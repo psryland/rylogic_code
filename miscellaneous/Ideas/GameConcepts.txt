@@ -1,0 +1,54 @@
+[Contracts]
+
+[Home Base]
+
+[Research]
+	Produces step changes in:
+		energy cell energy density
+		engine efficiency
+		engine power
+		material weight
+		shield strength
+		shield recharge rate
+	Plus milestone technologies:
+		energy cell types
+		engine types
+		weapon types
+
+[Ship Building]
+	[Energy Cells]
+		Used for weapons, engines, life support
+		
+	[Engines]
+		Energy consumption is a quadratic (or something like) so that engines on full burn use more than twice as much energy as on half burn..
+
+	[Weapons]
+		pulse laser
+		beam laser
+		missle
+		seeking missle
+		attack drone - thing with lasers that chases after the enemy shooting them. Could even build these?
+	
+	[Shields]
+		A bounding sphere or box (whichever is smaller) that acts as the collision volume against weapons
+	
+	[Life support]
+		This just consumes energy. It means ships have a limited range based on the acceleration of there engines and how much energy they're carrying.
+		
+[Ship flying]
+	[Flight Computer]
+		Converts inputs (from the player or AI) into individual engine thrusts. Limitations of the ship handling will depend on the combined maximum force that the engines can produce in particular directions
+		
+	[Controls]
+		The player has:
+			thrust forward
+			rotate left/right
+			rotate up/down
+			cycle engine configuration
+			fire weapon bank 1/2/etc...
+
+	[Engine configurations]
+		Allow some engines to pivot about a point. In the build screen the player selects a configuration number (up to three say) then arranges the pivoting engines in the positions wanted for that configuration. When flying, the player can cycle through the configurations which causes the engines to rotate to the position for that configuration. What the configurations are used for is up to the player but I was imagining: take-off, braking, landing, combat, long-haul, etc...
+
+	[Auto pilot]
+		Allows a ship to 'deliver' itself to the customer, as well as being an attractive gadget which increases the value of ship.  A ship on auto pilot does not consume any energy for life support as long as there is no crew on board, which means a ship being delivered solely on auto pilot can deliver itself greater distances due to lower fuel consumption.  However, an auto pilot can only fly according to its programming; it cannot react to changes in its environment, e.g. defending itself from pirate attack or navigating through an asteroid storm.

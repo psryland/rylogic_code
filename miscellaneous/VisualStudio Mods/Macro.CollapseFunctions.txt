@@ -1,0 +1,84 @@
+Imports System
+Imports EnvDTE
+Imports EnvDTE80
+Imports EnvDTE90
+Imports System.Diagnostics
+
+Public Module Collapser
+
+    'Collapse all functions / methods in a file
+    Public Sub CollapseAllFunctions()
+
+        If (DTE.ActiveDocument Is Nothing) Then
+            Exit Sub
+        End If
+
+        If (DTE.UndoContext.IsOpen) Then
+            DTE.UndoContext.Close()
+        End If
+
+        DTE.SuppressUI = True
+
+        Try
+            DTE.UndoContext.Open("CollapseAllFunctions")
+        Catch
+        End Try
+
+        Dim ts As TextSelection = DTE.ActiveDocument.Selection
+        Dim line As Integer = ts.CurrentLine
+        ts.StartOfDocument()
+
+        Dim fcm As FileCodeModel = DTE.ActiveDocument.ProjectItem.FileCodeModel
+        CollapseAllFunctionsRec(ts, fcm.CodeElements)
+
+        ts.StartOfDocument()
+        ts.GotoLine(line)
+
+        DTE.UndoContext.Close()
+        DTE.SuppressUI = False
+
+    End Sub
+
+    'Recursively collapse functions in a container of code elements
+    Private Function CollapseAllFunctionsRec(ByRef ts As TextSelection, ByRef elems As EnvDTE.CodeElements)
+
+        For Each elem As CodeElement In elems
+            If (elem.Kind = vsCMElement.vsCMElementFunction) Then
+                ts.MoveToPoint(elem.StartPoint)
+                DTE.ExecuteCommand("Edit.ToggleOutliningExpansion")
+            End If
+            CollapseAllFunctionsRec(ts, elem.Children)
+        Next
+
+    End Function
+
+
+	' Before running this example, open a code document from a project
+	' and place the insertion point anywhere inside the source code.
+    Public Sub ListCodeElements()
+
+		Try
+            Dim sel As TextSelection = CType(DTE.ActiveDocument.Selection, TextSelection)
+            Dim pnt As TextPoint = CType(sel.ActivePoint, TextPoint)
+
+            ' Discover every code element containing the insertion point.
+            Dim fcm As FileCodeModel = DTE.ActiveDocument.ProjectItem.FileCodeModel
+            Dim elems As String
+            Dim elem As CodeElement
+            Dim scope As vsCMElement
+            For Each scope In [Enum].GetValues(scope.GetType())
+                elem = fcm.CodeElementFromPoint(pnt, scope)
+                If IsNothing(elem) = False Then
+                    elems &= elem.Name & " (" & scope.ToString() & ")" & vbCrLf
+                End If
+            Next
+
+            MsgBox("The following elements contain the insertion point:" & vbCrLf & vbCrLf & elems)
+        Catch ex As Exception
+            MsgBox(ex.Message)
+        End Try
+		
+    End Sub
+End Module
+
+

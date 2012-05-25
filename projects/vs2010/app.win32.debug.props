@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <TargetPlatform>x86</TargetPlatform>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ReferencePath>$(ReferencePath)</ReferencePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <SourcePath>$(SourcePath)</SourcePath>
+    <ExcludePath>$(ExcludePath)</ExcludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <OutDir>..\..\obj\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>..\..\obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <BuildMacro Include="TargetPlatform">
+      <Value>$(TargetPlatform)</Value>
+      <EnvironmentVariable>true</EnvironmentVariable>
+    </BuildMacro>
+  </ItemGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <DisableSpecificWarnings>4351</DisableSpecificWarnings>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\directx9.0c\aug2009\include;..\..\sdk\wtl\v8.1\include;..\..\sdk\lua\lua\src;..\..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <WarningLevel>Level4</WarningLevel>
+      <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <OmitFramePointers>false</OmitFramePointers>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <OpenMPSupport>true</OpenMPSupport>
+      <MinimalRebuild>true</MinimalRebuild>
+    </ClCompile>
+    <Lib>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Lib>
+    <Link>
+      <AdditionalLibraryDirectories>..\..\sdk\pr\lib;..\..\sdk\directx9.0c\aug2009\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+</Project>

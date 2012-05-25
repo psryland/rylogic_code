@@ -1,0 +1,26 @@
+//*******************************************************************
+// A collection of window related functions
+//  Copyright © Rylogic Ltd 2008
+//*******************************************************************
+
+#pragma once
+#ifndef PR_COMMON_WINDOWS_COM_H
+#define PR_COMMON_WINDOWS_COM_H
+
+#include <windows.h>
+#include "pr/common/hresult.h"
+
+namespace pr
+{
+	// RAII class for initialising COM
+	struct InitCom
+	{
+		enum EFlag { NoThrow };
+		HRESULT m_res;
+		InitCom(DWORD dwCoInit = COINIT_APARTMENTTHREADED)        { pr::Throw(m_res = ::CoInitializeEx(0, dwCoInit)); }
+		InitCom(EFlag, DWORD dwCoInit = COINIT_APARTMENTTHREADED) { m_res = ::CoInitializeEx(0, dwCoInit); }
+		~InitCom()                                                { ::CoUninitialize(); }
+	};
+}
+
+#endif

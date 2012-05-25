@@ -1,0 +1,11 @@
+trademark:  ™ = 0153
+pound:      £ = 0163
+copyright:  © = 0169
+degrees:    ° = 0176
+plus_minus: ± = 0177
+squared:    ² = 0178
+cubed:      ³ = 0179
+micro:      µ = 0181
+return:     ¶ = 0182
+dbl left:   « = 0171
+dbl right:  » = 0187

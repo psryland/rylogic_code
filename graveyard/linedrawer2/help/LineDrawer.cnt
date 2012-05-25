@@ -1,0 +1,88 @@
+;This contents file was created with the free trial version of HelpScribble 7.3.1
+;Help files created with the free trial version must not be distributed.
+
+:BASE LineDrawer.hlp
+:TITLE LineDrawer Help
+1 General
+2 Overview=Scribble10
+2 History=Scribble2010
+2 Development=Scribble2015
+2 Licence=Scribble2017
+2 Contact Details=Scribble2020
+1 LineDrawer Script
+2 LineDrawer Script=Scribble15
+1 LineDrawer Objects
+2 Objects=Scribble20
+2 List-able Object Types=Scribble27
+2 Object Types=Scribble25
+2 Object Types
+3 Point=Scribble30
+3 Line, LineD, LineNL=Scribble40
+3 RectangleLU, RectangleWHZ=Scribble50
+3 Triangle=Scribble60
+3 Quad, QuadLU, QuadWHZ=Scribble70
+3 CircleR, CircleRxRyZ=Scribble80
+3 BoxLU, BoxWHD=Scribble90
+3 CylinderHR, CylinderHRxRy=Scribble100
+3 SphereR, SphereRxRyRz=Scribble110
+3 FrustumWHNF, FrustumATNF=Scribble120
+3 GridWHD=Scribble130
+3 Mesh=Scribble140
+3 XFile=Scribble150
+3 Group, GroupCyclic=Scribble160
+3 Example Summary=Scribble170
+2 Object Type Modifiers
+3 Object Type Modifiers=Scribble175
+3 Transform=Scribble177
+3 Position=Scribble179
+3 Orientation=Scribble189
+3 Animation=Scribble199
+3 Wire=Scribble209
+3 Hidden=Scribble219
+1 Menus
+2 File Menu
+3 New Object=Scribble300
+3 Open=Scribble310
+3 Additive Open=Scribble320
+3 Save=Scribble330
+3 Save As=Scribble340
+3 Set Error Output=Scribble350
+3 Run Plugin=Scribble360
+2 Navigation Menu
+3 Jump To=Scribble400
+3 Show Origin, Axis, Focus Point=Scribble410
+3 Lock=Scribble420
+3 View=Scribble430
+3 Inertial Camera=Scribble440
+2 Data Menu
+3 Show Selection=Scribble500
+3 Clear=Scribble510
+3 Auto Clear=Scribble520
+3 Auto Refresh=Scribble530
+3 Network Listener=Scribble540
+3 Start Cyclic Objects=Scribble550
+3 Start Animations=Scribble560
+3 Data List=Scribble570
+2 Rendering Menu
+3 Wire frame=Scribble600
+3 Co-ordinates=Scribble610
+3 Render 2D=Scribble620
+3 Right-handed=Scribble630
+3 Stereo View=Scribble640
+3 Lighting=Scribble650
+2 Window Menu
+3 Always On Top=Scribble700
+3 Background Colour=Scribble710
+3 LineDrawer Help=Scribble720
+3 About LineDrawer=Scribble730
+1 Navigation
+2 Trackball Mouse Navigation=Scribble740
+2 Inertial Camera=Scribble750
+1 Data Window
+2 Data Window=Scribble760
+1 Rendering
+2 Co-ordinates=Scribble860
+2 Stereo View=Scribble870
+2 Lighting=Scribble880
+1 Keyboard Shortcuts
+2 Keyboard Shortcuts=Scribble2000

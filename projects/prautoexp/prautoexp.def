@@ -1,0 +1,23 @@
+
+EXPORTS
+	AddIn_v2
+	AddIn_v3
+	AddIn_v4
+	AddIn_iv4
+	AddIn_i64v4
+	AddIn_m3x3
+	AddIn_m4x4
+	AddIn_MAXMatrix3
+	AddIn_stdvector
+	AddIn_stdstring
+	AddIn_stdstringstream
+	AddIn_stdifstream
+	AddIn_stdofstream
+	AddIn_Quaternion
+	AddIn_MD5
+	AddIn_GeomType
+	AddIn_LargeInt
+	AddIn_QuaternionAsMatrix
+	AddIn_phShape
+	AddIn_LuaState
+	

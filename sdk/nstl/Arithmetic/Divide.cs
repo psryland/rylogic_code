@@ -1,0 +1,119 @@
+﻿#region Copyright (c) 2003 - 2008, Andreas Mueller
+/////////////////////////////////////////////////////////////////////////////////////////
+// 
+// Copyright (c) 2003 - 2008, Andreas Mueller.
+// All rights reserved. This program and the accompanying materials
+// are made available under the terms of the Eclipse Public License v1.0
+// which accompanies this distribution, and is available at
+// http://www.eclipse.org/legal/epl-v10.html
+//
+// Contributors:
+//    Andreas Mueller - initial API and implementation
+//
+// 
+// This software is derived from software bearing the following
+// restrictions:
+// 
+// Copyright (c) 1994
+// Hewlett-Packard Company
+// 
+// Permission to use, copy, modify, distribute and sell this software
+// and its documentation for any purpose is hereby granted without fee,
+// provided that the above copyright notice appear in all copies and
+// that both that copyright notice and this permission notice appear
+// in supporting documentation.  Hewlett-Packard Company makes no
+// representations about the suitability of this software for any
+// purpose.  It is provided "as is" without express or implied warranty.
+// 
+// 
+// Copyright (c) 1996,1997
+// Silicon Graphics Computer Systems, Inc.
+// 
+// Permission to use, copy, modify, distribute and sell this software
+// and its documentation for any purpose is hereby granted without fee,
+// provided that the above copyright notice appear in all copies and
+// that both that copyright notice and this permission notice appear
+// in supporting documentation.  Silicon Graphics makes no
+// representations about the suitability of this software for any
+// purpose.  It is provided "as is" without express or implied warranty.
+// 
+// 
+// (C) Copyright Nicolai M. Josuttis 1999.
+// Permission to copy, use, modify, sell and distribute this software
+// is granted provided this copyright notice appears in all copies.
+// This software is provided "as is" without express or implied
+// warranty, and with no claim as to its suitability for any purpose.
+// 
+/////////////////////////////////////////////////////////////////////////////////////////
+#endregion
+
+
+namespace NStl.Arithmetic
+{
+    /// <summary>
+    /// Represents the operation of dividing two elements.
+    /// </summary>
+    public static class Divide
+    {
+        /// <summary>
+        /// Creates a functor that lets you divide two <see cref="decimal"/> types.
+        /// </summary>
+        /// <returns></returns>
+        public static IBinaryFunction<decimal, decimal, decimal> Decimal()
+        {
+            return Functional.PtrFun<decimal, decimal, decimal>(
+                delegate(decimal lhs, decimal rhs) { return lhs / rhs; }
+                );  
+        }
+        /// <summary>
+        /// Creates a functor that lets you divide two <see cref="int"/> types.
+        /// </summary>
+        /// <returns></returns>
+        public static IBinaryFunction<int, int, int> Int32()
+        {
+            return Functional.PtrFun<int, int, int>(
+                delegate(int lhs, int rhs) { return lhs / rhs; }
+                );
+        }
+        /// <summary>
+        /// Creates a functor that lets you divide two <see cref="long"/> types.
+        /// </summary>
+        /// <returns></returns>
+        public static IBinaryFunction<long, long, long> Int64()
+        {
+            return Functional.PtrFun<long, long, long>(
+                delegate(long lhs, long rhs) { return lhs / rhs; }
+                );
+        }
+        /// <summary>
+        /// Creates a functor that lets you divide two <see cref="short"/> types.
+        /// </summary>
+        /// <returns></returns>
+        public static IBinaryFunction<short, short, short> Int16()
+        {
+            return Functional.PtrFun<short, short, short>(
+                delegate(short lhs, short rhs) { return (short)(lhs / rhs); }
+                );
+        }
+        /// <summary>
+        /// Creates a functor that lets you divide two <see cref="float"/> types.
+        /// </summary>
+        /// <returns></returns>
+        public static IBinaryFunction<float, float, float> Float()
+        {
+            return Functional.PtrFun<float, float, float>(
+                delegate(float lhs, float rhs) { return lhs / rhs; }
+                );
+        }
+        /// <summary>
+        /// Creates a functor that lets you divide two <see cref="double"/> types.
+        /// </summary>
+        /// <returns></returns>
+        public static IBinaryFunction<double, double, double> Double()
+        {
+            return Functional.PtrFun<double, double, double>(
+                delegate(double lhs, double rhs) { return lhs / rhs; }
+                );
+        }
+    }
+}

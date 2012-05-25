@@ -1,0 +1,48 @@
+
+Modify the current instruction:
+	*(uint8*)($eip),x
+	0x90 = nop
+	0xcc = int 3
+
+Copy File Path user tool:
+Title: Copy File Path
+Command: Q:\Paul\Tools\Bin\Clip.exe
+Arguments: -forward_slash -leading_capital $(ItemPath)
+
+Open source or header macro:
+	Imports EnvDTE
+	Imports System.IO
+	
+	Public Module Module1
+	
+	    '*****
+	    'Open the header or source file corresponding to the currently open file
+	    Sub OpenHeaderOrSource()
+	
+	        Dim FileName As String = DTE.ActiveDocument.FullName
+	        Dim FileExtn As String = GetFilenameExtension(FileName)
+	        Dim FilePathAndTitle As String = FileName.Substring(0, FileName.Length - FileExtn.Length)
+	
+	        If FileExtn = "h" Then
+	            DTE.ItemOperations.OpenFile(FilePathAndTitle + "cpp")
+	        ElseIf FileExtn = "cpp" Then
+	            DTE.ItemOperations.OpenFile(FilePathAndTitle + "h")
+	        End If
+	        'MsgBox(FilePathAndTitle, 0)
+	    End Sub
+	
+	    '*****
+	    'GetFilenameExtension
+	    Function GetFilenameExtension(ByVal filename As String) As String
+	
+	        Dim last_dot = filename.LastIndexOf(".")
+	        If last_dot = -1 Then
+	            Return ("")
+	        End If
+	        last_dot += 1
+	        Return filename.Substring(last_dot)
+	
+	    End Function
+	
+	End Module
+

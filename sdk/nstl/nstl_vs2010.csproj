@@ -1,0 +1,391 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{BB8BA0A6-7F4A-413C-8D7A-B21D2BA7D98B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>NStl</RootNamespace>
+    <AssemblyName>nstl</AssemblyName>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>nstl.key.snk</AssemblyOriginatorKeyFile>
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccProvider>
+    </SccProvider>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DocumentationFile>nstl.xml</DocumentationFile>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>..\..\bin\nstl.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>Migrated rules for nstl.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile>nstl.xml</DocumentationFile>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>..\..\bin\nstl.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DocumentationFile>nstl.xml</DocumentationFile>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>..\..\bin\nstl.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>Migrated rules for nstl.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile>nstl.xml</DocumentationFile>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisLogFile>..\..\bin\nstl.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Adapters\Collection2ReadOnlyCollectionTAdapter.cs" />
+    <Compile Include="Adapters\IDIctionary2IDictionaryTAdapter.cs" />
+    <Compile Include="Adapters\IEnumerator2IEnumeratorTAdapter.cs" />
+    <Compile Include="Adapters\IList2IlistTAdapter.cs" />
+    <Compile Include="Adapters\Iterator2IEnumeratorAdaptor.cs" />
+    <Compile Include="Algorithm\Algorithm.cs" />
+    <Compile Include="Algorithm\Algorithm.Find.cs" />
+    <Compile Include="Collections\DList.cs" />
+    <Compile Include="Collections\Map.cs" />
+    <Compile Include="Collections\MultiMap.cs" />
+    <Compile Include="Collections\MultiSet.cs" />
+    <Compile Include="Collections\Private\RBTree.cs" />
+    <Compile Include="Collections\UniqueSet.cs" />
+    <Compile Include="Collections\Vector.cs" />
+    <Compile Include="Exceptions\Exceptions.cs" />
+    <Compile Include="Functional\BinaryFunction\IBinaryFunction.cs" />
+    <Compile Include="Functional\BinaryFunction\IBinaryPredicate.cs" />
+    <Compile Include="Functional\BinaryFunction\IBinaryVoidFunction.cs" />
+    <Compile Include="Functional\Cloner.cs" />
+    <Compile Include="Functional\Comparison\CompareAction.cs" />
+    <Compile Include="Functional\Comparison\Comparison.cs" />
+    <Compile Include="Functional\Functional.cs" />
+    <Compile Include="Functional\Identity.cs" />
+    <Compile Include="Functional\IsSomething.cs" />
+    <Compile Include="Functional\Logical.cs" />
+    <Compile Include="Functional\Negate.cs" />
+    <Compile Include="Functional\NullaryFunction\INullaryFunction.cs" />
+    <Compile Include="Functional\Project.cs" />
+    <Compile Include="Functional\Select.cs" />
+    <Compile Include="Functional\UnaryFunction\IUnaryFunction.cs" />
+    <Compile Include="Functional\UnaryFunction\IUnaryPredicate.cs" />
+    <Compile Include="Functional\UnaryFunction\IUnaryVoidFunction.cs" />
+    <Compile Include="Interfaces\IFrontInsertable.cs" />
+    <Compile Include="Interfaces\IInsertable.cs" />
+    <Compile Include="Interfaces\IBackInsertable.cs" />
+    <Compile Include="Interfaces\IRange.cs" />
+    <Compile Include="Iterators\Support\BidirectionalIterator.cs" />
+    <Compile Include="Iterators\Private\DictionaryBackInsertIterator.cs" />
+    <Compile Include="Iterators\IBidirectionalIterator.cs" />
+    <Compile Include="Iterators\IForwardIterator.cs" />
+    <Compile Include="Iterators\IRandomAccessIterator.cs" />
+    <Compile Include="Iterators\Support\IteratorProxy.cs" />
+    <Compile Include="Iterators\Private\BidirectionalReverseIterator.cs" />
+    <Compile Include="Iterators\Private\BlackholeOutputIterator.cs" />
+    <Compile Include="Iterators\Private\ConsoleOutputIterator.cs" />
+    <Compile Include="Iterators\Support\ForwardIterator.cs" />
+    <Compile Include="Iterators\Private\CollectionAddInsertIterator.cs" />
+    <Compile Include="Iterators\Support\ListIterator.cs" />
+    <Compile Include="Iterators\IInputIterator.cs" />
+    <Compile Include="Iterators\Private\InsertIterator.cs" />
+    <Compile Include="Iterators\IIterator.cs" />
+    <Compile Include="Iterators\Private\BackInsertableBackInsertIterator.cs" />
+    <Compile Include="Iterators\IOutputIterator.cs" />
+    <Compile Include="Iterators\Support\OutputIterator.cs" />
+    <Compile Include="Iterators\Support\RandomAccessIterator.cs" />
+    <Compile Include="Iterators\Private\RandomAccessReverseIterator.cs" />
+    <Compile Include="Iterators\Private\StringOutputIterator.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Util\NullType.cs" />
+    <Compile Include="Util\NStlUtil.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Adapters\Adapt.Covariant.cs" />
+    <Compile Include="Adapters\Adapt.Range.cs" />
+    <Compile Include="Adapters\Adapt.Weak.cs" />
+    <Compile Include="Adapters\Adapt.Generic.cs" />
+    <Compile Include="Adapters\CollectionT2ICollectionAdapter.cs" />
+    <Compile Include="Adapters\CollectionT2ICollectionAdapterBase.cs" />
+    <Compile Include="Adapters\List2IInsertableAdaptor.cs" />
+    <Compile Include="Adapters\ListT2IListAdaptor.cs" />
+    <Compile Include="Algorithm\Algorithm.Accumulate.cs" />
+    <Compile Include="Algorithm\Algorithm.AdjacentDifference.cs" />
+    <Compile Include="Algorithm\Algorithm.AdjacentFind.cs" />
+    <Compile Include="Algorithm\Algorithm.BinarySearch.cs" />
+    <Compile Include="Algorithm\Algorithm.Copy.cs" />
+    <Compile Include="Algorithm\Algorithm.CopyBackward.cs" />
+    <Compile Include="Algorithm\Algorithm.CopyN.cs" />
+    <Compile Include="Algorithm\Algorithm.Count.cs" />
+    <Compile Include="Algorithm\Algorithm.Equal.cs" />
+    <Compile Include="Algorithm\Algorithm.EqualRange.cs" />
+    <Compile Include="Algorithm\Algorithm.Fill.cs" />
+    <Compile Include="Algorithm\Algorithm.FillN.cs" />
+    <Compile Include="Algorithm\Algorithm.FindEnd.cs" />
+    <Compile Include="Algorithm\Algorithm.FindFirstOf.cs" />
+    <Compile Include="Algorithm\Algorithm.Generate.cs" />
+    <Compile Include="Algorithm\Algorithm.Includes.cs" />
+    <Compile Include="Algorithm\Algorithm.InnerProduct.cs" />
+    <Compile Include="Algorithm\Algorithm.InplaceMerge.cs" />
+    <Compile Include="Algorithm\Algorithm.IsSorted.cs" />
+    <Compile Include="Algorithm\Algorithm.LexicographicalCompare.cs" />
+    <Compile Include="Algorithm\Algorithm.Max.cs" />
+    <Compile Include="Algorithm\Algorithm.Merge.cs" />
+    <Compile Include="Algorithm\Algorithm.MinAndMaxElement.cs" />
+    <Compile Include="Algorithm\Algorithm.MinElement.cs" />
+    <Compile Include="Algorithm\Algorithm.GenerateN.cs" />
+    <Compile Include="Algorithm\Algorithm.NextPermutation.cs" />
+    <Compile Include="Algorithm\Algorithm.NthElement.cs" />
+    <Compile Include="Algorithm\Algorithm.PartialSortCopy.cs" />
+    <Compile Include="Algorithm\Algorithm.PartialSum.cs" />
+    <Compile Include="Algorithm\Algorithm.Partition.cs" />
+    <Compile Include="Algorithm\Algorithm.PrevPermutation.cs" />
+    <Compile Include="Algorithm\Algorithm.Replace.cs" />
+    <Compile Include="Algorithm\Algorithm.ReplaceCopyIf.cs" />
+    <Compile Include="Algorithm\Algorithm.Reverse.cs" />
+    <Compile Include="Algorithm\Algorithm.ReverseCopy.cs" />
+    <Compile Include="Algorithm\Algorithm.Rotate.cs" />
+    <Compile Include="Algorithm\Algorithm.RotateCopy.cs" />
+    <Compile Include="Algorithm\Algorithm.Sort.cs" />
+    <Compile Include="Algorithm\Algorithm.StablePartition.cs" />
+    <Compile Include="Algorithm\Algorithm.StableSort.cs" />
+    <Compile Include="Algorithm\ALgorithm.SwapRanges.cs" />
+    <Compile Include="Algorithm\Algorithm.Min.cs" />
+    <Compile Include="Algorithm\Algorithm.TopologicalSort.cs" />
+    <Compile Include="Algorithm\Algorithm.Unique.cs" />
+    <Compile Include="Algorithm\Algorithm.UniqueCopy.cs" />
+    <Compile Include="Collections\HashMultiSet.cs" />
+    <Compile Include="Collections\IReadOnlyCollection.cs" />
+    <Compile Include="Collections\IReadOnlyList.cs" />
+    <Compile Include="Collections\ISortedRange.cs" />
+    <Compile Include="Iterators\IRandomAccessInputIterator.cs" />
+    <Compile Include="Iterators\Support\DictionaryIterator.cs" />
+    <Compile Include="Iterators\Support\EquatableIterator.cs" />
+    <Compile Include="Iterators\Support\ListIteratorBase.cs" />
+    <Compile Include="Iterators\Support\ListTIterator.cs" />
+    <Compile Include="Linq\AlgorithmExtension\AlgorithmExtension.Accumulate.cs" />
+    <Compile Include="Linq\CollectionTExtension.cs" />
+    <Compile Include="Linq\DictionaryExtension.cs" />
+    <Compile Include="Linq\EnumerableExtension.cs" />
+    <Compile Include="Linq\InsertableExtension.cs" />
+    <Compile Include="Linq\IteratorExtension.cs" />
+    <Compile Include="Linq\LinkedListExtension.cs" />
+    <Compile Include="Linq\ListExtension.cs" />
+    <Compile Include="Linq\ListTExtension.cs" />
+    <Compile Include="Resource.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resource.resx</DependentUpon>
+    </Compile>
+    <Compile Include="SyntaxHelper\Binder.cs" />
+    <Compile Include="Binder\Binder0th.cs" />
+    <Compile Include="Collections\HashMultiMap.cs" />
+    <Compile Include="Collections\HashSet.cs" />
+    <Compile Include="Collections\Range.cs" />
+    <Compile Include="Collections\Private\ReadonlyCollectionAdaptor.cs" />
+    <Compile Include="SyntaxHelper\Compare.cs" />
+    <Compile Include="SyntaxHelper\Compose.cs" />
+    <Compile Include="Binder\ComposeFG.cs" />
+    <Compile Include="Binder\ComposeFGx.cs" />
+    <Compile Include="Binder\ComposeFGxHx.cs" />
+    <Compile Include="Binder\ComposeFGxHy.cs" />
+    <Compile Include="Binder\ComposeFGxy.cs" />
+    <Compile Include="Binder\Binder1st.cs" />
+    <Compile Include="Binder\Binder1stPred.cs" />
+    <Compile Include="Binder\Binder2nd.cs" />
+    <Compile Include="Binder\Binder2ndPred.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Query\Sequence.Filter.cs" />
+    <Compile Include="Algorithm\Algorithm.Iota.cs" />
+    <Compile Include="Algorithm\Algorithm.IsHeap.cs" />
+    <Compile Include="Algorithm\Algorithm.IterSwap.cs" />
+    <Compile Include="Algorithm\Algorithm.LexicographicalCompare3way.cs" />
+    <Compile Include="Algorithm\Algorithm.Mismatch.cs" />
+    <Compile Include="Algorithm\Algorithm.PartialSort.cs" />
+    <Compile Include="Algorithm\Algorithm.PopHeap.cs" />
+    <Compile Include="Algorithm\Algorithm.PushHeap.cs" />
+    <Compile Include="Algorithm\Algorithm.RandomSample.cs" />
+    <Compile Include="Algorithm\Algorithm.RandomSampleN.cs" />
+    <Compile Include="Algorithm\Algorithm.RandomShuffle.cs" />
+    <Compile Include="Algorithm\Algorithm.Remove.cs" />
+    <Compile Include="Algorithm\Algorithm.RemoveCopy.cs" />
+    <Compile Include="Algorithm\Algorithm.Search.cs" />
+    <Compile Include="Algorithm\Algorithm.SearchN.cs" />
+    <Compile Include="Algorithm\Algorithm.SetIntersection.cs" />
+    <Compile Include="Algorithm\Algorithm.SetSymmetricDifference.cs" />
+    <Compile Include="Algorithm\Algorithm.SortHeap.cs" />
+    <Compile Include="Algorithm\Algorithm.Transform.cs" />
+    <Compile Include="Algorithm\Algorithm.LowerBound.cs" />
+    <Compile Include="Algorithm\Algorithm.MakeHeap.cs" />
+    <Compile Include="Algorithm\Algorithm.MaxElement.cs" />
+    <None Include="Migrated rules for nstl.ruleset" />
+    <None Include="nstl.key.snk" />
+    <Compile Include="Collections\Deque.cs" />
+    <Compile Include="Collections\Private\FixedSizeInt32.cs" />
+    <Compile Include="Collections\Private\Position.cs" />
+    <Compile Include="Iterators\Private\FrontInsertIterator.cs" />
+    <Compile Include="SyntaxHelper\Logical.cs" />
+    <Compile Include="SyntaxHelper\Project.cs" />
+    <Compile Include="SyntaxHelper\Select.cs" />
+    <Compile Include="Util\NStlUtil.FrontInserter.cs" />
+    <Compile Include="Util\NStlUtil.IDictionary.cs" />
+    <Compile Include="Algorithm\Algorithm.SetUnion.cs" />
+    <Compile Include="Algorithm\Algorithm.UpperBound.cs" />
+    <Compile Include="Arithmetic\Modulo.cs" />
+    <Compile Include="Arithmetic\Multiply.cs" />
+    <Compile Include="Arithmetic\Divide.cs" />
+    <Compile Include="Arithmetic\Minus.cs" />
+    <Compile Include="Collections\HashMap.cs" />
+    <Compile Include="Collections\PriorityQueue.cs" />
+    <Compile Include="Collections\Private\HashContainer.cs" />
+    <Compile Include="Debugging\CollectionDebuggerProxy.cs" />
+    <Compile Include="Arithmetic\Plus.cs" />
+    <Compile Include="Functional\FunctionAdapter\BinaryDelegate2BinaryFunctionAdapter.cs" />
+    <Compile Include="Functional\FunctionAdapter\BinaryVoidDelegate2BinaryVoidFunctionAdapter.cs" />
+    <Compile Include="Functional\FunctionAdapter\NullaryDelegate2NullaryFunctionAdapter.cs" />
+    <Compile Include="Functional\FunctionAdapter\UnaryDelegate2UnaryFunctionAdapter.cs" />
+    <Compile Include="Functional\FunctionAdapter\UnaryVoidDelegate2UnaryVoidFunctionAdapter.cs" />
+    <Compile Include="Interfaces\IBackInsertableCollection.cs" />
+    <Compile Include="Iterators\Support\BidirectionalInputReverseIterator.cs" />
+    <Compile Include="Iterators\Support\BidirectionalIterator2InputBidirectionalIteratorAdapter.cs" />
+    <Compile Include="Iterators\Support\EnumerableIterator.cs" />
+    <Compile Include="Iterators\IBidirectionalInputIterator.cs" />
+    <Compile Include="Iterators\Support\BidirectionalInputIterator.cs" />
+    <Compile Include="Iterators\Support\InputIterator.cs" />
+    <Compile Include="Iterators\Support\LinkedListIterator.cs" />
+    <Compile Include="Util\NStlUtil.ICollection.cs" />
+    <Compile Include="Algorithm\Algorithm.ForEach.cs" />
+    <Compile Include="Algorithm\Algorithm.SetDifference.cs" />
+    <Compile Include="Algorithm\Algorithm.Swap.cs" />
+    <Compile Include="Util\NStlUtil.Advance.cs" />
+    <Compile Include="Util\NStlUtil.Distance.cs" />
+    <Compile Include="Util\NStlUtil.IEnumerator.cs" />
+    <Compile Include="Util\NStlUtil.ArrayT.cs" />
+    <Compile Include="Util\NStlUtil.BackInserter.cs" />
+    <Compile Include="Util\NStlUtil.IEnumerable.cs" />
+    <Compile Include="Util\NStlUtil.IEnumerableT.cs" />
+    <Compile Include="Util\NStlUtil.IList.cs" />
+    <Compile Include="Util\NStlUtil.IListT.cs" />
+    <Compile Include="Util\NStlUtil.Inserter.cs" />
+    <Compile Include="Util\NStlUtil.IteratorAdapter.cs" />
+    <Compile Include="Util\NStlUtil.LinkedListT.cs" />
+    <Compile Include="Util\NStlUtil.Reverse.cs" />
+    <Compile Include="Util\NStlUtil.StringOutput.cs" />
+    <Compile Include="Util\Verify.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resource.resx">
+      <SubType>Designer</SubType>
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+</Project>

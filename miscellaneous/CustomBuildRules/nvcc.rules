@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<VisualStudioToolFile
+	Name="CudaCompile"
+	Version="8.00"
+	>
+	<Rules>
+		<CustomBuildRule
+			Name="CUDA"
+			DisplayName="NVCC"
+			CommandLine="nvcc.exe [cppcompiler] [compilerswitches] [definitions] [includes] [emulation] [fastmath] [optimization] [outputtype] -o [outputfile] $(InputFileName)"
+			Outputs="[outputfile]"
+			FileExtensions="*.cu"
+			ExecutionDescription="NVCC Compiling..."
+			>
+			<Properties>
+				<EnumProperty
+					Name="outputtype"
+					DisplayName="Output Type"
+					Category="Code Generation"
+					Description="Type of output to generate"
+					>
+					<Values>
+						<EnumValue
+							Value="0"
+							DisplayName="Obj File (.obj)"
+							Switch="-c"
+						/>
+						<EnumValue
+							Value="1"
+							DisplayName="C File (.c)"
+							Switch="-cuda"
+						/>
+					</Values>
+				</EnumProperty>
+				<StringProperty
+					Name="outputfile"
+					DisplayName="Output File Name"
+					Category="Code Generation"
+					Description="Name of the output file"
+					DefaultValue="$(IntDir)\$(InputName).obj"				
+					Switch="[value]"
+				/>
+				<StringProperty
+					Name="cppcompiler"
+					DisplayName="C++ Compiler Path"
+					Category="Code Generation"
+					Description="The path the to C++ compiler"
+					Switch="-ccbin [value]"
+					DefaultValue="&quot;$(VCInstallDir)bin&quot;"
+				/>
+				<StringProperty
+					Name="compilerswitches"
+					DisplayName="C++ Compiler Options"
+					Category="Code Generation"
+					Description="Sets options passed on the C++ compiler"
+					Switch="-Xcompiler [value]"
+					DefaultValue="/EHsc,/W3,/nologo,/Wp64,/Od,/Zi,/RTC1,/MTd"
+				/>
+				<BooleanProperty
+					Name="emulation"
+					DisplayName="Enable Emulation Mode"
+					Category="Default"
+					Description="Compiles the code to run in emulation mode."
+					Switch="-deviceemu"
+				/>
+				<BooleanProperty
+					Name="fastmath"
+					DisplayName="Use Fast Math"
+					Category="Default"
+					Description="Make use of the fast math library."
+					Switch="-use_fast_math"
+				/>
+				<EnumProperty
+					Name="optimization"
+					DisplayName="Optimization Level"
+					Category="Default"
+					Description="Sets the optimization level, where level = 0, 1, 2, or 3.    (-O0, -O1, -O2, -O3)"
+					>
+					<Values>
+						<EnumValue
+							Value="0"
+							Switch="-O0"
+							DisplayName="Optimization Level 0 (-O0)"
+						/>
+						<EnumValue
+							Value="1"
+							Switch="-O1"
+							DisplayName="Optimization Level 1 (-O1)"
+						/>
+						<EnumValue
+							Value="2"
+							Switch="-O2"
+							DisplayName="Optimization Level 2 (-O2)"
+						/>
+						<EnumValue
+							Value="3"
+							Switch="-O3"
+							DisplayName="Optimization Level 3 (-O3)"
+						/>
+					</Values>
+				</EnumProperty>
+				<StringProperty
+					Name="definitions"
+					DisplayName="Preprocessor Definitions"
+					Description="Defines a text macro with the given name.    (-D[symbol])"
+					Switch="-D[value]"
+					Delimited="true"
+					Inheritable="true"
+				/>
+				<StringProperty
+					Name="includes"
+					DisplayName="Include Paths"
+					Description="Sets path for include file. A maximum of 10 -I options is allowed.    (-I [path])"
+					Switch="-I&quot;[value]&quot;"
+					DefaultValue="$(CUDA_INC_PATH);$(VCInstallDir)\include;$(VCInstallDir)\PlatformSDK\include"
+					Delimited="true"
+					Inheritable="true"
+				/>
+			</Properties>
+		</CustomBuildRule>
+	</Rules>
+</VisualStudioToolFile>

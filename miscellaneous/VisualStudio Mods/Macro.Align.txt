@@ -1,0 +1,109 @@
+Imports System
+Imports EnvDTE
+Imports EnvDTE80
+Imports EnvDTE90
+Imports System.Diagnostics
+
+Public Module Align
+
+    Sub Align()
+
+        Dim top As Integer = ActiveDocument.Selection.TopPoint.Line
+        Dim bottom As Integer = ActiveDocument.Selection.BottomPoint.Line
+
+        If ActiveDocument.Selection.BottomPoint.AtStartOfLine Then
+            bottom = bottom - 1
+        End If
+
+        If top >= bottom Then
+            Return
+        End If
+
+        Dim equals_min_index As Integer = 999999
+        Dim equals_max_index As Integer = 0
+        Dim bracket_min_index As Integer = 999999
+        Dim bracket_max_index As Integer = 0
+
+        Dim has_equals As Boolean = True
+        Dim has_brackets As Boolean = True
+
+        Dim edit As EditPoint = ActiveDocument.Selection.TopPoint.CreateEditPoint()
+
+        For line_index As Integer = top To bottom
+            Dim line As String = edit.GetLines(line_index, line_index + 1)
+
+            If line.Trim().Length <> 0 Then
+                If has_equals Then
+                    Dim equals As Integer = line.IndexOf("=")
+
+                    If equals <> -1 Then
+                        If equals < equals_min_index Then
+                            equals_min_index = equals
+                        End If
+
+                        If equals > equals_max_index Then
+                            equals_max_index = equals
+                        End If
+                    Else
+                        has_equals = False
+                    End If
+                End If
+
+                If has_brackets Then
+                    Dim bracket As Integer = line.IndexOf("(")
+
+                    If bracket <> -1 Then
+                        If bracket < bracket_min_index Then
+                            bracket_min_index = bracket
+                        End If
+
+                        If bracket > bracket_max_index Then
+                            bracket_max_index = bracket
+                        End If
+                    Else
+                        has_brackets = False
+                    End If
+                End If
+            End If
+        Next
+
+        Dim min_index As Integer
+        Dim max_index As Integer
+        Dim indent_string As String
+        Dim undo_string As String
+
+        If has_equals And equals_min_index <> equals_max_index Then
+            min_index = equals_min_index
+            max_index = equals_max_index
+            indent_string = "="
+            undo_string = "assignments"
+        ElseIf has_brackets And bracket_min_index <> bracket_max_index Then
+            min_index = bracket_min_index
+            max_index = bracket_max_index
+            indent_string = "("
+            undo_string = "brackets"
+        Else
+            MsgBox("Couldn't find anything to align")
+            Return
+        End If
+
+        DTE.UndoContext.Open("Align " + undo_string)
+        For line_index As Integer = top To bottom
+            Dim line As String = edit.GetLines(line_index, line_index + 1)
+
+            If line.Trim().Length <> 0 Then
+                Dim indent_index As Integer = line.IndexOf(indent_string)
+
+                edit.MoveToLineAndOffset(line_index, indent_index + 1)
+
+                If indent_index <> max_index Then
+                    edit.Insert(New String(" ", max_index - indent_index))
+                End If
+            End If
+        Next
+        DTE.UndoContext.Close()
+
+    End Sub
+
+End Module
+

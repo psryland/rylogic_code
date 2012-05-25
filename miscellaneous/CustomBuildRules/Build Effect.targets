@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema
+      Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml" />
+    <AvailableItemName
+      Include="Build_Effect">
+      <Targets>_Build_Effect</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  <UsingTask
+    TaskName="Build_Effect"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <Target
+    Name="_Build_Effect"
+    BeforeTargets="$(Build_EffectBeforeTargets)"
+    AfterTargets="$(Build_EffectAfterTargets)"
+    Condition="'@(Build_Effect)' != ''"
+    DependsOnTargets="_SelectedFiles;ComputeBuild_EffectOutput"
+    Outputs="@(Build_Effect-&gt;Metadata('Outputs')-&gt;Distinct())"
+    Inputs="@(Build_Effect);%(Build_Effect.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <Build_Effect
+        Remove="@(Build_Effect)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <Build_Effect_tlog
+        Include="%(Build_Effect.Outputs)"
+        Condition="'%(Build_Effect.Outputs)' != '' and '%(Build_Effect.ExcludedFromBuild)' != 'true'">
+        <Source>@(Build_Effect, '|')</Source>
+      </Build_Effect_tlog>
+    </ItemGroup>
+    <Message
+      Importance="High"
+      Text="%(Build_Effect.ExecutionDescription)" />
+    <WriteLinesToFile
+      File="$(IntDir)$(ProjectName).write.1.tlog"
+      Lines="^%(Build_Effect_tlog.Source);@(Build_Effect_tlog-&gt;'%(Fullpath)')" />
+    <Build_Effect
+      Condition="'%(Build_Effect.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(Build_Effect.CommandLineTemplate)"
+      flags="%(Build_Effect.flags)"
+      outfile="%(Build_Effect.outfile)"
+      target="%(Build_Effect.target)"
+      AdditionalOptions="%(Build_Effect.AdditionalOptions)"
+      Inputs="@(Build_Effect)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+            $(ComputeLinkInputsTargets);
+            ComputeBuild_EffectOutput;
+          </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+            $(ComputeLibInputsTargets);
+            ComputeBuild_EffectOutput;
+          </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeBuild_EffectOutput"
+    Condition="'@(Build_Effect)' != ''">
+    <ItemGroup>
+      <Build_EffectDirsToMake
+        Condition="'@(Build_Effect)' != ''"
+        Include="%(Build_Effect.Outputs)" />
+      <Link
+        Include="%(Build_EffectDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <Lib
+        Include="%(Build_EffectDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <ImpLib
+        Include="%(Build_EffectDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+    </ItemGroup>
+    <MakeDir
+      Directories="@(Build_EffectDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+</Project>

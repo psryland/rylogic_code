@@ -1,0 +1,285 @@
+'******************************************************************************
+' To use this macro effectively, map the keyboard shortcuts for Copy and Cut
+' to the Copy and Cut functions of this macro. Normal Copy and Cut behaviour
+' should continue to work. To display the clip ring set up a keyboard shortcut
+' such as "ctrl+shift+V" to the ShowClipRing function.
+' Note: on first using a macro in VS there is a slight pause as visual studio
+' loads the macros
+' You can also disable the "macro running" balloon by adding a DWORD key to
+' the registry. Under: HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\8.0
+' add a DWORD "DontShowMacrosBalloon" with a value of 6
+' Note: Remember to add a reference to System.Drawing
+'******************************************************************************
+Imports System
+Imports EnvDTE
+Imports EnvDTE80
+Imports System.Diagnostics
+Imports System.Windows.Forms
+Imports System.Drawing
+Imports System.Collections.Generic
+Imports System.Text.RegularExpressions
+
+Public Module ClipRing
+
+    'Module data
+    Private g_clip_ring_size = 10                       'The maximum length of the clipboard ring
+    Private g_clip_count = 0                            'The number of added clips
+    Private g_clip_data As DataObject                   'Used to transfer a copy of the clipboard data to the clip ring (and back)
+    Private g_clip_ring(g_clip_ring_size) As Clip       'The clip ring
+    Private g_ignorable_formats As String() = New String() {"Hidden Text Banner Format", "Locale"}
+    Private g_format_type_remapping_key As String() = New String() {"ImagEdit"}
+    Private g_format_type_remapping_val As String() = New String() {"<<image>>"}
+
+    'Combines clip data with a text string representation
+    ' suitable for displaying in the clip ring window
+    Private Class Clip
+        Public m_clipdata As DataObject
+        Public m_listtext As String
+
+        Public Sub New(ByVal data As DataObject)
+            m_clipdata = data
+
+            'Format the clip data suitable for displaying in the clip ring window
+            m_listtext = m_clipdata.GetData(DataFormats.UnicodeText, False)
+            Dim formats() As String = m_clipdata.GetFormats(False)
+            If m_listtext Is Nothing And formats.Length <> 0 Then
+                Dim index = Array.IndexOf(g_format_type_remapping_key, formats(0))
+                If index = -1 Then
+                    m_listtext = formats(0).ToString()
+                Else
+                    m_listtext = g_format_type_remapping_val(index)
+                End If
+            End If
+            If m_listtext Is Nothing Then
+                m_listtext = "<<non-text-data>>"
+            Else
+                m_listtext = Regex.Replace(m_listtext.Replace(vbNewLine, " " + Chr(182) + " "), "\s+", " ").Trim()
+            End If
+        End Sub
+
+        Public Overrides Function ToString() As String
+            Return m_listtext
+        End Function
+    End Class
+
+    'This class is used to set the proper parent to any UI that you may display from within a macro.
+    Public Class WinWrapper
+        Implements System.Windows.Forms.IWin32Window
+        Overridable ReadOnly Property Handle() As System.IntPtr Implements System.Windows.Forms.IWin32Window.Handle
+            Get
+                Dim iptr As New System.IntPtr(DTE.MainWindow.HWnd)
+                Return iptr
+            End Get
+        End Property
+    End Class
+
+
+    'Move a clip to the first position in the clip ring
+    Private Sub MoveToFront(ByVal index As Integer)
+        Dim move = g_clip_ring(index)
+        While index <> 0
+            g_clip_ring(index) = g_clip_ring(index - 1)
+            index -= 1
+        End While
+        g_clip_ring(0) = move
+    End Sub
+
+    'Test for duplicate clips
+    Private Function SameClip(ByVal lhs As Clip, ByVal rhs As Clip) As Boolean
+        Dim lhs_formats = lhs.m_clipdata.GetFormats()
+        Dim rhs_formats = rhs.m_clipdata.GetFormats()
+        If lhs_formats.Length <> rhs_formats.Length Then
+            Return False
+        End If
+        Array.Sort(lhs_formats)
+        Array.Sort(rhs_formats)
+        For i As Integer = 0 To lhs_formats.Length - 1
+            If lhs_formats(i) <> rhs_formats(i) Then
+                Return False
+            End If
+            If Array.IndexOf(g_ignorable_formats, lhs_formats(i)) = -1 And Not lhs.m_clipdata.GetData(lhs_formats(i)).Equals(rhs.m_clipdata.GetData(rhs_formats(i))) Then
+                Return False
+            End If
+        Next
+        Return True
+    End Function
+
+    'Remove a clip from the clip ring
+    Private Sub DeleteClip(ByVal index As Integer)
+        g_clip_count -= 1
+        While index <> g_clip_count
+            g_clip_ring(index) = g_clip_ring(index + 1)
+            index += 1
+        End While
+        g_clip_ring(index) = Nothing
+    End Sub
+
+    'Add a clip to the clip ring at the first position
+    ' if it's not a duplicate
+    Private Sub AddNewClip(ByVal clip As Clip)
+        For i As Integer = 0 To g_clip_count - 1
+            If SameClip(clip, g_clip_ring(i)) Then
+                MoveToFront(i)
+                Return
+            End If
+        Next
+        If g_clip_count = g_clip_ring_size Then
+            g_clip_count -= 1
+        End If
+        For i As Integer = g_clip_count To 1 Step -1
+            g_clip_ring(i) = g_clip_ring(i - 1)
+        Next
+        g_clip_count += 1
+        g_clip_ring(0) = clip
+    End Sub
+
+    'Paste a clip at the current selection
+    Private Sub Paste(ByRef clip As Clip)
+        ClipboardData() = clip.m_clipdata
+        Try
+            ExecuteCommand("Edit.Paste")
+        Catch ex As Exception
+            DTE.StatusBar.Text = "Clip Ring 'paste' not available: " + ex.Message
+        End Try
+    End Sub
+
+    'Copy the current clipboard contents into 'g_clip_data'
+    Private Sub GetClipboardData()
+        Dim data As IDataObject = Clipboard.GetDataObject()
+        Dim formats() As String = data.GetFormats(False)
+
+        g_clip_data = New DataObject()
+        For Each format As String In formats
+            g_clip_data.SetData(format, data.GetData(format, False))
+        Next
+    End Sub
+
+    'Copy 'g_clip_data' to the clipboard
+    Private Sub SetClipboardData()
+        Clipboard.SetDataObject(g_clip_data, True)
+    End Sub
+
+    'Run a function synchronously in a separate thread
+    Private Function RunThread(ByVal fct As Threading.ThreadStart)
+        Dim thread As New Threading.Thread(fct)
+        thread.ApartmentState = Threading.ApartmentState.STA
+        thread.Start()
+        thread.Join()
+    End Function
+
+    'Get/Set the contents of the clipboard
+    Private Property ClipboardData() As DataObject
+        Get
+            RunThread(AddressOf GetClipboardData)
+            Return g_clip_data
+        End Get
+        Set(ByVal value As DataObject)
+            g_clip_data = value
+            RunThread(AddressOf SetClipboardData)
+        End Set
+
+    End Property
+
+    'A form for displaying the items in the clip ring
+    Public Class ClipRingForm
+        Inherits Form
+        WithEvents m_listbox As New ListBox()
+        Public Sub New()
+            Me.Name = "ClipRingForm"
+            Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0F, 13.0F)
+            Me.AutoScaleMode = AutoScaleMode.Font
+            Me.AutoSizeMode = AutoSizeMode.GrowAndShrink
+            Me.ClientSize = New System.Drawing.Size(240, 108)
+            Me.ControlBox = False
+            Me.Controls.Add(m_listbox)
+            Me.FormBorderStyle = FormBorderStyle.FixedSingle
+            Me.StartPosition = FormStartPosition.CenterParent
+            m_listbox.Name = "ClipRingListBox"
+            m_listbox.Dock = DockStyle.Fill
+            PopulateList()
+        End Sub
+
+        'Handle key commands for the clip ring,
+        'Escape - closes the window
+        'Delete - removes an entry from the clip ring
+        'Return - pastes the currently selected entry
+        Sub OnListKeyDown(ByVal sender As Object, ByVal e As KeyEventArgs) Handles m_listbox.KeyDown
+            Select Case e.KeyCode
+                Case Keys.Escape
+                    Close()
+                Case Keys.Delete
+                    If 0 <= m_listbox.SelectedIndex And m_listbox.SelectedIndex < g_clip_count Then
+                        DeleteClip(m_listbox.SelectedIndex)
+                        m_listbox.Items.RemoveAt(m_listbox.SelectedIndex)
+                    End If
+                Case Keys.Return
+                    If 0 <= m_listbox.SelectedIndex And m_listbox.SelectedIndex < g_clip_count Then
+                        Paste(m_listbox.SelectedItem)
+                        MoveToFront(m_listbox.SelectedIndex)
+                        Close()
+                    End If
+            End Select
+        End Sub
+
+        'Paste an item from the clip ring via mouse click on one of the entries.
+        Sub OnListClick(ByVal sender As Object, ByVal e As MouseEventArgs) Handles m_listbox.MouseClick
+            Dim index As Integer = m_listbox.IndexFromPoint(e.Location)
+            If 0 <= index And index < m_listbox.Items.Count Then
+                Paste(m_listbox.Items(index))
+                MoveToFront(index)
+            End If
+            Close()
+        End Sub
+
+        'Close the clip ring window if we lose focus
+        Sub OnLostFocus(ByVal sender As Object, ByVal e As EventArgs) Handles Me.LostFocus
+            Close()
+        End Sub
+
+        'Populate the clip ring list
+        Private Sub PopulateList()
+            m_listbox.Items.Clear()
+            For i As Integer = 0 To g_clip_count - 1
+                m_listbox.Items.Add(g_clip_ring(i))
+            Next
+            If g_clip_count > 0 Then
+                m_listbox.SelectedIndex = 0
+            End If
+            Me.Size = New System.Drawing.Size(Me.ClientSize.Width, g_clip_ring_size * m_listbox.ItemHeight + 6)
+        End Sub
+    End Class
+
+    '******************************************************************
+    'Map "Ctrl+C" to this.
+    Public Sub Copy()
+        Try
+            'Use 'ExecuteCommand', rather than 'ActiveDocument.Selection.Copy()'
+            'so that copy/cut still work for other windows such as the resource editor
+            ExecuteCommand("Edit.Copy")
+            AddNewClip(New Clip(ClipboardData()))
+        Catch ex As Exception
+            DTE.StatusBar.Text = "Clip Ring 'copy' not available: " + ex.Message
+        End Try
+    End Sub
+
+    'Map "Ctrl+X" to this.
+    Public Sub Cut()
+        Try
+            'Use 'ExecuteCommand', rather than 'ActiveDocument.Selection.Cut()'
+            ' so that copy/cut still work for other windows such as the resource editor
+            ExecuteCommand("Edit.Cut")
+            AddNewClip(New Clip(ClipboardData()))
+        Catch ex As Exception
+            DTE.StatusBar.Text = "Clip Ring 'cut' not available: " + ex.Message
+        End Try
+    End Sub
+
+    'Map "Ctrl+Shift+V" to this.
+    Public Sub ShowClipRing()
+        Dim winptr As WinWrapper = New WinWrapper()
+        Dim form As ClipRingForm = New ClipRingForm()
+        form.ShowDialog(winptr)
+        ActiveWindow.Activate()
+    End Sub
+
+End Module

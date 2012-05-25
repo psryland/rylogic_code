@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup
+    Condition="'$(Build_EffectBeforeTargets)' == '' and '$(Build_EffectAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <Build_EffectBeforeTargets>Midl</Build_EffectBeforeTargets>
+    <Build_EffectAfterTargets>CustomBuild</Build_EffectAfterTargets>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Build_Effect>
+      <flags>/nologo</flags>
+      <outfile>$(IntDir)%(FileName).fxo</outfile>
+      <target>18</target>
+      <CommandLineTemplate>fxc [target] [flags] [outfile] "%(FullPath)"</CommandLineTemplate>
+      <Outputs>"[outfile]"</Outputs>
+    </Build_Effect>
+  </ItemDefinitionGroup>
+</Project>

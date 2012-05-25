@@ -1,0 +1,11 @@
+LIBRARY "linedrawerexampleplugin.dll"
+
+EXPORTS
+	ldrInitialise
+	ldrUnInitialise
+	
+IMPORT
+	ldrRegisterObject
+	ldrUnRegisterObject
+	ldrUnRegisterAllObjects
+

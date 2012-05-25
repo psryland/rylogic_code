@@ -1,0 +1,241 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ProjectSchemaDefinitions xmlns="clr-namespace:Microsoft.Build.Framework.XamlTypes;assembly=Microsoft.Build.Framework" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:transformCallback="Microsoft.Cpp.Dev10.ConvertPropertyCallback" xmlns:impl="clr-namespace:Microsoft.VisualStudio.Project.Contracts.Implementation;assembly=Microsoft.VisualStudio.Project.Contracts.Implementation">
+  <Rule
+    Name="Build_Effect"
+    PageTemplate="tool"
+    DisplayName="Compile HLSL Shader"
+    Order="200">
+    <Rule.DataSource>
+      <DataSource
+        Persistence="ProjectFile"
+        ItemType="Build_Effect" />
+    </Rule.DataSource>
+    <Rule.Categories>
+      <Category
+        Name="General">
+        <Category.DisplayName>
+          <sys:String>General</sys:String>
+        </Category.DisplayName>
+      </Category>
+      <Category
+        Name="Command Line"
+        Subtype="CommandLine">
+        <Category.DisplayName>
+          <sys:String>Command Line</sys:String>
+        </Category.DisplayName>
+      </Category>
+    </Rule.Categories>
+    <StringListProperty
+      Name="Inputs"
+      Category="Command Line"
+      IsRequired="true"
+      Switch=" ">
+      <StringListProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType="Build_Effect"
+          SourceType="Item" />
+      </StringListProperty.DataSource>
+    </StringListProperty>
+    <StringProperty
+      Name="flags"
+      Subcategory="Default"
+      HelpContext="0"
+      DisplayName="Compiler flags"
+      Description="Addition compiler flags"
+      Switch="[value]" />
+    <StringProperty
+      Name="outfile"
+      Subcategory="Default"
+      HelpContext="0"
+      DisplayName="Output File"
+      Description="The file to output. Leave blank for output to stdout"
+      Switch="/Fo&quot;[value]&quot;" />
+    <EnumProperty
+      Name="target"
+      Subcategory="Default"
+      HelpContext="0"
+      DisplayName="Target Profile"
+      Description="Target profile">
+      <EnumValue
+        Name="0"
+        DisplayName="vs_1_1"
+        Switch="/Tvs_1_1" />
+      <EnumValue
+        Name="1"
+        DisplayName="vs_2_0"
+        Switch="/Tvs_2_0" />
+      <EnumValue
+        Name="2"
+        DisplayName="vs_2_a"
+        Switch="/Tvs_2_a" />
+      <EnumValue
+        Name="3"
+        DisplayName="vs_2_sw"
+        Switch="/Tvs_2_sw" />
+      <EnumValue
+        Name="4"
+        DisplayName="vs_3_0"
+        Switch="/Tvs_3_0" />
+      <EnumValue
+        Name="5"
+        DisplayName="vs_3_sw"
+        Switch="/Tvs_3_sw" />
+      <EnumValue
+        Name="6"
+        DisplayName="vs_4_0"
+        Switch="/Tvs_4_0" />
+      <EnumValue
+        Name="7"
+        DisplayName="vs_4_1"
+        Switch="/Tvs_4_1" />
+      <EnumValue
+        Name="8"
+        DisplayName="ps_2_0"
+        Switch="/Tps_2_0" />
+      <EnumValue
+        Name="9"
+        DisplayName="ps_2_a"
+        Switch="/Tps_2_a" />
+      <EnumValue
+        Name="10"
+        DisplayName="ps_2_b"
+        Switch="/Tps_2_b" />
+      <EnumValue
+        Name="11"
+        DisplayName="ps_2_sw"
+        Switch="/Tps_2_sw" />
+      <EnumValue
+        Name="12"
+        DisplayName="ps_3_0"
+        Switch="/Tps_3_0" />
+      <EnumValue
+        Name="13"
+        DisplayName="ps_3_sw"
+        Switch="/Tps_3_sw" />
+      <EnumValue
+        Name="14"
+        DisplayName="ps_4_0"
+        Switch="/Tps_4_0" />
+      <EnumValue
+        Name="15"
+        DisplayName="ps_4_1"
+        Switch="/Tps_4_1" />
+      <EnumValue
+        Name="16"
+        DisplayName="gs_4_0"
+        Switch="/Tgs_4_0" />
+      <EnumValue
+        Name="17"
+        DisplayName="gs_4_1"
+        Switch="/Tgs_4_1" />
+      <EnumValue
+        Name="18"
+        DisplayName="fx_2_0"
+        Switch="/Tfx_2_0" />
+      <EnumValue
+        Name="19"
+        DisplayName="fx_4_0"
+        Switch="/Tfx_4_0" />
+      <EnumValue
+        Name="20"
+        DisplayName="fx_4_1"
+        Switch="/Tfx_4_1" />
+    </EnumProperty>
+    <StringProperty
+      Name="CommandLineTemplate"
+      DisplayName="Command Line"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <DynamicEnumProperty
+      Name="Build_EffectBeforeTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute Before</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run before.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^Build_EffectBeforeTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <DynamicEnumProperty
+      Name="Build_EffectAfterTargets"
+      Category="General"
+      EnumProvider="Targets"
+      IncludeInCommandLine="False">
+      <DynamicEnumProperty.DisplayName>
+        <sys:String>Execute After</sys:String>
+      </DynamicEnumProperty.DisplayName>
+      <DynamicEnumProperty.Description>
+        <sys:String>Specifies the targets for the build customization to run after.</sys:String>
+      </DynamicEnumProperty.Description>
+      <DynamicEnumProperty.ProviderSettings>
+        <NameValuePair
+          Name="Exclude"
+          Value="^Build_EffectAfterTargets|^Compute" />
+      </DynamicEnumProperty.ProviderSettings>
+      <DynamicEnumProperty.DataSource>
+        <DataSource
+          Persistence="ProjectFile"
+          ItemType=""
+          HasConfigurationCondition="true" />
+      </DynamicEnumProperty.DataSource>
+    </DynamicEnumProperty>
+    <StringListProperty
+      Name="Outputs"
+      DisplayName="Outputs"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <StringProperty
+      Name="ExecutionDescription"
+      DisplayName="Execution Description"
+      Visible="False"
+      IncludeInCommandLine="False" />
+    <StringListProperty
+      Name="AdditionalDependencies"
+      DisplayName="Additional Dependencies"
+      IncludeInCommandLine="False"
+      Visible="false" />
+    <StringProperty
+      Subtype="AdditionalOptions"
+      Name="AdditionalOptions"
+      Category="Command Line">
+      <StringProperty.DisplayName>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.DisplayName>
+      <StringProperty.Description>
+        <sys:String>Additional Options</sys:String>
+      </StringProperty.Description>
+    </StringProperty>
+  </Rule>
+  <ItemType
+    Name="Build_Effect"
+    DisplayName="Compile HLSL Shader" />
+  <FileExtension
+    Name="*.fx"
+    ContentType="Build_Effect" />
+  <FileExtension
+    Name="*.vsh"
+    ContentType="Build_Effect" />
+  <FileExtension
+    Name="*.psh"
+    ContentType="Build_Effect" />
+  <FileExtension
+    Name="*.hlsl"
+    ContentType="Build_Effect" />
+  <ContentType
+    Name="Build_Effect"
+    DisplayName="Compile HLSL Shader"
+    ItemType="Build_Effect" />
+</ProjectSchemaDefinitions>

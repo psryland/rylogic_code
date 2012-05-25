@@ -1,0 +1,2 @@
+copy the dll into 'C:\Users\Paul\Documents\Visual Studio 2008\Visualizers'
+restart VS

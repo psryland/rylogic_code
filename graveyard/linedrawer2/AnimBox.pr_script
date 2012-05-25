@@ -1,0 +1,44 @@
+*BoxWHD box FFFF0000
+{
+	*Animation
+	{
+		4			// Style: one of: NoAnimation = 0, PlayOnce = 1, PlayReverse = 2, PingPong = 3, PlayContinuous = 4
+		1.0			// Period in seconds
+		0 0 0		// Linear velocity in m/s
+		0 1 0		// Axis of rotation
+		1.0			// Angular speed in rad/s
+	}
+
+	*Transform
+	{
+		0.707 0.000 -0.707 2.000
+		0.000 1.000  0.000 0.000
+		0.707 0.000  0.707 0.000
+		0.000 0.000  0.000 1.000
+	}
+
+	2 0.25 0.25
+	
+	*BoxWHD child FFFF0000
+	{
+		*Transform
+		{
+			1.000 0.000 0.000 2.000
+			0.000 1.000 0.000 0.000
+			0.000 0.000 1.000 0.000
+			0.000 0.000 0.000 1.000
+		}
+
+		*Animation
+		{
+			3			// Style: one of: NoAnimation = 0, PlayOnce = 1, PlayReverse = 2, PingPong = 3, PlayContinuous = 4
+			1.0			// Period in seconds
+			0 0 0		// Linear velocity in m/s
+			0 1 0		// Axis of rotation
+			1.0			// Angular speed in rad/s
+		}
+
+		2 0.25 0.25
+	}
+}
+

@@ -1,0 +1,100 @@
+# Parse the file and build up an array of physics objects, impulses (in chronological order) and twists (in chronological order)
+# -plugin "C:\PDrive\PhysicsLab_LDPI\Debug\LDPI_PhysicsLab.dll"
+#
+#
+
+*Gravity				0 -3.0 0
+*Density				1
+*StaticFriction			0.6
+*DynamicFriction		0.4
+*Elasticity				0.8
+*TangentialElasticity	-0.5
+
+*PhysicsObject
+{
+	*Name		"Boris"
+	*Colour		80FF0000
+	*Position	0 8.0 0
+	*Velocity	0 0 0
+	*AngVel		0 0 0
+	*Model
+	{
+		*Primitive
+		{
+			*Type		"box"
+			*Dim		1.5 0.5 0.5
+			*Material	0
+#PSR...			*Transform
+#PSR...			{
+#PSR...				0.99  0 -0.01 0
+#PSR...				0     1 0     0
+#PSR...				0.01  0 0.99  0
+#PSR...				0     0 0     1
+#PSR...			}
+#PSR...			*Transform
+#PSR...			{
+#PSR...				0.707 0 -0.707 0
+#PSR...				0     1 0      0
+#PSR...				0.707 0 0.707  0
+#PSR...				0     0 0      1
+#PSR...			}
+				*Transform
+				{
+					0.146455757	-0.853242243	-0.5	0
+					0.5	0.5	-0.707107	0
+					0.853242243	-0.146455757	0.5	0
+					0	0	0	1
+				}
+		}
+#PSR...		*Primitive
+#PSR...		{
+#PSR...			*Type		"box"
+#PSR...			*Dim		0.5 1.5 0.5
+#PSR...			*Material	0
+#PSR...			*Transform
+#PSR...			{
+#PSR...				1 0 0 0
+#PSR...				0 1 0 1
+#PSR...				0 0 1 0
+#PSR...				0 0 0 1
+#PSR...			}
+#PSR...		}
+	}
+}
+
+#PSR...*Event
+#PSR...{
+#PSR...	*Type	"Impulse"	# Impulse event
+#PSR...	*Obj	"Boris"		# Name of the physics object to impulse
+#PSR...	*Pos	1.5 0.5 0.5		# Physics object relative (world space)
+#PSR...	*Dir	0 1 0		# Direction of the impulse (world space)
+#PSR...	*Mag	10.0		# Magnitude in Ns
+#PSR...	*Time	1.0			# seconds
+#PSR...}
+
+#PSR...*Event
+#PSR...{
+#PSR...	*Type	"Moment"	# Rotational impulse event
+#PSR...	*Obj	"Boris"		# Name of the physics object to impulse
+#PSR...	*Pos	0 0 0		# Physics object relative (world space)
+#PSR...	*Dir	0 1 0		# Direction of the impulse (world space)
+#PSR...	*Mag	100.0		# Magnitude in Nms
+#PSR...	*Time	2.0			# seconds
+#PSR...}
+#PSR...
+#PSR...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

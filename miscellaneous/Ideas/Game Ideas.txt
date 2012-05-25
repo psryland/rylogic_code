@@ -1,0 +1,5 @@
+Tycoon cross Elite style game:
+You're a contractor on an asteroid settlement. Your objective is to make money by winning contracts delivering materials, people, supplies, etc to various locations on the asteroid. Contract rewards are based on speedy deliveries, skill deliveries (to awkward locations), volume of delivered goods, reputation, etc. You are competing with other contractors with varyingly honourable business practises. You have the option of land vehicles or flying vehicles, each having costs in terms of cost, fuel, maintenance, etc but advantages such as speed, power, cost, required skill. Your objectives are to make money, buy bigger/better vehicles, and put other contractors out of business.
+ - Procedurally generated asteroid
+ - Thrust style delivers
+ - Elite style rivalry

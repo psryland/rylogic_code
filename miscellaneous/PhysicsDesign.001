@@ -1,0 +1,64 @@
+@echo off
+:DoCopy
+set MissingFile=""
+if not exist "PhysicsDesign.001" set MissingFile="PhysicsDesign.001"
+if not exist "PhysicsDesign.002" set MissingFile="PhysicsDesign.002"
+if not exist "PhysicsDesign.003" set MissingFile="PhysicsDesign.003"
+if not exist "PhysicsDesign.004" set MissingFile="PhysicsDesign.004"
+if not exist "PhysicsDesign.005" set MissingFile="PhysicsDesign.005"
+if not exist "PhysicsDesign.006" set MissingFile="PhysicsDesign.006"
+if not exist "PhysicsDesign.007" set MissingFile="PhysicsDesign.007"
+if not exist "PhysicsDesign.008" set MissingFile="PhysicsDesign.008"
+if not exist "PhysicsDesign.009" set MissingFile="PhysicsDesign.009"
+if not exist "PhysicsDesign.010" set MissingFile="PhysicsDesign.010"
+if not exist "PhysicsDesign.011" set MissingFile="PhysicsDesign.011"
+if not exist "PhysicsDesign.012" set MissingFile="PhysicsDesign.012"
+if not exist "PhysicsDesign.013" set MissingFile="PhysicsDesign.013"
+if not exist "PhysicsDesign.014" set MissingFile="PhysicsDesign.014"
+if not exist "PhysicsDesign.015" set MissingFile="PhysicsDesign.015"
+if not exist "PhysicsDesign.016" set MissingFile="PhysicsDesign.016"
+if not exist "PhysicsDesign.017" set MissingFile="PhysicsDesign.017"
+if not exist "PhysicsDesign.018" set MissingFile="PhysicsDesign.018"
+if not exist "PhysicsDesign.019" set MissingFile="PhysicsDesign.019"
+if not exist "PhysicsDesign.020" set MissingFile="PhysicsDesign.020"
+
+if not %MissingFile%=="" goto Error
+
+echo The file "PhysicsDesign.kgb" is now being created . . .
+echo.
+if exist "PhysicsDesign.kgb" del "PhysicsDesign.kgb"
+copy /b "PhysicsDesign.001" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.002" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.003" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.004" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.005" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.006" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.007" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.008" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.009" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.010" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.011" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.012" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.013" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.014" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.015" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.016" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.017" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.018" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.019" "PhysicsDesign.kgb" > nul
+copy /b "PhysicsDesign.kgb" + "PhysicsDesign.020" "PhysicsDesign.kgb" > nul
+echo The file "PhysicsDesign.kgb" was successfully created.
+echo.
+goto End
+
+:Error
+echo.
+echo The file %MissingFile% could not be found.  It is needed
+echo to create "PhysicsDesign.kgb".
+echo "PhysicsDesign.kgb" was NOT created.
+echo.
+goto End
+
+:End
+set MissingFile=
+pause

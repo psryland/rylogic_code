@@ -1,0 +1,27 @@
+Microsoft Visual Studio Solution File, Format Version 7.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LDSend", "LDSend.vcproj", "{53CDC698-E172-4A11-81FF-E44E3AE70C2E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UDPTransmitter", "..\..\Network\UDPTransmitter\UDPTransmitter.vcproj", "{C68CBE2B-1BD8-41B4-8FC8-0F2C9E73A776}"
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		ConfigName.0 = Debug
+		ConfigName.1 = Release
+	EndGlobalSection
+	GlobalSection(ProjectDependencies) = postSolution
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{53CDC698-E172-4A11-81FF-E44E3AE70C2E}.Debug.ActiveCfg = Debug|Win32
+		{53CDC698-E172-4A11-81FF-E44E3AE70C2E}.Debug.Build.0 = Debug|Win32
+		{53CDC698-E172-4A11-81FF-E44E3AE70C2E}.Release.ActiveCfg = Release|Win32
+		{53CDC698-E172-4A11-81FF-E44E3AE70C2E}.Release.Build.0 = Release|Win32
+		{C68CBE2B-1BD8-41B4-8FC8-0F2C9E73A776}.Debug.ActiveCfg = Debug|Win32
+		{C68CBE2B-1BD8-41B4-8FC8-0F2C9E73A776}.Debug.Build.0 = Debug|Win32
+		{C68CBE2B-1BD8-41B4-8FC8-0F2C9E73A776}.Release.ActiveCfg = Release|Win32
+		{C68CBE2B-1BD8-41B4-8FC8-0F2C9E73A776}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

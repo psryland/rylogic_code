@@ -1,0 +1,35 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-nz">
+<head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+  <link rel="stylesheet" type="text/css" href="style.css" />
+  <title>Rylogic Limited</title>
+
+<script type="text/javascript">
+
+/***********************************************
+* Easy Email Scrambler script- © Dynamic Drive (www.dynamicdrive.com)
+* This notice MUST stay intact for legal use
+* Visit http://www.dynamicdrive.com/ for full source code
+***********************************************/
+
+var maildivider="[at]" //enter divider you use to divide your email address strings
+
+for (i=0; i<=(document.links.length-1); i++){
+if (document.links[i].href.indexOf(maildivider)!=-1)
+document.links[i].href=document.links[i].href.split(maildivider)[0]+"@"+document.links[i].href.split(maildivider)[1]
+}
+
+</script>
+</head>
+
+
+<body>
+
+<a href="mailto:contact[at]microsoft.com">Contact Microsoft</a>
+<a href="mailto:help[at]google.com">Contact Google</a>
+
+</body>
+</html>

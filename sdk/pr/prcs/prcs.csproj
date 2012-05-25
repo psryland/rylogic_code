@@ -1,0 +1,266 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>pr</RootNamespace>
+    <AssemblyName>pr</AssemblyName>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <SignAssembly>false</SignAssembly>
+    <AssemblyOriginatorKeyFile>pr.pfx</AssemblyOriginatorKeyFile>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkSubset>
+    </TargetFrameworkSubset>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="nunit.framework, Version=2.5.9.10348, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\nunit\net-2.0\framework\nunit.framework.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationFramework">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.XML" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="WindowsBase">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="attrib\string_attr.cs" />
+    <Compile Include="attrib\units_attr.cs" />
+    <Compile Include="common\box.cs" />
+    <Compile Include="common\pin.cs" />
+    <Compile Include="common\range.cs" />
+    <Compile Include="common\singleton.cs" />
+    <Compile Include="common\tuple.cs" />
+    <Compile Include="common\weak_delegate.cs" />
+    <Compile Include="container\listevt.cs" />
+    <Compile Include="container\ring_buffer.cs" />
+    <Compile Include="container\sortable_binding_list.cs" />
+    <Compile Include="directshow.net\amstream.cs" />
+    <Compile Include="directshow.net\amvideo.cs" />
+    <Compile Include="directshow.net\atscpsipparser.cs" />
+    <Compile Include="directshow.net\austream.cs" />
+    <Compile Include="directshow.net\AxCore.cs" />
+    <Compile Include="directshow.net\AXExtend.cs" />
+    <Compile Include="directshow.net\BDAIface.cs" />
+    <Compile Include="directshow.net\Bdatif.cs" />
+    <Compile Include="directshow.net\BDATypes.cs" />
+    <Compile Include="directshow.net\Control.cs" />
+    <Compile Include="directshow.net\DES.cs" />
+    <Compile Include="directshow.net\DevEnum.cs" />
+    <Compile Include="directshow.net\DMODShow.cs" />
+    <Compile Include="directshow.net\dsattrib.cs" />
+    <Compile Include="directshow.net\DsUtils.cs" />
+    <Compile Include="directshow.net\dvbsiparser.cs" />
+    <Compile Include="directshow.net\DVDIf.cs" />
+    <Compile Include="directshow.net\DynGraph.cs" />
+    <Compile Include="directshow.net\encdec.cs" />
+    <Compile Include="directshow.net\EvCode.cs" />
+    <Compile Include="directshow.net\IL21Dec.cs" />
+    <Compile Include="directshow.net\MediaObj.cs" />
+    <Compile Include="directshow.net\MediaParam.cs" />
+    <Compile Include="directshow.net\Misc.cs" />
+    <Compile Include="directshow.net\Mixerocx.cs" />
+    <Compile Include="directshow.net\mmstream.cs" />
+    <Compile Include="directshow.net\mpconfig.cs" />
+    <Compile Include="directshow.net\Mpeg2Data.cs" />
+    <Compile Include="directshow.net\mpeg2psiparser.cs" />
+    <Compile Include="directshow.net\Mpeg2Structs.cs" />
+    <Compile Include="directshow.net\other.cs" />
+    <Compile Include="directshow.net\PlayList.cs" />
+    <Compile Include="directshow.net\QEdit.cs" />
+    <Compile Include="directshow.net\qnetwork.cs" />
+    <Compile Include="directshow.net\RegBag.cs" />
+    <Compile Include="directshow.net\Sbe.cs" />
+    <Compile Include="directshow.net\Tuner.cs" />
+    <Compile Include="directshow.net\TvRatings.cs" />
+    <Compile Include="directshow.net\Uuids.cs" />
+    <Compile Include="directshow.net\Vidcap.cs" />
+    <Compile Include="directshow.net\VidPort.cs" />
+    <Compile Include="directshow.net\Vmr9.cs" />
+    <Compile Include="directshow.net\VmRender.cs" />
+    <Compile Include="extn\datagridview_extensions.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="extn\drawing_extensions.cs" />
+    <Compile Include="extn\enum_extensions.cs" />
+    <Compile Include="extn\event_extensions.cs" />
+    <Compile Include="extn\list_extensions.cs" />
+    <Compile Include="extn\path_extensions.cs" />
+    <Compile Include="extn\string_extensions.cs" />
+    <Compile Include="extn\xml_extensions.cs" />
+    <Compile Include="gfx\colour128.cs" />
+    <Compile Include="gfx\colour32.cs" />
+    <Compile Include="gfx\gfx.cs" />
+    <Compile Include="gui\dock_container.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="gui\graph_control.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="gui\hover_scroll.cs">
+    </Compile>
+    <Compile Include="gui\progress_form.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="gui\recent_files.cs" />
+    <Compile Include="gfx\video.cs">
+    </Compile>
+    <Compile Include="gui\tree_grid_view.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\view3d.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="gui\view_image_control.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="gui\view_video_control.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="gui\vt100.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="inet\cred.cs" />
+    <Compile Include="inet\inet.cs" />
+    <Compile Include="ldr\ldr_helper.cs" />
+    <Compile Include="maths\bbox.cs" />
+    <Compile Include="maths\bit.cs" />
+    <Compile Include="maths\matrix3x3.cs" />
+    <Compile Include="maths\matrix4x4.cs" />
+    <Compile Include="maths\quaternion.cs" />
+    <Compile Include="maths\rand.cs" />
+    <Compile Include="maths\scalar.cs" />
+    <Compile Include="maths\vector2.cs" />
+    <Compile Include="maths\vector4.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="util\base64.cs" />
+    <Compile Include="util\crt.cs" />
+    <Compile Include="util\csv_data.cs" />
+    <Compile Include="util\eql.cs" />
+    <Compile Include="util\event_batcher.cs" />
+    <Compile Include="util\file_watch.cs" />
+    <Compile Include="util\generic_type_converter.cs" />
+    <Compile Include="util\log.cs" />
+    <Compile Include="util\mouse_keyboard_hook.cs" />
+    <Compile Include="util\string_transform.cs" />
+    <Compile Include="util\uncloseable_stream.cs">
+    </Compile>
+    <Compile Include="util\ref.cs" />
+    <Compile Include="undo\undo.cs" />
+    <Compile Include="util\win32.cs" />
+    <Compile Include="util\windows.cs" />
+    <Compile Include="util\util.cs" />
+    <Compile Include="util\winmm.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.VisualBasic.PowerPacks.10.0">
+      <Visible>False</Visible>
+      <ProductName>Microsoft Visual Basic PowerPacks 10.0</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="gui\view_video_control.resx">
+      <DependentUpon>view_video_control.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="pr.pfx" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
+  </PropertyGroup>
+</Project>

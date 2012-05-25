@@ -1,0 +1,20 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\8.0\NativeDE\StepOver]
+"RTDynamicCast"="__RTDynamicCast=NoStepInfo"
+"TAO_vars"="TAO_Objref_Var_T.*\\:\\:in=NoStepInto"
+"TAO_seq_var"="TAO_Seq_Var_Base_T.*\\:\\:.*=NoStepInto"
+"boost_foreach"="boost\\:\\:foreach_detail_\\:\\:.*=NoStepInto"
+"boost_shared_ptr"="boost\\:\\:shared_ptr.*\\:\\:.*=NoStepInto"
+"std_string_c_str"="std\\:\\:basic_string.*\\:\\:.*=NoStepInto"
+"std::list"="std\\:\\:list.*\\:\\:.*=NoStepInto"
+"std::vector"="std\\:\\:vector.*\\:\\:.*=NoStepInto"
+"std::map"="std\\:\\:map.*\\:\\:.*=NoStepInto"
+"std::set"="std\\:\\:set.*\\:\\:.*=NoStepInto"
+"PtrObjectGetter"="PtrObjectGetter.*\\:\\:operator-\\>"
+
+"pr::no_step_into"="pr\\:\\:no_step_into\\:\\:.*=NoStepInto"
+
+"MAv4"="MAv4\\:\\:.*=NoStepInto"
+"MAm4"="MAm4\\:\\:.*=NoStepInto"
+"hamster"="hamster\\:\\:.*=NoStepInto"

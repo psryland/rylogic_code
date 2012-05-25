@@ -1,0 +1,189 @@
+<DProject>
+ <ProjectGuid>{BB9F34D1-BC95-4FE2-BEC4-6AB27B85B2BA}</ProjectGuid>
+ <Config name="Debug">
+  <obj>0</obj>
+  <link>0</link>
+  <lib>0</lib>
+  <multiobj>0</multiobj>
+  <singleFileCompilation>0</singleFileCompilation>
+  <oneobj>0</oneobj>
+  <trace>0</trace>
+  <quiet>0</quiet>
+  <verbose>0</verbose>
+  <vtls>0</vtls>
+  <symdebug>1</symdebug>
+  <optimize>0</optimize>
+  <cpu>0</cpu>
+  <isX86_64>0</isX86_64>
+  <isLinux>0</isLinux>
+  <isOSX>0</isOSX>
+  <isWindows>0</isWindows>
+  <isFreeBSD>0</isFreeBSD>
+  <isSolaris>0</isSolaris>
+  <scheduler>0</scheduler>
+  <useDeprecated>0</useDeprecated>
+  <useAssert>0</useAssert>
+  <useInvariants>0</useInvariants>
+  <useIn>0</useIn>
+  <useOut>0</useOut>
+  <useArrayBounds>0</useArrayBounds>
+  <noboundscheck>0</noboundscheck>
+  <useSwitchError>0</useSwitchError>
+  <useUnitTests>0</useUnitTests>
+  <useInline>0</useInline>
+  <release>0</release>
+  <preservePaths>0</preservePaths>
+  <warnings>0</warnings>
+  <infowarnings>0</infowarnings>
+  <pic>0</pic>
+  <cov>0</cov>
+  <nofloat>0</nofloat>
+  <Dversion>2</Dversion>
+  <ignoreUnsupportedPragmas>0</ignoreUnsupportedPragmas>
+  <otherDMD>1</otherDMD>
+  <program>D:\DPL\D2.052\dmd2\windows\bin\dmd.exe</program>
+  <imppath>q:\sdk\pr;d:\dpl\dfl\import</imppath>
+  <fileImppath />
+  <outdir>..\..\..\obj\dpl\$(ProjectName)\$(ConfigurationName)</outdir>
+  <objdir>$(OutDir)</objdir>
+  <objname />
+  <libname />
+  <doDocComments>0</doDocComments>
+  <docdir />
+  <docname />
+  <modules_ddoc />
+  <ddocfiles />
+  <doHdrGeneration>0</doHdrGeneration>
+  <hdrdir />
+  <hdrname />
+  <doXGeneration>1</doXGeneration>
+  <xfilename>$(IntDir)\$(TargetName).json</xfilename>
+  <debuglevel>0</debuglevel>
+  <debugids />
+  <versionlevel>0</versionlevel>
+  <versionids />
+  <dump_source>0</dump_source>
+  <mapverbosity>0</mapverbosity>
+  <createImplib>0</createImplib>
+  <defaultlibname />
+  <debuglibname />
+  <moduleDepsFile />
+  <run>0</run>
+  <runargs />
+  <runCv2pdb>1</runCv2pdb>
+  <pathCv2pdb>$(VisualDInstallDir)cv2pdb\cv2pdb.exe</pathCv2pdb>
+  <objfiles />
+  <linkswitches />
+  <libfiles>linedrawer2.$(ConfigurationName).lib dfl_debug.lib</libfiles>
+  <libpaths>D:\DPL\d2.050\dmd2\windows\lib</libpaths>
+  <deffile>ldr_example_plugin.def</deffile>
+  <resfile>ui.res</resfile>
+  <exefile>$(OutDir)\$(ProjectName).dll</exefile>
+  <additionalOptions>-L/exet:nt/su:windows:4.0</additionalOptions>
+  <preBuildCommand />
+  <postBuildCommand />
+  <debugtarget>Q:\obj\LineDrawer2\Debug\linedrawer2.exe</debugtarget>
+  <debugarguments>-plugin $(TargetPath)</debugarguments>
+  <debugworkingdir />
+  <debugattach>0</debugattach>
+  <debugremote />
+  <debugEngine>1</debugEngine>
+  <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
+ </Config>
+ <Config name="Release">
+  <obj>0</obj>
+  <link>0</link>
+  <lib>0</lib>
+  <multiobj>0</multiobj>
+  <singleFileCompilation>0</singleFileCompilation>
+  <oneobj>0</oneobj>
+  <trace>0</trace>
+  <quiet>0</quiet>
+  <verbose>0</verbose>
+  <vtls>0</vtls>
+  <symdebug>0</symdebug>
+  <optimize>0</optimize>
+  <cpu>0</cpu>
+  <isX86_64>0</isX86_64>
+  <isLinux>0</isLinux>
+  <isOSX>0</isOSX>
+  <isWindows>0</isWindows>
+  <isFreeBSD>0</isFreeBSD>
+  <isSolaris>0</isSolaris>
+  <scheduler>0</scheduler>
+  <useDeprecated>0</useDeprecated>
+  <useAssert>0</useAssert>
+  <useInvariants>0</useInvariants>
+  <useIn>0</useIn>
+  <useOut>0</useOut>
+  <useArrayBounds>0</useArrayBounds>
+  <noboundscheck>0</noboundscheck>
+  <useSwitchError>0</useSwitchError>
+  <useUnitTests>0</useUnitTests>
+  <useInline>0</useInline>
+  <release>1</release>
+  <preservePaths>0</preservePaths>
+  <warnings>0</warnings>
+  <infowarnings>0</infowarnings>
+  <pic>0</pic>
+  <cov>0</cov>
+  <nofloat>0</nofloat>
+  <Dversion>2</Dversion>
+  <ignoreUnsupportedPragmas>0</ignoreUnsupportedPragmas>
+  <otherDMD>1</otherDMD>
+  <program>D:\DPL\D2.052\dmd2\windows\bin\dmd.exe</program>
+  <imppath>q:\sdk\pr;d:\dpl\dfl\import</imppath>
+  <fileImppath />
+  <outdir>..\..\..\obj\dpl\$(ProjectName)\$(ConfigurationName)</outdir>
+  <objdir>$(OutDir)</objdir>
+  <objname />
+  <libname />
+  <doDocComments>0</doDocComments>
+  <docdir />
+  <docname />
+  <modules_ddoc />
+  <ddocfiles />
+  <doHdrGeneration>0</doHdrGeneration>
+  <hdrdir />
+  <hdrname />
+  <doXGeneration>1</doXGeneration>
+  <xfilename>$(IntDir)\$(TargetName).json</xfilename>
+  <debuglevel>0</debuglevel>
+  <debugids />
+  <versionlevel>0</versionlevel>
+  <versionids />
+  <dump_source>0</dump_source>
+  <mapverbosity>0</mapverbosity>
+  <createImplib>0</createImplib>
+  <defaultlibname />
+  <debuglibname />
+  <moduleDepsFile />
+  <run>0</run>
+  <runargs />
+  <runCv2pdb>0</runCv2pdb>
+  <pathCv2pdb>$(VisualDInstallDir)cv2pdb\cv2pdb.exe</pathCv2pdb>
+  <objfiles />
+  <linkswitches />
+  <libfiles>linedrawer2.$(ConfigurationName).lib</libfiles>
+  <libpaths />
+  <deffile>ldr_example_plugin.def</deffile>
+  <resfile>ui.res</resfile>
+  <exefile>$(OutDir)\$(ProjectName).dll</exefile>
+  <additionalOptions />
+  <preBuildCommand />
+  <postBuildCommand />
+  <debugtarget>Q:\obj\LineDrawer2\Debug\linedrawer2.exe</debugtarget>
+  <debugarguments>-plugin $(TargetPath)</debugarguments>
+  <debugworkingdir />
+  <debugattach>0</debugattach>
+  <debugremote />
+  <debugEngine>0</debugEngine>
+  <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
+ </Config>
+ <Folder name="ldr_example_plugin">
+  <File path="dllmain.d" />
+  <File path="ldr_example_plugin.def" />
+  <File path="create_import_libs.cmd" />
+  <File path="build_resources.cmd" />
+ </Folder>
+</DProject>

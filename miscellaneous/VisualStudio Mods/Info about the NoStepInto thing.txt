@@ -1,0 +1,42 @@
+Visual Studio 8.0 (Whidbey)
+
+Not sure when it happened, but beta 2 anyway requires this to be in HKLM not HKCU so the full reg path is now HKLM\Software\Microsoft\VisualStudio\8.0\NativeDE\StepOver. Yes, that means you need to be an Admin to set it up, and it is set for all users of your box. That's what happens when features aren't "official".
+
+ 
+Advanced Features
+
+The debugger supports additional escapes over and above the normal Visual Studio regular expression syntax, but note that even I have never tried these so YMMV. I got this list from comments in the source. Well I'm sure you know that such things cannot always be trusted 100%, but here they are anyway:
+
+\cid      A C/C++ identifier
+\funct   A C/C++ function name
+\scope  A set of class/namespace specifiers for a function (e.g. ATL::CFoo::CBar::)
+\anything         any string
+\oper    A C/C++ operator
+
+ 
+
+Additional Examples
+
+These examples are shown exactly how you would enter them via RegEdit, not in the more cumbersome .reg format. The numbers are arbitrary, but in the multi-line examples their relative values are important to get the right ordering.
+
+Don’t step into members of CString[AWT] etc:
+
+1          \scope:CString.*\:\:.*=NoStepInto
+
+Don’t step into overloaded operators:
+
+10        \scope:operator\oper:=NoStepInto
+
+Don’t step into ATL:: except for CComBSTRs non-operator members:
+
+20        ATL\:\:CComBSTR::\funct:=StepInto
+
+10        ATL\:\:.*=NoStepInto
+
+Don’t step into templated things, unless they are merely templated functions in a non-templated class:
+
+20        \scope:\funct:=StepInto
+
+10        .*[\<\>].NoStepInto
+
+ 

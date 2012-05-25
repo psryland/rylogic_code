@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "statement_parser", "statement_parser.csproj", "{C16C3D3F-7DDE-4347-ABC5-3A06C57BF27D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prcs", "..\..\sdk\pr\prcs\prcs.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C16C3D3F-7DDE-4347-ABC5-3A06C57BF27D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C16C3D3F-7DDE-4347-ABC5-3A06C57BF27D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C16C3D3F-7DDE-4347-ABC5-3A06C57BF27D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C16C3D3F-7DDE-4347-ABC5-3A06C57BF27D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

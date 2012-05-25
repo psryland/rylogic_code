@@ -1,0 +1,514 @@
+Imports EnvDTE
+Imports System.Diagnostics
+Imports System.IO
+
+Public Module MyMacros
+
+    '********************
+    '* Global variables *
+    '********************
+
+    Dim strName = "Fuz" 'Replace this with the one you want for the comment - should be 3 characters
+
+
+    '*************
+    '* Functions *
+    '*************
+
+    '*****
+    'GetFilenameExtension
+    Function GetFilenameExtension(ByVal filename As String) As String
+
+        Dim last_dot = filename.LastIndexOf(".")
+        If last_dot = -1 Then
+            Return ("")
+        End If
+        last_dot += 1
+        Return LCase(filename.Substring(last_dot))
+
+    End Function
+
+    '*****
+    'Open the header or source file corresponding to the currently open file
+    Sub OpenHeaderOrSource()
+
+        Dim FileName As String = DTE.ActiveDocument.FullName
+        Dim FileExtn As String = GetFilenameExtension(FileName)
+        Dim FilePathAndTitle As String = FileName.Substring(0, FileName.Length - FileExtn.Length)
+
+        If FileExtn = "h" Then
+            DTE.ItemOperations.OpenFile(FilePathAndTitle + "cpp")
+        ElseIf FileExtn = "cpp" Then
+            DTE.ItemOperations.OpenFile(FilePathAndTitle + "h")
+        End If
+
+    End Sub
+
+
+    '**************************************************************************************************
+    '*
+    '* Function    - GetOpenEndedComment
+    '* Parameters  - strExtension: The extension of the filename.
+    '* Returns     - The open-ended comment for the specified extension.
+    '* Description - Returns the string of an open-ended comment for a specified filetype, or a blank
+    '*               string if the filetype does not support open-ended comments.
+    '* Author      - Steve Robb
+    '*
+    '**************************************************************************************************
+
+    Function GetOpenEndedComment(ByVal strExtension As String) As String
+
+        'Set up open-ended comments for filetypes
+        Dim strResult As String = ""
+        Select Case strExtension
+
+            Case "cpp", "c", "cs", "hpp", "h", "inl", "tli", ""
+                strResult = "//"
+
+            Case "asm"
+                strResult = ";"
+
+            Case "dsm", "vbs"
+                strResult = "'"
+
+            Case "lua"
+                strResult = "--"
+
+        End Select
+
+        'Return result
+        Return strResult
+
+    End Function
+
+    '******************************
+    '* End of GetOpenEndedComment *
+    '******************************
+
+
+    '**************************************************************************************************
+    '*
+    '* Function    - GetDoubleEndedCommentStart
+    '* Parameters  - strExtension: The extension of the filename.
+    '* Returns     - The start of a double-ended comment for the specified extension.
+    '* Description - Returns the start string of a double-ended comment for a specified filetype, or
+    '*               a blank string if the filetype is not supported.
+    '* Author      - Steve Robb
+    '*
+    '**************************************************************************************************
+
+    Function GetDoubleEndedCommentStart(ByVal strExtension As String) As String
+
+        'Set up open-ended comments for filetypes
+        Dim strResult As String = ""
+        Select Case strExtension
+
+            Case "cpp", "c", "cs", "inl", "hpp", "h", "tli", ""
+                strResult = "/*"
+
+        End Select
+
+        'Return result
+        Return strResult
+
+    End Function
+
+    '*************************************
+    '* End of GetDoubleEndedCommentStart *
+    '*************************************
+
+
+    '**************************************************************************************************
+    '*
+    '* Function    - GetDoubleEndedCommentEnd
+    '* Parameters  - strExtension: The extension of the filename.
+    '* Returns     - The end of a double-ended comment for the specified extension.
+    '* Description - Returns the end string of a double-ended comment for a specified filetype, or a
+    '*               blank string if the filetype is not supported.
+    '* Author      - Steve Robb
+    '*
+    '**************************************************************************************************
+
+    Function GetDoubleEndedCommentEnd(ByVal strExtension As String) As String
+
+        'Set up open-ended comments for filetypes
+        Dim strResult As String = ""
+        Select Case strExtension
+
+            Case "cpp", "c", "cs", "inl", "hpp", "h", "tli", ""
+                strResult = "*/"
+
+        End Select
+
+        'Return result
+        Return strResult
+
+    End Function
+
+    '***********************************
+    '* End of GetDoubleEndedCommentEnd *
+    '***********************************
+
+
+    '**************************************************************************************************
+    '*
+    '* Function    - IsPointInBlock
+    '* Parameters  - epPoint     : The point to check.
+    '*               epBlockStart: The start of the block.
+    '*               epBlockEnd  : The end of the block.
+    '* Returns     - "true" if the point was in the block, "false" otherwise.
+    '* Description - Tests if a point lies within a block of text.
+    '* Author      - Steve Robb
+    '*
+    '**************************************************************************************************
+
+    Function IsPointInBlock(ByVal epPoint As EditPoint, ByVal epBlockStart As EditPoint, ByVal epBlockEnd As EditPoint) As Boolean
+
+        'Return result
+        Return ((epPoint.GreaterThan(epBlockStart)) Or (epPoint.EqualTo(epBlockStart))) And (epPoint.LessThan(epBlockEnd))
+
+    End Function
+
+    '*************************
+    '* End of IsPointInBlock *
+    '*************************
+
+
+    '**************************************************************************************************
+    '*
+    '* Function    - FindOpenEndedMacroComment
+    '* Parameters  - strComment    : The comment to search for.
+    '*               epCommentStart: The point on the line to test for the comment.
+    '*               repCommentEnd : The point at which the comment ends is returned in this.
+    '* Returns     - "true" if a macro-inserted comment was found, "false" otherwise.
+    '* Description - Tests if a macro-inserted comment lies within a block of text.
+    '* Author      - Steve Robb
+    '*
+    '**************************************************************************************************
+
+    Function FindOpenEndedMacroComment(ByVal strComment As String, ByVal epCommentStart As EditPoint, ByRef repCommentEnd As EditPoint) As Boolean
+
+        'Check if an open-ended comment was found at start of line
+        If epCommentStart.GetText(strComment.Length()) = strComment Then
+
+            'Create EditPoint at where ellipsis should be
+            Dim epEllipsis As EditPoint = epCommentStart.CreateEditPoint()
+            epEllipsis.CharRight(strComment.Length() + 3)
+
+            'Check if an ellipsis was found
+            If epEllipsis.GetText(3) = "..." Then
+
+                'Move ellipsis edit point to end of ellipsis
+                epEllipsis.CharRight(3)
+
+                'Copy comment positions into result
+                repCommentEnd = epEllipsis
+
+                'Return result
+                Return True
+
+            End If
+
+        End If
+
+        'Return result
+        Return False
+
+    End Function
+
+    '************************************
+    '* End of FindOpenEndedMacroComment *
+    '************************************
+
+
+    '**************************************************************************************************
+    '*
+    '* Function    - FindDoubleEndedMacroComment
+    '* Parameters  - strLeftComment : The left-hand end of the double-ended comment.
+    '*               strRightComment: The right-hand end of the double-ended comment.
+    '*               epSearchFrom   : The point to start searching from.
+    '*               repCommentEnd  : The point at which the comment ends is returned in this.
+    '* Returns     - "true" if a macro-inserted comment was found, "false" otherwise.
+    '* Description - Tests if a macro-inserted comment lies within a block of text.
+    '* Author      - Steve Robb
+    '*
+    '**************************************************************************************************
+
+    Function FindDoubleEndedMacroComment(ByVal strLeftComment As String, ByVal strRightComment As String, ByVal epSearchFrom As EditPoint, ByRef repLeftCommentStart As EditPoint, ByRef repLeftCommentEnd As EditPoint, ByRef repRightCommentStart As EditPoint, ByRef repRightCommentEnd As EditPoint) As Boolean
+
+        'Attempt to find comment start
+        repLeftCommentStart = epSearchFrom.CreateEditPoint()
+        repLeftCommentStart.CharRight(strRightComment.Length - 1)
+        If (repLeftCommentStart.FindPattern(strLeftComment, 2 + 4 + 128)) Then
+
+            'Attempt to find comment end
+            repRightCommentStart = repLeftCommentStart.CreateEditPoint()
+            If (repRightCommentStart.FindPattern(strRightComment, 2 + 4, repRightCommentEnd)) Then
+
+                'Check if cursor was in the comment
+                If (IsPointInBlock(epSearchFrom, repLeftCommentStart, repRightCommentEnd)) Then
+
+                    'Attempt to find ellipsis
+                    Dim epEllipsisStart As EditPoint = repLeftCommentStart.CreateEditPoint()
+                    If (epEllipsisStart.FindPattern("...", 2 + 4, repLeftCommentEnd)) Then
+
+                        'Check if ellipsis is in the comment
+                        If (IsPointInBlock(epEllipsisStart, repLeftCommentStart, repRightCommentEnd)) Then
+
+                            'Check if ellipsis, comment start and comment end are all on same line
+                            If ((repLeftCommentEnd.Line = repLeftCommentStart.Line) And (repLeftCommentEnd.Line = repRightCommentEnd.Line)) Then
+
+                                'Return success
+                                Return True
+
+                            End If
+
+                        End If
+
+                    End If
+
+                End If
+
+            End If
+
+        End If
+
+        'Return result
+        Return False
+
+    End Function
+
+    '**************************************
+    '* End of FindDoubleEndedMacroComment *
+    '**************************************
+
+
+    '**********
+    '* Macros *
+    '**********
+
+    '**************************************************************************************************
+    '*
+    '* Macro       - CommentOutSelection
+    '* Parameters  - void
+    '* Returns     - void
+    '* Description - Comments-out a selection of code, or removes the comments if any part of it is
+    '*               already commented-out.
+    '* Author      - Steve Robb
+    '*
+    '**************************************************************************************************
+
+    Sub CommentOutSelection()
+
+        'Ensure comment name is 3 characters long
+        If strName.Length() <> 3 Then
+
+            'Display message box
+            MsgBox("Unable to comment out - comment name (strName) must be 3 characters long")
+
+            'Comment name is 3 characters long
+        Else
+
+            'Get name of file
+            Dim strExtension As String = GetFilenameExtension(ActiveDocument.Name)
+
+            'Check if there is a selection
+            Dim bSelection As Boolean = Not ActiveDocument.Selection.IsEmpty
+
+            'Get positions of selection
+            Dim epSelectionTop As EditPoint = ActiveDocument.Selection.TopPoint.CreateEditPoint()
+            Dim epSelectionBottom As EditPoint = ActiveDocument.Selection.BottomPoint.CreateEditPoint()
+
+            'Determine type of selection
+            Dim bMultipleLinesSelected As Boolean = (epSelectionTop.Line <> epSelectionBottom.Line)
+            Dim bBoxSelection As Boolean = (ActiveDocument.Selection.Mode = 1)
+
+            'Check if multiple lines are selected and bottom point is at start of line
+            If bMultipleLinesSelected And epSelectionBottom.AtStartOfLine Then
+
+                'Move bottom point to end of previous line
+                epSelectionBottom.LineUp()
+                epSelectionBottom.EndOfLine()
+
+            End If
+
+            'Get the position of the caret
+            Dim epCaret As EditPoint = ActiveDocument.Selection.ActivePoint.CreateEditPoint()
+
+            'Determine open-ended comments for filetype
+            Dim strOpenEndedComment As String = GetOpenEndedComment(strExtension)
+            Dim strDoubleEndedCommentStart As String = GetDoubleEndedCommentStart(strExtension)
+            Dim strDoubleEndedCommentEnd As String = GetDoubleEndedCommentEnd(strExtension)
+
+            'Assume that caret is not in a comment
+            Dim bCaretInComment As Boolean = False
+
+            'Check if double-ended comments can be used
+            If (strDoubleEndedCommentStart <> "") And (strDoubleEndedCommentEnd <> "") Then
+
+                'Attempt to find comment start
+                Dim epLeftCommentStart As EditPoint
+                Dim epLeftCommentEnd As EditPoint
+                Dim epRightCommentStart As EditPoint
+                Dim epRightCommentEnd As EditPoint
+                If FindDoubleEndedMacroComment(strDoubleEndedCommentStart, strDoubleEndedCommentEnd, epCaret, epLeftCommentStart, epLeftCommentEnd, epRightCommentStart, epRightCommentEnd) Then
+
+                    'Open undo context
+                    DTE.UndoContext.Open("Remove one-line comment")
+
+                    'Remove comments text
+                    epLeftCommentStart.Delete(epLeftCommentEnd)
+                    epRightCommentStart.Delete(epRightCommentEnd)
+
+                    'Close undo context
+                    DTE.UndoContext.Close()
+
+                    'Flag that caret is in a comment
+                    bCaretInComment = True
+
+                End If
+
+            End If
+
+            'Check if a block comment is to be used
+            If (Not bCaretInComment) And ((Not bSelection) Or (bMultipleLinesSelected)) Then
+
+                'Check if comments can be used
+                If (strOpenEndedComment <> "") Then
+
+                    'Clear "found comment' flag
+                    Dim bFoundComment = False
+
+                    'Declare EditPoints for comment position
+                    Dim epCommentStart As EditPoint = ActiveDocument.Object.StartPoint.CreateEditPoint()
+                    Dim epCommentEnd As EditPoint
+
+                    'Move comment start to first line
+                    epCommentStart.MoveToLineAndOffset(epSelectionTop.Line, 1)
+
+                    'Loop through all lines
+                    Dim nUncommentStartLine = epSelectionTop.Line
+                    Dim nUncommentEndLine = epSelectionBottom.Line
+                    While (nUncommentStartLine <= nUncommentEndLine) And (Not bFoundComment)
+
+                        'Attempt to find ellipsis and comment start in line
+                        If (FindOpenEndedMacroComment(strOpenEndedComment, epCommentStart, epCommentEnd)) Then
+
+                            'Set "found comment' flag
+                            bFoundComment = True
+
+                        Else
+
+                            'Move comment start edit point down a line
+                            epCommentStart.LineDown()
+
+                            'Increment line number
+                            nUncommentStartLine = nUncommentStartLine + 1
+
+                        End If
+
+                    End While
+
+                    'Check if a comment was found
+                    If (bFoundComment) Then
+
+                        'Open undo context
+                        DTE.UndoContext.Open("Remove comment block")
+
+                        'Loop through all lines
+                        While nUncommentStartLine <= nUncommentEndLine
+
+                            'Attempt to find comment in line
+                            If (FindOpenEndedMacroComment(strOpenEndedComment, epCommentStart, epCommentEnd)) Then
+
+                                'Remove comment
+                                epCommentStart.Delete(epCommentEnd)
+
+                            End If
+
+                            'Move comment start edit point down a line
+                            epCommentStart.LineDown()
+
+                            'Increment line number
+                            nUncommentStartLine = nUncommentStartLine + 1
+
+                        End While
+
+                        'Selection does not contain the comment
+                    Else
+
+                        'Open undo context
+                        DTE.UndoContext.Open("Insert comment block")
+
+                        'Create edit point to insert text
+                        Dim epEditPoint As EditPoint = ActiveDocument.Object.StartPoint.CreateEditPoint()
+
+                        epEditPoint.MoveToLineAndOffset(epSelectionTop.Line, 1)
+
+                        'Create comment string
+                        Dim strComment As String = strOpenEndedComment + strName + "..."
+
+                        'Loop through all lines
+                        Dim nCommentStartLine = epSelectionTop.Line
+                        Dim nCommentEndLine = epSelectionBottom.Line
+                        Dim nLine As Integer
+                        For nLine = epSelectionTop.Line To nCommentEndLine
+
+                            'Insert comment
+                            epEditPoint.Insert(strComment)
+
+                            'Move edit point to start of next line
+                            epEditPoint.LineDown()
+                            epEditPoint.StartOfLine()
+
+                        Next
+
+                    End If
+
+                    'Close undo context
+                    DTE.UndoContext.Close()
+
+                    'Comments cannot be used
+                Else
+
+                    'Display error
+                    MsgBox("No open-ended comment defined for filetype """ + strExtension + """")
+
+                End If
+
+                'This is not a block comment
+            Else
+
+                'Check if comments can be used
+                If ((strDoubleEndedCommentStart <> "") And (strDoubleEndedCommentEnd <> "")) Then
+
+                    'Check if we're adding a comment
+                    If (Not bCaretInComment) Then
+
+                        'Open undo context
+                        DTE.UndoContext.Open("Insert one-line comment")
+
+                        'Insert double-ended comment at selection
+                        ActiveDocument.Selection.TopPoint.CreateEditPoint().Insert(strDoubleEndedCommentStart + strName + "...")
+                        ActiveDocument.Selection.BottomPoint.CreateEditPoint().Insert(strDoubleEndedCommentEnd)
+
+                        'Close undo context
+                        DTE.UndoContext.Close()
+
+                    End If
+
+                    'Comments cannot be used
+                Else
+
+                    'Display error
+                    MsgBox("No double-ended comment defined for filetype """ + strExtension + """")
+
+                End If
+
+            End If
+
+        End If
+
+    End Sub
+
+End Module

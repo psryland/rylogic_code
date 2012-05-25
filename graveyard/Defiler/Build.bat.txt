@@ -1,0 +1,7 @@
+@echo off
+
+Set PATH=\Tools\Microsoft Visual C++ Toolkit 2003\bin;%PATH%
+Set INCLUDE=\Tools\Microsoft Visual C++ Toolkit 2003\include;%INCLUDE%
+Set LIB=\Tools\Microsoft Visual C++ Toolkit 2003\lib;%LIB%
+
+cl /

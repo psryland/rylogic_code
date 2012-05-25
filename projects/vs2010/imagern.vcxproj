@@ -1,0 +1,209 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D84F8457-9E20-477A-8594-D0384FB62FA5}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>imagern</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <UseOfAtl>Static</UseOfAtl>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <UseOfAtl>Static</UseOfAtl>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <UseOfAtl>Static</UseOfAtl>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <UseOfAtl>Static</UseOfAtl>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="app.win32.debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="app.win32.release.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="app.x64.debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="app.x64.release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeaderFile>imagern/main/stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\sdk\sqlite;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>renderer.$(PlatformName).$(ConfigurationName).lib;d3d9.lib;d3dx9.lib;dxerr.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>imagern/main/stdafx.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>..\..\sdk\sqlite;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>renderer.$(PlatformName).$(ConfigurationName).lib;d3d9.lib;d3dx9.lib;dxerr.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>imagern/main/stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\sdk\sqlite;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link />
+    <Link>
+      <AdditionalDependencies>renderer.$(PlatformName).$(ConfigurationName).lib;d3d9.lib;d3dx9.lib;dxerr.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>imagern/main/stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\sdk\sqlite;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link />
+    <Link>
+      <AdditionalDependencies>renderer.$(PlatformName).$(ConfigurationName).lib;d3d9.lib;d3dx9.lib;dxerr.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\sdk\sqlite\sqlite3.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Level3</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\imagern\gui\main_gui.cpp" />
+    <ClCompile Include="..\imagern\main\imager.cpp" />
+    <ClCompile Include="..\imagern\main\main.cpp" />
+    <ClCompile Include="..\imagern\main\photo_model.cpp" />
+    <ClCompile Include="..\imagern\main\stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">imagern/main/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">imagern/main/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">imagern/main/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">imagern/main/stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="..\imagern\media\media_list.cpp" />
+    <ClCompile Include="..\imagern\settings\user_settings.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\sdk\pr\pr\common\assert.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\autoptr.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\events.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\filesys.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\gui\grid_ctrl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\gui\misc.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\gui\recent_files.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\count_of.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\reader.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstdstring.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstring.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstringcore.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstringextract.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstringstream.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstringutility.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\wstring.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\thread.h" />
+    <ClInclude Include="..\..\sdk\sqlite\sqlite3.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlapp.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlcrack.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlctrls.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlctrlw.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlctrlx.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlddx.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atldlgs.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atldwm.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlfind.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlframe.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlgdi.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlmisc.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlprint.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlres.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlresce.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlscrl.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlsplit.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atltheme.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atluser.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlwince.h" />
+    <ClInclude Include="..\..\sdk\wtl\v8.1\Include\atlwinx.h" />
+    <ClInclude Include="..\imagern\gui\main_gui.h" />
+    <ClInclude Include="..\imagern\main\events.h" />
+    <ClInclude Include="..\imagern\main\forward.h" />
+    <ClInclude Include="..\imagern\main\imager.h" />
+    <ClInclude Include="..\imagern\main\photo_model.h" />
+    <ClInclude Include="..\imagern\main\stdafx.h" />
+    <ClInclude Include="..\imagern\media\media_file.h" />
+    <ClInclude Include="..\imagern\media\media_list.h" />
+    <ClInclude Include="..\imagern\res\imagern.resources.h" />
+    <ClInclude Include="..\imagern\settings\user_settings.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\imagern\res\imagern.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

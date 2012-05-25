@@ -1,0 +1,315 @@
+;*********************************************************************************************
+;Pauls additions
+;*********************************************************************************************
+$Generate=false
+std::basic_string<char,std::char_traits<char>,std::allocator<char> >         =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_stdstring)
+std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> > =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_stdstringstream)
+std::basic_ifstream<char, std::char_traits<char> >                           =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_stdifstream)
+std::basic_ofstream<char, std::char_traits<char> >                           =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_stdofstream)
+
+;D3D
+_D3DBOX                                     =<Left,u>, <Top,u>, <Right,u>, <Bottom,u>, <Front,u>, <Back,u>
+_D3DRECT                                    =<x1,u>, <y1,u>, <x2,u>, <y2,u>
+_D3DVECTOR                                  =<x,g>, <y,g>, <z,g>
+D3DXCOLOR                                   =<r,g>, <g,g>, <b,g>, <a,g>
+D3DXPLANE                                   =<a,g>, <b,g>, <c,g>, <d,g>
+D3DXVECTOR2                                 =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_v2)
+D3DVECTOR4                                  =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_v4)
+D3DXQUATERNION                              =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_Quaternion)
+D3DXMATRIX                                  =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_m4x4)
+_D3DMATRIX                                  =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_m4x4)
+_D3DDISPLAYMODE                             =<Width> <Height> <RefreshRate> <Format>
+D3DCOLORVALUE                               =RGBA: <r> <g> <b> <a>
+D3DCOLOR                                    =<,x>
+
+;Common
+pr::Array<*>                                =[<m_count>] <m_ptr,3>
+pr::Array<*>::iterator                      =<m_elem>
+pr::Array<*>::const_iterator                =<m_elem>
+pr::ListInAnArray<*>::Node                  =<m_object>
+pr::ListInAnArray<*>                        =size=<m_count> current=<m_current> max_size=<m_max_size>
+pr::crypt::MD5                              =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_MD5)
+pr::SortKey                                 =<m_key>
+pr::RefPtr<*>                               =<m_ptr>
+pr::D3DPtr<*>                               =<m_ptr>
+pr::pod_array<*>                            =size=<m_count> <m_array[0]> <m_array[1]> <m_array[2]> ...
+pr::profiler::Profile                       =<m_name>
+pr::Stack<*>                                =size=<m_size>
+pr::string<*>                               =[<m_count-1>] <m_ptr,s>
+pr::chain::impl::const_iteartor<*,*>        =<m_elem->m_obj>
+pr::chain::impl::iteartor<*,*>              =<m_elem->m_obj>
+
+;Maths
+pr::Rand                                    =<m_value>
+pr::v2                                      =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_v2)
+pr::v3                                      =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_v3)
+pr::v4                                      =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_v4)
+pr::m3x3                                    =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_m3x3)
+pr::m4x4                                    =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_m4x4)
+pr::Quat                                    =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_Quaternion)
+pr::iv2                                     =<x> <y>
+pr::iv4                                     =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_iv4)
+pr::BoundingBox                             =radius={<m_radius.x> <m_radius.y> <m_radius.z> <m_radius.w>} centre={<m_centre.x> <m_centre.y> <m_centre.z> <m_centre.w>}
+pr::BoundingSphere                          =radius=<m_radius> centre=<m_centre>
+pr::Plane                                   =<m_dx> <m_dy> <m_dz> <m_dist>
+pr::Line3                                   =Pt:<m_point> Dir:<m_line>
+pr::FRect                                   =<m_left> <m_top> <m_right> <m_bottom>
+pr::IRect                                   =<m_min.x> <m_min.y> <m_max.x> <m_max.y>
+pr::Spline                                  =<m_geometry>
+pr::Frustum                                 =<m_frustum>
+pr::LargeInt                                =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_LargeInt)
+
+;Script
+pr::script::Token                           =<m_type> <m_str.m_str,s>
+pr::script::Reader                          =<m_src.m_token.m_type> <m_src.m_token.m_str.m_str,s>
+
+;Geometry
+pr::GeomType                                =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_GeomType)
+pr::Colour32                                =<m_aarrggbb,x>
+pr::Colour                                  =<r> <g> <b> <a>
+pr::Geometry                                =<m_name>
+pr::Frame                                   =<m_name> <m_transform>
+pr::Mesh                                    =<m_geometry_type>
+pr::Vertex                                  =<m_vertex> <m_normal> <m_colour> <m_tex_vertex>
+pr::Texture                                 =<m_filename>
+
+;Renderer
+pr::rdr::PosNormDiffTex                     =<m_vertex> <m_normal> <m_colour> <m_tex>
+pr::rdr::PosNormDiffTexFuture               =<m_vertex> <m_normal> <m_colour> <m_tex> <m_future>
+pr::rdr::RenderableBase                     =<m_name> <m_vertex_type>
+pr::rdr::Renderable                         =<m_name> <m_vertex_type>
+pr::rdr::RenderableElement                  =<m_name> <m_vertex_type>
+pr::rdr::RenderState                        =<m_type> <m_state>
+pr::rdr::RenderStateBlock                   =size=<m_num_states>
+pr::rdr::Effect2                            =<m_name.m_str>
+pr::rdr::MaterialIndex                      =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_MaterialIndex)
+pr::rdr::model::Range                       =first=<m_first> count=<m_count>
+pr::rdr::rs::State                          =<m_type> state=<m_state> prev=<m_prev_state>
+pr::rdr::rs::Block                          =<m_state.m_count>
+
+;Physics
+pr::ph::Material                            =den=<m_density> sf=<m_static_friction> df=<m_dynamic_friction> rf=<m_rolling_friction> E=<m_elasticity> tanE=<m_tangential_elasticity> torE=<m_tortional_elasticity>
+pr::ph::Primitive                           =<m_type> <m_radius[0]> <m_radius[1]> <m_radius[2]> <m_material_index>
+pr::ph::Object                              =<m_num_primitives> <m_primitive> <m_mass> <m_rot_inertia>
+pr::ph::Instance                            =<m_physics_object> <m_collision_group>
+pr::ph::Contact                             =<m_pointA> <m_pointB> <m_normal>
+pr::ph::CollisionParams                     =<m_objA> <m_objB>
+pr::ph::CollisionResult                     =<m_num_contacts> <m_contact>
+pr::ph::Shape                               =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_phShape)
+pr::ph::ShapeSphere                         =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_phShape)
+pr::ph::ShapeCylinder                       =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_phShape)
+pr::ph::ShapeBox                            =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_phShape)
+pr::ph::ShapePolytope                       =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_phShape)
+pr::ph::ShapeTerrain                        =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_phShape)
+pr::ph::ShapeArray                          =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_phShape)
+pr::ph::ShapePolytopeVert                   =<m_vert> nbr=(<m_nbr[0]> <m_nbr[1]> <m_nbr[2]> <m_nbr[3]>)
+pr::ph::ShapePolytopeFace                   =<m_index[0],u> <m_index[1],u> <m_index[2],u>
+pr::ph::RigidBodyBase                       =<m_type> <m_shape[0]> <m_instance_to_world>
+pr::ph::RigidBody                           =<m_base> <m_motion_type>
+pr::ph::collision::Vert                     =p={<m_id_p> <m_p>} q={<m_id_q> <m_q>} <m_r> <m_direction>
+pr::ph::collision::Triangle                 =<m_vert[0]> <m_vert[1]> <m_vert[2]> <m_direction> <m_distance>
+pr::ph::collision::Simplex                  =count=<m_num_vertices> bary=<m_bary_coords>
+pr::ph::collision::TrackVert                =<m_vert> <m_distance> <m_offset>
+
+;LineDrawer
+TBase                                       =<m_sub_type> <m_name> <m_colour>
+DataList::Data                              =<m_object> list=<m_list_item>
+pr::ldr::LdrObject                          =<m_type> <m_name>
+
+;ODE
+dVector3                                    =<[0]> <[1]> <[2]> <[3]>
+
+;Cuda
+float2                                      =<x> <y>
+float3                                      =<x> <y> <z>
+
+;Lua
+lua_State                                   =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_LuaState)
+
+;Rex Bionics
+vec2_t                                      =<x> <y>
+vec4_t                                      =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_RBVec4)
+Token                                       =$ADDIN(W:\software\PC\lib\rb_autoexp.win32.release.dll,AddIn_lete_token)
+
+;Intranel
+Vector2                                     =<x> <y>
+ScanIntersect                               =UID:<m_uid> H:<m_is_horizontal> {<m_location.x> <m_location.y>}
+
+;Reflections
+MAv2                                        =<m_Vector.v[0]> <m_Vector.v[1]>
+MAv3                                        =<m_Vector.v[0]> <m_Vector.v[1]> <m_Vector.v[2]>
+MAv4                                        =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_v4)
+MAm3                                        =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_m3x3)
+MAm4                                        =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_m4x4)
+MAq                                         =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_Quaternion)
+static_inst::Instance                       =$ADDIN(R:\Toolchain\Bin\DLL\ri_autoexp.dll,AddIn_StaticInst)
+PHcontainer<*>                              =size=<m_num_items> [<m_used[0]> <m_used[0].m_container_data.m_next[0]> ...]
+PHbounds                                    =l=<box.corner[0]> u=<box.corner[1]>
+; --- Model ---
+PHbox                                       =x=<boxSize[0]> y=<boxSize[1]> z=<boxSize[2]>
+PHcylinder                                  =r=<radius> h=<height>
+PHsphere                                    =r=<radius>
+PHpolyFace                                  =<index[0],u> <index[1],u> <index[2],u>
+PHpolyNbr                                   =count=<nbr_count> first=<first_nbr>
+PHpolytope                                  =v_size=<vert_count> f_size=<face_count>
+PHprimitive                                 =$ADDIN(R:\Toolchain\Bin\DLL\ri_autoexp.dll,AddIn_PHprimitive)
+PHcollisionModel                            =count=<count> bounds=<boundingRadius>
+PHmodelReference                            =$ADDIN(R:\Toolchain\Bin\DLL\ri_autoexp.dll,AddIn_PHmodelReference)
+PHmodelList                                 =models=<nModels> prims=<nPrimitives>
+; --- Rigidbodies ---
+PHbaseObj                                   =<m_type> pos={<m_object_to_world.m_Matrix.col[3].m_Vector.v[0]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[1]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[2]>}
+PHobject                                    =<m_name> <m_type> pos={<m_object_to_world.m_Matrix.col[3].m_Vector.v[0]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[1]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[2]>}
+; --- Multibodies ---
+PHmulti                                     =size=<nbodies> <**objects>
+PHlink                                      =jtype=<jtype> num_out=<outn> vel=<m_velocity> angv=<m_ang_velocity>
+PHmultiContainer                            =maxmultis=<maxmultis> maxnbodies=<maxnbodies> maxout=<maxout>
+; --- Dynamics ---
+PHdynamics                                  =<m_motion_type> mass=<1.0/m_inv_mass> pos={<m_object_to_world.m_Matrix.col[3].m_Vector.v[0]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[1]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[2]>} vel=<m_velocity> angm=<m_ang_momentum>
+PHdynamicsWPtr                              =<m_dyn>
+PHdynamicsRPtr                              =<m_dyn>
+; --- Broadphase ---
+BPsubList                                   =base=<m_listbase_and_length&0xFFF> len=<m_listbase_and_length/4096>
+BPnode                                      =lvl=<m_level> x=<m_indexX> z=<m_indexZ> <m_instance_sublist>
+BPstaticObject                              =col=<m_collision_model_ref> gfx=<m_graphic_instance_ref>
+BPstatics                                   =x=<m_MinX> z=<m_MinZ> size=<m_RegionSize> i=<m_IndexX> j=<m_IndexZ> nodes=<m_iNumNodes> statics=<m_iNumStatics>
+BPstaticsHeader                             =size=<m_PhysicsBPstaticsSize> statics=<m_PhysicsBPstatics>
+BPcoord                                     =<m_type> <m_value>
+BPcoordList                                 =<m_max_list_elements>
+BPdynamicObject                             =<m_object[0]>
+BPoverlapTable                              =size=<m_num_overlaps>
+BPobjectPair                                =<m_objA> <m_objB> <m_pair_flags>
+BPregion                                    =<m_pStaticData>
+BPbroadphase                                =<m_current_state> <m_region> ovrlaps=<m_num_overlaps> adovrlaps=<m_num_additional_overlaps>
+BPsearchArea                                =<m_type> l=<m_lower> u=<m_upper> pt=<m_start> dir=<m_direction>
+BPsearchData                                =<m_num_areas> <m_start_node> <m_region> <m_node> <m_node_index>
+; --- Engine ---
+PHengine                                    =step=<m_step_counter> obj_count=<m_objects->m_num_items>
+; --- Cache ---
+collision::Cache                            =A=<m_primA> B=<m_primB> sep=<m_separating_axis> id_p=<m_prev_p_id> id_q=<m_prev_q_id>
+collision::IdPairCache::IdPair              =<p> <q>
+collision::IdPairCache                      =size=<m_size> <m_id>
+;PHmatrixCache
+;PHobjectCache
+;PHoverlapCache
+;PHoverlapCachePool
+;PHoverlapCacheOverlaps
+;PHoverlapCacheSafeArea
+;PHoverlapCacheQTLevel
+;PHoverlapCacheQTNodes
+;PHoverlapCacheStatics
+; --- Collision ---
+collision::Vert                             =p={<m_id_p> <m_p>} q={<m_id_q> <m_q>} <m_r> <m_direction>
+collision::Triangle                         =<m_vert[0]> <m_vert[1]> <m_vert[2]> <m_direction> <m_distance>
+collision::Simplex                          =count=<m_num_vertices> bary=<m_bary_coords>
+collision::TrackVert                        =<m_vert> <m_distance> <m_offset>
+PHclosestPoints                             =<pointA> <pointB> norm=<normal> dist=<distance>
+;PHframe
+;PHcollisionFrameObject
+;PHcollisionFrameInfo
+;PHcollisionObjectOutput
+;PHcollisionOutput
+;PHworldCollisionResult
+;PHlineCollisionParams
+;PHlineCollisionResult
+;PHcylinderCollisionParams
+;PHcylinderCollisionResult
+;PHobjectAndLineCheckParams
+;PHobjectAndLineCheckResult
+;PHcharacterWorldCollisionParams
+;PHcharacterWorldCollisionResult
+
+;Reflections task scheduler
+ri::task::CDebugInfo::STask                 =running=<m_bRunning> fin=<m_bFinished> func=<m_pFunction> iter=<m_nIterations>
+
+; Work In progress
+pr::ph::convex_decom::Vert                  =set=<m_set_id> nbrs=<m_nbrs> zdv=<m_zdv> next=<m_next>
+pr::ph::convex_decom::Edge                  =<m_i0> <m_i1> cv=<m_concavity>
+pr::ph::convex_decom::Mesh                  =first=<m_first> buf=<m_vert->m_buffer>
+pr::geometry::triangulate::Vert             ={<m_edge_in->m_idx>,<m_idx>,<m_edge_out->m_idx>} type=<m_type>
+pr::tetramesh::Face                         =face={<m_i[0]>,<m_i[1]>,<m_i[2]>} from=<m_tetra0> to=<m_tetra1> order=<m_order>
+pr::tetramesh::Tetra                        =cnrs={<m_cnrs[0]>,<m_cnrs[1]>,<m_cnrs[2]>,<m_cnrs[3]>} nbrs={<m_nbrs[0]>,<m_nbrs[1]>,<m_nbrs[2]>,<m_nbrs[3]>} poly_id=<m_poly_id>
+pr::tetramesh::Edge                         =edge={<m_i0>,<m_i1>} ccv=<m_concavity> Lface=<m_Lface> Rface=<m_Rface>
+
+;*********************************************************************************************
+;Pauls additions End
+;*********************************************************************************************
+
+;[Visualizer]
+;****************************************************************************
+;PR visualizers
+;****************************************************************************
+pr::Array<*>{
+	preview
+	( 
+		#(
+			"[",$e.m_count,"](",
+			#array
+			(
+				expr : ($c.m_ptr)[$i],
+				size : #if($c.m_count > 256) (256)
+					   #else ($c.m_count)
+			),
+			")"
+		)
+	)
+	children
+	(
+		#(
+			[members]: [$c,!],
+			#array
+			(
+				expr : ($c.m_ptr)[$i],
+				size : #if($c.m_count > 256) (256)
+					   #else ($c.m_count)
+			)
+		)
+	)
+}
+pr::string<char,*>{
+	preview
+	( 
+		#("[",$e.m_count-1,"]",[$e.m_ptr,s])
+	)
+	stringview
+	(
+		[$e.m_ptr,sb]
+	)
+	children
+	(
+		#(
+			[members]: [$c,!],
+			#array
+			(
+				expr : ($c.m_ptr)[$i],
+				size : #if($c.m_count > 256) (256)
+					   #else ($c.m_count)
+			)
+		)
+	)
+}
+pr::string<wchar_t,*>{
+	preview
+	( 
+		#("[",$e.m_count-1,"]",[$e.m_ptr,su])
+	)
+	stringview
+	(
+		[$e.m_ptr,sub]
+	)
+	children
+	(
+		#(
+			[members]: [$c,!],
+			#array
+			(
+				expr : ($c.m_ptr)[$i],
+				size : #if($c.m_count > 256) (256)
+					   #else ($c.m_count)
+			)
+		)
+	)
+}
+;****************************************************************************
+;PR visualizers end
+;****************************************************************************
+

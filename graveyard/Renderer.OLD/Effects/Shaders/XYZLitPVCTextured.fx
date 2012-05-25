@@ -1,0 +1,43 @@
+//******************************************************************
+//
+//	XYZLitPVCTextured
+//
+//******************************************************************
+#include "Identifiers.fxh"
+#include "VSGeneric.fxh"
+#include "PSGeneric.fxh"
+
+//******************************************************************
+// Techniques
+technique T_2_0
+{
+    pass P0
+    {		
+		VertexShader	= compile vs_2_0 VS20_Generic(	VertexDiffuse_None,
+														VertexSpecular_None,
+														TexCoordsDiffuse_On,
+														TexCoordsEnviroMap_None,
+														VSDiffOut_InDiff );
+														
+		PixelShader		= compile ps_2_0 PS20_Generic(	PerPixelDiffuse_Amb_p_Directional,
+														PerPixelSpecular_On,
+														TexDiffuse_On,
+														EnviroMap_None,
+														PSOut_InDiff_x_Tex_x_LtDiff_p_LtSpec );
+    }
+}
+technique T_1_1
+{
+    pass P0
+    {		
+		VertexShader	= compile vs_1_1 VS11_Generic(	VertexDiffuse_Amb_p_Directional,
+														VertexSpecular_On,
+														TexDiffuse_On,
+														EnviroMap_None,
+														VSDiffOut_InDiff_x_LtDiff );
+														
+		PixelShader		= compile ps_1_1 PS11_Generic(	TexDiffuse_On,
+														EnviroMap_None,
+														PSOut_InDiff_x_Tex_p_InSpec);
+    }
+}

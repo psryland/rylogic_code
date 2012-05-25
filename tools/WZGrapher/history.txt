@@ -1,0 +1,513 @@
+--------------------------------------------------------------------------------
+WZGrapher Function Grapher
+File:   history.txt
+        Updatelog of WZGrapher
+Author: Walter Zorn
+Web:    http://www.walterzorn.com
+        http://www.walterzorn.de
+
+Legend:
++ New feature
+* Changed feature
+- Removed feature
+! Bugfix
+
+
+--------------------------------------------------------------------------------
+Version 0.95      (Release date: 4.11.2007)
+! Fixed GDI leak under Windows 9x/ME. Could lead to a crash after frequent
+  updates of the coordinatesystem.
+--------------------------------------------------------------------------------
+Version 0.94      (Release date: 6.11.2005)
+Executable renamed from wz_grapher.exe to wzgrapher.exe
++ Supports graphs in polar coordinates, also for ordinary differential
+  equations.
++ Mousegesture duration no longer infinite (now 1.5 seconds).
++ Detailed main help can now be invoked directly from function input dialogs
+  (per F1 key).
++ Changes to axes titles can be applied immediately, while the dialog
+  is still open.
++ Messagebox that requests confirmation if user changes default values
+  for x- and y-range.
++ Up to 1024 scroll/zoom undo steps.
+* Rendering of coordinatesystem is worlds faster, especially perceptible
+  when also subgrid is displayed.
+* Drawing the zoom selection rectangle is faster (perceptible on slower
+  machines).
+* Some improvements on the rendering modules for graphs and help windows.
+* Improvements on the printing engine (e.g. leaves margins).
+! Fixed: Parallel installed versions < 0.91 won't crash at startup anymore
+  (this is actually a bug in those old versions, the new version just
+  doesn't "uncover" it anymore).
+! Regression: Results y of cot(x) were offset by -pi.
+--------------------------------------------------------------------------------
+Version 0.93      (Release date: 4.5.2005)
++ New: Derivative operator d(). Computes the derivative of the expression
+  within the parentheses. Examples: y=d(x^2) or y=1/12*d(d(x^4)). Supported
+  maximum nesting level is 3 (allows to compute up the 3. derivative).
++ Main dialogs and thus function input textedits can be resized horizontally.
+  The app now remembers these sizes and positions also when being restarted.
++ Main and help window can be KDE-like dragged by simultaneously pressing the
+  ALT key.
++ Accuracy of drawn integral solution curves further improved through
+  pixel alignment of the lower integration limit.
++ Zoom functionality regards whether the concerned range (x or y) is displayed
+  in units of PI.
+- Select box "Draw 1. derivative" on the dialog for normal functions removed.
+  The new derivative operator d() has made this option needless.
+! Single-value-calculator bug from V. 0.92.7 was not yet properly fixed,
+  did occasionally evaluate y' to false infinite.
+! Fixed: Resizing the function input dialog vertically didn't work properly.
+! When selecting a zooming rectangle, stretching the rectangle beyond the left
+  window boundary didn't work correctly.
+--------------------------------------------------------------------------------
+Version 0.92.9    (Release date: 15.4.2005)
+Parts of core code rewritten, e.g. the coordinate system engine and the
+functions for formatting and drawing numbers.
++ Draws now also sub-tickmarks.
+--------------------------------------------------------------------------------
+Version 0.92.8    (Release date: 24.3.2005)
++ Graph image copied to clipboard via CTRL+C is now also GIMP-compatible.
+  Consider that in GIMP you cannot paste external data from the clipboard via
+  CTRL+V; use "Edit"->"Paste From Clipboard" instead.
++ Mousecoordinates-tooltip can display values in units of Pi.
+! Fixed: Selecting a zooming rectangle with the mouse could not be canceled
+  by pressing [Esc].
+! Bug introduced with v 0.92.7: Single-value function calculator did not always
+  print the first derivative value and could occasionally crash.
+- Zoom functionality of help windows disabled (didn't work properly with some
+  video cards - I'll try to fix that later).
+--------------------------------------------------------------------------------
+Version 0.92.7    (Release date: 20.3.2005)
++ Draws optionally also the 1. derivative, of normal functions as well as of
+  ordinary differential equations.
++ ODE-solving function calculator: Inserts initial values into the value tables
+  when these are copied to the clipboard.
++ Supports XP styles (themes) when running on Windows XP.
+--------------------------------------------------------------------------------
+Version 0.92.6    (Release date: 6.3.2005)
++ Improved file name handling, e.g. filename is now set to "untitled.wzg"
+  if not yet userspecified.
+! Fixed: Out-of-bounds memory reading could occur with binary files corrupted
+  in a certain manner (missing zero-bytes in ascii section of file).
+--------------------------------------------------------------------------------
+Version 0.92.5    (Release date: 28.2.2005)
+* Coordinates at mousepointer displayed also while selecting a zoom rectangle.
+* Zoom selection rectangle entirely visible also when expanded beyond the app's
+  window boundaries.
+--------------------------------------------------------------------------------
+Version 0.92.4    (Release date: 25.2.2005)
++ Can be run from Startmenu/Execute
+  (via command wz_grapher.exe, optionally with WZG file as parameter)
+* Function calculators for both normal functions and differential equations
+  in same tabbed dialog.
+* Context menus for function-input dropdownboxes.
+* Improved memory management, again slightly less memory usage.
+! Occasionally false singularity recognitions when rendering functions which
+  are difficult to graph, such as sin(1/x).
+--------------------------------------------------------------------------------
+Version 0.92.3    (Release date: 11.2.2005)
++ Helperfunction sqr( ) squares argument.
+--------------------------------------------------------------------------------
+Version 0.92.2    (Release date: 9.2.2005)
+! Fixed: Crash if multiple instances were running and the function input dialog
+  of another instance was open when WZ.Grapher was closed.
+! Bug regression from v.0.92 fixed: GDI leak when axes titles were displayed.
+--------------------------------------------------------------------------------
+Version 0.92.1    (Release date: 9.2.2005)
+* Numerical integration: Improved handling of incontinuousities if lower
+  integration limit x0 is less than x min, i.e. outside of displayed x range.
+* Slightly faster rendering speed when displaying integrals.
+--------------------------------------------------------------------------------
+Version 0.92      (Release date: 5.2.2005)
++ Coordinatesystem either crossed or boxed style. Tickmark labels can be toggled
+  independently from the coordinatesystem style.
++ Titles for axes user-renameable. Axes titles are also saved to WZG files.
+! Black background was printed in grey.
+--------------------------------------------------------------------------------
+Version 0.91.6    (Release date: 28.1.2005)
++ Enhanced contrast of visualized integral area.
+--------------------------------------------------------------------------------
+Version 0.91.5    (Release date: 26.1.2005)
++ Can save graph images as GIF (up until now as BMP only).
+--------------------------------------------------------------------------------
+Version 0.91.1    (Release date: 16.1.2005)
+! Crashed on WinXP when started the first time after installation from a
+  useraccount without admin rights.
+! Function parser didn't recognize as syntax error the second argument of a
+  two-arguments helperfunction being displaced into a following one-argument
+  function.
+--------------------------------------------------------------------------------
+Version 0.91      (Release date: 10.1.2005)
++ "Undo" functionality for zoom and scroll actions, with up to 200 undo steps.
+  Also, the "Undo" menu entry classifies the type of action
+  (e.g. "Undo: Scroll").
++ Mousewheel support: Help windows - scroll; main window - zoom in, zoom out
+  centered on position of mouse cursor.
++ Text of help windows can be zoomed in and out via menu or keyboard.
++ The "Save File?" messagebox that comes up when the application is about to be
+  terminated can now be disabled.
++ Option to reset all preferences and settings
+  ("Options"->"Reset All Settings").
+* Behaviour of zooming by vertical mouse gesture changed: now zooming is
+  centered on position of the cursor (same behaviour as with zooming by
+  mousewheel), rather than moving the point underneath the cursor to the window
+  center.
+- Command line option for initial window size removed (WZ.Grapher remembers
+  last window size instead).
+--------------------------------------------------------------------------------
+Version 0.90.1    (Release date: 28.12.2004)
++ gamma() function: increased precision, particularly with arguments
+  less than 1.0.
++ Toolbar button to toggle visibility of coordinate system border
+--------------------------------------------------------------------------------
+Version 0.90      (Release date: 21.12.2004)
++ WZ.Grapher now remembers mathematical expressions filled into inputs for
+  numerical values (x min etc.). Up until now, WZ.Grapher 'forgot' these
+  expressions and showed their decimalpoint equivalents when a dialog came
+  up again.
++ Changed file format which remembers the above mentioned expressions for
+  numerical inputs.
++ Can now calculate both in radians and degrees angular mode.
++ Improved syntax error handling of input expressions, such as:
+  Now the user is notified when he uses a comma instead of a period as
+  decimal point. Earlier versions just ignored the digits after the comma,
+  such truncating the number to integer.
++ When terminated, WZ.Grapher saves the current user settings (to INI file)
+  and re-uses them when being started the next time.
+Iconspicious improvements, such as:
++ Default x and y range values can be altered from within input dialogs.
++ Number of running instances of WZ.Grapher can optionally be limited to one.
++ When going to be closed, WZ.Grapher now asks the user whether other running
+  instances should also be terminated.
+! Under Win 9x, when an expression syntax error was detected, the concerned
+  input dialog box was occasionally dublicated.
+! Could under some circumstances be crashed by zooming via keybord while
+  the mouse was on a toolbar button with the button's tooltip being displayed
+--------------------------------------------------------------------------------
+Version 0.88.2    (Release date: 1.12.2004)
++ Coordinate system grid, ticks and labels can be displayed in units of Pi
+--------------------------------------------------------------------------------
+Version 0.88.1    (Release date: 5.11.2004)
++ Content of Help windows can now be printed
+* Enhanced stack protection
+* Several internal optimizations
+--------------------------------------------------------------------------------
+Version 0.88      (Release date: 19.10.2004)
++ Improved file handling: Now the surfaces for functions, integrals and
+  differential equations each can load, display and handle files independently
+  from each other
++ When displaying an integral curve, WZ.Grapher now visualizes the
+  integration area below the integrand by filling it with light-blue
++ First experiments to provide import capabilities for files from other graphing
+  programs: Can import Equation Grapher (.EGR) files
+* Minor modifications on how the coordinate system is displayed
+--------------------------------------------------------------------------------
+Version 0.87.1    (Release date: 14.10.2004)
++ Differential equation (ODE): The basic value and hence the solution curve
+  are now exactly pixel-aligned => again increased precision of the drawn graph
+! Value table of ODE: Wrong results if the x0 of the basic value, as specified
+  by the user, was not x-step-aligned, for example:
+  wrong result if
+  x min = -5.0, x max = 5.0, x step width = 0.5, x0 = 1.25 (not x-step-aligned).
+  Yes, now the basic value may be placed anywhere between x min and x max,
+  independently from the x step width
+--------------------------------------------------------------------------------
+Version 0.87      (Release date: 12.10.2004)
++ Can compute value tables of ordinary differential equations (ODE);
+  like those for normal functions, these value tables contain also the
+  first-derivative values
++ Can numerically solve up to fifth-order ODE
++ Numerical integration between 20% and 70% faster
+! Dotted subgrid lines appear now also dotted when printed
+--------------------------------------------------------------------------------
+Version 0.86.3    (Release date: 30.9.2004)
++ Solving differential equations: Again increased precision (independendly from
+  the order of the ODE), in "High Precision" mode 30% faster
+! Integral dialog: Under certain though not very probable conditions,
+  one or more of the function expressions within the dropdown list
+  could be corrupt
+--------------------------------------------------------------------------------
+Version 0.86.2    (Release date: 23.9.2004)
++ Graphs can be drawn into the main window directly from the function calculator
+  dialogs
+! Zooming triggered by mousegestures wasn't correctly vertical-centered on the
+  mousedown location
+--------------------------------------------------------------------------------
+Version 0.86.1    (Release date: 17.9.2004)
++ Small modifications of the appearance of the coordinate system
+ (e.g. togglable border)
+* Smarter detection of extrema at domain boundaries
+! Vertical zooming didn't work if y min and y max were not user-specified
+--------------------------------------------------------------------------------
+Version 0.86      (Release date: 16.9.2004)
++ Can numerically solve up to fourth-order differential equations
++ 50% faster and strongly increased precision with solving third-order
+  differential equations
+--------------------------------------------------------------------------------
+Version 0.85.2    (Release date: 8.9.2004)
+* Subgrid not displayed by default
+! When solving a differential equation, the application could crash in case of
+  the solution being undefined at the basic value
+  (example: y'=x/y with y(x0) having been set to 0.0)
+! Wrong tooltips displayed on the dialog for differential equation input
+--------------------------------------------------------------------------------
+Version 0.85.1    (Release date: 7.9.2004)
+* Several inconspicious improvements on the function calculator
+--------------------------------------------------------------------------------
+Version 0.85      (Release date: 2.9.2004)
++ Can numerically solve up to third-order differential equations
++ Solving second-order differential equations 40% faster and with increased
+  precision
+--------------------------------------------------------------------------------
+Version 0.84        (Release date: 27.8.2004)
++ Integration: Now the starting point x0 of the integration interval is
+  independent from the left boundary (x min) of the displayed x range
+  => the integration can start anywhere inside (and to some degree even outside)
+  of the visible range
++ Input textboxes for numbers (e.g. x min) now accept mathematical expressions,
+  provided these follow the rules for function expressions, such as
+  pi * -asinh(2.5*ln10) or, more realistically, pi/2
++ Factorial operator and function implemented
++ Enhanced WZG files format which now saves additionally...
+  1.) ...with integrals, the lower limit (starting point) of the integration
+      interval
+  2.) ...with differential equations, the basic value, i.e. the data of the
+      point through which the solution curve must pass
+* Main grid lines slightly less accentuated, subgrid lines dashed
+  => maingrid, subgrid, tickmarks and graphs should appear visually
+  more distinct
+--------------------------------------------------------------------------------
+Version 0.83        (Release date: 17.8.2004)
++ Extended differential equation solving capabilities:
+  Now the basic value (the point through which the solution curve must pass)
+  can be placed arbitrarily between x min and x max - contrary to the earlier
+  versions of WZ.Grapher which could only solve initial value problems
+  with the basic value at x min
++ In the differential equation mode, now also normal functions (diff equs of
+  the "zeroth order") can be entered. For example, y=x*sin(x) is as well
+  accepted as y'=x*sin(y) or y''=xy*sin(y')
++ Input textboxes for numbers (e.g. x min, x max etc.) now accept also the
+  predefined constants (PI, E, LN2 etc.)
+--------------------------------------------------------------------------------
+Version 0.82.2      (Release date: 15.8.2004)
++ Internal improvements on the differential equation solver engine (for example
+  faster on first-order diff equs)
+! On rare occasions the application crashed when being terminated
+! Wrong integration results if the option "Absolute Integral" was selected
+  (a bug regression from Version 0.82 on)
+--------------------------------------------------------------------------------
+Version 0.82.1      (Release date: 14.8.2004)
+* Further memory usage optimizations
+* Refinements on the coordinate system
+- Some, in my opinion, useless backgroundcolor options removed
+--------------------------------------------------------------------------------
+Version 0.82        (Release date: 12.8.2004)
++ Function calculator can also evaluate a single value and it's derivative
+  value
++ Function calculator: Increased precision near infinite derivative values
++ Context menu even for textedit boxes which are sensitive to mouse gestures
++ Smarter recognition of whether a file has been changed and needs to be saved
+* Further inconspicious improvements
+! Application crashed when a valuetable computation was started with the
+  function expression textbox being empty
+! Application could hang if the following three conditions coincided:
+  1.) double buffered video mode switched off
+  2.) the dialog for integration or differential equations was invoked the first
+      time after application startup
+  3.) the dialog was moved across the main window
+--------------------------------------------------------------------------------
+Version 0.81        (Release date: 7.8.2004)
++ frac() function implemented - returns the fractional part of it's argument
++ Can calculate negative numbers to powers whose inverse numbers are odd
+  integers
++ Dropdown lists for function expressions now remember up to 20 functions
+* Discontinuosities of a function are now also recognized next to x min and x max
+  (e.g. with ceil(x) and x min being -5, no longer a vertical line is drawn
+  at x min)
+* Enhanced recognition of +-infinite derivative values when creating
+  function value tables (e.g. sqrt(x) at x=0 or acos(x) at -1 and +1)
+! Dialog for function definitions didn't remember it's previous height =>
+  default height when re-opened
+--------------------------------------------------------------------------------
+Version 0.80.1        (Release date: 29.7.2004)
++ Improvements on managing the statusbar text
+--------------------------------------------------------------------------------
+Version 0.80          (Release date: 29.7.2004)
++ Can numerically solve differential equations  of the first and second order
++ Can generate function value tables, including the according derivative values.
+  These tables can be straighly (buttonclick) copied to the clipboard
+  and from there be pasted into Spreadsheet documents (Excel) etc.
++ The graph window, more precisely the coordinate system,
+  can now be made quadratic (via Ctrl+Q or menu)
++ Accepts also a preceeding 'f(x)=' or 'y=' on function expressions. This
+  should facilitate copying expressions from somewhere else into WZ.Grapher
++ The integral sign displays the bottom limit of the integration interval
+* More toolbar buttons -> two toolbars instead of one
+! The drop-down list for integrand function expressions was a bit stupid:
+  It tended to remember erroneous function expressions too easily,
+  and did not always insert the most recently used entries on top of the list.
+  Moreover, it now can't anymore be fooled by whitespaces within expressions
+
+  Despite the new features, the size of the application is still very small,
+  just 189 kB, and memory usage is relatively frugal.
+--------------------------------------------------------------------------------
+Version 0.71          (Release date: 11.7.2004)
++ Dialog for integral input contains a drop-down selection list for
+  integrand function expressions (remembers up to 15 functions)
+! Application crashed when integration was started
+  but the integrand input field was empty
+--------------------------------------------------------------------------------
+Version 0.70.3          (Release date: 9.7.2004)
++ Some minor modifications on the appearance of the coordinate system.
+  Particularly, tickmarks can now be toggled independently from other settings,
+  are also drawn on the top and right side, and their thickness is dependent
+  from the linewidth setting
+--------------------------------------------------------------------------------
+Version 0.70.2          (Release date: 9.7.2004)
++ A few new minor additions, such as:
+  The short guide that lists the helperfunctions and operators can also
+  be called from the integral input dialog; 'Integration' in context menu
+--------------------------------------------------------------------------------
+Version 0.70.1          (Release date: 8.7.2004)
+* Improvements of the integration engine (e.g. recognizes better limits of
+  the integration interval, i.e. where the integral becomes undefined versus
+  where the integrand is discontinuous but it's definite integral not undefined).
+--------------------------------------------------------------------------------
+Version 0.70            (Release date: 7.7.2004)
++ Numerical integration with high precision which accommodates automatically to
+  screen resolution. Draws the integral curve.
+--------------------------------------------------------------------------------
+Version 0.62            (Release date: 29.6.2004)
++ Four different colour profiles (background colours) can be picked
+* Again some performance tuning, some 5% faster
+* Modifications of the code to be better prepared for planned
+  future extensions (such as calculating integrals)
+--------------------------------------------------------------------------------
+Version 0.61.1          (Release date: 26.6.2004)
++ When the program starts, it displays an instruction how to enter functions
+* A few modifications of the Help Topics and their rendering engine
+--------------------------------------------------------------------------------
+Version 0.61            (Release date: 26.6.2004)
++ Incomplete elliptic integrals of first and second kind implemented
++ Again slightly faster
+--------------------------------------------------------------------------------
+Version 0.60            (Release date: 25.6.2004)
++ Capable to print
++ Complete elliptic integrals of first and second kind implemented
++ Remembers last open/save directory independently from the Windows version
++ Subgrid visibility can be toggled
+* Higher subgrid resolution, i.e. smaller subgrid divisions
+* Extended automatic menu item disabling/enabling
+* Improved color management on devices with less-than-24-bit color depth
+--------------------------------------------------------------------------------
+Version 0.55            (Release date: 5.6.2004)
++ The graph-picture can now be copied (either as scalable metafile or as bitmap)
+  to the clipboard, and hence be pasted into other programs
+  such as office suites (for instance OpenOffice, Word or Excel documents)
+  or graphics programs (Corel etc.)
++ Can save preferences (to INI file)
+* Many under-the-hood improvements, such as: The graphics mode switches
+  automatically from doublebuffered to non-doublebuffered mode in case there's
+  not enough videomemory available (too many instances or other
+  programs open, particularly with maximized windows).
+  Re-switches automatically to doublebuffered mode once memory is detected to
+  be sufficient again
+- Sound removed (I just felt so and might occasionally switch my mind again)
+--------------------------------------------------------------------------------
+Version 0.52            (Release date: 29.5.2004)
++ Gamma function implemented
+--------------------------------------------------------------------------------
+Version 0.51.1          (Release date: 29.5.2004)
+* Improved recognition of earlier versions on the system
+--------------------------------------------------------------------------------
+Version 0.51            (Release date: 27.5.2004)
++ Now WZG files (WZ.Grapher files) are automatically associated
+  with the program when it is started the first time
++ Additional command line option: Path of file to be loaded at startup
+--------------------------------------------------------------------------------
+Version 0.50            (Release date: 23.5.2004)
++ WZG file-type is now binary and saves the preferences which concern
+  the look of the coordinate system and graphs
+  (the new WZG type is NOT compatible with the previous text-mode one)
++ gaussd() function (Gaussian Bell Curve function) implemented
++ Bells and Whistles: Play sound when graphs are drawn :)
+  (can be toggled via "Options" menu)
++ New exponentiation operator besides the already existing base^exponent,
+  base"exp., base'exp. and p(base,exp.) supported: **, for example x**2
+* Again about 25% faster
+! Drag&Dropping a .WZG file on the application now brings the window
+  automatically to the foreground
+! The undocumented but nevertheless supported base² and base³ exponentiation
+  notations shouldn't be able to cause crashs anymore
+--------------------------------------------------------------------------------
+Version 0.44            (Release date: 20.5.2004)
++ Statusbar (can be toggled) implemented
+--------------------------------------------------------------------------------
+Version 0.43.9          (Release date: 18.5.2004)
+* Modified subgrid algorithm - subgrid ticks more precisely positioned
+* Ask-about-save dialog now comes up
+  in case the application is to be closed and graphs have been changed
+--------------------------------------------------------------------------------
+Version 0.43.8          (Release date: 12.5.2004)
+! Bug regression from version 0.43.7 fixed: GDI leak.
+--------------------------------------------------------------------------------
+Version 0.43.7          (Release date: 10.5.2004)
++ Sub-grid added to coordinate system
++ E-Mail hyperlink implemented in the application's "About" dialog
+* Improved division processing. Example: With f(x) being 1/(-x^2),
+  lim x->0 f(x) yields now correctly -infinite rather than +infinite
+! Checking/unchecking the menuitem "Mouse Coordinates" in context menu
+  works now correctly
+--------------------------------------------------------------------------------
+Version 0.43.6          (Release date: 2.5.2004)
+! Pipes used as operators for absolute values, example: -1*sin(|x|),
+  can't crash the application anymore
+--------------------------------------------------------------------------------
+Version 0.43.5          (Release date: 22.4.2004)
++ Hyperlink to www.walterzorn.de/www.walterzorn.com from the application's
+  "About" dialog
+! "Help Contents" text in english version corrected:
+  Shortcut for toggling the visibility of function expressions is "E",
+  rather than "T" as in the german version
+--------------------------------------------------------------------------------
+Version 0.43            (Release date: 21.4.2004)
++ New helper function: atan2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
