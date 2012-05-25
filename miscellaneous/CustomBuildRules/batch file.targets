@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema
+      Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml" />
+    <AvailableItemName
+		Include="BatchFileBuild">
+      <Targets>_BatchFileBuild</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  <UsingTask
+    TaskName="BatchFileBuild"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <Target
+    Name="_BatchFileBuild"
+    BeforeTargets="$(BatchFileBuildBeforeTargets)"
+    AfterTargets="$(BatchFileBuildAfterTargets)"
+    Condition="'@(BatchFileBuild)' != ''"
+    DependsOnTargets="ComputeBatchFileBuildOutput"
+	Outputs="%(BatchFileBuild.Outputs)"
+    Inputs="%(BatchFileBuild.Identity);%(BatchFileBuild.AdditionalDependencies);$(MSBuildProjectFile)"
+    >
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <BatchFileBuild
+        Remove="@(BatchFileBuild)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <BatchFileBuild_tlog
+		Include="%(BatchFileBuild.ObjectFileName)"
+		Condition="'%(BatchFileBuild.ObjectFileName)' != '' and '%(BatchFileBuild.ExcludedFromBuild)' != 'true'">
+        <Source>@(BatchFileBuild, '|')</Source>
+      </BatchFileBuild_tlog>
+    </ItemGroup>
+    <Message
+      Importance="High"
+      Text="%(BatchFileBuild.ExecutionDescription)" />
+    <WriteLinesToFile
+      File="$(IntDir)$(ProjectName).write.1.tlog"
+      Lines="^%(BatchFileBuild_tlog.Source);@(BatchFileBuild_tlog-&gt;'%(Fullpath)')"
+	  Condition="'@(BatchFileBuild_tlog)' != '' and '%(BatchFileBuild_tlog.ExcludedFromBuild)' != 'true'"
+      />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+            $(ComputeLinkInputsTargets);
+            ComputeBatchFileBuildOutput;
+          </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+            $(ComputeLibInputsTargets);
+            ComputeBatchFileBuildOutput;
+          </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeBatchFileBuildOutput"
+    Condition="'@(BatchFileBuild)' != ''">
+    <ItemGroup>
+      <Link
+		Include="@(BatchFileBuild->Metadata('ObjectFileName')->Distinct()->ClearMetadata())"
+		Condition="'%(BatchFileBuild.ExcludedFromBuild)' != 'true'"/>
+      <Lib
+		Include="@(BatchFileBuild->Metadata('ObjectFileName')->Distinct()->ClearMetadata())"
+		Condition="'%(BatchFileBuild.ExcludedFromBuild)' != 'true'"/>
+    </ItemGroup>
+  </Target>
+</Project>

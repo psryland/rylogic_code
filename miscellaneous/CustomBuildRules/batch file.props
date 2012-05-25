@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup
+    Condition="'$(BatchFileBuildBeforeTargets)' == '' and '$(BatchFileBuildAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <BatchFileBuildBeforeTargets>ClCompile</BatchFileBuildBeforeTargets>
+  </PropertyGroup>
+ <PropertyGroup>
+    <Foobar_builderDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(Foobar_builderDependsOn)</Foobar_builderDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <BatchFileBuild>
+      <CommandLineTemplate>call [BatchFileToRun] [BatchFileArgs]</CommandLineTemplate>
+	  <BatchFileToRun></BatchFileToRun>
+	  <BatchFileArgs></BatchFileArgs>
+	  <OutputFiles></OutputFiles>
+	  <Outputs>[OutputFiles]</Outputs>
+    </BatchFileBuild>
+  </ItemDefinitionGroup>
+</Project>
