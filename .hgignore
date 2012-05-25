@@ -1,0 +1,19 @@
+# syntax: shell style pattern match, other option is regexp
+syntax: glob
+*.dll
+*.mdb
+*.pdb
+*.exe
+*.pidb
+*.suo
+*.user
+*.orig
+*/bin/*
+*/obj/*
+*.userprefs
+*ReSharper*
+RylogicEnv.cmd
+.svn
+media/
+ideas/
+thirdparty/
