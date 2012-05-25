@@ -8,12 +8,14 @@ syntax: glob
 *.suo
 *.user
 *.orig
-*/bin/*
-*/obj/*
 *.userprefs
 *ReSharper*
 RylogicEnv.cmd
-.svn
+ResEdit.layout
+W.TOOLS HAS THE ARAXIS COMPARES FOR SDK
+obj/
+.svn/
 media/
 ideas/
 thirdparty/
+tools/Compressonator/
