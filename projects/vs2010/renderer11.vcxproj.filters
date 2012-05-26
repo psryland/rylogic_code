@@ -125,6 +125,9 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\renderer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\forward.h" />
+    <ClInclude Include="..\renderer11\shaders\cbuffer.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -186,10 +189,10 @@
     <None Include="..\renderer11\shaders\common\uber.hlsl">
       <Filter>shaders\common</Filter>
     </None>
-    <None Include="..\renderer11\shaders\common\uber_cbuffer.hlsl">
+    <None Include="..\renderer11\shaders\common\uber_defines.hlsl">
       <Filter>shaders\common</Filter>
     </None>
-    <None Include="..\renderer11\shaders\common\uber_defines.hlsl">
+    <None Include="..\renderer11\shaders\common\cbuffer.hlsl">
       <Filter>shaders\common</Filter>
     </None>
   </ItemGroup>

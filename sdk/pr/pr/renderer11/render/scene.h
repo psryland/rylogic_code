@@ -23,18 +23,14 @@ namespace pr
 		// A scene contains a drawlist
 		struct Scene
 		{
-			pr::Renderer*                m_rdr;         // The renderer
-			pr::rdr::Viewport            m_viewport;    // Represents the rectangular area on screen
-			pr::rdr::SceneView           m_view;        // Represents the camera properties used to project onto the screen
-			pr::rdr::Drawlist            m_drawlist;    // The list of elements to draw
-			pr::rdr::GBuffer             m_gbuffer;
-			pr::rdr::ERenderMethod::Type m_rdr_method;
-			pr::Colour                   m_background_colour;
+			pr::Renderer*        m_rdr;               // The renderer
+			pr::rdr::Viewport    m_viewport;          // Represents the rectangular area on screen
+			pr::rdr::SceneView   m_view;              // Represents the camera properties used to project onto the screen
+			pr::rdr::Drawlist    m_drawlist;          // The list of elements to draw
+			pr::Colour           m_background_colour; // The colour to clear the background to
+			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
 			
-			Scene(pr::Renderer& rdr, pr::rdr::ERenderMethod::Type method = pr::rdr::ERenderMethod::Forward, SceneView const& view = SceneView());
-			
-			// Change the render method for this scene
-			void SetRenderMethod(pr::rdr::ERenderMethod::Type method);
+			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());
 			
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
 			SceneView const& View() const    { return m_view; }
@@ -49,28 +45,51 @@ namespace pr
 			// Drawlists can be used in two ways, one is to clear the drawset with each frame
 			// and rebuild it from scratch (useful for scenes that change frequently), the other
 			// is to NOT clear the drawset and add and remove instances between frames
-			void ClearDrawlist() { m_drawlist.Clear(); }
-			void UpdateDrawlist() { pr::events::Send(pr::rdr::Evt_SceneRender(this)); }
+			void ClearDrawlist()  { m_drawlist.Clear(); }
+			void UpdateDrawlist() { pr::events::Send(pr::rdr::Evt_SceneRender(this)); m_drawlist.SortIfNeeded(); }
 			
 			// Add an instance. The instance must be resident for the entire time that it is
 			// in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
-			void AddInstance(BaseInstance const& inst)                   { m_drawlist.Add(inst); }
+			void AddInstance(BaseInstance const& inst)                     { m_drawlist.Add(inst); }
 			template <typename Inst> void AddInstance(Inst const& inst)    { m_drawlist.Add(inst.m_base); }
 			
 			// Remove an instance from the drawlist
-			void RemoveInstance(BaseInstance const& inst)                { m_drawlist.Remove(inst); }
+			void RemoveInstance(BaseInstance const& inst)                  { m_drawlist.Remove(inst); }
 			template <typename Inst> void RemoveInstance(Inst const& inst) { m_drawlist.Remove(inst.m_base); }
 			
-			// Render the current drawlist into 'ctx'
-			void Render(D3DPtr<ID3D11DeviceContext>& ctx, bool clear_bb = true);
-			void Render(bool clear_bb = true);
+			// Render the current drawlist into 'dc'
+			void Render(bool clear_bb = true) const;
+			void Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb = true) const;
+		
+		protected:
+			// Implementation of rendering for the derived scene type
+			virtual void DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const = 0;
+			
+			// Setup the input assembler for a drawlist element
+			void SetupIA(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle) const;
+		};
+		
+		
+		// A scene rendered using forward rendering techniques
+		struct SceneForward :Scene
+		{
+			SceneForward(pr::Renderer& rdr, SceneView const& view = SceneView());
 			
 		private:
-			// Deferred rendering
-			void RenderDeferred(D3DPtr<ID3D11DeviceContext>& ctx, bool clear_bb);
+			// Implementation of rendering for the derived scene type
+			void DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const;
+		};
+		
+		
+		// A scene rendered using deferred rendering techniques
+		struct SceneDeferred :Scene
+		{
+			pr::rdr::GBuffer m_gbuffer; // GBuffer containing visible scene geometry
 			
-			// Forward rendering
-			void RenderForward(D3DPtr<ID3D11DeviceContext>& ctx, bool clear_bb);
+			SceneDeferred(pr::Renderer& rdr, SceneView const& view = SceneView());
+			
+			// Implementation of rendering for the derived scene type
+			void DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const;
 		};
 	}
 }

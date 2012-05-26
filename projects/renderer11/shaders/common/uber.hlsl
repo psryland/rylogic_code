@@ -17,8 +17,8 @@
 // #pragma warning (disable:3557)
 // #define TINY 0.0005f
 
-#include "uber_cbuffer.hlsl"
 #include "uber_defines.hlsl"
+#include "cbuffer.hlsl"
 #include "functions.hlsl"
 
 // Vertex input format

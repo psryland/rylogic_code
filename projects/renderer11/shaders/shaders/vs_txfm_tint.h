@@ -5,7 +5,7 @@
 //
 //   fxc Q:\projects\renderer11\shaders\shaders\vs_txfm_tint.hlsl /Tvs_4_1
 //    /FhQ:\projects\renderer11\shaders\shaders\vs_txfm_tint.h /Vnvs_txfm_tint
-//    /nologo /IQ:\projects\renderer11\shaders\shaders\.. /DSHADER_BUILD=1
+//    /IQ:\projects\renderer11\shaders\shaders\.. /DSHADER_BUILD=1 /nologo
 //
 //
 // Buffer Definitions: 
@@ -14,7 +14,7 @@
 // {
 //
 //   float4x4 m_o2s;                    // Offset:    0 Size:    64
-//   float4 m_tint;                     // Offset:   64 Size:    16
+//   float4 m_tint;                     // Offset:  192 Size:    16
 //
 // }
 //
@@ -43,7 +43,7 @@
 //
 vs_4_1
 dcl_globalFlags refactoringAllowed
-dcl_constantbuffer cb0[5], immediateIndexed
+dcl_constantbuffer cb0[13], immediateIndexed
 dcl_input v0.xyz
 dcl_output_siv o0.xyzw, position
 dcl_output o1.xyzw
@@ -54,17 +54,17 @@ dp4 o0.x, r0.xyzw, cb0[0].xyzw
 dp4 o0.y, r0.xyzw, cb0[1].xyzw
 dp4 o0.z, r0.xyzw, cb0[2].xyzw
 dp4 o0.w, r0.xyzw, cb0[3].xyzw
-mov o1.xyzw, cb0[4].xyzw
+mov o1.xyzw, cb0[12].xyzw
 ret 
 // Approximately 8 instruction slots used
 #endif
 
 const BYTE vs_txfm_tint[] =
 {
-     68,  88,  66,  67, 169, 165, 
-    252, 106,   6, 137, 230, 186, 
-    103, 101, 151, 112,  93, 165, 
-     42, 181,   1,   0,   0,   0, 
+     68,  88,  66,  67, 173,  70, 
+    245, 204, 175, 255, 159,  83, 
+     30,  54, 187,   2, 179,  74, 
+     41, 230,   1,   0,   0,   0, 
      76,   3,   0,   0,   5,   0, 
       0,   0,  52,   0,   0,   0, 
      48,   1,   0,   0, 100,   1, 
@@ -85,13 +85,13 @@ const BYTE vs_txfm_tint[] =
     100, 101, 108,   0, 171, 171, 
      60,   0,   0,   0,   2,   0, 
       0,   0,  96,   0,   0,   0, 
-     80,   0,   0,   0,   0,   0, 
+    208,   0,   0,   0,   0,   0, 
       0,   0,   0,   0,   0,   0, 
     144,   0,   0,   0,   0,   0, 
       0,   0,  64,   0,   0,   0, 
       2,   0,   0,   0, 152,   0, 
       0,   0,   0,   0,   0,   0, 
-    168,   0,   0,   0,  64,   0, 
+    168,   0,   0,   0, 192,   0, 
       0,   0,  16,   0,   0,   0, 
       2,   0,   0,   0, 176,   0, 
       0,   0,   0,   0,   0,   0, 
@@ -139,7 +139,7 @@ const BYTE vs_txfm_tint[] =
       1,   0,  68,   0,   0,   0, 
     106,   8,   0,   1,  89,   0, 
       0,   4,  70, 142,  32,   0, 
-      0,   0,   0,   0,   5,   0, 
+      0,   0,   0,   0,  13,   0, 
       0,   0,  95,   0,   0,   3, 
     114,  16,  16,   0,   0,   0, 
       0,   0, 103,   0,   0,   4, 
@@ -179,7 +179,7 @@ const BYTE vs_txfm_tint[] =
       0,   0,  54,   0,   0,   6, 
     242,  32,  16,   0,   1,   0, 
       0,   0,  70, 142,  32,   0, 
-      0,   0,   0,   0,   4,   0, 
+      0,   0,   0,   0,  12,   0, 
       0,   0,  62,   0,   0,   1, 
      83,  84,  65,  84, 116,   0, 
       0,   0,   8,   0,   0,   0, 

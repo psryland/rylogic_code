@@ -84,12 +84,12 @@ namespace pr
 			// so they can call: MyType(...) :base(..) {}
 			typedef Main<UserSettings,MainGUI> base;
 			
-			UserSettings         m_settings;    // Application wide user settings
-			pr::Renderer         m_rdr;         // The renderer
-			pr::rdr::Scene       m_scene;       // The main view
-			pr::Camera           m_cam;         // A camera
-			MainGUI&             m_gui;         // The GUI that owns this app logic class
-			bool                 m_rdr_pending; // Render call batching, true if render has been called at least once
+			UserSettings           m_settings;    // Application wide user settings
+			pr::Renderer           m_rdr;         // The renderer
+			pr::rdr::SceneForward  m_scene;       // The main view
+			pr::Camera             m_cam;         // A camera
+			MainGUI&               m_gui;         // The GUI that owns this app logic class
+			bool                   m_rdr_pending; // Render call batching, true if render has been called at least once
 			
 			// Construct using a template setup object.
 			template <typename Setup>

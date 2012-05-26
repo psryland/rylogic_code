@@ -30,6 +30,9 @@ namespace pr
 			friend struct pr::rdr::Shader;
 			void Delete(pr::rdr::Shader const* shdr);
 			
+			// Create the built-in shaders
+			void CreateStockShaders();
+			
 		public:
 			ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
 			~ShaderManager();

@@ -13,6 +13,9 @@
 #ifndef PR_RDR_SHADER_PS
 #define PR_RDR_SHADER_PS 0
 #endif
+#ifndef PR_RDR_SHADER_CBUFMODEL
+#define PR_RDR_SHADER_CBUFMODEL 1
+#endif
 #ifndef PR_RDR_SHADER_TXFM
 #define PR_RDR_SHADER_TXFM 0
 #endif

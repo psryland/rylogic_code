@@ -5,22 +5,37 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
-#include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/dds_texture_loader.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/util.h"
+#include "pr/renderer11/instances/instance.h"
+#include "pr/renderer11/models/input_layout.h"
+#include "pr/renderer11/models/nugget.h"
+#include "pr/renderer11/render/drawlist_element.h"
+#include "pr/renderer11/render/scene_view.h"
+#include "pr/renderer11/render/sortkey.h"
+#include "pr/renderer11/util/lock.h"
+#include "renderer11/shaders/cbuffer.h"
 
 using namespace pr::rdr;
 
-GUID const TexInfoGUID = {0x506e436e, 0x5a4f, 0x4190, 0x98, 0x43, 0x99, 0x7a, 0x19, 0xa8, 0xd8, 0x69}; // {506E436E-5A4F-4190-9843-997A19A8D869}
+namespace pr
+{
+	namespace rdr
+	{
+		// include generated header files
+		#include "renderer11/shaders/shaders/vs_txfm_tint.h"
+		#include "renderer11/shaders/shaders/ps_txfm_tint.h"
+	}
+}
 
 pr::rdr::ShaderManager::ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device)
 :m_alex_shader(Allocator<Shader>(mem))
 ,m_device(device)
 ,m_lookup_shader(mem)
 {
-	CreateStockShaders(*this);
+	CreateStockShaders();
 }
 pr::rdr::ShaderManager::~ShaderManager()
 {
@@ -144,4 +159,59 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShaderFor(EGeom::Type geom_mask) 
 		throw pr::Exception<HRESULT>(E_FAIL, msg);
 	}
 	return const_cast<Shader*>(closest);
+}
+
+// Create the built-in shaders
+void pr::rdr::ShaderManager::CreateStockShaders()
+{
+	// Helper function for setting up the two standard constant buffers for a shader
+	auto CreateCBufModel = [this](pr::rdr::ShaderPtr& shdr)
+	{
+		shdr->m_cbuf.resize(1);
+		CBufferDesc cbdesc(sizeof(CBufModel));
+		pr::Throw(m_device->CreateBuffer(&cbdesc, 0, &shdr->m_cbuf[0].m_ptr));
+	};
+
+	{//TxTint
+		BindShaderFunc map = [](D3DPtr<ID3D11DeviceContext>& dc, pr::rdr::DrawMethod const& meth, Nugget const&, BaseInstance const& inst, SceneView const& view)
+		{
+			CBufModel cb = {};
+			cb.m_o2s = pr::GetInverse(view.m_c2w) * GetO2W(inst);
+			cb.m_tint = inst.get<pr::Colour>(EInstComp::TintColour32);
+			*Lock(dc, meth.m_shader->m_cbuf[0], 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
+		};
+		
+		// Create the basic shader
+		VShaderDesc vsdesc(VertP(), vs_txfm_tint, sizeof(vs_txfm_tint));
+		PShaderDesc psdesc(ps_txfm_tint, sizeof(ps_txfm_tint));
+		pr::rdr::ShaderPtr shdr = CreateShader(shader::TxTint, map, &vsdesc, &psdesc);
+		CreateCBufModel(shdr);
+	}
+
+
+//// Setup this shader for rendering
+//void pr::rdr::Shader::Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, SceneView const& view)
+//{
+//	(void)view;
+//	(void)dle; //todo textures
+//	
+//	// Configure the constants buffer for this shader
+////todo	m_map(dc, m_constants, dle, view);
+//	
+//	// Bind the constant buffer to the device
+////todo	dc->VSSetConstantBuffers(0, 1, &m_constants.m_ptr);
+//	
+//	// Apply the blend state if present
+//	if (m_blend_state)
+//		dc->OMSetBlendState(m_blend_state.m_ptr, 0, 0xffffffff);
+//	
+//	// Apply the rasterizer state if present
+//	if (m_rast_state)
+//		dc->RSSetState(m_rast_state.m_ptr);
+//	
+//	// Apply the depth buffer state if present
+//	if (m_depth_state)
+//		dc->OMSetDepthStencilState(m_depth_state.m_ptr, 0);
+//}
+
 }

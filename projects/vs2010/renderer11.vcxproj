@@ -151,6 +151,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\stock_resources.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\util.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\wrappers.h" />
+    <ClInclude Include="..\renderer11\shaders\cbuffer.h" />
     <ClInclude Include="..\renderer11\util\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
@@ -178,9 +179,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\bin\_build_shader.cmd" />
+    <None Include="..\renderer11\shaders\common\cbuffer.hlsl" />
     <None Include="..\renderer11\shaders\common\functions.hlsl" />
     <None Include="..\renderer11\shaders\common\uber.hlsl" />
-    <None Include="..\renderer11\shaders\common\uber_cbuffer.hlsl" />
     <None Include="..\renderer11\shaders\common\uber_defines.hlsl" />
     <CustomBuild Include="..\renderer11\shaders\shaders\ps_txfm_tint.hlsl">
       <FileType>Document</FileType>

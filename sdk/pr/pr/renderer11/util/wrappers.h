@@ -19,7 +19,8 @@ namespace pr
 		{
 			void const* Data;      // ByteWidth is the size of the data
 			size_t      ElemCount; // The number of elements in this buffer (verts, indices, whatever)
-			
+			size_t      SizeInBytes() const { return ElemCount * StructureByteStride; }
+
 			BufferDesc()
 			:D3D11_BUFFER_DESC()
 			,Data(0)
@@ -163,12 +164,19 @@ namespace pr
 		// Initialisation data
 		struct SubResourceData :D3D11_SUBRESOURCE_DATA
 		{
-			SubResourceData(void const* init_data = 0, UINT pitch = 0, UINT pitch_per_slice = 0)
+			SubResourceData(void const* init_data, UINT pitch, UINT pitch_per_slice)
 			:D3D11_SUBRESOURCE_DATA()
 			{
 				pSysMem          = init_data;       // Initialisation data for a resource
 				SysMemPitch      = pitch;           // used for 2D texture initialisation
 				SysMemSlicePitch = pitch_per_slice; // used for 3D texture initialisation
+			}
+			template <typename InitType> SubResourceData(InitType const& init)
+			:D3D11_SUBRESOURCE_DATA()
+			{
+				pSysMem          = &init;
+				SysMemPitch      = 0;
+				SysMemSlicePitch = sizeof(InitType);
 			}
 		};
 		

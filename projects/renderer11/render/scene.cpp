@@ -6,6 +6,8 @@
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/draw_method.h"
+#include "pr/renderer11/util/lock.h"
+#include "renderer11/shaders/cbuffer.h"
 
 using namespace pr::rdr;
 
@@ -52,86 +54,75 @@ void pr::rdr::SceneView::UpdateCameraToScreen()
 	else                ProjectionPerspectiveFOV(m_c2s ,m_fovY          ,m_aspect ,NearPlane() ,FarPlane() ,true);
 }
 
-// ***********************************************************
+// Scene ***********************************************************
 
 // Make a scene
-pr::rdr::Scene::Scene(pr::Renderer& rdr, pr::rdr::ERenderMethod::Type method, SceneView const& view)
+pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 :m_rdr(&rdr)
 ,m_viewport(m_rdr->DisplayRect())
 ,m_view(view)
 ,m_drawlist(rdr)
-,m_gbuffer()
-,m_rdr_method(ERenderMethod::None)
 ,m_background_colour(pr::ColourBlack)
+,m_cbuf_frame()
 {
-	// Do setup for the choosen render method
-	SetRenderMethod(method);
-}
-
-// Change the render method for this scene
-void pr::rdr::Scene::SetRenderMethod(pr::rdr::ERenderMethod::Type method)
-{
-	if (m_rdr_method == method) return;
-	m_rdr_method = method;
-	
-	switch (m_rdr_method)
-	{
-	default: throw pr::Exception<HRESULT>(E_FAIL, "Unknown rendering method");
-	case pr::rdr::ERenderMethod::Forward:
-		{
-			break;
-		}
-	case pr::rdr::ERenderMethod::Deferred:
-		{
-			IRect rect = m_rdr->DisplayRect();
-			m_gbuffer.Init(m_rdr->Device(),rect.SizeX(), rect.SizeY());
-			break;
-		}
-	}
+	CBufFrame scene_constants = {};
+	scene_constants.m_c2w = view.m_c2w;
+	scene_constants.m_w2c = pr::GetInverse(view.m_c2w);
+	SubResourceData init(scene_constants);
+	CBufferDesc cbdesc(sizeof(CBufFrame));
+	pr::Throw(rdr.Device()->CreateBuffer(&cbdesc, &init, &m_cbuf_frame.m_ptr));
 }
 
 // Render the draw list for this viewport
-void pr::rdr::Scene::Render(bool clear_bb)
+void pr::rdr::Scene::Render(bool clear_bb) const
 {
-	D3DPtr<ID3D11DeviceContext> ctx = m_rdr->ImmediateDC();
-	Render(ctx, clear_bb);
+	D3DPtr<ID3D11DeviceContext> dc = m_rdr->ImmediateDC();
+	Render(dc, clear_bb);
 }
-void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& ctx, bool clear_bb)
+void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
 {
-	// Ensure the drawlist is sorted
-	m_drawlist.SortIfNeeded();
-	
-	// Do the rendering
-	switch (m_rdr_method)
-	{
-	default: throw pr::Exception<HRESULT>(E_FAIL, "Unknown rendering method");
-	case pr::rdr::ERenderMethod::Deferred: return RenderDeferred(ctx, clear_bb);
-	case pr::rdr::ERenderMethod::Forward:  return RenderForward(ctx, clear_bb);
+	{// Set the frame constant variables
+		CBufFrame scene_constants;
+		scene_constants.m_c2w = m_view.m_c2w;
+		scene_constants.m_w2c = pr::GetInverse(m_view.m_c2w);
+		*Lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufFrame>() = scene_constants;
 	}
+	
+	DoRender(dc, clear_bb);
 }
 
-// Render the scene using the deferred rendering technique
-void pr::rdr::Scene::RenderDeferred(D3DPtr<ID3D11DeviceContext>& ctx, bool clear_bb)
+// Setup the input assembler for a drawlist element
+void pr::rdr::Scene::SetupIA(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle) const
 {
-	(void)ctx;
-	// Clear the render targets
-	if (clear_bb)
-	{
-		//m_gbuffer.Clear(ctx);
-	}
-	
-	// Loop over the elements in the draw list
-	Drawlist::DLECont::const_iterator element     = m_drawlist.begin();
-	Drawlist::DLECont::const_iterator element_end = m_drawlist.end();
-	while (element != element_end)
-	{
-		//Material const& mat = element->Material();
-		++element;
-	}
+	Nugget const&      nugget = *dle.m_nugget;
+	DrawMethod const&  meth   = nugget.m_draw;
+	ModelBuffer const& mb     = *nugget.m_model->m_model_buffer.m_ptr;
+		
+	// Bind the vertex buffer to the IA
+	ID3D11Buffer* buffers[] = {mb.m_vb.m_ptr};
+	UINT          strides[] = {mb.m_vb.m_stride};
+	UINT          offsets[] = {(UINT)nugget.m_vrange.m_begin};
+	dc->IASetVertexBuffers(0, 1, buffers, strides, offsets);
+		
+	// Set the input layout for this vertex buffer
+	dc->IASetInputLayout(meth.m_shader->m_iplayout.m_ptr);
+		
+	// Bind the index buffer to the IA
+	dc->IASetIndexBuffer(mb.m_ib.m_ptr, mb.m_ib.m_format, (UINT)nugget.m_irange.m_begin);
+		
+	// Tell the IA would sort of primitives to expect
+	dc->IASetPrimitiveTopology(nugget.m_prim_topo);
+		
 }
+
+// SceneForward ***********************************************************
+
+pr::rdr::SceneForward::SceneForward(pr::Renderer& rdr, SceneView const& view)
+:Scene(rdr, view)
+{}
 
 // Render the scene using the standard forward rendering technique
-void pr::rdr::Scene::RenderForward(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb)
+void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
 {
 	// Clear the back buffer and depth/stencil
 	if (clear_bb)
@@ -147,25 +138,12 @@ void pr::rdr::Scene::RenderForward(D3DPtr<ID3D11DeviceContext>& dc, bool clear_b
 	Drawlist::DLECont::const_iterator dle = m_drawlist.begin(), dle_end = m_drawlist.end();
 	for (;dle != dle_end; ++dle)
 	{
-		BaseInstance const& inst    = *dle->m_instance;
-		Nugget const&         nugget  = *dle->m_nugget;
-		DrawMethod const&     meth    = nugget.m_draw;
-		ModelBuffer const&    mb      = *nugget.m_model->m_model_buffer.m_ptr;
+		BaseInstance const& inst   = *dle->m_instance;
+		Nugget const&       nugget = *dle->m_nugget;
+		DrawMethod const&   meth   = nugget.m_draw;
 		
-		// Bind the vertex buffer to the IA
-		ID3D11Buffer* buffers[] = {mb.m_vb.m_ptr};
-		UINT          strides[] = {mb.m_vb.m_stride};
-		UINT          offsets[] = {(UINT)nugget.m_vrange.m_begin};
-		dc->IASetVertexBuffers(0, 1, buffers, strides, offsets);
-		
-		// Set the input layout for this vertex buffer
-		dc->IASetInputLayout(meth.m_shader->m_iplayout.m_ptr);
-		
-		// Bind the index buffer to the IA
-		dc->IASetIndexBuffer(mb.m_ib.m_ptr, mb.m_ib.m_format, (UINT)nugget.m_irange.m_begin);
-		
-		// Tell the IA would sort of primitives to expect
-		dc->IASetPrimitiveTopology(nugget.m_prim_topo);
+		// Setup the input assembler
+		SetupIA(dc, *dle);
 		
 		// Bind the shader to the device
 		meth.m_shader->Setup(dc, meth, nugget, inst, m_view);
@@ -177,3 +155,57 @@ void pr::rdr::Scene::RenderForward(D3DPtr<ID3D11DeviceContext>& dc, bool clear_b
 			UINT(nugget.m_vrange.m_begin));
 	}
 }
+
+// SceneDeferred ***********************************************************
+
+pr::rdr::SceneDeferred::SceneDeferred(pr::Renderer& rdr, SceneView const& view)
+:Scene(rdr, view)
+,m_gbuffer()
+{
+	IRect rect = m_rdr->DisplayRect();
+	m_gbuffer.Init(m_rdr->Device(),rect.SizeX(), rect.SizeY());
+}
+
+// Render the scene using the deferred rendering technique
+void pr::rdr::SceneDeferred::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
+{
+	(void)dc;
+	(void)clear_bb;
+	//// Clear the render targets
+	//if (clear_bb)
+	//{
+	//	//m_gbuffer.Clear(dc);
+	//}
+	//
+	//// Loop over the elements in the draw list
+	//Drawlist::DLECont::const_iterator element     = m_drawlist.begin();
+	//Drawlist::DLECont::const_iterator element_end = m_drawlist.end();
+	//while (element != element_end)
+	//{
+	//	//Material const& mat = element->Material();
+	//	++element;
+	//}
+	
+	// Make Scene a base class, and derive ForwardRenderedScene and DeferredRenderedScene
+
+	// Use a light volumes drawlist, that contains instances of light volume models
+	// i.e. sphere = point light, full screen quad = directional light, cone = spot light, etc
+	// Each light volume is a triangle list containing position and light index.
+	// Light index is a lookup into a constants buffer describing light type, colour, position, direction, etc
+	// Draw the light volumes drawlist with back face culling (only front faces drawn).
+	// Output pixel is GBuffer pixel colour plus lighting for the light type
+	// Do directional, ambient occlusion/reflection, depth of field, etc as a single pass using a full screen quad
+	// after the other lights
+
+	// GBuffer Pass:
+	//  Build a render target containing position info for every visible pixel
+	//  Draw things in the drawlist from [0, first_alpha)
+	
+	// Lighting Pass:
+	//  Set the GBuffer as a source texture
+	//  Draw the light volume draw list
+	
+	// Full Screen Pass:
+	//  Draw a full screen quad and do final post-process pass
+}
+

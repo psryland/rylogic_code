@@ -5,6 +5,7 @@ syntax: glob
 *.mdb
 *.pdb
 *.exe
+*.pp
 *.pidb
 *.ipch
 *.opensdf
@@ -23,3 +24,4 @@ media/
 ideas/
 thirdparty/
 tools/Compressonator/
+

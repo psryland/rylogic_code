@@ -5,7 +5,7 @@
 //
 //   fxc Q:\projects\renderer11\shaders\shaders\ps_txfm_tint.hlsl /Tps_4_1
 //    /FhQ:\projects\renderer11\shaders\shaders\ps_txfm_tint.h /Vnps_txfm_tint
-//    /nologo /IQ:\projects\renderer11\shaders\shaders\.. /DSHADER_BUILD=1
+//    /IQ:\projects\renderer11\shaders\shaders\.. /DSHADER_BUILD=1 /nologo
 //
 //
 //

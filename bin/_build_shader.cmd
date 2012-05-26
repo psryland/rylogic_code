@@ -39,13 +39,20 @@ set output=/Fh"%srcdir%\%file%.h"
 ::Set the variable name to the name of the file
 set varname=/Vn%file%
 
+::Set include paths
+set includes=/I%srcdir%\..
+
+::Set defines
+set defines=/DSHADER_BUILD=1
+
 ::Set other command line options
-set options=/nologo /I%srcdir%\.. /DSHADER_BUILD=1
+set options=/nologo
 
 ::Build the shader
 cd %srcdir%
-"%fxc%" "%fullpath%" %profile% %output% %varname% %options%
+"%fxc%" "%fullpath%" %profile% %output% %varname% %includes% %defines% %options%
 
 ::Generate preprocessed output
-::"%fxc%" "%fullpath%" /P"%fullpath%".pp
-::"%textedit%" "%fullpath%".pp
+::"%fxc%" "%fullpath%" /P"%fullpath%".pp %includes% %defines% %options%
+::Q:\bin\textformatter.exe -f "%fullpath%.pp" -newlines 0 2
+::"%textedit%" "%fullpath%.pp"

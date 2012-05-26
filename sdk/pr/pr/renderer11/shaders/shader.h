@@ -63,7 +63,7 @@ namespace pr
 		// A collection of shaders (kinda like an effect)
 		struct Shader :pr::RefCount<Shader>
 		{
-			typedef pr::Array< D3DPtr<ID3D11Buffer> > CBufCont;
+			typedef pr::Array< D3DPtr<ID3D11Buffer>, 16, true > CBufCont;
 			
 			D3DPtr<ID3D11InputLayout>       m_iplayout;        // The input layout compatible with this shader
 			CBufCont                        m_cbuf;            // Constant buffers used by the shader

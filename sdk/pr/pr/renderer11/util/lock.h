@@ -62,6 +62,11 @@ namespace pr
 			,m_sub(0)
 			,m_range()
 			{}
+			Lock(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Resource> const& res, UINT sub, D3D11_MAP map_type, UINT flags)
+			{
+				PR_ASSERT(PR_DBG_RDR, (flags & D3D11_MAP_FLAG_DO_NOT_WAIT) == 0, "Don't use this constructor with this flag");
+				Map(dc, res, sub, map_type, flags);
+			}
 			~Lock()
 			{
 				Unmap();

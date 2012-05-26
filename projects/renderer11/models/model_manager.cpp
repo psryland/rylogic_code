@@ -28,14 +28,14 @@ pr::rdr::ModelBufferPtr pr::rdr::ModelManager::CreateModelBuffer(MdlSettings con
 	pr::rdr::ModelBufferPtr mb(m_alex_mdlbuf.New());
 	mb->m_mdl_mgr = this;
 	{// Create a vertex buffer
-		SubResourceData init(settings.m_vb.Data);
+		SubResourceData init(settings.m_vb.Data, 0, UINT(settings.m_vb.SizeInBytes()));
 		pr::Throw(m_device->CreateBuffer(&settings.m_vb, &init, &mb->m_vb.m_ptr));
 		mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 		mb->m_vb.m_used.set(0, 0);
 		mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
 	}
 	{// Create an index buffer
-		SubResourceData init(settings.m_ib.Data);
+		SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
 		pr::Throw(m_device->CreateBuffer(&settings.m_ib, &init, &mb->m_ib.m_ptr));
 		mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 		mb->m_ib.m_used.set(0, 0);
