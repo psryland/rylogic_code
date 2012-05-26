@@ -10,6 +10,7 @@
 #include "pr/renderer11/render/drawlist.h"
 #include "pr/renderer11/render/gbuffer.h"
 #include "pr/renderer11/render/scene_view.h"
+#include "pr/renderer11/util/wrappers.h"
 
 namespace pr
 {
@@ -53,11 +54,11 @@ namespace pr
 			
 			// Add an instance. The instance must be resident for the entire time that it is
 			// in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
-			void AddInstance(instance::Base const& inst)                   { m_drawlist.Add(inst); }
+			void AddInstance(BaseInstance const& inst)                   { m_drawlist.Add(inst); }
 			template <typename Inst> void AddInstance(Inst const& inst)    { m_drawlist.Add(inst.m_base); }
 			
 			// Remove an instance from the drawlist
-			void RemoveInstance(instance::Base const& inst)                { m_drawlist.Remove(inst); }
+			void RemoveInstance(BaseInstance const& inst)                { m_drawlist.Remove(inst); }
 			template <typename Inst> void RemoveInstance(Inst const& inst) { m_drawlist.Remove(inst.m_base); }
 			
 			// Render the current drawlist into 'ctx'

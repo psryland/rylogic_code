@@ -7,6 +7,7 @@
 #define PR_RDR_MODELS_MODEL_SETTINGS_H
 
 #include "pr/renderer11/forward.h"
+#include "pr/renderer11/util/wrappers.h"
 
 namespace pr
 {

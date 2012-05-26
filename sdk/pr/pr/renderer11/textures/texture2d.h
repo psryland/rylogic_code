@@ -26,7 +26,7 @@ namespace pr
 			//TextureFilter             m_filter;          // Mip,Min,Mag filtering to use with this texture
 			//TextureAddrMode           m_addr_mode;       // The addressing mode to use with this texture
 			RdrId                     m_id;              // Id for this texture in the material managers lookup map
-			MaterialManager*          m_mat_mgr;         // The material manager that created this texture
+			TextureManager*           m_mgr;             // The texture manager that created this texture
 			string32                  m_name;            // Human readable id for the texture
 			//VideoPtr                  m_video;           // Non-null if this texture is the output of a video
 			

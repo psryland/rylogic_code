@@ -40,7 +40,7 @@ set output=/Fh"%srcdir%\%file%.h"
 set varname=/Vn%file%
 
 ::Set other command line options
-set options=/nologo /I%srcdir% /DSHADER_BUILD=1
+set options=/nologo /I%srcdir%\.. /DSHADER_BUILD=1
 
 ::Build the shader
 cd %srcdir%

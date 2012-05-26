@@ -32,9 +32,9 @@ namespace pr
 			PR_RDR_DECLARE_INSTANCE_TYPE3
 			(
 				Instance
-				,pr::rdr::ModelPtr           ,m_model ,pr::rdr::instance::EComp::ModelPtr
-				,pr::m4x4                    ,m_i2w   ,pr::rdr::instance::EComp::I2WTransform
-				,pr::rdr::sort_key::Override ,m_sko   ,pr::rdr::instance::EComp::SortkeyOverride
+				,pr::m4x4            ,m_i2w   ,pr::rdr::EInstComp::I2WTransform
+				,pr::rdr::ModelPtr   ,m_model ,pr::rdr::EInstComp::ModelPtr
+				,pr::rdr::SKOverride ,m_sko   ,pr::rdr::EInstComp::SortkeyOverride
 			);
 			typedef pr::Array<pr::rdr::Texture2DPtr> TexCont;
 			
@@ -63,28 +63,8 @@ namespace pr
 				m_inst.m_i2w = pr::Scale4x4(m_scale, e.m_scene->View().m_c2w.pos);
 				e.m_scene->AddInstance(m_inst);
 			}
-		
+			
 		private:
-			// Returns a material to use for the skybox, with render states set appropriately
-			pr::rdr::Material InitMaterial(pr::Renderer& rdr)
-			{
-				using namespace pr::rdr::shader;
-				
-				// From the word of Al:
-				//  Always try to maintain the z buffer (i.e. writeenable) even for huds etc
-				//  Stereoscope rendering requires everything to have correct depth
-				//  Render the skybox after all opaques to reduce overdraw
-				pr::rdr::Material mat;
-				
-				// Create a material for rendering the skybox
-				mat.m_shader = rdr.m_mat_mgr.FindShaderFor<pr::rdr::VertPT>();
-				//mat.m_shader = rdr.m_mat_mgr.CreateShader(pr::rdr::AutoId, &vs_basic, &ps_basic);
-				
-				//pr::rdr::Material mat = rdr.m_mat_mgr.GetMaterial(pr::geom::EVT);
-				//mat.m_rsb.SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);     // the type of z buffering to use (read/test against the z buffer)
-				//mat.m_rsb.SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE); // no alphablend
-				return mat;
-			}
 			
 			// Create a model for a 5-sided cubic dome
 			void InitFiveSidedCube(pr::Renderer& rdr, wstring const& texpath)
@@ -118,21 +98,27 @@ namespace pr
 					3, 10, 11,
 					3, 11,  0,
 				};
+				
+				// Create the skybox model
 				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices));
+				
+				// Create the render nuggets for the skybox
+				pr::rdr::DrawMethod method;
+				
+				// Get a suitable shader
+				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPT>();
 				
 				// Load the skybox texture
 				pr::rdr::TextureDesc desc;
-				m_tex.push_back(rdr.m_mat_mgr.CreateTexture2D(pr::rdr::AutoId, desc, texpath.c_str()));
+				method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, desc, texpath.c_str());
 				//m_tex[0]->m_addr_mode.m_addrU = D3DTADDRESS_CLAMP;
 				//m_tex[0]->m_addr_mode.m_addrV = D3DTADDRESS_CLAMP;
-	
-				// Add a render nugget
-				pr::rdr::Material mat = InitMaterial(rdr);
-				mat.m_tex_diffuse = m_tex[0];
-				m_inst.m_model->CreateNugget(mat, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				
+				// Create the render nugget
+				m_inst.m_model->CreateNugget(method, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 				
 				// Set the sortkey so that the skybox draws last
-				m_inst.m_sko.Group(pr::rdr::sort_key::SortGroup_Skybox);
+				m_inst.m_sko.Group(pr::rdr::ESortGroup::Skybox);
 			}
 			
 			// Create a model for a 6-sided cube
@@ -176,33 +162,39 @@ namespace pr
 					20,21,22, 20,22,23,
 				};
 				
+				// Create the skybox model
 				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices));
 				
+				// Create the render nuggets for the skybox
+				pr::rdr::DrawMethod method;
+				
+				// Get a shader suitable for drawing skybox
+				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPT>();
+				
+				// One texture per nugget
 				wstring tpath = texpath;
-				size_t ofs   = tpath.find(L"??", 0, 2);
+				size_t ofs    = tpath.find(L"??", 0, 2);
 				PR_ASSERT(PR_DBG, ofs != string::npos, "Provided path does not include '??' characters");
-				
-				// Add a render nugget
-				pr::rdr::Material mat = InitMaterial(rdr);
-				
-				// Load the skybox textures and add render nuggets
 				wchar_t const axes[6][3] = {{L"+X"},{L"-X"},{L"+Y"},{L"-Y"},{L"+Z"},{L"-Z"}};
 				for (int i = 0; i != 6; ++i)
 				{
+					// Load the texture for this face of the skybox
 					tpath[ofs+0] = axes[i][0];
 					tpath[ofs+1] = axes[i][1];
 					pr::rdr::TextureDesc desc;
-					m_tex.push_back(rdr.m_mat_mgr.CreateTexture2D(pr::rdr::AutoId, desc, tpath.c_str()));
+					pr::rdr::Texture2DPtr tex = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, desc, tpath.c_str());
 					//m_tex.back()->m_addr_mode.m_addrU = D3DTADDRESS_CLAMP;
 					//m_tex.back()->m_addr_mode.m_addrV = D3DTADDRESS_CLAMP;
 					
+					// Create the render nugget for this face of the skybox
 					pr::rdr::Range vrange = pr::rdr::Range::make(i*4, (i+1)*4);
 					pr::rdr::Range irange = pr::rdr::Range::make(i*6, (i+1)*6);
+					m_inst.m_model->CreateNugget(method, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, &vrange, &irange);
 					
-					// Add a render nugget
-					mat.m_tex_diffuse = m_tex.back();
-					m_inst.m_model->CreateNugget(mat, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, &vrange, &irange);
 				}
+				
+				// Set the sortkey so that the skybox draws last
+				m_inst.m_sko.Group(pr::rdr::ESortGroup::Skybox);
 			}
 		};
 	}

@@ -6,4 +6,4 @@
 #define PR_RDR_SHADER_VS 1
 #define PR_RDR_SHADER_TXFM 1
 #define PR_RDR_SHADER_TINT0 1
-#include "uber.hlsl"
+#include "common/uber.hlsl"

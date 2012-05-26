@@ -123,15 +123,17 @@ namespace pr
 //		struct Light;
 //		class  LightingManager;
 		
-		// Materials
-		class  MaterialManager;
-		struct Material;
+		// Shaders
+		class  ShaderManager;
+		struct ShaderDesc;
+		struct Shader;        typedef pr::RefPtr<Shader> ShaderPtr;
+		
+		// Textures
+		class  TextureManager;
 		struct TextureDesc;
 		struct Texture2D;     typedef pr::RefPtr<Texture2D> Texture2DPtr;
 //		struct TextureFilter;
 //		struct TextureAddrMode;
-		struct ShaderDesc;
-		struct Shader;        typedef pr::RefPtr<Shader> ShaderPtr;
 //		namespace effect
 //		{
 //			struct Desc;
@@ -167,24 +169,15 @@ namespace pr
 		struct MdlSettings;
 		
 		// Instances
-		namespace instance
-		{
-//			struct ComponentDesc;
-			struct Base;
-//			struct DrawlistData;
-		}
-//		struct BasicInstance;
+		struct BaseInstance;
 		
 		// Scenes
 		struct SceneView;
 		struct Scene;
+		struct DrawMethod;
 		struct Drawlist;
 		struct DrawListElement;
-//		namespace viewport
-//		{
-//			struct RdrViewportChain;
-//		}
-//		
+		
 		// Enums
 		namespace ERenderMethod
 		{

@@ -39,7 +39,7 @@ bool pr::rdr::Model::MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type, uint fl
 
 // Call to create a render nugget from a range within this model that uses 'material'
 // Ranges are model relative, i.e. the first vert in the model is range [0,1)
-void pr::rdr::Model::CreateNugget(pr::rdr::Material const& material, D3D11_PRIMITIVE_TOPOLOGY prim_type, Range const* v_range, Range const* i_range)
+void pr::rdr::Model::CreateNugget(pr::rdr::DrawMethod const& meth, D3D11_PRIMITIVE_TOPOLOGY prim_type, Range const* v_range, Range const* i_range)
 {
 	Range vrange, irange;
 	if (v_range) { vrange = *v_range; vrange.shift((int)m_vrange.m_begin); PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, vrange), "This range exceeds the size of this model"); }
@@ -63,8 +63,8 @@ void pr::rdr::Model::CreateNugget(pr::rdr::Material const& material, D3D11_PRIMI
 		nugget.m_irange     = irange;
 		nugget.m_prim_topo  = prim_type;
 		nugget.m_prim_count = PrimCount(irange.size(), prim_type);
-		nugget.m_material   = material;
-		nugget.m_sort_key   = sort_key::make(nugget);
+		nugget.m_draw       = meth;
+		nugget.m_sort_key   = MakeSortKey(nugget);
 		nugget.m_owner      = this;
 	}
 }

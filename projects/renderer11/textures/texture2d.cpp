@@ -3,8 +3,8 @@
 //  Copyright © Rylogic Ltd 2012
 //*********************************************
 #include "renderer11/util/stdafx.h"
-#include "pr/renderer11/materials/textures/texture2d.h"
-#include "pr/renderer11/materials/material_manager.h"
+#include "pr/renderer11/textures/texture2d.h"
+#include "pr/renderer11/textures/texture_manager.h"
 
 using namespace pr::rdr;
 
@@ -18,6 +18,6 @@ pr::rdr::Texture2D::Texture2D()
 void pr::rdr::Texture2D::RefCountZero(pr::RefCount<Texture2D>* doomed)
 {
 	pr::rdr::Texture2D* tex = static_cast<pr::rdr::Texture2D*>(doomed);
-	tex->m_mat_mgr->Delete(tex);
+	tex->m_mgr->Delete(tex);
 }
 

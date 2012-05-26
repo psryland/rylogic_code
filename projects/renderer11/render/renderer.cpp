@@ -4,7 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/renderer.h"
-#include "pr/renderer11/materials/textures/texture2d.h"
+#include "pr/renderer11/textures/texture2d.h"
 
 using namespace pr::rdr;
 
@@ -113,7 +113,8 @@ void pr::rdr::RdrState::InitMainRT()
 pr::Renderer::Renderer(pr::rdr::RdrSettings const& settings)
 :RdrState(settings)
 ,m_mdl_mgr(m_settings.m_mem, m_device)
-,m_mat_mgr(m_settings.m_mem, m_device)
+,m_shdr_mgr(m_settings.m_mem, m_device)
+,m_tex_mgr(m_settings.m_mem, m_device)
 {}
 pr::Renderer::~Renderer()
 {

@@ -3,23 +3,22 @@
 //  Copyright © Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_MATERIALS_MATERIAL_MANAGER_H
-#define PR_RDR_MATERIALS_MATERIAL_MANAGER_H
+#ifndef PR_RDR_TEXTURES_TEXTURE_MANAGER_H
+#define PR_RDR_TEXTURES_TEXTURE_MANAGER_H
 
 #include <hash_map>
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/lookup.h"
-#include "pr/renderer11/materials/textures/texture2d.h"
-#include "pr/renderer11/materials/shaders/shader.h"
+#include "pr/renderer11/textures/texture2d.h"
+
 
 namespace pr
 {
 	namespace rdr
 	{
-		class MaterialManager
+		class TextureManager
 		{
-			typedef Lookup<RdrId, Shader*>          ShaderLookup;
 			typedef Lookup<RdrId, Texture2D*>       TextureLookup;
 			typedef Lookup<RdrId, ID3D11Texture2D*> TexFileLookup;
 			
@@ -35,27 +34,18 @@ namespace pr
 			// existing texture and create a new d3d resource for the texture.
 			
 			pr::rdr::Allocator<Texture2D> m_alex_tex2d;
-			pr::rdr::Allocator<Shader>    m_alex_shader;
 			D3DPtr<ID3D11Device>          m_device;
-			ShaderLookup                  m_lookup_shader;  // A map from shader id to existing shader instances
 			TextureLookup                 m_lookup_tex;     // A map from texture id to existing texture instances
 			TexFileLookup                 m_lookup_fname;   // A map from hash of filepath to an existing d3d texture
 			
-			MaterialManager(MaterialManager const&); // no copying
-			MaterialManager& operator = (MaterialManager const&);
+			TextureManager(TextureManager const&); // no copying
+			TextureManager& operator = (TextureManager const&);
 			
-			friend struct pr::rdr::Shader;
 			friend struct pr::rdr::Texture2D;
-			void Delete(pr::rdr::Shader const* shdr);
 			void Delete(pr::rdr::Texture2D const* tex);
 			
 		public:
-			MaterialManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
-			~MaterialManager();
-			
-			// Create a shader.
-			// Pass nulls for unneeded shaders
-			pr::rdr::ShaderPtr CreateShader(RdrId id, shader::MapConstants map_consts, VShaderDesc const* vsdesc, PShaderDesc const* psdesc);
+			TextureManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
 			
 			// Create a texture instance.
 			// 'id' is the id to assign to this texture, use AutoId if you want a new instance regardless of whether there is an existing one or not.
@@ -76,10 +66,6 @@ namespace pr
 			// Throws if creation fails. On success returns a pointer to the created texture.
 			pr::rdr::Texture2DPtr CreateTexture2D(RdrId id, pr::rdr::TextureDesc const& desc, wchar_t const* filepath);
 			pr::rdr::Texture2DPtr CreateTexture2D(RdrId id, pr::rdr::TextureDesc const& desc, char const* filepath); // define this so that the void const* version doesn't get used by accident
-			
-			// Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'
-			pr::rdr::ShaderPtr FindShaderFor(EGeom::Type geom_mask) const;
-			template <class Vert> pr::rdr::ShaderPtr FindShaderFor() const { return FindShaderFor(Vert::GeomMask); }
 			
 			// Return a pointer to an existing texture
 			pr::rdr::Texture2DPtr FindTexture(RdrId id) const

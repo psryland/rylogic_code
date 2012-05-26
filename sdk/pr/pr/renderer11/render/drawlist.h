@@ -28,9 +28,9 @@ namespace pr
 			void Clear() { m_dle.resize(0); }
 			
 			// Add/Remove instances from the drawlist
-			void Add(instance::Base const& inst);
-			void Remove(instance::Base const& inst);
-			void Remove(instance::Base const** inst, std::size_t count);
+			void Add(BaseInstance const& inst);
+			void Remove(BaseInstance const& inst);
+			void Remove(BaseInstance const** inst, std::size_t count);
 			
 			// Sort the drawlist based on sortkey
 			void Sort()         { std::sort(m_dle.begin(), m_dle.end()); m_sort_needed = false; }

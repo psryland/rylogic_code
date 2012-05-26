@@ -10,7 +10,8 @@
 #include "pr/renderer11/config/config.h"
 #include "pr/renderer11/render/gbuffer.h"
 #include "pr/renderer11/models/model_manager.h"
-#include "pr/renderer11/materials/material_manager.h"
+#include "pr/renderer11/shaders/shader_manager.h"
+#include "pr/renderer11/textures/texture_manager.h"
 #include "pr/renderer11/util/allocator.h"
 
 namespace pr
@@ -84,8 +85,9 @@ namespace pr
 	{
 	public:
 		// These manager classes from part of the public interface of the renderer
-		pr::rdr::ModelManager       m_mdl_mgr;
-		pr::rdr::MaterialManager    m_mat_mgr;
+		pr::rdr::ModelManager   m_mdl_mgr;
+		pr::rdr::ShaderManager  m_shdr_mgr;
+		pr::rdr::TextureManager m_tex_mgr;
 		
 		Renderer(pr::rdr::RdrSettings const& settings);
 		~Renderer();

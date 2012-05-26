@@ -4,48 +4,40 @@
     <Filter Include="config">
       <UniqueIdentifier>{11a2d089-14e9-4307-8ad6-7e475adafcfa}</UniqueIdentifier>
     </Filter>
-    <Filter Include="render">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="util">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="materials">
-      <UniqueIdentifier>{058fd373-5ea2-4072-ad27-e69a8c65c84a}</UniqueIdentifier>
+    <Filter Include="instances">
+      <UniqueIdentifier>{c3806097-069b-4f18-8be1-94fc978e551c}</UniqueIdentifier>
     </Filter>
     <Filter Include="models">
       <UniqueIdentifier>{4151782e-6aca-4af0-8bb4-5e646d27e050}</UniqueIdentifier>
     </Filter>
-    <Filter Include="materials\textures">
-      <UniqueIdentifier>{faf42226-0091-4cef-b5ca-8c77abffc798}</UniqueIdentifier>
+    <Filter Include="render">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
     </Filter>
-    <Filter Include="instances">
-      <UniqueIdentifier>{c3806097-069b-4f18-8be1-94fc978e551c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="materials\shaders">
+    <Filter Include="shaders">
       <UniqueIdentifier>{046fe0e7-692c-4ede-8633-41b96de1420b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="materials\shaders\shaders">
+    <Filter Include="shaders\shaders">
       <UniqueIdentifier>{188ea3e3-14ac-4c9c-8c3a-e4b1827d0dc0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="materials\shaders\common">
+    <Filter Include="shaders\common">
       <UniqueIdentifier>{f2eca657-5dc8-4b27-8ad4-e9ce2f165350}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="textures">
+      <UniqueIdentifier>{faf42226-0091-4cef-b5ca-8c77abffc798}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\renderer.h" />
     <ClInclude Include="..\renderer11\util\stdafx.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\forward.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\renderer.h">
       <Filter>render</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\config\config.h">
       <Filter>config</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\materials\textures\texture2d.h">
-      <Filter>materials\textures</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\scene.h">
       <Filter>render</Filter>
@@ -71,12 +63,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\gbuffer.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\materials\material.h">
-      <Filter>materials</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\materials\shaders\shader.h">
-      <Filter>materials\shaders</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model_buffer.h">
       <Filter>models</Filter>
     </ClInclude>
@@ -94,9 +80,6 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\nugget.h">
       <Filter>models</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\materials\material_manager.h">
-      <Filter>materials</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\lookup.h">
       <Filter>util</Filter>
@@ -119,18 +102,29 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\demo_scene.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\renderer11\materials\shaders\constant_buffers.h">
-      <Filter>materials\shaders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer11\render\draw.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\scene_view.h">
       <Filter>render</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\drawlist_element.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\draw_method.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture2d.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture_manager.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\renderer.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\forward.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -151,23 +145,14 @@
     <ClCompile Include="..\renderer11\render\gbuffer.cpp">
       <Filter>render</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\materials\shaders\shader.cpp">
-      <Filter>materials\shaders</Filter>
-    </ClCompile>
     <ClCompile Include="..\renderer11\models\model_manager.cpp">
       <Filter>models</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\models\model_buffer.cpp">
       <Filter>models</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\materials\textures\texture2d.cpp">
-      <Filter>materials\textures</Filter>
-    </ClCompile>
     <ClCompile Include="..\renderer11\models\model.cpp">
       <Filter>models</Filter>
-    </ClCompile>
-    <ClCompile Include="..\renderer11\materials\material_manager.cpp">
-      <Filter>materials</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sdk\pr\pr\renderer11\util\util.cpp">
       <Filter>util</Filter>
@@ -178,33 +163,42 @@
     <ClCompile Include="..\renderer11\util\lock.cpp">
       <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\render\draw.cpp">
-      <Filter>render</Filter>
+    <ClCompile Include="..\renderer11\shaders\shader_manager.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\shaders\shader.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\textures\texture2d.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\textures\texture_manager.cpp">
+      <Filter>textures</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\bin\_build_shader.cmd">
-      <Filter>materials\shaders</Filter>
+      <Filter>shaders</Filter>
     </None>
-    <None Include="..\renderer11\materials\shaders\hlsl\uber.hlsl">
-      <Filter>materials\shaders\common</Filter>
+    <None Include="..\renderer11\shaders\common\functions.hlsl">
+      <Filter>shaders\common</Filter>
     </None>
-    <None Include="..\renderer11\materials\shaders\hlsl\uber_cbuffer.hlsl">
-      <Filter>materials\shaders\common</Filter>
+    <None Include="..\renderer11\shaders\common\uber.hlsl">
+      <Filter>shaders\common</Filter>
     </None>
-    <None Include="..\renderer11\materials\shaders\hlsl\uber_defines.hlsl">
-      <Filter>materials\shaders\common</Filter>
+    <None Include="..\renderer11\shaders\common\uber_cbuffer.hlsl">
+      <Filter>shaders\common</Filter>
     </None>
-    <None Include="..\renderer11\materials\shaders\hlsl\functions.hlsl">
-      <Filter>materials\shaders\common</Filter>
+    <None Include="..\renderer11\shaders\common\uber_defines.hlsl">
+      <Filter>shaders\common</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\materials\shaders\hlsl\ps_txfm_tint.hlsl">
-      <Filter>materials\shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\shaders\ps_txfm_tint.hlsl">
+      <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\materials\shaders\hlsl\vs_txfm_tint.hlsl">
-      <Filter>materials\shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\shaders\vs_txfm_tint.hlsl">
+      <Filter>shaders\shaders</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

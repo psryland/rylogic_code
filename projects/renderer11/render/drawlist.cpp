@@ -21,20 +21,20 @@ pr::rdr::Drawlist::Drawlist(Renderer& rdr)
 
 // Add an instance to the draw list. Instances persist in the
 // drawlist until they are removed or 'Clear()' is called.
-void pr::rdr::Drawlist::Add(instance::Base const& inst)
+void pr::rdr::Drawlist::Add(BaseInstance const& inst)
 {
-	ModelPtr const& model = instance::GetModel(inst);
+	ModelPtr const& model = GetModel(inst);
 	#if PR_DBG_RDR
 	if (model->m_nuggets.empty() && (model->m_dbg_flags & EDbgRdrFlags::WarnedNoRenderNuggets) == 0)
 	{
 		PR_INFO(PR_DBG_RDR, FmtS("This model ('%s') has no nuggets, you need to call SetMaterial() on the model first\n", model->m_name.c_str()));
 		model->m_dbg_flags |= EDbgRdrFlags::WarnedNoRenderNuggets;
 	}
-	PR_ASSERT(PR_DBG_RDR, FEql(instance::GetI2W(inst).w.w, 1.0f), "Invalid instance transform");
+	PR_ASSERT(PR_DBG_RDR, FEql(GetO2W(inst).w.w, 1.0f), "Invalid instance transform");
 	#endif
 
 	// See if the instance has a sort key override
-	sort_key::Override const* sko = instance::FindCpt<sort_key::Override>(inst, instance::EComp::SortkeyOverride);
+	SKOverride const* sko = inst.find<SKOverride>(EInstComp::SortkeyOverride);
 
 	// Add the drawlist elements for this instance that
 	// correspond to the render nuggets of the renderable
@@ -53,7 +53,7 @@ void pr::rdr::Drawlist::Add(instance::Base const& inst)
 }
 
 // Remove an instance from the drawlist
-void pr::rdr::Drawlist::Remove(instance::Base const& inst)
+void pr::rdr::Drawlist::Remove(BaseInstance const& inst)
 {
 	auto new_end = std::remove_if(std::begin(m_dle), std::end(m_dle), [&](DrawListElement const& dle){ return dle.m_instance == &inst; });
 	//TDrawList::iterator new_end = std::remove_if(m_draw_list.begin(), m_draw_list.end(), MatchInst(instance));
@@ -61,11 +61,11 @@ void pr::rdr::Drawlist::Remove(instance::Base const& inst)
 }
 
 // Remove a batch of instances from the draw list. Optimise by a single past through the drawlist
-void pr::rdr::Drawlist::Remove(instance::Base const** inst, std::size_t count)
+void pr::rdr::Drawlist::Remove(BaseInstance const** inst, std::size_t count)
 {
 	// Make a sorted list from the batch to remove
-	instance::Base const** doomed = PR_ALLOCA_POD(instance::Base const* , count);
-	instance::Base const** doomed_end = doomed + count;
+	BaseInstance const** doomed = PR_ALLOCA_POD(BaseInstance const* , count);
+	BaseInstance const** doomed_end = doomed + count;
 	std::copy(inst, inst + count, doomed);
 	std::sort(doomed, doomed_end);
 	

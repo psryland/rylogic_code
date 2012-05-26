@@ -17,12 +17,12 @@ namespace pr
 		{
 			enum Type
 			{
-				Tx,
+				TxTint,
 			};
-			
-			// Callback function for configuring the constants for a shader
-			typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Buffer>& cbuf, DrawListElement const& dle, SceneView const& view)> MapConstants;
 		}
+		
+		// User provided callback function for binding a shader to the device context
+		typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, pr::rdr::DrawMethod const& meth, Nugget const& nugget, BaseInstance const& inst, SceneView const& view)> BindShaderFunc;
 		
 		// Initialisation data for a shader
 		struct ShaderDesc
@@ -42,15 +42,13 @@ namespace pr
 			D3D11_INPUT_ELEMENT_DESC const* m_iplayout; // The input layout description
 			size_t               m_iplayout_count;      // The number of elements in the input layout
 			pr::rdr::EGeom::Type m_geom_mask;           // The minimum requirements of the vertex format
-			pr::rdr::CBufferDesc m_cbuf_desc;           // A description of the constants buffer to create
 			
 			// Initialise the shader description.
-			template <class Vert> VShaderDesc(Vert const&, void const* data, size_t size, size_t consts_size)
+			template <class Vert> VShaderDesc(Vert const&, void const* data, size_t size)
 			:ShaderDesc(data, size)
 			,m_iplayout(Vert::Layout())
 			,m_iplayout_count(sizeof(Vert::Layout())/sizeof(D3D11_INPUT_ELEMENT_DESC))
 			,m_geom_mask(Vert::GeomMask)
-			,m_cbuf_desc(consts_size)
 			{}
 		};
 		
@@ -65,9 +63,10 @@ namespace pr
 		// A collection of shaders (kinda like an effect)
 		struct Shader :pr::RefCount<Shader>
 		{
+			typedef pr::Array< D3DPtr<ID3D11Buffer> > CBufCont;
+			
 			D3DPtr<ID3D11InputLayout>       m_iplayout;        // The input layout compatible with this shader
-			D3DPtr<ID3D11Buffer>            m_cbuf_frame;      // The constants that change per frame
-			D3DPtr<ID3D11Buffer>            m_cbuf_object;     // The constants that change per object
+			CBufCont                        m_cbuf;            // Constant buffers used by the shader
 			D3DPtr<ID3D11VertexShader>      m_vs;              // The vertex shader (null if not used)
 			D3DPtr<ID3D11PixelShader>       m_ps;              // The pixel shader (null if not used)
 			D3DPtr<ID3D11GeometryShader>    m_gs;              // The geometry shader (null if not used)
@@ -78,22 +77,24 @@ namespace pr
 			D3DPtr<ID3D11RasterizerState>   m_rast_state;      // Rasterizer states (null if not used)
 			RdrId                           m_id;              // Id for this shader instance
 			EGeom::Type                     m_geom_mask;       // The geometry type supported by this shader
-			MaterialManager*                m_mat_mgr;         // The material manager that created this texture
-			shader::MapConstants            m_map;             // A callback for setting up the constants for the shader
+			ShaderManager*                  m_mgr;             // The shader manager that created this shader
 			string32                        m_name;            // Human readable id for the texture
 			SortKeyId                       m_sort_id;
 			
 			Shader();
 			
-			// Setup this shader for rendering
-			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, SceneView const& view);
+			// User provided callback for binding this shader to the device context
+			BindShaderFunc Setup;
+			
+			// Set the shaders of the dc for the non-null shader pointers
+			void Bind(D3DPtr<ID3D11DeviceContext>& dc) const;
 			
 			// Refcounting cleanup function
 			static void RefCountZero(pr::RefCount<Shader>* doomed);
 		};
 		
 		// Create the built in shaders
-		void CreateStockShaders(pr::rdr::MaterialManager& mat_mgr);
+		void CreateStockShaders(pr::rdr::ShaderManager& mgr);
 	}
 }
 

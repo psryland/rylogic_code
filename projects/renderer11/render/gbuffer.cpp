@@ -4,7 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/gbuffer.h"
-#include "pr/renderer11/materials/textures/texture2d.h"
+#include "pr/renderer11/textures/texture2d.h"
 
 using namespace pr::rdr;
 

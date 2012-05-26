@@ -1,10 +1,14 @@
 # syntax: shell style pattern match, other option is regexp
 syntax: glob
+*.lib
 *.dll
 *.mdb
 *.pdb
 *.exe
 *.pidb
+*.ipch
+*.opensdf
+*.sdf
 *.suo
 *.user
 *.orig

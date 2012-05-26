@@ -5,7 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
-#include "renderer11/render/draw.h"
+#include "pr/renderer11/render/draw_method.h"
 
 using namespace pr::rdr;
 
@@ -131,27 +131,49 @@ void pr::rdr::Scene::RenderDeferred(D3DPtr<ID3D11DeviceContext>& ctx, bool clear
 }
 
 // Render the scene using the standard forward rendering technique
-void pr::rdr::Scene::RenderForward(D3DPtr<ID3D11DeviceContext>& ctx, bool clear_bb)
+void pr::rdr::Scene::RenderForward(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb)
 {
-	// Create a draw helper
-	Draw draw(ctx);
-	
 	// Clear the back buffer and depth/stencil
 	if (clear_bb)
 	{
-		draw.ClearBB(m_background_colour);
-		draw.ClearDB();
+		D3DPtr<ID3D11RenderTargetView> rtv;
+		D3DPtr<ID3D11DepthStencilView> dsv;
+		dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+		dc->ClearRenderTargetView(rtv.m_ptr, pr::ColourBlack);
+		dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 	}
 	
 	// Loop over the elements in the draw list
-	Drawlist::DLECont::const_iterator element     = m_drawlist.begin();
-	Drawlist::DLECont::const_iterator element_end = m_drawlist.end();
-	for (;element != element_end; ++element)
+	Drawlist::DLECont::const_iterator dle = m_drawlist.begin(), dle_end = m_drawlist.end();
+	for (;dle != dle_end; ++dle)
 	{
-		// Set the device for this nugget
-		draw.Setup(*element, m_view);
+		BaseInstance const& inst    = *dle->m_instance;
+		Nugget const&         nugget  = *dle->m_nugget;
+		DrawMethod const&     meth    = nugget.m_draw;
+		ModelBuffer const&    mb      = *nugget.m_model->m_model_buffer.m_ptr;
 		
-		// Draw the element
-		draw.Render(*element->m_nugget);
+		// Bind the vertex buffer to the IA
+		ID3D11Buffer* buffers[] = {mb.m_vb.m_ptr};
+		UINT          strides[] = {mb.m_vb.m_stride};
+		UINT          offsets[] = {(UINT)nugget.m_vrange.m_begin};
+		dc->IASetVertexBuffers(0, 1, buffers, strides, offsets);
+		
+		// Set the input layout for this vertex buffer
+		dc->IASetInputLayout(meth.m_shader->m_iplayout.m_ptr);
+		
+		// Bind the index buffer to the IA
+		dc->IASetIndexBuffer(mb.m_ib.m_ptr, mb.m_ib.m_format, (UINT)nugget.m_irange.m_begin);
+		
+		// Tell the IA would sort of primitives to expect
+		dc->IASetPrimitiveTopology(nugget.m_prim_topo);
+		
+		// Bind the shader to the device
+		meth.m_shader->Setup(dc, meth, nugget, inst, m_view);
+		
+		// Add the nugget to the device context
+		dc->DrawIndexed(
+			UINT(nugget.m_irange.size()),
+			UINT(nugget.m_irange.m_begin),
+			UINT(nugget.m_vrange.m_begin));
 	}
 }

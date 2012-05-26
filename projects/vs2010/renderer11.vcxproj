@@ -48,7 +48,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 4.2.props" />
-    <Import Project="..\..\miscellaneous\CustomBuildRules\batch file.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="lib.win32.debug.props" />
@@ -123,10 +122,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\config\config.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\forward.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\instances\instance.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\materials\material.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\materials\material_manager.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\materials\shaders\shader.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\materials\textures\texture2d.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture2d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model_buffer.h" />
@@ -137,12 +135,14 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\renderer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\drawlist.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\drawlist_element.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\draw_method.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\gbuffer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\renderer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\render_states.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\scene.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\scene_view.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\sortkey.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture_manager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\allocator.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\dds_texture_loader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\demo_scene.h" />
@@ -151,24 +151,22 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\stock_resources.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\util.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\wrappers.h" />
-    <ClInclude Include="..\renderer11\materials\shaders\constant_buffers.h" />
-    <ClInclude Include="..\renderer11\render\draw.h" />
     <ClInclude Include="..\renderer11\util\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\renderer11\util\util.cpp" />
     <ClCompile Include="..\renderer11\config\config.cpp" />
-    <ClCompile Include="..\renderer11\materials\material_manager.cpp" />
-    <ClCompile Include="..\renderer11\materials\shaders\shader.cpp" />
-    <ClCompile Include="..\renderer11\materials\textures\texture2d.cpp" />
+    <ClCompile Include="..\renderer11\shaders\shader.cpp" />
+    <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
+    <ClCompile Include="..\renderer11\textures\texture2d.cpp" />
     <ClCompile Include="..\renderer11\models\model.cpp" />
     <ClCompile Include="..\renderer11\models\model_buffer.cpp" />
     <ClCompile Include="..\renderer11\models\model_manager.cpp" />
-    <ClCompile Include="..\renderer11\render\draw.cpp" />
     <ClCompile Include="..\renderer11\render\drawlist.cpp" />
     <ClCompile Include="..\renderer11\render\gbuffer.cpp" />
     <ClCompile Include="..\renderer11\render\renderer.cpp" />
     <ClCompile Include="..\renderer11\render\scene.cpp" />
+    <ClCompile Include="..\renderer11\textures\texture_manager.cpp" />
     <ClCompile Include="..\renderer11\util\dds_texture_loader.cpp" />
     <ClCompile Include="..\renderer11\util\lock.cpp" />
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -180,20 +178,19 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\bin\_build_shader.cmd" />
-    <None Include="..\renderer11\materials\shaders\hlsl\functions.hlsl" />
-    <CustomBuild Include="..\renderer11\materials\shaders\hlsl\ps_txfm_tint.hlsl">
+    <None Include="..\renderer11\shaders\common\functions.hlsl" />
+    <None Include="..\renderer11\shaders\common\uber.hlsl" />
+    <None Include="..\renderer11\shaders\common\uber_cbuffer.hlsl" />
+    <None Include="..\renderer11\shaders\common\uber_defines.hlsl" />
+    <CustomBuild Include="..\renderer11\shaders\shaders\ps_txfm_tint.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <None Include="..\renderer11\materials\shaders\hlsl\uber.hlsl" />
-    <None Include="..\renderer11\materials\shaders\hlsl\uber_cbuffer.hlsl" />
-    <None Include="..\renderer11\materials\shaders\hlsl\uber_defines.hlsl" />
-    <CustomBuild Include="..\renderer11\materials\shaders\hlsl\vs_txfm_tint.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\vs_txfm_tint.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 4.2.targets" />
-    <Import Project="..\..\miscellaneous\CustomBuildRules\batch file.targets" />
   </ImportGroup>
 </Project>

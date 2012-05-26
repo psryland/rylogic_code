@@ -58,10 +58,13 @@
 // Instances
 #include "pr/renderer11/instances/instance.h"
 
-// Materials
-#include "pr/renderer11/materials/material_manager.h"
-#include "pr/renderer11/materials/material.h"
-#include "pr/renderer11/materials/textures/texture2d.h"
+// Shaders
+#include "pr/renderer11/shaders/shader_manager.h"
+#include "pr/renderer11/shaders/shader.h"
+
+// Textures
+#include "pr/renderer11/textures/texture_manager.h"
+#include "pr/renderer11/textures/texture2d.h"
 //#include "pr/renderer/materials/effects/effect.h"
 //#include "pr/renderer/materials/effects/fragments.h"
 //#include "pr/renderer/materials/textures/texturefilter.h"
