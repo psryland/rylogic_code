@@ -24,6 +24,8 @@ pr::rdr::Drawlist::Drawlist(Renderer& rdr)
 void pr::rdr::Drawlist::Add(BaseInstance const& inst)
 {
 	ModelPtr const& model = GetModel(inst);
+	PR_ASSERT(PR_DBG_RDR, model != 0, "Null model pointer");
+	
 	#if PR_DBG_RDR
 	if (model->m_nuggets.empty() && (model->m_dbg_flags & EDbgRdrFlags::WarnedNoRenderNuggets) == 0)
 	{

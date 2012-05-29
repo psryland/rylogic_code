@@ -23,6 +23,16 @@ pr::rdr::TextureManager::TextureManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Dev
 {
 	// CreateStockTextures
 }
+pr::rdr::TextureManager::~TextureManager()
+{
+	// Release the ref added in CreateShader()
+	while (!m_lookup_tex.empty())
+	{
+		auto iter = begin(m_lookup_tex);
+		PR_INFO_EXP(PR_DBG_RDR, pr::PtrRefCount(iter->second) == 1, pr::FmtS("External references to texture %d - %s still exist", iter->second->m_id, iter->second->m_name.c_str()));
+		iter->second->Release();
+	}
+}
 
 // Create a texture instance.
 // 'id' is the id to assign to this texture, use AutoId if you want a new instance regardless of whether there is an existing one or not.
@@ -52,16 +62,20 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 			tex->m_id   = MakeId(tex.m_ptr);
 			tex->m_mgr  = this;
 			tex->m_name = existing.m_name;
-			PR_ASSERT(PR_DBG_RDR, !m_lookup_tex.count(tex->m_id), "overwriting an existing texture id");
-			m_lookup_tex[tex->m_id] = tex.m_ptr;
+			AddLookup(m_lookup_tex, tex->m_id, tex.m_ptr);
 			return tex;
 		}
 	}
 	
-	// If 'id' doesn't exist (or is Auto), allocate a new d3d texture resource
+	// If 'id' doesn't exist (or is Auto), allocate a new texture and d3d texture resource
+	pr::rdr::Texture2DPtr inst = m_alex_tex2d.New();
+	id = id == AutoId ? MakeId(inst.m_ptr) : id;
+	
+	// Create the d3d resource
 	D3DPtr<ID3D11Texture2D> tex;
 	SubResourceData init_data(data, desc.Pitch, desc.PitchPerSlice);
 	pr::Throw(m_device->CreateTexture2D(&desc,  &init_data, &tex.m_ptr));
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(tex, pr::FmtS("tex <RdrId:%d>", id)));
 	
 	// Save the texture creation info with the d3d texture, d3d cleans this up.
 	TextureDesc info = desc;
@@ -69,15 +83,12 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 	info.SortId   = m_lookup_tex.size() % pr::rdr::sortkey::MaxTextureId;
 	pr::Throw(tex->SetPrivateData(TexInfoGUID, sizeof(info), &info));
 	
-	// Allocate the texture instance and save texture creation info
-	pr::rdr::Texture2DPtr inst = m_alex_tex2d.New();
 	inst->m_tex  = tex;
 	inst->m_info = info;
-	inst->m_id   = id == AutoId ? MakeId(inst.m_ptr) : id;
+	inst->m_id   = id;
 	inst->m_mgr  = this;
-	inst->m_name = L"";
-	PR_ASSERT(PR_DBG_RDR, !m_lookup_tex.count(inst->m_id), "overwriting an existing texture id");
-	m_lookup_tex[inst->m_id] = inst.m_ptr;
+	inst->m_name = "";
+	AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
 	return inst;
 }
 
@@ -95,7 +106,7 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 	if (filepath && filepath[0] == L'#')
 	{
 		if (::isdigit(filepath[1]))
-			id = pr::str::as<RdrId>(filepath + 1, 0, 10);
+			id = pr::str::as<RdrId>(filepath + 1, (wchar_t**)0, 10);
 		else
 		{
 			id = pr::rdr::EStockTexture::Parse(filepath + 1);
@@ -117,18 +128,21 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 			tex->m_info = existing.m_info;
 			tex->m_id   = MakeId(tex.m_ptr);
 			tex->m_mgr  = this;
-			tex->m_name = filepath;
-			PR_ASSERT(PR_DBG_RDR, !m_lookup_tex.count(tex->m_id), "overwriting an existing texture id");
-			m_lookup_tex[tex->m_id] = tex.m_ptr;
+			tex->m_name = pr::str::ToAString<string32>(filepath);
+			AddLookup(m_lookup_tex, tex->m_id, tex.m_ptr);
 			return tex;
 		}
 	}
+
+	// Allocate the texture instance
+	pr::rdr::Texture2DPtr inst = m_alex_tex2d.New();
+	id = id == AutoId ? MakeId(inst.m_ptr) : id;
 	
 	D3DPtr<ID3D11Texture2D> tex;
 	TextureDesc info = desc;
 	
 	// Look for an existing d3d texture corresponding to 'filepath'
-	RdrId texfile_id = MakeId(pr::filesys::StandardiseC<std::wstring>(filepath).c_str());
+	RdrId texfile_id = MakeId(pr::filesys::StandardiseC<wstring256>(filepath).c_str());
 	TexFileLookup::const_iterator iter = m_lookup_fname.find(texfile_id);
 	if (iter != m_lookup_fname.end())
 	{
@@ -148,18 +162,17 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 		info.TexSrcId  = texfile_id;
 		info.SortId    = m_lookup_tex.size() % pr::rdr::sortkey::MaxTextureId;
 		pr::Throw(tex->SetPrivateData(TexInfoGUID, sizeof(info), &info)); // Attach info to the texture, d3d cleans this up
-		m_lookup_fname[texfile_id] = tex.m_ptr;
+		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(tex, pr::FmtS("tex <RdrId:%d>", id)));
+		
+		AddLookup(m_lookup_fname, texfile_id, tex.m_ptr);
 	}
 	
-	// Allocate the texture instance
-	pr::rdr::Texture2DPtr inst = m_alex_tex2d.New();
 	inst->m_tex  = tex;
 	inst->m_info = info;
-	inst->m_id   = id == AutoId ? MakeId(inst.m_ptr) : id;
+	inst->m_id   = id;
 	inst->m_mgr  = this;
-	inst->m_name = filepath;
-	PR_ASSERT(PR_DBG_RDR, !m_lookup_tex.count(inst->m_id), "overwriting an existing texture id");
-	m_lookup_tex[inst->m_id] = inst.m_ptr;
+	inst->m_name = pr::str::ToAString<string32>(filepath);
+	AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
 	return inst;
 }
 

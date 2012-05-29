@@ -40,8 +40,12 @@ pr::rdr::ShaderManager::ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Devic
 pr::rdr::ShaderManager::~ShaderManager()
 {
 	// Release the ref added in CreateShader()
-	for (auto i = begin(m_lookup_shader), iend = end(m_lookup_shader); i != iend; ++i)
-		i->second->Release();
+	while (!m_lookup_shader.empty())
+	{
+		auto iter = begin(m_lookup_shader);
+		PR_INFO_EXP(PR_DBG_RDR, pr::PtrRefCount(iter->second) == 1, pr::FmtS("External references to shader %d - %s still exist", iter->second->m_id, iter->second->m_name.c_str()));
+		iter->second->Release();
+	}
 }
 
 // Create a basic shader.
@@ -66,15 +70,18 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::CreateShader(RdrId id, BindShaderFunc
 	
 	// Allocate the shader instance
 	pr::rdr::ShaderPtr inst = m_alex_shader.New();
+	id = id == AutoId ? MakeId(inst.m_ptr) : id;
 	
 	// If 'id' doesn't exist (or is Auto), allocate a new shader
 	if (vsdesc != 0)
 	{
 		// Create the shader
 		pr::Throw(m_device->CreateVertexShader(vsdesc->m_data, vsdesc->m_size, 0, &inst->m_vs.m_ptr));
+		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(inst->m_vs, pr::FmtS("vshdr <RdrId:%d>", id)));
 		
 		// Create the input layout
 		pr::Throw(m_device->CreateInputLayout(vsdesc->m_iplayout, UINT(vsdesc->m_iplayout_count), vsdesc->m_data, vsdesc->m_size, &inst->m_iplayout.m_ptr));
+		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(inst->m_iplayout, pr::FmtS("iplayout <RdrId:%d>", id)));
 		
 		// Set the minimum vertex format mask
 		inst->m_geom_mask = vsdesc->m_geom_mask;
@@ -83,16 +90,16 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::CreateShader(RdrId id, BindShaderFunc
 	{
 		// Create the pixel shader
 		pr::Throw(m_device->CreatePixelShader(psdesc->m_data, psdesc->m_size, 0, &inst->m_ps.m_ptr));
+		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(inst->m_ps, pr::FmtS("pshdr <RdrId:%d>", id)));
 	}
 	
 	// Populate the remaining shader instance variables
-	inst->m_id   = id == AutoId ? MakeId(inst.m_ptr) : id;
+	inst->m_id   = id;
 	inst->m_mgr  = this;
 	inst->Setup  = bind_func;
-	inst->m_name = L"";
+	inst->m_name = "";
 	inst->m_sort_id = m_lookup_shader.size() % pr::rdr::sortkey::MaxShaderId;
-	PR_ASSERT(PR_DBG_RDR, !m_lookup_shader.count(inst->m_id), "overwriting an existing shader id");
-	m_lookup_shader[inst->m_id] = inst.m_ptr;
+	AddLookup(m_lookup_shader, inst->m_id, inst.m_ptr);
 	
 	// We need to prevent the shader from immediately being destroyed
 	// This ref is removed in the destructor
@@ -175,9 +182,12 @@ void pr::rdr::ShaderManager::CreateStockShaders()
 	{//TxTint
 		BindShaderFunc map = [](D3DPtr<ID3D11DeviceContext>& dc, pr::rdr::DrawMethod const& meth, Nugget const&, BaseInstance const& inst, SceneView const& view)
 		{
+			pr::m4x4 o2s = pr::GetInverse(view.m_c2w) * GetO2W(inst);
+			pr::Colour const* col = inst.find<pr::Colour>(EInstComp::TintColour32);
+			
 			CBufModel cb = {};
-			cb.m_o2s = pr::GetInverse(view.m_c2w) * GetO2W(inst);
-			cb.m_tint = inst.get<pr::Colour>(EInstComp::TintColour32);
+			cb.m_o2s = o2s;
+			cb.m_tint = col ? *col : pr::ColourWhite;
 			*Lock(dc, meth.m_shader->m_cbuf[0], 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
 		};
 		

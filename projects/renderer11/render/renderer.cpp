@@ -54,7 +54,10 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 		&m_feature_level,
 		&m_immediate.m_ptr
 		));
-	
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_device, pr::FmtS("d3d device")));
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_swap_chain, pr::FmtS("swap chain")));
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_immediate, pr::FmtS("immed dc")));
+
 	// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
 	D3DPtr<IDXGIFactory> factory;
 	pr::Throw(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)&factory.m_ptr));
@@ -69,12 +72,13 @@ void pr::rdr::RdrState::InitMainRT()
 {
 	// Get the back buffer so we can copy its properties
 	D3DPtr<ID3D11Texture2D> back_buffer;
-	pr::Throw(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer));
+	pr::Throw(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer.m_ptr));
 	pr::rdr::TextureDesc bb_desc;
 	back_buffer->GetDesc(&bb_desc);
 	
 	// Create a render-target view of the back buffer
 	pr::Throw(m_device->CreateRenderTargetView(back_buffer.m_ptr, 0, &m_main_rtv.m_ptr));
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_main_rtv, pr::FmtS("main RT <%dx%d>", bb_desc.Width, bb_desc.Height)));
 	
 	// Create a texture buffer that we will use as the depth buffer
 	pr::rdr::TextureDesc desc;
@@ -97,6 +101,7 @@ void pr::rdr::RdrState::InitMainRT()
 	dsv_desc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsv_desc.Texture2D.MipSlice = 0;
 	pr::Throw(m_device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_main_dsv, pr::FmtS("depth buffer <%dx%d>", desc.Width, desc.Height)));
 	
 	// Bind the render target and depth stencil to the immediate device context
 	m_immediate->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
@@ -118,7 +123,8 @@ pr::Renderer::Renderer(pr::rdr::RdrSettings const& settings)
 {}
 pr::Renderer::~Renderer()
 {
-	PR_ASSERT(PR_DBG_RDR, m_immediate.RefCount() == 1, "Outstanding references to the immediate device context");
+	PR_EXPAND(PR_DBG_RDR, int rcnt);
+	PR_ASSERT(PR_DBG_RDR, (rcnt = m_immediate.RefCount()) == 1, "Outstanding references to the immediate device context");
 	m_immediate->OMSetRenderTargets(0, 0, 0);
 	m_immediate = 0;
 	m_main_rtv = 0;
@@ -128,11 +134,12 @@ pr::Renderer::~Renderer()
 	// You may not release a swap chain in full-screen mode because doing so may create thread contention
 	// (which will cause DXGI to raise a non-continuable exception). Before releasing a swap chain, first
 	// switch to windowed mode (using IDXGISwapChain::SetFullscreenState( FALSE, NULL )) and then call IUnknown::Release.
-	PR_ASSERT(PR_DBG_RDR, m_swap_chain.RefCount() == 1, "Outstanding references to the swap chain");
+	PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
 	m_swap_chain->SetFullscreenState(FALSE, 0);
 	m_swap_chain = 0;
 	
-	PR_ASSERT(PR_DBG_RDR, m_device.RefCount() == 1, "Outstanding references to the d3d device");
+	// Can't assert this as the managers still contain references to the device (and possibly the client)
+	//PR_ASSERT(PR_DBG_RDR, (rcnt = m_device.RefCount()) == 1, "Outstanding references to the d3d device");
 	m_device = 0;
 }
 

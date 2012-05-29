@@ -71,6 +71,7 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 	SubResourceData init(scene_constants);
 	CBufferDesc cbdesc(sizeof(CBufFrame));
 	pr::Throw(rdr.Device()->CreateBuffer(&cbdesc, &init, &m_cbuf_frame.m_ptr));
+	PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, pr::FmtS("scene constants buffer")));
 }
 
 // Render the draw list for this viewport
@@ -96,23 +97,26 @@ void pr::rdr::Scene::SetupIA(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement co
 {
 	Nugget const&      nugget = *dle.m_nugget;
 	DrawMethod const&  meth   = nugget.m_draw;
-	ModelBuffer const& mb     = *nugget.m_model->m_model_buffer.m_ptr;
-		
+	ModelBuffer const& mb     = *nugget.m_model_buffer.m_ptr;
+	
+	// Render nuggets v/i ranges are relative to the model buffer, not the model
+	// so when we set the v/i buffers we don't need any offsets, the offsets are
+	// provided to the DrawIndexed() call
+	
 	// Bind the vertex buffer to the IA
 	ID3D11Buffer* buffers[] = {mb.m_vb.m_ptr};
 	UINT          strides[] = {mb.m_vb.m_stride};
-	UINT          offsets[] = {(UINT)nugget.m_vrange.m_begin};
+	UINT          offsets[] = {0};
 	dc->IASetVertexBuffers(0, 1, buffers, strides, offsets);
 		
 	// Set the input layout for this vertex buffer
 	dc->IASetInputLayout(meth.m_shader->m_iplayout.m_ptr);
 		
 	// Bind the index buffer to the IA
-	dc->IASetIndexBuffer(mb.m_ib.m_ptr, mb.m_ib.m_format, (UINT)nugget.m_irange.m_begin);
+	dc->IASetIndexBuffer(mb.m_ib.m_ptr, mb.m_ib.m_format, 0);
 		
 	// Tell the IA would sort of primitives to expect
 	dc->IASetPrimitiveTopology(nugget.m_prim_topo);
-		
 }
 
 // SceneForward ***********************************************************
@@ -130,7 +134,7 @@ void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear
 		D3DPtr<ID3D11RenderTargetView> rtv;
 		D3DPtr<ID3D11DepthStencilView> dsv;
 		dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-		dc->ClearRenderTargetView(rtv.m_ptr, pr::ColourBlack);
+		dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
 		dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 	}
 	
@@ -147,6 +151,9 @@ void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear
 		
 		// Bind the shader to the device
 		meth.m_shader->Setup(dc, meth, nugget, inst, m_view);
+		
+		// Bind the shaders to the device
+		meth.m_shader->Bind(dc);
 		
 		// Add the nugget to the device context
 		dc->DrawIndexed(

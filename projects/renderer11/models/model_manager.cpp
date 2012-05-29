@@ -7,6 +7,7 @@
 #include "pr/renderer11/models/model_settings.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/wrappers.h"
+#include "pr/renderer11/util/util.h"
 
 using namespace pr::rdr;
 
@@ -33,6 +34,7 @@ pr::rdr::ModelBufferPtr pr::rdr::ModelManager::CreateModelBuffer(MdlSettings con
 		mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 		mb->m_vb.m_used.set(0, 0);
 		mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
+		PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb, pr::FmtS("model buffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 	}
 	{// Create an index buffer
 		SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
@@ -40,6 +42,7 @@ pr::rdr::ModelBufferPtr pr::rdr::ModelManager::CreateModelBuffer(MdlSettings con
 		mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 		mb->m_ib.m_used.set(0, 0);
 		mb->m_ib.m_format = settings.m_ib.Format;
+		PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib, pr::FmtS("model buffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 	}
 	return mb;
 }
@@ -62,6 +65,7 @@ pr::rdr::ModelPtr pr::rdr::ModelManager::CreateModel(MdlSettings const& settings
 	mdl->m_model_buffer = model_buffer;
 	mdl->m_vrange       = model_buffer->ReserveVerts(settings.m_vb.ElemCount);
 	mdl->m_irange       = model_buffer->ReserveIndices(settings.m_ib.ElemCount);
+	mdl->m_name         = settings.m_name;
 	return mdl;
 }
 
@@ -76,7 +80,6 @@ void pr::rdr::ModelManager::Delete(pr::rdr::ModelBuffer* model_buffer)
 void pr::rdr::ModelManager::Delete(pr::rdr::Model* model)
 {
 	if (!model) return;
-	model->DeleteNuggets();
 	m_alex_model.Delete(model);
 }
 

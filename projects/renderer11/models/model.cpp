@@ -22,6 +22,10 @@ pr::rdr::Model::Model()
 ,m_name()
 ,m_dbg_flags(0)
 {}
+pr::rdr::Model::~Model()
+{
+	DeleteNuggets();
+}
 
 // Access to the vertex/index buffers
 bool pr::rdr::Model::MapVerts(pr::rdr::Lock& lock, D3D11_MAP map_type, uint flags, pr::rdr::Range v_range)
@@ -57,15 +61,15 @@ void pr::rdr::Model::CreateNugget(pr::rdr::DrawMethod const& meth, D3D11_PRIMITI
 	if (!irange.empty())
 	{
 		m_nuggets.push_back(*m_model_buffer->m_mdl_mgr->m_alex_nugget.New());
-		Nugget& nugget      = m_nuggets.back();
-		nugget.m_model      = this;
-		nugget.m_vrange     = vrange;
-		nugget.m_irange     = irange;
-		nugget.m_prim_topo  = prim_type;
-		nugget.m_prim_count = PrimCount(irange.size(), prim_type);
-		nugget.m_draw       = meth;
-		nugget.m_sort_key   = MakeSortKey(nugget);
-		nugget.m_owner      = this;
+		Nugget& nugget        = m_nuggets.back();
+		nugget.m_model_buffer = m_model_buffer;
+		nugget.m_vrange       = vrange;
+		nugget.m_irange       = irange;
+		nugget.m_prim_topo    = prim_type;
+		nugget.m_prim_count   = PrimCount(irange.size(), prim_type);
+		nugget.m_draw         = meth;
+		nugget.m_sort_key     = MakeSortKey(nugget);
+		nugget.m_owner        = this;
 	}
 }
 
@@ -80,6 +84,5 @@ void pr::rdr::Model::DeleteNuggets()
 void pr::rdr::Model::RefCountZero(pr::RefCount<Model>* doomed)
 {
 	pr::rdr::Model* mdl = static_cast<pr::rdr::Model*>(doomed);
-	mdl->DeleteNuggets();
 	mdl->m_model_buffer->m_mdl_mgr->Delete(mdl);
 }
