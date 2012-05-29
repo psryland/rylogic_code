@@ -84,11 +84,15 @@ namespace pr
 			// Get the 'index'th component in this instance
 			template <typename Comp> inline Comp const& get(pr::uint16 comp_type, int index = 0) const
 			{
-				return *find<Comp>(comp_type, index);
+				Comp const* comp = find<Comp>(comp_type, index);
+				PR_ASSERT(PR_DBG_RDR, comp != 0, "This instance does not have the requested component")
+				return *comp;
 			}
 			template <typename Comp> inline Comp& get(pr::uint16 comp_type, int index = 0)
 			{
-				return find<Comp>(comp_type, index);
+				Comp* comp = find<Comp>(comp_type, index);
+				PR_ASSERT(PR_DBG_RDR, comp != 0, "This instance does not have the requested component")
+				return *comp;
 			}
 		};
 		

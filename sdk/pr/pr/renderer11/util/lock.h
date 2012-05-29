@@ -100,6 +100,7 @@ namespace pr
 				HRESULT hr = m_dc->Map(res.m_ptr, sub, map_type, flags, this);
 				if ((flags&D3D11_MAP_FLAG_DO_NOT_WAIT) == 0) pr::Throw(hr);
 				m_res = res;
+				m_sub = sub;
 				return pr::Succeeded(hr);
 			}
 			

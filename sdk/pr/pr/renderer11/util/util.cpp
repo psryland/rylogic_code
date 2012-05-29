@@ -37,7 +37,7 @@ size_t pr::rdr::IndexCount(size_t pcount, D3D11_PRIMITIVE_TOPOLOGY topo)
 }
 
 // Return the number of bits per pixel for a given d3d format
-UINT pr::rdr::BitsPerPixel(DXGI_FORMAT fmt)
+size_t pr::rdr::BitsPerPixel(DXGI_FORMAT fmt)
 {
 	switch (fmt)
 	{
@@ -203,7 +203,7 @@ void pr::rdr::GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num
 	}
 	else
 	{
-		UINT bpp = BitsPerPixel(fmt);
+		UINT bpp = UINT(BitsPerPixel(fmt));
 		*row_bytes = (width * bpp + 7) / 8;   // round up to nearest byte
 		*num_rows  = height;
 	}

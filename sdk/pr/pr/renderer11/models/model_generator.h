@@ -15,66 +15,126 @@ namespace pr
 	{
 		namespace model
 		{
-			// General
-			void        GenerateNormals(MLock& mlock, Range const* v_range = 0, Range const* i_range = 0);
-			void        GenerateNormals(ModelPtr& model, Range const* v_range = 0, Range const* i_range = 0);
-			void        SetVertexColours(MLock& mlock, Colour32 colour, Range const* v_range = 0);
+			//// General
+			//void        GenerateNormals(MLock& mlock, Range const* vrange = 0, Range const* irange = 0);
+			//void        GenerateNormals(ModelPtr& model, Range const* vrange = 0, Range const* irange = 0);
+			//void        SetVertexColours(MLock& mlock, Colour32 colour, Range const* vrange = 0);
 
-			// Line
-			void        LineSize(Range& v_range, Range& i_range, std::size_t num_lines);
-			Settings    LineModelSettings(std::size_t num_lines);
-			ModelPtr    Line    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Line    (Renderer& rdr                          ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Line    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Line    (Renderer& rdr                          ,v4 const* point ,std::size_t num_lines                        ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    LineD   (MLock& mlock  ,MaterialManager& matmgr ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    LineD   (Renderer& rdr                          ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    LineD   (MLock& mlock  ,MaterialManager& matmgr ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    LineD   (Renderer& rdr                          ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
+			//// Line
+			//void        LineSize(Range& vrange, Range& irange, std::size_t num_lines);
+			//Settings    LineModelSettings(std::size_t num_lines);
+			//ModelPtr    Line    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Line    (Renderer& rdr                          ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Line    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Line    (Renderer& rdr                          ,v4 const* point ,std::size_t num_lines                        ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    LineD   (MLock& mlock  ,MaterialManager& matmgr ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    LineD   (Renderer& rdr                          ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    LineD   (MLock& mlock  ,MaterialManager& matmgr ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    LineD   (Renderer& rdr                          ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			// Quad
-			void        QuadSize(Range& v_range, Range& i_range, std::size_t num_quads);
-			Settings    QuadModelSettings(std::size_t num_quads);
-			ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_quads ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Quad    (Renderer& rdr                          ,v4 const* point ,std::size_t num_quads ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Quad    (Renderer& rdr                          ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
+			//// Quad
+			//void        QuadSize(Range& vrange, Range& irange, std::size_t num_quads);
+			//Settings    QuadModelSettings(std::size_t num_quads);
+			//ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_quads ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Quad    (Renderer& rdr                          ,v4 const* point ,std::size_t num_quads ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Quad    (Renderer& rdr                          ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			// Sphere
-			void        SphereSize(Range& v_range, Range& i_range, std::size_t divisions);
-			Settings    SphereModelSettings(std::size_t divisions);
-			ModelPtr    SphereRxyz(MLock& mlock ,MaterialManager& matmgr ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    SphereRxyz(Renderer& rdr                         ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
+			//// Sphere
+			//void        SphereSize(Range& vrange, Range& irange, std::size_t divisions);
+			//Settings    SphereModelSettings(std::size_t divisions);
+			//ModelPtr    SphereRxyz(MLock& mlock ,MaterialManager& matmgr ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    SphereRxyz(Renderer& rdr                         ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			// Box
-			void        BoxSize(Range& v_range, Range& i_range, std::size_t num_boxes);
-			Settings    BoxModelSettings(std::size_t num_boxes);
-			ModelPtr    Box     (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_boxes, m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Box     (Renderer& rdr                          ,v4 const* point ,std::size_t num_boxes, m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Box     (MLock& mlock  ,MaterialManager& matmgr ,v4 const& dim ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Box     (Renderer& rdr                          ,v4 const& dim ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    BoxList (MLock& mlock  ,MaterialManager& matmgr ,v4 const& dim ,v4 const* positions ,std::size_t num_boxes ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    BoxList (Renderer& rdr                          ,v4 const& dim ,v4 const* positions ,std::size_t num_boxes ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
+			//// Box
+			//void        BoxSize(Range& vrange, Range& irange, std::size_t num_boxes);
+			//Settings    BoxModelSettings(std::size_t num_boxes);
+			//ModelPtr    Box     (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_boxes, m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Box     (Renderer& rdr                          ,v4 const* point ,std::size_t num_boxes, m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Box     (MLock& mlock  ,MaterialManager& matmgr ,v4 const& dim ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    Box     (Renderer& rdr                          ,v4 const& dim ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    BoxList (MLock& mlock  ,MaterialManager& matmgr ,v4 const& dim ,v4 const* positions ,std::size_t num_boxes ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    BoxList (Renderer& rdr                          ,v4 const& dim ,v4 const* positions ,std::size_t num_boxes ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			// Cone
-			void        ConeSize(Range& v_range, Range& i_range, std::size_t layers, std::size_t wedges);
-			Settings    ConeModelSettings(std::size_t layers, std::size_t wedges);
-			ModelPtr    Cone(MLock& mlock  ,MaterialManager& matmgr         ,float height ,float radius0 ,float radius1 ,float xscale ,float yscale ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-	 		ModelPtr    Cone(Renderer& rdr                                  ,float height ,float radius0 ,float radius1 ,float xscale ,float yscale ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    CylinderHRxy(MLock& mlock  ,MaterialManager& matmgr ,float height ,float xradius ,float yradius ,m4x4 const& o2w ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-	 		ModelPtr    CylinderHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
+			//// Cone
+			//void        ConeSize(Range& vrange, Range& irange, std::size_t layers, std::size_t wedges);
+			//Settings    ConeModelSettings(std::size_t layers, std::size_t wedges);
+			//ModelPtr    Cone(MLock& mlock  ,MaterialManager& matmgr         ,float height ,float radius0 ,float radius1 ,float xscale ,float yscale ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+	 	//	ModelPtr    Cone(Renderer& rdr                                  ,float height ,float radius0 ,float radius1 ,float xscale ,float yscale ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    CylinderHRxy(MLock& mlock  ,MaterialManager& matmgr ,float height ,float xradius ,float yradius ,m4x4 const& o2w ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+	 	//	ModelPtr    CylinderHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			// Capsule
-			void        CapsuleSize(Range& v_range, Range& i_range, std::size_t divisions);
-			Settings    CapsuleModelSettings(std::size_t divisions);
-			ModelPtr    CapsuleHRxy(MLock& mlock  ,MaterialManager& matmgr ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-	 		ModelPtr    CapsuleHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
+			//// Capsule
+			//void        CapsuleSize(Range& vrange, Range& irange, std::size_t divisions);
+			//Settings    CapsuleModelSettings(std::size_t divisions);
+			//ModelPtr    CapsuleHRxy(MLock& mlock  ,MaterialManager& matmgr ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+	 	//	ModelPtr    CapsuleHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			// Mesh
-			void        MeshSize(Range& v_range, Range& i_range, std::size_t num_verts, std::size_t num_indices);
-			Settings    MeshModelSettings(std::size_t num_verts, std::size_t num_indices, pr::GeomType geom_type);
-			ModelPtr    Mesh(MLock& mlock  ,MaterialManager& matmgr ,EPrimitive::Type prim_type ,pr::GeomType geom_type ,std::size_t num_indices ,std::size_t num_verts ,rdr::Index const* indices ,v4 const* verts ,v4 const* normals ,Colour32 const* colours ,v2 const* tex_coords ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
-			ModelPtr    Mesh(Renderer& rdr                          ,EPrimitive::Type prim_type ,pr::GeomType geom_type ,std::size_t num_indices ,std::size_t num_verts ,rdr::Index const* indices ,v4 const* verts ,v4 const* normals ,Colour32 const* colours ,v2 const* tex_coords ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* v_range = 0 ,Range* i_range = 0);
+			//// Mesh
+			//template <typename Vert, typename Indx> MdlSettings MeshModelSettings(size_t vert_count, size_t indx_count)
+			//{
+			//	VBufferDesc vb(vert_count, (Vert*)0);
+			//	IBufferDesc ib(indx_count, (Indx*)0);
+			//	return MdlSettings(vb,ib);
+			//}
+			//template <typename Vert, typename Indx> ModelPtr Mesh(Renderer& rdr                          ,D3D11_PRIMITIVE_TOPOLOGY topo ,pr::GeomType geom_type ,std::size_t num_indices ,std::size_t num_verts ,rdr::Index const* indices ,v4 const* verts ,v4 const* normals ,Colour32 const* colours ,v2 const* tex_coords ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0)
+			//{
+			//	// Handle optional parameters
+			//	Range local_vrange, local_irange;
+			//	if (!vrange) vrange = &local_vrange;
+			//	if (!irange) irange = &local_irange;
+			//	vrange->set(0, vert_count);
+			//	irange->set(0, indx_count);
+			//	
+			//	// Shift the ranges into the editable range in the model
+			//	vrange->shift((int)mlock.m_vrange.m_begin);
+			//	irange->shift((int)mlock.m_irange.m_begin);
+			//	PR_ASSERT(PR_DBG_RDR, mlock.m_vrange.contains(*vrange), "Insufficient space in model vertex buffer");
+			//	PR_ASSERT(PR_DBG_RDR, mlock.m_irange.contains(*irange), "Insufficient space in model index buffer");
+
+			//	pr::Array<Vert> v(vert_count);
+			//	
+			//	mlock.m_model = rdr.
+			//}
+			//template <typename Vert, typename Indx> ModelPtr Mesh(MLock& mlock  ,MaterialManager& matmgr ,D3D11_PRIMITIVE_TOPOLOGY topo ,pr::GeomType geom_type ,std::size_t indx_count ,std::size_t vert_count ,rdr::Index const* indices ,v4 const* verts ,v4 const* normals ,Colour32 const* colours ,v2 const* tex_coords ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0)
+			//{
+			//	
+
+			//	bool has_alpha = false;
+			//	vf::iterator vb   = mlock.m_vlock.m_ptr + vrange->m_begin;
+			//	rdr::Index*  ib   = mlock.m_ilock.m_ptr + irange->m_begin;
+			//	rdr::Index   base = value_cast<rdr::Index>(vrange->m_begin);
+			//	for (std::size_t i = 0; i != num_verts; ++i)
+			//	{
+			//		v4 const*       v = verts++;
+			//		v4 const*       n = normals    ? normals++    : &v4YAxis;
+			//		Colour32 const* c = colours    ? colours++    : &colour;
+			//		v2 const*       t = tex_coords ? tex_coords++ : &v2Zero;
+			//		v4 point = o2w * *v;
+			//		v4 norm  = o2w * *n;
+			//		vb->set(point, norm, *c, *t); ++vb;
+
+			//		// Grow the bounding box
+			//		pr::Encompase(mlock.m_model->m_bbox, point);
+
+			//		// Look for alpha
+			//		has_alpha |= c->a() != 0xFF;
+			//	}
+			//	for (std::size_t i = 0; i != num_indices; ++i)
+			//	{
+			//		*ib++ = base + *indices++;
+			//	}
+
+			//	// Add a render nugget
+			//	rdr::Material local_mat = mat ? *mat : matmgr.GetMaterial(geom_type);
+			//	SetAlphaRenderStates(local_mat.m_rsb, has_alpha);
+			//	mlock.m_model->SetMaterial(local_mat, prim_type, false, vrange, irange);
+
+			//	// Update the editable ranges
+			//	mlock.m_vrange.m_begin += vrange->size();
+			//	mlock.m_irange.m_begin += irange->size();
+			//	return mlock.m_model;
+			//}
 		}
 	}
 }

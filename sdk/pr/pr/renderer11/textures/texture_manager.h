@@ -46,6 +46,7 @@ namespace pr
 			
 		public:
 			TextureManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
+			~TextureManager();
 			
 			// Create a texture instance.
 			// 'id' is the id to assign to this texture, use AutoId if you want a new instance regardless of whether there is an existing one or not.

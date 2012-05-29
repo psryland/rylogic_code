@@ -118,10 +118,9 @@ namespace pr
 			}
 			SKOverride& Group(ESortGroup::Type group)
 			{
-				SortKey grp = group + ESortGroup::Default;
-				PR_ASSERT(PR_DBG_RDR, grp >= 0 && grp < sortkey::MaxSortGroups, "sort group out of range");
+				PR_ASSERT(PR_DBG_RDR, group >= 0 && group < sortkey::MaxSortGroups, "sort group out of range");
 				m_mask |= static_cast<SortKey>(sortkey::SortGroupMask);
-				m_key  |= static_cast<SortKey>((grp << sortkey::SortGroupOfs) & sortkey::SortGroupMask);
+				m_key  |= static_cast<SortKey>((group << sortkey::SortGroupOfs) & sortkey::SortGroupMask);
 				return *this;
 			}
 		};

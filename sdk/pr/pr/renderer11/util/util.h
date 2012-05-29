@@ -49,11 +49,28 @@ namespace pr
 		size_t IndexCount(size_t pcount, D3D11_PRIMITIVE_TOPOLOGY topo);
 
 		// Returns the number of bits per pixel for a given d3d format
-		UINT BitsPerPixel(DXGI_FORMAT fmt);
+		size_t BitsPerPixel(DXGI_FORMAT fmt);
+		inline size_t BytesPerPixel(DXGI_FORMAT fmt) { return BitsPerPixel(fmt) >> 3; }
 		
 		// Return information about a surface determined from its dimensions and format
 		// Any of the pointer parameters can be null
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
+		
+		// Helper for checking values are not overwritten in a lookup table
+		template <class Table, typename Key, typename Value> inline void AddLookup(Table& table, Key key, Value value)
+		{
+			PR_ASSERT(PR_DBG_RDR, table.count(key) == 0, "Overwriting an existing lookup table item");
+			table[key] = value;
+		}
+		
+		// Set the name on a d3d resource (debug only)
+		template <typename T> inline void NameResource(D3DPtr<T>& res, char const* name)
+		{
+			#if PR_DBG_RDR
+			string32 res_name = name;
+			pr::Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
+			#endif
+		}	
 	}
 }
 

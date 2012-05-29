@@ -25,6 +25,7 @@ namespace pr
 			mutable int     m_dbg_flags;     // Flags used by PR_DBG_RDR to output info once only
 			
 			Model();
+			~Model();
 			
 			// Access to the vertex/index buffers
 			// Only returns false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw

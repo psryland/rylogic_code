@@ -8,6 +8,7 @@
 
 #include "pr/common/min_max_fix.h"
 
+#include <initguid.h>
 #include <malloc.h>
 #include <sdkddkver.h>
 #include <vector>
@@ -19,6 +20,7 @@
 #include <intrin.h>
 #include <windows.h>
 #include <d3d11.h>
+#include <d3d11sdklayers.h>
 
 #include "pr/macros/link.h"
 #include "pr/macros/count_of.h"
@@ -27,10 +29,12 @@
 #include "pr/common/assert.h"
 #include "pr/common/hresult.h"
 #include "pr/common/prtypes.h"
-#include "pr/common/chain.h"
-#include "pr/common/d3dptr.h"
-#include "pr/common/refcount.h"
 #include "pr/common/fmt.h"
+#include "pr/common/stackdump.h"
+#include "pr/common/refcount.h"
+#include "pr/common/refptr.h"
+#include "pr/common/d3dptr.h"
+#include "pr/common/chain.h"
 #include "pr/common/crc.h"
 #include "pr/common/fixedpodarray.h"
 #include "pr/common/valuecast.h"
@@ -71,8 +75,9 @@ namespace pr
 		typedef pr::uint16 SortKeyId;
 		RdrId const AutoId = ~0U; // A special value for automatically generating an Id
 		
-		typedef pr::string<wchar_t, 32>   string32;
-//		typedef pr::string<char, 256>  string256;
+		typedef pr::string<char, 32>     string32;
+		typedef pr::string<wchar_t, 32>  wstring32;
+		typedef pr::string<wchar_t, 256> wstring256;
 //		typedef pr::string<char, 1024> string1024;
 		typedef pr::Range<size_t> Range;
 		const Range RangeZero = {0,0};
@@ -160,12 +165,11 @@ namespace pr
 		class  ModelManager;
 		struct ModelBuffer;    typedef pr::RefPtr<ModelBuffer> ModelBufferPtr;
 		struct Model;          typedef pr::RefPtr<Model>       ModelPtr;
-		struct Nugget;
+		struct Nugget;         typedef pr::chain::head<Nugget, struct ChainGroupNugget> TNuggetChain;
 		struct VertP;
 		struct VertPC;
 		struct VertPT;
 		struct VertPNTC;
-		struct ChainGroupNugget;
 		struct MdlSettings;
 		
 		// Instances

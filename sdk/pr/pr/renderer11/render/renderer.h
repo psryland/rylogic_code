@@ -76,6 +76,7 @@ namespace pr
 			bool                           m_idle;            // True while the window is occluded
 		
 			RdrState(pr::rdr::RdrSettings const& settings);
+			virtual ~RdrState() {}
 			void InitMainRT();
 		};
 	}
