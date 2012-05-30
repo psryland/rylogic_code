@@ -1,0 +1,66 @@
+The demo code can be in any imperative language, although C-derived languages are the most use to us. The code should be sufficiently complex to demostrate an understanding of:
+
+* safe programming practises (error handling, exceptions, assertions, etc)
+* program organisation and encapsulation (modules, interfaces, dependencies)
+* appropriate use of memory (stack, heap, globals, statics, etc)
+* code layout (comments, readability)
+
+As an example, the demo code could be a command line tool that converts an arbitrary file into a C-style header that contains a byte array of the contents of the file.
+
+Some C++ questions:
+1) Point out as many things as you can think of that are wrong with this snippet of code:
+
+		struct Widget
+		{
+			int m_value;
+			
+			Widget()
+			:m_value(1)
+			{}
+			Widget(Widget const& rhs)
+			:m_value(rhs.m_value + 1)
+			{}
+		};
+		struct WidgetBuffer
+		{
+			Widget* m_container;
+			int     m_count;
+			int     m_max_count;
+		};
+		bool AddToBuffer(WidgetBuffer& buffer, Widget* new_widget)
+		{
+			if (buffer.m_max_count == 0)
+			{
+				buffer.m_container = (Widget*)malloc(sizeof(Widget));
+				buffer.m_max_count = 1;
+				buffer.m_count = 0;
+			}
+				
+			if (buffer.m_count == buffer.m_max_count)
+			{
+				Widget* old = buffer.m_container;
+				int old_max_count = buffer.m_max_count;
+				
+				buffer.m_max_count++;
+				buffer.m_container = (Widget*)malloc(sizeof(Widget) * buffer.m_max_count);
+				if (buffer.m_container == NULL)
+					return false;
+				
+				memcpy(buffer.m_container, old, sizeof(Widget) * old_max_count);
+			}
+			
+			buffer.m_container[buffer.m_count] = *new_widget;
+			buffer.m_count++;
+			return true;
+		}
+
+[Answers:
+	* Use of malloc and memcpy means the constructor, copy constructor, and destructor of Widget aren't called
+	* Returning false on failed allocation leaves the WidgetBuffer in an invalid state (invariant not maintained)
+	* Bad interface design
+		- AddToBuffer should return void but throw an exception if reallocation fails due to lack of memory
+		- new_widget should be passed in by Widget const&
+]
+
+
+2) what are std::auto_ptr and std::shared_ptr? what are they used for? Why can't std::auto_ptr be used in an stl container?
