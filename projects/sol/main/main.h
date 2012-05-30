@@ -10,7 +10,7 @@
 #include "pr/app/main_gui.h"
 #include "pr/app/main.h"
 #include "pr/app/skybox.h"
-//#include "pr/app/gimble.h"
+#include "pr/app/gimble.h"
 
 namespace sol
 {
@@ -32,15 +32,15 @@ namespace sol
 	// Main app logic
 	struct Main :pr::app::Main<UserSettings, MainGUI>
 	{
-		pr::app::Skybox m_skybox;
-		//pr::app::Gimble m_gimble;
+		//pr::app::Skybox m_skybox;
+		pr::app::Gimble m_gimble;
 		
 		wchar_t const* AppTitle() const { return L"Sol"; };
 		
 		Main(MainGUI& gui)
 		:base(pr::app::DefaultSetup(), gui)
-		,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/galaxy1/galaxy??.dds"), pr::app::Skybox::SixSidedCube)
-		//,m_gimble(m_rdr)
+		//,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/galaxy1/galaxy??.dds"), pr::app::Skybox::SixSidedCube)
+		,m_gimble(m_rdr)
 		{
 
 		}

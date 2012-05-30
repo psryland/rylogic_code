@@ -144,11 +144,11 @@ pr::Renderer::~Renderer()
 }
 
 // Returns the size of the displayable area as known by the renderer
-pr::IRect pr::Renderer::DisplayRect() const
+pr::iv2 pr::Renderer::DisplayArea() const
 {
 	DXGI_SWAP_CHAIN_DESC desc;
 	pr::Throw(m_swap_chain->GetDesc(&desc));
-	return pr::IRect::make(0, 0, desc.BufferDesc.Width, desc.BufferDesc.Height);
+	return pr::iv2::make(desc.BufferDesc.Width, desc.BufferDesc.Height);
 }
 
 // Called when the window size changes (e.g. from a WM_SIZE message)

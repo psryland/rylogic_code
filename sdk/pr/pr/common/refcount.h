@@ -68,6 +68,15 @@ namespace pr
 			delete doomed;
 		}
 	};
+
+	// Return the current refcount for a ref pointer
+	template <typename T> inline long PtrRefCount(T* ptr)
+	{
+		if (!ptr) return 0;
+		long count = ptr->AddRef() - 1;
+		ptr->Release();
+		return count;
+	}
 }
 	
 #ifdef PR_ASSERT_DEFINED

@@ -180,9 +180,6 @@
     <ClCompile Include="..\..\sdk\sqlite\sqlite3.c">
       <Filter>sdk\sqlite3</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\sdk\pr\pr\maths\test.cpp">
-      <Filter>sdk\pr\maths</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\unittest++\1.3\src\assertexception.h">

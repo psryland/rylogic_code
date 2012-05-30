@@ -194,12 +194,12 @@ namespace pr
 				ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 				Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
 			}
-			DisplayMode(pr::IRect const& area, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
+			DisplayMode(pr::iv2 const& area, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
 			:DXGI_MODE_DESC()
 			{
-				Width  = area.SizeX();
-				Height = area.SizeY();
-				Format = format;
+				Width                   = area.x;
+				Height                  = area.y;
+				Format                  = format;
 				RefreshRate.Numerator   = 60;
 				RefreshRate.Denominator = 1;
 				ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
@@ -251,13 +251,17 @@ namespace pr
 			{
 				set(x, y, width, height, min_depth, max_depth);
 			}
+			Viewport(pr::iv2 const& area)
+			:D3D11_VIEWPORT()
+			{
+				set(0.0f, 0.0f, float(area.x), float(area.y));
+			}
 			Viewport(pr::IRect const& rect)
 			:D3D11_VIEWPORT()
 			{
 				pr::FRect r = pr::FRect::make(rect);
 				set(r.X(), r.Y(), r.SizeX(), r.SizeY());
 			}
-			
 		};
 	}
 }

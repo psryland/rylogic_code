@@ -69,23 +69,23 @@ namespace pr
 		template <typename Type> struct char_traits;
 		template <> struct char_traits<char>
 		{
-			static size_type length(const_pointer ptr)                                              { return ::strlen(ptr); }
-			static void      fill(pointer ptr, size_type count, value_type ch)                      { ::memset(ptr, ch, count); }
-			static void      copy(pointer dst, const_pointer src, size_type count)                  { ::memcpy(dst, src, count); }
-			static void      move(pointer dst, const_pointer src, size_type count)                  { ::memmove(dst, src, count); }
-			static int       compare(const_pointer first1, const_pointer first2, size_type count)   { return ::strncmp(first1, first2, count); }
-			static bool      eq(value_type lhs, value_type rhs)                                     { return lhs == rhs; }
-			static const_pointer find(const_pointer first, size_type count, value_type ch)          { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
+			static size_type   length(char const* ptr)                                              { return ::strlen(ptr); }
+			static void        fill(char* ptr, size_type count, value_type ch)                      { ::memset(ptr, ch, count); }
+			static void        copy(char* dst, char const* src, size_type count)                    { ::memcpy(dst, src, count); }
+			static void        move(char* dst, char const* src, size_type count)                    { ::memmove(dst, src, count); }
+			static int         compare(char const* first1, char const* first2, size_type count)     { return ::strncmp(first1, first2, count); }
+			static bool        eq(value_type lhs, value_type rhs)                                   { return lhs == rhs; }
+			static char const* find(char const* first, size_type count, value_type ch)              { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
 		};
 		template <> struct char_traits<wchar_t>
 		{
-			static size_type length(const_pointer ptr)                                              { return ::wcslen(ptr); }
-			static void      fill(pointer ptr, size_type count, value_type ch)                      { for (;count-- != 0; ++ptr) *ptr = ch; }
-			static void      copy(pointer dst, const_pointer src, size_type count)                  { ::memcpy(dst, src, count * sizeof(wchar_t)); }
-			static void      move(pointer dst, const_pointer src, size_type count)                  { ::memmove(dst, src, count * sizeof(wchar_t)); }
-			static int       compare(const_pointer first1, const_pointer first2, size_type count)   { return ::wcsncmp(first1, first2, count); }
-			static bool      eq(value_type lhs, value_type rhs)                                     { return lhs == rhs; }
-			static const_pointer find(const_pointer first, size_type count, value_type ch)          { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
+			static size_type      length(wchar_t const* ptr)                                              { return ::wcslen(ptr); }
+			static void           fill(wchar_t* ptr, size_type count, value_type ch)                      { for (;count-- != 0; ++ptr) *ptr = ch; }
+			static void           copy(wchar_t* dst, wchar_t const* src, size_type count)                 { ::memcpy(dst, src, count * sizeof(wchar_t)); }
+			static void           move(wchar_t* dst, wchar_t const* src, size_type count)                 { ::memmove(dst, src, count * sizeof(wchar_t)); }
+			static int            compare(wchar_t const* first1, wchar_t const* first2, size_type count)  { return ::wcsncmp(first1, first2, count); }
+			static bool           eq(value_type lhs, value_type rhs)                                      { return lhs == rhs; }
+			static wchar_t const* find(wchar_t const* first, size_type count, value_type ch)              { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
 		};
 		struct traits :char_traits<Type>
 		{
@@ -122,6 +122,10 @@ namespace pr
 		// return true if 'arr' is actually this object
 		template <typename tarr> bool isthis(tarr const& arr) const { return static_cast<void const*>(this) == static_cast<void const*>(&arr); }
 		
+		// return the length of a string
+		template <typename tarr>  size_t length(tarr const& right) const  { return right.size(); }
+		template <typename tchar> size_t length(tchar const* right) const { return traits.length(right); }
+
 		// reverse a range of elements
 		void reverse(Type *first, Type* last) { for (; first != last && first != --last; ++first) std::swap(*first, *last); }
 		
@@ -467,8 +471,9 @@ namespace pr
 		}
 		
 		// assign right
-		template <int Len> string& operator = (Type const (&right)[Len])
+		template <typename tchar, int Len> string& operator = (tchar const (&right)[Len])
 		{
+			// using 'tchar' instead of Type so that the assign<tarr>(..) overload isn't choosen
 			assign(right);
 			return *this;
 		}
@@ -612,9 +617,9 @@ namespace pr
 		// assign right [rofs, rofs + count)
 		template <typename tarr> string& assign(tarr const& right, size_type rofs, size_type count)
 		{
-			PR_ASSERT(PR_DBG, rofs <= right.size(), "");
+			PR_ASSERT(PR_DBG, rofs <= length(right), "");
 			
-			size_type num = right.size() - rofs;
+			size_type num = length(right) - rofs;
 			if (count > num) count = num;
 			if (isthis(right)) // subrange
 			{
@@ -624,7 +629,7 @@ namespace pr
 			else // make room and assign new stuff
 			{
 				ensure_space(count + 1, true);
-				traits::copy(m_ptr, right.c_str() + rofs, count);
+				traits::copy(m_ptr, &right[0] + rofs, count);
 				m_count = count + 1;
 				m_ptr[count] = 0;
 			}
@@ -638,8 +643,9 @@ namespace pr
 		}
 		
 		// assign right
-		template <int Len> string& assign(Type const (&right)[Len])
+		template <typename tchar, int Len> string& assign(tchar const (&right)[Len])
 		{
+			// using 'tchar' instead of Type so that the assign<tarr>(..) overload isn't choosen
 			return assign(&right[0], 0, Len);
 		}
 		

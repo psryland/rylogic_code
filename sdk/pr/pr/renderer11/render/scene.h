@@ -22,6 +22,7 @@ namespace pr
 		// A scene has a viewport which defines the area of the window that the scene draws into.
 		// A scene contains a drawlist
 		struct Scene
+			:pr::events::IRecv<pr::rdr::Evt_Resize>
 		{
 			pr::Renderer*        m_rdr;               // The renderer
 			pr::rdr::Viewport    m_viewport;          // Represents the rectangular area on screen
@@ -33,9 +34,8 @@ namespace pr
 			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());
 			
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
-			SceneView const& View() const    { return m_view; }
-			void View(SceneView const& view) { m_view = view; }
-			void View(pr::Camera const& cam) { View(pr::rdr::SceneView(cam)); }
+			void SetView(SceneView const& view) { m_view = view; }
+			void SetView(pr::Camera const& cam) { SetView(pr::rdr::SceneView(cam)); }
 			
 			// Get/Set the on-screen visible area of this scene when rendered
 			pr::rdr::Viewport const& Viewport() const        { return m_viewport; }
@@ -62,6 +62,9 @@ namespace pr
 			void Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb = true) const;
 		
 		protected:
+			// Resize the viewport on back buffer resize
+			void OnEvent(pr::rdr::Evt_Resize const& evt);
+			
 			// Implementation of rendering for the derived scene type
 			virtual void DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const = 0;
 			

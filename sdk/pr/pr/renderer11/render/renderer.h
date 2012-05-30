@@ -36,11 +36,11 @@ namespace pr
 			pr::Array<D3D_FEATURE_LEVEL> m_feature_levels;     // Features to support. Empty implies 9.1 -> 11.0
 			UINT                         m_vsync;              // Present SyncInterval value
 			
-			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, pr::IRect const& client_area = pr::IRect::make(0,0,1024,768))
+			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, pr::iv2 const& client_area = pr::iv2::make(1024,768))
 			:m_mem()
 			,m_hwnd(hwnd)
 			,m_windowed(windowed)
-			,m_mode(DisplayMode(client_area))
+			,m_mode(client_area)
 			,m_multisamp()
 			,m_buffer_count(2)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT)
@@ -106,7 +106,7 @@ namespace pr
 		template <class Type> pr::rdr::Allocator<Type> Allocator() const { return pr::rdr::Allocator<Type>(m_settings.m_mem); }
 		
 		// Returns the size of the displayable area as known by the renderer
-		pr::IRect DisplayRect() const;
+		pr::iv2 DisplayArea() const;
 		
 		// Call when the window size changes (e.g. from a WM_SIZE message)
 		void Resize(pr::iv2 const& size);

@@ -43,10 +43,10 @@ namespace pr
 		// module = 0 means "this exe"
 		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function
 		// Note: you can use pr::GetCurrentModule() for 'module' in windowsfunctions.h
-		template <typename Type> Resource<Type> Read(TCHAR const* name, TCHAR const* type, HMODULE module = 0)
+		template <typename Type> Resource<Type> Read(wchar_t const* name, wchar_t const* type, HMODULE module = 0)
 		{
 			Resource<Type> res;
-			HRSRC handle = FindResource(module, name, type);
+			HRSRC handle = FindResourceW(module, name, type);
 			if (!handle)
 			{
 				DWORD last_error = GetLastError();

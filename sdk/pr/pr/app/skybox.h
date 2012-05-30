@@ -58,9 +58,10 @@ namespace pr
 			}
 			
 			// Add the skybox to a viewport
-			void Skybox::OnEvent(pr::rdr::Evt_SceneRender const& e)
+			void OnEvent(pr::rdr::Evt_SceneRender const& e)
 			{
-				m_inst.m_i2w = pr::Scale4x4(m_scale, e.m_scene->View().m_c2w.pos);
+				pr::rdr::SceneView const& view = e.m_scene->m_view;
+				m_inst.m_i2w = pr::Scale4x4(m_scale, view.m_c2w.pos);
 				e.m_scene->AddInstance(m_inst);
 			}
 			
@@ -100,7 +101,7 @@ namespace pr
 				};
 				
 				// Create the skybox model
-				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices));
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices, "skybox"));
 				
 				// Create the render nuggets for the skybox
 				pr::rdr::DrawMethod method;
@@ -163,7 +164,7 @@ namespace pr
 				};
 				
 				// Create the skybox model
-				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices));
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices, "skybox"));
 				
 				// Create the render nuggets for the skybox
 				pr::rdr::DrawMethod method;
@@ -182,7 +183,7 @@ namespace pr
 					tpath[ofs+0] = axes[i][0];
 					tpath[ofs+1] = axes[i][1];
 					pr::rdr::TextureDesc desc;
-					pr::rdr::Texture2DPtr tex = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, desc, tpath.c_str());
+					method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, desc, tpath.c_str());
 					//m_tex.back()->m_addr_mode.m_addrU = D3DTADDRESS_CLAMP;
 					//m_tex.back()->m_addr_mode.m_addrV = D3DTADDRESS_CLAMP;
 					

@@ -59,7 +59,7 @@ void pr::rdr::SceneView::UpdateCameraToScreen()
 // Make a scene
 pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 :m_rdr(&rdr)
-,m_viewport(m_rdr->DisplayRect())
+,m_viewport(m_rdr->DisplayArea())
 ,m_view(view)
 ,m_drawlist(rdr)
 ,m_background_colour(pr::ColourBlack)
@@ -74,6 +74,13 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 	PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, pr::FmtS("scene constants buffer")));
 }
 
+// Resize the viewport on back buffer resize
+void pr::rdr::Scene::OnEvent(pr::rdr::Evt_Resize const& evt)
+{
+	if (evt.m_done)
+		m_viewport = evt.m_area;
+}
+
 // Render the draw list for this viewport
 void pr::rdr::Scene::Render(bool clear_bb) const
 {
@@ -82,11 +89,16 @@ void pr::rdr::Scene::Render(bool clear_bb) const
 }
 void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
 {
+	dc->RSSetViewports(1, &m_viewport);
+	
 	{// Set the frame constant variables
 		CBufFrame scene_constants;
 		scene_constants.m_c2w = m_view.m_c2w;
 		scene_constants.m_w2c = pr::GetInverse(m_view.m_c2w);
 		*Lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufFrame>() = scene_constants;
+		
+		// Bind the frame constants to the shader
+		dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
 	}
 	
 	DoRender(dc, clear_bb);
@@ -169,8 +181,8 @@ pr::rdr::SceneDeferred::SceneDeferred(pr::Renderer& rdr, SceneView const& view)
 :Scene(rdr, view)
 ,m_gbuffer()
 {
-	IRect rect = m_rdr->DisplayRect();
-	m_gbuffer.Init(m_rdr->Device(),rect.SizeX(), rect.SizeY());
+	pr::iv2 area = m_rdr->DisplayArea();
+	m_gbuffer.Init(m_rdr->Device(),area.x, area.y);
 }
 
 // Render the scene using the deferred rendering technique

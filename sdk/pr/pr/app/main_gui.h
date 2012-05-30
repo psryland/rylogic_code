@@ -58,7 +58,11 @@ namespace pr
 				loop->AddIdleHandler(this);
 	
 				// Create the main app logic
-				m_main = new Main(static_cast<DerivedGUI&>(*this));
+				try { m_main = new Main(static_cast<DerivedGUI&>(*this)); }
+				catch (...)
+				{
+					throw;
+				}
 				SetWindowTextW(m_hWnd, m_main->AppTitle());
 				OnTimerTick(0); // Initiate the render timer
 				return S_OK;
@@ -169,8 +173,11 @@ namespace pr
 					//SaveWindowBounds();
 					//UpdateUI();
 					UpdateLayout(true);
-					m_main->Resize(area.Size());
-					m_main->Render();
+					if (m_main)
+					{
+						m_main->Resize(area.Size());
+						m_main->Render();
+					}
 				}
 			}
 

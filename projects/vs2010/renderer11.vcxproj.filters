@@ -178,6 +178,9 @@
     <ClCompile Include="..\renderer11\textures\texture_manager.cpp">
       <Filter>textures</Filter>
     </ClCompile>
+    <ClCompile Include="..\renderer11\models\model_generator.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\bin\_build_shader.cmd">
@@ -201,6 +204,12 @@
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
     <CustomBuild Include="..\renderer11\shaders\shaders\vs_txfm_tint.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\ps_txfm_tint_pvc.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\vs_txfm_tint_pvc.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
   </ItemGroup>

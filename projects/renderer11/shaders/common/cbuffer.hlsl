@@ -19,12 +19,14 @@
 // It contains values constant for the whole frame.
 // It is defined for every shader because most will probably need it
 #if SHADER_BUILD
-cbuffer CBufFrame
+#if PR_RDR_SHADER_CBUFFRAME
+cbuffer CBufFrame :register(b0)
 {
 	// Camera transform
 	matrix m_c2w :packoffset(c0); // camera to world
 	matrix m_w2c :packoffset(c4); // world to camera
 };
+#endif
 #else
 struct CBufFrame
 {
@@ -39,15 +41,15 @@ struct CBufFrame
 //
 #if SHADER_BUILD
 #if PR_RDR_SHADER_CBUFMODEL
-cbuffer CBufModel
+cbuffer CBufModel :register(b1)
 {
 	// Object transform
-	EXPAND(matrix m_o2s :packoffset(c0); , PR_RDR_SHADER_TXFM   ) // object to screen
-	EXPAND(matrix m_o2w :packoffset(c4); , PR_RDR_SHADER_TXFMWS ) // object to world
-	EXPAND(matrix m_n2w :packoffset(c8); , PR_RDR_SHADER_NORM   ) // normal to world
+	EXPAND(matrix m_o2s :packoffset(c0) ;,PR_RDR_SHADER_TXFM  ) // object to screen
+	EXPAND(matrix m_o2w :packoffset(c4) ;,PR_RDR_SHADER_TXFMWS) // object to world
+	EXPAND(matrix m_n2w :packoffset(c8) ;,PR_RDR_SHADER_TXFMWS) // normal to world
 
 	// Tinting
-	EXPAND(float4 m_tint :packoffset(c12); , PR_RDR_SHADER_TINT0 ) // object tint colour
+	EXPAND(float4 m_tint :packoffset(c12) ;,PR_RDR_SHADER_TINT0) // object tint colour
 };
 #endif
 #else

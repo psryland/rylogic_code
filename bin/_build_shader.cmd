@@ -34,7 +34,8 @@ if [%shdr%]==[vs] (
 )
 
 ::Choose the output file to generate
-set output=/Fh"%srcdir%\%file%.h"
+set outdir=%srcdir%\..\compiled
+set output=/Fh"%outdir%\%file%.h"
 
 ::Set the variable name to the name of the file
 set varname=/Vn%file%
@@ -46,13 +47,13 @@ set includes=/I%srcdir%\..
 set defines=/DSHADER_BUILD=1
 
 ::Set other command line options
-set options=/nologo
+set options=/nologo /Gis /Ges
 
 ::Build the shader
 cd %srcdir%
 "%fxc%" "%fullpath%" %profile% %output% %varname% %includes% %defines% %options%
 
 ::Generate preprocessed output
-::"%fxc%" "%fullpath%" /P"%fullpath%".pp %includes% %defines% %options%
-::Q:\bin\textformatter.exe -f "%fullpath%.pp" -newlines 0 2
-::"%textedit%" "%fullpath%.pp"
+::"%fxc%" "%fullpath%" /P"%outdir%\%file%.pp" %includes% %defines% %options%
+::Q:\bin\textformatter.exe -f "%outdir%\%file%.pp" -newlines 0 2
+::"%textedit%" "%outdir%\%file%.pp"

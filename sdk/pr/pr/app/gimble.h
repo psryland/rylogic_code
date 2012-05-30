@@ -13,50 +13,66 @@ namespace pr
 	namespace app
 	{
 		// A gimble model
-		struct Gimble :pr::events::IRecv<pr::app::Evt_AddToViewport>
+		struct Gimble :pr::events::IRecv<pr::rdr::Evt_SceneRender>
 		{
 			// A renderer instance type for the gimble
 			PR_RDR_DECLARE_INSTANCE_TYPE2
 			(
 				Instance
-				,pr::rdr::ModelPtr ,m_model ,pr::rdr::instance::ECpt_ModelPtr
-				,pr::m4x4          ,m_i2w   ,pr::rdr::instance::ECpt_I2WTransform
+				,pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr
+				,pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform
 			);
 			
-			Instance m_inst;
+			Instance m_inst;    // The gimble instance
 			pr::v4   m_ofs_pos; // The offset position from the camera focus point
 			float    m_scale;   // A model size scaler.
 			
 			// Constructs a gimble model and instance.
 			Gimble(pr::Renderer& rdr)
 			:m_inst()
-			,m_ofs_pos()
+			,m_ofs_pos(pr::v4Zero)
 			,m_scale(1.0f)
-			{}
+			{
+				InitModel(rdr);
+			}
 			
 			// Add the gimble to a viewport
-			void OnEvent(pr::app::Evt_AddToViewport const& e)
+			void OnEvent(pr::rdr::Evt_SceneRender const& e)
 			{
-				m_inst.m_i2w = pr::Scale4x4(100.0f, e.m_cam->CameraToWorld().pos);
-				e.m_vp->AddInstance(m_inst);
+				pr::rdr::SceneView const& view = e.m_scene->m_view;
+				m_inst.m_i2w = pr::Scale4x4(m_scale, view.FocusPoint() + view.m_c2w * m_ofs_pos);
+				e.m_scene->AddInstance(m_inst);
 			}
 		
 		private:
 			
-			// Create a model for a 5-sided cubic dome
-			void InitModel(pr::Renderer& rdr, string const& texpath)
+			// Create a model for a 'gimble'
+			void InitModel(pr::Renderer& rdr)
 			{
-				pr::v4 const verts[] =
+				pr::rdr::VertPC const verts[] =
 				{
-					pr::v4::make(-0.1f,  0.0f,  0.0f, 1.0f), pr::v4::make(1.0f,  0.0f,  0.0f, 1.0f),
-					pr::v4::make( 0.0f, -0.1f,  0.0f, 1.0f), pr::v4::make(0.0f,  1.0f,  0.0f, 1.0f),
-					pr::v4::make( 0.0f,  0.0f, -0.1f, 1.0f), pr::v4::make(0.0f,  0.0f,  1.0f, 1.0f),
+					{{-0.1f,  0.0f,  0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
+					{{ 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
+					{{ 0.0f, -0.1f,  0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+					{{ 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+					{{ 0.0f,  0.0f, -0.1f}, {0.0f, 0.0f, 1.0f, 1.0f}},
+					{{ 0.0f,  0.0f,  1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
 				};
-				pr::uint16 lines[] = { 0, 1, 2, 3, 4, 5 };
-				pr::Colour32 coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
-		
-				m_inst.m_model = pr::rdr::model::Mesh(rdr, pr::rdr::model::EPrimitive::LineList, pr::geom::EVC, PR_COUNTOF(lines), PR_COUNTOF(verts), lines, verts, 0, coloursFF, 0, pr::m4x4Identity);
-				m_inst.m_i2w   = pr::m4x4Identity;
+				pr::uint16 const indices[] =
+				{
+					0, 1, 2, 3, 4, 5
+				};
+				
+				// Create the gimble model
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts,indices, "gimble"));
+				
+				pr::rdr::DrawMethod method;
+				
+				// Get a suitable shader
+				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPC>();
+				
+				// Create a render nugget
+				m_inst.m_model->CreateNugget(method, D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 			}
 		};
 	}

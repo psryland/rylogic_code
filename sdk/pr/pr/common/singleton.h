@@ -63,7 +63,7 @@ namespace pr
 		{
 			// If this asset fires then you've tried to use this
 			// singleton after it has been deleted.
-			PR_ASSERT(PR_DBG, !m_has_been_deleted);
+			PR_ASSERT(PR_DBG, !m_has_been_deleted, "");
 
 			m_singleton = new T();
 			atexit(&Delete);

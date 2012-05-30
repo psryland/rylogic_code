@@ -25,8 +25,10 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include "renderer11/shaders/shaders/vs_txfm_tint.h"
-		#include "renderer11/shaders/shaders/ps_txfm_tint.h"
+		#include "renderer11/shaders/compiled/vs_txfm_tint.h"
+		#include "renderer11/shaders/compiled/ps_txfm_tint.h"
+		#include "renderer11/shaders/compiled/vs_txfm_tint_pvc.h"
+		#include "renderer11/shaders/compiled/ps_txfm_tint_pvc.h"
 	}
 }
 
@@ -39,6 +41,14 @@ pr::rdr::ShaderManager::ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Devic
 }
 pr::rdr::ShaderManager::~ShaderManager()
 {
+	// Clear all shaders
+	auto dc = ImmediateDC(m_device);
+	dc->VSSetShader(0, 0, 0);
+	dc->PSSetShader(0, 0, 0);
+	dc->GSSetShader(0, 0, 0);
+	dc->HSSetShader(0, 0, 0);
+	dc->DSSetShader(0, 0, 0);
+	
 	// Release the ref added in CreateShader()
 	while (!m_lookup_shader.empty())
 	{
@@ -168,6 +178,22 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShaderFor(EGeom::Type geom_mask) 
 	return const_cast<Shader*>(closest);
 }
 
+// Set the transform properties of CBufModel
+void Txfm(BaseInstance const& inst, SceneView const& view, CBufModel& cb)
+{
+	pr::m4x4 o2w = GetO2W(inst);
+	pr::m4x4 w2c = pr::GetInverseFast(view.m_c2w);
+	pr::m4x4 c2s; if (!FindC2S(inst, c2s)) c2s = view.m_c2s;
+	cb.m_o2s = c2s * w2c * o2w;
+}
+
+// Set the tint properties of CBufModel
+void Tint(BaseInstance const& inst, CBufModel& cb)
+{
+	pr::Colour const* col = inst.find<pr::Colour>(EInstComp::TintColour32);
+	cb.m_tint = col ? *col : pr::ColourWhite;
+}
+
 // Create the built-in shaders
 void pr::rdr::ShaderManager::CreateStockShaders()
 {
@@ -182,19 +208,33 @@ void pr::rdr::ShaderManager::CreateStockShaders()
 	{//TxTint
 		BindShaderFunc map = [](D3DPtr<ID3D11DeviceContext>& dc, pr::rdr::DrawMethod const& meth, Nugget const&, BaseInstance const& inst, SceneView const& view)
 		{
-			pr::m4x4 o2s = pr::GetInverse(view.m_c2w) * GetO2W(inst);
-			pr::Colour const* col = inst.find<pr::Colour>(EInstComp::TintColour32);
-			
 			CBufModel cb = {};
-			cb.m_o2s = o2s;
-			cb.m_tint = col ? *col : pr::ColourWhite;
+			Txfm(inst, view, cb);
+			Tint(inst, cb);
 			*Lock(dc, meth.m_shader->m_cbuf[0], 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
+			dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &meth.m_shader->m_cbuf[0].m_ptr);
 		};
 		
-		// Create the basic shader
+		// Create the shader
 		VShaderDesc vsdesc(VertP(), vs_txfm_tint, sizeof(vs_txfm_tint));
 		PShaderDesc psdesc(ps_txfm_tint, sizeof(ps_txfm_tint));
 		pr::rdr::ShaderPtr shdr = CreateShader(shader::TxTint, map, &vsdesc, &psdesc);
+		CreateCBufModel(shdr);
+	}
+	{//TxTintPvc
+		BindShaderFunc map = [](D3DPtr<ID3D11DeviceContext>& dc, pr::rdr::DrawMethod const& meth, Nugget const&, BaseInstance const& inst, SceneView const& view)
+		{
+			CBufModel cb = {};
+			Txfm(inst, view, cb);
+			Tint(inst, cb);
+			*Lock(dc, meth.m_shader->m_cbuf[0], 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
+			dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &meth.m_shader->m_cbuf[0].m_ptr);
+		};
+
+		// Create the shader
+		VShaderDesc vsdesc(VertPC(), vs_txfm_tint_pvc, sizeof(vs_txfm_tint_pvc));
+		PShaderDesc psdesc(ps_txfm_tint_pvc, sizeof(ps_txfm_tint_pvc));
+		pr::rdr::ShaderPtr shdr = CreateShader(shader::TxTintPvc, map, &vsdesc, &psdesc);
 		CreateCBufModel(shdr);
 	}
 

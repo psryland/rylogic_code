@@ -32,6 +32,21 @@
 #include "pr/common/fmt.h"
 #include "pr/common/stackdump.h"
 #include "pr/common/refcount.h"
+//namespace pr
+//{
+//	// Example code:
+//	#define PR_REFPTR_TRACE 1
+//	template <typename T> inline long PtrRefCount(T*);
+//	template <typename T> inline void RefPtrTrace(bool, T*){}
+//	template <> inline void RefPtrTrace<ID3D11DeviceContext>(bool add, ID3D11DeviceContext* ptr)
+//	{
+//		OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
+//		pr::StackDump(3,5,[](std::string const& file, int line)
+//		{
+//			OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line));
+//		});
+//	}
+//}
 #include "pr/common/refptr.h"
 #include "pr/common/d3dptr.h"
 #include "pr/common/chain.h"
@@ -200,6 +215,14 @@ namespace pr
 				Diff = 1 << 1,  // Diffuse base colour
 				Norm = 1 << 2,  // Object space 3D normal
 				Tex0 = 1 << 3,  // Diffuse texture
+			};
+		}
+		namespace EConstBuf
+		{
+			enum Type
+			{
+				FrameConstants = 0,
+				ModelConstants = 1,
 			};
 		}
 //		namespace EQuality

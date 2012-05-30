@@ -3,8 +3,8 @@
 //  Copyright © Rylogic Ltd 2011
 //*****************************************
 #pragma once
-#ifndef D3D_POINTER_H
-#define D3D_POINTER_H
+#ifndef PR_D3D_POINTER_H
+#define PR_D3D_POINTER_H
 
 #include "pr/common/assert.h"
 #include "pr/common/refptr.h"
@@ -35,7 +35,7 @@ template <typename D3DInterfaceType> struct D3DPtr :pr::RefPtr<D3DInterfaceType>
 	:pr::RefPtr<D3DInterfaceType>(t)
 	{
 		if (m_ptr && !add_ref)
-			m_ptr->Release();
+			DecRef(m_ptr);
 	}
 };
 

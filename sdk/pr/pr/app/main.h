@@ -68,7 +68,7 @@ namespace pr
 			virtual void* UserSettings(HWND) { return 0; }
 			
 			// Return settings to configure the render
-			virtual pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::IRect const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, client_area); }
+			virtual pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, client_area); }
 		};
 		
 		// This type contains the main app logic. It's lifetime is controlled by the GUI.
@@ -95,12 +95,14 @@ namespace pr
 			template <typename Setup>
 			Main(Setup setup, MainGUI& gui)
 			:m_settings(setup.UserSettings(gui.m_hWnd))
-			,m_rdr(setup.RdrSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd)))
+			,m_rdr(setup.RdrSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd).Size()))
 			,m_scene(m_rdr)
 			,m_cam()
 			,m_gui(gui)
 			,m_rdr_pending(false)
 			{
+				m_scene.m_background_colour.set(0.5f,0.5f,0.5f,1.0f);
+				
 				// Position the camera
 				m_cam.Aspect(1.0f);
 				m_cam.FovY(pr::maths::tau_by_8);
@@ -162,7 +164,7 @@ namespace pr
 				m_rdr_pending = false;
 				
 				// Set the camera position
-				m_scene.View(m_cam);
+				m_scene.SetView(m_cam);
 				
 				// Reset and rebuild the drawlist
 				m_scene.ClearDrawlist();

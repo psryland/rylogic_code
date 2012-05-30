@@ -18,6 +18,7 @@ namespace pr
 			enum Type
 			{
 				TxTint,
+				TxTintPvc,
 			};
 		}
 		
