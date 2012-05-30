@@ -21,13 +21,14 @@ namespace pr
 	{
 		float x;
 		float y;
+		typedef float Array[2];
 		
 		v2&                       set(float x_)                            { x = y = x_; return *this; }
 		v2&                       set(float x_, float y_)                  { x = x_; y = y_; return *this; }
 		template <typename T> v2& set(T const& v)                          { x = GetXf(v); y = GetYf(v); return *this; }
 		template <typename T> v2& set(T const* v)                          { x = AsReal(v[0]); y = GetYf(v[1]); return *this; }
-		float const*              ToArray() const                          { return reinterpret_cast<float const*>(this); }
-		float*                    ToArray()                                { return reinterpret_cast<float*>      (this); }
+		Array const&              ToArray() const                          { return reinterpret_cast<Array const&>(*this); }
+		Array&                    ToArray()                                { return reinterpret_cast<Array&>      (*this); }
 		float const&              operator [] (int i)    const             { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
 		float&                    operator [] (int i)                      { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
 		v2& operator = (iv2 const& rhs);

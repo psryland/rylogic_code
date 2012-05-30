@@ -110,16 +110,8 @@ namespace pr
 		return *this;
 	}
 	
-	inline m4x4&     m4x4::zero()                              { return *this = m4x4Zero; }
-	inline m4x4&     m4x4::identity()                          { return *this = m4x4Identity; }
-	inline v4        m4x4::row(int i) const                    { return v4::make(x[i], y[i], z[i], w[i]); }
-	inline v4        m4x4::col(int i) const                    { return (*this)[i]; }
-	inline void      m4x4::row(int i, v4 const& row)           { x[i] = row.x; y[i] = row.y; z[i] = row.z; w[i] = row.w; }
-	inline void      m4x4::col(int i, v4 const& col)           { (*this)[i] = col; }
-	inline v4 const* m4x4::ToArray() const                     { return reinterpret_cast<v4 const*>(this); }
-	inline v4*       m4x4::ToArray()                           { return reinterpret_cast<v4*>(this); }
-	inline v4 const& m4x4::operator [](int i) const            { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
-	inline v4&       m4x4::operator [](int i)                  { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
+	inline m4x4&        m4x4::zero()                              { return *this = m4x4Zero; }
+	inline m4x4&        m4x4::identity()                          { return *this = m4x4Identity; }
 	
 	// Assignment operators
 	inline m4x4& operator += (m4x4& lhs, float rhs)            { lhs.x += rhs; lhs.y += rhs; lhs.z += rhs; lhs.w += rhs; return lhs; }

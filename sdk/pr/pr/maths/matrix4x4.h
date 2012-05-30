@@ -21,33 +21,34 @@ namespace pr
 		v4 y;
 		v4 z;
 		union { v4 w; v4 pos; };
-
-		static m4x4 make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
-		static m4x4 make(m3x3 const& ori, v4 const& translation);
-		static m4x4 make(Quat const& quat, v4 const& translation);
-		static m4x4 make(v4 const& axis, float angle, v4 const& translation);
-		static m4x4 make(v4 const& angular_displacement, v4 const& translation);
-		static m4x4 make(v4 const& from, v4 const& to, v4 const& translation);
-		static m4x4 make(float pitch,  float yaw, float roll, v4 const& translation);
-		static m4x4 make(float const* mat);
-		m4x4&       set(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
-		m4x4&       set(m3x3 const& ori, v4 const& translation);
-		m4x4&       set(Quat const& quat, v4 const& translation);
-		m4x4&       set(v4 const& axis, float angle, v4 const& translation);
-		m4x4&       set(v4 const& angular_displacement, v4 const& translation);
-		m4x4&       set(v4 const& from, v4 const& to, v4 const& translation);
-		m4x4&       set(float pitch,  float yaw, float roll, v4 const& translation);
-		m4x4&       set(float const* mat);
-		m4x4&       zero();
-		m4x4&       identity();
-		v4          row(int i) const;
-		v4          col(int i) const;
-		void        row(int i, v4 const& row);
-		void        col(int i, v4 const& col);
-		v4 const*   ToArray() const;
-		v4*         ToArray();
-		v4 const&   operator [] (int i) const;
-		v4&         operator [] (int i);
+		typedef v4 Array[4];
+		
+		static m4x4  make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
+		static m4x4  make(m3x3 const& ori, v4 const& translation);
+		static m4x4  make(Quat const& quat, v4 const& translation);
+		static m4x4  make(v4 const& axis, float angle, v4 const& translation);
+		static m4x4  make(v4 const& angular_displacement, v4 const& translation);
+		static m4x4  make(v4 const& from, v4 const& to, v4 const& translation);
+		static m4x4  make(float pitch,  float yaw, float roll, v4 const& translation);
+		static m4x4  make(float const* mat);
+		m4x4&        set(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
+		m4x4&        set(m3x3 const& ori, v4 const& translation);
+		m4x4&        set(Quat const& quat, v4 const& translation);
+		m4x4&        set(v4 const& axis, float angle, v4 const& translation);
+		m4x4&        set(v4 const& angular_displacement, v4 const& translation);
+		m4x4&        set(v4 const& from, v4 const& to, v4 const& translation);
+		m4x4&        set(float pitch,  float yaw, float roll, v4 const& translation);
+		m4x4&        set(float const* mat);
+		m4x4&        zero();
+		m4x4&        identity();
+		v4           row(int i) const                       { return v4::make(x[i], y[i], z[i], w[i]); }
+		v4           col(int i) const                       { return (*this)[i]; }
+		void         row(int i, v4 const& row)              { x[i] = row.x; y[i] = row.y; z[i] = row.z; w[i] = row.w; }
+		void         col(int i, v4 const& col)              { (*this)[i] = col; }
+		Array const& ToArray() const                        { return reinterpret_cast<Array const&>(*this); }
+		Array&       ToArray()                              { return reinterpret_cast<Array&>      (*this); }
+		v4 const&    operator [] (int i) const              { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
+		v4&          operator [] (int i)                    { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
 	};
 
 	m4x4 const m4x4Zero     = {v4Zero, v4Zero, v4Zero, v4Zero};

@@ -22,36 +22,36 @@ namespace pr
 		v4 x;
 		v4 y;
 		v4 z;
+		typedef v4 Array[3];
 
-		static m3x3 make(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz);
-		static m3x3 make(v4 const& x_, v4 const& y_, v4 const& z_);
-		static m3x3 make(Quat const& quat);
-		static m3x3 make(v4 const& from, v4 const& to);
-		static m3x3 make(v4 const& axis_norm, float angle);
-		static m3x3 make(v4 const& angular_displacement);
-		static m3x3 make(float pitch, float yaw, float roll);
-		static m3x3 make(float const* mat);
-		m3x3&       set(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz);
-		m3x3&       set(v4 const& x_, v4 const& y_, v4 const& z_);
-		m3x3&       set(Quat const& quat);
-		m3x3&       set(v4 const& from, v4 const& to);
-		m3x3&       set(v4 const& axis_norm, v4 const& axis_sine_angle, float cos_angle);
-		m3x3&       set(v4 const& axis_norm, float angle);
-		m3x3&       set(v4 const& angular_displacement);
-		m3x3&       set(float pitch, float yaw, float roll);
-		m3x3&       set(float const* mat);
-		m3x3&       set(double const* mat);
-
-		m3x3&       zero();
-		m3x3&       identity();
-		v4          row(int i) const;
-		v4          col(int i) const;
-		void        row(int i, v4 const& row);
-		void        col(int i, v4 const& col);
-		v4 const*   ToArray() const;
-		v4*         ToArray();
-		v4 const&   operator [] (int i) const;
-		v4&         operator [] (int i);
+		static m3x3  make(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz);
+		static m3x3  make(v4 const& x_, v4 const& y_, v4 const& z_);
+		static m3x3  make(Quat const& quat);
+		static m3x3  make(v4 const& from, v4 const& to);
+		static m3x3  make(v4 const& axis_norm, float angle);
+		static m3x3  make(v4 const& angular_displacement);
+		static m3x3  make(float pitch, float yaw, float roll);
+		static m3x3  make(float const* mat);
+		m3x3&        set(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz);
+		m3x3&        set(v4 const& x_, v4 const& y_, v4 const& z_);
+		m3x3&        set(Quat const& quat);
+		m3x3&        set(v4 const& from, v4 const& to);
+		m3x3&        set(v4 const& axis_norm, v4 const& axis_sine_angle, float cos_angle);
+		m3x3&        set(v4 const& axis_norm, float angle);
+		m3x3&        set(v4 const& angular_displacement);
+		m3x3&        set(float pitch, float yaw, float roll);
+		m3x3&        set(float const* mat);
+		m3x3&        set(double const* mat);
+		m3x3&        zero();
+		m3x3&        identity();
+		v4           row(int i) const             { return v4::make(x[i], y[i], z[i], 0.0f); }
+		v4           col(int i) const             { return (*this)[i]; }
+		void         row(int i, v4 const& row)    { x[i] = row.x; y[i] = row.y; z[i] = row.z; }
+		void         col(int i, v4 const& col)    { (*this)[i] = col; }
+		Array const& ToArray() const              { return reinterpret_cast<Array const&>(*this); }
+		Array&       ToArray()                    { return reinterpret_cast<Array&>      (*this); }
+		v4 const&    operator [] (int i) const    { PR_ASSERT(PR_DBG_MATHS, i < 3, ""); return ToArray()[i]; }
+		v4&          operator [] (int i)          { PR_ASSERT(PR_DBG_MATHS, i < 3, ""); return ToArray()[i]; }
 	};
 
 	m3x3 const m3x3Zero     = {v4Zero, v4Zero, v4Zero};

@@ -17,23 +17,24 @@ namespace pr
 	{
 		v2 x;
 		v2 y;
+		typedef v2 Array[2];
 		
-		static m2x2 make(v2 const& x, v2 const& y);
-		static m2x2 make(float xx, float xy, float yx, float yy);
-		static m2x2 make(float const* mat);
-		static m2x2 make(float angle);
-		m2x2&       set(v2 const& x_, v2 const& y_);
-		m2x2&       set(float xx, float xy, float yx, float yy);
-		m2x2&       set(float const* mat);
-		m2x2&       set(float angle);
-		m2x2&       zero();
-		m2x2&       identity();
-		v2 const*   ToArray() const;
-		v2*         ToArray();
-		v2 const&   operator [](uint i) const;
-		v2&         operator [](uint i);
+		static m2x2  make(v2 const& x, v2 const& y);
+		static m2x2  make(float xx, float xy, float yx, float yy);
+		static m2x2  make(float const* mat);
+		static m2x2  make(float angle);
+		m2x2&        set(v2 const& x_, v2 const& y_);
+		m2x2&        set(float xx, float xy, float yx, float yy);
+		m2x2&        set(float const* mat);
+		m2x2&        set(float angle);
+		m2x2&        zero();
+		m2x2&        identity();
+		Array const& ToArray() const               { return reinterpret_cast<Array const&>(*this); }
+		Array&       ToArray()                     { return reinterpret_cast<Array&>      (*this); }
+		v2 const&    operator [](uint i) const     { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
+		v2&          operator [](uint i)           { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
 	};
-	
+
 	m2x2 const m2x2Zero     = {v2Zero, v2Zero};
 	m2x2 const m2x2Identity = {v2XAxis, v2YAxis};
 	

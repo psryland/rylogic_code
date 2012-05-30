@@ -139,14 +139,6 @@ namespace pr
 	}
 	inline m3x3&     m3x3::zero()                                  { return *this = m3x3Zero; }
 	inline m3x3&     m3x3::identity()                              { return *this = m3x3Identity; }
-	inline v4        m3x3::row(int i) const                        { return v4::make(x[i], y[i], z[i], 0.0f); }
-	inline v4        m3x3::col(int i) const                        { return (*this)[i]; }
-	inline void      m3x3::row(int i, v4 const& row)               { x[i] = row.x; y[i] = row.y; z[i] = row.z; }
-	inline void      m3x3::col(int i, v4 const& col)               { (*this)[i] = col; }
-	inline v4 const* m3x3::ToArray() const                         { return reinterpret_cast<v4 const*>(this); }
-	inline v4*       m3x3::ToArray()                               { return reinterpret_cast<v4*>      (this); }
-	inline v4 const& m3x3::operator [] (int i) const               { PR_ASSERT(PR_DBG_MATHS, i < 3, ""); return ToArray()[i]; }
-	inline v4&       m3x3::operator [] (int i)                     { PR_ASSERT(PR_DBG_MATHS, i < 3, ""); return ToArray()[i]; }
 	
 	// Assignment operators
 	inline m3x3& operator += (m3x3& lhs, float rhs)                { cast_v3(lhs.x) += rhs;   cast_v3(lhs.y) += rhs;   cast_v3(lhs.z) += rhs;   return lhs; }

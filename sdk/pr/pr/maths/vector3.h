@@ -22,6 +22,7 @@ namespace pr
 		float x;
 		float y;
 		float z;
+		typedef float Array[3];
 		
 		v3&                       set(float x_)                            { x = y = z = x_; return *this; }
 		v3&                       set(float x_, float y_, float z_)        { x = x_; y = y_; z = z_; return *this; }
@@ -32,8 +33,8 @@ namespace pr
 		v2&                       xy()                                     { return reinterpret_cast<v2&>      (x); }
 		v2 const&                 yz() const                               { return reinterpret_cast<v2 const&>(y); }
 		v2&                       yz()                                     { return reinterpret_cast<v2&>      (y); }
-		float const*              ToArray() const                          { return reinterpret_cast<float const*>(this); }
-		float*                    ToArray()                                { return reinterpret_cast<float*>      (this); }
+		Array const&              ToArray() const                          { return reinterpret_cast<Array const&>(*this); }
+		Array&                    ToArray()                                { return reinterpret_cast<Array&>      (*this); }
 		float const&              operator [](int i) const                 { PR_ASSERT(PR_DBG_MATHS, i < 3, ""); return ToArray()[i]; }
 		float&                    operator [](int i)                       { PR_ASSERT(PR_DBG_MATHS, i < 3, ""); return ToArray()[i]; }
 		v2 vec2(int i0, int i1) const;

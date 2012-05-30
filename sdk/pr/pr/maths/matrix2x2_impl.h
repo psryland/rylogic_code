@@ -22,10 +22,6 @@ namespace pr
 	inline m2x2&     m2x2::set(float angle)                              { y.y = (x.x = Cos(angle)); y.x = -(x.y = Sin(angle)); return *this; }
 	inline m2x2&     m2x2::zero()                                        { return *this = m2x2Zero; }
 	inline m2x2&     m2x2::identity()                                    { return *this = m2x2Identity; }
-	inline v2 const* m2x2::ToArray() const                               { return reinterpret_cast<v2 const*>(this); }
-	inline v2*       m2x2::ToArray()                                     { return reinterpret_cast<v2*>      (this); }
-	inline v2 const& m2x2::operator [] (uint i) const                    { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
-	inline v2&       m2x2::operator [] (uint i)                          { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
 
 	// Assignment operators
 	inline m2x2& operator += (m2x2& lhs, m2x2 const& rhs)        { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
