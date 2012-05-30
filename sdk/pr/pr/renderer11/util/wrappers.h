@@ -161,6 +161,32 @@ namespace pr
 			}
 		};
 		
+		// Texture sampler description
+		struct SamplerDesc :D3D11_SAMPLER_DESC
+		{
+			SamplerDesc()
+			:D3D11_SAMPLER_DESC()
+			{
+				InitDefaults();
+			}
+			void InitDefaults()
+			{
+				Filter         = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+				AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
+				AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
+				AddressW       = D3D11_TEXTURE_ADDRESS_WRAP;
+				MipLODBias     = 0.0f;
+				MaxAnisotropy  = 1;
+				ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+				BorderColor[0] = 0.0f;
+				BorderColor[1] = 0.0f;
+				BorderColor[2] = 0.0f;
+				BorderColor[3] = 0.0f;
+				MinLOD         = 0.0f;
+				MaxLOD         = D3D11_FLOAT32_MAX;
+			}
+		};
+
 		// Initialisation data
 		struct SubResourceData :D3D11_SUBRESOURCE_DATA
 		{
@@ -180,6 +206,20 @@ namespace pr
 			}
 		};
 		
+		// Shader resource view
+		struct ShaderResViewDesc :D3D11_SHADER_RESOURCE_VIEW_DESC
+		{
+			ShaderResViewDesc()
+			:D3D11_SHADER_RESOURCE_VIEW_DESC()
+			{}
+			ShaderResViewDesc(DXGI_FORMAT format, D3D11_SRV_DIMENSION view_dim)
+			:D3D11_SHADER_RESOURCE_VIEW_DESC()
+			{
+				Format = format;
+				ViewDimension = view_dim;
+			}
+		};
+
 		// Display mode description
 		struct DisplayMode :DXGI_MODE_DESC
 		{

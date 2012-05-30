@@ -19,16 +19,17 @@ namespace pr
 		// A copy of the TextureDesc is kept locally in the texture instance for per-instance modification
 		struct Texture2D :pr::RefCount<Texture2D>
 		{
-			pr::m4x4                  m_t2s;             // Texture to surface transform
-			D3DPtr<ID3D11Texture2D>   m_tex;             // The texture resource
-			TextureDesc               m_info;            // A description of the texture
-			//rs::Block                 m_rsb;             // Texture specific render states
-			//TextureFilter             m_filter;          // Mip,Min,Mag filtering to use with this texture
-			//TextureAddrMode           m_addr_mode;       // The addressing mode to use with this texture
-			RdrId                     m_id;              // Id for this texture in the material managers lookup map
-			TextureManager*           m_mgr;             // The texture manager that created this texture
-			string32                  m_name;            // Human readable id for the texture
-			//VideoPtr                  m_video;           // Non-null if this texture is the output of a video
+			typedef D3DPtr<ID3D11Texture2D> Tex2dPtr;
+			typedef D3DPtr<ID3D11ShaderResourceView> SRVPtr;
+			pr::m4x4        m_t2s;             // Texture to surface transform
+			Tex2dPtr        m_tex;             // The texture resource
+			SRVPtr          m_srv;             // A shader resource view of the texture
+			TextureDesc     m_info;            // A description of the texture
+			SamplerDesc     m_samp;            // A description of the sampler to use with this texture
+			RdrId           m_id;              // Id for this texture in the material managers lookup map
+			TextureManager* m_mgr;             // The texture manager that created this texture
+			string32        m_name;            // Human readable id for the texture
+			//VideoPtr      m_video;           // Non-null if this texture is the output of a video
 			
 			Texture2D();
 			

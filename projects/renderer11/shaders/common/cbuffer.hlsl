@@ -19,14 +19,12 @@
 // It contains values constant for the whole frame.
 // It is defined for every shader because most will probably need it
 #if SHADER_BUILD
-#if PR_RDR_SHADER_CBUFFRAME
 cbuffer CBufFrame :register(b0)
 {
 	// Camera transform
 	matrix m_c2w :packoffset(c0); // camera to world
 	matrix m_w2c :packoffset(c4); // world to camera
 };
-#endif
 #else
 struct CBufFrame
 {
@@ -38,9 +36,7 @@ struct CBufFrame
 
 // 'CBufModel' is a cbuffer updated per render nugget.
 // Shaders can select components from this structure as needed
-//
 #if SHADER_BUILD
-#if PR_RDR_SHADER_CBUFMODEL
 cbuffer CBufModel :register(b1)
 {
 	// Object transform
@@ -50,8 +46,10 @@ cbuffer CBufModel :register(b1)
 
 	// Tinting
 	EXPAND(float4 m_tint :packoffset(c12) ;,PR_RDR_SHADER_TINT0) // object tint colour
+	
+	// Texture2D
+	EXPAND(matrix m_tex2surf0 :packoffset(c13) ;,PR_RDR_SHADER_TEX0) // texture to surface transform
 };
-#endif
 #else
 struct CBufModel
 {
@@ -62,10 +60,16 @@ struct CBufModel
 	
 	// Tinting
 	pr::Colour m_tint;
+	
+	// Texture2D
+	pr::m4x4 m_tex2surf0;
 };
 #endif
 
+// Texture2D /w sampler
+#if SHADER_BUILD
+Texture2D    m_texture0 :register(t0);
+SamplerState m_tex0     :register(s0);
 #endif
 
-
-
+#endif

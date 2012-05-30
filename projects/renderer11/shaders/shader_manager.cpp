@@ -11,7 +11,7 @@
 using namespace pr::rdr;
 
 pr::rdr::ShaderManager::ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device)
-:m_alex_shader(Allocator<Shader>(mem))
+:m_mem(mem)
 ,m_device(device)
 ,m_lookup_shader(mem)
 {
@@ -36,67 +36,48 @@ pr::rdr::ShaderManager::~ShaderManager()
 	}
 }
 
-// Create a basic shader.
-// Clients should call this method to create the basic shader object and register it
-// with the shader manager. Afterwards they can use the shader pointer returned to setup
-// the specific properties of the shader. Pass nulls for unneeded shader descriptions
-pr::rdr::ShaderPtr pr::rdr::ShaderManager::CreateShader(RdrId id, BindShaderFunc bind_func, VShaderDesc const* vsdesc, PShaderDesc const* psdesc)
+// Builds the basic parts of a shader.
+pr::rdr::ShaderPtr& pr::rdr::ShaderManager::InitShader(pr::rdr::ShaderPtr& shdr, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc)
 {
-	// If the user has provided a specific id for the shader, look for an existing
-	// shader instance with the same name and return it.
-	if (id != AutoId)
-	{
-		// See if 'id' already exists, if not, then we'll carry on and create a new shader.
-		ShaderLookup::const_iterator iter = m_lookup_shader.find(id);
-		if (iter != m_lookup_shader.end())
-		{
-			PR_ASSERT(PR_DBG_RDR, vsdesc == 0 && psdesc == 0, "data provided for an existing shader");
-			Shader& existing = *(iter->second);
-			return &existing;
-		}
-	}
-	
-	// Allocate the shader instance
-	pr::rdr::ShaderPtr inst = m_alex_shader.New();
-	id = id == AutoId ? MakeId(inst.m_ptr) : id;
+	PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == 0, "A shader with this Id already exists");
 	
 	// If 'id' doesn't exist (or is Auto), allocate a new shader
 	if (vsdesc != 0)
 	{
 		// Create the shader
-		pr::Throw(m_device->CreateVertexShader(vsdesc->m_data, vsdesc->m_size, 0, &inst->m_vs.m_ptr));
-		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(inst->m_vs, pr::FmtS("vshdr <RdrId:%d>", id)));
+		pr::Throw(m_device->CreateVertexShader(vsdesc->m_data, vsdesc->m_size, 0, &shdr->m_vs.m_ptr));
+		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_vs, pr::FmtS("vshdr <RdrId:%d>", shdr->m_id)));
 		
 		// Create the input layout
-		pr::Throw(m_device->CreateInputLayout(vsdesc->m_iplayout, UINT(vsdesc->m_iplayout_count), vsdesc->m_data, vsdesc->m_size, &inst->m_iplayout.m_ptr));
-		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(inst->m_iplayout, pr::FmtS("iplayout <RdrId:%d>", id)));
+		pr::Throw(m_device->CreateInputLayout(vsdesc->m_iplayout, UINT(vsdesc->m_iplayout_count), vsdesc->m_data, vsdesc->m_size, &shdr->m_iplayout.m_ptr));
+		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_iplayout, pr::FmtS("iplayout <RdrId:%d>", shdr->m_id)));
 		
 		// Set the minimum vertex format mask
-		inst->m_geom_mask = vsdesc->m_geom_mask;
+		shdr->m_geom_mask = vsdesc->m_geom_mask;
 	}
 	if (psdesc != 0)
 	{
 		// Create the pixel shader
-		pr::Throw(m_device->CreatePixelShader(psdesc->m_data, psdesc->m_size, 0, &inst->m_ps.m_ptr));
-		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(inst->m_ps, pr::FmtS("pshdr <RdrId:%d>", id)));
+		pr::Throw(m_device->CreatePixelShader(psdesc->m_data, psdesc->m_size, 0, &shdr->m_ps.m_ptr));
+		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_ps, pr::FmtS("pshdr <RdrId:%d>", shdr->m_id)));
 	}
 	
 	// Populate the remaining shader instance variables
-	inst->m_id   = id;
-	inst->m_mgr  = this;
-	inst->Setup  = bind_func;
-	inst->m_name = "";
-	inst->m_sort_id = m_lookup_shader.size() % pr::rdr::sortkey::MaxShaderId;
-	AddLookup(m_lookup_shader, inst->m_id, inst.m_ptr);
+	shdr->m_mgr  = this;
+	shdr->Setup  = setup;
+	shdr->m_name = shader::ToString(shdr->m_id);
+	shdr->m_sort_id = m_lookup_shader.size() % pr::rdr::sortkey::MaxShaderId;
+	AddLookup(m_lookup_shader, shdr->m_id, shdr.m_ptr);
 	
-	// We need to prevent the shader from immediately being destroyed
-	// This ref is removed in the destructor
-	inst->AddRef();
-	return inst;
+	// The ShaderManager acts as a container of custom shaders. We need to
+	// prevent the shader from immediately being destroyed even if the caller
+	// holds no references to the shader
+	shdr->AddRef();
+	return shdr;
 }
 
 // Delete a shader instance
-void pr::rdr::ShaderManager::Delete(pr::rdr::Shader const* shdr)
+void pr::rdr::ShaderManager::Delete(pr::rdr::BaseShader const* shdr)
 {
 	if (shdr == 0) return;
 	
@@ -106,18 +87,34 @@ void pr::rdr::ShaderManager::Delete(pr::rdr::Shader const* shdr)
 	PR_ASSERT(PR_DBG_RDR, iter != m_lookup_shader.end(), "Shader not found");
 	
 	// Delete the shader and remove the entry from the RdrId lookup map
-	m_alex_shader.Delete(iter->second);
+	Allocator<BaseShader>(m_mem).Delete(iter->second);
 	m_lookup_shader.erase(iter);
+}
+
+// Find a shader by id
+pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShader(RdrId id) const
+{
+	// AutoId means make a new shader, so it'll never exist already
+	if (id == AutoId)
+		return 0;
+	
+	// See if 'id' already exists, if not, then we'll carry on and create a new shader.
+	ShaderLookup::const_iterator iter = m_lookup_shader.find(id);
+	if (iter == m_lookup_shader.end())
+		return 0;
+	
+	BaseShader& existing = *(iter->second);
+	return &existing;
 }
 
 // Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'
 pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShaderFor(EGeom::Type geom_mask) const
 {
-	pr::rdr::Shader const* closest = 0;
+	pr::rdr::BaseShader const* closest = 0;
 	pr::uint matching_bit_count = 0;
 	for (auto i = begin(m_lookup_shader), iend = end(m_lookup_shader); i != iend; ++i)
 	{
-		Shader const& shdr = *i->second;
+		BaseShader const& shdr = *i->second;
 		
 		// Doesn't meet minimum requirements?
 		if (!pr::AllSet(geom_mask, shdr.m_geom_mask))
@@ -153,5 +150,5 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShaderFor(EGeom::Type geom_mask) 
 		PR_ASSERT(PR_DBG_RDR, false, msg.c_str());
 		throw pr::Exception<HRESULT>(E_FAIL, msg);
 	}
-	return const_cast<Shader*>(closest);
+	return const_cast<BaseShader*>(closest);
 }

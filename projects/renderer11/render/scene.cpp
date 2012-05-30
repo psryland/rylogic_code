@@ -71,7 +71,7 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 	SubResourceData init(scene_constants);
 	CBufferDesc cbdesc(sizeof(CBufFrame));
 	pr::Throw(rdr.Device()->CreateBuffer(&cbdesc, &init, &m_cbuf_frame.m_ptr));
-	PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, pr::FmtS("scene constants buffer")));
+	PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "CBufFrame"));
 }
 
 // Resize the viewport on back buffer resize
@@ -104,33 +104,6 @@ void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) cons
 	DoRender(dc, clear_bb);
 }
 
-// Setup the input assembler for a drawlist element
-void pr::rdr::Scene::SetupIA(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle) const
-{
-	Nugget const&      nugget = *dle.m_nugget;
-	DrawMethod const&  meth   = nugget.m_draw;
-	ModelBuffer const& mb     = *nugget.m_model_buffer.m_ptr;
-	
-	// Render nuggets v/i ranges are relative to the model buffer, not the model
-	// so when we set the v/i buffers we don't need any offsets, the offsets are
-	// provided to the DrawIndexed() call
-	
-	// Bind the vertex buffer to the IA
-	ID3D11Buffer* buffers[] = {mb.m_vb.m_ptr};
-	UINT          strides[] = {mb.m_vb.m_stride};
-	UINT          offsets[] = {0};
-	dc->IASetVertexBuffers(0, 1, buffers, strides, offsets);
-		
-	// Set the input layout for this vertex buffer
-	dc->IASetInputLayout(meth.m_shader->m_iplayout.m_ptr);
-		
-	// Bind the index buffer to the IA
-	dc->IASetIndexBuffer(mb.m_ib.m_ptr, mb.m_ib.m_format, 0);
-		
-	// Tell the IA would sort of primitives to expect
-	dc->IASetPrimitiveTopology(nugget.m_prim_topo);
-}
-
 // SceneForward ***********************************************************
 
 pr::rdr::SceneForward::SceneForward(pr::Renderer& rdr, SceneView const& view)
@@ -154,18 +127,12 @@ void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear
 	Drawlist::DLECont::const_iterator dle = m_drawlist.begin(), dle_end = m_drawlist.end();
 	for (;dle != dle_end; ++dle)
 	{
-		BaseInstance const& inst   = *dle->m_instance;
 		Nugget const&       nugget = *dle->m_nugget;
-		DrawMethod const&   meth   = nugget.m_draw;
-		
-		// Setup the input assembler
-		SetupIA(dc, *dle);
+		BaseInstance const& inst   = *dle->m_instance;
+		ShaderPtr const&    shader = nugget.m_draw.m_shader;
 		
 		// Bind the shader to the device
-		meth.m_shader->Setup(dc, meth, nugget, inst, m_view);
-		
-		// Bind the shaders to the device
-		meth.m_shader->Bind(dc);
+		shader->Setup(dc, nugget, inst, m_view);
 		
 		// Add the nugget to the device context
 		dc->DrawIndexed(

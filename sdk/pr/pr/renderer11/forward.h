@@ -146,7 +146,7 @@ namespace pr
 		// Shaders
 		class  ShaderManager;
 		struct ShaderDesc;
-		struct Shader;        typedef pr::RefPtr<Shader> ShaderPtr;
+		struct BaseShader;   typedef pr::RefPtr<BaseShader> ShaderPtr;
 		
 		// Textures
 		class  TextureManager;

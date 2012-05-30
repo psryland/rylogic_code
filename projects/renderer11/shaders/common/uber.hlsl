@@ -25,15 +25,11 @@
 #ifndef PR_RDR_SHADER_UBER_HLSL
 #define PR_RDR_SHADER_UBER_HLSL
 
-// #pragma warning (disable:3557)
-// #define TINY 0.0005f
-
 #include "uber_defines.hlsl"
 #include "cbuffer.hlsl"
 #include "functions.hlsl"
 
 // Vertex input format
-#if PR_RDR_SHADER_VS
 struct VS_INPUT
 {
 	EXPAND(float3 pos   :Position  ;,PR_RDR_SHADER_VSIN_POS3  )
@@ -41,26 +37,21 @@ struct VS_INPUT
 	EXPAND(float4 diff0 :Color0    ;,PR_RDR_SHADER_VSIN_DIFF0 )
 	EXPAND(float2 tex0  :TexCoord0 ;,PR_RDR_SHADER_VSIN_2DTEX0)
 };
-#endif
 
 // Vertex output format
-#if PR_RDR_SHADER_VS || PR_RDR_SHADER_PS
 struct VS_OUTPUT
 {
 	EXPAND(float4 ss_pos :SV_Position ;,PR_RDR_SHADER_VSOUT_SSPOS4)
 	EXPAND(float4 ws_pos :Position1   ;,PR_RDR_SHADER_VSOUT_WSPOS4)
 	EXPAND(float4 diff0  :Color0      ;,PR_RDR_SHADER_VSOUT_DIFF0 )
-	EXPAND(float2 uv0    :TexCoord0   ;,PR_RDR_SHADER_VSOUT_2DTEX0)
+	EXPAND(float2 tex0   :TexCoord0   ;,PR_RDR_SHADER_VSOUT_2DTEX0)
 };
-#endif
 
 // Pixel output format
-#if PR_RDR_SHADER_PS
 struct PS_OUTPUT
 {
 	float4 diff0 :SV_Target;
 };
-#endif
 
 // Main vertex shader
 #if PR_RDR_SHADER_VS
@@ -80,6 +71,10 @@ VS_OUTPUT main(VS_INPUT In)
 	
 	// Per Vertex colour
 	EXPAND(Out.diff0 = In.diff0 * Out.diff0 ;,PR_RDR_SHADER_PVC)
+	
+	// Texture2D (with transform)
+	EXPAND(Out.tex0 = mul(m_tex2surf0, float4(In.tex0,0,1)).xy ;,PR_RDR_SHADER_TEX0)
+	
 	return Out;
 }
 #endif
@@ -91,9 +86,14 @@ PS_OUTPUT main(VS_OUTPUT In)
 	PS_OUTPUT Out;
 	Out.diff0 = float4(1,1,0,1);
 	
+	// Transform
+	EXPAND(In.ws_norm = normalize(In.ws_norm) ;,PR_RDR_SHADER_TXFMWS)
+	
 	// Tinting
 	EXPAND(Out.diff0 = In.diff0; , PR_RDR_SHADER_TINT0)
 	
+	// Texture2D (with transform)
+	EXPAND(Out.diff0 = tex2D(m_tex0, In.tex0) * Out.diff0 ;,PR_RDR_SHADER_TEX0)
 	return Out;
 }
 #endif

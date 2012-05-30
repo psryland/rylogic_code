@@ -67,9 +67,6 @@ namespace pr
 			
 			// Implementation of rendering for the derived scene type
 			virtual void DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const = 0;
-			
-			// Setup the input assembler for a drawlist element
-			void SetupIA(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle) const;
 		};
 		
 		

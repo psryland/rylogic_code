@@ -32,7 +32,7 @@ namespace sol
 	// Main app logic
 	struct Main :pr::app::Main<UserSettings, MainGUI>
 	{
-		pr::app::Skybox m_skybox;
+		//pr::app::Skybox m_skybox;
 		pr::app::Gimble m_gimble;
 		
 		wchar_t const* AppTitle() const { return L"Sol"; };
@@ -40,7 +40,7 @@ namespace sol
 		Main(MainGUI& gui)
 		:base(pr::app::DefaultSetup(), gui)
 		//,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/galaxy1/galaxy??.dds"), pr::app::Skybox::SixSidedCube)
-		,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/sky1/skybox-clouds-few-noon.dds"), pr::app::Skybox::FiveSidedCube)
+		//,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/sky1/skybox-clouds-few-noon.dds"), pr::app::Skybox::FiveSidedCube)
 		,m_gimble(m_rdr)
 		{
 

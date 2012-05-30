@@ -77,6 +77,11 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 	pr::Throw(m_device->CreateTexture2D(&desc,  &init_data, &tex.m_ptr));
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(tex, pr::FmtS("tex <RdrId:%d>", id)));
 	
+	// Create a shader resource view of the texture
+	ShaderResViewDesc srv_desc(desc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+	srv_desc.Texture2D.MipLevels = desc.MipLevels;
+	pr::Throw(m_device->CreateShaderResourceView(tex.m_ptr, &srv_desc, &inst->m_srv.m_ptr));
+	
 	// Save the texture creation info with the d3d texture, d3d cleans this up.
 	TextureDesc info = desc;
 	info.TexSrcId = 0; // This file was not derived from a file
@@ -156,13 +161,13 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 	{
 		// If not allocate the texture and populate from the file
 		D3DPtr<ID3D11Resource> res;
-		pr::Throw(pr::rdr::CreateDDSTextureFromFile(m_device.m_ptr, filepath, &res.m_ptr, 0, 0));
+		pr::Throw(pr::rdr::CreateDDSTextureFromFile(m_device.m_ptr, filepath, &res.m_ptr, &inst->m_srv.m_ptr, 0));
 		pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(tex, pr::FmtS("tex <File: %s>", filepath)));
 		
 		info.TexSrcId  = texfile_id;
 		info.SortId    = m_lookup_tex.size() % pr::rdr::sortkey::MaxTextureId;
 		pr::Throw(tex->SetPrivateData(TexInfoGUID, sizeof(info), &info)); // Attach info to the texture, d3d cleans this up
-		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(tex, pr::FmtS("tex <RdrId:%d>", id)));
 		
 		AddLookup(m_lookup_fname, texfile_id, tex.m_ptr);
 	}
