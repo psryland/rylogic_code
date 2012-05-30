@@ -6,6 +6,7 @@ syntax: glob
 *.pdb
 *.exe
 *.pp
+*.i
 *.pidb
 *.ipch
 *.opensdf
@@ -15,13 +16,16 @@ syntax: glob
 *.orig
 *.userprefs
 *ReSharper*
+renderer11/shaders/compiled/*
 RylogicEnv.cmd
 ResEdit.layout
 W.TOOLS HAS THE ARAXIS COMPARES FOR SDK
 obj/
+bin/
 .svn/
 media/
 ideas/
 thirdparty/
 tools/Compressonator/
 miscellaneous/VisualStudio Mods/VS2010_Settings.vssettings
+miscellaneous/VisualStudio Mods/VS2008_Settings.vssettings
