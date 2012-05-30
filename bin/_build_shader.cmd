@@ -24,7 +24,7 @@ if %RylogicEnvVersion% lss 1 (
 )
 
 call split_path.cmd fullpath srcdir file extn
-set shdr=%file:~0,2%
+set shdr=%file:~-2%
 
 ::Choose the compiler profile based on file extension
 if [%shdr%]==[vs] (
@@ -38,7 +38,7 @@ set outdir=%srcdir%\..\compiled
 set output=/Fh"%outdir%\%file%.h"
 
 ::Set the variable name to the name of the file
-set varname=/Vn%file%
+set varname=/Vn%file:~0,-3%_%shdr%
 
 ::Set include paths
 set includes=/I%srcdir%\..
@@ -54,6 +54,7 @@ cd %srcdir%
 "%fxc%" "%fullpath%" %profile% %output% %varname% %includes% %defines% %options%
 
 ::Generate preprocessed output
-::"%fxc%" "%fullpath%" /P"%outdir%\%file%.pp" %includes% %defines% %options%
-::Q:\bin\textformatter.exe -f "%outdir%\%file%.pp" -newlines 0 2
-::"%textedit%" "%outdir%\%file%.pp"
+::set ppoutput=%outdir%\%file%.pp
+::"%fxc%" "%fullpath%" /P"%ppoutput%" %includes% %defines% %options%
+::Q:\bin\textformatter.exe -f "%ppoutput%" -newlines 0 2
+::"%textedit%" "%ppoutput%"

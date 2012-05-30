@@ -172,6 +172,7 @@
     <ClCompile Include="..\renderer11\models\model_generator.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
+    <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp" />
     <ClCompile Include="..\renderer11\textures\texture2d.cpp" />
     <ClCompile Include="..\renderer11\models\model.cpp" />
     <ClCompile Include="..\renderer11\models\model_buffer.cpp" />
@@ -196,16 +197,22 @@
     <None Include="..\renderer11\shaders\common\functions.hlsl" />
     <None Include="..\renderer11\shaders\common\uber.hlsl" />
     <None Include="..\renderer11\shaders\common\uber_defines.hlsl" />
-    <CustomBuild Include="..\renderer11\shaders\shaders\ps_txfm_tint.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.ps.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\vs_txfm_tint.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.vs.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\ps_txfm_tint_pvc.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.ps.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\vs_txfm_tint_pvc.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.vs.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.ps.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.vs.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

@@ -181,6 +181,9 @@
     <ClCompile Include="..\renderer11\models\model_generator.cpp">
       <Filter>models</Filter>
     </ClCompile>
+    <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\bin\_build_shader.cmd">
@@ -200,16 +203,22 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\ps_txfm_tint.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.ps.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\vs_txfm_tint.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.vs.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\ps_txfm_tint_pvc.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.ps.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\vs_txfm_tint_pvc.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.vs.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.vs.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.ps.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
   </ItemGroup>
