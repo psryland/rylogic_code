@@ -55,11 +55,29 @@ Some C++ questions:
 		}
 
 [Answers:
-	* Use of malloc and memcpy means the constructor, copy constructor, and destructor of Widget aren't called
-	* Returning false on failed allocation leaves the WidgetBuffer in an invalid state (invariant not maintained)
-	* Bad interface design
-		- AddToBuffer should return void but throw an exception if reallocation fails due to lack of memory
-		- new_widget should be passed in by Widget const&
+	Things we were looking for in particular:
+	* Main bug in that code is that the use of malloc and memcpy does not result in the constructor and copy constructor of Widget being called.
+	* If new/delete were used in place of malloc/free then the code would not be exception safe as a fail of new would leave m_max_count incremented but m_container unchanged. (In jargon: the invariant of WidgetBuffer isn't maintained)
+	* The AddToBuffer function is poorly designed in terms of interface. Normal code should not be expected to handle the bool return value on every call. A much better design is to use exceptions and handle memory allocation failure at a higher level in the program.
+	* 'new_widget' should be passed by const reference rather than non-const pointer since passing NULL to the AddToBuffer function would be an error
+	* The WidgetBuffer type is a basic implementation of a resizing array. A better idea would be to use std::vector<Widget> and "not reinvent the wheel" (unless there is a compelling need).
+
+	Some lesser considerations:
+	* AddToBuffer could be a member of WidgetBuffer, however making it global function allows more flexible use of the function in generic code (i.e. template functions).
+	Consider:
+	  template <class Container, class Type> FillWithDefaults(Container& cont, size_t count)
+	  {
+		for (int i = 0; i != count; ++i)
+			AddToBuffer(cont, Type());
+	  }
+
+	  int integers[10];
+	  FillWithDefaults(integers,10);
+	  
+	  WidgetBuffer widgets;
+	  FillWithDefaults(widgets, 10);
+	  
+	  
 ]
 
 
