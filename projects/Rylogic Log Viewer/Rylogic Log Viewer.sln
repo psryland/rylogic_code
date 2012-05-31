@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic Log Viewer", "Rylogic Log Viewer.csproj", "{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prcs_vs2010", "..\..\sdk\pr\prcs\prcs_vs2010.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}.Debug|x64.ActiveCfg = Debug|x86
+		{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}.Debug|x86.ActiveCfg = Debug|x86
+		{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}.Debug|x86.Build.0 = Debug|x86
+		{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}.Release|x64.ActiveCfg = Release|x86
+		{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}.Release|x86.ActiveCfg = Release|x86
+		{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}.Release|x86.Build.0 = Release|x86
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|x64.ActiveCfg = Debug|x64
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|x64.Build.0 = Debug|x64
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|x86.ActiveCfg = Debug|x86
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|x86.Build.0 = Debug|x86
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|x64.ActiveCfg = Release|x64
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|x64.Build.0 = Release|x64
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|x86.ActiveCfg = Release|x86
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
