@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -224,7 +223,7 @@ namespace pr.gui
 		/// <summary>Return the length of a line in the control</summary>
 		public int LineLength(int line, bool include_newline)
 		{
-			return IndexRangeFromLine(line, include_newline).Count;
+			return (int)IndexRangeFromLine(line, include_newline).Count;
 		}
 
 		/// <summary>Get/Set the line that SelectionStart is on</summary>
@@ -600,20 +599,20 @@ namespace pr.gui
 				case "\u001b[K":  //Esc[K  Clear line from cursor right EL0
 				case "\u001b[0K":{//Esc[0K Clear line from cursor right EL0
 					Range rg = IndexRangeFromLine(CurrentLine, false);
-					SelectionLength = rg.m_end - SelectionStart;
+					SelectionLength = (int)rg.m_end - SelectionStart;
 					SelectedText = "";
 					}break;
 				case "\u001b[1K":{//Esc[1K Clear line from cursor left EL1
 					Range rg = IndexRangeFromLine(CurrentLine, false);
 					rg.m_end = SelectionStart;
-					SelectionStart = rg.m_begin;
-					SelectionLength = rg.Count;
+					SelectionStart = (int)rg.m_begin;
+					SelectionLength = (int)rg.Count;
 					SelectedText = "";
 					}break;
 				case "\u001b[2K":{//Esc[2K Clear entire line EL2
 					Range rg = IndexRangeFromLine(CurrentLine, false);
-					SelectionStart = rg.m_begin;
-					SelectionLength = rg.Count;
+					SelectionStart = (int)rg.m_begin;
+					SelectionLength = (int)rg.Count;
 					SelectedText = "";
 					}break;
 				}break;
@@ -815,10 +814,10 @@ namespace pr.gui
 			Range range = IndexRangeFromLine(loc.Y, false);
 			if (range.Count < loc.X)
 			{
-				int pad_count = loc.X - range.Count;
+				int pad_count = loc.X - (int)range.Count;
 				int restore = SelectionStart;
 				if (restore > range.m_end) restore += pad_count;
-				SelectionStart = range.m_end;
+				SelectionStart = (int)range.m_end;
 				SelectionLength = 0;
 				SelectedText = "".PadRight(pad_count, ' ');
 				SelectionStart = restore;
