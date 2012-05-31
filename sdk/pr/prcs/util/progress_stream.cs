@@ -10,10 +10,11 @@ namespace pr.util
 	/// <summary>A wrapper for a stream that notifies of transfer progress</summary>
 	public class ProgressStream :StreamWrapper
 	{
-		private readonly long m_length; // The length of the stream (if known, 0 if not known)
-		private long m_bytes_read;      // The number of bytes read from the wrapped stream
-		private long m_last_report;     // The number of bytes read when progress was last reported
-		private long m_granularity;     // Controls how frequently to report progress
+		private readonly long m_length;  // The length of the stream (if known, 0 if not known)
+		private long m_bytes_read;       // The number of bytes read from the wrapped stream
+		private long m_last_report;      // The number of bytes read when progress was last reported
+		private long m_last_report_time; // The time of the last report
+		private long m_granularity;      // Controls how frequently to report progress
 
 		/// <summary>An event that notifies as the progress is changed.</summary>
 		public event EventHandler<ProgressChangedEventArgs> ProgressChanged;
@@ -34,15 +35,18 @@ namespace pr.util
 				while (m_bytes_read - m_last_report >= m_granularity)
 				{
 					m_last_report += m_granularity;
+					m_last_report_time = Environment.TickCount;
 					ProgressChangedEventArgs args = new ProgressChangedEventArgs(m_last_report, m_length);
 					if (ProgressChanged != null) ProgressChanged(this, args);
 				}
 			}
 			else
 			{
-				if (m_bytes_read - m_last_report >= m_granularity)
+				if (m_bytes_read - m_last_report >= m_granularity &&
+					Environment.TickCount - m_last_report_time >= MinInterval)
 				{
 					m_last_report = m_bytes_read;
+					m_last_report_time = Environment.TickCount;
 					ProgressChangedEventArgs args = new ProgressChangedEventArgs(m_last_report, m_length);
 					if (ProgressChanged != null) ProgressChanged(this, args);
 				}
@@ -63,10 +67,12 @@ namespace pr.util
 		public ProgressStream(Stream stream) :base(stream)
 		{
 			try { m_length = stream.CanSeek ? stream.Length : 0; } catch (NotSupportedException) { m_length = 0; }
+			NotifyAllSteps = false;
+			MinInterval = 0;
 			m_bytes_read = 0;
 			m_last_report = 0;
+			m_last_report_time = Environment.TickCount - MinInterval;
 			Granularity = m_length != 0 ? m_length / 100 : DefaultGranularity;
-			NotifyAllSteps = false;
 		}
 		
 		/// <summary>Controls how frequently ProgressChanged is fired.
@@ -83,6 +89,9 @@ namespace pr.util
 		/// if N*Granularity bytes are read with a single Read call. Default is false.
 		/// </summary>
 		public bool NotifyAllSteps { get; set; }
+
+		/// <summary>The minimum time (in ms) between notification calls</summary>
+		public int MinInterval { get; set; }
 
 		/// <summary>
 		/// If the wrapped stream has a known length, returns the fraction of the wrapped stream's
