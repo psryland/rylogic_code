@@ -25,7 +25,7 @@ namespace Rylogic_Log_Viewer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("\"\"")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string RecentFiles {
             get {
                 return ((string)(this["RecentFiles"]));
@@ -98,24 +98,24 @@ namespace Rylogic_Log_Viewer.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("224, 224, 224")]
-        public global::System.Drawing.Color LineColour1 {
+        public global::System.Drawing.Color LineBackColour1 {
             get {
-                return ((global::System.Drawing.Color)(this["LineColour1"]));
+                return ((global::System.Drawing.Color)(this["LineBackColour1"]));
             }
             set {
-                this["LineColour1"] = value;
+                this["LineBackColour1"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("192, 255, 192")]
-        public global::System.Drawing.Color LineColour2 {
+        public global::System.Drawing.Color LineBackColour2 {
             get {
-                return ((global::System.Drawing.Color)(this["LineColour2"]));
+                return ((global::System.Drawing.Color)(this["LineBackColour2"]));
             }
             set {
-                this["LineColour2"] = value;
+                this["LineBackColour2"] = value;
             }
         }
         
@@ -152,6 +152,66 @@ namespace Rylogic_Log_Viewer.Properties {
             }
             set {
                 this["LineSelectForeColour"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool AlwaysOnTop {
+            get {
+                return ((bool)(this["AlwaysOnTop"]));
+            }
+            set {
+                this["AlwaysOnTop"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Black")]
+        public global::System.Drawing.Color LineForeColour1 {
+            get {
+                return ((global::System.Drawing.Color)(this["LineForeColour1"]));
+            }
+            set {
+                this["LineForeColour1"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Black")]
+        public global::System.Drawing.Color LineForeColour2 {
+            get {
+                return ((global::System.Drawing.Color)(this["LineForeColour2"]));
+            }
+            set {
+                this["LineForeColour2"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string HighlightPatterns {
+            get {
+                return ((string)(this["HighlightPatterns"]));
+            }
+            set {
+                this["HighlightPatterns"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string FilterPatterns {
+            get {
+                return ((string)(this["FilterPatterns"]));
+            }
+            set {
+                this["FilterPatterns"] = value;
             }
         }
     }

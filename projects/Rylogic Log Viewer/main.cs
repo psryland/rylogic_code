@@ -54,18 +54,16 @@ namespace Rylogic_Log_Viewer
 			}
 		}
 		
-		private const string AppTitle = "Rylogic Log Viewer";
 		private const int AvrBytesPerLine = 256;
 		private const int CacheSize = 4096;
 		
 		private readonly Settings m_settings;        // App settings
 		private readonly RecentFiles m_recent;       // Recent files
 		private readonly FileSystemWatcher m_watch;  // A FS watcher to detect file changes
-		private readonly List<long> m_line_index;    // Byte offsets (from file begin) to the start of lines
 		private readonly LineCache m_line_cache;     // Optimisation for reading whole lines on multi-column grids
-		private readonly byte[] m_buf;               // A temporary buffer for reading sections of the file
-		private FileStream m_file;                   // The file we're reading from (open with shared read/write)
-		private string m_filepath;                   // The path of 'm_file'
+		private List<long> m_line_index;             // Byte offsets (from file begin) to the start of lines
+		private string m_filepath;                   // The path of the log file we're viewing
+		private FileStream m_file;                   // A file stream of 'm_filepath'
 		private long m_end;                          // The current reference point in the file
 		
 		public Main()
@@ -76,17 +74,32 @@ namespace Rylogic_Log_Viewer
 			m_recent = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_recent.Import(m_settings.RecentFiles);
 			m_watch = new FileSystemWatcher{NotifyFilter = NotifyFilters.LastWrite|NotifyFilters.Size};
-			m_line_index = new List<long>();
 			m_line_cache = new LineCache();
-			m_buf = new byte[CacheSize];
+			m_line_index = null;
+			m_filepath = null;
+			m_file = null;
 			m_end = 0;
 			
 			// Menu
-			m_menu_file_open.Click += (s,a) => OpenLogFile(null);
-			m_menu_file_exit.Click += (s,a) => Close();
+			m_menu_file_open.Click         += (s,a) => OpenLogFile(null);
+			m_menu_file_close.Click        += (s,a) => CloseLogFile();
+			m_menu_file_exit.Click         += (s,a) => Close();
+			m_menu_edit_selectall.Click    += (s,a) => {};//SelectAll();
+			m_menu_edit_copy.Click         += (s,a) => {};//Copy();
+			m_menu_edit_find.Click         += (s,a) => {};//Find();
+			m_menu_edit_find_next.Click    += (s,a) => {};
+			m_menu_edit_find_prev.Click    += (s,a) => {};
+			m_menu_tools_alwaysontop.Click += (s,a) => { m_settings.AlwaysOnTop = !m_settings.AlwaysOnTop; TopMost = m_settings.AlwaysOnTop; };
+			m_menu_tools_highlights.Click  += (s,a) => {};
+			m_menu_tools_filters.Click     += (s,a) => {};
+			m_menu_tools_options.Click     += (s,a) => ShowOptions();
+			m_menu_help_about.Click        += (s,a) => {};
 			
 			// Toolbar
-			m_btn_open_log.Click += (s,a) => OpenLogFile(null);
+			m_btn_open_log.Click        += (s,a) => OpenLogFile(null);
+			m_check_tail.CheckedChanged += (s,a) => {};
+			m_btn_highlights.Click      += (s,a) => {};
+			m_btn_filter.Click          += (s,a) => {};
 			
 			// Setup the grid
 			m_grid.AutoGenerateColumns = false;
@@ -106,24 +119,45 @@ namespace Rylogic_Log_Viewer
 					m_settings.Save();
 				};
 		}
-
+		
 		/// <summary>Apply settings throughout the app</summary>
 		private void ApplySettings()
 		{
 			// Row styles
 			m_grid.RowsDefaultCellStyle.Font = m_settings.Font;
-			m_grid.RowsDefaultCellStyle.BackColor = m_settings.LineColour1;
+			m_grid.RowsDefaultCellStyle.ForeColor = m_settings.LineForeColour1;
+			m_grid.RowsDefaultCellStyle.BackColor = m_settings.LineBackColour1;
 			m_grid.RowsDefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.RowsDefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
 			if (m_settings.AlternateLineColours)
 			{
 				m_grid.AlternatingRowsDefaultCellStyle.Font = m_settings.Font;
-				m_grid.AlternatingRowsDefaultCellStyle.BackColor = m_settings.LineColour2;
+				m_grid.AlternatingRowsDefaultCellStyle.BackColor = m_settings.LineBackColour2;
 				m_grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 				m_grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
 			}
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
+			
+			// Tail
+			m_watch.EnableRaisingEvents = m_settings.TailEnabled;
+		}
+		
+		/// <summary>Returns a file stream for 'filepath' openned with R/W sharing</summary>
+		private FileStream LoadFile(string filepath)
+		{
+			return new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, m_settings.LineCount * AvrBytesPerLine);
+		}
+		
+		/// <summary>Close the current log file</summary>
+		private void CloseLogFile()
+		{
+			if (m_file != null) m_file.Dispose();
+			m_line_index = null;
+			m_filepath = null;
+			m_file = null;
+			m_end = 0;
+			UpdateUI();
 		}
 		
 		/// <summary>Prompt to open a log file</summary>
@@ -132,14 +166,17 @@ namespace Rylogic_Log_Viewer
 			// Prompt for a file if none provided
 			if (filepath == null)
 			{
-				var fd = new OpenFileDialog{Filter = "Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*", Multiselect = false};
+				var fd = new OpenFileDialog{Filter = Resources.LogFileFilter, Multiselect = false};
 				if (fd.ShowDialog() != DialogResult.OK) return;
 				filepath = fd.FileName;
 			}
 			
 			// Reject invalid filepaths
 			if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
+			{
+				MessageBox.Show(this, Resources.InvalidFilePath, string.Format(Resources.InvalidFileMsg, filepath), MessageBoxButtons.OK,MessageBoxIcon.Error);
 				return;
+			}
 		
 			m_recent.Add(filepath);
 			m_settings.RecentFiles = m_recent.Export();
@@ -150,112 +187,135 @@ namespace Rylogic_Log_Viewer
 			m_watch.Filter = Path.GetFileName(filepath);
 			
 			// Switch files
-			FileStream file = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, m_settings.LineCount * AvrBytesPerLine);
-			if (m_file != null) m_file.Close();
-			m_filepath = filepath;
-			m_file = file;
-			m_end = file.Length;
-			Text = AppTitle + " - " + m_filepath;
-			
-			BuildLineIndex();
+			CloseLogFile();
+			BuildLineIndex(filepath);
 		}
 		
 		/// <summary>Build a line index of the file</summary>
-		private void BuildLineIndex()
+		private void BuildLineIndex(string filepath)
 		{
-			// Do this in a background thread, it case it takes ages
-			ProgressForm task = new ProgressForm("Building line index", "Reading the last "+m_settings.LineCount+" lines from "+m_filepath, (s,a)=>
+			// Variables used by the follow async task
+			int max_line_count = m_settings.LineCount;
+			byte row_delimiter = m_settings.RowDelimiter;
+			List<long> line_index = new List<long>();
+			long end = 0;
+			
+			// Do this in a background thread, in case it takes ages
+			// Since this dialog is modal, we can use the members of the main thread
+			ProgressForm task = new ProgressForm(Resources.BuildingLineIndex, string.Format(Resources.ReadingXLineFromY, m_settings.LineCount, filepath), (s,a)=>
 				{
 					BackgroundWorker bgw = (BackgroundWorker)s;
 					
-					m_line_index.Clear();
-			
+					// A temporary buffer for reading sections of the file
+					byte[] buf = new byte[CacheSize]; 
+					
 					// Read the last 'LineCount' line indices into memory
 					// Search backward through the file counting lines to get to the byte indices
-					m_file.Seek(m_end, SeekOrigin.Begin);
-					for (long pos = m_end; pos != 0 && m_line_index.Count != m_settings.LineCount && !bgw.CancellationPending;)
+					using (var file = LoadFile(filepath))
 					{
-						int pc = 100 * m_line_index.Count / m_settings.LineCount;
-						bgw.ReportProgress(pc);
-						
-						// The number of bytes to buffer
-						int count = (int)Math.Min(pos, m_buf.Length);
-			
-						// Buffer file data
-						m_file.Seek(pos - count, SeekOrigin.Begin);
-						int read = m_file.Read(m_buf, 0, count);
-						if (read != count)
-							throw new IOException("failed to read file over range ["+(pos-count)+","+(pos+count)+"). Read "+read+"/"+count+" bytes.");
-				
-						// Search backwards counting lines
-						for (;read-- != 0 && m_line_index.Count != m_settings.LineCount; --pos)
+						// Save the file length in 'end' and then use this value rather than
+						// 'file.Length' just in case the file gets modified while we're using it.
+						end = file.Length;
+						file.Seek(end, SeekOrigin.Begin); // see above for why not Seek(0,SeekOrigin.End)
+						for (long pos = end; pos != 0 && line_index.Count != max_line_count && !bgw.CancellationPending;)
 						{
-							if (m_buf[read] != m_settings.RowDelimiter) continue;
-							if (pos != m_end) m_line_index.Add(pos); // special case for last character == row delimiter
+							int pc = 100 * line_index.Count / max_line_count;
+							bgw.ReportProgress(pc);
+						
+							// The number of bytes to buffer
+							int count = (int)Math.Min(pos, buf.Length);
+			
+							// Buffer file data
+							file.Seek(pos - count, SeekOrigin.Begin);
+							int read = file.Read(buf, 0, count);
+							if (read != count)
+								throw new IOException("failed to read file over range ["+(pos-count)+","+(pos+count)+"). Read "+read+"/"+count+" bytes.");
+				
+							// Search backwards counting lines
+							for (;read-- != 0 && line_index.Count != max_line_count; --pos)
+							{
+								if (buf[read] != row_delimiter) continue;
+								if (pos != end) line_index.Add(pos); // special case for last character == row delimiter
+							}
+							if (pos == 0) line_index.Add(0);
 						}
-						if (pos == 0)
-							m_line_index.Add(0);
 					}
-			
+					
 					// Reverse the line index list so that the last line is at the end
-					m_line_index.Reverse();
-			
-					for (int i = 0; i != m_line_index.Count; ++i)
-						m_line_cache.Cache(m_file, m_line_index, i, m_settings.ColDelimiter);
+					line_index.Reverse();
 					
 					a.Cancel = bgw.CancellationPending;
 				});
 			
-			task.ShowDialog(this);
-
-			// Configure the grid
-			m_line_cache.Cache(m_file, m_line_index, 0, m_settings.ColDelimiter);
-			m_grid.ColumnHeadersVisible = m_line_cache.Count > 1;
-			m_grid.ColumnCount = m_line_cache.Count;
-			m_grid.RowCount = 0;
-			m_grid.RowCount = m_line_index.Count;
+			// Don't use the results if the task was cancelled
+			if (task.ShowDialog(this) != DialogResult.OK)
+			{
+				CloseLogFile();
+				return;
+			}
+			
+			// Update the member variables once the line index is complete
+			m_line_index = line_index;
+			m_filepath = filepath;
+			m_file = LoadFile(m_filepath);
+			m_end = end;
+			UpdateUI();
 		}
 		
 		/// <summary>Extend the line index past 'm_end'</summary>
 		private void UpdateLineIndex()
 		{
 			// Get the range of bytes to read from the file
-			long start = m_line_index.Count != 0 ? m_line_index[m_line_index.Count-1] : 0;
+			long pos = m_line_index.Count != 0 ? m_line_index[m_line_index.Count-1] : 0;
 			long end = m_file.Length; // Read the new end of the file
-			
-			// If the file has shrunk, rebuild the index
 			if (end < m_end)
 			{
-				BuildLineIndex();
+				// If the file has shrunk, rebuild the index
+				BuildLineIndex(m_filepath);
 				return;
 			}
 			
-			var file = m_file.Cl(
+			// Variables used by the follow async task
+			string filepath = m_filepath;
+			byte row_delim = m_settings.RowDelimiter;
+			
 			// Find the new line indices in a background thread
 			ThreadPool.QueueUserWorkItem(a=>
 				{
-					var
-			// Seek to the start of the last known line
-			m_file.Seek(start, SeekOrigin.Begin);
-			
-			// Scan forward reading new lines
-			List<long> new_lines = new List<long>();
-			for (;m_file.Position != m_file.Length;)
-			{
-				// Buffer file data
-				int read = m_file.Read(m_buf, 0, m_buf.Length);
-				
-				// Search for new lines
-				for (int i = 0; i != read; ++i)
-				{
-					if (m_buf[i] != m_settings.RowDelimiter) continue;
-					if (pos != m_end) m_line_index.Add(pos); // special case for last character == row delimiter
+					List<long> line_index = new List<long>();
+					using (var file = LoadFile(filepath))
+					{
+						// Seek to the start of the last known line
+						file.Seek(pos, SeekOrigin.Begin);
+						
+						// A temporary buffer for reading sections of the file
+						byte[] buf = new byte[CacheSize]; 
+						
+						// Scan forward reading new lines
+						for (;file.Position != end;)
+						{
+							// Buffer file data
+							int read = file.Read(buf, 0, buf.Length);
+							
+							// Search for new lines
+							for (int i = 0; i != read; ++i)
+							{
+								if (buf[i] != row_delim) continue;
+								if (pos != end) line_index.Add(pos); // special case for last character == row delimiter
+							}
+							if (pos == 0) line_index.Add(0);
 						}
-						if (pos == 0)
-							m_line_index.Add(0);
-			}
-
-			UpdateStatus();
+					}
+					
+					// Marshal the results back to the main thread
+					Action AddToLineIndex = ()=>
+					{
+						m_line_index.AddRange(line_index);
+						m_end = end;
+						UpdateUI();
+					};
+					BeginInvoke(AddToLineIndex);
+				});
 		}
 		
 		/// <summary>Supply the grid with values</summary>
@@ -266,16 +326,55 @@ namespace Rylogic_Log_Viewer
 			e.Value = m_line_cache[e.ColumnIndex];
 		}
 		
+		/// <summary>Display the options dialog</summary>
+		private void ShowOptions()
+		{
+			m_settings.Save();
+			var settings = new SettingsUI();
+			if (settings.ShowDialog(this) != DialogResult.OK) return;
+			m_settings.Reload();
+		}
+		
+		/// <summary>Update the UI with the current line index</summary>
+		private void UpdateUI()
+		{
+			// Configure the grid
+			if (m_file != null)
+			{
+				// Read a row from the data and show column headers if there is more than one
+				m_line_cache.Cache(m_file, m_line_index, 0, m_settings.ColDelimiter);
+				m_grid.ColumnHeadersVisible = m_line_cache.Count > 1;
+				m_grid.ColumnCount = m_line_cache.Count;
+				if (m_grid.RowCount != m_line_index.Count)
+				{
+					// Reset to zero first, this is more efficient so some reason
+					m_grid.RowCount = 0;
+					m_grid.RowCount = m_line_index.Count;
+				}
+			}
+			else
+			{
+				m_grid.ColumnHeadersVisible = false;
+				m_grid.RowCount = 0;
+				m_grid.ColumnCount = 0;
+			}
+			UpdateStatus();
+		}
+		
 		/// <summary>Update the status bar</summary>
 		private void UpdateStatus()
 		{
 			if (m_file == null)
-				m_lbl_file_size.Text = "No File";
+			{
+				Text = Resources.AppTitle;
+				m_lbl_file_size.Text = Resources.NoFile;
+			}
 			else
 			{
+				Text = string.Format("{0} - {1}" ,m_filepath ,Resources.AppTitle);
 				StringBuilder sb = new StringBuilder(m_file.Length.ToString());
 				for (int i = 1; i < sb.Length; ++i) if ((i%3) == 0) sb.Insert(sb.Length - i, ',');
-				m_lbl_file_size.Text = string.Format("Size: {0} bytes", sb.ToString());
+				m_lbl_file_size.Text = string.Format(Resources.SizeXBytes, sb);
 			}
 		}
 	}
