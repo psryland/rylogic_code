@@ -147,4 +147,27 @@
     <value>Size: {0} bytes</value>
     <comment>Size in bytes status string</comment>
   </data>
+	<data name="Active">
+		<value xml:space="preserve">Active</value>
+		<comment>Active column header</comment>
+	</data>
+	<data name="Pattern">
+		<value xml:space="preserve">Pattern</value>
+		<comment>
+			Pattern column header
+		</comment>
+	</data>
+	<data name="Highlighting">
+		<value xml:space="preserve">Highlighting</value>
+		<comment>
+			Highlighting column header
+		</comment>
+	</data>
+	<data name="ReadingFileFailed">
+		<value xml:space="preserve">Reading File Failed</value>
+	</data>
+	<data name="BuildLineIndexErrorMsg">
+		<value><![CDATA[The was an error while parsing the log file.
+Error Details: {0}]]></value>
+	</data>
 </root>

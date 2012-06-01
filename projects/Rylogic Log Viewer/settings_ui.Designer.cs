@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			Rylogic_Log_Viewer.Pattern pattern1 = new Rylogic_Log_Viewer.Pattern();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsUI));
 			this.m_tabctrl = new System.Windows.Forms.TabControl();
 			this.m_tab_general = new System.Windows.Forms.TabPage();
@@ -46,13 +47,10 @@
 			this.m_btn_line1_fore_colour = new System.Windows.Forms.Button();
 			this.m_check_alternate_line_colour = new System.Windows.Forms.CheckBox();
 			this.m_tab_highlight = new System.Windows.Forms.TabPage();
+			this.m_pattern_hl = new Rylogic_Log_Viewer.PatternUI();
 			this.m_grid_highlight = new System.Windows.Forms.DataGridView();
-			this.Active = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-			this.RegExp = new System.Windows.Forms.DataGridViewTextBoxColumn();
-			this.Highlighting = new System.Windows.Forms.DataGridViewTextBoxColumn();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
-			this.m_pattern = new Rylogic_Log_Viewer.PatternUI();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_log_text_colours.SuspendLayout();
@@ -230,7 +228,7 @@
 			// 
 			// m_tab_highlight
 			// 
-			this.m_tab_highlight.Controls.Add(this.m_pattern);
+			this.m_tab_highlight.Controls.Add(this.m_pattern_hl);
 			this.m_tab_highlight.Controls.Add(this.m_grid_highlight);
 			this.m_tab_highlight.Location = new System.Drawing.Point(4, 22);
 			this.m_tab_highlight.Name = "m_tab_highlight";
@@ -239,6 +237,20 @@
 			this.m_tab_highlight.TabIndex = 1;
 			this.m_tab_highlight.Text = "Highlight";
 			this.m_tab_highlight.UseVisualStyleBackColor = true;
+			// 
+			// m_pattern_hl
+			// 
+			this.m_pattern_hl.Location = new System.Drawing.Point(3, 3);
+			this.m_pattern_hl.MinimumSize = new System.Drawing.Size(420, 78);
+			this.m_pattern_hl.Name = "m_pattern_hl";
+			pattern1.Active = true;
+			pattern1.Expr = "";
+			pattern1.IgnoreCase = false;
+			pattern1.Invert = false;
+			pattern1.IsRegex = false;
+			this.m_pattern_hl.Pattern = pattern1;
+			this.m_pattern_hl.Size = new System.Drawing.Size(465, 78);
+			this.m_pattern_hl.TabIndex = 2;
 			// 
 			// m_grid_highlight
 			// 
@@ -249,11 +261,7 @@
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid_highlight.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-			this.m_grid_highlight.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_highlight.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.Active,
-            this.RegExp,
-            this.Highlighting});
+			this.m_grid_highlight.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_highlight.Location = new System.Drawing.Point(3, 87);
 			this.m_grid_highlight.MultiSelect = false;
 			this.m_grid_highlight.Name = "m_grid_highlight";
@@ -261,22 +269,6 @@
 			this.m_grid_highlight.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid_highlight.Size = new System.Drawing.Size(465, 367);
 			this.m_grid_highlight.TabIndex = 1;
-			// 
-			// Active
-			// 
-			this.Active.FillWeight = 30F;
-			this.Active.HeaderText = "Active";
-			this.Active.Name = "Active";
-			// 
-			// RegExp
-			// 
-			this.RegExp.HeaderText = "Reg Exp";
-			this.RegExp.Name = "RegExp";
-			// 
-			// Highlighting
-			// 
-			this.Highlighting.HeaderText = "Highlighting";
-			this.Highlighting.Name = "Highlighting";
 			// 
 			// m_tab_filter
 			// 
@@ -299,15 +291,6 @@
 			this.m_grid_filter.Size = new System.Drawing.Size(391, 318);
 			this.m_grid_filter.TabIndex = 2;
 			// 
-			// m_pattern
-			// 
-			this.m_pattern.Location = new System.Drawing.Point(3, 3);
-			this.m_pattern.MinimumSize = new System.Drawing.Size(420, 78);
-			this.m_pattern.Name = "m_pattern";
-			this.m_pattern.Pattern = null;
-			this.m_pattern.Size = new System.Drawing.Size(465, 78);
-			this.m_pattern.TabIndex = 2;
-			// 
 			// SettingsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -317,6 +300,7 @@
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "SettingsUI";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Options";
 			this.m_tabctrl.ResumeLayout(false);
 			this.m_tab_general.ResumeLayout(false);
@@ -352,9 +336,6 @@
 		private System.Windows.Forms.Label m_lbl_selection_example;
 		private System.Windows.Forms.Label m_lbl_line2_colours;
 		private System.Windows.Forms.Button m_btn_line2_back_colour;
-		private System.Windows.Forms.DataGridViewCheckBoxColumn Active;
-		private System.Windows.Forms.DataGridViewTextBoxColumn RegExp;
-		private System.Windows.Forms.DataGridViewTextBoxColumn Highlighting;
-		private Rylogic_Log_Viewer.PatternUI m_pattern;
+		private Rylogic_Log_Viewer.PatternUI m_pattern_hl;
 	}
 }

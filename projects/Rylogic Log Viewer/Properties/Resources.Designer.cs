@@ -61,6 +61,15 @@ namespace Rylogic_Log_Viewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Active.
+        /// </summary>
+        internal static string Active {
+            get {
+                return ResourceManager.GetString("Active", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Rylogic Log Viewer.
         /// </summary>
         internal static string AppTitle {
@@ -75,6 +84,25 @@ namespace Rylogic_Log_Viewer.Properties {
         internal static string BuildingLineIndex {
             get {
                 return ResourceManager.GetString("BuildingLineIndex", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The was an error while parsing the log file.
+        ///Error Details: {0}.
+        /// </summary>
+        internal static string BuildLineIndexErrorMsg {
+            get {
+                return ResourceManager.GetString("BuildLineIndexErrorMsg", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Highlighting.
+        /// </summary>
+        internal static string Highlighting {
+            get {
+                return ResourceManager.GetString("Highlighting", resourceCulture);
             }
         }
         
@@ -111,6 +139,24 @@ namespace Rylogic_Log_Viewer.Properties {
         internal static string NoFile {
             get {
                 return ResourceManager.GetString("NoFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Pattern.
+        /// </summary>
+        internal static string Pattern {
+            get {
+                return ResourceManager.GetString("Pattern", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reading File Failed.
+        /// </summary>
+        internal static string ReadingFileFailed {
+            get {
+                return ResourceManager.GetString("ReadingFileFailed", resourceCulture);
             }
         }
         

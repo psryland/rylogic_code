@@ -21,7 +21,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="LineBackColour1" Type="System.Drawing.Color" Scope="User">
-      <Value Profile="(Default)">224, 224, 224</Value>
+      <Value Profile="(Default)">WhiteSmoke</Value>
     </Setting>
     <Setting Name="LineBackColour2" Type="System.Drawing.Color" Scope="User">
       <Value Profile="(Default)">192, 255, 192</Value>

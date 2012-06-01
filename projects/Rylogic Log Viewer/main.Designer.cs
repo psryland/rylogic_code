@@ -32,37 +32,37 @@
 			this.m_toolstrip = new System.Windows.Forms.ToolStrip();
 			this.m_btn_open_log = new System.Windows.Forms.ToolStripButton();
 			this.m_check_tail = new System.Windows.Forms.ToolStripButton();
+			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_filter = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_recent = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_status = new System.Windows.Forms.StatusStrip();
-			this.toolStripContainer2 = new System.Windows.Forms.ToolStripContainer();
-			this.m_grid = new System.Windows.Forms.DataGridView();
-			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
-			this.m_btn_filter = new System.Windows.Forms.ToolStripButton();
-			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_highlights = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_filters = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_edit_find = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_selectall = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_sep3 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_edit_copy = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep3 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_edit_find = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_find_next = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_find_prev = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_alwaysontop = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep4 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_highlights = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_filters = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_status = new System.Windows.Forms.StatusStrip();
 			this.m_lbl_file_size = new System.Windows.Forms.ToolStripStatusLabel();
+			this.toolStripContainer2 = new System.Windows.Forms.ToolStripContainer();
+			this.m_grid = new System.Windows.Forms.DataGridView();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -107,6 +107,29 @@
 			this.m_check_tail.Size = new System.Drawing.Size(23, 22);
 			this.m_check_tail.Text = "Tail";
 			// 
+			// m_sep
+			// 
+			this.m_sep.Name = "m_sep";
+			this.m_sep.Size = new System.Drawing.Size(6, 25);
+			// 
+			// m_btn_highlights
+			// 
+			this.m_btn_highlights.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_highlights.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_highlights.Image")));
+			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_highlights.Name = "m_btn_highlights";
+			this.m_btn_highlights.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_highlights.Text = "Highlights";
+			// 
+			// m_btn_filter
+			// 
+			this.m_btn_filter.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_filter.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_filter.Image")));
+			this.m_btn_filter.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_filter.Name = "m_btn_filter";
+			this.m_btn_filter.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_filter.Text = "Filters";
+			// 
 			// m_menu
 			// 
 			this.m_menu.AutoSize = false;
@@ -118,7 +141,7 @@
             this.m_menu_help});
 			this.m_menu.Location = new System.Drawing.Point(0, 0);
 			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(341, 24);
+			this.m_menu.Size = new System.Drawing.Size(593, 24);
 			this.m_menu.TabIndex = 1;
 			this.m_menu.Text = "menuStrip1";
 			// 
@@ -141,6 +164,13 @@
 			this.m_menu_file_open.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
 			this.m_menu_file_open.Size = new System.Drawing.Size(190, 22);
 			this.m_menu_file_open.Text = "&Open Log File";
+			// 
+			// m_menu_file_close
+			// 
+			this.m_menu_file_close.Name = "m_menu_file_close";
+			this.m_menu_file_close.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.W)));
+			this.m_menu_file_close.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_close.Text = "&Close";
 			// 
 			// m_sep1
 			// 
@@ -165,6 +195,120 @@
 			this.m_menu_file_exit.Size = new System.Drawing.Size(190, 22);
 			this.m_menu_file_exit.Text = "E&xit";
 			// 
+			// m_menu_edit
+			// 
+			this.m_menu_edit.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_edit_selectall,
+            this.m_menu_edit_copy,
+            this.m_sep3,
+            this.m_menu_edit_find,
+            this.m_menu_edit_find_next,
+            this.m_menu_edit_find_prev});
+			this.m_menu_edit.Name = "m_menu_edit";
+			this.m_menu_edit.Size = new System.Drawing.Size(39, 20);
+			this.m_menu_edit.Text = "&Edit";
+			// 
+			// m_menu_edit_selectall
+			// 
+			this.m_menu_edit_selectall.Name = "m_menu_edit_selectall";
+			this.m_menu_edit_selectall.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.A)));
+			this.m_menu_edit_selectall.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_selectall.Text = "Select &All";
+			// 
+			// m_menu_edit_copy
+			// 
+			this.m_menu_edit_copy.Name = "m_menu_edit_copy";
+			this.m_menu_edit_copy.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
+			this.m_menu_edit_copy.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_copy.Text = "&Copy";
+			// 
+			// m_sep3
+			// 
+			this.m_sep3.Name = "m_sep3";
+			this.m_sep3.Size = new System.Drawing.Size(193, 6);
+			// 
+			// m_menu_edit_find
+			// 
+			this.m_menu_edit_find.Name = "m_menu_edit_find";
+			this.m_menu_edit_find.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F)));
+			this.m_menu_edit_find.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_find.Text = "&Find";
+			// 
+			// m_menu_edit_find_next
+			// 
+			this.m_menu_edit_find_next.Name = "m_menu_edit_find_next";
+			this.m_menu_edit_find_next.ShortcutKeys = System.Windows.Forms.Keys.F3;
+			this.m_menu_edit_find_next.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_find_next.Text = "Find &Next";
+			// 
+			// m_menu_edit_find_prev
+			// 
+			this.m_menu_edit_find_prev.Name = "m_menu_edit_find_prev";
+			this.m_menu_edit_find_prev.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.F3)));
+			this.m_menu_edit_find_prev.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_find_prev.Text = "Find &Previous";
+			// 
+			// m_menu_tools
+			// 
+			this.m_menu_tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_tools_alwaysontop,
+            this.m_sep4,
+            this.m_menu_tools_highlights,
+            this.m_menu_tools_filters,
+            this.m_sep5,
+            this.m_menu_tools_options});
+			this.m_menu_tools.Name = "m_menu_tools";
+			this.m_menu_tools.Size = new System.Drawing.Size(48, 20);
+			this.m_menu_tools.Text = "&Tools";
+			// 
+			// m_menu_tools_alwaysontop
+			// 
+			this.m_menu_tools_alwaysontop.Name = "m_menu_tools_alwaysontop";
+			this.m_menu_tools_alwaysontop.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_alwaysontop.Text = "Always On &Top";
+			// 
+			// m_sep4
+			// 
+			this.m_sep4.Name = "m_sep4";
+			this.m_sep4.Size = new System.Drawing.Size(151, 6);
+			// 
+			// m_menu_tools_highlights
+			// 
+			this.m_menu_tools_highlights.Name = "m_menu_tools_highlights";
+			this.m_menu_tools_highlights.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_highlights.Text = "&Highlights";
+			// 
+			// m_menu_tools_filters
+			// 
+			this.m_menu_tools_filters.Name = "m_menu_tools_filters";
+			this.m_menu_tools_filters.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_filters.Text = "&Filters";
+			// 
+			// m_sep5
+			// 
+			this.m_sep5.Name = "m_sep5";
+			this.m_sep5.Size = new System.Drawing.Size(151, 6);
+			// 
+			// m_menu_tools_options
+			// 
+			this.m_menu_tools_options.Name = "m_menu_tools_options";
+			this.m_menu_tools_options.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_options.Text = "&Options";
+			// 
+			// m_menu_help
+			// 
+			this.m_menu_help.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_help_about});
+			this.m_menu_help.Name = "m_menu_help";
+			this.m_menu_help.Size = new System.Drawing.Size(44, 20);
+			this.m_menu_help.Text = "&Help";
+			// 
+			// m_menu_help_about
+			// 
+			this.m_menu_help_about.Name = "m_menu_help_about";
+			this.m_menu_help_about.Size = new System.Drawing.Size(107, 22);
+			this.m_menu_help_about.Text = "&About";
+			// 
 			// m_status
 			// 
 			this.m_status.Dock = System.Windows.Forms.DockStyle.None;
@@ -172,9 +316,15 @@
             this.m_lbl_file_size});
 			this.m_status.Location = new System.Drawing.Point(0, 0);
 			this.m_status.Name = "m_status";
-			this.m_status.Size = new System.Drawing.Size(341, 22);
+			this.m_status.Size = new System.Drawing.Size(593, 22);
 			this.m_status.TabIndex = 3;
 			this.m_status.Text = "statusStrip1";
+			// 
+			// m_lbl_file_size
+			// 
+			this.m_lbl_file_size.Name = "m_lbl_file_size";
+			this.m_lbl_file_size.Size = new System.Drawing.Size(124, 17);
+			this.m_lbl_file_size.Text = "Size: 2147483647 bytes";
 			// 
 			// toolStripContainer2
 			// 
@@ -188,11 +338,11 @@
 			this.toolStripContainer2.ContentPanel.AutoScroll = true;
 			this.toolStripContainer2.ContentPanel.Controls.Add(this.m_grid);
 			this.toolStripContainer2.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
-			this.toolStripContainer2.ContentPanel.Size = new System.Drawing.Size(341, 271);
+			this.toolStripContainer2.ContentPanel.Size = new System.Drawing.Size(593, 424);
 			this.toolStripContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.toolStripContainer2.Location = new System.Drawing.Point(0, 0);
 			this.toolStripContainer2.Name = "toolStripContainer2";
-			this.toolStripContainer2.Size = new System.Drawing.Size(341, 342);
+			this.toolStripContainer2.Size = new System.Drawing.Size(593, 495);
 			this.toolStripContainer2.TabIndex = 6;
 			this.toolStripContainer2.Text = "toolStripContainer2";
 			// 
@@ -219,165 +369,15 @@
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(335, 265);
+			this.m_grid.Size = new System.Drawing.Size(587, 418);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
-			// 
-			// m_btn_highlights
-			// 
-			this.m_btn_highlights.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_highlights.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_highlights.Image")));
-			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_highlights.Name = "m_btn_highlights";
-			this.m_btn_highlights.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_highlights.Text = "Highlights";
-			// 
-			// m_btn_filter
-			// 
-			this.m_btn_filter.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_filter.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_filter.Image")));
-			this.m_btn_filter.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_filter.Name = "m_btn_filter";
-			this.m_btn_filter.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_filter.Text = "Filters";
-			// 
-			// m_sep
-			// 
-			this.m_sep.Name = "m_sep";
-			this.m_sep.Size = new System.Drawing.Size(6, 25);
-			// 
-			// m_menu_help
-			// 
-			this.m_menu_help.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_help_about});
-			this.m_menu_help.Name = "m_menu_help";
-			this.m_menu_help.Size = new System.Drawing.Size(44, 20);
-			this.m_menu_help.Text = "&Help";
-			// 
-			// m_menu_help_about
-			// 
-			this.m_menu_help_about.Name = "m_menu_help_about";
-			this.m_menu_help_about.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_help_about.Text = "&About";
-			// 
-			// m_menu_tools
-			// 
-			this.m_menu_tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_tools_alwaysontop,
-            this.m_sep4,
-            this.m_menu_tools_highlights,
-            this.m_menu_tools_filters,
-            this.m_sep5,
-            this.m_menu_tools_options});
-			this.m_menu_tools.Name = "m_menu_tools";
-			this.m_menu_tools.Size = new System.Drawing.Size(48, 20);
-			this.m_menu_tools.Text = "&Tools";
-			// 
-			// m_menu_tools_highlights
-			// 
-			this.m_menu_tools_highlights.Name = "m_menu_tools_highlights";
-			this.m_menu_tools_highlights.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_highlights.Text = "&Highlights";
-			// 
-			// m_menu_tools_filters
-			// 
-			this.m_menu_tools_filters.Name = "m_menu_tools_filters";
-			this.m_menu_tools_filters.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_filters.Text = "&Filters";
-			// 
-			// m_menu_tools_options
-			// 
-			this.m_menu_tools_options.Name = "m_menu_tools_options";
-			this.m_menu_tools_options.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_options.Text = "&Options";
-			// 
-			// m_sep5
-			// 
-			this.m_sep5.Name = "m_sep5";
-			this.m_sep5.Size = new System.Drawing.Size(151, 6);
-			// 
-			// m_menu_file_close
-			// 
-			this.m_menu_file_close.Name = "m_menu_file_close";
-			this.m_menu_file_close.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.W)));
-			this.m_menu_file_close.Size = new System.Drawing.Size(190, 22);
-			this.m_menu_file_close.Text = "&Close";
-			// 
-			// m_menu_edit
-			// 
-			this.m_menu_edit.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_edit_selectall,
-            this.m_menu_edit_copy,
-            this.m_sep3,
-            this.m_menu_edit_find,
-            this.m_menu_edit_find_next,
-            this.m_menu_edit_find_prev});
-			this.m_menu_edit.Name = "m_menu_edit";
-			this.m_menu_edit.Size = new System.Drawing.Size(39, 20);
-			this.m_menu_edit.Text = "&Edit";
-			// 
-			// m_menu_edit_find
-			// 
-			this.m_menu_edit_find.Name = "m_menu_edit_find";
-			this.m_menu_edit_find.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F)));
-			this.m_menu_edit_find.Size = new System.Drawing.Size(196, 22);
-			this.m_menu_edit_find.Text = "&Find";
-			// 
-			// m_menu_edit_selectall
-			// 
-			this.m_menu_edit_selectall.Name = "m_menu_edit_selectall";
-			this.m_menu_edit_selectall.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.A)));
-			this.m_menu_edit_selectall.Size = new System.Drawing.Size(196, 22);
-			this.m_menu_edit_selectall.Text = "Select &All";
-			// 
-			// m_sep3
-			// 
-			this.m_sep3.Name = "m_sep3";
-			this.m_sep3.Size = new System.Drawing.Size(193, 6);
-			// 
-			// m_menu_edit_copy
-			// 
-			this.m_menu_edit_copy.Name = "m_menu_edit_copy";
-			this.m_menu_edit_copy.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
-			this.m_menu_edit_copy.Size = new System.Drawing.Size(196, 22);
-			this.m_menu_edit_copy.Text = "&Copy";
-			// 
-			// m_menu_edit_find_next
-			// 
-			this.m_menu_edit_find_next.Name = "m_menu_edit_find_next";
-			this.m_menu_edit_find_next.ShortcutKeys = System.Windows.Forms.Keys.F3;
-			this.m_menu_edit_find_next.Size = new System.Drawing.Size(196, 22);
-			this.m_menu_edit_find_next.Text = "Find &Next";
-			// 
-			// m_menu_edit_find_prev
-			// 
-			this.m_menu_edit_find_prev.Name = "m_menu_edit_find_prev";
-			this.m_menu_edit_find_prev.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.F3)));
-			this.m_menu_edit_find_prev.Size = new System.Drawing.Size(196, 22);
-			this.m_menu_edit_find_prev.Text = "Find &Previous";
-			// 
-			// m_menu_tools_alwaysontop
-			// 
-			this.m_menu_tools_alwaysontop.Name = "m_menu_tools_alwaysontop";
-			this.m_menu_tools_alwaysontop.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_alwaysontop.Text = "Always On &Top";
-			// 
-			// m_sep4
-			// 
-			this.m_sep4.Name = "m_sep4";
-			this.m_sep4.Size = new System.Drawing.Size(151, 6);
-			// 
-			// m_lbl_file_size
-			// 
-			this.m_lbl_file_size.Name = "m_lbl_file_size";
-			this.m_lbl_file_size.Size = new System.Drawing.Size(124, 17);
-			this.m_lbl_file_size.Text = "Size: 2147483647 bytes";
 			// 
 			// Main
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(341, 342);
+			this.ClientSize = new System.Drawing.Size(593, 495);
 			this.Controls.Add(this.toolStripContainer2);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MainMenuStrip = this.m_menu;

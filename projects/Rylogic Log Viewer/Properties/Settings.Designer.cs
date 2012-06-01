@@ -97,7 +97,7 @@ namespace Rylogic_Log_Viewer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("224, 224, 224")]
+        [global::System.Configuration.DefaultSettingValueAttribute("WhiteSmoke")]
         public global::System.Drawing.Color LineBackColour1 {
             get {
                 return ((global::System.Drawing.Color)(this["LineBackColour1"]));

@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.common;
-using pr.extn;
 
 namespace Rylogic_Log_Viewer
 {
-	public class Pattern
+	public class Pattern :ICloneable
 	{
 		/// <summary>The pattern to use when matching</summary>
 		public string Expr { get; set; }
@@ -37,18 +36,16 @@ namespace Rylogic_Log_Viewer
 		public bool IsMatch(string text)
 		{
 			if (!Active) return false;
-			bool match;
+			bool match = false;
 			if (IsRegex)
 			{
-				RegexOptions opts = RegexOptions.None;
-				if (IgnoreCase) opts |= RegexOptions.IgnoreCase;
-				match = new Regex(Expr, opts).IsMatch(text);
+				RegexOptions opts = IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None;
+				try { match = new Regex(Expr, opts).IsMatch(text); } catch (ArgumentException) {}
 			}
 			else
 			{
-				match = IgnoreCase
-					? text.ToLower().Contains(Expr.ToLower())
-					: text.Contains(Expr);
+				StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+				match = text.IndexOf(Expr, 0, cmp) != -1;
 			}
 			return Invert ? !match : match;
 		}
@@ -80,53 +77,46 @@ namespace Rylogic_Log_Viewer
 							x.Add(i + Expr.Length);
 						}
 					}
-				} catch {}
+				} catch (ArgumentException) {}
 				if (Invert) x.Add(text.Length);
 				for (int i = 0; i != x.Count; i += 2)
 					yield return new Range(x[i], x[i+1]);
 			}
 		}
 		
-		/// <summary>Reads an xml description of the highlight expressions</summary>
-		public static List<Pattern> Import(string highlights)
+		/// <summary>Construct from xml description</summary>
+		public Pattern(XElement node)
 		{
-			var list = new List<Pattern>();
-			XDocument doc; try { doc = XDocument.Parse(highlights); } catch { return list; }
-			foreach (XElement n in doc.Root.Elements("highlight"))
+			try
 			{
-				try
-				{
-					list.Add(new Pattern
-					{
-						// ReSharper disable PossibleNullReferenceException
-						Expr       = n.Element("expr").Value,
-						Active     = bool.Parse(n.Element("active").Value),
-						IsRegex    = bool.Parse(n.Element("isregex").Value),
-						IgnoreCase = bool.Parse(n.Element("ignorecase").Value),
-						Invert     = bool.Parse(n.Element("invert").Value),
-						// ReSharper restore PossibleNullReferenceException
-					});
-				}
-				catch {} // swallow bad input data
-			}
-			return list;
+				// ReSharper disable PossibleNullReferenceException
+				Expr       = node.Element("expr").Value;
+				Active     = bool.Parse(node.Element("active").Value);
+				IsRegex    = bool.Parse(node.Element("isregex").Value);
+				IgnoreCase = bool.Parse(node.Element("ignorecase").Value);
+				Invert     = bool.Parse(node.Element("invert").Value);
+				// ReSharper restore PossibleNullReferenceException
+			} catch {} // swallow bad input data
 		}
 		
-		/// <summary>Serialise the highlight patterns to xml</summary>
-		public static string Export(IList<Pattern> highlights)
+		/// <summary>Export this pattern as xml</summary>
+		public virtual XElement ToXml(XElement node)
 		{
-			XDocument doc = new XDocument();
-			var root = doc.Add2(new XElement("root"));
-			foreach (var hl in highlights)
-			{
-				var pattern = root.Add2(new XElement("pattern"));
-				pattern.Add2("expr"       ,hl.Expr       );
-				pattern.Add2("active"     ,hl.Active     );
-				pattern.Add2("isregex"    ,hl.IsRegex    );
-				pattern.Add2("ignorecase" ,hl.IgnoreCase );
-				pattern.Add2("invert"     ,hl.Invert     );
-			}
-			return doc.ToString(SaveOptions.None);
+			node.Add
+			(
+				new XElement("expr"       ,Expr       ),
+				new XElement("active"     ,Active     ),
+				new XElement("isregex"    ,IsRegex    ),
+				new XElement("ignorecase" ,IgnoreCase ),
+				new XElement("invert"     ,Invert     )
+			);
+			return node;
+		}
+
+		/// <summary>Creates a new object that is a copy of the current instance.</summary>
+		public object Clone()
+		{
+			return MemberwiseClone();
 		}
 	}
 }

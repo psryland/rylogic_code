@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using pr.gui;
+using pr.util;
 using Rylogic_Log_Viewer.Properties;
 
 namespace Rylogic_Log_Viewer
@@ -53,18 +54,18 @@ namespace Rylogic_Log_Viewer
 					m_col.Add(Encoding.ASCII.GetString(m_buf, b, e));
 			}
 		}
-		
 		private const int AvrBytesPerLine = 256;
 		private const int CacheSize = 4096;
 		
-		private readonly Settings m_settings;        // App settings
-		private readonly RecentFiles m_recent;       // Recent files
-		private readonly FileSystemWatcher m_watch;  // A FS watcher to detect file changes
-		private readonly LineCache m_line_cache;     // Optimisation for reading whole lines on multi-column grids
-		private List<long> m_line_index;             // Byte offsets (from file begin) to the start of lines
-		private string m_filepath;                   // The path of the log file we're viewing
-		private FileStream m_file;                   // A file stream of 'm_filepath'
-		private long m_end;                          // The current reference point in the file
+		private readonly Settings m_settings;          // App settings
+		private readonly RecentFiles m_recent;         // Recent files
+		private readonly FileSystemWatcher m_watch;    // A FS watcher to detect file changes
+		private readonly EventBatcher m_file_changed;  // Event batcher for m_watch events
+		private readonly LineCache m_line_cache;       // Optimisation for reading whole lines on multi-column grids
+		private List<long> m_line_index;               // Byte offsets (from file begin) to the start of lines
+		private string m_filepath;                     // The path of the log file we're viewing
+		private FileStream m_file;                     // A file stream of 'm_filepath'
+		private long m_end;                            // The current reference point in the file
 		
 		public Main()
 		{
@@ -74,6 +75,7 @@ namespace Rylogic_Log_Viewer
 			m_recent = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_recent.Import(m_settings.RecentFiles);
 			m_watch = new FileSystemWatcher{NotifyFilter = NotifyFilters.LastWrite|NotifyFilters.Size};
+			m_file_changed = new EventBatcher(10, this);
 			m_line_cache = new LineCache();
 			m_line_index = null;
 			m_filepath = null;
@@ -92,14 +94,14 @@ namespace Rylogic_Log_Viewer
 			m_menu_tools_alwaysontop.Click += (s,a) => { m_settings.AlwaysOnTop = !m_settings.AlwaysOnTop; TopMost = m_settings.AlwaysOnTop; };
 			m_menu_tools_highlights.Click  += (s,a) => {};
 			m_menu_tools_filters.Click     += (s,a) => {};
-			m_menu_tools_options.Click     += (s,a) => ShowOptions();
+			m_menu_tools_options.Click     += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_menu_help_about.Click        += (s,a) => {};
 			
 			// Toolbar
 			m_btn_open_log.Click        += (s,a) => OpenLogFile(null);
-			m_check_tail.CheckedChanged += (s,a) => {};
-			m_btn_highlights.Click      += (s,a) => {};
-			m_btn_filter.Click          += (s,a) => {};
+			m_check_tail.CheckedChanged += (s,a) => EnableTail(m_check_tail.Checked);
+			m_btn_highlights.Click      += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+			m_btn_filter.Click          += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
 			
 			// Setup the grid
 			m_grid.AutoGenerateColumns = false;
@@ -110,7 +112,8 @@ namespace Rylogic_Log_Viewer
 			UpdateStatus();
 			
 			// Watcher
-			m_watch.Changed += (s,a) => UpdateLineIndex();
+			m_watch.Changed += (s,a) => m_file_changed.Signal();
+			m_file_changed.Action += UpdateLineIndex;
 			
 			// Shutdown
 			FormClosing += (s,a) =>
@@ -120,9 +123,23 @@ namespace Rylogic_Log_Viewer
 				};
 		}
 		
+		/// <summary>True on auto detect of file changes</summary>
+		private void EnableTail(bool enable)
+		{
+			m_settings.TailEnabled = enable;
+			ApplySettings();
+			UpdateLineIndex();
+		}
+		
 		/// <summary>Apply settings throughout the app</summary>
 		private void ApplySettings()
 		{
+			// Tail
+			m_watch.EnableRaisingEvents = m_file != null && m_settings.TailEnabled;
+			
+			// Check states
+			m_check_tail.Checked = m_watch.EnableRaisingEvents;
+			
 			// Row styles
 			m_grid.RowsDefaultCellStyle.Font = m_settings.Font;
 			m_grid.RowsDefaultCellStyle.ForeColor = m_settings.LineForeColour1;
@@ -138,9 +155,6 @@ namespace Rylogic_Log_Viewer
 			}
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
-			
-			// Tail
-			m_watch.EnableRaisingEvents = m_settings.TailEnabled;
 		}
 		
 		/// <summary>Returns a file stream for 'filepath' openned with R/W sharing</summary>
@@ -201,7 +215,6 @@ namespace Rylogic_Log_Viewer
 			long end = 0;
 			
 			// Do this in a background thread, in case it takes ages
-			// Since this dialog is modal, we can use the members of the main thread
 			ProgressForm task = new ProgressForm(Resources.BuildingLineIndex, string.Format(Resources.ReadingXLineFromY, m_settings.LineCount, filepath), (s,a)=>
 				{
 					BackgroundWorker bgw = (BackgroundWorker)s;
@@ -221,21 +234,20 @@ namespace Rylogic_Log_Viewer
 						{
 							int pc = 100 * line_index.Count / max_line_count;
 							bgw.ReportProgress(pc);
-						
+								
 							// The number of bytes to buffer
 							int count = (int)Math.Min(pos, buf.Length);
-			
+								
 							// Buffer file data
 							file.Seek(pos - count, SeekOrigin.Begin);
 							int read = file.Read(buf, 0, count);
-							if (read != count)
-								throw new IOException("failed to read file over range ["+(pos-count)+","+(pos+count)+"). Read "+read+"/"+count+" bytes.");
-				
+							if (read != count) throw new IOException("failed to read file over range ["+(pos-count)+","+(pos+count)+"). Read "+read+"/"+count+" bytes.");
+								
 							// Search backwards counting lines
 							for (;read-- != 0 && line_index.Count != max_line_count; --pos)
 							{
 								if (buf[read] != row_delimiter) continue;
-								if (pos != end) line_index.Add(pos); // special case for last character == row delimiter
+								if (pos != end) line_index.Add(pos); // pos == end is a special case for last character == row delimiter
 							}
 							if (pos == 0) line_index.Add(0);
 						}
@@ -243,14 +255,18 @@ namespace Rylogic_Log_Viewer
 					
 					// Reverse the line index list so that the last line is at the end
 					line_index.Reverse();
-					
 					a.Cancel = bgw.CancellationPending;
 				});
 			
 			// Don't use the results if the task was cancelled
-			if (task.ShowDialog(this) != DialogResult.OK)
+			DialogResult res = DialogResult.Cancel;
+			try { res = task.ShowDialog(this); }
+			catch (Exception ex) { res = MessageBox.Show(this, Resources.ReadingFileFailed, string.Format(Resources.BuildLineIndexErrorMsg, ex.Message), MessageBoxButtons.RetryCancel, MessageBoxIcon.Error); }
+			if (res == DialogResult.Cancel) return;
+			if (res == DialogResult.Retry)
 			{
-				CloseLogFile();
+				Action<string> retry = BuildLineIndex;
+				BeginInvoke(retry, filepath);
 				return;
 			}
 			
@@ -282,39 +298,45 @@ namespace Rylogic_Log_Viewer
 			// Find the new line indices in a background thread
 			ThreadPool.QueueUserWorkItem(a=>
 				{
-					List<long> line_index = new List<long>();
-					using (var file = LoadFile(filepath))
+					try
 					{
-						// Seek to the start of the last known line
-						file.Seek(pos, SeekOrigin.Begin);
-						
-						// A temporary buffer for reading sections of the file
-						byte[] buf = new byte[CacheSize]; 
-						
-						// Scan forward reading new lines
-						for (;file.Position != end;)
+						List<long> line_index = new List<long>();
+						using (var file = LoadFile(filepath))
 						{
-							// Buffer file data
-							int read = file.Read(buf, 0, buf.Length);
-							
-							// Search for new lines
-							for (int i = 0; i != read; ++i)
+							// Seek to the start of the last known line
+							file.Seek(pos, SeekOrigin.Begin);
+						
+							// A temporary buffer for reading sections of the file
+							byte[] buf = new byte[CacheSize]; 
+						
+							// Scan forward reading new lines
+							for (;pos != end;)
 							{
-								if (buf[i] != row_delim) continue;
-								if (pos != end) line_index.Add(pos); // special case for last character == row delimiter
+								// Buffer file data
+								int count = (int)Math.Min(end - pos, buf.Length);
+								int read = file.Read(buf, 0, count);
+							
+								// Search for new lines
+								for (int i = 0; i != read; ++i, ++pos)
+								{
+									if (buf[i] != row_delim) continue;
+									if (pos+1 != end) line_index.Add(pos+1); // special case for last character == row delimiter
+								}
 							}
-							if (pos == 0) line_index.Add(0);
 						}
-					}
 					
-					// Marshal the results back to the main thread
-					Action AddToLineIndex = ()=>
-					{
-						m_line_index.AddRange(line_index);
-						m_end = end;
-						UpdateUI();
-					};
-					BeginInvoke(AddToLineIndex);
+						// Marshal the results back to the main thread
+						Action AddToLineIndex = ()=>
+						{
+							m_line_index.AddRange(line_index);
+							m_end = end;
+							if (m_file.Length != m_end) m_file_changed.Signal(); // Run it again if the files changed again
+							UpdateUI();
+						};
+						BeginInvoke(AddToLineIndex);
+					}
+					catch (Exception)
+					{}
 				});
 		}
 		
@@ -323,14 +345,14 @@ namespace Rylogic_Log_Viewer
 		{
 			// Read the line into memory and split it into columns
 			m_line_cache.Cache(m_file, m_line_index, e.RowIndex, m_settings.ColDelimiter);
-			e.Value = m_line_cache[e.ColumnIndex];
+			e.Value = (e.ColumnIndex >= 0 && e.ColumnIndex < m_line_cache.Count) ? m_line_cache[e.ColumnIndex] : "";
 		}
 		
 		/// <summary>Display the options dialog</summary>
-		private void ShowOptions()
+		private void ShowOptions(SettingsUI.ETab tab)
 		{
 			m_settings.Save();
-			var settings = new SettingsUI();
+			var settings = new SettingsUI(tab);
 			if (settings.ShowDialog(this) != DialogResult.OK) return;
 			m_settings.Reload();
 		}

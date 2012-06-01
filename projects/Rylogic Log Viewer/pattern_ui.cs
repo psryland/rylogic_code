@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Data;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace Rylogic_Log_Viewer
@@ -15,11 +16,15 @@ namespace Rylogic_Log_Viewer
 		public Pattern Pattern
 		{
 			get { return m_pattern; }
-			set { m_pattern = value ?? new Pattern(); }
+			set
+			{
+				m_pattern = value ?? new Pattern();
+				UpdateUI();
+			}
 		}
 		private Pattern m_pattern;
 		
-		/// <summary>Raised when the 'Add' button is hit</summary>
+		/// <summary>Raised when the 'Add' button is hit and the pattern field contains a valid pattern</summary>
 		public event EventHandler Add;
 		
 		public PatternUI()
@@ -33,8 +38,10 @@ namespace Rylogic_Log_Viewer
 				};
 			m_btn_add.Click += (s,a)=>
 				{
-					if (Add != null)
-						Add(this, EventArgs.Empty);
+					if (Add == null) return;
+					if (Pattern.Expr.Length == 0) return;
+					if (Pattern.IsRegex) try { new Regex(Pattern.Expr); } catch (ArgumentException) { return; }
+					Add(this, EventArgs.Empty);
 				};
 			m_check_is_regex.CheckedChanged += (s,a)=>
 				{
