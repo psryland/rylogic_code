@@ -130,7 +130,6 @@ namespace Rylogic_Log_Viewer
 		/// </summary>
 		private void InitializeComponent()
 		{
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternUI));
 			this.m_check_active = new System.Windows.Forms.CheckBox();
 			this.m_check_invert = new System.Windows.Forms.CheckBox();
 			this.m_check_is_regex = new System.Windows.Forms.CheckBox();
@@ -184,7 +183,7 @@ namespace Rylogic_Log_Viewer
 			// m_btn_add
 			// 
 			this.m_btn_add.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_add.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("m_btn_add.BackgroundImage")));
+			this.m_btn_add.BackgroundImage = global::Rylogic_Log_Viewer.Properties.Resources.edit_add;
 			this.m_btn_add.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
 			this.m_btn_add.Location = new System.Drawing.Point(383, 0);
 			this.m_btn_add.Name = "m_btn_add";

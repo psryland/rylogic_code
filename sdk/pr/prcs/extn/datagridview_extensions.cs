@@ -20,10 +20,20 @@ namespace pr.extn
 		/// <summary>Combined handler for cut, copy, and paste replace functions</summary>
 		public static void CutCopyPasteReplace(object sender, KeyEventArgs e)
 		{
+			SelectAll            (sender, e); if (e.Handled) return;
 			Cut                  (sender, e); if (e.Handled) return;
 			Copy                 (sender, e); if (e.Handled) return;
 			PasteReplace         (sender, e); if (e.Handled) return;
 			PasteReplaceSelected (sender, e); if (e.Handled) return;
+		}
+
+		/// <summary>Select all rows</summary>
+		public static void SelectAll(object sender, KeyEventArgs e)
+		{
+			DataGridView dgv = (DataGridView)sender;
+			if (!e.Control || e.KeyCode != Keys.A) return;
+			dgv.SelectAll();
+			e.Handled = true;
 		}
 
 		/// <summary>Delete the contents of the selected cells</summary>
@@ -179,6 +189,28 @@ namespace pr.extn
 			float[] w = new float[grid.Columns.Count];
 			for (int i = 0; i != w.Length; ++i) w[i] = grid.Columns[i].FillWeight;
 			return w;
+		}
+		
+		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
+		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
+		{
+			return grid.SelectedRows.Count != 0 ? grid.SelectedRows[0] : null;
+		}
+		
+		/// <summary>Sets the selection to row 'index'. Clamps 'index' to [0,RowCount)</summary>
+		public static void SelectRow(this DataGridView grid, int index)
+		{
+			index = Math.Max(0, Math.Min(grid.RowCount, index));
+			grid.ClearSelection();
+			if (index >= 0 && index < grid.RowCount)
+				grid.Rows[index].Selected = true;
+		}
+
+		/// <summary>Return the index of the first selected row (or -1) if no rows are selected</summary>
+		public static int FirstSelectedRowIndex(this DataGridView grid)
+		{
+			var row = FirstSelectedRow(grid);
+			return row != null ? row.Index : -1;
 		}
 	}
 

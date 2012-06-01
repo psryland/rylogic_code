@@ -60,37 +60,9 @@ namespace Rylogic_Log_Viewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap _1338530083_fileopen {
+        internal static System.Drawing.Bitmap _3dowarrow {
             get {
-                object obj = ResourceManager.GetObject("_1338530083_fileopen", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        internal static System.Drawing.Bitmap _1338530366_highlight {
-            get {
-                object obj = ResourceManager.GetObject("_1338530366_highlight", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        internal static System.Drawing.Bitmap _1338530828_light_bulb {
-            get {
-                object obj = ResourceManager.GetObject("1338530828_light_bulb", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        internal static System.Drawing.Bitmap _1338530996_book {
-            get {
-                object obj = ResourceManager.GetObject("_1338530996_book", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        internal static System.Drawing.Bitmap _3floppy_unmount {
-            get {
-                object obj = ResourceManager.GetObject("_3floppy_unmount", resourceCulture);
+                object obj = ResourceManager.GetObject("_3dowarrow", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -159,20 +131,6 @@ namespace Rylogic_Log_Viewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap down {
-            get {
-                object obj = ResourceManager.GetObject("down", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        internal static System.Drawing.Bitmap down1 {
-            get {
-                object obj = ResourceManager.GetObject("down1", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         /// <summary>
         ///   Looks up a localized string similar to Edit.
         /// </summary>
@@ -182,9 +140,23 @@ namespace Rylogic_Log_Viewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap filter {
+        internal static System.Drawing.Bitmap edit_add {
             get {
-                object obj = ResourceManager.GetObject("filter", resourceCulture);
+                object obj = ResourceManager.GetObject("edit_add", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap edit_save {
+            get {
+                object obj = ResourceManager.GetObject("edit_save", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap edit_save_needed {
+            get {
+                object obj = ResourceManager.GetObject("edit_save_needed", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -222,6 +194,13 @@ namespace Rylogic_Log_Viewer.Properties {
         internal static string LogFileFilter {
             get {
                 return ResourceManager.GetString("LogFileFilter", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap my_documents {
+            get {
+                object obj = ResourceManager.GetObject("my_documents", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

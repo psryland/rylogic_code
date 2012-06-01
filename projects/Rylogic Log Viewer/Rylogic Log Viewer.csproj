@@ -34,7 +34,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>clicket.ico</ApplicationIcon>
+    <ApplicationIcon>
+    </ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -106,15 +107,22 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="clicket.ico" />
-    <None Include="Resources\down1.png" />
-    <None Include="Resources\1338530828_light_bulb.png" />
-    <None Include="Resources\1338530996_book.png" />
-    <None Include="Resources\3floppy_unmount.png" />
-    <None Include="Resources\1338530366_highlight.png" />
-    <None Include="Resources\down.png" />
-    <None Include="Resources\filter.png" />
-    <None Include="Resources\1338530083_fileopen.png" />
+    <None Include="Resources\edit_add.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\edit_save.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\edit_save_needed.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\3dowarrow.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\my_documents.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\1338540027_filter_data.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

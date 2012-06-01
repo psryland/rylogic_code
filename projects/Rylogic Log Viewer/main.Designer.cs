@@ -34,7 +34,7 @@
 			this.m_check_tail = new System.Windows.Forms.ToolStripButton();
 			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
-			this.m_btn_filter = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
@@ -61,15 +61,15 @@
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
 			this.m_lbl_file_size = new System.Windows.Forms.ToolStripStatusLabel();
-			this.toolStripContainer2 = new System.Windows.Forms.ToolStripContainer();
+			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
-			this.toolStripContainer2.BottomToolStripPanel.SuspendLayout();
-			this.toolStripContainer2.ContentPanel.SuspendLayout();
-			this.toolStripContainer2.TopToolStripPanel.SuspendLayout();
-			this.toolStripContainer2.SuspendLayout();
+			this.m_toolstrip_cont.BottomToolStripPanel.SuspendLayout();
+			this.m_toolstrip_cont.ContentPanel.SuspendLayout();
+			this.m_toolstrip_cont.TopToolStripPanel.SuspendLayout();
+			this.m_toolstrip_cont.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
 			// 
@@ -81,7 +81,7 @@
             this.m_check_tail,
             this.m_sep,
             this.m_btn_highlights,
-            this.m_btn_filter});
+            this.m_btn_filters});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
 			this.m_toolstrip.Size = new System.Drawing.Size(110, 25);
@@ -90,8 +90,8 @@
 			// 
 			// m_btn_open_log
 			// 
+			this.m_btn_open_log.AutoSize = false;
 			this.m_btn_open_log.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_open_log.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_open_log.Image")));
 			this.m_btn_open_log.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_open_log.Name = "m_btn_open_log";
 			this.m_btn_open_log.Size = new System.Drawing.Size(23, 22);
@@ -101,7 +101,6 @@
 			// 
 			this.m_check_tail.CheckOnClick = true;
 			this.m_check_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_check_tail.Image = ((System.Drawing.Image)(resources.GetObject("m_check_tail.Image")));
 			this.m_check_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_check_tail.Name = "m_check_tail";
 			this.m_check_tail.Size = new System.Drawing.Size(23, 22);
@@ -115,20 +114,18 @@
 			// m_btn_highlights
 			// 
 			this.m_btn_highlights.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_highlights.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_highlights.Image")));
 			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_highlights.Name = "m_btn_highlights";
 			this.m_btn_highlights.Size = new System.Drawing.Size(23, 22);
 			this.m_btn_highlights.Text = "Highlights";
 			// 
-			// m_btn_filter
+			// m_btn_filters
 			// 
-			this.m_btn_filter.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_filter.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_filter.Image")));
-			this.m_btn_filter.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_filter.Name = "m_btn_filter";
-			this.m_btn_filter.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_filter.Text = "Filters";
+			this.m_btn_filters.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_filters.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_filters.Name = "m_btn_filters";
+			this.m_btn_filters.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_filters.Text = "Filters";
 			// 
 			// m_menu
 			// 
@@ -326,30 +323,30 @@
 			this.m_lbl_file_size.Size = new System.Drawing.Size(124, 17);
 			this.m_lbl_file_size.Text = "Size: 2147483647 bytes";
 			// 
-			// toolStripContainer2
+			// m_toolstrip_cont
 			// 
 			// 
-			// toolStripContainer2.BottomToolStripPanel
+			// m_toolstrip_cont.BottomToolStripPanel
 			// 
-			this.toolStripContainer2.BottomToolStripPanel.Controls.Add(this.m_status);
+			this.m_toolstrip_cont.BottomToolStripPanel.Controls.Add(this.m_status);
 			// 
-			// toolStripContainer2.ContentPanel
+			// m_toolstrip_cont.ContentPanel
 			// 
-			this.toolStripContainer2.ContentPanel.AutoScroll = true;
-			this.toolStripContainer2.ContentPanel.Controls.Add(this.m_grid);
-			this.toolStripContainer2.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
-			this.toolStripContainer2.ContentPanel.Size = new System.Drawing.Size(593, 424);
-			this.toolStripContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.toolStripContainer2.Location = new System.Drawing.Point(0, 0);
-			this.toolStripContainer2.Name = "toolStripContainer2";
-			this.toolStripContainer2.Size = new System.Drawing.Size(593, 495);
-			this.toolStripContainer2.TabIndex = 6;
-			this.toolStripContainer2.Text = "toolStripContainer2";
+			this.m_toolstrip_cont.ContentPanel.AutoScroll = true;
+			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_grid);
+			this.m_toolstrip_cont.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
+			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 424);
+			this.m_toolstrip_cont.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_toolstrip_cont.Location = new System.Drawing.Point(0, 0);
+			this.m_toolstrip_cont.Name = "m_toolstrip_cont";
+			this.m_toolstrip_cont.Size = new System.Drawing.Size(593, 495);
+			this.m_toolstrip_cont.TabIndex = 6;
+			this.m_toolstrip_cont.Text = "m_toolstrip_cont";
 			// 
-			// toolStripContainer2.TopToolStripPanel
+			// m_toolstrip_cont.TopToolStripPanel
 			// 
-			this.toolStripContainer2.TopToolStripPanel.Controls.Add(this.m_menu);
-			this.toolStripContainer2.TopToolStripPanel.Controls.Add(this.m_toolstrip);
+			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_menu);
+			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_toolstrip);
 			// 
 			// m_grid
 			// 
@@ -378,7 +375,7 @@
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(593, 495);
-			this.Controls.Add(this.toolStripContainer2);
+			this.Controls.Add(this.m_toolstrip_cont);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MainMenuStrip = this.m_menu;
 			this.MinimumSize = new System.Drawing.Size(200, 220);
@@ -390,13 +387,13 @@
 			this.m_menu.PerformLayout();
 			this.m_status.ResumeLayout(false);
 			this.m_status.PerformLayout();
-			this.toolStripContainer2.BottomToolStripPanel.ResumeLayout(false);
-			this.toolStripContainer2.BottomToolStripPanel.PerformLayout();
-			this.toolStripContainer2.ContentPanel.ResumeLayout(false);
-			this.toolStripContainer2.TopToolStripPanel.ResumeLayout(false);
-			this.toolStripContainer2.TopToolStripPanel.PerformLayout();
-			this.toolStripContainer2.ResumeLayout(false);
-			this.toolStripContainer2.PerformLayout();
+			this.m_toolstrip_cont.BottomToolStripPanel.ResumeLayout(false);
+			this.m_toolstrip_cont.BottomToolStripPanel.PerformLayout();
+			this.m_toolstrip_cont.ContentPanel.ResumeLayout(false);
+			this.m_toolstrip_cont.TopToolStripPanel.ResumeLayout(false);
+			this.m_toolstrip_cont.TopToolStripPanel.PerformLayout();
+			this.m_toolstrip_cont.ResumeLayout(false);
+			this.m_toolstrip_cont.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.ResumeLayout(false);
 
@@ -415,11 +412,11 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_recent;
 		private System.Windows.Forms.ToolStripSeparator m_sep2;
 		private System.Windows.Forms.ToolStripButton m_check_tail;
-		private System.Windows.Forms.ToolStripContainer toolStripContainer2;
+		private System.Windows.Forms.ToolStripContainer m_toolstrip_cont;
 		private System.Windows.Forms.DataGridView m_grid;
 		private System.Windows.Forms.ToolStripSeparator m_sep;
 		private System.Windows.Forms.ToolStripButton m_btn_highlights;
-		private System.Windows.Forms.ToolStripButton m_btn_filter;
+		private System.Windows.Forms.ToolStripButton m_btn_filters;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_close;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_edit;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_selectall;

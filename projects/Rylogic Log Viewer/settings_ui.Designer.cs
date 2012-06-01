@@ -28,8 +28,6 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			Rylogic_Log_Viewer.Pattern pattern1 = new Rylogic_Log_Viewer.Pattern();
-			Rylogic_Log_Viewer.Pattern pattern2 = new Rylogic_Log_Viewer.Pattern();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsUI));
 			this.m_tabctrl = new System.Windows.Forms.TabControl();
 			this.m_tab_general = new System.Windows.Forms.TabPage();
@@ -45,11 +43,11 @@
 			this.m_lbl_selection_colour = new System.Windows.Forms.Label();
 			this.m_check_alternate_line_colour = new System.Windows.Forms.CheckBox();
 			this.m_tab_highlight = new System.Windows.Forms.TabPage();
+			this.m_pattern_hl = new Rylogic_Log_Viewer.PatternUI();
 			this.m_grid_highlight = new System.Windows.Forms.DataGridView();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
-			this.m_grid_filter = new System.Windows.Forms.DataGridView();
-			this.m_pattern_hl = new Rylogic_Log_Viewer.PatternUI();
 			this.m_pattern_ft = new Rylogic_Log_Viewer.PatternUI();
+			this.m_grid_filter = new System.Windows.Forms.DataGridView();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_startup.SuspendLayout();
@@ -216,6 +214,16 @@
 			this.m_tab_highlight.Text = "Highlight";
 			this.m_tab_highlight.UseVisualStyleBackColor = true;
 			// 
+			// m_pattern_hl
+			// 
+			this.m_pattern_hl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_pattern_hl.Location = new System.Drawing.Point(3, 3);
+			this.m_pattern_hl.MinimumSize = new System.Drawing.Size(420, 78);
+			this.m_pattern_hl.Name = "m_pattern_hl";
+			this.m_pattern_hl.Size = new System.Drawing.Size(465, 139);
+			this.m_pattern_hl.TabIndex = 2;
+			// 
 			// m_grid_highlight
 			// 
 			this.m_grid_highlight.AllowUserToAddRows = false;
@@ -245,6 +253,16 @@
 			this.m_tab_filter.Text = "Filter";
 			this.m_tab_filter.UseVisualStyleBackColor = true;
 			// 
+			// m_pattern_ft
+			// 
+			this.m_pattern_ft.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_pattern_ft.Location = new System.Drawing.Point(3, 3);
+			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(420, 78);
+			this.m_pattern_ft.Name = "m_pattern_ft";
+			this.m_pattern_ft.Size = new System.Drawing.Size(465, 139);
+			this.m_pattern_ft.TabIndex = 4;
+			// 
 			// m_grid_filter
 			// 
 			this.m_grid_filter.AllowUserToAddRows = false;
@@ -262,36 +280,6 @@
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid_filter.Size = new System.Drawing.Size(465, 304);
 			this.m_grid_filter.TabIndex = 3;
-			// 
-			// m_pattern_hl
-			// 
-			this.m_pattern_hl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_pattern_hl.Location = new System.Drawing.Point(3, 3);
-			this.m_pattern_hl.MinimumSize = new System.Drawing.Size(420, 78);
-			this.m_pattern_hl.Name = "m_pattern_hl";
-			pattern1.Active = true;
-			pattern1.Expr = "";
-			pattern1.IgnoreCase = false;
-			pattern1.Invert = false;
-			pattern1.IsRegex = false;
-			this.m_pattern_hl.Size = new System.Drawing.Size(465, 139);
-			this.m_pattern_hl.TabIndex = 2;
-			// 
-			// m_pattern_ft
-			// 
-			this.m_pattern_ft.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_pattern_ft.Location = new System.Drawing.Point(3, 3);
-			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(420, 78);
-			this.m_pattern_ft.Name = "m_pattern_ft";
-			pattern2.Active = true;
-			pattern2.Expr = "";
-			pattern2.IgnoreCase = false;
-			pattern2.Invert = false;
-			pattern2.IsRegex = false;
-			this.m_pattern_ft.Size = new System.Drawing.Size(465, 139);
-			this.m_pattern_ft.TabIndex = 4;
 			// 
 			// SettingsUI
 			// 

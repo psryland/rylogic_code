@@ -117,12 +117,9 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="_1338530366_highlight" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\1338530366_highlight.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="ReadingXLineFromY" xml:space="preserve">
-    <value>Reading the last {0} lines from {1}</value>
+  <data name="LogFileFilter" xml:space="preserve">
+    <value>Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*</value>
+    <comment>File open dialog filter for log files</comment>
   </data>
   <data name="BuildLineIndexErrorMsg" xml:space="preserve">
     <value>The was an error while parsing the log file.
@@ -149,25 +146,12 @@ Error Details: {0}</value>
 			Pattern column header
 		</comment>
   </data>
-  <data name="InvalidFileMsg" xml:space="preserve">
-    <value>File path '{0}' is invalid or does not exist</value>
-    <comment>Show the invalid filepath</comment>
-  </data>
-  <data name="_1338530083_fileopen" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\1338530083_fileopen.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="down" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\down.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="LogFileFilter" xml:space="preserve">
-    <value>Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*</value>
-    <comment>File open dialog filter for log files</comment>
-  </data>
   <data name="BinaryMatch" xml:space="preserve">
     <value>Binary Match</value>
   </data>
-  <data name="BuildingLineIndex" xml:space="preserve">
-    <value>Building line index</value>
+  <data name="InvalidFilePath" xml:space="preserve">
+    <value>Invalid File Path</value>
+    <comment>File path doesn't exist or is invalid</comment>
   </data>
   <data name="Highlighting" xml:space="preserve">
     <value>Highlighting</value>
@@ -175,36 +159,43 @@ Error Details: {0}</value>
 			Highlighting column header
 		</comment>
   </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="my_documents" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\my_documents.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="edit_save_needed" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\edit_save_needed.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="BuildingLineIndex" xml:space="preserve">
+    <value>Building line index</value>
+  </data>
   <data name="Edit" xml:space="preserve">
     <value>Edit</value>
-  </data>
-  <data name="filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="_1338530996_book" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\1338530996_book.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="ReadingFileFailed" xml:space="preserve">
-    <value>Reading File Failed</value>
   </data>
   <data name="ChangeForeColour" xml:space="preserve">
     <value>Change Foregroud Colour</value>
   </data>
-  <data name="_3floppy_unmount" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\3floppy_unmount.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="InvalidFilePath" xml:space="preserve">
-    <value>Invalid File Path</value>
-    <comment>File path doesn't exist or is invalid</comment>
+  <data name="ReadingFileFailed" xml:space="preserve">
+    <value>Reading File Failed</value>
+  </data>
+  <data name="edit_save" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\edit_save.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ReadingXLineFromY" xml:space="preserve">
+    <value>Reading the last {0} lines from {1}</value>
+  </data>
+  <data name="InvalidFileMsg" xml:space="preserve">
+    <value>File path '{0}' is invalid or does not exist</value>
+    <comment>Show the invalid filepath</comment>
+  </data>
+  <data name="_3dowarrow" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\3dowarrow.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="Active" xml:space="preserve">
     <value>Active</value>
     <comment>Active column header</comment>
-  </data>
-  <data name="1338530828_light_bulb" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\1338530828_light_bulb.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="down1" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\down1.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

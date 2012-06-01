@@ -78,7 +78,6 @@ namespace Rylogic_Log_Viewer
 		public Main()
 		{
 			InitializeComponent();
-			
 			m_settings = new Settings();
 			m_recent = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_recent.Import(m_settings.RecentFiles);
@@ -107,10 +106,10 @@ namespace Rylogic_Log_Viewer
 			m_menu_help_about.Click        += (s,a) => {};
 			
 			// Toolbar
-			m_btn_open_log2.Click        += (s,a) => OpenLogFile(null);
-			m_check_tail2.CheckedChanged += (s,a) => EnableTail(m_check_tail2.Checked);
-			m_btn_highlights2.Click      += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
-			m_btn_filters2.Click          += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
+			m_btn_open_log.Click        += (s,a) => OpenLogFile(null);
+			m_check_tail.CheckedChanged += (s,a) => EnableTail(m_check_tail.Checked);
+			m_btn_highlights.Click      += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+			m_btn_filters.Click         += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
 			
 			// Setup the grid
 			m_grid.RowCount            = 0;
@@ -178,7 +177,7 @@ namespace Rylogic_Log_Viewer
 			m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
 
 			// Check states
-			m_check_tail2.Checked = m_watch.EnableRaisingEvents;
+			m_check_tail.Checked = m_watch.EnableRaisingEvents;
 			
 			// Row styles
 			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
