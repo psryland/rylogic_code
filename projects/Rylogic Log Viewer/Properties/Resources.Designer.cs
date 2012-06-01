@@ -132,6 +132,15 @@ namespace Rylogic_Log_Viewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Click here to modify highlight.
+        /// </summary>
+        internal static string ClickToModifyHighlight {
+            get {
+                return ResourceManager.GetString("ClickToModifyHighlight", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Edit.
         /// </summary>
         internal static string Edit {

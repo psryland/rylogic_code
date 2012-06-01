@@ -72,8 +72,10 @@ namespace Rylogic_Log_Viewer
 		
 		//todo:
 		// command line
-		// reopen last
 		// read stdin
+		// fix editing patterns
+		// do filtering
+
 
 		public Main()
 		{
