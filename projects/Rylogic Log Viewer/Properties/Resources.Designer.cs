@@ -74,6 +74,20 @@ namespace Rylogic_Log_Viewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap _1338530828_light_bulb {
+            get {
+                object obj = ResourceManager.GetObject("1338530828_light_bulb", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap _1338530996_book {
+            get {
+                object obj = ResourceManager.GetObject("_1338530996_book", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         internal static System.Drawing.Bitmap _3floppy_unmount {
             get {
                 object obj = ResourceManager.GetObject("_3floppy_unmount", resourceCulture);
@@ -148,6 +162,13 @@ namespace Rylogic_Log_Viewer.Properties {
         internal static System.Drawing.Bitmap down {
             get {
                 object obj = ResourceManager.GetObject("down", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap down1 {
+            get {
+                object obj = ResourceManager.GetObject("down1", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

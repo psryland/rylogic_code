@@ -107,6 +107,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="clicket.ico" />
+    <None Include="Resources\down1.png" />
+    <None Include="Resources\1338530828_light_bulb.png" />
+    <None Include="Resources\1338530996_book.png" />
     <None Include="Resources\3floppy_unmount.png" />
     <None Include="Resources\1338530366_highlight.png" />
     <None Include="Resources\down.png" />
