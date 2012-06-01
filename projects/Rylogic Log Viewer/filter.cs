@@ -1,0 +1,73 @@
+﻿using System.Collections.Generic;
+using System.Xml.Linq;
+
+namespace Rylogic_Log_Viewer
+{
+	public class Filter :Pattern
+	{
+		public Filter()
+		{
+		}
+		public Filter(Filter rhs) :base(rhs)
+		{
+		}
+
+		/// <summary>Construct from xml description</summary>
+		public Filter(XElement node) :base(node)
+		{
+			// ReSharper disable PossibleNullReferenceException
+			//try
+			//{
+			//    ForeColour = Color.FromArgb(int.Parse(node.Element("forecolour").Value, NumberStyles.HexNumber));
+			//    BackColour = Color.FromArgb(int.Parse(node.Element("backcolour").Value, NumberStyles.HexNumber));
+			//    FullColumn    = bool.Parse(node.Element("fullcolumn").Value);
+			//} catch {} // swallow bad input data
+			// ReSharper restore PossibleNullReferenceException
+		}
+
+		/// <summary>Export this highlight as xml</summary>
+		public override XElement ToXml(XElement node)
+		{
+			base.ToXml(node);
+			//node.Add
+			//(
+			//    new XElement("forecolour" ,ForeColour.ToArgb().ToString("X")),
+			//    new XElement("backcolour" ,BackColour.ToArgb().ToString("X")),
+			//    new XElement("fullcolumn" ,FullColumn)
+			//);
+			return node;
+		}
+		
+		/// <summary>Reads an xml description of the highlight expressions</summary>
+		public static List<Filter> Import(string filters)
+		{
+			var list = new List<Filter>();
+			
+			XDocument doc;
+			try { doc = XDocument.Parse(filters); } catch { return list; }
+			if (doc.Root == null) return list;
+			foreach (XElement n in doc.Root.Elements("filter"))
+				list.Add(new Filter(n));
+			
+			return list;
+		}
+		
+		/// <summary>Serialise the highlight patterns to xml</summary>
+		public static string Export(List<Filter> filters)
+		{
+			XDocument doc = new XDocument(new XElement("root"));
+			if (doc.Root == null) return "";
+			
+			foreach (var hl in filters)
+				doc.Root.Add(hl.ToXml(new XElement("fitler")));
+			
+			return doc.ToString(SaveOptions.None);
+		}
+		
+		/// <summary>Creates a new object that is a copy of the current instance.</summary>
+		public override object Clone()
+		{
+			return new Filter(this);
+		}
+	}
+}

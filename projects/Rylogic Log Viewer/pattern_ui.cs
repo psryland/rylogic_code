@@ -7,22 +7,16 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using Rylogic_Log_Viewer.Properties;
 
 namespace Rylogic_Log_Viewer
 {
 	public class PatternUI :UserControl
 	{
 		/// <summary>The pattern being controlled by this UI</summary>
-		public Pattern Pattern
-		{
-			get { return m_pattern; }
-			set
-			{
-				m_pattern = value ?? new Pattern();
-				UpdateUI();
-			}
-		}
+		public Pattern Pattern { get { return m_pattern; } }
 		private Pattern m_pattern;
+		private readonly ToolTip m_tt;
 		
 		/// <summary>Raised when the 'Add' button is hit and the pattern field contains a valid pattern</summary>
 		public event EventHandler Add;
@@ -30,7 +24,8 @@ namespace Rylogic_Log_Viewer
 		public PatternUI()
 		{
 			InitializeComponent();
-			Pattern = null;
+			m_pattern = null;
+			m_tt = new ToolTip();
 			m_edit_pattern.TextChanged += (s,a)=>
 				{
 					Pattern.Expr = m_edit_pattern.Text;
@@ -63,6 +58,10 @@ namespace Rylogic_Log_Viewer
 					Pattern.Active = m_check_active.Checked;
 					UpdateUI();
 				};
+			m_edit_test.TextChanged += (s,a)=>
+				{
+					UpdateUI();
+				};
 		}
 		private void UpdateUI()
 		{
@@ -73,6 +72,9 @@ namespace Rylogic_Log_Viewer
 			m_check_invert.Checked      = Pattern.Invert;
 			m_check_active.Checked      = Pattern.Active;
 			
+			// Preserve the current carot position
+			int start = m_edit_test.SelectionStart;
+			int length = m_edit_test.SelectionLength;
 			m_edit_test.SelectAll();
 			m_edit_test.SelectionBackColor = Color.White;
 			foreach (var r in Pattern.Match(m_edit_test.Text))
@@ -81,7 +83,22 @@ namespace Rylogic_Log_Viewer
 				m_edit_test.SelectionLength    = (int)r.Count;
 				m_edit_test.SelectionBackColor = Color.LightBlue;
 			}
+			m_edit_test.SelectionStart  = start;
+			m_edit_test.SelectionLength = length;
 			ResumeLayout();
+		}
+
+		public void EditPattern(Pattern pat)
+		{
+			m_pattern = pat;
+			//m_btn_add.Image = Resources.EditImage;
+			m_tt.SetToolTip(m_btn_add, "Finish editing this pattern");
+		}
+		public void NewPattern(Pattern pat)
+		{
+			m_pattern = pat;
+			//m_btn_add.Image = Resources.AddNew;
+			m_tt.SetToolTip(m_btn_add, "Add this new pattern");
 		}
 
 		private CheckBox m_check_active;
@@ -201,9 +218,8 @@ namespace Rylogic_Log_Viewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_test.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_edit_test.Location = new System.Drawing.Point(6, 52);
-			this.m_edit_test.Multiline = false;
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(408, 20);
+			this.m_edit_test.Size = new System.Drawing.Size(408, 81);
 			this.m_edit_test.TabIndex = 20;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
@@ -221,7 +237,7 @@ namespace Rylogic_Log_Viewer
 			this.Controls.Add(this.m_edit_pattern);
 			this.MinimumSize = new System.Drawing.Size(420, 78);
 			this.Name = "PatternUI";
-			this.Size = new System.Drawing.Size(420, 78);
+			this.Size = new System.Drawing.Size(420, 139);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

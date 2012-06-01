@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Xml.Linq;
@@ -15,15 +14,20 @@ namespace Rylogic_Log_Viewer
 		public Color BackColour { get; set; }
 		
 		/// <summary>True if a match anywhere on the row highlights the full row</summary>
-		public bool FullRow { get; set; }
-		
+		public bool FullColumn { get; set; }
+
 		public Highlight()
 		{
 			ForeColour = Color.White;
 			BackColour = Color.DarkRed;
-			FullRow = true;
+			FullColumn = true;
 		}
-
+		public Highlight(Highlight rhs) :base(rhs)
+		{
+			ForeColour = rhs.ForeColour;
+			BackColour = rhs.BackColour;
+			FullColumn = rhs.FullColumn;
+		}
 		/// <summary>Construct from xml description</summary>
 		public Highlight(XElement node) :base(node)
 		{
@@ -32,7 +36,7 @@ namespace Rylogic_Log_Viewer
 				// ReSharper disable PossibleNullReferenceException
 				ForeColour = Color.FromArgb(int.Parse(node.Element("forecolour").Value, NumberStyles.HexNumber));
 				BackColour = Color.FromArgb(int.Parse(node.Element("backcolour").Value, NumberStyles.HexNumber));
-				FullRow    = bool.Parse(node.Element("fullrow").Value);
+				FullColumn    = bool.Parse(node.Element("fullcolumn").Value);
 				// ReSharper restore PossibleNullReferenceException
 			} catch {} // swallow bad input data
 		}
@@ -45,7 +49,7 @@ namespace Rylogic_Log_Viewer
 			(
 				new XElement("forecolour" ,ForeColour.ToArgb().ToString("X")),
 				new XElement("backcolour" ,BackColour.ToArgb().ToString("X")),
-				new XElement("fullrow"    ,FullRow)
+				new XElement("fullcolumn" ,FullColumn)
 			);
 			return node;
 		}
@@ -74,6 +78,12 @@ namespace Rylogic_Log_Viewer
 				doc.Root.Add(hl.ToXml(new XElement("highlight")));
 			
 			return doc.ToString(SaveOptions.None);
+		}
+		
+		/// <summary>Creates a new object that is a copy of the current instance.</summary>
+		public override object Clone()
+		{
+			return MemberwiseClone();
 		}
 	}
 }

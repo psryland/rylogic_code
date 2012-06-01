@@ -214,5 +214,65 @@ namespace Rylogic_Log_Viewer.Properties {
                 this["FilterPatterns"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastLoadedFile {
+            get {
+                return ((string)(this["LastLoadedFile"]));
+            }
+            set {
+                this["LastLoadedFile"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool RestoreScreenLoc {
+            get {
+                return ((bool)(this["RestoreScreenLoc"]));
+            }
+            set {
+                this["RestoreScreenLoc"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LoadLastFile {
+            get {
+                return ((bool)(this["LoadLastFile"]));
+            }
+            set {
+                this["LoadLastFile"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("50, 50")]
+        public global::System.Drawing.Point ScreenPosition {
+            get {
+                return ((global::System.Drawing.Point)(this["ScreenPosition"]));
+            }
+            set {
+                this["ScreenPosition"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("640, 480")]
+        public global::System.Drawing.Size WindowSize {
+            get {
+                return ((global::System.Drawing.Size)(this["WindowSize"]));
+            }
+            set {
+                this["WindowSize"] = value;
+            }
+        }
     }
 }

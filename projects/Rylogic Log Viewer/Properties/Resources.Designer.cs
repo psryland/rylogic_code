@@ -60,6 +60,27 @@ namespace Rylogic_Log_Viewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap _1338530083_fileopen {
+            get {
+                object obj = ResourceManager.GetObject("_1338530083_fileopen", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap _1338530366_highlight {
+            get {
+                object obj = ResourceManager.GetObject("_1338530366_highlight", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap _3floppy_unmount {
+            get {
+                object obj = ResourceManager.GetObject("_3floppy_unmount", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Active.
         /// </summary>
@@ -79,6 +100,15 @@ namespace Rylogic_Log_Viewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Binary Match.
+        /// </summary>
+        internal static string BinaryMatch {
+            get {
+                return ResourceManager.GetString("BinaryMatch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Building line index.
         /// </summary>
         internal static string BuildingLineIndex {
@@ -94,6 +124,47 @@ namespace Rylogic_Log_Viewer.Properties {
         internal static string BuildLineIndexErrorMsg {
             get {
                 return ResourceManager.GetString("BuildLineIndexErrorMsg", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Change Background Colour.
+        /// </summary>
+        internal static string ChangeBackColour {
+            get {
+                return ResourceManager.GetString("ChangeBackColour", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Change Foregroud Colour.
+        /// </summary>
+        internal static string ChangeForeColour {
+            get {
+                return ResourceManager.GetString("ChangeForeColour", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap down {
+            get {
+                object obj = ResourceManager.GetObject("down", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Edit.
+        /// </summary>
+        internal static string Edit {
+            get {
+                return ResourceManager.GetString("Edit", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap filter {
+            get {
+                object obj = ResourceManager.GetObject("filter", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

@@ -49,6 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="filter.cs" />
     <Compile Include="highlight.cs" />
     <Compile Include="pattern.cs" />
     <Compile Include="main.cs">
@@ -106,6 +107,11 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="clicket.ico" />
+    <None Include="Resources\3floppy_unmount.png" />
+    <None Include="Resources\1338530366_highlight.png" />
+    <None Include="Resources\down.png" />
+    <None Include="Resources\filter.png" />
+    <None Include="Resources\1338530083_fileopen.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using pr.extn;
 using pr.gui;
 using pr.util;
 using Rylogic_Log_Viewer.Properties;
@@ -61,12 +63,18 @@ namespace Rylogic_Log_Viewer
 		private readonly RecentFiles m_recent;         // Recent files
 		private readonly FileSystemWatcher m_watch;    // A FS watcher to detect file changes
 		private readonly EventBatcher m_file_changed;  // Event batcher for m_watch events
+		private readonly List<Highlight> m_highlights;  // A list of the active highlights only
 		private readonly LineCache m_line_cache;       // Optimisation for reading whole lines on multi-column grids
 		private List<long> m_line_index;               // Byte offsets (from file begin) to the start of lines
 		private string m_filepath;                     // The path of the log file we're viewing
 		private FileStream m_file;                     // A file stream of 'm_filepath'
 		private long m_end;                            // The current reference point in the file
 		
+		//todo:
+		// command line
+		// reopen last
+		// read stdin
+
 		public Main()
 		{
 			InitializeComponent();
@@ -76,6 +84,7 @@ namespace Rylogic_Log_Viewer
 			m_recent.Import(m_settings.RecentFiles);
 			m_watch = new FileSystemWatcher{NotifyFilter = NotifyFilters.LastWrite|NotifyFilters.Size};
 			m_file_changed = new EventBatcher(10, this);
+			m_highlights = new List<Highlight>();
 			m_line_cache = new LineCache();
 			m_line_index = null;
 			m_filepath = null;
@@ -92,8 +101,8 @@ namespace Rylogic_Log_Viewer
 			m_menu_edit_find_next.Click    += (s,a) => {};
 			m_menu_edit_find_prev.Click    += (s,a) => {};
 			m_menu_tools_alwaysontop.Click += (s,a) => { m_settings.AlwaysOnTop = !m_settings.AlwaysOnTop; TopMost = m_settings.AlwaysOnTop; };
-			m_menu_tools_highlights.Click  += (s,a) => {};
-			m_menu_tools_filters.Click     += (s,a) => {};
+			m_menu_tools_highlights.Click  += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+			m_menu_tools_filters.Click     += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
 			m_menu_tools_options.Click     += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_menu_help_about.Click        += (s,a) => {};
 			
@@ -104,20 +113,46 @@ namespace Rylogic_Log_Viewer
 			m_btn_filter.Click          += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
 			
 			// Setup the grid
+			m_grid.RowCount            = 0;
 			m_grid.AutoGenerateColumns = false;
-			m_grid.CellValueNeeded += CellValueNeeded;
-			m_grid.RowCount = 0;
+			m_grid.KeyDown            += DataGridView_Extensions.SelectAll;
+			m_grid.KeyDown            += DataGridView_Extensions.Copy;
+			m_grid.CellValueNeeded    += CellValueNeeded;
+			m_grid.CellPainting       += CellPainting;
 			
-			ApplySettings();
-			UpdateStatus();
+			// Settings
+			m_settings.SettingsLoaded += (s,a) => ApplySettings();
 			
 			// Watcher
-			m_watch.Changed += (s,a) => m_file_changed.Signal();
 			m_file_changed.Action += UpdateLineIndex;
+			m_watch.Changed += (s,a) =>
+				{
+					// This happens sometimes, not really sure why
+					if (m_file.Length == 0) return;
+					m_file_changed.Signal();
+				};
+			
+			// Startup
+			Shown += (s,a)=>
+				{
+					if (m_settings.RestoreScreenLoc)
+					{
+						Location = m_settings.ScreenPosition;
+						Size = m_settings.WindowSize;
+					}
+					if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
+					{
+						OpenLogFile(m_settings.LastLoadedFile);
+					}
+					ApplySettings();
+					UpdateStatus();
+				};
 			
 			// Shutdown
 			FormClosing += (s,a) =>
 				{
+					m_settings.ScreenPosition = Location;
+					m_settings.WindowSize = Size;
 					m_settings.RecentFiles = m_recent.Export();
 					m_settings.Save();
 				};
@@ -129,6 +164,7 @@ namespace Rylogic_Log_Viewer
 			m_settings.TailEnabled = enable;
 			ApplySettings();
 			UpdateLineIndex();
+			SelectedRow = m_grid.RowCount - 1;
 		}
 		
 		/// <summary>Apply settings throughout the app</summary>
@@ -137,21 +173,35 @@ namespace Rylogic_Log_Viewer
 			// Tail
 			m_watch.EnableRaisingEvents = m_file != null && m_settings.TailEnabled;
 			
+			// Highlights;
+			m_highlights.Clear();
+			m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
+
 			// Check states
 			m_check_tail.Checked = m_watch.EnableRaisingEvents;
 			
 			// Row styles
-			m_grid.RowsDefaultCellStyle.Font = m_settings.Font;
-			m_grid.RowsDefaultCellStyle.ForeColor = m_settings.LineForeColour1;
-			m_grid.RowsDefaultCellStyle.BackColor = m_settings.LineBackColour1;
-			m_grid.RowsDefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
-			m_grid.RowsDefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
+			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
+			{
+				Font = m_settings.Font,
+				ForeColor = m_settings.LineForeColour1,
+				BackColor = m_settings.LineBackColour1,
+				SelectionBackColor = m_settings.LineSelectBackColour,
+				SelectionForeColor = m_settings.LineSelectForeColour,
+			};
 			if (m_settings.AlternateLineColours)
 			{
-				m_grid.AlternatingRowsDefaultCellStyle.Font = m_settings.Font;
-				m_grid.AlternatingRowsDefaultCellStyle.BackColor = m_settings.LineBackColour2;
-				m_grid.AlternatingRowsDefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
-				m_grid.AlternatingRowsDefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
+				m_grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
+				{
+					Font = m_settings.Font,
+					BackColor = m_settings.LineBackColour2,
+					SelectionBackColor = m_settings.LineSelectBackColour,
+					SelectionForeColor = m_settings.LineSelectForeColour,
+				};
+			}
+			else
+			{
+				m_grid.AlternatingRowsDefaultCellStyle = m_grid.RowsDefaultCellStyle;
 			}
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
@@ -194,6 +244,7 @@ namespace Rylogic_Log_Viewer
 		
 			m_recent.Add(filepath);
 			m_settings.RecentFiles = m_recent.Export();
+			m_settings.LastLoadedFile = filepath;
 			m_settings.Save();
 			
 			// Setup the watcher to watch for file changes
@@ -259,16 +310,17 @@ namespace Rylogic_Log_Viewer
 				});
 			
 			// Don't use the results if the task was cancelled
-			DialogResult res = DialogResult.Cancel;
+			DialogResult res;
 			try { res = task.ShowDialog(this); }
 			catch (Exception ex) { res = MessageBox.Show(this, Resources.ReadingFileFailed, string.Format(Resources.BuildLineIndexErrorMsg, ex.Message), MessageBoxButtons.RetryCancel, MessageBoxIcon.Error); }
-			if (res == DialogResult.Cancel) return;
 			if (res == DialogResult.Retry)
 			{
 				Action<string> retry = BuildLineIndex;
 				BeginInvoke(retry, filepath);
 				return;
 			}
+			if (res != DialogResult.OK)
+				return;
 			
 			// Update the member variables once the line index is complete
 			m_line_index = line_index;
@@ -343,20 +395,72 @@ namespace Rylogic_Log_Viewer
 		/// <summary>Supply the grid with values</summary>
 		private void CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
 		{
-			// Read the line into memory and split it into columns
-			m_line_cache.Cache(m_file, m_line_index, e.RowIndex, m_settings.ColDelimiter);
-			e.Value = (e.ColumnIndex >= 0 && e.ColumnIndex < m_line_cache.Count) ? m_line_cache[e.ColumnIndex] : "";
+			if (m_file == null) e.Value = null;
+			else
+			{
+				// Read the line into memory and split it into columns
+				m_line_cache.Cache(m_file, m_line_index, e.RowIndex, m_settings.ColDelimiter);
+				e.Value = (e.ColumnIndex >= 0 && e.ColumnIndex < m_line_cache.Count) ? m_line_cache[e.ColumnIndex] : "";
+			}
 		}
 		
+		/// <summary>Draw the cell appropriate to any highlighting</summary>
+		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+		{
+			string value = (string)e.Value;
+			
+			// Check if the cell value matches any of the highlight patterns
+			Highlight hl = null;
+			foreach (var h in m_highlights)
+			{
+				if (!h.IsMatch(value)) continue;
+				hl = h;
+				break;
+			}
+
+			if (hl == null)
+			{
+				e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
+				e.PaintContent(e.ClipBounds);
+			}
+			else if (hl.FullColumn)
+			{
+				e.CellStyle.BackColor = hl.BackColour;
+				e.CellStyle.ForeColor = hl.ForeColour;
+				e.PaintBackground(e.ClipBounds, false);
+				e.PaintContent(e.ClipBounds);
+			}
+			else
+			{
+				e.PaintBackground(e.ClipBounds, false);
+				e.PaintContent(e.ClipBounds);
+			}
+		}
+
 		/// <summary>Display the options dialog</summary>
 		private void ShowOptions(SettingsUI.ETab tab)
 		{
 			m_settings.Save();
 			var settings = new SettingsUI(tab);
-			if (settings.ShowDialog(this) != DialogResult.OK) return;
+			settings.ShowDialog(this);
 			m_settings.Reload();
+			ApplySettings();
+			Refresh();
 		}
 		
+		/// <summary>Get/Set the currently selected grid row</summary>
+		private int SelectedRow
+		{
+			get { return m_grid.SelectedRows.Count != 0 ? m_grid.SelectedRows[0].Index : -1; }
+			set { if (value != SelectedRow) m_grid.SelectRow(value); }
+		}
+		
+		/// <summary>Return true if we should auto scroll</summary>
+		private bool AutoScrollTail
+		{
+			get { return SelectedRow == m_grid.RowCount - 1; }
+		}
+
 		/// <summary>Update the UI with the current line index</summary>
 		private void UpdateUI()
 		{
@@ -369,9 +473,14 @@ namespace Rylogic_Log_Viewer
 				m_grid.ColumnCount = m_line_cache.Count;
 				if (m_grid.RowCount != m_line_index.Count)
 				{
-					// Reset to zero first, this is more efficient so some reason
-					m_grid.RowCount = 0;
+					// Preserve the selection across row count change
+					bool auto_scroll = AutoScrollTail;
+					int selected = SelectedRow;
+					
+					m_grid.RowCount = 0; // Reset to zero first, this is more efficient for some reason
 					m_grid.RowCount = m_line_index.Count;
+					SelectedRow = auto_scroll ? m_grid.RowCount - 1 : selected;
+					if (auto_scroll) m_grid.FirstDisplayedScrollingRowIndex = m_grid.RowCount - m_grid.DisplayedRowCount(false);
 				}
 			}
 			else
@@ -395,7 +504,7 @@ namespace Rylogic_Log_Viewer
 			{
 				Text = string.Format("{0} - {1}" ,m_filepath ,Resources.AppTitle);
 				StringBuilder sb = new StringBuilder(m_file.Length.ToString());
-				for (int i = 1; i < sb.Length; ++i) if ((i%3) == 0) sb.Insert(sb.Length - i, ',');
+				for (int i = sb.Length, j = 0; i-- != 0; ++j) if ((j%3) == 2 && i != 0) sb.Insert(i, ',');
 				m_lbl_file_size.Text = string.Format(Resources.SizeXBytes, sb);
 			}
 		}

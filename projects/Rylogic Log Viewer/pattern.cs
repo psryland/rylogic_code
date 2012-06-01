@@ -31,6 +31,14 @@ namespace Rylogic_Log_Viewer
 			IgnoreCase = false;
 			Invert = false;
 		}
+		public Pattern(Pattern rhs)
+		{
+			Expr       = rhs.Expr;
+			Active     = rhs.Active;
+			IsRegex    = rhs.IsRegex;
+			IgnoreCase = rhs.IgnoreCase;
+			Invert     = rhs.Invert;
+		}
 		
 		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
 		public bool IsMatch(string text)
@@ -114,9 +122,9 @@ namespace Rylogic_Log_Viewer
 		}
 
 		/// <summary>Creates a new object that is a copy of the current instance.</summary>
-		public object Clone()
+		public virtual object Clone()
 		{
-			return MemberwiseClone();
+			return new Pattern(this);
 		}
 	}
 }
