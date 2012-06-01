@@ -161,6 +161,20 @@ namespace Rylogic_Log_Viewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap filter {
+            get {
+                object obj = ResourceManager.GetObject("filter", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap highlight {
+            get {
+                object obj = ResourceManager.GetObject("highlight", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Highlighting.
         /// </summary>

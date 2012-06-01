@@ -181,6 +181,9 @@ Error Details: {0}</value>
   <data name="ReadingFileFailed" xml:space="preserve">
     <value>Reading File Failed</value>
   </data>
+  <data name="highlight" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\highlight.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="edit_save" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\edit_save.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -197,5 +200,8 @@ Error Details: {0}</value>
   <data name="Active" xml:space="preserve">
     <value>Active</value>
     <comment>Active column header</comment>
+  </data>
+  <data name="filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

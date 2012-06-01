@@ -122,7 +122,10 @@
     <None Include="Resources\my_documents.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\1338540027_filter_data.png" />
+    <None Include="Resources\highlight.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\filter.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

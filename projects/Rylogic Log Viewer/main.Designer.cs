@@ -76,55 +76,61 @@
 			// m_toolstrip
 			// 
 			this.m_toolstrip.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_toolstrip.ImageScalingSize = new System.Drawing.Size(36, 36);
 			this.m_toolstrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_btn_open_log,
             this.m_check_tail,
             this.m_sep,
             this.m_btn_highlights,
             this.m_btn_filters});
+			this.m_toolstrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(110, 25);
+			this.m_toolstrip.Size = new System.Drawing.Size(209, 43);
 			this.m_toolstrip.TabIndex = 0;
 			this.m_toolstrip.Text = "toolStrip1";
 			// 
 			// m_btn_open_log
 			// 
-			this.m_btn_open_log.AutoSize = false;
 			this.m_btn_open_log.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_open_log.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_open_log.Image = global::Rylogic_Log_Viewer.Properties.Resources.my_documents;
+			this.m_btn_open_log.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_open_log.Margin = new System.Windows.Forms.Padding(0);
 			this.m_btn_open_log.Name = "m_btn_open_log";
-			this.m_btn_open_log.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_open_log.Size = new System.Drawing.Size(40, 43);
 			this.m_btn_open_log.Text = "Open Log File";
 			// 
 			// m_check_tail
 			// 
 			this.m_check_tail.CheckOnClick = true;
 			this.m_check_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_check_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_check_tail.Image = global::Rylogic_Log_Viewer.Properties.Resources._3dowarrow;
+			this.m_check_tail.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_check_tail.Name = "m_check_tail";
-			this.m_check_tail.Size = new System.Drawing.Size(23, 22);
+			this.m_check_tail.Size = new System.Drawing.Size(40, 40);
 			this.m_check_tail.Text = "Tail";
 			// 
 			// m_sep
 			// 
 			this.m_sep.Name = "m_sep";
-			this.m_sep.Size = new System.Drawing.Size(6, 25);
+			this.m_sep.Size = new System.Drawing.Size(6, 43);
 			// 
 			// m_btn_highlights
 			// 
 			this.m_btn_highlights.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_highlights.Image = global::Rylogic_Log_Viewer.Properties.Resources.highlight;
+			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_highlights.Name = "m_btn_highlights";
-			this.m_btn_highlights.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_highlights.Size = new System.Drawing.Size(40, 40);
 			this.m_btn_highlights.Text = "Highlights";
 			// 
 			// m_btn_filters
 			// 
 			this.m_btn_filters.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_filters.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_filters.Image = global::Rylogic_Log_Viewer.Properties.Resources.filter;
+			this.m_btn_filters.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_filters.Name = "m_btn_filters";
-			this.m_btn_filters.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_filters.Size = new System.Drawing.Size(40, 40);
 			this.m_btn_filters.Text = "Filters";
 			// 
 			// m_menu
@@ -335,7 +341,7 @@
 			this.m_toolstrip_cont.ContentPanel.AutoScroll = true;
 			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_grid);
 			this.m_toolstrip_cont.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
-			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 424);
+			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 406);
 			this.m_toolstrip_cont.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_toolstrip_cont.Location = new System.Drawing.Point(0, 0);
 			this.m_toolstrip_cont.Name = "m_toolstrip_cont";
@@ -366,7 +372,7 @@
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(587, 418);
+			this.m_grid.Size = new System.Drawing.Size(587, 400);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
 			// 
