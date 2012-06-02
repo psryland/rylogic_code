@@ -40,6 +40,12 @@ namespace Rylogic_Log_Viewer
 			Invert     = rhs.Invert;
 		}
 		
+		/// <summary>Return true if the contained expression is valid</summary>
+		public bool ExprValid
+		{
+			get { try { return !IsRegex || new Regex(Expr) != null; } catch { return false; } }
+		}
+
 		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
 		public bool IsMatch(string text)
 		{

@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Drawing;
+using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using Rylogic_Log_Viewer.Properties;
 
 namespace Rylogic_Log_Viewer
 {
@@ -13,6 +16,7 @@ namespace Rylogic_Log_Viewer
 		public Pattern Pattern { get { return m_pattern; } }
 		private Pattern m_pattern;
 		private ImageList m_image_list;
+		private Button m_btn_regex_help;
 		private readonly ToolTip m_tt;
 		
 		/// <summary>True if the editted pattern is a new instance</summary>
@@ -30,6 +34,10 @@ namespace Rylogic_Log_Viewer
 				{
 					Pattern.Expr = m_edit_pattern.Text;
 					UpdateUI();
+				};
+			m_btn_regex_help.Click += (s,a)=>
+				{
+					ShowQuickHelp();
 				};
 			m_btn_add.Click += (s,a)=>
 				{
@@ -72,6 +80,9 @@ namespace Rylogic_Log_Viewer
 			m_check_invert.Checked      = Pattern.Invert;
 			m_check_active.Checked      = Pattern.Active;
 			
+			// Highlight the expression background to show valid regexp
+			m_edit_pattern.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
+			
 			// Preserve the current carot position
 			int start = m_edit_test.SelectionStart;
 			int length = m_edit_test.SelectionLength;
@@ -85,6 +96,7 @@ namespace Rylogic_Log_Viewer
 			}
 			m_edit_test.SelectionStart  = start;
 			m_edit_test.SelectionLength = length;
+			
 			ResumeLayout();
 		}
 
@@ -108,6 +120,28 @@ namespace Rylogic_Log_Viewer
 			UpdateUI();
 		}
 		
+		/// <summary>Show a window containing quick help info</summary>
+		private void ShowQuickHelp()
+		{
+			var win = new Form
+			{
+				FormBorderStyle = FormBorderStyle.SizableToolWindow,
+				StartPosition = FormStartPosition.Manual,
+				ShowInTaskbar = false,
+			};
+			var edit = new WebBrowser
+			{
+				Dock = DockStyle.Fill,
+			};
+			win.Controls.Add(edit);
+
+			Stream help = null;// Assembly.GetExecutingAssembly().GetManifestResourceStream("Rylogic_Log_Viewer.RegexQuickRef.rtf");
+			edit.DocumentText = (help == null) ? RegexHelpNotFound : new StreamReader(help).ReadToEnd();
+			win.Show(this);
+			win.Location = Location + new Size(Width, 0);
+			win.Size = new Size(400,600);
+		}
+
 		private CheckBox m_check_active;
 		private CheckBox m_check_invert;
 		private CheckBox m_check_is_regex;
@@ -144,10 +178,11 @@ namespace Rylogic_Log_Viewer
 			this.m_check_is_regex = new System.Windows.Forms.CheckBox();
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();
 			this.m_btn_add = new System.Windows.Forms.Button();
+			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
 			this.m_lbl_hl_regexp = new System.Windows.Forms.Label();
 			this.m_edit_pattern = new System.Windows.Forms.TextBox();
 			this.m_edit_test = new System.Windows.Forms.RichTextBox();
-			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
+			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
 			// m_check_active
@@ -202,6 +237,13 @@ namespace Rylogic_Log_Viewer
 			this.m_btn_add.TabIndex = 2;
 			this.m_btn_add.UseVisualStyleBackColor = true;
 			// 
+			// m_image_list
+			// 
+			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
+			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
+			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
+			this.m_image_list.Images.SetKeyName(1, "edit_save.png");
+			// 
 			// m_lbl_hl_regexp
 			// 
 			this.m_lbl_hl_regexp.AutoSize = true;
@@ -218,7 +260,7 @@ namespace Rylogic_Log_Viewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_pattern.Location = new System.Drawing.Point(53, 3);
 			this.m_edit_pattern.Name = "m_edit_pattern";
-			this.m_edit_pattern.Size = new System.Drawing.Size(311, 20);
+			this.m_edit_pattern.Size = new System.Drawing.Size(288, 20);
 			this.m_edit_pattern.TabIndex = 0;
 			// 
 			// m_edit_test
@@ -233,18 +275,22 @@ namespace Rylogic_Log_Viewer
 			this.m_edit_test.TabIndex = 20;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
-			// m_image_list
+			// m_btn_regex_help
 			// 
-			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
-			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
-			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
-			this.m_image_list.Images.SetKeyName(1, "edit_save.png");
+			this.m_btn_regex_help.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_regex_help.Location = new System.Drawing.Point(344, 3);
+			this.m_btn_regex_help.Name = "m_btn_regex_help";
+			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
+			this.m_btn_regex_help.TabIndex = 21;
+			this.m_btn_regex_help.Text = "?";
+			this.m_btn_regex_help.UseVisualStyleBackColor = true;
 			// 
 			// PatternUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.Controls.Add(this.m_btn_regex_help);
 			this.Controls.Add(this.m_edit_test);
 			this.Controls.Add(this.m_check_active);
 			this.Controls.Add(this.m_check_invert);
@@ -261,5 +307,9 @@ namespace Rylogic_Log_Viewer
 
 		}
 		#endregion
+		
+		private const string RegexHelpNotFound = @"<p>Regular Expression Quick Reference resource data not found</p>";
+			
+			//@"{\rtf1\ansi\ansicpg1252\deff0\deflang2057\deflangfe2057{\fonttbl{\f0\fswiss\fprq2\fcharset0 Arial;}}\viewkind4\uc1\pard\f0\fs16 Regular Expression Quick Reference resource data not found\par}";
 	}
 }

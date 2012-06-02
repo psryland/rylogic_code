@@ -73,8 +73,8 @@ namespace Rylogic_Log_Viewer
 		//todo:
 		// command line
 		// read stdin
-		// fix editing patterns
 		// do filtering
+		// unicode text files
 
 
 		public Main()
