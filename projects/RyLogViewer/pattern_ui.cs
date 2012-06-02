@@ -127,7 +127,7 @@ namespace RyLogViewer
 			{
 				FormBorderStyle = FormBorderStyle.SizableToolWindow,
 				StartPosition = FormStartPosition.Manual,
-				ShowInTaskbar = false,
+				ShowInTaskbar = true,
 			};
 			var edit = new WebBrowser
 			{
@@ -138,9 +138,10 @@ namespace RyLogViewer
 			const string RegexHelpNotFound = @"<p>Regular Expression Quick Reference resource data not found</p>";
 			Stream help = Assembly.GetExecutingAssembly().GetManifestResourceStream("RyLogViewer.RegexQuickRef.html");
 			edit.DocumentText = (help == null) ? RegexHelpNotFound : new StreamReader(help).ReadToEnd();
+			
+			win.Location = PointToScreen(Location) + new Size(Width, 0);
+			win.Size = new Size(640,480);
 			win.Show(this);
-			win.Location = Location + new Size(Width, 0);
-			win.Size = new Size(400,600);
 		}
 
 		private CheckBox m_check_active;
