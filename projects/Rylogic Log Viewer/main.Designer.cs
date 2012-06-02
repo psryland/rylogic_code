@@ -1,4 +1,4 @@
-﻿namespace Rylogic_Log_Viewer
+﻿namespace RyLogViewer
 {
 	partial class Main
 	{
@@ -93,7 +93,7 @@
 			// m_btn_open_log
 			// 
 			this.m_btn_open_log.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_open_log.Image = global::Rylogic_Log_Viewer.Properties.Resources.my_documents;
+			this.m_btn_open_log.Image = global::RyLogViewer.Properties.Resources.my_documents;
 			this.m_btn_open_log.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_open_log.Margin = new System.Windows.Forms.Padding(0);
 			this.m_btn_open_log.Name = "m_btn_open_log";
@@ -104,7 +104,7 @@
 			// 
 			this.m_check_tail.CheckOnClick = true;
 			this.m_check_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_check_tail.Image = global::Rylogic_Log_Viewer.Properties.Resources._3dowarrow;
+			this.m_check_tail.Image = global::RyLogViewer.Properties.Resources._3dowarrow;
 			this.m_check_tail.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_check_tail.Name = "m_check_tail";
 			this.m_check_tail.Size = new System.Drawing.Size(40, 40);
@@ -118,7 +118,7 @@
 			// m_btn_highlights
 			// 
 			this.m_btn_highlights.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_highlights.Image = global::Rylogic_Log_Viewer.Properties.Resources.highlight;
+			this.m_btn_highlights.Image = global::RyLogViewer.Properties.Resources.highlight;
 			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_highlights.Name = "m_btn_highlights";
 			this.m_btn_highlights.Size = new System.Drawing.Size(40, 40);
@@ -127,7 +127,7 @@
 			// m_btn_filters
 			// 
 			this.m_btn_filters.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_filters.Image = global::Rylogic_Log_Viewer.Properties.Resources.filter;
+			this.m_btn_filters.Image = global::RyLogViewer.Properties.Resources.filter;
 			this.m_btn_filters.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_filters.Name = "m_btn_filters";
 			this.m_btn_filters.Size = new System.Drawing.Size(40, 40);

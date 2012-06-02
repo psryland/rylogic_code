@@ -9,9 +9,9 @@ using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
 using pr.util;
-using Rylogic_Log_Viewer.Properties;
+using RyLogViewer.Properties;
 
-namespace Rylogic_Log_Viewer
+namespace RyLogViewer
 {
 	public partial class Main :Form
 	{

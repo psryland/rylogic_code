@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.common;
 
-namespace Rylogic_Log_Viewer
+namespace RyLogViewer
 {
 	public class Pattern :ICloneable
 	{
@@ -43,7 +43,9 @@ namespace Rylogic_Log_Viewer
 		/// <summary>Return true if the contained expression is valid</summary>
 		public bool ExprValid
 		{
+			// ReSharper disable ConditionIsAlwaysTrueOrFalse
 			get { try { return !IsRegex || new Regex(Expr) != null; } catch { return false; } }
+			// ReSharper restore ConditionIsAlwaysTrueOrFalse
 		}
 
 		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>

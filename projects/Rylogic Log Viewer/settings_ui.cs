@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
-using Rylogic_Log_Viewer.Properties;
+using RyLogViewer.Properties;
 
-namespace Rylogic_Log_Viewer
+namespace RyLogViewer
 {
 	internal partial class SettingsUI :Form
 	{

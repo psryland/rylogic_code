@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Xml.Linq;
 
-namespace Rylogic_Log_Viewer
+namespace RyLogViewer
 {
 	public class Highlight :Pattern
 	{

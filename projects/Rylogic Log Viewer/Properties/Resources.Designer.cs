@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Rylogic_Log_Viewer.Properties {
+namespace RyLogViewer.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Rylogic_Log_Viewer.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Rylogic_Log_Viewer.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("RyLogViewer.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -77,7 +77,7 @@ namespace Rylogic_Log_Viewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Rylogic Log Viewer.
+        ///   Looks up a localized string similar to RyLogViewer.
         /// </summary>
         internal static string AppTitle {
             get {

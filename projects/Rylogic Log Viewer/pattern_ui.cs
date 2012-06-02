@@ -4,9 +4,9 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using Rylogic_Log_Viewer.Properties;
+using RyLogViewer.Properties;
 
-namespace Rylogic_Log_Viewer
+namespace RyLogViewer
 {
 	public class PatternUI :UserControl
 	{
@@ -135,7 +135,8 @@ namespace Rylogic_Log_Viewer
 			};
 			win.Controls.Add(edit);
 
-			Stream help = null;// Assembly.GetExecutingAssembly().GetManifestResourceStream("Rylogic_Log_Viewer.RegexQuickRef.rtf");
+			const string RegexHelpNotFound = @"<p>Regular Expression Quick Reference resource data not found</p>";
+			Stream help = Assembly.GetExecutingAssembly().GetManifestResourceStream("RyLogViewer.RegexQuickRef.html");
 			edit.DocumentText = (help == null) ? RegexHelpNotFound : new StreamReader(help).ReadToEnd();
 			win.Show(this);
 			win.Location = Location + new Size(Width, 0);
@@ -307,9 +308,5 @@ namespace Rylogic_Log_Viewer
 
 		}
 		#endregion
-		
-		private const string RegexHelpNotFound = @"<p>Regular Expression Quick Reference resource data not found</p>";
-			
-			//@"{\rtf1\ansi\ansicpg1252\deff0\deflang2057\deflangfe2057{\fonttbl{\f0\fswiss\fprq2\fcharset0 Arial;}}\viewkind4\uc1\pard\f0\fs16 Regular Expression Quick Reference resource data not found\par}";
 	}
 }

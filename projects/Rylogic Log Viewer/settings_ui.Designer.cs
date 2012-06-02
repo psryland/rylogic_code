@@ -1,4 +1,4 @@
-﻿namespace Rylogic_Log_Viewer
+﻿namespace RyLogViewer
 {
 	partial class SettingsUI
 	{
@@ -46,8 +46,8 @@
 			this.m_grid_highlight = new System.Windows.Forms.DataGridView();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
-			this.m_pattern_hl = new Rylogic_Log_Viewer.PatternUI();
-			this.m_pattern_ft = new Rylogic_Log_Viewer.PatternUI();
+			this.m_pattern_hl = new PatternUI();
+			this.m_pattern_ft = new PatternUI();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_startup.SuspendLayout();
@@ -323,7 +323,7 @@
 		private System.Windows.Forms.Label m_lbl_line1_example;
 		private System.Windows.Forms.Label m_lbl_selection_example;
 		private System.Windows.Forms.Label m_lbl_line2_colours;
-		private Rylogic_Log_Viewer.PatternUI m_pattern_hl;
+		private PatternUI m_pattern_hl;
 		private System.Windows.Forms.GroupBox m_group_startup;
 		private System.Windows.Forms.CheckBox m_check_load_last_file;
 		private System.Windows.Forms.CheckBox m_check_save_screen_loc;
