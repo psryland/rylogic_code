@@ -170,6 +170,15 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        /// <summary>
+        ///   Looks up a localized string similar to Exclude.
+        /// </summary>
+        internal static string Exclude {
+            get {
+                return ResourceManager.GetString("Exclude", resourceCulture);
+            }
+        }
+        
         internal static System.Drawing.Bitmap filter {
             get {
                 object obj = ResourceManager.GetObject("filter", resourceCulture);

@@ -13,20 +13,16 @@ namespace RyLogViewer
 		/// <summary>Background colour of highlight</summary>
 		public Color BackColour { get; set; }
 		
-		/// <summary>True if a match anywhere on the row highlights the full row</summary>
-		public bool FullColumn { get; set; }
 
 		public Highlight()
 		{
 			ForeColour = Color.White;
 			BackColour = Color.DarkRed;
-			FullColumn = true;
 		}
 		public Highlight(Highlight rhs) :base(rhs)
 		{
 			ForeColour = rhs.ForeColour;
 			BackColour = rhs.BackColour;
-			FullColumn = rhs.FullColumn;
 		}
 		/// <summary>Construct from xml description</summary>
 		public Highlight(XElement node) :base(node)
@@ -36,7 +32,6 @@ namespace RyLogViewer
 				// ReSharper disable PossibleNullReferenceException
 				ForeColour = Color.FromArgb(int.Parse(node.Element("forecolour").Value, NumberStyles.HexNumber));
 				BackColour = Color.FromArgb(int.Parse(node.Element("backcolour").Value, NumberStyles.HexNumber));
-				FullColumn    = bool.Parse(node.Element("fullcolumn").Value);
 				// ReSharper restore PossibleNullReferenceException
 			} catch {} // swallow bad input data
 		}
@@ -48,8 +43,7 @@ namespace RyLogViewer
 			node.Add
 			(
 				new XElement("forecolour" ,ForeColour.ToArgb().ToString("X")),
-				new XElement("backcolour" ,BackColour.ToArgb().ToString("X")),
-				new XElement("fullcolumn" ,FullColumn)
+				new XElement("backcolour" ,BackColour.ToArgb().ToString("X"))
 			);
 			return node;
 		}

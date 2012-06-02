@@ -22,6 +22,7 @@ namespace RyLogViewer
 			public const string Modify = "Modify";
 			public const string FullColumn = "FullColumn";
 			public const string Highlighting = "Highlighting";
+			public const string Exclude = "Exclude";
 		}
 
 		private readonly Settings        m_settings;    // The app settings changed by this UI
@@ -99,7 +100,7 @@ namespace RyLogViewer
 			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop(m_grid_highlight, m_highlights, a, false);
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
-			m_grid_highlight.MouseClick       += (s,a)=> OnMouseClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
+			m_grid_highlight.MouseClick       += (s,a)=> OnMouseClick(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
 			
 			// Filters
@@ -113,9 +114,10 @@ namespace RyLogViewer
 			m_grid_filter.VirtualMode         = true;
 			m_grid_filter.AutoGenerateColumns = false;
 			m_grid_filter.ColumnCount         = m_grid_filter.RowCount = 0;
-			m_grid_filter.Columns.Add(new DataGridViewCheckBoxColumn{Name = ColumnNames.Active  ,HeaderText = Resources.Active       ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
-			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern      ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_filter.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit         ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_filter.Columns.Add(new DataGridViewCheckBoxColumn{Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
+			m_grid_filter.Columns.Add(new DataGridViewCheckBoxColumn{Name = ColumnNames.Exclude ,HeaderText = Resources.Exclude ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_filter.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
@@ -123,7 +125,7 @@ namespace RyLogViewer
 			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown(m_grid_filter, m_filters, a);
 			m_grid_filter.DragOver           += (s,a)=> DoDragDrop(m_grid_filter, m_filters, a, false);
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
-			m_grid_filter.MouseClick         += (s,a)=> OnMouseClick(m_grid_filter, m_filters, m_pattern_ft, a);
+			m_grid_filter.MouseClick         += (s,a)=> OnMouseClick(m_grid_filter, m_filters, a);
 			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
 			
 			// Save on close
@@ -187,19 +189,21 @@ namespace RyLogViewer
 			var cell = grid[e.ColumnIndex, e.RowIndex];
 			T pat = patterns[e.RowIndex];
 			Highlight hl = pat as Highlight;
+			Filter ft = pat as Filter;
 			
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: e.Value = string.Empty; break;
 			case ColumnNames.Active: e.Value = pat.Active; break;
 			case ColumnNames.Pattern: e.Value = pat.Expr; break;
-			case ColumnNames.FullColumn:
-				e.Value = hl != null ? hl.FullColumn : false;
-				break;
+			case ColumnNames.FullColumn: e.Value = pat.BinaryMatch; break;
 			case ColumnNames.Highlighting:
 				e.Value = Resources.ClickToModifyHighlight;
 				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? hl.BackColour : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
+				break;
+			case ColumnNames.Exclude:
+				e.Value = ft != null ? ft.Exclude : false;
 				break;
 			case ColumnNames.Modify:
 				e.Value = "...";
@@ -207,8 +211,8 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Handle clicks on the highlights grid</summary>
-		private void OnMouseClick<T>(DataGridView grid, List<T> patterns, PatternUI ctrl, MouseEventArgs e) where T:Pattern
+		/// <summary>Handle clicks on the grids</summary>
+		private void OnMouseClick<T>(DataGridView grid, List<T> patterns, MouseEventArgs e) where T:Pattern
 		{
 			var hit = grid.HitTest(e.X, e.Y);
 			if (hit.Type == DataGridViewHitTestType.Cell)
@@ -216,6 +220,7 @@ namespace RyLogViewer
 				var cell = grid[hit.ColumnIndex, hit.RowIndex];
 				T pat = patterns[hit.RowIndex];
 				Highlight hl = pat as Highlight;
+				Filter ft = pat as Filter;
 				
 				switch (grid.Columns[hit.ColumnIndex].Name)
 				{
@@ -227,11 +232,8 @@ namespace RyLogViewer
 				case ColumnNames.Pattern:
 					break;
 				case ColumnNames.FullColumn:
-					if (hl != null)
-					{
-						hl.FullColumn = (bool)cell.Value == false;
-						grid.EndEdit();
-					}
+					pat.BinaryMatch = (bool)cell.Value == false;
+					grid.EndEdit();
 					break;
 				case ColumnNames.Highlighting:
 					if (hl != null)
@@ -239,6 +241,13 @@ namespace RyLogViewer
 						PickColours(grid, e.X, e.Y,
 							(s,a) => { hl.ForeColour = PickColour(hl.ForeColour); grid.InvalidateCell(cell); },
 							(s,a) => { hl.BackColour = PickColour(hl.BackColour); grid.InvalidateCell(cell); });
+					}
+					break;
+				case ColumnNames.Exclude:
+					if (ft != null)
+					{
+						ft.Exclude = (bool)cell.Value == false;
+						grid.EndEdit();
 					}
 					break;
 				}

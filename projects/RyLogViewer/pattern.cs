@@ -23,6 +23,9 @@ namespace RyLogViewer
 		/// <summary>Invert the results of a match</summary>
 		public bool Invert { get; set; }
 		
+		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
+		public bool BinaryMatch { get; set; }
+		
 		public Pattern()
 		{
 			Expr = "";
@@ -30,14 +33,16 @@ namespace RyLogViewer
 			IsRegex = false;
 			IgnoreCase = false;
 			Invert = false;
+			BinaryMatch = true;
 		}
 		public Pattern(Pattern rhs)
 		{
-			Expr       = rhs.Expr;
-			Active     = rhs.Active;
-			IsRegex    = rhs.IsRegex;
-			IgnoreCase = rhs.IgnoreCase;
-			Invert     = rhs.Invert;
+			Expr        = rhs.Expr;
+			Active      = rhs.Active;
+			IsRegex     = rhs.IsRegex;
+			IgnoreCase  = rhs.IgnoreCase;
+			Invert      = rhs.Invert;
+			BinaryMatch = rhs.BinaryMatch;
 		}
 		
 		/// <summary>Return true if the contained expression is valid</summary>
@@ -106,11 +111,12 @@ namespace RyLogViewer
 			try
 			{
 				// ReSharper disable PossibleNullReferenceException
-				Expr       = node.Element("expr").Value;
-				Active     = bool.Parse(node.Element("active").Value);
-				IsRegex    = bool.Parse(node.Element("isregex").Value);
-				IgnoreCase = bool.Parse(node.Element("ignorecase").Value);
-				Invert     = bool.Parse(node.Element("invert").Value);
+				Expr        = node.Element("expr").Value;
+				Active      = bool.Parse(node.Element("active").Value);
+				IsRegex     = bool.Parse(node.Element("isregex").Value);
+				IgnoreCase  = bool.Parse(node.Element("ignorecase").Value);
+				Invert      = bool.Parse(node.Element("invert").Value);
+				BinaryMatch = bool.Parse(node.Element("binary").Value);
 				// ReSharper restore PossibleNullReferenceException
 			} catch {} // swallow bad input data
 		}
@@ -124,7 +130,8 @@ namespace RyLogViewer
 				new XElement("active"     ,Active     ),
 				new XElement("isregex"    ,IsRegex    ),
 				new XElement("ignorecase" ,IgnoreCase ),
-				new XElement("invert"     ,Invert     )
+				new XElement("invert"     ,Invert     ),
+				new XElement("binary"     ,BinaryMatch)
 			);
 			return node;
 		}

@@ -5,23 +5,28 @@ namespace RyLogViewer
 {
 	public class Filter :Pattern
 	{
+		/// <summary>
+		/// If true, then a positive match excludes the line, negative match includes the line.
+		/// If false, then a positive match include the line, negative match excludes the line.</summary>
+		public bool Exclude { get; set; }
+		
 		public Filter()
 		{
+			Exclude = false;
 		}
 		public Filter(Filter rhs) :base(rhs)
 		{
+			Exclude = rhs.Exclude;
 		}
 
 		/// <summary>Construct from xml description</summary>
 		public Filter(XElement node) :base(node)
 		{
 			// ReSharper disable PossibleNullReferenceException
-			//try
-			//{
-			//    ForeColour = Color.FromArgb(int.Parse(node.Element("forecolour").Value, NumberStyles.HexNumber));
-			//    BackColour = Color.FromArgb(int.Parse(node.Element("backcolour").Value, NumberStyles.HexNumber));
-			//    FullColumn    = bool.Parse(node.Element("fullcolumn").Value);
-			//} catch {} // swallow bad input data
+			try
+			{
+				Exclude =bool.Parse(node.Element("exclude").Value);
+			} catch {} // swallow bad input data
 			// ReSharper restore PossibleNullReferenceException
 		}
 
@@ -29,12 +34,10 @@ namespace RyLogViewer
 		public override XElement ToXml(XElement node)
 		{
 			base.ToXml(node);
-			//node.Add
-			//(
-			//    new XElement("forecolour" ,ForeColour.ToArgb().ToString("X")),
-			//    new XElement("backcolour" ,BackColour.ToArgb().ToString("X")),
-			//    new XElement("fullcolumn" ,FullColumn)
-			//);
+			node.Add
+			(
+				new XElement("exclude" ,Exclude)
+			);
 			return node;
 		}
 		

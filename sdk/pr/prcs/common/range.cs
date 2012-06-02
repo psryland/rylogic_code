@@ -48,5 +48,19 @@ namespace pr.common
 
 		/// <summary>String representation of the range</summary>
 		public override string ToString() { return "["+m_begin+"->"+m_end+")"; }
+
+		/// <summary>Grow the bounds of this range to include 'range'</summary>
+		public void Encompase(Range range)
+		{
+			m_begin = Math.Min(m_begin ,range.m_begin);
+			m_end   = Math.Max(m_end   ,range.m_end  );
+		}
+
+		/// <summary>Move the range by an offset</summary>
+		public void Shift(long ofs)
+		{
+			m_begin += ofs;
+			m_end   += ofs;
+		}
 	}
 }

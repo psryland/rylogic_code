@@ -4,7 +4,6 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
 
 namespace RyLogViewer
 {
@@ -12,12 +11,22 @@ namespace RyLogViewer
 	{
 		enum BtnImageIdx { AddNew = 0, Save = 1 }
 		
-		/// <summary>The pattern being controlled by this UI</summary>
-		public Pattern Pattern { get { return m_pattern; } }
+		private readonly ToolTip m_tt;
 		private Pattern m_pattern;
 		private ImageList m_image_list;
 		private Button m_btn_regex_help;
-		private readonly ToolTip m_tt;
+		private CheckBox m_check_binary;
+		private CheckBox m_check_active;
+		private CheckBox m_check_invert;
+		private CheckBox m_check_is_regex;
+		private CheckBox m_check_ignore_case;
+		private Button m_btn_add;
+		private Label m_lbl_hl_regexp;
+		private TextBox m_edit_pattern;
+		private RichTextBox m_edit_test;
+		
+		/// <summary>The pattern being controlled by this UI</summary>
+		public Pattern Pattern { get { return m_pattern; } }
 		
 		/// <summary>True if the editted pattern is a new instance</summary>
 		public bool IsNew { get; private set; }
@@ -30,6 +39,10 @@ namespace RyLogViewer
 			InitializeComponent();
 			m_pattern = null;
 			m_tt = new ToolTip();
+			
+			// Tool tips
+			//todo
+
 			m_edit_pattern.TextChanged += (s,a)=>
 				{
 					Pattern.Expr = m_edit_pattern.Text;
@@ -46,6 +59,11 @@ namespace RyLogViewer
 					if (Pattern.IsRegex) try { new Regex(Pattern.Expr); } catch (ArgumentException) { return; }
 					Add(this, EventArgs.Empty);
 				};
+			m_check_active.CheckedChanged += (s,a)=>
+				{
+					Pattern.Active = m_check_active.Checked;
+					UpdateUI();
+				};
 			m_check_is_regex.CheckedChanged += (s,a)=>
 				{
 					Pattern.IsRegex = m_check_is_regex.Checked;
@@ -61,9 +79,9 @@ namespace RyLogViewer
 					Pattern.Invert = m_check_invert.Checked;
 					UpdateUI();
 				};
-			m_check_active.CheckedChanged += (s,a)=>
+			m_check_binary.CheckedChanged += (s,a)=>
 				{
-					Pattern.Active = m_check_active.Checked;
+					Pattern.BinaryMatch = m_check_binary.Checked;
 					UpdateUI();
 				};
 			m_edit_test.TextChanged += (s,a)=>
@@ -71,14 +89,17 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 		}
+		
+		/// <summary>Update UI elements based on the current settings</summary>
 		private void UpdateUI()
 		{
 			SuspendLayout();
 			m_edit_pattern.Text         = Pattern.Expr;
+			m_check_active.Checked      = Pattern.Active;
 			m_check_is_regex.Checked    = Pattern.IsRegex;
 			m_check_ignore_case.Checked = Pattern.IgnoreCase;
 			m_check_invert.Checked      = Pattern.Invert;
-			m_check_active.Checked      = Pattern.Active;
+			m_check_binary.Checked      = Pattern.BinaryMatch;
 			
 			// Highlight the expression background to show valid regexp
 			m_edit_pattern.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
@@ -143,15 +164,6 @@ namespace RyLogViewer
 			win.Size = new Size(640,480);
 			win.Show(this);
 		}
-
-		private CheckBox m_check_active;
-		private CheckBox m_check_invert;
-		private CheckBox m_check_is_regex;
-		private CheckBox m_check_ignore_case;
-		private Button m_btn_add;
-		private Label m_lbl_hl_regexp;
-		private TextBox m_edit_pattern;
-		private RichTextBox m_edit_test;
 		
 		#region Component Designer generated code
 		
@@ -185,12 +197,13 @@ namespace RyLogViewer
 			this.m_edit_pattern = new System.Windows.Forms.TextBox();
 			this.m_edit_test = new System.Windows.Forms.RichTextBox();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
+			this.m_check_binary = new System.Windows.Forms.CheckBox();
 			this.SuspendLayout();
 			// 
 			// m_check_active
 			// 
 			this.m_check_active.AutoSize = true;
-			this.m_check_active.Location = new System.Drawing.Point(310, 29);
+			this.m_check_active.Location = new System.Drawing.Point(8, 29);
 			this.m_check_active.Name = "m_check_active";
 			this.m_check_active.Size = new System.Drawing.Size(56, 17);
 			this.m_check_active.TabIndex = 19;
@@ -200,7 +213,7 @@ namespace RyLogViewer
 			// m_check_invert
 			// 
 			this.m_check_invert.AutoSize = true;
-			this.m_check_invert.Location = new System.Drawing.Point(218, 29);
+			this.m_check_invert.Location = new System.Drawing.Point(263, 29);
 			this.m_check_invert.Name = "m_check_invert";
 			this.m_check_invert.Size = new System.Drawing.Size(86, 17);
 			this.m_check_invert.TabIndex = 18;
@@ -210,7 +223,7 @@ namespace RyLogViewer
 			// m_check_is_regex
 			// 
 			this.m_check_is_regex.AutoSize = true;
-			this.m_check_is_regex.Location = new System.Drawing.Point(6, 29);
+			this.m_check_is_regex.Location = new System.Drawing.Point(64, 29);
 			this.m_check_is_regex.Name = "m_check_is_regex";
 			this.m_check_is_regex.Size = new System.Drawing.Size(117, 17);
 			this.m_check_is_regex.TabIndex = 17;
@@ -220,7 +233,7 @@ namespace RyLogViewer
 			// m_check_ignore_case
 			// 
 			this.m_check_ignore_case.AutoSize = true;
-			this.m_check_ignore_case.Location = new System.Drawing.Point(129, 29);
+			this.m_check_ignore_case.Location = new System.Drawing.Point(181, 29);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
 			this.m_check_ignore_case.TabIndex = 16;
@@ -233,7 +246,7 @@ namespace RyLogViewer
 			this.m_btn_add.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
 			this.m_btn_add.ImageIndex = 0;
 			this.m_btn_add.ImageList = this.m_image_list;
-			this.m_btn_add.Location = new System.Drawing.Point(366, 3);
+			this.m_btn_add.Location = new System.Drawing.Point(438, 3);
 			this.m_btn_add.Name = "m_btn_add";
 			this.m_btn_add.Size = new System.Drawing.Size(46, 46);
 			this.m_btn_add.TabIndex = 2;
@@ -262,7 +275,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_pattern.Location = new System.Drawing.Point(53, 3);
 			this.m_edit_pattern.Name = "m_edit_pattern";
-			this.m_edit_pattern.Size = new System.Drawing.Size(288, 20);
+			this.m_edit_pattern.Size = new System.Drawing.Size(360, 20);
 			this.m_edit_pattern.TabIndex = 0;
 			// 
 			// m_edit_test
@@ -273,25 +286,36 @@ namespace RyLogViewer
 			this.m_edit_test.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_edit_test.Location = new System.Drawing.Point(6, 52);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(406, 79);
+			this.m_edit_test.Size = new System.Drawing.Size(478, 79);
 			this.m_edit_test.TabIndex = 20;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
 			// m_btn_regex_help
 			// 
 			this.m_btn_regex_help.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_regex_help.Location = new System.Drawing.Point(344, 3);
+			this.m_btn_regex_help.Location = new System.Drawing.Point(416, 3);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
 			this.m_btn_regex_help.TabIndex = 21;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
 			// 
+			// m_check_binary
+			// 
+			this.m_check_binary.AutoSize = true;
+			this.m_check_binary.Location = new System.Drawing.Point(349, 29);
+			this.m_check_binary.Name = "m_check_binary";
+			this.m_check_binary.Size = new System.Drawing.Size(80, 17);
+			this.m_check_binary.TabIndex = 22;
+			this.m_check_binary.Text = "Full Column";
+			this.m_check_binary.UseVisualStyleBackColor = true;
+			// 
 			// PatternUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.Controls.Add(this.m_check_binary);
 			this.Controls.Add(this.m_btn_regex_help);
 			this.Controls.Add(this.m_edit_test);
 			this.Controls.Add(this.m_check_active);
@@ -303,7 +327,7 @@ namespace RyLogViewer
 			this.Controls.Add(this.m_edit_pattern);
 			this.MinimumSize = new System.Drawing.Size(420, 78);
 			this.Name = "PatternUI";
-			this.Size = new System.Drawing.Size(418, 137);
+			this.Size = new System.Drawing.Size(490, 137);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

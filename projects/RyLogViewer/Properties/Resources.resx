@@ -207,4 +207,7 @@ Error Details: {0}</value>
   <data name="ClickToModifyHighlight" xml:space="preserve">
     <value>Click here to modify highlight</value>
   </data>
+	<data name="Exclude">
+		<value xml:space="preserve">Exclude</value>
+	</data>
 </root>
