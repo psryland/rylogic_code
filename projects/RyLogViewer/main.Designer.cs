@@ -31,6 +31,7 @@
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
 			this.m_toolstrip = new System.Windows.Forms.ToolStrip();
 			this.m_btn_open_log = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_refresh = new System.Windows.Forms.ToolStripButton();
 			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
@@ -64,7 +65,8 @@
 			this.m_lbl_file_size = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
-			this.m_btn_refresh = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -88,7 +90,7 @@
             this.toolStripSeparator1,
             this.m_check_tail});
 			this.m_toolstrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
-			this.m_toolstrip.Location = new System.Drawing.Point(304, 0);
+			this.m_toolstrip.Location = new System.Drawing.Point(6, 0);
 			this.m_toolstrip.Name = "m_toolstrip";
 			this.m_toolstrip.Size = new System.Drawing.Size(144, 27);
 			this.m_toolstrip.TabIndex = 0;
@@ -103,6 +105,15 @@
 			this.m_btn_open_log.Name = "m_btn_open_log";
 			this.m_btn_open_log.Size = new System.Drawing.Size(24, 27);
 			this.m_btn_open_log.Text = "Open Log File";
+			// 
+			// m_btn_refresh
+			// 
+			this.m_btn_refresh.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_refresh.Image = global::RyLogViewer.Properties.Resources.reload;
+			this.m_btn_refresh.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_refresh.Name = "m_btn_refresh";
+			this.m_btn_refresh.Size = new System.Drawing.Size(24, 24);
+			this.m_btn_refresh.Text = "Refresh";
 			// 
 			// m_sep
 			// 
@@ -152,7 +163,7 @@
             this.m_menu_edit,
             this.m_menu_tools,
             this.m_menu_help});
-			this.m_menu.Location = new System.Drawing.Point(5, 0);
+			this.m_menu.Location = new System.Drawing.Point(3, 27);
 			this.m_menu.Name = "m_menu";
 			this.m_menu.Size = new System.Drawing.Size(272, 24);
 			this.m_menu.Stretch = false;
@@ -169,7 +180,7 @@
             this.m_sep2,
             this.m_menu_file_exit});
 			this.m_menu_file.Name = "m_menu_file";
-			this.m_menu_file.Size = new System.Drawing.Size(37, 19);
+			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
 			this.m_menu_file.Text = "&File";
 			// 
 			// m_menu_file_open
@@ -219,7 +230,7 @@
             this.m_menu_edit_find_next,
             this.m_menu_edit_find_prev});
 			this.m_menu_edit.Name = "m_menu_edit";
-			this.m_menu_edit.Size = new System.Drawing.Size(39, 19);
+			this.m_menu_edit.Size = new System.Drawing.Size(39, 20);
 			this.m_menu_edit.Text = "&Edit";
 			// 
 			// m_menu_edit_selectall
@@ -272,7 +283,7 @@
             this.m_sep5,
             this.m_menu_tools_options});
 			this.m_menu_tools.Name = "m_menu_tools";
-			this.m_menu_tools.Size = new System.Drawing.Size(48, 19);
+			this.m_menu_tools.Size = new System.Drawing.Size(48, 20);
 			this.m_menu_tools.Text = "&Tools";
 			// 
 			// m_menu_tools_alwaysontop
@@ -312,15 +323,17 @@
 			// m_menu_help
 			// 
 			this.m_menu_help.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_help_totd,
+            this.toolStripSeparator2,
             this.m_menu_help_about});
 			this.m_menu_help.Name = "m_menu_help";
-			this.m_menu_help.Size = new System.Drawing.Size(44, 19);
+			this.m_menu_help.Size = new System.Drawing.Size(44, 20);
 			this.m_menu_help.Text = "&Help";
 			// 
 			// m_menu_help_about
 			// 
 			this.m_menu_help_about.Name = "m_menu_help_about";
-			this.m_menu_help_about.Size = new System.Drawing.Size(107, 22);
+			this.m_menu_help_about.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_help_about.Text = "&About";
 			// 
 			// m_status
@@ -352,7 +365,7 @@
 			this.m_toolstrip_cont.ContentPanel.AutoScroll = true;
 			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_grid);
 			this.m_toolstrip_cont.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
-			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 446);
+			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 422);
 			this.m_toolstrip_cont.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_toolstrip_cont.Location = new System.Drawing.Point(0, 0);
 			this.m_toolstrip_cont.Name = "m_toolstrip_cont";
@@ -362,8 +375,8 @@
 			// 
 			// m_toolstrip_cont.TopToolStripPanel
 			// 
-			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_menu);
 			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_toolstrip);
+			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_menu);
 			// 
 			// m_grid
 			// 
@@ -383,18 +396,20 @@
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(587, 440);
+			this.m_grid.Size = new System.Drawing.Size(587, 416);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
 			// 
-			// m_btn_refresh
+			// toolStripSeparator2
 			// 
-			this.m_btn_refresh.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_refresh.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_refresh.Image")));
-			this.m_btn_refresh.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_refresh.Name = "m_btn_refresh";
-			this.m_btn_refresh.Size = new System.Drawing.Size(24, 24);
-			this.m_btn_refresh.Text = "Refresh";
+			this.toolStripSeparator2.Name = "toolStripSeparator2";
+			this.toolStripSeparator2.Size = new System.Drawing.Size(149, 6);
+			// 
+			// m_menu_help_totd
+			// 
+			this.m_menu_help_totd.Name = "m_menu_help_totd";
+			this.m_menu_help_totd.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_help_totd.Text = "&Tip of the Day";
 			// 
 			// Main
 			// 
@@ -463,6 +478,8 @@
 		private System.Windows.Forms.ToolStripStatusLabel m_lbl_file_size;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
 		private System.Windows.Forms.ToolStripButton m_btn_refresh;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_totd;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
 	}
 }
 

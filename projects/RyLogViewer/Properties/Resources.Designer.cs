@@ -60,6 +60,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap _1338530996_book {
+            get {
+                object obj = ResourceManager.GetObject("1338530996_book", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         internal static System.Drawing.Bitmap _3dowarrow {
             get {
                 object obj = ResourceManager.GetObject("_3dowarrow", resourceCulture);
@@ -255,6 +262,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Pattern Set Files (*.patternset)|*.patternset|All files (*.*)|*.*.
+        /// </summary>
+        internal static string PatternSetFilter {
+            get {
+                return ResourceManager.GetString("PatternSetFilter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Position: {0} / {1} bytes.
         /// </summary>
         internal static string PositionXofYBytes {
@@ -278,6 +294,13 @@ namespace RyLogViewer.Properties {
         internal static string ReadingXLineFromY {
             get {
                 return ResourceManager.GetString("ReadingXLineFromY", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap reload {
+            get {
+                object obj = ResourceManager.GetObject("reload", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

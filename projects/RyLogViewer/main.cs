@@ -74,16 +74,15 @@ namespace RyLogViewer
 		private long m_file_end;                       // The last known size of the file
 		
 		//todo:
+		// Filter/Highlight sets
 		// read stdin
 		// unicode text files
 		// Tooltips
 		// partial highlighting
-		// about box
 		// Large file selection on first line loads next earlier chunk
 		// UpdateLineCount needs to reload from file end if more than LineCount new lines
-		// Tip of the Day
-		// Filter/Highlight sets
 		// Window transparency (Ghost mode) with click through
+		// Tip of the Day content
 
 		public Main(string[] args)
 		{
@@ -115,7 +114,8 @@ namespace RyLogViewer
 			m_menu_tools_highlights.Click  += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_menu_tools_filters.Click     += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
 			m_menu_tools_options.Click     += (s,a) => ShowOptions(SettingsUI.ETab.General);
-			m_menu_help_about.Click        += (s,a) => {};
+			m_menu_help_totd.Click         += (s,a) => ShowTotD();
+			m_menu_help_about.Click        += (s,a) => ShowAbout();
 			
 			// Toolbar
 			m_toolstrip.Move            += (s,a) => { m_settings.ToolsPosition = m_toolstrip.Location; m_settings.Save(); };
@@ -170,6 +170,10 @@ namespace RyLogViewer
 					}
 					ApplySettings();
 					UpdateStatus();
+
+					// Show the TotD
+					if (m_settings.ShowTOTD)
+						ShowTotD();
 				};
 			
 			// Shutdown
@@ -605,6 +609,18 @@ namespace RyLogViewer
 			}
 		}
 		
+		/// <summary>Show the TotD dialog</summary>
+		private void ShowTotD()
+		{
+			new TipOfTheDay(m_settings).ShowDialog(this);
+		}
+
+		/// <summary>Show the about dialog</summary>
+		private void ShowAbout()
+		{
+			new About().ShowDialog(this);
+		}
+
 		/// <summary>Return a collection of the currently active filters</summary>
 		private IEnumerable<Filter> ActiveFilters
 		{

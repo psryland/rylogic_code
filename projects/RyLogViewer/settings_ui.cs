@@ -7,9 +7,13 @@ using RyLogViewer.Properties;
 
 namespace RyLogViewer
 {
-	internal partial class SettingsUI :Form
+	public partial class SettingsUI :Form
 	{
-		internal enum ETab
+		private readonly Settings        m_settings;         // The app settings changed by this UI
+		private readonly List<Highlight> m_highlights;       // The highlight patterns currently in the grid
+		private readonly List<Filter>    m_filters;          // The filter patterns currently in the grid
+
+		public enum ETab
 		{
 			General    = 0,
 			Highlights = 1,
@@ -24,20 +28,17 @@ namespace RyLogViewer
 			public const string Highlighting = "Highlighting";
 			public const string Exclude = "Exclude";
 		}
-
-		private readonly Settings        m_settings;    // The app settings changed by this UI
-		private readonly List<Highlight> m_highlights;  // The highlight patterns
-		private readonly List<Filter>    m_filters;     // The filter patterns
+	
 		public SettingsUI(ETab tab)
 		{
 			InitializeComponent();
-			m_settings = new Settings();
-			m_highlights = Highlight.Import(m_settings.HighlightPatterns);
-			m_filters = Filter.Import(m_settings.FilterPatterns);
-			m_settings.PropertyChanged += (s,a) => UpdateUI();
+			m_settings              = new Settings();
+			m_highlights            = Highlight.Import(m_settings.HighlightPatterns);
+			m_filters               = Filter.Import(m_settings.FilterPatterns);
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
+			m_settings.PropertyChanged += (s,a) => UpdateUI();
 			
 			// General
 			m_check_save_screen_loc.CheckedChanged += (s,a)=>
@@ -47,6 +48,10 @@ namespace RyLogViewer
 			m_check_load_last_file.CheckedChanged += (s,a)=>
 				{
 					m_settings.LoadLastFile = m_check_load_last_file.Checked;
+				};
+			m_check_show_totd.CheckedChanged += (s,a)=>
+				{
+					m_settings.ShowTOTD = m_check_show_totd.Checked;
 				};
 			m_lbl_selection_example.MouseClick += (s,a)=>
 				{
@@ -102,7 +107,8 @@ namespace RyLogViewer
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.MouseClick       += (s,a)=> OnMouseClick(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
-			
+			m_pattern_set_hl.Init(m_highlights, m_settings);
+
 			// Filters
 			m_pattern_ft.Add += (s,a)=>
 				{
@@ -127,6 +133,7 @@ namespace RyLogViewer
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
 			m_grid_filter.MouseClick         += (s,a)=> OnMouseClick(m_grid_filter, m_filters, a);
 			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
+			m_pattern_set_ft.Init(m_filters, m_settings);
 			
 			// Save on close
 			Closed += (s,a) =>

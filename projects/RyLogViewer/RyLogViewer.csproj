@@ -68,6 +68,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="about.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="filter.cs" />
     <Compile Include="highlight.cs" />
     <Compile Include="pattern.cs" />
@@ -76,6 +79,9 @@
     </Compile>
     <Compile Include="main.Designer.cs">
       <DependentUpon>main.cs</DependentUpon>
+    </Compile>
+    <Compile Include="pattern_sets.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="pattern_ui.cs">
       <SubType>UserControl</SubType>
@@ -88,8 +94,17 @@
     <Compile Include="settings_ui.Designer.cs">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </Compile>
+    <Compile Include="tipoftheday.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <EmbeddedResource Include="about.resx">
+      <DependentUpon>about.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="main.resx">
       <DependentUpon>main.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="pattern_sets.resx">
+      <DependentUpon>pattern_sets.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="pattern_ui.resx">
       <DependentUpon>pattern_ui.cs</DependentUpon>
@@ -107,6 +122,9 @@
     <EmbeddedResource Include="settings_ui.resx">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="tipoftheday.resx">
+      <DependentUpon>tipoftheday.cs</DependentUpon>
+    </EmbeddedResource>
     <None Include="app.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -117,9 +135,7 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <EmbeddedResource Include="RegexQuickRef.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
+    <EmbeddedResource Include="docs\RegexQuickRef.html" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2010.csproj">
@@ -169,6 +185,21 @@
       <ProductName>Windows Installer 3.1</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\reload.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\1338530996_book.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="docs\VersionHistory.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="docs\TotD0.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="docs\TotD1.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

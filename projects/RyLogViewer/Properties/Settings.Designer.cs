@@ -310,5 +310,41 @@ namespace RyLogViewer.Properties {
                 this["StatusPosition"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowTOTD {
+            get {
+                return ((bool)(this["ShowTOTD"]));
+            }
+            set {
+                this["ShowTOTD"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("<root/>")]
+        public string HighlightPatternSets {
+            get {
+                return ((string)(this["HighlightPatternSets"]));
+            }
+            set {
+                this["HighlightPatternSets"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("<root/>")]
+        public string FilterPatternSets {
+            get {
+                return ((string)(this["FilterPatternSets"]));
+            }
+            set {
+                this["FilterPatternSets"] = value;
+            }
+        }
     }
 }
