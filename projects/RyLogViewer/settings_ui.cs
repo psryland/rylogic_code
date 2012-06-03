@@ -107,7 +107,7 @@ namespace RyLogViewer
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.MouseClick       += (s,a)=> OnMouseClick(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
-			m_pattern_set_hl.Init(m_highlights, m_settings);
+			m_pattern_set_hl.Init(m_settings, m_highlights);
 
 			// Filters
 			m_pattern_ft.Add += (s,a)=>
@@ -133,13 +133,13 @@ namespace RyLogViewer
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
 			m_grid_filter.MouseClick         += (s,a)=> OnMouseClick(m_grid_filter, m_filters, a);
 			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
-			m_pattern_set_ft.Init(m_filters, m_settings);
+			m_pattern_set_ft.Init(m_settings, m_filters);
 			
 			// Save on close
 			Closed += (s,a) =>
 			{
 				m_settings.HighlightPatterns = Highlight.Export(m_highlights);
-				m_settings.FilterPatterns = Filter.Export(m_filters);
+				m_settings.FilterPatterns    = Filter   .Export(m_filters);
 				m_settings.Save();
 			};
 			

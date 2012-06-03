@@ -60,13 +60,13 @@
 			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
 			this.m_lbl_file_size = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
-			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -90,9 +90,9 @@
             this.toolStripSeparator1,
             this.m_check_tail});
 			this.m_toolstrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
-			this.m_toolstrip.Location = new System.Drawing.Point(6, 0);
+			this.m_toolstrip.Location = new System.Drawing.Point(3, 0);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(144, 27);
+			this.m_toolstrip.Size = new System.Drawing.Size(175, 27);
 			this.m_toolstrip.TabIndex = 0;
 			this.m_toolstrip.Text = "toolStrip1";
 			// 
@@ -165,7 +165,7 @@
             this.m_menu_help});
 			this.m_menu.Location = new System.Drawing.Point(3, 27);
 			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(272, 24);
+			this.m_menu.Size = new System.Drawing.Size(180, 24);
 			this.m_menu.Stretch = false;
 			this.m_menu.TabIndex = 1;
 			this.m_menu.Text = "m_menu";
@@ -330,10 +330,21 @@
 			this.m_menu_help.Size = new System.Drawing.Size(44, 20);
 			this.m_menu_help.Text = "&Help";
 			// 
+			// m_menu_help_totd
+			// 
+			this.m_menu_help_totd.Name = "m_menu_help_totd";
+			this.m_menu_help_totd.Size = new System.Drawing.Size(148, 22);
+			this.m_menu_help_totd.Text = "&Tip of the Day";
+			// 
+			// toolStripSeparator2
+			// 
+			this.toolStripSeparator2.Name = "toolStripSeparator2";
+			this.toolStripSeparator2.Size = new System.Drawing.Size(145, 6);
+			// 
 			// m_menu_help_about
 			// 
 			this.m_menu_help_about.Name = "m_menu_help_about";
-			this.m_menu_help_about.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_help_about.Size = new System.Drawing.Size(148, 22);
 			this.m_menu_help_about.Text = "&About";
 			// 
 			// m_status
@@ -399,17 +410,6 @@
 			this.m_grid.Size = new System.Drawing.Size(587, 416);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
-			// 
-			// toolStripSeparator2
-			// 
-			this.toolStripSeparator2.Name = "toolStripSeparator2";
-			this.toolStripSeparator2.Size = new System.Drawing.Size(149, 6);
-			// 
-			// m_menu_help_totd
-			// 
-			this.m_menu_help_totd.Name = "m_menu_help_totd";
-			this.m_menu_help_totd.Size = new System.Drawing.Size(152, 22);
-			this.m_menu_help_totd.Text = "&Tip of the Day";
 			// 
 			// Main
 			// 

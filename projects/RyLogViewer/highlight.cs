@@ -56,7 +56,7 @@ namespace RyLogViewer
 			XDocument doc;
 			try { doc = XDocument.Parse(highlights); } catch { return list; }
 			if (doc.Root == null) return list;
-			foreach (XElement n in doc.Root.Elements("highlight"))
+			foreach (XElement n in doc.Root.Elements(XmlTag.Highlight))
 				list.Add(new Highlight(n));
 			
 			return list;
@@ -65,11 +65,11 @@ namespace RyLogViewer
 		/// <summary>Serialise the highlight patterns to xml</summary>
 		public static string Export(List<Highlight> highlights)
 		{
-			XDocument doc = new XDocument(new XElement("root"));
+			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
 			
 			foreach (var hl in highlights)
-				doc.Root.Add(hl.ToXml(new XElement("highlight")));
+				doc.Root.Add(hl.ToXml(new XElement(XmlTag.Highlight)));
 			
 			return doc.ToString(SaveOptions.None);
 		}

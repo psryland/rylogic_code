@@ -101,6 +101,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap bookmark_add {
+            get {
+                object obj = ResourceManager.GetObject("bookmark_add", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Building line index.
         /// </summary>
@@ -186,6 +193,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap fileclose {
+            get {
+                object obj = ResourceManager.GetObject("fileclose", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         internal static System.Drawing.Bitmap filter {
             get {
                 object obj = ResourceManager.GetObject("filter", resourceCulture);
@@ -227,15 +241,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*.
-        /// </summary>
-        internal static string LogFileFilter {
-            get {
-                return ResourceManager.GetString("LogFileFilter", resourceCulture);
-            }
-        }
-        
         internal static System.Drawing.Bitmap my_documents {
             get {
                 object obj = ResourceManager.GetObject("my_documents", resourceCulture);
@@ -258,15 +263,6 @@ namespace RyLogViewer.Properties {
         internal static string Pattern {
             get {
                 return ResourceManager.GetString("Pattern", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Pattern Set Files (*.patternset)|*.patternset|All files (*.*)|*.*.
-        /// </summary>
-        internal static string PatternSetFilter {
-            get {
-                return ResourceManager.GetString("PatternSetFilter", resourceCulture);
             }
         }
         

@@ -297,18 +297,18 @@
 			this.m_grid_highlight.Name = "m_grid_highlight";
 			this.m_grid_highlight.RowHeadersWidth = 24;
 			this.m_grid_highlight.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_highlight.Size = new System.Drawing.Size(482, 207);
+			this.m_grid_highlight.Size = new System.Drawing.Size(482, 200);
 			this.m_grid_highlight.TabIndex = 1;
 			// 
 			// m_pattern_set_hl
 			// 
 			this.m_pattern_set_hl.AutoSize = true;
 			this.m_pattern_set_hl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_pattern_set_hl.CurrentSet = null;
 			this.m_pattern_set_hl.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_hl.Location = new System.Drawing.Point(3, 216);
+			this.m_pattern_set_hl.Location = new System.Drawing.Point(3, 209);
+			this.m_pattern_set_hl.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_hl.Name = "m_pattern_set_hl";
-			this.m_pattern_set_hl.Size = new System.Drawing.Size(482, 31);
+			this.m_pattern_set_hl.Size = new System.Drawing.Size(482, 38);
 			this.m_pattern_set_hl.TabIndex = 2;
 			// 
 			// m_tab_filter
@@ -335,8 +335,8 @@
 			// m_split_ft.Panel2
 			// 
 			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
-			this.m_split_ft.Size = new System.Drawing.Size(494, 432);
-			this.m_split_ft.SplitterDistance = 145;
+			this.m_split_ft.Size = new System.Drawing.Size(192, 74);
+			this.m_split_ft.SplitterDistance = 25;
 			this.m_split_ft.TabIndex = 5;
 			// 
 			// m_pattern_ft
@@ -346,7 +346,7 @@
 			this.m_pattern_ft.Location = new System.Drawing.Point(0, 0);
 			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.Name = "m_pattern_ft";
-			this.m_pattern_ft.Size = new System.Drawing.Size(494, 145);
+			this.m_pattern_ft.Size = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.TabIndex = 4;
 			// 
 			// m_table_ft
@@ -361,7 +361,7 @@
 			this.m_table_ft.RowCount = 2;
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ft.Size = new System.Drawing.Size(494, 283);
+			this.m_table_ft.Size = new System.Drawing.Size(192, 45);
 			this.m_table_ft.TabIndex = 4;
 			// 
 			// m_grid_filter
@@ -377,18 +377,18 @@
 			this.m_grid_filter.Name = "m_grid_filter";
 			this.m_grid_filter.RowHeadersWidth = 24;
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(488, 240);
+			this.m_grid_filter.Size = new System.Drawing.Size(186, 1);
 			this.m_grid_filter.TabIndex = 3;
 			// 
 			// m_pattern_set_ft
 			// 
 			this.m_pattern_set_ft.AutoSize = true;
 			this.m_pattern_set_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_pattern_set_ft.CurrentSet = null;
 			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 249);
+			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 4);
+			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(488, 31);
+			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.TabIndex = 4;
 			// 
 			// SettingsUI

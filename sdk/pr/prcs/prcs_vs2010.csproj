@@ -213,6 +213,9 @@
     <Compile Include="gui\progress_form.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="gui\prompt_form.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="gui\recent_files.cs" />
     <Compile Include="gfx\video.cs">
     </Compile>
@@ -303,6 +306,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="gui\prompt_form.resx">
+      <DependentUpon>prompt_form.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\view_video_control.resx">
       <DependentUpon>view_video_control.cs</DependentUpon>
     </EmbeddedResource>

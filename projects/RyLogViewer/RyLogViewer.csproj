@@ -73,6 +73,7 @@
     </Compile>
     <Compile Include="filter.cs" />
     <Compile Include="highlight.cs" />
+    <Compile Include="misc.cs" />
     <Compile Include="pattern.cs" />
     <Compile Include="main.cs">
       <SubType>Form</SubType>
@@ -82,6 +83,12 @@
     </Compile>
     <Compile Include="pattern_sets.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="pattern_set_ui.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="pattern_set_ui.Designer.cs">
+      <DependentUpon>pattern_set_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="pattern_ui.cs">
       <SubType>UserControl</SubType>
@@ -105,6 +112,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="pattern_sets.resx">
       <DependentUpon>pattern_sets.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="pattern_set_ui.resx">
+      <DependentUpon>pattern_set_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="pattern_ui.resx">
       <DependentUpon>pattern_ui.cs</DependentUpon>
@@ -200,6 +210,15 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="docs\TotD1.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\fileclose.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\bookmark_add.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="docs\TotD2.html" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

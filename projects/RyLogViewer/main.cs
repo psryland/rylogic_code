@@ -58,6 +58,8 @@ namespace RyLogViewer
 					m_col.Add(Encoding.ASCII.GetString(m_buf, b, e));
 			}
 		}
+
+		private const string LogFileFilter = @"Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*";
 		private const int AvrBytesPerLine = 256;
 		private const int CacheSize = 4096;
 		
@@ -297,7 +299,7 @@ namespace RyLogViewer
 			// Prompt for a file if none provided
 			if (filepath == null)
 			{
-				var fd = new OpenFileDialog{Filter = Resources.LogFileFilter, Multiselect = false};
+				var fd = new OpenFileDialog{Filter = LogFileFilter, Multiselect = false};
 				if (fd.ShowDialog() != DialogResult.OK) return;
 				filepath = fd.FileName;
 			}
