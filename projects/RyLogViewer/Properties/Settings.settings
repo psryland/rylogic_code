@@ -1,5 +1,5 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Rylogic_Log_Viewer.Properties" GeneratedClassName="Settings">
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="RyLogViewer.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
     <Setting Name="RecentFiles" Type="System.String" Scope="User">
@@ -45,10 +45,10 @@
       <Value Profile="(Default)">Black</Value>
     </Setting>
     <Setting Name="HighlightPatterns" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">&lt;root/&gt;</Value>
     </Setting>
     <Setting Name="FilterPatterns" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">&lt;root/&gt;</Value>
     </Setting>
     <Setting Name="LastLoadedFile" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
@@ -64,6 +64,15 @@
     </Setting>
     <Setting Name="WindowSize" Type="System.Drawing.Size" Scope="User">
       <Value Profile="(Default)">640, 480</Value>
+    </Setting>
+    <Setting Name="MenuPosition" Type="System.Drawing.Point" Scope="User">
+      <Value Profile="(Default)">0, 0</Value>
+    </Setting>
+    <Setting Name="ToolsPosition" Type="System.Drawing.Point" Scope="User">
+      <Value Profile="(Default)">0, 30</Value>
+    </Setting>
+    <Setting Name="StatusPosition" Type="System.Drawing.Point" Scope="User">
+      <Value Profile="(Default)">0, 0</Value>
     </Setting>
   </Settings>
 </SettingsFile>

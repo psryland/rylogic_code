@@ -47,7 +47,7 @@ namespace pr.common
 		public IEnumerable<long> Enumerate { get { for (long i = m_begin; i != m_end; ++i) yield return i; } }
 
 		/// <summary>String representation of the range</summary>
-		public override string ToString() { return "["+m_begin+"->"+m_end+")"; }
+		public override string ToString() { return "["+m_begin+","+m_end+")"; }
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
 		public void Encompase(Range range)

@@ -27,7 +27,9 @@ namespace RyLogViewer
 			// Column accessors
 			public int Count            { get { return m_col.Count; } }
 			public string this[int col] { get { return m_col[col]; } }
+			public override string ToString() { return Encoding.ASCII.GetString(m_buf, 0, Count); }
 			
+			/// <summary>Read a line from 'file' and divide it into columns</summary>
 			public void Cache(FileStream file, List<Range> line_index, int index, byte column_delimiter)
 			{
 				if (m_index == index) return; // Already cached
@@ -37,11 +39,11 @@ namespace RyLogViewer
 				Range rng = line_index[index];
 				
 				// Read the whole line into m_buf
-				file.Seek(rng.First, SeekOrigin.Begin);
+				file.Seek(rng.m_begin, SeekOrigin.Begin);
 				m_buf = rng.Count <= m_buf.Length ? m_buf : new byte[rng.Count];
 				int read = file.Read(m_buf, 0, (int)rng.Count);
 				if (read != rng.Count)
-					throw new IOException("failed to read file over range ["+rng.First+","+rng.Last+"). Read "+read+"/"+rng.Count+" bytes.");
+					throw new IOException("failed to read file over range ["+rng.m_begin+","+rng.m_end+"). Read "+read+"/"+rng.Count+" bytes.");
 				
 				// Split the line up into columns and convert to strings
 				m_col.Clear();
@@ -72,14 +74,18 @@ namespace RyLogViewer
 		private long m_file_end;                       // The last known size of the file
 		
 		//todo:
-		// command line
 		// read stdin
-		// do filtering
 		// unicode text files
 		// Tooltips
 		// partial highlighting
+		// about box
+		// Large file selection on first line loads next earlier chunk
+		// UpdateLineCount needs to reload from file end if more than LineCount new lines
+		// Tip of the Day
+		// Filter/Highlight sets
+		// Window transparency (Ghost mode) with click through
 
-		public Main()
+		public Main(string[] args)
 		{
 			InitializeComponent();
 			m_settings = new Settings();
@@ -96,6 +102,7 @@ namespace RyLogViewer
 			m_file_end = 0;
 			
 			// Menu
+			m_menu.Move                    += (s,a) => { m_settings.MenuPosition = m_menu.Location; m_settings.Save(); };
 			m_menu_file_open.Click         += (s,a) => OpenLogFile(null);
 			m_menu_file_close.Click        += (s,a) => CloseLogFile();
 			m_menu_file_exit.Click         += (s,a) => Close();
@@ -111,10 +118,15 @@ namespace RyLogViewer
 			m_menu_help_about.Click        += (s,a) => {};
 			
 			// Toolbar
+			m_toolstrip.Move            += (s,a) => { m_settings.ToolsPosition = m_toolstrip.Location; m_settings.Save(); };
 			m_btn_open_log.Click        += (s,a) => OpenLogFile(null);
+			m_btn_refresh.Click         += (s,a) => { if (m_file != null) BuildLineIndex(m_filepath); };
 			m_check_tail.CheckedChanged += (s,a) => EnableTail(m_check_tail.Checked);
 			m_btn_highlights.Click      += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_btn_filters.Click         += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
+			
+			// Status
+			m_status.Move += (s,a) => { m_settings.StatusPosition = m_status.Location; m_settings.Save(); };
 			
 			// Setup the grid
 			m_grid.RowCount            = 0;
@@ -123,6 +135,7 @@ namespace RyLogViewer
 			m_grid.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid.CellValueNeeded    += CellValueNeeded;
 			m_grid.CellPainting       += CellPainting;
+			m_grid.SelectionChanged   += (s,a) => { UpdateStatus(); };
 			
 			// Settings
 			m_settings.SettingsLoaded += (s,a) => ApplySettings();
@@ -139,12 +152,19 @@ namespace RyLogViewer
 			// Startup
 			Shown += (s,a)=>
 				{
+					// Last screen position
 					if (m_settings.RestoreScreenLoc)
 					{
 						Location = m_settings.ScreenPosition;
 						Size = m_settings.WindowSize;
 					}
-					if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
+					
+					// Parse commandline
+					if (args.Length != 0)
+					{
+						ParseCommandLine(args);
+					}
+					else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
 					{
 						OpenLogFile(m_settings.LastLoadedFile);
 					}
@@ -161,11 +181,44 @@ namespace RyLogViewer
 					m_settings.Save();
 				};
 		}
+
+		/// <summary>Parse the command line parameters</summary>
+		private void ParseCommandLine(string[] args)
+		{
+			string file_to_load = null;
+			foreach (var arg in args)
+			{
+				if (arg[0] == '-')
+				{
+					string cmd = arg.Substring(1).ToLower();
+					switch (cmd)
+					{
+					default:
+						MessageBox.Show(this, Resources.UnknownCmdLineOption, string.Format("'{0}' is not a valid command line switch", cmd), MessageBoxButtons.OK, MessageBoxIcon.Information);
+						break;
+					}
+				}
+				else
+				{
+					file_to_load = arg;
+				}
+			}
+			if (file_to_load != null)
+				OpenLogFile(file_to_load);
+		}
 		
 		/// <summary>True on auto detect of file changes</summary>
 		private void EnableTail(bool enable)
 		{
-			m_settings.TailEnabled = enable;
+			// If the last row isn't visible scroll it into view before enabling tail
+			if (!LastRowVisible)
+			{
+				ShowLastRow();
+			}
+			else
+			{
+				m_settings.TailEnabled = enable;
+			}
 			ApplySettings();
 			UpdateLineIndex();
 			SelectedRow = m_grid.RowCount - 1;
@@ -182,7 +235,7 @@ namespace RyLogViewer
 			m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
 			
 			// Check states
-			m_check_tail.Checked = m_watch.EnableRaisingEvents;
+			m_check_tail.Checked = m_settings.TailEnabled;
 			
 			// Row styles
 			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
@@ -209,6 +262,11 @@ namespace RyLogViewer
 			}
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
+			
+			// Position UI elements
+			m_menu.Location = m_settings.MenuPosition;
+			m_toolstrip.Location = m_settings.ToolsPosition;
+			m_status.Location = m_settings.StatusPosition;
 		}
 		
 		/// <summary>Returns a file stream for 'filepath' openned with R/W sharing</summary>
@@ -259,6 +317,7 @@ namespace RyLogViewer
 			// Switch files
 			CloseLogFile();
 			BuildLineIndex(filepath);
+			ApplySettings(); // ensure settings that need a file to work are turned on
 		}
 
 		/// <summary>Test 'text' against 'filters' and returns true if it should be included.
@@ -276,10 +335,16 @@ namespace RyLogViewer
 				if (!include) break;
 				
 				// If the filter is not binary, trim 'line' to the bounding range of matches
-				Range bound = new Range(line.Last, line.First);
-				foreach (var m in f.Match(text)) bound.Encompase(m);
-				line.First = Math.Max(line.First ,bound.First);
-				line.Last  = Math.Min(line.Last  ,bound.Last );
+				if (!f.BinaryMatch)
+				{
+					Range bound = new Range(line.m_end, line.m_begin);
+					foreach (var m in f.Match(text)) bound.Encompase(m);
+					if (bound.Count >= 0)
+					{
+						line.m_begin = Math.Max(line.m_begin ,bound.m_begin);
+						line.m_end   = Math.Min(line.m_end   ,bound.m_end  );
+					}
+				}
 			}
 			return include;
 		}
@@ -328,25 +393,27 @@ namespace RyLogViewer
 							Action<long, Range> AddLine = (base_index, rng)=>
 								{
 									if (rng.Empty) return;
-									Range r; string text = Encoding.ASCII.GetString(buf, (int)rng.First, (int)rng.Count);
+									Range r; string text = Encoding.ASCII.GetString(buf, (int)rng.m_begin, (int)rng.Count);
 									if (PassesFilters(filters, text, out r))
 									{
-										rng.Shift(base_index + rng.First); // Shift the subrange within 'text' to be a file range
-										line_index.Add(rng);
+										r.Shift(base_index + rng.m_begin); // Shift the subrange within 'text' to be a file range
+										Debug.Assert(r.m_begin <= r.m_end);
+										line_index.Add(r);
 									}
 								};
 							
 							// Search backwards counting lines
 							Range Brng = new Range(read, read); // The range within 'buf' of the line text
-							for (;Brng.First-- != 0 && line_index.Count != max_line_count;)
+							for (;Brng.m_begin-- != 0 && line_index.Count != max_line_count;)
 							{
-								if (buf[Brng.First] != row_delimiter) continue;
-								++Brng.First;
+								if (buf[Brng.m_begin] != row_delimiter) continue;
+								++Brng.m_begin;
 								AddLine(pos, Brng);
-								Brng.Last  = Brng.First;
-								Brng.First = Brng.Last - 1;
-								if (last_line == 0) last_line = pos + Brng.Last;
+								Brng.m_end   = Brng.m_begin;
+								Brng.m_begin = Brng.m_end - 1;
+								if (last_line == 0) last_line = pos + Brng.m_end;
 							}
+							++Brng.m_begin;
 							AddLine(pos, Brng);
 						}
 					}
@@ -381,6 +448,9 @@ namespace RyLogViewer
 		/// <summary>Extend the line index past 'm_file_end'</summary>
 		private void UpdateLineIndex()
 		{
+			if (m_file == null)
+				return;
+			
 			// Get the range of bytes to read from the file. This range starts from the beginning
 			// of the last known (unfiltered) line to the new file end. The last line is read again
 			// because we may not have read the complete line last time.
@@ -393,7 +463,7 @@ namespace RyLogViewer
 			// Variables used by the follow async task
 			string filepath = m_filepath;
 			byte row_delim = m_settings.RowDelimiter;
-			List<Filter> filters = (from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft).ToList();
+			List<Filter> filters = ActiveFilters.ToList();
 			
 			// Find the new line indices in a background thread
 			ThreadPool.QueueUserWorkItem(a=>
@@ -422,37 +492,43 @@ namespace RyLogViewer
 								Action<long, Range> AddLine = (base_index, rng)=>
 									{
 										if (rng.Empty) return;
-										Range r; string text = Encoding.ASCII.GetString(buf, (int)rng.First, (int)rng.Count);
+										Range r; string text = Encoding.ASCII.GetString(buf, (int)rng.m_begin, (int)rng.Count);
 										if (PassesFilters(filters, text, out r))
 										{
-											rng.Shift(base_index + rng.First); // Shift the subrange within 'text' to be a file range
-											line_index.Add(rng);
+											r.Shift(base_index + rng.m_begin); // Shift the subrange within 'text' to be a file range
+											Debug.Assert(r.m_begin <= r.m_end);
+											line_index.Add(r);
 										}
 									};
 								
 								// Search for new lines
 								Range Brng = new Range(0,0); // The range within 'buf' of the line text
-								for (; Brng.Last != read; ++Brng.Last)
+								for (; Brng.m_end != read; ++Brng.m_end)
 								{
-									if (buf[Brng.Last] != row_delim) continue;
-									++Brng.Last;
-									AddLine(pos, Brng);
-									Brng.First = Brng.Last;
-									Brng.Last  = Brng.First - 1;
-									last_line = pos - Brng.First;
+									if (buf[Brng.m_end] != row_delim) continue;
+									++Brng.m_end;
+									AddLine(pos - read, Brng);
+									Brng.m_begin = Brng.m_end;
+									Brng.m_end   = Brng.m_begin - 1;
+									last_line = pos - Brng.m_begin;
 								}
+								AddLine(pos - read, Brng);
 							}
 						}
 					
 						// Marshal the results back to the main thread
 						Action AddToLineIndex = ()=>
 						{
-							int total = m_line_index.Count + line_index.Count;
-							if (total > m_settings.LineCount) m_line_index.RemoveRange(0, total - m_settings.LineCount);
-							m_line_index.AddRange(line_index);
-							m_last_line = last_line;
-							m_file_end  = end;
-							Debug.Assert(m_last_line <= m_file_end, "'m_file_end' should always be greater than 'm_last_line'");
+							if (line_index.Count != 0)
+							{
+								int total = m_line_index.Count + line_index.Count;
+								if (total > m_settings.LineCount) m_line_index.RemoveRange(0, total - m_settings.LineCount);
+								if (line_index[0].m_begin == m_last_line) m_line_index.RemoveAt(m_line_index.Count - 1);
+								m_line_index.AddRange(line_index);
+								m_last_line = last_line;
+								m_file_end  = end;
+								Debug.Assert(m_last_line <= m_file_end, "'m_file_end' should always be greater than 'm_last_line'");
+							}
 							
 							// Run it again if the file changed while we were doing this
 							if (m_file.Length != m_file_end) m_file_changed.Signal();
@@ -469,9 +545,13 @@ namespace RyLogViewer
 			if (m_file == null) e.Value = null;
 			else
 			{
-				// Read the line into memory and split it into columns
-				m_line_cache.Cache(m_file, m_line_index, e.RowIndex, m_settings.ColDelimiter);
-				e.Value = (e.ColumnIndex >= 0 && e.ColumnIndex < m_line_cache.Count) ? m_line_cache[e.ColumnIndex] : "";
+				try
+				{
+					// Read the line into memory and split it into columns
+					m_line_cache.Cache(m_file, m_line_index, e.RowIndex, m_settings.ColDelimiter);
+					e.Value = (e.ColumnIndex >= 0 && e.ColumnIndex < m_line_cache.Count) ? m_line_cache[e.ColumnIndex] : "";
+				}
+				catch { e.Value = ""; }
 			}
 		}
 		
@@ -505,12 +585,30 @@ namespace RyLogViewer
 		/// <summary>Display the options dialog</summary>
 		private void ShowOptions(SettingsUI.ETab tab)
 		{
+			// Save the current filter patterns so we can detected changes to the
+			// filters and reload the line index if they change.
+			string filters = m_file != null ? m_settings.FilterPatterns : null;
+			
+			// Save current settings so the settingsUI starts with the most up to date
+			// Show the settings dialog, then reload the settings
 			m_settings.Save();
-			var settings = new SettingsUI(tab);
-			settings.ShowDialog(this);
+			new SettingsUI(tab).ShowDialog(this);
 			m_settings.Reload();
-			ApplySettings();
-			Refresh();
+
+			// If the filter patterns have changed, reload the file
+			if (m_file != null && m_settings.FilterPatterns != filters)
+				BuildLineIndex(m_filepath);
+			else
+			{
+				ApplySettings();
+				Refresh();
+			}
+		}
+		
+		/// <summary>Return a collection of the currently active filters</summary>
+		private IEnumerable<Filter> ActiveFilters
+		{
+			get { return from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft; }
 		}
 		
 		/// <summary>Get/Set the currently selected grid row</summary>
@@ -520,33 +618,46 @@ namespace RyLogViewer
 			set { if (value != SelectedRow) m_grid.SelectRow(value); }
 		}
 		
+		/// <summary>Returns true if the last row is visible</summary>
+		private bool LastRowVisible
+		{
+			get { return m_grid.RowCount == 0 || m_grid.Rows[m_grid.RowCount-1].Displayed; }
+		}
+
 		/// <summary>Return true if we should auto scroll</summary>
 		private bool AutoScrollTail
 		{
-			get { return SelectedRow == m_grid.RowCount - 1; }
+			get { return LastRowVisible && SelectedRow == m_grid.RowCount - 1; }
+		}
+
+		/// <summary>Scroll the grid to make the last row visible</summary>
+		private void ShowLastRow()
+		{
+			if (m_grid.RowCount == 0) return;
+			int displayed_rows = m_grid.DisplayedRowCount(false);
+			m_grid.FirstDisplayedScrollingRowIndex = Math.Max(0, m_grid.RowCount - displayed_rows);
 		}
 
 		/// <summary>Update the UI with the current line index</summary>
 		private void UpdateUI()
 		{
 			// Configure the grid
-			if (m_file != null)
+			if (m_file != null && m_line_index.Count != 0)
 			{
 				// Read a row from the data and show column headers if there is more than one
 				m_line_cache.Cache(m_file, m_line_index, 0, m_settings.ColDelimiter);
 				m_grid.ColumnHeadersVisible = m_line_cache.Count > 1;
 				m_grid.ColumnCount = m_line_cache.Count;
+				
+				bool auto_scroll = AutoScrollTail;
 				if (m_grid.RowCount != m_line_index.Count)
 				{
-					// Preserve the selection across row count change
-					bool auto_scroll = AutoScrollTail;
-					int selected = SelectedRow;
-					
+					int selected = SelectedRow; // Preserve the selection across row count change
 					m_grid.RowCount = 0; // Reset to zero first, this is more efficient for some reason
 					m_grid.RowCount = m_line_index.Count;
 					SelectedRow = auto_scroll ? m_grid.RowCount - 1 : selected;
-					if (auto_scroll) m_grid.FirstDisplayedScrollingRowIndex = m_grid.RowCount - m_grid.DisplayedRowCount(false);
 				}
+				if (auto_scroll) ShowLastRow();
 			}
 			else
 			{
@@ -568,9 +679,21 @@ namespace RyLogViewer
 			else
 			{
 				Text = string.Format("{0} - {1}" ,m_filepath ,Resources.AppTitle);
-				StringBuilder sb = new StringBuilder(m_file.Length.ToString());
-				for (int i = sb.Length, j = 0; i-- != 0; ++j) if ((j%3) == 2 && i != 0) sb.Insert(i, ',');
-				m_lbl_file_size.Text = string.Format(Resources.SizeXBytes, sb);
+				
+				// Add comma's to a large number
+				Func<StringBuilder,StringBuilder> Pretty = (sb)=>
+					{
+						for (int i = sb.Length, j = 0; i-- != 0; ++j)
+							if ((j%3) == 2 && i != 0) sb.Insert(i, ',');
+						return sb;
+					};
+
+				// Get current file position
+				int r = SelectedRow;
+				long p = (r != -1) ? m_line_index[SelectedRow].m_begin : 0;
+				StringBuilder pos = Pretty(new StringBuilder(p.ToString()));
+				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString()));
+				m_lbl_file_size.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 			}
 		}
 	}

@@ -62,7 +62,7 @@ namespace RyLogViewer
 			if (doc.Root == null) return "";
 			
 			foreach (var hl in filters)
-				doc.Root.Add(hl.ToXml(new XElement("fitler")));
+				doc.Root.Add(hl.ToXml(new XElement("filter")));
 			
 			return doc.ToString(SaveOptions.None);
 		}

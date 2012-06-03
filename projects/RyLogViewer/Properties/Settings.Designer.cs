@@ -193,7 +193,7 @@ namespace RyLogViewer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("<root/>")]
         public string HighlightPatterns {
             get {
                 return ((string)(this["HighlightPatterns"]));
@@ -205,7 +205,7 @@ namespace RyLogViewer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("<root/>")]
         public string FilterPatterns {
             get {
                 return ((string)(this["FilterPatterns"]));
@@ -272,6 +272,42 @@ namespace RyLogViewer.Properties {
             }
             set {
                 this["WindowSize"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0, 0")]
+        public global::System.Drawing.Point MenuPosition {
+            get {
+                return ((global::System.Drawing.Point)(this["MenuPosition"]));
+            }
+            set {
+                this["MenuPosition"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0, 30")]
+        public global::System.Drawing.Point ToolsPosition {
+            get {
+                return ((global::System.Drawing.Point)(this["ToolsPosition"]));
+            }
+            set {
+                this["ToolsPosition"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0, 0")]
+        public global::System.Drawing.Point StatusPosition {
+            get {
+                return ((global::System.Drawing.Point)(this["StatusPosition"]));
+            }
+            set {
+                this["StatusPosition"] = value;
             }
         }
     }

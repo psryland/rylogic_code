@@ -255,6 +255,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Position: {0} / {1} bytes.
+        /// </summary>
+        internal static string PositionXofYBytes {
+            get {
+                return ResourceManager.GetString("PositionXofYBytes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Reading File Failed.
         /// </summary>
         internal static string ReadingFileFailed {
@@ -273,11 +282,11 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Size: {0} bytes.
+        ///   Looks up a localized string similar to Unknown command line option.
         /// </summary>
-        internal static string SizeXBytes {
+        internal static string UnknownCmdLineOption {
             get {
-                return ResourceManager.GetString("SizeXBytes", resourceCulture);
+                return ResourceManager.GetString("UnknownCmdLineOption", resourceCulture);
             }
         }
     }

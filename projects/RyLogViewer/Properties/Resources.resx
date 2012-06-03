@@ -133,9 +133,9 @@ Error Details: {0}</value>
     <value>No File</value>
     <comment>No file currently loaded</comment>
   </data>
-  <data name="SizeXBytes" xml:space="preserve">
-    <value>Size: {0} bytes</value>
-    <comment>Size in bytes status string</comment>
+  <data name="PositionXofYBytes" xml:space="preserve">
+    <value>Position: {0} / {1} bytes</value>
+    <comment>current position within the file</comment>
   </data>
   <data name="ChangeBackColour" xml:space="preserve">
     <value>Change Background Colour</value>
@@ -207,7 +207,10 @@ Error Details: {0}</value>
   <data name="ClickToModifyHighlight" xml:space="preserve">
     <value>Click here to modify highlight</value>
   </data>
-	<data name="Exclude">
-		<value xml:space="preserve">Exclude</value>
+  <data name="Exclude" xml:space="preserve">
+    <value>Exclude</value>
+  </data>
+	<data name="UnknownCmdLineOption">
+		<value xml:space="preserve">Unknown command line option</value>
 	</data>
 </root>
