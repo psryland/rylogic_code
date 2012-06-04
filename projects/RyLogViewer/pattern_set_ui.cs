@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.gui;
+using pr.extn;
 using pr.util;
 using RyLogViewer.Properties;
 
@@ -16,23 +11,53 @@ namespace RyLogViewer
 {
 	internal abstract partial class PatternSetUi :UserControl
 	{
-		[Serializable]
-		public class Set
+		[Serializable] public class Set
 		{
 			public string Name { get; set; }
 			public string Filepath { get; set; }
-			public Set() { Name = ""; Filepath = ""; }
-			public Set(string filepath) { Name = Path.GetFileName(filepath); Filepath = filepath; }
-			public XElement ToXml(XElement node) { node.Add(new XElement("name" ,Name), new XElement("filepath" ,Filepath)); return node; }
+			public Set()
+			{
+				Name = "";
+				Filepath = "";
+			}
+			public Set(string filepath)
+			{
+				Name = Path.GetFileName(filepath);
+				Filepath = filepath;
+			}
+			public Set(XElement node)
+			{
+				// ReSharper disable PossibleNullReferenceException
+				Name     = node.Element(XmlTag.Name    ).Value;
+				Filepath = node.Element(XmlTag.Filepath).Value;
+				// ReSharper restore PossibleNullReferenceException
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add
+				(
+					new XElement(XmlTag.Name     ,Name),
+					new XElement(XmlTag.Filepath ,Filepath)
+				);
+				return node;
+			}
 		}
 
 		protected const string PatternSetXmlTag = "patternset";
-		protected const string PatternSetExtn = @"patternset";
-		protected const string PatternSetFilter = @"Pattern Set Files (*.patternset)|*.patternset|All files (*.*)|*.*";
+		protected const string PatternSetExtn   = @"patternset";
+		protected const string PatternSetFilter = @"Pattern Set Files (*."+PatternSetExtn+")|*."+PatternSetExtn+"|All files (*.*)|*.*";
 		private readonly ToolTip m_tt;
 		protected readonly List<Set> m_sets;
 		protected Settings m_settings;
 
+		/// <summary>Raised when the list of current patterns is changed</summary>
+		public event EventHandler CurrentSetChanged;
+		protected void RaiseCurrentSetChanged()
+		{
+			if (CurrentSetChanged != null)
+				CurrentSetChanged(this, EventArgs.Empty);
+		}
+		
 		protected PatternSetUi()
 		{
 			InitializeComponent();
@@ -43,6 +68,19 @@ namespace RyLogViewer
 			// Combo
 			m_combo_sets.DisplayMember = Util<Set>.MemberName(x=>x.Name);
 			m_combo_sets.SelectedIndex = 0;
+			m_combo_sets.SelectedIndexChanged += (s,a)=>
+				{
+					if (m_combo_sets.SelectedIndex <= 0) return;
+					Set set = (Set)m_combo_sets.SelectedItem;
+					
+					// Pop up a menu with options to merge/replace
+					ContextMenuStrip menu = new ContextMenuStrip();
+					menu.Items.Add("Replace patterns"  , null, (ss,aa)=>{ ClearPatterns(); AddPatternSet(set); });
+					menu.Items.Add("Merge patterns"    , null, (ss,aa)=>{ AddPatternSet(set); });
+					menu.Items.Add(new ToolStripSeparator());
+					menu.Items.Add("Delete Pattern Set", null, (ss,aa)=>{ DeletePatternSet(set); });
+					menu.Show(MousePosition);
+				};
 			
 			// Save the current list of patterns as a pattern set
 			m_btn_save.Click += (s,a)=>
@@ -54,7 +92,7 @@ namespace RyLogViewer
 					try
 					{
 						// Export the current patterns as xml
-						XDocument doc = new XDocument(new XElement("root"));
+						XDocument doc = new XDocument(new XElement(XmlTag.Root));
 						if (doc.Root == null) throw new ApplicationException("failed to add root xml element");
 						CurrentSetToXml(doc.Root);
 					
@@ -70,25 +108,59 @@ namespace RyLogViewer
 					}
 					catch (Exception ex)
 					{
-						MessageBox.Show(this, "Could not create a pattern set from the current patterns. Error: " + ex.Message, "Add Pattern Set Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+						MessageBox.Show(this, string.Format(Resources.CreatePatternSetFailedMsg, ex.Message), Resources.CreatePatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
 					}
 				};
-
+			
+			// Load a pattern set from file
+			m_btn_load.Click += (s,a)=>
+				{
+					// Ask for the file location
+					OpenFileDialog fd = new OpenFileDialog{Filter = PatternSetFilter, CheckFileExists = true};
+					if (fd.ShowDialog(this) != DialogResult.OK) return;
+					m_sets.Add(new Set(fd.FileName));
+				};
+			
 			// ToolTips
 			m_tt.SetToolTip(m_combo_sets ,"Recent pattern sets. Select to load or merge a pattern set");
 			m_tt.SetToolTip(m_btn_save   ,"Save the current list of patterns as a pattern set");
 			m_tt.SetToolTip(m_btn_load   ,"Load a pattern set from file");
-			m_tt.SetToolTip(m_btn_del    ,"Delete the current pattern set from the dropdown list");
 		}
 
+		/// <summary>Add the patterns in 'set' to the current list</summary>
+		private void AddPatternSet(Set set)
+		{
+			try
+			{
+				XDocument doc = XDocument.Load(set.Filepath);
+				if (doc.Root == null) throw new InvalidDataException("root xml node not found");
+				MergePatterns(doc.Root);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+		
+		/// <summary>Remove a pattern set from the list</summary>
+		private void DeletePatternSet(Set set)
+		{
+			m_sets.Remove(set);
+			UpdateUI();
+		}
+		
 		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
 		protected abstract void CurrentSetToXml(XElement parent);
 		
+		/// <summary>Clear the current set of patterns</summary>
+		protected abstract void ClearPatterns();
+		
+		/// <summary>Add the patterns in 'node' to the current list</summary>
+		protected abstract void MergePatterns(XElement node); 
+		
 		/// <summary>Update UI elements based on current state</summary>
-		private void UpdateUI()
+		protected void UpdateUI()
 		{
-			m_btn_del.Enabled = m_combo_sets.SelectedIndex > 0;
-			
 			m_combo_sets.Items.Clear();
 			m_combo_sets.Items.Add(new Set{Name = "(Select Pattern Set)"});
 			foreach (var set in m_sets)
@@ -103,14 +175,14 @@ namespace RyLogViewer
 			if (doc.Root != null)
 			{
 				foreach (var set in doc.Root.Elements(PatternSetXmlTag))
-					m_sets.Add(new Set(set.Value));
+					try { m_sets.Add(new Set(set)); } catch {} // Ignore those that fail
 			}
 		}
 		
 		/// <summary>Serialise the pattern sets to xml</summary>
 		protected string Export()
 		{
-			XDocument doc = new XDocument(new XElement("root"));
+			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
 			
 			foreach (var set in m_sets)
@@ -120,7 +192,8 @@ namespace RyLogViewer
 		}
 	}
 
-	// Specific instances for each pattern type
+	
+	/// <summary>Highlight specific instance of the pattern set control</summary>
 	internal class PatternSetHL :PatternSetUi
 	{
 		/// <summary>A reference to the current set of highlight patterns</summary>
@@ -131,8 +204,9 @@ namespace RyLogViewer
 		{
 			m_settings = settings;
 			m_settings.SettingsSaving += (s,a)=>{ m_settings.HighlightPatternSets = Export(); };
-			CurrentSet = highlights;
 			Import(settings.HighlightPatternSets);
+			CurrentSet = highlights;
+			UpdateUI();
 		}
 
 		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
@@ -141,7 +215,27 @@ namespace RyLogViewer
 			foreach (var p in CurrentSet)
 				parent.Add(p.ToXml(new XElement(XmlTag.Highlight)));
 		}
+		
+		/// <summary>Clear the current set of patterns</summary>
+		protected override void ClearPatterns()
+		{
+			if (CurrentSet.Count == 0) return;
+			CurrentSet.Clear();
+			RaiseCurrentSetChanged();
+		}
+		
+		/// <summary>Add the patterns in 'node' to the current list</summary>
+		protected override void MergePatterns(XElement node)
+		{
+			bool some_added = false;
+			foreach (XElement n in node.Elements(XmlTag.Highlight))
+				try { some_added |= CurrentSet.AddIfUnique(new Highlight(n)); } catch {} // Ignore those that fail
+			if (some_added) RaiseCurrentSetChanged();
+		}
 	}
+	
+	
+	/// <summary>Filter specific instance of the pattern set control</summary>
 	internal class PatternSetFT :PatternSetUi
 	{
 		/// <summary>A reference to the current set of filter patterns</summary>
@@ -152,15 +246,33 @@ namespace RyLogViewer
 		{
 			m_settings = settings;
 			m_settings.SettingsSaving += (s,a)=>{ m_settings.FilterPatternSets = Export(); };
-			CurrentSet = filters;
 			Import(settings.FilterPatternSets);
+			CurrentSet = filters;
+			UpdateUI();
 		}
 		
 		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
 		protected override void CurrentSetToXml(XElement parent)
 		{
 			foreach (var p in CurrentSet)
-				parent.Add(p.ToXml(new XElement(XmlTag.Highlight)));
+				parent.Add(p.ToXml(new XElement(XmlTag.Filter)));
+		}
+		
+		/// <summary>Clear the current set of patterns</summary>
+		protected override void ClearPatterns()
+		{
+			if (CurrentSet.Count == 0) return;
+			CurrentSet.Clear();
+			RaiseCurrentSetChanged();
+		}
+		
+		/// <summary>Add the patterns in 'node' to the current list</summary>
+		protected override void MergePatterns(XElement node)
+		{
+			bool some_added = false;
+			foreach (XElement n in node.Elements(XmlTag.Highlight))
+				try { some_added |= CurrentSet.AddIfUnique(new Filter(n)); } catch {} // Ignore those that fail
+			if (some_added) RaiseCurrentSetChanged();
 		}
 	}
 }

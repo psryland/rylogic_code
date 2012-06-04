@@ -77,6 +77,7 @@ namespace RyLogViewer
 		
 		//todo:
 		// Filter/Highlight sets
+		// drag n drop
 		// read stdin
 		// unicode text files
 		// Tooltips
@@ -138,6 +139,7 @@ namespace RyLogViewer
 			m_grid.CellValueNeeded    += CellValueNeeded;
 			m_grid.CellPainting       += CellPainting;
 			m_grid.SelectionChanged   += (s,a) => { UpdateStatus(); };
+			m_grid.DataError          += (s,a) => { Debug.Assert(false); };
 			
 			// Settings
 			m_settings.SettingsLoaded += (s,a) => ApplySettings();

@@ -34,7 +34,6 @@
 			this.m_combo_sets = new System.Windows.Forms.ComboBox();
 			this.m_btn_save = new System.Windows.Forms.Button();
 			this.m_btn_load = new System.Windows.Forms.Button();
-			this.m_btn_del = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
 			// m_image_list
@@ -53,7 +52,7 @@
 			this.m_combo_sets.FormattingEnabled = true;
 			this.m_combo_sets.Location = new System.Drawing.Point(3, 9);
 			this.m_combo_sets.Name = "m_combo_sets";
-			this.m_combo_sets.Size = new System.Drawing.Size(201, 21);
+			this.m_combo_sets.Size = new System.Drawing.Size(248, 21);
 			this.m_combo_sets.TabIndex = 1;
 			// 
 			// m_btn_save
@@ -62,7 +61,7 @@
 			this.m_btn_save.AutoSize = true;
 			this.m_btn_save.ImageIndex = 0;
 			this.m_btn_save.ImageList = this.m_image_list;
-			this.m_btn_save.Location = new System.Drawing.Point(210, 5);
+			this.m_btn_save.Location = new System.Drawing.Point(257, 5);
 			this.m_btn_save.Name = "m_btn_save";
 			this.m_btn_save.Size = new System.Drawing.Size(39, 28);
 			this.m_btn_save.TabIndex = 2;
@@ -74,30 +73,17 @@
 			this.m_btn_load.AutoSize = true;
 			this.m_btn_load.ImageIndex = 1;
 			this.m_btn_load.ImageList = this.m_image_list;
-			this.m_btn_load.Location = new System.Drawing.Point(255, 5);
+			this.m_btn_load.Location = new System.Drawing.Point(302, 5);
 			this.m_btn_load.Name = "m_btn_load";
 			this.m_btn_load.Size = new System.Drawing.Size(39, 28);
 			this.m_btn_load.TabIndex = 3;
 			this.m_btn_load.UseVisualStyleBackColor = true;
-			// 
-			// m_btn_del
-			// 
-			this.m_btn_del.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_del.AutoSize = true;
-			this.m_btn_del.ImageIndex = 2;
-			this.m_btn_del.ImageList = this.m_image_list;
-			this.m_btn_del.Location = new System.Drawing.Point(300, 5);
-			this.m_btn_del.Name = "m_btn_del";
-			this.m_btn_del.Size = new System.Drawing.Size(39, 28);
-			this.m_btn_del.TabIndex = 4;
-			this.m_btn_del.UseVisualStyleBackColor = true;
 			// 
 			// PatternSetUi
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.Controls.Add(this.m_btn_del);
 			this.Controls.Add(this.m_btn_load);
 			this.Controls.Add(this.m_btn_save);
 			this.Controls.Add(this.m_combo_sets);
@@ -115,6 +101,5 @@
 		private System.Windows.Forms.ComboBox m_combo_sets;
 		private System.Windows.Forms.Button m_btn_save;
 		private System.Windows.Forms.Button m_btn_load;
-		private System.Windows.Forms.Button m_btn_del;
 	}
 }

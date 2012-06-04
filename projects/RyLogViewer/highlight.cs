@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Xml.Linq;
@@ -27,13 +28,10 @@ namespace RyLogViewer
 		/// <summary>Construct from xml description</summary>
 		public Highlight(XElement node) :base(node)
 		{
-			try
-			{
-				// ReSharper disable PossibleNullReferenceException
-				ForeColour = Color.FromArgb(int.Parse(node.Element("forecolour").Value, NumberStyles.HexNumber));
-				BackColour = Color.FromArgb(int.Parse(node.Element("backcolour").Value, NumberStyles.HexNumber));
-				// ReSharper restore PossibleNullReferenceException
-			} catch {} // swallow bad input data
+			// ReSharper disable PossibleNullReferenceException
+			ForeColour = Color.FromArgb(int.Parse(node.Element(XmlTag.ForeColour).Value, NumberStyles.HexNumber));
+			BackColour = Color.FromArgb(int.Parse(node.Element(XmlTag.BackColour).Value, NumberStyles.HexNumber));
+			// ReSharper restore PossibleNullReferenceException
 		}
 
 		/// <summary>Export this highlight as xml</summary>
@@ -42,8 +40,8 @@ namespace RyLogViewer
 			base.ToXml(node);
 			node.Add
 			(
-				new XElement("forecolour" ,ForeColour.ToArgb().ToString("X")),
-				new XElement("backcolour" ,BackColour.ToArgb().ToString("X"))
+				new XElement(XmlTag.ForeColour ,ForeColour.ToArgb().ToString("X")),
+				new XElement(XmlTag.BackColour ,BackColour.ToArgb().ToString("X"))
 			);
 			return node;
 		}
@@ -57,7 +55,7 @@ namespace RyLogViewer
 			try { doc = XDocument.Parse(highlights); } catch { return list; }
 			if (doc.Root == null) return list;
 			foreach (XElement n in doc.Root.Elements(XmlTag.Highlight))
-				list.Add(new Highlight(n));
+				try { list.Add(new Highlight(n)); } catch {} // Ignore those that fail
 			
 			return list;
 		}
@@ -78,6 +76,26 @@ namespace RyLogViewer
 		public override object Clone()
 		{
 			return MemberwiseClone();
+		}
+
+		/// <summary>Value equality test</summary>
+		public override bool Equals(object obj)
+		{
+			Highlight rhs = obj as Highlight;
+			return 
+				rhs != null &&
+				base.Equals(obj) &&
+				ForeColour.Equals(rhs.ForeColour) &&
+				BackColour.Equals(rhs.BackColour);
+		}
+
+		/// <summary>Value hash code</summary>
+		public override int GetHashCode()
+		{
+			return
+				base.GetHashCode()^
+				ForeColour.GetHashCode()^
+				BackColour.GetHashCode();
 		}
 	}
 }

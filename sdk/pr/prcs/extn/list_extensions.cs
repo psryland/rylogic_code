@@ -35,6 +35,16 @@ namespace pr.extn
 			return list[list.Count - 1];
 		}
 
+		/// <summary>Add 'item' to the list if it's not already there.
+		/// Uses 'item.Equals()' to test for uniqueness.
+		/// Returns true if 'item' was added, false if it was a duplicate</summary>
+		public static bool AddIfUnique<T>(this IList<T> list, T item)
+		{
+			foreach (var i in list) if (i.Equals(item)) return false;
+			list.Add(item);
+			return true;
+		}
+
 		/// <summary>Swap elements in the list</summary>
 		public static void Swap<T>(this IList<T> list, int index0, int index1)
 		{

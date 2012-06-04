@@ -108,17 +108,14 @@ namespace RyLogViewer
 		/// <summary>Construct from xml description</summary>
 		public Pattern(XElement node)
 		{
-			try
-			{
-				// ReSharper disable PossibleNullReferenceException
-				Expr        = node.Element("expr").Value;
-				Active      = bool.Parse(node.Element("active").Value);
-				IsRegex     = bool.Parse(node.Element("isregex").Value);
-				IgnoreCase  = bool.Parse(node.Element("ignorecase").Value);
-				Invert      = bool.Parse(node.Element("invert").Value);
-				BinaryMatch = bool.Parse(node.Element("binary").Value);
-				// ReSharper restore PossibleNullReferenceException
-			} catch {} // swallow bad input data
+			// ReSharper disable PossibleNullReferenceException
+			Expr        =            node.Element(XmlTag.Expr      ).Value;
+			Active      = bool.Parse(node.Element(XmlTag.Active    ).Value);
+			IsRegex     = bool.Parse(node.Element(XmlTag.IsRegex   ).Value);
+			IgnoreCase  = bool.Parse(node.Element(XmlTag.IgnoreCase).Value);
+			Invert      = bool.Parse(node.Element(XmlTag.Invert    ).Value);
+			BinaryMatch = bool.Parse(node.Element(XmlTag.Binary    ).Value);
+			// ReSharper restore PossibleNullReferenceException
 		}
 		
 		/// <summary>Export this pattern as xml</summary>
@@ -126,12 +123,12 @@ namespace RyLogViewer
 		{
 			node.Add
 			(
-				new XElement("expr"       ,Expr       ),
-				new XElement("active"     ,Active     ),
-				new XElement("isregex"    ,IsRegex    ),
-				new XElement("ignorecase" ,IgnoreCase ),
-				new XElement("invert"     ,Invert     ),
-				new XElement("binary"     ,BinaryMatch)
+				new XElement(XmlTag.Expr       ,Expr       ),
+				new XElement(XmlTag.Active     ,Active     ),
+				new XElement(XmlTag.IsRegex    ,IsRegex    ),
+				new XElement(XmlTag.IgnoreCase ,IgnoreCase ),
+				new XElement(XmlTag.Invert     ,Invert     ),
+				new XElement(XmlTag.Binary     ,BinaryMatch)
 			);
 			return node;
 		}
@@ -140,6 +137,32 @@ namespace RyLogViewer
 		public virtual object Clone()
 		{
 			return new Pattern(this);
+		}
+
+		/// <summary>Value equality test</summary>
+		public override bool Equals(object obj)
+		{
+			Pattern rhs = obj as Pattern;
+			return
+				rhs != null &&
+				Expr       .Equals(rhs.Expr       ) &&
+				Active     .Equals(rhs.Active     ) &&
+				IsRegex    .Equals(rhs.IsRegex    ) &&
+				IgnoreCase .Equals(rhs.IgnoreCase ) &&
+				Invert     .Equals(rhs.Invert     ) &&
+				BinaryMatch.Equals(rhs.BinaryMatch);
+		}
+
+		/// <summary>Value hash code</summary>
+		public override int GetHashCode()
+		{
+			return
+				Expr       .GetHashCode()^
+				Active     .GetHashCode()^
+				IsRegex    .GetHashCode()^
+				IgnoreCase .GetHashCode()^
+				Invert     .GetHashCode()^
+				BinaryMatch.GetHashCode();
 		}
 	}
 }

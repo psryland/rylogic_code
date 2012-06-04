@@ -81,9 +81,6 @@
     <Compile Include="main.Designer.cs">
       <DependentUpon>main.cs</DependentUpon>
     </Compile>
-    <Compile Include="pattern_sets.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Include="pattern_set_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -109,9 +106,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="main.resx">
       <DependentUpon>main.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="pattern_sets.resx">
-      <DependentUpon>pattern_sets.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="pattern_set_ui.resx">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>

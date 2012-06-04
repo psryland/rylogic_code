@@ -23,10 +23,7 @@ namespace RyLogViewer
 		public Filter(XElement node) :base(node)
 		{
 			// ReSharper disable PossibleNullReferenceException
-			try
-			{
-				Exclude =bool.Parse(node.Element("exclude").Value);
-			} catch {} // swallow bad input data
+			Exclude =bool.Parse(node.Element(XmlTag.Exclude).Value);
 			// ReSharper restore PossibleNullReferenceException
 		}
 
@@ -36,7 +33,7 @@ namespace RyLogViewer
 			base.ToXml(node);
 			node.Add
 			(
-				new XElement("exclude" ,Exclude)
+				new XElement(XmlTag.Exclude ,Exclude)
 			);
 			return node;
 		}
@@ -49,8 +46,8 @@ namespace RyLogViewer
 			XDocument doc;
 			try { doc = XDocument.Parse(filters); } catch { return list; }
 			if (doc.Root == null) return list;
-			foreach (XElement n in doc.Root.Elements("filter"))
-				list.Add(new Filter(n));
+			foreach (XElement n in doc.Root.Elements(XmlTag.Filter))
+				try { list.Add(new Filter(n)); } catch {} // Ignore those that fail
 			
 			return list;
 		}
@@ -58,11 +55,11 @@ namespace RyLogViewer
 		/// <summary>Serialise the highlight patterns to xml</summary>
 		public static string Export(List<Filter> filters)
 		{
-			XDocument doc = new XDocument(new XElement("root"));
+			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
 			
 			foreach (var hl in filters)
-				doc.Root.Add(hl.ToXml(new XElement("filter")));
+				doc.Root.Add(hl.ToXml(new XElement(XmlTag.Filter)));
 			
 			return doc.ToString(SaveOptions.None);
 		}
@@ -71,6 +68,24 @@ namespace RyLogViewer
 		public override object Clone()
 		{
 			return new Filter(this);
+		}
+
+		/// <summary>Value equality test</summary>
+		public override bool Equals(object obj)
+		{
+			Filter rhs = obj as Filter;
+			return
+				rhs != null &&
+				base.Equals(obj) &&
+				Exclude.Equals(rhs.Exclude);
+		}
+		
+		/// <summary>Value hash code</summary>
+		public override int GetHashCode()
+		{
+			return
+				base.GetHashCode()^
+				Exclude.GetHashCode();
 		}
 	}
 }

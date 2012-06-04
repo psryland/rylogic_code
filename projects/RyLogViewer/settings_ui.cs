@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
@@ -77,12 +78,6 @@ namespace RyLogViewer
 				};
 			
 			// Highlights
-			m_pattern_hl.Add += (s,a)=>
-				{
-					if (m_pattern_hl.IsNew) m_highlights.Add((Highlight)m_pattern_hl.Pattern);
-					m_pattern_hl.NewPattern(new Highlight());
-					UpdateUI();
-				};
 			var hl_style = new DataGridViewCellStyle
 			{
 				Font      = m_settings.Font,
@@ -107,15 +102,20 @@ namespace RyLogViewer
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.MouseClick       += (s,a)=> OnMouseClick(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
+			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
 			m_pattern_set_hl.Init(m_settings, m_highlights);
-
-			// Filters
-			m_pattern_ft.Add += (s,a)=>
+			m_pattern_set_hl.CurrentSetChanged += (s,a)=>
 				{
-					if (m_pattern_ft.IsNew) m_filters.Add((Filter)m_pattern_ft.Pattern);
-					m_pattern_ft.NewPattern(new Filter());
 					UpdateUI();
 				};
+			m_pattern_hl.Add += (s,a)=>
+				{
+					if (m_pattern_hl.IsNew) m_highlights.Add((Highlight)m_pattern_hl.Pattern);
+					m_pattern_hl.NewPattern(new Highlight());
+					UpdateUI();
+				};
+
+			// Filters
 			m_grid_filter.AllowDrop           = true;
 			m_grid_filter.VirtualMode         = true;
 			m_grid_filter.AutoGenerateColumns = false;
@@ -133,7 +133,18 @@ namespace RyLogViewer
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
 			m_grid_filter.MouseClick         += (s,a)=> OnMouseClick(m_grid_filter, m_filters, a);
 			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
+			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
 			m_pattern_set_ft.Init(m_settings, m_filters);
+			m_pattern_set_ft.CurrentSetChanged += (s,a)=>
+				{
+					UpdateUI();
+				};
+			m_pattern_ft.Add += (s,a)=>
+				{
+					if (m_pattern_ft.IsNew) m_filters.Add((Filter)m_pattern_ft.Pattern);
+					m_pattern_ft.NewPattern(new Filter());
+					UpdateUI();
+				};
 			
 			// Save on close
 			Closed += (s,a) =>
@@ -222,7 +233,7 @@ namespace RyLogViewer
 		private void OnMouseClick<T>(DataGridView grid, List<T> patterns, MouseEventArgs e) where T:Pattern
 		{
 			var hit = grid.HitTest(e.X, e.Y);
-			if (hit.Type == DataGridViewHitTestType.Cell)
+			if (hit.Type == DataGridViewHitTestType.Cell && hit.RowIndex >= 0)
 			{
 				var cell = grid[hit.ColumnIndex, hit.RowIndex];
 				T pat = patterns[hit.RowIndex];
@@ -246,8 +257,8 @@ namespace RyLogViewer
 					if (hl != null)
 					{
 						PickColours(grid, e.X, e.Y,
-							(s,a) => { hl.ForeColour = PickColour(hl.ForeColour); grid.InvalidateCell(cell); },
-							(s,a) => { hl.BackColour = PickColour(hl.BackColour); grid.InvalidateCell(cell); });
+							(s,a) => { hl.ForeColour = PickColour(hl.ForeColour); grid.InvalidateCell(hit.ColumnIndex, hit.RowIndex); },
+							(s,a) => { hl.BackColour = PickColour(hl.BackColour); grid.InvalidateCell(hit.ColumnIndex, hit.RowIndex); });
 					}
 					break;
 				case ColumnNames.Exclude:
@@ -295,10 +306,14 @@ namespace RyLogViewer
 			m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
 			
 			int selected = m_grid_highlight.FirstSelectedRowIndex();
+			m_grid_highlight.CurrentCell = null;
+			m_grid_highlight.RowCount = 0;
 			m_grid_highlight.RowCount = m_highlights.Count;
 			m_grid_highlight.SelectRow(selected);
 			
 			selected = m_grid_filter.FirstSelectedRowIndex();
+			m_grid_filter.CurrentCell = null;
+			m_grid_filter.RowCount = 0;
 			m_grid_filter.RowCount = m_filters.Count;
 			m_grid_filter.SelectRow(selected);
 			

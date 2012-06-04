@@ -155,6 +155,25 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Add Pattern Set Failed.
+        /// </summary>
+        internal static string CreatePatternSetFailed {
+            get {
+                return ResourceManager.GetString("CreatePatternSetFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not create a pattern set from the current patterns.
+        ///Error: {0}.
+        /// </summary>
+        internal static string CreatePatternSetFailedMsg {
+            get {
+                return ResourceManager.GetString("CreatePatternSetFailedMsg", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Edit.
         /// </summary>
         internal static string Edit {
@@ -238,6 +257,25 @@ namespace RyLogViewer.Properties {
         internal static string InvalidFilePath {
             get {
                 return ResourceManager.GetString("InvalidFilePath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Load Pattern Set Failed.
+        /// </summary>
+        internal static string LoadPatternSetFailed {
+            get {
+                return ResourceManager.GetString("LoadPatternSetFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not load pattern set {0}.
+        ///Error: {1}.
+        /// </summary>
+        internal static string LoadPatternSetFailedMsg {
+            get {
+                return ResourceManager.GetString("LoadPatternSetFailedMsg", resourceCulture);
             }
         }
         
