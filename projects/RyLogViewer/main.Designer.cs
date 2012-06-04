@@ -92,7 +92,7 @@
 			this.m_toolstrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 0);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(175, 27);
+			this.m_toolstrip.Size = new System.Drawing.Size(144, 27);
 			this.m_toolstrip.TabIndex = 0;
 			this.m_toolstrip.Text = "toolStrip1";
 			// 
@@ -413,6 +413,7 @@
 			// 
 			// Main
 			// 
+			this.AllowDrop = true;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(593, 495);

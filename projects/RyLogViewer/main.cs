@@ -76,7 +76,6 @@ namespace RyLogViewer
 		private long m_file_end;                       // The last known size of the file
 		
 		//todo:
-		// drag n drop
 		// read stdin
 		// unicode text files
 		// Tooltips
@@ -107,8 +106,8 @@ namespace RyLogViewer
 			m_menu_file_open.Click         += (s,a) => OpenLogFile(null);
 			m_menu_file_close.Click        += (s,a) => CloseLogFile();
 			m_menu_file_exit.Click         += (s,a) => Close();
-			m_menu_edit_selectall.Click    += (s,a) => {};//SelectAll();
-			m_menu_edit_copy.Click         += (s,a) => {};//Copy();
+			m_menu_edit_selectall.Click    += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
+			m_menu_edit_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
 			m_menu_edit_find.Click         += (s,a) => {};//Find();
 			m_menu_edit_find_next.Click    += (s,a) => {};
 			m_menu_edit_find_prev.Click    += (s,a) => {};
@@ -274,6 +273,39 @@ namespace RyLogViewer
 			m_menu.Location = m_settings.MenuPosition;
 			m_toolstrip.Location = m_settings.ToolsPosition;
 			m_status.Location = m_settings.StatusPosition;
+		}
+
+		/// <summary>Allow dropping of files</summary>
+		protected override void OnDragEnter(DragEventArgs args)
+		{
+			FileDrop(args, true);
+		}
+		
+		/// <summary>Do file drop</summary>
+		protected override void OnDragDrop(DragEventArgs args)
+		{
+			FileDrop(args, false);
+		}
+		
+		/// <summary>Handle file drop</summary>
+		private void FileDrop(DragEventArgs args, bool test_can_drop)
+		{
+			args.Effect = DragDropEffects.None;
+			
+			// File drop only
+			if (!args.Data.GetDataPresent(DataFormats.FileDrop))
+				return;
+			
+			// Single file drop only
+			string[] files = (string[])args.Data.GetData(DataFormats.FileDrop);
+			if (files.Length != 1)
+				return;
+			
+			args.Effect = DragDropEffects.All;
+			if (test_can_drop) return;
+			
+			// Open the dropped file
+			OpenLogFile(files[0]);
 		}
 		
 		/// <summary>Returns a file stream for 'filepath' openned with R/W sharing</summary>
