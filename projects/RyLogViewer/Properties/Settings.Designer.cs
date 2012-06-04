@@ -61,18 +61,6 @@ namespace RyLogViewer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("10")]
-        public byte RowDelimiter {
-            get {
-                return ((byte)(this["RowDelimiter"]));
-            }
-            set {
-                this["RowDelimiter"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
         public byte ColDelimiter {
             get {
@@ -344,6 +332,19 @@ namespace RyLogViewer.Properties {
             }
             set {
                 this["FilterPatternSets"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute(@"
+")]
+        public string RowDelimiter {
+            get {
+                return ((string)(this["RowDelimiter"]));
+            }
+            set {
+                this["RowDelimiter"] = value;
             }
         }
     }

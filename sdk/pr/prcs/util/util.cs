@@ -127,6 +127,14 @@ namespace pr.util
 			return Math.Sqrt(dx*dx + dy*dy);
 		}
 	
+		/// <summary>Return an assembly attribute</summary>
+		public static T GetAssemblyAttribute<T>()
+		{
+			object[] attr = Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(T), false);
+			if (attr.Length == 0) throw new ApplicationException("Assembly does not have attribute "+typeof(T).Name);
+			return (T)(attr[0]);
+		}
+
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
 		public static DateTime AssemblyTimestamp(Assembly ass)
 		{

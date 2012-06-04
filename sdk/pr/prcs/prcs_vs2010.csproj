@@ -141,6 +141,7 @@
     <Compile Include="attrib\units_attr.cs" />
     <Compile Include="common\pin.cs" />
     <Compile Include="common\range.cs" />
+    <Compile Include="common\settings.cs" />
     <Compile Include="common\singleton.cs" />
     <Compile Include="common\tuple.cs" />
     <Compile Include="common\weak_delegate.cs" />

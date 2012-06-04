@@ -25,8 +25,8 @@ namespace RyLogViewer
 				"Version: {2}"+
 				"Built: {3}"+
 				"All Rights Reserved"
-				,GetAttr<AssemblyCompanyAttribute>().Company
-				,GetAttr<AssemblyCopyrightAttribute>().Copyright + Environment.NewLine
+				,Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company
+				,Util.GetAssemblyAttribute<AssemblyCopyrightAttribute>().Copyright + Environment.NewLine
 				,ass.GetName().Version + Environment.NewLine
 				,Util.AssemblyTimestamp(ass) + Environment.NewLine
 				);
@@ -39,11 +39,6 @@ namespace RyLogViewer
 					m_edit_version_history.Text = r.ReadToEnd();
 				m_edit_version_history.Select(0,0);
 			}
-		}
-		private static T GetAttr<T>()
-		{
-			object[] attr = Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(T), false);
-			return (T)(attr[0]);
 		}
 		#region Windows Form Designer generated code
 		/// <summary>

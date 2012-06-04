@@ -67,6 +67,11 @@
 			this.m_lbl_file_size = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_menu_encoding = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_ascii = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_utf8 = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_ucs2_bigendian = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_ucs2_littleendian = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -90,7 +95,7 @@
             this.toolStripSeparator1,
             this.m_check_tail});
 			this.m_toolstrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
-			this.m_toolstrip.Location = new System.Drawing.Point(3, 0);
+			this.m_toolstrip.Location = new System.Drawing.Point(344, 0);
 			this.m_toolstrip.Name = "m_toolstrip";
 			this.m_toolstrip.Size = new System.Drawing.Size(144, 27);
 			this.m_toolstrip.TabIndex = 0;
@@ -161,11 +166,12 @@
 			this.m_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file,
             this.m_menu_edit,
+            this.m_menu_encoding,
             this.m_menu_tools,
             this.m_menu_help});
-			this.m_menu.Location = new System.Drawing.Point(3, 27);
+			this.m_menu.Location = new System.Drawing.Point(3, 0);
 			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(180, 24);
+			this.m_menu.Size = new System.Drawing.Size(341, 24);
 			this.m_menu.Stretch = false;
 			this.m_menu.TabIndex = 1;
 			this.m_menu.Text = "m_menu";
@@ -376,7 +382,7 @@
 			this.m_toolstrip_cont.ContentPanel.AutoScroll = true;
 			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_grid);
 			this.m_toolstrip_cont.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
-			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 422);
+			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 446);
 			this.m_toolstrip_cont.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_toolstrip_cont.Location = new System.Drawing.Point(0, 0);
 			this.m_toolstrip_cont.Name = "m_toolstrip_cont";
@@ -407,9 +413,44 @@
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(587, 416);
+			this.m_grid.Size = new System.Drawing.Size(587, 440);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
+			// 
+			// m_menu_encoding
+			// 
+			this.m_menu_encoding.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_encoding_ascii,
+            this.m_menu_encoding_utf8,
+            this.m_menu_encoding_ucs2_bigendian,
+            this.m_menu_encoding_ucs2_littleendian});
+			this.m_menu_encoding.Name = "m_menu_encoding";
+			this.m_menu_encoding.Size = new System.Drawing.Size(69, 20);
+			this.m_menu_encoding.Text = "E&ncoding";
+			// 
+			// m_menu_encoding_ascii
+			// 
+			this.m_menu_encoding_ascii.Name = "m_menu_encoding_ascii";
+			this.m_menu_encoding_ascii.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_ascii.Text = "ASCII";
+			// 
+			// m_menu_encoding_utf8
+			// 
+			this.m_menu_encoding_utf8.Name = "m_menu_encoding_utf8";
+			this.m_menu_encoding_utf8.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_utf8.Text = "UTF-8";
+			// 
+			// m_menu_encoding_ucs2_bigendian
+			// 
+			this.m_menu_encoding_ucs2_bigendian.Name = "m_menu_encoding_ucs2_bigendian";
+			this.m_menu_encoding_ucs2_bigendian.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_ucs2_bigendian.Text = "UCS-2 (big endian)";
+			// 
+			// m_menu_encoding_ucs2_littleendian
+			// 
+			this.m_menu_encoding_ucs2_littleendian.Name = "m_menu_encoding_ucs2_littleendian";
+			this.m_menu_encoding_ucs2_littleendian.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_ucs2_littleendian.Text = "UCS-2 (little endian)";
 			// 
 			// Main
 			// 
@@ -481,6 +522,11 @@
 		private System.Windows.Forms.ToolStripButton m_btn_refresh;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_totd;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ascii;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_utf8;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ucs2_bigendian;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ucs2_littleendian;
 	}
 }
 

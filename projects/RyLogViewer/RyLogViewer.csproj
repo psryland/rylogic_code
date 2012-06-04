@@ -92,6 +92,7 @@
     </Compile>
     <Compile Include="program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="settings.cs" />
     <Compile Include="settings_ui.cs">
       <SubType>Form</SubType>
     </Compile>

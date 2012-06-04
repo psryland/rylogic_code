@@ -69,6 +69,7 @@ namespace RyLogViewer
 		private readonly EventBatcher m_file_changed;  // Event batcher for m_watch events
 		private readonly List<Highlight> m_highlights; // A list of the active highlights only
 		private readonly LineCache m_line_cache;       // Optimisation for reading whole lines on multi-column grids
+		private Encoding m_encoding;                   // The file encoding
 		private List<Range> m_line_index;              // Byte offsets (from file begin) to the byte range of a line
 		private string m_filepath;                     // The path of the log file we're viewing
 		private FileStream m_file;                     // A file stream of 'm_filepath'
@@ -76,8 +77,9 @@ namespace RyLogViewer
 		private long m_file_end;                       // The last known size of the file
 		
 		//todo:
-		// read stdin
 		// unicode text files
+		// find
+		// read stdin
 		// Tooltips
 		// partial highlighting
 		// Large file selection on first line loads next earlier chunk
@@ -95,6 +97,7 @@ namespace RyLogViewer
 			m_file_changed = new EventBatcher(10, this);
 			m_highlights = new List<Highlight>();
 			m_line_cache = new LineCache();
+			m_encoding = Encoding.ASCII;
 			m_line_index = null;
 			m_filepath = null;
 			m_file = null;
@@ -102,26 +105,30 @@ namespace RyLogViewer
 			m_file_end = 0;
 			
 			// Menu
-			m_menu.Move                    += (s,a) => { m_settings.MenuPosition = m_menu.Location; m_settings.Save(); };
-			m_menu_file_open.Click         += (s,a) => OpenLogFile(null);
-			m_menu_file_close.Click        += (s,a) => CloseLogFile();
-			m_menu_file_exit.Click         += (s,a) => Close();
-			m_menu_edit_selectall.Click    += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
-			m_menu_edit_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
-			m_menu_edit_find.Click         += (s,a) => {};//Find();
-			m_menu_edit_find_next.Click    += (s,a) => {};
-			m_menu_edit_find_prev.Click    += (s,a) => {};
-			m_menu_tools_alwaysontop.Click += (s,a) => { m_settings.AlwaysOnTop = !m_settings.AlwaysOnTop; TopMost = m_settings.AlwaysOnTop; };
-			m_menu_tools_highlights.Click  += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
-			m_menu_tools_filters.Click     += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
-			m_menu_tools_options.Click     += (s,a) => ShowOptions(SettingsUI.ETab.General);
-			m_menu_help_totd.Click         += (s,a) => ShowTotD();
-			m_menu_help_about.Click        += (s,a) => ShowAbout();
+			m_menu.Move                             += (s,a) => { m_settings.MenuPosition = m_menu.Location; m_settings.Save(); };
+			m_menu_file_open.Click                  += (s,a) => OpenLogFile(null);
+			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
+			m_menu_file_exit.Click                  += (s,a) => Close();
+			m_menu_edit_selectall.Click             += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
+			m_menu_edit_copy.Click                  += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
+			m_menu_edit_find.Click                  += (s,a) => {};//Find();
+			m_menu_edit_find_next.Click             += (s,a) => {};
+			m_menu_edit_find_prev.Click             += (s,a) => {};
+			m_menu_encoding_ascii.Click             += (s,a) => { m_encoding = Encoding.ASCII;            Reload(); };
+			m_menu_encoding_utf8.Click              += (s,a) => { m_encoding = Encoding.UTF8;             Reload(); };
+			m_menu_encoding_ucs2_bigendian.Click    += (s,a) => { m_encoding = Encoding.BigEndianUnicode; Reload(); };
+			m_menu_encoding_ucs2_littleendian.Click += (s,a) => { m_encoding = Encoding.Unicode;          Reload(); };
+			m_menu_tools_alwaysontop.Click          += (s,a) => { m_settings.AlwaysOnTop = !m_settings.AlwaysOnTop; TopMost = m_settings.AlwaysOnTop; };
+			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
+			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
+			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
+			m_menu_help_about.Click                 += (s,a) => ShowAbout();
 			
 			// Toolbar
 			m_toolstrip.Move            += (s,a) => { m_settings.ToolsPosition = m_toolstrip.Location; m_settings.Save(); };
 			m_btn_open_log.Click        += (s,a) => OpenLogFile(null);
-			m_btn_refresh.Click         += (s,a) => { if (m_file != null) BuildLineIndex(m_filepath); };
+			m_btn_refresh.Click         += (s,a) => Reload();
 			m_check_tail.CheckedChanged += (s,a) => EnableTail(m_check_tail.Checked);
 			m_btn_highlights.Click      += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_btn_filters.Click         += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
@@ -388,15 +395,85 @@ namespace RyLogViewer
 			return include;
 		}
 		
+		/// <summary>Reload the current file</summary>
+		private void Reload()
+		{
+			if (m_file != null)
+				BuildLineIndex(m_filepath);
+		}
+		
+		/// <summary>
+		/// Buffer a maximum of 'count' bytes from 'stream' into 'buf'.
+		/// If 'backward' is true the stream is seeked backward from 'pos' before reading so that
+		/// after the read the file position is back at 'pos'. If false, reading is forward from 'pos'</summary>
+		private static int Buffer(Stream file, byte[] buf, int count, long pos, bool backward, Encoding encoding)
+		{
+			// The number of bytes to buffer
+			count = Math.Min(count, buf.Length);
+			if (count == 0) return 0;
+			
+			// Set the file position
+			if (backward) pos -= count;
+			file.Seek(pos, SeekOrigin.Begin);
+			
+			// Move to the start of a character
+			int ofs = 0;
+			if      (encoding.Equals(Encoding.ASCII)) {}
+			else if (encoding.Equals(Encoding.Unicode) || encoding.Equals(Encoding.BigEndianUnicode))
+			{
+				// Ensure a 16-bit word boundary
+				if ((pos % 2) == 1)
+				{
+					file.ReadByte();
+					--count;
+				}
+			}
+			else if (encoding.Equals(Encoding.UTF8            ))
+			{
+				// UTF-8 encoding:
+				//Bits Last code point  Byte 1    Byte 2    Byte 3    Byte 4    Byte 5   Byte 6
+				//  7     U+007F        0xxxxxxx
+				// 11     U+07FF        110xxxxx  10xxxxxx
+				// 16     U+FFFF        1110xxxx  10xxxxxx  10xxxxxx
+				// 21     U+1FFFFF      11110xxx  10xxxxxx  10xxxxxx  10xxxxxx
+				// 26     U+3FFFFFF     111110xx  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx
+				// 31     U+7FFFFFFF    1111110x  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx  10xxxxxx
+				const int char_byte  = 0xbf; // 10111111
+				for (int b = file.ReadByte(); count-- != 0; b = file.ReadByte())
+				{
+					// End of file
+					if (b == -1)
+						return 0; 
+					
+					// If 'b' is a byte halfway through an encoded char, keep reading
+					if ((b & char_byte) == b)
+						continue;
+					
+					// Otherwise it's an ascii char or the start of a multibyte char
+					// save the byte we read, and read the remander of 'count'
+					buf[0] = (byte)b;
+					ofs = 1;
+					break;
+				}
+			}
+			
+			// Buffer file data
+			int read = file.Read(buf, ofs, count);
+			if (read != count) throw new IOException("failed to read file over range ["+pos+","+(pos+count)+"). Read "+read+"/"+count+" bytes.");
+			return read;
+		}
+		
 		/// <summary>Build a line index of the file</summary>
 		private void BuildLineIndex(string filepath)
 		{
 			// Variables used by the follow async task
-			int max_line_count = m_settings.LineCount;
-			byte row_delimiter = m_settings.RowDelimiter;
+			List<Filter> filters   = (from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft).ToList();
+			Encoding encoding      = (Encoding)m_encoding.Clone();
 			List<Range> line_index = new List<Range>();
-			List<Filter> filters = (from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft).ToList();
-			long last_line = 0, file_end = 0;
+			byte[] row_delim       = encoding.GetBytes(m_settings.RowDelimiter);
+			int max_line_count     = m_settings.LineCount;
+			long last_line         = 0;
+			long file_end          = 0;
 			
 			// Do this in a background thread, in case it takes ages
 			ProgressForm task = new ProgressForm(Resources.BuildingLineIndex, string.Format(Resources.ReadingXLineFromY, m_settings.LineCount, filepath), (s,a)=>
@@ -419,13 +496,8 @@ namespace RyLogViewer
 							int pc = 100 * line_index.Count / max_line_count;
 							bgw.ReportProgress(pc);
 							
-							// The number of bytes to buffer
-							int count = (int)Math.Min(pos, buf.Length);
-							
-							// Buffer file data
-							file.Seek(pos - count, SeekOrigin.Begin);
-							int read = file.Read(buf, 0, count);
-							if (read != count) throw new IOException("failed to read file over range ["+(pos-count)+","+(pos+count)+"). Read "+read+"/"+count+" bytes.");
+							// Buffer data from the file
+							int read = Buffer(file, buf, (int)pos, pos, true, encoding);
 							pos -= read;
 							
 							// Add to line index
@@ -445,11 +517,20 @@ namespace RyLogViewer
 							Range Brng = new Range(read, read); // The range within 'buf' of the line text
 							for (;Brng.m_begin-- != 0 && line_index.Count != max_line_count;)
 							{
-								if (buf[Brng.m_begin] != row_delimiter) continue;
-								++Brng.m_begin;
+								// Quick test using the first byte of the row delimiter
+								if (buf[Brng.m_begin] != row_delim[0]) continue;
+								
+								// Test the remaining bytes of the row delimiter
+								bool new_row = (Brng.m_begin + row_delim.Length) < read;
+								for (int i = 1; new_row && i != row_delim.Length; ++i) new_row &= buf[Brng.m_begin+i] == row_delim[i];
+								if (!new_row) continue;
+								
+								// 'Brng.m_begin' points to the start of a row delimiter,
+								// Add the line not including row delimiters
+								Brng.m_begin += row_delim.Length;
 								AddLine(pos, Brng);
-								Brng.m_end   = Brng.m_begin;
-								Brng.m_begin = Brng.m_end - 1;
+								Brng.m_end   = Brng.m_begin - row_delim.Length;
+								Brng.m_begin = Brng.m_end;
 								if (last_line == 0) last_line = pos + Brng.m_end;
 							}
 							++Brng.m_begin;
@@ -496,35 +577,33 @@ namespace RyLogViewer
 			long pos = m_last_line;
 			long end = m_file.Length; // Read the new end of the file
 			if (end == m_file_end) return;
-			if (end <  m_file_end) { BuildLineIndex(m_filepath); return; } // If the file has shrunk, rebuild the index
+			if (end <  m_file_end) { Reload(); return; } // If the file has shrunk, rebuild the index
 			Debug.Assert(pos <= end, "'m_file_end' should always be greater than 'm_last_line'");
 			
 			// Variables used by the follow async task
-			string filepath = m_filepath;
-			byte row_delim = m_settings.RowDelimiter;
-			List<Filter> filters = ActiveFilters.ToList();
+			List<Filter> filters   = ActiveFilters.ToList();
+			Encoding encoding      = (Encoding)m_encoding.Clone();
+			List<Range> line_index = new List<Range>();
+			byte[] row_delim       = encoding.GetBytes(m_settings.RowDelimiter);
+			string filepath        = m_filepath;
+			long last_line         = 0;
 			
 			// Find the new line indices in a background thread
 			ThreadPool.QueueUserWorkItem(a=>
 				{
 					try
 					{
-						long last_line = 0;
-						List<Range> line_index = new List<Range>();
+						// A temporary buffer for reading sections of the file
+						byte[] buf = new byte[CacheSize]; 
+						
+						// Read lines starting from the last known line
 						using (var file = LoadFile(filepath))
 						{
-							// Seek to the start of the last known line
-							file.Seek(pos, SeekOrigin.Begin);
-						
-							// A temporary buffer for reading sections of the file
-							byte[] buf = new byte[CacheSize]; 
-						
 							// Scan forward reading new lines
 							for (;pos != end;)
 							{
-								// Buffer file data
-								int count = (int)Math.Min(end - pos, buf.Length);
-								int read = file.Read(buf, 0, count);
+								// Buffer data from the file
+								int read = Buffer(file, buf, (int)(end - pos), pos, false, encoding);
 								pos += read;
 								
 								// Add to the line index
@@ -540,14 +619,22 @@ namespace RyLogViewer
 										}
 									};
 								
-								// Search for new lines
+								// Search forward for new lines
 								Range Brng = new Range(0,0); // The range within 'buf' of the line text
 								for (; Brng.m_end != read; ++Brng.m_end)
 								{
-									if (buf[Brng.m_end] != row_delim) continue;
-									++Brng.m_end;
+									// Quick test using the first byte of the row delimiter
+									if (buf[Brng.m_end] != row_delim[0]) continue;
+									
+									// Test the remaining bytes of the row delimiter
+									bool new_row = (Brng.m_end + row_delim.Length) < read;
+									for (int i = 1; new_row && i != row_delim.Length; ++i) new_row &= buf[Brng.m_end+i] == row_delim[i];
+									if (!new_row) continue;
+
+									// 'Brng.m_end' points to the start of a row delimiter
+									// Add the line not including row delimiters
 									AddLine(pos - read, Brng);
-									Brng.m_begin = Brng.m_end;
+									Brng.m_begin = Brng.m_end + row_delim.Length;
 									Brng.m_end   = Brng.m_begin - 1;
 									last_line = pos - Brng.m_begin;
 								}
@@ -636,7 +723,7 @@ namespace RyLogViewer
 
 			// If the filter patterns have changed, reload the file
 			if (m_file != null && m_settings.FilterPatterns != filters)
-				BuildLineIndex(m_filepath);
+				Reload();
 			else
 			{
 				ApplySettings();
