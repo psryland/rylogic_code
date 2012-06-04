@@ -233,4 +233,17 @@ Error: {1}</value>
   <data name="LoadPatternSetFailed" xml:space="preserve">
     <value>Load Pattern Set Failed</value>
   </data>
+	<data name="ConfirmDelete">
+		<value xml:space="preserve">Confirm Delete</value>
+	</data>
+	<data name="DeletePatternSetFileX">
+		<value><![CDATA[Delete pattern set file '{0}'?]]></value>
+	</data>
+	<data name="DeleteFailed">
+		<value xml:space="preserve">Delete Failed</value>
+	</data>
+	<data name="CouldNotDeletePatternSetFileX">
+		<value xml:space="preserve">Could not delete pattern set file {0}.
+Error: {1}</value>
+	</data>
 </root>

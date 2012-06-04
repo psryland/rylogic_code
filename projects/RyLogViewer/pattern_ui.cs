@@ -89,37 +89,6 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 		}
-		
-		/// <summary>Update UI elements based on the current settings</summary>
-		private void UpdateUI()
-		{
-			SuspendLayout();
-			m_edit_pattern.Text         = Pattern.Expr;
-			m_check_active.Checked      = Pattern.Active;
-			m_check_is_regex.Checked    = Pattern.IsRegex;
-			m_check_ignore_case.Checked = Pattern.IgnoreCase;
-			m_check_invert.Checked      = Pattern.Invert;
-			m_check_binary.Checked      = Pattern.BinaryMatch;
-			
-			// Highlight the expression background to show valid regexp
-			m_edit_pattern.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
-			
-			// Preserve the current carot position
-			int start = m_edit_test.SelectionStart;
-			int length = m_edit_test.SelectionLength;
-			m_edit_test.SelectAll();
-			m_edit_test.SelectionBackColor = Color.White;
-			foreach (var r in Pattern.Match(m_edit_test.Text))
-			{
-				m_edit_test.SelectionStart     = (int)r.First;
-				m_edit_test.SelectionLength    = (int)r.Count;
-				m_edit_test.SelectionBackColor = Color.LightBlue;
-			}
-			m_edit_test.SelectionStart  = start;
-			m_edit_test.SelectionLength = length;
-			
-			ResumeLayout();
-		}
 
 		/// <summary>Select 'pat' as a new pattern</summary>
 		public void NewPattern(Pattern pat)
@@ -163,6 +132,39 @@ namespace RyLogViewer
 			win.Location = PointToScreen(Location) + new Size(Width, 0);
 			win.Size = new Size(640,480);
 			win.Show(this);
+		}
+		
+		/// <summary>Update UI elements based on the current settings</summary>
+		private void UpdateUI()
+		{
+			SuspendLayout();
+			m_edit_pattern.Text         = Pattern.Expr;
+			m_check_active.Checked      = Pattern.Active;
+			m_check_is_regex.Checked    = Pattern.IsRegex;
+			m_check_ignore_case.Checked = Pattern.IgnoreCase;
+			m_check_invert.Checked      = Pattern.Invert;
+			m_check_binary.Checked      = Pattern.BinaryMatch;
+			
+			m_btn_add.Enabled = m_edit_pattern.Text.Length != 0;
+			
+			// Highlight the expression background to show valid regexp
+			m_edit_pattern.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
+			
+			// Preserve the current carot position
+			int start = m_edit_test.SelectionStart;
+			int length = m_edit_test.SelectionLength;
+			m_edit_test.SelectAll();
+			m_edit_test.SelectionBackColor = Color.White;
+			foreach (var r in Pattern.Match(m_edit_test.Text))
+			{
+				m_edit_test.SelectionStart     = (int)r.First;
+				m_edit_test.SelectionLength    = (int)r.Count;
+				m_edit_test.SelectionBackColor = Color.LightBlue;
+			}
+			m_edit_test.SelectionStart  = start;
+			m_edit_test.SelectionLength = length;
+			
+			ResumeLayout();
 		}
 		
 		#region Component Designer generated code

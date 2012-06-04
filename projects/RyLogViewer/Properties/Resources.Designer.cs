@@ -155,6 +155,25 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Confirm Delete.
+        /// </summary>
+        internal static string ConfirmDelete {
+            get {
+                return ResourceManager.GetString("ConfirmDelete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not delete pattern set file {0}.
+        ///Error: {1}.
+        /// </summary>
+        internal static string CouldNotDeletePatternSetFileX {
+            get {
+                return ResourceManager.GetString("CouldNotDeletePatternSetFileX", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Add Pattern Set Failed.
         /// </summary>
         internal static string CreatePatternSetFailed {
@@ -170,6 +189,24 @@ namespace RyLogViewer.Properties {
         internal static string CreatePatternSetFailedMsg {
             get {
                 return ResourceManager.GetString("CreatePatternSetFailedMsg", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Delete Failed.
+        /// </summary>
+        internal static string DeleteFailed {
+            get {
+                return ResourceManager.GetString("DeleteFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Delete pattern set file &apos;{0}&apos;?.
+        /// </summary>
+        internal static string DeletePatternSetFileX {
+            get {
+                return ResourceManager.GetString("DeletePatternSetFileX", resourceCulture);
             }
         }
         

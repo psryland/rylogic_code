@@ -13,22 +13,13 @@ namespace RyLogViewer
 	{
 		[Serializable] public class Set
 		{
-			public string Name { get; set; }
 			public string Filepath { get; set; }
-			public Set()
-			{
-				Name = "";
-				Filepath = "";
-			}
-			public Set(string filepath)
-			{
-				Name = Path.GetFileName(filepath);
-				Filepath = filepath;
-			}
+			public string Name { get { return Path.GetFileNameWithoutExtension(Filepath); } }
+			public Set()                { Filepath = ""; }
+			public Set(string filepath) { Filepath = filepath; }
 			public Set(XElement node)
 			{
 				// ReSharper disable PossibleNullReferenceException
-				Name     = node.Element(XmlTag.Name    ).Value;
 				Filepath = node.Element(XmlTag.Filepath).Value;
 				// ReSharper restore PossibleNullReferenceException
 			}
@@ -36,7 +27,6 @@ namespace RyLogViewer
 			{
 				node.Add
 				(
-					new XElement(XmlTag.Name     ,Name),
 					new XElement(XmlTag.Filepath ,Filepath)
 				);
 				return node;
@@ -44,8 +34,6 @@ namespace RyLogViewer
 		}
 
 		protected const string PatternSetXmlTag = "patternset";
-		protected const string PatternSetExtn   = @"patternset";
-		protected const string PatternSetFilter = @"Pattern Set Files (*."+PatternSetExtn+")|*."+PatternSetExtn+"|All files (*.*)|*.*";
 		private readonly ToolTip m_tt;
 		protected readonly List<Set> m_sets;
 		protected Settings m_settings;
@@ -127,6 +115,9 @@ namespace RyLogViewer
 			m_tt.SetToolTip(m_btn_load   ,"Load a pattern set from file");
 		}
 
+		/// <summary>Return the pattern set filter</summary>
+		protected abstract string PatternSetFilter { get; }
+
 		/// <summary>Add the patterns in 'set' to the current list</summary>
 		private void AddPatternSet(Set set)
 		{
@@ -145,7 +136,19 @@ namespace RyLogViewer
 		/// <summary>Remove a pattern set from the list</summary>
 		private void DeletePatternSet(Set set)
 		{
-			m_sets.Remove(set);
+			DialogResult res = MessageBox.Show(this, string.Format(Resources.DeletePatternSetFileX, set.Filepath), Resources.ConfirmDelete, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+			if (res != DialogResult.Yes) return;
+			try
+			{
+				File.Delete(set.Filepath);
+				m_sets.Remove(set);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, string.Format(Resources.CouldNotDeletePatternSetFileX, set.Filepath ,ex.Message), Resources.DeleteFailed, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+			m_combo_sets.SelectedIndex = 0;
 			UpdateUI();
 		}
 		
@@ -162,7 +165,7 @@ namespace RyLogViewer
 		protected void UpdateUI()
 		{
 			m_combo_sets.Items.Clear();
-			m_combo_sets.Items.Add(new Set{Name = "(Select Pattern Set)"});
+			m_combo_sets.Items.Add(new Set(@"x:\(Select Pattern Set).tmp"));
 			foreach (var set in m_sets)
 				m_combo_sets.Items.Add(set);
 		}
@@ -196,6 +199,9 @@ namespace RyLogViewer
 	/// <summary>Highlight specific instance of the pattern set control</summary>
 	internal class PatternSetHL :PatternSetUi
 	{
+		private const string HLPatternSetExtn   = @"rylog_highlights";
+		private const string HLPatternSetFilter = @"Highlight Pattern Set Files (*."+HLPatternSetExtn+")|*."+HLPatternSetExtn+"|All files (*.*)|*.*";
+		
 		/// <summary>A reference to the current set of highlight patterns</summary>
 		public List<Highlight> CurrentSet { get; private set; }
 		
@@ -207,6 +213,12 @@ namespace RyLogViewer
 			Import(settings.HighlightPatternSets);
 			CurrentSet = highlights;
 			UpdateUI();
+		}
+
+		/// <summary>Return the pattern set filter</summary>
+		protected override string PatternSetFilter
+		{
+			get { return HLPatternSetFilter; }
 		}
 
 		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
@@ -238,6 +250,9 @@ namespace RyLogViewer
 	/// <summary>Filter specific instance of the pattern set control</summary>
 	internal class PatternSetFT :PatternSetUi
 	{
+		protected const string FTPatternSetExtn   = @"rylog_filters";
+		protected const string FTPatternSetFilter = @"Filter Pattern Set Files (*."+FTPatternSetExtn+")|*."+FTPatternSetExtn+"|All files (*.*)|*.*";
+		
 		/// <summary>A reference to the current set of filter patterns</summary>
 		public List<Filter> CurrentSet { get; private set; }
 
@@ -250,7 +265,13 @@ namespace RyLogViewer
 			CurrentSet = filters;
 			UpdateUI();
 		}
-		
+
+		/// <summary>Return the pattern set filter</summary>
+		protected override string PatternSetFilter
+		{
+			get { return FTPatternSetFilter; }
+		}
+
 		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
 		protected override void CurrentSetToXml(XElement parent)
 		{

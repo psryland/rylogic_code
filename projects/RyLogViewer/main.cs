@@ -76,7 +76,6 @@ namespace RyLogViewer
 		private long m_file_end;                       // The last known size of the file
 		
 		//todo:
-		// Filter/Highlight sets
 		// drag n drop
 		// read stdin
 		// unicode text files
