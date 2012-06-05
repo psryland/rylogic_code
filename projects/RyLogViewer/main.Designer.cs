@@ -69,7 +69,10 @@
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
-			this.m_lbl_file_size = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_line = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_filesize = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_spring = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_message = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
 			this.m_toolstrip.SuspendLayout();
@@ -392,18 +395,56 @@
 			// 
 			this.m_status.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_status.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_lbl_file_size});
+            this.m_status_line,
+            this.m_status_filesize,
+            this.m_status_spring,
+            this.m_status_message});
 			this.m_status.Location = new System.Drawing.Point(0, 0);
 			this.m_status.Name = "m_status";
-			this.m_status.Size = new System.Drawing.Size(593, 22);
+			this.m_status.Size = new System.Drawing.Size(593, 24);
 			this.m_status.TabIndex = 3;
 			this.m_status.Text = "statusStrip1";
 			// 
-			// m_lbl_file_size
+			// m_status_line
 			// 
-			this.m_lbl_file_size.Name = "m_lbl_file_size";
-			this.m_lbl_file_size.Size = new System.Drawing.Size(124, 17);
-			this.m_lbl_file_size.Text = "Size: 2147483647 bytes";
+			this.m_status_line.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_line.Name = "m_status_line";
+			this.m_status_line.Size = new System.Drawing.Size(74, 19);
+			this.m_status_line.Text = "Line: 1/1000";
+			this.m_status_line.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_status_filesize
+			// 
+			this.m_status_filesize.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_filesize.Name = "m_status_filesize";
+			this.m_status_filesize.Size = new System.Drawing.Size(128, 19);
+			this.m_status_filesize.Text = "Size: 2147483647 bytes";
+			this.m_status_filesize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_status_spring
+			// 
+			this.m_status_spring.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_spring.Name = "m_status_spring";
+			this.m_status_spring.Size = new System.Drawing.Size(236, 19);
+			this.m_status_spring.Spring = true;
+			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_status_message
+			// 
+			this.m_status_message.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_message.Name = "m_status_message";
+			this.m_status_message.Size = new System.Drawing.Size(109, 19);
+			this.m_status_message.Text = "Transient Message";
+			this.m_status_message.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.m_status_message.Visible = false;
 			// 
 			// m_toolstrip_cont
 			// 
@@ -417,7 +458,7 @@
 			this.m_toolstrip_cont.ContentPanel.AutoScroll = true;
 			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_grid);
 			this.m_toolstrip_cont.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
-			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 422);
+			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 420);
 			this.m_toolstrip_cont.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_toolstrip_cont.Location = new System.Drawing.Point(0, 0);
 			this.m_toolstrip_cont.Name = "m_toolstrip_cont";
@@ -448,7 +489,7 @@
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(587, 416);
+			this.m_grid.Size = new System.Drawing.Size(587, 414);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
 			// 
@@ -517,7 +558,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_options;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_about;
-		private System.Windows.Forms.ToolStripStatusLabel m_lbl_file_size;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_filesize;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
 		private System.Windows.Forms.ToolStripButton m_btn_refresh;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_totd;
@@ -527,6 +568,9 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_utf8;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ucs2_bigendian;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ucs2_littleendian;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_spring;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_message;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_line;
 	}
 }
 

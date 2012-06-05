@@ -252,4 +252,25 @@ Error: {1}</value>
   <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\agt_action_fail.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+	<data name="ShowFiltersDialog">
+		<value xml:space="preserve">Show the filters dialog</value>
+	</data>
+	<data name="ShowHighlightsDialog">
+		<value xml:space="preserve">Show the highlights dialog</value>
+	</data>
+	<data name="ScrollToTail">
+		<value xml:space="preserve">Scroll to the last log file row, and automatically load changes</value>
+	</data>
+	<data name="ReloadLogFile">
+		<value xml:space="preserve">Reload the current log file</value>
+	</data>
+	<data name="OpenLogFile">
+		<value xml:space="preserve">Open a log file</value>
+	</data>
+	<data name="Idle">
+		<value xml:space="preserve">Idle</value>
+	</data>
+	<data name="LineXofY">
+		<value xml:space="preserve">Line: {0}/{1}</value>
+	</data>
 </root>

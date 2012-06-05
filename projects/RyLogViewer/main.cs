@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -9,76 +10,39 @@ using System.Windows.Forms;
 using pr.common;
 using pr.extn;
 using pr.gui;
+using pr.maths;
 using pr.util;
 using RyLogViewer.Properties;
+using Timer = System.Windows.Forms.Timer;
 
 namespace RyLogViewer
 {
 	public partial class Main :Form
 	{
-		//private class LineCache
-		//{
-		//    private const int LineCacheSize = 512;
-		//    private readonly List<string> m_col = new List<string>();
-		//    private byte[] m_buf   = new byte[LineCacheSize];
-		//    private int    m_index = -1;
-			
-		//    // Column accessors
-		//    public int Count            { get { return m_col.Count; } }
-		//    public string this[int col] { get { return m_col[col]; } }
-		//    public override string ToString() { return Count != 0 ? this[0] : ""; }
-			
-		//    /// <summary>Read a line from 'file' and divide it into columns</summary>
-		//    public void Cache(FileStream file, Encoding encoding, List<Range> line_index, int index, string column_delimiter)
-		//    {
-		//        if (m_index == index) return; // Already cached
-		//        m_index = index;
-				
-		//        // Determine the length of the line
-		//        Range rng = line_index[index];
-				
-		//        // Read the whole line into m_buf
-		//        file.Seek(rng.m_begin, SeekOrigin.Begin);
-		//        m_buf = rng.Count <= m_buf.Length ? m_buf : new byte[rng.Count];
-		//        int read = file.Read(m_buf, 0, (int)rng.Count);
-		//        if (read != rng.Count) throw new IOException("failed to read file over range ["+rng.m_begin+","+rng.m_end+"). Read "+read+"/"+rng.Count+" bytes.");
-		//        string line = encoding.GetString(m_buf, 0, read);
-
-		//        // Split the line up into columns
-		//        m_col.Clear();
-		//        if (column_delimiter.Length != 0)
-		//            m_col.AddRange(line.Split(new[]{column_delimiter}, StringSplitOptions.None));
-		//        else
-		//            m_col.Add(line);
-		//    }
-		//}
-
 		private const string LogFileFilter = @"Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*";
 		private const int AvrBytesPerLine = 256;
 		private const int CacheSize = 4096;
 		
-		private readonly Settings m_settings;          // App settings
-		private readonly RecentFiles m_recent;         // Recent files
-		private readonly FileSystemWatcher m_watch;    // A FS watcher to detect file changes
-		private readonly EventBatcher m_file_changed;  // Event batcher for m_watch events
-		private readonly List<Highlight> m_highlights; // A list of the active highlights only
-		private List<Range> m_line_index;              // Byte offsets (from file begin) to the byte range of a line
-		private Encoding m_encoding;                   // The file encoding
-		private string m_filepath;                     // The path of the log file we're viewing
-		private FileStream m_file;                     // A file stream of 'm_filepath'
-		private byte[] m_row_delim;                    // The row delimiter converted from a string to a byte[] using the current encoding
-		private char[] m_col_delim;                    // The column delimiter, cached to prevent m_settings access in CellNeeded
-		private int m_row_height;                      // The row height, cached to prevent settings lookups in CellNeeded
-		private long m_last_line;                      // The byte offset (from file begin) to the start of the last known line
-		private long m_file_end;                       // The last known size of the file
+		private readonly Settings m_settings;                 // App settings
+		private readonly RecentFiles m_recent;                // Recent files
+		private readonly FileSystemWatcher m_watch;           // A FS watcher to detect file changes
+		private readonly EventBatcher m_file_changed;         // Event batcher for m_watch events
+		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
+		private readonly BindingList<string> m_find_history;  // A history of the strings used to find
+		private Pattern m_last_find_pattern;                  // The pattern last used in a find
+		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
+		private Encoding m_encoding;                          // The file encoding
+		private string m_filepath;                            // The path of the log file we're viewing
+		private FileStream m_file;                            // A file stream of 'm_filepath'
+		private byte[] m_row_delim;                           // The row delimiter converted from a string to a byte[] using the current encoding
+		private char[] m_col_delim;                           // The column delimiter, cached to prevent m_settings access in CellNeeded
+		private int m_row_height;                             // The row height, cached to prevent settings lookups in CellNeeded
+		private long m_last_line;                             // The byte offset (from file begin) to the start of the last known line
+		private long m_file_end;                              // The last known size of the file
 		
 		//todo:
 		// find
-		// profile scrolling, get rid of duplicate line renderering (maybe cache actual strings?)
-		// cache highlighted state
-		// extend the line cache to hold more than one line
 		// read stdin
-		// Tooltips
 		// partial highlighting
 		// Large file selection on first line loads next earlier chunk
 		// UpdateLineCount needs to reload from file end if more than LineCount new lines
@@ -88,16 +52,18 @@ namespace RyLogViewer
 		public Main(string[] args)
 		{
 			InitializeComponent();
-			m_settings     = new Settings();
-			m_recent       = new RecentFiles(m_menu_file_recent, OpenLogFile);
-			m_watch        = new FileSystemWatcher{NotifyFilter = NotifyFilters.LastWrite|NotifyFilters.Size};
-			m_file_changed = new EventBatcher(10, this);
-			m_highlights   = new List<Highlight>();
-			m_line_index   = new List<Range>();
-			m_filepath     = null;
-			m_file         = null;
-			m_last_line    = 0;
-			m_file_end     = 0;
+			m_settings          = new Settings();
+			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
+			m_watch             = new FileSystemWatcher{NotifyFilter = NotifyFilters.LastWrite|NotifyFilters.Size};
+			m_file_changed      = new EventBatcher(10, this);
+			m_highlights        = new List<Highlight>();
+			m_find_history      = new BindingList<string>();
+			m_line_index        = new List<Range>();
+			m_last_find_pattern = null;
+			m_filepath          = null;
+			m_file              = null;
+			m_last_line         = 0;
+			m_file_end          = 0;
 			InitCache();
 			ApplySettings();
 			
@@ -109,8 +75,8 @@ namespace RyLogViewer
 			m_menu_edit_selectall.Click             += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
 			m_menu_edit_copy.Click                  += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
 			m_menu_edit_find.Click                  += (s,a) => ShowFindDialog();
-			m_menu_edit_find_next.Click             += (s,a) => FindNext();
-			m_menu_edit_find_prev.Click             += (s,a) => FindPrev();
+			m_menu_edit_find_next.Click             += (s,a) => FindNext(m_last_find_pattern);
+			m_menu_edit_find_prev.Click             += (s,a) => FindPrev(m_last_find_pattern);
 			m_menu_encoding_ascii.Click             += (s,a) => SetEncoding(Encoding.ASCII           );
 			m_menu_encoding_utf8.Click              += (s,a) => SetEncoding(Encoding.UTF8            );
 			m_menu_encoding_ucs2_littleendian.Click += (s,a) => SetEncoding(Encoding.Unicode         );
@@ -130,11 +96,11 @@ namespace RyLogViewer
 			m_check_tail.CheckedChanged += (s,a) => EnableTail(m_check_tail.Checked);
 			m_btn_highlights.Click      += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_btn_filters.Click         += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
-			m_btn_open_log.ToolTipText   = "Open a log file";   
-			m_btn_refresh.ToolTipText    = "Reload the current log file";
-			m_check_tail.ToolTipText     = "Scroll to the last log file row, and automatically load changes";
-			m_btn_highlights.ToolTipText = "Show the highlights dialog";
-			m_btn_filters.ToolTipText    = "Show the filters dialog";
+			m_btn_open_log.ToolTipText   = Resources.OpenLogFile;   
+			m_btn_refresh.ToolTipText    = Resources.ReloadLogFile;
+			m_check_tail.ToolTipText     = Resources.ScrollToTail;
+			m_btn_highlights.ToolTipText = Resources.ShowHighlightsDialog;
+			m_btn_filters.ToolTipText    = Resources.ShowFiltersDialog;
 			
 			// Status
 			m_status.Move += (s,a) => { m_settings.StatusPosition = m_status.Location; m_settings.Save(); };
@@ -162,6 +128,13 @@ namespace RyLogViewer
 					m_file_changed.Signal();
 				};
 			
+			// Find
+			m_find_history.ListChanged += (s,a)=>
+				{
+					if (a.ListChangedType == ListChangedType.ItemAdded && m_find_history.Count > 10)
+						m_find_history.RemoveAt(m_find_history.Count - 1);
+				};
+
 			// Startup
 			Shown += (s,a)=>
 				{
@@ -213,7 +186,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Parse the command line parameters</summary>
-		private void ParseCommandLine(string[] args)
+		private void ParseCommandLine(IEnumerable<string> args)
 		{
 			string file_to_load = null;
 			foreach (var arg in args)
@@ -377,21 +350,53 @@ namespace RyLogViewer
 		private void ShowFindDialog()
 		{
 			Point pt = m_grid.PointToScreen(m_grid.Location);
-			var find = new FindUI();
-			find.FindNext += (s,a) => FindNext();
-			find.FindPrev += (s,a) => FindPrev();
+			var find = new FindUI(m_find_history);
+			find.FindNext += FindNext;
+			find.FindPrev += FindPrev;
 			find.Location = pt + new Size(Width - find.Width, 0);
 			find.Show(this);
 		}
 		
 		/// <summary>Search for the next occurance of a pattern in the grid</summary>
-		private void FindNext()
+		private void FindNext(Pattern pat)
 		{
+			if (pat == null || m_grid.RowCount == 0) return;
+			m_last_find_pattern = pat;
+
+			// Search from the current row forward
+			int row = SelectedRow;
+			bool current_row_matches = pat.IsMatch(CacheLine(row).RowText);
+			for (int i = row + 1; i != m_grid.RowCount; ++i)
+			{
+				if (!pat.IsMatch(CacheLine(i).RowText)) continue;
+				
+				// Found!. Make sure the selected row is visible
+				SelectedRow = i;
+				return;
+			}
+			if (!current_row_matches)
+				SetTransientStatusMessage("Not found", 2000);
 		}
 		
 		/// <summary>Search for an earlier occurance of a pattern in the grid</summary>
-		private void FindPrev()
+		private void FindPrev(Pattern pat)
 		{
+			if (pat == null || m_grid.RowCount == 0) return;
+			m_last_find_pattern = pat;
+			
+			// Search from the current row backward
+			int row = SelectedRow;
+			bool current_row_matches = pat.IsMatch(CacheLine(row).RowText);
+			for (int i = row - 1; i != -1; --i)
+			{
+				if (!pat.IsMatch(CacheLine(i).RowText)) continue;
+				
+				// Found!. Make sure the selected row is visible
+				SelectedRow = i;
+				return;
+			}
+			if (!current_row_matches)
+				SetTransientStatusMessage("Not found", 2000);
 		}
 
 		/// <summary>Handle file drop</summary>
@@ -490,11 +495,20 @@ namespace RyLogViewer
 			throw new NotSupportedException("Text file encoding '"+encoding_name+"' is not supported");
 		}
 
-		/// <summary>Get/Set the currently selected grid row</summary>
+		/// <summary>Get/Set the currently selected grid row. Setting the selected row makes it visible</summary>
 		private int SelectedRow
 		{
 			get { return m_grid.SelectedRows.Count != 0 ? m_grid.SelectedRows[0].Index : -1; }
-			set { if (value != SelectedRow) m_grid.SelectRow(value); }
+			set
+			{
+				if (value == SelectedRow) return;
+				m_grid.SelectRow(value);
+				if (m_grid.RowCount != 0)
+				{
+					int display_row = value - m_grid.DisplayedRowCount(true) / 2;
+					m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount);
+				}
+			}
 		}
 		
 		/// <summary>Returns true if the last row is visible</summary>
@@ -515,6 +529,29 @@ namespace RyLogViewer
 			if (m_grid.RowCount == 0) return;
 			int displayed_rows = m_grid.DisplayedRowCount(false);
 			m_grid.FirstDisplayedScrollingRowIndex = Math.Max(0, m_grid.RowCount - displayed_rows);
+		}
+
+		/// <summary>Create a message that displays for a period then disappears</summary>
+		private void SetTransientStatusMessage(string text, int display_time_ms)
+		{
+			m_status_message.Text = text;
+			m_status_message.Visible = true;
+			
+			// If the status message has a timer already, dispose it
+			Timer timer = m_status_message.Tag as Timer;
+			if (timer != null) timer.Dispose();
+			
+			// Attach a new timer to the status message
+			m_status_message.Tag = timer = new Timer{Enabled = true, Interval = display_time_ms};
+			timer.Tick += (s,a)=>
+				{
+					// When the timer fires, if we're still associated with
+					// the status message, null out the text and remove ourself
+					if (s != m_status_message.Tag) return;
+					m_status_message.Text = Resources.Idle;
+					m_status_message.Tag = null;
+					((Timer)s).Dispose();
+				};
 		}
 
 		/// <summary>Update the UI with the current line index</summary>
@@ -583,7 +620,10 @@ namespace RyLogViewer
 			if (!FileOpen)
 			{
 				Text = Resources.AppTitle;
-				m_lbl_file_size.Text = Resources.NoFile;
+				m_status_line.Visible = false;
+				m_status_filesize.Visible = false;
+				m_status_spring.Text = Resources.NoFile;
+				
 			}
 			else
 			{
@@ -602,7 +642,11 @@ namespace RyLogViewer
 				long p = (r != -1) ? m_line_index[SelectedRow].m_begin : 0;
 				StringBuilder pos = Pretty(new StringBuilder(p.ToString()));
 				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString()));
-				m_lbl_file_size.Text = string.Format(Resources.PositionXofYBytes, pos, len);
+				m_status_line.Text = string.Format(Resources.LineXofY, r, m_grid.RowCount);
+				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
+				m_status_spring.Text = "";
+				m_status_line.Visible = true;
+				m_status_filesize.Visible = true;
 			}
 		}
 	}

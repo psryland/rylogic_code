@@ -280,6 +280,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Idle.
+        /// </summary>
+        internal static string Idle {
+            get {
+                return ResourceManager.GetString("Idle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to File path &apos;{0}&apos; is invalid or does not exist.
         /// </summary>
         internal static string InvalidFileMsg {
@@ -294,6 +303,15 @@ namespace RyLogViewer.Properties {
         internal static string InvalidFilePath {
             get {
                 return ResourceManager.GetString("InvalidFilePath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Line: {0}/{1}.
+        /// </summary>
+        internal static string LineXofY {
+            get {
+                return ResourceManager.GetString("LineXofY", resourceCulture);
             }
         }
         
@@ -329,6 +347,15 @@ namespace RyLogViewer.Properties {
         internal static string NoFile {
             get {
                 return ResourceManager.GetString("NoFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open a log file.
+        /// </summary>
+        internal static string OpenLogFile {
+            get {
+                return ResourceManager.GetString("OpenLogFile", resourceCulture);
             }
         }
         
@@ -386,6 +413,42 @@ namespace RyLogViewer.Properties {
             get {
                 object obj = ResourceManager.GetObject("reload", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reload the current log file.
+        /// </summary>
+        internal static string ReloadLogFile {
+            get {
+                return ResourceManager.GetString("ReloadLogFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Scroll to the last log file row, and automatically load changes.
+        /// </summary>
+        internal static string ScrollToTail {
+            get {
+                return ResourceManager.GetString("ScrollToTail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show the filters dialog.
+        /// </summary>
+        internal static string ShowFiltersDialog {
+            get {
+                return ResourceManager.GetString("ShowFiltersDialog", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show the highlights dialog.
+        /// </summary>
+        internal static string ShowHighlightsDialog {
+            get {
+                return ResourceManager.GetString("ShowHighlightsDialog", resourceCulture);
             }
         }
         

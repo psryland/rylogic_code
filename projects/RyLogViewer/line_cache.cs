@@ -29,7 +29,10 @@ namespace RyLogViewer
 			
 			/// <summary>The line in the file that is cached in this object</summary>
 			public int Index;
-
+			
+			/// <summary>The string for the whole row</summary>
+			public string RowText;
+			
 			/// <summary>The column values for this line</summary>
 			public readonly List<Col> Column;
 			
@@ -74,23 +77,25 @@ namespace RyLogViewer
 			if (read != rng.Count) throw new IOException("failed to read file over range ["+rng.m_begin+","+rng.m_end+"). Read "+read+"/"+rng.Count+" bytes.");
 			
 			// Convert the buffer to text
-			string text = m_encoding.GetString(m_line_buf, 0, read);
+			line.RowText = m_encoding.GetString(m_line_buf, 0, read);
 			
 			// Split the line into columns
 			line.Column.Clear();
 			if (m_col_delim.Length != 0)
 			{
 				// Multiple columns...
-				foreach (string col_value in text.Split(m_col_delim))
+				foreach (string col_value in line.RowText.Split(m_col_delim))
 				{
-					var col_text = col_value;
-					line.Column.Add(new Line.Col(col_text, m_highlights.FirstOrDefault(h => h.IsMatch(col_text))));
+					string col_text = col_value;
+					Highlight hl = m_highlights.FirstOrDefault(h => h.IsMatch(col_text));
+					line.Column.Add(new Line.Col(col_text, hl));
 				}
 			}
 			else
 			{
 				// Single column
-				line.Column.Add(new Line.Col(text, m_highlights.FirstOrDefault(h => h.IsMatch(text))));
+				Highlight hl = m_highlights.FirstOrDefault(h => h.IsMatch(line.RowText));
+				line.Column.Add(new Line.Col(line.RowText, hl));
 			}
 			line.Index = index;
 			return line;
