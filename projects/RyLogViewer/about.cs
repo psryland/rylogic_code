@@ -77,7 +77,7 @@ namespace RyLogViewer
 			// m_lbl_version_history
 			// 
 			this.m_lbl_version_history.AutoSize = true;
-			this.m_lbl_version_history.Location = new System.Drawing.Point(61, 117);
+			this.m_lbl_version_history.Location = new System.Drawing.Point(9, 141);
 			this.m_lbl_version_history.Name = "m_lbl_version_history";
 			this.m_lbl_version_history.Size = new System.Drawing.Size(80, 13);
 			this.m_lbl_version_history.TabIndex = 13;
@@ -91,12 +91,12 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_version_history.BackColor = System.Drawing.SystemColors.ControlLightLight;
-			this.m_edit_version_history.Location = new System.Drawing.Point(64, 133);
+			this.m_edit_version_history.Location = new System.Drawing.Point(12, 157);
 			this.m_edit_version_history.Multiline = true;
 			this.m_edit_version_history.Name = "m_edit_version_history";
 			this.m_edit_version_history.ReadOnly = true;
 			this.m_edit_version_history.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-			this.m_edit_version_history.Size = new System.Drawing.Size(235, 114);
+			this.m_edit_version_history.Size = new System.Drawing.Size(287, 90);
 			this.m_edit_version_history.TabIndex = 12;
 			this.m_edit_version_history.WordWrap = false;
 			// 
@@ -118,18 +118,18 @@ namespace RyLogViewer
 			this.m_edit_version.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_version.BackColor = System.Drawing.SystemColors.ControlLightLight;
-			this.m_edit_version.Location = new System.Drawing.Point(64, 40);
+			this.m_edit_version.Location = new System.Drawing.Point(12, 64);
 			this.m_edit_version.Multiline = true;
 			this.m_edit_version.Name = "m_edit_version";
 			this.m_edit_version.ReadOnly = true;
-			this.m_edit_version.Size = new System.Drawing.Size(235, 74);
+			this.m_edit_version.Size = new System.Drawing.Size(287, 74);
 			this.m_edit_version.TabIndex = 10;
 			this.m_edit_version.WordWrap = false;
 			// 
 			// pictureBox1
 			// 
 			this.pictureBox1.Image = global::RyLogViewer.Properties.Resources.book;
-			this.pictureBox1.Location = new System.Drawing.Point(12, 12);
+			this.pictureBox1.Location = new System.Drawing.Point(12, 11);
 			this.pictureBox1.Name = "pictureBox1";
 			this.pictureBox1.Size = new System.Drawing.Size(48, 48);
 			this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
@@ -140,7 +140,7 @@ namespace RyLogViewer
 			// 
 			this.m_lbl_info.AutoSize = true;
 			this.m_lbl_info.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			this.m_lbl_info.Location = new System.Drawing.Point(60, 12);
+			this.m_lbl_info.Location = new System.Drawing.Point(66, 23);
 			this.m_lbl_info.Name = "m_lbl_info";
 			this.m_lbl_info.Size = new System.Drawing.Size(128, 24);
 			this.m_lbl_info.TabIndex = 8;

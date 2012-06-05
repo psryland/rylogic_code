@@ -1,6 +1,6 @@
 ::Post Build Event for exporting binary file to this local directory
 ::Use:
-::	_publish_bin $(TargetPath) $(PlatformName) $(ConfigurationName)
+::	_publish_bin $(TargetPath) $(PlatformName) $(ConfigurationName) [dstsubdir]
 
 @echo OFF
 SetLocal EnableDelayedExpansion 
@@ -9,7 +9,7 @@ set PATH=Q:\sdk\pr\cmd\;%PATH%
 set targetpath=%1
 set platform=%2
 set config=%3
-set dstdir=q:\bin
+set dstdir=q:\bin\%4
 
 ::Load Rylogic environment variables and check version
 call %RylogicEnv%
@@ -25,6 +25,9 @@ call lower_case config
 call lower_case srcdir
 call lower_case file
 call lower_case extn
+
+::Ensure dstdir exists
+if not exist %dstdir% mkdir %dstdir%
 
 if [%platform%]==[win32] set platform=x86
 

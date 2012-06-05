@@ -41,7 +41,6 @@ namespace RyLogViewer
 		private long m_file_end;                              // The last known size of the file
 		
 		//todo:
-		// find
 		// read stdin
 		// partial highlighting
 		// Large file selection on first line loads next earlier chunk
@@ -81,7 +80,7 @@ namespace RyLogViewer
 			m_menu_encoding_utf8.Click              += (s,a) => SetEncoding(Encoding.UTF8            );
 			m_menu_encoding_ucs2_littleendian.Click += (s,a) => SetEncoding(Encoding.Unicode         );
 			m_menu_encoding_ucs2_bigendian.Click    += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
-			m_menu_tools_alwaysontop.Click          += (s,a) => { m_settings.AlwaysOnTop = !m_settings.AlwaysOnTop; TopMost = m_settings.AlwaysOnTop; };
+			m_menu_tools_alwaysontop.Click          += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
 			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
@@ -213,14 +212,10 @@ namespace RyLogViewer
 		/// <summary>Apply settings throughout the app</summary>
 		private void ApplySettings()
 		{
-			// Apply line count limit
-			if (m_line_index != null && m_line_index.Count > m_settings.LineCount)
-				Reload(); // todo, move this
-			
 			// Cached settings for performance
 			m_encoding   = GetEncoding(m_settings.Encoding);
 			m_row_delim  = m_encoding.GetBytes(m_settings.RowDelimiter.Replace("CR","\r").Replace("LF","\n"));
-			m_col_delim  = m_settings.ColDelimiter.ToCharArray();
+			m_col_delim  = m_settings.ColDelimiter.Replace("TAB","\t").ToCharArray();
 			m_row_height = m_settings.RowHeight;
 			
 			// Tail
@@ -447,11 +442,18 @@ namespace RyLogViewer
 			Reload();
 		}
 		
+		/// <summary>Set always on top</summary>
+		private void SetAlwaysOnTop(bool onatop)
+		{
+			m_menu_tools_alwaysontop.Checked = onatop;
+			m_settings.AlwaysOnTop = onatop;
+			TopMost = onatop;
+		}
+		
 		/// <summary>Display the options dialog</summary>
 		private void ShowOptions(SettingsUI.ETab tab)
 		{
-			// Save the current highlight and filter patterns so we can detected
-			// changes to them and reload the line index if they change.
+			// Save current values so we can detected changes and reload if necessary
 			string highlights = FileOpen ? m_settings.HighlightPatterns : null;
 			string filters    = FileOpen ? m_settings.FilterPatterns    : null;
 			
@@ -460,14 +462,17 @@ namespace RyLogViewer
 			m_settings.Save();
 			new SettingsUI(tab).ShowDialog(this);
 			m_settings.Reload();
+			
 			ApplySettings();
 			
 			// If the highlight patterns have changed, invalidate the line cache
 			if (FileOpen && m_settings.HighlightPatterns != highlights)
 				InvalidateCache();
 			
-			// If the filter patterns have changed, reload the file
-			if (FileOpen && m_settings.FilterPatterns != filters)
+			// If the filter patterns have changed or the line count limit
+			// is less than what we currently have, reload the file
+			if (FileOpen && m_settings.FilterPatterns != filters ||
+				m_line_index.Count > m_settings.LineCount)
 				Reload();
 			
 			Refresh();

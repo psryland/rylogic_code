@@ -49,8 +49,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>
-    </ApplicationIcon>
+    <ApplicationIcon>RyLog.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>RyLogViewer.program</StartupObject>
@@ -155,6 +154,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="release.bat" />
     <None Include="Resources\edit_add.png" />
   </ItemGroup>
   <ItemGroup>
@@ -220,10 +220,15 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="docs\TotD2.html" />
+    <EmbeddedResource Include="RyLog.ico" />
     <None Include="Resources\agt_action_fail.png" />
     <None Include="Resources\agt_action_success.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
