@@ -8,9 +8,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using NUnit.Framework;
@@ -128,20 +130,29 @@ namespace pr.util
 		}
 	
 		/// <summary>Return an assembly attribute</summary>
-		public static T GetAssemblyAttribute<T>()
+		public static T GetAssemblyAttribute<T>(Assembly ass = null)
 		{
-			object[] attr = Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(T), false);
+			if (ass == null) ass = Assembly.GetEntryAssembly();
+			object[] attr = ass.GetCustomAttributes(typeof(T), false);
 			if (attr.Length == 0) throw new ApplicationException("Assembly does not have attribute "+typeof(T).Name);
 			return (T)(attr[0]);
 		}
+		
+		/// <summary>Return the version number for an assembly</summary>
+		public static Version AssemblyVersion(Assembly ass = null)
+		{
+			if (ass == null) ass = Assembly.GetEntryAssembly();
+			return ass.GetName().Version;
+		}
 
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
-		public static DateTime AssemblyTimestamp(Assembly ass)
+		public static DateTime AssemblyTimestamp(Assembly ass = null)
 		{
 			const int PeHeaderOffset = 60;
 			const int LinkerTimestampOffset = 8;
 
 			byte[] b = new byte[2048];
+			if (ass == null) ass = Assembly.GetEntryAssembly();
 			using (Stream s = new FileStream(ass.Location, FileMode.Open, FileAccess.Read))
 				s.Read(b, 0, 2048);
 
@@ -407,6 +418,21 @@ namespace pr.util
 			return unex != null && unex.NodeType == ExpressionType.Convert
 				? ((MemberExpression) unex.Operand).Member.Name
 				: ((MemberExpression) expression.Body).Member.Name;
+		}
+		
+		/// <summary>Returns all inherited fields for a type</summary>
+		private static IEnumerable<FieldInfo> AllFields(Type type, BindingFlags flags)
+		{
+			if (type == null) return Enumerable.Empty<FieldInfo>();
+			return AllFields(type.BaseType, flags).Union(type.GetFields(flags|BindingFlags.DeclaredOnly));
+		}
+
+		/// <summary>Copies all of the fields of 'from' into 'to'. Returns 'to' for method chaining</summary>
+		public static T ShallowCopy(T from, T to)
+		{
+			foreach (var x in AllFields(typeof(T), BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
+				x.SetValue(to, x.GetValue(from));
+			return to;
 		}
 	}
 

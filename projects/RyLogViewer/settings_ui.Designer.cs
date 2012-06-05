@@ -55,6 +55,9 @@
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
+			this.m_group_line_ends = new System.Windows.Forms.GroupBox();
+			this.m_lbl_line_ends = new System.Windows.Forms.Label();
+			this.m_edit_line_ends = new System.Windows.Forms.TextBox();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_startup.SuspendLayout();
@@ -73,6 +76,7 @@
 			this.m_split_ft.SuspendLayout();
 			this.m_table_ft.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filter)).BeginInit();
+			this.m_group_line_ends.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tabctrl
@@ -89,6 +93,7 @@
 			// 
 			// m_tab_general
 			// 
+			this.m_tab_general.Controls.Add(this.m_group_line_ends);
 			this.m_tab_general.Controls.Add(this.m_group_startup);
 			this.m_tab_general.Controls.Add(this.m_group_log_text_colours);
 			this.m_tab_general.Location = new System.Drawing.Point(4, 22);
@@ -391,6 +396,33 @@
 			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.TabIndex = 4;
 			// 
+			// m_group_line_ends
+			// 
+			this.m_group_line_ends.Controls.Add(this.m_edit_line_ends);
+			this.m_group_line_ends.Controls.Add(this.m_lbl_line_ends);
+			this.m_group_line_ends.Location = new System.Drawing.Point(219, 6);
+			this.m_group_line_ends.Name = "m_group_line_ends";
+			this.m_group_line_ends.Size = new System.Drawing.Size(272, 50);
+			this.m_group_line_ends.TabIndex = 5;
+			this.m_group_line_ends.TabStop = false;
+			this.m_group_line_ends.Text = "Line Endings";
+			// 
+			// m_lbl_line_ends
+			// 
+			this.m_lbl_line_ends.AutoSize = true;
+			this.m_lbl_line_ends.Location = new System.Drawing.Point(20, 20);
+			this.m_lbl_line_ends.Name = "m_lbl_line_ends";
+			this.m_lbl_line_ends.Size = new System.Drawing.Size(66, 13);
+			this.m_lbl_line_ends.TabIndex = 1;
+			this.m_lbl_line_ends.Text = "Line Ending:";
+			// 
+			// m_edit_line_ends
+			// 
+			this.m_edit_line_ends.Location = new System.Drawing.Point(92, 17);
+			this.m_edit_line_ends.Name = "m_edit_line_ends";
+			this.m_edit_line_ends.Size = new System.Drawing.Size(174, 20);
+			this.m_edit_line_ends.TabIndex = 2;
+			// 
 			// SettingsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -424,6 +456,8 @@
 			this.m_table_ft.ResumeLayout(false);
 			this.m_table_ft.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filter)).EndInit();
+			this.m_group_line_ends.ResumeLayout(false);
+			this.m_group_line_ends.PerformLayout();
 			this.ResumeLayout(false);
 
 		}
@@ -456,5 +490,8 @@
 		private PatternSetHL m_pattern_set_hl;
 		private System.Windows.Forms.TableLayoutPanel m_table_ft;
 		private PatternSetFT m_pattern_set_ft;
+		private System.Windows.Forms.GroupBox m_group_line_ends;
+		private System.Windows.Forms.Label m_lbl_line_ends;
+		private System.Windows.Forms.TextBox m_edit_line_ends;
 	}
 }

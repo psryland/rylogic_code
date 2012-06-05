@@ -19,7 +19,6 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			
-			Assembly ass = Assembly.GetExecutingAssembly();
 			m_edit_version.Text = string.Format(
 				"{0} {1}"+
 				"Version: {2}"+
@@ -27,12 +26,12 @@ namespace RyLogViewer
 				"All Rights Reserved"
 				,Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company
 				,Util.GetAssemblyAttribute<AssemblyCopyrightAttribute>().Copyright + Environment.NewLine
-				,ass.GetName().Version + Environment.NewLine
-				,Util.AssemblyTimestamp(ass) + Environment.NewLine
+				,Util.AssemblyVersion() + Environment.NewLine
+				,Util.AssemblyTimestamp() + Environment.NewLine
 				);
 			m_edit_version.Select(0,0);
 
-			Stream stream = ass.GetManifestResourceStream("RyLogViewer.docs.VersionHistory.txt");
+			Stream stream = Assembly.GetEntryAssembly().GetManifestResourceStream("RyLogViewer.docs.VersionHistory.txt");
 			if (stream != null)
 			{
 				using (TextReader r = new StreamReader(stream))

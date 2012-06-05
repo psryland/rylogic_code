@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using pr.common;
 
@@ -8,7 +9,7 @@ namespace RyLogViewer
 	public sealed class Settings :SettingsBase
 	{
 		// Defaults
-		public static readonly Settings Default = new Settings(0);
+		public static readonly Settings Default = new Settings(ELoadOptions.Defaults);
 		protected override SettingsBase DefaultData { get { return Default; } }
 		
 		public string RecentFiles
@@ -146,11 +147,17 @@ namespace RyLogViewer
 			get { return get<byte>("ColDelimiter"); }
 			set { set("ColDelimiter", value); }
 		}
-		
+		public string Encoding
+		{
+			get { return get<string>("Encoding"); }
+			set { set("Encoding", value); }
+		}
+
 		public Settings(ELoadOptions opts = ELoadOptions.Normal)
 		{
 			if (opts == ELoadOptions.Normal)
-				try { Reload(); return; } catch {}
+				try { Reload(); return; }
+				catch (Exception ex) { Debug.WriteLine(ex); }
 			
 			RecentFiles          = "";
 			Font                 = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
@@ -177,8 +184,9 @@ namespace RyLogViewer
 			FilterPatterns       = "<root/>";
 			HighlightPatternSets = "<root/>";
 			FilterPatternSets    = "<root/>";
-			RowDelimiter         = Environment.NewLine;
+			RowDelimiter         = "CRLF";
 			ColDelimiter         = 0;
+			Encoding             = System.Text.Encoding.UTF8.EncodingName;
 		}
 	}
 }

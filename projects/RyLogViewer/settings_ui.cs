@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
@@ -10,9 +9,10 @@ namespace RyLogViewer
 {
 	public partial class SettingsUI :Form
 	{
-		private readonly Settings        m_settings;         // The app settings changed by this UI
-		private readonly List<Highlight> m_highlights;       // The highlight patterns currently in the grid
-		private readonly List<Filter>    m_filters;          // The filter patterns currently in the grid
+		private readonly Settings        m_settings;   // The app settings changed by this UI
+		private readonly List<Highlight> m_highlights; // The highlight patterns currently in the grid
+		private readonly List<Filter>    m_filters;    // The filter patterns currently in the grid
+		private readonly ToolTip         m_tt;         // Tooltips
 
 		public enum ETab
 		{
@@ -22,12 +22,12 @@ namespace RyLogViewer
 		}
 		private static class ColumnNames
 		{
-			public const string Active = "Active";
-			public const string Pattern = "Pattern";
-			public const string Modify = "Modify";
-			public const string FullColumn = "FullColumn";
+			public const string Active       = "Active";
+			public const string Pattern      = "Pattern";
+			public const string Modify       = "Modify";
+			public const string FullColumn   = "FullColumn";
 			public const string Highlighting = "Highlighting";
-			public const string Exclude = "Exclude";
+			public const string Exclude      = "Exclude";
 		}
 	
 		public SettingsUI(ETab tab)
@@ -36,10 +36,11 @@ namespace RyLogViewer
 			m_settings              = new Settings();
 			m_highlights            = Highlight.Import(m_settings.HighlightPatterns);
 			m_filters               = Filter.Import(m_settings.FilterPatterns);
+			m_tt                    = new ToolTip();
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
-			m_settings.PropertyChanged += (s,a) => UpdateUI();
+			m_settings.SettingChanged += (s,a) => UpdateUI();
 			
 			// General
 			m_check_save_screen_loc.CheckedChanged += (s,a)=>
@@ -76,6 +77,12 @@ namespace RyLogViewer
 				{
 					m_settings.AlternateLineColours = m_check_alternate_line_colour.Checked;
 				};
+			m_edit_line_ends.TextChanged += (s,a)=>
+			{
+				m_settings.RowDelimiter = m_edit_line_ends.Text;
+			};
+			m_edit_line_ends.Text = m_settings.RowDelimiter;
+			m_tt.SetToolTip(m_edit_line_ends, "Use 'CR' for carriage return, 'LF' for line feed.");
 			
 			// Highlights
 			var hl_style = new DataGridViewCellStyle

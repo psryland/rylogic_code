@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Configuration;
+using System.Drawing;
 using System.IO;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Xml;
-using System.Xml.Serialization;
 using NUnit.Framework;
 using pr.util;
 
@@ -30,9 +30,26 @@ using pr.util;
 namespace pr.common
 {
 	/// <summary>A base class for simple settings</summary>
-	[Serializable] public abstract class SettingsBase
+	public abstract class SettingsBase
 	{
-		protected Dictionary<string,object> Data = new Dictionary<string, object>();
+		// Add more of these as needed
+		[KnownType(typeof(Point))]
+		[KnownType(typeof(Color))]
+		[KnownType(typeof(Size))]
+		[KnownType(typeof(DateTime))]
+		[KnownType(typeof(Font))]
+		[KnownType(typeof(FontStyle))]
+		[KnownType(typeof(GraphicsUnit))]
+
+		// Using a List<> instead of a Dictionary as Dictionary isn't serialisable
+		[DataContract(Name="setting")] public class Pair
+		{
+			[DataMember(Name="key"  )] public string Key   {get;set;}
+			[DataMember(Name="value")] public object Value {get;set;}
+			public override string ToString() { return Key + "  " + Value; }
+		}
+		
+		protected List<Pair> Data = new List<Pair>();
 		private const string version_key = "__SettingsVersion";
 		
 		/// <summary>Options for loading settings</summary>
@@ -50,8 +67,8 @@ namespace pr.common
 			get
 			{
 				string company = Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company;
-				string app_name = Util.GetAssemblyAttribute<AssemblyProductAttribute>().Product;
-				string app_data = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.Create);
+				string app_name = Util.GetAssemblyAttribute<AssemblyTitleAttribute>().Title;
+				string app_data = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 				return Path.Combine(app_data, company, app_name);
 			}
 		}
@@ -65,25 +82,34 @@ namespace pr.common
 		/// <summary>Read a settings value</summary>
 		protected T get<T>(string key)
 		{
-			return (T)Data[key];
+			Pair pair = Data.Find(x => x.Key == key);
+			if (pair != null) return (T)pair.Value;
+			pair = DefaultData.Data.Find(x => x.Key == key);
+			if (pair != null) return (T)pair.Value;
+			throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
+				"This is probably because there is no default value set "+
+				"in the constructor of the derived settings class");
 		}
 
 		/// <summary>Write a settings value</summary>
-		protected void set<T>(string key, T value)
+		protected void set<T>(string key, T new_value)
 		{
 			// Key not in the data yet, must be initial value from startup
-			if (!Data.ContainsKey(key))
+			Pair pair = Data.Find(x => x.Key == key);
+			if (pair == null)
 			{
-				Data.Add(key, value);
+				Data.Add(new Pair{Key = key, Value = new_value});
 				return;
 			}
 			
 			// If the values are the same, don't raise 'changing' events
-			if (value.Equals(Data[key])) return; // same value
+			if (Equals(pair.Value, new_value)) return; // same value
 			
-			var args = new SettingsChangingEventArgs(key, value, false);
+			T old_value = (T)pair.Value;
+			var args = new SettingsChangingEventArgs(key, old_value, new_value, false);
 			if (SettingChanging != null && key != version_key) SettingChanging(this, args);
-			if (!args.Cancel) Data[key] = value;
+			if (!args.Cancel) pair.Value = new_value;
+			if (SettingChanged != null && key != version_key) SettingChanged(this, new SettingChangedEventArgs(key, old_value, new_value));
 		}
 		
 		/// <summary>An event raised when a settings is about to change value</summary>
@@ -91,8 +117,29 @@ namespace pr.common
 		public class SettingsChangingEventArgs :CancelEventArgs
 		{
 			public string Key      { get; private set; }
+			public object OldValue { get; private set; }
 			public object NewValue { get; private set; }
-			public SettingsChangingEventArgs(string key, object new_value, bool cancel = false) :base(cancel) { Key = key; NewValue = new_value; }
+			public SettingsChangingEventArgs(string key, object old_value, object new_value, bool cancel = false) :base(cancel)
+			{
+				Key = key;
+				OldValue = old_value;
+				NewValue = new_value;
+			}
+		}
+		
+		/// <summary>An event raised after a setting has been changed</summary>
+		public event EventHandler<SettingChangedEventArgs> SettingChanged;
+		public class SettingChangedEventArgs :EventArgs
+		{
+			public string Key      { get; private set; }
+			public object OldValue { get; private set; }
+			public object NewValue { get; private set; }
+			public SettingChangedEventArgs(string key, object old_value, object new_value)
+			{
+				Key = key;
+				OldValue = old_value;
+				NewValue = new_value;
+			}
 		}
 		
 		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
@@ -106,22 +153,28 @@ namespace pr.common
 		}
 
 		/// <summary>An event raised whenver the settings are about to be saved to persistent storage</summary>
-		public event SettingsSavingEventHandler SettingsSaving;
+		public event EventHandler<SettingsSavingEventArgs> SettingsSaving;
+		public class SettingsSavingEventArgs :CancelEventArgs
+		{
+			public SettingsSavingEventArgs(bool cancel = false) :base(cancel)
+			{}
+		}
 		
 		/// <summary>Refreshes the settings from persistent storage</summary>
 		public virtual void Reload()
 		{
 			string filepath = Filepath;
-
-			XmlSerializer ser = new XmlSerializer(typeof(Dictionary<string,object>));
-			XmlReaderSettings rs = new XmlReaderSettings();
-			using (XmlReader r = XmlReader.Create(filepath, rs))
-				Data = (Dictionary<string,object>)ser.Deserialize(r);
+			if (!File.Exists(filepath))
+				Reset();
+			
+			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>));
+			using (FileStream fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read))
+				Data = (List<Pair>)ser.ReadObject(fs);
 			
 			// Check the version of the settings
 			string version = get<string>(version_key);
 			if (version != Version)
-				 Upgrade();
+				Upgrade();
 			
 			// Notify of settings loaded
 			if (SettingsLoaded != null)
@@ -132,7 +185,7 @@ namespace pr.common
 		public virtual void Save()
 		{
 			// Notify of a save about to happen
-			CancelEventArgs args = new CancelEventArgs(false);
+			SettingsSavingEventArgs args = new SettingsSavingEventArgs(false);
 			if (SettingsSaving != null) SettingsSaving(this, args);
 			if (args.Cancel) return;
 
@@ -141,18 +194,26 @@ namespace pr.common
 			string path = Path.GetDirectoryName(filepath);
 			if (path != null && !Directory.Exists(path)) Directory.CreateDirectory(path);
 
-			// Perform the save
+			// Save the settings version
 			set(version_key, Version);
-			XmlSerializer ser = new XmlSerializer(typeof(Dictionary<string,object>));
-			XmlWriterSettings ws = new XmlWriterSettings{NewLineHandling = NewLineHandling.Entitize, Indent = true};
-			using (XmlWriter wr = XmlWriter.Create(Filepath, ws))
-				ser.Serialize(wr, Data);
+
+			// Perform the save
+			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>));
+			using (XmlWriter fs = XmlWriter.Create(Filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment, NamespaceHandling = NamespaceHandling.OmitDuplicates}))
+				ser.WriteObject(fs, Data);
 		}
 
 		/// <summary>Resets the persistent settings to their defaults</summary>
 		public virtual void Reset()
 		{
 			DefaultData.Save();
+		}
+
+		/// <summary>Remove the settings file from persistent storage</summary>
+		public virtual void Delete()
+		{
+			if (File.Exists(Filepath))
+				File.Delete(Filepath);
 		}
 
 		/// <summary>Called when loading settings from an earlier version</summary>
@@ -165,12 +226,12 @@ namespace pr.common
 		/// <summary>Example use of settings</summary>
 		private sealed class Settings :SettingsBase
 		{
-			public static readonly Settings Default = new Settings(0);
+			public static readonly Settings Default = new Settings(ELoadOptions.Defaults);
 			protected override SettingsBase DefaultData { get { return Default; } }
 			
-			public string Str { get { return get<string>("Str"); } set { set("Str", value); } }
-			public int    Int { get { return get<int   >("Int"); } set { set("Int", value); } }
-
+			public string   Str { get { return get<string  >("Str"); } set { set("Str", value); } }
+			public int      Int { get { return get<int     >("Int"); } set { set("Int", value); } }
+			
 			public Settings(ELoadOptions opts = ELoadOptions.Normal)
 			{
 				if (opts == ELoadOptions.Normal)
