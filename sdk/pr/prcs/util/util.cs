@@ -403,6 +403,12 @@ namespace pr.util
 			{"zip", "application/zip"}
 		};
 		#endregion
+		
+		/// <summary>Set the tooltip for this control</summary>
+		public static void ToolTip(this Control ctrl, ToolTip tt, string caption)
+		{
+			tt.SetToolTip(ctrl, caption);
+		}
 	}
 	
 	/// <summary>Type specific utility methods</summary>

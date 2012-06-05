@@ -72,7 +72,19 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="filter.cs" />
+    <Compile Include="find_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="find_ui.Designer.cs">
+      <DependentUpon>find_ui.cs</DependentUpon>
+    </Compile>
     <Compile Include="highlight.cs" />
+    <Compile Include="line_cache.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="line_index.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="misc.cs" />
     <Compile Include="pattern.cs" />
     <Compile Include="main.cs">
@@ -104,6 +116,9 @@
     </Compile>
     <EmbeddedResource Include="about.resx">
       <DependentUpon>about.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="find_ui.resx">
+      <DependentUpon>find_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="main.resx">
       <DependentUpon>main.cs</DependentUpon>

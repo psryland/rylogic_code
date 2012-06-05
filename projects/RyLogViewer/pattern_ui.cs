@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -11,19 +12,20 @@ namespace RyLogViewer
 	{
 		enum BtnImageIdx { AddNew = 0, Save = 1 }
 		
+		// Some of these are public to allow clients to hide bits of the UI
 		private readonly ToolTip m_tt;
-		private Pattern m_pattern;
-		private ImageList m_image_list;
-		private Button m_btn_regex_help;
-		private CheckBox m_check_binary;
-		private CheckBox m_check_active;
-		private CheckBox m_check_invert;
-		private CheckBox m_check_is_regex;
-		private CheckBox m_check_ignore_case;
-		private Button m_btn_add;
-		private Label m_lbl_hl_regexp;
-		private TextBox m_edit_pattern;
-		private RichTextBox m_edit_test;
+		private Pattern          m_pattern;
+		private ImageList        m_image_list;
+		private Button           m_btn_regex_help;
+		public  CheckBox         m_check_binary;
+		public  CheckBox         m_check_active;
+		public  CheckBox         m_check_invert;
+		public  CheckBox         m_check_is_regex;
+		public  CheckBox         m_check_ignore_case;
+		public  Button           m_btn_add;
+		private Label            m_lbl_hl_regexp;
+		public  TextBox          m_edit_pattern;
+		public  RichTextBox      m_edit_test;
 		
 		/// <summary>The pattern being controlled by this UI</summary>
 		public Pattern Pattern { get { return m_pattern; } }
@@ -40,18 +42,23 @@ namespace RyLogViewer
 			m_pattern = null;
 			m_tt = new ToolTip();
 			
-			// Tool tips
-			//todo
-
+			// Pattern
+			m_edit_pattern.ToolTip(m_tt, "A substring or regular expression to match");
 			m_edit_pattern.TextChanged += (s,a)=>
 				{
 					Pattern.Expr = m_edit_pattern.Text;
 					UpdateUI();
 				};
+			
+			// Regex help
+			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");
 			m_btn_regex_help.Click += (s,a)=>
 				{
 					ShowQuickHelp();
 				};
+			
+			// Add/Update
+			m_btn_add.ToolTip(m_tt, "Adds a new pattern, or updates an existing pattern");
 			m_btn_add.Click += (s,a)=>
 				{
 					if (Add == null) return;
@@ -59,31 +66,49 @@ namespace RyLogViewer
 					if (Pattern.IsRegex) try { new Regex(Pattern.Expr); } catch (ArgumentException) { return; }
 					Add(this, EventArgs.Empty);
 				};
+			
+			// Active
+			m_check_active.ToolTip(m_tt, "Uncheck to temporarily disable the pattern");
 			m_check_active.CheckedChanged += (s,a)=>
 				{
 					Pattern.Active = m_check_active.Checked;
 					UpdateUI();
 				};
+			
+			// Regex
+			m_check_is_regex.ToolTip(m_tt, "Check if the pattern is a regular expression");
 			m_check_is_regex.CheckedChanged += (s,a)=>
 				{
 					Pattern.IsRegex = m_check_is_regex.Checked;
 					UpdateUI();
 				};
+			
+			// Ignore case
+			m_check_ignore_case.ToolTip(m_tt, "Check if the pattern should ignore case when matching");
 			m_check_ignore_case.CheckedChanged += (s,a)=>
 				{
 					Pattern.IgnoreCase = m_check_ignore_case.Checked;
 					UpdateUI();
 				};
+			
+			// Invert
+			m_check_invert.ToolTip(m_tt, "Invert the match result. e.g the pattern 'a' matches anything without the letter 'a' when this option is checked");
 			m_check_invert.CheckedChanged += (s,a)=>
 				{
 					Pattern.Invert = m_check_invert.Checked;
 					UpdateUI();
 				};
+			
+			// Binary
+			m_check_binary.ToolTip(m_tt, "When checked, any match within a value is treated as if the whole value matches");
 			m_check_binary.CheckedChanged += (s,a)=>
 				{
 					Pattern.BinaryMatch = m_check_binary.Checked;
 					UpdateUI();
 				};
+			
+			// Test text
+			m_edit_test.ToolTip(m_tt, "A area for testing your pattern. Add any text you like here");
 			m_edit_test.TextChanged += (s,a)=>
 				{
 					UpdateUI();
@@ -96,7 +121,7 @@ namespace RyLogViewer
 			IsNew = true;
 			m_pattern = pat;
 			m_btn_add.ImageIndex = (int)BtnImageIdx.AddNew;
-			m_tt.SetToolTip(m_btn_add, "Add this new pattern");
+			m_btn_add.ToolTip(m_tt, "Add this new pattern");
 			UpdateUI();
 		}
 
@@ -106,7 +131,7 @@ namespace RyLogViewer
 			IsNew = false;
 			m_pattern = pat;
 			m_btn_add.ImageIndex = (int)BtnImageIdx.Save;
-			m_tt.SetToolTip(m_btn_add, "Finish editing this pattern");
+			m_btn_add.ToolTip(m_tt, "Finish editing this pattern");
 			UpdateUI();
 		}
 		

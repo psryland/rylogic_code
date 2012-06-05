@@ -8,22 +8,22 @@ namespace RyLogViewer
 		/// <summary>
 		/// If true, then a positive match excludes the line, negative match includes the line.
 		/// If false, then a positive match include the line, negative match excludes the line.</summary>
-		public bool Exclude { get; set; }
+		//public bool Exclude { get; set; }
 		
 		public Filter()
 		{
-			Exclude = false;
+			//Exclude = false;
 		}
 		public Filter(Filter rhs) :base(rhs)
 		{
-			Exclude = rhs.Exclude;
+			//Exclude = rhs.Exclude;
 		}
 
 		/// <summary>Construct from xml description</summary>
 		public Filter(XElement node) :base(node)
 		{
 			// ReSharper disable PossibleNullReferenceException
-			Exclude =bool.Parse(node.Element(XmlTag.Exclude).Value);
+			//Exclude =bool.Parse(node.Element(XmlTag.Exclude).Value);
 			// ReSharper restore PossibleNullReferenceException
 		}
 
@@ -31,10 +31,10 @@ namespace RyLogViewer
 		public override XElement ToXml(XElement node)
 		{
 			base.ToXml(node);
-			node.Add
-			(
-				new XElement(XmlTag.Exclude ,Exclude)
-			);
+			//node.Add
+			//(
+			//    new XElement(XmlTag.Exclude ,Exclude)
+			//);
 			return node;
 		}
 		
@@ -74,18 +74,20 @@ namespace RyLogViewer
 		public override bool Equals(object obj)
 		{
 			Filter rhs = obj as Filter;
-			return
-				rhs != null &&
-				base.Equals(obj) &&
-				Exclude.Equals(rhs.Exclude);
+			return 
+				rhs != null
+				&& base.Equals(obj)
+				//&& Exclude.Equals(rhs.Exclude)
+				;
 		}
 		
 		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{
 			return
-				base.GetHashCode()^
-				Exclude.GetHashCode();
+				base.GetHashCode()
+				//^Exclude.GetHashCode()
+				;
 		}
 	}
 }

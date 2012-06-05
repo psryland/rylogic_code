@@ -87,6 +87,11 @@ namespace RyLogViewer
 			get { return get<Color>("LineForeColour2"); }
 			set { set("LineForeColour2", value); }
 		}
+		public int    RowHeight
+		{
+			get { return get<int>("RowHeight"); }
+			set { set("RowHeight", value); }
+		}
 		public bool   LoadLastFile
 		{
 			get { return get<bool>("LoadLastFile"); }
@@ -174,6 +179,7 @@ namespace RyLogViewer
 			LineBackColour2      = Color.FromArgb(192, 255, 192);
 			LineForeColour1      = Color.Black;
 			LineForeColour2      = Color.Black;
+			RowHeight            = 18;
 			LoadLastFile         = false;
 			LastLoadedFile       = "";
 			AlwaysOnTop          = false;

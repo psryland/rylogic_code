@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
+using pr.maths;
+using pr.util;
 using RyLogViewer.Properties;
 
 namespace RyLogViewer
@@ -27,7 +29,7 @@ namespace RyLogViewer
 			public const string Modify       = "Modify";
 			public const string FullColumn   = "FullColumn";
 			public const string Highlighting = "Highlighting";
-			public const string Exclude      = "Exclude";
+			//public const string Exclude      = "Exclude";
 		}
 	
 		public SettingsUI(ETab tab)
@@ -42,55 +44,127 @@ namespace RyLogViewer
 			m_pattern_ft.NewPattern(new Filter());
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			
-			// General
-			m_check_save_screen_loc.CheckedChanged += (s,a)=>
-				{
-					m_settings.RestoreScreenLoc = m_check_save_screen_loc.Checked;
-				};
+			SetupGeneralTab();
+			SetupHighlightTab();
+			SetupFilterTab();
+			
+			// Save on close
+			Closed += (s,a) =>
+			{
+				m_settings.HighlightPatterns = Highlight.Export(m_highlights);
+				m_settings.FilterPatterns    = Filter   .Export(m_filters);
+				m_settings.Save();
+			};
+			
+			UpdateUI();
+		}
+		
+		/// <summary>Hook up events for the general tab</summary>
+		private void SetupGeneralTab()
+		{
+			// Load last file on startup
+			m_check_load_last_file.ToolTip(m_tt, "Automatically load the last loaded file on startup");
 			m_check_load_last_file.CheckedChanged += (s,a)=>
 				{
 					m_settings.LoadLastFile = m_check_load_last_file.Checked;
 				};
+			
+			// Restore window position on startup
+			m_check_save_screen_loc.ToolTip(m_tt, "Restore the window to its last position on startup");
+			m_check_save_screen_loc.CheckedChanged += (s,a)=>
+				{
+					m_settings.RestoreScreenLoc = m_check_save_screen_loc.Checked;
+				};
+			
+			// Show tip of the day on startup
+			m_check_show_totd.ToolTip(m_tt, "Show the 'Tip of the Day' dialog on startup");
 			m_check_show_totd.CheckedChanged += (s,a)=>
 				{
 					m_settings.ShowTOTD = m_check_show_totd.Checked;
 				};
+
+			// Line endings
+			m_edit_line_ends.ToolTip(m_tt, "Set the line ending characters to expect in the log data. Use 'CR' for carriage return, 'LF' for line feed");
+			m_edit_line_ends.Text = m_settings.RowDelimiter;
+			m_edit_line_ends.TextChanged += (s,a)=>
+			{
+				m_settings.RowDelimiter = m_edit_line_ends.Text;
+			};
+			
+			// Column delimiters
+			m_edit_col_delims.ToolTip(m_tt, "Set the characters that separate columns in the log data. Use 'TAB' for a tab character. Leave blank for no column delimiters");
+			m_edit_col_delims.Text = m_settings.ColDelimiter;
+			m_edit_col_delims.TextChanged += (s,a)=>
+				{
+					m_settings.ColDelimiter = m_edit_col_delims.Text;
+				};
+			
+			// Selection colour
+			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view");
 			m_lbl_selection_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_selection_example, a.X, a.Y,
 						(o,e) => m_settings.LineSelectForeColour = PickColour(m_settings.LineSelectForeColour),
 						(o,e) => m_settings.LineSelectBackColour = PickColour(m_settings.LineSelectBackColour));
 				};
+			
+			// Log text colour
+			m_lbl_line1_example.ToolTip(m_tt, "Set the foreground and background colours in the log view");
 			m_lbl_line1_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_line1_example, a.X, a.Y,
 						(o,e) => m_settings.LineForeColour1 = PickColour(m_settings.LineForeColour1),
 						(o,e) => m_settings.LineBackColour1 = PickColour(m_settings.LineBackColour1));
 				};
+			
+			// Alt log text colour
+			m_lbl_line2_example.ToolTip(m_tt, "Set the foreground and background colours for odd numbered rows in the log view");
 			m_lbl_line2_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_line2_example, a.X, a.Y,
 						(o,e) => m_settings.LineForeColour2 = PickColour(m_settings.LineForeColour2),
 						(o,e) => m_settings.LineBackColour2 = PickColour(m_settings.LineBackColour2));
 				};
+			
+			// Enable alt line colours
+			m_check_alternate_line_colour.ToolTip(m_tt, "Enable alternating colours in the log view");
 			m_check_alternate_line_colour.CheckedChanged += (s,a)=>
 				{
 					m_settings.AlternateLineColours = m_check_alternate_line_colour.Checked;
 				};
-			m_edit_line_ends.TextChanged += (s,a)=>
-			{
-				m_settings.RowDelimiter = m_edit_line_ends.Text;
-			};
-			m_edit_line_ends.Text = m_settings.RowDelimiter;
-			m_tt.SetToolTip(m_edit_line_ends, "Use 'CR' for carriage return, 'LF' for line feed.");
 			
-			// Highlights
+			// Line count
+			m_spinner_line_count.ToolTip(m_tt, "The maximum number of lines to read from a log file (read from the end of the file)");
+			m_spinner_line_count.Minimum = 1;
+			m_spinner_line_count.Maximum = 5000;
+			m_spinner_line_count.Value = Maths.Clamp(m_settings.LineCount, (int)m_spinner_line_count.Minimum, (int)m_spinner_line_count.Maximum);
+			m_spinner_line_count.ValueChanged += (s,a)=>
+				{
+					m_settings.LineCount = (int)m_spinner_line_count.Value;
+				};
+			
+			// Row height
+			m_spinner_row_height.ToolTip(m_tt, "The height of each row in the log view");
+			m_spinner_row_height.Minimum = 1;
+			m_spinner_row_height.Maximum = 200;
+			m_spinner_row_height.Value = Maths.Clamp(m_settings.RowHeight, (int)m_spinner_row_height.Minimum, (int)m_spinner_row_height.Maximum);
+			m_spinner_row_height.ValueChanged += (s,a)=>
+				{
+					m_settings.RowHeight = (int)m_spinner_row_height.Value;
+				};
+		}
+		
+		/// <summary>Hook up events for the highlights tab</summary>
+		private void SetupHighlightTab()
+		{
 			var hl_style = new DataGridViewCellStyle
 			{
 				Font      = m_settings.Font,
 				ForeColor = m_settings.LineForeColour1,
 				BackColor = m_settings.LineBackColour1,
 			};
+
+			// Highlight grid
 			m_grid_highlight.AllowDrop           = true;
 			m_grid_highlight.VirtualMode         = true;
 			m_grid_highlight.AutoGenerateColumns = false;
@@ -110,26 +184,33 @@ namespace RyLogViewer
 			m_grid_highlight.MouseClick       += (s,a)=> OnMouseClick(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
 			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
-			m_pattern_set_hl.Init(m_settings, m_highlights);
-			m_pattern_set_hl.CurrentSetChanged += (s,a)=>
-				{
-					UpdateUI();
-				};
+			
+			// Highlight pattern
 			m_pattern_hl.Add += (s,a)=>
 				{
 					if (m_pattern_hl.IsNew) m_highlights.Add((Highlight)m_pattern_hl.Pattern);
 					m_pattern_hl.NewPattern(new Highlight());
 					UpdateUI();
 				};
-
-			// Filters
+			
+			// Highlight pattern sets
+			m_pattern_set_hl.Init(m_settings, m_highlights);
+			m_pattern_set_hl.CurrentSetChanged += (s,a)=>
+				{
+					UpdateUI();
+				};
+		}
+		
+		/// <summary>Hook up events for the filters tab</summary>
+		private void SetupFilterTab()
+		{
 			m_grid_filter.AllowDrop           = true;
 			m_grid_filter.VirtualMode         = true;
 			m_grid_filter.AutoGenerateColumns = false;
 			m_grid_filter.ColumnCount         = m_grid_filter.RowCount = 0;
 			m_grid_filter.Columns.Add(new DataGridViewCheckBoxColumn{Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
 			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_filter.Columns.Add(new DataGridViewCheckBoxColumn{Name = ColumnNames.Exclude ,HeaderText = Resources.Exclude ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			//m_grid_filter.Columns.Add(new DataGridViewCheckBoxColumn{Name = ColumnNames.Exclude ,HeaderText = Resources.Exclude ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader, ToolTipText = "If checked, matches are Excluded from the view."});
 			m_grid_filter.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
@@ -141,11 +222,8 @@ namespace RyLogViewer
 			m_grid_filter.MouseClick         += (s,a)=> OnMouseClick(m_grid_filter, m_filters, a);
 			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
 			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
-			m_pattern_set_ft.Init(m_settings, m_filters);
-			m_pattern_set_ft.CurrentSetChanged += (s,a)=>
-				{
-					UpdateUI();
-				};
+			
+			// Filter pattern
 			m_pattern_ft.Add += (s,a)=>
 				{
 					if (m_pattern_ft.IsNew) m_filters.Add((Filter)m_pattern_ft.Pattern);
@@ -153,17 +231,14 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			
-			// Save on close
-			Closed += (s,a) =>
-			{
-				m_settings.HighlightPatterns = Highlight.Export(m_highlights);
-				m_settings.FilterPatterns    = Filter   .Export(m_filters);
-				m_settings.Save();
-			};
-			
-			UpdateUI();
+			// Filter pattern sets
+			m_pattern_set_ft.Init(m_settings, m_filters);
+			m_pattern_set_ft.CurrentSetChanged += (s,a)=>
+				{
+					UpdateUI();
+				};
 		}
-
+		
 		/// <summary>Delete a pattern</summary>
 		private static void OnDeleteRow<T>(DataGridView grid, List<T> patterns)
 		{
@@ -227,9 +302,9 @@ namespace RyLogViewer
 				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? hl.BackColour : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
 				break;
-			case ColumnNames.Exclude:
-				e.Value = ft != null ? ft.Exclude : false;
-				break;
+			//case ColumnNames.Exclude:
+			//    e.Value = ft != null ? ft.Exclude : false;
+			//    break;
 			case ColumnNames.Modify:
 				e.Value = "...";
 				break;
@@ -268,13 +343,13 @@ namespace RyLogViewer
 							(s,a) => { hl.BackColour = PickColour(hl.BackColour); grid.InvalidateCell(hit.ColumnIndex, hit.RowIndex); });
 					}
 					break;
-				case ColumnNames.Exclude:
-					if (ft != null)
-					{
-						ft.Exclude = (bool)cell.Value == false;
-						grid.EndEdit();
-					}
-					break;
+				//case ColumnNames.Exclude:
+				//    if (ft != null)
+				//    {
+				//        ft.Exclude = (bool)cell.Value == false;
+				//        grid.EndEdit();
+				//    }
+				//    break;
 				}
 				UpdateUI();
 			}
@@ -309,7 +384,6 @@ namespace RyLogViewer
 			m_lbl_line1_example.ForeColor = m_settings.LineForeColour1;
 			m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
 			m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
-			m_lbl_line2_colours.Enabled = m_settings.AlternateLineColours;
 			m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
 			
 			int selected = m_grid_highlight.FirstSelectedRowIndex();

@@ -55,8 +55,8 @@
 			this.m_menu_encoding = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding_ascii = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding_utf8 = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_encoding_ucs2_bigendian = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding_ucs2_littleendian = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_ucs2_bigendian = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_alwaysontop = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep4 = new System.Windows.Forms.ToolStripSeparator();
@@ -171,7 +171,7 @@
             this.m_menu_help});
 			this.m_menu.Location = new System.Drawing.Point(3, 27);
 			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(341, 24);
+			this.m_menu.Size = new System.Drawing.Size(249, 24);
 			this.m_menu.Stretch = false;
 			this.m_menu.TabIndex = 1;
 			this.m_menu.Text = "m_menu";
@@ -302,17 +302,17 @@
 			this.m_menu_encoding_utf8.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_encoding_utf8.Text = "UTF-8";
 			// 
-			// m_menu_encoding_ucs2_bigendian
-			// 
-			this.m_menu_encoding_ucs2_bigendian.Name = "m_menu_encoding_ucs2_bigendian";
-			this.m_menu_encoding_ucs2_bigendian.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_encoding_ucs2_bigendian.Text = "UCS-2 (big endian)";
-			// 
 			// m_menu_encoding_ucs2_littleendian
 			// 
 			this.m_menu_encoding_ucs2_littleendian.Name = "m_menu_encoding_ucs2_littleendian";
 			this.m_menu_encoding_ucs2_littleendian.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_encoding_ucs2_littleendian.Text = "UCS-2 (little endian)";
+			// 
+			// m_menu_encoding_ucs2_bigendian
+			// 
+			this.m_menu_encoding_ucs2_bigendian.Name = "m_menu_encoding_ucs2_bigendian";
+			this.m_menu_encoding_ucs2_bigendian.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_ucs2_bigendian.Text = "UCS-2 (big endian)";
 			// 
 			// m_menu_tools
 			// 
@@ -427,8 +427,8 @@
 			// 
 			// m_toolstrip_cont.TopToolStripPanel
 			// 
-			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_menu);
 			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_toolstrip);
+			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_menu);
 			// 
 			// m_grid
 			// 
@@ -436,7 +436,7 @@
 			this.m_grid.AllowUserToDeleteRows = false;
 			this.m_grid.AllowUserToOrderColumns = true;
 			this.m_grid.AllowUserToResizeRows = false;
-			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.DisplayedCellsExceptHeader;
 			this.m_grid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_grid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;

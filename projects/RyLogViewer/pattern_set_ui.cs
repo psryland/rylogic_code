@@ -54,6 +54,7 @@ namespace RyLogViewer
 			UpdateUI();
 			
 			// Combo
+			m_combo_sets.ToolTip(m_tt, "Select a pattern set from this list to merge with or replace the existing patterns");
 			m_combo_sets.DisplayMember = Util<Set>.MemberName(x=>x.Name);
 			m_combo_sets.SelectedIndex = 0;
 			m_combo_sets.SelectedIndexChanged += (s,a)=>
@@ -71,6 +72,7 @@ namespace RyLogViewer
 				};
 			
 			// Save the current list of patterns as a pattern set
+			m_btn_save.ToolTip(m_tt, "Save the current list of patterns as a pattern set");
 			m_btn_save.Click += (s,a)=>
 				{
 					// Ask for a name for the set
@@ -101,6 +103,7 @@ namespace RyLogViewer
 				};
 			
 			// Load a pattern set from file
+			m_btn_load.ToolTip(m_tt, "Load a pattern set from file");
 			m_btn_load.Click += (s,a)=>
 				{
 					// Ask for the file location
@@ -108,11 +111,6 @@ namespace RyLogViewer
 					if (fd.ShowDialog(this) != DialogResult.OK) return;
 					m_sets.Add(new Set(fd.FileName));
 				};
-			
-			// ToolTips
-			m_tt.SetToolTip(m_combo_sets ,"Recent pattern sets. Select to load or merge a pattern set");
-			m_tt.SetToolTip(m_btn_save   ,"Save the current list of patterns as a pattern set");
-			m_tt.SetToolTip(m_btn_load   ,"Load a pattern set from file");
 		}
 
 		/// <summary>Return the pattern set filter</summary>

@@ -8,24 +8,57 @@ namespace RyLogViewer
 {
 	public class Pattern :ICloneable
 	{
+		private string m_expr;
+		private bool m_active;
+		private bool m_is_regex;
+		private bool m_ignore_case;
+		private bool m_invert;
+		private bool m_binary_match;
+		private Regex m_compiled_regex;
+		
 		/// <summary>The pattern to use when matching</summary>
-		public string Expr { get; set; }
-		
+		public string Expr
+		{
+			get { return m_expr; }
+			set { m_expr = value; m_compiled_regex = null; }
+		}
+
 		/// <summary>True if the highlight pattern is active</summary>
-		public bool Active { get; set; }
-		
+		public bool Active
+		{
+			get { return m_active; }
+			set { m_active = value; }
+		}
+
 		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
-		public bool IsRegex { get; set; }
+		public bool IsRegex
+		{
+			get { return m_is_regex; }
+			set { m_is_regex = value; m_compiled_regex = null; }
+		}
+
 		
 		/// <summary>True if the pattern should ignore case</summary>
-		public bool IgnoreCase { get; set; }
-		
+		public bool IgnoreCase
+		{
+			get { return m_ignore_case; }
+			set { m_ignore_case = value; m_compiled_regex = null; }
+		}
+
 		/// <summary>Invert the results of a match</summary>
-		public bool Invert { get; set; }
-		
+		public bool Invert
+		{
+			get { return m_invert; }
+			set { m_invert = value; }
+		}
+
 		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
-		public bool BinaryMatch { get; set; }
-		
+		public bool BinaryMatch
+		{
+			get { return m_binary_match; }
+			set { m_binary_match = value; }
+		}
+
 		public Pattern()
 		{
 			Expr = "";
@@ -45,6 +78,15 @@ namespace RyLogViewer
 			BinaryMatch = rhs.BinaryMatch;
 		}
 		
+		private Regex Regex
+		{
+			get
+			{
+				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
+				return m_compiled_regex ?? (m_compiled_regex = new Regex(Expr, opts));
+			}
+		}
+		
 		/// <summary>Return true if the contained expression is valid</summary>
 		public bool ExprValid
 		{
@@ -60,8 +102,7 @@ namespace RyLogViewer
 			bool match = false;
 			if (IsRegex)
 			{
-				RegexOptions opts = IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None;
-				try { match = new Regex(Expr, opts).IsMatch(text); } catch (ArgumentException) {}
+				try { match = Regex.IsMatch(text); } catch (ArgumentException) {}
 			}
 			else
 			{
@@ -82,8 +123,7 @@ namespace RyLogViewer
 				{
 					if (IsRegex)
 					{
-						RegexOptions opts = IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None;
-						foreach (Match m in new Regex(Expr, opts).Matches(text))
+						foreach (Match m in Regex.Matches(text))
 						{
 							x.Add(m.Index);
 							x.Add(m.Index + m.Length);

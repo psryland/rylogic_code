@@ -31,6 +31,14 @@
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsUI));
 			this.m_tabctrl = new System.Windows.Forms.TabControl();
 			this.m_tab_general = new System.Windows.Forms.TabPage();
+			this.m_group_grid = new System.Windows.Forms.GroupBox();
+			this.m_lbl_history_length = new System.Windows.Forms.Label();
+			this.m_spinner_line_count = new System.Windows.Forms.NumericUpDown();
+			this.m_lbl_row_height = new System.Windows.Forms.Label();
+			this.m_spinner_row_height = new System.Windows.Forms.NumericUpDown();
+			this.m_group_line_ends = new System.Windows.Forms.GroupBox();
+			this.m_edit_line_ends = new System.Windows.Forms.TextBox();
+			this.m_lbl_line_ends = new System.Windows.Forms.Label();
 			this.m_group_startup = new System.Windows.Forms.GroupBox();
 			this.m_check_show_totd = new System.Windows.Forms.CheckBox();
 			this.m_check_save_screen_loc = new System.Windows.Forms.CheckBox();
@@ -39,7 +47,6 @@
 			this.m_lbl_line2_example = new System.Windows.Forms.Label();
 			this.m_lbl_line1_example = new System.Windows.Forms.Label();
 			this.m_lbl_selection_example = new System.Windows.Forms.Label();
-			this.m_lbl_line2_colours = new System.Windows.Forms.Label();
 			this.m_lbl_line1_colours = new System.Windows.Forms.Label();
 			this.m_lbl_selection_colour = new System.Windows.Forms.Label();
 			this.m_check_alternate_line_colour = new System.Windows.Forms.CheckBox();
@@ -55,11 +62,14 @@
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
-			this.m_group_line_ends = new System.Windows.Forms.GroupBox();
-			this.m_lbl_line_ends = new System.Windows.Forms.Label();
-			this.m_edit_line_ends = new System.Windows.Forms.TextBox();
+			this.m_lbl_col_delims = new System.Windows.Forms.Label();
+			this.m_edit_col_delims = new System.Windows.Forms.TextBox();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
+			this.m_group_grid.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_line_count)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_row_height)).BeginInit();
+			this.m_group_line_ends.SuspendLayout();
 			this.m_group_startup.SuspendLayout();
 			this.m_group_log_text_colours.SuspendLayout();
 			this.m_tab_highlight.SuspendLayout();
@@ -76,7 +86,6 @@
 			this.m_split_ft.SuspendLayout();
 			this.m_table_ft.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filter)).BeginInit();
-			this.m_group_line_ends.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tabctrl
@@ -93,6 +102,7 @@
 			// 
 			// m_tab_general
 			// 
+			this.m_tab_general.Controls.Add(this.m_group_grid);
 			this.m_tab_general.Controls.Add(this.m_group_line_ends);
 			this.m_tab_general.Controls.Add(this.m_group_startup);
 			this.m_tab_general.Controls.Add(this.m_group_log_text_colours);
@@ -103,6 +113,80 @@
 			this.m_tab_general.TabIndex = 0;
 			this.m_tab_general.Text = "General";
 			this.m_tab_general.UseVisualStyleBackColor = true;
+			// 
+			// m_group_grid
+			// 
+			this.m_group_grid.Controls.Add(this.m_lbl_history_length);
+			this.m_group_grid.Controls.Add(this.m_spinner_line_count);
+			this.m_group_grid.Controls.Add(this.m_lbl_row_height);
+			this.m_group_grid.Controls.Add(this.m_spinner_row_height);
+			this.m_group_grid.Location = new System.Drawing.Point(8, 211);
+			this.m_group_grid.Name = "m_group_grid";
+			this.m_group_grid.Size = new System.Drawing.Size(200, 100);
+			this.m_group_grid.TabIndex = 6;
+			this.m_group_grid.TabStop = false;
+			this.m_group_grid.Text = "Log Output";
+			// 
+			// m_lbl_history_length
+			// 
+			this.m_lbl_history_length.AutoSize = true;
+			this.m_lbl_history_length.Location = new System.Drawing.Point(13, 21);
+			this.m_lbl_history_length.Name = "m_lbl_history_length";
+			this.m_lbl_history_length.Size = new System.Drawing.Size(109, 13);
+			this.m_lbl_history_length.TabIndex = 3;
+			this.m_lbl_history_length.Text = "History Length (rows):";
+			// 
+			// m_spinner_line_count
+			// 
+			this.m_spinner_line_count.Location = new System.Drawing.Point(128, 19);
+			this.m_spinner_line_count.Name = "m_spinner_line_count";
+			this.m_spinner_line_count.Size = new System.Drawing.Size(66, 20);
+			this.m_spinner_line_count.TabIndex = 2;
+			// 
+			// m_lbl_row_height
+			// 
+			this.m_lbl_row_height.AutoSize = true;
+			this.m_lbl_row_height.Location = new System.Drawing.Point(56, 47);
+			this.m_lbl_row_height.Name = "m_lbl_row_height";
+			this.m_lbl_row_height.Size = new System.Drawing.Size(66, 13);
+			this.m_lbl_row_height.TabIndex = 1;
+			this.m_lbl_row_height.Text = "Row Height:";
+			// 
+			// m_spinner_row_height
+			// 
+			this.m_spinner_row_height.Location = new System.Drawing.Point(128, 45);
+			this.m_spinner_row_height.Name = "m_spinner_row_height";
+			this.m_spinner_row_height.Size = new System.Drawing.Size(66, 20);
+			this.m_spinner_row_height.TabIndex = 0;
+			// 
+			// m_group_line_ends
+			// 
+			this.m_group_line_ends.Controls.Add(this.m_edit_col_delims);
+			this.m_group_line_ends.Controls.Add(this.m_lbl_col_delims);
+			this.m_group_line_ends.Controls.Add(this.m_edit_line_ends);
+			this.m_group_line_ends.Controls.Add(this.m_lbl_line_ends);
+			this.m_group_line_ends.Location = new System.Drawing.Point(219, 6);
+			this.m_group_line_ends.Name = "m_group_line_ends";
+			this.m_group_line_ends.Size = new System.Drawing.Size(272, 87);
+			this.m_group_line_ends.TabIndex = 5;
+			this.m_group_line_ends.TabStop = false;
+			this.m_group_line_ends.Text = "Row Properties";
+			// 
+			// m_edit_line_ends
+			// 
+			this.m_edit_line_ends.Location = new System.Drawing.Point(108, 23);
+			this.m_edit_line_ends.Name = "m_edit_line_ends";
+			this.m_edit_line_ends.Size = new System.Drawing.Size(158, 20);
+			this.m_edit_line_ends.TabIndex = 2;
+			// 
+			// m_lbl_line_ends
+			// 
+			this.m_lbl_line_ends.AutoSize = true;
+			this.m_lbl_line_ends.Location = new System.Drawing.Point(36, 26);
+			this.m_lbl_line_ends.Name = "m_lbl_line_ends";
+			this.m_lbl_line_ends.Size = new System.Drawing.Size(66, 13);
+			this.m_lbl_line_ends.TabIndex = 1;
+			this.m_lbl_line_ends.Text = "Line Ending:";
 			// 
 			// m_group_startup
 			// 
@@ -151,13 +235,12 @@
 			this.m_group_log_text_colours.Controls.Add(this.m_lbl_line2_example);
 			this.m_group_log_text_colours.Controls.Add(this.m_lbl_line1_example);
 			this.m_group_log_text_colours.Controls.Add(this.m_lbl_selection_example);
-			this.m_group_log_text_colours.Controls.Add(this.m_lbl_line2_colours);
 			this.m_group_log_text_colours.Controls.Add(this.m_lbl_line1_colours);
 			this.m_group_log_text_colours.Controls.Add(this.m_lbl_selection_colour);
 			this.m_group_log_text_colours.Controls.Add(this.m_check_alternate_line_colour);
 			this.m_group_log_text_colours.Location = new System.Drawing.Point(8, 99);
 			this.m_group_log_text_colours.Name = "m_group_log_text_colours";
-			this.m_group_log_text_colours.Size = new System.Drawing.Size(319, 130);
+			this.m_group_log_text_colours.Size = new System.Drawing.Size(319, 106);
 			this.m_group_log_text_colours.TabIndex = 3;
 			this.m_group_log_text_colours.TabStop = false;
 			this.m_group_log_text_colours.Text = "Log Text Colours";
@@ -167,9 +250,9 @@
 			this.m_lbl_line2_example.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_line2_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_line2_example.Location = new System.Drawing.Point(164, 67);
+			this.m_lbl_line2_example.Location = new System.Drawing.Point(148, 75);
 			this.m_lbl_line2_example.Name = "m_lbl_line2_example";
-			this.m_lbl_line2_example.Size = new System.Drawing.Size(149, 21);
+			this.m_lbl_line2_example.Size = new System.Drawing.Size(165, 21);
 			this.m_lbl_line2_example.TabIndex = 13;
 			this.m_lbl_line2_example.Text = "Click here to modify colours";
 			this.m_lbl_line2_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -179,7 +262,7 @@
 			this.m_lbl_line1_example.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_line1_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_line1_example.Location = new System.Drawing.Point(98, 16);
+			this.m_lbl_line1_example.Location = new System.Drawing.Point(98, 45);
 			this.m_lbl_line1_example.Name = "m_lbl_line1_example";
 			this.m_lbl_line1_example.Size = new System.Drawing.Size(215, 21);
 			this.m_lbl_line1_example.TabIndex = 12;
@@ -191,26 +274,17 @@
 			this.m_lbl_selection_example.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_selection_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_selection_example.Location = new System.Drawing.Point(98, 98);
+			this.m_lbl_selection_example.Location = new System.Drawing.Point(98, 16);
 			this.m_lbl_selection_example.Name = "m_lbl_selection_example";
 			this.m_lbl_selection_example.Size = new System.Drawing.Size(215, 21);
 			this.m_lbl_selection_example.TabIndex = 11;
 			this.m_lbl_selection_example.Text = "Click here to modify colours";
 			this.m_lbl_selection_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
-			// m_lbl_line2_colours
-			// 
-			this.m_lbl_line2_colours.AutoSize = true;
-			this.m_lbl_line2_colours.Location = new System.Drawing.Point(28, 71);
-			this.m_lbl_line2_colours.Name = "m_lbl_line2_colours";
-			this.m_lbl_line2_colours.Size = new System.Drawing.Size(130, 13);
-			this.m_lbl_line2_colours.TabIndex = 10;
-			this.m_lbl_line2_colours.Text = "Alternate Log Text Colour:";
-			// 
 			// m_lbl_line1_colours
 			// 
 			this.m_lbl_line1_colours.AutoSize = true;
-			this.m_lbl_line1_colours.Location = new System.Drawing.Point(7, 20);
+			this.m_lbl_line1_colours.Location = new System.Drawing.Point(7, 48);
 			this.m_lbl_line1_colours.Name = "m_lbl_line1_colours";
 			this.m_lbl_line1_colours.Size = new System.Drawing.Size(85, 13);
 			this.m_lbl_line1_colours.TabIndex = 8;
@@ -219,7 +293,7 @@
 			// m_lbl_selection_colour
 			// 
 			this.m_lbl_selection_colour.AutoSize = true;
-			this.m_lbl_selection_colour.Location = new System.Drawing.Point(7, 102);
+			this.m_lbl_selection_colour.Location = new System.Drawing.Point(5, 20);
 			this.m_lbl_selection_colour.Name = "m_lbl_selection_colour";
 			this.m_lbl_selection_colour.Size = new System.Drawing.Size(87, 13);
 			this.m_lbl_selection_colour.TabIndex = 5;
@@ -228,11 +302,11 @@
 			// m_check_alternate_line_colour
 			// 
 			this.m_check_alternate_line_colour.AutoSize = true;
-			this.m_check_alternate_line_colour.Location = new System.Drawing.Point(10, 47);
+			this.m_check_alternate_line_colour.Location = new System.Drawing.Point(10, 77);
 			this.m_check_alternate_line_colour.Name = "m_check_alternate_line_colour";
-			this.m_check_alternate_line_colour.Size = new System.Drawing.Size(129, 17);
+			this.m_check_alternate_line_colour.Size = new System.Drawing.Size(132, 17);
 			this.m_check_alternate_line_colour.TabIndex = 4;
-			this.m_check_alternate_line_colour.Text = "Alternate Line Colours";
+			this.m_check_alternate_line_colour.Text = "Alternate Line Colours:";
 			this.m_check_alternate_line_colour.UseVisualStyleBackColor = true;
 			// 
 			// m_tab_highlight
@@ -396,32 +470,21 @@
 			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.TabIndex = 4;
 			// 
-			// m_group_line_ends
+			// m_lbl_col_delims
 			// 
-			this.m_group_line_ends.Controls.Add(this.m_edit_line_ends);
-			this.m_group_line_ends.Controls.Add(this.m_lbl_line_ends);
-			this.m_group_line_ends.Location = new System.Drawing.Point(219, 6);
-			this.m_group_line_ends.Name = "m_group_line_ends";
-			this.m_group_line_ends.Size = new System.Drawing.Size(272, 50);
-			this.m_group_line_ends.TabIndex = 5;
-			this.m_group_line_ends.TabStop = false;
-			this.m_group_line_ends.Text = "Line Endings";
+			this.m_lbl_col_delims.AutoSize = true;
+			this.m_lbl_col_delims.Location = new System.Drawing.Point(9, 56);
+			this.m_lbl_col_delims.Name = "m_lbl_col_delims";
+			this.m_lbl_col_delims.Size = new System.Drawing.Size(93, 13);
+			this.m_lbl_col_delims.TabIndex = 3;
+			this.m_lbl_col_delims.Text = "Column Delimiters:";
 			// 
-			// m_lbl_line_ends
+			// m_edit_col_delims
 			// 
-			this.m_lbl_line_ends.AutoSize = true;
-			this.m_lbl_line_ends.Location = new System.Drawing.Point(20, 20);
-			this.m_lbl_line_ends.Name = "m_lbl_line_ends";
-			this.m_lbl_line_ends.Size = new System.Drawing.Size(66, 13);
-			this.m_lbl_line_ends.TabIndex = 1;
-			this.m_lbl_line_ends.Text = "Line Ending:";
-			// 
-			// m_edit_line_ends
-			// 
-			this.m_edit_line_ends.Location = new System.Drawing.Point(92, 17);
-			this.m_edit_line_ends.Name = "m_edit_line_ends";
-			this.m_edit_line_ends.Size = new System.Drawing.Size(174, 20);
-			this.m_edit_line_ends.TabIndex = 2;
+			this.m_edit_col_delims.Location = new System.Drawing.Point(108, 53);
+			this.m_edit_col_delims.Name = "m_edit_col_delims";
+			this.m_edit_col_delims.Size = new System.Drawing.Size(158, 20);
+			this.m_edit_col_delims.TabIndex = 4;
 			// 
 			// SettingsUI
 			// 
@@ -436,6 +499,12 @@
 			this.Text = "Options";
 			this.m_tabctrl.ResumeLayout(false);
 			this.m_tab_general.ResumeLayout(false);
+			this.m_group_grid.ResumeLayout(false);
+			this.m_group_grid.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_line_count)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_row_height)).EndInit();
+			this.m_group_line_ends.ResumeLayout(false);
+			this.m_group_line_ends.PerformLayout();
 			this.m_group_startup.ResumeLayout(false);
 			this.m_group_startup.PerformLayout();
 			this.m_group_log_text_colours.ResumeLayout(false);
@@ -456,8 +525,6 @@
 			this.m_table_ft.ResumeLayout(false);
 			this.m_table_ft.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filter)).EndInit();
-			this.m_group_line_ends.ResumeLayout(false);
-			this.m_group_line_ends.PerformLayout();
 			this.ResumeLayout(false);
 
 		}
@@ -476,7 +543,6 @@
 		private System.Windows.Forms.Label m_lbl_line2_example;
 		private System.Windows.Forms.Label m_lbl_line1_example;
 		private System.Windows.Forms.Label m_lbl_selection_example;
-		private System.Windows.Forms.Label m_lbl_line2_colours;
 		private PatternUI m_pattern_hl;
 		private System.Windows.Forms.GroupBox m_group_startup;
 		private System.Windows.Forms.CheckBox m_check_load_last_file;
@@ -493,5 +559,12 @@
 		private System.Windows.Forms.GroupBox m_group_line_ends;
 		private System.Windows.Forms.Label m_lbl_line_ends;
 		private System.Windows.Forms.TextBox m_edit_line_ends;
+		private System.Windows.Forms.GroupBox m_group_grid;
+		private System.Windows.Forms.Label m_lbl_row_height;
+		private System.Windows.Forms.NumericUpDown m_spinner_row_height;
+		private System.Windows.Forms.Label m_lbl_history_length;
+		private System.Windows.Forms.NumericUpDown m_spinner_line_count;
+		private System.Windows.Forms.TextBox m_edit_col_delims;
+		private System.Windows.Forms.Label m_lbl_col_delims;
 	}
 }
