@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -30,7 +32,7 @@ namespace RyLogViewer
 			public override string ToString() { return Count != 0 ? this[0] : ""; }
 			
 			/// <summary>Read a line from 'file' and divide it into columns</summary>
-			public void Cache(FileStream file, Encoding encoding, List<Range> line_index, int index, byte column_delimiter)
+			public void Cache(FileStream file, Encoding encoding, List<Range> line_index, int index, string column_delimiter)
 			{
 				if (m_index == index) return; // Already cached
 				m_index = index;
@@ -42,20 +44,15 @@ namespace RyLogViewer
 				file.Seek(rng.m_begin, SeekOrigin.Begin);
 				m_buf = rng.Count <= m_buf.Length ? m_buf : new byte[rng.Count];
 				int read = file.Read(m_buf, 0, (int)rng.Count);
-				if (read != rng.Count)
-					throw new IOException("failed to read file over range ["+rng.m_begin+","+rng.m_end+"). Read "+read+"/"+rng.Count+" bytes.");
-				
-				// Split the line up into columns and convert to strings
+				if (read != rng.Count) throw new IOException("failed to read file over range ["+rng.m_begin+","+rng.m_end+"). Read "+read+"/"+rng.Count+" bytes.");
+				string line = encoding.GetString(m_buf, 0, read);
+
+				// Split the line up into columns
 				m_col.Clear();
-				int b = 0, e = 0;
-				for (; e != rng.Count; ++e)
-				{
-					if (m_buf[e] != column_delimiter) continue;
-					m_col.Add(encoding.GetString(m_buf, b, e));
-					b = e + 1;
-				}
-				if (b != e)
-					m_col.Add(encoding.GetString(m_buf, b, e));
+				if (column_delimiter.Length != 0)
+					m_col.AddRange(line.Split(new[]{column_delimiter}, StringSplitOptions.None));
+				else
+					m_col.Add(line);
 			}
 		}
 
@@ -212,6 +209,7 @@ namespace RyLogViewer
 			m_encoding = encoding;
 			m_settings.Encoding = m_encoding.EncodingName;
 			m_settings.Save();
+			ApplySettings();
 			Reload();
 		}
 		
@@ -445,8 +443,11 @@ namespace RyLogViewer
 			if (encoding.Equals(Encoding.ASCII)) {}
 			else if (encoding.Equals(Encoding.Unicode) || encoding.Equals(Encoding.BigEndianUnicode))
 			{
+				// Skip the byte order mask (BOM)
+				if (pos == 0 && file.ReadByte() != -1 && file.ReadByte() != -1) {}
+				
 				// Ensure a 16-bit word boundary
-				if ((pos % 2) == 1)
+				if ((file.Position % 2) == 1)
 					file.ReadByte();
 			}
 			else if (encoding.Equals(Encoding.UTF8))
@@ -497,8 +498,10 @@ namespace RyLogViewer
 				r.m_begin = base_addr + rng.m_begin + encoding.GetByteCount(text.Substring(0, (int)r.m_begin)); 
 				r.m_end   = base_addr + rng.m_begin + encoding.GetByteCount(text.Substring(0, (int)r.m_end  ));
 				Debug.Assert(r.m_begin <= r.m_end);
-				Debug.Assert(r.m_begin >= 0 && r.m_end <= max_addr);
-				line_index.Add(r);
+				if (r.m_begin >= 0 && r.m_end <= max_addr)
+					line_index.Add(r);
+				else
+					throw new DataException("Invalid text data. Check that the correct encoding is used");
 			}
 		}
 		
@@ -578,7 +581,11 @@ namespace RyLogViewer
 			// Don't use the results if the task was cancelled
 			DialogResult res;
 			try { res = task.ShowDialog(this); }
-			catch (Exception ex) { res = MessageBox.Show(this, string.Format(Resources.BuildLineIndexErrorMsg, ex.Message), Resources.ReadingFileFailed, MessageBoxButtons.RetryCancel, MessageBoxIcon.Error); }
+			catch (Exception ex)
+			{
+				if (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
+				res = MessageBox.Show(this, string.Format(Resources.BuildLineIndexErrorMsg, ex.Message), Resources.ReadingFileFailed, MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
+			}
 			if (res == DialogResult.Retry)
 			{
 				Action<string> retry = BuildLineIndex;

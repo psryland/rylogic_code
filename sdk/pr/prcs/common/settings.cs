@@ -59,10 +59,10 @@ namespace pr.common
 		protected abstract SettingsBase DefaultData { get; }
 		
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		protected virtual string Version { get { return "v1.0"; } }
+		public virtual string Version { get { return "v1.0"; } }
 		
 		/// <summary>Returns the directory in which to store app settings</summary>
-		protected virtual string AppDataDirectory
+		public virtual string AppDataDirectory
 		{
 			get
 			{
@@ -74,7 +74,7 @@ namespace pr.common
 		}
 		
 		/// <summary>Returns the filepath for the persisted settings file</summary>
-		protected virtual string Filepath
+		public virtual string Filepath
 		{
 			get { return Path.Combine(AppDataDirectory, "settings.xml"); }
 		}

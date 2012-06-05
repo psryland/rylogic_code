@@ -142,9 +142,9 @@ namespace RyLogViewer
 			get { return get<string>("RowDelimiter"); }
 			set { set("RowDelimiter", value); }
 		}
-		public byte   ColDelimiter
+		public string ColDelimiter
 		{
-			get { return get<byte>("ColDelimiter"); }
+			get { return get<string>("ColDelimiter"); }
 			set { set("ColDelimiter", value); }
 		}
 		public string Encoding
@@ -185,7 +185,7 @@ namespace RyLogViewer
 			HighlightPatternSets = "<root/>";
 			FilterPatternSets    = "<root/>";
 			RowDelimiter         = "CRLF";
-			ColDelimiter         = 0;
+			ColDelimiter         = "";
 			Encoding             = System.Text.Encoding.UTF8.EncodingName;
 		}
 	}
