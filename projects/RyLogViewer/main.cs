@@ -192,6 +192,9 @@ namespace RyLogViewer
 			// File Drop
 			DragEnter += (s,a) => FileDrop(a, true);
 			DragDrop  += (s,a) => FileDrop(a, false);
+			
+			// Resize
+			SizeChanged += (s,a)=> UpdateUI();
 
 			// Shutdown
 			FormClosing += (s,a) =>
@@ -525,6 +528,7 @@ namespace RyLogViewer
 				m_grid.ColumnHeadersVisible = line.Column.Count > 1;
 				m_grid.ColumnCount = line.Column.Count;
 				
+				// Ensure the grid has the correct number of rows
 				bool auto_scroll = AutoScrollTail;
 				if (m_grid.RowCount != m_line_index.Count)
 				{
@@ -534,6 +538,26 @@ namespace RyLogViewer
 					SelectedRow = auto_scroll ? m_grid.RowCount - 1 : selected;
 				}
 				if (auto_scroll) ShowLastRow();
+				
+				// Measure each column's preferred width
+				int total_width = 0;
+				int[] col_widths = new int[m_grid.ColumnCount];
+				foreach (DataGridViewColumn col in m_grid.Columns)
+					total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
+				
+				// Resize columns. If the total width is less than the control width use the control width instead
+				if (total_width < m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
+				{
+					m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+					m_grid.AutoResizeColumns();
+				}
+				else if (total_width > m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
+				{
+					m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+					foreach (DataGridViewColumn col in m_grid.Columns)
+						col.Width = col_widths[col.Index];
+				}
+				
 				m_grid.Refresh();
 			}
 			else
