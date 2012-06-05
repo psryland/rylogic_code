@@ -100,7 +100,8 @@
 			this.m_toolstrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
 			this.m_toolstrip.Location = new System.Drawing.Point(6, 0);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(144, 27);
+			this.m_toolstrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
+			this.m_toolstrip.Size = new System.Drawing.Size(175, 27);
 			this.m_toolstrip.TabIndex = 0;
 			this.m_toolstrip.Text = "toolStrip1";
 			// 
@@ -431,7 +432,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(236, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(376, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
