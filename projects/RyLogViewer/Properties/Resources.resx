@@ -199,7 +199,7 @@
 			Highlighting column header
 		</comment>
   </data>
-  <data name="1338530996_book" type="System.Resources.ResXFileRef, System.Windows.Forms">
+  <data name="book" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\1338530996_book.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
@@ -233,17 +233,23 @@ Error: {1}</value>
   <data name="LoadPatternSetFailed" xml:space="preserve">
     <value>Load Pattern Set Failed</value>
   </data>
-	<data name="ConfirmDelete">
-		<value xml:space="preserve">Confirm Delete</value>
-	</data>
-	<data name="DeletePatternSetFileX">
-		<value><![CDATA[Delete pattern set file '{0}'?]]></value>
-	</data>
-	<data name="DeleteFailed">
-		<value xml:space="preserve">Delete Failed</value>
-	</data>
-	<data name="CouldNotDeletePatternSetFileX">
-		<value xml:space="preserve">Could not delete pattern set file {0}.
+  <data name="ConfirmDelete" xml:space="preserve">
+    <value>Confirm Delete</value>
+  </data>
+  <data name="DeletePatternSetFileX" xml:space="preserve">
+    <value>Delete pattern set file '{0}'?</value>
+  </data>
+  <data name="DeleteFailed" xml:space="preserve">
+    <value>Delete Failed</value>
+  </data>
+  <data name="CouldNotDeletePatternSetFileX" xml:space="preserve">
+    <value>Could not delete pattern set file {0}.
 Error: {1}</value>
-	</data>
+  </data>
+  <data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\agt_action_success.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\agt_action_fail.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
 </root>

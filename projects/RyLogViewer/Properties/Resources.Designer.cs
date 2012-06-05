@@ -60,13 +60,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap _1338530996_book {
-            get {
-                object obj = ResourceManager.GetObject("1338530996_book", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         internal static System.Drawing.Bitmap _3dowarrow {
             get {
                 object obj = ResourceManager.GetObject("_3dowarrow", resourceCulture);
@@ -98,6 +91,13 @@ namespace RyLogViewer.Properties {
         internal static string BinaryMatch {
             get {
                 return ResourceManager.GetString("BinaryMatch", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap book {
+            get {
+                object obj = ResourceManager.GetObject("book", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -338,6 +338,20 @@ namespace RyLogViewer.Properties {
         internal static string Pattern {
             get {
                 return ResourceManager.GetString("Pattern", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap pattern_active {
+            get {
+                object obj = ResourceManager.GetObject("pattern_active", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap pattern_inactive {
+            get {
+                object obj = ResourceManager.GetObject("pattern_inactive", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

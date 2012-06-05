@@ -37,6 +37,8 @@
 			this.m_lbl_row_height = new System.Windows.Forms.Label();
 			this.m_spinner_row_height = new System.Windows.Forms.NumericUpDown();
 			this.m_group_line_ends = new System.Windows.Forms.GroupBox();
+			this.m_edit_col_delims = new System.Windows.Forms.TextBox();
+			this.m_lbl_col_delims = new System.Windows.Forms.Label();
 			this.m_edit_line_ends = new System.Windows.Forms.TextBox();
 			this.m_lbl_line_ends = new System.Windows.Forms.Label();
 			this.m_group_startup = new System.Windows.Forms.GroupBox();
@@ -51,19 +53,17 @@
 			this.m_lbl_selection_colour = new System.Windows.Forms.Label();
 			this.m_check_alternate_line_colour = new System.Windows.Forms.CheckBox();
 			this.m_tab_highlight = new System.Windows.Forms.TabPage();
-			this.m_split_hl = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_hl = new RyLogViewer.PatternUI();
-			this.m_table_hl = new System.Windows.Forms.TableLayoutPanel();
-			this.m_grid_highlight = new System.Windows.Forms.DataGridView();
-			this.m_pattern_set_hl = new RyLogViewer.PatternSetHL();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
 			this.m_split_ft = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_ft = new RyLogViewer.PatternUI();
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
+			this.m_split_hl = new System.Windows.Forms.SplitContainer();
+			this.m_table_hl = new System.Windows.Forms.TableLayoutPanel();
+			this.m_grid_highlight = new System.Windows.Forms.DataGridView();
+			this.m_pattern_hl = new RyLogViewer.PatternUI();
+			this.m_pattern_set_hl = new RyLogViewer.PatternSetHL();
+			this.m_pattern_ft = new RyLogViewer.PatternUI();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
-			this.m_lbl_col_delims = new System.Windows.Forms.Label();
-			this.m_edit_col_delims = new System.Windows.Forms.TextBox();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_grid.SuspendLayout();
@@ -73,12 +73,6 @@
 			this.m_group_startup.SuspendLayout();
 			this.m_group_log_text_colours.SuspendLayout();
 			this.m_tab_highlight.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_split_hl)).BeginInit();
-			this.m_split_hl.Panel1.SuspendLayout();
-			this.m_split_hl.Panel2.SuspendLayout();
-			this.m_split_hl.SuspendLayout();
-			this.m_table_hl.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_grid_highlight)).BeginInit();
 			this.m_tab_filter.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_split_ft)).BeginInit();
 			this.m_split_ft.Panel1.SuspendLayout();
@@ -86,6 +80,12 @@
 			this.m_split_ft.SuspendLayout();
 			this.m_table_ft.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filter)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.m_split_hl)).BeginInit();
+			this.m_split_hl.Panel1.SuspendLayout();
+			this.m_split_hl.Panel2.SuspendLayout();
+			this.m_split_hl.SuspendLayout();
+			this.m_table_hl.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_highlight)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// m_tabctrl
@@ -171,6 +171,22 @@
 			this.m_group_line_ends.TabIndex = 5;
 			this.m_group_line_ends.TabStop = false;
 			this.m_group_line_ends.Text = "Row Properties";
+			// 
+			// m_edit_col_delims
+			// 
+			this.m_edit_col_delims.Location = new System.Drawing.Point(108, 53);
+			this.m_edit_col_delims.Name = "m_edit_col_delims";
+			this.m_edit_col_delims.Size = new System.Drawing.Size(158, 20);
+			this.m_edit_col_delims.TabIndex = 4;
+			// 
+			// m_lbl_col_delims
+			// 
+			this.m_lbl_col_delims.AutoSize = true;
+			this.m_lbl_col_delims.Location = new System.Drawing.Point(9, 56);
+			this.m_lbl_col_delims.Name = "m_lbl_col_delims";
+			this.m_lbl_col_delims.Size = new System.Drawing.Size(93, 13);
+			this.m_lbl_col_delims.TabIndex = 3;
+			this.m_lbl_col_delims.Text = "Column Delimiters:";
 			// 
 			// m_edit_line_ends
 			// 
@@ -320,6 +336,65 @@
 			this.m_tab_highlight.Text = "Highlight";
 			this.m_tab_highlight.UseVisualStyleBackColor = true;
 			// 
+			// m_tab_filter
+			// 
+			this.m_tab_filter.Controls.Add(this.m_split_ft);
+			this.m_tab_filter.Location = new System.Drawing.Point(4, 22);
+			this.m_tab_filter.Name = "m_tab_filter";
+			this.m_tab_filter.Size = new System.Drawing.Size(494, 432);
+			this.m_tab_filter.TabIndex = 2;
+			this.m_tab_filter.Text = "Filter";
+			this.m_tab_filter.UseVisualStyleBackColor = true;
+			// 
+			// m_split_ft
+			// 
+			this.m_split_ft.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_split_ft.Location = new System.Drawing.Point(0, 0);
+			this.m_split_ft.Name = "m_split_ft";
+			this.m_split_ft.Orientation = System.Windows.Forms.Orientation.Horizontal;
+			// 
+			// m_split_ft.Panel1
+			// 
+			this.m_split_ft.Panel1.Controls.Add(this.m_pattern_ft);
+			// 
+			// m_split_ft.Panel2
+			// 
+			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
+			this.m_split_ft.Size = new System.Drawing.Size(494, 432);
+			this.m_split_ft.SplitterDistance = 145;
+			this.m_split_ft.TabIndex = 5;
+			// 
+			// m_table_ft
+			// 
+			this.m_table_ft.ColumnCount = 1;
+			this.m_table_ft.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table_ft.Controls.Add(this.m_grid_filter, 0, 0);
+			this.m_table_ft.Controls.Add(this.m_pattern_set_ft, 0, 1);
+			this.m_table_ft.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_table_ft.Location = new System.Drawing.Point(0, 0);
+			this.m_table_ft.Name = "m_table_ft";
+			this.m_table_ft.RowCount = 2;
+			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.m_table_ft.Size = new System.Drawing.Size(494, 283);
+			this.m_table_ft.TabIndex = 4;
+			// 
+			// m_grid_filter
+			// 
+			this.m_grid_filter.AllowUserToAddRows = false;
+			this.m_grid_filter.AllowUserToOrderColumns = true;
+			this.m_grid_filter.AllowUserToResizeRows = false;
+			this.m_grid_filter.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid_filter.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+			this.m_grid_filter.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_grid_filter.Location = new System.Drawing.Point(3, 3);
+			this.m_grid_filter.MultiSelect = false;
+			this.m_grid_filter.Name = "m_grid_filter";
+			this.m_grid_filter.RowHeadersWidth = 24;
+			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid_filter.Size = new System.Drawing.Size(488, 233);
+			this.m_grid_filter.TabIndex = 3;
+			// 
 			// m_split_hl
 			// 
 			this.m_split_hl.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -337,16 +412,6 @@
 			this.m_split_hl.Size = new System.Drawing.Size(488, 426);
 			this.m_split_hl.SplitterDistance = 172;
 			this.m_split_hl.TabIndex = 3;
-			// 
-			// m_pattern_hl
-			// 
-			this.m_pattern_hl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_pattern_hl.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_hl.Location = new System.Drawing.Point(0, 0);
-			this.m_pattern_hl.MinimumSize = new System.Drawing.Size(336, 92);
-			this.m_pattern_hl.Name = "m_pattern_hl";
-			this.m_pattern_hl.Size = new System.Drawing.Size(488, 172);
-			this.m_pattern_hl.TabIndex = 2;
 			// 
 			// m_table_hl
 			// 
@@ -379,6 +444,16 @@
 			this.m_grid_highlight.Size = new System.Drawing.Size(482, 200);
 			this.m_grid_highlight.TabIndex = 1;
 			// 
+			// m_pattern_hl
+			// 
+			this.m_pattern_hl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_pattern_hl.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_pattern_hl.Location = new System.Drawing.Point(0, 0);
+			this.m_pattern_hl.MinimumSize = new System.Drawing.Size(336, 92);
+			this.m_pattern_hl.Name = "m_pattern_hl";
+			this.m_pattern_hl.Size = new System.Drawing.Size(488, 172);
+			this.m_pattern_hl.TabIndex = 2;
+			// 
 			// m_pattern_set_hl
 			// 
 			this.m_pattern_set_hl.AutoSize = true;
@@ -390,34 +465,6 @@
 			this.m_pattern_set_hl.Size = new System.Drawing.Size(482, 38);
 			this.m_pattern_set_hl.TabIndex = 2;
 			// 
-			// m_tab_filter
-			// 
-			this.m_tab_filter.Controls.Add(this.m_split_ft);
-			this.m_tab_filter.Location = new System.Drawing.Point(4, 22);
-			this.m_tab_filter.Name = "m_tab_filter";
-			this.m_tab_filter.Size = new System.Drawing.Size(494, 432);
-			this.m_tab_filter.TabIndex = 2;
-			this.m_tab_filter.Text = "Filter";
-			this.m_tab_filter.UseVisualStyleBackColor = true;
-			// 
-			// m_split_ft
-			// 
-			this.m_split_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_split_ft.Location = new System.Drawing.Point(0, 0);
-			this.m_split_ft.Name = "m_split_ft";
-			this.m_split_ft.Orientation = System.Windows.Forms.Orientation.Horizontal;
-			// 
-			// m_split_ft.Panel1
-			// 
-			this.m_split_ft.Panel1.Controls.Add(this.m_pattern_ft);
-			// 
-			// m_split_ft.Panel2
-			// 
-			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
-			this.m_split_ft.Size = new System.Drawing.Size(192, 74);
-			this.m_split_ft.SplitterDistance = 25;
-			this.m_split_ft.TabIndex = 5;
-			// 
 			// m_pattern_ft
 			// 
 			this.m_pattern_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -425,66 +472,19 @@
 			this.m_pattern_ft.Location = new System.Drawing.Point(0, 0);
 			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.Name = "m_pattern_ft";
-			this.m_pattern_ft.Size = new System.Drawing.Size(336, 92);
+			this.m_pattern_ft.Size = new System.Drawing.Size(494, 145);
 			this.m_pattern_ft.TabIndex = 4;
-			// 
-			// m_table_ft
-			// 
-			this.m_table_ft.ColumnCount = 1;
-			this.m_table_ft.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.m_table_ft.Controls.Add(this.m_grid_filter, 0, 0);
-			this.m_table_ft.Controls.Add(this.m_pattern_set_ft, 0, 1);
-			this.m_table_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_table_ft.Location = new System.Drawing.Point(0, 0);
-			this.m_table_ft.Name = "m_table_ft";
-			this.m_table_ft.RowCount = 2;
-			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ft.Size = new System.Drawing.Size(192, 45);
-			this.m_table_ft.TabIndex = 4;
-			// 
-			// m_grid_filter
-			// 
-			this.m_grid_filter.AllowUserToAddRows = false;
-			this.m_grid_filter.AllowUserToOrderColumns = true;
-			this.m_grid_filter.AllowUserToResizeRows = false;
-			this.m_grid_filter.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-			this.m_grid_filter.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-			this.m_grid_filter.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_filter.Location = new System.Drawing.Point(3, 3);
-			this.m_grid_filter.MultiSelect = false;
-			this.m_grid_filter.Name = "m_grid_filter";
-			this.m_grid_filter.RowHeadersWidth = 24;
-			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(186, 1);
-			this.m_grid_filter.TabIndex = 3;
 			// 
 			// m_pattern_set_ft
 			// 
 			this.m_pattern_set_ft.AutoSize = true;
 			this.m_pattern_set_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 4);
+			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 242);
 			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
+			this.m_pattern_set_ft.Size = new System.Drawing.Size(488, 38);
 			this.m_pattern_set_ft.TabIndex = 4;
-			// 
-			// m_lbl_col_delims
-			// 
-			this.m_lbl_col_delims.AutoSize = true;
-			this.m_lbl_col_delims.Location = new System.Drawing.Point(9, 56);
-			this.m_lbl_col_delims.Name = "m_lbl_col_delims";
-			this.m_lbl_col_delims.Size = new System.Drawing.Size(93, 13);
-			this.m_lbl_col_delims.TabIndex = 3;
-			this.m_lbl_col_delims.Text = "Column Delimiters:";
-			// 
-			// m_edit_col_delims
-			// 
-			this.m_edit_col_delims.Location = new System.Drawing.Point(108, 53);
-			this.m_edit_col_delims.Name = "m_edit_col_delims";
-			this.m_edit_col_delims.Size = new System.Drawing.Size(158, 20);
-			this.m_edit_col_delims.TabIndex = 4;
 			// 
 			// SettingsUI
 			// 
@@ -510,13 +510,6 @@
 			this.m_group_log_text_colours.ResumeLayout(false);
 			this.m_group_log_text_colours.PerformLayout();
 			this.m_tab_highlight.ResumeLayout(false);
-			this.m_split_hl.Panel1.ResumeLayout(false);
-			this.m_split_hl.Panel2.ResumeLayout(false);
-			((System.ComponentModel.ISupportInitialize)(this.m_split_hl)).EndInit();
-			this.m_split_hl.ResumeLayout(false);
-			this.m_table_hl.ResumeLayout(false);
-			this.m_table_hl.PerformLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_grid_highlight)).EndInit();
 			this.m_tab_filter.ResumeLayout(false);
 			this.m_split_ft.Panel1.ResumeLayout(false);
 			this.m_split_ft.Panel2.ResumeLayout(false);
@@ -525,6 +518,13 @@
 			this.m_table_ft.ResumeLayout(false);
 			this.m_table_ft.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filter)).EndInit();
+			this.m_split_hl.Panel1.ResumeLayout(false);
+			this.m_split_hl.Panel2.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_split_hl)).EndInit();
+			this.m_split_hl.ResumeLayout(false);
+			this.m_table_hl.ResumeLayout(false);
+			this.m_table_hl.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_highlight)).EndInit();
 			this.ResumeLayout(false);
 
 		}

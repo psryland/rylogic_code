@@ -128,7 +128,7 @@ namespace RyLogViewer
 			// 
 			// pictureBox1
 			// 
-			this.pictureBox1.Image = global::RyLogViewer.Properties.Resources._1338530996_book;
+			this.pictureBox1.Image = global::RyLogViewer.Properties.Resources.book;
 			this.pictureBox1.Location = new System.Drawing.Point(12, 12);
 			this.pictureBox1.Name = "pictureBox1";
 			this.pictureBox1.Size = new System.Drawing.Size(48, 48);
