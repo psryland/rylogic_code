@@ -88,7 +88,7 @@
 			// m_toolstrip
 			// 
 			this.m_toolstrip.Dock = System.Windows.Forms.DockStyle.None;
-			this.m_toolstrip.ImageScalingSize = new System.Drawing.Size(20, 20);
+			this.m_toolstrip.ImageScalingSize = new System.Drawing.Size(24, 24);
 			this.m_toolstrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_btn_open_log,
             this.m_btn_refresh,
@@ -97,13 +97,10 @@
             this.m_btn_filters,
             this.toolStripSeparator1,
             this.m_check_tail});
-			this.m_toolstrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
-			this.m_toolstrip.Location = new System.Drawing.Point(6, 0);
+			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
-			this.m_toolstrip.Size = new System.Drawing.Size(175, 27);
+			this.m_toolstrip.Size = new System.Drawing.Size(195, 31);
 			this.m_toolstrip.TabIndex = 0;
-			this.m_toolstrip.Text = "toolStrip1";
 			// 
 			// m_btn_open_log
 			// 
@@ -112,7 +109,7 @@
 			this.m_btn_open_log.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_open_log.Margin = new System.Windows.Forms.Padding(0);
 			this.m_btn_open_log.Name = "m_btn_open_log";
-			this.m_btn_open_log.Size = new System.Drawing.Size(24, 27);
+			this.m_btn_open_log.Size = new System.Drawing.Size(28, 31);
 			this.m_btn_open_log.Text = "Open Log File";
 			// 
 			// m_btn_refresh
@@ -121,13 +118,13 @@
 			this.m_btn_refresh.Image = global::RyLogViewer.Properties.Resources.reload;
 			this.m_btn_refresh.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_refresh.Name = "m_btn_refresh";
-			this.m_btn_refresh.Size = new System.Drawing.Size(24, 24);
+			this.m_btn_refresh.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_refresh.Text = "Refresh";
 			// 
 			// m_sep
 			// 
 			this.m_sep.Name = "m_sep";
-			this.m_sep.Size = new System.Drawing.Size(6, 27);
+			this.m_sep.Size = new System.Drawing.Size(6, 31);
 			// 
 			// m_btn_highlights
 			// 
@@ -135,7 +132,7 @@
 			this.m_btn_highlights.Image = global::RyLogViewer.Properties.Resources.highlight;
 			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_highlights.Name = "m_btn_highlights";
-			this.m_btn_highlights.Size = new System.Drawing.Size(24, 24);
+			this.m_btn_highlights.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_highlights.Text = "Highlights";
 			// 
 			// m_btn_filters
@@ -144,13 +141,13 @@
 			this.m_btn_filters.Image = global::RyLogViewer.Properties.Resources.filter;
 			this.m_btn_filters.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_filters.Name = "m_btn_filters";
-			this.m_btn_filters.Size = new System.Drawing.Size(24, 24);
+			this.m_btn_filters.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_filters.Text = "Filters";
 			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
-			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 27);
+			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
 			// 
 			// m_check_tail
 			// 
@@ -159,24 +156,22 @@
 			this.m_check_tail.Image = global::RyLogViewer.Properties.Resources._3dowarrow;
 			this.m_check_tail.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_check_tail.Name = "m_check_tail";
-			this.m_check_tail.Size = new System.Drawing.Size(24, 24);
+			this.m_check_tail.Size = new System.Drawing.Size(28, 28);
 			this.m_check_tail.Text = "Tail";
 			// 
 			// m_menu
 			// 
 			this.m_menu.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_menu.GripStyle = System.Windows.Forms.ToolStripGripStyle.Visible;
-			this.m_menu.ImageScalingSize = new System.Drawing.Size(22, 22);
 			this.m_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file,
             this.m_menu_edit,
             this.m_menu_encoding,
             this.m_menu_tools,
             this.m_menu_help});
-			this.m_menu.Location = new System.Drawing.Point(3, 27);
+			this.m_menu.Location = new System.Drawing.Point(0, 0);
 			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(249, 24);
-			this.m_menu.Stretch = false;
+			this.m_menu.Size = new System.Drawing.Size(593, 24);
 			this.m_menu.TabIndex = 1;
 			this.m_menu.Text = "m_menu";
 			// 
@@ -378,18 +373,18 @@
 			// m_menu_help_totd
 			// 
 			this.m_menu_help_totd.Name = "m_menu_help_totd";
-			this.m_menu_help_totd.Size = new System.Drawing.Size(148, 22);
+			this.m_menu_help_totd.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_help_totd.Text = "&Tip of the Day";
 			// 
 			// toolStripSeparator2
 			// 
 			this.toolStripSeparator2.Name = "toolStripSeparator2";
-			this.toolStripSeparator2.Size = new System.Drawing.Size(145, 6);
+			this.toolStripSeparator2.Size = new System.Drawing.Size(149, 6);
 			// 
 			// m_menu_help_about
 			// 
 			this.m_menu_help_about.Name = "m_menu_help_about";
-			this.m_menu_help_about.Size = new System.Drawing.Size(148, 22);
+			this.m_menu_help_about.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_help_about.Text = "&About";
 			// 
 			// m_status
@@ -459,18 +454,20 @@
 			this.m_toolstrip_cont.ContentPanel.AutoScroll = true;
 			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_grid);
 			this.m_toolstrip_cont.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
-			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 420);
+			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 416);
 			this.m_toolstrip_cont.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_toolstrip_cont.LeftToolStripPanelVisible = false;
 			this.m_toolstrip_cont.Location = new System.Drawing.Point(0, 0);
 			this.m_toolstrip_cont.Name = "m_toolstrip_cont";
+			this.m_toolstrip_cont.RightToolStripPanelVisible = false;
 			this.m_toolstrip_cont.Size = new System.Drawing.Size(593, 495);
 			this.m_toolstrip_cont.TabIndex = 6;
 			this.m_toolstrip_cont.Text = "m_toolstrip_cont";
 			// 
 			// m_toolstrip_cont.TopToolStripPanel
 			// 
-			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_toolstrip);
 			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_menu);
+			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_toolstrip);
 			// 
 			// m_grid
 			// 
@@ -490,7 +487,7 @@
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(587, 414);
+			this.m_grid.Size = new System.Drawing.Size(587, 410);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
 			// 

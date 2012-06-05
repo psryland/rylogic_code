@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 using pr.common;
 using pr.extn;
 using pr.gui;
@@ -100,7 +101,8 @@ namespace RyLogViewer
 			m_check_tail.ToolTipText     = Resources.ScrollToTail;
 			m_btn_highlights.ToolTipText = Resources.ShowHighlightsDialog;
 			m_btn_filters.ToolTipText    = Resources.ShowFiltersDialog;
-			
+			ToolStripManager.Renderer = new CheckedButtonRenderer();
+
 			// Status
 			m_status.Move += (s,a) => { m_settings.StatusPosition = m_status.Location; m_settings.Save(); };
 			
@@ -652,6 +654,24 @@ namespace RyLogViewer
 				m_status_spring.Text = "";
 				m_status_line.Visible = true;
 				m_status_filesize.Visible = true;
+			}
+		}
+	
+		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
+		public class CheckedButtonRenderer :ToolStripProfessionalRenderer
+		{
+			protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
+			{
+				ToolStripButton btn = e.Item as ToolStripButton;
+				if (btn == null || !btn.Checked) { base.OnRenderButtonBackground(e); return; }
+				Rectangle r = Rectangle.Inflate(e.Item.ContentRectangle, 2, 2);
+				
+				VisualStyleRenderer style = btn.Selected
+					? new VisualStyleRenderer(VisualStyleElement.Button.PushButton.Hot)
+					: new VisualStyleRenderer(VisualStyleElement.Button.PushButton.Pressed);
+				
+				style.DrawBackground(e.Graphics, r);
+				style.DrawEdge(e.Graphics, r, Edges.Left|Edges.Top|Edges.Right|Edges.Bottom ,EdgeStyle.Etched, EdgeEffects.Mono);
 			}
 		}
 	}
