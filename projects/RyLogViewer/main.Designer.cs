@@ -80,6 +80,8 @@
 			this.m_status_message = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_scroll_file = new RyLogViewer.FileScroll();
+			this.m_table = new System.Windows.Forms.TableLayoutPanel();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -88,6 +90,7 @@
 			this.m_toolstrip_cont.TopToolStripPanel.SuspendLayout();
 			this.m_toolstrip_cont.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
+			this.m_table.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_toolstrip
@@ -105,7 +108,7 @@
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(223, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(192, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -501,7 +504,7 @@
 			// m_toolstrip_cont.ContentPanel
 			// 
 			this.m_toolstrip_cont.ContentPanel.AutoScroll = true;
-			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_grid);
+			this.m_toolstrip_cont.ContentPanel.Controls.Add(this.m_table);
 			this.m_toolstrip_cont.ContentPanel.Padding = new System.Windows.Forms.Padding(3);
 			this.m_toolstrip_cont.ContentPanel.Size = new System.Drawing.Size(593, 416);
 			this.m_toolstrip_cont.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -530,15 +533,40 @@
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.m_grid.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
-			this.m_grid.Location = new System.Drawing.Point(3, 3);
+			this.m_grid.Location = new System.Drawing.Point(25, 3);
 			this.m_grid.Name = "m_grid";
 			this.m_grid.ReadOnly = true;
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(587, 410);
+			this.m_grid.Size = new System.Drawing.Size(559, 404);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
+			// 
+			// m_scroll_file
+			// 
+			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_scroll_file.Location = new System.Drawing.Point(0, 0);
+			this.m_scroll_file.Maximum = 1000;
+			this.m_scroll_file.MinimumSize = new System.Drawing.Size(22, 22);
+			this.m_scroll_file.Name = "m_scroll_file";
+			this.m_scroll_file.Size = new System.Drawing.Size(22, 410);
+			this.m_scroll_file.TabIndex = 4;
+			// 
+			// m_table
+			// 
+			this.m_table.ColumnCount = 2;
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 431F));
+			this.m_table.Controls.Add(this.m_scroll_file, 0, 0);
+			this.m_table.Controls.Add(this.m_grid, 1, 0);
+			this.m_table.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_table.Location = new System.Drawing.Point(3, 3);
+			this.m_table.Name = "m_table";
+			this.m_table.RowCount = 1;
+			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table.Size = new System.Drawing.Size(587, 410);
+			this.m_table.TabIndex = 5;
 			// 
 			// Main
 			// 
@@ -566,6 +594,7 @@
 			this.m_toolstrip_cont.ResumeLayout(false);
 			this.m_toolstrip_cont.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
+			this.m_table.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -623,6 +652,8 @@
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
 		private System.Windows.Forms.ToolStripButton m_btn_options;
+		private RyLogViewer.FileScroll m_scroll_file;
+		private System.Windows.Forms.TableLayoutPanel m_table;
 	}
 }
 

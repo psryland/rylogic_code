@@ -42,6 +42,9 @@ namespace RyLogViewer
 		private long m_file_end;                              // The last known size of the file
 		
 		//todo:
+		// handle large files
+		// 'Rewrite' - regex substitution
+		// Export to log file
 		// read stdin
 		// partial highlighting
 		// Large file selection on first line loads next earlier chunk
@@ -616,6 +619,10 @@ namespace RyLogViewer
 			m_menu_encoding_utf8             .Checked = m_settings.Encoding == Encoding.UTF8.EncodingName;
 			m_menu_encoding_ucs2_littleendian.Checked = m_settings.Encoding == Encoding.Unicode.EncodingName;
 			m_menu_encoding_ucs2_bigendian   .Checked = m_settings.Encoding == Encoding.BigEndianUnicode.EncodingName;
+			
+			// The file scroll bar is only visible when part of the file is loaded
+			m_scroll_file.Width = m_settings.FileScrollWidth;
+			m_scroll_file.Visible = m_line_index.Count == m_settings.LineCount;
 			
 			// Status and title
 			UpdateStatus();

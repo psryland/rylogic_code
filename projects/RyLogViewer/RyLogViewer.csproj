@@ -70,6 +70,9 @@
     <Compile Include="about.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="file_scroll.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="filter.cs" />
     <Compile Include="find_ui.cs">
       <SubType>Form</SubType>

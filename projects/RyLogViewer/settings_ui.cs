@@ -107,6 +107,15 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
+			// Load at end of file
+			m_check_open_at_end.ToolTip(m_tt, "If checked, opens files showing the end of the file.\r\nIf unchecked opens files at the beginning");
+			m_check_open_at_end.Checked = m_settings.OpenAtEnd;
+			m_check_open_at_end.CheckedChanged += (s,a)=>
+				{
+					m_settings.OpenAtEnd = m_check_open_at_end.Checked;
+					WhatsChanged |= EWhatsChanged.FileOpenOptions;
+				};
+
 			// Selection colour
 			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view");
 			m_lbl_selection_example.MouseClick += (s,a)=>
@@ -164,6 +173,17 @@ namespace RyLogViewer
 			m_spinner_row_height.ValueChanged += (s,a)=>
 				{
 					m_settings.RowHeight = (int)m_spinner_row_height.Value;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+			
+			// File scroll width
+			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the left file position scroll bar");
+			m_spinner_file_scroll_width.Minimum = 16;
+			m_spinner_file_scroll_width.Maximum = 200;
+			m_spinner_file_scroll_width.Value = Maths.Clamp(m_settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
+			m_spinner_file_scroll_width.ValueChanged += (s,a)=>
+				{
+					m_settings.FileScrollWidth = (int)m_spinner_file_scroll_width.Value;
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 		}

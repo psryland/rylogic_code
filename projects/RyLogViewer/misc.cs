@@ -9,7 +9,10 @@ namespace RyLogViewer
 		/// <summary>Options that only effect the program on startup</summary>
 		StartupOptions = 1 << 0,
 		
-		/// <summary>An option that affects how a file is parsed.</summary>
+		/// <summary>Options that affect files as they are opened</summary>
+		FileOpenOptions = 1 << 1,
+		
+		/// <summary>An option that affects how a file is parsed</summary>
 		FileParsing = 1 << 1,
 		
 		/// <summary>An option that changes how the log view is rendered</summary>

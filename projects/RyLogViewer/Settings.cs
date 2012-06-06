@@ -88,6 +88,11 @@ namespace RyLogViewer
 			get { return get<Color>("LineForeColour2"); }
 			set { set("LineForeColour2", value); }
 		}
+		public int    FileScrollWidth
+		{
+			get { return get<int>("FileScrollWidth"); }
+			set { set("FileScrollWidth", value); }
+		}
 		public int    RowHeight
 		{
 			get { return get<int>("RowHeight"); }
@@ -102,6 +107,11 @@ namespace RyLogViewer
 		{
 			get { return get<string>("LastLoadedFile"); }
 			set { set("LastLoadedFile", value); }
+		}
+		public bool   OpenAtEnd
+		{
+			get { return get<bool>("OpenAtEnd"); }
+			set { set("OpenAtEnd", value); }
 		}
 		public bool   AlwaysOnTop
 		{
@@ -180,9 +190,11 @@ namespace RyLogViewer
 			LineBackColour2      = Color.FromArgb(192, 255, 192);
 			LineForeColour1      = Color.Black;
 			LineForeColour2      = Color.Black;
+			FileScrollWidth      = 28;
 			RowHeight            = 18;
 			LoadLastFile         = false;
 			LastLoadedFile       = "";
+			OpenAtEnd            = true;
 			AlwaysOnTop          = false;
 			ShowTOTD             = true;
 			TailEnabled          = false;
