@@ -760,8 +760,8 @@ namespace imager
 					{
 						string dir = copy[d].Directory;
 						Range r = new Range(0, copy.Count);
-						for (r.m_begin = d - 1; r.m_begin != -1         && string.Compare(dir,copy[r.m_begin].Directory) == 0; --r.m_begin) {}
-						for (r.m_end   = d + 1; r.m_end   != copy.Count && string.Compare(dir,copy[r.m_end  ].Directory) == 0; ++r.m_end  ) {}
+						for (r.m_begin = d - 1; r.m_begin != -1         && string.Compare(dir,copy[(int)r.m_begin].Directory) == 0; --r.m_begin) {}
+						for (r.m_end   = d + 1; r.m_end   != copy.Count && string.Compare(dir,copy[(int)r.m_end  ].Directory) == 0; ++r.m_end  ) {}
 						++r.m_begin;
 						return r;
 					};
@@ -794,16 +794,16 @@ namespace imager
 				switch (file_order)
 				{
 				default: break;
-				case ESortOrder.AlphabeticalAscending:  copy.Sort(rg.m_begin, rg.Count, (lhs,rhs)=>{ return string.Compare(lhs.FileName, rhs.FileName); }); break;
-				case ESortOrder.AlphabeticalDecending:  copy.Sort(rg.m_begin, rg.Count, (lhs,rhs)=>{ return string.Compare(rhs.FileName, lhs.FileName); }); break;
-				case ESortOrder.ChronologicalAscending: copy.Sort(rg.m_begin, rg.Count, (lhs,rhs)=>{ return Maths.Compare(lhs.m_timestamp, rhs.m_timestamp); }); break;
-				case ESortOrder.ChronologicalDecending: copy.Sort(rg.m_begin, rg.Count, (lhs,rhs)=>{ return Maths.Compare(rhs.m_timestamp, lhs.m_timestamp); }); break;
-				case ESortOrder.Random: for (int i = rg.m_end; i != rg.m_begin; --i) copy.Swap(rg.m_begin + rng.Next(rg.Count), i-1); break;
+				case ESortOrder.AlphabeticalAscending:  copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return string.Compare(lhs.FileName, rhs.FileName); }); break;
+				case ESortOrder.AlphabeticalDecending:  copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return string.Compare(rhs.FileName, lhs.FileName); }); break;
+				case ESortOrder.ChronologicalAscending: copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return Maths.Compare(lhs.m_timestamp, rhs.m_timestamp); }); break;
+				case ESortOrder.ChronologicalDecending: copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return Maths.Compare(rhs.m_timestamp, lhs.m_timestamp); }); break;
+				case ESortOrder.Random: for (long i = rg.m_end; i != rg.m_begin; --i) copy.Swap((int)(rg.m_begin + rng.Next((int)rg.Count)), (int)(i-1)); break;
 				}
 
 				// Move the range from 'copy' to 'list'
-				for (int i = rg.m_begin; i != rg.m_end; ++i) list.Add(copy[i]);
-				copy.RemoveRange(rg.m_begin, rg.Count);
+				for (long i = rg.m_begin; i != rg.m_end; ++i) list.Add(copy[(int)i]);
+				copy.RemoveRange((int)rg.m_begin, (int)rg.Count);
 			}
 		}
 
