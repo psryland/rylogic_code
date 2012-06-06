@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
+using System.Text;
 using System.Threading;
 using NUnit.Framework;
-using pr.extn;
 using pr.maths;
 using CallerMap = System.Collections.Generic.Dictionary<pr.util.Profile.Instance, pr.util.Profile.Caller>;
 
@@ -22,6 +21,9 @@ namespace pr.util
 		///  * time spent within the block excluding time spent in child blocks</summary>
 		public class Block
 		{
+			/// <summary>The name of the profile block</summary>
+			public string m_name;
+			
 			/// <summary>A unique id for this profile</summary>
 			public int  m_id;
 			
@@ -34,7 +36,7 @@ namespace pr.util
 			/// <summary>The total time spent within Start()/Stop() excluding calls to child profiles (self time)</summary>
 			public long m_excl;
 
-			public Block() { m_id = Profile.mgr.m_id++; }
+			internal Block(string name, int id) { m_name = name; m_id = id; }
 			public override string ToString() { return string.Format("[{0}] calls: {1} incl: {2} excl: {3}" ,m_id ,m_calls ,m_incl ,m_excl); }
 		};
 		
@@ -54,26 +56,28 @@ namespace pr.util
 		};
 		
 		/// <summary>A profile instance - create one of these for each object/function/entity to be profiled</summary>
-		public class Instance :IDisposable
+		public class Instance :Block, IDisposable
 		{
-			public CallerMap  m_caller = new CallerMap(); // A map of parents of this profile, if parent == 0, then its a global scope profile
-			public Block       m_block   = new Block();      // Frame data
-			public string     m_name;                     // The name of the profile
-			public long       m_start;                    // The rtc value on leaving the profile start method
-			public long       m_time;                     // The time within one Start()/Stop() cycle
-			public int        m_active;                   // > 0 while this profile is running, == 0 when it is not
-			public bool       m_disabled;                 // True if this profile is disabled
-			public Instance   m_parent;                   //
+			public CallerMap  m_caller;   // A map of parents of this profile, if parent == 0, then its a global scope profile
+			public long       m_start;    // The rtc value on leaving the profile start method
+			public long       m_time;     // The time within one Start()/Stop() cycle
+			public int        m_active;   // > 0 while this profile is running, == 0 when it is not
+			public bool       m_disabled; // True if this profile is disabled
+			public Instance   m_parent;   //
 			
-			public Instance(string name)
+			internal Instance(string name, int id)
+			:base(name, id)
 			{
-				m_name = name;
+				m_caller = new CallerMap();
 				Profile.RegisterProfile(this);
 			}
 			~Instance()
 			{
 				Dispose();
 			}
+			public Instance(string name)
+			:this(name, mgr.m_id++)
+			{}
 
 			public void Dispose()
 			{
@@ -85,9 +89,9 @@ namespace pr.util
 			{
 				Debug.Assert(m_active == 0, "Resetting an active profile block");
 				m_active = 0;
-				m_block.m_calls = 0;
-				m_block.m_incl = 0;
-				m_block.m_excl = 0;
+				m_calls  = 0;
+				m_incl   = 0;
+				m_excl   = 0;
 				m_caller.Clear();
 			}
 		};
@@ -123,9 +127,9 @@ namespace pr.util
 			public long                    m_frame_start;     // Used to calculate m_frame_time
 			public Collecter()
 			{
-				m_id            = 1; // Note: id zero is reserved to indicate the end of a profile data stream
+				m_id            = 1; // Note: id zero is reserved for the root instance
 				m_profiles      = new List<Instance>();
-				m_root          = new Instance("Root");
+				m_root          = new Instance("Root", 0);
 				m_sample        = new Sample{m_to_ms = Stopwatch.Frequency / 1000.0};
 				m_stack         = m_root;
 				m_frame_started = false;
@@ -194,14 +198,14 @@ namespace pr.util
 			Debug.Assert(profile == mgr.m_stack, "This profile hasn't been started or a child profile hasn't been stopped");
 			
 			// Accumulate times
-			profile.m_time          = now - profile.m_start;
-			profile.m_block.m_incl += profile.m_time;
-			profile.m_block.m_excl += profile.m_time;
-			profile.m_block.m_calls++;
+			profile.m_time  = now - profile.m_start;
+			profile.m_incl += profile.m_time;
+			profile.m_excl += profile.m_time;
+			profile.m_calls++;
 			
 			// Collect call tree info
 			Caller caller = profile.m_caller.GetOrAdd(profile.m_parent, new Caller());
-			caller.m_id   = profile.m_parent.m_block.m_id;
+			caller.m_id   = profile.m_parent.m_id;
 			caller.m_time += profile.m_time; // The amount of time spent in this profile when called from 'caller'
 			caller.m_count++; // the number of times this profile has been called from this parent
 			
@@ -211,7 +215,7 @@ namespace pr.util
 			
 			// Remove some of the time overhead from the frame statistics
 			long stop_overhead = Stopwatch.GetTimestamp() - now;
-			mgr.m_stack.m_block.m_excl -= profile.m_time + stop_overhead;
+			mgr.m_stack.m_excl -= profile.m_time + stop_overhead;
 			mgr.m_sample.m_sample_time -= stop_overhead;
 		}
 		
@@ -228,37 +232,47 @@ namespace pr.util
 			if (mgr.m_sample.m_frames == 0)
 				return output;
 			
-			var br = new BinaryWriter(output);
+			var bw = new BinaryWriter(output);
 			
 			// Output the sample data
-			br.Write(mgr.m_sample);
+			bw.Write(mgr.m_sample);
+			bw.Write(mgr.m_profiles.Count);
 			foreach (var p in mgr.m_profiles)
 			{
-				if (p.m_disabled) continue;
-				
 				// Output each profile instance and it's callers
-				br.Write(p.m_block);
-				br.Write(p.m_caller.Count);
+				bw.Write(p.m_name);
+				bw.Write(p);
+				bw.Write(p.m_caller.Count);
 				foreach (var c in p.m_caller)
-					br.Write(c.Value);
+					bw.Write(c.Value);
 				
 				p.Reset();
 			}
-			br.Write(LastProfileTerminator);
 			SampleReset();
 			return output;
 		}
 		
-		/// <summary>An </summary>
-		private const int LastProfileTerminator = 0;
+		// Above here are types for profile data collection
+		// ***************************************************************************
+		// Below here are types for profile data processing and display
 		
 		/// <summary>Helper extension methods</summary>
 		private static void Write(this BinaryWriter bw, Block block)
 		{
+			bw.Write(block.m_name);
 			bw.Write(block.m_id);
 			bw.Write(block.m_calls);
 			bw.Write(block.m_incl);
 			bw.Write(block.m_excl);
+		}
+		private static Block ReadBlock(this BinaryReader br)
+		{
+			return new Block(br.ReadString(), br.ReadInt32())
+			{
+				m_calls = br.ReadInt32(),
+				m_incl  = br.ReadInt64(),
+				m_excl  = br.ReadInt64()
+			};
 		}
 		private static void Write(this BinaryWriter bw, Caller caller)
 		{
@@ -266,49 +280,21 @@ namespace pr.util
 			bw.Write(caller.m_count);
 			bw.Write(caller.m_time);
 		}
+		private static Caller ReadCaller(this BinaryReader br)
+		{
+			return new Caller
+			{
+				m_id    = br.ReadInt32(),
+				m_count = br.ReadInt32(),
+				m_time  = br.ReadInt64(),
+			};
+		}
 		private static void Write(this BinaryWriter bw, Sample sample)
 		{
 			bw.Write(sample.m_sample_count);
 			bw.Write(sample.m_frames);
 			bw.Write(sample.m_sample_time);
 			bw.Write(sample.m_to_ms);
-		}
-
-		
-		// Above here are types for profile data collection
-		// ***************************************************************************
-		// Below here are types for profile data processing and display
-		
-		/// <summary>Data representing a collection of results over a frame</summary>
-		public class ResultData
-		{
-			/// <summary>The number of times this profile block was called per frame</summary>
-			public double CallsPerFrame;
-			
-			/// <summary>The average time spent in this profile block per frame (in ms)</summary>
-			public double SelfInclChildTimeMS;
-			
-			/// <summary>The average time spent in this profile block per frame (in ms) excluding child profile blocks</summary>
-			public double SelfExclChildTimeMS;
-			
-			public ResultData(Instance inst)
-			{
-				CallsPerFrame       = inst.m_block.m_calls     * m_to_ms / m_frames;
-				SelfInclChildTimeMS = inst.m_block.m_incl * m_to_ms / m_frames;
-				SelfExclChildTimeMS = inst.m_block.m_excl * m_to_ms / m_frames;
-			}
-		}
-		
-		/// <summary>Helper extension methods</summary>
-		private static Block ReadBlock(this BinaryReader br)
-		{
-			return new Block
-			{
-				m_id = br.ReadInt32(),
-				m_calls = br.ReadInt32(),
-				m_incl = br.ReadInt64(),
-				m_excl = br.ReadInt64()
-			};
 		}
 		private static Sample ReadSample(this BinaryReader br)
 		{
@@ -320,16 +306,74 @@ namespace pr.util
 				m_to_ms        = br.ReadDouble()
 			};
 		}
-
+		
+		/// <summary>
+		/// Read piped profile data from a stream.
+		/// This method should be the symmetric opposite to Profile.Output()</summary>
+		public static Results Collect(Stream istream)
+		{
+			var br = new BinaryReader(istream);
+			
+			Sample sample = br.ReadSample();
+			
+			Results results = new Results(sample);
+			
+			// Read sample data
+			int pcount = br.ReadInt32();
+			for (int i = 0; i != pcount; ++i)
+			{
+				ResultData presult = new ResultData(br.ReadBlock(), sample);
+				int ccount = br.ReadInt32();
+				for (int j = 0; j != ccount; ++j)
+					presult.Callers.Add(br.ReadCaller());
+			}
+			return results;
+		}
+		
+		/// <summary>Data representing a collection of results over a frame</summary>
+		public class ResultData
+		{
+			/// <summary>The name of the associated profile</summary>
+			public string Name;
+			
+			/// <summary>The number of times this profile block was called per frame</summary>
+			public double CallsPerFrame;
+			
+			/// <summary>The average time spent in this profile block per frame (in ms)</summary>
+			public double SelfInclChildTimeMS;
+			
+			/// <summary>The average time spent in this profile block per frame (in ms) excluding child profile blocks</summary>
+			public double SelfExclChildTimeMS;
+			
+			/// <summary>Profile blocks that contain calls to this called this</summary>
+			public List<Caller> Callers = new List<Caller>();
+			
+			public ResultData() {}
+			public ResultData(Block block, Sample sample)
+			{
+				CallsPerFrame       = block.m_calls * sample.m_to_ms / sample.m_frames;
+				SelfInclChildTimeMS = block.m_incl  * sample.m_to_ms / sample.m_frames;
+				SelfExclChildTimeMS = block.m_excl  * sample.m_to_ms / sample.m_frames;
+			}
+		}
+		
 		/// <summary>A collecter of profile results</summary>
 		public class Results
 		{
 			private readonly List<ResultData> m_data = new List<ResultData>();
 			
+			/// <summary>The average length of a frame in milli seconds</summary>
+			public double AvrFrameTimeMS;
+			
+			public Results(Sample sample)
+			{
+				AvrFrameTimeMS = (double)sample.m_sample_time / sample.m_frames;
+			}
+			
 			/// <summary>Sort results by name</summary>
 			public void SortByName()
 			{
-				Sort((lhs,rhs) => string.Compare(lhs.Inst.m_name, rhs.Inst.m_name));
+				Sort((lhs,rhs) => string.Compare(lhs.Name, rhs.Name));
 			}
 			
 			/// <summary>Sort results by calls per frame</summary>
@@ -361,84 +405,102 @@ namespace pr.util
 			{
 				get
 				{
-
-					return string.Format(
-						""
+					StringBuilder sb = new StringBuilder();
+					sb.AppendFormat(
+						"Profile Results:\n"+
+						" Frame rate: {0} Hz   Frame time: {1} ms\n"+
+						"=====================================================================\n"+
+						" name             | count        | incl (ms)  | excl(ms)  |\n"+
+						"=====================================================================\n"
+						,(1000.0 / AvrFrameTimeMS).ToString("0.00")
+						,AvrFrameTimeMS
 						);
+					
+					// Output each profile
+					ResultData unaccounted = new ResultData();
+					foreach (var pres in m_data)
+					{
+						unaccounted.SelfInclChildTimeMS += pres.SelfInclChildTimeMS;
+						unaccounted.SelfExclChildTimeMS += pres.SelfExclChildTimeMS;
+						sb.AppendFormat(
+							" {0} | {1} | {2} | {3} |\n"
+							,pres.Name
+							,pres.CallsPerFrame
+							,pres.SelfInclChildTimeMS
+							,pres.SelfExclChildTimeMS
+							);
+					}
+					unaccounted.SelfInclChildTimeMS = AvrFrameTimeMS - unaccounted.SelfInclChildTimeMS;
+					unaccounted.SelfExclChildTimeMS = AvrFrameTimeMS - unaccounted.SelfExclChildTimeMS;
+					sb.Append("=====================================================================\n");
+					sb.AppendFormat(
+						" {0} | {1} | {2} | {3} |\n"
+						,unaccounted.Name
+						,unaccounted.CallsPerFrame
+						,unaccounted.SelfInclChildTimeMS
+						,unaccounted.SelfExclChildTimeMS
+						);
+					sb.Append("=====================================================================\n");
+					return sb.ToString();
 				}
 			}
 		}
-
-		/// <summary>
-		/// Read piped profile data from a stream.
-		/// This method should be the symmetric opposite to Profile.Output()</summary>
-		public static Results Collect(Stream istream)
-		{
-			var br = new BinaryReader(istream);
-				
-			// Read sample data
-			Results results = new Results();
-			results.m_sample = br.ReadSample();
-			
-			br..Peek.ReadIn
-				
-			Block block = br.ReadBlock();
-		}
 	}
-	
-	/// <summary>String transform unit tests</summary>
-	[TestFixture] internal static partial class UnitTests
-	{
-		public class Test
-		{
-			private readonly Profile.Instance prof1 = new Profile.Instance("Func1");
-			private readonly Profile.Instance prof2 = new Profile.Instance("Func2");
-			private readonly Profile.Instance prof3 = new Profile.Instance("Func3");
-			
-			public void Func1()
-			{
-				prof1.Start();
-				Thread.Sleep(10);
-				Func2();
-				Func3();
-				prof1.Stop();
-			}
-			public void Func2()
-			{
-				prof2.Start();
-				Thread.Sleep(20);
-				for (int i = 0; i != 5; ++i)
-					Func3();
-				prof2.Stop();
-			}
-			public void Func3()
-			{
-				prof3.Start();
-				Thread.Sleep(1);
-				prof3.Stop();
-			}
-		}
 
-		[Test] public static void TestProfile()
-		{
-			// A stream for linking collected profile data to the profile output
-			var ms = new MemoryStream();
+
+	///// <summary>String transform unit tests</summary>
+	//[TestFixture] internal static partial class UnitTests
+	//{
+	//    public class Test
+	//    {
+	//        private readonly Profile.Instance prof1 = new Profile.Instance("Func1");
+	//        private readonly Profile.Instance prof2 = new Profile.Instance("Func2");
+	//        private readonly Profile.Instance prof3 = new Profile.Instance("Func3");
 			
-			// Collect profile data
-			for (int f = 0; f != 10; ++f)
-			{
-				Profile.FrameBegin();
-				var test = new Test();
-				test.Func1();
-				Profile.FrameEnd();
-			}
-			Profile.Output(ms);
+	//        public void Func1()
+	//        {
+	//            prof1.Start();
+	//            Thread.Sleep(10);
+	//            Func2();
+	//            Func3();
+	//            prof1.Stop();
+	//        }
+	//        public void Func2()
+	//        {
+	//            prof2.Start();
+	//            Thread.Sleep(20);
+	//            for (int i = 0; i != 5; ++i)
+	//                Func3();
+	//            prof2.Stop();
+	//        }
+	//        public void Func3()
+	//        {
+	//            prof3.Start();
+	//            Thread.Sleep(1);
+	//            prof3.Stop();
+	//        }
+	//    }
+
+	//    [Test] public static void TestProfile()
+	//    {
+	//        // A stream for linking collected profile data to the profile output
+	//        var ms = new MemoryStream();
 			
-			// Receive and display profile data
-			var result = Profile.Collect(ms);
-			result.SortByInclTime();
-			Debug.Write(result.Summary);
-		}
-	}
+	//        // Collect profile data
+	//        for (int f = 0; f != 10; ++f)
+	//        {
+	//            Profile.FrameBegin();
+	//            var test = new Test();
+	//            test.Func1();
+	//            Profile.FrameEnd();
+	//        }
+	//        Profile.Output(ms);
+			
+	//        // Receive and display profile data
+	//        var result = Profile.Collect(ms);
+	//        result.SortByInclTime();
+	//        Debug.Write(result.Summary);
+	//    }
+	//}
 }
 
