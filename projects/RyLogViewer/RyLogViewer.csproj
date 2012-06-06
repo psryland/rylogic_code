@@ -224,6 +224,24 @@
     <None Include="Resources\agt_action_fail.png" />
     <None Include="Resources\agt_action_success.png" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\configure.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\options.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\downred.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\pause_gray.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\folder_with_file.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Refresh.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

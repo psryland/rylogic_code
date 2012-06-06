@@ -27,7 +27,7 @@ namespace RyLogViewer
 		private void Reload()
 		{
 			if (FileOpen) BuildLineIndex(m_filepath);
-			UpdateUI2();
+			UpdateUI();
 		}
 		
 		/// <summary>
@@ -168,21 +168,17 @@ namespace RyLogViewer
 				});
 			
 			// Don't use the results if the task was cancelled
-			DialogResult res;
-			try { res = task.ShowDialog(this); }
+			try
+			{
+				if (task.ShowDialog(this) != DialogResult.OK)
+					return;
+			}
 			catch (Exception ex)
 			{
 				if (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
-				res = MessageBox.Show(this, string.Format(Resources.BuildLineIndexErrorMsg, ex.Message), Resources.ReadingFileFailed, MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
-			}
-			if (res == DialogResult.Retry)
-			{
-				Action<string> retry = BuildLineIndex;
-				BeginInvoke(retry, filepath);
+				MessageBox.Show(this, string.Format(Resources.BuildLineIndexErrorMsg, ex.Message), Resources.ReadingFileFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
 				return;
 			}
-			if (res != DialogResult.OK)
-				return;
 			
 			// Update the member variables once the line index is complete
 			m_line_index = line_index;
@@ -190,7 +186,7 @@ namespace RyLogViewer
 			m_file       = LoadFile(m_filepath);
 			m_last_line  = last_line;
 			m_file_end   = file_end;
-			UpdateUI2();
+			UpdateUI();
 		}
 		
 		/// <summary>Incrementally update the line index</summary>
@@ -311,7 +307,7 @@ namespace RyLogViewer
 			m_last_line = last_line;
 			m_file_end  = file_end;
 			Debug.Assert(m_last_line <= m_file_end, "'m_file_end' should always be greater than 'm_last_line'");
-			UpdateUI2();
+			UpdateUI();
 		}
 		
 		/// <summary>Add a line to 'line_index'</summary>

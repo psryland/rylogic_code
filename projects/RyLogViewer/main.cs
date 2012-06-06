@@ -65,7 +65,7 @@ namespace RyLogViewer
 			m_last_line         = 0;
 			m_file_end          = 0;
 			InitCache();
-			ApplySettings2();
+			ApplySettings();
 			
 			// Menu
 			m_menu.Move                             += (s,a) => { m_settings.MenuPosition = m_menu.Location; m_settings.Save(); };
@@ -94,15 +94,17 @@ namespace RyLogViewer
 			m_toolstrip.Move            += (s,a) => { m_settings.ToolsPosition = m_toolstrip.Location; m_settings.Save(); };
 			m_btn_open_log.Click        += (s,a) => OpenLogFile(null);
 			m_btn_refresh.Click         += (s,a) => Reload();
-			m_check_tail.CheckedChanged += (s,a) => EnableTail(m_check_tail.Checked);
 			m_btn_highlights.Click      += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_btn_filters.Click         += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
+			m_btn_options.Click         += (s,a) => ShowOptions(SettingsUI.ETab.General);
+			m_btn_tail.CheckedChanged   += (s,a) => EnableTail(m_btn_tail.Checked);
 			m_btn_open_log.ToolTipText   = Resources.OpenLogFile;   
 			m_btn_refresh.ToolTipText    = Resources.ReloadLogFile;
-			m_check_tail.ToolTipText     = Resources.ScrollToTail;
 			m_btn_highlights.ToolTipText = Resources.ShowHighlightsDialog;
 			m_btn_filters.ToolTipText    = Resources.ShowFiltersDialog;
-			ToolStripManager.Renderer = new CheckedButtonRenderer();
+			m_btn_options.ToolTipText    = Resources.ShowOptionsDialog;
+			m_btn_tail.ToolTipText       = Resources.ScrollToTail;
+			ToolStripManager.Renderer    = new CheckedButtonRenderer();
 
 			// Status
 			m_status.Move += (s,a) => { m_settings.StatusPosition = m_status.Location; m_settings.Save(); };
@@ -158,8 +160,8 @@ namespace RyLogViewer
 					if (m_settings.ShowTOTD)
 						ShowTotD();
 					
-					ApplySettings2();
-					UpdateUI2();
+					ApplySettings();
+					UpdateUI();
 				};
 			
 			// File Drop
@@ -167,7 +169,7 @@ namespace RyLogViewer
 			DragDrop  += (s,a) => FileDrop(a, false);
 			
 			// Resize
-			SizeChanged += (s,a)=> UpdateUI2();
+			SizeChanged += (s,a)=> UpdateUI();
 
 			// Shutdown
 			FormClosing += (s,a) =>
@@ -219,7 +221,7 @@ namespace RyLogViewer
 			m_file = null;
 			m_last_line = 0;
 			m_file_end = 0;
-			UpdateUI2();
+			UpdateUI();
 		}
 		
 		/// <summary>Prompt to open a log file</summary>
@@ -376,8 +378,8 @@ namespace RyLogViewer
 			{
 				m_settings.TailEnabled = enable;
 			}
-			ApplySettings2();
-			UpdateUI2();
+			ApplySettings();
+			UpdateUI();
 			SelectedRow = m_grid.RowCount - 1;
 			UpdateLineIndex();
 		}
@@ -396,7 +398,7 @@ namespace RyLogViewer
 
 			m_settings.Encoding = enc_name;
 			m_settings.Save();
-			ApplySettings2();
+			ApplySettings();
 			Reload();
 		}
 		
@@ -418,12 +420,12 @@ namespace RyLogViewer
 			ui.ShowDialog(this);
 			m_settings.Reload();
 			
-			ApplySettings2();
+			ApplySettings();
 			
 			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
 				Reload();
 			else if ((ui.WhatsChanged & EWhatsChanged.Rendering) != 0)
-				UpdateUI2();
+				UpdateUI();
 		}
 		
 		/// <summary>Show the TotD dialog</summary>
@@ -502,7 +504,7 @@ namespace RyLogViewer
 		/// after the settings dialog has been shown and closed. It needs to
 		/// update anything that is only changed in the settings. Note: it does't
 		/// trigger a file reload.</summary>
-		private void ApplySettings2()
+		private void ApplySettings()
 		{
 			// Cached settings for performance, don't overwrite auto detected cached values tho
 			m_encoding   = GetEncoding(m_settings.Encoding);
@@ -512,13 +514,14 @@ namespace RyLogViewer
 			
 			// Tail
 			m_watch.EnableRaisingEvents = FileOpen && m_settings.TailEnabled;
+			m_btn_tail.Image = m_settings.TailEnabled ? Resources.downred : Resources.pause_gray;
 			
 			// Highlights;
 			m_highlights.Clear();
 			m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
 			
 			// Check states
-			m_check_tail.Checked = m_settings.TailEnabled;
+			m_btn_tail.Checked = m_settings.TailEnabled;
 			
 			// Row styles
 			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
@@ -556,7 +559,7 @@ namespace RyLogViewer
 		/// Update the UI with the current line index.
 		/// This method should be called whenever a changes occurs that requires
 		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
-		private void UpdateUI2()
+		private void UpdateUI()
 		{
 			// Configure the grid
 			if (m_line_index.Count != 0)

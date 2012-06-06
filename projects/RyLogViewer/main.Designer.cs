@@ -35,8 +35,9 @@
 			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_check_tail = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
@@ -79,7 +80,6 @@
 			this.m_status_message = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
-			this.toolStripButton1 = new System.Windows.Forms.ToolStripButton();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -100,9 +100,9 @@
             this.m_sep,
             this.m_btn_highlights,
             this.m_btn_filters,
-            this.toolStripButton1,
+            this.m_btn_options,
             this.toolStripSeparator1,
-            this.m_check_tail});
+            this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
 			this.m_toolstrip.Size = new System.Drawing.Size(223, 31);
@@ -110,18 +110,19 @@
 			// 
 			// m_btn_open_log
 			// 
+			this.m_btn_open_log.AutoSize = false;
 			this.m_btn_open_log.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_open_log.Image = global::RyLogViewer.Properties.Resources.my_documents;
+			this.m_btn_open_log.Image = global::RyLogViewer.Properties.Resources.folder_with_file;
 			this.m_btn_open_log.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_open_log.Margin = new System.Windows.Forms.Padding(0);
 			this.m_btn_open_log.Name = "m_btn_open_log";
-			this.m_btn_open_log.Size = new System.Drawing.Size(28, 31);
+			this.m_btn_open_log.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_open_log.Text = "Open Log File";
 			// 
 			// m_btn_refresh
 			// 
 			this.m_btn_refresh.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_refresh.Image = global::RyLogViewer.Properties.Resources.reload;
+			this.m_btn_refresh.Image = global::RyLogViewer.Properties.Resources.Refresh;
 			this.m_btn_refresh.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_refresh.Name = "m_btn_refresh";
 			this.m_btn_refresh.Size = new System.Drawing.Size(28, 28);
@@ -150,20 +151,29 @@
 			this.m_btn_filters.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_filters.Text = "Filters";
 			// 
+			// m_btn_options
+			// 
+			this.m_btn_options.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_options.Image = global::RyLogViewer.Properties.Resources.options;
+			this.m_btn_options.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_options.Name = "m_btn_options";
+			this.m_btn_options.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_options.Text = "Show Options";
+			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
 			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
 			// 
-			// m_check_tail
+			// m_btn_tail
 			// 
-			this.m_check_tail.CheckOnClick = true;
-			this.m_check_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_check_tail.Image = global::RyLogViewer.Properties.Resources._3dowarrow;
-			this.m_check_tail.ImageTransparentColor = System.Drawing.Color.Transparent;
-			this.m_check_tail.Name = "m_check_tail";
-			this.m_check_tail.Size = new System.Drawing.Size(28, 28);
-			this.m_check_tail.Text = "Tail";
+			this.m_btn_tail.CheckOnClick = true;
+			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.downred;
+			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_tail.Name = "m_btn_tail";
+			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_tail.Text = "Tail";
 			// 
 			// m_menu
 			// 
@@ -530,15 +540,6 @@
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
 			// 
-			// toolStripButton1
-			// 
-			this.toolStripButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.toolStripButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton1.Image")));
-			this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.toolStripButton1.Name = "toolStripButton1";
-			this.toolStripButton1.Size = new System.Drawing.Size(28, 28);
-			this.toolStripButton1.Text = "toolStripButton1";
-			// 
 			// Main
 			// 
 			this.AllowDrop = true;
@@ -581,7 +582,7 @@
 		private System.Windows.Forms.StatusStrip m_status;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_recent;
 		private System.Windows.Forms.ToolStripSeparator m_sep2;
-		private System.Windows.Forms.ToolStripButton m_check_tail;
+		private System.Windows.Forms.ToolStripButton m_btn_tail;
 		private System.Windows.Forms.ToolStripContainer m_toolstrip_cont;
 		private System.Windows.Forms.DataGridView m_grid;
 		private System.Windows.Forms.ToolStripSeparator m_sep;
@@ -621,7 +622,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
-		private System.Windows.Forms.ToolStripButton toolStripButton1;
+		private System.Windows.Forms.ToolStripButton m_btn_options;
 	}
 }
 

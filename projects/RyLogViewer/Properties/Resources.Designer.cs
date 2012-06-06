@@ -154,6 +154,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap configure {
+            get {
+                object obj = ResourceManager.GetObject("configure", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Confirm Delete.
         /// </summary>
@@ -207,6 +214,13 @@ namespace RyLogViewer.Properties {
         internal static string DeletePatternSetFileX {
             get {
                 return ResourceManager.GetString("DeletePatternSetFileX", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap downred {
+            get {
+                object obj = ResourceManager.GetObject("downred", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -268,6 +282,13 @@ namespace RyLogViewer.Properties {
         internal static System.Drawing.Bitmap filter {
             get {
                 object obj = ResourceManager.GetObject("filter", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap folder_with_file {
+            get {
+                object obj = ResourceManager.GetObject("folder_with_file", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -377,6 +398,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap options {
+            get {
+                object obj = ResourceManager.GetObject("options", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Pattern.
         /// </summary>
@@ -396,6 +424,13 @@ namespace RyLogViewer.Properties {
         internal static System.Drawing.Bitmap pattern_inactive {
             get {
                 object obj = ResourceManager.GetObject("pattern_inactive", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap pause_gray {
+            get {
+                object obj = ResourceManager.GetObject("pause_gray", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -424,6 +459,13 @@ namespace RyLogViewer.Properties {
         internal static string ReadingXLineFromY {
             get {
                 return ResourceManager.GetString("ReadingXLineFromY", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap Refresh {
+            get {
+                object obj = ResourceManager.GetObject("Refresh", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -467,6 +509,15 @@ namespace RyLogViewer.Properties {
         internal static string ShowHighlightsDialog {
             get {
                 return ResourceManager.GetString("ShowHighlightsDialog", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show the options dialog.
+        /// </summary>
+        internal static string ShowOptionsDialog {
+            get {
+                return ResourceManager.GetString("ShowOptionsDialog", resourceCulture);
             }
         }
         
