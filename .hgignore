@@ -7,6 +7,7 @@ syntax: glob
 *.exe
 *.pp
 *.i
+*.db
 *.pidb
 *.ipch
 *.opensdf
