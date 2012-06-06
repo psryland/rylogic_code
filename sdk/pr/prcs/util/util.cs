@@ -409,6 +409,15 @@ namespace pr.util
 		{
 			tt.SetToolTip(ctrl, caption);
 		}
+		
+		/// <summary>Return the value for 'key', if it doesn't exist, insert 'def' and return that</summary>
+		public static V GetOrAdd<K,V>(this Dictionary<K,V> dic, K key, V def)
+		{
+			V value;
+			if (dic.TryGetValue(key, out value)) return value;
+			dic.Add(key, def);
+			return def;
+		}
 	}
 	
 	/// <summary>Type specific utility methods</summary>

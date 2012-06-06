@@ -263,6 +263,7 @@
     <Compile Include="util\lazy.cs" />
     <Compile Include="util\log.cs" />
     <Compile Include="util\mouse_keyboard_hook.cs" />
+    <Compile Include="util\profile.cs" />
     <Compile Include="util\progress_stream.cs" />
     <Compile Include="util\stream_wrapper.cs" />
     <Compile Include="util\string_transform.cs" />
