@@ -65,7 +65,7 @@ namespace RyLogViewer
 			m_last_line         = 0;
 			m_file_end          = 0;
 			InitCache();
-			ApplySettings();
+			ApplySettings2();
 			
 			// Menu
 			m_menu.Move                             += (s,a) => { m_settings.MenuPosition = m_menu.Location; m_settings.Save(); };
@@ -77,6 +77,7 @@ namespace RyLogViewer
 			m_menu_edit_find.Click                  += (s,a) => ShowFindDialog();
 			m_menu_edit_find_next.Click             += (s,a) => FindNext(m_last_find_pattern);
 			m_menu_edit_find_prev.Click             += (s,a) => FindPrev(m_last_find_pattern);
+			m_menu_encoding_detect.Click            += (s,a) => SetEncoding(null);
 			m_menu_encoding_ascii.Click             += (s,a) => SetEncoding(Encoding.ASCII           );
 			m_menu_encoding_utf8.Click              += (s,a) => SetEncoding(Encoding.UTF8            );
 			m_menu_encoding_ucs2_littleendian.Click += (s,a) => SetEncoding(Encoding.Unicode         );
@@ -117,9 +118,6 @@ namespace RyLogViewer
 			m_grid.SelectionChanged    += (s,a) => { UpdateStatus(); };
 			m_grid.DataError           += (s,a) => { Debug.Assert(false); };
 			
-			// Settings
-			m_settings.SettingsLoaded += (s,a) => ApplySettings();
-			
 			// Watcher
 			m_file_changed.Action += UpdateLineIndex;
 			m_watch.Changed += (s,a) =>
@@ -155,12 +153,13 @@ namespace RyLogViewer
 					{
 						OpenLogFile(m_settings.LastLoadedFile);
 					}
-					ApplySettings();
-					UpdateUI();
-
+					
 					// Show the TotD
 					if (m_settings.ShowTOTD)
 						ShowTotD();
+					
+					ApplySettings2();
+					UpdateUI2();
 				};
 			
 			// File Drop
@@ -168,7 +167,7 @@ namespace RyLogViewer
 			DragDrop  += (s,a) => FileDrop(a, false);
 			
 			// Resize
-			SizeChanged += (s,a)=> UpdateUI();
+			SizeChanged += (s,a)=> UpdateUI2();
 
 			// Shutdown
 			FormClosing += (s,a) =>
@@ -179,13 +178,13 @@ namespace RyLogViewer
 					m_settings.Save();
 				};
 		}
-
+		
 		/// <summary>Returns true if there is a log file currently open</summary>
 		private bool FileOpen
 		{
 			get { return m_file != null; }
 		}
-
+		
 		/// <summary>Parse the command line parameters</summary>
 		private void ParseCommandLine(IEnumerable<string> args)
 		{
@@ -210,57 +209,6 @@ namespace RyLogViewer
 			if (file_to_load != null)
 				OpenLogFile(file_to_load);
 		}
-
-		/// <summary>Apply settings throughout the app</summary>
-		private void ApplySettings()
-		{
-			// Cached settings for performance
-			m_encoding   = GetEncoding(m_settings.Encoding);
-			m_row_delim  = m_encoding.GetBytes(m_settings.RowDelimiter.Replace("CR","\r").Replace("LF","\n"));
-			m_col_delim  = m_settings.ColDelimiter.Replace("TAB","\t").ToCharArray();
-			m_row_height = m_settings.RowHeight;
-			
-			// Tail
-			m_watch.EnableRaisingEvents = FileOpen && m_settings.TailEnabled;
-			
-			// Highlights;
-			m_highlights.Clear();
-			m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
-			
-			// Check states
-			m_check_tail.Checked = m_settings.TailEnabled;
-			
-			// Row styles
-			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
-			{
-				Font = m_settings.Font,
-				ForeColor = m_settings.LineForeColour1,
-				BackColor = m_settings.LineBackColour1,
-				SelectionBackColor = m_settings.LineSelectBackColour,
-				SelectionForeColor = m_settings.LineSelectForeColour,
-			};
-			if (m_settings.AlternateLineColours)
-			{
-				m_grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
-				{
-					Font = m_settings.Font,
-					BackColor = m_settings.LineBackColour2,
-					SelectionBackColor = m_settings.LineSelectBackColour,
-					SelectionForeColor = m_settings.LineSelectForeColour,
-				};
-			}
-			else
-			{
-				m_grid.AlternatingRowsDefaultCellStyle = m_grid.RowsDefaultCellStyle;
-			}
-			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
-			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
-			
-			// Position UI elements
-			m_menu.Location      = m_settings.MenuPosition;
-			m_toolstrip.Location = m_settings.ToolsPosition;
-			m_status.Location    = m_settings.StatusPosition;
-		}
 		
 		/// <summary>Close the current log file</summary>
 		private void CloseLogFile()
@@ -271,7 +219,7 @@ namespace RyLogViewer
 			m_file = null;
 			m_last_line = 0;
 			m_file_end = 0;
-			UpdateUI();
+			UpdateUI2();
 		}
 		
 		/// <summary>Prompt to open a log file</summary>
@@ -304,7 +252,6 @@ namespace RyLogViewer
 			// Switch files
 			CloseLogFile();
 			BuildLineIndex(filepath);
-			ApplySettings(); // ensure settings that need a file to work are turned on
 		}
 
 		/// <summary>Supply the grid with values</summary>
@@ -429,18 +376,27 @@ namespace RyLogViewer
 			{
 				m_settings.TailEnabled = enable;
 			}
-			ApplySettings();
-			UpdateLineIndex();
+			ApplySettings2();
+			UpdateUI2();
 			SelectedRow = m_grid.RowCount - 1;
+			UpdateLineIndex();
 		}
 		
-		/// <summary>Set the encoding to use with loaded files</summary>
+		/// <summary>Set the encoding to use with loaded files. 'null' means auto detect</summary>
 		private void SetEncoding(Encoding encoding)
 		{
-			m_encoding = encoding;
-			m_settings.Encoding = m_encoding.EncodingName;
+			string enc_name = encoding == null ? "" : encoding.EncodingName;
+			if (enc_name == m_settings.Encoding) return; // not changed.
+			
+			// If a specific encoding is given, use it.
+			// Otherwise leave it as whatever it is now, but reloading
+			// the file will cause it to be auto detected.
+			if (encoding != null)
+				m_encoding = encoding;
+
+			m_settings.Encoding = enc_name;
 			m_settings.Save();
-			ApplySettings();
+			ApplySettings2();
 			Reload();
 		}
 		
@@ -455,29 +411,19 @@ namespace RyLogViewer
 		/// <summary>Display the options dialog</summary>
 		private void ShowOptions(SettingsUI.ETab tab)
 		{
-			// Save current values so we can detected changes and reload if necessary
-			string highlights = FileOpen ? m_settings.HighlightPatterns : null;
-			string filters    = FileOpen ? m_settings.FilterPatterns    : null;
-			
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
 			m_settings.Save();
-			new SettingsUI(tab).ShowDialog(this);
+			var ui = new SettingsUI(tab);
+			ui.ShowDialog(this);
 			m_settings.Reload();
 			
-			ApplySettings();
+			ApplySettings2();
 			
-			// If the highlight patterns have changed, invalidate the line cache
-			if (FileOpen && m_settings.HighlightPatterns != highlights)
-				InvalidateCache();
-			
-			// If the filter patterns have changed or the line count limit
-			// is less than what we currently have, reload the file
-			if (FileOpen && m_settings.FilterPatterns != filters ||
-				m_line_index.Count > m_settings.LineCount)
+			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
 				Reload();
-			
-			Refresh();
+			else if ((ui.WhatsChanged & EWhatsChanged.Rendering) != 0)
+				UpdateUI2();
 		}
 		
 		/// <summary>Show the TotD dialog</summary>
@@ -493,13 +439,25 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Convert an encoding name to encoding object</summary>
-		private static Encoding GetEncoding(string encoding_name)
+		private Encoding GetEncoding(string enc_name)
 		{
-			if (encoding_name == Encoding.ASCII           .EncodingName) return Encoding.ASCII           ;
-			if (encoding_name == Encoding.UTF8            .EncodingName) return Encoding.UTF8            ;
-			if (encoding_name == Encoding.Unicode         .EncodingName) return Encoding.Unicode         ;
-			if (encoding_name == Encoding.BigEndianUnicode.EncodingName) return Encoding.BigEndianUnicode;
-			throw new NotSupportedException("Text file encoding '"+encoding_name+"' is not supported");
+			// If 'enc_name' is empty, this is the auto detect case, in which case we don't
+			// modify it from what it's already set to. Auto detect will set it on file load.
+			if (enc_name.Length == 0) return m_encoding ?? Encoding.UTF8;
+			if (enc_name == Encoding.ASCII           .EncodingName) return Encoding.ASCII           ;
+			if (enc_name == Encoding.UTF8            .EncodingName) return Encoding.UTF8            ;
+			if (enc_name == Encoding.Unicode         .EncodingName) return Encoding.Unicode         ;
+			if (enc_name == Encoding.BigEndianUnicode.EncodingName) return Encoding.BigEndianUnicode;
+			throw new NotSupportedException("Text file encoding '"+enc_name+"' is not supported");
+		}
+
+		/// <summary>Convert a row delimiter string into an encoded byte array</summary>
+		private byte[] GetRowDelim(string row_delim)
+		{
+			// If 'row_delim' is empty, this is the auto detect case, in which case we don't
+			// modify it from what it's already set to. Auto detect will set it on file load.
+			if (row_delim.Length == 0) return m_row_delim;
+			return m_encoding.GetBytes(row_delim.Replace("CR","\r").Replace("LF","\n"));
 		}
 
 		/// <summary>Get/Set the currently selected grid row. Setting the selected row makes it visible</summary>
@@ -538,31 +496,67 @@ namespace RyLogViewer
 			m_grid.FirstDisplayedScrollingRowIndex = Math.Max(0, m_grid.RowCount - displayed_rows);
 		}
 
-		/// <summary>Create a message that displays for a period then disappears</summary>
-		private void SetTransientStatusMessage(string text, int display_time_ms)
+		/// <summary>
+		/// Apply settings throughout the app.
+		/// This method is called on startup to apply initial settings and
+		/// after the settings dialog has been shown and closed. It needs to
+		/// update anything that is only changed in the settings. Note: it does't
+		/// trigger a file reload.</summary>
+		private void ApplySettings2()
 		{
-			m_status_message.Text = text;
-			m_status_message.Visible = true;
+			// Cached settings for performance, don't overwrite auto detected cached values tho
+			m_encoding   = GetEncoding(m_settings.Encoding);
+			m_row_delim  = GetRowDelim(m_settings.RowDelimiter);
+			m_col_delim  = m_settings.ColDelimiter.Replace("TAB","\t").ToCharArray();
+			m_row_height = m_settings.RowHeight;
 			
-			// If the status message has a timer already, dispose it
-			Timer timer = m_status_message.Tag as Timer;
-			if (timer != null) timer.Dispose();
+			// Tail
+			m_watch.EnableRaisingEvents = FileOpen && m_settings.TailEnabled;
 			
-			// Attach a new timer to the status message
-			m_status_message.Tag = timer = new Timer{Enabled = true, Interval = display_time_ms};
-			timer.Tick += (s,a)=>
+			// Highlights;
+			m_highlights.Clear();
+			m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
+			
+			// Check states
+			m_check_tail.Checked = m_settings.TailEnabled;
+			
+			// Row styles
+			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
+			{
+				Font = m_settings.Font,
+				ForeColor = m_settings.LineForeColour1,
+				BackColor = m_settings.LineBackColour1,
+				SelectionBackColor = m_settings.LineSelectBackColour,
+				SelectionForeColor = m_settings.LineSelectForeColour,
+			};
+			if (m_settings.AlternateLineColours)
+			{
+				m_grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
 				{
-					// When the timer fires, if we're still associated with
-					// the status message, null out the text and remove ourself
-					if (s != m_status_message.Tag) return;
-					m_status_message.Text = Resources.Idle;
-					m_status_message.Tag = null;
-					((Timer)s).Dispose();
+					Font = m_settings.Font,
+					BackColor = m_settings.LineBackColour2,
+					SelectionBackColor = m_settings.LineSelectBackColour,
+					SelectionForeColor = m_settings.LineSelectForeColour,
 				};
+			}
+			else
+			{
+				m_grid.AlternatingRowsDefaultCellStyle = m_grid.RowsDefaultCellStyle;
+			}
+			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
+			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
+			
+			// Position UI elements
+			m_menu.Location      = m_settings.MenuPosition;
+			m_toolstrip.Location = m_settings.ToolsPosition;
+			m_status.Location    = m_settings.StatusPosition;
 		}
-
-		/// <summary>Update the UI with the current line index</summary>
-		private void UpdateUI()
+		
+		/// <summary>
+		/// Update the UI with the current line index.
+		/// This method should be called whenever a changes occurs that requires
+		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
+		private void UpdateUI2()
 		{
 			// Configure the grid
 			if (m_line_index.Count != 0)
@@ -601,8 +595,6 @@ namespace RyLogViewer
 					foreach (DataGridViewColumn col in m_grid.Columns)
 						col.Width = col_widths[col.Index];
 				}
-				
-				m_grid.Refresh();
 			}
 			else
 			{
@@ -611,7 +603,12 @@ namespace RyLogViewer
 				m_grid.ColumnCount = 0;
 			}
 			
+			// Invalidate the cache and get the grid to redraw
+			InvalidateCache();
+			m_grid.Refresh();
+			
 			// Configure menus
+			m_menu_encoding_detect           .Checked = m_settings.Encoding.Length == 0;
 			m_menu_encoding_ascii            .Checked = m_settings.Encoding == Encoding.ASCII.EncodingName;
 			m_menu_encoding_utf8             .Checked = m_settings.Encoding == Encoding.UTF8.EncodingName;
 			m_menu_encoding_ucs2_littleendian.Checked = m_settings.Encoding == Encoding.Unicode.EncodingName;
@@ -627,14 +624,16 @@ namespace RyLogViewer
 			if (!FileOpen)
 			{
 				Text = Resources.AppTitle;
-				m_status_line.Visible = false;
+				m_status_spring.Text      = Resources.NoFile;
 				m_status_filesize.Visible = false;
-				m_status_spring.Text = Resources.NoFile;
-				
+				m_status_line.Visible     = false;
+				m_status_line_end.Visible = false;
+				m_status_encoding.Visible = false;
 			}
 			else
 			{
 				Text = string.Format("{0} - {1}" ,m_filepath ,Resources.AppTitle);
+				m_status_spring.Text = "";
 				
 				// Add comma's to a large number
 				Func<StringBuilder,StringBuilder> Pretty = (sb)=>
@@ -649,14 +648,42 @@ namespace RyLogViewer
 				long p = (r != -1) ? m_line_index[SelectedRow].m_begin : 0;
 				StringBuilder pos = Pretty(new StringBuilder(p.ToString()));
 				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString()));
-				m_status_line.Text = string.Format(Resources.LineXofY, r, m_grid.RowCount);
+				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
-				m_status_spring.Text = "";
-				m_status_line.Visible = true;
 				m_status_filesize.Visible = true;
+				m_status_line.Text = string.Format(Resources.LineXofY, r, m_grid.RowCount);
+				m_status_line.Visible = true;
+				m_status_line_end.Text = string.Format(Resources.LineEndingX, m_encoding.GetString(m_row_delim).Replace("\r","CR").Replace("\n", "LF"));
+				m_status_line_end.Visible = true;
+				m_status_encoding.Text = string.Format(Resources.EncodingX, m_encoding.EncodingName);
+				m_status_encoding.Visible = true;
 			}
 		}
-	
+		
+		/// <summary>Create a message that displays for a period then disappears</summary>
+		private void SetTransientStatusMessage(string text, int display_time_ms)
+		{
+			m_status_message.Text = text;
+			m_status_message.Visible = true;
+			
+			// If the status message has a timer already, dispose it
+			Timer timer = m_status_message.Tag as Timer;
+			if (timer != null) timer.Dispose();
+			
+			// Attach a new timer to the status message
+			m_status_message.Tag = timer = new Timer{Enabled = true, Interval = display_time_ms};
+			timer.Tick += (s,a)=>
+				{
+					// When the timer fires, if we're still associated with
+					// the status message, null out the text and remove ourself
+					if (s != m_status_message.Tag) return;
+					m_status_message.Text = Resources.Idle;
+					m_status_message.Visible = false;
+					m_status_message.Tag = null;
+					((Timer)s).Dispose();
+				};
+		}
+		
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
 		public class CheckedButtonRenderer :ToolStripProfessionalRenderer
 		{

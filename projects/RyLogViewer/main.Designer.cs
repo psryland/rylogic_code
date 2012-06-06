@@ -53,6 +53,8 @@
 			this.m_menu_edit_find_next = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_find_prev = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_encoding_detect = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_encoding_ascii = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding_utf8 = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding_ucs2_littleendian = new System.Windows.Forms.ToolStripMenuItem();
@@ -69,12 +71,15 @@
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
-			this.m_status_line = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_filesize = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_line = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_line_end = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_encoding = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_spring = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_message = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.toolStripButton1 = new System.Windows.Forms.ToolStripButton();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -95,11 +100,12 @@
             this.m_sep,
             this.m_btn_highlights,
             this.m_btn_filters,
+            this.toolStripButton1,
             this.toolStripSeparator1,
             this.m_check_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(195, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(223, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -281,6 +287,8 @@
 			// m_menu_encoding
 			// 
 			this.m_menu_encoding.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_encoding_detect,
+            this.toolStripSeparator3,
             this.m_menu_encoding_ascii,
             this.m_menu_encoding_utf8,
             this.m_menu_encoding_ucs2_littleendian,
@@ -289,28 +297,39 @@
 			this.m_menu_encoding.Size = new System.Drawing.Size(69, 20);
 			this.m_menu_encoding.Text = "E&ncoding";
 			// 
+			// m_menu_encoding_detect
+			// 
+			this.m_menu_encoding_detect.Name = "m_menu_encoding_detect";
+			this.m_menu_encoding_detect.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_encoding_detect.Text = "&Detect Automatically";
+			// 
+			// toolStripSeparator3
+			// 
+			this.toolStripSeparator3.Name = "toolStripSeparator3";
+			this.toolStripSeparator3.Size = new System.Drawing.Size(182, 6);
+			// 
 			// m_menu_encoding_ascii
 			// 
 			this.m_menu_encoding_ascii.Name = "m_menu_encoding_ascii";
-			this.m_menu_encoding_ascii.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_ascii.Size = new System.Drawing.Size(185, 22);
 			this.m_menu_encoding_ascii.Text = "ASCII";
 			// 
 			// m_menu_encoding_utf8
 			// 
 			this.m_menu_encoding_utf8.Name = "m_menu_encoding_utf8";
-			this.m_menu_encoding_utf8.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_utf8.Size = new System.Drawing.Size(185, 22);
 			this.m_menu_encoding_utf8.Text = "UTF-8";
 			// 
 			// m_menu_encoding_ucs2_littleendian
 			// 
 			this.m_menu_encoding_ucs2_littleendian.Name = "m_menu_encoding_ucs2_littleendian";
-			this.m_menu_encoding_ucs2_littleendian.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_ucs2_littleendian.Size = new System.Drawing.Size(185, 22);
 			this.m_menu_encoding_ucs2_littleendian.Text = "UCS-2 (little endian)";
 			// 
 			// m_menu_encoding_ucs2_bigendian
 			// 
 			this.m_menu_encoding_ucs2_bigendian.Name = "m_menu_encoding_ucs2_bigendian";
-			this.m_menu_encoding_ucs2_bigendian.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_encoding_ucs2_bigendian.Size = new System.Drawing.Size(185, 22);
 			this.m_menu_encoding_ucs2_bigendian.Text = "UCS-2 (big endian)";
 			// 
 			// m_menu_tools
@@ -373,26 +392,28 @@
 			// m_menu_help_totd
 			// 
 			this.m_menu_help_totd.Name = "m_menu_help_totd";
-			this.m_menu_help_totd.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_help_totd.Size = new System.Drawing.Size(148, 22);
 			this.m_menu_help_totd.Text = "&Tip of the Day";
 			// 
 			// toolStripSeparator2
 			// 
 			this.toolStripSeparator2.Name = "toolStripSeparator2";
-			this.toolStripSeparator2.Size = new System.Drawing.Size(149, 6);
+			this.toolStripSeparator2.Size = new System.Drawing.Size(145, 6);
 			// 
 			// m_menu_help_about
 			// 
 			this.m_menu_help_about.Name = "m_menu_help_about";
-			this.m_menu_help_about.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_help_about.Size = new System.Drawing.Size(148, 22);
 			this.m_menu_help_about.Text = "&About";
 			// 
 			// m_status
 			// 
 			this.m_status.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_status.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_status_line,
             this.m_status_filesize,
+            this.m_status_line,
+            this.m_status_line_end,
+            this.m_status_encoding,
             this.m_status_spring,
             this.m_status_message});
 			this.m_status.Location = new System.Drawing.Point(0, 0);
@@ -400,16 +421,6 @@
 			this.m_status.Size = new System.Drawing.Size(593, 24);
 			this.m_status.TabIndex = 3;
 			this.m_status.Text = "statusStrip1";
-			// 
-			// m_status_line
-			// 
-			this.m_status_line.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
-			this.m_status_line.Name = "m_status_line";
-			this.m_status_line.Size = new System.Drawing.Size(74, 19);
-			this.m_status_line.Text = "Line: 1/1000";
-			this.m_status_line.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// m_status_filesize
 			// 
@@ -421,13 +432,41 @@
 			this.m_status_filesize.Text = "Size: 2147483647 bytes";
 			this.m_status_filesize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
+			// m_status_line
+			// 
+			this.m_status_line.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_line.Name = "m_status_line";
+			this.m_status_line.Size = new System.Drawing.Size(74, 19);
+			this.m_status_line.Text = "Line: 1/1000";
+			this.m_status_line.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_status_line_end
+			// 
+			this.m_status_line_end.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_line_end.Name = "m_status_line_end";
+			this.m_status_line_end.Size = new System.Drawing.Size(76, 19);
+			this.m_status_line_end.Text = "Line Ending:";
+			// 
+			// m_status_encoding
+			// 
+			this.m_status_encoding.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_encoding.Name = "m_status_encoding";
+			this.m_status_encoding.Size = new System.Drawing.Size(64, 19);
+			this.m_status_encoding.Text = "Encoding:";
+			// 
 			// m_status_spring
 			// 
 			this.m_status_spring.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(376, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(236, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -490,6 +529,15 @@
 			this.m_grid.Size = new System.Drawing.Size(587, 410);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
+			// 
+			// toolStripButton1
+			// 
+			this.toolStripButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.toolStripButton1.Image = ((System.Drawing.Image)(resources.GetObject("toolStripButton1.Image")));
+			this.toolStripButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.toolStripButton1.Name = "toolStripButton1";
+			this.toolStripButton1.Size = new System.Drawing.Size(28, 28);
+			this.toolStripButton1.Text = "toolStripButton1";
 			// 
 			// Main
 			// 
@@ -569,6 +617,11 @@
 		private System.Windows.Forms.ToolStripStatusLabel m_status_spring;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_message;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_line;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_line_end;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
+		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
+		private System.Windows.Forms.ToolStripButton toolStripButton1;
 	}
 }
 

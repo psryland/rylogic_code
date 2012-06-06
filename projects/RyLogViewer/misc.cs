@@ -1,5 +1,24 @@
-﻿namespace RyLogViewer
+﻿using System;
+
+namespace RyLogViewer
 {
+	[Flags] public enum EWhatsChanged
+	{
+		Nothing = 0,
+		
+		/// <summary>Options that only effect the program on startup</summary>
+		StartupOptions = 1 << 0,
+		
+		/// <summary>An option that affects how a file is parsed.</summary>
+		FileParsing = 1 << 1,
+		
+		/// <summary>An option that changes how the log view is rendered</summary>
+		Rendering = 1 << 2,
+		
+		/// <summary>who knows...</summary>
+		Everything = ~0,
+	}
+
 	public class XmlTag
 	{
 		public const string Root       = "root";

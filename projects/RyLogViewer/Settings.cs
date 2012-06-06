@@ -191,9 +191,9 @@ namespace RyLogViewer
 			FilterPatterns       = "<root/>";
 			HighlightPatternSets = "<root/>";
 			FilterPatternSets    = "<root/>";
-			RowDelimiter         = "CRLF";
+			RowDelimiter         = "";
 			ColDelimiter         = "";
-			Encoding             = System.Text.Encoding.UTF8.EncodingName;
+			Encoding             = "";
 		}
 	}
 }

@@ -29,7 +29,10 @@ namespace RyLogViewer
 			public const string Modify       = "Modify";
 			public const string Highlighting = "Highlighting";
 		}
-	
+		
+		/// <summary>Returns a bit mask of the settings data that's changed</summary>
+		public EWhatsChanged WhatsChanged { get; private set; }
+		
 		public SettingsUI(ETab tab)
 		{
 			InitializeComponent();
@@ -56,6 +59,7 @@ namespace RyLogViewer
 			};
 			
 			UpdateUI();
+			WhatsChanged = EWhatsChanged.Nothing;
 		}
 		
 		/// <summary>Hook up events for the general tab</summary>
@@ -66,6 +70,7 @@ namespace RyLogViewer
 			m_check_load_last_file.CheckedChanged += (s,a)=>
 				{
 					m_settings.LoadLastFile = m_check_load_last_file.Checked;
+					WhatsChanged |= EWhatsChanged.StartupOptions;
 				};
 			
 			// Restore window position on startup
@@ -73,6 +78,7 @@ namespace RyLogViewer
 			m_check_save_screen_loc.CheckedChanged += (s,a)=>
 				{
 					m_settings.RestoreScreenLoc = m_check_save_screen_loc.Checked;
+					WhatsChanged |= EWhatsChanged.StartupOptions;
 				};
 			
 			// Show tip of the day on startup
@@ -80,22 +86,25 @@ namespace RyLogViewer
 			m_check_show_totd.CheckedChanged += (s,a)=>
 				{
 					m_settings.ShowTOTD = m_check_show_totd.Checked;
+					WhatsChanged |= EWhatsChanged.StartupOptions;
 				};
 
 			// Line endings
-			m_edit_line_ends.ToolTip(m_tt, "Set the line ending characters to expect in the log data. Use 'CR' for carriage return, 'LF' for line feed");
+			m_edit_line_ends.ToolTip(m_tt, "Set the line ending characters to expect in the log data.\r\nUse 'CR' for carriage return, 'LF' for line feed.\r\nLeave blank to auto detect");
 			m_edit_line_ends.Text = m_settings.RowDelimiter;
 			m_edit_line_ends.TextChanged += (s,a)=>
 			{
 				m_settings.RowDelimiter = m_edit_line_ends.Text;
+				WhatsChanged |= EWhatsChanged.FileParsing;
 			};
 			
 			// Column delimiters
-			m_edit_col_delims.ToolTip(m_tt, "Set the characters that separate columns in the log data. Use 'TAB' for a tab character. Leave blank for no column delimiters");
+			m_edit_col_delims.ToolTip(m_tt, "Set the characters that separate columns in the log data.\r\nUse 'TAB' for a tab character.\r\nLeave blank for no column delimiters");
 			m_edit_col_delims.Text = m_settings.ColDelimiter;
 			m_edit_col_delims.TextChanged += (s,a)=>
 				{
 					m_settings.ColDelimiter = m_edit_col_delims.Text;
+					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
 			// Selection colour
@@ -105,6 +114,7 @@ namespace RyLogViewer
 					PickColours(m_lbl_selection_example, a.X, a.Y,
 						(o,e) => m_settings.LineSelectForeColour = PickColour(m_settings.LineSelectForeColour),
 						(o,e) => m_settings.LineSelectBackColour = PickColour(m_settings.LineSelectBackColour));
+					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 			
 			// Log text colour
@@ -114,6 +124,7 @@ namespace RyLogViewer
 					PickColours(m_lbl_line1_example, a.X, a.Y,
 						(o,e) => m_settings.LineForeColour1 = PickColour(m_settings.LineForeColour1),
 						(o,e) => m_settings.LineBackColour1 = PickColour(m_settings.LineBackColour1));
+					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 			
 			// Alt log text colour
@@ -123,6 +134,7 @@ namespace RyLogViewer
 					PickColours(m_lbl_line2_example, a.X, a.Y,
 						(o,e) => m_settings.LineForeColour2 = PickColour(m_settings.LineForeColour2),
 						(o,e) => m_settings.LineBackColour2 = PickColour(m_settings.LineBackColour2));
+					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 			
 			// Enable alt line colours
@@ -130,6 +142,7 @@ namespace RyLogViewer
 			m_check_alternate_line_colour.CheckedChanged += (s,a)=>
 				{
 					m_settings.AlternateLineColours = m_check_alternate_line_colour.Checked;
+					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 			
 			// Line count
@@ -140,6 +153,7 @@ namespace RyLogViewer
 			m_spinner_line_count.ValueChanged += (s,a)=>
 				{
 					m_settings.LineCount = (int)m_spinner_line_count.Value;
+					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
 			// Row height
@@ -150,6 +164,7 @@ namespace RyLogViewer
 			m_spinner_row_height.ValueChanged += (s,a)=>
 				{
 					m_settings.RowHeight = (int)m_spinner_row_height.Value;
+					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 		}
 		
@@ -181,12 +196,12 @@ namespace RyLogViewer
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
 			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting(m_grid_highlight, m_highlights, a);
-			//m_grid_highlight.MouseClick       += (s,a)=> OnMouseClick(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
 			
 			// Highlight pattern
 			m_pattern_hl.Add += (s,a)=>
 				{
+					WhatsChanged |= EWhatsChanged.Rendering;
 					if (m_pattern_hl.IsNew) m_highlights.Add((Highlight)m_pattern_hl.Pattern);
 					m_pattern_hl.NewPattern(new Highlight());
 					UpdateUI();
@@ -219,12 +234,12 @@ namespace RyLogViewer
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
 			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
 			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting(m_grid_filter, m_filters, a);
-			//m_grid_filter.MouseClick         += (s,a)=> OnMouseClick(m_grid_filter, m_filters, a);
 			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
 			
 			// Filter pattern
 			m_pattern_ft.Add += (s,a)=>
 				{
+					WhatsChanged |= EWhatsChanged.FileParsing;
 					if (m_pattern_ft.IsNew) m_filters.Add((Filter)m_pattern_ft.Pattern);
 					m_pattern_ft.NewPattern(new Filter());
 					UpdateUI();
@@ -239,8 +254,12 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Delete a pattern</summary>
-		private static void OnDeleteRow<T>(DataGridView grid, List<T> patterns)
+		private void OnDeleteRow<T>(DataGridView grid, List<T> patterns)
 		{
+			WhatsChanged |= grid == m_grid_highlight
+				? EWhatsChanged.Rendering
+				: EWhatsChanged.FileParsing;
+			
 			if (grid.RowCount == 0) patterns.Clear();
 			else
 			{
@@ -250,7 +269,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>DragDrop functionality for grid rows</summary>
-		private static void DoDragDrop<T>(DataGridView grid, List<T> patterns, DragEventArgs args, bool test_can_drop)
+		private void DoDragDrop<T>(DataGridView grid, List<T> patterns, DragEventArgs args, bool test_can_drop)
 		{
 			args.Effect = DragDropEffects.None;
 			if (!args.Data.GetDataPresent(typeof(T))) return;
@@ -269,6 +288,11 @@ namespace RyLogViewer
 			patterns[idx2] = tmp;
 			grid.InvalidateRow(idx1);
 			grid.InvalidateRow(idx2);
+			
+			// Changing the order can effect the highlight order, and possibly the filtering(?)
+			WhatsChanged |= grid == m_grid_highlight
+				? EWhatsChanged.Rendering
+				: EWhatsChanged.FileParsing;
 		}
 
 		/// <summary>Handle mouse down on the patterns grid</summary>
@@ -319,10 +343,14 @@ namespace RyLogViewer
 			default: return;
 			case ColumnNames.Active:
 				pat.Active = !pat.Active;
+				WhatsChanged |= grid == m_grid_highlight
+					? EWhatsChanged.Rendering
+					: EWhatsChanged.FileParsing;
 				break;
 			case ColumnNames.Highlighting:
 				if (hl != null)
 				{
+					WhatsChanged |= EWhatsChanged.Rendering;
 					PickColours(grid, MousePosition.X, MousePosition.Y,
 						(s,a) => { hl.ForeColour = PickColour(hl.ForeColour); grid.InvalidateCell(e.ColumnIndex, e.RowIndex); },
 						(s,a) => { hl.BackColour = PickColour(hl.BackColour); grid.InvalidateCell(e.ColumnIndex, e.RowIndex); });
@@ -330,6 +358,9 @@ namespace RyLogViewer
 				break;
 			case ColumnNames.Modify:
 				ctrl.EditPattern(patterns[e.RowIndex]);
+				WhatsChanged |= grid == m_grid_highlight
+					? EWhatsChanged.Rendering
+					: EWhatsChanged.FileParsing;
 				break;
 			}
 		}

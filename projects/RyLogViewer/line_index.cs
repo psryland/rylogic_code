@@ -27,7 +27,7 @@ namespace RyLogViewer
 		private void Reload()
 		{
 			if (FileOpen) BuildLineIndex(m_filepath);
-			UpdateUI();
+			UpdateUI2();
 		}
 		
 		/// <summary>
@@ -50,7 +50,7 @@ namespace RyLogViewer
 			if (encoding.Equals(Encoding.ASCII)) {}
 			else if (encoding.Equals(Encoding.Unicode) || encoding.Equals(Encoding.BigEndianUnicode))
 			{
-				// Skip the byte order mask (BOM)
+				// Skip the byte order mark (BOM)
 				if (pos == 0 && file.ReadByte() != -1 && file.ReadByte() != -1) {}
 				
 				// Ensure a 16-bit word boundary
@@ -59,7 +59,7 @@ namespace RyLogViewer
 			}
 			else if (encoding.Equals(Encoding.UTF8))
 			{
-				// Some programs store a byte order mask (BOM) at the start of UTF-8 text files.
+				// Some programs store a byte order mark (BOM) at the start of UTF-8 text files.
 				// These bytes are 0xEF, 0xBB, 0xBF, so ignore them if present
 				if (pos == 0 && file.ReadByte() == 0xEF && file.ReadByte() == 0xBB && file.ReadByte() == 0xBF) {}
 				else file.Seek(pos, SeekOrigin.Begin);
@@ -100,8 +100,8 @@ namespace RyLogViewer
 			// Local copies of variables used by the follow async task
 			List<Range> line_index = new List<Range>();
 			List<Filter> filters   = ActiveFilters.ToList();
-			Encoding encoding      = (Encoding)m_encoding.Clone();
-			byte[] row_delim       = (byte[])m_row_delim.Clone();
+			Encoding encoding      = (Encoding)GuessEncoding(filepath).Clone();
+			byte[] row_delim       = (byte[])GuessRowDelimiter(filepath, m_encoding).Clone();
 			int max_line_count     = m_settings.LineCount;
 			long last_line         = 0;
 			long file_end          = 0;
@@ -129,7 +129,7 @@ namespace RyLogViewer
 							// Buffer data from the file
 							int read = Buffer(file, buf, (int)file.Position, true, encoding);
 							if (read == 0) break;
-
+							
 							// Search backwards counting lines
 							long base_addr = file.Position;
 							Range Brng = new Range(read, read); // The range within 'buf' of the line text
@@ -190,7 +190,7 @@ namespace RyLogViewer
 			m_file       = LoadFile(m_filepath);
 			m_last_line  = last_line;
 			m_file_end   = file_end;
-			UpdateUI();
+			UpdateUI2();
 		}
 		
 		/// <summary>Incrementally update the line index</summary>
@@ -311,11 +311,11 @@ namespace RyLogViewer
 			m_last_line = last_line;
 			m_file_end  = file_end;
 			Debug.Assert(m_last_line <= m_file_end, "'m_file_end' should always be greater than 'm_last_line'");
-			UpdateUI();
+			UpdateUI2();
 		}
 		
 		/// <summary>Add a line to 'line_index'</summary>
-		private static void AddLine(List<Range> line_index, byte[] buf, Range rng, long base_addr, long max_addr, Encoding encoding, List<Filter> filters)
+		private static void AddLine(List<Range> line_index, byte[] buf, Range rng, long base_addr, long max_addr, Encoding encoding, IEnumerable<Filter> filters)
 		{
 			if (rng.Empty) return;
 			Range r; string text = encoding.GetString(buf, (int)rng.m_begin, (int)rng.Count);
@@ -332,20 +332,18 @@ namespace RyLogViewer
 			}
 		}
 		
-		/// <summary>Test 'text' against 'filters' and returns true if it should be included.
+		/// <summary>
+		/// Test 'text' against 'filters' and returns true if it should be included.
 		/// Updates 'line' in the event that the filters include non-binary matches</summary>
-		private static bool PassesFilters(List<Filter> filters, string text, out Range line)
+		private static bool PassesFilters(IEnumerable<Filter> filters, string text, out Range line)
 		{
 			// Test 'text' against each filter to see if it's included
-			bool include = true;
 			line = new Range(0, text.Length);
 			foreach (var f in filters)
 			{
 				// First see if it passes this filter
-				include &= f.IsMatch(text);
-				//if (f.Exclude) include &= !f.IsMatch(text);
-				//else           include &=  f.IsMatch(text);
-				if (!include) break;
+				if (!f.IsMatch(text))
+					return false;
 				
 				// If the filter is not binary, trim 'line' to the bounding range of matches
 				if (!f.BinaryMatch)
@@ -359,13 +357,68 @@ namespace RyLogViewer
 					}
 				}
 			}
-			return include;
+			return true;
 		}
 		
 		/// <summary>Return a collection of the currently active filters</summary>
 		private IEnumerable<Filter> ActiveFilters
 		{
 			get { return from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft; }
+		}
+		
+		/// <summary>Auto detect the line end format. Must be called from the main thread</summary>
+		private byte[] GuessRowDelimiter(string filepath, Encoding encoding)
+		{
+			// Auto detect if the settings say "detect", that way m_row_delim
+			// is cached as the appropriate row delimiter while the current file is loaded
+			if (m_settings.RowDelimiter.Length == 0)
+			{
+				using (var r = new StreamReader(LoadFile(filepath)))
+				{
+					int idx = -1, ofs = 0;
+					const int len = 1024;
+					char[] buf = new char[len + 1];
+					for (int read = r.ReadBlock(buf, ofs, len); read != 0; read = r.ReadBlock(buf, ofs, len))
+					{
+						idx = Array.FindIndex(buf, 0, read, c => c == '\n' || c == '\r');
+						if (idx == -1) continue;
+						if (idx == read - 1) { buf[0] = buf[read-1]; ofs = 1; continue; }
+						break;
+					}
+					if (idx != -1)
+					{
+						m_row_delim = buf[idx] == '\r' && buf[idx+1] == '\n'
+							? encoding.GetBytes(buf, idx, 2)
+							: encoding.GetBytes(buf, idx, 1);
+					}
+				}
+			}
+			return m_row_delim;
+		}
+		
+		/// <summary>Guess the text file encoding</summary>
+		private Encoding GuessEncoding(string filepath)
+		{
+			// Auto detect if the settings say "detect", that way m_encoding
+			// is cached as the appropriate encoding while the current file is loaded
+			if (m_settings.Encoding.Length == 0)
+			{
+				using (var file = LoadFile(filepath))
+				{
+					// Look for a BOM
+					byte[] buf = new byte[4];
+					int read = file.Read(buf, 0, buf.Length);
+					if (read >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF)
+ 						m_encoding = Encoding.UTF8;
+					else if (read >= 2 && buf[0] == 0xFE && buf[1] == 0xFF)
+						m_encoding = Encoding.BigEndianUnicode;
+					else if (read >= 2 && buf[0] == 0xFF && buf[1] == 0xFE)
+						m_encoding = Encoding.Unicode;
+					else // If no valid bomb is found, assume UTF-8 as that is a superset of ASCII
+						m_encoding = Encoding.UTF8;
+				}
+			}
+			return m_encoding;
 		}
 	}
 }

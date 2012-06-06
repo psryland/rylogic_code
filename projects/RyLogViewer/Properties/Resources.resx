@@ -273,4 +273,10 @@ Error: {1}</value>
 	<data name="LineXofY">
 		<value xml:space="preserve">Line: {0}/{1}</value>
 	</data>
+	<data name="LineEndingX">
+		<value xml:space="preserve">Line Ending: {0}</value>
+	</data>
+	<data name="EncodingX">
+		<value xml:space="preserve">Encoding: {0}</value>
+	</data>
 </root>

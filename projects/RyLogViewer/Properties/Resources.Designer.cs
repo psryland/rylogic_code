@@ -241,6 +241,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Encoding: {0}.
+        /// </summary>
+        internal static string EncodingX {
+            get {
+                return ResourceManager.GetString("EncodingX", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Exclude.
         /// </summary>
         internal static string Exclude {
@@ -303,6 +312,15 @@ namespace RyLogViewer.Properties {
         internal static string InvalidFilePath {
             get {
                 return ResourceManager.GetString("InvalidFilePath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Line Ending: {0}.
+        /// </summary>
+        internal static string LineEndingX {
+            get {
+                return ResourceManager.GetString("LineEndingX", resourceCulture);
             }
         }
         

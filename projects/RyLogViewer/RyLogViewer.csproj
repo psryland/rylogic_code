@@ -219,7 +219,7 @@
     <None Include="Resources\bookmark_add.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="docs\TotD2.html" />
+    <EmbeddedResource Include="docs\TotD2.html" />
     <EmbeddedResource Include="RyLog.ico" />
     <None Include="Resources\agt_action_fail.png" />
     <None Include="Resources\agt_action_success.png" />
