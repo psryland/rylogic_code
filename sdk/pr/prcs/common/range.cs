@@ -41,7 +41,7 @@ namespace pr.common
 		public void Clear()               { m_begin = m_end = 0; }
 
 		/// <summary>Returns true if 'index' is within this range</summary>
-		public bool Contains(int index)   { return m_begin <= index && index < m_end; }
+		public bool Contains(long index)  { return m_begin <= index && index < m_end; }
 
 		/// <summary>Enumerator for iterating over the range</summary>
 		public IEnumerable<long> Enumerate { get { for (long i = m_begin; i != m_end; ++i) yield return i; } }

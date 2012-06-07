@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using pr.common;
@@ -24,6 +25,10 @@ namespace RyLogViewer
 		private const int AvrBytesPerLine = 256;
 		private const int CacheSize = 4096;
 		
+		// Synchronisation so that we're only ever have one thread building the line index at a time
+		private static readonly EventWaitHandle m_sync_cancel_building = new EventWaitHandle(false, EventResetMode.ManualReset);
+		private static readonly EventWaitHandle m_sync_build_ended     = new EventWaitHandle(true , EventResetMode.ManualReset);
+		
 		private readonly Settings m_settings;                 // App settings
 		private readonly RecentFiles m_recent;                // Recent files
 		private readonly FileSystemWatcher m_watch;           // A FS watcher to detect file changes
@@ -38,8 +43,8 @@ namespace RyLogViewer
 		private byte[] m_row_delim;                           // The row delimiter converted from a string to a byte[] using the current encoding
 		private char[] m_col_delim;                           // The column delimiter, cached to prevent m_settings access in CellNeeded
 		private int m_row_height;                             // The row height, cached to prevent settings lookups in CellNeeded
-		private long m_last_line;                             // The byte offset (from file begin) to the start of the last known line
-		private long m_file_end;                              // The last known size of the file
+		private long m_filepos;                               // The byte offset (from file begin) to the start of the last known line
+		private long m_fileend;                               // The last known size of the file
 		
 		//todo:
 		// handle large files
@@ -65,8 +70,8 @@ namespace RyLogViewer
 			m_last_find_pattern = null;
 			m_filepath          = null;
 			m_file              = null;
-			m_last_line         = 0;
-			m_file_end          = 0;
+			m_filepos           = 0;
+			m_fileend           = 0;
 			InitCache();
 			ApplySettings();
 			
@@ -124,11 +129,15 @@ namespace RyLogViewer
 			m_grid.DataError           += (s,a) => { Debug.Assert(false); };
 			
 			// Watcher
-			m_file_changed.Action += UpdateLineIndex;
+			m_file_changed.Action += ()=>
+				{
+					UpdateLineIndex();
+				};
 			m_watch.Changed += (s,a) =>
 				{
 					// This happens sometimes, not really sure why
 					if (m_file.Length == 0) return;
+					if (a.ChangeType != WatcherChangeTypes.Changed) return;
 					m_file_changed.Signal();
 				};
 			
@@ -222,41 +231,50 @@ namespace RyLogViewer
 			m_line_index.Clear();
 			m_filepath = null;
 			m_file = null;
-			m_last_line = 0;
-			m_file_end = 0;
+			m_filepos = 0;
+			m_fileend = 0;
 			UpdateUI();
 		}
 		
 		/// <summary>Prompt to open a log file</summary>
 		private void OpenLogFile(string filepath)
 		{
-			// Prompt for a file if none provided
-			if (filepath == null)
+			try
 			{
-				var fd = new OpenFileDialog{Filter = LogFileFilter, Multiselect = false};
-				if (fd.ShowDialog() != DialogResult.OK) return;
-				filepath = fd.FileName;
-			}
+				// Prompt for a file if none provided
+				if (filepath == null)
+				{
+					var fd = new OpenFileDialog{Filter = LogFileFilter, Multiselect = false};
+					if (fd.ShowDialog() != DialogResult.OK) return;
+					filepath = fd.FileName;
+				}
 			
-			// Reject invalid filepaths
-			if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
-			{
-				MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+				// Reject invalid filepaths
+				if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
+				{
+					MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					return;
+				}
+				
+				m_recent.Add(filepath);
+				m_settings.RecentFiles = m_recent.Export();
+				m_settings.LastLoadedFile = filepath;
+				m_settings.Save();
+				
+				// Switch files - open the file to make sure it's accessible (and to hold a lock)
+				CloseLogFile();
+				m_file = LoadFile(filepath);
+				m_filepos = m_settings.OpenAtEnd ? m_file.Length : 0;
+				
+				// Setup the watcher to watch for file changes
+				m_watch.Path = Path.GetDirectoryName(filepath);
+				m_watch.Filter = Path.GetFileName(filepath);
+				
+				BuildLineIndex(filepath, m_filepos, true);
 				return;
 			}
-		
-			m_recent.Add(filepath);
-			m_settings.RecentFiles = m_recent.Export();
-			m_settings.LastLoadedFile = filepath;
-			m_settings.Save();
-			
-			// Setup the watcher to watch for file changes
-			m_watch.Path = Path.GetDirectoryName(filepath);
-			m_watch.Filter = Path.GetFileName(filepath);
-			
-			// Switch files
+			catch (Exception ex) { MessageBox.Show(this, string.Format(Resources.FailedToOpenXDueToErrorY, filepath ,ex.Message), Resources.FailedToLoadFile, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			CloseLogFile();
-			BuildLineIndex(filepath);
 		}
 
 		/// <summary>Supply the grid with values</summary>
@@ -426,9 +444,14 @@ namespace RyLogViewer
 			ApplySettings();
 			
 			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
+			{
 				Reload();
+			}
 			else if ((ui.WhatsChanged & EWhatsChanged.Rendering) != 0)
+			{
+				InvalidateCache();
 				UpdateUI();
+			}
 		}
 		
 		/// <summary>Show the TotD dialog</summary>
@@ -556,6 +579,9 @@ namespace RyLogViewer
 			m_menu.Location      = m_settings.MenuPosition;
 			m_toolstrip.Location = m_settings.ToolsPosition;
 			m_status.Location    = m_settings.StatusPosition;
+			
+			// Ensure rows are rerendered
+			InvalidateCache();
 		}
 		
 		/// <summary>
@@ -622,7 +648,7 @@ namespace RyLogViewer
 			
 			// The file scroll bar is only visible when part of the file is loaded
 			m_scroll_file.Width = m_settings.FileScrollWidth;
-			m_scroll_file.Visible = m_line_index.Count == m_settings.LineCount;
+			m_scroll_file.Visible = false;//m_line_index.Count == m_settings.LineCount;
 			
 			// Status and title
 			UpdateStatus();

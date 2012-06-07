@@ -64,7 +64,7 @@ namespace test.test.ui
 			
 			StringBuilder sb = new StringBuilder();
 			results.Summary(sb);
-			m_edit.Text = sb.ToString();
+			m_edit.Text = sb.ToString().Replace("\n","\r\n");
 		}
 	}
 }

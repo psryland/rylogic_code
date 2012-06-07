@@ -272,6 +272,25 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to load file.
+        /// </summary>
+        internal static string FailedToLoadFile {
+            get {
+                return ResourceManager.GetString("FailedToLoadFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to open file {0} due to an error
+        ///Error: {1}.
+        /// </summary>
+        internal static string FailedToOpenXDueToErrorY {
+            get {
+                return ResourceManager.GetString("FailedToOpenXDueToErrorY", resourceCulture);
+            }
+        }
+        
         internal static System.Drawing.Bitmap fileclose {
             get {
                 object obj = ResourceManager.GetObject("fileclose", resourceCulture);
