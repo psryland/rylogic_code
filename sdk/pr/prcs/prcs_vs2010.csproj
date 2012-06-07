@@ -251,6 +251,7 @@
     <Compile Include="maths\vector2.cs" />
     <Compile Include="maths\vector4.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="stream\link_stream.cs" />
     <Compile Include="util\base64.cs" />
     <Compile Include="util\crc16.cs" />
     <Compile Include="util\crc32.cs" />

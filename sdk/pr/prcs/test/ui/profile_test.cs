@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Linq;
+﻿#define PR_PROFILE
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using pr.stream;
 using pr.util;
 
 namespace test.test.ui
@@ -18,9 +12,9 @@ namespace test.test.ui
 		/// <summary>String transform unit tests</summary>
 		public class Test
 		{
-			private readonly Profile.Instance prof1 = new Profile.Instance("Func1");
-			private readonly Profile.Instance prof2 = new Profile.Instance("Func2");
-			private readonly Profile.Instance prof3 = new Profile.Instance("Func3");
+			private readonly Profile.Instance prof1 = Profile.Create("Func1");
+			private readonly Profile.Instance prof2 = Profile.Create("Func2");
+			private readonly Profile.Instance prof3 = Profile.Create("Func3");
 			
 			public void Func1()
 			{
@@ -50,9 +44,6 @@ namespace test.test.ui
 		{
 			InitializeComponent();
 			
-			// A stream for linking collected profile data to the profile output
-			var ms = new MemoryStream();
-			
 			// Collect profile data
 			for (int f = 0; f != 10; ++f)
 			{
@@ -61,12 +52,19 @@ namespace test.test.ui
 				test.Func1();
 				Profile.FrameEnd();
 			}
-			Profile.Output(ms);
+
+			// A stream for linking collected profile data to the profile output
+			var s = new LinkStream();
+			Profile.Sample(s.OStream);
 			
 			// Receive and display profile data
-			var result = Profile.Collect(ms);
-			result.SortByInclTime();
-			m_edit.Text = result.Summary;
+			Profile.Results results = new Profile.Results();
+			results.Collect(s.IStream);
+			results.SortByInclTime();
+			
+			StringBuilder sb = new StringBuilder();
+			results.Summary(sb);
+			m_edit.Text = sb.ToString();
 		}
 	}
 }

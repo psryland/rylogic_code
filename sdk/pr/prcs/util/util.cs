@@ -12,7 +12,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using NUnit.Framework;
@@ -410,13 +409,13 @@ namespace pr.util
 			tt.SetToolTip(ctrl, caption);
 		}
 		
-		/// <summary>Return the value for 'key', if it doesn't exist, insert 'def' and return that</summary>
-		public static V GetOrAdd<K,V>(this Dictionary<K,V> dic, K key, V def)
+		/// <summary>Return the value for 'key', if it doesn't exist, insert and return the result of calling 'def'</summary>
+		public static V GetOrAdd<K,V>(this Dictionary<K,V> dic, K key, Func<V> def)
 		{
 			V value;
 			if (dic.TryGetValue(key, out value)) return value;
-			dic.Add(key, def);
-			return def;
+			dic.Add(key, value = def()); // 'def' is only evaluated if 'key' is not found
+			return value;
 		}
 	}
 	
