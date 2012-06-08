@@ -52,14 +52,10 @@ namespace RyLogViewer
 			get { return m_value; }
 			set { m_value = value; }
 		}
-
-
-
-	
+		
 		public event EventHandler Scroll;
 		public event EventHandler ValueChanged;
-
-
+		
 		/// <summary>The byte range of the file that is visible</summary>
 		public Range VisibleRange { get; set; }
 		

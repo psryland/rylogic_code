@@ -107,6 +107,15 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
+			// Include blank lines
+			m_check_include_blank_lines.ToolTip(m_tt, "Include blank lines in the log view");
+			m_check_include_blank_lines.Checked = m_settings.IncludeBlankLines;
+			m_check_include_blank_lines.CheckedChanged += (s,a)=>
+				{
+					m_settings.IncludeBlankLines = m_check_include_blank_lines.Checked;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+			
 			// Load at end of file
 			m_check_open_at_end.ToolTip(m_tt, "If checked, opens files showing the end of the file.\r\nIf unchecked opens files at the beginning");
 			m_check_open_at_end.Checked = m_settings.OpenAtEnd;

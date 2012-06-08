@@ -113,6 +113,11 @@ namespace RyLogViewer
 			get { return get<bool>("OpenAtEnd"); }
 			set { set("OpenAtEnd", value); }
 		}
+		public bool   IncludeBlankLines
+		{
+			get { return get<bool>("IncludeBlankLines"); }
+			set { set("IncludeBlankLines", value); }
+		}
 		public bool   AlwaysOnTop
 		{
 			get { return get<bool>("AlwaysOnTop"); }
@@ -172,8 +177,10 @@ namespace RyLogViewer
 		public Settings(ELoadOptions opts = ELoadOptions.Normal)
 		{
 			if (opts == ELoadOptions.Normal)
+			{
 				try { Reload(); return; }
 				catch (Exception ex) { Debug.WriteLine(ex); }
+			}
 			
 			RecentFiles          = "";
 			Font                 = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
@@ -195,6 +202,7 @@ namespace RyLogViewer
 			LoadLastFile         = false;
 			LastLoadedFile       = "";
 			OpenAtEnd            = true;
+			IncludeBlankLines    = true;
 			AlwaysOnTop          = false;
 			ShowTOTD             = true;
 			TailEnabled          = false;

@@ -264,13 +264,14 @@ namespace RyLogViewer
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
 				CloseLogFile();
 				m_file = LoadFile(filepath);
+				m_filepath = filepath;
 				m_filepos = m_settings.OpenAtEnd ? m_file.Length : 0;
 				
 				// Setup the watcher to watch for file changes
 				m_watch.Path = Path.GetDirectoryName(filepath);
 				m_watch.Filter = Path.GetFileName(filepath);
 				
-				BuildLineIndex(filepath, m_filepos, true);
+				Reload();
 				return;
 			}
 			catch (Exception ex) { MessageBox.Show(this, string.Format(Resources.FailedToOpenXDueToErrorY, filepath ,ex.Message), Resources.FailedToLoadFile, MessageBoxButtons.OK, MessageBoxIcon.Error); }
@@ -283,7 +284,7 @@ namespace RyLogViewer
 			if (!FileOpen) e.Value = null;
 			else
 			{
-				try { e.Value = CacheLine(e.RowIndex)[e.ColumnIndex].Text; }
+				try { e.Value = ReadLine(e.RowIndex)[e.ColumnIndex].Text; }
 				catch { e.Value = ""; }
 			}
 		}
@@ -292,7 +293,7 @@ namespace RyLogViewer
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
 		{
 			// Check if the cell value has a highlight pattern it matches
-			Highlight hl = (e.RowIndex != -1) ? CacheLine(e.RowIndex)[e.ColumnIndex].HL : null;
+			Highlight hl = (e.RowIndex != -1) ? ReadLine(e.RowIndex)[e.ColumnIndex].HL : null;
 			if (hl == null)
 			{
 				e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
@@ -332,10 +333,10 @@ namespace RyLogViewer
 
 			// Search from the current row forward
 			int row = SelectedRow;
-			bool current_row_matches = pat.IsMatch(CacheLine(row).RowText);
+			bool current_row_matches = pat.IsMatch(ReadLine(row).RowText);
 			for (int i = row + 1; i != m_grid.RowCount; ++i)
 			{
-				if (!pat.IsMatch(CacheLine(i).RowText)) continue;
+				if (!pat.IsMatch(ReadLine(i).RowText)) continue;
 				
 				// Found!. Make sure the selected row is visible
 				SelectedRow = i;
@@ -353,10 +354,10 @@ namespace RyLogViewer
 			
 			// Search from the current row backward
 			int row = SelectedRow;
-			bool current_row_matches = pat.IsMatch(CacheLine(row).RowText);
+			bool current_row_matches = pat.IsMatch(ReadLine(row).RowText);
 			for (int i = row - 1; i != -1; --i)
 			{
-				if (!pat.IsMatch(CacheLine(i).RowText)) continue;
+				if (!pat.IsMatch(ReadLine(i).RowText)) continue;
 				
 				// Found!. Make sure the selected row is visible
 				SelectedRow = i;
@@ -594,7 +595,7 @@ namespace RyLogViewer
 			if (m_line_index.Count != 0)
 			{
 				// Read a row from the data and show column headers if there is more than one
-				Line line = CacheLine(m_line_index.Count - 1);
+				Line line = ReadLine(m_line_index.Count/2);
 				m_grid.ColumnHeadersVisible = line.Column.Count > 1;
 				m_grid.ColumnCount = line.Column.Count;
 				
