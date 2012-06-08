@@ -5,7 +5,6 @@ using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using pr.gfx;
 using pr.maths;
-using pr.util;
 
 namespace RyLogViewer
 {
@@ -20,7 +19,7 @@ namespace RyLogViewer
 		private float  m_small_change;  // Normalised small change amount
 		private long   m_sub_range;     // The sub range size
 		private long   m_total_range;   // The total range size
-		private float  m_frac;          // The normalised position of the thumb
+		private double m_frac;          // The normalised position of the thumb
 		private bool   m_dragging;      // True while dragging
 
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("TrackColor")]
@@ -60,8 +59,14 @@ namespace RyLogViewer
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("Value")]
 		public int Value
 		{
-			get { return (int)Maths.Lerp(Minimum, Maximum, Fraction); }
+			get { return (int)Maths.Lerp(Minimum, Maximum, (float)Fraction); }
 			set { Fraction = Maths.Ratio(Minimum, value, Maximum); RaiseValueChanged(); Invalidate(); }
+		}
+
+		/// <summary>Return the current slider position in reference to TotalRange</summary>
+		public long RangePos
+		{
+			get { return (long)(TotalRange * Fraction); }
 		}
 
 		/// <summary>The size of the visible portion of the range</summary>
@@ -88,13 +93,13 @@ namespace RyLogViewer
 
 		/// <summary>The normalised position of the thumb</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The normalised position of the thumb")]
-		public float Fraction
+		public double Fraction
 		{
 			get { return m_frac; }
-			set { m_frac = Maths.Clamp(value, 0f, 1f); RaiseScrollEvent(); Invalidate(); }
+			set { m_frac = Maths.Clamp(value, 0.0, 1.0); RaiseValueChanged(); Invalidate(); }
 		}
 		
-		/// <summary>Raised whenever the scroll box is moved by either a mouse or keyboard action and before the value is updated</summary>
+		/// <summary>Raised whenever the scroll box is moved by either a mouse or keyboard action immediately after the value is updated</summary>
 		public event EventHandler Scroll;
 		private void RaiseScrollEvent()
 		{
@@ -133,7 +138,7 @@ namespace RyLogViewer
 			var bounds = e.ClipRectangle;
 			const float rad = 4f;
 			int thm_hheight = ThumbSize / 2;
-			int thm_centre  = (int)Maths.Lerp(thm_hheight, Height - thm_hheight, Fraction);
+			int thm_centre  = (int)Maths.Lerp(thm_hheight, Height - thm_hheight, (float)Fraction);
 			
 			gfx.SmoothingMode = SmoothingMode.AntiAlias;
 			
@@ -159,31 +164,32 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Set the thumb position given a control space Y value</summary>
-		private void SetThumbPos(int y)
+		private void ScrollThumbPos(int y)
 		{
 			int h = ThumbSize / 2;
 			y = Maths.Clamp(y, h, Height - h);
 			Fraction = Maths.Ratio(h, y, Height - h);
+			RaiseScrollEvent();
 		}
 
 		/// <summary>Mouse down, tries to centre the thumb at the mouse location</summary>
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
-			SetThumbPos(e.Y);
+			ScrollThumbPos(e.Y);
 			Capture = true;
 			m_dragging = true;
 		}
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
 			base.OnMouseMove(e);
-			if (m_dragging) SetThumbPos(e.Y);
+			if (m_dragging) ScrollThumbPos(e.Y);
 			
 		}
 		protected override void OnMouseUp(MouseEventArgs e)
 		{
 			base.OnMouseUp(e);
-			SetThumbPos(e.Y);
+			ScrollThumbPos(e.Y);
 			Capture = false;
 			m_dragging = false;
 		}
@@ -192,10 +198,10 @@ namespace RyLogViewer
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			base.OnKeyDown(e);
-			if (e.KeyCode == Keys.PageUp  ) Fraction -= m_large_change;
-			if (e.KeyCode == Keys.PageDown) Fraction += m_large_change;
-			if (e.KeyCode == Keys.Up   && e.Control) Fraction -= m_small_change;
-			if (e.KeyCode == Keys.Down && e.Control) Fraction += m_small_change;
+			if (e.KeyCode == Keys.PageUp  )          { Fraction -= m_large_change; RaiseScrollEvent(); }
+			if (e.KeyCode == Keys.PageDown)          { Fraction += m_large_change; RaiseScrollEvent(); }
+			if (e.KeyCode == Keys.Up   && e.Control) { Fraction -= m_small_change; RaiseScrollEvent(); }
+			if (e.KeyCode == Keys.Down && e.Control) { Fraction += m_small_change; RaiseScrollEvent(); }
 		}
 	}
 }

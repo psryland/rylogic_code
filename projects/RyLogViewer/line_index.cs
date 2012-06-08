@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using pr.common;
+using pr.maths;
 
 namespace RyLogViewer
 {
@@ -15,6 +16,21 @@ namespace RyLogViewer
 		private static FileStream LoadFile(string filepath, int buffer_size = 4096)
 		{
 			return new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, buffer_size);
+		}
+		
+		/// <summary>Returns the full byte range currently represented by 'm_line_index'</summary>
+		private Range FileRange
+		{
+			get { return m_line_index.Count != 0 ? new Range(m_line_index.First().m_begin, m_line_index.Last().m_end) : Range.Zero; }
+		}
+
+		/// <summary>
+		/// Returns the byte range of the file currently covered by 'm_line_index'
+		/// Note: the range is between starts of lines, not the full range. This is because
+		/// this is the only range we know is complete and doesn't contain partial lines</summary>
+		private Range LineIndexRange
+		{
+			get { return m_line_index.Count != 0 ? new Range(m_line_index.First().m_begin, m_line_index.Last().m_begin) : Range.Zero; }
 		}
 		
 		/// <summary>Reload the current file</summary>
@@ -55,6 +71,20 @@ namespace RyLogViewer
 		/// search for lines is done in the direction needed to recentre the line list around 'filepos'</summary>
 		private void BuildLineIndex(string filepath, long filepos, bool reload, Action on_complete)
 		{
+			// If this is not a reload, only update the line index when we within
+			// the extreme 25% of the current line index buffer and not near the start
+			// or end of the file.
+			if (!reload)
+			{
+				// Find the byte range of the file currently loaded
+				Range file_range = FileRange;
+				const float IncrementalLoadRange = 0.25f;
+				float ratio = Maths.Ratio(file_range.m_begin, filepos, file_range.m_end);
+				if      (ratio <      IncrementalLoadRange && file_range.m_begin != 0) {}
+				else if (ratio > 1f - IncrementalLoadRange && file_range.m_end != m_fileend) {}
+				else return;
+			}
+			
 			// Stop any existing build that might be in progress
 			if (!BuildEnded)
 			{
@@ -65,9 +95,7 @@ namespace RyLogViewer
 			}
 			
 			// Find the byte range of the file currently loaded
-			Range file_range = m_line_index.Count != 0
-				? new Range(m_line_index.First().m_begin, m_line_index.Last().m_begin)
-				: Range.Zero;
+			Range line_index_range = LineIndexRange;
 			
 			// If this is not a 'reload', guess the encoding
 			Encoding encoding = reload
@@ -121,21 +149,21 @@ namespace RyLogViewer
 							
 							// If the filepos is within the range of the current line index
 							// do an incremental update to recentre the line index about filepos
-							incremental = file_range.Contains(filepos) && !reload;
+							incremental = line_index_range.Contains(filepos) && !reload;
 							if (incremental)
 							{
 								// Reduce the byte range so we only scan in the direction we need
 								if (filepos >= last_filepos)
 								{
 									bwd_range = 0;
-									fwd_range = half_range - (file_range.m_end - filepos);
-									scan_from = file_range.m_end;
+									fwd_range = half_range - (line_index_range.m_end - filepos);
+									scan_from = line_index_range.m_end;
 								}
 								else
 								{
-									bwd_range = half_range - (filepos - file_range.m_begin);
+									bwd_range = half_range - (filepos - line_index_range.m_begin);
 									fwd_range = 0;
-									scan_from = file_range.m_begin;
+									scan_from = line_index_range.m_begin;
 								}
 							}
 							
@@ -177,7 +205,7 @@ namespace RyLogViewer
 		private static int Buffer(Stream file, byte[] buf, int count, bool backward, Encoding encoding)
 		{
 			// The number of bytes to buffer
-			count = Math.Min(count, buf.Length);
+			count = (int)Math.Min(Math.Min(count, buf.Length), file.Position);
 			if (count == 0) return 0;
 			
 			// Set the file position

@@ -114,6 +114,13 @@ namespace RyLogViewer
 			m_btn_tail.ToolTipText       = Resources.ScrollToTail;
 			ToolStripManager.Renderer    = new CheckedButtonRenderer();
 
+			// Scrollbar
+			m_scroll_file.Scroll += (s,a)=>
+				{
+					// Only update the file on scroll, since UpdateUI sets Value when the build is complete
+					BuildLineIndex(m_filepath, m_scroll_file.RangePos, false, UpdateUI);
+				};
+
 			// Status
 			m_status.Move += (s,a) => { m_settings.StatusPosition = m_status.Location; m_settings.Save(); };
 			
@@ -648,8 +655,19 @@ namespace RyLogViewer
 			m_menu_encoding_ucs2_bigendian   .Checked = m_settings.Encoding == Encoding.BigEndianUnicode.EncodingName;
 			
 			// The file scroll bar is only visible when part of the file is loaded
-			m_scroll_sub_range.Width = m_settings.FileScrollWidth;
-			m_scroll_sub_range.Visible = true;//m_line_index.Count == m_settings.LineCount;
+			m_scroll_file.Width = m_settings.FileScrollWidth;
+			if (m_line_index.Count != 0)
+			{
+				Range file_range = FileRange;
+				m_scroll_file.Visible = file_range.Count < m_fileend;
+				m_scroll_file.TotalRange = m_fileend;
+				m_scroll_file.SubRange = LineIndexRange.Count;
+				m_scroll_file.Fraction = (double)m_filepos / m_fileend;
+			}
+			else
+			{
+				m_scroll_file.Visible = false;
+			}
 			
 			// Status and title
 			UpdateStatus();
