@@ -648,8 +648,8 @@ namespace RyLogViewer
 			m_menu_encoding_ucs2_bigendian   .Checked = m_settings.Encoding == Encoding.BigEndianUnicode.EncodingName;
 			
 			// The file scroll bar is only visible when part of the file is loaded
-			m_scroll_file.Width = m_settings.FileScrollWidth;
-			m_scroll_file.Visible = false;//m_line_index.Count == m_settings.LineCount;
+			m_scroll_sub_range.Width = m_settings.FileScrollWidth;
+			m_scroll_sub_range.Visible = true;//m_line_index.Count == m_settings.LineCount;
 			
 			// Status and title
 			UpdateStatus();
