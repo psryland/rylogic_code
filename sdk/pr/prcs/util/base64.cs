@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Text;
-using NUnit.Framework;
+using pr.util;
 
 namespace pr.util
 {
@@ -106,8 +106,13 @@ namespace pr.util
 			dst_length = o;
 		}
 	}
+}
 
-	/// <summary>Unit tests for Base64</summary>
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestBase64()
@@ -156,3 +161,4 @@ namespace pr.util
 		}
 	}
 }
+#endif

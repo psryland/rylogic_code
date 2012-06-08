@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime;
 using System.Text;
-using NUnit.Framework;
+using pr.util;
 
 namespace pr.util
 {
@@ -146,9 +145,15 @@ namespace pr.util
 		}
 
 	}
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using System.Collections.Generic;
 
 	// ReSharper disable PossibleNullReferenceException, AccessToModifiedClosure
-	/// <summary>Unit tests</summary>
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestProgressStream()
@@ -203,3 +208,4 @@ namespace pr.util
 	}
 	// ReSharper restore PossibleNullReferenceException, AccessToModifiedClosure
 }
+#endif

@@ -13,8 +13,7 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using System.Windows.Forms.VisualStyles;
-using NUnit.Framework;
+using pr.gui;
 
 namespace pr.gui
 {
@@ -1022,11 +1021,15 @@ namespace pr.gui
 
 	public delegate void CollapsingEventHandler(object sender, CollapsingEventArgs e);
 	public delegate void CollapsedEventHandler (object sender, CollapsedEventArgs  e);
+}
 
-	/// <summary>Unit tests for xml extensions</summary>
-	[TestFixture] internal class UnitTests
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	
+	[TestFixture] internal static partial class UnitTests
 	{
-		/// <summary>Test building node trees</summary>
 		[Test] public static void TestTGV1()
 		{
 			TreeGridView grid0 = new TreeGridView();
@@ -1067,7 +1070,6 @@ namespace pr.gui
 			Assert.Throws(typeof(InvalidOperationException), ()=>{a0_1.Parent = a0_0_0;});
 		}
 
-		/// <summary>Test adding/inserting node trees to/into a grid</summary>
 		[Test] public static void TestTGV2()
 		{
 			TreeGridView grid0 = new TreeGridView();
@@ -1134,3 +1136,4 @@ namespace pr.gui
 		}
 	}
 }
+#endif

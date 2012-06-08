@@ -7,9 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Threading;
-using NUnit.Framework;
 using pr.common;
+using pr.extn;
 
 namespace pr.extn
 {
@@ -356,9 +355,14 @@ namespace pr.extn
 			return weak_action.Handler;
 		}
 	}
+}
 
+#if PR_UNITTESTS
+namespace pr
+{
+	using System.Threading;
+	using NUnit.Framework;
 	
-	/// <summary>String extension unit tests</summary>
 	[TestFixture] internal static partial class UnitTests
 	{
 		private static event Action<int> BooEvent;
@@ -416,3 +420,4 @@ namespace pr.extn
 		}
 	}
 }
+#endif

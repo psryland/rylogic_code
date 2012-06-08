@@ -6,7 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Xml;
-using NUnit.Framework;
+using pr.common;
 using pr.util;
 
 // /// <summary>Example use of settings</summary>
@@ -219,11 +219,15 @@ namespace pr.common
 		/// <summary>Called when loading settings from an earlier version</summary>
 		public virtual void Upgrade() {}
 	}
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
 	
-	/// <summary>String extension unit tests</summary>
-	[TestFixture] internal static class UnitTests
+	[TestFixture] internal static partial class UnitTests
 	{
-		/// <summary>Example use of settings</summary>
 		private sealed class Settings :SettingsBase
 		{
 			public static readonly Settings Default = new Settings(ELoadOptions.Defaults);
@@ -244,13 +248,13 @@ namespace pr.common
 			}
 		}
 		
-		[Test] public static void TestEventExtensions()
+		[Test] public static void TestSettings()
 		{
 			Settings s = new Settings();
 			Assert.AreEqual(Settings.Default.Str, s.Str);
 			Assert.AreEqual(Settings.Default.Int, s.Int);
 			s.Save();
-
 		}
 	}
 }
+#endif

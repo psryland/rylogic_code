@@ -5,7 +5,6 @@
 
 using System;
 using System.Diagnostics;
-using NUnit.Framework;
 
 namespace pr.util
 {
@@ -31,8 +30,14 @@ namespace pr.util
 		/// <summary>Helper for constructing Lazy expressions</summary>
 		[DebuggerStepThrough] public static Lazy<T> New<T>(Func<T> func) { return new Lazy<T>(func); }
 	}
-	
-	/// <summary>Utils unit tests</summary>
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using Lazy=pr.util.Lazy;
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal class Thing
@@ -45,7 +50,7 @@ namespace pr.util
 				m_evaluated = true;
 				return "<insert lots of work here>";
 			}
-			public void LazyCall(Lazy<string> str)
+			public void LazyCall(pr.util.Lazy<string> str)
 			{
 				Assert.False(m_evaluated);
 				string s = str;
@@ -66,3 +71,4 @@ namespace pr.util
 		}
 	}
 }
+#endif

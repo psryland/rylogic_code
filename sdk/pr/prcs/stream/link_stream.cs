@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using NUnit.Framework;
+using pr.stream;
 
 namespace pr.stream
 {
@@ -260,9 +260,14 @@ namespace pr.stream
 			}
 		}
 	}
+}
 
-	/// <summary></summary>
-	[TestFixture] internal static class UnitTests
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+
+	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestLinkStream()
 		{
@@ -301,3 +306,4 @@ namespace pr.stream
 		}
 	}
 }
+#endif

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-using System.Text;
-using NUnit.Framework;
+using pr.util;
 
 namespace pr.util
 {
@@ -29,11 +28,13 @@ namespace pr.util
 			int r = memcmp(lhs, rhs, Math.Min(lhs.Length, rhs.Length));
 			return (r != 0) ? r : lhs.Length - rhs.Length;
 		}
-		
-		/// <summary>Scan a formatted string</summary>
-		[DllImport("msvcrt.dll", CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
-		public static extern int sscanf(string buffer, string format, __arglist);
 	}
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
 
 	[TestFixture] internal partial class UnitTests
 	{
@@ -54,37 +55,7 @@ namespace pr.util
 				Assert.True(crt.memcmp(block0, block1) < 0);
 				Assert.True(crt.memcmp(block1, block0) > 0);
 			}
-			{// sscanf
-				char c; int d; float f;
-				crt.sscanf("A,2;3.125", "%c,%d;%f", __arglist(out c, out d, out f));
-				Assert.AreEqual('A', c);
-				Assert.AreEqual(2, d);
-				Assert.AreEqual(3.125, f);
-
-				//const string line = "DVL:";// 21378: + 1.571%  >   3.140% (   3.1%), RV: 8573, AV:    0, Dir:S, mm:  23.773, PKmA:  371, OD: 0.0, W:  0.1, AC°C:26, AS°C:22";
-				//StringBuilder state = new StringBuilder(); state.Length = 4;
-				//////int timestamp, rv, av, PKmA, ACtemp, AStemp;
-				//////float delta_dc, total_dc, summik0, extn, OD, W;
-				//////char dir;
-				//crt.sscanf(line,
-				//    "%s",//: %d: + %f%%  >%f%% (%f%%), RV:%d, AV:%d, Dir:%c, mm:%f, PKmA:%d, OD:%f, W:%f, AC°C:%d, AS°C:%d",
-				//    __arglist(ref state));//, out timestamp, out delta_dc, out total_dc, out summik0, out rv, out av, out dir, out extn, out PKmA, out OD, out W, out ACtemp, out AStemp));
-				////Assert.AreEqual("DVL:", state);
-				
-				////Assert.AreEqual(21378, timestamp);
-				//Assert.AreEqual(1.571, delta_dc);
-				//Assert.AreEqual(3.140, total_dc);
-				//Assert.AreEqual(3.1, summik0);
-				//Assert.AreEqual(8573, rv);
-				//Assert.AreEqual(0, av);
-				//Assert.AreEqual('S', dir);
-				//Assert.AreEqual(23.773, extn);
-				//Assert.AreEqual(371, PKmA);
-				//Assert.AreEqual(0.0, OD);
-				//Assert.AreEqual(0.1, W);
-				//Assert.AreEqual(26, ACtemp);
-				//Assert.AreEqual(22, AStemp);
-			}
 		}
 	}
 }
+#endif

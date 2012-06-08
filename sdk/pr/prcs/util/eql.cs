@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
 
 namespace pr.util
 {
@@ -27,8 +26,13 @@ namespace pr.util
 		public bool Equals(T lhs, T rhs)              { return m_eql(lhs,rhs); }
 		public int GetHashCode(T obj)                 { return obj.GetHashCode(); }
 	}
+}
 
-	/// <summary>Utils unit tests</summary>
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestEql()
@@ -38,3 +42,4 @@ namespace pr.util
 		}
 	}
 }
+#endif

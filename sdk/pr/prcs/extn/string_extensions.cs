@@ -4,14 +4,8 @@
 //***************************************************
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
-using NUnit.Framework;
-using pr.common;
+using pr.extn;
 
 namespace pr.extn
 {
@@ -60,8 +54,13 @@ namespace pr.extn
 			return sb.ToString();
 		}
 	}
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
 	
-	/// <summary>String extension unit tests</summary>
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestStringExtensions()
@@ -76,6 +75,10 @@ namespace pr.extn
 			Assert.AreEqual(result, r);
 		}
 	}
+}
+#endif
+
+
 	
 	
 	//    /// <summary>Scanf style string parsing</summary>
@@ -160,6 +163,3 @@ namespace pr.extn
 	//        //}
 	//    }
 	//}
-	
-
-}

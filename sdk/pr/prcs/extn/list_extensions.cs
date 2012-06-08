@@ -6,9 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using NUnit.Framework;
-using pr.maths;
 using pr.util;
+using pr.extn;
 
 namespace pr.extn
 {
@@ -219,8 +218,14 @@ namespace pr.extn
 			return list.QuickSelect(k, new Comparison<T>((x, y) => x.CompareTo(y)));
 		}
 	}
+}
 
-	/// <summary>List extension unit tests</summary>
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using pr.maths;
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestListExtensions()
@@ -245,3 +250,4 @@ namespace pr.extn
 		}
 	}
 }
+#endif

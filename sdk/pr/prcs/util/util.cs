@@ -14,7 +14,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
-using NUnit.Framework;
+using pr.util;
 
 namespace pr.util
 {
@@ -449,8 +449,13 @@ namespace pr.util
 			return to;
 		}
 	}
+}
 
-	/// <summary>Utils unit tests</summary>
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestUtils()
@@ -475,3 +480,4 @@ namespace pr.util
 		}
 	}
 }
+#endif
