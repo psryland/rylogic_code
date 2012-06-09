@@ -108,11 +108,11 @@ namespace RyLogViewer
 				};
 			
 			// Include blank lines
-			m_check_include_blank_lines.ToolTip(m_tt, "Include blank lines in the log view");
-			m_check_include_blank_lines.Checked = m_settings.IncludeBlankLines;
-			m_check_include_blank_lines.CheckedChanged += (s,a)=>
+			m_check_ignore_blank_lines.ToolTip(m_tt, "Ignore blank lines when loading the log file");
+			m_check_ignore_blank_lines.Checked = m_settings.IgnoreBlankLines;
+			m_check_ignore_blank_lines.CheckedChanged += (s,a)=>
 				{
-					m_settings.IncludeBlankLines = m_check_include_blank_lines.Checked;
+					m_settings.IgnoreBlankLines = m_check_ignore_blank_lines.Checked;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
@@ -164,13 +164,13 @@ namespace RyLogViewer
 				};
 			
 			// Line count
-			m_spinner_line_count.ToolTip(m_tt, "The maximum number of lines to read from a log file (read from the end of the file)");
-			m_spinner_line_count.Minimum = 1;
-			m_spinner_line_count.Maximum = 5000;
-			m_spinner_line_count.Value = Maths.Clamp(m_settings.LineCount, (int)m_spinner_line_count.Minimum, (int)m_spinner_line_count.Maximum);
-			m_spinner_line_count.ValueChanged += (s,a)=>
+			m_spinner_file_buf_size.ToolTip(m_tt, "The size (in KB) of the cached portion of the log file");
+			m_spinner_file_buf_size.Minimum = 1;
+			m_spinner_file_buf_size.Maximum = 100000;
+			m_spinner_file_buf_size.Value = Maths.Clamp(m_settings.FileBufSizeKB, (int)m_spinner_file_buf_size.Minimum, (int)m_spinner_file_buf_size.Maximum);
+			m_spinner_file_buf_size.ValueChanged += (s,a)=>
 				{
-					m_settings.LineCount = (int)m_spinner_line_count.Value;
+					m_settings.FileBufSizeKB = (int)m_spinner_file_buf_size.Value;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			

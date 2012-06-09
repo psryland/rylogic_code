@@ -73,7 +73,6 @@
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
 			this.m_status_filesize = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_status_line = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_line_end = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_encoding = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_spring = new System.Windows.Forms.ToolStripStatusLabel();
@@ -424,7 +423,6 @@
 			this.m_status.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_status.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_status_filesize,
-            this.m_status_line,
             this.m_status_line_end,
             this.m_status_encoding,
             this.m_status_spring,
@@ -444,16 +442,6 @@
 			this.m_status_filesize.Size = new System.Drawing.Size(128, 19);
 			this.m_status_filesize.Text = "Size: 2147483647 bytes";
 			this.m_status_filesize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
-			// m_status_line
-			// 
-			this.m_status_line.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
-			this.m_status_line.Name = "m_status_line";
-			this.m_status_line.Size = new System.Drawing.Size(74, 19);
-			this.m_status_line.Text = "Line: 1/1000";
-			this.m_status_line.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// m_status_line_end
 			// 
@@ -479,7 +467,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(236, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(170, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -562,7 +550,7 @@
 			// 
 			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_scroll_file.Fraction = 0D;
-			this.m_scroll_file.LargeChange = -2147483648;
+			this.m_scroll_file.LargeChange = 0;
 			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
 			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
 			this.m_scroll_file.Maximum = 1000;
@@ -656,7 +644,6 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ucs2_littleendian;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_spring;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_message;
-		private System.Windows.Forms.ToolStripStatusLabel m_status_line;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_line_end;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;

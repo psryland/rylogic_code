@@ -197,13 +197,13 @@ namespace pr.extn
 			return grid.SelectedRows.Count != 0 ? grid.SelectedRows[0] : null;
 		}
 		
-		/// <summary>Sets the selection to row 'index'. Clamps 'index' to [0,RowCount)</summary>
-		public static void SelectRow(this DataGridView grid, int index)
+		/// <summary>Sets the selection to row 'index'. Clamps 'index' to [0,RowCount). Returns the row actually selected</summary>
+		public static int SelectRow(this DataGridView grid, int index)
 		{
 			index = Math.Max(0, Math.Min(grid.RowCount, index));
 			grid.ClearSelection();
-			if (index >= 0 && index < grid.RowCount)
-				grid.Rows[index].Selected = true;
+			if (index >= 0 && index < grid.RowCount) grid.Rows[index].Selected = true;
+			return index;
 		}
 
 		/// <summary>Return the index of the first selected row (or -1) if no rows are selected</summary>

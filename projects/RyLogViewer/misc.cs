@@ -2,6 +2,11 @@
 
 namespace RyLogViewer
 {
+	public static class Constants
+	{
+		public const int FileReadChunkSize = 4096;
+	}
+
 	[Flags] public enum EWhatsChanged
 	{
 		Nothing = 0,

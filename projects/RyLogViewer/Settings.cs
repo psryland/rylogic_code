@@ -113,10 +113,10 @@ namespace RyLogViewer
 			get { return get<bool>("OpenAtEnd"); }
 			set { set("OpenAtEnd", value); }
 		}
-		public bool   IncludeBlankLines
+		public bool   IgnoreBlankLines
 		{
-			get { return get<bool>("IncludeBlankLines"); }
-			set { set("IncludeBlankLines", value); }
+			get { return get<bool>("IgnoreBlankLines"); }
+			set { set("IgnoreBlankLines", value); }
 		}
 		public bool   AlwaysOnTop
 		{
@@ -133,10 +133,10 @@ namespace RyLogViewer
 			get { return get<bool>("TailEnabled"); }
 			set { set("TailEnabled", value); }
 		}
-		public int    LineCount
+		public int    FileBufSizeKB
 		{
-			get { return get<int>("LineCount"); }
-			set { set("LineCount", value); }
+			get { return get<int>("FileBufSizeKB"); }
+			set { set("FileBufSizeKB", value); }
 		}
 		public string HighlightPatterns
 		{
@@ -202,11 +202,11 @@ namespace RyLogViewer
 			LoadLastFile         = false;
 			LastLoadedFile       = "";
 			OpenAtEnd            = true;
-			IncludeBlankLines    = true;
+			IgnoreBlankLines     = false;
 			AlwaysOnTop          = false;
 			ShowTOTD             = true;
 			TailEnabled          = false;
-			LineCount            = 1000;
+			FileBufSizeKB        = 250;
 			HighlightPatterns    = "<root/>";
 			FilterPatterns       = "<root/>";
 			HighlightPatternSets = "<root/>";

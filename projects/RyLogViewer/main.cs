@@ -22,12 +22,6 @@ namespace RyLogViewer
 	public partial class Main :Form
 	{
 		private const string LogFileFilter = @"Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*";
-		private const int AvrBytesPerLine = 256;
-		private const int CacheSize = 4096;
-		
-		// Synchronisation so that we're only ever have one thread building the line index at a time
-		private static readonly EventWaitHandle m_sync_cancel_building = new EventWaitHandle(false, EventResetMode.ManualReset);
-		private static readonly EventWaitHandle m_sync_build_ended     = new EventWaitHandle(true , EventResetMode.ManualReset);
 		
 		private readonly Settings m_settings;                 // App settings
 		private readonly RecentFiles m_recent;                // Recent files
@@ -115,10 +109,10 @@ namespace RyLogViewer
 			ToolStripManager.Renderer    = new CheckedButtonRenderer();
 
 			// Scrollbar
-			m_scroll_file.Scroll += (s,a)=>
+			m_scroll_file.ScrollEnd += (s,a)=>
 				{
-					// Only update the file on scroll, since UpdateUI sets Value when the build is complete
-					BuildLineIndex(m_filepath, m_scroll_file.RangePos, false, UpdateUI);
+					// Only update the file on ScrollEnd, since UpdateUI sets Value when the build is complete
+					UpdateLineIndex(m_scroll_file.RangePos);
 				};
 
 			// Status
@@ -134,11 +128,12 @@ namespace RyLogViewer
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
 			m_grid.SelectionChanged    += (s,a) => { UpdateStatus(); };
 			m_grid.DataError           += (s,a) => { Debug.Assert(false); };
+			m_grid.Scroll              += (s,a) => { UpdateFileScroll(); };
 			
 			// Watcher
 			m_file_changed.Action += ()=>
 				{
-					UpdateLineIndex();
+					UpdateLineIndex(AutoScrollTail ? m_file.Length : m_filepos);
 				};
 			m_watch.Changed += (s,a) =>
 				{
@@ -410,7 +405,7 @@ namespace RyLogViewer
 			ApplySettings();
 			UpdateUI();
 			SelectedRow = m_grid.RowCount - 1;
-			UpdateLineIndex();
+			UpdateLineIndex(m_filepos);
 		}
 		
 		/// <summary>Set the encoding to use with loaded files. 'null' means auto detect</summary>
@@ -496,14 +491,15 @@ namespace RyLogViewer
 			return m_encoding.GetBytes(row_delim.Replace("CR","\r").Replace("LF","\n"));
 		}
 
-		/// <summary>Get/Set the currently selected grid row. Setting the selected row makes it visible</summary>
+		/// <summary>
+		/// Get/Set the currently selected grid row. Get returns -1 if there are no rows in the grid.
+		/// Setting the selected row clamps to the range [0,RowCount) and makes it visible in the grid (if possible)</summary>
 		private int SelectedRow
 		{
 			get { return m_grid.SelectedRows.Count != 0 ? m_grid.SelectedRows[0].Index : -1; }
 			set
 			{
-				if (value == SelectedRow) return;
-				m_grid.SelectRow(value);
+				value = m_grid.SelectRow(value);
 				if (m_grid.RowCount != 0)
 				{
 					int display_row = value - m_grid.DisplayedRowCount(true) / 2;
@@ -656,18 +652,7 @@ namespace RyLogViewer
 			
 			// The file scroll bar is only visible when part of the file is loaded
 			m_scroll_file.Width = m_settings.FileScrollWidth;
-			if (m_line_index.Count != 0)
-			{
-				Range file_range = FileRange;
-				m_scroll_file.Visible = file_range.Count < m_fileend;
-				m_scroll_file.TotalRange = m_fileend;
-				m_scroll_file.SubRange = LineIndexRange.Count;
-				m_scroll_file.Fraction = (double)m_filepos / m_fileend;
-			}
-			else
-			{
-				m_scroll_file.Visible = false;
-			}
+			m_scroll_file.SelectedRangeColor = m_settings.LineSelectBackColour;
 			
 			// Status and title
 			UpdateStatus();
@@ -681,7 +666,6 @@ namespace RyLogViewer
 				Text = Resources.AppTitle;
 				m_status_spring.Text      = Resources.NoFile;
 				m_status_filesize.Visible = false;
-				m_status_line.Visible     = false;
 				m_status_line_end.Visible = false;
 				m_status_encoding.Visible = false;
 			}
@@ -706,12 +690,31 @@ namespace RyLogViewer
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
-				m_status_line.Text = string.Format(Resources.LineXofY, r, m_grid.RowCount);
-				m_status_line.Visible = true;
 				m_status_line_end.Text = string.Format(Resources.LineEndingX, m_encoding.GetString(m_row_delim).Replace("\r","CR").Replace("\n", "LF"));
 				m_status_line_end.Visible = true;
 				m_status_encoding.Text = string.Format(Resources.EncodingX, m_encoding.EncodingName);
 				m_status_encoding.Visible = true;
+			}
+			
+			UpdateFileScroll();
+		}
+		
+		/// <summary>Update the indicator ranges on the file scroll bar</summary>
+		private void UpdateFileScroll()
+		{
+			if (m_line_index.Count != 0)
+			{
+				Range file_range = FileRange;
+				m_scroll_file.Visible = file_range.Count < m_fileend;
+				m_scroll_file.TotalRange = m_fileend;
+				m_scroll_file.SubRange = LineIndexRange.Count;
+				m_scroll_file.VisibleRange = DisplayedRowsRange;
+				m_scroll_file.SelectedRange = SelectedRowRange;
+				m_scroll_file.Fraction = (double)m_filepos / m_fileend;
+			}
+			else
+			{
+				m_scroll_file.Visible = false;
 			}
 		}
 		
