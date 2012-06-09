@@ -34,6 +34,17 @@ namespace pr.extn
 			return list[list.Count - 1];
 		}
 
+		/// <summary>Reize a list default constructing objects to fill</summary>
+		public static void Resize<T>(this List<T> list, int newsize) where T:new()
+		{
+			list.Resize(newsize,() => new T());
+		}
+		public static void Resize<T>(this List<T> list, int newsize, Func<T> factory)
+		{
+			if      (list.Count > newsize) list.RemoveRange(newsize, list.Count - newsize);
+			else if (list.Count < newsize) for (int i = list.Count; i != newsize; ++i) list.Add(factory());
+		}
+
 		/// <summary>Add 'item' to the list if it's not already there.
 		/// Uses 'item.Equals()' to test for uniqueness.
 		/// Returns true if 'item' was added, false if it was a duplicate</summary>

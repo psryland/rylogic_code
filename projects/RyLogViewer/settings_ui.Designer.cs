@@ -72,6 +72,7 @@
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
+			this.m_check_file_changes_additive = new System.Windows.Forms.CheckBox();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_grid.SuspendLayout();
@@ -127,12 +128,13 @@
 			// 
 			// m_group_grid
 			// 
+			this.m_group_grid.Controls.Add(this.m_check_file_changes_additive);
 			this.m_group_grid.Controls.Add(this.m_check_open_at_end);
 			this.m_group_grid.Controls.Add(this.m_lbl_history_length);
 			this.m_group_grid.Controls.Add(this.m_spinner_file_buf_size);
 			this.m_group_grid.Location = new System.Drawing.Point(8, 99);
 			this.m_group_grid.Name = "m_group_grid";
-			this.m_group_grid.Size = new System.Drawing.Size(205, 84);
+			this.m_group_grid.Size = new System.Drawing.Size(205, 121);
 			this.m_group_grid.TabIndex = 6;
 			this.m_group_grid.TabStop = false;
 			this.m_group_grid.Text = "File Load";
@@ -140,7 +142,7 @@
 			// m_check_open_at_end
 			// 
 			this.m_check_open_at_end.AutoSize = true;
-			this.m_check_open_at_end.Location = new System.Drawing.Point(14, 23);
+			this.m_check_open_at_end.Location = new System.Drawing.Point(17, 53);
 			this.m_check_open_at_end.Name = "m_check_open_at_end";
 			this.m_check_open_at_end.Size = new System.Drawing.Size(124, 17);
 			this.m_check_open_at_end.TabIndex = 4;
@@ -150,7 +152,7 @@
 			// m_lbl_history_length
 			// 
 			this.m_lbl_history_length.AutoSize = true;
-			this.m_lbl_history_length.Location = new System.Drawing.Point(11, 51);
+			this.m_lbl_history_length.Location = new System.Drawing.Point(11, 23);
 			this.m_lbl_history_length.Name = "m_lbl_history_length";
 			this.m_lbl_history_length.Size = new System.Drawing.Size(111, 13);
 			this.m_lbl_history_length.TabIndex = 3;
@@ -158,7 +160,7 @@
 			// 
 			// m_spinner_file_buf_size
 			// 
-			this.m_spinner_file_buf_size.Location = new System.Drawing.Point(128, 49);
+			this.m_spinner_file_buf_size.Location = new System.Drawing.Point(128, 21);
 			this.m_spinner_file_buf_size.Name = "m_spinner_file_buf_size";
 			this.m_spinner_file_buf_size.Size = new System.Drawing.Size(66, 20);
 			this.m_spinner_file_buf_size.TabIndex = 2;
@@ -576,6 +578,16 @@
 			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.TabIndex = 4;
 			// 
+			// m_check_file_changes_additive
+			// 
+			this.m_check_file_changes_additive.AutoSize = true;
+			this.m_check_file_changes_additive.Location = new System.Drawing.Point(17, 82);
+			this.m_check_file_changes_additive.Name = "m_check_file_changes_additive";
+			this.m_check_file_changes_additive.Size = new System.Drawing.Size(181, 17);
+			this.m_check_file_changes_additive.TabIndex = 5;
+			this.m_check_file_changes_additive.Text = "Assume file changes are additive";
+			this.m_check_file_changes_additive.UseVisualStyleBackColor = true;
+			// 
 			// SettingsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -668,5 +680,6 @@
 		private System.Windows.Forms.Label m_lbl_line1_colours;
 		private System.Windows.Forms.Label m_lbl_selection_colour;
 		private System.Windows.Forms.CheckBox m_check_alternate_line_colour;
+		private System.Windows.Forms.CheckBox m_check_file_changes_additive;
 	}
 }

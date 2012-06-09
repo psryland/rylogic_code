@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using pr.common;
+using pr.extn;
 using pr.maths;
 
 namespace RyLogViewer
@@ -55,46 +56,6 @@ namespace RyLogViewer
 			}
 		}
 		
-		/// <summary>Reload the current file</summary>
-		private void Reload()
-		{
-			if (!FileOpen) return;
-			
-			// Preserve the selected row if possible
-			int selected_row =  SelectedRow;
-			
-			// Update m_line_index
-			BuildLineIndex(m_filepath, m_filepos, true,
-				(incremental, added, to_front)=>
-				{
-					if (!incremental)  SelectedRow = Maths.Clamp(selected_row, 0, m_line_index.Count);
-					else if (to_front) SelectedRow = selected_row + added;
-					UpdateUI();
-				});
-		}
-		
-		/// <summary>Cause an incremental update to the line index</summary>
-		private void UpdateLineIndex(long filepos)
-		{
-			if (!FileOpen) return;
-			
-			// Preserve the selected row if possible
-			int selected_row =  SelectedRow;
-			
-			// Update m_line_index
-			BuildLineIndex(m_filepath, filepos, false,
-				(incremental, added, to_front)=>
-				{
-					if (!incremental)  SelectedRow = Maths.Clamp(selected_row, 0, m_line_index.Count);
-					else if (to_front) SelectedRow = selected_row + added;
-					UpdateUI();
-					
-					// On completion, check if the file has changed again and rerun if it has
-					if (m_fileend != m_file.Length)
-						m_file_changed.Signal();
-				});
-		}
-		
 		/// <summary>
 		/// An issue number for the build.
 		/// Builder threads abort as soon as possible when they notice this
@@ -107,21 +68,18 @@ namespace RyLogViewer
 				throw new OperationCanceledException();
 		}
 
-		/// <summary>The call back called when a BuildLineIndex call completes</summary>
-		private delegate void OnBuildComplete(bool incremental, int lines_added, bool to_front);
-		
-		/// <summary>Generates the line index centred around 'filepos'.
-		/// If 'filepos' is within the byte range of the current line_index then an incremental
-		/// search for lines is done in the direction needed to recentre the line list around 'filepos'
-		/// 'on_complete'</summary>
-		private void BuildLineIndex(string filepath, long filepos, bool reload, OnBuildComplete on_complete)
+		/// <summary>
+		/// Generates the line index centred around 'filepos'.
+		/// If 'filepos' is within the byte range of 'm_line_index' then an incremental search for
+		/// lines is done in the direction needed to recentre the line list around 'filepos'.
+		/// If 'reload' is true a full rescan of the file is done</summary>
+		private void BuildLineIndex(long filepos, bool reload)
 		{
-			// If the file position hasn't moved, do bother doing anything
+			if (!FileOpen) return;
+			
+			// If the file position hasn't moved, don't bother doing anything
 			if (filepos == m_filepos && !reload)
-			{
-				if (on_complete != null) on_complete(true, 0, false);
 				return;
-			}
 			
 			// Incremental updates cannot supplant reloads
 			if (m_reload_in_progress && reload == false)
@@ -137,12 +95,12 @@ namespace RyLogViewer
 			
 			// If this is not a 'reload', guess the encoding
 			Encoding encoding = reload
-				? (Encoding)GuessEncoding(filepath).Clone()
+				? (Encoding)GuessEncoding(m_filepath).Clone()
 				: (Encoding)m_encoding.Clone();
 			
 			// If this is not a 'reload', guess the row_delimiters
 			byte[] row_delim = reload
-				? (byte[])GuessRowDelimiter(filepath, encoding).Clone()
+				? (byte[])GuessRowDelimiter(m_filepath, encoding).Clone()
 				: (byte[])m_row_delim.Clone();
 			
 			List<Filter> filters = ActiveFilters.ToList();
@@ -152,6 +110,10 @@ namespace RyLogViewer
 			long half_range    = m_settings.FileBufSizeKB * 512; // * 1 KB / 2
 			bool ignore_blanks = m_settings.IgnoreBlankLines;
 			
+			// Preserve the selected row if possible
+			int selected_row =  SelectedRow;
+			long selected_row_addr = selected_row != -1 ? m_line_index[selected_row].m_begin : -1;
+
 			// Find the new line indices in a background thread
 			ThreadPool.QueueUserWorkItem(bi =>
 				{
@@ -168,7 +130,7 @@ namespace RyLogViewer
 						long fileend;
 						bool incremental;
 						
-						using (var file = LoadFile(filepath))
+						using (var file = LoadFile(m_filepath))
 						{
 							// Use a fixed file end so that additions to the file don't muck this
 							// build up. Reducing the file size during this will probably cause an
@@ -219,7 +181,24 @@ namespace RyLogViewer
 							// the start of this method it can't be changed until after this function returns.
 							if (m_build_issue != build_issue) return;
 							MergeLineIndex(line_index, half_range*2, filepos, fileend, incremental);
-							if (on_complete != null) on_complete(incremental, line_index.Count, filepos < m_filepos);
+							
+							// Restore the selected row (if possible)
+							if (FileRange.Contains(selected_row_addr))
+							{
+								int idx = m_line_index.BinarySearch(x => Maths.Compare(x.m_begin, selected_row_addr));
+								if (idx < 0) idx = ~idx;
+								selected_row = idx;
+							}
+							else
+								selected_row = (filepos < last_filepos) ? m_line_index.Count - 1 : 0;
+							
+							// Ensure the grid is updated
+							UpdateUI(selected_row);
+							
+							// On completion, check if the file has changed again and rerun if it has
+							if (m_fileend != m_file.Length)
+								m_file_changed.Signal();
+							
 							m_reload_in_progress = false;
 						};
 						BeginInvoke(MergeLineIndexDelegate);

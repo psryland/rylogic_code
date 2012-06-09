@@ -47,6 +47,7 @@ namespace RyLogViewer
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			
 			SetupGeneralTab();
+			SetupLogViewTab();
 			SetupHighlightTab();
 			SetupFilterTab();
 			
@@ -116,7 +117,7 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
-			// Load at end of file
+			// Open at end
 			m_check_open_at_end.ToolTip(m_tt, "If checked, opens files showing the end of the file.\r\nIf unchecked opens files at the beginning");
 			m_check_open_at_end.Checked = m_settings.OpenAtEnd;
 			m_check_open_at_end.CheckedChanged += (s,a)=>
@@ -124,7 +125,33 @@ namespace RyLogViewer
 					m_settings.OpenAtEnd = m_check_open_at_end.Checked;
 					WhatsChanged |= EWhatsChanged.FileOpenOptions;
 				};
+			
+			// File changes additive
+			m_check_file_changes_additive.ToolTip(m_tt, "Assume all changes to the watched file are additive only\r\nIf checked, reloading of changed files will not invalidate existing cached data");
+			m_check_file_changes_additive.Checked = m_settings.FileChangesAdditive;
+			m_check_file_changes_additive.CheckedChanged += (s,a)=>
+				{
+					m_settings.FileChangesAdditive = m_check_file_changes_additive.Checked;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
 
+
+			// Line count
+			m_spinner_file_buf_size.ToolTip(m_tt, "The size (in KB) of the cached portion of the log file");
+			m_spinner_file_buf_size.Minimum = 1;
+			m_spinner_file_buf_size.Maximum = 100000;
+			m_spinner_file_buf_size.Value = Maths.Clamp(m_settings.FileBufSizeKB, (int)m_spinner_file_buf_size.Minimum, (int)m_spinner_file_buf_size.Maximum);
+			m_spinner_file_buf_size.ValueChanged += (s,a)=>
+				{
+					m_settings.FileBufSizeKB = (int)m_spinner_file_buf_size.Value;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+
+		}
+		
+		/// <summary>Hook up events for the log view tab</summary>
+		private void SetupLogViewTab()
+		{
 			// Selection colour
 			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view");
 			m_lbl_selection_example.MouseClick += (s,a)=>
@@ -163,17 +190,6 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 			
-			// Line count
-			m_spinner_file_buf_size.ToolTip(m_tt, "The size (in KB) of the cached portion of the log file");
-			m_spinner_file_buf_size.Minimum = 1;
-			m_spinner_file_buf_size.Maximum = 100000;
-			m_spinner_file_buf_size.Value = Maths.Clamp(m_settings.FileBufSizeKB, (int)m_spinner_file_buf_size.Minimum, (int)m_spinner_file_buf_size.Maximum);
-			m_spinner_file_buf_size.ValueChanged += (s,a)=>
-				{
-					m_settings.FileBufSizeKB = (int)m_spinner_file_buf_size.Value;
-					WhatsChanged |= EWhatsChanged.FileParsing;
-				};
-			
 			// Row height
 			m_spinner_row_height.ToolTip(m_tt, "The height of each row in the log view");
 			m_spinner_row_height.Minimum = 1;
@@ -194,6 +210,21 @@ namespace RyLogViewer
 				{
 					m_settings.FileScrollWidth = (int)m_spinner_file_scroll_width.Value;
 					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+			
+			// Font 
+			m_text_font.ToolTip(m_tt, "The font used to display the log file data");
+			m_text_font.Text = string.Format("{0}, {1}pt" ,m_settings.Font.Name ,m_settings.Font.Size);
+			m_text_font.Font = m_settings.Font;
+			
+			// Font button
+			m_btn_change_font.ToolTip(m_tt, "Change the log view font");
+			m_btn_change_font.Click += (s,a)=>
+				{
+					var dg = new FontDialog{Font = m_settings.Font};
+					if (dg.ShowDialog(this) != DialogResult.OK) return;
+					m_text_font.Font = dg.Font;
+					m_settings.Font = dg.Font;
 				};
 		}
 		

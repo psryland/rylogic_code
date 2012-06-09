@@ -44,4 +44,11 @@ namespace RyLogViewer
 		public const string Name       = "name";
 		public const string Filepath   = "filepath";
 	}
+
+	public enum SubRangeScrollRange
+	{
+		FileRange,
+		DisplayedRange,
+		SelectedRange,
+	}
 }

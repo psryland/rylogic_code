@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -14,28 +15,28 @@ namespace RyLogViewer
 	/// This class cannot inherit from VScrollBar because the OS does fancy stuff rendering it</summary>
 	public sealed class SubRangeScroll :Control
 	{
-		private int    m_minimum;        // Integer range that the
-		private int    m_maximum;        //  normalised values apply to.
-		private float  m_large_change;   // Normalised large change amount
-		private float  m_small_change;   // Normalised small change amount
-		private Range  m_visible_range;  // The portion of the bar to indicate as visible
-		private Range  m_selected_range; // The portion of the bar to indicate as selected
-		private long   m_sub_range;      // The sub range size
-		private long   m_total_range;    // The total range size
-		private double m_frac;           // The normalised position of the thumb
-		private bool   m_dragging;       // True while dragging
+		public class SubRange
+		{
+			public Range Range;
+			public Color Color;
+			internal Rectangle m_rect;
+			public SubRange() {}
+			public SubRange(Range range, Color color) { Range = range; Color = color; }
+		}
+		private readonly List<SubRange> m_ranges;         // Sub ranges to draw within the scroll bar
+		private int                     m_minimum;        // Integer range that the
+		private int                     m_maximum;        //  normalised values apply to.
+		private float                   m_large_change;   // Normalised large change amount
+		private float                   m_small_change;   // Normalised small change amount
+		private long                    m_total_range;    // The total range size
+		private double                  m_frac;           // The normalised position of the thumb
+		private bool                    m_dragging;       // True while dragging
 
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("TrackColor")]
 		public Color TrackColor { get; set; }
 
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("ThumbColor")]
 		public Color ThumbColor { get; set; }
-
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("VisibleRangeColor")]
-		public Color VisibleRangeColor { get; set; }
-
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("SelectedRangeColor")]
-		public Color SelectedRangeColor { get; set; }
 
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("LargeChange")]
 		public int LargeChange
@@ -78,30 +79,13 @@ namespace RyLogViewer
 			get { return (long)(TotalRange * Fraction); }
 		}
 
-		/// <summary>The visible portion of the SubRange</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The size of the visible portion of the range")]
-		public Range VisibleRange
+		/// <summary>The ranges to draw on the scroll bar</summary>
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The indicator ranges to draw on the scroll bar")]
+		public List<SubRange> Ranges
 		{
-			get { return m_visible_range; }
-			set { m_visible_range = new Range(0, TotalRange).Intersect(value); Invalidate(); }
-		}
-		
-		/// <summary>The selected portion of the SubRange</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The size of the selected portion of the range")]
-		public Range SelectedRange
-		{
-			get { return m_selected_range; }
-			set { m_selected_range = new Range(0, TotalRange).Intersect(value); Invalidate(); }
+			get { return m_ranges; }
 		}
 
-		/// <summary>The size of the visible portion of the range</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The size of the visible portion of the range")]
-		public long SubRange
-		{
-			get { return m_sub_range; }
-			set { m_sub_range = Maths.Clamp(value, 0, TotalRange); Invalidate(); }
-		}
-		
 		/// <summary>The total size of the represented range</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The total size of the represented range")]
 		public long TotalRange
@@ -110,17 +94,16 @@ namespace RyLogViewer
 			set
 			{
 				m_total_range = value;
-				SubRange = SubRange;
-				VisibleRange = VisibleRange;
-				SelectedRange = SelectedRange;
+				var total = new Range(0,TotalRange);
+				foreach (var r in m_ranges) r.Range = total.Intersect(r.Range);
 				Invalidate();
 			}
 		}
-		
-		/// <summary>Returns the fractional size of SubRange to TotalRange</summary>
-		public float RangeRatio
+
+		/// <summary>The size of the thumb in control space</summary>
+		public int ThumbSize
 		{
-			get { return 1f * SubRange / TotalRange; }
+			get; set;// { return (int)(RangeRatio * Height); }
 		}
 
 		/// <summary>The normalised position of the thumb</summary>
@@ -157,17 +140,13 @@ namespace RyLogViewer
 
 		public SubRangeScroll()
 		{
+			m_ranges   = new List<SubRange>();
 			m_dragging = false;
 			TrackColor = SystemColors.ControlDark;
 			ThumbColor = SystemColors.Window;
-			VisibleRangeColor = Color.FromArgb(128, Color.SteelBlue);
-			SelectedRangeColor = Color.FromArgb(128, Color.DarkBlue);
-
 			Fraction   = 0.5f;
 			TotalRange = 100;
-			SubRange   = 25;
-			VisibleRange = new Range(10,50);
-			SelectedRange = new Range(8,15);
+			ThumbSize  = 80;
 			SetStyle(
 				ControlStyles.OptimizedDoubleBuffer |
 				ControlStyles.AllPaintingInWmPaint|
@@ -185,16 +164,26 @@ namespace RyLogViewer
 			const float rad = 4f;
 			int thm_hheight = ThumbSize / 2;
 			int thm_centre  = (int)Maths.Lerp(thm_hheight, Height - thm_hheight, (float)Fraction);
-			int vis_top     = (int)(Maths.Ratio(0, m_visible_range.m_begin, TotalRange) * Height);
-			int vis_height  = (int)(Maths.Ratio(0, m_visible_range.Count, TotalRange) * Height);
-			int sel_top     = (int)(Maths.Ratio(0, m_selected_range.m_begin, TotalRange) * Height);
-			int sel_height  = (int)(Maths.Ratio(0, m_selected_range.Count, TotalRange) * Height);
 			
 			// Rectum?
-			var back_rect  = bounds; back_rect.Inflate(-1,-1);
+			var back_rect = bounds; back_rect.Inflate(-1,-1);
 			var thumb_rect = new Rectangle(bounds.X, bounds.Y + thm_centre - thm_hheight, bounds.Width, 2 * thm_hheight); thumb_rect.Inflate(-2,0);
-			var vis_rect   = new Rectangle(bounds.X, bounds.Y + vis_top, bounds.Width, Math.Max(1,vis_height)); vis_rect.Inflate(-2,0);
-			var sel_rect   = new Rectangle(bounds.X, bounds.Y + sel_top, bounds.Width, Math.Max(1,sel_height)); sel_rect.Inflate(-2,0);
+			foreach (var r in Ranges)
+			{
+				int top    = (int)(Maths.Ratio(0, r.Range.m_begin, TotalRange) * Height);
+				int height = (int)(Maths.Ratio(0, r.Range.Count, TotalRange) * Height);
+				r.m_rect   = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,height));
+				r.m_rect   .Inflate(-2,0);
+			}
+			//int thm_top     = (int)(Maths.Ratio(0, m_sub_range.m_begin, TotalRange) * Height);
+			//int thm_height  = (int)(Maths.Ratio(0, m_sub_range.Count, TotalRange) * Height);
+			//int vis_top     = (int)(Maths.Ratio(0, m_visible_range.m_begin, TotalRange) * Height);
+			//int vis_height  = (int)(Maths.Ratio(0, m_visible_range.Count, TotalRange) * Height);
+			//int sel_top     = (int)(Maths.Ratio(0, m_selected_range.m_begin, TotalRange) * Height);
+			//int sel_height  = (int)(Maths.Ratio(0, m_selected_range.Count, TotalRange) * Height);
+			//var thm_rect  = new Rectangle(bounds.X, bounds.Y + thm_top, bounds.Width, Math.Max(1,thm_height)); thm_rect.Inflate(-2,0);
+			//var vis_rect  = new Rectangle(bounds.X, bounds.Y + vis_top, bounds.Width, Math.Max(1,vis_height)); vis_rect.Inflate(-2,0);
+			//var sel_rect  = new Rectangle(bounds.X, bounds.Y + sel_top, bounds.Width, Math.Max(1,sel_height)); sel_rect.Inflate(-2,0);
 			
 			Color c0,c1;
 			Point pt0 = new Point(bounds.Left, 0);
@@ -203,38 +192,32 @@ namespace RyLogViewer
 			gfx.SmoothingMode = SmoothingMode.AntiAlias;
 			
 			// Background
-			using (var bsh = new LinearGradientBrush(pt0, pt1, TrackColor, Gfx.Blend(TrackColor, Color.White, 0.2f)))
+			c0 = TrackColor;
+			c1 = Gfx.Blend(TrackColor, Color.White, 0.2f);
+			using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1))
 				gfx.FillRectangleRounded(bsh, back_rect, rad);
 			
 			// Thumb background
-			using (var bsh = new LinearGradientBrush(pt0, pt1, ThumbColor, Gfx.Blend(ThumbColor, Color.Black, 0.2f)))
+			c0 = ThumbColor;
+			c1 = Gfx.Blend(ThumbColor, Color.Black, 0.2f);
+			using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1))
 				gfx.FillRectangleRounded(bsh, thumb_rect, rad);
 			
-			// Visible range
-			c0 = VisibleRangeColor;
-			c1 = Gfx.Blend(c0, Color.FromArgb(c0.A, Color.White), 0.2f);
-			using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1))
-				gfx.FillRectangle(bsh, vis_rect);
+			foreach (var r in Ranges)
+			{
+				c0 = r.Color;
+				c1 = Gfx.Blend(c0, Color.FromArgb(c0.A, Color.White), 0.2f);
+				using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1))
+					gfx.FillRectangle(bsh, r.m_rect);
+			}
 			
-			// Selected range
-			c0 = SelectedRangeColor;
-			c1 = Gfx.Blend(c0, Color.FromArgb(c0.A, Color.White), 0.2f);
-			using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1))
-				gfx.FillRectangle(bsh, sel_rect);
-
 			// Borders
 			gfx.DrawRectangleRounded(SystemPens.ControlDarkDark, back_rect, rad);
-			using (var pen = new Pen(Color.FromArgb(255, VisibleRangeColor)))
-				gfx.DrawRectangle(pen, vis_rect);
-			using (var pen = new Pen(Color.FromArgb(255, SelectedRangeColor)))
-				gfx.DrawRectangle(pen, sel_rect);
+			//using (var pen = new Pen(Color.FromArgb(255, VisibleRangeColor)))
+			//    gfx.DrawRectangle(pen, vis_rect);
+			//using (var pen = new Pen(Color.FromArgb(255, SelectedRangeColor)))
+			//    gfx.DrawRectangle(pen, sel_rect);
 			gfx.DrawRectangleRounded(SystemPens.ControlDarkDark, thumb_rect, rad);
-		}
-
-		/// <summary>The size of the thumb in control space</summary>
-		public int ThumbSize
-		{
-			get { return (int)(RangeRatio * Height); }
 		}
 
 		/// <summary>Set the thumb position given a control space Y value</summary>

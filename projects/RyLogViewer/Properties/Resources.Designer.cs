@@ -272,6 +272,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap Eyeball {
+            get {
+                object obj = ResourceManager.GetObject("Eyeball", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Failed to load file.
         /// </summary>
@@ -505,11 +512,11 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Scroll to the last log file row, and automatically load changes.
+        ///   Looks up a localized string similar to Scroll to the last log file row.
         /// </summary>
-        internal static string ScrollToTail {
+        internal static string ScrollToEnd {
             get {
-                return ResourceManager.GetString("ScrollToTail", resourceCulture);
+                return ResourceManager.GetString("ScrollToEnd", resourceCulture);
             }
         }
         
@@ -546,6 +553,15 @@ namespace RyLogViewer.Properties {
         internal static string UnknownCmdLineOption {
             get {
                 return ResourceManager.GetString("UnknownCmdLineOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Watch the file and update automatically when it changes.
+        /// </summary>
+        internal static string WatchForUpdates {
+            get {
+                return ResourceManager.GetString("WatchForUpdates", resourceCulture);
             }
         }
     }

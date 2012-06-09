@@ -37,6 +37,7 @@
 			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
@@ -104,10 +105,11 @@
             this.m_btn_filters,
             this.m_btn_options,
             this.toolStripSeparator1,
+            this.m_btn_jump_to_end,
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(192, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(251, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -167,15 +169,25 @@
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
 			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
 			// 
+			// m_btn_jump_to_end
+			// 
+			this.m_btn_jump_to_end.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_jump_to_end.Image = global::RyLogViewer.Properties.Resources.downred;
+			this.m_btn_jump_to_end.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_jump_to_end.Name = "m_btn_jump_to_end";
+			this.m_btn_jump_to_end.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_jump_to_end.Text = "File End";
+			this.m_btn_jump_to_end.ToolTipText = "Jump to the file end";
+			// 
 			// m_btn_tail
 			// 
 			this.m_btn_tail.CheckOnClick = true;
 			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.downred;
-			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.Eyeball;
+			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_tail.Name = "m_btn_tail";
 			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_tail.Text = "Tail";
+			this.m_btn_tail.Text = "Live Update";
 			// 
 			// m_menu
 			// 
@@ -467,7 +479,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(170, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(310, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -550,7 +562,7 @@
 			// 
 			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_scroll_file.Fraction = 0D;
-			this.m_scroll_file.LargeChange = 0;
+			this.m_scroll_file.LargeChange = -2147483648;
 			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
 			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
 			this.m_scroll_file.Maximum = 1000;
@@ -559,7 +571,6 @@
 			this.m_scroll_file.Name = "m_scroll_file";
 			this.m_scroll_file.Size = new System.Drawing.Size(18, 410);
 			this.m_scroll_file.SmallChange = 0;
-			this.m_scroll_file.SubRange = ((long)(25));
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
 			this.m_scroll_file.TotalRange = ((long)(100));
@@ -609,7 +620,7 @@
 		private System.Windows.Forms.StatusStrip m_status;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_recent;
 		private System.Windows.Forms.ToolStripSeparator m_sep2;
-		private System.Windows.Forms.ToolStripButton m_btn_tail;
+		private System.Windows.Forms.ToolStripButton m_btn_jump_to_end;
 		private System.Windows.Forms.ToolStripContainer m_toolstrip_cont;
 		private System.Windows.Forms.DataGridView m_grid;
 		private System.Windows.Forms.ToolStripSeparator m_sep;
@@ -651,6 +662,7 @@
 		private System.Windows.Forms.ToolStripButton m_btn_options;
 		private RyLogViewer.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
+		private System.Windows.Forms.ToolStripButton m_btn_tail;
 	}
 }
 

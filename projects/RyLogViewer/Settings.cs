@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using pr.common;
@@ -93,6 +92,16 @@ namespace RyLogViewer
 			get { return get<int>("FileScrollWidth"); }
 			set { set("FileScrollWidth", value); }
 		}
+		public Color  ScrollBarFileRangeColour
+		{
+			get { return get<Color>("ScrollBarFileRangeColour"); }
+			set { set("ScrollBarFileRangeColour", value); }
+		}
+		public Color  ScrollBarDisplayRangeColour
+		{
+			get { return get<Color>("ScrollBarDisplayRangeColour"); }
+			set { set("ScrollBarDisplayRangeColour", value); }
+		}
 		public int    RowHeight
 		{
 			get { return get<int>("RowHeight"); }
@@ -112,6 +121,11 @@ namespace RyLogViewer
 		{
 			get { return get<bool>("OpenAtEnd"); }
 			set { set("OpenAtEnd", value); }
+		}
+		public bool   FileChangesAdditive
+		{
+			get { return get<bool>("FileChangesAdditive"); }
+			set { set("FileChangesAdditive", value); }
 		}
 		public bool   IgnoreBlankLines
 		{
@@ -182,38 +196,41 @@ namespace RyLogViewer
 				catch (Exception ex) { Debug.WriteLine(ex); }
 			}
 			
-			RecentFiles          = "";
-			Font                 = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
-			RestoreScreenLoc     = true;
-			ScreenPosition       = new Point(50, 50);
-			WindowSize           = new Size(640, 480);
-			MenuPosition         = Point.Empty;
-			ToolsPosition        = new Point(0, 30);
-			StatusPosition       = Point.Empty;
-			AlternateLineColours = true;
-			LineSelectBackColour = Color.DarkGreen;
-			LineSelectForeColour = Color.Lime;
-			LineBackColour1      = Color.WhiteSmoke;
-			LineBackColour2      = Color.FromArgb(192, 255, 192);
-			LineForeColour1      = Color.Black;
-			LineForeColour2      = Color.Black;
-			FileScrollWidth      = 28;
-			RowHeight            = 18;
-			LoadLastFile         = false;
-			LastLoadedFile       = "";
-			OpenAtEnd            = true;
-			IgnoreBlankLines     = false;
-			AlwaysOnTop          = false;
-			ShowTOTD             = true;
-			TailEnabled          = false;
-			FileBufSizeKB        = 250;
-			HighlightPatterns    = "<root/>";
-			FilterPatterns       = "<root/>";
-			HighlightPatternSets = "<root/>";
-			FilterPatternSets    = "<root/>";
-			RowDelimiter         = "";
-			ColDelimiter         = "";
-			Encoding             = "";
+			RecentFiles                 = "";
+			Font                        = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
+			RestoreScreenLoc            = true;
+			ScreenPosition              = new Point(50, 50);
+			WindowSize                  = new Size(640, 480);
+			MenuPosition                = Point.Empty;
+			ToolsPosition               = new Point(0, 30);
+			StatusPosition              = Point.Empty;
+			AlternateLineColours        = true;
+			LineSelectBackColour        = Color.DarkGreen;
+			LineSelectForeColour        = Color.Lime;
+			LineBackColour1             = Color.WhiteSmoke;
+			LineBackColour2             = Color.FromArgb(192, 255, 192);
+			LineForeColour1             = Color.Black;
+			LineForeColour2             = Color.Black;
+			FileScrollWidth             = 28;
+			ScrollBarFileRangeColour    = Color.FromArgb(128, Color.WhiteSmoke);
+			ScrollBarDisplayRangeColour = Color.FromArgb(128, Color.SteelBlue);
+			RowHeight                   = 18;
+			LoadLastFile                = false;
+			LastLoadedFile              = "";
+			OpenAtEnd                   = true;
+			FileChangesAdditive         = true;
+			IgnoreBlankLines            = false;
+			AlwaysOnTop                 = false;
+			ShowTOTD                    = true;
+			TailEnabled                 = false;
+			FileBufSizeKB               = 250;
+			HighlightPatterns           = "<root/>";
+			FilterPatterns              = "<root/>";
+			HighlightPatternSets        = "<root/>";
+			FilterPatternSets           = "<root/>";
+			RowDelimiter                = "";
+			ColDelimiter                = "";
+			Encoding                    = "";
 		}
 	}
 }
