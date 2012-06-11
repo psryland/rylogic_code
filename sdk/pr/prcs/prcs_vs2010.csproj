@@ -224,6 +224,7 @@
     <Compile Include="gui\tree_grid_view.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="gui\util.cs" />
     <Compile Include="gui\view3d.cs">
       <SubType>UserControl</SubType>
     </Compile>

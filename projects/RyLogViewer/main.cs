@@ -182,6 +182,9 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			
+			// Keydown
+			KeyDown += (s,a) => HandleKeyDown(a);
+			
 			// File Drop
 			DragEnter += (s,a) => FileDrop(a, true);
 			DragDrop  += (s,a) => FileDrop(a, false);
@@ -198,7 +201,7 @@ namespace RyLogViewer
 					m_settings.Save();
 				};
 		}
-		
+
 		/// <summary>Returns true if there is a log file currently open</summary>
 		private bool FileOpen
 		{
@@ -277,7 +280,7 @@ namespace RyLogViewer
 				m_watch.Path = Path.GetDirectoryName(filepath);
 				m_watch.Filter = Path.GetFileName(filepath);
 				
-				BuildLineIndex(m_filepos, true);
+				BuildLineIndex(m_filepos, true, ()=>{ SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0; });
 				return;
 			}
 			catch (Exception ex) { MessageBox.Show(this, string.Format(Resources.FailedToOpenXDueToErrorY, filepath ,ex.Message), Resources.FailedToLoadFile, MessageBoxButtons.OK, MessageBoxIcon.Error); }
@@ -319,11 +322,24 @@ namespace RyLogViewer
 				e.PaintContent(e.ClipBounds);
 			}
 		}
-
+		
 		/// <summary>Handler for selections made in the grid</summary>
 		private void GridSelectionChanged(object sender, EventArgs e)
 		{
+			const float file_scroll_limit = 0.1f;
+			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount);
+			if (ratio < 0f + file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_begin, false);
+			if (ratio > 1f - file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_end  , false);
 			UpdateStatus();
+		}
+		
+		/// <summary>Handle key down events for the grid</summary>
+		private void HandleKeyDown(KeyEventArgs e)
+		{
+			if (e.Control && e.KeyCode == Keys.PageUp)
+				BuildLineIndex(0, false, () => SelectedRow = 0);
+			if (e.Control && e.KeyCode == Keys.PageDown)
+				BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
 		}
 		
 		/// <summary>Show the find dialog</summary>
@@ -503,7 +519,7 @@ namespace RyLogViewer
 				if (m_grid.RowCount != 0)
 				{
 					int display_row = value - m_grid.DisplayedRowCount(true) / 2;
-					m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount);
+					m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
 				}
 			}
 		}
@@ -517,7 +533,8 @@ namespace RyLogViewer
 		/// <summary>Return true if we should auto scroll</summary>
 		private bool AutoScrollTail
 		{
-			get { return LastRowVisible && SelectedRow == m_grid.RowCount - 1; }
+			// Auto scroll the selected position if the last (known) row of the file is selected
+			get { return LastRowVisible && LineIndexRange.m_end == m_fileend && SelectedRowRange.m_begin == LineIndexRange.m_begin; }
 		}
 
 		/// <summary>Scroll the grid to make the last row visible</summary>
@@ -591,60 +608,72 @@ namespace RyLogViewer
 		/// Update the UI with the current line index.
 		/// This method should be called whenever a changes occurs that requires
 		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
-		private void UpdateUI(int? selected_row = null)
+		private void UpdateUI(int row_delta = 0)
 		{
-			// Configure the grid
-			if (m_line_index.Count != 0)
+			using (m_grid.SuspendLayout(true))
 			{
-				// Read a row from the data and show column headers if there is more than one
-				Line line = ReadLine(m_line_index.Count/2);
-				m_grid.ColumnHeadersVisible = line.Column.Count > 1;
-				m_grid.ColumnCount = line.Column.Count;
-				
-				// Ensure the grid has the correct number of rows
-				bool auto_scroll = AutoScrollTail;
-				if (m_grid.RowCount != m_line_index.Count)
+				// Configure the grid
+				if (m_line_index.Count != 0)
 				{
-					// Unhook the grid selection event causing UpdateStatus()
-					m_grid.SelectionChanged -= GridSelectionChanged;
-					
-					int selected = SelectedRow; // Preserve the selection across row count change
-					m_grid.RowCount = 0; // Reset to zero first, this is more efficient for some reason
-					m_grid.RowCount = m_line_index.Count;
-					SelectedRow =
-						auto_scroll ? m_grid.RowCount - 1 : 
-						selected_row.HasValue ? selected_row.Value :
-						selected;
-					
-					// Rehook the grid selection event causing UpdateStatus()
-					m_grid.SelectionChanged += GridSelectionChanged;
-				}
-				if (auto_scroll) ShowLastRow();
+					// Read a row from the data and show column headers if there is more than one
+					Line line = ReadLine(m_line_index.Count/2);
+					m_grid.ColumnHeadersVisible = line.Column.Count > 1;
+					m_grid.ColumnCount = line.Column.Count;
 				
-				// Measure each column's preferred width
-				int total_width = 0;
-				int[] col_widths = new int[m_grid.ColumnCount];
-				foreach (DataGridViewColumn col in m_grid.Columns)
-					total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
+					// Ensure the grid has the correct number of rows
+					bool auto_scroll_tail = AutoScrollTail;
+					if (m_grid.RowCount != m_line_index.Count)
+					{
+						// Unhook handlers that get called when the RowCount changes
+						m_grid.SelectionChanged -= GridSelectionChanged;
+						m_grid.CellValueNeeded -= CellValueNeeded;
+						
+						// Preserve the selected row index and first visible row index (if possible)
+						int selected = SelectedRow;
+						int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
+						m_grid.CurrentCell = null;
+						m_grid.ClearSelection();
+						
+						// Reset to zero first, this is more efficient for some reason
+						//m_grid.RowCount = 0;
+						m_grid.RowCount = m_line_index.Count;
+						
+						// Restore the selected row, and the first visible row
+						int row = m_grid.SelectRow(auto_scroll_tail ? m_grid.RowCount - 1 : selected + row_delta);
+						if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
+						if (row != -1) m_grid.CurrentCell = m_grid[0, row];
+						
+						// Restore handlers
+						m_grid.CellValueNeeded += CellValueNeeded;
+						m_grid.SelectionChanged += GridSelectionChanged;
+					}
+					if (auto_scroll_tail) ShowLastRow();
 				
-				// Resize columns. If the total width is less than the control width use the control width instead
-				if (total_width < m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
-				{
-					m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-					m_grid.AutoResizeColumns();
-				}
-				else if (total_width > m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
-				{
-					m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+					// Measure each column's preferred width
+					int total_width = 0;
+					int[] col_widths = new int[m_grid.ColumnCount];
 					foreach (DataGridViewColumn col in m_grid.Columns)
-						col.Width = col_widths[col.Index];
+						total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
+				
+					// Resize columns. If the total width is less than the control width use the control width instead
+					if (total_width < m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
+					{
+						m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+						m_grid.AutoResizeColumns();
+					}
+					else if (total_width > m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
+					{
+						m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+						foreach (DataGridViewColumn col in m_grid.Columns)
+							col.Width = col_widths[col.Index];
+					}
 				}
-			}
-			else
-			{
-				m_grid.ColumnHeadersVisible = false;
-				m_grid.RowCount = 0;
-				m_grid.ColumnCount = 0;
+				else
+				{
+					m_grid.ColumnHeadersVisible = false;
+					m_grid.RowCount = 0;
+					m_grid.ColumnCount = 0;
+				}
 			}
 			
 			// Invalidate the cache and get the grid to redraw
@@ -715,7 +744,7 @@ namespace RyLogViewer
 		{
 			if (m_line_index.Count != 0)
 			{
-				Range file_range = FileRange;
+				Range file_range = LineIndexRange;
 				m_scroll_file.Visible    = file_range.Count < m_fileend;
 				m_scroll_file.TotalRange = m_fileend;
 				m_scroll_file.Fraction   = (double)m_filepos / m_fileend;

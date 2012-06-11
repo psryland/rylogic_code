@@ -50,9 +50,9 @@ namespace pr.util
 		/// are made, but a sample should only be called after FrameEnd() and before the next FrameBegin().
 		/// 'ouput' is a stream so that raw profiling data can be piped to an external process/machine
 		/// if necessary. Pass null if you want to sample but have nothing to send the results to.</summary>
-		[Conditional("PR_PROFILE")] public static void Sample(BinaryWriter output)
+		[Conditional("PR_PROFILE")] public static void Sample(BinaryWriter output, bool reset_frame_data)
 		{
-			mgr.SampleImpl(output);
+			mgr.SampleImpl(output, reset_frame_data);
 		}
 		
 		/// <summary>A marker tag to help synchronise profile data between client and server</summary>
@@ -90,6 +90,13 @@ namespace pr.util
 			public override string ToString()
 			{
 				return string.Format("[{0}] count: {1} time: {2}" ,ProfileId ,CallCount ,TotalCallTime);
+			}
+
+			/// <summary>Combine the statistics of 'caller' with this Caller</summary>
+			public void Merge(Caller rhs)
+			{
+				CallCount     += rhs.CallCount;
+				TotalCallTime += rhs.TotalCallTime;
 			}
 		};
 		
@@ -146,6 +153,20 @@ namespace pr.util
 			public override string ToString()
 			{
 				return string.Format("[{0} {1}] calls: {2} incl: {3} excl: {4}" ,Name ,ProfileId ,CallCount ,SelfInclChildTimeTicks ,SelfExclChildTimeTicks);
+			}
+			
+			/// <summary>Combine the data in 'rhs' with this block</summary>
+			public void Merge(Block rhs)
+			{
+				CallCount              += rhs.CallCount;
+				SelfInclChildTimeTicks += rhs.SelfInclChildTimeTicks;
+				SelfExclChildTimeTicks += rhs.SelfExclChildTimeTicks;
+				foreach (var c in rhs.Callers)
+				{
+					Caller rhs_caller = c.Value;
+					Caller caller = GetOrAdd(Callers, c.Key, () => rhs_caller);
+					if (!ReferenceEquals(caller, rhs_caller)) caller.Merge(rhs_caller);
+				}
 			}
 		};
 		
@@ -290,7 +311,7 @@ namespace pr.util
 			/// Read the collected profiling data and send it to 'output'.
 			/// Resets the profile instances ready for a frame to begin again.
 			/// Calling this method with 'null' has the effect of resetting the profiling data.</summary>
-			internal void SampleImpl(BinaryWriter output) // Note: symmetric with Results.Collect()
+			internal void SampleImpl(BinaryWriter output, bool reset) // Note: symmetric with Results.Collect()
 			{
 				Debug.Assert(FrameStarted == false, "Do not sample profiling data midway through a frame");
 				
@@ -301,7 +322,7 @@ namespace pr.util
 				// If output is null, just reset the profile blocks
 				if (output == null)
 				{
-					foreach (var p in mgr) p.Reset();
+					if (reset) { foreach (var p in mgr) p.Reset(); }
 					++m_sample_count;
 					return;
 				}
@@ -329,7 +350,7 @@ namespace pr.util
 							pkt.Write(c.Value.CallCount);
 							pkt.Write(c.Value.TotalCallTime);
 						}
-						p.Reset();
+						if (reset) p.Reset();
 					}
 					++m_sample_count;
 					
@@ -350,33 +371,87 @@ namespace pr.util
 		/// <summary>Data representing the average results over one frame</summary>
 		public class ResultData :Block
 		{
+			private readonly double m_ticks_per_ms;
+			private readonly double m_frames;
+			
+			/// <summary>The number of times Start()/Stop() has been called for this profile (i.e. call count)</summary>
+			public int    TotalCallCount           { get { return CallCount; } }
+			
+			/// <summary>The total time spent within Start()/Stop() including calls to child profiles (total time)</summary>
+			public double TotalSelfInclChildTimeMS { get { return SelfInclChildTimeTicks / m_ticks_per_ms; } }
+			
+			/// <summary>The total time spent within Start()/Stop() excluding calls to child profiles (self time)</summary>
+			public double TotalSelfExclChildTimeMS { get { return SelfExclChildTimeTicks / m_ticks_per_ms; } }
+			
 			/// <summary>The number of times this profile block was called per frame</summary>
-			public double CallsPerFrame;
+			public double AvrCallsPerFrame         { get { return CallCount / m_frames; } }
 			
 			/// <summary>The average time spent in this profile block per frame (in ms)</summary>
-			public double SelfInclChildTimeMS;
+			public double AvrSelfInclChildTimeMS   { get { return SelfInclChildTimeTicks / (m_ticks_per_ms * m_frames); } }
 			
 			/// <summary>The average time spent in this profile block per frame (in ms) excluding child profile blocks</summary>
-			public double SelfExclChildTimeMS;
+			public double AvrSelfExclChildTimeMS   { get { return SelfExclChildTimeTicks / (m_ticks_per_ms * m_frames); } }
 			
 			/// <summary>Profile blocks that where called within this profile block</summary>
-			public List<ResultData> Child = new List<ResultData>();
+			public ResultSample Child = new ResultSample();
 			
-			public ResultData() :base(null,0) {}
+			public ResultData() :base(null,0)
+			{
+				m_frames       = 1.0;
+				m_ticks_per_ms = 1.0;
+			}
 			public ResultData(Block block, int frames, double ticks_per_ms) :base(block)
 			{
-				CallsPerFrame       = (double)CallCount / frames;
-				SelfInclChildTimeMS = SelfInclChildTimeTicks / (ticks_per_ms * frames);
-				SelfExclChildTimeMS = SelfExclChildTimeTicks / (ticks_per_ms * frames);
+				m_frames       = frames;
+				m_ticks_per_ms = ticks_per_ms;
 			}
 			public override string ToString()
 			{
-				return string.Format("[{0} {1}] calls: {2} incl: {3} excl: {4}" ,Name ,ProfileId ,CallsPerFrame ,SelfInclChildTimeMS ,SelfExclChildTimeMS);
+				return string.Format("[{0} {1}] calls: {2} incl: {3} excl: {4}" ,Name ,ProfileId ,AvrCallsPerFrame ,AvrSelfInclChildTimeMS ,AvrSelfExclChildTimeMS);
+			}
+			
+			/// <summary>Combine the statistics of 'rhs' with this ResultData</summary>
+			public void Merge(ResultData rhs)
+			{
+				base.Merge(rhs);
+				foreach (var c in rhs.Child)
+					AddIfUnique(Child, c, (l,r) => l.ProfileId == r.ProfileId);
 			}
 		}
 		
 		/// <summary>A collection of ResultData</summary>
-		public class ResultSample :List<ResultData> {}
+		public class ResultSample :List<ResultData>
+		{
+			/// <summary>Sort results by profile id</summary>
+			public void SortProfileId()
+			{
+				Sort((lhs,rhs) => Compare(lhs.ProfileId, rhs.ProfileId));
+			}
+			
+			/// <summary>Sort results by name</summary>
+			public void SortByName()
+			{
+				Sort((lhs,rhs) => string.CompareOrdinal(lhs.Name, rhs.Name));
+			}
+			
+			/// <summary>Sort results by calls per frame</summary>
+			public void SortByCallCount()
+			{
+				Sort((lhs,rhs) => -Compare(lhs.CallCount, rhs.CallCount));
+			}
+			
+			/// <summary>Sort results by inclusive time</summary>
+			public void SortByInclTime()
+			{
+				Sort((lhs,rhs) => -Compare(lhs.SelfInclChildTimeTicks, rhs.SelfInclChildTimeTicks));
+			}
+			
+			/// <summary>Sort results by exclusive time</summary>
+			public void SortByExclTime()
+			{
+				Sort((lhs,rhs) => -Compare(lhs.SelfExclChildTimeTicks, rhs.SelfExclChildTimeTicks));
+			}
+		}
 		
 		/// <summary>A history of result data</summary>
 		public class ResultHistory :List<ResultSample> {}
@@ -400,7 +475,7 @@ namespace pr.util
 			public int Frames;
 			
 			/// <summary>The average length of a frame in milli seconds</summary>
-			public double FrameTimeMS;
+			public double FrameTimeMS { get { return Data.Count != 0 ? Data[0].AvrSelfInclChildTimeMS : 0; } }
 			
 			/// <summary>The length of history to keep</summary>
 			public int MaxHistoryLength { get; set; }
@@ -461,7 +536,7 @@ namespace pr.util
 				}
 				
 				// Wire-up caller tree
-				sample.Sort((lhs,rhs) => Compare(lhs.ProfileId, rhs.ProfileId));
+				sample.SortProfileId();
 				foreach (var d in sample)
 				{
 					foreach (var c in d.Callers)
@@ -478,39 +553,24 @@ namespace pr.util
 				
 				// Update to the new sample
 				Data = sample;
-				FrameTimeMS = Data.Count != 0 ? Data[0].SelfInclChildTimeMS : 0;
 			}
 			
-			/// <summary>Sort results by name</summary>
-			public void SortByName()
+			/// <summary>Merge another results instance with this one</summary>
+			public void Merge(Results result)
 			{
-				Sort((lhs,rhs) => string.CompareOrdinal(lhs.Name, rhs.Name));
+				SampleCount = Math.Max(SampleCount, result.SampleCount);
+				Frames     += result.Frames;
+				Data.AddRange(result.Data);
+				Data.SortProfileId();
+				for (int i = 0; i != Data.Count - 1; ++i)
+				{
+					if (Data[i].ProfileId != Data[i+1].ProfileId) continue;
+					Data[i].Merge(Data[i+1]);
+					Data.RemoveAt(i+1);
+					--i;
+				}
 			}
-			
-			/// <summary>Sort results by calls per frame</summary>
-			public void SortByCallCount()
-			{
-				Sort((lhs,rhs) => -Compare(lhs.CallsPerFrame, rhs.CallsPerFrame));
-			}
-			
-			/// <summary>Sort results by inclusive time</summary>
-			public void SortByInclTime()
-			{
-				Sort((lhs,rhs) => -Compare(lhs.SelfInclChildTimeMS, rhs.SelfInclChildTimeMS));
-			}
-			
-			/// <summary>Sort results by exclusive time</summary>
-			public void SortByExclTime()
-			{
-				Sort((lhs,rhs) => -Compare(lhs.SelfExclChildTimeMS, rhs.SelfExclChildTimeMS));
-			}
-			
-			/// <summary>Sort the results by a custom predicate</summary>
-			public void Sort(Comparison<ResultData> pred)
-			{
-				Data.Sort(pred);
-			}
-			
+
 			/// <summary>Output a basic summary of the collected profile data as a string</summary>
 			public string Summary
 			{
@@ -532,7 +592,7 @@ namespace pr.util
 					
 					// Output each profile
 					foreach (var pres in Data)
-						sb.AppendFormat(row_format+Environment.NewLine ,pres.Name ,pres.CallsPerFrame ,pres.SelfInclChildTimeMS ,pres.SelfExclChildTimeMS);
+						sb.AppendFormat(row_format+Environment.NewLine ,pres.Name ,pres.AvrCallsPerFrame ,pres.AvrSelfInclChildTimeMS ,pres.AvrSelfExclChildTimeMS);
 					
 					sb.AppendLine(horiz_line);
 					return sb.ToString();
@@ -569,6 +629,16 @@ namespace pr.util
 				if (c <  0) { if (m == b){return ~e;} b = m; continue; }
 				if (c >  0) { if (m == b){return ~b;} e = m; continue; }
 			}
+		}
+
+		/// <summary>
+		/// Add 'item' to the list if it's not already there.
+		/// Uses 'are_equal(list[i],item)' to test for uniqueness.
+		/// Returns true if 'item' was added, false if it was a duplicate</summary>
+		private static void AddIfUnique<T>(List<T> list, T item, Func<T,T,bool> are_equal)
+		{
+			foreach (var i in list) if (are_equal(i,item)) return;
+			list.Add(item);
 		}
 
 		#endregion
@@ -626,13 +696,13 @@ namespace pr
 			var bw = new BinaryWriter(s);
 			var br = new BinaryReader(s);
 			
-			Profile.Sample(bw);
+			Profile.Sample(bw, true);
 			s.Position = 0;
 			
 			// Receive and display profile data
 			Profile.Results results = new Profile.Results();
 			results.Collect(br);
-			results.SortByInclTime();
+			results.Data.SortByInclTime();
 			Debug.Write(results.Summary);
 		}
 	}

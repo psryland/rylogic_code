@@ -147,10 +147,10 @@ namespace RyLogViewer
 			get { return get<bool>("TailEnabled"); }
 			set { set("TailEnabled", value); }
 		}
-		public int    FileBufSizeKB
+		public int    FileBufSize
 		{
-			get { return get<int>("FileBufSizeKB"); }
-			set { set("FileBufSizeKB", value); }
+			get { return get<int>("FileBufSize"); }
+			set { set("FileBufSize", value); }
 		}
 		public string HighlightPatterns
 		{
@@ -223,7 +223,7 @@ namespace RyLogViewer
 			AlwaysOnTop                 = false;
 			ShowTOTD                    = true;
 			TailEnabled                 = false;
-			FileBufSizeKB               = 250;
+			FileBufSize                 = 250 * 1024;
 			HighlightPatterns           = "<root/>";
 			FilterPatterns              = "<root/>";
 			HighlightPatternSets        = "<root/>";

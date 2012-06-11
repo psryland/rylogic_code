@@ -200,9 +200,14 @@ namespace pr.extn
 		/// <summary>Sets the selection to row 'index'. Clamps 'index' to [0,RowCount). Returns the row actually selected</summary>
 		public static int SelectRow(this DataGridView grid, int index)
 		{
-			index = Math.Max(0, Math.Min(grid.RowCount, index));
 			grid.ClearSelection();
-			if (index >= 0 && index < grid.RowCount) grid.Rows[index].Selected = true;
+			if (grid.RowCount == 0) index = -1;
+			else
+			{
+				index = Maths.Clamp(index, 0, grid.RowCount - 1);
+				grid.Rows[index].Selected = true;
+				grid.CurrentCell = grid.Rows[index].Cells[0];
+			}
 			return index;
 		}
 

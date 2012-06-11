@@ -21,6 +21,20 @@ namespace pr.gui
 		/// <summary>Limit user input to specific categories</summary>
 		public EInputType InputType { get; set; }
 		
+		/// <summary>The text to display above the prompt edit box</summary>
+		public string PromptText
+		{
+			get { return m_lbl_info.Text; }
+			set { m_lbl_info.Text = value; }
+		}
+
+		/// <summary>The prompt dialog title</summary>
+		public string Title
+		{
+			get { return Text; }
+			set { Text = value; }
+		}
+
 		/// <summary>The value entered in the edit box</summary>
 		public string Value
 		{
@@ -31,6 +45,7 @@ namespace pr.gui
 		public PromptForm()
 		{
 			InitializeComponent();
+			InputType = EInputType.Anything;
 			m_tt = new ToolTip();
 			List<char> invalid_filename_chars = new List<char>(Path.GetInvalidFileNameChars());
 			m_edit.KeyPress += (s,a)=>

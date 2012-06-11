@@ -54,6 +54,7 @@ namespace RyLogViewer
 			// Save on close
 			Closed += (s,a) =>
 			{
+				Focus(); // grab focus to ensure all controls persist their state
 				m_settings.HighlightPatterns = Highlight.Export(m_highlights);
 				m_settings.FilterPatterns    = Filter   .Export(m_filters);
 				m_settings.Save();
@@ -136,14 +137,14 @@ namespace RyLogViewer
 				};
 
 
-			// Line count
+			// File buf size
 			m_spinner_file_buf_size.ToolTip(m_tt, "The size (in KB) of the cached portion of the log file");
 			m_spinner_file_buf_size.Minimum = 1;
 			m_spinner_file_buf_size.Maximum = 100000;
-			m_spinner_file_buf_size.Value = Maths.Clamp(m_settings.FileBufSizeKB, (int)m_spinner_file_buf_size.Minimum, (int)m_spinner_file_buf_size.Maximum);
+			m_spinner_file_buf_size.Value = Maths.Clamp(m_settings.FileBufSize / 1024, (int)m_spinner_file_buf_size.Minimum, (int)m_spinner_file_buf_size.Maximum);
 			m_spinner_file_buf_size.ValueChanged += (s,a)=>
 				{
-					m_settings.FileBufSizeKB = (int)m_spinner_file_buf_size.Value;
+					m_settings.FileBufSize = (int)m_spinner_file_buf_size.Value * 1024;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 

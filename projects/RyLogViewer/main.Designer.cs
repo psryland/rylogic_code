@@ -109,7 +109,7 @@
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(251, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(220, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -562,7 +562,7 @@
 			// 
 			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_scroll_file.Fraction = 0D;
-			this.m_scroll_file.LargeChange = -2147483648;
+			this.m_scroll_file.LargeChange = 0;
 			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
 			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
 			this.m_scroll_file.Maximum = 1000;
@@ -573,6 +573,7 @@
 			this.m_scroll_file.SmallChange = 0;
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
+			this.m_scroll_file.ThumbSize = 80;
 			this.m_scroll_file.TotalRange = ((long)(100));
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			this.m_scroll_file.Value = 0;
@@ -585,6 +586,7 @@
 			this.ClientSize = new System.Drawing.Size(593, 495);
 			this.Controls.Add(this.m_toolstrip_cont);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.KeyPreview = true;
 			this.MainMenuStrip = this.m_menu;
 			this.MinimumSize = new System.Drawing.Size(200, 220);
 			this.Name = "Main";

@@ -45,8 +45,20 @@ namespace pr.extn
 			else if (list.Count < newsize) for (int i = list.Count; i != newsize; ++i) list.Add(factory());
 		}
 
-		/// <summary>Add 'item' to the list if it's not already there.
-		/// Uses 'item.Equals()' to test for uniqueness.
+		/// <summary>
+		/// Add 'item' to the list if it's not already there.
+		/// Uses 'are_equal(list[i],item)' to test for uniqueness.
+		/// Returns true if 'item' was added, false if it was a duplicate</summary>
+		public static bool AddIfUnique<T>(this IList<T> list, T item, Func<T,T,bool> are_equal)
+		{
+			foreach (var i in list) if (are_equal(i,item)) return false;
+			list.Add(item);
+			return true;
+		}
+		
+		/// <summary>
+		/// Add 'item' to the list if it's not already there.
+		/// Uses 'list[i].Equals((item)' to test for uniqueness.
 		/// Returns true if 'item' was added, false if it was a duplicate</summary>
 		public static bool AddIfUnique<T>(this IList<T> list, T item)
 		{
@@ -64,17 +76,36 @@ namespace pr.extn
 			list[index1] = tmp;
 		}
 
-		/// <summary>Return the index of the first occurance of 'item' in 'list'. Linear search</summary>
-		public static int IndexOf<T>(this IList<T> list, T item, int start_index)
+		/// <summary>Return the index of the occurance of an element that causes 'pred' to return true</summary>
+		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index, int count)
 		{
-			int i = start_index;
-			for (; i < list.Count && !list[i].Equals(item); ++i) {}
-			return i < list.Count ? -1 : i;
+			int i; for (i = start_index; i != count && !pred(list[i]); ++i) {}
+			return i != count ? i : -1;
 		}
-		public static int IndexOf<T>(this IList<T> list, T item)
+		
+		/// <summary>Return the index of the occurance of an element that causes 'pred' to return true</summary>
+		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index)
 		{
-			return list.IndexOf(item, 0);
+			return list.IndexOf(pred, start_index, list.Count);
 		}
+		
+		/// <summary>Return the index of the occurance of an element that causes 'pred' to return true</summary>
+		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred)
+		{
+			return list.IndexOf(pred, 0, list.Count);
+		}
+		
+		///// <summary>Return the index of the first occurance of 'item' in 'list'. Linear search</summary>
+		//public static int IndexOf<T>(this IList<T> list, T item, int start_index)
+		//{
+		//    int i = start_index;
+		//    for (; i < list.Count && !list[i].Equals(item); ++i) {}
+		//    return i < list.Count ? -1 : i;
+		//}
+		//public static int IndexOf<T>(this IList<T> list, T item)
+		//{
+		//    return list.IndexOf(item, 0);
+		//}
 
 		/// <summary>Binary search using for an element using only a predicate function.
 		/// Returns the index of the element if found or the 2s-complement of the first

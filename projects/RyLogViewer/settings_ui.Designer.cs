@@ -32,6 +32,7 @@
 			this.m_tabctrl = new System.Windows.Forms.TabControl();
 			this.m_tab_general = new System.Windows.Forms.TabPage();
 			this.m_group_grid = new System.Windows.Forms.GroupBox();
+			this.m_check_file_changes_additive = new System.Windows.Forms.CheckBox();
 			this.m_check_open_at_end = new System.Windows.Forms.CheckBox();
 			this.m_lbl_history_length = new System.Windows.Forms.Label();
 			this.m_spinner_file_buf_size = new System.Windows.Forms.NumericUpDown();
@@ -72,7 +73,6 @@
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
-			this.m_check_file_changes_additive = new System.Windows.Forms.CheckBox();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_grid.SuspendLayout();
@@ -138,6 +138,16 @@
 			this.m_group_grid.TabIndex = 6;
 			this.m_group_grid.TabStop = false;
 			this.m_group_grid.Text = "File Load";
+			// 
+			// m_check_file_changes_additive
+			// 
+			this.m_check_file_changes_additive.AutoSize = true;
+			this.m_check_file_changes_additive.Location = new System.Drawing.Point(17, 82);
+			this.m_check_file_changes_additive.Name = "m_check_file_changes_additive";
+			this.m_check_file_changes_additive.Size = new System.Drawing.Size(181, 17);
+			this.m_check_file_changes_additive.TabIndex = 5;
+			this.m_check_file_changes_additive.Text = "Assume file changes are additive";
+			this.m_check_file_changes_additive.UseVisualStyleBackColor = true;
 			// 
 			// m_check_open_at_end
 			// 
@@ -577,16 +587,6 @@
 			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
 			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.TabIndex = 4;
-			// 
-			// m_check_file_changes_additive
-			// 
-			this.m_check_file_changes_additive.AutoSize = true;
-			this.m_check_file_changes_additive.Location = new System.Drawing.Point(17, 82);
-			this.m_check_file_changes_additive.Name = "m_check_file_changes_additive";
-			this.m_check_file_changes_additive.Size = new System.Drawing.Size(181, 17);
-			this.m_check_file_changes_additive.TabIndex = 5;
-			this.m_check_file_changes_additive.Text = "Assume file changes are additive";
-			this.m_check_file_changes_additive.UseVisualStyleBackColor = true;
 			// 
 			// SettingsUI
 			// 
