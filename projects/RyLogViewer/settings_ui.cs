@@ -67,6 +67,8 @@ namespace RyLogViewer
 		/// <summary>Hook up events for the general tab</summary>
 		private void SetupGeneralTab()
 		{
+			string tt;
+
 			// Load last file on startup
 			m_check_load_last_file.ToolTip(m_tt, "Automatically load the last loaded file on startup");
 			m_check_load_last_file.CheckedChanged += (s,a)=>
@@ -92,7 +94,9 @@ namespace RyLogViewer
 				};
 
 			// Line endings
-			m_edit_line_ends.ToolTip(m_tt, "Set the line ending characters to expect in the log data.\r\nUse 'CR' for carriage return, 'LF' for line feed.\r\nLeave blank to auto detect");
+			tt = "Set the line ending characters to expect in the log data.\r\nUse 'CR' for carriage return, 'LF' for line feed.\r\nLeave blank to auto detect";
+			m_lbl_line_ends.ToolTip(m_tt, tt);
+			m_edit_line_ends.ToolTip(m_tt, tt);
 			m_edit_line_ends.Text = m_settings.RowDelimiter;
 			m_edit_line_ends.TextChanged += (s,a)=>
 			{

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 namespace RyLogViewer
 {
@@ -50,5 +51,14 @@ namespace RyLogViewer
 		FileRange,
 		DisplayedRange,
 		SelectedRange,
+	}
+
+	public static class Misc
+	{
+		/// <summary>Watch window helper for converting byte buffers to strings</summary>
+		public static string BufToStr(byte[] buf, int start, int len)
+		{
+			return Encoding.UTF8.GetString(buf, start, len);
+		}
 	}
 }

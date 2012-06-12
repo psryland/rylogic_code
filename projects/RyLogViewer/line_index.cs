@@ -8,6 +8,7 @@ using System.Threading;
 using pr.common;
 using pr.extn;
 using pr.maths;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -139,6 +140,8 @@ namespace RyLogViewer
 				{
 					try
 					{
+						Log.Info("build started. (id {0})", (int)bi);
+						
 						int build_issue = (int)bi;
 						if (BuildCancelled(build_issue)) return;
 						
@@ -216,15 +219,18 @@ namespace RyLogViewer
 		/// the read. Returns the number of bytes buffered in 'buf'</summary>
 		private static int Buffer(Stream file, int count, long fileend, Encoding encoding, bool backward, byte[] buf, out bool eof)
 		{
+			long pos = file.Position;
+			eof = backward ? pos == 0 : pos == fileend;
+			
 			// The number of bytes to buffer
 			count = Math.Min(count, buf.Length);
 			count = Math.Min(count, (int)(backward ? file.Position : fileend - file.Position));
-			eof = count != buf.Length;
 			if (count == 0) return 0;
 			
-			// Set the file position
+			// Set the file position to the location to read from
 			if (backward) file.Seek(-count, SeekOrigin.Current);
-			long pos = file.Position;
+			pos = file.Position;
+			eof = backward ? pos == 0 : pos == fileend;
 			
 			// Move to the start of a character
 			if (encoding.Equals(Encoding.ASCII)) {}
@@ -407,7 +413,7 @@ namespace RyLogViewer
 				// If 'length' bytes have passed through 'buf' then we're done.
 				// otherwise, add whole lines to the scanned count so we catch
 				// lines that span the buffer boundary
-				if (eof) break;
+				if (read == remaining || eof) break;
 				scanned   += backward ?  (read - lasti) : lasti;
 				read_addr =  filepos + (backward ? -scanned : +scanned);
 			}
@@ -447,6 +453,7 @@ namespace RyLogViewer
 					row_delta = new_idx - old_idx;
 				}
 				
+				Log.Info("Replacing results. {0} lines about filepos {1}/{2}", line_index.Count, filepos, fileend);
 				m_line_index = line_index;
 			}
 			else if (line_index.Count != 0)
@@ -461,6 +468,7 @@ namespace RyLogViewer
 						--row_delta;
 					}
 					
+					Log.Info("Merging results front. {0} lines added. filepos {1}/{2}", line_index.Count, filepos, fileend);
 					m_line_index.InsertRange(0, line_index);
 					row_delta += line_index.Count;
 					
@@ -473,6 +481,7 @@ namespace RyLogViewer
 						++i;
 						break;
 					}
+				
 					m_line_index.RemoveRange(i, iend-i);
 				}
 				// Or append to the back and trim the start
@@ -482,6 +491,7 @@ namespace RyLogViewer
 					while (m_line_index.Count != 0 && line_index.First().Contains(m_line_index.Last().m_begin))
 						m_line_index.RemoveAt(m_line_index.Count - 1);
 					
+					Log.Info("Merging results tail. {0} lines added. filepos {1}/{2}", line_index.Count, filepos, fileend);
 					m_line_index.AddRange(line_index);
 					
 					// Trim the head

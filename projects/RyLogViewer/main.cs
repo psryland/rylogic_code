@@ -52,6 +52,9 @@ namespace RyLogViewer
 
 		public Main(string[] args)
 		{
+			Log.Register(null, false);
+			Log.Info("App Startup: {0}", DateTime.Now);
+
 			InitializeComponent();
 			m_settings          = new Settings();
 			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
@@ -72,6 +75,7 @@ namespace RyLogViewer
 			m_menu.Move                             += (s,a) => { m_settings.MenuPosition = m_menu.Location; m_settings.Save(); };
 			m_menu_file_open.Click                  += (s,a) => OpenLogFile(null);
 			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
+			m_menu_file_export.Click                += (s,a) => ShowExportDialog();
 			m_menu_file_exit.Click                  += (s,a) => Close();
 			m_menu_edit_selectall.Click             += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
 			m_menu_edit_copy.Click                  += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
@@ -115,6 +119,7 @@ namespace RyLogViewer
 				{
 					// Update on ScrollEnd not value changed, since
 					// UpdateUI() sets Value when the build is complete.
+					Log.Info("file scroll to {0}", m_scroll_file.ThumbRange.Mid);
 					BuildLineIndex(m_scroll_file.ThumbRange.Mid, false);
 				};
 
@@ -402,6 +407,15 @@ namespace RyLogViewer
 				SetTransientStatusMessage("Not found", 2000);
 		}
 
+		/// <summary>Show the export dialog</summary>
+		private void ShowExportDialog()
+		{
+			var dg = new ExportUI(FileByteRange);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			
+			// Do the export
+		}
+
 		/// <summary>Handle file drop</summary>
 		private void FileDrop(DragEventArgs args, bool test_can_drop)
 		{
@@ -568,7 +582,9 @@ namespace RyLogViewer
 				int selected = SelectedRow;
 				m_grid.SelectRow(-1);
 				
+				Log.Info("RowCount changed. Selected row: {0}. First visible row: {1}", selected, first_vis);
 				m_grid.RowCount = count;
+				
 				if (count != 0)
 				{
 					// Restore the selected row, and the first visible row
@@ -591,6 +607,8 @@ namespace RyLogViewer
 		/// trigger a file reload.</summary>
 		private void ApplySettings()
 		{
+			Log.Info("Applying settings");
+			
 			// Cached settings for performance, don't overwrite auto detected cached values tho
 			m_encoding   = GetEncoding(m_settings.Encoding);
 			m_row_delim  = GetRowDelim(m_settings.RowDelimiter);
@@ -757,6 +775,9 @@ namespace RyLogViewer
 			Range range = BufferRange(m_filepos, m_fileend, m_settings.FileBufSize / 2);
 			if (range.Count < m_fileend)
 			{
+				if (!range.Equals(m_scroll_file.ThumbRange))
+					Log.Info("File scroll set to [{0},{1}) within file [{2},{3})", range.m_begin, range.m_end, FileByteRange.m_begin, FileByteRange.m_end);
+				
 				m_scroll_file.Visible    = true;
 				m_scroll_file.TotalRange = FileByteRange;
 				m_scroll_file.ThumbRange = range;
