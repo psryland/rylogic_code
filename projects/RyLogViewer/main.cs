@@ -98,7 +98,7 @@ namespace RyLogViewer
 			m_btn_highlights.Click       += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_btn_filters.Click          += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
 			m_btn_options.Click          += (s,a) => ShowOptions(SettingsUI.ETab.General);
-			m_btn_jump_to_end.Click      += (s,a) => SelectedRow = m_grid.RowCount - 1;
+			m_btn_jump_to_end.Click      += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
 			m_btn_tail.CheckedChanged    += (s,a) => EnableTail(m_btn_tail.Checked);
 			m_btn_open_log.ToolTipText    = Resources.OpenLogFile;   
 			m_btn_refresh.ToolTipText     = Resources.ReloadLogFile;
@@ -345,10 +345,8 @@ namespace RyLogViewer
 		/// <summary>Handle key down events for the grid</summary>
 		private void HandleKeyDown(KeyEventArgs e)
 		{
-			if (e.Control && e.KeyCode == Keys.PageUp)
-				BuildLineIndex(0, false, () => SelectedRow = 0);
-			if (e.Control && e.KeyCode == Keys.PageDown)
-				BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+			if (e.Control && e.KeyCode == Keys.PageUp)   BuildLineIndex(0        , false, () => SelectedRow = 0                  );
+			if (e.Control && e.KeyCode == Keys.PageDown) BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
 		}
 		
 		/// <summary>Show the find dialog</summary>

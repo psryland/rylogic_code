@@ -157,12 +157,12 @@ namespace RyLogViewer
 		{
 			const float rad = 4f;
 			var gfx = e.Graphics;
-			var bounds = e.ClipRectangle;
+			var bounds = e.ClipRectangle; bounds.Inflate(-1,-1);
 			var height = bounds.Height;
 			var total = TotalRange;
 			
 			// Rectum?
-			var back_rect = bounds; back_rect.Inflate(-1,-1);
+			var back_rect = bounds;
 			var thumb_rect = MakeThumbRect(bounds);
 			foreach (var r in Ranges)
 			{

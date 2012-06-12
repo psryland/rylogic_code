@@ -214,11 +214,12 @@ namespace RyLogViewer
 		/// backward from the current position before reading and then seeked backward again
 		/// after reading so that conceptually the file position moves in the direction of
 		/// the read. Returns the number of bytes buffered in 'buf'</summary>
-		private static int Buffer(Stream file, int count, long fileend, Encoding encoding, bool backward, byte[] buf)
+		private static int Buffer(Stream file, int count, long fileend, Encoding encoding, bool backward, byte[] buf, out bool eof)
 		{
 			// The number of bytes to buffer
 			count = Math.Min(count, buf.Length);
 			count = Math.Min(count, (int)(backward ? file.Position : fileend - file.Position));
+			eof = count != buf.Length;
 			if (count == 0) return 0;
 			
 			// Set the file position
@@ -305,7 +306,8 @@ namespace RyLogViewer
 			for (;;)
 			{
 				// Read a block into 'buf'
-				int read = Buffer(file, buf.Length, fileend, encoding, true, buf);
+				bool eof;
+				int read = Buffer(file, buf.Length, fileend, encoding, true, buf, out eof);
 				if (read == 0) return 0; // assume the first character in the file is the start of a line
 				
 				// Scan for a line start
@@ -360,8 +362,8 @@ namespace RyLogViewer
 				file.Seek(read_addr, SeekOrigin.Begin);
 				
 				// Read as much as possible into 'buf'
-				int remaining = (int)(length - scanned);
-				int read = Buffer(file, remaining, fileend, encoding, backward, buf);
+				int remaining = (int)(length - scanned); bool eof;
+				int read = Buffer(file, remaining, fileend, encoding, backward, buf, out eof);
 				if (read < row_delim.Length) break;
 				
 				// filepos is the start of a line, so when reading backwards
@@ -390,7 +392,7 @@ namespace RyLogViewer
 				}
 				
 				// If scanning backwards and we hit the start of the file, treat this as a line start
-				if (backward && base_addr == 0)
+				if (backward && eof)
 				{
 					// 'i' points to the start of a line, 'lasti' points to the start of the last line we found
 					++i; Range line = new Range(i, lasti - row_delim.Length);
@@ -405,7 +407,7 @@ namespace RyLogViewer
 				// If 'length' bytes have passed through 'buf' then we're done.
 				// otherwise, add whole lines to the scanned count so we catch
 				// lines that span the buffer boundary
-				if (read == remaining) break;
+				if (eof) break;
 				scanned   += backward ?  (read - lasti) : lasti;
 				read_addr =  filepos + (backward ? -scanned : +scanned);
 			}
