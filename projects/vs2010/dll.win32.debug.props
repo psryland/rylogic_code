@@ -4,8 +4,8 @@
     <TargetPlatform>x86</TargetPlatform>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>..\..\obj\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\..\obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>..\..\obj2010\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>..\..\obj2010\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>

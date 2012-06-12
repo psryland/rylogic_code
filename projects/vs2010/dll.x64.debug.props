@@ -4,10 +4,10 @@
     <TargetPlatform>x64</TargetPlatform>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>..\..\obj\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>..\..\obj2010\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup>
-    <IntDir>..\..\obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>..\..\obj2010\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>

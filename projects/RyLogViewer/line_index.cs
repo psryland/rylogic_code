@@ -25,6 +25,25 @@ namespace RyLogViewer
 			get { return new Range(0, m_fileend); }
 		}
 
+		/// <summary>Returns the byte range within the file that would be buffered given 'filepos'</summary>
+		private static Range BufferRange(long filepos, long fileend, long buf_size)
+		{
+			Range rng = new Range();
+			long ovr, hbuf = buf_size;
+			
+			// Start with the range that has filepos in the middle
+			rng.m_begin = filepos - hbuf;
+			rng.m_end   = filepos + hbuf;
+			
+			// Any overflow, add to the other range
+			if ((ovr = 0     - rng.m_begin) > 0) { rng.m_begin += ovr; rng.m_end   += ovr; }
+			if ((ovr = rng.m_end - fileend) > 0) { rng.m_end   -= ovr; rng.m_begin -= ovr; }
+			if ((ovr = 0     - rng.m_begin) > 0) { rng.m_begin += ovr; }
+			
+			Debug.Assert(rng.m_begin >= 0 && rng.m_end <= fileend && rng.m_begin <= rng.m_end);
+			return rng;
+		}
+
 		/// <summary>Returns the full byte range currently represented by 'm_line_index'</summary>
 		private Range LineIndexRange
 		{
@@ -95,8 +114,8 @@ namespace RyLogViewer
 			m_reload_in_progress = reload;
 			
 			// Find the byte range of the file currently loaded
-			Range file_range       = LineIndexRange;
-			Range line_index_range = LineStartIndexRange;
+			Range line_index_range  = LineIndexRange;
+			Range line_starts_range = LineStartIndexRange;
 			
 			// If this is not a 'reload', guess the encoding
 			Encoding encoding = reload
@@ -144,35 +163,23 @@ namespace RyLogViewer
 							long scan_from = filepos;
 							
 							// Determine the range of bytes to scan in each direction
-							long bwd_range = Math.Min(filepos -       0, half_range);
-							long fwd_range = Math.Min(fileend - filepos, half_range);
-							if      (fwd_range != half_range) bwd_range += half_range - fwd_range;
-							else if (bwd_range != half_range) fwd_range += half_range - bwd_range;
+							Range rng = BufferRange(filepos, fileend, half_range);
 							
 							// If the filepos is within the range of the current line index
 							// do an incremental update to recentre the line index about filepos
-							incremental = file_range.Contains(filepos) && !reload;
+							incremental = line_index_range.Contains(filepos) && !reload;
 							if (incremental)
 							{
 								// Reduce the byte range so we only scan in the direction we need
-								if (filepos >= last_filepos)
-								{
-									bwd_range = 0;
-									fwd_range = Maths.Clamp(half_range - (line_index_range.m_end - filepos), 0, fileend - filepos);
-									scan_from = line_index_range.m_end;
-								}
-								else
-								{
-									bwd_range = Maths.Clamp(half_range - (filepos - line_index_range.m_begin), 0, filepos - 0);
-									fwd_range = 0;
-									scan_from = line_index_range.m_begin;
-								}
+								scan_from = filepos >= last_filepos
+									? (rng.m_begin = line_starts_range.m_end)
+									: (rng.m_end = line_starts_range.m_begin);
 							}
 							
 							// Scan backward from 'scan_from' for 'bwd_range' bytes,
 							// then scan forward from 'scan_from' for 'fwd_range' bytes.
-							if (!BuildCancelled(build_issue)) FindLines(file, scan_from, fileend, true , bwd_range, line_index, encoding, row_delim, filters, ignore_blanks, buf, build_issue);
-							if (!BuildCancelled(build_issue)) FindLines(file, scan_from, fileend, false, fwd_range, line_index, encoding, row_delim, filters, ignore_blanks, buf, build_issue);
+							if (!BuildCancelled(build_issue)) FindLines(file, scan_from, fileend, true , scan_from - rng.m_begin, line_index, encoding, row_delim, filters, ignore_blanks, buf, build_issue);
+							if (!BuildCancelled(build_issue)) FindLines(file, scan_from, fileend, false, rng.m_end - scan_from  , line_index, encoding, row_delim, filters, ignore_blanks, buf, build_issue);
 						}
 						
 						// Marshal the results back to the main thread
@@ -339,7 +346,7 @@ namespace RyLogViewer
 		/// <param name="ignore_blanks">True to ignore blank lines in the output</param>
 		/// <param name="buf">A buffer to use when buffering file data</param>
 		/// <param name="build_issue">The build issue number assign to this thread</param>
-		private static void FindLines(FileStream file, long filepos, long fileend, bool backward, long length, List<Range> line_index, Encoding encoding, byte[] row_delim, IEnumerable<Filter> filters, bool ignore_blanks, byte[] buf, int build_issue)
+		private static void FindLines(FileStream file, long filepos, long fileend, bool backward, long length, List<Range> line_index, Encoding encoding, byte[] row_delim, List<Filter> filters, bool ignore_blanks, byte[] buf, int build_issue)
 		{
 			int initial_count = line_index.Count;
 			

@@ -30,6 +30,7 @@ namespace RyLogViewer
 		private float                   m_small_change;   // Normalised small change amount
 		private long                    m_total_range;    // The total range size
 		private double                  m_frac;           // The normalised position of the thumb
+		private double                  m_thumbsize;      // The thumb size as a fraction of the total range
 		private bool                    m_dragging;       // True while dragging
 
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("TrackColor")]
@@ -73,10 +74,10 @@ namespace RyLogViewer
 			set { Fraction = Maths.Ratio(Minimum, value, Maximum); RaiseValueChanged(); Invalidate(); }
 		}
 
-		/// <summary>Return the current slider position in reference to TotalRange</summary>
-		public long RangePos
+		/// <summary>Return the current centre position of the slider relative to TotalRange.</summary>
+		public long RangeCentrePos
 		{
-			get { return (long)(TotalRange * Fraction); }
+			get { return (long)(TotalRange * Maths.Lerp(ThumbSize*0.5, 1.0 - ThumbSize*0.5, Fraction)); }
 		}
 
 		/// <summary>The ranges to draw on the scroll bar</summary>
@@ -100,10 +101,17 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>The size of the thumb in control space</summary>
-		public int ThumbSize
+		/// <summary>The thumb size as a fraction of the total range</summary>
+		public double ThumbSize
 		{
-			get; set;// { return (int)(RangeRatio * Height); }
+			get { return m_thumbsize; }
+			set { m_thumbsize = Maths.Clamp(value, 0.05, 1.0); Invalidate(); }
+		}
+
+		/// <summary>The size of the thumb in control space</summary>
+		private int ThumbSizeCS
+		{
+			get { return (int)(m_thumbsize * Height); }
 		}
 
 		/// <summary>The normalised position of the thumb</summary>
@@ -162,7 +170,7 @@ namespace RyLogViewer
 			var bounds = e.ClipRectangle;
 			
 			const float rad = 4f;
-			int thm_hheight = ThumbSize / 2;
+			int thm_hheight = ThumbSizeCS / 2;
 			int thm_centre  = (int)Maths.Lerp(thm_hheight, Height - thm_hheight, (float)Fraction);
 			
 			// Rectum?
@@ -175,15 +183,6 @@ namespace RyLogViewer
 				r.m_rect   = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,height));
 				r.m_rect   .Inflate(-2,0);
 			}
-			//int thm_top     = (int)(Maths.Ratio(0, m_sub_range.m_begin, TotalRange) * Height);
-			//int thm_height  = (int)(Maths.Ratio(0, m_sub_range.Count, TotalRange) * Height);
-			//int vis_top     = (int)(Maths.Ratio(0, m_visible_range.m_begin, TotalRange) * Height);
-			//int vis_height  = (int)(Maths.Ratio(0, m_visible_range.Count, TotalRange) * Height);
-			//int sel_top     = (int)(Maths.Ratio(0, m_selected_range.m_begin, TotalRange) * Height);
-			//int sel_height  = (int)(Maths.Ratio(0, m_selected_range.Count, TotalRange) * Height);
-			//var thm_rect  = new Rectangle(bounds.X, bounds.Y + thm_top, bounds.Width, Math.Max(1,thm_height)); thm_rect.Inflate(-2,0);
-			//var vis_rect  = new Rectangle(bounds.X, bounds.Y + vis_top, bounds.Width, Math.Max(1,vis_height)); vis_rect.Inflate(-2,0);
-			//var sel_rect  = new Rectangle(bounds.X, bounds.Y + sel_top, bounds.Width, Math.Max(1,sel_height)); sel_rect.Inflate(-2,0);
 			
 			Color c0,c1;
 			Point pt0 = new Point(bounds.Left, 0);
@@ -223,7 +222,7 @@ namespace RyLogViewer
 		/// <summary>Set the thumb position given a control space Y value</summary>
 		private void ScrollThumbPos(int y)
 		{
-			int h = ThumbSize / 2;
+			int h = ThumbSizeCS / 2;
 			y = Maths.Clamp(y, h, Height - h);
 			Fraction = Maths.Ratio(h, y, Height - h);
 			RaiseScrollEvent();

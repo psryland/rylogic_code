@@ -115,7 +115,7 @@ namespace RyLogViewer
 				{
 					// Update on ScrollEnd not value changed, since
 					// UpdateUI() sets Value when the build is complete.
-					BuildLineIndex(m_scroll_file.RangePos, false);
+					BuildLineIndex(m_scroll_file.RangeCentrePos, false);
 				};
 
 			// Status
@@ -545,6 +545,40 @@ namespace RyLogViewer
 			m_grid.FirstDisplayedScrollingRowIndex = Math.Max(0, m_grid.RowCount - displayed_rows);
 		}
 
+		/// <summary>Helper for setting the grid row count without event handlers being fired</summary>
+		private void SetGridRowCount(int count, int row_delta)
+		{
+			// Ensure the grid has the correct number of rows
+			bool auto_scroll_tail = AutoScrollTail;
+			if (m_grid.RowCount != count)
+			{
+				// Unhook handlers that get called when the RowCount changes
+				m_grid.SelectionChanged -= GridSelectionChanged;
+				m_grid.CellValueNeeded -= CellValueNeeded;
+						
+				// Preserve the selected row index and first visible row index (if possible)
+				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
+				int selected = SelectedRow;
+				m_grid.SelectRow(-1);
+				
+				// Reset to zero first, this is more efficient for some reason
+				m_grid.RowCount = 0;
+				if (count != 0)
+				{
+					m_grid.RowCount = count;
+					
+					// Restore the selected row, and the first visible row
+					m_grid.SelectRow(auto_scroll_tail ? m_grid.RowCount - 1 : selected + row_delta);
+					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
+				}
+				
+				// Restore handlers
+				m_grid.CellValueNeeded += CellValueNeeded;
+				m_grid.SelectionChanged += GridSelectionChanged;
+			}
+			if (auto_scroll_tail) ShowLastRow();
+		}
+		
 		/// <summary>
 		/// Apply settings throughout the app.
 		/// This method is called on startup to apply initial settings and
@@ -619,42 +653,16 @@ namespace RyLogViewer
 					Line line = ReadLine(m_line_index.Count/2);
 					m_grid.ColumnHeadersVisible = line.Column.Count > 1;
 					m_grid.ColumnCount = line.Column.Count;
-				
+					
 					// Ensure the grid has the correct number of rows
-					bool auto_scroll_tail = AutoScrollTail;
-					if (m_grid.RowCount != m_line_index.Count)
-					{
-						// Unhook handlers that get called when the RowCount changes
-						m_grid.SelectionChanged -= GridSelectionChanged;
-						m_grid.CellValueNeeded -= CellValueNeeded;
-						
-						// Preserve the selected row index and first visible row index (if possible)
-						int selected = SelectedRow;
-						int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
-						m_grid.CurrentCell = null;
-						m_grid.ClearSelection();
-						
-						// Reset to zero first, this is more efficient for some reason
-						//m_grid.RowCount = 0;
-						m_grid.RowCount = m_line_index.Count;
-						
-						// Restore the selected row, and the first visible row
-						int row = m_grid.SelectRow(auto_scroll_tail ? m_grid.RowCount - 1 : selected + row_delta);
-						if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
-						if (row != -1) m_grid.CurrentCell = m_grid[0, row];
-						
-						// Restore handlers
-						m_grid.CellValueNeeded += CellValueNeeded;
-						m_grid.SelectionChanged += GridSelectionChanged;
-					}
-					if (auto_scroll_tail) ShowLastRow();
-				
+					SetGridRowCount(m_line_index.Count, row_delta);
+					
 					// Measure each column's preferred width
 					int total_width = 0;
 					int[] col_widths = new int[m_grid.ColumnCount];
 					foreach (DataGridViewColumn col in m_grid.Columns)
 						total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
-				
+					
 					// Resize columns. If the total width is less than the control width use the control width instead
 					if (total_width < m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
 					{
@@ -671,8 +679,8 @@ namespace RyLogViewer
 				else
 				{
 					m_grid.ColumnHeadersVisible = false;
-					m_grid.RowCount = 0;
-					m_grid.ColumnCount = 0;
+					m_grid.ColumnCount = 1;
+					SetGridRowCount(0, 0);
 				}
 			}
 			
@@ -742,13 +750,14 @@ namespace RyLogViewer
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
-			if (m_line_index.Count != 0)
+			Range range = BufferRange(m_filepos, m_fileend, m_settings.FileBufSize / 2);
+			if (range.Count < m_fileend)
 			{
-				Range file_range = LineIndexRange;
-				m_scroll_file.Visible    = file_range.Count < m_fileend;
+				m_scroll_file.Visible    = true;
 				m_scroll_file.TotalRange = m_fileend;
-				m_scroll_file.Fraction   = (double)m_filepos / m_fileend;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange].Range      = file_range;
+				m_scroll_file.Fraction   = (m_filepos - range.Count*0.5) / (m_fileend - range.Count);
+				m_scroll_file.ThumbSize  = (double)range.Count / m_fileend;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange].Range      = range;
 				m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Range = DisplayedRowsRange;
 				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange].Range  = SelectedRowRange;
 			}

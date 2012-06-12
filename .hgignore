@@ -10,6 +10,7 @@ syntax: glob
 *.db
 *.pidb
 *.ipch
+*.ncb
 *.opensdf
 *.sdf
 *.suo
@@ -22,6 +23,7 @@ RylogicEnv.cmd
 ResEdit.layout
 W.TOOLS HAS THE ARAXIS COMPARES FOR SDK
 obj/
+obj2010/
 bin/
 .svn/
 media/
