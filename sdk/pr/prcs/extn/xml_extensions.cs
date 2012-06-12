@@ -6,8 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Xml.Linq;
-using NUnit.Framework;
-using pr.util;
+using pr.extn;
 
 namespace pr.extn
 {
@@ -119,8 +118,14 @@ namespace pr.extn
 			return node;
 		}
 	}
-	
-	/// <summary>Unit tests for xml extensions</summary>
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using pr.util;
+
 	[TestFixture] internal partial class UnitTests
 	{
 		private enum EEnum { Dog }
@@ -213,3 +218,4 @@ namespace pr.extn
 		}
 	}
 }
+#endif

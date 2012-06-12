@@ -47,12 +47,14 @@ namespace RyLogViewer
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			
 			SetupGeneralTab();
+			SetupLogViewTab();
 			SetupHighlightTab();
 			SetupFilterTab();
 			
 			// Save on close
 			Closed += (s,a) =>
 			{
+				Focus(); // grab focus to ensure all controls persist their state
 				m_settings.HighlightPatterns = Highlight.Export(m_highlights);
 				m_settings.FilterPatterns    = Filter   .Export(m_filters);
 				m_settings.Save();
@@ -65,6 +67,8 @@ namespace RyLogViewer
 		/// <summary>Hook up events for the general tab</summary>
 		private void SetupGeneralTab()
 		{
+			string tt;
+
 			// Load last file on startup
 			m_check_load_last_file.ToolTip(m_tt, "Automatically load the last loaded file on startup");
 			m_check_load_last_file.CheckedChanged += (s,a)=>
@@ -90,7 +94,9 @@ namespace RyLogViewer
 				};
 
 			// Line endings
-			m_edit_line_ends.ToolTip(m_tt, "Set the line ending characters to expect in the log data.\r\nUse 'CR' for carriage return, 'LF' for line feed.\r\nLeave blank to auto detect");
+			tt = "Set the line ending characters to expect in the log data.\r\nUse 'CR' for carriage return, 'LF' for line feed.\r\nLeave blank to auto detect";
+			m_lbl_line_ends.ToolTip(m_tt, tt);
+			m_edit_line_ends.ToolTip(m_tt, tt);
 			m_edit_line_ends.Text = m_settings.RowDelimiter;
 			m_edit_line_ends.TextChanged += (s,a)=>
 			{
@@ -107,7 +113,16 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
-			// Load at end of file
+			// Include blank lines
+			m_check_ignore_blank_lines.ToolTip(m_tt, "Ignore blank lines when loading the log file");
+			m_check_ignore_blank_lines.Checked = m_settings.IgnoreBlankLines;
+			m_check_ignore_blank_lines.CheckedChanged += (s,a)=>
+				{
+					m_settings.IgnoreBlankLines = m_check_ignore_blank_lines.Checked;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+			
+			// Open at end
 			m_check_open_at_end.ToolTip(m_tt, "If checked, opens files showing the end of the file.\r\nIf unchecked opens files at the beginning");
 			m_check_open_at_end.Checked = m_settings.OpenAtEnd;
 			m_check_open_at_end.CheckedChanged += (s,a)=>
@@ -115,7 +130,33 @@ namespace RyLogViewer
 					m_settings.OpenAtEnd = m_check_open_at_end.Checked;
 					WhatsChanged |= EWhatsChanged.FileOpenOptions;
 				};
+			
+			// File changes additive
+			m_check_file_changes_additive.ToolTip(m_tt, "Assume all changes to the watched file are additive only\r\nIf checked, reloading of changed files will not invalidate existing cached data");
+			m_check_file_changes_additive.Checked = m_settings.FileChangesAdditive;
+			m_check_file_changes_additive.CheckedChanged += (s,a)=>
+				{
+					m_settings.FileChangesAdditive = m_check_file_changes_additive.Checked;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
 
+
+			// File buf size
+			m_spinner_file_buf_size.ToolTip(m_tt, "The size (in KB) of the cached portion of the log file");
+			m_spinner_file_buf_size.Minimum = 1;
+			m_spinner_file_buf_size.Maximum = 100000;
+			m_spinner_file_buf_size.Value = Maths.Clamp(m_settings.FileBufSize / 1024, (int)m_spinner_file_buf_size.Minimum, (int)m_spinner_file_buf_size.Maximum);
+			m_spinner_file_buf_size.ValueChanged += (s,a)=>
+				{
+					m_settings.FileBufSize = (int)m_spinner_file_buf_size.Value * 1024;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+
+		}
+		
+		/// <summary>Hook up events for the log view tab</summary>
+		private void SetupLogViewTab()
+		{
 			// Selection colour
 			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view");
 			m_lbl_selection_example.MouseClick += (s,a)=>
@@ -154,17 +195,6 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 			
-			// Line count
-			m_spinner_line_count.ToolTip(m_tt, "The maximum number of lines to read from a log file (read from the end of the file)");
-			m_spinner_line_count.Minimum = 1;
-			m_spinner_line_count.Maximum = 5000;
-			m_spinner_line_count.Value = Maths.Clamp(m_settings.LineCount, (int)m_spinner_line_count.Minimum, (int)m_spinner_line_count.Maximum);
-			m_spinner_line_count.ValueChanged += (s,a)=>
-				{
-					m_settings.LineCount = (int)m_spinner_line_count.Value;
-					WhatsChanged |= EWhatsChanged.FileParsing;
-				};
-			
 			// Row height
 			m_spinner_row_height.ToolTip(m_tt, "The height of each row in the log view");
 			m_spinner_row_height.Minimum = 1;
@@ -185,6 +215,21 @@ namespace RyLogViewer
 				{
 					m_settings.FileScrollWidth = (int)m_spinner_file_scroll_width.Value;
 					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+			
+			// Font 
+			m_text_font.ToolTip(m_tt, "The font used to display the log file data");
+			m_text_font.Text = string.Format("{0}, {1}pt" ,m_settings.Font.Name ,m_settings.Font.Size);
+			m_text_font.Font = m_settings.Font;
+			
+			// Font button
+			m_btn_change_font.ToolTip(m_tt, "Change the log view font");
+			m_btn_change_font.Click += (s,a)=>
+				{
+					var dg = new FontDialog{Font = m_settings.Font};
+					if (dg.ShowDialog(this) != DialogResult.OK) return;
+					m_text_font.Font = dg.Font;
+					m_settings.Font = dg.Font;
 				};
 		}
 		

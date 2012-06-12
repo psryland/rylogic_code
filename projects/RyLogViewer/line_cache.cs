@@ -27,8 +27,8 @@ namespace RyLogViewer
 				}
 			}
 			
-			/// <summary>The line in the file that is cached in this object</summary>
-			public int Index;
+			/// <summary>The file offset for the start of this cached line</summary>
+			public long LineStartAddr;
 			
 			/// <summary>The string for the whole row</summary>
 			public string RowText;
@@ -43,7 +43,7 @@ namespace RyLogViewer
 			
 			public Line()
 			{
-				Index = -1;
+				LineStartAddr = -1;
 				Column = new List<Col>();
 			}
 		}
@@ -53,23 +53,28 @@ namespace RyLogViewer
 		/// <summary>Initialise the line cache</summary>
 		private void InitCache()
 		{
-			m_line_cache.Capacity = 500;
+			m_line_cache.Capacity = 1000;
 			for (int i = 0; i != m_line_cache.Capacity; ++i)
 				m_line_cache.Add(new Line());
 		}
 
+		/// <summary>Returns the line data for the line in the m_line_index at position 'row'</summary>
+		private Line ReadLine(int row)
+		{
+			return ReadLine(m_line_index[row]);
+		}
+
 		/// <summary>Access info about a line (cached)</summary>
-		private Line CacheLine(int index)
+		private Line ReadLine(Range rng)
 		{
 			Debug.Assert(FileOpen);
 			
 			// Check if the line is already cached
-			Line line = m_line_cache[index % m_line_cache.Count];
-			if (line.Index == index) return line;
+			Line line = m_line_cache[(int)(rng.m_begin % m_line_cache.Count)];
+			if (line.LineStartAddr == rng.m_begin) return line;
 			
-			// If not, read it from file and perform highlighting tests on it
-			Range rng = m_line_index[index];
-
+			// If not, read it from file and perform highlighting and filtering tests on it
+			
 			// Read the whole line into m_buf
 			m_file.Seek(rng.m_begin, SeekOrigin.Begin);
 			m_line_buf = rng.Count <= m_line_buf.Length ? m_line_buf : new byte[rng.Count];
@@ -97,7 +102,7 @@ namespace RyLogViewer
 				Highlight hl = m_highlights.FirstOrDefault(h => h.IsMatch(line.RowText));
 				line.Column.Add(new Line.Col(line.RowText, hl));
 			}
-			line.Index = index;
+			line.LineStartAddr = rng.m_begin;
 			return line;
 		}
 
@@ -105,7 +110,7 @@ namespace RyLogViewer
 		private void InvalidateCache()
 		{
 			foreach (var line in m_line_cache)
-				line.Index = -1;
+				line.LineStartAddr = -1;
 		}
 	}
 }

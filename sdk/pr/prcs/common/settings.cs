@@ -6,8 +6,9 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Xml;
-using NUnit.Framework;
+using pr.common;
 using pr.util;
+using pr.extn;
 
 // /// <summary>Example use of settings</summary>
 // public sealed class Settings :SettingsBase
@@ -79,37 +80,45 @@ namespace pr.common
 			get { return Path.Combine(AppDataDirectory, "settings.xml"); }
 		}
 		
+		/// <summary>Indexer for accessing settings</summary>
+		protected object this[string key]
+		{
+			get 
+			{
+				int idx = Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+				if (idx >= 0) return Data[idx].Value;
+				idx = DefaultData.Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+				if (idx >= 0) return DefaultData.Data[idx].Value;
+				throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
+					"This is probably because there is no default value set "+
+					"in the constructor of the derived settings class");
+			}
+			set
+			{
+				// Key not in the data yet? Must be initial value from startup
+				int idx = Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+				if (idx < 0) { Data.Insert(~idx, new Pair{Key = key, Value = value}); return; }
+				
+				object old_value = Data[idx].Value;
+				if (Equals(old_value, value)) return; // If the values are the same, don't raise 'changing' events
+				
+				var args = new SettingsChangingEventArgs(key, old_value, value, false);
+				if (SettingChanging != null && key != version_key) SettingChanging(this, args);
+				if (!args.Cancel) Data[idx].Value = value;
+				if (SettingChanged != null && key != version_key) SettingChanged(this, new SettingChangedEventArgs(key, old_value, value));
+			}
+		}
+
 		/// <summary>Read a settings value</summary>
 		protected T get<T>(string key)
 		{
-			Pair pair = Data.Find(x => x.Key == key);
-			if (pair != null) return (T)pair.Value;
-			pair = DefaultData.Data.Find(x => x.Key == key);
-			if (pair != null) return (T)pair.Value;
-			throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
-				"This is probably because there is no default value set "+
-				"in the constructor of the derived settings class");
+			return (T)this[key];
 		}
 
 		/// <summary>Write a settings value</summary>
 		protected void set<T>(string key, T new_value)
 		{
-			// Key not in the data yet, must be initial value from startup
-			Pair pair = Data.Find(x => x.Key == key);
-			if (pair == null)
-			{
-				Data.Add(new Pair{Key = key, Value = new_value});
-				return;
-			}
-			
-			// If the values are the same, don't raise 'changing' events
-			if (Equals(pair.Value, new_value)) return; // same value
-			
-			T old_value = (T)pair.Value;
-			var args = new SettingsChangingEventArgs(key, old_value, new_value, false);
-			if (SettingChanging != null && key != version_key) SettingChanging(this, args);
-			if (!args.Cancel) pair.Value = new_value;
-			if (SettingChanged != null && key != version_key) SettingChanged(this, new SettingChangedEventArgs(key, old_value, new_value));
+			this[key] = new_value;
 		}
 		
 		/// <summary>An event raised when a settings is about to change value</summary>
@@ -169,7 +178,10 @@ namespace pr.common
 			
 			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>));
 			using (FileStream fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read))
+			{
 				Data = (List<Pair>)ser.ReadObject(fs);
+				Data.Sort((lhs,rhs) => string.CompareOrdinal(lhs.Key, rhs.Key));
+			}
 			
 			// Check the version of the settings
 			string version = get<string>(version_key);
@@ -219,11 +231,15 @@ namespace pr.common
 		/// <summary>Called when loading settings from an earlier version</summary>
 		public virtual void Upgrade() {}
 	}
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
 	
-	/// <summary>String extension unit tests</summary>
-	[TestFixture] internal static class UnitTests
+	[TestFixture] internal static partial class UnitTests
 	{
-		/// <summary>Example use of settings</summary>
 		private sealed class Settings :SettingsBase
 		{
 			public static readonly Settings Default = new Settings(ELoadOptions.Defaults);
@@ -244,13 +260,13 @@ namespace pr.common
 			}
 		}
 		
-		[Test] public static void TestEventExtensions()
+		[Test] public static void TestSettings()
 		{
 			Settings s = new Settings();
 			Assert.AreEqual(Settings.Default.Str, s.Str);
 			Assert.AreEqual(Settings.Default.Int, s.Int);
 			s.Save();
-
 		}
 	}
 }
+#endif

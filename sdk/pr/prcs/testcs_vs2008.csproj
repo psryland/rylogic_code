@@ -134,9 +134,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="prcs.csproj">
+    <ProjectReference Include="prcs_vs2008.csproj">
       <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>prcs</Name>
+      <Name>prcs_vs2008</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

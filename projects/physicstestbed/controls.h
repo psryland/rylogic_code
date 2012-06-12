@@ -4,7 +4,7 @@
 #pragma once
 
 #include "PhysicsTestbed/Forwards.h"
-#include "pr/maths/averager.h"
+#include "pr/maths/stat.h"
 #include "afxcmn.h"
 #include "afxwin.h"
 

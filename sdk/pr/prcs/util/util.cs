@@ -14,7 +14,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
-using NUnit.Framework;
+using pr.util;
 
 namespace pr.util
 {
@@ -129,29 +129,34 @@ namespace pr.util
 		}
 	
 		/// <summary>Return an assembly attribute</summary>
-		public static T GetAssemblyAttribute<T>(Assembly ass = null)
+		public static T GetAssemblyAttribute<T>(Assembly ass)
 		{
 			if (ass == null) ass = Assembly.GetEntryAssembly();
+			if (ass == null) ass = Assembly.GetExecutingAssembly();
 			object[] attr = ass.GetCustomAttributes(typeof(T), false);
 			if (attr.Length == 0) throw new ApplicationException("Assembly does not have attribute "+typeof(T).Name);
 			return (T)(attr[0]);
 		}
-		
+		public static T GetAssemblyAttribute<T>() { return GetAssemblyAttribute<T>(null); }
+
 		/// <summary>Return the version number for an assembly</summary>
-		public static Version AssemblyVersion(Assembly ass = null)
+		public static Version AssemblyVersion(Assembly ass)
 		{
 			if (ass == null) ass = Assembly.GetEntryAssembly();
+			if (ass == null) ass = Assembly.GetExecutingAssembly();
 			return ass.GetName().Version;
 		}
-
+		public static Version AssemblyVersion() { return AssemblyVersion(null); }
+		
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
-		public static DateTime AssemblyTimestamp(Assembly ass = null)
+		public static DateTime AssemblyTimestamp(Assembly ass)
 		{
 			const int PeHeaderOffset = 60;
 			const int LinkerTimestampOffset = 8;
 
 			byte[] b = new byte[2048];
 			if (ass == null) ass = Assembly.GetEntryAssembly();
+			if (ass == null) ass = Assembly.GetExecutingAssembly();
 			using (Stream s = new FileStream(ass.Location, FileMode.Open, FileAccess.Read))
 				s.Read(b, 0, 2048);
 
@@ -160,7 +165,8 @@ namespace pr.util
 			ts = ts.AddHours(TimeZone.CurrentTimeZone.GetUtcOffset(ts).Hours);
 			return ts;
 		}
-
+		public static DateTime AssemblyTimestamp() { return AssemblyTimestamp(null); }
+		
 		/// <summary>Convert a unix time (i.e. seconds past 1/1/1970) to a date time</summary>
 		public static DateTime UnixTimeToDateTime(long milliseconds)
 		{
@@ -449,8 +455,13 @@ namespace pr.util
 			return to;
 		}
 	}
+}
 
-	/// <summary>Utils unit tests</summary>
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestUtils()
@@ -475,3 +486,4 @@ namespace pr.util
 		}
 	}
 }
+#endif

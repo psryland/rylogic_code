@@ -8,6 +8,7 @@
 #define PR_PHYSICS_SHAPE_ARRAY_H
 
 #include "pr/physics/types/forward.h"
+#include "pr/physics/shape/shape.h"
 
 namespace pr
 {

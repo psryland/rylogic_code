@@ -76,7 +76,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\x86\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;PR_UNITTESTS</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <CodeAnalysisLogFile>bin\Debug\pr.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
@@ -224,6 +224,7 @@
     <Compile Include="gui\tree_grid_view.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="gui\util.cs" />
     <Compile Include="gui\view3d.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -265,10 +266,10 @@
     <Compile Include="util\log.cs" />
     <Compile Include="util\mouse_keyboard_hook.cs" />
     <Compile Include="util\profile.cs" />
-    <Compile Include="util\progress_stream.cs" />
-    <Compile Include="util\stream_wrapper.cs" />
+    <Compile Include="stream\progress_stream.cs" />
+    <Compile Include="stream\stream_wrapper.cs" />
     <Compile Include="util\string_transform.cs" />
-    <Compile Include="util\uncloseable_stream.cs">
+    <Compile Include="stream\uncloseable_stream.cs">
     </Compile>
     <Compile Include="util\ref.cs" />
     <Compile Include="undo\undo.cs" />

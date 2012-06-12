@@ -5,9 +5,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Reflection;
-using NUnit.Framework;
-using DescriptionAttribute=System.ComponentModel.DescriptionAttribute;
+using pr.attrib;
 
 namespace pr.attrib
 {
@@ -115,9 +115,15 @@ namespace pr.attrib
 			return GetStrings(type, false);
 		}
 	}
+}
 
-	/// <summary>String attribute unit test</summary>
-	[TestFixture] internal static class UnitTests
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using DescriptionAttribute=System.ComponentModel.DescriptionAttribute;
+
+	[TestFixture] internal static partial class UnitTests
 	{
 		private enum EType
 		{
@@ -156,3 +162,4 @@ namespace pr.attrib
 		}
 	}
 }
+#endif

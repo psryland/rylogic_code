@@ -117,12 +117,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs.csproj">
-      <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>prcs</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Camera.ico" />
     <Content Include="install_screen_saver.cmd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

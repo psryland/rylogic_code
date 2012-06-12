@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
 			this.m_toolstrip = new System.Windows.Forms.ToolStrip();
 			this.m_btn_open_log = new System.Windows.Forms.ToolStripButton();
@@ -37,6 +38,7 @@
 			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
@@ -73,15 +75,20 @@
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
 			this.m_status_filesize = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_status_line = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_line_end = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_encoding = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_spring = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_message = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
-			this.m_grid = new System.Windows.Forms.DataGridView();
-			this.m_scroll_file = new RyLogViewer.FileScroll();
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
+			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_cmenu_grid = new System.Windows.Forms.ContextMenuStrip(this.components);
+			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -89,8 +96,9 @@
 			this.m_toolstrip_cont.ContentPanel.SuspendLayout();
 			this.m_toolstrip_cont.TopToolStripPanel.SuspendLayout();
 			this.m_toolstrip_cont.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.m_table.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
+			this.m_cmenu_grid.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_toolstrip
@@ -105,10 +113,11 @@
             this.m_btn_filters,
             this.m_btn_options,
             this.toolStripSeparator1,
+            this.m_btn_jump_to_end,
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(192, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(220, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -168,15 +177,25 @@
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
 			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
 			// 
+			// m_btn_jump_to_end
+			// 
+			this.m_btn_jump_to_end.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_jump_to_end.Image = global::RyLogViewer.Properties.Resources.downred;
+			this.m_btn_jump_to_end.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_jump_to_end.Name = "m_btn_jump_to_end";
+			this.m_btn_jump_to_end.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_jump_to_end.Text = "File End";
+			this.m_btn_jump_to_end.ToolTipText = "Jump to the file end";
+			// 
 			// m_btn_tail
 			// 
 			this.m_btn_tail.CheckOnClick = true;
 			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.downred;
-			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.Eyeball;
+			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_tail.Name = "m_btn_tail";
 			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_tail.Text = "Tail";
+			this.m_btn_tail.Text = "Live Update";
 			// 
 			// m_menu
 			// 
@@ -200,6 +219,8 @@
             this.m_menu_file_open,
             this.m_menu_file_close,
             this.m_sep1,
+            this.m_menu_file_export,
+            this.toolStripSeparator5,
             this.m_menu_file_recent,
             this.m_sep2,
             this.m_menu_file_exit});
@@ -424,7 +445,6 @@
 			this.m_status.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_status.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_status_filesize,
-            this.m_status_line,
             this.m_status_line_end,
             this.m_status_encoding,
             this.m_status_spring,
@@ -444,16 +464,6 @@
 			this.m_status_filesize.Size = new System.Drawing.Size(128, 19);
 			this.m_status_filesize.Text = "Size: 2147483647 bytes";
 			this.m_status_filesize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
-			// m_status_line
-			// 
-			this.m_status_line.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
-			this.m_status_line.Name = "m_status_line";
-			this.m_status_line.Size = new System.Drawing.Size(74, 19);
-			this.m_status_line.Text = "Line: 1/1000";
-			this.m_status_line.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// m_status_line_end
 			// 
@@ -479,7 +489,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(236, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(310, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -521,6 +531,21 @@
 			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_menu);
 			this.m_toolstrip_cont.TopToolStripPanel.Controls.Add(this.m_toolstrip);
 			// 
+			// m_table
+			// 
+			this.m_table.ColumnCount = 2;
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+			this.m_table.Controls.Add(this.m_grid, 0, 0);
+			this.m_table.Controls.Add(this.m_scroll_file, 1, 0);
+			this.m_table.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_table.Location = new System.Drawing.Point(3, 3);
+			this.m_table.Name = "m_table";
+			this.m_table.RowCount = 1;
+			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table.Size = new System.Drawing.Size(587, 410);
+			this.m_table.TabIndex = 5;
+			// 
 			// m_grid
 			// 
 			this.m_grid.AllowUserToAddRows = false;
@@ -531,42 +556,70 @@
 			this.m_grid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_grid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid.ContextMenuStrip = this.m_cmenu_grid;
 			this.m_grid.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
-			this.m_grid.Location = new System.Drawing.Point(25, 3);
+			this.m_grid.Location = new System.Drawing.Point(3, 3);
 			this.m_grid.Name = "m_grid";
 			this.m_grid.ReadOnly = true;
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(559, 404);
+			this.m_grid.Size = new System.Drawing.Size(563, 404);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
+			// 
+			// m_cmenu_grid
+			// 
+			this.m_cmenu_grid.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_cmenu_copy,
+            this.toolStripSeparator4,
+            this.m_cmenu_select_all});
+			this.m_cmenu_grid.Name = "m_cmenu_grid";
+			this.m_cmenu_grid.Size = new System.Drawing.Size(123, 54);
+			// 
+			// m_cmenu_copy
+			// 
+			this.m_cmenu_copy.Name = "m_cmenu_copy";
+			this.m_cmenu_copy.Size = new System.Drawing.Size(122, 22);
+			this.m_cmenu_copy.Text = "&Copy";
+			// 
+			// toolStripSeparator4
+			// 
+			this.toolStripSeparator4.Name = "toolStripSeparator4";
+			this.toolStripSeparator4.Size = new System.Drawing.Size(119, 6);
+			// 
+			// m_cmenu_select_all
+			// 
+			this.m_cmenu_select_all.Name = "m_cmenu_select_all";
+			this.m_cmenu_select_all.Size = new System.Drawing.Size(122, 22);
+			this.m_cmenu_select_all.Text = "Select &All";
 			// 
 			// m_scroll_file
 			// 
 			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_scroll_file.Location = new System.Drawing.Point(0, 0);
-			this.m_scroll_file.Maximum = 1000;
-			this.m_scroll_file.MinimumSize = new System.Drawing.Size(22, 22);
+			this.m_scroll_file.LargeChange = ((long)(1));
+			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
+			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
+			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
+			this.m_scroll_file.MinThumbSize = 50;
 			this.m_scroll_file.Name = "m_scroll_file";
-			this.m_scroll_file.Size = new System.Drawing.Size(22, 410);
+			this.m_scroll_file.Size = new System.Drawing.Size(18, 410);
+			this.m_scroll_file.SmallChange = ((long)(1));
 			this.m_scroll_file.TabIndex = 4;
+			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
+			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
-			// m_table
+			// toolStripSeparator5
 			// 
-			this.m_table.ColumnCount = 2;
-			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
-			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 431F));
-			this.m_table.Controls.Add(this.m_scroll_file, 0, 0);
-			this.m_table.Controls.Add(this.m_grid, 1, 0);
-			this.m_table.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_table.Location = new System.Drawing.Point(3, 3);
-			this.m_table.Name = "m_table";
-			this.m_table.RowCount = 1;
-			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.m_table.Size = new System.Drawing.Size(587, 410);
-			this.m_table.TabIndex = 5;
+			this.toolStripSeparator5.Name = "toolStripSeparator5";
+			this.toolStripSeparator5.Size = new System.Drawing.Size(187, 6);
+			// 
+			// m_menu_file_export
+			// 
+			this.m_menu_file_export.Name = "m_menu_file_export";
+			this.m_menu_file_export.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_export.Text = "&Export...";
 			// 
 			// Main
 			// 
@@ -576,6 +629,7 @@
 			this.ClientSize = new System.Drawing.Size(593, 495);
 			this.Controls.Add(this.m_toolstrip_cont);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.KeyPreview = true;
 			this.MainMenuStrip = this.m_menu;
 			this.MinimumSize = new System.Drawing.Size(200, 220);
 			this.Name = "Main";
@@ -593,8 +647,9 @@
 			this.m_toolstrip_cont.TopToolStripPanel.PerformLayout();
 			this.m_toolstrip_cont.ResumeLayout(false);
 			this.m_toolstrip_cont.PerformLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.m_table.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
+			this.m_cmenu_grid.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -611,7 +666,7 @@
 		private System.Windows.Forms.StatusStrip m_status;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_recent;
 		private System.Windows.Forms.ToolStripSeparator m_sep2;
-		private System.Windows.Forms.ToolStripButton m_btn_tail;
+		private System.Windows.Forms.ToolStripButton m_btn_jump_to_end;
 		private System.Windows.Forms.ToolStripContainer m_toolstrip_cont;
 		private System.Windows.Forms.DataGridView m_grid;
 		private System.Windows.Forms.ToolStripSeparator m_sep;
@@ -646,14 +701,20 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_ucs2_littleendian;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_spring;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_message;
-		private System.Windows.Forms.ToolStripStatusLabel m_status_line;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_line_end;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
 		private System.Windows.Forms.ToolStripButton m_btn_options;
-		private RyLogViewer.FileScroll m_scroll_file;
+		private RyLogViewer.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
+		private System.Windows.Forms.ToolStripButton m_btn_tail;
+		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_copy;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_select_all;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_export;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
 	}
 }
 

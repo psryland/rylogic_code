@@ -5,7 +5,7 @@
 
 using System;
 using System.Diagnostics;
-using NUnit.Framework;
+using pr.maths;
 
 namespace pr.maths
 {
@@ -205,8 +205,13 @@ namespace pr.maths
 			return  values.Length == 4 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z) && float.TryParse(values[3], out vec.w);
 		}
 	}
+}
 
-	/// <summary>Unit tests for Bit</summary>
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestV4()
@@ -215,3 +220,4 @@ namespace pr.maths
 		}
 	}
 }
+#endif

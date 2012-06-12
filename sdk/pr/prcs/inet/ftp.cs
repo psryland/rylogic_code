@@ -6,7 +6,8 @@ using System.Net.Sockets;
 using System.IO;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using NUnit.Framework;
+using pr.inet;
+using pr.stream;
 using pr.util;
 
 namespace pr.inet
@@ -624,9 +625,14 @@ namespace pr.inet
 				).ToString();
 		}
 	}
+}
 
-	/// <summary>Unit test</summary>
-	[TestFixture] internal static class UnitTests
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	
+	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestFTPS()
 		{
@@ -656,3 +662,4 @@ namespace pr.inet
 		}
 	}
 }
+#endif

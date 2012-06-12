@@ -1,11 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime;
 using System.Text;
-using NUnit.Framework;
+using pr.stream;
+using pr.util;
 
-namespace pr.util
+namespace pr.stream
 {
 	/// <summary>A wrapper for a stream that notifies of transfer progress</summary>
 	public class ProgressStream :StreamWrapper
@@ -136,7 +136,6 @@ namespace pr.util
 		/// <exception cref="T:System.NotSupportedException">The stream does not support reading.</exception>
 		/// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed.</exception>
 		/// <filterpriority>2</filterpriority>
-		[TargetedPatchingOptOut("Performance critical to inline across NGen image boundaries")]
 		public override int ReadByte()
 		{
 			int result = base.ReadByte();
@@ -144,11 +143,16 @@ namespace pr.util
 			RaiseProgressChanged();
 			return result;
 		}
-
 	}
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using System.Collections.Generic;
 
 	// ReSharper disable PossibleNullReferenceException, AccessToModifiedClosure
-	/// <summary>Unit tests</summary>
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestProgressStream()
@@ -203,3 +207,4 @@ namespace pr.util
 	}
 	// ReSharper restore PossibleNullReferenceException, AccessToModifiedClosure
 }
+#endif

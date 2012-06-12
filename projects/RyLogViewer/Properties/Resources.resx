@@ -120,6 +120,9 @@
   <data name="Exclude" xml:space="preserve">
     <value>Exclude</value>
   </data>
+  <data name="OpenLogFile" xml:space="preserve">
+    <value>Open a log file</value>
+  </data>
   <data name="ChangeForeColour" xml:space="preserve">
     <value>Change Foregroud Colour</value>
   </data>
@@ -127,21 +130,28 @@
   <data name="fileclose" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\fileclose.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="ShowOptionsDialog" xml:space="preserve">
+    <value>Show the options dialog</value>
+  </data>
   <data name="LoadPatternSetFailedMsg" xml:space="preserve">
     <value>Could not load pattern set {0}.
 Error: {1}</value>
   </data>
-  <data name="BinaryMatch" xml:space="preserve">
-    <value>Binary Match</value>
-  </data>
   <data name="ClickToModifyHighlight" xml:space="preserve">
     <value>Click here to modify highlight</value>
+  </data>
+  <data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\agt_action_success.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="bookmark_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\bookmark_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="my_documents" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\my_documents.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="CouldNotDeletePatternSetFileX" xml:space="preserve">
+    <value>Could not delete pattern set file {0}.
+Error: {1}</value>
   </data>
   <data name="ReadingXLineFromY" xml:space="preserve">
     <value>Reading the last {0} lines from {1}</value>
@@ -154,10 +164,6 @@ Error: {1}</value>
   </data>
   <data name="downred" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\downred.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="PositionXofYBytes" xml:space="preserve">
-    <value>Position: {0} / {1} bytes</value>
-    <comment>current position within the file</comment>
   </data>
   <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\agt_action_fail.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -172,8 +178,11 @@ Error: {0}</value>
   <data name="CreatePatternSetFailed" xml:space="preserve">
     <value>Add Pattern Set Failed</value>
   </data>
-  <data name="ScrollToTail" xml:space="preserve">
-    <value>Scroll to the last log file row, and automatically load changes</value>
+  <data name="ScrollToEnd" xml:space="preserve">
+    <value>Scroll to the last log file row</value>
+  </data>
+  <data name="FailedToLoadFile" xml:space="preserve">
+    <value>Failed to load file</value>
   </data>
   <data name="EncodingX" xml:space="preserve">
     <value>Encoding: {0}</value>
@@ -190,10 +199,6 @@ Error: {0}</value>
   <data name="Idle" xml:space="preserve">
     <value>Idle</value>
   </data>
-  <data name="BuildLineIndexErrorMsg" xml:space="preserve">
-    <value>The was an error while parsing the log file.
-Error Details: {0}</value>
-  </data>
   <data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -204,8 +209,8 @@ Error Details: {0}</value>
     <value>Pattern</value>
     <comment>Pattern column header</comment>
   </data>
-  <data name="OpenLogFile" xml:space="preserve">
-    <value>Open a log file</value>
+  <data name="BinaryMatch" xml:space="preserve">
+    <value>Binary Match</value>
   </data>
   <data name="edit_save_needed" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\edit_save_needed.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -216,8 +221,9 @@ Error Details: {0}</value>
   <data name="highlight" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\highlight.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="ShowOptionsDialog" xml:space="preserve">
-    <value>Show the options dialog</value>
+  <data name="PositionXofYBytes" xml:space="preserve">
+    <value>Position: {0} / {1} bytes</value>
+    <comment>current position within the file</comment>
   </data>
   <data name="Active" xml:space="preserve">
     <value>Active</value>
@@ -226,15 +232,21 @@ Error Details: {0}</value>
   <data name="ConfirmDelete" xml:space="preserve">
     <value>Confirm Delete</value>
   </data>
+  <data name="folder_with_file" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\folder_with_file.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="reload" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\reload.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="InvalidFilePath" xml:space="preserve">
-    <value>Invalid File Path</value>
-    <comment>File path doesn't exist or is invalid</comment>
-  </data>
   <data name="UnknownCmdLineOption" xml:space="preserve">
     <value>Unknown command line option</value>
+  </data>
+  <data name="LineEndingX" xml:space="preserve">
+    <value>Line Ending: {0}</value>
+  </data>
+  <data name="FailedToOpenXDueToErrorY" xml:space="preserve">
+    <value>Failed to open file {0} due to an error
+Error: {1}</value>
   </data>
   <data name="InvalidFileMsg" xml:space="preserve">
     <value>File path '{0}' is invalid or does not exist</value>
@@ -250,8 +262,9 @@ Error Details: {0}</value>
 			Highlighting column header
 		</comment>
   </data>
-  <data name="book" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\1338530996_book.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="NoFile" xml:space="preserve">
+    <value>No File</value>
+    <comment>No file currently loaded</comment>
   </data>
   <data name="ChangeBackColour" xml:space="preserve">
     <value>Change Background Colour</value>
@@ -265,28 +278,25 @@ Error Details: {0}</value>
   <data name="ShowFiltersDialog" xml:space="preserve">
     <value>Show the filters dialog</value>
   </data>
-  <data name="DeleteFailed" xml:space="preserve">
-    <value>Delete Failed</value>
+  <data name="BuildLineIndexErrorMsg" xml:space="preserve">
+    <value>The was an error while parsing the log file.
+Error Details: {0}</value>
   </data>
-  <data name="LineEndingX" xml:space="preserve">
-    <value>Line Ending: {0}</value>
+  <data name="book" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\1338530996_book.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="NoFile" xml:space="preserve">
-    <value>No File</value>
-    <comment>No file currently loaded</comment>
+  <data name="InvalidFilePath" xml:space="preserve">
+    <value>Invalid File Path</value>
+    <comment>File path doesn't exist or is invalid</comment>
   </data>
-  <data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\agt_action_success.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="folder_with_file" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\folder_with_file.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="Refresh" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\Refresh.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="pause_gray" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\pause_gray.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="CouldNotDeletePatternSetFileX" xml:space="preserve">
-    <value>Could not delete pattern set file {0}.
-Error: {1}</value>
+  <data name="DeleteFailed" xml:space="preserve">
+    <value>Delete Failed</value>
   </data>
   <data name="edit_save" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\edit_save.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -297,7 +307,10 @@ Error: {1}</value>
   <data name="ShowHighlightsDialog" xml:space="preserve">
     <value>Show the highlights dialog</value>
   </data>
-  <data name="Refresh" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Refresh.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="Eyeball" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\Eyeball.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+	<data name="WatchForUpdates">
+		<value xml:space="preserve">Watch the file and update automatically when it changes</value>
+	</data>
 </root>

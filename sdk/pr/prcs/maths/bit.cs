@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using NUnit.Framework;
+using pr.maths;
 
 namespace pr.maths
 {
@@ -179,7 +179,7 @@ namespace pr.maths
 		public static uint InterleaveBits(uint x, uint y)
 		{
 			uint[] B = new uint[]{0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF};
-			int[]  S = new int[]{1, 2, 4, 8};
+			int[]  S = new []{1, 2, 4, 8};
 			x = (x | (x << S[3])) & B[3];
 			x = (x | (x << S[2])) & B[2];
 			x = (x | (x << S[1])) & B[1];
@@ -235,8 +235,13 @@ namespace pr.maths
 			return ToString(bits, 0);
 		}
 	}
+}
 
-	/// <summary>Unit tests for Bit</summary>
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestBit()
@@ -260,3 +265,4 @@ namespace pr.maths
 		}
 	}
 }
+#endif

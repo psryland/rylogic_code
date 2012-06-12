@@ -21,8 +21,6 @@ namespace RyLogViewer
 	public partial class Main :Form
 	{
 		private const string LogFileFilter = @"Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*";
-		private const int AvrBytesPerLine = 256;
-		private const int CacheSize = 4096;
 		
 		private readonly Settings m_settings;                 // App settings
 		private readonly RecentFiles m_recent;                // Recent files
@@ -38,8 +36,8 @@ namespace RyLogViewer
 		private byte[] m_row_delim;                           // The row delimiter converted from a string to a byte[] using the current encoding
 		private char[] m_col_delim;                           // The column delimiter, cached to prevent m_settings access in CellNeeded
 		private int m_row_height;                             // The row height, cached to prevent settings lookups in CellNeeded
-		private long m_last_line;                             // The byte offset (from file begin) to the start of the last known line
-		private long m_file_end;                              // The last known size of the file
+		private long m_filepos;                               // The byte offset (from file begin) to the start of the last known line
+		private long m_fileend;                               // The last known size of the file
 		
 		//todo:
 		// handle large files
@@ -54,6 +52,9 @@ namespace RyLogViewer
 
 		public Main(string[] args)
 		{
+			Log.Register(null, false);
+			Log.Info("App Startup: {0}", DateTime.Now);
+
 			InitializeComponent();
 			m_settings          = new Settings();
 			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
@@ -65,8 +66,8 @@ namespace RyLogViewer
 			m_last_find_pattern = null;
 			m_filepath          = null;
 			m_file              = null;
-			m_last_line         = 0;
-			m_file_end          = 0;
+			m_filepos           = 0;
+			m_fileend           = 0;
 			InitCache();
 			ApplySettings();
 			
@@ -74,6 +75,7 @@ namespace RyLogViewer
 			m_menu.Move                             += (s,a) => { m_settings.MenuPosition = m_menu.Location; m_settings.Save(); };
 			m_menu_file_open.Click                  += (s,a) => OpenLogFile(null);
 			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
+			m_menu_file_export.Click                += (s,a) => ShowExportDialog();
 			m_menu_file_exit.Click                  += (s,a) => Close();
 			m_menu_edit_selectall.Click             += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
 			m_menu_edit_copy.Click                  += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
@@ -94,20 +96,32 @@ namespace RyLogViewer
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
-			m_toolstrip.Move            += (s,a) => { m_settings.ToolsPosition = m_toolstrip.Location; m_settings.Save(); };
-			m_btn_open_log.Click        += (s,a) => OpenLogFile(null);
-			m_btn_refresh.Click         += (s,a) => Reload();
-			m_btn_highlights.Click      += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
-			m_btn_filters.Click         += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
-			m_btn_options.Click         += (s,a) => ShowOptions(SettingsUI.ETab.General);
-			m_btn_tail.CheckedChanged   += (s,a) => EnableTail(m_btn_tail.Checked);
-			m_btn_open_log.ToolTipText   = Resources.OpenLogFile;   
-			m_btn_refresh.ToolTipText    = Resources.ReloadLogFile;
-			m_btn_highlights.ToolTipText = Resources.ShowHighlightsDialog;
-			m_btn_filters.ToolTipText    = Resources.ShowFiltersDialog;
-			m_btn_options.ToolTipText    = Resources.ShowOptionsDialog;
-			m_btn_tail.ToolTipText       = Resources.ScrollToTail;
-			ToolStripManager.Renderer    = new CheckedButtonRenderer();
+			m_toolstrip.Move             += (s,a) => { m_settings.ToolsPosition = m_toolstrip.Location; m_settings.Save(); };
+			m_btn_open_log.Click         += (s,a) => OpenLogFile(null);
+			m_btn_refresh.Click          += (s,a) => BuildLineIndex(m_filepos, true);
+			m_btn_highlights.Click       += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+			m_btn_filters.Click          += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
+			m_btn_options.Click          += (s,a) => ShowOptions(SettingsUI.ETab.General);
+			m_btn_jump_to_end.Click      += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+			m_btn_tail.CheckedChanged    += (s,a) => EnableTail(m_btn_tail.Checked);
+			m_btn_open_log.ToolTipText    = Resources.OpenLogFile;   
+			m_btn_refresh.ToolTipText     = Resources.ReloadLogFile;
+			m_btn_highlights.ToolTipText  = Resources.ShowHighlightsDialog;
+			m_btn_filters.ToolTipText     = Resources.ShowFiltersDialog;
+			m_btn_options.ToolTipText     = Resources.ShowOptionsDialog;
+			m_btn_jump_to_end.ToolTipText = Resources.ScrollToEnd;
+			m_btn_tail.ToolTipText        = Resources.WatchForUpdates;
+			ToolStripManager.Renderer     = new CheckedButtonRenderer();
+
+			// Scrollbar
+			m_scroll_file.Ranges.Resize(3);
+			m_scroll_file.ScrollEnd += (s,a)=>
+				{
+					// Update on ScrollEnd not value changed, since
+					// UpdateUI() sets Value when the build is complete.
+					Log.Info("file scroll to {0}", m_scroll_file.ThumbRange.Mid);
+					BuildLineIndex(m_scroll_file.ThumbRange.Mid, false);
+				};
 
 			// Status
 			m_status.Move += (s,a) => { m_settings.StatusPosition = m_status.Location; m_settings.Save(); };
@@ -119,16 +133,31 @@ namespace RyLogViewer
 			m_grid.KeyDown             += DataGridView_Extensions.Copy;
 			m_grid.CellValueNeeded     += CellValueNeeded;
 			m_grid.CellPainting        += CellPainting;
+			m_grid.SelectionChanged    += GridSelectionChanged;
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
-			m_grid.SelectionChanged    += (s,a) => { UpdateStatus(); };
 			m_grid.DataError           += (s,a) => { Debug.Assert(false); };
+			m_grid.Scroll              += (s,a) => { UpdateFileScroll(); };
+			
+			// Grid context menu
+			m_cmenu_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid);
+			m_cmenu_select_all.Click   += (s,a) => DataGridView_Extensions.SelectAll(m_grid);
+			m_cmenu_grid.VisibleChanged += (s,a) =>
+				{
+					m_cmenu_copy.Enabled = m_grid.SelectedCells.Count != 0;
+					m_cmenu_select_all.Enabled = m_grid.RowCount != 0;
+				};
 			
 			// Watcher
-			m_file_changed.Action += UpdateLineIndex;
+			m_file_changed.Action += ()=>
+				{
+					if (AutoScrollTail) BuildLineIndex(m_file.Length, m_settings.FileChangesAdditive);
+					else BuildLineIndex(m_filepos, true);
+				};
 			m_watch.Changed += (s,a) =>
 				{
 					// This happens sometimes, not really sure why
 					if (m_file.Length == 0) return;
+					if (a.ChangeType != WatcherChangeTypes.Changed) return;
 					m_file_changed.Signal();
 				};
 			
@@ -167,6 +196,9 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			
+			// Keydown
+			KeyDown += (s,a) => HandleKeyDown(a);
+			
 			// File Drop
 			DragEnter += (s,a) => FileDrop(a, true);
 			DragDrop  += (s,a) => FileDrop(a, false);
@@ -183,7 +215,7 @@ namespace RyLogViewer
 					m_settings.Save();
 				};
 		}
-		
+
 		/// <summary>Returns true if there is a log file currently open</summary>
 		private bool FileOpen
 		{
@@ -222,41 +254,51 @@ namespace RyLogViewer
 			m_line_index.Clear();
 			m_filepath = null;
 			m_file = null;
-			m_last_line = 0;
-			m_file_end = 0;
+			m_filepos = 0;
+			m_fileend = 0;
 			UpdateUI();
 		}
 		
 		/// <summary>Prompt to open a log file</summary>
 		private void OpenLogFile(string filepath)
 		{
-			// Prompt for a file if none provided
-			if (filepath == null)
+			try
 			{
-				var fd = new OpenFileDialog{Filter = LogFileFilter, Multiselect = false};
-				if (fd.ShowDialog() != DialogResult.OK) return;
-				filepath = fd.FileName;
-			}
+				// Prompt for a file if none provided
+				if (filepath == null)
+				{
+					var fd = new OpenFileDialog{Filter = LogFileFilter, Multiselect = false};
+					if (fd.ShowDialog() != DialogResult.OK) return;
+					filepath = fd.FileName;
+				}
 			
-			// Reject invalid filepaths
-			if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
-			{
-				MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+				// Reject invalid filepaths
+				if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
+				{
+					MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					return;
+				}
+				
+				m_recent.Add(filepath);
+				m_settings.RecentFiles = m_recent.Export();
+				m_settings.LastLoadedFile = filepath;
+				m_settings.Save();
+				
+				// Switch files - open the file to make sure it's accessible (and to hold a lock)
+				CloseLogFile();
+				m_file = LoadFile(filepath);
+				m_filepath = filepath;
+				m_filepos = m_settings.OpenAtEnd ? m_file.Length : 0;
+				
+				// Setup the watcher to watch for file changes
+				m_watch.Path = Path.GetDirectoryName(filepath);
+				m_watch.Filter = Path.GetFileName(filepath);
+				
+				BuildLineIndex(m_filepos, true, ()=>{ SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0; });
 				return;
 			}
-		
-			m_recent.Add(filepath);
-			m_settings.RecentFiles = m_recent.Export();
-			m_settings.LastLoadedFile = filepath;
-			m_settings.Save();
-			
-			// Setup the watcher to watch for file changes
-			m_watch.Path = Path.GetDirectoryName(filepath);
-			m_watch.Filter = Path.GetFileName(filepath);
-			
-			// Switch files
+			catch (Exception ex) { MessageBox.Show(this, string.Format(Resources.FailedToOpenXDueToErrorY, filepath ,ex.Message), Resources.FailedToLoadFile, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			CloseLogFile();
-			BuildLineIndex(filepath);
 		}
 
 		/// <summary>Supply the grid with values</summary>
@@ -265,7 +307,7 @@ namespace RyLogViewer
 			if (!FileOpen) e.Value = null;
 			else
 			{
-				try { e.Value = CacheLine(e.RowIndex)[e.ColumnIndex].Text; }
+				try { e.Value = ReadLine(e.RowIndex)[e.ColumnIndex].Text; }
 				catch { e.Value = ""; }
 			}
 		}
@@ -274,7 +316,7 @@ namespace RyLogViewer
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
 		{
 			// Check if the cell value has a highlight pattern it matches
-			Highlight hl = (e.RowIndex != -1) ? CacheLine(e.RowIndex)[e.ColumnIndex].HL : null;
+			Highlight hl = (e.RowIndex != -1) ? ReadLine(e.RowIndex)[e.ColumnIndex].HL : null;
 			if (hl == null)
 			{
 				e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
@@ -294,7 +336,24 @@ namespace RyLogViewer
 				e.PaintContent(e.ClipBounds);
 			}
 		}
-
+		
+		/// <summary>Handler for selections made in the grid</summary>
+		private void GridSelectionChanged(object sender, EventArgs e)
+		{
+			const float file_scroll_limit = 0.1f;
+			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount);
+			if (ratio < 0f + file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_begin, false);
+			if (ratio > 1f - file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_end  , false);
+			UpdateStatus();
+		}
+		
+		/// <summary>Handle key down events for the grid</summary>
+		private void HandleKeyDown(KeyEventArgs e)
+		{
+			if (e.Control && e.KeyCode == Keys.PageUp)   BuildLineIndex(0        , false, () => SelectedRow = 0                  );
+			if (e.Control && e.KeyCode == Keys.PageDown) BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+		}
+		
 		/// <summary>Show the find dialog</summary>
 		private void ShowFindDialog()
 		{
@@ -314,10 +373,10 @@ namespace RyLogViewer
 
 			// Search from the current row forward
 			int row = SelectedRow;
-			bool current_row_matches = pat.IsMatch(CacheLine(row).RowText);
+			bool current_row_matches = pat.IsMatch(ReadLine(row).RowText);
 			for (int i = row + 1; i != m_grid.RowCount; ++i)
 			{
-				if (!pat.IsMatch(CacheLine(i).RowText)) continue;
+				if (!pat.IsMatch(ReadLine(i).RowText)) continue;
 				
 				// Found!. Make sure the selected row is visible
 				SelectedRow = i;
@@ -335,10 +394,10 @@ namespace RyLogViewer
 			
 			// Search from the current row backward
 			int row = SelectedRow;
-			bool current_row_matches = pat.IsMatch(CacheLine(row).RowText);
+			bool current_row_matches = pat.IsMatch(ReadLine(row).RowText);
 			for (int i = row - 1; i != -1; --i)
 			{
-				if (!pat.IsMatch(CacheLine(i).RowText)) continue;
+				if (!pat.IsMatch(ReadLine(i).RowText)) continue;
 				
 				// Found!. Make sure the selected row is visible
 				SelectedRow = i;
@@ -346,6 +405,15 @@ namespace RyLogViewer
 			}
 			if (!current_row_matches)
 				SetTransientStatusMessage("Not found", 2000);
+		}
+
+		/// <summary>Show the export dialog</summary>
+		private void ShowExportDialog()
+		{
+			var dg = new ExportUI(FileByteRange);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			
+			// Do the export
 		}
 
 		/// <summary>Handle file drop</summary>
@@ -369,22 +437,12 @@ namespace RyLogViewer
 			OpenLogFile(files[0]);
 		}
 		
-		/// <summary>True on auto detect of file changes</summary>
+		/// <summary>Turn on/off tail mode</summary>
 		private void EnableTail(bool enable)
 		{
-			// If the last row isn't visible scroll it into view before enabling tail
-			if (!LastRowVisible)
-			{
-				ShowLastRow();
-			}
-			else
-			{
-				m_settings.TailEnabled = enable;
-			}
+			m_settings.TailEnabled = enable;
 			ApplySettings();
-			UpdateUI();
-			SelectedRow = m_grid.RowCount - 1;
-			UpdateLineIndex();
+			if (enable) BuildLineIndex(m_filepos, m_settings.FileChangesAdditive);
 		}
 		
 		/// <summary>Set the encoding to use with loaded files. 'null' means auto detect</summary>
@@ -402,7 +460,7 @@ namespace RyLogViewer
 			m_settings.Encoding = enc_name;
 			m_settings.Save();
 			ApplySettings();
-			Reload();
+			BuildLineIndex(m_filepos, true);
 		}
 		
 		/// <summary>Set always on top</summary>
@@ -426,9 +484,14 @@ namespace RyLogViewer
 			ApplySettings();
 			
 			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
-				Reload();
+			{
+				BuildLineIndex(m_filepos, true);
+			}
 			else if ((ui.WhatsChanged & EWhatsChanged.Rendering) != 0)
+			{
+				InvalidateCache();
 				UpdateUI();
+			}
 		}
 		
 		/// <summary>Show the TotD dialog</summary>
@@ -465,18 +528,19 @@ namespace RyLogViewer
 			return m_encoding.GetBytes(row_delim.Replace("CR","\r").Replace("LF","\n"));
 		}
 
-		/// <summary>Get/Set the currently selected grid row. Setting the selected row makes it visible</summary>
+		/// <summary>
+		/// Get/Set the currently selected grid row. Get returns -1 if there are no rows in the grid.
+		/// Setting the selected row clamps to the range [0,RowCount) and makes it visible in the grid (if possible)</summary>
 		private int SelectedRow
 		{
 			get { return m_grid.SelectedRows.Count != 0 ? m_grid.SelectedRows[0].Index : -1; }
 			set
 			{
-				if (value == SelectedRow) return;
-				m_grid.SelectRow(value);
+				value = m_grid.SelectRow(value);
 				if (m_grid.RowCount != 0)
 				{
 					int display_row = value - m_grid.DisplayedRowCount(true) / 2;
-					m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount);
+					m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
 				}
 			}
 		}
@@ -490,7 +554,8 @@ namespace RyLogViewer
 		/// <summary>Return true if we should auto scroll</summary>
 		private bool AutoScrollTail
 		{
-			get { return LastRowVisible && SelectedRow == m_grid.RowCount - 1; }
+			// Auto scroll the selected position if the last (known) row of the file is selected
+			get { return LastRowVisible && LineIndexRange.m_end == m_fileend && SelectedRowRange.m_begin == LineIndexRange.m_begin; }
 		}
 
 		/// <summary>Scroll the grid to make the last row visible</summary>
@@ -501,6 +566,39 @@ namespace RyLogViewer
 			m_grid.FirstDisplayedScrollingRowIndex = Math.Max(0, m_grid.RowCount - displayed_rows);
 		}
 
+		/// <summary>Helper for setting the grid row count without event handlers being fired</summary>
+		private void SetGridRowCount(int count, int row_delta)
+		{
+			// Ensure the grid has the correct number of rows
+			bool auto_scroll_tail = AutoScrollTail;
+			if (m_grid.RowCount != count)
+			{
+				// Unhook handlers that get called when the RowCount changes
+				m_grid.SelectionChanged -= GridSelectionChanged;
+				m_grid.CellValueNeeded -= CellValueNeeded;
+						
+				// Preserve the selected row index and first visible row index (if possible)
+				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
+				int selected = SelectedRow;
+				m_grid.SelectRow(-1);
+				
+				Log.Info("RowCount changed. Selected row: {0}. First visible row: {1}", selected, first_vis);
+				m_grid.RowCount = count;
+				
+				if (count != 0)
+				{
+					// Restore the selected row, and the first visible row
+					m_grid.SelectRow(auto_scroll_tail ? m_grid.RowCount - 1 : selected + row_delta);
+					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
+				}
+				
+				// Restore handlers
+				m_grid.CellValueNeeded += CellValueNeeded;
+				m_grid.SelectionChanged += GridSelectionChanged;
+			}
+			if (auto_scroll_tail) ShowLastRow();
+		}
+		
 		/// <summary>
 		/// Apply settings throughout the app.
 		/// This method is called on startup to apply initial settings and
@@ -509,6 +607,8 @@ namespace RyLogViewer
 		/// trigger a file reload.</summary>
 		private void ApplySettings()
 		{
+			Log.Info("Applying settings");
+			
 			// Cached settings for performance, don't overwrite auto detected cached values tho
 			m_encoding   = GetEncoding(m_settings.Encoding);
 			m_row_delim  = GetRowDelim(m_settings.RowDelimiter);
@@ -517,7 +617,6 @@ namespace RyLogViewer
 			
 			// Tail
 			m_watch.EnableRaisingEvents = FileOpen && m_settings.TailEnabled;
-			m_btn_tail.Image = m_settings.TailEnabled ? Resources.downred : Resources.pause_gray;
 			
 			// Highlights;
 			m_highlights.Clear();
@@ -556,57 +655,55 @@ namespace RyLogViewer
 			m_menu.Location      = m_settings.MenuPosition;
 			m_toolstrip.Location = m_settings.ToolsPosition;
 			m_status.Location    = m_settings.StatusPosition;
+			
+			// Ensure rows are rerendered
+			InvalidateCache();
 		}
 		
 		/// <summary>
 		/// Update the UI with the current line index.
 		/// This method should be called whenever a changes occurs that requires
 		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
-		private void UpdateUI()
+		private void UpdateUI(int row_delta = 0)
 		{
-			// Configure the grid
-			if (m_line_index.Count != 0)
+			using (m_grid.SuspendLayout(true))
 			{
-				// Read a row from the data and show column headers if there is more than one
-				Line line = CacheLine(m_line_index.Count - 1);
-				m_grid.ColumnHeadersVisible = line.Column.Count > 1;
-				m_grid.ColumnCount = line.Column.Count;
-				
-				// Ensure the grid has the correct number of rows
-				bool auto_scroll = AutoScrollTail;
-				if (m_grid.RowCount != m_line_index.Count)
+				// Configure the grid
+				if (m_line_index.Count != 0)
 				{
-					int selected = SelectedRow; // Preserve the selection across row count change
-					m_grid.RowCount = 0; // Reset to zero first, this is more efficient for some reason
-					m_grid.RowCount = m_line_index.Count;
-					SelectedRow = auto_scroll ? m_grid.RowCount - 1 : selected;
-				}
-				if (auto_scroll) ShowLastRow();
-				
-				// Measure each column's preferred width
-				int total_width = 0;
-				int[] col_widths = new int[m_grid.ColumnCount];
-				foreach (DataGridViewColumn col in m_grid.Columns)
-					total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
-				
-				// Resize columns. If the total width is less than the control width use the control width instead
-				if (total_width < m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
-				{
-					m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-					m_grid.AutoResizeColumns();
-				}
-				else if (total_width > m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
-				{
-					m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+					// Read a row from the data and show column headers if there is more than one
+					Line line = ReadLine(m_line_index.Count/2);
+					m_grid.ColumnHeadersVisible = line.Column.Count > 1;
+					m_grid.ColumnCount = line.Column.Count;
+					
+					// Ensure the grid has the correct number of rows
+					SetGridRowCount(m_line_index.Count, row_delta);
+					
+					// Measure each column's preferred width
+					int total_width = 0;
+					int[] col_widths = new int[m_grid.ColumnCount];
 					foreach (DataGridViewColumn col in m_grid.Columns)
-						col.Width = col_widths[col.Index];
+						total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
+					
+					// Resize columns. If the total width is less than the control width use the control width instead
+					if (total_width < m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
+					{
+						m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+						m_grid.AutoResizeColumns();
+					}
+					else if (total_width > m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
+					{
+						m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+						foreach (DataGridViewColumn col in m_grid.Columns)
+							col.Width = col_widths[col.Index];
+					}
 				}
-			}
-			else
-			{
-				m_grid.ColumnHeadersVisible = false;
-				m_grid.RowCount = 0;
-				m_grid.ColumnCount = 0;
+				else
+				{
+					m_grid.ColumnHeadersVisible = false;
+					m_grid.ColumnCount = 1;
+					SetGridRowCount(0, 0);
+				}
 			}
 			
 			// Invalidate the cache and get the grid to redraw
@@ -622,7 +719,9 @@ namespace RyLogViewer
 			
 			// The file scroll bar is only visible when part of the file is loaded
 			m_scroll_file.Width = m_settings.FileScrollWidth;
-			m_scroll_file.Visible = m_line_index.Count == m_settings.LineCount;
+			m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange     ].Color = m_settings.ScrollBarFileRangeColour;
+			m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Color = m_settings.ScrollBarDisplayRangeColour;
+			m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange ].Color = m_settings.LineSelectBackColour;
 			
 			// Status and title
 			UpdateStatus();
@@ -631,12 +730,12 @@ namespace RyLogViewer
 		/// <summary>Update the status bar</summary>
 		private void UpdateStatus()
 		{
+			Debug.Assert(m_grid.RowCount == m_line_index.Count, "The grid is not up to date");
 			if (!FileOpen)
 			{
 				Text = Resources.AppTitle;
 				m_status_spring.Text      = Resources.NoFile;
 				m_status_filesize.Visible = false;
-				m_status_line.Visible     = false;
 				m_status_line_end.Visible = false;
 				m_status_encoding.Visible = false;
 			}
@@ -655,18 +754,40 @@ namespace RyLogViewer
 
 				// Get current file position
 				int r = SelectedRow;
-				long p = (r != -1) ? m_line_index[SelectedRow].m_begin : 0;
+				long p = (r != -1) ? m_line_index[r].m_begin : 0;
 				StringBuilder pos = Pretty(new StringBuilder(p.ToString()));
 				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString()));
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
-				m_status_line.Text = string.Format(Resources.LineXofY, r, m_grid.RowCount);
-				m_status_line.Visible = true;
 				m_status_line_end.Text = string.Format(Resources.LineEndingX, m_encoding.GetString(m_row_delim).Replace("\r","CR").Replace("\n", "LF"));
 				m_status_line_end.Visible = true;
 				m_status_encoding.Text = string.Format(Resources.EncodingX, m_encoding.EncodingName);
 				m_status_encoding.Visible = true;
+			}
+			
+			UpdateFileScroll();
+		}
+		
+		/// <summary>Update the indicator ranges on the file scroll bar</summary>
+		private void UpdateFileScroll()
+		{
+			Range range = BufferRange(m_filepos, m_fileend, m_settings.FileBufSize / 2);
+			if (range.Count < m_fileend)
+			{
+				if (!range.Equals(m_scroll_file.ThumbRange))
+					Log.Info("File scroll set to [{0},{1}) within file [{2},{3})", range.m_begin, range.m_end, FileByteRange.m_begin, FileByteRange.m_end);
+				
+				m_scroll_file.Visible    = true;
+				m_scroll_file.TotalRange = FileByteRange;
+				m_scroll_file.ThumbRange = range;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange].Range      = range;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Range = DisplayedRowsRange;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange].Range  = SelectedRowRange;
+			}
+			else
+			{
+				m_scroll_file.Visible = false;
 			}
 		}
 		

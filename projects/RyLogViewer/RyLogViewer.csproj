@@ -35,9 +35,10 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -69,6 +70,12 @@
   <ItemGroup>
     <Compile Include="about.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="export_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="export_ui.Designer.cs">
+      <DependentUpon>export_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="file_scroll.cs">
       <SubType>Component</SubType>
@@ -118,6 +125,9 @@
     </Compile>
     <EmbeddedResource Include="about.resx">
       <DependentUpon>about.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="export_ui.resx">
+      <DependentUpon>export_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="find_ui.resx">
       <DependentUpon>find_ui.cs</DependentUpon>
@@ -244,6 +254,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Refresh.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Eyeball.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
