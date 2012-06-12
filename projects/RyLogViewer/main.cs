@@ -115,7 +115,7 @@ namespace RyLogViewer
 				{
 					// Update on ScrollEnd not value changed, since
 					// UpdateUI() sets Value when the build is complete.
-					BuildLineIndex(m_scroll_file.RangeCentrePos, false);
+					BuildLineIndex(m_scroll_file.ThumbRange.Mid, false);
 				};
 
 			// Status
@@ -132,6 +132,15 @@ namespace RyLogViewer
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
 			m_grid.DataError           += (s,a) => { Debug.Assert(false); };
 			m_grid.Scroll              += (s,a) => { UpdateFileScroll(); };
+			
+			// Grid context menu
+			m_cmenu_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid);
+			m_cmenu_select_all.Click   += (s,a) => DataGridView_Extensions.SelectAll(m_grid);
+			m_cmenu_grid.VisibleChanged += (s,a) =>
+				{
+					m_cmenu_copy.Enabled = m_grid.SelectedCells.Count != 0;
+					m_cmenu_select_all.Enabled = m_grid.RowCount != 0;
+				};
 			
 			// Watcher
 			m_file_changed.Action += ()=>
@@ -561,12 +570,9 @@ namespace RyLogViewer
 				int selected = SelectedRow;
 				m_grid.SelectRow(-1);
 				
-				// Reset to zero first, this is more efficient for some reason
-				m_grid.RowCount = 0;
+				m_grid.RowCount = count;
 				if (count != 0)
 				{
-					m_grid.RowCount = count;
-					
 					// Restore the selected row, and the first visible row
 					m_grid.SelectRow(auto_scroll_tail ? m_grid.RowCount - 1 : selected + row_delta);
 					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
@@ -754,9 +760,8 @@ namespace RyLogViewer
 			if (range.Count < m_fileend)
 			{
 				m_scroll_file.Visible    = true;
-				m_scroll_file.TotalRange = m_fileend;
-				m_scroll_file.Fraction   = (m_filepos - range.Count*0.5) / (m_fileend - range.Count);
-				m_scroll_file.ThumbSize  = (double)range.Count / m_fileend;
+				m_scroll_file.TotalRange = FileByteRange;
+				m_scroll_file.ThumbRange = range;
 				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange].Range      = range;
 				m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Range = DisplayedRowsRange;
 				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange].Range  = SelectedRowRange;

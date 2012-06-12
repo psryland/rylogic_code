@@ -24,15 +24,14 @@ namespace RyLogViewer
 			public SubRange(Range range, Color color) { Range = range; Color = color; }
 		}
 		private readonly List<SubRange> m_ranges;         // Sub ranges to draw within the scroll bar
-		private int                     m_minimum;        // Integer range that the
-		private int                     m_maximum;        //  normalised values apply to.
-		private float                   m_large_change;   // Normalised large change amount
-		private float                   m_small_change;   // Normalised small change amount
-		private long                    m_total_range;    // The total range size
-		private double                  m_frac;           // The normalised position of the thumb
-		private double                  m_thumbsize;      // The thumb size as a fraction of the total range
+		private long                    m_large_change;   // Large change amount
+		private long                    m_small_change;   // Small change amount
+		private Range                   m_total_range;    // The total range size
+		private Range                   m_thumb_range;    // The range of the thumb relative to total range
 		private bool                    m_dragging;       // True while dragging
 
+		public int MinThumbSize { get; set; }
+			
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("TrackColor")]
 		public Color TrackColor { get; set; }
 
@@ -40,44 +39,17 @@ namespace RyLogViewer
 		public Color ThumbColor { get; set; }
 
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("LargeChange")]
-		public int LargeChange
+		public long LargeChange
 		{
-			get { return (int)Maths.Lerp(Minimum, Maximum, m_large_change); }
-			set { m_large_change = Maths.Clamp(Maths.Ratio(Minimum, value, Maximum), 0f, 1f); Invalidate(); }
+			get { return m_large_change; }
+			set { m_large_change = Maths.Clamp(value, 1, TotalRange.Count); Invalidate(); }
 		}
 
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("SmallChange")]
-		public int SmallChange
+		public long SmallChange
 		{
-			get { return (int)Maths.Lerp(Minimum, Maximum, m_small_change); }
-			set { m_small_change = Maths.Clamp(Maths.Ratio(Minimum, value, Maximum), 0f, 1f); Invalidate(); }
-		}
-		
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("Minimum")]
-		public int Minimum
-		{
-			get { return m_minimum; }
-			set { m_minimum = value; Value = Value; Invalidate(); }
-		}
-
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("Maximum")]
-		public int Maximum
-		{
-			get { return m_maximum; }
-			set { m_maximum = value; Value = Value; Invalidate(); }
-		}
-
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("Value")]
-		public int Value
-		{
-			get { return (int)Maths.Lerp(Minimum, Maximum, (float)Fraction); }
-			set { Fraction = Maths.Ratio(Minimum, value, Maximum); RaiseValueChanged(); Invalidate(); }
-		}
-
-		/// <summary>Return the current centre position of the slider relative to TotalRange.</summary>
-		public long RangeCentrePos
-		{
-			get { return (long)(TotalRange * Maths.Lerp(ThumbSize*0.5, 1.0 - ThumbSize*0.5, Fraction)); }
+			get { return m_small_change; }
+			set { m_small_change = Maths.Clamp(value, 1, TotalRange.Count); Invalidate(); }
 		}
 
 		/// <summary>The ranges to draw on the scroll bar</summary>
@@ -89,40 +61,36 @@ namespace RyLogViewer
 
 		/// <summary>The total size of the represented range</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The total size of the represented range")]
-		public long TotalRange
+		public Range TotalRange
 		{
 			get { return m_total_range; }
 			set
 			{
 				m_total_range = value;
-				var total = new Range(0,TotalRange);
-				foreach (var r in m_ranges) r.Range = total.Intersect(r.Range);
+				ThumbRange = TotalRange.Intersect(ThumbRange);
+				foreach (var r in m_ranges) r.Range = TotalRange.Intersect(r.Range);
 				Invalidate();
 			}
 		}
 
-		/// <summary>The thumb size as a fraction of the total range</summary>
-		public double ThumbSize
+		/// <summary>The range of the thumb relative to TotalRange</summary>
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The size of the thumb bar within TotalRange")]
+		public Range ThumbRange
 		{
-			get { return m_thumbsize; }
-			set { m_thumbsize = Maths.Clamp(value, 0.05, 1.0); Invalidate(); }
+			get { return m_thumb_range; }
+			set
+			{
+				m_thumb_range = value;
+				var total = TotalRange;
+				if (m_thumb_range.Count   > total.Count  ) m_thumb_range = total;
+				if (m_thumb_range.m_end   > total.m_end  ) m_thumb_range.Last  = total.Last;
+				if (m_thumb_range.m_begin < total.m_begin) m_thumb_range.First = total.First;
+				RaiseValueChanged();
+				Invalidate();
+			}
 		}
 
-		/// <summary>The size of the thumb in control space</summary>
-		private int ThumbSizeCS
-		{
-			get { return (int)(m_thumbsize * Height); }
-		}
-
-		/// <summary>The normalised position of the thumb</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The normalised position of the thumb")]
-		public double Fraction
-		{
-			get { return m_frac; }
-			set { m_frac = Maths.Clamp(value, 0.0, 1.0); RaiseValueChanged(); Invalidate(); }
-		}
-		
-		/// <summary>Raised whenever 'Fraction' is changed.</summary>
+		/// <summary>Raised whenever 'ThumbRange' is changed.</summary>
 		public event EventHandler ValueChanged;
 		private void RaiseValueChanged()
 		{
@@ -148,13 +116,13 @@ namespace RyLogViewer
 
 		public SubRangeScroll()
 		{
-			m_ranges   = new List<SubRange>();
-			m_dragging = false;
-			TrackColor = SystemColors.ControlDark;
-			ThumbColor = SystemColors.Window;
-			Fraction   = 0.5f;
-			TotalRange = 100;
-			ThumbSize  = 80;
+			m_ranges     = new List<SubRange>();
+			m_dragging   = false;
+			MinThumbSize = 50;
+			TrackColor   = SystemColors.ControlDark;
+			ThumbColor   = SystemColors.Window;
+			TotalRange   = new Range(0, 100);
+			ThumbRange   = new Range(35, 50);
 			SetStyle(
 				ControlStyles.OptimizedDoubleBuffer |
 				ControlStyles.AllPaintingInWmPaint|
@@ -163,25 +131,45 @@ namespace RyLogViewer
 				ControlStyles.UserPaint, true);
 		}
 		
+		private Rectangle MakeThumbRect(Rectangle bounds)
+		{
+			var height = bounds.Height;
+			var thm   = ThumbRange;
+			var total = TotalRange;
+			
+			int top  = (int)(Maths.Ratio(0, thm.m_begin, total.Count) * Height);
+			int hite = (int)(Maths.Ratio(0, thm.Count  , total.Count) * Height);
+			var thumb_rect = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,hite));
+			
+			// Fix up thumbs that are too small
+			if (thumb_rect.Height < MinThumbSize)
+			{
+				thumb_rect.Height += MinThumbSize;
+				thumb_rect.Y      -= MinThumbSize / 2;
+				if (thumb_rect.Top    <      0) thumb_rect.Y = 0;
+				if (thumb_rect.Bottom > height) thumb_rect.Y = height - MinThumbSize;
+			}
+			return thumb_rect;
+		}
+
 		/// <summary>Paint the scrollbar</summary>
 		protected override void OnPaint(PaintEventArgs e)
 		{
+			const float rad = 4f;
 			var gfx = e.Graphics;
 			var bounds = e.ClipRectangle;
-			
-			const float rad = 4f;
-			int thm_hheight = ThumbSizeCS / 2;
-			int thm_centre  = (int)Maths.Lerp(thm_hheight, Height - thm_hheight, (float)Fraction);
+			var height = bounds.Height;
+			var total = TotalRange;
 			
 			// Rectum?
 			var back_rect = bounds; back_rect.Inflate(-1,-1);
-			var thumb_rect = new Rectangle(bounds.X, bounds.Y + thm_centre - thm_hheight, bounds.Width, 2 * thm_hheight); thumb_rect.Inflate(-2,0);
+			var thumb_rect = MakeThumbRect(bounds);
 			foreach (var r in Ranges)
 			{
-				int top    = (int)(Maths.Ratio(0, r.Range.m_begin, TotalRange) * Height);
-				int height = (int)(Maths.Ratio(0, r.Range.Count, TotalRange) * Height);
-				r.m_rect   = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,height));
-				r.m_rect   .Inflate(-2,0);
+				int top  = (int)(Maths.Ratio(0, r.Range.m_begin, total.Count) * height);
+				int hite = (int)(Math.Max(1, Maths.Ratio(0, r.Range.Count  , total.Count) * height));
+				r.m_rect = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,hite));
+				r.m_rect .Inflate(-2,0);
 			}
 			
 			Color c0,c1;
@@ -222,9 +210,9 @@ namespace RyLogViewer
 		/// <summary>Set the thumb position given a control space Y value</summary>
 		private void ScrollThumbPos(int y)
 		{
-			int h = ThumbSizeCS / 2;
-			y = Maths.Clamp(y, h, Height - h);
-			Fraction = Maths.Ratio(h, y, Height - h);
+			Range thm = ThumbRange;
+			thm.Mid = (long)(Maths.Ratio(0, y, Height) * TotalRange.Count);
+			ThumbRange = thm;
 			RaiseScrollEvent();
 		}
 
@@ -255,10 +243,64 @@ namespace RyLogViewer
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			base.OnKeyDown(e);
-			if (e.KeyCode == Keys.PageUp  )          { Fraction -= m_large_change; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.PageDown)          { Fraction += m_large_change; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.Up   && e.Control) { Fraction -= m_small_change; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.Down && e.Control) { Fraction += m_small_change; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.PageUp  )          { Range thm = ThumbRange; thm.Shift(-m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.PageDown)          { Range thm = ThumbRange; thm.Shift(+m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.Up   && e.Control) { Range thm = ThumbRange; thm.Shift(-m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.Down && e.Control) { Range thm = ThumbRange; thm.Shift(+m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
 		}
 	}
 }
+
+
+		///// <summary>Return the current centre position of the slider relative to TotalRange.</summary>
+		//public long RangeCentrePos
+		//{
+		//    get { return (long)(TotalRange * Maths.Lerp(ThumbSize*0.5, 1.0 - ThumbSize*0.5, Fraction)); }
+		//}
+		///// <summary>The thumb size as a fraction of the total range</summary>
+		//public double ThumbSize
+		//{
+		//    get { return m_thumbsize; }
+		//    set { m_thumbsize = Maths.Clamp(value, 0.05, 1.0); Invalidate(); }
+		//}
+
+		///// <summary>The size of the thumb in control space</summary>
+		//private int ThumbSizeCS
+		//{
+		//    get { return (int)(m_thumbsize * Height); }
+		//}
+
+		///// <summary>The normalised position of the thumb</summary>
+		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The normalised position of the thumb")]
+		//public double Fraction
+		//{
+		//    get { return m_frac; }
+		//    set { m_frac = Maths.Clamp(value, 0.0, 1.0); RaiseValueChanged(); Invalidate(); }
+		//}
+		
+		//var thumb_rect = new Rectangle(bounds.X, bounds.Y + thm_centre - thm_hheight, bounds.Width, 2 * thm_hheight); thumb_rect.Inflate(-2,0);
+
+
+		
+		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("Minimum")]
+		//public int Minimum
+		//{
+		//    get { return m_minimum; }
+		//    set { m_minimum = value; Value = Value; Invalidate(); }
+		//}
+
+		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("Maximum")]
+		//public int Maximum
+		//{
+		//    get { return m_maximum; }
+		//    set { m_maximum = value; Value = Value; Invalidate(); }
+		//}
+
+		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("Value")]
+		//public int Value
+		//{
+		//    get { return (int)Maths.Lerp(Minimum, Maximum, (float)Fraction); }
+		//    set { Fraction = Maths.Ratio(Minimum, value, Maximum); RaiseValueChanged(); Invalidate(); }
+		//}
+
+			

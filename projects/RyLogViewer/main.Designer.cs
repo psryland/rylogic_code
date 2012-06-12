@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
 			this.m_toolstrip = new System.Windows.Forms.ToolStrip();
 			this.m_btn_open_log = new System.Windows.Forms.ToolStripButton();
@@ -82,6 +83,10 @@
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid = new System.Windows.Forms.DataGridView();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.m_cmenu_grid = new System.Windows.Forms.ContextMenuStrip(this.components);
+			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -91,6 +96,7 @@
 			this.m_toolstrip_cont.SuspendLayout();
 			this.m_table.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
+			this.m_cmenu_grid.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_toolstrip
@@ -546,6 +552,7 @@
 			this.m_grid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_grid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid.ContextMenuStrip = this.m_cmenu_grid;
 			this.m_grid.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
 			this.m_grid.Location = new System.Drawing.Point(3, 3);
@@ -561,22 +568,42 @@
 			// m_scroll_file
 			// 
 			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_scroll_file.Fraction = 0D;
-			this.m_scroll_file.LargeChange = 0;
+			this.m_scroll_file.LargeChange = -2147483648;
 			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
 			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
-			this.m_scroll_file.Maximum = 1000;
-			this.m_scroll_file.Minimum = 0;
 			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
 			this.m_scroll_file.Name = "m_scroll_file";
 			this.m_scroll_file.Size = new System.Drawing.Size(18, 410);
 			this.m_scroll_file.SmallChange = 0;
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
-			this.m_scroll_file.ThumbSize = 80;
-			this.m_scroll_file.TotalRange = ((long)(100));
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
-			this.m_scroll_file.Value = 0;
+			// 
+			// m_cmenu_grid
+			// 
+			this.m_cmenu_grid.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_cmenu_copy,
+            this.toolStripSeparator4,
+            this.m_cmenu_select_all});
+			this.m_cmenu_grid.Name = "m_cmenu_grid";
+			this.m_cmenu_grid.Size = new System.Drawing.Size(123, 54);
+			// 
+			// m_cmenu_copy
+			// 
+			this.m_cmenu_copy.Name = "m_cmenu_copy";
+			this.m_cmenu_copy.Size = new System.Drawing.Size(122, 22);
+			this.m_cmenu_copy.Text = "&Copy";
+			// 
+			// m_cmenu_select_all
+			// 
+			this.m_cmenu_select_all.Name = "m_cmenu_select_all";
+			this.m_cmenu_select_all.Size = new System.Drawing.Size(122, 22);
+			this.m_cmenu_select_all.Text = "Select &All";
+			// 
+			// toolStripSeparator4
+			// 
+			this.toolStripSeparator4.Name = "toolStripSeparator4";
+			this.toolStripSeparator4.Size = new System.Drawing.Size(119, 6);
 			// 
 			// Main
 			// 
@@ -606,6 +633,7 @@
 			this.m_toolstrip_cont.PerformLayout();
 			this.m_table.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
+			this.m_cmenu_grid.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -665,6 +693,10 @@
 		private RyLogViewer.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
 		private System.Windows.Forms.ToolStripButton m_btn_tail;
+		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_copy;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_select_all;
 	}
 }
 
