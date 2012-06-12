@@ -9,8 +9,8 @@
     <SourcePath>$(SourcePath)</SourcePath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
     <IncludePath>$(IncludePath)</IncludePath>
-    <OutDir>..\..\obj\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\..\obj\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>..\..\obj2010\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>..\..\obj2010\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">

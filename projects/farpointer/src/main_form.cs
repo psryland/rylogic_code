@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Windows.Forms;
+using pr.stream;
 using pr.util;
 
 namespace FarPointer

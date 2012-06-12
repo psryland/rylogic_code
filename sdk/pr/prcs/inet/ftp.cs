@@ -7,6 +7,7 @@ using System.IO;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using pr.inet;
+using pr.stream;
 using pr.util;
 
 namespace pr.inet

@@ -6,9 +6,9 @@
 using System;
 using System.IO;
 using System.Text;
-using pr.util;
+using pr.stream;
 
-namespace pr.util
+namespace pr.stream
 {
 	// Prevents a reader/writer class closing a stream when closed.
 	// Usage:

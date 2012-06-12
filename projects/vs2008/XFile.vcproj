@@ -42,7 +42,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="Q:\SDK\PR;Q:\SDK\DirectX9.0c\Oct2006\Include"
+				AdditionalIncludeDirectories="Q:\sdk\pr;Q:\sdk\directx9.0c\aug2009\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;D3D_DEBUG_INFO;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;NOMINMAX"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -110,7 +110,7 @@
 				Optimization="2"
 				InlineFunctionExpansion="1"
 				OmitFramePointers="true"
-				AdditionalIncludeDirectories="Q:\SDK\PR;Q:\SDK\DirectX9.0c\Oct2006\Include"
+				AdditionalIncludeDirectories="Q:\sdk\pr;Q:\sdk\directx9.0c\aug2009\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;NOMINMAX"
 				StringPooling="true"
 				RuntimeLibrary="0"

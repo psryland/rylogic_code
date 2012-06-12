@@ -4,7 +4,7 @@
 #pragma once
 #include "PhysicsTestbed/Res/Resource.h"
 #include "PhysicsTestbed/Forwards.h"
-#include "pr/linedrawer/plugininterface.h"
+#include "pr/linedrawer/ldr_plugin_interface.h"
 #include "PhysicsTestbed/TestbedState.h"
 #include "PhysicsTestbed/Controls.h"
 #include "PhysicsTestbed/PhysicsEngine.h"

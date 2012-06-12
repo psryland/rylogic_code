@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
+    <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{F857C009-9717-4851-AFA4-5AE56DD8427F}</ProjectGuid>
     <OutputType>WinExe</OutputType>
@@ -35,14 +35,6 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.XML" />
-    <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
@@ -103,9 +95,9 @@
     <Compile Include="settings.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs.csproj">
+    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2008.csproj">
       <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>prcs</Name>
+      <Name>prcs_vs2008</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

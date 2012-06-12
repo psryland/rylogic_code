@@ -68,7 +68,8 @@ namespace pr.stream
 		/// <summary>Access to the write interface of the stream</summary>
 		public Stream OStream { get; private set; }
 		
-		public LinkStream(int capacity = DefaultBlockBufferSize * 8)
+		public LinkStream() :this(DefaultBlockBufferSize * 8) {}
+		public LinkStream(int capacity)
 		{
 			m_capacity = 0;
 			CommitCharge = 0;

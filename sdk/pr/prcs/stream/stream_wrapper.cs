@@ -5,7 +5,7 @@ using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Runtime.Remoting;
 
-namespace pr.util
+namespace pr.stream
 {
 	/// <summary>
 	/// A base class for implementing a wrapper around a contained stream
@@ -296,7 +296,6 @@ namespace pr.util
 		/// <exception cref="T:System.NotSupportedException">The stream does not support reading.</exception>
 		/// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed.</exception>
 		/// <filterpriority>2</filterpriority>
-		[TargetedPatchingOptOut("Performance critical to inline across NGen image boundaries")]
 		public override int ReadByte()
 		{
 			return m_stream.ReadByte();
@@ -333,11 +332,13 @@ namespace pr.util
 			m_stream.WriteByte(value);
 		}
 		
+		#if !PR_DOTNET35
 		protected override void ObjectInvariant()
 		{
 			MethodInfo method = m_stream.GetType().GetMethod("ObjectInvariant", BindingFlags.NonPublic|BindingFlags.ExactBinding);
 			method.Invoke(m_stream, null);
 		}
+		#endif
 
 		/// <summary>
 		/// Creates an object that contains all the relevant information required to generate a proxy used to communicate with a remote object.

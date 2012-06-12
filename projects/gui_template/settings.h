@@ -86,8 +86,8 @@ namespace gui_template
 				reader.AddSource(src);
 				
 				// Verify the hash values are correct
-				#if PR_DBG_COMMON
-				#define USER_SETTING(name, type, member, default_value, hashvalue, desc) PR_ASSERT(PR_DBG_COMMON, reader.HashKeyword(#name) == hashvalue, pr::FmtS("Hash value for %s incorrect. Should be 0x%08x\n", #name, reader.HashKeyword(#name)));
+				#if PR_DBG
+				#define USER_SETTING(name, type, member, default_value, hashvalue, desc) PR_ASSERT(PR_DBG, reader.HashKeyword(#name) == hashvalue, pr::FmtS("Hash value for %s incorrect. Should be 0x%08x\n", #name, reader.HashKeyword(#name)));
 				#include "settings.h"
 				#endif
 				
@@ -96,7 +96,7 @@ namespace gui_template
 				{
 					switch (setting)
 					{
-					default: PR_ASSERT(PR_DBG_COMMON, false, "Unknown user setting"); break;
+					default: PR_ASSERT(PR_DBG, false, "Unknown user setting"); break;
 					case Notepad:        reader.ExtractStringS(m_notepad); break;
 					}
 				}

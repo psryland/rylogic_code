@@ -45,7 +45,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="Q:\Projects;Q:\SDK\PR;Q:\SDK\DirectX9.0c\Oct2006\Include;&quot;S:\DNG-Code\Root\Modules&quot;;S:\SDK\Reflections;S:\SDK\Fuz\Latest"
+				AdditionalIncludeDirectories="Q:\projects;Q:\sdk\pr;Q:\sdk\directx9.0c\aug2009\include;&quot;S:\DNG-Code\Root\Modules&quot;;S:\SDK\Reflections;S:\SDK\Fuz\Latest"
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG;_USRDLL;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;NOMINMAX;VC_EXTRALEAN;_WIN32_WINNT=0x0500;PR_MATHS_USE_D3DX=1;PHYSICS_ENGINE=RYLOGIC_PHYSICS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -74,7 +74,7 @@
 				AdditionalDependencies="d3d9.lib d3dx9.lib LineDrawerD.lib PhysicsD.lib"
 				OutputFile="$(OutDir)/PhysicsTestbed.dll"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="Q:\SDK\PR\Lib;Q:\SDK\DirectX9.0c\Oct2006\Lib\x86;&quot;S:\DNG-Code\Root\Modules\Maths\Lib&quot;;&quot;S:\DNG-Code\Root\Modules\Physics\lib&quot;"
+				AdditionalLibraryDirectories="Q:\sdk\pr\lib;Q:\sdk\directx9.0c\aug2009\lib\x86;&quot;S:\DNG-Code\Root\Modules\Maths\Lib&quot;;&quot;S:\DNG-Code\Root\Modules\Physics\lib&quot;"
 				GenerateManifest="true"
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile=""
@@ -135,7 +135,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="Q:\Projects;Q:\SDK\PR;Q:\SDK\DirectX9.0c\Oct2006\Include;&quot;S:\DNG-Code\Root\Modules&quot;;S:\SDK\Reflections;S:\SDK\Fuz\Latest"
+				AdditionalIncludeDirectories="Q:\projects;Q:\sdk\pr;Q:\sdk\directx9.0c\aug2009\include;&quot;S:\DNG-Code\Root\Modules&quot;;S:\SDK\Reflections;S:\SDK\Fuz\Latest"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;_USRDLL;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;NOMINMAX;VC_EXTRALEAN;_WIN32_WINNT=0x0500;PR_MATHS_USE_D3DX=1;PHYSICS_ENGINE=RYLOGIC_PHYSICS"
 				RuntimeLibrary="0"
 				TreatWChar_tAsBuiltInType="true"
@@ -162,7 +162,7 @@
 				AdditionalDependencies="d3d9.lib d3dx9.lib LineDrawer.lib Physics.lib"
 				OutputFile="$(OutDir)/PhysicsTestbed.dll"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="Q:\SDK\PR\Lib;Q:\SDK\DirectX9.0c\Oct2006\Lib\x86;&quot;S:\DNG-Code\Root\Modules\Maths\Lib&quot;;&quot;S:\DNG-Code\Root\Modules\Physics\lib&quot;"
+				AdditionalLibraryDirectories="Q:\sdk\pr\lib;Q:\sdk\directx9.0c\aug2009\lib\x86;&quot;S:\DNG-Code\Root\Modules\Maths\Lib&quot;;&quot;S:\DNG-Code\Root\Modules\Physics\lib&quot;"
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile=""
 				GenerateDebugInformation="true"
