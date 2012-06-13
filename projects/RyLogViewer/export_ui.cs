@@ -5,48 +5,42 @@ namespace RyLogViewer
 {
 	public partial class ExportUI :Form
 	{
-		public enum EMode
+		public enum EContent
 		{
 			WholeFile,
 			Selection,
 			ByteRange
 		}
 		
-		public EMode ExportType
-		{
-			get;
-			set;
-		}
+		/// <summary>What to export</summary>
+		public EContent Content { get; set; }
 
-		public Range ByteRange
-		{
-			get;
-			set;
-		}
+		/// <summary>If Content is byte range, export this range</summary>
+		public Range ByteRange { get; set; }
 
 		public ExportUI(Range file_byte_range)
 		{
 			InitializeComponent();
 			ByteRange = file_byte_range;
-			ExportType = EMode.WholeFile;
+			Content = EContent.WholeFile;
 			
 			// Radio buttons
-			m_radio_whole_file.Checked = ExportType == EMode.WholeFile;
+			m_radio_whole_file.Checked = Content == EContent.WholeFile;
 			m_radio_whole_file.CheckedChanged += (s,a)=>
 				{
-					ExportType = EMode.WholeFile;
+					Content = EContent.WholeFile;
 					UpdateUI();
 				};
-			m_radio_selection.Checked = ExportType == EMode.Selection;
+			m_radio_selection.Checked = Content == EContent.Selection;
 			m_radio_selection.CheckedChanged += (s,a)=>
 				{
-					ExportType = EMode.Selection;
+					Content = EContent.Selection;
 					UpdateUI();
 				};
-			m_radio_range.Checked = ExportType == EMode.ByteRange;
+			m_radio_range.Checked = Content == EContent.ByteRange;
 			m_radio_range.CheckedChanged += (s,a)=>
 				{
-					ExportType = EMode.ByteRange;
+					Content = EContent.ByteRange;
 					UpdateUI();
 				};
 			
@@ -55,7 +49,7 @@ namespace RyLogViewer
 
 		private void UpdateUI()
 		{
-			bool byte_range = ExportType == EMode.ByteRange;
+			bool byte_range = Content == EContent.ByteRange;
 			m_btn_range_to_start.Enabled = byte_range;
 			m_btn_range_to_end  .Enabled = byte_range;
 			m_spinner_range_min .Enabled = byte_range;

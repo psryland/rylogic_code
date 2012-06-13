@@ -313,4 +313,10 @@ Error Details: {0}</value>
 	<data name="WatchForUpdates">
 		<value xml:space="preserve">Watch the file and update automatically when it changes</value>
 	</data>
+  <data name="ClearLogFailed">
+    <value xml:space="preserve">Clear Log Failed</value>
+  </data>
+  <data name="ConfirmClearLog">
+    <value xml:space="preserve">Confirm Clear Log</value>
+  </data>
 </root>

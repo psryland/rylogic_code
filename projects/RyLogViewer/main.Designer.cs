@@ -45,6 +45,8 @@
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep1 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_recent = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
@@ -87,8 +89,8 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_clear = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -247,6 +249,17 @@
 			this.m_sep1.Name = "m_sep1";
 			this.m_sep1.Size = new System.Drawing.Size(187, 6);
 			// 
+			// m_menu_file_export
+			// 
+			this.m_menu_file_export.Name = "m_menu_file_export";
+			this.m_menu_file_export.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_export.Text = "&Export...";
+			// 
+			// toolStripSeparator5
+			// 
+			this.toolStripSeparator5.Name = "toolStripSeparator5";
+			this.toolStripSeparator5.Size = new System.Drawing.Size(187, 6);
+			// 
 			// m_menu_file_recent
 			// 
 			this.m_menu_file_recent.Name = "m_menu_file_recent";
@@ -373,6 +386,8 @@
             this.m_sep4,
             this.m_menu_tools_highlights,
             this.m_menu_tools_filters,
+            this.toolStripSeparator6,
+            this.m_menu_tools_clear,
             this.m_sep5,
             this.m_menu_tools_options});
 			this.m_menu_tools.Name = "m_menu_tools";
@@ -610,16 +625,16 @@
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
-			// toolStripSeparator5
+			// m_menu_tools_clear
 			// 
-			this.toolStripSeparator5.Name = "toolStripSeparator5";
-			this.toolStripSeparator5.Size = new System.Drawing.Size(187, 6);
+			this.m_menu_tools_clear.Name = "m_menu_tools_clear";
+			this.m_menu_tools_clear.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_clear.Text = "&Clear Log File";
 			// 
-			// m_menu_file_export
+			// toolStripSeparator6
 			// 
-			this.m_menu_file_export.Name = "m_menu_file_export";
-			this.m_menu_file_export.Size = new System.Drawing.Size(190, 22);
-			this.m_menu_file_export.Text = "&Export...";
+			this.toolStripSeparator6.Name = "toolStripSeparator6";
+			this.toolStripSeparator6.Size = new System.Drawing.Size(151, 6);
 			// 
 			// Main
 			// 
@@ -715,6 +730,8 @@
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_select_all;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_export;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_clear;
 	}
 }
 

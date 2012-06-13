@@ -11,10 +11,13 @@ using System.Windows.Forms;
 namespace pr.util
 {
 	// Consider using a 'System.IO.FileSystemWatcher' before using this helper
+	// Note however that FileSystemWatcher does not notify of file changed immediately.
+	// Something has to touch the file before the OS notices it change. For watching a
+	// file with high frequency, polling is the best method
 
 	// Note about worker threads:
 	// It's tempting to try and make this type a worker thread that notifies the client when
-	// a file has changed. However this requires cross-thread marshelling which is only possible
+	// a file has changed. However this requires cross-thread marshalling which is only possible
 	// if the client has a message queue. There are three possibilities;
 	//   1) the client is a window - could use SendMessage() to notify the client (SendMessage
 	//      marshalls across threads) however it doesn't make sense for the FileWatch type to
@@ -49,9 +52,10 @@ namespace pr.util
 		private readonly List<WatchedFile> m_files = new List<WatchedFile>();
 		private readonly Timer             m_timer = new Timer{Interval = 1000, Enabled = false};
 
-		// File changed callback. Return true if the change was handled
-		// Returning false causes the FileChanged notification to happen
-		// again next time CheckForChangedFiles() is called.
+		/// <summary>
+		/// File changed callback. Return true if the change was handled
+		/// Returning false causes the FileChanged notification to happen
+		/// again next time CheckForChangedFiles() is called. </summary>
 		public delegate bool FileChangedHandler(string filepath, object ctx);
 
 		public FileWatch() {}

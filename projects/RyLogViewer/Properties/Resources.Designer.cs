@@ -146,6 +146,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Clear Log Failed.
+        /// </summary>
+        internal static string ClearLogFailed {
+            get {
+                return ResourceManager.GetString("ClearLogFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Click here to modify highlight.
         /// </summary>
         internal static string ClickToModifyHighlight {
@@ -158,6 +167,15 @@ namespace RyLogViewer.Properties {
             get {
                 object obj = ResourceManager.GetObject("configure", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Confirm Clear Log.
+        /// </summary>
+        internal static string ConfirmClearLog {
+            get {
+                return ResourceManager.GetString("ConfirmClearLog", resourceCulture);
             }
         }
         

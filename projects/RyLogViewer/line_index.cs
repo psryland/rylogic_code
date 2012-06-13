@@ -30,7 +30,7 @@ namespace RyLogViewer
 		private static Range BufferRange(long filepos, long fileend, long buf_size)
 		{
 			Range rng = new Range();
-			long ovr, hbuf = buf_size;
+			long ovr, hbuf = buf_size / 2;
 			
 			// Start with the range that has filepos in the middle
 			rng.m_begin = filepos - hbuf;
@@ -132,7 +132,7 @@ namespace RyLogViewer
 			
 			// The file position when 'm_line_index' was built
 			long last_filepos  = m_filepos;
-			long half_range    = m_settings.FileBufSize / 2;
+			long half_range    = m_bufsize / 2;
 			bool ignore_blanks = m_settings.IgnoreBlankLines;
 			
 			// Find the new line indices in a background thread
@@ -199,8 +199,7 @@ namespace RyLogViewer
 							UpdateUI(row_delta);
 							
 							// On completion, check if the file has changed again and rerun if it has
-							if (m_fileend != m_file.Length)
-								m_file_changed.Signal();
+							m_watch.CheckForChangedFiles();
 							
 							if (on_complete != null) on_complete();
 							m_reload_in_progress = false;

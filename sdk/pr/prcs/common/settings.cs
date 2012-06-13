@@ -70,7 +70,7 @@ namespace pr.common
 				string company = Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company;
 				string app_name = Util.GetAssemblyAttribute<AssemblyTitleAttribute>().Title;
 				string app_data = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-				return Path.Combine(app_data, company, app_name);
+				return Path.Combine(Path.Combine(app_data, company), app_name);
 			}
 		}
 		
@@ -128,12 +128,16 @@ namespace pr.common
 			public string Key      { get; private set; }
 			public object OldValue { get; private set; }
 			public object NewValue { get; private set; }
-			public SettingsChangingEventArgs(string key, object old_value, object new_value, bool cancel = false) :base(cancel)
+			public SettingsChangingEventArgs(string key, object old_value, object new_value, bool cancel)
+			:base(cancel)
 			{
 				Key = key;
 				OldValue = old_value;
 				NewValue = new_value;
 			}
+			public SettingsChangingEventArgs(string key, object old_value, object new_value)
+			:this(key, old_value, new_value, false)
+			{}
 		}
 		
 		/// <summary>An event raised after a setting has been changed</summary>
@@ -165,8 +169,8 @@ namespace pr.common
 		public event EventHandler<SettingsSavingEventArgs> SettingsSaving;
 		public class SettingsSavingEventArgs :CancelEventArgs
 		{
-			public SettingsSavingEventArgs(bool cancel = false) :base(cancel)
-			{}
+			public SettingsSavingEventArgs() :this(false) {}
+			public SettingsSavingEventArgs(bool cancel) :base(cancel) {}
 		}
 		
 		/// <summary>Refreshes the settings from persistent storage</summary>
@@ -211,7 +215,7 @@ namespace pr.common
 
 			// Perform the save
 			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>));
-			using (XmlWriter fs = XmlWriter.Create(Filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment, NamespaceHandling = NamespaceHandling.OmitDuplicates}))
+			using (XmlWriter fs = XmlWriter.Create(Filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
 				ser.WriteObject(fs, Data);
 		}
 

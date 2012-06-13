@@ -207,7 +207,7 @@ namespace RyLogViewer
 				};
 			
 			// File scroll width
-			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the left file position scroll bar");
+			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
 			m_spinner_file_scroll_width.Minimum = 16;
 			m_spinner_file_scroll_width.Maximum = 200;
 			m_spinner_file_scroll_width.Value = Maths.Clamp(m_settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
