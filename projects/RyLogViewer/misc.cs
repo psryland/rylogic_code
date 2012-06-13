@@ -8,6 +8,13 @@ namespace RyLogViewer
 		public const int FileReadChunkSize = 4096;
 	}
 
+	public enum EPattern
+	{
+		Substring,
+		Wildcard,
+		RegularExpression
+	}
+
 	[Flags] public enum EWhatsChanged
 	{
 		Nothing = 0,
@@ -33,7 +40,7 @@ namespace RyLogViewer
 		public const string Root       = "root";
 		public const string Expr       = "expr";
 		public const string Active     = "active";
-		public const string IsRegex    = "isregex";
+		public const string PatnType   = "patntype";
 		public const string IgnoreCase = "ignorecase";
 		public const string Invert     = "invert";
 		public const string Binary     = "binary";

@@ -3,24 +3,39 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.common;
+using pr.util;
 
 namespace RyLogViewer
 {
 	public class Pattern :ICloneable
 	{
 		private string m_expr;
+		private EPattern m_patn_type;
 		private bool m_active;
-		private bool m_is_regex;
 		private bool m_ignore_case;
 		private bool m_invert;
 		private bool m_binary_match;
-		private Regex m_compiled_regex;
-		
+		private Regex m_compiled_patn;
+
 		/// <summary>The pattern to use when matching</summary>
 		public string Expr
 		{
 			get { return m_expr; }
-			set { m_expr = value; m_compiled_regex = null; }
+			set { m_expr = value; m_compiled_patn = null; }
+		}
+
+		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
+		public EPattern PatnType
+		{
+			get { return m_patn_type; }
+			set { m_patn_type = value; m_compiled_patn = null; }
+		}
+
+		/// <summary>True if the pattern should ignore case</summary>
+		public bool IgnoreCase
+		{
+			get { return m_ignore_case; }
+			set { m_ignore_case = value; m_compiled_patn = null; }
 		}
 
 		/// <summary>True if the highlight pattern is active</summary>
@@ -28,21 +43,6 @@ namespace RyLogViewer
 		{
 			get { return m_active; }
 			set { m_active = value; }
-		}
-
-		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
-		public bool IsRegex
-		{
-			get { return m_is_regex; }
-			set { m_is_regex = value; m_compiled_regex = null; }
-		}
-
-		
-		/// <summary>True if the pattern should ignore case</summary>
-		public bool IgnoreCase
-		{
-			get { return m_ignore_case; }
-			set { m_ignore_case = value; m_compiled_regex = null; }
 		}
 
 		/// <summary>Invert the results of a match</summary>
@@ -63,36 +63,59 @@ namespace RyLogViewer
 		{
 			Expr = "";
 			Active = true;
-			IsRegex = false;
+			PatnType = EPattern.Substring;
 			IgnoreCase = false;
 			Invert = false;
 			BinaryMatch = true;
 		}
-		public Pattern(Pattern rhs)
+
+		protected Pattern(Pattern rhs)
 		{
 			Expr        = rhs.Expr;
 			Active      = rhs.Active;
-			IsRegex     = rhs.IsRegex;
+			PatnType    = rhs.PatnType;
 			IgnoreCase  = rhs.IgnoreCase;
 			Invert      = rhs.Invert;
 			BinaryMatch = rhs.BinaryMatch;
 		}
 		
+		/// <summary>Converts this wildcard pattern into a compiled regex pattern</summary>
+		private Regex WildCard
+		{
+			get
+			{
+				string patn = Regex.Escape(Expr).Replace("\\*", ".*").Replace("\\?", ".");
+				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
+				return m_compiled_patn ?? (m_compiled_patn = new Regex(patn, opts));
+			}
+		}
+		
+		/// <summary>Converts this regex pattern into a compiled regex pattern</summary>
 		private Regex Regex
 		{
 			get
 			{
 				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
-				return m_compiled_regex ?? (m_compiled_regex = new Regex(Expr, opts));
+				return m_compiled_patn ?? (m_compiled_patn = new Regex(Expr, opts));
 			}
 		}
 		
 		/// <summary>Return true if the contained expression is valid</summary>
 		public bool ExprValid
 		{
-			// ReSharper disable ConditionIsAlwaysTrueOrFalse
-			get { try { return !IsRegex || new Regex(Expr) != null; } catch { return false; } }
-			// ReSharper restore ConditionIsAlwaysTrueOrFalse
+			get
+			{
+				try
+				{
+					switch (PatnType)
+					{
+					default: throw new ArgumentException("Unknown pattern type");
+					case EPattern.Substring:         return true;
+					case EPattern.Wildcard:          return WildCard != null;
+					case EPattern.RegularExpression: return Regex != null;
+					}
+				} catch { return false; }
+			}
 		}
 
 		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
@@ -100,15 +123,26 @@ namespace RyLogViewer
 		{
 			if (!Active) return false;
 			bool match = false;
-			if (IsRegex)
+			switch (PatnType)
 			{
-				try { match = Regex.IsMatch(text); } catch (ArgumentException) {}
+			case EPattern.Substring:
+				{
+					StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+					match = text.IndexOf(Expr, 0, cmp) != -1;
+					break;
+				}
+			case EPattern.Wildcard:
+				{
+					try { match = WildCard.IsMatch(text); } catch (ArgumentException) {}
+					break;
+				}
+			case EPattern.RegularExpression:
+				{
+					try { match = Regex.IsMatch(text); } catch (ArgumentException) {}
+					break;
+				}
 			}
-			else
-			{
-				StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-				match = text.IndexOf(Expr, 0, cmp) != -1;
-			}
+			
 			return Invert ? !match : match;
 		}
 		
@@ -121,21 +155,35 @@ namespace RyLogViewer
 				if (Invert) x.Add(0);
 				if (Expr.Length != 0) try
 				{
-					if (IsRegex)
+					switch (PatnType)
 					{
-						foreach (Match m in Regex.Matches(text))
+					case EPattern.Substring:
 						{
-							x.Add(m.Index);
-							x.Add(m.Index + m.Length);
+							StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+							for (int i = text.IndexOf(Expr, 0, cmp); i != -1; i = text.IndexOf(Expr, i + Expr.Length, cmp))
+							{
+								x.Add(i);
+								x.Add(i + Expr.Length);
+							}
+							break;
 						}
-					}
-					else
-					{
-						StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-						for (int i = text.IndexOf(Expr, 0, cmp); i != -1; i = text.IndexOf(Expr, i + Expr.Length, cmp))
+					case EPattern.Wildcard:
 						{
-							x.Add(i);
-							x.Add(i + Expr.Length);
+							foreach (Match m in WildCard.Matches(text))
+							{
+								x.Add(m.Index);
+								x.Add(m.Index + m.Length);
+							}
+							break;
+						}
+					case EPattern.RegularExpression:
+						{
+							foreach (Match m in Regex.Matches(text))
+							{
+								x.Add(m.Index);
+								x.Add(m.Index + m.Length);
+							}
+							break;
 						}
 					}
 				} catch (ArgumentException) {}
@@ -146,12 +194,12 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Construct from xml description</summary>
-		public Pattern(XElement node)
+		protected Pattern(XElement node)
 		{
 			// ReSharper disable PossibleNullReferenceException
-			Expr        =            node.Element(XmlTag.Expr      ).Value;
+			Expr        = node.Element(XmlTag.Expr      ).Value;
+			PatnType    = Enum<EPattern>.Parse(node.Element(XmlTag.PatnType).Value);
 			Active      = bool.Parse(node.Element(XmlTag.Active    ).Value);
-			IsRegex     = bool.Parse(node.Element(XmlTag.IsRegex   ).Value);
 			IgnoreCase  = bool.Parse(node.Element(XmlTag.IgnoreCase).Value);
 			Invert      = bool.Parse(node.Element(XmlTag.Invert    ).Value);
 			BinaryMatch = bool.Parse(node.Element(XmlTag.Binary    ).Value);
@@ -165,7 +213,7 @@ namespace RyLogViewer
 			(
 				new XElement(XmlTag.Expr       ,Expr       ),
 				new XElement(XmlTag.Active     ,Active     ),
-				new XElement(XmlTag.IsRegex    ,IsRegex    ),
+				new XElement(XmlTag.PatnType   ,PatnType   ),
 				new XElement(XmlTag.IgnoreCase ,IgnoreCase ),
 				new XElement(XmlTag.Invert     ,Invert     ),
 				new XElement(XmlTag.Binary     ,BinaryMatch)
@@ -187,7 +235,7 @@ namespace RyLogViewer
 				rhs != null &&
 				Expr       .Equals(rhs.Expr       ) &&
 				Active     .Equals(rhs.Active     ) &&
-				IsRegex    .Equals(rhs.IsRegex    ) &&
+				PatnType   .Equals(rhs.PatnType   ) &&
 				IgnoreCase .Equals(rhs.IgnoreCase ) &&
 				Invert     .Equals(rhs.Invert     ) &&
 				BinaryMatch.Equals(rhs.BinaryMatch);
@@ -199,7 +247,7 @@ namespace RyLogViewer
 			return
 				Expr       .GetHashCode()^
 				Active     .GetHashCode()^
-				IsRegex    .GetHashCode()^
+				PatnType   .GetHashCode()^
 				IgnoreCase .GetHashCode()^
 				Invert     .GetHashCode()^
 				BinaryMatch.GetHashCode();

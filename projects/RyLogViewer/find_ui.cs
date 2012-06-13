@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows.Forms;
 
 namespace RyLogViewer
@@ -35,25 +34,36 @@ namespace RyLogViewer
 			InitializeComponent();
 			m_pattern = new Pattern();
 			m_history = find_history;
-
-			m_combo_pattern.Items.AddRange(m_history.ToArray());
+			m_radio_substring.Checked = m_pattern.PatnType == EPattern.Substring;
+			m_radio_wildcard .Checked = m_pattern.PatnType == EPattern.Wildcard;
+			m_radio_regex    .Checked = m_pattern.PatnType == EPattern.RegularExpression;
+			
+			foreach (var h in m_history) m_combo_pattern.Items.Add(h);
 			m_history.ListChanged += (s,a)=>
 				{
 					if (a.ListChangedType != ListChangedType.ItemAdded) return;
 					m_combo_pattern.Items.Clear();
-					m_combo_pattern.Items.AddRange(m_history.ToArray());
+					foreach (var h in m_history) m_combo_pattern.Items.Add(h);
 				};
 
 			m_btn_find_prev.Click += (s,a) => RaiseFindPrev();
 			m_btn_find_next.Click += (s,a) => RaiseFindNext();
 
+			m_radio_substring.Click += (s,a)=>
+				{
+					if (m_radio_substring.Checked) m_pattern.PatnType = EPattern.Substring;
+				};
+			m_radio_wildcard.Click += (s,a)=>
+				{
+					if (m_radio_wildcard.Checked) m_pattern.PatnType = EPattern.Wildcard;
+				};
+			m_radio_regex.Click += (s,a)=>
+				{
+					if (m_radio_regex.Checked) m_pattern.PatnType = EPattern.RegularExpression;
+				};
 			m_check_ignore_case.CheckedChanged += (s,a)=>
 				{
 					m_pattern.IgnoreCase = m_check_ignore_case.Checked;
-				};
-			m_check_regex.CheckedChanged += (s,a)=>
-				{
-					m_pattern.IsRegex = m_check_regex.Checked;
 				};
 			m_check_invert.CheckedChanged += (s,a)=>
 				{
@@ -64,6 +74,12 @@ namespace RyLogViewer
 			Shown += (s,a)=>
 				{
 					m_combo_pattern.Focus();
+				};
+			FormClosing += (s,a)=>
+				{
+					if (a.CloseReason != CloseReason.UserClosing) return;
+					Hide();
+					a.Cancel = true;
 				};
 		}
 		

@@ -455,6 +455,15 @@ namespace pr.util
 			return to;
 		}
 	}
+	
+	/// <summary>Enum parse helper</summary>
+	public static class Enum<T>
+	{
+		public static T Parse(string value)
+		{
+			return (T)Enum.Parse(typeof(T), value);
+		}
+	}
 }
 
 #if PR_UNITTESTS

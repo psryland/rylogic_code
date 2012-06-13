@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using pr.common;
@@ -24,10 +25,12 @@ namespace RyLogViewer
 		
 		private readonly Settings m_settings;                 // App settings
 		private readonly RecentFiles m_recent;                // Recent files
+		private readonly EventWaitHandle m_sync;              // A sync event for general use
 		private readonly FileWatch m_watch;                   // A helper for watching files
 		private readonly Timer m_watch_timer;                 // A timer for polling the file watcher
 		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
 		private readonly BindingList<string> m_find_history;  // A history of the strings used to find
+		private readonly FindUI m_find_ui;                    // The find dialog
 		private Pattern m_last_find_pattern;                  // The pattern last used in a find
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
@@ -56,10 +59,12 @@ namespace RyLogViewer
 			InitializeComponent();
 			m_settings          = new Settings();
 			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
+			m_sync              = new EventWaitHandle(false, EventResetMode.ManualReset);
 			m_watch             = new FileWatch();
 			m_watch_timer       = new Timer{Interval = 100};
 			m_highlights        = new List<Highlight>();
 			m_find_history      = new BindingList<string>();
+			m_find_ui           = new FindUI(m_find_history){Visible = false};
 			m_line_index        = new List<Range>();
 			m_last_find_pattern = null;
 			m_filepath          = null;
@@ -150,6 +155,10 @@ namespace RyLogViewer
 			m_watch_timer.Tick += (s,a)=> { m_watch.CheckForChangedFiles(); };
 			
 			// Find
+			m_find_ui.Tag = Size.Empty;
+			m_find_ui.FindNext += FindNext;
+			m_find_ui.FindPrev += FindPrev;
+			m_find_ui.Move     += (s,e)=> { m_find_ui.Tag = new Size(m_find_ui.Location.X - Location.X, m_find_ui.Location.Y - Location.Y); };
 			m_find_history.ListChanged += (s,a)=>
 				{
 					if (a.ListChangedType == ListChangedType.ItemAdded && m_find_history.Count > 10)
@@ -164,6 +173,7 @@ namespace RyLogViewer
 					{
 						Location = m_settings.ScreenPosition;
 						Size = m_settings.WindowSize;
+						m_find_ui.Tag = new Size(Size.Width - m_find_ui.Width - 8, 28);
 					}
 					
 					// Parse commandline
@@ -193,6 +203,12 @@ namespace RyLogViewer
 			
 			// Resize
 			SizeChanged += (s,a)=> UpdateUI();
+
+			// Main window move
+			Move += (s,a)=>
+				{
+					m_find_ui.Location = Location + (Size)m_find_ui.Tag;
+				};
 
 			// Shutdown
 			FormClosing += (s,a) =>
@@ -358,33 +374,28 @@ namespace RyLogViewer
 		/// <summary>Show the find dialog</summary>
 		private void ShowFindDialog()
 		{
-			Point pt = m_grid.PointToScreen(m_grid.Location);
-			var find = new FindUI(m_find_history);
-			find.FindNext += FindNext;
-			find.FindPrev += FindPrev;
-			find.Location = pt + new Size(Width - find.Width, 0);
-			find.Show(this);
+			m_find_ui.Location = Location + (Size)m_find_ui.Tag;
+			if (!m_find_ui.Visible)
+				m_find_ui.Show(this);
 		}
 		
-		/// <summary>Search for the next occurance of a pattern in the grid</summary>
+		/// <summary>Search for the next occurance of a pattern in the file</summary>
 		private void FindNext(Pattern pat)
 		{
 			if (pat == null || m_grid.RowCount == 0) return;
 			m_last_find_pattern = pat;
-
-			// Search from the current row forward
-			int row = SelectedRow;
-			bool current_row_matches = pat.IsMatch(ReadLine(row).RowText);
-			for (int i = row + 1; i != m_grid.RowCount; ++i)
-			{
-				if (!pat.IsMatch(ReadLine(i).RowText)) continue;
-				
-				// Found!. Make sure the selected row is visible
-				SelectedRow = i;
+			
+			var start = SelectedRowRange.m_end;
+			Log.Info("FindNext starting from {0}", start);
+			
+			long found;
+			if (!Find(pat, start, false, out found))
 				return;
-			}
-			if (!current_row_matches)
-				SetTransientStatusMessage("Not found", 2000);
+			
+			if (found == -1)
+				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue, 2000);
+			else
+				SelectRowByAddr(found);
 		}
 		
 		/// <summary>Search for an earlier occurance of a pattern in the grid</summary>
@@ -393,19 +404,17 @@ namespace RyLogViewer
 			if (pat == null || m_grid.RowCount == 0) return;
 			m_last_find_pattern = pat;
 			
-			// Search from the current row backward
-			int row = SelectedRow;
-			bool current_row_matches = pat.IsMatch(ReadLine(row).RowText);
-			for (int i = row - 1; i != -1; --i)
-			{
-				if (!pat.IsMatch(ReadLine(i).RowText)) continue;
-				
-				// Found!. Make sure the selected row is visible
-				SelectedRow = i;
+			var start = SelectedRowRange.m_begin;
+			Log.Info("FindPrev starting from {0}", start);
+			
+			long found;
+			if (!Find(pat, start, true, out found))
 				return;
-			}
-			if (!current_row_matches)
-				SetTransientStatusMessage("Not found", 2000);
+			
+			if (found == -1)
+				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue, 2000);
+			else
+				SelectRowByAddr(found);
 		}
 
 		/// <summary>Show the export dialog</summary>
@@ -545,6 +554,22 @@ namespace RyLogViewer
 			// modify it from what it's already set to. Auto detect will set it on file load.
 			if (row_delim.Length == 0) return m_row_delim;
 			return m_encoding.GetBytes(row_delim.Replace("CR","\r").Replace("LF","\n"));
+		}
+
+		/// <summary>Selected the row in the file that contains the byte offset 'addr'</summary>
+		private void SelectRowByAddr(long addr)
+		{
+			// Ensure 'addr' is cached
+			m_sync.Reset();
+			BuildLineIndex(addr, false, ()=>
+			{
+				// When the file is cached, select the row
+				int idx = m_line_index.BinarySearch(r => r.m_end < addr ? -1 : r.m_begin > addr ? 1 : 0);
+				if (idx < 0) idx = ~idx;
+				SelectedRow = idx;
+				m_sync.Set();
+			});
+			m_sync.WaitOne(1000);
 		}
 
 		/// <summary>
@@ -817,10 +842,12 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Create a message that displays for a period then disappears</summary>
-		private void SetTransientStatusMessage(string text, int display_time_ms)
+		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, int display_time_ms)
 		{
 			m_status_message.Text = text;
 			m_status_message.Visible = true;
+			m_status_message.ForeColor = frcol;
+			m_status_message.BackColor = bkcol;
 			
 			// If the status message has a timer already, dispose it
 			Timer timer = m_status_message.Tag as Timer;

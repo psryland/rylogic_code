@@ -19,8 +19,9 @@ namespace RyLogViewer
 		public enum ETab
 		{
 			General    = 0,
-			Highlights = 1,
-			Filters    = 2,
+			LogView    = 1,
+			Highlights = 2,
+			Filters    = 3,
 		}
 		private static class ColumnNames
 		{

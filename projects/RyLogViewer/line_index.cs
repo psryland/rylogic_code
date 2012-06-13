@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.gui;
 using pr.maths;
 using pr.util;
 
@@ -100,115 +103,162 @@ namespace RyLogViewer
 		/// If 'reload' is true a full rescan of the file is done</summary>
 		private void BuildLineIndex(long filepos, bool reload, Action on_complete = null)
 		{
-			if (!FileOpen) return;
+			bool on_complete_call_needed = false;
+			try
+			{
+				// Ensure the on_complete callback gets called
+				on_complete_call_needed = on_complete != null;
+				
+				// No file open, nothing to do
+				if (!FileOpen)
+					return;
 			
-			// If the file position hasn't moved, don't bother doing anything
-			if (filepos == m_filepos && !reload)
-				return;
+				// If the file position hasn't moved, don't bother doing anything
+				if (filepos == m_filepos && !reload)
+					return;
 			
-			// Incremental updates cannot supplant reloads
-			if (m_reload_in_progress && reload == false)
-				return;
+				// Incremental updates cannot supplant reloads
+				if (m_reload_in_progress && reload == false)
+					return;
 			
-			// Cause any existing builds to stop by changing the issue number
-			Interlocked.Increment(ref m_build_issue);
-			m_reload_in_progress = reload;
+				// Cause any existing builds to stop by changing the issue number
+				Interlocked.Increment(ref m_build_issue);
+				m_reload_in_progress = reload;
 			
-			// Find the byte range of the file currently loaded
-			Range line_index_range  = LineIndexRange;
-			Range line_starts_range = LineStartIndexRange;
+				// Find the byte range of the file currently loaded
+				Range line_index_range  = LineIndexRange;
+				Range line_starts_range = LineStartIndexRange;
 			
-			// If this is not a 'reload', guess the encoding
-			Encoding encoding = reload
-				? (Encoding)GuessEncoding(m_filepath).Clone()
-				: (Encoding)m_encoding.Clone();
+				// If this is not a 'reload', guess the encoding
+				Encoding encoding = reload
+					? (Encoding)GuessEncoding(m_filepath).Clone()
+					: (Encoding)m_encoding.Clone();
 			
-			// If this is not a 'reload', guess the row_delimiters
-			byte[] row_delim = reload
-				? (byte[])GuessRowDelimiter(m_filepath, encoding).Clone()
-				: (byte[])m_row_delim.Clone();
+				// If this is not a 'reload', guess the row_delimiters
+				byte[] row_delim = reload
+					? (byte[])GuessRowDelimiter(m_filepath, encoding).Clone()
+					: (byte[])m_row_delim.Clone();
 			
-			List<Filter> filters = ActiveFilters.ToList();
+				List<Filter> filters = ActiveFilters.ToList();
 			
-			// The file position when 'm_line_index' was built
-			long last_filepos  = m_filepos;
-			long half_range    = m_bufsize / 2;
-			bool ignore_blanks = m_settings.IgnoreBlankLines;
+				// The file position when 'm_line_index' was built
+				long last_filepos  = m_filepos;
+				long bufsize       = m_bufsize;
+				bool ignore_blanks = m_settings.IgnoreBlankLines;
 			
-			// Find the new line indices in a background thread
-			ThreadPool.QueueUserWorkItem(bi =>
-				{
-					try
+				// Find the new line indices in a background thread
+				ThreadPool.QueueUserWorkItem(bi =>
 					{
-						Log.Info("build started. (id {0})", (int)bi);
-						
-						int build_issue = (int)bi;
-						if (BuildCancelled(build_issue)) return;
-						
-						// Generate the line index in a new buffer
-						List<Range> line_index = new List<Range>();
-						
-						// A temporary buffer for reading sections of the file
-						byte[] buf = new byte[Constants.FileReadChunkSize]; 
-						long fileend;
-						bool incremental;
-						
-						using (var file = LoadFile(m_filepath))
+						bool on_complete_call_needed2 = false;
+						try
 						{
-							// Use a fixed file end so that additions to the file don't muck this
-							// build up. Reducing the file size during this will probably cause an
-							// exception but oh well...
-							fileend = file.Length;
+							Log.Info("build started. (id {0})", (int)bi);
+							on_complete_call_needed2 = on_complete != null;
 							
-							// Seek to the first line that starts immediately before filepos
-							filepos = FindLineStart(file, filepos, fileend, row_delim, encoding, buf);
+							int build_issue = (int)bi;
 							if (BuildCancelled(build_issue)) return;
-							long scan_from = filepos;
-							
-							// Determine the range of bytes to scan in each direction
-							Range rng = BufferRange(filepos, fileend, half_range);
-							
-							// If the filepos is within the range of the current line index
-							// do an incremental update to recentre the line index about filepos
-							incremental = line_index_range.Contains(filepos) && !reload;
-							if (incremental)
+						
+							// Generate the line index in a new buffer
+							List<Range> line_index = new List<Range>();
+						
+							// A temporary buffer for reading sections of the file
+							byte[] buf = new byte[Constants.FileReadChunkSize]; 
+							long fileend;
+							bool incremental;
+						
+							using (var file = LoadFile(m_filepath))
 							{
-								// Reduce the byte range so we only scan in the direction we need
-								scan_from = filepos >= last_filepos
-									? (rng.m_begin = line_starts_range.m_end)
-									: (rng.m_end = line_starts_range.m_begin);
+								// Use a fixed file end so that additions to the file don't muck this
+								// build up. Reducing the file size during this will probably cause an
+								// exception but oh well...
+								fileend = file.Length;
+							
+								// Seek to the first line that starts immediately before filepos
+								filepos = FindLineStart(file, filepos, fileend, row_delim, encoding, buf);
+								if (BuildCancelled(build_issue)) return;
+								long scan_from = filepos;
+							
+								// Determine the range of bytes to scan in each direction
+								Range rng = BufferRange(filepos, fileend, bufsize);
+							
+								// If the filepos is within the range of the current line index
+								// do an incremental update to recentre the line index about filepos
+								incremental = line_index_range.Contains(filepos) && !reload;
+								if (incremental)
+								{
+									// Reduce the byte range so we only scan in the direction we need
+									scan_from = filepos >= last_filepos
+										? (rng.m_begin = line_starts_range.m_end)
+										: (rng.m_end = line_starts_range.m_begin);
+								
+									Debug.Assert(rng.m_begin >= 0 && rng.m_end <= fileend && rng.m_begin <= rng.m_end);
+								}
+							
+								// Callback function that adds lines to 'line_index'
+								int added = 0;
+								AddLineFunc add_line = (line, baddr, fend, bf, enc) =>
+									{
+										if (!line.Empty || !ignore_blanks)
+										{
+											AddLine(line_index, baddr, fend, line, bf, enc, filters);
+											++added;
+										}
+										return true;
+									};
+							
+								// Callback function for cancelling
+								CancelFindFunc cancel = () => BuildCancelled(build_issue);
+							
+								// Scan backward from 'scan_from' for 'bwd_range' bytes,
+								FindLines(file, scan_from, fileend, true , scan_from - rng.m_begin, add_line, encoding, row_delim, buf, cancel);
+								if (BuildCancelled(build_issue)) return;
+							
+								// Scanning backward adds lines to the line index in reverse order,
+								// we need to flip the buffer over the range that was added.
+								line_index.Reverse(line_index.Count - added, added);
+							
+								// Now scan forward from 'scan_from' for 'fwd_range' bytes.
+								FindLines(file, scan_from, fileend, false, rng.m_end - scan_from, add_line, encoding, row_delim, buf, cancel);
+								if (BuildCancelled(build_issue)) return;
 							}
-							
-							// Scan backward from 'scan_from' for 'bwd_range' bytes,
-							// then scan forward from 'scan_from' for 'fwd_range' bytes.
-							if (!BuildCancelled(build_issue)) FindLines(file, scan_from, fileend, true , scan_from - rng.m_begin, line_index, encoding, row_delim, filters, ignore_blanks, buf, build_issue);
-							if (!BuildCancelled(build_issue)) FindLines(file, scan_from, fileend, false, rng.m_end - scan_from  , line_index, encoding, row_delim, filters, ignore_blanks, buf, build_issue);
-						}
 						
-						// Marshal the results back to the main thread
-						Action MergeLineIndexDelegate = () =>
-						{
-							// This lamdba runs in the main thread, so if the build issue is the same at
-							// the start of this method it can't be changed until after this function returns.
-							if (BuildCancelled(build_issue)) return;
+							// Marshal the results back to the main thread
+							Action MergeLineIndexDelegate = () =>
+							{
+								bool on_complete_call_needed3 = false;
+								try
+								{
+									on_complete_call_needed3 = on_complete != null;
+									
+									// This lamdba runs in the main thread, so if the build issue is the same at
+									// the start of this method it can't be changed until after this function returns.
+									if (BuildCancelled(build_issue)) return;
 							
-							// Merge the line index results
-							int row_delta = MergeLineIndex(line_index, half_range*2, filepos, fileend, incremental);
+									// Merge the line index results
+									int row_delta = MergeLineIndex(line_index, bufsize, filepos, fileend, incremental);
 							
-							// Ensure the grid is updated
-							UpdateUI(row_delta);
+									// Ensure the grid is updated
+									UpdateUI(row_delta);
 							
-							// On completion, check if the file has changed again and rerun if it has
-							m_watch.CheckForChangedFiles();
-							
-							if (on_complete != null) on_complete();
-							m_reload_in_progress = false;
-						};
-						BeginInvoke(MergeLineIndexDelegate);
-					}
-					catch (OperationCanceledException) {}
-					catch (Exception ex) { Debug.WriteLine("Exception ended BuildLineIndex() call: " + ex.Message); }
-				}, m_build_issue);
+									// On completion, check if the file has changed again and rerun if it has
+									m_watch.CheckForChangedFiles();
+									
+									on_complete_call_needed3 = false;
+									if (on_complete != null) on_complete();
+									m_reload_in_progress = false;
+								}
+								finally { if (on_complete_call_needed3) on_complete(); }
+							};
+							BeginInvoke(MergeLineIndexDelegate);
+							on_complete_call_needed2 = false;
+						}
+						catch (OperationCanceledException) {}
+						catch (Exception ex) { Debug.WriteLine("Exception ended BuildLineIndex() call: " + ex.Message); }
+						finally { if (on_complete_call_needed2) on_complete(); }
+					}, m_build_issue);
+				on_complete_call_needed = false;
+			}
+			finally { if (on_complete_call_needed) on_complete(); }
 		}
 		
 		/// <summary>Buffer a maximum of 'count' bytes from 'stream' into 'buf' (note,
@@ -330,9 +380,7 @@ namespace RyLogViewer
 			// Note: not caching this string because we want to read immediate data
 			// from the file to pick up file changes.
 			string text = encoding.GetString(buf, (int)rng.m_begin, (int)rng.Count);
-			foreach (var f in filters)
-				if (!f.IsMatch(text))
-					return;
+			if (!PassesFilters(text, filters)) return;
 			
 			// Convert the byte range to a file range
 			rng.Shift(base_addr);
@@ -340,28 +388,37 @@ namespace RyLogViewer
 			line_index.Add(rng);
 		}
 
+		/// <summary>Callback function called by FindLines that is called with each line found</summary>
+		/// <param name="rng">The byte range of the line within 'buf', not including row delimiter</param>
+		/// <param name="base_addr">The base address in the file that buf is relative to</param>
+		/// <param name="fileend">The current known end position of the file</param>
+		/// <param name="buf">Buffer containing the buffered file data</param>
+		/// <param name="encoding">The text encoding used</param>
+		/// <returns>Return true to continue adding lines, false to stop</returns>
+		private delegate bool AddLineFunc(Range rng, long base_addr, long fileend, byte[] buf, Encoding encoding);
+
+		/// <summary>Callback function called by FindLines to test whether to abort the search for lines</summary>
+		/// <returns>Return true if the search should abort</returns>
+		private delegate bool CancelFindFunc();
+		
 		/// <summary>Scan the file from 'filepos' adding whole lines to 'line_index' until 'length' bytes have been read</summary>
 		/// <param name="file">The file to scan</param>
 		/// <param name="filepos">The position in the file to start scanning from </param>
 		/// <param name="fileend">The current known length of the file</param>
 		/// <param name="backward">The direction to scan</param>
 		/// <param name="length">The number of bytes to scan over</param>
-		/// <param name="line_index">The line index to add the found line ranges to</param>
+		/// <param name="add_line">Callback function called with each detected line</param>
 		/// <param name="encoding">The text file encoding</param>
 		/// <param name="row_delim">The bytes that identify an end of line</param>
-		/// <param name="filters">Filters that remove lines from the results</param>
-		/// <param name="ignore_blanks">True to ignore blank lines in the output</param>
 		/// <param name="buf">A buffer to use when buffering file data</param>
-		/// <param name="build_issue">The build issue number assign to this thread</param>
-		private static void FindLines(FileStream file, long filepos, long fileend, bool backward, long length, List<Range> line_index, Encoding encoding, byte[] row_delim, List<Filter> filters, bool ignore_blanks, byte[] buf, int build_issue)
+		/// <param name="cancel">Callback function to allow the find to abort</param>
+		private static void FindLines(FileStream file, long filepos, long fileend, bool backward, long length, AddLineFunc add_line, Encoding encoding, byte[] row_delim, byte[] buf, CancelFindFunc cancel)
 		{
-			int initial_count = line_index.Count;
-			
 			long read_addr = filepos;
 			for (long scanned = 0; scanned != length;)
 			{
 				// Check whether we need to cancel
-				if (BuildCancelled(build_issue)) return;
+				if (cancel()) return;
 				
 				// Seek to the start position (should be the start of a line).
 				file.Seek(read_addr, SeekOrigin.Begin);
@@ -388,9 +445,9 @@ namespace RyLogViewer
 						? new Range(i, lasti - row_delim.Length)
 						: new Range(lasti, i - row_delim.Length);
 					
-					// Add the line to the line index
-					if (!line.Empty || !ignore_blanks)
-						AddLine(line_index, base_addr, fileend, line, buf, encoding, filters);
+					// Pass the detected line to the callback
+					if (!add_line(line, base_addr, fileend, buf, encoding))
+						return;
 					
 					lasti = i;
 					if (backward) i -= row_delim.Length + 1;
@@ -402,9 +459,9 @@ namespace RyLogViewer
 					// 'i' points to the start of a line, 'lasti' points to the start of the last line we found
 					++i; Range line = new Range(i, lasti - row_delim.Length);
 					
-					// Add the line to the line index
-					if (!line.Empty || !ignore_blanks)
-						AddLine(line_index, base_addr, fileend, line, buf, encoding, filters);
+					// Pass the detected line to the callback
+					if (!add_line(line, base_addr, fileend, buf, encoding))
+						return;
 					
 					lasti = i;
 				}
@@ -415,14 +472,6 @@ namespace RyLogViewer
 				if (read == remaining || eof) break;
 				scanned   += backward ?  (read - lasti) : lasti;
 				read_addr =  filepos + (backward ? -scanned : +scanned);
-			}
-			
-			// Scanning backward adds lines to the line index in reverse order,
-			// we need to flip the buffer over the range we've added
-			if (backward)
-			{
-				int final_count = line_index.Count;
-				line_index.Reverse(initial_count, final_count - initial_count);
 			}
 		}
 		
@@ -513,10 +562,70 @@ namespace RyLogViewer
 			return row_delta;
 		}
 		
+		/// <summary>Searches the file from 'addr' looking for a match to 'pat'</summary>
+		/// <returns>Returns true if a match is found, false otherwise. If true
+		/// is returned 'found' contains the file byte offset of the first match</returns>
+		private bool Find(Pattern pat, long addr, bool backward, out long found)
+		{
+			// Copy variables for use in background thread
+			string filepath      = m_filepath;
+			long start           = addr;
+			long fileend         = m_fileend;
+			long count           = backward ? start - 0 : fileend - start;
+			byte[] row_delim     = (byte[])m_row_delim.Clone();
+			Encoding encoding    = m_encoding;
+			List<Filter> filters = ActiveFilters.ToList();
+			byte[] buf           = new byte[Constants.FileReadChunkSize];
+			
+			// Search from the current row
+			long at = -1;
+			ProgressForm search = new ProgressForm("Search...", "", (s,a)=>
+				{
+					BackgroundWorker bgw = (BackgroundWorker)s;
+					using (var file = LoadFile(filepath))
+					{
+						int last_progress = 0;
+						AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
+							{
+								int progress = backward
+									? (int)(100 * Maths.Ratio(    0, baddr + line.m_begin,   start))
+									: (int)(100 * Maths.Ratio(start, baddr + line.m_end  , fileend));
+								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
+								
+								// Keep searching while the text is filtered out or doesn't match the pattern
+								string text = encoding.GetString(buf, (int)line.m_begin, (int)line.Count);
+								if (!PassesFilters(text, filters) || !pat.IsMatch(text)) return true;
+								
+								// Found a match
+								at = baddr + line.m_begin;
+								return false;
+							};
+						
+						// Search for files
+						FindLines(file, start, fileend, backward, count, test_line, encoding, row_delim, buf, () => bgw.CancellationPending);
+						a.Cancel = bgw.CancellationPending;
+					}
+				}){StartPosition = FormStartPosition.CenterParent};
+			
+			DialogResult res = search.ShowDialog(this);
+			found = at;
+			return res == DialogResult.OK;
+		}
+		
 		/// <summary>Return a collection of the currently active filters</summary>
 		private IEnumerable<Filter> ActiveFilters
 		{
 			get { return from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft; }
+		}
+
+		/// <summary>Test 'text' against each filter to see if it returns a positive match</summary>
+		/// <returns>Returns false if at least one filter returned no match</returns>
+		private static bool PassesFilters(string text, IEnumerable<Filter> filters)
+		{
+			foreach (var f in filters)
+				if (!f.IsMatch(text))
+					return false;
+			return true;
 		}
 		
 		/// <summary>Auto detect the line end format. Must be called from the main thread</summary>
