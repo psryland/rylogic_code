@@ -12,6 +12,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using pr.util;
@@ -422,6 +423,20 @@ namespace pr.util
 			if (dic.TryGetValue(key, out value)) return value;
 			dic.Add(key, value = def()); // 'def' is only evaluated if 'key' is not found
 			return value;
+		}
+
+		/// <summary>A stack trace that selected a band of stack frames</summary>
+		public static string StackTrace(int skip, int count)
+		{
+			StringBuilder sb = new StringBuilder();
+			var st = new StackTrace(1,true).GetFrames();
+			if (st == null) return "";
+			foreach (var s in st.Skip(skip).Take(count))
+			{
+				var m = s.GetMethod();
+				sb.AppendFormat(" {0,-60}({1,3})  {2}.{3}\n" ,s.GetFileName() ,s.GetFileLineNumber() ,m.ReflectedType.FullName ,m.Name);
+			}
+			return sb.ToString();
 		}
 	}
 	

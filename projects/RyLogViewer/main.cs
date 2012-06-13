@@ -367,8 +367,9 @@ namespace RyLogViewer
 		/// <summary>Handle key down events for the grid</summary>
 		private void HandleKeyDown(KeyEventArgs e)
 		{
-			if (e.Control && e.KeyCode == Keys.PageUp)   BuildLineIndex(0        , false, () => SelectedRow = 0                  );
-			if (e.Control && e.KeyCode == Keys.PageDown) BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+			if (e.Control && e.KeyCode == Keys.PageUp)   { BuildLineIndex(0        , false, () => SelectedRow = 0                  ); e.Handled = true; }
+			if (e.Control && e.KeyCode == Keys.PageDown) { BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1); e.Handled = true; }
+			e.Handled = false;
 		}
 		
 		/// <summary>Show the find dialog</summary>
@@ -377,6 +378,62 @@ namespace RyLogViewer
 			m_find_ui.Location = Location + (Size)m_find_ui.Tag;
 			if (!m_find_ui.Visible)
 				m_find_ui.Show(this);
+		}
+		
+		/// <summary>Searches the file from 'addr' looking for a match to 'pat'</summary>
+		/// <returns>Returns true if a match is found, false otherwise. If true
+		/// is returned 'found' contains the file byte offset of the first match</returns>
+		private bool Find(Pattern pat, long addr, bool backward, out long found)
+		{
+			// Copy variables for use in background thread
+			string filepath      = m_filepath;
+			long start           = addr;
+			long fileend         = m_fileend;
+			long count           = backward ? start - 0 : fileend - start;
+			byte[] row_delim     = (byte[])m_row_delim.Clone();
+			Encoding encoding    = m_encoding;
+			List<Filter> filters = ActiveFilters.ToList();
+			byte[] buf           = new byte[Constants.FileReadChunkSize];
+			
+			// Search from the current row
+			long at = -1;
+			ProgressForm search = new ProgressForm("Search...", "", (s,a)=>
+				{
+					BackgroundWorker bgw = (BackgroundWorker)s;
+					using (var file = LoadFile(filepath))
+					{
+						int last_progress = 0;
+						AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
+							{
+								int progress = backward
+									? (int)(100 * Maths.Ratio(    0, baddr + line.m_begin,   start))
+									: (int)(100 * Maths.Ratio(start, baddr + line.m_end  , fileend));
+								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
+								
+								// Keep searching while the text is filtered out or doesn't match the pattern
+								string text = encoding.GetString(buf, (int)line.m_begin, (int)line.Count);
+								if (!PassesFilters(text, filters) || !pat.IsMatch(text)) return true;
+								
+								// Found a match
+								at = baddr + line.m_begin;
+								return false;
+							};
+						
+						// Search for files
+						FindLines(file, start, fileend, backward, count, test_line, encoding, row_delim, buf, () => bgw.CancellationPending);
+						
+						// We can call BuildLineIndex in this thread context because we know
+						// we're in a modal dialog.
+						if (at != -1)
+							SelectRowByAddr(at);
+						
+						a.Cancel = bgw.CancellationPending;
+					}
+				}){StartPosition = FormStartPosition.CenterParent};
+			
+			DialogResult res = search.ShowDialog(this);
+			found = at;
+			return res == DialogResult.OK;
 		}
 		
 		/// <summary>Search for the next occurance of a pattern in the file</summary>
@@ -389,13 +446,8 @@ namespace RyLogViewer
 			Log.Info("FindNext starting from {0}", start);
 			
 			long found;
-			if (!Find(pat, start, false, out found))
-				return;
-			
-			if (found == -1)
+			if (Find(pat, start, false, out found) && found == -1)
 				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue, 2000);
-			else
-				SelectRowByAddr(found);
 		}
 		
 		/// <summary>Search for an earlier occurance of a pattern in the grid</summary>
@@ -408,13 +460,8 @@ namespace RyLogViewer
 			Log.Info("FindPrev starting from {0}", start);
 			
 			long found;
-			if (!Find(pat, start, true, out found))
-				return;
-			
-			if (found == -1)
+			if (Find(pat, start, true, out found) && found == -1)
 				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue, 2000);
-			else
-				SelectRowByAddr(found);
 		}
 
 		/// <summary>Show the export dialog</summary>
@@ -580,11 +627,20 @@ namespace RyLogViewer
 			get { return m_grid.SelectedRows.Count != 0 ? m_grid.SelectedRows[0].Index : -1; }
 			set
 			{
-				value = m_grid.SelectRow(value);
-				if (m_grid.RowCount != 0)
+				try
 				{
-					int display_row = value - m_grid.DisplayedRowCount(true) / 2;
-					m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
+					m_grid.SelectionChanged -= GridSelectionChanged;
+				
+					value = m_grid.SelectRow(value);
+					if (m_grid.RowCount != 0)
+					{
+						int display_row = value - m_grid.DisplayedRowCount(true) / 2;
+						m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
+					}
+				}
+				finally
+				{
+					m_grid.SelectionChanged += GridSelectionChanged;
 				}
 			}
 		}
@@ -615,14 +671,13 @@ namespace RyLogViewer
 		/// <summary>Helper for setting the grid row count without event handlers being fired</summary>
 		private void SetGridRowCount(int count, int row_delta)
 		{
-			// Ensure the grid has the correct number of rows
 			bool auto_scroll_tail = AutoScrollTail;
 			if (m_grid.RowCount != count)
 			{
 				// Unhook handlers that get called when the RowCount changes
 				m_grid.SelectionChanged -= GridSelectionChanged;
 				m_grid.CellValueNeeded -= CellValueNeeded;
-						
+				
 				// Preserve the selected row index and first visible row index (if possible)
 				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
 				int selected = SelectedRow;

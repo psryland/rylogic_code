@@ -124,7 +124,8 @@ namespace RyLogViewer
 				// Cause any existing builds to stop by changing the issue number
 				Interlocked.Increment(ref m_build_issue);
 				m_reload_in_progress = reload;
-			
+				Log.Info("build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
+				
 				// Find the byte range of the file currently loaded
 				Range line_index_range  = LineIndexRange;
 				Range line_starts_range = LineStartIndexRange;
@@ -560,56 +561,6 @@ namespace RyLogViewer
 			m_filepos = filepos;
 			m_fileend = fileend;
 			return row_delta;
-		}
-		
-		/// <summary>Searches the file from 'addr' looking for a match to 'pat'</summary>
-		/// <returns>Returns true if a match is found, false otherwise. If true
-		/// is returned 'found' contains the file byte offset of the first match</returns>
-		private bool Find(Pattern pat, long addr, bool backward, out long found)
-		{
-			// Copy variables for use in background thread
-			string filepath      = m_filepath;
-			long start           = addr;
-			long fileend         = m_fileend;
-			long count           = backward ? start - 0 : fileend - start;
-			byte[] row_delim     = (byte[])m_row_delim.Clone();
-			Encoding encoding    = m_encoding;
-			List<Filter> filters = ActiveFilters.ToList();
-			byte[] buf           = new byte[Constants.FileReadChunkSize];
-			
-			// Search from the current row
-			long at = -1;
-			ProgressForm search = new ProgressForm("Search...", "", (s,a)=>
-				{
-					BackgroundWorker bgw = (BackgroundWorker)s;
-					using (var file = LoadFile(filepath))
-					{
-						int last_progress = 0;
-						AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
-							{
-								int progress = backward
-									? (int)(100 * Maths.Ratio(    0, baddr + line.m_begin,   start))
-									: (int)(100 * Maths.Ratio(start, baddr + line.m_end  , fileend));
-								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
-								
-								// Keep searching while the text is filtered out or doesn't match the pattern
-								string text = encoding.GetString(buf, (int)line.m_begin, (int)line.Count);
-								if (!PassesFilters(text, filters) || !pat.IsMatch(text)) return true;
-								
-								// Found a match
-								at = baddr + line.m_begin;
-								return false;
-							};
-						
-						// Search for files
-						FindLines(file, start, fileend, backward, count, test_line, encoding, row_delim, buf, () => bgw.CancellationPending);
-						a.Cancel = bgw.CancellationPending;
-					}
-				}){StartPosition = FormStartPosition.CenterParent};
-			
-			DialogResult res = search.ShowDialog(this);
-			found = at;
-			return res == DialogResult.OK;
 		}
 		
 		/// <summary>Return a collection of the currently active filters</summary>
