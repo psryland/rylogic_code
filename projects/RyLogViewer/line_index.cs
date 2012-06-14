@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,6 @@ using System.Threading;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
-using pr.gui;
 using pr.maths;
 using pr.util;
 
@@ -68,20 +66,22 @@ namespace RyLogViewer
 		{
 			get
 			{
+				if (m_line_index.Count == 0) return Range.Zero;
 				int b = Maths.Clamp(m_grid.FirstDisplayedScrollingRowIndex ,0 ,m_line_index.Count-1);
 				int e = Maths.Clamp(b + m_grid.DisplayedRowCount(true)     ,0 ,m_line_index.Count-1);
-				return b == e ? Range.Zero : new Range(m_line_index[b].m_begin, m_line_index[e].m_end);
+				return new Range(m_line_index[b].m_begin, m_line_index[e].m_end);
 			}
 		}
 
-		/// <summary>Returns the byte range of the currently selected row</summary>
+		/// <summary>Returns the bounding byte range of the currently selected rows.</summary>
 		private Range SelectedRowRange
 		{
 			get
 			{
-				int row = SelectedRow;
-				if (row < 0 || row >= m_line_index.Count) return Range.Zero;
-				return new Range(m_line_index[row].m_begin, m_line_index[row].m_end);
+				Range rng = Range.Invalid;
+				foreach (DataGridViewRow r in m_grid.SelectedRows)
+					rng.Encompase(m_line_index[r.Index]);
+				return !rng.Equals(Range.Invalid) ? rng : Range.Zero;
 			}
 		}
 		
@@ -139,7 +139,7 @@ namespace RyLogViewer
 				byte[] row_delim = reload
 					? (byte[])GuessRowDelimiter(m_filepath, encoding).Clone()
 					: (byte[])m_row_delim.Clone();
-			
+				
 				List<Filter> filters = ActiveFilters.ToList();
 			
 				// The file position when 'm_line_index' was built
@@ -196,14 +196,22 @@ namespace RyLogViewer
 								}
 							
 								// Callback function that adds lines to 'line_index'
-								int added = 0;
 								AddLineFunc add_line = (line, baddr, fend, bf, enc) =>
 									{
-										if (!line.Empty || !ignore_blanks)
-										{
-											AddLine(line_index, baddr, fend, line, bf, enc, filters);
-											++added;
-										}
+										if (line.Empty && ignore_blanks)
+											return true;
+										
+										// Test 'text' against each filter to see if it's included
+										// Note: not caching this string because we want to read immediate data
+										// from the file to pick up file changes.
+										string text = encoding.GetString(buf, (int)line.m_begin, (int)line.Count);
+										if (!PassesFilters(text, filters))
+											return true;
+											
+										// Convert the byte range to a file range
+										line.Shift(baddr);
+										Debug.Assert(new Range(0,fileend).Contains(line));
+										line_index.Add(line);
 										return true;
 									};
 							
@@ -216,7 +224,7 @@ namespace RyLogViewer
 							
 								// Scanning backward adds lines to the line index in reverse order,
 								// we need to flip the buffer over the range that was added.
-								line_index.Reverse(line_index.Count - added, added);
+								line_index.Reverse();
 							
 								// Now scan forward from 'scan_from' for 'fwd_range' bytes.
 								FindLines(file, scan_from, fileend, false, rng.m_end - scan_from, add_line, encoding, row_delim, buf, cancel);
@@ -280,7 +288,7 @@ namespace RyLogViewer
 			// Set the file position to the location to read from
 			if (backward) file.Seek(-count, SeekOrigin.Current);
 			pos = file.Position;
-			eof = backward ? pos == 0 : pos == fileend;
+			eof = backward ? pos == 0 : pos + count == fileend;
 			
 			// Move to the start of a character
 			if (encoding.Equals(Encoding.ASCII)) {}
@@ -331,25 +339,26 @@ namespace RyLogViewer
 			return read;
 		}
 		
-		/// <summary>Returns the index in 'buf' of the start of a line, starting from 'start'.
+		/// <summary>
+		/// Returns the index in 'buf' of one past the next delimiter, starting from 'start'.
 		/// If not found, returns -1 when searching backwards, or length when searching forwards</summary>
-		private static int FindLineStart(byte[] buf, int start, int length, byte[] row_delim, bool backward)
+		private static int FindNextDelim(byte[] buf, int start, int length, byte[] delim, bool backward)
 		{
 			Debug.Assert(start >= -1 && start <= length);
 			int i = start, di = backward ? -1 : 1;
 			for (; i >= 0 && i < length; i += di)
 			{
-				// Quick test using the first byte of the row delimiter
-				if (buf[i] != row_delim[0]) continue;
+				// Quick test using the first byte of the delimiter
+				if (buf[i] != delim[0]) continue;
 				
-				// Test the remaining bytes of the row delimiter
-				bool is_line_end = (i + row_delim.Length) <= length;
-				for (int j = 1; is_line_end && j != row_delim.Length; ++j) is_line_end = buf[i+j] == row_delim[j];
-				if (!is_line_end) continue;
+				// Test the remaining bytes of the delimiter
+				bool is_match = (i + delim.Length) <= length;
+				for (int j = 1; is_match && j != delim.Length; ++j) is_match = buf[i+j] == delim[j];
+				if (!is_match) continue;
 				
-				// 'i' now points to the start of a row delimiter,
-				// shift it forward to the start of the line.
-				i += row_delim.Length;
+				// 'i' now points to the start of the delimiter,
+				// shift it forward to one past the delimiter.
+				i += delim.Length;
 				break;
 			}
 			return i;
@@ -367,28 +376,11 @@ namespace RyLogViewer
 				if (read == 0) return 0; // assume the first character in the file is the start of a line
 				
 				// Scan for a line start
-				int idx = FindLineStart(buf, read - 1, read, row_delim, true);
+				int idx = FindNextDelim(buf, read - 1, read, row_delim, true);
 				if (idx != -1) return file.Position + idx; // found
 			}
 		}
 		
-		/// <summary>Add a line to 'line_index'.
-		/// 'base_addr' is the file position that 'rng' is relative to.
-		/// 'buf' is the buffer that holds the line data read from the file.</summary>
-		private static void AddLine(List<Range> line_index, long base_addr, long fileend, Range rng, byte[] buf, Encoding encoding, IEnumerable<Filter> filters)
-		{
-			// Test 'text' against each filter to see if it's included
-			// Note: not caching this string because we want to read immediate data
-			// from the file to pick up file changes.
-			string text = encoding.GetString(buf, (int)rng.m_begin, (int)rng.Count);
-			if (!PassesFilters(text, filters)) return;
-			
-			// Convert the byte range to a file range
-			rng.Shift(base_addr);
-			Debug.Assert(new Range(0,fileend).Contains(rng));
-			line_index.Add(rng);
-		}
-
 		/// <summary>Callback function called by FindLines that is called with each line found</summary>
 		/// <param name="rng">The byte range of the line within 'buf', not including row delimiter</param>
 		/// <param name="base_addr">The base address in the file that buf is relative to</param>
@@ -437,7 +429,7 @@ namespace RyLogViewer
 				long base_addr = backward ? file.Position : file.Position - read;
 				
 				// Scan the buffer for lines
-				for (i = FindLineStart(buf, i, read, row_delim, backward); i != iend; i = FindLineStart(buf, i, read, row_delim, backward))
+				for (i = FindNextDelim(buf, i, read, row_delim, backward); i != iend; i = FindNextDelim(buf, i, read, row_delim, backward))
 				{
 					// 'i' points to the start of a line,
 					// 'lasti' points to the start of the last line we found
@@ -455,22 +447,37 @@ namespace RyLogViewer
 				}
 				
 				// If scanning backwards and we hit the start of the file, treat this as a line start
-				if (backward && eof)
+				// If scanning forward and we hit the end of the file, treat this as the last line (might be partial)
+				if (eof)
 				{
-					// 'i' points to the start of a line, 'lasti' points to the start of the last line we found
-					++i; Range line = new Range(i, lasti - row_delim.Length);
+					if (backward) ++i;
+					else
+					{
+						// If not a partial row, offset i so that we don't remove the row delimiter below
+						if (Util.Compare(buf, i-row_delim.Length, row_delim.Length, row_delim, 0, row_delim.Length) != 0)
+							i += row_delim.Length;
+					}
+					
+					// 'i' points to the start of a line,
+					// 'lasti' points to the start of the last line we found
+					// Get the range in buf containing the line
+					Range line = backward
+						? new Range(i, lasti - row_delim.Length)
+						: new Range(lasti, i - row_delim.Length);
 					
 					// Pass the detected line to the callback
 					if (!add_line(line, base_addr, fileend, buf, encoding))
 						return;
 					
-					lasti = i;
+					break;
 				}
 
-				// If 'length' bytes have passed through 'buf' then we're done.
-				// otherwise, add whole lines to the scanned count so we catch
+				// Otherwise, if we've scanned 'length' bytes then we're done.
+				if (read == remaining)
+					break;
+				
+				// Otherwise, add whole lines to the scanned count so we catch
 				// lines that span the buffer boundary
-				if (read == remaining || eof) break;
 				scanned   += backward ?  (read - lasti) : lasti;
 				read_addr =  filepos + (backward ? -scanned : +scanned);
 			}
@@ -582,8 +589,7 @@ namespace RyLogViewer
 		/// <summary>Auto detect the line end format. Must be called from the main thread</summary>
 		private byte[] GuessRowDelimiter(string filepath, Encoding encoding)
 		{
-			// Auto detect if the settings say "detect", that way m_row_delim
-			// is cached as the appropriate row delimiter while the current file is loaded
+			// If the settings don't contain a row delimiter, then auto detect it from 'filepath'.
 			if (m_settings.RowDelimiter.Length == 0)
 			{
 				using (var r = new StreamReader(LoadFile(filepath)))

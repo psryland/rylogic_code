@@ -310,13 +310,37 @@ Error Details: {0}</value>
   <data name="Eyeball" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Eyeball.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-	<data name="WatchForUpdates">
-		<value xml:space="preserve">Watch the file and update automatically when it changes</value>
-	</data>
-  <data name="ClearLogFailed">
-    <value xml:space="preserve">Clear Log Failed</value>
+  <data name="WatchForUpdates" xml:space="preserve">
+    <value>Watch the file and update automatically when it changes</value>
   </data>
-  <data name="ConfirmClearLog">
-    <value xml:space="preserve">Confirm Clear Log</value>
+  <data name="ClearLogFailed" xml:space="preserve">
+    <value>Clear Log Failed</value>
+  </data>
+  <data name="ConfirmClearLog" xml:space="preserve">
+    <value>Confirm Clear Log</value>
+  </data>
+  <data name="OutputFileMissingMsg" xml:space="preserve">
+    <value>Output file missing. Please select a file to export to</value>
+  </data>
+  <data name="OutputFileMissing" xml:space="preserve">
+    <value>Output file missing</value>
+  </data>
+  <data name="ChooseOutputFileName" xml:space="preserve">
+    <value>Choose an output file name</value>
+  </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Export Failed</value>
+  </data>
+  <data name="ExportComplete" xml:space="preserve">
+    <value>Export Complete</value>
+  </data>
+  <data name="ExportCompletedSuccessfully" xml:space="preserve">
+    <value>Export completed successfully</value>
+  </data>
+  <data name="LogFileFilter" xml:space="preserve">
+    <value>Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*</value>
+  </data>
+  <data name="ConfirmOverwrite" xml:space="preserve">
+    <value>Confirm Overwrite</value>
   </data>
 </root>

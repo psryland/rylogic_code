@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using pr.maths;
 
 namespace RyLogViewer
 {
@@ -66,6 +67,18 @@ namespace RyLogViewer
 		public static string BufToStr(byte[] buf, int start, int len)
 		{
 			return Encoding.UTF8.GetString(buf, start, len);
+		}
+
+		/// <summary>Replace the \r,\n,\t characters with '&lt;CR&gt;', '&lt;LF&gt;', and '&lt;TAB&gt;'</summary>
+		public static string Humanise(string str)
+		{
+			return str.Replace("\r","<CR>").Replace("\n","<LF>").Replace("\t","<TAB>");
+		}
+
+		/// <summary>Replace the '&lt;CR&gt;', '&lt;LF&gt;', and '&lt;TAB&gt;' strings with \r,\n,\t characters</summary>
+		public static string Robitise(string str)
+		{
+			return str.Replace("<CR>","\r").Replace("<LF>","\n").Replace("<TAB>","\t");
 		}
 	}
 }

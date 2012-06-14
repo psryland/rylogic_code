@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using pr.common;
 
 namespace RyLogViewer
@@ -25,6 +26,10 @@ namespace RyLogViewer
 					Text = text;
 					HL = hl;
 				}
+				public override string ToString()
+				{
+					return Text;
+				}
 			}
 			
 			/// <summary>The file offset for the start of this cached line</summary>
@@ -45,6 +50,35 @@ namespace RyLogViewer
 			{
 				LineStartAddr = -1;
 				Column = new List<Col>();
+			}
+
+			/// <summary>Populate this line from a buffer</summary>
+			public void Read(long addr, byte[] buf, int start, int length, Encoding encoding, byte[] col_delim, List<Highlight> highlights)
+			{
+				LineStartAddr = addr;
+				
+				// Convert the buffer to text
+				RowText = encoding.GetString(buf, start, length);
+				
+				Column.Clear();
+				
+				// Split the line into columns
+				if (col_delim.Length == 0) // Single column
+				{
+					Highlight hl = highlights != null ? highlights.FirstOrDefault(h => h.IsMatch(RowText)) : null;
+					Column.Add(new Col(RowText, hl));
+				}
+				else // Multiple columns
+				{
+					int i = start, lasti = i;
+					for (i = FindNextDelim(buf, i, length, col_delim, false); i != length; i = FindNextDelim(buf, i, length, col_delim, false))
+					{
+						string col_text = encoding.GetString(buf, lasti, i - lasti);
+						Highlight hl = highlights != null ? highlights.FirstOrDefault(h => h.IsMatch(col_text)) : null;
+						Column.Add(new Col(col_text, hl));
+						lasti = i;
+					}
+				}
 			}
 		}
 		private readonly List<Line> m_line_cache = new List<Line>();
@@ -73,7 +107,7 @@ namespace RyLogViewer
 			Line line = m_line_cache[(int)(rng.m_begin % m_line_cache.Count)];
 			if (line.LineStartAddr == rng.m_begin) return line;
 			
-			// If not, read it from file and perform highlighting and filtering tests on it
+			// If not, read it from file and perform highlighting and transforming on it
 			
 			// Read the whole line into m_buf
 			m_file.Seek(rng.m_begin, SeekOrigin.Begin);
@@ -81,28 +115,7 @@ namespace RyLogViewer
 			int read = m_file.Read(m_line_buf, 0, (int)rng.Count);
 			if (read != rng.Count) throw new IOException("failed to read file over range ["+rng.m_begin+","+rng.m_end+"). Read "+read+"/"+rng.Count+" bytes.");
 			
-			// Convert the buffer to text
-			line.RowText = m_encoding.GetString(m_line_buf, 0, read);
-			
-			// Split the line into columns
-			line.Column.Clear();
-			if (m_col_delim.Length != 0)
-			{
-				// Multiple columns...
-				foreach (string col_value in line.RowText.Split(m_col_delim))
-				{
-					string col_text = col_value;
-					Highlight hl = m_highlights.FirstOrDefault(h => h.IsMatch(col_text));
-					line.Column.Add(new Line.Col(col_text, hl));
-				}
-			}
-			else
-			{
-				// Single column
-				Highlight hl = m_highlights.FirstOrDefault(h => h.IsMatch(line.RowText));
-				line.Column.Add(new Line.Col(line.RowText, hl));
-			}
-			line.LineStartAddr = rng.m_begin;
+			line.Read(rng.m_begin, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights);
 			return line;
 		}
 

@@ -38,7 +38,6 @@
 			this.m_spinner_file_buf_size = new System.Windows.Forms.NumericUpDown();
 			this.m_group_line_ends = new System.Windows.Forms.GroupBox();
 			this.m_check_ignore_blank_lines = new System.Windows.Forms.CheckBox();
-			this.m_edit_col_delims = new System.Windows.Forms.TextBox();
 			this.m_lbl_col_delims = new System.Windows.Forms.Label();
 			this.m_edit_line_ends = new System.Windows.Forms.TextBox();
 			this.m_lbl_line_ends = new System.Windows.Forms.Label();
@@ -73,6 +72,7 @@
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
+			this.m_edit_col_delims = new System.Windows.Forms.TextBox();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_grid.SuspendLayout();
@@ -184,7 +184,7 @@
 			this.m_group_line_ends.Controls.Add(this.m_lbl_line_ends);
 			this.m_group_line_ends.Location = new System.Drawing.Point(219, 6);
 			this.m_group_line_ends.Name = "m_group_line_ends";
-			this.m_group_line_ends.Size = new System.Drawing.Size(272, 116);
+			this.m_group_line_ends.Size = new System.Drawing.Size(272, 104);
 			this.m_group_line_ends.TabIndex = 5;
 			this.m_group_line_ends.TabStop = false;
 			this.m_group_line_ends.Text = "Row Properties";
@@ -192,24 +192,17 @@
 			// m_check_ignore_blank_lines
 			// 
 			this.m_check_ignore_blank_lines.AutoSize = true;
-			this.m_check_ignore_blank_lines.Location = new System.Drawing.Point(26, 87);
+			this.m_check_ignore_blank_lines.Location = new System.Drawing.Point(12, 19);
 			this.m_check_ignore_blank_lines.Name = "m_check_ignore_blank_lines";
 			this.m_check_ignore_blank_lines.Size = new System.Drawing.Size(109, 17);
 			this.m_check_ignore_blank_lines.TabIndex = 5;
 			this.m_check_ignore_blank_lines.Text = "Ignore blank lines";
 			this.m_check_ignore_blank_lines.UseVisualStyleBackColor = true;
 			// 
-			// m_edit_col_delims
-			// 
-			this.m_edit_col_delims.Location = new System.Drawing.Point(108, 53);
-			this.m_edit_col_delims.Name = "m_edit_col_delims";
-			this.m_edit_col_delims.Size = new System.Drawing.Size(158, 20);
-			this.m_edit_col_delims.TabIndex = 4;
-			// 
 			// m_lbl_col_delims
 			// 
 			this.m_lbl_col_delims.AutoSize = true;
-			this.m_lbl_col_delims.Location = new System.Drawing.Point(9, 56);
+			this.m_lbl_col_delims.Location = new System.Drawing.Point(9, 76);
 			this.m_lbl_col_delims.Name = "m_lbl_col_delims";
 			this.m_lbl_col_delims.Size = new System.Drawing.Size(93, 13);
 			this.m_lbl_col_delims.TabIndex = 3;
@@ -217,7 +210,7 @@
 			// 
 			// m_edit_line_ends
 			// 
-			this.m_edit_line_ends.Location = new System.Drawing.Point(108, 23);
+			this.m_edit_line_ends.Location = new System.Drawing.Point(108, 45);
 			this.m_edit_line_ends.Name = "m_edit_line_ends";
 			this.m_edit_line_ends.Size = new System.Drawing.Size(158, 20);
 			this.m_edit_line_ends.TabIndex = 2;
@@ -225,7 +218,7 @@
 			// m_lbl_line_ends
 			// 
 			this.m_lbl_line_ends.AutoSize = true;
-			this.m_lbl_line_ends.Location = new System.Drawing.Point(36, 26);
+			this.m_lbl_line_ends.Location = new System.Drawing.Point(36, 48);
 			this.m_lbl_line_ends.Name = "m_lbl_line_ends";
 			this.m_lbl_line_ends.Size = new System.Drawing.Size(66, 13);
 			this.m_lbl_line_ends.TabIndex = 1;
@@ -532,8 +525,8 @@
 			// m_split_ft.Panel2
 			// 
 			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
-			this.m_split_ft.Size = new System.Drawing.Size(192, 74);
-			this.m_split_ft.SplitterDistance = 25;
+			this.m_split_ft.Size = new System.Drawing.Size(494, 432);
+			this.m_split_ft.SplitterDistance = 145;
 			this.m_split_ft.TabIndex = 5;
 			// 
 			// m_pattern_ft
@@ -543,7 +536,7 @@
 			this.m_pattern_ft.Location = new System.Drawing.Point(0, 0);
 			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.Name = "m_pattern_ft";
-			this.m_pattern_ft.Size = new System.Drawing.Size(336, 92);
+			this.m_pattern_ft.Size = new System.Drawing.Size(494, 145);
 			this.m_pattern_ft.TabIndex = 4;
 			// 
 			// m_table_ft
@@ -558,7 +551,7 @@
 			this.m_table_ft.RowCount = 2;
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ft.Size = new System.Drawing.Size(192, 45);
+			this.m_table_ft.Size = new System.Drawing.Size(494, 283);
 			this.m_table_ft.TabIndex = 4;
 			// 
 			// m_grid_filter
@@ -574,7 +567,7 @@
 			this.m_grid_filter.Name = "m_grid_filter";
 			this.m_grid_filter.RowHeadersWidth = 24;
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(186, 1);
+			this.m_grid_filter.Size = new System.Drawing.Size(488, 233);
 			this.m_grid_filter.TabIndex = 3;
 			// 
 			// m_pattern_set_ft
@@ -582,11 +575,18 @@
 			this.m_pattern_set_ft.AutoSize = true;
 			this.m_pattern_set_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 4);
+			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 242);
 			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
+			this.m_pattern_set_ft.Size = new System.Drawing.Size(488, 38);
 			this.m_pattern_set_ft.TabIndex = 4;
+			// 
+			// m_edit_col_delims
+			// 
+			this.m_edit_col_delims.Location = new System.Drawing.Point(108, 73);
+			this.m_edit_col_delims.Name = "m_edit_col_delims";
+			this.m_edit_col_delims.Size = new System.Drawing.Size(158, 20);
+			this.m_edit_col_delims.TabIndex = 4;
 			// 
 			// SettingsUI
 			// 
@@ -661,7 +661,6 @@
 		private System.Windows.Forms.GroupBox m_group_grid;
 		private System.Windows.Forms.Label m_lbl_history_length;
 		private System.Windows.Forms.NumericUpDown m_spinner_file_buf_size;
-		private System.Windows.Forms.TextBox m_edit_col_delims;
 		private System.Windows.Forms.Label m_lbl_col_delims;
 		private System.Windows.Forms.CheckBox m_check_open_at_end;
 		private System.Windows.Forms.CheckBox m_check_ignore_blank_lines;
@@ -681,5 +680,6 @@
 		private System.Windows.Forms.Label m_lbl_selection_colour;
 		private System.Windows.Forms.CheckBox m_check_alternate_line_colour;
 		private System.Windows.Forms.CheckBox m_check_file_changes_additive;
+		private System.Windows.Forms.TextBox m_edit_col_delims;
 	}
 }

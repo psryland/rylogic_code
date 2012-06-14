@@ -27,6 +27,9 @@ namespace pr.common
 		/// <summary>The default empty range</summary>
 		public static readonly Range Zero = new Range{m_begin = 0, m_end = 0};
 
+		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
+		public static readonly Range Invalid = new Range{m_begin = long.MaxValue, m_end = long.MinValue};
+
 		/// <summary>Construct from an index range</summary>
 		public Range(long begin, long end) { m_begin = begin; m_end = end; }
 		

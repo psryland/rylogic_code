@@ -15,6 +15,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using pr.maths;
 using pr.util;
 
 namespace pr.util
@@ -34,6 +35,17 @@ namespace pr.util
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
+		/// <summary>Compare to ranges within a byte array</summary>
+		public static int Compare(byte[] lhs, int lstart, int llength, byte[] rhs, int rstart, int rlength)
+		{
+			for (;llength != 0 && rlength != 0; ++lstart, ++rstart, --llength, --rlength)
+			{
+				if (lhs[lstart] == rhs[rstart]) continue;
+				return Maths.Compare(lhs[lstart], rhs[rstart]);
+			}
+			return Maths.Compare(llength, rlength);
+		}
+
 		/// <summary>Enable double buffering for the control</summary>
 		public static void DblBuffer(this Control ctl)
 		{
@@ -44,7 +56,7 @@ namespace pr.util
 		}
 
 		/// <summary>Convert a collection of 'U' into a collection of 'T' using 'conv' to do the conversion</summary>
-		public static IEnumerable<T> Conv<T,U>(IEnumerable<U> collection, Func<U,T> conv)
+		public static IEnumerable<T> Conv<T,U>(IEnumerable<U> collection, Func<U, T> conv)
 		{
 			foreach (U i in collection) yield return conv(i);
 		}
@@ -58,7 +70,7 @@ namespace pr.util
 		}
 
 		/// <summary>Helper for allocating an array of constructed classes</summary>
-		public static T[] New<T>(uint count, Func<uint,T> construct)
+		public static T[] New<T>(uint count, Func<uint, T> construct)
 		{
 			T[] arr = new T[count];
 			for (uint i = 0; i != count; ++i) arr[i] = construct(i);
@@ -417,7 +429,7 @@ namespace pr.util
 		}
 		
 		/// <summary>Return the value for 'key', if it doesn't exist, insert and return the result of calling 'def'</summary>
-		public static V GetOrAdd<K,V>(this Dictionary<K,V> dic, K key, Func<V> def)
+		public static V GetOrAdd<K,V>(this Dictionary<K, V> dic, K key, Func<V> def)
 		{
 			V value;
 			if (dic.TryGetValue(key, out value)) return value;
@@ -488,6 +500,17 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
+		[Test] public static void TestByteArrayCompare()
+		{
+			byte[] lhs = new byte[]{1,2,3,4,5};
+			byte[] rhs = new byte[]{3,4,5,6,7};
+
+			Assert.AreEqual(-1, Util.Compare(lhs, 0, 5, rhs, 0, 5));
+			Assert.AreEqual( 0, Util.Compare(lhs, 2, 3, rhs, 0, 3));
+			Assert.AreEqual( 1, Util.Compare(lhs, 3, 2, rhs, 0, 2));
+			Assert.AreEqual(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
+			Assert.AreEqual( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
+		}
 		[Test] public static void TestUtils()
 		{
 			{// Conv

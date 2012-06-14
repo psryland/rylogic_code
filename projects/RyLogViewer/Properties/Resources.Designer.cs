@@ -146,6 +146,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Choose an output file name.
+        /// </summary>
+        internal static string ChooseOutputFileName {
+            get {
+                return ResourceManager.GetString("ChooseOutputFileName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Clear Log Failed.
         /// </summary>
         internal static string ClearLogFailed {
@@ -185,6 +194,15 @@ namespace RyLogViewer.Properties {
         internal static string ConfirmDelete {
             get {
                 return ResourceManager.GetString("ConfirmDelete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Confirm Overwrite.
+        /// </summary>
+        internal static string ConfirmOverwrite {
+            get {
+                return ResourceManager.GetString("ConfirmOverwrite", resourceCulture);
             }
         }
         
@@ -287,6 +305,33 @@ namespace RyLogViewer.Properties {
         internal static string Exclude {
             get {
                 return ResourceManager.GetString("Exclude", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Export Complete.
+        /// </summary>
+        internal static string ExportComplete {
+            get {
+                return ResourceManager.GetString("ExportComplete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Export completed successfully.
+        /// </summary>
+        internal static string ExportCompletedSuccessfully {
+            get {
+                return ResourceManager.GetString("ExportCompletedSuccessfully", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Export Failed.
+        /// </summary>
+        internal static string ExportFailed {
+            get {
+                return ResourceManager.GetString("ExportFailed", resourceCulture);
             }
         }
         
@@ -417,6 +462,15 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        /// <summary>
+        ///   Looks up a localized string similar to Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*.
+        /// </summary>
+        internal static string LogFileFilter {
+            get {
+                return ResourceManager.GetString("LogFileFilter", resourceCulture);
+            }
+        }
+        
         internal static System.Drawing.Bitmap my_documents {
             get {
                 object obj = ResourceManager.GetObject("my_documents", resourceCulture);
@@ -446,6 +500,24 @@ namespace RyLogViewer.Properties {
             get {
                 object obj = ResourceManager.GetObject("options", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Output file missing.
+        /// </summary>
+        internal static string OutputFileMissing {
+            get {
+                return ResourceManager.GetString("OutputFileMissing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Output file missing. Please select a file to export to.
+        /// </summary>
+        internal static string OutputFileMissingMsg {
+            get {
+                return ResourceManager.GetString("OutputFileMissingMsg", resourceCulture);
             }
         }
         

@@ -21,8 +21,6 @@ namespace RyLogViewer
 {
 	public partial class Main :Form
 	{
-		private const string LogFileFilter = @"Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*";
-		
 		private readonly Settings m_settings;                 // App settings
 		private readonly RecentFiles m_recent;                // Recent files
 		private readonly EventWaitHandle m_sync;              // A sync event for general use
@@ -37,7 +35,7 @@ namespace RyLogViewer
 		private string m_filepath;                            // The path of the log file we're viewing
 		private FileStream m_file;                            // A file stream of 'm_filepath'
 		private byte[] m_row_delim;                           // The row delimiter converted from a string to a byte[] using the current encoding
-		private char[] m_col_delim;                           // The column delimiter, cached to prevent m_settings access in CellNeeded
+		private byte[] m_col_delim;                           // The column delimiter, cached to prevent m_settings access in CellNeeded
 		private int m_row_height;                             // The row height, cached to prevent settings lookups in CellNeeded
 		private long m_filepos;                               // The byte offset (from file begin) to the start of the last known line
 		private long m_fileend;                               // The last known size of the file
@@ -272,7 +270,7 @@ namespace RyLogViewer
 				// Prompt for a file if none provided
 				if (filepath == null)
 				{
-					var fd = new OpenFileDialog{Filter = LogFileFilter, Multiselect = false};
+					var fd = new OpenFileDialog{Filter = Resources.LogFileFilter, Multiselect = false};
 					if (fd.ShowDialog() != DialogResult.OK) return;
 					filepath = fd.FileName;
 				}
@@ -367,8 +365,9 @@ namespace RyLogViewer
 		/// <summary>Handle key down events for the grid</summary>
 		private void HandleKeyDown(KeyEventArgs e)
 		{
-			if (e.Control && e.KeyCode == Keys.PageUp)   { BuildLineIndex(0        , false, () => SelectedRow = 0                  ); e.Handled = true; }
-			if (e.Control && e.KeyCode == Keys.PageDown) { BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1); e.Handled = true; }
+			if (e.KeyCode == Keys.F5)                    { BuildLineIndex(m_filepos, true); e.Handled = true; }
+			if (e.KeyCode == Keys.PageUp && e.Control)   { BuildLineIndex(0        , false, () => SelectedRow = 0                  ); e.Handled = true; }
+			if (e.KeyCode == Keys.PageDown && e.Control) { BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1); e.Handled = true; }
 			e.Handled = false;
 		}
 		
@@ -380,47 +379,49 @@ namespace RyLogViewer
 				m_find_ui.Show(this);
 		}
 		
-		/// <summary>Searches the file from 'addr' looking for a match to 'pat'</summary>
+		/// <summary>Searches the file from 'start' looking for a match to 'pat'</summary>
 		/// <returns>Returns true if a match is found, false otherwise. If true
 		/// is returned 'found' contains the file byte offset of the first match</returns>
-		private bool Find(Pattern pat, long addr, bool backward, out long found)
+		private bool Find(Pattern pat, long start, bool backward, out long found)
 		{
-			// Copy variables for use in background thread
-			string filepath      = m_filepath;
-			long start           = addr;
-			long fileend         = m_fileend;
-			long count           = backward ? start - 0 : fileend - start;
-			byte[] row_delim     = (byte[])m_row_delim.Clone();
-			Encoding encoding    = m_encoding;
-			List<Filter> filters = ActiveFilters.ToList();
-			byte[] buf           = new byte[Constants.FileReadChunkSize];
+			// Although this search runs in a background thread, it's wrapped in a modal
+			// dialog box, so it should be ok to use class members directly
 			
-			// Search from the current row
 			long at = -1;
-			ProgressForm search = new ProgressForm("Search...", "", (s,a)=>
+			ProgressForm search = new ProgressForm("Searching...", "", (s,a)=>
 				{
 					BackgroundWorker bgw = (BackgroundWorker)s;
-					using (var file = LoadFile(filepath))
+					
+					using (var file = LoadFile(m_filepath))
 					{
-						int last_progress = 0;
+						int last_progress     = 0;
+						bool ignore_blanks    = m_settings.IgnoreBlankLines;
+						List<Filter> filters  = ActiveFilters.ToList();
 						AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
 							{
 								int progress = backward
-									? (int)(100 * Maths.Ratio(    0, baddr + line.m_begin,   start))
-									: (int)(100 * Maths.Ratio(start, baddr + line.m_end  , fileend));
+									? (int)(100 * (1f - Maths.Ratio(0, baddr + line.m_begin, start)))
+									: (int)(100 * Maths.Ratio(start, baddr + line.m_end ,m_fileend));
 								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
 								
+								// Ignore blanks?
+								if (line.Empty && ignore_blanks)
+									return true;
+								
 								// Keep searching while the text is filtered out or doesn't match the pattern
-								string text = encoding.GetString(buf, (int)line.m_begin, (int)line.Count);
-								if (!PassesFilters(text, filters) || !pat.IsMatch(text)) return true;
+								string text = m_encoding.GetString(bf, (int)line.m_begin, (int)line.Count);
+								if (!PassesFilters(text, filters) || !pat.IsMatch(text))
+									return true;
 								
 								// Found a match
 								at = baddr + line.m_begin;
-								return false;
+								return false; // Stop searching
 							};
 						
 						// Search for files
-						FindLines(file, start, fileend, backward, count, test_line, encoding, row_delim, buf, () => bgw.CancellationPending);
+						byte[] buf = new byte[Constants.FileReadChunkSize];
+						long count = backward ? start - 0 : m_fileend - start;
+						FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, () => bgw.CancellationPending);
 						
 						// We can call BuildLineIndex in this thread context because we know
 						// we're in a modal dialog.
@@ -442,7 +443,7 @@ namespace RyLogViewer
 			if (pat == null || m_grid.RowCount == 0) return;
 			m_last_find_pattern = pat;
 			
-			var start = SelectedRowRange.m_end;
+			var start = m_line_index[SelectedRow].m_begin;
 			Log.Info("FindNext starting from {0}", start);
 			
 			long found;
@@ -467,11 +468,97 @@ namespace RyLogViewer
 		/// <summary>Show the export dialog</summary>
 		private void ShowExportDialog()
 		{
-			var dg = new ExportUI(FileByteRange);
+			if (!FileOpen) return;
+			var dg = new ExportUI(
+				Path.ChangeExtension(m_filepath, ".exported"+Path.GetExtension(m_filepath)),
+				Misc.Humanise(m_encoding.GetString(m_row_delim)),
+				Misc.Humanise(m_encoding.GetString(m_col_delim)),
+				FileByteRange);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			
-			// Do the export
+			Range rng;
+			switch (dg.RangeToExport)
+			{
+			default: throw new ArgumentOutOfRangeException();
+			case ExportUI.ERangeToExport.WholeFile: rng = FileByteRange; break;
+			case ExportUI.ERangeToExport.Selection: rng = SelectedRowRange; break;
+			case ExportUI.ERangeToExport.ByteRange: rng = dg.ByteRange; break;
+			}
 			
+			// Do the export
+			using (var outp = new StreamWriter(new FileStream(dg.OutputFilepath, FileMode.Create, FileAccess.Write, FileShare.Read)))
+			{
+				try
+				{
+					if (ExportLogFile(outp, m_filepath, rng, dg.ColDelim, dg.RowDelim))
+						MessageBox.Show(this, Resources.ExportCompletedSuccessfully, Resources.ExportComplete, MessageBoxButtons.OK);
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show(this, string.Format("Export failed.\r\nError: {0}",ex.Message), Resources.ExportFailed, MessageBoxButtons.OK);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Export the file 'filepath' using current filters to the stream 'outp'.
+		/// Note: this method throws if an exception occurs in the background thread.
+		/// </summary>
+		/// <param name="outp">The stream to write the exported file to</param>
+		/// <param name="filepath">The name of the file to export</param>
+		/// <param name="rng">The range of bytes within 'filepath' to be exported</param>
+		/// <param name="col_delim">The string to delimit columns with. (CR,LF,TAB converted to \r,\n,\t respectively)</param>
+		/// <param name="row_delim">The string to delimit rows with. (CR,LF,TAB converted to \r,\n,\t respectively)</param>
+		private bool ExportLogFile(StreamWriter outp, string filepath, Range rng, string col_delim, string row_delim)
+		{
+			// Although this search runs in a background thread, it's wrapped in a modal
+			// dialog box, so it should be ok to use class members directly
+			ProgressForm export = new ProgressForm("Exporting...", "", (s,a)=>
+				{
+					BackgroundWorker bgw = (BackgroundWorker)s;
+					using (var file = LoadFile(filepath))
+					{
+						Line line             = new Line();
+						int last_progress     = 0;
+						rng.m_begin           = Maths.Clamp(rng.m_begin, 0, file.Length);
+						rng.m_end             = Maths.Clamp(rng.m_end, 0, file.Length);
+						row_delim             = Misc.Robitise(row_delim);
+						col_delim             = Misc.Robitise(col_delim);
+						bool ignore_blanks    = m_settings.IgnoreBlankLines;
+						List<Filter> filters  = ActiveFilters.ToList();
+						AddLineFunc test_line = (line_rng, baddr, fend, bf, enc) =>
+							{
+								int progress = (int)(100 * Maths.Ratio(rng.m_begin, baddr + line_rng.m_end, rng.m_end));
+								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
+								
+								if (line_rng.Empty && ignore_blanks)
+									return true;
+								
+								// Parse the line from the buffer
+								line.Read(baddr + line_rng.m_begin, bf, (int)line_rng.m_begin, (int)line_rng.Count, m_encoding, m_col_delim, null);
+								
+								// Keep searching while the text is filtered out or doesn't match the pattern
+								if (!PassesFilters(line.RowText, filters)) return true;
+								
+								// Write to the output file
+								outp.Write(string.Join(col_delim, line.Column));
+								outp.Write(row_delim);
+								return true;
+							};
+						
+						byte[] buf = new byte[Constants.FileReadChunkSize];
+						
+						// Find the start of a line (grow the range if necessary)
+						rng.m_begin = FindLineStart(file, rng.m_begin, rng.m_end, m_row_delim, m_encoding, buf);
+						
+						// Read lines and write them to the export file
+						FindLines(file, rng.m_begin, rng.m_end, false, rng.Count, test_line, m_encoding, m_row_delim, buf, () => bgw.CancellationPending);
+						a.Cancel = bgw.CancellationPending;
+					}
+				}){StartPosition = FormStartPosition.CenterParent};
+			
+			DialogResult res = export.ShowDialog(this);
+			return res == DialogResult.OK;
 		}
 
 		/// <summary>Handle file drop</summary>
@@ -600,7 +687,14 @@ namespace RyLogViewer
 			// If 'row_delim' is empty, this is the auto detect case, in which case we don't
 			// modify it from what it's already set to. Auto detect will set it on file load.
 			if (row_delim.Length == 0) return m_row_delim;
-			return m_encoding.GetBytes(row_delim.Replace("CR","\r").Replace("LF","\n"));
+			return m_encoding.GetBytes(Misc.Robitise(row_delim));
+		}
+
+		/// <summary>Convert a column delimiter string into an encoded byte array</summary>
+		private byte[] GetColDelim(string col_delim)
+		{
+			// If 'col_delim' is empty, then there is not column delimiter.
+			return m_encoding.GetBytes(Misc.Robitise(col_delim));
 		}
 
 		/// <summary>Selected the row in the file that contains the byte offset 'addr'</summary>
@@ -713,7 +807,7 @@ namespace RyLogViewer
 			// Cached settings for performance, don't overwrite auto detected cached values tho
 			m_encoding   = GetEncoding(m_settings.Encoding);
 			m_row_delim  = GetRowDelim(m_settings.RowDelimiter);
-			m_col_delim  = m_settings.ColDelimiter.Replace("TAB","\t").ToCharArray();
+			m_col_delim  = GetColDelim(m_settings.ColDelimiter);
 			m_row_height = m_settings.RowHeight;
 			m_bufsize    = m_settings.FileBufSize;
 			
@@ -812,12 +906,20 @@ namespace RyLogViewer
 			m_grid.Refresh();
 			
 			// Configure menus
+			bool file_open                            = FileOpen;
+			m_menu_file_export.Enabled                = file_open;
+			m_menu_file_close.Enabled                 = file_open;
+			m_menu_edit_selectall.Enabled             = file_open;
+			m_menu_edit_copy.Enabled                  = file_open;
+			m_menu_edit_find.Enabled                  = file_open;
+			m_menu_edit_find_next.Enabled             = file_open;
+			m_menu_edit_find_prev.Enabled             = file_open;
 			m_menu_encoding_detect           .Checked = m_settings.Encoding.Length == 0;
 			m_menu_encoding_ascii            .Checked = m_settings.Encoding == Encoding.ASCII.EncodingName;
 			m_menu_encoding_utf8             .Checked = m_settings.Encoding == Encoding.UTF8.EncodingName;
 			m_menu_encoding_ucs2_littleendian.Checked = m_settings.Encoding == Encoding.Unicode.EncodingName;
 			m_menu_encoding_ucs2_bigendian   .Checked = m_settings.Encoding == Encoding.BigEndianUnicode.EncodingName;
-			m_menu_tools_clear.Enabled = FileOpen;
+			m_menu_tools_clear.Enabled                = FileOpen;
 			
 			// Toolbar
 			m_btn_tail.Checked = m_watch_timer.Enabled;

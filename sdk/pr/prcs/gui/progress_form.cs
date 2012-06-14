@@ -27,6 +27,9 @@ namespace pr.gui
 		private readonly ProgressBar m_progress;
 		private readonly Button m_button;
 		private readonly Label m_description;
+		
+		/// <summary>Any exception thrown in the worker thread</summary>
+		public Exception Error { get; private set; }
 
 		public ProgressForm(string title, string description, DoWorkEventHandler func) :this(title, description, func, null) {}
 		public ProgressForm(string title, string description, DoWorkEventHandler func, object argument)
@@ -57,14 +60,21 @@ namespace pr.gui
 				};
 			m_bgw.RunWorkerCompleted += (s,e)=>
 				{
-					if (e.Error != null) { DialogResult = DialogResult.Abort; Close(); if (e.Error.InnerException != null) throw e.Error.InnerException; throw e.Error; }
-					if (e.Cancelled) DialogResult = DialogResult.Cancel;
-					DialogResult = DialogResult.OK;
-					Close();
+					if ((Error = e.Error) != null) DialogResult = DialogResult.Abort;
+					else if (e.Cancelled)          DialogResult = DialogResult.Cancel;
+					else                           DialogResult = DialogResult.OK;
+					Action close = Close;
+					BeginInvoke(close);
 				};
 			
-			Shown       += (s,e)=>{ m_bgw.RunWorkerAsync(argument); };
-			SizeChanged += (s,e)=>{ DoLayout(); };
+			Shown       += (s,e) => m_bgw.RunWorkerAsync(argument);
+			SizeChanged += (s,e) => DoLayout();
+			FormClosing += (s,e) =>
+				{
+					if (Error == null) return;
+					if (Error.InnerException != null) throw Error.InnerException;
+					throw Error;
+				};
 		}
 
 		/// <summary>Layout the controls on the form</summary>

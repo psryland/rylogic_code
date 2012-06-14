@@ -95,7 +95,7 @@ namespace RyLogViewer
 				};
 
 			// Line endings
-			tt = "Set the line ending characters to expect in the log data.\r\nUse 'CR' for carriage return, 'LF' for line feed.\r\nLeave blank to auto detect";
+			tt = "Set the line ending characters to expect in the log data.\r\nUse '<CR>' for carriage return, '<LF>' for line feed.\r\nLeave blank to auto detect";
 			m_lbl_line_ends.ToolTip(m_tt, tt);
 			m_edit_line_ends.ToolTip(m_tt, tt);
 			m_edit_line_ends.Text = m_settings.RowDelimiter;
@@ -106,7 +106,9 @@ namespace RyLogViewer
 			};
 			
 			// Column delimiters
-			m_edit_col_delims.ToolTip(m_tt, "Set the characters that separate columns in the log data.\r\nUse 'TAB' for a tab character.\r\nLeave blank for no column delimiters");
+			tt = "Set the characters that separate columns in the log data.\r\nUse '<TAB>' for a tab character.\r\nLeave blank for no column delimiter";
+			m_lbl_col_delims.ToolTip(m_tt, tt);
+			m_edit_col_delims.ToolTip(m_tt, tt);
 			m_edit_col_delims.Text = m_settings.ColDelimiter;
 			m_edit_col_delims.TextChanged += (s,a)=>
 				{
