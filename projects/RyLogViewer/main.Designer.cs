@@ -69,6 +69,8 @@
 			this.m_sep4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_highlights = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_filters = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_clear = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
@@ -89,8 +91,8 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.m_menu_tools_clear = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_tcp = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -219,6 +221,8 @@
 			// 
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file_open,
+            this.m_menu_file_open_stdout,
+            this.m_menu_file_open_tcp,
             this.m_menu_file_close,
             this.m_sep1,
             this.m_menu_file_export,
@@ -234,48 +238,48 @@
 			// 
 			this.m_menu_file_open.Name = "m_menu_file_open";
 			this.m_menu_file_open.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-			this.m_menu_file_open.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_open.Size = new System.Drawing.Size(193, 22);
 			this.m_menu_file_open.Text = "&Open Log File";
 			// 
 			// m_menu_file_close
 			// 
 			this.m_menu_file_close.Name = "m_menu_file_close";
 			this.m_menu_file_close.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.W)));
-			this.m_menu_file_close.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_close.Size = new System.Drawing.Size(193, 22);
 			this.m_menu_file_close.Text = "&Close";
 			// 
 			// m_sep1
 			// 
 			this.m_sep1.Name = "m_sep1";
-			this.m_sep1.Size = new System.Drawing.Size(187, 6);
+			this.m_sep1.Size = new System.Drawing.Size(190, 6);
 			// 
 			// m_menu_file_export
 			// 
 			this.m_menu_file_export.Name = "m_menu_file_export";
-			this.m_menu_file_export.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_export.Size = new System.Drawing.Size(193, 22);
 			this.m_menu_file_export.Text = "&Export...";
 			// 
 			// toolStripSeparator5
 			// 
 			this.toolStripSeparator5.Name = "toolStripSeparator5";
-			this.toolStripSeparator5.Size = new System.Drawing.Size(187, 6);
+			this.toolStripSeparator5.Size = new System.Drawing.Size(190, 6);
 			// 
 			// m_menu_file_recent
 			// 
 			this.m_menu_file_recent.Name = "m_menu_file_recent";
-			this.m_menu_file_recent.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_recent.Size = new System.Drawing.Size(193, 22);
 			this.m_menu_file_recent.Text = "&Recent Files";
 			// 
 			// m_sep2
 			// 
 			this.m_sep2.Name = "m_sep2";
-			this.m_sep2.Size = new System.Drawing.Size(187, 6);
+			this.m_sep2.Size = new System.Drawing.Size(190, 6);
 			// 
 			// m_menu_file_exit
 			// 
 			this.m_menu_file_exit.Name = "m_menu_file_exit";
 			this.m_menu_file_exit.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
-			this.m_menu_file_exit.Size = new System.Drawing.Size(190, 22);
+			this.m_menu_file_exit.Size = new System.Drawing.Size(193, 22);
 			this.m_menu_file_exit.Text = "E&xit";
 			// 
 			// m_menu_edit
@@ -416,6 +420,17 @@
 			this.m_menu_tools_filters.Name = "m_menu_tools_filters";
 			this.m_menu_tools_filters.Size = new System.Drawing.Size(154, 22);
 			this.m_menu_tools_filters.Text = "&Filters";
+			// 
+			// toolStripSeparator6
+			// 
+			this.toolStripSeparator6.Name = "toolStripSeparator6";
+			this.toolStripSeparator6.Size = new System.Drawing.Size(151, 6);
+			// 
+			// m_menu_tools_clear
+			// 
+			this.m_menu_tools_clear.Name = "m_menu_tools_clear";
+			this.m_menu_tools_clear.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_clear.Text = "&Clear Log File";
 			// 
 			// m_sep5
 			// 
@@ -625,16 +640,17 @@
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
-			// m_menu_tools_clear
+			// m_menu_file_open_stdout
 			// 
-			this.m_menu_tools_clear.Name = "m_menu_tools_clear";
-			this.m_menu_tools_clear.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_clear.Text = "&Clear Log File";
+			this.m_menu_file_open_stdout.Name = "m_menu_file_open_stdout";
+			this.m_menu_file_open_stdout.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_open_stdout.Text = "Log &Program Output...";
 			// 
-			// toolStripSeparator6
+			// m_menu_file_open_tcp
 			// 
-			this.toolStripSeparator6.Name = "toolStripSeparator6";
-			this.toolStripSeparator6.Size = new System.Drawing.Size(151, 6);
+			this.m_menu_file_open_tcp.Name = "m_menu_file_open_tcp";
+			this.m_menu_file_open_tcp.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_open_tcp.Text = "Log &TCP Connection...";
 			// 
 			// Main
 			// 
@@ -732,6 +748,8 @@
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_clear;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_stdout;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_tcp;
 	}
 }
 

@@ -309,6 +309,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*.
+        /// </summary>
+        internal static string ExecutablesFilter {
+            get {
+                return ResourceManager.GetString("ExecutablesFilter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Export Complete.
         /// </summary>
         internal static string ExportComplete {

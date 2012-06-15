@@ -16,6 +16,18 @@ namespace RyLogViewer
 		RegularExpression
 	}
 
+	public enum ProgramOutputAction
+	{
+		LaunchApplication,
+		AttachToProcess,
+	}
+
+	[Flags] public enum StandardStreams
+	{
+		Stdout = 1 << 0,
+		Stderr = 1 << 1,
+	}
+
 	[Flags] public enum EWhatsChanged
 	{
 		Nothing = 0,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Xml;
@@ -31,19 +32,19 @@ using pr.extn;
 namespace pr.common
 {
 	/// <summary>A base class for simple settings</summary>
+	[KnownType("KnownTypes")]
 	public abstract class SettingsBase
 	{
-		// Add more of these as needed
-		[KnownType(typeof(Point))]
+		// Using a List<> instead of a Dictionary as Dictionary isn't serialisable
+		[KnownType(typeof(Point))] // Add more of these as needed
 		[KnownType(typeof(Color))]
 		[KnownType(typeof(Size))]
 		[KnownType(typeof(DateTime))]
 		[KnownType(typeof(Font))]
 		[KnownType(typeof(FontStyle))]
 		[KnownType(typeof(GraphicsUnit))]
-
-		// Using a List<> instead of a Dictionary as Dictionary isn't serialisable
-		[DataContract(Name="setting")] public class Pair
+		[DataContract(Name="setting")]
+		protected class Pair
 		{
 			[DataMember(Name="key"  )] public string Key   {get;set;}
 			[DataMember(Name="value")] public object Value {get;set;}
@@ -59,11 +60,14 @@ namespace pr.common
 		/// <summary>Return default values for these settings</summary>
 		protected abstract SettingsBase DefaultData { get; }
 		
+		/// <summary>Override this method to return addition known types</summary>
+		protected virtual IEnumerable<Type> KnownTypes { get { return Enumerable.Empty<Type>(); } }
+
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		public virtual string Version { get { return "v1.0"; } }
+		protected virtual string Version { get { return "v1.0"; } }
 		
 		/// <summary>Returns the directory in which to store app settings</summary>
-		public virtual string AppDataDirectory
+		protected virtual string AppDataDirectory
 		{
 			get
 			{
@@ -173,6 +177,26 @@ namespace pr.common
 			public SettingsSavingEventArgs(bool cancel) :base(cancel) {}
 		}
 		
+		protected SettingsBase()
+		{
+			AutoSaveOnChanges = true;
+		}
+		
+		/// <summary>Get/Set whether to automatically save whenever a setting is changed</summary>
+		public bool AutoSaveOnChanges
+		{
+			get { return m_auto_save; }
+			set
+			{
+				if (m_auto_save == value) return;
+				m_auto_save = value;
+				EventHandler<SettingChangedEventArgs> save = (s,a)=> Save();
+				if (m_auto_save) SettingChanged += save;
+				else             SettingChanged -= save;
+			}
+		}
+		private bool m_auto_save;
+
 		/// <summary>Refreshes the settings from persistent storage</summary>
 		public virtual void Reload()
 		{
@@ -180,7 +204,7 @@ namespace pr.common
 			if (!File.Exists(filepath))
 				Reset();
 			
-			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>));
+			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
 			using (FileStream fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read))
 			{
 				Data = (List<Pair>)ser.ReadObject(fs);
@@ -214,7 +238,7 @@ namespace pr.common
 			set(version_key, Version);
 
 			// Perform the save
-			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>));
+			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
 			using (XmlWriter fs = XmlWriter.Create(Filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
 				ser.WriteObject(fs, Data);
 		}

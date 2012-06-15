@@ -93,7 +93,6 @@ namespace RyLogViewer
 						Set set = new Set(fd.FileName);
 						m_sets.RemoveAll(ps => ps.Name == set.Name);
 						m_sets.Insert(0, set);
-						m_settings.Save();
 						UpdateUI();
 					}
 					catch (Exception ex)

@@ -31,7 +31,6 @@ namespace RyLogViewer
 			m_check_show_on_startup.CheckedChanged += (s,a)=>
 				{
 					settings.ShowTOTD = m_check_show_on_startup.Checked;
-					settings.Save();
 				};
 			m_btn_next.Click += (s,a)=>
 				{

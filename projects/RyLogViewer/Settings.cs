@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using pr.common;
@@ -11,7 +12,8 @@ namespace RyLogViewer
 		// Defaults
 		public static readonly Settings Default = new Settings(ELoadOptions.Defaults);
 		protected override SettingsBase DefaultData { get { return Default; } }
-		
+		protected override IEnumerable<Type> KnownTypes { get { return new[]{typeof(ProgramOutputAction), typeof(StandardStreams)}; } }
+
 		public string RecentFiles
 		{
 			get { return get<string>("RecentFiles"); }
@@ -187,7 +189,21 @@ namespace RyLogViewer
 			get { return get<string>("Encoding"); }
 			set { set("Encoding", value); }
 		}
-
+		public ProgramOutputAction LogProgramOutput_Action
+		{
+			get { return get<ProgramOutputAction>("LogProgramOutput_Action"); }
+			set { set("LogProgramOutput_Action", value); }
+		}
+		public string LogProgramOutput_CmdLine
+		{
+			get { return get<string>("LogProgramOutput_CmdLine"); }
+			set { set("LogProgramOutput_CmdLine", value); }
+		}
+		public StandardStreams LogProgramOutput_Streams
+		{
+			get { return get<StandardStreams>("LogProgramOutput_Streams"); }
+			set { set("LogProgramOutput_Streams", value); }
+		}
 		public Settings(ELoadOptions opts = ELoadOptions.Normal)
 		{
 			if (opts == ELoadOptions.Normal)
@@ -231,6 +247,9 @@ namespace RyLogViewer
 			RowDelimiter                = "";
 			ColDelimiter                = "";
 			Encoding                    = "";
+			LogProgramOutput_Action     = ProgramOutputAction.LaunchApplication;
+			LogProgramOutput_CmdLine    = "";
+			LogProgramOutput_Streams    = StandardStreams.Stdout|StandardStreams.Stderr;
 		}
 	}
 }

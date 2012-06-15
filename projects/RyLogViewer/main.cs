@@ -73,8 +73,9 @@ namespace RyLogViewer
 			m_settings.SettingChanged += (s,a)=> { Log.Info("Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue); };
 			
 			// Menu
-			m_menu.Move                             += (s,a) => { m_settings.MenuPosition = m_menu.Location; m_settings.Save(); };
+			m_menu.Move                             += (s,a) => m_settings.MenuPosition = m_menu.Location;
 			m_menu_file_open.Click                  += (s,a) => OpenLogFile(null);
+			m_menu_file_open_stdout.Click           += (s,a) => OpenStdOut();
 			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
 			m_menu_file_export.Click                += (s,a) => ShowExportDialog();
 			m_menu_file_exit.Click                  += (s,a) => Close();
@@ -98,7 +99,7 @@ namespace RyLogViewer
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
-			m_toolstrip.Move             += (s,a) => { m_settings.ToolsPosition = m_toolstrip.Location; m_settings.Save(); };
+			m_toolstrip.Move             += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
 			m_btn_open_log.Click         += (s,a) => OpenLogFile(null);
 			m_btn_refresh.Click          += (s,a) => BuildLineIndex(m_filepos, true);
 			m_btn_highlights.Click       += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
@@ -126,7 +127,7 @@ namespace RyLogViewer
 				};
 
 			// Status
-			m_status.Move += (s,a) => { m_settings.StatusPosition = m_status.Location; m_settings.Save(); };
+			m_status.Move += (s,a) => m_settings.StatusPosition = m_status.Location;
 			
 			// Setup the grid
 			m_grid.RowCount             = 0;
@@ -214,7 +215,6 @@ namespace RyLogViewer
 					m_settings.ScreenPosition = Location;
 					m_settings.WindowSize = Size;
 					m_settings.RecentFiles = m_recent.Export();
-					m_settings.Save();
 				};
 		}
 
@@ -285,7 +285,6 @@ namespace RyLogViewer
 				m_recent.Add(filepath);
 				m_settings.RecentFiles = m_recent.Export();
 				m_settings.LastLoadedFile = filepath;
-				m_settings.Save();
 				
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
 				CloseLogFile();
@@ -296,7 +295,7 @@ namespace RyLogViewer
 				// Setup the watcher to watch for file changes
 				// Start the build in an invoke so that checking for file changes doesn't cause reentrancy
 				Action file_changed = OnFileChanged;
-				m_watch.Add(m_filepath, (fp,ctx) => { BeginInvoke(file_changed); return true;});
+				m_watch.Add(m_filepath, (fp,ctx) => { ((Main)ctx).BeginInvoke(file_changed); return true;}, 0, this);
 				m_watch_timer.Enabled = FileOpen && m_settings.TailEnabled;
 				
 				BuildLineIndex(m_filepos, true, ()=>{ SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0; });
@@ -304,6 +303,13 @@ namespace RyLogViewer
 			}
 			catch (Exception ex) { MessageBox.Show(this, string.Format(Resources.FailedToOpenXDueToErrorY, filepath ,ex.Message), Resources.FailedToLoadFile, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			CloseLogFile();
+		}
+
+		/// <summary>Open a standard out connection</summary>
+		private void OpenStdOut()
+		{
+			var dg = new LogProgramOutputUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
 		}
 
 		/// <summary>Called when the log file is noticed to have changed</summary>
@@ -620,7 +626,6 @@ namespace RyLogViewer
 				m_encoding = encoding;
 
 			m_settings.Encoding = enc_name;
-			m_settings.Save();
 			ApplySettings();
 			BuildLineIndex(m_filepos, true);
 		}
@@ -638,7 +643,6 @@ namespace RyLogViewer
 		{
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
-			m_settings.Save();
 			var ui = new SettingsUI(tab);
 			ui.ShowDialog(this);
 			m_settings.Reload();

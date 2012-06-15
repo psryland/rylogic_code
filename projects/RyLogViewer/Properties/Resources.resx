@@ -343,4 +343,7 @@ Error Details: {0}</value>
   <data name="ConfirmOverwrite" xml:space="preserve">
     <value>Confirm Overwrite</value>
   </data>
+  <data name="ExecutablesFilter">
+    <value xml:space="preserve">Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
+  </data>
 </root>

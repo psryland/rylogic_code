@@ -58,7 +58,6 @@ namespace RyLogViewer
 				Focus(); // grab focus to ensure all controls persist their state
 				m_settings.HighlightPatterns = Highlight.Export(m_highlights);
 				m_settings.FilterPatterns    = Filter   .Export(m_filters);
-				m_settings.Save();
 			};
 			
 			UpdateUI();
