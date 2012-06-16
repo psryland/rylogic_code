@@ -6,7 +6,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using pr.common;
@@ -23,12 +22,12 @@ namespace RyLogViewer
 	{
 		private readonly Settings m_settings;                 // App settings
 		private readonly RecentFiles m_recent;                // Recent files
-		private readonly EventWaitHandle m_sync;              // A sync event for general use
 		private readonly FileWatch m_watch;                   // A helper for watching files
 		private readonly Timer m_watch_timer;                 // A timer for polling the file watcher
 		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
 		private readonly BindingList<string> m_find_history;  // A history of the strings used to find
 		private readonly FindUI m_find_ui;                    // The find dialog
+		private readonly ToolTip m_tt;                        // Tooltips
 		private Pattern m_last_find_pattern;                  // The pattern last used in a find
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
@@ -43,9 +42,7 @@ namespace RyLogViewer
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
 		
 		//bug:
-		// output truncated on process end
 		// ungraceful close of process capture file
-		// blank lines in log when ignore blank lines (logcat file)
 		//todo:
 		// read stdin/network
 		// 'Rewrite' - regex substitution
@@ -61,12 +58,12 @@ namespace RyLogViewer
 			InitializeComponent();
 			m_settings          = new Settings();
 			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
-			m_sync              = new EventWaitHandle(false, EventResetMode.ManualReset);
 			m_watch             = new FileWatch();
 			m_watch_timer       = new Timer{Interval = Constants.FilePollingRate};
 			m_highlights        = new List<Highlight>();
 			m_find_history      = new BindingList<string>();
 			m_find_ui           = new FindUI(m_find_history){Visible = false};
+			m_tt                = new ToolTip();
 			m_line_index        = new List<Range>();
 			m_last_find_pattern = null;
 			m_filepath          = null;
@@ -106,21 +103,27 @@ namespace RyLogViewer
 			m_toolstrip.Move             += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
 			m_btn_open_log.Click         += (s,a) => OpenLogFile();
 			m_btn_refresh.Click          += (s,a) => BuildLineIndex(m_filepos, true);
-			m_btn_highlights.Click       += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
-			m_btn_filters.Click          += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
+			
+			m_btn_highlights.ToolTipText  = Resources.ShowHighlightsDialog;
+			m_btn_highlights.Click       += (s,a) => EnableHighlights(m_btn_highlights.Checked);
+			m_btn_highlights.MouseDown   += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
+			
+			m_btn_filters.ToolTipText     = Resources.ShowFiltersDialog;
+			m_btn_filters.Click          += (s,a) => EnableFilters(m_btn_filters.Checked);
+			m_btn_filters.MouseDown      += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
+			
 			m_btn_options.Click          += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_btn_jump_to_end.Click      += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
 			m_btn_tail.Click             += (s,a) => EnableTail(m_btn_tail.Checked);
 			m_btn_open_log.ToolTipText    = Resources.OpenLogFile;   
 			m_btn_refresh.ToolTipText     = Resources.ReloadLogFile;
-			m_btn_highlights.ToolTipText  = Resources.ShowHighlightsDialog;
-			m_btn_filters.ToolTipText     = Resources.ShowFiltersDialog;
 			m_btn_options.ToolTipText     = Resources.ShowOptionsDialog;
 			m_btn_jump_to_end.ToolTipText = Resources.ScrollToEnd;
 			m_btn_tail.ToolTipText        = Resources.WatchForUpdates;
 			ToolStripManager.Renderer     = new CheckedButtonRenderer();
 
 			// Scrollbar
+			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file");
 			m_scroll_file.Ranges.Resize(3);
 			m_scroll_file.ScrollEnd += (s,a)=>
 				{
@@ -405,6 +408,8 @@ namespace RyLogViewer
 			m_find_ui.Location = Location + (Size)m_find_ui.Tag;
 			if (!m_find_ui.Visible)
 				m_find_ui.Show(this);
+			else
+				m_find_ui.Focus();
 		}
 		
 		/// <summary>Searches the file from 'start' looking for a match to 'pat'</summary>
@@ -454,7 +459,10 @@ namespace RyLogViewer
 						// We can call BuildLineIndex in this thread context because we know
 						// we're in a modal dialog.
 						if (at != -1)
-							SelectRowByAddr(at);
+						{
+							Action select = ()=>SelectRowByAddr(at);
+							Invoke(select);
+						}
 						
 						a.Cancel = bgw.CancellationPending;
 					}
@@ -471,7 +479,7 @@ namespace RyLogViewer
 			if (pat == null || m_grid.RowCount == 0) return;
 			m_last_find_pattern = pat;
 			
-			var start = m_line_index[SelectedRow].m_begin;
+			var start = m_line_index[SelectedRow].m_end;
 			Log.Info("FindNext starting from {0}", start);
 			
 			long found;
@@ -610,6 +618,23 @@ namespace RyLogViewer
 			OpenLogFile(files[0]);
 		}
 		
+		/// <summary>Turn on/off highlights</summary>
+		private void EnableHighlights(bool enable)
+		{
+			m_settings.HighlightsEnabled = enable;
+			ApplySettings();
+			InvalidateCache();
+			m_grid.Refresh();
+		}
+
+		/// <summary>Turn on/off filters</summary>
+		private void EnableFilters(bool enable)
+		{
+			m_settings.FiltersEnabled = enable;
+			ApplySettings();
+			BuildLineIndex(m_filepos, true);
+		}
+
 		/// <summary>Turn on/off tail mode</summary>
 		private void EnableTail(bool enable)
 		{
@@ -727,16 +752,13 @@ namespace RyLogViewer
 		private void SelectRowByAddr(long addr)
 		{
 			// Ensure 'addr' is cached
-			m_sync.Reset();
 			BuildLineIndex(addr, false, ()=>
 			{
 				// When the file is cached, select the row
 				int idx = m_line_index.BinarySearch(r => r.m_end < addr ? -1 : r.m_begin > addr ? 1 : 0);
 				if (idx < 0) idx = ~idx;
 				SelectedRow = idx;
-				m_sync.Set();
 			});
-			m_sync.WaitOne(1000);
 		}
 
 		/// <summary>
@@ -803,7 +825,7 @@ namespace RyLogViewer
 				// Preserve the selected row index and first visible row index (if possible)
 				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
 				int selected = SelectedRow;
-				m_grid.SelectRow(-1);
+				m_grid.ClearSelection();//SelectRow(-1);
 				
 				Log.Info("RowCount changed. Selected row: {0}. First visible row: {1}. Auto scroll {2}", selected, first_vis, auto_scroll_tail);
 				m_grid.RowCount = count;
@@ -840,7 +862,8 @@ namespace RyLogViewer
 			
 			// Highlights;
 			m_highlights.Clear();
-			m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
+			if (m_settings.HighlightsEnabled)
+				m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
 			
 			// Row styles
 			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
@@ -949,7 +972,9 @@ namespace RyLogViewer
 			m_menu_tools_clear.Enabled                = FileOpen;
 			
 			// Toolbar
-			m_btn_tail.Checked = m_watch_timer.Enabled;
+			m_btn_highlights.Checked = m_settings.HighlightsEnabled;
+			m_btn_filters.Checked    = m_settings.FiltersEnabled;
+			m_btn_tail.Checked       = m_watch_timer.Enabled;
 			
 			// The file scroll bar is only visible when part of the file is loaded
 			m_scroll_file.Width = m_settings.FileScrollWidth;

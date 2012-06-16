@@ -43,6 +43,8 @@
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_tcp = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
@@ -91,8 +93,6 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_open_tcp = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -121,7 +121,7 @@
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(220, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(251, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -151,6 +151,7 @@
 			// 
 			// m_btn_highlights
 			// 
+			this.m_btn_highlights.CheckOnClick = true;
 			this.m_btn_highlights.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
 			this.m_btn_highlights.Image = global::RyLogViewer.Properties.Resources.highlight;
 			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Transparent;
@@ -160,6 +161,7 @@
 			// 
 			// m_btn_filters
 			// 
+			this.m_btn_filters.CheckOnClick = true;
 			this.m_btn_filters.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
 			this.m_btn_filters.Image = global::RyLogViewer.Properties.Resources.filter;
 			this.m_btn_filters.ImageTransparentColor = System.Drawing.Color.Transparent;
@@ -240,6 +242,18 @@
 			this.m_menu_file_open.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
 			this.m_menu_file_open.Size = new System.Drawing.Size(193, 22);
 			this.m_menu_file_open.Text = "&Open Log File";
+			// 
+			// m_menu_file_open_stdout
+			// 
+			this.m_menu_file_open_stdout.Name = "m_menu_file_open_stdout";
+			this.m_menu_file_open_stdout.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_open_stdout.Text = "Log &Program Output...";
+			// 
+			// m_menu_file_open_tcp
+			// 
+			this.m_menu_file_open_tcp.Name = "m_menu_file_open_tcp";
+			this.m_menu_file_open_tcp.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_open_tcp.Text = "Log &TCP Connection...";
 			// 
 			// m_menu_file_close
 			// 
@@ -639,18 +653,6 @@
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
-			// 
-			// m_menu_file_open_stdout
-			// 
-			this.m_menu_file_open_stdout.Name = "m_menu_file_open_stdout";
-			this.m_menu_file_open_stdout.Size = new System.Drawing.Size(193, 22);
-			this.m_menu_file_open_stdout.Text = "Log &Program Output...";
-			// 
-			// m_menu_file_open_tcp
-			// 
-			this.m_menu_file_open_tcp.Name = "m_menu_file_open_tcp";
-			this.m_menu_file_open_tcp.Size = new System.Drawing.Size(193, 22);
-			this.m_menu_file_open_tcp.Text = "Log &TCP Connection...";
 			// 
 			// Main
 			// 

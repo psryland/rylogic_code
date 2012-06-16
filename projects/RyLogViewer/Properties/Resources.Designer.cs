@@ -629,7 +629,8 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Show the filters dialog.
+        ///   Looks up a localized string similar to Left click to enable/disable filters.
+        ///Right click to show the filters dialog.
         /// </summary>
         internal static string ShowFiltersDialog {
             get {
@@ -638,7 +639,8 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Show the highlights dialog.
+        ///   Looks up a localized string similar to Left click to enable/disable highlighting.
+        ///Right click to show the highlighting dialog.
         /// </summary>
         internal static string ShowHighlightsDialog {
             get {

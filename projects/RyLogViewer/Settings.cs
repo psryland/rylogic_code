@@ -143,6 +143,16 @@ namespace RyLogViewer
 			get { return get<bool>("ShowTOTD"); }
 			set { set("ShowTOTD", value); }
 		}
+		public bool   HighlightsEnabled
+		{
+			get { return get<bool>("HighlightsEnabled"); }
+			set { set("HighlightsEnabled", value); }
+		}
+		public bool   FiltersEnabled
+		{
+			get { return get<bool>("FiltersEnabled"); }
+			set { set("FiltersEnabled", value); }
+		}
 		public bool   TailEnabled
 		{
 			get { return get<bool>("TailEnabled"); }
@@ -227,6 +237,8 @@ namespace RyLogViewer
 			IgnoreBlankLines                = false;
 			AlwaysOnTop                     = false;
 			ShowTOTD                        = true;
+			HighlightsEnabled               = true;
+			FiltersEnabled                  = true;
 			TailEnabled                     = false;
 			FileBufSize                     = 250 * 1024;
 			HighlightPatterns               = "<root/>";

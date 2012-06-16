@@ -80,6 +80,7 @@ namespace RyLogViewer
 					if (a.CloseReason != CloseReason.UserClosing) return;
 					Hide();
 					a.Cancel = true;
+					Owner.Focus();
 				};
 		}
 		

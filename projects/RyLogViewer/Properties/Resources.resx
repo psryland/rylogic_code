@@ -276,7 +276,8 @@ Error: {1}</value>
     <value>..\Resources\filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="ShowFiltersDialog" xml:space="preserve">
-    <value>Show the filters dialog</value>
+    <value>Left click to enable/disable filters.
+Right click to show the filters dialog</value>
   </data>
   <data name="BuildLineIndexErrorMsg" xml:space="preserve">
     <value>The was an error while parsing the log file.
@@ -305,7 +306,8 @@ Error Details: {0}</value>
     <value>..\Resources\3dowarrow.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="ShowHighlightsDialog" xml:space="preserve">
-    <value>Show the highlights dialog</value>
+    <value>Left click to enable/disable highlighting.
+Right click to show the highlighting dialog</value>
   </data>
   <data name="Eyeball" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Eyeball.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

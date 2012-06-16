@@ -157,7 +157,7 @@ namespace RyLogViewer
 		{
 			const float rad = 4f;
 			var gfx = e.Graphics;
-			var bounds = e.ClipRectangle; bounds.Inflate(-1,-1);
+			var bounds = e.ClipRectangle; bounds.Inflate(-1,0);
 			var height = bounds.Height;
 			var total = TotalRange;
 			
