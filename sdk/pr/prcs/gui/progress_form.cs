@@ -24,6 +24,15 @@ namespace pr.gui
 	//MessageBox.Show("result got to " + result + " and the dialog returned " + res);
 	public sealed class ProgressForm :Form
 	{
+		public class UserState
+		{
+			/// <summary>Control the visibility of the progress bar. 'null' means don't change</summary>
+			public bool? ProgressBarVisible = null;
+			
+			/// <summary>Change the description. 'null' means don't change</summary>
+			public string Description = null;
+		}
+
 		private readonly BackgroundWorker m_bgw;
 		private readonly ProgressBar m_progress;
 		private readonly Button m_button;
@@ -57,6 +66,12 @@ namespace pr.gui
 			m_bgw.ProgressChanged += (s,e)=>
 				{
 					m_progress.Value = (int)Maths.Lerp(m_progress.Minimum, m_progress.Maximum, Maths.Clamp(e.ProgressPercentage * 0.01f, 0f, 1f));
+					UserState us = e.UserState as UserState;
+					if (us != null)
+					{
+						if (us.ProgressBarVisible != null) m_progress.Visible = us.ProgressBarVisible.Value;
+						if (us.Description        != null) m_description.Text = us.Description;
+					}
 				};
 			m_bgw.RunWorkerCompleted += (s,e)=>
 				{

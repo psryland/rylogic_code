@@ -96,6 +96,13 @@ namespace RyLogViewer
 			return Interlocked.CompareExchange(ref m_build_issue, build_issue, build_issue) != build_issue;
 		}
 
+		/// <summary>Cause a currently running BuildLineIndex call to be cancelled</summary>
+		private void CancelBuildLineIndex() // will be used when caching numbers of lines, not byte range
+		{
+			Log.Info("build (id {0}) cancelled", m_build_issue);
+			Interlocked.Increment(ref m_build_issue);
+		}
+
 		/// <summary>
 		/// Generates the line index centred around 'filepos'.
 		/// If 'filepos' is within the byte range of 'm_line_index' then an incremental search for

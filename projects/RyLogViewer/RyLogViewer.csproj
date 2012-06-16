@@ -72,6 +72,7 @@
     <Compile Include="about.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Class1.cs" />
     <Compile Include="export_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -130,6 +131,12 @@
     <Compile Include="stream_buffering.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="network_connection_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="network_connection_ui.Designer.cs">
+      <DependentUpon>network_connection_ui.cs</DependentUpon>
+    </Compile>
     <Compile Include="tipoftheday.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -166,6 +173,9 @@
     </Compile>
     <EmbeddedResource Include="settings_ui.resx">
       <DependentUpon>settings_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="network_connection_ui.resx">
+      <DependentUpon>network_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="tipoftheday.resx">
       <DependentUpon>tipoftheday.cs</DependentUpon>

@@ -44,7 +44,8 @@
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_open_tcp = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_network = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_named_pipe = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
@@ -85,6 +86,7 @@
 			this.m_status_encoding = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_spring = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_message = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_progress = new System.Windows.Forms.ToolStripProgressBar();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid = new System.Windows.Forms.DataGridView();
@@ -93,7 +95,6 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.m_status_progress = new System.Windows.Forms.ToolStripProgressBar();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -225,7 +226,8 @@
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file_open,
             this.m_menu_file_open_stdout,
-            this.m_menu_file_open_tcp,
+            this.m_menu_file_open_network,
+            this.m_menu_file_open_named_pipe,
             this.m_menu_file_close,
             this.m_sep1,
             this.m_menu_file_export,
@@ -241,60 +243,66 @@
 			// 
 			this.m_menu_file_open.Name = "m_menu_file_open";
 			this.m_menu_file_open.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-			this.m_menu_file_open.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_open.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_open.Text = "&Open Log File";
 			// 
 			// m_menu_file_open_stdout
 			// 
 			this.m_menu_file_open_stdout.Name = "m_menu_file_open_stdout";
-			this.m_menu_file_open_stdout.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_open_stdout.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_open_stdout.Text = "Log &Program Output...";
 			// 
-			// m_menu_file_open_tcp
+			// m_menu_file_open_network
 			// 
-			this.m_menu_file_open_tcp.Name = "m_menu_file_open_tcp";
-			this.m_menu_file_open_tcp.Size = new System.Drawing.Size(193, 22);
-			this.m_menu_file_open_tcp.Text = "Log &TCP Connection...";
+			this.m_menu_file_open_network.Name = "m_menu_file_open_network";
+			this.m_menu_file_open_network.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_open_network.Text = "Log Ne&twork Connection...";
+			// 
+			// m_menu_file_open_named_pipe
+			// 
+			this.m_menu_file_open_named_pipe.Name = "m_menu_file_log_named_pipe";
+			this.m_menu_file_open_named_pipe.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_open_named_pipe.Text = "Log &Named Pipe...";
 			// 
 			// m_menu_file_close
 			// 
 			this.m_menu_file_close.Name = "m_menu_file_close";
 			this.m_menu_file_close.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.W)));
-			this.m_menu_file_close.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_close.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_close.Text = "&Close";
 			// 
 			// m_sep1
 			// 
 			this.m_sep1.Name = "m_sep1";
-			this.m_sep1.Size = new System.Drawing.Size(190, 6);
+			this.m_sep1.Size = new System.Drawing.Size(213, 6);
 			// 
 			// m_menu_file_export
 			// 
 			this.m_menu_file_export.Name = "m_menu_file_export";
-			this.m_menu_file_export.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_export.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_export.Text = "&Export...";
 			// 
 			// toolStripSeparator5
 			// 
 			this.toolStripSeparator5.Name = "toolStripSeparator5";
-			this.toolStripSeparator5.Size = new System.Drawing.Size(190, 6);
+			this.toolStripSeparator5.Size = new System.Drawing.Size(213, 6);
 			// 
 			// m_menu_file_recent
 			// 
 			this.m_menu_file_recent.Name = "m_menu_file_recent";
-			this.m_menu_file_recent.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_recent.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_recent.Text = "&Recent Files";
 			// 
 			// m_sep2
 			// 
 			this.m_sep2.Name = "m_sep2";
-			this.m_sep2.Size = new System.Drawing.Size(190, 6);
+			this.m_sep2.Size = new System.Drawing.Size(213, 6);
 			// 
 			// m_menu_file_exit
 			// 
 			this.m_menu_file_exit.Name = "m_menu_file_exit";
 			this.m_menu_file_exit.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
-			this.m_menu_file_exit.Size = new System.Drawing.Size(193, 22);
+			this.m_menu_file_exit.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_exit.Text = "E&xit";
 			// 
 			// m_menu_edit
@@ -535,7 +543,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(68, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(310, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -549,6 +557,12 @@
 			this.m_status_message.Text = "Transient Message";
 			this.m_status_message.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			this.m_status_message.Visible = false;
+			// 
+			// m_status_progress
+			// 
+			this.m_status_progress.Name = "m_status_progress";
+			this.m_status_progress.Size = new System.Drawing.Size(100, 18);
+			this.m_status_progress.Visible = false;
 			// 
 			// m_toolstrip_cont
 			// 
@@ -656,12 +670,6 @@
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
-			// m_status_progress
-			// 
-			this.m_status_progress.Name = "m_status_progress";
-			this.m_status_progress.Size = new System.Drawing.Size(100, 18);
-			this.m_status_progress.Visible = false;
-			// 
 			// Main
 			// 
 			this.AllowDrop = true;
@@ -759,8 +767,9 @@
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_clear;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_stdout;
-		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_tcp;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_network;
 		private System.Windows.Forms.ToolStripProgressBar m_status_progress;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_named_pipe;
 	}
 }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Text;
 
@@ -68,6 +69,10 @@ namespace RyLogViewer
 		SelectedRange,
 	}
 
+	public enum NetworkTransport
+	{
+	}
+
 	[DataContract]
 	public class LaunchApp :ICloneable
 	{
@@ -100,6 +105,40 @@ namespace RyLogViewer
 		public object Clone()
 		{
 			return new LaunchApp(this);
+		}
+	}
+
+	[DataContract]
+	public class NetConn :ICloneable
+	{
+		[DataMember] public string       Hostname     = "";
+		[DataMember] public ushort       Port         = 5555;
+		[DataMember] public ProtocolType ProtocolType = ProtocolType.IPv4;
+		[DataMember] public bool         UseProxy         = false;
+		[DataMember] public string       ProxyHostname    = "";
+		[DataMember] public ushort       ProxyPort        = 5555;
+		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public bool         AppendOutputFile = true;
+		
+		public NetConn() {}
+		public NetConn(NetConn rhs)
+		{
+			Hostname         = rhs.Hostname         ;
+			Port             = rhs.Port             ;
+			ProtocolType     = rhs.ProtocolType     ;
+			UseProxy         = rhs.UseProxy         ;
+			ProxyHostname    = rhs.ProxyHostname    ;
+			ProxyPort        = rhs.ProxyPort        ;
+			OutputFilepath   = rhs.OutputFilepath   ;
+			AppendOutputFile = rhs.AppendOutputFile ;
+		}
+		public override string ToString()
+		{
+			return Hostname;
+		}
+		public object Clone()
+		{
+			return new NetConn(this);
 		}
 	}
 

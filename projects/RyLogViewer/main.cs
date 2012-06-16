@@ -42,6 +42,7 @@ namespace RyLogViewer
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
 		
 		//bug:
+		// build line index missing partial lines
 		// ungraceful close of process capture file
 		//todo:
 		// read stdin/network
@@ -77,6 +78,8 @@ namespace RyLogViewer
 			m_menu.Move                             += (s,a) => m_settings.MenuPosition = m_menu.Location;
 			m_menu_file_open.Click                  += (s,a) => OpenLogFile();
 			m_menu_file_open_stdout.Click           += (s,a) => LogProgramOutput();
+			m_menu_file_open_network.Click          += (s,a) => LogNetworkOutput();
+			m_menu_file_open_named_pipe.Click       += (s,a) => LogNamedPipe();
 			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
 			m_menu_file_export.Click                += (s,a) => ShowExportDialog();
 			m_menu_file_exit.Click                  += (s,a) => Close();
@@ -267,8 +270,10 @@ namespace RyLogViewer
 				m_line_index.Clear();
 				m_watch.Remove(m_filepath);
 				if (m_buffered_process != null) m_buffered_process.Dispose();
+				if (m_buffered_netconn != null) m_buffered_netconn.Dispose();
 				if (FileOpen) m_file.Dispose();
 				m_buffered_process = null;
+				m_buffered_netconn = null;
 				m_filepath = null;
 				m_file = null;
 				m_filepos = 0;
@@ -327,9 +332,22 @@ namespace RyLogViewer
 		/// <summary>Open a standard out connection</summary>
 		private void LogProgramOutput()
 		{
-			var dg = new LogProgramOutputUI(m_settings);
+			var dg = new ProgramOutputUI(m_settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			LaunchProcess(dg.Launch);
+		}
+
+		/// <summary>Open a network connection and log the received data</summary>
+		private void LogNetworkOutput()
+		{
+			var dg = new NetworkConnectionUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LogNetworkConnection(dg.Conn);
+		}
+
+		/// <summary>Open a named pipe and log the received data</summary>
+		private void LogNamedPipe()
+		{
 		}
 
 		/// <summary>Called when the log file is noticed to have changed</summary>

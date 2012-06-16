@@ -203,14 +203,14 @@ namespace RyLogViewer
 			get { return get<LaunchApp[]>("LogProgramOutputHistory"); }
 			set { set("LogProgramOutputHistory", value); }
 		}
+		public NetConn[] NetworkConnectionHistory
+		{
+			get { return get<NetConn[]>("NetworkConnectionHistory"); }
+			set { set("NetworkConnectionHistory", value); }
+		}
+		
 		public Settings(ELoadOptions opts = ELoadOptions.Normal)
 		{
-			if (opts == ELoadOptions.Normal)
-			{
-				try { Reload(); return; }
-				catch (Exception ex) { Debug.WriteLine(ex); }
-			}
-			
 			RecentFiles                     = "";
 			Font                            = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
 			RestoreScreenLoc                = true;
@@ -249,6 +249,15 @@ namespace RyLogViewer
 			ColDelimiter                    = "";
 			Encoding                        = "";
 			LogProgramOutputHistory         = new LaunchApp[0];
+			NetworkConnectionHistory        = new NetConn[0];
+			
+			// Load all the default values first, then if the load options are 'normal'
+			// load from file. This ensures options missing in the file exist with default values
+			if (opts == ELoadOptions.Normal)
+			{
+				try { Reload(); }
+				catch (Exception ex) { Debug.WriteLine(ex); }
+			}
 		}
 		
 		/// <summary>Types the serialiser needs to know about</summary>
@@ -260,7 +269,9 @@ namespace RyLogViewer
 				{
 					typeof(StandardStreams),
 					typeof(LaunchApp),
-					typeof(LaunchApp[])
+					typeof(LaunchApp[]),
+					typeof(NetConn),
+					typeof(NetConn[])
 				};
 			}
 		}

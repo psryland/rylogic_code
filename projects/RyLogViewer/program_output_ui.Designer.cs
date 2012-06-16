@@ -1,6 +1,6 @@
 ﻿namespace RyLogViewer
 {
-	partial class LogProgramOutputUI
+	partial class ProgramOutputUI
 	{
 		/// <summary>
 		/// Required designer variable.
@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ProgramOutputUI));
 			this.m_btn_browse_exec = new System.Windows.Forms.Button();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
@@ -49,7 +50,7 @@
 			// m_btn_browse_exec
 			// 
 			this.m_btn_browse_exec.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_browse_exec.Location = new System.Drawing.Point(252, 33);
+			this.m_btn_browse_exec.Location = new System.Drawing.Point(230, 33);
 			this.m_btn_browse_exec.Name = "m_btn_browse_exec";
 			this.m_btn_browse_exec.Size = new System.Drawing.Size(34, 23);
 			this.m_btn_browse_exec.TabIndex = 1;
@@ -60,10 +61,10 @@
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(130, 266);
+			this.m_btn_ok.Location = new System.Drawing.Point(108, 251);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 8;
+			this.m_btn_ok.TabIndex = 10;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -71,10 +72,10 @@
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(211, 266);
+			this.m_btn_cancel.Location = new System.Drawing.Point(189, 251);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 9;
+			this.m_btn_cancel.TabIndex = 11;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
@@ -82,7 +83,7 @@
 			// 
 			this.m_check_capture_stdout.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_capture_stdout.AutoSize = true;
-			this.m_check_capture_stdout.Location = new System.Drawing.Point(32, 202);
+			this.m_check_capture_stdout.Location = new System.Drawing.Point(32, 200);
 			this.m_check_capture_stdout.Name = "m_check_capture_stdout";
 			this.m_check_capture_stdout.Size = new System.Drawing.Size(121, 17);
 			this.m_check_capture_stdout.TabIndex = 6;
@@ -93,7 +94,7 @@
 			// 
 			this.m_check_capture_stderr.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_capture_stderr.AutoSize = true;
-			this.m_check_capture_stderr.Location = new System.Drawing.Point(32, 225);
+			this.m_check_capture_stderr.Location = new System.Drawing.Point(32, 223);
 			this.m_check_capture_stderr.Name = "m_check_capture_stderr";
 			this.m_check_capture_stderr.Size = new System.Drawing.Size(112, 17);
 			this.m_check_capture_stderr.TabIndex = 7;
@@ -107,7 +108,7 @@
 			this.m_combo_launch_cmdline.FormattingEnabled = true;
 			this.m_combo_launch_cmdline.Location = new System.Drawing.Point(32, 33);
 			this.m_combo_launch_cmdline.Name = "m_combo_launch_cmdline";
-			this.m_combo_launch_cmdline.Size = new System.Drawing.Size(214, 21);
+			this.m_combo_launch_cmdline.Size = new System.Drawing.Size(192, 21);
 			this.m_combo_launch_cmdline.TabIndex = 0;
 			// 
 			// m_lbl_cmdline
@@ -125,7 +126,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_output_file.Location = new System.Drawing.Point(32, 172);
 			this.m_edit_output_file.Name = "m_edit_output_file";
-			this.m_edit_output_file.Size = new System.Drawing.Size(214, 20);
+			this.m_edit_output_file.Size = new System.Drawing.Size(192, 20);
 			this.m_edit_output_file.TabIndex = 4;
 			// 
 			// m_lbl_output_file
@@ -140,7 +141,7 @@
 			// m_btn_browse_output
 			// 
 			this.m_btn_browse_output.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_browse_output.Location = new System.Drawing.Point(252, 170);
+			this.m_btn_browse_output.Location = new System.Drawing.Point(230, 170);
 			this.m_btn_browse_output.Name = "m_btn_browse_output";
 			this.m_btn_browse_output.Size = new System.Drawing.Size(34, 23);
 			this.m_btn_browse_output.TabIndex = 5;
@@ -153,7 +154,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_arguments.Location = new System.Drawing.Point(32, 80);
 			this.m_edit_arguments.Name = "m_edit_arguments";
-			this.m_edit_arguments.Size = new System.Drawing.Size(214, 20);
+			this.m_edit_arguments.Size = new System.Drawing.Size(192, 20);
 			this.m_edit_arguments.TabIndex = 2;
 			// 
 			// m_lbl_arguments
@@ -180,17 +181,17 @@
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_working_dir.Location = new System.Drawing.Point(32, 126);
 			this.m_edit_working_dir.Name = "m_edit_working_dir";
-			this.m_edit_working_dir.Size = new System.Drawing.Size(214, 20);
+			this.m_edit_working_dir.Size = new System.Drawing.Size(192, 20);
 			this.m_edit_working_dir.TabIndex = 3;
 			// 
 			// m_check_append
 			// 
 			this.m_check_append.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_append.AutoSize = true;
-			this.m_check_append.Location = new System.Drawing.Point(159, 225);
+			this.m_check_append.Location = new System.Drawing.Point(159, 200);
 			this.m_check_append.Name = "m_check_append";
 			this.m_check_append.Size = new System.Drawing.Size(113, 17);
-			this.m_check_append.TabIndex = 18;
+			this.m_check_append.TabIndex = 8;
 			this.m_check_append.Text = "Append to existing";
 			this.m_check_append.UseVisualStyleBackColor = true;
 			// 
@@ -198,20 +199,20 @@
 			// 
 			this.m_check_show_window.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_show_window.AutoSize = true;
-			this.m_check_show_window.Location = new System.Drawing.Point(159, 202);
+			this.m_check_show_window.Location = new System.Drawing.Point(159, 223);
 			this.m_check_show_window.Name = "m_check_show_window";
 			this.m_check_show_window.Size = new System.Drawing.Size(92, 17);
-			this.m_check_show_window.TabIndex = 19;
+			this.m_check_show_window.TabIndex = 9;
 			this.m_check_show_window.Text = "Show window";
 			this.m_check_show_window.UseVisualStyleBackColor = true;
 			// 
-			// LogProgramOutputUI
+			// ProgramOutputUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(298, 301);
+			this.ClientSize = new System.Drawing.Size(276, 286);
 			this.Controls.Add(this.m_check_show_window);
 			this.Controls.Add(this.m_check_append);
 			this.Controls.Add(this.m_lbl_working_dir);
@@ -228,8 +229,9 @@
 			this.Controls.Add(this.m_btn_cancel);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_btn_browse_exec);
-			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-			this.Name = "LogProgramOutputUI";
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.MinimumSize = new System.Drawing.Size(292, 324);
+			this.Name = "ProgramOutputUI";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Log Program Output";
 			this.ResumeLayout(false);

@@ -8,7 +8,7 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	public partial class LogProgramOutputUI :Form
+	public partial class ProgramOutputUI :Form
 	{
 		private readonly Settings m_settings;
 		private readonly List<LaunchApp> m_history;
@@ -17,7 +17,7 @@ namespace RyLogViewer
 		/// <summary>The command line to execute</summary>
 		public LaunchApp Launch;
 		
-		public LogProgramOutputUI(Settings settings)
+		public ProgramOutputUI(Settings settings)
 		{
 			InitializeComponent();
 			m_settings = settings;
@@ -27,7 +27,6 @@ namespace RyLogViewer
 			
 			// Command line
 			m_combo_launch_cmdline.ToolTip(m_tt, "Command line for the application to launch");
-			m_combo_launch_cmdline.DisplayMember = "Executable";
 			foreach (var s in m_history) m_combo_launch_cmdline.Items.Add(s);
 			if (m_history.Count != 0) m_combo_launch_cmdline.SelectedIndex = 0;
 			m_combo_launch_cmdline.TextChanged += (s,a)=>
@@ -97,7 +96,7 @@ namespace RyLogViewer
 				};
 
 			// Append to existing
-			m_check_append.ToolTip(m_tt, "If checked, captured output is appended to the output file.\r\nIf not, then the output file is overwritten");
+			m_check_append.ToolTip(m_tt, "If checked, captured output is appended to the capture file.\r\nIf not, then the capture file is overwritten");
 			m_check_append.Checked = Launch.AppendOutputFile;
 			m_check_append.Click += (s,a)=>
 				{
