@@ -93,6 +93,7 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.m_status_progress = new System.Windows.Forms.ToolStripProgressBar();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -121,7 +122,7 @@
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(251, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(220, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -492,7 +493,8 @@
             this.m_status_line_end,
             this.m_status_encoding,
             this.m_status_spring,
-            this.m_status_message});
+            this.m_status_message,
+            this.m_status_progress});
 			this.m_status.Location = new System.Drawing.Point(0, 0);
 			this.m_status.Name = "m_status";
 			this.m_status.Size = new System.Drawing.Size(593, 24);
@@ -533,7 +535,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(310, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(68, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -654,6 +656,12 @@
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
+			// m_status_progress
+			// 
+			this.m_status_progress.Name = "m_status_progress";
+			this.m_status_progress.Size = new System.Drawing.Size(100, 18);
+			this.m_status_progress.Visible = false;
+			// 
 			// Main
 			// 
 			this.AllowDrop = true;
@@ -752,6 +760,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_clear;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_stdout;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_tcp;
+		private System.Windows.Forms.ToolStripProgressBar m_status_progress;
 	}
 }
 

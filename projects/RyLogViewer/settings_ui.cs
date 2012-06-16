@@ -144,7 +144,7 @@ namespace RyLogViewer
 
 
 			// File buf size
-			m_spinner_file_buf_size.ToolTip(m_tt, "The size (in KB) of the cached portion of the log file");
+			m_spinner_file_buf_size.ToolTip(m_tt, "The size (in KB) of the cached portion of the log file.\r\nMaking this larger will make refreshing displayed data slower but needed less often");
 			m_spinner_file_buf_size.Minimum = 1;
 			m_spinner_file_buf_size.Maximum = 100000;
 			m_spinner_file_buf_size.Value = Maths.Clamp(m_settings.FileBufSize / 1024, (int)m_spinner_file_buf_size.Minimum, (int)m_spinner_file_buf_size.Maximum);
@@ -262,6 +262,7 @@ namespace RyLogViewer
 			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop(m_grid_highlight, m_highlights, a, false);
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
+			m_grid_highlight.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
 			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting(m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
 			
@@ -300,6 +301,7 @@ namespace RyLogViewer
 			m_grid_filter.DragOver           += (s,a)=> DoDragDrop(m_grid_filter, m_filters, a, false);
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
 			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
+			m_grid_filter.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_filter, m_filters, m_pattern_ft, a);
 			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting(m_grid_filter, m_filters, a);
 			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
 			
@@ -430,6 +432,15 @@ namespace RyLogViewer
 					: EWhatsChanged.FileParsing;
 				break;
 			}
+		}
+
+		/// <summary>Double click edits the pattern</summary>
+		private void OnCellDoubleClick<T>(DataGridView grid, List<T> patterns, PatternUI ctrl, DataGridViewCellEventArgs e) where T:Pattern
+		{
+			ctrl.EditPattern(patterns[e.RowIndex]);
+			WhatsChanged |= grid == m_grid_highlight
+				? EWhatsChanged.Rendering
+				: EWhatsChanged.FileParsing;
 		}
 		
 		/// <summary>Cell formatting...</summary>

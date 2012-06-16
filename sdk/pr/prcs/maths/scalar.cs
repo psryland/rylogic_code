@@ -62,6 +62,7 @@ namespace pr.maths
 		public static float     Lerp(float lhs, float rhs, float frac)          { return lhs * (1f - frac) + rhs * (frac); }
 		public static double    Lerp(double lhs, double rhs, double frac)       { return lhs * (1.0 - frac) + rhs * (frac); }
 		public static float     Ratio(int min, int x, int max)                  { Debug.Assert(max != min); return (float)(x - min) / (max - min); }
+		public static double    Ratio(long min, long x, long max)               { Debug.Assert(max != min); return (double)(x - min) / (max - min); }
 		public static float     Ratio(float min, float x, float max)            { Debug.Assert(Math.Abs(max - min) > float .Epsilon); return (x - min) / (max - min); }
 		public static double    Ratio(double min, double x, double max)         { Debug.Assert(Math.Abs(max - min) > double.Epsilon); return (x - min) / (max - min); }
 		

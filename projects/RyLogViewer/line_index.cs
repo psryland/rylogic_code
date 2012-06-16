@@ -148,11 +148,10 @@ namespace RyLogViewer
 			// Find the new line indices in a background thread
 			ThreadPool.QueueUserWorkItem(bi =>
 				{
+					int build_issue = (int)bi;
 					try
 					{
-						Log.Info("build started. (id {0})", (int)bi);
-						
-						int build_issue = (int)bi;
+						Log.Info("build started. (id {0})", build_issue);
 						if (BuildCancelled(build_issue)) return;
 						
 						// Generate the line index in a new buffer
@@ -211,11 +210,25 @@ namespace RyLogViewer
 									return true;
 								};
 							
-							// Callback function for cancelling
-							CancelFindFunc cancel = () => BuildCancelled(build_issue);
+							long bwd_range = scan_from - rng.m_begin;
+							long fwd_range = rng.m_end - scan_from;
+							
+							// Callbacks for updating progress for the first and second FindLines
+							ProgressFunc progress0 = (scanned, length) =>
+								{
+									Action update_progress_bar = () => UpdateStatusProgress(scanned, rng.Count);
+									BeginInvoke(update_progress_bar);
+									return !BuildCancelled(build_issue);
+								};
+							ProgressFunc progress1 = (scanned, length) =>
+								{
+									Action update_progress_bar = () => UpdateStatusProgress(scanned + bwd_range, rng.Count);
+									BeginInvoke(update_progress_bar);
+									return !BuildCancelled(build_issue);
+								};
 							
 							// Scan backward from 'scan_from' for 'bwd_range' bytes,
-							FindLines(file, scan_from, fileend, true , scan_from - rng.m_begin, add_line, encoding, row_delim, buf, cancel);
+							FindLines(file, scan_from, fileend, true , bwd_range, add_line, encoding, row_delim, buf, progress0);
 							if (BuildCancelled(build_issue)) return;
 							
 							// Scanning backward adds lines to the line index in reverse order,
@@ -223,7 +236,7 @@ namespace RyLogViewer
 							line_index.Reverse();
 							
 							// Now scan forward from 'scan_from' for 'fwd_range' bytes.
-							FindLines(file, scan_from, fileend, false, rng.m_end - scan_from, add_line, encoding, row_delim, buf, cancel);
+							FindLines(file, scan_from, fileend, false, fwd_range, add_line, encoding, row_delim, buf, progress1);
 							if (BuildCancelled(build_issue)) return;
 						}
 						
@@ -250,6 +263,15 @@ namespace RyLogViewer
 					}
 					catch (OperationCanceledException) {}
 					catch (Exception ex) { Debug.WriteLine("Exception ended BuildLineIndex() call: " + ex.Message); }
+					finally
+					{
+						Action update_progress_bar = ()=>
+							{
+								if (!BuildCancelled(build_issue))
+									UpdateStatusProgress(1,1);
+							};
+						BeginInvoke(update_progress_bar);
+					}
 				}, m_build_issue);
 		}
 		
@@ -373,10 +395,10 @@ namespace RyLogViewer
 		/// <returns>Return true to continue adding lines, false to stop</returns>
 		private delegate bool AddLineFunc(Range rng, long base_addr, long fileend, byte[] buf, Encoding encoding);
 
-		/// <summary>Callback function called by FindLines to test whether to abort the search for lines</summary>
-		/// <returns>Return true if the search should abort</returns>
-		private delegate bool CancelFindFunc();
-		
+		/// <summary>Callback function called periodically while finding lines</summary>
+		/// <returns>Return true to continue finding, false to abort</returns>
+		private delegate bool ProgressFunc(long scanned, long length);
+
 		/// <summary>Scan the file from 'filepos' adding whole lines to 'line_index' until 'length' bytes have been read</summary>
 		/// <param name="file">The file to scan</param>
 		/// <param name="filepos">The position in the file to start scanning from </param>
@@ -387,14 +409,14 @@ namespace RyLogViewer
 		/// <param name="encoding">The text file encoding</param>
 		/// <param name="row_delim">The bytes that identify an end of line</param>
 		/// <param name="buf">A buffer to use when buffering file data</param>
-		/// <param name="cancel">Callback function to allow the find to abort</param>
-		private static void FindLines(FileStream file, long filepos, long fileend, bool backward, long length, AddLineFunc add_line, Encoding encoding, byte[] row_delim, byte[] buf, CancelFindFunc cancel)
+		/// <param name="progress">Callback function to report progress and allow the find to abort</param>
+		private static void FindLines(FileStream file, long filepos, long fileend, bool backward, long length, AddLineFunc add_line, Encoding encoding, byte[] row_delim, byte[] buf, ProgressFunc progress)
 		{
 			long read_addr = filepos;
 			for (long scanned = 0; scanned != length;)
 			{
-				// Check whether we need to cancel
-				if (cancel()) return;
+				// Progress update
+				if (progress != null && !progress(scanned, length)) return;
 				
 				// Seek to the start position (should be the start of a line).
 				file.Seek(read_addr, SeekOrigin.Begin);

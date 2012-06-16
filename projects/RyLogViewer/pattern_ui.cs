@@ -50,6 +50,11 @@ namespace RyLogViewer
 					Pattern.Expr = m_edit_pattern.Text;
 					UpdateUI();
 				};
+			m_edit_pattern.KeyDown += (s,a)=>
+				{
+					if (a.KeyCode == Keys.Enter)
+						m_btn_add.PerformClick();
+				};
 			
 			// Regex help
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");

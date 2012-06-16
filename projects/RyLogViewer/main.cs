@@ -135,7 +135,10 @@ namespace RyLogViewer
 
 			// Status
 			m_status.Move += (s,a) => m_settings.StatusPosition = m_status.Location;
-			
+			m_status_progress.Minimum = 0;
+			m_status_progress.Maximum = 100;
+			m_status_progress.Visible = false;
+
 			// Setup the grid
 			m_grid.RowCount             = 0;
 			m_grid.AutoGenerateColumns  = false;
@@ -454,7 +457,7 @@ namespace RyLogViewer
 						// Search for files
 						byte[] buf = new byte[Constants.FileReadChunkSize];
 						long count = backward ? start - 0 : m_fileend - start;
-						FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, () => bgw.CancellationPending);
+						FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, (c,l) => !bgw.CancellationPending);
 						
 						// We can call BuildLineIndex in this thread context because we know
 						// we're in a modal dialog.
@@ -588,7 +591,7 @@ namespace RyLogViewer
 						rng.m_begin = FindLineStart(file, rng.m_begin, rng.m_end, m_row_delim, m_encoding, buf);
 						
 						// Read lines and write them to the export file
-						FindLines(file, rng.m_begin, rng.m_end, false, rng.Count, test_line, m_encoding, m_row_delim, buf, () => bgw.CancellationPending);
+						FindLines(file, rng.m_begin, rng.m_end, false, rng.Count, test_line, m_encoding, m_row_delim, buf, (c,l) => !bgw.CancellationPending);
 						a.Cancel = bgw.CancellationPending;
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
@@ -828,6 +831,7 @@ namespace RyLogViewer
 				m_grid.ClearSelection();//SelectRow(-1);
 				
 				Log.Info("RowCount changed. Selected row: {0}. First visible row: {1}. Auto scroll {2}", selected, first_vis, auto_scroll_tail);
+				m_grid.RowCount = 0;
 				m_grid.RowCount = count;
 				
 				if (count != 0)
@@ -1028,6 +1032,21 @@ namespace RyLogViewer
 			UpdateFileScroll();
 		}
 		
+		/// <summary>Update the status bar progress bar</summary>
+		private void UpdateStatusProgress(long current, long total)
+		{
+			if (current == total)
+			{
+				m_status_progress.Visible = false;
+				m_status_progress.Value = m_status_progress.Maximum;
+			}
+			else
+			{
+				m_status_progress.Visible = true;
+				m_status_progress.Value = (int)(Maths.Ratio(0, current, total) * 100);
+			}
+		}
+
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
