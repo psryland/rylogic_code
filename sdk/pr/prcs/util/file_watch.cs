@@ -3,7 +3,6 @@
 //  Copyright © Rylogic Ltd 2008
 //***************************************************
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
@@ -38,15 +37,20 @@ namespace pr.util
 			public readonly object             m_ctx;            // User provided context data
 			public long                        m_stamp0;         // The last time the file was modified
 			public long                        m_stamp1;         // The new timestamp for the file, copied to stamp0 when the file change is handled
+			public long                        m_size0;          // The last recorded size of the file
+			public long                        m_size1;          // The new size for the file, copied to size0 when the file change is handled
 	
 			public WatchedFile(string filepath, FileChangedHandler onchange, int id, object ctx)
 			{
+				var info = new FileInfo(filepath);
 				m_filepath = filepath;
 				m_onchange = onchange;
 				m_id       = id;
 				m_ctx      = ctx;
-				m_stamp0   = File.GetLastWriteTimeUtc(m_filepath).Ticks;
+				m_stamp0   = info.LastWriteTimeUtc.Ticks;
 				m_stamp1   = m_stamp0;
+				m_size0    = info.Length;
+				m_size1    = m_size0;
 			}
 		}
 		private readonly List<WatchedFile> m_files = new List<WatchedFile>();
@@ -114,16 +118,22 @@ namespace pr.util
 			List<WatchedFile> changed_files = new List<WatchedFile>();
 			foreach (WatchedFile f in m_files)
 			{
-				long stamp = File.GetLastWriteTimeUtc(f.m_filepath).Ticks;
-				if (f.m_stamp0 != stamp) { changed_files.Add(f); }
+				var info = new FileInfo(f.m_filepath);
+				long size  = info.Length;
+				long stamp = info.LastWriteTimeUtc.Ticks;
+				if (f.m_stamp0 != stamp || f.m_size0 != size) { changed_files.Add(f); }
 				f.m_stamp1 = stamp;
+				f.m_size1 = size;
 			}
 
 			// Report each changed file
 			foreach (WatchedFile f in changed_files)
 			{
 				if (f.m_onchange(f.m_filepath, f.m_ctx))
+				{
 					f.m_stamp0 = f.m_stamp1;
+					f.m_size0  = f.m_size1;
+				}
 			}
 		}
 	}

@@ -346,4 +346,7 @@ Error Details: {0}</value>
   <data name="ExecutablesFilter">
     <value xml:space="preserve">Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
   </data>
+  <data name="FailedToLaunchProcess">
+    <value xml:space="preserve">Failed to Launch Process</value>
+  </data>
 </root>

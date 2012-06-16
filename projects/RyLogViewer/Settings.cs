@@ -12,8 +12,7 @@ namespace RyLogViewer
 		// Defaults
 		public static readonly Settings Default = new Settings(ELoadOptions.Defaults);
 		protected override SettingsBase DefaultData { get { return Default; } }
-		protected override IEnumerable<Type> KnownTypes { get { return new[]{typeof(ProgramOutputAction), typeof(StandardStreams)}; } }
-
+		
 		public string RecentFiles
 		{
 			get { return get<string>("RecentFiles"); }
@@ -189,20 +188,10 @@ namespace RyLogViewer
 			get { return get<string>("Encoding"); }
 			set { set("Encoding", value); }
 		}
-		public ProgramOutputAction LogProgramOutput_Action
+		public LaunchApp[] LogProgramOutputHistory
 		{
-			get { return get<ProgramOutputAction>("LogProgramOutput_Action"); }
-			set { set("LogProgramOutput_Action", value); }
-		}
-		public string LogProgramOutput_CmdLine
-		{
-			get { return get<string>("LogProgramOutput_CmdLine"); }
-			set { set("LogProgramOutput_CmdLine", value); }
-		}
-		public StandardStreams LogProgramOutput_Streams
-		{
-			get { return get<StandardStreams>("LogProgramOutput_Streams"); }
-			set { set("LogProgramOutput_Streams", value); }
+			get { return get<LaunchApp[]>("LogProgramOutputHistory"); }
+			set { set("LogProgramOutputHistory", value); }
 		}
 		public Settings(ELoadOptions opts = ELoadOptions.Normal)
 		{
@@ -212,44 +201,56 @@ namespace RyLogViewer
 				catch (Exception ex) { Debug.WriteLine(ex); }
 			}
 			
-			RecentFiles                 = "";
-			Font                        = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
-			RestoreScreenLoc            = true;
-			ScreenPosition              = new Point(50, 50);
-			WindowSize                  = new Size(640, 480);
-			MenuPosition                = Point.Empty;
-			ToolsPosition               = new Point(0, 30);
-			StatusPosition              = Point.Empty;
-			AlternateLineColours        = true;
-			LineSelectBackColour        = Color.DarkGreen;
-			LineSelectForeColour        = Color.Lime;
-			LineBackColour1             = Color.WhiteSmoke;
-			LineBackColour2             = Color.FromArgb(192, 255, 192);
-			LineForeColour1             = Color.Black;
-			LineForeColour2             = Color.Black;
-			FileScrollWidth             = 28;
-			ScrollBarFileRangeColour    = Color.FromArgb(128, Color.WhiteSmoke);
-			ScrollBarDisplayRangeColour = Color.FromArgb(128, Color.SteelBlue);
-			RowHeight                   = 18;
-			LoadLastFile                = false;
-			LastLoadedFile              = "";
-			OpenAtEnd                   = true;
-			FileChangesAdditive         = true;
-			IgnoreBlankLines            = false;
-			AlwaysOnTop                 = false;
-			ShowTOTD                    = true;
-			TailEnabled                 = false;
-			FileBufSize                 = 250 * 1024;
-			HighlightPatterns           = "<root/>";
-			FilterPatterns              = "<root/>";
-			HighlightPatternSets        = "<root/>";
-			FilterPatternSets           = "<root/>";
-			RowDelimiter                = "";
-			ColDelimiter                = "";
-			Encoding                    = "";
-			LogProgramOutput_Action     = ProgramOutputAction.LaunchApplication;
-			LogProgramOutput_CmdLine    = "";
-			LogProgramOutput_Streams    = StandardStreams.Stdout|StandardStreams.Stderr;
+			RecentFiles                     = "";
+			Font                            = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
+			RestoreScreenLoc                = true;
+			ScreenPosition                  = new Point(50, 50);
+			WindowSize                      = new Size(640, 480);
+			MenuPosition                    = Point.Empty;
+			ToolsPosition                   = new Point(0, 30);
+			StatusPosition                  = Point.Empty;
+			AlternateLineColours            = true;
+			LineSelectBackColour            = Color.DarkGreen;
+			LineSelectForeColour            = Color.Lime;
+			LineBackColour1                 = Color.WhiteSmoke;
+			LineBackColour2                 = Color.FromArgb(192, 255, 192);
+			LineForeColour1                 = Color.Black;
+			LineForeColour2                 = Color.Black;
+			FileScrollWidth                 = 28;
+			ScrollBarFileRangeColour        = Color.FromArgb(128, Color.WhiteSmoke);
+			ScrollBarDisplayRangeColour     = Color.FromArgb(128, Color.SteelBlue);
+			RowHeight                       = 18;
+			LoadLastFile                    = false;
+			LastLoadedFile                  = "";
+			OpenAtEnd                       = true;
+			FileChangesAdditive             = true;
+			IgnoreBlankLines                = false;
+			AlwaysOnTop                     = false;
+			ShowTOTD                        = true;
+			TailEnabled                     = false;
+			FileBufSize                     = 250 * 1024;
+			HighlightPatterns               = "<root/>";
+			FilterPatterns                  = "<root/>";
+			HighlightPatternSets            = "<root/>";
+			FilterPatternSets               = "<root/>";
+			RowDelimiter                    = "";
+			ColDelimiter                    = "";
+			Encoding                        = "";
+			LogProgramOutputHistory         = new LaunchApp[0];
+		}
+		
+		/// <summary>Types the serialiser needs to know about</summary>
+		protected override IEnumerable<Type> KnownTypes
+		{
+			get
+			{
+				return new[]
+				{
+					typeof(StandardStreams),
+					typeof(LaunchApp),
+					typeof(LaunchApp[])
+				};
+			}
 		}
 	}
 }

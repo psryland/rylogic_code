@@ -224,7 +224,7 @@
     <Compile Include="gui\tree_grid_view.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\util.cs" />
+    <Compile Include="gui\gui.cs" />
     <Compile Include="gui\view3d.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -268,6 +268,7 @@
     <Compile Include="util\profile.cs" />
     <Compile Include="stream\progress_stream.cs" />
     <Compile Include="stream\stream_wrapper.cs" />
+    <Compile Include="util\scope.cs" />
     <Compile Include="util\string_transform.cs" />
     <Compile Include="stream\uncloseable_stream.cs">
     </Compile>

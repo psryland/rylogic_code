@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Runtime.Serialization;
 using System.Text;
-using pr.maths;
 
 namespace RyLogViewer
 {
 	public static class Constants
 	{
 		public const int FileReadChunkSize = 4096;
+		public const int FilePollingRate   = 100;
 	}
 
 	public enum EPattern
@@ -14,12 +15,6 @@ namespace RyLogViewer
 		Substring,
 		Wildcard,
 		RegularExpression
-	}
-
-	public enum ProgramOutputAction
-	{
-		LaunchApplication,
-		AttachToProcess,
 	}
 
 	[Flags] public enum StandardStreams
@@ -71,6 +66,41 @@ namespace RyLogViewer
 		FileRange,
 		DisplayedRange,
 		SelectedRange,
+	}
+
+	[DataContract]
+	public class LaunchApp :ICloneable
+	{
+		[DataMember] public string Executable       = "";
+		[DataMember] public string Arguments        = "";
+		[DataMember] public string WorkingDirectory = "";
+		[DataMember] public string OutputFilepath   = "";
+		[DataMember] public bool   ShowWindow       = false;
+		[DataMember] public bool   AppendOutputFile = true;
+		[DataMember] public StandardStreams Streams = StandardStreams.Stdout|StandardStreams.Stderr;
+		
+		public bool CaptureStdout { get { return (Streams & StandardStreams.Stdout) != 0; } }
+		public bool CaptureStderr { get { return (Streams & StandardStreams.Stderr) != 0; } }
+
+		public LaunchApp() {}
+		public LaunchApp(LaunchApp rhs)
+		{
+			Executable       = rhs.Executable;
+			Arguments        = rhs.Arguments;
+			WorkingDirectory = rhs.WorkingDirectory;
+			OutputFilepath   = rhs.OutputFilepath;
+			ShowWindow       = rhs.ShowWindow;
+			AppendOutputFile = rhs.AppendOutputFile;
+			Streams          = rhs.Streams;
+		}
+		public override string ToString()
+		{
+			return Executable;
+		}
+		public object Clone()
+		{
+			return new LaunchApp(this);
+		}
 	}
 
 	public static class Misc

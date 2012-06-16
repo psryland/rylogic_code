@@ -352,6 +352,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Failed to Launch Process.
+        /// </summary>
+        internal static string FailedToLaunchProcess {
+            get {
+                return ResourceManager.GetString("FailedToLaunchProcess", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Failed to load file.
         /// </summary>
         internal static string FailedToLoadFile {

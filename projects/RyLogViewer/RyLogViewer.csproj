@@ -127,6 +127,9 @@
     <Compile Include="settings_ui.Designer.cs">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </Compile>
+    <Compile Include="stream_buffering.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="tipoftheday.cs">
       <SubType>Form</SubType>
     </Compile>

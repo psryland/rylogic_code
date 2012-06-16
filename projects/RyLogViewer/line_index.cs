@@ -18,7 +18,7 @@ namespace RyLogViewer
 		/// <summary>Returns a file stream for 'filepath' openned with R/W sharing</summary>
 		private static FileStream LoadFile(string filepath, int buffer_size = 4096)
 		{
-			return new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, buffer_size);
+			return new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite|FileShare.Delete, buffer_size, FileOptions.RandomAccess);
 		}
 		
 		/// <summary>Returns the byte range of the complete file, last time we checked its length</summary>
@@ -124,7 +124,8 @@ namespace RyLogViewer
 				// Cause any existing builds to stop by changing the issue number
 				Interlocked.Increment(ref m_build_issue);
 				m_reload_in_progress = reload;
-				Log.Info("build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
+				Log.Info("build start request (id {0})", m_build_issue);
+				//Log.Info("build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
 				
 				// Find the byte range of the file currently loaded
 				Range line_index_range  = LineIndexRange;
@@ -136,7 +137,7 @@ namespace RyLogViewer
 					: (Encoding)m_encoding.Clone();
 			
 				// If this is not a 'reload', guess the row_delimiters
-				byte[] row_delim = reload
+				byte[] row_delim = reload || m_row_delim == null
 					? (byte[])GuessRowDelimiter(m_filepath, encoding).Clone()
 					: (byte[])m_row_delim.Clone();
 				
@@ -612,7 +613,9 @@ namespace RyLogViewer
 					}
 				}
 			}
-			return m_row_delim;
+			// If we still don't know what the row delimiter is, guess,
+			// but don't update 'm_row_delim' so that we try to guess again later
+			return m_row_delim ?? encoding.GetBytes("\n");
 		}
 		
 		/// <summary>Guess the text file encoding</summary>

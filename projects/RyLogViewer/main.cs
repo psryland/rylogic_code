@@ -40,11 +40,15 @@ namespace RyLogViewer
 		private long m_filepos;                               // The byte offset (from file begin) to the start of the last known line
 		private long m_fileend;                               // The last known size of the file
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
+		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
 		
+		//bug:
+		// output truncated on process end
+		// ungraceful close of process capture file
+		// blank lines in log when ignore blank lines (logcat file)
 		//todo:
+		// read stdin/network
 		// 'Rewrite' - regex substitution
-		// Export to log file
-		// read stdin
 		// partial highlighting
 		// Window transparency (Ghost mode) with click through
 		// Tip of the Day content
@@ -59,7 +63,7 @@ namespace RyLogViewer
 			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_sync              = new EventWaitHandle(false, EventResetMode.ManualReset);
 			m_watch             = new FileWatch();
-			m_watch_timer       = new Timer{Interval = 100};
+			m_watch_timer       = new Timer{Interval = Constants.FilePollingRate};
 			m_highlights        = new List<Highlight>();
 			m_find_history      = new BindingList<string>();
 			m_find_ui           = new FindUI(m_find_history){Visible = false};
@@ -74,8 +78,8 @@ namespace RyLogViewer
 			
 			// Menu
 			m_menu.Move                             += (s,a) => m_settings.MenuPosition = m_menu.Location;
-			m_menu_file_open.Click                  += (s,a) => OpenLogFile(null);
-			m_menu_file_open_stdout.Click           += (s,a) => OpenStdOut();
+			m_menu_file_open.Click                  += (s,a) => OpenLogFile();
+			m_menu_file_open_stdout.Click           += (s,a) => LogProgramOutput();
 			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
 			m_menu_file_export.Click                += (s,a) => ShowExportDialog();
 			m_menu_file_exit.Click                  += (s,a) => Close();
@@ -100,7 +104,7 @@ namespace RyLogViewer
 			
 			// Toolbar
 			m_toolstrip.Move             += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
-			m_btn_open_log.Click         += (s,a) => OpenLogFile(null);
+			m_btn_open_log.Click         += (s,a) => OpenLogFile();
 			m_btn_refresh.Click          += (s,a) => BuildLineIndex(m_filepos, true);
 			m_btn_highlights.Click       += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_btn_filters.Click          += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
@@ -252,18 +256,23 @@ namespace RyLogViewer
 		/// <summary>Close the current log file</summary>
 		private void CloseLogFile()
 		{
-			m_watch.Remove(m_filepath);
-			if (FileOpen) m_file.Dispose();
-			m_line_index.Clear();
-			m_filepath = null;
-			m_file = null;
-			m_filepos = 0;
-			m_fileend = 0;
+			using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+			{
+				m_line_index.Clear();
+				m_watch.Remove(m_filepath);
+				if (m_buffered_process != null) m_buffered_process.Dispose();
+				if (FileOpen) m_file.Dispose();
+				m_buffered_process = null;
+				m_filepath = null;
+				m_file = null;
+				m_filepos = 0;
+				m_fileend = 0;
+			}
 			UpdateUI();
 		}
 		
 		/// <summary>Prompt to open a log file</summary>
-		private void OpenLogFile(string filepath)
+		private void OpenLogFile(string filepath, bool add_to_recent)
 		{
 			try
 			{
@@ -282,9 +291,12 @@ namespace RyLogViewer
 					return;
 				}
 				
-				m_recent.Add(filepath);
-				m_settings.RecentFiles = m_recent.Export();
-				m_settings.LastLoadedFile = filepath;
+				if (add_to_recent)
+				{
+					m_recent.Add(filepath);
+					m_settings.RecentFiles = m_recent.Export();
+					m_settings.LastLoadedFile = filepath;
+				}
 				
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
 				CloseLogFile();
@@ -304,12 +316,14 @@ namespace RyLogViewer
 			catch (Exception ex) { MessageBox.Show(this, string.Format(Resources.FailedToOpenXDueToErrorY, filepath ,ex.Message), Resources.FailedToLoadFile, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			CloseLogFile();
 		}
+		private void OpenLogFile(string filepath = null) { OpenLogFile(filepath, true); }
 
 		/// <summary>Open a standard out connection</summary>
-		private void OpenStdOut()
+		private void LogProgramOutput()
 		{
 			var dg = new LogProgramOutputUI(m_settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LaunchProcess(dg.Launch);
 		}
 
 		/// <summary>Called when the log file is noticed to have changed</summary>
@@ -325,7 +339,7 @@ namespace RyLogViewer
 		/// <summary>Supply the grid with values</summary>
 		private void CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
 		{
-			if (!FileOpen) e.Value = null;
+			if (!FileOpen || GridEventsBlocked) e.Value = null;
 			else
 			{
 				try { e.Value = ReadLine(e.RowIndex)[e.ColumnIndex].Text; }
@@ -336,6 +350,13 @@ namespace RyLogViewer
 		/// <summary>Draw the cell appropriate to any highlighting</summary>
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
 		{
+			// Leave rendering to the grid while events are suspended
+			if (GridEventsBlocked)
+			{
+				e.Handled = false;
+				return;
+			}
+			
 			// Check if the cell value has a highlight pattern it matches
 			Highlight hl = (e.RowIndex != -1) ? ReadLine(e.RowIndex)[e.ColumnIndex].HL : null;
 			if (hl == null)
@@ -361,6 +382,7 @@ namespace RyLogViewer
 		/// <summary>Handler for selections made in the grid</summary>
 		private void GridSelectionChanged(object sender, EventArgs e)
 		{
+			if (GridEventsBlocked) return;
 			const float file_scroll_limit = 0.1f;
 			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount);
 			if (ratio < 0f + file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_begin, false);
@@ -454,7 +476,7 @@ namespace RyLogViewer
 			
 			long found;
 			if (Find(pat, start, false, out found) && found == -1)
-				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue, 2000);
+				SetTransientStatusMessage("End of file");
 		}
 		
 		/// <summary>Search for an earlier occurance of a pattern in the grid</summary>
@@ -468,7 +490,7 @@ namespace RyLogViewer
 			
 			long found;
 			if (Find(pat, start, true, out found) && found == -1)
-				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue, 2000);
+				SetTransientStatusMessage("Start of file");
 		}
 
 		/// <summary>Show the export dialog</summary>
@@ -766,16 +788,18 @@ namespace RyLogViewer
 			Log.Info("Showing last row. First({0}) + Displayed({1}) = {2}. RowCount = {3}", first_row, displayed_rows, first_row + displayed_rows, m_grid.RowCount);
 		}
 
+		/// <summary>Returns true if grid event handlers should process grid events</summary>
+		private bool GridEventsBlocked
+		{
+			get { return m_suspend_grid_events != 0; }
+		}
+
 		/// <summary>Helper for setting the grid row count without event handlers being fired</summary>
 		private void SetGridRowCount(int count, int row_delta)
 		{
 			bool auto_scroll_tail = AutoScrollTail;
 			if (m_grid.RowCount != count)
 			{
-				// Unhook handlers that get called when the RowCount changes
-				m_grid.SelectionChanged -= GridSelectionChanged;
-				m_grid.CellValueNeeded -= CellValueNeeded;
-				
 				// Preserve the selected row index and first visible row index (if possible)
 				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
 				int selected = SelectedRow;
@@ -790,10 +814,6 @@ namespace RyLogViewer
 					m_grid.SelectRow(auto_scroll_tail ? m_grid.RowCount - 1 : selected + row_delta);
 					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
 				}
-				
-				// Restore handlers
-				m_grid.CellValueNeeded += CellValueNeeded;
-				m_grid.SelectionChanged += GridSelectionChanged;
 			}
 			if (auto_scroll_tail) ShowLastRow();
 		}
@@ -865,7 +885,10 @@ namespace RyLogViewer
 		private void UpdateUI(int row_delta = 0)
 		{
 			Log.Info("UpdateUI. Row delta {0}", row_delta);
+			
+			// Don't suspend events by removing/adding handlers because that pattern doesn't nest
 			using (m_grid.SuspendLayout(true))
+			using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
 			{
 				// Configure the grid
 				if (m_line_index.Count != 0)
@@ -971,7 +994,7 @@ namespace RyLogViewer
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
-				m_status_line_end.Text = string.Format(Resources.LineEndingX, m_encoding.GetString(m_row_delim).Replace("\r","CR").Replace("\n", "LF"));
+				m_status_line_end.Text = string.Format(Resources.LineEndingX, m_row_delim == null ? "unknown" : Misc.Humanise(m_encoding.GetString(m_row_delim)));
 				m_status_line_end.Visible = true;
 				m_status_encoding.Text = string.Format(Resources.EncodingX, m_encoding.EncodingName);
 				m_status_encoding.Visible = true;
@@ -1027,7 +1050,11 @@ namespace RyLogViewer
 					((Timer)s).Dispose();
 				};
 		}
-		
+		private void SetTransientStatusMessage(string text, int display_time_ms = 2000)
+		{
+			SetTransientStatusMessage(text, Color.Azure, Color.Blue, display_time_ms);
+		}
+
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
 		public class CheckedButtonRenderer :ToolStripProfessionalRenderer
 		{
