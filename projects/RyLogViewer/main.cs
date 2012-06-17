@@ -27,6 +27,7 @@ namespace RyLogViewer
 		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
 		private readonly BindingList<string> m_find_history;  // A history of the strings used to find
 		private readonly FindUI m_find_ui;                    // The find dialog
+		private readonly NotifyIcon m_notify_icon;            // A system tray icon
 		private readonly ToolTip m_tt;                        // Tooltips
 		private Pattern m_last_find_pattern;                  // The pattern last used in a find
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
@@ -40,7 +41,7 @@ namespace RyLogViewer
 		private long m_fileend;                               // The last known size of the file
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
-		
+
 		//bug:
 		// build line index missing partial lines
 		// ungraceful close of process capture file
@@ -57,6 +58,7 @@ namespace RyLogViewer
 			Log.Info("App Startup: {0}", DateTime.Now);
 
 			InitializeComponent();
+			AllowTransparency   = true;
 			m_settings          = new Settings();
 			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_watch             = new FileWatch();
@@ -65,6 +67,7 @@ namespace RyLogViewer
 			m_find_history      = new BindingList<string>();
 			m_find_ui           = new FindUI(m_find_history){Visible = false};
 			m_tt                = new ToolTip();
+			m_notify_icon       = new NotifyIcon{Icon = Icon};
 			m_line_index        = new List<Range>();
 			m_last_find_pattern = null;
 			m_filepath          = null;
@@ -72,7 +75,11 @@ namespace RyLogViewer
 			m_filepos           = 0;
 			m_fileend           = 0;
 			m_bufsize           = 0;
-			m_settings.SettingChanged += (s,a)=> { Log.Info("Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue); };
+			
+			m_settings.SettingChanged += (s,a)=>
+			{
+				Log.Info("Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
+			};
 			
 			// Menu
 			m_menu.Move                             += (s,a) => m_settings.MenuPosition = m_menu.Location;
@@ -102,33 +109,31 @@ namespace RyLogViewer
 			m_menu_tools_alwaysontop.Click          += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
 			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
-			m_menu_tools_clear.Click                += (s,a) => ClearLogFile();
+			m_menu_tools_clear_log_file.Click       += (s,a) => ClearLogFile();
+			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(true);
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
 			m_menu_help_about.Click                 += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
-			m_toolstrip.Move             += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
+			m_btn_open_log.ToolTipText    = Resources.OpenLogFile;
 			m_btn_open_log.Click         += (s,a) => OpenLogFile();
+			m_btn_refresh.ToolTipText     = Resources.ReloadLogFile;
 			m_btn_refresh.Click          += (s,a) => BuildLineIndex(m_filepos, true);
-			
 			m_btn_highlights.ToolTipText  = Resources.ShowHighlightsDialog;
 			m_btn_highlights.Click       += (s,a) => EnableHighlights(m_btn_highlights.Checked);
 			m_btn_highlights.MouseDown   += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
-			
 			m_btn_filters.ToolTipText     = Resources.ShowFiltersDialog;
 			m_btn_filters.Click          += (s,a) => EnableFilters(m_btn_filters.Checked);
 			m_btn_filters.MouseDown      += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
-			
-			m_btn_options.Click          += (s,a) => ShowOptions(SettingsUI.ETab.General);
-			m_btn_jump_to_end.Click      += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
-			m_btn_tail.Click             += (s,a) => EnableTail(m_btn_tail.Checked);
-			m_btn_open_log.ToolTipText    = Resources.OpenLogFile;   
-			m_btn_refresh.ToolTipText     = Resources.ReloadLogFile;
 			m_btn_options.ToolTipText     = Resources.ShowOptionsDialog;
+			m_btn_options.Click          += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_btn_jump_to_end.ToolTipText = Resources.ScrollToEnd;
+			m_btn_jump_to_end.Click      += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
 			m_btn_tail.ToolTipText        = Resources.WatchForUpdates;
+			m_btn_tail.Click             += (s,a) => EnableTail(m_btn_tail.Checked);
+			m_toolstrip.Move             += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
 			ToolStripManager.Renderer     = new CheckedButtonRenderer();
 
 			// Scrollbar
@@ -327,8 +332,7 @@ namespace RyLogViewer
 				
 				// Setup the watcher to watch for file changes
 				// Start the build in an invoke so that checking for file changes doesn't cause reentrancy
-				Action file_changed = OnFileChanged;
-				m_watch.Add(m_filepath, (fp,ctx) => { ((Main)ctx).BeginInvoke(file_changed); return true;}, 0, this);
+				m_watch.Add(m_filepath, (fp,ctx) => { OnFileChanged(); return true; });
 				m_watch_timer.Enabled = FileOpen && m_settings.TailEnabled;
 				
 				BuildLineIndex(m_filepos, true, ()=>{ SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0; });
@@ -341,7 +345,7 @@ namespace RyLogViewer
 		{
 			OpenLogFile(filepath, true);
 		}
-
+		
 		/// <summary>Open a standard out connection</summary>
 		private void LogProgramOutput()
 		{
@@ -705,6 +709,49 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Enable/Disable ghost mode</summary>
+		private void EnableGhostMode(bool enabled)
+		{
+			if (enabled)
+			{
+				var dg = new GhostModeUI(this);
+				if (dg.ShowDialog(this) != DialogResult.OK) return;
+
+				Opacity = dg.Alpha;
+				TopMost = true;
+				if (dg.ClickThru)
+				{
+					uint style = Win32.GetWindowLong(Handle, Win32.GWL_EXSTYLE);
+					style = Bit.SetBits(style, Win32.WS_EX_LAYERED | Win32.WS_EX_TRANSPARENT, true);
+					Win32.SetWindowLong(Handle, Win32.GWL_EXSTYLE, style);
+				}
+				
+				EventHandler icon_clicked = null;
+				icon_clicked = (s,a)=>
+					{
+						// ReSharper disable AccessToModifiedClosure
+						m_notify_icon.Visible = false;
+						m_notify_icon.Click -= icon_clicked;
+						EnableGhostMode(false);
+						// ReSharper restore AccessToModifiedClosure
+					};
+				
+				m_notify_icon.Click += icon_clicked;
+				m_notify_icon.ShowBalloonTip(1000, "Ghost Mode", "Click here to cancel ghost mode", ToolTipIcon.Info);
+				m_notify_icon.Text = "Click to disable ghost mode";
+				m_notify_icon.Visible = true;
+				
+			}
+			else
+			{
+				Opacity = 1f;
+				SetAlwaysOnTop(m_settings.AlwaysOnTop);
+				uint style = Win32.GetWindowLong(Handle, Win32.GWL_EXSTYLE);
+				style = Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false);
+				Win32.SetWindowLong(Handle, Win32.GWL_EXSTYLE, style);
+			}
+		}
+
 		/// <summary>Set the encoding to use with loaded files. 'null' means auto detect</summary>
 		private void SetEncoding(Encoding encoding)
 		{
@@ -1040,7 +1087,7 @@ namespace RyLogViewer
 			m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
 			m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
 			m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
-			m_menu_tools_clear.Enabled                = FileOpen;
+			m_menu_tools_clear_log_file.Enabled                = FileOpen;
 			
 			// Toolbar
 			m_btn_highlights.Checked = m_settings.HighlightsEnabled;

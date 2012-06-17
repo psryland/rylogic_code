@@ -68,13 +68,21 @@
 			this.m_menu_encoding_utf8 = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding_ucs2_littleendian = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding_ucs2_bigendian = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_detect = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_line_ending_cr = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_crlf = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_lf = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_custom = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_alwaysontop = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_highlights = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_filters = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_tools_clear = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_clear_log_file = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_ghost_mode = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
@@ -95,13 +103,6 @@
 			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_line_ending = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_line_ending_detect = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_line_ending_crlf = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_line_ending_cr = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_line_ending_lf = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_line_ending_custom = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
@@ -422,6 +423,54 @@
 			this.m_menu_encoding_ucs2_bigendian.Size = new System.Drawing.Size(185, 22);
 			this.m_menu_encoding_ucs2_bigendian.Text = "UCS-2 (big endian)";
 			// 
+			// m_menu_line_ending
+			// 
+			this.m_menu_line_ending.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_line_ending_detect,
+            this.toolStripSeparator7,
+            this.m_menu_line_ending_cr,
+            this.m_menu_line_ending_crlf,
+            this.m_menu_line_ending_lf,
+            this.m_menu_line_ending_custom});
+			this.m_menu_line_ending.Name = "m_menu_line_ending";
+			this.m_menu_line_ending.Size = new System.Drawing.Size(81, 20);
+			this.m_menu_line_ending.Text = "&Line Ending";
+			// 
+			// m_menu_line_ending_detect
+			// 
+			this.m_menu_line_ending_detect.Name = "m_menu_line_ending_detect";
+			this.m_menu_line_ending_detect.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_detect.Text = "Detect &Automatically";
+			// 
+			// toolStripSeparator7
+			// 
+			this.toolStripSeparator7.Name = "toolStripSeparator7";
+			this.toolStripSeparator7.Size = new System.Drawing.Size(182, 6);
+			// 
+			// m_menu_line_ending_cr
+			// 
+			this.m_menu_line_ending_cr.Name = "m_menu_line_ending_cr";
+			this.m_menu_line_ending_cr.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_cr.Text = "CR";
+			// 
+			// m_menu_line_ending_crlf
+			// 
+			this.m_menu_line_ending_crlf.Name = "m_menu_line_ending_crlf";
+			this.m_menu_line_ending_crlf.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_crlf.Text = "CR+LF";
+			// 
+			// m_menu_line_ending_lf
+			// 
+			this.m_menu_line_ending_lf.Name = "m_menu_line_ending_lf";
+			this.m_menu_line_ending_lf.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_lf.Text = "LF";
+			// 
+			// m_menu_line_ending_custom
+			// 
+			this.m_menu_line_ending_custom.Name = "m_menu_line_ending_custom";
+			this.m_menu_line_ending_custom.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_custom.Text = "Custom";
+			// 
 			// m_menu_tools
 			// 
 			this.m_menu_tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -430,7 +479,8 @@
             this.m_menu_tools_highlights,
             this.m_menu_tools_filters,
             this.toolStripSeparator6,
-            this.m_menu_tools_clear,
+            this.m_menu_tools_clear_log_file,
+            this.m_menu_tools_ghost_mode,
             this.m_sep5,
             this.m_menu_tools_options});
 			this.m_menu_tools.Name = "m_menu_tools";
@@ -465,11 +515,17 @@
 			this.toolStripSeparator6.Name = "toolStripSeparator6";
 			this.toolStripSeparator6.Size = new System.Drawing.Size(151, 6);
 			// 
-			// m_menu_tools_clear
+			// m_menu_tools_clear_log_file
 			// 
-			this.m_menu_tools_clear.Name = "m_menu_tools_clear";
-			this.m_menu_tools_clear.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_clear.Text = "&Clear Log File";
+			this.m_menu_tools_clear_log_file.Name = "m_menu_tools_clear_log_file";
+			this.m_menu_tools_clear_log_file.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_clear_log_file.Text = "&Clear Log File";
+			// 
+			// m_menu_tools_ghost_mode
+			// 
+			this.m_menu_tools_ghost_mode.Name = "m_menu_tools_ghost_mode";
+			this.m_menu_tools_ghost_mode.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_ghost_mode.Text = "&Ghost Mode";
 			// 
 			// m_sep5
 			// 
@@ -671,54 +727,6 @@
 			this.m_cmenu_select_all.Size = new System.Drawing.Size(122, 22);
 			this.m_cmenu_select_all.Text = "Select &All";
 			// 
-			// m_menu_line_ending
-			// 
-			this.m_menu_line_ending.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_line_ending_detect,
-            this.toolStripSeparator7,
-            this.m_menu_line_ending_cr,
-            this.m_menu_line_ending_crlf,
-            this.m_menu_line_ending_lf,
-            this.m_menu_line_ending_custom});
-			this.m_menu_line_ending.Name = "m_menu_line_ending";
-			this.m_menu_line_ending.Size = new System.Drawing.Size(81, 20);
-			this.m_menu_line_ending.Text = "&Line Ending";
-			// 
-			// m_menu_line_ending_detect
-			// 
-			this.m_menu_line_ending_detect.Name = "m_menu_line_ending_detect";
-			this.m_menu_line_ending_detect.Size = new System.Drawing.Size(185, 22);
-			this.m_menu_line_ending_detect.Text = "Detect &Automatically";
-			// 
-			// m_menu_line_ending_crlf
-			// 
-			this.m_menu_line_ending_crlf.Name = "m_menu_line_ending_crlf";
-			this.m_menu_line_ending_crlf.Size = new System.Drawing.Size(185, 22);
-			this.m_menu_line_ending_crlf.Text = "CR+LF";
-			// 
-			// m_menu_line_ending_cr
-			// 
-			this.m_menu_line_ending_cr.Name = "m_menu_line_ending_cr";
-			this.m_menu_line_ending_cr.Size = new System.Drawing.Size(185, 22);
-			this.m_menu_line_ending_cr.Text = "CR";
-			// 
-			// m_menu_line_ending_lf
-			// 
-			this.m_menu_line_ending_lf.Name = "m_menu_line_ending_lf";
-			this.m_menu_line_ending_lf.Size = new System.Drawing.Size(185, 22);
-			this.m_menu_line_ending_lf.Text = "LF";
-			// 
-			// m_menu_line_ending_custom
-			// 
-			this.m_menu_line_ending_custom.Name = "m_menu_line_ending_custom";
-			this.m_menu_line_ending_custom.Size = new System.Drawing.Size(185, 22);
-			this.m_menu_line_ending_custom.Text = "Custom";
-			// 
-			// toolStripSeparator7
-			// 
-			this.toolStripSeparator7.Name = "toolStripSeparator7";
-			this.toolStripSeparator7.Size = new System.Drawing.Size(182, 6);
-			// 
 			// m_scroll_file
 			// 
 			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -829,7 +837,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_export;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
-		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_clear;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_clear_log_file;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_stdout;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_network;
 		private System.Windows.Forms.ToolStripProgressBar m_status_progress;
@@ -842,6 +850,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_crlf;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_lf;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_custom;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_ghost_mode;
 	}
 }
 

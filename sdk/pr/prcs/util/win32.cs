@@ -317,6 +317,9 @@ namespace pr.util
 		public const int WS_VISIBLE                       = unchecked(0x10000000); // The window is initially visible. This style can be turned on and off by using the ShowWindow or SetWindowPos function.
 		public const int WS_VSCROLL                       = unchecked(0x00200000); // The window has a vertical scroll bar.
 
+		public const int WS_EX_LAYERED                    = 0x80000;
+		public const int WS_EX_TRANSPARENT                = 0x20;
+
 		public enum ScrollBarDirection
 		{
 			SB_HORZ = 0,
