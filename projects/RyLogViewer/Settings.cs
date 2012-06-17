@@ -218,7 +218,12 @@ namespace RyLogViewer
 			get { return get<SerialConn[]>("SerialConnectionHistory"); }
 			set { set("SerialConnectionHistory", value); }
 		}
-		
+		public PipeConn[] PipeConnectionHistory
+		{
+			get { return get<PipeConn[]>("PipeConnectionHistory"); }
+			set { set("PipeConnectionHistory", value); }
+		}
+
 		public Settings(ELoadOptions opts = ELoadOptions.Normal)
 		{
 			RecentFiles                     = "";
@@ -262,6 +267,7 @@ namespace RyLogViewer
 			LogProgramOutputHistory         = new LaunchApp[0];
 			NetworkConnectionHistory        = new NetConn[0];
 			SerialConnectionHistory         = new SerialConn[0];
+			PipeConnectionHistory           = new PipeConn[0];
 			
 			// Load all the default values first, then if the load options are 'normal'
 			// load from file. This ensures options missing in the file exist with default values
@@ -286,7 +292,9 @@ namespace RyLogViewer
 					typeof(NetConn),
 					typeof(NetConn[]),
 					typeof(SerialConn),
-					typeof(SerialConn[])
+					typeof(SerialConn[]),
+					typeof(PipeConn),
+					typeof(PipeConn[])
 				};
 			}
 		}

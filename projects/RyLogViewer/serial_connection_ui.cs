@@ -141,7 +141,7 @@ namespace RyLogViewer
 				};
 			
 			// Save settings on close
-			FormClosed += (s,a)=>
+			FormClosing += (s,a)=>
 				{
 					// If launch is selected, add the launch command line to the history
 					if (DialogResult == DialogResult.OK && Conn.CommPort.Length != 0)

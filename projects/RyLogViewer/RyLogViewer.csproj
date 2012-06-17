@@ -96,6 +96,12 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="misc.cs" />
+    <Compile Include="named_pipe_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="named_pipe_ui.Designer.cs">
+      <DependentUpon>named_pipe_ui.cs</DependentUpon>
+    </Compile>
     <Compile Include="pattern.cs" />
     <Compile Include="main.cs">
       <SubType>Form</SubType>
@@ -156,6 +162,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="main.resx">
       <DependentUpon>main.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="named_pipe_ui.resx">
+      <DependentUpon>named_pipe_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="pattern_set_ui.resx">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>

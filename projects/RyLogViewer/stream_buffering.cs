@@ -2,8 +2,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.IO.Ports;
 using System.Net.Sockets;
+using System.Threading;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.gui;
@@ -17,10 +19,12 @@ namespace RyLogViewer
 		private BufferedProcess    m_buffered_process;
 		private BufferedNetConn    m_buffered_netconn;
 		private BufferedSerialConn m_buffered_serialconn;
+		private BufferedPipeConn   m_buffered_pipeconn;
 
 		/// <summary>Launch a process, piping its output into a temporary file</summary>
-		private void LaunchProcess(LaunchApp launch)
+		private void LaunchProcess(LaunchApp conn)
 		{
+			BufferedProcess buffered_process = null;
 			try
 			{
 				// Close any currently open file
@@ -30,32 +34,41 @@ namespace RyLogViewer
 				CloseLogFile();
 				
 				// Launch the process with standard output/error redirected to the temporary file
-				BufferedProcess buffered_process = new BufferedProcess(launch);
+				buffered_process = new BufferedProcess(conn);
 				
 				// Give some UI feedback when the process ends
-				buffered_process.ProcessExited += (s,a)=>
+				buffered_process.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage(string.Format("{0} exited", launch.Executable));
+						Action proc_exit = () => SetTransientStatusMessage(string.Format("{0} exited", conn.Executable));
 						BeginInvoke(proc_exit);
 					};
 			
 				// Open the capture file created by buffered_process
 				OpenLogFile(buffered_process.Filepath, !buffered_process.TmpFile);
+				buffered_process.Start();
+				
+				// Pass over the ref
 				m_buffered_process = buffered_process;
-				m_buffered_process.Start();
+				buffered_process = null;
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(ex, "Failed to launch child process {0} {1} -> {2}", launch.Executable, launch.Arguments, launch.OutputFilepath);
+				Log.Exception(ex, "Failed to launch child process {0} {1} -> {2}", conn.Executable, conn.Arguments, conn.OutputFilepath);
 				MessageBox.Show(this
-					,string.Format("Failed to launch child process {0}\r\n.Error: {1}",launch.Executable,ex.Message)
+					,string.Format("Failed to launch child process {0}.\r\nError: {1}",conn.Executable,ex.Message)
 					,Resources.FailedToLaunchProcess, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			finally 
+			{
+				if (buffered_process != null)
+					buffered_process.Dispose();
 			}
 		}
 		
 		/// <summary>Open a network connection and log anything read</summary>
 		private void LogNetworkConnection(NetConn conn)
 		{
+			BufferedNetConn buffered_netconn = null;
 			try
 			{
 				// Close any currently open file
@@ -65,7 +78,7 @@ namespace RyLogViewer
 				CloseLogFile();
 				
 				// Launch the process with standard output/error redirected to the temporary file
-				BufferedNetConn buffered_netconn = new BufferedNetConn(conn);
+				buffered_netconn = new BufferedNetConn(conn);
 				
 				// Give some UI feedback if the connection drops
 				buffered_netconn.ConnectionDropped += (s,a)=>
@@ -76,21 +89,31 @@ namespace RyLogViewer
 			
 				// Open the capture file created by buffered_process
 				OpenLogFile(buffered_netconn.Filepath, !buffered_netconn.TmpFile);
+				buffered_netconn.Start(this);
+				
+				// Pass over the ref
 				m_buffered_netconn = buffered_netconn;
-				m_buffered_netconn.Start(this);
+				buffered_netconn = null;
 			}
+			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
 				Log.Exception(ex, "Failed to connect {0}:{1} -> {2}", conn.Hostname, conn.Port, conn.OutputFilepath);
 				MessageBox.Show(this
-					,string.Format("Failed to connect to {0}:{1}\r\n.Error: {2}",conn.Hostname,conn.Port,ex.Message)
+					,string.Format("Failed to connect to {0}:{1}.\r\nError: {2}",conn.Hostname,conn.Port,ex.Message)
 					,Resources.FailedToLaunchProcess, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			finally 
+			{
+				if (buffered_netconn != null)
+					buffered_netconn.Dispose();
 			}
 		}
 		
 		/// <summary>Open a serial port connection and log anything read</summary>
 		private void LogSerialConnection(SerialConn conn)
 		{
+			BufferedSerialConn buffered_serialconn = null;
 			try
 			{
 				// Close any currently open file
@@ -100,7 +123,7 @@ namespace RyLogViewer
 				CloseLogFile();
 				
 				// Launch the process with standard output/error redirected to the temporary file
-				BufferedSerialConn buffered_serialconn = new BufferedSerialConn(conn);
+				buffered_serialconn = new BufferedSerialConn(conn);
 				
 				// Give some UI feedback if the connection drops
 				buffered_serialconn.ConnectionDropped += (s,a)=>
@@ -111,15 +134,68 @@ namespace RyLogViewer
 			
 				// Open the capture file created by buffered_process
 				OpenLogFile(buffered_serialconn.Filepath, !buffered_serialconn.TmpFile);
+				buffered_serialconn.Start();
+
+				// Pass over the ref
 				m_buffered_serialconn = buffered_serialconn;
-				m_buffered_serialconn.Start();
+				buffered_serialconn = null;
 			}
 			catch (Exception ex)
 			{
 				Log.Exception(ex, "Failed to connect {0}:{1} -> {2}", conn.CommPort, conn.BaudRate, conn.OutputFilepath);
 				MessageBox.Show(this
-					,string.Format("Failed to connect to {0}:{1}\r\n.Error: {2}",conn.CommPort,conn.BaudRate,ex.Message)
+					,string.Format("Failed to connect to {0}:{1}.\r\nError: {2}",conn.CommPort,conn.BaudRate,ex.Message)
 					,Resources.FailedToLaunchProcess, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			finally
+			{
+				if (buffered_serialconn != null)
+					buffered_serialconn.Dispose();
+			}
+		}
+		
+		/// <summary>Open a named pipe connection and log anything read</summary>
+		private void LogNamedPipeConnection(PipeConn conn)
+		{
+			BufferedPipeConn buffered_pipeconn = null;
+			try
+			{
+				// Close any currently open file
+				// Strictly, we don't have to close because OpenLogFile closes before opening
+				// however if the user reopens the same connection the existing connection will
+				// hold a lock on the capture file preventing the new connection being created.
+				CloseLogFile();
+				
+				// Create the buffered pipe connection
+				buffered_pipeconn = new BufferedPipeConn(conn);
+				
+				// Give some UI feedback if the connection drops
+				buffered_pipeconn.ConnectionDropped += (s,a)=>
+					{
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped");
+						BeginInvoke(proc_exit);
+					};
+			
+				// Open the capture file
+				OpenLogFile(buffered_pipeconn.Filepath, !buffered_pipeconn.TmpFile);
+				buffered_pipeconn.Start(this);
+				
+				// Pass over the ref
+				m_buffered_pipeconn = buffered_pipeconn;
+				buffered_pipeconn = null;
+			}
+			catch (OperationCanceledException) {}
+			catch (Exception ex)
+			{
+				Log.Exception(ex, "Failed to connect {0} -> {1}", conn.PipeAddr, conn.OutputFilepath);
+				MessageBox.Show(this
+					,string.Format("Failed to connect to {0}.\r\nError: {1}",conn.PipeAddr,ex.Message)
+					,Resources.FailedToLaunchProcess, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			finally
+			{
+				if (buffered_pipeconn != null)
+					buffered_pipeconn.Dispose();
 			}
 		}
 	}
@@ -147,6 +223,14 @@ namespace RyLogViewer
 		/// <summary>True if 'Filepath' is a temporary file that will get deleted on close</summary>
 		public readonly bool TmpFile;
 
+		/// <summary>Raised if the connection to the host is lost</summary>
+		public event EventHandler ConnectionDropped;
+		protected void RaiseConnectionDropped()
+		{
+			if (ConnectionDropped != null)
+				ConnectionDropped(this, EventArgs.Empty);
+		}
+
 		protected BufferedStream(string output_filepath, bool append)
 		{
 			m_lock = new object();
@@ -170,17 +254,33 @@ namespace RyLogViewer
 			m_outp = new FileStream(Filepath, mode, FileAccess.Write, FileShare.Read, Constants.FileReadChunkSize, opts);
 		}
 		
+		/// <summary>Should return true to continue reading data</summary>
+		protected abstract bool IsConnected { get; }
+
 		/// <summary>Handler for async reads from a stream</summary>
 		protected virtual void DataRecv(IAsyncResult ar)
 		{
 			AsyncData data = (AsyncData)ar.AsyncState;
-			int read = data.Stream.EndRead(ar);
 			lock (m_lock)
 			{
-				if (m_outp == null) return;
-				m_outp.Write(data.Buffer, 0, read);
-				m_outp.Flush();
-				data.Stream.BeginRead(data.Buffer, 0, data.Buffer.Length, DataRecv, data);
+				try
+				{
+					int read = data.Stream.EndRead(ar);
+					if (m_outp == null) return;
+					if (read != 0 || IsConnected)
+					{
+						m_outp.Write(data.Buffer, 0, read);
+						m_outp.Flush();
+						data.Stream.BeginRead(data.Buffer, 0, data.Buffer.Length, DataRecv, data);
+						return;
+					}
+				}
+				catch (Exception ex)
+				{
+					var type = GetType().DeclaringType;
+					Log.Exception(ex, "[{0}] Data receive exception", type == null ? "" : type.Name);
+				}
+				RaiseConnectionDropped();
 			}
 		}
 		
@@ -206,9 +306,6 @@ namespace RyLogViewer
 		private readonly byte[] m_outbuf;    // A buffer for standard output data
 		private readonly byte[] m_errbuf;    // A buffer for standard error data
 		private Process m_process;           // The running process
-		
-		/// <summary>Raised when the process exits</summary>
-		public event EventHandler ProcessExited;
 
 		public BufferedProcess(LaunchApp launch)
 		:base(launch.OutputFilepath, launch.AppendOutputFile)
@@ -232,8 +329,7 @@ namespace RyLogViewer
 			m_process.Exited += (s,a) =>
 			{
 				Log.Info("Process {0} exited", launch.Executable);
-				if (ProcessExited != null)
-					ProcessExited(s,a);
+				RaiseConnectionDropped();
 			};
 		}
 		
@@ -251,12 +347,10 @@ namespace RyLogViewer
 				m_process.StandardError.BaseStream.BeginRead(m_errbuf, 0, m_errbuf.Length, DataRecv, new AsyncData(m_process.StandardError.BaseStream, m_errbuf));
 		}
 
-		/// <summary>Handler for async reads from a stream</summary>
-		protected override void DataRecv(IAsyncResult ar)
+		/// <summary>True while the process is still running</summary>
+		protected override bool IsConnected
 		{
-			try { base.DataRecv(ar); }
-			catch (Exception ex) { Log.Exception(ex, "Process output receive exception"); }
-			//catch {}
+			get { return m_process != null && !m_process.HasExited; }
 		}
 
 		/// <summary>Cleanup</summary>
@@ -285,9 +379,6 @@ namespace RyLogViewer
 		private readonly NetConn m_conn;
 		private readonly byte[] m_buf;
 		private TcpClient m_client;
-		
-		/// <summary>Raised if the connection to the host is lost</summary>
-		public event EventHandler ConnectionDropped;
 
 		public BufferedNetConn(NetConn conn)
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
@@ -298,35 +389,48 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Start asynchronously reading from the tcp client</summary>
-		public void Start(IWin32Window parent)
+		public void Start(Main parent)
 		{
 			ProgressForm connect = new ProgressForm("Connecting..."
 				,string.Format("Connecting to remote host: {0}:{1}", m_conn.Hostname, m_conn.Port)
 				,(s,a)=>
 				{
 					BackgroundWorker bgw = (BackgroundWorker)s;
-					bgw.ReportProgress(0, new ProgressForm.UserState{ProgressBarVisible = false});
+					bgw.ReportProgress(0, new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
 					
-					//new Socket(AddressFamily.i
-					//new UdpClient().Client.ProtocolType = ;
-					m_client.Connect(m_conn.Hostname, m_conn.Port);
-					
-					NetworkStream stream = m_client.GetStream();
-					stream.ReadTimeout = Constants.FilePollingRate;
-					stream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(stream, m_buf));
-				}, null);
+					// Connect async
+					Exception error = null;
+					using (ManualResetEvent done = new ManualResetEvent(false))
+					{
+						m_client.BeginConnect(m_conn.Hostname, m_conn.Port, ar => 
+							{
+								// ReSharper disable AccessToDisposedClosure
+								try { m_client.EndConnect(ar); }
+								catch (Exception ex) { error = ex; }
+								done.Set();
+								// ReSharper restore AccessToDisposedClosure
+							}, null);
+						
+						// Poll for connected or cancel
+						for (;!done.WaitOne(0) && !bgw.CancellationPending; Thread.Sleep(100)) {}
+					}
+					if (error != null) throw error;
+					a.Cancel = bgw.CancellationPending;
+					if (!a.Cancel)
+					{
+						NetworkStream stream = m_client.GetStream();
+						stream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(stream, m_buf));
+					}
+				});
 			
 			if (connect.ShowDialog(parent) != DialogResult.OK)
 				throw new OperationCanceledException("Connecting cancelled");
 		}
 
-		/// <summary>Handler for async reads from a stream</summary>
-		protected override void DataRecv(IAsyncResult ar)
+		/// <summary>Returns true if the tcp client is connected</summary>
+		protected override bool IsConnected
 		{
-			try { base.DataRecv(ar); }
-			catch (Exception ex) { Log.Exception(ex, "Network connection data receive exception"); }
-			if (ConnectionDropped != null && (m_client == null || !m_client.Connected))
-				ConnectionDropped(this, EventArgs.Empty);
+			get { return m_client != null && m_client.Connected; }
 		}
 
 		/// <summary>Cleanup</summary>
@@ -337,8 +441,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info("Disposing tcp client {0}", m_client.Client.RemoteEndPoint);
-					m_client.GetStream().Dispose();
+					Log.Info("Disposing tcp client {0}", m_conn.Hostname);
 					m_client.Close();
 					m_client = null;
 				}
@@ -352,9 +455,6 @@ namespace RyLogViewer
 		private readonly SerialConn m_conn;
 		private readonly byte[] m_buf;
 		private SerialPort m_port;
-		
-		/// <summary>Raised if the connection to the host is lost</summary>
-		public event EventHandler ConnectionDropped;
 
 		public BufferedSerialConn(SerialConn conn)
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
@@ -377,13 +477,10 @@ namespace RyLogViewer
 			m_port.BaseStream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(m_port.BaseStream, m_buf));
 		}
 
-		/// <summary>Handler for async reads from a stream</summary>
-		protected override void DataRecv(IAsyncResult ar)
+		/// <summary>Returns true while the serial port is connected</summary>
+		protected override bool IsConnected
 		{
-			try { base.DataRecv(ar); }
-			catch (Exception ex) { Log.Exception(ex, "Serial connection data receive exception"); }
-			if (ConnectionDropped != null && (m_port == null))
-				ConnectionDropped(this, EventArgs.Empty);
+			get { return m_port != null && m_port.IsOpen; }
 		}
 
 		/// <summary>Cleanup</summary>
@@ -397,6 +494,65 @@ namespace RyLogViewer
 					Log.Info("Disposing serial port connection {0}", m_conn.CommPort);
 					m_port.Dispose();
 					m_port = null;
+				}
+			}
+		}
+	}
+
+	/// <summary>Manages a named pipe connection and reading its incoming data</summary>
+	public class BufferedPipeConn :BufferedStream
+	{
+		private readonly PipeConn m_conn;
+		private readonly byte[] m_buf;
+		private NamedPipeClientStream m_pipe;
+
+		public BufferedPipeConn(PipeConn conn)
+		:base(conn.OutputFilepath, conn.AppendOutputFile)
+		{
+			m_conn = conn;
+			m_buf = new byte[Constants.FileReadChunkSize];
+			m_pipe = new NamedPipeClientStream(m_conn.ServerName, m_conn.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+		}
+
+		/// <summary>Start asynchronously reading from the tcp client</summary>
+		public void Start(Main parent)
+		{
+			ProgressForm connect = new ProgressForm("Connecting...", "Connecting to "+m_conn.PipeAddr, (s,a)=>
+				{
+					BackgroundWorker bgw = (BackgroundWorker)s;
+					bgw.ReportProgress(0, new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
+					
+					while (!m_pipe.IsConnected && !bgw.CancellationPending)
+						try { m_pipe.Connect(100); } catch (TimeoutException) {}
+					
+					a.Cancel = bgw.CancellationPending;
+					if (!a.Cancel)
+					{
+						m_pipe.ReadMode = PipeTransmissionMode.Byte;
+						m_pipe.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(m_pipe, m_buf));
+					}
+				});
+			if (connect.ShowDialog(parent) != DialogResult.OK)
+				throw new OperationCanceledException("Connecting cancelled");
+		}
+
+		/// <summary>Returns true while the pipe is connected</summary>
+		protected override bool IsConnected
+		{
+			get { return m_pipe != null && m_pipe.IsConnected; }
+		}
+
+		/// <summary>Cleanup</summary>
+		public override void Dispose()
+		{
+			base.Dispose();
+			if (m_pipe != null)
+			{
+				lock (m_lock)
+				{
+					Log.Info("Disposing named pipe connection {0}", m_conn.PipeName);
+					m_pipe.Dispose();
+					m_pipe = null;
 				}
 			}
 		}

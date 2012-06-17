@@ -80,7 +80,7 @@ namespace RyLogViewer
 			m_menu_file_open_stdout.Click           += (s,a) => LogProgramOutput();
 			m_menu_file_open_serial_port.Click      += (s,a) => LogSerialPort();
 			m_menu_file_open_network.Click          += (s,a) => LogNetworkOutput();
-			m_menu_file_open_named_pipe.Click       += (s,a) => LogNamedPipe();
+			m_menu_file_open_named_pipe.Click       += (s,a) => LogNamedPipeOutput();
 			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
 			m_menu_file_export.Click                += (s,a) => ShowExportDialog();
 			m_menu_file_exit.Click                  += (s,a) => Close();
@@ -275,13 +275,15 @@ namespace RyLogViewer
 			{
 				m_line_index.Clear();
 				m_watch.Remove(m_filepath);
-				if (m_buffered_process != null) m_buffered_process.Dispose();
-				if (m_buffered_netconn != null) m_buffered_netconn.Dispose();
+				if (m_buffered_process    != null) m_buffered_process.Dispose();
+				if (m_buffered_netconn    != null) m_buffered_netconn.Dispose();
 				if (m_buffered_serialconn != null) m_buffered_serialconn.Dispose();
+				if (m_buffered_pipeconn   != null) m_buffered_pipeconn.Dispose();
 				if (FileOpen) m_file.Dispose();
 				m_buffered_process = null;
 				m_buffered_netconn = null;
 				m_buffered_serialconn = null;
+				m_buffered_pipeconn = null;
 				m_filepath = null;
 				m_file = null;
 				m_filepos = 0;
@@ -365,8 +367,11 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Open a named pipe and log the received data</summary>
-		private void LogNamedPipe()
+		private void LogNamedPipeOutput()
 		{
+			var dg = new NamedPipeUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LogNamedPipeConnection(dg.Conn);
 		}
 
 		/// <summary>Called when the log file is noticed to have changed</summary>

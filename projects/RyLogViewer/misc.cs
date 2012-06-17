@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Ports;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
@@ -194,7 +195,49 @@ namespace RyLogViewer
 			return new SerialConn(this);
 		}
 	}
-	
+
+	[DataContract]
+	public class PipeConn :ICloneable
+	{
+		// Notes: It is usually recommended to set DTR and RTS true.
+		// If the connected device uses these signals, it will not transmit before
+		// the signals are set
+
+		[DataMember] public string       ServerName       = "";
+		[DataMember] public string       PipeName         = "";
+		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public bool         AppendOutputFile = true;
+		
+		public string PipeAddr
+		{
+			get { return string.Format(@"\\{0}\pipe\{1}",ServerName,PipeName); }
+			set
+			{
+				var parts = value.Replace(@"\\", string.Empty).Split('\\');
+				if (parts.Length != 3 || parts[1] != "pipe") throw new ArgumentException("Invalid pipe name");
+				ServerName = parts[0];
+				PipeName = parts[2];
+			}
+		}
+
+		public PipeConn() {}
+		public PipeConn(PipeConn rhs)
+		{
+			ServerName       = rhs.ServerName;
+			PipeName         = rhs.PipeName;
+			OutputFilepath   = rhs.OutputFilepath;
+			AppendOutputFile = rhs.AppendOutputFile;
+		}
+		public override string ToString()
+		{
+			return PipeAddr;
+		}
+		public object Clone()
+		{
+			return new PipeConn(this);
+		}
+	}
+
 	public static class Misc
 	{
 		/// <summary>Watch window helper for converting byte buffers to strings</summary>
@@ -218,8 +261,10 @@ namespace RyLogViewer
 		/// <summary>Add 'item' to a history list of items</summary>
 		public static void AddToHistoryList<T>(List<T> list, T item, bool ignore_case, int max_history_length)
 		{
+			string item_name = item.ToString();
+			if (item_name.Length == 0) return;
 			StringComparison cmp = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-			list.RemoveAll(i => String.Compare(i.ToString(), item.ToString(), cmp) == 0);
+			list.RemoveAll(i => String.Compare(i.ToString(), item_name, cmp) == 0);
 			list.Insert(0, item);
 			
 			if (list.Count > max_history_length)

@@ -186,7 +186,7 @@ namespace RyLogViewer
 							
 							// If the filepos is within the range of the current line index
 							// do an incremental update to recentre the line index about filepos
-							incremental = line_index_range.Contains(filepos) && !reload;
+							incremental = !line_index_range.Intersect(rng).Empty && !reload;
 							if (incremental)
 							{
 								// Reduce the byte range so we only scan in the direction we need
