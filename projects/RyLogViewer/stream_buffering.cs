@@ -39,7 +39,7 @@ namespace RyLogViewer
 				// Give some UI feedback when the process ends
 				buffered_process.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage(string.Format("{0} exited", conn.Executable));
+						Action proc_exit = () => SetTransientStatusMessage(string.Format("'{0}' exited", Path.GetFileName(conn.Executable)));
 						BeginInvoke(proc_exit);
 					};
 			
