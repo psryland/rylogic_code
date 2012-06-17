@@ -501,13 +501,13 @@ namespace RyLogViewer
 		private int MergeLineIndex(List<Range> line_index, long cache_range, long filepos, long fileend, bool incremental)
 		{
 			int row_delta = 0;
+			Range old_rng   = m_line_index.Count != 0 ? new Range(m_line_index.First().m_begin, m_line_index.Last().m_begin) : Range.Zero;
+			Range new_rng   =   line_index.Count != 0 ? new Range(  line_index.First().m_begin,   line_index.Last().m_begin) : Range.Zero;
 			
 			// If not incremental, just replace 'm_line_index'
 			if (!incremental)
 			{
 				// Use any range overlap to work out the row delta. 
-				Range old_rng   = m_line_index.Count != 0 ? new Range(m_line_index.First().m_begin, m_line_index.Last().m_begin) : Range.Zero;
-				Range new_rng   =   line_index.Count != 0 ? new Range(  line_index.First().m_begin,   line_index.Last().m_begin) : Range.Zero;
 				Range intersect = old_rng.Intersect(new_rng);
 				
 				// If the ranges overlap, we can search for the begin address of the intersect in both ranges to
@@ -523,6 +523,9 @@ namespace RyLogViewer
 				
 				Log.Info("Replacing results. {0} lines about filepos {1}/{2}", line_index.Count, filepos, fileend);
 				m_line_index = line_index;
+				
+				// Invalidate the cache since the cached data may now be different
+				InvalidateCache();
 			}
 			else if (line_index.Count != 0)
 			{
@@ -574,6 +577,9 @@ namespace RyLogViewer
 					m_line_index.RemoveRange(0, i+1);
 					row_delta -= i+1;
 				}
+				
+				// Invalidate the cache since the cached data may now be different
+				InvalidateCache(new_rng);
 			}
 			
 			// Save the new file position and length

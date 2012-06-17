@@ -78,6 +78,7 @@ namespace RyLogViewer
 			m_menu.Move                             += (s,a) => m_settings.MenuPosition = m_menu.Location;
 			m_menu_file_open.Click                  += (s,a) => OpenLogFile();
 			m_menu_file_open_stdout.Click           += (s,a) => LogProgramOutput();
+			m_menu_file_open_serial_port.Click      += (s,a) => LogSerialPort();
 			m_menu_file_open_network.Click          += (s,a) => LogNetworkOutput();
 			m_menu_file_open_named_pipe.Click       += (s,a) => LogNamedPipe();
 			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
@@ -327,7 +328,10 @@ namespace RyLogViewer
 			catch (Exception ex) { MessageBox.Show(this, string.Format(Resources.FailedToOpenXDueToErrorY, filepath ,ex.Message), Resources.FailedToLoadFile, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			CloseLogFile();
 		}
-		private void OpenLogFile(string filepath = null) { OpenLogFile(filepath, true); }
+		private void OpenLogFile(string filepath = null)
+		{
+			OpenLogFile(filepath, true);
+		}
 
 		/// <summary>Open a standard out connection</summary>
 		private void LogProgramOutput()
@@ -335,6 +339,11 @@ namespace RyLogViewer
 			var dg = new ProgramOutputUI(m_settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			LaunchProcess(dg.Launch);
+		}
+
+		/// <summary>Open a serial port connection and log the received data</summary>
+		private void LogSerialPort()
+		{
 		}
 
 		/// <summary>Open a network connection and log the received data</summary>
@@ -356,8 +365,8 @@ namespace RyLogViewer
 			long len = m_file.Length;
 			Log.Info("File {0} changed. File length: {1}", m_filepath, len);
 			
-			if (AutoScrollTail) BuildLineIndex(m_file.Length, m_settings.FileChangesAdditive);
-			else                BuildLineIndex(m_filepos    , m_settings.FileChangesAdditive);
+			if (AutoScrollTail) BuildLineIndex(m_file.Length, !m_settings.FileChangesAdditive);
+			else                BuildLineIndex(m_filepos    , !m_settings.FileChangesAdditive);
 		}
 		
 		/// <summary>Supply the grid with values</summary>
@@ -972,9 +981,6 @@ namespace RyLogViewer
 					SetGridRowCount(0, 0);
 				}
 			}
-			
-			// Invalidate the cache and get the grid to redraw
-			//InvalidateCache(); - shouldn't need to do this every time the ui is updated
 			m_grid.Refresh();
 			
 			// Configure menus

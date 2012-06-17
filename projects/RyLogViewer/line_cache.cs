@@ -119,6 +119,14 @@ namespace RyLogViewer
 			return line;
 		}
 
+		/// <summary>Invalidate cache entries for lines within a memory range</summary>
+		private void InvalidateCache(Range rng)
+		{
+			foreach (var line in m_line_cache)
+				if (rng.Contains(line.LineStartAddr))
+					line.LineStartAddr = -1;
+		}
+		
 		/// <summary>Invalidate all cache entries</summary>
 		private void InvalidateCache()
 		{

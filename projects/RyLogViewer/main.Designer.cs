@@ -95,6 +95,7 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.m_menu_file_open_serial_port = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -226,6 +227,7 @@
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file_open,
             this.m_menu_file_open_stdout,
+            this.m_menu_file_open_serial_port,
             this.m_menu_file_open_network,
             this.m_menu_file_open_named_pipe,
             this.m_menu_file_close,
@@ -260,7 +262,7 @@
 			// 
 			// m_menu_file_open_named_pipe
 			// 
-			this.m_menu_file_open_named_pipe.Name = "m_menu_file_log_named_pipe";
+			this.m_menu_file_open_named_pipe.Name = "m_menu_file_open_named_pipe";
 			this.m_menu_file_open_named_pipe.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_open_named_pipe.Text = "Log &Named Pipe...";
 			// 
@@ -670,6 +672,12 @@
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
+			// m_menu_file_open_serial_port
+			// 
+			this.m_menu_file_open_serial_port.Name = "m_menu_file_serial_port";
+			this.m_menu_file_open_serial_port.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_open_serial_port.Text = "Log &Serial Port...";
+			// 
 			// Main
 			// 
 			this.AllowDrop = true;
@@ -770,6 +778,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_network;
 		private System.Windows.Forms.ToolStripProgressBar m_status_progress;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_named_pipe;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_serial_port;
 	}
 }
 

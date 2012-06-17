@@ -256,7 +256,7 @@ namespace RyLogViewer
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
 		{
 			m_conn = conn;
-			m_buf = new byte[1];
+			m_buf = new byte[Constants.FileReadChunkSize];
 			m_client = new TcpClient();
 		}
 
