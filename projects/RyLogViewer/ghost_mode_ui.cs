@@ -1,10 +1,12 @@
 ﻿using System.Windows.Forms;
+using pr.util;
 
 namespace RyLogViewer
 {
 	public partial class GhostModeUI :Form
 	{
 		private readonly Main m_main;
+		private readonly ToolTip m_tt;
 
 		/// <summary>Transparent to mouseclicks</summary>
 		public bool ClickThru { get; set; }
@@ -16,8 +18,10 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_main = main;
+			m_tt = new ToolTip();
 			
 			// Click through
+			m_check_click_thru.ToolTip(m_tt, "Check to make the window invisible to user input.\r\nCancel this mode by clicking on the system tray icon");
 			m_check_click_thru.Checked = ClickThru;
 			m_check_click_thru.Click += (s,a)=>
 				{
@@ -25,6 +29,7 @@ namespace RyLogViewer
 				};
 
 			// Transparency track
+			m_track_opacity.ToolTip(m_tt, "The transparency of the main log view window");
 			m_track_opacity.ValueChanged += (s,a)=>
 				{
 					Alpha = m_track_opacity.Value * 0.01f;

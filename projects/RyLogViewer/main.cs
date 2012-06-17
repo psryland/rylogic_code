@@ -110,7 +110,7 @@ namespace RyLogViewer
 			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
 			m_menu_tools_clear_log_file.Click       += (s,a) => ClearLogFile();
-			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(true);
+			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
 			m_menu_help_about.Click                 += (s,a) => ShowAbout();
@@ -716,7 +716,8 @@ namespace RyLogViewer
 			{
 				var dg = new GhostModeUI(this);
 				if (dg.ShowDialog(this) != DialogResult.OK) return;
-
+				m_menu_tools_ghost_mode.Checked = true;
+				
 				Opacity = dg.Alpha;
 				TopMost = true;
 				if (dg.ClickThru)
@@ -726,6 +727,7 @@ namespace RyLogViewer
 					Win32.SetWindowLong(Handle, Win32.GWL_EXSTYLE, style);
 				}
 				
+				// Self removing icon clicked delegate
 				EventHandler icon_clicked = null;
 				icon_clicked = (s,a)=>
 					{
@@ -740,10 +742,10 @@ namespace RyLogViewer
 				m_notify_icon.ShowBalloonTip(1000, "Ghost Mode", "Click here to cancel ghost mode", ToolTipIcon.Info);
 				m_notify_icon.Text = "Click to disable ghost mode";
 				m_notify_icon.Visible = true;
-				
 			}
 			else
 			{
+				m_menu_tools_ghost_mode.Checked = false;
 				Opacity = 1f;
 				SetAlwaysOnTop(m_settings.AlwaysOnTop);
 				uint style = Win32.GetWindowLong(Handle, Win32.GWL_EXSTYLE);
