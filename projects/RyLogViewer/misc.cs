@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO.Ports;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Text;
@@ -7,8 +9,12 @@ namespace RyLogViewer
 {
 	public static class Constants
 	{
-		public const int FileReadChunkSize = 4096;
-		public const int FilePollingRate   = 100;
+		public const int FileReadChunkSize                = 4096;
+		public const int FilePollingRate                  = 100;
+		public const int MaxProgramHistoryLength          = 10;
+		public const int MaxNetConnHistoryLength          = 10;
+		public const int MaxSerialConnHistoryLength       = 1;
+		public const int MaxOutputFileHistoryLength       = 10;
 	}
 
 	public enum EPattern
@@ -16,6 +22,15 @@ namespace RyLogViewer
 		Substring,
 		Wildcard,
 		RegularExpression
+	}
+
+	public enum ELineEnding
+	{
+		Detect,
+		CR,
+		CRLF,
+		LF,
+		Custom
 	}
 
 	[Flags] public enum StandardStreams
@@ -67,10 +82,6 @@ namespace RyLogViewer
 		FileRange,
 		DisplayedRange,
 		SelectedRange,
-	}
-
-	public enum NetworkTransport
-	{
 	}
 
 	[DataContract]
@@ -142,6 +153,48 @@ namespace RyLogViewer
 		}
 	}
 
+	[DataContract]
+	public class SerialConn :ICloneable
+	{
+		// Notes: It is usually recommended to set DTR and RTS true.
+		// If the connected device uses these signals, it will not transmit before
+		// the signals are set
+
+		[DataMember] public string       CommPort         = "";
+		[DataMember] public int          BaudRate         = 9600;
+		[DataMember] public int          DataBits         = 8;
+		[DataMember] public Parity       Parity           = Parity.None;
+		[DataMember] public StopBits     StopBits         = StopBits.One;
+		[DataMember] public Handshake    FlowControl      = Handshake.None;
+		[DataMember] public bool         DtrEnable        = true;
+		[DataMember] public bool         RtsEnable        = true;
+		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public bool         AppendOutputFile = true;
+		
+		public SerialConn() {}
+		public SerialConn(SerialConn rhs)
+		{
+			CommPort         = rhs.CommPort;
+			BaudRate         = rhs.BaudRate;
+			DataBits         = rhs.DataBits;
+			Parity           = rhs.Parity;
+			StopBits         = rhs.StopBits;
+			FlowControl      = rhs.FlowControl;
+			DtrEnable        = rhs.DtrEnable;
+			RtsEnable        = rhs.RtsEnable;
+			OutputFilepath   = rhs.OutputFilepath;
+			AppendOutputFile = rhs.AppendOutputFile;
+		}
+		public override string ToString()
+		{
+			return CommPort;
+		}
+		public object Clone()
+		{
+			return new SerialConn(this);
+		}
+	}
+	
 	public static class Misc
 	{
 		/// <summary>Watch window helper for converting byte buffers to strings</summary>
@@ -160,6 +213,17 @@ namespace RyLogViewer
 		public static string Robitise(string str)
 		{
 			return str.Replace("<CR>","\r").Replace("<LF>","\n").Replace("<TAB>","\t");
+		}
+
+		/// <summary>Add 'item' to a history list of items</summary>
+		public static void AddToHistoryList<T>(List<T> list, T item, bool ignore_case, int max_history_length)
+		{
+			StringComparison cmp = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+			list.RemoveAll(i => String.Compare(i.ToString(), item.ToString(), cmp) == 0);
+			list.Insert(0, item);
+			
+			if (list.Count > max_history_length)
+				list.RemoveRange(max_history_length, list.Count - max_history_length);
 		}
 	}
 }

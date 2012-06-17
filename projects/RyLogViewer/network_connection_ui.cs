@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
@@ -11,6 +10,7 @@ namespace RyLogViewer
 	{
 		private readonly Settings m_settings;
 		private readonly List<NetConn> m_history;
+		private readonly List<string> m_outp_history;
 		private readonly ToolTip m_tt;
 
 		/// <summary>The network connection properties selected</summary>
@@ -21,6 +21,7 @@ namespace RyLogViewer
 			InitializeComponent();
 			m_settings = settings;
 			m_history  = new List<NetConn>(m_settings.NetworkConnectionHistory);
+			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
 			Conn       = m_history.Count != 0 ? new NetConn(m_history[0]) : new NetConn();
 			m_tt       = new ToolTip();
 			
@@ -87,11 +88,12 @@ namespace RyLogViewer
 				};
 
 			// Output file
-			m_edit_output_file.ToolTip(m_tt, "The file to capture network data in.\r\nLeave blank to not save captured data");
-			m_edit_output_file.Text = Conn.OutputFilepath;
-			m_edit_output_file.TextChanged += (s,a)=>
+			m_combo_output_filepath.ToolTip(m_tt, "The file to capture network data in.\r\nLeave blank to not save captured data");
+			foreach (var i in m_outp_history) m_combo_output_filepath.Items.Add(i);
+			m_combo_output_filepath.Text = Conn.OutputFilepath;
+			m_combo_output_filepath.TextChanged += (s,a)=>
 				{
-					Conn.OutputFilepath = m_edit_output_file.Text;
+					Conn.OutputFilepath = m_combo_output_filepath.Text;
 					UpdateUI();
 				};
 
@@ -119,12 +121,14 @@ namespace RyLogViewer
 					// If launch is selected, add the launch command line to the history
 					if (DialogResult == DialogResult.OK && Conn.Hostname.Length != 0)
 					{
-						m_history.RemoveAll(i => string.Compare(i.ToString(), Conn.ToString(), StringComparison.OrdinalIgnoreCase) == 0);
-						m_history.Insert(0, Conn);
-						if (m_history.Count > 10) m_history.RemoveRange(10, m_history.Count - 10);
+						Misc.AddToHistoryList(m_history, Conn, true, Constants.MaxNetConnHistoryLength);
 						m_settings.NetworkConnectionHistory = m_history.ToArray();
+
+						Misc.AddToHistoryList(m_outp_history, Conn.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
+						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}
 				};
+			UpdateUI();
 		}
 
 		/// <summary>Enable/Disable bits of the UI based on current settings</summary>
@@ -136,7 +140,7 @@ namespace RyLogViewer
 			m_check_use_proxy.Checked           = Conn.UseProxy;
 			m_edit_proxy_hostname.Text          = Conn.ProxyHostname;
 			m_spinner_proxy_port.Value          = Conn.ProxyPort;
-			m_edit_output_file.Text             = Conn.OutputFilepath;
+			m_combo_output_filepath.Text        = Conn.OutputFilepath;
 			m_check_append.Checked              = Conn.AppendOutputFile;
 			m_check_append.Enabled              = Conn.OutputFilepath.Length != 0;
 		}

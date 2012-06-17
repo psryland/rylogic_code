@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
@@ -12,6 +11,7 @@ namespace RyLogViewer
 	{
 		private readonly Settings m_settings;
 		private readonly List<LaunchApp> m_history;
+		private readonly List<string> m_outp_history;
 		private readonly ToolTip  m_tt;
 		
 		/// <summary>The command line to execute</summary>
@@ -20,10 +20,11 @@ namespace RyLogViewer
 		public ProgramOutputUI(Settings settings)
 		{
 			InitializeComponent();
-			m_settings = settings;
-			m_history  = new List<LaunchApp>(m_settings.LogProgramOutputHistory);
-			Launch     = m_history.Count != 0 ? new LaunchApp(m_history[0]) : new LaunchApp();
-			m_tt       = new ToolTip();
+			m_settings     = settings;
+			m_history      = new List<LaunchApp>(m_settings.LogProgramOutputHistory);
+			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
+			Launch         = m_history.Count != 0 ? new LaunchApp(m_history[0]) : new LaunchApp();
+			m_tt           = new ToolTip();
 			
 			// Command line
 			m_combo_launch_cmdline.ToolTip(m_tt, "Command line for the application to launch");
@@ -59,11 +60,12 @@ namespace RyLogViewer
 				};
 
 			// Output file
-			m_edit_output_file.ToolTip(m_tt, "The file to capture program output in.\r\nLeave blank to not save captured output");
-			m_edit_output_file.Text = Launch.OutputFilepath;
-			m_edit_output_file.TextChanged += (s,a)=>
+			m_combo_output_filepath.ToolTip(m_tt, "The file to save captured program output in.\r\nLeave blank to not save captured output");
+			foreach (var i in m_outp_history) m_combo_output_filepath.Items.Add(i);
+			m_combo_output_filepath.Text = Launch.OutputFilepath;
+			m_combo_output_filepath.TextChanged += (s,a)=>
 				{
-					Launch.OutputFilepath = m_edit_output_file.Text;
+					Launch.OutputFilepath = m_combo_output_filepath.Text;
 					UpdateUI();
 				};
 
@@ -130,10 +132,11 @@ namespace RyLogViewer
 					// If launch is selected, add the launch command line to the history
 					if (DialogResult == DialogResult.OK && Launch.Executable.Length != 0)
 					{
-						m_history.RemoveAll(i => string.Compare(i.ToString(), Launch.ToString(), StringComparison.OrdinalIgnoreCase) == 0);
-						m_history.Insert(0, Launch);
-						if (m_history.Count > 10) m_history.RemoveRange(10, m_history.Count - 10);
+						Misc.AddToHistoryList(m_history, Launch, true, Constants.MaxProgramHistoryLength);
 						m_settings.LogProgramOutputHistory = m_history.ToArray();
+						
+						Misc.AddToHistoryList(m_outp_history, Launch.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
+						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}
 				};
 			UpdateUI();
@@ -145,12 +148,12 @@ namespace RyLogViewer
 			m_combo_launch_cmdline.Text    = Launch.Executable;
 			m_edit_arguments.Text          = Launch.Arguments;
 			m_edit_working_dir.Text        = Launch.WorkingDirectory;
-			m_edit_output_file.Text        = Launch.OutputFilepath;
+			m_combo_output_filepath.Text   = Launch.OutputFilepath;
 			m_check_show_window.Checked    = Launch.ShowWindow;
-			m_check_append.Checked         = Launch.AppendOutputFile;
-			m_check_append.Enabled         = Launch.OutputFilepath.Length != 0;
 			m_check_capture_stdout.Checked = (Launch.Streams & StandardStreams.Stdout) != 0;
 			m_check_capture_stderr.Checked = (Launch.Streams & StandardStreams.Stderr) != 0;
+			m_check_append.Checked         = Launch.AppendOutputFile;
+			m_check_append.Enabled         = Launch.OutputFilepath.Length != 0;
 		}
 	}
 }

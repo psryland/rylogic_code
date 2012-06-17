@@ -44,6 +44,7 @@
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_open_serial_port = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_network = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_named_pipe = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
@@ -94,8 +95,14 @@
 			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_detect = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_crlf = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_cr = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_lf = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_line_ending_custom = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.m_menu_file_open_serial_port = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -214,6 +221,7 @@
             this.m_menu_file,
             this.m_menu_edit,
             this.m_menu_encoding,
+            this.m_menu_line_ending,
             this.m_menu_tools,
             this.m_menu_help});
 			this.m_menu.Location = new System.Drawing.Point(0, 0);
@@ -253,6 +261,12 @@
 			this.m_menu_file_open_stdout.Name = "m_menu_file_open_stdout";
 			this.m_menu_file_open_stdout.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_open_stdout.Text = "Log &Program Output...";
+			// 
+			// m_menu_file_open_serial_port
+			// 
+			this.m_menu_file_open_serial_port.Name = "m_menu_file_open_serial_port";
+			this.m_menu_file_open_serial_port.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_open_serial_port.Text = "Log &Serial Port...";
 			// 
 			// m_menu_file_open_network
 			// 
@@ -657,6 +671,54 @@
 			this.m_cmenu_select_all.Size = new System.Drawing.Size(122, 22);
 			this.m_cmenu_select_all.Text = "Select &All";
 			// 
+			// m_menu_line_ending
+			// 
+			this.m_menu_line_ending.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_line_ending_detect,
+            this.toolStripSeparator7,
+            this.m_menu_line_ending_cr,
+            this.m_menu_line_ending_crlf,
+            this.m_menu_line_ending_lf,
+            this.m_menu_line_ending_custom});
+			this.m_menu_line_ending.Name = "m_menu_line_ending";
+			this.m_menu_line_ending.Size = new System.Drawing.Size(81, 20);
+			this.m_menu_line_ending.Text = "&Line Ending";
+			// 
+			// m_menu_line_ending_detect
+			// 
+			this.m_menu_line_ending_detect.Name = "m_menu_line_ending_detect";
+			this.m_menu_line_ending_detect.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_detect.Text = "Detect &Automatically";
+			// 
+			// m_menu_line_ending_crlf
+			// 
+			this.m_menu_line_ending_crlf.Name = "m_menu_line_ending_crlf";
+			this.m_menu_line_ending_crlf.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_crlf.Text = "CR+LF";
+			// 
+			// m_menu_line_ending_cr
+			// 
+			this.m_menu_line_ending_cr.Name = "m_menu_line_ending_cr";
+			this.m_menu_line_ending_cr.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_cr.Text = "CR";
+			// 
+			// m_menu_line_ending_lf
+			// 
+			this.m_menu_line_ending_lf.Name = "m_menu_line_ending_lf";
+			this.m_menu_line_ending_lf.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_lf.Text = "LF";
+			// 
+			// m_menu_line_ending_custom
+			// 
+			this.m_menu_line_ending_custom.Name = "m_menu_line_ending_custom";
+			this.m_menu_line_ending_custom.Size = new System.Drawing.Size(185, 22);
+			this.m_menu_line_ending_custom.Text = "Custom";
+			// 
+			// toolStripSeparator7
+			// 
+			this.toolStripSeparator7.Name = "toolStripSeparator7";
+			this.toolStripSeparator7.Size = new System.Drawing.Size(182, 6);
+			// 
 			// m_scroll_file
 			// 
 			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -671,12 +733,6 @@
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
-			// 
-			// m_menu_file_open_serial_port
-			// 
-			this.m_menu_file_open_serial_port.Name = "m_menu_file_serial_port";
-			this.m_menu_file_open_serial_port.Size = new System.Drawing.Size(216, 22);
-			this.m_menu_file_open_serial_port.Text = "Log &Serial Port...";
 			// 
 			// Main
 			// 
@@ -779,6 +835,13 @@
 		private System.Windows.Forms.ToolStripProgressBar m_status_progress;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_named_pipe;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_serial_port;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_detect;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator7;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_cr;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_crlf;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_lf;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_custom;
 	}
 }
 

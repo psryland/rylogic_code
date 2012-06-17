@@ -501,8 +501,8 @@ namespace RyLogViewer
 		private int MergeLineIndex(List<Range> line_index, long cache_range, long filepos, long fileend, bool incremental)
 		{
 			int row_delta = 0;
-			Range old_rng   = m_line_index.Count != 0 ? new Range(m_line_index.First().m_begin, m_line_index.Last().m_begin) : Range.Zero;
-			Range new_rng   =   line_index.Count != 0 ? new Range(  line_index.First().m_begin,   line_index.Last().m_begin) : Range.Zero;
+			Range old_rng   = m_line_index.Count != 0 ? new Range(m_line_index.First().m_begin, m_line_index.Last().m_end) : Range.Zero;
+			Range new_rng   =   line_index.Count != 0 ? new Range(  line_index.First().m_begin,   line_index.Last().m_end) : Range.Zero;
 			
 			// If not incremental, just replace 'm_line_index'
 			if (!incremental)
@@ -533,7 +533,7 @@ namespace RyLogViewer
 				if (filepos < m_filepos)
 				{
 					// Make sure there's no overlap of rows between line_index and m_line_index
-					while (m_line_index.Count != 0 && line_index.Last().Contains(m_line_index.First().m_begin))
+					while (m_line_index.Count != 0 && new_rng.Contains(m_line_index.First().m_begin))
 					{
 						m_line_index.RemoveAt(0);
 						--row_delta;
@@ -559,7 +559,7 @@ namespace RyLogViewer
 				else
 				{
 					// Make sure there's no overlap of rows between line_index and m_line_index
-					while (m_line_index.Count != 0 && line_index.First().Contains(m_line_index.Last().m_begin))
+					while (m_line_index.Count != 0 && new_rng.Contains(m_line_index.Last().m_begin))
 						m_line_index.RemoveAt(m_line_index.Count - 1);
 					
 					Log.Info("Merging results tail. {0} lines added. filepos {1}/{2}", line_index.Count, filepos, fileend);

@@ -37,6 +37,7 @@ namespace RyLogViewer
 		public SettingsUI(ETab tab)
 		{
 			InitializeComponent();
+			KeyPreview    = true;
 			m_settings    = new Settings();
 			m_highlights  = Highlight.Import(m_settings.HighlightPatterns);
 			m_filters     = Filter.Import(m_settings.FilterPatterns);
@@ -52,13 +53,20 @@ namespace RyLogViewer
 			SetupHighlightTab();
 			SetupFilterTab();
 			
+			// Escape to close
+			KeyDown += (s,a) =>
+				{
+					a.Handled = a.KeyCode == Keys.Escape;
+					if (a.Handled) Close();
+				};
+
 			// Save on close
 			Closed += (s,a) =>
-			{
-				Focus(); // grab focus to ensure all controls persist their state
-				m_settings.HighlightPatterns = Highlight.Export(m_highlights);
-				m_settings.FilterPatterns    = Filter   .Export(m_filters);
-			};
+				{
+					Focus(); // grab focus to ensure all controls persist their state
+					m_settings.HighlightPatterns = Highlight.Export(m_highlights);
+					m_settings.FilterPatterns    = Filter   .Export(m_filters);
+				};
 			
 			UpdateUI();
 			WhatsChanged = EWhatsChanged.Nothing;

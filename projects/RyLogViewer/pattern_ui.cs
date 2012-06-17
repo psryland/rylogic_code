@@ -52,8 +52,8 @@ namespace RyLogViewer
 				};
 			m_edit_pattern.KeyDown += (s,a)=>
 				{
-					if (a.KeyCode == Keys.Enter)
-						m_btn_add.PerformClick();
+					a.Handled = a.KeyCode == Keys.Enter;
+					if (a.Handled) m_btn_add.PerformClick();
 				};
 			
 			// Regex help

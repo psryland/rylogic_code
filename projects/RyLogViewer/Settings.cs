@@ -198,6 +198,11 @@ namespace RyLogViewer
 			get { return get<string>("Encoding"); }
 			set { set("Encoding", value); }
 		}
+		public string[] OutputFilepathHistory
+		{
+			get { return get<string[]>("OutputFilepathHistory"); }
+			set { set("OutputFilepathHistory", value); }
+		}
 		public LaunchApp[] LogProgramOutputHistory
 		{
 			get { return get<LaunchApp[]>("LogProgramOutputHistory"); }
@@ -207,6 +212,11 @@ namespace RyLogViewer
 		{
 			get { return get<NetConn[]>("NetworkConnectionHistory"); }
 			set { set("NetworkConnectionHistory", value); }
+		}
+		public SerialConn[] SerialConnectionHistory
+		{
+			get { return get<SerialConn[]>("SerialConnectionHistory"); }
+			set { set("SerialConnectionHistory", value); }
 		}
 		
 		public Settings(ELoadOptions opts = ELoadOptions.Normal)
@@ -248,8 +258,10 @@ namespace RyLogViewer
 			RowDelimiter                    = "";
 			ColDelimiter                    = "";
 			Encoding                        = "";
+			OutputFilepathHistory           = new string[0];
 			LogProgramOutputHistory         = new LaunchApp[0];
 			NetworkConnectionHistory        = new NetConn[0];
+			SerialConnectionHistory         = new SerialConn[0];
 			
 			// Load all the default values first, then if the load options are 'normal'
 			// load from file. This ensures options missing in the file exist with default values
@@ -267,11 +279,14 @@ namespace RyLogViewer
 			{
 				return new[]
 				{
+					typeof(string[]),
 					typeof(StandardStreams),
 					typeof(LaunchApp),
 					typeof(LaunchApp[]),
 					typeof(NetConn),
-					typeof(NetConn[])
+					typeof(NetConn[]),
+					typeof(SerialConn),
+					typeof(SerialConn[])
 				};
 			}
 		}

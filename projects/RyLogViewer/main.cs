@@ -94,6 +94,11 @@ namespace RyLogViewer
 			m_menu_encoding_utf8.Click              += (s,a) => SetEncoding(Encoding.UTF8            );
 			m_menu_encoding_ucs2_littleendian.Click += (s,a) => SetEncoding(Encoding.Unicode         );
 			m_menu_encoding_ucs2_bigendian.Click    += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
+			m_menu_line_ending_detect.Click         += (s,a) => SetLineEnding(ELineEnding.Detect);
+			m_menu_line_ending_cr.Click             += (s,a) => SetLineEnding(ELineEnding.CR    );
+			m_menu_line_ending_crlf.Click           += (s,a) => SetLineEnding(ELineEnding.CRLF  );
+			m_menu_line_ending_lf.Click             += (s,a) => SetLineEnding(ELineEnding.LF    );
+			m_menu_line_ending_custom.Click         += (s,a) => SetLineEnding(ELineEnding.Custom);
 			m_menu_tools_alwaysontop.Click          += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
 			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
@@ -272,9 +277,11 @@ namespace RyLogViewer
 				m_watch.Remove(m_filepath);
 				if (m_buffered_process != null) m_buffered_process.Dispose();
 				if (m_buffered_netconn != null) m_buffered_netconn.Dispose();
+				if (m_buffered_serialconn != null) m_buffered_serialconn.Dispose();
 				if (FileOpen) m_file.Dispose();
 				m_buffered_process = null;
 				m_buffered_netconn = null;
+				m_buffered_serialconn = null;
 				m_filepath = null;
 				m_file = null;
 				m_filepos = 0;
@@ -344,6 +351,9 @@ namespace RyLogViewer
 		/// <summary>Open a serial port connection and log the received data</summary>
 		private void LogSerialPort()
 		{
+			var dg = new SerialConnectionUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LogSerialConnection(dg.Conn);
 		}
 
 		/// <summary>Open a network connection and log the received data</summary>
@@ -707,6 +717,27 @@ namespace RyLogViewer
 			BuildLineIndex(m_filepos, true);
 		}
 		
+		/// <summary>Set the line ending to use with loaded files</summary>
+		private void SetLineEnding(ELineEnding ending)
+		{
+			string row_delim;
+			switch (ending)
+			{
+			default: throw new ApplicationException("Unknown line ending type");
+			case ELineEnding.Detect: row_delim = ""; break;
+			case ELineEnding.CR:     row_delim = "<CR>"; break;
+			case ELineEnding.CRLF:   row_delim = "<CR><LF>"; break;
+			case ELineEnding.LF:     row_delim = "<LF>"; break;
+			case ELineEnding.Custom:
+				ShowOptions(SettingsUI.ETab.General);
+				return;
+			}
+			if (row_delim == m_settings.RowDelimiter) return; // not changed
+			m_settings.RowDelimiter = row_delim;
+			ApplySettings();
+			BuildLineIndex(m_filepos, true);
+		}
+
 		/// <summary>Set always on top</summary>
 		private void SetAlwaysOnTop(bool onatop)
 		{
@@ -985,6 +1016,8 @@ namespace RyLogViewer
 			
 			// Configure menus
 			bool file_open                            = FileOpen;
+			string enc                                = m_settings.Encoding;
+			string row_delim                          = m_settings.RowDelimiter;
 			m_menu_file_export.Enabled                = file_open;
 			m_menu_file_close.Enabled                 = file_open;
 			m_menu_edit_selectall.Enabled             = file_open;
@@ -992,11 +1025,16 @@ namespace RyLogViewer
 			m_menu_edit_find.Enabled                  = file_open;
 			m_menu_edit_find_next.Enabled             = file_open;
 			m_menu_edit_find_prev.Enabled             = file_open;
-			m_menu_encoding_detect           .Checked = m_settings.Encoding.Length == 0;
-			m_menu_encoding_ascii            .Checked = m_settings.Encoding == Encoding.ASCII.EncodingName;
-			m_menu_encoding_utf8             .Checked = m_settings.Encoding == Encoding.UTF8.EncodingName;
-			m_menu_encoding_ucs2_littleendian.Checked = m_settings.Encoding == Encoding.Unicode.EncodingName;
-			m_menu_encoding_ucs2_bigendian   .Checked = m_settings.Encoding == Encoding.BigEndianUnicode.EncodingName;
+			m_menu_encoding_detect           .Checked = enc.Length == 0;
+			m_menu_encoding_ascii            .Checked = enc == Encoding.ASCII.EncodingName;
+			m_menu_encoding_utf8             .Checked = enc == Encoding.UTF8.EncodingName;
+			m_menu_encoding_ucs2_littleendian.Checked = enc == Encoding.Unicode.EncodingName;
+			m_menu_encoding_ucs2_bigendian   .Checked = enc == Encoding.BigEndianUnicode.EncodingName;
+			m_menu_line_ending_detect        .Checked = row_delim.Length == 0;
+			m_menu_line_ending_cr            .Checked = row_delim == "<CR>";
+			m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
+			m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
+			m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
 			m_menu_tools_clear.Enabled                = FileOpen;
 			
 			// Toolbar

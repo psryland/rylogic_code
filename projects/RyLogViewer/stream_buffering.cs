@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Ports;
 using System.Net.Sockets;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
@@ -13,8 +14,9 @@ namespace RyLogViewer
 	/// <summary>Parts of the Main form related to buffering non-file stream into an output file</summary>
 	public partial class Main :Form
 	{
-		private BufferedProcess m_buffered_process;
-		private BufferedNetConn m_buffered_netconn;
+		private BufferedProcess    m_buffered_process;
+		private BufferedNetConn    m_buffered_netconn;
+		private BufferedSerialConn m_buffered_serialconn;
 
 		/// <summary>Launch a process, piping its output into a temporary file</summary>
 		private void LaunchProcess(LaunchApp launch)
@@ -82,6 +84,41 @@ namespace RyLogViewer
 				Log.Exception(ex, "Failed to connect {0}:{1} -> {2}", conn.Hostname, conn.Port, conn.OutputFilepath);
 				MessageBox.Show(this
 					,string.Format("Failed to connect to {0}:{1}\r\n.Error: {2}",conn.Hostname,conn.Port,ex.Message)
+					,Resources.FailedToLaunchProcess, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+		
+		/// <summary>Open a serial port connection and log anything read</summary>
+		private void LogSerialConnection(SerialConn conn)
+		{
+			try
+			{
+				// Close any currently open file
+				// Strictly, we don't have to close because OpenLogFile closes before opening
+				// however if the user reopens the same connection the existing connection will
+				// hold a lock on the capture file preventing the new connection being created.
+				CloseLogFile();
+				
+				// Launch the process with standard output/error redirected to the temporary file
+				BufferedSerialConn buffered_serialconn = new BufferedSerialConn(conn);
+				
+				// Give some UI feedback if the connection drops
+				buffered_serialconn.ConnectionDropped += (s,a)=>
+					{
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped");
+						BeginInvoke(proc_exit);
+					};
+			
+				// Open the capture file created by buffered_process
+				OpenLogFile(buffered_serialconn.Filepath, !buffered_serialconn.TmpFile);
+				m_buffered_serialconn = buffered_serialconn;
+				m_buffered_serialconn.Start();
+			}
+			catch (Exception ex)
+			{
+				Log.Exception(ex, "Failed to connect {0}:{1} -> {2}", conn.CommPort, conn.BaudRate, conn.OutputFilepath);
+				MessageBox.Show(this
+					,string.Format("Failed to connect to {0}:{1}\r\n.Error: {2}",conn.CommPort,conn.BaudRate,ex.Message)
 					,Resources.FailedToLaunchProcess, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
@@ -287,7 +324,7 @@ namespace RyLogViewer
 		protected override void DataRecv(IAsyncResult ar)
 		{
 			try { base.DataRecv(ar); }
-			catch (Exception ex) { Log.Exception(ex, "Network connect receive exception"); }
+			catch (Exception ex) { Log.Exception(ex, "Network connection data receive exception"); }
 			if (ConnectionDropped != null && (m_client == null || !m_client.Connected))
 				ConnectionDropped(this, EventArgs.Empty);
 		}
@@ -304,6 +341,62 @@ namespace RyLogViewer
 					m_client.GetStream().Dispose();
 					m_client.Close();
 					m_client = null;
+				}
+			}
+		}
+	}
+
+	/// <summary>Manages a serial port connection and reading its incoming data</summary>
+	public class BufferedSerialConn :BufferedStream
+	{
+		private readonly SerialConn m_conn;
+		private readonly byte[] m_buf;
+		private SerialPort m_port;
+		
+		/// <summary>Raised if the connection to the host is lost</summary>
+		public event EventHandler ConnectionDropped;
+
+		public BufferedSerialConn(SerialConn conn)
+		:base(conn.OutputFilepath, conn.AppendOutputFile)
+		{
+			m_conn = conn;
+			m_buf = new byte[Constants.FileReadChunkSize];
+			m_port = new SerialPort(m_conn.CommPort, m_conn.BaudRate, m_conn.Parity, m_conn.DataBits, m_conn.StopBits)
+				{
+					Handshake = m_conn.FlowControl,
+					DtrEnable = m_conn.DtrEnable,
+					RtsEnable = m_conn.RtsEnable
+				};
+		}
+
+		/// <summary>Start asynchronously reading from the tcp client</summary>
+		public void Start()
+		{
+			m_port.Open();
+			m_port.BaseStream.ReadTimeout = Constants.FilePollingRate;
+			m_port.BaseStream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(m_port.BaseStream, m_buf));
+		}
+
+		/// <summary>Handler for async reads from a stream</summary>
+		protected override void DataRecv(IAsyncResult ar)
+		{
+			try { base.DataRecv(ar); }
+			catch (Exception ex) { Log.Exception(ex, "Serial connection data receive exception"); }
+			if (ConnectionDropped != null && (m_port == null))
+				ConnectionDropped(this, EventArgs.Empty);
+		}
+
+		/// <summary>Cleanup</summary>
+		public override void Dispose()
+		{
+			base.Dispose();
+			if (m_port != null)
+			{
+				lock (m_lock)
+				{
+					Log.Info("Disposing serial port connection {0}", m_conn.CommPort);
+					m_port.Dispose();
+					m_port = null;
 				}
 			}
 		}

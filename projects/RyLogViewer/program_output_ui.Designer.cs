@@ -36,7 +36,6 @@
 			this.m_check_capture_stderr = new System.Windows.Forms.CheckBox();
 			this.m_combo_launch_cmdline = new System.Windows.Forms.ComboBox();
 			this.m_lbl_cmdline = new System.Windows.Forms.Label();
-			this.m_edit_output_file = new System.Windows.Forms.TextBox();
 			this.m_lbl_output_file = new System.Windows.Forms.Label();
 			this.m_btn_browse_output = new System.Windows.Forms.Button();
 			this.m_edit_arguments = new System.Windows.Forms.TextBox();
@@ -45,12 +44,13 @@
 			this.m_edit_working_dir = new System.Windows.Forms.TextBox();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
 			this.m_check_show_window = new System.Windows.Forms.CheckBox();
+			this.m_combo_output_filepath = new System.Windows.Forms.ComboBox();
 			this.SuspendLayout();
 			// 
 			// m_btn_browse_exec
 			// 
 			this.m_btn_browse_exec.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_browse_exec.Location = new System.Drawing.Point(230, 33);
+			this.m_btn_browse_exec.Location = new System.Drawing.Point(234, 33);
 			this.m_btn_browse_exec.Name = "m_btn_browse_exec";
 			this.m_btn_browse_exec.Size = new System.Drawing.Size(34, 23);
 			this.m_btn_browse_exec.TabIndex = 1;
@@ -61,7 +61,7 @@
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(108, 251);
+			this.m_btn_ok.Location = new System.Drawing.Point(112, 251);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 10;
@@ -72,7 +72,7 @@
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(189, 251);
+			this.m_btn_cancel.Location = new System.Drawing.Point(193, 251);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_cancel.TabIndex = 11;
@@ -81,7 +81,6 @@
 			// 
 			// m_check_capture_stdout
 			// 
-			this.m_check_capture_stdout.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_capture_stdout.AutoSize = true;
 			this.m_check_capture_stdout.Location = new System.Drawing.Point(32, 200);
 			this.m_check_capture_stdout.Name = "m_check_capture_stdout";
@@ -92,7 +91,6 @@
 			// 
 			// m_check_capture_stderr
 			// 
-			this.m_check_capture_stderr.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_capture_stderr.AutoSize = true;
 			this.m_check_capture_stderr.Location = new System.Drawing.Point(32, 223);
 			this.m_check_capture_stderr.Name = "m_check_capture_stderr";
@@ -108,7 +106,7 @@
 			this.m_combo_launch_cmdline.FormattingEnabled = true;
 			this.m_combo_launch_cmdline.Location = new System.Drawing.Point(32, 33);
 			this.m_combo_launch_cmdline.Name = "m_combo_launch_cmdline";
-			this.m_combo_launch_cmdline.Size = new System.Drawing.Size(192, 21);
+			this.m_combo_launch_cmdline.Size = new System.Drawing.Size(196, 21);
 			this.m_combo_launch_cmdline.TabIndex = 0;
 			// 
 			// m_lbl_cmdline
@@ -119,15 +117,6 @@
 			this.m_lbl_cmdline.Size = new System.Drawing.Size(130, 13);
 			this.m_lbl_cmdline.TabIndex = 10;
 			this.m_lbl_cmdline.Text = "Application command line:";
-			// 
-			// m_edit_output_file
-			// 
-			this.m_edit_output_file.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_output_file.Location = new System.Drawing.Point(32, 172);
-			this.m_edit_output_file.Name = "m_edit_output_file";
-			this.m_edit_output_file.Size = new System.Drawing.Size(192, 20);
-			this.m_edit_output_file.TabIndex = 4;
 			// 
 			// m_lbl_output_file
 			// 
@@ -141,7 +130,7 @@
 			// m_btn_browse_output
 			// 
 			this.m_btn_browse_output.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_browse_output.Location = new System.Drawing.Point(230, 170);
+			this.m_btn_browse_output.Location = new System.Drawing.Point(234, 170);
 			this.m_btn_browse_output.Name = "m_btn_browse_output";
 			this.m_btn_browse_output.Size = new System.Drawing.Size(34, 23);
 			this.m_btn_browse_output.TabIndex = 5;
@@ -154,7 +143,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_arguments.Location = new System.Drawing.Point(32, 80);
 			this.m_edit_arguments.Name = "m_edit_arguments";
-			this.m_edit_arguments.Size = new System.Drawing.Size(192, 20);
+			this.m_edit_arguments.Size = new System.Drawing.Size(196, 20);
 			this.m_edit_arguments.TabIndex = 2;
 			// 
 			// m_lbl_arguments
@@ -181,12 +170,11 @@
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_working_dir.Location = new System.Drawing.Point(32, 126);
 			this.m_edit_working_dir.Name = "m_edit_working_dir";
-			this.m_edit_working_dir.Size = new System.Drawing.Size(192, 20);
+			this.m_edit_working_dir.Size = new System.Drawing.Size(196, 20);
 			this.m_edit_working_dir.TabIndex = 3;
 			// 
 			// m_check_append
 			// 
-			this.m_check_append.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_append.AutoSize = true;
 			this.m_check_append.Location = new System.Drawing.Point(159, 200);
 			this.m_check_append.Name = "m_check_append";
@@ -197,7 +185,6 @@
 			// 
 			// m_check_show_window
 			// 
-			this.m_check_show_window.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_show_window.AutoSize = true;
 			this.m_check_show_window.Location = new System.Drawing.Point(159, 223);
 			this.m_check_show_window.Name = "m_check_show_window";
@@ -206,13 +193,24 @@
 			this.m_check_show_window.Text = "Show window";
 			this.m_check_show_window.UseVisualStyleBackColor = true;
 			// 
+			// m_combo_output_filepath
+			// 
+			this.m_combo_output_filepath.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_combo_output_filepath.FormattingEnabled = true;
+			this.m_combo_output_filepath.Location = new System.Drawing.Point(32, 171);
+			this.m_combo_output_filepath.Name = "m_combo_output_filepath";
+			this.m_combo_output_filepath.Size = new System.Drawing.Size(196, 21);
+			this.m_combo_output_filepath.TabIndex = 4;
+			// 
 			// ProgramOutputUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(276, 286);
+			this.ClientSize = new System.Drawing.Size(280, 286);
+			this.Controls.Add(this.m_combo_output_filepath);
 			this.Controls.Add(this.m_check_show_window);
 			this.Controls.Add(this.m_check_append);
 			this.Controls.Add(this.m_lbl_working_dir);
@@ -221,7 +219,6 @@
 			this.Controls.Add(this.m_edit_arguments);
 			this.Controls.Add(this.m_btn_browse_output);
 			this.Controls.Add(this.m_lbl_output_file);
-			this.Controls.Add(this.m_edit_output_file);
 			this.Controls.Add(this.m_lbl_cmdline);
 			this.Controls.Add(this.m_combo_launch_cmdline);
 			this.Controls.Add(this.m_check_capture_stderr);
@@ -230,6 +227,7 @@
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_btn_browse_exec);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.MaximumSize = new System.Drawing.Size(2000, 324);
 			this.MinimumSize = new System.Drawing.Size(292, 324);
 			this.Name = "ProgramOutputUI";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
@@ -248,7 +246,6 @@
 		private System.Windows.Forms.CheckBox m_check_capture_stderr;
 		private System.Windows.Forms.ComboBox m_combo_launch_cmdline;
 		private System.Windows.Forms.Label m_lbl_cmdline;
-		private System.Windows.Forms.TextBox m_edit_output_file;
 		private System.Windows.Forms.Label m_lbl_output_file;
 		private System.Windows.Forms.Button m_btn_browse_output;
 		private System.Windows.Forms.TextBox m_edit_arguments;
@@ -257,5 +254,6 @@
 		private System.Windows.Forms.TextBox m_edit_working_dir;
 		private System.Windows.Forms.CheckBox m_check_append;
 		private System.Windows.Forms.CheckBox m_check_show_window;
+		private System.Windows.Forms.ComboBox m_combo_output_filepath;
 	}
 }
