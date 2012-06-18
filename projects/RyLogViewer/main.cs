@@ -25,7 +25,6 @@ namespace RyLogViewer
 		private readonly FileWatch m_watch;                   // A helper for watching files
 		private readonly Timer m_watch_timer;                 // A timer for polling the file watcher
 		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
-		private readonly BindingList<string> m_find_history;  // A history of the strings used to find
 		private readonly FindUI m_find_ui;                    // The find dialog
 		private readonly NotifyIcon m_notify_icon;            // A system tray icon
 		private readonly ToolTip m_tt;                        // Tooltips
@@ -64,8 +63,7 @@ namespace RyLogViewer
 			m_watch             = new FileWatch();
 			m_watch_timer       = new Timer{Interval = Constants.FilePollingRate};
 			m_highlights        = new List<Highlight>();
-			m_find_history      = new BindingList<string>();
-			m_find_ui           = new FindUI(m_find_history){Visible = false};
+			m_find_ui           = new FindUI(m_settings){Visible = false};
 			m_tt                = new ToolTip();
 			m_notify_icon       = new NotifyIcon{Icon = Icon};
 			m_line_index        = new List<Range>();
@@ -182,12 +180,7 @@ namespace RyLogViewer
 			m_find_ui.FindNext += FindNext;
 			m_find_ui.FindPrev += FindPrev;
 			m_find_ui.Move     += (s,e)=> { m_find_ui.Tag = new Size(m_find_ui.Location.X - Location.X, m_find_ui.Location.Y - Location.Y); };
-			m_find_history.ListChanged += (s,a)=>
-				{
-					if (a.ListChangedType == ListChangedType.ItemAdded && m_find_history.Count > 10)
-						m_find_history.RemoveAt(m_find_history.Count - 1);
-				};
-
+			
 			// Startup
 			Shown += (s,a)=>
 				{
@@ -454,6 +447,12 @@ namespace RyLogViewer
 		/// <summary>Show the find dialog</summary>
 		private void ShowFindDialog()
 		{
+			// Initialise the find string from the selected row
+			int row = SelectedRow;
+			if (row != -1)
+				m_find_ui.Pattern = ReadLine(row).RowText;
+			
+			// Display the find window
 			m_find_ui.Location = Location + (Size)m_find_ui.Tag;
 			if (!m_find_ui.Visible)
 				m_find_ui.Show(this);

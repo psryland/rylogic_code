@@ -9,12 +9,13 @@ namespace RyLogViewer
 {
 	public static class Constants
 	{
-		public const int FileReadChunkSize                = 4096;
-		public const int FilePollingRate                  = 100;
-		public const int MaxProgramHistoryLength          = 10;
-		public const int MaxNetConnHistoryLength          = 10;
-		public const int MaxSerialConnHistoryLength       = 1;
-		public const int MaxOutputFileHistoryLength       = 10;
+		public const int FileReadChunkSize          = 4096;
+		public const int FilePollingRate            = 100;
+		public const int MaxProgramHistoryLength    = 10;
+		public const int MaxNetConnHistoryLength    = 10;
+		public const int MaxSerialConnHistoryLength = 1;
+		public const int MaxOutputFileHistoryLength = 10;
+		public const int MaxFindHistory             = 10;
 	}
 
 	public enum EPattern

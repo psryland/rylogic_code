@@ -1,14 +1,24 @@
 ﻿using System;
-using System.ComponentModel;
+using System.Collections.Generic;
 using System.Windows.Forms;
+using pr.util;
 
 namespace RyLogViewer
 {
 	public partial class FindUI :Form
 	{
+		private readonly Settings m_settings;
 		private readonly Pattern m_pattern;
-		private readonly BindingList<string> m_history;
+		private readonly List<string> m_history;
+		private readonly ToolTip m_tt;
 		
+		/// <summary>The search pattern</summary>
+		public string Pattern
+		{
+			get { return m_pattern.Expr; }
+			set { m_pattern.Expr = value; }
+		}
+
 		/// <summary>An event called whenever the dialog gets a FindNext command</summary>
 		public event Action<Pattern> FindNext;
 		private void RaiseFindNext()
@@ -29,51 +39,62 @@ namespace RyLogViewer
 			m_btn_find_prev.Enabled = true;
 		}
 		
-		public FindUI(BindingList<string> find_history)
+		public FindUI(Settings settings)
 		{
 			InitializeComponent();
-			m_pattern = new Pattern();
-			m_history = find_history;
-			m_radio_substring.Checked = m_pattern.PatnType == EPattern.Substring;
-			m_radio_wildcard .Checked = m_pattern.PatnType == EPattern.Wildcard;
-			m_radio_regex    .Checked = m_pattern.PatnType == EPattern.RegularExpression;
+			m_settings = settings;
+			m_pattern  = new Pattern();
+			m_history  = new List<string>(m_settings.FindHistory);
+			m_tt       = new ToolTip();
 			
-			foreach (var h in m_history) m_combo_pattern.Items.Add(h);
-			m_history.ListChanged += (s,a)=>
-				{
-					if (a.ListChangedType != ListChangedType.ItemAdded) return;
-					m_combo_pattern.Items.Clear();
-					foreach (var h in m_history) m_combo_pattern.Items.Add(h);
-				};
-
+			// Search buttons
+			m_btn_find_prev.ToolTip(m_tt, "Search backward through the log.\r\nKeyboard shortcut: <Shift>+<Enter>");
 			m_btn_find_prev.Click += (s,a) => RaiseFindPrev();
+			
+			m_btn_find_next.ToolTip(m_tt, "Search forward through the log.\r\nKeyboard shortcut: <Enter>");
 			m_btn_find_next.Click += (s,a) => RaiseFindNext();
-
+			
+			// Pattern type
+			m_radio_substring.Checked = m_pattern.PatnType == EPattern.Substring;
 			m_radio_substring.Click += (s,a)=>
 				{
 					if (m_radio_substring.Checked) m_pattern.PatnType = EPattern.Substring;
 				};
+			m_radio_wildcard .Checked = m_pattern.PatnType == EPattern.Wildcard;
 			m_radio_wildcard.Click += (s,a)=>
 				{
 					if (m_radio_wildcard.Checked) m_pattern.PatnType = EPattern.Wildcard;
 				};
+			m_radio_regex    .Checked = m_pattern.PatnType == EPattern.RegularExpression;
 			m_radio_regex.Click += (s,a)=>
 				{
 					if (m_radio_regex.Checked) m_pattern.PatnType = EPattern.RegularExpression;
 				};
+			
+			// Ignore case
+			m_check_ignore_case.ToolTip(m_tt, "Check to make searches ignore differences in case");
 			m_check_ignore_case.CheckedChanged += (s,a)=>
 				{
 					m_pattern.IgnoreCase = m_check_ignore_case.Checked;
 				};
+			
+			// Invert
+			m_check_invert.ToolTip(m_tt, "Check to find instances that do not match the search pattern");
 			m_check_invert.CheckedChanged += (s,a)=>
 				{
 					m_pattern.Invert = m_check_invert.Checked;
 				};
 			
 			// Shown
-			Shown += (s,a)=>
+			VisibleChanged += (s,a)=>
 				{
-					m_combo_pattern.Focus();
+					if (Visible)
+					{
+						m_combo_pattern.Focus();
+						m_combo_pattern.Text = Pattern;
+						m_combo_pattern.SelectAll();
+						
+					}
 				};
 			FormClosing += (s,a)=>
 				{
@@ -111,16 +132,18 @@ namespace RyLogViewer
 			{
 				if (m_combo_pattern.Text.Length == 0) return false;
 				m_pattern.Expr = m_combo_pattern.Text;
-				AddToFindHistory(m_pattern.Expr);
+				
+				// Update the history
+				Misc.AddToHistoryList(m_history, m_pattern.Expr, false, Constants.MaxFindHistory);
+				m_settings.FindHistory = m_history.ToArray();
+				
+				// Repopulate the combo
+				m_combo_pattern.Items.Clear();
+				foreach (var h in m_history)
+					m_combo_pattern.Items.Add(h);
+				
 				return true;
 			}
-		}
-		
-		/// <summary>Update the find history to include 'pattern'</summary>
-		private void AddToFindHistory(string pattern)
-		{
-			m_history.Remove(pattern);
-			m_history.Insert(0, pattern);
 		}
 	}
 }
