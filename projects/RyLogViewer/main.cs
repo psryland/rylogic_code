@@ -719,7 +719,6 @@ namespace RyLogViewer
 				m_menu_tools_ghost_mode.Checked = true;
 				
 				Opacity = dg.Alpha;
-				TopMost = true;
 				if (dg.ClickThru)
 				{
 					uint style = Win32.GetWindowLong(Handle, Win32.GWL_EXSTYLE);
@@ -747,7 +746,6 @@ namespace RyLogViewer
 			{
 				m_menu_tools_ghost_mode.Checked = false;
 				Opacity = 1f;
-				SetAlwaysOnTop(m_settings.AlwaysOnTop);
 				uint style = Win32.GetWindowLong(Handle, Win32.GWL_EXSTYLE);
 				style = Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false);
 				Win32.SetWindowLong(Handle, Win32.GWL_EXSTYLE, style);
@@ -981,7 +979,10 @@ namespace RyLogViewer
 			if (m_settings.HighlightsEnabled)
 				m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
 			
-			// Row styles
+			// Grid
+			int col_count = m_settings.ColDelimiter.Length != 0 ? Maths.Clamp(m_settings.ColumnCount, 1, 255) : 1;
+			m_grid.ColumnHeadersVisible = col_count > 1;
+			m_grid.ColumnCount = col_count;
 			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
 			{
 				Font = m_settings.Font,
@@ -1032,11 +1033,6 @@ namespace RyLogViewer
 				// Configure the grid
 				if (m_line_index.Count != 0)
 				{
-					// Read a row from the data and show column headers if there is more than one
-					Line line = ReadLine(m_line_index.Count/2);
-					m_grid.ColumnHeadersVisible = line.Column.Count > 1;
-					m_grid.ColumnCount = line.Column.Count;
-					
 					// Ensure the grid has the correct number of rows
 					SetGridRowCount(m_line_index.Count, row_delta);
 					

@@ -311,8 +311,8 @@ namespace RyLogViewer
 		:base(launch.OutputFilepath, launch.AppendOutputFile)
 		{
 			m_launch = launch;
-			m_outbuf = new byte[1];
-			m_errbuf = new byte[1];
+			m_outbuf = new byte[Constants.FileReadChunkSize];
+			m_errbuf = new byte[Constants.FileReadChunkSize];
 			
 			// Create the process
 			ProcessStartInfo info = new ProcessStartInfo

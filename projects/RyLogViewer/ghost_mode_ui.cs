@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms;
+using pr.maths;
 using pr.util;
 
 namespace RyLogViewer
@@ -7,18 +8,24 @@ namespace RyLogViewer
 	{
 		private readonly Main m_main;
 		private readonly ToolTip m_tt;
+		private float m_alpha;
 
 		/// <summary>Transparent to mouseclicks</summary>
 		public bool ClickThru { get; set; }
 
 		/// <summary>The level of transparency</summary>
-		public float Alpha { get; set; }
+		public float Alpha
+		{
+			get { return m_alpha; }
+			set { m_alpha = Maths.Clamp(value, 0f, 1f); }
+		}
 
 		public GhostModeUI(Main main)
 		{
 			InitializeComponent();
 			m_main = main;
 			m_tt = new ToolTip();
+			m_alpha = 1f;
 			
 			// Click through
 			m_check_click_thru.ToolTip(m_tt, "Check to make the window invisible to user input.\r\nCancel this mode by clicking on the system tray icon");
@@ -37,7 +44,7 @@ namespace RyLogViewer
 				};
 			FormClosing += (s,a)=>
 				{
-					m_main.Opacity = 1.0f;
+					m_main.Opacity = 1f;
 				};
 		}
 	}

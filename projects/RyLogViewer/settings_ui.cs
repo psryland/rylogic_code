@@ -123,6 +123,17 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
+			// Column Count
+			tt = "The number of columns to display in the grid.\r\nUsed when the column delimiter is not blank";
+			m_lbl_column_count.ToolTip(m_tt, tt);
+			m_spinner_column_count.ToolTip(m_tt, tt);
+			m_spinner_column_count.Value = m_settings.ColumnCount;
+			m_spinner_column_count.ValueChanged += (s,a)=>
+				{
+					m_settings.ColumnCount = (int)m_spinner_column_count.Value;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+
 			// Include blank lines
 			m_check_ignore_blank_lines.ToolTip(m_tt, "Ignore blank lines when loading the log file");
 			m_check_ignore_blank_lines.Checked = m_settings.IgnoreBlankLines;
@@ -412,6 +423,7 @@ namespace RyLogViewer
 		{
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
+			Point pt = MousePosition;
 			T pat = patterns[e.RowIndex];
 			Highlight hl = pat as Highlight;
 			
@@ -428,7 +440,8 @@ namespace RyLogViewer
 				if (hl != null)
 				{
 					WhatsChanged |= EWhatsChanged.Rendering;
-					PickColours(grid, MousePosition.X, MousePosition.Y,
+					pt = grid.PointToClient(pt);
+					PickColours(grid, pt.X, pt.Y,
 						(s,a) => { hl.ForeColour = PickColour(hl.ForeColour); grid.InvalidateCell(e.ColumnIndex, e.RowIndex); },
 						(s,a) => { hl.BackColour = PickColour(hl.BackColour); grid.InvalidateCell(e.ColumnIndex, e.RowIndex); });
 				}
@@ -480,6 +493,9 @@ namespace RyLogViewer
 		private void UpdateUI()
 		{
 			SuspendLayout();
+			
+			m_spinner_column_count.Enabled = m_settings.ColDelimiter.Length != 0;
+			
 			m_check_alternate_line_colour.Checked = m_settings.AlternateLineColours;
 			m_lbl_selection_example.BackColor = m_settings.LineSelectBackColour;
 			m_lbl_selection_example.ForeColor = m_settings.LineSelectForeColour;

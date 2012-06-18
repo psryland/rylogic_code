@@ -193,6 +193,11 @@ namespace RyLogViewer
 			get { return get<string>("ColDelimiter"); }
 			set { set("ColDelimiter", value); }
 		}
+		public int    ColumnCount
+		{
+			get { return get<int>("ColumnCount"); }
+			set { set("ColumnCount", value); }
+		}
 		public string Encoding
 		{
 			get { return get<string>("Encoding"); }
@@ -262,6 +267,7 @@ namespace RyLogViewer
 			FilterPatternSets               = "<root/>";
 			RowDelimiter                    = "";
 			ColDelimiter                    = "";
+			ColumnCount                     = 1;
 			Encoding                        = "";
 			OutputFilepathHistory           = new string[0];
 			LogProgramOutputHistory         = new LaunchApp[0];

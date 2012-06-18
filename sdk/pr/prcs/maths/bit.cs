@@ -263,6 +263,30 @@ namespace pr
 			List<uint> bitidx = new List<uint>(Bit.EnumBits(bits0));
 			Assert.AreEqual(bitidx.ToArray(), new[]{1,2,4,7,8,11,13,17,20});
 		}
+		
+		public enum NonFlags
+		{
+			One = 1,
+			Two = 2,
+		}
+		[Flags] public enum Flags
+		{
+			One   = 1 << 0,
+			Two   = 1 << 1,
+			Three = 1 << 2,
+			Four  = 1 << 3,
+			Five  = 1 << 4,
+		}
+
+		[Test] public static void TestEnumBit()
+		{
+			NonFlags nf = NonFlags.One;
+			Flags f = Flags.One;
+			
+			Assert.Throws(typeof(ArgumentException), ()=>f.HasFlag(nf));
+			Assert.IsTrue(f.HasFlag(Flags.One));
+			Assert.IsFalse(f.HasFlag(Flags.One|Flags.Two));
+		}
 	}
 }
 #endif
