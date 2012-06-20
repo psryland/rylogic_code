@@ -214,11 +214,13 @@ namespace RyLogViewer
 										{
 											fwd_lines = 0;
 											bwd_lines -= Maths.Clamp(next_line_index - 0, 0, line_cache_count/2);
+											if (bwd_lines == 0) rng.m_begin = rng.m_end;
 										}
 										else
 										{
 											bwd_lines = 0;
 											fwd_lines -= Maths.Clamp(last_line_count - next_line_index, 0, line_cache_count/2);
+											if (fwd_lines == 0) rng.m_end = rng.m_begin;
 										}
 									}
 									else

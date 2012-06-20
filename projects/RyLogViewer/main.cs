@@ -906,6 +906,7 @@ namespace RyLogViewer
 					{
 						int display_row = value - m_grid.DisplayedRowCount(true) / 2;
 						m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
+						UpdateStatus();
 					}
 				}
 			}
