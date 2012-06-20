@@ -16,6 +16,7 @@ namespace RyLogViewer
 		public const int MaxSerialConnHistoryLength = 1;
 		public const int MaxOutputFileHistoryLength = 10;
 		public const int MaxFindHistory             = 10;
+		public const int OneMB                      = 1024*1024;
 	}
 
 	public enum EPattern

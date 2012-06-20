@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -17,9 +18,21 @@ namespace RyLogViewer
 	{
 		public class SubRange
 		{
-			public Range Range;
-			public Color Color;
+			private Range m_range;
+			private Color m_color;
 			internal Rectangle m_rect;
+			
+			public Range Range
+			{
+				get { return m_range; }
+				set { Debug.Assert(value.Count >= 0); m_range = value; }
+			}
+			public Color Color
+			{
+				get { return m_color; }
+				set { m_color = value; }
+			}
+			
 			public SubRange() {}
 			public SubRange(Range range, Color color) { Range = range; Color = color; }
 		}
@@ -118,7 +131,7 @@ namespace RyLogViewer
 		{
 			m_ranges     = new List<SubRange>();
 			m_dragging   = false;
-			MinThumbSize = 50;
+			MinThumbSize = 20;
 			TrackColor   = SystemColors.ControlDark;
 			ThumbColor   = SystemColors.Window;
 			TotalRange   = new Range(0, 100);
@@ -144,10 +157,11 @@ namespace RyLogViewer
 			// Fix up thumbs that are too small
 			if (thumb_rect.Height < MinThumbSize)
 			{
-				thumb_rect.Height += MinThumbSize;
-				thumb_rect.Y      -= MinThumbSize / 2;
+				int diff = MinThumbSize - thumb_rect.Height;
+				thumb_rect.Height += diff;
+				thumb_rect.Y      -= diff / 2;
 				if (thumb_rect.Top    <      0) thumb_rect.Y = 0;
-				if (thumb_rect.Bottom > height) thumb_rect.Y = height - MinThumbSize;
+				if (thumb_rect.Bottom > height) thumb_rect.Y = height - thumb_rect.Height;
 			}
 			return thumb_rect;
 		}

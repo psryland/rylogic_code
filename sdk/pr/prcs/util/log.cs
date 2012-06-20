@@ -53,13 +53,10 @@ namespace pr.util
 		/// <summary>Add a string to the log</summary>
 		[Conditional("PR_LOGGING")] public static void Write(string str)
 		{
-			lock (m_lock)
-			{
-				LogFile lf = m_logs[Id];
-				if (lf == null) { Debug.Write(str); return; }
-				using (StreamWriter f = new StreamWriter(File.Open(lf.m_fname, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
-					f.Write(str);
-			}
+			LogFile lf; lock (m_lock) lf = m_logs[Id];
+			if (lf == null) { Debug.Write(str); return; }
+			using (StreamWriter f = new StreamWriter(File.Open(lf.m_fname, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
+				f.Write(str);
 		}
 
 		/// <summary>Write info to the current log</summary>

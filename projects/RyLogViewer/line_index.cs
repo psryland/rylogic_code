@@ -128,12 +128,11 @@ namespace RyLogViewer
 			// Cause any existing builds to stop by changing the issue number
 			Interlocked.Increment(ref m_build_issue);
 			m_reload_in_progress = reload;
-			Log.Info("build start request (id {0})", m_build_issue);
-			//Log.Info("build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
+			//Log.Info("build start request (id {0})", m_build_issue);
+			Log.Info("build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
 				
 			// Find the byte range of the file currently loaded
 			Range line_index_range  = LineIndexRange;
-			Range line_starts_range = LineStartIndexRange;
 			
 			// If this is not a 'reload', guess the encoding
 			Encoding encoding = reload
@@ -147,10 +146,12 @@ namespace RyLogViewer
 				
 			List<Filter> filters = ActiveFilters.ToList();
 			
-			// The file position when 'm_line_index' was built
-			long last_filepos  = m_filepos;
-			long bufsize       = m_bufsize;
-			bool ignore_blanks = m_settings.IgnoreBlankLines;
+			long bufsize          = m_bufsize;
+			int  line_cache_count = m_line_cache_count;
+			long last_filepos     = m_filepos;
+			int  next_line_index  = LineIndex(m_line_index, filepos);
+			int  last_line_count  = m_line_index.Count;
+			bool ignore_blanks    = m_settings.IgnoreBlankLines;
 			
 			// Find the new line indices in a background thread
 			ThreadPool.QueueUserWorkItem(bi =>
@@ -160,42 +161,82 @@ namespace RyLogViewer
 					{
 						Log.Info("build started. (id {0})", build_issue);
 						if (BuildCancelled(build_issue)) return;
-						
-						// Generate the line index in a new buffer
-						List<Range> line_index = new List<Range>();
-						
-						// A temporary buffer for reading sections of the file
-						byte[] buf = new byte[Constants.FileReadChunkSize]; 
-						long fileend;
-						bool incremental;
-						
 						using (var file = LoadFile(m_filepath))
 						{
+							// A temporary buffer for reading sections of the file
+							byte[] buf = new byte[Constants.FileReadChunkSize];
+						
 							// Use a fixed file end so that additions to the file don't muck this
 							// build up. Reducing the file size during this will probably cause an
 							// exception but oh well...
-							fileend = file.Length;
+							long fileend = file.Length;
 							
 							// Seek to the first line that starts immediately before filepos
 							filepos = FindLineStart(file, filepos, fileend, row_delim, encoding, buf);
 							if (BuildCancelled(build_issue)) return;
-							long scan_from = filepos;
+							
+							// True if 'filepos' has moved toward the end of the file
+							bool toward_start = filepos < last_filepos;
+							bool scan_backward = fileend - filepos >= filepos - 0; // scan in the most bound direction first
 							
 							// Determine the range of bytes to scan in each direction
 							Range rng = BufferRange(filepos, fileend, bufsize);
 							
-							// If the filepos is within the range of the current line index
-							// do an incremental update to recentre the line index about filepos
-							incremental = !line_index_range.Intersect(rng).Empty && !reload;
-							if (incremental)
+							// The number of lines to cache in the forward and backward directions
+							int bwd_lines = line_cache_count/2; 
+							int fwd_lines = line_cache_count/2;
+							
+							// Incremental loading
+							if (!reload)
 							{
-								// Reduce the byte range so we only scan in the direction we need
-								scan_from = filepos >= last_filepos
-									? (rng.m_begin = line_starts_range.m_end)
-									: (rng.m_end = line_starts_range.m_begin);
+								// If the range overlaps the currently cached range (and this isn't a reload)
+								// reduce the range to only scan the range that isn't cached
+								bool incremental;
+								if (toward_start) { incremental = line_index_range.m_begin < rng.m_end;   if (incremental) rng.m_end   = Math.Max(rng.m_begin, line_index_range.m_begin); }
+								else              { incremental = line_index_range.m_end   > rng.m_begin; if (incremental) rng.m_begin = Math.Min(rng.m_end,   line_index_range.m_end); }
+								Debug.Assert(rng.Count >= 0);
 								
-								Debug.Assert(rng.m_begin >= 0 && rng.m_end <= fileend && rng.m_begin <= rng.m_end);
+								// If the range has been reduced, then the number of lines to be scanned may also have reduced
+								// If 'scan_from' is within the currently cached lines, then we can limit the number of lines to
+								// scan. If outside the currently cached range, then we can't predict how many lines are needed,
+								// but if we search in the unbound direction first for up to 'line_cache_count/2' lines, then the
+								// number of lines found in the bound direction will be <= 'line_cache_count/2' and these found
+								// lines can be incrementally added to the current cache
+								if (incremental)
+								{
+									// If 'filepos' is within the currently cached range, limit the number of lines to scan
+									if (next_line_index >= 0 && next_line_index < line_cache_count)
+									{
+										// We can only incrementally add lines to either to start or end of the current
+										// line cache. Make sure the range and number of lines to scan are correct.
+										if (toward_start)
+										{
+											bwd_lines -= Maths.Clamp(next_line_index - 0               ,0 ,line_cache_count/2);
+											fwd_lines = 0;
+											if (bwd_lines == 0) rng.m_begin = rng.m_end;
+										}
+										else
+										{
+											bwd_lines = 0;
+											fwd_lines -= Maths.Clamp(last_line_count - next_line_index ,0 ,line_cache_count/2);
+											if (fwd_lines == 0) rng.m_end = rng.m_begin;
+										}
+									}
+									else
+									{
+										scan_backward = toward_start;
+									}
+								}
 							}
+							
+							// Caps the number of lines read for each of the forward and backward searches
+							// Wrapped in an array to prevent 'access to modified closure'
+							int[] line_limit = {0};
+							List<Range>[] line_buf = {null};
+							
+							// Line index buffers for collecting the results
+							List<Range> fwd_line_buf = new List<Range>();
+							List<Range> bwd_line_buf = new List<Range>();
 							
 							// Callback function that adds lines to 'line_index'
 							AddLineFunc add_line = (line, baddr, fend, bf, enc) =>
@@ -209,64 +250,61 @@ namespace RyLogViewer
 									string text = encoding.GetString(buf, (int)line.m_begin, (int)line.Count);
 									if (!PassesFilters(text, filters))
 										return true;
-											
+									
 									// Convert the byte range to a file range
 									line.Shift(baddr);
 									Debug.Assert(new Range(0,fileend).Contains(line));
-									line_index.Add(line);
-									return true;
+									line_buf[0].Add(line);
+									Debug.Assert(line_buf[0].Count <= line_limit[0]);
+									return (fwd_line_buf.Count + bwd_line_buf.Count) < line_limit[0];
 								};
 							
-							long bwd_range = scan_from - rng.m_begin;
-							long fwd_range = rng.m_end - scan_from;
-							
-							// Callbacks for updating progress for the first and second FindLines
-							ProgressFunc progress0 = (scanned, length) =>
+							// Callback for updating progress
+							ProgressFunc progress = (scanned, length) =>
 								{
-									Action update_progress_bar = () => UpdateStatusProgress(scanned, rng.Count);
-									BeginInvoke(update_progress_bar);
-									return !BuildCancelled(build_issue);
-								};
-							ProgressFunc progress1 = (scanned, length) =>
-								{
-									Action update_progress_bar = () => UpdateStatusProgress(scanned + bwd_range, rng.Count);
+									Action update_progress_bar = () => UpdateStatusProgress(fwd_line_buf.Count + bwd_line_buf.Count, line_cache_count);
 									BeginInvoke(update_progress_bar);
 									return !BuildCancelled(build_issue);
 								};
 							
-							// Scan backward from 'scan_from' for 'bwd_range' bytes,
-							FindLines(file, scan_from, fileend, true , bwd_range, add_line, encoding, row_delim, buf, progress0);
-							if (BuildCancelled(build_issue)) return;
+							// Scan twice, starting in the direction of the smallest range so that any
+							// unused cache space is used by the search in the other direction
+							long scan_from = Maths.Clamp(filepos, rng.m_begin, rng.m_end);
+							for (int a = 0; a != 2; ++a, scan_backward = !scan_backward)
+							{
+								line_buf[0]    = scan_backward ? bwd_line_buf : fwd_line_buf;
+								line_limit[0] += scan_backward ? bwd_lines    : fwd_lines;    // Push out the limit of allowed lines
+								long range     = scan_backward ? scan_from - rng.m_begin : rng.m_end - scan_from;
+								FindLines(file, scan_from, fileend, scan_backward, range, add_line, encoding, row_delim, buf, progress);
+								if (BuildCancelled(build_issue)) return;
+							}
 							
 							// Scanning backward adds lines to the line index in reverse order,
 							// we need to flip the buffer over the range that was added.
-							line_index.Reverse();
+							bwd_line_buf.Reverse();
+							List<Range> line_index = bwd_line_buf.Concat(fwd_line_buf).ToList();
 							
-							// Now scan forward from 'scan_from' for 'fwd_range' bytes.
-							FindLines(file, scan_from, fileend, false, fwd_range, add_line, encoding, row_delim, buf, progress1);
-							if (BuildCancelled(build_issue)) return;
+							// Marshal the results back to the main thread
+							Action MergeLineIndexDelegate = () =>
+							{
+								// This lamdba runs in the main thread, so if the build issue is the same at
+								// the start of this method it can't be changed until after this function returns.
+								if (BuildCancelled(build_issue)) return;
+							
+								// Merge the line index results
+								int row_delta = MergeLineIndex(line_index, bufsize, filepos, fileend, reload);
+							
+								// Ensure the grid is updated
+								UpdateUI(row_delta);
+							
+								// On completion, check if the file has changed again and rerun if it has
+								m_watch.CheckForChangedFiles();
+							
+								if (on_success != null) on_success();
+								m_reload_in_progress = false;
+							};
+							BeginInvoke(MergeLineIndexDelegate);
 						}
-						
-						// Marshal the results back to the main thread
-						Action MergeLineIndexDelegate = () =>
-						{
-							// This lamdba runs in the main thread, so if the build issue is the same at
-							// the start of this method it can't be changed until after this function returns.
-							if (BuildCancelled(build_issue)) return;
-							
-							// Merge the line index results
-							int row_delta = MergeLineIndex(line_index, bufsize, filepos, fileend, incremental);
-							
-							// Ensure the grid is updated
-							UpdateUI(row_delta);
-							
-							// On completion, check if the file has changed again and rerun if it has
-							m_watch.CheckForChangedFiles();
-							
-							if (on_success != null) on_success();
-							m_reload_in_progress = false;
-						};
-						BeginInvoke(MergeLineIndexDelegate);
 					}
 					catch (OperationCanceledException) {}
 					catch (Exception ex) { Debug.WriteLine("Exception ended BuildLineIndex() call: " + ex.Message); }
@@ -498,14 +536,14 @@ namespace RyLogViewer
 		/// <summary>
 		/// Merge or replace 'm_line_index' with 'line_index'.
 		/// Returns the delta position for how a row moves once 'line_index' has been added to 'm_line_index'</summary>
-		private int MergeLineIndex(List<Range> line_index, long cache_range, long filepos, long fileend, bool incremental)
+		private int MergeLineIndex(List<Range> line_index, long cache_range, long filepos, long fileend, bool replace)
 		{
 			int row_delta = 0;
-			Range old_rng   = m_line_index.Count != 0 ? new Range(m_line_index.First().m_begin, m_line_index.Last().m_end) : Range.Zero;
-			Range new_rng   =   line_index.Count != 0 ? new Range(  line_index.First().m_begin,   line_index.Last().m_end) : Range.Zero;
+			Range old_rng = m_line_index.Count != 0 ? new Range(m_line_index.First().m_begin, m_line_index.Last().m_end) : Range.Zero;
+			Range new_rng =   line_index.Count != 0 ? new Range(  line_index.First().m_begin,   line_index.Last().m_end) : Range.Zero;
 			
-			// If not incremental, just replace 'm_line_index'
-			if (!incremental)
+			// Replace the cached line index with 'line_index'
+			if (replace)
 			{
 				// Use any range overlap to work out the row delta. 
 				Range intersect = old_rng.Intersect(new_rng);
@@ -516,8 +554,8 @@ namespace RyLogViewer
 					row_delta = intersect.m_begin == old_rng.m_end ? -line_index.Count : line_index.Count;
 				else
 				{
-					int old_idx = m_line_index.BinarySearch(x => Maths.Compare(x.m_begin, intersect.m_begin));
-					int new_idx =   line_index.BinarySearch(x => Maths.Compare(x.m_begin, intersect.m_begin));
+					int old_idx = LineIndex(m_line_index, intersect.m_begin);
+					int new_idx = LineIndex(  line_index, intersect.m_begin);
 					row_delta = new_idx - old_idx;
 				}
 				
@@ -529,7 +567,7 @@ namespace RyLogViewer
 			}
 			else if (line_index.Count != 0)
 			{
-				// Otherwise append to the front and trim the end
+				// Append to the front and trim the end
 				if (filepos < m_filepos)
 				{
 					// Make sure there's no overlap of rows between line_index and m_line_index
@@ -546,7 +584,7 @@ namespace RyLogViewer
 					// Trim the tail
 					Range line_range = LineStartIndexRange;
 					int i,iend = m_line_index.Count;
-					for (i = iend; i-- != 0;)
+					for (i = Math.Min(m_settings.LineCacheCount, iend); i-- != 0;)
 					{
 						if (m_line_index[i].m_begin - line_range.m_begin > cache_range) continue;
 						++i;
@@ -568,7 +606,7 @@ namespace RyLogViewer
 					// Trim the head
 					Range line_range = LineStartIndexRange;
 					int i,iend = m_line_index.Count;
-					for (i = 0; i != iend; ++i)
+					for (i = Math.Max(0, iend - m_settings.LineCacheCount); i != iend; ++i)
 					{
 						if (line_range.m_end - m_line_index[i].m_end > cache_range) continue;
 						--i;
@@ -663,5 +701,49 @@ namespace RyLogViewer
 			}
 			return m_encoding;
 		}
+		
+		/// <summary>
+		/// Returns the index in 'line_index' for the line that contains 'filepos'.
+		/// Returns '-1' if 'filepos' is before the first range and 'line_index.Count'
+		/// if 'filepos' is after the last range</summary>
+		private int LineIndex(List<Range> line_index, long filepos)
+		{
+			// Careful, comparing filepos to line starts, if idx == line_index.Count
+			// it could be in the last line, or after the last line.
+			if (line_index.Count == 0) return 0;
+			if (filepos >= line_index.Last().m_end) return line_index.Count;
+			int idx = line_index.BinarySearch(line => Maths.Compare(line.m_begin, filepos));
+			return idx >= 0 ? idx : ~idx - 1;
+		}
 	}
 }
+
+
+
+							//long scan_from = filepos;
+							//// If there is some overlap with the range of the last line index with the new
+							//// range,  do an incremental update to recentre the line index about filepos
+							//incremental = line_index_range.Contains(filepos) && !reload;
+							//if (incremental)
+							//{
+							//    // Reduce the byte range so we only scan in the direction we need
+							//    scan_from = toward_end
+							//        ? (rng.m_begin = line_starts_range.m_end)
+							//        : (rng.m_end = line_starts_range.m_begin);
+								
+							//    Debug.Assert(rng.m_begin >= 0 && rng.m_end <= fileend && rng.m_begin <= rng.m_end);
+							//    //bwd_range = scan_from - rng.m_begin;
+							//    //fwd_range = rng.m_end - scan_from;
+							//    //bwd_lines = toward_end ? last_line_count                   : 0;
+							//    //fwd_lines = toward_end ? last_line_count - next_line_index : last_line_count;
+							//}
+							//else
+							//{
+							//long bwd_range = scan_from - rng.m_begin;
+							//long fwd_range = rng.m_end - scan_from;
+							
+							
+							
+							//int  bwd_lines = 0; // The number of lines already cached before 'scan_from'
+							//int  fwd_lines = 0; // The number of lines already cached after 'scan_from'
+							//}

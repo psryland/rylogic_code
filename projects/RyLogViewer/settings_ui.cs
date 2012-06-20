@@ -143,6 +143,30 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
+			// Lines cached
+			m_spinner_line_cache_count.ToolTip(m_tt, "The number of lines to scan into memory around the currently selected line");
+			m_spinner_line_cache_count.Minimum = 1;
+			m_spinner_line_cache_count.Maximum = 100000;
+			m_spinner_line_cache_count.Value = Maths.Clamp(m_settings.LineCacheCount, (int)m_spinner_line_cache_count.Minimum, (int)m_spinner_line_cache_count.Maximum);
+			m_spinner_line_cache_count.ValueChanged += (s,a)=>
+				{
+					m_settings.LineCacheCount = (int)m_spinner_line_cache_count.Value;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+			
+			// Max memory range
+			tt = "The maximum number of bytes to scan when finding lines around the currently selected row (in MB).";
+			m_lbl_max_scan_size0.ToolTip(m_tt, tt);
+			m_spinner_max_mem_range.ToolTip(m_tt, tt);
+			m_spinner_max_mem_range.Minimum = 1;
+			m_spinner_max_mem_range.Maximum = 100;
+			m_spinner_max_mem_range.Value = Maths.Clamp(m_settings.FileBufSize / Constants.OneMB, (int)m_spinner_max_mem_range.Minimum, (int)m_spinner_max_mem_range.Maximum);
+			m_spinner_max_mem_range.ValueChanged += (s,a)=>
+				{
+					m_settings.FileBufSize = (int)m_spinner_max_mem_range.Value * Constants.OneMB;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+			
 			// Open at end
 			m_check_open_at_end.ToolTip(m_tt, "If checked, opens files showing the end of the file.\r\nIf unchecked opens files at the beginning");
 			m_check_open_at_end.Checked = m_settings.OpenAtEnd;
@@ -160,19 +184,6 @@ namespace RyLogViewer
 					m_settings.FileChangesAdditive = m_check_file_changes_additive.Checked;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
-
-
-			// File buf size
-			m_spinner_file_buf_size.ToolTip(m_tt, "The size (in KB) of the cached portion of the log file.\r\nMaking this larger will make refreshing displayed data slower but needed less often");
-			m_spinner_file_buf_size.Minimum = 1;
-			m_spinner_file_buf_size.Maximum = 100000;
-			m_spinner_file_buf_size.Value = Maths.Clamp(m_settings.FileBufSize / 1024, (int)m_spinner_file_buf_size.Minimum, (int)m_spinner_file_buf_size.Maximum);
-			m_spinner_file_buf_size.ValueChanged += (s,a)=>
-				{
-					m_settings.FileBufSize = (int)m_spinner_file_buf_size.Value * 1024;
-					WhatsChanged |= EWhatsChanged.FileParsing;
-				};
-
 		}
 		
 		/// <summary>Hook up events for the log view tab</summary>

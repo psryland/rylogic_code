@@ -734,12 +734,12 @@
 			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
 			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
 			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
-			this.m_scroll_file.MinThumbSize = 50;
+			this.m_scroll_file.MinThumbSize = 20;
 			this.m_scroll_file.Name = "m_scroll_file";
 			this.m_scroll_file.Size = new System.Drawing.Size(18, 410);
 			this.m_scroll_file.SmallChange = ((long)(1));
 			this.m_scroll_file.TabIndex = 4;
-			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.Window;
+			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.ControlLight;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
 			// Main

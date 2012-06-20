@@ -26,6 +26,7 @@ obj/
 obj2010/
 bin/
 .svn/
+.metadata/
 media/
 ideas/
 thirdparty/

@@ -163,6 +163,11 @@ namespace RyLogViewer
 			get { return get<int>("FileBufSize"); }
 			set { set("FileBufSize", value); }
 		}
+		public int    LineCacheCount
+		{
+			get { return get<int>("LineCacheCount"); }
+			set { set("LineCacheCount", value); }
+		}
 		public string HighlightPatterns
 		{
 			get { return get<string>("HighlightPatterns"); }
@@ -251,8 +256,8 @@ namespace RyLogViewer
 			LineBackColour2                 = Color.FromArgb(192, 255, 192);
 			LineForeColour1                 = Color.Black;
 			LineForeColour2                 = Color.Black;
-			FileScrollWidth                 = 28;
-			ScrollBarFileRangeColour        = Color.FromArgb(128, Color.WhiteSmoke);
+			FileScrollWidth                 = 20;
+			ScrollBarFileRangeColour        = Color.FromArgb(128, Color.White);
 			ScrollBarDisplayRangeColour     = Color.FromArgb(128, Color.SteelBlue);
 			RowHeight                       = 18;
 			LoadLastFile                    = false;
@@ -265,7 +270,8 @@ namespace RyLogViewer
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = true;
 			TailEnabled                     = false;
-			FileBufSize                     = 250 * 1024;
+			FileBufSize                     = 10 * 1024 * 1024;
+			LineCacheCount                  = 2000;
 			HighlightPatterns               = "<root/>";
 			FilterPatterns                  = "<root/>";
 			HighlightPatternSets            = "<root/>";

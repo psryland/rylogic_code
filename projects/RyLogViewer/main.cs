@@ -39,16 +39,14 @@ namespace RyLogViewer
 		private long m_filepos;                               // The byte offset (from file begin) to the start of the last known line
 		private long m_fileend;                               // The last known size of the file
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
+		private int m_line_cache_count;                      // The number of lines to scan about the currently selected row
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
 
 		//bug:
-		// build line index missing partial lines
 		// ungraceful close of process capture file
 		//todo:
-		// read stdin/network
 		// 'Rewrite' - regex substitution
 		// partial highlighting
-		// Window transparency (Ghost mode) with click through
 		// Tip of the Day content
 
 		public Main(string[] args)
@@ -58,7 +56,7 @@ namespace RyLogViewer
 
 			InitializeComponent();
 			AllowTransparency   = true;
-			m_settings          = new Settings();
+			m_settings          = new Settings(SettingsBase.ELoadOptions.Normal);
 			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_watch             = new FileWatch();
 			m_watch_timer       = new Timer{Interval = Constants.FilePollingRate};
@@ -72,7 +70,8 @@ namespace RyLogViewer
 			m_file              = null;
 			m_filepos           = 0;
 			m_fileend           = 0;
-			m_bufsize           = 0;
+			m_bufsize           = m_settings.FileBufSize;
+			m_line_cache_count  = m_settings.LineCacheCount;
 			
 			m_settings.SettingChanged += (s,a)=>
 			{
@@ -156,13 +155,15 @@ namespace RyLogViewer
 			m_grid.AutoGenerateColumns  = false;
 			m_grid.KeyDown             += DataGridView_Extensions.SelectAll;
 			m_grid.KeyDown             += DataGridView_Extensions.Copy;
+			m_grid.KeyUp               += (s,a) => LoadNearBoundary();
+			m_grid.MouseUp             += (s,a) => LoadNearBoundary();
 			m_grid.CellValueNeeded     += CellValueNeeded;
 			m_grid.CellPainting        += CellPainting;
 			m_grid.SelectionChanged    += GridSelectionChanged;
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
 			m_grid.DataError           += (s,a) => { Debug.Assert(false); };
 			m_grid.Scroll              += (s,a) => { UpdateFileScroll(); };
-			
+
 			// Grid context menu
 			m_cmenu_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid);
 			m_cmenu_select_all.Click   += (s,a) => DataGridView_Extensions.SelectAll(m_grid);
@@ -210,7 +211,7 @@ namespace RyLogViewer
 					ApplySettings();
 				};
 			
-			// Keydown
+			// User input
 			KeyDown += (s,a) => HandleKeyDown(a);
 			
 			// File Drop
@@ -428,13 +429,21 @@ namespace RyLogViewer
 		private void GridSelectionChanged(object sender, EventArgs e)
 		{
 			if (GridEventsBlocked) return;
+			UpdateStatus();
+		}
+		
+		/// <summary>
+		/// Tests whether the currently selected row is near the start or end of
+		/// the line range and causes a reload if it is</summary>
+		private void LoadNearBoundary()
+		{
+			if (m_grid.RowCount == 0) return;
 			const float file_scroll_limit = 0.1f;
 			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount);
 			if (ratio < 0f + file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_begin, false);
 			if (ratio > 1f - file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_end  , false);
-			UpdateStatus();
 		}
-		
+
 		/// <summary>Handle key down events for the grid</summary>
 		private void HandleKeyDown(KeyEventArgs e)
 		{
@@ -881,35 +890,34 @@ namespace RyLogViewer
 			get { return m_grid.SelectedRows.Count != 0 ? m_grid.SelectedRows[0].Index : -1; }
 			set
 			{
-				try
+				using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
 				{
-					m_grid.SelectionChanged -= GridSelectionChanged;
-				
 					value = m_grid.SelectRow(value);
-					if (m_grid.RowCount != 0)
+					Log.Info("Row {0} selected", value);
+					
+					if (m_grid.RowCount != 0 && value != -1)
 					{
 						int display_row = value - m_grid.DisplayedRowCount(true) / 2;
 						m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
 					}
 				}
-				finally
-				{
-					m_grid.SelectionChanged += GridSelectionChanged;
-				}
 			}
 		}
 		
-		/// <summary>Returns true if the last row is visible</summary>
-		private bool LastRowVisible
-		{
-			get { return m_grid.RowCount == 0 || m_grid.Rows[m_grid.RowCount-1].Displayed; }
-		}
-
 		/// <summary>Return true if we should auto scroll</summary>
 		private bool AutoScrollTail
 		{
-			// Auto scroll the selected position if the last (known) row of the file is selected
-			get { return LastRowVisible && BufferRange(m_filepos, m_fileend, m_bufsize).m_end == m_fileend && SelectedRow == m_grid.RowCount - 1; }
+			get
+			{
+				// Auto scroll if the last row of the file is visible and selected in the grid
+				int row_delim_length = m_row_delim != null ? m_row_delim.Length : 0;
+				return
+					m_grid.RowCount != 0 &&                                     // the grid has data
+					m_line_index.Count != 0 &&                                  // rows of the file are cached
+					SelectedRow == m_grid.RowCount - 1 &&                       // last row selected
+					m_grid.Rows[m_grid.RowCount - 1].Displayed &&               // last row displayed
+					m_line_index.Last().Contains(m_fileend - row_delim_length); // last row in the file
+			}
 		}
 
 		/// <summary>Scroll the grid to make the last row visible</summary>
@@ -932,17 +940,18 @@ namespace RyLogViewer
 		private void SetGridRowCount(int count, int row_delta)
 		{
 			bool auto_scroll_tail = AutoScrollTail;
-			if (m_grid.RowCount != count)
+			if (m_grid.RowCount != count || row_delta != 0)
 			{
 				// Preserve the selected row index and first visible row index (if possible)
 				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
 				int selected = SelectedRow;
-				m_grid.ClearSelection();//SelectRow(-1);
+				SelectedRow = -1;
 				
-				Log.Info("RowCount changed. Selected row: {0}. First visible row: {1}. Auto scroll {2}", selected, first_vis, auto_scroll_tail);
+				Log.Info("RowCount changed. Row delta {0}. Selected row: {1}->{2}. First visible row: {3}->{4}. Auto scroll {5}" ,row_delta ,selected ,selected+row_delta ,first_vis ,first_vis+row_delta ,auto_scroll_tail);
 				m_grid.RowCount = 0;
 				m_grid.RowCount = count;
 				
+				// Restore the selected row, and the first visible row
 				if (count != 0)
 				{
 					// Restore the selected row, and the first visible row
@@ -969,6 +978,7 @@ namespace RyLogViewer
 			m_col_delim  = GetColDelim(m_settings.ColDelimiter);
 			m_row_height = m_settings.RowHeight;
 			m_bufsize    = m_settings.FileBufSize;
+			m_line_cache_count = m_settings.LineCacheCount;
 			
 			// Tail
 			m_watch_timer.Enabled = FileOpen && m_settings.TailEnabled;
@@ -1161,8 +1171,9 @@ namespace RyLogViewer
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
-			Range range = BufferRange(m_filepos, m_fileend, m_bufsize);
-			if (range.Count < m_fileend)
+			Range range = LineIndexRange;//BufferRange(m_filepos, m_fileend, m_bufsize);
+			int row_delim_len = m_row_delim != null ? m_row_delim.Length : 0;
+			if (range.Count < m_fileend - row_delim_len)
 			{
 				if (!range.Equals(m_scroll_file.ThumbRange))
 					Log.Info("File scroll set to [{0},{1}) within file [{2},{3})", range.m_begin, range.m_end, FileByteRange.m_begin, FileByteRange.m_end);
