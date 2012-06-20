@@ -39,6 +39,8 @@
 			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_jump_to_start = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
@@ -129,10 +131,12 @@
             this.m_btn_options,
             this.toolStripSeparator1,
             this.m_btn_jump_to_end,
+            this.m_btn_jump_to_start,
+            this.toolStripSeparator8,
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(220, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(285, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -203,6 +207,21 @@
 			this.m_btn_jump_to_end.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_jump_to_end.Text = "File End";
 			this.m_btn_jump_to_end.ToolTipText = "Jump to the file end";
+			// 
+			// m_btn_jump_to_start
+			// 
+			this.m_btn_jump_to_start.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_jump_to_start.Image = global::RyLogViewer.Properties.Resources.upred;
+			this.m_btn_jump_to_start.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_jump_to_start.Name = "m_btn_jump_to_start";
+			this.m_btn_jump_to_start.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_jump_to_start.Text = "File Start";
+			this.m_btn_jump_to_start.ToolTipText = "Jump to the file start";
+			// 
+			// toolStripSeparator8
+			// 
+			this.toolStripSeparator8.Name = "toolStripSeparator8";
+			this.toolStripSeparator8.Size = new System.Drawing.Size(6, 31);
 			// 
 			// m_btn_tail
 			// 
@@ -851,6 +870,8 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_lf;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_custom;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_ghost_mode;
+		private System.Windows.Forms.ToolStripButton m_btn_jump_to_start;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
 	}
 }
 

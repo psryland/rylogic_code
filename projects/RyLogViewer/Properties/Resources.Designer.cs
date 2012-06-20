@@ -629,6 +629,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Scroll to the first log file row.
+        /// </summary>
+        internal static string ScrollToStart {
+            get {
+                return ResourceManager.GetString("ScrollToStart", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Left click to enable/disable filters.
         ///Right click to show the filters dialog.
         /// </summary>
@@ -663,6 +672,13 @@ namespace RyLogViewer.Properties {
         internal static string UnknownCmdLineOption {
             get {
                 return ResourceManager.GetString("UnknownCmdLineOption", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap upred {
+            get {
+                object obj = ResourceManager.GetObject("upred", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

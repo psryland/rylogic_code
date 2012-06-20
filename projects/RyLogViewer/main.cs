@@ -114,24 +114,26 @@ namespace RyLogViewer
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
-			m_btn_open_log.ToolTipText    = Resources.OpenLogFile;
-			m_btn_open_log.Click         += (s,a) => OpenLogFile();
-			m_btn_refresh.ToolTipText     = Resources.ReloadLogFile;
-			m_btn_refresh.Click          += (s,a) => BuildLineIndex(m_filepos, true);
-			m_btn_highlights.ToolTipText  = Resources.ShowHighlightsDialog;
-			m_btn_highlights.Click       += (s,a) => EnableHighlights(m_btn_highlights.Checked);
-			m_btn_highlights.MouseDown   += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
-			m_btn_filters.ToolTipText     = Resources.ShowFiltersDialog;
-			m_btn_filters.Click          += (s,a) => EnableFilters(m_btn_filters.Checked);
-			m_btn_filters.MouseDown      += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
-			m_btn_options.ToolTipText     = Resources.ShowOptionsDialog;
-			m_btn_options.Click          += (s,a) => ShowOptions(SettingsUI.ETab.General);
-			m_btn_jump_to_end.ToolTipText = Resources.ScrollToEnd;
-			m_btn_jump_to_end.Click      += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
-			m_btn_tail.ToolTipText        = Resources.WatchForUpdates;
-			m_btn_tail.Click             += (s,a) => EnableTail(m_btn_tail.Checked);
-			m_toolstrip.Move             += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
-			ToolStripManager.Renderer     = new CheckedButtonRenderer();
+			m_btn_open_log.ToolTipText      = Resources.OpenLogFile;
+			m_btn_open_log.Click           += (s,a) => OpenLogFile();
+			m_btn_refresh.ToolTipText       = Resources.ReloadLogFile;
+			m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
+			m_btn_highlights.ToolTipText    = Resources.ShowHighlightsDialog;
+			m_btn_highlights.Click         += (s,a) => EnableHighlights(m_btn_highlights.Checked);
+			m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
+			m_btn_filters.ToolTipText       = Resources.ShowFiltersDialog;
+			m_btn_filters.Click            += (s,a) => EnableFilters(m_btn_filters.Checked);
+			m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
+			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
+			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
+			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
+			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRow = 0);
+			m_btn_jump_to_end.ToolTipText   = Resources.ScrollToEnd;
+			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+			m_btn_tail.ToolTipText          = Resources.WatchForUpdates;
+			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
+			m_toolstrip.Move               += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
+			ToolStripManager.Renderer       = new CheckedButtonRenderer();
 
 			// Scrollbar
 			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file");
@@ -140,8 +142,10 @@ namespace RyLogViewer
 				{
 					// Update on ScrollEnd not value changed, since
 					// UpdateUI() sets Value when the build is complete.
-					Log.Info("file scroll to {0}", m_scroll_file.ThumbRange.Mid);
-					BuildLineIndex(m_scroll_file.ThumbRange.Mid, false);
+					var range = m_scroll_file.ThumbRange;
+					long pos = (range.m_begin == 0) ? 0 : (range.m_end == m_fileend) ? m_fileend : range.Mid;
+					Log.Info("file scroll to {0}", pos);
+					BuildLineIndex(pos, false);
 				};
 
 			// Status
