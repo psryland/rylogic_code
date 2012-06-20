@@ -271,7 +271,7 @@ namespace RyLogViewer
 			FiltersEnabled                  = true;
 			TailEnabled                     = false;
 			FileBufSize                     = 10 * 1024 * 1024;
-			LineCacheCount                  = 2000;
+			LineCacheCount                  = 10000;
 			HighlightPatterns               = "<root/>";
 			FilterPatterns                  = "<root/>";
 			HighlightPatternSets            = "<root/>";

@@ -101,6 +101,7 @@ namespace RyLogViewer
 		{
 			Log.Info("build (id {0}) cancelled", m_build_issue);
 			Interlocked.Increment(ref m_build_issue);
+			UpdateStatusProgress(1,1);
 		}
 
 		/// <summary>
@@ -211,15 +212,13 @@ namespace RyLogViewer
 										// line cache. Make sure the range and number of lines to scan are correct.
 										if (toward_start)
 										{
-											bwd_lines -= Maths.Clamp(next_line_index - 0               ,0 ,line_cache_count/2);
 											fwd_lines = 0;
-											if (bwd_lines == 0) rng.m_begin = rng.m_end;
+											bwd_lines -= Maths.Clamp(next_line_index - 0, 0, line_cache_count/2);
 										}
 										else
 										{
 											bwd_lines = 0;
-											fwd_lines -= Maths.Clamp(last_line_count - next_line_index ,0 ,line_cache_count/2);
-											if (fwd_lines == 0) rng.m_end = rng.m_begin;
+											fwd_lines -= Maths.Clamp(last_line_count - next_line_index, 0, line_cache_count/2);
 										}
 									}
 									else
@@ -227,6 +226,8 @@ namespace RyLogViewer
 										scan_backward = toward_start;
 									}
 								}
+								Debug.Assert(rng.Count >= 0);
+								Debug.Assert(fwd_lines + bwd_lines != 0 || rng.Empty);
 							}
 							
 							// Caps the number of lines read for each of the forward and backward searches
@@ -262,7 +263,7 @@ namespace RyLogViewer
 							// Callback for updating progress
 							ProgressFunc progress = (scanned, length) =>
 								{
-									Action update_progress_bar = () => UpdateStatusProgress(fwd_line_buf.Count + bwd_line_buf.Count, line_cache_count);
+									Action update_progress_bar = () => UpdateStatusProgress(scanned, length);//fwd_line_buf.Count + bwd_line_buf.Count, line_cache_count);
 									BeginInvoke(update_progress_bar);
 									return !BuildCancelled(build_issue);
 								};
@@ -310,11 +311,7 @@ namespace RyLogViewer
 					catch (Exception ex) { Debug.WriteLine("Exception ended BuildLineIndex() call: " + ex.Message); }
 					finally
 					{
-						Action update_progress_bar = ()=>
-							{
-								if (!BuildCancelled(build_issue))
-									UpdateStatusProgress(1,1);
-							};
+						Action update_progress_bar = ()=>{ UpdateStatusProgress(1,1); };
 						BeginInvoke(update_progress_bar);
 					}
 				}, m_build_issue);

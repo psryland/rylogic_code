@@ -150,9 +150,11 @@ namespace RyLogViewer
 
 			// Status
 			m_status.Move += (s,a) => m_settings.StatusPosition = m_status.Location;
-			m_status_progress.Minimum = 0;
-			m_status_progress.Maximum = 100;
-			m_status_progress.Visible = false;
+			m_status_progress.ToolTipText = "Press escape to cancel";
+			m_status_progress.Minimum     = 0;
+			m_status_progress.Maximum     = 100;
+			m_status_progress.Visible     = false;
+			m_status_progress.Text        = "Test";
 
 			// Setup the grid
 			m_grid.RowCount             = 0;
@@ -441,16 +443,17 @@ namespace RyLogViewer
 		/// the line range and causes a reload if it is</summary>
 		private void LoadNearBoundary()
 		{
-			if (m_grid.RowCount == 0) return;
-			const float file_scroll_limit = 0.1f;
-			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount);
-			if (ratio < 0f + file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_begin, false);
-			if (ratio > 1f - file_scroll_limit) BuildLineIndex(LineStartIndexRange.m_end  , false);
+			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit) return;
+			const float limit = 1f / Constants.AutoScrollAtBoundaryLimit;
+			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount - 1);
+			if (ratio < 0f + limit) BuildLineIndex(LineStartIndexRange.m_begin, false);
+			if (ratio > 1f - limit) BuildLineIndex(LineStartIndexRange.m_end  , false);
 		}
 
 		/// <summary>Handle key down events for the grid</summary>
 		private void HandleKeyDown(KeyEventArgs e)
 		{
+			if (e.KeyCode == Keys.Escape)                { CancelBuildLineIndex(); }
 			if (e.KeyCode == Keys.F5)                    { BuildLineIndex(m_filepos, true); e.Handled = true; }
 			if (e.KeyCode == Keys.PageUp && e.Control)   { BuildLineIndex(0        , false, () => SelectedRow = 0                  ); e.Handled = true; }
 			if (e.KeyCode == Keys.PageDown && e.Control) { BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1); e.Handled = true; }

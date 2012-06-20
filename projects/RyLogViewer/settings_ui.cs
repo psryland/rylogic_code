@@ -146,7 +146,7 @@ namespace RyLogViewer
 			// Lines cached
 			m_spinner_line_cache_count.ToolTip(m_tt, "The number of lines to scan into memory around the currently selected line");
 			m_spinner_line_cache_count.Minimum = 1;
-			m_spinner_line_cache_count.Maximum = 100000;
+			m_spinner_line_cache_count.Maximum = 99999999;
 			m_spinner_line_cache_count.Value = Maths.Clamp(m_settings.LineCacheCount, (int)m_spinner_line_cache_count.Minimum, (int)m_spinner_line_cache_count.Maximum);
 			m_spinner_line_cache_count.ValueChanged += (s,a)=>
 				{

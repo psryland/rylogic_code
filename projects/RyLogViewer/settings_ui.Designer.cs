@@ -32,12 +32,14 @@
 			this.m_tabctrl = new System.Windows.Forms.TabControl();
 			this.m_tab_general = new System.Windows.Forms.TabPage();
 			this.m_group_grid = new System.Windows.Forms.GroupBox();
+			this.m_lbl_max_scan_size1 = new System.Windows.Forms.Label();
+			this.m_lbl_history_length1 = new System.Windows.Forms.Label();
+			this.m_spinner_line_cache_count = new System.Windows.Forms.NumericUpDown();
 			this.m_spinner_max_mem_range = new System.Windows.Forms.NumericUpDown();
 			this.m_lbl_max_scan_size0 = new System.Windows.Forms.Label();
 			this.m_check_file_changes_additive = new System.Windows.Forms.CheckBox();
 			this.m_check_open_at_end = new System.Windows.Forms.CheckBox();
 			this.m_lbl_history_length0 = new System.Windows.Forms.Label();
-			this.m_spinner_line_cache_count = new System.Windows.Forms.NumericUpDown();
 			this.m_group_line_ends = new System.Windows.Forms.GroupBox();
 			this.m_lbl_column_count = new System.Windows.Forms.Label();
 			this.m_spinner_column_count = new System.Windows.Forms.NumericUpDown();
@@ -77,13 +79,11 @@
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
-			this.m_lbl_history_length1 = new System.Windows.Forms.Label();
-			this.m_lbl_max_scan_size1 = new System.Windows.Forms.Label();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_grid.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_mem_range)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_line_cache_count)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_mem_range)).BeginInit();
 			this.m_group_line_ends.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_column_count)).BeginInit();
 			this.m_group_startup.SuspendLayout();
@@ -151,6 +151,50 @@
 			this.m_group_grid.TabStop = false;
 			this.m_group_grid.Text = "File Loading";
 			// 
+			// m_lbl_max_scan_size1
+			// 
+			this.m_lbl_max_scan_size1.AutoSize = true;
+			this.m_lbl_max_scan_size1.Location = new System.Drawing.Point(121, 52);
+			this.m_lbl_max_scan_size1.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
+			this.m_lbl_max_scan_size1.Name = "m_lbl_max_scan_size1";
+			this.m_lbl_max_scan_size1.Size = new System.Drawing.Size(75, 13);
+			this.m_lbl_max_scan_size1.TabIndex = 6;
+			this.m_lbl_max_scan_size1.Text = "MB of file data";
+			this.m_lbl_max_scan_size1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_lbl_history_length1
+			// 
+			this.m_lbl_history_length1.AutoSize = true;
+			this.m_lbl_history_length1.Location = new System.Drawing.Point(117, 24);
+			this.m_lbl_history_length1.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
+			this.m_lbl_history_length1.Name = "m_lbl_history_length1";
+			this.m_lbl_history_length1.Size = new System.Drawing.Size(78, 13);
+			this.m_lbl_history_length1.TabIndex = 5;
+			this.m_lbl_history_length1.Text = "lines in memory";
+			this.m_lbl_history_length1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_spinner_line_cache_count
+			// 
+			this.m_spinner_line_cache_count.Location = new System.Drawing.Point(45, 21);
+			this.m_spinner_line_cache_count.Maximum = new decimal(new int[] {
+            99999999,
+            0,
+            0,
+            0});
+			this.m_spinner_line_cache_count.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+			this.m_spinner_line_cache_count.Name = "m_spinner_line_cache_count";
+			this.m_spinner_line_cache_count.Size = new System.Drawing.Size(68, 20);
+			this.m_spinner_line_cache_count.TabIndex = 0;
+			this.m_spinner_line_cache_count.Value = new decimal(new int[] {
+            99999999,
+            0,
+            0,
+            0});
+			// 
 			// m_spinner_max_mem_range
 			// 
 			this.m_spinner_max_mem_range.Location = new System.Drawing.Point(76, 50);
@@ -209,28 +253,6 @@
 			this.m_lbl_history_length0.TabIndex = 3;
 			this.m_lbl_history_length0.Text = "Cache";
 			this.m_lbl_history_length0.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
-			// m_spinner_line_cache_count
-			// 
-			this.m_spinner_line_cache_count.Location = new System.Drawing.Point(45, 21);
-			this.m_spinner_line_cache_count.Maximum = new decimal(new int[] {
-            100000,
-            0,
-            0,
-            0});
-			this.m_spinner_line_cache_count.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-			this.m_spinner_line_cache_count.Name = "m_spinner_line_cache_count";
-			this.m_spinner_line_cache_count.Size = new System.Drawing.Size(68, 20);
-			this.m_spinner_line_cache_count.TabIndex = 0;
-			this.m_spinner_line_cache_count.Value = new decimal(new int[] {
-            100000,
-            0,
-            0,
-            0});
 			// 
 			// m_group_line_ends
 			// 
@@ -622,8 +644,8 @@
 			// m_split_ft.Panel2
 			// 
 			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
-			this.m_split_ft.Size = new System.Drawing.Size(192, 74);
-			this.m_split_ft.SplitterDistance = 25;
+			this.m_split_ft.Size = new System.Drawing.Size(494, 432);
+			this.m_split_ft.SplitterDistance = 145;
 			this.m_split_ft.TabIndex = 5;
 			// 
 			// m_pattern_ft
@@ -633,7 +655,7 @@
 			this.m_pattern_ft.Location = new System.Drawing.Point(0, 0);
 			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.Name = "m_pattern_ft";
-			this.m_pattern_ft.Size = new System.Drawing.Size(336, 92);
+			this.m_pattern_ft.Size = new System.Drawing.Size(494, 145);
 			this.m_pattern_ft.TabIndex = 0;
 			// 
 			// m_table_ft
@@ -648,7 +670,7 @@
 			this.m_table_ft.RowCount = 2;
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ft.Size = new System.Drawing.Size(192, 45);
+			this.m_table_ft.Size = new System.Drawing.Size(494, 283);
 			this.m_table_ft.TabIndex = 4;
 			// 
 			// m_grid_filter
@@ -664,7 +686,7 @@
 			this.m_grid_filter.Name = "m_grid_filter";
 			this.m_grid_filter.RowHeadersWidth = 24;
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(186, 1);
+			this.m_grid_filter.Size = new System.Drawing.Size(488, 233);
 			this.m_grid_filter.TabIndex = 0;
 			// 
 			// m_pattern_set_ft
@@ -672,33 +694,11 @@
 			this.m_pattern_set_ft.AutoSize = true;
 			this.m_pattern_set_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 4);
+			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 242);
 			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
+			this.m_pattern_set_ft.Size = new System.Drawing.Size(488, 38);
 			this.m_pattern_set_ft.TabIndex = 1;
-			// 
-			// m_lbl_history_length1
-			// 
-			this.m_lbl_history_length1.AutoSize = true;
-			this.m_lbl_history_length1.Location = new System.Drawing.Point(117, 24);
-			this.m_lbl_history_length1.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
-			this.m_lbl_history_length1.Name = "m_lbl_history_length1";
-			this.m_lbl_history_length1.Size = new System.Drawing.Size(78, 13);
-			this.m_lbl_history_length1.TabIndex = 5;
-			this.m_lbl_history_length1.Text = "lines in memory";
-			this.m_lbl_history_length1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
-			// m_lbl_max_scan_size1
-			// 
-			this.m_lbl_max_scan_size1.AutoSize = true;
-			this.m_lbl_max_scan_size1.Location = new System.Drawing.Point(121, 52);
-			this.m_lbl_max_scan_size1.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
-			this.m_lbl_max_scan_size1.Name = "m_lbl_max_scan_size1";
-			this.m_lbl_max_scan_size1.Size = new System.Drawing.Size(75, 13);
-			this.m_lbl_max_scan_size1.TabIndex = 6;
-			this.m_lbl_max_scan_size1.Text = "MB of file data";
-			this.m_lbl_max_scan_size1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// SettingsUI
 			// 
@@ -715,8 +715,8 @@
 			this.m_tab_general.ResumeLayout(false);
 			this.m_group_grid.ResumeLayout(false);
 			this.m_group_grid.PerformLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_mem_range)).EndInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_line_cache_count)).EndInit();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_mem_range)).EndInit();
 			this.m_group_line_ends.ResumeLayout(false);
 			this.m_group_line_ends.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_column_count)).EndInit();
