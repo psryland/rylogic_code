@@ -644,8 +644,8 @@
 			// m_split_ft.Panel2
 			// 
 			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
-			this.m_split_ft.Size = new System.Drawing.Size(494, 432);
-			this.m_split_ft.SplitterDistance = 145;
+			this.m_split_ft.Size = new System.Drawing.Size(192, 74);
+			this.m_split_ft.SplitterDistance = 25;
 			this.m_split_ft.TabIndex = 5;
 			// 
 			// m_pattern_ft
@@ -655,7 +655,7 @@
 			this.m_pattern_ft.Location = new System.Drawing.Point(0, 0);
 			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.Name = "m_pattern_ft";
-			this.m_pattern_ft.Size = new System.Drawing.Size(494, 145);
+			this.m_pattern_ft.Size = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.TabIndex = 0;
 			// 
 			// m_table_ft
@@ -670,7 +670,7 @@
 			this.m_table_ft.RowCount = 2;
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ft.Size = new System.Drawing.Size(494, 283);
+			this.m_table_ft.Size = new System.Drawing.Size(192, 45);
 			this.m_table_ft.TabIndex = 4;
 			// 
 			// m_grid_filter
@@ -686,7 +686,7 @@
 			this.m_grid_filter.Name = "m_grid_filter";
 			this.m_grid_filter.RowHeadersWidth = 24;
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(488, 233);
+			this.m_grid_filter.Size = new System.Drawing.Size(186, 1);
 			this.m_grid_filter.TabIndex = 0;
 			// 
 			// m_pattern_set_ft
@@ -694,10 +694,10 @@
 			this.m_pattern_set_ft.AutoSize = true;
 			this.m_pattern_set_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 242);
+			this.m_pattern_set_ft.Location = new System.Drawing.Point(3, 4);
 			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(488, 38);
+			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.TabIndex = 1;
 			// 
 			// SettingsUI

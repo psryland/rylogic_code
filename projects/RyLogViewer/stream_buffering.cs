@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.IO.Ports;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
@@ -211,7 +212,8 @@ namespace RyLogViewer
 		{
 			public readonly Stream Stream;
 			public readonly byte[] Buffer;
-			public AsyncData(Stream s, byte[] b) { Stream = s; Buffer = b; }
+			public int Read;               // the valid data size in 'Buffer'
+			public AsyncData(Stream s, byte[] b) { Stream = s; Buffer = b; Read = 0; }
 		}
 
 		protected readonly object m_lock;   // Sync writes to the file
@@ -265,11 +267,11 @@ namespace RyLogViewer
 			{
 				try
 				{
-					int read = data.Stream.EndRead(ar);
+					data.Read = data.Stream.EndRead(ar);
 					if (m_outp == null) return;
-					if (read != 0 || IsConnected)
+					if (data.Read != 0 || IsConnected)
 					{
-						m_outp.Write(data.Buffer, 0, read);
+						m_outp.Write(data.Buffer, 0, data.Read);
 						m_outp.Flush();
 						data.Stream.BeginRead(data.Buffer, 0, data.Buffer.Length, DataRecv, data);
 						return;
@@ -338,6 +340,10 @@ namespace RyLogViewer
 			m_process.Start();
 			Log.Info("Process {0} started", m_process.ProcessName);
 			
+			// Attach to the window console so we can forward received data to it
+			if (m_launch.ShowWindow)
+				Win32.AttachConsole(m_process.Id);
+			
 			// Capture stdout
 			if (m_launch.CaptureStdout)
 				m_process.StandardOutput.BaseStream.BeginRead(m_outbuf, 0, m_outbuf.Length, DataRecv, new AsyncData(m_process.StandardOutput.BaseStream, m_outbuf));
@@ -353,6 +359,22 @@ namespace RyLogViewer
 			get { return m_process != null && !m_process.HasExited; }
 		}
 
+		/// <summary>Handler for async reads from a stream</summary>
+		protected override void DataRecv(IAsyncResult ar)
+		{
+			base.DataRecv(ar);
+			if (!m_launch.ShowWindow) return;
+			
+			// If we're "showing the window" forward recieved data to the window
+			AsyncData data = (AsyncData)ar.AsyncState;
+			lock (m_lock)
+			{
+				Win32.AttachConsole(m_process.Id);
+				char[] msg = Encoding.ASCII.GetChars(data.Buffer, 0, data.Read);
+				Console.Write(msg);
+			}
+		}
+		
 		/// <summary>Cleanup</summary>
 		public override void Dispose()
 		{

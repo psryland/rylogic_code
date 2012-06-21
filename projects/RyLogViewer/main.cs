@@ -920,11 +920,11 @@ namespace RyLogViewer
 				// Auto scroll if the last row of the file is visible and selected in the grid
 				int row_delim_length = m_row_delim != null ? m_row_delim.Length : 0;
 				return
-					m_grid.RowCount != 0 &&                                     // the grid has data
-					m_line_index.Count != 0 &&                                  // rows of the file are cached
-					SelectedRow == m_grid.RowCount - 1 &&                       // last row selected
-					m_grid.Rows[m_grid.RowCount - 1].Displayed &&               // last row displayed
-					m_line_index.Last().Contains(m_fileend - row_delim_length); // last row in the file
+					m_grid.RowCount != 0 &&                                         // the grid has data
+					m_line_index.Count != 0 &&                                      // rows of the file are cached
+					SelectedRow == m_grid.RowCount - 1 &&                           // last row selected
+					m_grid.Rows[m_grid.RowCount - 1].Displayed &&                   // last row displayed
+					m_line_index.Last().Contains(m_fileend - row_delim_length - 1); // last row in the file
 			}
 		}
 

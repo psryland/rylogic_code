@@ -467,6 +467,7 @@ namespace pr.util
 		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   AllocConsole();
 		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   FreeConsole();
 		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   AttachConsole(int dwProcessId);
+		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   WriteConsole(IntPtr hConsoleOutput, string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
 		[DllImport("ole32.dll")]                                  public static extern void   CoTaskMemFree(IntPtr ptr);
 		[DllImport("gdi32.dll", EntryPoint="DeleteObject")]       public static extern bool   DeleteObject(IntPtr hObject);
 	}
