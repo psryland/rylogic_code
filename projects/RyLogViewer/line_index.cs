@@ -99,7 +99,7 @@ namespace RyLogViewer
 		/// <summary>Cause a currently running BuildLineIndex call to be cancelled</summary>
 		private void CancelBuildLineIndex() // will be used when caching numbers of lines, not byte range
 		{
-			Log.Info("build (id {0}) cancelled", m_build_issue);
+			Log.Info(this, "build (id {0}) cancelled", m_build_issue);
 			Interlocked.Increment(ref m_build_issue);
 			UpdateStatusProgress(1,1);
 		}
@@ -129,8 +129,8 @@ namespace RyLogViewer
 			// Cause any existing builds to stop by changing the issue number
 			Interlocked.Increment(ref m_build_issue);
 			m_reload_in_progress = reload;
-			//Log.Info("build start request (id {0})", m_build_issue);
-			Log.Info("build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
+			//Log.Info(this, "build start request (id {0})", m_build_issue);
+			Log.Info(this, "build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
 				
 			// Find the byte range of the file currently loaded
 			Range line_index_range  = LineIndexRange;
@@ -160,7 +160,7 @@ namespace RyLogViewer
 					int build_issue = (int)bi;
 					try
 					{
-						Log.Info("build started. (id {0})", build_issue);
+						Log.Info(this, "build started. (id {0})", build_issue);
 						if (BuildCancelled(build_issue)) return;
 						using (var file = LoadFile(m_filepath))
 						{
@@ -558,7 +558,7 @@ namespace RyLogViewer
 					row_delta = new_idx - old_idx;
 				}
 				
-				Log.Info("Replacing results. {0} lines about filepos {1}/{2}", line_index.Count, filepos, fileend);
+				Log.Info(this, "Replacing results. {0} lines about filepos {1}/{2}", line_index.Count, filepos, fileend);
 				m_line_index = line_index;
 				
 				// Invalidate the cache since the cached data may now be different
@@ -576,7 +576,7 @@ namespace RyLogViewer
 						--row_delta;
 					}
 					
-					Log.Info("Merging results front. {0} lines added. filepos {1}/{2}", line_index.Count, filepos, fileend);
+					Log.Info(this, "Merging results front. {0} lines added. filepos {1}/{2}", line_index.Count, filepos, fileend);
 					m_line_index.InsertRange(0, line_index);
 					row_delta += line_index.Count;
 					
@@ -599,7 +599,7 @@ namespace RyLogViewer
 					while (m_line_index.Count != 0 && new_rng.Contains(m_line_index.Last().m_begin))
 						m_line_index.RemoveAt(m_line_index.Count - 1);
 					
-					Log.Info("Merging results tail. {0} lines added. filepos {1}/{2}", line_index.Count, filepos, fileend);
+					Log.Info(this, "Merging results tail. {0} lines added. filepos {1}/{2}", line_index.Count, filepos, fileend);
 					m_line_index.AddRange(line_index);
 					
 					// Trim the head

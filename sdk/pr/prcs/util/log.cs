@@ -26,6 +26,14 @@ namespace pr.util
 
 		/// <summary>Return the current process id</summary>
 		private static int Id { get { return Process.GetCurrentProcess().Id; } }
+		
+		/// <summary>Creates a tag based on the namespcase and type of the sender</summary>
+		private static string GetTag(object sender)
+		{
+			if (sender == null) return "static";
+			Type sender_type = sender.GetType();
+			return string.Format("{0}.{1}", sender_type.Namespace, sender_type.Name);
+		}
 
 		/// <summary>Register a log file for the current process id. Pass null for filepath to log to the debug window</summary>
 		[Conditional("PR_LOGGING")] public static void Register(string filepath, bool reset)
@@ -51,7 +59,7 @@ namespace pr.util
 		}
 		
 		/// <summary>Add a string to the log</summary>
-		[Conditional("PR_LOGGING")] public static void Write(string str)
+		[Conditional("PR_LOGGING")] private static void Write(string str)
 		{
 			LogFile lf; lock (m_lock) lf = m_logs[Id];
 			if (lf == null) { Debug.Write(str); return; }
@@ -60,27 +68,27 @@ namespace pr.util
 		}
 
 		/// <summary>Write info to the current log</summary>
-		[Conditional("PR_LOGGING")] public static void Info(string str, params object[] args)
+		[Conditional("PR_LOGGING")] public static void Info(object sender, string str, params object[] args)
 		{
-			Write(string.Format("[info] "+str+Environment.NewLine, args));
+			Write(string.Format("[info][{0}] {1}"+Environment.NewLine, GetTag(sender), string.Format(str, args)));
 		}
 		
 		/// <summary>Write info to the current log</summary>
-		[Conditional("PR_LOGGING")] public static void Warn(string str, params object[] args)
+		[Conditional("PR_LOGGING")] public static void Warn(object sender, string str, params object[] args)
 		{
-			Write(string.Format("[warn] "+str+Environment.NewLine, args));
+			Write(string.Format("[warn][{0}] {1}"+Environment.NewLine, GetTag(sender), string.Format(str, args)));
 		}
 		
 		/// <summary>Write info to the current log</summary>
-		[Conditional("PR_LOGGING")] public static void Error(string str, params object[] args)
+		[Conditional("PR_LOGGING")] public static void Error(object sender, string str, params object[] args)
 		{
-			Write(string.Format("[error] "+str+Environment.NewLine, args));
+			Write(string.Format("[error][{0}] {1}"+Environment.NewLine, GetTag(sender), string.Format(str, args)));
 		}
 		
 		/// <summary>Write info to the current log</summary>
-		[Conditional("PR_LOGGING")] public static void Exception(Exception ex, string str, params object[] args)
+		[Conditional("PR_LOGGING")] public static void Exception(object sender, Exception ex, string str, params object[] args)
 		{
-			Write(string.Format("[exception] "+str+Environment.NewLine, args));
+			Write(string.Format("[exception][{0}] {1}"+Environment.NewLine, GetTag(sender), string.Format(str, args)));
 			Write(string.Format("[exception] {0}"+Environment.NewLine, ex));
 		}
 	}

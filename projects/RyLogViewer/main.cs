@@ -52,7 +52,7 @@ namespace RyLogViewer
 		public Main(string[] args)
 		{
 			Log.Register(null, false);
-			Log.Info("App Startup: {0}", DateTime.Now);
+			Log.Info(this, "App Startup: {0}", DateTime.Now);
 
 			InitializeComponent();
 			AllowTransparency   = true;
@@ -75,7 +75,7 @@ namespace RyLogViewer
 			
 			m_settings.SettingChanged += (s,a)=>
 			{
-				Log.Info("Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
+				Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
 			};
 			
 			// Menu
@@ -144,7 +144,7 @@ namespace RyLogViewer
 					// UpdateUI() sets Value when the build is complete.
 					var range = m_scroll_file.ThumbRange;
 					long pos = (range.m_begin == 0) ? 0 : (range.m_end == m_fileend) ? m_fileend : range.Mid;
-					Log.Info("file scroll to {0}", pos);
+					Log.Info(this, "file scroll to {0}", pos);
 					BuildLineIndex(pos, false);
 				};
 
@@ -382,7 +382,7 @@ namespace RyLogViewer
 		private void OnFileChanged()
 		{
 			long len = m_file.Length;
-			Log.Info("File {0} changed. File length: {1}", m_filepath, len);
+			Log.Info(this, "File {0} changed. File length: {1}", m_filepath, len);
 			
 			if (AutoScrollTail) BuildLineIndex(m_file.Length, !m_settings.FileChangesAdditive);
 			else                BuildLineIndex(m_filepos    , !m_settings.FileChangesAdditive);
@@ -544,7 +544,7 @@ namespace RyLogViewer
 			m_last_find_pattern = pat;
 			
 			var start = m_line_index[SelectedRow].m_end;
-			Log.Info("FindNext starting from {0}", start);
+			Log.Info(this, "FindNext starting from {0}", start);
 			
 			long found;
 			if (Find(pat, start, false, out found) && found == -1)
@@ -558,7 +558,7 @@ namespace RyLogViewer
 			m_last_find_pattern = pat;
 			
 			var start = SelectedRowRange.m_begin;
-			Log.Info("FindPrev starting from {0}", start);
+			Log.Info(this, "FindPrev starting from {0}", start);
 			
 			long found;
 			if (Find(pat, start, true, out found) && found == -1)
@@ -900,7 +900,7 @@ namespace RyLogViewer
 				using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
 				{
 					value = m_grid.SelectRow(value);
-					Log.Info("Row {0} selected", value);
+					Log.Info(this, "Row {0} selected", value);
 					
 					if (m_grid.RowCount != 0 && value != -1)
 					{
@@ -935,7 +935,7 @@ namespace RyLogViewer
 			int displayed_rows = m_grid.DisplayedRowCount(false);
 			int first_row = Math.Max(0, m_grid.RowCount - displayed_rows);
 			m_grid.FirstDisplayedScrollingRowIndex = first_row;
-			Log.Info("Showing last row. First({0}) + Displayed({1}) = {2}. RowCount = {3}", first_row, displayed_rows, first_row + displayed_rows, m_grid.RowCount);
+			Log.Info(this, "Showing last row. First({0}) + Displayed({1}) = {2}. RowCount = {3}", first_row, displayed_rows, first_row + displayed_rows, m_grid.RowCount);
 		}
 
 		/// <summary>Returns true if grid event handlers should process grid events</summary>
@@ -955,7 +955,7 @@ namespace RyLogViewer
 				int selected = SelectedRow;
 				SelectedRow = -1;
 				
-				Log.Info("RowCount changed. Row delta {0}. Selected row: {1}->{2}. First visible row: {3}->{4}. Auto scroll {5}" ,row_delta ,selected ,selected+row_delta ,first_vis ,first_vis+row_delta ,auto_scroll_tail);
+				Log.Info(this, "RowCount changed. Row delta {0}. Selected row: {1}->{2}. First visible row: {3}->{4}. Auto scroll {5}" ,row_delta ,selected ,selected+row_delta ,first_vis ,first_vis+row_delta ,auto_scroll_tail);
 				m_grid.RowCount = 0;
 				m_grid.RowCount = count;
 				
@@ -978,7 +978,7 @@ namespace RyLogViewer
 		/// Note: it does't trigger a file reload.</summary>
 		private void ApplySettings()
 		{
-			Log.Info("Applying settings");
+			Log.Info(this, "Applying settings");
 			
 			// Cached settings for performance, don't overwrite auto detected cached values tho
 			m_encoding   = GetEncoding(m_settings.Encoding);
@@ -1041,7 +1041,7 @@ namespace RyLogViewer
 		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
 		private void UpdateUI(int row_delta = 0)
 		{
-			Log.Info("UpdateUI. Row delta {0}", row_delta);
+			Log.Info(this, "UpdateUI. Row delta {0}", row_delta);
 			
 			// Don't suspend events by removing/adding handlers because that pattern doesn't nest
 			using (m_grid.SuspendLayout(true))
@@ -1184,7 +1184,7 @@ namespace RyLogViewer
 			if (range.Count < m_fileend - row_delim_len)
 			{
 				if (!range.Equals(m_scroll_file.ThumbRange))
-					Log.Info("File scroll set to [{0},{1}) within file [{2},{3})", range.m_begin, range.m_end, FileByteRange.m_begin, FileByteRange.m_end);
+					Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})", range.m_begin, range.m_end, FileByteRange.m_begin, FileByteRange.m_end);
 				
 				m_scroll_file.Visible    = true;
 				m_scroll_file.TotalRange = FileByteRange;

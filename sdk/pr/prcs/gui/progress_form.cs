@@ -83,7 +83,7 @@ namespace pr.gui
 				};
 			m_bgw.RunWorkerCompleted += (s,e)=>
 				{
-					Log.Info("Progress form worker complete");
+					Log.Info(this, "Progress form worker complete");
 					if ((Error = e.Error) != null) DialogResult = DialogResult.Abort;
 					else if (e.Cancelled)          DialogResult = DialogResult.Cancel;
 					else                           DialogResult = DialogResult.OK;
