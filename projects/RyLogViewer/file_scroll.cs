@@ -169,6 +169,7 @@ namespace RyLogViewer
 		/// <summary>Paint the scrollbar</summary>
 		protected override void OnPaint(PaintEventArgs e)
 		{
+			base.OnPaint(e);
 			const float rad = 4f;
 			var gfx = e.Graphics;
 			var bounds = e.ClipRectangle; bounds.Inflate(-1,0);
