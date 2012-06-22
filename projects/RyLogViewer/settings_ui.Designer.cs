@@ -49,6 +49,7 @@
 			this.m_edit_line_ends = new System.Windows.Forms.TextBox();
 			this.m_lbl_line_ends = new System.Windows.Forms.Label();
 			this.m_group_startup = new System.Windows.Forms.GroupBox();
+			this.m_check_c4u = new System.Windows.Forms.CheckBox();
 			this.m_check_show_totd = new System.Windows.Forms.CheckBox();
 			this.m_check_save_screen_loc = new System.Windows.Forms.CheckBox();
 			this.m_check_load_last_file = new System.Windows.Forms.CheckBox();
@@ -144,7 +145,7 @@
 			this.m_group_grid.Controls.Add(this.m_check_file_changes_additive);
 			this.m_group_grid.Controls.Add(this.m_check_open_at_end);
 			this.m_group_grid.Controls.Add(this.m_lbl_history_length0);
-			this.m_group_grid.Location = new System.Drawing.Point(8, 99);
+			this.m_group_grid.Location = new System.Drawing.Point(8, 138);
 			this.m_group_grid.Name = "m_group_grid";
 			this.m_group_grid.Size = new System.Drawing.Size(205, 142);
 			this.m_group_grid.TabIndex = 6;
@@ -345,15 +346,26 @@
 			// 
 			// m_group_startup
 			// 
+			this.m_group_startup.Controls.Add(this.m_check_c4u);
 			this.m_group_startup.Controls.Add(this.m_check_show_totd);
 			this.m_group_startup.Controls.Add(this.m_check_save_screen_loc);
 			this.m_group_startup.Controls.Add(this.m_check_load_last_file);
 			this.m_group_startup.Location = new System.Drawing.Point(8, 6);
 			this.m_group_startup.Name = "m_group_startup";
-			this.m_group_startup.Size = new System.Drawing.Size(205, 87);
+			this.m_group_startup.Size = new System.Drawing.Size(205, 114);
 			this.m_group_startup.TabIndex = 4;
 			this.m_group_startup.TabStop = false;
 			this.m_group_startup.Text = "Startup";
+			// 
+			// m_check_c4u
+			// 
+			this.m_check_c4u.AutoSize = true;
+			this.m_check_c4u.Location = new System.Drawing.Point(14, 88);
+			this.m_check_c4u.Name = "m_check_c4u";
+			this.m_check_c4u.Size = new System.Drawing.Size(115, 17);
+			this.m_check_c4u.TabIndex = 3;
+			this.m_check_c4u.Text = "Check for Updates";
+			this.m_check_c4u.UseVisualStyleBackColor = true;
 			// 
 			// m_check_show_totd
 			// 
@@ -801,5 +813,6 @@
 		private System.Windows.Forms.Label m_lbl_max_scan_size0;
 		private System.Windows.Forms.Label m_lbl_history_length1;
 		private System.Windows.Forms.Label m_lbl_max_scan_size1;
+		private System.Windows.Forms.CheckBox m_check_c4u;
 	}
 }

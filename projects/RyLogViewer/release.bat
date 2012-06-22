@@ -15,7 +15,7 @@ if %RylogicEnvVersion% lss 1 (
 )
 
 set srcdir=Q:\projects\rylogviewer
-set dstdir=Q:\bin\RyLogViewer
+set dstdir=Q:\bin
 
 ::Export for each platform (only x86 at the moment)
 for %%p in (x86) do call :copy_files %%p

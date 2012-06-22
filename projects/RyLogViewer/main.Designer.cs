@@ -89,6 +89,7 @@
 			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_check_for_updates = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
@@ -561,6 +562,7 @@
 			// 
 			this.m_menu_help.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_help_totd,
+            this.m_menu_help_check_for_updates,
             this.toolStripSeparator2,
             this.m_menu_help_about});
 			this.m_menu_help.Name = "m_menu_help";
@@ -570,18 +572,24 @@
 			// m_menu_help_totd
 			// 
 			this.m_menu_help_totd.Name = "m_menu_help_totd";
-			this.m_menu_help_totd.Size = new System.Drawing.Size(148, 22);
+			this.m_menu_help_totd.Size = new System.Drawing.Size(171, 22);
 			this.m_menu_help_totd.Text = "&Tip of the Day";
+			// 
+			// m_menu_help_check_for_updates
+			// 
+			this.m_menu_help_check_for_updates.Name = "m_menu_help_check_for_updates";
+			this.m_menu_help_check_for_updates.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_check_for_updates.Text = "Check for &Updates";
 			// 
 			// toolStripSeparator2
 			// 
 			this.toolStripSeparator2.Name = "toolStripSeparator2";
-			this.toolStripSeparator2.Size = new System.Drawing.Size(145, 6);
+			this.toolStripSeparator2.Size = new System.Drawing.Size(168, 6);
 			// 
 			// m_menu_help_about
 			// 
 			this.m_menu_help_about.Name = "m_menu_help_about";
-			this.m_menu_help_about.Size = new System.Drawing.Size(148, 22);
+			this.m_menu_help_about.Size = new System.Drawing.Size(171, 22);
 			this.m_menu_help_about.Text = "&About";
 			// 
 			// m_status
@@ -634,7 +642,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(68, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(310, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -872,6 +880,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_ghost_mode;
 		private System.Windows.Forms.ToolStripButton m_btn_jump_to_start;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_check_for_updates;
 	}
 }
 

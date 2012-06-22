@@ -5,12 +5,14 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using pr.common;
 using pr.extn;
 using pr.gui;
+using pr.inet;
 using pr.maths;
 using pr.util;
 using RyLogViewer.Properties;
@@ -110,6 +112,7 @@ namespace RyLogViewer
 			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
+			m_menu_help_check_for_updates.Click     += (s,a) => CheckForUpdates(true);
 			m_menu_help_about.Click                 += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
 			
@@ -189,33 +192,7 @@ namespace RyLogViewer
 			m_find_ui.Move     += (s,e)=> { m_find_ui.Tag = new Size(m_find_ui.Location.X - Location.X, m_find_ui.Location.Y - Location.Y); };
 			
 			// Startup
-			Shown += (s,a)=>
-				{
-					// Last screen position
-					if (m_settings.RestoreScreenLoc)
-					{
-						Location = m_settings.ScreenPosition;
-						Size = m_settings.WindowSize;
-						m_find_ui.Tag = new Size(Size.Width - m_find_ui.Width - 8, 28);
-					}
-					
-					// Parse commandline
-					if (args.Length != 0)
-					{
-						ParseCommandLine(args);
-					}
-					else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
-					{
-						OpenLogFile(m_settings.LastLoadedFile);
-					}
-					
-					// Show the TotD
-					if (m_settings.ShowTOTD)
-						ShowTotD();
-
-					InitCache();
-					ApplySettings();
-				};
+			Shown += (s,a)=> Startup(args);
 			
 			// User input
 			KeyDown += (s,a) => HandleKeyDown(a);
@@ -240,6 +217,39 @@ namespace RyLogViewer
 					m_settings.WindowSize = Size;
 					m_settings.RecentFiles = m_recent.Export();
 				};
+		}
+
+		/// <summary>Called the first time the app is displayed</summary>
+		private void Startup(string[] args)
+		{
+			// Last screen position
+			if (m_settings.RestoreScreenLoc)
+			{
+				Location = m_settings.ScreenPosition;
+				Size = m_settings.WindowSize;
+				m_find_ui.Tag = new Size(Size.Width - m_find_ui.Width - 8, 28);
+			}
+					
+			// Parse commandline
+			if (args.Length != 0)
+			{
+				ParseCommandLine(args);
+			}
+			else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
+			{
+				OpenLogFile(m_settings.LastLoadedFile);
+			}
+					
+			// Show the TotD
+			if (m_settings.ShowTOTD)
+				ShowTotD();
+
+			// Check for updates
+			if (m_settings.CheckForUpdates)
+				CheckForUpdates(false);
+
+			InitCache();
+			ApplySettings();
 		}
 
 		/// <summary>Returns true if there is a log file currently open</summary>
@@ -548,7 +558,7 @@ namespace RyLogViewer
 			
 			long found;
 			if (Find(pat, start, false, out found) && found == -1)
-				SetTransientStatusMessage("End of file");
+				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
 		}
 		
 		/// <summary>Search for an earlier occurance of a pattern in the grid</summary>
@@ -562,7 +572,7 @@ namespace RyLogViewer
 			
 			long found;
 			if (Find(pat, start, true, out found) && found == -1)
-				SetTransientStatusMessage("Start of file");
+				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue);
 		}
 
 		/// <summary>Show the export dialog</summary>
@@ -839,6 +849,85 @@ namespace RyLogViewer
 		private void ShowTotD()
 		{
 			new TipOfTheDay(m_settings).ShowDialog(this);
+		}
+
+		/// <summary>Check a remote server for the latest version information</summary>
+		private void CheckForUpdates(bool show_dialog)
+		{
+			// The callback to call when the check for updates results are in
+			Action<IAsyncResult> callback = ar =>
+				{
+					INet.CheckForUpdateResult res = null; Exception err = null;
+					try { res = INet.EndCheckForUpdate(ar); }
+					catch (OperationCanceledException) {}
+					catch (Exception ex) { err = ex; }
+						
+					Action done = () => { HandleCheckForUpdateResult(res, err, show_dialog); };
+					BeginInvoke(done);
+				};
+			
+			// Start the check for updates
+			if (show_dialog)
+			{
+				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", (s,a)=>
+					{
+						BackgroundWorker bgw = (BackgroundWorker)s;
+						bgw.ReportProgress(100, new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee});
+						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateURL, null);
+						
+						// Wait till the operation completes, or until cancel is singled
+						for (;!bgw.CancellationPending && !async.AsyncWaitHandle.WaitOne(500);) {}
+						a.Cancel = bgw.CancellationPending;
+
+						if (!a.Cancel) callback(async);
+						else INet.CancelCheckForUpdate(async);
+					});
+				dg.ShowDialog(this);
+			}
+			else
+			{
+				// Start the asynchronous check for updates
+				INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateURL, callback);
+			}
+		}
+
+		/// <summary>Handle the results of a check for updates</summary>
+		private void HandleCheckForUpdateResult(INet.CheckForUpdateResult res, Exception error, bool show_dialog)
+		{
+			if (error != null)
+			{
+				SetTransientStatusMessage("Check for updates error", Color.Red, SystemColors.Control);
+				if (show_dialog) MessageBox.Show(this, string.Format("Check for updates failed\r\nError: {0}", error.Message), "Check for Updates Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			else
+			{
+				Version this_version = Assembly.GetExecutingAssembly().GetName().Version;
+				if (this_version.CompareTo(res.Version) >  0)
+				{
+					SetTransientStatusMessage("Development version running");
+					if (show_dialog) MessageBox.Show(this, "This version is newer than the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				}
+				else if (this_version.CompareTo(res.Version) == 0)
+				{
+					SetTransientStatusMessage("Latest version running");
+					if (show_dialog) MessageBox.Show(this, "This is the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				}
+				else
+				{
+					SetTransientStatusMessage("New Version Available!", Color.Green, SystemColors.Control);
+					if (show_dialog)
+					{
+						var dg = new NewVersionForm
+						{
+							CurrentVersion = this_version.ToString(),
+							LatestVersion  = res.Version.ToString(),
+							WebsiteUrl     = res.InfoURL,
+							DownloadUrl    = res.DownloadURL
+						};
+						dg.ShowDialog(this);
+					}
+				}
+			}
 		}
 
 		/// <summary>Show the about dialog</summary>
@@ -1200,7 +1289,7 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Create a message that displays for a period then disappears</summary>
-		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, int display_time_ms)
+		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, int display_time_ms = 2000)
 		{
 			m_status_message.Text = text;
 			m_status_message.Visible = true;
@@ -1226,7 +1315,7 @@ namespace RyLogViewer
 		}
 		private void SetTransientStatusMessage(string text, int display_time_ms = 2000)
 		{
-			SetTransientStatusMessage(text, Color.Azure, Color.Blue, display_time_ms);
+			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control, display_time_ms);
 		}
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>

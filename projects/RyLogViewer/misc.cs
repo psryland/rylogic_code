@@ -9,15 +9,17 @@ namespace RyLogViewer
 {
 	public static class Constants
 	{
-		public const int AutoScrollAtBoundaryLimit            = 10;
-		public const int FileReadChunkSize                   = 4096;
-		public const int FilePollingRate                     = 100;
-		public const int MaxProgramHistoryLength             = 10;
-		public const int MaxNetConnHistoryLength             = 10;
-		public const int MaxSerialConnHistoryLength          = 1;
-		public const int MaxOutputFileHistoryLength          = 10;
-		public const int MaxFindHistory                      = 10;
-		public const int OneMB                               = 1024*1024;
+		public const string AppIdentifier           = "rylogviewer.x86";
+		public const string UpdateURL               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
+		public const int AutoScrollAtBoundaryLimit  = 10;
+		public const int FileReadChunkSize          = 4096;
+		public const int FilePollingRate            = 100;
+		public const int MaxProgramHistoryLength    = 10;
+		public const int MaxNetConnHistoryLength    = 10;
+		public const int MaxSerialConnHistoryLength = 1;
+		public const int MaxOutputFileHistoryLength = 10;
+		public const int MaxFindHistory             = 10;
+		public const int OneMB                      = 1024*1024;
 	}
 
 	public enum EPattern

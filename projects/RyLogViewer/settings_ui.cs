@@ -79,7 +79,8 @@ namespace RyLogViewer
 
 			// Load last file on startup
 			m_check_load_last_file.ToolTip(m_tt, "Automatically load the last loaded file on startup");
-			m_check_load_last_file.CheckedChanged += (s,a)=>
+			m_check_load_last_file.Checked = m_settings.LoadLastFile;
+			m_check_load_last_file.Click += (s,a)=>
 				{
 					m_settings.LoadLastFile = m_check_load_last_file.Checked;
 					WhatsChanged |= EWhatsChanged.StartupOptions;
@@ -87,7 +88,8 @@ namespace RyLogViewer
 			
 			// Restore window position on startup
 			m_check_save_screen_loc.ToolTip(m_tt, "Restore the window to its last position on startup");
-			m_check_save_screen_loc.CheckedChanged += (s,a)=>
+			m_check_save_screen_loc.Checked = m_settings.RestoreScreenLoc;
+			m_check_save_screen_loc.Click += (s,a)=>
 				{
 					m_settings.RestoreScreenLoc = m_check_save_screen_loc.Checked;
 					WhatsChanged |= EWhatsChanged.StartupOptions;
@@ -95,9 +97,19 @@ namespace RyLogViewer
 			
 			// Show tip of the day on startup
 			m_check_show_totd.ToolTip(m_tt, "Show the 'Tip of the Day' dialog on startup");
-			m_check_show_totd.CheckedChanged += (s,a)=>
+			m_check_show_totd.Checked = m_settings.ShowTOTD;
+			m_check_show_totd.Click += (s,a)=>
 				{
 					m_settings.ShowTOTD = m_check_show_totd.Checked;
+					WhatsChanged |= EWhatsChanged.StartupOptions;
+				};
+
+			// Check for updates
+			m_check_c4u.ToolTip(m_tt, "Check for newer versions on startup");
+			m_check_c4u.Checked = m_settings.CheckForUpdates;
+			m_check_c4u.Click += (s,a)=>
+				{
+					m_settings.CheckForUpdates = m_check_c4u.Checked;
 					WhatsChanged |= EWhatsChanged.StartupOptions;
 				};
 

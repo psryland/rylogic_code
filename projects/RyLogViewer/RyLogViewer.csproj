@@ -108,6 +108,12 @@
     <Compile Include="named_pipe_ui.Designer.cs">
       <DependentUpon>named_pipe_ui.cs</DependentUpon>
     </Compile>
+    <Compile Include="new_version_form.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="new_version_form.Designer.cs">
+      <DependentUpon>new_version_form.cs</DependentUpon>
+    </Compile>
     <Compile Include="pattern.cs" />
     <Compile Include="main.cs">
       <SubType>Form</SubType>
@@ -174,6 +180,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="named_pipe_ui.resx">
       <DependentUpon>named_pipe_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="new_version_form.resx">
+      <DependentUpon>new_version_form.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="pattern_set_ui.resx">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>
@@ -309,6 +318,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\upred.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\important.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

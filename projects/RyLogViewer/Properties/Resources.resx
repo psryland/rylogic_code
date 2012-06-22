@@ -120,6 +120,10 @@
   <data name="ChooseOutputFileName" xml:space="preserve">
     <value>Choose an output file name</value>
   </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="edit_save" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\edit_save.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="LoadPatternSetFailedMsg" xml:space="preserve">
     <value>Could not load pattern set {0}.
 Error: {1}</value>
@@ -127,22 +131,28 @@ Error: {1}</value>
   <data name="EncodingX" xml:space="preserve">
     <value>Encoding: {0}</value>
   </data>
-  <data name="LineEndingX" xml:space="preserve">
-    <value>Line Ending: {0}</value>
+  <data name="filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\agt_action_success.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="AppTitle" xml:space="preserve">
     <value>RyLogViewer</value>
     <comment>The name of the app</comment>
   </data>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="Refresh" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Refresh.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="InvalidFileMsg" xml:space="preserve">
+    <value>File path '{0}' is invalid or does not exist</value>
+    <comment>Show the invalid filepath</comment>
   </data>
   <data name="ExportCompletedSuccessfully" xml:space="preserve">
     <value>Export completed successfully</value>
+  </data>
+  <data name="upred" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\upred.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="NoFile" xml:space="preserve">
     <value>No File</value>
@@ -170,17 +180,15 @@ Error: {1}</value>
   <data name="ChangeBackColour" xml:space="preserve">
     <value>Change Background Colour</value>
   </data>
-  <data name="ConfirmOverwrite" xml:space="preserve">
-    <value>Confirm Overwrite</value>
-  </data>
   <data name="my_documents" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\my_documents.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="FailedToOpenXDueToErrorY" xml:space="preserve">
+    <value>Failed to open file {0} due to an error
+Error: {1}</value>
+  </data>
   <data name="OutputFileMissingMsg" xml:space="preserve">
     <value>Output file missing. Please select a file to export to</value>
-  </data>
-  <data name="ScrollToStart" xml:space="preserve">
-    <value>Scroll to the first log file row</value>
   </data>
   <data name="ScrollToEnd" xml:space="preserve">
     <value>Scroll to the last log file row</value>
@@ -194,9 +202,6 @@ Error: {1}</value>
   <data name="Eyeball" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Eyeball.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="_3dowarrow" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\3dowarrow.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
   <data name="configure" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\configure.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -207,15 +212,12 @@ Error: {1}</value>
     <value>Left click to enable/disable highlighting.
 Right click to show the highlighting dialog</value>
   </data>
-  <data name="ShowOptionsDialog" xml:space="preserve">
-    <value>Show the options dialog</value>
-  </data>
   <data name="Active" xml:space="preserve">
     <value>Active</value>
     <comment>Active column header</comment>
   </data>
-  <data name="filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="_3dowarrow" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\3dowarrow.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="FailedToLoadFile" xml:space="preserve">
     <value>Failed to load file</value>
@@ -233,8 +235,8 @@ Right click to show the highlighting dialog</value>
   <data name="edit_save_needed" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\edit_save_needed.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="edit_save" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\edit_save.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="ExportComplete" xml:space="preserve">
+    <value>Export Complete</value>
   </data>
   <data name="book" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\1338530996_book.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -252,14 +254,14 @@ Error: {0}</value>
   <data name="FailedToLaunchProcess" xml:space="preserve">
     <value>Failed to Launch Process</value>
   </data>
+  <data name="ReloadLogFile" xml:space="preserve">
+    <value>Reload the current log file</value>
+  </data>
   <data name="fileclose" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\fileclose.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="ReadingFileFailed" xml:space="preserve">
     <value>Reading File Failed</value>
-  </data>
-  <data name="ExportComplete" xml:space="preserve">
-    <value>Export Complete</value>
   </data>
   <data name="downred" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\downred.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -297,8 +299,8 @@ Error Details: {0}</value>
   <data name="ChangeForeColour" xml:space="preserve">
     <value>Change Foregroud Colour</value>
   </data>
-  <data name="ReloadLogFile" xml:space="preserve">
-    <value>Reload the current log file</value>
+  <data name="ConfirmOverwrite" xml:space="preserve">
+    <value>Confirm Overwrite</value>
   </data>
   <data name="ClearLogFailed" xml:space="preserve">
     <value>Clear Log Failed</value>
@@ -313,17 +315,17 @@ Error Details: {0}</value>
     <value>Could not delete pattern set file {0}.
 Error: {1}</value>
   </data>
-  <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\agt_action_fail.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="ExecutablesFilter" xml:space="preserve">
+    <value>Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
   </data>
   <data name="ConfirmClearLog" xml:space="preserve">
     <value>Confirm Clear Log</value>
   </data>
-  <data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\agt_action_success.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="ExecutablesFilter" xml:space="preserve">
-    <value>Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
+  <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\agt_action_fail.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="LoadPatternSetFailed" xml:space="preserve">
     <value>Load Pattern Set Failed</value>
@@ -340,21 +342,22 @@ Error: {1}</value>
   <data name="highlight" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\highlight.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="ScrollToStart" xml:space="preserve">
+    <value>Scroll to the first log file row</value>
+  </data>
   <data name="BinaryMatch" xml:space="preserve">
     <value>Binary Match</value>
   </data>
-  <data name="FailedToOpenXDueToErrorY" xml:space="preserve">
-    <value>Failed to open file {0} due to an error
-Error: {1}</value>
+  <data name="ShowOptionsDialog" xml:space="preserve">
+    <value>Show the options dialog</value>
   </data>
-  <data name="InvalidFileMsg" xml:space="preserve">
-    <value>File path '{0}' is invalid or does not exist</value>
-    <comment>Show the invalid filepath</comment>
+  <data name="LineEndingX" xml:space="preserve">
+    <value>Line Ending: {0}</value>
   </data>
   <data name="ExportFailed" xml:space="preserve">
     <value>Export Failed</value>
   </data>
-  <data name="upred" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\upred.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="important" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\important.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

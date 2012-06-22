@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Drawing;
-using System.IO;
 using System.Windows.Forms;
 using pr.util;
 
@@ -15,12 +13,13 @@ namespace imager
 			MessageBox.Show("Paws'd", "Imager");
 			#endif
 
-			Log.Open("imager.log", FileMode.Create);
+			Log.Register("imager.log", true);
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 			try
 			{
-				Log.Write("args: "); foreach (string s in args) {Log.Write(s+" ");} Log.Write("\n");
+				
+				Log.Info(null, "args: {0}", string.Join(" ",args));
 
 				// Parse screen saver arguments
 				if (args.Length >= 1)
@@ -58,7 +57,7 @@ namespace imager
 			}
 			catch (Exception ex)
 			{
-				Log.Write("exception: "+ex+"\n");
+				Log.Exception(null, ex, "Exception parsing commandline");
 
 				// Details of the error should have been display in an earlier message box
 				#if DEBUG
@@ -66,11 +65,10 @@ namespace imager
 				#else
 				MessageBox.Show("An error has occurred that means Imager cannot run.\nError: "+ex.Message, "Imager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				#endif
-				return;
 			}
 			finally
 			{
-				Log.Write("shutdown\n");
+				Log.Info(null, "shutdown");
 			}
 		}
 

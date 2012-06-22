@@ -143,6 +143,11 @@ namespace RyLogViewer
 			get { return get<bool>("ShowTOTD"); }
 			set { set("ShowTOTD", value); }
 		}
+		public bool   CheckForUpdates
+		{
+			get { return get<bool>("CheckForUpdates"); }
+			set { set("CheckForUpdates", value); }
+		}
 		public bool   HighlightsEnabled
 		{
 			get { return get<bool>("HighlightsEnabled"); }
@@ -267,6 +272,7 @@ namespace RyLogViewer
 			IgnoreBlankLines                = false;
 			AlwaysOnTop                     = false;
 			ShowTOTD                        = true;
+			CheckForUpdates                 = true;
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = true;
 			TailEnabled                     = false;

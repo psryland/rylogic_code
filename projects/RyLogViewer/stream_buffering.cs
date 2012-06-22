@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.IO.Pipes;
 using System.IO.Ports;
@@ -40,7 +41,7 @@ namespace RyLogViewer
 				// Give some UI feedback when the process ends
 				buffered_process.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage(string.Format("'{0}' exited", Path.GetFileName(conn.Executable)));
+						Action proc_exit = () => SetTransientStatusMessage(string.Format("'{0}' exited", Path.GetFileName(conn.Executable)), Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
@@ -84,7 +85,7 @@ namespace RyLogViewer
 				// Give some UI feedback if the connection drops
 				buffered_netconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped");
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
@@ -129,7 +130,7 @@ namespace RyLogViewer
 				// Give some UI feedback if the connection drops
 				buffered_serialconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped");
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
@@ -173,7 +174,7 @@ namespace RyLogViewer
 				// Give some UI feedback if the connection drops
 				buffered_pipeconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped");
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
