@@ -1,0 +1,68 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-nz">
+<head>
+	<title>Rylogic Limited - Links</title>
+	<?php include('inc/header.php') ?>
+	<style type="text/css">
+		.table_leftcolstyle { vertical-align:top; width: 137px; }
+		.table_rightcolstyle { vertical-align:top; width: auto; text-align: justify;}
+	</style>
+</head>
+<body>
+	<div id="container">
+		<?php include('inc/title.php') ?>
+		<?php include('inc/main_menu.php') ?>
+		<?php include('inc/left_menu.php') ?>
+		<div id="content">
+			<div id="content_top"></div>
+			<div id="content_main">
+				<h3>
+					Previous Clients
+				</h3>
+				<br />
+				<table style="text-align: left; width:600px; height:54px;" border="0" cellpadding="2" cellspacing="2">
+					<tbody>
+						<tr>
+							<td class="table_leftcolstyle"><h4 style="text-align:right;">Rex Bionics:</h4></td>
+							<td class="table_rightcolstyle">
+								Rex Bionics are an R&D company developing a walking exoskeleton robot.<br /><br />
+								<span = style="font-style:italic">web: <a href="http://www.rexbionics.com/">www.rexbionics.com</a></span>
+							</td>
+						</tr>
+						<tr>
+							<td class="table_leftcolstyle"><h4 style="text-align:right;">Intranel Limited:</h4></td>
+							<td class="table_rightcolstyle">
+								Intranel are an R&D company developing a wide range of software and hardware devices. The product
+								that Rylogic Limited was involved with has application in the agriculture industry.<br /><br />
+								<span style="font-style:italic">web: <a href="http://www.intranel.com/">www.intranel.com</a></span>
+							</td>
+						</tr>
+						<tr>
+							<td class="table_leftcolstyle"><h4 style="text-align:right;">Ubisoft Reflections:</h4></td>
+							<td class="table_rightcolstyle">
+								Ubisoft Reflections are the UK based game development studio that creates the 'Driver' series games.
+								The games are AAA titles and are released on PS3, Xbox, and PC platforms. Rylogic Limited contributed
+								to the development of the game physics engine.<br /><br />
+								<span style="font-style: italic;">web: <a href="http://driver.uk.ubi.com/san-francisco/">latest driver series game</a></span>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				<br />
+				<h3>Maintenance</h3>
+				<br />
+				<a href="latest_versions.xml">Latest Rylogic Software Versions</a>
+				<br />
+				<a href="https://www.rylogic.co.nz:443/">File Upload</a>
+				<br />
+				<a href="http://www.rylogic.co.nz:8080/">Server Admin Logon</a>
+				<br />
+				<a href="priv/index.php">Private</a>
+			</div>
+			<div id="content_bottom"></div>
+			<?php include('inc/footer.php') ?>
+		</div>
+		<?php include('inc/right_panel.php') ?>
+	</div>
+</body>
+</html>

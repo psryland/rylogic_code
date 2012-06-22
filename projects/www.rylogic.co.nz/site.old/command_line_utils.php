@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-nz">
+<head>
+	<title>Rylogic Limited - Command Line Utilities</title>
+	<?php include('inc/header.php') ?>
+	<style type="text/css">
+		.table_leftcolstyle { vertical-align:top; width: 137px; }
+		.table_rightcolstyle { vertical-align:top; width: auto; text-align: justify;}
+	</style>
+</head>
+<body>
+	<div id="container">
+		<?php include('inc/title.php') ?>
+		<?php include('inc/main_menu.php') ?>
+		<?php include('inc/left_menu.php') ?>
+		<div id="content">
+			<div id="content_top"></div>
+			<div id="content_main">
+				<h2>
+					Command Line Utilities
+				</h2>
+				<br />
+				<table style="text-align: left; width:530px; height:54px;" border="0" cellpadding="2" cellspacing="2">
+					<tbody>
+						<tr>
+							<td class="table_leftcolstyle"><h4 style="text-align:right;">Cex.exe</h4></td>
+							<td class="table_rightcolstyle">
+							Command line extensions</br>
+							</td>
+						</tr>
+						<tr><td></td></tr>
+						<tr>
+							<td class="table_leftcolstyle"><h4 style="text-align:right;">Clip.exe</h4></td>
+							<td class="table_rightcolstyle">
+							Text to clipboard</br>
+							</td>
+						</tr>
+						<tr><td></td></tr>
+						<tr>
+							<td class="table_leftcolstyle"><h4 style="text-align:right;">HeaderFileData.exe</h4></td>
+							<td class="table_rightcolstyle">
+							C/C++ header file generator
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div id="content_bottom"></div>
+			<?php include('inc/footer.php') ?>
+		</div>
+		<?php include('inc/right_panel.php') ?>
+	</div>
+</body>
+</html>
