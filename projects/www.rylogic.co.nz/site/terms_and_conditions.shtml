@@ -2,13 +2,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en-nz">
 <head>
 	<title>Rylogic Limited - Terms and Conditions</title>
-	<?php include('inc/header.php') ?>
+	<!--#include file="inc/header.shtml" -->
 </head>
 <body>
 	<div id="container">
-		<?php include('inc/title.php') ?>
-		<?php include('inc/main_menu.php') ?>
-		<?php include('inc/left_menu.php') ?>
+		<!--#include file="inc/title.shtml" -->
+		<!--#include file="inc/main_menu.shtml" -->
+		<!--#include file="inc/left_menu.shtml" -->
 		<div id="content">
 			<div id="content_top"></div>
 			<div id="content_main">
@@ -47,9 +47,9 @@
 				EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
 			</div>
 			<div id="content_bottom"></div>
-			<?php include('inc/footer.php') ?>
+			<!--#include file="inc/footer.shtml" -->
 		</div>
-		<?php include('inc/right_panel.php') ?>
+		<!--#include file="inc/right_panel.shtml" -->
 	</div>
 </body>
 </html>

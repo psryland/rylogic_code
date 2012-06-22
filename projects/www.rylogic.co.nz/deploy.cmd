@@ -1,4 +1,8 @@
 @echo off
+SetLocal EnableDelayedExpansion 
+set PATH=Q:\sdk\pr\cmd\;%PATH%
+cls
+
 ::Load Rylogic environment variables and check version
 call %RylogicEnv%
 if %RylogicEnvVersion% lss 1 (
@@ -6,9 +10,6 @@ if %RylogicEnvVersion% lss 1 (
 	goto :end
 )
 
-SetLocal EnableDelayedExpansion 
-set PATH=Q:\sdk\pr\cmd\;%PATH%
-cls
 
 ::Read the command line parameter
 set param=%1
@@ -35,11 +36,11 @@ if [%param%]==[] (
 echo Deploying %srcdir% -^> %dstdir%...
 
 ::Copy web site files
-call copy "%srcdir%\*.php" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.png" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.jpg" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.css" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.xml" "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.shtml" "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.png"   "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.jpg"   "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.css"   "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.xml"   "%dstdir%\" /Y /F /E %newer%
 
 ::Copy site data
 call copy "q:\bin\linedrawer.x86.zip"  "%zdrive%\WWW\WWW-pub\data\" /F /Y %newer%

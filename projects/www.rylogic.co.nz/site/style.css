@@ -9,7 +9,7 @@ body
 	font-size: 13px;
 	color: #061C37;
 	background: #000000;/*#EEEFE4;*/
-	background-image: url(art/background.png);
+	background-image: url(./art/background.png);
 	background-repeat: repeat-x;
 }
 *
@@ -60,7 +60,7 @@ body
 
 #mainpic
 {
-	background-image: url(art/main.jpg);
+	background-image: url(./art/main.jpg);
 	background-repeat: no-repeat;
 	width: 900px;
 	height: 354px;
@@ -104,7 +104,7 @@ body
 #menu a:hover
 {
 	color: #86AEF9;
-	background-image: url(art/linkbackground.jpg);
+	background-image: url(./art/linkbackground.jpg);
 	background-repeat: repeat-x;
 }
 
@@ -118,13 +118,13 @@ body
 {
 	width: 204px;
 	height: 14px;
-	background-image: url(art/leftmenu_top.png);
+	background-image: url(./art/leftmenu_top.png);
 }
 #leftmenu_bottom
 {
 	width: 204px;
 	height: 14px;
-	background-image: url(art/leftmenu_bottom.png);
+	background-image: url(./art/leftmenu_bottom.png);
 }
 #leftmenu_main
 {
@@ -165,7 +165,7 @@ body
 	padding-top: 4px;
 	height: 30px;
 	text-align: left;
-	background-image: url(art/leftmenu_link.png);
+	background-image: url(./art/leftmenu_link.png);
 	background-repeat: repeat-x;
 	margin-top: 5px;
 	color: #FFFFFF;
@@ -193,14 +193,14 @@ body
 }
 #content_top
 {
-	background-image: url(art/main_top.png);
+	background-image: url(./art/main_top.png);
 	background-repeat: no-repeat;
 	width: 689px;
 	height: 25px;
 }
 #content_main
 {
-	background-image: url('art/main_back.png');
+	background-image: url(./art/main_back.png);
 	background-repeat: repeat-y;
 	width: 659px;
 	padding-left: 15px;
@@ -209,7 +209,7 @@ body
 }
 #content_bottom
 {
-	background-image: url('art/main_bottom.png');
+	background-image: url(./art/main_bottom.png);
 	background-repeat: no-repeat;
 	width: 689px;
 	height: 24px;

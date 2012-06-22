@@ -1,0 +1,146 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="site\inc\header.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\footer.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\left_menu.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\main_menu.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\right_panel.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\title.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\style.css">
+      <Filter>live</Filter>
+    </None>
+    <None Include="site\services.shtml">
+      <Filter>live</Filter>
+    </None>
+    <None Include="site\links.shtml">
+      <Filter>live</Filter>
+    </None>
+    <None Include="site\index.shtml">
+      <Filter>live</Filter>
+    </None>
+    <None Include="site\contact.shtml">
+      <Filter>live</Filter>
+    </None>
+    <None Include="site\terms_and_conditions.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\clicket.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\command_line_utils.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\contact.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\imager.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\index.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\linedrawer.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\links.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\prdll.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\rylogviewer.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\services.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\style.css">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\terms_and_conditions.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\view3d.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\art\background.png">
+      <Filter>site\art</Filter>
+    </None>
+    <None Include="site\art\leftmenu_bottom.png">
+      <Filter>site\art</Filter>
+    </None>
+    <None Include="site\art\leftmenu_link.png">
+      <Filter>site\art</Filter>
+    </None>
+    <None Include="site\art\leftmenu_top.png">
+      <Filter>site\art</Filter>
+    </None>
+    <None Include="site\art\linkbackground.jpg">
+      <Filter>site\art</Filter>
+    </None>
+    <None Include="site\art\main_back.png">
+      <Filter>site\art</Filter>
+    </None>
+    <None Include="site\art\main_bottom.png">
+      <Filter>site\art</Filter>
+    </None>
+    <None Include="site\art\main_top.png">
+      <Filter>site\art</Filter>
+    </None>
+    <None Include="site\inc\footer.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\header.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\left_menu.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\main_menu.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\right_panel.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\inc\title.shtml">
+      <Filter>site\inc</Filter>
+    </None>
+    <None Include="site\versions\rylogviewer.xml">
+      <Filter>site\versions</Filter>
+    </None>
+    <None Include="..\..\bin\RyLogViewer\rylogviewer.x86.zip">
+      <Filter>site\data</Filter>
+    </None>
+    <None Include="deploy.cmd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="site">
+      <UniqueIdentifier>{6d6df952-f5b4-4d27-8ad0-bcc74e4d684c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="site\art">
+      <UniqueIdentifier>{bbe1ffd8-c289-4d31-b8a3-f5fd23f79317}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="site\inc">
+      <UniqueIdentifier>{5e2be3a0-4aeb-4889-8365-c14e5df42455}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="site\data">
+      <UniqueIdentifier>{add64475-39f1-486f-af2e-e2a14edff266}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="site\versions">
+      <UniqueIdentifier>{2468b71a-e108-4dd1-ac59-848dff7f6d02}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
