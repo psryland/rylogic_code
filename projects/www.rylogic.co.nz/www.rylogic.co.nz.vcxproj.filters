@@ -19,21 +19,6 @@
     <None Include="site\inc\title.shtml">
       <Filter>site\inc</Filter>
     </None>
-    <None Include="site\style.css">
-      <Filter>live</Filter>
-    </None>
-    <None Include="site\services.shtml">
-      <Filter>live</Filter>
-    </None>
-    <None Include="site\links.shtml">
-      <Filter>live</Filter>
-    </None>
-    <None Include="site\index.shtml">
-      <Filter>live</Filter>
-    </None>
-    <None Include="site\contact.shtml">
-      <Filter>live</Filter>
-    </None>
     <None Include="site\terms_and_conditions.shtml">
       <Filter>site</Filter>
     </None>
@@ -125,6 +110,30 @@
       <Filter>site\data</Filter>
     </None>
     <None Include="deploy.cmd" />
+    <None Include="site\links.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\services.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\contact.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\index.shtml">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\style.css">
+      <Filter>site</Filter>
+    </None>
+    <None Include="site\versions\imager.xml">
+      <Filter>site\versions</Filter>
+    </None>
+    <None Include="site\versions\linedrawer.xml">
+      <Filter>site\versions</Filter>
+    </None>
+    <None Include="site\products.shtml">
+      <Filter>site</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="site">

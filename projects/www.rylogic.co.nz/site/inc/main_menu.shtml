@@ -1,8 +1,9 @@
 <div id="menu">
 	<ul>
-		<li class="menuitem"><a href="index.shtml">Home</a></li>
-		<li class="menuitem"><a href="services.shtml">Services</a></li>
-		<li class="menuitem"><a href="links.shtml">Links</a></li>
-		<li class="menuitem"><a href="contact.shtml">Contact</a></li>
+		<li class="menuitem"><a href="../index.shtml">Home</a></li>
+		<li class="menuitem"><a href="../products.shtml">Products</a></li>
+		<li class="menuitem"><a href="../services.shtml">Services</a></li>
+		<li class="menuitem"><a href="../links.shtml">Links</a></li>
+		<li class="menuitem"><a href="../contact.shtml">Contact</a></li>
 	</ul>
 </div>

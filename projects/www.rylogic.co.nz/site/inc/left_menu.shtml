@@ -2,10 +2,10 @@
 	<div id="leftmenu_top"><br /></div>
 	<div id="leftmenu_main">
 		<div style="text-align: center;">
-			<h2 style="text-align: center; color:#67A0F5">Software</h2>
+			<h2 style="text-align: center; color:#67A0F5">News</h2>
 		</div>
 		<ul>
-			<li><a href="rylogviewer.shtml">RyLog Viewer</a></li>
+			<!--<li><a href="rylogviewer.shtml">RyLog Viewer</a></li>-->
 			<!--<li><a href="linedrawer.shtml">Line Drawer</a></li>-->
 			<!--<li><a href="imager.shtml">Imager</a></li>-->
 			<!--<li><a href="prdll.shtml">pr.dll C# Assembly</a></li>-->
