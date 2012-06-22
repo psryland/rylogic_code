@@ -1,6 +1,6 @@
 ﻿namespace imager
 {
-	partial class Imager
+	sealed partial class Imager
 	{
 		/// <summary>
 		/// Required designer variable.

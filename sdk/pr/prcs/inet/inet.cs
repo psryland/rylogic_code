@@ -1,90 +1,12 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
-using System.Windows.Threading;
-using System.Xml.Linq;
 
 namespace pr.inet
 {
-	public class INet
+	public static partial class INet
 	{
-		/// <summary>The result of a 'CheckForUpdate' call</summary>
-		public class CheckForUpdateResult
-		{
-			/// <summary>The version number of the latest version according to the remote data</summary>
-			public Version m_version;
-			
-			/// <summary>The location to download the latest version from</summary>
-			public string m_dl_url;
-
-			/// <summary>The location containing info about the latest version</summary>
-			public string m_info_url;
-		}
-
-		/// <summary>Check a remote xml file for version information asynchronously.
-		/// When complete 'done' is called either with the CheckForUpdateResult or an error message</summary>
-		public static void CheckForUpdate(string app_name, Uri url, IWebProxy proxy, Action<CheckForUpdateResult, string> done)
-		{
-			Dispatcher caller = Dispatcher.CurrentDispatcher;
-
-			// Do the version check as a background task
-			ThreadPool.QueueUserWorkItem((s)=>
-			{
-				try
-				{
-					// Check the update url is valid
-					if (!Uri.IsWellFormedUriString(url.AbsoluteUri, UriKind.Absolute))
-						throw new Exception("Update URL is invalid");
-
-					// Create a web client
-					string latest_version_xml;
-					using (WebClient web = new WebClient{Proxy = proxy})
-						latest_version_xml = web.DownloadString(url);
-
-					// Load the version info string
-					XDocument xml = XDocument.Parse(latest_version_xml);
-					CheckForUpdateResult res = new CheckForUpdateResult();
-					XElement info = xml.Element(app_name);
-					if (info != null)
-					{
-						XElement elem;
-						if ((elem = info.Element("version" )) != null) res.m_version  = new Version(elem.Value);
-						if ((elem = info.Element("dl_url"  )) != null) res.m_dl_url   = elem.Value;
-						if ((elem = info.Element("info_url")) != null) res.m_info_url = elem.Value;
-					}
-
-					//// Load the version info str
-					//XmlDataDocument eggsemel = new XmlDataDocument();
-					//eggsemel.Load(new MemoryStream(Encoding.ASCII.GetBytes(latest_version_xml)));
-					//if (eggsemel.DocumentElement == null)
-					//    throw new Exception("Invalid version information received");
-
-					//// Read version info from the downloaded data
-					//CheckForUpdateResult res = new CheckForUpdateResult();
-					//XmlElement info = eggsemel.DocumentElement[app_name];
-					//if (info != null)
-					//{
-					//    XmlElement elem;
-					//    if ((elem = info["version" ]) != null) res.m_version  = new Version(elem.InnerText);
-					//    if ((elem = info["dl_url"  ]) != null) res.m_dl_url   = elem.InnerText;
-					//    if ((elem = info["info_url"]) != null) res.m_info_url = elem.InnerText;
-					//}
-					caller.BeginInvoke(done, res, "");
-				}
-				catch (Exception ex)
-				{
-					caller.BeginInvoke(done, null, ex.Message);
-				}
-			});
-		}
-		public static void CheckForUpdate(string app_name, Uri url, Action<CheckForUpdateResult,string> done)
-		{
-			CheckForUpdate(app_name, url, WebRequest.DefaultWebProxy, done);
-		}
-	
 		[Flags] public enum CREDUI_FLAGS
 		{
 			INCORRECT_PASSWORD          = 0x1,

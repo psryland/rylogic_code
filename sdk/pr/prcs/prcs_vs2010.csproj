@@ -237,6 +237,7 @@
     <Compile Include="gui\vt100.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="inet\check_for_updates.cs" />
     <Compile Include="inet\cred.cs" />
     <Compile Include="inet\ftp.cs" />
     <Compile Include="inet\inet.cs" />

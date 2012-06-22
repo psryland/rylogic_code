@@ -25,7 +25,7 @@ namespace imager
 	#warning "No platform defined"
 	#endif
 
-	public partial class Imager :Form
+	public sealed partial class Imager :Form
 	{
 		private const string AppTitle = "Imager";
 
@@ -44,7 +44,7 @@ namespace imager
 			{
 				if (lhs == rhs) return true;
 				if (lhs == null || rhs == null) return false;
-				return string.Compare(lhs.m_file,rhs.m_file) == 0 && lhs.m_timestamp == rhs.m_timestamp;
+				return string.CompareOrdinal(lhs.m_file, rhs.m_file) == 0 && lhs.m_timestamp == rhs.m_timestamp;
 			}
 		}
 
@@ -86,7 +86,7 @@ namespace imager
 		{
 			InitializeComponent();
 
-			Log.Write("Imager mode: "+mode+"\n");
+			Log.Info(this, "Constructor - mode: "+mode+"\n");
 
 			KeyPreview = true;
 			BackColor = Color.Black;
@@ -248,7 +248,7 @@ namespace imager
 		/// <summary>Called as the app shuts down</summary>
 		private void OnFormClosing()
 		{
-			Log.Write("OnFormClosing:\n");
+			Log.Info(this,"OnFormClosing:\n");
 			SlideShow = false;
 			SetMedia(EMediaType.All, null, null);
 			m_media_list_ui.Close();
@@ -309,10 +309,9 @@ namespace imager
 				Debug.Assert(media_file != null);
 				switch (type)
 				{
-				default:break;
 				case EMediaType.Image:
 					{
-						Log.Write("SetMedia: Image - " + media_file.m_file + "\n");
+						Log.Info(this, "SetMedia: Image - " + media_file.m_file + "\n");
 						m_photo = (View3D.Texture)media;
 						m_photo_model.Edit(EditPhotoCB);
 						if (m_settings.ResetZoomOnLoad) ResetZoom();
@@ -322,7 +321,7 @@ namespace imager
 				case EMediaType.Audio:
 				case EMediaType.Video:
 					{
-						Log.Write("SetMedia: " + (type == EMediaType.Audio ? "Audio - " : "Video - ") + media_file.m_file + "\n");
+						Log.Info(this, "SetMedia: " + (type == EMediaType.Audio ? "Audio - " : "Video - ") + media_file.m_file + "\n");
 						m_video.Video = (Video)media;
 						m_video.Video.Volume = m_mode == EMode.Normal ? m_settings.Volume : m_mode == EMode.ScreenSaver ? m_settings.SSVolume : 0;
 						if (m_settings.ResetZoomOnLoad) ResetZoom();
@@ -332,7 +331,7 @@ namespace imager
 					}break;
 				}
 
-				Log.Write("SetMedia: assignment done\n");
+				Log.Info(this, "SetMedia: assignment done\n");
 				Status = media_file.ToString();
 				PhotoLabel = media_file.ToString();
 				ImageInfo = media;
@@ -341,7 +340,7 @@ namespace imager
 			}
 			else
 			{
-				Log.Write("SetMedia: null assigned\n");
+				Log.Info(this, "SetMedia: null assigned\n");
 				Status = "no file";
 				PhotoLabel = "";
 				ImageInfo = null;
@@ -356,7 +355,7 @@ namespace imager
 		{
 			Action<MediaFile, string, string> fail = (mf, msg, detail)=>
 			{
-				Log.Write("LoadFile: FAILED - " + mf.m_file + " - " + msg + " - " + detail + "\n");
+				Log.Info(this, "LoadFile: FAILED - " + mf.m_file + " - " + msg + " - " + detail + "\n");
 				Status = msg;
 				m_media_list.Remove(mf);
 				m_media_list.ResetBindings(false);
@@ -364,7 +363,7 @@ namespace imager
 				BeginInvoke(load_next, null); // fire off a call to load the next file in the list, use BeginInvoke to prevent recursion
 			};
 
-			Log.Write("LoadFile: " + media_file.m_file + "\n");
+			Log.Info(this, "LoadFile: " + media_file.m_file + "\n");
 
 			// Check the file exists first
 			if (!File.Exists(media_file.m_file))
@@ -448,7 +447,7 @@ namespace imager
 		/// <summary>Cancel any existing media list build/sort processes. Blocks until done</summary>
 		public void CancelMediaListBuild()
 		{
-			Log.Write("CancelMediaListBuild\n");
+			Log.Info(this, "CancelMediaListBuild\n");
 			lock (m_build_lock) { m_build_issue = unchecked(m_build_issue + 1); }
 			m_build_done.WaitOne();
 			m_sort_done.WaitOne();
@@ -484,7 +483,7 @@ namespace imager
 			// m_media_list should only be accessed by the main thread => is doesn't need to be locked
 			// Each thread spawned by calls to this method creates a local cache of media files
 			// which are periodically added to the main media list
-			Log.Write("BuildMediaListAsync\n");
+			Log.Info(this, "BuildMediaListAsync\n");
 
 			// Ensure existing builds/sorts are stopped if needed
 			bool wait_for_build_done = false;
@@ -642,7 +641,7 @@ namespace imager
 		/// <summary>Called to sort the current media list</summary>
 		public void SortMediaListAsync()
 		{
-			Log.Write("SortMediaListAsync\n");
+			Log.Info(this, "SortMediaListAsync\n");
 
 			// Switch to the sorting state
 			lock (m_build_lock)
@@ -731,12 +730,12 @@ namespace imager
 			copy.Sort((lhs,rhs)=>
 				{
 					if (++tick[0] == 100 && progress_cb != null) { progress_cb(); tick[0] = 0; }
-					return string.Compare(lhs.m_file, rhs.m_file);
+					return string.CompareOrdinal(lhs.m_file, rhs.m_file);
 				});
 			
 			// Remove adjascent duplicates
 			if (!allow_duplicates)
-				copy.Unique((lhs,rhs)=>MediaFile.Eql(lhs,rhs));
+				copy.Unique(MediaFile.Eql);
 			
 			// If we're sorting by folder timestamp, build a map from directory to minimum timestamp then sort the folders
 			if (folder_order == ESortOrder.ChronologicalAscending || folder_order == ESortOrder.ChronologicalDecending)
@@ -760,8 +759,8 @@ namespace imager
 					{
 						string dir = copy[d].Directory;
 						Range r = new Range(0, copy.Count);
-						for (r.m_begin = d - 1; r.m_begin != -1         && string.Compare(dir,copy[(int)r.m_begin].Directory) == 0; --r.m_begin) {}
-						for (r.m_end   = d + 1; r.m_end   != copy.Count && string.Compare(dir,copy[(int)r.m_end  ].Directory) == 0; ++r.m_end  ) {}
+						for (r.m_begin = d - 1; r.m_begin != -1         && string.CompareOrdinal(dir, copy[(int)r.m_begin].Directory) == 0; --r.m_begin) {}
+						for (r.m_end   = d + 1; r.m_end   != copy.Count && string.CompareOrdinal(dir, copy[(int)r.m_end  ].Directory) == 0; ++r.m_end  ) {}
 						++r.m_begin;
 						return r;
 					};
@@ -794,8 +793,8 @@ namespace imager
 				switch (file_order)
 				{
 				default: break;
-				case ESortOrder.AlphabeticalAscending:  copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return string.Compare(lhs.FileName, rhs.FileName); }); break;
-				case ESortOrder.AlphabeticalDecending:  copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return string.Compare(rhs.FileName, lhs.FileName); }); break;
+				case ESortOrder.AlphabeticalAscending:  copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return string.CompareOrdinal(lhs.FileName, rhs.FileName); }); break;
+				case ESortOrder.AlphabeticalDecending:  copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return string.CompareOrdinal(rhs.FileName, lhs.FileName); }); break;
 				case ESortOrder.ChronologicalAscending: copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return Maths.Compare(lhs.m_timestamp, rhs.m_timestamp); }); break;
 				case ESortOrder.ChronologicalDecending: copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return Maths.Compare(rhs.m_timestamp, lhs.m_timestamp); }); break;
 				case ESortOrder.Random: for (long i = rg.m_end; i != rg.m_begin; --i) copy.Swap((int)(rg.m_begin + rng.Next((int)rg.Count)), (int)(i-1)); break;
@@ -813,7 +812,7 @@ namespace imager
 			// m_media_list should only be accessed by the main thread => is doesn't need to be locked
 			// Each thread spawned by calls to this method creates a local cache of media files
 			// which are periodically added to the main media list
-			Log.Write("BuildMediaListFromCache\n");
+			Log.Info(this, "BuildMediaListFromCache\n");
 
 			// Cancel any existing builds
 			CancelMediaListBuild();
@@ -878,14 +877,14 @@ namespace imager
 		private void FindInMediaList(MediaFile media_file)
 		{
 			// If the current position matches 'mf' then there's nothing to do
-			if (m_media_list.Current == null || string.Compare(media_file.m_file, ((MediaFile) m_media_list.Current).m_file) != 0)
+			if (m_media_list.Current == null || string.CompareOrdinal(media_file.m_file, ((MediaFile) m_media_list.Current).m_file) != 0)
 			{
 				// Otherwise search for 'media_file' in 'm_media_list'
 				List<MediaFile> list = (List<MediaFile>) m_media_list.DataSource;
 				//m_media_list_ui.Controls[0].Tag = false;
-				m_media_list.Position = list.FindIndex((mf)=>{ return string.Compare(media_file.m_file, mf.m_file) == 0; });
+				m_media_list.Position = list.FindIndex((mf)=>{ return string.CompareOrdinal(media_file.m_file, mf.m_file) == 0; });
 				//m_media_list_ui.Controls[0].Tag = true;
-				Log.Write("FindInMediaList: linear search done\n");
+				Log.Info(this, "FindInMediaList: linear search done\n");
 			}
 			//m_settings.CachedListPosition = m_media_list.Position;
 			//Log.Write("FindInMediaList: position = " + m_settings.CachedListPosition + "\n");
@@ -994,7 +993,7 @@ namespace imager
 				m_slide_show.Tag = (uint)Environment.TickCount;
 				m_slide_show.Enabled = value;
 				m_menu_slide_show.Checked = value;
-				Log.Write("SlideShow:"+(value?"started":"stopped")+"\n");
+				Log.Info(this, "SlideShow:"+(value?"started":"stopped")+"\n");
 			}
 		}
 
@@ -1011,7 +1010,7 @@ namespace imager
 			// Hacky way to shutdown when in preview mode
 			if (m_mode == EMode.Preview && !Win32.IsWindowVisible(m_parent))
 			{
-				Log.Write("Parent not visible in preview mode, calling Close()\n");
+				Log.Info(this, "Parent not visible in preview mode, calling Close()\n");
 				Close();
 				return;
 			}
@@ -1020,7 +1019,7 @@ namespace imager
 			if (m_video.Video != null && m_video.Video.PlayState == Video.EPlayState.Running)
 				return;
 
-			Log.Write("StepSlideShow - Next\n");
+			Log.Info(this, "StepSlideShow - Next\n");
 			
 			// Load the next file
 			Next();
@@ -1325,7 +1324,7 @@ namespace imager
 			controls.FormClosing    += (s,e)=>{ if (e.CloseReason == CloseReason.UserClosing) {controls.Hide(); e.Cancel = true;} };
 			controls.VisibleChanged += (s,e)=>
 			{
-				Log.Write("m_controls now "+(controls.Visible ? "Visible" : "Hidden")+"\n");
+				Log.Info(this, "m_controls now "+(controls.Visible ? "Visible" : "Hidden")+"\n");
 				if (controls.Visible) { position(); controls.BringToFront(); ShowControls(); }
 				else if (ViewType == EViewType.FullScreen) { Util.ShowCursor = false; }
 			};
@@ -1410,7 +1409,7 @@ namespace imager
 		/// <summary>Called when the settings are changed</summary>
 		private void OnSettingsChanged(Settings settings, string prop)
 		{
-			Log.Write("SettingsChanged - "+prop+"\n");
+			Log.Info(this, "SettingsChanged - "+prop+"\n");
 			switch (prop)
 			{
 			default: break;
@@ -1568,8 +1567,7 @@ namespace imager
 		/// <summary>Check for udpates. Returns true if a new version is available</summary>
 		private void CheckForUpdates(bool show_dialogs)
 		{
-			// Callback function for when the version check has completed
-			Action<INet.CheckForUpdateResult,string> done = (res,msg)=>
+			Action<INet.CheckForUpdateResult,Exception> handle_c4u = (res,err) =>
 				{
 					Version this_version = Assembly.GetExecutingAssembly().GetName().Version;
 					if (res == null)
@@ -1577,16 +1575,16 @@ namespace imager
 						Status = "Version information not found.";
 						if (show_dialogs) MessageBox.Show(this,
 							"Failed to retrieve version information from "+m_settings.UpdateURL+".\n\n"+
-							"Reason: "+msg,
+							"Reason: "+err.Message,
 							"Check for Updates",
 							MessageBoxButtons.OK, MessageBoxIcon.Information);
 					}
-					else if (this_version.CompareTo(res.m_version) >  0)
+					else if (this_version.CompareTo(res.Version) >  0)
 					{
 						Status = "Development version running";
 						if (show_dialogs) MessageBox.Show(this, "This is newer than the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
 					}
-					else if (this_version.CompareTo(res.m_version) == 0)
+					else if (this_version.CompareTo(res.Version) == 0)
 					{
 						Status = "Latest version running";
 						if (show_dialogs) MessageBox.Show(this, "This is the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1599,27 +1597,35 @@ namespace imager
 							if (MessageBox.Show(this,
 								"A new version is available!\n"+
 								"Current version: "+this_version+"\n"+
-								"Latest version: "+res.m_version+"\n"+
-								"Website: "+(res.m_dl_url??"<Website URL not available>")+"\n"+
+								"Latest version: "+res.Version+"\n"+
+								"Website: "+(res.DownloadURL??"<Website URL not available>")+"\n"+
 								"\n"+
 								"Visit website to download the latest version?",
 								"New Version Detected",
 								MessageBoxButtons.YesNo,
 								MessageBoxIcon.Question) == DialogResult.Yes)
 							{
-								if (res.m_dl_url != null) Process.Start(res.m_dl_url);
+								if (res.DownloadURL != null) Process.Start(res.DownloadURL);
 								else MessageBox.Show(this, "The download URL is not available. Please update manually", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
 							}
 						}
 					}
 				};
-			
+
 			Status = "Checking for newer version...";
 			#if PLATFORM_X64
-			INet.CheckForUpdate("imager.x64", new Uri(m_settings.UpdateURL), done);
+			INet.BeginCheckForUpdate("imager.x64", m_settings.UpdateURL, ar =>
 			#elif PLATFORM_X86
-			INet.CheckForUpdate("imager.x86", new Uri(m_settings.UpdateURL), done);
+			INet.BeginCheckForUpdate("imager.x86", m_settings.UpdateURL, ar =>
 			#endif
+				{
+					INet.CheckForUpdateResult res = null; Exception error = null;
+					try { res = INet.EndCheckForUpdate(ar); }
+					catch (OperationCanceledException) {}
+					catch (Exception ex) { error = ex; }
+					handle_c4u(res, error);
+				});
+			
 		}
 
 		///// <summary>Transition to 'new_image'</summary>
@@ -1668,7 +1674,7 @@ namespace imager
 		/// <summary>Update which UI elements are visible and where they are on screen</summary>
 		private void UpdateUI()
 		{
-			Log.Write("UpdateUI begin\n");
+			Log.Info(this, "UpdateIU - begin\n");
 			SuspendLayout();
 
 			// Prevent UI updates while we set the form position
@@ -1677,7 +1683,7 @@ namespace imager
 			// Position the forms
 			if (m_view_type == EViewType.Normal)
 			{
-				Log.Write("UpdateUI - Normal\n");
+				Log.Info(this, "UpdateIU - Normal\n");
 				FormBorderStyle = FormBorderStyle.Sizable;
 				if (m_settings.WindowBounds != Rectangle.Empty) Bounds = m_settings.WindowBounds;
 				TopMost = m_settings.AlwaysOnTop;
@@ -1685,7 +1691,7 @@ namespace imager
 			}
 			else if (m_view_type == EViewType.ChildWindow)
 			{
-				Log.Write("UpdateUI - Child Window\n");
+				Log.Info(this, "UpdateIU - Child Window\n");
 				Win32.RECT rect; Win32.GetClientRect(m_parent, out rect);
 				FormBorderStyle = FormBorderStyle.None;
 				Size = rect.ToSize();
@@ -1699,7 +1705,7 @@ namespace imager
 				int primary = Maths.Clamp(m_settings.PrimaryDisplay, 0, display_count);
 				if (m_mode == EMode.ScreenSaver)
 				{
-					Log.Write("UpdateUI - Full Screen - screen saver\n");
+					Log.Info(this, "UpdateIU - Full Screen - screen saver\n");
 					primary = (primary != 0) ? primary - 1 : m_rng.Next(display_count);
 					for (int i = 0, j = 0; i != display_count; ++i)
 					{
@@ -1719,7 +1725,7 @@ namespace imager
 				}
 				else
 				{
-					Log.Write("UpdateUI - Full Screen - normal mode\n");
+					Log.Info(this, "UpdateIU - Full Screen - normal mode\n");
 					foreach (Form form in m_blanks) form.Visible = false;
 					Screen scrn = primary == 0 ? Screen.FromHandle(Handle) : Screen.AllScreens[primary-1];
 					WindowState = FormWindowState.Normal;
@@ -1735,7 +1741,6 @@ namespace imager
 			// Position the view controls within the forms
 			switch (m_view_type)
 			{
-			default: break;
 			case EViewType.Normal:
 				m_video.Location   = m_view3d.Location = new Point(0,m_menu.Height);
 				m_video.Size       = m_view3d.Size     = new Size(ClientSize.Width, ClientSize.Height - m_menu.Height - m_status.Height);
@@ -1755,7 +1760,7 @@ namespace imager
 			if (m_media_list_ui.Visible) m_media_list_ui.BringToFront();
 			if (m_dir_manager.Visible) m_dir_manager.BringToFront();
 
-			Log.Write("UpdateUI end: ["+Location.X+","+Location.Y+","+Size.Width+","+Size.Height+"]\n");
+			Log.Info(this, "UpdateIU - end: ["+Location.X+","+Location.Y+","+Size.Width+","+Size.Height+"]\n");
 			ResumeLayout();
 		}
 
@@ -1770,7 +1775,7 @@ namespace imager
 		{
 			string ext = Path.GetExtension(file);
 			foreach (string e in extn.Split(';'))
-				if (string.Compare(ext,"."+e.Substring(1),true) == 0)
+				if (string.Compare(ext, "."+e.Substring(1), StringComparison.OrdinalIgnoreCase) == 0)
 					return true;
 			return false;
 		}
