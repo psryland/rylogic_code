@@ -635,6 +635,16 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Return a collection of the currently active transforms</summary>
+		private IEnumerable<Transform> ActiveTransforms
+		{
+			get
+			{
+				if (!m_settings.TransformsEnabled) return Enumerable.Empty<Transform>();
+				return from tx in Transform.Import(m_settings.TransformPatterns) where tx.Active select tx;
+			}
+		}
+
 		/// <summary>Test 'text' against each filter to see if it returns a positive match</summary>
 		/// <returns>Returns false if at least one filter returned no match</returns>
 		private static bool PassesFilters(string text, IEnumerable<Filter> filters)

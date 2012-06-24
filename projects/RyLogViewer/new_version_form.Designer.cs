@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NewVersionForm));
 			this.m_link_website = new System.Windows.Forms.LinkLabel();
 			this.m_lbl_new_version = new System.Windows.Forms.Label();
 			this.m_link_download = new System.Windows.Forms.LinkLabel();
@@ -181,6 +182,7 @@
 			this.Controls.Add(this.m_panel);
 			this.Controls.Add(this.m_btn_ok);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "NewVersionForm";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "New Version Available";

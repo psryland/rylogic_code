@@ -11,7 +11,7 @@ namespace RyLogViewer
 {
 	internal abstract partial class PatternSetUi :UserControl
 	{
-		[Serializable] public class Set
+		[Serializable] protected class Set
 		{
 			public string Filepath { get; set; }
 			public string Name { get { return Path.GetFileNameWithoutExtension(Filepath); } }
@@ -288,8 +288,58 @@ namespace RyLogViewer
 		protected override void MergePatterns(XElement node)
 		{
 			bool some_added = false;
-			foreach (XElement n in node.Elements(XmlTag.Highlight))
+			foreach (XElement n in node.Elements(XmlTag.Filter))
 				try { some_added |= CurrentSet.AddIfUnique(new Filter(n)); } catch {} // Ignore those that fail
+			if (some_added) RaiseCurrentSetChanged();
+		}
+	}
+
+	/// <summary>Transform specific instance of the pattern set control</summary>
+	internal class PatternSetTX :PatternSetUi
+	{
+		protected const string TXPatternSetExtn   = @"rylog_transforms";
+		protected const string TXPatternSetFilter = @"Transform Set Files (*."+TXPatternSetExtn+")|*."+TXPatternSetExtn+"|All files (*.*)|*.*";
+		
+		/// <summary>A reference to the current set of transforms</summary>
+		public List<Transform> CurrentSet { get; private set; }
+
+		/// <summary>Initialise the control</summary>
+		internal void Init(Settings settings, List<Transform> transforms)
+		{
+			m_settings = settings;
+			m_settings.SettingsSaving += (s,a)=>{ m_settings.TransformPatternSets = Export(); };
+			Import(settings.TransformPatternSets);
+			CurrentSet = transforms;
+			UpdateUI();
+		}
+
+		/// <summary>Return the pattern set filter</summary>
+		protected override string PatternSetFilter
+		{
+			get { return TXPatternSetFilter; }
+		}
+
+		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
+		protected override void CurrentSetToXml(XElement parent)
+		{
+			foreach (var p in CurrentSet)
+				parent.Add(p.ToXml(new XElement(XmlTag.Transform)));
+		}
+		
+		/// <summary>Clear the current set of patterns</summary>
+		protected override void ClearPatterns()
+		{
+			if (CurrentSet.Count == 0) return;
+			CurrentSet.Clear();
+			RaiseCurrentSetChanged();
+		}
+		
+		/// <summary>Add the patterns in 'node' to the current list</summary>
+		protected override void MergePatterns(XElement node)
+		{
+			bool some_added = false;
+			foreach (XElement n in node.Elements(XmlTag.Transform))
+				try { some_added |= CurrentSet.AddIfUnique(new Transform(n)); } catch {} // Ignore those that fail
 			if (some_added) RaiseCurrentSetChanged();
 		}
 	}

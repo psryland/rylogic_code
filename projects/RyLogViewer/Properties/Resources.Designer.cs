@@ -674,6 +674,16 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Left click to enable/disable transforms.
+        ///Right click to show the transforms dialog.
+        /// </summary>
+        internal static string ShowTransformsDialog {
+            get {
+                return ResourceManager.GetString("ShowTransformsDialog", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Unknown command line option.
         /// </summary>
         internal static string UnknownCmdLineOption {

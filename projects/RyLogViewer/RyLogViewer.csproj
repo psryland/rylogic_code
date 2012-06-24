@@ -163,6 +163,10 @@
     <Compile Include="tipoftheday.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="transform.cs" />
+    <Compile Include="transform_ui.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <EmbeddedResource Include="about.resx">
       <DependentUpon>about.cs</DependentUpon>
     </EmbeddedResource>
@@ -214,6 +218,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="tipoftheday.resx">
       <DependentUpon>tipoftheday.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="transform_ui.resx">
+      <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="app.config" />
     <EmbeddedResource Include="docs\RegexQuickRef.html" />

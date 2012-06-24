@@ -14,6 +14,7 @@ namespace RyLogViewer
 		private readonly Settings        m_settings;    // The app settings changed by this UI
 		private readonly List<Highlight> m_highlights;  // The highlight patterns currently in the grid
 		private readonly List<Filter>    m_filters;     // The filter patterns currently in the grid
+		private readonly List<Transform> m_transforms;  // The transforms current in the grid 
 		private readonly ToolTip         m_tt;          // Tooltips
 		
 		public enum ETab
@@ -22,6 +23,7 @@ namespace RyLogViewer
 			LogView    = 1,
 			Highlights = 2,
 			Filters    = 3,
+			Transforms = 4,
 		}
 		private static class ColumnNames
 		{
@@ -40,18 +42,29 @@ namespace RyLogViewer
 			KeyPreview    = true;
 			m_settings    = new Settings();
 			m_highlights  = Highlight.Import(m_settings.HighlightPatterns);
-			m_filters     = Filter.Import(m_settings.FilterPatterns);
+			m_filters     = Filter   .Import(m_settings.FilterPatterns   );
+			m_transforms  = Transform.Import(m_settings.TransformPatterns);
 			m_tt          = new ToolTip();
 			
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
+			m_pattern_tx.NewPattern(new Transform());
+			
+					
+			//hack
+			var t = new Transform();
+			t.Match = "Enter {0} here to {1} your {2}";
+			t.Replace = "This is the result of your {2} {1} on {0}";
+			m_pattern_tx.NewPattern(t);
+			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			
 			SetupGeneralTab();
 			SetupLogViewTab();
 			SetupHighlightTab();
 			SetupFilterTab();
+			SetupTransformTab();
 			
 			// Escape to close
 			KeyDown += (s,a) =>
@@ -66,6 +79,7 @@ namespace RyLogViewer
 					Focus(); // grab focus to ensure all controls persist their state
 					m_settings.HighlightPatterns = Highlight.Export(m_highlights);
 					m_settings.FilterPatterns    = Filter   .Export(m_filters);
+					m_settings.TransformPatterns = Transform.Export(m_transforms);
 				};
 			
 			UpdateUI();
@@ -299,13 +313,13 @@ namespace RyLogViewer
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.SelectAll;
-			m_grid_highlight.UserDeletedRow   += (s,a)=> OnDeleteRow(m_grid_highlight, m_highlights);
-			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown(m_grid_highlight, m_highlights, a);
-			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop(m_grid_highlight, m_highlights, a, false);
+			m_grid_highlight.UserDeletedRow   += (s,a)=> OnDeleteRow      (m_grid_highlight, m_highlights);
+			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown      (m_grid_highlight, m_highlights, a);
+			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop       (m_grid_highlight, m_highlights, a, false);
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
-			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
+			m_grid_highlight.CellClick        += (s,a)=> OnCellClick      (m_grid_highlight, m_highlights, m_pattern_hl, a);
 			m_grid_highlight.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
-			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting(m_grid_highlight, m_highlights, a);
+			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
 			
 			// Highlight pattern
@@ -338,13 +352,13 @@ namespace RyLogViewer
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
-			m_grid_filter.UserDeletedRow     += (s,a)=> OnDeleteRow(m_grid_filter, m_filters);
-			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown(m_grid_filter, m_filters, a);
-			m_grid_filter.DragOver           += (s,a)=> DoDragDrop(m_grid_filter, m_filters, a, false);
+			m_grid_filter.UserDeletedRow     += (s,a)=> OnDeleteRow      (m_grid_filter, m_filters);
+			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown      (m_grid_filter, m_filters, a);
+			m_grid_filter.DragOver           += (s,a)=> DoDragDrop       (m_grid_filter, m_filters, a, false);
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
-			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
+			m_grid_filter.CellClick          += (s,a)=> OnCellClick      (m_grid_filter, m_filters, m_pattern_ft, a);
 			m_grid_filter.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_filter, m_filters, m_pattern_ft, a);
-			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting(m_grid_filter, m_filters, a);
+			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_filter, m_filters, a);
 			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
 			
 			// Filter pattern
@@ -359,6 +373,45 @@ namespace RyLogViewer
 			// Filter pattern sets
 			m_pattern_set_ft.Init(m_settings, m_filters);
 			m_pattern_set_ft.CurrentSetChanged += (s,a)=>
+				{
+					UpdateUI();
+				};
+		}
+
+		/// <summary>Hook up events for the transforms tab</summary>
+		private void SetupTransformTab()
+		{
+			m_grid_transform.AllowDrop           = true;
+			m_grid_transform.VirtualMode         = true;
+			m_grid_transform.AutoGenerateColumns = false;
+			m_grid_transform.ColumnCount         = m_grid_transform.RowCount = 0;
+			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
+			m_grid_transform.Columns.Add(new DataGridViewButtonColumn {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
+			m_grid_transform.KeyDown            += DataGridView_Extensions.Copy;
+			m_grid_transform.KeyDown            += DataGridView_Extensions.SelectAll;
+			m_grid_transform.UserDeletedRow     += (s,a)=> OnDeleteRow      (m_grid_transform, m_transforms);
+			m_grid_transform.MouseDown          += (s,a)=> OnMouseDown      (m_grid_transform, m_transforms, a);
+			m_grid_transform.DragOver           += (s,a)=> DoDragDrop       (m_grid_transform, m_transforms, a, false);
+			m_grid_transform.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_transform, m_transforms, a);
+			m_grid_transform.CellClick          += (s,a)=> OnCellClick      (m_grid_transform, m_transforms, m_pattern_tx, a);
+			m_grid_transform.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_transform, m_transforms, m_pattern_tx, a);
+			m_grid_transform.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_transform, m_transforms, a);
+			m_grid_transform.DataError          += (s,a)=> a.Cancel = true;
+			
+			// Transform
+			m_pattern_tx.Add += (s,a)=>
+				{
+					WhatsChanged |= EWhatsChanged.Rendering;
+					if (m_pattern_tx.IsNew) m_transforms.Add(m_pattern_tx.Transform);
+					m_pattern_tx.NewPattern(new Transform());
+					UpdateUI();
+				};
+			
+			// Transform sets
+			m_pattern_set_tx.Init(m_settings, m_transforms);
+			m_pattern_set_tx.CurrentSetChanged += (s,a)=>
 				{
 					UpdateUI();
 				};
@@ -417,7 +470,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Provide cells for the grid</summary>
-		private static void OnCellValueNeeded<T>(DataGridView grid, List<T> patterns, DataGridViewCellValueEventArgs e) where T:Pattern
+		private static void OnCellValueNeeded<T>(DataGridView grid, List<T> patterns, DataGridViewCellValueEventArgs e)
 		{
 			if (e.RowIndex < 0 || e.RowIndex >= patterns.Count) { e.Value = ""; return; }
 			var cell = grid[e.ColumnIndex, e.RowIndex];
@@ -428,7 +481,7 @@ namespace RyLogViewer
 			{
 			default: e.Value = string.Empty; break;
 			case ColumnNames.Pattern:
-				e.Value = pat.Expr;
+				e.Value = pat.ToString();
 				break;
 			case ColumnNames.Highlighting:
 				e.Value = Resources.ClickToModifyHighlight;
@@ -442,7 +495,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Handle cell clicks</summary>
-		private void OnCellClick<T>(DataGridView grid, List<T> patterns, PatternUI ctrl, DataGridViewCellEventArgs e) where T:Pattern
+		private void OnCellClick<T>(DataGridView grid, List<T> patterns, IPatternUI ctrl, DataGridViewCellEventArgs e) where T:IPattern
 		{
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
@@ -479,7 +532,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Double click edits the pattern</summary>
-		private void OnCellDoubleClick<T>(DataGridView grid, List<T> patterns, PatternUI ctrl, DataGridViewCellEventArgs e) where T:Pattern
+		private void OnCellDoubleClick<T>(DataGridView grid, List<T> patterns, IPatternUI ctrl, DataGridViewCellEventArgs e) where T:IPattern
 		{
 			ctrl.EditPattern(patterns[e.RowIndex]);
 			WhatsChanged |= grid == m_grid_highlight
@@ -488,7 +541,7 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Cell formatting...</summary>
-		private static void OnCellFormatting<T>(DataGridView grid, List<T> patterns, DataGridViewCellFormattingEventArgs e) where T:Pattern
+		private static void OnCellFormatting<T>(DataGridView grid, List<T> patterns, DataGridViewCellFormattingEventArgs e) where T:IPattern
 		{
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
@@ -537,7 +590,7 @@ namespace RyLogViewer
 			selected = m_grid_filter.FirstSelectedRowIndex();
 			m_grid_filter.CurrentCell = null;
 			m_grid_filter.RowCount = 0;
-			m_grid_filter.RowCount = m_filters.Count;
+			m_grid_filter.RowCount = m_transforms.Count;
 			m_grid_filter.SelectRow(selected);
 			
 			ResumeLayout();

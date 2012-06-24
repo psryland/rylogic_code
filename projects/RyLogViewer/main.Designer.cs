@@ -107,6 +107,8 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.m_btn_transforms = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -129,6 +131,8 @@
             this.m_sep,
             this.m_btn_highlights,
             this.m_btn_filters,
+            this.m_btn_transforms,
+            this.toolStripSeparator9,
             this.m_btn_options,
             this.toolStripSeparator1,
             this.m_btn_jump_to_end,
@@ -137,7 +141,7 @@
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(254, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(319, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -769,6 +773,21 @@
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.ControlLight;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
+			// m_btn_transforms
+			// 
+			this.m_btn_transforms.CheckOnClick = true;
+			this.m_btn_transforms.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_transforms.Image = global::RyLogViewer.Properties.Resources.reload;
+			this.m_btn_transforms.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_transforms.Name = "m_btn_transforms";
+			this.m_btn_transforms.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_transforms.Text = "Transforms";
+			// 
+			// toolStripSeparator9
+			// 
+			this.toolStripSeparator9.Name = "toolStripSeparator9";
+			this.toolStripSeparator9.Size = new System.Drawing.Size(6, 31);
+			// 
 			// Main
 			// 
 			this.AllowDrop = true;
@@ -881,6 +900,8 @@
 		private System.Windows.Forms.ToolStripButton m_btn_jump_to_start;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_check_for_updates;
+		private System.Windows.Forms.ToolStripButton m_btn_transforms;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
 	}
 }
 

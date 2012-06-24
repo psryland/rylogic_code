@@ -127,6 +127,9 @@ namespace RyLogViewer
 			m_btn_filters.ToolTipText       = Resources.ShowFiltersDialog;
 			m_btn_filters.Click            += (s,a) => EnableFilters(m_btn_filters.Checked);
 			m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
+			m_btn_transforms.ToolTipText    = Resources.ShowTransformsDialog;
+			m_btn_transforms.Click         += (s,a) => EnableTransforms(m_btn_transforms.Checked);
+			m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms); };
 			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
 			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
@@ -709,6 +712,14 @@ namespace RyLogViewer
 			BuildLineIndex(m_filepos, true);
 		}
 
+		/// <summary>Turn on/off transforms</summary>
+		private void EnableTransforms(bool enable)
+		{
+			m_settings.TransformsEnabled = enable;
+			ApplySettings();
+			BuildLineIndex(m_filepos, true);
+		}
+
 		/// <summary>Turn on/off tail mode</summary>
 		private void EnableTail(bool enable)
 		{
@@ -872,7 +883,7 @@ namespace RyLogViewer
 				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", (s,a)=>
 					{
 						BackgroundWorker bgw = (BackgroundWorker)s;
-						bgw.ReportProgress(100, new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee});
+						bgw.ReportProgress(100, new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
 						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateURL, null);
 						
 						// Wait till the operation completes, or until cancel is singled
@@ -1196,6 +1207,7 @@ namespace RyLogViewer
 			// Toolbar
 			m_btn_highlights.Checked = m_settings.HighlightsEnabled;
 			m_btn_filters.Checked    = m_settings.FiltersEnabled;
+			m_btn_transforms.Checked = m_settings.TransformsEnabled;
 			m_btn_tail.Checked       = m_watch_timer.Enabled;
 			
 			// The file scroll bar is only visible when part of the file is loaded

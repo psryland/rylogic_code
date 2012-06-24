@@ -280,6 +280,10 @@ Error: {0}</value>
     <value>Left click to enable/disable filters.
 Right click to show the filters dialog</value>
   </data>
+  <data name="ShowTransformsDialog" xml:space="preserve">
+    <value>Left click to enable/disable transforms.
+Right click to show the transforms dialog</value>
+  </data>
   <data name="BuildLineIndexErrorMsg" xml:space="preserve">
     <value>The was an error while parsing the log file.
 Error Details: {0}</value>

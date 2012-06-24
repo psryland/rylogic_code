@@ -158,6 +158,11 @@ namespace RyLogViewer
 			get { return get<bool>("FiltersEnabled"); }
 			set { set("FiltersEnabled", value); }
 		}
+		public bool   TransformsEnabled
+		{
+			get { return get<bool>("TransformsEnabled"); }
+			set { set("TransformsEnabled", value); }
+		}
 		public bool   TailEnabled
 		{
 			get { return get<bool>("TailEnabled"); }
@@ -183,6 +188,11 @@ namespace RyLogViewer
 			get { return get<string>("FilterPatterns"); }
 			set { set("FilterPatterns", value); }
 		}
+		public string TransformPatterns
+		{
+			get { return get<string>("TransformPatterns"); }
+			set { set("TransformPatterns", value); }
+		}
 		public string HighlightPatternSets
 		{
 			get { return get<string>("HighlightPatternSets"); }
@@ -192,6 +202,11 @@ namespace RyLogViewer
 		{
 			get { return get<string>("FilterPatternSets"); }
 			set { set("FilterPatternSets", value); }
+		}
+		public string TransformPatternSets
+		{
+			get { return get<string>("TransformPatternSets"); }
+			set { set("TransformPatternSets", value); }
 		}
 		public string RowDelimiter
 		{
@@ -275,13 +290,16 @@ namespace RyLogViewer
 			CheckForUpdates                 = true;
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = true;
+			TransformsEnabled               = true;
 			TailEnabled                     = false;
 			FileBufSize                     = 10 * 1024 * 1024;
 			LineCacheCount                  = 10000;
 			HighlightPatterns               = "<root/>";
 			FilterPatterns                  = "<root/>";
+			TransformPatterns               = "<root/>";
 			HighlightPatternSets            = "<root/>";
 			FilterPatternSets               = "<root/>";
+			TransformPatternSets            = "<root/>";
 			RowDelimiter                    = "";
 			ColDelimiter                    = "";
 			ColumnCount                     = 1;

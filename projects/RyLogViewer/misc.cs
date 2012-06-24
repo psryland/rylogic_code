@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.IO.Ports;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace RyLogViewer
 {
@@ -77,9 +82,18 @@ namespace RyLogViewer
 		public const string ForeColour = "forecolour";
 		public const string BackColour = "backcolour";
 		public const string Filter     = "filter";
+		public const string Transform  = "transform";
 		public const string Exclude    = "exclude";
 		public const string Name       = "name";
 		public const string Filepath   = "filepath";
+		public const string Match      = "match";
+		public const string Pattern    = "pattern";
+		public const string Replace    = "replace";
+		public const string Subs       = "subs";
+		public const string Sub        = "sub";
+		public const string Type       = "type";
+		public const string Elem       = "elem";
+		public const string Id         = "id";
 	}
 
 	public enum SubRangeScrollRange
@@ -273,6 +287,46 @@ namespace RyLogViewer
 			
 			if (list.Count > max_history_length)
 				list.RemoveRange(max_history_length, list.Count - max_history_length);
+		}
+		
+		/// <summary>Show a window containing quick help info</summary>
+		public static void ShowQuickHelp(Control parent)
+		{
+			var win = new Form
+			{
+				FormBorderStyle = FormBorderStyle.SizableToolWindow,
+				StartPosition = FormStartPosition.Manual,
+				ShowInTaskbar = true,
+			};
+			var edit = new WebBrowser
+			{
+				Dock = DockStyle.Fill,
+			};
+			win.Controls.Add(edit);
+
+			const string RegexHelpNotFound = @"<p>Regular Expression Quick Reference resource data not found</p>";
+			Stream help = Assembly.GetExecutingAssembly().GetManifestResourceStream("RyLogViewer.docs.RegexQuickRef.html");
+			edit.DocumentText = (help == null) ? RegexHelpNotFound : new StreamReader(help).ReadToEnd();
+			
+			win.Location = parent.PointToScreen(parent.Location) + new Size(parent.Width, 0);
+			win.Size = new Size(640,480);
+			win.Show(parent);
+		}
+	}
+
+	public struct Span
+	{
+		public int Index;
+		public int Count;
+		
+		public Span(int index, int count)
+		{
+			Index = index;
+			Count = count;
+		}
+		public override string ToString()
+		{
+			return string.Format("[{0},{1})",Index,Index+Count);
 		}
 	}
 }
