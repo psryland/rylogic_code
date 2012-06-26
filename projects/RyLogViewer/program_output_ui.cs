@@ -46,6 +46,7 @@ namespace RyLogViewer
 			m_edit_arguments.Text = Launch.Arguments;
 			m_edit_arguments.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					Launch.Arguments = m_edit_arguments.Text;
 					UpdateUI();
 				};
@@ -55,6 +56,7 @@ namespace RyLogViewer
 			m_edit_working_dir.Text = Launch.WorkingDirectory;
 			m_edit_working_dir.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					Launch.WorkingDirectory = m_edit_working_dir.Text;
 					UpdateUI();
 				};

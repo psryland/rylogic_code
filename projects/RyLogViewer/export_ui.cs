@@ -51,6 +51,7 @@ namespace RyLogViewer
 			m_edit_output_filepath.Text = OutputFilepath;
 			m_edit_output_filepath.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					OutputFilepath = m_edit_output_filepath.Text;
 				};
 			
@@ -93,6 +94,7 @@ namespace RyLogViewer
 			m_edit_line_ending.Text = RowDelim;
 			m_edit_line_ending.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					RowDelim = m_edit_line_ending.Text;
 				};
 			
@@ -103,6 +105,7 @@ namespace RyLogViewer
 			m_edit_col_delim.Text = ColDelim;
 			m_edit_col_delim.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					ColDelim = m_edit_col_delim.Text;
 				};
 			

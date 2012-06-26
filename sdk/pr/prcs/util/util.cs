@@ -474,6 +474,24 @@ namespace pr.util
 			return AllFields(type.BaseType, flags).Union(type.GetFields(flags|BindingFlags.DeclaredOnly));
 		}
 
+		/// <summary>
+		/// Find all types derived from 'T'<para/>
+		/// Use: var output = FindAllDerivedTypes&lt;System.IO.Stream&gt;();<para/>
+		///  foreach (var type in output)<para/>
+		///  {<para/>
+		///     Console.WriteLine(type.Name);<para/>
+		///  }<para/>
+		/// </summary>
+		public static List<Type> FindAllDerivedTypes()
+		{
+			return FindAllDerivedTypes(Assembly.GetAssembly(typeof(T)));
+		}
+		private static List<Type> FindAllDerivedTypes(Assembly assembly)
+		{
+			var derivedType = typeof(T);
+			return assembly.GetTypes().Where(t => t != derivedType && derivedType.IsAssignableFrom(t)).ToList();
+		}
+		
 		/// <summary>Copies all of the fields of 'from' into 'to'. Returns 'to' for method chaining</summary>
 		public static T ShallowCopy(T from, T to)
 		{

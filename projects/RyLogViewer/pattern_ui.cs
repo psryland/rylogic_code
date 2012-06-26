@@ -55,6 +55,7 @@ namespace RyLogViewer
 			m_edit_pattern.ToolTip(m_tt, "A substring or regular expression to match");
 			m_edit_pattern.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					Pattern.Expr = m_edit_pattern.Text;
 					UpdateUI();
 				};
@@ -140,6 +141,7 @@ namespace RyLogViewer
 			m_edit_test.ToolTip(m_tt, "A area for testing your pattern. Add any text you like here");
 			m_edit_test.TextChanged += (s,a)=>
 				{
+					if (!((RichTextBox)s).Modified) return;
 					UpdateUI();
 				};
 		}

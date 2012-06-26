@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
-using System.Reflection;
+using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using System.Xml.Linq;
+using pr.container;
+using pr.extn;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -11,82 +17,18 @@ namespace RyLogViewer
 	{
 		private string m_match;
 		private Regex  m_compiled_patn;
-
-		public interface ISub
-		{
-			/// <summary>The tag id for the substitution</summary>
-			string Id { get; }
-			
-			/// <summary>The friendly name for the substitution</summary>
-			string Type { get; }
-			
-			/// <summary>Returns 'elem' transformed</summary>
-			string Result(string elem);
-			
-			/// <summary>Populate this object from an xml node</summary>
-			void FromXml(XElement node);
-			
-			/// <summary>Serialise this object to an xml node</summary>
-			XElement ToXml(XElement node);
-		}
-	
-		/// <summary>A base class for a substitution object. Implements a default substitution which does not transform the input element</summary>
-		public class Sudb :ISub
-		{
-			/// <summary>The tag id if this substitution. Should be something wrapped in '{','}'. E.g {boobs}</summary>
-			public string Id { get; private set; }
-
-			/// <summary>A human readable name for the substitution</summary>
-			public string Type { get; protected set; }
-
-			/// <summary>Return 'elem' transformed by this substitution object</summary>
-			public virtual string Result(string elem)
-			{
-				return elem;
-			}
-			
-			public Sudb()
-			{
-				Id = "";
-				Type = "No Change";
-			}
-			public Sudb(string id) :this()
-			{
-				Id = id;
-			}
-			public virtual void FromXml(XElement node)
-			{
-				// ReSharper disable PossibleNullReferenceException
-				Id   = node.Element(XmlTag.Id  ).Value;
-				Type = node.Element(XmlTag.Type).Value;
-				// ReSharper restore PossibleNullReferenceException
-			}
-			public virtual XElement ToXml(XElement node)
-			{
-				node.Add
-				(
-					new XElement(XmlTag.Id   ,Id),
-					new XElement(XmlTag.Type ,Type)
-				);
-				return node;
-			}
-			public override string ToString()
-			{
-				return string.Format("{0} ({1})" ,Id ,Type);
-			}
-		}
-
+		
 		/// <summary>Represents a captured element with a source string</summary>
 		public class Capture
 		{
 			/// <summary>The tag id for the capture</summary>
-			public string Id;
+			public readonly string Id;
 
 			/// <summary>The character range for the capture in the source string</summary>
-			public Span Span;
+			public readonly Span Span;
 
 			/// <summary>The content of the captured character range from the source string</summary>
-			public string Elem;
+			public readonly string Elem;
 
 			public Capture(string id, Span span, string elem)
 			{
@@ -116,8 +58,8 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>A collection of the substitutions to apply for each capture tag</summary>
-		public Dictionary<string,ISub> Subs { get; private set; }
+		/// <summary>A sorted list of substitutions to apply for each capture tag</summary>
+		public ListMap<string, ITxfmSub> Subs { get; private set; }
 		
 		//assume substring only for now
 		/// <summary>The pattern used to match rows that will have the transform applied.</summary>
@@ -140,22 +82,25 @@ namespace RyLogViewer
 
 		/// <summary>True if this transform should be applied</summary>
 		public bool Active { get; set; }
+		
+		private static int TxfmCmp(string key, ITxfmSub value) { return -string.CompareOrdinal(key, value.Id); }
 
 		public Transform()
 		{
-			Subs       = new Dictionary<string,ISub>();
-			Match      = "";
-			Replace    = "";
-			IgnoreCase = false;
-			Active     = true;
+			Subs         = new ListMap<string, ITxfmSub>(TxfmCmp);
+			Match        = "";
+			Replace      = "";
+			IgnoreCase   = false;
+			Active       = true;
 		}
-		public Transform(Transform rhs)
+
+		private Transform(Transform rhs)
 		{
+			Subs       = new ListMap<string,ITxfmSub>(rhs.Subs);
 			Match      = rhs.Match;
 			Replace    = rhs.Replace;
 			IgnoreCase = rhs.IgnoreCase;
 			Active     = rhs.Active;
-			Subs       = new Dictionary<string,ISub>(rhs.Subs);
 		}
 
 		/// <summary>Construct from xml description</summary>
@@ -166,30 +111,18 @@ namespace RyLogViewer
 			Replace     = node.Element(XmlTag.Replace).Value;
 			IgnoreCase  = bool.Parse(node.Element(XmlTag.IgnoreCase).Value);
 			Active      = bool.Parse(node.Element(XmlTag.Active).Value);
-			
-			Subs = new Dictionary<string,ISub>();
-			foreach (XElement n in node.Element(XmlTag.Subs).Elements())
-			{
-				ISub sub = (ISub)Activator.CreateInstance(null, n.Name.LocalName);
-				Subs.Add(sub.Id, sub);
-			}
 			// ReSharper restore PossibleNullReferenceException
 		}
 
 		/// <summary>Export this type to an xml node</summary>
 		public XElement ToXml(XElement node)
 		{
-			XElement subs = new XElement(XmlTag.Subs);
-			foreach (var s in Subs)
-				subs.Add(s.Value.ToXml(new XElement(s.Value.Type)));
-			
 			node.Add
 			(
 				new XElement(XmlTag.Match      ,Match     ),
 				new XElement(XmlTag.Replace    ,Replace   ),
 				new XElement(XmlTag.IgnoreCase ,IgnoreCase),
-				new XElement(XmlTag.Active     ,Active    ),
-				subs
+				new XElement(XmlTag.Active     ,Active    )
 			);
 			return node;
 		}
@@ -223,15 +156,11 @@ namespace RyLogViewer
 		{
 			get
 			{
-				// Check all tags in the match template exist in 'Subs' (this should be true if set_Match is used)
-				foreach (Match m in GetTags(Match))
-					if (!Subs.ContainsKey(m.Value)) return false;
-				
-				// Check all tags in the result template exist in 'Subs'
-				foreach (Match m in GetTags(Replace))
-					if (!Subs.ContainsKey(m.Value)) return false;
-				
-				return true;
+				// Check all tags in the match template and the result template exist in 'Subs'
+				// (the match template should be true if set_Match is used)
+				return
+					GetTags(Match  ).Cast<Match>().All(m => Subs.IndexOf(x => x.Id == m.Value) != -1) &&
+					GetTags(Replace).Cast<Match>().All(m => Subs.IndexOf(x => x.Id == m.Value) != -1);
 			}
 		}
 
@@ -272,15 +201,13 @@ namespace RyLogViewer
 			string result = Replace;
 			
 			// Build a list of the tags to be replaced in the result string
-			List<Tag> rtags = new List<Tag>();
-			foreach (Match m in GetTags(result))
-				rtags.Add(new Tag(m.Value, new Span(m.Index, m.Length)));
-			
+			List<Tag> rtags = (from Match m in GetTags(result) select new Tag(m.Value, new Span(m.Index, m.Length))).ToList();
+
 			// Perform the substitutions on the tags (in reverse order to preserve indices)
 			rtags.Reverse();
 			foreach (Tag t in rtags)
 			{
-				string sub = Subs[t.Id].Result(tags[t.Id].Elem);
+				string sub = Subs.Find(x=>x.Id==t.Id).Result(tags[t.Id].Elem);
 				result = result.Remove(t.Span.Index, t.Span.Count);
 				result = result.Insert(t.Span.Index, sub);
 			}
@@ -295,15 +222,15 @@ namespace RyLogViewer
 			var subs = Subs;
 			
 			// Build a map of tag ids to default substitution objects
-			Subs = new Dictionary<string,ISub>();
+			Subs = new ListMap<string,ITxfmSub>(TxfmCmp);
 			foreach (Match m in GetTags(Match))
-				Subs.Add(m.Value, new Sudb(m.Value));
+				Subs.Add(m.Value, new SubNoChange{Id = m.Value});
 			
 			// Merge the old list of subs back into the Subs map
 			foreach (var s in subs)
 			{
-				if (!Subs.ContainsKey(s.Key)) continue;
-				Subs[s.Key] = s.Value;
+				if (!Subs.ContainsKey(s.Id)) continue;
+				Subs[s.Id] = s;
 			}
 		}
 		
@@ -364,79 +291,155 @@ namespace RyLogViewer
 			return Match;
 		}
 	}
+	
+	/// <summary>A helper class for loading transform substitutions</summary>
+	internal class TxfmSubLoader
+	{
+		// ReSharper disable UnassignedField.Global
+		[ImportMany(typeof(ITxfmSub))] public List<ITxfmSub> TxfmSubs; // populated by 'ComposeParts'
+		// ReSharper restore UnassignedField.Global
+		
+		/// <summary>Find all type derived from ITxfmSub</summary>
+		public TxfmSubLoader()
+		{
+			TxfmSubs = null;
+			var cat       = new AssemblyCatalog(typeof(Transform).Assembly);
+			var comp_cont = new CompositionContainer(cat);
+			comp_cont.ComposeParts(this);
+		}
+
+		/// <summary>Factory method for creating substitution objects by name</summary>
+		public ITxfmSub Create(string id, string sub_type)
+		{
+			foreach (ITxfmSub s in TxfmSubs)
+			{
+				if (s.Type != sub_type) continue;
+				ITxfmSub sub = s.Clone();
+				sub.Id = id;
+				return sub;
+			}
+			throw new ArgumentException("Unknown transform substitution type");
+		}
+	}
+
+	/// <summary>An interface for substitution types used in Transform</summary>
+	public interface ITxfmSub
+	{
+		/// <summary>The tag id for the substitution</summary>
+		string Id { get; set; }
+		
+		/// <summary>The friendly name for the substitution</summary>
+		string Type { get; }
+		
+		/// <summary>A summary of the configuration for this transform substitution</summary>
+		string ConfigSummary { get; }
+		
+		/// <summary>A method to setup the transform substitution's specific data</summary>
+		void Config();
+		
+		/// <summary>Returns 'elem' transformed</summary>
+		string Result(string elem);
+
+		/// <summary>Create a copy of this instance</summary>
+		ITxfmSub Clone();
+	}
+
+	public class TxfmSubBase :ITxfmSub
+	{
+		/// <summary>The tag id if this substitution. Should be something wrapped in '{','}'. E.g {boobs}</summary>
+		public string Id { get; set; }
+
+		/// <summary>A human readable name for the substitution</summary>
+		public string Type { get; private set; }
+
+		public TxfmSubBase(string type) { Id = ""; Type = type; }
+
+		/// <summary>A summary of the configuration for this transform substitution</summary>
+		public virtual string ConfigSummary { get { return ""; } }
+
+		/// <summary>A method to setup the transform substitution's specific data</summary>
+		public virtual void Config() { } // Nothing to configure
+
+		/// <summary>Returns 'elem' transformed</summary>
+		public virtual string Result(string elem) { return elem; }
+
+		/// <summary>Create a copy of this instance</summary>
+		public ITxfmSub Clone() { return (ITxfmSub)MemberwiseClone(); }
+
+		public override string ToString() { return string.Format("{0} ({1})" ,Id ,Type); }
+	}
+
+	/// <summary>A default substitution object which does not transform the input element</summary>
+	[Export(typeof(ITxfmSub))]
+	public class SubNoChange :TxfmSubBase
+	{
+		public SubNoChange() :base("No Change") {}
+	}
 
 	/// <summary>A substitution type that converts elements to lower case</summary>
-	public class SubToLower :Transform.Sudb
+	[Export(typeof(ITxfmSub))]
+	public class SubToLower :TxfmSubBase
 	{
-		public SubToLower(string id) :base(id)
-		{
-			Type = "To Lower Case";
-		}
-		public SubToLower(XElement node) :base(node)
-		{
-		}
-
-		/// <summary>Return 'elem' transformed by this substitution object</summary>
+		public SubToLower() :base("To Lower Case") {}
 		public override string Result(string elem)
 		{
 			return elem.ToLower();
 		}
 	}
 
-	
-		//public class Sub
-		//{
-		//    public enum EType
-		//    {
-		//        NoChange,
-		//        ToUpper,
-		//        ToLower,
-		//    }
-			
-		//    /// <summary>The tag id if this substitution. Should be something wrapped in '{','}'. E.g {boobs}</summary>
-		//    public string Id;
-			
-		//    /// <summary>The type of substitution to perform</summary>
-		//    public EType Type;
+	/// <summary>A substitution type that converts elements to lower case</summary>
+	[Export(typeof(ITxfmSub))]
+	public class SubToUpper :TxfmSubBase
+	{
+		public SubToUpper() :base("To Upper Case") {}
+		public override string Result(string elem)
+		{
+			return elem.ToUpper();
+		}
+	}
 
-		//    /// <summary>The string contents of the captured element</summary>
-		//    public string Result(string elem)
-		//    {
-		//        switch (Type)
-		//        {
-		//        default: throw new ArgumentOutOfRangeException();
-		//        case EType.NoChange: return elem;
-		//        case EType.ToUpper:  return elem.ToUpper();
-		//        case EType.ToLower:  return elem.ToLower();
-		//        }
-		//    }
-			
-		//    public Sub(string id, EType type)
-		//    {
-		//        Id = id;
-		//        Type = type;
-		//    }
-		//    public Sub(XElement node)
-		//    {
-		//        // ReSharper disable PossibleNullReferenceException
-		//        Id   = node.Element(XmlTag.Id).Value;
-		//        Type = (EType)Enum.Parse(typeof(EType), node.Element(XmlTag.Type).Value);
-		//        // ReSharper restore PossibleNullReferenceException
-		//    }
-		//    public XElement ToXml(XElement node)
-		//    {
-		//        node.Add
-		//        (
-		//            new XElement(XmlTag.Id   ,Id),
-		//            new XElement(XmlTag.Type ,Type)
-		//        );
-		//        return node;
-		//    }
-		//    public override string ToString()
-		//    {
-		//        return string.Format("{0} {1}" ,Id ,Type.ToString());
-		//    }
-		//}
+	/// <summary>A substitution that rearranges text</summary>
+	[Export(typeof(ITxfmSub))]
+	public class Swizzle :TxfmSubBase
+	{
+		private int[] m_swap;
+		
+		/// <summary>A summary of the configuration for this transform substitution</summary>
+		public override string ConfigSummary
+		{
+			get { return "aabb -> abab"; }
+		}
+
+		public Swizzle() :base("Swizzle") {}
+		public virtual void Config(Form parent)
+		{
+			var dg = new Form
+			{
+				FormBorderStyle = FormBorderStyle.FixedSingle,
+			};
+			var lbl0 = new Label
+			{
+			};
+			var edit0 = new TextBox
+			{
+			};
+			var lbl1 = new Label
+			{
+			};
+			var edit1 = new TextBox
+			{
+			};
+			dg.Controls.Add(lbl0);
+			dg.Controls.Add(edit0);
+			dg.Controls.Add(lbl1);
+			dg.Controls.Add(edit1);
+			dg.ShowDialog(parent);
+		}
+		public override string Result(string elem)
+		{
+			return elem;
+		}
+	}
 }
 
 

@@ -147,6 +147,7 @@
     <Compile Include="common\tuple.cs" />
     <Compile Include="common\weak_delegate.cs" />
     <Compile Include="container\listevt.cs" />
+    <Compile Include="container\list_map.cs" />
     <Compile Include="container\ring_buffer.cs" />
     <Compile Include="container\sortable_binding_list.cs" />
     <Compile Include="directshow.net\amstream.cs" />

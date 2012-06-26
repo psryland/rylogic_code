@@ -7,10 +7,16 @@ namespace RyLogViewer
 {
 	public class TransformUI :UserControl ,IPatternUI
 	{
-		enum BtnImageIdx { AddNew = 0, Save = 1 }
+		private enum BtnImageIdx { AddNew = 0, Save = 1 }
+		private static class ColumnNames
+		{
+			public const string Id   = "Id";
+			public const string Type = "Type";
+			public const string Data = "Data";
+		}
 		
+		private readonly TxfmSubLoader m_subs_loader;
 		private readonly ToolTip m_tt;
-		private readonly BindingSource m_subs;
 		private Transform      m_transform;
 		private TextBox        m_edit_match;
 		private TextBox        m_edit_replace;
@@ -21,11 +27,12 @@ namespace RyLogViewer
 		private Label          m_lbl_match_desc;
 		private Label          m_lbl_replace_desc;
 		private CheckBox       m_check_ignore_case;
-		public  Button         m_btn_add;
+		private Button         m_btn_add;
 		private Button         m_btn_regex_help;
 		private ImageList      m_image_list;
 		private SplitContainer m_split_test;
 		private RichTextBox    m_edit_test;
+		private SplitContainer m_split_subs;
 		private RichTextBox    m_edit_result;
 		
 		/// <summary>The pattern being controlled by this UI</summary>
@@ -41,10 +48,10 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_transform = null;
+			m_subs_loader = new TxfmSubLoader();
 			m_tt = new ToolTip();
-			m_subs = new BindingSource{DataSource = null};
 			string tt;
-
+			
 			// Add/Update
 			m_btn_add.ToolTip(m_tt, "Adds a new transform, or updates an existing transform");
 			m_btn_add.Click += (s,a)=>
@@ -67,6 +74,7 @@ namespace RyLogViewer
 			m_edit_match.ToolTip(m_tt, tt);
 			m_edit_match.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					Transform.Match = m_edit_match.Text;
 					UpdateUI();
 				};
@@ -85,27 +93,69 @@ namespace RyLogViewer
 			m_edit_replace.ToolTip(m_tt, tt);
 			m_edit_replace.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					Transform.Replace = m_edit_replace.Text;
 					UpdateUI();
 				};
 
 			// Substitutions
 			m_grid_subs.AutoGenerateColumns = false;
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {HeaderText = "Id"   ,FillWeight = 20 ,DataPropertyName = "Id"    });
-			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{HeaderText = "Type" ,FillWeight = 50 ,DataPropertyName = "Type"  ,DataSource = Enum.GetNames(typeof(Transform.Sub.EType))});
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {HeaderText = "Data" ,FillWeight = 50 ,DataPropertyName = "Type"  });
-			m_grid_subs.DataSource = m_subs;
-			m_grid_subs.CellPainting += CellPainting;
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Id   ,HeaderText = "Id"   ,FillWeight = 20 ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type ,HeaderText = "Type" ,FillWeight = 30 ,DataSource = m_subs_loader.TxfmSubs, DisplayMember = "Type", FlatStyle=FlatStyle.Flat});
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Data ,HeaderText = "Data" ,FillWeight = 50 ,ReadOnly = true});
+			m_grid_subs.VirtualMode       = true;
+			m_grid_subs.CurrentCellDirtyStateChanged += (s,a) => m_grid_subs.CommitEdit(DataGridViewDataErrorContexts.Commit);
+			m_grid_subs.CellValueNeeded  += CellValueNeeded;
+			m_grid_subs.CellValuePushed  += CellValuePushed;
+			m_grid_subs.CellPainting     += CellPainting;
 
 			// Test text
 			m_edit_test.ToolTip(m_tt, "A area for testing your pattern. Add any text you like here");
 			m_edit_test.TextChanged += (s,a)=>
 				{
+					if (!((RichTextBox)s).Modified) return;
 					UpdateUI();
 				};
 
 			// Result text
 			m_edit_result.ToolTip(m_tt, "Shows the result of applying the transform to the text in the test area");
+		}
+
+		/// <summary>Get the cell value from the transform</summary>
+		private void CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
+		{
+			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) { e.Value = ""; return; }
+			DataGridView grid = (DataGridView)sender;
+			var sub = Transform.Subs[e.RowIndex];
+			switch (grid.Columns[e.ColumnIndex].Name)
+			{
+			default: e.Value = string.Empty; break;
+			case ColumnNames.Id:   e.Value = sub.Id;   break;
+			case ColumnNames.Type: e.Value = sub.Type; break;
+			case ColumnNames.Data: e.Value = sub.ConfigSummary; break;
+			}
+		}
+
+		/// <summary>Handle cell values changed</summary>
+		private void CellValuePushed(object sender, DataGridViewCellValueEventArgs e)
+		{
+			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) { return; }
+			DataGridView grid = (DataGridView)sender;
+			var cell = grid[e.ColumnIndex, e.RowIndex];
+			var sub = Transform.Subs[e.RowIndex];
+			
+			switch (grid.Columns[e.ColumnIndex].Name)
+			{
+			case ColumnNames.Type:
+				if (!e.Value.Equals(sub.Type))
+				{
+					var new_sub = m_subs_loader.Create(sub.Id, (string)e.Value);
+					Transform.Subs[e.RowIndex] = new_sub;
+					grid.Invalidate();
+				}
+				break;
+			}
+			UpdateUI();
 		}
 
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
@@ -121,7 +171,6 @@ namespace RyLogViewer
 		{
 			IsNew = true;
 			m_transform = (Transform)tx;
-			m_subs.DataSource = m_transform.Subs;
 			m_btn_add.ImageIndex = (int)BtnImageIdx.AddNew;
 			m_btn_add.ToolTip(m_tt, "Add this new transform");
 			UpdateUI();
@@ -132,7 +181,6 @@ namespace RyLogViewer
 		{
 			IsNew = false;
 			m_transform = (Transform)tx;
-			m_subs.DataSource = m_transform.Subs;
 			m_btn_add.ImageIndex = (int)BtnImageIdx.Save;
 			m_btn_add.ToolTip(m_tt, "Finish editing this transform");
 			UpdateUI();
@@ -141,6 +189,8 @@ namespace RyLogViewer
 		private void UpdateUI()
 		{
 			SuspendLayout();
+			
+			m_grid_subs.DataSource = Transform.Subs;
 			
 			m_btn_add.Enabled           = Transform.IsValid && Transform.Match.Length != 0;
 			m_edit_match.Text           = Transform.Match;
@@ -224,11 +274,16 @@ namespace RyLogViewer
 			this.m_lbl_replace_desc = new System.Windows.Forms.Label();
 			this.m_grid_subs = new System.Windows.Forms.DataGridView();
 			this.m_lbl_subs = new System.Windows.Forms.Label();
+			this.m_split_subs = new System.Windows.Forms.SplitContainer();
 			((System.ComponentModel.ISupportInitialize)(this.m_split_test)).BeginInit();
 			this.m_split_test.Panel1.SuspendLayout();
 			this.m_split_test.Panel2.SuspendLayout();
 			this.m_split_test.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_subs)).BeginInit();
+			((System.ComponentModel.ISupportInitialize)(this.m_split_subs)).BeginInit();
+			this.m_split_subs.Panel1.SuspendLayout();
+			this.m_split_subs.Panel2.SuspendLayout();
+			this.m_split_subs.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_btn_regex_help
@@ -266,7 +321,7 @@ namespace RyLogViewer
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(391, 44);
+			this.m_edit_test.Size = new System.Drawing.Size(392, 55);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
@@ -277,7 +332,7 @@ namespace RyLogViewer
 			this.m_edit_result.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_result.Name = "m_edit_result";
 			this.m_edit_result.ReadOnly = true;
-			this.m_edit_result.Size = new System.Drawing.Size(391, 53);
+			this.m_edit_result.Size = new System.Drawing.Size(392, 64);
 			this.m_edit_result.TabIndex = 0;
 			this.m_edit_result.Text = "This is the resulting text after replacement";
 			// 
@@ -318,7 +373,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_split_test.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_split_test.Location = new System.Drawing.Point(3, 187);
+			this.m_split_test.Location = new System.Drawing.Point(0, 0);
 			this.m_split_test.Name = "m_split_test";
 			this.m_split_test.Orientation = System.Windows.Forms.Orientation.Horizontal;
 			// 
@@ -329,8 +384,8 @@ namespace RyLogViewer
 			// m_split_test.Panel2
 			// 
 			this.m_split_test.Panel2.Controls.Add(this.m_edit_result);
-			this.m_split_test.Size = new System.Drawing.Size(393, 105);
-			this.m_split_test.SplitterDistance = 46;
+			this.m_split_test.Size = new System.Drawing.Size(394, 127);
+			this.m_split_test.SplitterDistance = 57;
 			this.m_split_test.TabIndex = 8;
 			// 
 			// m_lbl_match
@@ -373,32 +428,53 @@ namespace RyLogViewer
 			// 
 			// m_grid_subs
 			// 
-			this.m_grid_subs.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.m_grid_subs.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid_subs.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_subs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_subs.Location = new System.Drawing.Point(74, 86);
+			this.m_grid_subs.Location = new System.Drawing.Point(73, 0);
 			this.m_grid_subs.Name = "m_grid_subs";
 			this.m_grid_subs.RowHeadersVisible = false;
-			this.m_grid_subs.Size = new System.Drawing.Size(321, 97);
+			this.m_grid_subs.Size = new System.Drawing.Size(321, 135);
 			this.m_grid_subs.TabIndex = 47;
 			// 
 			// m_lbl_subs
 			// 
 			this.m_lbl_subs.AutoSize = true;
-			this.m_lbl_subs.Location = new System.Drawing.Point(4, 86);
+			this.m_lbl_subs.Location = new System.Drawing.Point(3, 0);
 			this.m_lbl_subs.Name = "m_lbl_subs";
 			this.m_lbl_subs.Size = new System.Drawing.Size(70, 13);
 			this.m_lbl_subs.TabIndex = 48;
 			this.m_lbl_subs.Text = "Substitutions:";
 			this.m_lbl_subs.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
+			// m_split_subs
+			// 
+			this.m_split_subs.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_split_subs.Location = new System.Drawing.Point(3, 86);
+			this.m_split_subs.Name = "m_split_subs";
+			this.m_split_subs.Orientation = System.Windows.Forms.Orientation.Horizontal;
+			// 
+			// m_split_subs.Panel1
+			// 
+			this.m_split_subs.Panel1.Controls.Add(this.m_lbl_subs);
+			this.m_split_subs.Panel1.Controls.Add(this.m_grid_subs);
+			// 
+			// m_split_subs.Panel2
+			// 
+			this.m_split_subs.Panel2.Controls.Add(this.m_split_test);
+			this.m_split_subs.Size = new System.Drawing.Size(394, 269);
+			this.m_split_subs.SplitterDistance = 135;
+			this.m_split_subs.TabIndex = 49;
+			// 
 			// TransformUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.Controls.Add(this.m_grid_subs);
-			this.Controls.Add(this.m_split_test);
+			this.Controls.Add(this.m_split_subs);
 			this.Controls.Add(this.m_lbl_replace_desc);
 			this.Controls.Add(this.m_lbl_match_desc);
 			this.Controls.Add(this.m_edit_match);
@@ -406,18 +482,22 @@ namespace RyLogViewer
 			this.Controls.Add(this.m_edit_replace);
 			this.Controls.Add(this.m_btn_regex_help);
 			this.Controls.Add(this.m_btn_add);
-			this.Controls.Add(this.m_lbl_subs);
 			this.Controls.Add(this.m_lbl_match);
 			this.Controls.Add(this.m_lbl_replace);
 			this.Margin = new System.Windows.Forms.Padding(0);
-			this.MinimumSize = new System.Drawing.Size(400, 240);
+			this.MinimumSize = new System.Drawing.Size(400, 176);
 			this.Name = "TransformUI";
-			this.Size = new System.Drawing.Size(400, 295);
+			this.Size = new System.Drawing.Size(400, 355);
 			this.m_split_test.Panel1.ResumeLayout(false);
 			this.m_split_test.Panel2.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_split_test)).EndInit();
 			this.m_split_test.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_subs)).EndInit();
+			this.m_split_subs.Panel1.ResumeLayout(false);
+			this.m_split_subs.Panel1.PerformLayout();
+			this.m_split_subs.Panel2.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_split_subs)).EndInit();
+			this.m_split_subs.ResumeLayout(false);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

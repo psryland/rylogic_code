@@ -49,14 +49,7 @@ namespace RyLogViewer
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
-			m_pattern_tx.NewPattern(new Transform());
-			
-					
-			//hack
-			var t = new Transform();
-			t.Match = "Enter {0} here to {1} your {2}";
-			t.Replace = "This is the result of your {2} {1} on {0}";
-			m_pattern_tx.NewPattern(t);
+			m_pattern_tx.NewPattern(new Transform{Match = "Enter {0} here to {1} your {2}", Replace = "This is the result of your {2} {1} on {0}"});
 			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			
@@ -134,6 +127,7 @@ namespace RyLogViewer
 			m_edit_line_ends.Text = m_settings.RowDelimiter;
 			m_edit_line_ends.TextChanged += (s,a)=>
 			{
+				if (!((TextBox)s).Modified) return;
 				m_settings.RowDelimiter = m_edit_line_ends.Text;
 				WhatsChanged |= EWhatsChanged.FileParsing;
 			};
@@ -145,6 +139,7 @@ namespace RyLogViewer
 			m_edit_col_delims.Text = m_settings.ColDelimiter;
 			m_edit_col_delims.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					m_settings.ColDelimiter = m_edit_col_delims.Text;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};

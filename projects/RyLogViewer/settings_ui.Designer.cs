@@ -32,6 +32,9 @@
 			this.m_tabctrl = new System.Windows.Forms.TabControl();
 			this.m_tab_general = new System.Windows.Forms.TabPage();
 			this.m_group_grid = new System.Windows.Forms.GroupBox();
+			this.m_lbl_max_line_len_kb = new System.Windows.Forms.Label();
+			this.m_spinner_max_line_length = new System.Windows.Forms.NumericUpDown();
+			this.m_lbl_max_line_length = new System.Windows.Forms.Label();
 			this.m_lbl_max_scan_size1 = new System.Windows.Forms.Label();
 			this.m_lbl_history_length1 = new System.Windows.Forms.Label();
 			this.m_spinner_line_cache_count = new System.Windows.Forms.NumericUpDown();
@@ -70,28 +73,26 @@
 			this.m_check_alternate_line_colour = new System.Windows.Forms.CheckBox();
 			this.m_tab_highlight = new System.Windows.Forms.TabPage();
 			this.m_split_hl = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_hl = new RyLogViewer.PatternUI();
 			this.m_table_hl = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_highlight = new System.Windows.Forms.DataGridView();
-			this.m_pattern_set_hl = new RyLogViewer.PatternSetHL();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
 			this.m_split_ft = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_ft = new RyLogViewer.PatternUI();
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
-			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
 			this.m_tab_transform = new System.Windows.Forms.TabPage();
+			this.m_pattern_hl = new RyLogViewer.PatternUI();
+			this.m_pattern_set_hl = new RyLogViewer.PatternSetHL();
+			this.m_pattern_ft = new RyLogViewer.PatternUI();
+			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
 			this.m_split_tx = new System.Windows.Forms.SplitContainer();
 			this.m_pattern_tx = new RyLogViewer.TransformUI();
 			this.m_table_tx = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_transform = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_tx = new RyLogViewer.PatternSetTX();
-			this.m_lbl_max_line_length = new System.Windows.Forms.Label();
-			this.m_spinner_max_line_length = new System.Windows.Forms.NumericUpDown();
-			this.m_lbl_max_line_len_kb = new System.Windows.Forms.Label();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_grid.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_line_length)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_line_cache_count)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_mem_range)).BeginInit();
 			this.m_group_line_ends.SuspendLayout();
@@ -123,7 +124,6 @@
 			this.m_split_tx.SuspendLayout();
 			this.m_table_tx.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_transform)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_line_length)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// m_tabctrl
@@ -177,6 +177,50 @@
 			this.m_group_grid.TabIndex = 1;
 			this.m_group_grid.TabStop = false;
 			this.m_group_grid.Text = "File Loading";
+			// 
+			// m_lbl_max_line_len_kb
+			// 
+			this.m_lbl_max_line_len_kb.AutoSize = true;
+			this.m_lbl_max_line_len_kb.Location = new System.Drawing.Point(158, 81);
+			this.m_lbl_max_line_len_kb.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
+			this.m_lbl_max_line_len_kb.Name = "m_lbl_max_line_len_kb";
+			this.m_lbl_max_line_len_kb.Size = new System.Drawing.Size(21, 13);
+			this.m_lbl_max_line_len_kb.TabIndex = 9;
+			this.m_lbl_max_line_len_kb.Text = "KB";
+			this.m_lbl_max_line_len_kb.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_spinner_max_line_length
+			// 
+			this.m_spinner_max_line_length.Location = new System.Drawing.Point(111, 79);
+			this.m_spinner_max_line_length.Maximum = new decimal(new int[] {
+            128,
+            0,
+            0,
+            0});
+			this.m_spinner_max_line_length.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+			this.m_spinner_max_line_length.Name = "m_spinner_max_line_length";
+			this.m_spinner_max_line_length.Size = new System.Drawing.Size(44, 20);
+			this.m_spinner_max_line_length.TabIndex = 8;
+			this.m_spinner_max_line_length.Value = new decimal(new int[] {
+            100,
+            0,
+            0,
+            0});
+			// 
+			// m_lbl_max_line_length
+			// 
+			this.m_lbl_max_line_length.AutoSize = true;
+			this.m_lbl_max_line_length.Location = new System.Drawing.Point(6, 81);
+			this.m_lbl_max_line_length.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
+			this.m_lbl_max_line_length.Name = "m_lbl_max_line_length";
+			this.m_lbl_max_line_length.Size = new System.Drawing.Size(102, 13);
+			this.m_lbl_max_line_length.TabIndex = 7;
+			this.m_lbl_max_line_length.Text = "Maximum line length";
+			this.m_lbl_max_line_length.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_lbl_max_scan_size1
 			// 
@@ -606,20 +650,9 @@
 			// m_split_hl.Panel2
 			// 
 			this.m_split_hl.Panel2.Controls.Add(this.m_table_hl);
-			this.m_split_hl.Size = new System.Drawing.Size(190, 72);
-			this.m_split_hl.SplitterDistance = 25;
+			this.m_split_hl.Size = new System.Drawing.Size(492, 429);
+			this.m_split_hl.SplitterDistance = 148;
 			this.m_split_hl.TabIndex = 3;
-			// 
-			// m_pattern_hl
-			// 
-			this.m_pattern_hl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_pattern_hl.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_hl.Location = new System.Drawing.Point(0, 0);
-			this.m_pattern_hl.Margin = new System.Windows.Forms.Padding(0);
-			this.m_pattern_hl.MinimumSize = new System.Drawing.Size(336, 92);
-			this.m_pattern_hl.Name = "m_pattern_hl";
-			this.m_pattern_hl.Size = new System.Drawing.Size(336, 92);
-			this.m_pattern_hl.TabIndex = 0;
 			// 
 			// m_table_hl
 			// 
@@ -634,7 +667,7 @@
 			this.m_table_hl.RowCount = 2;
 			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_hl.Size = new System.Drawing.Size(190, 43);
+			this.m_table_hl.Size = new System.Drawing.Size(492, 277);
 			this.m_table_hl.TabIndex = 2;
 			// 
 			// m_grid_highlight
@@ -651,20 +684,8 @@
 			this.m_grid_highlight.Name = "m_grid_highlight";
 			this.m_grid_highlight.RowHeadersWidth = 24;
 			this.m_grid_highlight.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_highlight.Size = new System.Drawing.Size(190, 5);
+			this.m_grid_highlight.Size = new System.Drawing.Size(492, 239);
 			this.m_grid_highlight.TabIndex = 0;
-			// 
-			// m_pattern_set_hl
-			// 
-			this.m_pattern_set_hl.AutoSize = true;
-			this.m_pattern_set_hl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_pattern_set_hl.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_hl.Location = new System.Drawing.Point(0, 5);
-			this.m_pattern_set_hl.Margin = new System.Windows.Forms.Padding(0);
-			this.m_pattern_set_hl.MinimumSize = new System.Drawing.Size(274, 38);
-			this.m_pattern_set_hl.Name = "m_pattern_set_hl";
-			this.m_pattern_set_hl.Size = new System.Drawing.Size(274, 38);
-			this.m_pattern_set_hl.TabIndex = 1;
 			// 
 			// m_tab_filter
 			// 
@@ -693,20 +714,9 @@
 			// m_split_ft.Panel2
 			// 
 			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
-			this.m_split_ft.Size = new System.Drawing.Size(190, 72);
-			this.m_split_ft.SplitterDistance = 25;
+			this.m_split_ft.Size = new System.Drawing.Size(492, 429);
+			this.m_split_ft.SplitterDistance = 148;
 			this.m_split_ft.TabIndex = 5;
-			// 
-			// m_pattern_ft
-			// 
-			this.m_pattern_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_pattern_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_ft.Location = new System.Drawing.Point(0, 0);
-			this.m_pattern_ft.Margin = new System.Windows.Forms.Padding(0);
-			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
-			this.m_pattern_ft.Name = "m_pattern_ft";
-			this.m_pattern_ft.Size = new System.Drawing.Size(336, 92);
-			this.m_pattern_ft.TabIndex = 0;
 			// 
 			// m_table_ft
 			// 
@@ -721,7 +731,7 @@
 			this.m_table_ft.RowCount = 2;
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ft.Size = new System.Drawing.Size(190, 43);
+			this.m_table_ft.Size = new System.Drawing.Size(492, 277);
 			this.m_table_ft.TabIndex = 4;
 			// 
 			// m_grid_filter
@@ -738,20 +748,8 @@
 			this.m_grid_filter.Name = "m_grid_filter";
 			this.m_grid_filter.RowHeadersWidth = 24;
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(190, 5);
+			this.m_grid_filter.Size = new System.Drawing.Size(492, 239);
 			this.m_grid_filter.TabIndex = 0;
-			// 
-			// m_pattern_set_ft
-			// 
-			this.m_pattern_set_ft.AutoSize = true;
-			this.m_pattern_set_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(0, 5);
-			this.m_pattern_set_ft.Margin = new System.Windows.Forms.Padding(0);
-			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
-			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 38);
-			this.m_pattern_set_ft.TabIndex = 1;
 			// 
 			// m_tab_transform
 			// 
@@ -764,6 +762,52 @@
 			this.m_tab_transform.TabIndex = 4;
 			this.m_tab_transform.Text = "Transform";
 			this.m_tab_transform.UseVisualStyleBackColor = true;
+			// 
+			// m_pattern_hl
+			// 
+			this.m_pattern_hl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_pattern_hl.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_pattern_hl.Location = new System.Drawing.Point(0, 0);
+			this.m_pattern_hl.Margin = new System.Windows.Forms.Padding(0);
+			this.m_pattern_hl.MinimumSize = new System.Drawing.Size(336, 92);
+			this.m_pattern_hl.Name = "m_pattern_hl";
+			this.m_pattern_hl.Size = new System.Drawing.Size(492, 148);
+			this.m_pattern_hl.TabIndex = 0;
+			// 
+			// m_pattern_set_hl
+			// 
+			this.m_pattern_set_hl.AutoSize = true;
+			this.m_pattern_set_hl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_pattern_set_hl.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_pattern_set_hl.Location = new System.Drawing.Point(0, 239);
+			this.m_pattern_set_hl.Margin = new System.Windows.Forms.Padding(0);
+			this.m_pattern_set_hl.MinimumSize = new System.Drawing.Size(274, 38);
+			this.m_pattern_set_hl.Name = "m_pattern_set_hl";
+			this.m_pattern_set_hl.Size = new System.Drawing.Size(492, 38);
+			this.m_pattern_set_hl.TabIndex = 1;
+			// 
+			// m_pattern_ft
+			// 
+			this.m_pattern_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_pattern_ft.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_pattern_ft.Location = new System.Drawing.Point(0, 0);
+			this.m_pattern_ft.Margin = new System.Windows.Forms.Padding(0);
+			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
+			this.m_pattern_ft.Name = "m_pattern_ft";
+			this.m_pattern_ft.Size = new System.Drawing.Size(492, 148);
+			this.m_pattern_ft.TabIndex = 0;
+			// 
+			// m_pattern_set_ft
+			// 
+			this.m_pattern_set_ft.AutoSize = true;
+			this.m_pattern_set_ft.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_pattern_set_ft.Location = new System.Drawing.Point(0, 239);
+			this.m_pattern_set_ft.Margin = new System.Windows.Forms.Padding(0);
+			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
+			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
+			this.m_pattern_set_ft.Size = new System.Drawing.Size(492, 38);
+			this.m_pattern_set_ft.TabIndex = 1;
 			// 
 			// m_split_tx
 			// 
@@ -780,8 +824,8 @@
 			// m_split_tx.Panel2
 			// 
 			this.m_split_tx.Panel2.Controls.Add(this.m_table_tx);
-			this.m_split_tx.Size = new System.Drawing.Size(190, 72);
-			this.m_split_tx.SplitterDistance = 43;
+			this.m_split_tx.Size = new System.Drawing.Size(492, 429);
+			this.m_split_tx.SplitterDistance = 326;
 			this.m_split_tx.TabIndex = 0;
 			// 
 			// m_pattern_tx
@@ -792,7 +836,7 @@
 			this.m_pattern_tx.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_tx.MinimumSize = new System.Drawing.Size(400, 150);
 			this.m_pattern_tx.Name = "m_pattern_tx";
-			this.m_pattern_tx.Size = new System.Drawing.Size(400, 150);
+			this.m_pattern_tx.Size = new System.Drawing.Size(492, 326);
 			this.m_pattern_tx.TabIndex = 0;
 			// 
 			// m_table_tx
@@ -808,7 +852,7 @@
 			this.m_table_tx.RowCount = 2;
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_tx.Size = new System.Drawing.Size(190, 25);
+			this.m_table_tx.Size = new System.Drawing.Size(492, 99);
 			this.m_table_tx.TabIndex = 3;
 			// 
 			// m_grid_transform
@@ -825,7 +869,7 @@
 			this.m_grid_transform.Name = "m_grid_transform";
 			this.m_grid_transform.RowHeadersWidth = 24;
 			this.m_grid_transform.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_transform.Size = new System.Drawing.Size(190, 1);
+			this.m_grid_transform.Size = new System.Drawing.Size(492, 61);
 			this.m_grid_transform.TabIndex = 0;
 			// 
 			// m_pattern_set_tx
@@ -833,56 +877,12 @@
 			this.m_pattern_set_tx.AutoSize = true;
 			this.m_pattern_set_tx.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_pattern_set_tx.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_tx.Location = new System.Drawing.Point(0, -13);
+			this.m_pattern_set_tx.Location = new System.Drawing.Point(0, 61);
 			this.m_pattern_set_tx.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_set_tx.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_tx.Name = "m_pattern_set_tx";
-			this.m_pattern_set_tx.Size = new System.Drawing.Size(274, 38);
+			this.m_pattern_set_tx.Size = new System.Drawing.Size(492, 38);
 			this.m_pattern_set_tx.TabIndex = 1;
-			// 
-			// m_lbl_max_line_length
-			// 
-			this.m_lbl_max_line_length.AutoSize = true;
-			this.m_lbl_max_line_length.Location = new System.Drawing.Point(6, 81);
-			this.m_lbl_max_line_length.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
-			this.m_lbl_max_line_length.Name = "m_lbl_max_line_length";
-			this.m_lbl_max_line_length.Size = new System.Drawing.Size(102, 13);
-			this.m_lbl_max_line_length.TabIndex = 7;
-			this.m_lbl_max_line_length.Text = "Maximum line length";
-			this.m_lbl_max_line_length.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
-			// m_spinner_max_line_length
-			// 
-			this.m_spinner_max_line_length.Location = new System.Drawing.Point(111, 79);
-			this.m_spinner_max_line_length.Maximum = new decimal(new int[] {
-            128,
-            0,
-            0,
-            0});
-			this.m_spinner_max_line_length.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-			this.m_spinner_max_line_length.Name = "m_spinner_max_line_length";
-			this.m_spinner_max_line_length.Size = new System.Drawing.Size(44, 20);
-			this.m_spinner_max_line_length.TabIndex = 8;
-			this.m_spinner_max_line_length.Value = new decimal(new int[] {
-            100,
-            0,
-            0,
-            0});
-			// 
-			// m_lbl_max_line_len_kb
-			// 
-			this.m_lbl_max_line_len_kb.AutoSize = true;
-			this.m_lbl_max_line_len_kb.Location = new System.Drawing.Point(158, 81);
-			this.m_lbl_max_line_len_kb.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
-			this.m_lbl_max_line_len_kb.Name = "m_lbl_max_line_len_kb";
-			this.m_lbl_max_line_len_kb.Size = new System.Drawing.Size(21, 13);
-			this.m_lbl_max_line_len_kb.TabIndex = 9;
-			this.m_lbl_max_line_len_kb.Text = "KB";
-			this.m_lbl_max_line_len_kb.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// SettingsUI
 			// 
@@ -899,6 +899,7 @@
 			this.m_tab_general.ResumeLayout(false);
 			this.m_group_grid.ResumeLayout(false);
 			this.m_group_grid.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_line_length)).EndInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_line_cache_count)).EndInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_mem_range)).EndInit();
 			this.m_group_line_ends.ResumeLayout(false);
@@ -937,7 +938,6 @@
 			this.m_table_tx.ResumeLayout(false);
 			this.m_table_tx.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_transform)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(this.m_spinner_max_line_length)).EndInit();
 			this.ResumeLayout(false);
 
 		}
