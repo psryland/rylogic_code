@@ -119,7 +119,8 @@ namespace RyLogViewer.Properties {
         
         /// <summary>
         ///   Looks up a localized string similar to The was an error while parsing the log file.
-        ///Error Details: {0}.
+        ///Error Details:
+        ///{0}.
         /// </summary>
         internal static string BuildLineIndexErrorMsg {
             get {

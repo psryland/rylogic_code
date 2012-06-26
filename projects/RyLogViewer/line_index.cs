@@ -15,6 +15,25 @@ namespace RyLogViewer
 {
 	public partial class Main
 	{
+		private class NoLinesException :Exception
+		{
+			private readonly int m_buf_size;
+			public NoLinesException(int buf_size) { m_buf_size = buf_size; }
+			public override string Message
+			{
+				get
+				{
+					return string.Format(
+						"No lines detected within a {0} byte block.\r\n"+
+						"\r\n"+
+						"This might be due to lines in the log file being larger than {0} bytes, or that the line endings are not being detected correctly.\r\n"+
+						"If lines longer than {0} bytes are expected, increase the 'Maximum Line Length' option under settings.\r\n"+
+						"Otherwise, check the line ending and text encoding settings. You may have to specify these values explicitly rather than using automatic detection."
+						,m_buf_size);
+				}
+			}
+		}
+		
 		/// <summary>Returns a file stream for 'filepath' openned with R/W sharing</summary>
 		private static FileStream LoadFile(string filepath, int buffer_size = 4096)
 		{
@@ -30,7 +49,7 @@ namespace RyLogViewer
 		/// <summary>Returns the byte range within the file that would be buffered given 'filepos'</summary>
 		private static Range BufferRange(long filepos, long fileend, long buf_size)
 		{
-			Range rng = new Range();
+			var rng = new Range();
 			long ovr, hbuf = buf_size / 2;
 			
 			// Start with the range that has filepos in the middle
@@ -89,7 +108,7 @@ namespace RyLogViewer
 		/// An issue number for the build.
 		/// Builder threads abort as soon as possible when they notice this
 		/// value is not equal to their startup issue number</summary>
-		private static int m_build_issue = 0;
+		private static int m_build_issue;
 		private bool m_reload_in_progress; // Should only be set/tested in the main thread
 		private static bool BuildCancelled(int build_issue)
 		{
@@ -147,6 +166,7 @@ namespace RyLogViewer
 				
 			List<Filter> filters = ActiveFilters.ToList();
 			
+			long max_line_length  = m_settings.MaxLineLength;
 			long bufsize          = m_bufsize;
 			int  line_cache_count = m_line_cache_count;
 			long last_filepos     = m_filepos;
@@ -165,7 +185,7 @@ namespace RyLogViewer
 						using (var file = LoadFile(m_filepath))
 						{
 							// A temporary buffer for reading sections of the file
-							byte[] buf = new byte[Constants.FileReadChunkSize];
+							byte[] buf = new byte[max_line_length];
 						
 							// Use a fixed file end so that additions to the file don't muck this
 							// build up. Reducing the file size during this will probably cause an
@@ -310,10 +330,15 @@ namespace RyLogViewer
 						}
 					}
 					catch (OperationCanceledException) {}
-					catch (Exception ex) { Debug.WriteLine("Exception ended BuildLineIndex() call: " + ex.Message); }
+					catch (Exception ex)
+					{
+						Debug.WriteLine("Exception ended BuildLineIndex() call: " + ex.Message);
+						Action<string> report_error = msg => MessageBox.Show(this, "Scanning the log file ended with an error.\r\nError details:\r\n"+msg, "Scanning file terminated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+						BeginInvoke(report_error, ex.Message);
+					}
 					finally
 					{
-						Action update_progress_bar = ()=>{ UpdateStatusProgress(1,1); };
+						Action update_progress_bar = () => UpdateStatusProgress(1,1);
 						BeginInvoke(update_progress_bar);
 					}
 				}, m_build_issue);
@@ -417,17 +442,17 @@ namespace RyLogViewer
 		private static long FindLineStart(FileStream file, long filepos, long fileend, byte[] row_delim, Encoding encoding, byte[] buf)
 		{
 			file.Seek(filepos, SeekOrigin.Begin);
-			for (;;)
-			{
-				// Read a block into 'buf'
-				bool eof;
-				int read = Buffer(file, buf.Length, fileend, encoding, true, buf, out eof);
-				if (read == 0) return 0; // assume the first character in the file is the start of a line
-				
-				// Scan for a line start
-				int idx = FindNextDelim(buf, read - 1, read, row_delim, true);
-				if (idx != -1) return file.Position + idx; // found
-			}
+			
+			// Read a block into 'buf'
+			bool eof;
+			int read = Buffer(file, buf.Length, fileend, encoding, true, buf, out eof);
+			if (read == 0) return 0; // assume the first character in the file is the start of a line
+			
+			// Scan for a line start
+			int idx = FindNextDelim(buf, read - 1, read, row_delim, true);
+			if (idx != -1) return file.Position + idx; // found
+			if (filepos == read) return 0; // assume the first character in the file is the start of a line
+			throw new NoLinesException(read);
 		}
 		
 		/// <summary>Callback function called by FindLines that is called with each line found</summary>
@@ -525,10 +550,15 @@ namespace RyLogViewer
 				if (read == remaining)
 					break;
 				
+				// Make sure we're always making progress
+				long scan_increment = backward ?  (read - lasti) : lasti;
+				if (scan_increment == 0) // No lines detected in this block, 
+					throw new NoLinesException(read);
+				
 				// Otherwise, add whole lines to the scanned count so we catch
 				// lines that span the buffer boundary
-				scanned   += backward ?  (read - lasti) : lasti;
-				read_addr =  filepos + (backward ? -scanned : +scanned);
+				scanned  += scan_increment;
+				read_addr = filepos + (backward ? -scanned : +scanned);
 			}
 		}
 		
@@ -649,12 +679,9 @@ namespace RyLogViewer
 		/// <returns>Returns false if at least one filter returned no match</returns>
 		private static bool PassesFilters(string text, IEnumerable<Filter> filters)
 		{
-			foreach (var f in filters)
-				if (!f.IsMatch(text))
-					return false;
-			return true;
+			return filters.AsParallel().All(f => f.IsMatch(text));
 		}
-		
+
 		/// <summary>Auto detect the line end format. Must be called from the main thread</summary>
 		private byte[] GuessRowDelimiter(string filepath, Encoding encoding)
 		{

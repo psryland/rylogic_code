@@ -286,7 +286,8 @@ Right click to show the transforms dialog</value>
   </data>
   <data name="BuildLineIndexErrorMsg" xml:space="preserve">
     <value>The was an error while parsing the log file.
-Error Details: {0}</value>
+Error Details:
+{0}</value>
   </data>
   <data name="BuildingLineIndex" xml:space="preserve">
     <value>Building line index</value>

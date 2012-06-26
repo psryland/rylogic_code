@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -58,7 +59,7 @@ namespace RyLogViewer
 
 			InitializeComponent();
 			AllowTransparency   = true;
-			m_settings          = new Settings(SettingsBase.ELoadOptions.Normal);
+			m_settings          = new Settings();
 			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_watch             = new FileWatch();
 			m_watch_timer       = new Timer{Interval = Constants.FilePollingRate};
@@ -75,10 +76,7 @@ namespace RyLogViewer
 			m_bufsize           = m_settings.FileBufSize;
 			m_line_cache_count  = m_settings.LineCacheCount;
 			
-			m_settings.SettingChanged += (s,a)=>
-			{
-				Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
-			};
+			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
 			
 			// Menu
 			m_menu.Move                             += (s,a) => m_settings.MenuPosition = m_menu.Location;
@@ -173,8 +171,8 @@ namespace RyLogViewer
 			m_grid.CellPainting        += CellPainting;
 			m_grid.SelectionChanged    += GridSelectionChanged;
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
-			m_grid.DataError           += (s,a) => { Debug.Assert(false); };
-			m_grid.Scroll              += (s,a) => { UpdateFileScroll(); };
+			m_grid.DataError           += (s,a) => Debug.Assert(false);
+			m_grid.Scroll              += (s,a) => UpdateFileScroll();
 
 			// Grid context menu
 			m_cmenu_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid);
@@ -186,7 +184,7 @@ namespace RyLogViewer
 				};
 			
 			// File Watcher
-			m_watch_timer.Tick += (s,a)=> { m_watch.CheckForChangedFiles(); };
+			m_watch_timer.Tick += (s,a)=> m_watch.CheckForChangedFiles();
 			
 			// Find
 			m_find_ui.Tag = Size.Empty;
@@ -396,9 +394,7 @@ namespace RyLogViewer
 		{
 			long len = m_file.Length;
 			Log.Info(this, "File {0} changed. File length: {1}", m_filepath, len);
-			
-			if (AutoScrollTail) BuildLineIndex(m_file.Length, !m_settings.FileChangesAdditive);
-			else                BuildLineIndex(m_filepos    , !m_settings.FileChangesAdditive);
+			BuildLineIndex(AutoScrollTail ? m_file.Length : m_filepos, !m_settings.FileChangesAdditive);
 		}
 		
 		/// <summary>Supply the grid with values</summary>
@@ -529,7 +525,7 @@ namespace RyLogViewer
 							};
 						
 						// Search for files
-						byte[] buf = new byte[Constants.FileReadChunkSize];
+						byte[] buf = new byte[m_settings.MaxLineLength];
 						long count = backward ? start - 0 : m_fileend - start;
 						FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, (c,l) => !bgw.CancellationPending);
 						
@@ -545,7 +541,10 @@ namespace RyLogViewer
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
 			
-			DialogResult res = search.ShowDialog(this);
+			DialogResult res = DialogResult.Cancel;
+			try { res = search.ShowDialog(this); }
+			catch (OperationCanceledException) {}
+			catch (Exception ex) { MessageBox.Show(this, "Find terminated by an error.\r\nError Details:\r\n"+ex.Message, "Find error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			found = at;
 			return res == DialogResult.OK;
 		}
@@ -659,7 +658,7 @@ namespace RyLogViewer
 								return true;
 							};
 						
-						byte[] buf = new byte[Constants.FileReadChunkSize];
+						byte[] buf = new byte[m_settings.MaxLineLength];
 						
 						// Find the start of a line (grow the range if necessary)
 						rng.m_begin = FindLineStart(file, rng.m_begin, rng.m_end, m_row_delim, m_encoding, buf);
@@ -670,7 +669,10 @@ namespace RyLogViewer
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
 			
-			DialogResult res = export.ShowDialog(this);
+			DialogResult res = DialogResult.Cancel;
+			try { res = export.ShowDialog(this); }
+			catch (OperationCanceledException) {}
+			catch (Exception ex) { MessageBox.Show(this, "Exporting terminated due to an error.\r\nError Details:\r\n"+ex.Message, "Export error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			return res == DialogResult.OK;
 		}
 
@@ -873,7 +875,7 @@ namespace RyLogViewer
 					catch (OperationCanceledException) {}
 					catch (Exception ex) { err = ex; }
 						
-					Action done = () => { HandleCheckForUpdateResult(res, err, show_dialog); };
+					Action done = () => HandleCheckForUpdateResult(res, err, show_dialog);
 					BeginInvoke(done);
 				};
 			
@@ -1154,10 +1156,9 @@ namespace RyLogViewer
 					SetGridRowCount(m_line_index.Count, row_delta);
 					
 					// Measure each column's preferred width
-					int total_width = 0;
 					int[] col_widths = new int[m_grid.ColumnCount];
-					foreach (DataGridViewColumn col in m_grid.Columns)
-						total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
+					int total_width = m_grid.Columns.Cast<DataGridViewColumn>().Sum(
+						col => col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true));
 					
 					// Resize columns. If the total width is less than the control width use the control width instead
 					if (total_width < m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
@@ -1238,7 +1239,7 @@ namespace RyLogViewer
 				m_status_spring.Text = "";
 				
 				// Add comma's to a large number
-				Func<StringBuilder,StringBuilder> Pretty = (sb)=>
+				Func<StringBuilder,StringBuilder> Pretty = sb=>
 					{
 						for (int i = sb.Length, j = 0; i-- != 0; ++j)
 							if ((j%3) == 2 && i != 0) sb.Insert(i, ',');
@@ -1248,8 +1249,8 @@ namespace RyLogViewer
 				// Get current file position
 				int r = SelectedRow;
 				long p = (r != -1) ? m_line_index[r].m_begin : 0;
-				StringBuilder pos = Pretty(new StringBuilder(p.ToString()));
-				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString()));
+				StringBuilder pos = Pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
+				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString(CultureInfo.InvariantCulture)));
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
@@ -1331,7 +1332,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
-		public class CheckedButtonRenderer :ToolStripProfessionalRenderer
+		private class CheckedButtonRenderer :ToolStripProfessionalRenderer
 		{
 			protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
 			{

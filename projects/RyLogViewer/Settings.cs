@@ -173,6 +173,11 @@ namespace RyLogViewer
 			get { return get<int>("FileBufSize"); }
 			set { set("FileBufSize", value); }
 		}
+		public int    MaxLineLength
+		{
+			get { return get<int>("MaxLineLength"); }
+			set { set("MaxLineLength", value); }
+		}
 		public int    LineCacheCount
 		{
 			get { return get<int>("LineCacheCount"); }
@@ -292,7 +297,8 @@ namespace RyLogViewer
 			FiltersEnabled                  = true;
 			TransformsEnabled               = true;
 			TailEnabled                     = false;
-			FileBufSize                     = 10 * 1024 * 1024;
+			FileBufSize                     = 10 * Constants.OneMB;
+			MaxLineLength                   = 4 * Constants.OneKB;
 			LineCacheCount                  = 10000;
 			HighlightPatterns               = "<root/>";
 			FilterPatterns                  = "<root/>";

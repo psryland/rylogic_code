@@ -193,6 +193,20 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
+			// Max line length
+			tt = "The maximum length of a line in the log file.\r\nIf the log contains lines longer than this an error will be reported when loading the file";
+			m_lbl_max_line_len_kb.ToolTip(m_tt, tt);
+			m_lbl_max_line_length.ToolTip(m_tt, tt);
+			m_spinner_max_line_length.ToolTip(m_tt, tt);
+			m_spinner_max_line_length.Minimum = 1;
+			m_spinner_max_line_length.Maximum = 128;
+			m_spinner_max_line_length.Value = Maths.Clamp(m_settings.MaxLineLength / Constants.OneKB, (int)m_spinner_max_line_length.Minimum, (int)m_spinner_max_line_length.Maximum);
+			m_spinner_max_line_length.ValueChanged += (s,a)=>
+				{
+					m_settings.MaxLineLength = (int)m_spinner_max_line_length.Value * Constants.OneKB;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+			
 			// Open at end
 			m_check_open_at_end.ToolTip(m_tt, "If checked, opens files showing the end of the file.\r\nIf unchecked opens files at the beginning");
 			m_check_open_at_end.Checked = m_settings.OpenAtEnd;
