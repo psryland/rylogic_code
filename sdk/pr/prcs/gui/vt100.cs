@@ -599,19 +599,19 @@ namespace pr.gui
 				case "\u001b[K":  //Esc[K  Clear line from cursor right EL0
 				case "\u001b[0K":{//Esc[0K Clear line from cursor right EL0
 					Range rg = IndexRangeFromLine(CurrentLine, false);
-					SelectionLength = (int)rg.m_end - SelectionStart;
+					SelectionLength = (int)rg.End - SelectionStart;
 					SelectedText = "";
 					}break;
 				case "\u001b[1K":{//Esc[1K Clear line from cursor left EL1
 					Range rg = IndexRangeFromLine(CurrentLine, false);
-					rg.m_end = SelectionStart;
-					SelectionStart = (int)rg.m_begin;
+					rg.End = SelectionStart;
+					SelectionStart = (int)rg.Begin;
 					SelectionLength = (int)rg.Count;
 					SelectedText = "";
 					}break;
 				case "\u001b[2K":{//Esc[2K Clear entire line EL2
 					Range rg = IndexRangeFromLine(CurrentLine, false);
-					SelectionStart = (int)rg.m_begin;
+					SelectionStart = (int)rg.Begin;
 					SelectionLength = (int)rg.Count;
 					SelectedText = "";
 					}break;
@@ -816,8 +816,8 @@ namespace pr.gui
 			{
 				int pad_count = loc.X - (int)range.Count;
 				int restore = SelectionStart;
-				if (restore > range.m_end) restore += pad_count;
-				SelectionStart = (int)range.m_end;
+				if (restore > range.End) restore += pad_count;
+				SelectionStart = (int)range.End;
 				SelectionLength = 0;
 				SelectedText = "".PadRight(pad_count, ' ');
 				SelectionStart = restore;
