@@ -169,37 +169,46 @@ namespace RyLogViewer
 		/// <summary>Update UI elements based on the current settings</summary>
 		private void UpdateUI()
 		{
-			SuspendLayout();
-			m_edit_pattern.Text         = Pattern.Expr;
-			m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
-			m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
-			m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
-			m_check_active.Checked      = Pattern.Active;
-			m_check_ignore_case.Checked = Pattern.IgnoreCase;
-			m_check_invert.Checked      = Pattern.Invert;
-			m_check_binary.Checked      = Pattern.BinaryMatch;
-			
-			m_btn_add.Enabled = m_edit_pattern.Text.Length != 0;
-			
-			// Highlight the expression background to show valid regexp
-			m_edit_pattern.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
-			
-			// Preserve the current carot position
-			int start = m_edit_test.SelectionStart;
-			int length = m_edit_test.SelectionLength;
-			m_edit_test.SelectAll();
-			m_edit_test.SelectionBackColor = Color.White;
-			foreach (var r in Pattern.Match(m_edit_test.Text))
+			if (m_in_update_iu) return;
+			try
 			{
-				m_edit_test.SelectionStart     = (int)r.First;
-				m_edit_test.SelectionLength    = (int)r.Count;
-				m_edit_test.SelectionBackColor = Color.LightBlue;
-			}
-			m_edit_test.SelectionStart  = start;
-			m_edit_test.SelectionLength = length;
+				m_in_update_iu = true;
+				SuspendLayout();
+				m_edit_pattern.Text         = Pattern.Expr;
+				m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
+				m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
+				m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
+				m_check_active.Checked      = Pattern.Active;
+				m_check_ignore_case.Checked = Pattern.IgnoreCase;
+				m_check_invert.Checked      = Pattern.Invert;
+				m_check_binary.Checked      = Pattern.BinaryMatch;
 			
-			ResumeLayout();
+				m_btn_add.Enabled = m_edit_pattern.Text.Length != 0;
+			
+				// Highlight the expression background to show valid regexp
+				m_edit_pattern.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
+			
+				// Preserve the current carot position
+				int start = m_edit_test.SelectionStart;
+				int length = m_edit_test.SelectionLength;
+				m_edit_test.SelectAll();
+				m_edit_test.SelectionBackColor = Color.White;
+				foreach (var r in Pattern.Match(m_edit_test.Text))
+				{
+					m_edit_test.SelectionStart     = (int)r.First;
+					m_edit_test.SelectionLength    = (int)r.Count;
+					m_edit_test.SelectionBackColor = Color.LightBlue;
+				}
+				m_edit_test.SelectionStart  = start;
+				m_edit_test.SelectionLength = length;
+			}
+			finally
+			{
+				m_in_update_iu = false;
+				ResumeLayout();
+			}
 		}
+		private bool m_in_update_iu;
 		
 		#region Component Designer generated code
 		

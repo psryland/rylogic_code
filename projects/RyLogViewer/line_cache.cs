@@ -104,18 +104,18 @@ namespace RyLogViewer
 			Debug.Assert(FileOpen);
 			
 			// Check if the line is already cached
-			Line line = m_line_cache[(int)(rng.m_begin % m_line_cache.Count)];
-			if (line.LineStartAddr == rng.m_begin) return line;
+			Line line = m_line_cache[(int)(rng.Begin % m_line_cache.Count)];
+			if (line.LineStartAddr == rng.Begin) return line;
 			
 			// If not, read it from file and perform highlighting and transforming on it
 			
 			// Read the whole line into m_buf
-			m_file.Seek(rng.m_begin, SeekOrigin.Begin);
+			m_file.Seek(rng.Begin, SeekOrigin.Begin);
 			m_line_buf = rng.Count <= m_line_buf.Length ? m_line_buf : new byte[rng.Count];
 			int read = m_file.Read(m_line_buf, 0, (int)rng.Count);
-			if (read != rng.Count) throw new IOException("failed to read file over range ["+rng.m_begin+","+rng.m_end+"). Read "+read+"/"+rng.Count+" bytes.");
+			if (read != rng.Count) throw new IOException("failed to read file over range ["+rng.Begin+","+rng.End+"). Read "+read+"/"+rng.Count+" bytes.");
 			
-			line.Read(rng.m_begin, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights);
+			line.Read(rng.Begin, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights);
 			return line;
 		}
 

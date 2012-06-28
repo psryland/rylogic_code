@@ -36,6 +36,8 @@
 			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_transforms = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
@@ -107,8 +109,6 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.m_btn_transforms = new System.Windows.Forms.ToolStripButton();
-			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -141,7 +141,7 @@
             this.m_btn_tail});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(319, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(288, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -188,6 +188,21 @@
 			this.m_btn_filters.Name = "m_btn_filters";
 			this.m_btn_filters.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_filters.Text = "Filters";
+			// 
+			// m_btn_transforms
+			// 
+			this.m_btn_transforms.CheckOnClick = true;
+			this.m_btn_transforms.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_transforms.Image = global::RyLogViewer.Properties.Resources.reload;
+			this.m_btn_transforms.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_transforms.Name = "m_btn_transforms";
+			this.m_btn_transforms.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_transforms.Text = "Transforms";
+			// 
+			// toolStripSeparator9
+			// 
+			this.toolStripSeparator9.Name = "toolStripSeparator9";
+			this.toolStripSeparator9.Size = new System.Drawing.Size(6, 31);
 			// 
 			// m_btn_options
 			// 
@@ -715,7 +730,7 @@
 			this.m_grid.AllowUserToDeleteRows = false;
 			this.m_grid.AllowUserToOrderColumns = true;
 			this.m_grid.AllowUserToResizeRows = false;
-			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.AllCells;
 			this.m_grid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_grid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -772,21 +787,6 @@
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.ControlLight;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
-			// 
-			// m_btn_transforms
-			// 
-			this.m_btn_transforms.CheckOnClick = true;
-			this.m_btn_transforms.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_transforms.Image = global::RyLogViewer.Properties.Resources.reload;
-			this.m_btn_transforms.ImageTransparentColor = System.Drawing.Color.Transparent;
-			this.m_btn_transforms.Name = "m_btn_transforms";
-			this.m_btn_transforms.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_transforms.Text = "Transforms";
-			// 
-			// toolStripSeparator9
-			// 
-			this.toolStripSeparator9.Name = "toolStripSeparator9";
-			this.toolStripSeparator9.Size = new System.Drawing.Size(6, 31);
 			// 
 			// Main
 			// 

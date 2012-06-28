@@ -10,6 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>pr</RootNamespace>
     <AssemblyName>pr</AssemblyName>
+    <BaseIntermediateOutputPath>obj2010</BaseIntermediateOutputPath>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
@@ -35,7 +36,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x64\Debug\</OutputPath>
+    <OutputPath>bin2010\x64\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -54,7 +55,7 @@
     <RegisterForComInterop>false</RegisterForComInterop>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>bin\x64\Release\</OutputPath>
+    <OutputPath>bin2010\x64\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
@@ -75,7 +76,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x86\Debug\</OutputPath>
+    <OutputPath>bin2010\x86\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;PR_UNITTESTS</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -94,7 +95,7 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <OutputPath>bin\x86\Release\</OutputPath>
+    <OutputPath>bin2010\x86\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
@@ -140,6 +141,7 @@
   <ItemGroup>
     <Compile Include="attrib\string_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
+    <Compile Include="common\span.cs" />
     <Compile Include="common\pin.cs" />
     <Compile Include="common\range.cs" />
     <Compile Include="common\settings.cs" />
@@ -251,6 +253,7 @@
     <Compile Include="maths\quaternion.cs" />
     <Compile Include="maths\rand.cs" />
     <Compile Include="maths\scalar.cs" />
+    <Compile Include="maths\stat.cs" />
     <Compile Include="maths\vector2.cs" />
     <Compile Include="maths\vector4.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

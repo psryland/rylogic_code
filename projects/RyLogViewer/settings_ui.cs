@@ -49,7 +49,7 @@ namespace RyLogViewer
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
-			m_pattern_tx.NewPattern(new Transform{Match = "Enter {0} here to {1} your {2}", Replace = "This is the result of your {2} {1} on {0}"});
+			m_pattern_tx.NewPattern(new Transform{Match = "Enter {one} here to {2} your {III}", Replace = "This is the result of your {III} {2} on {one}"});
 			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			
@@ -506,10 +506,11 @@ namespace RyLogViewer
 		/// <summary>Handle cell clicks</summary>
 		private void OnCellClick<T>(DataGridView grid, List<T> patterns, IPatternUI ctrl, DataGridViewCellEventArgs e) where T:IPattern
 		{
+			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			Point pt = MousePosition;
 			T pat = patterns[e.RowIndex];
+			Point pt = MousePosition;
 			Highlight hl = pat as Highlight;
 			
 			switch (grid.Columns[e.ColumnIndex].Name)
@@ -543,7 +544,12 @@ namespace RyLogViewer
 		/// <summary>Double click edits the pattern</summary>
 		private void OnCellDoubleClick<T>(DataGridView grid, List<T> patterns, IPatternUI ctrl, DataGridViewCellEventArgs e) where T:IPattern
 		{
-			ctrl.EditPattern(patterns[e.RowIndex]);
+			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
+			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
+			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
+			T pat = patterns[e.RowIndex];
+			
+			ctrl.EditPattern(pat);
 			WhatsChanged |= grid == m_grid_highlight
 				? EWhatsChanged.Rendering
 				: EWhatsChanged.FileParsing;
@@ -552,6 +558,7 @@ namespace RyLogViewer
 		/// <summary>Cell formatting...</summary>
 		private static void OnCellFormatting<T>(DataGridView grid, List<T> patterns, DataGridViewCellFormattingEventArgs e) where T:IPattern
 		{
+			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			T pat = patterns[e.RowIndex];

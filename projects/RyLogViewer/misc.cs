@@ -312,20 +312,4 @@ namespace RyLogViewer
 			win.Show(parent);
 		}
 	}
-
-	public struct Span
-	{
-		public int Index;
-		public int Count;
-		
-		public Span(int index, int count)
-		{
-			Index = index;
-			Count = count;
-		}
-		public override string ToString()
-		{
-			return string.Format("[{0},{1})",Index,Index+Count);
-		}
-	}
 }
