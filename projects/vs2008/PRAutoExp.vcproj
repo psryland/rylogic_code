@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -42,7 +42,7 @@
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
 				TargetEnvironment="1"
-				TypeLibraryName="Q:\Paul\obj\$(ProjectName)\$(ConfigurationName)/PRAutoExp.tlb"
+				TypeLibraryName="Q:\Paul\obj2008\$(ProjectName)\$(ConfigurationName)/PRAutoExp.tlb"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
@@ -109,8 +109,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -134,7 +134,7 @@
 				MkTypLibCompatible="true"
 				SuppressStartupBanner="true"
 				TargetEnvironment="1"
-				TypeLibraryName="Q:\Paul\obj\$(ProjectName)\$(ConfigurationName)PRAutoExp.tlb"
+				TypeLibraryName="Q:\Paul\obj2008\$(ProjectName)\$(ConfigurationName)PRAutoExp.tlb"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"

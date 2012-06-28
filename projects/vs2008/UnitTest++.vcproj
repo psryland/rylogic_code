@@ -18,8 +18,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			>
@@ -64,7 +64,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="physics.$(PlatformName).$(ConfigurationName).lib renderer.$(PlatformName).$(ConfigurationName).lib d3d9.lib d3dx9.lib d3dxof.lib dxguid.lib dxerr.lib rpcrt4.lib dinput8.lib dbghelp.lib ws2_32.lib xmllite.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\sdk\pr\lib;..\..\sdk\directx9.0c\aug2009\lib\x86;..\..\sdk\lua\lib;&quot;..\..\obj\UnitTest++_Lib\$(ConfigurationName)&quot;"
+				AdditionalLibraryDirectories="..\..\sdk\pr\lib;..\..\sdk\directx9.0c\aug2009\lib\x86;..\..\sdk\lua\lib;&quot;..\..\obj2008\UnitTest++_Lib\$(ConfigurationName)&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				RandomizedBaseAddress="1"
@@ -96,8 +96,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			WholeProgramOptimization="0"
@@ -142,7 +142,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="physics.$(PlatformName).$(ConfigurationName).lib renderer.$(PlatformName).$(ConfigurationName).lib d3d9.lib d3dx9.lib d3dxof.lib dxguid.lib dxerr.lib rpcrt4.lib dinput8.lib dbghelp.lib ws2_32.lib xmllite.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\..\sdk\pr\lib;..\..\sdk\directx9.0c\aug2009\lib\x86;..\..\sdk\lua\lib;&quot;..\..\obj\UnitTest++_Lib\$(ConfigurationName)&quot;"
+				AdditionalLibraryDirectories="..\..\sdk\pr\lib;..\..\sdk\directx9.0c\aug2009\lib\x86;..\..\sdk\lua\lib;&quot;..\..\obj2008\UnitTest++_Lib\$(ConfigurationName)&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
