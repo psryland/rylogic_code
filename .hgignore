@@ -23,8 +23,11 @@ RylogicEnv.cmd
 ResEdit.layout
 W.TOOLS HAS THE ARAXIS COMPARES FOR SDK
 obj/
+obj2008/
 obj2010/
 bin/
+bin2008/
+bin2010/
 .svn/
 .metadata/
 media/

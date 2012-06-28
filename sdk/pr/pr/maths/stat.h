@@ -210,8 +210,8 @@ namespace pr
 			Type var = Type();
 			uint count = m_count;
 			Type const* end = &m_window[0] + m_size;
-			for (Type const* i = m_in; i-- != m_window && count; --count) { Type diff  = *i - m_mean; var += diff * diff; }
-			for (Type const* i = end;  i-- != m_window && count; --count) { Type diff  = *i - m_mean; var += diff * diff; }
+			for (Type const* i = m_in; i-- != m_window && count; --count) { Type diff = *i - m_mean; var += diff * diff; }
+			for (Type const* i = end;  i-- != m_window && count; --count) { Type diff = *i - m_mean; var += diff * diff; }
 			return var;
 		}
 	public:

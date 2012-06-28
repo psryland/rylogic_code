@@ -3,9 +3,12 @@
 //  Copyright © Rylogic Ltd 2008
 //***************************************************
 
+using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Linq;
 
 namespace pr.gfx
 {
@@ -20,6 +23,12 @@ namespace pr.gfx
 				(int)(c0.R*(1f - t) + c1.R*t),
 				(int)(c0.G*(1f - t) + c1.G*t),
 				(int)(c0.B*(1f - t) + c1.B*t));
+		}
+
+		/// <summary>Return all colors satisfying a predicate</summary>
+		public static IEnumerable<Color> GetColors(Func<Color,bool> pred)
+		{
+			return Enum.GetValues(typeof(KnownColor)).Cast<KnownColor>().Select(Color.FromKnownColor).Where(pred);
 		}
 
 		/// <summary>The identity colour matrix</summary>
