@@ -229,7 +229,7 @@ namespace RyLogViewer
 			default: return;
 			case ColumnNames.Data:
 				sub.Config(this);
-				grid.Invalidate();
+				UpdateUI();
 				break;
 			}
 		}
@@ -266,6 +266,7 @@ namespace RyLogViewer
 			
 				m_cap_ids = Transform.CaptureIds;
 				m_grid_subs.RowCount = m_cap_ids.Count;
+				m_grid_subs.Refresh();
 			
 				m_btn_add.Enabled           = Transform.IsValid && Transform.Match.Length != 0;
 				m_edit_match.Text           = Transform.Match;
@@ -439,8 +440,7 @@ namespace RyLogViewer
 			this.m_edit_test.Name = "m_edit_test";
 			this.m_edit_test.Size = new System.Drawing.Size(473, 55);
 			this.m_edit_test.TabIndex = 0;
-			this.m_edit_test.Text = "Enter text here to test your pattern\n    Enter text here to test your pattern on\n" +
-    "** Enter text here to test your pattern **";
+			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
 			// m_edit_result
 			// 
