@@ -109,6 +109,7 @@ namespace RyLogViewer
 					OpenFileDialog fd = new OpenFileDialog{Filter = PatternSetFilter, CheckFileExists = true};
 					if (fd.ShowDialog(this) != DialogResult.OK) return;
 					m_sets.Add(new Set(fd.FileName));
+					UpdateUI();
 				};
 		}
 

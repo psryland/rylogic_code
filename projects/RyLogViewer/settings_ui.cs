@@ -330,6 +330,7 @@ namespace RyLogViewer
 			m_grid_highlight.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
 			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
+			m_grid_highlight.CellContextMenuStripNeeded += (s,a)=> OnCellClick (m_grid_highlight, m_highlights, m_pattern_hl, a);
 			
 			// Highlight pattern
 			m_pattern_hl.Add += (s,a)=>
@@ -606,8 +607,14 @@ namespace RyLogViewer
 			selected = m_grid_filter.FirstSelectedRowIndex();
 			m_grid_filter.CurrentCell = null;
 			m_grid_filter.RowCount = 0;
-			m_grid_filter.RowCount = m_transforms.Count;
+			m_grid_filter.RowCount = m_filters.Count;
 			m_grid_filter.SelectRow(selected);
+			
+			selected = m_grid_transform.FirstSelectedRowIndex();
+			m_grid_transform.CurrentCell = null;
+			m_grid_transform.RowCount = 0;
+			m_grid_transform.RowCount = m_transforms.Count;
+			m_grid_transform.SelectRow(selected);
 			
 			ResumeLayout();
 		}

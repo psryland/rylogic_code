@@ -69,7 +69,11 @@ namespace RyLogViewer
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");
 			m_btn_regex_help.Click += (s,a)=>
 				{
-					Misc.ShowQuickHelp(this);
+					HelpUI.Show(this
+						,"RyLogViewer.docs.RegexQuickRef.html"
+						,"Regular Expression Help"
+						,PointToScreen(Location) + new Size(Width, 0)
+						,new Size(640,480));
 				};
 			
 			// Add/Update

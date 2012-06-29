@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
-using System.Reflection;
 using System.Windows.Forms;
 using pr.gfx;
 using pr.util;
@@ -24,7 +22,6 @@ namespace RyLogViewer
 			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
 		};
 		
-		private readonly TxfmSubLoader m_subs_loader;
 		private readonly ToolTip m_tt;
 		private List<string>   m_cap_ids;
 		private Transform      m_transform;
@@ -46,6 +43,7 @@ namespace RyLogViewer
 		private RadioButton    m_radio_wildcard;
 		private RadioButton    m_radio_substring;
 		private TextBox m_edit_compiled_regex;
+		private Label label1;
 		private RichTextBox    m_edit_result;
 		
 		/// <summary>The pattern being controlled by this UI</summary>
@@ -64,7 +62,6 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_transform = null;
-			m_subs_loader = new TxfmSubLoader();
 			m_tt = new ToolTip();
 			string tt;
 			
@@ -146,13 +143,14 @@ namespace RyLogViewer
 			m_grid_subs.VirtualMode = true;
 			m_grid_subs.AutoGenerateColumns = false;
 			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Id   ,HeaderText = "Id"   ,FillWeight = 20 ,ReadOnly = true});
-			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type ,HeaderText = "Type" ,FillWeight = 30 ,DataSource = m_subs_loader.TxfmSubs, DisplayMember = "Type", FlatStyle=FlatStyle.Flat});
+			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type ,HeaderText = "Name" ,FillWeight = 30 ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
 			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Data ,HeaderText = "Data" ,FillWeight = 50 ,ReadOnly = true});
 			m_grid_subs.CurrentCellDirtyStateChanged += (s,a) => m_grid_subs.CommitEdit(DataGridViewDataErrorContexts.Commit);
 			m_grid_subs.CellValueNeeded  += CellValueNeeded;
 			m_grid_subs.CellValuePushed  += CellValuePushed;
 			m_grid_subs.CellPainting     += CellPainting;
-
+			m_grid_subs.CellClick        += CellClick;
+			
 			// Test text
 			m_edit_test.ToolTip(m_tt, "Enter text here on which to test your pattern.");
 			m_edit_test.TextChanged += (s,a)=>
@@ -177,7 +175,7 @@ namespace RyLogViewer
 			{
 			default:               e.Value = string.Empty; break;
 			case ColumnNames.Id:   e.Value = sub.Id;   break;
-			case ColumnNames.Type: e.Value = sub.Type; break;
+			case ColumnNames.Type: e.Value = sub.Name; break;
 			case ColumnNames.Data: e.Value = sub.ConfigSummary; break;
 			}
 		}
@@ -193,9 +191,9 @@ namespace RyLogViewer
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Type:
-				if (!e.Value.Equals(sub.Type))
+				if (!e.Value.Equals(sub.Name))
 				{
-					var new_sub = m_subs_loader.Create(sub.Id, (string)e.Value);
+					var new_sub = Transform.SubLoader.Create(sub.Id, (string)e.Value);
 					Transform.Subs[m_cap_ids[e.RowIndex]] = new_sub;
 					grid.Invalidate();
 				}
@@ -208,13 +206,30 @@ namespace RyLogViewer
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
 		{
 			e.Handled = false;
-			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) { return; }
 			DataGridView grid = (DataGridView)sender;
+			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) return;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Id:
 				e.CellStyle.BackColor = m_bk_colors[e.RowIndex % m_bk_colors.Length];
 				e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, Color.Black, 0.2f);
+				break;
+			}
+		}
+
+		/// <summary>Handle clicks on cells</summary>
+		private void CellClick(object sender, DataGridViewCellEventArgs e)
+		{
+			DataGridView grid = (DataGridView)sender;
+			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) return;
+			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
+			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			switch (grid.Columns[e.ColumnIndex].Name)
+			{
+			default: return;
+			case ColumnNames.Data:
+				sub.Config(this);
+				grid.Invalidate();
 				break;
 			}
 		}
@@ -320,25 +335,11 @@ namespace RyLogViewer
 		/// <summary>Display a quick help for the match field syntax</summary>
 		private void ShowMatchHelp()
 		{
-			var win = new Form
-			{
-				FormBorderStyle = FormBorderStyle.SizableToolWindow,
-				StartPosition = FormStartPosition.Manual,
-				ShowInTaskbar = true,
-			};
-			var edit = new WebBrowser
-			{
-				Dock = DockStyle.Fill,
-			};
-			win.Controls.Add(edit);
-
-			const string RegexHelpNotFound = @"<p>Quick Reference Guide not found</p>";
-			Stream help = Assembly.GetExecutingAssembly().GetManifestResourceStream("RyLogViewer.docs.TransformQuickRef.html");
-			edit.DocumentText = (help == null) ? RegexHelpNotFound : new StreamReader(help).ReadToEnd();
-			
-			win.Location = PointToScreen(Location) + new Size(Width, 0);
-			win.Size = new Size(640,480);
-			win.Show(this);
+			HelpUI.Show(this
+				,"RyLogViewer.docs.TransformQuickRef.html"
+				,"Transform Help"
+				,PointToScreen(Location) + new Size(Width, 0)
+				,new Size(640,480));
 		}
 
 		#region Component Designer generated code
@@ -384,10 +385,11 @@ namespace RyLogViewer
 			this.m_lbl_subs = new System.Windows.Forms.Label();
 			this.m_split_subs = new System.Windows.Forms.SplitContainer();
 			this.m_group_patntype = new System.Windows.Forms.Panel();
-			this.m_radio_substring = new System.Windows.Forms.RadioButton();
-			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();
 			this.m_radio_regex = new System.Windows.Forms.RadioButton();
+			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();
+			this.m_radio_substring = new System.Windows.Forms.RadioButton();
 			this.m_edit_compiled_regex = new System.Windows.Forms.TextBox();
+			this.label1 = new System.Windows.Forms.Label();
 			((System.ComponentModel.ISupportInitialize)(this.m_split_test)).BeginInit();
 			this.m_split_test.Panel1.SuspendLayout();
 			this.m_split_test.Panel2.SuspendLayout();
@@ -467,7 +469,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_replace.Location = new System.Drawing.Point(74, 78);
 			this.m_edit_replace.Name = "m_edit_replace";
-			this.m_edit_replace.Size = new System.Drawing.Size(351, 20);
+			this.m_edit_replace.Size = new System.Drawing.Size(323, 20);
 			this.m_edit_replace.TabIndex = 7;
 			this.m_edit_replace.Text = "This is the result of your {2} {1} on {0}";
 			// 
@@ -583,16 +585,16 @@ namespace RyLogViewer
 			this.m_group_patntype.Size = new System.Drawing.Size(268, 23);
 			this.m_group_patntype.TabIndex = 50;
 			// 
-			// m_radio_substring
+			// m_radio_regex
 			// 
-			this.m_radio_substring.AutoSize = true;
-			this.m_radio_substring.Location = new System.Drawing.Point(3, 3);
-			this.m_radio_substring.Name = "m_radio_substring";
-			this.m_radio_substring.Size = new System.Drawing.Size(69, 17);
-			this.m_radio_substring.TabIndex = 1;
-			this.m_radio_substring.TabStop = true;
-			this.m_radio_substring.Text = "Substring";
-			this.m_radio_substring.UseVisualStyleBackColor = true;
+			this.m_radio_regex.AutoSize = true;
+			this.m_radio_regex.Location = new System.Drawing.Point(149, 3);
+			this.m_radio_regex.Name = "m_radio_regex";
+			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
+			this.m_radio_regex.TabIndex = 3;
+			this.m_radio_regex.TabStop = true;
+			this.m_radio_regex.Text = "Regular Expression";
+			this.m_radio_regex.UseVisualStyleBackColor = true;
 			// 
 			// m_radio_wildcard
 			// 
@@ -605,16 +607,16 @@ namespace RyLogViewer
 			this.m_radio_wildcard.Text = "Wildcard";
 			this.m_radio_wildcard.UseVisualStyleBackColor = true;
 			// 
-			// m_radio_regex
+			// m_radio_substring
 			// 
-			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(149, 3);
-			this.m_radio_regex.Name = "m_radio_regex";
-			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
-			this.m_radio_regex.TabIndex = 3;
-			this.m_radio_regex.TabStop = true;
-			this.m_radio_regex.Text = "Regular Expression";
-			this.m_radio_regex.UseVisualStyleBackColor = true;
+			this.m_radio_substring.AutoSize = true;
+			this.m_radio_substring.Location = new System.Drawing.Point(3, 3);
+			this.m_radio_substring.Name = "m_radio_substring";
+			this.m_radio_substring.Size = new System.Drawing.Size(69, 17);
+			this.m_radio_substring.TabIndex = 1;
+			this.m_radio_substring.TabStop = true;
+			this.m_radio_substring.Text = "Substring";
+			this.m_radio_substring.UseVisualStyleBackColor = true;
 			// 
 			// m_edit_compiled_regex
 			// 
@@ -626,10 +628,23 @@ namespace RyLogViewer
 			this.m_edit_compiled_regex.Size = new System.Drawing.Size(323, 20);
 			this.m_edit_compiled_regex.TabIndex = 51;
 			// 
+			// label1
+			// 
+			this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.label1.AutoSize = true;
+			this.label1.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
+			this.label1.Location = new System.Drawing.Point(400, 58);
+			this.label1.Name = "label1";
+			this.label1.Size = new System.Drawing.Size(63, 13);
+			this.label1.TabIndex = 52;
+			this.label1.Text = "Eqv. Regex";
+			this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			// 
 			// TransformUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.Controls.Add(this.label1);
 			this.Controls.Add(this.m_edit_compiled_regex);
 			this.Controls.Add(this.m_group_patntype);
 			this.Controls.Add(this.m_split_subs);
@@ -640,6 +655,7 @@ namespace RyLogViewer
 			this.Controls.Add(this.m_btn_add);
 			this.Controls.Add(this.m_lbl_match);
 			this.Controls.Add(this.m_lbl_replace);
+			this.DoubleBuffered = true;
 			this.Margin = new System.Windows.Forms.Padding(0);
 			this.MinimumSize = new System.Drawing.Size(400, 176);
 			this.Name = "TransformUI";
