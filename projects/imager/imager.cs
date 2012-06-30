@@ -759,9 +759,9 @@ namespace imager
 					{
 						string dir = copy[d].Directory;
 						Range r = new Range(0, copy.Count);
-						for (r.m_begin = d - 1; r.m_begin != -1         && string.CompareOrdinal(dir, copy[(int)r.m_begin].Directory) == 0; --r.m_begin) {}
-						for (r.m_end   = d + 1; r.m_end   != copy.Count && string.CompareOrdinal(dir, copy[(int)r.m_end  ].Directory) == 0; ++r.m_end  ) {}
-						++r.m_begin;
+						for (r.Begin = d - 1; r.Begin != -1         && string.CompareOrdinal(dir, copy[(int)r.Begin].Directory) == 0; --r.Begin) {}
+						for (r.End   = d + 1; r.End   != copy.Count && string.CompareOrdinal(dir, copy[(int)r.End  ].Directory) == 0; ++r.End  ) {}
+						++r.Begin;
 						return r;
 					};
 
@@ -793,16 +793,16 @@ namespace imager
 				switch (file_order)
 				{
 				default: break;
-				case ESortOrder.AlphabeticalAscending:  copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return string.CompareOrdinal(lhs.FileName, rhs.FileName); }); break;
-				case ESortOrder.AlphabeticalDecending:  copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return string.CompareOrdinal(rhs.FileName, lhs.FileName); }); break;
-				case ESortOrder.ChronologicalAscending: copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return Maths.Compare(lhs.m_timestamp, rhs.m_timestamp); }); break;
-				case ESortOrder.ChronologicalDecending: copy.Sort((int)rg.m_begin, (int)rg.Count, (lhs,rhs)=>{ return Maths.Compare(rhs.m_timestamp, lhs.m_timestamp); }); break;
-				case ESortOrder.Random: for (long i = rg.m_end; i != rg.m_begin; --i) copy.Swap((int)(rg.m_begin + rng.Next((int)rg.Count)), (int)(i-1)); break;
+				case ESortOrder.AlphabeticalAscending:  copy.Sort((int)rg.Begin, (int)rg.Count, (lhs,rhs)=>{ return string.CompareOrdinal(lhs.FileName, rhs.FileName); }); break;
+				case ESortOrder.AlphabeticalDecending:  copy.Sort((int)rg.Begin, (int)rg.Count, (lhs,rhs)=>{ return string.CompareOrdinal(rhs.FileName, lhs.FileName); }); break;
+				case ESortOrder.ChronologicalAscending: copy.Sort((int)rg.Begin, (int)rg.Count, (lhs,rhs)=>{ return Maths.Compare(lhs.m_timestamp, rhs.m_timestamp); }); break;
+				case ESortOrder.ChronologicalDecending: copy.Sort((int)rg.Begin, (int)rg.Count, (lhs,rhs)=>{ return Maths.Compare(rhs.m_timestamp, lhs.m_timestamp); }); break;
+				case ESortOrder.Random: for (long i = rg.End; i != rg.Begin; --i) copy.Swap((int)(rg.Begin + rng.Next((int)rg.Count)), (int)(i-1)); break;
 				}
 
 				// Move the range from 'copy' to 'list'
-				for (long i = rg.m_begin; i != rg.m_end; ++i) list.Add(copy[(int)i]);
-				copy.RemoveRange((int)rg.m_begin, (int)rg.Count);
+				for (long i = rg.Begin; i != rg.End; ++i) list.Add(copy[(int)i]);
+				copy.RemoveRange((int)rg.Begin, (int)rg.Count);
 			}
 		}
 
@@ -833,13 +833,13 @@ namespace imager
 			string cache_file = MediaListCacheFilepath;
 
 			// If the cache is available generate the media list from the cache file
-			ThreadPool.QueueUserWorkItem((a)=>
+			ThreadPool.QueueUserWorkItem(a =>
 			{
 				try
 				{
 					// Add a cache of media files to the media list
 					int r = 0; bool load_first_file = true;
-					Action<List<MediaFile>> add_to_media_list = (cc)=>
+					Action<List<MediaFile>> add_to_media_list = cc =>
 					{
 						AddToMediaList(cc, load_first_file, ref r);
 						load_first_file = false;
@@ -882,7 +882,7 @@ namespace imager
 				// Otherwise search for 'media_file' in 'm_media_list'
 				List<MediaFile> list = (List<MediaFile>) m_media_list.DataSource;
 				//m_media_list_ui.Controls[0].Tag = false;
-				m_media_list.Position = list.FindIndex((mf)=>{ return string.CompareOrdinal(media_file.m_file, mf.m_file) == 0; });
+				m_media_list.Position = list.FindIndex(mf =>{ return string.CompareOrdinal(media_file.m_file, mf.m_file) == 0; });
 				//m_media_list_ui.Controls[0].Tag = true;
 				Log.Info(this, "FindInMediaList: linear search done\n");
 			}
