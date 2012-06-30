@@ -655,31 +655,11 @@ namespace RyLogViewer
 			return row_delta;
 		}
 		
-		/// <summary>Return a collection of the currently active filters</summary>
-		private IEnumerable<Filter> ActiveFilters
-		{
-			get
-			{
-				if (!m_settings.FiltersEnabled) return Enumerable.Empty<Filter>();
-				return from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft;
-			}
-		}
-
-		/// <summary>Return a collection of the currently active transforms</summary>
-		private IEnumerable<Transform> ActiveTransforms
-		{
-			get
-			{
-				if (!m_settings.TransformsEnabled) return Enumerable.Empty<Transform>();
-				return from tx in Transform.Import(m_settings.TransformPatterns) where tx.Active select tx;
-			}
-		}
-
 		/// <summary>Test 'text' against each filter to see if it returns a positive match</summary>
 		/// <returns>Returns false if at least one filter returned no match</returns>
 		private static bool PassesFilters(string text, IEnumerable<Filter> filters)
 		{
-			return filters.AsParallel().All(f => f.IsMatch(text));
+			return filters.All(f => f.IsMatch(text));
 		}
 
 		/// <summary>Auto detect the line end format. Must be called from the main thread</summary>

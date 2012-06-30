@@ -93,7 +93,7 @@ namespace RyLogViewer
 				{
 				default: throw new ArgumentOutOfRangeException();
 				case EPattern.Substring:         return Regex.Escape(Expr);
-				case EPattern.Wildcard:          return Regex.Escape(Expr).Replace("\\*", ".*?").Replace("\\?", ".");
+				case EPattern.Wildcard:          return Regex.Escape(Expr).Replace("\\*", ".*").Replace("\\?", ".");
 				case EPattern.RegularExpression: return Expr;
 				}
 			}

@@ -36,11 +36,20 @@ namespace RyLogViewer
 		/// <summary>Returns a bit mask of the settings data that's changed</summary>
 		public EWhatsChanged WhatsChanged { get; private set; }
 		
-		public SettingsUI(ETab tab)
+		/// <summary>Access to the highlight pattern ui</summary>
+		public PatternUI HighlightUI { get { return m_pattern_hl; } }
+		
+		/// <summary>Access to the filter pattern ui</summary>
+		public PatternUI FilterUI { get { return m_pattern_ft; } }
+		
+		/// <summary>Access to the transform pattern ui</summary>
+		public TransformUI TransformUI { get { return m_pattern_tx; } }
+		
+		public SettingsUI(Settings settings, ETab tab)
 		{
 			InitializeComponent();
 			KeyPreview    = true;
-			m_settings    = new Settings();
+			m_settings    = settings;
 			m_highlights  = Highlight.Import(m_settings.HighlightPatterns);
 			m_filters     = Filter   .Import(m_settings.FilterPatterns   );
 			m_transforms  = Transform.Import(m_settings.TransformPatterns);
@@ -49,7 +58,7 @@ namespace RyLogViewer
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
-			m_pattern_tx.NewPattern(new Transform{Match = "Enter {one} here to {2} your {III}", Replace = "This is the result of your {III} {2} on {one}"});
+			m_pattern_tx.NewPattern(new Transform());
 			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			

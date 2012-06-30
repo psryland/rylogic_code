@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -159,7 +160,13 @@ namespace RyLogViewer
 		/// <summary>Return the compiled regex string for reference</summary>
 		public string RegexString
 		{
-			get { return IsValid ? Regex.ToString() : "Expression invalid"; }
+			get
+			{
+				var ex = Validate();
+				return ex == null
+					? Regex.ToString()
+					: string.Format("Expression invalid - {0}", ex.Message);
+			}
 		}
 
 		/// <summary>Returns the match template as a compiled regular expression</summary>
@@ -189,19 +196,17 @@ namespace RyLogViewer
 					
 					// Replace wildcards with Regex equivalents
 					if (PatnType == EPattern.Wildcard)
-						expr = expr.Replace(@"\*", @".*?").Replace(@"\?", @".");
+						expr = expr.Replace(@"\*", @".*").Replace(@"\?", @".");
 					
 					// Replace the (now escaped) '{tag}' capture
 					// groups with named regular expression capture groups
-					expr = Regex.Replace(expr, @"\\{(\w+)}", @"(?<$1>.*?)");
+					expr = Regex.Replace(expr, @"\\{(\w+)}", @"(?<$1>.*)");
 					
 					// Replace all escaped whitespace with '\s+'
 					expr = expr.Replace(@"\ ", @"\s+");
 					
 					// Allow expressions the end with whitespace to also match the eol char
-					if (!expr.EndsWith(@"\s+"))
-						expr = expr + @"$";
-					else
+					if (expr.EndsWith(@"\s+"))
 					{
 						expr = expr.Remove(expr.Length - 3, 3);
 						expr = expr + @"(?:$|\s)";
@@ -230,21 +235,36 @@ namespace RyLogViewer
 				m => new Tag(m.Value.TrimStart('{').TrimEnd('}'), new Span(m.Index, m.Length)));
 		}
 
-		/// <summary>Returns true if the transform is valid</summary>
+		/// <summary>Returns true if the match expression is valid</summary>
 		public bool IsValid
 		{
-			get
+			get { return Validate() == null; }
+		}
+		
+		/// <summary>Returns null if the transform is valid, otherwise an exception describing what's wrong</summary>
+		public Exception Validate()
+		{
+			// Check the regex can be compiled and all tags in the result template string exist in 'Subs'
+			try
 			{
-				// Check the regex can be compiled and all tags in the result template string exist in 'Subs'
-				try { return Regex != null && GetTags(Replace).All(t => Subs.ContainsKey(t.Id)); }
-				catch { return false; }
+				// Compiling the Regex may throw. In theory, it should never be null
+				if (Regex == null)
+					return new ArgumentNullException("The regular expression is null");
+				
+				// All tags in 'Replace' must exist in the match expression
+				if (!GetTags(Replace).All(t => Subs.ContainsKey(t.Id)))
+					return new ArgumentException("The replace pattern contains unknown tags");
+				
+				// No prob, bob!
+				return null;
 			}
+			catch (Exception ex) { return ex; }
 		}
 
 		/// <summary>Return true if 'text' matches the 'Match' pattern</summary>
 		public bool IsMatch(string text)
 		{
-			return Match.Length != 0 && Regex.IsMatch(text);
+			return Match.Length != 0 && IsValid && Regex.IsMatch(text);
 		}
 
 		/// <summary>Apply the transform to 'text' and return the mapping of capture groups in 'text' and in the returned result</summary>
@@ -306,6 +326,8 @@ namespace RyLogViewer
 		/// <summary>Apply the transform to 'text' (as fast as possible).</summary>
 		public string Txfm(string text)
 		{
+			Debug.Assert(IsValid, "Shouldn't be calling this unless the transform is valid");
+			
 			// If 'text' doesn't match the 'Match' expression, return the string unchanged
 			Match match = Regex.Match(text);
 			if (!match.Success) return text;

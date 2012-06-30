@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
+using System.Diagnostics;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
@@ -21,6 +22,8 @@ namespace RyLogViewer
 			var cat       = new AssemblyCatalog(typeof(Transform).Assembly);
 			var comp_cont = new CompositionContainer(cat);
 			comp_cont.ComposeParts(this);
+			Debug.Assert(TxfmSubs != null, "TxfmSubs != null");
+			TxfmSubs.Sort((lhs,rhs) => string.CompareOrdinal(lhs.Name, rhs.Name));
 		}
 
 		/// <summary>Factory method for creating substitution objects by name</summary>
@@ -108,7 +111,7 @@ namespace RyLogViewer
 	[Export(typeof(ITxfmSub))]
 	public class SubToLower :TxfmSubBase
 	{
-		public SubToLower() :base("To Lower Case") {}
+		public SubToLower() :base("Lower Case") {}
 		public override string Result(string elem)
 		{
 			return elem.ToLower();
@@ -119,7 +122,7 @@ namespace RyLogViewer
 	[Export(typeof(ITxfmSub))]
 	public class SubToUpper :TxfmSubBase
 	{
-		public SubToUpper() :base("To Upper Case") {}
+		public SubToUpper() :base("Upper Case") {}
 		public override string Result(string elem)
 		{
 			return elem.ToUpper();

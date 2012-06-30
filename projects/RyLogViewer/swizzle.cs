@@ -42,7 +42,7 @@ namespace RyLogViewer
 				// Check the char doesn't already exist
 				foreach (var m in mapping)
 					if (m.Char == ch)
-						throw new ArgumentException("Character block '"+ch+"' is not contiguous");
+						throw new ArgumentException("Character block '"+ch+"' is not contiguous in the output mapping");
 				
 				// Create a map block
 				var map = new Map();
@@ -59,9 +59,10 @@ namespace RyLogViewer
 				map.Src = new Span(j,0);
 				for (; j != src.Length && char.ToLowerInvariant(src[j]) == ch; ++map.Src.Count, ++j) {}
 				
-				//// map.Dst.Count must be <= map.Src.Count
-				//if (map.Src.Count < map.Dst.Count)
-				//    throw new ArgumentException("Output mapping block '"+ch+"' is longer than the source block");
+				// Check that there are no other 'ch' blocks in 'src'
+				for (; j != src.Length && char.ToLowerInvariant(src[j]) != ch; ++j) {}
+				if (j != src.Length)
+					throw new ArgumentException("Character block '"+ch+"' is not contiguous in the source mapping");
 				
 				// Read the case changes
 				cas.Clear();

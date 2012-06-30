@@ -27,7 +27,9 @@ namespace RyLogViewer
 		private readonly RecentFiles m_recent;                // Recent files
 		private readonly FileWatch m_watch;                   // A helper for watching files
 		private readonly Timer m_watch_timer;                 // A timer for polling the file watcher
+		private readonly EventBatcher m_batch_set_col_size;   // A call batcher for setting the column widths
 		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
+		private readonly List<Transform> m_transforms;        // A list of the active transforms only 
 		private readonly FindUI m_find_ui;                    // The find dialog
 		private readonly NotifyIcon m_notify_icon;            // A system tray icon
 		private readonly ToolTip m_tt;                        // Tooltips
@@ -42,9 +44,8 @@ namespace RyLogViewer
 		private long m_filepos;                               // The byte offset (from file begin) to the start of the last known line
 		private long m_fileend;                               // The last known size of the file
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
-		private int m_line_cache_count;                      // The number of lines to scan about the currently selected row
+		private int m_line_cache_count;                       // The number of lines to scan about the currently selected row
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
-
 		//bug:
 		// ungraceful close of process capture file
 		//todo:
@@ -58,23 +59,25 @@ namespace RyLogViewer
 			Log.Info(this, "App Startup: {0}", DateTime.Now);
 
 			InitializeComponent();
-			AllowTransparency   = true;
-			m_settings          = new Settings();
-			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
-			m_watch             = new FileWatch();
-			m_watch_timer       = new Timer{Interval = Constants.FilePollingRate};
-			m_highlights        = new List<Highlight>();
-			m_find_ui           = new FindUI(m_settings){Visible = false};
-			m_tt                = new ToolTip();
-			m_notify_icon       = new NotifyIcon{Icon = Icon};
-			m_line_index        = new List<Range>();
-			m_last_find_pattern = null;
-			m_filepath          = null;
-			m_file              = null;
-			m_filepos           = 0;
-			m_fileend           = 0;
-			m_bufsize           = m_settings.FileBufSize;
-			m_line_cache_count  = m_settings.LineCacheCount;
+			AllowTransparency    = true;
+			m_settings           = new Settings();
+			m_recent             = new RecentFiles(m_menu_file_recent, OpenLogFile);
+			m_watch              = new FileWatch();
+			m_watch_timer        = new Timer{Interval = Constants.FilePollingRate};
+			m_batch_set_col_size = new EventBatcher(100, this);
+			m_highlights         = new List<Highlight>();
+			m_transforms         = new List<Transform>();
+			m_find_ui            = new FindUI(m_settings){Visible = false};
+			m_tt                 = new ToolTip();
+			m_notify_icon        = new NotifyIcon{Icon = Icon};
+			m_line_index         = new List<Range>();
+			m_last_find_pattern  = null;
+			m_filepath           = null;
+			m_file               = null;
+			m_filepos            = 0;
+			m_fileend            = 0;
+			m_bufsize            = m_settings.FileBufSize;
+			m_line_cache_count   = m_settings.LineCacheCount;
 			
 			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
 			
@@ -173,7 +176,7 @@ namespace RyLogViewer
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
 			m_grid.DataError           += (s,a) => Debug.Assert(false);
 			m_grid.Scroll              += (s,a) => GridScroll();
-
+			
 			// Grid context menu
 			m_cmenu_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid);
 			m_cmenu_select_all.Click   += (s,a) => DataGridView_Extensions.SelectAll(m_grid);
@@ -185,6 +188,9 @@ namespace RyLogViewer
 			
 			// File Watcher
 			m_watch_timer.Tick += (s,a)=> m_watch.CheckForChangedFiles();
+			
+			// Column size event batcher
+			m_batch_set_col_size.Action += SetGridColumnSizesImpl;
 			
 			// Find
 			m_find_ui.Tag = Size.Empty;
@@ -450,6 +456,7 @@ namespace RyLogViewer
 		/// <summary>Called when the grid is scrolled</summary>
 		private void GridScroll()
 		{
+			if (GridEventsBlocked) return;
 			UpdateFileScroll();
 			SetGridColumnSizes();
 		}
@@ -654,7 +661,7 @@ namespace RyLogViewer
 									return true;
 								
 								// Parse the line from the buffer
-								line.Read(baddr + line_rng.Begin, bf, (int)line_rng.Begin, (int)line_rng.Count, m_encoding, m_col_delim, null);
+								line.Read(baddr + line_rng.Begin, bf, (int)line_rng.Begin, (int)line_rng.Count, m_encoding, m_col_delim, null, m_transforms);
 								
 								// Keep searching while the text is filtered out or doesn't match the pattern
 								if (!PassesFilters(line.RowText, filters)) return true;
@@ -846,12 +853,23 @@ namespace RyLogViewer
 		/// <summary>Display the options dialog</summary>
 		private void ShowOptions(SettingsUI.ETab tab)
 		{
+			string test_text = "<Enter test text here>";
+			if (SelectedRow != -1)
+				test_text = ReadLine(SelectedRow).RowText;
+			
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
-			var ui = new SettingsUI(tab);
+			var ui = new SettingsUI(m_settings, tab);
+			switch (tab)
+			{
+			default: throw new ArgumentOutOfRangeException("tab");
+			case SettingsUI.ETab.General: break;
+			case SettingsUI.ETab.LogView: break;
+			case SettingsUI.ETab.Highlights: ui.HighlightUI.TestText = test_text; break;
+			case SettingsUI.ETab.Filters:    ui.FilterUI   .TestText = test_text; break;
+			case SettingsUI.ETab.Transforms: ui.TransformUI.TestText = test_text; break;
+			}
 			ui.ShowDialog(this);
-			m_settings.Reload();
-			
 			ApplySettings();
 			
 			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
@@ -1082,6 +1100,11 @@ namespace RyLogViewer
 		/// <summary>Helper for setting the grid column size based on currently displayed content</summary>
 		private void SetGridColumnSizes()
 		{
+			if (m_grid.ColumnCount == 0) return;
+			m_batch_set_col_size.Signal();
+		}
+		private void SetGridColumnSizesImpl()
+		{
 			// Measure each column's preferred width
 			int[] col_widths = new int[m_grid.ColumnCount];
 			int total_width = 0, current_width = 0;
@@ -1092,23 +1115,41 @@ namespace RyLogViewer
 			}
 
 			// Resize columns. If the total width is less than the control width use the control width instead
-			if (total_width <= m_grid.Width)
+			float scale = Maths.Max((float)m_grid.Width / total_width, 1.0f);
+			foreach (DataGridViewColumn col in m_grid.Columns)
+				col.Width = (int)(col_widths[col.Index] * scale);
+		}
+		
+		/// <summary>Return a collection of the currently active highlights</summary>
+		private IEnumerable<Highlight> ActiveHighlights
+		{
+			get
 			{
-				if (m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
-				{
-					m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-					m_grid.AutoResizeColumns();
-				}
-			}
-			// Otherwise, If the total width is more than the control width, set each column to its preferred width
-			else if (total_width > current_width)
-			{
-				m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
-				foreach (DataGridViewColumn col in m_grid.Columns)
-					col.Width = col_widths[col.Index];
+				if (!m_settings.HighlightsEnabled) return Enumerable.Empty<Highlight>();
+				return from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl;
 			}
 		}
-
+		
+		/// <summary>Return a collection of the currently active filters</summary>
+		private IEnumerable<Filter> ActiveFilters
+		{
+			get
+			{
+				if (!m_settings.FiltersEnabled) return Enumerable.Empty<Filter>();
+				return from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft;
+			}
+		}
+		
+		/// <summary>Return a collection of the currently active transforms</summary>
+		private IEnumerable<Transform> ActiveTransforms
+		{
+			get
+			{
+				if (!m_settings.TransformsEnabled) return Enumerable.Empty<Transform>();
+				return from tx in Transform.Import(m_settings.TransformPatterns) where tx.Active select tx;
+			}
+		}
+		
 		/// <summary>
 		/// Apply settings throughout the app.
 		/// This method is called on startup to apply initial settings and
@@ -1132,8 +1173,11 @@ namespace RyLogViewer
 			
 			// Highlights;
 			m_highlights.Clear();
-			if (m_settings.HighlightsEnabled)
-				m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
+			m_highlights.AddRange(ActiveHighlights);
+			
+			// Transforms
+			m_transforms.Clear();
+			m_transforms.AddRange(ActiveTransforms);
 			
 			// Grid
 			int col_count = m_settings.ColDelimiter.Length != 0 ? Maths.Clamp(m_settings.ColumnCount, 1, 255) : 1;

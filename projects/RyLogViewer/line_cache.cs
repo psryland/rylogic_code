@@ -53,12 +53,16 @@ namespace RyLogViewer
 			}
 
 			/// <summary>Populate this line from a buffer</summary>
-			public void Read(long addr, byte[] buf, int start, int length, Encoding encoding, byte[] col_delim, List<Highlight> highlights)
+			public void Read(long addr, byte[] buf, int start, int length, Encoding encoding, byte[] col_delim, List<Highlight> highlights, List<Transform> transforms)
 			{
 				LineStartAddr = addr;
 				
 				// Convert the buffer to text
 				RowText = encoding.GetString(buf, start, length);
+				
+				// Apply any transforms
+				foreach (var tx in transforms)
+					RowText = tx.Txfm(RowText);
 				
 				Column.Clear();
 				
@@ -115,7 +119,7 @@ namespace RyLogViewer
 			int read = m_file.Read(m_line_buf, 0, (int)rng.Count);
 			if (read != rng.Count) throw new IOException("failed to read file over range ["+rng.Begin+","+rng.End+"). Read "+read+"/"+rng.Count+" bytes.");
 			
-			line.Read(rng.Begin, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights);
+			line.Read(rng.Begin, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights, m_transforms);
 			return line;
 		}
 

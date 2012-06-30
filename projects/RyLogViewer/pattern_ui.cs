@@ -22,23 +22,26 @@ namespace RyLogViewer
 		private Pattern     m_pattern;
 		private ImageList   m_image_list;
 		private Button      m_btn_regex_help;
-		public  CheckBox    m_check_binary;
-		public  CheckBox    m_check_active;
-		public  CheckBox    m_check_invert;
-		public  CheckBox    m_check_ignore_case;
-		public  Button      m_btn_add;
+		private CheckBox    m_check_binary;
+		private CheckBox    m_check_active;
+		private CheckBox    m_check_invert;
+		private CheckBox    m_check_ignore_case;
+		private Button      m_btn_add;
 		private Label       m_lbl_hl_regexp;
-		public  TextBox     m_edit_pattern;
+		private TextBox     m_edit_pattern;
 		private RadioButton m_radio_substring;
 		private RadioButton m_radio_wildcard;
 		private RadioButton m_radio_regex;
-		private Panel m_panel;
-		private Panel m_group_patntype;
-		public  RichTextBox m_edit_test;
+		private Panel       m_panel;
+		private Panel       m_group_patntype;
+		private RichTextBox m_edit_test;
 		
 		/// <summary>The pattern being controlled by this UI</summary>
 		public Pattern Pattern { get { return m_pattern; } }
 		
+		/// <summary>Access to the test text field</summary>
+		public string TestText { get { return m_edit_test.Text; } set { m_edit_test.Text = value; } }
+
 		/// <summary>True if the editted pattern is a new instance</summary>
 		public bool IsNew { get; private set; }
 		
