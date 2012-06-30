@@ -35,7 +35,7 @@ namespace pr.util
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
-		/// <summary>Compare to ranges within a byte array</summary>
+		/// <summary>Compare two ranges within a byte array</summary>
 		public static int Compare(byte[] lhs, int lstart, int llength, byte[] rhs, int rstart, int rlength)
 		{
 			for (;llength != 0 && rlength != 0; ++lstart, ++rstart, --llength, --rlength)

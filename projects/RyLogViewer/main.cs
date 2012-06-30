@@ -137,8 +137,8 @@ namespace RyLogViewer
 			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRow = 0);
 			m_btn_jump_to_end.ToolTipText   = Resources.ScrollToEnd;
 			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
-			m_btn_tail.ToolTipText          = Resources.WatchForUpdates;
-			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
+			m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
+			m_btn_watch.Click              += (s,a) => EnableWatch(m_btn_watch.Checked);
 			m_toolstrip.Move               += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
 			ToolStripManager.Renderer       = new CheckedButtonRenderer();
 
@@ -350,7 +350,7 @@ namespace RyLogViewer
 				// Setup the watcher to watch for file changes
 				// Start the build in an invoke so that checking for file changes doesn't cause reentrancy
 				m_watch.Add(m_filepath, (fp,ctx) => { OnFileChanged(); return true; });
-				m_watch_timer.Enabled = FileOpen && m_settings.TailEnabled;
+				m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
 				
 				BuildLineIndex(m_filepos, true, ()=>{ SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0; });
 				return;
@@ -400,7 +400,9 @@ namespace RyLogViewer
 		{
 			long len = m_file.Length;
 			Log.Info(this, "File {0} changed. File length: {1}", m_filepath, len);
-			BuildLineIndex(AutoScrollTail ? m_file.Length : m_filepos, !m_settings.FileChangesAdditive);
+			long filepos = AutoScrollTail ? m_file.Length : m_filepos;
+			bool reload  = m_file.Length < m_fileend || !m_settings.FileChangesAdditive;
+			BuildLineIndex(filepos, reload);
 		}
 		
 		/// <summary>Supply the grid with values</summary>
@@ -737,9 +739,9 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
-		private void EnableTail(bool enable)
+		private void EnableWatch(bool enable)
 		{
-			m_settings.TailEnabled = enable;
+			m_settings.WatchEnabled = enable;
 			ApplySettings();
 			if (enable) BuildLineIndex(m_filepos, m_settings.FileChangesAdditive);
 		}
@@ -1047,11 +1049,17 @@ namespace RyLogViewer
 				// Auto scroll if the last row of the file is visible and selected in the grid
 				int row_delim_length = m_row_delim != null ? m_row_delim.Length : 0;
 				return
-					m_grid.RowCount != 0 &&                                         // the grid has data
-					m_line_index.Count != 0 &&                                      // rows of the file are cached
-					SelectedRow == m_grid.RowCount - 1 &&                           // last row selected
-					m_grid.Rows[m_grid.RowCount - 1].Displayed &&                   // last row displayed
-					m_line_index.Last().Contains(m_fileend - row_delim_length - 1); // last row in the file
+					m_grid.RowCount == 0 ||                                                // no data, then yes
+					(
+						m_grid.RowCount != 0 &&                                            // the grid has data
+						m_line_index.Count != 0 &&                                         // rows of the file are cached
+						SelectedRow == m_grid.RowCount - 1 &&                              // last row selected
+						m_grid.Rows[m_grid.RowCount - 1].Displayed &&                      // last row displayed
+						(
+							m_line_index.Last().Contains(m_fileend - 1) ||                 // last char in the file
+							m_line_index.Last().Contains(m_fileend - 1 - row_delim_length) // last row in the file
+						)
+					);
 			}
 		}
 
@@ -1107,13 +1115,10 @@ namespace RyLogViewer
 		{
 			// Measure each column's preferred width
 			int[] col_widths = new int[m_grid.ColumnCount];
-			int total_width = 0, current_width = 0;
+			int total_width = 0;
 			foreach (DataGridViewColumn col in m_grid.Columns)
-			{
 				total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
-				current_width += col.Width;
-			}
-
+			
 			// Resize columns. If the total width is less than the control width use the control width instead
 			float scale = Maths.Max((float)m_grid.Width / total_width, 1.0f);
 			foreach (DataGridViewColumn col in m_grid.Columns)
@@ -1169,7 +1174,7 @@ namespace RyLogViewer
 			m_line_cache_count = m_settings.LineCacheCount;
 			
 			// Tail
-			m_watch_timer.Enabled = FileOpen && m_settings.TailEnabled;
+			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
 			
 			// Highlights;
 			m_highlights.Clear();
@@ -1279,7 +1284,7 @@ namespace RyLogViewer
 				m_btn_highlights.Checked = m_settings.HighlightsEnabled;
 				m_btn_filters.Checked    = m_settings.FiltersEnabled;
 				m_btn_transforms.Checked = m_settings.TransformsEnabled;
-				m_btn_tail.Checked       = m_watch_timer.Enabled;
+				m_btn_watch.Checked       = m_watch_timer.Enabled;
 			
 				// The file scroll bar is only visible when part of the file is loaded
 				m_scroll_file.Width = m_settings.FileScrollWidth;

@@ -43,7 +43,7 @@
 			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_jump_to_start = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_watch = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
@@ -138,7 +138,7 @@
             this.m_btn_jump_to_end,
             this.m_btn_jump_to_start,
             this.toolStripSeparator8,
-            this.m_btn_tail});
+            this.m_btn_watch});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
 			this.m_toolstrip.Size = new System.Drawing.Size(288, 31);
@@ -243,15 +243,15 @@
 			this.toolStripSeparator8.Name = "toolStripSeparator8";
 			this.toolStripSeparator8.Size = new System.Drawing.Size(6, 31);
 			// 
-			// m_btn_tail
+			// m_btn_watch
 			// 
-			this.m_btn_tail.CheckOnClick = true;
-			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.Eyeball;
-			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_tail.Name = "m_btn_tail";
-			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_tail.Text = "Live Update";
+			this.m_btn_watch.CheckOnClick = true;
+			this.m_btn_watch.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_watch.Image = global::RyLogViewer.Properties.Resources.Eyeball;
+			this.m_btn_watch.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_watch.Name = "m_btn_watch";
+			this.m_btn_watch.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_watch.Text = "Live Update";
 			// 
 			// m_menu
 			// 
@@ -878,7 +878,7 @@
 		private System.Windows.Forms.ToolStripButton m_btn_options;
 		private RyLogViewer.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
-		private System.Windows.Forms.ToolStripButton m_btn_tail;
+		private System.Windows.Forms.ToolStripButton m_btn_watch;
 		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_copy;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;

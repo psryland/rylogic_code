@@ -163,10 +163,10 @@ namespace RyLogViewer
 			get { return get<bool>("TransformsEnabled"); }
 			set { set("TransformsEnabled", value); }
 		}
-		public bool   TailEnabled
+		public bool   WatchEnabled
 		{
-			get { return get<bool>("TailEnabled"); }
-			set { set("TailEnabled", value); }
+			get { return get<bool>("WatchEnabled"); }
+			set { set("WatchEnabled", value); }
 		}
 		public int    FileBufSize
 		{
@@ -296,7 +296,7 @@ namespace RyLogViewer
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = true;
 			TransformsEnabled               = true;
-			TailEnabled                     = false;
+			WatchEnabled                     = false;
 			FileBufSize                     = 10 * Constants.OneMB;
 			MaxLineLength                   = 4 * Constants.OneKB;
 			LineCacheCount                  = 10000;
