@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Windows.Forms;
 using pr.common;
 
 namespace RyLogViewer
@@ -281,10 +282,10 @@ namespace RyLogViewer
 			LineBackColour2                 = Color.FromArgb(192, 255, 192);
 			LineForeColour1                 = Color.Black;
 			LineForeColour2                 = Color.Black;
-			FileScrollWidth                 = 20;
+			FileScrollWidth                 = Constants.FileScrollWidthDefault;
 			ScrollBarFileRangeColour        = Color.FromArgb(128, Color.White);
 			ScrollBarDisplayRangeColour     = Color.FromArgb(128, Color.SteelBlue);
-			RowHeight                       = 18;
+			RowHeight                       = Constants.RowHeightDefault;
 			LoadLastFile                    = false;
 			LastLoadedFile                  = "";
 			OpenAtEnd                       = true;
@@ -296,10 +297,10 @@ namespace RyLogViewer
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = true;
 			TransformsEnabled               = true;
-			WatchEnabled                     = false;
-			FileBufSize                     = 10 * Constants.OneMB;
-			MaxLineLength                   = 4 * Constants.OneKB;
-			LineCacheCount                  = 10000;
+			WatchEnabled                    = false;
+			FileBufSize                     = Constants.FileBufSizeDefault;
+			MaxLineLength                   = Constants.MaxLineLengthDefault;
+			LineCacheCount                  = Constants.LineCacheCountDefault;
 			HighlightPatterns               = "<root/>";
 			FilterPatterns                  = "<root/>";
 			TransformPatterns               = "<root/>";
@@ -324,6 +325,52 @@ namespace RyLogViewer
 				try { Reload(); }
 				catch (Exception ex) { Debug.WriteLine(ex); }
 			}
+		}
+		
+		/// <summary>Perform validation on the loaded settings</summary>
+		public override void Validate()
+		{
+			// If restoring the screen location, ensure it's onscreen
+			if (RestoreScreenLoc)
+			{
+				Size sz = WindowSize;
+				Point pt = ScreenPosition;
+				bool valid =
+					sz.Width  < SystemInformation.VirtualScreen.Width &&
+					sz.Height < SystemInformation.VirtualScreen.Height &&
+					pt.X >= SystemInformation.VirtualScreen.Left && pt.X < SystemInformation.VirtualScreen.Right - 20 &&
+					pt.Y >= SystemInformation.VirtualScreen.Top  && pt.Y < SystemInformation.VirtualScreen.Bottom - 20;
+				if (!valid) RestoreScreenLoc = false;
+			}
+
+			// File scroll width must be within range
+			int file_scroll_width = FileScrollWidth;
+			if (file_scroll_width < Constants.FileScrollMinWidth || file_scroll_width > Constants.FileScrollMaxWidth)
+				FileScrollWidth = Constants.FileScrollWidthDefault;
+
+			// Row height within range
+			int row_height = RowHeight;
+			if (row_height < Constants.RowHeightMinHeight || row_height > Constants.RowHeightMaxHeight)
+				RowHeight = Constants.RowHeightDefault;
+
+			// File buffer size
+			int file_buf_size = FileBufSize;
+			if (file_buf_size < Constants.FileBufSizeMin || file_buf_size > Constants.FileBufSizeMax)
+				FileBufSize = Constants.FileBufSizeDefault;
+			
+			// Max line length
+			int max_line_length = MaxLineLength;
+			if (max_line_length < Constants.MaxLineLengthMin || max_line_length > Constants.MaxLineLengthMax)
+				MaxLineLength = Constants.MaxLineLengthDefault;
+
+			// Line cache count
+			int line_cache_count = LineCacheCount;
+			if (line_cache_count < Constants.LineCacheCountMin || line_cache_count > Constants.LineCacheCountMax)
+				LineCacheCount = Constants.LineCacheCountDefault;
+
+			int column_count = ColumnCount;
+			if (column_count < Constants.ColumnCountMin || column_count > Constants.ColumnCountMax)
+				ColumnCount = Constants.ColumnCountDefault;
 		}
 		
 		/// <summary>Types the serialiser needs to know about</summary>

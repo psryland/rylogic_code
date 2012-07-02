@@ -16,6 +16,24 @@ namespace RyLogViewer
 	{
 		public const string AppIdentifier           = "rylogviewer.x86";
 		public const string UpdateURL               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
+		public const int FileBufSizeMin             = 1 * OneMB;
+		public const int FileBufSizeDefault         = 10 * OneMB;
+		public const int FileBufSizeMax             = 100 * OneMB;
+		public const int MaxLineLengthMin           = 1 * OneKB;
+		public const int MaxLineLengthDefault       = 4 * OneKB;
+		public const int MaxLineLengthMax           = 128 * OneKB;
+		public const int LineCacheCountMin          = 1;
+		public const int LineCacheCountDefault      = 10000;
+		public const int LineCacheCountMax          = 99999999;
+		public const int ColumnCountMin             = 1;
+		public const int ColumnCountDefault         = 1;
+		public const int ColumnCountMax             = 256;
+		public const int FileScrollMinWidth         = 16;
+		public const int FileScrollMaxWidth         = 200;
+		public const int FileScrollWidthDefault     = 20;
+		public const int RowHeightMinHeight         = 1;
+		public const int RowHeightMaxHeight         = 200;
+		public const int RowHeightDefault           = 18;
 		public const int AutoScrollAtBoundaryLimit  = 10;
 		public const int FilePollingRate            = 100;
 		public const int MaxProgramHistoryLength    = 10;

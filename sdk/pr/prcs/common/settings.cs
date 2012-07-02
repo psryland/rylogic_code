@@ -216,6 +216,8 @@ namespace pr.common
 			if (version != Version)
 				Upgrade();
 			
+			Validate();
+			
 			// Notify of settings loaded
 			if (SettingsLoaded != null)
 				SettingsLoaded(this, new SettingsLoadedEventArgs(filepath));
@@ -258,6 +260,9 @@ namespace pr.common
 
 		/// <summary>Called when loading settings from an earlier version</summary>
 		public virtual void Upgrade() {}
+
+		/// <summary>Perform validation on the loaded settings</summary>
+		public virtual void Validate() {}
 	}
 }
 

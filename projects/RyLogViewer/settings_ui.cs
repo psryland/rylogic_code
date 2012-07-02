@@ -157,7 +157,9 @@ namespace RyLogViewer
 			tt = "The number of columns to display in the grid.\r\nUsed when the column delimiter is not blank";
 			m_lbl_column_count.ToolTip(m_tt, tt);
 			m_spinner_column_count.ToolTip(m_tt, tt);
-			m_spinner_column_count.Value = m_settings.ColumnCount;
+			m_spinner_column_count.Minimum = Constants.ColumnCountMin;
+			m_spinner_column_count.Maximum = Constants.ColumnCountMax;
+			m_spinner_column_count.Value = Maths.Clamp(m_settings.ColumnCount, Constants.ColumnCountMin, Constants.ColumnCountMax);
 			m_spinner_column_count.ValueChanged += (s,a)=>
 				{
 					m_settings.ColumnCount = (int)m_spinner_column_count.Value;
@@ -175,8 +177,8 @@ namespace RyLogViewer
 			
 			// Lines cached
 			m_spinner_line_cache_count.ToolTip(m_tt, "The number of lines to scan into memory around the currently selected line");
-			m_spinner_line_cache_count.Minimum = 1;
-			m_spinner_line_cache_count.Maximum = 99999999;
+			m_spinner_line_cache_count.Minimum = Constants.LineCacheCountMin;
+			m_spinner_line_cache_count.Maximum = Constants.LineCacheCountMax;
 			m_spinner_line_cache_count.Value = Maths.Clamp(m_settings.LineCacheCount, (int)m_spinner_line_cache_count.Minimum, (int)m_spinner_line_cache_count.Maximum);
 			m_spinner_line_cache_count.ValueChanged += (s,a)=>
 				{
@@ -188,8 +190,8 @@ namespace RyLogViewer
 			tt = "The maximum number of bytes to scan when finding lines around the currently selected row (in MB).";
 			m_lbl_max_scan_size0.ToolTip(m_tt, tt);
 			m_spinner_max_mem_range.ToolTip(m_tt, tt);
-			m_spinner_max_mem_range.Minimum = 1;
-			m_spinner_max_mem_range.Maximum = 100;
+			m_spinner_max_mem_range.Minimum = Constants.FileBufSizeMin / Constants.OneMB;
+			m_spinner_max_mem_range.Maximum = Constants.FileBufSizeMax / Constants.OneMB;
 			m_spinner_max_mem_range.Value = Maths.Clamp(m_settings.FileBufSize / Constants.OneMB, (int)m_spinner_max_mem_range.Minimum, (int)m_spinner_max_mem_range.Maximum);
 			m_spinner_max_mem_range.ValueChanged += (s,a)=>
 				{
@@ -202,8 +204,8 @@ namespace RyLogViewer
 			m_lbl_max_line_len_kb.ToolTip(m_tt, tt);
 			m_lbl_max_line_length.ToolTip(m_tt, tt);
 			m_spinner_max_line_length.ToolTip(m_tt, tt);
-			m_spinner_max_line_length.Minimum = 1;
-			m_spinner_max_line_length.Maximum = 128;
+			m_spinner_max_line_length.Minimum = Constants.MaxLineLengthMin;
+			m_spinner_max_line_length.Maximum = Constants.MaxLineLengthMax;
 			m_spinner_max_line_length.Value = Maths.Clamp(m_settings.MaxLineLength / Constants.OneKB, (int)m_spinner_max_line_length.Minimum, (int)m_spinner_max_line_length.Maximum);
 			m_spinner_max_line_length.ValueChanged += (s,a)=>
 				{
@@ -273,8 +275,8 @@ namespace RyLogViewer
 			
 			// Row height
 			m_spinner_row_height.ToolTip(m_tt, "The height of each row in the log view");
-			m_spinner_row_height.Minimum = 1;
-			m_spinner_row_height.Maximum = 200;
+			m_spinner_row_height.Minimum = Constants.RowHeightMinHeight;
+			m_spinner_row_height.Maximum = Constants.RowHeightMaxHeight;
 			m_spinner_row_height.Value = Maths.Clamp(m_settings.RowHeight, (int)m_spinner_row_height.Minimum, (int)m_spinner_row_height.Maximum);
 			m_spinner_row_height.ValueChanged += (s,a)=>
 				{
@@ -284,8 +286,8 @@ namespace RyLogViewer
 			
 			// File scroll width
 			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
-			m_spinner_file_scroll_width.Minimum = 16;
-			m_spinner_file_scroll_width.Maximum = 200;
+			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
+			m_spinner_file_scroll_width.Maximum = Constants.FileScrollMaxWidth;
 			m_spinner_file_scroll_width.Value = Maths.Clamp(m_settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
 			m_spinner_file_scroll_width.ValueChanged += (s,a)=>
 				{

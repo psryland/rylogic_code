@@ -143,7 +143,7 @@
             this.m_btn_additive});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(347, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(316, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
