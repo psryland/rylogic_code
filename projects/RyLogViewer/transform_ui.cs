@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.gfx;
@@ -54,6 +55,7 @@ namespace RyLogViewer
 		private RichTextBox      m_edit_result;
 		
 		/// <summary>The pattern being controlled by this UI</summary>
+		[Browsable(false)]
 		public Transform Transform { get { return m_transform; } }
 		
 		/// <summary>The test text to use</summary>
@@ -68,7 +70,7 @@ namespace RyLogViewer
 		public TransformUI()
 		{
 			InitializeComponent();
-			m_transform = null;
+			m_transform = new Transform();
 			m_tt = new ToolTip();
 			
 			// Add/Update

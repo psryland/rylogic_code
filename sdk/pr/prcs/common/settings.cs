@@ -51,8 +51,8 @@ namespace pr.common
 			public override string ToString() { return Key + "  " + Value; }
 		}
 		
-		protected List<Pair> Data = new List<Pair>();
 		private const string version_key = "__SettingsVersion";
+		protected List<Pair> Data = new List<Pair>();
 		
 		/// <summary>Options for loading settings</summary>
 		public enum ELoadOptions { Normal, Defaults };
@@ -67,7 +67,7 @@ namespace pr.common
 		protected virtual string Version { get { return "v1.0"; } }
 		
 		/// <summary>Returns the directory in which to store app settings</summary>
-		protected virtual string AppDataDirectory
+		public string DefaultAppDataDirectory
 		{
 			get
 			{
@@ -78,11 +78,14 @@ namespace pr.common
 			}
 		}
 		
-		/// <summary>Returns the filepath for the persisted settings file</summary>
-		public virtual string Filepath
+		/// <summary>Returns the directory in which to store app settings</summary>
+		public string DefaultFilepath
 		{
-			get { return Path.Combine(AppDataDirectory, "settings.xml"); }
+			get { return Path.Combine(DefaultAppDataDirectory, "settings.xml"); }
 		}
+
+		/// <summary>Returns the filepath for the persisted settings file</summary>
+		public string Filepath { get; set; }
 		
 		/// <summary>Indexer for accessing settings</summary>
 		protected object this[string key]
@@ -179,6 +182,7 @@ namespace pr.common
 		
 		protected SettingsBase()
 		{
+			Filepath = DefaultFilepath;
 			AutoSaveOnChanges = true;
 		}
 		
@@ -226,29 +230,38 @@ namespace pr.common
 		/// <summary>Persist current settings to storage</summary>
 		public virtual void Save()
 		{
-			// Notify of a save about to happen
-			SettingsSavingEventArgs args = new SettingsSavingEventArgs(false);
-			if (SettingsSaving != null) SettingsSaving(this, args);
-			if (args.Cancel) return;
-
-			// Ensure the save directory exists
-			string filepath = Filepath;
-			string path = Path.GetDirectoryName(filepath);
-			if (path != null && !Directory.Exists(path)) Directory.CreateDirectory(path);
-
-			// Save the settings version
-			set(version_key, Version);
-
-			// Perform the save
-			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
-			using (XmlWriter fs = XmlWriter.Create(Filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
-				ser.WriteObject(fs, Data);
+			if (m_saving) return;
+			try
+			{
+				m_saving = true;
+				
+				// Notify of a save about to happen
+				SettingsSavingEventArgs args = new SettingsSavingEventArgs(false);
+				if (SettingsSaving != null) SettingsSaving(this, args);
+				if (args.Cancel) return;
+				
+				// Ensure the save directory exists
+				string filepath = Filepath;
+				string path = Path.GetDirectoryName(filepath);
+				if (path != null && !Directory.Exists(path)) Directory.CreateDirectory(path);
+				
+				// Save the settings version
+				set(version_key, Version);
+				
+				// Perform the save
+				DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
+				using (XmlWriter fs = XmlWriter.Create(Filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
+					ser.WriteObject(fs, Data);
+			}
+			finally { m_saving = false; }
 		}
+		private bool m_saving;
 
 		/// <summary>Resets the persistent settings to their defaults</summary>
 		public virtual void Reset()
 		{
 			DefaultData.Save();
+			Reload();
 		}
 
 		/// <summary>Remove the settings file from persistent storage</summary>

@@ -276,11 +276,25 @@ namespace RyLogViewer
 			{
 				if (arg[0] == '-')
 				{
+					const string help =
+						"Valid Command Line Options:\r\n"+
+						"  -s <settings file path>\r\n"+
+						"     \r\n"+
+						"\r\n"+
+						"     The path to a settings file to load\r\n"+
+						"  -e <export file path> - The path to a settings file to load\r\n"+
+						"  -h                      - This help message\r\n"+
+						"";
+					
 					string cmd = arg.Substring(1).ToLower();
 					switch (cmd)
 					{
 					default:
-						MessageBox.Show(this, string.Format("'{0}' is not a valid command line switch", cmd), Resources.UnknownCmdLineOption, MessageBoxButtons.OK, MessageBoxIcon.Information);
+						MessageBox.Show(this, string.Format(
+							"'{0}' is not a valid command line switch\r\n\r\n{1}"
+							,cmd ,help), Resources.UnknownCmdLineOption, MessageBoxButtons.OK, MessageBoxIcon.Information);
+						break;
+					case "s":
 						break;
 					}
 				}

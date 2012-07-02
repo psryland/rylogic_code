@@ -657,6 +657,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Settings Files (*.xml)|*.xml|All files (*.*)|*.*.
+        /// </summary>
+        internal static string SettingsFileFilter {
+            get {
+                return ResourceManager.GetString("SettingsFileFilter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Left click to enable/disable filters.
         ///Right click to show the filters dialog.
         /// </summary>

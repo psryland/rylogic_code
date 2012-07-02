@@ -230,6 +230,44 @@ namespace RyLogViewer
 					m_settings.FileChangesAdditive = m_check_file_changes_additive.Checked;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
+			
+			// Settings reset
+			m_btn_settings_reset.ToolTip(m_tt, "Reset settings to their default values.");
+			m_btn_settings_reset.Click += (s,a)=>
+				{
+					DialogResult res = MessageBox.Show(this, "This will reset all current settings to their default values\r\n\r\nContinue?", "Confirm Reset Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+					if (res != DialogResult.Yes) return;
+					m_settings.Reset();
+					UpdateUI();
+					WhatsChanged |= EWhatsChanged.Everything;
+				};
+			
+			// Settings filepath
+			m_text_settings.ToolTip(m_tt, "The path to the current settings file");
+			
+			// Settings load
+			m_btn_settings_load.ToolTip(m_tt, "Load settings from file");
+			m_btn_settings_load.Click += (s,a)=>
+				{
+					var dg = new OpenFileDialog{Title = "Choose a settings file to load", Filter = Resources.SettingsFileFilter, CheckFileExists = true};
+					if (dg.ShowDialog(this) != DialogResult.OK) return;
+					m_settings.Filepath = dg.FileName;
+					m_settings.Reload();
+					UpdateUI();
+					WhatsChanged |= EWhatsChanged.Everything;
+				};
+			
+			// Settings save
+			m_btn_settings_save.ToolTip(m_tt, "Save current settings to a file");
+			m_btn_settings_save.Click += (s,a)=>
+				{
+					var dg = new SaveFileDialog{Title = "Save current settings", Filter = Resources.SettingsFileFilter, CheckPathExists = true};
+					if (dg.ShowDialog(this) != DialogResult.OK) return;
+					m_settings.Filepath = dg.FileName;
+					m_settings.Save();
+					UpdateUI();
+					WhatsChanged |= EWhatsChanged.Nothing;
+				};
 		}
 		
 		/// <summary>Hook up events for the log view tab</summary>
@@ -596,38 +634,45 @@ namespace RyLogViewer
 		/// <summary>Update the UI state based on current settings</summary>
 		private void UpdateUI()
 		{
-			SuspendLayout();
+			try
+			{
+				SuspendLayout();
 			
-			m_spinner_column_count.Enabled = m_settings.ColDelimiter.Length != 0;
+				m_spinner_column_count.Enabled = m_settings.ColDelimiter.Length != 0;
 			
-			m_check_alternate_line_colour.Checked = m_settings.AlternateLineColours;
-			m_lbl_selection_example.BackColor = m_settings.LineSelectBackColour;
-			m_lbl_selection_example.ForeColor = m_settings.LineSelectForeColour;
-			m_lbl_line1_example.BackColor = m_settings.LineBackColour1;
-			m_lbl_line1_example.ForeColor = m_settings.LineForeColour1;
-			m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
-			m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
-			m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
+				m_check_alternate_line_colour.Checked = m_settings.AlternateLineColours;
+				m_lbl_selection_example.BackColor = m_settings.LineSelectBackColour;
+				m_lbl_selection_example.ForeColor = m_settings.LineSelectForeColour;
+				m_lbl_line1_example.BackColor = m_settings.LineBackColour1;
+				m_lbl_line1_example.ForeColor = m_settings.LineForeColour1;
+				m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
+				m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
+				m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
 			
-			int selected = m_grid_highlight.FirstSelectedRowIndex();
-			m_grid_highlight.CurrentCell = null;
-			m_grid_highlight.RowCount = 0;
-			m_grid_highlight.RowCount = m_highlights.Count;
-			m_grid_highlight.SelectRow(selected);
+				int selected = m_grid_highlight.FirstSelectedRowIndex();
+				m_grid_highlight.CurrentCell = null;
+				m_grid_highlight.RowCount = 0;
+				m_grid_highlight.RowCount = m_highlights.Count;
+				m_grid_highlight.SelectRow(selected);
 			
-			selected = m_grid_filter.FirstSelectedRowIndex();
-			m_grid_filter.CurrentCell = null;
-			m_grid_filter.RowCount = 0;
-			m_grid_filter.RowCount = m_filters.Count;
-			m_grid_filter.SelectRow(selected);
+				selected = m_grid_filter.FirstSelectedRowIndex();
+				m_grid_filter.CurrentCell = null;
+				m_grid_filter.RowCount = 0;
+				m_grid_filter.RowCount = m_filters.Count;
+				m_grid_filter.SelectRow(selected);
 			
-			selected = m_grid_transform.FirstSelectedRowIndex();
-			m_grid_transform.CurrentCell = null;
-			m_grid_transform.RowCount = 0;
-			m_grid_transform.RowCount = m_transforms.Count;
-			m_grid_transform.SelectRow(selected);
+				selected = m_grid_transform.FirstSelectedRowIndex();
+				m_grid_transform.CurrentCell = null;
+				m_grid_transform.RowCount = 0;
+				m_grid_transform.RowCount = m_transforms.Count;
+				m_grid_transform.SelectRow(selected);
 			
-			ResumeLayout();
+				m_text_settings.Text = m_settings.Filepath;
+			}
+			finally
+			{
+				ResumeLayout();
+			}
 		}
 
 		/// <summary>Colour picker helper</summary>
