@@ -31,6 +31,7 @@ namespace pr.util
 	{
 		private class WatchedFile
 		{
+			public readonly FileInfo           m_info;           // File info
 			public readonly string             m_filepath;       // The filepath of the file to watch
 			public readonly FileChangedHandler m_onchange;       // The client to callback when a changed file is found
 			public readonly int                m_id;             // A user provided id used to identify groups of watched files
@@ -42,14 +43,14 @@ namespace pr.util
 	
 			public WatchedFile(string filepath, FileChangedHandler onchange, int id, object ctx)
 			{
-				var info = new FileInfo(filepath);
+				m_info     = new FileInfo(filepath);
 				m_filepath = filepath;
 				m_onchange = onchange;
 				m_id       = id;
 				m_ctx      = ctx;
-				m_stamp0   = info.LastWriteTimeUtc.Ticks;
+				m_stamp0   = m_info.LastWriteTimeUtc.Ticks;
 				m_stamp1   = m_stamp0;
-				m_size0    = info.Length;
+				m_size0    = m_info.Length;
 				m_size1    = m_size0;
 			}
 		}
@@ -115,19 +116,19 @@ namespace pr.util
 		public void CheckForChangedFiles()
 		{
 			// Build a collection of the changed files to prevent re-entrancy problems with the callbacks
-			List<WatchedFile> changed_files = new List<WatchedFile>();
+			m_changed_files.Clear();
 			foreach (WatchedFile f in m_files)
 			{
-				var info = new FileInfo(f.m_filepath);
-				long size  = info.Length;
-				long stamp = info.LastWriteTimeUtc.Ticks;
-				if (f.m_stamp0 != stamp || f.m_size0 != size) { changed_files.Add(f); }
+				f.m_info.Refresh();
+				long size  = f.m_info.Length;
+				long stamp = f.m_info.LastWriteTimeUtc.Ticks;
+				if (f.m_stamp0 != stamp || f.m_size0 != size) { m_changed_files.Add(f); }
 				f.m_stamp1 = stamp;
 				f.m_size1 = size;
 			}
 
 			// Report each changed file
-			foreach (WatchedFile f in changed_files)
+			foreach (WatchedFile f in m_changed_files)
 			{
 				if (f.m_onchange(f.m_filepath, f.m_ctx))
 				{
@@ -136,5 +137,7 @@ namespace pr.util
 				}
 			}
 		}
+		// Recycle the changed files collection
+		private readonly List<WatchedFile> m_changed_files = new List<WatchedFile>();
 	}
 }

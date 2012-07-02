@@ -1,21 +1,15 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{1863889A-00DF-4350-BA39-669CA949CB81}") = "www.rylogic.co.nz", "www.rylogic.co.nz.phpproj", "{7B6516EA-866E-45FB-B7FB-A0C6B029B109}"
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "www.rylogic.co.nz", "www.rylogic.co.nz.vcxproj", "{09FA81FB-78FA-4930-8236-36482526FF74}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Local|PHP 5.3 = Local|PHP 5.3
-		Production|PHP 5.3 = Production|PHP 5.3
-		Staging|PHP 5.3 = Staging|PHP 5.3
+		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7B6516EA-866E-45FB-B7FB-A0C6B029B109}.Local|PHP 5.3.ActiveCfg = Local|PHP 5.3
-		{7B6516EA-866E-45FB-B7FB-A0C6B029B109}.Local|PHP 5.3.Deploy.0 = Local|PHP 5.3
-		{7B6516EA-866E-45FB-B7FB-A0C6B029B109}.Production|PHP 5.3.ActiveCfg = Production|PHP 5.3
-		{7B6516EA-866E-45FB-B7FB-A0C6B029B109}.Production|PHP 5.3.Deploy.0 = Production|PHP 5.3
-		{7B6516EA-866E-45FB-B7FB-A0C6B029B109}.Staging|PHP 5.3.ActiveCfg = Staging|PHP 5.3
-		{7B6516EA-866E-45FB-B7FB-A0C6B029B109}.Staging|PHP 5.3.Deploy.0 = Staging|PHP 5.3
+		{09FA81FB-78FA-4930-8236-36482526FF74}.Release|Win32.ActiveCfg = Release|Win32
+		{09FA81FB-78FA-4930-8236-36482526FF74}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

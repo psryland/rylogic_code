@@ -1,23 +1,48 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.IO.Ports;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace RyLogViewer
 {
 	public static class Constants
 	{
-		public const int AutoScrollAtBoundaryLimit            = 10;
-		public const int FileReadChunkSize                   = 4096;
-		public const int FilePollingRate                     = 100;
-		public const int MaxProgramHistoryLength             = 10;
-		public const int MaxNetConnHistoryLength             = 10;
-		public const int MaxSerialConnHistoryLength          = 1;
-		public const int MaxOutputFileHistoryLength          = 10;
-		public const int MaxFindHistory                      = 10;
-		public const int OneMB                               = 1024*1024;
+		public const string AppIdentifier           = "rylogviewer.x86";
+		public const string UpdateURL               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
+		public const int FileBufSizeMin             = 1 * OneMB;
+		public const int FileBufSizeDefault         = 10 * OneMB;
+		public const int FileBufSizeMax             = 100 * OneMB;
+		public const int MaxLineLengthMin           = 1 * OneKB;
+		public const int MaxLineLengthDefault       = 4 * OneKB;
+		public const int MaxLineLengthMax           = 128 * OneKB;
+		public const int LineCacheCountMin          = 1;
+		public const int LineCacheCountDefault      = 10000;
+		public const int LineCacheCountMax          = 99999999;
+		public const int ColumnCountMin             = 1;
+		public const int ColumnCountDefault         = 1;
+		public const int ColumnCountMax             = 256;
+		public const int FileScrollMinWidth         = 16;
+		public const int FileScrollMaxWidth         = 200;
+		public const int FileScrollWidthDefault     = 20;
+		public const int RowHeightMinHeight         = 1;
+		public const int RowHeightMaxHeight         = 200;
+		public const int RowHeightDefault           = 18;
+		public const int AutoScrollAtBoundaryLimit  = 10;
+		public const int FilePollingRate            = 100;
+		public const int MaxProgramHistoryLength    = 10;
+		public const int MaxNetConnHistoryLength    = 10;
+		public const int MaxSerialConnHistoryLength = 1;
+		public const int MaxOutputFileHistoryLength = 10;
+		public const int MaxFindHistory             = 10;
+		public const int OneKB                      = 1024;
+		public const int OneMB                      = 1024*1024;
 	}
 
 	public enum EPattern
@@ -62,7 +87,7 @@ namespace RyLogViewer
 		Everything = ~0,
 	}
 
-	public class XmlTag
+	public static class XmlTag
 	{
 		public const string Root       = "root";
 		public const string Expr       = "expr";
@@ -75,9 +100,21 @@ namespace RyLogViewer
 		public const string ForeColour = "forecolour";
 		public const string BackColour = "backcolour";
 		public const string Filter     = "filter";
+		public const string Transform  = "transform";
 		public const string Exclude    = "exclude";
 		public const string Name       = "name";
 		public const string Filepath   = "filepath";
+		public const string Match      = "match";
+		public const string Pattern    = "pattern";
+		public const string Replace    = "replace";
+		public const string Subs       = "subs";
+		public const string Sub        = "sub";
+		public const string SubData    = "subdata";
+		public const string Src        = "src";
+		public const string Dst        = "dst";
+		public const string Type       = "type";
+		public const string Elem       = "elem";
+		public const string Id         = "id";
 	}
 
 	public enum SubRangeScrollRange

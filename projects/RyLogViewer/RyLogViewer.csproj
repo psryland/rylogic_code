@@ -57,6 +57,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
@@ -94,6 +95,9 @@
     <Compile Include="ghost_mode_ui.Designer.cs">
       <DependentUpon>ghost_mode_ui.cs</DependentUpon>
     </Compile>
+    <Compile Include="help_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="highlight.cs" />
     <Compile Include="line_cache.cs">
       <SubType>Form</SubType>
@@ -107,6 +111,12 @@
     </Compile>
     <Compile Include="named_pipe_ui.Designer.cs">
       <DependentUpon>named_pipe_ui.cs</DependentUpon>
+    </Compile>
+    <Compile Include="new_version_form.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="new_version_form.Designer.cs">
+      <DependentUpon>new_version_form.cs</DependentUpon>
     </Compile>
     <Compile Include="pattern.cs" />
     <Compile Include="main.cs">
@@ -154,8 +164,20 @@
     <Compile Include="network_connection_ui.Designer.cs">
       <DependentUpon>network_connection_ui.cs</DependentUpon>
     </Compile>
+    <Compile Include="swizzle.cs" />
+    <Compile Include="swizzle_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="swizzle_ui.Designer.cs">
+      <DependentUpon>swizzle_ui.cs</DependentUpon>
+    </Compile>
     <Compile Include="tipoftheday.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="transform.cs" />
+    <Compile Include="transform_subs.cs" />
+    <Compile Include="transform_ui.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <EmbeddedResource Include="about.resx">
       <DependentUpon>about.cs</DependentUpon>
@@ -169,11 +191,17 @@
     <EmbeddedResource Include="ghost_mode_ui.resx">
       <DependentUpon>ghost_mode_ui.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="help_ui.resx">
+      <DependentUpon>help_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="main.resx">
       <DependentUpon>main.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="named_pipe_ui.resx">
       <DependentUpon>named_pipe_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="new_version_form.resx">
+      <DependentUpon>new_version_form.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="pattern_set_ui.resx">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>
@@ -203,8 +231,14 @@
     <EmbeddedResource Include="network_connection_ui.resx">
       <DependentUpon>network_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="swizzle_ui.resx">
+      <DependentUpon>swizzle_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="tipoftheday.resx">
       <DependentUpon>tipoftheday.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="transform_ui.resx">
+      <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="app.config" />
     <EmbeddedResource Include="docs\RegexQuickRef.html" />
@@ -309,6 +343,21 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\upred.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\important.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="docs\SwizzleQuickRef.html" />
+    <EmbeddedResource Include="docs\TransformQuickRef.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="lib\ClrDump.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="lib\dbghelp.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

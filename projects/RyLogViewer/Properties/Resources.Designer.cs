@@ -77,6 +77,17 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Assume log file changes are additive only. If enabled, only additions to the
+        ///file will be scanned allowing increased performance. The view may get out of sync if the
+        ///log file is modified in a way that isn&apos;t additive (e.g. lines swapped, deleted, etc).
+        /// </summary>
+        internal static string AdditiveMode {
+            get {
+                return ResourceManager.GetString("AdditiveMode", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to RyLogViewer.
         /// </summary>
         internal static string AppTitle {
@@ -119,7 +130,8 @@ namespace RyLogViewer.Properties {
         
         /// <summary>
         ///   Looks up a localized string similar to The was an error while parsing the log file.
-        ///Error Details: {0}.
+        ///Error Details:
+        ///{0}.
         /// </summary>
         internal static string BuildLineIndexErrorMsg {
             get {
@@ -425,6 +437,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap important {
+            get {
+                object obj = ResourceManager.GetObject("important", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to File path &apos;{0}&apos; is invalid or does not exist.
         /// </summary>
@@ -638,6 +657,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Settings Files (*.xml)|*.xml|All files (*.*)|*.*.
+        /// </summary>
+        internal static string SettingsFileFilter {
+            get {
+                return ResourceManager.GetString("SettingsFileFilter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Left click to enable/disable filters.
         ///Right click to show the filters dialog.
         /// </summary>
@@ -663,6 +691,16 @@ namespace RyLogViewer.Properties {
         internal static string ShowOptionsDialog {
             get {
                 return ResourceManager.GetString("ShowOptionsDialog", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Left click to enable/disable transforms.
+        ///Right click to show the transforms dialog.
+        /// </summary>
+        internal static string ShowTransformsDialog {
+            get {
+                return ResourceManager.GetString("ShowTransformsDialog", resourceCulture);
             }
         }
         

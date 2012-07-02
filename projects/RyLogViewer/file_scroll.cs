@@ -95,9 +95,9 @@ namespace RyLogViewer
 			{
 				m_thumb_range = value;
 				var total = TotalRange;
-				if (m_thumb_range.Count   > total.Count  ) m_thumb_range = total;
-				if (m_thumb_range.m_end   > total.m_end  ) m_thumb_range.Last  = total.Last;
-				if (m_thumb_range.m_begin < total.m_begin) m_thumb_range.First = total.First;
+				if (m_thumb_range.Count > total.Count) m_thumb_range = total;
+				if (m_thumb_range.End   > total.End  ) m_thumb_range.Last  = total.Last;
+				if (m_thumb_range.Begin < total.Begin) m_thumb_range.First = total.First;
 				RaiseValueChanged();
 				Invalidate();
 			}
@@ -150,7 +150,7 @@ namespace RyLogViewer
 			var thm   = ThumbRange;
 			var total = TotalRange;
 			
-			int top  = (int)(Maths.Ratio(0, thm.m_begin, total.Count) * Height);
+			int top  = (int)(Maths.Ratio(0, thm.Begin, total.Count) * Height);
 			int hite = (int)(Maths.Ratio(0, thm.Count  , total.Count) * Height);
 			var thumb_rect = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,hite));
 			
@@ -181,7 +181,7 @@ namespace RyLogViewer
 			var thumb_rect = MakeThumbRect(bounds);
 			foreach (var r in Ranges)
 			{
-				int top  = (int)(Maths.Ratio(0, r.Range.m_begin, total.Count) * height);
+				int top  = (int)(Maths.Ratio(0, r.Range.Begin, total.Count) * height);
 				int hite = (int)(Math.Max(1, Maths.Ratio(0, r.Range.Count  , total.Count) * height));
 				r.m_rect = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,hite));
 				r.m_rect .Inflate(-2,0);

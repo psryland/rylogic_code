@@ -140,6 +140,7 @@
   <ItemGroup>
     <Compile Include="attrib\string_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
+    <Compile Include="common\span.cs" />
     <Compile Include="common\pin.cs" />
     <Compile Include="common\range.cs" />
     <Compile Include="common\settings.cs" />
@@ -147,6 +148,7 @@
     <Compile Include="common\tuple.cs" />
     <Compile Include="common\weak_delegate.cs" />
     <Compile Include="container\listevt.cs" />
+    <Compile Include="container\list_map.cs" />
     <Compile Include="container\ring_buffer.cs" />
     <Compile Include="container\sortable_binding_list.cs" />
     <Compile Include="directshow.net\amstream.cs" />
@@ -250,11 +252,13 @@
     <Compile Include="maths\quaternion.cs" />
     <Compile Include="maths\rand.cs" />
     <Compile Include="maths\scalar.cs" />
+    <Compile Include="maths\stat.cs" />
     <Compile Include="maths\vector2.cs" />
     <Compile Include="maths\vector4.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="stream\link_stream.cs" />
     <Compile Include="util\base64.cs" />
+    <Compile Include="util\clrdump.cs" />
     <Compile Include="util\crc16.cs" />
     <Compile Include="util\crc32.cs" />
     <Compile Include="util\crt.cs" />
@@ -334,7 +338,6 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)
-</PostBuildEvent>
+    <PostBuildEvent>q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
   </PropertyGroup>
 </Project>

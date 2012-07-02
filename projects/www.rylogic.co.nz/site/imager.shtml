@@ -1,0 +1,62 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-nz">
+<head>
+	<title>Rylogic Limited - Imager</title>
+	<!--#include file="inc/header.shtml" -->
+</head>
+<body>
+	<div id="container">
+		<!--#include file="inc/title.shtml" -->
+		<!--#include file="inc/main_menu.shtml" -->
+		<!--#include file="inc/left_menu.shtml" -->
+		<div id="content">
+			<div id="content_top"></div>
+			<div id="content_main">
+				<h2>Imager</h2>
+				<br />
+				<p style="text-align:justify">
+					Imager is a multimedia viewer and slide show program based on directx
+					and directshow. It can display images, videos, and audio clips all within
+					the one application and has a simple interface for cycling through media
+					files manually or as a slide show. It can also be used as a screen saver
+					for displaying your photo and video collection while your PC is idle.
+				</p>
+				<br />
+				<h4>Download: </h4>
+				<a href="data/imager.x86.zip">Imager</a> for windows 32-bit (Windows 7, Vista, XP)<br />
+				<a href="data/imager.x64.zip">Imager</a> for windows 64-bit (Windows 7, Vista)<br />
+				<small>Download and/or use of this software implies your agreement with these <a href="terms_and_conditions.php">Terms and Conditions</a></small>.
+				<br />
+				<br />
+				<h4 id="manual">User Manual:</h4>
+				<p style="text-align:justify">
+					At the core of Imager is the media file list which is viewable through
+					the Window menu or by pressing F8. This list can be generated a number of
+					ways:
+				</p><br />
+				<ul>
+					<li>File Menu -> Open File option</li>
+					<li>File Menu -> Directories option</li>
+					<li>Drag 'n' Drop of files and/or folders into the main application window</li>
+					<li>Drag 'n' Drop of files and/or folders into the Media List window</li>
+				</ul><br />
+				<h5>Open File Menu Option</h5>
+				<p style="text-align:justify">
+					The Open File menu option allows multiple files to be selected from a standard
+					open file dialog. The selected files are added to the media file list.
+				</p><br />
+				<h5>Directories Menu Option</h5>
+				<p style="text-align:justify">
+					The Directories menu option opens a dialog allowing the user to manage a collection
+					of folders. When OK is selected, the listed folders are searched for media files and
+					any that are found are added to the media list.
+				</p><br />
+				more coming soon...
+			</div>
+			<div id="content_bottom"></div>
+			<!--#include file="inc/footer.shtml" -->
+		</div>
+		<!--#include file="inc/right_panel.shtml" -->
+	</div>
+</body>
+</html>

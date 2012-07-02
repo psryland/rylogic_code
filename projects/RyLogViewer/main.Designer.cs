@@ -36,12 +36,15 @@
 			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_transforms = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_jump_to_start = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_watch = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_additive = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
@@ -89,6 +92,7 @@
 			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_check_for_updates = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
@@ -128,15 +132,18 @@
             this.m_sep,
             this.m_btn_highlights,
             this.m_btn_filters,
+            this.m_btn_transforms,
+            this.toolStripSeparator9,
             this.m_btn_options,
             this.toolStripSeparator1,
             this.m_btn_jump_to_end,
             this.m_btn_jump_to_start,
             this.toolStripSeparator8,
-            this.m_btn_tail});
+            this.m_btn_watch,
+            this.m_btn_additive});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(254, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(316, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -184,6 +191,21 @@
 			this.m_btn_filters.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_filters.Text = "Filters";
 			// 
+			// m_btn_transforms
+			// 
+			this.m_btn_transforms.CheckOnClick = true;
+			this.m_btn_transforms.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_transforms.Image = global::RyLogViewer.Properties.Resources.reload;
+			this.m_btn_transforms.ImageTransparentColor = System.Drawing.Color.Transparent;
+			this.m_btn_transforms.Name = "m_btn_transforms";
+			this.m_btn_transforms.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_transforms.Text = "Transforms";
+			// 
+			// toolStripSeparator9
+			// 
+			this.toolStripSeparator9.Name = "toolStripSeparator9";
+			this.toolStripSeparator9.Size = new System.Drawing.Size(6, 31);
+			// 
 			// m_btn_options
 			// 
 			this.m_btn_options.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
@@ -223,15 +245,25 @@
 			this.toolStripSeparator8.Name = "toolStripSeparator8";
 			this.toolStripSeparator8.Size = new System.Drawing.Size(6, 31);
 			// 
-			// m_btn_tail
+			// m_btn_watch
 			// 
-			this.m_btn_tail.CheckOnClick = true;
-			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.Eyeball;
-			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_tail.Name = "m_btn_tail";
-			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_tail.Text = "Live Update";
+			this.m_btn_watch.CheckOnClick = true;
+			this.m_btn_watch.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_watch.Image = global::RyLogViewer.Properties.Resources.Eyeball;
+			this.m_btn_watch.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_watch.Name = "m_btn_watch";
+			this.m_btn_watch.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_watch.Text = "Live Update";
+			// 
+			// m_btn_additive
+			// 
+			this.m_btn_additive.CheckOnClick = true;
+			this.m_btn_additive.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_additive.Image = global::RyLogViewer.Properties.Resources.edit_add;
+			this.m_btn_additive.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_additive.Name = "m_btn_additive";
+			this.m_btn_additive.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_additive.Text = "Additive Only";
 			// 
 			// m_menu
 			// 
@@ -561,6 +593,7 @@
 			// 
 			this.m_menu_help.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_help_totd,
+            this.m_menu_help_check_for_updates,
             this.toolStripSeparator2,
             this.m_menu_help_about});
 			this.m_menu_help.Name = "m_menu_help";
@@ -570,18 +603,24 @@
 			// m_menu_help_totd
 			// 
 			this.m_menu_help_totd.Name = "m_menu_help_totd";
-			this.m_menu_help_totd.Size = new System.Drawing.Size(148, 22);
+			this.m_menu_help_totd.Size = new System.Drawing.Size(171, 22);
 			this.m_menu_help_totd.Text = "&Tip of the Day";
+			// 
+			// m_menu_help_check_for_updates
+			// 
+			this.m_menu_help_check_for_updates.Name = "m_menu_help_check_for_updates";
+			this.m_menu_help_check_for_updates.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_check_for_updates.Text = "Check for &Updates";
 			// 
 			// toolStripSeparator2
 			// 
 			this.toolStripSeparator2.Name = "toolStripSeparator2";
-			this.toolStripSeparator2.Size = new System.Drawing.Size(145, 6);
+			this.toolStripSeparator2.Size = new System.Drawing.Size(168, 6);
 			// 
 			// m_menu_help_about
 			// 
 			this.m_menu_help_about.Name = "m_menu_help_about";
-			this.m_menu_help_about.Size = new System.Drawing.Size(148, 22);
+			this.m_menu_help_about.Size = new System.Drawing.Size(171, 22);
 			this.m_menu_help_about.Text = "&About";
 			// 
 			// m_status
@@ -634,7 +673,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(68, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(310, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -703,7 +742,6 @@
 			this.m_grid.AllowUserToDeleteRows = false;
 			this.m_grid.AllowUserToOrderColumns = true;
 			this.m_grid.AllowUserToResizeRows = false;
-			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
 			this.m_grid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -716,6 +754,10 @@
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid.ShowCellErrors = false;
+			this.m_grid.ShowCellToolTips = false;
+			this.m_grid.ShowEditingIcon = false;
+			this.m_grid.ShowRowErrors = false;
 			this.m_grid.Size = new System.Drawing.Size(563, 404);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
@@ -848,7 +890,7 @@
 		private System.Windows.Forms.ToolStripButton m_btn_options;
 		private RyLogViewer.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
-		private System.Windows.Forms.ToolStripButton m_btn_tail;
+		private System.Windows.Forms.ToolStripButton m_btn_watch;
 		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_copy;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
@@ -872,6 +914,10 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_ghost_mode;
 		private System.Windows.Forms.ToolStripButton m_btn_jump_to_start;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_check_for_updates;
+		private System.Windows.Forms.ToolStripButton m_btn_transforms;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
+		private System.Windows.Forms.ToolStripButton m_btn_additive;
 	}
 }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.IO.Pipes;
 using System.IO.Ports;
@@ -40,7 +41,7 @@ namespace RyLogViewer
 				// Give some UI feedback when the process ends
 				buffered_process.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage(string.Format("'{0}' exited", Path.GetFileName(conn.Executable)));
+						Action proc_exit = () => SetTransientStatusMessage(string.Format("'{0}' exited", Path.GetFileName(conn.Executable)), Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
@@ -84,7 +85,7 @@ namespace RyLogViewer
 				// Give some UI feedback if the connection drops
 				buffered_netconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped");
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
@@ -129,7 +130,7 @@ namespace RyLogViewer
 				// Give some UI feedback if the connection drops
 				buffered_serialconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped");
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
@@ -173,7 +174,7 @@ namespace RyLogViewer
 				// Give some UI feedback if the connection drops
 				buffered_pipeconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped");
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
@@ -215,9 +216,9 @@ namespace RyLogViewer
 			public int Read;               // the valid data size in 'Buffer'
 			public AsyncData(Stream s, byte[] b) { Stream = s; Buffer = b; Read = 0; }
 		}
-
+		protected const int BufBlockSize = 4096;
 		protected readonly object m_lock;   // Sync writes to the file
-		protected FileStream m_outp;        // The file that captured output is written to
+		private FileStream m_outp;        // The file that captured output is written to
 		
 		/// <summary>The filepath of the file that contains the redirected output</summary>
 		public readonly string Filepath;
@@ -253,7 +254,7 @@ namespace RyLogViewer
 			}
 			
 			// Open the file that will receive the captured output
-			m_outp = new FileStream(Filepath, mode, FileAccess.Write, FileShare.Read, Constants.FileReadChunkSize, opts);
+			m_outp = new FileStream(Filepath, mode, FileAccess.Write, FileShare.Read, BufBlockSize, opts);
 		}
 		
 		/// <summary>Should return true to continue reading data</summary>
@@ -313,8 +314,8 @@ namespace RyLogViewer
 		:base(launch.OutputFilepath, launch.AppendOutputFile)
 		{
 			m_launch = launch;
-			m_outbuf = new byte[Constants.FileReadChunkSize];
-			m_errbuf = new byte[Constants.FileReadChunkSize];
+			m_outbuf = new byte[BufBlockSize];
+			m_errbuf = new byte[BufBlockSize];
 			
 			// Create the process
 			ProcessStartInfo info = new ProcessStartInfo
@@ -406,7 +407,7 @@ namespace RyLogViewer
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
 		{
 			m_conn = conn;
-			m_buf = new byte[Constants.FileReadChunkSize];
+			m_buf = new byte[BufBlockSize];
 			m_client = new TcpClient();
 		}
 
@@ -482,7 +483,7 @@ namespace RyLogViewer
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
 		{
 			m_conn = conn;
-			m_buf = new byte[Constants.FileReadChunkSize];
+			m_buf = new byte[BufBlockSize];
 			m_port = new SerialPort(m_conn.CommPort, m_conn.BaudRate, m_conn.Parity, m_conn.DataBits, m_conn.StopBits)
 				{
 					Handshake = m_conn.FlowControl,
@@ -532,7 +533,7 @@ namespace RyLogViewer
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
 		{
 			m_conn = conn;
-			m_buf = new byte[Constants.FileReadChunkSize];
+			m_buf = new byte[BufBlockSize];
 			m_pipe = new NamedPipeClientStream(m_conn.ServerName, m_conn.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
 		}
 

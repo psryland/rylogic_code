@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Windows.Forms;
 using pr.common;
 
 namespace RyLogViewer
@@ -143,6 +144,11 @@ namespace RyLogViewer
 			get { return get<bool>("ShowTOTD"); }
 			set { set("ShowTOTD", value); }
 		}
+		public bool   CheckForUpdates
+		{
+			get { return get<bool>("CheckForUpdates"); }
+			set { set("CheckForUpdates", value); }
+		}
 		public bool   HighlightsEnabled
 		{
 			get { return get<bool>("HighlightsEnabled"); }
@@ -153,15 +159,25 @@ namespace RyLogViewer
 			get { return get<bool>("FiltersEnabled"); }
 			set { set("FiltersEnabled", value); }
 		}
-		public bool   TailEnabled
+		public bool   TransformsEnabled
 		{
-			get { return get<bool>("TailEnabled"); }
-			set { set("TailEnabled", value); }
+			get { return get<bool>("TransformsEnabled"); }
+			set { set("TransformsEnabled", value); }
+		}
+		public bool   WatchEnabled
+		{
+			get { return get<bool>("WatchEnabled"); }
+			set { set("WatchEnabled", value); }
 		}
 		public int    FileBufSize
 		{
 			get { return get<int>("FileBufSize"); }
 			set { set("FileBufSize", value); }
+		}
+		public int    MaxLineLength
+		{
+			get { return get<int>("MaxLineLength"); }
+			set { set("MaxLineLength", value); }
 		}
 		public int    LineCacheCount
 		{
@@ -178,6 +194,11 @@ namespace RyLogViewer
 			get { return get<string>("FilterPatterns"); }
 			set { set("FilterPatterns", value); }
 		}
+		public string TransformPatterns
+		{
+			get { return get<string>("TransformPatterns"); }
+			set { set("TransformPatterns", value); }
+		}
 		public string HighlightPatternSets
 		{
 			get { return get<string>("HighlightPatternSets"); }
@@ -187,6 +208,11 @@ namespace RyLogViewer
 		{
 			get { return get<string>("FilterPatternSets"); }
 			set { set("FilterPatternSets", value); }
+		}
+		public string TransformPatternSets
+		{
+			get { return get<string>("TransformPatternSets"); }
+			set { set("TransformPatternSets", value); }
 		}
 		public string RowDelimiter
 		{
@@ -251,15 +277,15 @@ namespace RyLogViewer
 			StatusPosition                  = Point.Empty;
 			AlternateLineColours            = true;
 			LineSelectBackColour            = Color.DarkGreen;
-			LineSelectForeColour            = Color.Lime;
+			LineSelectForeColour            = Color.White;
 			LineBackColour1                 = Color.WhiteSmoke;
 			LineBackColour2                 = Color.FromArgb(192, 255, 192);
 			LineForeColour1                 = Color.Black;
 			LineForeColour2                 = Color.Black;
-			FileScrollWidth                 = 20;
+			FileScrollWidth                 = Constants.FileScrollWidthDefault;
 			ScrollBarFileRangeColour        = Color.FromArgb(128, Color.White);
 			ScrollBarDisplayRangeColour     = Color.FromArgb(128, Color.SteelBlue);
-			RowHeight                       = 18;
+			RowHeight                       = Constants.RowHeightDefault;
 			LoadLastFile                    = false;
 			LastLoadedFile                  = "";
 			OpenAtEnd                       = true;
@@ -267,15 +293,20 @@ namespace RyLogViewer
 			IgnoreBlankLines                = false;
 			AlwaysOnTop                     = false;
 			ShowTOTD                        = true;
+			CheckForUpdates                 = true;
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = true;
-			TailEnabled                     = false;
-			FileBufSize                     = 10 * 1024 * 1024;
-			LineCacheCount                  = 10000;
+			TransformsEnabled               = true;
+			WatchEnabled                    = false;
+			FileBufSize                     = Constants.FileBufSizeDefault;
+			MaxLineLength                   = Constants.MaxLineLengthDefault;
+			LineCacheCount                  = Constants.LineCacheCountDefault;
 			HighlightPatterns               = "<root/>";
 			FilterPatterns                  = "<root/>";
+			TransformPatterns               = "<root/>";
 			HighlightPatternSets            = "<root/>";
 			FilterPatternSets               = "<root/>";
+			TransformPatternSets            = "<root/>";
 			RowDelimiter                    = "";
 			ColDelimiter                    = "";
 			ColumnCount                     = 1;
@@ -294,6 +325,52 @@ namespace RyLogViewer
 				try { Reload(); }
 				catch (Exception ex) { Debug.WriteLine(ex); }
 			}
+		}
+		
+		/// <summary>Perform validation on the loaded settings</summary>
+		public override void Validate()
+		{
+			// If restoring the screen location, ensure it's onscreen
+			if (RestoreScreenLoc)
+			{
+				Size sz = WindowSize;
+				Point pt = ScreenPosition;
+				bool valid =
+					sz.Width  < SystemInformation.VirtualScreen.Width &&
+					sz.Height < SystemInformation.VirtualScreen.Height &&
+					pt.X >= SystemInformation.VirtualScreen.Left && pt.X < SystemInformation.VirtualScreen.Right - 20 &&
+					pt.Y >= SystemInformation.VirtualScreen.Top  && pt.Y < SystemInformation.VirtualScreen.Bottom - 20;
+				if (!valid) RestoreScreenLoc = false;
+			}
+
+			// File scroll width must be within range
+			int file_scroll_width = FileScrollWidth;
+			if (file_scroll_width < Constants.FileScrollMinWidth || file_scroll_width > Constants.FileScrollMaxWidth)
+				FileScrollWidth = Constants.FileScrollWidthDefault;
+
+			// Row height within range
+			int row_height = RowHeight;
+			if (row_height < Constants.RowHeightMinHeight || row_height > Constants.RowHeightMaxHeight)
+				RowHeight = Constants.RowHeightDefault;
+
+			// File buffer size
+			int file_buf_size = FileBufSize;
+			if (file_buf_size < Constants.FileBufSizeMin || file_buf_size > Constants.FileBufSizeMax)
+				FileBufSize = Constants.FileBufSizeDefault;
+			
+			// Max line length
+			int max_line_length = MaxLineLength;
+			if (max_line_length < Constants.MaxLineLengthMin || max_line_length > Constants.MaxLineLengthMax)
+				MaxLineLength = Constants.MaxLineLengthDefault;
+
+			// Line cache count
+			int line_cache_count = LineCacheCount;
+			if (line_cache_count < Constants.LineCacheCountMin || line_cache_count > Constants.LineCacheCountMax)
+				LineCacheCount = Constants.LineCacheCountDefault;
+
+			int column_count = ColumnCount;
+			if (column_count < Constants.ColumnCountMin || column_count > Constants.ColumnCountMax)
+				ColumnCount = Constants.ColumnCountDefault;
 		}
 		
 		/// <summary>Types the serialiser needs to know about</summary>

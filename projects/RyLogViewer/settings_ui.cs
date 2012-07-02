@@ -14,6 +14,7 @@ namespace RyLogViewer
 		private readonly Settings        m_settings;    // The app settings changed by this UI
 		private readonly List<Highlight> m_highlights;  // The highlight patterns currently in the grid
 		private readonly List<Filter>    m_filters;     // The filter patterns currently in the grid
+		private readonly List<Transform> m_transforms;  // The transforms current in the grid 
 		private readonly ToolTip         m_tt;          // Tooltips
 		
 		public enum ETab
@@ -22,6 +23,7 @@ namespace RyLogViewer
 			LogView    = 1,
 			Highlights = 2,
 			Filters    = 3,
+			Transforms = 4,
 		}
 		private static class ColumnNames
 		{
@@ -34,24 +36,37 @@ namespace RyLogViewer
 		/// <summary>Returns a bit mask of the settings data that's changed</summary>
 		public EWhatsChanged WhatsChanged { get; private set; }
 		
-		public SettingsUI(ETab tab)
+		/// <summary>Access to the highlight pattern ui</summary>
+		public PatternUI HighlightUI { get { return m_pattern_hl; } }
+		
+		/// <summary>Access to the filter pattern ui</summary>
+		public PatternUI FilterUI { get { return m_pattern_ft; } }
+		
+		/// <summary>Access to the transform pattern ui</summary>
+		public TransformUI TransformUI { get { return m_pattern_tx; } }
+		
+		public SettingsUI(Settings settings, ETab tab)
 		{
 			InitializeComponent();
 			KeyPreview    = true;
-			m_settings    = new Settings();
+			m_settings    = settings;
 			m_highlights  = Highlight.Import(m_settings.HighlightPatterns);
-			m_filters     = Filter.Import(m_settings.FilterPatterns);
+			m_filters     = Filter   .Import(m_settings.FilterPatterns   );
+			m_transforms  = Transform.Import(m_settings.TransformPatterns);
 			m_tt          = new ToolTip();
 			
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
+			m_pattern_tx.NewPattern(new Transform());
+			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			
 			SetupGeneralTab();
 			SetupLogViewTab();
 			SetupHighlightTab();
 			SetupFilterTab();
+			SetupTransformTab();
 			
 			// Escape to close
 			KeyDown += (s,a) =>
@@ -66,6 +81,7 @@ namespace RyLogViewer
 					Focus(); // grab focus to ensure all controls persist their state
 					m_settings.HighlightPatterns = Highlight.Export(m_highlights);
 					m_settings.FilterPatterns    = Filter   .Export(m_filters);
+					m_settings.TransformPatterns = Transform.Export(m_transforms);
 				};
 			
 			UpdateUI();
@@ -79,7 +95,8 @@ namespace RyLogViewer
 
 			// Load last file on startup
 			m_check_load_last_file.ToolTip(m_tt, "Automatically load the last loaded file on startup");
-			m_check_load_last_file.CheckedChanged += (s,a)=>
+			m_check_load_last_file.Checked = m_settings.LoadLastFile;
+			m_check_load_last_file.Click += (s,a)=>
 				{
 					m_settings.LoadLastFile = m_check_load_last_file.Checked;
 					WhatsChanged |= EWhatsChanged.StartupOptions;
@@ -87,7 +104,8 @@ namespace RyLogViewer
 			
 			// Restore window position on startup
 			m_check_save_screen_loc.ToolTip(m_tt, "Restore the window to its last position on startup");
-			m_check_save_screen_loc.CheckedChanged += (s,a)=>
+			m_check_save_screen_loc.Checked = m_settings.RestoreScreenLoc;
+			m_check_save_screen_loc.Click += (s,a)=>
 				{
 					m_settings.RestoreScreenLoc = m_check_save_screen_loc.Checked;
 					WhatsChanged |= EWhatsChanged.StartupOptions;
@@ -95,9 +113,19 @@ namespace RyLogViewer
 			
 			// Show tip of the day on startup
 			m_check_show_totd.ToolTip(m_tt, "Show the 'Tip of the Day' dialog on startup");
-			m_check_show_totd.CheckedChanged += (s,a)=>
+			m_check_show_totd.Checked = m_settings.ShowTOTD;
+			m_check_show_totd.Click += (s,a)=>
 				{
 					m_settings.ShowTOTD = m_check_show_totd.Checked;
+					WhatsChanged |= EWhatsChanged.StartupOptions;
+				};
+
+			// Check for updates
+			m_check_c4u.ToolTip(m_tt, "Check for newer versions on startup");
+			m_check_c4u.Checked = m_settings.CheckForUpdates;
+			m_check_c4u.Click += (s,a)=>
+				{
+					m_settings.CheckForUpdates = m_check_c4u.Checked;
 					WhatsChanged |= EWhatsChanged.StartupOptions;
 				};
 
@@ -108,6 +136,7 @@ namespace RyLogViewer
 			m_edit_line_ends.Text = m_settings.RowDelimiter;
 			m_edit_line_ends.TextChanged += (s,a)=>
 			{
+				if (!((TextBox)s).Modified) return;
 				m_settings.RowDelimiter = m_edit_line_ends.Text;
 				WhatsChanged |= EWhatsChanged.FileParsing;
 			};
@@ -119,6 +148,7 @@ namespace RyLogViewer
 			m_edit_col_delims.Text = m_settings.ColDelimiter;
 			m_edit_col_delims.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					m_settings.ColDelimiter = m_edit_col_delims.Text;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
@@ -127,7 +157,9 @@ namespace RyLogViewer
 			tt = "The number of columns to display in the grid.\r\nUsed when the column delimiter is not blank";
 			m_lbl_column_count.ToolTip(m_tt, tt);
 			m_spinner_column_count.ToolTip(m_tt, tt);
-			m_spinner_column_count.Value = m_settings.ColumnCount;
+			m_spinner_column_count.Minimum = Constants.ColumnCountMin;
+			m_spinner_column_count.Maximum = Constants.ColumnCountMax;
+			m_spinner_column_count.Value = Maths.Clamp(m_settings.ColumnCount, Constants.ColumnCountMin, Constants.ColumnCountMax);
 			m_spinner_column_count.ValueChanged += (s,a)=>
 				{
 					m_settings.ColumnCount = (int)m_spinner_column_count.Value;
@@ -145,8 +177,8 @@ namespace RyLogViewer
 			
 			// Lines cached
 			m_spinner_line_cache_count.ToolTip(m_tt, "The number of lines to scan into memory around the currently selected line");
-			m_spinner_line_cache_count.Minimum = 1;
-			m_spinner_line_cache_count.Maximum = 99999999;
+			m_spinner_line_cache_count.Minimum = Constants.LineCacheCountMin;
+			m_spinner_line_cache_count.Maximum = Constants.LineCacheCountMax;
 			m_spinner_line_cache_count.Value = Maths.Clamp(m_settings.LineCacheCount, (int)m_spinner_line_cache_count.Minimum, (int)m_spinner_line_cache_count.Maximum);
 			m_spinner_line_cache_count.ValueChanged += (s,a)=>
 				{
@@ -158,12 +190,26 @@ namespace RyLogViewer
 			tt = "The maximum number of bytes to scan when finding lines around the currently selected row (in MB).";
 			m_lbl_max_scan_size0.ToolTip(m_tt, tt);
 			m_spinner_max_mem_range.ToolTip(m_tt, tt);
-			m_spinner_max_mem_range.Minimum = 1;
-			m_spinner_max_mem_range.Maximum = 100;
+			m_spinner_max_mem_range.Minimum = Constants.FileBufSizeMin / Constants.OneMB;
+			m_spinner_max_mem_range.Maximum = Constants.FileBufSizeMax / Constants.OneMB;
 			m_spinner_max_mem_range.Value = Maths.Clamp(m_settings.FileBufSize / Constants.OneMB, (int)m_spinner_max_mem_range.Minimum, (int)m_spinner_max_mem_range.Maximum);
 			m_spinner_max_mem_range.ValueChanged += (s,a)=>
 				{
 					m_settings.FileBufSize = (int)m_spinner_max_mem_range.Value * Constants.OneMB;
+					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+			
+			// Max line length
+			tt = "The maximum length of a line in the log file.\r\nIf the log contains lines longer than this an error will be reported when loading the file";
+			m_lbl_max_line_len_kb.ToolTip(m_tt, tt);
+			m_lbl_max_line_length.ToolTip(m_tt, tt);
+			m_spinner_max_line_length.ToolTip(m_tt, tt);
+			m_spinner_max_line_length.Minimum = Constants.MaxLineLengthMin;
+			m_spinner_max_line_length.Maximum = Constants.MaxLineLengthMax;
+			m_spinner_max_line_length.Value = Maths.Clamp(m_settings.MaxLineLength / Constants.OneKB, (int)m_spinner_max_line_length.Minimum, (int)m_spinner_max_line_length.Maximum);
+			m_spinner_max_line_length.ValueChanged += (s,a)=>
+				{
+					m_settings.MaxLineLength = (int)m_spinner_max_line_length.Value * Constants.OneKB;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
 			
@@ -183,6 +229,44 @@ namespace RyLogViewer
 				{
 					m_settings.FileChangesAdditive = m_check_file_changes_additive.Checked;
 					WhatsChanged |= EWhatsChanged.FileParsing;
+				};
+			
+			// Settings reset
+			m_btn_settings_reset.ToolTip(m_tt, "Reset settings to their default values.");
+			m_btn_settings_reset.Click += (s,a)=>
+				{
+					DialogResult res = MessageBox.Show(this, "This will reset all current settings to their default values\r\n\r\nContinue?", "Confirm Reset Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+					if (res != DialogResult.Yes) return;
+					m_settings.Reset();
+					UpdateUI();
+					WhatsChanged |= EWhatsChanged.Everything;
+				};
+			
+			// Settings filepath
+			m_text_settings.ToolTip(m_tt, "The path to the current settings file");
+			
+			// Settings load
+			m_btn_settings_load.ToolTip(m_tt, "Load settings from file");
+			m_btn_settings_load.Click += (s,a)=>
+				{
+					var dg = new OpenFileDialog{Title = "Choose a settings file to load", Filter = Resources.SettingsFileFilter, CheckFileExists = true};
+					if (dg.ShowDialog(this) != DialogResult.OK) return;
+					m_settings.Filepath = dg.FileName;
+					m_settings.Reload();
+					UpdateUI();
+					WhatsChanged |= EWhatsChanged.Everything;
+				};
+			
+			// Settings save
+			m_btn_settings_save.ToolTip(m_tt, "Save current settings to a file");
+			m_btn_settings_save.Click += (s,a)=>
+				{
+					var dg = new SaveFileDialog{Title = "Save current settings", Filter = Resources.SettingsFileFilter, CheckPathExists = true};
+					if (dg.ShowDialog(this) != DialogResult.OK) return;
+					m_settings.Filepath = dg.FileName;
+					m_settings.Save();
+					UpdateUI();
+					WhatsChanged |= EWhatsChanged.Nothing;
 				};
 		}
 		
@@ -229,8 +313,8 @@ namespace RyLogViewer
 			
 			// Row height
 			m_spinner_row_height.ToolTip(m_tt, "The height of each row in the log view");
-			m_spinner_row_height.Minimum = 1;
-			m_spinner_row_height.Maximum = 200;
+			m_spinner_row_height.Minimum = Constants.RowHeightMinHeight;
+			m_spinner_row_height.Maximum = Constants.RowHeightMaxHeight;
 			m_spinner_row_height.Value = Maths.Clamp(m_settings.RowHeight, (int)m_spinner_row_height.Minimum, (int)m_spinner_row_height.Maximum);
 			m_spinner_row_height.ValueChanged += (s,a)=>
 				{
@@ -240,8 +324,8 @@ namespace RyLogViewer
 			
 			// File scroll width
 			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
-			m_spinner_file_scroll_width.Minimum = 16;
-			m_spinner_file_scroll_width.Maximum = 200;
+			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
+			m_spinner_file_scroll_width.Maximum = Constants.FileScrollMaxWidth;
 			m_spinner_file_scroll_width.Value = Maths.Clamp(m_settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
 			m_spinner_file_scroll_width.ValueChanged += (s,a)=>
 				{
@@ -287,14 +371,15 @@ namespace RyLogViewer
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.SelectAll;
-			m_grid_highlight.UserDeletedRow   += (s,a)=> OnDeleteRow(m_grid_highlight, m_highlights);
-			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown(m_grid_highlight, m_highlights, a);
-			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop(m_grid_highlight, m_highlights, a, false);
+			m_grid_highlight.UserDeletedRow   += (s,a)=> OnDeleteRow      (m_grid_highlight, m_highlights);
+			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown      (m_grid_highlight, m_highlights, a);
+			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop       (m_grid_highlight, m_highlights, a, false);
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
-			m_grid_highlight.CellClick        += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
+			m_grid_highlight.CellClick        += (s,a)=> OnCellClick      (m_grid_highlight, m_highlights, m_pattern_hl, a);
 			m_grid_highlight.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
-			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting(m_grid_highlight, m_highlights, a);
+			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
+			m_grid_highlight.CellContextMenuStripNeeded += (s,a)=> OnCellClick (m_grid_highlight, m_highlights, m_pattern_hl, a);
 			
 			// Highlight pattern
 			m_pattern_hl.Add += (s,a)=>
@@ -326,13 +411,13 @@ namespace RyLogViewer
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
-			m_grid_filter.UserDeletedRow     += (s,a)=> OnDeleteRow(m_grid_filter, m_filters);
-			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown(m_grid_filter, m_filters, a);
-			m_grid_filter.DragOver           += (s,a)=> DoDragDrop(m_grid_filter, m_filters, a, false);
+			m_grid_filter.UserDeletedRow     += (s,a)=> OnDeleteRow      (m_grid_filter, m_filters);
+			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown      (m_grid_filter, m_filters, a);
+			m_grid_filter.DragOver           += (s,a)=> DoDragDrop       (m_grid_filter, m_filters, a, false);
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
-			m_grid_filter.CellClick          += (s,a)=> OnCellClick(m_grid_filter, m_filters, m_pattern_ft, a);
+			m_grid_filter.CellClick          += (s,a)=> OnCellClick      (m_grid_filter, m_filters, m_pattern_ft, a);
 			m_grid_filter.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_filter, m_filters, m_pattern_ft, a);
-			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting(m_grid_filter, m_filters, a);
+			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_filter, m_filters, a);
 			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
 			
 			// Filter pattern
@@ -347,6 +432,45 @@ namespace RyLogViewer
 			// Filter pattern sets
 			m_pattern_set_ft.Init(m_settings, m_filters);
 			m_pattern_set_ft.CurrentSetChanged += (s,a)=>
+				{
+					UpdateUI();
+				};
+		}
+
+		/// <summary>Hook up events for the transforms tab</summary>
+		private void SetupTransformTab()
+		{
+			m_grid_transform.AllowDrop           = true;
+			m_grid_transform.VirtualMode         = true;
+			m_grid_transform.AutoGenerateColumns = false;
+			m_grid_transform.ColumnCount         = m_grid_transform.RowCount = 0;
+			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
+			m_grid_transform.Columns.Add(new DataGridViewButtonColumn {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
+			m_grid_transform.KeyDown            += DataGridView_Extensions.Copy;
+			m_grid_transform.KeyDown            += DataGridView_Extensions.SelectAll;
+			m_grid_transform.UserDeletedRow     += (s,a)=> OnDeleteRow      (m_grid_transform, m_transforms);
+			m_grid_transform.MouseDown          += (s,a)=> OnMouseDown      (m_grid_transform, m_transforms, a);
+			m_grid_transform.DragOver           += (s,a)=> DoDragDrop       (m_grid_transform, m_transforms, a, false);
+			m_grid_transform.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_transform, m_transforms, a);
+			m_grid_transform.CellClick          += (s,a)=> OnCellClick      (m_grid_transform, m_transforms, m_pattern_tx, a);
+			m_grid_transform.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_transform, m_transforms, m_pattern_tx, a);
+			m_grid_transform.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_transform, m_transforms, a);
+			m_grid_transform.DataError          += (s,a)=> a.Cancel = true;
+			
+			// Transform
+			m_pattern_tx.Add += (s,a)=>
+				{
+					WhatsChanged |= EWhatsChanged.Rendering;
+					if (m_pattern_tx.IsNew) m_transforms.Add(m_pattern_tx.Transform);
+					m_pattern_tx.NewPattern(new Transform());
+					UpdateUI();
+				};
+			
+			// Transform sets
+			m_pattern_set_tx.Init(m_settings, m_transforms);
+			m_pattern_set_tx.CurrentSetChanged += (s,a)=>
 				{
 					UpdateUI();
 				};
@@ -405,7 +529,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Provide cells for the grid</summary>
-		private static void OnCellValueNeeded<T>(DataGridView grid, List<T> patterns, DataGridViewCellValueEventArgs e) where T:Pattern
+		private static void OnCellValueNeeded<T>(DataGridView grid, List<T> patterns, DataGridViewCellValueEventArgs e)
 		{
 			if (e.RowIndex < 0 || e.RowIndex >= patterns.Count) { e.Value = ""; return; }
 			var cell = grid[e.ColumnIndex, e.RowIndex];
@@ -416,7 +540,7 @@ namespace RyLogViewer
 			{
 			default: e.Value = string.Empty; break;
 			case ColumnNames.Pattern:
-				e.Value = pat.Expr;
+				e.Value = pat.ToString();
 				break;
 			case ColumnNames.Highlighting:
 				e.Value = Resources.ClickToModifyHighlight;
@@ -430,12 +554,13 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Handle cell clicks</summary>
-		private void OnCellClick<T>(DataGridView grid, List<T> patterns, PatternUI ctrl, DataGridViewCellEventArgs e) where T:Pattern
+		private void OnCellClick<T>(DataGridView grid, List<T> patterns, IPatternUI ctrl, DataGridViewCellEventArgs e) where T:IPattern
 		{
+			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			Point pt = MousePosition;
 			T pat = patterns[e.RowIndex];
+			Point pt = MousePosition;
 			Highlight hl = pat as Highlight;
 			
 			switch (grid.Columns[e.ColumnIndex].Name)
@@ -467,17 +592,23 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Double click edits the pattern</summary>
-		private void OnCellDoubleClick<T>(DataGridView grid, List<T> patterns, PatternUI ctrl, DataGridViewCellEventArgs e) where T:Pattern
+		private void OnCellDoubleClick<T>(DataGridView grid, List<T> patterns, IPatternUI ctrl, DataGridViewCellEventArgs e) where T:IPattern
 		{
-			ctrl.EditPattern(patterns[e.RowIndex]);
+			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
+			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
+			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
+			T pat = patterns[e.RowIndex];
+			
+			ctrl.EditPattern(pat);
 			WhatsChanged |= grid == m_grid_highlight
 				? EWhatsChanged.Rendering
 				: EWhatsChanged.FileParsing;
 		}
 		
 		/// <summary>Cell formatting...</summary>
-		private static void OnCellFormatting<T>(DataGridView grid, List<T> patterns, DataGridViewCellFormattingEventArgs e) where T:Pattern
+		private static void OnCellFormatting<T>(DataGridView grid, List<T> patterns, DataGridViewCellFormattingEventArgs e) where T:IPattern
 		{
+			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			T pat = patterns[e.RowIndex];
@@ -503,32 +634,45 @@ namespace RyLogViewer
 		/// <summary>Update the UI state based on current settings</summary>
 		private void UpdateUI()
 		{
-			SuspendLayout();
+			try
+			{
+				SuspendLayout();
 			
-			m_spinner_column_count.Enabled = m_settings.ColDelimiter.Length != 0;
+				m_spinner_column_count.Enabled = m_settings.ColDelimiter.Length != 0;
 			
-			m_check_alternate_line_colour.Checked = m_settings.AlternateLineColours;
-			m_lbl_selection_example.BackColor = m_settings.LineSelectBackColour;
-			m_lbl_selection_example.ForeColor = m_settings.LineSelectForeColour;
-			m_lbl_line1_example.BackColor = m_settings.LineBackColour1;
-			m_lbl_line1_example.ForeColor = m_settings.LineForeColour1;
-			m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
-			m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
-			m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
+				m_check_alternate_line_colour.Checked = m_settings.AlternateLineColours;
+				m_lbl_selection_example.BackColor = m_settings.LineSelectBackColour;
+				m_lbl_selection_example.ForeColor = m_settings.LineSelectForeColour;
+				m_lbl_line1_example.BackColor = m_settings.LineBackColour1;
+				m_lbl_line1_example.ForeColor = m_settings.LineForeColour1;
+				m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
+				m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
+				m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
 			
-			int selected = m_grid_highlight.FirstSelectedRowIndex();
-			m_grid_highlight.CurrentCell = null;
-			m_grid_highlight.RowCount = 0;
-			m_grid_highlight.RowCount = m_highlights.Count;
-			m_grid_highlight.SelectRow(selected);
+				int selected = m_grid_highlight.FirstSelectedRowIndex();
+				m_grid_highlight.CurrentCell = null;
+				m_grid_highlight.RowCount = 0;
+				m_grid_highlight.RowCount = m_highlights.Count;
+				m_grid_highlight.SelectRow(selected);
 			
-			selected = m_grid_filter.FirstSelectedRowIndex();
-			m_grid_filter.CurrentCell = null;
-			m_grid_filter.RowCount = 0;
-			m_grid_filter.RowCount = m_filters.Count;
-			m_grid_filter.SelectRow(selected);
+				selected = m_grid_filter.FirstSelectedRowIndex();
+				m_grid_filter.CurrentCell = null;
+				m_grid_filter.RowCount = 0;
+				m_grid_filter.RowCount = m_filters.Count;
+				m_grid_filter.SelectRow(selected);
 			
-			ResumeLayout();
+				selected = m_grid_transform.FirstSelectedRowIndex();
+				m_grid_transform.CurrentCell = null;
+				m_grid_transform.RowCount = 0;
+				m_grid_transform.RowCount = m_transforms.Count;
+				m_grid_transform.SelectRow(selected);
+			
+				m_text_settings.Text = m_settings.Filepath;
+			}
+			finally
+			{
+				ResumeLayout();
+			}
 		}
 
 		/// <summary>Colour picker helper</summary>

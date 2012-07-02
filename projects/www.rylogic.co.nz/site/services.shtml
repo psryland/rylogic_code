@@ -1,0 +1,31 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-nz">
+<head>
+	<title>Rylogic Limited - Services</title>
+	<!--#include file="inc/header.shtml" -->
+</head>
+<body>
+	<div id="container">
+		<!--#include file="inc/title.shtml" -->
+		<!--#include file="inc/main_menu.shtml" -->
+		<!--#include file="inc/left_menu.shtml" -->
+		<div id="content">
+			<div id="content_top"></div>
+			<div id="content_main">
+				<h3>
+					Services
+				</h3>
+				<br />
+				<p>Rylogic Limited provides software development services for projects requiring a high degree of 
+				mathematical or physical modelling. <br /><br />
+				Although our office is based in Christchurch, New Zealand, Rylogic Limited services have been employed
+				by companies as far afield as the UK.</p>
+				<br />
+			</div>
+			<div id="content_bottom"></div>
+			<!--#include file="inc/footer.shtml" -->
+		</div>
+		<!--#include file="inc/right_panel.shtml" -->
+	</div>
+</body>
+</html>

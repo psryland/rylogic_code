@@ -1,19 +1,24 @@
 @echo off
-::Load Rylogic environment variables and check version
-call %RylogicEnv%
-if %RylogicEnvVersion% lss 1 (
- 	echo RylogicEnv.cmd out of date. Please update
-	goto :end
-)
-
 SetLocal EnableDelayedExpansion 
 set PATH=Q:\sdk\pr\cmd\;%PATH%
 cls
 
+::Load Rylogic environment variables and check version
+if [%RylogicEnv%]==[] (
+ 	echo ERROR: The 'RylogicEnv' environment variable is not set.
+	goto :eof
+)
+call %RylogicEnv%
+if %RylogicEnvVersion% lss 2 (
+	echo ERROR: '%RylogicEnv%' is out of date. Please update.
+	goto :eof
+)
+
+
 ::Read the command line parameter
 set param=%1
-set srcdir=Q:\projects\www.rylogic.co.nz
-set dstdir=%zdrive%\WWW\WWW-pub
+set srcdir=Q:\projects\www.rylogic.co.nz\site
+set dstdir=%zdrive%\WWW\dev.rylogic.co.nz
 if not exist "%dstdir%" mkdir "%dstdir%"
 
 if [%param%]==[clean] (
@@ -35,18 +40,19 @@ if [%param%]==[] (
 echo Deploying %srcdir% -^> %dstdir%...
 
 ::Copy web site files
-call copy "%srcdir%\*.php" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.png" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.jpg" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.css" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.xml" "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.shtml" "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.png"   "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.jpg"   "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.css"   "%dstdir%\" /Y /F /E %newer%
+call copy "%srcdir%\*.xml"   "%dstdir%\" /Y /F /E %newer%
 
 ::Copy site data
-call copy "q:\bin\linedrawer.x86.zip"  "%zdrive%\WWW\WWW-pub\data\" /F /Y %newer%
-call copy "q:\bin\linedrawer.x64.zip"  "%zdrive%\WWW\WWW-pub\data\" /F /Y %newer%
-call copy "q:\bin\imager.x86.zip"      "%zdrive%\WWW\WWW-pub\data\" /F /Y %newer%
-call copy "q:\bin\imager.x64.zip"      "%zdrive%\WWW\WWW-pub\data\" /F /Y %newer%
-call copy "q:\bin\clicket.zip"         "%zdrive%\WWW\WWW-pub\data\" /F /Y %newer%
+call copy "q:\bin\linedrawer.x86.zip"  "%dstdir%\data\" /F /Y %newer%
+call copy "q:\bin\linedrawer.x64.zip"  "%dstdir%\data\" /F /Y %newer%
+call copy "q:\bin\imager.x86.zip"      "%dstdir%\data\" /F /Y %newer%
+call copy "q:\bin\imager.x64.zip"      "%dstdir%\data\" /F /Y %newer%
+call copy "q:\bin\clicket.zip"         "%dstdir%\data\" /F /Y %newer%
+call copy "q:\bin\rylogviewer.x86.zip" "%dstdir%\data\" /F /Y %newer%
 
 :end
 EndLocal

@@ -43,7 +43,7 @@ namespace pr.util
 			{
 				// Ensure the directory exists (todo: should probably go in an official logs folder)
 				string dir = Path.GetDirectoryName(filepath);
-				if (dir != null && !Directory.Exists(dir))
+				if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
 					Directory.CreateDirectory(dir);
 				
 				if (m_log == null)

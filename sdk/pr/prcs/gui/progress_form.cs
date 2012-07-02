@@ -29,6 +29,9 @@ namespace pr.gui
 			/// <summary>Control the visibility of the progress bar. 'null' means don't change</summary>
 			public bool? ProgressBarVisible = null;
 			
+			/// <summary>Control the style of the progress bar</summary>
+			public ProgressBarStyle? ProgressBarStyle = null;
+
 			/// <summary>Dialog icon</summary>
 			public Icon Icon = null;
 			
@@ -79,6 +82,7 @@ namespace pr.gui
 						if (us.Description        != null) m_description.Text = us.Description;
 						if (us.Icon               != null) Icon = us.Icon;
 						if (us.ProgressBarVisible != null) m_progress.Visible = us.ProgressBarVisible.Value;
+						if (us.ProgressBarStyle   != null) m_progress.Style = us.ProgressBarStyle.Value;
 					}
 				};
 			m_bgw.RunWorkerCompleted += (s,e)=>

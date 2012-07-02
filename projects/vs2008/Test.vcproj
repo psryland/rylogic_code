@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -38,7 +38,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="Q:\Paul\obj\$(ProjectName)\$(ConfigurationName)/Test.tlb"
+				TypeLibraryName="Q:\Paul\obj2008\$(ProjectName)\$(ConfigurationName)/Test.tlb"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
@@ -107,8 +107,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
@@ -129,7 +129,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="Q:\Paul\obj\$(ProjectName)\$(ConfigurationName)/Test.tlb"
+				TypeLibraryName="Q:\Paul\obj2008\$(ProjectName)\$(ConfigurationName)/Test.tlb"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"

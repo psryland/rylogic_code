@@ -3,14 +3,18 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using pr.common;
 using pr.extn;
+using pr.gfx;
 using pr.gui;
+using pr.inet;
 using pr.maths;
 using pr.util;
 using RyLogViewer.Properties;
@@ -24,7 +28,9 @@ namespace RyLogViewer
 		private readonly RecentFiles m_recent;                // Recent files
 		private readonly FileWatch m_watch;                   // A helper for watching files
 		private readonly Timer m_watch_timer;                 // A timer for polling the file watcher
+		private readonly EventBatcher m_batch_set_col_size;   // A call batcher for setting the column widths
 		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
+		private readonly List<Transform> m_transforms;        // A list of the active transforms only 
 		private readonly FindUI m_find_ui;                    // The find dialog
 		private readonly NotifyIcon m_notify_icon;            // A system tray icon
 		private readonly ToolTip m_tt;                        // Tooltips
@@ -39,9 +45,8 @@ namespace RyLogViewer
 		private long m_filepos;                               // The byte offset (from file begin) to the start of the last known line
 		private long m_fileend;                               // The last known size of the file
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
-		private int m_line_cache_count;                      // The number of lines to scan about the currently selected row
+		private int m_line_cache_count;                       // The number of lines to scan about the currently selected row
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
-
 		//bug:
 		// ungraceful close of process capture file
 		//todo:
@@ -55,28 +60,27 @@ namespace RyLogViewer
 			Log.Info(this, "App Startup: {0}", DateTime.Now);
 
 			InitializeComponent();
-			AllowTransparency   = true;
-			m_settings          = new Settings(SettingsBase.ELoadOptions.Normal);
-			m_recent            = new RecentFiles(m_menu_file_recent, OpenLogFile);
-			m_watch             = new FileWatch();
-			m_watch_timer       = new Timer{Interval = Constants.FilePollingRate};
-			m_highlights        = new List<Highlight>();
-			m_find_ui           = new FindUI(m_settings){Visible = false};
-			m_tt                = new ToolTip();
-			m_notify_icon       = new NotifyIcon{Icon = Icon};
-			m_line_index        = new List<Range>();
-			m_last_find_pattern = null;
-			m_filepath          = null;
-			m_file              = null;
-			m_filepos           = 0;
-			m_fileend           = 0;
-			m_bufsize           = m_settings.FileBufSize;
-			m_line_cache_count  = m_settings.LineCacheCount;
+			AllowTransparency    = true;
+			m_settings           = new Settings();
+			m_recent             = new RecentFiles(m_menu_file_recent, OpenLogFile);
+			m_watch              = new FileWatch();
+			m_watch_timer        = new Timer{Interval = Constants.FilePollingRate};
+			m_batch_set_col_size = new EventBatcher(100, this);
+			m_highlights         = new List<Highlight>();
+			m_transforms         = new List<Transform>();
+			m_find_ui            = new FindUI(m_settings){Visible = false};
+			m_tt                 = new ToolTip();
+			m_notify_icon        = new NotifyIcon{Icon = Icon};
+			m_line_index         = new List<Range>();
+			m_last_find_pattern  = null;
+			m_filepath           = null;
+			m_file               = null;
+			m_filepos            = 0;
+			m_fileend            = 0;
+			m_bufsize            = m_settings.FileBufSize;
+			m_line_cache_count   = m_settings.LineCacheCount;
 			
-			m_settings.SettingChanged += (s,a)=>
-			{
-				Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
-			};
+			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
 			
 			// Menu
 			m_menu.Move                             += (s,a) => m_settings.MenuPosition = m_menu.Location;
@@ -110,6 +114,7 @@ namespace RyLogViewer
 			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
+			m_menu_help_check_for_updates.Click     += (s,a) => CheckForUpdates(true);
 			m_menu_help_about.Click                 += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
 			
@@ -124,14 +129,19 @@ namespace RyLogViewer
 			m_btn_filters.ToolTipText       = Resources.ShowFiltersDialog;
 			m_btn_filters.Click            += (s,a) => EnableFilters(m_btn_filters.Checked);
 			m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
+			m_btn_transforms.ToolTipText    = Resources.ShowTransformsDialog;
+			m_btn_transforms.Click         += (s,a) => EnableTransforms(m_btn_transforms.Checked);
+			m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms); };
 			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
 			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
 			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRow = 0);
 			m_btn_jump_to_end.ToolTipText   = Resources.ScrollToEnd;
 			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
-			m_btn_tail.ToolTipText          = Resources.WatchForUpdates;
-			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
+			m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
+			m_btn_watch.Click              += (s,a) => EnableWatch(m_btn_watch.Checked);
+			m_btn_additive.ToolTipText      = Resources.AdditiveMode;
+			m_btn_additive.Click           += (s,a) => EnableAdditive(m_btn_additive.Checked);
 			m_toolstrip.Move               += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
 			ToolStripManager.Renderer       = new CheckedButtonRenderer();
 
@@ -143,7 +153,7 @@ namespace RyLogViewer
 					// Update on ScrollEnd not value changed, since
 					// UpdateUI() sets Value when the build is complete.
 					var range = m_scroll_file.ThumbRange;
-					long pos = (range.m_begin == 0) ? 0 : (range.m_end == m_fileend) ? m_fileend : range.Mid;
+					long pos = (range.Begin == 0) ? 0 : (range.End == m_fileend) ? m_fileend : range.Mid;
 					Log.Info(this, "file scroll to {0}", pos);
 					BuildLineIndex(pos, false);
 				};
@@ -167,9 +177,9 @@ namespace RyLogViewer
 			m_grid.CellPainting        += CellPainting;
 			m_grid.SelectionChanged    += GridSelectionChanged;
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
-			m_grid.DataError           += (s,a) => { Debug.Assert(false); };
-			m_grid.Scroll              += (s,a) => { UpdateFileScroll(); };
-
+			m_grid.DataError           += (s,a) => Debug.Assert(false);
+			m_grid.Scroll              += (s,a) => GridScroll();
+			
 			// Grid context menu
 			m_cmenu_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid);
 			m_cmenu_select_all.Click   += (s,a) => DataGridView_Extensions.SelectAll(m_grid);
@@ -180,7 +190,10 @@ namespace RyLogViewer
 				};
 			
 			// File Watcher
-			m_watch_timer.Tick += (s,a)=> { m_watch.CheckForChangedFiles(); };
+			m_watch_timer.Tick += (s,a)=> m_watch.CheckForChangedFiles();
+			
+			// Column size event batcher
+			m_batch_set_col_size.Action += SetGridColumnSizesImpl;
 			
 			// Find
 			m_find_ui.Tag = Size.Empty;
@@ -189,33 +202,7 @@ namespace RyLogViewer
 			m_find_ui.Move     += (s,e)=> { m_find_ui.Tag = new Size(m_find_ui.Location.X - Location.X, m_find_ui.Location.Y - Location.Y); };
 			
 			// Startup
-			Shown += (s,a)=>
-				{
-					// Last screen position
-					if (m_settings.RestoreScreenLoc)
-					{
-						Location = m_settings.ScreenPosition;
-						Size = m_settings.WindowSize;
-						m_find_ui.Tag = new Size(Size.Width - m_find_ui.Width - 8, 28);
-					}
-					
-					// Parse commandline
-					if (args.Length != 0)
-					{
-						ParseCommandLine(args);
-					}
-					else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
-					{
-						OpenLogFile(m_settings.LastLoadedFile);
-					}
-					
-					// Show the TotD
-					if (m_settings.ShowTOTD)
-						ShowTotD();
-
-					InitCache();
-					ApplySettings();
-				};
+			Shown += (s,a)=> Startup(args);
 			
 			// User input
 			KeyDown += (s,a) => HandleKeyDown(a);
@@ -240,6 +227,39 @@ namespace RyLogViewer
 					m_settings.WindowSize = Size;
 					m_settings.RecentFiles = m_recent.Export();
 				};
+			
+			InitCache();
+			ApplySettings();
+		}
+
+		/// <summary>Called the first time the app is displayed</summary>
+		private void Startup(string[] args)
+		{
+			// Last screen position
+			if (m_settings.RestoreScreenLoc)
+			{
+				Location = m_settings.ScreenPosition;
+				Size = m_settings.WindowSize;
+				m_find_ui.Tag = new Size(Size.Width - m_find_ui.Width - 8, 28);
+			}
+					
+			// Parse commandline
+			if (args.Length != 0)
+			{
+				ParseCommandLine(args);
+			}
+			else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
+			{
+				OpenLogFile(m_settings.LastLoadedFile);
+			}
+					
+			// Show the TotD
+			if (m_settings.ShowTOTD)
+				ShowTotD();
+
+			// Check for updates
+			if (m_settings.CheckForUpdates)
+				CheckForUpdates(false);
 		}
 
 		/// <summary>Returns true if there is a log file currently open</summary>
@@ -256,11 +276,25 @@ namespace RyLogViewer
 			{
 				if (arg[0] == '-')
 				{
+					const string help =
+						"Valid Command Line Options:\r\n"+
+						"  -s <settings file path>\r\n"+
+						"     \r\n"+
+						"\r\n"+
+						"     The path to a settings file to load\r\n"+
+						"  -e <export file path> - The path to a settings file to load\r\n"+
+						"  -h                      - This help message\r\n"+
+						"";
+					
 					string cmd = arg.Substring(1).ToLower();
 					switch (cmd)
 					{
 					default:
-						MessageBox.Show(this, string.Format("'{0}' is not a valid command line switch", cmd), Resources.UnknownCmdLineOption, MessageBoxButtons.OK, MessageBoxIcon.Information);
+						MessageBox.Show(this, string.Format(
+							"'{0}' is not a valid command line switch\r\n\r\n{1}"
+							,cmd ,help), Resources.UnknownCmdLineOption, MessageBoxButtons.OK, MessageBoxIcon.Information);
+						break;
+					case "s":
 						break;
 					}
 				}
@@ -333,7 +367,7 @@ namespace RyLogViewer
 				// Setup the watcher to watch for file changes
 				// Start the build in an invoke so that checking for file changes doesn't cause reentrancy
 				m_watch.Add(m_filepath, (fp,ctx) => { OnFileChanged(); return true; });
-				m_watch_timer.Enabled = FileOpen && m_settings.TailEnabled;
+				m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
 				
 				BuildLineIndex(m_filepos, true, ()=>{ SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0; });
 				return;
@@ -383,9 +417,9 @@ namespace RyLogViewer
 		{
 			long len = m_file.Length;
 			Log.Info(this, "File {0} changed. File length: {1}", m_filepath, len);
-			
-			if (AutoScrollTail) BuildLineIndex(m_file.Length, !m_settings.FileChangesAdditive);
-			else                BuildLineIndex(m_filepos    , !m_settings.FileChangesAdditive);
+			long filepos = AutoScrollTail ? m_file.Length : m_filepos;
+			bool reload  = m_file.Length < m_fileend || !m_settings.FileChangesAdditive;
+			BuildLineIndex(filepos, reload);
 		}
 		
 		/// <summary>Supply the grid with values</summary>
@@ -429,6 +463,7 @@ namespace RyLogViewer
 				e.PaintBackground(e.ClipBounds, false);
 				e.PaintContent(e.ClipBounds);
 			}
+			e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, m_grid.DefaultCellStyle.SelectionBackColor, 0.7f);
 		}
 		
 		/// <summary>Handler for selections made in the grid</summary>
@@ -438,6 +473,14 @@ namespace RyLogViewer
 			UpdateStatus();
 		}
 		
+		/// <summary>Called when the grid is scrolled</summary>
+		private void GridScroll()
+		{
+			if (GridEventsBlocked) return;
+			UpdateFileScroll();
+			SetGridColumnSizes();
+		}
+
 		/// <summary>
 		/// Tests whether the currently selected row is near the start or end of
 		/// the line range and causes a reload if it is</summary>
@@ -446,8 +489,8 @@ namespace RyLogViewer
 			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit) return;
 			const float limit = 1f / Constants.AutoScrollAtBoundaryLimit;
 			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount - 1);
-			if (ratio < 0f + limit) BuildLineIndex(LineStartIndexRange.m_begin, false);
-			if (ratio > 1f - limit) BuildLineIndex(LineStartIndexRange.m_end  , false);
+			if (ratio < 0f + limit) BuildLineIndex(LineStartIndexRange.Begin, false);
+			if (ratio > 1f - limit) BuildLineIndex(LineStartIndexRange.End  , false);
 		}
 
 		/// <summary>Handle key down events for the grid</summary>
@@ -497,8 +540,8 @@ namespace RyLogViewer
 						AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
 							{
 								int progress = backward
-									? (int)(100 * (1f - Maths.Ratio(0, baddr + line.m_begin, start)))
-									: (int)(100 * Maths.Ratio(start, baddr + line.m_end ,m_fileend));
+									? (int)(100 * (1f - Maths.Ratio(0, baddr + line.Begin, start)))
+									: (int)(100 * Maths.Ratio(start, baddr + line.End ,m_fileend));
 								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
 								
 								// Ignore blanks?
@@ -506,17 +549,17 @@ namespace RyLogViewer
 									return true;
 								
 								// Keep searching while the text is filtered out or doesn't match the pattern
-								string text = m_encoding.GetString(bf, (int)line.m_begin, (int)line.Count);
+								string text = m_encoding.GetString(bf, (int)line.Begin, (int)line.Count);
 								if (!PassesFilters(text, filters) || !pat.IsMatch(text))
 									return true;
 								
 								// Found a match
-								at = baddr + line.m_begin;
+								at = baddr + line.Begin;
 								return false; // Stop searching
 							};
 						
 						// Search for files
-						byte[] buf = new byte[Constants.FileReadChunkSize];
+						byte[] buf = new byte[m_settings.MaxLineLength];
 						long count = backward ? start - 0 : m_fileend - start;
 						FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, (c,l) => !bgw.CancellationPending);
 						
@@ -532,7 +575,10 @@ namespace RyLogViewer
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
 			
-			DialogResult res = search.ShowDialog(this);
+			DialogResult res = DialogResult.Cancel;
+			try { res = search.ShowDialog(this); }
+			catch (OperationCanceledException) {}
+			catch (Exception ex) { MessageBox.Show(this, "Find terminated by an error.\r\nError Details:\r\n"+ex.Message, "Find error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			found = at;
 			return res == DialogResult.OK;
 		}
@@ -543,12 +589,12 @@ namespace RyLogViewer
 			if (pat == null || m_grid.RowCount == 0) return;
 			m_last_find_pattern = pat;
 			
-			var start = m_line_index[SelectedRow].m_end;
+			var start = m_line_index[SelectedRow].End;
 			Log.Info(this, "FindNext starting from {0}", start);
 			
 			long found;
 			if (Find(pat, start, false, out found) && found == -1)
-				SetTransientStatusMessage("End of file");
+				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
 		}
 		
 		/// <summary>Search for an earlier occurance of a pattern in the grid</summary>
@@ -557,12 +603,12 @@ namespace RyLogViewer
 			if (pat == null || m_grid.RowCount == 0) return;
 			m_last_find_pattern = pat;
 			
-			var start = SelectedRowRange.m_begin;
+			var start = SelectedRowRange.Begin;
 			Log.Info(this, "FindPrev starting from {0}", start);
 			
 			long found;
 			if (Find(pat, start, true, out found) && found == -1)
-				SetTransientStatusMessage("Start of file");
+				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue);
 		}
 
 		/// <summary>Show the export dialog</summary>
@@ -620,22 +666,22 @@ namespace RyLogViewer
 					{
 						Line line             = new Line();
 						int last_progress     = 0;
-						rng.m_begin           = Maths.Clamp(rng.m_begin, 0, file.Length);
-						rng.m_end             = Maths.Clamp(rng.m_end, 0, file.Length);
+						rng.Begin           = Maths.Clamp(rng.Begin, 0, file.Length);
+						rng.End             = Maths.Clamp(rng.End, 0, file.Length);
 						row_delim             = Misc.Robitise(row_delim);
 						col_delim             = Misc.Robitise(col_delim);
 						bool ignore_blanks    = m_settings.IgnoreBlankLines;
 						List<Filter> filters  = ActiveFilters.ToList();
 						AddLineFunc test_line = (line_rng, baddr, fend, bf, enc) =>
 							{
-								int progress = (int)(100 * Maths.Ratio(rng.m_begin, baddr + line_rng.m_end, rng.m_end));
+								int progress = (int)(100 * Maths.Ratio(rng.Begin, baddr + line_rng.End, rng.End));
 								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
 								
 								if (line_rng.Empty && ignore_blanks)
 									return true;
 								
 								// Parse the line from the buffer
-								line.Read(baddr + line_rng.m_begin, bf, (int)line_rng.m_begin, (int)line_rng.Count, m_encoding, m_col_delim, null);
+								line.Read(baddr + line_rng.Begin, bf, (int)line_rng.Begin, (int)line_rng.Count, m_encoding, m_col_delim, null, m_transforms);
 								
 								// Keep searching while the text is filtered out or doesn't match the pattern
 								if (!PassesFilters(line.RowText, filters)) return true;
@@ -646,18 +692,21 @@ namespace RyLogViewer
 								return true;
 							};
 						
-						byte[] buf = new byte[Constants.FileReadChunkSize];
+						byte[] buf = new byte[m_settings.MaxLineLength];
 						
 						// Find the start of a line (grow the range if necessary)
-						rng.m_begin = FindLineStart(file, rng.m_begin, rng.m_end, m_row_delim, m_encoding, buf);
+						rng.Begin = FindLineStart(file, rng.Begin, rng.End, m_row_delim, m_encoding, buf);
 						
 						// Read lines and write them to the export file
-						FindLines(file, rng.m_begin, rng.m_end, false, rng.Count, test_line, m_encoding, m_row_delim, buf, (c,l) => !bgw.CancellationPending);
+						FindLines(file, rng.Begin, rng.End, false, rng.Count, test_line, m_encoding, m_row_delim, buf, (c,l) => !bgw.CancellationPending);
 						a.Cancel = bgw.CancellationPending;
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
 			
-			DialogResult res = export.ShowDialog(this);
+			DialogResult res = DialogResult.Cancel;
+			try { res = export.ShowDialog(this); }
+			catch (OperationCanceledException) {}
+			catch (Exception ex) { MessageBox.Show(this, "Exporting terminated due to an error.\r\nError Details:\r\n"+ex.Message, "Export error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
 			return res == DialogResult.OK;
 		}
 
@@ -699,14 +748,30 @@ namespace RyLogViewer
 			BuildLineIndex(m_filepos, true);
 		}
 
-		/// <summary>Turn on/off tail mode</summary>
-		private void EnableTail(bool enable)
+		/// <summary>Turn on/off transforms</summary>
+		private void EnableTransforms(bool enable)
 		{
-			m_settings.TailEnabled = enable;
+			m_settings.TransformsEnabled = enable;
+			ApplySettings();
+			BuildLineIndex(m_filepos, true);
+		}
+
+		/// <summary>Turn on/off tail mode</summary>
+		private void EnableWatch(bool enable)
+		{
+			m_settings.WatchEnabled = enable;
 			ApplySettings();
 			if (enable) BuildLineIndex(m_filepos, m_settings.FileChangesAdditive);
 		}
-		
+
+		/// <summary>Turn on/off additive only mode</summary>
+		private void EnableAdditive(bool enable)
+		{
+			m_settings.FileChangesAdditive = enable;
+			ApplySettings();
+			if (!enable) BuildLineIndex(m_filepos, true);
+		}
+
 		/// <summary>Try to remove data from the log file</summary>
 		private void ClearLogFile()
 		{
@@ -816,12 +881,23 @@ namespace RyLogViewer
 		/// <summary>Display the options dialog</summary>
 		private void ShowOptions(SettingsUI.ETab tab)
 		{
+			string test_text = "<Enter test text here>";
+			if (SelectedRow != -1)
+				test_text = ReadLine(SelectedRow).RowText;
+			
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
-			var ui = new SettingsUI(tab);
+			var ui = new SettingsUI(m_settings, tab);
+			switch (tab)
+			{
+			default: throw new ArgumentOutOfRangeException("tab");
+			case SettingsUI.ETab.General: break;
+			case SettingsUI.ETab.LogView: break;
+			case SettingsUI.ETab.Highlights: ui.HighlightUI.TestText = test_text; break;
+			case SettingsUI.ETab.Filters:    ui.FilterUI   .TestText = test_text; break;
+			case SettingsUI.ETab.Transforms: ui.TransformUI.TestText = test_text; break;
+			}
 			ui.ShowDialog(this);
-			m_settings.Reload();
-			
 			ApplySettings();
 			
 			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
@@ -839,6 +915,85 @@ namespace RyLogViewer
 		private void ShowTotD()
 		{
 			new TipOfTheDay(m_settings).ShowDialog(this);
+		}
+
+		/// <summary>Check a remote server for the latest version information</summary>
+		private void CheckForUpdates(bool show_dialog)
+		{
+			// The callback to call when the check for updates results are in
+			Action<IAsyncResult> callback = ar =>
+				{
+					INet.CheckForUpdateResult res = null; Exception err = null;
+					try { res = INet.EndCheckForUpdate(ar); }
+					catch (OperationCanceledException) {}
+					catch (Exception ex) { err = ex; }
+						
+					Action done = () => HandleCheckForUpdateResult(res, err, show_dialog);
+					BeginInvoke(done);
+				};
+			
+			// Start the check for updates
+			if (show_dialog)
+			{
+				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", (s,a)=>
+					{
+						BackgroundWorker bgw = (BackgroundWorker)s;
+						bgw.ReportProgress(100, new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
+						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateURL, null);
+						
+						// Wait till the operation completes, or until cancel is singled
+						for (;!bgw.CancellationPending && !async.AsyncWaitHandle.WaitOne(500);) {}
+						a.Cancel = bgw.CancellationPending;
+
+						if (!a.Cancel) callback(async);
+						else INet.CancelCheckForUpdate(async);
+					});
+				dg.ShowDialog(this);
+			}
+			else
+			{
+				// Start the asynchronous check for updates
+				INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateURL, callback);
+			}
+		}
+
+		/// <summary>Handle the results of a check for updates</summary>
+		private void HandleCheckForUpdateResult(INet.CheckForUpdateResult res, Exception error, bool show_dialog)
+		{
+			if (error != null)
+			{
+				SetTransientStatusMessage("Check for updates error", Color.Red, SystemColors.Control);
+				if (show_dialog) MessageBox.Show(this, string.Format("Check for updates failed\r\nError: {0}", error.Message), "Check for Updates Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			else
+			{
+				Version this_version = Assembly.GetExecutingAssembly().GetName().Version;
+				if (this_version.CompareTo(res.Version) >  0)
+				{
+					SetTransientStatusMessage("Development version running");
+					if (show_dialog) MessageBox.Show(this, "This version is newer than the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				}
+				else if (this_version.CompareTo(res.Version) == 0)
+				{
+					SetTransientStatusMessage("Latest version running");
+					if (show_dialog) MessageBox.Show(this, "This is the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				}
+				else
+				{
+					SetTransientStatusMessage("New Version Available!", Color.Green, SystemColors.Control);
+					if (show_dialog)
+					{
+						var dg = new NewVersionForm
+						{
+							CurrentVersion = this_version.ToString(),
+							LatestVersion  = res.Version.ToString(),
+							WebsiteUrl     = res.InfoURL,
+							DownloadUrl    = res.DownloadURL
+						};
+						dg.ShowDialog(this);
+					}
+				}
+			}
 		}
 
 		/// <summary>Show the about dialog</summary>
@@ -883,7 +1038,7 @@ namespace RyLogViewer
 			BuildLineIndex(addr, false, ()=>
 			{
 				// When the file is cached, select the row
-				int idx = m_line_index.BinarySearch(r => r.m_end < addr ? -1 : r.m_begin > addr ? 1 : 0);
+				int idx = m_line_index.BinarySearch(r => r.End < addr ? -1 : r.Begin > addr ? 1 : 0);
 				if (idx < 0) idx = ~idx;
 				SelectedRow = idx;
 			});
@@ -920,11 +1075,17 @@ namespace RyLogViewer
 				// Auto scroll if the last row of the file is visible and selected in the grid
 				int row_delim_length = m_row_delim != null ? m_row_delim.Length : 0;
 				return
-					m_grid.RowCount != 0 &&                                         // the grid has data
-					m_line_index.Count != 0 &&                                      // rows of the file are cached
-					SelectedRow == m_grid.RowCount - 1 &&                           // last row selected
-					m_grid.Rows[m_grid.RowCount - 1].Displayed &&                   // last row displayed
-					m_line_index.Last().Contains(m_fileend - row_delim_length - 1); // last row in the file
+					m_grid.RowCount == 0 ||                                                // no data, then yes
+					(
+						m_grid.RowCount != 0 &&                                            // the grid has data
+						m_line_index.Count != 0 &&                                         // rows of the file are cached
+						SelectedRow == m_grid.RowCount - 1 &&                              // last row selected
+						m_grid.Rows[m_grid.RowCount - 1].Displayed &&                      // last row displayed
+						(
+							m_line_index.Last().Contains(m_fileend - 1) ||                 // last char in the file
+							m_line_index.Last().Contains(m_fileend - 1 - row_delim_length) // last row in the file
+						)
+					);
 			}
 		}
 
@@ -970,6 +1131,56 @@ namespace RyLogViewer
 			if (auto_scroll_tail) ShowLastRow();
 		}
 		
+		/// <summary>Helper for setting the grid column size based on currently displayed content</summary>
+		private void SetGridColumnSizes()
+		{
+			if (m_grid.ColumnCount == 0) return;
+			m_batch_set_col_size.Signal();
+		}
+		private void SetGridColumnSizesImpl()
+		{
+			// Measure each column's preferred width
+			int[] col_widths = new int[m_grid.ColumnCount];
+			int total_width = 0;
+			foreach (DataGridViewColumn col in m_grid.Columns)
+				total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
+			
+			// Resize columns. If the total width is less than the control width use the control width instead
+			float scale = Maths.Max((m_grid.Width - 2f) / total_width, 1f);
+			foreach (DataGridViewColumn col in m_grid.Columns)
+				col.Width = (int)(col_widths[col.Index] * scale);
+		}
+		
+		/// <summary>Return a collection of the currently active highlights</summary>
+		private IEnumerable<Highlight> ActiveHighlights
+		{
+			get
+			{
+				if (!m_settings.HighlightsEnabled) return Enumerable.Empty<Highlight>();
+				return from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl;
+			}
+		}
+		
+		/// <summary>Return a collection of the currently active filters</summary>
+		private IEnumerable<Filter> ActiveFilters
+		{
+			get
+			{
+				if (!m_settings.FiltersEnabled) return Enumerable.Empty<Filter>();
+				return from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft;
+			}
+		}
+		
+		/// <summary>Return a collection of the currently active transforms</summary>
+		private IEnumerable<Transform> ActiveTransforms
+		{
+			get
+			{
+				if (!m_settings.TransformsEnabled) return Enumerable.Empty<Transform>();
+				return from tx in Transform.Import(m_settings.TransformPatterns) where tx.Active select tx;
+			}
+		}
+		
 		/// <summary>
 		/// Apply settings throughout the app.
 		/// This method is called on startup to apply initial settings and
@@ -989,12 +1200,15 @@ namespace RyLogViewer
 			m_line_cache_count = m_settings.LineCacheCount;
 			
 			// Tail
-			m_watch_timer.Enabled = FileOpen && m_settings.TailEnabled;
+			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
 			
 			// Highlights;
 			m_highlights.Clear();
-			if (m_settings.HighlightsEnabled)
-				m_highlights.AddRange(from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl);
+			m_highlights.AddRange(ActiveHighlights);
+			
+			// Transforms
+			m_transforms.Clear();
+			m_transforms.AddRange(ActiveTransforms);
 			
 			// Grid
 			int col_count = m_settings.ColDelimiter.Length != 0 ? Maths.Clamp(m_settings.ColumnCount, 1, 255) : 1;
@@ -1041,83 +1255,79 @@ namespace RyLogViewer
 		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
 		private void UpdateUI(int row_delta = 0)
 		{
-			Log.Info(this, "UpdateUI. Row delta {0}", row_delta);
-			
-			// Don't suspend events by removing/adding handlers because that pattern doesn't nest
-			using (m_grid.SuspendLayout(true))
-			using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+			if (m_in_update_ui) return;
+			try
 			{
-				// Configure the grid
-				if (m_line_index.Count != 0)
+				m_in_update_ui = true;
+				Log.Info(this, "UpdateUI. Row delta {0}", row_delta);
+			
+				// Don't suspend events by removing/adding handlers because that pattern doesn't nest
+				using (m_grid.SuspendLayout(true))
 				{
-					// Ensure the grid has the correct number of rows
-					SetGridRowCount(m_line_index.Count, row_delta);
-					
-					// Measure each column's preferred width
-					int total_width = 0;
-					int[] col_widths = new int[m_grid.ColumnCount];
-					foreach (DataGridViewColumn col in m_grid.Columns)
-						total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
-					
-					// Resize columns. If the total width is less than the control width use the control width instead
-					if (total_width < m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.Fill)
+					// Configure the grid
+					if (m_line_index.Count != 0)
 					{
-						m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-						m_grid.AutoResizeColumns();
+						// Ensure the grid has the correct number of rows
+						using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+							SetGridRowCount(m_line_index.Count, row_delta);
+					
+						SetGridColumnSizes();
 					}
-					else if (total_width > m_grid.Width && m_grid.AutoSizeColumnsMode != DataGridViewAutoSizeColumnsMode.None)
+					else
 					{
-						m_grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
-						foreach (DataGridViewColumn col in m_grid.Columns)
-							col.Width = col_widths[col.Index];
+						m_grid.ColumnHeadersVisible = false;
+						m_grid.ColumnCount = 1;
+						using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+							SetGridRowCount(0, 0);
 					}
 				}
-				else
-				{
-					m_grid.ColumnHeadersVisible = false;
-					m_grid.ColumnCount = 1;
-					SetGridRowCount(0, 0);
-				}
+				m_grid.Refresh();
+			
+				// Configure menus
+				bool file_open                            = FileOpen;
+				string enc                                = m_settings.Encoding;
+				string row_delim                          = m_settings.RowDelimiter;
+				m_menu_file_export.Enabled                = file_open;
+				m_menu_file_close.Enabled                 = file_open;
+				m_menu_edit_selectall.Enabled             = file_open;
+				m_menu_edit_copy.Enabled                  = file_open;
+				m_menu_edit_find.Enabled                  = file_open;
+				m_menu_edit_find_next.Enabled             = file_open;
+				m_menu_edit_find_prev.Enabled             = file_open;
+				m_menu_encoding_detect           .Checked = enc.Length == 0;
+				m_menu_encoding_ascii            .Checked = enc == Encoding.ASCII.EncodingName;
+				m_menu_encoding_utf8             .Checked = enc == Encoding.UTF8.EncodingName;
+				m_menu_encoding_ucs2_littleendian.Checked = enc == Encoding.Unicode.EncodingName;
+				m_menu_encoding_ucs2_bigendian   .Checked = enc == Encoding.BigEndianUnicode.EncodingName;
+				m_menu_line_ending_detect        .Checked = row_delim.Length == 0;
+				m_menu_line_ending_cr            .Checked = row_delim == "<CR>";
+				m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
+				m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
+				m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
+				m_menu_tools_clear_log_file.Enabled                = FileOpen;
+			
+				// Toolbar
+				m_btn_highlights.Checked = m_settings.HighlightsEnabled;
+				m_btn_filters.Checked    = m_settings.FiltersEnabled;
+				m_btn_transforms.Checked = m_settings.TransformsEnabled;
+				m_btn_watch.Checked      = m_watch_timer.Enabled;
+				m_btn_additive.Checked   = m_settings.FileChangesAdditive;
+			
+				// The file scroll bar is only visible when part of the file is loaded
+				m_scroll_file.Width = m_settings.FileScrollWidth;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange     ].Color = m_settings.ScrollBarFileRangeColour;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Color = m_settings.ScrollBarDisplayRangeColour;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange ].Color = m_settings.LineSelectBackColour;
+			
+				// Status and title
+				UpdateStatus();
 			}
-			m_grid.Refresh();
-			
-			// Configure menus
-			bool file_open                            = FileOpen;
-			string enc                                = m_settings.Encoding;
-			string row_delim                          = m_settings.RowDelimiter;
-			m_menu_file_export.Enabled                = file_open;
-			m_menu_file_close.Enabled                 = file_open;
-			m_menu_edit_selectall.Enabled             = file_open;
-			m_menu_edit_copy.Enabled                  = file_open;
-			m_menu_edit_find.Enabled                  = file_open;
-			m_menu_edit_find_next.Enabled             = file_open;
-			m_menu_edit_find_prev.Enabled             = file_open;
-			m_menu_encoding_detect           .Checked = enc.Length == 0;
-			m_menu_encoding_ascii            .Checked = enc == Encoding.ASCII.EncodingName;
-			m_menu_encoding_utf8             .Checked = enc == Encoding.UTF8.EncodingName;
-			m_menu_encoding_ucs2_littleendian.Checked = enc == Encoding.Unicode.EncodingName;
-			m_menu_encoding_ucs2_bigendian   .Checked = enc == Encoding.BigEndianUnicode.EncodingName;
-			m_menu_line_ending_detect        .Checked = row_delim.Length == 0;
-			m_menu_line_ending_cr            .Checked = row_delim == "<CR>";
-			m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
-			m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
-			m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
-			m_menu_tools_clear_log_file.Enabled                = FileOpen;
-			
-			// Toolbar
-			m_btn_highlights.Checked = m_settings.HighlightsEnabled;
-			m_btn_filters.Checked    = m_settings.FiltersEnabled;
-			m_btn_tail.Checked       = m_watch_timer.Enabled;
-			
-			// The file scroll bar is only visible when part of the file is loaded
-			m_scroll_file.Width = m_settings.FileScrollWidth;
-			m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange     ].Color = m_settings.ScrollBarFileRangeColour;
-			m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Color = m_settings.ScrollBarDisplayRangeColour;
-			m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange ].Color = m_settings.LineSelectBackColour;
-			
-			// Status and title
-			UpdateStatus();
+			finally
+			{
+				m_in_update_ui = false;
+			}
 		}
+		private bool m_in_update_ui;
 		
 		/// <summary>Update the status bar</summary>
 		private void UpdateStatus()
@@ -1137,7 +1347,7 @@ namespace RyLogViewer
 				m_status_spring.Text = "";
 				
 				// Add comma's to a large number
-				Func<StringBuilder,StringBuilder> Pretty = (sb)=>
+				Func<StringBuilder,StringBuilder> Pretty = sb=>
 					{
 						for (int i = sb.Length, j = 0; i-- != 0; ++j)
 							if ((j%3) == 2 && i != 0) sb.Insert(i, ',');
@@ -1146,9 +1356,9 @@ namespace RyLogViewer
 
 				// Get current file position
 				int r = SelectedRow;
-				long p = (r != -1) ? m_line_index[r].m_begin : 0;
-				StringBuilder pos = Pretty(new StringBuilder(p.ToString()));
-				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString()));
+				long p = (r != -1) ? m_line_index[r].Begin : 0;
+				StringBuilder pos = Pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
+				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString(CultureInfo.InvariantCulture)));
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
@@ -1179,19 +1389,18 @@ namespace RyLogViewer
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
-			Range range = LineIndexRange;//BufferRange(m_filepos, m_fileend, m_bufsize);
-			int row_delim_len = m_row_delim != null ? m_row_delim.Length : 0;
-			if (range.Count < m_fileend - row_delim_len)
+			if (m_line_index.Count == m_settings.LineCacheCount || m_fileend > m_settings.FileBufSize)
 			{
+				Range range = LineIndexRange;
 				if (!range.Equals(m_scroll_file.ThumbRange))
-					Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})", range.m_begin, range.m_end, FileByteRange.m_begin, FileByteRange.m_end);
+					Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})", range.Begin, range.End, FileByteRange.Begin, FileByteRange.End);
 				
 				m_scroll_file.Visible    = true;
 				m_scroll_file.TotalRange = FileByteRange;
 				m_scroll_file.ThumbRange = range;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange].Range      = range;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange     ].Range = range;
 				m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Range = DisplayedRowsRange;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange].Range  = SelectedRowRange;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange ].Range = SelectedRowRange;
 			}
 			else
 			{
@@ -1200,7 +1409,7 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Create a message that displays for a period then disappears</summary>
-		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, int display_time_ms)
+		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, int display_time_ms = 2000)
 		{
 			m_status_message.Text = text;
 			m_status_message.Visible = true;
@@ -1226,11 +1435,11 @@ namespace RyLogViewer
 		}
 		private void SetTransientStatusMessage(string text, int display_time_ms = 2000)
 		{
-			SetTransientStatusMessage(text, Color.Azure, Color.Blue, display_time_ms);
+			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control, display_time_ms);
 		}
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
-		public class CheckedButtonRenderer :ToolStripProfessionalRenderer
+		private class CheckedButtonRenderer :ToolStripProfessionalRenderer
 		{
 			protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
 			{

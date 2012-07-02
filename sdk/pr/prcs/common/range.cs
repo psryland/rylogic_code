@@ -19,58 +19,58 @@ namespace pr.common
 	public struct Range
 	{
 		/// <summary>The index of the first element in the range</summary>
-		public long m_begin;
+		public long Begin;
 		
 		/// <summary>The index of one past the last element in the range</summary>
-		public long m_end;
+		public long End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly Range Zero = new Range{m_begin = 0, m_end = 0};
+		public static readonly Range Zero = new Range{Begin = 0, End = 0};
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly Range Invalid = new Range{m_begin = long.MaxValue, m_end = long.MinValue};
+		public static readonly Range Invalid = new Range{Begin = long.MaxValue, End = long.MinValue};
 
 		/// <summary>Construct from an index range</summary>
-		public Range(long begin, long end) { m_begin = begin; m_end = end; }
+		public Range(long begin, long end) { Begin = begin; End = end; }
 		
 		/// <summary>True if the range spans zero elements</summary>
-		public bool Empty                  { get { return m_end == m_begin; } }
+		public bool Empty                  { get { return End == Begin; } }
 
 		/// <summary>Get/Set the number of elements in the range</summary>
-		public long Count                 { get { return m_end - m_begin; } set { m_end = m_begin + value; } }
+		public long Count                  { get { return End - Begin; } set { End = Begin + value; } }
 
-		/// <summary>Gets the first index in the range, or moves the range so that 'm_begin' is at a given index. Note, moves 'm_end' so that 'Count' is unchanged</summary>
-		public long First                 { get { return m_begin; } set { long count = Count; m_begin = value; m_end = value + count; } }
+		/// <summary>Gets the first index in the range, or moves the range so that 'Begin' is at a given index.<para/>Note, moves 'End' so that 'Count' is unchanged</summary>
+		public long First                  { get { return Begin; } set { long count = Count; Begin = value; End = value + count; } }
 
-		/// <summary>Gets one past the last index in the range, or moves the range so that 'm_end' is at a given index. Note, moves 'm_begin' so that 'Count' is unchanged</summary>
-		public long Last                  { get { return m_end; } set { long count = Count; m_begin = value - count; m_end = value; } }
+		/// <summary>Gets one past the last index in the range, or moves the range so that 'End' is at a given index.<para/>Note, moves 'Begin' so that 'Count' is unchanged</summary>
+		public long Last                   { get { return End; } set { long count = Count; Begin = value - count; End = value; } }
 
-		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Count', i.e. 'm_begin' and 'm_end' are both potentially moved</summary>
-		public long Mid                   { get { return (m_begin + m_end) / 2; } set { long count = Count; m_begin = value - count/2; m_end = value + (count+1)/2; } }
+		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Count', i.e. 'Begin' and 'End' are both potentially moved</summary>
+		public long Mid                    { get { return (Begin + End) / 2; } set { long count = Count; Begin = value - count/2; End = value + (count+1)/2; } }
 
 		/// <summary>Empty the range and reset to the zero'th index</summary>
-		public void Clear()               { m_begin = m_end = 0; }
+		public void Clear()                { Begin = End = 0; }
 
 		/// <summary>Enumerator for iterating over the range</summary>
-		public IEnumerable<long> Enumerate { get { for (long i = m_begin; i != m_end; ++i) yield return i; } }
+		public IEnumerable<long> Enumerate { get { for (long i = Begin; i != End; ++i) yield return i; } }
 
 		/// <summary>Returns true if 'index' is within this range</summary>
-		public bool Contains(long index)  { return m_begin <= index && index < m_end; }
+		public bool Contains(long index)   { return Begin <= index && index < End; }
 
 		/// <summary>Returns true if 'rng' is entirely within this range</summary>
 		public bool Contains(Range rng) 
 		{
 			Debug.Assert(Count >= 0, "this range is inside out");
 			Debug.Assert(rng.Count >= 0, "'rng' is inside out");
-			return m_begin <= rng.m_begin && rng.m_end <= m_end;
+			return Begin <= rng.Begin && rng.End <= End;
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
 		public void Encompase(Range rng)
 		{
 			Debug.Assert(rng.Count >= 0, "'rng' is inside out");
-			m_begin = Math.Min(m_begin ,rng.m_begin);
-			m_end   = Math.Max(m_end   ,rng.m_end  );
+			Begin = Math.Min(Begin ,rng.Begin);
+			End   = Math.Max(End   ,rng.End  );
 		}
 
 		/// <summary>
@@ -80,7 +80,7 @@ namespace pr.common
 		{
 			Debug.Assert(Count >= 0, "this range is inside out");
 			Debug.Assert(rng.Count >= 0, "'rng' is inside out");
-			return new Range(Math.Min(m_begin, rng.m_begin), Math.Max(m_end, rng.m_end));
+			return new Range(Math.Min(Begin, rng.Begin), Math.Max(End, rng.End));
 		}
 
 		/// <summary>
@@ -91,22 +91,22 @@ namespace pr.common
 		{
 			Debug.Assert(Count >= 0, "this range is inside out");
 			Debug.Assert(rng.Count >= 0, "'rng' is inside out");
-			if (rng.m_end <= m_begin) return new Range(m_begin, m_begin);
-			if (rng.m_begin >= m_end) return new Range(m_end, m_end);
-			return new Range(Math.Max(m_begin, rng.m_begin), Math.Min(m_end, rng.m_end));
+			if (rng.End <= Begin) return new Range(Begin, Begin);
+			if (rng.Begin >= End) return new Range(End, End);
+			return new Range(Math.Max(Begin, rng.Begin), Math.Min(End, rng.End));
 		}
 		
 		/// <summary>Move the range by an offset</summary>
 		public void Shift(long ofs)
 		{
-			m_begin += ofs;
-			m_end   += ofs;
+			Begin += ofs;
+			End   += ofs;
 		}
 
 		/// <summary>String representation of the range</summary>
 		public override string ToString()
 		{
-			return "["+m_begin+","+m_end+")";
+			return "["+Begin+","+End+")";
 		}
 		public override bool Equals(object obj)
 		{
@@ -116,11 +116,11 @@ namespace pr.common
 		}
 		public bool Equals(Range other)
 		{
-			return other.m_begin == m_begin && other.m_end == m_end;
+			return other.Begin == Begin && other.End == End;
 		}
 		public override int GetHashCode()
 		{
-			unchecked { return (m_begin.GetHashCode()*397) ^ m_end.GetHashCode(); }
+			unchecked { return (Begin.GetHashCode()*397) ^ End.GetHashCode(); }
 		}
 	}
 }

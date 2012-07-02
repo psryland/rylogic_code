@@ -74,6 +74,7 @@ namespace RyLogViewer
 			m_edit_proxy_hostname.Text = Conn.ProxyHostname;
 			m_edit_proxy_hostname.TextChanged += (s,a)=>
 				{
+					if (!((TextBox)s).Modified) return;
 					Conn.ProxyHostname = m_edit_proxy_hostname.Text;
 					UpdateUI();
 				};

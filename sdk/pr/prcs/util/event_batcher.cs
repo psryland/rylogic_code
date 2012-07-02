@@ -6,7 +6,6 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Windows.Forms;
 using Timer = System.Timers.Timer;
 
 namespace pr.util
@@ -20,7 +19,8 @@ namespace pr.util
 		/// <summary>The callback called when this event has been signalled</summary>
 		public event Action Action;
 
-		public EventBatcher() :this(100, null) {}
+		public EventBatcher() :this(100) {}
+		public EventBatcher(int delay_ms) :this(delay_ms, null) {}
 		public EventBatcher(int delay_ms, ISynchronizeInvoke synchronising_object)
 		{
 			m_signalled = false;

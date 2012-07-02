@@ -15,7 +15,8 @@ if %RylogicEnvVersion% lss 1 (
 )
 
 set srcdir=Q:\projects\rylogviewer
-set dstdir=Q:\bin\RyLogViewer
+set dstdir=Q:\bin
+set symdir=Q:\local\symbols
 
 ::Export for each platform (only x86 at the moment)
 for %%p in (x86) do call :copy_files %%p
@@ -34,14 +35,24 @@ goto :end
 	set rlvdir=rylogviewer.%1
 	set bindir=%srcdir%\bin\release
 	
-	::Ensure the directory exists and is empty
+	::Ensure directories exist and are empty
 	if not exist "%dstdir%\%rlvdir%" mkdir "%dstdir%\%rlvdir%"
 	del "%dstdir%\%rlvdir%\*.*" /Q
+	if not exist "%symdir%\%rlvdir%" mkdir "%symdir%\%rlvdir%"
+	del "%symdir%\%rlvdir%\*.*" /Q
 	
 	echo Copying files to "%dstdir%\%rlvdir%"
 	call copy "%bindir%\rylogviewer.exe" "%dstdir%\%rlvdir%\" /Y /F
 	if errorlevel 1 goto :eof
+	call copy "%bindir%\rylogviewer.pdb" "%symdir%\%rlvdir%\" /Y /F
+	if errorlevel 1 goto :eof
 	call copy "%bindir%\pr.dll" "%dstdir%\%rlvdir%\" /Y /F
+	if errorlevel 1 goto :eof
+	call copy "%bindir%\pr.pdb" "%symdir%\%rlvdir%\" /Y /F
+	if errorlevel 1 goto :eof
+	call copy "%bindir%\lib\clrdump.dll" "%dstdir%\%rlvdir%\lib\" /Y /F
+	if errorlevel 1 goto :eof
+	call copy "%bindir%\lib\dbghelp.dll" "%dstdir%\%rlvdir%\lib\" /Y /F
 	if errorlevel 1 goto :eof
 
 	echo Creating zip file

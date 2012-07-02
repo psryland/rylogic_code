@@ -18,8 +18,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="..\..\..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="..\..\..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="..\..\..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			>
@@ -87,8 +87,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="..\..\..\..\obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="..\..\..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="..\..\..\..\obj2008\$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			>
