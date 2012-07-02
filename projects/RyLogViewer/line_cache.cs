@@ -114,6 +114,7 @@ namespace RyLogViewer
 			// If not, read it from file and perform highlighting and transforming on it
 			
 			// Read the whole line into m_buf
+			m_file.Flush();
 			m_file.Seek(rng.Begin, SeekOrigin.Begin);
 			m_line_buf = rng.Count <= m_line_buf.Length ? m_line_buf : new byte[rng.Count];
 			int read = m_file.Read(m_line_buf, 0, (int)rng.Count);

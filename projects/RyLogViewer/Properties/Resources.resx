@@ -301,6 +301,11 @@ Error Details:
   <data name="WatchForUpdates" xml:space="preserve">
     <value>Watch the file and update automatically when it changes</value>
   </data>
+  <data name="AdditiveMode" xml:space="preserve">
+    <value>Assume log file changes are additive only. If enabled, only additions to the
+file will be scanned allowing increased performance. The view may get out of sync if the
+log file is modified in a way that isn't additive (e.g. lines swapped, deleted, etc)</value>
+  </data>
   <data name="ChangeForeColour" xml:space="preserve">
     <value>Change Foregroud Colour</value>
   </data>

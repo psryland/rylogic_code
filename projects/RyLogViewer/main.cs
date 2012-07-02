@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using pr.common;
 using pr.extn;
+using pr.gfx;
 using pr.gui;
 using pr.inet;
 using pr.maths;
@@ -139,6 +140,8 @@ namespace RyLogViewer
 			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
 			m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
 			m_btn_watch.Click              += (s,a) => EnableWatch(m_btn_watch.Checked);
+			m_btn_additive.ToolTipText      = Resources.AdditiveMode;
+			m_btn_additive.Click           += (s,a) => EnableAdditive(m_btn_additive.Checked);
 			m_toolstrip.Move               += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
 			ToolStripManager.Renderer       = new CheckedButtonRenderer();
 
@@ -446,6 +449,7 @@ namespace RyLogViewer
 				e.PaintBackground(e.ClipBounds, false);
 				e.PaintContent(e.ClipBounds);
 			}
+			e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, m_grid.DefaultCellStyle.SelectionBackColor, 0.7f);
 		}
 		
 		/// <summary>Handler for selections made in the grid</summary>
@@ -745,7 +749,15 @@ namespace RyLogViewer
 			ApplySettings();
 			if (enable) BuildLineIndex(m_filepos, m_settings.FileChangesAdditive);
 		}
-		
+
+		/// <summary>Turn on/off additive only mode</summary>
+		private void EnableAdditive(bool enable)
+		{
+			m_settings.FileChangesAdditive = enable;
+			ApplySettings();
+			if (!enable) BuildLineIndex(m_filepos, true);
+		}
+
 		/// <summary>Try to remove data from the log file</summary>
 		private void ClearLogFile()
 		{
@@ -1120,7 +1132,7 @@ namespace RyLogViewer
 				total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
 			
 			// Resize columns. If the total width is less than the control width use the control width instead
-			float scale = Maths.Max((float)m_grid.Width / total_width, 1.0f);
+			float scale = Maths.Max((m_grid.Width - 2f) / total_width, 1f);
 			foreach (DataGridViewColumn col in m_grid.Columns)
 				col.Width = (int)(col_widths[col.Index] * scale);
 		}
@@ -1284,7 +1296,8 @@ namespace RyLogViewer
 				m_btn_highlights.Checked = m_settings.HighlightsEnabled;
 				m_btn_filters.Checked    = m_settings.FiltersEnabled;
 				m_btn_transforms.Checked = m_settings.TransformsEnabled;
-				m_btn_watch.Checked       = m_watch_timer.Enabled;
+				m_btn_watch.Checked      = m_watch_timer.Enabled;
+				m_btn_additive.Checked   = m_settings.FileChangesAdditive;
 			
 				// The file scroll bar is only visible when part of the file is loaded
 				m_scroll_file.Width = m_settings.FileScrollWidth;
@@ -1362,19 +1375,18 @@ namespace RyLogViewer
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
-			Range range = LineIndexRange;//BufferRange(m_filepos, m_fileend, m_bufsize);
-			int row_delim_len = m_row_delim != null ? m_row_delim.Length : 0;
-			if (range.Count < m_fileend - row_delim_len)
+			if (m_line_index.Count == m_settings.LineCacheCount || m_fileend > m_settings.FileBufSize)
 			{
+				Range range = LineIndexRange;
 				if (!range.Equals(m_scroll_file.ThumbRange))
 					Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})", range.Begin, range.End, FileByteRange.Begin, FileByteRange.End);
 				
 				m_scroll_file.Visible    = true;
 				m_scroll_file.TotalRange = FileByteRange;
 				m_scroll_file.ThumbRange = range;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange].Range      = range;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange     ].Range = range;
 				m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Range = DisplayedRowsRange;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange].Range  = SelectedRowRange;
+				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange ].Range = SelectedRowRange;
 			}
 			else
 			{

@@ -44,6 +44,7 @@
 			this.m_btn_jump_to_start = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_watch = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_additive = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
@@ -138,10 +139,11 @@
             this.m_btn_jump_to_end,
             this.m_btn_jump_to_start,
             this.toolStripSeparator8,
-            this.m_btn_watch});
+            this.m_btn_watch,
+            this.m_btn_additive});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(288, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(347, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -252,6 +254,16 @@
 			this.m_btn_watch.Name = "m_btn_watch";
 			this.m_btn_watch.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_watch.Text = "Live Update";
+			// 
+			// m_btn_additive
+			// 
+			this.m_btn_additive.CheckOnClick = true;
+			this.m_btn_additive.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_additive.Image = global::RyLogViewer.Properties.Resources.edit_add;
+			this.m_btn_additive.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_additive.Name = "m_btn_additive";
+			this.m_btn_additive.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_additive.Text = "Additive Only";
 			// 
 			// m_menu
 			// 
@@ -905,6 +917,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_check_for_updates;
 		private System.Windows.Forms.ToolStripButton m_btn_transforms;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
+		private System.Windows.Forms.ToolStripButton m_btn_additive;
 	}
 }
 

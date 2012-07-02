@@ -77,6 +77,17 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Assume log file changes are additive only. If enabled, only additions to the
+        ///file will be scanned allowing increased performance. The view may get out of sync if the
+        ///log file is modified in a way that isn&apos;t additive (e.g. lines swapped, deleted, etc).
+        /// </summary>
+        internal static string AdditiveMode {
+            get {
+                return ResourceManager.GetString("AdditiveMode", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to RyLogViewer.
         /// </summary>
         internal static string AppTitle {

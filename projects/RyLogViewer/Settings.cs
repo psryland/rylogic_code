@@ -276,7 +276,7 @@ namespace RyLogViewer
 			StatusPosition                  = Point.Empty;
 			AlternateLineColours            = true;
 			LineSelectBackColour            = Color.DarkGreen;
-			LineSelectForeColour            = Color.Lime;
+			LineSelectForeColour            = Color.White;
 			LineBackColour1                 = Color.WhiteSmoke;
 			LineBackColour2                 = Color.FromArgb(192, 255, 192);
 			LineForeColour1                 = Color.Black;
