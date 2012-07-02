@@ -227,6 +227,9 @@ namespace RyLogViewer
 					m_settings.WindowSize = Size;
 					m_settings.RecentFiles = m_recent.Export();
 				};
+			
+			InitCache();
+			ApplySettings();
 		}
 
 		/// <summary>Called the first time the app is displayed</summary>
@@ -257,9 +260,6 @@ namespace RyLogViewer
 			// Check for updates
 			if (m_settings.CheckForUpdates)
 				CheckForUpdates(false);
-
-			InitCache();
-			ApplySettings();
 		}
 
 		/// <summary>Returns true if there is a log file currently open</summary>
