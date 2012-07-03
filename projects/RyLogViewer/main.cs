@@ -54,14 +54,14 @@ namespace RyLogViewer
 		// partial highlighting
 		// Tip of the Day content
 
-		public Main(string[] args)
+		public Main(StartupOptions startup_options)
 		{
 			Log.Register(null, false);
 			Log.Info(this, "App Startup: {0}", DateTime.Now);
-
+			
 			InitializeComponent();
 			AllowTransparency    = true;
-			m_settings           = new Settings();
+			m_settings           = new Settings(startup_options.SettingsPath);
 			m_recent             = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_watch              = new FileWatch();
 			m_watch_timer        = new Timer{Interval = Constants.FilePollingRate};
@@ -202,7 +202,7 @@ namespace RyLogViewer
 			m_find_ui.Move     += (s,e)=> { m_find_ui.Tag = new Size(m_find_ui.Location.X - Location.X, m_find_ui.Location.Y - Location.Y); };
 			
 			// Startup
-			Shown += (s,a)=> Startup(args);
+			Shown += (s,a)=> Startup(startup_options);
 			
 			// User input
 			KeyDown += (s,a) => HandleKeyDown(a);
@@ -233,7 +233,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Called the first time the app is displayed</summary>
-		private void Startup(string[] args)
+		private void Startup(StartupOptions su)
 		{
 			// Last screen position
 			if (m_settings.RestoreScreenLoc)
@@ -242,11 +242,11 @@ namespace RyLogViewer
 				Size = m_settings.WindowSize;
 				m_find_ui.Tag = new Size(Size.Width - m_find_ui.Width - 8, 28);
 			}
-					
+			
 			// Parse commandline
-			if (args.Length != 0)
+			if (su.FileToLoad != null)
 			{
-				ParseCommandLine(args);
+				OpenLogFile(su.FileToLoad);
 			}
 			else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
 			{
@@ -266,45 +266,6 @@ namespace RyLogViewer
 		private bool FileOpen
 		{
 			get { return m_file != null; }
-		}
-		
-		/// <summary>Parse the command line parameters</summary>
-		private void ParseCommandLine(IEnumerable<string> args)
-		{
-			string file_to_load = null;
-			foreach (var arg in args)
-			{
-				if (arg[0] == '-')
-				{
-					const string help =
-						"Valid Command Line Options:\r\n"+
-						"  -s <settings file path>\r\n"+
-						"     \r\n"+
-						"\r\n"+
-						"     The path to a settings file to load\r\n"+
-						"  -e <export file path> - The path to a settings file to load\r\n"+
-						"  -h                      - This help message\r\n"+
-						"";
-					
-					string cmd = arg.Substring(1).ToLower();
-					switch (cmd)
-					{
-					default:
-						MessageBox.Show(this, string.Format(
-							"'{0}' is not a valid command line switch\r\n\r\n{1}"
-							,cmd ,help), Resources.UnknownCmdLineOption, MessageBoxButtons.OK, MessageBoxIcon.Information);
-						break;
-					case "s":
-						break;
-					}
-				}
-				else
-				{
-					file_to_load = arg;
-				}
-			}
-			if (file_to_load != null)
-				OpenLogFile(file_to_load);
 		}
 		
 		/// <summary>Close the current log file</summary>

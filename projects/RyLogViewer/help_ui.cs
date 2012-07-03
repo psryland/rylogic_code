@@ -2,7 +2,9 @@
 using System.Drawing;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Windows.Forms;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -13,28 +15,47 @@ namespace RyLogViewer
 		private WebBrowser m_html;
 		private Button     m_btn_ok;
 		
-		public static DialogResult Show(IWin32Window owner, string resource_name, string title) { return Show(owner, resource_name, title, Point.Empty, Size.Empty); }
-		public static DialogResult Show(IWin32Window owner, string resource_name, string title, Point loc, Size size)
+		public static DialogResult ShowText(IWin32Window owner, string text, string title)
+		{
+			return ShowText(owner, text, title, Point.Empty, Size.Empty);
+		}
+		public static DialogResult ShowText(IWin32Window owner, string text, string title, Point loc, Size size)
+		{
+			Debug.Assert(text != null);
+			string encoded = Util.TextToHtml(text);
+			return ShowHtml(owner, encoded, title, loc, size);
+		}
+		public static DialogResult ShowHtml(IWin32Window owner, string html, string title)
+		{
+			return ShowHtml(owner, html, title, Point.Empty, Size.Empty);
+		}
+		public static DialogResult ShowHtml(IWin32Window owner, string html, string title, Point loc, Size size)
+		{
+			Debug.Assert(html != null);
+			using (var src = new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(html))))
+				return Show(owner, src, title, loc, size);
+		}
+		public static DialogResult ShowResource(IWin32Window owner, string resource_name, string title)
+		{
+			return ShowResource(owner, resource_name, title, Point.Empty, Size.Empty);
+		}
+		public static DialogResult ShowResource(IWin32Window owner, string resource_name, string title, Point loc, Size size)
 		{
 			Assembly ass = Assembly.GetExecutingAssembly();
-			Stream stream = ass.GetManifestResourceStream(resource_name);
-			
+			Stream stream = ass.GetManifestResourceStream(resource_name) ?? new MemoryStream(Encoding.UTF8.GetBytes(HelpNotFound));
+			using (var src = new StreamReader(stream))
+				return Show(owner, src, title, loc, size);
+		}
+		private static DialogResult Show(IWin32Window owner, StreamReader src, string title, Point loc, Size size)
+		{
 			var ui = new HelpUI{Text = title};
 			if (loc != Point.Empty) ui.Location = loc;
 			if (size != Size.Empty) ui.Size = size;
 			
+			Debug.Assert(src != null);
 			Debug.Assert(ui.m_html.Document != null, "ui.m_html.Document != null");
 			ui.m_html.Document.OpenNew(true);
-			
-			if (stream == null)
-			{
-				ui.m_html.Document.Write(HelpNotFound);
-			}
-			else
-			{
-				using (TextReader r = new StreamReader(stream))
-					ui.m_html.Document.Write(r.ReadToEnd());
-			}
+			ui.m_html.Document.Write(src.ReadToEnd());
 			return ui.ShowDialog(owner);
 		}
 

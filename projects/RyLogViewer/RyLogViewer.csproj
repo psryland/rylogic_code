@@ -73,6 +73,7 @@
     <Compile Include="about.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="startup_options.cs" />
     <Compile Include="export_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -142,6 +143,11 @@
       <DependentUpon>program_output_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="serial_connection_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -214,14 +220,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-      <DesignTime>True</DesignTime>
-    </Compile>
     <EmbeddedResource Include="serial_connection_ui.resx">
       <DependentUpon>serial_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
@@ -352,6 +353,7 @@
     <EmbeddedResource Include="docs\TransformQuickRef.html" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="docs\CommandLineRef.html" />
     <Content Include="lib\ClrDump.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

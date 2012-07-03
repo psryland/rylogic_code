@@ -26,6 +26,7 @@
     <None Include="site\inc\left_menu.shtml" />
     <None Include="site\inc\main_menu.shtml" />
     <None Include="site\inc\right_panel.shtml" />
+    <None Include="site\inc\search.shtml" />
     <None Include="site\inc\title.shtml" />
     <None Include="site\index.shtml" />
     <None Include="site\linedrawer.shtml" />

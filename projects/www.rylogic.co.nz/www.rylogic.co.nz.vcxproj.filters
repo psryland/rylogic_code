@@ -134,6 +134,9 @@
     <None Include="site\products.shtml">
       <Filter>site</Filter>
     </None>
+    <None Include="site\inc\search.shtml">
+      <Filter>site\inc</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="site">

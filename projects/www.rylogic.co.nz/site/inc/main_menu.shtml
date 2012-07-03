@@ -1,9 +1,35 @@
 <div id="menu">
-	<ul>
-		<li class="menuitem"><a href="../index.shtml">Home</a></li>
-		<li class="menuitem"><a href="../products.shtml">Products</a></li>
-		<li class="menuitem"><a href="../services.shtml">Services</a></li>
-		<li class="menuitem"><a href="../links.shtml">Links</a></li>
-		<li class="menuitem"><a href="../contact.shtml">Contact</a></li>
-	</ul>
+	<table style="border:0px;padding:0px">
+        <tbody>
+        <tr>
+        <td>
+            <ul>
+		        <li class="menuitem"><a href="../index.shtml">Home</a></li>
+		        <li class="menuitem"><a href="../products.shtml">Products</a></li>
+		        <li class="menuitem"><a href="../services.shtml">Services</a></li>
+		        <li class="menuitem"><a href="../links.shtml">Links</a></li>
+		        <li class="menuitem"><a href="../contact.shtml">Contact</a></li>
+	        </ul>
+        </td>
+        <td>
+            <div id="search">
+                <form action="http://www.google.com/cse" id="cse-search-box">
+                    <div>
+                        <input type="hidden" name="cx" value="001126538005051100876:bb0p8harmxg"/>
+                        <input type="hidden" name="ie" value="UTF-8"/>
+                        <input type="text" name="q" size="40" style="border: 1px solid rgb(126, 157, 185);
+                            padding: 2px; background-image: url(http://www.google.com/cse/intl/en/images/google_custom_search_watermark.gif);
+                            background-color: rgb(255, 255, 255); background-position: 0% 50%; background-repeat: no-repeat no-repeat;"/>
+                        <input type="submit" name="sa" value="Search"/>
+                    </div>
+                    <input name="siteurl" type="hidden" value="www.google.com/cse/home?cx=001126538005051100876:bb0p8harmxg"/>
+                    <input name="ref" type="hidden" value="www.google.com/cse/panel/index?cx=001126538005051100876:bb0p8harmxg&amp;sig=__TpoP4HVn1m2c4ZhMapqcs8FQ7II="/>
+                    <input name="ss" type="hidden" value=""/>
+                </form>
+                <script type="text/javascript" src="http://www.google.com/cse/brand?form=cse-search-box&amp;lang=en"></script>
+            </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
 </div>

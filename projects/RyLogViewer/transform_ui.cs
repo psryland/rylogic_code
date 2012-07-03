@@ -372,7 +372,7 @@ namespace RyLogViewer
 		/// <summary>Display a quick help for the match field syntax</summary>
 		private void ShowMatchHelp()
 		{
-			HelpUI.Show(this
+			HelpUI.ShowResource(this
 				,"RyLogViewer.docs.TransformQuickRef.html"
 				,"Transform Help"
 				,PointToScreen(Location) + new Size(Width, 0)

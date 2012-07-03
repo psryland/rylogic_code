@@ -24,7 +24,7 @@ namespace RyLogViewer
 			
 			m_btn_help.Click += (s,a)=>
 				{
-					HelpUI.Show(this, "RyLogViewer.docs.SwizzleQuickRef.html", "Swizzle Help");
+					HelpUI.ShowResource(this, "RyLogViewer.docs.SwizzleQuickRef.html", "Swizzle Help");
 				};
 			m_edit_source.TextChanged += (s,a)=>
 				{

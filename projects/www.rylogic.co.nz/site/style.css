@@ -22,7 +22,11 @@ body
 {
 	color: #67A0F5;
 }
-
+.table
+{
+    border:0px;
+    padding:0px;
+}
 #container
 {
 	display: block;
@@ -106,6 +110,17 @@ body
 	color: #86AEF9;
 	background-image: url(./art/linkbackground.jpg);
 	background-repeat: repeat-x;
+}
+
+#search
+{
+    padding-left: 0px;
+    padding-right: 50px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+#cse-search-box
+{
 }
 
 #leftmenu

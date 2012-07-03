@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using pr.extn;
 using pr.maths;
@@ -249,7 +250,13 @@ namespace RyLogViewer
 			m_btn_settings_load.ToolTip(m_tt, "Load settings from file");
 			m_btn_settings_load.Click += (s,a)=>
 				{
-					var dg = new OpenFileDialog{Title = "Choose a settings file to load", Filter = Resources.SettingsFileFilter, CheckFileExists = true};
+					var dg = new OpenFileDialog
+					{
+						Title = "Choose a settings file to load",
+						Filter = Resources.SettingsFileFilter,
+						CheckFileExists = true,
+						InitialDirectory = Path.GetDirectoryName(m_settings.Filepath)
+					};
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_settings.Filepath = dg.FileName;
 					m_settings.Reload();
@@ -261,7 +268,13 @@ namespace RyLogViewer
 			m_btn_settings_save.ToolTip(m_tt, "Save current settings to a file");
 			m_btn_settings_save.Click += (s,a)=>
 				{
-					var dg = new SaveFileDialog{Title = "Save current settings", Filter = Resources.SettingsFileFilter, CheckPathExists = true};
+					var dg = new SaveFileDialog
+						{
+							Title = "Save current settings",
+							Filter = Resources.SettingsFileFilter,
+							CheckPathExists = true,
+							InitialDirectory = Path.GetDirectoryName(m_settings.Filepath)
+						};
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_settings.Filepath = dg.FileName;
 					m_settings.Save();

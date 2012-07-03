@@ -1,0 +1,30 @@
+<div id="search">
+<!--    <div id="cse" style="width: 30%;">Loading</div>
+    <script src="http://www.google.com/jsapi" type="text/javascript"></script>
+    <script type="text/javascript">
+        google.load('search', '1', { language: 'en', style: google.loader.themes.V2_DEFAULT });
+        google.setOnLoadCallback(function () {
+            var customSearchOptions = {};
+            var customSearchControl = new google.search.CustomSearchControl('001126538005051100876:bb0p8harmxg', customSearchOptions);
+            customSearchControl.setResultSetSize(google.search.Search.FILTERED_CSE_RESULTSET);
+            customSearchControl.draw('cse');
+        }, true);
+    </script>-->
+    <div style="padding-left: 50px; padding-top: 20px; padding-bottom: 20px">
+        <form action="http://www.google.com/cse" id="cse-search-box">
+            <div>
+                <input type="hidden" name="cx" value="001126538005051100876:bb0p8harmxg"/>
+                <input type="hidden" name="ie" value="UTF-8"/>
+                <input type="text" name="q" size="40" style="border: 1px solid rgb(126, 157, 185);
+                    padding: 2px; background-image: url(http://www.google.com/cse/intl/en/images/google_custom_search_watermark.gif);
+                    background-color: rgb(255, 255, 255); background-position: 0% 50%; background-repeat: no-repeat no-repeat;"/>
+                <input type="submit" name="sa" value="Search"/>
+            </div>
+            <input name="siteurl" type="hidden" value="www.google.com/cse/home?cx=001126538005051100876:bb0p8harmxg"/>
+            <input name="ref" type="hidden" value="www.google.com/cse/panel/index?cx=001126538005051100876:bb0p8harmxg&amp;sig=__TpoP4HVn1m2c4ZhMapqcs8FQ7II="/>
+            <input name="ss" type="hidden" value=""/>
+        </form>
+        <script type="text/javascript" src="http://www.google.com/cse/brand?form=cse-search-box&amp;lang=en"></script>
+    </div>
+</div>
+

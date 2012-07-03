@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.common;
@@ -8,12 +7,8 @@ using pr.common;
 namespace RyLogViewer
 {
 	/// <summary>RyLog Viewer settings</summary>
-	public sealed class Settings :SettingsBase
+	public sealed class Settings :SettingsBase<Settings>
 	{
-		// Defaults
-		public static readonly Settings Default = new Settings(ELoadOptions.Defaults);
-		protected override SettingsBase DefaultData { get { return Default; } }
-		
 		public string RecentFiles
 		{
 			get { return get<string>("RecentFiles"); }
@@ -265,7 +260,8 @@ namespace RyLogViewer
 			set { set("PipeConnectionHistory", value); }
 		}
 
-		public Settings(ELoadOptions opts = ELoadOptions.Normal)
+		// Default construct settings
+		public Settings()
 		{
 			RecentFiles                     = "";
 			Font                            = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
@@ -317,15 +313,10 @@ namespace RyLogViewer
 			NetworkConnectionHistory        = new NetConn[0];
 			SerialConnectionHistory         = new SerialConn[0];
 			PipeConnectionHistory           = new PipeConn[0];
-			
-			// Load all the default values first, then if the load options are 'normal'
-			// load from file. This ensures options missing in the file exist with default values
-			if (opts == ELoadOptions.Normal)
-			{
-				try { Reload(); }
-				catch (Exception ex) { Debug.WriteLine(ex); }
-			}
 		}
+		public Settings(string filepath)
+		:base(filepath)
+		{}
 		
 		/// <summary>Perform validation on the loaded settings</summary>
 		public override void Validate()

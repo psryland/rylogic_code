@@ -72,7 +72,7 @@ namespace RyLogViewer
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");
 			m_btn_regex_help.Click += (s,a)=>
 				{
-					HelpUI.Show(this
+					HelpUI.ShowResource(this
 						,"RyLogViewer.docs.RegexQuickRef.html"
 						,"Regular Expression Help"
 						,PointToScreen(Location) + new Size(Width, 0)

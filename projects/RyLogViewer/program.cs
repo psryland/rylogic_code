@@ -5,23 +5,59 @@ using System.Reflection;
 using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.util;
 
 namespace RyLogViewer
 {
 	static class program
 	{
-		/// <summary>
-		/// The main entry point for the application.
-		/// </summary>
+		/// <summary>The main entry point for the application.</summary>
 		[STAThread]
 		[SecurityPermission(SecurityAction.Demand,ControlAppDomain=true)] // for the unhandled exception handler
 		static void Main(string[] args)
 		{
+			// Register ClrDump handler
 			try { ClrDump.Init(DumpHandler); } catch { Log.Warn(null, "ClrDump not available"); }
+			
+			Environment.ExitCode = 0;
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new Main(args));
+			
+			// Start the main app
+			StartupOptions su = null; Exception err = null;
+			try { su = new StartupOptions(args); } catch (Exception ex) { err = ex; }
+			
+			// If there was an error, or they just want help displayed...
+			if (err != null || su.ShowHelp)
+			{
+				if (err != null)
+				{
+					MessageBox.Show(string.Format(
+						"There is an error in the startup options provided.\r\n"+
+						"Error Details:\r\n{0}"
+						,err.Message)
+						,"Command Line Error"
+						,MessageBoxButtons.OK
+						,MessageBoxIcon.Error);
+				}
+				HelpUI.ShowResource(null, "RyLogViewer.docs.CommandLineRef.html", "Command Line and Startup Options");
+				Environment.ExitCode = 1;
+				return;
+			}
+			
+			// Create the main application
+			var main = new Main(su);
+			
+			// If an export path is given, run as a command line tool doing an export
+			if (su.ExportPath != null)
+			{
+				
+			}
+			else
+			{
+				Application.Run(main);
+			}
 		}
 		
 		/// <summary>Handle dumps</summary>
@@ -44,6 +80,7 @@ namespace RyLogViewer
 				,MessageBoxButtons.OK
 				,MessageBoxIcon.Error);
 			#endif
+			Environment.ExitCode = 1;
 			ClrDump.DefaultDumpHandler(sender, args);
 		}
 	}

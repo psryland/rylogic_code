@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -33,7 +34,7 @@ namespace pr.common
 {
 	/// <summary>A base class for simple settings</summary>
 	[KnownType("KnownTypes")]
-	public abstract class SettingsBase
+	public abstract class SettingsBase<T> where T:SettingsBase<T>, new()
 	{
 		// Using a List<> instead of a Dictionary as Dictionary isn't serialisable
 		[KnownType(typeof(Point))] // Add more of these as needed
@@ -53,21 +54,14 @@ namespace pr.common
 		
 		private const string version_key = "__SettingsVersion";
 		protected List<Pair> Data = new List<Pair>();
+		private bool m_saving;
+		private bool m_auto_save;
 		
-		/// <summary>Options for loading settings</summary>
-		public enum ELoadOptions { Normal, Defaults };
-		
-		/// <summary>Return default values for these settings</summary>
-		protected abstract SettingsBase DefaultData { get; }
-		
-		/// <summary>Override this method to return addition known types</summary>
-		protected virtual IEnumerable<Type> KnownTypes { get { return Enumerable.Empty<Type>(); } }
-
-		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		protected virtual string Version { get { return "v1.0"; } }
+		/// <summary>The default values for the settings</summary>
+		public static T Default { get; private set; }
 		
 		/// <summary>Returns the directory in which to store app settings</summary>
-		public string DefaultAppDataDirectory
+		public static string DefaultAppDataDirectory
 		{
 			get
 			{
@@ -79,53 +73,48 @@ namespace pr.common
 		}
 		
 		/// <summary>Returns the directory in which to store app settings</summary>
-		public string DefaultFilepath
+		public static string DefaultFilepath
 		{
 			get { return Path.Combine(DefaultAppDataDirectory, "settings.xml"); }
 		}
 
-		/// <summary>Returns the filepath for the persisted settings file</summary>
+		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
+		protected virtual string Version { get { return "v1.0"; } }
+		
+		/// <summary>Override this method to return addition known types</summary>
+		protected virtual IEnumerable<Type> KnownTypes { get { return Enumerable.Empty<Type>(); } }
+
+		/// <summary>
+		/// Returns the filepath for the persisted settings file.
+		/// Settings cannot be saved until this property has a valid filepath</summary>
 		public string Filepath { get; set; }
 		
-		/// <summary>Indexer for accessing settings</summary>
-		protected object this[string key]
-		{
-			get 
-			{
-				int idx = Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
-				if (idx >= 0) return Data[idx].Value;
-				idx = DefaultData.Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
-				if (idx >= 0) return DefaultData.Data[idx].Value;
-				throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
-					"This is probably because there is no default value set "+
-					"in the constructor of the derived settings class");
-			}
-			set
-			{
-				// Key not in the data yet? Must be initial value from startup
-				int idx = Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
-				if (idx < 0) { Data.Insert(~idx, new Pair{Key = key, Value = value}); return; }
-				
-				object old_value = Data[idx].Value;
-				if (Equals(old_value, value)) return; // If the values are the same, don't raise 'changing' events
-				
-				var args = new SettingsChangingEventArgs(key, old_value, value, false);
-				if (SettingChanging != null && key != version_key) SettingChanging(this, args);
-				if (!args.Cancel) Data[idx].Value = value;
-				if (SettingChanged != null && key != version_key) SettingChanged(this, new SettingChangedEventArgs(key, old_value, value));
-			}
-		}
-
 		/// <summary>Read a settings value</summary>
-		protected T get<T>(string key)
+		protected Value get<Value>(string key)
 		{
-			return (T)this[key];
+			int idx = Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+			if (idx >= 0) return (Value)Data[idx].Value;
+			idx = Default.Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+			if (idx >= 0) return (Value)Default.Data[idx].Value;
+			throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
+				"This is probably because there is no default value set "+
+				"in the constructor of the derived settings class");
 		}
 
 		/// <summary>Write a settings value</summary>
-		protected void set<T>(string key, T new_value)
+		protected void set<Value>(string key, Value value)
 		{
-			this[key] = new_value;
+			// Key not in the data yet? Must be initial value from startup
+			int idx = Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+			if (idx < 0) { Data.Insert(~idx, new Pair{Key = key, Value = value}); return; }
+				
+			object old_value = Data[idx].Value;
+			if (Equals(old_value, value)) return; // If the values are the same, don't raise 'changing' events
+				
+			var args = new SettingsChangingEventArgs(key, old_value, value, false);
+			if (SettingChanging != null && key != version_key) SettingChanging(this, args);
+			if (!args.Cancel) Data[idx].Value = value;
+			if (SettingChanged != null && key != version_key) SettingChanged(this, new SettingChangedEventArgs(key, old_value, value));
 		}
 		
 		/// <summary>An event raised when a settings is about to change value</summary>
@@ -168,7 +157,6 @@ namespace pr.common
 		{
 			/// <summary>The location of where the settings were loaded from</summary>
 			public string Filepath { get; private set; }
-			
 			public SettingsLoadedEventArgs(string filepath) { Filepath = filepath; }
 		}
 
@@ -180,9 +168,23 @@ namespace pr.common
 			public SettingsSavingEventArgs(bool cancel) :base(cancel) {}
 		}
 		
+		/// <summary>Default settings instance</summary>
 		protected SettingsBase()
 		{
-			Filepath = DefaultFilepath;
+			Default = (T)this;
+		}
+		
+		/// <summary>Initialise the settings object</summary>
+		protected SettingsBase(string filepath)
+		{
+			Debug.Assert(!string.IsNullOrEmpty(filepath));
+			
+			Filepath = filepath;
+			Default  = new T();
+			Data     = new List<Pair>(Default.Data);
+			
+			try { Load(Filepath); }
+			catch (Exception ex) { Debug.WriteLine(ex); }
 			AutoSaveOnChanges = true;
 		}
 		
@@ -199,12 +201,24 @@ namespace pr.common
 				else             SettingChanged -= save;
 			}
 		}
-		private bool m_auto_save;
 
-		/// <summary>Refreshes the settings from persistent storage</summary>
-		public virtual void Reload()
+		/// <summary>Resets the persistent settings to their defaults</summary>
+		public void Reset()
 		{
-			string filepath = Filepath;
+			Default.Save(Filepath);
+			Reload();
+		}
+
+		/// <summary>Reload the current settings file</summary>
+		public void Reload()
+		{
+			Load(Filepath);
+		}
+		
+		/// <summary>Refreshes the settings from persistent storage</summary>
+		public void Load(string filepath)
+		{
+			Filepath = filepath;
 			if (!File.Exists(filepath))
 				Reset();
 			
@@ -228,12 +242,14 @@ namespace pr.common
 		}
 
 		/// <summary>Persist current settings to storage</summary>
-		public virtual void Save()
+		public void Save(string filepath)
 		{
 			if (m_saving) return;
 			try
 			{
 				m_saving = true;
+				if (string.IsNullOrEmpty(filepath))
+					throw new ArgumentNullException("No settings filepath set");
 				
 				// Notify of a save about to happen
 				SettingsSavingEventArgs args = new SettingsSavingEventArgs(false);
@@ -241,7 +257,6 @@ namespace pr.common
 				if (args.Cancel) return;
 				
 				// Ensure the save directory exists
-				string filepath = Filepath;
 				string path = Path.GetDirectoryName(filepath);
 				if (path != null && !Directory.Exists(path)) Directory.CreateDirectory(path);
 				
@@ -255,17 +270,15 @@ namespace pr.common
 			}
 			finally { m_saving = false; }
 		}
-		private bool m_saving;
-
-		/// <summary>Resets the persistent settings to their defaults</summary>
-		public virtual void Reset()
+		
+		/// <summary>Save using the last filepath</summary>
+		public void Save()
 		{
-			DefaultData.Save();
-			Reload();
+			Save(Filepath);
 		}
-
+		
 		/// <summary>Remove the settings file from persistent storage</summary>
-		public virtual void Delete()
+		public void Delete()
 		{
 			if (File.Exists(Filepath))
 				File.Delete(Filepath);
@@ -286,24 +299,19 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		private sealed class Settings :SettingsBase
+		private sealed class Settings :SettingsBase<Settings>
 		{
-			public static readonly Settings Default = new Settings(ELoadOptions.Defaults);
-			protected override SettingsBase DefaultData { get { return Default; } }
-			
 			public string   Str { get { return get<string  >("Str"); } set { set("Str", value); } }
 			public int      Int { get { return get<int     >("Int"); } set { set("Int", value); } }
 			
-			public Settings(ELoadOptions opts = ELoadOptions.Normal)
+			public Settings()
 			{
-				if (opts == ELoadOptions.Normal)
-				{
-					// Try to load from file, if that fails, fall through an load defaults
-					try { Reload(); return; } catch {}
-				}
 				Str = "default";
 				Int = 4;
 			}
+			public Settings(string filepath)
+			:base(filepath)
+			{}
 		}
 		
 		[Test] public static void TestSettings()
@@ -311,7 +319,7 @@ namespace pr
 			Settings s = new Settings();
 			Assert.AreEqual(Settings.Default.Str, s.Str);
 			Assert.AreEqual(Settings.Default.Int, s.Int);
-			s.Save();
+			Assert.Throws(typeof(ArgumentNullException), s.Save); // no filepath set
 		}
 	}
 }
