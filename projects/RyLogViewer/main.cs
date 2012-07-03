@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
+using System.Xml.Linq;
 using pr.common;
 using pr.extn;
 using pr.gfx;
@@ -79,6 +80,9 @@ namespace RyLogViewer
 			m_fileend            = 0;
 			m_bufsize            = m_settings.FileBufSize;
 			m_line_cache_count   = m_settings.LineCacheCount;
+			
+			// Startup options
+			ApplyStartupOptions(startup_options);
 			
 			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
 			
@@ -230,6 +234,66 @@ namespace RyLogViewer
 			
 			InitCache();
 			ApplySettings();
+		}
+
+		//
+		public static void ExportToFile(StartupOptions startup_options)
+		{
+			// todo
+
+			// Create a temporary settings file so that we don't trash the normal one
+
+			// refactor the export function so we can call the worker thread not in a progress dialog
+
+			// add a 'no gui' option to allow uses to no show the export progress dialog
+			var m = new Main(startup_options);
+
+		}
+
+		/// <summary>Apply the startup options</summary>
+		private void ApplyStartupOptions(StartupOptions su)
+		{
+			// If a pattern set file path is given, replace the patterns in 'm_settings'
+			// with the contents of the file
+			if (su.HighlightSetPath != null)
+			{
+				try
+				{
+					XDocument doc = XDocument.Load(su.HighlightSetPath);
+					if (doc.Root == null) throw new InvalidDataException("Invalid highlight set, root xml node not found");
+					m_settings.HighlightPatterns = doc.ToString(SaveOptions.None);
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+			}
+			if (su.FilterSetPath != null)
+			{
+				try
+				{
+					XDocument doc = XDocument.Load(su.FilterSetPath);
+					if (doc.Root == null) throw new InvalidDataException("Invalid filter set, root xml node not found");
+					m_settings.FilterPatterns = doc.ToString(SaveOptions.None);
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+			}
+			if (su.TransformSetPath != null)
+			{
+				try
+				{
+					XDocument doc = XDocument.Load(su.TransformSetPath);
+					if (doc.Root == null) throw new InvalidDataException("Invalid transform set, root xml node not found");
+					m_settings.TransformPatterns = doc.ToString(SaveOptions.None);
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+			}
 		}
 
 		/// <summary>Called the first time the app is displayed</summary>
@@ -627,8 +691,8 @@ namespace RyLogViewer
 					{
 						Line line             = new Line();
 						int last_progress     = 0;
-						rng.Begin           = Maths.Clamp(rng.Begin, 0, file.Length);
-						rng.End             = Maths.Clamp(rng.End, 0, file.Length);
+						rng.Begin             = Maths.Clamp(rng.Begin, 0, file.Length);
+						rng.End               = Maths.Clamp(rng.End, 0, file.Length);
 						row_delim             = Misc.Robitise(row_delim);
 						col_delim             = Misc.Robitise(col_delim);
 						bool ignore_blanks    = m_settings.IgnoreBlankLines;

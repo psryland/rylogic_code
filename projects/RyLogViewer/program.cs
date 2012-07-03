@@ -47,17 +47,16 @@ namespace RyLogViewer
 			}
 			
 			// Create the main application
-			var main = new Main(su);
 			
 			// If an export path is given, run as a command line tool doing an export
 			if (su.ExportPath != null)
 			{
-				
+				RyLogViewer.Main.ExportToFile(su);
+				return;
 			}
-			else
-			{
-				Application.Run(main);
-			}
+			
+			// Otherwise show the app
+			Application.Run(new Main(su));
 		}
 		
 		/// <summary>Handle dumps</summary>

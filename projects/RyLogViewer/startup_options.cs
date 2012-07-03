@@ -33,9 +33,6 @@ namespace RyLogViewer
 		/// <summary>The transform set file to load</summary>
 		public string TransformSetPath { get; private set; }
 		
-		/// <summary>True if the app should run without display the GUI</summary>
-		public bool NoGUI { get; private set; }
-		
 		/// <summary>True if the command line help options should be displayed</summary>
 		public bool ShowHelp { get; private set; }
 
@@ -74,7 +71,6 @@ namespace RyLogViewer
 				case "-e":
 					if (++i == iend) throw new ArgumentException("No export file path given after '-e' option.");
 					ExportPath = args[i];
-					NoGUI = true;
 					break;
 				case "-hl":
 					if (++i == iend) throw new ArgumentException("No highlight set file path given after '-hl' option.");

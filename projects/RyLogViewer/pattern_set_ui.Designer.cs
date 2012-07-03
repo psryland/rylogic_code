@@ -40,9 +40,8 @@
 			// 
 			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
 			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
-			this.m_image_list.Images.SetKeyName(0, "bookmark_add.png");
-			this.m_image_list.Images.SetKeyName(1, "my_documents.png");
-			this.m_image_list.Images.SetKeyName(2, "fileclose.png");
+			this.m_image_list.Images.SetKeyName(0, "edit_save.png");
+			this.m_image_list.Images.SetKeyName(1, "folder_with_file.png");
 			// 
 			// m_combo_sets
 			// 

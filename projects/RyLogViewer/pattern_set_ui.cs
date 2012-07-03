@@ -33,9 +33,9 @@ namespace RyLogViewer
 			}
 		}
 
-		protected const string PatternSetXmlTag = "patternset";
-		private readonly ToolTip m_tt;
+		private const string PatternSetXmlTag = "patternset";
 		protected readonly List<Set> m_sets;
+		private readonly ToolTip m_tt;
 		protected Settings m_settings;
 
 		/// <summary>Raised when the list of current patterns is changed</summary>
