@@ -73,6 +73,9 @@
     <Compile Include="about.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="export.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="startup_options.cs" />
     <Compile Include="export_ui.cs">
       <SubType>Form</SubType>

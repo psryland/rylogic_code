@@ -23,6 +23,7 @@
 //	//or
 //	if (!pr::EnumCommandLine(GetCommandLine(), thing)) return false;
 //
+#pragma once
 #ifndef PR_COMMAND_LINE_H
 #define PR_COMMAND_LINE_H
 

@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using pr.common;
 
 namespace RyLogViewer
 {

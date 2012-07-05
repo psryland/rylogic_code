@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Security.Permissions;
-using System.Text;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
 using pr.util;
 
 namespace RyLogViewer
@@ -45,8 +42,6 @@ namespace RyLogViewer
 				Environment.ExitCode = 1;
 				return;
 			}
-			
-			// Create the main application
 			
 			// If an export path is given, run as a command line tool doing an export
 			if (su.ExportPath != null)
