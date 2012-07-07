@@ -48,7 +48,8 @@ namespace RyLogViewer
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
 		private int m_line_cache_count;                       // The number of lines to scan about the currently selected row
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
-		
+		private bool m_first_row_is_odd;                      // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
+
 		public Main(StartupOptions startup_options)
 		{
 			Log.Register(null, false);
@@ -450,6 +451,10 @@ namespace RyLogViewer
 				e.Handled = false;
 				return;
 			}
+			
+			// Give the illusion that the alternating row colour is moving with the overall file
+			var cs = ((e.RowIndex & 1) == 1) == m_first_row_is_odd ? m_grid.DefaultCellStyle : m_grid.AlternatingRowsDefaultCellStyle;
+			e.CellStyle.ApplyStyle(cs);
 			
 			// Check if the cell value has a highlight pattern it matches
 			Highlight hl = (e.RowIndex != -1) ? ReadLine(e.RowIndex)[e.ColumnIndex].HL : null;
@@ -1178,6 +1183,10 @@ namespace RyLogViewer
 					// Configure the grid
 					if (m_line_index.Count != 0)
 					{
+						// Give the illusion that the alternating row colour is moving with the overall file
+						if ((Math.Abs(row_delta) & 1) == 1)
+							m_first_row_is_odd = !m_first_row_is_odd;
+						
 						// Ensure the grid has the correct number of rows
 						using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
 							SetGridRowCount(m_line_index.Count, row_delta);
