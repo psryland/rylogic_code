@@ -48,6 +48,7 @@ namespace RyLogViewer
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
 		private int m_line_cache_count;                       // The number of lines to scan about the currently selected row
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
+		private bool m_alternating_line_colours;              // Cache the alternating line colours setting for performance
 		private bool m_first_row_is_odd;                      // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
 
 		public Main(StartupOptions startup_options)
@@ -453,8 +454,11 @@ namespace RyLogViewer
 			}
 			
 			// Give the illusion that the alternating row colour is moving with the overall file
-			var cs = ((e.RowIndex & 1) == 1) == m_first_row_is_odd ? m_grid.DefaultCellStyle : m_grid.AlternatingRowsDefaultCellStyle;
-			e.CellStyle.ApplyStyle(cs);
+			if (m_alternating_line_colours)
+			{
+				var cs = ((e.RowIndex & 1) == 1) == m_first_row_is_odd ? m_grid.DefaultCellStyle : m_grid.AlternatingRowsDefaultCellStyle;
+				e.CellStyle.ApplyStyle(cs);
+			}
 			
 			// Check if the cell value has a highlight pattern it matches
 			Highlight hl = (e.RowIndex != -1) ? ReadLine(e.RowIndex)[e.ColumnIndex].HL : null;
@@ -1108,12 +1112,13 @@ namespace RyLogViewer
 			Log.Info(this, "Applying settings");
 			
 			// Cached settings for performance, don't overwrite auto detected cached values tho
-			m_encoding   = GetEncoding(m_settings.Encoding);
-			m_row_delim  = GetRowDelim(m_settings.RowDelimiter);
-			m_col_delim  = GetColDelim(m_settings.ColDelimiter);
-			m_row_height = m_settings.RowHeight;
-			m_bufsize    = m_settings.FileBufSize;
-			m_line_cache_count = m_settings.LineCacheCount;
+			m_encoding                 = GetEncoding(m_settings.Encoding);
+			m_row_delim                = GetRowDelim(m_settings.RowDelimiter);
+			m_col_delim                = GetColDelim(m_settings.ColDelimiter);
+			m_row_height               = m_settings.RowHeight;
+			m_bufsize                  = m_settings.FileBufSize;
+			m_line_cache_count         = m_settings.LineCacheCount;
+			m_alternating_line_colours = m_settings.AlternateLineColours;
 			
 			// Tail
 			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
