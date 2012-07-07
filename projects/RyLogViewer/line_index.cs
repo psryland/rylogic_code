@@ -191,7 +191,7 @@ namespace RyLogViewer
 							if (BuildCancelled(build_issue)) return;
 							
 							// True if 'filepos' has moved toward the end of the file
-							bool toward_start = filepos < last_filepos;
+							bool toward_start  = filepos == last_filepos ? filepos == 0 : filepos < last_filepos;
 							bool scan_backward = fileend - filepos >= filepos - 0; // scan in the most bound direction first
 							
 							// Determine the range of bytes to scan in each direction

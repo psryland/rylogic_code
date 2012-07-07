@@ -194,6 +194,7 @@
     <Compile Include="directshow.net\VidPort.cs" />
     <Compile Include="directshow.net\Vmr9.cs" />
     <Compile Include="directshow.net\VmRender.cs" />
+    <Compile Include="extn\dict_extensions.cs" />
     <Compile Include="extn\datagridview_extensions.cs">
       <SubType>Component</SubType>
     </Compile>

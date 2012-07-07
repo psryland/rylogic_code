@@ -16,10 +16,16 @@ namespace RyLogViewer
 		public string ExeDir { get; private set; }
 		
 		/// <summary>The filepath to the settings file to use</summary>
-		public string SettingsPath { get; private set; }
+		public string SettingsPath { get; set; }
 		
-		/// <summary>The file to export to. Not-null implies an export is wanted</summary>
+		/// <summary>Settings for an export from the command line. Null if not an export</summary>
 		public string ExportPath { get; private set; }
+		
+		/// <summary>The row delimiter to use in the output file of an export (humanised)</summary>
+		public string RowDelim { get; private set; }
+		
+		/// <summary>The column delimiter to use in the output file of an export (humanised)</summary>
+		public string ColDelim { get; private set; }
 		
 		/// <summary>The highlight set file to load</summary>
 		public string HighlightSetPath { get; private set; }
@@ -29,6 +35,9 @@ namespace RyLogViewer
 		
 		/// <summary>The transform set file to load</summary>
 		public string TransformSetPath { get; private set; }
+		
+		/// <summary>True if the app should run with displaying any UI</summary>
+		public bool NoGUI { get; private set; }
 		
 		/// <summary>True if the command line help options should be displayed</summary>
 		public bool ShowHelp { get; private set; }
@@ -54,37 +63,21 @@ namespace RyLogViewer
 					continue;
 				}
 				
-				switch (arg)
-				{
-				default:
-					throw new ArgumentException("Unknown command line option '"+arg+"'.");
-				case "-p":
-					PortableMode = true;
-					break;
-				case "-s":
-					if (++i == iend) throw new ArgumentException("No settings file path given after '-s' option.");
-					SettingsPath = args[i];
-					break;
-				case "-e":
-					if (++i == iend) throw new ArgumentException("No export file path given after '-e' option.");
-					ExportPath = args[i];
-					break;
-				case "-hl":
-					if (++i == iend) throw new ArgumentException("No highlight set file path given after '-hl' option.");
-					HighlightSetPath = args[i];
-					break;
-				case "-ft":
-					if (++i == iend) throw new ArgumentException("No filter set file path given after '-ft' option.");
-					FilterSetPath = args[i];
-					break;
-				case "-tx":
-					if (++i == iend) throw new ArgumentException("No transform set file path given after '-tx' option.");
-					TransformSetPath = args[i];
-					break;
-				case "-h":
-					ShowHelp = true;
-					break;
-				}
+				// Helper for comparing option strings
+				Func<string, bool> IsOption = opt => { return string.CompareOrdinal(arg, 0, opt, 0, opt.Length) == 0; };
+
+				// (order these by longest option first)
+				if      (IsOption(CmdLineOption.RDelim       )) { RowDelim = arg.Substring(CmdLineOption.RDelim.Length); }
+				else if (IsOption(CmdLineOption.CDelim       )) { ColDelim = arg.Substring(CmdLineOption.CDelim.Length); }
+				else if (IsOption(CmdLineOption.NoGUI        )) { NoGUI = true; }
+				else if (IsOption(CmdLineOption.HighlightSet )) { HighlightSetPath = arg.Substring(CmdLineOption.HighlightSet.Length); }
+				else if (IsOption(CmdLineOption.FilterSet    )) { FilterSetPath = arg.Substring(CmdLineOption.FilterSet.Length); }
+				else if (IsOption(CmdLineOption.TransformSet )) { TransformSetPath = arg.Substring(CmdLineOption.TransformSet.Length); }
+				else if (IsOption(CmdLineOption.Portable     )) { PortableMode = true; }
+				else if (IsOption(CmdLineOption.SettingsPath )) { SettingsPath = arg.Substring(CmdLineOption.SettingsPath.Length); }
+				else if (IsOption(CmdLineOption.Export       )) { ExportPath = arg.Substring(CmdLineOption.Export.Length); }
+				else if (IsOption(CmdLineOption.ShowHelp     )) { ShowHelp = true; }
+				else throw new ArgumentException("Unknown command line option '"+arg+"'.");
 			}
 			
 			// If the export option is given, a 'FileToLoad' must also be given

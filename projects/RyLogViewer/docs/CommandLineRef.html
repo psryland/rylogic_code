@@ -48,16 +48,16 @@
                 </td>
             </tr>
             <tr>
-                <td class="option_column">-s "settings file path"</td>
+                <td class="option_column">-s"settings file path"</td>
                 <td>
                     Loads the log viewer using the specified settings file path.<br/>
                     This option is useful for running multiple instances of the log viewer
                     without overwriting the settings of other instances.<br/><br/>
-                    Example: <div class="mono_indent">rylogviewer -s "C:\temp\mysettings.xml"</div>
+                    Example: <div class="mono_indent">rylogviewer -s"C:\temp\mysettings.xml"</div>
                 </td>
             </tr>
             <tr>
-                <td class="option_column">-e "export file path"</td>
+                <td class="option_column">-e"export file path"</td>
                 <td>
                     This option instructs the log viewer to export a file to "export file path"
                     using the current filter and transform settings. "file path" must also be
@@ -67,30 +67,74 @@
                     '0' for success, '1' for failure.<br/><br/>
                     Examples:
                     <div class="mono_indent">
-                        rylogviewer ALogFile.log -e "C:\exported logs\ALogFile.Exported.txt"<br/>
-                        rylogviewer ALogFile.log -e "C:\exported logs\ALogFile.Exported.txt" -tx "transforms.rylog_transforms" -ft "filters.rylog_filters"
+                        rylogviewer ALogFile.log -e"C:\exported logs\ALogFile.Exported.txt"<br/>
+                        rylogviewer ALogFile.log 
+                        -ft"filters.rylog_filters" -tx&quot;transforms.rylog_transforms&quot; -e&quot;C:\exported 
+                        logs\ALogFile.Exported.txt&quot;
                     </div>
                 </td>
             </tr>
             <tr>
-                <td class="option_column">-hl "highlight set file path"</td>
+                <td class="option_column">-rdelim"row delimiter"</td>
+                <td>
+                    This option specifies the row delimiter to use when exporting a file using the
+                    '-e' option. If not given, the row delimiters from the input file are used. If
+                    the -e option is not used, this option is ignored. Use the following special
+                    strings to represent carrage return, line feed, and tab:
+                    <ul class="mono_indent">
+                        <li>&lt;CR&gt; - carrage return</li>
+                        <li>&lt;LF&gt; - line feed</li>
+                        <li>&lt;TAB&gt; - tab</li>
+                    </ul>
+                    Examples:
+                    <div class="mono_indent">
+                        rylogviewer ALogFile.log -e"C:\exported logs\ALogFile.Exported.txt" -rdelim"&lt;CR&gt;&lt;LF&gt;"<br/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="option_column">-cdelim"column delimiter"</td>
+                <td>
+                    This option specifies the column delimiter to use when exporting a file using the
+                    '-e' option. If not given, the column delimiters from the input file are used. If
+                    the -e option is not used, this option is ignored. Use the following special
+                    strings to represent carrage return, line feed, and tab:
+                    <ul class="mono_indent">
+                        <li>&lt;CR&gt; - carrage return</li>
+                        <li>&lt;LF&gt; - line feed</li>
+                        <li>&lt;TAB&gt; - tab</li>
+                    </ul>
+                    Examples:
+                    <div class="mono_indent">
+                        rylogviewer ALogFile.log -e"C:\exported logs\ALogFile.Exported.txt" -cdelim"&lt;TAB&gt;"<br/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="option_column">-hl"highlight set file path"</td>
                 <td>
                     Loads the specified highlight set, replacing any currently configured highlights<br/><br/>
-                    Example: <div class="mono_indent">rylogviewer -hl "myhighlights.rylog_highlights"</div>
+                    Example: <div class="mono_indent">rylogviewer -hl"myhighlights.rylog_highlights"</div>
                 </td>
             </tr>
             <tr>
-                <td class="option_column">-ft "filter set file path"</td>
+                <td class="option_column">-ft"filter set file path"</td>
                 <td>
                     Loads the specified filter set, replacing any currently configured filters<br/><br/>
-                    Example: <div class="mono_indent">rylogviewer -ft "myfilters.rylog_filters"</div>
+                    Example: <div class="mono_indent">rylogviewer -ft"myfilters.rylog_filters"</div>
                 </td>
             </tr>
             <tr>
-                <td class="option_column">-tx "transform set file path"</td>
+                <td class="option_column">-tx"transform set file path"</td>
                 <td>
                     Loads the specified transform set, replacing any currently configured transforms<br/><br/>
-                    Example: <div class="mono_indent">rylogviewer -tx "mytransforms.rylog_transforms"</div>
+                    Example: <div class="mono_indent">rylogviewer -tx"mytransforms.rylog_transforms"</div>
+                </td>
+            </tr>
+            <tr>
+                <td class="option_column">-nogui</td>
+                <td>
+                    Suppresses the displaying of any gui (e.g. progress dialogs) while running from the command line.
                 </td>
             </tr>
             <tr>

@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
@@ -115,6 +116,20 @@ namespace RyLogViewer
 		public const string Type       = "type";
 		public const string Elem       = "elem";
 		public const string Id         = "id";
+	}
+
+	public static class CmdLineOption
+	{
+		public const string ShowHelp     = "-h";
+		public const string SettingsPath = "-s";
+		public const string Portable     = "-p";
+		public const string HighlightSet = "-hl";
+		public const string FilterSet    = "-ft";
+		public const string TransformSet = "-tx";
+		public const string Export       = "-e";
+		public const string RDelim       = "-rdelim";
+		public const string CDelim       = "-cdelim";
+		public const string NoGUI        = "-nogui";
 	}
 
 	public enum SubRangeScrollRange
@@ -294,7 +309,10 @@ namespace RyLogViewer
 		/// <summary>Replace the '&lt;CR&gt;', '&lt;LF&gt;', and '&lt;TAB&gt;' strings with \r,\n,\t characters</summary>
 		public static string Robitise(string str)
 		{
-			return str.Replace("<CR>","\r").Replace("<LF>","\n").Replace("<TAB>","\t");
+			str = Regex.Replace(str, Regex.Escape("<CR>" ), "\r", RegexOptions.IgnoreCase);
+			str = Regex.Replace(str, Regex.Escape("<LF>" ), "\n", RegexOptions.IgnoreCase);
+			str = Regex.Replace(str, Regex.Escape("<TAB>"), "\t", RegexOptions.IgnoreCase);
+			return str;
 		}
 
 		/// <summary>Add 'item' to a history list of items</summary>

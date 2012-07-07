@@ -241,11 +241,12 @@ namespace RyLogViewer
 				{
 					XDocument doc = XDocument.Load(su.HighlightSetPath);
 					if (doc.Root == null) throw new InvalidDataException("Invalid highlight set, root xml node not found");
+					if (doc.Root.Element(XmlTag.Highlight) == null) throw new InvalidDataException("Highlight set file does not contain any highlight descriptions");
 					m_settings.HighlightPatterns = doc.ToString(SaveOptions.None);
 				}
 				catch (Exception ex)
 				{
-					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, su.HighlightSetPath, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
 			}
 			if (su.FilterSetPath != null)
@@ -254,11 +255,12 @@ namespace RyLogViewer
 				{
 					XDocument doc = XDocument.Load(su.FilterSetPath);
 					if (doc.Root == null) throw new InvalidDataException("Invalid filter set, root xml node not found");
+					if (doc.Root.Element(XmlTag.Filter) == null) throw new InvalidDataException("Filter set file does not contain any filter descriptions");
 					m_settings.FilterPatterns = doc.ToString(SaveOptions.None);
 				}
 				catch (Exception ex)
 				{
-					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, su.FilterSetPath, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
 			}
 			if (su.TransformSetPath != null)
@@ -267,11 +269,12 @@ namespace RyLogViewer
 				{
 					XDocument doc = XDocument.Load(su.TransformSetPath);
 					if (doc.Root == null) throw new InvalidDataException("Invalid transform set, root xml node not found");
+					if (doc.Root.Element(XmlTag.Transform) == null) throw new InvalidDataException("Transform set file does not contain any transform descriptions");
 					m_settings.TransformPatterns = doc.ToString(SaveOptions.None);
 				}
 				catch (Exception ex)
 				{
-					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, su.TransformSetPath, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
 			}
 		}

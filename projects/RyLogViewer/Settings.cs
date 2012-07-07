@@ -303,8 +303,8 @@ namespace RyLogViewer
 			HighlightPatternSets            = "<root/>";
 			FilterPatternSets               = "<root/>";
 			TransformPatternSets            = "<root/>";
-			RowDelimiter                    = "";
-			ColDelimiter                    = "";
+			RowDelimiter                    = ""; // stored in humanised form
+			ColDelimiter                    = ""; // stored in humanised form
 			ColumnCount                     = 1;
 			Encoding                        = "";
 			FindHistory                     = new string[0];

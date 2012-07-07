@@ -119,11 +119,17 @@ namespace RyLogViewer
 					m_spinner_range_max.Value = ByteRange.End;
 				};
 			m_spinner_range_min.ToolTip(m_tt, "The start of the byte range (in bytes)");
+			m_spinner_range_min.Minimum = ByteRange.Begin;
+			m_spinner_range_min.Maximum = ByteRange.End;
+			m_spinner_range_min.Value = ByteRange.Begin;
 			m_spinner_range_min.ValueChanged += (s,a)=>
 				{
 					ByteRange.Begin = (long)m_spinner_range_min.Value;
 				};
 			m_spinner_range_max.ToolTip(m_tt, "The end of the byte range (in bytes)");
+			m_spinner_range_max.Minimum = ByteRange.Begin;
+			m_spinner_range_max.Maximum = ByteRange.End;
+			m_spinner_range_max.Value = ByteRange.End;
 			m_spinner_range_max.ValueChanged += (s,a)=>
 				{
 					ByteRange.End = (long)m_spinner_range_max.Value;
