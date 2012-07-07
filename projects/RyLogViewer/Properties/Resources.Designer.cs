@@ -381,16 +381,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Failed to open file {0} due to an error
-        ///Error: {1}.
-        /// </summary>
-        internal static string FailedToOpenXDueToErrorY {
-            get {
-                return ResourceManager.GetString("FailedToOpenXDueToErrorY", resourceCulture);
-            }
-        }
-        
         internal static System.Drawing.Bitmap fileclose {
             get {
                 object obj = ResourceManager.GetObject("fileclose", resourceCulture);
@@ -486,16 +476,6 @@ namespace RyLogViewer.Properties {
         internal static string LoadPatternSetFailed {
             get {
                 return ResourceManager.GetString("LoadPatternSetFailed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Could not load pattern set {0}.
-        ///Error: {1}.
-        /// </summary>
-        internal static string LoadPatternSetFailedMsg {
-            get {
-                return ResourceManager.GetString("LoadPatternSetFailedMsg", resourceCulture);
             }
         }
         

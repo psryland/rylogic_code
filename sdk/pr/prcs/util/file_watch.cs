@@ -40,6 +40,8 @@ namespace pr.util
 			public long                        m_stamp1;         // The new timestamp for the file, copied to stamp0 when the file change is handled
 			public long                        m_size0;          // The last recorded size of the file
 			public long                        m_size1;          // The new size for the file, copied to size0 when the file change is handled
+			public bool                        m_exists0;        // Whether the file existed last time we checked
+			public bool                        m_exists1;        // The new existence state of the file
 	
 			public WatchedFile(string filepath, FileChangedHandler onchange, int id, object ctx)
 			{
@@ -52,11 +54,16 @@ namespace pr.util
 				m_stamp1   = m_stamp0;
 				m_size0    = m_info.Length;
 				m_size1    = m_size0;
+				m_exists0  = m_info.Exists;
+				m_exists1  = m_exists0;
+	
 			}
 		}
 		private readonly List<WatchedFile> m_files = new List<WatchedFile>();
 		private readonly Timer             m_timer = new Timer{Interval = 1000, Enabled = false};
-
+		private readonly List<WatchedFile> m_changed_files = new List<WatchedFile>(); // Recycle the changed files collection
+		private bool m_in_check_for_changes;
+		
 		/// <summary>
 		/// File changed callback. Return true if the change was handled
 		/// Returning false causes the FileChanged notification to happen
@@ -115,29 +122,41 @@ namespace pr.util
 		/// <summary>Check the collection of filepaths for those that have changed</summary>
 		public void CheckForChangedFiles()
 		{
-			// Build a collection of the changed files to prevent re-entrancy problems with the callbacks
-			m_changed_files.Clear();
-			foreach (WatchedFile f in m_files)
+			if (m_in_check_for_changes) return;
+			m_in_check_for_changes = true;
+			try
 			{
-				f.m_info.Refresh();
-				long size  = f.m_info.Length;
-				long stamp = f.m_info.LastWriteTimeUtc.Ticks;
-				if (f.m_stamp0 != stamp || f.m_size0 != size) { m_changed_files.Add(f); }
-				f.m_stamp1 = stamp;
-				f.m_size1 = size;
-			}
-
-			// Report each changed file
-			foreach (WatchedFile f in m_changed_files)
-			{
-				if (f.m_onchange(f.m_filepath, f.m_ctx))
+				// Build a collection of the changed files to prevent re-entrancy problems
+				// with the callbacks modifying the 'm_files' collection.
+				m_changed_files.Clear();
+				foreach (WatchedFile f in m_files)
 				{
-					f.m_stamp0 = f.m_stamp1;
-					f.m_size0  = f.m_size1;
+					f.m_info.Refresh();
+				
+					long size   = f.m_info.Exists ? f.m_info.Length : 0;
+					long stamp  = f.m_info.LastWriteTimeUtc.Ticks;
+					bool exists = f.m_info.Exists;
+				
+					if (f.m_stamp0 != stamp || f.m_size0 != size || f.m_exists0 != f.m_exists1) 
+						m_changed_files.Add(f);
+				
+					f.m_stamp1  = stamp;
+					f.m_size1   = size;
+					f.m_exists1 = exists;
+				}
+
+				// Report each changed file
+				foreach (WatchedFile f in m_changed_files)
+				{
+					if (f.m_onchange(f.m_filepath, f.m_ctx))
+					{
+						f.m_stamp0  = f.m_stamp1;
+						f.m_size0   = f.m_size1;
+						f.m_exists0 = f.m_exists1;
+					}
 				}
 			}
+			finally { m_in_check_for_changes = false; }
 		}
-		// Recycle the changed files collection
-		private readonly List<WatchedFile> m_changed_files = new List<WatchedFile>();
 	}
 }

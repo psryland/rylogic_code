@@ -127,7 +127,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, string.Format(Resources.LoadPatternSetFailedMsg, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show(this, string.Format("Could not load pattern set {0}.\r\nError Details:\r\n{1}", set.Filepath, ex.Message), Resources.LoadPatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 		
