@@ -349,7 +349,7 @@ namespace RyLogViewer
 			result = result.Insert(grps[0].Index, Replace);
 			
 			// Build a list of the tags to be replaced in the result string
-			List<Tag> rtags = GetTags(result).ToList();
+			List<Tag> rtags = (from t in GetTags(result) where ids.Contains(t.Id) select t).ToList();
 			
 			// Perform the substitutions
 			int ofs = 0;
