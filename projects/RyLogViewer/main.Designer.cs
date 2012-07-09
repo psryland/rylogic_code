@@ -112,8 +112,11 @@
 			this.m_cmenu_filter_row = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_transform_row = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.m_menu_tools_transforms = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cmenu_find_next = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -775,9 +778,12 @@
             this.toolStripSeparator10,
             this.m_cmenu_highlight_row,
             this.m_cmenu_filter_row,
-            this.m_cmenu_transform_row});
+            this.m_cmenu_transform_row,
+            this.toolStripSeparator4,
+            this.m_cmenu_find_next,
+            this.m_cmenu_find_prev});
 			this.m_cmenu_grid.Name = "m_cmenu_grid";
-			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 120);
+			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 192);
 			// 
 			// m_cmenu_copy
 			// 
@@ -801,7 +807,7 @@
 			// 
 			this.m_cmenu_filter_row.Name = "m_cmenu_filter_row";
 			this.m_cmenu_filter_row.Size = new System.Drawing.Size(164, 22);
-			this.m_cmenu_filter_row.Text = "Filter Row...";
+			this.m_cmenu_filter_row.Text = "&Filter Row...";
 			// 
 			// toolStripSeparator10
 			// 
@@ -812,7 +818,13 @@
 			// 
 			this.m_cmenu_transform_row.Name = "m_cmenu_transform_row";
 			this.m_cmenu_transform_row.Size = new System.Drawing.Size(164, 22);
-			this.m_cmenu_transform_row.Text = "Transform Row...";
+			this.m_cmenu_transform_row.Text = "&Transform Row...";
+			// 
+			// m_menu_tools_transforms
+			// 
+			this.m_menu_tools_transforms.Name = "m_menu_tools_transforms";
+			this.m_menu_tools_transforms.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_transforms.Text = "&Transforms";
 			// 
 			// m_scroll_file
 			// 
@@ -829,11 +841,22 @@
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.ControlLight;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
-			// m_menu_tools_transforms
+			// toolStripSeparator4
 			// 
-			this.m_menu_tools_transforms.Name = "m_menu_tools_transforms";
-			this.m_menu_tools_transforms.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_transforms.Text = "&Transforms";
+			this.toolStripSeparator4.Name = "toolStripSeparator4";
+			this.toolStripSeparator4.Size = new System.Drawing.Size(161, 6);
+			// 
+			// m_cmenu_find_next
+			// 
+			this.m_cmenu_find_next.Name = "m_cmenu_find_next";
+			this.m_cmenu_find_next.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_find_next.Text = "Find &Next";
+			// 
+			// m_cmenu_find_prev
+			// 
+			this.m_cmenu_find_prev.Name = "m_cmenu_find_prev";
+			this.m_cmenu_find_prev.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_find_prev.Text = "Find &Previous";
 			// 
 			// Main
 			// 
@@ -954,6 +977,9 @@
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_filter_row;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_transform_row;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_transforms;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_next;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_prev;
 	}
 }
 

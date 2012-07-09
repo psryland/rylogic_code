@@ -110,9 +110,9 @@ namespace RyLogViewer
 			m_menu_line_ending_lf.Click             += (s,a) => SetLineEnding(ELineEnding.LF    );
 			m_menu_line_ending_custom.Click         += (s,a) => SetLineEnding(ELineEnding.Custom);
 			m_menu_tools_alwaysontop.Click          += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
-			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights, SelectedRow);
-			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters   , SelectedRow);
-			m_menu_tools_transforms.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Transforms, SelectedRow);
+			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
+			m_menu_tools_transforms.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
 			m_menu_tools_clear_log_file.Click       += (s,a) => ClearLogFile();
 			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
@@ -129,13 +129,13 @@ namespace RyLogViewer
 			m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
 			m_btn_highlights.ToolTipText    = Resources.ShowHighlightsDialog;
 			m_btn_highlights.Click         += (s,a) => EnableHighlights(m_btn_highlights.Checked);
-			m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights, SelectedRow); };
+			m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
 			m_btn_filters.ToolTipText       = Resources.ShowFiltersDialog;
 			m_btn_filters.Click            += (s,a) => EnableFilters(m_btn_filters.Checked);
-			m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters, SelectedRow); };
+			m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
 			m_btn_transforms.ToolTipText    = Resources.ShowTransformsDialog;
 			m_btn_transforms.Click         += (s,a) => EnableTransforms(m_btn_transforms.Checked);
-			m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms, SelectedRow); };
+			m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms); };
 			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
 			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
@@ -175,7 +175,7 @@ namespace RyLogViewer
 			m_grid.KeyDown             += DataGridView_Extensions.SelectAll;
 			m_grid.KeyDown             += DataGridView_Extensions.Copy;
 			m_grid.KeyUp               += (s,a) => LoadNearBoundary();
-			m_grid.MouseUp             += (s,a) => LoadNearBoundary();
+			m_grid.MouseUp             += (s,a) => { if (a.Button == MouseButtons.Left) LoadNearBoundary(); };
 			m_grid.CellValueNeeded     += CellValueNeeded;
 			m_grid.CellPainting        += CellPainting;
 			m_grid.SelectionChanged    += GridSelectionChanged;
@@ -499,24 +499,23 @@ namespace RyLogViewer
 		/// <summary>Handle grid context menu actions</summary>
 		private void GridContextMenu(object sender, ToolStripItemClickedEventArgs args)
 		{
-			if (args.ClickedItem == m_cmenu_copy)
-			{
-				DataGridView_Extensions.Copy(m_grid);
-				return;
-			}
-			if (args.ClickedItem == m_cmenu_select_all)
-			{
-				DataGridView_Extensions.SelectAll(m_grid);
-				return;
-			}
+			// Clipboard operations
+			if (args.ClickedItem == m_cmenu_copy      ) { DataGridView_Extensions.Copy(m_grid);      return; }
+			if (args.ClickedItem == m_cmenu_select_all) { DataGridView_Extensions.SelectAll(m_grid); return; }
 			
 			// Find the row that the context menu was opened on
 			var pt = m_grid.PointToClient(((ContextMenuStrip)sender).Location);
 			var hit = m_grid.HitTest(pt.X, pt.Y);
 			if (hit.RowIndex < 0 || hit.RowIndex >= m_grid.RowCount) return;
-			if      (args.ClickedItem == m_cmenu_highlight_row) ShowOptions(SettingsUI.ETab.Highlights ,hit.RowIndex);
-			else if (args.ClickedItem == m_cmenu_filter_row   ) ShowOptions(SettingsUI.ETab.Filters    ,hit.RowIndex);
-			else if (args.ClickedItem == m_cmenu_transform_row) ShowOptions(SettingsUI.ETab.Transforms ,hit.RowIndex);
+			SelectedRow = hit.RowIndex;
+			
+			if (args.ClickedItem == m_cmenu_highlight_row) { ShowOptions(SettingsUI.ETab.Highlights); return; }
+			if (args.ClickedItem == m_cmenu_filter_row   ) { ShowOptions(SettingsUI.ETab.Filters   ); return; }
+			if (args.ClickedItem == m_cmenu_transform_row) { ShowOptions(SettingsUI.ETab.Transforms); return; }
+			
+			// Find operations
+			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(); return; }
+			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(); }//return; }
 		}
 
 		/// <summary>Called when the grid is scrolled</summary>
@@ -553,9 +552,9 @@ namespace RyLogViewer
 		private void ShowFindDialog()
 		{
 			// Initialise the find string from the selected row
-			int row = SelectedRow;
-			if (row != -1)
-				m_find_ui.Pattern = ReadLine(row).RowText;
+			int init_row = SelectedRow;
+			if (init_row != -1)
+				m_find_ui.Pattern = ReadLine(init_row).RowText;
 			
 			// Display the find window
 			m_find_ui.Location = Location + (Size)m_find_ui.Tag;
@@ -622,7 +621,11 @@ namespace RyLogViewer
 				}){StartPosition = FormStartPosition.CenterParent};
 			
 			DialogResult res = DialogResult.Cancel;
-			try { res = search.ShowDialog(this); }
+			try
+			{
+				m_last_find_pattern = pat;
+				res = search.ShowDialog(this);
+			}
 			catch (OperationCanceledException) {}
 			catch (Exception ex) { ShowErrorMessage(ex, "Find terminated by an error.", "Find error"); }
 			found = at;
@@ -633,7 +636,6 @@ namespace RyLogViewer
 		private void FindNext(Pattern pat)
 		{
 			if (pat == null || m_grid.RowCount == 0) return;
-			m_last_find_pattern = pat;
 			
 			var start = m_line_index[SelectedRow].End;
 			Log.Info(this, "FindNext starting from {0}", start);
@@ -647,7 +649,6 @@ namespace RyLogViewer
 		private void FindPrev(Pattern pat)
 		{
 			if (pat == null || m_grid.RowCount == 0) return;
-			m_last_find_pattern = pat;
 			
 			var start = SelectedRowRange.Begin;
 			Log.Info(this, "FindPrev starting from {0}", start);
@@ -826,10 +827,11 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Display the options dialog</summary>
-		private void ShowOptions(SettingsUI.ETab tab, int init_row = -1)
+		private void ShowOptions(SettingsUI.ETab tab)
 		{
 			string row_text = "";
 			string test_text = "<Enter test text here>";
+			int init_row = SelectedRow;
 			if (init_row != -1)
 				row_text = test_text = ReadLine(init_row).RowText.Trim();
 			

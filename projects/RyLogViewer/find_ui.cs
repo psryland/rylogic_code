@@ -16,12 +16,12 @@ namespace RyLogViewer
 		public string Pattern
 		{
 			get { return m_pattern.Expr; }
-			set { m_pattern.Expr = value; }
+			set { m_pattern.Expr = m_combo_pattern.Text = value; }
 		}
 
 		/// <summary>An event called whenever the dialog gets a FindNext command</summary>
 		public event Action<Pattern> FindNext;
-		private void RaiseFindNext()
+		public void RaiseFindNext()
 		{
 			if (!UseFindExpr) return;
 			m_btn_find_next.Enabled = false;
@@ -31,7 +31,7 @@ namespace RyLogViewer
 		
 		/// <summary>An event called whenever the dialog gets a FindPrev command</summary>
 		public event Action<Pattern> FindPrev;
-		private void RaiseFindPrev()
+		public void RaiseFindPrev()
 		{
 			if (!UseFindExpr) return;
 			m_btn_find_prev.Enabled = false;

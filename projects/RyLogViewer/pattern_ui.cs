@@ -30,7 +30,7 @@ namespace RyLogViewer
 		private CheckBox    m_check_invert;
 		private CheckBox    m_check_ignore_case;
 		private Button      m_btn_add;
-		private Label       m_lbl_hl_regexp;
+		private Label       m_lbl_pattern;
 		private TextBox     m_edit_pattern;
 		private RadioButton m_radio_substring;
 		private RadioButton m_radio_wildcard;
@@ -56,9 +56,12 @@ namespace RyLogViewer
 			InitializeComponent();
 			m_pattern = null;
 			m_tt = new ToolTip();
-			
+			string tt;
+
 			// Pattern
-			m_edit_pattern.ToolTip(m_tt, "A substring or regular expression to match");
+			tt = "A substring or regular expression to match";
+			m_lbl_pattern.ToolTip(m_tt, tt);
+			m_edit_pattern.ToolTip(m_tt, tt);
 			m_edit_pattern.TextChanged += (s,a)=>
 				{
 					if (!((TextBox)s).Modified) return;
@@ -253,7 +256,7 @@ namespace RyLogViewer
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();
 			this.m_btn_add = new System.Windows.Forms.Button();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
-			this.m_lbl_hl_regexp = new System.Windows.Forms.Label();
+			this.m_lbl_pattern = new System.Windows.Forms.Label();
 			this.m_edit_pattern = new System.Windows.Forms.TextBox();
 			this.m_edit_test = new System.Windows.Forms.RichTextBox();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
@@ -317,15 +320,15 @@ namespace RyLogViewer
 			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
 			this.m_image_list.Images.SetKeyName(1, "edit_save.png");
 			// 
-			// m_lbl_hl_regexp
+			// m_lbl_pattern
 			// 
-			this.m_lbl_hl_regexp.AutoSize = true;
-			this.m_lbl_hl_regexp.Location = new System.Drawing.Point(3, 6);
-			this.m_lbl_hl_regexp.Name = "m_lbl_hl_regexp";
-			this.m_lbl_hl_regexp.Size = new System.Drawing.Size(44, 13);
-			this.m_lbl_hl_regexp.TabIndex = 14;
-			this.m_lbl_hl_regexp.Text = "Pattern:";
-			this.m_lbl_hl_regexp.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.m_lbl_pattern.AutoSize = true;
+			this.m_lbl_pattern.Location = new System.Drawing.Point(3, 6);
+			this.m_lbl_pattern.Name = "m_lbl_pattern";
+			this.m_lbl_pattern.Size = new System.Drawing.Size(44, 13);
+			this.m_lbl_pattern.TabIndex = 14;
+			this.m_lbl_pattern.Text = "Pattern:";
+			this.m_lbl_pattern.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_edit_pattern
 			// 
@@ -435,7 +438,7 @@ namespace RyLogViewer
 			this.Controls.Add(this.m_check_invert);
 			this.Controls.Add(this.m_check_ignore_case);
 			this.Controls.Add(this.m_btn_add);
-			this.Controls.Add(this.m_lbl_hl_regexp);
+			this.Controls.Add(this.m_lbl_pattern);
 			this.Controls.Add(this.m_edit_pattern);
 			this.Controls.Add(this.m_group_patntype);
 			this.MinimumSize = new System.Drawing.Size(334, 104);
