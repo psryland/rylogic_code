@@ -140,10 +140,6 @@
   <data name="Refresh" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Refresh.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="InvalidFileMsg" xml:space="preserve">
-    <value>File path '{0}' is invalid or does not exist</value>
-    <comment>Show the invalid filepath</comment>
-  </data>
   <data name="ExportCompletedSuccessfully" xml:space="preserve">
     <value>Export completed successfully</value>
   </data>
@@ -175,6 +171,12 @@
   </data>
   <data name="ChangeBackColour" xml:space="preserve">
     <value>Change Background Colour</value>
+  </data>
+  <data name="ConfirmOverwrite" xml:space="preserve">
+    <value>Confirm Overwrite</value>
+  </data>
+  <data name="important" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\important.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="my_documents" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\my_documents.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -246,9 +248,6 @@ Error: {0}</value>
   <data name="FailedToLaunchProcess" xml:space="preserve">
     <value>Failed to Launch Process</value>
   </data>
-  <data name="ReloadLogFile" xml:space="preserve">
-    <value>Reload the current log file</value>
-  </data>
   <data name="fileclose" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\fileclose.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -263,6 +262,11 @@ Error: {0}</value>
     <comment>
 			Highlighting column header
 		</comment>
+  </data>
+  <data name="AdditiveMode" xml:space="preserve">
+    <value>Assume log file changes are additive only. If enabled, only additions to the
+file will be scanned allowing increased performance. The view may get out of sync if the
+log file is modified in a way that isn't additive (e.g. lines swapped, deleted, etc)</value>
   </data>
   <data name="PositionXofYBytes" xml:space="preserve">
     <value>Position: {0} / {1} bytes</value>
@@ -293,16 +297,11 @@ Error Details:
   <data name="WatchForUpdates" xml:space="preserve">
     <value>Watch the file and update automatically when it changes</value>
   </data>
-  <data name="AdditiveMode" xml:space="preserve">
-    <value>Assume log file changes are additive only. If enabled, only additions to the
-file will be scanned allowing increased performance. The view may get out of sync if the
-log file is modified in a way that isn't additive (e.g. lines swapped, deleted, etc)</value>
-  </data>
   <data name="ChangeForeColour" xml:space="preserve">
     <value>Change Foregroud Colour</value>
   </data>
-  <data name="ConfirmOverwrite" xml:space="preserve">
-    <value>Confirm Overwrite</value>
+  <data name="ReloadLogFile" xml:space="preserve">
+    <value>Reload the current log file</value>
   </data>
   <data name="ClearLogFailed" xml:space="preserve">
     <value>Clear Log Failed</value>
@@ -317,6 +316,9 @@ log file is modified in a way that isn't additive (e.g. lines swapped, deleted, 
     <value>Could not delete pattern set file {0}.
 Error: {1}</value>
   </data>
+  <data name="LineEndingX" xml:space="preserve">
+    <value>Line Ending: {0}</value>
+  </data>
   <data name="ExecutablesFilter" xml:space="preserve">
     <value>Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
   </data>
@@ -325,6 +327,9 @@ Error: {1}</value>
   </data>
   <data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="SettingsFileFilter" xml:space="preserve">
+    <value>Settings Files (*.xml)|*.xml|All files (*.*)|*.*</value>
   </data>
   <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\agt_action_fail.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -353,16 +358,14 @@ Error: {1}</value>
   <data name="ShowOptionsDialog" xml:space="preserve">
     <value>Show the options dialog</value>
   </data>
-  <data name="LineEndingX" xml:space="preserve">
-    <value>Line Ending: {0}</value>
+  <data name="InvalidFileMsg" xml:space="preserve">
+    <value>File path '{0}' is invalid or does not exist</value>
+    <comment>Show the invalid filepath</comment>
   </data>
   <data name="ExportFailed" xml:space="preserve">
     <value>Export Failed</value>
   </data>
-  <data name="important" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\important.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="SettingsFileFilter" xml:space="preserve">
-    <value>Settings Files (*.xml)|*.xml|All files (*.*)|*.*</value>
+  <data name="trashcan_empty" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\trashcan_empty.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

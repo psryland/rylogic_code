@@ -39,16 +39,6 @@ namespace RyLogViewer
 			get { return get<Point>("MenuPosition"); }
 			set { set("MenuPosition", value); }
 		}
-		public Point  ToolsPosition
-		{
-			get { return get<Point>("ToolsPosition"); }
-			set { set("ToolsPosition", value); }
-		}
-		public Point  StatusPosition
-		{
-			get { return get<Point>("StatusPosition"); }
-			set { set("StatusPosition", value); }
-		}
 		public bool   AlternateLineColours
 		{
 			get { return get<bool>("AlternateLineColours"); }
@@ -269,13 +259,11 @@ namespace RyLogViewer
 			ScreenPosition                  = new Point(50, 50);
 			WindowSize                      = new Size(640, 480);
 			MenuPosition                    = Point.Empty;
-			ToolsPosition                   = new Point(0, 30);
-			StatusPosition                  = Point.Empty;
 			AlternateLineColours            = true;
 			LineSelectBackColour            = Color.DarkGreen;
 			LineSelectForeColour            = Color.White;
 			LineBackColour1                 = Color.WhiteSmoke;
-			LineBackColour2                 = Color.FromArgb(192, 255, 192);
+			LineBackColour2                 = Color.White;
 			LineForeColour1                 = Color.Black;
 			LineForeColour2                 = Color.Black;
 			FileScrollWidth                 = Constants.FileScrollWidthDefault;

@@ -12,6 +12,9 @@ namespace RyLogViewer
 
 		/// <summary>Select a pattern into the UI for editting</summary>
 		void EditPattern(IPattern pat);
+
+		/// <summary>Set focus to the primary input field</summary>
+		void FocusInput();
 	}
 	public class PatternUI :UserControl ,IPatternUI
 	{
@@ -153,6 +156,12 @@ namespace RyLogViewer
 				};
 		}
 
+		/// <summary>Set focus to the primary input field</summary>
+		public void FocusInput()
+		{
+			m_edit_pattern.Focus();
+		}
+
 		/// <summary>Select 'pat' as a new pattern</summary>
 		public void NewPattern(IPattern pat)
 		{
@@ -267,6 +276,7 @@ namespace RyLogViewer
 			this.m_check_active.TabIndex = 4;
 			this.m_check_active.Text = "Active";
 			this.m_check_active.UseVisualStyleBackColor = true;
+			this.m_check_active.Visible = false;
 			// 
 			// m_check_invert
 			// 
@@ -355,6 +365,7 @@ namespace RyLogViewer
 			this.m_check_binary.TabIndex = 5;
 			this.m_check_binary.Text = "Full Column";
 			this.m_check_binary.UseVisualStyleBackColor = true;
+			this.m_check_binary.Visible = false;
 			// 
 			// m_radio_substring
 			// 

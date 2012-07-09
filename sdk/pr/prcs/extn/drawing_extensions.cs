@@ -3,7 +3,6 @@
 //  Copyright © Rylogic Ltd 2008
 //***************************************************
 
-using System;
 using System.Drawing;
 
 namespace pr.extn
@@ -19,5 +18,11 @@ namespace pr.extn
 		//    r.Width  = Math.Max(r.Right  - r.X, rect.Right  - r.X);
 		//    r.Height = Math.Max(r.Bottom - r.Y, rect.Bottom - r.Y);
 		//}
+		
+		/// <summary>Returns the center of the rectangle</summary>
+		public static Point Centre(this Rectangle r)
+		{
+			return new Point(r.X + r.Width/2, r.Y + r.Height/2);
+		}
 	}
 }

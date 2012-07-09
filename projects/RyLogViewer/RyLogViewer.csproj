@@ -356,6 +356,7 @@
     <EmbeddedResource Include="docs\TransformQuickRef.html" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\trashcan_empty.png" />
     <EmbeddedResource Include="docs\CommandLineRef.html" />
     <Content Include="lib\ClrDump.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

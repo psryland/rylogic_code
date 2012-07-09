@@ -171,9 +171,15 @@ namespace RyLogViewer
 			
 			VisibleChanged += (s,a)=>
 				{
-					if (Visible)
-						UpdateUI();
+					if (!Visible) return;
+					UpdateUI();
 				};
+		}
+
+		/// <summary>Set focus to the primary input field</summary>
+		public void FocusInput()
+		{
+			m_edit_match.Focus();
 		}
 
 		/// <summary>Get the cell value from the transform</summary>

@@ -684,6 +684,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap trashcan_empty {
+            get {
+                object obj = ResourceManager.GetObject("trashcan_empty", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Unknown command line option.
         /// </summary>

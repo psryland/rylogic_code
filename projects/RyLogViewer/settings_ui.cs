@@ -39,13 +39,16 @@ namespace RyLogViewer
 		
 		/// <summary>Access to the highlight pattern ui</summary>
 		public PatternUI HighlightUI { get { return m_pattern_hl; } }
-		
+		public bool HighlightsChanged { get; set; }
+
 		/// <summary>Access to the filter pattern ui</summary>
 		public PatternUI FilterUI { get { return m_pattern_ft; } }
-		
+		public bool FiltersChanged { get; set; }
+
 		/// <summary>Access to the transform pattern ui</summary>
 		public TransformUI TransformUI { get { return m_pattern_tx; } }
-		
+		public bool TransformsChanged { get; set; }
+
 		public SettingsUI(Settings settings, ETab tab)
 		{
 			InitializeComponent();
@@ -62,7 +65,8 @@ namespace RyLogViewer
 			m_pattern_tx.NewPattern(new Transform());
 			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
-			
+			m_tabctrl.SelectedIndexChanged += (s,a) => FocusInput();
+
 			SetupGeneralTab();
 			SetupLogViewTab();
 			SetupHighlightTab();
@@ -74,6 +78,11 @@ namespace RyLogViewer
 				{
 					a.Handled = a.KeyCode == Keys.Escape;
 					if (a.Handled) Close();
+				};
+
+			Shown += (s,a) =>
+				{
+					FocusInput();
 				};
 
 			// Save on close
@@ -400,6 +409,7 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Rendering;
 					if (m_pattern_hl.IsNew) m_highlights.Add((Highlight)m_pattern_hl.Pattern);
 					m_pattern_hl.NewPattern(new Highlight());
+					HighlightsChanged = true;
 					UpdateUI();
 				};
 			
@@ -439,6 +449,7 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.FileParsing;
 					if (m_pattern_ft.IsNew) m_filters.Add((Filter)m_pattern_ft.Pattern);
 					m_pattern_ft.NewPattern(new Filter());
+					FiltersChanged = true;
 					UpdateUI();
 				};
 			
@@ -478,6 +489,7 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Rendering;
 					if (m_pattern_tx.IsNew) m_transforms.Add(m_pattern_tx.Transform);
 					m_pattern_tx.NewPattern(new Transform());
+					TransformsChanged = true;
 					UpdateUI();
 				};
 			
@@ -489,6 +501,17 @@ namespace RyLogViewer
 				};
 		}
 		
+		/// <summary>Set input focus to the primary input field of the current tab</summary>
+		private void FocusInput()
+		{
+			switch ((ETab)m_tabctrl.SelectedIndex)
+			{
+			case ETab.Highlights: m_pattern_hl.FocusInput(); break;
+			case ETab.Filters:    m_pattern_ft.FocusInput(); break;
+			case ETab.Transforms: m_pattern_tx.FocusInput(); break;
+			}
+		}
+
 		/// <summary>Delete a pattern</summary>
 		private void OnDeleteRow<T>(DataGridView grid, List<T> patterns)
 		{

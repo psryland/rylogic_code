@@ -51,7 +51,7 @@
 			this.m_combo_sets.FormattingEnabled = true;
 			this.m_combo_sets.Location = new System.Drawing.Point(3, 9);
 			this.m_combo_sets.Name = "m_combo_sets";
-			this.m_combo_sets.Size = new System.Drawing.Size(248, 21);
+			this.m_combo_sets.Size = new System.Drawing.Size(250, 21);
 			this.m_combo_sets.TabIndex = 1;
 			// 
 			// m_btn_save
@@ -60,7 +60,7 @@
 			this.m_btn_save.AutoSize = true;
 			this.m_btn_save.ImageIndex = 0;
 			this.m_btn_save.ImageList = this.m_image_list;
-			this.m_btn_save.Location = new System.Drawing.Point(257, 5);
+			this.m_btn_save.Location = new System.Drawing.Point(259, 5);
 			this.m_btn_save.Name = "m_btn_save";
 			this.m_btn_save.Size = new System.Drawing.Size(39, 28);
 			this.m_btn_save.TabIndex = 2;
@@ -72,7 +72,7 @@
 			this.m_btn_load.AutoSize = true;
 			this.m_btn_load.ImageIndex = 1;
 			this.m_btn_load.ImageList = this.m_image_list;
-			this.m_btn_load.Location = new System.Drawing.Point(302, 5);
+			this.m_btn_load.Location = new System.Drawing.Point(304, 5);
 			this.m_btn_load.Name = "m_btn_load";
 			this.m_btn_load.Size = new System.Drawing.Size(39, 28);
 			this.m_btn_load.TabIndex = 3;
@@ -82,13 +82,12 @@
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.Controls.Add(this.m_btn_load);
 			this.Controls.Add(this.m_btn_save);
 			this.Controls.Add(this.m_combo_sets);
 			this.MinimumSize = new System.Drawing.Size(274, 38);
 			this.Name = "PatternSetUi";
-			this.Size = new System.Drawing.Size(344, 38);
+			this.Size = new System.Drawing.Size(346, 40);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

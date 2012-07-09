@@ -35,6 +35,7 @@ namespace RyLogViewer
 		private readonly FindUI m_find_ui;                    // The find dialog
 		private readonly NotifyIcon m_notify_icon;            // A system tray icon
 		private readonly ToolTip m_tt;                        // Tooltips
+		private readonly ToolTip m_balloon;                   // A hint balloon tooltip
 		private Pattern m_last_find_pattern;                  // The pattern last used in a find
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
@@ -67,6 +68,7 @@ namespace RyLogViewer
 			m_transforms         = new List<Transform>();
 			m_find_ui            = new FindUI(m_settings){Visible = false};
 			m_tt                 = new ToolTip();
+			m_balloon            = new ToolTip{IsBalloon = true};
 			m_notify_icon        = new NotifyIcon{Icon = Icon};
 			m_line_index         = new List<Range>();
 			m_last_find_pattern  = null;
@@ -108,8 +110,9 @@ namespace RyLogViewer
 			m_menu_line_ending_lf.Click             += (s,a) => SetLineEnding(ELineEnding.LF    );
 			m_menu_line_ending_custom.Click         += (s,a) => SetLineEnding(ELineEnding.Custom);
 			m_menu_tools_alwaysontop.Click          += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
-			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
-			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters);
+			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights, SelectedRow);
+			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters   , SelectedRow);
+			m_menu_tools_transforms.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Transforms, SelectedRow);
 			m_menu_tools_clear_log_file.Click       += (s,a) => ClearLogFile();
 			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
@@ -119,19 +122,20 @@ namespace RyLogViewer
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
+			m_toolstrip.Location            = new Point(0,30);
 			m_btn_open_log.ToolTipText      = Resources.OpenLogFile;
 			m_btn_open_log.Click           += (s,a) => OpenLogFile();
 			m_btn_refresh.ToolTipText       = Resources.ReloadLogFile;
 			m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
 			m_btn_highlights.ToolTipText    = Resources.ShowHighlightsDialog;
 			m_btn_highlights.Click         += (s,a) => EnableHighlights(m_btn_highlights.Checked);
-			m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
+			m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights, SelectedRow); };
 			m_btn_filters.ToolTipText       = Resources.ShowFiltersDialog;
 			m_btn_filters.Click            += (s,a) => EnableFilters(m_btn_filters.Checked);
-			m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters); };
+			m_btn_filters.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Filters, SelectedRow); };
 			m_btn_transforms.ToolTipText    = Resources.ShowTransformsDialog;
 			m_btn_transforms.Click         += (s,a) => EnableTransforms(m_btn_transforms.Checked);
-			m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms); };
+			m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms, SelectedRow); };
 			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
 			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
@@ -142,7 +146,6 @@ namespace RyLogViewer
 			m_btn_watch.Click              += (s,a) => EnableWatch(m_btn_watch.Checked);
 			m_btn_additive.ToolTipText      = Resources.AdditiveMode;
 			m_btn_additive.Click           += (s,a) => EnableAdditive(m_btn_additive.Checked);
-			m_toolstrip.Move               += (s,a) => m_settings.ToolsPosition = m_toolstrip.Location;
 			ToolStripManager.Renderer       = new CheckedButtonRenderer();
 
 			// Scrollbar
@@ -159,7 +162,7 @@ namespace RyLogViewer
 				};
 
 			// Status
-			m_status.Move += (s,a) => m_settings.StatusPosition = m_status.Location;
+			m_status.Location             = Point.Empty;
 			m_status_progress.ToolTipText = "Press escape to cancel";
 			m_status_progress.Minimum     = 0;
 			m_status_progress.Maximum     = 100;
@@ -181,10 +184,10 @@ namespace RyLogViewer
 			m_grid.Scroll              += (s,a) => GridScroll();
 			
 			// Grid context menu
-			m_cmenu_copy.Click         += (s,a) => DataGridView_Extensions.Copy(m_grid);
-			m_cmenu_select_all.Click   += (s,a) => DataGridView_Extensions.SelectAll(m_grid);
+			m_cmenu_grid.ItemClicked    += GridContextMenu;
 			m_cmenu_grid.VisibleChanged += (s,a) =>
 				{
+					m_cmenu_grid.Tag = MousePosition; // save the mouse position in 'Tag'
 					m_cmenu_copy.Enabled = m_grid.SelectedCells.Count != 0;
 					m_cmenu_select_all.Enabled = m_grid.RowCount != 0;
 				};
@@ -222,7 +225,7 @@ namespace RyLogViewer
 				{
 					m_find_ui.Location = Location + (Size)m_find_ui.Tag;
 				};
-
+			
 			// Shutdown
 			FormClosing += (s,a) =>
 				{
@@ -493,6 +496,29 @@ namespace RyLogViewer
 			UpdateStatus();
 		}
 		
+		/// <summary>Handle grid context menu actions</summary>
+		private void GridContextMenu(object sender, ToolStripItemClickedEventArgs args)
+		{
+			if (args.ClickedItem == m_cmenu_copy)
+			{
+				DataGridView_Extensions.Copy(m_grid);
+				return;
+			}
+			if (args.ClickedItem == m_cmenu_select_all)
+			{
+				DataGridView_Extensions.SelectAll(m_grid);
+				return;
+			}
+			
+			// Find the row that the context menu was opened on
+			var pt = m_grid.PointToClient(((ContextMenuStrip)sender).Location);
+			var hit = m_grid.HitTest(pt.X, pt.Y);
+			if (hit.RowIndex < 0 || hit.RowIndex >= m_grid.RowCount) return;
+			if      (args.ClickedItem == m_cmenu_highlight_row) ShowOptions(SettingsUI.ETab.Highlights ,hit.RowIndex);
+			else if (args.ClickedItem == m_cmenu_filter_row   ) ShowOptions(SettingsUI.ETab.Filters    ,hit.RowIndex);
+			else if (args.ClickedItem == m_cmenu_transform_row) ShowOptions(SettingsUI.ETab.Transforms ,hit.RowIndex);
+		}
+
 		/// <summary>Called when the grid is scrolled</summary>
 		private void GridScroll()
 		{
@@ -800,11 +826,12 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Display the options dialog</summary>
-		private void ShowOptions(SettingsUI.ETab tab)
+		private void ShowOptions(SettingsUI.ETab tab, int init_row = -1)
 		{
+			string row_text = "";
 			string test_text = "<Enter test text here>";
-			if (SelectedRow != -1)
-				test_text = ReadLine(SelectedRow).RowText;
+			if (init_row != -1)
+				row_text = test_text = ReadLine(init_row).RowText.Trim();
 			
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
@@ -814,12 +841,28 @@ namespace RyLogViewer
 			default: throw new ArgumentOutOfRangeException("tab");
 			case SettingsUI.ETab.General: break;
 			case SettingsUI.ETab.LogView: break;
-			case SettingsUI.ETab.Highlights: ui.HighlightUI.TestText = test_text; break;
-			case SettingsUI.ETab.Filters:    ui.FilterUI   .TestText = test_text; break;
-			case SettingsUI.ETab.Transforms: ui.TransformUI.TestText = test_text; break;
+			case SettingsUI.ETab.Highlights:
+				ui.HighlightUI.Pattern.Expr = row_text;
+				ui.HighlightUI.TestText = test_text;
+				break;
+			case SettingsUI.ETab.Filters:
+				ui.FilterUI.Pattern.Expr = row_text;
+				ui.FilterUI.TestText = test_text;
+				break;
+			case SettingsUI.ETab.Transforms:
+				ui.TransformUI.Transform.Match = row_text;
+				ui.TransformUI.Transform.Replace = row_text;
+				ui.TransformUI.TestText = test_text;
+				break;
 			}
 			ui.ShowDialog(this);
 			ApplySettings();
+			
+			// Show hints if patterns where added but there will be no visible
+			// change on the main view because that behaviour is disabled
+			if      (ui.HighlightsChanged && !m_settings.HighlightsEnabled) ShowHintBalloon("Highlights are currently disabled", m_btn_highlights);
+			else if (ui.FiltersChanged    && !m_settings.FiltersEnabled   ) ShowHintBalloon("Filters are currently disabled"   , m_btn_filters);
+			else if (ui.TransformsChanged && !m_settings.TransformsEnabled) ShowHintBalloon("Transforms are currently disabled", m_btn_transforms);
 			
 			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
 			{
@@ -1165,7 +1208,6 @@ namespace RyLogViewer
 			
 			// Position UI elements
 			m_menu.Location      = m_settings.MenuPosition;
-			m_toolstrip.Location = m_settings.ToolsPosition;
 			m_status.Location    = m_settings.StatusPosition;
 			
 			// Ensure rows are rerendered
@@ -1370,6 +1412,16 @@ namespace RyLogViewer
 		private void ShowErrorMessage(Exception ex, string caption, string title)
 		{
 			MessageBox.Show(this, string.Format("{0}\r\nError Details:\r\n{1}", caption, ex.Message), title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
+
+		/// <summary>Display the hint balloon</summary>
+		private void ShowHintBalloon(string msg, ToolStripItem item)
+		{
+			var parent = item.GetCurrentParent();
+			if (parent == null) return;
+			var pt = item.Bounds.Location;
+			pt.Offset(-2,-32);
+			m_balloon.Show(msg, parent, pt, 2000);
 		}
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
