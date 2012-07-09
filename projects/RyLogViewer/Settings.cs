@@ -34,11 +34,6 @@ namespace RyLogViewer
 			get { return get<Size>("WindowSize"); }
 			set { set("WindowSize", value); }
 		}
-		public Point  MenuPosition
-		{
-			get { return get<Point>("MenuPosition"); }
-			set { set("MenuPosition", value); }
-		}
 		public bool   AlternateLineColours
 		{
 			get { return get<bool>("AlternateLineColours"); }
@@ -258,7 +253,6 @@ namespace RyLogViewer
 			RestoreScreenLoc                = true;
 			ScreenPosition                  = new Point(50, 50);
 			WindowSize                      = new Size(640, 480);
-			MenuPosition                    = Point.Empty;
 			AlternateLineColours            = true;
 			LineSelectBackColour            = Color.DarkGreen;
 			LineSelectForeColour            = Color.White;

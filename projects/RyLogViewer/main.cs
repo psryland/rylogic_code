@@ -85,7 +85,7 @@ namespace RyLogViewer
 			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
 			
 			// Menu
-			m_menu.Move                             += (s,a) => m_settings.MenuPosition = m_menu.Location;
+			m_menu.Location                          = Point.Empty;
 			m_menu_file_open.Click                  += (s,a) => OpenLogFile();
 			m_menu_file_open_stdout.Click           += (s,a) => LogProgramOutput();
 			m_menu_file_open_serial_port.Click      += (s,a) => LogSerialPort();
@@ -1205,10 +1205,6 @@ namespace RyLogViewer
 			}
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
-			
-			// Position UI elements
-			m_menu.Location      = m_settings.MenuPosition;
-			m_status.Location    = m_settings.StatusPosition;
 			
 			// Ensure rows are rerendered
 			InvalidateCache();

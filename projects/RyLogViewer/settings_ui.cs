@@ -393,7 +393,7 @@ namespace RyLogViewer
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.SelectAll;
-			m_grid_highlight.UserDeletedRow   += (s,a)=> OnDeleteRow      (m_grid_highlight, m_highlights);
+			m_grid_highlight.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_highlight, m_highlights, a.Row.Index);
 			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown      (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop       (m_grid_highlight, m_highlights, a, false);
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
@@ -434,7 +434,7 @@ namespace RyLogViewer
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
-			m_grid_filter.UserDeletedRow     += (s,a)=> OnDeleteRow      (m_grid_filter, m_filters);
+			m_grid_filter.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_filter, m_filters, a.Row.Index);
 			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown      (m_grid_filter, m_filters, a);
 			m_grid_filter.DragOver           += (s,a)=> DoDragDrop       (m_grid_filter, m_filters, a, false);
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
@@ -474,7 +474,7 @@ namespace RyLogViewer
 			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_transform.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_transform.KeyDown            += DataGridView_Extensions.SelectAll;
-			m_grid_transform.UserDeletedRow     += (s,a)=> OnDeleteRow      (m_grid_transform, m_transforms);
+			m_grid_transform.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_transform, m_transforms, a.Row.Index);
 			m_grid_transform.MouseDown          += (s,a)=> OnMouseDown      (m_grid_transform, m_transforms, a);
 			m_grid_transform.DragOver           += (s,a)=> DoDragDrop       (m_grid_transform, m_transforms, a, false);
 			m_grid_transform.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_transform, m_transforms, a);
@@ -513,18 +513,12 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Delete a pattern</summary>
-		private void OnDeleteRow<T>(DataGridView grid, List<T> patterns)
+		private void OnDeletingRow<T>(DataGridView grid, List<T> patterns, int index)
 		{
+			patterns.RemoveAt(index);
 			WhatsChanged |= grid == m_grid_highlight
 				? EWhatsChanged.Rendering
 				: EWhatsChanged.FileParsing;
-			
-			if (grid.RowCount == 0) patterns.Clear();
-			else
-			{
-				int selected = grid.FirstSelectedRowIndex();
-				if (selected != -1) patterns.RemoveAt(selected);
-			}
 		}
 
 		/// <summary>DragDrop functionality for grid rows</summary>
