@@ -70,79 +70,79 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="about.cs">
+    <Compile Include="src\about.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="export.cs">
+    <Compile Include="src\export.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="startup_options.cs" />
-    <Compile Include="export_ui.cs">
+    <Compile Include="src\startup_options.cs" />
+    <Compile Include="src\export_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="export_ui.Designer.cs">
+    <Compile Include="src\export_ui.Designer.cs">
       <DependentUpon>export_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="file_scroll.cs">
+    <Compile Include="src\file_scroll.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="filter.cs" />
-    <Compile Include="find_ui.cs">
+    <Compile Include="src\patterns\filter.cs" />
+    <Compile Include="src\find_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="find_ui.Designer.cs">
+    <Compile Include="src\find_ui.Designer.cs">
       <DependentUpon>find_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="ghost_mode_ui.cs">
+    <Compile Include="src\ghost_mode_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="ghost_mode_ui.Designer.cs">
+    <Compile Include="src\ghost_mode_ui.Designer.cs">
       <DependentUpon>ghost_mode_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="help_ui.cs">
+    <Compile Include="src\help_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="highlight.cs" />
-    <Compile Include="line_cache.cs">
+    <Compile Include="src\patterns\highlight.cs" />
+    <Compile Include="src\line_cache.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="line_index.cs">
+    <Compile Include="src\line_index.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="misc.cs" />
-    <Compile Include="named_pipe_ui.cs">
+    <Compile Include="src\misc.cs" />
+    <Compile Include="src\inputs\named_pipe_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="named_pipe_ui.Designer.cs">
+    <Compile Include="src\inputs\named_pipe_ui.Designer.cs">
       <DependentUpon>named_pipe_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="new_version_form.cs">
+    <Compile Include="src\new_version_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="new_version_form.Designer.cs">
+    <Compile Include="src\new_version_form.Designer.cs">
       <DependentUpon>new_version_form.cs</DependentUpon>
     </Compile>
-    <Compile Include="pattern.cs" />
-    <Compile Include="main.cs">
+    <Compile Include="src\patterns\pattern.cs" />
+    <Compile Include="src\main.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="main.Designer.cs">
+    <Compile Include="src\main.Designer.cs">
       <DependentUpon>main.cs</DependentUpon>
     </Compile>
-    <Compile Include="pattern_set_ui.cs">
+    <Compile Include="src\patterns\pattern_set_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="pattern_set_ui.Designer.cs">
+    <Compile Include="src\patterns\pattern_set_ui.Designer.cs">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="pattern_ui.cs">
+    <Compile Include="src\patterns\pattern_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="program.cs" />
-    <Compile Include="program_output_ui.cs">
+    <Compile Include="src\program.cs" />
+    <Compile Include="src\inputs\program_output_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="program_output_ui.Designer.cs">
+    <Compile Include="src\inputs\program_output_ui.Designer.cs">
       <DependentUpon>program_output_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -151,74 +151,74 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="serial_connection_ui.cs">
+    <Compile Include="src\inputs\serial_connection_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="serial_connection_ui.Designer.cs">
+    <Compile Include="src\inputs\serial_connection_ui.Designer.cs">
       <DependentUpon>serial_connection_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="settings.cs" />
-    <Compile Include="settings_ui.cs">
+    <Compile Include="src\settings.cs" />
+    <Compile Include="src\settings_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="settings_ui.Designer.cs">
+    <Compile Include="src\settings_ui.Designer.cs">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="stream_buffering.cs">
+    <Compile Include="src\inputs\stream_buffering.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="network_connection_ui.cs">
+    <Compile Include="src\inputs\network_connection_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="network_connection_ui.Designer.cs">
+    <Compile Include="src\inputs\network_connection_ui.Designer.cs">
       <DependentUpon>network_connection_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="swizzle.cs" />
-    <Compile Include="swizzle_ui.cs">
+    <Compile Include="src\transforms\swizzle.cs" />
+    <Compile Include="src\transforms\swizzle_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="swizzle_ui.Designer.cs">
+    <Compile Include="src\transforms\swizzle_ui.Designer.cs">
       <DependentUpon>swizzle_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="tipoftheday.cs">
+    <Compile Include="src\tipoftheday.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="transform.cs" />
-    <Compile Include="transform_subs.cs" />
-    <Compile Include="transform_ui.cs">
+    <Compile Include="src\transforms\transform.cs" />
+    <Compile Include="src\transforms\transform_subs.cs" />
+    <Compile Include="src\transforms\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <EmbeddedResource Include="about.resx">
+    <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="export_ui.resx">
+    <EmbeddedResource Include="src\export_ui.resx">
       <DependentUpon>export_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="find_ui.resx">
+    <EmbeddedResource Include="src\find_ui.resx">
       <DependentUpon>find_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="ghost_mode_ui.resx">
+    <EmbeddedResource Include="src\ghost_mode_ui.resx">
       <DependentUpon>ghost_mode_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="help_ui.resx">
+    <EmbeddedResource Include="src\help_ui.resx">
       <DependentUpon>help_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="main.resx">
+    <EmbeddedResource Include="src\main.resx">
       <DependentUpon>main.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="named_pipe_ui.resx">
+    <EmbeddedResource Include="src\inputs\named_pipe_ui.resx">
       <DependentUpon>named_pipe_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="new_version_form.resx">
+    <EmbeddedResource Include="src\new_version_form.resx">
       <DependentUpon>new_version_form.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="pattern_set_ui.resx">
+    <EmbeddedResource Include="src\patterns\pattern_set_ui.resx">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="pattern_ui.resx">
+    <EmbeddedResource Include="src\patterns\pattern_ui.resx">
       <DependentUpon>pattern_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="program_output_ui.resx">
+    <EmbeddedResource Include="src\inputs\program_output_ui.resx">
       <DependentUpon>program_output_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -226,25 +226,24 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="serial_connection_ui.resx">
+    <EmbeddedResource Include="src\inputs\serial_connection_ui.resx">
       <DependentUpon>serial_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="settings_ui.resx">
+    <EmbeddedResource Include="src\settings_ui.resx">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="network_connection_ui.resx">
+    <EmbeddedResource Include="src\inputs\network_connection_ui.resx">
       <DependentUpon>network_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="swizzle_ui.resx">
+    <EmbeddedResource Include="src\transforms\swizzle_ui.resx">
       <DependentUpon>swizzle_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="tipoftheday.resx">
+    <EmbeddedResource Include="src\tipoftheday.resx">
       <DependentUpon>tipoftheday.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="transform_ui.resx">
+    <EmbeddedResource Include="src\transforms\transform_ui.resx">
       <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <None Include="app.config" />
     <EmbeddedResource Include="docs\RegexQuickRef.html" />
   </ItemGroup>
   <ItemGroup>
