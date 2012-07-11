@@ -268,25 +268,20 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="release.bat" />
+    <None Include="Resources\executable.png" />
     <None Include="Resources\edit_add.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\edit_save.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\edit_save_needed.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\3dowarrow.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\my_documents.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\highlight.png" />
-  </ItemGroup>
-  <ItemGroup>
+    <None Include="Resources\exchange.png" />
+    <None Include="Resources\Eyeball.png" />
     <None Include="Resources\filter.png" />
+    <None Include="Resources\folder_with_file.png" />
+    <None Include="Resources\green_down.png" />
+    <None Include="Resources\green_up.png" />
+    <None Include="Resources\highlight.png" />
+    <None Include="Resources\important.png" />
+    <None Include="Resources\options.png" />
+    <None Include="Resources\Refresh.png" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">
@@ -311,12 +306,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\reload.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\1338530996_book.png" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="docs\VersionHistory.txt" />
   </ItemGroup>
   <ItemGroup>
@@ -326,56 +315,16 @@
     <EmbeddedResource Include="docs\TotD1.html" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\fileclose.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\bookmark_add.png" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="docs\TotD2.html" />
     <EmbeddedResource Include="RyLog.ico" />
-    <None Include="Resources\agt_action_fail.png" />
-    <None Include="Resources\agt_action_success.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\configure.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\options.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\downred.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\pause_gray.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\folder_with_file.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Refresh.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Eyeball.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\upred.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\important.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="docs\SwizzleQuickRef.html" />
     <EmbeddedResource Include="docs\TransformQuickRef.html" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\edit_add1.png" />
-    <None Include="Resources\green_up.png" />
-    <None Include="Resources\green_down.png" />
-    <None Include="Resources\application-x-executable-script.png" />
-    <None Include="Resources\exchange.png" />
-    <None Include="Resources\cache.png" />
-    <None Include="Resources\trashcan_empty.png" />
+    <Content Include="Resources\book.png" />
+    <Content Include="Resources\green_tick.png" />
     <EmbeddedResource Include="docs\CommandLineRef.html" />
     <Content Include="lib\ClrDump.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -384,6 +333,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

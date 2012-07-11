@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NamedPipeUI));
 			this.m_combo_output_filepath = new System.Windows.Forms.ComboBox();
 			this.m_lbl_output_file = new System.Windows.Forms.Label();
 			this.m_btn_browse_output = new System.Windows.Forms.Button();
@@ -133,6 +134,7 @@
 			this.Controls.Add(this.m_check_append);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_btn_cancel);
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MaximumSize = new System.Drawing.Size(2000, 200);
 			this.MinimumSize = new System.Drawing.Size(323, 200);
 			this.Name = "NamedPipeUI";

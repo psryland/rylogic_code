@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SerialConnectionUI));
 			this.m_lbl_commport = new System.Windows.Forms.Label();
 			this.m_combo_commport = new System.Windows.Forms.ComboBox();
 			this.m_lbl_baudrate = new System.Windows.Forms.Label();
@@ -261,6 +262,7 @@
 			this.Controls.Add(this.m_check_append);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_btn_cancel);
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MaximumSize = new System.Drawing.Size(2000, 320);
 			this.MinimumSize = new System.Drawing.Size(323, 320);
 			this.Name = "SerialConnectionUI";

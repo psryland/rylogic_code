@@ -96,6 +96,7 @@ namespace RyLogViewer
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ClkActionUI));
 			this.m_lbl_exec = new System.Windows.Forms.Label();
 			this.m_lbl_args = new System.Windows.Forms.Label();
 			this.m_lbl_startin = new System.Windows.Forms.Label();
@@ -213,6 +214,7 @@ namespace RyLogViewer
 			this.Controls.Add(this.m_lbl_args);
 			this.Controls.Add(this.m_lbl_exec);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MaximumSize = new System.Drawing.Size(3000, 150);
 			this.MinimumSize = new System.Drawing.Size(200, 150);
 			this.Name = "ClkActionUI";

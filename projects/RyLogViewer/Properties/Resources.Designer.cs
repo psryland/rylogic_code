@@ -60,13 +60,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap _3dowarrow {
-            get {
-                object obj = ResourceManager.GetObject("_3dowarrow", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         /// <summary>
         ///   Looks up a localized string similar to Action.
         /// </summary>
@@ -128,13 +121,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap bookmark_add {
-            get {
-                object obj = ResourceManager.GetObject("bookmark_add", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         /// <summary>
         ///   Looks up a localized string similar to Building line index.
         /// </summary>
@@ -152,13 +138,6 @@ namespace RyLogViewer.Properties {
         internal static string BuildLineIndexErrorMsg {
             get {
                 return ResourceManager.GetString("BuildLineIndexErrorMsg", resourceCulture);
-            }
-        }
-        
-        internal static System.Drawing.Bitmap cache {
-            get {
-                object obj = ResourceManager.GetObject("cache", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -213,13 +192,6 @@ namespace RyLogViewer.Properties {
         internal static string ClickToModifyHighlight {
             get {
                 return ResourceManager.GetString("ClickToModifyHighlight", resourceCulture);
-            }
-        }
-        
-        internal static System.Drawing.Bitmap configure {
-            get {
-                object obj = ResourceManager.GetObject("configure", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -306,13 +278,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap downred {
-            get {
-                object obj = ResourceManager.GetObject("downred", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         /// <summary>
         ///   Looks up a localized string similar to Edit.
         /// </summary>
@@ -325,13 +290,6 @@ namespace RyLogViewer.Properties {
         internal static System.Drawing.Bitmap edit_add {
             get {
                 object obj = ResourceManager.GetObject("edit_add", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        internal static System.Drawing.Bitmap edit_add1 {
-            get {
-                object obj = ResourceManager.GetObject("edit_add1", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -433,13 +391,6 @@ namespace RyLogViewer.Properties {
         internal static string FailedToLoadFile {
             get {
                 return ResourceManager.GetString("FailedToLoadFile", resourceCulture);
-            }
-        }
-        
-        internal static System.Drawing.Bitmap fileclose {
-            get {
-                object obj = ResourceManager.GetObject("fileclose", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -557,13 +508,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap my_documents {
-            get {
-                object obj = ResourceManager.GetObject("my_documents", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         /// <summary>
         ///   Looks up a localized string similar to No File.
         /// </summary>
@@ -630,13 +574,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap pause_gray {
-            get {
-                object obj = ResourceManager.GetObject("pause_gray", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         /// <summary>
         ///   Looks up a localized string similar to Position: {0} / {1} bytes.
         /// </summary>
@@ -667,13 +604,6 @@ namespace RyLogViewer.Properties {
         internal static System.Drawing.Bitmap Refresh {
             get {
                 object obj = ResourceManager.GetObject("Refresh", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        internal static System.Drawing.Bitmap reload {
-            get {
-                object obj = ResourceManager.GetObject("reload", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -753,26 +683,12 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap trashcan_empty {
-            get {
-                object obj = ResourceManager.GetObject("trashcan_empty", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         /// <summary>
         ///   Looks up a localized string similar to Unknown command line option.
         /// </summary>
         internal static string UnknownCmdLineOption {
             get {
                 return ResourceManager.GetString("UnknownCmdLineOption", resourceCulture);
-            }
-        }
-        
-        internal static System.Drawing.Bitmap upred {
-            get {
-                object obj = ResourceManager.GetObject("upred", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
