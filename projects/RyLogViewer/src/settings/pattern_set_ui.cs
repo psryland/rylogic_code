@@ -344,4 +344,54 @@ namespace RyLogViewer
 			if (some_added) RaiseCurrentSetChanged();
 		}
 	}
+
+	/// <summary>Click Action specific instance of the pattern set control</summary>
+	internal class PatternSetAC :PatternSetUi
+	{
+		protected const string ACPatternSetExtn   = @"rylog_actions";
+		protected const string ACPatternSetFilter = @"Action Set Files (*."+ACPatternSetExtn+")|*."+ACPatternSetExtn+"|All files (*.*)|*.*";
+		
+		/// <summary>A reference to the current set of actions</summary>
+		public List<ClkAction> CurrentSet { get; private set; }
+
+		/// <summary>Initialise the control</summary>
+		internal void Init(Settings settings, List<ClkAction> actions)
+		{
+			m_settings = settings;
+			m_settings.SettingsSaving += (s,a)=>{ m_settings.ActionPatternSets = Export(); };
+			Import(settings.ActionPatternSets);
+			CurrentSet = actions;
+			UpdateUI();
+		}
+
+		/// <summary>Return the pattern set filter</summary>
+		protected override string PatternSetFilter
+		{
+			get { return ACPatternSetFilter; }
+		}
+
+		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
+		protected override void CurrentSetToXml(XElement parent)
+		{
+			foreach (var p in CurrentSet)
+				parent.Add(p.ToXml(new XElement(XmlTag.ClkAction)));
+		}
+		
+		/// <summary>Clear the current set of patterns</summary>
+		protected override void ClearPatterns()
+		{
+			if (CurrentSet.Count == 0) return;
+			CurrentSet.Clear();
+			RaiseCurrentSetChanged();
+		}
+		
+		/// <summary>Add the patterns in 'node' to the current list</summary>
+		protected override void MergePatterns(XElement node)
+		{
+			bool some_added = false;
+			foreach (XElement n in node.Elements(XmlTag.ClkAction))
+				try { some_added |= CurrentSet.AddIfUnique(new ClkAction(n)); } catch {} // Ignore those that fail
+			if (some_added) RaiseCurrentSetChanged();
+		}
+	}
 }

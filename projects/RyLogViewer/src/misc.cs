@@ -102,6 +102,7 @@ namespace RyLogViewer
 		public const string BackColour = "backcolour";
 		public const string Filter     = "filter";
 		public const string Transform  = "transform";
+		public const string ClkAction  = "clkaction";
 		public const string Exclude    = "exclude";
 		public const string Name       = "name";
 		public const string Filepath   = "filepath";
@@ -120,7 +121,9 @@ namespace RyLogViewer
 		public const string CodeValue  = "cv";
 		public const string Code       = "c";
 		public const string Value      = "v";
-		public const string HexCodes   = "hexcodes";
+		public const string Executable = "executable";
+		public const string Arguments  = "arguments";
+		public const string WorkingDir = "working_dir";
 	}
 
 	public static class CmdLineOption

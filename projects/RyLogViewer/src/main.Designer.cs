@@ -37,6 +37,7 @@
 			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_transforms = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_actions = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -85,6 +86,7 @@
 			this.m_sep4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_highlights = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_filters = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_transforms = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_clear_log_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_ghost_mode = new System.Windows.Forms.ToolStripMenuItem();
@@ -106,17 +108,16 @@
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid = new System.Windows.Forms.DataGridView();
 			this.m_cmenu_grid = new System.Windows.Forms.ContextMenuStrip(this.components);
-			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_highlight_row = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_filter_row = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_transform_row = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_transforms = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_find_next = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -140,6 +141,7 @@
             this.m_btn_highlights,
             this.m_btn_filters,
             this.m_btn_transforms,
+            this.m_btn_actions,
             this.toolStripSeparator9,
             this.m_btn_options,
             this.toolStripSeparator1,
@@ -150,7 +152,7 @@
             this.m_btn_additive});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(316, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(344, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -202,11 +204,21 @@
 			// 
 			this.m_btn_transforms.CheckOnClick = true;
 			this.m_btn_transforms.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_transforms.Image = global::RyLogViewer.Properties.Resources.reload;
+			this.m_btn_transforms.Image = global::RyLogViewer.Properties.Resources.exchange;
 			this.m_btn_transforms.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_transforms.Name = "m_btn_transforms";
 			this.m_btn_transforms.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_transforms.Text = "Transforms";
+			// 
+			// m_btn_actions
+			// 
+			this.m_btn_actions.CheckOnClick = true;
+			this.m_btn_actions.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_actions.Image = global::RyLogViewer.Properties.Resources.application_x_executable_script;
+			this.m_btn_actions.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_actions.Name = "m_btn_actions";
+			this.m_btn_actions.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_actions.Text = "Actions";
 			// 
 			// toolStripSeparator9
 			// 
@@ -230,7 +242,7 @@
 			// m_btn_jump_to_end
 			// 
 			this.m_btn_jump_to_end.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_jump_to_end.Image = global::RyLogViewer.Properties.Resources.downred;
+			this.m_btn_jump_to_end.Image = global::RyLogViewer.Properties.Resources.green_down;
 			this.m_btn_jump_to_end.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_jump_to_end.Name = "m_btn_jump_to_end";
 			this.m_btn_jump_to_end.Size = new System.Drawing.Size(28, 28);
@@ -240,7 +252,7 @@
 			// m_btn_jump_to_start
 			// 
 			this.m_btn_jump_to_start.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_jump_to_start.Image = global::RyLogViewer.Properties.Resources.upred;
+			this.m_btn_jump_to_start.Image = global::RyLogViewer.Properties.Resources.green_up;
 			this.m_btn_jump_to_start.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_jump_to_start.Name = "m_btn_jump_to_start";
 			this.m_btn_jump_to_start.Size = new System.Drawing.Size(28, 28);
@@ -266,7 +278,7 @@
 			// 
 			this.m_btn_additive.CheckOnClick = true;
 			this.m_btn_additive.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_additive.Image = global::RyLogViewer.Properties.Resources.edit_add;
+			this.m_btn_additive.Image = global::RyLogViewer.Properties.Resources.edit_add1;
 			this.m_btn_additive.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_additive.Name = "m_btn_additive";
 			this.m_btn_additive.Size = new System.Drawing.Size(28, 28);
@@ -569,6 +581,12 @@
 			this.m_menu_tools_filters.Size = new System.Drawing.Size(154, 22);
 			this.m_menu_tools_filters.Text = "&Filters";
 			// 
+			// m_menu_tools_transforms
+			// 
+			this.m_menu_tools_transforms.Name = "m_menu_tools_transforms";
+			this.m_menu_tools_transforms.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_transforms.Text = "&Transforms";
+			// 
 			// toolStripSeparator6
 			// 
 			this.toolStripSeparator6.Name = "toolStripSeparator6";
@@ -783,7 +801,13 @@
             this.m_cmenu_find_next,
             this.m_cmenu_find_prev});
 			this.m_cmenu_grid.Name = "m_cmenu_grid";
-			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 192);
+			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 170);
+			// 
+			// m_cmenu_select_all
+			// 
+			this.m_cmenu_select_all.Name = "m_cmenu_select_all";
+			this.m_cmenu_select_all.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_select_all.Text = "Select &All";
 			// 
 			// m_cmenu_copy
 			// 
@@ -791,11 +815,10 @@
 			this.m_cmenu_copy.Size = new System.Drawing.Size(164, 22);
 			this.m_cmenu_copy.Text = "&Copy";
 			// 
-			// m_cmenu_select_all
+			// toolStripSeparator10
 			// 
-			this.m_cmenu_select_all.Name = "m_cmenu_select_all";
-			this.m_cmenu_select_all.Size = new System.Drawing.Size(164, 22);
-			this.m_cmenu_select_all.Text = "Select &All";
+			this.toolStripSeparator10.Name = "toolStripSeparator10";
+			this.toolStripSeparator10.Size = new System.Drawing.Size(161, 6);
 			// 
 			// m_cmenu_highlight_row
 			// 
@@ -809,37 +832,11 @@
 			this.m_cmenu_filter_row.Size = new System.Drawing.Size(164, 22);
 			this.m_cmenu_filter_row.Text = "&Filter Row...";
 			// 
-			// toolStripSeparator10
-			// 
-			this.toolStripSeparator10.Name = "toolStripSeparator10";
-			this.toolStripSeparator10.Size = new System.Drawing.Size(161, 6);
-			// 
 			// m_cmenu_transform_row
 			// 
 			this.m_cmenu_transform_row.Name = "m_cmenu_transform_row";
 			this.m_cmenu_transform_row.Size = new System.Drawing.Size(164, 22);
 			this.m_cmenu_transform_row.Text = "&Transform Row...";
-			// 
-			// m_menu_tools_transforms
-			// 
-			this.m_menu_tools_transforms.Name = "m_menu_tools_transforms";
-			this.m_menu_tools_transforms.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_transforms.Text = "&Transforms";
-			// 
-			// m_scroll_file
-			// 
-			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_scroll_file.LargeChange = ((long)(1));
-			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
-			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
-			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
-			this.m_scroll_file.MinThumbSize = 20;
-			this.m_scroll_file.Name = "m_scroll_file";
-			this.m_scroll_file.Size = new System.Drawing.Size(18, 410);
-			this.m_scroll_file.SmallChange = ((long)(1));
-			this.m_scroll_file.TabIndex = 4;
-			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.ControlLight;
-			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
 			// toolStripSeparator4
 			// 
@@ -857,6 +854,21 @@
 			this.m_cmenu_find_prev.Name = "m_cmenu_find_prev";
 			this.m_cmenu_find_prev.Size = new System.Drawing.Size(164, 22);
 			this.m_cmenu_find_prev.Text = "Find &Previous";
+			// 
+			// m_scroll_file
+			// 
+			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_scroll_file.LargeChange = ((long)(1));
+			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
+			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
+			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
+			this.m_scroll_file.MinThumbSize = 20;
+			this.m_scroll_file.Name = "m_scroll_file";
+			this.m_scroll_file.Size = new System.Drawing.Size(18, 410);
+			this.m_scroll_file.SmallChange = ((long)(1));
+			this.m_scroll_file.TabIndex = 4;
+			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.ControlLight;
+			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
 			// 
 			// Main
 			// 
@@ -980,6 +992,7 @@
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_next;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_prev;
+		private System.Windows.Forms.ToolStripButton m_btn_actions;
 	}
 }
 

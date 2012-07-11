@@ -856,6 +856,10 @@ namespace RyLogViewer
 				ui.TransformUI.Transform.Replace = row_text;
 				ui.TransformUI.TestText = test_text;
 				break;
+			case SettingsUI.ETab.Actions:
+				ui.ActionUI.Pattern.Expr = row_text;
+				ui.ActionUI.TestText = test_text;
+				break;
 			}
 			ui.ShowDialog(this);
 			ApplySettings();
@@ -865,6 +869,7 @@ namespace RyLogViewer
 			if      (ui.HighlightsChanged && !m_settings.HighlightsEnabled) ShowHintBalloon("Highlights are currently disabled", m_btn_highlights);
 			else if (ui.FiltersChanged    && !m_settings.FiltersEnabled   ) ShowHintBalloon("Filters are currently disabled"   , m_btn_filters);
 			else if (ui.TransformsChanged && !m_settings.TransformsEnabled) ShowHintBalloon("Transforms are currently disabled", m_btn_transforms);
+			else if (ui.ActionsChanged    && !m_settings.ActionsEnabled   ) ShowHintBalloon("Actions are currently disabled"   , m_btn_actions);
 			
 			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
 			{

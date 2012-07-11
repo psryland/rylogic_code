@@ -76,6 +76,10 @@
     <Compile Include="src\export.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\settings\clkaction.cs" />
+    <Compile Include="src\settings\clkaction_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\startup_options.cs" />
     <Compile Include="src\export_ui.cs">
       <SubType>Form</SubType>
@@ -86,7 +90,7 @@
     <Compile Include="src\file_scroll.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="src\patterns\filter.cs" />
+    <Compile Include="src\settings\filter.cs" />
     <Compile Include="src\find_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -102,7 +106,7 @@
     <Compile Include="src\help_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\patterns\highlight.cs" />
+    <Compile Include="src\settings\highlight.cs" />
     <Compile Include="src\line_cache.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -122,20 +126,20 @@
     <Compile Include="src\new_version_form.Designer.cs">
       <DependentUpon>new_version_form.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\patterns\pattern.cs" />
+    <Compile Include="src\settings\pattern.cs" />
     <Compile Include="src\main.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\main.Designer.cs">
       <DependentUpon>main.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\patterns\pattern_set_ui.cs">
+    <Compile Include="src\settings\pattern_set_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="src\patterns\pattern_set_ui.Designer.cs">
+    <Compile Include="src\settings\pattern_set_ui.Designer.cs">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\patterns\pattern_ui.cs">
+    <Compile Include="src\settings\pattern_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\program.cs" />
@@ -157,11 +161,11 @@
     <Compile Include="src\inputs\serial_connection_ui.Designer.cs">
       <DependentUpon>serial_connection_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\settings.cs" />
-    <Compile Include="src\settings_ui.cs">
+    <Compile Include="src\settings\settings.cs" />
+    <Compile Include="src\settings\settings_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings_ui.Designer.cs">
+    <Compile Include="src\settings\settings_ui.Designer.cs">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="src\inputs\stream_buffering.cs">
@@ -173,23 +177,23 @@
     <Compile Include="src\inputs\network_connection_ui.Designer.cs">
       <DependentUpon>network_connection_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\transforms\code_lookup.cs" />
-    <Compile Include="src\transforms\code_lookup_ui.cs">
+    <Compile Include="src\settings\code_lookup.cs" />
+    <Compile Include="src\settings\code_lookup_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\transforms\swizzle.cs" />
-    <Compile Include="src\transforms\swizzle_ui.cs">
+    <Compile Include="src\settings\swizzle.cs" />
+    <Compile Include="src\settings\swizzle_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\transforms\swizzle_ui.Designer.cs">
+    <Compile Include="src\settings\swizzle_ui.Designer.cs">
       <DependentUpon>swizzle_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="src\tipoftheday.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\transforms\transform.cs" />
-    <Compile Include="src\transforms\transform_subs.cs" />
-    <Compile Include="src\transforms\transform_ui.cs">
+    <Compile Include="src\settings\transform.cs" />
+    <Compile Include="src\settings\transform_subs.cs" />
+    <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <EmbeddedResource Include="src\about.resx">
@@ -216,10 +220,13 @@
     <EmbeddedResource Include="src\new_version_form.resx">
       <DependentUpon>new_version_form.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\patterns\pattern_set_ui.resx">
+    <EmbeddedResource Include="src\settings\clkaction_ui.resx">
+      <DependentUpon>clkaction_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\settings\pattern_set_ui.resx">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\patterns\pattern_ui.resx">
+    <EmbeddedResource Include="src\settings\pattern_ui.resx">
       <DependentUpon>pattern_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\inputs\program_output_ui.resx">
@@ -233,22 +240,22 @@
     <EmbeddedResource Include="src\inputs\serial_connection_ui.resx">
       <DependentUpon>serial_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\settings_ui.resx">
+    <EmbeddedResource Include="src\settings\settings_ui.resx">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\inputs\network_connection_ui.resx">
       <DependentUpon>network_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\transforms\code_lookup_ui.resx">
+    <EmbeddedResource Include="src\settings\code_lookup_ui.resx">
       <DependentUpon>code_lookup_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\transforms\swizzle_ui.resx">
+    <EmbeddedResource Include="src\settings\swizzle_ui.resx">
       <DependentUpon>swizzle_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\tipoftheday.resx">
       <DependentUpon>tipoftheday.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\transforms\transform_ui.resx">
+    <EmbeddedResource Include="src\settings\transform_ui.resx">
       <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="docs\RegexQuickRef.html" />
@@ -362,6 +369,12 @@
     <EmbeddedResource Include="docs\TransformQuickRef.html" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\edit_add1.png" />
+    <None Include="Resources\green_up.png" />
+    <None Include="Resources\green_down.png" />
+    <None Include="Resources\application-x-executable-script.png" />
+    <None Include="Resources\exchange.png" />
+    <None Include="Resources\cache.png" />
     <None Include="Resources\trashcan_empty.png" />
     <EmbeddedResource Include="docs\CommandLineRef.html" />
     <Content Include="lib\ClrDump.dll">

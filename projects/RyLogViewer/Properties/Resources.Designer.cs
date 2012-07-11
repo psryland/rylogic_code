@@ -68,6 +68,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Action.
+        /// </summary>
+        internal static string Action {
+            get {
+                return ResourceManager.GetString("Action", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Active.
         /// </summary>
         internal static string Active {
@@ -84,6 +93,13 @@ namespace RyLogViewer.Properties {
         internal static string AdditiveMode {
             get {
                 return ResourceManager.GetString("AdditiveMode", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap application_x_executable_script {
+            get {
+                object obj = ResourceManager.GetObject("application-x-executable-script", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -139,6 +155,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap cache {
+            get {
+                object obj = ResourceManager.GetObject("cache", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Change Background Colour.
         /// </summary>
@@ -172,6 +195,15 @@ namespace RyLogViewer.Properties {
         internal static string ClearLogFailed {
             get {
                 return ResourceManager.GetString("ClearLogFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Click here to modify action.
+        /// </summary>
+        internal static string ClickToModifyAction {
+            get {
+                return ResourceManager.GetString("ClickToModifyAction", resourceCulture);
             }
         }
         
@@ -297,6 +329,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap edit_add1 {
+            get {
+                object obj = ResourceManager.GetObject("edit_add1", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         internal static System.Drawing.Bitmap edit_save {
             get {
                 object obj = ResourceManager.GetObject("edit_save", resourceCulture);
@@ -317,6 +356,13 @@ namespace RyLogViewer.Properties {
         internal static string EncodingX {
             get {
                 return ResourceManager.GetString("EncodingX", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap exchange {
+            get {
+                object obj = ResourceManager.GetObject("exchange", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         
@@ -407,6 +453,20 @@ namespace RyLogViewer.Properties {
         internal static System.Drawing.Bitmap folder_with_file {
             get {
                 object obj = ResourceManager.GetObject("folder_with_file", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap green_down {
+            get {
+                object obj = ResourceManager.GetObject("green_down", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap green_up {
+            get {
+                object obj = ResourceManager.GetObject("green_up", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

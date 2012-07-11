@@ -15,7 +15,8 @@ namespace RyLogViewer
 		private readonly Settings        m_settings;    // The app settings changed by this UI
 		private readonly List<Highlight> m_highlights;  // The highlight patterns currently in the grid
 		private readonly List<Filter>    m_filters;     // The filter patterns currently in the grid
-		private readonly List<Transform> m_transforms;  // The transforms current in the grid 
+		private readonly List<Transform> m_transforms;  // The transforms currently in the grid 
+		private readonly List<ClkAction> m_actions;     // The actions currently in the grid 
 		private readonly ToolTip         m_tt;          // Tooltips
 		
 		public enum ETab
@@ -25,6 +26,7 @@ namespace RyLogViewer
 			Highlights = 2,
 			Filters    = 3,
 			Transforms = 4,
+			Actions    = 5,
 		}
 		private static class ColumnNames
 		{
@@ -32,6 +34,7 @@ namespace RyLogViewer
 			public const string Pattern      = "Pattern";
 			public const string Modify       = "Modify";
 			public const string Highlighting = "Highlighting";
+			public const string ClickAction  = "ClickAction";
 		}
 		
 		/// <summary>Returns a bit mask of the settings data that's changed</summary>
@@ -48,7 +51,11 @@ namespace RyLogViewer
 		/// <summary>Access to the transform pattern ui</summary>
 		public TransformUI TransformUI { get { return m_pattern_tx; } }
 		public bool TransformsChanged { get; set; }
-
+		
+		/// <summary>Access to the action pattern ui</summary>
+		public PatternUI ActionUI { get { return m_pattern_ac; } }
+		public bool ActionsChanged { get; set; }
+		
 		public SettingsUI(Settings settings, ETab tab)
 		{
 			InitializeComponent();
@@ -57,12 +64,14 @@ namespace RyLogViewer
 			m_highlights  = Highlight.Import(m_settings.HighlightPatterns);
 			m_filters     = Filter   .Import(m_settings.FilterPatterns   );
 			m_transforms  = Transform.Import(m_settings.TransformPatterns);
+			m_actions     = ClkAction.Import(m_settings.ActionPatterns   );
 			m_tt          = new ToolTip();
 			
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
 			m_pattern_tx.NewPattern(new Transform());
+			m_pattern_ac.NewPattern(new ClkAction());
 			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			m_tabctrl.SelectedIndexChanged += (s,a) => FocusInput();
@@ -72,6 +81,7 @@ namespace RyLogViewer
 			SetupHighlightTab();
 			SetupFilterTab();
 			SetupTransformTab();
+			SetupActionTab();
 			
 			// Escape to close
 			KeyDown += (s,a) =>
@@ -92,6 +102,7 @@ namespace RyLogViewer
 					m_settings.HighlightPatterns = Highlight.Export(m_highlights);
 					m_settings.FilterPatterns    = Filter   .Export(m_filters);
 					m_settings.TransformPatterns = Transform.Export(m_transforms);
+					m_settings.ActionPatterns    = ClkAction.Export(m_actions);
 				};
 			
 			UpdateUI();
@@ -500,7 +511,50 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 		}
-		
+
+		/// <summary>Hook up events for the actions tab</summary>
+		private void SetupActionTab()
+		{
+			// Action grid
+			m_grid_action.AllowDrop           = true;
+			m_grid_action.VirtualMode         = true;
+			m_grid_action.AutoGenerateColumns = false;
+			m_grid_action.ColumnCount         = m_grid_action.RowCount = 0;
+			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active       ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern      ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
+			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.ClickAction  ,HeaderText = Resources.Action  ,FillWeight = 100 ,ReadOnly = true });
+			m_grid_action.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify       ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_action.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
+			m_grid_action.KeyDown          += DataGridView_Extensions.Copy;
+			m_grid_action.KeyDown          += DataGridView_Extensions.SelectAll;
+			m_grid_action.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_action, m_actions, a.Row.Index);
+			m_grid_action.MouseDown        += (s,a)=> OnMouseDown      (m_grid_action, m_actions, a);
+			m_grid_action.DragOver         += (s,a)=> DoDragDrop       (m_grid_action, m_actions, a, false);
+			m_grid_action.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_action, m_actions, a);
+			m_grid_action.CellClick        += (s,a)=> OnCellClick      (m_grid_action, m_actions, m_pattern_ac, a);
+			m_grid_action.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_action, m_actions, m_pattern_ac, a);
+			m_grid_action.CellFormatting   += (s,a)=> OnCellFormatting (m_grid_action, m_actions, a);
+			m_grid_action.DataError        += (s,a)=> a.Cancel = true;
+			m_grid_action.CellContextMenuStripNeeded += (s,a)=> OnCellClick (m_grid_action, m_actions, m_pattern_ac, a);
+			
+			// Action pattern
+			m_pattern_ac.Add += (s,a)=>
+				{
+					WhatsChanged |= EWhatsChanged.Nothing;
+					if (m_pattern_ac.IsNew) m_actions.Add((ClkAction)m_pattern_ac.Pattern);
+					m_pattern_ac.NewPattern(new ClkAction());
+					ActionsChanged = true;
+					UpdateUI();
+				};
+			
+			// Action pattern sets
+			m_pattern_set_ac.Init(m_settings, m_actions);
+			m_pattern_set_ac.CurrentSetChanged += (s,a)=>
+				{
+					UpdateUI();
+				};
+		}
+
 		/// <summary>Set input focus to the primary input field of the current tab</summary>
 		private void FocusInput()
 		{
@@ -509,16 +563,24 @@ namespace RyLogViewer
 			case ETab.Highlights: m_pattern_hl.FocusInput(); break;
 			case ETab.Filters:    m_pattern_ft.FocusInput(); break;
 			case ETab.Transforms: m_pattern_tx.FocusInput(); break;
+			case ETab.Actions:    m_pattern_ac.FocusInput(); break;
 			}
+		}
+
+		/// <summary>Set appropriate changed flags when a grid is changed</summary>
+		private void FlagAsChanged(DataGridView grid)
+		{
+			if      (grid == m_grid_highlight) { HighlightsChanged = true; WhatsChanged |= EWhatsChanged.Rendering; }
+			else if (grid == m_grid_filter   ) { FiltersChanged    = true; WhatsChanged |= EWhatsChanged.FileParsing; }
+			else if (grid == m_grid_transform) { TransformsChanged = true; WhatsChanged |= EWhatsChanged.FileParsing; }
+			else if (grid == m_grid_action   ) { ActionsChanged    = true; WhatsChanged |= EWhatsChanged.Nothing; }
 		}
 
 		/// <summary>Delete a pattern</summary>
 		private void OnDeletingRow<T>(DataGridView grid, List<T> patterns, int index)
 		{
 			patterns.RemoveAt(index);
-			WhatsChanged |= grid == m_grid_highlight
-				? EWhatsChanged.Rendering
-				: EWhatsChanged.FileParsing;
+			FlagAsChanged(grid);
 		}
 
 		/// <summary>DragDrop functionality for grid rows</summary>
@@ -542,10 +604,7 @@ namespace RyLogViewer
 			grid.InvalidateRow(idx1);
 			grid.InvalidateRow(idx2);
 			
-			// Changing the order can effect the highlight order, and possibly the filtering(?)
-			WhatsChanged |= grid == m_grid_highlight
-				? EWhatsChanged.Rendering
-				: EWhatsChanged.FileParsing;
+			FlagAsChanged(grid);
 		}
 
 		/// <summary>Handle mouse down on the patterns grid</summary>
@@ -565,6 +624,7 @@ namespace RyLogViewer
 			var cell = grid[e.ColumnIndex, e.RowIndex];
 			T pat = patterns[e.RowIndex];
 			Highlight hl = pat as Highlight;
+			ClkAction ac = pat as ClkAction;
 			
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
@@ -572,19 +632,22 @@ namespace RyLogViewer
 			case ColumnNames.Pattern:
 				e.Value = pat.ToString();
 				break;
+			case ColumnNames.Modify:
+				e.Value = "...";
+				break;
 			case ColumnNames.Highlighting:
 				e.Value = Resources.ClickToModifyHighlight;
 				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? hl.BackColour : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
 				break;
-			case ColumnNames.Modify:
-				e.Value = "...";
+			case ColumnNames.ClickAction:
+				e.Value = ac != null && !string.IsNullOrEmpty(ac.Executable) ? ac.Executable : Resources.ClickToModifyAction;
 				break;
 			}
 		}
 
 		/// <summary>Handle cell clicks</summary>
-		private void OnCellClick<T>(DataGridView grid, List<T> patterns, IPatternUI ctrl, DataGridViewCellEventArgs e) where T:IPattern
+		private void OnCellClick<T>(DataGridView grid, List<T> patterns, IPatternUI ctrl, DataGridViewCellEventArgs e) where T: class, IPattern
 		{
 			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
@@ -592,33 +655,32 @@ namespace RyLogViewer
 			T pat = patterns[e.RowIndex];
 			Point pt = MousePosition;
 			Highlight hl = pat as Highlight;
+			ClkAction ac = pat as ClkAction;
 			
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
-			case ColumnNames.Active:
-				pat.Active = !pat.Active;
-				WhatsChanged |= grid == m_grid_highlight
-					? EWhatsChanged.Rendering
-					: EWhatsChanged.FileParsing;
-				break;
+			case ColumnNames.Active: pat.Active = !pat.Active; break;
+			case ColumnNames.Modify: ctrl.EditPattern(patterns[e.RowIndex]); break;
 			case ColumnNames.Highlighting:
 				if (hl != null)
 				{
-					WhatsChanged |= EWhatsChanged.Rendering;
 					pt = grid.PointToClient(pt);
 					PickColours(grid, pt.X, pt.Y,
 						(s,a) => { hl.ForeColour = PickColour(hl.ForeColour); grid.InvalidateCell(e.ColumnIndex, e.RowIndex); },
 						(s,a) => { hl.BackColour = PickColour(hl.BackColour); grid.InvalidateCell(e.ColumnIndex, e.RowIndex); });
 				}
 				break;
-			case ColumnNames.Modify:
-				ctrl.EditPattern(patterns[e.RowIndex]);
-				WhatsChanged |= grid == m_grid_highlight
-					? EWhatsChanged.Rendering
-					: EWhatsChanged.FileParsing;
+			case ColumnNames.ClickAction:
+				if (ac != null)
+				{
+					var dg = new ClkActionUI(ac);
+					if (dg.ShowDialog(this) != DialogResult.OK) break;
+					patterns[e.RowIndex] = dg.Action as T;
+				}
 				break;
 			}
+			FlagAsChanged(grid);
 		}
 
 		/// <summary>Double click edits the pattern</summary>
@@ -630,9 +692,7 @@ namespace RyLogViewer
 			T pat = patterns[e.RowIndex];
 			
 			ctrl.EditPattern(pat);
-			WhatsChanged |= grid == m_grid_highlight
-				? EWhatsChanged.Rendering
-				: EWhatsChanged.FileParsing;
+			FlagAsChanged(grid);
 		}
 		
 		/// <summary>Cell formatting...</summary>
@@ -696,6 +756,12 @@ namespace RyLogViewer
 				m_grid_transform.RowCount = 0;
 				m_grid_transform.RowCount = m_transforms.Count;
 				m_grid_transform.SelectRow(selected);
+			
+				selected = m_grid_action.FirstSelectedRowIndex();
+				m_grid_action.CurrentCell = null;
+				m_grid_action.RowCount = 0;
+				m_grid_action.RowCount = m_actions.Count;
+				m_grid_action.SelectRow(selected);
 			
 				m_text_settings.Text = m_settings.Filepath;
 			}

@@ -5,6 +5,7 @@
             table { border:1px solid black; border-collapse:collapse; width:70%; }
             th { border:1px solid black; border-collapse:collapse; }
             td { border:1px solid black; border-collapse:collapse; }
+            .mono { font-family:monospace; font-size:0.8em; }
         </style>
     </head>
     <body>
@@ -142,5 +143,16 @@
                 <tr><td>#[to end of line]</td><td>X-mode comment. The comment starts at an unescaped # and continues to the end of the line.</td><td>(?x)\bA\w+\b#Matches words starting with A</td></tr>
             </tbody>
         </table>
-    </body>
+        <h3>Useful Examples:</h3>
+        <table cellpadding="2px" align="center">
+            <tbody>
+                <tr style="font-style:italic"><th>Description</th><th>Expression</th></tr>
+                <tr><td>Match a full file path</td><td class="mono">([a-zA-Z]{1}:)(\\[^\\/<>:\|\*\?\"]+)+\.[^\\/<>:\|\*\?\s]*</td></tr>
+            </tbody>
+        </table>
+        <h3>External Links:</h3>
+        <ul>
+            <li><p><a href="http://gskinner.com/RegExr/">gskinner.com</a> online regular expression tool.</p></li>
+        </ul>
+     </body>
 </html>

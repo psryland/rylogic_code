@@ -144,6 +144,11 @@ namespace RyLogViewer
 			get { return get<bool>("TransformsEnabled"); }
 			set { set("TransformsEnabled", value); }
 		}
+		public bool   ActionsEnabled
+		{
+			get { return get<bool>("ActionsEnabled"); }
+			set { set("ActionsEnabled", value); }
+		}
 		public bool   WatchEnabled
 		{
 			get { return get<bool>("WatchEnabled"); }
@@ -179,6 +184,11 @@ namespace RyLogViewer
 			get { return get<string>("TransformPatterns"); }
 			set { set("TransformPatterns", value); }
 		}
+		public string ActionPatterns
+		{
+			get { return get<string>("ActionPatterns"); }
+			set { set("ActionPatterns", value); }
+		}
 		public string HighlightPatternSets
 		{
 			get { return get<string>("HighlightPatternSets"); }
@@ -193,6 +203,11 @@ namespace RyLogViewer
 		{
 			get { return get<string>("TransformPatternSets"); }
 			set { set("TransformPatternSets", value); }
+		}
+		public string ActionPatternSets
+		{
+			get { return get<string>("ActionPatternSets"); }
+			set { set("ActionPatternSets", value); }
 		}
 		public string RowDelimiter
 		{
@@ -275,6 +290,7 @@ namespace RyLogViewer
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = true;
 			TransformsEnabled               = true;
+			ActionsEnabled                  = true;
 			WatchEnabled                    = false;
 			FileBufSize                     = Constants.FileBufSizeDefault;
 			MaxLineLength                   = Constants.MaxLineLengthDefault;
@@ -282,9 +298,11 @@ namespace RyLogViewer
 			HighlightPatterns               = "<root/>";
 			FilterPatterns                  = "<root/>";
 			TransformPatterns               = "<root/>";
+			ActionPatterns                  = "<root/>";
 			HighlightPatternSets            = "<root/>";
 			FilterPatternSets               = "<root/>";
 			TransformPatternSets            = "<root/>";
+			ActionPatternSets               = "<root/>";
 			RowDelimiter                    = ""; // stored in humanised form
 			ColDelimiter                    = ""; // stored in humanised form
 			ColumnCount                     = 1;
