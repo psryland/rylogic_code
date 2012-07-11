@@ -641,7 +641,7 @@ namespace RyLogViewer
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
 				break;
 			case ColumnNames.ClickAction:
-				e.Value = ac != null && !string.IsNullOrEmpty(ac.Executable) ? ac.Executable : Resources.ClickToModifyAction;
+				e.Value = ac != null && !string.IsNullOrEmpty(ac.Executable) ? ac.ActionString : Resources.ClickToModifyAction;
 				break;
 			}
 		}

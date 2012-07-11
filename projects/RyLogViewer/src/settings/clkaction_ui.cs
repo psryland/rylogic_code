@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.util;
 
 namespace RyLogViewer
@@ -59,16 +60,13 @@ namespace RyLogViewer
 					Action.WorkingDirectory = m_edit_startin.Text;
 				};
 			
-			// Validate on close
-			FormClosing += (s,a)=>
+			// Browse button
+			m_btn_browse.ToolTip(m_tt, "Browse for an executable to run");
+			m_btn_browse.Click += (s,a)=>
 				{
-					if (DialogResult == DialogResult.OK)
-					{
-						if (!File.Exists(Action.Executable))
-							a.Cancel = MessageBox.Show(this, "Executable file path not found", "Config Error", MessageBoxButtons.OK, MessageBoxIcon.Information) == DialogResult.OK;
-						if (!string.IsNullOrEmpty(Action.WorkingDirectory) && !Directory.Exists(Action.WorkingDirectory))
-							a.Cancel = MessageBox.Show(this, "Start in directory not found", "Config Error", MessageBoxButtons.OK, MessageBoxIcon.Information) == DialogResult.OK;
-					}
+					var dg = new OpenFileDialog{Title = "Select an Executable", CheckPathExists = true, Filter = Resources.ExecutablesFilter};
+					if (dg.ShowDialog(this) != DialogResult.OK) return;
+					m_edit_exec.Text = dg.FileName;
 				};
 		}
 
@@ -156,7 +154,7 @@ namespace RyLogViewer
 			this.m_edit_args.Location = new System.Drawing.Point(71, 33);
 			this.m_edit_args.Name = "m_edit_args";
 			this.m_edit_args.Size = new System.Drawing.Size(185, 20);
-			this.m_edit_args.TabIndex = 2;
+			this.m_edit_args.TabIndex = 1;
 			// 
 			// m_edit_startin
 			// 
@@ -165,7 +163,7 @@ namespace RyLogViewer
 			this.m_edit_startin.Location = new System.Drawing.Point(71, 58);
 			this.m_edit_startin.Name = "m_edit_startin";
 			this.m_edit_startin.Size = new System.Drawing.Size(185, 20);
-			this.m_edit_startin.TabIndex = 3;
+			this.m_edit_startin.TabIndex = 2;
 			// 
 			// m_btn_ok
 			// 
@@ -174,7 +172,7 @@ namespace RyLogViewer
 			this.m_btn_ok.Location = new System.Drawing.Point(220, 85);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 5;
+			this.m_btn_ok.TabIndex = 4;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
@@ -185,7 +183,7 @@ namespace RyLogViewer
 			this.m_btn_cancel.Location = new System.Drawing.Point(139, 85);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_cancel.TabIndex = 4;
+			this.m_btn_cancel.TabIndex = 3;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
 			// 
@@ -195,7 +193,7 @@ namespace RyLogViewer
 			this.m_btn_browse.Location = new System.Drawing.Point(262, 6);
 			this.m_btn_browse.Name = "m_btn_browse";
 			this.m_btn_browse.Size = new System.Drawing.Size(33, 23);
-			this.m_btn_browse.TabIndex = 1;
+			this.m_btn_browse.TabIndex = 5;
 			this.m_btn_browse.Text = "...";
 			this.m_btn_browse.UseVisualStyleBackColor = true;
 			// 

@@ -17,6 +17,9 @@ namespace RyLogViewer
 		/// <summary>The working directory of the launched program</summary>
 		public string WorkingDirectory { get; set; }
 		
+		/// <summary>Return a string description of the acton</summary>
+		public string ActionString { get { return Executable + " " + Arguments; } }
+		
 		public ClkAction()
 		{
 			Executable       = "";
@@ -54,7 +57,7 @@ namespace RyLogViewer
 			{
 				UseShellExecute        = false,
 				FileName               = Executable,
-				Arguments              = Arguments,
+				Arguments              = args,
 				WorkingDirectory       = WorkingDirectory
 			};
 			Process.Start(info);

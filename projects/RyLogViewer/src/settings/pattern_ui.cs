@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using pr.util;
 
@@ -24,19 +25,20 @@ namespace RyLogViewer
 		private readonly ToolTip m_tt;
 		private Pattern     m_pattern;
 		private ImageList   m_image_list;
-		private Button      m_btn_regex_help;
-		private CheckBox    m_check_binary;
-		private CheckBox    m_check_active;
+		private Button m_btn_regex_help;
 		private CheckBox    m_check_invert;
 		private CheckBox    m_check_ignore_case;
 		private Button      m_btn_add;
-		private Label       m_lbl_pattern;
-		private TextBox     m_edit_pattern;
+		private Label       m_lbl_match;
+		private TextBox     m_edit_match;
 		private RadioButton m_radio_substring;
 		private RadioButton m_radio_wildcard;
 		private RadioButton m_radio_regex;
-		private Panel       m_panel;
 		private Panel       m_group_patntype;
+		private Label m_lbl_match_type;
+		private SplitContainer m_split;
+		private DataGridView m_grid_grps;
+		private Label m_lbl_groups;
 		private RichTextBox m_edit_test;
 		
 		/// <summary>The pattern being controlled by this UI</summary>
@@ -60,15 +62,15 @@ namespace RyLogViewer
 
 			// Pattern
 			tt = "A substring or regular expression to match";
-			m_lbl_pattern.ToolTip(m_tt, tt);
-			m_edit_pattern.ToolTip(m_tt, tt);
-			m_edit_pattern.TextChanged += (s,a)=>
+			m_lbl_match.ToolTip(m_tt, tt);
+			m_edit_match.ToolTip(m_tt, tt);
+			m_edit_match.TextChanged += (s,a)=>
 				{
 					if (!((TextBox)s).Modified) return;
-					Pattern.Expr = m_edit_pattern.Text;
+					Pattern.Expr = m_edit_match.Text;
 					UpdateUI();
 				};
-			m_edit_pattern.KeyDown += (s,a)=>
+			m_edit_match.KeyDown += (s,a)=>
 				{
 					a.Handled = a.KeyCode == Keys.Enter;
 					if (a.Handled) m_btn_add.PerformClick();
@@ -92,14 +94,6 @@ namespace RyLogViewer
 					if (Add == null) return;
 					if (Pattern.Expr.Length == 0 || !Pattern.ExprValid) return;
 					Add(this, EventArgs.Empty);
-				};
-			
-			// Active
-			m_check_active.ToolTip(m_tt, "Uncheck to temporarily disable the pattern");
-			m_check_active.CheckedChanged += (s,a)=>
-				{
-					Pattern.Active = m_check_active.Checked;
-					UpdateUI();
 				};
 			
 			// Substring
@@ -142,14 +136,6 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			
-			// Binary
-			m_check_binary.ToolTip(m_tt, "When checked, any match within a value is treated as if the whole value matches");
-			m_check_binary.CheckedChanged += (s,a)=>
-				{
-					Pattern.BinaryMatch = m_check_binary.Checked;
-					UpdateUI();
-				};
-			
 			// Test text
 			m_edit_test.ToolTip(m_tt, "A area for testing your pattern. Add any text you like here");
 			m_edit_test.TextChanged += (s,a)=>
@@ -157,12 +143,17 @@ namespace RyLogViewer
 					if (!((RichTextBox)s).Modified) return;
 					UpdateUI();
 				};
+			
+			// Groups
+			m_grid_grps.AutoGenerateColumns = false;
+			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Tag"   ,HeaderText="Tag"   ,FillWeight=1 ,DataPropertyName = "Key"  });
+			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Value" ,HeaderText="Value" ,FillWeight=2 ,DataPropertyName = "Value"});
 		}
 
 		/// <summary>Set focus to the primary input field</summary>
 		public void FocusInput()
 		{
-			m_edit_pattern.Focus();
+			m_edit_match.Focus();
 		}
 
 		/// <summary>Select 'pat' as a new pattern</summary>
@@ -193,19 +184,17 @@ namespace RyLogViewer
 			{
 				m_in_update_iu = true;
 				SuspendLayout();
-				m_edit_pattern.Text         = Pattern.Expr;
+				m_edit_match.Text           = Pattern.Expr;
 				m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
 				m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
 				m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
-				m_check_active.Checked      = Pattern.Active;
 				m_check_ignore_case.Checked = Pattern.IgnoreCase;
 				m_check_invert.Checked      = Pattern.Invert;
-				m_check_binary.Checked      = Pattern.BinaryMatch;
-			
-				m_btn_add.Enabled = m_edit_pattern.Text.Length != 0;
-			
+				
+				m_btn_add.Enabled = m_edit_match.Text.Length != 0;
+				
 				// Highlight the expression background to show valid regexp
-				m_edit_pattern.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
+				m_edit_match.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
 			
 				// Preserve the current carot position
 				int start = m_edit_test.SelectionStart;
@@ -220,6 +209,9 @@ namespace RyLogViewer
 				}
 				m_edit_test.SelectionStart  = start;
 				m_edit_test.SelectionLength = length;
+
+				// Populate the groups grid
+				m_grid_grps.DataSource = Pattern.CaptureGroups(m_edit_test.Text).ToList();
 			}
 			finally
 			{
@@ -251,40 +243,34 @@ namespace RyLogViewer
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternUI));
-			this.m_check_active = new System.Windows.Forms.CheckBox();
 			this.m_check_invert = new System.Windows.Forms.CheckBox();
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();
 			this.m_btn_add = new System.Windows.Forms.Button();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
-			this.m_lbl_pattern = new System.Windows.Forms.Label();
-			this.m_edit_pattern = new System.Windows.Forms.TextBox();
+			this.m_lbl_match = new System.Windows.Forms.Label();
+			this.m_edit_match = new System.Windows.Forms.TextBox();
 			this.m_edit_test = new System.Windows.Forms.RichTextBox();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
-			this.m_check_binary = new System.Windows.Forms.CheckBox();
 			this.m_radio_substring = new System.Windows.Forms.RadioButton();
 			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();
 			this.m_radio_regex = new System.Windows.Forms.RadioButton();
-			this.m_panel = new System.Windows.Forms.Panel();
 			this.m_group_patntype = new System.Windows.Forms.Panel();
-			this.m_panel.SuspendLayout();
+			this.m_lbl_match_type = new System.Windows.Forms.Label();
+			this.m_split = new System.Windows.Forms.SplitContainer();
+			this.m_grid_grps = new System.Windows.Forms.DataGridView();
+			this.m_lbl_groups = new System.Windows.Forms.Label();
 			this.m_group_patntype.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
+			this.m_split.Panel1.SuspendLayout();
+			this.m_split.Panel2.SuspendLayout();
+			this.m_split.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_grps)).BeginInit();
 			this.SuspendLayout();
-			// 
-			// m_check_active
-			// 
-			this.m_check_active.AutoSize = true;
-			this.m_check_active.Location = new System.Drawing.Point(302, 52);
-			this.m_check_active.Name = "m_check_active";
-			this.m_check_active.Size = new System.Drawing.Size(56, 17);
-			this.m_check_active.TabIndex = 4;
-			this.m_check_active.Text = "Active";
-			this.m_check_active.UseVisualStyleBackColor = true;
-			this.m_check_active.Visible = false;
 			// 
 			// m_check_invert
 			// 
 			this.m_check_invert.AutoSize = true;
-			this.m_check_invert.Location = new System.Drawing.Point(128, 52);
+			this.m_check_invert.Location = new System.Drawing.Point(164, 52);
 			this.m_check_invert.Name = "m_check_invert";
 			this.m_check_invert.Size = new System.Drawing.Size(86, 17);
 			this.m_check_invert.TabIndex = 3;
@@ -294,7 +280,7 @@ namespace RyLogViewer
 			// m_check_ignore_case
 			// 
 			this.m_check_ignore_case.AutoSize = true;
-			this.m_check_ignore_case.Location = new System.Drawing.Point(39, 52);
+			this.m_check_ignore_case.Location = new System.Drawing.Point(75, 52);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
 			this.m_check_ignore_case.TabIndex = 2;
@@ -307,7 +293,7 @@ namespace RyLogViewer
 			this.m_btn_add.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
 			this.m_btn_add.ImageIndex = 0;
 			this.m_btn_add.ImageList = this.m_image_list;
-			this.m_btn_add.Location = new System.Drawing.Point(325, 3);
+			this.m_btn_add.Location = new System.Drawing.Point(356, 3);
 			this.m_btn_add.Name = "m_btn_add";
 			this.m_btn_add.Size = new System.Drawing.Size(46, 46);
 			this.m_btn_add.TabIndex = 8;
@@ -320,24 +306,24 @@ namespace RyLogViewer
 			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
 			this.m_image_list.Images.SetKeyName(1, "edit_save.png");
 			// 
-			// m_lbl_pattern
+			// m_lbl_match
 			// 
-			this.m_lbl_pattern.AutoSize = true;
-			this.m_lbl_pattern.Location = new System.Drawing.Point(3, 6);
-			this.m_lbl_pattern.Name = "m_lbl_pattern";
-			this.m_lbl_pattern.Size = new System.Drawing.Size(44, 13);
-			this.m_lbl_pattern.TabIndex = 14;
-			this.m_lbl_pattern.Text = "Pattern:";
-			this.m_lbl_pattern.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.m_lbl_match.AutoSize = true;
+			this.m_lbl_match.Location = new System.Drawing.Point(30, 32);
+			this.m_lbl_match.Name = "m_lbl_match";
+			this.m_lbl_match.Size = new System.Drawing.Size(40, 13);
+			this.m_lbl_match.TabIndex = 14;
+			this.m_lbl_match.Text = "Match:";
+			this.m_lbl_match.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
-			// m_edit_pattern
+			// m_edit_match
 			// 
-			this.m_edit_pattern.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_pattern.Location = new System.Drawing.Point(53, 3);
-			this.m_edit_pattern.Name = "m_edit_pattern";
-			this.m_edit_pattern.Size = new System.Drawing.Size(247, 20);
-			this.m_edit_pattern.TabIndex = 0;
+			this.m_edit_match.Location = new System.Drawing.Point(75, 29);
+			this.m_edit_match.Name = "m_edit_match";
+			this.m_edit_match.Size = new System.Drawing.Size(252, 20);
+			this.m_edit_match.TabIndex = 0;
 			// 
 			// m_edit_test
 			// 
@@ -345,30 +331,19 @@ namespace RyLogViewer
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(369, 26);
+			this.m_edit_test.Size = new System.Drawing.Size(267, 85);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
 			// m_btn_regex_help
 			// 
 			this.m_btn_regex_help.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_regex_help.Location = new System.Drawing.Point(302, 3);
+			this.m_btn_regex_help.Location = new System.Drawing.Point(333, 3);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
 			this.m_btn_regex_help.TabIndex = 7;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
-			// 
-			// m_check_binary
-			// 
-			this.m_check_binary.AutoSize = true;
-			this.m_check_binary.Location = new System.Drawing.Point(216, 52);
-			this.m_check_binary.Name = "m_check_binary";
-			this.m_check_binary.Size = new System.Drawing.Size(80, 17);
-			this.m_check_binary.TabIndex = 5;
-			this.m_check_binary.Text = "Full Column";
-			this.m_check_binary.UseVisualStyleBackColor = true;
-			this.m_check_binary.Visible = false;
 			// 
 			// m_radio_substring
 			// 
@@ -384,7 +359,7 @@ namespace RyLogViewer
 			// m_radio_wildcard
 			// 
 			this.m_radio_wildcard.AutoSize = true;
-			this.m_radio_wildcard.Location = new System.Drawing.Point(78, 3);
+			this.m_radio_wildcard.Location = new System.Drawing.Point(73, 3);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 2;
@@ -395,7 +370,7 @@ namespace RyLogViewer
 			// m_radio_regex
 			// 
 			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(151, 3);
+			this.m_radio_regex.Location = new System.Drawing.Point(141, 3);
 			this.m_radio_regex.Name = "m_radio_regex";
 			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
 			this.m_radio_regex.TabIndex = 3;
@@ -403,49 +378,104 @@ namespace RyLogViewer
 			this.m_radio_regex.Text = "Regular Expression";
 			this.m_radio_regex.UseVisualStyleBackColor = true;
 			// 
-			// m_panel
-			// 
-			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_panel.AutoSize = true;
-			this.m_panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_panel.Controls.Add(this.m_edit_test);
-			this.m_panel.Location = new System.Drawing.Point(3, 75);
-			this.m_panel.Name = "m_panel";
-			this.m_panel.Size = new System.Drawing.Size(371, 28);
-			this.m_panel.TabIndex = 6;
-			// 
 			// m_group_patntype
 			// 
 			this.m_group_patntype.Controls.Add(this.m_radio_substring);
 			this.m_group_patntype.Controls.Add(this.m_radio_wildcard);
 			this.m_group_patntype.Controls.Add(this.m_radio_regex);
-			this.m_group_patntype.Location = new System.Drawing.Point(36, 26);
+			this.m_group_patntype.Location = new System.Drawing.Point(75, 3);
 			this.m_group_patntype.Name = "m_group_patntype";
-			this.m_group_patntype.Size = new System.Drawing.Size(283, 23);
+			this.m_group_patntype.Size = new System.Drawing.Size(258, 23);
 			this.m_group_patntype.TabIndex = 1;
+			// 
+			// m_lbl_match_type
+			// 
+			this.m_lbl_match_type.AutoSize = true;
+			this.m_lbl_match_type.Location = new System.Drawing.Point(3, 8);
+			this.m_lbl_match_type.Name = "m_lbl_match_type";
+			this.m_lbl_match_type.Size = new System.Drawing.Size(67, 13);
+			this.m_lbl_match_type.TabIndex = 15;
+			this.m_lbl_match_type.Text = "Match Type:";
+			this.m_lbl_match_type.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			// 
+			// m_split
+			// 
+			this.m_split.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_split.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_split.Location = new System.Drawing.Point(3, 75);
+			this.m_split.Name = "m_split";
+			// 
+			// m_split.Panel1
+			// 
+			this.m_split.Panel1.Controls.Add(this.m_edit_test);
+			// 
+			// m_split.Panel2
+			// 
+			this.m_split.Panel2.Controls.Add(this.m_grid_grps);
+			this.m_split.Size = new System.Drawing.Size(402, 87);
+			this.m_split.SplitterDistance = 269;
+			this.m_split.TabIndex = 16;
+			// 
+			// m_grid_grps
+			// 
+			this.m_grid_grps.AllowUserToAddRows = false;
+			this.m_grid_grps.AllowUserToDeleteRows = false;
+			this.m_grid_grps.AllowUserToResizeRows = false;
+			this.m_grid_grps.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid_grps.BackgroundColor = System.Drawing.SystemColors.ControlLightLight;
+			this.m_grid_grps.BorderStyle = System.Windows.Forms.BorderStyle.None;
+			this.m_grid_grps.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid_grps.ColumnHeadersVisible = false;
+			this.m_grid_grps.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_grid_grps.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
+			this.m_grid_grps.Location = new System.Drawing.Point(0, 0);
+			this.m_grid_grps.MultiSelect = false;
+			this.m_grid_grps.Name = "m_grid_grps";
+			this.m_grid_grps.ReadOnly = true;
+			this.m_grid_grps.RowHeadersVisible = false;
+			this.m_grid_grps.RowTemplate.Height = 16;
+			this.m_grid_grps.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid_grps.Size = new System.Drawing.Size(127, 85);
+			this.m_grid_grps.TabIndex = 0;
+			// 
+			// m_lbl_groups
+			// 
+			this.m_lbl_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_lbl_groups.AutoSize = true;
+			this.m_lbl_groups.Location = new System.Drawing.Point(352, 59);
+			this.m_lbl_groups.Name = "m_lbl_groups";
+			this.m_lbl_groups.Size = new System.Drawing.Size(53, 13);
+			this.m_lbl_groups.TabIndex = 17;
+			this.m_lbl_groups.Text = "...Groups:";
+			this.m_lbl_groups.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// PatternUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.Controls.Add(this.m_panel);
-			this.Controls.Add(this.m_check_binary);
+			this.Controls.Add(this.m_lbl_groups);
+			this.Controls.Add(this.m_split);
+			this.Controls.Add(this.m_lbl_match_type);
 			this.Controls.Add(this.m_btn_regex_help);
-			this.Controls.Add(this.m_check_active);
+			this.Controls.Add(this.m_lbl_match);
+			this.Controls.Add(this.m_edit_match);
 			this.Controls.Add(this.m_check_invert);
 			this.Controls.Add(this.m_check_ignore_case);
 			this.Controls.Add(this.m_btn_add);
-			this.Controls.Add(this.m_lbl_pattern);
-			this.Controls.Add(this.m_edit_pattern);
 			this.Controls.Add(this.m_group_patntype);
-			this.MinimumSize = new System.Drawing.Size(334, 104);
+			this.Margin = new System.Windows.Forms.Padding(0);
+			this.MinimumSize = new System.Drawing.Size(408, 104);
 			this.Name = "PatternUI";
-			this.Size = new System.Drawing.Size(377, 106);
-			this.m_panel.ResumeLayout(false);
+			this.Size = new System.Drawing.Size(408, 165);
 			this.m_group_patntype.ResumeLayout(false);
 			this.m_group_patntype.PerformLayout();
+			this.m_split.Panel1.ResumeLayout(false);
+			this.m_split.Panel2.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_split)).EndInit();
+			this.m_split.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_grps)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
