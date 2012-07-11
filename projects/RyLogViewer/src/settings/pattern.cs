@@ -152,41 +152,60 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Return the range of 'text' that matches this pattern</summary>
-		public IEnumerable<Range> Match(string text)
+		public IEnumerable<Span> Match(string text)
 		{
-			if (Active && text != null)
+			if (!Active || text == null) yield break;
+			
+			var x = new List<int>();
+			if (Invert) x.Add(0);
+			if (Expr.Length != 0) try
 			{
-				List<long> x = new List<long>();
-				if (Invert) x.Add(0);
-				if (Expr.Length != 0) try
+				switch (PatnType)
 				{
-					switch (PatnType)
+				case EPattern.Substring:
 					{
-					case EPattern.Substring:
+						StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+						for (int i = text.IndexOf(Expr, 0, cmp); i != -1; i = text.IndexOf(Expr, i + Expr.Length, cmp))
 						{
-							StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-							for (int i = text.IndexOf(Expr, 0, cmp); i != -1; i = text.IndexOf(Expr, i + Expr.Length, cmp))
-							{
-								x.Add(i);
-								x.Add(i + Expr.Length);
-							}
-							break;
+							x.Add(i);
+							x.Add(i + Expr.Length);
 						}
-					case EPattern.Wildcard:
-					case EPattern.RegularExpression:
-						{
-							foreach (Match m in Regex.Matches(text))
-							{
-								x.Add(m.Index);
-								x.Add(m.Index + m.Length);
-							}
-							break;
-						}
+						break;
 					}
-				} catch (ArgumentException) {}
-				if (Invert) x.Add(text.Length);
-				for (int i = 0; i != x.Count; i += 2)
-					yield return new Range(x[i], x[i+1]);
+				case EPattern.Wildcard:
+				case EPattern.RegularExpression:
+					{
+						foreach (Match m in Regex.Matches(text))
+						{
+							x.Add(m.Index);
+							x.Add(m.Index + m.Length);
+						}
+						break;
+					}
+				}
+			} catch (ArgumentException) {}
+			if (Invert) x.Add(text.Length);
+			for (int i = 0; i != x.Count; i += 2)
+				yield return new Span(x[i], x[i+1] - x[i]);
+		}
+
+		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
+		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
+		{
+			if (!IsMatch(text)) yield break;
+			if (PatnType != EPattern.RegularExpression)
+			{
+				int i = 0;
+				foreach (var s in Match(text))
+					yield return new KeyValuePair<string, string>((++i).ToString(), text.Substring(s.Index,s.Count));
+			}
+			else
+			{
+				Match match = Regex.Match(text);
+				var names = Regex.GetGroupNames();
+				var grps  = match.Groups;
+				for (int i = 1; i < grps.Count; ++i)
+					yield return new KeyValuePair<string, string>(names[i], grps[i].Value);
 			}
 		}
 

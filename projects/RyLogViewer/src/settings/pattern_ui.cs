@@ -214,8 +214,8 @@ namespace RyLogViewer
 				m_edit_test.SelectionBackColor = Color.White;
 				foreach (var r in Pattern.Match(m_edit_test.Text))
 				{
-					m_edit_test.SelectionStart     = (int)r.First;
-					m_edit_test.SelectionLength    = (int)r.Count;
+					m_edit_test.SelectionStart     = r.Index;
+					m_edit_test.SelectionLength    = r.Count;
 					m_edit_test.SelectionBackColor = Color.LightBlue;
 				}
 				m_edit_test.SelectionStart  = start;
@@ -273,7 +273,7 @@ namespace RyLogViewer
 			// m_check_active
 			// 
 			this.m_check_active.AutoSize = true;
-			this.m_check_active.Location = new System.Drawing.Point(201, 26);
+			this.m_check_active.Location = new System.Drawing.Point(302, 52);
 			this.m_check_active.Name = "m_check_active";
 			this.m_check_active.Size = new System.Drawing.Size(56, 17);
 			this.m_check_active.TabIndex = 4;
@@ -284,7 +284,7 @@ namespace RyLogViewer
 			// m_check_invert
 			// 
 			this.m_check_invert.AutoSize = true;
-			this.m_check_invert.Location = new System.Drawing.Point(112, 43);
+			this.m_check_invert.Location = new System.Drawing.Point(128, 52);
 			this.m_check_invert.Name = "m_check_invert";
 			this.m_check_invert.Size = new System.Drawing.Size(86, 17);
 			this.m_check_invert.TabIndex = 3;
@@ -294,7 +294,7 @@ namespace RyLogViewer
 			// m_check_ignore_case
 			// 
 			this.m_check_ignore_case.AutoSize = true;
-			this.m_check_ignore_case.Location = new System.Drawing.Point(112, 27);
+			this.m_check_ignore_case.Location = new System.Drawing.Point(39, 52);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
 			this.m_check_ignore_case.TabIndex = 2;
@@ -307,7 +307,7 @@ namespace RyLogViewer
 			this.m_btn_add.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
 			this.m_btn_add.ImageIndex = 0;
 			this.m_btn_add.ImageList = this.m_image_list;
-			this.m_btn_add.Location = new System.Drawing.Point(282, 3);
+			this.m_btn_add.Location = new System.Drawing.Point(325, 3);
 			this.m_btn_add.Name = "m_btn_add";
 			this.m_btn_add.Size = new System.Drawing.Size(46, 46);
 			this.m_btn_add.TabIndex = 8;
@@ -336,7 +336,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_pattern.Location = new System.Drawing.Point(53, 3);
 			this.m_edit_pattern.Name = "m_edit_pattern";
-			this.m_edit_pattern.Size = new System.Drawing.Size(204, 20);
+			this.m_edit_pattern.Size = new System.Drawing.Size(247, 20);
 			this.m_edit_pattern.TabIndex = 0;
 			// 
 			// m_edit_test
@@ -345,14 +345,14 @@ namespace RyLogViewer
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(326, 20);
+			this.m_edit_test.Size = new System.Drawing.Size(369, 26);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
 			// m_btn_regex_help
 			// 
 			this.m_btn_regex_help.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_regex_help.Location = new System.Drawing.Point(259, 3);
+			this.m_btn_regex_help.Location = new System.Drawing.Point(302, 3);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
 			this.m_btn_regex_help.TabIndex = 7;
@@ -362,7 +362,7 @@ namespace RyLogViewer
 			// m_check_binary
 			// 
 			this.m_check_binary.AutoSize = true;
-			this.m_check_binary.Location = new System.Drawing.Point(201, 43);
+			this.m_check_binary.Location = new System.Drawing.Point(216, 52);
 			this.m_check_binary.Name = "m_check_binary";
 			this.m_check_binary.Size = new System.Drawing.Size(80, 17);
 			this.m_check_binary.TabIndex = 5;
@@ -384,7 +384,7 @@ namespace RyLogViewer
 			// m_radio_wildcard
 			// 
 			this.m_radio_wildcard.AutoSize = true;
-			this.m_radio_wildcard.Location = new System.Drawing.Point(3, 19);
+			this.m_radio_wildcard.Location = new System.Drawing.Point(78, 3);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 2;
@@ -395,7 +395,7 @@ namespace RyLogViewer
 			// m_radio_regex
 			// 
 			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(3, 35);
+			this.m_radio_regex.Location = new System.Drawing.Point(151, 3);
 			this.m_radio_regex.Name = "m_radio_regex";
 			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
 			this.m_radio_regex.TabIndex = 3;
@@ -411,9 +411,9 @@ namespace RyLogViewer
 			this.m_panel.AutoSize = true;
 			this.m_panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_panel.Controls.Add(this.m_edit_test);
-			this.m_panel.Location = new System.Drawing.Point(3, 79);
+			this.m_panel.Location = new System.Drawing.Point(3, 75);
 			this.m_panel.Name = "m_panel";
-			this.m_panel.Size = new System.Drawing.Size(328, 22);
+			this.m_panel.Size = new System.Drawing.Size(371, 28);
 			this.m_panel.TabIndex = 6;
 			// 
 			// m_group_patntype
@@ -421,16 +421,15 @@ namespace RyLogViewer
 			this.m_group_patntype.Controls.Add(this.m_radio_substring);
 			this.m_group_patntype.Controls.Add(this.m_radio_wildcard);
 			this.m_group_patntype.Controls.Add(this.m_radio_regex);
-			this.m_group_patntype.Location = new System.Drawing.Point(6, 25);
+			this.m_group_patntype.Location = new System.Drawing.Point(36, 26);
 			this.m_group_patntype.Name = "m_group_patntype";
-			this.m_group_patntype.Size = new System.Drawing.Size(120, 54);
+			this.m_group_patntype.Size = new System.Drawing.Size(283, 23);
 			this.m_group_patntype.TabIndex = 1;
 			// 
 			// PatternUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.Controls.Add(this.m_panel);
 			this.Controls.Add(this.m_check_binary);
 			this.Controls.Add(this.m_btn_regex_help);
@@ -443,7 +442,7 @@ namespace RyLogViewer
 			this.Controls.Add(this.m_group_patntype);
 			this.MinimumSize = new System.Drawing.Size(334, 104);
 			this.Name = "PatternUI";
-			this.Size = new System.Drawing.Size(334, 104);
+			this.Size = new System.Drawing.Size(377, 106);
 			this.m_panel.ResumeLayout(false);
 			this.m_group_patntype.ResumeLayout(false);
 			this.m_group_patntype.PerformLayout();

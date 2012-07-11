@@ -110,12 +110,13 @@ namespace RyLogViewer
 			m_menu_line_ending_lf.Click             += (s,a) => SetLineEnding(ELineEnding.LF    );
 			m_menu_line_ending_custom.Click         += (s,a) => SetLineEnding(ELineEnding.Custom);
 			m_menu_tools_alwaysontop.Click          += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
+			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
+			m_menu_tools_clear_log_file.Click       += (s,a) => ClearLogFile();
 			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
 			m_menu_tools_transforms.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
-			m_menu_tools_clear_log_file.Click       += (s,a) => ClearLogFile();
-			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
-			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General);
+			m_menu_tools_actions.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
+			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General   );
 			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
 			m_menu_help_check_for_updates.Click     += (s,a) => CheckForUpdates(true);
 			m_menu_help_about.Click                 += (s,a) => ShowAbout();
@@ -136,6 +137,9 @@ namespace RyLogViewer
 			m_btn_transforms.ToolTipText    = Resources.ShowTransformsDialog;
 			m_btn_transforms.Click         += (s,a) => EnableTransforms(m_btn_transforms.Checked);
 			m_btn_transforms.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Transforms); };
+			m_btn_actions.ToolTipText       = Resources.ShowActionsDialog;
+			m_btn_actions.Click            += (s,a) => EnableActions(m_btn_actions.Checked);
+			m_btn_actions.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Actions); };
 			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
 			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
 			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
@@ -179,6 +183,7 @@ namespace RyLogViewer
 			m_grid.CellValueNeeded     += CellValueNeeded;
 			m_grid.CellPainting        += CellPainting;
 			m_grid.SelectionChanged    += GridSelectionChanged;
+			m_grid.CellDoubleClick     += CellDoubleClick;
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
 			m_grid.DataError           += (s,a) => Debug.Assert(false);
 			m_grid.Scroll              += (s,a) => GridScroll();
@@ -495,7 +500,27 @@ namespace RyLogViewer
 			if (GridEventsBlocked) return;
 			UpdateStatus();
 		}
-		
+
+		/// <summary>Handler for cell double clicks</summary>
+		private void CellDoubleClick(object sender, DataGridViewCellEventArgs args)
+		{
+			if (!m_settings.ActionsEnabled) return;
+			if (args.RowIndex < 0 || args.RowIndex > m_line_index.Count) return;
+
+			var columns = ReadLine(args.RowIndex).Column;
+			if (args.ColumnIndex < 0 || args.ColumnIndex > columns.Count) return;
+
+			// Read the text for the column and look for a matching action
+			var text = columns[args.ColumnIndex].Text;
+			foreach (var a in ActiveActions)
+			{
+				if (!a.IsMatch(text)) continue;
+				try { a.Execute(text); }
+				catch { SetTransientStatusMessage("Action Failed", Color.Red, SystemColors.Control); }
+				break;
+			}
+		}
+
 		/// <summary>Handle grid context menu actions</summary>
 		private void GridContextMenu(object sender, ToolStripItemClickedEventArgs args)
 		{
@@ -512,6 +537,7 @@ namespace RyLogViewer
 			if (args.ClickedItem == m_cmenu_highlight_row) { ShowOptions(SettingsUI.ETab.Highlights); return; }
 			if (args.ClickedItem == m_cmenu_filter_row   ) { ShowOptions(SettingsUI.ETab.Filters   ); return; }
 			if (args.ClickedItem == m_cmenu_transform_row) { ShowOptions(SettingsUI.ETab.Transforms); return; }
+			if (args.ClickedItem == m_cmenu_action_row   ) { ShowOptions(SettingsUI.ETab.Actions   ); return; }
 			
 			// Find operations
 			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(); return; }
@@ -702,6 +728,13 @@ namespace RyLogViewer
 			m_settings.TransformsEnabled = enable;
 			ApplySettings();
 			BuildLineIndex(m_filepos, true);
+		}
+
+		/// <summary>Turn on/off actions</summary>
+		private void EnableActions(bool enabled)
+		{
+			m_settings.ActionsEnabled = enabled;
+			ApplySettings();
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
@@ -1154,6 +1187,16 @@ namespace RyLogViewer
 			}
 		}
 		
+		/// <summary>Return a collection of the currently active actions</summary>
+		private IEnumerable<ClkAction> ActiveActions
+		{
+			get
+			{
+				if (!m_settings.ActionsEnabled) return Enumerable.Empty<ClkAction>();
+				return from ac in ClkAction.Import(m_settings.ActionPatterns) where ac.Active select ac;
+			}
+		}
+		
 		/// <summary>
 		/// Apply settings throughout the app.
 		/// This method is called on startup to apply initial settings and
@@ -1283,6 +1326,7 @@ namespace RyLogViewer
 				m_btn_highlights.Checked = m_settings.HighlightsEnabled;
 				m_btn_filters.Checked    = m_settings.FiltersEnabled;
 				m_btn_transforms.Checked = m_settings.TransformsEnabled;
+				m_btn_actions.Checked    = m_settings.ActionsEnabled;
 				m_btn_watch.Checked      = m_watch_timer.Enabled;
 				m_btn_additive.Checked   = m_settings.FileChangesAdditive;
 			

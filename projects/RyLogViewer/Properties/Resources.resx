@@ -274,6 +274,10 @@ Right click to show the filters dialog</value>
     <value>Left click to enable/disable transforms.
 Right click to show the transforms dialog</value>
   </data>
+  <data name="ShowActionsDialog" xml:space="preserve">
+    <value>Left click to enable/disable actions.
+Right click to show the actions dialog</value>
+  </data>
   <data name="BuildLineIndexErrorMsg" xml:space="preserve">
     <value>The was an error while parsing the log file.
 Error Details:

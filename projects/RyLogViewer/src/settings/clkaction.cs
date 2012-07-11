@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Xml.Linq;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -36,6 +38,26 @@ namespace RyLogViewer
 			Arguments        = node.Element(XmlTag.Arguments ).Value;
 			WorkingDirectory = node.Element(XmlTag.WorkingDir).Value;
 			// ReSharper restore PossibleNullReferenceException
+		}
+
+		/// <summary>Performs the click action using values 'text'</summary>
+		public void Execute(string text)
+		{
+			// Substitute the capture groups into the arguments string
+			var grps = CaptureGroups(text);
+			string args = Arguments;
+			foreach (var c in grps)
+				args = args.Replace("{"+c.Key+"}", c.Value);
+
+			// Create the process
+			ProcessStartInfo info = new ProcessStartInfo
+			{
+				UseShellExecute        = false,
+				FileName               = Executable,
+				Arguments              = Arguments,
+				WorkingDirectory       = WorkingDirectory
+			};
+			Process.Start(info);
 		}
 
 		/// <summary>Export this ClkAction as xml</summary>

@@ -645,6 +645,16 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Left click to enable/disable actions.
+        ///Right click to show the actions dialog.
+        /// </summary>
+        internal static string ShowActionsDialog {
+            get {
+                return ResourceManager.GetString("ShowActionsDialog", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Left click to enable/disable filters.
         ///Right click to show the filters dialog.
         /// </summary>

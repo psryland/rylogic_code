@@ -83,14 +83,15 @@
 			this.m_menu_line_ending_custom = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_alwaysontop = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_ghost_mode = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep4 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_tools_clear_log_file = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_highlights = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_filters = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_transforms = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_actions = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_tools_clear_log_file = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_ghost_mode = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
@@ -114,6 +115,7 @@
 			this.m_cmenu_highlight_row = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_filter_row = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_transform_row = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_cmenu_action_row = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_find_next = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
@@ -545,14 +547,15 @@
 			// 
 			this.m_menu_tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_tools_alwaysontop,
+            this.m_menu_tools_ghost_mode,
             this.m_sep4,
+            this.m_menu_tools_clear_log_file,
+            this.m_sep5,
             this.m_menu_tools_highlights,
             this.m_menu_tools_filters,
             this.m_menu_tools_transforms,
+            this.m_menu_tools_actions,
             this.toolStripSeparator6,
-            this.m_menu_tools_clear_log_file,
-            this.m_menu_tools_ghost_mode,
-            this.m_sep5,
             this.m_menu_tools_options});
 			this.m_menu_tools.Name = "m_menu_tools";
 			this.m_menu_tools.Size = new System.Drawing.Size(48, 20);
@@ -564,10 +567,27 @@
 			this.m_menu_tools_alwaysontop.Size = new System.Drawing.Size(154, 22);
 			this.m_menu_tools_alwaysontop.Text = "Always On &Top";
 			// 
+			// m_menu_tools_ghost_mode
+			// 
+			this.m_menu_tools_ghost_mode.Name = "m_menu_tools_ghost_mode";
+			this.m_menu_tools_ghost_mode.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_ghost_mode.Text = "&Ghost Mode";
+			// 
 			// m_sep4
 			// 
 			this.m_sep4.Name = "m_sep4";
 			this.m_sep4.Size = new System.Drawing.Size(151, 6);
+			// 
+			// m_menu_tools_clear_log_file
+			// 
+			this.m_menu_tools_clear_log_file.Name = "m_menu_tools_clear_log_file";
+			this.m_menu_tools_clear_log_file.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_clear_log_file.Text = "&Clear Log File";
+			// 
+			// m_sep5
+			// 
+			this.m_sep5.Name = "m_sep5";
+			this.m_sep5.Size = new System.Drawing.Size(151, 6);
 			// 
 			// m_menu_tools_highlights
 			// 
@@ -587,27 +607,16 @@
 			this.m_menu_tools_transforms.Size = new System.Drawing.Size(154, 22);
 			this.m_menu_tools_transforms.Text = "&Transforms";
 			// 
+			// m_menu_tools_actions
+			// 
+			this.m_menu_tools_actions.Name = "m_menu_tools_actions";
+			this.m_menu_tools_actions.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_actions.Text = "&Actions";
+			// 
 			// toolStripSeparator6
 			// 
 			this.toolStripSeparator6.Name = "toolStripSeparator6";
 			this.toolStripSeparator6.Size = new System.Drawing.Size(151, 6);
-			// 
-			// m_menu_tools_clear_log_file
-			// 
-			this.m_menu_tools_clear_log_file.Name = "m_menu_tools_clear_log_file";
-			this.m_menu_tools_clear_log_file.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_clear_log_file.Text = "&Clear Log File";
-			// 
-			// m_menu_tools_ghost_mode
-			// 
-			this.m_menu_tools_ghost_mode.Name = "m_menu_tools_ghost_mode";
-			this.m_menu_tools_ghost_mode.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_ghost_mode.Text = "&Ghost Mode";
-			// 
-			// m_sep5
-			// 
-			this.m_sep5.Name = "m_sep5";
-			this.m_sep5.Size = new System.Drawing.Size(151, 6);
 			// 
 			// m_menu_tools_options
 			// 
@@ -797,11 +806,12 @@
             this.m_cmenu_highlight_row,
             this.m_cmenu_filter_row,
             this.m_cmenu_transform_row,
+            this.m_cmenu_action_row,
             this.toolStripSeparator4,
             this.m_cmenu_find_next,
             this.m_cmenu_find_prev});
 			this.m_cmenu_grid.Name = "m_cmenu_grid";
-			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 170);
+			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 214);
 			// 
 			// m_cmenu_select_all
 			// 
@@ -837,6 +847,12 @@
 			this.m_cmenu_transform_row.Name = "m_cmenu_transform_row";
 			this.m_cmenu_transform_row.Size = new System.Drawing.Size(164, 22);
 			this.m_cmenu_transform_row.Text = "&Transform Row...";
+			// 
+			// m_cmenu_action_row
+			// 
+			this.m_cmenu_action_row.Name = "m_cmenu_action_row";
+			this.m_cmenu_action_row.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_action_row.Text = "&Action Row...";
 			// 
 			// toolStripSeparator4
 			// 
@@ -988,11 +1004,13 @@
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_highlight_row;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_filter_row;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_transform_row;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_action_row;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_transforms;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_next;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_prev;
 		private System.Windows.Forms.ToolStripButton m_btn_actions;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_actions;
 	}
 }
 

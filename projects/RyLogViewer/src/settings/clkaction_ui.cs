@@ -38,7 +38,9 @@ namespace RyLogViewer
 				};
 			
 			// Arguments
-			tt = "The arguments to pass to the executable";
+			tt = "The arguments to pass to the executable.\r\n" +
+			     "For sub string or wildcard patterns use {1} to represent the matched text.\r\n" +
+			     "For regular expressions use {1},{2},{3},... to represent capture groups";
 			m_lbl_args.ToolTip(m_tt, tt);
 			m_edit_args.ToolTip(m_tt, tt);
 			m_edit_args.Text = Action.Arguments;
