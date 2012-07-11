@@ -12,7 +12,14 @@ namespace pr.util
 {
 	public class CSVData
 	{
-		private readonly List<List<string>> m_data = new List<List<string>>();
+		public class Row :List<string>
+		{
+			public Row() {}
+			public Row(IEnumerable<string> collection) :base(collection) {} 
+			public Row(int capacity) :base(capacity) {}
+		}
+		
+		private readonly List<Row> m_data = new List<Row>();
 
 		// If true, out of bounds write cause the csv data to grow in size
 		// if false, out of bounds reads/writes cause exceptions
@@ -29,13 +36,13 @@ namespace pr.util
 		}
 
 		// Read/Write access to the rows
-		public List<List<string>> Rows
+		public List<Row> Rows
 		{
 			get { return m_data; }
 		}
 
 		// Access to the end of the collection
-		public void Add(List<string> row)
+		public void Add(Row row)
 		{
 			m_data.Add(row);
 		}
@@ -44,23 +51,23 @@ namespace pr.util
 		public void Reserve(int rows, int columns)
 		{
 			m_data.Capacity = rows;
-			foreach (List<string> row in m_data)
+			foreach (var row in m_data)
 				row.Capacity = columns;
 		}
 
 		// Access a row
-		public List<string> this[int row]
+		public Row this[int row]
 		{
 			get
 			{
 				if (!AutoSize && row >= m_data.Count) throw new IndexOutOfRangeException();
-				while (m_data.Count <= row) m_data.Add(new List<string>());
+				while (m_data.Count <= row) m_data.Add(new Row());
 				return m_data[row];
 			}
 			set
 			{
 				if (!AutoSize && row >= m_data.Count) throw new IndexOutOfRangeException();
-				while (m_data.Count <= row) m_data.Add(new List<string>());
+				while (m_data.Count <= row) m_data.Add(new Row());
 				m_data[row] = value;
 			}
 		}
@@ -92,7 +99,7 @@ namespace pr.util
 			using (TextReader file = new StreamReader(filepath))
 			{
 				StringBuilder str = new StringBuilder();
-				List<string> row = new List<string>();
+				var row = new Row();
 				while (!((StreamReader)file).EndOfStream)
 				{
 					char ch = (char)file.Read();
@@ -100,7 +107,7 @@ namespace pr.util
 					{
 					default:   str.Append(ch); break;
 					case ',':  row.Add(str.ToString()); str.Length = 0; break;
-					case '\n': row.Add(str.ToString()); str.Length = 0; csv.m_data.Add(row); row = new List<string>(); break;
+					case '\n': row.Add(str.ToString()); str.Length = 0; csv.m_data.Add(row); row = new Row(); break;
 					case '\r': break;
 					}
 				}
@@ -115,7 +122,7 @@ namespace pr.util
 		{
 			using (TextWriter file = new StreamWriter(filepath))
 			{
-				foreach (List<string> row in m_data)
+				foreach (var row in m_data)
 				{
 					if (row.Count != 0) file.Write(row[0]);
 					for (int i = 1; i < row.Count; ++i)

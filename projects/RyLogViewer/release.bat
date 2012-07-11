@@ -23,6 +23,17 @@ for %%p in (x86) do call :copy_files %%p
 if errorlevel 1 goto :error
 goto :end
 
+:end
+echo Success.
+pause
+start explorer "%dstdir%"
+goto :eof
+
+:error
+echo Error occurred.
+pause
+goto :eof
+
 ::Copy subroutine
 :copy_files
 	setlocal
@@ -64,14 +75,4 @@ goto :end
 	endlocal
 goto :eof
 
-:end
-echo success.
-pause
-start explorer "%dstdir%"
-goto :eof
-
-:error
-echo Error occurred.
-pause
-goto :eof
 

@@ -248,6 +248,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to CSV Files (*.csv)|*.csv|All files (*.*)|*.*.
+        /// </summary>
+        internal static string CSVFileFilter {
+            get {
+                return ResourceManager.GetString("CSVFileFilter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Delete Failed.
         /// </summary>
         internal static string DeleteFailed {
@@ -713,6 +722,15 @@ namespace RyLogViewer.Properties {
         internal static string WatchForUpdates {
             get {
                 return ResourceManager.GetString("WatchForUpdates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to XML Files (*.xml)|*.xml|CSV Files (*.csv)|*.csv.
+        /// </summary>
+        internal static string XmlOrCsvFileFilter {
+            get {
+                return ResourceManager.GetString("XmlOrCsvFileFilter", resourceCulture);
             }
         }
     }

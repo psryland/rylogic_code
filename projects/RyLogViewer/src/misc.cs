@@ -116,6 +116,11 @@ namespace RyLogViewer
 		public const string Type       = "type";
 		public const string Elem       = "elem";
 		public const string Id         = "id";
+		public const string CodeValues = "codevalues";
+		public const string CodeValue  = "cv";
+		public const string Code       = "c";
+		public const string Value      = "v";
+		public const string HexCodes   = "hexcodes";
 	}
 
 	public static class CmdLineOption

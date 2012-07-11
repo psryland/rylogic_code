@@ -311,16 +311,16 @@ namespace RyLogViewer
 									// This lamdba runs in the main thread, so if the build issue is the same at
 									// the start of this method it can't be changed until after this function returns.
 									if (BuildCancelled(build_issue)) return;
-							
+									
 									// Merge the line index results
 									int row_delta = MergeLineIndex(rng, line_index, bufsize, filepos, fileend, reload);
-							
+									
 									// Ensure the grid is updated
 									UpdateUI(row_delta);
-							
+									
 									// On completion, check if the file has changed again and rerun if it has
 									m_watch.CheckForChangedFiles();
-							
+									
 									if (on_success != null) on_success();
 									m_reload_in_progress = false;
 								};
@@ -630,10 +630,9 @@ namespace RyLogViewer
 					{
 						if (m_line_index[i].Begin - line_range.Begin > cache_range) continue;
 						++i;
+						m_line_index.RemoveRange(i, iend-i);
 						break;
 					}
-				
-					m_line_index.RemoveRange(i, iend-i);
 				}
 				// Or append to the back and trim the start
 				else
@@ -653,10 +652,10 @@ namespace RyLogViewer
 					{
 						if (line_range.End - m_line_index[i].End > cache_range) continue;
 						--i;
+						m_line_index.RemoveRange(0, i+1);
+						row_delta -= i+1;
 						break;
 					}
-					m_line_index.RemoveRange(0, i+1);
-					row_delta -= i+1;
 				}
 				
 				// Invalidate the cache since the cached data may now be different

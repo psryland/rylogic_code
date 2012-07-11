@@ -340,6 +340,12 @@ Error: {1}</value>
   <data name="LogFileFilter" xml:space="preserve">
     <value>Text Files (*.txt;*.log;*.csv)|*.txt;*.log;*.csv|All files (*.*)|*.*</value>
   </data>
+  <data name="CSVFileFilter" xml:space="preserve">
+    <value>CSV Files (*.csv)|*.csv|All files (*.*)|*.*</value>
+  </data>
+  <data name="XmlOrCsvFileFilter" xml:space="preserve">
+    <value>XML Files (*.xml)|*.xml|CSV Files (*.csv)|*.csv</value>
+  </data>
   <data name="LineXofY" xml:space="preserve">
     <value>Line: {0}/{1}</value>
   </data>
