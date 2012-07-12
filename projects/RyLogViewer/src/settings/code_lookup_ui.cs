@@ -92,7 +92,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, string.Format("Export failed due to an error.\r\nError Details:\r\n{0}", ex.Message), "Export Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				Misc.ShowErrorMessage(this, ex, "Export failed.", "Export Failed");
 			}
 		}
 
@@ -162,7 +162,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, string.Format("Import failed.\r\nError Details:\r\n{0}", ex.Message), "Import Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				Misc.ShowErrorMessage(this, ex, "Import failed.", "Import Failed");
 			}
 		}
 		

@@ -336,7 +336,7 @@ namespace RyLogViewer
 						catch (Exception ex)
 						{
 							Debug.WriteLine("Exception ended BuildLineIndex() call: " + ex.Message);
-							Action report_error = () => ShowErrorMessage(ex, "Scanning the log file ended with an error.", "Scanning file terminated");
+							Action report_error = () => Misc.ShowErrorMessage(this, ex, "Scanning the log file ended with an error.", "Scanning file terminated");
 							BeginInvoke(report_error);
 						}
 						finally
@@ -351,7 +351,7 @@ namespace RyLogViewer
 			catch (Exception ex) { err = ex; }
 			m_reload_in_progress = false;
 			Log.Exception(this, err, "Failed to build index list for {0}", m_filepath);
-			ShowErrorMessage(err, "Scanning the log file ended with an error.", "Scanning file terminated");
+			Misc.ShowErrorMessage(this, err, "Scanning the log file ended with an error.", "Scanning file terminated");
 		}
 		
 		/// <summary>Buffer a maximum of 'count' bytes from 'stream' into 'buf' (note,

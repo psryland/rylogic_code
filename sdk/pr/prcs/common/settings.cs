@@ -265,7 +265,7 @@ namespace pr.common
 				
 				// Perform the save
 				DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
-				using (XmlWriter fs = XmlWriter.Create(Filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
+				using (XmlWriter fs = XmlWriter.Create(filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
 					ser.WriteObject(fs, Data);
 			}
 			finally { m_saving = false; }

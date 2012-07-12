@@ -259,7 +259,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					ShowErrorMessage(ex, string.Format("Could not load highlight pattern set {0}.", su.HighlightSetPath), Resources.LoadPatternSetFailed);
+					Misc.ShowErrorMessage(this, ex, string.Format("Could not load highlight pattern set {0}.", su.HighlightSetPath), Resources.LoadPatternSetFailed);
 				}
 			}
 			if (su.FilterSetPath != null)
@@ -273,7 +273,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					ShowErrorMessage(ex, string.Format("Could not load filter pattern set {0}.", su.FilterSetPath), Resources.LoadPatternSetFailed);
+					Misc.ShowErrorMessage(this, ex, string.Format("Could not load filter pattern set {0}.", su.FilterSetPath), Resources.LoadPatternSetFailed);
 				}
 			}
 			if (su.TransformSetPath != null)
@@ -287,7 +287,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					ShowErrorMessage(ex, string.Format("Could not load transform pattern set {0}.", su.TransformSetPath), Resources.LoadPatternSetFailed);
+					Misc.ShowErrorMessage(this, ex, string.Format("Could not load transform pattern set {0}.", su.TransformSetPath), Resources.LoadPatternSetFailed);
 				}
 			}
 		}
@@ -393,7 +393,7 @@ namespace RyLogViewer
 				BuildLineIndex(m_filepos, true, ()=>{ SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0; });
 				return;
 			}
-			catch (Exception ex) { ShowErrorMessage(ex, string.Format("Failed to open file {0} due to an error.", filepath), Resources.FailedToLoadFile); }
+			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, string.Format("Failed to open file {0} due to an error.", filepath), Resources.FailedToLoadFile); }
 			CloseLogFile();
 		}
 		private void OpenLogFile(string filepath = null)
@@ -653,7 +653,7 @@ namespace RyLogViewer
 				res = search.ShowDialog(this);
 			}
 			catch (OperationCanceledException) {}
-			catch (Exception ex) { ShowErrorMessage(ex, "Find terminated by an error.", "Find error"); }
+			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Find terminated by an error.", "Find error"); }
 			found = at;
 			return res == DialogResult.OK;
 		}
@@ -1453,12 +1453,6 @@ namespace RyLogViewer
 		private void SetTransientStatusMessage(string text, int display_time_ms = 2000)
 		{
 			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control, display_time_ms);
-		}
-
-		/// <summary>A wrapper around showing message boxes for exceptions</summary>
-		private void ShowErrorMessage(Exception ex, string caption, string title)
-		{
-			MessageBox.Show(this, string.Format("{0}\r\nError Details:\r\n{1}", caption, ex.Message), title, MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 
 		/// <summary>Display the hint balloon</summary>

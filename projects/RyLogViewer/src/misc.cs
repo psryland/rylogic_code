@@ -21,7 +21,7 @@ namespace RyLogViewer
 		public const int FileBufSizeDefault         = 10 * OneMB;
 		public const int FileBufSizeMax             = 100 * OneMB;
 		public const int MaxLineLengthMin           = 1 * OneKB;
-		public const int MaxLineLengthDefault       = 4 * OneKB;
+		public const int MaxLineLengthDefault       = 16 * OneKB;
 		public const int MaxLineLengthMax           = 128 * OneKB;
 		public const int LineCacheCountMin          = 1;
 		public const int LineCacheCountDefault      = 10000;
@@ -334,6 +334,12 @@ namespace RyLogViewer
 			
 			if (list.Count > max_history_length)
 				list.RemoveRange(max_history_length, list.Count - max_history_length);
+		}
+		
+		/// <summary>A wrapper around showing message boxes for exceptions</summary>
+		public static void ShowErrorMessage(IWin32Window owner, Exception ex, string caption, string title)
+		{
+			MessageBox.Show(owner, string.Format("{0}\r\nError Details:\r\n{1}", caption, ex.Message), title, MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 	}
 }

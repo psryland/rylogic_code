@@ -256,9 +256,7 @@ namespace RyLogViewer
 			m_btn_settings_reset.ToolTip(m_tt, "Reset settings to their default values.");
 			m_btn_settings_reset.Click += (s,a)=>
 				{
-					DialogResult res = MessageBox.Show(this, "This will reset all current settings to their default values\r\n\r\nContinue?", "Confirm Reset Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-					if (res != DialogResult.Yes) return;
-					m_settings.Reset();
+					ResetSettingsToDefaults();
 					UpdateUI();
 					WhatsChanged |= EWhatsChanged.Everything;
 				};
@@ -553,6 +551,22 @@ namespace RyLogViewer
 				{
 					UpdateUI();
 				};
+		}
+
+		/// <summary>Reset the settings to their default values</summary>
+		private void ResetSettingsToDefaults()
+		{
+			// Confirm first...
+			DialogResult res = MessageBox.Show(this, "This will reset all current settings to their default values\r\n\r\nContinue?", "Confirm Reset Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+			if (res != DialogResult.Yes) return;
+			
+			// Flatten the settings
+			try { m_settings.Reset(); }
+			catch (Exception ex)
+			{
+				Log.Exception(this, ex, "Resetting settings to defaults");
+				Misc.ShowErrorMessage(this, ex, "Failed to reset settings to their default values.", "Reset Settings Failed");
+			}
 		}
 
 		/// <summary>Set input focus to the primary input field of the current tab</summary>

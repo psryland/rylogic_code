@@ -56,7 +56,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to launch child process {0} {1} -> {2}", conn.Executable, conn.Arguments, conn.OutputFilepath);
-				ShowErrorMessage(ex, string.Format("Failed to launch child process {0}.",conn.Executable),Resources.FailedToLaunchProcess);
+				Misc.ShowErrorMessage(this, ex, string.Format("Failed to launch child process {0}.",conn.Executable),Resources.FailedToLaunchProcess);
 			}
 			finally 
 			{
@@ -99,7 +99,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}", conn.Hostname, conn.Port, conn.OutputFilepath);
-				ShowErrorMessage(ex, string.Format("Failed to connect to {0}:{1}.",conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
+				Misc.ShowErrorMessage(this, ex, string.Format("Failed to connect to {0}:{1}.",conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
 			}
 			finally 
 			{
@@ -141,7 +141,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}", conn.CommPort, conn.BaudRate, conn.OutputFilepath);
-				ShowErrorMessage(ex, string.Format("Failed to connect to {0}:{1}.",conn.CommPort,conn.BaudRate),Resources.FailedToLaunchProcess);
+				Misc.ShowErrorMessage(this, ex, string.Format("Failed to connect to {0}:{1}.",conn.CommPort,conn.BaudRate),Resources.FailedToLaunchProcess);
 			}
 			finally
 			{
@@ -184,7 +184,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to connect {0} -> {1}", conn.PipeAddr, conn.OutputFilepath);
-				ShowErrorMessage(ex, string.Format("Failed to connect to {0}.",conn.PipeAddr) ,Resources.FailedToLaunchProcess);
+				Misc.ShowErrorMessage(this, ex, string.Format("Failed to connect to {0}.",conn.PipeAddr) ,Resources.FailedToLaunchProcess);
 			}
 			finally
 			{

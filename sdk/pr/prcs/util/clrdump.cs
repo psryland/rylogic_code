@@ -72,7 +72,7 @@ namespace pr.util
 			DialogResult res = MessageBox.Show(msg, "Unexpected Termination", MessageBoxButtons.YesNo, MessageBoxIcon.Error);
 			if (res == DialogResult.Yes)
 			{
-				var dg = new SaveFileDialog{Title = "Save dump file", DefaultExt = "dmp", CheckFileExists = true};
+				var dg = new SaveFileDialog{Title = "Save dump file", DefaultExt = "dmp", CheckPathExists = true};
 				if (dg.ShowDialog() == DialogResult.OK)
 				{
 					Dump(dg.FileName);
