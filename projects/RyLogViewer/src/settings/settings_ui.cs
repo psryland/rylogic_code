@@ -225,8 +225,8 @@ namespace RyLogViewer
 			m_lbl_max_line_len_kb.ToolTip(m_tt, tt);
 			m_lbl_max_line_length.ToolTip(m_tt, tt);
 			m_spinner_max_line_length.ToolTip(m_tt, tt);
-			m_spinner_max_line_length.Minimum = Constants.MaxLineLengthMin;
-			m_spinner_max_line_length.Maximum = Constants.MaxLineLengthMax;
+			m_spinner_max_line_length.Minimum = Constants.MaxLineLengthMin / Constants.OneKB;
+			m_spinner_max_line_length.Maximum = Constants.MaxLineLengthMax / Constants.OneKB;
 			m_spinner_max_line_length.Value = Maths.Clamp(m_settings.MaxLineLength / Constants.OneKB, (int)m_spinner_max_line_length.Minimum, (int)m_spinner_max_line_length.Maximum);
 			m_spinner_max_line_length.ValueChanged += (s,a)=>
 				{
