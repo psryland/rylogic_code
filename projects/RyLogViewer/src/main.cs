@@ -467,7 +467,7 @@ namespace RyLogViewer
 			// Give the illusion that the alternating row colour is moving with the overall file
 			if (m_alternating_line_colours)
 			{
-				var cs = ((e.RowIndex & 1) == 1) == m_first_row_is_odd ? m_grid.DefaultCellStyle : m_grid.AlternatingRowsDefaultCellStyle;
+				var cs = ((e.RowIndex & 1) == 1) == m_first_row_is_odd ? m_grid.RowsDefaultCellStyle : m_grid.AlternatingRowsDefaultCellStyle;
 				e.CellStyle.ApplyStyle(cs);
 			}
 			
