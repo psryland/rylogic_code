@@ -137,13 +137,13 @@ namespace RyLogViewer
 			case EPattern.Substring:
 				{
 					StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-					match = text.IndexOf(Expr, 0, cmp) != -1;
+					match = Expr.Length != 0 && text.IndexOf(Expr, 0, cmp) != -1;
 					break;
 				}
 			case EPattern.Wildcard:
 			case EPattern.RegularExpression:
 				{
-					try { match = Regex.IsMatch(text); } catch (ArgumentException) {}
+					try { match = Expr.Length != 0 && Regex.IsMatch(text); } catch (ArgumentException) {}
 					break;
 				}
 			}
@@ -158,17 +158,20 @@ namespace RyLogViewer
 			
 			var x = new List<int>();
 			if (Invert) x.Add(0);
-			if (Expr.Length != 0) try
+			try
 			{
 				switch (PatnType)
 				{
 				case EPattern.Substring:
 					{
 						StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-						for (int i = text.IndexOf(Expr, 0, cmp); i != -1; i = text.IndexOf(Expr, i + Expr.Length, cmp))
+						if (Expr.Length != 0)
 						{
-							x.Add(i);
-							x.Add(i + Expr.Length);
+							for (int i = text.IndexOf(Expr, 0, cmp); i != -1; i = text.IndexOf(Expr, i + Expr.Length, cmp))
+							{
+								x.Add(i);
+								x.Add(i + Expr.Length);
+							}
 						}
 						break;
 					}
@@ -177,6 +180,7 @@ namespace RyLogViewer
 					{
 						foreach (Match m in Regex.Matches(text))
 						{
+							if (m.Length == 0) continue;
 							x.Add(m.Index);
 							x.Add(m.Index + m.Length);
 						}
@@ -192,7 +196,7 @@ namespace RyLogViewer
 		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
 		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
 		{
-			if (!IsMatch(text)) yield break;
+			if (!IsMatch(text) || !ExprValid) yield break;
 			if (PatnType != EPattern.RegularExpression)
 			{
 				int i = 0;

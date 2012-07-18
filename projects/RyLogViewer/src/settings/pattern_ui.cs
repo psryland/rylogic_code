@@ -92,7 +92,7 @@ namespace RyLogViewer
 			m_btn_add.Click += (s,a)=>
 				{
 					if (Add == null) return;
-					if (Pattern.Expr.Length == 0 || !Pattern.ExprValid) return;
+					if (!Pattern.ExprValid) return;
 					Add(this, EventArgs.Empty);
 				};
 			
@@ -191,7 +191,7 @@ namespace RyLogViewer
 				m_check_ignore_case.Checked = Pattern.IgnoreCase;
 				m_check_invert.Checked      = Pattern.Invert;
 				
-				m_btn_add.Enabled = m_edit_match.Text.Length != 0;
+				m_btn_add.Enabled = Pattern.ExprValid;
 				
 				// Highlight the expression background to show valid regexp
 				m_edit_match.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
