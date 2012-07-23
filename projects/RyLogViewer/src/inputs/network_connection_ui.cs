@@ -158,8 +158,19 @@ namespace RyLogViewer
 				m_combo_proxy_type.Enabled    = true;
 				m_lbl_proxy_hostname.Enabled  = Conn.ProxyType != ProxyType.None;
 				m_lbl_proxy_port.Enabled      = Conn.ProxyType != ProxyType.None;
+				m_lbl_proxy_username.Enabled  = Conn.ProxyType != ProxyType.None && Conn.ProxyType != ProxyType.Http;
+				m_lbl_proxy_password.Enabled  = Conn.ProxyType != ProxyType.None && Conn.ProxyType != ProxyType.Http;
 				m_edit_proxy_hostname.Enabled = Conn.ProxyType != ProxyType.None;
 				m_spinner_proxy_port.Enabled  = Conn.ProxyType != ProxyType.None;
+				m_edit_proxy_username.Enabled = Conn.ProxyType != ProxyType.None && Conn.ProxyType != ProxyType.Http;
+				m_edit_proxy_password.Enabled = Conn.ProxyType != ProxyType.None && Conn.ProxyType != ProxyType.Http;
+				switch (Conn.ProxyType)
+				{
+				case ProxyType.Http:    m_spinner_proxy_port.Value = HttpProxyClient.DefaultPort; break;
+				case ProxyType.Socks4:  m_spinner_proxy_port.Value = Socks4ProxyClient.DefaultPort; break;
+				case ProxyType.Socks4A: m_spinner_proxy_port.Value = Socks4ProxyClient.DefaultPort; break;
+				case ProxyType.Socks5:  m_spinner_proxy_port.Value = Socks5ProxyClient.DefaultPort; break;
+				}
 			}
 			else if (Conn.ProtocolType == ProtocolType.Udp)
 			{
@@ -176,8 +187,12 @@ namespace RyLogViewer
 				m_combo_proxy_type.Enabled    = false;
 				m_lbl_proxy_hostname.Enabled  = false;
 				m_lbl_proxy_port.Enabled      = false;
+				m_lbl_proxy_username.Enabled  = false;
+				m_lbl_proxy_password.Enabled  = false;
 				m_edit_proxy_hostname.Enabled = false;
 				m_spinner_proxy_port.Enabled  = false;
+				m_edit_proxy_username.Enabled = false;
+				m_edit_proxy_password.Enabled = false;
 			}
 			
 			m_combo_hostname.Text               = Conn.Hostname;

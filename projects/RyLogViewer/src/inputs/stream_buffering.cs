@@ -8,10 +8,10 @@ using System.IO.Ports;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.gui;
+using pr.inet;
 using pr.util;
 
 namespace RyLogViewer
@@ -438,14 +438,16 @@ namespace RyLogViewer
 	{
 		private readonly NetConn m_conn;
 		private readonly byte[] m_buf;
+		private readonly IProxyClient m_proxy;
 		private TcpClient m_tcp;
-
+		
 		public BufferedTcpNetConn(NetConn conn)
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
 		{
-			m_conn = conn;
-			m_buf = new byte[BufBlockSize];
-			m_tcp = new TcpClient();
+			m_conn  = conn;
+			m_buf   = new byte[BufBlockSize];
+			m_proxy = conn.ProxyType == ProxyType.None ? null : ProxyClientFactory.CreateProxyClient(conn.ProxyType, conn.ProxyHostname, conn.ProxyPort, conn.ProxyUserName, conn.ProxyPassword);
+			m_tcp   = m_proxy != null ? m_proxy.TcpClient : new TcpClient();
 		}
 
 		/// <summary>Start asynchronously reading from the tcp client</summary>
@@ -501,8 +503,8 @@ namespace RyLogViewer
 	{
 		private readonly NetConn m_conn;
 		private readonly byte[] m_buf;
+		private readonly bool m_specific_host;
 		private UdpClient m_udp;
-		private bool m_specific_host;
 		
 		public BufferedUdpNetConn(NetConn conn)
 		:base(conn.OutputFilepath, conn.AppendOutputFile)

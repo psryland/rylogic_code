@@ -47,6 +47,10 @@
 			this.m_combo_output_filepath = new System.Windows.Forms.ComboBox();
 			this.m_lbl_proxy_type = new System.Windows.Forms.Label();
 			this.m_combo_proxy_type = new System.Windows.Forms.ComboBox();
+			this.m_edit_proxy_username = new System.Windows.Forms.TextBox();
+			this.m_edit_proxy_password = new System.Windows.Forms.TextBox();
+			this.m_lbl_proxy_username = new System.Windows.Forms.Label();
+			this.m_lbl_proxy_password = new System.Windows.Forms.Label();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_port)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_proxy_port)).BeginInit();
 			this.SuspendLayout();
@@ -54,7 +58,7 @@
 			// m_check_append
 			// 
 			this.m_check_append.AutoSize = true;
-			this.m_check_append.Location = new System.Drawing.Point(28, 199);
+			this.m_check_append.Location = new System.Drawing.Point(28, 231);
 			this.m_check_append.Name = "m_check_append";
 			this.m_check_append.Size = new System.Drawing.Size(113, 17);
 			this.m_check_append.TabIndex = 10;
@@ -92,7 +96,7 @@
 			// m_btn_browse_output
 			// 
 			this.m_btn_browse_output.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_browse_output.Location = new System.Drawing.Point(225, 172);
+			this.m_btn_browse_output.Location = new System.Drawing.Point(225, 204);
 			this.m_btn_browse_output.Name = "m_btn_browse_output";
 			this.m_btn_browse_output.Size = new System.Drawing.Size(34, 23);
 			this.m_btn_browse_output.TabIndex = 7;
@@ -102,7 +106,7 @@
 			// m_lbl_output_file
 			// 
 			this.m_lbl_output_file.AutoSize = true;
-			this.m_lbl_output_file.Location = new System.Drawing.Point(8, 158);
+			this.m_lbl_output_file.Location = new System.Drawing.Point(8, 190);
 			this.m_lbl_output_file.Name = "m_lbl_output_file";
 			this.m_lbl_output_file.Size = new System.Drawing.Size(149, 13);
 			this.m_lbl_output_file.TabIndex = 31;
@@ -131,7 +135,7 @@
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(184, 224);
+			this.m_btn_cancel.Location = new System.Drawing.Point(184, 255);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_cancel.TabIndex = 12;
@@ -142,7 +146,7 @@
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(103, 224);
+			this.m_btn_ok.Location = new System.Drawing.Point(103, 255);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 11;
@@ -218,7 +222,7 @@
 			this.m_combo_output_filepath.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_combo_output_filepath.FormattingEnabled = true;
-			this.m_combo_output_filepath.Location = new System.Drawing.Point(28, 173);
+			this.m_combo_output_filepath.Location = new System.Drawing.Point(28, 205);
 			this.m_combo_output_filepath.Name = "m_combo_output_filepath";
 			this.m_combo_output_filepath.Size = new System.Drawing.Size(191, 21);
 			this.m_combo_output_filepath.TabIndex = 6;
@@ -241,13 +245,54 @@
 			this.m_combo_proxy_type.Size = new System.Drawing.Size(121, 21);
 			this.m_combo_proxy_type.TabIndex = 42;
 			// 
+			// m_edit_proxy_username
+			// 
+			this.m_edit_proxy_username.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_edit_proxy_username.Location = new System.Drawing.Point(28, 167);
+			this.m_edit_proxy_username.Name = "m_edit_proxy_username";
+			this.m_edit_proxy_username.Size = new System.Drawing.Size(113, 20);
+			this.m_edit_proxy_username.TabIndex = 43;
+			// 
+			// m_edit_proxy_password
+			// 
+			this.m_edit_proxy_password.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_edit_proxy_password.Location = new System.Drawing.Point(146, 167);
+			this.m_edit_proxy_password.Name = "m_edit_proxy_password";
+			this.m_edit_proxy_password.Size = new System.Drawing.Size(122, 20);
+			this.m_edit_proxy_password.TabIndex = 44;
+			this.m_edit_proxy_password.UseSystemPasswordChar = true;
+			// 
+			// m_lbl_proxy_username
+			// 
+			this.m_lbl_proxy_username.AutoSize = true;
+			this.m_lbl_proxy_username.Location = new System.Drawing.Point(25, 151);
+			this.m_lbl_proxy_username.Name = "m_lbl_proxy_username";
+			this.m_lbl_proxy_username.Size = new System.Drawing.Size(87, 13);
+			this.m_lbl_proxy_username.TabIndex = 45;
+			this.m_lbl_proxy_username.Text = "Proxy Username:";
+			// 
+			// m_lbl_proxy_password
+			// 
+			this.m_lbl_proxy_password.AutoSize = true;
+			this.m_lbl_proxy_password.Location = new System.Drawing.Point(143, 151);
+			this.m_lbl_proxy_password.Name = "m_lbl_proxy_password";
+			this.m_lbl_proxy_password.Size = new System.Drawing.Size(85, 13);
+			this.m_lbl_proxy_password.TabIndex = 46;
+			this.m_lbl_proxy_password.Text = "Proxy Password:";
+			// 
 			// NetworkConnectionUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(275, 260);
+			this.ClientSize = new System.Drawing.Size(275, 291);
+			this.Controls.Add(this.m_lbl_proxy_password);
+			this.Controls.Add(this.m_lbl_proxy_username);
+			this.Controls.Add(this.m_edit_proxy_password);
+			this.Controls.Add(this.m_edit_proxy_username);
 			this.Controls.Add(this.m_combo_proxy_type);
 			this.Controls.Add(this.m_lbl_proxy_type);
 			this.Controls.Add(this.m_spinner_proxy_port);
@@ -299,5 +344,9 @@
 		private System.Windows.Forms.ComboBox m_combo_output_filepath;
 		private System.Windows.Forms.Label m_lbl_proxy_type;
 		private System.Windows.Forms.ComboBox m_combo_proxy_type;
+		private System.Windows.Forms.TextBox m_edit_proxy_username;
+		private System.Windows.Forms.TextBox m_edit_proxy_password;
+		private System.Windows.Forms.Label m_lbl_proxy_username;
+		private System.Windows.Forms.Label m_lbl_proxy_password;
 	}
 }

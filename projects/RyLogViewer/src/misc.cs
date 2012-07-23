@@ -188,9 +188,11 @@ namespace RyLogViewer
 		[DataMember] public ProxyType    ProxyType        = ProxyType.None;
 		[DataMember] public string       ProxyHostname    = "";
 		[DataMember] public ushort       ProxyPort        = 5555;
+		[DataMember] public string       ProxyUserName    = "";
+		             public string       ProxyPassword    = ""; // don't store passwords
 		[DataMember] public string       OutputFilepath   = "";
 		[DataMember] public bool         AppendOutputFile = true;
-		
+
 		public NetConn() {}
 		public NetConn(NetConn rhs)
 		{
@@ -200,6 +202,8 @@ namespace RyLogViewer
 			ProxyType        = rhs.ProxyType        ;
 			ProxyHostname    = rhs.ProxyHostname    ;
 			ProxyPort        = rhs.ProxyPort        ;
+			ProxyUserName    = rhs.ProxyUserName    ;
+			ProxyPassword    = rhs.ProxyPassword    ;
 			OutputFilepath   = rhs.OutputFilepath   ;
 			AppendOutputFile = rhs.AppendOutputFile ;
 		}
