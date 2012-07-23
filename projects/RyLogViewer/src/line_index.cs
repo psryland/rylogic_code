@@ -194,20 +194,20 @@ namespace RyLogViewer
 								filepos = FindLineStart(file, filepos, fileend, row_delim, encoding, buf);
 								if (BuildCancelled(build_issue)) return;
 							
-								// True if 'filepos' has moved toward the end of the file
-								bool toward_start  = filepos == last_filepos ? filepos == 0 : filepos < last_filepos;
-								bool scan_backward = fileend - filepos >= filepos - 0; // scan in the most bound direction first
-							
 								// Determine the range of bytes to scan in each direction
 								Range rng = BufferRange(filepos, fileend, bufsize);
-							
+								bool scan_backward = fileend - filepos >= filepos - 0; // scan in the most bound direction first
+								
 								// The number of lines to cache in the forward and backward directions
 								int bwd_lines = line_cache_count/2; 
 								int fwd_lines = line_cache_count/2;
 							
 								// Incremental loading
-								if (!reload)
+								if (!reload && filepos != last_filepos)
 								{
+									// True if 'filepos' has moved toward the start of the file
+									bool toward_start = filepos < last_filepos;
+								
 									// If the range overlaps the currently cached range (and this isn't a reload)
 									// reduce the range to only scan the range that isn't cached
 									bool incremental;
@@ -287,7 +287,9 @@ namespace RyLogViewer
 										BeginInvoke(update_progress_bar);
 										return !BuildCancelled(build_issue);
 									};
-							
+								
+								if (BuildCancelled(build_issue)) return;
+								
 								// Scan twice, starting in the direction of the smallest range so that any
 								// unused cache space is used by the search in the other direction
 								long scan_from = Maths.Clamp(filepos, rng.Begin, rng.End);

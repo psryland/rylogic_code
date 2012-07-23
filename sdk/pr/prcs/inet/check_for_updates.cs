@@ -13,7 +13,7 @@ namespace pr.inet
 		public class CheckForUpdateResult
 		{
 			/// <summary>The version number of the latest version according to the remote data</summary>
-			public Version Version;
+			public string Version;
 			
 			/// <summary>The location to download the latest version from</summary>
 			public string DownloadURL;
@@ -124,7 +124,7 @@ namespace pr.inet
 					if (info != null)
 					{
 						XElement elem;
-						if ((elem = info.Element("version" )) != null) async.Result.Version     = new Version(elem.Value);
+						if ((elem = info.Element("version" )) != null) async.Result.Version     = elem.Value;
 						if ((elem = info.Element("dl_url"  )) != null) async.Result.DownloadURL = elem.Value;
 						if ((elem = info.Element("info_url")) != null) async.Result.InfoURL     = elem.Value;
 					}

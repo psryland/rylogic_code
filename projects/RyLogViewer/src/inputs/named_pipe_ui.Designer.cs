@@ -138,6 +138,7 @@
 			this.MaximumSize = new System.Drawing.Size(2000, 200);
 			this.MinimumSize = new System.Drawing.Size(323, 200);
 			this.Name = "NamedPipeUI";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Named Pipe Connection";
 			this.ResumeLayout(false);
 			this.PerformLayout();

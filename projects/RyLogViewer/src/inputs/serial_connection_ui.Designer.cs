@@ -266,6 +266,7 @@
 			this.MaximumSize = new System.Drawing.Size(2000, 320);
 			this.MinimumSize = new System.Drawing.Size(323, 320);
 			this.Name = "SerialConnectionUI";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Serial Port Connection";
 			this.ResumeLayout(false);
 			this.PerformLayout();

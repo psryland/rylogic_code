@@ -185,9 +185,9 @@ namespace RyLogViewer
 	[DataContract]
 	public class NetConn :ICloneable
 	{
-		[DataMember] public string       Hostname     = "";
-		[DataMember] public ushort       Port         = 5555;
-		[DataMember] public ProtocolType ProtocolType = ProtocolType.IPv4;
+		[DataMember] public string       Hostname         = "";
+		[DataMember] public ushort       Port             = 5555;
+		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
 		[DataMember] public bool         UseProxy         = false;
 		[DataMember] public string       ProxyHostname    = "";
 		[DataMember] public ushort       ProxyPort        = 5555;

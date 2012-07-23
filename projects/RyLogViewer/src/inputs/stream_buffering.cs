@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.IO.Pipes;
 using System.IO.Ports;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -19,7 +20,8 @@ namespace RyLogViewer
 	public partial class Main :Form
 	{
 		private BufferedProcess    m_buffered_process;
-		private BufferedNetConn    m_buffered_netconn;
+		private BufferedTcpNetConn m_buffered_tcp_netconn;
+		private BufferedUdpNetConn m_buffered_udp_netconn;
 		private BufferedSerialConn m_buffered_serialconn;
 		private BufferedPipeConn   m_buffered_pipeconn;
 
@@ -65,10 +67,10 @@ namespace RyLogViewer
 			}
 		}
 		
-		/// <summary>Open a network connection and log anything read</summary>
-		private void LogNetworkConnection(NetConn conn)
+		/// <summary>Open a tcp network connection and log anything read</summary>
+		private void LogTcpNetConnection(NetConn conn)
 		{
-			BufferedNetConn buffered_netconn = null;
+			BufferedTcpNetConn buffered_tcp_netconn = null;
 			try
 			{
 				// Close any currently open file
@@ -78,22 +80,22 @@ namespace RyLogViewer
 				CloseLogFile();
 				
 				// Launch the process with standard output/error redirected to the temporary file
-				buffered_netconn = new BufferedNetConn(conn);
+				buffered_tcp_netconn = new BufferedTcpNetConn(conn);
 				
 				// Give some UI feedback if the connection drops
-				buffered_netconn.ConnectionDropped += (s,a)=>
+				buffered_tcp_netconn.ConnectionDropped += (s,a)=>
 					{
 						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
 						BeginInvoke(proc_exit);
 					};
 			
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_netconn.Filepath, !buffered_netconn.TmpFile);
-				buffered_netconn.Start(this);
+				OpenLogFile(buffered_tcp_netconn.Filepath, !buffered_tcp_netconn.TmpFile);
+				buffered_tcp_netconn.Start(this);
 				
 				// Pass over the ref
-				m_buffered_netconn = buffered_netconn;
-				buffered_netconn = null;
+				m_buffered_tcp_netconn = buffered_tcp_netconn;
+				buffered_tcp_netconn = null;
 			}
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
@@ -103,8 +105,51 @@ namespace RyLogViewer
 			}
 			finally 
 			{
-				if (buffered_netconn != null)
-					buffered_netconn.Dispose();
+				if (buffered_tcp_netconn != null)
+					buffered_tcp_netconn.Dispose();
+			}
+		}
+		
+		/// <summary>Open a network connection and log anything read</summary>
+		private void LogUdpNetConnection(NetConn conn)
+		{
+			BufferedUdpNetConn buffered_udp_netconn = null;
+			try
+			{
+				// Close any currently open file
+				// Strictly, we don't have to close because OpenLogFile closes before opening
+				// however if the user reopens the same connection the existing connection will
+				// hold a lock on the capture file preventing the new connection being created.
+				CloseLogFile();
+				
+				// Launch the process with standard output/error redirected to the temporary file
+				buffered_udp_netconn = new BufferedUdpNetConn(conn);
+				
+				// Give some UI feedback if the connection drops (not that there is a connection with Udp... on well..)
+				buffered_udp_netconn.ConnectionDropped += (s,a)=>
+					{
+						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
+						BeginInvoke(proc_exit);
+					};
+			
+				// Open the capture file created by buffered_process
+				OpenLogFile(buffered_udp_netconn.Filepath, !buffered_udp_netconn.TmpFile);
+				buffered_udp_netconn.Start();
+				
+				// Pass over the ref
+				m_buffered_udp_netconn = buffered_udp_netconn;
+				buffered_udp_netconn = null;
+			}
+			catch (OperationCanceledException) {}
+			catch (Exception ex)
+			{
+				Log.Exception(this, ex, "Failed to open connection {0}:{1} -> {2}", conn.Hostname, conn.Port, conn.OutputFilepath);
+				Misc.ShowErrorMessage(this, ex, string.Format("Failed to open connected to {0}:{1}.",conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
+			}
+			finally 
+			{
+				if (buffered_udp_netconn != null)
+					buffered_udp_netconn.Dispose();
 			}
 		}
 		
@@ -210,7 +255,7 @@ namespace RyLogViewer
 		}
 		protected const int BufBlockSize = 4096;
 		protected readonly object m_lock;   // Sync writes to the file
-		private FileStream m_outp;        // The file that captured output is written to
+		protected FileStream m_outp;        // The file that captured output is written to
 		
 		/// <summary>The filepath of the file that contains the redirected output</summary>
 		public readonly string Filepath;
@@ -389,18 +434,18 @@ namespace RyLogViewer
 	}
 
 	/// <summary>Manages a network connection and reading its incoming data</summary>
-	public class BufferedNetConn :BufferedStream
+	public class BufferedTcpNetConn :BufferedStream
 	{
 		private readonly NetConn m_conn;
 		private readonly byte[] m_buf;
-		private TcpClient m_client;
+		private TcpClient m_tcp;
 
-		public BufferedNetConn(NetConn conn)
+		public BufferedTcpNetConn(NetConn conn)
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
 		{
 			m_conn = conn;
 			m_buf = new byte[BufBlockSize];
-			m_client = new TcpClient();
+			m_tcp = new TcpClient();
 		}
 
 		/// <summary>Start asynchronously reading from the tcp client</summary>
@@ -417,10 +462,10 @@ namespace RyLogViewer
 					Exception error = null;
 					using (ManualResetEvent done = new ManualResetEvent(false))
 					{
-						m_client.BeginConnect(m_conn.Hostname, m_conn.Port, ar => 
+						m_tcp.BeginConnect(m_conn.Hostname, m_conn.Port, ar => 
 							{
 								// ReSharper disable AccessToDisposedClosure
-								try { m_client.EndConnect(ar); }
+								try { m_tcp.EndConnect(ar); }
 								catch (Exception ex) { error = ex; }
 								done.Set();
 								// ReSharper restore AccessToDisposedClosure
@@ -433,7 +478,7 @@ namespace RyLogViewer
 					a.Cancel = bgw.CancellationPending;
 					if (!a.Cancel)
 					{
-						NetworkStream stream = m_client.GetStream();
+						NetworkStream stream = m_tcp.GetStream();
 						stream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(stream, m_buf));
 					}
 				});
@@ -445,25 +490,112 @@ namespace RyLogViewer
 		/// <summary>Returns true if the tcp client is connected</summary>
 		protected override bool IsConnected
 		{
-			get { return m_client != null && m_client.Connected; }
+			get { return m_tcp != null && m_tcp.Connected; }
 		}
 
 		/// <summary>Cleanup</summary>
 		public override void Dispose()
 		{
 			base.Dispose();
-			if (m_client != null)
+			if (m_tcp != null)
 			{
 				lock (m_lock)
 				{
 					Log.Info(this, "Disposing tcp client {0}", m_conn.Hostname);
-					m_client.Close();
-					m_client = null;
+					m_tcp.Close();
+					m_tcp = null;
 				}
 			}
 		}
 	}
 
+	/// <summary>Manages a network connection and reading its incoming data</summary>
+	public class BufferedUdpNetConn :BufferedStream
+	{
+		private readonly NetConn m_conn;
+		private readonly byte[] m_buf;
+		private UdpClient m_udp;
+		private bool m_specific_host;
+		
+		public BufferedUdpNetConn(NetConn conn)
+		:base(conn.OutputFilepath, conn.AppendOutputFile)
+		{
+			m_conn = conn;
+			m_buf = new byte[BufBlockSize];
+			m_udp = new UdpClient(m_conn.Port);
+			m_specific_host = !string.IsNullOrEmpty(m_conn.Hostname);
+		}
+
+		/// <summary></summary>
+		private IAsyncResult BeginRecv()
+		{
+			EndPoint src = new IPEndPoint(IPAddress.Any, m_conn.Port);
+			return m_specific_host
+				? m_udp.Client.BeginReceive(m_buf, 0, m_buf.Length, SocketFlags.None, DataRecv, null)
+				: m_udp.Client.BeginReceiveFrom(m_buf, 0, m_buf.Length, SocketFlags.None, ref src, DataRecv, null);
+		}
+
+		private int EndRecv(IAsyncResult ar)
+		{
+			EndPoint src = new IPEndPoint(IPAddress.Any, m_conn.Port);
+			return m_specific_host
+				? m_udp.Client.EndReceive(ar)
+				: m_udp.Client.EndReceiveFrom(ar, ref src);
+		}
+
+		/// <summary>Start asynchronously reading from the tcp client</summary>
+		public void Start()
+		{
+			if (m_specific_host) m_udp.Connect(m_conn.Hostname, 0);
+			BeginRecv();
+		}
+
+		/// <summary>Returns true if the tcp client is connected</summary>
+		protected override bool IsConnected
+		{
+			get { return m_udp != null; }
+		}
+
+		/// <summary>Handler for async reads from a stream</summary>
+		protected override void DataRecv(IAsyncResult ar)
+		{
+			lock (m_lock)
+			{
+				try
+				{
+					if (m_udp == null)
+						return;
+					
+					int read = EndRecv(ar);
+					if (m_outp == null) return;
+					m_outp.Write(m_buf, 0, read);
+					m_outp.Flush();
+					BeginRecv();
+				}
+				catch (Exception ex)
+				{
+					var type = GetType().DeclaringType;
+					Log.Exception(this, ex, "[{0}] Data receive exception", type == null ? "" : type.Name);
+				}
+			}
+		}
+
+		/// <summary>Cleanup</summary>
+		public override void Dispose()
+		{
+			base.Dispose();
+			if (m_udp != null)
+			{
+				lock (m_lock)
+				{
+					Log.Info(this, "Disposing ucp client {0}", m_conn.Hostname);
+					m_udp.Close();
+					m_udp = null;
+				}
+			}
+		}
+	}
+	
 	/// <summary>Manages a serial port connection and reading its incoming data</summary>
 	public class BufferedSerialConn :BufferedStream
 	{

@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
@@ -336,12 +337,14 @@ namespace RyLogViewer
 				m_line_index.Clear();
 				m_watch.Remove(m_filepath);
 				if (m_buffered_process    != null) m_buffered_process.Dispose();
-				if (m_buffered_netconn    != null) m_buffered_netconn.Dispose();
+				if (m_buffered_tcp_netconn != null) m_buffered_tcp_netconn.Dispose();
+				if (m_buffered_udp_netconn != null) m_buffered_udp_netconn.Dispose();
 				if (m_buffered_serialconn != null) m_buffered_serialconn.Dispose();
 				if (m_buffered_pipeconn   != null) m_buffered_pipeconn.Dispose();
 				if (FileOpen) m_file.Dispose();
 				m_buffered_process = null;
-				m_buffered_netconn = null;
+				m_buffered_tcp_netconn = null;
+				m_buffered_udp_netconn = null;
 				m_buffered_serialconn = null;
 				m_buffered_pipeconn = null;
 				m_filepath = null;
@@ -422,7 +425,11 @@ namespace RyLogViewer
 		{
 			var dg = new NetworkConnectionUI(m_settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			LogNetworkConnection(dg.Conn);
+			
+			if (dg.Conn.ProtocolType == ProtocolType.Tcp)
+				LogTcpNetConnection(dg.Conn);
+			else if (dg.Conn.ProtocolType == ProtocolType.Udp)
+				LogUdpNetConnection(dg.Conn);
 		}
 
 		/// <summary>Open a named pipe and log the received data</summary>
