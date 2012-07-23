@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.inet;
 using pr.util;
 
 namespace RyLogViewer
@@ -59,11 +61,12 @@ namespace RyLogViewer
 				};
 			
 			// Use proxy
-			m_check_use_proxy.ToolTip(m_tt, "Check to specify a proxy server");
-			m_check_use_proxy.Checked = Conn.UseProxy;
-			m_check_use_proxy.Click += (s,a)=>
+			m_combo_proxy_type.ToolTip(m_tt, "Select if using a proxy server");
+			m_combo_proxy_type.DataSource = Enum.GetValues(typeof(ProxyType));
+			m_combo_proxy_type.SelectedIndex = (int)Conn.ProxyType;
+			m_combo_proxy_type.SelectedIndexChanged +=(s,a)=>
 				{
-					Conn.UseProxy = m_check_use_proxy.Checked;
+					Conn.ProxyType = (ProxyType)m_combo_proxy_type.SelectedItem;
 					UpdateUI();
 				};
 			
@@ -152,11 +155,11 @@ namespace RyLogViewer
 				m_spinner_port.ToolTip(m_tt, tt);
 				
 				// Allow proxy server description
-				m_check_use_proxy.Enabled     = true;
-				m_lbl_proxy_hostname.Enabled  = Conn.UseProxy;
-				m_lbl_proxy_port.Enabled      = Conn.UseProxy;
-				m_edit_proxy_hostname.Enabled = Conn.UseProxy;
-				m_spinner_proxy_port.Enabled  = Conn.UseProxy;
+				m_combo_proxy_type.Enabled    = true;
+				m_lbl_proxy_hostname.Enabled  = Conn.ProxyType != ProxyType.None;
+				m_lbl_proxy_port.Enabled      = Conn.ProxyType != ProxyType.None;
+				m_edit_proxy_hostname.Enabled = Conn.ProxyType != ProxyType.None;
+				m_spinner_proxy_port.Enabled  = Conn.ProxyType != ProxyType.None;
 			}
 			else if (Conn.ProtocolType == ProtocolType.Udp)
 			{
@@ -170,7 +173,7 @@ namespace RyLogViewer
 				m_spinner_port.ToolTip(m_tt, tt);
 				
 				// Proxy doesn't make sense for UDP connections
-				m_check_use_proxy.Enabled     = false;
+				m_combo_proxy_type.Enabled    = false;
 				m_lbl_proxy_hostname.Enabled  = false;
 				m_lbl_proxy_port.Enabled      = false;
 				m_edit_proxy_hostname.Enabled = false;
@@ -179,7 +182,7 @@ namespace RyLogViewer
 			
 			m_combo_hostname.Text               = Conn.Hostname;
 			m_spinner_port.Value                = Conn.Port;
-			m_check_use_proxy.Checked           = Conn.UseProxy;
+			m_combo_proxy_type.SelectedIndex    = (int)Conn.ProxyType;
 			m_edit_proxy_hostname.Text          = Conn.ProxyHostname;
 			m_spinner_proxy_port.Value          = Conn.ProxyPort;
 			m_combo_output_filepath.Text        = Conn.OutputFilepath;

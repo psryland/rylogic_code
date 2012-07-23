@@ -247,6 +247,7 @@
     <Compile Include="inet\ftp.cs" />
     <Compile Include="inet\inet.cs" />
     <Compile Include="inet\markdown.cs" />
+    <Compile Include="inet\proxy.cs" />
     <Compile Include="ldr\ldr_helper.cs" />
     <Compile Include="maths\bbox.cs" />
     <Compile Include="maths\bit.cs" />

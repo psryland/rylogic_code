@@ -1,22 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
 using System.IO.Ports;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using System.Xml.Linq;
+using pr.inet;
 
 namespace RyLogViewer
 {
 	public static class Constants
 	{
 		public const string AppIdentifier           = "rylogviewer.x86";
-		public const string UpdateURL               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
+		public const string UpdateUrl               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
 		public const int FileBufSizeMin             = 1 * OneMB;
 		public const int FileBufSizeDefault         = 10 * OneMB;
 		public const int FileBufSizeMax             = 100 * OneMB;
@@ -188,7 +185,7 @@ namespace RyLogViewer
 		[DataMember] public string       Hostname         = "";
 		[DataMember] public ushort       Port             = 5555;
 		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
-		[DataMember] public bool         UseProxy         = false;
+		[DataMember] public ProxyType    ProxyType        = ProxyType.None;
 		[DataMember] public string       ProxyHostname    = "";
 		[DataMember] public ushort       ProxyPort        = 5555;
 		[DataMember] public string       OutputFilepath   = "";
@@ -200,7 +197,7 @@ namespace RyLogViewer
 			Hostname         = rhs.Hostname         ;
 			Port             = rhs.Port             ;
 			ProtocolType     = rhs.ProtocolType     ;
-			UseProxy         = rhs.UseProxy         ;
+			ProxyType        = rhs.ProxyType        ;
 			ProxyHostname    = rhs.ProxyHostname    ;
 			ProxyPort        = rhs.ProxyPort        ;
 			OutputFilepath   = rhs.OutputFilepath   ;

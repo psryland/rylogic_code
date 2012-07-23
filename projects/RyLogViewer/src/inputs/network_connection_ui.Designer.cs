@@ -29,7 +29,6 @@
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NetworkConnectionUI));
-			this.m_check_use_proxy = new System.Windows.Forms.CheckBox();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
 			this.m_lbl_proxy_hostname = new System.Windows.Forms.Label();
 			this.m_edit_proxy_hostname = new System.Windows.Forms.TextBox();
@@ -46,19 +45,11 @@
 			this.m_spinner_port = new System.Windows.Forms.NumericUpDown();
 			this.m_spinner_proxy_port = new System.Windows.Forms.NumericUpDown();
 			this.m_combo_output_filepath = new System.Windows.Forms.ComboBox();
+			this.m_lbl_proxy_type = new System.Windows.Forms.Label();
+			this.m_combo_proxy_type = new System.Windows.Forms.ComboBox();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_port)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_proxy_port)).BeginInit();
 			this.SuspendLayout();
-			// 
-			// m_check_use_proxy
-			// 
-			this.m_check_use_proxy.AutoSize = true;
-			this.m_check_use_proxy.Location = new System.Drawing.Point(11, 88);
-			this.m_check_use_proxy.Name = "m_check_use_proxy";
-			this.m_check_use_proxy.Size = new System.Drawing.Size(74, 17);
-			this.m_check_use_proxy.TabIndex = 4;
-			this.m_check_use_proxy.Text = "Use Proxy";
-			this.m_check_use_proxy.UseVisualStyleBackColor = true;
 			// 
 			// m_check_append
 			// 
@@ -73,7 +64,7 @@
 			// m_lbl_proxy_hostname
 			// 
 			this.m_lbl_proxy_hostname.AutoSize = true;
-			this.m_lbl_proxy_hostname.Location = new System.Drawing.Point(25, 108);
+			this.m_lbl_proxy_hostname.Location = new System.Drawing.Point(25, 112);
 			this.m_lbl_proxy_hostname.Name = "m_lbl_proxy_hostname";
 			this.m_lbl_proxy_hostname.Size = new System.Drawing.Size(87, 13);
 			this.m_lbl_proxy_hostname.TabIndex = 3;
@@ -83,7 +74,7 @@
 			// 
 			this.m_edit_proxy_hostname.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_proxy_hostname.Location = new System.Drawing.Point(28, 124);
+			this.m_edit_proxy_hostname.Location = new System.Drawing.Point(28, 128);
 			this.m_edit_proxy_hostname.Name = "m_edit_proxy_hostname";
 			this.m_edit_proxy_hostname.Size = new System.Drawing.Size(183, 20);
 			this.m_edit_proxy_hostname.TabIndex = 4;
@@ -92,7 +83,7 @@
 			// 
 			this.m_lbl_port.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_port.AutoSize = true;
-			this.m_lbl_port.Location = new System.Drawing.Point(204, 45);
+			this.m_lbl_port.Location = new System.Drawing.Point(204, 42);
 			this.m_lbl_port.Name = "m_lbl_port";
 			this.m_lbl_port.Size = new System.Drawing.Size(29, 13);
 			this.m_lbl_port.TabIndex = 32;
@@ -120,7 +111,7 @@
 			// m_lbl_hostname
 			// 
 			this.m_lbl_hostname.AutoSize = true;
-			this.m_lbl_hostname.Location = new System.Drawing.Point(8, 45);
+			this.m_lbl_hostname.Location = new System.Drawing.Point(8, 42);
 			this.m_lbl_hostname.Name = "m_lbl_hostname";
 			this.m_lbl_hostname.Size = new System.Drawing.Size(58, 13);
 			this.m_lbl_hostname.TabIndex = 30;
@@ -131,7 +122,7 @@
 			this.m_combo_hostname.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_combo_hostname.FormattingEnabled = true;
-			this.m_combo_hostname.Location = new System.Drawing.Point(28, 61);
+			this.m_combo_hostname.Location = new System.Drawing.Point(28, 58);
 			this.m_combo_hostname.Name = "m_combo_hostname";
 			this.m_combo_hostname.Size = new System.Drawing.Size(183, 21);
 			this.m_combo_hostname.TabIndex = 0;
@@ -162,7 +153,7 @@
 			// 
 			this.m_lbl_proxy_port.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_proxy_port.AutoSize = true;
-			this.m_lbl_proxy_port.Location = new System.Drawing.Point(204, 108);
+			this.m_lbl_proxy_port.Location = new System.Drawing.Point(204, 112);
 			this.m_lbl_proxy_port.Name = "m_lbl_proxy_port";
 			this.m_lbl_proxy_port.Size = new System.Drawing.Size(29, 13);
 			this.m_lbl_proxy_port.TabIndex = 38;
@@ -189,7 +180,7 @@
 			// m_spinner_port
 			// 
 			this.m_spinner_port.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_spinner_port.Location = new System.Drawing.Point(217, 61);
+			this.m_spinner_port.Location = new System.Drawing.Point(217, 58);
 			this.m_spinner_port.Maximum = new decimal(new int[] {
             65535,
             0,
@@ -207,7 +198,7 @@
 			// m_spinner_proxy_port
 			// 
 			this.m_spinner_proxy_port.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_spinner_proxy_port.Location = new System.Drawing.Point(217, 124);
+			this.m_spinner_proxy_port.Location = new System.Drawing.Point(217, 128);
 			this.m_spinner_proxy_port.Maximum = new decimal(new int[] {
             65535,
             0,
@@ -232,6 +223,24 @@
 			this.m_combo_output_filepath.Size = new System.Drawing.Size(191, 21);
 			this.m_combo_output_filepath.TabIndex = 6;
 			// 
+			// m_lbl_proxy_type
+			// 
+			this.m_lbl_proxy_type.AutoSize = true;
+			this.m_lbl_proxy_type.Location = new System.Drawing.Point(12, 89);
+			this.m_lbl_proxy_type.Name = "m_lbl_proxy_type";
+			this.m_lbl_proxy_type.Size = new System.Drawing.Size(63, 13);
+			this.m_lbl_proxy_type.TabIndex = 41;
+			this.m_lbl_proxy_type.Text = "Proxy Type:";
+			// 
+			// m_combo_proxy_type
+			// 
+			this.m_combo_proxy_type.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.m_combo_proxy_type.FormattingEnabled = true;
+			this.m_combo_proxy_type.Location = new System.Drawing.Point(90, 85);
+			this.m_combo_proxy_type.Name = "m_combo_proxy_type";
+			this.m_combo_proxy_type.Size = new System.Drawing.Size(121, 21);
+			this.m_combo_proxy_type.TabIndex = 42;
+			// 
 			// NetworkConnectionUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
@@ -239,8 +248,9 @@
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
 			this.ClientSize = new System.Drawing.Size(275, 260);
+			this.Controls.Add(this.m_combo_proxy_type);
+			this.Controls.Add(this.m_lbl_proxy_type);
 			this.Controls.Add(this.m_spinner_proxy_port);
-			this.Controls.Add(this.m_check_use_proxy);
 			this.Controls.Add(this.m_lbl_proxy_port);
 			this.Controls.Add(this.m_combo_output_filepath);
 			this.Controls.Add(this.m_edit_proxy_hostname);
@@ -271,7 +281,6 @@
 
 		#endregion
 
-		private System.Windows.Forms.CheckBox m_check_use_proxy;
 		private System.Windows.Forms.CheckBox m_check_append;
 		private System.Windows.Forms.Label m_lbl_proxy_hostname;
 		private System.Windows.Forms.TextBox m_edit_proxy_hostname;
@@ -288,5 +297,7 @@
 		private System.Windows.Forms.NumericUpDown m_spinner_port;
 		private System.Windows.Forms.NumericUpDown m_spinner_proxy_port;
 		private System.Windows.Forms.ComboBox m_combo_output_filepath;
+		private System.Windows.Forms.Label m_lbl_proxy_type;
+		private System.Windows.Forms.ComboBox m_combo_proxy_type;
 	}
 }

@@ -459,25 +459,12 @@ namespace RyLogViewer
 					bgw.ReportProgress(0, new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
 					
 					// Connect async
-					Exception error = null;
-					using (ManualResetEvent done = new ManualResetEvent(false))
-					{
-						m_tcp.BeginConnect(m_conn.Hostname, m_conn.Port, ar => 
-							{
-								// ReSharper disable AccessToDisposedClosure
-								try { m_tcp.EndConnect(ar); }
-								catch (Exception ex) { error = ex; }
-								done.Set();
-								// ReSharper restore AccessToDisposedClosure
-							}, null);
-						
-						// Poll for connected or cancel
-						for (;!done.WaitOne(0) && !bgw.CancellationPending; Thread.Sleep(100)) {}
-					}
-					if (error != null) throw error;
+					var ar = m_tcp.BeginConnect(m_conn.Hostname, m_conn.Port, null, null);
+					for (;!bgw.CancellationPending && !ar.AsyncWaitHandle.WaitOne(500);){}
 					a.Cancel = bgw.CancellationPending;
 					if (!a.Cancel)
 					{
+						m_tcp.EndConnect(ar);
 						NetworkStream stream = m_tcp.GetStream();
 						stream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(stream, m_buf));
 					}

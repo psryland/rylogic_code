@@ -950,7 +950,7 @@ namespace RyLogViewer
 					{
 						BackgroundWorker bgw = (BackgroundWorker)s;
 						bgw.ReportProgress(100, new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
-						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateURL, null);
+						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, null);
 						
 						// Wait till the operation completes, or until cancel is singled
 						for (;!bgw.CancellationPending && !async.AsyncWaitHandle.WaitOne(500);) {}
@@ -964,7 +964,7 @@ namespace RyLogViewer
 			else
 			{
 				// Start the asynchronous check for updates
-				INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateURL, callback);
+				INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, callback);
 			}
 		}
 
