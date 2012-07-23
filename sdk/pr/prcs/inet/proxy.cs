@@ -129,12 +129,12 @@ namespace pr.inet
 	/// System.Net.Sockets.TcpClient tcpClient = proxy.CreateConnection("www.starksoft.com", 80);
 	/// </code>
 	/// </remarks>
-	public class ProxyClientFactory
+	public static class ProxyClientFactory
 	{
 		/// <summary>Factory method for creating new proxy client objects.</summary>
 		/// <param name="type">The type of proxy client to create.</param>
 		/// <returns>Proxy client object.</returns>
-		public IProxyClient CreateProxyClient(ProxyType type)
+		public static IProxyClient CreateProxyClient(ProxyType type)
 		{
 			switch (type)
 			{
@@ -151,7 +151,7 @@ namespace pr.inet
 		/// <param name="type">The type of proxy client to create.</param>
 		/// <param name="tcp_client">Open TcpClient object.</param>
 		/// <returns>Proxy client object.</returns>
-		public IProxyClient CreateProxyClient(ProxyType type, TcpClient tcp_client)
+		public static IProxyClient CreateProxyClient(ProxyType type, TcpClient tcp_client)
 		{
 				
 			switch (type)
@@ -170,7 +170,7 @@ namespace pr.inet
 		/// <param name="proxy_host">The proxy host or IP address.</param>
 		/// <param name="proxy_port">The proxy port number.</param>
 		/// <returns>Proxy client object.</returns>
-		public IProxyClient CreateProxyClient(ProxyType type, string proxy_host, int proxy_port)
+		public static IProxyClient CreateProxyClient(ProxyType type, string proxy_host, int proxy_port)
 		{
 			switch (type)
 			{
@@ -190,13 +190,13 @@ namespace pr.inet
 		/// <param name="proxy_username">The proxy username.  This parameter is only used by Socks4 and Socks5 proxy objects.</param>
 		/// <param name="proxy_password">The proxy user password.  This parameter is only used Socks5 proxy objects.</param>
 		/// <returns>Proxy client object.</returns>
-		public IProxyClient CreateProxyClient(ProxyType type, string proxy_host, int proxy_port, string proxy_username, string proxy_password)
+		public static IProxyClient CreateProxyClient(ProxyType type, string proxy_host, int proxy_port, string proxy_username, string proxy_password)
 		{
 			switch (type)
 			{
 			default: throw new ProxyException(String.Format("Unknown proxy type {0}.", type));
 			case ProxyType.None:    throw new ArgumentOutOfRangeException("type");
-			case ProxyType.Http:    return new HttpProxyClient(proxy_host, proxy_port);
+			case ProxyType.Http:    return new HttpProxyClient(proxy_host, proxy_port, proxy_username, proxy_password);
 			case ProxyType.Socks4:  return new Socks4ProxyClient(proxy_host, proxy_port, proxy_username);
 			case ProxyType.Socks4A: return new Socks4AProxyClient(proxy_host, proxy_port, proxy_username);
 			case ProxyType.Socks5:  return new Socks5ProxyClient(proxy_host, proxy_port, proxy_username, proxy_password);
@@ -211,7 +211,7 @@ namespace pr.inet
 		/// <param name="proxy_username">The proxy username.  This parameter is only used by Socks4 and Socks5 proxy objects.</param>
 		/// <param name="proxy_password">The proxy user password.  This parameter is only used Socks5 proxy objects.</param>
 		/// <returns>Proxy client object.</returns>
-		public IProxyClient CreateProxyClient(ProxyType type, TcpClient tcp_client, string proxy_host, int proxy_port, string proxy_username, string proxy_password)
+		public static IProxyClient CreateProxyClient(ProxyType type, TcpClient tcp_client, string proxy_host, int proxy_port, string proxy_username, string proxy_password)
 		{
 			IProxyClient c = CreateProxyClient(type, proxy_host, proxy_port, proxy_username, proxy_password);
 			c.TcpClient = tcp_client;
@@ -234,12 +234,16 @@ namespace pr.inet
 	{
 		private string m_proxy_host;
 		private int m_proxy_port;
+		private readonly string m_proxy_username;
+		private readonly string m_proxy_password;
 		private HttpResponseCodes m_resp_code;
 		private string m_resp_text;
 		private TcpClient m_tcp_client;
+		private TcpClient m_tcp_client_cached;
 		
-		private const int HttpProxyDefaultPort = 8080;
-		private const string HttpProxyConnectCmd = "CONNECT {0}:{1} HTTP/1.0 \r\nHOST {0}:{1}\r\n\r\n";
+		public const int DefaultPort = 8080;
+		private const string HttpProxyConnectCmd = "CONNECT {0}:{1} HTTP/1.0\r\nHOST {0}:{1}\r\n";
+		private const string HttpProxyAuthenticateCmd = "Proxy-Authorization: Basic {0}\r\n";
 		private const int WaitForDataInterval = 50; // 50 ms
 		private const int WaitForDataTimeout = 15000; // 15 seconds
 		
@@ -297,7 +301,7 @@ namespace pr.inet
 		public HttpProxyClient(TcpClient tcp_client)
 		{
 			if (tcp_client == null) throw new ArgumentNullException("tcp_client");
-			m_tcp_client = tcp_client;
+			m_tcp_client_cached = tcp_client;
 		}
 		
 		/// <summary> Constructor. The default HTTP proxy port 8080 is used.</summary>
@@ -306,7 +310,7 @@ namespace pr.inet
 		{
 			if (String.IsNullOrEmpty(proxy_host)) throw new ArgumentNullException("proxy_host");
 			m_proxy_host = proxy_host;
-			m_proxy_port = HttpProxyDefaultPort;
+			m_proxy_port = DefaultPort;
 		}
 		
 		/// <summary>Constructor.</summary>
@@ -323,7 +327,32 @@ namespace pr.inet
 			m_proxy_host = proxy_host;
 			m_proxy_port = proxy_port;
 		}
-		
+
+		/// <summary>Constructor.</summary>
+		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
+		/// <param name="proxy_port">Port number for the proxy server.</param>
+		/// <param name="proxy_username">Http basic authentication user name</param>
+		/// <param name="proxy_password">Http basic authentication password</param>
+		public HttpProxyClient(string proxy_host, int proxy_port, string proxy_username, string proxy_password)
+		{
+			if (String.IsNullOrEmpty(proxy_host))
+				throw new ArgumentNullException("proxy_host");
+
+			if (String.IsNullOrEmpty(proxy_username))
+				throw new ArgumentNullException("proxy_username");
+
+			if (proxy_password == null)
+				throw new ArgumentNullException("proxy_password");
+
+			if (proxy_port <= 0 || proxy_port > 65535)
+				throw new ArgumentOutOfRangeException("proxy_port", "port must be greater than zero and less than 65535");
+
+			m_proxy_host = proxy_host;
+			m_proxy_port = proxy_port;
+			m_proxy_username = proxy_username;
+			m_proxy_password = proxy_password;
+		}
+
 		/// <summary>Gets or sets host name or IP address of the proxy server.</summary>
 		public string ProxyHost
 		{
@@ -351,8 +380,8 @@ namespace pr.inet
 		/// </summary>
 		public TcpClient TcpClient
 		{
-			get { return m_tcp_client; }
-			set { m_tcp_client = value; }
+			get { return m_tcp_client_cached; }
+			set { m_tcp_client_cached = value; }
 		}
 		
 		/// <summary>Creates a remote TCP connection through a proxy server to the destination host on the destination port.</summary>
@@ -370,8 +399,8 @@ namespace pr.inet
 		{
 			try
 			{
-				// if we have no connection, create one
-				if (m_tcp_client == null)
+				// if we have no cached tcpip connection then create one
+				if (m_tcp_client_cached == null)
 				{
 					if (String.IsNullOrEmpty(m_proxy_host))
 						throw new ProxyException("ProxyHost property must contain a value.");
@@ -385,12 +414,19 @@ namespace pr.inet
 					// attempt to open the connection
 					m_tcp_client.Connect(m_proxy_host, m_proxy_port);
 				}
+				else
+				{
+					m_tcp_client = m_tcp_client_cached;
+				}
 				
 				//  send connection command to proxy host for the specified destination host and port
 				SendConnectionCommand(destination_host, destination_port);
 				
+				// remove the private reference to the tcp client so the proxy object does not keep it
 				// return the open proxied tcp client object to the caller for normal use
-				return m_tcp_client;
+				TcpClient rtn = m_tcp_client;
+				m_tcp_client = null;
+				return rtn;
 			}
 			catch (SocketException ex)
 			{
@@ -401,15 +437,34 @@ namespace pr.inet
 		private void SendConnectionCommand(string host, int port)
 		{
 			NetworkStream stream = m_tcp_client.GetStream();
+			string connect_cmd;
 			
-			// PROXY SERVER REQUEST
-			// =======================================================================
-			//CONNECT starksoft.com:443 HTTP/1.0 <CR><LF>
-			//HOST starksoft.com:443<CR><LF>
-			//[... other HTTP header lines ending with <CR><LF> if required]>
-			//<CR><LF>    // Last Empty Line
+			if (!string.IsNullOrEmpty(m_proxy_username) && m_proxy_password != null)
+			{
+				//Gets the user/pass into base64 encoded string in the form of [username]:[password]
+				string auth = Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", m_proxy_username, m_proxy_password)));
 			
-			string connect_cmd = String.Format(CultureInfo.InvariantCulture, HttpProxyConnectCmd, host, port.ToString(CultureInfo.InvariantCulture));
+				// PROXY SERVER REQUEST
+				// =======================================================================
+				//CONNECT starksoft.com:443 HTTP/1.0<CR><LF>
+				//HOST starksoft.com:443<CR><LF>
+				//Proxy-Authorization: username:password<CR><LF>
+				//		NOTE: username:password string will be base64 encoded as one 
+				//			  concatenated string
+				//[... other HTTP header lines ending with <CR><LF> if required]>
+				//<CR><LF>    // Last Empty Line
+				connect_cmd = String.Format(CultureInfo.InvariantCulture, HttpProxyConnectCmd + string.Format(HttpProxyAuthenticateCmd, auth) + "\r\n", host, port.ToString(CultureInfo.InvariantCulture));
+			}
+			else
+			{
+				// PROXY SERVER REQUEST
+				// =======================================================================
+				//CONNECT starksoft.com:443 HTTP/1.0 <CR><LF>
+				//HOST starksoft.com:443<CR><LF>
+				//[... other HTTP header lines ending with <CR><LF> if required]>
+				//<CR><LF>    // Last Empty Line
+				connect_cmd = String.Format(CultureInfo.InvariantCulture, HttpProxyConnectCmd + "\r\n", host, port.ToString(CultureInfo.InvariantCulture));	
+			}
 			byte[] request = Encoding.ASCII.GetBytes(connect_cmd);
 			
 			// send the connect request
@@ -512,19 +567,14 @@ namespace pr.inet
 			get { return m_async_worker != null && m_async_worker.IsBusy; }
 		}
 		
-		/// <summary>
-		/// Gets a value indicating whether an asynchronous operation is cancelled.
-		/// </summary>
-		/// <remarks>Returns true if an asynchronous operation is cancelled; otherwise, false.
-		/// </remarks>
+		/// <summary>Gets a value indicating whether an asynchronous operation is cancelled.</summary>
+		/// <remarks>Returns true if an asynchronous operation is cancelled; otherwise, false.</remarks>
 		public bool IsAsyncCancelled
 		{
 			get { return m_async_cancelled; }
 		}
 		
-		/// <summary>
-		/// Cancels any asychronous operation that is currently active.
-		/// </summary>
+		/// <summary>Cancels any asychronous operation that is currently active.</summary>
 		public void CancelAsync()
 		{
 			if (m_async_worker != null && !m_async_worker.CancellationPending && m_async_worker.IsBusy)
@@ -534,9 +584,7 @@ namespace pr.inet
 			}
 		}
 		
-		/// <summary>
-		/// Event handler for CreateConnectionAsync method completed.
-		/// </summary>
+		/// <summary>Event handler for CreateConnectionAsync method completed.</summary>
 		public event EventHandler<CreateConnectionAsyncCompletedEventArgs> CreateConnectionAsyncCompleted;
 		
 		/// <summary>
@@ -611,18 +659,14 @@ namespace pr.inet
 		:base(tcp_client)
 		{}
 		
-		/// <summary>
-		/// Create a Socks4a proxy client object.  The default proxy port 1080 is used.
-		/// </summary>
+		/// <summary>Create a Socks4a proxy client object.  The default proxy port 1080 is used.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_user_id">Proxy user identification information for an IDENTD server.</param>
 		public Socks4AProxyClient(string proxy_host, string proxy_user_id)
 		:base(proxy_host, proxy_user_id)
 		{}
 		
-		/// <summary>
-		/// Create a Socks4a proxy client object.
-		/// </summary>
+		/// <summary>Create a Socks4a proxy client object.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_port">Port used to connect to proxy server.</param>
 		/// <param name="proxy_user_id">Proxy user identification information.</param>
@@ -630,34 +674,26 @@ namespace pr.inet
 		:base(proxy_host, proxy_port, proxy_user_id)
 		{}
 		
-		/// <summary>
-		/// Create a Socks4 proxy client object.  The default proxy port 1080 is used.
-		/// </summary>
+		/// <summary>Create a Socks4 proxy client object.  The default proxy port 1080 is used.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		public Socks4AProxyClient(string proxy_host) : base(proxy_host)
 		{ }
 		
-		/// <summary>
-		/// Create a Socks4a proxy client object.
-		/// </summary>
+		/// <summary>Create a Socks4a proxy client object.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_port">Port used to connect to proxy server.</param>
 		public Socks4AProxyClient(string proxy_host, int proxy_port)
 		: base(proxy_host, proxy_port)
 		{  }
 		
-		/// <summary>
-		/// Gets String representing the name of the proxy.
-		/// </summary>
+		/// <summary>Gets String representing the name of the proxy.</summary>
 		/// <remarks>This property will always return the value 'SOCKS4a'</remarks>
 		public override string ProxyName
 		{
 			get { return "SOCKS4a"; }
 		}
 		
-		/// <summary>
-		/// Sends a command to the proxy server.
-		/// </summary>
+		/// <summary>Sends a command to the proxy server.</summary>
 		/// <param name="proxy">Proxy server data stream.</param>
 		/// <param name="command">Proxy byte command to execute.</param>
 		/// <param name="destination_host">Destination host name or IP address.</param>
@@ -777,12 +813,8 @@ namespace pr.inet
 		}
 	}
 	
-	/// <summary>
-	/// Socks4 connection proxy class.  This class implements the Socks4 standard proxy protocol.
-	/// </summary>
-	/// <remarks>
-	/// This class implements the Socks4 proxy protocol standard for TCP communciations.
-	/// </remarks>
+	/// <summary>Socks4 connection proxy class.  This class implements the Socks4 standard proxy protocol.</summary>
+	/// <remarks>This class implements the Socks4 proxy protocol standard for TCP communciations.</remarks>
 	public class Socks4ProxyClient : IProxyClient
 	{
 		private const int WaitForDataInterval = 50;   // 50 ms
@@ -793,9 +825,10 @@ namespace pr.inet
 		private int m_proxy_port;
 		private string m_proxy_user_id;
 		
-		// ReSharper disable InconsistentNaming
 		/// <summary>Default Socks4 proxy port.</summary>
-		internal const int SOCKS_PROXY_DEFAULT_PORT = 1080;
+		public const int DefaultPort = 1080;
+		
+		// ReSharper disable InconsistentNaming
 		/// <summary>Socks4 version number.</summary>
 		internal const byte SOCKS4_VERSION_NUMBER = 4;
 		/// <summary>Socks4 connection command value.</summary>
@@ -837,7 +870,7 @@ namespace pr.inet
 				throw new ArgumentNullException("proxy_user_id");
 				
 			m_proxy_host = proxy_host;
-			m_proxy_port = SOCKS_PROXY_DEFAULT_PORT;
+			m_proxy_port = DefaultPort;
 			m_proxy_user_id = proxy_user_id;
 		}
 		
@@ -871,7 +904,7 @@ namespace pr.inet
 				throw new ArgumentNullException("proxy_host");
 				
 			m_proxy_host = proxy_host;
-			m_proxy_port = SOCKS_PROXY_DEFAULT_PORT;
+			m_proxy_port = DefaultPort;
 		}
 		
 		/// <summary>
@@ -1176,10 +1209,7 @@ namespace pr.inet
 					throw new ProxyException("A timeout while waiting for the proxy destination to respond.");
 			}
 		}
-		
-		
-		#region "Async Methods"
-		
+
 		private BackgroundWorker m_async_worker;
 		private Exception m_async_exception;
 		bool m_async_cancelled;
@@ -1272,17 +1302,10 @@ namespace pr.inet
 			if (CreateConnectionAsyncCompleted != null)
 				CreateConnectionAsyncCompleted(this, new CreateConnectionAsyncCompletedEventArgs(m_async_exception, m_async_cancelled, (TcpClient)e.Result));
 		}
-		
-		#endregion
-		
 	}
 	
-	/// <summary>
-	/// Socks5 connection proxy class.  This class implements the Socks5 standard proxy protocol.
-	/// </summary>
-	/// <remarks>
-	/// This implementation supports TCP proxy connections with a Socks v5 server.
-	/// </remarks>
+	/// <summary>Socks5 connection proxy class.  This class implements the Socks5 standard proxy protocol.</summary>
+	/// <remarks>This implementation supports TCP proxy connections with a Socks v5 server.</remarks>
 	public class Socks5ProxyClient : IProxyClient
 	{
 		private string m_proxy_host;
@@ -1291,9 +1314,10 @@ namespace pr.inet
 		private string m_proxy_password;
 		private SocksAuthentication m_proxy_auth_method;
 		private TcpClient m_tcp_client;
+
+		public const int DefaultPort = 1080;
 		
 		// ReSharper disable InconsistentNaming, UnusedMember.Local
-		private const int SOCKS5_DEFAULT_PORT = 1080;
 		private const byte SOCKS5_VERSION_NUMBER = 5;
 		private const byte SOCKS5_RESERVED = 0x00;
 		private const byte SOCKS5_AUTH_NUMBER_OF_AUTH_METHODS_SUPPORTED = 2;
@@ -1343,9 +1367,7 @@ namespace pr.inet
 			m_tcp_client = tcp_client;
 		}
 		
-		/// <summary>
-		/// Create a Socks5 proxy client object.  The default proxy port 1080 is used.
-		/// </summary>
+		/// <summary>Create a Socks5 proxy client object.  The default proxy port 1080 is used.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		public Socks5ProxyClient(string proxy_host)
 		{
@@ -1353,12 +1375,10 @@ namespace pr.inet
 				throw new ArgumentNullException("proxy_host");
 				
 			m_proxy_host = proxy_host;
-			m_proxy_port = SOCKS5_DEFAULT_PORT;
+			m_proxy_port = DefaultPort;
 		}
 		
-		/// <summary>
-		/// Create a Socks5 proxy client object.
-		/// </summary>
+		/// <summary>Create a Socks5 proxy client object.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_port">Port used to connect to proxy server.</param>
 		public Socks5ProxyClient(string proxy_host, int proxy_port)
@@ -1373,9 +1393,7 @@ namespace pr.inet
 			m_proxy_port = proxy_port;
 		}
 		
-		/// <summary>
-		/// Create a Socks5 proxy client object.  The default proxy port 1080 is used.
-		/// </summary>
+		/// <summary>Create a Socks5 proxy client object.  The default proxy port 1080 is used.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_user_name">Proxy authentication user name.</param>
 		/// <param name="proxy_password">Proxy authentication password.</param>
@@ -1391,14 +1409,12 @@ namespace pr.inet
 				throw new ArgumentNullException("proxy_password");
 				
 			m_proxy_host = proxy_host;
-			m_proxy_port = SOCKS5_DEFAULT_PORT;
+			m_proxy_port = DefaultPort;
 			m_proxy_user_name = proxy_user_name;
 			m_proxy_password = proxy_password;
 		}
 		
-		/// <summary>
-		/// Create a Socks5 proxy client object.
-		/// </summary>
+		/// <summary>Create a Socks5 proxy client object.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_port">Port used to connect to proxy server.</param>
 		/// <param name="proxy_user_name">Proxy authentication user name.</param>
@@ -1423,45 +1439,35 @@ namespace pr.inet
 			m_proxy_password = proxy_password;
 		}
 		
-		/// <summary>
-		/// Gets or sets host name or IP address of the proxy server.
-		/// </summary>
+		/// <summary>Gets or sets host name or IP address of the proxy server.</summary>
 		public string ProxyHost
 		{
 			get { return m_proxy_host; }
 			set { m_proxy_host = value; }
 		}
 		
-		/// <summary>
-		/// Gets or sets port used to connect to proxy server.
-		/// </summary>
+		/// <summary>Gets or sets port used to connect to proxy server.</summary>
 		public int ProxyPort
 		{
 			get { return m_proxy_port; }
 			set { m_proxy_port = value; }
 		}
 		
-		/// <summary>
-		/// Gets String representing the name of the proxy.
-		/// </summary>
+		/// <summary>Gets String representing the name of the proxy.</summary>
 		/// <remarks>This property will always return the value 'SOCKS5'</remarks>
 		public string ProxyName
 		{
 			get { return "SOCKS5"; }
 		}
 		
-		/// <summary>
-		/// Gets or sets proxy authentication user name.
-		/// </summary>
+		/// <summary>Gets or sets proxy authentication user name.</summary>
 		public string ProxyUserName
 		{
 			get { return m_proxy_user_name; }
 			set { m_proxy_user_name = value; }
 		}
 		
-		/// <summary>
-		/// Gets or sets proxy authentication password.
-		/// </summary>
+		/// <summary>Gets or sets proxy authentication password.</summary>
 		public string ProxyPassword
 		{
 			get { return m_proxy_password; }
