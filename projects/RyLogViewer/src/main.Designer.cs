@@ -96,6 +96,9 @@
 			this.m_menu_help = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help_check_for_updates = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
+			this.purchaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.registerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
@@ -629,6 +632,9 @@
 			this.m_menu_help.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_help_totd,
             this.m_menu_help_check_for_updates,
+            this.toolStripSeparator11,
+            this.purchaseToolStripMenuItem,
+            this.registerToolStripMenuItem,
             this.toolStripSeparator2,
             this.m_menu_help_about});
 			this.m_menu_help.Name = "m_menu_help";
@@ -646,6 +652,23 @@
 			this.m_menu_help_check_for_updates.Name = "m_menu_help_check_for_updates";
 			this.m_menu_help_check_for_updates.Size = new System.Drawing.Size(171, 22);
 			this.m_menu_help_check_for_updates.Text = "Check for &Updates";
+			// 
+			// toolStripSeparator11
+			// 
+			this.toolStripSeparator11.Name = "toolStripSeparator11";
+			this.toolStripSeparator11.Size = new System.Drawing.Size(168, 6);
+			// 
+			// purchaseToolStripMenuItem
+			// 
+			this.purchaseToolStripMenuItem.Name = "purchaseToolStripMenuItem";
+			this.purchaseToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
+			this.purchaseToolStripMenuItem.Text = "&Visit Store";
+			// 
+			// registerToolStripMenuItem
+			// 
+			this.registerToolStripMenuItem.Name = "registerToolStripMenuItem";
+			this.registerToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
+			this.registerToolStripMenuItem.Text = "&Register...";
 			// 
 			// toolStripSeparator2
 			// 
@@ -1011,6 +1034,9 @@
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_find_prev;
 		private System.Windows.Forms.ToolStripButton m_btn_actions;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_actions;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator11;
+		private System.Windows.Forms.ToolStripMenuItem purchaseToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem registerToolStripMenuItem;
 	}
 }
 

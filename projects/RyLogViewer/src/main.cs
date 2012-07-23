@@ -967,7 +967,7 @@ namespace RyLogViewer
 			if (error != null)
 			{
 				SetTransientStatusMessage("Check for updates error", Color.Red, SystemColors.Control);
-				if (show_dialog) MessageBox.Show(this, string.Format("Check for updates failed\r\nError: {0}", error.Message), "Check for Updates Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				if (show_dialog) Misc.ShowErrorMessage(this, error, "Check for updates failed", "Check for Updates");
 			}
 			else
 			{

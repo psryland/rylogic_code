@@ -8,11 +8,11 @@ namespace RyLogViewer
 {
 	public class About :Form
 	{
-		private Label m_lbl_version_history;
-		private TextBox m_edit_version_history;
+		private TextBox m_edit_licence;
 		private Button m_btn_ok;
 		private TextBox m_edit_version;
 		private PictureBox pictureBox1;
+		private Label m_lbl_licence;
 		private Label m_lbl_info;
 		
 		public About()
@@ -35,8 +35,8 @@ namespace RyLogViewer
 			if (stream != null)
 			{
 				using (TextReader r = new StreamReader(stream))
-					m_edit_version_history.Text = r.ReadToEnd();
-				m_edit_version_history.Select(0,0);
+					m_edit_licence.Text = r.ReadToEnd();
+				m_edit_licence.Select(0,0);
 			}
 		}
 		#region Windows Form Designer generated code
@@ -65,46 +65,36 @@ namespace RyLogViewer
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(About));
-			this.m_lbl_version_history = new System.Windows.Forms.Label();
-			this.m_edit_version_history = new System.Windows.Forms.TextBox();
+			this.m_edit_licence = new System.Windows.Forms.TextBox();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_edit_version = new System.Windows.Forms.TextBox();
 			this.pictureBox1 = new System.Windows.Forms.PictureBox();
 			this.m_lbl_info = new System.Windows.Forms.Label();
+			this.m_lbl_licence = new System.Windows.Forms.Label();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.SuspendLayout();
 			// 
-			// m_lbl_version_history
+			// m_edit_licence
 			// 
-			this.m_lbl_version_history.AutoSize = true;
-			this.m_lbl_version_history.Location = new System.Drawing.Point(9, 141);
-			this.m_lbl_version_history.Name = "m_lbl_version_history";
-			this.m_lbl_version_history.Size = new System.Drawing.Size(80, 13);
-			this.m_lbl_version_history.TabIndex = 13;
-			this.m_lbl_version_history.Text = "Version History:";
-			// 
-			// m_edit_version_history
-			// 
-			this.m_edit_version_history.AcceptsReturn = true;
-			this.m_edit_version_history.AcceptsTab = true;
-			this.m_edit_version_history.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+			this.m_edit_licence.AcceptsReturn = true;
+			this.m_edit_licence.AcceptsTab = true;
+			this.m_edit_licence.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_version_history.BackColor = System.Drawing.SystemColors.ControlLightLight;
-			this.m_edit_version_history.Location = new System.Drawing.Point(12, 157);
-			this.m_edit_version_history.Multiline = true;
-			this.m_edit_version_history.Name = "m_edit_version_history";
-			this.m_edit_version_history.ReadOnly = true;
-			this.m_edit_version_history.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-			this.m_edit_version_history.Size = new System.Drawing.Size(287, 90);
-			this.m_edit_version_history.TabIndex = 12;
-			this.m_edit_version_history.WordWrap = false;
+			this.m_edit_licence.BackColor = System.Drawing.SystemColors.ControlLightLight;
+			this.m_edit_licence.Location = new System.Drawing.Point(12, 157);
+			this.m_edit_licence.Multiline = true;
+			this.m_edit_licence.Name = "m_edit_licence";
+			this.m_edit_licence.ReadOnly = true;
+			this.m_edit_licence.Size = new System.Drawing.Size(314, 78);
+			this.m_edit_licence.TabIndex = 12;
+			this.m_edit_licence.WordWrap = false;
 			// 
 			// m_btn_ok
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(228, 253);
+			this.m_btn_ok.Location = new System.Drawing.Point(255, 241);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(71, 21);
 			this.m_btn_ok.TabIndex = 11;
@@ -122,7 +112,7 @@ namespace RyLogViewer
 			this.m_edit_version.Multiline = true;
 			this.m_edit_version.Name = "m_edit_version";
 			this.m_edit_version.ReadOnly = true;
-			this.m_edit_version.Size = new System.Drawing.Size(287, 74);
+			this.m_edit_version.Size = new System.Drawing.Size(314, 74);
 			this.m_edit_version.TabIndex = 10;
 			this.m_edit_version.WordWrap = false;
 			// 
@@ -146,13 +136,22 @@ namespace RyLogViewer
 			this.m_lbl_info.TabIndex = 8;
 			this.m_lbl_info.Text = "RyLog Viewer";
 			// 
+			// m_lbl_licence
+			// 
+			this.m_lbl_licence.AutoSize = true;
+			this.m_lbl_licence.Location = new System.Drawing.Point(12, 141);
+			this.m_lbl_licence.Name = "m_lbl_licence";
+			this.m_lbl_licence.Size = new System.Drawing.Size(69, 13);
+			this.m_lbl_licence.TabIndex = 14;
+			this.m_lbl_licence.Text = "Licence Info:";
+			// 
 			// About
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(311, 286);
-			this.Controls.Add(this.m_lbl_version_history);
-			this.Controls.Add(this.m_edit_version_history);
+			this.ClientSize = new System.Drawing.Size(338, 274);
+			this.Controls.Add(this.m_lbl_licence);
+			this.Controls.Add(this.m_edit_licence);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_edit_version);
 			this.Controls.Add(this.pictureBox1);

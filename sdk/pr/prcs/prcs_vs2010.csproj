@@ -140,6 +140,7 @@
   <ItemGroup>
     <Compile Include="attrib\string_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
+    <Compile Include="common\licence.cs" />
     <Compile Include="common\span.cs" />
     <Compile Include="common\pin.cs" />
     <Compile Include="common\range.cs" />

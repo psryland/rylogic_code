@@ -55,6 +55,12 @@
   <PropertyGroup>
     <StartupObject>RyLogViewer.program</StartupObject>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>RylogViewer Key File.pfx</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -284,6 +290,7 @@
     <None Include="Resources\important.png" />
     <None Include="Resources\options.png" />
     <None Include="Resources\Refresh.png" />
+    <None Include="RylogViewer Key File.pfx" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">
@@ -327,6 +334,7 @@
   <ItemGroup>
     <Content Include="Resources\book.png" />
     <Content Include="Resources\green_tick.png" />
+    <Content Include="rylog_private_key.txt" />
     <EmbeddedResource Include="docs\CommandLineRef.html" />
     <Content Include="lib\ClrDump.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

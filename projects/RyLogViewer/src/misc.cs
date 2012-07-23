@@ -337,9 +337,11 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>A wrapper around showing message boxes for exceptions</summary>
-		public static void ShowErrorMessage(IWin32Window owner, Exception ex, string caption, string title)
+		public static void ShowErrorMessage(IWin32Window owner, Exception exception, string caption, string title)
 		{
-			MessageBox.Show(owner, string.Format("{0}\r\nError Details:\r\n{1}", caption, ex.Message), title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			string msg = exception.Message;
+			for (var ex = exception.InnerException; ex != null; ex = ex.InnerException) msg += Environment.NewLine + ex.Message;
+			MessageBox.Show(owner, string.Format("{0}\r\nError Details:\r\n{1}", caption, msg), title, MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 	}
 }

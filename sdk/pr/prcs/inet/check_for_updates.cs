@@ -88,11 +88,22 @@ namespace pr.inet
 					
 					// Create a web client and grab the version xml data
 					string latest_version_xml = "";
+					Exception error = null;
 					using (WebClient web = new WebClient{Proxy = proxy})
 					using (ManualResetEvent got = new ManualResetEvent(false))
 					{
 						// ReSharper disable AccessToDisposedClosure
-						web.DownloadStringCompleted += (s,a) => { if (!a.Cancelled) latest_version_xml = a.Result; got.Set(); };
+						web.DownloadStringCompleted += (s,a) =>
+						{
+							try
+							{
+								error = a.Error;
+								if (!a.Cancelled && a.Error == null)
+									latest_version_xml = a.Result;
+							}
+							catch { }
+							finally { got.Set(); }
+						};
 						web.DownloadStringAsync(uri);
 						// ReSharper restore AccessToDisposedClosure
 						
@@ -103,6 +114,8 @@ namespace pr.inet
 						
 						if (async.CancelPending)
 							throw new OperationCanceledException();
+						if (error != null)
+							throw new Exception("Failed to read latest version info", error);
 					}
 					
 					// Load the version info string
@@ -145,7 +158,7 @@ namespace pr.inet
 			try
 			{
 				ar.AsyncWaitHandle.WaitOne();
-				if (async.Error != null) throw new TargetInvocationException(async.Error);
+				if (async.Error != null) throw async.Error;
 				return async.Result;
 			}
 			finally
