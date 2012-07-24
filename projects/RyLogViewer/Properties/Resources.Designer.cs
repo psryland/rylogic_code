@@ -121,6 +121,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap bottom {
+            get {
+                object obj = ResourceManager.GetObject("bottom", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         /// <summary>
         ///   Looks up a localized string similar to Building line index.
         /// </summary>
@@ -708,6 +715,15 @@ namespace RyLogViewer.Properties {
         internal static string WatchForUpdates {
             get {
                 return ResourceManager.GetString("WatchForUpdates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Automatically scroll to the bottom of the log as new data is loaded.
+        /// </summary>
+        internal static string WatchTail {
+            get {
+                return ResourceManager.GetString("WatchTail", resourceCulture);
             }
         }
         

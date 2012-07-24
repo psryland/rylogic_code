@@ -46,6 +46,7 @@
 			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_watch = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_additive = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
@@ -150,14 +151,15 @@
             this.toolStripSeparator9,
             this.m_btn_options,
             this.toolStripSeparator1,
-            this.m_btn_jump_to_end,
             this.m_btn_jump_to_start,
+            this.m_btn_jump_to_end,
+            this.m_btn_tail,
             this.toolStripSeparator8,
             this.m_btn_watch,
             this.m_btn_additive});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(344, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(403, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -288,6 +290,16 @@
 			this.m_btn_additive.Name = "m_btn_additive";
 			this.m_btn_additive.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_additive.Text = "Additive Only";
+			// 
+			// m_btn_tail
+			// 
+			this.m_btn_tail.CheckOnClick = true;
+			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.bottom;
+			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_tail.Name = "m_btn_tail";
+			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_tail.Text = "Tail Mode";
 			// 
 			// m_menu
 			// 
@@ -834,7 +846,7 @@
             this.m_cmenu_find_next,
             this.m_cmenu_find_prev});
 			this.m_cmenu_grid.Name = "m_cmenu_grid";
-			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 214);
+			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 192);
 			// 
 			// m_cmenu_select_all
 			// 
@@ -1037,6 +1049,7 @@
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator11;
 		private System.Windows.Forms.ToolStripMenuItem purchaseToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem registerToolStripMenuItem;
+		private System.Windows.Forms.ToolStripButton m_btn_tail;
 	}
 }
 

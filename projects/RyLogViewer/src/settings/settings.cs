@@ -149,6 +149,11 @@ namespace RyLogViewer
 			get { return get<bool>("ActionsEnabled"); }
 			set { set("ActionsEnabled", value); }
 		}
+		public bool   TailEnabled
+		{
+			get { return get<bool>("TailEnabled"); }
+			set { set("TailEnabled", value); }
+		}
 		public bool   WatchEnabled
 		{
 			get { return get<bool>("WatchEnabled"); }
@@ -291,6 +296,7 @@ namespace RyLogViewer
 			FiltersEnabled                  = true;
 			TransformsEnabled               = true;
 			ActionsEnabled                  = true;
+			TailEnabled                     = false;
 			WatchEnabled                    = false;
 			FileBufSize                     = Constants.FileBufSizeDefault;
 			MaxLineLength                   = Constants.MaxLineLengthDefault;

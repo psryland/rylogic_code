@@ -203,7 +203,8 @@ namespace RyLogViewer
 								int fwd_lines = line_cache_count/2;
 							
 								// Incremental loading
-								if (!reload && filepos != last_filepos)
+								reload |= filepos == last_filepos;
+								if (!reload)
 								{
 									// True if 'filepos' has moved toward the start of the file
 									bool toward_start = filepos < last_filepos;

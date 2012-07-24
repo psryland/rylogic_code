@@ -147,6 +147,8 @@ namespace RyLogViewer
 			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRow = 0);
 			m_btn_jump_to_end.ToolTipText   = Resources.ScrollToEnd;
 			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+			m_btn_tail.ToolTipText          = Resources.WatchTail;
+			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
 			m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
 			m_btn_watch.Click              += (s,a) => EnableWatch(m_btn_watch.Checked);
 			m_btn_additive.ToolTipText      = Resources.AdditiveMode;
@@ -505,6 +507,7 @@ namespace RyLogViewer
 		private void GridSelectionChanged(object sender, EventArgs e)
 		{
 			if (GridEventsBlocked) return;
+			EnableTail(SelectedRow == m_grid.RowCount - 1);
 			UpdateStatus();
 		}
 
@@ -745,6 +748,13 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
+		private void EnableTail(bool enabled)
+		{
+			m_settings.TailEnabled = enabled;
+			UpdateUI();
+		}
+
+		/// <summary>Turn on/off tail mode</summary>
 		private void EnableWatch(bool enable)
 		{
 			m_settings.WatchEnabled = enable;
@@ -979,12 +989,13 @@ namespace RyLogViewer
 			else
 			{
 				Version this_version = Assembly.GetExecutingAssembly().GetName().Version;
-				if (this_version.CompareTo(res.Version) >  0)
+				Version othr_version = new Version(res.Version);
+				if (this_version.CompareTo(othr_version) >  0)
 				{
 					SetTransientStatusMessage("Development version running");
 					if (show_dialog) MessageBox.Show(this, "This version is newer than the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
 				}
-				else if (this_version.CompareTo(res.Version) == 0)
+				else if (this_version.CompareTo(othr_version) == 0)
 				{
 					SetTransientStatusMessage("Latest version running");
 					if (show_dialog) MessageBox.Show(this, "This is the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -997,7 +1008,7 @@ namespace RyLogViewer
 						var dg = new NewVersionForm
 						{
 							CurrentVersion = this_version.ToString(),
-							LatestVersion  = res.Version.ToString(),
+							LatestVersion  = othr_version.ToString(),
 							WebsiteUrl     = res.InfoURL,
 							DownloadUrl    = res.DownloadURL
 						};
@@ -1081,23 +1092,7 @@ namespace RyLogViewer
 		/// <summary>Return true if we should auto scroll</summary>
 		private bool AutoScrollTail
 		{
-			get
-			{
-				// Auto scroll if the last row of the file is visible and selected in the grid
-				int row_delim_length = m_row_delim != null ? m_row_delim.Length : 0;
-				return
-					m_grid.RowCount == 0 ||                                                // no data, then yes
-					(
-						m_grid.RowCount != 0 &&                                            // the grid has data
-						m_line_index.Count != 0 &&                                         // rows of the file are cached
-						SelectedRow == m_grid.RowCount - 1 &&                              // last row selected
-						m_grid.Rows[m_grid.RowCount - 1].Displayed &&                      // last row displayed
-						(
-							m_line_index.Last().Contains(m_fileend - 1) ||                 // last char in the file
-							m_line_index.Last().Contains(m_fileend - 1 - row_delim_length) // last row in the file
-						)
-					);
-			}
+			get { return m_settings.TailEnabled; }
 		}
 
 		/// <summary>Scroll the grid to make the last row visible</summary>
@@ -1334,6 +1329,7 @@ namespace RyLogViewer
 				m_btn_filters.Checked    = m_settings.FiltersEnabled;
 				m_btn_transforms.Checked = m_settings.TransformsEnabled;
 				m_btn_actions.Checked    = m_settings.ActionsEnabled;
+				m_btn_tail.Checked       = m_settings.TailEnabled;
 				m_btn_watch.Checked      = m_watch_timer.Enabled;
 				m_btn_additive.Checked   = m_settings.FileChangesAdditive;
 			
@@ -1371,7 +1367,7 @@ namespace RyLogViewer
 				m_status_spring.Text = "";
 				
 				// Add comma's to a large number
-				Func<StringBuilder,StringBuilder> Pretty = sb=>
+				Func<StringBuilder,StringBuilder> pretty = sb=>
 					{
 						for (int i = sb.Length, j = 0; i-- != 0; ++j)
 							if ((j%3) == 2 && i != 0) sb.Insert(i, ',');
@@ -1381,8 +1377,8 @@ namespace RyLogViewer
 				// Get current file position
 				int r = SelectedRow;
 				long p = (r != -1) ? m_line_index[r].Begin : 0;
-				StringBuilder pos = Pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
-				StringBuilder len = Pretty(new StringBuilder(m_file.Length.ToString(CultureInfo.InvariantCulture)));
+				StringBuilder pos = pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
+				StringBuilder len = pretty(new StringBuilder(m_file.Length.ToString(CultureInfo.InvariantCulture)));
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
