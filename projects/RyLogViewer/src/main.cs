@@ -727,9 +727,13 @@ namespace RyLogViewer
 		/// <summary>Turn on/off filters</summary>
 		private void EnableFilters(bool enable)
 		{
+			var current = SelectedRowRange.Begin;
 			m_settings.FiltersEnabled = enable;
 			ApplySettings();
-			BuildLineIndex(m_filepos, true);
+			BuildLineIndex(m_filepos, true, ()=>
+				{
+					SelectedRow = LineIndex(m_line_index, current);
+				});
 		}
 
 		/// <summary>Turn on/off transforms</summary>

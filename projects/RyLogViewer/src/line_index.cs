@@ -759,7 +759,7 @@ namespace RyLogViewer
 		/// Returns the index in 'line_index' for the line that contains 'filepos'.
 		/// Returns '-1' if 'filepos' is before the first range and 'line_index.Count'
 		/// if 'filepos' is after the last range</summary>
-		private int LineIndex(List<Range> line_index, long filepos)
+		private static int LineIndex(List<Range> line_index, long filepos)
 		{
 			// Careful, comparing filepos to line starts, if idx == line_index.Count
 			// it could be in the last line, or after the last line.
