@@ -305,8 +305,10 @@ namespace RyLogViewer
 			{
 				try
 				{
+					if (m_outp == null)
+						return;
+					
 					data.Read = data.Stream.EndRead(ar);
-					if (m_outp == null) return;
 					if (data.Read != 0 || IsConnected)
 					{
 						m_outp.Write(data.Buffer, 0, data.Read);
@@ -438,7 +440,6 @@ namespace RyLogViewer
 	{
 		private readonly NetConn m_conn;
 		private readonly byte[] m_buf;
-		private readonly IProxyClient m_proxy;
 		private TcpClient m_tcp;
 		
 		public BufferedTcpNetConn(NetConn conn)
@@ -446,8 +447,6 @@ namespace RyLogViewer
 		{
 			m_conn  = conn;
 			m_buf   = new byte[BufBlockSize];
-			m_proxy = conn.ProxyType == ProxyType.None ? null : ProxyClientFactory.CreateProxyClient(conn.ProxyType, conn.ProxyHostname, conn.ProxyPort, conn.ProxyUserName, conn.ProxyPassword);
-			m_tcp   = m_proxy != null ? m_proxy.TcpClient : new TcpClient();
 		}
 
 		/// <summary>Start asynchronously reading from the tcp client</summary>
@@ -460,13 +459,25 @@ namespace RyLogViewer
 					BackgroundWorker bgw = (BackgroundWorker)s;
 					bgw.ReportProgress(0, new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
 					
+					m_tcp = new TcpClient();
+					Proxy proxy = m_conn.ProxyType != Proxy.EType.None
+						? Proxy.Create(m_conn.ProxyType, m_conn.ProxyHostname, m_conn.ProxyPort, m_conn.ProxyUserName, m_conn.ProxyPassword)
+						: null;
+					
 					// Connect async
-					var ar = m_tcp.BeginConnect(m_conn.Hostname, m_conn.Port, null, null);
+					var ar = (proxy != null)
+						? proxy.BeginConnect(m_conn.Hostname, m_conn.Port)
+						: m_tcp.BeginConnect(m_conn.Hostname, m_conn.Port, null, null);
+
 					for (;!bgw.CancellationPending && !ar.AsyncWaitHandle.WaitOne(500);){}
 					a.Cancel = bgw.CancellationPending;
 					if (!a.Cancel)
 					{
-						m_tcp.EndConnect(ar);
+						if (proxy != null)
+							m_tcp = proxy.EndConnect(ar);
+						else
+							m_tcp.EndConnect(ar);
+						
 						NetworkStream stream = m_tcp.GetStream();
 						stream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(stream, m_buf));
 					}

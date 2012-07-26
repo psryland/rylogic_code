@@ -26,11 +26,12 @@ namespace RyLogViewer
 			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
 			Conn       = m_history.Count != 0 ? new NetConn(m_history[0]) : new NetConn();
 			m_tt       = new ToolTip();
+			string tt;
 			
 			// Protocol type
 			m_combo_protocol_type.ToolTip(m_tt, "The connection type");
 			var allowed = new[]{ProtocolType.Tcp, ProtocolType.Udp};
-			foreach (var i in allowed) m_combo_protocol_type.Items.Add(i);
+			foreach (var i in allowed) { m_combo_protocol_type.Items.Add(i); }
 			m_combo_protocol_type.SelectedIndex = 0;
 			m_combo_protocol_type.SelectedIndexChanged += (s,a)=>
 				{
@@ -39,6 +40,9 @@ namespace RyLogViewer
 				};
 			
 			// Hostname
+			tt = "The remote host to connect to and receive data from";
+			m_lbl_hostname.ToolTip(m_tt, tt);
+			m_combo_hostname.ToolTip(m_tt, tt);
 			foreach (var i in m_history) m_combo_hostname.Items.Add(i);
 			if (m_history.Count != 0) m_combo_hostname.SelectedIndex = 0;
 			m_combo_hostname.TextChanged += (s,a)=>
@@ -53,6 +57,9 @@ namespace RyLogViewer
 				};
 			
 			// Port
+			tt = "The remote port to connect to and receive data from";
+			m_lbl_port.ToolTip(m_tt, tt);
+			m_spinner_port.ToolTip(m_tt, tt);
 			m_spinner_port.Value = Conn.Port;
 			m_spinner_port.ValueChanged += (s,a)=>
 				{
@@ -62,16 +69,19 @@ namespace RyLogViewer
 			
 			// Use proxy
 			m_combo_proxy_type.ToolTip(m_tt, "Select if using a proxy server");
-			m_combo_proxy_type.DataSource = Enum.GetValues(typeof(ProxyType));
+			m_combo_proxy_type.DataSource = Enum.GetValues(typeof(Proxy.EType));
 			m_combo_proxy_type.SelectedIndex = (int)Conn.ProxyType;
 			m_combo_proxy_type.SelectedIndexChanged +=(s,a)=>
 				{
-					Conn.ProxyType = (ProxyType)m_combo_proxy_type.SelectedItem;
+					Conn.ProxyType = (Proxy.EType)m_combo_proxy_type.SelectedItem;
+					Conn.ProxyPort = Proxy.PortDefault(Conn.ProxyType);
 					UpdateUI();
 				};
 			
 			// Proxy host
-			m_edit_proxy_hostname.ToolTip(m_tt, "The hostname of the proxy server");
+			tt = "The hostname of the proxy server";
+			m_lbl_proxy_hostname.ToolTip(m_tt, tt);
+			m_edit_proxy_hostname.ToolTip(m_tt, tt);
 			m_edit_proxy_hostname.Text = Conn.ProxyHostname;
 			m_edit_proxy_hostname.TextChanged += (s,a)=>
 				{
@@ -81,11 +91,37 @@ namespace RyLogViewer
 				};
 
 			// Proxy port
-			m_spinner_proxy_port.ToolTip(m_tt, "The remote port of the proxy server");
+			tt = "The remote port of the proxy server";
+			m_lbl_proxy_port.ToolTip(m_tt, tt);
+			m_spinner_proxy_port.ToolTip(m_tt, tt);
 			m_spinner_proxy_port.Value = Conn.ProxyPort;
 			m_spinner_proxy_port.ValueChanged += (s,a)=>
 				{
 					Conn.ProxyPort = (ushort)m_spinner_proxy_port.Value;
+					UpdateUI();
+				};
+
+			// Proxy user name
+			tt = "The username used to connect to the proxy server.\r\nLeave blank if no username is required";
+			m_lbl_proxy_username.ToolTip(m_tt, tt);
+			m_edit_proxy_username.ToolTip(m_tt, tt);
+			m_edit_proxy_username.Text = Conn.ProxyUserName;
+			m_edit_proxy_username.TextChanged += (s,a)=>
+				{
+					if (!((TextBox)s).Modified) return;
+					Conn.ProxyUserName = m_edit_proxy_username.Text;
+					UpdateUI();
+				};
+
+			// Proxy password
+			tt = "The password used to connect to the proxy server.\r\nLeave blank if no password is required";
+			m_lbl_proxy_password.ToolTip(m_tt, tt);
+			m_edit_proxy_password.ToolTip(m_tt, tt);
+			m_edit_proxy_password.Text = Conn.ProxyPassword;
+			m_edit_proxy_password.TextChanged += (s,a)=>
+				{
+					if (!((TextBox)s).Modified) return;
+					Conn.ProxyPassword = m_edit_proxy_password.Text;
 					UpdateUI();
 				};
 
@@ -147,6 +183,7 @@ namespace RyLogViewer
 			{
 				tt = "The remote host to connect to and receive data from";
 				m_lbl_hostname.ToolTip(m_tt, tt);
+				m_lbl_hostname.Text = "Remote Host:";
 				m_combo_hostname.ToolTip(m_tt, tt);
 				
 				tt = "The remote port to connect to and receive data from";
@@ -156,26 +193,20 @@ namespace RyLogViewer
 				
 				// Allow proxy server description
 				m_combo_proxy_type.Enabled    = true;
-				m_lbl_proxy_hostname.Enabled  = Conn.ProxyType != ProxyType.None;
-				m_lbl_proxy_port.Enabled      = Conn.ProxyType != ProxyType.None;
-				m_lbl_proxy_username.Enabled  = Conn.ProxyType != ProxyType.None && Conn.ProxyType != ProxyType.Http;
-				m_lbl_proxy_password.Enabled  = Conn.ProxyType != ProxyType.None && Conn.ProxyType != ProxyType.Http;
-				m_edit_proxy_hostname.Enabled = Conn.ProxyType != ProxyType.None;
-				m_spinner_proxy_port.Enabled  = Conn.ProxyType != ProxyType.None;
-				m_edit_proxy_username.Enabled = Conn.ProxyType != ProxyType.None && Conn.ProxyType != ProxyType.Http;
-				m_edit_proxy_password.Enabled = Conn.ProxyType != ProxyType.None && Conn.ProxyType != ProxyType.Http;
-				switch (Conn.ProxyType)
-				{
-				case ProxyType.Http:    m_spinner_proxy_port.Value = HttpProxyClient.DefaultPort; break;
-				case ProxyType.Socks4:  m_spinner_proxy_port.Value = Socks4ProxyClient.DefaultPort; break;
-				case ProxyType.Socks4A: m_spinner_proxy_port.Value = Socks4ProxyClient.DefaultPort; break;
-				case ProxyType.Socks5:  m_spinner_proxy_port.Value = Socks5ProxyClient.DefaultPort; break;
-				}
+				m_lbl_proxy_hostname.Enabled  = Conn.ProxyType != Proxy.EType.None;
+				m_lbl_proxy_port.Enabled      = Conn.ProxyType != Proxy.EType.None;
+				m_lbl_proxy_username.Enabled  = Conn.ProxyType != Proxy.EType.None;
+				m_lbl_proxy_password.Enabled  = Conn.ProxyType != Proxy.EType.None;
+				m_edit_proxy_hostname.Enabled = Conn.ProxyType != Proxy.EType.None;
+				m_spinner_proxy_port.Enabled  = Conn.ProxyType != Proxy.EType.None;
+				m_edit_proxy_username.Enabled = Conn.ProxyType != Proxy.EType.None;
+				m_edit_proxy_password.Enabled = Conn.ProxyType != Proxy.EType.None;
 			}
 			else if (Conn.ProtocolType == ProtocolType.Udp)
 			{
-				tt = "The host to expect data from. Leave blank for multiple udp data sources";
+				tt = "An optional hostname to expect data from. Leave blank for multiple udp data sources";
 				m_lbl_hostname.ToolTip(m_tt, tt);
+				m_lbl_hostname.Text = "Sending Host:";
 				m_combo_hostname.ToolTip(m_tt, tt);
 				
 				tt = "The local port that remote clients will connect to";

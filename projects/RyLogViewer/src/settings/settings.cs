@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Net.Sockets;
 using System.Windows.Forms;
 using pr.common;
 
@@ -368,6 +369,13 @@ namespace RyLogViewer
 			int column_count = ColumnCount;
 			if (column_count < Constants.ColumnCountMin || column_count > Constants.ColumnCountMax)
 				ColumnCount = Constants.ColumnCountDefault;
+			
+			// Network connection settings
+			foreach (var c in NetworkConnectionHistory)
+			{
+				if (c.ProtocolType != ProtocolType.Tcp && c.ProtocolType != ProtocolType.Udp)
+					c.ProtocolType = ProtocolType.Tcp;
+			}
 		}
 		
 		/// <summary>Types the serialiser needs to know about</summary>

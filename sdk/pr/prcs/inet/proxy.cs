@@ -10,32 +10,47 @@ using System.Threading;
 namespace pr.inet
 {
 	// Usage:
-	// ProxyClient proxy = ProxyClient.Create(ProxyType.Http, "localhost", 6588);
+	// Proxy proxy = Proxy.Create(EType.Http, "localhost", 6588);
 	// TcpClient tcp = proxy.Connect("www.rylogic.co.nz", 80);
 	
-	/// <summary>The type of proxy.</summary>
-	public enum ProxyType
+	/// <summary>Proxy base class</summary>
+	public abstract class Proxy
 	{
-		None,
-		Http,
-		Socks4,
-		Socks4A,
-		Socks5
-	}
-	
-	/// <summary>Proxy client base class</summary>
-	public abstract class ProxyClient
-	{
-		/// <summary>Factory method for creating a proxy client by type enum</summary>
-		public static ProxyClient Create(ProxyType type, string proxy_host, int proxy_port, string proxy_username = null, string proxy_password = null)
+		/// <summary>The type of proxy.</summary>
+		public enum EType
+		{
+			None,
+			Http,
+			Socks4,
+			Socks4A,
+			Socks5,
+		}
+		
+		/// <summary>Factory method for creating a proxy instance by enum</summary>
+		public static Proxy Create(EType type, string proxy_host, int proxy_port, string proxy_username = null, string proxy_password = null)
 		{
 			switch (type)
 			{
 			default: throw new ArgumentOutOfRangeException("type");
-			case ProxyType.Http:    return new HttpProxyClient   (proxy_host, proxy_port, proxy_username, proxy_password);
-			case ProxyType.Socks4:  return new Socks4ProxyClient (proxy_host, proxy_port, proxy_username, proxy_password);
-			case ProxyType.Socks4A: return new Socks4AProxyClient(proxy_host, proxy_port, proxy_username, proxy_password);
-			case ProxyType.Socks5:  return new Socks5ProxyClient (proxy_host, proxy_port, proxy_username, proxy_password);
+			case EType.None:    return null;
+			case EType.Http:    return new HttpProxy   (proxy_host, proxy_port, proxy_username, proxy_password);
+			case EType.Socks4:  return new Socks4Proxy (proxy_host, proxy_port, proxy_username, proxy_password);
+			case EType.Socks4A: return new Socks4AProxy(proxy_host, proxy_port, proxy_username, proxy_password);
+			case EType.Socks5:  return new Socks5Proxy (proxy_host, proxy_port, proxy_username, proxy_password);
+			}
+		}
+
+		/// <summary>Return the default port for the given proxy type</summary>
+		public static ushort PortDefault(EType type)
+		{
+			switch (type)
+			{
+			default: throw new ArgumentOutOfRangeException("type");
+			case EType.None:    return 0;
+			case EType.Http:    return HttpProxy.DefaultPort;
+			case EType.Socks4:  return Socks4Proxy.DefaultPort;
+			case EType.Socks4A: return Socks4Proxy.DefaultPort;
+			case EType.Socks5:  return Socks5Proxy.DefaultPort;
 			}
 		}
 
@@ -85,10 +100,7 @@ namespace pr.inet
 		}
 
 		/// <summary>The type of proxy connection</summary>
-		public abstract ProxyType ProxyType { get; }
-
-		/// <summary>The time (in ms) to wait for a connection to the proxy server to be established</summary>
-		public int ProxyConnectTimeout { get; set; }
+		public abstract EType ProxyType { get; }
 
 		/// <summary>The hostname of the proxy server to connect to</summary>
 		public string ProxyHostname { get; private set; }
@@ -102,15 +114,27 @@ namespace pr.inet
 		/// <summary>The password needed to connect to the proxy server</summary>
 		public string ProxyPassword { get; private set; }
 
-		/// <summary>Gets the TcpClient object representing the remote tcp connection through the proxy server</summary>
-		public TcpClient TcpClient { get; private set; }
-		
+		/// <summary>The time (in ms) to wait for a connection to the proxy server to be established</summary>
+		public int ProxyConnectTimeout { get; set; }
+
 		/// <summary>Begin connecting asynchronously through the proxy server</summary>
 		public IAsyncResult BeginConnect(string destination_host, int destination_port)
 		{
 			// Execute the async operation
 			var async = new ProxyAsyncData();
-			ThreadPool.QueueUserWorkItem(x => DoConnect(destination_host, destination_port, async), async);
+			ThreadPool.QueueUserWorkItem(x =>
+				{
+					try
+					{
+						// Connect to the proxy server
+						async.TcpClient.Connect(ProxyHostname, ProxyPort);
+						
+						// Connect through to the remote host
+						DoConnect(async.TcpClient, destination_host, destination_port);
+					}
+					catch (Exception ex) { async.Error = ex; }
+					finally { ((ManualResetEvent)async.AsyncWaitHandle).Set(); }
+				}, async);
 			return async;
 		}
 
@@ -123,7 +147,7 @@ namespace pr.inet
 		}
 		
 		/// <summary>Complete an async connection</summary>
-		public static TcpClient EndConnect(IAsyncResult ar)
+		public TcpClient EndConnect(IAsyncResult ar)
 		{
 			ProxyAsyncData async = (ProxyAsyncData)ar;
 			try
@@ -144,7 +168,8 @@ namespace pr.inet
 			EndConnect(BeginConnect(destination_host, destination_port));
 		}
 
-		protected ProxyClient(string host, int port, string username, string password)
+		/// <summary>Construct</summary>
+		protected Proxy(string host, int port, string username, string password)
 		{
 			if (String.IsNullOrEmpty(host))
 				throw new ProxyException("ProxyHost property must contain a value.");
@@ -156,45 +181,50 @@ namespace pr.inet
 			ProxyPort      = port;
 			ProxyUsername  = username;
 			ProxyPassword  = password;
-			TcpClient = new TcpClient();
 		}
 
 		/// <summary>Implement the connection through the proxy server</summary>
-		protected abstract void DoConnect(string host, int port, ProxyAsyncData async);
+		protected abstract void DoConnect(TcpClient tcp, string host, int port);
 
 		/// <summary>Sends 'request' over the TcpClient stream and reads a byte[] response</summary>
-		protected byte[] SendCmdAndGetReply(byte[] request)
+		protected byte[] SendCmdAndGetReply(TcpClient tcp, byte[] request)
 		{
-			NetworkStream stream = TcpClient.GetStream();
+			NetworkStream stream = tcp.GetStream();
 			stream.Write(request, 0, request.Length);
 			
 			// Wait for the proxy server to respond
-			for (int tick = 0; !stream.DataAvailable; Thread.Sleep(100), tick += 100)
+			for (int tick = 0; tick <= ProxyConnectTimeout && !stream.DataAvailable; Thread.Sleep(100), tick += 100) {}
+			if (!stream.DataAvailable)
 			{
-				if (tick <= ProxyConnectTimeout) continue;
-				var ep = (IPEndPoint) TcpClient.Client.RemoteEndPoint;
+				var ep = (IPEndPoint)tcp.Client.RemoteEndPoint;
 				string host = ep.Address.ToString();
 				string port = ep.Port.ToString(CultureInfo.InvariantCulture);
 				throw new ProxyException(string.Format("A timeout while connecting to proxy server {0}:{1}.", host, port));
 			}
 			
 			// Read the response
-			using (var ms = new MemoryStream(TcpClient.ReceiveBufferSize))
+			using (var ms = new MemoryStream(tcp.ReceiveBufferSize))
 			{
-				byte[] buf = new byte[TcpClient.ReceiveBufferSize];
-				for (int bytes = stream.Read(buf, 0, buf.Length); stream.DataAvailable; bytes = stream.Read(buf, 0, buf.Length))
+				byte[] buf = new byte[tcp.ReceiveBufferSize];
+				while (stream.DataAvailable)
+				{
+					int bytes = stream.Read(buf, 0, buf.Length);
 					ms.Write(buf, 0, bytes);
-				
-				return ms.ToArray();
+				}
+				var reply = ms.ToArray();
+				// ReSharper disable UnusedVariable
+				string dbg; try { dbg = Encoding.ASCII.GetString(reply); } catch {}
+				// ReSharper restore UnusedVariable
+				return reply;
 			}
 		}
 		
-		/// <summary>Return a byte array of the port number in big endian</summary>
-		protected static byte[] PortBytesBigEndian(int value)
+		/// <summary>Returns a 2-byte array of the port number in big endian</summary>
+		protected static byte[] PortBytesBigEndian(int port)
 		{
 			byte[] array = new byte[2];
-			array[0] = Convert.ToByte(value / 256);
-			array[1] = Convert.ToByte(value % 256);
+			array[0] = Convert.ToByte(port / 256);
+			array[1] = Convert.ToByte(port % 256);
 			return array;
 		}
 	}
@@ -202,7 +232,7 @@ namespace pr.inet
 	/// <summary>
 	/// HTTP connection proxy class.  This class implements the HTTP standard proxy protocol.
 	/// You can use this class to set up a connection to an HTTP proxy server.</summary>
-	public class HttpProxyClient :ProxyClient
+	public class HttpProxy :Proxy
 	{
 		// ReSharper disable UnusedMember.Local
 		private enum HttpResponseCodes
@@ -254,14 +284,14 @@ namespace pr.inet
 		public const int DefaultPort = 8080;
 
 		/// <summary>The type of proxy connection</summary>
-		public override ProxyType ProxyType { get { return ProxyType.Http; } }
+		public override EType ProxyType { get { return EType.Http; } }
 		
 		/// <summary>Constructor.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_port">Port number for the proxy server.</param>
 		/// <param name="proxy_username">Http basic authentication user name</param>
 		/// <param name="proxy_password">Http basic authentication password</param>
-		public HttpProxyClient(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
+		public HttpProxy(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
 		:base(proxy_host, proxy_port, proxy_username, proxy_password)
 		{}
 		
@@ -271,23 +301,16 @@ namespace pr.inet
 		/// This method creates a connection to the proxy server and instructs the proxy server to make a pass
 		/// through connection to the specified destination host on the specified port
 		/// </summary>
-		protected override void DoConnect(string host, int port, ProxyAsyncData async)
+		protected override void DoConnect(TcpClient tcp, string host, int port)
 		{
-			try
-			{
-				// Connect to the proxy server
-				TcpClient.Connect(ProxyHostname, ProxyPort);
+			// Build the connection message
+			var request = BuildConnectionRequest(host, port);
 				
-				// Build the connection message
-				var request = BuildConnectionRequest(host, port);
+			// Send the connection command to the proxy and read the response
+			string response = Encoding.UTF8.GetString(SendCmdAndGetReply(tcp, request));
 				
-				// Send the connection command to the proxy and read the response
-				string response = Encoding.UTF8.GetString(SendCmdAndGetReply(request));
-				
-				// Interpret the response
-				ParseConnectionResponse(response, host, port);
-			}
-			catch (Exception ex) { async.Error = ex; }
+			// Interpret the response
+			ParseConnectionResponse(response, host, port);
 		}
 		
 		/// <summary>Construct the message to send for a connection request</summary>
@@ -357,9 +380,9 @@ namespace pr.inet
 						,host ,port ,response_code ,line));
 				default:
 					throw new ProxyException(string.Format(CultureInfo.InvariantCulture,
-						"The connection to {0}:{1} failed due to an unknown response code.\r\n" +
+						"The connection to {0}:{1} failed with the following response code: {3}.\r\n" +
 						"Server response: {2}"
-						,host, port, line));
+						,host, port, line, response_code));
 				}
 			}
 		}
@@ -367,20 +390,20 @@ namespace pr.inet
 
 	/// <summary>Socks4 Proxy.  This class implements the Socks4 standard proxy protocol.</summary>
 	/// <remarks>This class implements the Socks4 proxy protocol standard for TCP communciations.</remarks>
-	public class Socks4ProxyClient :ProxyClient
+	public class Socks4Proxy :Proxy
 	{
 		/// <summary>The typical default port used for this type of proxy</summary>
 		public const int DefaultPort = Socks4.DefaultPort;
 		
 		/// <summary>Gets String representing the name of the proxy.</summary>
-		public override ProxyType ProxyType { get { return ProxyType.Socks4; } }
+		public override EType ProxyType { get { return EType.Socks4; } }
 
 		/// <summary>Create a Socks4 proxy client object.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_port">Port used to connect to proxy server.</param>
 		/// <param name="proxy_username">Proxy user identification information.</param>
 		/// <param name="proxy_password">Proxy password - Not used, just here for consistency of interface</param>
-		public Socks4ProxyClient(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
+		public Socks4Proxy(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
 		:base(proxy_host, proxy_port, proxy_username, proxy_password)
 		{}
 		
@@ -389,27 +412,20 @@ namespace pr.inet
 		/// 'host:port' is the host on the other side of the proxy server
 		/// This method creates a connection to the proxy server and instructs the proxy server
 		/// to make a pass through connection to the specified destination host on the specified port.</summary>
-		protected override void DoConnect(string host, int port, ProxyAsyncData async)
+		protected override void DoConnect(TcpClient tcp, string host, int port)
 		{
-			try
-			{
-				// Connect to the proxy server
-				TcpClient.Connect(ProxyHostname, ProxyPort);
+			// Construct the connection message
+			var request = BuildConnectionRequest(host, port);
 				
-				// Construct the connection message
-				var request = BuildConnectionRequest(host, port);
+			// Send the connection command to the proxy and read the response
+			var response = SendCmdAndGetReply(tcp, request);
 				
-				// Send the connection command to the proxy and read the response
-				var response = SendCmdAndGetReply(request);
-				
-				// Interpret the response
-				ParseConnectionResponse(response, host, port);
-			}
-			catch (Exception ex) { async.Error = ex; }
+			// Interpret the response
+			ParseConnectionResponse(response, host, port);
 		}
 
 		/// <summary>Construct the message to send for a connection request</summary>
-		private byte[] BuildConnectionRequest(string host, int port)
+		protected virtual byte[] BuildConnectionRequest(string host, int port)
 		{
 			// Connect request format (bytes):
 			//  [0]: Version
@@ -443,6 +459,7 @@ namespace pr.inet
 			// server makes a connection to the specified port of the destination host.
 			// A reply packet is sent to the client when this connection is established,
 			// or when the request is rejected or the operation fails.
+			//
 			// Response format (bytes):
 			//  [0]: Version
 			//  [1]: Result code
@@ -473,299 +490,180 @@ namespace pr.inet
 	
 	/// <summary>Socks4A Proxy.  This class implements the Socks4a standard proxy protocol which is an extension of the Socks4 protocol</summary>
 	/// <remarks>In Socks version 4A if the client cannot resolve the destination host's domain name to find its IP address the server will attempt to resolve it.</remarks>
-	public class Socks4AProxyClient :ProxyClient
+	public class Socks4AProxy :Socks4Proxy
 	{
-		/// <summary>The typical default port used for this type of proxy</summary>
-		public const int DefaultPort = Socks4.DefaultPort;
-		
 		/// <summary>Gets String representing the name of the proxy.</summary>
-		public override ProxyType ProxyType { get { return ProxyType.Socks4A;} }
+		public override EType ProxyType { get { return EType.Socks4A;} }
 		
-		public Socks4AProxyClient(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
+		public Socks4AProxy(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
 		:base(proxy_host, proxy_port, proxy_username, proxy_password)
 		{}
 		
-		/// <summary>
-		/// Creates a TCP connection to the destination host through the proxy server host. 
-		/// Socks4A adds support for the Socks4a extensions which allow the proxy client
-		/// to optionally command the proxy server to resolve the destination host IP address.</summary>
-		protected override void DoConnect(string host, int port, ProxyAsyncData async)
-		{
-			try
-			{
-				TcpClient.Connect(ProxyHostname, ProxyPort);
-				
-				// Construct the connection message
-				var request = BuildConnectionRequest(host, port);
-				
-				// Send connection command to the proxy for the specified destination host and port
-				var response = SendCmdAndGetReply(request);
-				
-				// Interpret the response
-				ParseConnectionResponse(response, host, port);
-			}
-			catch (Exception ex) { async.Error = ex; }
-		}
-
 		/// <summary>Construct the message to send for a connection request</summary>
-		private byte[] BuildConnectionRequest(string host, int port)
+		protected  override byte[] BuildConnectionRequest(string host, int port)
 		{
-			// PROXY SERVER REQUEST
-			//Please read SOCKS4.protocol first for an description of the version 4
-			//protocol. This extension is intended to allow the use of SOCKS on hosts
-			//which are not capable of resolving all domain names.
+			// Connect request format (bytes):
+			//  [0]: Version
+			//  [1]: Command code
+			//  [2..3]: Port (big endian)
+			//  [4..7]: IP address
+			//  [8..N]: User ID
+			//  [N+1]:  Null terminator byte
 			//
-			//In version 4, the client sends the following packet to the SOCKS server
-			//to request a CONNECT or a BIND operation:
+			// Socks4A is used on hosts that cannot resolve all domain names.
+			// For version 4A, if the client cannot resolve the destination host's domain
+			// name to find its IP address, it should set the first three bytes of the IP
+			// to 0 and the last byte to a non-zero value (i.e. 0.0.0.x, where x is nonzero).
+			// The Internet Assigned Numbers Authority: such an address is inadmissible
+			// as a destination IP address and thus should never occur if the client
+			// can resolve the domain name. Following the null byte terminating the user id,
+			// the client sends the destination domain name and termiantes it with another
+			// null byte. This is used for both CONNECT and BIND requests.
 			//
-			//        +----+----+----+----+----+----+----+----+----+----+....+----+
-			//        | VN | CD | DSTPORT |      DSTIP        | USERID       |NULL|
-			//        +----+----+----+----+----+----+----+----+----+----+....+----+
-			// # of bytes:     1    1      2              4           variable       1
-			//
-			//VN is the SOCKS protocol version number and should be 4. CD is the
-			//SOCKS command code and should be 1 for CONNECT or 2 for BIND. NULL
-			//is a byte of all zero bits.
-			//
-			//For version 4A, if the client cannot resolve the destination host's
-			//domain name to find its IP address, it should set the first three bytes
-			//of DSTIP to NULL and the last byte to a non-zero value. (This corresponds
-			//to IP address 0.0.0.x, with x nonzero. As decreed by IANA  -- The
-			//Internet Assigned Numbers Authority -- such an address is inadmissible
-			//as a destination IP address and thus should never occur if the client
-			//can resolve the domain name.) Following the NULL byte terminating
-			//USERID, the client must sends the destination domain name and termiantes
-			//it with another NULL byte. This is used for both CONNECT and BIND requests.
-			//
-			//A server using protocol 4A must check the DSTIP in the request packet.
-			//If it represent address 0.0.0.x with nonzero x, the server must read
-			//in the domain name that the client sends in the packet. The server
-			//should resolve the domain name and make connection to the destination
-			//host if it can.
-			//
-			//SOCKSified sockd may pass domain names that it cannot resolve to
-			//the next-hop SOCKS server.
-			string user_id = ProxyUsername ?? "";
-			byte[] user_id_bytes = Encoding.ASCII.GetBytes(user_id);
+			// A server using Socks4A must check the IP in the request packet. If it matches
+			// 0.0.0.x, the server reads the domain name that follows in the packet. The server
+			// should resolve the domain name and make connection to the destination host if it can.
 			byte[] dest_ip = {0,0,0,1};  // build the invalid ip address as specified in the 4a protocol
 			byte[] dest_port = PortBytesBigEndian(port);
 			byte[] host_bytes = Encoding.ASCII.GetBytes(host);
-				
+			byte[] user_id = Encoding.ASCII.GetBytes(ProxyUsername ?? "");
+			
 			// Setup the request byte arry
-			byte[] request = new byte[10 + user_id_bytes.Length + host_bytes.Length];
+			byte[] request = new byte[10 + user_id.Length + host_bytes.Length];
 			request[0] = Socks4.VersionNumer;
 			request[1] = Socks4.CmdConnect;
 			dest_port.CopyTo(request, 2);
-			dest_ip.CopyTo(request, 4);
-			user_id_bytes.CopyTo(request, 8);  // copy the userid to the request byte array
-			request[8 + user_id_bytes.Length] = 0x00;  // null (byte with all zeros) terminator for userId
-			host_bytes.CopyTo(request, 9 + user_id_bytes.Length);  // copy the host name to the request byte array
-			request[9 + user_id_bytes.Length + host_bytes.Length] = 0x00;  // null (byte with all zeros) terminator for userId
+			dest_ip  .CopyTo(request, 4);
+			user_id  .CopyTo(request, 8);  // copy the userid to the request byte array
+			request[8 + user_id.Length] = 0;  // null (byte with all zeros) terminator for userId
+			host_bytes.CopyTo(request, 9 + user_id.Length);  // copy the host name to the request byte array
+			request[9 + user_id.Length + host_bytes.Length] = 0;  // null (byte with all zeros) terminator for userId
 			return request;
-		}
-		
-		/// <summary>Parse the response from the proxy server</summary>
-		private void ParseConnectionResponse(byte[] response, string host, int port)
-		{
-			// PROXY SERVER RESPONSE
-			// The SOCKS server checks to see whether such a request should be granted
-			// based on any combination of source IP address, destination IP address,
-			// destination port number, the userid, and information it may obtain by
-			// consulting IDENT, cf. RFC 1413.  If the request is granted, the SOCKS
-			// server makes a connection to the specified port of the destination host.
-			// A reply packet is sent to the client when this connection is established,
-			// or when the request is rejected or the operation fails.
-			//
-			//        +----+----+----+----+----+----+----+----+
-			//        | VN | CD | DSTPORT |      DSTIP        |
-			//        +----+----+----+----+----+----+----+----+
-			// # of bytes:     1    1      2              4
-			//
-			// VN is the version of the reply code and should be 0. CD is the result
-			// code with one of the following values:
-			//
-			//    90: request granted
-			//    91: request rejected or failed
-			//    92: request rejected becuase SOCKS server cannot connect to
-			//        identd on the client
-			//    93: request rejected because the client program and identd
-			//        report different user-ids
-			//
-			// The remaining fields are ignored.
-			//
-			// The SOCKS server closes its connection immediately after notifying
-			// the client of a failed or rejected request. For a successful request,
-			// the SOCKS server gets ready to relay traffic on both directions. This
-			// enables the client to do I/O on its connection as if it were directly
-			// connected to the application server.
-			byte reply_code = response[1];
-			if (reply_code != Socks4.RequestGranted)
-			{
-				// Extract the ip v4 address (4 bytes) and port (2 bytes big endian)
-				var reply_host = new IPAddress(new []{response[4], response[5], response[6], response[7]});
-				var reply_port = (int)BitConverter.ToUInt16(new[]{response[3], response[2]}, 0);
-				Socks4.TranslateReply(reply_code, host, port, reply_host, reply_port);
-			}
 		}
 	}
 
 	/// <summary>Socks5 connection proxy class.  This class implements the Socks5 standard proxy protocol.</summary>
 	/// <remarks>This implementation supports TCP proxy connections with a Socks v5 server.</remarks>
-	public class Socks5ProxyClient : ProxyClient
+	public class Socks5Proxy : Proxy
 	{
 		/// <summary>The typical default port used for this type of proxy</summary>
 		public const int DefaultPort = Socks5.DefaultPort;
 		
 		/// <summary>The type of proxy connection</summary>
-		public override ProxyType ProxyType { get { return ProxyType.Socks5; } }
+		public override EType ProxyType { get { return EType.Socks5; } }
 		
-		public Socks5ProxyClient(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
+		public Socks5Proxy(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
 		:base(proxy_host, proxy_port, proxy_username, proxy_password)
 		{}
 
 		/// <summary>Implement the connection through the proxy server</summary>
-		protected override void DoConnect(string host, int port, ProxyAsyncData async)
+		protected override void DoConnect(TcpClient tcp, string host, int port)
 		{
-			try
-			{
-				// Connect to the proxy server
-				TcpClient.Connect(ProxyHostname, ProxyPort);
+			// Decide what authentication method to use
+			Socks5.AuthenticationType auth_method = !string.IsNullOrEmpty(ProxyUsername) && !string.IsNullOrEmpty(ProxyPassword)
+				? Socks5.AuthenticationType.UsernamePassword
+				: Socks5.AuthenticationType.None;
 				
-				// Decide what authentication method to use
-				Socks5.AuthenticationType auth_method = !string.IsNullOrEmpty(ProxyUsername) && !string.IsNullOrEmpty(ProxyPassword)
-					? Socks5.AuthenticationType.UsernamePassword
-					: Socks5.AuthenticationType.None;
+			// Determine the authentication methods supported by the server and whether we have enough info
+			NegotiateAuthenticationMethod(tcp, auth_method);
 				
-				// Determine the authentication methods supported by the server and whether we have enough info
-				NegotiateAuthenticationMethod(auth_method);
+			// Construct the connection message
+			var request = BuildConnectionRequest(host, port);
 				
-				// Construct the connection message
-				var request = BuildConnectionRequest(host, port);
+			// Send the connection command to the proxy and read the response
+			var response = SendCmdAndGetReply(tcp, request);
 				
-				// Send the connection command to the proxy and read the response
-				var response = SendCmdAndGetReply(request);
-				
-				// Interpret the response
-				ParseConnectionResponse(response, host, port);
-			}
-			catch (Exception ex) { async.Error = ex; }
+			// Interpret the response
+			ParseConnectionResponse(response, host, port);
 		}
 		
 		/// <summary>Determine the authentication methods that the server accepts and validate that 'auth_method' is one of them</summary>
-		private void NegotiateAuthenticationMethod(Socks5.AuthenticationType auth_method)
+		private void NegotiateAuthenticationMethod(TcpClient tcp, Socks5.AuthenticationType auth_method)
 		{
-			// SERVER AUTHENTICATION REQUEST
-			// The client connects to the server, and sends a version identifier/method selection message:
-			//      +----+----------+----------+
-			//      |VER | NMETHODS | METHODS  |
-			//      +----+----------+----------+
-			//      | 1  |    1     | 1 to 255 |
-			//      +----+----------+----------+
+			// Authentication methods request format (bytes):
+			//  [0]: Version
+			//  [1]: Number of methods queried
+			//  [1..255]: Methods
 			byte[] auth_method_request = new byte[4];
 			auth_method_request[0] = Socks5.VersionNumber;
 			auth_method_request[1] = 2;
 			auth_method_request[2] = Socks5.AuthMethodNoAuthenticationRequired;
 			auth_method_request[3] = Socks5.AuthMethodUsernamePassword;
-			var auth_method_response = SendCmdAndGetReply(auth_method_request);
-				
-			// SERVER AUTHENTICATION RESPONSE
-			// The server selects from one of the methods given in METHODS, and sends a METHOD selection message:
-			//    +----+--------+
-			//    |VER | METHOD |
-			//    +----+--------+
-			//    | 1  |   1    |
-			//    +----+--------+
-			//
-			// If the selected METHOD is X'FF', none of the methods listed by the
-			// client are acceptable, and the client MUST close the connection.
-			//
-			// The values currently defined for METHOD are:
-			//  * X'00' NO AUTHENTICATION REQUIRED
-			//  * X'01' GSSAPI
-			//  * X'02' USERNAME/PASSWORD
-			//  * X'03' to X'7F' IANA ASSIGNED
-			//  * X'80' to X'FE' RESERVED FOR PRIVATE METHODS
-			//  * X'FF' NO ACCEPTABLE METHODS
+			var auth_method_response = SendCmdAndGetReply(tcp, auth_method_request);
+			
+			// Response format:
+			//  [0]: Version
+			//  [1]: Method to use
+			// 
+			// If the selected METHOD is 'FF', none of the methods listed by the
+			// client are acceptable, and the client must close the connection.
+			// The values currently defined for 'method' are:
+			//  00 - NO AUTHENTICATION REQUIRED
+			//  01 - GSSAPI
+			//  02 - USERNAME/PASSWORD
+			//  03 - to '7F' IANA ASSIGNED
+			//  80 - to 'FE' RESERVED FOR PRIVATE METHODS
+			//  FF - NO ACCEPTABLE METHODS
 				
 			// The first byte contains the socks version number (e.g. 5)
 			// The second byte contains the auth method acceptable to the proxy server
 			byte auth_reply = auth_method_response[1];
-			if (auth_reply == Socks5.AuthMethodReplyNoAcceptableMethods)
+			if (auth_reply == Socks5.AuthMethodNoAuthenticationRequired)
 			{
-				TcpClient.Close();
-				throw new ProxyException("The proxy does not accept any of the supported authentication methods.");
-			}
-			if (auth_reply == Socks5.AuthMethodUsernamePassword && auth_method == Socks5.AuthenticationType.None)
-			{
-				TcpClient.Close();
-				throw new ProxyException("The proxy destination requires a username and password for authentication.");
+				// All good to go
+				return;
 			}
 			if (auth_reply == Socks5.AuthMethodUsernamePassword)
 			{
-				// USERNAME / PASSWORD SERVER REQUEST
-				// Once the SOCKS V5 server has started, and the client has selected the
-				// Username/Password Authentication protocol, the Username/Password
-				// subnegotiation begins.  This begins with the client producing a
-				// Username/Password request:
-				//
-				//       +----+------+----------+------+----------+
-				//       |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
-				//       +----+------+----------+------+----------+
-				//       | 1  |  1   | 1 to 255 |  1   | 1 to 255 |
-				//       +----+------+----------+------+----------+
-				byte[] credentials = new byte[ProxyUsername.Length + ProxyPassword.Length + 3];
-				credentials[0] = Socks5.VersionNumber;
-				credentials[1] = (byte)ProxyUsername.Length;
-				Array.Copy(Encoding.ASCII.GetBytes(ProxyUsername), 0, credentials, 2, ProxyUsername.Length);
-				credentials[ProxyUsername.Length + 2] = (byte)ProxyPassword.Length;
-				Array.Copy(Encoding.ASCII.GetBytes(ProxyPassword), 0, credentials, ProxyUsername.Length + 3, ProxyPassword.Length);
+				if (auth_method != Socks5.AuthenticationType.UsernamePassword)
+				{
+					tcp.Close();
+					throw new ProxyException("The proxy destination requires a username and password for authentication.");
+				}
 				
-				// USERNAME / PASSWORD SERVER RESPONSE
-				// The server verifies the supplied UNAME and PASSWD, and sends the
-				// following response:
-				//
-				//   +----+--------+
-				//   |VER | STATUS |
-				//   +----+--------+
-				//   | 1  |   1    |
-				//   +----+--------+
-				//
-				// A STATUS field of X'00' indicates success. If the server returns a
-				// `failure' (STATUS value other than X'00') status, it MUST close the
-				// connection.
-				var cred_response = SendCmdAndGetReply(credentials);
+				// Username/Password method:
+				//  [0]: Version
+				//  [1]: Username length in bytes
+				//  [2..N]: Username
+				//  [N+1]: password length
+				//  [N+2..M]: password
+				int ofs = 0;
+				byte[] cred = new byte[1 + 1 + ProxyUsername.Length + 1 + ProxyPassword.Length];
+				cred[ofs++] = Socks5.VersionNumber;
+				cred[ofs++] = (byte)ProxyUsername.Length;
+				Array.Copy(Encoding.ASCII.GetBytes(ProxyUsername), 0, cred, ofs, ProxyUsername.Length); ofs += ProxyUsername.Length;
+				cred[ofs++] = (byte)ProxyPassword.Length;
+				Array.Copy(Encoding.ASCII.GetBytes(ProxyPassword), 0, cred, ofs, ProxyPassword.Length);
+				
+				// Username/Password response:
+				//  [0]: Version
+				//  [1]: Status   // Status == 0 means success, failure means the connection should be closed
+				var cred_response = SendCmdAndGetReply(tcp, cred);
 				if (cred_response[1] != Socks5.ReplySucceeded)
 				{
-					TcpClient.Close();
+					tcp.Close();
 					throw new ProxyException("Authentication with the proxy server failed.\r\nInvalid username and/or password");
 				}
+				return;
 			}
+			if (auth_reply == Socks5.AuthMethodReplyNoAcceptableMethods)
+			{
+				tcp.Close();
+				throw new ProxyException("The proxy does not accept any of the supported authentication methods.");
+			}
+			throw new ProxyException("The proxy response was not recognised");
 		}
 
 		/// <summary>Construct the message to send for a connection request</summary>
 		private byte[] BuildConnectionRequest(string host, int port)
 		{
-			//  The connection request is made up of 6 bytes plus the
-			//  length of the variable address byte array
-			//
-			//  +----+-----+-------+------+----------+----------+
-			//  |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
-			//  +----+-----+-------+------+----------+----------+
-			//  | 1  |  1  | X'00' |  1   | Variable |    2     |
-			//  +----+-----+-------+------+----------+----------+
-			//
-			// * VER protocol version: X'05'
-			// * CMD
-			//   * CONNECT X'01'
-			//   * BIND X'02'
-			//   * UDP ASSOCIATE X'03'
-			// * RSV RESERVED
-			// * ATYP address itemType of following address
-			//   * IP V4 address: X'01'
-			//   * DOMAINNAME: X'03'
-			//   * IP V6 address: X'04'
-			// * DST.ADDR desired destination address
-			// * DST.PORT desired destination port in network octet order
+			// Connection request format:
+			//  [0]: Version
+			//  [1]: Connect command.      (Connect == 1, Bind == 2, UDP Associate = 3)
+			//  [2]: Reserved, must be 0
+			//  [3]: Address type          (IPv4 = 1, DomainName ==3, IPv6 == 4)
+			//  [4..N]: Address
+			//  [N+1..N+3]: Port           (big endian)
 			byte address_type = Socks5.AddressType(host);
 			byte[] dest_addr = Socks5.AddressBytes(host);
 			byte[] dest_port = PortBytesBigEndian(port);
@@ -783,27 +681,13 @@ namespace pr.inet
 		/// <summary>Parse the response from the proxy server</summary>
 		private void ParseConnectionResponse(byte[] response, string host, int port)
 		{
-			//  PROXY SERVER RESPONSE
-			//  +----+-----+-------+------+----------+----------+
-			//  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
-			//  +----+-----+-------+------+----------+----------+
-			//  | 1  |  1  | X'00' |  1   | Variable |    2     |
-			//  +----+-----+-------+------+----------+----------+
-			//
-			// * VER protocol version: X'05'
-			// * REP Reply field:
-			//   * X'00' succeeded
-			//   * X'01' general SOCKS server failure
-			//   * X'02' connection not allowed by ruleset
-			//   * X'03' Network unreachable
-			//   * X'04' Host unreachable
-			//   * X'05' Connection refused
-			//   * X'06' TTL expired
-			//   * X'07' Command not supported
-			//   * X'08' Address itemType not supported
-			//   * X'09' to X'FF' unassigned
-			//* RSV RESERVED
-			//* ATYP address itemType of following address
+			// Response format:
+			//  [0]: Version
+			//  [1]: Reply code
+			//  [2]: Reserved, must be 0
+			//  [3]: Address type
+			//  [4..N]: Bound address
+			//  [N+1..N+3]: Bound port
 			byte reply_code = response[1];
 			if (reply_code != Socks5.ReplySucceeded)
 			{

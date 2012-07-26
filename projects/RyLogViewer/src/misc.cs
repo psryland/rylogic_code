@@ -185,7 +185,7 @@ namespace RyLogViewer
 		[DataMember] public string       Hostname         = "";
 		[DataMember] public ushort       Port             = 5555;
 		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
-		[DataMember] public ProxyType    ProxyType        = ProxyType.None;
+		[DataMember] public Proxy.EType  ProxyType        = Proxy.EType.None;
 		[DataMember] public string       ProxyHostname    = "";
 		[DataMember] public ushort       ProxyPort        = 5555;
 		[DataMember] public string       ProxyUserName    = "";
@@ -324,11 +324,10 @@ namespace RyLogViewer
 			return str;
 		}
 
-		/// <summary>Add 'item' to a history list of items</summary>
+		/// <summary>Add 'item' to a history list of items.</summary>
 		public static void AddToHistoryList<T>(List<T> list, T item, bool ignore_case, int max_history_length)
 		{
 			string item_name = item.ToString();
-			if (item_name.Length == 0) return;
 			StringComparison cmp = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 			list.RemoveAll(i => String.Compare(i.ToString(), item_name, cmp) == 0);
 			list.Insert(0, item);
