@@ -57,7 +57,7 @@ namespace pr.inet
 			internal bool CancelPending
 			{
 				get { return m_cancel != 0; }
-				set { Interlocked.CompareExchange(ref m_cancel, 1, 0); }
+				set { if (value) Interlocked.CompareExchange(ref m_cancel, 1, 0); }
 			}
 
 			/// <summary>The result of the async check for updates</summary>
