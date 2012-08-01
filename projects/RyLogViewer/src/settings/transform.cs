@@ -162,7 +162,7 @@ namespace RyLogViewer
 		{
 			get
 			{
-				var ex = Validate();
+				var ex = ValidateExpr();
 				return ex == null
 					? Regex.ToString()
 					: string.Format("Expression invalid - {0}", ex.Message);
@@ -238,19 +238,29 @@ namespace RyLogViewer
 		/// <summary>Returns true if the match expression is valid</summary>
 		public bool IsValid
 		{
-			get { return Validate() == null; }
+			get { return ValidateExpr() == null && ValidateReplace() == null; }
 		}
 		
-		/// <summary>Returns null if the transform is valid, otherwise an exception describing what's wrong</summary>
-		public Exception Validate()
+		/// <summary>Returns null if the match field is valid, otherwise an exception describing what's wrong</summary>
+		public Exception ValidateExpr()
 		{
-			// Check the regex can be compiled and all tags in the result template string exist in 'Subs'
 			try
 			{
-				// Compiling the Regex may throw. In theory, it should never be null
+				// Compiling the Regex will throw if there's something wrong with it. It will never be null
 				if (Regex == null)
-					return new ArgumentNullException("The regular expression is null");
+					return new ArgumentException("The regular expression is null");
 				
+				// No prob, bob!
+				return null;
+			}
+			catch (Exception ex) { return ex; }
+		}
+
+		/// <summary>Returns null if the replace field is valid, otherwise an exception describing what's wrong</summary>
+		public Exception ValidateReplace()
+		{
+			try
+			{
 				// All tags in 'Replace' must exist in the match expression
 				if (!GetTags(Replace).All(t => Subs.ContainsKey(t.Id)))
 					return new ArgumentException("The replace pattern contains unknown tags");

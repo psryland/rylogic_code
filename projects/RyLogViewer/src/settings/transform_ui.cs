@@ -33,8 +33,7 @@ namespace RyLogViewer
 		private TextBox          m_edit_replace;
 		private DataGridView     m_grid_subs;
 		private Label            m_lbl_match;
-		private Label            m_lbl_replace;
-		private Label            m_lbl_subs;
+		private Label m_lbl_replace;
 		private CheckBox         m_check_ignore_case;
 		private Button           m_btn_add;
 		private Button           m_btn_regex_help;
@@ -320,23 +319,26 @@ namespace RyLogViewer
 				m_split_subs.Height = m_split_subs.Parent.Height - m_split_subs.Top - 3;
 				
 				// Highlight the match/replace fields if in error
-				var ex = Transform.Validate();
-				string tt0 = ex == null
-					? "The format string used to identify rows to transform.\r\nCreate capture groups using '{' and '}', e.g. {one},{2},{tag},etc\r\n"
-					: "Invalid match pattern - " + ex.Message;
-				string tt1 = ex == null
-					? "The template that describes the transformed result.\r\nUse the capture groups created in the Match field"
-					: "Invalid match pattern - " + ex.Message;
-				Color bkcolor = ex == null ? SystemColors.Window : Color.LightSalmon;
+				var ex0 = Transform.ValidateExpr();
+				string tt0 = ex0 == null
+					? "The pattern used to identify rows to transform.\r\n" +
+						(Transform.PatnType == EPattern.RegularExpression
+							? "Capture groups are defined using the usual regular expression syntax for capture groups e.g. (.*),(<tag>?.*),etc\r\n"
+							: "Create capture groups using '{' and '}', e.g. {one},{2},{tag},etc\r\n")
+					: "Invalid match pattern - " + ex0.Message;
+				var ex1 = Transform.ValidateReplace();
+				string tt1 = ex1 == null
+					? "The template for the transformed result.\r\nUse the capture groups created in the Match field"
+					: "Invalid replace template - " + ex1.Message;
 				m_lbl_match   .ToolTip(m_tt, tt0);
 				m_edit_match  .ToolTip(m_tt, tt0);
 				m_lbl_replace .ToolTip(m_tt, tt1);
 				m_edit_replace.ToolTip(m_tt, tt1);
-				m_edit_match  .BackColor = bkcolor;
-				m_edit_replace.BackColor = bkcolor;
+				m_edit_match  .BackColor = ex0 == null ? SystemColors.Window : Color.LightSalmon;
+				m_edit_replace.BackColor = ex1 == null ? SystemColors.Window : Color.LightSalmon;
 				
 				// Apply the transform to the test text if not in error
-				if (ex == null)
+				if (ex0 == null && ex1 == null)
 				{
 					// Preserve the current carot position
 					int start  = m_edit_test.SelectionStart;
@@ -432,7 +434,6 @@ namespace RyLogViewer
 			this.m_lbl_match = new System.Windows.Forms.Label();
 			this.m_edit_match = new System.Windows.Forms.TextBox();
 			this.m_grid_subs = new System.Windows.Forms.DataGridView();
-			this.m_lbl_subs = new System.Windows.Forms.Label();
 			this.m_split_subs = new System.Windows.Forms.SplitContainer();
 			this.m_radio_regex = new System.Windows.Forms.RadioButton();
 			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();
@@ -497,7 +498,7 @@ namespace RyLogViewer
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(490, 26);
+			this.m_edit_test.Size = new System.Drawing.Size(202, 45);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
@@ -508,7 +509,7 @@ namespace RyLogViewer
 			this.m_edit_result.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_result.Name = "m_edit_result";
 			this.m_edit_result.ReadOnly = true;
-			this.m_edit_result.Size = new System.Drawing.Size(490, 33);
+			this.m_edit_result.Size = new System.Drawing.Size(202, 60);
 			this.m_edit_result.TabIndex = 0;
 			this.m_edit_result.Text = "This is the resulting text after replacement";
 			// 
@@ -545,6 +546,7 @@ namespace RyLogViewer
 			this.m_split_test.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_split_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_split_test.Location = new System.Drawing.Point(0, 0);
+			this.m_split_test.Margin = new System.Windows.Forms.Padding(0);
 			this.m_split_test.Name = "m_split_test";
 			this.m_split_test.Orientation = System.Windows.Forms.Orientation.Horizontal;
 			// 
@@ -555,8 +557,8 @@ namespace RyLogViewer
 			// m_split_test.Panel2
 			// 
 			this.m_split_test.Panel2.Controls.Add(this.m_edit_result);
-			this.m_split_test.Size = new System.Drawing.Size(492, 67);
-			this.m_split_test.SplitterDistance = 28;
+			this.m_split_test.Size = new System.Drawing.Size(204, 113);
+			this.m_split_test.SplitterDistance = 47;
 			this.m_split_test.TabIndex = 8;
 			// 
 			// m_lbl_match
@@ -582,28 +584,18 @@ namespace RyLogViewer
 			this.m_grid_subs.AllowUserToAddRows = false;
 			this.m_grid_subs.AllowUserToDeleteRows = false;
 			this.m_grid_subs.AllowUserToResizeRows = false;
-			this.m_grid_subs.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid_subs.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_subs.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
 			this.m_grid_subs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_subs.Location = new System.Drawing.Point(76, 0);
+			this.m_grid_subs.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_grid_subs.Location = new System.Drawing.Point(0, 0);
+			this.m_grid_subs.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_subs.MultiSelect = false;
 			this.m_grid_subs.Name = "m_grid_subs";
 			this.m_grid_subs.RowHeadersVisible = false;
 			this.m_grid_subs.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_subs.Size = new System.Drawing.Size(416, 42);
+			this.m_grid_subs.Size = new System.Drawing.Size(284, 113);
 			this.m_grid_subs.TabIndex = 0;
-			// 
-			// m_lbl_subs
-			// 
-			this.m_lbl_subs.Location = new System.Drawing.Point(3, -1);
-			this.m_lbl_subs.Name = "m_lbl_subs";
-			this.m_lbl_subs.Size = new System.Drawing.Size(70, 17);
-			this.m_lbl_subs.TabIndex = 48;
-			this.m_lbl_subs.Text = "Substitutions:";
-			this.m_lbl_subs.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_split_subs
 			// 
@@ -613,18 +605,16 @@ namespace RyLogViewer
 			this.m_split_subs.Location = new System.Drawing.Point(3, 99);
 			this.m_split_subs.Margin = new System.Windows.Forms.Padding(0);
 			this.m_split_subs.Name = "m_split_subs";
-			this.m_split_subs.Orientation = System.Windows.Forms.Orientation.Horizontal;
 			// 
 			// m_split_subs.Panel1
 			// 
-			this.m_split_subs.Panel1.Controls.Add(this.m_grid_subs);
-			this.m_split_subs.Panel1.Controls.Add(this.m_lbl_subs);
+			this.m_split_subs.Panel1.Controls.Add(this.m_split_test);
 			// 
 			// m_split_subs.Panel2
 			// 
-			this.m_split_subs.Panel2.Controls.Add(this.m_split_test);
+			this.m_split_subs.Panel2.Controls.Add(this.m_grid_subs);
 			this.m_split_subs.Size = new System.Drawing.Size(492, 113);
-			this.m_split_subs.SplitterDistance = 42;
+			this.m_split_subs.SplitterDistance = 204;
 			this.m_split_subs.TabIndex = 49;
 			// 
 			// m_radio_regex
