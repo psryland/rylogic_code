@@ -454,6 +454,15 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        /// <summary>
+        ///   Looks up a localized string similar to If Match....
+        /// </summary>
+        internal static string IfMatch {
+            get {
+                return ResourceManager.GetString("IfMatch", resourceCulture);
+            }
+        }
+        
         internal static System.Drawing.Bitmap important {
             get {
                 object obj = ResourceManager.GetObject("important", resourceCulture);

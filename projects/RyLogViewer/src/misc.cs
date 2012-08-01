@@ -8,6 +8,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using pr.inet;
 
 namespace RyLogViewer
@@ -103,6 +104,7 @@ namespace RyLogViewer
 		public const string Transform  = "transform";
 		public const string ClkAction  = "clkaction";
 		public const string Exclude    = "exclude";
+		public const string IfMatch    = "ifmatch";
 		public const string Name       = "name";
 		public const string Filepath   = "filepath";
 		public const string Match      = "match";

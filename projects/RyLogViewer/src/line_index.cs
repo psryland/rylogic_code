@@ -671,11 +671,15 @@ namespace RyLogViewer
 			return row_delta;
 		}
 		
-		/// <summary>Test 'text' against each filter to see if it returns a positive match</summary>
-		/// <returns>Returns false if at least one filter returned no match</returns>
+		/// <summary>Tests 'text' against each of the filters in 'filters'</summary>
 		private static bool PassesFilters(string text, IEnumerable<Filter> filters)
 		{
-			return filters.All(f => f.IsMatch(text));
+			foreach (var ft in filters)
+			{
+				if (!ft.IsMatch(text)) continue;
+				return ft.IfMatch == Filter.EIfMatch.Keep;
+			}
+			return true;
 		}
 
 		/// <summary>Auto detect the line end format. Must be called from the main thread</summary>

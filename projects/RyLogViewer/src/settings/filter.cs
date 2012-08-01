@@ -1,40 +1,51 @@
 ﻿using System.Collections.Generic;
 using System.Xml.Linq;
+using pr.util;
 
 namespace RyLogViewer
 {
 	public class Filter :Pattern
 	{
-		/// <summary>
-		/// If true, then a positive match excludes the line, negative match includes the line.
-		/// If false, then a positive match include the line, negative match excludes the line.</summary>
-		//public bool Exclude { get; set; }
+		public enum EIfMatch
+		{
+			Keep,
+			Reject,
+		}
+		
+		/// <summary>Defines what a match with this filter means</summary>
+		public EIfMatch IfMatch { get; set; }
 		
 		public Filter()
 		{
-			//Exclude = false;
+			IfMatch = EIfMatch.Keep;
 		}
 		public Filter(Filter rhs) :base(rhs)
 		{
-			//Exclude = rhs.Exclude;
+			IfMatch = rhs.IfMatch;
 		}
 
 		/// <summary>Construct from xml description</summary>
 		public Filter(XElement node) :base(node)
 		{
 			// ReSharper disable PossibleNullReferenceException
-			//Exclude =bool.Parse(node.Element(XmlTag.Exclude).Value);
+			IfMatch = Enum<EIfMatch>.Parse(node.Element(XmlTag.IfMatch).Value);
 			// ReSharper restore PossibleNullReferenceException
 		}
 
+		///// <summary>Returns true if 'text' should be kept according to this filter</summary>
+		//public bool ItsAKeeper(string text)
+		//{
+		//    return !IsMatch(text) || IfMatch == EIfMatch.Keep;
+		//}
+		
 		/// <summary>Export this highlight as xml</summary>
 		public override XElement ToXml(XElement node)
 		{
 			base.ToXml(node);
-			//node.Add
-			//(
-			//    new XElement(XmlTag.Exclude ,Exclude)
-			//);
+			node.Add
+			(
+				new XElement(XmlTag.IfMatch ,IfMatch)
+			);
 			return node;
 		}
 		
@@ -53,7 +64,7 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Serialise the highlight patterns to xml</summary>
-		public static string Export(List<Filter> filters)
+		public static string Export(IEnumerable<Filter> filters)
 		{
 			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
@@ -77,7 +88,7 @@ namespace RyLogViewer
 			return 
 				rhs != null
 				&& base.Equals(obj)
-				//&& Exclude.Equals(rhs.Exclude)
+				&& IfMatch.Equals(rhs.IfMatch)
 				;
 		}
 		
@@ -86,7 +97,7 @@ namespace RyLogViewer
 		{
 			return
 				base.GetHashCode()
-				//^Exclude.GetHashCode()
+				^IfMatch.GetHashCode()
 				;
 		}
 	}

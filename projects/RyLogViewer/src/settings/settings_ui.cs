@@ -34,6 +34,7 @@ namespace RyLogViewer
 			public const string Pattern      = "Pattern";
 			public const string Modify       = "Modify";
 			public const string Highlighting = "Highlighting";
+			public const string Behaviour    = "IfMatch";
 			public const string ClickAction  = "ClickAction";
 		}
 		
@@ -437,9 +438,10 @@ namespace RyLogViewer
 			m_grid_filter.VirtualMode         = true;
 			m_grid_filter.AutoGenerateColumns = false;
 			m_grid_filter.ColumnCount         = m_grid_filter.RowCount = 0;
-			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_filter.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = Resources.Active  ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Behaviour ,HeaderText = Resources.IfMatch ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
+			m_grid_filter.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify    ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
@@ -632,19 +634,25 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Provide cells for the grid</summary>
-		private static void OnCellValueNeeded<T>(DataGridView grid, List<T> patterns, DataGridViewCellValueEventArgs e)
+		private static void OnCellValueNeeded<T>(DataGridView grid, List<T> patterns, DataGridViewCellValueEventArgs e) where T: class, IPattern
 		{
 			if (e.RowIndex < 0 || e.RowIndex >= patterns.Count) { e.Value = ""; return; }
 			var cell = grid[e.ColumnIndex, e.RowIndex];
 			T pat = patterns[e.RowIndex];
+			Pattern   pt = pat as Pattern;
 			Highlight hl = pat as Highlight;
+			Filter    ft = pat as Filter;
 			ClkAction ac = pat as ClkAction;
 			
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: e.Value = string.Empty; break;
 			case ColumnNames.Pattern:
-				e.Value = pat.ToString();
+				string val = pat.ToString();
+				if (string.IsNullOrEmpty(val)) val = "<blank>";
+				if (string.IsNullOrWhiteSpace(val)) val = "'"+val+"'";
+				if (pt != null && pt.Invert) val = "not "+val;
+				e.Value = val;
 				break;
 			case ColumnNames.Modify:
 				e.Value = "...";
@@ -653,6 +661,12 @@ namespace RyLogViewer
 				e.Value = Resources.ClickToModifyHighlight;
 				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? hl.BackColour : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
+				break;
+			case ColumnNames.Behaviour:
+				if (ft != null) switch (ft.IfMatch) {
+				case Filter.EIfMatch.Keep: e.Value = "Keep"; break;
+				case Filter.EIfMatch.Reject: e.Value = "Reject"; break;
+				}
 				break;
 			case ColumnNames.ClickAction:
 				e.Value = ac != null && !string.IsNullOrEmpty(ac.Executable) ? ac.ActionString : Resources.ClickToModifyAction;
@@ -669,6 +683,7 @@ namespace RyLogViewer
 			T pat = patterns[e.RowIndex];
 			Point pt = MousePosition;
 			Highlight hl = pat as Highlight;
+			Filter    ft = pat as Filter;
 			ClkAction ac = pat as ClkAction;
 			
 			switch (grid.Columns[e.ColumnIndex].Name)
@@ -683,6 +698,12 @@ namespace RyLogViewer
 					PickColours(grid, pt.X, pt.Y,
 						(s,a) => { hl.ForeColour = PickColour(hl.ForeColour); grid.InvalidateCell(e.ColumnIndex, e.RowIndex); },
 						(s,a) => { hl.BackColour = PickColour(hl.BackColour); grid.InvalidateCell(e.ColumnIndex, e.RowIndex); });
+				}
+				break;
+			case ColumnNames.Behaviour:
+				if (ft != null)
+				{
+					ft.IfMatch = Enum<Filter.EIfMatch>.Cycle(ft.IfMatch);
 				}
 				break;
 			case ColumnNames.ClickAction:

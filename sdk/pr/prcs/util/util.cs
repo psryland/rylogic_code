@@ -518,6 +518,15 @@ namespace pr.util
 		{
 			return (T)Enum.Parse(typeof(T), value);
 		}
+		
+		/// <summary>Returns the next enum value after 'value'.
+		/// Note: this is really enum abuse. Use sparingly</summary>
+		public static T Cycle(T src)
+		{
+			T[] arr = (T[])Enum.GetValues(typeof(T));
+			int i = Array.IndexOf(arr, src) + 1;
+			return (i >= 0 && i < arr.Length) ? arr[i] : arr[0];
+		}
 	}
 }
 
