@@ -10,6 +10,11 @@
 #ifndef PR_META_IS_POD_H
 #define PR_META_IS_POD_H
 
+// <type_traits> was introduced in sp1
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 150030729
+#error VS2008 SP1 or greater is required to build this file
+#endif
+
 #include <type_traits>
 #include "pr/meta/or.h"
 #include "pr/meta/and.h"

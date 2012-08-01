@@ -8,6 +8,11 @@
 #ifndef PR_STD_STRING_H
 #define PR_STD_STRING_H
 
+// <type_traits> was introduced in sp1
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 150030729
+#error VS2008 SP1 or greater is required to build this file
+#endif
+
 #pragma intrinsic(memcmp, memcpy, memset, strcmp)
 #include <memory>
 #include <string>

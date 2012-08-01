@@ -2,6 +2,11 @@
 #ifndef PR_META_IF_H
 #define PR_META_IF_H
 
+// <type_traits> was introduced in sp1
+#if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 150030729
+#error VS2008 SP1 or greater is required to build this file
+#endif
+
 #include <type_traits>
 
 namespace pr
