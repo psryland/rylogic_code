@@ -8,14 +8,14 @@ using pr.util;
 
 namespace pr
 {
-	public partial class Grapher :Form
+	public sealed partial class Grapher :Form
 	{
 		public struct Block
 		{
 			public DataGridView m_grid;
 			public Range m_range;
 			public int m_column;
-			public string Description { get { return m_grid.Columns[m_column].HeaderText + " : [" + m_range.m_begin + "->" + m_range.m_end + "]"; } }
+			public string Description { get { return m_grid.Columns[m_column].HeaderText + " : [" + m_range.Begin + "->" + m_range.End + "]"; } }
 		}
 		private readonly RecentFiles  m_recent_files; // Recent files
 		private readonly List<Plot>   m_plot;         // Collection of graph windows
@@ -162,9 +162,9 @@ namespace pr
 				// Find the range of selected cells
 				Block block = new Block{m_grid = m_grid};
 				block.m_column = cell.ColumnIndex;
-				block.m_range = new Range{m_begin=cell.RowIndex,m_end=cell.RowIndex+1};
-				for (int i = cell.RowIndex-1; i >= 0               && m_grid[cell.ColumnIndex, i].Selected; --i) { block.m_range.m_begin--;	m_grid[cell.ColumnIndex, i].Tag = 1; }
-				for (int i = cell.RowIndex+1; i <  m_grid.RowCount && m_grid[cell.ColumnIndex, i].Selected; ++i) { block.m_range.m_end++;	m_grid[cell.ColumnIndex, i].Tag = 1; }
+				block.m_range = new Range{Begin=cell.RowIndex,End=cell.RowIndex+1};
+				for (int i = cell.RowIndex-1; i >= 0               && m_grid[cell.ColumnIndex, i].Selected; --i) { block.m_range.Begin--;	m_grid[cell.ColumnIndex, i].Tag = 1; }
+				for (int i = cell.RowIndex+1; i <  m_grid.RowCount && m_grid[cell.ColumnIndex, i].Selected; ++i) { block.m_range.End++;	m_grid[cell.ColumnIndex, i].Tag = 1; }
 				if (block.m_range.Count <= 1) continue;
 
 				blocks.Add(block);
@@ -180,8 +180,8 @@ namespace pr
 				return
 					lhs.m_column < rhs.m_column ? -1 :
 					lhs.m_column > rhs.m_column ?  1 :
-					lhs.m_range.m_begin < rhs.m_range.m_begin ? -1 :
-					lhs.m_range.m_begin > rhs.m_range.m_begin ?  1 : 0;
+					lhs.m_range.Begin < rhs.m_range.Begin ? -1 :
+					lhs.m_range.Begin > rhs.m_range.Begin ?  1 : 0;
 			});
 
 			return blocks;

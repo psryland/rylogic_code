@@ -26,8 +26,8 @@ namespace pr
 			{
 				try
 				{
-					DataGridViewCell cellx = grid[m_xblock.m_column, (int)m_xblock.m_range.m_begin + i];
-					DataGridViewCell celly = grid[m_yblock.m_column, (int)m_yblock.m_range.m_begin + i];
+					DataGridViewCell cellx = grid[m_xblock.m_column, (int)m_xblock.m_range.Begin + i];
+					DataGridViewCell celly = grid[m_yblock.m_column, (int)m_yblock.m_range.Begin + i];
 					object x_boxed = Convert.ChangeType(cellx.Value, typeof(double));
 					object y_boxed = Convert.ChangeType(celly.Value, typeof(double));
 					double x = x_boxed != null ? (double)x_boxed : 0.0;

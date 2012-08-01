@@ -1,20 +1,17 @@
-@echo OFF
-rem 
+rem
 rem Rylogic Limited user specific variables
 rem  Remember to create a environment variable called 'RylogicEnv' 
 rem  that is the path to this file so that other batch files can simply
 rem  'call %RylogicEnv%' to set up the variables below.
 rem
 
-rem Rylogic Environment Variables version number
+rem Environment Variables version number
 rem Increment if you add a new user variable and require users to have that variable
-rem Test for a minimum version requirement using:
-rem if %RylogicEnvVersion% lss 1 (
-rem 	echo RylogicEnv.cmd out of date. Please update
-rem 	goto :eof
-rem )
 
-REM Boilerplate:
+rem NOTE: if you variables contain '(' or ')' characters in them, remember to escape them.
+rem  E.g. somepath=C:\Program Files ^(x86^)\SomePath
+
+rem Boilerplate:
 ::Load Rylogic environment variables and check version
 ::if [%RylogicEnv%]==[] (
 :: 	echo ERROR: The 'RylogicEnv' environment variable is not set.
@@ -31,7 +28,7 @@ set RylogicEnvVersion=2
 set user=Paul
 set machine=Rylogic
 set qdrive=Q:
-set zdrive=Y:
+set zdrive=Z:
 set cp=xcopy
 set zip=Q:\tools\7za.exe
 set arch=x86

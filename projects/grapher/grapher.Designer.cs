@@ -1,6 +1,6 @@
 ﻿namespace pr
 {
-	partial class Grapher
+	sealed partial class Grapher
 	{
 		/// <summary>
 		/// Required designer variable.
