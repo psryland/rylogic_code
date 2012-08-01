@@ -3,12 +3,15 @@ using System.IO;
 using System.Reflection;
 using System.Security.Permissions;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.util;
 
 namespace RyLogViewer
 {
 	static class program
 	{
+		private const string CommandLineRef = "RyLogViewer.docs.CommandLineRef.html";
+		
 		/// <summary>The main entry point for the application.</summary>
 		[STAThread]
 		[SecurityPermission(SecurityAction.Demand,ControlAppDomain=true)] // for the unhandled exception handler
@@ -38,7 +41,7 @@ namespace RyLogViewer
 						,MessageBoxButtons.OK
 						,MessageBoxIcon.Error);
 				}
-				HelpUI.ShowResource(null, "RyLogViewer.docs.CommandLineRef.html", "Command Line and Startup Options");
+				HelpUI.ShowResource(null, CommandLineRef, Resources.AppTitle);
 				Environment.ExitCode = 1;
 				return;
 			}

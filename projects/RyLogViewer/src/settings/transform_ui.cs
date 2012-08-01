@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.gfx;
@@ -11,6 +12,7 @@ namespace RyLogViewer
 	public class TransformUI :UserControl ,IPatternUI
 	{
 		private enum BtnImageIdx { AddNew = 0, Save = 1 }
+		private const string TransformQuickRef = "RyLogViewer.docs.TransformQuickRef.html";
 		private static class ColumnNames
 		{
 			public const string Id   = "Id";
@@ -24,6 +26,7 @@ namespace RyLogViewer
 		};
 		
 		private readonly ToolTip m_tt;
+		private HelpUI           m_dlg_help;
 		private List<string>     m_cap_ids;
 		private Transform        m_transform;
 		private TextBox          m_edit_match;
@@ -64,6 +67,20 @@ namespace RyLogViewer
 		/// <summary>True if the editted pattern is a new instance</summary>
 		public bool IsNew { get; private set; }
 		
+		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
+		private HelpUI MatchFieldHelpUI
+		{
+			get
+			{
+				Debug.Assert(ParentForm != null);
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
+					,TransformQuickRef
+					,"Transform Help"
+					,new Point(ParentForm.Right, ParentForm.Top)
+					,new Size(640,480)));
+			}
+		}
+
 		/// <summary>Raised when the 'Add' button is hit and the pattern field contains a valid pattern</summary>
 		public event EventHandler Add;
 		
@@ -86,7 +103,7 @@ namespace RyLogViewer
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for the Match field");
 			m_btn_regex_help.Click += (s,a)=>
 				{
-					ShowMatchHelp();
+					MatchFieldHelpUI.Display();
 				};
 
 			// Toggle eqv regex
@@ -373,16 +390,6 @@ namespace RyLogViewer
 				m_in_update_ui = false;
 				ResumeLayout();
 			}
-		}
-
-		/// <summary>Display a quick help for the match field syntax</summary>
-		private void ShowMatchHelp()
-		{
-			HelpUI.ShowResource(this
-				,"RyLogViewer.docs.TransformQuickRef.html"
-				,"Transform Help"
-				,PointToScreen(Location) + new Size(Width, 0)
-				,new Size(640,480));
 		}
 
 		#region Component Designer generated code

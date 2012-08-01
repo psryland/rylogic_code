@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Ports;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -303,6 +305,16 @@ namespace RyLogViewer
 
 	public static class Misc
 	{
+		/// <summary>Read a text file embedded resource returning it as a string</summary>
+		public static string TextResource(string resource_name)
+		{
+			Assembly ass = Assembly.GetExecutingAssembly();
+			Stream stream = ass.GetManifestResourceStream(resource_name);
+			if (stream == null) return null;
+			using (var src = new StreamReader(stream))
+				return src.ReadToEnd();
+		}
+
 		/// <summary>Watch window helper for converting byte buffers to strings</summary>
 		public static string BufToStr(byte[] buf, int start, int len)
 		{

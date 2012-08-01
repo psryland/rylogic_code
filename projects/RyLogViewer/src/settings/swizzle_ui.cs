@@ -1,5 +1,5 @@
-﻿
-using System;
+﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.util;
@@ -9,13 +9,29 @@ namespace RyLogViewer
 	/// <summary>A UI for configuring a swizzle element</summary>
 	public partial class SwizzleUI :Form
 	{
+		private const string SwizzleQuickRef = "RyLogViewer.docs.SwizzleQuickRef.html";
 		private readonly ToolTip m_tt;
+		private HelpUI           m_dlg_help;
 		
 		/// <summary>The source mapping</summary>
 		public string Src { get { return m_edit_source.Text; } set { m_edit_source.Text = value; } }
 		
 		/// <summary>The destination mapping</summary>
 		public string Dst { get { return m_edit_output.Text; } set { m_edit_output.Text = value; } }
+		
+		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
+		private HelpUI SwizzleHelpUI
+		{
+			get
+			{
+				Debug.Assert(ParentForm != null);
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
+					,SwizzleQuickRef
+					,"Swizzle Help"
+					,new Point(ParentForm.Right, ParentForm.Top)
+					,new Size(640,480)));
+			}
+		}
 		
 		public SwizzleUI()
 		{
@@ -24,7 +40,7 @@ namespace RyLogViewer
 			
 			m_btn_help.Click += (s,a)=>
 				{
-					HelpUI.ShowResource(this, "RyLogViewer.docs.SwizzleQuickRef.html", "Swizzle Help");
+					SwizzleHelpUI.Display();
 				};
 			m_edit_source.TextChanged += (s,a)=>
 				{

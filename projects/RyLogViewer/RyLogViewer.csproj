@@ -335,7 +335,6 @@
     <Content Include="Resources\book.png" />
     <None Include="Resources\bottom.png" />
     <Content Include="Resources\green_tick.png" />
-    <Content Include="rylog_private_key.txt" />
     <EmbeddedResource Include="docs\CommandLineRef.html" />
     <Content Include="lib\ClrDump.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

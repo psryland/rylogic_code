@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -20,26 +21,28 @@ namespace RyLogViewer
 	public class PatternUI :UserControl ,IPatternUI
 	{
 		enum BtnImageIdx { AddNew = 0, Save = 1 }
+		private const string RegexQuickRef = "RyLogViewer.docs.RegexQuickRef.html";
 		
 		// Some of these are public to allow clients to hide bits of the UI
 		private readonly ToolTip m_tt;
-		private Pattern     m_pattern;
-		private ImageList   m_image_list;
-		private Button m_btn_regex_help;
-		private CheckBox    m_check_invert;
-		private CheckBox    m_check_ignore_case;
-		private Button      m_btn_add;
-		private Label       m_lbl_match;
-		private TextBox     m_edit_match;
-		private RadioButton m_radio_substring;
-		private RadioButton m_radio_wildcard;
-		private RadioButton m_radio_regex;
-		private Panel       m_group_patntype;
-		private Label m_lbl_match_type;
-		private SplitContainer m_split;
-		private DataGridView m_grid_grps;
-		private Label m_lbl_groups;
-		private RichTextBox m_edit_test;
+		private HelpUI           m_dlg_help;
+		private Pattern          m_pattern;
+		private ImageList        m_image_list;
+		private Button           m_btn_regex_help;
+		private CheckBox         m_check_invert;
+		private CheckBox         m_check_ignore_case;
+		private Button           m_btn_add;
+		private Label            m_lbl_match;
+		private TextBox          m_edit_match;
+		private RadioButton      m_radio_substring;
+		private RadioButton      m_radio_wildcard;
+		private RadioButton      m_radio_regex;
+		private Panel            m_group_patntype;
+		private Label            m_lbl_match_type;
+		private SplitContainer   m_split;
+		private DataGridView     m_grid_grps;
+		private Label            m_lbl_groups;
+		private RichTextBox      m_edit_test;
 		
 		/// <summary>The pattern being controlled by this UI</summary>
 		public Pattern Pattern { get { return m_pattern; } }
@@ -49,6 +52,20 @@ namespace RyLogViewer
 
 		/// <summary>True if the editted pattern is a new instance</summary>
 		public bool IsNew { get; private set; }
+		
+		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
+		private HelpUI RegexHelpUI
+		{
+			get
+			{
+				Debug.Assert(ParentForm != null);
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
+					,RegexQuickRef
+					,"Regular Expression Help"
+					,new Point(ParentForm.Right, ParentForm.Top)
+					,new Size(640,480)));
+			}
+		}
 		
 		/// <summary>Raised when the 'Add' button is hit and the pattern field contains a valid pattern</summary>
 		public event EventHandler Add;
@@ -80,11 +97,7 @@ namespace RyLogViewer
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");
 			m_btn_regex_help.Click += (s,a)=>
 				{
-					HelpUI.ShowResource(this
-						,"RyLogViewer.docs.RegexQuickRef.html"
-						,"Regular Expression Help"
-						,PointToScreen(Location) + new Size(Width, 0)
-						,new Size(640,480));
+					RegexHelpUI.Display();
 				};
 			
 			// Add/Update
