@@ -59,6 +59,7 @@ namespace RyLogViewer
 				
 				// Convert the buffer to text
 				RowText = encoding.GetString(buf, start, length);
+				//RowText = RowText.TrimEnd(new[]{'\r','\n'}); - don't do this, its the logs fault if it has weird newlines at the end of each row
 				
 				// Apply any transforms
 				foreach (var tx in transforms)
