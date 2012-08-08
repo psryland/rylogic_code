@@ -563,7 +563,7 @@ namespace RyLogViewer
 			if (res != DialogResult.Yes) return;
 			
 			// Flatten the settings
-			try { m_settings.Reset(); }
+			try { m_settings.Reset(); Close(); }
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Resetting settings to defaults");

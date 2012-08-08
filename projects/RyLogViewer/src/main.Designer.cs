@@ -40,13 +40,15 @@
 			this.m_btn_actions = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_bookmarks = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_jump_to_start = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_jump_to_end = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_watch = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_additive = new System.Windows.Forms.ToolStripButton();
-			this.m_btn_tail = new System.Windows.Forms.ToolStripButton();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
@@ -68,6 +70,12 @@
 			this.m_menu_edit_find = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_find_next = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_find_prev = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator13 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_edit_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_next_bookmark = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_prev_bookmark = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_clearall_bookmarks = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_edit_bookmarks = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_encoding_detect = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
@@ -98,8 +106,8 @@
 			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help_check_for_updates = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
-			this.purchaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			this.registerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_visit_store = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_register = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
@@ -123,6 +131,8 @@
 			this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_find_next = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
@@ -150,6 +160,8 @@
             this.m_btn_actions,
             this.toolStripSeparator9,
             this.m_btn_options,
+            this.toolStripSeparator12,
+            this.m_btn_bookmarks,
             this.toolStripSeparator1,
             this.m_btn_jump_to_start,
             this.m_btn_jump_to_end,
@@ -159,7 +171,7 @@
             this.m_btn_additive});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(403, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(406, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -241,10 +253,34 @@
 			this.m_btn_options.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_options.Text = "Show Options";
 			// 
+			// toolStripSeparator12
+			// 
+			this.toolStripSeparator12.Name = "toolStripSeparator12";
+			this.toolStripSeparator12.Size = new System.Drawing.Size(6, 31);
+			// 
+			// m_btn_bookmarks
+			// 
+			this.m_btn_bookmarks.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_bookmarks.Image = global::RyLogViewer.Properties.Resources.bookmark;
+			this.m_btn_bookmarks.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_bookmarks.Name = "m_btn_bookmarks";
+			this.m_btn_bookmarks.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_bookmarks.Text = "Bookmarks";
+			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
 			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 31);
+			// 
+			// m_btn_jump_to_start
+			// 
+			this.m_btn_jump_to_start.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_jump_to_start.Image = global::RyLogViewer.Properties.Resources.green_up;
+			this.m_btn_jump_to_start.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_jump_to_start.Name = "m_btn_jump_to_start";
+			this.m_btn_jump_to_start.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_jump_to_start.Text = "File Start";
+			this.m_btn_jump_to_start.ToolTipText = "Jump to the file start";
 			// 
 			// m_btn_jump_to_end
 			// 
@@ -256,15 +292,15 @@
 			this.m_btn_jump_to_end.Text = "File End";
 			this.m_btn_jump_to_end.ToolTipText = "Jump to the file end";
 			// 
-			// m_btn_jump_to_start
+			// m_btn_tail
 			// 
-			this.m_btn_jump_to_start.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_jump_to_start.Image = global::RyLogViewer.Properties.Resources.green_up;
-			this.m_btn_jump_to_start.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_jump_to_start.Name = "m_btn_jump_to_start";
-			this.m_btn_jump_to_start.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_jump_to_start.Text = "File Start";
-			this.m_btn_jump_to_start.ToolTipText = "Jump to the file start";
+			this.m_btn_tail.CheckOnClick = true;
+			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.bottom;
+			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_tail.Name = "m_btn_tail";
+			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_tail.Text = "Tail Mode";
 			// 
 			// toolStripSeparator8
 			// 
@@ -290,16 +326,6 @@
 			this.m_btn_additive.Name = "m_btn_additive";
 			this.m_btn_additive.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_additive.Text = "Additive Only";
-			// 
-			// m_btn_tail
-			// 
-			this.m_btn_tail.CheckOnClick = true;
-			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.bottom;
-			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_tail.Name = "m_btn_tail";
-			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_tail.Text = "Tail Mode";
 			// 
 			// m_menu
 			// 
@@ -417,8 +443,15 @@
             this.m_sep3,
             this.m_menu_edit_find,
             this.m_menu_edit_find_next,
-            this.m_menu_edit_find_prev});
+            this.m_menu_edit_find_prev,
+            this.toolStripSeparator13,
+            this.m_menu_edit_toggle_bookmark,
+            this.m_menu_edit_next_bookmark,
+            this.m_menu_edit_prev_bookmark,
+            this.m_menu_edit_clearall_bookmarks,
+            this.m_menu_edit_bookmarks});
 			this.m_menu_edit.Name = "m_menu_edit";
+			this.m_menu_edit.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F2)));
 			this.m_menu_edit.Size = new System.Drawing.Size(39, 20);
 			this.m_menu_edit.Text = "&Edit";
 			// 
@@ -426,41 +459,82 @@
 			// 
 			this.m_menu_edit_selectall.Name = "m_menu_edit_selectall";
 			this.m_menu_edit_selectall.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.A)));
-			this.m_menu_edit_selectall.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_selectall.Size = new System.Drawing.Size(258, 22);
 			this.m_menu_edit_selectall.Text = "Select &All";
 			// 
 			// m_menu_edit_copy
 			// 
 			this.m_menu_edit_copy.Name = "m_menu_edit_copy";
 			this.m_menu_edit_copy.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
-			this.m_menu_edit_copy.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_copy.Size = new System.Drawing.Size(258, 22);
 			this.m_menu_edit_copy.Text = "&Copy";
 			// 
 			// m_sep3
 			// 
 			this.m_sep3.Name = "m_sep3";
-			this.m_sep3.Size = new System.Drawing.Size(193, 6);
+			this.m_sep3.Size = new System.Drawing.Size(255, 6);
 			// 
 			// m_menu_edit_find
 			// 
 			this.m_menu_edit_find.Name = "m_menu_edit_find";
 			this.m_menu_edit_find.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F)));
-			this.m_menu_edit_find.Size = new System.Drawing.Size(196, 22);
-			this.m_menu_edit_find.Text = "&Find";
+			this.m_menu_edit_find.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_find.Text = "&Find...";
 			// 
 			// m_menu_edit_find_next
 			// 
 			this.m_menu_edit_find_next.Name = "m_menu_edit_find_next";
 			this.m_menu_edit_find_next.ShortcutKeys = System.Windows.Forms.Keys.F3;
-			this.m_menu_edit_find_next.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_find_next.Size = new System.Drawing.Size(258, 22);
 			this.m_menu_edit_find_next.Text = "Find &Next";
 			// 
 			// m_menu_edit_find_prev
 			// 
 			this.m_menu_edit_find_prev.Name = "m_menu_edit_find_prev";
 			this.m_menu_edit_find_prev.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.F3)));
-			this.m_menu_edit_find_prev.Size = new System.Drawing.Size(196, 22);
+			this.m_menu_edit_find_prev.Size = new System.Drawing.Size(258, 22);
 			this.m_menu_edit_find_prev.Text = "Find &Previous";
+			// 
+			// toolStripSeparator13
+			// 
+			this.toolStripSeparator13.Name = "toolStripSeparator13";
+			this.toolStripSeparator13.Size = new System.Drawing.Size(255, 6);
+			// 
+			// m_menu_edit_toggle_bookmark
+			// 
+			this.m_menu_edit_toggle_bookmark.Name = "m_menu_edit_toggle_bookmark";
+			this.m_menu_edit_toggle_bookmark.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F2)));
+			this.m_menu_edit_toggle_bookmark.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_toggle_bookmark.Text = "Toggle Bookmark";
+			// 
+			// m_menu_edit_next_bookmark
+			// 
+			this.m_menu_edit_next_bookmark.Name = "m_menu_edit_next_bookmark";
+			this.m_menu_edit_next_bookmark.ShortcutKeys = System.Windows.Forms.Keys.F2;
+			this.m_menu_edit_next_bookmark.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_next_bookmark.Text = "Next Bookmark";
+			// 
+			// m_menu_edit_prev_bookmark
+			// 
+			this.m_menu_edit_prev_bookmark.Name = "m_menu_edit_prev_bookmark";
+			this.m_menu_edit_prev_bookmark.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.F2)));
+			this.m_menu_edit_prev_bookmark.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_prev_bookmark.Text = "Previous Bookmark";
+			// 
+			// m_menu_edit_clearall_bookmarks
+			// 
+			this.m_menu_edit_clearall_bookmarks.Name = "m_menu_edit_clearall_bookmarks";
+			this.m_menu_edit_clearall_bookmarks.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.F2)));
+			this.m_menu_edit_clearall_bookmarks.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_clearall_bookmarks.Text = "Clear All Bookmarks";
+			// 
+			// m_menu_edit_bookmarks
+			// 
+			this.m_menu_edit_bookmarks.Name = "m_menu_edit_bookmarks";
+			this.m_menu_edit_bookmarks.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.B)));
+			this.m_menu_edit_bookmarks.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_bookmarks.Text = "Bookmarks...";
 			// 
 			// m_menu_encoding
 			// 
@@ -645,8 +719,8 @@
             this.m_menu_help_totd,
             this.m_menu_help_check_for_updates,
             this.toolStripSeparator11,
-            this.purchaseToolStripMenuItem,
-            this.registerToolStripMenuItem,
+            this.m_menu_help_visit_store,
+            this.m_menu_help_register,
             this.toolStripSeparator2,
             this.m_menu_help_about});
 			this.m_menu_help.Name = "m_menu_help";
@@ -670,17 +744,17 @@
 			this.toolStripSeparator11.Name = "toolStripSeparator11";
 			this.toolStripSeparator11.Size = new System.Drawing.Size(168, 6);
 			// 
-			// purchaseToolStripMenuItem
+			// m_menu_help_visit_store
 			// 
-			this.purchaseToolStripMenuItem.Name = "purchaseToolStripMenuItem";
-			this.purchaseToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
-			this.purchaseToolStripMenuItem.Text = "&Visit Store";
+			this.m_menu_help_visit_store.Name = "m_menu_help_visit_store";
+			this.m_menu_help_visit_store.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_visit_store.Text = "&Visit Store";
 			// 
-			// registerToolStripMenuItem
+			// m_menu_help_register
 			// 
-			this.registerToolStripMenuItem.Name = "registerToolStripMenuItem";
-			this.registerToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
-			this.registerToolStripMenuItem.Text = "&Register...";
+			this.m_menu_help_register.Name = "m_menu_help_register";
+			this.m_menu_help_register.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_register.Text = "&Register...";
 			// 
 			// toolStripSeparator2
 			// 
@@ -844,67 +918,80 @@
             this.m_cmenu_action_row,
             this.toolStripSeparator4,
             this.m_cmenu_find_next,
-            this.m_cmenu_find_prev});
+            this.m_cmenu_find_prev,
+            this.toolStripSeparator14,
+            this.m_cmenu_toggle_bookmark});
 			this.m_cmenu_grid.Name = "m_cmenu_grid";
-			this.m_cmenu_grid.Size = new System.Drawing.Size(165, 192);
+			this.m_cmenu_grid.Size = new System.Drawing.Size(169, 242);
 			// 
 			// m_cmenu_select_all
 			// 
 			this.m_cmenu_select_all.Name = "m_cmenu_select_all";
-			this.m_cmenu_select_all.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_select_all.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_select_all.Text = "Select &All";
 			// 
 			// m_cmenu_copy
 			// 
 			this.m_cmenu_copy.Name = "m_cmenu_copy";
-			this.m_cmenu_copy.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_copy.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_copy.Text = "&Copy";
 			// 
 			// toolStripSeparator10
 			// 
 			this.toolStripSeparator10.Name = "toolStripSeparator10";
-			this.toolStripSeparator10.Size = new System.Drawing.Size(161, 6);
+			this.toolStripSeparator10.Size = new System.Drawing.Size(165, 6);
 			// 
 			// m_cmenu_highlight_row
 			// 
 			this.m_cmenu_highlight_row.Name = "m_cmenu_highlight_row";
-			this.m_cmenu_highlight_row.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_highlight_row.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_highlight_row.Text = "&Highlight Row...";
 			// 
 			// m_cmenu_filter_row
 			// 
 			this.m_cmenu_filter_row.Name = "m_cmenu_filter_row";
-			this.m_cmenu_filter_row.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_filter_row.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_filter_row.Text = "&Filter Row...";
 			// 
 			// m_cmenu_transform_row
 			// 
 			this.m_cmenu_transform_row.Name = "m_cmenu_transform_row";
-			this.m_cmenu_transform_row.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_transform_row.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_transform_row.Text = "&Transform Row...";
 			// 
 			// m_cmenu_action_row
 			// 
 			this.m_cmenu_action_row.Name = "m_cmenu_action_row";
-			this.m_cmenu_action_row.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_action_row.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_action_row.Text = "&Action Row...";
 			// 
 			// toolStripSeparator4
 			// 
 			this.toolStripSeparator4.Name = "toolStripSeparator4";
-			this.toolStripSeparator4.Size = new System.Drawing.Size(161, 6);
+			this.toolStripSeparator4.Size = new System.Drawing.Size(165, 6);
 			// 
 			// m_cmenu_find_next
 			// 
 			this.m_cmenu_find_next.Name = "m_cmenu_find_next";
-			this.m_cmenu_find_next.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_find_next.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_find_next.Text = "Find &Next";
 			// 
 			// m_cmenu_find_prev
 			// 
 			this.m_cmenu_find_prev.Name = "m_cmenu_find_prev";
-			this.m_cmenu_find_prev.Size = new System.Drawing.Size(164, 22);
+			this.m_cmenu_find_prev.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_find_prev.Text = "Find &Previous";
+			// 
+			// toolStripSeparator14
+			// 
+			this.toolStripSeparator14.Name = "toolStripSeparator14";
+			this.toolStripSeparator14.Size = new System.Drawing.Size(165, 6);
+			// 
+			// m_cmenu_toggle_bookmark
+			// 
+			this.m_cmenu_toggle_bookmark.Name = "m_cmenu_toggle_bookmark";
+			this.m_cmenu_toggle_bookmark.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_toggle_bookmark.Text = "Toggle &Bookmark";
 			// 
 			// m_scroll_file
 			// 
@@ -1047,9 +1134,19 @@
 		private System.Windows.Forms.ToolStripButton m_btn_actions;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_actions;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator11;
-		private System.Windows.Forms.ToolStripMenuItem purchaseToolStripMenuItem;
-		private System.Windows.Forms.ToolStripMenuItem registerToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_visit_store;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_register;
 		private System.Windows.Forms.ToolStripButton m_btn_tail;
+		private System.Windows.Forms.ToolStripButton m_btn_bookmarks;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator12;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator13;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_toggle_bookmark;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_next_bookmark;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_prev_bookmark;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_clearall_bookmarks;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_bookmarks;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator14;
+		private System.Windows.Forms.ToolStripMenuItem m_cmenu_toggle_bookmark;
 	}
 }
 

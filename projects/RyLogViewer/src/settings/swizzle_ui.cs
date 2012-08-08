@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
@@ -28,8 +29,9 @@ namespace RyLogViewer
 				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
 					,SwizzleQuickRef
 					,"Swizzle Help"
-					,new Point(ParentForm.Right, ParentForm.Top)
-					,new Size(640,480)));
+					,new Size(1,1)
+					,new Size(640,480)
+					,ToolForm.EPin.TopRight));
 			}
 		}
 		

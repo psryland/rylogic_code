@@ -1,152 +1,86 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.util;
+using pr.gui;
 
 namespace RyLogViewer
 {
-	public sealed class HelpUI :Form
+	public sealed class HelpUI :ToolForm
 	{
 		private const string HelpNotFound = @"<p>Help Reference Guide not found</p>";
 		private Panel      m_panel;
 		private WebBrowser m_html;
 		private Button     m_btn_ok;
-		private Size       m_parent_ofs;
 		
 		// Create modal instances
 		public static DialogResult ShowText(Form owner, string text, string title)
 		{
-			return ShowHtml(owner, Util.TextToHtml(text), title, Point.Empty, Size.Empty);
+			return ShowHtml(owner, Util.TextToHtml(text), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static DialogResult ShowText(Form owner, string text, string title, Point loc, Size size)
+		public static DialogResult ShowText(Form owner, string text, string title, Size ofs, Size size, EPin pin)
 		{
-			return ShowHtml(owner, Util.TextToHtml(text), title, loc, size);
+			return ShowHtml(owner, Util.TextToHtml(text), title, ofs, size, pin);
 		}
 		public static DialogResult ShowResource(Form owner, string resource_name, string title)
 		{
-			return ShowHtml(owner, Misc.TextResource(resource_name), title, Point.Empty, Size.Empty);
+			return ShowHtml(owner, Misc.TextResource(resource_name), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static DialogResult ShowResource(Form owner, string resource_name, string title, Point loc, Size size)
+		public static DialogResult ShowResource(Form owner, string resource_name, string title, Size ofs, Size size, EPin pin)
 		{
-			return ShowHtml(owner, Misc.TextResource(resource_name), title, loc, size);
+			return ShowHtml(owner, Misc.TextResource(resource_name), title, ofs, size, pin);
 		}
 		public static DialogResult ShowHtml(Form owner, string html, string title)
 		{
-			return ShowHtml(owner, html, title, Point.Empty, Size.Empty);
+			return ShowHtml(owner, html, title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static DialogResult ShowHtml(Form owner, string html, string title, Point loc, Size size)
+		public static DialogResult ShowHtml(Form owner, string html, string title, Size ofs, Size size, EPin pin)
 		{
-			return new HelpUI(owner, html, title, loc, size, true).ShowDialog(owner);
+			return new HelpUI(owner, html, title, ofs, size, pin, true).ShowDialog(owner);
 		}
 		
 		// Create non-modal instances
 		public static HelpUI FromText(Form parent, string text, string title)
 		{
-			return FromHtml(parent, Util.TextToHtml(text), title, Point.Empty, Size.Empty);
+			return FromHtml(parent, Util.TextToHtml(text), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static HelpUI FromText(Form parent, string text, string title, Point loc, Size size)
+		public static HelpUI FromText(Form parent, string text, string title, Size ofs, Size size, EPin pin)
 		{
-			return FromHtml(parent, Util.TextToHtml(text), title, loc, size);
+			return FromHtml(parent, Util.TextToHtml(text), title, ofs, size, pin);
 		}
 		public static HelpUI FromResource(Form parent, string resource_name, string title)
 		{
-			return FromHtml(parent, Misc.TextResource(resource_name), title, Point.Empty, Size.Empty);
+			return FromHtml(parent, Misc.TextResource(resource_name), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static HelpUI FromResource(Form parent, string resource_name, string title, Point loc, Size size)
+		public static HelpUI FromResource(Form parent, string resource_name, string title, Size ofs, Size size, EPin pin)
 		{
-			return FromHtml(parent, Misc.TextResource(resource_name), title, loc, size);
+			return FromHtml(parent, Misc.TextResource(resource_name), title, ofs, size, pin);
 		}
 		public static HelpUI FromHtml(Form parent, string html, string title)
 		{
-			return FromHtml(parent, html, title, Point.Empty, Size.Empty);
+			return FromHtml(parent, html, title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static HelpUI FromHtml(Form parent, string html, string title, Point loc, Size size)
+		public static HelpUI FromHtml(Form parent, string html, string title, Size ofs, Size size, EPin pin)
 		{
-			return new HelpUI(parent, html, title, loc, size, false);
+			return new HelpUI(parent, html, title, ofs, size, pin, false);
 		}
 		
 		/// <summary>Construct from html. Private constructor so we can create overloads for resources, plain text, and html</summary>
-		private HelpUI(Form parent, string html, string title, Point loc, Size size, bool modal)
+		private HelpUI(Form owner, string html, string title, Size ofs, Size size, EPin pin, bool modal)
+		:base(owner, ofs, size, pin, modal)
 		{
 			InitializeComponent();
 			Text = title;
-			Owner = parent;
-			StartPosition = FormStartPosition.CenterParent;
-			if (loc != Point.Empty) { StartPosition = FormStartPosition.Manual; Location = loc; }
-			if (size != Size.Empty) Size = size;
 			
 			m_html.DocumentText = "<html/>";
 			Debug.Assert(m_html.Document != null);
 			m_html.Document.OpenNew(true);
 			m_html.Document.Write(html ?? HelpNotFound);
 			
-			EventHandler parent_moved = (s,a)=>
-				{
-					if (Owner != null)
-						Location = Owner.Location + m_parent_ofs;
-				};
-			EventHandler record_offset = (s,a)=>
-				{
-					m_parent_ofs = Owner != null
-						? new Size(Location.X - Owner.Location.X, Location.Y - Owner.Location.Y)
-						: Size.Empty;
-				};
-			
 			m_btn_ok.Click += (s,a)=>
 				{
 					Close();
 				};
-			
-			// Whenever the window moves, save it's offset from the owner
-			Move += record_offset;
-			
-			// Whenever the owner moves, move this form as well
-			if (Owner != null)
-				Owner.Move += parent_moved;
-			
-			// On closing, if non-modal just hide, otherwise remove the Move handler from the owner
-			FormClosing += (s,a)=>
-				{
-					if (!modal && a.CloseReason == CloseReason.UserClosing)
-					{
-						Hide();
-						a.Cancel = true;
-						if (Owner != null)
-							Owner.Focus();
-					}
-					else
-					{
-						if (Owner != null)
-							Owner.Move -= parent_moved;
-					}
-				};
-			
-			record_offset(null,null);
-		}
-		
-		/// <summary>Display the UI</summary>
-		public void Display()
-		{
-			if (Owner != null)
-				Location = Owner.Location + m_parent_ofs;
-			if (!Visible)
-				Show(Owner);
-			else
-				Focus();
-		}
-
-		/// <summary>Handle key presses</summary>
-		protected override void OnKeyDown(KeyEventArgs e)
-		{
-			e.Handled = true;
-			if (e.KeyCode == Keys.Escape)
-			{
-				Close();
-				return;
-			}
-			e.Handled = false;
-			base.OnKeyDown(e);
 		}
 
 		#region Windows Form Designer generated code
@@ -224,11 +158,9 @@ namespace RyLogViewer
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "HelpUI";
-			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Help";
 			this.m_panel.ResumeLayout(false);
 			this.ResumeLayout(false);
-
 		}
 
 		#endregion

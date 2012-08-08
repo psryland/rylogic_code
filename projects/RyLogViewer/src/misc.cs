@@ -141,12 +141,12 @@ namespace RyLogViewer
 		public const string NoGUI        = "-nogui";
 	}
 
-	public enum SubRangeScrollRange
-	{
-		FileRange,
-		DisplayedRange,
-		SelectedRange,
-	}
+	//public enum SubRangeScrollRange
+	//{
+	//    FileRange,
+	//    DisplayedRange,
+	//    SelectedRange,
+	//}
 
 	[DataContract]
 	public class LaunchApp :ICloneable

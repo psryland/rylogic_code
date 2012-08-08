@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.gfx;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
@@ -19,7 +20,7 @@ namespace RyLogViewer
 			public const string Type = "Type";
 			public const string Data = "Data";
 		}
-		private static readonly Color[] m_bk_colors = new[]
+		private static readonly Color[] BkColors = new[]
 		{
 			Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
 			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
@@ -63,7 +64,7 @@ namespace RyLogViewer
 		/// <summary>The test text to use</summary>
 		public string TestText { get { return m_edit_test.Text; } set { m_edit_test.Text = value; } }
 
-		/// <summary>True if the editted pattern is a new instance</summary>
+		/// <summary>True if the edited pattern is a new instance</summary>
 		public bool IsNew { get; private set; }
 		
 		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
@@ -75,8 +76,9 @@ namespace RyLogViewer
 				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
 					,TransformQuickRef
 					,"Transform Help"
-					,new Point(ParentForm.Right, ParentForm.Top)
-					,new Size(640,480)));
+					,new Size(1,1)
+					,new Size(640,480)
+					,ToolForm.EPin.TopRight));
 			}
 		}
 
@@ -105,7 +107,7 @@ namespace RyLogViewer
 					MatchFieldHelpUI.Display();
 				};
 
-			// Toggle eqv regex
+			// Toggle equivalent regex
 			m_btn_show_eqv_regex.ToolTip(m_tt, "Toggle the visibility of the equivalent regular expression field");
 			m_btn_show_eqv_regex.Click += (s,a)=>
 				{
@@ -121,7 +123,7 @@ namespace RyLogViewer
 				};
 
 			// Match - Substring
-			m_radio_substring.ToolTip(m_tt, "Match any occurance of the pattern as a substring");
+			m_radio_substring.ToolTip(m_tt, "Match any occurrence of the pattern as a substring");
 			m_radio_substring.Click += (s,a)=>
 				{
 					if (m_radio_substring.Checked) Transform.PatnType = EPattern.Substring;
@@ -247,7 +249,7 @@ namespace RyLogViewer
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Id:
-				e.CellStyle.BackColor = m_bk_colors[e.RowIndex % m_bk_colors.Length];
+				e.CellStyle.BackColor = BkColors[e.RowIndex % BkColors.Length];
 				e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, Color.Black, 0.2f);
 				break;
 			}
@@ -373,12 +375,12 @@ namespace RyLogViewer
 							int j = 0; foreach (var s in src_caps)
 							{
 								m_edit_test.Select(starti + s.Span.Index, s.Span.Count);
-								m_edit_test.SelectionBackColor = m_bk_colors[j++ % m_bk_colors.Length];
+								m_edit_test.SelectionBackColor = BkColors[j++ % BkColors.Length];
 							}
 							j = 0; foreach (var s in dst_caps)
 							{
 								m_edit_result.Select(startj + s.Span.Index, s.Span.Count);
-								m_edit_result.SelectionBackColor = m_bk_colors[j++ % m_bk_colors.Length];
+								m_edit_result.SelectionBackColor = BkColors[j++ % BkColors.Length];
 							}
 						}
 					}

@@ -121,6 +121,13 @@ namespace RyLogViewer.Properties {
             }
         }
         
+        internal static System.Drawing.Bitmap bookmark {
+            get {
+                object obj = ResourceManager.GetObject("bookmark", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
         internal static System.Drawing.Bitmap bottom {
             get {
                 object obj = ResourceManager.GetObject("bottom", resourceCulture);
@@ -667,6 +674,15 @@ namespace RyLogViewer.Properties {
         internal static string ShowActionsDialog {
             get {
                 return ResourceManager.GetString("ShowActionsDialog", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show the bookmarks dialog.
+        /// </summary>
+        internal static string ShowBookmarksDialog {
+            get {
+                return ResourceManager.GetString("ShowBookmarksDialog", resourceCulture);
             }
         }
         

@@ -945,8 +945,8 @@
 			// m_split_tx.Panel2
 			// 
 			this.m_split_tx.Panel2.Controls.Add(this.m_table_tx);
-			this.m_split_tx.Size = new System.Drawing.Size(498, 429);
-			this.m_split_tx.SplitterDistance = 175;
+			this.m_split_tx.Size = new System.Drawing.Size(190, 72);
+			this.m_split_tx.SplitterDistance = 29;
 			this.m_split_tx.TabIndex = 0;
 			// 
 			// m_pattern_tx
@@ -957,7 +957,7 @@
 			this.m_pattern_tx.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_tx.MinimumSize = new System.Drawing.Size(400, 150);
 			this.m_pattern_tx.Name = "m_pattern_tx";
-			this.m_pattern_tx.Size = new System.Drawing.Size(498, 175);
+			this.m_pattern_tx.Size = new System.Drawing.Size(400, 150);
 			this.m_pattern_tx.TabIndex = 0;
 			this.m_pattern_tx.TestText = "Enter text here to test your pattern";
 			// 
@@ -977,7 +977,7 @@
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_tx.Size = new System.Drawing.Size(498, 250);
+			this.m_table_tx.Size = new System.Drawing.Size(190, 39);
 			this.m_table_tx.TabIndex = 3;
 			// 
 			// label4
@@ -986,7 +986,7 @@
 			this.label4.Location = new System.Drawing.Point(4, 1);
 			this.label4.Name = "label4";
 			this.label4.Padding = new System.Windows.Forms.Padding(3);
-			this.label4.Size = new System.Drawing.Size(259, 32);
+			this.label4.Size = new System.Drawing.Size(179, 58);
 			this.label4.TabIndex = 4;
 			this.label4.Text = "Transforms are applied in the order given in this list.\r\nThe list order can be ch" +
     "anged by dragging the rows.\r\n";
@@ -999,24 +999,24 @@
 			this.m_grid_transform.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_transform.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_transform.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_transform.Location = new System.Drawing.Point(1, 34);
+			this.m_grid_transform.Location = new System.Drawing.Point(1, 60);
 			this.m_grid_transform.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_transform.MultiSelect = false;
 			this.m_grid_transform.Name = "m_grid_transform";
 			this.m_grid_transform.RowHeadersWidth = 24;
 			this.m_grid_transform.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_transform.Size = new System.Drawing.Size(496, 174);
+			this.m_grid_transform.Size = new System.Drawing.Size(188, 1);
 			this.m_grid_transform.TabIndex = 0;
 			// 
 			// m_pattern_set_tx
 			// 
 			this.m_pattern_set_tx.AutoSize = true;
 			this.m_pattern_set_tx.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_tx.Location = new System.Drawing.Point(1, 209);
+			this.m_pattern_set_tx.Location = new System.Drawing.Point(1, -2);
 			this.m_pattern_set_tx.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_set_tx.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_tx.Name = "m_pattern_set_tx";
-			this.m_pattern_set_tx.Size = new System.Drawing.Size(496, 40);
+			this.m_pattern_set_tx.Size = new System.Drawing.Size(274, 40);
 			this.m_pattern_set_tx.TabIndex = 1;
 			// 
 			// m_tab_action

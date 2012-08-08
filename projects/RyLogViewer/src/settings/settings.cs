@@ -85,6 +85,11 @@ namespace RyLogViewer
 			get { return get<Color>("ScrollBarDisplayRangeColour"); }
 			set { set("ScrollBarDisplayRangeColour", value); }
 		}
+		public Color  BookmarkColour
+		{
+			get { return get<Color>("BookmarkColour"); }
+			set { set("BookmarkColour", value); }
+		}
 		public int    RowHeight
 		{
 			get { return get<int>("RowHeight"); }
@@ -284,6 +289,7 @@ namespace RyLogViewer
 			FileScrollWidth                 = Constants.FileScrollWidthDefault;
 			ScrollBarFileRangeColour        = Color.FromArgb(128, Color.White);
 			ScrollBarDisplayRangeColour     = Color.FromArgb(128, Color.SteelBlue);
+			BookmarkColour                  = Color.LightSkyBlue;
 			RowHeight                       = Constants.RowHeightDefault;
 			LoadLastFile                    = false;
 			LastLoadedFile                  = "";

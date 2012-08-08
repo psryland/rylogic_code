@@ -34,7 +34,7 @@ namespace pr.extn
 			return list[list.Count - 1];
 		}
 
-		/// <summary>Reize a list default constructing objects to fill</summary>
+		/// <summary>Resize a list default constructing objects to fill</summary>
 		public static void Resize<T>(this List<T> list, int newsize) where T:new()
 		{
 			list.Resize(newsize,() => new T());
@@ -75,37 +75,85 @@ namespace pr.extn
 			list[index0] = list[index1];
 			list[index1] = tmp;
 		}
-
-		/// <summary>Return the index of the occurance of an element that causes 'pred' to return true</summary>
+		
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
+		public static int IndexOf<T>(this System.Collections.IList list, Func<T,bool> pred, int start_index, int count)
+		{
+			int i; for (i = start_index; i != count && !pred((T)list[i]); ++i) {}
+			return i != count ? i : -1;
+		}
+		
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
+		public static int IndexOf<T>(this System.Collections.IList list, Func<T,bool> pred)
+		{
+			return list.IndexOf(pred, 0, list.Count);
+		}
+		
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index, int count)
 		{
 			int i; for (i = start_index; i != count && !pred(list[i]); ++i) {}
 			return i != count ? i : -1;
 		}
 		
-		/// <summary>Return the index of the occurance of an element that causes 'pred' to return true</summary>
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index)
 		{
 			return list.IndexOf(pred, start_index, list.Count);
 		}
 		
-		/// <summary>Return the index of the occurance of an element that causes 'pred' to return true</summary>
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred)
 		{
 			return list.IndexOf(pred, 0, list.Count);
 		}
 		
-		///// <summary>Return the index of the first occurance of 'item' in 'list'. Linear search</summary>
-		//public static int IndexOf<T>(this IList<T> list, T item, int start_index)
-		//{
-		//    int i = start_index;
-		//    for (; i < list.Count && !list[i].Equals(item); ++i) {}
-		//    return i < list.Count ? -1 : i;
-		//}
-		//public static int IndexOf<T>(this IList<T> list, T item)
-		//{
-		//    return list.IndexOf(item, 0);
-		//}
+		/// <summary>
+		/// Remove items from a list by predicate.
+		/// Returns the number of elements removed.</summary>
+		public static int RemoveIf<T>(this List<T> list, Func<T,bool> pred, bool stable)
+		{
+			// If stable remove is needed, use the IList version
+			if (stable)
+				return ((IList<T>)list).RemoveIf(pred);
+			
+			int end = list.Count;
+			for (int i = list.Count; i-- != 0;)
+			{
+				if (!pred(list[i])) continue;
+				list.Swap(i, --end);
+			}
+			int count = list.Count - end;
+			list.RemoveRange(end, count);
+			return count;
+		}
+		
+		/// <summary>
+		/// Remove items from a list by predicate.
+		/// Note generic list has an unstable faster version of this.
+		/// Returns the number of elements removed.</summary>
+		public static int RemoveIf<T>(this IList<T> list, Func<T,bool> pred)
+		{
+			int count = 0;
+			for (int i = list.Count; i-- != 0;)
+			{
+				if (!pred(list[i])) continue;
+				list.RemoveAt(i);
+				++count;
+			}
+			return count;
+		}
+		public static int RemoveIf<T>(this System.Collections.IList list, Func<T,bool> pred)
+		{
+			int count = 0;
+			for (int i = list.Count; i-- != 0;)
+			{
+				if (!pred((T)list[i])) continue;
+				list.RemoveAt(i);
+				++count;
+			}
+			return count;
+		}
 
 		/// <summary>Binary search using for an element using only a predicate function.
 		/// Returns the index of the element if found or the 2s-complement of the first

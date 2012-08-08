@@ -79,7 +79,16 @@
     <Compile Include="src\about.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\bookmarks.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\bookmarks_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\export.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\find.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\settings\clkaction.cs" />
@@ -99,9 +108,6 @@
     <Compile Include="src\settings\filter.cs" />
     <Compile Include="src\find_ui.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="src\find_ui.Designer.cs">
-      <DependentUpon>find_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="src\ghost_mode_ui.cs">
       <SubType>Form</SubType>
@@ -204,6 +210,9 @@
     </Compile>
     <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\bookmarks_ui.resx">
+      <DependentUpon>bookmarks_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\export_ui.resx">
       <DependentUpon>export_ui.cs</DependentUpon>
@@ -334,6 +343,7 @@
   <ItemGroup>
     <Content Include="Resources\book.png" />
     <None Include="Resources\bottom.png" />
+    <None Include="Resources\bookmark.png" />
     <Content Include="Resources\green_tick.png" />
     <EmbeddedResource Include="docs\CommandLineRef.html" />
     <Content Include="lib\ClrDump.dll">

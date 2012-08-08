@@ -127,8 +127,15 @@
   <data name="EncodingX" xml:space="preserve">
     <value>Encoding: {0}</value>
   </data>
+  <data name="IfMatch" xml:space="preserve">
+    <value>If Match...</value>
+    <comment>IfMatch column header</comment>
+  </data>
   <data name="filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\green_tick.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="AppTitle" xml:space="preserve">
     <value>RyLogViewer</value>
@@ -136,9 +143,6 @@
   </data>
   <data name="Refresh" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Refresh.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="ExportCompletedSuccessfully" xml:space="preserve">
     <value>Export completed successfully</value>
@@ -164,10 +168,6 @@
     <value>Pattern</value>
     <comment>Pattern column header</comment>
   </data>
-  <data name="InvalidFileMsg" xml:space="preserve">
-    <value>File path '{0}' is invalid or does not exist</value>
-    <comment>Show the invalid filepath</comment>
-  </data>
   <data name="ReadingXLineFromY" xml:space="preserve">
     <value>Reading the last {0} lines from {1}</value>
   </data>
@@ -178,9 +178,6 @@
   <data name="ChangeBackColour" xml:space="preserve">
     <value>Change Background Colour</value>
   </data>
-  <data name="green_down" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\green_down.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
   <data name="XmlOrCsvFileFilter" xml:space="preserve">
     <value>XML Files (*.xml)|*.xml|CSV Files (*.csv)|*.csv</value>
   </data>
@@ -189,9 +186,6 @@
   </data>
   <data name="green_up" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\green_up.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="OutputFileMissingMsg" xml:space="preserve">
-    <value>Output file missing. Please select a file to export to</value>
   </data>
   <data name="ScrollToEnd" xml:space="preserve">
     <value>Scroll to the last log file row</value>
@@ -218,10 +212,6 @@ Right click to show the highlighting dialog</value>
   <data name="Active" xml:space="preserve">
     <value>Active</value>
     <comment>Active column header</comment>
-  </data>
-  <data name="IfMatch" xml:space="preserve">
-    <value>If Match...</value>
-    <comment>IfMatch column header</comment>
   </data>
   <data name="important" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\important.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -263,6 +253,9 @@ Error: {0}</value>
   <data name="ReadingFileFailed" xml:space="preserve">
     <value>Reading File Failed</value>
   </data>
+  <data name="bottom" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\bottom.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="Highlighting" xml:space="preserve">
     <value>Highlighting</value>
     <comment>
@@ -288,6 +281,9 @@ Right click to show the filters dialog</value>
   <data name="ShowTransformsDialog" xml:space="preserve">
     <value>Left click to enable/disable transforms.
 Right click to show the transforms dialog</value>
+  </data>
+  <data name="WatchTail" xml:space="preserve">
+    <value>Automatically scroll to the bottom of the log as new data is loaded</value>
   </data>
   <data name="BuildLineIndexErrorMsg" xml:space="preserve">
     <value>The was an error while parsing the log file.
@@ -325,14 +321,24 @@ Error Details:
     <value>Could not delete pattern set file {0}.
 Error: {1}</value>
   </data>
-  <data name="ExecutablesFilter" xml:space="preserve">
-    <value>Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
+  <data name="LineEndingX" xml:space="preserve">
+    <value>Line Ending: {0}</value>
+  </data>
+  <data name="ShowActionsDialog" xml:space="preserve">
+    <value>Left click to enable/disable actions.
+Right click to show the actions dialog</value>
+  </data>
+  <data name="OutputFileMissingMsg" xml:space="preserve">
+    <value>Output file missing. Please select a file to export to</value>
   </data>
   <data name="ConfirmClearLog" xml:space="preserve">
     <value>Confirm Clear Log</value>
   </data>
-  <data name="pattern_active" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\green_tick.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ExecutablesFilter" xml:space="preserve">
+    <value>Executables (*.exe;*.bat;*.cmd;*.com)|*.exe;*.bat;*.cmd;*.com|All files (*.*)|*.*</value>
   </data>
   <data name="SettingsFileFilter" xml:space="preserve">
     <value>Settings Files (*.xml)|*.xml|All files (*.*)|*.*</value>
@@ -355,9 +361,8 @@ Error: {1}</value>
   <data name="highlight" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\highlight.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="ShowActionsDialog" xml:space="preserve">
-    <value>Left click to enable/disable actions.
-Right click to show the actions dialog</value>
+  <data name="green_down" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\green_down.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="BinaryMatch" xml:space="preserve">
     <value>Binary Match</value>
@@ -365,16 +370,17 @@ Right click to show the actions dialog</value>
   <data name="ShowOptionsDialog" xml:space="preserve">
     <value>Show the options dialog</value>
   </data>
-  <data name="WatchTail" xml:space="preserve">
-    <value>Automatically scroll to the bottom of the log as new data is loaded</value>
+  <data name="ShowBookmarksDialog" xml:space="preserve">
+    <value>Show the bookmarks dialog</value>
   </data>
-  <data name="LineEndingX" xml:space="preserve">
-    <value>Line Ending: {0}</value>
+  <data name="InvalidFileMsg" xml:space="preserve">
+    <value>File path '{0}' is invalid or does not exist</value>
+    <comment>Show the invalid filepath</comment>
   </data>
   <data name="ExportFailed" xml:space="preserve">
     <value>Export Failed</value>
   </data>
-  <data name="bottom" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\bottom.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="bookmark" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\bookmark.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

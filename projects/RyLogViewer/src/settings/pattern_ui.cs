@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
@@ -12,7 +13,7 @@ namespace RyLogViewer
 		/// <summary>Set a new pattern for the UI</summary>
 		void NewPattern(IPattern pat);
 
-		/// <summary>Select a pattern into the UI for editting</summary>
+		/// <summary>Select a pattern into the UI for editing</summary>
 		void EditPattern(IPattern pat);
 
 		/// <summary>Set focus to the primary input field</summary>
@@ -50,7 +51,7 @@ namespace RyLogViewer
 		/// <summary>Access to the test text field</summary>
 		public string TestText { get { return m_edit_test.Text; } set { m_edit_test.Text = value; } }
 
-		/// <summary>True if the editted pattern is a new instance</summary>
+		/// <summary>True if the edited pattern is a new instance</summary>
 		public bool IsNew { get; private set; }
 		
 		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
@@ -62,8 +63,9 @@ namespace RyLogViewer
 				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
 					,RegexQuickRef
 					,"Regular Expression Help"
-					,new Point(ParentForm.Right, ParentForm.Top)
-					,new Size(640,480)));
+					,new Size(1,1)
+					,new Size(640,480)
+					,ToolForm.EPin.TopRight));
 			}
 		}
 		
@@ -110,7 +112,7 @@ namespace RyLogViewer
 				};
 			
 			// Substring
-			m_radio_substring.ToolTip(m_tt, "Match any occurance of the pattern as a substring");
+			m_radio_substring.ToolTip(m_tt, "Match any occurrence of the pattern as a substring");
 			m_radio_substring.Click += (s,a)=>
 				{
 					if (m_radio_substring.Checked) Pattern.PatnType = EPattern.Substring;
@@ -179,7 +181,7 @@ namespace RyLogViewer
 			UpdateUI();
 		}
 
-		/// <summary>Select a pattern into the UI for editting</summary>
+		/// <summary>Select a pattern into the UI for editing</summary>
 		public void EditPattern(IPattern pat)
 		{
 			IsNew = false;
@@ -206,10 +208,10 @@ namespace RyLogViewer
 				
 				m_btn_add.Enabled = Pattern.ExprValid;
 				
-				// Highlight the expression background to show valid regexp
+				// Highlight the expression background to show valid regex
 				m_edit_match.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
 			
-				// Preserve the current carot position
+				// Preserve the current caret position
 				int start = m_edit_test.SelectionStart;
 				int length = m_edit_test.SelectionLength;
 				m_edit_test.SelectAll();

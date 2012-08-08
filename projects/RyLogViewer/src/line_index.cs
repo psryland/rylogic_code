@@ -35,7 +35,7 @@ namespace RyLogViewer
 			}
 		}
 		
-		/// <summary>Returns a file stream for 'filepath' openned with R/W sharing</summary>
+		/// <summary>Returns a file stream for 'filepath' opened with R/W sharing</summary>
 		private static FileStream LoadFile(string filepath, int buffer_size = 4096)
 		{
 			return new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite|FileShare.Delete, buffer_size, FileOptions.RandomAccess);
@@ -127,7 +127,7 @@ namespace RyLogViewer
 		/// <summary>
 		/// Generates the line index centred around 'filepos'.
 		/// If 'filepos' is within the byte range of 'm_line_index' then an incremental search for
-		/// lines is done in the direction needed to recentre the line list around 'filepos'.
+		/// lines is done in the direction needed to re-centre the line list around 'filepos'.
 		/// If 'reload' is true a full rescan of the file is done</summary>
 		private void BuildLineIndex(long filepos, bool reload, Action on_success = null)
 		{
@@ -311,7 +311,7 @@ namespace RyLogViewer
 								// Marshal the results back to the main thread
 								Action MergeLineIndexDelegate = () =>
 								{
-									// This lamdba runs in the main thread, so if the build issue is the same at
+									// This lambda runs in the main thread, so if the build issue is the same at
 									// the start of this method it can't be changed until after this function returns.
 									if (BuildCancelled(build_issue)) return;
 									
@@ -412,7 +412,7 @@ namespace RyLogViewer
 					if ((b & encode_mask) == encode_char) continue; // If 'b' is a byte halfway through an encoded char, keep reading
 					
 					// Otherwise it's an ascii char or the start of a multibyte char
-					// save the byte we read, and read the remander of 'count'
+					// save the byte we read, and read the remainder of 'count'
 					file.Seek(-1, SeekOrigin.Current);
 					break;
 				}

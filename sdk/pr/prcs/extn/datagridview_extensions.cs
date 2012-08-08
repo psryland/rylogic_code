@@ -247,7 +247,7 @@ namespace pr.extn
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
 		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
 		{
-			return grid.SelectedRows.Count != 0 ? grid.SelectedRows[0] : null;
+			return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
 		}
 		
 		/// <summary>

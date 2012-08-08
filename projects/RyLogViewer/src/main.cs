@@ -34,10 +34,10 @@ namespace RyLogViewer
 		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
 		private readonly List<Transform> m_transforms;        // A list of the active transforms only 
 		private readonly FindUI m_find_ui;                    // The find dialog
+		private readonly BookmarksUI m_bookmarks_ui;          // The bookmarks dialog
 		private readonly NotifyIcon m_notify_icon;            // A system tray icon
 		private readonly ToolTip m_tt;                        // Tooltips
 		private readonly ToolTip m_balloon;                   // A hint balloon tooltip
-		private Pattern m_last_find_pattern;                  // The pattern last used in a find
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
 		private string m_filepath;                            // The path of the log file we're viewing
@@ -51,34 +51,44 @@ namespace RyLogViewer
 		private int m_line_cache_count;                       // The number of lines to scan about the currently selected row
 		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
 		private bool m_alternating_line_colours;              // Cache the alternating line colours setting for performance
+		private bool m_tail_enabled;                          // Cache whether tail mode is enabled
 		private bool m_first_row_is_odd;                      // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
 
 		public Main(StartupOptions startup_options)
 		{
 			Log.Register(null, false);
 			Log.Info(this, "App Startup: {0}", DateTime.Now);
+			m_settings = new Settings(startup_options.SettingsPath);
 			
 			InitializeComponent();
-			AllowTransparency    = true;
-			m_settings           = new Settings(startup_options.SettingsPath);
+			AllowTransparency = true;
+			if (m_settings.RestoreScreenLoc)
+			{
+				StartPosition = FormStartPosition.Manual;
+				Location = m_settings.ScreenPosition;
+				Size = m_settings.WindowSize;
+			}
+			
 			m_recent             = new RecentFiles(m_menu_file_recent, OpenLogFile);
 			m_watch              = new FileWatch();
 			m_watch_timer        = new Timer{Interval = Constants.FilePollingRate};
 			m_batch_set_col_size = new EventBatcher(100, this);
 			m_highlights         = new List<Highlight>();
 			m_transforms         = new List<Transform>();
-			m_find_ui            = new FindUI(m_settings){Visible = false};
+			m_bookmarks          = new BindingSource{DataSource = new BindingList<Bookmark>()};
+			m_find_ui            = new FindUI(this, m_settings){Visible = false};
+			m_bookmarks_ui       = new BookmarksUI(this, m_bookmarks){Visible = false};
 			m_tt                 = new ToolTip();
 			m_balloon            = new ToolTip{IsBalloon = true};
 			m_notify_icon        = new NotifyIcon{Icon = Icon};
 			m_line_index         = new List<Range>();
-			m_last_find_pattern  = null;
 			m_filepath           = null;
 			m_file               = null;
 			m_filepos            = 0;
 			m_fileend            = 0;
 			m_bufsize            = m_settings.FileBufSize;
 			m_line_cache_count   = m_settings.LineCacheCount;
+			m_tail_enabled       = m_settings.TailEnabled;
 			
 			// Startup options
 			ApplyStartupOptions(startup_options);
@@ -100,6 +110,11 @@ namespace RyLogViewer
 			m_menu_edit_find.Click                  += (s,a) => ShowFindDialog();
 			m_menu_edit_find_next.Click             += (s,a) => FindNext(m_last_find_pattern);
 			m_menu_edit_find_prev.Click             += (s,a) => FindPrev(m_last_find_pattern);
+			m_menu_edit_toggle_bookmark.Click       += (s,a) => ToggleBookmark(SelectedRow);
+			m_menu_edit_next_bookmark.Click         += (s,a) => NextBookmark();
+			m_menu_edit_prev_bookmark.Click         += (s,a) => PrevBookmark();
+			m_menu_edit_clearall_bookmarks.Click    += (s,a) => m_bookmarks.Clear();
+			m_menu_edit_bookmarks.Click             += (s,a) => ShowBookmarksDialog();
 			m_menu_encoding_detect.Click            += (s,a) => SetEncoding(null);
 			m_menu_encoding_ascii.Click             += (s,a) => SetEncoding(Encoding.ASCII           );
 			m_menu_encoding_utf8.Click              += (s,a) => SetEncoding(Encoding.UTF8            );
@@ -143,6 +158,8 @@ namespace RyLogViewer
 			m_btn_actions.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Actions); };
 			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
 			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
+			m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
+			m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
 			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
 			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRow = 0);
 			m_btn_jump_to_end.ToolTipText   = Resources.ScrollToEnd;
@@ -154,10 +171,9 @@ namespace RyLogViewer
 			m_btn_additive.ToolTipText      = Resources.AdditiveMode;
 			m_btn_additive.Click           += (s,a) => EnableAdditive(m_btn_additive.Checked);
 			ToolStripManager.Renderer       = new CheckedButtonRenderer();
-
+			
 			// Scrollbar
 			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file");
-			m_scroll_file.Ranges.Resize(3);
 			m_scroll_file.ScrollEnd += (s,a)=>
 				{
 					// Update on ScrollEnd not value changed, since
@@ -210,10 +226,14 @@ namespace RyLogViewer
 			m_batch_set_col_size.Action += SetGridColumnSizesImpl;
 			
 			// Find
-			m_find_ui.Tag = Size.Empty;
 			m_find_ui.FindNext += FindNext;
 			m_find_ui.FindPrev += FindPrev;
-			m_find_ui.Move     += (s,e)=> { m_find_ui.Tag = new Size(m_find_ui.Location.X - Location.X, m_find_ui.Location.Y - Location.Y); };
+			
+			// Bookmarks
+			m_bookmarks.CurrentChanged     += (s,a) => SelectBookmark((Bookmark)m_bookmarks.Current);
+			m_bookmarks.CurrentItemChanged += (s,a) => SelectBookmark((Bookmark)m_bookmarks.Current);
+			m_bookmarks_ui.NextBookmark    += NextBookmark;
+			m_bookmarks_ui.PrevBookmark    += PrevBookmark;
 			
 			// Startup
 			Shown += (s,a)=> Startup(startup_options);
@@ -228,12 +248,6 @@ namespace RyLogViewer
 			// Resize
 			SizeChanged += (s,a)=> UpdateUI();
 
-			// Main window move
-			Move += (s,a)=>
-				{
-					m_find_ui.Location = Location + (Size)m_find_ui.Tag;
-				};
-			
 			// Shutdown
 			FormClosing += (s,a) =>
 				{
@@ -298,15 +312,7 @@ namespace RyLogViewer
 		/// <summary>Called the first time the app is displayed</summary>
 		private void Startup(StartupOptions su)
 		{
-			// Last screen position
-			if (m_settings.RestoreScreenLoc)
-			{
-				Location = m_settings.ScreenPosition;
-				Size = m_settings.WindowSize;
-				m_find_ui.Tag = new Size(Size.Width - m_find_ui.Width - 8, 28);
-			}
-			
-			// Parse commandline
+			// Parse command line
 			if (su.FileToLoad != null)
 			{
 				OpenLogFile(su.FileToLoad);
@@ -370,7 +376,7 @@ namespace RyLogViewer
 					filepath = fd.FileName;
 				}
 			
-				// Reject invalid filepaths
+				// Reject invalid file paths
 				if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
 				{
 					MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
@@ -480,25 +486,41 @@ namespace RyLogViewer
 				e.CellStyle.ApplyStyle(cs);
 			}
 			
-			// Check if the cell value has a highlight pattern it matches
-			Highlight hl = (e.RowIndex != -1) ? ReadLine(e.RowIndex)[e.ColumnIndex].HL : null;
-			if (hl == null)
+			if (e.RowIndex != -1)
 			{
-				e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
-				e.PaintContent(e.ClipBounds);
-			}
-			else if (hl.BinaryMatch)
-			{
-				e.CellStyle.BackColor = hl.BackColour;
-				e.CellStyle.ForeColor = hl.ForeColour;
-				e.PaintBackground(e.ClipBounds, false);
-				e.PaintContent(e.ClipBounds);
-			}
-			else
-			{
-				//todo
-				e.PaintBackground(e.ClipBounds, false);
-				e.PaintContent(e.ClipBounds);
+				// Read the line from the cache
+				var line = ReadLine(e.RowIndex);
+				var hl   = line[e.ColumnIndex].HL;
+				
+				// If the line is bookmarked, use the bookmark colour
+				if (m_bookmarks.Count != 0 && m_bookmarks.List.IndexOf<Bookmark>(x => x.Range.Contains(line.LineStartAddr)) != -1)
+				{
+					e.CellStyle.BackColor = m_settings.BookmarkColour;
+					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
+					e.PaintContent(e.ClipBounds);
+				}
+				// Check if the cell value has a highlight pattern it matches
+				else if (hl != null)
+				{
+					if (hl.BinaryMatch)
+					{
+						e.CellStyle.BackColor = hl.BackColour;
+						e.CellStyle.ForeColor = hl.ForeColour;
+						e.PaintBackground(e.ClipBounds, false);
+						e.PaintContent(e.ClipBounds);
+					}
+					else
+					{
+						//todo
+						e.PaintBackground(e.ClipBounds, false);
+						e.PaintContent(e.ClipBounds);
+					}
+				}
+				else
+				{
+					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
+					e.PaintContent(e.ClipBounds);
+				}
 			}
 			e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, m_grid.DefaultCellStyle.SelectionBackColor, 0.7f);
 		}
@@ -534,6 +556,10 @@ namespace RyLogViewer
 		/// <summary>Handle grid context menu actions</summary>
 		private void GridContextMenu(object sender, ToolStripItemClickedEventArgs args)
 		{
+			// Note: I'm not attaching event handlers to each context menu item because
+			// some items require the selected row to be set and some don't. Plus the
+			// individual handlers don't have access to the click location
+			
 			// Clipboard operations
 			if (args.ClickedItem == m_cmenu_copy      ) { DataGridView_Extensions.Copy(m_grid);      return; }
 			if (args.ClickedItem == m_cmenu_select_all) { DataGridView_Extensions.SelectAll(m_grid); return; }
@@ -551,7 +577,10 @@ namespace RyLogViewer
 			
 			// Find operations
 			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(); return; }
-			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(); }//return; }
+			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(); return; }
+			
+			// Bookmarks
+			if (args.ClickedItem == m_cmenu_toggle_bookmark) { ToggleBookmark(hit.RowIndex); }
 		}
 
 		/// <summary>Called when the grid is scrolled</summary>
@@ -568,130 +597,50 @@ namespace RyLogViewer
 		private void LoadNearBoundary()
 		{
 			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit) return;
-			const float limit = 1f / Constants.AutoScrollAtBoundaryLimit;
+			const float Limit = 1f / Constants.AutoScrollAtBoundaryLimit;
 			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount - 1);
-			if (ratio < 0f + limit) BuildLineIndex(LineStartIndexRange.Begin, false);
-			if (ratio > 1f - limit) BuildLineIndex(LineStartIndexRange.End  , false);
+			if (ratio < 0f + Limit) BuildLineIndex(LineStartIndexRange.Begin, false);
+			if (ratio > 1f - Limit) BuildLineIndex(LineStartIndexRange.End  , false);
 		}
 
 		/// <summary>Handle key down events for the grid</summary>
-		private void HandleKeyDown(KeyEventArgs e)
+		public void HandleKeyDown(KeyEventArgs e)
 		{
-			if (e.KeyCode == Keys.Escape)                { CancelBuildLineIndex(); }
-			if (e.KeyCode == Keys.F5)                    { BuildLineIndex(m_filepos, true); e.Handled = true; }
-			if (e.KeyCode == Keys.PageUp && e.Control)   { BuildLineIndex(0        , false, () => SelectedRow = 0                  ); e.Handled = true; }
-			if (e.KeyCode == Keys.PageDown && e.Control) { BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1); e.Handled = true; }
 			e.Handled = false;
-		}
-		
-		/// <summary>Show the find dialog</summary>
-		private void ShowFindDialog()
-		{
-			// Initialise the find string from the selected row
-			int init_row = SelectedRow;
-			if (init_row != -1)
-				m_find_ui.Pattern = ReadLine(init_row).RowText;
-			
-			// Display the find window
-			m_find_ui.Location = Location + (Size)m_find_ui.Tag;
-			if (!m_find_ui.Visible)
-				m_find_ui.Show(this);
-			else
-				m_find_ui.Focus();
-		}
-		
-		/// <summary>Searches the file from 'start' looking for a match to 'pat'</summary>
-		/// <returns>Returns true if a match is found, false otherwise. If true
-		/// is returned 'found' contains the file byte offset of the first match</returns>
-		private bool Find(Pattern pat, long start, bool backward, out long found)
-		{
-			// Although this search runs in a background thread, it's wrapped in a modal
-			// dialog box, so it should be ok to use class members directly
-			
-			long at = -1;
-			ProgressForm search = new ProgressForm("Searching...", "", (s,a)=>
-				{
-					BackgroundWorker bgw = (BackgroundWorker)s;
-					
-					using (var file = LoadFile(m_filepath))
-					{
-						int last_progress     = 0;
-						bool ignore_blanks    = m_settings.IgnoreBlankLines;
-						List<Filter> filters  = ActiveFilters.ToList();
-						AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
-							{
-								int progress = backward
-									? (int)(100 * (1f - Maths.Ratio(0, baddr + line.Begin, start)))
-									: (int)(100 * Maths.Ratio(start, baddr + line.End ,m_fileend));
-								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
-								
-								// Ignore blanks?
-								if (line.Empty && ignore_blanks)
-									return true;
-								
-								// Keep searching while the text is filtered out or doesn't match the pattern
-								string text = m_encoding.GetString(bf, (int)line.Begin, (int)line.Count);
-								if (!PassesFilters(text, filters) || !pat.IsMatch(text))
-									return true;
-								
-								// Found a match
-								at = baddr + line.Begin;
-								return false; // Stop searching
-							};
-						
-						// Search for files
-						byte[] buf = new byte[m_settings.MaxLineLength];
-						long count = backward ? start - 0 : m_fileend - start;
-						FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, (c,l) => !bgw.CancellationPending);
-						
-						// We can call BuildLineIndex in this thread context because we know
-						// we're in a modal dialog.
-						if (at != -1)
-						{
-							Action select = ()=>SelectRowByAddr(at);
-							Invoke(select);
-						}
-						
-						a.Cancel = bgw.CancellationPending;
-					}
-				}){StartPosition = FormStartPosition.CenterParent};
-			
-			DialogResult res = DialogResult.Cancel;
-			try
+			switch (e.KeyCode)
 			{
-				m_last_find_pattern = pat;
-				res = search.ShowDialog(this);
+			case Keys.Escape:
+				CancelBuildLineIndex();
+				e.Handled = true;
+				break;
+			case Keys.F5:
+				BuildLineIndex(m_filepos, true);
+				e.Handled = true;
+				break;
+			case Keys.F2:
+				if (!e.Shift) NextBookmark();
+				else          PrevBookmark();
+				e.Handled = true;
+				break;
+				check this... handling Key presses
+			case Keys.PageUp:
+			case Keys.PageDown:
+				if (e.Control)
+				{
+					if (e.KeyCode == Keys.PageUp  ) BuildLineIndex(0        , false, () => SelectedRow = 0                  );
+					if (e.KeyCode == Keys.PageDown) BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+					e.Handled = true;
+				}
+				break;
+			case Keys.Tab:
+				if (e.Control)
+				{
+					if      (m_find_ui     .Visible) m_find_ui     .Focus();
+					else if (m_bookmarks_ui.Visible) m_bookmarks_ui.Focus();
+					e.Handled = true;
+				}
+				break;
 			}
-			catch (OperationCanceledException) {}
-			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Find terminated by an error.", "Find error"); }
-			found = at;
-			return res == DialogResult.OK;
-		}
-		
-		/// <summary>Search for the next occurance of a pattern in the file</summary>
-		private void FindNext(Pattern pat)
-		{
-			if (pat == null || m_grid.RowCount == 0) return;
-			
-			var start = m_line_index[SelectedRow].End;
-			Log.Info(this, "FindNext starting from {0}", start);
-			
-			long found;
-			if (Find(pat, start, false, out found) && found == -1)
-				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
-		}
-		
-		/// <summary>Search for an earlier occurance of a pattern in the grid</summary>
-		private void FindPrev(Pattern pat)
-		{
-			if (pat == null || m_grid.RowCount == 0) return;
-			
-			var start = SelectedRowRange.Begin;
-			Log.Info(this, "FindPrev starting from {0}", start);
-			
-			long found;
-			if (Find(pat, start, true, out found) && found == -1)
-				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue);
 		}
 		
 		/// <summary>Handle file drop</summary>
@@ -754,8 +703,11 @@ namespace RyLogViewer
 		/// <summary>Turn on/off tail mode</summary>
 		private void EnableTail(bool enabled)
 		{
-			m_settings.TailEnabled = enabled;
-			UpdateUI();
+			if (enabled != m_tail_enabled)
+			{
+				m_settings.TailEnabled = m_tail_enabled = enabled;
+				UpdateUI();
+			}
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
@@ -1060,14 +1012,23 @@ namespace RyLogViewer
 		/// <summary>Selected the row in the file that contains the byte offset 'addr'</summary>
 		private void SelectRowByAddr(long addr)
 		{
-			// Ensure 'addr' is cached
-			BuildLineIndex(addr, false, ()=>
+			// If 'addr' is within the currently loaded range, select the row now
+			if (LineIndexRange.Contains(addr))
 			{
-				// When the file is cached, select the row
-				int idx = m_line_index.BinarySearch(r => r.End < addr ? -1 : r.Begin > addr ? 1 : 0);
-				if (idx < 0) idx = ~idx;
-				SelectedRow = idx;
-			});
+				SelectedRow = LineIndex(m_line_index, addr);
+			}
+			// Otherwise, load the range around 'addr', then select the row
+			else
+			{
+				BuildLineIndex(addr, false, ()=> SelectedRow = LineIndex(m_line_index, addr));
+				//{
+				//    // When the file is cached, select the row
+					
+				//    //int idx = m_line_index.BinarySearch(r => r.End < addr ? -1 : r.Begin > addr ? 1 : 0);
+				//    //if (idx < 0) idx = ~idx;
+				//    //SelectedRow = idx;
+				//});
+			}
 		}
 
 		/// <summary>
@@ -1075,7 +1036,12 @@ namespace RyLogViewer
 		/// Setting the selected row clamps to the range [0,RowCount) and makes it visible in the grid (if possible)</summary>
 		private int SelectedRow
 		{
-			get { return m_grid.SelectedRows.Count != 0 ? m_grid.SelectedRows[0].Index : -1; }
+			get
+			{
+				return m_grid.GetCellCount(DataGridViewElementStates.Selected) != 0
+					? m_grid.SelectedRows[0].Index
+					: -1;
+			}
 			set
 			{
 				using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
@@ -1084,11 +1050,11 @@ namespace RyLogViewer
 					Log.Info(this, "Row {0} selected", value);
 					
 					if (m_grid.RowCount != 0 && value != -1)
-					{
-						int display_row = value - m_grid.DisplayedRowCount(true) / 2;
-						m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
+					//{
+					//    int display_row = value - m_grid.DisplayedRowCount(true) / 2;
+					//    m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
 						UpdateStatus();
-					}
+					//}
 				}
 			}
 		}
@@ -1096,7 +1062,7 @@ namespace RyLogViewer
 		/// <summary>Return true if we should auto scroll</summary>
 		private bool AutoScrollTail
 		{
-			get { return m_settings.TailEnabled; }
+			get { return m_tail_enabled; }
 		}
 
 		/// <summary>Scroll the grid to make the last row visible</summary>
@@ -1208,12 +1174,12 @@ namespace RyLogViewer
 		/// This method is called on startup to apply initial settings and
 		/// after the settings dialog has been shown and closed. It needs to
 		/// update anything that is only changed in the settings.
-		/// Note: it does't trigger a file reload.</summary>
+		/// Note: it doesn't trigger a file reload.</summary>
 		private void ApplySettings()
 		{
 			Log.Info(this, "Applying settings");
 			
-			// Cached settings for performance, don't overwrite auto detected cached values tho
+			// Cached settings for performance, don't overwrite auto detected cached values though
 			m_encoding                 = GetEncoding(m_settings.Encoding);
 			m_row_delim                = GetRowDelim(m_settings.RowDelimiter);
 			m_col_delim                = GetColDelim(m_settings.ColDelimiter);
@@ -1221,6 +1187,7 @@ namespace RyLogViewer
 			m_bufsize                  = m_settings.FileBufSize;
 			m_line_cache_count         = m_settings.LineCacheCount;
 			m_alternating_line_colours = m_settings.AlternateLineColours;
+			m_tail_enabled             = m_settings.TailEnabled;
 			
 			// Tail
 			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
@@ -1262,7 +1229,7 @@ namespace RyLogViewer
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
 			
-			// Ensure rows are rerendered
+			// Ensure rows are re-rendered
 			InvalidateCache();
 			UpdateUI();
 		}
@@ -1316,6 +1283,11 @@ namespace RyLogViewer
 				m_menu_edit_find.Enabled                  = file_open;
 				m_menu_edit_find_next.Enabled             = file_open;
 				m_menu_edit_find_prev.Enabled             = file_open;
+				m_menu_edit_toggle_bookmark.Enabled       = file_open;
+				m_menu_edit_next_bookmark.Enabled         = file_open;
+				m_menu_edit_prev_bookmark.Enabled         = file_open;
+				m_menu_edit_clearall_bookmarks.Enabled    = file_open;
+				m_menu_edit_bookmarks.Enabled             = file_open;
 				m_menu_encoding_detect           .Checked = enc.Length == 0;
 				m_menu_encoding_ascii            .Checked = enc == Encoding.ASCII.EncodingName;
 				m_menu_encoding_utf8             .Checked = enc == Encoding.UTF8.EncodingName;
@@ -1336,12 +1308,6 @@ namespace RyLogViewer
 				m_btn_tail.Checked       = m_settings.TailEnabled;
 				m_btn_watch.Checked      = m_watch_timer.Enabled;
 				m_btn_additive.Checked   = m_settings.FileChangesAdditive;
-			
-				// The file scroll bar is only visible when part of the file is loaded
-				m_scroll_file.Width = m_settings.FileScrollWidth;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange     ].Color = m_settings.ScrollBarFileRangeColour;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Color = m_settings.ScrollBarDisplayRangeColour;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange ].Color = m_settings.LineSelectBackColour;
 			
 				// Status and title
 				UpdateStatus();
@@ -1413,6 +1379,7 @@ namespace RyLogViewer
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
+			// The file scroll bar is only visible when part of the file is loaded
 			if (m_line_index.Count == m_settings.LineCacheCount || m_fileend > m_settings.FileBufSize)
 			{
 				Range range = LineIndexRange;
@@ -1422,9 +1389,17 @@ namespace RyLogViewer
 				m_scroll_file.Visible    = true;
 				m_scroll_file.TotalRange = FileByteRange;
 				m_scroll_file.ThumbRange = range;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.FileRange     ].Range = range;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.DisplayedRange].Range = DisplayedRowsRange;
-				m_scroll_file.Ranges[(int)SubRangeScrollRange.SelectedRange ].Range = SelectedRowRange;
+				m_scroll_file.Width      = m_settings.FileScrollWidth;
+				
+				m_scroll_file.Ranges.Clear();
+				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(range              ,m_settings.ScrollBarFileRangeColour   ));
+				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(DisplayedRowsRange ,m_settings.ScrollBarDisplayRangeColour));
+				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(SelectedRowRange   ,m_settings.LineSelectBackColour       ));
+				
+				// Add marks for the bookmarked positions
+				var bkmark_colour = m_settings.BookmarkColour;
+				foreach (var bk in m_bookmarks)
+					m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(((Bookmark)bk).Range, bkmark_colour));
 			}
 			else
 			{
@@ -1449,7 +1424,7 @@ namespace RyLogViewer
 			timer.Tick += (s,a)=>
 				{
 					// When the timer fires, if we're still associated with
-					// the status message, null out the text and remove ourself
+					// the status message, null out the text and remove our self
 					if (s != m_status_message.Tag) return;
 					m_status_message.Text = Resources.Idle;
 					m_status_message.Visible = false;
