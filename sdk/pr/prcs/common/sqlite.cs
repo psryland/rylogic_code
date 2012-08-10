@@ -1,5 +1,4 @@
-﻿#define SQLITE_TRACE
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,17 +12,31 @@ using pr.common;
 using sqlite3      = System.IntPtr;
 using sqlite3_stmt = System.IntPtr;
 
+// Usage:
+// - Your domain objects must be classes with a default constructor.
+// - Create a type and attribute it using these attribute types
+//   (see comments within each type for details):
+//      Sqlite.TableAttribute
+//      Sqlite.ColumnAttribute
+//      Sqlite.IgnoreAttribute
+// - Open a database connection using an instance of 'Sqlite.Database'
+// - Create/Access tables, insert, update, delete, transact, etc
+// - See the unit tests for example usages
+//
 // Notes:
 // Trace/Debugging:
-//  Define SQLITE_TRACE to trace query object creation and destruction
+//  Define SQLITE_TRACE to trace query object creation and destruction.
+//  This will help if you get an exception on shutdown saying there are
+//  still open statements that haven't been finalised.
 //
 // Decimals:
-//  Deliberately not supporting decimals by default because the whole
-//  point of decimal is accuracy. Sqlite only uses 8bytes to store a real
-//  so the 128bit decimal numbers lose too much accuracy when stored.
-//  Use doubles instead, or blobs.
+//  Decimals are deliberately not supported here because sqlite does not
+//  use sufficient accuracy to store them. Sqlite only uses 8 bytes to
+//  store a real so the 128bit decimal numbers lose too much accuracy
+//  when stored. You can add custom Bind/Read functions if you still wish
+//  to use decimals. Otherwise, strings or blobs are probably a better idea.
 //
-// ICustomAccessors:
+// Custom Accessors:
 //  I considered an ICustomAccessors interface where custom types would
 //  provide custom method for 'getting' and 'setting' themselves, however
 //  this approach won't work for 3rd party types (e.g. Size, Point, etc)
@@ -31,6 +44,8 @@ using sqlite3_stmt = System.IntPtr;
 //  ClrType to indicate the type returned by their get/set methods, since
 //  the meta data is generated from type information without an instance,
 //  an interface is not appropriate for getting this type.
+//  For custom types use the BindFunction/ReadFunction map to convert your
+//  custom type to one of the supported sqlite data types.
 
 namespace pr.common
 {
@@ -912,116 +927,6 @@ namespace pr.common
 			}
 		}
 
-		/// <summary>A specialised query used for inserting objects into a table</summary>
-		public class InsertCmd<T> :Query where T:class,new()
-		{
-			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
-
-			/// <summary>Returns the sql string for the insert command for type 'T'</summary>
-			public static string SqlString(OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			{
-				string cons;
-				switch (on_constraint) {
-				default: throw Exception.New(Result.Misuse, "Unknown OnConstraint behaviour");
-				case OnInsertConstraint.Reject:  cons = ""; break;
-				case OnInsertConstraint.Ignore:  cons = "or ignore"; break;
-				case OnInsertConstraint.Replace: cons = "or replace"; break;
-				}
-				var meta = TableMetaData.GetMetaData<T>();
-				return Sql(
-					"insert ",cons," into ",meta.Name," (",
-					string.Join(",", from c in meta.NonAutoIncs select c.Name),
-					") values (",
-					string.Join(",", from c in meta.NonAutoIncs select "?"),
-					")");
-			}
-
-			/// <summary>
-			/// Creates a compiled query for inserting an object of type 'T' into a table.
-			/// Users can then bind values, and run the query repeatedly to insert multiple items</summary>
-			public InsertCmd(Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject) :base(db, SqlString(on_constraint))
-			{}
-
-			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
-			public void BindObj(T item)
-			{
-				m_meta.BindObj(m_stmt, 1, item);
-			}
-
-			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
-			public int Run()
-			{
-				Step();
-				Debug.Assert(RowEnd, "Insert returned more than one row");
-				return RowsChanged;
-			}
-		}
-
-		/// <summary>A specialised query used for getting objects from the db</summary>
-		public class GetCmd<T> :Query where T:class,new()
-		{
-			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
-
-			/// <summary>Returns the sql string for the get command for type 'T'</summary>
-			public static string SqlString()
-			{
-				var meta = TableMetaData.GetMetaData<T>();
-				return Sql("select * from ",meta.Name," where ",meta.PkConstraints());
-			}
-
-			/// <summary>
-			/// Create a compiled query for getting an object of type 'T' from a table.
-			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
-			public GetCmd(Database db) :base(db, SqlString())
-			{}
-
-			/// <summary>
-			/// Populates 'item' and returns true if the query finds a row, otherwise returns false.
-			/// Remember to call 'Reset()' before running the command again</summary>
-			public T Find()
-			{
-				Step();
-				if (RowEnd) return null;
-				var item = new T();
-				m_meta.Read(m_stmt, item);
-				return item;
-			}
-		}
-
-		/// <summary>A specialised query used for getting objects from the db</summary>
-		public class SelectAllCmd<T> :Query ,IEnumerable<T> where T:class,new()
-		{
-			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
-
-			/// <summary>Returns the sql string for the get command for type 'T'</summary>
-			public static string SqlString()
-			{
-				var meta = TableMetaData.GetMetaData<T>();
-				return Sql("select * from ",meta.Name);
-			}
-
-			/// <summary>
-			/// Create a compiled query for getting an object of type 'T' from a table.
-			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
-			public SelectAllCmd(Database db) :base(db, SqlString())
-			{}
-
-			/// <summary>Enumerates all rows in a table</summary>
-			public IEnumerator<T> GetEnumerator()
-			{
-				while (Step())
-				{
-					var item = new T();
-					m_meta.Read(m_stmt, item);
-					yield return item;
-				}
-			}
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
-			}
-		}
-
 		/// <summary>Mapping information from a type to columns in the table</summary>
 		public class TableMetaData
 		{
@@ -1319,6 +1224,120 @@ namespace pr.common
 				return string.Format("{0}{1} [{2}]" ,IsPk?"*":"" ,Name ,SqlDataType);
 			}
 		}
+
+		#region Specialised query sub-classes
+
+		/// <summary>A specialised query used for inserting objects into a table</summary>
+		public class InsertCmd<T> :Query where T:class,new()
+		{
+			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
+
+			/// <summary>Returns the sql string for the insert command for type 'T'</summary>
+			public static string SqlString(OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			{
+				string cons;
+				switch (on_constraint) {
+				default: throw Exception.New(Result.Misuse, "Unknown OnConstraint behaviour");
+				case OnInsertConstraint.Reject:  cons = ""; break;
+				case OnInsertConstraint.Ignore:  cons = "or ignore"; break;
+				case OnInsertConstraint.Replace: cons = "or replace"; break;
+				}
+				var meta = TableMetaData.GetMetaData<T>();
+				return Sql(
+					"insert ",cons," into ",meta.Name," (",
+					string.Join(",", from c in meta.NonAutoIncs select c.Name),
+					") values (",
+					string.Join(",", from c in meta.NonAutoIncs select "?"),
+					")");
+			}
+
+			/// <summary>
+			/// Creates a compiled query for inserting an object of type 'T' into a table.
+			/// Users can then bind values, and run the query repeatedly to insert multiple items</summary>
+			public InsertCmd(Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject) :base(db, SqlString(on_constraint))
+			{}
+
+			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
+			public void BindObj(T item)
+			{
+				m_meta.BindObj(m_stmt, 1, item);
+			}
+
+			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
+			public int Run()
+			{
+				Step();
+				Debug.Assert(RowEnd, "Insert returned more than one row");
+				return RowsChanged;
+			}
+		}
+
+		/// <summary>A specialised query used for getting objects from the db</summary>
+		public class GetCmd<T> :Query where T:class,new()
+		{
+			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
+
+			/// <summary>Returns the sql string for the get command for type 'T'</summary>
+			public static string SqlString()
+			{
+				var meta = TableMetaData.GetMetaData<T>();
+				return Sql("select * from ",meta.Name," where ",meta.PkConstraints());
+			}
+
+			/// <summary>
+			/// Create a compiled query for getting an object of type 'T' from a table.
+			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
+			public GetCmd(Database db) :base(db, SqlString())
+			{}
+
+			/// <summary>
+			/// Populates 'item' and returns true if the query finds a row, otherwise returns false.
+			/// Remember to call 'Reset()' before running the command again</summary>
+			public T Find()
+			{
+				Step();
+				if (RowEnd) return null;
+				var item = new T();
+				m_meta.Read(m_stmt, item);
+				return item;
+			}
+		}
+
+		/// <summary>A specialised query used for getting objects from the db</summary>
+		public class SelectAllCmd<T> :Query ,IEnumerable<T> where T:class,new()
+		{
+			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
+
+			/// <summary>Returns the sql string for the get command for type 'T'</summary>
+			public static string SqlString()
+			{
+				var meta = TableMetaData.GetMetaData<T>();
+				return Sql("select * from ",meta.Name);
+			}
+
+			/// <summary>
+			/// Create a compiled query for getting an object of type 'T' from a table.
+			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
+			public SelectAllCmd(Database db) :base(db, SqlString())
+			{}
+
+			/// <summary>Enumerates all rows in a table</summary>
+			public IEnumerator<T> GetEnumerator()
+			{
+				while (Step())
+				{
+					var item = new T();
+					m_meta.Read(m_stmt, item);
+					yield return item;
+				}
+			}
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return GetEnumerator();
+			}
+		}
+
+		#endregion
 
 		#region Attribute types
 
@@ -1683,6 +1702,7 @@ namespace pr
 			[Sqlite.Column(Order=16)] public Guid         m_guid;
 			[Sqlite.Column(Order=17)] public SomeEnum     m_enum;
 			[Sqlite.Column(Order=18, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
+			
 			// ReSharper disable UnusedAutoPropertyAccessor.Local
 			public int Ignored { get; set; }
 			// ReSharper restore UnusedAutoPropertyAccessor.Local
@@ -2145,8 +2165,6 @@ namespace pr
 				Assert.AreEqual(objs.Count, table.RowCount);
 			}
 		}
-		
-		//todo: collation
 	}
 }
 #endif
