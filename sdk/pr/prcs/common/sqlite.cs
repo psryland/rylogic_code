@@ -218,7 +218,7 @@ namespace pr.common
 			return Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(str));
 		}
 
-		/// <summary>Converts an IntPtr that points to a null terminated utf-8 string in a .NET string</summary>
+		/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string in a .NET string</summary>
 		private static string UTF8toStr(IntPtr utf8ptr)
 		{
 			if (utf8ptr == IntPtr.Zero) return null;
@@ -480,6 +480,12 @@ namespace pr.common
 				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
 			}
 
+			/// <summary>Returns the db handle after asserting it's validity</summary>
+			public sqlite3 Handle
+			{
+				get { Debug.Assert(m_db != IntPtr.Zero, "Invalid database handle"); return m_db; }
+			}
+
 			/// <summary>
 			/// Sets the busy timeout period in milliseconds. This controls how long the thread
 			/// sleeps for when waiting to gain a lock on a table. After this timeout period Step()
@@ -488,15 +494,9 @@ namespace pr.common
 			{
 				set
 				{
-					var res = sqlite3_busy_timeout(Db, value);
+					var res = sqlite3_busy_timeout(Handle, value);
 					if (res != Result.OK) throw Exception.New(res, "Failed to set the busy timeout to "+value+"ms");
 				}
-			}
-
-			/// <summary>Returns the m_db field after asserting it's validity</summary>
-			private sqlite3 Db
-			{
-				get { Debug.Assert(m_db != IntPtr.Zero, "Invalid database handle"); return m_db; }
 			}
 
 			/// <summary>Close a database file</summary>
@@ -527,7 +527,7 @@ namespace pr.common
 			/// </summary>
 			public Query ExecuteQuery(string sql)
 			{
-				var query = new Query(Db, sql);
+				var query = new Query(this, sql);
 				query.Step();
 				return query;
 			}
@@ -586,7 +586,7 @@ namespace pr.common
 			/// <summary>Return an existing table for type 'T'</summary>
 			public Table<T> Table<T>() where T:class,new()
 			{
-				return new Table<T>(Db);
+				return new Table<T>(this);
 			}
 			// ReSharper restore MemberHidesStaticFromOuterClass
 
@@ -601,11 +601,11 @@ namespace pr.common
 		public class Table<T> :IEnumerable<T> where T:class,new()
 		{
 			private readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
-			private readonly sqlite3 m_db; // The handle for the database connection
+			private readonly Database m_db; // The handle for the database connection
 				
-			public Table(sqlite3 db)
+			public Table(Database db)
 			{
-				Debug.Assert(db != null, "Invalid database handle");
+				Debug.Assert(db.Handle != null, "Invalid database handle");
 				m_db = db;
 			}
 
@@ -619,6 +619,12 @@ namespace pr.common
 			public int ColumnCount
 			{
 				get { return m_meta.ColumnCount; }
+			}
+
+			/// <summary>Returns the number of rows in this table</summary>
+			public int RowCount
+			{
+				get { return m_db.ExecuteScalar("select count(*) from "+m_meta.Name); }
 			}
 
 			// ReSharper disable MemberHidesStaticFromOuterClass
@@ -648,7 +654,7 @@ namespace pr.common
 			public int Insert(T item, out int last_row_id, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
 				int res = Insert(item, on_constraint);
-				last_row_id = (int)sqlite3_last_insert_rowid(m_db);
+				last_row_id = (int)sqlite3_last_insert_rowid(m_db.Handle);
 				return res;
 			}
 
@@ -762,7 +768,7 @@ namespace pr.common
 				m_stmt = stmt;
 				m_row_end = false;
 			}
-			public Query(sqlite3 db, string sql_string) :this(Compile(db, sql_string))
+			public Query(Database db, string sql_string) :this(Compile(db.Handle, sql_string))
 			{
 			}
 			~Query()
@@ -892,6 +898,12 @@ namespace pr.common
 				return Marshal.PtrToStringUni(sqlite3_column_name16(Stmt, idx));
 			}
 
+			/// <summary>Enumerates the columns in the result</summary>
+			public IEnumerable<string> ColumnNames
+			{
+				get { for (int i = 0, iend= ColumnCount; i != iend; ++i) yield return ColumnName(i); }
+			}
+
 			/// <summary>Read the value of a particular column</summary>
 			public T ReadColumn<T>(int idx)
 			{
@@ -927,7 +939,7 @@ namespace pr.common
 			/// <summary>
 			/// Creates a compiled query for inserting an object of type 'T' into a table.
 			/// Users can then bind values, and run the query repeatedly to insert multiple items</summary>
-			public InsertCmd(sqlite3 db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject) :base(db, SqlString(on_constraint))
+			public InsertCmd(Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject) :base(db, SqlString(on_constraint))
 			{}
 
 			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
@@ -960,7 +972,7 @@ namespace pr.common
 			/// <summary>
 			/// Create a compiled query for getting an object of type 'T' from a table.
 			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
-			public GetCmd(sqlite3 db) :base(db, SqlString())
+			public GetCmd(Database db) :base(db, SqlString())
 			{}
 
 			/// <summary>
@@ -991,7 +1003,7 @@ namespace pr.common
 			/// <summary>
 			/// Create a compiled query for getting an object of type 'T' from a table.
 			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
-			public SelectAllCmd(sqlite3 db) :base(db, SqlString())
+			public SelectAllCmd(Database db) :base(db, SqlString())
 			{}
 
 			/// <summary>Enumerates all rows in a table</summary>
@@ -1052,32 +1064,77 @@ namespace pr.common
 			/// <summary>Gets the number of columns in this table</summary>
 			public int ColumnCount { get { return m_column.Length; } }
 			
+			/// <summary>True if the table uses multiple primary keys</summary>
+			public bool MultiplePK { get { return Pks.Length > 1; } }
+			
 			/// <summary>Constructs the meta data for mapping a type to a database table</summary>
 			public TableMetaData(Type type)
 			{
 				// Get the class level table attribute
-				var attr = (TableAttribute)type.GetCustomAttributes(typeof(TableAttribute), true).FirstOrDefault() ?? new TableAttribute();
+				var attr = (TableAttribute)type.GetCustomAttributes(typeof(TableAttribute), true).FirstOrDefault()
+					?? new TableAttribute();
 				
 				Type = type;
 				Name = type.Name;
-				Constraints = attr.Constraints;
-				
-				// Tests if a member should be included as a column in the table
-				Func<MemberInfo, bool> inc_member = mi =>
-					!mi.GetCustomAttributes(typeof(IgnoreAttribute), true).Any() &&                      // doesn't have the ignore attribute
-					(attr.AllByDefault || mi.GetCustomAttributes(typeof(ColumnAttribute), true).Any());  // all in by default, or marked with the column attribute
+				Constraints = attr.Constraints ?? "";
 				
 				// Get all properties and fields that are to be included in the database table
-				List<ColumnMetaData> cols = new List<ColumnMetaData>();
-				var props  = type.GetProperties(attr.PropertyBindingFlags).Where(pi => inc_member(pi));
-				var fields = type.GetFields    (attr.FieldBindingFlags   ).Where(fi => inc_member(fi));
-				foreach (var p in props ) cols.Add(new ColumnMetaData(p));
-				foreach (var f in fields) cols.Add(new ColumnMetaData(f));
+				{
+					// Tests if a member should be included as a column in the table
+					Func<MemberInfo, bool> inc_member = mi =>
+						!mi.GetCustomAttributes(typeof(IgnoreAttribute), true).Any() &&                      // doesn't have the ignore attribute
+						(attr.AllByDefault || mi.GetCustomAttributes(typeof(ColumnAttribute), true).Any());  // all in by default, or marked with the column attribute
+					
+					// If 'AllByDefault' is true, use the flags given in the attribute to find properties/fields
+					// If false, then find all properties/fields but only include those with the ColumnAttribute
+					var pflags = attr.AllByDefault ? attr.PropertyBindingFlags : BindingFlags.Public|BindingFlags.NonPublic;
+					var fflags = attr.AllByDefault ? attr.FieldBindingFlags    : BindingFlags.Public|BindingFlags.NonPublic;
+					if (pflags != BindingFlags.Default) pflags |= BindingFlags.Instance;
+					if (fflags != BindingFlags.Default) fflags |= BindingFlags.Instance;
+					var props  = type.GetProperties(pflags).Where(pi => inc_member(pi));
+					var fields = type.GetFields    (fflags).Where(fi => inc_member(fi));
+					
+					var cols = new List<ColumnMetaData>();
+					foreach (var p in props ) cols.Add(new ColumnMetaData(p));
+					foreach (var f in fields) cols.Add(new ColumnMetaData(f));
+					m_column = cols.ToArray();
+				}
+				
+				// Check the table constraints for primary key definitions
+				const string primary_key = "primary key";
+				var pk_ofs = Constraints.IndexOf(primary_key, StringComparison.OrdinalIgnoreCase);
+				if (pk_ofs != -1)
+				{
+					var s = Constraints.IndexOf('(', pk_ofs + primary_key.Length);
+					var e = Constraints.IndexOf(')', s + 1);
+					if (s == -1 || e == -1) throw new ArgumentException("Table constraints '"+Constraints+"' are invalid");
+					string[] pk_list = Constraints.Substring(s+1, e-s-1).Split(',');
+					
+					// Check that every named primary key is actually a column
+					// and also ensure primary keys are ordered as given.
+					int order = 0;
+					foreach (var pk in pk_list)
+					{
+						var col = Column(pk.Trim());
+						if (col == null) throw new ArgumentException("Named primary key column '"+pk+"' was not found as a table column. Check the Sqlite attributes have been used correctly");
+						col.IsPk = true;
+						col.Order = order++;
+					}
+				}
+				
+				// If a primary key is named in the class level attribute, mark it here
+				if (!string.IsNullOrEmpty(attr.PrimaryKeyName))
+				{
+					var col = Column(attr.PrimaryKeyName);
+					if (col == null) throw new ArgumentException("Named primary key column '"+attr.PrimaryKeyName+"' (given by Sqlite.TableAttribute) was not found as a table column. Check the Sqlite attributes have been used correctly");
+					col.IsPk = true;
+					col.IsAutoInc = attr.PKAutoInc;
+					col.Order = 0;
+				}
 				
 				// Sort the columns by the given order
 				var cmp = Comparer<int>.Default;
-				cols.Sort((lhs,rhs) => cmp.Compare(lhs.Order, rhs.Order));
-				m_column = cols.ToArray();
+				Array.Sort(m_column, (lhs,rhs) => cmp.Compare(lhs.Order, rhs.Order));
 				
 				// Create optimised lists
 				Pks         = m_column.Where(x => x.IsPk).ToArray();
@@ -1089,7 +1146,7 @@ namespace pr.common
 			/// <summary>Return the column meta data for a column by name</summary>
 			public ColumnMetaData Column(string column_name)
 			{
-				return m_column.First(x => string.CompareOrdinal(x.Name, column_name) == 0);
+				return m_column.FirstOrDefault(x => string.CompareOrdinal(x.Name, column_name) == 0);
 			}
 
 			/// <summary>
@@ -1140,7 +1197,7 @@ namespace pr.common
 			public string Decl()
 			{
 				var sb = new StringBuilder();
-				sb.Append(string.Join(",\n", from c in m_column select c.ColumnDef()));
+				sb.Append(string.Join(",\n", from c in m_column select c.ColumnDef(m_single_pk != null)));
 				if (!string.IsNullOrEmpty(Constraints))
 				{
 					if (sb.Length != 0) sb.Append(",\n");
@@ -1218,10 +1275,9 @@ namespace pr.common
 			/// <summary>Common constructor code</summary>
 			private void Init(MemberInfo mi, Type type)
 			{
-				var attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true)[0];
-				var name = mi.Name;
+				var attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault() ?? new ColumnAttribute();
 				
-				Name            = name;
+				Name            = mi.Name;
 				SqlDataType     = attr.SqlDataType != DataType.Null ? attr.SqlDataType : SqlType(type);
 				Constraints     = attr.Constraints ?? "";
 				IsPk            = attr.PrimaryKey;
@@ -1253,58 +1309,80 @@ namespace pr.common
 			}
 
 			/// <summary>Returns the column definition for this column</summary>
-			public string ColumnDef()
+			public string ColumnDef(bool incl_pk)
 			{
-				return Sql(Name," ",SqlDataType.ToString().ToLowerInvariant()," ",IsPk?"primary key ":"",IsAutoInc?"autoincrement ":"",Constraints);
+				return Sql(Name," ",SqlDataType.ToString().ToLowerInvariant()," ",incl_pk&&IsPk?"primary key ":"",IsAutoInc?"autoincrement ":"",Constraints);
 			}
 
 			public override string ToString()
 			{
-				return string.Format("{0} [{1}]" ,Name ,SqlDataType);
+				return string.Format("{0}{1} [{2}]" ,IsPk?"*":"" ,Name ,SqlDataType);
 			}
 		}
 
 		#region Attribute types
 
-		/// <summary>Controls the mapping from .NET type to database table</summary>
+		/// <summary>
+		/// Controls the mapping from .NET type to database table.
+		/// By default, all public properties are used as columns, this can be changed
+		/// using the PropertyBindingFlags/FieldBindingFlags properties.</summary>
 		[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 		public class TableAttribute :Attribute
 		{
 			/// <summary>
 			/// If true, all properties/fields (selected by the given binding flags) are
 			/// used as columns in the created table unless marked with the Sqlite.IgnoreAttribute.<para/>
-			/// If false, all properties/fields (selected by the given binding flags) are
-			/// not used as columns unless marked with the Sqlite.ColumnAttribute.<para/>
-			/// Default value is false.</summary>
+			/// If false, only properties/fields marked with the Sqlite.ColumnAttribute will be included.<para/>
+			/// Default value is true.</summary>
 			public bool AllByDefault { get; set; }
 			
 			/// <summary>
 			/// Binding flags used to reflect on properties in the type.<para/>
-			/// Use BindingFlags.Default for none.<para/>
-			/// Default value is BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;</summary>
+			/// Only used if 'AllByDefault' is true. BindingFlag.Instance is added
+			/// automatically. Use BindingFlags.Default for none.<para/>
+			/// Default value is BindingFlags.Public|BindingFlags.Instance</summary>
 			public BindingFlags PropertyBindingFlags { get; set; }
 			
 			/// <summary>
 			/// Binding flags used to reflect on fields in the type.<para/>
-			/// Use BindingFlags.Default for none.<para/>
-			/// Default value is BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;</summary>
+			/// Only used if 'AllByDefault' is true. BindingFlag.Instance is added
+			/// automatically. Use BindingFlags.Default for none.<para/>
+			/// Default value is BindingFlags.Default</summary>
 			public BindingFlags FieldBindingFlags { get; set; }
 			
 			/// <summary>
 			/// Defines any table constraints to use when creating the table.<para/>
-			/// This can be used to specify multiple primary keys at the class level<para/>
+			/// This can be used to specify multiple primary keys for the table.<para/>
+			/// Primary keys are ordered as given in the constraint, starting with column Order value 0.<para/>
 			/// e.g.<para/>
 			///  Constraints = "unique (C1), primary key (C2, C3)"<para/>
-			///  Column 'C1' is unique, columns C2 and C3 are the primary keys<para/>
+			///  Column 'C1' is unique, columns C2 and C3 are the primary keys (in that order)<para/>
 			/// Default value is none.</summary>
 			public string Constraints { get; set; }
 			
+			/// <summary>
+			/// The name of the property or field to use as the primary key for a table.
+			/// This property can be used to specify the primary key at a class level which
+			/// is helpful if the class is part of an inheritance hierarchy or is a partial
+			/// class. This property is used in addition to primary keys specified by
+			/// property/field attributes or table constraints. If given, the column Order
+			/// value will be set to 0.<para/>
+			/// Default is value is null.</summary>
+			public string PrimaryKeyName { get; set; }
+			
+			/// <summary>
+			/// Set to true if the column given by 'PrimaryKeyName' is also an auto increment
+			/// column. Not used if PrimaryKeyName is not specified. Default is true.</summary>
+			public bool PKAutoInc { get; set; }
+			
 			public TableAttribute()
 			{
-				AllByDefault = false;
-				PropertyBindingFlags = BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;
-				FieldBindingFlags    = BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;
-				Constraints = null;
+				AllByDefault         = true;
+				PropertyBindingFlags = BindingFlags.Public;
+				FieldBindingFlags    = BindingFlags.Default;
+				Constraints          = null;
+				PrimaryKeyName       = null;
+				PKAutoInc            = true;
 			}
 		}
 
@@ -1315,7 +1393,8 @@ namespace pr.common
 			/// <summary>
 			/// True if this column should be used as a primary key.
 			/// If multiple primary keys are specified, ensure the Order
-			/// property is used so that the order of primary keys is defined.</summary>
+			/// property is used so that the order of primary keys is defined.
+			/// Default value is false.</summary>
 			public bool PrimaryKey { get; set; }
 			
 			/// <summary>True if this column should auto increment. Default is false</summary>
@@ -1345,9 +1424,7 @@ namespace pr.common
 		/// Marks a property or field as not a column in the db table for this type.
 		/// This attribute has higher precedence than the Sqlite.ColumnAttribute.</summary>
 		[AttributeUsage(AttributeTargets.Property|AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
-		public class IgnoreAttribute :Attribute
-		{
-		}
+		public class IgnoreAttribute :Attribute {}
 
 		#endregion
 
@@ -1556,28 +1633,22 @@ namespace pr
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,CSharpWarnings::CS0659
-		private enum SomeEnum { One, Two, Three }
+		// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local
+		public enum SomeEnum { One, Two, Three }
 
+		// Tests user types can be mapped to table columns
 		private class Custom
 		{
 			public string Str;
 			public Custom()           { Str = "I'm a custom object"; }
 			public Custom(string str) { Str = str; }
-			public override bool Equals(object obj)
-			{
-				if (ReferenceEquals(null, obj)) return false;
-				if (ReferenceEquals(this, obj)) return true;
-				if (obj.GetType() != typeof (Custom)) return false;
-				return Equals((Custom) obj);
-			}
 			public bool Equals(Custom other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
 				return other.Str == Str;
 			}
-
+			
 			/// <summary>Binds this type to a parameter in a prepared statement</summary>
 			public static void SqliteBind(sqlite3_stmt stmt, int idx, object obj)
 			{
@@ -1590,6 +1661,7 @@ namespace pr
 		}
 
 		// Single primary key table
+		[Sqlite.Table(AllByDefault = false)]
 		private class DOMType
 		{
 			[Sqlite.Column(Order= 0, PrimaryKey = true, AutoInc = true, Constraints = "not null")] public int m_key;
@@ -1611,9 +1683,9 @@ namespace pr
 			[Sqlite.Column(Order=16)] public Guid         m_guid;
 			[Sqlite.Column(Order=17)] public SomeEnum     m_enum;
 			[Sqlite.Column(Order=18, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
-			// ReSharper disable NotAccessedField.Local
-			public int Ignored;
-			// ReSharper restore NotAccessedField.Local
+			// ReSharper disable UnusedAutoPropertyAccessor.Local
+			public int Ignored { get; set; }
+			// ReSharper restore UnusedAutoPropertyAccessor.Local
 			
 			public DOMType() {}
 			public DOMType(int val)
@@ -1641,6 +1713,8 @@ namespace pr
 			}
 			public bool Equals(DOMType other)
 			{
+				if (ReferenceEquals(null, other)) return false;
+				if (ReferenceEquals(this, other)) return true;
 				if (other.m_key     != m_key      ) return false;
 				if (other.m_bool    != m_bool     ) return false;
 				if (other.m_sbyte   != m_sbyte    ) return false;
@@ -1655,9 +1729,9 @@ namespace pr
 				if (!Equals(other.m_string, m_string)       ) return false;
 				if (!Equals(other.m_buf, m_buf)             ) return false;
 				if (!Equals(other.m_empty_buf, m_empty_buf) ) return false;
-				if (!other.m_guid.Equals(m_guid)            ) return false;
 				if (!Equals(other.m_enum, m_enum)           ) return false;
-				if (!Equals(other.m_custom, m_custom)       ) return false;
+				if (!other.m_guid.Equals(m_guid)            ) return false;
+				if (!other.m_custom.Equals(m_custom)        ) return false;
 				if (Math.Abs(other.m_float   - m_float  ) > float .Epsilon) return false;
 				if (Math.Abs(other.m_double  - m_double ) > double.Epsilon) return false;
 				//&& other.Ignored == Ignored
@@ -1671,16 +1745,99 @@ namespace pr
 				return arr1.SequenceEqual(arr2);
 			}
 		}
-		// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,CSharpWarnings::CS0659
 
-		[Test] public static void TestSqlite1()
+		// Tests PKs named at class level, Unicode, non-int type primary keys
+		[Sqlite.Table(PrimaryKeyName = "PK", PKAutoInc = false, FieldBindingFlags = BindingFlags.Public)]
+		private class DOMType2 :DOMType2Base
 		{
+			public string UniStr;
+			public DOMType2() {}
+			public DOMType2(string key, string str)
+			{
+				PK     = key;
+				UniStr = str;
+			}
+			public bool Equals(DOMType2 other)
+			{
+				if (ReferenceEquals(null, other)) return false;
+				if (ReferenceEquals(this, other)) return true;
+				if (other.PK     != PK    ) return false;
+				if (other.UniStr != UniStr) return false;
+				return true;
+			}
+		}
+		private class DOMType2Base
+		{
+			// Notice the DOMType2 class indicates this is the primary key from a separate class.
+			public string PK { get; protected set; }
+		}
+
+		// Tests multiple primary keys, and properties in inherited/partial classes
+		[Sqlite.Table(Constraints = "primary key (Key1, Key2)")]
+		public partial class MultiDOMType
+		{
+			public int    Key1 { get; set; }
+			public bool   Key2 { get; set; }
+			public string Prop1 { get; set; }
+			public float  Prop2 { get; set; }
+			public Guid   Prop3 { get; set; }
+			
+			public MultiDOMType(){}
+			public MultiDOMType(int key1, bool key2)
+			{
+				Key1 = key1;
+				Key2 = key2;
+				Prop1 = key1.ToString() + " " + key2.ToString();
+				Prop2 = key1;
+				Prop3 = Guid.NewGuid();
+				Parent1 = key1;
+				PropA = key1.ToString() + " " + key2.ToString();
+				PropB = (SomeEnum)key1;
+			}
+			public bool Equals(MultiDOMType other)
+			{
+				if (ReferenceEquals(null, other)) return false;
+				if (ReferenceEquals(this, other)) return true;
+				if (other.Key1    != Key1   ) return false;
+				if (other.Key2    != Key2   ) return false;
+				if (other.Prop1   != Prop1  ) return false;
+				if (Math.Abs(other.Prop2 - Prop2) > float.Epsilon) return false;
+				if (other.Prop3   != Prop3  ) return false;
+				if (other.Parent1 != Parent1) return false;
+				if (other.PropA   != PropA  ) return false;
+				if (other.PropB   != PropB  ) return false;
+				return true;
+			}
+		}
+		public partial class MultiDOMType :MultiDOMTypeBase
+		{
+			public string   PropA { get; set; }
+			public SomeEnum PropB { get; set; }
+		}
+		public class MultiDOMTypeBase
+		{
+			public int Parent1 { get; set; }
+		}
+		// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local
+
+		// The test methods can run in any order, but we only want to do this stuff once
+		private static bool TestSqlite_OneTimeOnly_Done = false;
+		private static void TestSqlite_OneTimeOnly()
+		{
+			if (TestSqlite_OneTimeOnly_Done) return;
+			TestSqlite_OneTimeOnly_Done = true;
+
 			// Register custom type bind/read methods
 			Sqlite.BindFunction.Add(typeof(Custom), Custom.SqliteBind);
 			Sqlite.ReadFunction.Add(typeof(Custom), Custom.SqliteRead);
 			
 			// Use single threading
 			Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
+		}
+
+		[Test] public static void TestSqlite_TypicalUse()
+		{
+			TestSqlite_OneTimeOnly();
 			
 			// Create/Open the database connection
 			const string FilePath = "tmpDB.db";
@@ -1727,13 +1884,18 @@ namespace pr
 				Assert.AreEqual(1, table.Insert(obj1, out obj1.m_key));
 				Assert.AreEqual(1, table.Insert(obj2, out obj2.m_key));
 				Assert.AreEqual(1, table.Insert(obj3, out obj3.m_key));
+				Assert.AreEqual(3, table.RowCount);
+				
+				// Check Get() throws and Find() returns null if not found
+				Assert.IsNull(table.Find(0));
+				Sqlite.Exception err = null;
+				try { table.Get(4); } catch (Sqlite.Exception ex) { err = ex; }
+				Assert.IsTrue(err != null && err.Result == Sqlite.Result.NotFound);
 				
 				// Get stuff and check it's the same
-				var OBJ0 = table.Find(0);
 				var OBJ1 = table.Get(obj1.m_key);
 				var OBJ2 = table.Get(obj2.m_key);
 				var OBJ3 = table.Get(obj3.m_key);
-				Assert.IsNull(OBJ0);
 				Assert.IsTrue(obj1.Equals(OBJ1));
 				Assert.IsTrue(obj2.Equals(OBJ2));
 				Assert.IsTrue(obj3.Equals(OBJ3));
@@ -1804,10 +1966,187 @@ namespace pr
 				Assert.IsTrue(obj1.Equals(objs[0]));
 				Assert.IsTrue(obj2.Equals(objs[1]));
 				Assert.IsTrue(obj3.Equals(objs[2]));
+				
+				// Linq expressions
+				objs = (from a in table where a.m_string == "I've been modified" select a).ToArray();
+				Assert.AreEqual(1, objs.Length);
+				Assert.IsTrue(obj2.Equals(objs[0]));
 			}
 		}
 
-		// todo: test with multiple primary keys
+		[Test] public static void TestSqlite_MultiplePks()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a table
+				db.DropTable<MultiDOMType>();
+				db.CreateTable<MultiDOMType>();
+				Assert.IsTrue(db.TableExists<MultiDOMType>());
+				
+				// Check the table
+				var table = db.Table<MultiDOMType>();
+				Assert.AreEqual(8, table.ColumnCount);
+				using (var q = table.Query("select * from "+table.Name))
+				{
+					var cols = q.ColumnNames.ToList();
+					Assert.AreEqual(8, q.ColumnCount);
+					Assert.IsTrue(cols.Contains("Key1"));
+					Assert.IsTrue(cols.Contains("Key2"));
+					Assert.IsTrue(cols.Contains("Prop1"));
+					Assert.IsTrue(cols.Contains("Prop2"));
+					Assert.IsTrue(cols.Contains("Prop3"));
+					Assert.IsTrue(cols.Contains("PropA"));
+					Assert.IsTrue(cols.Contains("PropB"));
+					Assert.IsTrue(cols.Contains("Parent1"));
+				}
+				
+				// Create some stuff
+				var obj1 = new MultiDOMType(1, false);
+				var obj2 = new MultiDOMType(1, true);
+				var obj3 = new MultiDOMType(2, false);
+				var obj4 = new MultiDOMType(2, true);
+				
+				// Insert it an check they're there
+				Assert.AreEqual(1, table.Insert(obj1));
+				Assert.AreEqual(1, table.Insert(obj2));
+				Assert.AreEqual(1, table.Insert(obj3));
+				Assert.AreEqual(1, table.Insert(obj4));
+				Assert.AreEqual(4, table.RowCount);
+				var OBJ1 = table.Get(obj1.Key1, obj1.Key2);
+				var OBJ2 = table.Get(obj2.Key1, obj2.Key2);
+				var OBJ3 = table.Get(obj3.Key1, obj3.Key2);
+				var OBJ4 = table.Get(obj4.Key1, obj4.Key2);
+				Assert.IsTrue(obj1.Equals(OBJ1));
+				Assert.IsTrue(obj2.Equals(OBJ2));
+				Assert.IsTrue(obj3.Equals(OBJ3));
+				Assert.IsTrue(obj4.Equals(OBJ4));
+				
+				// Check insert collisions
+				obj1.Prop1 = "I've been modified";
+				{
+					Sqlite.Exception err = null;
+					try { table.Insert(obj1); } catch (Sqlite.Exception ex) { err = ex; }
+					Assert.IsTrue(err != null && err.Result == Sqlite.Result.Constraint);
+					OBJ1 = table.Get(obj1.Key1, obj1.Key2);
+					Assert.IsNotNull(OBJ1);
+					Assert.IsFalse(obj1.Equals(OBJ1));
+				}
+				{
+					Sqlite.Exception err = null;
+					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Ignore); } catch (Sqlite.Exception ex) { err = ex; }
+					Assert.IsNull(err);
+					OBJ1 = table.Get(obj1.Key1, obj1.Key2);
+					Assert.IsNotNull(OBJ1);
+					Assert.IsFalse(obj1.Equals(OBJ1));
+				}
+				{
+					Sqlite.Exception err = null;
+					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Replace); } catch (Sqlite.Exception ex) { err = ex; }
+					Assert.IsNull(err);
+					OBJ1 = table.Get(obj1.Key1, obj1.Key2);
+					Assert.IsNotNull(OBJ1);
+					Assert.IsTrue(obj1.Equals(OBJ1));
+				}
+				
+				// Update in a multiple pk table
+				obj2.PropA = "I've also been modified";
+				Assert.AreEqual(1, table.Update(obj2));
+				OBJ2 = table.Get(obj2.Key1, obj2.Key2);
+				Assert.IsNotNull(OBJ2);
+				Assert.IsTrue(obj2.Equals(OBJ2));
+				
+				// Delete in a multiple pk table
+				Assert.AreEqual(1, table.Delete(Sqlite.PrimaryKeys(obj3)));
+				OBJ3 = table.Find(obj3.Key1, obj3.Key2);
+				Assert.IsNull(OBJ3);
+			}
+		}
+
+		[Test] public static void TestSqlite_Unicode()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a table
+				db.DropTable<DOMType2>();
+				db.CreateTable<DOMType2>();
+				Assert.IsTrue(db.TableExists<DOMType2>());
+				
+				// Check the table
+				var table = db.Table<DOMType2>();
+				Assert.AreEqual(2, table.ColumnCount);
+				using (var q = table.Query("select * from "+table.Name))
+				{
+					Assert.AreEqual(2        ,q.ColumnCount);
+					Assert.AreEqual("PK"     ,q.ColumnName(0));
+					Assert.AreEqual("UniStr" ,q.ColumnName(1));
+				}
+				
+				// Insert some stuff and check it stores/reads back ok
+				var obj1 = new DOMType2("123", "€€€€");
+				var obj2 = new DOMType2("abc", "⽄畂卧湥敳慈摮敬⡲㐲ㄴ⤷›慃獵摥戠㩹樠癡⹡慬杮吮牨睯扡敬›潣⹭湩牴湡汥洮扯汩扥汵敬⹴牃獡剨灥牯楴杮匫獥楳湯瑓牡䕴捸灥楴湯›敓獳潩⁮瑓牡整㩤眠楚塄婐桹㐰慳扲汬穷䌰㡶啩扁搶睄畎䐱䭡䝭牌夳䉡獁െ");
+				Assert.AreEqual(1, table.Insert(obj1));
+				Assert.AreEqual(1, table.Insert(obj2));
+				Assert.AreEqual(2, table.RowCount);
+				var OBJ1 = table.Get(obj1.PK);
+				var OBJ2 = table.Get(obj2.PK);
+				Assert.IsTrue(obj1.Equals(OBJ1));
+				Assert.IsTrue(obj2.Equals(OBJ2));
+				
+				// Update Unicode stuff
+				obj2.UniStr = "獁㩹獁";
+				Assert.AreEqual(1, table.Update(obj2));
+				OBJ2 = table.Get(obj2.PK);
+				Assert.IsTrue(obj2.Equals(OBJ2));
+			}
+		}
+
+		[Test] public static void TestSqlite_Transactions()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a table
+				db.DropTable<DOMType>();
+				db.CreateTable<DOMType>();
+				Assert.IsTrue(db.TableExists<DOMType>());
+				var table = db.Table<DOMType>();
+				
+				// Create objects
+				var objs = Enumerable.Range(0,10).Select(i => new DOMType(i)).ToList();
+				
+				// Add objects
+				try { using (new Sqlite.Transaction(db))
+				{
+					foreach (var x in objs) table.Insert(x);
+					throw new Exception("aborting insert");
+				}} catch {}
+				Assert.AreEqual(0, table.RowCount);
+				using (new Sqlite.Transaction(db))
+				{
+					foreach (var x in objs) table.Insert(x);
+				}
+				Assert.AreEqual(0, table.RowCount);
+				using (var tranny = new Sqlite.Transaction(db))
+				{
+					foreach (var x in objs) table.Insert(x);
+					tranny.Commit();
+				}
+				Assert.AreEqual(objs.Count, table.RowCount);
+			}
+		}
+		
+		//todo: collation
 	}
 }
 #endif
