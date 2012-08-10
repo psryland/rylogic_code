@@ -45,8 +45,17 @@ namespace pr
 		//       PR_SQLITE_COLUMN(Float  ,m_float  ,text    ,"")
 		//       PR_SQLITE_TABLE_END()
 		//   };
+		// Data Types:
+		//   sqlite uses these data types:
+		//      null    - the null value
+		//      integer - A signed integer, stored in 1, 2, 3, 4, 6, or 8 bytes depending on the magnitude of the value.
+		//      real    - A floating point value, stored as an 8-byte IEEE floating point number.
+		//      text    - A text string, stored using the database encoding (UTF-8, UTF-16BE or UTF-16LE).
+		//      blob    - A blob of data, stored exactly as it was input.
+		//  All other type keywords are mapped to these types
 		// See:
 		//   http://www.sqlite.org/syntaxdiagrams.html
+		//   http://www.sqlite.org/datatype3.html
 		// Note:
 		//  This wrapper uses simplified string searching. All constraints and datatype identifiers
 		//  must be given in lower case, separated by single ' ' characters.
@@ -249,7 +258,7 @@ namespace pr
 			static bool Null(char c) { return c == 0; }
 			template <typename Type> static bool False(Type const&) { return false; }
 			
-			// Returns a pointer into 'src' at the first occurance of 'ch' or a pointer to the terminator
+			// Returns a pointer into 'src' at the first occurrence of 'ch' or a pointer to the terminator
 			template <typename Term> static char const* FindChar(char const* src, char ch, Term term)
 			{
 				for (;!term(*src) && *src != ch; ++src) {}
@@ -260,7 +269,7 @@ namespace pr
 				return FindChar(src, ch, Null);
 			}
 			
-			// Returns a pointer to the first occurance of any character in 'any_of_these'.
+			// Returns a pointer to the first occurrence of any character in 'any_of_these'.
 			template <typename Term> static char const* FindAny(char const* src, char const* any_of_these, Term term)
 			{
 				for (;!term(*src) && *FindChar(any_of_these, *src) == 0; ++src) {}
@@ -276,7 +285,7 @@ namespace pr
 			{
 				for (;!term(*src); ++src)
 				{
-					// Seek to the next non-separater character
+					// Seek to the next non-separator character
 					for (; !term(*src) && *FindChar(sep, *src, Null) != 0; ++src) {}
 					
 					// Compare the word starting at 'src' with 'substring'
@@ -1121,7 +1130,7 @@ namespace pr
 			}
 		};
 		
-		// A specialised query used for getting objects from teh db
+		// A specialised query used for getting objects from the db
 		template <typename DBRecord> struct GetCmd :Query
 		{
 			// Returns the sql string for the get command for type 'DBRecord'
@@ -1351,6 +1360,25 @@ namespace pr
 			// return at its earliest opportunity. Typically used for Cancel functionality
 			void Interrupt() { sqlite3_interrupt(m_db); }
 			
+			// Executes an sql query string that doesn't require binding, returning a 'Query' result
+			Query ExecuteQuery(char const* sql_query)
+			{
+				PR_ASSERT(PR_SQL_ASSERTS, m_db, "Database not open");
+				Query query(m_db, sql_query);
+				query.Step();
+				return query;
+			}
+			
+			// Executes an sql query that returns a scalar (ie int) result
+			int ExecuteScalar(char const* sql_query)
+			{
+				Query query = ExecuteQuery(sql_query);
+				if (query.RowEnd()) throw Exception(SQLITE_ERROR, "Scalar query returned no results", false);
+				int value; pr::sqlite::read_integer(query, 0, value);
+				if (query.Step()) throw Exception(SQLITE_ERROR, "Scalar query returned more than one result", false);
+				return value;
+			}
+			
 			// Execute an sql string command
 			int Execute(char const* sql_cmd)
 			{
@@ -1362,29 +1390,16 @@ namespace pr
 				return sqlite3_changes(m_db);
 			}
 			
-			// Excute an sql query string that doesn't require binding, returning a 'Query' result
-			Query ExecuteQuery(char const* sql_query)
-			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db, "Database not open");
-				Query query(m_db, sql_query);
-				query.Step();
-				return query;
-			}
-			
-			// Excute an sql query that returns a scalar (ie int) result
-			int ExecuteScalar(char const* sql_query)
-			{
-				Query query = ExecuteQuery(sql_query);
-				if (!query.RowEnd()) throw Exception(SQLITE_ERROR, "Query result is not a scalar value", false);
-				int value; pr::sqlite::read_integer(query, 0, value);
-				return value;
-			}
-			
 			// Returns true if a table named 'name' exists
 			bool TableExists(char const* name) const
 			{
 				char const* sql = Sql("select count(*) from sqlite_master where type='table' and name='",name,"'");
 				return const_cast<Database*>(this)->ExecuteScalar(sql) != 0;
+			}
+			template <typename DBRecord> bool TableExists() const
+			{
+				TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
+				return TableExists(meta.TableName());
 			}
 			
 			// Creates a table in the database based on type 'DBRecord'. Returns SQLITE_OK on success

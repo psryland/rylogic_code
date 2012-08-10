@@ -231,7 +231,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\crc.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dinstance.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dptr.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\defaultallocator.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\dependency.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\discretepidcontroller.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\event.h" />
@@ -257,10 +256,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\objectpool.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\observe.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\pipe.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\podchain.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\pollingtoevent.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\prerrorcodes.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\prerrordef.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prlink.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prlog.h" />
@@ -279,17 +275,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\registrykey.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\resource.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\scriptreader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\serialportio.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stack.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdalgorithm.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdlist.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdmap.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdset.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdstring.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdvector.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\testbed3d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\timers.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\triangulartable.h" />

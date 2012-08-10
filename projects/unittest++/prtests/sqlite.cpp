@@ -98,6 +98,7 @@ SUITE(PRSqlite)
 		DB db;
 		db.DropTable<Record>();
 		CHECK_EQUAL(SQLITE_OK, db.CreateTable<Record>());
+		CHECK(db.TableExists<Record>());
 		auto table = db.Table<Record>();
 		
 		Record r;

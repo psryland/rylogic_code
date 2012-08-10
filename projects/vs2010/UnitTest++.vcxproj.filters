@@ -377,9 +377,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dptr.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\defaultallocator.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\dependency.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
@@ -452,16 +449,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\pipe.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\podchain.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\pollingtoevent.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\prerrorcodes.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\prerrordef.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\prlink.h">
@@ -515,9 +503,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\scriptreader.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\serialportio.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
@@ -528,24 +513,6 @@
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdalgorithm.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdlist.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdmap.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdset.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdstring.h">
-      <Filter>sdk\pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\stdvector.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\testbed3d.h">

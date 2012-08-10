@@ -6,7 +6,7 @@
 using System;
 using System.Reflection;
 
-namespace pr.util
+namespace pr.attrib
 {
 	// Usage:
 	//	enum EType
