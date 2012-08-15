@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.extn;
 using pr.gui;
 using pr.maths;
@@ -109,52 +111,47 @@ namespace RyLogViewer
 		{
 			// Although this search runs in a background thread, it's wrapped in a modal
 			// dialog box, so it should be ok to use class members directly
-			
 			long at = -1;
+			
+			//using (var done = new ManualResetEvent(false))
+			//{
+			//    ThreadPool.QueueUserWorkItem(x =>
+			//        {
+			//            // ReSharper disable AccessToDisposedClosure
+			//            at = DoFind(pat, start, backward, (c,l)=>true);
+			//            done.Set();
+			//            // ReSharper restore AccessToDisposedClosure
+			//        });
+			//    done.WaitOne();
+			//}
+
+
 			ProgressForm search = new ProgressForm("Searching...", "", (s,a)=>
 				{
 					BackgroundWorker bgw = (BackgroundWorker)s;
 					
-					using (var file = LoadFile(m_filepath))
-					{
-						int last_progress     = 0;
-						bool ignore_blanks    = m_settings.IgnoreBlankLines;
-						List<Filter> filters  = ActiveFilters.ToList();
-						AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
-							{
-								int progress = backward
-									? (int)(100 * (1f - Maths.Ratio(0, baddr + line.Begin, start)))
-									: (int)(100 * Maths.Ratio(start, baddr + line.End ,m_fileend));
-								if (progress != last_progress) { bgw.ReportProgress(progress); last_progress = progress; }
-								
-								// Ignore blanks?
-								if (line.Empty && ignore_blanks)
-									return true;
-								
-								// Keep searching while the text is filtered out or doesn't match the pattern
-								string text = m_encoding.GetString(bf, (int)line.Begin, (int)line.Count);
-								if (!PassesFilters(text, filters) || !pat.IsMatch(text))
-									return true;
-								
-								// Found a match
-								at = baddr + line.Begin;
-								return false; // Stop searching
-							};
-						
-						// Search for files
-						byte[] buf = new byte[m_settings.MaxLineLength];
-						long count = backward ? start - 0 : m_fileend - start;
-						FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, (c,l) => !bgw.CancellationPending);
-						
-						// We can call BuildLineIndex in this thread context because we know
-						// we're in a modal dialog.
-						if (at != -1)
+					int last_progress = 0;
+					ProgressFunc report_progress = (scanned, length) =>
 						{
-							Action select = ()=>SelectRowByAddr(at);
-							Invoke(select);
-						}
-						
-						a.Cancel = bgw.CancellationPending;
+							int progress = (int)(100 * Maths.Ratio(0,scanned,length));
+							if (progress != last_progress)
+							{
+								bgw.ReportProgress(progress);
+								last_progress = progress;
+							}
+							return !bgw.CancellationPending;
+						};
+					
+					// Searching....
+					at = DoFind(pat, start, backward, report_progress);
+					a.Cancel = bgw.CancellationPending;
+					
+					// We can call BuildLineIndex in this thread context because we know
+					// we're in a modal dialog.
+					if (at != -1 && !a.Cancel)
+					{
+						Action select = ()=>SelectRowByAddr(at);
+						Invoke(select);
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
 			
@@ -164,6 +161,40 @@ namespace RyLogViewer
 			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Find terminated by an error.", "Find error"); }
 			found = at;
 			return res == DialogResult.OK;
+		}
+
+		/// <summary>
+		/// Does the donkey work of searching for a pattern.
+		/// Returns the byte address of the first match.</summary>
+		private long DoFind(Pattern pat, long start, bool backward, ProgressFunc report_progress)
+		{
+			long at = -1;
+			using (var file = LoadFile(m_filepath))
+			{
+				bool ignore_blanks    = m_settings.IgnoreBlankLines;
+				List<Filter> filters  = ActiveFilters.ToList();
+				AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
+					{
+						// Ignore blanks?
+						if (line.Empty && ignore_blanks)
+							return true;
+						
+						// Keep searching while the text is filtered out or doesn't match the pattern
+						string text = m_encoding.GetString(bf, (int)line.Begin, (int)line.Count);
+						if (!PassesFilters(text, filters) || !pat.IsMatch(text))
+							return true;
+						
+						// Found a match
+						at = baddr + line.Begin;
+						return false; // Stop searching
+					};
+				
+				// Search for files
+				byte[] buf = new byte[m_settings.MaxLineLength];
+				long count = backward ? start - 0 : m_fileend - start;
+				FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, report_progress);
+				return at;
+			}
 		}
 	}
 }

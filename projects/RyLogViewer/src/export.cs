@@ -47,7 +47,7 @@ namespace RyLogViewer
 								ThreadPool.QueueUserWorkItem(x =>
 									{
 										// ReSharper disable AccessToDisposedClosure
-										m.DoExport(filepath, rng, row_delimiter, col_delimiter, outp, (c,l)=> { return true; });
+										m.DoExport(filepath, rng, row_delimiter, col_delimiter, outp, (c,l)=>true);
 										done.Set();
 										// ReSharper restore AccessToDisposedClosure
 									});

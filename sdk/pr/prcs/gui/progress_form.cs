@@ -26,12 +26,12 @@ namespace pr.gui
 	{
 		public class UserState
 		{
-			/// <summary>Control the visibility of the progress bar. 'null' means don't change</summary>
+			/// <summary>Control the visibility of the progress bar.</summary>
 			public bool? ProgressBarVisible = null;
 			
 			/// <summary>Control the style of the progress bar</summary>
 			public ProgressBarStyle? ProgressBarStyle = null;
-
+			
 			/// <summary>Dialog icon</summary>
 			public Icon Icon = null;
 			
@@ -91,8 +91,7 @@ namespace pr.gui
 					if ((Error = e.Error) != null) DialogResult = DialogResult.Abort;
 					else if (e.Cancelled)          DialogResult = DialogResult.Cancel;
 					else                           DialogResult = DialogResult.OK;
-					Action close = Close;
-					BeginInvoke(close);
+					if (Visible) BeginInvoke(new Action(Close));
 				};
 			
 			m_description = new Label{Text = description, AutoSize = false};

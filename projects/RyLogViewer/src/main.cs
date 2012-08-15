@@ -1019,13 +1019,6 @@ namespace RyLogViewer
 			else
 			{
 				BuildLineIndex(addr, false, ()=> SelectedRow = LineIndex(m_line_index, addr));
-				//{
-				//    // When the file is cached, select the row
-					
-				//    //int idx = m_line_index.BinarySearch(r => r.End < addr ? -1 : r.Begin > addr ? 1 : 0);
-				//    //if (idx < 0) idx = ~idx;
-				//    //SelectedRow = idx;
-				//});
 			}
 		}
 
@@ -1046,13 +1039,8 @@ namespace RyLogViewer
 				{
 					value = m_grid.SelectRow(value);
 					Log.Info(this, "Row {0} selected", value);
-					
 					if (m_grid.RowCount != 0 && value != -1)
-					//{
-					//    int display_row = value - m_grid.DisplayedRowCount(true) / 2;
-					//    m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(display_row, 0, m_grid.RowCount - 1);
 						UpdateStatus();
-					//}
 				}
 			}
 		}
