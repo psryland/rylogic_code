@@ -30,11 +30,8 @@ using sqlite3_stmt = System.IntPtr;
 //  still open statements that haven't been finalised.
 //
 // Decimals:
-//  Decimals are deliberately not supported here because sqlite does not
-//  use sufficient accuracy to store them. Sqlite only uses 8 bytes to
-//  store a real so the 128bit decimal numbers lose too much accuracy
-//  when stored. You can add custom Bind/Read functions if you still wish
-//  to use decimals. Otherwise, strings or blobs are probably a better idea.
+//  Decimals cannot be stored as a number in sqlite due to loss of precision
+//  so this implementation stores them as a text field.
 //
 // Custom Accessors:
 //  I considered an ICustomAccessors interface where custom types would
@@ -122,16 +119,29 @@ namespace pr.common
 			ProtectionNone                                 = 0x00400000
 		}
 
-		/// <summary>Behaviour to perform on a constraint condition</summary>
-		public enum OnInsertConstraint
+		/// <summary>Behaviour to perform when creating a table detects an already existing table with the same name</summary>
+		public enum OnCreateConstraint
 		{
-			/// <summary>On constraint, the insert operation will produce an error</summary>
+			/// <summary>The create operation will produce an error</summary>
 			Reject,
 			
-			/// <summary>On constraint, the insert operation will be ignored</summary>
+			/// <summary>The create operation will ignore the create command if a table with the same name already exists</summary>
+			IfNotExists,
+			
+			/// <summary>If a table with the same name already exists, it will be altered to match the new schema</summary>
+			AlterTable,
+		}
+
+		/// <summary>Behaviour to perform when an insert operation detects a constraint</summary>
+		public enum OnInsertConstraint
+		{
+			/// <summary>The insert operation will produce an error</summary>
+			Reject,
+			
+			/// <summary>The insert operation will be ignored</summary>
 			Ignore,
 			
-			/// <summary>On constraint, the insert operation will replace the existing item</summary>
+			/// <summary>The insert operation will replace the existing item</summary>
 			Replace,
 		}
 
@@ -178,24 +188,25 @@ namespace pr.common
 			type = Nullable.GetUnderlyingType(type) ?? type;
 			if (type == null)
 				return DataType.Null;
-			if (type == typeof(bool) ||
-				type == typeof(byte) ||
-				type == typeof(sbyte) ||
-				type == typeof(Char) ||
-				type == typeof(UInt16) ||
-				type == typeof(Int16) ||
-				type == typeof(Int32) ||
-				type == typeof(UInt32) ||
-				type == typeof(Int64) ||
-				type == typeof(UInt64) ||
+			if (type == typeof(bool)     ||
+				type == typeof(byte)     ||
+				type == typeof(sbyte)    ||
+				type == typeof(Char)     ||
+				type == typeof(UInt16)   ||
+				type == typeof(Int16)    ||
+				type == typeof(Int32)    ||
+				type == typeof(UInt32)   ||
+				type == typeof(Int64)    ||
+				type == typeof(UInt64)   ||
 				type.IsEnum)
 				return DataType.Integer;
-			if (type == typeof(Single) ||
+			if (type == typeof(Single)   ||
 				type == typeof(Double))
 				return DataType.Real;
-			if (type == typeof(String) ||
+			if (type == typeof(String)   ||
 				type == typeof(DateTime) ||
-				type == typeof(Guid))
+				type == typeof(Guid)     ||
+				type == typeof(Decimal))
 				return DataType.Text;
 			if (type == typeof(byte[]))
 				return DataType.Blob;
@@ -206,34 +217,89 @@ namespace pr.common
 				"'SqlDataType' property in their ColumnAttribute");
 		}
 
-		/// <summary>A helper for gluing strings together that uses a provided string builder</summary>
+		/// <summary>A helper for gluing strings together</summary>
+		public static string Sql(params string[] parts)
+		{
+			return Sql(m_sql_cached_sb, parts);
+		}
 		public static string Sql(StringBuilder sb, params string[] parts)
 		{
 			sb.Length = 0;
 			foreach (var p in parts) sb.Append(p);
 			return sb.ToString();
 		}
-		public static string Sql(params string[] parts)
-		{
-			return Sql(new StringBuilder(), parts);
-		}
+		private static readonly StringBuilder m_sql_cached_sb = new StringBuilder();
 
 		/// <summary>
 		/// Returns the primary key values read from 'item'. 
 		/// The returned array can be pass to methods that take 'params object[]' arguments</summary>
-		public static object[] PrimaryKeys<T>(T item) where T:class,new()
+		public static object[] PrimaryKeys(object item)
 		{
-			var meta = TableMetaData.GetMetaData<T>();
+			var meta = TableMetaData.GetMetaData(item.GetType());
 			return meta.Pks.Select(x => x.Get(item)).ToArray();
 		}
 
+		/// <summary>Returns the sql string for the insert command for type 'type'</summary>
+		public static string SqlInsertCmd(Type type, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+		{
+			string cons;
+			switch (on_constraint)
+			{
+			default: throw Exception.New(Result.Misuse, "Unknown OnInsertConstraint behaviour");
+			case OnInsertConstraint.Reject:  cons = ""; break;
+			case OnInsertConstraint.Ignore:  cons = "or ignore"; break;
+			case OnInsertConstraint.Replace: cons = "or replace"; break;
+			}
+			
+			var meta = TableMetaData.GetMetaData(type);
+			return Sql(
+				"insert ",cons," into ",meta.Name," (",
+				string.Join(",", from c in meta.NonAutoIncs select c.Name),
+				") values (",
+				string.Join(",", from c in meta.NonAutoIncs select "?"),
+				")");
+		}
+
+		/// <summary>Returns the sql string for the update command for type 'type'</summary>
+		public static string SqlUpdateCmd(Type type)
+		{
+			var meta = TableMetaData.GetMetaData(type);
+			return Sql(
+				"update ",meta.Name," set ",
+				string.Join(",", meta.NonPks.Select(x => x.Name+" = ?")),
+				" where ",
+				string.Join(" and ", meta.Pks.Select(x => x.Name+" = ?"))
+				);
+		}
+
+		/// <summary>Returns the sql string for the delete command for type 'type'</summary>
+		public static string SqlDeleteCmd(Type type)
+		{
+			var meta = TableMetaData.GetMetaData(type);
+			return Sql("delete from ",meta.Name," where ",meta.PkConstraints());
+		}
+
+		/// <summary>Returns the sql string for the get command for type 'type'</summary>
+		public static string SqlGetCmd(Type type)
+		{
+			var meta = TableMetaData.GetMetaData(type);
+			return Sql("select * from ",meta.Name," where ",meta.PkConstraints());
+		}
+
+		/// <summary>Returns the sql string for the get command for type 'type'</summary>
+		public static string SqlSelectAllCmd(Type type)
+		{
+			var meta = TableMetaData.GetMetaData(type);
+			return Sql("select * from ",meta.Name);
+		}
+		
 		/// <summary>Converts a C# string (in UTF-16) to a byte array in UTF-8</summary>
 		private static byte[] StrToUTF8(string str)
 		{
 			return Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(str));
 		}
 
-		/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string in a .NET string</summary>
+		/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string into a .NET string</summary>
 		private static string UTF8toStr(IntPtr utf8ptr)
 		{
 			if (utf8ptr == IntPtr.Zero) return null;
@@ -312,6 +378,11 @@ namespace pr.common
 			{
 				sqlite3_bind_int64(stmt, idx, Convert.ToInt64(value)); // Use Convert to trap overflow exceptions
 			}
+			public static void Decimal(sqlite3_stmt stmt, int idx, object value)
+			{
+				var dec = (decimal)value;
+				sqlite3_bind_text16(stmt, idx, dec.ToString(), -1, TransientData);
+			}
 			public static void Float(sqlite3_stmt stmt, int idx, object value)
 			{
 				sqlite3_bind_double(stmt, idx, (float)value);
@@ -335,6 +406,11 @@ namespace pr.common
 				if (value == null) sqlite3_bind_null(stmt, idx);
 				else Text(stmt, idx, ((Guid)value).ToString());
 			}
+			public static void DateTime(sqlite3_stmt stmt, int idx, object value)
+			{
+				if (value == null) sqlite3_bind_null(stmt, idx);
+				else Text(stmt, idx, ((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss.FFFFFFF"));
+			}
 		}
 
 		/// <summary>
@@ -346,21 +422,23 @@ namespace pr.common
 		{
 			public BindMap()
 			{
-				Add(typeof(bool)   ,Bind.Bool   );
-				Add(typeof(sbyte)  ,Bind.SByte  );
-				Add(typeof(byte)   ,Bind.Byte   );
-				Add(typeof(char)   ,Bind.Char   );
-				Add(typeof(short)  ,Bind.Short  );
-				Add(typeof(ushort) ,Bind.UShort );
-				Add(typeof(int)    ,Bind.Int    );
-				Add(typeof(uint)   ,Bind.UInt   );
-				Add(typeof(long)   ,Bind.Long   );
-				Add(typeof(ulong)  ,Bind.ULong  );
-				Add(typeof(float)  ,Bind.Float  );
-				Add(typeof(double) ,Bind.Double );
-				Add(typeof(string) ,Bind.Text   );
-				Add(typeof(byte[]) ,Bind.Blob   );
-				Add(typeof(Guid)   ,Bind.Guid   );
+				Add(typeof(bool)     ,Bind.Bool    );
+				Add(typeof(sbyte)    ,Bind.SByte   );
+				Add(typeof(byte)     ,Bind.Byte    );
+				Add(typeof(char)     ,Bind.Char    );
+				Add(typeof(short)    ,Bind.Short   );
+				Add(typeof(ushort)   ,Bind.UShort  );
+				Add(typeof(int)      ,Bind.Int     );
+				Add(typeof(uint)     ,Bind.UInt    );
+				Add(typeof(long)     ,Bind.Long    );
+				Add(typeof(ulong)    ,Bind.ULong   );
+				Add(typeof(decimal)  ,Bind.Decimal );
+				Add(typeof(float)    ,Bind.Float   );
+				Add(typeof(double)   ,Bind.Double  );
+				Add(typeof(string)   ,Bind.Text    );
+				Add(typeof(byte[])   ,Bind.Blob    );
+				Add(typeof(Guid)     ,Bind.Guid    );
+				Add(typeof(DateTime) ,Bind.DateTime);
 			}
 		}
 
@@ -411,6 +489,14 @@ namespace pr.common
 			{
 				return (ulong)sqlite3_column_int64(stmt, idx); // Sqlite returns 0 if this column is null
 			}
+			public static object Decimal(sqlite3_stmt stmt, int idx)
+			{
+				var ptr = sqlite3_column_text16(stmt, idx); // Sqlite returns null if this column is null
+				if (ptr == IntPtr.Zero) return 0m;
+				var str = Marshal.PtrToStringUni(ptr);
+				if (str == null) return 0m;
+				return decimal.Parse(str);
+			}
 			public static object Float(sqlite3_stmt stmt, int idx)
 			{
 				return (float)sqlite3_column_double(stmt, idx); // Sqlite returns 0.0 if this column is null
@@ -446,6 +532,11 @@ namespace pr.common
 				string text = (string)Text(stmt, idx);
 				return System.Guid.Parse(text);
 			}
+			public static object DateTime(sqlite3_stmt stmt, int idx)
+			{
+				string text = (string)Text(stmt, idx);
+				return System.DateTime.Parse(text);
+			}
 		}
 
 		/// <summary>
@@ -457,27 +548,29 @@ namespace pr.common
 		{
 			public ReadMap()
 			{
-				Add(typeof(bool)   ,Read.Bool   );
-				Add(typeof(sbyte)  ,Read.SByte  );
-				Add(typeof(byte)   ,Read.Byte   );
-				Add(typeof(char)   ,Read.Char   );
-				Add(typeof(short)  ,Read.Short  );
-				Add(typeof(ushort) ,Read.UShort );
-				Add(typeof(int)    ,Read.Int    );
-				Add(typeof(uint)   ,Read.UInt   );
-				Add(typeof(long)   ,Read.Long   );
-				Add(typeof(ulong)  ,Read.ULong  );
-				Add(typeof(float)  ,Read.Float  );
-				Add(typeof(double) ,Read.Double );
-				Add(typeof(string) ,Read.Text   );
-				Add(typeof(byte[]) ,Read.Blob   );
-				Add(typeof(Guid)   ,Read.Guid   );
+				Add(typeof(bool)     ,Read.Bool    );
+				Add(typeof(sbyte)    ,Read.SByte   );
+				Add(typeof(byte)     ,Read.Byte    );
+				Add(typeof(char)     ,Read.Char    );
+				Add(typeof(short)    ,Read.Short   );
+				Add(typeof(ushort)   ,Read.UShort  );
+				Add(typeof(int)      ,Read.Int     );
+				Add(typeof(uint)     ,Read.UInt    );
+				Add(typeof(long)     ,Read.Long    );
+				Add(typeof(ulong)    ,Read.ULong   );
+				Add(typeof(decimal)  ,Read.Decimal );
+				Add(typeof(float)    ,Read.Float   );
+				Add(typeof(double)   ,Read.Double  );
+				Add(typeof(string)   ,Read.Text    );
+				Add(typeof(byte[])   ,Read.Blob    );
+				Add(typeof(Guid)     ,Read.Guid    );
+				Add(typeof(DateTime) ,Read.DateTime);
 			}
 		}
 
 		#endregion
 
-		/// <summary>Creates a connection to an sqlite database file</summary>
+		/// <summary>Represents a connection to an sqlite database file</summary>
 		public class Database :IDisposable
 		{
 			private sqlite3 m_db;
@@ -486,13 +579,16 @@ namespace pr.common
 			public string Filepath { get; set; }
 
 			/// <summary>Opens a connection to the database</summary>
-			public Database(string filepath, OpenFlags flags)
+			public Database(string filepath, OpenFlags flags = OpenFlags.Create|OpenFlags.ReadWrite)
 			{
 				Filepath = filepath;
 				
 				// Open the database file
 				var res = sqlite3_open_v2(filepath, out m_db, (int)flags, IntPtr.Zero);
 				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
+				
+				// Default to no busy timeout
+				BusyTimeout = 0;
 			}
 
 			/// <summary>Returns the db handle after asserting it's validity</summary>
@@ -537,8 +633,10 @@ namespace pr.common
 			/// Remember to wrap the returned query in a 'using' statement or you might have trouble
 			/// closing the database connection due to outstanding un-finalized prepared statements.<para/>
 			/// e.g.<para/>
+			/// <code>
 			///   using (var query = ExecuteQuery(sql))<para/>
-			///      query.ReadInt(0);<para/>
+			///      int result = query.ReadColumn&lt;int&gt;(0);<para/>
+			/// </code>
 			/// </summary>
 			public Query ExecuteQuery(string sql)
 			{
@@ -566,10 +664,22 @@ namespace pr.common
 					return sqlite3_changes(m_db);
 			}
 
-			/// <summary>Drop any existing table created for type 'T'</summary>
-			public void DropTable<T>(bool if_exists = true) where T:class,new()
+			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
+			public IEnumerable<T> EnumRows<T>(string sql)
 			{
-				var meta = TableMetaData.GetMetaData<T>();
+				using (var query = new Query(this, sql))
+					foreach (var r in query.Rows<T>())
+						yield return r;
+			}
+
+			/// <summary>Drop any existing table created for type 'T'</summary>
+			public void DropTable<T>(bool if_exists = true)
+			{
+				DropTable(typeof(T), if_exists);
+			}
+			public void DropTable(Type type, bool if_exists = true)
+			{
+				var meta = TableMetaData.GetMetaData(type);
 				var opts = if_exists ? "if exists " : "";
 				var sql  = Sql("drop table ",opts,meta.Name);
 				Execute(sql);
@@ -577,33 +687,147 @@ namespace pr.common
 
 			/// <summary>
 			/// Creates a table in the database based on type 'T'. Throws if not successful.<para/>
-			/// http://www.sqlite.org/syntaxdiagrams.html#create-table-stmt <para/>
-			/// http://www.sqlite.org/syntaxdiagrams.html#table-constraint <para/>
+			/// 'factory' is a custom factory method to use to create instances of 'type', if null
+			/// then Activator.CreateInstance will be used and the type will require a default constructor.<para/>
+			/// For information about sql create table syntax see:<para/>
+			///  http://www.sqlite.org/syntaxdiagrams.html#create-table-stmt <para/>
+			///  http://www.sqlite.org/syntaxdiagrams.html#table-constraint <para/>
 			/// Notes: <para/>
 			///  auto increment must follow primary key without anything in between<para/></summary>
-			public void CreateTable<T>(bool if_not_exists = true) where T:class,new()
+			public void CreateTable<T>(OnCreateConstraint on_constraint = OnCreateConstraint.Reject) where T:new()
 			{
-				var meta = TableMetaData.GetMetaData<T>();
-				var opts = if_not_exists ? "if not exists " : "";
-				var sql  = Sql("create table ",opts,meta.Name,"(\n",meta.Decl(),")");
-				Execute(sql);
+				CreateTable(typeof(T), ()=>new T(), on_constraint);
+			}
+			public void CreateTable<T>(Func<object> factory, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
+			{
+				CreateTable(typeof(T), factory, on_constraint);
+			}
+			public void CreateTable(Type type, Func<object> factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
+			{
+				var meta = TableMetaData.GetMetaData(type);
+				if (factory != null) meta.Factory = factory;
+				switch (on_constraint) {
+				case OnCreateConstraint.Reject:
+					Execute(Sql("create table ",meta.Name,"(\n",meta.Decl(),")"));
+					break;
+				case OnCreateConstraint.IfNotExists:
+					Execute(Sql("create table if not exists ",meta.Name,"(\n",meta.Decl(),")"));
+					break;
+				case OnCreateConstraint.AlterTable:
+					if (TableExists(type)) AlterTable(type);
+					else Execute(Sql("create table if not exists ",meta.Name,"(\n",meta.Decl(),")"));
+					break;
+				}
+			}
+
+			/// <summary>Alters an existing table to match the columns for 'type'</summary>
+			public void AlterTable<T>()
+			{
+				AlterTable(typeof(T));
+			}
+			public void AlterTable(Type type)
+			{
+				// Read the columns that we want the table to have
+				var meta = TableMetaData.GetMetaData(type);
+				var cols0 = meta.Columns.Select(x => x.Name).ToList();
+				
+				// Read the existing columns that the table has
+				var sql = Sql("pragma table_info(",meta.Name,")");
+				var cols1 = EnumRows<TableInfo>(sql).Select(x => x.name).ToList();
+				
+				// Sqlite does not support the drop column syntax
+				//// For each column in cols1, that isn't in cols0, drop it
+				//foreach (var c in cols1)
+				//{
+				//    if (cols0.Contains(c)) continue;
+				//    Execute(Sql("alter table ",meta.Name," drop column ",c));
+				//}
+					
+				// For each column in cols0, that isn't in cols1, add it
+				for (int i = 0, iend = cols0.Count; i != iend; ++i)
+				{
+					var c = cols0[i];
+					if (cols1.Contains(c)) continue;
+					Execute(Sql("alter table ",meta.Name," add column ",meta.Column(i).ColumnDef(true)));
+				}
 			}
 
 			/// <summary>Returns true if a table for type 'T' exists</summary>
-			public bool TableExists<T>() where T:class,new()
+			public bool TableExists<T>()
 			{
-				var name = typeof(T).Name;
-				var sql = Sql("select count(*) from sqlite_master where type='table' and name='",name,"'");
+				return TableExists(typeof(T));
+			}
+			public bool TableExists(Type type)
+			{
+				var sql = Sql("select count(*) from sqlite_master where type='table' and name='",type.Name,"'");
 				return ExecuteScalar(sql) != 0;
+			}
+
+			/// <summary>Change the name of an existing table.</summary>
+			public void RenameTable<T>(string new_name, bool update_meta_data = true)
+			{
+				RenameTable(typeof(T), new_name, update_meta_data);
+			}
+			public void RenameTable(Type type, string new_name, bool update_meta_data = true)
+			{
+				var meta = TableMetaData.GetMetaData(type);
+				var sql = Sql("alter table ",meta.Name," rename to ",new_name);
+				Execute(sql);
+				if (update_meta_data)
+					meta.Name = new_name;
 			}
 
 			// ReSharper disable MemberHidesStaticFromOuterClass
 			/// <summary>Return an existing table for type 'T'</summary>
-			public Table<T> Table<T>() where T:class,new()
+			public Table<T> Table<T>()
 			{
 				return new Table<T>(this);
 			}
+
+			/// <summary>
+			/// Return an existing table for runtime type 'type'.
+			/// 'factory' is a factory method for creating instances of type 'type'. It null, then Activator.CreateInstance is used.</summary>
+			public Table Table(Type type)
+			{
+				return new Table(type, this);
+			}
 			// ReSharper restore MemberHidesStaticFromOuterClass
+
+			/// <summary>Find a row in a table of type 'T'</summary>
+			public T Find<T>(params object[] keys)
+			{
+				return Table<T>().Find(keys);
+			}
+
+			/// <summary>Get a row from a table of type 'T'</summary>
+			public T Get<T>(params object[] keys)
+			{
+				return Table<T>().Get(keys);
+			}
+
+			/// <summary>Insert 'item' into a table of type 'T'</summary>
+			public int Insert<T>(T item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			{
+				return Table<T>().Insert(item, on_constraint);
+			}
+
+			///// <summary>Insert 'item' into a table of type 'T'</summary>
+			//public int Insert<T>(T item, out int last_row_id, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			//{
+			//    return Table<T>().Insert(item, out last_row_id, on_constraint);
+			//}
+
+			/// <summary>Update the row corresponding to 'item' in a table of type 'T'</summary>
+			public int Update<T>(T item)
+			{
+				return Table<T>().Update(item);
+			}
+
+			/// <summary>Delete the row corresponding to 'item' from a table of type 'T'</summary>
+			public int Delete<T>(T item)
+			{
+				return Table<T>().Delete(item);
+			}
 
 			/// <summary>IDisposable interface</summary>
 			public void Dispose()
@@ -612,15 +836,16 @@ namespace pr.common
 			}
 		}
 
-		/// <summary>Represents a table within the database</summary>
-		public class Table<T> :IEnumerable<T> where T:class,new()
+		/// <summary>Represents a single table in the database</summary>
+		public class Table :IEnumerable
 		{
-			private readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
-			private readonly Database m_db; // The handle for the database connection
-				
-			public Table(Database db)
+			protected readonly TableMetaData m_meta;
+			protected readonly Database m_db; // The handle for the database connection
+			
+			public Table(Type type, Database db)
 			{
-				Debug.Assert(db.Handle != null, "Invalid database handle");
+				if (db.Handle == IntPtr.Zero) throw new ArgumentNullException("db", "Invalid database handle");
+				m_meta = TableMetaData.GetMetaData(type);
 				m_db = db;
 			}
 
@@ -650,82 +875,153 @@ namespace pr.common
 			}
 			// ReSharper restore MemberHidesStaticFromOuterClass
 
-			/// <summary>
-			/// Insert an item into the table.<para/>
-			/// Note: insert will *NOT* change the primary keys/autoincrement members of 'item' make sure you call 'Get()' to get the updated item.</summary>
-			public int Insert(T item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			/// <summary>Returns a row in the table or null if not found</summary>
+			public T Find<T>(params object[] keys)
 			{
-				using (var insert = new InsertCmd<T>(m_db, on_constraint)) // Create the sql query
+				using (var get = new GetCmd(m_meta, m_db))
 				{
-					insert.BindObj(item); // Bind 'item' to it
-					return insert.Run();  // Run the query
+					get.BindPks(typeof(T), 1, keys);
+					return (T)get.Find();
 				}
 			}
 
-			/// <summary>
-			/// Inserts 'item' into the database and then sets 'at_row' to the row at which
-			/// 'item' was inserted. This is typically used to update the primary key in 'item'
-			/// which, for integer auto increment columns, is normally the last row id.</summary>
-			public int Insert(T item, out int last_row_id, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			/// <summary>Returns a row in the table or null if not found</summary>
+			public T Find<T>(object key1, object key2) // overload for performance
 			{
-				int res = Insert(item, on_constraint);
-				last_row_id = (int)sqlite3_last_insert_rowid(m_db.Handle);
-				return res;
+				using (var get = new GetCmd(m_meta, m_db))
+				{
+					get.BindPks(typeof(T), 1, key1, key2);
+					return (T)get.Find();
+				}
 			}
 
-			/// <summary>Update 'item' in the table</summary>
-			public int Update(T item)
+			/// <summary>Returns a row in the table or null if not found</summary>
+			public T Find<T>(object key1) // overload for performance
 			{
-				var sql = Sql(
-					"update ",m_meta.Name," set ",
-					string.Join(",", m_meta.NonPks.Select(x => x.Name+" = ?")),
-					" where ",
-					string.Join(" and ", m_meta.Pks.Select(x => x.Name+" = ?")));
-				
-				using (var query = new Query(m_db, sql))
+				using (var get = new GetCmd(m_meta, m_db))
+				{
+					get.BindPks(typeof(T), 1, key1);
+					return (T)get.Find();
+				}
+			}
+
+			/// <summary>Returns a row in the table (throws if not found)</summary>
+			public T Get<T>(params object[] keys)
+			{
+				var item = Find<T>(keys);
+				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key(s): "+string.Join(",", keys.Select(x=>x.ToString())));
+				return item;
+			}
+
+			/// <summary>Returns a row in the table (throws if not found)</summary>
+			public T Get<T>(object key1, object key2) // overload for performance
+			{
+				var item = Find<T>(key1, key2);
+				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for keys: "+key1+","+key2);
+				return item;
+			}
+
+			/// <summary>Returns a row in the table (throws if not found)</summary>
+			public T Get<T>(object key1) // overload for performance
+			{
+				var item = Find<T>(key1);
+				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key: "+key1);
+				return item;
+			}
+
+			/// <summary>
+			/// Insert an item into the table.<para/>
+			/// Note: insert will *NOT* change the primary keys/autoincrement members of 'item'.
+			/// Make sure you call 'Get()' or the other overload of Insert to get the updated item.</summary>
+			public int Insert<T>(T item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			{
+				return Insert((object)item, on_constraint);
+			}
+
+			/// <summary>Insert an item into the table.<para/>
+			/// Note: insert will *NOT* change the primary keys/autoincrement members of 'item'.
+			/// Make sure you call 'Get()' or the other overload of Insert to get the updated item.</summary>
+			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			{
+				using (var insert = new InsertCmd(m_meta, m_db, on_constraint)) // Create the sql query
+				{
+					insert.BindObj(item); // Bind 'item' to it
+					var count = insert.Run();  // Run the query
+					m_meta.SetAutoIncPK(item, m_db.Handle);
+					return count;
+				}
+			}
+
+			///// <summary>
+			///// Inserts 'item' into the database and then sets 'at_row' to the row at which
+			///// 'item' was inserted. This is typically used to update the primary key in 'item'
+			///// which, for integer auto increment columns, is normally the last row id.</summary>
+			//public int Insert<T>(T item, out int last_row_id, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			//{
+			//    return Insert((object)item, out last_row_id, on_constraint);
+			//}
+
+			///// <summary>
+			///// Inserts 'item' into the database and then sets 'at_row' to the row at which
+			///// 'item' was inserted. This is typically used to update the primary key in 'item'
+			///// which, for integer auto increment columns, is normally the last row id.</summary>
+			//public int Insert(object item, out int last_row_id, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			//{
+			//    int res = Insert(item, on_constraint);
+			//    last_row_id = (int)sqlite3_last_insert_rowid(m_db.Handle);
+			//    return res;
+			//}
+
+			/// <summary>Update 'item' in the table</summary>
+			public int Update(object item)
+			{
+				using (var query = new Query(m_db, SqlUpdateCmd(m_meta.Type)))
 				{
 					int idx = 1; // binding parameters are indexed from 1
 					foreach (var c in m_meta.NonPks)
 						c.BindFn(query.Stmt, idx++, c.Get(item));
 					foreach (var c in m_meta.Pks)
 						c.BindFn(query.Stmt, idx++, c.Get(item));
-				
+					
 					query.Step();
 					return query.RowsChanged;
 				}
 			}
 
 			/// <summary>Delete 'item' from the table</summary>
-			public int Delete(T item)
+			public int Delete(object item)
 			{
-				return Delete(PrimaryKeys(item));
-			}
-
-			/// <summary>Returns a row in the table or null if not found</summary>
-			public T Find(params object[] keys)
-			{
-				using (var get = new GetCmd<T>(m_db))
-				{
-					get.BindPks<T>(1, keys);
-					return get.Find();
-				}
-			}
-
-			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public T Get(params object[] keys)
-			{
-				var item = Find(keys);
-				if (item == null) throw Exception.New(Result.NotFound, "Row not found for key(s): "+string.Join(",", keys.Select(x=>x.ToString())));
-				return item;
+				return DeleteByKey(PrimaryKeys(item));
 			}
 
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
-			public int Delete(params object[] keys)
+			public int DeleteByKey(params object[] keys)
 			{
-				var sql = Sql("delete from ",m_meta.Name," where ",m_meta.PkConstraints());
-				using (var query = new Query(m_db, sql))
+				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, keys);
+					query.Step();
+					return query.RowsChanged;
+				}
+			}
+
+			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
+			public int DeleteByKey(object key1, object key2) // overload for performance
+			{
+				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
+				{
+					query.BindParms(1, key1, key2);
+					query.Step();
+					return query.RowsChanged;
+				}
+			}
+
+			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
+			public int DeleteByKey(object key1) // overload for performance
+			{
+				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
+				{
+					query.BindParms(1, key1);
 					query.Step();
 					return query.RowsChanged;
 				}
@@ -739,7 +1035,20 @@ namespace pr.common
 				using (var query = new Query(m_db, sql))
 				{
 					column_meta.BindFn(query.Stmt, 1, value);
-					query.BindPks<T>(2, keys);
+					query.BindPks(m_meta.Type, 2, keys);
+					query.Step();
+					return query.RowsChanged;
+				}
+			}
+
+			/// <summary>Update the value of a column for all rows in a table</summary>
+			public int UpdateAll<TValueType>(string column_name, TValueType value)
+			{
+				var column_meta = m_meta.Column(column_name);
+				var sql = Sql("update ",m_meta.Name," set ",column_name," = ?");
+				using (var query = new Query(m_db, sql))
+				{
+					column_meta.BindFn(query.Stmt, 1, value);
 					query.Step();
 					return query.RowsChanged;
 				}
@@ -752,22 +1061,85 @@ namespace pr.common
 				var sql = Sql("select ",column_meta.Name," from ",m_meta.Name," where ",m_meta.PkConstraints());
 				using (var query = new Query(m_db, sql))
 				{
-					query.BindPks<T>(1, keys);
+					query.BindPks(m_meta.Type, 1, keys);
 					query.Step();
 					return (TValueType)column_meta.ReadFn(query.Stmt, 0);
 				}
 			}
 
 			/// <summary>IEnumerable interface</summary>
-			public IEnumerator<T> GetEnumerator()
+			IEnumerator IEnumerable.GetEnumerator()
 			{
-				using (var query = new SelectAllCmd<T>(m_db))
-					foreach (var t in query)
-						yield return t;
+				using (var query = new Query(m_db, SqlSelectAllCmd(m_meta.Type)))
+				{
+					while (query.Step())
+					{
+						var item = m_meta.Factory();
+						m_meta.ReadObj(query.Stmt, item);
+						yield return item;
+					}
+				}
+			}
+		}
+
+		/// <summary>Represents a table within the database for a compile-time type 'T'.</summary>
+		public class Table<T> :Table, IEnumerable<T>
+		{
+			public Table(Database db) :base(typeof(T), db)
+			{}
+
+			/// <summary>Returns a row in the table or null if not found</summary>
+			public T Find(params object[] keys)
+			{
+				return Find<T>(keys);
+			}
+
+			/// <summary>Returns a row in the table or null if not found</summary>
+			public T Find(object key1, object key2) // overload for performance
+			{
+				return Find<T>(key1, key2);
+			}
+
+			/// <summary>Returns a row in the table or null if not found</summary>
+			public T Find(object key1) // overload for performance
+			{
+				return Find<T>(key1);
+			}
+
+			/// <summary>Returns a row in the table (throws if not found)</summary>
+			public T Get(params object[] keys)
+			{
+				return Get<T>(keys);
+			}
+
+			/// <summary>Returns a row in the table (throws if not found)</summary>
+			public T Get(object key1, object key2) // overload for performance
+			{
+				return Get<T>(key1, key2);
+			}
+
+			/// <summary>Returns a row in the table (throws if not found)</summary>
+			public T Get(object key1) // overload for performance
+			{
+				return Get<T>(key1);
+			}
+
+			/// <summary>IEnumerable interface</summary>
+			IEnumerator<T> IEnumerable<T>.GetEnumerator()
+			{
+				using (var query = new Query(m_db, SqlSelectAllCmd(m_meta.Type)))
+				{
+					while (query.Step())
+					{
+						var item = m_meta.Factory();
+						m_meta.ReadObj(query.Stmt, item);
+						yield return (T)item;
+					}
+				}
 			}
 			IEnumerator IEnumerable.GetEnumerator()
 			{
-				return GetEnumerator();
+				return ((IEnumerable<T>)this).GetEnumerator();
 			}
 		}
 
@@ -779,13 +1151,13 @@ namespace pr.common
 			
 			public Query(sqlite3_stmt stmt)
 			{
+				if (stmt == IntPtr.Zero) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
 				Trace.QueryCtor(this);
 				m_stmt = stmt;
 				m_row_end = false;
 			}
 			public Query(Database db, string sql_string) :this(Compile(db.Handle, sql_string))
-			{
-			}
+			{}
 			~Query()
 			{
 				Trace.QueryDtor(this);
@@ -854,14 +1226,53 @@ namespace pr.common
 			}
 
 			/// <summary>
+			/// Bind an array of parameters starting at parameter index 'first_idx' (remember parameter indices start at 1)
+			/// To reuse the Query, call Reset(), then bind new keys, then call Step() again</summary>
+			public void BindParms(int first_idx, object parm1, object parm2) // overload for performance
+			{
+				BindFunction[parm1.GetType()](m_stmt, first_idx+0, parm1);
+				BindFunction[parm1.GetType()](m_stmt, first_idx+1, parm2);
+			}
+
+			/// <summary>
+			/// Bind an array of parameters starting at parameter index 'first_idx' (remember parameter indices start at 1)
+			/// To reuse the Query, call Reset(), then bind new keys, then call Step() again</summary>
+			public void BindParms(int first_idx, object parm1) // overload for performance
+			{
+				BindFunction[parm1.GetType()](m_stmt, first_idx, parm1);
+			}
+
+			/// <summary>
 			/// Bind primary keys to this query starting at parameter index 
 			/// 'first_idx' (remember parameter indices start at 1)
 			/// This is functionally the same as BindParms but it validates
 			/// the types of the primary keys against the table meta data.</summary>
-			public void BindPks<T>(int first_idx, params object[] keys)
+			public void BindPks(Type type, int first_idx, params object[] keys)
 			{
-				var meta = TableMetaData.GetMetaData<T>();
+				var meta = TableMetaData.GetMetaData(type);
 				meta.BindPks(m_stmt, first_idx, keys);
+			}
+
+			/// <summary>
+			/// Bind primary keys to this query starting at parameter index 
+			/// 'first_idx' (remember parameter indices start at 1)
+			/// This is functionally the same as BindParms but it validates
+			/// the types of the primary keys against the table meta data.</summary>
+			public void BindPks(Type type, int first_idx, object key1, object key2) // overload for performance
+			{
+				var meta = TableMetaData.GetMetaData(type);
+				meta.BindPks(m_stmt, first_idx, key1, key2);
+			}
+
+			/// <summary>
+			/// Bind primary keys to this query starting at parameter index 
+			/// 'first_idx' (remember parameter indices start at 1)
+			/// This is functionally the same as BindParms but it validates
+			/// the types of the primary keys against the table meta data.</summary>
+			public void BindPks(Type type, int first_idx, object key1) // overload for performance
+			{
+				var meta = TableMetaData.GetMetaData(type);
+				meta.BindPks(m_stmt, first_idx, key1);
 			}
 
 			/// <summary>Reset the prepared statement object back to its initial state, ready to be re-executed.</summary>
@@ -910,7 +1321,7 @@ namespace pr.common
 			/// <summary>Returns the name of the column at position 'idx'</summary>
 			public string ColumnName(int idx)
 			{
-				return Marshal.PtrToStringUni(sqlite3_column_name16(Stmt, idx));
+				return sqlite3_column_name(Stmt, idx);
 			}
 
 			/// <summary>Enumerates the columns in the result</summary>
@@ -925,15 +1336,28 @@ namespace pr.common
 				var read = ReadFunction[typeof(T)];
 				return (T)read(m_stmt, idx);
 			}
+
+			/// <summary>Enumerate over the result rows of this query, interpreting each row as type 'T'</summary>
+			public IEnumerable<T> Rows<T>()
+			{
+				var meta = TableMetaData.GetMetaData(typeof(T));
+				while (Step())
+				{
+					var obj = meta.Factory();
+					meta.ReadObj(Stmt, obj);
+					yield return (T)obj;
+				}
+			}
 		}
 
 		/// <summary>Mapping information from a type to columns in the table</summary>
 		public class TableMetaData
 		{
 			private static readonly Dictionary<Type, TableMetaData> Meta = new Dictionary<Type, TableMetaData>();
-			public static TableMetaData GetMetaData<T>() { return GetMetaData(typeof(T)); }
 			public static TableMetaData GetMetaData(Type type)
 			{
+				if (type == typeof(object)) throw new ArgumentException("Type 'object' cannot have TableMetaData", "type");
+				
 				TableMetaData meta;
 				if (!Meta.TryGetValue(type, out meta))
 					Meta.Add(type, meta = new TableMetaData(type));
@@ -957,6 +1381,9 @@ namespace pr.common
 			/// <summary>Table constraints for this table (default is none)</summary>
 			public string Constraints { get; set; }
 			
+			/// <summary>Enumerate the column meta data</summary>
+			public IEnumerable<ColumnMetaData> Columns { get { return m_column; } }
+			
 			/// <summary>The primary key columns, in order</summary>
 			public ColumnMetaData[] Pks { get; private set; }
 			
@@ -972,37 +1399,62 @@ namespace pr.common
 			/// <summary>True if the table uses multiple primary keys</summary>
 			public bool MultiplePK { get { return Pks.Length > 1; } }
 			
-			/// <summary>Constructs the meta data for mapping a type to a database table</summary>
+			/// <summary>A factory method for creating instances of the type for this table</summary>
+			public Func<object> Factory { get; set; }
+
+			/// <summary>A default method to use as a factory method for creating instances of type 'Type'</summary>
+			public object DefaultFactory() { return Activator.CreateInstance(Type); }
+
+			/// <summary>
+			/// Constructs the meta data for mapping a type to a database table.
+			/// By default, 'Activator.CreateInstance' is used as the factory function.
+			/// This is slow however so use a static delegate if possible</summary>
 			public TableMetaData(Type type)
 			{
-				// Get the class level table attribute
-				var attr = (TableAttribute)type.GetCustomAttributes(typeof(TableAttribute), true).FirstOrDefault()
-					?? new TableAttribute();
+				// Get the table attribute
+				var attr = type.GetCustomAttributes(typeof(TableAttribute), false).Cast<TableAttribute>().FirstOrDefault() ?? new TableAttribute();
 				
 				Type = type;
 				Name = type.Name;
 				Constraints = attr.Constraints ?? "";
+				Factory = DefaultFactory;
 				
-				// Get all properties and fields that are to be included in the database table
+				// Build a collection of columns to ignore
+				var ignored = new List<string>();
+				foreach (var ign in type.GetCustomAttributes(typeof(IgnoreColumnsAttribute), true).Cast<IgnoreColumnsAttribute>())
+					ignored.AddRange(ign.Ignore.Split(',').Select(x => x.Trim()));
+				
+				// Create a collection of the columns of this table
+				var cols = new List<ColumnMetaData>();
 				{
 					// Tests if a member should be included as a column in the table
-					Func<MemberInfo, bool> inc_member = mi =>
-						!mi.GetCustomAttributes(typeof(IgnoreAttribute), true).Any() &&                      // doesn't have the ignore attribute
-						(attr.AllByDefault || mi.GetCustomAttributes(typeof(ColumnAttribute), true).Any());  // all in by default, or marked with the column attribute
+					Func<MemberInfo, List<string>, bool> inc_member = (mi,def) =>
+						!mi.GetCustomAttributes(typeof(IgnoreAttribute), false).Any() &&  // doesn't have the ignore attribute and,
+						!ignored.Contains(mi.Name) &&                                     // isn't in the ignore list and,
+						(mi.GetCustomAttributes(typeof(ColumnAttribute), false).Any() ||  // has the column attribute or,
+						(attr.AllByDefault && def.Contains(mi.Name)));                         // all in by default and 'mi' is in the collection of found columns
 					
-					// If 'AllByDefault' is true, use the flags given in the attribute to find properties/fields
-					// If false, then find all properties/fields but only include those with the ColumnAttribute
-					var pflags = attr.AllByDefault ? attr.PropertyBindingFlags : BindingFlags.Public|BindingFlags.NonPublic;
-					var fflags = attr.AllByDefault ? attr.FieldBindingFlags    : BindingFlags.Public|BindingFlags.NonPublic;
-					if (pflags != BindingFlags.Default) pflags |= BindingFlags.Instance;
-					if (fflags != BindingFlags.Default) fflags |= BindingFlags.Instance;
-					var props  = type.GetProperties(pflags).Where(pi => inc_member(pi));
-					var fields = type.GetFields    (fflags).Where(fi => inc_member(fi));
+					// If AllByDefault is enabled, get a collection of the properties/fields indicated by the binding flags in the attribute
+					var pflags = attr.PropertyBindingFlags != BindingFlags.Default ? attr.PropertyBindingFlags |BindingFlags.Instance : BindingFlags.Default;
+					var fflags = attr.FieldBindingFlags    != BindingFlags.Default ? attr.FieldBindingFlags    |BindingFlags.Instance : BindingFlags.Default;
+					var by_def = !attr.AllByDefault ? null :
+						type.GetProperties(pflags).Where(x => x.CanRead && x.CanWrite).Select(x => x.Name).Concat(
+						type.GetFields    (fflags).Select(x => x.Name)).ToList();
 					
-					var cols = new List<ColumnMetaData>();
-					foreach (var p in props ) cols.Add(new ColumnMetaData(p));
-					foreach (var f in fields) cols.Add(new ColumnMetaData(f));
-					m_column = cols.ToArray();
+					// Check all public/non-public properties/fields
+					const BindingFlags binding_flags = BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;
+					cols.AddRange(AllProps (type, binding_flags).Where(pi => inc_member(pi, by_def)).Select(pi => new ColumnMetaData(pi)));
+					cols.AddRange(AllFields(type, binding_flags).Where(fi => inc_member(fi, by_def)).Select(fi => new ColumnMetaData(fi)));
+				}
+				
+				// If a primary key is named in the class level attribute, mark it
+				if (attr.PrimaryKey != null)
+				{
+					var col = cols.FirstOrDefault(x => x.Name == attr.PrimaryKey);
+					if (col == null) throw new ArgumentException("Named primary key column '"+attr.PrimaryKey+"' (given by Sqlite.TableAttribute) is not a found table column for type '"+Name+"'");
+					col.IsPk = true;
+					col.IsAutoInc = attr.PKAutoInc;
+					col.Order = 0;
 				}
 				
 				// Check the table constraints for primary key definitions
@@ -1013,39 +1465,49 @@ namespace pr.common
 					var s = Constraints.IndexOf('(', pk_ofs + primary_key.Length);
 					var e = Constraints.IndexOf(')', s + 1);
 					if (s == -1 || e == -1) throw new ArgumentException("Table constraints '"+Constraints+"' are invalid");
-					string[] pk_list = Constraints.Substring(s+1, e-s-1).Split(',');
 					
 					// Check that every named primary key is actually a column
 					// and also ensure primary keys are ordered as given.
 					int order = 0;
-					foreach (var pk in pk_list)
+					foreach (var pk in Constraints.Substring(s+1, e-s-1).Split(',').Select(x => x.Trim()))
 					{
-						var col = Column(pk.Trim());
-						if (col == null) throw new ArgumentException("Named primary key column '"+pk+"' was not found as a table column. Check the Sqlite attributes have been used correctly");
+						var col = cols.FirstOrDefault(x => x.Name == pk);
+						if (col == null) throw new ArgumentException("Named primary key column '"+pk+"' was not found as a table column for type '"+Name+"'");
 						col.IsPk = true;
 						col.Order = order++;
 					}
 				}
 				
-				// If a primary key is named in the class level attribute, mark it here
-				if (!string.IsNullOrEmpty(attr.PrimaryKeyName))
-				{
-					var col = Column(attr.PrimaryKeyName);
-					if (col == null) throw new ArgumentException("Named primary key column '"+attr.PrimaryKeyName+"' (given by Sqlite.TableAttribute) was not found as a table column. Check the Sqlite attributes have been used correctly");
-					col.IsPk = true;
-					col.IsAutoInc = attr.PKAutoInc;
-					col.Order = 0;
-				}
-				
 				// Sort the columns by the given order
 				var cmp = Comparer<int>.Default;
-				Array.Sort(m_column, (lhs,rhs) => cmp.Compare(lhs.Order, rhs.Order));
+				cols.Sort((lhs,rhs) => cmp.Compare(lhs.Order, rhs.Order));
 				
-				// Create optimised lists
+				// Create the column arrays
+				m_column    = cols.ToArray();
 				Pks         = m_column.Where(x => x.IsPk).ToArray();
 				NonPks      = m_column.Where(x => !x.IsPk).ToArray();
 				NonAutoIncs = m_column.Where(x => !x.IsAutoInc).ToArray();
 				m_single_pk = Pks.Count() == 1 ? Pks.First() : null;
+			}
+
+			/// <summary>Returns all inherited properties for a type</summary>
+			private IEnumerable<PropertyInfo> AllProps(Type type, BindingFlags flags)
+			{
+				if (type == null || type == typeof(object)) return Enumerable.Empty<PropertyInfo>();
+				return AllProps(type.BaseType, flags).Concat(type.GetProperties(flags|BindingFlags.DeclaredOnly));
+			}
+
+			/// <summary>Returns all inherited fields for a type</summary>
+			private IEnumerable<FieldInfo> AllFields(Type type, BindingFlags flags)
+			{
+				if (type == null || type == typeof(object)) return Enumerable.Empty<FieldInfo>();
+				return AllFields(type.BaseType, flags).Concat(type.GetFields(flags|BindingFlags.DeclaredOnly));
+			}
+
+			/// <summary>Return the column meta data for a column by name</summary>
+			public ColumnMetaData Column(int column_index)
+			{
+				return m_column[column_index];
 			}
 
 			/// <summary>Return the column meta data for a column by name</summary>
@@ -1059,12 +1521,12 @@ namespace pr.common
 			/// prepared statement starting at parameter 'first_idx'.</summary>
 			public void BindPks(sqlite3_stmt stmt, int first_idx, params object[] keys)
 			{
-				Debug.Assert(first_idx >= 1, "parameter binding indices start at 1 so 'first_idx' must be >= 1");
+				if (first_idx < 1) throw new ArgumentException("Parameter binding indices start at 1 so 'first_idx' must be >= 1");
+				if (Pks.Length != keys.Length) throw new ArgumentException("Not enough primary key values passed for type "+Name);
 				
 				int idx = 0;
 				foreach (var c in Pks)
 				{
-					if (idx == keys.Length) throw new ArgumentException("Not enough primary key values passed for type "+Name);
 					if (keys[idx].GetType() != c.ClrType) throw new ArgumentException("Primary key "+(idx+1)+" should be of type "+c.ClrType.Name+" not type "+keys[idx].GetType().Name);
 					c.BindFn(stmt, first_idx+idx, keys[idx]); // binding parameters are indexed from 1 (hence the +1)
 					++idx;
@@ -1072,13 +1534,37 @@ namespace pr.common
 			}
 
 			/// <summary>
+			/// Bind the primary keys 'keys' to the parameters in a
+			/// prepared statement starting at parameter 'first_idx'.</summary>
+			public void BindPks(sqlite3_stmt stmt, int first_idx, object key1, object key2) // overload for performance
+			{
+				if (first_idx < 1) throw new ArgumentException("Parameter binding indices start at 1 so 'first_idx' must be >= 1");
+				if (Pks.Length != 2) throw new ArgumentException("Insufficient primary keys provided for this table type");
+				if (key1.GetType() != Pks[0].ClrType) throw new ArgumentException("Primary key "+1+" should be of type "+Pks[0].ClrType.Name+" not type "+key1.GetType().Name);
+				if (key2.GetType() != Pks[1].ClrType) throw new ArgumentException("Primary key "+2+" should be of type "+Pks[1].ClrType.Name+" not type "+key2.GetType().Name);
+				Pks[0].BindFn(stmt, first_idx+0, key1);
+				Pks[1].BindFn(stmt, first_idx+1, key2);
+			}
+
+			/// <summary>
+			/// Bind the primary keys 'keys' to the parameters in a
+			/// prepared statement starting at parameter 'first_idx'.</summary>
+			public void BindPks(sqlite3_stmt stmt, int first_idx, object key1) // overload for performance
+			{
+				if (first_idx < 1) throw new ArgumentException("parameter binding indices start at 1 so 'first_idx' must be >= 1");
+				if (Pks.Length != 1) throw new ArgumentException("Insufficient primary keys provided for this table type");
+				if (key1.GetType() != Pks[0].ClrType) throw new ArgumentException("Primary key "+1+" should be of type "+Pks[0].ClrType.Name+" not type "+key1.GetType().Name);
+				Pks[0].BindFn(stmt, first_idx, key1);
+			}
+
+			/// <summary>
 			/// Bind the values of the properties/fields in 'item' to the parameters
 			/// in prepared statement 'stmt'. 'ofs' is the index offset of the first
 			/// parameter to start binding from.</summary>
-			public void BindObj<T>(sqlite3_stmt stmt, int first_idx, T item) where T:class,new()
+			public void BindObj<T>(sqlite3_stmt stmt, int first_idx, T item)
 			{
-				Debug.Assert(typeof(T) == Type, "'item' is not the correct type for this table");
-				Debug.Assert(first_idx >= 1, "parameter binding indices start at 1 so 'first_idx' must be >= 1");
+				if (first_idx < 1) throw new ArgumentException("parameter binding indices start at 1 so 'first_idx' must be >= 1");
+				if (item.GetType() != Type) throw new ArgumentException("'item' is not the correct type for this table");
 				
 				int idx = 0; // binding parameters are indexed from 1
 				foreach (var c in NonAutoIncs)
@@ -1089,13 +1575,17 @@ namespace pr.common
 			}
 
 			/// <summary>Populate the properties and fields of 'item' from the column values read from 'stmt'</summary>
-			public void Read<T>(sqlite3_stmt stmt, T item) where T:class,new()
+			public void ReadObj<T>(sqlite3_stmt stmt, T item)
 			{
-				Debug.Assert(typeof(T) == Type, "'item' is not the correct type for this table");
+				if (item.GetType() != Type) throw new ArgumentException("'item' is not the correct type for this table");
 				
-				int idx = 0; // columns are indexed from 0
-				foreach (var c in m_column)
-					c.Set(item, c.ReadFn(stmt, idx++));
+				for (int i = 0, iend = sqlite3_column_count(stmt); i != iend; ++i)
+				{
+					var cname = sqlite3_column_name(stmt, i);
+					var col = Column(cname);
+					if (col == null) throw new ArgumentException("'item' does not contain a property or field called '"+cname+"'");
+					col.Set(item, col.ReadFn(stmt, i));
+				}
 			}
 
 			/// <summary>Returns a table declaration string for this table</summary>
@@ -1120,11 +1610,21 @@ namespace pr.common
 					? m_single_pk.Name + " = ?"
 					: string.Join(" and ", Pks.Select(x => x.Name + " = ?"));
 			}
+
+			/// <summary>Updates the value of the auto increment primary key (if there is one)</summary>
+			public void SetAutoIncPK(object obj, IntPtr handle)
+			{
+				if (m_single_pk == null || !m_single_pk.IsAutoInc) return;
+				int id = (int)sqlite3_last_insert_rowid(handle);
+				m_single_pk.Set(obj, id);
+			}
 		}
 
 		/// <summary>A column within a db table</summary>
 		public class ColumnMetaData
 		{
+			public const int OrderBaseValue = 0xFFFF;
+			
 			/// <summary>The name of the column</summary>
 			public string Name;
 			
@@ -1181,13 +1681,16 @@ namespace pr.common
 			private void Init(MemberInfo mi, Type type)
 			{
 				var attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault() ?? new ColumnAttribute();
+				var underlying_type = Nullable.GetUnderlyingType(type);
 				
 				Name            = mi.Name;
 				SqlDataType     = attr.SqlDataType != DataType.Null ? attr.SqlDataType : SqlType(type);
 				Constraints     = attr.Constraints ?? "";
 				IsPk            = attr.PrimaryKey;
 				IsAutoInc       = attr.AutoInc;
-				Order           = attr.Order;
+				IsNotNull       = type.IsValueType && underlying_type == null;
+				IsCollate       = false;
+				Order           = OrderBaseValue + attr.Order;
 				ClrType         = type;
 				
 				// Setup the bind and read methods
@@ -1199,6 +1702,23 @@ namespace pr.common
 						BindFn = BindFunction[typeof(int)];
 						ReadFn = ReadFunction[typeof(int)];
 					}
+					else if (underlying_type != null)
+					{
+						var bind = BindFunction[underlying_type];
+						BindFn = (stmt,idx,obj) =>
+							{
+								if (obj != null) bind(stmt, idx, obj);
+								else sqlite3_bind_null(stmt, idx);
+							};
+						
+						var read = ReadFunction[underlying_type];
+						ReadFn = (stmt,idx) =>
+							{
+								return sqlite3_column_type(stmt, idx) != DataType.Null
+									? read(stmt, idx)
+									: null;
+							};
+					}
 					else
 					{
 						BindFn = BindFunction[ClrType];
@@ -1208,7 +1728,7 @@ namespace pr.common
 				}
 				catch (KeyNotFoundException) {}
 				throw new KeyNotFoundException(
-					"A bind or read function was not found for type "+ClrType.Name+"\n" +
+					"A bind or read function was not found for type '"+ClrType.Name+"'\r\n" +
 					"Custom types need to register a Bind/Read function in the " +
 					"BindFunction/ReadFunction map before being used");
 			}
@@ -1221,44 +1741,33 @@ namespace pr.common
 
 			public override string ToString()
 			{
-				return string.Format("{0}{1} [{2}]" ,IsPk?"*":"" ,Name ,SqlDataType);
+				var sb = new StringBuilder();
+				if (IsPk) sb.Append("*");
+				sb.Append("[").Append(SqlDataType).Append("]");
+				sb.Append(" ").Append(Name);
+				if (IsAutoInc) sb.Append("<auto inc>");
+				if (IsNotNull) sb.Append("<not null>");
+				sb.Append(" ").Append("(").Append(ClrType.Name).Append(")");
+				return sb.ToString();
 			}
 		}
 
 		#region Specialised query sub-classes
 
 		/// <summary>A specialised query used for inserting objects into a table</summary>
-		public class InsertCmd<T> :Query where T:class,new()
+		public class InsertCmd :Query
 		{
-			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
+			protected readonly TableMetaData m_meta;
 
-			/// <summary>Returns the sql string for the insert command for type 'T'</summary>
-			public static string SqlString(OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			/// <summary>Creates a compiled query for inserting an object of type 'type' into a table.</summary>
+			public InsertCmd(TableMetaData meta, Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			:base(db, SqlInsertCmd(meta.Type, on_constraint))
 			{
-				string cons;
-				switch (on_constraint) {
-				default: throw Exception.New(Result.Misuse, "Unknown OnConstraint behaviour");
-				case OnInsertConstraint.Reject:  cons = ""; break;
-				case OnInsertConstraint.Ignore:  cons = "or ignore"; break;
-				case OnInsertConstraint.Replace: cons = "or replace"; break;
-				}
-				var meta = TableMetaData.GetMetaData<T>();
-				return Sql(
-					"insert ",cons," into ",meta.Name," (",
-					string.Join(",", from c in meta.NonAutoIncs select c.Name),
-					") values (",
-					string.Join(",", from c in meta.NonAutoIncs select "?"),
-					")");
+				m_meta = meta;
 			}
 
-			/// <summary>
-			/// Creates a compiled query for inserting an object of type 'T' into a table.
-			/// Users can then bind values, and run the query repeatedly to insert multiple items</summary>
-			public InsertCmd(Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject) :base(db, SqlString(on_constraint))
-			{}
-
 			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
-			public void BindObj(T item)
+			public void BindObj(object item)
 			{
 				m_meta.BindObj(m_stmt, 1, item);
 			}
@@ -1267,73 +1776,34 @@ namespace pr.common
 			public int Run()
 			{
 				Step();
-				Debug.Assert(RowEnd, "Insert returned more than one row");
+				if (!RowEnd) throw Exception.New(Result.Misuse, "Insert returned more than one row");
 				return RowsChanged;
 			}
 		}
 
 		/// <summary>A specialised query used for getting objects from the db</summary>
-		public class GetCmd<T> :Query where T:class,new()
+		public class GetCmd :Query
 		{
-			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
-
-			/// <summary>Returns the sql string for the get command for type 'T'</summary>
-			public static string SqlString()
-			{
-				var meta = TableMetaData.GetMetaData<T>();
-				return Sql("select * from ",meta.Name," where ",meta.PkConstraints());
-			}
+			protected readonly TableMetaData m_meta;
 
 			/// <summary>
 			/// Create a compiled query for getting an object of type 'T' from a table.
 			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
-			public GetCmd(Database db) :base(db, SqlString())
-			{}
+			public GetCmd(TableMetaData meta, Database db) :base(db, SqlGetCmd(meta.Type))
+			{
+				m_meta = meta;
+			}
 
 			/// <summary>
 			/// Populates 'item' and returns true if the query finds a row, otherwise returns false.
 			/// Remember to call 'Reset()' before running the command again</summary>
-			public T Find()
+			public object Find()
 			{
 				Step();
 				if (RowEnd) return null;
-				var item = new T();
-				m_meta.Read(m_stmt, item);
+				var item = m_meta.Factory();
+				m_meta.ReadObj(m_stmt, item);
 				return item;
-			}
-		}
-
-		/// <summary>A specialised query used for getting objects from the db</summary>
-		public class SelectAllCmd<T> :Query ,IEnumerable<T> where T:class,new()
-		{
-			protected readonly TableMetaData m_meta = TableMetaData.GetMetaData<T>();
-
-			/// <summary>Returns the sql string for the get command for type 'T'</summary>
-			public static string SqlString()
-			{
-				var meta = TableMetaData.GetMetaData<T>();
-				return Sql("select * from ",meta.Name);
-			}
-
-			/// <summary>
-			/// Create a compiled query for getting an object of type 'T' from a table.
-			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
-			public SelectAllCmd(Database db) :base(db, SqlString())
-			{}
-
-			/// <summary>Enumerates all rows in a table</summary>
-			public IEnumerator<T> GetEnumerator()
-			{
-				while (Step())
-				{
-					var item = new T();
-					m_meta.Read(m_stmt, item);
-					yield return item;
-				}
-			}
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
 			}
 		}
 
@@ -1343,40 +1813,40 @@ namespace pr.common
 
 		/// <summary>
 		/// Controls the mapping from .NET type to database table.
-		/// By default, all public properties are used as columns, this can be changed
-		/// using the PropertyBindingFlags/FieldBindingFlags properties.</summary>
-		[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
+		/// By default, all public properties (including inherited properties) are used as columns,
+		/// this can be changed using the PropertyBindingFlags/FieldBindingFlags properties.</summary>
+		[AttributeUsage(AttributeTargets.Class|AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
 		public class TableAttribute :Attribute
 		{
 			/// <summary>
-			/// If true, all properties/fields (selected by the given binding flags) are
-			/// used as columns in the created table unless marked with the Sqlite.IgnoreAttribute.<para/>
+			/// If true, all properties/fields (selected by the given binding flags) are used as
+			/// columns in the created table unless marked with the Sqlite.IgnoreAttribute.<para/>
 			/// If false, only properties/fields marked with the Sqlite.ColumnAttribute will be included.<para/>
 			/// Default value is true.</summary>
 			public bool AllByDefault { get; set; }
 			
 			/// <summary>
 			/// Binding flags used to reflect on properties in the type.<para/>
-			/// Only used if 'AllByDefault' is true. BindingFlag.Instance is added
-			/// automatically. Use BindingFlags.Default for none.<para/>
-			/// Default value is BindingFlags.Public|BindingFlags.Instance</summary>
+			/// Only used if 'AllByDefault' is true. BindingFlag.Instance is added automatically.
+			/// Use BindingFlags.Default for none.<para/>
+			/// Default value is BindingFlags.Public</summary>
 			public BindingFlags PropertyBindingFlags { get; set; }
 			
 			/// <summary>
 			/// Binding flags used to reflect on fields in the type.<para/>
-			/// Only used if 'AllByDefault' is true. BindingFlag.Instance is added
-			/// automatically. Use BindingFlags.Default for none.<para/>
+			/// Only used if 'AllByDefault' is true. BindingFlag.Instance is added automatically.
+			/// Use BindingFlags.Default for none.<para/>
 			/// Default value is BindingFlags.Default</summary>
 			public BindingFlags FieldBindingFlags { get; set; }
 			
 			/// <summary>
 			/// Defines any table constraints to use when creating the table.<para/>
 			/// This can be used to specify multiple primary keys for the table.<para/>
-			/// Primary keys are ordered as given in the constraint, starting with column Order value 0.<para/>
+			/// Primary keys are ordered as given in the constraint, starting with Order = 0.<para/>
 			/// e.g.<para/>
 			///  Constraints = "unique (C1), primary key (C2, C3)"<para/>
 			///  Column 'C1' is unique, columns C2 and C3 are the primary keys (in that order)<para/>
-			/// Default value is none.</summary>
+			/// Default value is null.</summary>
 			public string Constraints { get; set; }
 			
 			/// <summary>
@@ -1385,13 +1855,13 @@ namespace pr.common
 			/// is helpful if the class is part of an inheritance hierarchy or is a partial
 			/// class. This property is used in addition to primary keys specified by
 			/// property/field attributes or table constraints. If given, the column Order
-			/// value will be set to 0.<para/>
+			/// value will be set to 0 for that column.<para/>
 			/// Default is value is null.</summary>
-			public string PrimaryKeyName { get; set; }
+			public string PrimaryKey { get; set; }
 			
 			/// <summary>
-			/// Set to true if the column given by 'PrimaryKeyName' is also an auto increment
-			/// column. Not used if PrimaryKeyName is not specified. Default is true.</summary>
+			/// Set to true if the column given by 'PrimaryKey' is also an auto increment
+			/// column. Not used if PrimaryKey is not specified. Default is false.</summary>
 			public bool PKAutoInc { get; set; }
 			
 			public TableAttribute()
@@ -1400,12 +1870,28 @@ namespace pr.common
 				PropertyBindingFlags = BindingFlags.Public;
 				FieldBindingFlags    = BindingFlags.Default;
 				Constraints          = null;
-				PrimaryKeyName       = null;
-				PKAutoInc            = true;
+				PrimaryKey           = null;
+				PKAutoInc            = false;
 			}
 		}
 
-		/// <summary>Marks a property or field as a column in the db table for this type</summary>
+		/// <summary>
+		/// Allows a class or struct to list members that do not create table columns.
+		/// This attribute can be inherited from partial or base classes, the resulting
+		/// ignored members are the union of all ignore column attributes for a type</summary>
+		[AttributeUsage(AttributeTargets.Class|AttributeTargets.Struct, AllowMultiple = true, Inherited = true)]
+		public class IgnoreColumnsAttribute :Attribute
+		{
+			/// <summary>A comma separated list of properties/fields to ignore</summary>
+			public string Ignore { get; private set; }
+			
+			public IgnoreColumnsAttribute(string column_names)
+			{
+				Ignore = column_names;
+			}
+		}
+
+		/// <summary>Marks a property or field as a column in the db table for a type</summary>
 		[AttributeUsage(AttributeTargets.Property|AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
 		public class ColumnAttribute :Attribute
 		{
@@ -1419,32 +1905,50 @@ namespace pr.common
 			/// <summary>True if this column should auto increment. Default is false</summary>
 			public bool AutoInc { get; set; }
 			
-			/// <summary>Defines the order of columns in the table. By default, Order is MaxValue and column order isn't defined</summary>
+			/// <summary>Defines the relative order of columns in the table. Default is '0'</summary>
 			public int Order { get; set; }
 			
-			/// <summary>The sqlite data type used to represent this column. 
-			/// If DataType.Null (default), then the default mapping from .NET data type to sqlite type is used.</summary>
+			/// <summary>
+			/// The sqlite data type used to represent this column. 
+			/// If set to DataType.Null, then the default mapping from .NET data type to sqlite type is used.
+			/// Default value is DataType.Null</summary>
 			public DataType SqlDataType { get; set; }
 			
-			/// <summary>Custom constraints to add to this column. Default is none (null)</summary>
+			/// <summary>Custom constraints to add to this column. Default is null</summary>
 			public string Constraints { get; set; }
 			
 			public ColumnAttribute()
 			{
 				PrimaryKey  = false;
 				AutoInc     = false;
-				Order       = int.MaxValue;
+				Order       = 0;
 				SqlDataType = DataType.Null;
 				Constraints = null;
 			}
 		}
 
-		/// <summary>
-		/// Marks a property or field as not a column in the db table for this type.
-		/// This attribute has higher precedence than the Sqlite.ColumnAttribute.</summary>
+		/// <summary>Marks a property or field as not a column in the db table for a type.</summary>
 		[AttributeUsage(AttributeTargets.Property|AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
-		public class IgnoreAttribute :Attribute {}
+		public class IgnoreAttribute :Attribute
+		{}
 
+		#endregion
+
+		#region Sqlite.TableInfo
+		// ReSharper disable ClassNeverInstantiated.Local,UnusedMember.Local
+
+		/// <summary>Represents the internal type used by sqlite to store information about a table</summary>
+		private class TableInfo
+		{
+			public int    cid        { get; set; }
+			public string name       { get; set; }
+			public string type       { get; set; }
+			public int    notnull    { get; set; }
+			public string dflt_value { get; set; }
+			public int    pk         { get; set; }
+		}
+
+		// ReSharper restore ClassNeverInstantiated.Local,UnusedMember.Local
 		#endregion
 
 		#region Sqlite.Transaction
@@ -1452,7 +1956,8 @@ namespace pr.common
 		/// <summary>An RAII class for transactional interaction with a database</summary>
 		public class Transaction :IDisposable
 		{
-			// Lock so that only one thread can use a transaction at a time
+			private readonly static object m_lock = new object();
+			private static bool m_transaction_in_progress;
 			private readonly Database m_db;
 			private bool m_completed;
 			
@@ -1460,17 +1965,31 @@ namespace pr.common
 			{
 				m_db = db;
 				m_completed = false;
-				m_db.Execute("begin transaction");
+				lock (m_lock)
+				{
+					if (m_transaction_in_progress) throw new ApplicationException("Nested transactions are not allowed");
+					m_db.Execute("begin transaction");
+					m_transaction_in_progress = true;
+				}
 			}
 			public void Commit()
 			{
-				m_db.Execute("commit");
-				m_completed = true;
+				lock (m_lock)
+				{
+					m_db.Execute("commit");
+					m_completed = true;
+					m_transaction_in_progress = false;
+				}
 			}
 			public void Rollback()
 			{
-				m_db.Execute("rollback");
-				m_completed = true;
+				lock (m_lock)
+				{
+					m_db.Execute("rollback");
+					m_completed = true;
+					m_transaction_in_progress = false;
+				}
+
 			}
 			public void Dispose()
 			{
@@ -1504,18 +2023,18 @@ namespace pr.common
 		#region Imported functions
 
 		// ReSharper disable InconsistentNaming,UnusedMember.Local
-		private static readonly IntPtr StaticData    = new IntPtr(0);
+		//private static readonly IntPtr StaticData  = new IntPtr(0);
 		private static readonly IntPtr TransientData = new IntPtr(-1);
 		private delegate void sqlite3_destructor_type(IntPtr ptr);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_config", CallingConvention=CallingConvention.Cdecl)]
-		public static extern Result sqlite3_config(ConfigOption option);
+		private static extern Result sqlite3_config(ConfigOption option);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_open_v2", CallingConvention=CallingConvention.Cdecl)]
 		private static extern Result sqlite3_open_v2(string filepath, out sqlite3 db, int flags, IntPtr zvfs);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_busy_timeout", CallingConvention=CallingConvention.Cdecl)]
-		public static extern Result sqlite3_busy_timeout(sqlite3 db, int milliseconds);
+		private static extern Result sqlite3_busy_timeout(sqlite3 db, int milliseconds);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_close", CallingConvention=CallingConvention.Cdecl)]
 		private static extern Result sqlite3_close(sqlite3 db);
@@ -1539,7 +2058,7 @@ namespace pr.common
 		private static extern int sqlite3_changes(sqlite3 db);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_last_insert_rowid", CallingConvention=CallingConvention.Cdecl)]
-		public static extern long sqlite3_last_insert_rowid(IntPtr db);
+		private static extern long sqlite3_last_insert_rowid(IntPtr db);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_errmsg16", CallingConvention=CallingConvention.Cdecl)]
 		private static extern IntPtr sqlite3_errmsg16(sqlite3 db);
@@ -1555,31 +2074,32 @@ namespace pr.common
 
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_name16", CallingConvention=CallingConvention.Cdecl)]
-		public static extern IntPtr sqlite3_column_name16(sqlite3_stmt stmt, int index);
+		private static extern IntPtr sqlite3_column_name16_impl(sqlite3_stmt stmt, int index);
+		private static string sqlite3_column_name(sqlite3_stmt stmt, int index) { return Marshal.PtrToStringUni(sqlite3_column_name16_impl(stmt, index)); }
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_count", CallingConvention=CallingConvention.Cdecl)]
 		private static extern int sqlite3_column_count(sqlite3_stmt stmt);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_type", CallingConvention=CallingConvention.Cdecl)]
-		public static extern DataType sqlite3_column_type(sqlite3_stmt stmt, int index);
+		private static extern DataType sqlite3_column_type(sqlite3_stmt stmt, int index);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_int64", CallingConvention=CallingConvention.Cdecl)]
-		public static extern Int64 sqlite3_column_int64(sqlite3_stmt stmt, int index);
+		private static extern Int64 sqlite3_column_int64(sqlite3_stmt stmt, int index);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_int", CallingConvention=CallingConvention.Cdecl)]
-		public static extern Int32 sqlite3_column_int(sqlite3_stmt stmt, int index);
+		private static extern Int32 sqlite3_column_int(sqlite3_stmt stmt, int index);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_double", CallingConvention=CallingConvention.Cdecl)]
-		public static extern double sqlite3_column_double(sqlite3_stmt stmt, int index);
+		private static extern double sqlite3_column_double(sqlite3_stmt stmt, int index);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_text16", CallingConvention=CallingConvention.Cdecl)]
-		public static extern IntPtr sqlite3_column_text16(sqlite3_stmt stmt, int index);
+		private static extern IntPtr sqlite3_column_text16(sqlite3_stmt stmt, int index);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_blob", CallingConvention=CallingConvention.Cdecl)]
-		public static extern IntPtr sqlite3_column_blob(sqlite3_stmt stmt, int index);
+		private static extern IntPtr sqlite3_column_blob(sqlite3_stmt stmt, int index);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_bytes", CallingConvention=CallingConvention.Cdecl)]
-		public static extern int sqlite3_column_bytes(sqlite3_stmt stmt, int index);
+		private static extern int sqlite3_column_bytes(sqlite3_stmt stmt, int index);
 
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_parameter_count", CallingConvention=CallingConvention.Cdecl)]
@@ -1592,22 +2112,22 @@ namespace pr.common
 		private static extern IntPtr sqlite3_bind_parameter_name(sqlite3_stmt stmt, int index);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_null", CallingConvention=CallingConvention.Cdecl)]
-		public static extern int sqlite3_bind_null(sqlite3_stmt stmt, int index);
+		private static extern int sqlite3_bind_null(sqlite3_stmt stmt, int index);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_int", CallingConvention=CallingConvention.Cdecl)]
-		public static extern int sqlite3_bind_int(sqlite3_stmt stmt, int index, int val);
+		private static extern int sqlite3_bind_int(sqlite3_stmt stmt, int index, int val);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_int64", CallingConvention=CallingConvention.Cdecl)]
-		public static extern int sqlite3_bind_int64(sqlite3_stmt stmt, int index, long val);
+		private static extern int sqlite3_bind_int64(sqlite3_stmt stmt, int index, long val);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_double", CallingConvention=CallingConvention.Cdecl)]
-		public static extern int sqlite3_bind_double(sqlite3_stmt stmt, int index, double val);
+		private static extern int sqlite3_bind_double(sqlite3_stmt stmt, int index, double val);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_text16", CallingConvention=CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-		public static extern int sqlite3_bind_text16(sqlite3_stmt stmt, int index, string val, int n, IntPtr destructor_cb);
+		private static extern int sqlite3_bind_text16(sqlite3_stmt stmt, int index, string val, int n, IntPtr destructor_cb);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_blob", CallingConvention=CallingConvention.Cdecl)]
-		public static extern int sqlite3_bind_blob(sqlite3_stmt stmt, int index, byte[] val, int n, IntPtr destructor_cb);
+		private static extern int sqlite3_bind_blob(sqlite3_stmt stmt, int index, byte[] val, int n, IntPtr destructor_cb);
 		// ReSharper restore InconsistentNaming,UnusedMember.Local
 
 		#endregion
@@ -1669,19 +2189,42 @@ namespace pr
 			}
 			
 			/// <summary>Binds this type to a parameter in a prepared statement</summary>
-			public static void SqliteBind(sqlite3_stmt stmt, int idx, object obj)
+			public static void SqliteBind(IntPtr stmt, int idx, object obj)
 			{
 				Sqlite.Bind.Text(stmt, idx, ((Custom)obj).Str);
 			}
-			public static Custom SqliteRead(sqlite3_stmt stmt, int idx)
+			public static Custom SqliteRead(IntPtr stmt, int idx)
 			{
 				return new Custom((string)Sqlite.Read.Text(stmt, idx));
 			}
 		}
 
+		// Tests a basic default table
+		private class DOMType0
+		{
+			public  int    Inc_Key                 { get; set; }
+			public  string Inc_Value               { get; set; }
+			public  float  Ign_NoGetter            { set { } }
+			public  int    Ign_NoSetter            { get { return 42; } }
+			private bool   Ign_PrivateProp         { get; set; }
+			private int    m_ign_private_field;
+			public  short  Ign_PublicField;
+			
+			public DOMType0(){}
+			public DOMType0(int seed)
+			{
+				Inc_Key = seed;
+				Inc_Value = seed.ToString();
+				Ign_NoGetter = seed;
+				Ign_PrivateProp = seed != 0;
+				m_ign_private_field = seed;
+				Ign_PublicField = (short)m_ign_private_field;
+			}
+		}
+
 		// Single primary key table
 		[Sqlite.Table(AllByDefault = false)]
-		private class DOMType
+		private class DOMType1
 		{
 			[Sqlite.Column(Order= 0, PrimaryKey = true, AutoInc = true, Constraints = "not null")] public int m_key;
 			[Sqlite.Column(Order= 1)] protected bool      m_bool;
@@ -1694,21 +2237,25 @@ namespace pr
 			[Sqlite.Column(Order= 8)] public uint         m_uint;
 			[Sqlite.Column(Order= 9)] public long         m_int64;
 			[Sqlite.Column(Order=10)] public ulong        m_uint64;
-			[Sqlite.Column(Order=11)] public float        m_float;
-			[Sqlite.Column(Order=12)] public double       m_double;
-			[Sqlite.Column(Order=13)] public string       m_string;
-			[Sqlite.Column(Order=14)] public byte[]       m_buf;
-			[Sqlite.Column(Order=15)] public byte[]       m_empty_buf;
-			[Sqlite.Column(Order=16)] public Guid         m_guid;
-			[Sqlite.Column(Order=17)] public SomeEnum     m_enum;
-			[Sqlite.Column(Order=18, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
+			[Sqlite.Column(Order=11)] public decimal      m_decimal;
+			[Sqlite.Column(Order=12)] public float        m_float;
+			[Sqlite.Column(Order=13)] public double       m_double;
+			[Sqlite.Column(Order=14)] public string       m_string;
+			[Sqlite.Column(Order=15)] public byte[]       m_buf;
+			[Sqlite.Column(Order=16)] public byte[]       m_empty_buf;
+			[Sqlite.Column(Order=17)] public Guid         m_guid;
+			[Sqlite.Column(Order=18)] public SomeEnum     m_enum;
+			[Sqlite.Column(Order=19)] public DateTime     m_datetime;
+			[Sqlite.Column(Order=20, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
+			[Sqlite.Column(Order=21)] public int?         m_nullint;
+			[Sqlite.Column(Order=22)] public long?        m_nulllong;
 			
 			// ReSharper disable UnusedAutoPropertyAccessor.Local
 			public int Ignored { get; set; }
 			// ReSharper restore UnusedAutoPropertyAccessor.Local
 			
-			public DOMType() {}
-			public DOMType(int val)
+			public DOMType1() {}
+			public DOMType1(int val)
 			{
 				m_key        = -1;
 				m_bool       = true;
@@ -1721,36 +2268,44 @@ namespace pr
 				m_uint       = 12345678;
 				m_int64      = 1234567890000;
 				m_uint64     = 1234567890000;
+				m_decimal    = 1234567890.123467890m;
 				m_float      = 1.234567f;
 				m_double     = 1.2345678987654321;
-				m_enum       = SomeEnum.One;
 				m_string     = "string";
-				m_guid       = Guid.NewGuid();
 				m_buf        = new byte[]{0,1,2,3,4,5,6,7,8,9};
 				m_empty_buf  = null;
+				m_guid       = Guid.NewGuid();
+				m_enum       = SomeEnum.One;
+				m_datetime   = DateTime.Now;
 				m_custom     = new Custom();
+				m_nullint    = 23;
+				m_nulllong   = null;
 				Ignored      = val;
 			}
-			public bool Equals(DOMType other)
+			public bool Equals(DOMType1 other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
-				if (other.m_key     != m_key      ) return false;
-				if (other.m_bool    != m_bool     ) return false;
-				if (other.m_sbyte   != m_sbyte    ) return false;
-				if (other.m_byte    != m_byte     ) return false;
-				if (other.m_char    != m_char     ) return false;
-				if (other.m_short   != m_short    ) return false;
-				if (other.m_ushort  != m_ushort   ) return false;
-				if (other.m_int     != m_int      ) return false;
-				if (other.m_uint    != m_uint     ) return false;
-				if (other.m_int64   != m_int64    ) return false;
-				if (other.m_uint64  != m_uint64   ) return false;
+				if (other.m_key      != m_key               ) return false;
+				if (other.m_bool     != m_bool              ) return false;
+				if (other.m_sbyte    != m_sbyte             ) return false;
+				if (other.m_byte     != m_byte              ) return false;
+				if (other.m_char     != m_char              ) return false;
+				if (other.m_short    != m_short             ) return false;
+				if (other.m_ushort   != m_ushort            ) return false;
+				if (other.m_int      != m_int               ) return false;
+				if (other.m_uint     != m_uint              ) return false;
+				if (other.m_int64    != m_int64             ) return false;
+				if (other.m_uint64   != m_uint64            ) return false;
+				if (other.m_decimal  != m_decimal           ) return false;
+				if (other.m_nullint  != m_nullint           ) return false;
+				if (other.m_nulllong != m_nulllong          ) return false;
 				if (!Equals(other.m_string, m_string)       ) return false;
 				if (!Equals(other.m_buf, m_buf)             ) return false;
 				if (!Equals(other.m_empty_buf, m_empty_buf) ) return false;
 				if (!Equals(other.m_enum, m_enum)           ) return false;
 				if (!other.m_guid.Equals(m_guid)            ) return false;
+				if (!other.m_datetime.Equals(m_datetime)    ) return false;
 				if (!other.m_custom.Equals(m_custom)        ) return false;
 				if (Math.Abs(other.m_float   - m_float  ) > float .Epsilon) return false;
 				if (Math.Abs(other.m_double  - m_double ) > double.Epsilon) return false;
@@ -1767,54 +2322,76 @@ namespace pr
 		}
 
 		// Tests PKs named at class level, Unicode, non-int type primary keys
-		[Sqlite.Table(PrimaryKeyName = "PK", PKAutoInc = false, FieldBindingFlags = BindingFlags.Public)]
+		[Sqlite.Table(PrimaryKey = "PK", PKAutoInc = false, FieldBindingFlags = BindingFlags.Public)]
 		private class DOMType2 :DOMType2Base
 		{
-			public string UniStr;
+			public string UniStr; // Should be a column, because of the FieldBindingFlags
+			private bool Ign_PrivateField; // Should not be a column because private
+			
 			public DOMType2() {}
 			public DOMType2(string key, string str)
 			{
 				PK     = key;
 				UniStr = str;
+				Ign_PrivateField = true;
 			}
 			public bool Equals(DOMType2 other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
-				if (other.PK     != PK    ) return false;
 				if (other.UniStr != UniStr) return false;
-				return true;
+				return base.Equals(other);
 			}
 		}
 		private class DOMType2Base
 		{
+			[Sqlite.Column] private int Inc_Explicit; // Should be a column, because explicitly named
+			
 			// Notice the DOMType2 class indicates this is the primary key from a separate class.
 			public string PK { get; protected set; }
+
+			protected DOMType2Base()
+			{
+				Inc_Explicit = -2;
+			}
+			public bool Equals(DOMType2Base other)
+			{
+				if (ReferenceEquals(null, other)) return false;
+				if (ReferenceEquals(this, other)) return true;
+				if (other.PK           != PK          ) return false;
+				if (other.Inc_Explicit != Inc_Explicit) return false;
+				return true;
+			}
 		}
 
 		// Tests multiple primary keys, and properties in inherited/partial classes
-		[Sqlite.Table(Constraints = "primary key (Key1, Key2)")]
-		public partial class MultiDOMType
+		[Sqlite.Table(Constraints = "primary key (Key1, Key2, Key3)")]
+		[Sqlite.IgnoreColumns("Ignored1")]
+		public partial class DOMType3
 		{
 			public int    Key1 { get; set; }
 			public bool   Key2 { get; set; }
 			public string Prop1 { get; set; }
 			public float  Prop2 { get; set; }
 			public Guid   Prop3 { get; set; }
-			
-			public MultiDOMType(){}
-			public MultiDOMType(int key1, bool key2)
+			public float Ignored1 { get; set; }
+
+			public DOMType3(){}
+			public DOMType3(int key1, bool key2, string key3)
 			{
 				Key1 = key1;
 				Key2 = key2;
+				Key3 = key3;
 				Prop1 = key1.ToString() + " " + key2.ToString();
 				Prop2 = key1;
 				Prop3 = Guid.NewGuid();
 				Parent1 = key1;
 				PropA = key1.ToString() + " " + key2.ToString();
 				PropB = (SomeEnum)key1;
+				Ignored1 = 1f;
+				Ignored2 = 2.0;
 			}
-			public bool Equals(MultiDOMType other)
+			public bool Equals(DOMType3 other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
@@ -1829,15 +2406,30 @@ namespace pr
 				return true;
 			}
 		}
-		public partial class MultiDOMType :MultiDOMTypeBase
+		[Sqlite.IgnoreColumns("Ignored2")]
+		public partial class DOMType3 :DOMType3Base
 		{
 			public string   PropA { get; set; }
 			public SomeEnum PropB { get; set; }
 		}
-		public class MultiDOMTypeBase
+		public class DOMType3Base
 		{
 			public int Parent1 { get; set; }
+			public string Key3 { get; set; }
+			public double Ignored2 { get; set; }
 		}
+
+		// Tests altering a table
+		public class DOMType4
+		{
+			[Sqlite.Column(PrimaryKey = true)] public int Key1 { get; set; }
+			public bool   Key2 { get; set; }
+			public string Prop1 { get; set; }
+			public float  Prop2 { get; set; }
+			public Guid   Prop3 { get; set; }
+			public int    NewProp { get; set; }
+		}
+
 		// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local
 
 		// The test methods can run in any order, but we only want to do this stuff once
@@ -1855,6 +2447,44 @@ namespace pr
 			Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
 		}
 
+		[Test] public static void TestSqlite_DefaultUse()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a simple table
+				db.DropTable<DOMType0>();
+				db.CreateTable<DOMType0>();
+				Assert.IsTrue(db.TableExists<DOMType0>());
+				
+				// Check the table
+				var table = db.Table<DOMType0>();
+				Assert.AreEqual(2, table.ColumnCount);
+				var column_names = new[]{"Inc_Key", "Inc_Value"};
+				using (var q = table.Query("select * from "+table.Name))
+				{
+					Assert.AreEqual(2, q.ColumnCount);
+					Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
+					Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
+				}
+				
+				// Create some objects to stick in the table
+				var obj1 = new DOMType0(5);
+				var obj2 = new DOMType0(6);
+				var obj3 = new DOMType0(7);
+				
+				// Insert stuff
+				Assert.AreEqual(1, table.Insert(obj1));
+				Assert.AreEqual(1, table.Insert(obj2));
+				Assert.AreEqual(1, table.Insert(obj3));
+				Assert.AreEqual(3, table.RowCount);
+			
+			}
+		}
+
 		[Test] public static void TestSqlite_TypicalUse()
 		{
 			TestSqlite_OneTimeOnly();
@@ -1864,16 +2494,16 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<DOMType>();
-				db.CreateTable<DOMType>();
-				Assert.IsTrue(db.TableExists<DOMType>());
+				db.DropTable<DOMType1>();
+				db.CreateTable<DOMType1>();
+				Assert.IsTrue(db.TableExists<DOMType1>());
 				
 				// Check the table
-				var table = db.Table<DOMType>();
-				Assert.AreEqual(19, table.ColumnCount);
+				var table = db.Table<DOMType1>();
+				Assert.AreEqual(23, table.ColumnCount);
 				using (var q = table.Query("select * from "+table.Name))
 				{
-					Assert.AreEqual(19, q.ColumnCount);
+					Assert.AreEqual(23, q.ColumnCount);
 					Assert.AreEqual("m_key"       ,q.ColumnName( 0));
 					Assert.AreEqual("m_bool"      ,q.ColumnName( 1));
 					Assert.AreEqual("m_sbyte"     ,q.ColumnName( 2));
@@ -1885,25 +2515,29 @@ namespace pr
 					Assert.AreEqual("m_uint"      ,q.ColumnName( 8));
 					Assert.AreEqual("m_int64"     ,q.ColumnName( 9));
 					Assert.AreEqual("m_uint64"    ,q.ColumnName(10));
-					Assert.AreEqual("m_float"     ,q.ColumnName(11));
-					Assert.AreEqual("m_double"    ,q.ColumnName(12));
-					Assert.AreEqual("m_string"    ,q.ColumnName(13));
-					Assert.AreEqual("m_buf"       ,q.ColumnName(14));
-					Assert.AreEqual("m_empty_buf" ,q.ColumnName(15));
-					Assert.AreEqual("m_guid"      ,q.ColumnName(16));
-					Assert.AreEqual("m_enum"      ,q.ColumnName(17));
-					Assert.AreEqual("m_custom"    ,q.ColumnName(18));
+					Assert.AreEqual("m_decimal"   ,q.ColumnName(11));
+					Assert.AreEqual("m_float"     ,q.ColumnName(12));
+					Assert.AreEqual("m_double"    ,q.ColumnName(13));
+					Assert.AreEqual("m_string"    ,q.ColumnName(14));
+					Assert.AreEqual("m_buf"       ,q.ColumnName(15));
+					Assert.AreEqual("m_empty_buf" ,q.ColumnName(16));
+					Assert.AreEqual("m_guid"      ,q.ColumnName(17));
+					Assert.AreEqual("m_enum"      ,q.ColumnName(18));
+					Assert.AreEqual("m_datetime"  ,q.ColumnName(19));
+					Assert.AreEqual("m_custom"    ,q.ColumnName(20));
+					Assert.AreEqual("m_nullint"   ,q.ColumnName(21));
+					Assert.AreEqual("m_nulllong"  ,q.ColumnName(22));
 				}
 				
 				// Create some objects to stick in the table
-				var obj1 = new DOMType(5);
-				var obj2 = new DOMType(6);
-				var obj3 = new DOMType(7);
+				var obj1 = new DOMType1(5);
+				var obj2 = new DOMType1(6);
+				var obj3 = new DOMType1(7);
 				
 				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1, out obj1.m_key));
-				Assert.AreEqual(1, table.Insert(obj2, out obj2.m_key));
-				Assert.AreEqual(1, table.Insert(obj3, out obj3.m_key));
+				Assert.AreEqual(1, table.Insert(obj1));
+				Assert.AreEqual(1, table.Insert(obj2));
+				Assert.AreEqual(1, table.Insert(obj3));
 				Assert.AreEqual(3, table.RowCount);
 				
 				// Check Get() throws and Find() returns null if not found
@@ -1975,10 +2609,14 @@ namespace pr
 				Assert.AreEqual(obj2.m_ushort, val);
 				
 				// Add something back
-				Assert.AreEqual(1, table.Insert(obj3, out obj3.m_key));
+				Assert.AreEqual(1, table.Insert(obj3));
 				OBJ3 = table.Get(obj3.m_key);
 				Assert.IsNotNull(OBJ3);
 				Assert.IsTrue(obj3.Equals(OBJ3));
+				
+				// Update the column value for all rows
+				obj1.m_byte = obj2.m_byte = obj3.m_byte = 0xAB;
+				Assert.AreEqual(3, table.UpdateAll("m_byte", (byte)0xAB));
 				
 				// Enumerate objects
 				var objs = table.Select(x => x).ToArray();
@@ -2003,19 +2641,20 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<MultiDOMType>();
-				db.CreateTable<MultiDOMType>();
-				Assert.IsTrue(db.TableExists<MultiDOMType>());
+				db.DropTable<DOMType3>();
+				db.CreateTable<DOMType3>();
+				Assert.IsTrue(db.TableExists<DOMType3>());
 				
 				// Check the table
-				var table = db.Table<MultiDOMType>();
-				Assert.AreEqual(8, table.ColumnCount);
+				var table = db.Table<DOMType3>();
+				Assert.AreEqual(9, table.ColumnCount);
 				using (var q = table.Query("select * from "+table.Name))
 				{
 					var cols = q.ColumnNames.ToList();
-					Assert.AreEqual(8, q.ColumnCount);
+					Assert.AreEqual(9, q.ColumnCount);
 					Assert.IsTrue(cols.Contains("Key1"));
 					Assert.IsTrue(cols.Contains("Key2"));
+					Assert.IsTrue(cols.Contains("Key3"));
 					Assert.IsTrue(cols.Contains("Prop1"));
 					Assert.IsTrue(cols.Contains("Prop2"));
 					Assert.IsTrue(cols.Contains("Prop3"));
@@ -2025,10 +2664,10 @@ namespace pr
 				}
 				
 				// Create some stuff
-				var obj1 = new MultiDOMType(1, false);
-				var obj2 = new MultiDOMType(1, true);
-				var obj3 = new MultiDOMType(2, false);
-				var obj4 = new MultiDOMType(2, true);
+				var obj1 = new DOMType3(1, false, "first");
+				var obj2 = new DOMType3(1, true , "first");
+				var obj3 = new DOMType3(2, false, "first");
+				var obj4 = new DOMType3(2, true , "first");
 				
 				// Insert it an check they're there
 				Assert.AreEqual(1, table.Insert(obj1));
@@ -2036,10 +2675,13 @@ namespace pr
 				Assert.AreEqual(1, table.Insert(obj3));
 				Assert.AreEqual(1, table.Insert(obj4));
 				Assert.AreEqual(4, table.RowCount);
-				var OBJ1 = table.Get(obj1.Key1, obj1.Key2);
-				var OBJ2 = table.Get(obj2.Key1, obj2.Key2);
-				var OBJ3 = table.Get(obj3.Key1, obj3.Key2);
-				var OBJ4 = table.Get(obj4.Key1, obj4.Key2);
+				
+				Assert.Throws<ArgumentException>(()=>table.Get(obj1.Key1, obj1.Key2));
+				
+				var OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
+				var OBJ2 = table.Get(obj2.Key1, obj2.Key2, obj2.Key3);
+				var OBJ3 = table.Get(obj3.Key1, obj3.Key2, obj3.Key3);
+				var OBJ4 = table.Get(obj4.Key1, obj4.Key2, obj4.Key3);
 				Assert.IsTrue(obj1.Equals(OBJ1));
 				Assert.IsTrue(obj2.Equals(OBJ2));
 				Assert.IsTrue(obj3.Equals(OBJ3));
@@ -2051,7 +2693,7 @@ namespace pr
 					Sqlite.Exception err = null;
 					try { table.Insert(obj1); } catch (Sqlite.Exception ex) { err = ex; }
 					Assert.IsTrue(err != null && err.Result == Sqlite.Result.Constraint);
-					OBJ1 = table.Get(obj1.Key1, obj1.Key2);
+					OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
 					Assert.IsNotNull(OBJ1);
 					Assert.IsFalse(obj1.Equals(OBJ1));
 				}
@@ -2059,7 +2701,7 @@ namespace pr
 					Sqlite.Exception err = null;
 					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Ignore); } catch (Sqlite.Exception ex) { err = ex; }
 					Assert.IsNull(err);
-					OBJ1 = table.Get(obj1.Key1, obj1.Key2);
+					OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
 					Assert.IsNotNull(OBJ1);
 					Assert.IsFalse(obj1.Equals(OBJ1));
 				}
@@ -2067,7 +2709,7 @@ namespace pr
 					Sqlite.Exception err = null;
 					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Replace); } catch (Sqlite.Exception ex) { err = ex; }
 					Assert.IsNull(err);
-					OBJ1 = table.Get(obj1.Key1, obj1.Key2);
+					OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
 					Assert.IsNotNull(OBJ1);
 					Assert.IsTrue(obj1.Equals(OBJ1));
 				}
@@ -2075,13 +2717,14 @@ namespace pr
 				// Update in a multiple pk table
 				obj2.PropA = "I've also been modified";
 				Assert.AreEqual(1, table.Update(obj2));
-				OBJ2 = table.Get(obj2.Key1, obj2.Key2);
+				OBJ2 = table.Get(obj2.Key1, obj2.Key2, obj2.Key3);
 				Assert.IsNotNull(OBJ2);
 				Assert.IsTrue(obj2.Equals(OBJ2));
 				
 				// Delete in a multiple pk table
-				Assert.AreEqual(1, table.Delete(Sqlite.PrimaryKeys(obj3)));
-				OBJ3 = table.Find(obj3.Key1, obj3.Key2);
+				var keys = Sqlite.PrimaryKeys(obj3);
+				Assert.AreEqual(1, table.DeleteByKey(keys));
+				OBJ3 = table.Find(obj3.Key1, obj3.Key2, obj3.Key3);
 				Assert.IsNull(OBJ3);
 			}
 		}
@@ -2101,12 +2744,14 @@ namespace pr
 				
 				// Check the table
 				var table = db.Table<DOMType2>();
-				Assert.AreEqual(2, table.ColumnCount);
+				Assert.AreEqual(3, table.ColumnCount);
+				var column_names = new[]{"PK", "UniStr", "Inc_Explicit"};
 				using (var q = table.Query("select * from "+table.Name))
 				{
-					Assert.AreEqual(2        ,q.ColumnCount);
+					Assert.AreEqual(3        ,q.ColumnCount);
 					Assert.AreEqual("PK"     ,q.ColumnName(0));
-					Assert.AreEqual("UniStr" ,q.ColumnName(1));
+					Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
+					Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
 				}
 				
 				// Insert some stuff and check it stores/reads back ok
@@ -2137,13 +2782,13 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<DOMType>();
-				db.CreateTable<DOMType>();
-				Assert.IsTrue(db.TableExists<DOMType>());
-				var table = db.Table<DOMType>();
+				db.DropTable<DOMType1>();
+				db.CreateTable<DOMType1>();
+				Assert.IsTrue(db.TableExists<DOMType1>());
+				var table = db.Table<DOMType1>();
 				
 				// Create objects
-				var objs = Enumerable.Range(0,10).Select(i => new DOMType(i)).ToList();
+				var objs = Enumerable.Range(0,10).Select(i => new DOMType1(i)).ToList();
 				
 				// Add objects
 				try { using (new Sqlite.Transaction(db))
@@ -2163,6 +2808,109 @@ namespace pr
 					tranny.Commit();
 				}
 				Assert.AreEqual(objs.Count, table.RowCount);
+			}
+		}
+		
+		[Test] public static void TestSqlite_RuntimeTypes()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a table
+				db.DropTable<DOMType1>();
+				db.CreateTable<DOMType1>();
+				Assert.IsTrue(db.TableExists<DOMType1>());
+				var table = db.Table(typeof(DOMType1));
+				
+				// Create objects
+				var objs = Enumerable.Range(0,10).Select(i => new DOMType1(i)).ToList();
+				foreach (var x in objs)
+					Assert.AreEqual(1, table.Insert(x)); // insert without compile-time type info
+				
+				objs[5].m_string = "I am number 5";
+				Assert.AreEqual(1, table.Update(objs[5]));
+				
+				var OBJS = table.Cast<DOMType1>().Select(x => x).ToList();
+				for (int i = 0, iend = objs.Count; i != iend; ++i)
+					Assert.IsTrue(objs[i].Equals(OBJS[i]));
+			}
+		}
+		
+		[Test] public static void TestSqlite_AlterTable()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a table
+				db.DropTable<DOMType3>();
+				db.CreateTable<DOMType3>();
+				Assert.IsTrue(db.TableExists<DOMType3>());
+				
+				// Check the table
+				var table3 = db.Table<DOMType3>();
+				Assert.AreEqual(9, table3.ColumnCount);
+				using (var q = table3.Query("select * from "+table3.Name))
+				{
+					var cols = q.ColumnNames.ToList();
+					Assert.AreEqual(9, q.ColumnCount);
+					Assert.AreEqual(9, cols.Count);
+					Assert.IsTrue(cols.Contains("Key1"));
+					Assert.IsTrue(cols.Contains("Key2"));
+					Assert.IsTrue(cols.Contains("Key3"));
+					Assert.IsTrue(cols.Contains("Prop1"));
+					Assert.IsTrue(cols.Contains("Prop2"));
+					Assert.IsTrue(cols.Contains("Prop3"));
+					Assert.IsTrue(cols.Contains("PropA"));
+					Assert.IsTrue(cols.Contains("PropB"));
+					Assert.IsTrue(cols.Contains("Parent1"));
+				}
+				
+				// Create some stuff
+				var obj1 = new DOMType3(1, false, "first");
+				var obj2 = new DOMType3(1, true , "first");
+				var obj3 = new DOMType3(2, false, "first");
+				var obj4 = new DOMType3(2, true , "first");
+				
+				// Insert it an check they're there
+				Assert.AreEqual(1, table3.Insert(obj1));
+				Assert.AreEqual(1, table3.Insert(obj2));
+				Assert.AreEqual(1, table3.Insert(obj3));
+				Assert.AreEqual(1, table3.Insert(obj4));
+				Assert.AreEqual(4, table3.RowCount);
+				
+				// Rename the table
+				db.DropTable<DOMType4>();
+				db.RenameTable<DOMType3>("DOMType4", false);
+				
+				// Alter the table to DOMType4
+				db.AlterTable<DOMType4>();
+				Assert.IsTrue(db.TableExists<DOMType4>());
+				
+				// Check the table
+				var table4 = db.Table<DOMType4>();
+				Assert.AreEqual(6, table4.ColumnCount);
+				using (var q = table4.Query("select * from "+table4.Name))
+				{
+					var cols = q.ColumnNames.ToList();
+					Assert.AreEqual(10, q.ColumnCount);
+					Assert.AreEqual(10, cols.Count);
+					Assert.IsTrue(cols.Contains("Key1"));
+					Assert.IsTrue(cols.Contains("Key2"));
+					Assert.IsTrue(cols.Contains("Key3"));
+					Assert.IsTrue(cols.Contains("Prop1"));
+					Assert.IsTrue(cols.Contains("Prop2"));
+					Assert.IsTrue(cols.Contains("Prop3"));
+					Assert.IsTrue(cols.Contains("PropA"));
+					Assert.IsTrue(cols.Contains("PropB"));
+					Assert.IsTrue(cols.Contains("Parent1"));
+					Assert.IsTrue(cols.Contains("NewProp"));
+				}
 			}
 		}
 	}

@@ -9,21 +9,15 @@ namespace RyLogViewer
 	{
 		private readonly BindingSource m_marks;
 		private DataGridView m_grid;
-		
+
 		/// <summary>An event called whenever the dialog gets a NextBookmark command</summary>
 		public event Action NextBookmark;
-		public void RaiseNextBookmark()
-		{
-			if (NextBookmark != null) NextBookmark();
-		}
-		
+		public void RaiseNextBookmark() { if (NextBookmark != null) NextBookmark(); }
+
 		/// <summary>An event called whenever the dialog gets a FindPrev command</summary>
 		public event Action PrevBookmark;
-		public void RaisePrevBookmark()
-		{
-			if (PrevBookmark != null) PrevBookmark();
-		}
-		
+		public void RaisePrevBookmark() { if (PrevBookmark != null) PrevBookmark(); }
+
 		public BookmarksUI(Form owner, BindingSource marks)
 		:base(owner, new Size(-200, +28), new Size(200,320), EPin.TopRight, false)
 		{
@@ -40,18 +34,22 @@ namespace RyLogViewer
 						m_marks.Position = m_grid.CurrentCell.RowIndex;
 				};
 		}
-		
-		/// <summary>Handle key presses</summary>
-		protected override void OnKeyDown(KeyEventArgs e)
+
+		/// <summary>Handle global command keys</summary>
+		protected override bool ProcessCmdKey(ref Message msg, Keys key_data)
 		{
-			if (Owner is Main)
+			switch (key_data)
 			{
-				((Main)Owner).HandleKeyDown(e);
-				if (e.Handled) return;
+			default:
+				var main = Owner as Main;
+				if (main != null && main.HandleKeyDown(this, key_data)) return true;
+				return base.ProcessCmdKey(ref msg, key_data);
+			case Keys.Escape:
+				Close();
+				return true;
 			}
-			base.OnKeyDown(e);
 		}
-		
+
 		#region Windows Form Designer generated code
 		
 		/// <summary>

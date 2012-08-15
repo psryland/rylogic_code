@@ -476,12 +476,19 @@ namespace pr.util
 				? ((MemberExpression) unex.Operand).Member.Name
 				: ((MemberExpression) expression.Body).Member.Name;
 		}
-		
-		/// <summary>Returns all inherited fields for a type</summary>
-		private static IEnumerable<FieldInfo> AllFields(Type type, BindingFlags flags)
+
+		/// <summary>Returns all inherited properties for a type</summary>
+		public static IEnumerable<PropertyInfo> AllProps(Type type, BindingFlags flags)
 		{
-			if (type == null) return Enumerable.Empty<FieldInfo>();
-			return AllFields(type.BaseType, flags).Union(type.GetFields(flags|BindingFlags.DeclaredOnly));
+			if (type == null || type == typeof(object)) return Enumerable.Empty<PropertyInfo>();
+			return AllProps(type.BaseType, flags).Concat(type.GetProperties(flags|BindingFlags.DeclaredOnly));
+		}
+
+		/// <summary>Returns all inherited fields for a type</summary>
+		public static IEnumerable<FieldInfo> AllFields(Type type, BindingFlags flags)
+		{
+			if (type == null || type == typeof(object)) return Enumerable.Empty<FieldInfo>();
+			return AllFields(type.BaseType, flags).Concat(type.GetFields(flags|BindingFlags.DeclaredOnly));
 		}
 
 		/// <summary>

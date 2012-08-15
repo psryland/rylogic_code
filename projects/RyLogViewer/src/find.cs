@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using pr.extn;
 using pr.gui;
 using pr.maths;
 using pr.util;
@@ -12,20 +13,95 @@ namespace RyLogViewer
 {
 	public partial class Main
 	{
-		private Pattern m_last_find_pattern; // The pattern last used in a find
-		
+		private readonly BindingSource m_find_history;
+
+		/// <summary>Initialise the app's find search support</summary>
+		private void InitFind()
+		{
+			// When the find events are fired on m_find_ui, trigger find next/prev
+			m_find_ui.FindNext += FindNext;
+			m_find_ui.FindPrev += FindPrev;
+		}
+
 		/// <summary>Show the find dialog</summary>
 		private void ShowFindDialog()
 		{
 			// Initialise the find string from the selected row
-			int init_row = SelectedRow;
-			if (init_row != -1)
-				m_find_ui.Pattern = ReadLine(init_row).RowText;
+			// if the find pattern is currently empty
+			if (m_find_ui.Pattern.Expr.Length == 0)
+			{
+				int row_index = SelectedRow;
+				if (row_index != -1)
+					m_find_ui.Pattern = new Pattern(EPattern.Substring, ReadLine(row_index).RowText);
+			}
 			
 			// Display the find window
 			m_find_ui.Display();
 		}
-		
+
+		/// <summary>Update the current find pattern to the text from row 'row_index'</summary>
+		private void SetFindPattern(int row_index, bool find_next)
+		{
+			if (row_index == -1) return;
+			m_find_ui.Pattern = new Pattern(EPattern.Substring, ReadLine(row_index).RowText);
+			if (find_next) FindNext();
+			else           FindPrev();
+		}
+
+		/// <summary>Prepare to execute the find command. Returns true if the find should execute</summary>
+		private bool PreFind()
+		{
+			// If there's nothing in the grid, don't do a find
+			if (m_grid.RowCount == 0)
+				return false;
+			
+			// Check if m_find_ui has a valid find pattern
+			if (m_find_ui.Pattern.Expr.Length == 0 || !m_find_ui.Pattern.ExprValid)
+				return false;
+			
+			var pattern = new Pattern(m_find_ui.Pattern);
+			
+			// Remove any patterns with the same expr as 'pattern'
+			m_find_history.RemoveIf<Pattern>(x => string.CompareOrdinal(x.Expr, pattern.Expr) == 0);
+			m_find_history.Insert(0, pattern);
+			m_find_history.Position = 0;
+			
+			// Cap the length of the find history
+			while (m_find_history.Count > Constants.MaxFindHistory)
+				m_find_history.RemoveAt(m_find_history.Count - 1);
+			
+			// Continue with the find
+			return true;
+		}
+
+		/// <summary>Search for the next occurrence of a pattern in the file</summary>
+		private void FindNext()
+		{
+			if (!PreFind())
+				return;
+			
+			var start = m_line_index[SelectedRow].End;
+			Log.Info(this, "FindNext starting from {0}", start);
+			
+			long found;
+			if (Find(m_find_ui.Pattern, start, false, out found) && found == -1)
+				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
+		}
+
+		/// <summary>Search for an earlier occurrence of a pattern in the grid</summary>
+		private void FindPrev()
+		{
+			if (!PreFind())
+				return;
+			
+			var start = SelectedRowRange.Begin;
+			Log.Info(this, "FindPrev starting from {0}", start);
+			
+			long found;
+			if (Find(m_find_ui.Pattern, start, true, out found) && found == -1)
+				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue);
+		}
+
 		/// <summary>Searches the file from 'start' looking for a match to 'pat'</summary>
 		/// <returns>Returns true if a match is found, false otherwise. If true
 		/// is returned 'found' contains the file byte offset of the first match</returns>
@@ -83,41 +159,11 @@ namespace RyLogViewer
 				}){StartPosition = FormStartPosition.CenterParent};
 			
 			DialogResult res = DialogResult.Cancel;
-			try
-			{
-				m_last_find_pattern = pat;
-				res = search.ShowDialog(this);
-			}
+			try { res = search.ShowDialog(this); }
 			catch (OperationCanceledException) {}
 			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Find terminated by an error.", "Find error"); }
 			found = at;
 			return res == DialogResult.OK;
-		}
-		
-		/// <summary>Search for the next occurrence of a pattern in the file</summary>
-		private void FindNext(Pattern pat)
-		{
-			if (pat == null || m_grid.RowCount == 0) return;
-			
-			var start = m_line_index[SelectedRow].End;
-			Log.Info(this, "FindNext starting from {0}", start);
-			
-			long found;
-			if (Find(pat, start, false, out found) && found == -1)
-				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
-		}
-		
-		/// <summary>Search for an earlier occurrence of a pattern in the grid</summary>
-		private void FindPrev(Pattern pat)
-		{
-			if (pat == null || m_grid.RowCount == 0) return;
-			
-			var start = SelectedRowRange.Begin;
-			Log.Info(this, "FindPrev starting from {0}", start);
-			
-			long found;
-			if (Find(pat, start, true, out found) && found == -1)
-				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue);
 		}
 	}
 }

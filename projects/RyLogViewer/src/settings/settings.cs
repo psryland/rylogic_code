@@ -240,11 +240,6 @@ namespace RyLogViewer
 			get { return get<string>("Encoding"); }
 			set { set("Encoding", value); }
 		}
-		public string[] FindHistory
-		{
-			get { return get<string[]>("FindHistory"); }
-			set { set("FindHistory", value); }
-		}
 		public string[] OutputFilepathHistory
 		{
 			get { return get<string[]>("OutputFilepathHistory"); }
@@ -269,6 +264,11 @@ namespace RyLogViewer
 		{
 			get { return get<PipeConn[]>("PipeConnectionHistory"); }
 			set { set("PipeConnectionHistory", value); }
+		}
+		public string LogFilePath
+		{
+			get { return get<string>("LogFilePath"); }
+			set { set("LogFilePath", value); }
 		}
 
 		// Default construct settings
@@ -320,12 +320,12 @@ namespace RyLogViewer
 			ColDelimiter                    = ""; // stored in humanised form
 			ColumnCount                     = 1;
 			Encoding                        = "";
-			FindHistory                     = new string[0];
 			OutputFilepathHistory           = new string[0];
 			LogProgramOutputHistory         = new LaunchApp[0];
 			NetworkConnectionHistory        = new NetConn[0];
 			SerialConnectionHistory         = new SerialConn[0];
 			PipeConnectionHistory           = new PipeConn[0];
+			LogFilePath                     = "";
 		}
 		public Settings(string filepath)
 		:base(filepath)

@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.inet;
+using pr.extn;
 
 namespace RyLogViewer
 {
@@ -140,13 +141,6 @@ namespace RyLogViewer
 		public const string CDelim       = "-cdelim";
 		public const string NoGUI        = "-nogui";
 	}
-
-	//public enum SubRangeScrollRange
-	//{
-	//    FileRange,
-	//    DisplayedRange,
-	//    SelectedRange,
-	//}
 
 	[DataContract]
 	public class LaunchApp :ICloneable
@@ -339,15 +333,15 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>
-		public static void AddToHistoryList<T>(List<T> list, T item, bool ignore_case, int max_history_length)
+		public static void AddToHistoryList<T>(IList<T> list, T item, bool ignore_case, int max_history_length)
 		{
 			string item_name = item.ToString();
 			StringComparison cmp = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-			list.RemoveAll(i => String.Compare(i.ToString(), item_name, cmp) == 0);
+			list.RemoveIf(i => String.Compare(i.ToString(), item_name, cmp) == 0);
 			list.Insert(0, item);
 			
-			if (list.Count > max_history_length)
-				list.RemoveRange(max_history_length, list.Count - max_history_length);
+			while (list.Count > max_history_length)
+				list.RemoveAt(list.Count - 1);
 		}
 		
 		/// <summary>A wrapper around showing message boxes for exceptions</summary>

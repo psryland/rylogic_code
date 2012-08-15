@@ -87,8 +87,8 @@ namespace pr.gui
 			}
 			if (e.KeyCode == Keys.Tab && e.Control && Owner != null)
 			{
-			    Owner.Focus();
-			    return;
+				Owner.Focus();
+				return;
 			}
 			e.Handled = false;
 			base.OnKeyDown(e);

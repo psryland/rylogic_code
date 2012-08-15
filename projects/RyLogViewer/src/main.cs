@@ -38,6 +38,7 @@ namespace RyLogViewer
 		private readonly NotifyIcon m_notify_icon;            // A system tray icon
 		private readonly ToolTip m_tt;                        // Tooltips
 		private readonly ToolTip m_balloon;                   // A hint balloon tooltip
+		private readonly Form[] m_tab_cycle;                  // The forms that Ctrl+Tab cycles through
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
 		private string m_filepath;                            // The path of the log file we're viewing
@@ -56,9 +57,9 @@ namespace RyLogViewer
 
 		public Main(StartupOptions startup_options)
 		{
-			Log.Register(null, false);
-			Log.Info(this, "App Startup: {0}", DateTime.Now);
 			m_settings = new Settings(startup_options.SettingsPath);
+			Log.Register(m_settings.LogFilePath, false);
+			Log.Info(this, "App Startup: {0}", DateTime.Now);
 			
 			InitializeComponent();
 			AllowTransparency = true;
@@ -75,11 +76,13 @@ namespace RyLogViewer
 			m_batch_set_col_size = new EventBatcher(100, this);
 			m_highlights         = new List<Highlight>();
 			m_transforms         = new List<Transform>();
+			m_find_history       = new BindingSource{DataSource = new BindingList<Pattern>()};
+			m_find_ui            = new FindUI(this, m_find_history){Visible = false};
 			m_bookmarks          = new BindingSource{DataSource = new BindingList<Bookmark>()};
-			m_find_ui            = new FindUI(this, m_settings){Visible = false};
 			m_bookmarks_ui       = new BookmarksUI(this, m_bookmarks){Visible = false};
 			m_tt                 = new ToolTip();
 			m_balloon            = new ToolTip{IsBalloon = true};
+			m_tab_cycle          = new Form[]{this, m_find_ui, m_bookmarks_ui};
 			m_notify_icon        = new NotifyIcon{Icon = Icon};
 			m_line_index         = new List<Range>();
 			m_filepath           = null;
@@ -108,8 +111,8 @@ namespace RyLogViewer
 			m_menu_edit_selectall.Click             += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
 			m_menu_edit_copy.Click                  += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
 			m_menu_edit_find.Click                  += (s,a) => ShowFindDialog();
-			m_menu_edit_find_next.Click             += (s,a) => FindNext(m_last_find_pattern);
-			m_menu_edit_find_prev.Click             += (s,a) => FindPrev(m_last_find_pattern);
+			m_menu_edit_find_next.Click             += (s,a) => FindNext();
+			m_menu_edit_find_prev.Click             += (s,a) => FindPrev();
 			m_menu_edit_toggle_bookmark.Click       += (s,a) => ToggleBookmark(SelectedRow);
 			m_menu_edit_next_bookmark.Click         += (s,a) => NextBookmark();
 			m_menu_edit_prev_bookmark.Click         += (s,a) => PrevBookmark();
@@ -219,15 +222,15 @@ namespace RyLogViewer
 			// File Watcher
 			m_watch_timer.Tick += (s,a)=>
 				{
-					m_watch.CheckForChangedFiles();
+					try { m_watch.CheckForChangedFiles(); }
+					catch (Exception ex) { Log.Exception(this, ex, "CheckForChangedFiles failed"); }
 				};
 			
 			// Column size event batcher
 			m_batch_set_col_size.Action += SetGridColumnSizesImpl;
 			
 			// Find
-			m_find_ui.FindNext += FindNext;
-			m_find_ui.FindPrev += FindPrev;
+			InitFind();
 			
 			// Bookmarks
 			m_bookmarks.CurrentChanged     += (s,a) => SelectBookmark((Bookmark)m_bookmarks.Current);
@@ -237,9 +240,6 @@ namespace RyLogViewer
 			
 			// Startup
 			Shown += (s,a)=> Startup(startup_options);
-			
-			// User input
-			KeyDown += (s,a) => HandleKeyDown(a);
 			
 			// File Drop
 			DragEnter += (s,a) => FileDrop(a, true);
@@ -576,8 +576,8 @@ namespace RyLogViewer
 			if (args.ClickedItem == m_cmenu_action_row   ) { ShowOptions(SettingsUI.ETab.Actions   ); return; }
 			
 			// Find operations
-			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(); return; }
-			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(); return; }
+			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(); return; }
+			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(); return; }
 			
 			// Bookmarks
 			if (args.ClickedItem == m_cmenu_toggle_bookmark) { ToggleBookmark(hit.RowIndex); }
@@ -603,43 +603,41 @@ namespace RyLogViewer
 			if (ratio > 1f - Limit) BuildLineIndex(LineStartIndexRange.End  , false);
 		}
 
-		/// <summary>Handle key down events for the grid</summary>
-		public void HandleKeyDown(KeyEventArgs e)
+		/// <summary>Handle global command keys</summary>
+		protected override bool ProcessCmdKey(ref Message msg, Keys key_data)
 		{
-			e.Handled = false;
-			switch (e.KeyCode)
+			if (HandleKeyDown(this, key_data)) return true;
+			return base.ProcessCmdKey(ref msg, key_data);
+		}
+
+		/// <summary>Handle key down events for the main form</summary>
+		public bool HandleKeyDown(Form caller, Keys keys)
+		{
+			switch (keys)
 			{
-			case Keys.Escape:
-				CancelBuildLineIndex();
-				e.Handled = true;
-				break;
-			case Keys.F5:
-				BuildLineIndex(m_filepos, true);
-				e.Handled = true;
-				break;
-			case Keys.F2:
-				if (!e.Shift) NextBookmark();
-				else          PrevBookmark();
-				e.Handled = true;
-				break;
-				check this... handling Key presses
-			case Keys.PageUp:
-			case Keys.PageDown:
-				if (e.Control)
+			default: return false;
+			case Keys.Escape:                     CancelBuildLineIndex();             return true;
+			case Keys.F2:                         NextBookmark();                     return true;
+			case Keys.F2|Keys.Shift:              PrevBookmark();                     return true;
+			case Keys.F2|Keys.Control:            ToggleBookmark(SelectedRow);        return true;
+			case Keys.F3:                         FindNext();                         return true;
+			case Keys.F3|Keys.Shift:              FindPrev();                         return true;
+			case Keys.F3|Keys.Control:            SetFindPattern(SelectedRow, true);  return true;
+			case Keys.F3|Keys.Shift|Keys.Control: SetFindPattern(SelectedRow, false); return true;
+			case Keys.F5:                         BuildLineIndex(m_filepos, true);    return true;
+			case Keys.PageUp  |Keys.Control:      BuildLineIndex(0        , false, () => SelectedRow = 0                  ); return true;
+			case Keys.PageDown|Keys.Control:      BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1); return true;
+			case Keys.Tab|Keys.Control:
 				{
-					if (e.KeyCode == Keys.PageUp  ) BuildLineIndex(0        , false, () => SelectedRow = 0                  );
-					if (e.KeyCode == Keys.PageDown) BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
-					e.Handled = true;
+					int idx = (m_tab_cycle.IndexOf(x => ReferenceEquals(x,caller)) + 1) % m_tab_cycle.Length;
+					for (int j = 0, jend = m_tab_cycle.Length; j != jend; ++j, idx = (idx+1)%jend)
+					{
+						if (!m_tab_cycle[idx].Visible) continue;
+						m_tab_cycle[idx].Focus();
+						break;
+					}
+					return true;
 				}
-				break;
-			case Keys.Tab:
-				if (e.Control)
-				{
-					if      (m_find_ui     .Visible) m_find_ui     .Focus();
-					else if (m_bookmarks_ui.Visible) m_bookmarks_ui.Focus();
-					e.Handled = true;
-				}
-				break;
 			}
 		}
 		

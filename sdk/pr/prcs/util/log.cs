@@ -18,7 +18,7 @@ namespace pr.util
 			
 			public LogFile(string fname, bool reset)
 			{
-				Filepath = fname;
+				Filepath = string.IsNullOrEmpty(fname) ? null : fname;
 				if (Filepath == null) return;
 				using (File.Open(Filepath, reset ? FileMode.Create : FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite)) {} // ensure the file exists/is reset
 			}
@@ -36,20 +36,29 @@ namespace pr.util
 		/// <summary>The log file representation</summary>
 		private static LogFile m_log = new LogFile(null, false);
 
-		/// <summary>Register a log file for the current process id. Pass null for filepath to log to the debug window</summary>
+		/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
 		[Conditional("PR_LOGGING")] public static void Register(string filepath, bool reset)
 		{
 			lock (m_lock)
 			{
-				// Ensure the directory exists (todo: should probably go in an official logs folder)
-				string dir = Path.GetDirectoryName(filepath);
-				if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-					Directory.CreateDirectory(dir);
+				// Make empty string equivalent to null
+				filepath = string.IsNullOrEmpty(filepath) ? null : filepath;
 				
-				if (m_log == null)
-					m_log = new LogFile(filepath, reset);
-				else
-					m_log.Filepath = filepath;
+				// Ensure the directory exists (todo: should probably go in an official logs folder)
+				if (filepath != null) try
+				{
+					var dir = Path.GetDirectoryName(filepath);
+					if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+						Directory.CreateDirectory(dir);
+				} catch { filepath = null; } // Can't create the directory, log to stdout
+				
+				try
+				{
+					if (m_log == null)
+						m_log = new LogFile(filepath, reset);
+					else
+						m_log.Filepath = filepath;
+				} catch {} // Can't update the m_log, oh well...
 			}
 		}
 		
@@ -59,7 +68,7 @@ namespace pr.util
 			lock (m_lock) m_log.WriteLog(str);
 		}
 
-		/// <summary>Creates a tag based on the namespcase and type of the sender</summary>
+		/// <summary>Creates a tag based on the namespace and type of the sender</summary>
 		private static string GetTag(object sender)
 		{
 			if (sender == null) return "static";

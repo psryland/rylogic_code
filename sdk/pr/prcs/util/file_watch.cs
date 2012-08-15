@@ -19,7 +19,7 @@ namespace pr.util
 	// a file has changed. However this requires cross-thread marshalling which is only possible
 	// if the client has a message queue. There are three possibilities;
 	//   1) the client is a window - could use SendMessage() to notify the client (SendMessage
-	//      marshalls across threads) however it doesn't make sense for the FileWatch type to
+	//      marshals across threads) however it doesn't make sense for the FileWatch type to
 	//      require a windows handle
 	//   2) use PostThreadMessage - this has synchronisation problems i.e. notifications occur for
 	//      all changed files plus the filename cannot be passed to the client without allocation
@@ -126,17 +126,17 @@ namespace pr.util
 			m_in_check_for_changes = true;
 			try
 			{
-				// Build a collection of the changed files to prevent re-entrancy problems
+				// Build a collection of the changed files to prevent reentrancy problems
 				// with the callbacks modifying the 'm_files' collection.
 				m_changed_files.Clear();
 				foreach (WatchedFile f in m_files)
 				{
 					f.m_info.Refresh();
-				
-					long size   = f.m_info.Exists ? f.m_info.Length : 0;
-					long stamp  = f.m_info.LastWriteTimeUtc.Ticks;
+					
 					bool exists = f.m_info.Exists;
-				
+					long size   = exists ? f.m_info.Length : 0;
+					long stamp  = exists ? f.m_info.LastWriteTimeUtc.Ticks : 0;
+					
 					if (f.m_stamp0 != stamp || f.m_size0 != size || f.m_exists0 != f.m_exists1) 
 						m_changed_files.Add(f);
 				

@@ -743,8 +743,8 @@
 			// m_split_hl.Panel2
 			// 
 			this.m_split_hl.Panel2.Controls.Add(this.m_table_hl);
-			this.m_split_hl.Size = new System.Drawing.Size(190, 72);
-			this.m_split_hl.SplitterDistance = 26;
+			this.m_split_hl.Size = new System.Drawing.Size(498, 429);
+			this.m_split_hl.SplitterDistance = 154;
 			this.m_split_hl.TabIndex = 3;
 			// 
 			// m_pattern_hl
@@ -755,7 +755,7 @@
 			this.m_pattern_hl.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_hl.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_hl.Name = "m_pattern_hl";
-			this.m_pattern_hl.Size = new System.Drawing.Size(336, 92);
+			this.m_pattern_hl.Size = new System.Drawing.Size(498, 154);
 			this.m_pattern_hl.TabIndex = 0;
 			this.m_pattern_hl.TestText = "Enter text here to test your pattern";
 			// 
@@ -775,7 +775,7 @@
 			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_hl.Size = new System.Drawing.Size(190, 42);
+			this.m_table_hl.Size = new System.Drawing.Size(498, 271);
 			this.m_table_hl.TabIndex = 2;
 			// 
 			// m_grid_highlight
@@ -786,24 +786,24 @@
 			this.m_grid_highlight.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_highlight.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_highlight.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_highlight.Location = new System.Drawing.Point(1, 60);
+			this.m_grid_highlight.Location = new System.Drawing.Point(1, 34);
 			this.m_grid_highlight.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_highlight.MultiSelect = false;
 			this.m_grid_highlight.Name = "m_grid_highlight";
 			this.m_grid_highlight.RowHeadersWidth = 24;
 			this.m_grid_highlight.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_highlight.Size = new System.Drawing.Size(188, 1);
+			this.m_grid_highlight.Size = new System.Drawing.Size(496, 195);
 			this.m_grid_highlight.TabIndex = 0;
 			// 
 			// m_pattern_set_hl
 			// 
 			this.m_pattern_set_hl.AutoSize = true;
 			this.m_pattern_set_hl.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_hl.Location = new System.Drawing.Point(1, 1);
+			this.m_pattern_set_hl.Location = new System.Drawing.Point(1, 230);
 			this.m_pattern_set_hl.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_set_hl.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_hl.Name = "m_pattern_set_hl";
-			this.m_pattern_set_hl.Size = new System.Drawing.Size(274, 40);
+			this.m_pattern_set_hl.Size = new System.Drawing.Size(496, 40);
 			this.m_pattern_set_hl.TabIndex = 1;
 			// 
 			// label2
@@ -812,10 +812,10 @@
 			this.label2.Location = new System.Drawing.Point(4, 1);
 			this.label2.Name = "label2";
 			this.label2.Padding = new System.Windows.Forms.Padding(3);
-			this.label2.Size = new System.Drawing.Size(172, 58);
+			this.label2.Size = new System.Drawing.Size(313, 32);
 			this.label2.TabIndex = 2;
-			this.label2.Text = "A line is highlighted based on the first match in this list.\r\nThe list order can " +
-    "be changed by dragging the rows.\r\n";
+			this.label2.Text = "A line in the log is highlighted based on the first match in this list.\r\nThe list" +
+    " order can be changed by dragging the rows.\r\n";
 			// 
 			// m_tab_filter
 			// 
@@ -844,8 +844,8 @@
 			// m_split_ft.Panel2
 			// 
 			this.m_split_ft.Panel2.Controls.Add(this.m_table_ft);
-			this.m_split_ft.Size = new System.Drawing.Size(190, 72);
-			this.m_split_ft.SplitterDistance = 25;
+			this.m_split_ft.Size = new System.Drawing.Size(498, 429);
+			this.m_split_ft.SplitterDistance = 148;
 			this.m_split_ft.TabIndex = 5;
 			// 
 			// m_pattern_ft
@@ -856,7 +856,7 @@
 			this.m_pattern_ft.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_ft.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ft.Name = "m_pattern_ft";
-			this.m_pattern_ft.Size = new System.Drawing.Size(336, 92);
+			this.m_pattern_ft.Size = new System.Drawing.Size(498, 148);
 			this.m_pattern_ft.TabIndex = 0;
 			this.m_pattern_ft.TestText = "Enter text here to test your pattern";
 			// 
@@ -876,7 +876,7 @@
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ft.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ft.Size = new System.Drawing.Size(190, 43);
+			this.m_table_ft.Size = new System.Drawing.Size(498, 277);
 			this.m_table_ft.TabIndex = 4;
 			// 
 			// label3
@@ -885,10 +885,10 @@
 			this.label3.Location = new System.Drawing.Point(4, 1);
 			this.label3.Name = "label3";
 			this.label3.Padding = new System.Windows.Forms.Padding(3);
-			this.label3.Size = new System.Drawing.Size(172, 58);
+			this.label3.Size = new System.Drawing.Size(293, 32);
 			this.label3.TabIndex = 3;
-			this.label3.Text = "A line is filtered based on the first match in this list.\r\nThe list order can be " +
-    "changed by dragging the rows.\r\n";
+			this.label3.Text = "A line in the log is filtered based on the first match in this list.\r\nThe list or" +
+    "der can be changed by dragging the rows.\r\n";
 			// 
 			// m_grid_filter
 			// 
@@ -898,24 +898,24 @@
 			this.m_grid_filter.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_filter.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_filter.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_filter.Location = new System.Drawing.Point(1, 60);
+			this.m_grid_filter.Location = new System.Drawing.Point(1, 34);
 			this.m_grid_filter.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_filter.MultiSelect = false;
 			this.m_grid_filter.Name = "m_grid_filter";
 			this.m_grid_filter.RowHeadersWidth = 24;
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(188, 1);
+			this.m_grid_filter.Size = new System.Drawing.Size(496, 201);
 			this.m_grid_filter.TabIndex = 0;
 			// 
 			// m_pattern_set_ft
 			// 
 			this.m_pattern_set_ft.AutoSize = true;
 			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(1, 2);
+			this.m_pattern_set_ft.Location = new System.Drawing.Point(1, 236);
 			this.m_pattern_set_ft.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(274, 40);
+			this.m_pattern_set_ft.Size = new System.Drawing.Size(496, 40);
 			this.m_pattern_set_ft.TabIndex = 1;
 			// 
 			// m_tab_transform
@@ -945,8 +945,8 @@
 			// m_split_tx.Panel2
 			// 
 			this.m_split_tx.Panel2.Controls.Add(this.m_table_tx);
-			this.m_split_tx.Size = new System.Drawing.Size(190, 72);
-			this.m_split_tx.SplitterDistance = 29;
+			this.m_split_tx.Size = new System.Drawing.Size(498, 429);
+			this.m_split_tx.SplitterDistance = 172;
 			this.m_split_tx.TabIndex = 0;
 			// 
 			// m_pattern_tx
@@ -957,7 +957,7 @@
 			this.m_pattern_tx.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_tx.MinimumSize = new System.Drawing.Size(400, 150);
 			this.m_pattern_tx.Name = "m_pattern_tx";
-			this.m_pattern_tx.Size = new System.Drawing.Size(400, 150);
+			this.m_pattern_tx.Size = new System.Drawing.Size(498, 172);
 			this.m_pattern_tx.TabIndex = 0;
 			this.m_pattern_tx.TestText = "Enter text here to test your pattern";
 			// 
@@ -977,7 +977,7 @@
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_tx.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_tx.Size = new System.Drawing.Size(190, 39);
+			this.m_table_tx.Size = new System.Drawing.Size(498, 253);
 			this.m_table_tx.TabIndex = 3;
 			// 
 			// label4
@@ -986,7 +986,7 @@
 			this.label4.Location = new System.Drawing.Point(4, 1);
 			this.label4.Name = "label4";
 			this.label4.Padding = new System.Windows.Forms.Padding(3);
-			this.label4.Size = new System.Drawing.Size(179, 58);
+			this.label4.Size = new System.Drawing.Size(259, 32);
 			this.label4.TabIndex = 4;
 			this.label4.Text = "Transforms are applied in the order given in this list.\r\nThe list order can be ch" +
     "anged by dragging the rows.\r\n";
@@ -999,24 +999,24 @@
 			this.m_grid_transform.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_transform.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_transform.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_transform.Location = new System.Drawing.Point(1, 60);
+			this.m_grid_transform.Location = new System.Drawing.Point(1, 34);
 			this.m_grid_transform.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_transform.MultiSelect = false;
 			this.m_grid_transform.Name = "m_grid_transform";
 			this.m_grid_transform.RowHeadersWidth = 24;
 			this.m_grid_transform.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_transform.Size = new System.Drawing.Size(188, 1);
+			this.m_grid_transform.Size = new System.Drawing.Size(496, 177);
 			this.m_grid_transform.TabIndex = 0;
 			// 
 			// m_pattern_set_tx
 			// 
 			this.m_pattern_set_tx.AutoSize = true;
 			this.m_pattern_set_tx.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_tx.Location = new System.Drawing.Point(1, -2);
+			this.m_pattern_set_tx.Location = new System.Drawing.Point(1, 212);
 			this.m_pattern_set_tx.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_set_tx.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_tx.Name = "m_pattern_set_tx";
-			this.m_pattern_set_tx.Size = new System.Drawing.Size(274, 40);
+			this.m_pattern_set_tx.Size = new System.Drawing.Size(496, 40);
 			this.m_pattern_set_tx.TabIndex = 1;
 			// 
 			// m_tab_action
@@ -1046,8 +1046,8 @@
 			// m_split_ac.Panel2
 			// 
 			this.m_split_ac.Panel2.Controls.Add(this.m_table_ac);
-			this.m_split_ac.Size = new System.Drawing.Size(190, 72);
-			this.m_split_ac.SplitterDistance = 25;
+			this.m_split_ac.Size = new System.Drawing.Size(498, 429);
+			this.m_split_ac.SplitterDistance = 148;
 			this.m_split_ac.TabIndex = 4;
 			// 
 			// m_pattern_ac
@@ -1058,7 +1058,7 @@
 			this.m_pattern_ac.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_ac.MinimumSize = new System.Drawing.Size(336, 92);
 			this.m_pattern_ac.Name = "m_pattern_ac";
-			this.m_pattern_ac.Size = new System.Drawing.Size(336, 92);
+			this.m_pattern_ac.Size = new System.Drawing.Size(498, 148);
 			this.m_pattern_ac.TabIndex = 0;
 			this.m_pattern_ac.TestText = "Enter text here to test your pattern";
 			// 
@@ -1078,7 +1078,7 @@
 			this.m_table_ac.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table_ac.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_ac.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_ac.Size = new System.Drawing.Size(190, 43);
+			this.m_table_ac.Size = new System.Drawing.Size(498, 277);
 			this.m_table_ac.TabIndex = 2;
 			// 
 			// label5
@@ -1087,7 +1087,7 @@
 			this.label5.Location = new System.Drawing.Point(4, 1);
 			this.label5.Name = "label5";
 			this.label5.Padding = new System.Windows.Forms.Padding(3);
-			this.label5.Size = new System.Drawing.Size(173, 58);
+			this.label5.Size = new System.Drawing.Size(269, 32);
 			this.label5.TabIndex = 4;
 			this.label5.Text = "An action is applied based on the first match in this list.\r\nThe list order can b" +
     "e changed by dragging the rows.\r\n";
@@ -1100,24 +1100,24 @@
 			this.m_grid_action.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_action.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_action.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_action.Location = new System.Drawing.Point(1, 60);
+			this.m_grid_action.Location = new System.Drawing.Point(1, 34);
 			this.m_grid_action.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_action.MultiSelect = false;
 			this.m_grid_action.Name = "m_grid_action";
 			this.m_grid_action.RowHeadersWidth = 24;
 			this.m_grid_action.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_action.Size = new System.Drawing.Size(188, 1);
+			this.m_grid_action.Size = new System.Drawing.Size(496, 201);
 			this.m_grid_action.TabIndex = 0;
 			// 
 			// m_pattern_set_ac
 			// 
 			this.m_pattern_set_ac.AutoSize = true;
 			this.m_pattern_set_ac.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ac.Location = new System.Drawing.Point(1, 2);
+			this.m_pattern_set_ac.Location = new System.Drawing.Point(1, 236);
 			this.m_pattern_set_ac.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_set_ac.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ac.Name = "m_pattern_set_ac";
-			this.m_pattern_set_ac.Size = new System.Drawing.Size(274, 40);
+			this.m_pattern_set_ac.Size = new System.Drawing.Size(496, 40);
 			this.m_pattern_set_ac.TabIndex = 1;
 			// 
 			// m_image_list

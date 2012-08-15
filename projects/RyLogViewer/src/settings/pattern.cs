@@ -14,26 +14,26 @@ namespace RyLogViewer
 	}
 	public class Pattern :IPattern
 	{
-		private string m_expr;
 		private EPattern m_patn_type;
-		private bool m_active;
-		private bool m_ignore_case;
-		private bool m_invert;
-		private bool m_binary_match;
-		private Regex m_compiled_patn;
-
-		/// <summary>The pattern to use when matching</summary>
-		public string Expr
-		{
-			get { return m_expr; }
-			set { m_expr = value; m_compiled_patn = null; }
-		}
+		private string   m_expr;
+		private bool     m_ignore_case;
+		private bool     m_active;
+		private bool     m_invert;
+		private bool     m_binary_match;
+		private Regex    m_compiled_patn;
 
 		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
 		public EPattern PatnType
 		{
 			get { return m_patn_type; }
 			set { m_patn_type = value; m_compiled_patn = null; }
+		}
+
+		/// <summary>The pattern to use when matching</summary>
+		public string Expr
+		{
+			get { return m_expr; }
+			set { m_expr = value; m_compiled_patn = null; }
 		}
 
 		/// <summary>True if the pattern should ignore case</summary>
@@ -64,13 +64,16 @@ namespace RyLogViewer
 			set { m_binary_match = value; }
 		}
 
-		public Pattern()
+		public Pattern() :this(EPattern.Substring, "")
+		{}
+
+		public Pattern(EPattern patn_type, string expr)
 		{
-			Expr = "";
-			Active = true;
-			PatnType = EPattern.Substring;
-			IgnoreCase = false;
-			Invert = false;
+			PatnType    = patn_type;
+			Expr        = expr;
+			IgnoreCase  = false;
+			Active      = true;
+			Invert      = false;
 			BinaryMatch = true;
 		}
 
