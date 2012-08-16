@@ -405,7 +405,14 @@ namespace RyLogViewer
 				m_watch.Add(m_filepath, (fp,ctx) => { OnFileChanged(); return true; });
 				m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
 				
-				BuildLineIndex(m_filepos, true, ()=>{ SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0; });
+				BuildLineIndex(m_filepos, true, ()=>
+					{
+						SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
+						
+						// Show a hint if filters are active, the file isn't empty, but there are no visible rows
+						if (m_grid.RowCount == 0 && m_fileend != 0 && m_filters.Count != 0)
+							ShowHintBalloon("Filters are currently active", m_btn_filters);
+					});
 				return;
 			}
 			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, string.Format("Failed to open file {0} due to an error.", filepath), Resources.FailedToLoadFile); }
