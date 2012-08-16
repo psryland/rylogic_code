@@ -16,6 +16,7 @@ namespace RyLogViewer
 {
 	public static class Constants
 	{
+		public const string UnregistedUserName      = "UNREGISTERED VERSION";
 		public const string AppIdentifier           = "rylogviewer.x86";
 		public const string UpdateUrl               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
 		public const int PortNumberMin              = 0;
@@ -94,6 +95,10 @@ namespace RyLogViewer
 
 	public static class XmlTag
 	{
+		public const string UserName   = "user_name";
+		public const string Company    = "company";
+		public const string EmailAddr  = "email";
+		public const string SerialNo   = "serial";
 		public const string Root       = "root";
 		public const string Expr       = "expr";
 		public const string Active     = "active";

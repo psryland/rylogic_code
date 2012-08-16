@@ -91,6 +91,9 @@
     <Compile Include="src\find.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\licence\licence.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\settings\clkaction.cs" />
     <Compile Include="src\settings\clkaction_ui.cs">
       <SubType>Form</SubType>
@@ -342,6 +345,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\book.png" />
+    <None Include="Resources\public_key.xml" />
+    <None Include="src\licence\private_key.xml" />
     <None Include="Resources\bottom.png" />
     <None Include="Resources\bookmark.png" />
     <Content Include="Resources\green_tick.png" />

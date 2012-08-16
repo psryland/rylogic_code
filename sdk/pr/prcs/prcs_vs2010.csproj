@@ -153,6 +153,7 @@
     <Compile Include="container\list_map.cs" />
     <Compile Include="container\ring_buffer.cs" />
     <Compile Include="container\sortable_binding_list.cs" />
+    <Compile Include="crypt\crypt.cs" />
     <Compile Include="directshow.net\amstream.cs" />
     <Compile Include="directshow.net\amvideo.cs" />
     <Compile Include="directshow.net\atscpsipparser.cs" />

@@ -10,6 +10,16 @@ namespace RyLogViewer
 	/// <summary>RyLog Viewer settings</summary>
 	public sealed class Settings :SettingsBase<Settings>
 	{
+		public string UserName
+		{
+			get { return get<string>("UserName"); }
+			set { set("UserName", value); }
+		}
+		public string Company
+		{
+			get { return get<string>("Company"); }
+			set { set("Company", value); }
+		}
 		public string RecentFiles
 		{
 			get { return get<string>("RecentFiles"); }
@@ -289,6 +299,8 @@ namespace RyLogViewer
 		// Default construct settings
 		public Settings()
 		{
+			UserName                        = Constants.UnregistedUserName;
+			Company                         = "";
 			RecentFiles                     = "";
 			Font                            = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
 			RestoreScreenLoc                = true;

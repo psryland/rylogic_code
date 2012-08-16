@@ -45,8 +45,9 @@ namespace RyLogViewer
 		/// <summary>Load and parse the startup options</summary>
 		public StartupOptions(string[] args)
 		{
-			ExeDir = Path.GetDirectoryName(Application.ExecutablePath) ?? ".\\";
-			if (ExeDir == null) throw new ArgumentException("Cannot determine the current executable directory");
+			ExeDir = Path.GetDirectoryName(Application.ExecutablePath) ?? @".\";
+			if (!Directory.Exists(ExeDir))
+				throw new ArgumentException("Cannot determine the current executable directory");
 			
 			// Determine whether to run the app in portable mode
 			PortableMode = File.Exists(Path.Combine(ExeDir, "portable"));

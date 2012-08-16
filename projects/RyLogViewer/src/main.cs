@@ -99,6 +99,7 @@ namespace RyLogViewer
 			m_tail_enabled       = m_settings.TailEnabled;
 			
 			// Startup options
+			CheckLicence(startup_options);
 			ApplyStartupOptions(startup_options);
 			
 			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
@@ -326,11 +327,11 @@ namespace RyLogViewer
 			{
 				OpenLogFile(m_settings.LastLoadedFile);
 			}
-					
+			
 			// Show the TotD
 			if (m_settings.ShowTOTD)
 				ShowTotD();
-
+			
 			// Check for updates
 			if (m_settings.CheckForUpdates)
 				CheckForUpdates(false);

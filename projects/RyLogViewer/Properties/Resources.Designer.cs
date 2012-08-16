@@ -607,6 +607,19 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+        ///&lt;RSAKeyValue&gt;
+        ///  &lt;Modulus&gt;miDmCy/hXV9YZFFc3sOKcYDDV2e49MeRvCb2ghpJBQFnSRVCeAmRtc8Vfm4meMuye/tnDGcYWf1t5J1llYstA1+26/AuTPDCrTXEU/FObmIWUwfpzlWfh4ZBzx0hBDJFUpWbncCKXvOxIubc1NhMDK1yuYLG2FEucx6V/yLcEiU=&lt;/Modulus&gt;
+        ///  &lt;Exponent&gt;AQAB&lt;/Exponent&gt;
+        ///&lt;/RSAKeyValue&gt;.
+        /// </summary>
+        internal static string public_key {
+            get {
+                return ResourceManager.GetString("public_key", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Reading File Failed.
         /// </summary>
         internal static string ReadingFileFailed {

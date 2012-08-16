@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Security.Cryptography;
+using pr.crypt;
 
 namespace pr.common
 {
-	// Licencing
+	// Licensing
 	//  Serial number:
 	//    Generate a number where the first part is a random number (seed) and the
 	//    second part is the first part hashed and signed using the private key.
@@ -11,14 +12,6 @@ namespace pr.common
 	//    seed using the public key, it should equal the second part of the key
 	public static class SerialNumber
 	{
-		/// <summary>Generates a public/private key pair as xml strings</summary>
-		public static void GenerateKeys(out string pub, out string priv)
-		{
-			var rsa = new RSACryptoServiceProvider();
-			pub  = rsa.ToXmlString(false);
-			priv = rsa.ToXmlString(true);
-		}
-
 		/// <summary>Generates a serial number using the provided private key</summary>
 		public static string Generate(string private_key)
 		{
@@ -63,11 +56,11 @@ namespace pr
 	{
 		[Test] public static void TestSerialNumber()
 		{
-			// Generate a publc and private key.
+			// Generate a public and private key.
 			// Save the public key in the app (in a resource file)
 			// Save the private key somewhere safe, you need that to generate more serial numbers for the app
 			string pub, priv;
-			SerialNumber.GenerateKeys(out pub, out priv);
+			Crypt.GenerateRSAKeyPair(out pub, out priv);
 			
 			// Generate a serial number for the app
 			var key = SerialNumber.Generate(priv);
