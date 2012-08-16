@@ -458,6 +458,11 @@ namespace RyLogViewer
 			m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
 			m_check_reject_all_by_default.Click += (s,a)=>
 				{
+					m_filters.Remove(Filter.RejectAll);
+					if (m_check_reject_all_by_default.Checked)
+						m_filters.Add(Filter.RejectAll);
+					
+					FlagAsChanged(m_grid_filter);
 					UpdateUI();
 				};
 			
@@ -785,6 +790,8 @@ namespace RyLogViewer
 				m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
 				m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
 				
+				m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
+				
 				int selected = m_grid_highlight.FirstSelectedRowIndex();
 				m_grid_highlight.CurrentCell = null;
 				m_grid_highlight.RowCount = 0;
@@ -808,10 +815,6 @@ namespace RyLogViewer
 				m_grid_action.RowCount = 0;
 				m_grid_action.RowCount = m_actions.Count;
 				m_grid_action.SelectRow(selected);
-				
-				m_filters.Remove(Filter.RejectAll);
-				if (m_check_reject_all_by_default.Checked)
-					m_filters.Add(Filter.RejectAll);
 				
 				m_text_settings.Text = m_settings.Filepath;
 			}
