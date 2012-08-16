@@ -811,12 +811,6 @@ namespace pr.common
 				return Table<T>().Insert(item, on_constraint);
 			}
 
-			///// <summary>Insert 'item' into a table of type 'T'</summary>
-			//public int Insert<T>(T item, out int last_row_id, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			//{
-			//    return Table<T>().Insert(item, out last_row_id, on_constraint);
-			//}
-
 			/// <summary>Update the row corresponding to 'item' in a table of type 'T'</summary>
 			public int Update<T>(T item)
 			{
@@ -951,26 +945,6 @@ namespace pr.common
 					return count;
 				}
 			}
-
-			///// <summary>
-			///// Inserts 'item' into the database and then sets 'at_row' to the row at which
-			///// 'item' was inserted. This is typically used to update the primary key in 'item'
-			///// which, for integer auto increment columns, is normally the last row id.</summary>
-			//public int Insert<T>(T item, out int last_row_id, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			//{
-			//    return Insert((object)item, out last_row_id, on_constraint);
-			//}
-
-			///// <summary>
-			///// Inserts 'item' into the database and then sets 'at_row' to the row at which
-			///// 'item' was inserted. This is typically used to update the primary key in 'item'
-			///// which, for integer auto increment columns, is normally the last row id.</summary>
-			//public int Insert(object item, out int last_row_id, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			//{
-			//    int res = Insert(item, on_constraint);
-			//    last_row_id = (int)sqlite3_last_insert_rowid(m_db.Handle);
-			//    return res;
-			//}
 
 			/// <summary>Update 'item' in the table</summary>
 			public int Update(object item)
@@ -2334,6 +2308,7 @@ namespace pr
 				PK     = key;
 				UniStr = str;
 				Ign_PrivateField = true;
+				Ign_PrivateField = !Ign_PrivateField;
 			}
 			public bool Equals(DOMType2 other)
 			{

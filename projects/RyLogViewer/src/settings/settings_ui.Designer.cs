@@ -89,7 +89,7 @@
 			this.m_split_ft = new System.Windows.Forms.SplitContainer();
 			this.m_pattern_ft = new RyLogViewer.PatternUI();
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
-			this.label3 = new System.Windows.Forms.Label();
+			this.m_lbl_ft_grid_desc = new System.Windows.Forms.Label();
 			this.m_grid_filter = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
 			this.m_tab_transform = new System.Windows.Forms.TabPage();
@@ -107,6 +107,7 @@
 			this.m_grid_action = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_ac = new RyLogViewer.PatternSetAC();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
+			this.m_check_reject_all_by_default = new System.Windows.Forms.CheckBox();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_settings.SuspendLayout();
@@ -862,12 +863,13 @@
 			// 
 			// m_table_ft
 			// 
-			this.m_table_ft.CellBorderStyle = System.Windows.Forms.TableLayoutPanelCellBorderStyle.Single;
-			this.m_table_ft.ColumnCount = 1;
+			this.m_table_ft.ColumnCount = 2;
 			this.m_table_ft.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.m_table_ft.Controls.Add(this.label3, 0, 0);
+			this.m_table_ft.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+			this.m_table_ft.Controls.Add(this.m_lbl_ft_grid_desc, 0, 0);
 			this.m_table_ft.Controls.Add(this.m_grid_filter, 0, 1);
 			this.m_table_ft.Controls.Add(this.m_pattern_set_ft, 0, 2);
+			this.m_table_ft.Controls.Add(this.m_check_reject_all_by_default, 1, 0);
 			this.m_table_ft.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_table_ft.Location = new System.Drawing.Point(0, 0);
 			this.m_table_ft.Margin = new System.Windows.Forms.Padding(0);
@@ -879,15 +881,15 @@
 			this.m_table_ft.Size = new System.Drawing.Size(498, 277);
 			this.m_table_ft.TabIndex = 4;
 			// 
-			// label3
+			// m_lbl_ft_grid_desc
 			// 
-			this.label3.AutoSize = true;
-			this.label3.Location = new System.Drawing.Point(4, 1);
-			this.label3.Name = "label3";
-			this.label3.Padding = new System.Windows.Forms.Padding(3);
-			this.label3.Size = new System.Drawing.Size(293, 32);
-			this.label3.TabIndex = 3;
-			this.label3.Text = "A line in the log is filtered based on the first match in this list.\r\nThe list or" +
+			this.m_lbl_ft_grid_desc.AutoSize = true;
+			this.m_lbl_ft_grid_desc.Location = new System.Drawing.Point(3, 0);
+			this.m_lbl_ft_grid_desc.Name = "m_lbl_ft_grid_desc";
+			this.m_lbl_ft_grid_desc.Padding = new System.Windows.Forms.Padding(3);
+			this.m_lbl_ft_grid_desc.Size = new System.Drawing.Size(293, 32);
+			this.m_lbl_ft_grid_desc.TabIndex = 3;
+			this.m_lbl_ft_grid_desc.Text = "A line in the log is filtered based on the first match in this list.\r\nThe list or" +
     "der can be changed by dragging the rows.\r\n";
 			// 
 			// m_grid_filter
@@ -897,25 +899,27 @@
 			this.m_grid_filter.AllowUserToResizeRows = false;
 			this.m_grid_filter.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_filter.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+			this.m_table_ft.SetColumnSpan(this.m_grid_filter, 2);
 			this.m_grid_filter.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_filter.Location = new System.Drawing.Point(1, 34);
+			this.m_grid_filter.Location = new System.Drawing.Point(0, 32);
 			this.m_grid_filter.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_filter.MultiSelect = false;
 			this.m_grid_filter.Name = "m_grid_filter";
 			this.m_grid_filter.RowHeadersWidth = 24;
 			this.m_grid_filter.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_filter.Size = new System.Drawing.Size(496, 201);
+			this.m_grid_filter.Size = new System.Drawing.Size(498, 205);
 			this.m_grid_filter.TabIndex = 0;
 			// 
 			// m_pattern_set_ft
 			// 
 			this.m_pattern_set_ft.AutoSize = true;
+			this.m_table_ft.SetColumnSpan(this.m_pattern_set_ft, 2);
 			this.m_pattern_set_ft.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_pattern_set_ft.Location = new System.Drawing.Point(1, 236);
+			this.m_pattern_set_ft.Location = new System.Drawing.Point(0, 237);
 			this.m_pattern_set_ft.Margin = new System.Windows.Forms.Padding(0);
 			this.m_pattern_set_ft.MinimumSize = new System.Drawing.Size(274, 38);
 			this.m_pattern_set_ft.Name = "m_pattern_set_ft";
-			this.m_pattern_set_ft.Size = new System.Drawing.Size(496, 40);
+			this.m_pattern_set_ft.Size = new System.Drawing.Size(498, 40);
 			this.m_pattern_set_ft.TabIndex = 1;
 			// 
 			// m_tab_transform
@@ -1126,6 +1130,17 @@
 			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
 			this.m_image_list.Images.SetKeyName(0, "fileclose.png");
 			// 
+			// m_check_reject_all_by_default
+			// 
+			this.m_check_reject_all_by_default.Anchor = System.Windows.Forms.AnchorStyles.Left;
+			this.m_check_reject_all_by_default.AutoSize = true;
+			this.m_check_reject_all_by_default.Location = new System.Drawing.Point(351, 7);
+			this.m_check_reject_all_by_default.Name = "m_check_reject_all_by_default";
+			this.m_check_reject_all_by_default.Size = new System.Drawing.Size(144, 17);
+			this.m_check_reject_all_by_default.TabIndex = 4;
+			this.m_check_reject_all_by_default.Text = "Reject all rows by default";
+			this.m_check_reject_all_by_default.UseVisualStyleBackColor = true;
+			// 
 			// SettingsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1270,8 +1285,9 @@
 		private System.Windows.Forms.DataGridView m_grid_action;
 		private PatternSetAC m_pattern_set_ac;
 		private System.Windows.Forms.Label label2;
-		private System.Windows.Forms.Label label3;
+		private System.Windows.Forms.Label m_lbl_ft_grid_desc;
 		private System.Windows.Forms.Label label4;
 		private System.Windows.Forms.Label label5;
+		private System.Windows.Forms.CheckBox m_check_reject_all_by_default;
 	}
 }

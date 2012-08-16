@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
@@ -169,8 +168,8 @@ namespace RyLogViewer
 				rng.Begin = Maths.Clamp(rng.Begin, 0, file.Length);
 				rng.End   = Maths.Clamp(rng.End  , 0, file.Length);
 				bool ignore_blanks = m_settings.IgnoreBlankLines;
-				List<Filter>    ft_list = ActiveFilters.ToList();
-				List<Transform> tx_list = ActiveTransforms.ToList();
+				List<Filter>    ft_list = m_filters;
+				List<Transform> tx_list = m_transforms;
 				
 				// Call back for adding lines to the export result
 				AddLineFunc add_line = (line_rng, baddr, fend, bf, enc) =>

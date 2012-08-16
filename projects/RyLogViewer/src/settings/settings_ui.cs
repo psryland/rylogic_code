@@ -454,6 +454,13 @@ namespace RyLogViewer
 			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_filter, m_filters, a);
 			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
 			
+			// Check reject all by default
+			m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
+			m_check_reject_all_by_default.Click += (s,a)=>
+				{
+					UpdateUI();
+				};
+			
 			// Filter pattern
 			m_pattern_ft.Add += (s,a)=>
 				{
@@ -595,8 +602,12 @@ namespace RyLogViewer
 		/// <summary>Delete a pattern</summary>
 		private void OnDeletingRow<T>(DataGridView grid, List<T> patterns, int index)
 		{
+			// Note, don't update the grid here or it causes an ArgumentOutOfRange exception.
+			// Other stuff must be using the grid row that will be deleted.
 			patterns.RemoveAt(index);
 			FlagAsChanged(grid);
+			if (typeof(T) == typeof(Filter))
+				m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
 		}
 
 		/// <summary>DragDrop functionality for grid rows</summary>
@@ -773,31 +784,35 @@ namespace RyLogViewer
 				m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
 				m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
 				m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
-			
+				
 				int selected = m_grid_highlight.FirstSelectedRowIndex();
 				m_grid_highlight.CurrentCell = null;
 				m_grid_highlight.RowCount = 0;
 				m_grid_highlight.RowCount = m_highlights.Count;
 				m_grid_highlight.SelectRow(selected);
-			
+				
 				selected = m_grid_filter.FirstSelectedRowIndex();
 				m_grid_filter.CurrentCell = null;
 				m_grid_filter.RowCount = 0;
 				m_grid_filter.RowCount = m_filters.Count;
 				m_grid_filter.SelectRow(selected);
-			
+				
 				selected = m_grid_transform.FirstSelectedRowIndex();
 				m_grid_transform.CurrentCell = null;
 				m_grid_transform.RowCount = 0;
 				m_grid_transform.RowCount = m_transforms.Count;
 				m_grid_transform.SelectRow(selected);
-			
+				
 				selected = m_grid_action.FirstSelectedRowIndex();
 				m_grid_action.CurrentCell = null;
 				m_grid_action.RowCount = 0;
 				m_grid_action.RowCount = m_actions.Count;
 				m_grid_action.SelectRow(selected);
-			
+				
+				m_filters.Remove(Filter.RejectAll);
+				if (m_check_reject_all_by_default.Checked)
+					m_filters.Add(Filter.RejectAll);
+				
 				m_text_settings.Text = m_settings.Filepath;
 			}
 			finally

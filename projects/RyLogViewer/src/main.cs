@@ -32,7 +32,9 @@ namespace RyLogViewer
 		private readonly Timer m_watch_timer;                 // A timer for polling the file watcher
 		private readonly EventBatcher m_batch_set_col_size;   // A call batcher for setting the column widths
 		private readonly List<Highlight> m_highlights;        // A list of the active highlights only
-		private readonly List<Transform> m_transforms;        // A list of the active transforms only 
+		private readonly List<Filter> m_filters;              // A list of the active filters only
+		private readonly List<Transform> m_transforms;        // A list of the active transforms only
+		private readonly List<ClkAction> m_clkactions;        // A list of the active click actions only
 		private readonly FindUI m_find_ui;                    // The find dialog
 		private readonly BookmarksUI m_bookmarks_ui;          // The bookmarks dialog
 		private readonly NotifyIcon m_notify_icon;            // A system tray icon
@@ -75,7 +77,9 @@ namespace RyLogViewer
 			m_watch_timer        = new Timer{Interval = Constants.FilePollingRate};
 			m_batch_set_col_size = new EventBatcher(100, this);
 			m_highlights         = new List<Highlight>();
+			m_filters            = new List<Filter>();
 			m_transforms         = new List<Transform>();
+			m_clkactions         = new List<ClkAction>();
 			m_find_history       = new BindingSource{DataSource = new BindingList<Pattern>()};
 			m_find_ui            = new FindUI(this, m_find_history){Visible = false};
 			m_bookmarks          = new BindingSource{DataSource = new BindingList<Bookmark>()};
@@ -544,7 +548,7 @@ namespace RyLogViewer
 
 			// Read the text for the column and look for a matching action
 			var text = columns[args.ColumnIndex].Text;
-			foreach (var a in ActiveActions)
+			foreach (var a in m_clkactions)
 			{
 				if (!a.IsMatch(text)) continue;
 				try { a.Execute(text); }
@@ -1092,7 +1096,7 @@ namespace RyLogViewer
 			}
 			if (auto_scroll_tail) ShowLastRow();
 		}
-		
+
 		/// <summary>Helper for setting the grid column size based on currently displayed content</summary>
 		private void SetGridColumnSizes()
 		{
@@ -1114,47 +1118,7 @@ namespace RyLogViewer
 			foreach (DataGridViewColumn col in m_grid.Columns)
 				col.Width = (int)(col_widths[col.Index] * scale);
 		}
-		
-		/// <summary>Return a collection of the currently active highlights</summary>
-		private IEnumerable<Highlight> ActiveHighlights
-		{
-			get
-			{
-				if (!m_settings.HighlightsEnabled) return Enumerable.Empty<Highlight>();
-				return from hl in Highlight.Import(m_settings.HighlightPatterns) where hl.Active select hl;
-			}
-		}
-		
-		/// <summary>Return a collection of the currently active filters</summary>
-		private IEnumerable<Filter> ActiveFilters
-		{
-			get
-			{
-				if (!m_settings.FiltersEnabled) return Enumerable.Empty<Filter>();
-				return from ft in Filter.Import(m_settings.FilterPatterns) where ft.Active select ft;
-			}
-		}
-		
-		/// <summary>Return a collection of the currently active transforms</summary>
-		private IEnumerable<Transform> ActiveTransforms
-		{
-			get
-			{
-				if (!m_settings.TransformsEnabled) return Enumerable.Empty<Transform>();
-				return from tx in Transform.Import(m_settings.TransformPatterns) where tx.Active select tx;
-			}
-		}
-		
-		/// <summary>Return a collection of the currently active actions</summary>
-		private IEnumerable<ClkAction> ActiveActions
-		{
-			get
-			{
-				if (!m_settings.ActionsEnabled) return Enumerable.Empty<ClkAction>();
-				return from ac in ClkAction.Import(m_settings.ActionPatterns) where ac.Active select ac;
-			}
-		}
-		
+
 		/// <summary>
 		/// Apply settings throughout the app.
 		/// This method is called on startup to apply initial settings and
@@ -1180,11 +1144,23 @@ namespace RyLogViewer
 			
 			// Highlights;
 			m_highlights.Clear();
-			m_highlights.AddRange(ActiveHighlights);
+			if (m_settings.HighlightsEnabled)
+				m_highlights.AddRange(Highlight.Import(m_settings.HighlightPatterns).Where(x => x.Active));
+			
+			// Filters
+			m_filters.Clear();
+			if (m_settings.FiltersEnabled)
+				m_filters.AddRange(Filter.Import(m_settings.FilterPatterns).Where(x => x.Active));
 			
 			// Transforms
 			m_transforms.Clear();
-			m_transforms.AddRange(ActiveTransforms);
+			if (m_settings.TransformsEnabled)
+				m_transforms.AddRange(Transform.Import(m_settings.TransformPatterns).Where(x => x.Active));
+			
+			// Click Actions
+			m_clkactions.Clear();
+			if (m_settings.ActionsEnabled)
+				m_clkactions.AddRange(ClkAction.Import(m_settings.ActionPatterns).Where(x => x.Active));
 			
 			// Grid
 			int col_count = m_settings.ColDelimiter.Length != 0 ? Maths.Clamp(m_settings.ColumnCount, 1, 255) : 1;

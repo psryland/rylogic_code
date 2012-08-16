@@ -161,7 +161,7 @@ namespace RyLogViewer
 					? (byte[])GuessRowDelimiter(m_filepath, encoding).Clone()
 					: (byte[])m_row_delim.Clone();
 				
-				List<Filter> filters = ActiveFilters.ToList();
+				List<Filter> filters = m_filters.ToList();
 			
 				long max_line_length  = m_settings.MaxLineLength;
 				long bufsize          = m_bufsize;

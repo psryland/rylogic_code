@@ -14,7 +14,13 @@ namespace RyLogViewer
 		
 		/// <summary>Defines what a match with this filter means</summary>
 		public EIfMatch IfMatch { get; set; }
-		
+
+		/// <summary>A static instance of a 'KeepAll' filter</summary>
+		public static readonly Filter KeepAll = new Filter{Expr = "", Invert = true, IfMatch = EIfMatch.Keep};
+
+		/// <summary>Returns an instance of a 'RejectAll' filter</summary>
+		public static readonly Filter RejectAll = new Filter{Expr = "", Invert = true, IfMatch = EIfMatch.Reject};
+
 		public Filter()
 		{
 			IfMatch = EIfMatch.Keep;
@@ -32,12 +38,6 @@ namespace RyLogViewer
 			// ReSharper restore PossibleNullReferenceException
 		}
 
-		///// <summary>Returns true if 'text' should be kept according to this filter</summary>
-		//public bool ItsAKeeper(string text)
-		//{
-		//    return !IsMatch(text) || IfMatch == EIfMatch.Keep;
-		//}
-		
 		/// <summary>Export this highlight as xml</summary>
 		public override XElement ToXml(XElement node)
 		{

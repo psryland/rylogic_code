@@ -2,10 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
-using System.Linq;
-using System.Threading;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
 using pr.extn;
 using pr.gui;
 using pr.maths;
@@ -172,7 +169,7 @@ namespace RyLogViewer
 			using (var file = LoadFile(m_filepath))
 			{
 				bool ignore_blanks    = m_settings.IgnoreBlankLines;
-				List<Filter> filters  = ActiveFilters.ToList();
+				List<Filter> filters  = m_filters;
 				AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
 					{
 						// Ignore blanks?
