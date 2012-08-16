@@ -151,6 +151,40 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.StartupOptions;
 				};
 
+			// Use web proxy
+			m_check_use_web_proxy.ToolTip(m_tt, "Use a web proxy for internet connections (such as checking for updates)");
+			m_check_use_web_proxy.Checked = m_settings.UseWebProxy;
+			m_check_use_web_proxy.Click += (s,a)=>
+				{
+					m_settings.UseWebProxy = m_check_use_web_proxy.Checked;
+					WhatsChanged |= EWhatsChanged.Nothing;
+				};
+
+			// Web proxy host
+			tt = "The hostname or IP address of the web proxy server";
+			m_lbl_web_proxy_host.ToolTip(m_tt, tt);
+			m_edit_web_proxy_host.ToolTip(m_tt, tt);
+			m_edit_web_proxy_host.Text = m_settings.WebProxyHost;
+			m_edit_web_proxy_host.TextChanged += (s,a)=>
+				{
+					if (!((TextBox)s).Modified) return;
+					m_settings.WebProxyHost = m_edit_web_proxy_host.Text;
+					WhatsChanged |= EWhatsChanged.Nothing;
+				};
+
+			// Web proxy port
+			tt = "The port number of the web proxy server";
+			m_lbl_web_proxy_port.ToolTip(m_tt, tt);
+			m_spinner_web_proxy_port.ToolTip(m_tt, tt);
+			m_spinner_web_proxy_port.Minimum = Constants.PortNumberMin;
+			m_spinner_web_proxy_port.Maximum = Constants.PortNumberMax;
+			m_spinner_web_proxy_port.Value = Maths.Clamp(m_settings.WebProxyPort, Constants.PortNumberMin, Constants.PortNumberMax);
+			m_spinner_web_proxy_port.ValueChanged += (s,a)=>
+				{
+					m_settings.WebProxyPort = (int)m_spinner_web_proxy_port.Value;
+					WhatsChanged |= EWhatsChanged.Nothing;
+				};
+
 			// Line endings
 			tt = "Set the line ending characters to expect in the log data.\r\nUse '<CR>' for carriage return, '<LF>' for line feed.\r\nLeave blank to auto detect";
 			m_lbl_line_ends.ToolTip(m_tt, tt);
@@ -779,6 +813,11 @@ namespace RyLogViewer
 			{
 				SuspendLayout();
 			
+				bool use_web_proxy = m_settings.UseWebProxy;
+				m_lbl_web_proxy_host.Enabled = use_web_proxy;
+				m_lbl_web_proxy_port.Enabled = use_web_proxy;
+				m_edit_web_proxy_host.Enabled = use_web_proxy;
+				m_spinner_web_proxy_port.Enabled = use_web_proxy;
 				m_spinner_column_count.Enabled = m_settings.ColDelimiter.Length != 0;
 			
 				m_check_alternate_line_colour.Checked = m_settings.AlternateLineColours;

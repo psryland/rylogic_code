@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Net;
-using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Xml.Linq;
 
@@ -134,7 +132,7 @@ namespace pr.inet
 				if (callback != null) callback(async);
 			};
 
-			// Excute the async operation
+			// Execute the async operation
 			ThreadPool.QueueUserWorkItem(version_check, async);
 			return async;
 		}

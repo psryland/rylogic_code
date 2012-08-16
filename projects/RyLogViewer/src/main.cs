@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
@@ -918,6 +919,14 @@ namespace RyLogViewer
 					BeginInvoke(done);
 				};
 			
+			// Use a web proxy if it specified in the settings
+			IWebProxy proxy = WebRequest.DefaultWebProxy;
+			if (m_settings.UseWebProxy && !string.IsNullOrEmpty(m_settings.WebProxyHost))
+			{
+				try { proxy =  new WebProxy(m_settings.WebProxyHost, m_settings.WebProxyPort); }
+				catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}", m_settings.WebProxyHost, m_settings.WebProxyPort); }
+			}
+			
 			// Start the check for updates
 			if (show_dialog)
 			{
@@ -925,7 +934,7 @@ namespace RyLogViewer
 					{
 						BackgroundWorker bgw = (BackgroundWorker)s;
 						bgw.ReportProgress(100, new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
-						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, null);
+						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, null, proxy);
 						
 						// Wait till the operation completes, or until cancel is singled
 						for (;!bgw.CancellationPending && !async.AsyncWaitHandle.WaitOne(500);) {}
@@ -939,7 +948,7 @@ namespace RyLogViewer
 			else
 			{
 				// Start the asynchronous check for updates
-				INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, callback);
+				INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, callback, proxy);
 			}
 		}
 
@@ -953,8 +962,18 @@ namespace RyLogViewer
 			}
 			else
 			{
-				Version this_version = Assembly.GetExecutingAssembly().GetName().Version;
-				Version othr_version = new Version(res.Version);
+				Version this_version, othr_version;
+				try
+				{
+					this_version = Assembly.GetExecutingAssembly().GetName().Version;
+					othr_version = new Version(res.Version);
+				}
+				catch (Exception)
+				{
+					SetTransientStatusMessage("Version Information Unavailable");
+					if (show_dialog) MessageBox.Show(this, "The server was contacted but version information was not available", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					return;
+				}
 				if (this_version.CompareTo(othr_version) >  0)
 				{
 					SetTransientStatusMessage("Development version running");

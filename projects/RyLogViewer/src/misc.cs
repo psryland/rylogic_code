@@ -18,6 +18,9 @@ namespace RyLogViewer
 	{
 		public const string AppIdentifier           = "rylogviewer.x86";
 		public const string UpdateUrl               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
+		public const int PortNumberMin              = 0;
+		public const int PortNumberWebProxyDefault  = 8080;
+		public const int PortNumberMax              = 65535;
 		public const int FileBufSizeMin             = 1 * OneMB;
 		public const int FileBufSizeDefault         = 10 * OneMB;
 		public const int FileBufSizeMax             = 100 * OneMB;

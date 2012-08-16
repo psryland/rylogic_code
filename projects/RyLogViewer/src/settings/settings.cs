@@ -135,6 +135,21 @@ namespace RyLogViewer
 			get { return get<bool>("CheckForUpdates"); }
 			set { set("CheckForUpdates", value); }
 		}
+		public bool   UseWebProxy
+		{
+			get { return get<bool>("UseWebProxy"); }
+			set { set("UseWebProxy", value); }
+		}
+		public string WebProxyHost
+		{
+			get { return get<string>("WebProxyHost"); }
+			set { set("WebProxyHost", value); }
+		}
+		public int    WebProxyPort
+		{
+			get { return get<int>("WebProxyPort"); }
+			set { set("WebProxyPort", value); }
+		}
 		public bool   HighlightsEnabled
 		{
 			get { return get<bool>("HighlightsEnabled"); }
@@ -299,6 +314,9 @@ namespace RyLogViewer
 			AlwaysOnTop                     = false;
 			ShowTOTD                        = true;
 			CheckForUpdates                 = true;
+			UseWebProxy                     = false;
+			WebProxyHost                    = "";
+			WebProxyPort                    = Constants.PortNumberWebProxyDefault;
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = true;
 			TransformsEnabled               = true;
