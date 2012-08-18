@@ -6,7 +6,7 @@ namespace RyLogViewer
 {
 	public class StartupOptions
 	{
-		/// <summary>The filepath to a file given on the commandline</summary>
+		/// <summary>The filepath to a file given on the command line</summary>
 		public string FileToLoad { get; private set; }
 		
 		/// <summary>True if we should run the app in portable mode</summary>

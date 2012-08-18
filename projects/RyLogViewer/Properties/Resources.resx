@@ -202,7 +202,7 @@
   <data name="OutputFileMissing" xml:space="preserve">
     <value>Output file missing</value>
   </data>
-  <data name="application-x-executable-script" type="System.Resources.ResXFileRef, System.Windows.Forms">
+  <data name="execute" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\executable.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="ShowHighlightsDialog" xml:space="preserve">

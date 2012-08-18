@@ -1,20 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.IO.Ports;
-using System.Net.Sockets;
-using System.Reflection;
-using System.Resources;
-using System.Runtime.Serialization;
 using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using RyLogViewer.Properties;
 using pr.common;
-using pr.inet;
-using pr.extn;
 
 namespace RyLogViewer
 {

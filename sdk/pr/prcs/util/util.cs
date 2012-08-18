@@ -460,6 +460,14 @@ namespace pr.util
 			enc = enc.Replace("\r\n", "\n");
 			return "<pre>"+enc+"</pre>";
 		}
+
+		/// <summary>Return a sub range of an array of T</summary>
+		public static T[] SubRange<T>(T[] arr, int start, int length)
+		{
+			var sub = new T[length];
+			Array.Copy(arr, start, sub, 0, length);
+			return sub;
+		}
 	}
 	
 	/// <summary>Type specific utility methods</summary>

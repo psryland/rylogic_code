@@ -233,7 +233,7 @@
 			// 
 			this.m_btn_actions.CheckOnClick = true;
 			this.m_btn_actions.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_actions.Image = global::RyLogViewer.Properties.Resources.application_x_executable_script;
+			this.m_btn_actions.Image = global::RyLogViewer.Properties.Resources.execute;
 			this.m_btn_actions.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_actions.Name = "m_btn_actions";
 			this.m_btn_actions.Size = new System.Drawing.Size(28, 28);

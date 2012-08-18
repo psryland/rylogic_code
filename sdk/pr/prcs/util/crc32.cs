@@ -37,7 +37,7 @@ namespace pr.util
 		{}
 
 		/// <summary>Creates a CRC32 object using the specified polynomial.</summary>
-		/// <remarks>The polynomical should be supplied in its bit-reflected form. <see cref="DefaultPolynomial"/>.</remarks>
+		/// <remarks>The polynomial should be supplied in its bit-reflected form. <see cref="DefaultPolynomial"/>.</remarks>
 		public CRC32(uint polynomial)
 		{
 			HashSizeValue = 32;
@@ -113,7 +113,7 @@ namespace pr.util
 		/// <remarks>The computation preserves the internal state between the calls, so it can be used for computation of a stream data.</remarks>
 		public byte[] ComputeHash(string asciiString)
 		{
-			byte[] rawBytes = ASCIIEncoding.ASCII.GetBytes(asciiString);
+			byte[] rawBytes = Encoding.ASCII.GetBytes(asciiString);
 			return ComputeHash(rawBytes);
 		}
 	

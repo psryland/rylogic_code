@@ -108,7 +108,7 @@ namespace pr.util
 		/// <remarks>The computation preserves the internal state between the calls, so it can be used for computation of a stream data.</remarks>
 		public byte[] ComputeHash(string asciiString)
 		{
-			byte[] rawBytes = ASCIIEncoding.ASCII.GetBytes(asciiString);
+			byte[] rawBytes = Encoding.ASCII.GetBytes(asciiString);
 			return ComputeHash(rawBytes);
 		}
 	

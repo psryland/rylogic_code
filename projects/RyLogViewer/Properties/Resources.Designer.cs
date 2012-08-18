@@ -89,13 +89,6 @@ namespace RyLogViewer.Properties {
             }
         }
         
-        internal static System.Drawing.Bitmap application_x_executable_script {
-            get {
-                object obj = ResourceManager.GetObject("application-x-executable-script", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
         /// <summary>
         ///   Looks up a localized string similar to RyLogViewer.
         /// </summary>
@@ -353,6 +346,13 @@ namespace RyLogViewer.Properties {
         internal static string ExecutablesFilter {
             get {
                 return ResourceManager.GetString("ExecutablesFilter", resourceCulture);
+            }
+        }
+        
+        internal static System.Drawing.Bitmap execute {
+            get {
+                object obj = ResourceManager.GetObject("execute", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

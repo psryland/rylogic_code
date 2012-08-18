@@ -14,9 +14,9 @@ namespace pr.crypt
 		public static readonly byte[] SignatureId = new Guid("ACDC91BB-6E26-4F33-9F14-7C9A3F928750").ToByteArray();
 
 		/// <summary>Generates a public/private key pair as xml strings</summary>
-		public static void GenerateRSAKeyPair(out string pub, out string priv)
+		public static void GenerateRSAKeyPair(out string pub, out string priv, int key_size = 1024)
 		{
-			var rsa = new RSACryptoServiceProvider();
+			var rsa = new RSACryptoServiceProvider(key_size);
 			pub  = rsa.ToXmlString(false);
 			priv = rsa.ToXmlString(true);
 		}
