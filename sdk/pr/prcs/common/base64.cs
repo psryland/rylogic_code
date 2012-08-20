@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Text;
-using pr.util;
 
-namespace pr.util
+namespace pr.common
 {
 	// Implements the Base64 Content-Transfer-Encoding standard described in RFC1113 (http://www.faqs.org/rfcs/rfc1113.html).
 	//
@@ -89,7 +88,7 @@ namespace pr.util
 		public static void Decode(byte[] src, int soffset, int scount, byte[] dst, int doffset, out int dst_length)
 		{
 			if (dst.Length - doffset < DecodeSize(scount)) throw new ArgumentException("destination buffer too small");
-			Func<byte, bool> isbase64 = (c)=> {return (c != '=') && ((c == 43) || (c >= 47 && c < 58) || (c >= 65 && c < 91) || (c >= 97 && c < 123));}; // isalnum, '+', or '/'
+			Func<byte, bool> isbase64 = c => {return (c != '=') && ((c == 43) || (c >= 47 && c < 58) || (c >= 65 && c < 91) || (c >= 97 && c < 123));}; // isalnum, '+', or '/'
 
 			int i,o,j=0;
 			for (i = 0, o = 0; (src.Length - i) >= 4; i += 4) // decoding works in blocks of 4
@@ -112,6 +111,7 @@ namespace pr.util
 namespace pr
 {
 	using NUnit.Framework;
+	using common;
 
 	[TestFixture] internal static partial class UnitTests
 	{

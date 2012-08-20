@@ -18,7 +18,7 @@ namespace RyLogViewer
 			var exe_dir = Path.GetDirectoryName(Application.ExecutablePath) ?? @".\";
 			var priv_key_path = Path.Combine(exe_dir, "private_key.xml");
 			var priv_key = File.ReadAllText(priv_key_path);
-			var key = SerialNumber.Generate(priv_key);
+			var key = ActivationCode.Generate(priv_key);
 			return key;
 		}
 

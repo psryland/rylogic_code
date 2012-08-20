@@ -451,16 +451,6 @@ namespace pr.util
 			return sb.ToString();
 		}
 
-		/// <summary>Convert simple plain text to html</summary>
-		public static string TextToHtml(string text)
-		{
-			Debug.Assert(text != null);
-			string enc = System.Security.SecurityElement.Escape(text);
-			Debug.Assert(enc!= null);
-			enc = enc.Replace("\r\n", "\n");
-			return "<pre>"+enc+"</pre>";
-		}
-
 		/// <summary>Return a sub range of an array of T</summary>
 		public static T[] SubRange<T>(T[] arr, int start, int length)
 		{

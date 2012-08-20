@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.inet;
 using pr.util;
 using pr.gui;
 
@@ -16,11 +17,11 @@ namespace RyLogViewer
 		// Create modal instances
 		public static DialogResult ShowText(Form owner, string text, string title)
 		{
-			return ShowHtml(owner, Util.TextToHtml(text), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return ShowHtml(owner, Html.FromText(text), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
 		public static DialogResult ShowText(Form owner, string text, string title, Size ofs, Size size, EPin pin)
 		{
-			return ShowHtml(owner, Util.TextToHtml(text), title, ofs, size, pin);
+			return ShowHtml(owner, Html.FromText(text), title, ofs, size, pin);
 		}
 		public static DialogResult ShowResource(Form owner, string resource_name, string title)
 		{
@@ -42,11 +43,11 @@ namespace RyLogViewer
 		// Create non-modal instances
 		public static HelpUI FromText(Form parent, string text, string title)
 		{
-			return FromHtml(parent, Util.TextToHtml(text), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return FromHtml(parent, Html.FromText(text), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
 		public static HelpUI FromText(Form parent, string text, string title, Size ofs, Size size, EPin pin)
 		{
-			return FromHtml(parent, Util.TextToHtml(text), title, ofs, size, pin);
+			return FromHtml(parent, Html.FromText(text), title, ofs, size, pin);
 		}
 		public static HelpUI FromResource(Form parent, string resource_name, string title)
 		{
