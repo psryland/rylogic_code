@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prcs_vs2010", "..\..\sdk\pr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Csex", "..\Csex\Csex.csproj", "{7F52A774-6015-43DA-AD5B-A3289EDD6690}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "RyLogViewerSetup", "Q:\projects\RyLogViewer\RyLogViewerSetup\RyLogViewerSetup.vdproj", "{25EC1E3F-1103-469A-8DE4-163C042D340E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -38,6 +40,10 @@ Global
 		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Release|x64.ActiveCfg = Release|x86
 		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Release|x86.ActiveCfg = Release|x86
 		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Release|x86.Build.0 = Release|x86
+		{25EC1E3F-1103-469A-8DE4-163C042D340E}.Debug|x64.ActiveCfg = Debug
+		{25EC1E3F-1103-469A-8DE4-163C042D340E}.Debug|x86.ActiveCfg = Debug
+		{25EC1E3F-1103-469A-8DE4-163C042D340E}.Release|x64.ActiveCfg = Release
+		{25EC1E3F-1103-469A-8DE4-163C042D340E}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
