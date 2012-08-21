@@ -299,7 +299,7 @@ namespace RyLogViewer
 		// Default construct settings
 		public Settings()
 		{
-			LicenceHolder                   = Constants.UnregistedUser;
+			LicenceHolder                   = Constants.EvalLicence;
 			Company                         = "";
 			RecentFiles                     = "";
 			Font                            = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);

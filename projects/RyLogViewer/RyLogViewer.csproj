@@ -351,9 +351,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\book.png" />
-    <Content Include="Resources\licence.xml">
-      <SubType>Designer</SubType>
-    </Content>
     <None Include="Resources\public_key.xml" />
     <None Include="src\licence\private_key.xml" />
     <None Include="Resources\bottom.png" />

@@ -27,6 +27,7 @@ namespace RyLogViewer
 {
 	public partial class Main :Form
 	{
+		private readonly StartupOptions m_startup_options;    // The options provided at startup
 		private readonly Settings m_settings;                 // App settings
 		private readonly RecentFiles m_recent;                // Recent files
 		private readonly FileWatch m_watch;                   // A helper for watching files
@@ -60,12 +61,14 @@ namespace RyLogViewer
 
 		public Main(StartupOptions startup_options)
 		{
-			m_settings = new Settings(startup_options.SettingsPath);
+			m_startup_options = startup_options;
+			m_settings = new Settings(m_startup_options.SettingsPath);
 			Log.Register(m_settings.LogFilePath, false);
 			Log.Info(this, "App Startup: {0}", DateTime.Now);
 			
 			InitializeComponent();
 			AllowTransparency = true;
+			
 			if (m_settings.RestoreScreenLoc)
 			{
 				StartPosition = FormStartPosition.Manual;
@@ -99,8 +102,7 @@ namespace RyLogViewer
 			m_tail_enabled       = m_settings.TailEnabled;
 			
 			// Startup options
-			CheckLicence(startup_options);
-			ApplyStartupOptions(startup_options);
+			ApplyStartupOptions();
 			
 			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
 			
@@ -144,6 +146,7 @@ namespace RyLogViewer
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General   );
 			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
 			m_menu_help_check_for_updates.Click     += (s,a) => CheckForUpdates(true);
+			m_menu_help_visit_store.Click           += (s,a) => VisitStore();
 			m_menu_help_register.Click              += (s,a) => ShowActivation();
 			m_menu_help_about.Click                 += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
@@ -246,7 +249,7 @@ namespace RyLogViewer
 			m_bookmarks_ui.PrevBookmark    += PrevBookmark;
 			
 			// Startup
-			Shown += (s,a)=> Startup(startup_options);
+			Shown += (s,a)=> Startup();
 			
 			// File Drop
 			DragEnter += (s,a) => FileDrop(a, true);
@@ -268,8 +271,10 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Apply the startup options</summary>
-		private void ApplyStartupOptions(StartupOptions su)
+		private void ApplyStartupOptions()
 		{
+			StartupOptions su = m_startup_options;
+			
 			// If a pattern set file path is given, replace the patterns in 'm_settings'
 			// with the contents of the file
 			if (su.HighlightSetPath != null)
@@ -317,8 +322,10 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Called the first time the app is displayed</summary>
-		private void Startup(StartupOptions su)
+		private void Startup()
 		{
+			StartupOptions su = m_startup_options;
+			
 			// Parse command line
 			if (su.FileToLoad != null)
 			{

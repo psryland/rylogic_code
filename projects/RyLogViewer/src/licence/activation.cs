@@ -1,7 +1,5 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using pr.common;
 using pr.util;
 
 namespace RyLogViewer
@@ -19,11 +17,11 @@ namespace RyLogViewer
 		private TextBox m_edit_name;
 		private Label m_lbl_name;
 		private Label m_lbl_valid;
-		
-		public Activation()
+
+		public Activation(Licence licence)
 		{
 			InitializeComponent();
-			m_licence = new Licence();
+			m_licence = licence;
 			m_tt = new ToolTip();
 			string tt;
 			
@@ -69,9 +67,17 @@ namespace RyLogViewer
 		/// <summary>Update the UI</summary>
 		private void UpdateUI()
 		{
-			bool crcpass = ActivationCode.CheckCrc(m_edit_activation_code.Text);
-			bool valid = ActivationCode.Validate(m_edit_activation_code.Text, Resources.public_key);
-			m_lbl_valid.Text = valid ? "Licence Accepted" : crcpass ? "Code Invalid" : "Evaluation Licence";
+			// Only perform the validation if the crc passes
+			bool valid_characters = m_licence.ValidCharacters;
+			bool valid_length     = m_licence.ValidLength;
+			bool valid_crc        = valid_characters && valid_length && m_licence.ValidCrC;
+			bool valid            = valid_crc && m_licence.Valid;
+			
+			m_lbl_valid.Text =
+				!valid_characters || !valid_length ? "Evaluation Licence" :
+				!valid_crc ? "Code Invalid" :
+				!valid ? "Licence Rejected" : "Licence Accepted";
+			
 			m_lbl_valid.BackColor = valid ? Color.LightGreen : Color.LightSalmon;
 			m_btn_ok.Enabled = valid;
 		}
@@ -116,7 +122,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(130, 193);
+			this.m_btn_ok.Location = new System.Drawing.Point(166, 234);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 15;
@@ -127,7 +133,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(211, 193);
+			this.m_btn_cancel.Location = new System.Drawing.Point(247, 234);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_cancel.TabIndex = 14;
@@ -142,7 +148,8 @@ namespace RyLogViewer
 			this.m_edit_activation_code.Location = new System.Drawing.Point(12, 116);
 			this.m_edit_activation_code.Multiline = true;
 			this.m_edit_activation_code.Name = "m_edit_activation_code";
-			this.m_edit_activation_code.Size = new System.Drawing.Size(274, 70);
+			this.m_edit_activation_code.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+			this.m_edit_activation_code.Size = new System.Drawing.Size(310, 111);
 			this.m_edit_activation_code.TabIndex = 13;
 			// 
 			// m_lbl_activation_code
@@ -160,7 +167,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_company.Location = new System.Drawing.Point(12, 72);
 			this.m_edit_company.Name = "m_edit_company";
-			this.m_edit_company.Size = new System.Drawing.Size(274, 20);
+			this.m_edit_company.Size = new System.Drawing.Size(310, 20);
 			this.m_edit_company.TabIndex = 11;
 			// 
 			// m_lbl_company
@@ -178,7 +185,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_name.Location = new System.Drawing.Point(12, 28);
 			this.m_edit_name.Name = "m_edit_name";
-			this.m_edit_name.Size = new System.Drawing.Size(274, 20);
+			this.m_edit_name.Size = new System.Drawing.Size(310, 20);
 			this.m_edit_name.TabIndex = 9;
 			// 
 			// m_lbl_name
@@ -194,7 +201,7 @@ namespace RyLogViewer
 			// 
 			this.m_lbl_valid.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_lbl_valid.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_valid.Location = new System.Drawing.Point(12, 193);
+			this.m_lbl_valid.Location = new System.Drawing.Point(12, 234);
 			this.m_lbl_valid.Margin = new System.Windows.Forms.Padding(20);
 			this.m_lbl_valid.Name = "m_lbl_valid";
 			this.m_lbl_valid.Size = new System.Drawing.Size(100, 23);
@@ -208,7 +215,7 @@ namespace RyLogViewer
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(301, 224);
+			this.ClientSize = new System.Drawing.Size(337, 265);
 			this.Controls.Add(this.m_lbl_valid);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_btn_cancel);

@@ -12,8 +12,8 @@ namespace RyLogViewer
 		/// <summary>True if we should run the app in portable mode</summary>
 		public bool PortableMode { get; private set; }
 		
-		/// <summary>The directory that the executable is running from</summary>
-		public string ExeDir { get; private set; }
+		/// <summary>A location that the app should read settings from and write to</summary>
+		public string AppDataDir { get; private set; }
 		
 		/// <summary>The filepath to the settings file to use</summary>
 		public string SettingsPath { get; set; }
@@ -45,13 +45,18 @@ namespace RyLogViewer
 		/// <summary>Load and parse the startup options</summary>
 		public StartupOptions(string[] args)
 		{
-			ExeDir = Path.GetDirectoryName(Application.ExecutablePath) ?? @".\";
-			if (!Directory.Exists(ExeDir))
+			var exe_dir = Path.GetDirectoryName(Application.ExecutablePath) ?? @".\";
+			if (!Directory.Exists(exe_dir))
 				throw new ArgumentException("Cannot determine the current executable directory");
 			
+			// Get the app data directory
+			var app_dir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+			app_dir = Path.Combine(app_dir, Constants.RylogicLimited);
+			app_dir = Path.Combine(app_dir, Constants.AppName);
+			
 			// Determine whether to run the app in portable mode
-			PortableMode = File.Exists(Path.Combine(ExeDir, "portable"));
-
+			PortableMode = File.Exists(Path.Combine(exe_dir, "portable"));
+			
 			// Check the command line options
 			for (int i = 0, iend = args.Length; i != iend; ++i)
 			{
@@ -66,7 +71,7 @@ namespace RyLogViewer
 				
 				// Helper for comparing option strings
 				Func<string, bool> IsOption = opt => { return string.CompareOrdinal(arg, 0, opt, 0, opt.Length) == 0; };
-
+				
 				// (order these by longest option first)
 				if      (IsOption(CmdLineOption.RDelim       )) { RowDelim = arg.Substring(CmdLineOption.RDelim.Length); }
 				else if (IsOption(CmdLineOption.CDelim       )) { ColDelim = arg.Substring(CmdLineOption.CDelim.Length); }
@@ -81,20 +86,29 @@ namespace RyLogViewer
 				else throw new ArgumentException("Unknown command line option '"+arg+"'.");
 			}
 			
+			// Set the AppDataDir based on whether we're running in portable mode or not
+			AppDataDir = Path.GetFullPath(PortableMode ? exe_dir : app_dir);
+			
+			// If we're in portable mode, check that we have write access to the local directory
+			if (PortableMode)
+			{
+				if (!Directory.Exists(AppDataDir) || (new DirectoryInfo(AppDataDir).Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+					throw new IOException("Unable to run in portable mode as the directory ('"+AppDataDir+"') is readonly.");
+			}
+			// If not in portable mode, check the AppData directory exists (or can be created)
+			else
+			{
+				if (!Directory.Exists(AppDataDir))
+					Directory.CreateDirectory(AppDataDir);
+			}
+			
 			// If the export option is given, a 'FileToLoad' must also be given
 			if (ExportPath != null && FileToLoad == null)
 				throw new ArgumentException("A file to export must be given if the '-e' option is used");
 			
 			// If a settings path has not been given, use the defaults
 			if (SettingsPath == null)
-				SettingsPath = PortableMode
-					? Path.Combine(ExeDir, "settings.xml")
-					: Settings.DefaultFilepath;
-			
-			// Check that we have write access to the settings file location
-			string settings_dir = Path.GetDirectoryName(SettingsPath) ?? ".\\";
-			if (Directory.Exists(settings_dir) && (new DirectoryInfo(settings_dir).Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
-				throw new ArgumentException("Unable to run in portable mode as the local directory ('"+ExeDir+"') is readonly.");
+				SettingsPath = Path.Combine(AppDataDir, "settings.xml");
 		}
 	}
 }

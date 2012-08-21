@@ -496,15 +496,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to .
-        /// </summary>
-        internal static string licence {
-            get {
-                return ResourceManager.GetString("licence", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Line Ending: {0}.
         /// </summary>
         internal static string LineEndingX {

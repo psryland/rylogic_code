@@ -61,10 +61,18 @@ namespace pr.common
 	/// <summary>Base32 encoder/decoder conforming to http://tools.ietf.org/html/rfc4648#section-6 </summary>
 	public static class Base32Encoding
 	{
+		private const string RegexBase32InvalidChars = @"[^a-zA-Z2-7=]";
+
+		/// <summary>Returns true if code32 is made up of valid base32 characters</summary>
+		public static bool IsBase32String(string code32)
+		{
+			return !Regex.IsMatch(code32, RegexBase32InvalidChars);
+		}
+
 		/// <summary>Removes any invalid characters from 'code32'. Useful for removing hyphens, spaces, etc</summary>
 		public static string Sanitise(string code32)
 		{
-			return Regex.Replace(code32, @"[^2-7,a-z,A-Z]", "");
+			return Regex.Replace(code32, RegexBase32InvalidChars, "");
 		}
 
 		/// <summary>Return the length of the base32 encoded string for a byte array with length 'byte_array_length'</summary>
@@ -108,6 +116,7 @@ namespace pr.common
 					if (ch <  91 && ch > 64) return ch - 65; //65-90 == uppercase letters
 					if (ch <  56 && ch > 49) return ch - 24; //50-55 == numbers 2-7
 					if (ch < 123 && ch > 96) return ch - 97; //97-122 == lowercase letters
+					if (ch == '=')           return 0;
 					throw new ArgumentException("Character is not a Base32 character.", "ch");
 				};
 			
@@ -205,7 +214,7 @@ namespace pr
 		[Test] public static void TestBase32()
 		{
 			{
-				var data = new byte[1]{0xff};
+				var data = new byte[]{0xff};
 				var enc = Base32Encoding.ToString(data);
 				var dec = Base32Encoding.ToBytes(enc);
 				Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));

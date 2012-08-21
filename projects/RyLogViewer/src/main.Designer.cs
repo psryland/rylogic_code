@@ -123,6 +123,8 @@
 			this.m_cmenu_grid = new System.Windows.Forms.ContextMenuStrip(this.components);
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator15 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_cmenu_clear_log = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator10 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_highlight_row = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_filter_row = new System.Windows.Forms.ToolStripMenuItem();
@@ -134,8 +136,6 @@
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.m_cmenu_clear_log = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator15 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -940,6 +940,17 @@
 			this.m_cmenu_copy.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_copy.Text = "&Copy";
 			// 
+			// toolStripSeparator15
+			// 
+			this.toolStripSeparator15.Name = "toolStripSeparator15";
+			this.toolStripSeparator15.Size = new System.Drawing.Size(165, 6);
+			// 
+			// m_cmenu_clear_log
+			// 
+			this.m_cmenu_clear_log.Name = "m_cmenu_clear_log";
+			this.m_cmenu_clear_log.Size = new System.Drawing.Size(168, 22);
+			this.m_cmenu_clear_log.Text = "C&lear Log";
+			// 
 			// toolStripSeparator10
 			// 
 			this.toolStripSeparator10.Name = "toolStripSeparator10";
@@ -1011,17 +1022,6 @@
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.ControlLight;
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
-			// 
-			// m_cmenu_clear_log
-			// 
-			this.m_cmenu_clear_log.Name = "m_cmenu_clear_log";
-			this.m_cmenu_clear_log.Size = new System.Drawing.Size(168, 22);
-			this.m_cmenu_clear_log.Text = "C&lear Log";
-			// 
-			// toolStripSeparator15
-			// 
-			this.toolStripSeparator15.Name = "toolStripSeparator15";
-			this.toolStripSeparator15.Size = new System.Drawing.Size(165, 6);
 			// 
 			// Main
 			// 

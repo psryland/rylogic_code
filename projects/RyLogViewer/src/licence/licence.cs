@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -13,53 +16,137 @@ namespace RyLogViewer
 	/// <summary>Represents loaded licence information</summary>
 	public class Licence
 	{
+		/// <summary>Returns true if the code has the correct length</summary>
+		public bool ValidLength { get { return pr.common.ActivationCode.CheckLength(ActivationCode, Resources.public_key); } }
+
+		/// <summary>Returns true if the code is made up of valid characters</summary>
+		public bool ValidCharacters { get { return pr.common.ActivationCode.CheckChars(ActivationCode); } }
+
+		/// <summary>Returns true if the code at least looks right</summary>
+		public bool ValidCrC { get { return pr.common.ActivationCode.CheckCrc(ActivationCode); } }
+
+		/// <summary>True if the activation code is valid</summary>
+		public bool Valid { get { return pr.common.ActivationCode.Validate(ActivationCode, Resources.public_key); } }
+
+		/// <summary>True if the licence data has been modified</summary>
+		public bool Changed { get; private set; }
+
 		/// <summary>The name of the licence holder</summary>
-		public string LicenceHolder { get; set; }
+		public string LicenceHolder
+		{
+			get { return m_licence_holder; }
+			set { if (value != m_licence_holder) { m_licence_holder = value; Changed = true; } }
+		}
+		private string m_licence_holder;
 
 		/// <summary>The associated company name</summary>
-		public string Company { get; set; }
+		public string Company
+		{
+			get { return m_company; }
+			set { if (value != m_company) { m_company = value; Changed = true; } }
+		}
+		private string m_company;
 
 		/// <summary>The activation code</summary>
-		public string ActivationCode { get; set; }
+		public string ActivationCode
+		{
+			get { return m_activation_code; }
+			set { if (value != m_activation_code) { m_activation_code = value; Changed = true; } }
+		}
+		private string m_activation_code;
+
+		/// <summary>Returns a hash of the user details</summary>
+		private byte[] UserDetailsHash
+		{
+			get
+			{
+				var user_details = "Rylogic-"+LicenceHolder+"-Limited-"+Company+"-Pwns";
+				var hash = new SHA1CryptoServiceProvider().ComputeHash(Encoding.Unicode.GetBytes(user_details));
+				return hash;
+			}
+		}
+
+		/// <summary>The software key is the combination of the activation code and user details</summary>
+		private string SoftwareKey
+		{
+			get
+			{
+				// Return a software key that is generated from the current activation code
+				var bytes = Base32Encoding.ToBytes(Base32Encoding.Sanitise(ActivationCode));
+				var lcg = new LCG(UserDetailsHash.Sum(b => b));
+				for (int i = 0, iend = bytes.Length; i != iend; ++i, lcg.next())
+					bytes[i] = (byte)(bytes[i] ^ (byte)lcg.value);
+				return Base32Encoding.ToString(bytes);
+			}
+			set
+			{
+				// Set the activation code from the provided software key
+				var bytes = Base32Encoding.ToBytes(Base32Encoding.Sanitise(value));
+				var lcg = new LCG(UserDetailsHash.Sum(b => b));
+				for (int i = 0, iend = bytes.Length; i != iend; ++i, lcg.next())
+					bytes[i] = (byte)(bytes[i] ^ (byte)lcg.value);
+				ActivationCode = Base32Encoding.ToString(bytes);
+			}
+		}
+
+		/// <summary>Linear congruential generator</summary>
+		private class LCG
+		{
+			public int value;
+			public void next() { value = (16807 * value + 0) % 2147483647; }
+			public LCG(int seed) { value = seed; }
+		}
 
 		/// <summary>Loads the licence info</summary>
-		public Licence()
+		public Licence(string dir)
 		{
 			try
 			{
-				// Check the local directory first in case we're running as a portable instance
-				var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? @".\";
 				var lic = Path.Combine(dir, "licence.xml");
-				if (!File.Exists(lic))
-				{
-					dir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-					lic = Path.Combine(dir, "licence.xml");
-					if (!File.Exists(lic))
-						throw new FileNotFoundException("Licence file not found");
-				}
+				if (!File.Exists(lic)) throw new FileNotFoundException("Licence file not found");
 				
-				// ReSharper disable PossibleNullReferenceException
+				// Load the licence file
 				var doc = XDocument.Load(lic, LoadOptions.None);
 				if (doc.Root == null) throw new InvalidDataException("licence file invalid");
+				
+				// ReSharper disable PossibleNullReferenceException
 				LicenceHolder  = doc.Root.Element(XmlTag.LicenceHolder).Value;
 				Company        = doc.Root.Element(XmlTag.Company).Value;
-				ActivationCode = doc.Root.Element(XmlTag.ActivationCode).Value;
+				SoftwareKey    = doc.Root.Element(XmlTag.SoftwareKey).Value;
 				// ReSharper restore PossibleNullReferenceException
+				
 				return;
 			}
 			catch (FileNotFoundException) { Log.Info(this, "Licence file not found"); }
 			catch (Exception ex) { Log.Exception(this, ex, "Licence file invalid"); }
 			
 			// No valid licence file found. Create a default evaluation licence
-			LicenceHolder = Constants.UnregistedUser;
-			Company = "";
-			ActivationCode = "Paste your Activation licence here";
+			LicenceHolder  = Constants.EvalLicence;
+			Company        = Constants.EvalLicence;
+			ActivationCode = "<paste your activation licence here>";
 		}
-		
+
 		/// <summary>Use the unpredictability of the GC to do a file signing test</summary>
 		~Licence()
 		{
 			Main.PerformSigningVerification();
+		}
+
+		/// <summary>Output the licence details to a licence file</summary>
+		public void WriteFile(string dir)
+		{
+			// Create the licence xml document
+			var doc = new XDocument(new XElement(XmlTag.Root));
+			if (doc.Root == null) throw new Exception("Failed to create licence.xml root node");
+			
+			// Save the elements
+			doc.Root.Add(new XElement(XmlTag.LicenceHolder, LicenceHolder));
+			doc.Root.Add(new XElement(XmlTag.Company, Company));
+			doc.Root.Add(new XElement(XmlTag.SoftwareKey, SoftwareKey));
+			
+			// Save the licence file
+			var lic = Path.Combine(dir, "licence.xml");
+			doc.Save(lic);
 		}
 	}
 
@@ -68,103 +155,94 @@ namespace RyLogViewer
 		/// <summary>Check that the app has a correct signature</summary>
 		public static void PerformSigningVerification()
 		{
-			Action test = () =>
+			// Do the signing test in a background thread
+			ThreadPool.QueueUserWorkItem(x =>
 				{
-					if (pr.crypt.Crypt.Validate(Application.ExecutablePath, Resources.public_key, false)) return;
-					MessageBox.Show(null,
-						"WARNING! This executable has been tampered with!\r\n" +
-						"Using this program may compromise your computer.\r\n" +
-						"\r\n" +
-						"Please contact Rylogic Limited (support@rylogic.co.nz) with " +
-						"information about where you received this copy of the application."
-						,"Tampered Executable Detected!"
-						,MessageBoxButtons.OK
-						,MessageBoxIcon.Exclamation);
-					Application.Exit();
-				};
-			
-			if (ActiveForm != null)
-				ActiveForm.BeginInvoke(test);
+					// Only test for a signed exe once / 5mins
+					const int RetestPeriodMS = 5 * 60 * 1000;
+					if (Environment.TickCount - m_signing_last_tested < RetestPeriodMS)
+						return;
+					
+					// Perform the signing test
+					m_signing_last_tested = Environment.TickCount;
+					if (pr.crypt.Crypt.Validate(Application.ExecutablePath, Resources.public_key, false))
+						return;
+					
+					// Notify if it fails
+					Action failed_notification = () =>
+						{
+							MessageBox.Show(null,
+								"WARNING! This executable has been tampered with!\r\n" +
+								"Using this program may compromise your computer.\r\n" +
+								"\r\n" +
+								"Please contact Rylogic Limited ("+Constants.SupportEmail+") with " +
+								"information about where you received this copy of the application."
+								,"Tampered Executable Detected!"
+								,MessageBoxButtons.OK
+								,MessageBoxIcon.Exclamation);
+							Application.Exit();
+						};
+					
+					var form = ActiveForm;
+					if (form != null) form.BeginInvoke(failed_notification);
+				});
 		}
+		private static int m_signing_last_tested;
 
 		/// <summary>Display the activation dialog</summary>
 		private void ShowActivation()
 		{
-			var dg = new Activation();
+			// Load the licence file
+			var licence = new Licence(m_startup_options.AppDataDir);
+			bool initially_valid = licence.Valid;
+			
+			// Display the UI for entering licence info
+			var dg = new Activation(licence);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
-
+			
+			// Write the updated licence file (if changed)
+			if (!licence.Valid) return;
+			if (!licence.Changed) return;
+			try
+			{
+				licence.WriteFile(m_startup_options.AppDataDir);
+				if (!initially_valid)
+					MessageBox.Show(this,
+						"Thank you for activating "+Constants.AppName+".\r\n" +
+						"Your support is greatly appreciated."
+						,"Activation Successful"
+						,MessageBoxButtons.OK ,MessageBoxIcon.Information);
+			}
+			catch (Exception ex)
+			{
+				Log.Exception(this, ex, "Failed to write licence file in directory "+m_startup_options.AppDataDir);
+				Misc.ShowErrorMessage(this, ex,
+					"An error occurred while creating the licence file.\r\n" +
+					"Please contact "+Constants.SupportEmail+" with details of this error."
+					,"Activation Error");
+			}
 		}
 
-		/// <summary>
-		/// Creates a serial number for the app. The private key xml 
-		/// file must be in the same directory that the app is running in.</summary>
-		public static string GenerateSerialNumber()
+		/// <summary>Launch a browser to the online store</summary>
+		private void VisitStore()
 		{
-			var exe_dir = Path.GetDirectoryName(Application.ExecutablePath) ?? @".\";
-			var priv_key_path = Path.Combine(exe_dir, "private_key.xml");
-			var priv_key = File.ReadAllText(priv_key_path);
-			var key = ActivationCode.Generate(priv_key);
-			return key;
-		}
-
-		/// <summary>Generates a licence xml file in the current executable directory</summary>
-		public void GenerateLicenceFile(string user_name, string company, string email, string serial)
-		{
-			// Create a licence xml file
-			var doc = new XDocument(new XElement(XmlTag.Root));
-			if (doc.Root == null) throw new ApplicationException("Failed to generate licence xml file");
-			
-			// Add personal data to discourage sharing of licence files
-			doc.Root.Add(new XElement(XmlTag.LicenceHolder, user_name));
-			doc.Root.Add(new XElement(XmlTag.Company, company));
-			doc.Root.Add(new XElement(XmlTag.EmailAddr, email));
-			
-			// Add the client's product serial number
-			doc.Root.Add(new XElement(XmlTag.ActivationCode, serial));
-			
-			// Read the bytes of the executable into a buffer
-			var exebytes = File.ReadAllBytes(Application.ExecutablePath);
-
-			// Generate the finger print by combining the
-			// above data with the bits of the executable.
-			var alg = new RSACryptoServiceProvider();
-
-
-			var exe_dir = Path.GetDirectoryName(Application.ExecutablePath) ?? @".\";
-		}
-
-		private void CheckLicence(StartupOptions su)
-		{
-			// What is the licence?
-			// User name       }
-			// company         } personal data to discourage sharing
-			// Email address   }
-			// kagi issued serial number (self checkable)
-			// exe
-
-			// Look for a licence file in the same directory as the exe
-			var licence_path = Path.Combine(su.ExeDir, "licence.xml");
-
-			var exebuf = File.ReadAllBytes(Application.ExecutablePath);
-			
-			var sha1 = new SHA1CryptoServiceProvider();
-			var hash = sha1.ComputeHash(exebuf);
-
-
-			var pub_key = Resources.public_key;
-			
-			// Generate the thumbprint from the contents of the licence.xml
-			// file and compare it to the thumbprint given in that file.
-			// If equal, then it's a valid licence file
-			
-			//SerialNumber.Validate();
-
+			Process p = new Process();
+			p.StartInfo.Arguments = "url.dll,FileProtocolHandler " + "http://store.kagi.com/cgi-bin/store.cgi?storeID=6FFFY_LIVE";
+			p.StartInfo.FileName = "rundll32";
+			p.StartInfo.UseShellExecute = false;
+			p.Start();
 		}
 	}
 
 	/// <summary>A class for managing crippled functionality</summary>
 	public static class Cripple
 	{
-
+		// have a timed "uncripple"... whenever a cripple limit is reached
+		// show a dialog saying:
+		// "This feature has been limited in the evaluation version."
+		// "You can remove these limits for 5 minutes, after which time "
+		// "the limits will be automatically reapplied."
+		// "Please consider purchasing an activation code."
+		//       [Visit Store] [Remove Limits] [Continue]   <- switch these buttons randomly
 	}
 }
