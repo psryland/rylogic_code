@@ -115,7 +115,7 @@ namespace pr.util
 			return new byte[Marshal.SizeOf(typeof(T))];
 		}
 
-		/// <summary>Convert a subrange of bytes to a structure</summary>
+		/// <summary>Convert a sub range of bytes to a structure</summary>
 		public static T FromBytes<T>(byte[] arr, int offset)
 		{
 			Debug.Assert(arr.Length - offset >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
@@ -179,8 +179,25 @@ namespace pr.util
 			return ts;
 		}
 		public static DateTime AssemblyTimestamp() { return AssemblyTimestamp(null); }
-		
-		/// <summary>Convert a unix time (i.e. seconds past 1/1/1970) to a date time</summary>
+
+		/// <summary>
+		/// Event handler used to load a dll from an embedded resource.<para/>
+		/// Use:<para/>
+		///  Add dependent dlls to the project and select "Embedded Resource" in their properties<para/>
+		///  AppDomain.CurrentDomain.AssemblyResolve += (s,a) => Util.ResolveEmbeddedAssembly(a.Name);</summary>
+		public static Assembly ResolveEmbeddedAssembly(string assembly_name)
+		{
+			var resource_name = "AssemblyLoadingAndReflection." + new AssemblyName(assembly_name).Name + ".dll";
+			using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource_name))
+			{
+				Debug.Assert(stream != null, "Embedded assembly not found");
+				var assembly_data = new Byte[stream.Length];
+				stream.Read(assembly_data, 0, assembly_data.Length);
+				return Assembly.Load(assembly_data);
+			}
+		}
+
+		/// <summary>Convert a Unix time (i.e. seconds past 1/1/1970) to a date time</summary>
 		public static DateTime UnixTimeToDateTime(long milliseconds)
 		{
 			const long ticks_per_ms = 10000;
