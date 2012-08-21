@@ -386,4 +386,7 @@ Right click to show the actions dialog</value>
   <data name="public_key" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\public_key.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
+  <data name="licence" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\licence.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
 </root>

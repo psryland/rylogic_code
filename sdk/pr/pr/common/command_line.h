@@ -45,13 +45,13 @@ namespace pr
 		// Return true for more options
 		struct IOptionReceiver
 		{
-			// Called for anything not preceeded by '-'.
+			// Called for anything not preceded by '-'.
 			// The caller should advance 'arg' for each argument read.
 			// Return true to continue parsing, false to abort parsing, or
 			// set arg = arg_end to end parsing and have true returned.
 			virtual bool CmdLineData(TArgIter& arg, TArgIter /*arg_end*/) { ++arg; return true; }
 
-			// Called when an option is found. An option is anything preceeded by a '-'.
+			// Called when an option is found. An option is anything preceded by a '-'.
 			// 'option' is the name of the option, including the '-'.
 			// 'arg' is an iterator to the next command line value after 'option'
 			// 'arg_end' is the end of the argument vector
@@ -63,7 +63,7 @@ namespace pr
 		};
 	}
 	
-	// Parse a range of command line argments
+	// Parse a range of command line arguments
 	// Returns true if all command line parameters were parsed
 	inline bool EnumCommandLine(pr::cmdline::TArgIter arg, pr::cmdline::TArgIter arg_end, pr::cmdline::IOptionReceiver& receiver)
 	{
@@ -84,7 +84,7 @@ namespace pr
 		return true;
 	}
 	
-	// Parse console program style command line argments
+	// Parse console program style command line arguments
 	// Returns true if all command line parameters were parsed
 	inline bool EnumCommandLine(int argc, char* argv[], pr::cmdline::IOptionReceiver& receiver)
 	{
@@ -96,7 +96,7 @@ namespace pr
 		return argc == 0 || EnumCommandLine(args.begin(), args.end(), receiver);
 	}
 	
-	// Parse windows program style command line argments
+	// Parse windows program style command line arguments
 	// Returns true if all command line parameters were parsed
 	inline bool EnumCommandLine(char const* cmd_line, pr::cmdline::IOptionReceiver& receiver)
 	{

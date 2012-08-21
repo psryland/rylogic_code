@@ -10,10 +10,10 @@ namespace RyLogViewer
 	/// <summary>RyLog Viewer settings</summary>
 	public sealed class Settings :SettingsBase<Settings>
 	{
-		public string UserName
+		public string LicenceHolder
 		{
-			get { return get<string>("UserName"); }
-			set { set("UserName", value); }
+			get { return get<string>("LicenceHolder"); }
+			set { set("LicenceHolder", value); }
 		}
 		public string Company
 		{
@@ -299,7 +299,7 @@ namespace RyLogViewer
 		// Default construct settings
 		public Settings()
 		{
-			UserName                        = Constants.UnregistedUserName;
+			LicenceHolder                   = Constants.UnregistedUser;
 			Company                         = "";
 			RecentFiles                     = "";
 			Font                            = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
@@ -330,11 +330,11 @@ namespace RyLogViewer
 			WebProxyHost                    = "";
 			WebProxyPort                    = Constants.PortNumberWebProxyDefault;
 			HighlightsEnabled               = true;
-			FiltersEnabled                  = true;
-			TransformsEnabled               = true;
-			ActionsEnabled                  = true;
-			TailEnabled                     = false;
-			WatchEnabled                    = false;
+			FiltersEnabled                  = false;
+			TransformsEnabled               = false;
+			ActionsEnabled                  = false;
+			TailEnabled                     = true;
+			WatchEnabled                    = true;
 			FileBufSize                     = Constants.FileBufSizeDefault;
 			MaxLineLength                   = Constants.MaxLineLengthDefault;
 			LineCacheCount                  = Constants.LineCacheCountDefault;

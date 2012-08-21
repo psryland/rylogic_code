@@ -137,11 +137,11 @@ namespace RyLogViewer
 				// No file open, nothing to do
 				if (!FileOpen)
 					return;
-			
+				
 				// Incremental updates cannot supplant reloads
 				if (m_reload_in_progress && reload == false)
 					return;
-			
+				
 				// Cause any existing builds to stop by changing the issue number
 				Interlocked.Increment(ref m_build_issue);
 				m_reload_in_progress = reload;
@@ -326,6 +326,11 @@ namespace RyLogViewer
 									
 									if (on_success != null) on_success();
 									m_reload_in_progress = false;
+									
+									// Trigger a collect to free up memory, this also has the 
+									// side effect of triggering a signing test of the exe because
+									// that test is done in a destructor
+									GC.Collect();
 								};
 								BeginInvoke(MergeLineIndexDelegate);
 							}

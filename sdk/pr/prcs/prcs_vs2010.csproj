@@ -142,6 +142,7 @@
     <Compile Include="attrib\string_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
     <Compile Include="common\base32.cs" />
+    <Compile Include="common\cmdline.cs" />
     <Compile Include="crypt\activation_code.cs" />
     <Compile Include="common\span.cs" />
     <Compile Include="common\pin.cs" />

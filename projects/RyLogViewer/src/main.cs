@@ -144,6 +144,7 @@ namespace RyLogViewer
 			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General   );
 			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
 			m_menu_help_check_for_updates.Click     += (s,a) => CheckForUpdates(true);
+			m_menu_help_register.Click              += (s,a) => ShowActivation();
 			m_menu_help_about.Click                 += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
 			
@@ -576,6 +577,7 @@ namespace RyLogViewer
 			// Clipboard operations
 			if (args.ClickedItem == m_cmenu_copy      ) { DataGridView_Extensions.Copy(m_grid);      return; }
 			if (args.ClickedItem == m_cmenu_select_all) { DataGridView_Extensions.SelectAll(m_grid); return; }
+			if (args.ClickedItem == m_cmenu_clear_log ) { ClearLogFile(); return; }
 			
 			// Find the row that the context menu was opened on
 			var pt = m_grid.PointToClient(((ContextMenuStrip)sender).Location);
@@ -740,18 +742,35 @@ namespace RyLogViewer
 		/// <summary>Try to remove data from the log file</summary>
 		private void ClearLogFile()
 		{
-			if (!FileOpen) return;
-			var res = MessageBox.Show(this, string.Format("Attempt to clear the contents of file {0}?\r\nNote, this may not work if another application holds an exclusive lock on the file.",m_filepath), Resources.ConfirmClearLog, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
-			if (res != DialogResult.OK) return;
-			try
+			if (!FileOpen || !File.Exists(m_filepath)) return;
+			Exception err;
+			try // recreating the file
 			{
 				using (new FileStream(m_filepath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {}
 				OpenLogFile(m_filepath); // reopen the file to purge any cached data
+				return;
 			}
-			catch (Exception ex)
+			catch {}
+			try // deleting the file
 			{
-				MessageBox.Show(this, string.Format("Clearing file {0} failed.\r\nReason: {1}",m_filepath, ex.Message), Resources.ClearLogFailed, MessageBoxButtons.OK, MessageBoxIcon.Information);
+				File.Delete(m_filepath);
+				OpenLogFile(m_filepath); // reopen the file to purge any cached data
+				return;
 			}
+			catch (Exception ex) { err = ex; }
+			MessageBox.Show(this, string.Format(
+				"Clearing file {0} failed.\r\n" +
+				"Reason: {1}\r\n" +
+				"\r\n" +
+				"Usually clearing the log file fails if another application holds an " +
+				"exclusive lock on the file. Stop any processes that are using the file " +
+				"and try again. Note, if you are using 'Log Program Output', the program " +
+				"you are running may be holding the file lock."
+				,m_filepath
+				,err.Message)
+				,Resources.ClearLogFailed
+				,MessageBoxButtons.OK
+				,MessageBoxIcon.Information);
 		}
 
 		/// <summary>Enable/Disable ghost mode</summary>

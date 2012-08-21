@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using pr.util;
@@ -13,6 +14,8 @@ namespace pr.common
 	//    seed using the public key, it should equal the second part of the key
 	public static class ActivationCode
 	{
+		private static readonly int SeedLength = Guid.Empty.ToByteArray().Length;
+
 		/// <summary>Generates an activation code using the provided private key</summary>
 		public static string Generate(string private_key)
 		{
@@ -22,6 +25,7 @@ namespace pr.common
 			
 			// Start with a guid as the seed
 			var seed = Guid.NewGuid().ToByteArray();
+			Debug.Assert(seed.Length == SeedLength);
 			
 			// Generate a signature for the seed
 			var sig = alg.SignData(seed, new SHA1CryptoServiceProvider());
@@ -42,10 +46,17 @@ namespace pr.common
 			// Create the crypto service
 			var alg = new RSACryptoServiceProvider();
 			alg.FromXmlString(public_key);
+			var sig_length = alg.KeySize / 8;
+			
+			// Strip out any invalid characters
+			code32 = Base32Encoding.Sanitise(code32);
 			
 			var code = Base32Encoding.ToBytes(code32);
-			var seed   = Util.SubRange(code, 0, 16);
-			var sig    = Util.SubRange(code, 16, code.Length - 17);
+			if (code.Length != SeedLength + sig_length + 1)
+				return false;
+			
+			var seed   = Util.SubRange(code, 0, SeedLength);
+			var sig    = Util.SubRange(code, SeedLength, code.Length - SeedLength - 1);
 			
 			bool valid = alg.VerifyData(seed, new SHA1CryptoServiceProvider(), sig);
 			return valid;
@@ -54,7 +65,9 @@ namespace pr.common
 		/// <summary>Check that the activation code is self consistent</summary>
 		public static bool CheckCrc(string code32)
 		{
+			code32 = Base32Encoding.Sanitise(code32);
 			var code = Base32Encoding.ToBytes(code32);
+			if (code.Length == 0) return false;
 			byte crc = CalcCrudeCrC(code, 0, code.Length - 1);
 			return crc == code[code.Length - 1];
 		}

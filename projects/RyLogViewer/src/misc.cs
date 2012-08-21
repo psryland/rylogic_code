@@ -16,7 +16,7 @@ namespace RyLogViewer
 {
 	public static class Constants
 	{
-		public const string UnregistedUserName      = "UNREGISTERED VERSION";
+		public const string UnregistedUser          = "Evaluation";
 		public const string AppIdentifier           = "rylogviewer.x86";
 		public const string UpdateUrl               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
 		public const int PortNumberMin              = 0;
@@ -95,45 +95,45 @@ namespace RyLogViewer
 
 	public static class XmlTag
 	{
-		public const string UserName   = "user_name";
-		public const string Company    = "company";
-		public const string EmailAddr  = "email";
-		public const string SerialNo   = "serial";
-		public const string Root       = "root";
-		public const string Expr       = "expr";
-		public const string Active     = "active";
-		public const string PatnType   = "patntype";
-		public const string IgnoreCase = "ignorecase";
-		public const string Invert     = "invert";
-		public const string Binary     = "binary";
-		public const string Highlight  = "highlight";
-		public const string ForeColour = "forecolour";
-		public const string BackColour = "backcolour";
-		public const string Filter     = "filter";
-		public const string Transform  = "transform";
-		public const string ClkAction  = "clkaction";
-		public const string Exclude    = "exclude";
-		public const string IfMatch    = "ifmatch";
-		public const string Name       = "name";
-		public const string Filepath   = "filepath";
-		public const string Match      = "match";
-		public const string Pattern    = "pattern";
-		public const string Replace    = "replace";
-		public const string Subs       = "subs";
-		public const string Sub        = "sub";
-		public const string SubData    = "subdata";
-		public const string Src        = "src";
-		public const string Dst        = "dst";
-		public const string Type       = "type";
-		public const string Elem       = "elem";
-		public const string Id         = "id";
-		public const string CodeValues = "codevalues";
-		public const string CodeValue  = "cv";
-		public const string Code       = "c";
-		public const string Value      = "v";
-		public const string Executable = "executable";
-		public const string Arguments  = "arguments";
-		public const string WorkingDir = "working_dir";
+		public const string Name          = "name";
+		public const string LicenceHolder = "licence_holder";
+		public const string Company       = "company";
+		public const string EmailAddr     = "email";
+		public const string ActivationCode      = "serial";
+		public const string Root          = "root";
+		public const string Expr          = "expr";
+		public const string Active        = "active";
+		public const string PatnType      = "patntype";
+		public const string IgnoreCase    = "ignorecase";
+		public const string Invert        = "invert";
+		public const string Binary        = "binary";
+		public const string Highlight     = "highlight";
+		public const string ForeColour    = "forecolour";
+		public const string BackColour    = "backcolour";
+		public const string Filter        = "filter";
+		public const string Transform     = "transform";
+		public const string ClkAction     = "clkaction";
+		public const string Exclude       = "exclude";
+		public const string IfMatch       = "ifmatch";
+		public const string Filepath      = "filepath";
+		public const string Match         = "match";
+		public const string Pattern       = "pattern";
+		public const string Replace       = "replace";
+		public const string Subs          = "subs";
+		public const string Sub           = "sub";
+		public const string SubData       = "subdata";
+		public const string Src           = "src";
+		public const string Dst           = "dst";
+		public const string Type          = "type";
+		public const string Elem          = "elem";
+		public const string Id            = "id";
+		public const string CodeValues    = "codevalues";
+		public const string CodeValue     = "cv";
+		public const string Code          = "c";
+		public const string Value         = "v";
+		public const string Executable    = "executable";
+		public const string Arguments     = "arguments";
+		public const string WorkingDir    = "working_dir";
 	}
 
 	public static class CmdLineOption

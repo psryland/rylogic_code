@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 
 namespace pr.common
 {
@@ -45,10 +46,27 @@ namespace pr.common
 	//                    <===> 3rd character
 	//              <====> 2nd character
 	//         <===> 1st character
+	//
+	// The RFC 4648 Base 32 alphabet
+	//   0 -> A     9 -> J    18 -> S    27 -> 3
+	//   1 -> B    10 -> K    19 -> T    28 -> 4
+	//   2 -> C    11 -> L    20 -> U    29 -> 5
+	//   3 -> D    12 -> M    21 -> V    30 -> 6
+	//   4 -> E    13 -> N    22 -> W    31 -> 7
+	//   5 -> F    14 -> O    23 -> X
+	//   6 -> G    15 -> P    24 -> Y
+	//   7 -> H    16 -> Q    25 -> Z
+	//   8 -> I    17 -> R    26 -> 2    pad -> =
 	
 	/// <summary>Base32 encoder/decoder conforming to http://tools.ietf.org/html/rfc4648#section-6 </summary>
 	public static class Base32Encoding
 	{
+		/// <summary>Removes any invalid characters from 'code32'. Useful for removing hyphens, spaces, etc</summary>
+		public static string Sanitise(string code32)
+		{
+			return Regex.Replace(code32, @"[^2-7,a-z,A-Z]", "");
+		}
+
 		/// <summary>Return the length of the base32 encoded string for a byte array with length 'byte_array_length'</summary>
 		public static int EncodedLength(int byte_array_length)
 		{

@@ -2,8 +2,13 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer", "RyLogViewer.csproj", "{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7F52A774-6015-43DA-AD5B-A3289EDD6690} = {7F52A774-6015-43DA-AD5B-A3289EDD6690}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prcs_vs2010", "..\..\sdk\pr\prcs\prcs_vs2010.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Csex", "..\Csex\Csex.csproj", "{7F52A774-6015-43DA-AD5B-A3289EDD6690}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +32,12 @@ Global
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|x64.Build.0 = Release|x64
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|x86.ActiveCfg = Release|x86
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|x86.Build.0 = Release|x86
+		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Debug|x64.ActiveCfg = Debug|x86
+		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Debug|x86.ActiveCfg = Debug|x86
+		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Debug|x86.Build.0 = Debug|x86
+		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Release|x64.ActiveCfg = Release|x86
+		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Release|x86.ActiveCfg = Release|x86
+		{7F52A774-6015-43DA-AD5B-A3289EDD6690}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
