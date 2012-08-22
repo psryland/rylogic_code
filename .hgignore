@@ -23,6 +23,8 @@ RylogicEnv.cmd
 ResEdit.layout
 W.TOOLS HAS THE ARAXIS COMPARES FOR SDK
 obj/
+Debug/
+Release/
 obj2008/
 obj2010/
 bin/

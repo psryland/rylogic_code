@@ -15,9 +15,7 @@ namespace RyLogViewer
 {
 	public static class Constants
 	{
-		public const string RylogicLimited          = "Rylogic Limited";
-		public const string AppName                 = "RyLogViewer";
-		public const string SupportEmail            = "support@rylogic.co.nz";
+		public const string SupportEmail            = "support+rylogviewer@rylogic.co.nz";
 		public const string EvalLicence             = "Evaluation Licence";
 		public const string AppIdentifier           = "rylogviewer.x86";
 		public const string UpdateUrl               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";

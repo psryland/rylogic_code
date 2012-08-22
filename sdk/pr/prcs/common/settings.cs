@@ -54,12 +54,14 @@ namespace pr.common
 		
 		private const string version_key = "__SettingsVersion";
 		protected List<Pair> Data = new List<Pair>();
+		private string m_filepath = "";
 		private bool m_saving;
 		private bool m_auto_save;
-		
+
 		/// <summary>The default values for the settings</summary>
-		public static T Default { get; private set; }
-		
+		public static T Default { get { return m_default ?? (m_default = new T()); } }
+		private static T m_default;
+
 		/// <summary>Returns the directory in which to store app settings</summary>
 		public static string DefaultAppDataDirectory
 		{
@@ -87,8 +89,12 @@ namespace pr.common
 		/// <summary>
 		/// Returns the filepath for the persisted settings file.
 		/// Settings cannot be saved until this property has a valid filepath</summary>
-		public string Filepath { get; set; }
-		
+		public string Filepath
+		{
+			get { return m_filepath; }
+			set { m_filepath = value ?? ""; }
+		}
+
 		/// <summary>Read a settings value</summary>
 		protected Value get<Value>(string key)
 		{
@@ -160,7 +166,7 @@ namespace pr.common
 			public SettingsLoadedEventArgs(string filepath) { Filepath = filepath; }
 		}
 
-		/// <summary>An event raised whenver the settings are about to be saved to persistent storage</summary>
+		/// <summary>An event raised whenever the settings are about to be saved to persistent storage</summary>
 		public event EventHandler<SettingsSavingEventArgs> SettingsSaving;
 		public class SettingsSavingEventArgs :CancelEventArgs
 		{
@@ -170,9 +176,7 @@ namespace pr.common
 		
 		/// <summary>Default settings instance</summary>
 		protected SettingsBase()
-		{
-			Default = (T)this;
-		}
+		{}
 		
 		/// <summary>Initialise the settings object</summary>
 		protected SettingsBase(string filepath)
@@ -180,7 +184,6 @@ namespace pr.common
 			Debug.Assert(!string.IsNullOrEmpty(filepath));
 			
 			Filepath = filepath;
-			Default  = new T();
 			Data     = new List<Pair>(Default.Data);
 			
 			try { Load(Filepath); }
@@ -249,7 +252,7 @@ namespace pr.common
 			{
 				m_saving = true;
 				if (string.IsNullOrEmpty(filepath))
-					throw new ArgumentNullException("No settings filepath set");
+					throw new ArgumentNullException("filepath", "No settings filepath set");
 				
 				// Notify of a save about to happen
 				SettingsSavingEventArgs args = new SettingsSavingEventArgs(false);
@@ -309,9 +312,6 @@ namespace pr
 				Str = "default";
 				Int = 4;
 			}
-			public Settings(string filepath)
-			:base(filepath)
-			{}
 		}
 		
 		[Test] public static void TestSettings()

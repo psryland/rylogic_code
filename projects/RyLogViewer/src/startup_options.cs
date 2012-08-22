@@ -51,8 +51,8 @@ namespace RyLogViewer
 			
 			// Get the app data directory
 			var app_dir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-			app_dir = Path.Combine(app_dir, Constants.RylogicLimited);
-			app_dir = Path.Combine(app_dir, Constants.AppName);
+			app_dir = Path.Combine(app_dir, Application.CompanyName);
+			app_dir = Path.Combine(app_dir, Application.ProductName);
 			
 			// Determine whether to run the app in portable mode
 			PortableMode = File.Exists(Path.Combine(exe_dir, "portable"));

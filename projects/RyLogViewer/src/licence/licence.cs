@@ -208,7 +208,7 @@ namespace RyLogViewer
 				licence.WriteFile(m_startup_options.AppDataDir);
 				if (!initially_valid)
 					MessageBox.Show(this,
-						"Thank you for activating "+Constants.AppName+".\r\n" +
+						"Thank you for activating "+Application.ProductName+".\r\n" +
 						"Your support is greatly appreciated."
 						,"Activation Successful"
 						,MessageBoxButtons.OK ,MessageBoxIcon.Information);

@@ -143,6 +143,7 @@
     <Compile Include="attrib\units_attr.cs" />
     <Compile Include="common\base32.cs" />
     <Compile Include="common\cmdline.cs" />
+    <Compile Include="common\hglobal.cs" />
     <Compile Include="crypt\activation_code.cs" />
     <Compile Include="common\span.cs" />
     <Compile Include="common\pin.cs" />
@@ -252,6 +253,7 @@
     </Compile>
     <Compile Include="inet\check_for_updates.cs" />
     <Compile Include="inet\cred.cs" />
+    <Compile Include="inet\email.cs" />
     <Compile Include="inet\ftp.cs" />
     <Compile Include="inet\html.cs" />
     <Compile Include="inet\inet.cs" />

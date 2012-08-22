@@ -59,7 +59,7 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>RylogViewer Key File.pfx</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>Rylogic Limited Key File.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -308,7 +308,6 @@
     <None Include="Resources\important.png" />
     <None Include="Resources\options.png" />
     <None Include="Resources\Refresh.png" />
-    <None Include="RylogViewer Key File.pfx" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">
@@ -352,6 +351,7 @@
   <ItemGroup>
     <Content Include="Resources\book.png" />
     <None Include="Resources\public_key.xml" />
+    <None Include="Rylogic Limited Key File.pfx" />
     <None Include="src\licence\private_key.xml" />
     <None Include="Resources\bottom.png" />
     <None Include="Resources\bookmark.png" />

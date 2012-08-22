@@ -314,9 +314,6 @@ Error Details:
   <data name="Exclude" xml:space="preserve">
     <value>Exclude</value>
   </data>
-  <data name="CSVFileFilter" xml:space="preserve">
-    <value>CSV Files (*.csv)|*.csv|All files (*.*)|*.*</value>
-  </data>
   <data name="CouldNotDeletePatternSetFileX" xml:space="preserve">
     <value>Could not delete pattern set file {0}.
 Error: {1}</value>
@@ -342,6 +339,12 @@ Right click to show the actions dialog</value>
   </data>
   <data name="SettingsFileFilter" xml:space="preserve">
     <value>Settings Files (*.xml)|*.xml|All files (*.*)|*.*</value>
+  </data>
+  <data name="CSVFileFilter" xml:space="preserve">
+    <value>CSV Files (*.csv)|*.csv|All files (*.*)|*.*</value>
+  </data>
+  <data name="DumpFileFilter" xml:space="preserve">
+    <value>Dump Files (*.dmp)|*.dmp|All files (*.*)|*.*</value>
   </data>
   <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\gray_cross.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

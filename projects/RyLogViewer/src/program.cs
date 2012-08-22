@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Security.Permissions;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.inet;
 using pr.util;
 
 namespace RyLogViewer
@@ -77,8 +78,46 @@ namespace RyLogViewer
 				,MessageBoxButtons.OK
 				,MessageBoxIcon.Error);
 			#endif
+			
+			var res = MessageBox.Show(string.Format(
+				"An unhandled exception has occurred in {0}.\r\n" +
+				"\r\n" +
+				"Creating a dump file and sending it to {1} will aid in the resolution of this issue.\r\n" +
+				"\r\n" +
+				"Choose 'Yes' to create a dump file, or 'No' to quit."
+				,Application.ProductName
+				,Constants.SupportEmail)
+				,"Unexpected Termination"
+				,MessageBoxButtons.YesNo, MessageBoxIcon.Error);
+			if (res == DialogResult.Yes)
+			{
+				var dg = new SaveFileDialog{Title = "Save dump file", Filter = Resources.DumpFileFilter, DefaultExt = "dmp", CheckPathExists = true};
+				if (dg.ShowDialog() == DialogResult.OK)
+				{
+					ClrDump.Dump(dg.FileName);
+					try
+					{
+						// Try to create an email with the attachment ready to go
+						var email = new Email();
+						email.AddRecipient(Constants.SupportEmail, Email.MAPIRecipient.To);
+						email.Subject = Application.ProductName + " crash report";
+						email.Body = string.Format(
+							"To {0},\r\n" +
+							"\r\n" +
+							"Attached is a crash report generated on {1}\r\n" +
+							"A brief description of how the application was being used at the time follows:\r\n" +
+							"\r\n\r\n\r\n\r\n" +
+							"Regards,\r\n" +
+							"A Helpful User"
+							,Application.CompanyName
+							,DateTime.Now);
+						email.Attachments.Add(dg.FileName);
+						email.Send();
+					} catch {}
+				}
+			}
 			Environment.ExitCode = 1;
-			ClrDump.DefaultDumpHandler(sender, args);
+			Application.Exit();
 		}
 	}
 }
