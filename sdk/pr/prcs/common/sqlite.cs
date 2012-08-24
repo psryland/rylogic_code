@@ -7,10 +7,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text;
-using pr.common;
-
-using sqlite3      = System.IntPtr;
-using sqlite3_stmt = System.IntPtr;
+using Microsoft.Win32.SafeHandles;
 
 // Usage:
 // - Your domain objects must be classes with a default constructor.
@@ -313,7 +310,7 @@ namespace pr.common
 		/// <summary>Compiles an sql string into an sqlite3 statement</summary>
 		private static sqlite3_stmt Compile(sqlite3 db, string sql_string)
 		{
-			Debug.Assert(db != IntPtr.Zero, "Database handle invalid");
+			Debug.Assert(!db.IsInvalid, "Database handle invalid");
 			
 			sqlite3_stmt stmt;
 			var bytes_utf8 = StrToUTF8(sql_string);
@@ -570,10 +567,39 @@ namespace pr.common
 
 		#endregion
 
+		#region Sqlite3 handle wrappers
+
+		// In theory the ReleaseHandle() method in these SafeHandles should never be
+		// called, because callers should be using the Dispose pattern.
+
+		/// <summary>A wrapper for unmanaged sqlite database connection handles</summary>
+		public class sqlite3 :SafeHandleZeroOrMinusOneIsInvalid
+		{
+			public sqlite3() :base(true) {}
+
+			/// <summary>When overridden in a derived class, executes the code required to free the handle.</summary>
+			/// <returns>true if the handle is released successfully; otherwise, in the event of a catastrophic
+			/// failure, false. In this case, it generates a releaseHandleFailed MDA Managed Debugging Assistant.</returns>
+			protected override bool ReleaseHandle() { if (!IsClosed) sqlite3_close(this); return true; }
+		}
+		
+		/// <summary>A wrapper for unmanaged sqlite prepared statement handles</summary>
+		public class sqlite3_stmt :SafeHandleZeroOrMinusOneIsInvalid
+		{
+			public sqlite3_stmt() :base(true) {}
+			
+			/// <summary>When overridden in a derived class, executes the code required to free the handle.</summary>
+			/// <returns>true if the handle is released successfully; otherwise, in the event of a catastrophic
+			/// failure, false. In this case, it generates a releaseHandleFailed MDA Managed Debugging Assistant.</returns>
+			protected override bool ReleaseHandle() { if (!IsClosed) sqlite3_finalize(this); return true; }
+		}
+
+		#endregion
+
 		/// <summary>Represents a connection to an sqlite database file</summary>
 		public class Database :IDisposable
 		{
-			private sqlite3 m_db;
+			private readonly sqlite3 m_db;
 
 			/// <summary>The filepath of the database file opened</summary>
 			public string Filepath { get; set; }
@@ -591,10 +617,16 @@ namespace pr.common
 				BusyTimeout = 0;
 			}
 
+			/// <summary>IDisposable interface</summary>
+			public void Dispose()
+			{
+				Close();
+			}
+
 			/// <summary>Returns the db handle after asserting it's validity</summary>
 			public sqlite3 Handle
 			{
-				get { Debug.Assert(m_db != IntPtr.Zero, "Invalid database handle"); return m_db; }
+				get { Debug.Assert(!m_db.IsInvalid, "Invalid database handle"); return m_db; }
 			}
 
 			/// <summary>
@@ -613,8 +645,7 @@ namespace pr.common
 			/// <summary>Close a database file</summary>
 			public void Close()
 			{
-				if (m_db == IntPtr.Zero) return;
-				GC.Collect(); // Just in case there are disposable objects awaiting collection
+				if (m_db.IsClosed) return;
 				var res = sqlite3_close(m_db);
 				if (res == Result.Busy)
 				{
@@ -625,7 +656,7 @@ namespace pr.common
 				{
 					throw Exception.New(res, "Failed to close database connection");
 				}
-				m_db = IntPtr.Zero;
+				m_db.SetHandleAsInvalid();
 			}
 
 			/// <summary>
@@ -822,12 +853,6 @@ namespace pr.common
 			{
 				return Table<T>().Delete(item);
 			}
-
-			/// <summary>IDisposable interface</summary>
-			public void Dispose()
-			{
-				Close();
-			}
 		}
 
 		/// <summary>Represents a single table in the database</summary>
@@ -838,7 +863,7 @@ namespace pr.common
 			
 			public Table(Type type, Database db)
 			{
-				if (db.Handle == IntPtr.Zero) throw new ArgumentNullException("db", "Invalid database handle");
+				if (db.Handle.IsInvalid) throw new ArgumentNullException("db", "Invalid database handle");
 				m_meta = TableMetaData.GetMetaData(type);
 				m_db = db;
 			}
@@ -1120,12 +1145,12 @@ namespace pr.common
 		/// <summary>Represents an sqlite prepared statement and iterative result (wraps an sqlite3_stmt handle).</summary>
 		public class Query :IDisposable
 		{
-			protected sqlite3_stmt m_stmt; // sqlite managed memory for this query
+			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
 			protected bool m_row_end;      // True once the last row has been read
 			
 			public Query(sqlite3_stmt stmt)
 			{
-				if (stmt == IntPtr.Zero) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
+				if (stmt.IsInvalid) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
 				Trace.QueryCtor(this);
 				m_stmt = stmt;
 				m_row_end = false;
@@ -1137,27 +1162,28 @@ namespace pr.common
 				Trace.QueryDtor(this);
 			}
 			
-			/// <summary>Returns the m_stmt field after asserting it's validity</summary>
-			public sqlite3_stmt Stmt
-			{
-				get { Debug.Assert(m_stmt != IntPtr.Zero, "Invalid query object"); return m_stmt; }
-			}
-			
 			/// <summary>IDisposable</summary>
 			public void Dispose()
 			{
 				Close();
 			}
+			
+			/// <summary>Returns the m_stmt field after asserting it's validity</summary>
+			public sqlite3_stmt Stmt
+			{
+				get { Debug.Assert(!m_stmt.IsInvalid, "Invalid query object"); return m_stmt; }
+			}
 
 			/// <summary>Call when done with this query</summary>
 			public void Close()
 			{
-				if (m_stmt == IntPtr.Zero) return;
+				if (m_stmt.IsClosed) return;
 				
 				// After 'sqlite3_finalize()', it is illegal to use m_stmt. So save 'db' here first
 				sqlite3 db = sqlite3_db_handle(m_stmt);
-				Result res = sqlite3_finalize(m_stmt); m_stmt = IntPtr.Zero; // Ensure no use of 'm_stmt'
+				Result res = sqlite3_finalize(m_stmt);
 				if (res != Result.OK) throw Exception.New(res, ErrorMsg(db));
+				m_stmt.SetHandleAsInvalid(); // Ensure no use of 'm_stmt'
 			}
 
 			/// <summary>Return the number of parameters in this statement</summary>
@@ -1586,10 +1612,10 @@ namespace pr.common
 			}
 
 			/// <summary>Updates the value of the auto increment primary key (if there is one)</summary>
-			public void SetAutoIncPK(object obj, IntPtr handle)
+			public void SetAutoIncPK(object obj, sqlite3 db)
 			{
 				if (m_single_pk == null || !m_single_pk.IsAutoInc) return;
-				int id = (int)sqlite3_last_insert_rowid(handle);
+				int id = (int)sqlite3_last_insert_rowid(db);
 				m_single_pk.Set(obj, id);
 			}
 		}
@@ -2032,7 +2058,7 @@ namespace pr.common
 		private static extern int sqlite3_changes(sqlite3 db);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_last_insert_rowid", CallingConvention=CallingConvention.Cdecl)]
-		private static extern long sqlite3_last_insert_rowid(IntPtr db);
+		private static extern long sqlite3_last_insert_rowid(sqlite3 db);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_errmsg16", CallingConvention=CallingConvention.Cdecl)]
 		private static extern IntPtr sqlite3_errmsg16(sqlite3 db);
@@ -2143,6 +2169,7 @@ namespace pr.common
 namespace pr
 {
 	using NUnit.Framework;
+	using common;
 
 	[TestFixture] internal static partial class UnitTests
 	{
@@ -2163,18 +2190,18 @@ namespace pr
 			}
 			
 			/// <summary>Binds this type to a parameter in a prepared statement</summary>
-			public static void SqliteBind(IntPtr stmt, int idx, object obj)
+			public static void SqliteBind(Sqlite.sqlite3_stmt stmt, int idx, object obj)
 			{
 				Sqlite.Bind.Text(stmt, idx, ((Custom)obj).Str);
 			}
-			public static Custom SqliteRead(IntPtr stmt, int idx)
+			public static Custom SqliteRead(Sqlite.sqlite3_stmt stmt, int idx)
 			{
 				return new Custom((string)Sqlite.Read.Text(stmt, idx));
 			}
 		}
 
 		// Tests a basic default table
-		private class DOMType0
+		private class DomType0
 		{
 			public  int    Inc_Key                 { get; set; }
 			public  string Inc_Value               { get; set; }
@@ -2184,8 +2211,8 @@ namespace pr
 			private int    m_ign_private_field;
 			public  short  Ign_PublicField;
 			
-			public DOMType0(){}
-			public DOMType0(int seed)
+			public DomType0(){}
+			public DomType0(int seed)
 			{
 				Inc_Key = seed;
 				Inc_Value = seed.ToString();
@@ -2198,7 +2225,7 @@ namespace pr
 
 		// Single primary key table
 		[Sqlite.Table(AllByDefault = false)]
-		private class DOMType1
+		private class DomType1
 		{
 			[Sqlite.Column(Order= 0, PrimaryKey = true, AutoInc = true, Constraints = "not null")] public int m_key;
 			[Sqlite.Column(Order= 1)] protected bool      m_bool;
@@ -2228,8 +2255,8 @@ namespace pr
 			public int Ignored { get; set; }
 			// ReSharper restore UnusedAutoPropertyAccessor.Local
 			
-			public DOMType1() {}
-			public DOMType1(int val)
+			public DomType1() {}
+			public DomType1(int val)
 			{
 				m_key        = -1;
 				m_bool       = true;
@@ -2256,7 +2283,7 @@ namespace pr
 				m_nulllong   = null;
 				Ignored      = val;
 			}
-			public bool Equals(DOMType1 other)
+			public bool Equals(DomType1 other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
@@ -2297,20 +2324,20 @@ namespace pr
 
 		// Tests PKs named at class level, Unicode, non-int type primary keys
 		[Sqlite.Table(PrimaryKey = "PK", PKAutoInc = false, FieldBindingFlags = BindingFlags.Public)]
-		private class DOMType2 :DOMType2Base
+		private class DomType2 :DomType2Base
 		{
 			public string UniStr; // Should be a column, because of the FieldBindingFlags
 			private bool Ign_PrivateField; // Should not be a column because private
 			
-			public DOMType2() {}
-			public DOMType2(string key, string str)
+			public DomType2() {}
+			public DomType2(string key, string str)
 			{
 				PK     = key;
 				UniStr = str;
 				Ign_PrivateField = true;
 				Ign_PrivateField = !Ign_PrivateField;
 			}
-			public bool Equals(DOMType2 other)
+			public bool Equals(DomType2 other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
@@ -2318,18 +2345,18 @@ namespace pr
 				return base.Equals(other);
 			}
 		}
-		private class DOMType2Base
+		private class DomType2Base
 		{
 			[Sqlite.Column] private int Inc_Explicit; // Should be a column, because explicitly named
 			
 			// Notice the DOMType2 class indicates this is the primary key from a separate class.
 			public string PK { get; protected set; }
 
-			protected DOMType2Base()
+			protected DomType2Base()
 			{
 				Inc_Explicit = -2;
 			}
-			public bool Equals(DOMType2Base other)
+			public bool Equals(DomType2Base other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
@@ -2342,7 +2369,7 @@ namespace pr
 		// Tests multiple primary keys, and properties in inherited/partial classes
 		[Sqlite.Table(Constraints = "primary key (Key1, Key2, Key3)")]
 		[Sqlite.IgnoreColumns("Ignored1")]
-		public partial class DOMType3
+		public partial class DomType3
 		{
 			public int    Key1 { get; set; }
 			public bool   Key2 { get; set; }
@@ -2351,8 +2378,8 @@ namespace pr
 			public Guid   Prop3 { get; set; }
 			public float Ignored1 { get; set; }
 
-			public DOMType3(){}
-			public DOMType3(int key1, bool key2, string key3)
+			public DomType3(){}
+			public DomType3(int key1, bool key2, string key3)
 			{
 				Key1 = key1;
 				Key2 = key2;
@@ -2366,7 +2393,7 @@ namespace pr
 				Ignored1 = 1f;
 				Ignored2 = 2.0;
 			}
-			public bool Equals(DOMType3 other)
+			public bool Equals(DomType3 other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
@@ -2382,12 +2409,12 @@ namespace pr
 			}
 		}
 		[Sqlite.IgnoreColumns("Ignored2")]
-		public partial class DOMType3 :DOMType3Base
+		public partial class DomType3 :DomType3Base
 		{
 			public string   PropA { get; set; }
 			public SomeEnum PropB { get; set; }
 		}
-		public class DOMType3Base
+		public class DomType3Base
 		{
 			public int Parent1 { get; set; }
 			public string Key3 { get; set; }
@@ -2395,7 +2422,7 @@ namespace pr
 		}
 
 		// Tests altering a table
-		public class DOMType4
+		public class DomType4
 		{
 			[Sqlite.Column(PrimaryKey = true)] public int Key1 { get; set; }
 			public bool   Key2 { get; set; }
@@ -2431,12 +2458,12 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a simple table
-				db.DropTable<DOMType0>();
-				db.CreateTable<DOMType0>();
-				Assert.IsTrue(db.TableExists<DOMType0>());
+				db.DropTable<DomType0>();
+				db.CreateTable<DomType0>();
+				Assert.IsTrue(db.TableExists<DomType0>());
 				
 				// Check the table
-				var table = db.Table<DOMType0>();
+				var table = db.Table<DomType0>();
 				Assert.AreEqual(2, table.ColumnCount);
 				var column_names = new[]{"Inc_Key", "Inc_Value"};
 				using (var q = table.Query("select * from "+table.Name))
@@ -2447,9 +2474,9 @@ namespace pr
 				}
 				
 				// Create some objects to stick in the table
-				var obj1 = new DOMType0(5);
-				var obj2 = new DOMType0(6);
-				var obj3 = new DOMType0(7);
+				var obj1 = new DomType0(5);
+				var obj2 = new DomType0(6);
+				var obj3 = new DomType0(7);
 				
 				// Insert stuff
 				Assert.AreEqual(1, table.Insert(obj1));
@@ -2469,12 +2496,12 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<DOMType1>();
-				db.CreateTable<DOMType1>();
-				Assert.IsTrue(db.TableExists<DOMType1>());
+				db.DropTable<DomType1>();
+				db.CreateTable<DomType1>();
+				Assert.IsTrue(db.TableExists<DomType1>());
 				
 				// Check the table
-				var table = db.Table<DOMType1>();
+				var table = db.Table<DomType1>();
 				Assert.AreEqual(23, table.ColumnCount);
 				using (var q = table.Query("select * from "+table.Name))
 				{
@@ -2505,9 +2532,9 @@ namespace pr
 				}
 				
 				// Create some objects to stick in the table
-				var obj1 = new DOMType1(5);
-				var obj2 = new DOMType1(6);
-				var obj3 = new DOMType1(7);
+				var obj1 = new DomType1(5);
+				var obj2 = new DomType1(6);
+				var obj3 = new DomType1(7);
 				
 				// Insert stuff
 				Assert.AreEqual(1, table.Insert(obj1));
@@ -2616,12 +2643,12 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<DOMType3>();
-				db.CreateTable<DOMType3>();
-				Assert.IsTrue(db.TableExists<DOMType3>());
+				db.DropTable<DomType3>();
+				db.CreateTable<DomType3>();
+				Assert.IsTrue(db.TableExists<DomType3>());
 				
 				// Check the table
-				var table = db.Table<DOMType3>();
+				var table = db.Table<DomType3>();
 				Assert.AreEqual(9, table.ColumnCount);
 				using (var q = table.Query("select * from "+table.Name))
 				{
@@ -2639,10 +2666,10 @@ namespace pr
 				}
 				
 				// Create some stuff
-				var obj1 = new DOMType3(1, false, "first");
-				var obj2 = new DOMType3(1, true , "first");
-				var obj3 = new DOMType3(2, false, "first");
-				var obj4 = new DOMType3(2, true , "first");
+				var obj1 = new DomType3(1, false, "first");
+				var obj2 = new DomType3(1, true , "first");
+				var obj3 = new DomType3(2, false, "first");
+				var obj4 = new DomType3(2, true , "first");
 				
 				// Insert it an check they're there
 				Assert.AreEqual(1, table.Insert(obj1));
@@ -2713,12 +2740,12 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<DOMType2>();
-				db.CreateTable<DOMType2>();
-				Assert.IsTrue(db.TableExists<DOMType2>());
+				db.DropTable<DomType2>();
+				db.CreateTable<DomType2>();
+				Assert.IsTrue(db.TableExists<DomType2>());
 				
 				// Check the table
-				var table = db.Table<DOMType2>();
+				var table = db.Table<DomType2>();
 				Assert.AreEqual(3, table.ColumnCount);
 				var column_names = new[]{"PK", "UniStr", "Inc_Explicit"};
 				using (var q = table.Query("select * from "+table.Name))
@@ -2730,8 +2757,8 @@ namespace pr
 				}
 				
 				// Insert some stuff and check it stores/reads back ok
-				var obj1 = new DOMType2("123", "€€€€");
-				var obj2 = new DOMType2("abc", "⽄畂卧湥敳慈摮敬⡲㐲ㄴ⤷›慃獵摥戠㩹樠癡⹡慬杮吮牨睯扡敬›潣⹭湩牴湡汥洮扯汩扥汵敬⹴牃獡剨灥牯楴杮匫獥楳湯瑓牡䕴捸灥楴湯›敓獳潩⁮瑓牡整㩤眠楚塄婐桹㐰慳扲汬穷䌰㡶啩扁搶睄畎䐱䭡䝭牌夳䉡獁െ");
+				var obj1 = new DomType2("123", "€€€€");
+				var obj2 = new DomType2("abc", "⽄畂卧湥敳慈摮敬⡲㐲ㄴ⤷›慃獵摥戠㩹樠癡⹡慬杮吮牨睯扡敬›潣⹭湩牴湡汥洮扯汩扥汵敬⹴牃獡剨灥牯楴杮匫獥楳湯瑓牡䕴捸灥楴湯›敓獳潩⁮瑓牡整㩤眠楚塄婐桹㐰慳扲汬穷䌰㡶啩扁搶睄畎䐱䭡䝭牌夳䉡獁െ");
 				Assert.AreEqual(1, table.Insert(obj1));
 				Assert.AreEqual(1, table.Insert(obj2));
 				Assert.AreEqual(2, table.RowCount);
@@ -2757,13 +2784,13 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<DOMType1>();
-				db.CreateTable<DOMType1>();
-				Assert.IsTrue(db.TableExists<DOMType1>());
-				var table = db.Table<DOMType1>();
+				db.DropTable<DomType1>();
+				db.CreateTable<DomType1>();
+				Assert.IsTrue(db.TableExists<DomType1>());
+				var table = db.Table<DomType1>();
 				
 				// Create objects
-				var objs = Enumerable.Range(0,10).Select(i => new DOMType1(i)).ToList();
+				var objs = Enumerable.Range(0,10).Select(i => new DomType1(i)).ToList();
 				
 				// Add objects
 				try { using (new Sqlite.Transaction(db))
@@ -2795,20 +2822,20 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<DOMType1>();
-				db.CreateTable<DOMType1>();
-				Assert.IsTrue(db.TableExists<DOMType1>());
-				var table = db.Table(typeof(DOMType1));
+				db.DropTable<DomType1>();
+				db.CreateTable<DomType1>();
+				Assert.IsTrue(db.TableExists<DomType1>());
+				var table = db.Table(typeof(DomType1));
 				
 				// Create objects
-				var objs = Enumerable.Range(0,10).Select(i => new DOMType1(i)).ToList();
+				var objs = Enumerable.Range(0,10).Select(i => new DomType1(i)).ToList();
 				foreach (var x in objs)
 					Assert.AreEqual(1, table.Insert(x)); // insert without compile-time type info
 				
 				objs[5].m_string = "I am number 5";
 				Assert.AreEqual(1, table.Update(objs[5]));
 				
-				var OBJS = table.Cast<DOMType1>().Select(x => x).ToList();
+				var OBJS = table.Cast<DomType1>().Select(x => x).ToList();
 				for (int i = 0, iend = objs.Count; i != iend; ++i)
 					Assert.IsTrue(objs[i].Equals(OBJS[i]));
 			}
@@ -2823,12 +2850,12 @@ namespace pr
 			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
-				db.DropTable<DOMType3>();
-				db.CreateTable<DOMType3>();
-				Assert.IsTrue(db.TableExists<DOMType3>());
+				db.DropTable<DomType3>();
+				db.CreateTable<DomType3>();
+				Assert.IsTrue(db.TableExists<DomType3>());
 				
 				// Check the table
-				var table3 = db.Table<DOMType3>();
+				var table3 = db.Table<DomType3>();
 				Assert.AreEqual(9, table3.ColumnCount);
 				using (var q = table3.Query("select * from "+table3.Name))
 				{
@@ -2847,10 +2874,10 @@ namespace pr
 				}
 				
 				// Create some stuff
-				var obj1 = new DOMType3(1, false, "first");
-				var obj2 = new DOMType3(1, true , "first");
-				var obj3 = new DOMType3(2, false, "first");
-				var obj4 = new DOMType3(2, true , "first");
+				var obj1 = new DomType3(1, false, "first");
+				var obj2 = new DomType3(1, true , "first");
+				var obj3 = new DomType3(2, false, "first");
+				var obj4 = new DomType3(2, true , "first");
 				
 				// Insert it an check they're there
 				Assert.AreEqual(1, table3.Insert(obj1));
@@ -2860,15 +2887,15 @@ namespace pr
 				Assert.AreEqual(4, table3.RowCount);
 				
 				// Rename the table
-				db.DropTable<DOMType4>();
-				db.RenameTable<DOMType3>("DOMType4", false);
+				db.DropTable<DomType4>();
+				db.RenameTable<DomType3>("DomType4", false);
 				
 				// Alter the table to DOMType4
-				db.AlterTable<DOMType4>();
-				Assert.IsTrue(db.TableExists<DOMType4>());
+				db.AlterTable<DomType4>();
+				Assert.IsTrue(db.TableExists<DomType4>());
 				
 				// Check the table
-				var table4 = db.Table<DOMType4>();
+				var table4 = db.Table<DomType4>();
 				Assert.AreEqual(6, table4.ColumnCount);
 				using (var q = table4.Query("select * from "+table4.Name))
 				{
