@@ -180,6 +180,16 @@ namespace pr.util
 		}
 		public static DateTime AssemblyTimestamp() { return AssemblyTimestamp(null); }
 
+		/// <summary>Read a text file embedded resource returning it as a string</summary>
+		public static string TextResource(string resource_name, Assembly ass = null)
+		{
+			ass = ass ?? Assembly.GetExecutingAssembly();
+			var stream = ass.GetManifestResourceStream(resource_name);
+			if (stream == null) throw new IOException("No resource with name "+resource_name+" found");
+			using (var src = new StreamReader(stream))
+				return src.ReadToEnd();
+		}
+
 		/// <summary>
 		/// Event handler used to load a dll from an embedded resource.<para/>
 		/// Use:<para/>

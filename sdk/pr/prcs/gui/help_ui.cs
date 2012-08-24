@@ -5,11 +5,10 @@ using pr.inet;
 using pr.util;
 using pr.gui;
 
-namespace RyLogViewer
+namespace pr.gui
 {
 	public sealed class HelpUI :ToolForm
 	{
-		private const string HelpNotFound = @"<p>Help Reference Guide not found</p>";
 		private Panel      m_panel;
 		private WebBrowser m_html;
 		private Button     m_btn_ok;
@@ -25,11 +24,11 @@ namespace RyLogViewer
 		}
 		public static DialogResult ShowResource(Form owner, string resource_name, string title)
 		{
-			return ShowHtml(owner, Misc.TextResource(resource_name), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return ShowHtml(owner, Util.TextResource(resource_name), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
 		public static DialogResult ShowResource(Form owner, string resource_name, string title, Size ofs, Size size, EPin pin)
 		{
-			return ShowHtml(owner, Misc.TextResource(resource_name), title, ofs, size, pin);
+			return ShowHtml(owner, Util.TextResource(resource_name), title, ofs, size, pin);
 		}
 		public static DialogResult ShowHtml(Form owner, string html, string title)
 		{
@@ -51,11 +50,11 @@ namespace RyLogViewer
 		}
 		public static HelpUI FromResource(Form parent, string resource_name, string title)
 		{
-			return FromHtml(parent, Misc.TextResource(resource_name), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return FromHtml(parent, Util.TextResource(resource_name), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
 		public static HelpUI FromResource(Form parent, string resource_name, string title, Size ofs, Size size, EPin pin)
 		{
-			return FromHtml(parent, Misc.TextResource(resource_name), title, ofs, size, pin);
+			return FromHtml(parent, Util.TextResource(resource_name), title, ofs, size, pin);
 		}
 		public static HelpUI FromHtml(Form parent, string html, string title)
 		{
@@ -76,7 +75,7 @@ namespace RyLogViewer
 			m_html.DocumentText = "<html/>";
 			Debug.Assert(m_html.Document != null);
 			m_html.Document.OpenNew(true);
-			m_html.Document.Write(html ?? HelpNotFound);
+			m_html.Document.Write(html ?? "");
 			
 			m_btn_ok.Click += (s,a)=>
 				{
