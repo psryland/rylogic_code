@@ -144,6 +144,7 @@
     <Compile Include="common\base32.cs" />
     <Compile Include="common\cmdline.cs" />
     <Compile Include="common\hglobal.cs" />
+    <Compile Include="common\rtf.cs" />
     <Compile Include="crypt\activation_code.cs" />
     <Compile Include="common\span.cs" />
     <Compile Include="common\pin.cs" />
@@ -220,6 +221,9 @@
     </Compile>
     <Compile Include="gui\graph_control.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="gui\help_ui.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="gui\hover_scroll.cs">
     </Compile>
@@ -332,6 +336,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="gui\help_ui.resx">
+      <DependentUpon>help_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\prompt_form.resx">
       <DependentUpon>prompt_form.cs</DependentUpon>
     </EmbeddedResource>
