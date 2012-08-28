@@ -7,8 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace pr.common
@@ -30,10 +33,11 @@ namespace pr.common
 		/// <summary>Text alignment</summary>
 		public enum EAlign
 		{
-			Left    = 0,
-			Centre  = 1,
-			Right   = 2,
-			Justify = 3,
+			Left        = 0,
+			Centre      = 1,
+			Right       = 2,
+			Justify     = 3,
+			Distributed = 4,
 		}
 
 		/// <summary>Font descriptions</summary>
@@ -225,12 +229,27 @@ namespace pr.common
 			public virtual bool Merge(Content other) { return false; }
 		}
 
+		/// <summary>A rectangle used to define margins and padding</summary>
+		public class Rect
+		{
+			public int Left;
+			public int Top;
+			public int Right;
+			public int Bottom;
+			
+			public Rect() {}
+			public Rect(int l, int t, int r, int b) { Left = l; Top = t; Right = r; Bottom = b; }
+			public Rect(Rect rhs)                   { Left = rhs.Left; Top = rhs.Top; Right = rhs.Right; Bottom = rhs.Bottom; }
+			public bool AllZero                     { get { return Left == 0 && Top == 0 && Right == 0 && Bottom == 0; } }
+			public static Rect Zero                 { get { return new Rect(0,0,0,0); } }
+		}
+
 		/// <summary>Represents the state of all rtf style control words</summary>
-		public class Style
+		public class TextStyle
 		{
 			/// <summary>The default style</summary>
-			public static Style Default { get { return m_default; } }
-			private static readonly Style m_default = new Style();
+			public static TextStyle Default { get { return m_default; } }
+			private static readonly TextStyle m_default = new TextStyle();
 
 			/// <summary>The index of the font to use. Use rtf.FontIndex(Font.Arial) to get the font index</summary>
 			public int FontIndex { get; set; }
@@ -247,52 +266,27 @@ namespace pr.common
 			/// <summary>The font colour. Use rtf.ColourIndex(Color.Black) to get the colour index</summary>
 			public int ForeColourIndex { get; set; }
 
-			/// <summary>The indenting to apply to each line (in 100th's of a character unit)</summary>
-			public int LineIndent { get; set; }
-
-			/// <summary>The indenting to apply to the first line of a paragraph (in 100th's of a character unit)</summary>
-			public int LineIndentFirst { get; set; }
-
-			/// <summary>Paragraph alignment. Left, centre, right, or justify. Note: justify is not supported by RichTextBox</summary>
-			public EAlign Alignment { get; set; }
-
-			public Style() :this(0, 12, EFontStyle.Regular) {}
-			public Style(int font_index, int font_size = 12, EFontStyle font_style = EFontStyle.Regular)
+			public TextStyle() :this(0, 12, EFontStyle.Regular) {}
+			public TextStyle(int font_index, int font_size = 12, EFontStyle font_style = EFontStyle.Regular)
 			{
 				FontIndex       = font_index;
 				FontSize        = font_size;
 				FontStyle       = font_style;
 				BackColourIndex = 0;
 				ForeColourIndex = 0;
-				LineIndent      = 0;
-				LineIndentFirst = 0;
-				Alignment       = EAlign.Left;
 			}
-			public Style(Style rhs)
+			public TextStyle(TextStyle rhs)
 			{
 				FontIndex       = rhs.FontIndex       ;
 				FontSize        = rhs.FontSize        ;
 				FontStyle       = rhs.FontStyle       ;
 				BackColourIndex = rhs.BackColourIndex ;
 				ForeColourIndex = rhs.ForeColourIndex ;
-				LineIndent      = rhs.LineIndent      ;
-				LineIndentFirst = rhs.LineIndentFirst ;
-				Alignment       = rhs.Alignment       ;
 			}
 
 			/// <summary>Writes control words for the differences in style begin 'prev' and 'next'</summary>
-			public static void Write(StrBuild sb, Style next, Style prev)
+			public static void Write(StrBuild sb, TextStyle next, TextStyle prev)
 			{
-				if (next.LineIndentFirst != prev.LineIndentFirst) sb.AppendFormat(StrBuild.EType.Control, @"\fi{0}" ,next.LineIndentFirst);
-				if (next.LineIndent      != prev.LineIndent     ) sb.AppendFormat(StrBuild.EType.Control, @"\li{0}" ,next.LineIndent);
-				
-				if (next.Alignment != prev.Alignment)
-				{
-					if (next.Alignment == EAlign.Left   ) sb.Append(StrBuild.EType.Control, @"\ql");
-					if (next.Alignment == EAlign.Centre ) sb.Append(StrBuild.EType.Control, @"\qc");
-					if (next.Alignment == EAlign.Right  ) sb.Append(StrBuild.EType.Control, @"\qr");
-					if (next.Alignment == EAlign.Justify) sb.Append(StrBuild.EType.Control, @"\qj");
-				}
 				if (next.FontStyle != prev.FontStyle)
 				{
 					if (next.FontStyle == EFontStyle.Regular)
@@ -317,15 +311,183 @@ namespace pr.common
 			}
 		}
 
+		/// <summary>Describes a single edge of a border for a paragraph</summary>
+		public class BorderStyle
+		{
+			/// <summary>Border sides</summary>
+			public ESide Side { get; set; }
+			[Flags] public enum ESide
+			{
+				Left       = 1 << 0,
+				Top        = 1 << 1,
+				Right      = 1 << 2,
+				Bottom     = 1 << 3,
+				Horizontal = 1 << 4,
+				Vertical   = 1 << 5,
+				All        = Left|Top|Right|Bottom
+			}
+
+			/// <summary>Border types</summary>
+			public BType Type { get; set; }
+			public sealed class BType
+			{
+				public const string None                 = @"brdrnone"; // No border.
+				public const string SingleThickness      = @"\brdrs"; // Single-thickness border.
+				public const string DoubleThickness      = @"\brdrth"; // Double-thickness border.
+				public const string Shadowed             = @"\brdrsh"; // Shadowed border.
+				public const string Double               = @"\brdrdb"; // Double border.
+				public const string Dot                  = @"\brdrdot"; // Dotted border.
+				public const string Dash                 = @"\brdrdash"; // Dashed border.
+				public const string Hair                 = @"\brdrhair"; // Hairline border.
+				public const string Inset                = @"\brdrinset"; // Inset border.
+				public const string Outset               = @"\brdroutset"; // Outset border.
+				public const string DashSmall            = @"\brdrdashsm"; // Dash border (small).
+				public const string DotDash              = @"\brdrdashd"; // Dot dash border.
+				public const string DotDotDash           = @"\brdrdashdd"; // Dot dot dash border.
+				public const string Triple               = @"\brdrtriple"; // Triple border.
+				public const string ThickThinSmall       = @"\brdrtnthsg"; // Thick thin border (small).
+				public const string ThinThickSmall       = @"\brdrthtnsg"; // Thin thick border (small).
+				public const string ThinThickThinSmall   = @"\brdrtnthtnsg"; // Thin thick thin border (small).
+				public const string ThickThinMedium      = @"\brdrtnthmg"; // Thick thin border (medium).
+				public const string ThinThickMedium      = @"\brdrthtnmg"; // Thin thick border (medium).
+				public const string ThinThickThinMedium  = @"\brdrtnthtnmg"; // Thin thick thin border (medium).
+				public const string ThickThinLarge       = @"\brdrtnthlg"; // Thick thin border (large).
+				public const string ThinThickLarge       = @"\brdrthtnlg"; // Thin thick border (large).
+				public const string ThinThickThinLarge   = @"\brdrtnthtnlg"; // Thin thick thin border (large).
+				public const string Wavy                 = @"\brdrwavy"; // Wavy border.
+				public const string DoubleWavy           = @"\brdrwavydb"; // Double wavy border.
+				public const string Striped              = @"\brdrdashdotstr"; // Striped border.
+				public const string Emboss               = @"\brdremboss"; // Emboss border.
+				public const string Engrave              = @"\brdrengrave"; // Engrave border.
+				public const string Frame                = @"\brdrframe"; // Border resembles a "Frame."
+				
+				private string m_value;
+				public override string ToString()                   { return m_value; }
+				public static implicit operator BType(string value) { return new BType{m_value = value}; }
+				public static implicit operator string(BType value) { return value.m_value; }
+			}
+
+			/// <summary>
+			/// Width (in twips) of the pen used to draw the paragraph border line.
+			/// Width cannot be greater than 75. To obtain a larger border width, the \brdth control word can be used to obtain a width double that of 'Width'.</summary>
+			public int Width { get; set; }
+
+			/// <summary>The color of the paragraph border, specified as an index into the color table</summary>
+			public int ColourIndex { get; set; }
+
+			public BorderStyle() :this(ESide.All, BType.SingleThickness, 1, 0) {}
+			public BorderStyle(ESide side, BType type, int width, int colour_index)
+			{
+				Side        = side;
+				Type        = type;
+				Width       = width;
+				ColourIndex = colour_index;
+			}
+			public BorderStyle(BorderStyle rhs)
+			{
+				Side        = rhs.Side        ;
+				Type        = rhs.Type        ;
+				Width       = rhs.Width       ;
+				ColourIndex = rhs.ColourIndex ;
+			}
+
+			/// <summary>Writes a border definition to 'sb'</summary>
+			public void ToRtf(StrBuild sb, StrBuild.EFor elem)
+			{
+				// Output for each side
+				for (int i = 0; i != 4; ++i)
+				{
+					int side = 1 << i;
+					if (((int)Side & side) == 0) continue;
+					StrBuild.RtfBorder(sb, (ESide)side, Type, Width, ColourIndex, elem);
+				
+				//public const string // \brspN - Space in twips between borders and the paragraph.
+				}
+			}
+		}
+
+		/// <summary>Represents the state of all rtf style control words for a paragraph</summary>
+		public class ParagraphStyle
+		{
+			/// <summary>The default style</summary>
+			public static ParagraphStyle Default { get { return m_default; } }
+			private static readonly ParagraphStyle m_default = new ParagraphStyle();
+
+			/// <summary>Paragraph alignment. Left, centre, right, or justify. Note: justify is not supported by RichTextBox</summary>
+			public EAlign Alignment { get; set; }
+
+			/// <summary>The indenting to apply to each line (in 100th's of a character unit)</summary>
+			public int LineIndent { get; set; }
+
+			/// <summary>The indenting to apply to the first line of a paragraph (in 100th's of a character unit)</summary>
+			public int FirstIndent { get; set; }
+
+			/// <summary>The indenting to apply from the right (in 100th's of a character unit)</summary>
+			public int LineIndentRight { get; set; }
+
+			/// <summary>Line spacing (in 100th's of a character unit)</summary>
+			public int LineSpacing { get; set; }
+
+			/// <summary>Paragraph spacing (in 100th's of a character unit)</summary>
+			public int ParaSpacing { get; set; }
+
+			/// <summary>Controls automatic hyphenation for the paragraph. Append 1 or nothing to toggle property on; append 0 to turn it off.</summary>
+			public bool Hyphenation { get; set; }
+
+			/// <summary>The borders of the paragraph</summary>
+			public List<BorderStyle> Border { get; private set; }
+
+			public ParagraphStyle() :this(EAlign.Left) {}
+			public ParagraphStyle(EAlign align, int line_indent = 0, int first_line = 0, int line_spacing = 0, int para_spacing = 0)
+			{
+				Alignment       = align;
+				LineIndent      = line_indent;
+				FirstIndent     = first_line;
+				LineIndentRight = 0;
+				LineSpacing     = line_spacing;
+				ParaSpacing     = para_spacing;
+				Hyphenation     = false;
+				Border          = new List<BorderStyle>();
+			}
+			public ParagraphStyle(ParagraphStyle rhs)
+			{
+				Alignment       = rhs.Alignment  ;
+				LineIndent      = rhs.LineIndent ;
+				FirstIndent     = rhs.FirstIndent;
+				LineSpacing     = rhs.LineSpacing;
+				LineIndentRight = rhs.LineIndentRight;
+				ParaSpacing     = rhs.ParaSpacing;
+				Hyphenation     = rhs.Hyphenation;
+				Border          = new List<BorderStyle>(rhs.Border);
+			}
+
+			/// <summary>Writes control words for the differences in style begin 'prev' and 'next'</summary>
+			public void ToRtf(StrBuild sb, bool in_table)
+			{
+				sb.Append(StrBuild.EType.Control, @"\pard");
+				if (in_table) sb.Append(StrBuild.EType.Control,@"\intbl");
+				StrBuild.RtfAlignment(sb, Alignment, StrBuild.EFor.Paragraph);
+				
+				if (FirstIndent     != 0) sb.AppendFormat(StrBuild.EType.Control, @"\fi{0}" ,FirstIndent);
+				if (LineIndent      != 0) sb.AppendFormat(StrBuild.EType.Control, @"\li{0}" ,LineIndent );
+				if (LineIndentRight != 0) sb.AppendFormat(StrBuild.EType.Control, @"\ri{0}" ,LineIndentRight);
+				if (LineSpacing     != 0) sb.AppendFormat(StrBuild.EType.Control, @"\sl{0}\slmult1" ,LineSpacing * 2); // \sl is in half units
+				if (ParaSpacing     != 0) sb.AppendFormat(StrBuild.EType.Control, @"\sa{0}" ,ParaSpacing * 2); // \sa is in half units
+				if (Hyphenation) sb.Append(StrBuild.EType.Control, @"\hyphpar");
+				
+				foreach (var b in Border) b.ToRtf(sb, StrBuild.EFor.Paragraph);
+			}
+		}
+
 		/// <summary>An object for constructing rtf strings</summary>
-		public class Builder :Content
+		public class Builder :Content, IAppendable<Builder>
 		{
 			private readonly Root m_root;
 			private readonly FontTable m_font_table;
  			private readonly ColourTable m_colour_table;
 
 			/// <summary>The current style used when appending text</summary>
-			public Style Style { get; set; }
+			public TextStyle Style { get; set; }
 
 			public Builder()
 			{
@@ -335,7 +497,7 @@ namespace pr.common
 				m_root.AddContent(m_font_table);
 				m_root.AddContent(m_colour_table);
 				m_font_table.Add(new Font());
-				Style = Style.Default;
+				Style = TextStyle.Default;
 			}
 
 			/// <summary>Returns the contained content as an rtf string</summary>
@@ -364,24 +526,22 @@ namespace pr.common
 				return m_colour_table.Add(colour) + 1;
 			}
 
-			public Builder Append(Style style)                         { Style = style; return this; }
-			public Builder Append(Content content)                     { m_root.AddContent(content); return this; }
-			public Builder Append(Paragraph para)                      { m_root.AddContent(para); return this; }
+			public Builder Append(TextStyle style) { Style = style; return this; }
+			public Builder Append(Content content) { m_root.AddContent(content); return this; }
+			public Builder Append(string str)      { m_root.AddContent(new TextSpan(str, Style)); return this; }
+		}
 
-			/// <summary>Append a plain text string using the current style</summary>
-			public Builder Append(string str)                          { m_root.AddContent(new TextSpan(str, Style)); return this; }
-			public Builder Append(string str, int start, int count)    { return Append(str.Substring(start, count)); }
-			public Builder Append<T>(T x)                              { return Append(x.ToString()); }
-			public Builder AppendLine()                                { return Append("\n"); }
-			public Builder AppendLine(string str)                      { return Append(str + "\n"); }
-			public Builder AppendLine<T>(T x)                          { return Append(x + "\n"); }
+		/// <summary>Mix in functionality for Append methods</summary>
+		public interface IAppendable<out TBase> where TBase:IAppendable<TBase>
+		{
+			TBase Append(string str);
 		}
 
 		/// <summary>The rtf header string.</summary>
 		private class Root :Content
 		{
 			/// <summary>Nested content</summary>
-			private readonly List<Content> m_groups = new List<Content>();
+			private readonly List<Content> m_content = new List<Content>();
 
 			/// <summary>The version of the rtf specification</summary>
 			private int Version { get; set; }
@@ -418,11 +578,11 @@ namespace pr.common
 			public void AddContent(Content group)
 			{
 				// Try to merge the content to the last one added
-				if (m_groups.Count != 0 && m_groups.Last().Merge(group))
+				if (m_content.Count != 0 && m_content.Last().Merge(group))
 					return;
 				
-				// Otherwise add it
-				m_groups.Add(group);
+				// Otherwise, just add it
+				m_content.Add(group);
 			}
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
@@ -431,7 +591,11 @@ namespace pr.common
 				// e.g: @"\rtf1\ansi\deff0"; @"\rtf1\ansi\ansicpg1252\deff0\deflang3081";
 				sb.AppendFormat(StrBuild.EType.Control, @"{{\rtf{0}\{1}\ansicpg{2}\deff{3}\viewkind{4}{5}{6}" ,Version ,CharSet ,AnsiCodePage ,DefaultFontIndex ,Viewkind ,AdditionalControlWords ,Generator);
 				sb.AppendLine(StrBuild.EType.Control, @"\pard");
-				foreach (var g in m_groups) g.ToRtf(sb, this);
+				foreach (var c in m_content)
+				{
+					Content cc = c is TextSpan ? new Paragraph((TextSpan)c) : c;
+					cc.ToRtf(sb, this);
+				}
 				sb.Append(StrBuild.EType.Control, @"}");
 			}
 		}
@@ -520,67 +684,103 @@ namespace pr.common
 		}
 
 		/// <summary>A collection of TextSpans that form a paragraph</summary>
-		public class Paragraph :Content
+		public class Paragraph :Content, IAppendable<Paragraph>
 		{
 			private readonly List<TextSpan> m_spans = new List<TextSpan>();
 
-			/// <summary>The style that applies to this paragraph</summary>
-			public Style Style { get; set; }
+			/// <summary>Style that applies to the paragraph</summary>
+			public ParagraphStyle ParaStyle { get; set; }
 
-			public Paragraph Append(Style style)                         { Style = style; return this; }
-			public Paragraph Append(TextSpan content)                    { m_spans.Add(content); return this; }
+			/// <summary>Default text style for this paragraph</summary>
+			public TextStyle Style { get; set; }
 
-			/// <summary>Append a plain text string using the current style</summary>
-			public Paragraph Append(string str)                          { return Append(new TextSpan(str, Style)); }
-			public Paragraph Append(string str, int start, int count)    { return Append(str.Substring(start, count)); }
-			public Paragraph Append<T>(T x)                              { return Append(x.ToString()); }
-			public Paragraph AppendLine()                                { return Append("\n"); }
-			public Paragraph AppendLine(string str)                      { return Append(str + "\n"); }
-			public Paragraph AppendLine<T>(T x)                          { return Append(x + "\n"); }
+			/// <summary>Set to true when this paragraph is part of a table</summary>
+			public bool InTable { get; set; }
 
-			public Paragraph() :this(Style.Default) {}
-			public Paragraph(Style style) { Style = style; }
+			public Paragraph() :this(ParagraphStyle.Default, TextStyle.Default) {}
+			public Paragraph(ParagraphStyle para_style) :this(para_style, TextStyle.Default) {}
+			public Paragraph(TextStyle text_style) :this(ParagraphStyle.Default, text_style) {}
+			public Paragraph(ParagraphStyle para_style, TextStyle style)
+			{
+				ParaStyle = para_style;
+				Style     = style;
+				InTable   = false;
+			}
+
+			/// <summary>Constructs a paragraph containing a single string</summary>
+			public Paragraph(string str) :this() { Append(str); }
+			public Paragraph(string str, ParagraphStyle para_style) :this(para_style, TextStyle.Default) { Append(str); }
+			public Paragraph(string str, TextStyle text_style) :this(ParagraphStyle.Default, text_style) { Append(str); }
+			public Paragraph(string str, ParagraphStyle para_style, TextStyle style) :this(para_style, style) { Append(str); }
+
+			/// <summary>Constructs a paragraph containing a single string</summary>
+			public Paragraph(TextSpan text) :this() { Append(text); }
+			public Paragraph(TextSpan text, ParagraphStyle para_style) :this(para_style, TextStyle.Default) { Append(text); }
+			public Paragraph(TextSpan text, TextStyle text_style) :this(ParagraphStyle.Default, text_style) { Append(text); }
+			public Paragraph(TextSpan text, ParagraphStyle para_style, TextStyle style) :this(para_style, style) { Append(text); }
+
+			public Paragraph Append(TextStyle style)  { Style = style; return this; }
+			public Paragraph Append(TextSpan content) { m_spans.Add(content); return this; }
+			public Paragraph Append(string str)       { return Append(new TextSpan(str, Style)); }
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
 			public override void ToRtf(StrBuild sb, Content parent)
 			{
-				sb.Append(StrBuild.EType.Control, @"\pard");
-				Style.Write(sb, Style, Style.Default);
+				ParaStyle.ToRtf(sb, InTable);
+				TextStyle.Write(sb, Style, TextStyle.Default);
 				foreach (var s in m_spans) s.ToRtf(sb, this);
-				Style.Write(sb, Style.Default, Style);
+				TextStyle.Write(sb, TextStyle.Default, Style);
 				sb.AppendLine(StrBuild.EType.Control, @"\par");
 			}
 		}
 
+		/// <summary>Inserts a page break</summary>
+		public class PageBreak :Content
+		{
+			/// <summary>Writes this object as rtf into the provided string builder</summary>
+			public override void ToRtf(StrBuild sb, Content parent) { sb.Append(StrBuild.EType.Control, @"\pagebb"); }
+		}
+
 		/// <summary>A block of text that uses a specific style</summary>
-		public class TextSpan :Content
+		public class TextSpan :Content ,IAppendable<TextSpan>
 		{
 			/// <summary>A recycled string builder to reduce allocs</summary>
 			private static readonly StringBuilder TmpSB = new StringBuilder();
 
+			/// <summary>Collects the text for the span</summary>
+			private readonly StringBuilder m_sb;
+
 			/// <summary>The text string</summary>
-			public StringBuilder Text { get; set; }
+			public string Text { get { return m_sb.ToString(); } }
 
 			/// <summary>The style applied to the text</summary>
-			public Style Style { get; set; }
+			public TextStyle Style { get; set; }
 
-			public TextSpan() :this("", Style.Default) {}
-			public TextSpan(string text) :this(text, Style.Default) {}
-			public TextSpan(string text, Style style) { Text = new StringBuilder(text); Style = style; }
+			public TextSpan() :this("", TextStyle.Default) {}
+			public TextSpan(string text) :this(text, TextStyle.Default) {}
+			public TextSpan(string text, TextStyle style)
+			{
+				m_sb = new StringBuilder(Sanitise(text));
+				Style = style;
+			}
+
+			public TextSpan Append(string str)
+			{
+				m_sb.Append(Sanitise(str));
+				return this;
+			}
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
 			public override void ToRtf(StrBuild sb, Content parent)
 			{
 				var para = parent as Paragraph;
-				var parent_style = para != null ? para.Style : Style.Default;
+				var parent_style = para != null ? para.Style : TextStyle.Default;
+				var text = Text;
 				
-				// Sanitise the string
-				var sanitry = Sanitise(Text);
-				
-				Style.Write(sb, Style, parent_style);
-				int s,e; for (s = 0; (e = sanitry.IndexOf('\n', s)) != -1; s = e+1) sb.Append(StrBuild.EType.Content, sanitry, s, e-s).AppendLine(StrBuild.EType.Control, @"\line");
-				if (s != sanitry.Length) sb.Append(StrBuild.EType.Content, sanitry, s, sanitry.Length - s);
-				Style.Write(sb, parent_style, Style);
+				TextStyle.Write(sb, Style, parent_style);
+				int s,e; for (s = 0; (e = text.IndexOf('\n', s)) != -1; s = e+1) sb.Append(StrBuild.EType.Content, text, s, e-s).Append(StrBuild.EType.Control, @"\line").Append(StrBuild.EType.Content, "\n");
+				if (s != text.Length) sb.Append(StrBuild.EType.Content, text, s, text.Length - s);
+				TextStyle.Write(sb, parent_style, Style);
 			}
 
 			/// <summary>Merges two content objects into one. Return true if the merge is successful, false if 'other' cannot be merged</summary>
@@ -589,12 +789,12 @@ namespace pr.common
 				// We can merge text spans if they share the same style
 				var rhs = other as TextSpan;
 				if (rhs == null || !ReferenceEquals(Style, rhs.Style)) return false;
-				Text.Append(rhs.Text.ToString());
+				Append(rhs.Text);
 				return true;
 			}
 
 			/// <summary>Escapes and sanitises a plain text string</summary>
-			private string Sanitise(StringBuilder value)
+			public static string Sanitise(string value)
 			{
 				TmpSB.Clear();
 				TmpSB.EnsureCapacity(value.Length + 100);
@@ -604,11 +804,8 @@ namespace pr.common
 					char ch = value[i];
 					
 					// Standardise newlines to a single '\n' character
-					if (ch == '\n' || ch == '\r')
-					{
-						TmpSB.Append('\n');
-						if (ch == '\r' && i+1 != iend && value[i+1] == '\n') ++i;
-					}
+					if      (ch == '\r') { TmpSB.Append('\n'); if (i+1 != iend && value[i+1] == '\n') ++i; }
+					else if (ch == '\n') { TmpSB.Append('\n'); }
 					
 					// If this is a unicode character > 255, replace with it's \u1234 code
 					else if (ch > 255)   { TmpSB.Append(@"\u").Append((int)ch).Append("?"); }
@@ -624,12 +821,548 @@ namespace pr.common
 			}
 		}
 
-		/// <summary>Represents a table in the rtf doc</summary>
-		public class Table :Content
+		/// <summary>A list of strings displayed as a bullet point or numbered list</summary>
+		public class BulletList :Content
 		{
+			/// <summary>The text for each bullet point</summary>
+			private readonly List<TextSpan> m_points;
+
+			/// <summary>Bullet points are controlled using paragraph styles</summary>
+			public ParagraphStyle ParaStyle { get; set; }
+
+			/// <summary>The font to use in the bullet point list</summary>
+			public TextStyle TextStyle { get; set; }
+
+			/// <summary>True to use numbers, false to use bullet points</summary>
+			public bool Numbered { get; set; }
+
+			/// <summary>The ascii character to use as the bullet point</summary>
+			public byte BulletCharacter { get; set; }
+
+			public BulletList() :this(false, new List<string>()) {}
+			public BulletList(IEnumerable<string> points) :this(false, points) {}
+			public BulletList(bool numbered) :this(numbered, new string[0]) {}
+			public BulletList(bool numbered, IEnumerable<string> points)
+			{
+				m_points        = points.Select(s => new TextSpan(s)).ToList();
+				ParaStyle       = new ParagraphStyle{FirstIndent = -360, LineIndent = 720, LineSpacing = 120};
+				TextStyle       = TextStyle.Default;
+				Numbered        = numbered;
+				BulletCharacter = 0xB7;
+			}
+
+			/// <summary>Add text for a bullet point</summary>
+			public BulletList Add(TextSpan point)
+			{
+				m_points.Add(point);
+				return this;
+			}
+
+			/// <summary>Add text for a bullet point</summary>
+			public BulletList Add(string point)
+			{
+				return Add(new TextSpan(point));
+			}
+
+			/// <summary>Writes this object as rtf into the provided string builder</summary>
 			public override void ToRtf(StrBuild sb, Content parent)
 			{
-				throw new NotImplementedException();
+				ParaStyle.ToRtf(sb, false);
+				TextStyle.Write(sb, TextStyle, TextStyle.Default);
+				
+				// Output basic text for the bullet point
+				bool first_time = true; int i = 1;
+				foreach (var p in m_points)
+				{
+					if (Numbered) sb.AppendFormat(StrBuild.EType.Control, @"{{\pntext\f{0} {1}.\tab}}" ,TextStyle.FontIndex ,i++);
+					else          sb.AppendFormat(StrBuild.EType.Control, @"{{\pntext\'{0:X}\tab}}", BulletCharacter);
+					
+					// Output a bulleted paragraph control word for rtf readers that understand it.
+					// Note: have to pass '{' and '}' as format parameters to solve a quirk of the
+					// string escaping algorithm. '{{' and '}}' are replace by '{' and '}' before
+					// the string is checked for format specifiers.
+					if (first_time)
+					{
+						if (Numbered) sb.AppendFormat(StrBuild.EType.Control, @"{{\*\pn\pnlvlbody\pnf{0}\pnindent0\pnstart1\pndec{{\pntxta.}}}}" ,TextStyle.FontIndex);
+						else          sb.AppendFormat(StrBuild.EType.Control, @"{{\*\pn\pnlvlblt\pnf{0}\pnindent0{{\pntxtb\'{1:X}{2}" ,TextStyle.FontIndex, (int)BulletCharacter, "}}");
+						first_time = false;
+					}
+					
+					// Write the bullet point text
+					sb.Append(StrBuild.EType.Content, p.Text).AppendLine(StrBuild.EType.Control,@"\par");
+				}
+			}
+		}
+
+		/// <summary>
+		/// Represents a table in the rtf doc.
+		/// There is no RTF table group; instead, tables are specified as paragraph properties.
+		/// A table is represented as a sequence of table rows. A table row is a continuous sequence of
+		/// paragraphs partitioned into cells. The table row begins with the \trowd control word and ends
+		///  with the \row control word. Every paragraph that is contained in a table row must have the
+		/// \intbl control word specified or inherited from the previous paragraph. A cell may have more
+		/// than one paragraph in it; the cell is terminated by a cell mark (the \cell control word), and
+		/// the row is terminated by a row mark (the \row control word). Table rows can also be positioned.
+		/// In this case, every paragraph in a table row must have the same positioning controls (see the apoctl 
+		/// controls in the Positioned Objects and Frames sub-section of this RTF Specification). Table properties
+		/// may be inherited from the previous row; therefore, a series of table rows may be introduced by a single tbldef.<para/>
+		/// Note: the RichTextBox control seems to have very limited support for tables</summary>
+		public class Table :Content
+		{
+			/// <summary>Style for a table row</summary>
+			public class RowStyle
+			{
+				public static RowStyle Default { get { return m_default ?? (m_default = new RowStyle()); } }
+				private static RowStyle m_default;
+
+				public RowStyle()
+				{
+					RowHeight  = 0;
+					LeftOffset = 44;
+					Alignment  = EAlign.Left;
+					Margin     = Rect.Zero;
+					Padding    = Rect.Zero;
+					Borders    = new List<BorderStyle> {new BorderStyle()};
+				}
+				public RowStyle(RowStyle rhs)
+				{
+					RowHeight  = rhs.RowHeight;
+					LeftOffset = rhs.LeftOffset;
+					Alignment  = rhs.Alignment;
+					Margin     = new Rect(rhs.Margin);
+					Padding    = new Rect(rhs.Padding);
+					Borders    = new List<BorderStyle>(rhs.Borders);
+				}
+
+				/// <summary>The height of the table row. Default is 0 which should auto wrap the contained text</summary>
+				public int RowHeight { get; set; }
+
+				/// <summary>Position of the leftmost edge of the row with respect to the left edge of its column (in twips)</summary>
+				public int LeftOffset { get; set; }
+
+				/// <summary>Row alignment</summary>
+				public EAlign Alignment { get; set; }
+
+				/// <summary>The margin around each cell (in twips)</summary>
+				public Rect Margin { get; set; }
+
+				/// <summary>The padding within each cell (in twips)</summary>
+				public Rect Padding { get; set; }
+
+				/// <summary>The visible borders of the cell</summary>
+				public List<BorderStyle> Borders { get; set; }
+
+				/// <summary>Write this style as rtf into 'sb'</summary>
+				public void ToRtf(StrBuild sb)
+				{
+					// Row left offset
+					if (LeftOffset != 0)
+					{
+						sb.AppendFormat(StrBuild.EType.Control, @"\trgaph{0}" ,LeftOffset);
+						sb.AppendFormat(StrBuild.EType.Control, @"\trleft{0}" ,Padding.Left - LeftOffset);
+					}
+					
+					// Row alignment
+					StrBuild.RtfAlignment(sb, Alignment, StrBuild.EFor.Row);
+					
+					// Row height
+					if (RowHeight != 0)
+						sb.AppendFormat(StrBuild.EType.Control, @"\trrh{0}" ,RowHeight);
+					
+					// Margin
+					if (!Margin.AllZero)
+					{
+						sb.AppendFormat(StrBuild.EType.Control,
+							@"\trspdfl3\trspdft3\trspdfr3\trspdfb3" +   // units for the margin (set to twips)
+							@"\trspdl{0}\trspdt{1}\trspdr{2}\trspdb{3}" // margin
+							,Margin.Left ,Margin.Top ,Margin.Right ,Margin.Bottom);
+					}
+					
+					// Padding
+					if (!Padding.AllZero)
+					{
+						sb.AppendFormat(StrBuild.EType.Control,
+							@"\trpaddfl3\trpaddft3\trpaddfr3\trpaddfb3" +      // units for the padding (set to twips)
+							@"\trpaddl{0}\trpaddt{1}\trpaddr{2}\trpaddb{3}"    // padding
+							,Padding.Left ,Padding.Top ,Padding.Right ,Padding.Bottom);
+					}
+					
+					// Borders
+					foreach (var b in Borders) b.ToRtf(sb, StrBuild.EFor.Row);
+					sb.AppendLine(StrBuild.EType.Control);
+				}
+			}
+
+			/// <summary>Style for a table cell</summary>
+			public class CellStyle
+			{
+				/// <summary>The default style</summary>
+				public static CellStyle Default { get { return m_default ?? (m_default = new CellStyle()); } }
+				private static CellStyle m_default;
+
+				/// <summary>Vertical alignment within the cell</summary>
+				public EVerticalAlign VerticalAlignment { get; set; }
+				public sealed class EVerticalAlign
+				{
+					public const string Default = Top;
+					public const string Top     = @"\clvertalt"; // Text is top-aligned in cell (the default).
+					public const string Centre  = @"\clvertalc"; // Text is centered vertically in cell.
+					public const string Bottom  = @"\clvertalb"; // Text is bottom-aligned in cell.
+
+					private string m_value;
+					public override string ToString()                            { return m_value; }
+					public static implicit operator EVerticalAlign(string value) { return new EVerticalAlign{m_value = value}; }
+					public static implicit operator string(EVerticalAlign value) { return value.m_value; }
+				}
+
+				/// <summary>The visible borders of the cell</summary>
+				public List<BorderStyle> Borders { get; set; }
+
+				/// <summary>The padding within each cell (in twips). Overrides the row padding</summary>
+				public Rect Padding { get; set; }
+
+				/// <summary>The size of the cell (in twips) (Ignored if AutoFit is true)</summary>
+				public int CellSize { get; set; }
+
+				/// <summary>Text flow</summary>
+				public ETextFlow TextFlow { get; set; }
+				public class ETextFlow
+				{
+					public const string Default                       = Left2Right_Top2Bottom;
+					public const string Left2Right_Top2Bottom         = @"\cltxlrtb";  // Text in a cell flows from left to right and top to bottom (default).
+					public const string Right2Left_Top2Bottom         = @"\cltxtbrl";  // Text in a cell flows right to left and top to bottom.
+					public const string Left2Right_Bottom2Top         = @"\cltxbtlr";  // Text in a cell flows left to right and bottom to top.
+					public const string Left2Right_Top2BottomVertical = @"\cltxlrtbv"; // Text in a cell flows left to right and top to bottom, vertical.
+					public const string Right2Left_Top2BottomVertical = @"\cltxtbrlv"; // Text in a cell flows top to bottom and right to left, vertical.
+				
+					private string m_value;
+					public override string ToString()                       { return m_value; }
+					public static implicit operator ETextFlow(string value) { return new ETextFlow{m_value = value}; }
+					public static implicit operator string(ETextFlow value) { return value.m_value; }
+				}
+
+				public CellStyle()
+				{
+					VerticalAlignment  = EVerticalAlign.Default;
+					Borders            = new List<BorderStyle>();
+					Padding            = Rect.Zero;
+					CellSize           = 1000;
+					TextFlow           = ETextFlow.Default;
+				}
+				public CellStyle(CellStyle rhs)
+				{
+					VerticalAlignment  = rhs.VerticalAlignment;
+					Borders            = new List<BorderStyle>(rhs.Borders);
+					Padding            = new Rect(rhs.Padding);
+					CellSize           = rhs.CellSize;
+					TextFlow           = rhs.TextFlow;
+				}
+
+				/// <summary>Write this style as rtf into 'sb'</summary>
+				public void ToRtf(StrBuild sb, ref int row_size, RowStyle rstyle, bool restore)
+				{
+					// Vertical alignment
+					if (VerticalAlignment != EVerticalAlign.Default)
+						sb.Append(StrBuild.EType.Control, VerticalAlignment);
+
+					// Custom cell padding
+					if (!Padding.AllZero)
+						sb.AppendFormat(StrBuild.EType.Control,
+							@"\clpadfl3\clpadft3\clpadfb3\clpadfr3" + // 0Null.  Ignore \clpadr in favor of \trgaph (Word 97 style cell padding).
+							@"\clpadl{0}\clpadt{1}\clpadr{2}\clpadb{3}"
+							,Padding.Left ,Padding.Top ,Padding.Right ,Padding.Bottom);
+
+					// Borders
+					foreach (var b in Borders) b.ToRtf(sb, StrBuild.EFor.Cell);
+					sb.AppendLine(StrBuild.EType.Control);
+
+					// Text flow
+					if (TextFlow != ETextFlow.Default)
+						sb.Append(StrBuild.EType.Control, TextFlow);
+
+					// Cell size
+					row_size += CellSize;
+					sb.AppendFormat(StrBuild.EType.Control, @"\cellx{0}" ,row_size);
+
+					// New line after the style
+					sb.AppendLine(StrBuild.EType.Control);
+				}
+			}
+			
+			/// <summary>A row in the table</summary>
+			public class Row
+			{
+				/// <summary>Constructs a row containing 'cells' cells</summary>
+				protected Row(int cells, RowStyle style, Func<Cell> new_cell)
+				{
+					Style = style;
+					Cells = new Cell[cells];
+					for (int i = 0; i != cells; ++i)
+						Cells[i] = new_cell();
+				}
+
+				/// <summary>The style to apply to this row</summary>
+				public RowStyle Style { get; set; }
+
+				/// <summary>The cells within the row</summary>
+				public Cell[] Cells { get; private set; }
+				
+				/// <summary>Cell indexer</summary>
+				public Cell this[int cell] { get { return Cells[cell]; } }
+				
+				/// <summary>Writes rtf for this row into 'sb'</summary>
+				public void ToRtf(StrBuild sb, Content parent)
+				{
+					sb.AppendLine(StrBuild.EType.Control, @"\trowd");
+					Style.ToRtf(sb);
+					int row_size = Style.LeftOffset;
+					foreach (var c in Cells) c.ToRtf(sb, ref row_size, this, parent);
+					sb.AppendLine(StrBuild.EType.Control, @"\row");
+				}
+			}
+
+			/// <summary>A cell within a row</summary>
+			public class Cell
+			{
+				private readonly List<Content> m_content;
+				protected Cell() :this(CellStyle.Default) {}
+				protected Cell(CellStyle style)
+				{
+					m_content = new List<Content>();
+					Style = style;
+				}
+
+				/// <summary>The style for this cell</summary>
+				public CellStyle Style { get; set; }
+
+				/// <summary>Append content to the cell</summary>
+				public Cell Append(Paragraph content)
+				{
+					content.InTable = true;
+					m_content.Add(content);
+					return this;
+				}
+				public Cell Append(TextSpan text)  { return Append(new Paragraph(text)); }
+				public Cell Append(string str)     { return Append(new TextSpan(str)); }
+				
+				/// <summary>Writes rtf for this cell into 'sb'</summary>
+				public void ToRtf(StrBuild sb, ref int row_size, Row row, Content parent)
+				{
+					Style.ToRtf(sb, ref row_size, row.Style, false);
+					foreach (var c in m_content) c.ToRtf(sb, parent);
+					sb.AppendLine(StrBuild.EType.Control, @"\cell");
+				}
+			}
+
+			// Private classes so that only the Table can create rows/cells
+			private class RowInternal  :Row  { public RowInternal(int cells, RowStyle style, Func<Cell> new_cell) :base(cells, style, new_cell) {} }
+			private class CellInternal :Cell { public CellInternal(CellStyle style) :base(style) {} }
+			private readonly List<Row> m_rows; // The rows of the table
+
+			/// <summary>The default style to use for rows</summary>
+			public RowStyle DefaultRowStyle { get; set; }
+
+			/// <summary>The default style to use for cells</summary>
+			public CellStyle DefaultCellStyle { get; set; }
+
+			/// <summary>Builds a table with 'rows' rows, each 'cell's columns wide</summary>
+			public Table(int rows, int cells)
+			{
+				DefaultRowStyle = RowStyle.Default;
+				DefaultCellStyle = CellStyle.Default;
+				m_rows = new List<Row>(rows);
+				for (int r = 0; r != rows; ++r)
+					AddRow(cells);
+			}
+
+			/// <summary>Add a row to the table</summary>
+			public Row AddRow(int cells)
+			{
+				var row = new RowInternal(cells, DefaultRowStyle, ()=>new CellInternal(DefaultCellStyle));
+				m_rows.Add(row);
+				return row;
+			}
+
+			/// <summary>Access a row in the table</summary>
+			public Row this[int row]
+			{
+				get { return m_rows[row]; }
+			}
+
+			/// <summary>Access a cell in the table</summary>
+			public Cell this[int row, int cell]
+			{
+				get { return m_rows[row].Cells[cell]; }
+			}
+
+			/// <summary>Write the table as rtf to 'sb'</summary>
+			public override void ToRtf(StrBuild sb, Content parent)
+			{
+				foreach (var r in m_rows)
+					r.ToRtf(sb, this);
+			}
+		}
+
+		/// <summary>An embedded image</summary>
+		public class EmbeddedImage :Content
+		{
+			private static readonly string[] Hex = Enumerable.Range(0, 256).Select(x => x.ToString("X2")).ToArray();
+			private readonly StringBuilder m_sb;
+			
+			// ReSharper disable UnusedMember.Local
+			[Flags] private enum EmfToWmfFlags
+			{
+				Default          = 0, // Use the default conversion
+				EmbedEmf         = 1, // Embedded the source of the EMF metafile within the resulting WMF metafile
+				IncludePlaceable = 2, // Place a 22-byte header in the resulting WMF file. The header is required for the metafile to be considered place-able.
+				NoXORClip        = 4, // Don't simulate clipping by using the XOR operator.
+			};
+			private enum MapMode // Descriptions can be found with documentation of Windows GDI function SetMapMode
+			{
+				MM_TEXT        = 1,
+				MM_LOMETRIC    = 2,
+				MM_HIMETRIC    = 3,
+				MM_LOENGLISH   = 4,
+				MM_HIENGLISH   = 5,
+				MM_TWIPS       = 6,
+				MM_ISOTROPIC   = 7,
+				MM_ANISOTROPIC = 8,
+			}
+			// ReSharper restore UnusedMember.Local
+
+			/// <summary>Device context safe handle </summary>
+			private class HDCHandle :SafeHandle
+			{
+				private readonly Graphics m_gfx;
+				public HDCHandle(Graphics gfx) : base(IntPtr.Zero, true) { m_gfx = gfx; SetHandle(m_gfx.GetHdc()); }
+				protected override bool ReleaseHandle()                  { m_gfx.ReleaseHdc(handle); return true; }
+				public override bool IsInvalid                           { get { return handle == IntPtr.Zero; } }
+				public IntPtr Handle                                     { get { return handle; } }
+			}
+
+			/// <summary>Use the EmfToWmfBits function from GDI+ to convert an enhanced metafile to a windows metafile</summary>
+			/// <param name="emf">The handle of the enhanced metafile to convert</param>
+			/// <param name="wmf_out_size">The size of the buffer used to store the return wmf</param>
+			/// <param name="wmf_out">An array of bytes used to hold the returned wmf</param>
+			/// <param name="mapping_mode">The mapping mode of the image.</param>
+			/// <param name="flags">Flags used to specify the format of the wmf returned</param>
+			[DllImport("gdiplus.dll")] private static extern uint GdipEmfToWmfBits(IntPtr emf, uint wmf_out_size, byte[] wmf_out, int mapping_mode, EmfToWmfFlags flags);
+
+			public EmbeddedImage() { m_sb = new StringBuilder(); }
+			public EmbeddedImage(Image image) :this() { Add(image); }
+
+			/// <summary>Add an image to embed</summary>
+			public void Add(Image image)
+			{
+				// Some credit to Anton for this code:
+				// ----------------------------------------------------------------------------------------
+				//    _                ___        _..-._   Date: 12/11/08    23:32
+				//    \`.|\..----...-'`   `-._.-'' _.-..'
+				//    /  ' `         ,       __.-''
+				//    )/` _/     \   `-_,   /     Solution: RTFLib
+				//    `-'" `"\_  ,_.-;_.-\_ ',    Project : RTFLib
+				//        _.-'_./   {_.'   ; /    Author  : Anton
+				//       {_.-``-'         {_/     Assembly: 1.0.0.0
+				//                                Copyright © 2005-2008, Rogue Trader/MWM
+				// ----------------------------------------------------------------------------------------
+				// The Graphics Context's resolution is simply the current resolution at which
+				// windows is being displayed.  Normally it's 96 dpi, but instead of assuming
+				// I just added the code.
+				//
+				// According to Ken Howe at pbdr.com, "Twips are screen-independent units
+				// used to ensure that the placement and proportion of screen elements in
+				// your screen application are the same on all display systems."
+				//
+				// Units Used
+				// ----------
+				// 1 Twip = 1/20 Point
+				// 1 Point = 1/72 Inch
+				// 1 Twip = 1/1440 Inch
+				//
+				// 1 Inch = 2.54 cm
+				// 1 Inch = 25.4 mm
+				// 1 Inch = 2540 (0.01)mm
+				
+				// Creates the RTF control string that describes the image being embedded.
+				// This description specifies that the image is an MM_ANISOTROPIC metafile,
+				// meaning that both X and Y axes can be scaled independently. The control
+				// string also gives the images current dimensions, and its target dimensions,
+				// so if you want to control the size of the image being inserted, this would
+				// be the place to do it. The prefix should have the form:
+				// {\pict\wmetafile8\picw[A]\pich[B]\picwgoal[C]\pichgoal[D]
+				//
+				// where:
+				// A   = current width of the metafile in hundredths of millimetres (0.01mm)
+				//     = Image Width in Inches * Number of (0.01mm) per inch
+				//     = (Image Width in Pixels / Graphics Context's Horizontal Resolution) * 2540
+				//     = (Image Width in Pixels / Graphics.DpiX) * 2540
+				// B   = current height of the metafile in hundredths of millimetres (0.01mm)
+				//     = Image Height in Inches * Number of (0.01mm) per inch
+				//     = (Image Height in Pixels / Graphics Context's Vertical Resolution) * 2540
+				//     = (Image Height in Pixels / Graphics.DpiX) * 2540
+				// C   = target width of the metafile in twips
+				//     = Image Width in Inches * Number of twips per inch
+				//     = (Image Width in Pixels / Graphics Context's Horizontal Resolution) * 1440
+				//     = (Image Width in Pixels / Graphics.DpiX) * 1440
+				// D   = target height of the metafile in twips
+				//     = Image Height in Inches * Number of twips per inch
+				//     = (Image Height in Pixels / Graphics Context's Horizontal Resolution) * 1440
+				//     = (Image Height in Pixels / Graphics.DpiX) * 1440
+
+				using (var gfx = Graphics.FromImage(image))
+				using (var stream = new MemoryStream())
+				{
+					const int HMM_PER_INCH   = 2540; // The number of hundredths of millimetres (0.01 mm) in an inch
+					const int TWIPS_PER_INCH = 1440; // The number of twips in an inch. For more information, see GetImagePrefix() method.
+
+					// Get the horizontal and vertical resolutions at which the object is being displayed
+					float x_dpi = gfx.DpiX, y_dpi = gfx.DpiY;
+					var picw     = (int)Math.Round(HMM_PER_INCH   * image.Width  / x_dpi); // Calculate the current width of the image in (0.01)mm
+					var pich     = (int)Math.Round(HMM_PER_INCH   * image.Height / y_dpi); // Calculate the current height of the image in (0.01)mm
+					var picwgoal = (int)Math.Round(TWIPS_PER_INCH * image.Width  / x_dpi); // Calculate the target width of the image in twips
+					var pichgoal = (int)Math.Round(TWIPS_PER_INCH * image.Height / y_dpi); // Calculate the target height of the image in twips
+
+					// Create the wmf and append its bytes in HEX format
+					// Wraps the image in an emf by drawing the image onto the graphics context,
+					// then converts the emf to a wmf, and finally appends the bits of the wmf
+					// in hex to the string buffer
+					
+					// Draw the image into the emf
+					using (var hdc = new HDCHandle(gfx))
+					using (var meta_file = new Metafile(stream, hdc.Handle))
+					{
+						// Draw the image into the meta file
+						using (var gfx2 = Graphics.FromImage(meta_file))
+							gfx2.DrawImage(image, new Rectangle(0, 0, image.Width, image.Height));
+
+						// Get the handle of the Enhanced Metafile
+						// We don't need to free this handle, because the metafile owns it
+						var emf = meta_file.GetHenhmetafile();
+						
+						// Calling with null for the buffer returns the required buffer size
+						var buf_size = GdipEmfToWmfBits(emf, 0, null, (int)MapMode.MM_ANISOTROPIC, EmfToWmfFlags.Default);
+						var buffer = new byte[buf_size];
+
+						// Convert the emf to an wmf
+						GdipEmfToWmfBits(emf, buf_size, buffer, (int)MapMode.MM_ANISOTROPIC, EmfToWmfFlags.Default);
+
+						// Append to the rtf string
+						m_sb.EnsureCapacity(2*buffer.Length + 100);
+						m_sb.AppendFormat(@"{{\pict\wmetafile8\picw{0}\pich{1}\picwgoal{2}\pichgoal{3} " ,picw ,pich ,picwgoal, pichgoal);
+						int i = 0; foreach (byte b in buffer)
+						{
+							m_sb.Append(Hex[b]);
+							if (++i == 32) { m_sb.AppendLine(); i = 0; }
+						}
+						m_sb.AppendLine(@"}");
+					}
+				}
+			}
+
+			/// <summary>Writes this object as rtf into the provided string builder</summary>
+			public override void ToRtf(StrBuild sb, Content parent)
+			{
+				sb.Append(StrBuild.EType.Content, m_sb.ToString());
 			}
 		}
 
@@ -656,19 +1389,111 @@ namespace pr.common
 				if (newline) m_sb.Append('\n');
 				
 				// A delimiter will be needed if this was a control word that didn't end with a '}'
-				m_delim_needed = type == EType.Control && str[start + length-1] != '}';
+				m_delim_needed = type == EType.Control && (str.Length == 0 || str[start + length-1] != '}');
 				return this;
 			}
 			public StrBuild Append      (EType type, string str)                                        { return Append(type, str, 0, str.Length, false); }
 			public StrBuild Append      (EType type, string str, int start, int length)                 { return Append(type, str, start, length, false); }
+			public StrBuild AppendLine  (EType type)                                                    { return Append(type, string.Empty, 0, 0, true); }
 			public StrBuild AppendLine  (EType type, string str)                                        { return Append(type, str, 0, str.Length, true); }
 			public StrBuild AppendFormat(EType type, string fmt, object arg0)                           { return Append(type, string.Format(fmt, arg0)); }
 			public StrBuild AppendFormat(EType type, string fmt, object arg0, object arg1)              { return Append(type, string.Format(fmt, arg0, arg1)); }
 			public StrBuild AppendFormat(EType type, string fmt, object arg0, object arg1, object arg2) { return Append(type, string.Format(fmt, arg0, arg1, arg2)); }
 			public StrBuild AppendFormat(EType type, string fmt, params object[] args)                  { return Append(type, string.Format(fmt, args)); }
-			
+
 			public override string ToString() { return m_sb.ToString(); }
+
+			/// <summary>RTF elements</summary>
+			public enum EFor
+			{
+				Paragraph,
+				Row,
+				Cell,
+			}
+
+			// Helper methods
+			internal static string Prefix(EFor elem)
+			{
+				switch (elem)
+				{
+				default: throw new ArgumentOutOfRangeException("elem");
+				case EFor.Paragraph: return "";
+				case EFor.Row:       return "tr";
+				case EFor.Cell:      return "cl";
+				}
+			}
+
+			/// <summary>Write an rtf alignment control word</summary>
+			internal static StrBuild RtfAlignment(StrBuild sb, EAlign align, EFor elem)
+			{
+				string alignstr;
+				switch (align)
+				{
+				default: throw new ArgumentOutOfRangeException("align");
+				case EAlign.Left:         alignstr = @"\"+Prefix(elem)+"ql"; break;
+				case EAlign.Centre:       alignstr = @"\"+Prefix(elem)+"qc"; break;
+				case EAlign.Right:        alignstr = @"\"+Prefix(elem)+"qr"; break;
+				case EAlign.Justify:      alignstr = @"\"+Prefix(elem)+"qj"; break;
+				case EAlign.Distributed:  alignstr = @"\"+Prefix(elem)+"qd"; break;
+				}
+				sb.Append(EType.Control, alignstr);
+				return sb;
+			}
+
+			/// <summary>Write an rtf border description</summary>
+			public static StrBuild RtfBorder(StrBuild sb, BorderStyle.ESide side, BorderStyle.BType type, int width, int colour_index, EFor elem)
+			{
+				string sidestr;
+				switch (side)
+				{
+				default: throw new ArgumentOutOfRangeException();
+				case BorderStyle.ESide.Left:       sidestr = @"\"+Prefix(elem)+"brdrl"; break;
+				case BorderStyle.ESide.Top:        sidestr = @"\"+Prefix(elem)+"brdrt"; break;
+				case BorderStyle.ESide.Right:      sidestr = @"\"+Prefix(elem)+"brdrr"; break;
+				case BorderStyle.ESide.Bottom:     sidestr = @"\"+Prefix(elem)+"brdrb"; break;
+				case BorderStyle.ESide.Horizontal: sidestr = @"\"+Prefix(elem)+"brdrh"; break;
+				case BorderStyle.ESide.Vertical:   sidestr = @"\"+Prefix(elem)+"brdrv"; break;
+				}
+				sb.AppendLine(EType.Control);
+				sb.Append(EType.Control, sidestr);
+				sb.Append(EType.Control, type);
+				sb.AppendFormat(EType.Control, @"\brdrw{0}" ,width);
+				sb.AppendFormat(EType.Control, @"\brdrcf{0}" ,colour_index);
+				return sb;
+			}
 		}
+	}
+	
+	/// <summary>Append mix in functionality for Rtf Content types can concatenate strings</summary>
+	public static class RtfBuilderAppendMixin
+	{
+		public static T Append<T>    (this Rtf.IAppendable<T> This, string str, int start, int count) where T:Rtf.IAppendable<T>   { return This.Append(str.Substring(start, count)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, byte    x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, sbyte   x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, char    x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, short   x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, ushort  x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, int     x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, uint    x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, long    x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, ulong   x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, float   x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, double  x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T Append<T>    (this Rtf.IAppendable<T> This, decimal x)                        where T:Rtf.IAppendable<T>   { return This.Append(x.ToString(CultureInfo.InvariantCulture)); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This  )                                 where T:Rtf.IAppendable<T>   { return This.Append('\n'); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, string  x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, byte    x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, sbyte   x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, char    x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, short   x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, ushort  x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, int     x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, uint    x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, long    x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, ulong   x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, float   x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, double  x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
+		public static T AppendLine<T>(this Rtf.IAppendable<T> This, decimal x)                        where T:Rtf.IAppendable<T>   { return This.Append(x).AppendLine(); }
 	}
 }
 
@@ -685,7 +1510,7 @@ namespace pr
 		public static void TestRtf()
 		{
 			var rtf = new Rtf.Builder();
-			
+/*			
 			rtf.Append("A basic string\n");
 			
 			rtf.Style = new Rtf.Style
@@ -737,16 +1562,42 @@ namespace pr
 				.Append("Superscript")
 				.Append(new Rtf.Style{FontStyle = Rtf.EFontStyle.Sub})
 				.Append("Subscript\n");
-				
-			var para = new Rtf.Paragraph{Style = new Rtf.Style{LineIndentFirst = 800}};
+
+			var para = new Rtf.Paragraph{ParaStyle = new Rtf.ParagraphStyle{FirstIndent = 800, LineIndent = 400, ParaSpacing = 200, Hyphenation = true}};
 			para.Append("I'm the start of a paragraph. ")
 				.Append("I'm some more words in the middle of the paragraph. These words make the paragraph fairly long just is good for testing. ")
 				.Append("I'm the end of the paragraph.");
 			rtf.Append(para);
-
-			para = new Rtf.Paragraph(para.Style);
+			
+			rtf.Append(new Rtf.PageBreak());
+			
+			para = new Rtf.Paragraph(para.ParaStyle);
 			para.Append("I'm a new short paragraph.");
 			rtf.Append(para);
+
+			var bulletlist = new Rtf.BulletList(false);
+			bulletlist.Add("My first point");
+			bulletlist.Add(new Rtf.TextSpan("My next point"){Style = new Rtf.TextStyle{FontStyle = Rtf.EFontStyle.Bold}});
+			rtf.Append(bulletlist);
+
+			var numberedlist = new Rtf.BulletList(true);
+			numberedlist.Add("First");
+			numberedlist.Add("Second");
+			rtf.Append(numberedlist);
+
+			using (var bm = Image.FromFile(@"z:\pictures\gekko\Smiling gekko 150x121.jpg"))
+			{
+				var img = new Rtf.EmbeddedImage(bm);
+				rtf.Append(img);
+			}
+*/
+			var table = new Rtf.Table(3,3);
+			table.DefaultCellStyle.CellSize = 2000;
+			table[0,0].Append("Hello\r\nWorld");
+			table[1,1].Append("This is the middle cell");
+			table[2,2].Style = new Rtf.Table.CellStyle(table.DefaultCellStyle){VerticalAlignment = Rtf.Table.CellStyle.EVerticalAlign.Bottom};
+			table[2,2].Append("The last cell");
+			rtf.Append(table);
 
 			var str = rtf.ToString();
 			File.WriteAllText("tmp.rtf", str);
