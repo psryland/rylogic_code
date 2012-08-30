@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text;
-using Microsoft.Win32.SafeHandles;
 
 // Usage:
 // - Your domain objects must be classes with a default constructor.
@@ -310,11 +310,12 @@ namespace pr.common
 		/// <summary>Compiles an sql string into an sqlite3 statement</summary>
 		private static sqlite3_stmt Compile(sqlite3 db, string sql_string)
 		{
+			Trace.WriteLine(string.Format("Compiling sql string '{0}'", sql_string));
 			Debug.Assert(!db.IsInvalid, "Database handle invalid");
 			
 			sqlite3_stmt stmt;
-			var bytes_utf8 = StrToUTF8(sql_string);
-			var res = sqlite3_prepare_v2(db, bytes_utf8, bytes_utf8.Length, out stmt, IntPtr.Zero);
+			var buf_utf8 = StrToUTF8(sql_string);
+			var res = sqlite3_prepare_v2(db, buf_utf8, buf_utf8.Length, out stmt, IntPtr.Zero);
 			if (res != Result.OK) throw Exception.New(res, ErrorMsg(db));
 			return stmt;
 		}
@@ -569,29 +570,60 @@ namespace pr.common
 
 		#region Sqlite3 handle wrappers
 
-		// In theory the ReleaseHandle() method in these SafeHandles should never be
-		// called, because callers should be using the Dispose pattern.
-
-		/// <summary>A wrapper for unmanaged sqlite database connection handles</summary>
-		public class sqlite3 :SafeHandleZeroOrMinusOneIsInvalid
+		public abstract class SQLiteHandle :SafeHandle
 		{
-			public sqlite3() :base(true) {}
+			/// <summary>The result from the 'sqlite3_close' call</summary>
+			public Result CloseResult { get; protected set; }
 
-			/// <summary>When overridden in a derived class, executes the code required to free the handle.</summary>
-			/// <returns>true if the handle is released successfully; otherwise, in the event of a catastrophic
-			/// failure, false. In this case, it generates a releaseHandleFailed MDA Managed Debugging Assistant.</returns>
-			protected override bool ReleaseHandle() { if (!IsClosed) sqlite3_close(this); return true; }
+			/// <summary>Internal constructor used to create safehandles that optionally own the handle</summary>
+			protected SQLiteHandle(IntPtr initial_ptr, bool owns_handle) :base(IntPtr.Zero, owns_handle)
+			{
+				CloseResult = Result.Empty; // Initialise to 'empty' so we know when its been set
+				SetHandle(initial_ptr);
+			}
+
+			/// <summary>True if the contained handle is invalid</summary>
+			public override bool IsInvalid
+			{
+				[PrePrepareMethod]
+				[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+				get { return handle == IntPtr.Zero; }
+			}
+
+		}
+		
+		/// <summary>A wrapper for unmanaged sqlite database connection handles</summary>
+		public sealed class sqlite3 :SQLiteHandle
+		{
+			public sqlite3() :base(IntPtr.Zero, true) {}
+			public sqlite3(IntPtr non_owned_handle) :base(non_owned_handle, false) {}
+
+			/// <summary>Frees the handle.</summary>
+			[PrePrepareMethod][ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+			protected override bool ReleaseHandle()
+			{
+				Trace.WriteLine(string.Format("Releasing sqlite3 handle ({0})", handle));
+				CloseResult = sqlite3_close(handle);
+				handle = IntPtr.Zero;
+				return true;
+			}
 		}
 		
 		/// <summary>A wrapper for unmanaged sqlite prepared statement handles</summary>
-		public class sqlite3_stmt :SafeHandleZeroOrMinusOneIsInvalid
+		public sealed class sqlite3_stmt :SQLiteHandle
 		{
-			public sqlite3_stmt() :base(true) {}
+			public sqlite3_stmt() :base(IntPtr.Zero, true) {}
+			public sqlite3_stmt(IntPtr non_owned_handle) :base(non_owned_handle, false) {}
 			
-			/// <summary>When overridden in a derived class, executes the code required to free the handle.</summary>
-			/// <returns>true if the handle is released successfully; otherwise, in the event of a catastrophic
-			/// failure, false. In this case, it generates a releaseHandleFailed MDA Managed Debugging Assistant.</returns>
-			protected override bool ReleaseHandle() { if (!IsClosed) sqlite3_finalize(this); return true; }
+			/// <summary>Frees the handle.</summary>
+			[PrePrepareMethod][ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+			protected override bool ReleaseHandle()
+			{
+				Trace.WriteLine(string.Format("Releasing sqlite3_stmt handle ({0})", handle));
+				CloseResult = sqlite3_finalize(handle);
+				handle = IntPtr.Zero;
+				return true;
+			}
 		}
 
 		#endregion
@@ -612,6 +644,7 @@ namespace pr.common
 				// Open the database file
 				var res = sqlite3_open_v2(filepath, out m_db, (int)flags, IntPtr.Zero);
 				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
+				Trace.WriteLine(string.Format("Database connection opened for '{0}'", filepath));
 				
 				// Default to no busy timeout
 				BusyTimeout = 0;
@@ -645,18 +678,20 @@ namespace pr.common
 			/// <summary>Close a database file</summary>
 			public void Close()
 			{
+				Trace.WriteLine(string.Format("Closing database connection{0}", m_db.IsClosed ? " (already closed)" : ""));
 				if (m_db.IsClosed) return;
-				var res = sqlite3_close(m_db);
-				if (res == Result.Busy)
+				
+				// Release the db handle
+				m_db.Close();
+				if (m_db.CloseResult == Result.Busy)
 				{
 					Trace.Dump();
-					throw Exception.New(res, "Could not close database handle, there are still prepared statements that haven't been 'finalized' or blob handles that haven't been closed.");
+					throw Exception.New(m_db.CloseResult, "Could not close database handle, there are still prepared statements that haven't been 'finalized' or blob handles that haven't been closed.");
 				}
-				if (res != Result.OK)
+				if (m_db.CloseResult != Result.OK)
 				{
-					throw Exception.New(res, "Failed to close database connection");
+					throw Exception.New(m_db.CloseResult, "Failed to close database connection");
 				}
-				m_db.SetHandleAsInvalid();
 			}
 
 			/// <summary>
@@ -1148,12 +1183,15 @@ namespace pr.common
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
 			protected bool m_row_end;      // True once the last row has been read
 			
+			public override string ToString()  { return SqlString; }
+			
 			public Query(sqlite3_stmt stmt)
 			{
 				if (stmt.IsInvalid) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
-				Trace.QueryCtor(this);
 				m_stmt = stmt;
 				m_row_end = false;
+				Trace.QueryCtor(this);
+				Trace.WriteLine(string.Format("Query created '{0}'", SqlString));
 			}
 			public Query(Database db, string sql_string) :this(Compile(db.Handle, sql_string))
 			{}
@@ -1161,13 +1199,19 @@ namespace pr.common
 			{
 				Trace.QueryDtor(this);
 			}
-			
+
 			/// <summary>IDisposable</summary>
 			public void Dispose()
 			{
 				Close();
 			}
-			
+
+			/// <summary>The string used to construct this query statement</summary>
+			public string SqlString
+			{
+				get { return sqlite3_sql(m_stmt); }
+			}
+
 			/// <summary>Returns the m_stmt field after asserting it's validity</summary>
 			public sqlite3_stmt Stmt
 			{
@@ -1177,13 +1221,14 @@ namespace pr.common
 			/// <summary>Call when done with this query</summary>
 			public void Close()
 			{
+				Trace.WriteLine(string.Format("Query closed{0}", m_stmt.IsClosed ? " (already closed)" : ""));
 				if (m_stmt.IsClosed) return;
 				
 				// After 'sqlite3_finalize()', it is illegal to use m_stmt. So save 'db' here first
 				sqlite3 db = sqlite3_db_handle(m_stmt);
-				Result res = sqlite3_finalize(m_stmt);
-				if (res != Result.OK) throw Exception.New(res, ErrorMsg(db));
-				m_stmt.SetHandleAsInvalid(); // Ensure no use of 'm_stmt'
+				m_stmt.Close();
+				if (m_stmt.CloseResult != Result.OK)
+					throw Exception.New(m_stmt.CloseResult, ErrorMsg(db));
 			}
 
 			/// <summary>Return the number of parameters in this statement</summary>
@@ -1411,6 +1456,8 @@ namespace pr.common
 			/// This is slow however so use a static delegate if possible</summary>
 			public TableMetaData(Type type)
 			{
+				Trace.WriteLine(string.Format("Creating table meta data for '{0}'", type.Name));
+				
 				// Get the table attribute
 				var attr = type.GetCustomAttributes(typeof(TableAttribute), false).Cast<TableAttribute>().FirstOrDefault() ?? new TableAttribute();
 				
@@ -1680,6 +1727,7 @@ namespace pr.common
 			/// <summary>Common constructor code</summary>
 			private void Init(MemberInfo mi, Type type)
 			{
+				Trace.WriteLine(string.Format("   Column: '{0}'", mi.Name));
 				var attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault() ?? new ColumnAttribute();
 				var underlying_type = Nullable.GetUnderlyingType(type);
 				
@@ -1976,6 +2024,7 @@ namespace pr.common
 			{
 				lock (m_lock)
 				{
+					if (m_completed) throw new ApplicationException("Transaction already completed");
 					m_db.Execute("commit");
 					m_completed = true;
 					m_transaction_in_progress = false;
@@ -1985,6 +2034,7 @@ namespace pr.common
 			{
 				lock (m_lock)
 				{
+					if (m_completed) throw new ApplicationException("Transaction already completed");
 					m_db.Execute("rollback");
 					m_completed = true;
 					m_transaction_in_progress = false;
@@ -1993,8 +2043,12 @@ namespace pr.common
 			}
 			public void Dispose()
 			{
-				if (m_completed) return;
-				Rollback();
+				try
+				{
+					lock (m_lock) if (m_completed) return;
+					Rollback();
+				}
+				finally { m_transaction_in_progress = false; }
 			}
 		}
 
@@ -2037,22 +2091,20 @@ namespace pr.common
 		private static extern Result sqlite3_busy_timeout(sqlite3 db, int milliseconds);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_close", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_close(sqlite3 db);
+		private static extern Result sqlite3_close(IntPtr db);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_free", CallingConvention=CallingConvention.Cdecl)]
 		private static extern void sqlite3_free(IntPtr ptr);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_db_handle", CallingConvention=CallingConvention.Cdecl)]
-		private static extern sqlite3 sqlite3_db_handle(sqlite3_stmt stmt);
+		private static extern IntPtr sqlite3_db_handle_impl(sqlite3_stmt stmt);
+		private static sqlite3 sqlite3_db_handle(sqlite3_stmt stmt) { return new sqlite3(sqlite3_db_handle_impl(stmt)); }
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_limit", CallingConvention=CallingConvention.Cdecl)]
 		private static extern int sqlite3_limit(sqlite3 db, Limit limit_category, int new_value);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_prepare_v2", CallingConvention=CallingConvention.Cdecl)]
 		private static extern Result sqlite3_prepare_v2(sqlite3 db, byte[] sql, int num_bytes, out sqlite3_stmt stmt, IntPtr pzTail);
-
-		[DllImport("sqlite3", EntryPoint = "sqlite3_prepare16_v2", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_prepare16_v2(sqlite3 db, string sql, int num_bytes, out sqlite3_stmt stmt, IntPtr pzTail);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_changes", CallingConvention=CallingConvention.Cdecl)]
 		private static extern int sqlite3_changes(sqlite3 db);
@@ -2070,8 +2122,11 @@ namespace pr.common
 		private static extern Result sqlite3_step(sqlite3_stmt stmt);
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_finalize", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_finalize(sqlite3_stmt stmt);
+		private static extern Result sqlite3_finalize(IntPtr stmt);
 
+		[DllImport("sqlite3", EntryPoint = "sqlite3_sql", CallingConvention=CallingConvention.Cdecl)]
+		private static extern IntPtr sqlite3_sql_impl(sqlite3_stmt stmt);
+		private static string sqlite3_sql(sqlite3_stmt stmt) { return UTF8toStr(sqlite3_sql_impl(stmt)); } // this assumes sqlite3_prepare_v2 was used to create 'stmt'
 
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_name16", CallingConvention=CallingConvention.Cdecl)]
 		private static extern IntPtr sqlite3_column_name16_impl(sqlite3_stmt stmt, int index);
@@ -2159,6 +2214,12 @@ namespace pr.common
 			{
 				foreach (var t in m_trace)
 					Debug.WriteLine("\nQuery:\n"+t.Value.CallStack);
+			}
+			
+			/// <summary>Write trace information to the debug output window</summary>
+			[Conditional("SQLITE_TRACE")] public static void WriteLine(string str)
+			{
+				Debug.WriteLine("[SQLite]:"+str);
 			}
 		}
 		#endregion
@@ -2483,7 +2544,10 @@ namespace pr
 				Assert.AreEqual(1, table.Insert(obj2));
 				Assert.AreEqual(1, table.Insert(obj3));
 				Assert.AreEqual(3, table.RowCount);
-			
+				
+				string sql_count = "select count(*) from "+table.Name;
+				using (var q = table.Query(sql_count))
+					Assert.AreEqual(sql_count, q.SqlString);
 			}
 		}
 
