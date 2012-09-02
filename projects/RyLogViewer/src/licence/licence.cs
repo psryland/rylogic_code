@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -60,7 +61,7 @@ namespace RyLogViewer
 		{
 			get
 			{
-				var user_details = "Rylogic-"+LicenceHolder+"-Limited-"+Company+"-Pwns";
+				var user_details = "Rylogic-"+LicenceHolder+"-Limited-"+Company+"-isAwesome";
 				var hash = new SHA1CryptoServiceProvider().ComputeHash(Encoding.Unicode.GetBytes(user_details));
 				return hash;
 			}
@@ -148,6 +149,35 @@ namespace RyLogViewer
 			var lic = Path.Combine(dir, "licence.xml");
 			doc.Save(lic);
 		}
+
+		/// <summary>Returns a text summary of the licence info</summary>
+		public string InfoStringRtf()
+		{
+			var rtf = new Rtf.Builder();
+			if (!Valid)
+			{
+				rtf.Append(new Rtf.TextStyle{FontSize = 14, FontStyle = Rtf.EFontStyle.Bold, ForeColourIndex = rtf.ColourIndex(Color.DarkRed)});
+				rtf.Append("EVALUATION LICENCE").AppendLine();
+				rtf.Append(Rtf.TextStyle.Default);
+				rtf.Append("Limitations are applied.");
+			}
+			else
+			{
+				rtf.Append("Licenced To:").AppendLine();
+				rtf.Append(new Rtf.TextStyle{ForeColourIndex = rtf.ColourIndex(Color.DarkBlue)});
+				rtf.Append(LicenceHolder).AppendLine();
+				if (!string.IsNullOrEmpty(Company)) rtf.Append(Company).AppendLine();
+				//TimeSpan usage = new TimeSpan(10000);
+				//return string.Format(
+				//    "Evaluation Licence\r\n" +
+				//    "\r\n" +
+				//    "Active Usage: {0}"
+				//    ,usage.ToString());
+			}
+			return rtf.ToString();
+		}
+
+
 	}
 
 	public partial class Main :Form
@@ -159,7 +189,6 @@ namespace RyLogViewer
 			ThreadPool.QueueUserWorkItem(x =>
 				{
 					// Only test for a signed exe once / 5mins
-					const int RetestPeriodMS = 5 * 60 * 1000;
 					if (Environment.TickCount - m_signing_last_tested < RetestPeriodMS)
 						return;
 					
@@ -187,7 +216,8 @@ namespace RyLogViewer
 					if (form != null) form.BeginInvoke(failed_notification);
 				});
 		}
-		private static int m_signing_last_tested;
+		private const int RetestPeriodMS = 5 * 60 * 1000;
+		private static int m_signing_last_tested = Environment.TickCount - RetestPeriodMS;
 
 		/// <summary>Display the activation dialog</summary>
 		private void ShowActivation()

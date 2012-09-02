@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 using pr.gui;
 using pr.util;
@@ -28,6 +29,7 @@ namespace RyLogViewer
 				Debug.Assert(ParentForm != null);
 				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
 					,SwizzleQuickRef
+					,Assembly.GetExecutingAssembly()
 					,"Swizzle Help"
 					,new Size(1,1)
 					,new Size(640,480)

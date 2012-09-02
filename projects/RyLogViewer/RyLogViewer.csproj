@@ -126,9 +126,6 @@
     <Compile Include="src\ghost_mode_ui.Designer.cs">
       <DependentUpon>ghost_mode_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\help_ui.cs">
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Include="src\settings\highlight.cs" />
     <Compile Include="src\line_cache.cs">
       <SubType>Form</SubType>
@@ -229,9 +226,6 @@
     <EmbeddedResource Include="src\ghost_mode_ui.resx">
       <DependentUpon>ghost_mode_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\help_ui.resx">
-      <DependentUpon>help_ui.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="src\licence\activation.resx">
       <DependentUpon>activation.cs</DependentUpon>
     </EmbeddedResource>
@@ -293,6 +287,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="gen_licence.cmd" />
     <None Include="release.bat" />
     <None Include="Resources\executable.png" />
     <None Include="Resources\edit_add.png" />
@@ -332,7 +327,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\VersionHistory.txt" />
+    <EmbeddedResource Include="docs\VersionHistory.html" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="docs\TotD0.html" />

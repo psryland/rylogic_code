@@ -181,9 +181,9 @@ namespace pr.util
 		public static DateTime AssemblyTimestamp() { return AssemblyTimestamp(null); }
 
 		/// <summary>Read a text file embedded resource returning it as a string</summary>
-		public static string TextResource(string resource_name, Assembly ass = null)
+		public static string TextResource(string resource_name, Assembly ass)
 		{
-			ass = ass ?? Assembly.GetExecutingAssembly();
+			ass = ass ?? Assembly.GetExecutingAssembly(); // this will look in pr.dll for resources.. probably not what's wanted
 			var stream = ass.GetManifestResourceStream(resource_name);
 			if (stream == null) throw new IOException("No resource with name "+resource_name+" found");
 			using (var src = new StreamReader(stream))

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 using pr.gfx;
 using pr.gui;
@@ -75,6 +76,7 @@ namespace RyLogViewer
 				Debug.Assert(ParentForm != null);
 				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
 					,TransformQuickRef
+					,Assembly.GetExecutingAssembly()
 					,"Transform Help"
 					,new Size(1,1)
 					,new Size(640,480)

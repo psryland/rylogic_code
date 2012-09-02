@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Security.Permissions;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.gui;
 using pr.inet;
 using pr.util;
 
@@ -42,7 +43,7 @@ namespace RyLogViewer
 						,MessageBoxButtons.OK
 						,MessageBoxIcon.Error);
 				}
-				HelpUI.ShowResource(null, CommandLineRef, Resources.AppTitle);
+				HelpUI.ShowResource(null, CommandLineRef, Assembly.GetExecutingAssembly(), Resources.AppTitle);
 				Environment.ExitCode = 1;
 				return;
 			}

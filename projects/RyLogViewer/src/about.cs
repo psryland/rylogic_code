@@ -1,24 +1,26 @@
 ﻿using System;
-using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
 {
 	public class About :Form
 	{
-		private TextBox m_edit_licence;
 		private Button m_btn_ok;
 		private TextBox m_edit_version;
 		private PictureBox pictureBox1;
 		private Label m_lbl_licence;
+		private Button m_btn_version_history;
+		private RichTextBox m_edit_licence;
 		private Label m_lbl_info;
 		
-		public About()
+		public About(Licence licence)
 		{
 			InitializeComponent();
 			
+			// Version info
 			m_edit_version.Text = string.Format(
 				"{0} {1}"+
 				"Version: {2}"+
@@ -30,19 +32,20 @@ namespace RyLogViewer
 				,Util.AssemblyTimestamp() + Environment.NewLine
 				);
 			m_edit_version.Select(0,0);
-
-			Stream stream = Assembly.GetEntryAssembly().GetManifestResourceStream("RyLogViewer.docs.VersionHistory.txt");
-			if (stream != null)
-			{
-				using (TextReader r = new StreamReader(stream))
-					m_edit_licence.Text = r.ReadToEnd();
-				m_edit_licence.Select(0,0);
-			}
+			
+			// Licence info
+			m_edit_licence.Rtf = licence.InfoStringRtf();
+			
+			// Version history
+			m_btn_version_history.Click += (s,a)=>
+				{
+					HelpUI.ShowResource(this, "RyLogViewer.docs.VersionHistory.html", Assembly.GetExecutingAssembly(), "Version History");
+				};
 		}
+
 		#region Windows Form Designer generated code
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
+		
+		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
 
 		/// <summary>
@@ -65,30 +68,15 @@ namespace RyLogViewer
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(About));
-			this.m_edit_licence = new System.Windows.Forms.TextBox();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_edit_version = new System.Windows.Forms.TextBox();
 			this.pictureBox1 = new System.Windows.Forms.PictureBox();
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_lbl_licence = new System.Windows.Forms.Label();
+			this.m_btn_version_history = new System.Windows.Forms.Button();
+			this.m_edit_licence = new System.Windows.Forms.RichTextBox();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.SuspendLayout();
-			// 
-			// m_edit_licence
-			// 
-			this.m_edit_licence.AcceptsReturn = true;
-			this.m_edit_licence.AcceptsTab = true;
-			this.m_edit_licence.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_licence.BackColor = System.Drawing.SystemColors.ControlLightLight;
-			this.m_edit_licence.Location = new System.Drawing.Point(12, 157);
-			this.m_edit_licence.Multiline = true;
-			this.m_edit_licence.Name = "m_edit_licence";
-			this.m_edit_licence.ReadOnly = true;
-			this.m_edit_licence.Size = new System.Drawing.Size(314, 78);
-			this.m_edit_licence.TabIndex = 12;
-			this.m_edit_licence.WordWrap = false;
 			// 
 			// m_btn_ok
 			// 
@@ -145,13 +133,35 @@ namespace RyLogViewer
 			this.m_lbl_licence.TabIndex = 14;
 			this.m_lbl_licence.Text = "Licence Info:";
 			// 
+			// m_btn_version_history
+			// 
+			this.m_btn_version_history.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_btn_version_history.Location = new System.Drawing.Point(12, 241);
+			this.m_btn_version_history.Name = "m_btn_version_history";
+			this.m_btn_version_history.Size = new System.Drawing.Size(92, 21);
+			this.m_btn_version_history.TabIndex = 15;
+			this.m_btn_version_history.Text = "Version History";
+			this.m_btn_version_history.UseVisualStyleBackColor = true;
+			// 
+			// m_edit_licence
+			// 
+			this.m_edit_licence.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_edit_licence.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_edit_licence.Location = new System.Drawing.Point(15, 157);
+			this.m_edit_licence.Name = "m_edit_licence";
+			this.m_edit_licence.Size = new System.Drawing.Size(311, 78);
+			this.m_edit_licence.TabIndex = 16;
+			this.m_edit_licence.Text = "";
+			// 
 			// About
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(338, 274);
-			this.Controls.Add(this.m_lbl_licence);
 			this.Controls.Add(this.m_edit_licence);
+			this.Controls.Add(this.m_btn_version_history);
+			this.Controls.Add(this.m_lbl_licence);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_edit_version);
 			this.Controls.Add(this.pictureBox1);

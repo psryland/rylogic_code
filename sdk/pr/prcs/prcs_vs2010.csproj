@@ -118,6 +118,10 @@
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>Rylogic Limited Key File.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>
+    </ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="nunit.framework">
       <HintPath>..\..\nunit\net-2.0\framework\nunit.framework.dll</HintPath>
@@ -345,6 +349,7 @@
     <EmbeddedResource Include="gui\view_video_control.resx">
       <DependentUpon>view_video_control.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="SmilingGekko140x110.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Rylogic Limited Key File.pfx" />

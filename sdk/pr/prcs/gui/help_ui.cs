@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
 using System.Windows.Forms;
 using pr.inet;
 using pr.util;
-using pr.gui;
 
 namespace pr.gui
 {
@@ -22,13 +22,13 @@ namespace pr.gui
 		{
 			return ShowHtml(owner, Html.FromText(text), title, ofs, size, pin);
 		}
-		public static DialogResult ShowResource(Form owner, string resource_name, string title)
+		public static DialogResult ShowResource(Form owner, string resource_name, Assembly ass, string title)
 		{
-			return ShowHtml(owner, Util.TextResource(resource_name), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return ShowHtml(owner, Util.TextResource(resource_name, ass), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static DialogResult ShowResource(Form owner, string resource_name, string title, Size ofs, Size size, EPin pin)
+		public static DialogResult ShowResource(Form owner, string resource_name, Assembly ass, string title, Size ofs, Size size, EPin pin)
 		{
-			return ShowHtml(owner, Util.TextResource(resource_name), title, ofs, size, pin);
+			return ShowHtml(owner, Util.TextResource(resource_name, ass), title, ofs, size, pin);
 		}
 		public static DialogResult ShowHtml(Form owner, string html, string title)
 		{
@@ -48,13 +48,13 @@ namespace pr.gui
 		{
 			return FromHtml(parent, Html.FromText(text), title, ofs, size, pin);
 		}
-		public static HelpUI FromResource(Form parent, string resource_name, string title)
+		public static HelpUI FromResource(Form parent, string resource_name, Assembly ass, string title)
 		{
-			return FromHtml(parent, Util.TextResource(resource_name), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return FromHtml(parent, Util.TextResource(resource_name, ass), title, Size.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static HelpUI FromResource(Form parent, string resource_name, string title, Size ofs, Size size, EPin pin)
+		public static HelpUI FromResource(Form parent, string resource_name, Assembly ass, string title, Size ofs, Size size, EPin pin)
 		{
-			return FromHtml(parent, Util.TextResource(resource_name), title, ofs, size, pin);
+			return FromHtml(parent, Util.TextResource(resource_name, ass), title, ofs, size, pin);
 		}
 		public static HelpUI FromHtml(Form parent, string html, string title)
 		{

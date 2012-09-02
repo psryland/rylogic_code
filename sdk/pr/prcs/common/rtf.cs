@@ -263,7 +263,7 @@ namespace pr.common
 			/// <summary>The font colour. Use rtf.ColourIndex(Color.Black) to get the colour index</summary>
 			public int ForeColourIndex { get; set; }
 
-			public TextStyle() :this(0, 12, EFontStyle.Regular) {}
+			public TextStyle() :this(0, 10, EFontStyle.Regular) {}
 			public TextStyle(int font_index, int font_size = 12, EFontStyle font_style = EFontStyle.Regular)
 			{
 				FontIndex       = font_index;
