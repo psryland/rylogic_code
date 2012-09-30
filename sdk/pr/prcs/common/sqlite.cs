@@ -751,6 +751,13 @@ namespace pr.common
 				Execute(sql);
 			}
 
+			/// <summary>Return the sql string used to create a table for 'type'</summary>
+			public static string CreateTableString(Type type, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
+			{
+				var meta = TableMetaData.GetMetaData(type);
+				return Sql("create table ",on_constraint == OnCreateConstraint.Reject?string.Empty:"if not exists ",meta.Name,"(\n",meta.Decl(),")");
+			}
+
 			/// <summary>
 			/// Creates a table in the database based on type 'T'. Throws if not successful.<para/>
 			/// 'factory' is a custom factory method to use to create instances of 'type', if null
@@ -772,20 +779,13 @@ namespace pr.common
 			{
 				var meta = TableMetaData.GetMetaData(type);
 				if (factory != null) meta.Factory = factory;
-				switch (on_constraint) {
-				case OnCreateConstraint.Reject:
-					Execute(Sql("create table ",meta.Name,"(\n",meta.Decl(),")"));
-					break;
-				case OnCreateConstraint.IfNotExists:
-					Execute(Sql("create table if not exists ",meta.Name,"(\n",meta.Decl(),")"));
-					break;
-				case OnCreateConstraint.AlterTable:
-					if (TableExists(type)) AlterTable(type);
-					else Execute(Sql("create table if not exists ",meta.Name,"(\n",meta.Decl(),")"));
-					break;
-				}
+				
+				if (on_constraint == OnCreateConstraint.AlterTable && TableExists(type))
+					AlterTable(type);
+				else
+					Execute(Sql(CreateTableString(type, on_constraint)));
 			}
-
+			
 			/// <summary>Alters an existing table to match the columns for 'type'</summary>
 			public void AlterTable<T>()
 			{
@@ -1630,7 +1630,13 @@ namespace pr.common
 				{
 					var cname = sqlite3_column_name(stmt, i);
 					var col = Column(cname);
-					if (col == null) throw new ArgumentException("'item' does not contain a property or field called '"+cname+"'");
+					
+					// Since sqlite does not support dropping columns in a table, it's likely,
+					// for backwards compatibility, that a table will contain columns that don't
+					// correspond to a property or field in 'item'. These columns are silently ignored.
+					//if (col == null) throw new ArgumentException("'item' does not contain a property or field called '"+cname+"'");
+					if (col == null) continue;
+					
 					col.Set(item, col.ReadFn(stmt, i));
 				}
 			}
