@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.Linq.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
@@ -2558,8 +2557,9 @@ namespace pr.common
 namespace pr
 {
 	using NUnit.Framework;
+	using System.Data.Linq.SqlClient;
 	using common;
-
+	
 	[TestFixture] internal static partial class UnitTests
 	{
 		#region DomTypes
