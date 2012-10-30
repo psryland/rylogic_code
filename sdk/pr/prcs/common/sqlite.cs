@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Linq.SqlClient;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
@@ -289,7 +291,7 @@ namespace pr.common
 			var meta = TableMetaData.GetMetaData(type);
 			return Sql("select * from ",meta.Name);
 		}
-		
+
 		/// <summary>Converts a C# string (in UTF-16) to a byte array in UTF-8</summary>
 		private static byte[] StrToUTF8(string str)
 		{
@@ -704,17 +706,17 @@ namespace pr.common
 			///      int result = query.ReadColumn&lt;int&gt;(0);<para/>
 			/// </code>
 			/// </summary>
-			public Query ExecuteQuery(string sql)
+			public Query ExecuteQuery(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				var query = new Query(this, sql);
+				var query = new Query(this, sql, parms, first_idx);
 				query.Step();
 				return query;
 			}
 
 			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
-			public int ExecuteScalar(string sql)
+			public int ExecuteScalar(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (Query query = ExecuteQuery(sql))
+				using (Query query = ExecuteQuery(sql, parms, first_idx))
 				{
 					if (query.RowEnd) throw Exception.New(Result.Error, "Scalar query returned no results");
 					int value = (int)Read.Int(query.Stmt, 0);
@@ -724,16 +726,16 @@ namespace pr.common
 			}
 
 			/// <summary>Executes an sql statement returning the number of affected rows</summary>
-			public int Execute(string sql)
+			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (ExecuteQuery(sql))
+				using (ExecuteQuery(sql, parms, first_idx))
 					return sqlite3_changes(m_db);
 			}
 
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
-			public IEnumerable<T> EnumRows<T>(string sql)
+			public IEnumerable<T> EnumRows<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (var query = new Query(this, sql))
+				using (var query = new Query(this, sql, parms, first_idx))
 					foreach (var r in query.Rows<T>())
 						yield return r;
 			}
@@ -896,11 +898,16 @@ namespace pr.common
 			protected readonly TableMetaData m_meta;
 			protected readonly Database m_db; // The handle for the database connection
 			
+			/// <summary>Lazy created command for table enumeration. Set to null to start a new command</summary>
+			protected CmdExpr Cmd { get { return m_cmd ?? (m_cmd = new CmdExpr()); } set { Debug.Assert(value == null); m_cmd = null; } }
+			private CmdExpr m_cmd;
+			
 			public Table(Type type, Database db)
 			{
 				if (db.Handle.IsInvalid) throw new ArgumentNullException("db", "Invalid database handle");
 				m_meta = TableMetaData.GetMetaData(type);
-				m_db = db;
+				m_db   = db;
+				m_cmd  = null;
 			}
 
 			/// <summary>The name of this table</summary>
@@ -918,14 +925,22 @@ namespace pr.common
 			/// <summary>Returns the number of rows in this table</summary>
 			public int RowCount
 			{
-				get { return m_db.ExecuteScalar("select count(*) from "+m_meta.Name); }
+				get
+				{
+					try
+					{
+						Cmd.Generate(m_meta.Type, "count(*)");
+						return m_db.ExecuteScalar(Cmd.SqlString, Cmd.Arguments);
+					}
+					finally { Cmd = null; }
+				}
 			}
 
 			// ReSharper disable MemberHidesStaticFromOuterClass
 			/// <summary>General sql query on the table</summary>
-			public Query Query(string sql_string)
+			public Query Query(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				return new Query(m_db, sql_string);
+				return new Query(m_db, sql, parms, first_idx);
 			}
 			// ReSharper restore MemberHidesStaticFromOuterClass
 
@@ -1104,23 +1119,290 @@ namespace pr.common
 			/// <summary>IEnumerable interface</summary>
 			IEnumerator IEnumerable.GetEnumerator()
 			{
-				using (var query = new Query(m_db, SqlSelectAllCmd(m_meta.Type)))
+				try
 				{
-					while (query.Step())
+					Cmd.Generate(m_meta.Type, "*");
+					using (var query = new Query(m_db, Cmd.SqlString, Cmd.Arguments))
 					{
-						var item = m_meta.Factory();
-						m_meta.ReadObj(query.Stmt, item);
-						yield return item;
+						while (query.Step())
+						{
+							var item = m_meta.Factory();
+							m_meta.ReadObj(query.Stmt, item);
+							yield return item;
+						}
 					}
+				}
+				finally { Cmd = null; }
+			}
+
+			/// <summary>Wraps an sql expression for enumerating the rows of this table</summary>
+			protected class CmdExpr
+			{
+				private Expression m_where;
+				private string m_order;
+				private int? m_take;
+				private int? m_skip;
+
+				public override string ToString() { return (SqlString ?? "<not generated>") + (Arguments != null ? " ["+string.Join(",",Arguments)+"]" : ""); }
+
+				/// <summary>The command translated into sql. Invalid until 'Generate()' is called</summary>
+				public string SqlString { get; private set; }
+
+				/// <summary>Arguments for '?'s in the generated SqlString. Invalid until 'Generate()' is called</summary>
+				public List<object> Arguments { get; private set; }
+
+				/// <summary>Add a where clause to the command</summary>
+				public void Where(Expression expr)
+				{
+					var lambda = expr as LambdaExpression;
+					if (lambda != null) expr = lambda.Body;
+					m_where = m_where == null ? expr : Expression.AndAlso(m_where, expr);
+				}
+
+				/// <summary>Add an order by clause to the command</summary>
+				public void OrderBy(Expression expr, bool ascending)
+				{
+					var lambda = expr as LambdaExpression;
+					if (lambda != null) expr = lambda.Body;
+					
+					var args = new List<object>();
+					var name = Translate(expr, args);
+					if (args.Count != 0) throw new NotSupportedException("OrderBy expressions do not support parameters");
+					
+					if (m_order == null) m_order = ""; else m_order += ",";
+					m_order += name;
+					if (!ascending) m_order += " desc";
+				}
+
+				/// <summary>Add a limit to the number of rows returned</summary>
+				public void Take(int n)
+				{
+					m_take = n;
+				}
+
+				/// <summary>Add an offset to the first row returned</summary>
+				public void Skip(int n)
+				{
+					m_skip = n;
+				}
+
+				/// <summary>Return an sql string representing this command</summary>
+				public string Generate(Type type, string select)
+				{
+					var meta = TableMetaData.GetMetaData(type);
+					var cmd = new StringBuilder(Sql("select ",select," from ",meta.Name));
+					var args = new List<object>();
+					
+					if (m_where != null)
+					{
+						var clause = Translate(m_where, args);
+						cmd.Append(" where ").Append(clause);
+					}
+					if (m_order != null)
+					{
+						cmd.Append(" order by ").Append(m_order);
+					}
+					if (m_take.HasValue)
+					{
+						cmd.Append(" limit ").Append(m_take.Value);
+					}
+					if (m_skip.HasValue)
+					{
+						if (!m_take.HasValue) cmd.Append(" limit -1 ");
+						cmd.Append(" offset ").Append(m_skip.Value);
+					}
+
+					SqlString = cmd.ToString();
+					Arguments = args;
+					return SqlString;
+				}
+
+				/// <summary>
+				/// Translates an expression into an sql sub-string in 'sb'.
+				/// Returns an object associated with 'expr' where appropriate, otherwise null.</summary>
+				private StringBuilder Translate(Expression expr, List<object> args, StringBuilder sb = null)
+				{
+					sb = sb ?? new StringBuilder();
+					
+					var binary_expr = expr as BinaryExpression;
+					if (binary_expr != null)
+					{
+						sb.Append("(");
+						Translate(binary_expr.Left ,args ,sb);
+					}
+					
+					// Helper for testing if an expression is a null constant
+					Func<Expression, bool> IsNullConstant = exp => exp.NodeType == ExpressionType.Constant && ((ConstantExpression)exp).Value == null;
+					
+					switch (expr.NodeType)
+					{
+					default: throw new NotSupportedException();
+					case ExpressionType.MemberAccess:
+						#region Member Access
+						{
+							var me = (MemberExpression)expr;
+							if (me.Expression.NodeType == ExpressionType.Parameter)
+								return sb.Append(me.Member.Name);
+							
+							// Get the object that has the member
+							var arrgs = new List<object>();
+							Translate(me.Expression, arrgs, null);
+							if (arrgs.Count != 1) throw new NotSupportedException("Could not find the object instance for MemberExpression: " + me);
+							
+							// Get the member value
+							object ob;
+							switch (me.Member.MemberType)
+							{
+							default: throw new NotSupportedException("MemberExpression: " + me.Member.MemberType.ToString());
+							case MemberTypes.Property: ob = ((PropertyInfo)me.Member).GetValue(arrgs[0], null); break;
+							case MemberTypes.Field:    ob = (   (FieldInfo)me.Member).GetValue(arrgs[0]); break;
+							}
+							
+							Debug.Assert(args != null);
+							
+							// Handle IEnumerable
+							if (ob != null && ob is IEnumerable && !(ob is string))
+							{
+								sb.Append("(");
+								foreach (var a in (IEnumerable)ob)
+								{
+									args.Add(a);
+									sb.Append("?,");
+								}
+								if (sb[sb.Length-1] != ')') sb.Length--;
+								sb.Append(")");
+							}
+							else
+							{
+								args.Add(ob);
+								sb.Append("?");
+							}
+							break;
+						}
+						#endregion
+					case ExpressionType.Call:
+						#region Method Call
+						{
+							var mc = (MethodCallExpression)expr;
+							var method_name = mc.Method.Name.ToLowerInvariant();
+							switch (method_name)
+							{
+							default: throw new NotSupportedException();
+							case "like":
+								{
+									if (mc.Arguments.Count != 2) throw new NotSupportedException("The only supported 'like' method has 2 parameters");
+									var p0 = Translate(mc.Arguments[0], args);
+									var p1 = Translate(mc.Arguments[1], args);
+									sb.Append("(").Append(p0).Append(" like ").Append(p1).Append(")");
+									break;
+								}
+							case "contains":
+								{
+									if (mc.Object != null && mc.Arguments.Count == 1) // obj.Contains() calls...
+									{
+										var p0 = Translate(mc.Object, args);
+										var p1 = Translate(mc.Arguments[0], args);
+										sb.Append("(").Append(p1).Append(" in ").Append(p0).Append(")");
+									}
+									else if (mc.Object == null && mc.Arguments.Count == 2) // StaticClass.Contains(thing, in_things);
+									{
+										var p0 = Translate(mc.Arguments[0], args);
+										var p1 = Translate(mc.Arguments[1], args);
+										sb.Append("(").Append(p1).Append(" in ").Append(p0).Append(")");
+									}
+									else
+										throw new NotSupportedException("Unsupported 'contains' method");
+									break;
+								}
+							}
+							break;
+						}
+						#endregion
+					case ExpressionType.Constant:
+						#region Constant
+						{
+							var ob = ((ConstantExpression)expr).Value;
+							if (ob == null) sb.Append("null");
+							else
+							{
+								sb.Append("?");
+								args.Add(ob);
+							}
+							break;
+						}
+						#endregion
+					case ExpressionType.Convert:
+						#region Convert
+						{
+							var ue = (UnaryExpression)expr;
+							var ty = ue.Type;
+							var start = args.Count;
+							Translate(ue.Operand, args, sb);
+							for (; start != args.Count; ++start)
+								args[start] = Convert.ChangeType(args[start], ty, null);
+							break;
+						}
+						#endregion
+					case ExpressionType.Not:
+					case ExpressionType.UnaryPlus:
+					case ExpressionType.Negate:
+					case ExpressionType.OnesComplement:
+						#region Unary Expressions
+						{
+							switch (expr.NodeType) {
+							case ExpressionType.Not:            sb.Append(" not "); break;
+							case ExpressionType.UnaryPlus:      sb.Append('+'); break;
+							case ExpressionType.Negate:         sb.Append('-'); break;
+							case ExpressionType.OnesComplement: sb.Append('~'); break;
+							}
+							sb.Append("(");
+							Translate(((UnaryExpression)expr).Operand, args, sb);
+							sb.Append(")");
+							break;
+						}
+						#endregion
+					case ExpressionType.Quote:
+						#region Quote
+						{
+							sb.Append('"');
+							Translate(((UnaryExpression)expr).Operand, args, sb);
+							sb.Append('"');
+							break;
+						}
+						#endregion
+					case ExpressionType.Equal:              sb.Append(binary_expr != null && IsNullConstant(binary_expr.Right) ? " is " : "=="); break;
+					case ExpressionType.NotEqual:           sb.Append(binary_expr != null && IsNullConstant(binary_expr.Right) ? " is not " : "!="); break;
+					case ExpressionType.OrElse:             sb.Append(" or "); break;
+					case ExpressionType.AndAlso:            sb.Append(" and "); break;
+					case ExpressionType.Multiply:           sb.Append( "*"); break;
+					case ExpressionType.Divide:             sb.Append( "/"); break;
+					case ExpressionType.Modulo:             sb.Append( "%"); break;
+					case ExpressionType.Add:                sb.Append( "+"); break;
+					case ExpressionType.Subtract:           sb.Append( "-"); break;
+					case ExpressionType.LeftShift:          sb.Append("<<"); break;
+					case ExpressionType.RightShift:         sb.Append("<<"); break;
+					case ExpressionType.And:                sb.Append( "&"); break;
+					case ExpressionType.Or:                 sb.Append( "|"); break;
+					case ExpressionType.LessThan:           sb.Append( "<"); break;
+					case ExpressionType.LessThanOrEqual:    sb.Append("<="); break;
+					case ExpressionType.GreaterThan:        sb.Append( ">"); break;
+					case ExpressionType.GreaterThanOrEqual: sb.Append(">="); break;
+					}
+					
+					if (binary_expr != null)
+					{
+						Translate(binary_expr.Right ,args ,sb);
+						sb.Append(")");
+					}
+					return sb;
 				}
 			}
 		}
 
 		/// <summary>Represents a table within the database for a compile-time type 'T'.</summary>
-		public class Table<T> :Table, IEnumerable<T>
+		public class Table<T> :Table ,IEnumerable<T>
 		{
-			public Table(Database db) :base(typeof(T), db)
-			{}
+			public Table(Database db) :base(typeof(T), db) {}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
 			public T Find(params object[] keys)
@@ -1161,19 +1443,43 @@ namespace pr.common
 			/// <summary>IEnumerable interface</summary>
 			IEnumerator<T> IEnumerable<T>.GetEnumerator()
 			{
-				using (var query = new Query(m_db, SqlSelectAllCmd(m_meta.Type)))
-				{
-					while (query.Step())
-					{
-						var item = m_meta.Factory();
-						m_meta.ReadObj(query.Stmt, item);
-						yield return (T)item;
-					}
-				}
+				foreach (var t in (IEnumerable)this)
+					yield return (T)t;
 			}
-			IEnumerator IEnumerable.GetEnumerator()
+
+			/// <summary>Add a 'where' clause to row enumeration</summary>
+			public Table<T> Where(Expression<Func<T,bool>> pred)
 			{
-				return ((IEnumerable<T>)this).GetEnumerator();
+				Cmd.Where(pred);
+				return this;
+			}
+
+			/// <summary>Add an 'OrderBy' clause to row enumeration</summary>
+			public Table<T> OrderBy<U>(Expression<Func<T,U>> pred)
+			{
+				Cmd.OrderBy(pred, true);
+				return this;
+			}
+
+			/// <summary>Add an 'OrderByDescending' clause to row enumeration</summary>
+			public Table<T> OrderByDescending<U>(Expression<Func<T,U>> pred)
+			{
+				Cmd.OrderBy(pred, false);
+				return this;
+			}
+
+			/// <summary>Add a 'limit' clause to row enumeration</summary>
+			public Table<T> Take(int n)
+			{
+				Cmd.Take(n);
+				return this;
+			}
+
+			/// <summary>Add an 'offset' clause to row enumeration</summary>
+			public Table<T> Skip(int n)
+			{
+				Cmd.Skip(n);
+				return this;
 			}
 		}
 
@@ -1193,8 +1499,12 @@ namespace pr.common
 				Trace.QueryCtor(this);
 				Trace.WriteLine(string.Format("Query created '{0}'", SqlString));
 			}
-			public Query(Database db, string sql_string) :this(Compile(db.Handle, sql_string))
-			{}
+			public Query(Database db, string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
+			:this(Compile(db.Handle, sql_string))
+			{
+				if (parms != null)
+					BindParms(first_idx, parms);
+			}
 			~Query()
 			{
 				Trace.QueryDtor(this);
@@ -1261,13 +1571,21 @@ namespace pr.common
 			/// <summary>
 			/// Bind an array of parameters starting at parameter index 'first_idx' (remember parameter indices start at 1)
 			/// To reuse the Query, call Reset(), then bind new keys, then call Step() again</summary>
-			public void BindParms(int first_idx, params object[] parms)
+			public void BindParms(int first_idx, IEnumerable<object> parms)
 			{
 				foreach (var p in parms)
 				{
 					var bind = BindFunction[p.GetType()];
 					bind(m_stmt, first_idx++, p);
 				}
+			}
+
+			/// <summary>
+			/// Bind a sequence of parameters starting at parameter index 'first_idx' (remember parameter indices start at 1)
+			/// To reuse the Query, call Reset(), then bind new keys, then call Step() again</summary>
+			public void BindParms(int first_idx, params object[] parms)
+			{
+				BindParms(first_idx, parms.AsEnumerable());
 			}
 
 			/// <summary>
@@ -1395,6 +1713,7 @@ namespace pr.common
 			}
 		}
 
+		#region Table Meta Data
 		/// <summary>Mapping information from a type to columns in the table</summary>
 		public class TableMetaData
 		{
@@ -1672,7 +1991,9 @@ namespace pr.common
 				m_single_pk.Set(obj, id);
 			}
 		}
+		#endregion
 
+		#region Column Meta Data
 		/// <summary>A column within a db table</summary>
 		public class ColumnMetaData
 		{
@@ -1805,6 +2126,7 @@ namespace pr.common
 				return sb.ToString();
 			}
 		}
+		#endregion
 
 		#region Specialised query sub-classes
 
@@ -2240,7 +2562,8 @@ namespace pr
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local
+		#region DomTypes
+		// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
 		public enum SomeEnum { One, Two, Three }
 
 		// Tests user types can be mapped to table columns
@@ -2288,6 +2611,7 @@ namespace pr
 				m_ign_private_field = seed;
 				Ign_PublicField = (short)m_ign_private_field;
 			}
+			public override string ToString() { return Inc_Key + " " + Inc_Value; }
 		}
 
 		// Single primary key table
@@ -2423,7 +2747,7 @@ namespace pr
 			{
 				Inc_Explicit = -2;
 			}
-			public bool Equals(DomType2Base other)
+			protected bool Equals(DomType2Base other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
@@ -2498,8 +2822,8 @@ namespace pr
 			public Guid   Prop3 { get; set; }
 			public int    NewProp { get; set; }
 		}
-
-		// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local
+		// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
+		#endregion
 
 		// The test methods can run in any order, but we only want to do this stuff once
 		private static bool TestSqlite_OneTimeOnly_Done = false;
@@ -2556,7 +2880,6 @@ namespace pr
 					Assert.AreEqual(sql_count, q.SqlString);
 			}
 		}
-
 		[Test] public static void TestSqlite_TypicalUse()
 		{
 			TestSqlite_OneTimeOnly();
@@ -2703,7 +3026,6 @@ namespace pr
 				Assert.IsTrue(obj2.Equals(objs[0]));
 			}
 		}
-
 		[Test] public static void TestSqlite_MultiplePks()
 		{
 			TestSqlite_OneTimeOnly();
@@ -2800,7 +3122,6 @@ namespace pr
 				Assert.IsNull(OBJ3);
 			}
 		}
-
 		[Test] public static void TestSqlite_Unicode()
 		{
 			TestSqlite_OneTimeOnly();
@@ -2844,7 +3165,6 @@ namespace pr
 				Assert.IsTrue(obj2.Equals(OBJ2));
 			}
 		}
-
 		[Test] public static void TestSqlite_Transactions()
 		{
 			TestSqlite_OneTimeOnly();
@@ -2882,7 +3202,6 @@ namespace pr
 				Assert.AreEqual(objs.Count, table.RowCount);
 			}
 		}
-		
 		[Test] public static void TestSqlite_RuntimeTypes()
 		{
 			TestSqlite_OneTimeOnly();
@@ -2910,7 +3229,6 @@ namespace pr
 					Assert.IsTrue(objs[i].Equals(OBJS[i]));
 			}
 		}
-		
 		[Test] public static void TestSqlite_AlterTable()
 		{
 			TestSqlite_OneTimeOnly();
@@ -2982,6 +3300,142 @@ namespace pr
 					Assert.IsTrue(cols.Contains("PropB"));
 					Assert.IsTrue(cols.Contains("Parent1"));
 					Assert.IsTrue(cols.Contains("NewProp"));
+				}
+			}
+		}
+		[Test] public static void TestSqlite_ExprTree()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a simple table
+				db.DropTable<DomType0>();
+				db.CreateTable<DomType0>();
+				Assert.IsTrue(db.TableExists<DomType0>());
+				
+				// Check the table
+				var table = db.Table<DomType0>();
+				Assert.AreEqual(2, table.ColumnCount);
+				var column_names = new[]{"Inc_Key", "Inc_Value"};
+				using (var q = table.Query("select * from "+table.Name))
+				{
+					Assert.AreEqual(2, q.ColumnCount);
+					Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
+					Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
+				}
+				
+				// Insert stuff
+				Assert.AreEqual(1, table.Insert(new DomType0(4)));
+				Assert.AreEqual(1, table.Insert(new DomType0(1)));
+				Assert.AreEqual(1, table.Insert(new DomType0(0)));
+				Assert.AreEqual(1, table.Insert(new DomType0(5)));
+				Assert.AreEqual(1, table.Insert(new DomType0(7)));
+				Assert.AreEqual(1, table.Insert(new DomType0(9)));
+				Assert.AreEqual(1, table.Insert(new DomType0(6)));
+				Assert.AreEqual(1, table.Insert(new DomType0(3)));
+				Assert.AreEqual(1, table.Insert(new DomType0(8)));
+				Assert.AreEqual(1, table.Insert(new DomType0(2)));
+				Assert.AreEqual(10, table.RowCount);
+				
+				string sql_count = "select count(*) from "+table.Name;
+				using (var q = table.Query(sql_count))
+					Assert.AreEqual(sql_count, q.SqlString);
+				
+				// Do some expression tree queries
+				{// Where clause
+					var q = from x in table where x.Inc_Key % 2 == 1 select x;
+					var list = q.ToList();
+					Assert.AreEqual(5, list.Count);
+				}
+				{// Where clause with 'like' method calling 'RowCount'
+					var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
+					Assert.AreEqual(1, q);
+				}
+				{// Contains clause
+					var set = new List<string>{"2","4","8"};
+					var q = from x in table where set.Contains(x.Inc_Value) select x;
+					var list = q.ToList();
+					Assert.AreEqual(3, list.Count);
+					Assert.AreEqual(4, list[0].Inc_Key);
+					Assert.AreEqual(8, list[1].Inc_Key);
+					Assert.AreEqual(2, list[2].Inc_Key);
+				}
+				{// NOT Contains clause
+					var set = new List<string>{"2","4","8","5","9"};
+					var q = from x in table where set.Contains(x.Inc_Value) == false select x;
+					var list = q.ToList();
+					Assert.AreEqual(5, list.Count);
+					Assert.AreEqual(1, list[0].Inc_Key);
+					Assert.AreEqual(0, list[1].Inc_Key);
+					Assert.AreEqual(7, list[2].Inc_Key);
+					Assert.AreEqual(6, list[3].Inc_Key);
+					Assert.AreEqual(3, list[4].Inc_Key);
+				}
+				{// NOT Contains clause
+					var set = new List<string>{"2","4","8","5","9"};
+					var q = from x in table where !set.Contains(x.Inc_Value) select x;
+					var list = q.ToList();
+					Assert.AreEqual(5, list.Count);
+					Assert.AreEqual(1, list[0].Inc_Key);
+					Assert.AreEqual(0, list[1].Inc_Key);
+					Assert.AreEqual(7, list[2].Inc_Key);
+					Assert.AreEqual(6, list[3].Inc_Key);
+					Assert.AreEqual(3, list[4].Inc_Key);
+				}
+				{// OrderBy clause
+					var q = from x in table orderby x.Inc_Key descending select x;
+					var list = q.ToList();
+					Assert.AreEqual(10, list.Count);
+					for (int i = 0; i != 10; ++i)
+						Assert.AreEqual(9-i, list[i].Inc_Key);
+				}
+				{// Where and OrderBy clause
+					var q = from x in table where ((x.Inc_Key * 4 + 2 - 1) / 3) >= 5 orderby x.Inc_Value select x;
+					var list = q.ToList();
+					Assert.AreEqual(6, list.Count);
+					for (int i = 0; i != 6; ++i)
+						Assert.AreEqual(4+i, list[i].Inc_Key);
+				}
+				{// Skip
+					var q = table.Where(x => x.Inc_Key <= 5).Skip(2);
+					var list = q.ToList();
+					Assert.AreEqual(4, list.Count);
+					Assert.AreEqual(0, list[0].Inc_Key);
+					Assert.AreEqual(5, list[1].Inc_Key);
+					Assert.AreEqual(3, list[2].Inc_Key);
+					Assert.AreEqual(2, list[3].Inc_Key);
+				}
+				{// Take
+					var q = table.Where(x => x.Inc_Key >= 5).Take(2);
+					var list = q.ToList();
+					Assert.AreEqual(2, list.Count);
+					Assert.AreEqual(5, list[0].Inc_Key);
+					Assert.AreEqual(7, list[1].Inc_Key);
+				}
+				{// Skip and Take
+					var q = table.Where(x => x.Inc_Key >= 5).Skip(2).Take(2);
+					var list = q.ToList();
+					Assert.AreEqual(2, list.Count);
+					Assert.AreEqual(9, list[0].Inc_Key);
+					Assert.AreEqual(6, list[1].Inc_Key);
+				}
+				{// Null test
+					var q = from x in table where x.Inc_Value != null select x;
+					var list = q.ToList();
+					Assert.AreEqual(10, list.Count);
+				}
+				{// Type conversions
+					var q = from x in table where (float)x.Inc_Key > 2.5f && (float)x.Inc_Key < 7.5f select x;
+					var list = q.ToList();
+					Assert.AreEqual(5, list.Count);
+					Assert.AreEqual(4, list[0].Inc_Key);
+					Assert.AreEqual(5, list[1].Inc_Key);
+					Assert.AreEqual(7, list[2].Inc_Key);
+					Assert.AreEqual(6, list[3].Inc_Key);
+					Assert.AreEqual(3, list[4].Inc_Key);
 				}
 			}
 		}
