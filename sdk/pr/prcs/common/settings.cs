@@ -36,7 +36,7 @@ namespace pr.common
 	[KnownType("KnownTypes")]
 	public abstract class SettingsBase<T> where T:SettingsBase<T>, new()
 	{
-		// Using a List<> instead of a Dictionary as Dictionary isn't serialisable
+		// Using a List<> instead of a Dictionary as Dictionary isn't serialiseable
 		[KnownType(typeof(Point))] // Add more of these as needed
 		[KnownType(typeof(Color))]
 		[KnownType(typeof(Size))]
