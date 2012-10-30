@@ -12,6 +12,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -485,11 +486,54 @@ namespace pr.util
 			Array.Copy(arr, start, sub, 0, length);
 			return sub;
 		}
+
+		/// <summary>Convert a size in bytes to a 'pretty' size in KB,MB,GB,etc</summary>
+		/// <param name="bytes">The input data size</param>
+		/// <param name="si">True to use 1000bytes = 1kb, false for 1024bytes = 1kb</param>
+		/// <param name="dp">The number of decimal places to use</param>
+		public static string PrettySize(long bytes, bool si, int dp)
+		{
+			int unit = si ? 1000 : 1024;
+			if (bytes < unit) return bytes + (si ? "B" : "iB");
+			int exp = (int)(Math.Log(bytes) / Math.Log(unit));
+			char prefix = "KMGTPE"[exp-1];
+			var fmt = "{0:N" + dp + "}{1}" + (si ? "B" : "iB");
+			return string.Format(fmt, bytes / Math.Pow(unit, exp), prefix);
+		}
 	}
 	
 	/// <summary>Type specific utility methods</summary>
 	public static class Util<T>
 	{
+		/// <summary>
+		/// Serialise an instance of type 'T' to xml.
+		/// 'T' should be decorated with [DataContract],[DataMember] attributes.
+		/// You also need to add custom types as '[KnownType(typeof(CustomType))]' attributes</summary>
+		public static string ToXml(T obj)
+		{
+			using (var m = new MemoryStream())
+			using (var r = new StreamReader(m))
+			{
+				var s = new DataContractSerializer(typeof(T));
+				s.WriteObject(m, obj);
+				m.Position = 0;
+				return r.ReadToEnd();
+			}
+		}
+
+		/// <summary>Deserialise an instance of type 'T' from xml.</summary>
+		public static T FromXml(string xml)
+		{
+			using (var m = new MemoryStream())
+			{
+				var data = Encoding.UTF8.GetBytes(xml);
+				m.Write(data, 0, data.Length);
+				m.Position = 0;
+				var s = new DataContractSerializer(typeof(T));
+				return (T)s.ReadObject(m);
+			}
+		}
+
 		/// <summary>
 		/// Derives the name of a property from the given lambda expression and returns it as string.
 		/// Example: DateTime.Now.PropertyName(s => s.Ticks) returns "Ticks"
@@ -594,11 +638,28 @@ namespace pr
 				Util.FromBytes<ulong>(bytes);
 			}
 		}
-
 		[Test] public static void TestPropertyName()
 		{
 			Assert.AreEqual("X", Util<Point>.MemberName(p=>p.X));
 			Assert.AreEqual("BaseStream", Util<StreamWriter>.MemberName(s=>s.BaseStream));
+		}
+		[Test] public static void TestPrettySize()
+		{
+			Func<long,string> pretty = size => { return Util.PrettySize(size, true, 1) + " " + Util.PrettySize(size, false, 1); };
+
+			Assert.AreEqual(      "0B 0iB"      , pretty(0));
+			Assert.AreEqual(     "27B 27iB"     , pretty(27));
+			Assert.AreEqual(    "999B 999iB"    , pretty(999));
+			Assert.AreEqual(   "1.0KB 1000iB"   , pretty(1000));
+			Assert.AreEqual(   "1.0KB 1023iB"   , pretty(1023));
+			Assert.AreEqual(   "1.0KB 1.0KiB"   , pretty(1024));
+			Assert.AreEqual(   "1.7KB 1.7KiB"   , pretty(1728));
+			Assert.AreEqual( "110.6KB 108.0KiB" , pretty(110592));
+			Assert.AreEqual(   "7.1MB 6.8MiB"   , pretty(7077888));
+			Assert.AreEqual( "453.0MB 432.0MiB" , pretty(452984832));
+			Assert.AreEqual(  "29.0GB 27.0GiB"  , pretty(28991029248));
+			Assert.AreEqual(   "1.9TB 1.7TiB"   , pretty(1855425871872));
+			Assert.AreEqual(   "9.2EB 8.0EiB"   , pretty(9223372036854775807));
 		}
 	}
 }
