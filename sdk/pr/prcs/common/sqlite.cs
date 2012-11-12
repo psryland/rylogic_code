@@ -1150,7 +1150,7 @@ namespace pr.common
 				/// <summary>Arguments for '?'s in the generated SqlString. Invalid until 'Generate()' is called</summary>
 				public List<object> Arguments { get; private set; }
 
-				/// <summary>Add a where clause to the command</summary>
+				/// <summary>Add a 'where' clause to the command</summary>
 				public void Where(Expression expr)
 				{
 					var lambda = expr as LambdaExpression;
@@ -1158,7 +1158,7 @@ namespace pr.common
 					m_where = m_where == null ? expr : Expression.AndAlso(m_where, expr);
 				}
 
-				/// <summary>Add an order by clause to the command</summary>
+				/// <summary>Add an 'order by' clause to the command</summary>
 				public void OrderBy(Expression expr, bool ascending)
 				{
 					var lambda = expr as LambdaExpression;
@@ -1444,6 +1444,13 @@ namespace pr.common
 			{
 				foreach (var t in (IEnumerable)this)
 					yield return (T)t;
+			}
+
+			/// <summary>Add a 'count' clause to row enumeration</summary>
+			public int Count(Expression<Func<T,bool>> pred)
+			{
+				Cmd.Where(pred);
+				return RowCount;
 			}
 
 			/// <summary>Add a 'where' clause to row enumeration</summary>
@@ -3345,6 +3352,10 @@ namespace pr
 					Assert.AreEqual(sql_count, q.SqlString);
 				
 				// Do some expression tree queries
+				{// Count clause
+					var q = table.Count(x => (x.Inc_Key % 3) == 0);
+					Assert.AreEqual(4, q);
+				}
 				{// Where clause
 					var q = from x in table where x.Inc_Key % 2 == 1 select x;
 					var list = q.ToList();
