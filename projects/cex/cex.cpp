@@ -439,17 +439,19 @@ namespace cex
 	{
 		std::string m_text;
 		bool m_lwr, m_upr, m_fwdslash, m_bkslash, m_cstr;
-		Clip() :m_text() ,m_lwr(false) ,m_upr(false) ,m_fwdslash(false) ,m_bkslash(false) ,m_cstr(false) {}
+		std::string m_newline;
+		Clip() :m_text() ,m_lwr(false) ,m_upr(false) ,m_fwdslash(false) ,m_bkslash(false) ,m_cstr(false) ,m_newline() {}
 		void ShowHelp() const
 		{
 			std::cout <<
 				"Clip text to the system clipboard\n"
-				" Syntax: Cex -clip [-lwr][-upr][-fwdslash][-bkslash][-cstr] text_to_copy ...\n"
+				" Syntax: Cex -clip [-lwr][-upr][-fwdslash][-bkslash][-cstr] [-crlf|cr|lf] text_to_copy ...\n"
 				"  -lwr : converts copied text to lower case\n"
 				"  -upr : converts copied text to upper case\n"
 				"  -fwdslash : converts any directory marks to forward slashes\n"
 				"  -bkslash : converts any directory marks to back slashes\n"
-				"  -cstr : converts the copied text to a C\\C++ style string by adding escape characters\n";
+				"  -cstr : converts the copied text to a C\\C++ style string by adding escape characters\n"
+				"  -crlf|cr|lf : convert newlines to the dos,mac,linux format\n";
 		}
 		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
 		{
@@ -459,21 +461,26 @@ namespace cex
 			if (str::EqualI(option, "-fwdslash")) { m_fwdslash = true; return true; }
 			if (str::EqualI(option, "-bkslash" )) { m_bkslash = true; return true; }
 			if (str::EqualI(option, "-cstr"    )) { m_cstr = true; return true; }
+			if (str::EqualI(option, "-crlf"    )) { m_newline = "\r\n"; return true; }
+			if (str::EqualI(option, "-cr"      )) { m_newline = "\r"; return true; }
+			if (str::EqualI(option, "-lf"      )) { m_newline = "\n"; return true; }
 			return ICex::CmdLineOption(option, arg, arg_end);
 		}
 		bool CmdLineData(TArgIter& arg, TArgIter)
 		{
+			if (!m_text.empty()) m_text += "\r\n";
 			m_text += *arg++;
 			return true;
 		}
 		int Run()
 		{
 			// Perform optional conversions
-			if (m_lwr)      { pr::str::LowerCase(m_text); }
-			if (m_upr)      { pr::str::UpperCase(m_text); }
-			if (m_fwdslash) { pr::str::Replace(m_text, "\\\\", "/");  pr::str::Replace(m_text, "\\", "/"); }
-			if (m_bkslash)  { pr::str::Replace(m_text, "\\\\", "\\"); pr::str::Replace(m_text, "/", "\\"); }
-			if (m_cstr)     { m_text = pr::str::StringToCString<std::string>(m_text); }
+			if (m_lwr)              { pr::str::LowerCase(m_text); }
+			if (m_upr)              { pr::str::UpperCase(m_text); }
+			if (m_fwdslash)         { pr::str::Replace(m_text, "\\\\", "/");  pr::str::Replace(m_text, "\\", "/"); }
+			if (m_bkslash)          { pr::str::Replace(m_text, "\\\\", "\\"); pr::str::Replace(m_text, "/", "\\"); }
+			if (!m_newline.empty()) { pr::str::Replace(m_text, "\r\n", "\n"); pr::str::Replace(m_text, "\r", "\n"); pr::str::Replace(m_text, "\n", m_newline.c_str()); }
+			if (m_cstr)             { m_text = pr::str::StringToCString<std::string>(m_text); }
 			return pr::SetClipBoardText(GetConsoleWindow(), m_text) ? 0 : -1;
 		}
 	};
