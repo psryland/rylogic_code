@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -168,9 +167,6 @@ namespace pr.common
 			Serialized   = 3
 		}
 
-		/// <summary>The format string used to store/retrieve date time objects</summary>
-		public const string DateTimeFormatString = "yyyy-MM-dd HH:mm:ss.FFFFFFFK";
-
 		#endregion
 
 		#region Global methods
@@ -190,23 +186,22 @@ namespace pr.common
 			type = Nullable.GetUnderlyingType(type) ?? type;
 			if (type == null)
 				return DataType.Null;
-			if (type == typeof(bool)     ||
-				type == typeof(byte)     ||
-				type == typeof(sbyte)    ||
-				type == typeof(Char)     ||
-				type == typeof(UInt16)   ||
-				type == typeof(Int16)    ||
-				type == typeof(Int32)    ||
-				type == typeof(UInt32)   ||
-				type == typeof(Int64)    ||
-				type == typeof(UInt64)   ||
+			if (type == typeof(bool)           ||
+				type == typeof(byte)           ||
+				type == typeof(sbyte)          ||
+				type == typeof(Char)           ||
+				type == typeof(UInt16)         ||
+				type == typeof(Int16)          ||
+				type == typeof(Int32)          ||
+				type == typeof(UInt32)         ||
+				type == typeof(Int64)          ||
+				type == typeof(UInt64)         ||
 				type.IsEnum)
 				return DataType.Integer;
-			if (type == typeof(Single)   ||
+			if (type == typeof(Single)         ||
 				type == typeof(Double))
 				return DataType.Real;
 			if (type == typeof(String)         ||
-				type == typeof(DateTime)       ||
 				type == typeof(DateTimeOffset) ||
 				type == typeof(Guid)           ||
 				type == typeof(Decimal))
@@ -410,15 +405,10 @@ namespace pr.common
 				if (value == null) sqlite3_bind_null(stmt, idx);
 				else Text(stmt, idx, ((Guid)value).ToString());
 			}
-			public static void DateTime(sqlite3_stmt stmt, int idx, object value)
-			{
-				if (value == null) sqlite3_bind_null(stmt, idx);
-				else Text(stmt, idx, ((DateTime)value).ToString(DateTimeFormatString, CultureInfo.InvariantCulture));
-			}
 			public static void DateTimeOffset(sqlite3_stmt stmt, int idx, object value)
 			{
 				if (value == null) sqlite3_bind_null(stmt, idx);
-				else Text(stmt, idx, ((DateTimeOffset)value).ToString(DateTimeFormatString, CultureInfo.InvariantCulture));
+				else Text(stmt, idx, ((DateTimeOffset)value).ToString("o"));
 			}
 			
 			public delegate void Func(sqlite3_stmt stmt, int index, object obj);
@@ -442,8 +432,7 @@ namespace pr.common
 					Add(typeof(string)         ,Text          );
 					Add(typeof(byte[])         ,Blob          );
 					Add(typeof(Guid)           ,Guid          );
-					Add(typeof(DateTime)       ,DateTime      );
-					Add(typeof(DateTimeOffset) ,DateTimeOffset);
+					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 				}
 			}
 		}
@@ -543,15 +532,10 @@ namespace pr.common
 				string text = (string)Text(stmt, idx);
 				return System.Guid.Parse(text);
 			}
-			public static object DateTime(sqlite3_stmt stmt, int idx)
-			{
-				string text = (string)Text(stmt, idx);
-				return System.DateTime.ParseExact(text, DateTimeFormatString, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-			}
 			public static object DateTimeOffset(sqlite3_stmt stmt, int idx)
 			{
 				string text = (string)Text(stmt, idx);
-				return System.DateTimeOffset.ParseExact(text, DateTimeFormatString, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+				return System.DateTimeOffset.Parse(text);
 			}
 			
 			public delegate object Func(sqlite3_stmt stmt, int index);
@@ -575,8 +559,7 @@ namespace pr.common
 					Add(typeof(string)         ,Text          );
 					Add(typeof(byte[])         ,Blob          );
 					Add(typeof(Guid)           ,Guid          );
-					Add(typeof(DateTime)       ,DateTime      );
-					Add(typeof(DateTimeOffset) ,DateTimeOffset);
+					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 				}
 			}
 		}
@@ -2665,11 +2648,10 @@ namespace pr
 			[Sqlite.Column(Order=16)] public byte[]         m_empty_buf;
 			[Sqlite.Column(Order=17)] public Guid           m_guid;
 			[Sqlite.Column(Order=18)] public SomeEnum       m_enum;
-			[Sqlite.Column(Order=19)] public DateTime       m_datetime;
-			[Sqlite.Column(Order=20)] public DateTimeOffset m_dt_offset;
-			[Sqlite.Column(Order=21, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
-			[Sqlite.Column(Order=22)] public int?           m_nullint;
-			[Sqlite.Column(Order=23)] public long?          m_nulllong;
+			[Sqlite.Column(Order=19)] public DateTimeOffset m_dt_offset;
+			[Sqlite.Column(Order=20, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
+			[Sqlite.Column(Order=21)] public int?           m_nullint;
+			[Sqlite.Column(Order=22)] public long?          m_nulllong;
 			
 			// ReSharper disable UnusedAutoPropertyAccessor.Local
 			public int Ignored { get; set; }
@@ -2697,7 +2679,6 @@ namespace pr
 				m_empty_buf = null;
 				m_guid      = Guid.NewGuid();
 				m_enum      = SomeEnum.One;
-				m_datetime  = DateTime.Now;
 				m_dt_offset = DateTimeOffset.Now;
 				m_custom    = new Custom();
 				m_nullint   = 23;
@@ -2727,8 +2708,7 @@ namespace pr
 				if (!Equals(other.m_empty_buf, m_empty_buf) ) return false;
 				if (!Equals(other.m_enum, m_enum)           ) return false;
 				if (!other.m_guid.Equals(m_guid)            ) return false;
-				if (!other.m_datetime.Equals(m_datetime) || other.m_datetime.Kind != m_datetime.Kind) return false;
-				if (!other.m_dt_offset.Equals(m_dt_offset)) return false;
+				if (!other.m_dt_offset.Equals(m_dt_offset)  ) return false;
 				if (!other.m_custom.Equals(m_custom)        ) return false;
 				if (Math.Abs(other.m_float   - m_float  ) > float .Epsilon) return false;
 				if (Math.Abs(other.m_double  - m_double ) > double.Epsilon) return false;
@@ -2931,10 +2911,10 @@ namespace pr
 				
 				// Check the table
 				var table = db.Table<DomType1>();
-				Assert.AreEqual(24, table.ColumnCount);
+				Assert.AreEqual(23, table.ColumnCount);
 				using (var q = table.Query("select * from "+table.Name))
 				{
-					Assert.AreEqual(24, q.ColumnCount);
+					Assert.AreEqual(23, q.ColumnCount);
 					Assert.AreEqual("m_key"       ,q.ColumnName( 0));
 					Assert.AreEqual("m_bool"      ,q.ColumnName( 1));
 					Assert.AreEqual("m_sbyte"     ,q.ColumnName( 2));
@@ -2954,19 +2934,16 @@ namespace pr
 					Assert.AreEqual("m_empty_buf" ,q.ColumnName(16));
 					Assert.AreEqual("m_guid"      ,q.ColumnName(17));
 					Assert.AreEqual("m_enum"      ,q.ColumnName(18));
-					Assert.AreEqual("m_datetime"  ,q.ColumnName(19));
-					Assert.AreEqual("m_dt_offset" ,q.ColumnName(20));
-					Assert.AreEqual("m_custom"    ,q.ColumnName(21));
-					Assert.AreEqual("m_nullint"   ,q.ColumnName(22));
-					Assert.AreEqual("m_nulllong"  ,q.ColumnName(23));
+					Assert.AreEqual("m_dt_offset" ,q.ColumnName(19));
+					Assert.AreEqual("m_custom"    ,q.ColumnName(20));
+					Assert.AreEqual("m_nullint"   ,q.ColumnName(21));
+					Assert.AreEqual("m_nulllong"  ,q.ColumnName(22));
 				}
 				
 				// Create some objects to stick in the table
 				var obj1 = new DomType1(5);
 				var obj2 = new DomType1(6);
 				var obj3 = new DomType1(7);
-				obj2.m_datetime = obj2.m_datetime.ToLocalTime();
-				obj3.m_datetime = obj3.m_datetime.ToUniversalTime();
 				obj2.m_dt_offset = DateTimeOffset.UtcNow;
 				
 				// Insert stuff
