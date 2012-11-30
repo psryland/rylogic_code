@@ -22,10 +22,13 @@ namespace pr.stream
 		{
 			/// <summary>The number of bytes read from the wrapped stream</summary>
 			public long BytesRead { get; private set; }
-			
+
 			/// <summary>The total length of the wrapped stream (if known, 0 if not known)</summary>
-			public long Length    { get; private set; }
-			
+			public long Length { get; private set; }
+
+			/// <summary>Return the current progress as a percentage</summary>
+			public float ProgressPercentage { get { return Length != 0 ? BytesRead * 100f / Length : 50; } }
+
 			public ProgressChangedEventArgs(long bytesRead, long length) { BytesRead = bytesRead; Length = length; }
 		}
 		public void RaiseProgressChanged()
