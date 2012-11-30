@@ -217,6 +217,8 @@
     <Compile Include="extn\enum_extensions.cs" />
     <Compile Include="extn\event_extensions.cs" />
     <Compile Include="extn\list_extensions.cs" />
+    <Compile Include="extn\object_extensions.cs" />
+    <Compile Include="extn\path_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
     <Compile Include="extn\xml_extensions.cs" />

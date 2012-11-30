@@ -7,7 +7,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using NUnit.Framework;
 
 namespace pr.extn
 {
@@ -37,8 +36,18 @@ namespace pr.extn
 				if (string.IsNullOrEmpty(paths[i])) continue;
 				path = Path.Combine(path, (paths[i][0] == '/' || paths[i][0] == '\\') ? paths[i].Substring(1) : paths[i]);
 			}
+			return Cannonicalise(path);
+		}
+
+		/// <summary>Remove '..' or '.' directories from a path and swap all '/' to '\'</summary>
+		public static string Cannonicalise(string path, Case change_case = Case.Unchanged)
+		{
+			if (change_case == Case.Lower) path = path.ToLowerInvariant();
+			if (change_case == Case.Upper) path = path.ToUpperInvariant();
+			path = path.Replace('/', '\\');
 			return Path.GetFullPath(path);
 		}
+		public enum Case { Unchanged, Lower, Upper };
 
 		/// <summary>Remove the invalid chars from a potential filename</summary>
 		public static string SanitiseFileName(string name, string additional_invalid_chars, string replace_with)
@@ -63,9 +72,15 @@ namespace pr.extn
 			return path;
 		}
 	}
+}
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using extn;
 	
-	/// <summary>Unit tests for xml extensions</summary>
-	[TestFixture] internal partial class UnitTests
+	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestPathEx()
 		{
@@ -89,3 +104,4 @@ namespace pr.extn
 		}
 	}
 }
+#endif

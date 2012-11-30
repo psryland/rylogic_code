@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using pr.extn;
 
@@ -12,9 +13,13 @@ namespace pr.extn
 	/// <summary>Extensions for strings</summary>
 	public static class StringExtensions
 	{
-		/// <summary>
-		/// Word wraps the given text to fit within the specified width.
-		/// </summary>
+		/// <summary>Treats this string as a format string</summary>
+		public static string Fmt(this string fmt, params object[] args)
+		{
+			return string.Format(fmt, args);
+		}
+
+		/// <summary>Word wraps the given text to fit within the specified width.</summary>
 		/// <param name="text">Text to be word wrapped</param>
 		/// <param name="width">Width, in characters, to which the text should be word wrapped</param>
 		/// <returns>The modified text</returns>
@@ -53,7 +58,190 @@ namespace pr.extn
 			}
 			return sb.ToString();
 		}
+
+		//public static string HaackFormat(this string format, object source)
+		//{
+		//    var formattedStrings = (from expression in SplitFormat(format) select expression.Eval(source)).ToArray();
+		//    return string.Join("", formattedStrings);
+		//}
+
+		//private static int IndexOfSingle(string format, int start_index, char ch)
+		//{
+		//    for (int idx = format.IndexOf(ch, start_index); idx != -1; idx = format.IndexOf(ch,idx+1))
+		//    {
+		//        if (idx + 1 < format.Length && format[idx+1] == ch) continue;
+		//        return idx;
+		//    }
+		//    return -1;
+		//}
+
+		//private static IEnumerable<string> SplitFormat(string format)
+		//{
+		//    int exprEndIndex = -1;
+		//    int expStartIndex;
+		//    do
+		//    {
+		//        expStartIndex = IndexOfSingle(format, exprEndIndex + 1, '{');
+		//        if (expStartIndex == -1)
+		//        {
+		//            //everything after last end brace index.
+		//            if (exprEndIndex + 1 < format.Length)
+		//            {
+		//                yield return new LiteralFormat(format.Substring(exprEndIndex + 1));
+		//            }
+		//            break;
+		//        }
+
+		//        if (expStartIndex - exprEndIndex - 1 > 0)
+		//        {
+		//            //everything up to next start brace index
+		//            yield return new LiteralFormat(format.Substring(exprEndIndex + 1, expStartIndex - exprEndIndex - 1));
+		//        }
+
+		//        int endBraceIndex = IndexOfSingle(format, expStartIndex + 1, '}');
+		//        if (endBraceIndex < 0)
+		//        {
+		//            //rest of string, no end brace (could be invalid expression)
+		//            yield return new FormatExpression(format.Substring(expStartIndex));
+		//        }
+		//        else
+		//        {
+		//            exprEndIndex = endBraceIndex;
+		//            //everything from start to end brace.
+		//            yield return new FormatExpression(format.Substring(expStartIndex, endBraceIndex - expStartIndex + 1));
+
+		//        }
+		//    }
+		//    while (expStartIndex > -1);
+		//}
+
+
+  //static int IndexOfExpressionEnd(this string format, int startIndex)
+  //{
+  //  int endBraceIndex = format.IndexOf('}', startIndex);
+  //  if (endBraceIndex == -1) {
+  //    return endBraceIndex;
+  //  }
+  //  //start peeking ahead until there are no more braces...
+  //  // }}}}
+  //  int braceCount = 0;
+  //  for (int i = endBraceIndex + 1; i < format.Length; i++) {
+  //    if (format[i] == '}') {
+  //      braceCount++;
+  //    }
+  //    else {
+  //      break;
+  //    }
+  //  }
+  //  if (braceCount % 2 == 1) {
+  //    return IndexOfExpressionEnd(format, endBraceIndex + braceCount + 1);
+  //  }
+
+  //  return endBraceIndex;
+  //}
+	
 	}
+
+	/*
+	 * public static class HaackFormatter
+{
+  
+
+
+
+}
+And the code for the supporting classes
+public class FormatExpression : ITextExpression
+{
+  bool _invalidExpression = false;
+
+  public FormatExpression(string expression) {
+    if (!expression.StartsWith("{") || !expression.EndsWith("}")) {
+      _invalidExpression = true;
+      Expression = expression;
+      return;
+    }
+
+    string expressionWithoutBraces = expression.Substring(1
+        , expression.Length - 2);
+    int colonIndex = expressionWithoutBraces.IndexOf(':');
+    if (colonIndex < 0) {
+      Expression = expressionWithoutBraces;
+    }
+    else {
+      Expression = expressionWithoutBraces.Substring(0, colonIndex);
+      Format = expressionWithoutBraces.Substring(colonIndex + 1);
+    }
+  }
+
+  public string Expression { 
+    get; 
+    private set; 
+  }
+
+  public string Format
+  {
+    get;
+    private set;
+  }
+
+  public string Eval(object o) {
+    if (_invalidExpression) {
+      throw new FormatException("Invalid expression");
+    }
+    try
+    {
+      if (String.IsNullOrEmpty(Format))
+      {
+        return (DataBinder.Eval(o, Expression) ?? string.Empty).ToString();
+      }
+      return (DataBinder.Eval(o, Expression, "{0:" + Format + "}") ?? 
+        string.Empty).ToString();
+    }
+    catch (ArgumentException) {
+      throw new FormatException();
+    }
+    catch (HttpException) {
+      throw new FormatException();
+    }
+  }
+}
+
+public class LiteralFormat : ITextExpression
+{
+  public LiteralFormat(string literalText) {
+    LiteralText = literalText;
+  }
+
+  public string LiteralText { 
+    get; 
+    private set; 
+  }
+
+  public string Eval(object o) {
+    string literalText = LiteralText
+        .Replace("{{", "{")
+        .Replace("}}", "}");
+    return literalText;
+  }
+}
+	 * 
+	 * 
+	 * 
+	 * static string Format( this string str
+, params Expression<Func<string,object>[] args)
+{ var parameters=args.ToDictionary
+( e=>string.Format("{{{0}}}",e.Parameters[0].Name)
+,e=>e.Compile()(e.Parameters[0].Name));
+
+var sb = new StringBuilder(str);
+foreach(var kv in parameters) 
+{ sb.Replace( kv.Key
+,kv.Value != null ? kv.Value.ToString() : ""); 
+} 
+return sb.ToString();
+}
+	 */
 }
 
 #if PR_UNITTESTS
