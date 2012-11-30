@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -167,6 +168,9 @@ namespace pr.common
 			Serialized   = 3
 		}
 
+		/// <summary>The format string used to store/retrieve date time objects</summary>
+		public const string DateTimeFormatString = "yyyy-MM-dd HH:mm:ss.FFFFFFFK";
+
 		#endregion
 
 		#region Global methods
@@ -201,9 +205,10 @@ namespace pr.common
 			if (type == typeof(Single)   ||
 				type == typeof(Double))
 				return DataType.Real;
-			if (type == typeof(String)   ||
-				type == typeof(DateTime) ||
-				type == typeof(Guid)     ||
+			if (type == typeof(String)         ||
+				type == typeof(DateTime)       ||
+				type == typeof(DateTimeOffset) ||
+				type == typeof(Guid)           ||
 				type == typeof(Decimal))
 				return DataType.Text;
 			if (type == typeof(byte[]))
@@ -408,39 +413,46 @@ namespace pr.common
 			public static void DateTime(sqlite3_stmt stmt, int idx, object value)
 			{
 				if (value == null) sqlite3_bind_null(stmt, idx);
-				else Text(stmt, idx, ((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss.FFFFFFF"));
+				else Text(stmt, idx, ((DateTime)value).ToString(DateTimeFormatString, CultureInfo.InvariantCulture));
+			}
+			public static void DateTimeOffset(sqlite3_stmt stmt, int idx, object value)
+			{
+				if (value == null) sqlite3_bind_null(stmt, idx);
+				else Text(stmt, idx, ((DateTimeOffset)value).ToString(DateTimeFormatString, CultureInfo.InvariantCulture));
+			}
+			
+			public delegate void Func(sqlite3_stmt stmt, int index, object obj);
+			public class Map :Dictionary<Type, Func>
+			{
+				public Map()
+				{
+					Add(typeof(bool)           ,Bool          );
+					Add(typeof(sbyte)          ,SByte         );
+					Add(typeof(byte)           ,Byte          );
+					Add(typeof(char)           ,Char          );
+					Add(typeof(short)          ,Short         );
+					Add(typeof(ushort)         ,UShort        );
+					Add(typeof(int)            ,Int           );
+					Add(typeof(uint)           ,UInt          );
+					Add(typeof(long)           ,Long          );
+					Add(typeof(ulong)          ,ULong         );
+					Add(typeof(decimal)        ,Decimal       );
+					Add(typeof(float)          ,Float         );
+					Add(typeof(double)         ,Double        );
+					Add(typeof(string)         ,Text          );
+					Add(typeof(byte[])         ,Blob          );
+					Add(typeof(Guid)           ,Guid          );
+					Add(typeof(DateTime)       ,DateTime      );
+					Add(typeof(DateTimeOffset) ,DateTimeOffset);
+				}
 			}
 		}
 
 		/// <summary>
 		/// A lookup table from ClrType to binding function.
 		/// Users can add custom types and binding functions to this map if needed</summary>
-		public static readonly Dictionary<Type, BindFunc> BindFunction = new BindMap();
-		public delegate void BindFunc(sqlite3_stmt stmt, int index, object obj);
-		private class BindMap :Dictionary<Type, BindFunc>
-		{
-			public BindMap()
-			{
-				Add(typeof(bool)     ,Bind.Bool    );
-				Add(typeof(sbyte)    ,Bind.SByte   );
-				Add(typeof(byte)     ,Bind.Byte    );
-				Add(typeof(char)     ,Bind.Char    );
-				Add(typeof(short)    ,Bind.Short   );
-				Add(typeof(ushort)   ,Bind.UShort  );
-				Add(typeof(int)      ,Bind.Int     );
-				Add(typeof(uint)     ,Bind.UInt    );
-				Add(typeof(long)     ,Bind.Long    );
-				Add(typeof(ulong)    ,Bind.ULong   );
-				Add(typeof(decimal)  ,Bind.Decimal );
-				Add(typeof(float)    ,Bind.Float   );
-				Add(typeof(double)   ,Bind.Double  );
-				Add(typeof(string)   ,Bind.Text    );
-				Add(typeof(byte[])   ,Bind.Blob    );
-				Add(typeof(Guid)     ,Bind.Guid    );
-				Add(typeof(DateTime) ,Bind.DateTime);
-			}
-		}
-
+		public static readonly Bind.Map BindFunction = new Bind.Map();
+		
 		#endregion
 
 		#region Reading - Reading columns from a query result into a Clr Object
@@ -534,38 +546,45 @@ namespace pr.common
 			public static object DateTime(sqlite3_stmt stmt, int idx)
 			{
 				string text = (string)Text(stmt, idx);
-				return System.DateTime.Parse(text);
+				return System.DateTime.ParseExact(text, DateTimeFormatString, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			}
+			public static object DateTimeOffset(sqlite3_stmt stmt, int idx)
+			{
+				string text = (string)Text(stmt, idx);
+				return System.DateTimeOffset.ParseExact(text, DateTimeFormatString, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+			}
+			
+			public delegate object Func(sqlite3_stmt stmt, int index);
+			public class Map :Dictionary<Type, Func>
+			{
+				public Map()
+				{
+					Add(typeof(bool)           ,Bool          );
+					Add(typeof(sbyte)          ,SByte         );
+					Add(typeof(byte)           ,Byte          );
+					Add(typeof(char)           ,Char          );
+					Add(typeof(short)          ,Short         );
+					Add(typeof(ushort)         ,UShort        );
+					Add(typeof(int)            ,Int           );
+					Add(typeof(uint)           ,UInt          );
+					Add(typeof(long)           ,Long          );
+					Add(typeof(ulong)          ,ULong         );
+					Add(typeof(decimal)        ,Decimal       );
+					Add(typeof(float)          ,Float         );
+					Add(typeof(double)         ,Double        );
+					Add(typeof(string)         ,Text          );
+					Add(typeof(byte[])         ,Blob          );
+					Add(typeof(Guid)           ,Guid          );
+					Add(typeof(DateTime)       ,DateTime      );
+					Add(typeof(DateTimeOffset) ,DateTimeOffset);
+				}
 			}
 		}
 
 		/// <summary>
 		/// A lookup table from ClrType to reading function.
 		/// Users can add custom types and reading functions to this map if needed</summary>
-		public static readonly Dictionary<Type, ReadFunc> ReadFunction = new ReadMap();
-		public delegate object ReadFunc(sqlite3_stmt stmt, int index);
-		private class ReadMap :Dictionary<Type, ReadFunc>
-		{
-			public ReadMap()
-			{
-				Add(typeof(bool)     ,Read.Bool    );
-				Add(typeof(sbyte)    ,Read.SByte   );
-				Add(typeof(byte)     ,Read.Byte    );
-				Add(typeof(char)     ,Read.Char    );
-				Add(typeof(short)    ,Read.Short   );
-				Add(typeof(ushort)   ,Read.UShort  );
-				Add(typeof(int)      ,Read.Int     );
-				Add(typeof(uint)     ,Read.UInt    );
-				Add(typeof(long)     ,Read.Long    );
-				Add(typeof(ulong)    ,Read.ULong   );
-				Add(typeof(decimal)  ,Read.Decimal );
-				Add(typeof(float)    ,Read.Float   );
-				Add(typeof(double)   ,Read.Double  );
-				Add(typeof(string)   ,Read.Text    );
-				Add(typeof(byte[])   ,Read.Blob    );
-				Add(typeof(Guid)     ,Read.Guid    );
-				Add(typeof(DateTime) ,Read.DateTime);
-			}
-		}
+		public static readonly Read.Map ReadFunction = new Read.Map();
 
 		#endregion
 
@@ -2039,10 +2058,10 @@ namespace pr.common
 			public Action<object,object> Set { get; set; }
 			
 			/// <summary>Binds the value from this column to parameter 'index' in 'stmt'</summary>
-			public BindFunc BindFn;
+			public Bind.Func BindFn;
 			
 			/// <summary>Reads column 'index' from 'stmt' and sets the corresponding property or field in 'obj'</summary>
-			public ReadFunc ReadFn;
+			public Read.Func ReadFn;
 			
 			public ColumnMetaData(PropertyInfo pi)
 			{
@@ -2565,6 +2584,8 @@ namespace pr
 {
 	using NUnit.Framework;
 	using System.Data.Linq.SqlClient;
+	using System.IO;
+	using System.Text.RegularExpressions;
 	using common;
 	
 	[TestFixture] internal static partial class UnitTests
@@ -2626,28 +2647,29 @@ namespace pr
 		private class DomType1
 		{
 			[Sqlite.Column(Order= 0, PrimaryKey = true, AutoInc = true, Constraints = "not null")] public int m_key;
-			[Sqlite.Column(Order= 1)] protected bool      m_bool;
-			[Sqlite.Column(Order= 2)] public sbyte        m_sbyte;
-			[Sqlite.Column(Order= 3)] public byte         m_byte;
-			[Sqlite.Column(Order= 4)] private char        m_char;
-			[Sqlite.Column(Order= 5)] private short       m_short {get;set;}
-			[Sqlite.Column(Order= 6)] public ushort       m_ushort {get;set;}
-			[Sqlite.Column(Order= 7)] public int          m_int;
-			[Sqlite.Column(Order= 8)] public uint         m_uint;
-			[Sqlite.Column(Order= 9)] public long         m_int64;
-			[Sqlite.Column(Order=10)] public ulong        m_uint64;
-			[Sqlite.Column(Order=11)] public decimal      m_decimal;
-			[Sqlite.Column(Order=12)] public float        m_float;
-			[Sqlite.Column(Order=13)] public double       m_double;
-			[Sqlite.Column(Order=14)] public string       m_string;
-			[Sqlite.Column(Order=15)] public byte[]       m_buf;
-			[Sqlite.Column(Order=16)] public byte[]       m_empty_buf;
-			[Sqlite.Column(Order=17)] public Guid         m_guid;
-			[Sqlite.Column(Order=18)] public SomeEnum     m_enum;
-			[Sqlite.Column(Order=19)] public DateTime     m_datetime;
-			[Sqlite.Column(Order=20, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
-			[Sqlite.Column(Order=21)] public int?         m_nullint;
-			[Sqlite.Column(Order=22)] public long?        m_nulllong;
+			[Sqlite.Column(Order= 1)] protected bool        m_bool;
+			[Sqlite.Column(Order= 2)] public sbyte          m_sbyte;
+			[Sqlite.Column(Order= 3)] public byte           m_byte;
+			[Sqlite.Column(Order= 4)] private char          m_char;
+			[Sqlite.Column(Order= 5)] private short         m_short {get;set;}
+			[Sqlite.Column(Order= 6)] public ushort         m_ushort {get;set;}
+			[Sqlite.Column(Order= 7)] public int            m_int;
+			[Sqlite.Column(Order= 8)] public uint           m_uint;
+			[Sqlite.Column(Order= 9)] public long           m_int64;
+			[Sqlite.Column(Order=10)] public ulong          m_uint64;
+			[Sqlite.Column(Order=11)] public decimal        m_decimal;
+			[Sqlite.Column(Order=12)] public float          m_float;
+			[Sqlite.Column(Order=13)] public double         m_double;
+			[Sqlite.Column(Order=14)] public string         m_string;
+			[Sqlite.Column(Order=15)] public byte[]         m_buf;
+			[Sqlite.Column(Order=16)] public byte[]         m_empty_buf;
+			[Sqlite.Column(Order=17)] public Guid           m_guid;
+			[Sqlite.Column(Order=18)] public SomeEnum       m_enum;
+			[Sqlite.Column(Order=19)] public DateTime       m_datetime;
+			[Sqlite.Column(Order=20)] public DateTimeOffset m_dt_offset;
+			[Sqlite.Column(Order=21, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
+			[Sqlite.Column(Order=22)] public int?           m_nullint;
+			[Sqlite.Column(Order=23)] public long?          m_nulllong;
 			
 			// ReSharper disable UnusedAutoPropertyAccessor.Local
 			public int Ignored { get; set; }
@@ -2656,30 +2678,31 @@ namespace pr
 			public DomType1() {}
 			public DomType1(int val)
 			{
-				m_key        = -1;
-				m_bool       = true;
-				m_char       = 'X';
-				m_sbyte      = 12;
-				m_byte       = 12;
-				m_short      = 1234;
-				m_ushort     = 1234;
-				m_int        = 12345678;
-				m_uint       = 12345678;
-				m_int64      = 1234567890000;
-				m_uint64     = 1234567890000;
-				m_decimal    = 1234567890.123467890m;
-				m_float      = 1.234567f;
-				m_double     = 1.2345678987654321;
-				m_string     = "string";
-				m_buf        = new byte[]{0,1,2,3,4,5,6,7,8,9};
-				m_empty_buf  = null;
-				m_guid       = Guid.NewGuid();
-				m_enum       = SomeEnum.One;
-				m_datetime   = DateTime.Now;
-				m_custom     = new Custom();
-				m_nullint    = 23;
-				m_nulllong   = null;
-				Ignored      = val;
+				m_key       = -1;
+				m_bool      = true;
+				m_char      = 'X';
+				m_sbyte     = 12;
+				m_byte      = 12;
+				m_short     = 1234;
+				m_ushort    = 1234;
+				m_int       = 12345678;
+				m_uint      = 12345678;
+				m_int64     = 1234567890000;
+				m_uint64    = 1234567890000;
+				m_decimal   = 1234567890.123467890m;
+				m_float     = 1.234567f;
+				m_double    = 1.2345678987654321;
+				m_string    = "string";
+				m_buf       = new byte[]{0,1,2,3,4,5,6,7,8,9};
+				m_empty_buf = null;
+				m_guid      = Guid.NewGuid();
+				m_enum      = SomeEnum.One;
+				m_datetime  = DateTime.Now;
+				m_dt_offset = DateTimeOffset.Now;
+				m_custom    = new Custom();
+				m_nullint   = 23;
+				m_nulllong  = null;
+				Ignored     = val;
 			}
 			public bool Equals(DomType1 other)
 			{
@@ -2704,7 +2727,8 @@ namespace pr
 				if (!Equals(other.m_empty_buf, m_empty_buf) ) return false;
 				if (!Equals(other.m_enum, m_enum)           ) return false;
 				if (!other.m_guid.Equals(m_guid)            ) return false;
-				if (!other.m_datetime.Equals(m_datetime)    ) return false;
+				if (!other.m_datetime.Equals(m_datetime) || other.m_datetime.Kind != m_datetime.Kind) return false;
+				if (!other.m_dt_offset.Equals(m_dt_offset)) return false;
 				if (!other.m_custom.Equals(m_custom)        ) return false;
 				if (Math.Abs(other.m_float   - m_float  ) > float .Epsilon) return false;
 				if (Math.Abs(other.m_double  - m_double ) > double.Epsilon) return false;
@@ -2839,6 +2863,11 @@ namespace pr
 			if (TestSqlite_OneTimeOnly_Done) return;
 			TestSqlite_OneTimeOnly_Done = true;
 
+			// Copy sqlite3.dll to test folder
+			var src_dir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\sqlite\lib\"));
+			var src_file = Regex.Replace(Environment.CurrentDirectory, @"(.*)\\(.*?)\\(.*?)$", "sqlite3.$2.$3.dll");
+			File.Copy(Path.Combine(src_dir, src_file), Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
+
 			// Register custom type bind/read methods
 			Sqlite.BindFunction.Add(typeof(Custom), Custom.SqliteBind);
 			Sqlite.ReadFunction.Add(typeof(Custom), Custom.SqliteRead);
@@ -2902,10 +2931,10 @@ namespace pr
 				
 				// Check the table
 				var table = db.Table<DomType1>();
-				Assert.AreEqual(23, table.ColumnCount);
+				Assert.AreEqual(24, table.ColumnCount);
 				using (var q = table.Query("select * from "+table.Name))
 				{
-					Assert.AreEqual(23, q.ColumnCount);
+					Assert.AreEqual(24, q.ColumnCount);
 					Assert.AreEqual("m_key"       ,q.ColumnName( 0));
 					Assert.AreEqual("m_bool"      ,q.ColumnName( 1));
 					Assert.AreEqual("m_sbyte"     ,q.ColumnName( 2));
@@ -2926,15 +2955,19 @@ namespace pr
 					Assert.AreEqual("m_guid"      ,q.ColumnName(17));
 					Assert.AreEqual("m_enum"      ,q.ColumnName(18));
 					Assert.AreEqual("m_datetime"  ,q.ColumnName(19));
-					Assert.AreEqual("m_custom"    ,q.ColumnName(20));
-					Assert.AreEqual("m_nullint"   ,q.ColumnName(21));
-					Assert.AreEqual("m_nulllong"  ,q.ColumnName(22));
+					Assert.AreEqual("m_dt_offset" ,q.ColumnName(20));
+					Assert.AreEqual("m_custom"    ,q.ColumnName(21));
+					Assert.AreEqual("m_nullint"   ,q.ColumnName(22));
+					Assert.AreEqual("m_nulllong"  ,q.ColumnName(23));
 				}
 				
 				// Create some objects to stick in the table
 				var obj1 = new DomType1(5);
 				var obj2 = new DomType1(6);
 				var obj3 = new DomType1(7);
+				obj2.m_datetime = obj2.m_datetime.ToLocalTime();
+				obj3.m_datetime = obj3.m_datetime.ToUniversalTime();
+				obj2.m_dt_offset = DateTimeOffset.UtcNow;
 				
 				// Insert stuff
 				Assert.AreEqual(1, table.Insert(obj1));
