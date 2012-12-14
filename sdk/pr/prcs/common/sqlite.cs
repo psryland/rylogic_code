@@ -904,21 +904,14 @@ namespace pr.common
 		{
 			protected readonly TableMetaData m_meta;
 			protected readonly Database m_db; // The handle for the database connection
-			
-			/// <summary>Lazy created command for table enumeration. Set to null to start a new command</summary>
-			protected CmdExpr Cmd
-			{
-				get { return m_cmd ?? (m_cmd = new CmdExpr()); }
-				set { Debug.Assert(value == null); m_cmd = null; }
-			}
-			private CmdExpr m_cmd;
-			
+			protected readonly CmdExpr m_cmd;
+
 			public Table(Type type, Database db)
 			{
 				if (db.Handle.IsInvalid) throw new ArgumentNullException("db", "Invalid database handle");
 				m_meta = TableMetaData.GetMetaData(type);
 				m_db   = db;
-				m_cmd  = null;
+				m_cmd  = new CmdExpr();
 			}
 
 			/// <summary>The name of this table</summary>
@@ -938,9 +931,8 @@ namespace pr.common
 			{
 				get
 				{
-					Cmd = null;
-					Cmd.Generate(m_meta.Type, "count(*)");
-					return m_db.ExecuteScalar(Cmd.SqlString, Cmd.Arguments);
+					GenerateExpression("count(*)");
+					try { return m_db.ExecuteScalar(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
 				}
 			}
 
@@ -1127,9 +1119,8 @@ namespace pr.common
 			/// <summary>IEnumerable interface</summary>
 			IEnumerator IEnumerable.GetEnumerator()
 			{
-				Cmd = null;
-				Cmd.Generate(m_meta.Type, "*");
-				using (var query = new Query(m_db, Cmd.SqlString, Cmd.Arguments))
+				GenerateExpression();
+				using (var query = new Query(m_db, m_cmd.SqlString, m_cmd.Arguments))
 				{
 					while (query.Step())
 					{
@@ -1138,8 +1129,23 @@ namespace pr.common
 						yield return item;
 					}
 				}
+				// Don't put this in a finally block because it gets called for each yield return
+				ResetExpression();
 			}
 
+
+			/// <summary>Generate the sql string and arguments</summary>
+			public Table GenerateExpression(string select = "*") { m_cmd.Generate(m_meta.Type, select); return this; }
+
+			/// <summary>Resets the generated sql string and arguments. Mainly used when an expression is generated but not used</summary>
+			public Table ResetExpression() { m_cmd.Reset(); return this; }
+
+			/// <summary>Read only access to the generated sql string</summary>
+			public string SqlString { get { return m_cmd.SqlString; } }
+
+			/// <summary>Read only access to the generated sql arguments</summary>
+			public List<object> Arguments { get { return m_cmd.Arguments; } }
+ 
 			/// <summary>Wraps an sql expression for enumerating the rows of this table</summary>
 			protected class CmdExpr
 			{
@@ -1156,18 +1162,35 @@ namespace pr.common
 				/// <summary>Arguments for '?'s in the generated SqlString. Invalid until 'Generate()' is called</summary>
 				public List<object> Arguments { get; private set; }
 
+				/// <summary>A flag to indicate that the expression has been used</summary>
+				public void Reset()
+				{
+					m_where = null;
+					m_order = null;
+					m_take = null;
+					m_skip = null;
+				}
+
+				/// <summary>Helper for resetting the generated string an arguments</summary>
+				public void Ungenerate()
+				{
+					SqlString = null;
+					Arguments = null;
+				}
+
 				/// <summary>Add a 'where' clause to the command</summary>
 				public void Where(Expression expr)
 				{
+					Ungenerate();
 					var lambda = expr as LambdaExpression;
 					if (lambda != null) expr = lambda.Body;
 					m_where = m_where == null ? expr : Expression.AndAlso(m_where, expr);
-					SqlString = null;
 				}
 
 				/// <summary>Add an 'order by' clause to the command</summary>
 				public void OrderBy(Expression expr, bool ascending)
 				{
+					Ungenerate();
 					var lambda = expr as LambdaExpression;
 					if (lambda != null) expr = lambda.Body;
 					
@@ -1178,27 +1201,25 @@ namespace pr.common
 					if (m_order == null) m_order = ""; else m_order += ",";
 					m_order += name;
 					if (!ascending) m_order += " desc";
-					SqlString = null;
 				}
 
 				/// <summary>Add a limit to the number of rows returned</summary>
 				public void Take(int n)
 				{
+					Ungenerate();
 					m_take = n;
-					SqlString = null;
 				}
 
 				/// <summary>Add an offset to the first row returned</summary>
 				public void Skip(int n)
 				{
+					Ungenerate();
 					m_skip = n;
-					SqlString = null;
 				}
 
 				/// <summary>Return an sql string representing this command</summary>
-				public string Generate(Type type, string select)
+				public void Generate(Type type, string select)
 				{
-					if (SqlString != null) return SqlString;
 					var meta = TableMetaData.GetMetaData(type);
 					var cmd = new StringBuilder(Sql("select ",select," from ",meta.Name));
 					var args = new List<object>();
@@ -1221,11 +1242,10 @@ namespace pr.common
 						if (!m_take.HasValue) cmd.Append(" limit -1 ");
 						cmd.Append(" offset ").Append(m_skip.Value);
 					}
-
+					
 					SqlString = cmd.ToString();
 					Arguments = args;
-					Trace.WriteLine("Sql expression generated: " + ToString());
-					return SqlString;
+					Debug.WriteLine("Sql expression generated: " + ToString());
 				}
 
 				/// <summary>
@@ -1463,53 +1483,77 @@ namespace pr.common
 				return Get<T>(key1);
 			}
 
-			/// <summary>IEnumerable interface</summary>
-			IEnumerator<T> IEnumerable<T>.GetEnumerator()
+			/// <summary>Return the first row. Throws if no rows found</summary>
+			public T First()
 			{
-				foreach (var t in (IEnumerable)this)
-					yield return (T)t;
+				m_cmd.Take(1);
+				try { return ((IEnumerable<T>)this).First(); } finally { m_cmd.Reset(); }
+			}
+			public T First(Expression<Func<T,bool>> pred)
+			{
+				m_cmd.Where(pred);
+				return First();
+			}
+
+			/// <summary>Return the first row or null</summary>
+			public T FirstOrDefault()
+			{
+				m_cmd.Take(1);
+				try { return ((IEnumerable<T>)this).FirstOrDefault(); } finally { m_cmd.Reset(); }
+			}
+			public T FirstOrDefault(Expression<Func<T,bool>> pred)
+			{
+				m_cmd.Where(pred);
+				return FirstOrDefault();
 			}
 
 			/// <summary>Add a 'count' clause to row enumeration</summary>
 			public int Count(Expression<Func<T,bool>> pred)
 			{
-				Cmd.Where(pred);
+				m_cmd.Where(pred);
 				return RowCount;
 			}
 
 			/// <summary>Add a 'where' clause to row enumeration</summary>
 			public Table<T> Where(Expression<Func<T,bool>> pred)
 			{
-				Cmd.Where(pred);
+				m_cmd.Where(pred);
 				return this;
 			}
 
 			/// <summary>Add an 'OrderBy' clause to row enumeration</summary>
 			public Table<T> OrderBy<U>(Expression<Func<T,U>> pred)
 			{
-				Cmd.OrderBy(pred, true);
+				m_cmd.OrderBy(pred, true);
 				return this;
 			}
 
 			/// <summary>Add an 'OrderByDescending' clause to row enumeration</summary>
 			public Table<T> OrderByDescending<U>(Expression<Func<T,U>> pred)
 			{
-				Cmd.OrderBy(pred, false);
+				m_cmd.OrderBy(pred, false);
 				return this;
 			}
 
 			/// <summary>Add a 'limit' clause to row enumeration</summary>
 			public Table<T> Take(int n)
 			{
-				Cmd.Take(n);
+				m_cmd.Take(n);
 				return this;
 			}
 
 			/// <summary>Add an 'offset' clause to row enumeration</summary>
 			public Table<T> Skip(int n)
 			{
-				Cmd.Skip(n);
+				m_cmd.Skip(n);
 				return this;
+			}
+
+			/// <summary>IEnumerable interface</summary>
+			IEnumerator<T> IEnumerable<T>.GetEnumerator()
+			{
+				foreach (var t in (IEnumerable)this)
+					yield return (T)t;
 			}
 		}
 
@@ -3065,7 +3109,7 @@ namespace pr
 				Assert.IsTrue(obj2.Equals(objs[0]));
 				
 				// Linq expression test against nullable
-				int target = 23;
+				const int target = 23;
 				var qq = table.Where(x => x.m_nullint == target);
 				objs = qq.ToArray();
 				Assert.AreEqual(3, objs.Length);
@@ -3521,6 +3565,23 @@ namespace pr
 					Assert.AreEqual(7, list[2].Inc_Key);
 					Assert.AreEqual(6, list[3].Inc_Key);
 					Assert.AreEqual(3, list[4].Inc_Key);
+				}
+				{//Check sql strings are correct
+					string sql;
+					
+					sql = table.Where(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
+					
+					sql = table.Where(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
+					
+					var t = table.FirstOrDefault(x => x.Inc_Key == 4);
+					sql = table.SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
+					
+					var l = table.Where(x => x.Inc_Key == 4).Take(4).Skip(2).ToList();
+					sql = table.SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
 				}
 			}
 		}
