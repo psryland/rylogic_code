@@ -906,7 +906,11 @@ namespace pr.common
 			protected readonly Database m_db; // The handle for the database connection
 			
 			/// <summary>Lazy created command for table enumeration. Set to null to start a new command</summary>
-			protected CmdExpr Cmd { get { return m_cmd ?? (m_cmd = new CmdExpr()); } set { Debug.Assert(value == null); m_cmd = null; } }
+			protected CmdExpr Cmd
+			{
+				get { return m_cmd ?? (m_cmd = new CmdExpr()); }
+				set { Debug.Assert(value == null); m_cmd = null; }
+			}
 			private CmdExpr m_cmd;
 			
 			public Table(Type type, Database db)
@@ -934,12 +938,9 @@ namespace pr.common
 			{
 				get
 				{
-					try
-					{
-						Cmd.Generate(m_meta.Type, "count(*)");
-						return m_db.ExecuteScalar(Cmd.SqlString, Cmd.Arguments);
-					}
-					finally { Cmd = null; }
+					Cmd = null;
+					Cmd.Generate(m_meta.Type, "count(*)");
+					return m_db.ExecuteScalar(Cmd.SqlString, Cmd.Arguments);
 				}
 			}
 
@@ -1126,20 +1127,17 @@ namespace pr.common
 			/// <summary>IEnumerable interface</summary>
 			IEnumerator IEnumerable.GetEnumerator()
 			{
-				try
+				Cmd = null;
+				Cmd.Generate(m_meta.Type, "*");
+				using (var query = new Query(m_db, Cmd.SqlString, Cmd.Arguments))
 				{
-					Cmd.Generate(m_meta.Type, "*");
-					using (var query = new Query(m_db, Cmd.SqlString, Cmd.Arguments))
+					while (query.Step())
 					{
-						while (query.Step())
-						{
-							var item = m_meta.Factory();
-							m_meta.ReadObj(query.Stmt, item);
-							yield return item;
-						}
+						var item = m_meta.Factory();
+						m_meta.ReadObj(query.Stmt, item);
+						yield return item;
 					}
 				}
-				finally { Cmd = null; }
 			}
 
 			/// <summary>Wraps an sql expression for enumerating the rows of this table</summary>
@@ -1164,6 +1162,7 @@ namespace pr.common
 					var lambda = expr as LambdaExpression;
 					if (lambda != null) expr = lambda.Body;
 					m_where = m_where == null ? expr : Expression.AndAlso(m_where, expr);
+					SqlString = null;
 				}
 
 				/// <summary>Add an 'order by' clause to the command</summary>
@@ -1179,23 +1178,27 @@ namespace pr.common
 					if (m_order == null) m_order = ""; else m_order += ",";
 					m_order += name;
 					if (!ascending) m_order += " desc";
+					SqlString = null;
 				}
 
 				/// <summary>Add a limit to the number of rows returned</summary>
 				public void Take(int n)
 				{
 					m_take = n;
+					SqlString = null;
 				}
 
 				/// <summary>Add an offset to the first row returned</summary>
 				public void Skip(int n)
 				{
 					m_skip = n;
+					SqlString = null;
 				}
 
 				/// <summary>Return an sql string representing this command</summary>
 				public string Generate(Type type, string select)
 				{
+					if (SqlString != null) return SqlString;
 					var meta = TableMetaData.GetMetaData(type);
 					var cmd = new StringBuilder(Sql("select ",select," from ",meta.Name));
 					var args = new List<object>();
@@ -1221,6 +1224,7 @@ namespace pr.common
 
 					SqlString = cmd.ToString();
 					Arguments = args;
+					Trace.WriteLine("Sql expression generated: " + ToString());
 					return SqlString;
 				}
 
