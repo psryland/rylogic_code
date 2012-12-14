@@ -862,6 +862,12 @@ namespace pr.common
 			}
 			// ReSharper restore MemberHidesStaticFromOuterClass
 
+			/// <summary>Factory method for creating Sqlite.Transaction instances</summary>
+			public Transaction NewTransaction()
+			{
+				return new Transaction(this);
+			}
+
 			/// <summary>Find a row in a table of type 'T'</summary>
 			public T Find<T>(params object[] keys)
 			{
@@ -1245,10 +1251,22 @@ namespace pr.common
 							if (me.Expression.NodeType == ExpressionType.Parameter)
 								return sb.Append(me.Member.Name);
 							
-							// Get the object that has the member
+							// Try to evaluate the expression
+							var sbb = new StringBuilder();
 							var arrgs = new List<object>();
-							Translate(me.Expression, arrgs, null);
-							if (arrgs.Count != 1) throw new NotSupportedException("Could not find the object instance for MemberExpression: " + me);
+							Translate(me.Expression, arrgs, sbb);
+							
+							// If a value cannot be determined from the expression, write the parameter name instead
+							if (arrgs.Count == 0)
+							{
+								// Special case nullables. This handles this case "table.Where(x => x.nullable.Value == 5)",
+								// i.e. the resulting sql should be "select * from table where nullable == 5"
+								return Nullable.GetUnderlyingType(me.Expression.Type) == null
+									? sb.Append(me.Member.Name)
+									: sb.Append(sbb);
+							}
+							if (arrgs.Count != 1)
+								throw new NotSupportedException("Could not find the object instance for MemberExpression: " + me);
 							
 							// Get the member value
 							object ob;
@@ -1340,7 +1358,7 @@ namespace pr.common
 							var start = args.Count;
 							Translate(ue.Operand, args, sb);
 							for (; start != args.Count; ++start)
-								args[start] = Convert.ChangeType(args[start], ty, null);
+								args[start] = Convert.ChangeType(args[start], Nullable.GetUnderlyingType(ty) ?? ty, null);
 							break;
 						}
 						#endregion
@@ -3041,6 +3059,21 @@ namespace pr
 				objs = (from a in table where a.m_string == "I've been modified" select a).ToArray();
 				Assert.AreEqual(1, objs.Length);
 				Assert.IsTrue(obj2.Equals(objs[0]));
+				
+				// Linq expression test against nullable
+				int target = 23;
+				var qq = table.Where(x => x.m_nullint == target);
+				objs = qq.ToArray();
+				Assert.AreEqual(3, objs.Length);
+				Assert.IsTrue(objs[0].m_nullint == 23);
+				Assert.IsTrue(objs[1].m_nullint == 23);
+				Assert.IsTrue(objs[2].m_nullint == 23);
+				qq = table.Where(x => x.m_nullint.Value == target);
+				objs = qq.ToArray();
+				Assert.AreEqual(3, objs.Length);
+				Assert.IsTrue(objs[0].m_nullint == 23);
+				Assert.IsTrue(objs[1].m_nullint == 23);
+				Assert.IsTrue(objs[2].m_nullint == 23);
 			}
 		}
 		[Test] public static void TestSqlite_MultiplePks()
@@ -3374,6 +3407,33 @@ namespace pr
 				{// Where clause with 'like' method calling 'RowCount'
 					var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
 					Assert.AreEqual(1, q);
+				}
+				{// Where clause with x => true
+					var q = table.Where(x => true);
+					var list = q.ToList();
+					Assert.AreEqual(10, list.Count);
+					Assert.AreEqual(4, list[0].Inc_Key);
+					Assert.AreEqual(1, list[1].Inc_Key);
+					Assert.AreEqual(0, list[2].Inc_Key);
+					Assert.AreEqual(5, list[3].Inc_Key);
+					Assert.AreEqual(7, list[4].Inc_Key);
+					Assert.AreEqual(9, list[5].Inc_Key);
+					Assert.AreEqual(6, list[6].Inc_Key);
+					Assert.AreEqual(3, list[7].Inc_Key);
+					Assert.AreEqual(8, list[8].Inc_Key);
+					Assert.AreEqual(2, list[9].Inc_Key);
+				}
+				{// Where clause with x => x.int == nullable
+					int? nullable = 5;
+					var q = table.Where(x => x.Inc_Key == nullable);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(5, list[0].Inc_Key);
+					
+					q = table.Where(x => x.Inc_Key == nullable.Value);
+					list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(5, list[0].Inc_Key);
 				}
 				{// Contains clause
 					var set = new List<string>{"2","4","8"};

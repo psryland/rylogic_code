@@ -13,7 +13,6 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using pr.gui;
 
 namespace pr.gui
 {
@@ -73,7 +72,7 @@ namespace pr.gui
 		}
 
 		/// <summary>"Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes</summary>
-		[System.ComponentModel.Description("Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes.")]
+		[Description("Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes.")]
 		public bool VirtualNodes { get; set; }
 
 		/// <summary>The grid current node</summary>
@@ -87,8 +86,8 @@ namespace pr.gui
 		}
 
 		/// <summary>The collection of nodes in the grid</summary>
-		[System.ComponentModel.Category("Data")]
-		[System.ComponentModel.Description("The collection of nodes in the grid.")]
+		[Category("Data")]
+		[Description("The collection of nodes in the grid.")]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
 		public TreeGridNodeCollection Nodes
 		{
@@ -147,7 +146,7 @@ namespace pr.gui
 			// ReSharper disable PossibleNullReferenceException
 			// ReSharper disable AccessToModifiedClosure
 			Action<TreeGridNode> sort = null;
-			sort = (node)=>
+			sort = node =>
 			{
 				foreach (TreeGridNode n in node.Nodes)
 					if (n.Nodes.Count >= 2)
@@ -519,8 +518,8 @@ namespace pr.gui
 		}
 
 		/// <summary>The collection of child nodes for this node</summary>
-		[System.ComponentModel.Category("Data")]
-		[System.ComponentModel.Description("The collection of child nodes for this node")]
+		[Category("Data")]
+		[Description("The collection of child nodes for this node")]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
 		public TreeGridNodeCollection Nodes
 		{
@@ -613,8 +612,8 @@ namespace pr.gui
 		}
 
 		/// <summary>The index of the image to use in 'Grid.ImageList' or -1 if none</summary>
-		[System.ComponentModel.Category("Appearance")]
-		[System.ComponentModel.Description("The index of the image to use in 'Grid.ImageList' or -1 if none"), DefaultValue(-1)]
+		[Category("Appearance")]
+		[Description("The index of the image to use in 'Grid.ImageList' or -1 if none"), DefaultValue(-1)]
 		[TypeConverter(typeof(ImageIndexConverter))]
 		[Editor("System.Windows.Forms.Design.ImageIndexEditor", typeof(UITypeEditor))]
 		public int ImageIndex
@@ -813,19 +812,28 @@ namespace pr.gui
 	/// <summary>A cell within the tree column of a TreeGridView</summary>
 	public class TreeGridCell :DataGridViewTextBoxCell
 	{
+		// ReSharper disable FieldCanBeMadeReadOnly.Global
 		/// <summary>Data controlling the indenting behaviour of tree cells</summary>
 		public class Indenting
 		{
 			/// <summary>The size (in px) of the glyph '+' or '-' plus line leading to the text or image</summary>
-			public int m_glyph_width = 15;
+			public int m_glyph_width;
 
 			/// <summary>The distance from the left cell edge to the glyph</summary>
-			public int m_margin = 5;
+			public int m_margin;
 
 			/// <summary>The number of pixels to move in by with each child node</summary>
-			public int m_width = 20;
+			public int m_width;
+
+			public Indenting(int glyph_width = 15, int margin = 5, int width = 20)
+			{
+				m_glyph_width = glyph_width;
+				m_margin      = margin;
+				m_width       = width;
+			}
 		}
 		public static Indenting DefaultIndenting = new Indenting();
+		// ReSharper restore FieldCanBeMadeReadOnly.Global
 		
 		private Indenting m_indent = DefaultIndenting; // Indenting parameters
 		private bool m_calc_padding;                   // Dirty flag for when the cell padding needs calculating
@@ -847,9 +855,15 @@ namespace pr.gui
 		/// <summary>Get/Set the text for this cell</summary>
 		public string Text
 		{
-			get { return (string)Value; }
+			get { return TextFormatter(Value); }
 			set { Value = value; }
 		}
+
+		/// <summary>A customisable method for converting 'Value' to a string</summary>
+		// ReSharper disable FieldCanBeMadeReadOnly.Global
+		public Func<object,string> TextFormatter = DefaultTextFormater;
+		private static readonly Func<object,string> DefaultTextFormater = o => o.ToString();
+		// ReSharper restore FieldCanBeMadeReadOnly.Global
 
 		/// <summary>Get/Set the indenting parameters</summary>
 		public Indenting IndentParams
@@ -963,7 +977,7 @@ namespace pr.gui
 	}
 
 	/// <summary>Column type for the tree column</summary>
-	public class TreeGridColumn : DataGridViewTextBoxColumn
+	public sealed class TreeGridColumn : DataGridViewTextBoxColumn
 	{
 		private Image m_default_node_image;
 		
@@ -1027,6 +1041,7 @@ namespace pr.gui
 namespace pr
 {
 	using NUnit.Framework;
+	using pr.gui;
 	
 	[TestFixture] internal static partial class UnitTests
 	{

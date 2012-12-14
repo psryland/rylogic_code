@@ -20,6 +20,11 @@ set LF=^
 echo A string across!LF!multiple lines
 echo.
 
+echo Test: wait
+echo Waiting for 2 seconds
+call wait 2000
+echo.
+
 echo Test: timestamp
 set timestamp=%date:~-4,4%-%date:~-7,2%-%date:~-10,2% - %time%
 echo Time stamp : %timestamp%
@@ -56,6 +61,7 @@ call remove_trailing_slash a
 echo %a%
 echo.
 
+@echo on
 echo Test: split_path
 set a=rules.Paul
 call split_path a directory file extn
