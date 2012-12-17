@@ -336,8 +336,11 @@ namespace pr.common
 		/// <summary>Methods for binding data to an sqlite prepared statement</summary>
 		public static class Bind
 		{
-			// Could use Convert.ToXYZ() here, but straight casts are faster
-			public static void Bool(sqlite3_stmt stmt, int idx, object value)
+			public static void Null(sqlite3_stmt stmt, int idx)
+			{
+				sqlite3_bind_null(stmt, idx);
+			}
+			public static void Bool(sqlite3_stmt stmt, int idx, object value) // Could use Convert.ToXYZ() here, but straight casts are faster
 			{
 				sqlite3_bind_int(stmt, idx, (bool)value ? 1 : 0);
 			}
@@ -392,22 +395,22 @@ namespace pr.common
 			}
 			public static void Text(sqlite3_stmt stmt, int idx, object value)
 			{
-				if (value == null) sqlite3_bind_null(stmt, idx);
+				if (value == null) Null(stmt, idx);
 				else sqlite3_bind_text16(stmt, idx, (string)value, -1, TransientData);
 			}
 			public static void Blob(sqlite3_stmt stmt, int idx, object value)
 			{
-				if (value == null) sqlite3_bind_null(stmt, idx);
+				if (value == null) Null(stmt, idx);
 				else sqlite3_bind_blob(stmt, idx, (byte[])value, ((byte[])value).Length, TransientData);
 			}
 			public static void Guid(sqlite3_stmt stmt, int idx, object value)
 			{
-				if (value == null) sqlite3_bind_null(stmt, idx);
+				if (value == null) Null(stmt, idx);
 				else Text(stmt, idx, ((Guid)value).ToString());
 			}
 			public static void DateTimeOffset(sqlite3_stmt stmt, int idx, object value)
 			{
-				if (value == null) sqlite3_bind_null(stmt, idx);
+				if (value == null) Null(stmt, idx);
 				else Text(stmt, idx, ((DateTimeOffset)value).ToString("o"));
 			}
 			
@@ -1133,7 +1136,6 @@ namespace pr.common
 				ResetExpression();
 			}
 
-
 			/// <summary>Generate the sql string and arguments</summary>
 			public Table GenerateExpression(string select = "*") { m_cmd.Generate(m_meta.Type, select); return this; }
 
@@ -1154,7 +1156,19 @@ namespace pr.common
 				private int? m_take;
 				private int? m_skip;
 
-				public override string ToString() { return (SqlString ?? "<not generated>") + (Arguments != null ? " ["+string.Join(",",Arguments)+"]" : ""); }
+				public override string ToString()
+				{
+					var sb = new StringBuilder();
+					sb.Append(SqlString ?? "<not generated>");
+					if (Arguments != null)
+					{
+						sb.Append('[');
+						foreach (var a in Arguments) sb.Append(a != null ? a.ToString() : "null").Append(',');
+						sb.Length--;
+						sb.Append(']');
+					}
+					return sb.ToString();
+				}
 
 				/// <summary>The command translated into sql. Invalid until 'Generate()' is called</summary>
 				public string SqlString { get; private set; }
@@ -1194,12 +1208,12 @@ namespace pr.common
 					var lambda = expr as LambdaExpression;
 					if (lambda != null) expr = lambda.Body;
 					
-					var args = new List<object>();
-					var name = Translate(expr, args);
-					if (args.Count != 0) throw new NotSupportedException("OrderBy expressions do not support parameters");
+					var clause = Translate(expr);
+					if (clause.Args.Count != 0)
+						throw new NotSupportedException("OrderBy expressions do not support parameters");
 					
 					if (m_order == null) m_order = ""; else m_order += ",";
-					m_order += name;
+					m_order += clause.Text;
 					if (!ascending) m_order += " desc";
 				}
 
@@ -1221,49 +1235,67 @@ namespace pr.common
 				public void Generate(Type type, string select)
 				{
 					var meta = TableMetaData.GetMetaData(type);
-					var cmd = new StringBuilder(Sql("select ",select," from ",meta.Name));
-					var args = new List<object>();
+					var cmd = new TranslateResult();
+					cmd.Text.Append(Sql("select ",select," from ",meta.Name));
 					
 					if (m_where != null)
 					{
-						var clause = Translate(m_where, args);
-						cmd.Append(" where ").Append(clause);
+						var clause = Translate(m_where);
+						cmd.Text.Append(" where ").Append(clause.Text);
+						cmd.Args.AddRange(clause.Args);
 					}
 					if (m_order != null)
 					{
-						cmd.Append(" order by ").Append(m_order);
+						cmd.Text.Append(" order by ").Append(m_order);
 					}
 					if (m_take.HasValue)
 					{
-						cmd.Append(" limit ").Append(m_take.Value);
+						cmd.Text.Append(" limit ").Append(m_take.Value);
 					}
 					if (m_skip.HasValue)
 					{
-						if (!m_take.HasValue) cmd.Append(" limit -1 ");
-						cmd.Append(" offset ").Append(m_skip.Value);
+						if (!m_take.HasValue) cmd.Text.Append(" limit -1 ");
+						cmd.Text.Append(" offset ").Append(m_skip.Value);
 					}
 					
-					SqlString = cmd.ToString();
-					Arguments = args;
+					SqlString = cmd.Text.ToString();
+					Arguments = cmd.Args;
 					Debug.WriteLine("Sql expression generated: " + ToString());
 				}
 
-				/// <summary>
-				/// Translates an expression into an sql sub-string in 'sb'.
-				/// Returns an object associated with 'expr' where appropriate, otherwise null.</summary>
-				private StringBuilder Translate(Expression expr, List<object> args, StringBuilder sb = null)
+				/// <summary>The result of a call to 'Translate'</summary>
+				private class TranslateResult
 				{
-					sb = sb ?? new StringBuilder();
+					public readonly StringBuilder Text = new StringBuilder();
+					public readonly List<object>  Args = new List<object>();
+				}
+
+				/// <summary>
+				/// Translates an expression into an sql sub-string in 'text'.
+				/// Returns an object associated with 'expr' where appropriate, otherwise null.</summary>
+				private TranslateResult Translate(Expression expr, TranslateResult result = null)
+				{
+					if (result == null)
+						result = new TranslateResult();
 					
 					var binary_expr = expr as BinaryExpression;
 					if (binary_expr != null)
 					{
-						sb.Append("(");
-						Translate(binary_expr.Left ,args ,sb);
+						result.Text.Append("(");
+						Translate(binary_expr.Left ,result);
 					}
 					
 					// Helper for testing if an expression is a null constant
-					Func<Expression, bool> IsNullConstant = exp => exp.NodeType == ExpressionType.Constant && ((ConstantExpression)exp).Value == null;
+					Func<Expression, bool> IsNullConstant = exp =>
+						{
+							if (exp.NodeType == ExpressionType.Constant) return ((ConstantExpression)exp).Value == null;
+							if (Nullable.GetUnderlyingType(exp.Type) != null)
+							{
+								var res = Translate(exp);
+								return res.Args.Count == 1 && res.Args[0] == null;
+							}
+							return false;
+						};
 					
 					switch (expr.NodeType)
 					{
@@ -1273,23 +1305,26 @@ namespace pr.common
 						{
 							var me = (MemberExpression)expr;
 							if (me.Expression.NodeType == ExpressionType.Parameter)
-								return sb.Append(me.Member.Name);
+							{
+								result.Text.Append(me.Member.Name);
+								return result;
+							}
 							
 							// Try to evaluate the expression
-							var sbb = new StringBuilder();
-							var arrgs = new List<object>();
-							Translate(me.Expression, arrgs, sbb);
+							var res = Translate(me.Expression);
 							
 							// If a value cannot be determined from the expression, write the parameter name instead
-							if (arrgs.Count == 0)
+							if (res.Args.Count == 0)
 							{
-								// Special case nullables. This handles this case "table.Where(x => x.nullable.Value == 5)",
+								// Special case for nullables. This handles this case "table.Where(x => x.nullable.Value == 5)",
 								// i.e. the resulting sql should be "select * from table where nullable == 5"
-								return Nullable.GetUnderlyingType(me.Expression.Type) == null
-									? sb.Append(me.Member.Name)
-									: sb.Append(sbb);
+								result.Text.Append(Nullable.GetUnderlyingType(me.Expression.Type) != null
+									? res.Text.ToString()
+									: me.Member.Name);
+								
+								return result;
 							}
-							if (arrgs.Count != 1)
+							if (res.Args.Count != 1 || res.Args[0] == null)
 								throw new NotSupportedException("Could not find the object instance for MemberExpression: " + me);
 							
 							// Get the member value
@@ -1297,28 +1332,26 @@ namespace pr.common
 							switch (me.Member.MemberType)
 							{
 							default: throw new NotSupportedException("MemberExpression: " + me.Member.MemberType.ToString());
-							case MemberTypes.Property: ob = ((PropertyInfo)me.Member).GetValue(arrgs[0], null); break;
-							case MemberTypes.Field:    ob = (   (FieldInfo)me.Member).GetValue(arrgs[0]); break;
+							case MemberTypes.Property: ob = ((PropertyInfo)me.Member).GetValue(res.Args[0], null); break;
+							case MemberTypes.Field:    ob = (   (FieldInfo)me.Member).GetValue(res.Args[0]); break;
 							}
-							
-							Debug.Assert(args != null);
 							
 							// Handle IEnumerable
 							if (ob != null && ob is IEnumerable && !(ob is string))
 							{
-								sb.Append("(");
+								result.Text.Append("(");
 								foreach (var a in (IEnumerable)ob)
 								{
-									args.Add(a);
-									sb.Append("?,");
+									result.Text.Append("?,");
+									result.Args.Add(a);
 								}
-								if (sb[sb.Length-1] != ')') sb.Length--;
-								sb.Append(")");
+								if (result.Text[result.Text.Length-1] != ')') result.Text.Length--;
+								result.Text.Append(")");
 							}
 							else
 							{
-								args.Add(ob);
-								sb.Append("?");
+								result.Text.Append("?");
+								result.Args.Add(ob);
 							}
 							break;
 						}
@@ -1334,24 +1367,30 @@ namespace pr.common
 							case "like":
 								{
 									if (mc.Arguments.Count != 2) throw new NotSupportedException("The only supported 'like' method has 2 parameters");
-									var p0 = Translate(mc.Arguments[0], args);
-									var p1 = Translate(mc.Arguments[1], args);
-									sb.Append("(").Append(p0).Append(" like ").Append(p1).Append(")");
+									var p0 = Translate(mc.Arguments[0]);
+									var p1 = Translate(mc.Arguments[1]);
+									result.Text.Append("(").Append(p0.Text).Append(" like ").Append(p1.Text).Append(")");
+									result.Args.AddRange(p0.Args);
+									result.Args.AddRange(p1.Args);
 									break;
 								}
 							case "contains":
 								{
 									if (mc.Object != null && mc.Arguments.Count == 1) // obj.Contains() calls...
 									{
-										var p0 = Translate(mc.Object, args);
-										var p1 = Translate(mc.Arguments[0], args);
-										sb.Append("(").Append(p1).Append(" in ").Append(p0).Append(")");
+										var p0 = Translate(mc.Object);
+										var p1 = Translate(mc.Arguments[0]);
+										result.Text.Append("(").Append(p1.Text).Append(" in ").Append(p0.Text).Append(")");
+										result.Args.AddRange(p0.Args);
+										result.Args.AddRange(p1.Args);
 									}
 									else if (mc.Object == null && mc.Arguments.Count == 2) // StaticClass.Contains(thing, in_things);
 									{
-										var p0 = Translate(mc.Arguments[0], args);
-										var p1 = Translate(mc.Arguments[1], args);
-										sb.Append("(").Append(p1).Append(" in ").Append(p0).Append(")");
+										var p0 = Translate(mc.Arguments[0]);
+										var p1 = Translate(mc.Arguments[1]);
+										result.Text.Append("(").Append(p1.Text).Append(" in ").Append(p0.Text).Append(")");
+										result.Args.AddRange(p0.Args);
+										result.Args.AddRange(p1.Args);
 									}
 									else
 										throw new NotSupportedException("Unsupported 'contains' method");
@@ -1365,11 +1404,11 @@ namespace pr.common
 						#region Constant
 						{
 							var ob = ((ConstantExpression)expr).Value;
-							if (ob == null) sb.Append("null");
+							if (ob == null) result.Text.Append("null");
 							else
 							{
-								sb.Append("?");
-								args.Add(ob);
+								result.Text.Append("?");
+								result.Args.Add(ob);
 							}
 							break;
 						}
@@ -1379,10 +1418,10 @@ namespace pr.common
 						{
 							var ue = (UnaryExpression)expr;
 							var ty = ue.Type;
-							var start = args.Count;
-							Translate(ue.Operand, args, sb);
-							for (; start != args.Count; ++start)
-								args[start] = Convert.ChangeType(args[start], Nullable.GetUnderlyingType(ty) ?? ty, null);
+							var start = result.Args.Count;
+							Translate(ue.Operand, result);
+							for (; start != result.Args.Count; ++start)
+								result.Args[start] = Convert.ChangeType(result.Args[start], Nullable.GetUnderlyingType(ty) ?? ty, null);
 							break;
 						}
 						#endregion
@@ -1393,51 +1432,52 @@ namespace pr.common
 						#region Unary Expressions
 						{
 							switch (expr.NodeType) {
-							case ExpressionType.Not:            sb.Append(" not "); break;
-							case ExpressionType.UnaryPlus:      sb.Append('+'); break;
-							case ExpressionType.Negate:         sb.Append('-'); break;
-							case ExpressionType.OnesComplement: sb.Append('~'); break;
+							case ExpressionType.Not:            result.Text.Append(" not "); break;
+							case ExpressionType.UnaryPlus:      result.Text.Append('+'); break;
+							case ExpressionType.Negate:         result.Text.Append('-'); break;
+							case ExpressionType.OnesComplement: result.Text.Append('~'); break;
 							}
-							sb.Append("(");
-							Translate(((UnaryExpression)expr).Operand, args, sb);
-							sb.Append(")");
+							result.Text.Append("(");
+							Translate(((UnaryExpression)expr).Operand, result);
+							result.Text.Append(")");
 							break;
 						}
 						#endregion
 					case ExpressionType.Quote:
 						#region Quote
 						{
-							sb.Append('"');
-							Translate(((UnaryExpression)expr).Operand, args, sb);
-							sb.Append('"');
+							result.Text.Append('"');
+							Translate(((UnaryExpression)expr).Operand, result);
+							result.Text.Append('"');
 							break;
 						}
 						#endregion
-					case ExpressionType.Equal:              sb.Append(binary_expr != null && IsNullConstant(binary_expr.Right) ? " is " : "=="); break;
-					case ExpressionType.NotEqual:           sb.Append(binary_expr != null && IsNullConstant(binary_expr.Right) ? " is not " : "!="); break;
-					case ExpressionType.OrElse:             sb.Append(" or "); break;
-					case ExpressionType.AndAlso:            sb.Append(" and "); break;
-					case ExpressionType.Multiply:           sb.Append( "*"); break;
-					case ExpressionType.Divide:             sb.Append( "/"); break;
-					case ExpressionType.Modulo:             sb.Append( "%"); break;
-					case ExpressionType.Add:                sb.Append( "+"); break;
-					case ExpressionType.Subtract:           sb.Append( "-"); break;
-					case ExpressionType.LeftShift:          sb.Append("<<"); break;
-					case ExpressionType.RightShift:         sb.Append("<<"); break;
-					case ExpressionType.And:                sb.Append( "&"); break;
-					case ExpressionType.Or:                 sb.Append( "|"); break;
-					case ExpressionType.LessThan:           sb.Append( "<"); break;
-					case ExpressionType.LessThanOrEqual:    sb.Append("<="); break;
-					case ExpressionType.GreaterThan:        sb.Append( ">"); break;
-					case ExpressionType.GreaterThanOrEqual: sb.Append(">="); break;
+					case ExpressionType.Equal:              result.Text.Append(binary_expr != null && IsNullConstant(binary_expr.Right) ? " is " : "=="); break;
+					case ExpressionType.NotEqual:           result.Text.Append(binary_expr != null && IsNullConstant(binary_expr.Right) ? " is not " : "!="); break;
+					case ExpressionType.OrElse:             result.Text.Append(" or "); break;
+					case ExpressionType.AndAlso:            result.Text.Append(" and "); break;
+					case ExpressionType.Multiply:           result.Text.Append( "*"); break;
+					case ExpressionType.Divide:             result.Text.Append( "/"); break;
+					case ExpressionType.Modulo:             result.Text.Append( "%"); break;
+					case ExpressionType.Add:                result.Text.Append( "+"); break;
+					case ExpressionType.Subtract:           result.Text.Append( "-"); break;
+					case ExpressionType.LeftShift:          result.Text.Append("<<"); break;
+					case ExpressionType.RightShift:         result.Text.Append("<<"); break;
+					case ExpressionType.And:                result.Text.Append( "&"); break;
+					case ExpressionType.Or:                 result.Text.Append( "|"); break;
+					case ExpressionType.LessThan:           result.Text.Append( "<"); break;
+					case ExpressionType.LessThanOrEqual:    result.Text.Append("<="); break;
+					case ExpressionType.GreaterThan:        result.Text.Append( ">"); break;
+					case ExpressionType.GreaterThanOrEqual: result.Text.Append(">="); break;
 					}
 					
 					if (binary_expr != null)
 					{
-						Translate(binary_expr.Right ,args ,sb);
-						sb.Append(")");
+						Translate(binary_expr.Right ,result);
+						result.Text.Append(")");
 					}
-					return sb;
+					
+					return result;
 				}
 			}
 		}
@@ -1649,8 +1689,8 @@ namespace pr.common
 			{
 				foreach (var p in parms)
 				{
-					var bind = BindFunction[p.GetType()];
-					bind(m_stmt, first_idx++, p);
+					if (p == null) Bind.Null(m_stmt, first_idx++);
+					else BindFunction[p.GetType()](m_stmt, first_idx++, p);
 				}
 			}
 
@@ -3107,21 +3147,6 @@ namespace pr
 				objs = (from a in table where a.m_string == "I've been modified" select a).ToArray();
 				Assert.AreEqual(1, objs.Length);
 				Assert.IsTrue(obj2.Equals(objs[0]));
-				
-				// Linq expression test against nullable
-				const int target = 23;
-				var qq = table.Where(x => x.m_nullint == target);
-				objs = qq.ToArray();
-				Assert.AreEqual(3, objs.Length);
-				Assert.IsTrue(objs[0].m_nullint == 23);
-				Assert.IsTrue(objs[1].m_nullint == 23);
-				Assert.IsTrue(objs[2].m_nullint == 23);
-				qq = table.Where(x => x.m_nullint.Value == target);
-				objs = qq.ToArray();
-				Assert.AreEqual(3, objs.Length);
-				Assert.IsTrue(objs[0].m_nullint == 23);
-				Assert.IsTrue(objs[1].m_nullint == 23);
-				Assert.IsTrue(objs[2].m_nullint == 23);
 			}
 		}
 		[Test] public static void TestSqlite_MultiplePks()
@@ -3471,18 +3496,6 @@ namespace pr
 					Assert.AreEqual(8, list[8].Inc_Key);
 					Assert.AreEqual(2, list[9].Inc_Key);
 				}
-				{// Where clause with x => x.int == nullable
-					int? nullable = 5;
-					var q = table.Where(x => x.Inc_Key == nullable);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(5, list[0].Inc_Key);
-					
-					q = table.Where(x => x.Inc_Key == nullable.Value);
-					list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(5, list[0].Inc_Key);
-				}
 				{// Contains clause
 					var set = new List<string>{"2","4","8"};
 					var q = from x in table where set.Contains(x.Inc_Value) select x;
@@ -3582,6 +3595,94 @@ namespace pr
 					var l = table.Where(x => x.Inc_Key == 4).Take(4).Skip(2).ToList();
 					sql = table.SqlString;
 					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
+					
+					var q = (from x in table where x.Inc_Key == 3 select new {x.Inc_Key, x.Inc_Value}).ToList();
+					sql = table.SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
+				}
+			}
+		}
+		[Test] public static void TestSqlite_Nullables()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a simple table
+				db.DropTable<DomType1>();
+				db.CreateTable<DomType1>();
+				Assert.IsTrue(db.TableExists<DomType1>());
+				var table = db.Table<DomType1>();
+				
+				// Create some objects to stick in the table
+				var obj1 = new DomType1(1){m_nullint = 1, m_int = 4};
+				var obj2 = new DomType1(2){m_nulllong = null};
+				var obj3 = new DomType1(3){m_nullint = null};
+				var obj4 = new DomType1(4){m_nulllong = 2};
+				
+				// Insert stuff
+				Assert.AreEqual(1, table.Insert(obj1));
+				Assert.AreEqual(1, table.Insert(obj2));
+				Assert.AreEqual(1, table.Insert(obj3));
+				Assert.AreEqual(1, table.Insert(obj4));
+				Assert.AreEqual(4, table.RowCount);
+				
+				{// non-null nullable
+					int? nullable = 1;
+					var q = table.Where(x => x.m_nullint == nullable);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(1, list[0].m_nullint);
+				}
+				{// non-null nullable
+					long? nullable = 2;
+					var q = table.Where(x => x.m_nulllong == nullable.Value);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(2, list[0].m_nulllong);
+				}
+				{// null nullable
+					int? nullable = null;
+					var q = table.Where(x => x.m_nullint == nullable);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(null, list[0].m_nullint);
+				}
+				{// null nullable
+					long? nullable = null;
+					var q = table.Where(x => x.m_nullint == nullable);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(null, list[0].m_nulllong);
+				}
+				{// expression nullable(not null) == non-nullable
+					const int target = 1;
+					var q = table.Where(x => x.m_nullint == target);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(1, list[0].m_nullint);
+				}
+				{// expression non-nullable == nullable(not null)
+					int? target = 4;
+					var q = table.Where(x => x.m_int == target);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(4, list[0].m_int);
+				}
+				{// expression nullable(null) == non-nullable
+					const long target = 2;
+					var q = table.Where(x => x.m_nulllong == target);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(2, list[0].m_nulllong);
+				}
+				{// expression non-nullable == nullable(null)
+					int? target = null;
+					var q = table.Where(x => x.m_int == target);
+					var list = q.ToList();
+					Assert.AreEqual(0, list.Count);
 				}
 			}
 		}
