@@ -2003,6 +2003,7 @@ namespace pr.common
 			{
 				if (first_idx < 1) throw new ArgumentException("Parameter binding indices start at 1 so 'first_idx' must be >= 1");
 				if (Pks.Length != keys.Length) throw new ArgumentException("Not enough primary key values passed for type "+Name);
+				if (Pks.Length == 0) throw new ArgumentException("Attempting to bind primary keys for a type without primary keys");
 				
 				int idx = 0;
 				foreach (var c in Pks)
