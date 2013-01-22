@@ -18,12 +18,12 @@ rem Boilerplate:
 ::	goto :eof
 ::)
 ::call %RylogicEnv%
-::if %RylogicEnvVersion% lss 2 (
+::if %RylogicEnvVersion% lss 3 (
 ::	echo ERROR: '%RylogicEnv%' is out of date. Please update.
 ::	goto :eof
 ::)
 
-set RylogicEnvVersion=2
+set RylogicEnvVersion=3
 
 set user=Paul
 set machine=Rylogic
@@ -32,6 +32,13 @@ set zdrive=Z:
 set cp=xcopy
 set zip=Q:\tools\7za.exe
 set arch=x86
-set vs_dir=D:\Program Files\Microsoft Visual Studio 9.0
+set vs_dir=C:\Program Files ^(x86^)\Microsoft Visual Studio 10.0
 set fxc=%DXSDK_DIR%Utilities\bin\x64\fxc.exe
-set textedit=C:\Program Files (x86)\Notepad++\notepad++.exe
+set textedit=C:\Program Files ^(x86^)\Notepad++\notepad++.exe
+set mergetool=C:\Program Files ^(x86^)\Araxis\Araxis Merge\Merge.exe
+set msbuild=C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe
+set ttbuild=C:\Program Files ^(x86^)\Common Files\Microsoft Shared\TextTemplating\10.0\TextTransform.exe
+set silverlight_root=C:\Program Files ^(x86^)\Microsoft SDKs\Silverlight\v5.0
+set java_sdkdir=C:\Program Files\Java\jdk1.6.0_38
+set android_sdkdir=C:\Program Files ^(x86^)\Android\android-sdk
+set adb=C:\Program Files ^(x86^)\Android\android-sdk\platform-tools\adb.exe

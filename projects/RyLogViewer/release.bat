@@ -2,14 +2,10 @@
 SetLocal EnableDelayedExpansion 
 set PATH=Q:\sdk\pr\cmd\;%PATH%
 cls
-echo =================
-echo Releasing RyLogViewer
-echo =================
-echo.
 
 ::Load Rylogic environment variables and check version
 call %RylogicEnv%
-if %RylogicEnvVersion% lss 1 (
+if %RylogicEnvVersion% lss 3 (
  	echo RylogicEnv.cmd out of date. Please update
 	goto :end
 )
@@ -17,6 +13,19 @@ if %RylogicEnvVersion% lss 1 (
 set srcdir=Q:\projects\rylogviewer
 set dstdir=Q:\bin
 set symdir=Q:\local\symbols
+set proj=%srcdir%\RylogViewer.sln
+set config=release
+
+echo =================
+echo Releasing RyLogViewer
+echo config : %config%
+echo dst dir: %dstdir%
+echo =================
+
+echo.
+echo Building the apk...
+"%msbuild%" "%proj%" /p:Configuration=%config% /t:Build
+if errorlevel 1 goto :error
 
 ::Export for each platform (only x86 at the moment)
 for %%p in (x86) do call :copy_files %%p
