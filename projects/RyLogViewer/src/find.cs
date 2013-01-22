@@ -80,7 +80,7 @@ namespace RyLogViewer
 				return;
 			
 			var start = m_line_index[SelectedRow].End;
-			Log.Info(this, "FindNext starting from {0}", start);
+			Log.Info(this, "FindNext starting from {0}".Fmt(start));
 			
 			long found;
 			if (Find(m_find_ui.Pattern, start, false, out found) && found == -1)
@@ -94,7 +94,7 @@ namespace RyLogViewer
 				return;
 			
 			var start = SelectedRowRange.Begin;
-			Log.Info(this, "FindPrev starting from {0}", start);
+			Log.Info(this, "FindPrev starting from {0}".Fmt(start));
 			
 			long found;
 			if (Find(m_find_ui.Pattern, start, true, out found) && found == -1)

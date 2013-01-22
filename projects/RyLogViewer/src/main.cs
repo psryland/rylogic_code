@@ -64,7 +64,7 @@ namespace RyLogViewer
 			m_startup_options = startup_options;
 			m_settings = new Settings(m_startup_options.SettingsPath);
 			Log.Register(m_settings.LogFilePath, false);
-			Log.Info(this, "App Startup: {0}", DateTime.Now);
+			Log.Info(this, "App Startup: {0}".Fmt(DateTime.Now));
 			
 			InitializeComponent();
 			AllowTransparency = true;
@@ -104,7 +104,7 @@ namespace RyLogViewer
 			// Startup options
 			ApplyStartupOptions();
 			
-			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}", a.Key ,a.OldValue ,a.NewValue);
+			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(a.Key ,a.OldValue ,a.NewValue));
 			
 			// Menu
 			m_menu.Location                          = Point.Empty;
@@ -193,7 +193,7 @@ namespace RyLogViewer
 					// UpdateUI() sets Value when the build is complete.
 					var range = m_scroll_file.ThumbRange;
 					long pos = (range.Begin == 0) ? 0 : (range.End == m_fileend) ? m_fileend : range.Mid;
-					Log.Info(this, "file scroll to {0}", pos);
+					Log.Info(this, "file scroll to {0}".Fmt(pos));
 					BuildLineIndex(pos, false);
 				};
 
@@ -473,7 +473,7 @@ namespace RyLogViewer
 		private void OnFileChanged()
 		{
 			long len = m_file.Length;
-			Log.Info(this, "File {0} changed. File length: {1}", m_filepath, len);
+			Log.Info(this, "File {0} changed. File length: {1}".Fmt(m_filepath, len));
 			long filepos = AutoScrollTail ? m_file.Length : m_filepos;
 			bool reload  = m_file.Length < m_fileend || !m_settings.FileChangesAdditive;
 			BuildLineIndex(filepos, reload);
@@ -951,7 +951,7 @@ namespace RyLogViewer
 			if (m_settings.UseWebProxy && !string.IsNullOrEmpty(m_settings.WebProxyHost))
 			{
 				try { proxy =  new WebProxy(m_settings.WebProxyHost, m_settings.WebProxyPort); }
-				catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}", m_settings.WebProxyHost, m_settings.WebProxyPort); }
+				catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}".Fmt(m_settings.WebProxyHost, m_settings.WebProxyPort)); }
 			}
 			
 			// Start the check for updates
@@ -1095,7 +1095,7 @@ namespace RyLogViewer
 				using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
 				{
 					value = m_grid.SelectRow(value);
-					Log.Info(this, "Row {0} selected", value);
+					Log.Info(this, "Row {0} selected".Fmt(value));
 					if (m_grid.RowCount != 0 && value != -1)
 						UpdateStatus();
 				}
@@ -1115,7 +1115,7 @@ namespace RyLogViewer
 			int displayed_rows = m_grid.DisplayedRowCount(false);
 			int first_row = Math.Max(0, m_grid.RowCount - displayed_rows);
 			m_grid.FirstDisplayedScrollingRowIndex = first_row;
-			Log.Info(this, "Showing last row. First({0}) + Displayed({1}) = {2}. RowCount = {3}", first_row, displayed_rows, first_row + displayed_rows, m_grid.RowCount);
+			Log.Info(this, "Showing last row. First({0}) + Displayed({1}) = {2}. RowCount = {3}".Fmt(first_row, displayed_rows, first_row + displayed_rows, m_grid.RowCount));
 		}
 
 		/// <summary>Returns true if grid event handlers should process grid events</summary>
@@ -1135,7 +1135,7 @@ namespace RyLogViewer
 				int selected = SelectedRow;
 				SelectedRow = -1;
 				
-				Log.Info(this, "RowCount changed. Row delta {0}. Selected row: {1}->{2}. First visible row: {3}->{4}. Auto scroll {5}" ,row_delta ,selected ,selected+row_delta ,first_vis ,first_vis+row_delta ,auto_scroll_tail);
+				Log.Info(this, "RowCount changed. Row delta {0}. Selected row: {1}->{2}. First visible row: {3}->{4}. Auto scroll {5}".Fmt(row_delta ,selected ,selected+row_delta ,first_vis ,first_vis+row_delta ,auto_scroll_tail));
 				m_grid.RowCount = 0;
 				m_grid.RowCount = count;
 				
@@ -1259,7 +1259,7 @@ namespace RyLogViewer
 			try
 			{
 				m_in_update_ui = true;
-				Log.Info(this, "UpdateUI. Row delta {0}", row_delta);
+				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
 			
 				// Don't suspend events by removing/adding handlers because that pattern doesn't nest
 				using (m_grid.SuspendLayout(true))
@@ -1399,7 +1399,7 @@ namespace RyLogViewer
 			{
 				Range range = LineIndexRange;
 				if (!range.Equals(m_scroll_file.ThumbRange))
-					Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})", range.Begin, range.End, FileByteRange.Begin, FileByteRange.End);
+					Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Begin, range.End, FileByteRange.Begin, FileByteRange.End));
 				
 				m_scroll_file.Visible    = true;
 				m_scroll_file.TotalRange = FileByteRange;

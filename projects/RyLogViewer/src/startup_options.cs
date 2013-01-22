@@ -36,9 +36,9 @@ namespace RyLogViewer
 		/// <summary>The transform set file to load</summary>
 		public string TransformSetPath { get; private set; }
 		
-		/// <summary>True if the app should run with displaying any UI</summary>
+		/// <summary>True if the app should run without displaying any UI</summary>
 		public bool NoGUI { get; private set; }
-		
+
 		/// <summary>True if the command line help options should be displayed</summary>
 		public bool ShowHelp { get; private set; }
 
@@ -70,7 +70,7 @@ namespace RyLogViewer
 				}
 				
 				// Helper for comparing option strings
-				Func<string, bool> IsOption = opt => { return string.CompareOrdinal(arg, 0, opt, 0, opt.Length) == 0; };
+				Func<string, bool> IsOption = opt => string.CompareOrdinal(arg, 0, opt, 0, opt.Length) == 0;
 				
 				// (order these by longest option first)
 				if      (IsOption(CmdLineOption.RDelim       )) { RowDelim = arg.Substring(CmdLineOption.RDelim.Length); }

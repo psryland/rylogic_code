@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.gui;
 using pr.inet;
 using pr.util;
@@ -57,7 +58,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to launch child process {0} {1} -> {2}", conn.Executable, conn.Arguments, conn.OutputFilepath);
+				Log.Exception(this, ex, "Failed to launch child process {0} {1} -> {2}".Fmt(conn.Executable, conn.Arguments, conn.OutputFilepath));
 				Misc.ShowErrorMessage(this, ex, string.Format("Failed to launch child process {0}.",conn.Executable),Resources.FailedToLaunchProcess);
 			}
 			finally 
@@ -100,8 +101,8 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}", conn.Hostname, conn.Port, conn.OutputFilepath);
-				Misc.ShowErrorMessage(this, ex, string.Format("Failed to connect to {0}:{1}.",conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
+				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}".Fmt(conn.Hostname, conn.Port, conn.OutputFilepath));
+				Misc.ShowErrorMessage(this, ex, "Failed to connect to {0}:{1}.".Fmt(conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
 			}
 			finally 
 			{
@@ -143,8 +144,8 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to open connection {0}:{1} -> {2}", conn.Hostname, conn.Port, conn.OutputFilepath);
-				Misc.ShowErrorMessage(this, ex, string.Format("Failed to open connected to {0}:{1}.",conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
+				Log.Exception(this, ex, "Failed to open connection {0}:{1} -> {2}".Fmt(conn.Hostname, conn.Port, conn.OutputFilepath));
+				Misc.ShowErrorMessage(this, ex, "Failed to open connected to {0}:{1}.".Fmt(conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
 			}
 			finally 
 			{
@@ -185,8 +186,8 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}", conn.CommPort, conn.BaudRate, conn.OutputFilepath);
-				Misc.ShowErrorMessage(this, ex, string.Format("Failed to connect to {0}:{1}.",conn.CommPort,conn.BaudRate),Resources.FailedToLaunchProcess);
+				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}".Fmt(conn.CommPort, conn.BaudRate, conn.OutputFilepath));
+				Misc.ShowErrorMessage(this, ex, "Failed to connect to {0}:{1}.".Fmt(conn.CommPort,conn.BaudRate),Resources.FailedToLaunchProcess);
 			}
 			finally
 			{
@@ -228,8 +229,8 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to connect {0} -> {1}", conn.PipeAddr, conn.OutputFilepath);
-				Misc.ShowErrorMessage(this, ex, string.Format("Failed to connect to {0}.",conn.PipeAddr) ,Resources.FailedToLaunchProcess);
+				Log.Exception(this, ex, "Failed to connect {0} -> {1}".Fmt(conn.PipeAddr, conn.OutputFilepath));
+				Misc.ShowErrorMessage(this, ex, "Failed to connect to {0}.".Fmt(conn.PipeAddr) ,Resources.FailedToLaunchProcess);
 			}
 			finally
 			{
@@ -320,7 +321,7 @@ namespace RyLogViewer
 				catch (Exception ex)
 				{
 					var type = GetType().DeclaringType;
-					Log.Exception(this, ex, "[{0}] Data receive exception", type == null ? "" : type.Name);
+					Log.Exception(this, ex, "[{0}] Data receive exception".Fmt(type != null ? type.Name : ""));
 				}
 				RaiseConnectionDropped();
 			}
@@ -370,7 +371,7 @@ namespace RyLogViewer
 			m_process = new Process{StartInfo = info};
 			m_process.Exited += (s,a) =>
 			{
-				Log.Info(this, "Process {0} exited", launch.Executable);
+				Log.Info(this, "Process {0} exited".Fmt(launch.Executable));
 				RaiseConnectionDropped();
 			};
 		}
@@ -378,7 +379,7 @@ namespace RyLogViewer
 		public void Start()
 		{
 			m_process.Start();
-			Log.Info(this, "Process {0} started", m_process.ProcessName);
+			Log.Info(this, "Process {0} started".Fmt(m_process.ProcessName));
 			
 			// Attach to the window console so we can forward received data to it
 			if (m_launch.ShowWindow)
@@ -423,7 +424,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing process {0}", m_process.ProcessName);
+					Log.Info(this, "Disposing process {0}".Fmt(m_process.ProcessName));
 					if (!m_process.HasExited)
 						if (!m_process.CloseMainWindow())
 							m_process.Kill();
@@ -501,7 +502,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing tcp client {0}", m_conn.Hostname);
+					Log.Info(this, "Disposing tcp client {0}".Fmt(m_conn.Hostname));
 					m_tcp.Close();
 					m_tcp = null;
 				}
@@ -575,7 +576,7 @@ namespace RyLogViewer
 				catch (Exception ex)
 				{
 					var type = GetType().DeclaringType;
-					Log.Exception(this, ex, "[{0}] Data receive exception", type == null ? "" : type.Name);
+					Log.Exception(this, ex, "[{0}] Data receive exception".Fmt(type != null ? type.Name : ""));
 				}
 			}
 		}
@@ -588,7 +589,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing ucp client {0}", m_conn.Hostname);
+					Log.Info(this, "Disposing ucp client {0}".Fmt(m_conn.Hostname));
 					m_udp.Close();
 					m_udp = null;
 				}
@@ -638,7 +639,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing serial port connection {0}", m_conn.CommPort);
+					Log.Info(this, "Disposing serial port connection {0}".Fmt(m_conn.CommPort));
 					m_port.Dispose();
 					m_port = null;
 				}
@@ -697,7 +698,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing named pipe connection {0}", m_conn.PipeName);
+					Log.Info(this, "Disposing named pipe connection {0}".Fmt(m_conn.PipeName));
 					m_pipe.Dispose();
 					m_pipe = null;
 				}

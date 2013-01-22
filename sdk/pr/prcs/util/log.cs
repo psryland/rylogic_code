@@ -77,27 +77,27 @@ namespace pr.util
 		}
 
 		/// <summary>Write info to the current log</summary>
-		[Conditional("PR_LOGGING")] public static void Info(object sender, string str, params object[] args)
+		[Conditional("PR_LOGGING")] public static void Info(object sender, string str)
 		{
-			Write(string.Format("[info][{0}] {1}"+Environment.NewLine, GetTag(sender), string.Format(str, args)));
+			Write(string.Format("[info][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
 		}
 		
 		/// <summary>Write info to the current log</summary>
-		[Conditional("PR_LOGGING")] public static void Warn(object sender, string str, params object[] args)
+		[Conditional("PR_LOGGING")] public static void Warn(object sender, string str)
 		{
-			Write(string.Format("[warn][{0}] {1}"+Environment.NewLine, GetTag(sender), string.Format(str, args)));
+			Write(string.Format("[warn][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
 		}
 		
 		/// <summary>Write info to the current log</summary>
-		[Conditional("PR_LOGGING")] public static void Error(object sender, string str, params object[] args)
+		[Conditional("PR_LOGGING")] public static void Error(object sender, string str)
 		{
-			Write(string.Format("[error][{0}] {1}"+Environment.NewLine, GetTag(sender), string.Format(str, args)));
+			Write(string.Format("[error][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
 		}
 		
 		/// <summary>Write info to the current log</summary>
-		[Conditional("PR_LOGGING")] public static void Exception(object sender, Exception ex, string str, params object[] args)
+		[Conditional("PR_LOGGING")] public static void Exception(object sender, Exception ex, string str)
 		{
-			Write(string.Format("[exception][{0}] {1}"+Environment.NewLine, GetTag(sender), string.Format(str, args)));
+			Write(string.Format("[exception][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
 			Write(string.Format("[exception] {0}"+Environment.NewLine, ex));
 		}
 	}
