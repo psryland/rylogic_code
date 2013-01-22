@@ -116,6 +116,10 @@ namespace pr.inet
 							throw new Exception("Failed to read latest version info", error);
 					}
 					
+					// Check for a non-empty result
+					if (string.IsNullOrEmpty(latest_version_xml))
+						throw new Exception("No update information returned from server");
+					
 					// Load the version info string
 					XElement root = XDocument.Parse(latest_version_xml).Root;
 					XElement info = root != null ? root.Element(identifier) : null;
