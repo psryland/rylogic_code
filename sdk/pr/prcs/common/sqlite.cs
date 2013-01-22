@@ -411,7 +411,12 @@ namespace pr.common
 			public static void DateTimeOffset(sqlite3_stmt stmt, int idx, object value)
 			{
 				if (value == null) Null(stmt, idx);
-				else Text(stmt, idx, ((DateTimeOffset)value).ToString("o"));
+				else
+				{
+					var dto = (DateTimeOffset)value;
+					if (dto.Offset != TimeSpan.Zero) throw new Exception("Only UTC DateTimeOffset values can be stored");
+					Long(stmt, idx, dto.Ticks);
+				}
 			}
 			
 			public delegate void Func(sqlite3_stmt stmt, int index, object obj);
@@ -537,8 +542,8 @@ namespace pr.common
 			}
 			public static object DateTimeOffset(sqlite3_stmt stmt, int idx)
 			{
-				string text = (string)Text(stmt, idx);
-				return System.DateTimeOffset.Parse(text);
+				long ticks = (long)Long(stmt, idx);
+				return new DateTimeOffset(ticks, TimeSpan.Zero);
 			}
 			
 			public delegate object Func(sqlite3_stmt stmt, int index);
@@ -1260,7 +1265,7 @@ namespace pr.common
 					
 					SqlString = cmd.Text.ToString();
 					Arguments = cmd.Args;
-					Debug.WriteLine("Sql expression generated: " + ToString());
+					Trace.WriteLine("Sql expression generated: " + ToString());
 				}
 
 				/// <summary>The result of a call to 'Translate'</summary>
@@ -1551,6 +1556,10 @@ namespace pr.common
 			public int Count(Expression<Func<T,bool>> pred)
 			{
 				m_cmd.Where(pred);
+				return RowCount;
+			}
+			public int Count() // Overload added to prevent accidental use of Linq-to-Objects Count() extension
+			{
 				return RowCount;
 			}
 
@@ -2003,6 +2012,7 @@ namespace pr.common
 			{
 				if (first_idx < 1) throw new ArgumentException("Parameter binding indices start at 1 so 'first_idx' must be >= 1");
 				if (Pks.Length != keys.Length) throw new ArgumentException("Not enough primary key values passed for type "+Name);
+				if (Pks.Length == 0) throw new ArgumentException("Attempting to bind primary keys for a type without primary keys");
 				
 				int idx = 0;
 				foreach (var c in Pks)
@@ -2785,7 +2795,7 @@ namespace pr
 				m_empty_buf = null;
 				m_guid      = Guid.NewGuid();
 				m_enum      = SomeEnum.One;
-				m_dt_offset = DateTimeOffset.Now;
+				m_dt_offset = DateTimeOffset.UtcNow;
 				m_custom    = new Custom();
 				m_nullint   = 23;
 				m_nulllong  = null;
