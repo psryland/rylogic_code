@@ -23,7 +23,7 @@ echo dst dir: %dstdir%
 echo =================
 
 echo.
-echo Building the apk...
+echo Building the exe...
 "%msbuild%" "%proj%" /p:Configuration=%config% /t:Build
 if errorlevel 1 goto :error
 

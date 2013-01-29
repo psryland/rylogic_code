@@ -12,6 +12,13 @@ echo Test Batch File
 echo *********************
 echo.
 
+echo Test: runas_admin
+call runas_admin %~s0 %*
+if errorlevel 1 goto :eof
+echo Output: should see no errors
+net session >nul
+echo.
+
 echo Test: newlines
 set LF=^
 
