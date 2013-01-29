@@ -9,6 +9,7 @@ using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 
 // Usage:
 // - Your domain objects must be classes with a default constructor.
@@ -643,6 +644,13 @@ namespace pr.common
 		public class Database :IDisposable
 		{
 			private readonly sqlite3 m_db;
+			
+			private readonly int m_creation_thread;
+			[Conditional("DEBUG")] public void AssertCorrectThread()
+			{
+				if (m_creation_thread != Thread.CurrentThread.ManagedThreadId)
+					throw Exception.New(Result.Misuse, "Cross-thread use of Sqlite ORM");
+			}
 
 			/// <summary>The filepath of the database file opened</summary>
 			public string Filepath { get; set; }
@@ -651,6 +659,7 @@ namespace pr.common
 			public Database(string filepath, OpenFlags flags = OpenFlags.Create|OpenFlags.ReadWrite)
 			{
 				Filepath = filepath;
+				m_creation_thread = Thread.CurrentThread.ManagedThreadId;
 				
 				// Open the database file
 				var res = sqlite3_open_v2(filepath, out m_db, (int)flags, IntPtr.Zero);
@@ -670,7 +679,12 @@ namespace pr.common
 			/// <summary>Returns the db handle after asserting it's validity</summary>
 			public sqlite3 Handle
 			{
-				get { Debug.Assert(!m_db.IsInvalid, "Invalid database handle"); return m_db; }
+				get
+				{
+					AssertCorrectThread();
+					Debug.Assert(!m_db.IsInvalid, "Invalid database handle");
+					return m_db;
+				}
 			}
 
 			/// <summary>
@@ -689,6 +703,7 @@ namespace pr.common
 			/// <summary>Close a database file</summary>
 			public void Close()
 			{
+				AssertCorrectThread();
 				Trace.WriteLine(string.Format("Closing database connection{0}", m_db.IsClosed ? " (already closed)" : ""));
 				if (m_db.IsClosed) return;
 				
@@ -706,39 +721,27 @@ namespace pr.common
 			}
 
 			/// <summary>
-			/// Executes an sql query string that doesn't require binding, returning a 'Query' result.
-			/// Remember to wrap the returned query in a 'using' statement or you might have trouble
-			/// closing the database connection due to outstanding un-finalized prepared statements.<para/>
-			/// e.g.<para/>
-			/// <code>
-			///   using (var query = ExecuteQuery(sql))<para/>
-			///      int result = query.ReadColumn&lt;int&gt;(0);<para/>
-			/// </code>
-			/// </summary>
-			public Query ExecuteQuery(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			/// Executes an sql command that is expected to not return results. (e.g. Insert/Update/Delete).
+			/// Returns the number of rows affected by the operation</summary>
+			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				var query = new Query(this, sql, parms, first_idx);
-				query.Step();
-				return query;
+				using (var query = new Query(this, sql, parms, first_idx))
+				{
+					query.Step();
+					return sqlite3_changes(m_db);
+				}
 			}
 
 			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
 			public int ExecuteScalar(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (Query query = ExecuteQuery(sql, parms, first_idx))
+				using (var query = new Query(this, sql, parms, first_idx))
 				{
-					if (query.RowEnd) throw Exception.New(Result.Error, "Scalar query returned no results");
+					if (!query.Step()) throw Exception.New(Result.Error, "Scalar query returned no results");
 					int value = (int)Read.Int(query.Stmt, 0);
 					if (query.Step()) throw Exception.New(Result.Error, "Scalar query returned more than one result");
 					return value;
 				}
-			}
-
-			/// <summary>Executes an sql statement returning the number of affected rows</summary>
-			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
-			{
-				using (ExecuteQuery(sql, parms, first_idx))
-					return sqlite3_changes(m_db);
 			}
 
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
@@ -746,7 +749,13 @@ namespace pr.common
 			{
 				using (var query = new Query(this, sql, parms, first_idx))
 					foreach (var r in query.Rows<T>())
-						yield return r;
+						yield return r; // Can't just return Rows<T>() because Dispose() is called on query
+			}
+			public IEnumerable EnumRows(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				using (var query = new Query(this, sql, parms, first_idx))
+					foreach (var r in query.Rows(type))
+						yield return r; // Can't just return Rows<T>() because Dispose() is called on query
 			}
 
 			/// <summary>Drop any existing table created for type 'T'</summary>
@@ -758,8 +767,7 @@ namespace pr.common
 			{
 				var meta = TableMetaData.GetMetaData(type);
 				var opts = if_exists ? "if exists " : "";
-				var sql  = Sql("drop table ",opts,meta.Name);
-				Execute(sql);
+				Execute(Sql("drop table ",opts,meta.Name));
 			}
 
 			/// <summary>Return the sql string used to create a table for 'type'</summary>
@@ -939,7 +947,7 @@ namespace pr.common
 			{
 				get
 				{
-					GenerateExpression("count(*)");
+					GenerateExpression("select count(*)");
 					try { return m_db.ExecuteScalar(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
 				}
 			}
@@ -1020,6 +1028,7 @@ namespace pr.common
 			/// Make sure you call 'Get()' or the other overload of Insert to get the updated item.</summary>
 			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
+				Trace.WriteLine(string.Format("Inserting {0}", m_meta.Name));
 				using (var insert = new InsertCmd(m_meta, m_db, on_constraint)) // Create the sql query
 				{
 					insert.BindObj(item); // Bind 'item' to it
@@ -1032,6 +1041,7 @@ namespace pr.common
 			/// <summary>Update 'item' in the table</summary>
 			public int Update(object item)
 			{
+				Trace.WriteLine(string.Format("Updating {0}", m_meta.Name));
 				using (var query = new Query(m_db, SqlUpdateCmd(m_meta.Type)))
 				{
 					int idx = 1; // binding parameters are indexed from 1
@@ -1054,6 +1064,7 @@ namespace pr.common
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(params object[] keys)
 			{
+				Trace.WriteLine(string.Format("Deleting {0} (key: {1})", m_meta.Name, string.Join(",",keys)));
 				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, keys);
@@ -1065,6 +1076,7 @@ namespace pr.common
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(object key1, object key2) // overload for performance
 			{
+				Trace.WriteLine(string.Format("Deleting {0} (key: {1},{2})", m_meta.Name, key1, key2));
 				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, key1, key2);
@@ -1076,6 +1088,7 @@ namespace pr.common
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(object key1) // overload for performance
 			{
+				Trace.WriteLine(string.Format("Deleting {0} (key: {1})", m_meta.Name, key1));
 				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, key1);
@@ -1087,6 +1100,7 @@ namespace pr.common
 			/// <summary>Update a single column for a single row in the table</summary>
 			public int Update<TValueType>(string column_name, TValueType value, params object[] keys)
 			{
+				Trace.WriteLine(string.Format("Updating column {0} in table {1} (key: {2})", column_name, m_meta.Name, string.Join(",",keys)));
 				var column_meta = m_meta.Column(column_name);
 				var sql = Sql("update ",m_meta.Name," set ",column_meta.Name," = ? where ",m_meta.PkConstraints());
 				using (var query = new Query(m_db, sql))
@@ -1101,6 +1115,7 @@ namespace pr.common
 			/// <summary>Update the value of a column for all rows in a table</summary>
 			public int UpdateAll<TValueType>(string column_name, TValueType value)
 			{
+				Trace.WriteLine(string.Format("Updating column {0} in table {1} (all rows)", column_name, m_meta.Name));
 				var column_meta = m_meta.Column(column_name);
 				var sql = Sql("update ",m_meta.Name," set ",column_name," = ?");
 				using (var query = new Query(m_db, sql))
@@ -1128,21 +1143,12 @@ namespace pr.common
 			IEnumerator IEnumerable.GetEnumerator()
 			{
 				GenerateExpression();
-				using (var query = new Query(m_db, m_cmd.SqlString, m_cmd.Arguments))
-				{
-					while (query.Step())
-					{
-						var item = m_meta.Factory();
-						m_meta.ReadObj(query.Stmt, item);
-						yield return item;
-					}
-				}
-				// Don't put this in a finally block because it gets called for each yield return
-				ResetExpression();
+				ResetExpression(); // Don't put this in a finally block because it gets called for each yield return
+				return m_db.EnumRows(m_meta.Type, m_cmd.SqlString, m_cmd.Arguments).GetEnumerator();
 			}
 
 			/// <summary>Generate the sql string and arguments</summary>
-			public Table GenerateExpression(string select = "*") { m_cmd.Generate(m_meta.Type, select); return this; }
+			public Table GenerateExpression(string select = "select *") { m_cmd.Generate(m_meta.Type, select); return this; }
 
 			/// <summary>Resets the generated sql string and arguments. Mainly used when an expression is generated but not used</summary>
 			public Table ResetExpression() { m_cmd.Reset(); return this; }
@@ -1241,7 +1247,7 @@ namespace pr.common
 				{
 					var meta = TableMetaData.GetMetaData(type);
 					var cmd = new TranslateResult();
-					cmd.Text.Append(Sql("select ",select," from ",meta.Name));
+					cmd.Text.Append(Sql(select," from ",meta.Name));
 					
 					if (m_where != null)
 					{
@@ -1541,15 +1547,15 @@ namespace pr.common
 			}
 
 			/// <summary>Return the first row or null</summary>
-			public T FirstOrDefault()
-			{
-				m_cmd.Take(1);
-				try { return ((IEnumerable<T>)this).FirstOrDefault(); } finally { m_cmd.Reset(); }
-			}
 			public T FirstOrDefault(Expression<Func<T,bool>> pred)
 			{
 				m_cmd.Where(pred);
 				return FirstOrDefault();
+			}
+			public T FirstOrDefault()
+			{
+				m_cmd.Take(1);
+				try { return ((IEnumerable<T>)this).FirstOrDefault(); } finally { m_cmd.Reset(); }
 			}
 
 			/// <summary>Add a 'count' clause to row enumeration</summary>
@@ -1561,6 +1567,18 @@ namespace pr.common
 			public int Count() // Overload added to prevent accidental use of Linq-to-Objects Count() extension
 			{
 				return RowCount;
+			}
+
+			/// <summary>Delete rows from the table</summary>
+			public int Delete(Expression<Func<T,bool>> pred)
+			{
+				m_cmd.Where(pred);
+				return Delete();
+			}
+			public int Delete()
+			{
+				GenerateExpression("delete");
+				try { return m_db.Execute(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
 			}
 
 			/// <summary>Add a 'where' clause to row enumeration</summary>
@@ -1598,11 +1616,12 @@ namespace pr.common
 				return this;
 			}
 
-			/// <summary>IEnumerable interface</summary>
+			/// <summary>IEnumerable(T) interface</summary>
 			IEnumerator<T> IEnumerable<T>.GetEnumerator()
 			{
-				foreach (var t in (IEnumerable)this)
-					yield return (T)t;
+				GenerateExpression();
+				ResetExpression(); // Don't put this in a finally block because it gets called for each yield return
+				return m_db.EnumRows<T>(m_cmd.SqlString, m_cmd.Arguments).GetEnumerator();
 			}
 		}
 
@@ -1834,6 +1853,16 @@ namespace pr.common
 					yield return (T)obj;
 				}
 			}
+			public IEnumerable Rows(Type type)
+			{
+				var meta = TableMetaData.GetMetaData(type);
+				while (Step())
+				{
+					var obj = meta.Factory();
+					meta.ReadObj(Stmt, obj);
+					yield return obj;
+				}
+			}
 		}
 
 		#region Table Meta Data
@@ -2002,7 +2031,11 @@ namespace pr.common
 			/// <summary>Return the column meta data for a column by name</summary>
 			public ColumnMetaData Column(string column_name)
 			{
-				return m_column.FirstOrDefault(x => string.CompareOrdinal(x.Name, column_name) == 0);
+				foreach (var c in m_column)
+					if (string.CompareOrdinal(c.Name, column_name) == 0)
+						return c;
+				
+				return null;
 			}
 
 			/// <summary>
@@ -3589,6 +3622,18 @@ namespace pr
 					Assert.AreEqual(6, list[3].Inc_Key);
 					Assert.AreEqual(3, list[4].Inc_Key);
 				}
+				{// Delete
+					var q = table.Delete(x => x.Inc_Key >= 5);
+					var list = table.ToList();
+					Assert.AreEqual(5, q);
+					Assert.AreEqual(5, list.Count);
+					Assert.AreEqual(4, list[0].Inc_Key);
+					Assert.AreEqual(1, list[1].Inc_Key);
+					Assert.AreEqual(0, list[2].Inc_Key);
+					Assert.AreEqual(3, list[3].Inc_Key);
+					Assert.AreEqual(2, list[4].Inc_Key);
+				}
+				#pragma warning disable 168
 				{//Check sql strings are correct
 					string sql;
 					
@@ -3609,7 +3654,12 @@ namespace pr
 					var q = (from x in table where x.Inc_Key == 3 select new {x.Inc_Key, x.Inc_Value}).ToList();
 					sql = table.SqlString;
 					Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
+					
+					var w = table.Delete(x => x.Inc_Key == 2);
+					sql = table.SqlString;
+					Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
 				}
+				#pragma warning restore 168
 			}
 		}
 		[Test] public static void TestSqlite_Nullables()
