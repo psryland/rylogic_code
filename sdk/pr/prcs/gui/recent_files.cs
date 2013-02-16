@@ -2,8 +2,10 @@
 // RecentFiles
 //  Copyright © Rylogic Ltd 2009
 //***************************************************
+
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
 
@@ -32,19 +34,25 @@ namespace pr.gui
 		private ToolStripMenuItem m_menu = null;
 		private OnClickHandler m_on_click = null;
 
+		/// <summary>
+		/// An event raised when the 'clear recent files' option is selected.
+		/// This event gives the caller the opportunity to cancel the clear</summary>
+		public event EventHandler<CancelEventArgs> ClearRecentFilesListEvent;
+
+		/// <summary>The signature of the click handler for a menu item</summary>
 		public delegate void OnClickHandler(string file);
 
-		public RecentFiles() { MaxCount = 10; }
+		public RecentFiles() { MaxCount = 10; ResetListText = "<Clear Recent Files>"; }
 		public RecentFiles(ToolStripMenuItem menu, OnClickHandler on_click) :this() { SetTargetMenu(menu, on_click); }
 		
 		/// <summary>Get/Set the limit for how many files appear in the recent files list</summary>
 		public int MaxCount {get;set;}
 
+		/// <summary>The text to display as the last item allowing the user to clear the list</summary>
+		public string ResetListText { get; set; }
+
 		/// <summary>Access to the list of recent files</summary>
-		public List<string> Files
-		{
-			get { return m_files; }
-		}
+		public List<string> Files { get { return m_files; } }
 
 		/// <summary>Set the menu we're populating with the recent files</summary>
 		public void SetTargetMenu(ToolStripMenuItem menu, OnClickHandler on_click)
@@ -63,7 +71,6 @@ namespace pr.gui
 		/// <summary>Add a file to the recent files list</summary>
 		public void Add(string file, bool update_menu)
 		{
-			file.ToLower();
 			m_files.Remove(file);
 			m_files.Insert(0, file);
 			if (m_files.Count > MaxCount) m_files.RemoveAt(m_files.Count - 1);
@@ -79,12 +86,20 @@ namespace pr.gui
 		{
 			if (m_menu == null || m_on_click == null) return;
 			m_menu.DropDownItems.Clear();
-			foreach (string s in m_files)
-				m_menu.DropDownItems.Add(new ToolStripMenuItem(s, null, delegate (object sender, EventArgs e)
+			foreach (string f in m_files)
+				m_menu.DropDownItems.Add(new ToolStripMenuItem(f, null, (s,a) =>
+					{
+						ToolStripMenuItem menu = (ToolStripMenuItem)s;
+						Add(menu.Text, false);
+						m_on_click(menu.Text);
+					}));
+			
+			// Add a menu item for clearing the recent files list
+			m_menu.DropDownItems.Add(new ToolStripMenuItem(ResetListText, null, (s,a) =>
 				{
-					ToolStripMenuItem menu = (ToolStripMenuItem)sender;
-					Add(menu.Text, false);
-					m_on_click(menu.Text);
+					var args = new CancelEventArgs();
+					if (ClearRecentFilesListEvent != null) ClearRecentFilesListEvent(this, args);
+					if (!args.Cancel) Clear();
 				}));
 		}
 

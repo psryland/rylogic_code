@@ -76,7 +76,14 @@ namespace RyLogViewer
 				Size = m_settings.WindowSize;
 			}
 			
-			m_recent             = new RecentFiles(m_menu_file_recent, OpenLogFile);
+			// Recent files menu
+			m_recent = new RecentFiles(m_menu_file_recent, OpenLogFile);
+			m_recent.ClearRecentFilesListEvent += (s,a) =>
+				{
+					var res = MessageBox.Show(this, "Do you want to clear the recent files list?", "Clear Recent Files", MessageBoxButtons.OKCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
+					a.Cancel = res == DialogResult.Cancel;
+				};
+			
 			m_watch              = new FileWatch();
 			m_watch_timer        = new Timer{Interval = Constants.FilePollingRate};
 			m_batch_set_col_size = new EventBatcher(100, this);
