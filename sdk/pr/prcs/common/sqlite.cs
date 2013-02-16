@@ -1311,6 +1311,10 @@ namespace pr.common
 					switch (expr.NodeType)
 					{
 					default: throw new NotSupportedException();
+					case ExpressionType.Parameter:
+						{
+							return result;
+						}
 					case ExpressionType.MemberAccess:
 						#region Member Access
 						{
@@ -1327,12 +1331,28 @@ namespace pr.common
 							// If a value cannot be determined from the expression, write the parameter name instead
 							if (res.Args.Count == 0)
 							{
-								// Special case for nullables. This handles this case "table.Where(x => x.nullable.Value == 5)",
-								// i.e. the resulting sql should be "select * from table where nullable == 5"
-								result.Text.Append(Nullable.GetUnderlyingType(me.Expression.Type) != null
-									? res.Text.ToString()
-									: me.Member.Name);
-								
+								// Special cases for nullables.
+								if (Nullable.GetUnderlyingType(me.Expression.Type) != null)
+								{
+									if (me.Member.Name == "HasValue")
+									{
+										result.Text.Append("(").Append(res.Text.ToString()).Append(" is not null)");
+									}
+									else if (me.Member.Name == "Value")
+									{
+										// This handles this case "table.Where(x => x.nullable.Value == 5)",
+										// i.e. the resulting sql should be "select * from table where nullable == 5"
+										result.Text.Append(res.Text.ToString());
+									}
+									else
+									{
+										throw new NotSupportedException("Unsupported member of nullable type for MemberExpression: " + me);
+									}
+								}
+								else
+								{
+									result.Text.Append(me.Member.Name);
+								}
 								return result;
 							}
 							if (res.Args.Count != 1 || res.Args[0] == null)
@@ -2750,22 +2770,28 @@ namespace pr
 			}
 		}
 
-		// Tests a basic default table
-		private class DomType0
+		public interface IDomType0
 		{
-			public  int    Inc_Key                 { get; set; }
-			public  string Inc_Value               { get; set; }
-			public  float  Ign_NoGetter            { set { } }
-			public  int    Ign_NoSetter            { get { return 42; } }
-			private bool   Ign_PrivateProp         { get; set; }
-			private int    m_ign_private_field;
-			public  short  Ign_PublicField;
-			
+			SomeEnum Inc_Enum { get; set; }
+		}
+
+		// Tests a basic default table
+		private class DomType0 :IDomType0
+		{
+			public  int      Inc_Key                 { get; set; }
+			public  string   Inc_Value               { get; set; }
+			public SomeEnum  Inc_Enum                { get; set; }
+			public  float    Ign_NoGetter            { set { } }
+			public  int      Ign_NoSetter            { get { return 42; } }
+			private bool     Ign_PrivateProp         { get; set; }
+			private int      m_ign_private_field;
+			public  short    Ign_PublicField;
 			public DomType0(){}
 			public DomType0(int seed)
 			{
 				Inc_Key = seed;
 				Inc_Value = seed.ToString();
+				Inc_Enum = (SomeEnum)(seed % 3);
 				Ign_NoGetter = seed;
 				Ign_PrivateProp = seed != 0;
 				m_ign_private_field = seed;
@@ -3020,13 +3046,14 @@ namespace pr
 				
 				// Check the table
 				var table = db.Table<DomType0>();
-				Assert.AreEqual(2, table.ColumnCount);
-				var column_names = new[]{"Inc_Key", "Inc_Value"};
+				Assert.AreEqual(3, table.ColumnCount);
+				var column_names = new[]{"Inc_Key", "Inc_Value", "Inc_Enum"};
 				using (var q = table.Query("select * from "+table.Name))
 				{
-					Assert.AreEqual(2, q.ColumnCount);
+					Assert.AreEqual(3, q.ColumnCount);
 					Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
 					Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
+					Assert.IsTrue(column_names.Contains(q.ColumnName(2)));
 				}
 				
 				// Create some objects to stick in the table
@@ -3481,17 +3508,7 @@ namespace pr
 				db.DropTable<DomType0>();
 				db.CreateTable<DomType0>();
 				Assert.IsTrue(db.TableExists<DomType0>());
-				
-				// Check the table
 				var table = db.Table<DomType0>();
-				Assert.AreEqual(2, table.ColumnCount);
-				var column_names = new[]{"Inc_Key", "Inc_Value"};
-				using (var q = table.Query("select * from "+table.Name))
-				{
-					Assert.AreEqual(2, q.ColumnCount);
-					Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
-					Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
-				}
 				
 				// Insert stuff
 				Assert.AreEqual(1, table.Insert(new DomType0(4)));
@@ -3519,6 +3536,18 @@ namespace pr
 					var q = from x in table where x.Inc_Key % 2 == 1 select x;
 					var list = q.ToList();
 					Assert.AreEqual(5, list.Count);
+				}
+				{// Where clause
+					var q = table.Where(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three);
+					var list = q.ToList();
+					Assert.AreEqual(7, list.Count);
+					Assert.AreEqual(0, list[0].Inc_Key);
+					Assert.AreEqual(5, list[1].Inc_Key);
+					Assert.AreEqual(9, list[2].Inc_Key);
+					Assert.AreEqual(6, list[3].Inc_Key);
+					Assert.AreEqual(3, list[4].Inc_Key);
+					Assert.AreEqual(8, list[5].Inc_Key);
+					Assert.AreEqual(2, list[6].Inc_Key);
 				}
 				{// Where clause with 'like' method calling 'RowCount'
 					var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
@@ -3743,6 +3772,19 @@ namespace pr
 					var q = table.Where(x => x.m_int == target);
 					var list = q.ToList();
 					Assert.AreEqual(0, list.Count);
+				}
+				{// Testing members on nullable types
+					var q = table.Where(x => x.m_nullint.HasValue == false);
+					var list = q.ToList();
+					Assert.AreEqual(1, list.Count);
+					Assert.AreEqual(null, list[0].m_nullint);
+				}
+				{// Testing members on nullable types
+					var q = table.Where(x => x.m_nullint.HasValue && x.m_nullint.Value == 23);
+					var list = q.ToList();
+					Assert.AreEqual(2, list.Count);
+					Assert.AreEqual(23, list[0].m_nullint);
+					Assert.AreEqual(23, list[1].m_nullint);
 				}
 			}
 		}
