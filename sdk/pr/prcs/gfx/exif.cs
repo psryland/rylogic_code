@@ -2,31 +2,64 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using pr.stream;
 using pr.extn;
+using pr.stream;
 
 namespace pr.gfx
 {
+	/// <summary>Based on http://www.cipa.jp/english/hyoujunka/kikaku/pdf/DC-008-2010_E.pdf</summary>
 	public static class Exif
 	{
 		// ReSharper disable UnusedMember.Local
-		/// <summary>A file marker used to identify jpg files</summary>
-		private const ushort JpgIdentifierTag    = 0xFFD8;
-		private const byte   JpgIdentifierTag_b0 = 0xFF;  // jpg start byte
-		private const byte   JpgIdentifierTag_b1 = 0xD8;  // jpg start+1 byte
-		private const byte   JpgIdentifierTag_e0 = 0xFF;  // jpg end-1 byte
-		private const byte   JpgIdentifierTag_e1 = 0xD9;  // jpg end byte
-		private const ushort TiffDataIdentifier  = 0x002A;
-		private const string ExifIdentifier      = "Exif";
-		private const string IntelIdentifier     = "II";
-		private const string MotorolaIdentifier  = "MM";
-		private const byte ExifStartMarker       = 0xFF;
-		private const byte ExifCountMarker       = 0xE1;
+		private const ushort TiffDataIdentifier           = 0x002A;
+		private static readonly byte[] ExifIdentifier     = new[]{(byte)'E',(byte)'x',(byte)'i',(byte)'f',(byte)'\0',(byte)'\0'};
+		private static readonly byte[] IntelIdentifier    = new[]{(byte)'I',(byte)'I'};
+		private static readonly byte[] MotorolaIdentifier = new[]{(byte)'M',(byte)'M'};
 		// ReSharper restore UnusedMember.Local
 
+		/// <summary>Structure markers within a jpg file</summary>
+		public static class JpgMarker
+		{
+			public const byte Start  = 0xFF;  // All markers are 2 bytes, beginning with 'Start' followed by one of these below
+			public const byte SOI    = 0xD8;  // Start of Image
+			public const byte APP1   = 0xE1;  // Application marker segment 1 (for Exif data)
+			public const byte APP2   = 0xE2;  // Application marker segment 2 (for FlashPix Extension data)
+			                                  // (Optional up to 0xEF)
+			public const byte DQT    = 0xDB;  // Define Quantization Table
+			public const byte DHT    = 0xC4;  // Define Huffman Table
+			public const byte DRI    = 0xDD;  // Define Restart Interoperability
+			public const byte SOF    = 0xC0;  // Start of Frame
+			public const byte SOS    = 0xDA;  // Start of Scan
+			                                  // Compressed data goes here
+			public const byte EOI    = 0xD9;  // End of Image
+		}
+
+		// Exif table structure is:
+		// "Exif" identifier    ___byte offsets are from here
+		// Endian-ness (2bytes)
+		// 0x002A (2bytes)
+		// ByteOffsetToIFD0 (4bytes) (typically = 8)
+		// IFD0: (main image exif data)
+		//   Count (2bytes)
+		//   Fields[Count] (N * 12bytes)
+		//   ByteOffsetToNextIFD (IFD1)
+		//   OversizedData (variable size)
+		//   SubIFD: (sub exif data)
+		//      Count
+		//      Fields[Count]
+		//      ByteOffsetToNextIFD (typically = 0 meaning no more)
+		//      OversizedData
+		// IFD1: (thumbnail exif data)
+		//   Count
+		//   Fields[Count]
+		//   ByteOffsetToNextIFD (typically = 0 meaning no more)
+		//   OversizedData
+		//
 		/// <summary>All Exif tags as per the Exif standard 2.2, JEITA CP-2451</summary>
 		public enum Tag :ushort
 		{
+			Invalid = 0,
+			
 			// IFD0 items
 			ImageWidth                  = 0x100,
 			ImageLength                 = 0x101,
@@ -154,7 +187,7 @@ namespace pr.gfx
 			GPSDifferential     = 0x1E
 		}
 
-		/// <summary>Data types used in the Exif tag records</summary>
+		/// <summary>Data types used in the Exif tag fields</summary>
 		public enum TiffDataType :byte
 		{
 			UByte        = 1,
@@ -225,6 +258,7 @@ namespace pr.gfx
 			case TiffDataType.UByte:
 			case TiffDataType.AsciiStrings:
 			case TiffDataType.SByte:
+			case TiffDataType.Undefined:
 				return 1;
 			case TiffDataType.UShort:
 			case TiffDataType.SShort:
@@ -232,7 +266,6 @@ namespace pr.gfx
 			case TiffDataType.ULong:
 			case TiffDataType.SLong:
 			case TiffDataType.Single:
-			case TiffDataType.Undefined:
 				return 4;
 			
 			case TiffDataType.URational:
@@ -250,114 +283,312 @@ namespace pr.gfx
 			public Exception(string message, Exception innerException) :base(message, innerException) {}
 		}
 
+		/// <summary>The value of an exif field</summary>
+		public class Field
+		{
+			public const int FieldDataSizeInBytes = 4;
+			public const int SizeInBytes = 12;
+			public readonly static Field Null = new Field(Tag.Invalid, TiffDataType.Undefined, 0, new byte[FieldDataSizeInBytes]);
+
+			public Tag          Tag;
+			public TiffDataType DataType;
+			public uint         Count;
+			public byte[]       Data;
+
+			public int AsInt
+			{
+				get
+				{
+					if (DataType == TiffDataType.SByte || DataType == TiffDataType.SShort || DataType == TiffDataType.SLong) return BitConverter.ToInt32(Data, 0);
+					throw new ArgumentException("Contained data type is not a signed integral type");
+				}
+			}
+			public uint AsUInt
+			{
+				get
+				{
+					if (DataType == TiffDataType.UByte || DataType == TiffDataType.UShort || DataType == TiffDataType.ULong) return BitConverter.ToUInt32(Data, 0);
+					throw new ArgumentException("Contained data type is not an unsigned integral type");
+				}
+			}
+			public double AsReal
+			{
+				get
+				{
+					if (DataType == TiffDataType.Single   ) return BitConverter.ToSingle(Data, 0);
+					if (DataType == TiffDataType.Double   ) return BitConverter.ToDouble(Data, 0);
+					if (DataType == TiffDataType.SRational) return (double)BitConverter.ToInt32 (Data, 0) / BitConverter.ToInt32 (Data, 4);
+					if (DataType == TiffDataType.URational) return (double)BitConverter.ToUInt32(Data, 0) / BitConverter.ToUInt32(Data, 4);
+					throw new ArgumentException("Contained data type is not floating point type");
+				}
+			}
+			public Tuple<int,int> AsSRational
+			{
+				get
+				{
+					if (DataType == TiffDataType.SRational) return new Tuple<int, int>(BitConverter.ToInt32(Data, 0), BitConverter.ToInt32(Data, 4));
+					throw new ArgumentException("Contained data type is not an signed rational type");
+				}
+			}
+			public Tuple<uint,uint> AsURational
+			{
+				get
+				{
+					if (DataType == TiffDataType.URational) return new Tuple<uint, uint>(BitConverter.ToUInt32(Data, 0), BitConverter.ToUInt32(Data, 4));
+					throw new ArgumentException("Contained data type is not an unsigned rational type");
+				}
+			}
+			public string AsString
+			{
+				get { return Encoding.ASCII.GetString(Data); }
+			}
+
+			public Field() {}
+			public Field(Tag tag, TiffDataType dt, uint count, byte[] data)
+			{
+				Tag      = tag;
+				DataType = dt;
+				Count    = count;
+				Data     = data;
+			}
+		}
+
+		/// <summary>
+		/// Public interface for an Exif data accessor object.
+		/// Presents all tags in the main ifd and sub ifd at the same level.</summary>
 		public interface IExifData
 		{
-			/// <summary>Returns true if 'tag' is in the exif data</summary>
+			/// <summary>Returns the number of contained exif fields</summary>
+			int Count { get; }
+
+			/// <summary>Enumerate the contained tags</summary>
+			IEnumerable<Tag> Tags { get; }
+
+			/// <summary>Returns true if 'tag' is in the contained data</summary>
 			bool HasTag(Tag tag);
 
-			/// <summary>Returns the raw exif data associated with a tag, or null if the tag is not available</summary>
-			byte[] this[Tag tag] { get; }
+			/// <summary>Returns the Exif data associated with a tag, or 'byte[]{0,0,0,0}' if the tag is not in this data</summary>
+			Field this[Tag tag] { get; }
 
 			/// <summary>Jpg thumbnail data</summary>
 			byte[] Thumbnail { get; }
+
+			/// <summary>The Exif data associated with the thumbnail</summary>
+			IExifData ThumbnailExif { get; }
 		}
 
+		/// <summary>Private interface for setting up an exif data accessor object</summary>
 		private interface IExifDataInternal :IExifData
 		{
-			/// <summary>Read and store info about an exif record</summary>
-			void ReadRecord(BinaryReaderEx br, long tiff_header_start);
+			/// <summary>Returns access to the next IFD table</summary>
+			IExifDataInternal NextIfd { get; }
+
+			/// <summary>Returns access to the sub IFD table</summary>
+			IExifDataInternal SubIfd { get; }
+
+			/// <summary>Returns access to the gps IFD table</summary>
+			IExifDataInternal GpsIfd { get; }
+
+			/// <summary>Returns the number of fields contained in this ifd table. (Not recursive)</summary>
+			int FieldCount { get; }
+
+			/// <summary>Return the fields contained in this ifd table. (Not recursive)</summary>
+			IEnumerable<Field> Fields { get; }
+
+			/// <summary>Return the field associated with 'tag'</summary>
+			Field Field(Tag tag, bool recursive);
+
+			/// <summary>Read and store info about an exif field</summary>
+			void ReadField(BinaryReaderEx br, long tiff_header_start);
 
 			/// <summary>Read and store info about an image thumbnail</summary>
 			void ReadThumbnail(BinaryReaderEx br, int length);
 		}
 
-		/// <summary>The Exif data read into memory from a jpg image</summary>
-		private class Data :IExifData ,IExifDataInternal
+		/// <summary>Common implementation of Exif data access</summary>
+		private abstract class ExifDataBase<Elem> :IExifData ,IExifDataInternal
 		{
-			/// <summary>The main table of exif data</summary>
-			private readonly Dictionary<Tag, byte[]> m_IDF = new Dictionary<Tag, byte[]>();
-			private readonly static byte[] m_NullTag = new byte[8];
+			protected readonly Dictionary<Tag, Elem> m_ifd = new Dictionary<Tag, Elem>();
+			protected ExifDataBase<Elem> m_sub_ifd;
+			protected ExifDataBase<Elem> m_gps_ifd;
+			protected ExifDataBase<Elem> m_nxt_ifd;
+
+			public override string ToString()
+			{
+				var sb = new StringBuilder();
+				foreach (var f in Fields) sb.Append(f.Tag).Append(": ").Append(BitConverter.ToString(f.Data)).AppendLine(" ");
+				return sb.ToString();
+			}
+
+			/// <summary>Returns the number of contained exif fields</summary>
+			public int Count
+			{
+				get
+				{
+					return m_ifd.Count
+						+ (m_sub_ifd != null ? m_sub_ifd.Count : 0)
+						+ (m_gps_ifd != null ? m_gps_ifd.Count : 0)
+						+ (m_nxt_ifd != null ? m_nxt_ifd.Count : 0);
+				}
+			}
+
+			/// <summary>Enumerate the contained tags</summary>
+			public IEnumerable<Tag> Tags
+			{
+				get
+				{
+					foreach (var k in m_ifd.Keys) yield return k;
+					if (m_sub_ifd != null) foreach (var k in m_sub_ifd.Tags) yield return k;
+					if (m_gps_ifd != null) foreach (var k in m_gps_ifd.Tags) yield return k;
+					if (m_nxt_ifd != null) foreach (var k in m_nxt_ifd.Tags) yield return k;
+				}
+			}
 
 			/// <summary>Returns true if 'tag' is in the exif data</summary>
-			public bool HasTag(Tag tag) { return m_IDF.ContainsKey(tag); }
+			public bool HasTag(Tag tag)
+			{
+				if (m_ifd.ContainsKey(tag)) return true;
+				if (m_sub_ifd != null && m_sub_ifd.HasTag(tag)) return true;
+				if (m_gps_ifd != null && m_gps_ifd.HasTag(tag)) return true;
+				if (m_nxt_ifd != null && m_nxt_ifd.HasTag(tag)) return true;
+				return false;
+			}
 
 			/// <summary>Returns the raw exif data associated with a tag, or null if the tag is not available</summary>
-			public byte[] this[Tag tag] { get { byte[] val; return m_IDF.TryGetValue(tag, out val) ? val : m_NullTag; } }
+			public Field this[Tag tag] { get { return Field(tag, true); } }
 
 			/// <summary>Jpg thumbnail data</summary>
-			public byte[] Thumbnail { get; private set; }
+			public abstract byte[] Thumbnail { get; }
 
-			/// <summary>Read and store info about an exif record</summary>
-			public void ReadRecord(BinaryReaderEx br, long tiff_header_start)
+			/// <summary>The Exif data associated with the thumbnail</summary>
+			public IExifData ThumbnailExif { get { return NextIfd; } }
+
+			/// <summary>Returns access to the next IFD table</summary>
+			public abstract IExifDataInternal NextIfd { get; }
+
+			/// <summary>Returns access to the sub IFD table</summary>
+			public abstract IExifDataInternal SubIfd { get; }
+
+			/// <summary>Returns access to the gps IFD table</summary>
+			public abstract IExifDataInternal GpsIfd { get; }
+
+			/// <summary>Returns the number of fields contained in this ifd table. (Not recursive)</summary>
+			public int FieldCount { get { return m_ifd.Count; } }
+
+			/// <summary>Return the fields contained in this ifd table. (Not recursive)</summary>
+			public IEnumerable<Field> Fields { get { foreach (var k  in m_ifd.Keys) yield return Field(k,false); } }
+ 
+			/// <summary>Return the field associated with 'tag'</summary>
+			public abstract Field Field(Tag tag, bool recursive);
+
+			/// <summary>Read and store info about an exif field</summary>
+			public abstract void ReadField(BinaryReaderEx br, long tiff_header_start);
+
+			/// <summary>Read and store info about an image thumbnail</summary>
+			public abstract void ReadThumbnail(BinaryReaderEx br, int length);
+		}
+
+		/// <summary>The Exif data read into memory from a jpg image</summary>
+		private class Data :ExifDataBase<Field>, IExifData ,IExifDataInternal
+		{
+			/// <summary>Jpg thumbnail data</summary>
+			public override byte[] Thumbnail { get { return m_Thumbnail; } }
+			private byte[] m_Thumbnail;
+
+			/// <summary>Returns access to the sub IFD table</summary>
+			public override IExifDataInternal SubIfd { get { return m_sub_ifd ?? (m_sub_ifd = new Data()); } }
+
+			/// <summary>Returns access to the gps IFD table</summary>
+			public override IExifDataInternal GpsIfd { get { return m_gps_ifd ?? (m_gps_ifd = new Data()); } }
+
+			/// <summary>Returns access to the next IFD table</summary>
+			public override IExifDataInternal NextIfd { get { return m_nxt_ifd ?? (m_nxt_ifd = new Data()); } }
+
+			/// <summary>Return the field associated with 'tag'</summary>
+			public override Field Field(Tag tag, bool recursive)
 			{
-				var record = ParseExifRecord(br, tiff_header_start);
-				m_IDF[record.Item1] = record.Item2;
+				Field r;
+				if (m_ifd.TryGetValue(tag, out r)) return r;
+				if (!recursive) return Exif.Field.Null;
+				if (m_sub_ifd != null && !ReferenceEquals(Exif.Field.Null, (r = m_sub_ifd.Field(tag, true)))) return r;
+				if (m_gps_ifd != null && !ReferenceEquals(Exif.Field.Null, (r = m_gps_ifd.Field(tag, true)))) return r;
+				if (m_nxt_ifd != null && !ReferenceEquals(Exif.Field.Null, (r = m_nxt_ifd.Field(tag, true)))) return r;
+				return Exif.Field.Null;
+			}
+
+			/// <summary>Read and store info about an exif field</summary>
+			public override void ReadField(BinaryReaderEx br, long tiff_header_start)
+			{
+				var field = ParseExifField(br, tiff_header_start);
+				m_ifd[field.Tag] = field;
 			}
 
 			/// <summary>Read and store info about an image thumbnail</summary>
-			public void ReadThumbnail(BinaryReaderEx br, int length)
+			public override void ReadThumbnail(BinaryReaderEx br, int length)
 			{
 				// Read the jpg thumbnail data
 				byte[] thumb = new byte[length];
 				br.BaseStream.Read(thumb, 0, thumb.Length);
-				Thumbnail = thumb;
+				m_Thumbnail = thumb;
 			}
 		}
 
 		/// <summary>An index for the exif data in a jpg image</summary>
-		private class Index :IExifDataInternal
+		private class Index :ExifDataBase<long>, IExifData ,IExifDataInternal
 		{
-			private readonly Dictionary<Tag, long> m_IDF = new Dictionary<Tag, long>();
-			private readonly static byte[] m_NullTag = new byte[8];
 			private readonly BinaryReaderEx m_br;
 			private long m_tiff_header_start;
 			private long m_thumbnail_offset;
 			private int m_thumbnail_length;
 			
-			public Index(Stream stream) { m_br = new BinaryReaderEx(stream); }
+			public Index(Stream stream) { m_br = new BinaryReaderEx(new UncloseableStream(stream)); }
 
-			/// <summary>Returns true if 'tag' is in the exif data</summary>
-			public bool HasTag(Tag tag) { return m_IDF.ContainsKey(tag); }
+			/// <summary>Jpg thumbnail data</summary>
+			public override byte[] Thumbnail { get { return m_thumbnail_length != 0 ? m_br.ReadBytes(m_thumbnail_offset, m_thumbnail_length) : null; } }
 
-			/// <summary>Returns the raw exif data associated with a tag, or null if the tag is not available</summary>
-			public byte[] this[Tag tag]
+			/// <summary>Returns access to the sub IFD table</summary>
+			public override IExifDataInternal SubIfd { get { return m_sub_ifd ?? (m_sub_ifd = new Index(m_br.BaseStream)); } }
+
+			/// <summary>Returns access to the gps IFD table</summary>
+			public override IExifDataInternal GpsIfd { get { return m_gps_ifd ?? (m_gps_ifd = new Index(m_br.BaseStream)); } }
+
+			/// <summary>Returns access to the next IFD table</summary>
+			public override IExifDataInternal NextIfd { get { return m_nxt_ifd ?? (m_nxt_ifd = new Index(m_br.BaseStream)); } }
+
+			/// <summary>Return the field associated with 'tag'</summary>
+			public override Field Field(Tag tag, bool recursive)
 			{
-				get
+				Field r;
+				for (long ofs; m_ifd.TryGetValue(tag, out ofs);)
 				{
-					long ofs;
-					if (!m_IDF.TryGetValue(tag, out ofs)) return m_NullTag;
 					long pos = m_br.BaseStream.Position;
 					try
 					{
 						m_br.BaseStream.Position = ofs;
-						return ParseExifRecord(m_br, m_tiff_header_start).Item2;
+						r = ParseExifField(m_br, m_tiff_header_start);
+						return r;
 					}
 					finally { m_br.BaseStream.Position = pos; }
 				}
+				if (!recursive) return Exif.Field.Null;
+				if (m_sub_ifd != null && !ReferenceEquals(Exif.Field.Null, (r = m_sub_ifd.Field(tag, true)))) return r;
+				if (m_gps_ifd != null && !ReferenceEquals(Exif.Field.Null, (r = m_gps_ifd.Field(tag, true)))) return r;
+				if (m_nxt_ifd != null && !ReferenceEquals(Exif.Field.Null, (r = m_nxt_ifd.Field(tag, true)))) return r;
+				return Exif.Field.Null;
 			}
 
-			/// <summary>Jpg thumbnail data</summary>
-			public byte[] Thumbnail
-			{
-				get
-				{
-					if (m_thumbnail_length == 0) return null;
-					return m_br.ReadBytes(m_thumbnail_offset, m_thumbnail_length);
-				}
-			}
-
-			/// <summary>Read and store info about an exif record</summary>
-			public void ReadRecord(BinaryReaderEx br, long tiff_header_start)
+			/// <summary>Read and store info about an exif field</summary>
+			public override void ReadField(BinaryReaderEx br, long tiff_header_start)
 			{
 				m_br.LittleEndian = br.LittleEndian;
 				m_tiff_header_start = tiff_header_start;
 				var tag = (Tag)br.ReadUShort();
-				m_IDF[tag] = br.BaseStream.Position - 2;
-				br.BaseStream.Position += 10;
+				m_ifd[tag] = br.BaseStream.Position - 2;
+				br.BaseStream.Position += Exif.Field.SizeInBytes - 2;
 			}
 
 			/// <summary>Read and store info about an image thumbnail</summary>
-			public void ReadThumbnail(BinaryReaderEx br, int length)
+			public override void ReadThumbnail(BinaryReaderEx br, int length)
 			{
 				m_thumbnail_offset = br.BaseStream.Position;
 				m_thumbnail_length = length;
@@ -366,31 +597,45 @@ namespace pr.gfx
 		}
 
 		/// <summary>Load the Exif data from a Jpg image into memory</summary>
-		public static IExifData Load(string filepath, bool load_gps, bool load_thumbnail)
+		public static IExifData Load(string filepath, bool load_thumbnail = true)
 		{
 			using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read))
-				return Load(fs, load_gps, load_thumbnail);
+				return Load(fs, load_thumbnail);
 		}
 
 		/// <summary>Load the Exif data from a Jpg image into memory. Note this method does not close the stream</summary>
-		public static IExifData Load(Stream stream, bool load_gps, bool load_thumbnail)
+		public static IExifData Load(Stream src, bool load_thumbnail = true)
 		{
-			return Parse(stream, new Data(), load_gps, load_thumbnail);
+			return Parse(src, new Data(), load_thumbnail);
 		}
 
 		/// <summary>Reads the exif data in a jpg creating an index of the tags and their byte offsets into the file</summary>
-		public static IExifData Read(Stream stream, bool load_gps, bool load_thumbnail)
+		public static IExifData Read(Stream src, bool load_thumbnail = true)
 		{
-			return Parse(stream, new Index(stream), load_gps, load_thumbnail);
+			return Parse(src, new Index(src), load_thumbnail);
+		}
+
+		/// <summary>Saves the exif data in 'exif_data' into 'dst'. Any existing exif data in source is overwritten</summary>
+		public static void Save(string src_file, IExifData exif_data, string dst_file)
+		{
+			using (var src = new FileStream(src_file, FileMode.Open, FileAccess.Read, FileShare.Read))
+			using (var dst = new FileStream(dst_file, FileMode.Create, FileAccess.Write, FileShare.Read))
+				Write(src, exif_data as IExifDataInternal, dst);
+		}
+
+		/// <summary>Saves the exif data in 'exif_data' into 'dst'. Any existing exif data in source is overwritten</summary>
+		public static void Save(Stream src, IExifData exif_data, Stream dst)
+		{
+			Write(src, exif_data as IExifDataInternal, dst);
 		}
 
 		/// <summary>Parse a jpg image for its exif data</summary>
-		private static IExifDataInternal Parse(Stream stream, IExifDataInternal data, bool load_gps, bool load_thumbnail)
+		private static IExifDataInternal Parse(Stream src, IExifDataInternal data, bool load_thumbnail)
 		{
-			if (stream == null) throw new ArgumentNullException("stream", "Null Jpg stream");
-			if (!stream.CanSeek) throw new Exception("Loading Exif data requires a seek-able stream");
+			if (src == null) throw new ArgumentNullException("src", "Null Jpg stream");
+			if (!src.CanSeek) throw new Exception("Loading Exif data requires a seek-able stream");
 			
-			using (var br = new BinaryReaderEx(new UncloseableStream(stream)))
+			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
 			{
 				// JPEG encoding uses big endian (i.e. Motorola) byte aligns.
 				// The TIFF encoding found later in the document will specify
@@ -398,7 +643,7 @@ namespace pr.gfx
 				br.LittleEndian = false;
 				
 				// Check that this is a Jpg file
-				if (br.ReadUShort() != JpgIdentifierTag)
+				if (br.ReadByte() != JpgMarker.Start || br.ReadByte() != JpgMarker.SOI)
 					throw new Exception("Source is not a Jpg data");
 				
 				// The file has a number of blocks (Exif/JFIF), each of which has a tag number
@@ -406,11 +651,9 @@ namespace pr.gfx
 				// is found. All tags start with FF, so a non FF tag indicates an error.
 				
 				// Scan to the start of the Exif data
-				byte s, c = 0;
-				for (; (s = br.ReadByte()) == ExifStartMarker && (c = br.ReadByte()) != ExifCountMarker;)
+				for (;!br.EndOfStream && br.ReadByte() == JpgMarker.Start && br.ReadByte() != JpgMarker.APP1;)
 					br.BaseStream.Seek(br.ReadUShort() - 2, SeekOrigin.Current);
-				if (s != ExifStartMarker || c != ExifCountMarker)
-					return data; // No Exif data found, return an empty data object
+				if (br.EndOfStream) return data; // No Exif data found, return an empty data object
 				
 				// Populate the Exif.Data
 				
@@ -418,98 +661,289 @@ namespace pr.gfx
 				var exif_data_size = br.ReadUShort();
 				if (exif_data_size == 0) return data;
 				
-				// Next is the Exif data itself. It starts with the ASCII "Exif" followed by 2 zero bytes.
-				if (br.ReadString(4) != ExifIdentifier) throw new Exception("Exif data not found");
-				if (br.ReadByte() != 0 || br.ReadByte() != 0) throw new Exception("Malformed Exif data");
+				// Next is the Exif data itself. It starts with the ASCII string "Exif\0\0".
+				if (ExifIdentifier.Compare(br.ReadBytes(6)) != 0)
+					throw new Exception("Malformed Exif data");
 				
 				// We're now into the TIFF format
 				// Here the byte alignment may be different. II for Intel, MM for Motorola
 				var tiff_hdr_start = br.BaseStream.Position;
-				br.LittleEndian = br.ReadString(2) == IntelIdentifier;
+				br.LittleEndian = IntelIdentifier.Compare(br.ReadBytes(2)) == 0;
 				
 				// Next 2 bytes are always the same.
 				if (br.ReadUShort() != TiffDataIdentifier)
 					throw new Exception("Error in TIFF data");
 				
-				// Get the offset to the main IFD (image file directory)
-				uint ifd0_offset = br.ReadUInt();
+				// Jump to the main IFD (image file directory)
+				br.BaseStream.Position = tiff_hdr_start + br.ReadUInt(); // Note that this offset is from the first byte of the TIFF header.
 				
-				// Note that this offset is from the first byte of the TIFF header. Jump to the IFD.
-				br.BaseStream.Position = tiff_hdr_start + ifd0_offset;
-				
-				// Parse this first IFD (there will be another IFD)
+				// Parse the IFD tables
 				ParseExifTable(br, data, tiff_hdr_start);
 				
-				// The address to the IFD1 (the thumbnail IFD) is located immediately after the main IFD. Save this for later
-				var ifd1_offset = br.ReadUInt();
-				
-				// There's more data stored in the sub IFD, the offset to which is found in tag 0x8769.
-				// As with all TIFF offsets, it will be relative to the first byte of the TIFF header.
-				if (data.HasTag(Tag.SubIFDOffset))
-				{
-					// Jump to the exif SubIFD and add that to the data as well
-					uint offset = data[Tag.SubIFDOffset].AsUInt32();
-					br.BaseStream.Position = tiff_hdr_start + offset;
-					ParseExifTable(br, data, tiff_hdr_start);
-				}
-				
-				// Look for the optional GPS exif data
-				if (load_gps && data.HasTag(Tag.GPSIFDOffset))
-				{
-					uint offset = data[Tag.GPSIFDOffset].AsUInt32();
-					br.BaseStream.Position = tiff_hdr_start + offset;
-					ParseExifTable(br, data, tiff_hdr_start);
-				}
-				
-				// Finally, catalogue the thumbnail IFD if it's present
-				if (load_thumbnail && ifd1_offset != 0)
-				{
-					var tmp = new Data();
-					br.BaseStream.Position = tiff_hdr_start + ifd1_offset;
-					ParseExifTable(br, tmp, tiff_hdr_start);
-					ParseJpgThumbnail(br, data, tmp);
-				}
+				if (load_thumbnail)
+					ParseJpgThumbnail(br, data, data.NextIfd);
 			}
 			
 			return data;
 		}
 
-		/// <summary>Parses an IDF table from 'br' into 'data'. Assumes 'br' is positioned at the start of the table</summary>
+		/// <summary>Saves the exif data in 'exif_data' into 'dst'. Any existing exif data in source is overwritten</summary>
+		private static void Write(Stream src, IExifDataInternal exif_data, Stream dst)
+		{
+			if (src == null) throw new Exception("Exif data must be an instance returned from this library");
+			if (!src.CanSeek) throw new Exception("Loading Exif data requires a seek-able stream");
+			
+			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
+			using (var bw = new BinaryWriterEx(new UncloseableStream(dst)))
+			{
+				long section_start;
+				
+				// JPEG encoding uses big endian (i.e. Motorola) byte aligns.
+				// The TIFF encoding found later in the document will specify
+				// the byte aligns used for the rest of the document.
+				bw.LittleEndian = false;
+				
+				// Copy the Jpg start of image marker
+				bw.Write(br.ReadBytes(2));
+				
+				// Write the exif data section
+				{
+					section_start = br.BaseStream.Position;
+					
+					// Write the exif data marker
+					bw.Write(JpgMarker.Start);
+					bw.Write(JpgMarker.APP1);
+						
+					// Write the section size
+					var section_size_offset = bw.BaseStream.Position;
+					bw.Write((ushort)0); // Will update this at the end
+						
+					// Write the Exif identifier tag
+					bw.Write(ExifIdentifier);
+					var tiff_header_start = bw.BaseStream.Position;
+					bw.LittleEndian = true; // Intel is little endian
+						
+					// Use Intel endian-ness
+					bw.Write(IntelIdentifier);
+						
+					// Write the TIFF data id
+					bw.Write(TiffDataIdentifier);
+						
+					// Write the offset to the main IFD table
+					bw.Write((uint)(bw.BaseStream.Position + sizeof(uint) - tiff_header_start));
+						
+					// Write the ifd tables
+					WriteExifTable(bw, exif_data, tiff_header_start);
+					bw.LittleEndian = false; // Back to Motorola endian
+						
+					// Write the thumbnail image
+					var thumb = exif_data.Thumbnail;
+					if (thumb != null)
+						bw.Write(thumb);
+						
+					// Update the section size
+					bw.Write(section_size_offset, (ushort)(bw.BaseStream.Position - section_start - 2)); // section size doesn't include the marker
+				}
+				
+				// Copy the sections of the source jpg, excluding the exif data section.
+				// When we encounter an unmarked section, that should be the scan data.
+				for (;!br.EndOfStream;)
+				{
+					section_start = br.BaseStream.Position;
+					var b0 = br.ReadByte();
+					var b1 = br.ReadByte();
+					var size = br.ReadUShort() + 2; // +2 to include the section marker
+					
+					// Not a section
+					if (b0 != JpgMarker.Start)
+						break;
+					
+					// If this is the Exif data section, skip it
+					if (b1 == JpgMarker.APP1)
+					{
+						br.BaseStream.Position = section_start + size;
+					}
+					// Otherwise, copy the section to the dst stream
+					else
+					{
+						br.BaseStream.Position = section_start;
+						var copied = br.BaseStream.CopyNTo(bw.BaseStream, size);
+						if (copied != size) throw new IOException("Error while writing to output stream");
+					}
+				}
+				
+				// Copy the scan data
+				br.BaseStream.Position = section_start;
+				var scan_data_size = br.BaseStream.Length - br.BaseStream.Position - 2;
+				if (scan_data_size > 0)
+					br.BaseStream.CopyNTo(bw.BaseStream, scan_data_size);
+				
+				// Copy the Jpg end of image marker
+				bw.Write(br.ReadBytes(2));
+			}
+		}
+
+		/// <summary>Parses IFD tables from 'br' into 'exif_data'. Assumes 'br' is positioned at the start of the table</summary>
 		private static void ParseExifTable(BinaryReaderEx br, IExifDataInternal exif_data, long tiff_header_start)
 		{
 			// First 2 bytes is the number of entries in this IFD
-			for (ushort i = 0, iend = br.ReadUShort(); i < iend; i++)
-				exif_data.ReadRecord(br, tiff_header_start);
+			for (ushort i = 0, iend = br.ReadUShort(); i != iend; i++)
+				exif_data.ReadField(br, tiff_header_start);
+			
+			// Save the offset to the next ifd table in the linked list
+			var next_idf_offset = br.ReadUInt();
+			
+			// Check for a sub IFD table
+			var sub = exif_data.Field(Tag.SubIFDOffset, false);
+			if (sub != Field.Null)
+			{
+				br.BaseStream.Position = tiff_header_start + sub.AsUInt;
+				ParseExifTable(br, exif_data.SubIfd, tiff_header_start);
+			}
+			
+			// Check for an optional GPS ifd table
+			var gps = exif_data.Field(Tag.GPSIFDOffset, false);
+			if (gps != Field.Null)
+			{
+				br.BaseStream.Position = tiff_header_start + gps.AsUInt;
+				ParseExifTable(br, exif_data.GpsIfd, tiff_header_start);
+			}
+			
+			// Move to the next table
+			if (next_idf_offset != 0)
+			{
+				br.BaseStream.Position = tiff_header_start + next_idf_offset;
+				ParseExifTable(br, exif_data.NextIfd, tiff_header_start);
+			}
+		}
+
+		/// <summary>Writes IFD tables from 'exif_data' into 'bw'. Assumes 'bw' is positioned at the location to start writing</summary>
+		private static void WriteExifTable(BinaryWriterEx bw, IExifDataInternal exif_data, long tiff_header_start)
+		{
+			// Write the number of fields in the table
+			var count_offset = bw.BaseStream.Position; // Save the position to write the table field count
+			bw.Write((ushort)0); // Will update this after writing the table data
+			
+			// The offset to the start of the oversized data for the table
+			var oversized_data_offset = bw.BaseStream.Position + exif_data.FieldCount * Field.SizeInBytes + sizeof(uint);
+			
+			long subifd_offset = 0; // Saves the location of where to write the offset to the subifd table
+			long gpsifd_offset = 0; // Saves the location of where to write the offset to the gpsifd table
+			
+			// Write each field
+			int count = 0;
+			foreach (var f in exif_data.Fields)
+			{
+				bw.Write((ushort)f.Tag);
+				bw.Write((ushort)f.DataType);
+				bw.Write(f.Count);
+				if (f.Tag == Tag.SubIFDOffset)
+				{
+					subifd_offset = bw.BaseStream.Position;
+					bw.Write((uint)0); // Will update this when we write the sub ifd table
+				}
+				else if (f.Tag == Tag.GPSIFDOffset)
+				{
+					gpsifd_offset = bw.BaseStream.Position;
+					bw.Write((uint)0); // Will update this when we write the gps ifd table
+				}
+				else if (f.Data.Length <= Field.FieldDataSizeInBytes)
+				{
+					bw.Write(f.Data);
+				}
+				else
+				{
+					bw.Write(oversized_data_offset, f.Data);                     // write the data at the oversized data position
+					bw.Write((uint)(oversized_data_offset - tiff_header_start)); // write the offset to it
+					oversized_data_offset += f.Data.Length;
+				}
+				++count;
+			}
+			
+			// Write the field count
+			bw.Write(count_offset, (ushort)count);
+			
+			// Write the offset to the next ifd table
+			var nextifd_offset = bw.BaseStream.Position;
+			bw.Write((uint)0); // Will update this if we write a next ifd table
+			
+			// Move the stream position past the oversized data
+			bw.BaseStream.Position = oversized_data_offset;
+			
+			// Write the sub ifd (if there is one)
+			if (subifd_offset != 0)
+			{
+				bw.Write(subifd_offset, (ushort)(bw.BaseStream.Position - tiff_header_start));
+				WriteExifTable(bw, exif_data.SubIfd, tiff_header_start);
+			}
+			
+			// Write the gps ifd (if there is one)
+			if (gpsifd_offset != 0)
+			{
+				bw.Write(gpsifd_offset, (ushort)(bw.BaseStream.Position - tiff_header_start));
+				WriteExifTable(bw, exif_data.GpsIfd, tiff_header_start);
+			}
+			
+			// Write the next next ifd (if there is one)
+			if (exif_data.NextIfd.Count != 0)
+			{
+				bw.Write(nextifd_offset, (ushort)(bw.BaseStream.Position - tiff_header_start));
+				WriteExifTable(bw, exif_data.NextIfd, tiff_header_start);
+			}
 		}
 
 		/// <summary>
 		/// Parse a single exif entry.
-		/// Assumes 'br' is positioned at the start of the record.
-		/// 'br' is moved to the start of the next record on return</summary>
-		private static Tuple<Tag,byte[]> ParseExifRecord(BinaryReaderEx br, long tiff_header_start)
+		/// Assumes 'br' is positioned at the start of the field.
+		/// 'br' is moved to the start of the next field on return</summary>
+		private static Field ParseExifField(BinaryReaderEx br, long tiff_header_start)
 		{
 			// Read the exif field data. Each entry is 12 bytes
-			var tag   = (Tag)br.ReadUShort();
-			var dt    = (TiffDataType)br.ReadUShort();
-			var count = br.ReadUInt();
-			byte[] data;
+			var field      = new Field();
+			field.Tag      = (Tag)br.ReadUShort();
+			field.DataType = (TiffDataType)br.ReadUShort();
+			field.Count    = br.ReadUInt();
 			
 			// If the total space taken up by the field is longer than the
-			// 4 bytes afforded by the tag data, the tag data will contain
-			// an offset to the actual data.
-			var data_size = (int)count * SizeInBytes(dt);
-			if (data_size > 4)
+			// FieldSizeInBytes bytes afforded by the tag data, the tag data
+			// will contain an offset to the actual data.
+			var elem_size = SizeInBytes(field.DataType);
+			var data_size = (int)field.Count * elem_size;
+			if (data_size > Field.FieldDataSizeInBytes)
 			{
-				var ofs = br.ReadUShort();
-				data = br.ReadBytes(tiff_header_start + ofs, data_size);
-				br.ReadByte();
-				br.ReadByte(); // pad to 4 bytes
+				var ofs = br.ReadUInt();
+				field.Data = br.ReadBytes(tiff_header_start + ofs, data_size);
 			}
 			else
 			{
-				data  = br.ReadBytes(4);
+				field.Data  = br.ReadBytes(Field.FieldDataSizeInBytes);
 			}
-			return new Tuple<Tag, byte[]>(tag,data);
+			
+			// If the contained data is not bytes, endian swap each element
+			if (br.LittleEndian != BitConverter.IsLittleEndian)
+			{
+				switch (field.DataType)
+				{
+				// For these types 'elem_size' is correct
+				case TiffDataType.SShort:
+				case TiffDataType.UShort:
+				case TiffDataType.SLong:
+				case TiffDataType.ULong:
+				case TiffDataType.Single:
+				case TiffDataType.Double:
+					for (uint i = 0, iend = field.Count; i != iend; ++i)
+						Array.Reverse(field.Data, (int)i * elem_size, elem_size);
+					break;
+				
+				case TiffDataType.SRational:
+				case TiffDataType.URational:
+					int sz = elem_size / 2;
+					for (uint i = 0, iend = 2*field.Count; i != iend; ++i)
+						Array.Reverse(field.Data, (int)i*sz, sz);
+					break;
+				}
+			}
+			return field;
 		}
 
 		/// <summary>
@@ -517,7 +951,7 @@ namespace pr.gfx
 		/// but since the DCF specification specifies that thumbnails must be JPEG, this method will be sufficient for most purposes
 		/// See http://gvsoft.homedns.org/exif/exif-explanation.html#TIFFThumbs or http://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf for 
 		/// details on the encoding of TIFF thumbnails</summary>
-		private static void ParseJpgThumbnail(BinaryReaderEx br, IExifDataInternal exif_data, Data tags)
+		private static void ParseJpgThumbnail(BinaryReaderEx br, IExifDataInternal exif_data, IExifDataInternal tags)
 		{
 			if (!tags.HasTag(Tag.Compression) ||
 				!tags.HasTag(Tag.JPEGInterchangeFormat) ||
@@ -525,13 +959,13 @@ namespace pr.gfx
 				return;
 			
 			// Get the thumbnail encoding. This method only handles JPEG thumbnails (compression type 6)
-			var compression = (CompressiongType)tags[Tag.Compression].AsUInt16();
+			var compression = (CompressiongType)tags[Tag.Compression].AsInt;
 			if (compression != CompressiongType.JPEG_Old)
 				return;
 			
 			// Get the location of the thumbnail
-			uint offset = tags[Tag.JPEGInterchangeFormat      ].AsUInt32();
-			uint length = tags[Tag.JPEGInterchangeFormatLength].AsUInt32();
+			var offset = tags[Tag.JPEGInterchangeFormat      ].AsInt;
+			var length = tags[Tag.JPEGInterchangeFormatLength].AsInt;
 			if (length < 2) return;
 			
 			// Seek to the thumbnail data
@@ -539,66 +973,144 @@ namespace pr.gfx
 			
 			// The thumbnail may be padded, so we scan forward until we reach the JPEG header (0xFFD8) or the end of the file
 			byte b0 = br.ReadByte(), b1 = br.ReadByte();
-			for (;!br.EndOfStream && !(b0 == JpgIdentifierTag_b0 && b1 == JpgIdentifierTag_b1); b0 = b1, b1 = br.ReadByte()) {}
+			for (;!br.EndOfStream && !(b0 == JpgMarker.Start && b1 == JpgMarker.SOI); b0 = b1, b1 = br.ReadByte()) {}
 			if (br.EndOfStream) return;
 			
 			// Validate that it is a valid jpg thumbnail
 			br.BaseStream.Position -= 2; // step back to point at b0
 			br.BaseStream.Position += length - 2; // jump to the end of the thumbnail minus 2 bytes
-			if (br.ReadByte() != JpgIdentifierTag_e0 || // A valid JPEG stream ends with 0xFFD9
-				br.ReadByte() != JpgIdentifierTag_e1)
+			if (br.ReadByte() != JpgMarker.Start || // A valid JPEG stream ends with 0xFFD9
+				br.ReadByte() != JpgMarker.EOI)
 				return;
 			
 			// Read the jpg thumbnail data
 			br.BaseStream.Position -= length;
-			exif_data.ReadThumbnail(br, (int)length);
+			exif_data.ReadThumbnail(br, length);
 		}
 
-		/// <summary>Helper class for reading binary data from a stream allowing for endian-ness</summary>
+		/// <summary>
+		/// Helper class for reading binary data from a stream allowing for endian-ness.
+		/// Does not close the stream.</summary>
 		private class BinaryReaderEx :IDisposable
 		{
 			private readonly BinaryReader m_br;
 
-			// ReSharper disable MemberCanBePrivate.Local
 			/// <summary>Set to true if the provided stream contains little endian data</summary>
 			public bool LittleEndian { get; set; }
-			// ReSharper restore MemberCanBePrivate.Local
 
 			// ReSharper disable UnusedMember.Local
-			public BinaryReaderEx(Stream input) { m_br = new BinaryReader(input); }
-			public BinaryReaderEx(Stream input, Encoding encoding) { m_br = new BinaryReader(input, encoding); }
+			public BinaryReaderEx(Stream input) { m_br = new BinaryReader(new UncloseableStream(input)); }
+			public BinaryReaderEx(Stream input, Encoding encoding) { m_br = new BinaryReader(new UncloseableStream(input), encoding); }
 			public void Dispose() { m_br.Dispose(); }
 			// ReSharper restore UnusedMember.Local
 
 			/// <summary>Access to the underlying stream</summary>
 			public Stream BaseStream { get { return m_br.BaseStream; } }
 
-			/// <summary>True when the end of stream is reached</summary>
+			/// <summary>Returns true when the end of the stream is reached</summary>
 			public bool EndOfStream { get { return m_br.BaseStream.Position == m_br.BaseStream.Length; } }
 
-			/// <summary>Reads 'count' bytes from the stream, and reverses them if necessary for endian-ness</summary>
-			public byte[] ReadBytes(int count)
-			{
-				var bytes = m_br.ReadBytes(count);
-				if (LittleEndian != BitConverter.IsLittleEndian) Array.Reverse(bytes);
-				return bytes;
-			}
-			
-			/// <summary>Reads 'count' bytes from the stream at a given offset, restoring the stream position afterwards</summary>
+			/// <summary>Read a byte from the stream</summary>
+			public byte ReadByte() { return m_br.ReadByte(); }
+
+			/// <summary>Reads 'count' bytes from the stream</summary>
+			public byte[] ReadBytes(int count) { return m_br.ReadBytes(count); }
+
+			/// <summary>Reads 'count' bytes from the stream at 'offset' preserving the stream position</summary>
 			public byte[] ReadBytes(long offset, int count)
 			{
 				var pos = m_br.BaseStream.Position;
 				try
 				{
 					m_br.BaseStream.Seek(offset, SeekOrigin.Begin);
-					return ReadBytes(count);
+					return m_br.ReadBytes(count);
 				}
 				finally { m_br.BaseStream.Position = pos; }
 			}
-			public byte   ReadByte()           { return m_br.ReadByte(); }
-			public ushort ReadUShort()         { return BitConverter.ToUInt16(ReadBytes(2), 0); }
-			public uint   ReadUInt()           { return BitConverter.ToUInt32(ReadBytes(4), 0); }
-			public string ReadString(int len)  { var b = m_br.ReadBytes(len); return Encoding.UTF8.GetString(b,0,b.Length); }
+
+			/// <summary>Read a ushort from the stream</summary>
+			public ushort ReadUShort()
+			{
+				var bytes = ReadBytes(2);
+				if (LittleEndian != BitConverter.IsLittleEndian) Array.Reverse(bytes);
+				return BitConverter.ToUInt16(bytes, 0);
+			}
+
+			/// <summary>Read a uint from the stream</summary>
+			public uint ReadUInt()
+			{
+				var bytes = ReadBytes(4);
+				if (LittleEndian != BitConverter.IsLittleEndian) Array.Reverse(bytes);
+				return BitConverter.ToUInt32(bytes, 0);
+			}
+		}
+
+		/// <summary>
+		/// Helper class for writing binary data to a stream allowing for endian-ness.
+		/// Does not close the stream</summary>
+		private class BinaryWriterEx :IDisposable
+		{
+			private readonly BinaryWriter m_bw;
+
+			/// <summary>Set to true if the provided stream contains little endian data</summary>
+			public bool LittleEndian { private get; set; }
+
+			// ReSharper disable UnusedMember.Local
+			public BinaryWriterEx(Stream input) { m_bw = new BinaryWriter(new UncloseableStream(input)); }
+			public BinaryWriterEx(Stream input, Encoding encoding) { m_bw = new BinaryWriter(new UncloseableStream(input), encoding); }
+			public void Dispose() { m_bw.Dispose(); }
+			// ReSharper restore UnusedMember.Local
+
+			/// <summary>Access to the underlying stream</summary>
+			public Stream BaseStream { get { return m_bw.BaseStream; } }
+
+			/// <summary>Write a byte to the stream</summary>
+			public void Write(byte b) { m_bw.Write(b); m_bw.Flush(); }
+
+			/// <summary>Write a byte array to the stream</summary>
+			public void Write(byte[] bytes) { m_bw.Write(bytes); m_bw.Flush(); }
+
+			/// <summary>Writes a byte[] starting at 'offset' preserving the stream position</summary>
+			public void Write(long offset, byte[] bytes)
+			{
+				var pos = m_bw.BaseStream.Position;
+				try
+				{
+					m_bw.BaseStream.Seek(offset, SeekOrigin.Begin);
+					Write(bytes);
+				}
+				finally { m_bw.BaseStream.Position = pos; }
+			}
+
+			/// <summary>Write a uint to the stream. (endian swapping if needed)</summary>
+			public void Write(uint ui)
+			{
+				var bytes = BitConverter.GetBytes(ui);
+				if (LittleEndian != BitConverter.IsLittleEndian) Array.Reverse(bytes);
+				Write(bytes);
+			}
+
+			/// <summary>Write a ushort to the stream. (endian swapping if needed)</summary>
+			public void Write(ushort us)
+			{
+				var bytes = BitConverter.GetBytes(us);
+				if (LittleEndian != BitConverter.IsLittleEndian) Array.Reverse(bytes);
+				Write(bytes);
+			}
+
+			/// <summary>Write a ushort to the stream at 'offset' preserving the stream position. (endian swapping if needed)</summary>
+			public void Write(long offset, ushort us)
+			{
+				var pos = m_bw.BaseStream.Position;
+				try
+				{
+					var bytes = BitConverter.GetBytes(us);
+					if (LittleEndian != BitConverter.IsLittleEndian) Array.Reverse(bytes);
+					m_bw.BaseStream.Seek(offset, SeekOrigin.Begin);
+					Write(bytes);
+				}
+				finally { m_bw.BaseStream.Position = pos; }
+			}
 		}
 	}
 }
@@ -607,25 +1119,37 @@ namespace pr.gfx
 namespace pr
 {
 	using NUnit.Framework;
+	using System.Drawing;
 	using gfx;
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		private const string ExifImage = @"Q:\sdk\pr\prcs\unittest_resources\exif_image.jpg";
+		private const string SrcImage = @"Q:\sdk\pr\prcs\unittest_resources\exif_image.jpg";
+		private const string DstImage = @"Q:\sdk\pr\prcs\unittest_resources\exif_image_out.jpg";
 		
-		[Test] public static void TestExif_LoadExif()
+		[Test] public static void TestExif_LoadExifToMemory()
 		{
+			var exif = Exif.Load(SrcImage);
+			Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal, float.Epsilon);
+		}
+		[Test] public static void TestExif_ReadExifFromFile()
+		{
+			using (var fs = new FileStream(SrcImage, FileMode.Open, FileAccess.Read, FileShare.Read))
 			{
-				var exif = Exif.Load(ExifImage, true, true);
-				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt32());
+				var exif = Exif.Read(fs);
+				Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal);
 			}
-			{
-				using (var fs = new FileStream(ExifImage, FileMode.Open, FileAccess.Read, FileShare.Read))
-				{
-					var exif = Exif.Read(fs, true, true);
-					Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsUInt32());
-				}
-			}
+		}
+		[Test] public static void TestExif_WriteExifToFile()
+		{
+			var exif_in = Exif.Load(SrcImage);
+			Exif.Save(SrcImage, exif_in, DstImage);
+			var exif_out = Exif.Load(DstImage);
+			
+			Assert.DoesNotThrow(() => new Bitmap(DstImage), "Output jpg image is invalid");
+			Assert.AreEqual(exif_in.Count, exif_out.Count);
+			Assert.AreEqual(exif_in[Exif.Tag.FocalLength ].AsReal, exif_out[Exif.Tag.FocalLength ].AsReal);
+			Assert.AreEqual(exif_in[Exif.Tag.ExposureTime].AsReal, exif_out[Exif.Tag.ExposureTime].AsReal);
 		}
 	}
 }

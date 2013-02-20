@@ -209,6 +209,7 @@
     <Compile Include="directshow.net\VidPort.cs" />
     <Compile Include="directshow.net\Vmr9.cs" />
     <Compile Include="directshow.net\VmRender.cs" />
+    <Compile Include="extn\byte_array_extensions.cs" />
     <Compile Include="extn\dict_extensions.cs" />
     <Compile Include="extn\datagridview_extensions.cs">
       <SubType>Component</SubType>
@@ -219,11 +220,13 @@
     <Compile Include="extn\list_extensions.cs" />
     <Compile Include="extn\object_extensions.cs" />
     <Compile Include="extn\path_extensions.cs" />
+    <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
     <Compile Include="extn\xml_extensions.cs" />
     <Compile Include="gfx\colour128.cs" />
     <Compile Include="gfx\colour32.cs" />
+    <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gui\dock_container.cs">
       <SubType>Form</SubType>
