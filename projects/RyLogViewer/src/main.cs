@@ -116,6 +116,7 @@ namespace RyLogViewer
 			// Menu
 			m_menu.Location                          = Point.Empty;
 			m_menu_file_open.Click                  += (s,a) => OpenLogFile();
+			m_menu_file_wizards_androidlogcat.Click += (s,a) => AndroidLogcatWizard();
 			m_menu_file_open_stdout.Click           += (s,a) => LogProgramOutput();
 			m_menu_file_open_serial_port.Click      += (s,a) => LogSerialPort();
 			m_menu_file_open_network.Click          += (s,a) => LogNetworkOutput();
@@ -439,7 +440,15 @@ namespace RyLogViewer
 		{
 			OpenLogFile(filepath, true);
 		}
-		
+
+		/// <summary>Show the android device log wizard</summary>
+		private void AndroidLogcatWizard()
+		{
+			var dg = new AndroidLogcatUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LaunchProcess(dg.Launch);
+		}
+
 		/// <summary>Open a standard out connection</summary>
 		private void LogProgramOutput()
 		{

@@ -52,10 +52,14 @@
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_wizards = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_wizards_androidlogcat = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator17 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_serial_port = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_network = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_named_pipe = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator16 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_close = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_export = new System.Windows.Forms.ToolStripMenuItem();
@@ -350,10 +354,13 @@
 			// 
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file_open,
+            this.m_menu_file_wizards,
+            this.toolStripSeparator17,
             this.m_menu_file_open_stdout,
             this.m_menu_file_open_serial_port,
             this.m_menu_file_open_network,
             this.m_menu_file_open_named_pipe,
+            this.toolStripSeparator16,
             this.m_menu_file_close,
             this.m_sep1,
             this.m_menu_file_export,
@@ -371,6 +378,25 @@
 			this.m_menu_file_open.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
 			this.m_menu_file_open.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_open.Text = "&Open Log File";
+			// 
+			// m_menu_file_wizards
+			// 
+			this.m_menu_file_wizards.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_wizards_androidlogcat});
+			this.m_menu_file_wizards.Name = "m_menu_file_wizards";
+			this.m_menu_file_wizards.Size = new System.Drawing.Size(216, 22);
+			this.m_menu_file_wizards.Text = "&Wizards";
+			// 
+			// m_menu_file_wizards_androidlogcat
+			// 
+			this.m_menu_file_wizards_androidlogcat.Name = "m_menu_file_wizards_androidlogcat";
+			this.m_menu_file_wizards_androidlogcat.Size = new System.Drawing.Size(156, 22);
+			this.m_menu_file_wizards_androidlogcat.Text = "Android Logcat";
+			// 
+			// toolStripSeparator17
+			// 
+			this.toolStripSeparator17.Name = "toolStripSeparator17";
+			this.toolStripSeparator17.Size = new System.Drawing.Size(213, 6);
 			// 
 			// m_menu_file_open_stdout
 			// 
@@ -395,6 +421,11 @@
 			this.m_menu_file_open_named_pipe.Name = "m_menu_file_open_named_pipe";
 			this.m_menu_file_open_named_pipe.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_open_named_pipe.Text = "Log &Named Pipe...";
+			// 
+			// toolStripSeparator16
+			// 
+			this.toolStripSeparator16.Name = "toolStripSeparator16";
+			this.toolStripSeparator16.Size = new System.Drawing.Size(213, 6);
 			// 
 			// m_menu_file_close
 			// 
@@ -1164,6 +1195,10 @@
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_toggle_bookmark;
 		private System.Windows.Forms.ToolStripMenuItem m_cmenu_clear_log;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator15;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards_androidlogcat;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator17;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator16;
 	}
 }
 

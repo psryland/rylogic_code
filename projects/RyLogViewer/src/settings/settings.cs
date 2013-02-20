@@ -290,6 +290,11 @@ namespace RyLogViewer
 			get { return get<PipeConn[]>("PipeConnectionHistory"); }
 			set { set("PipeConnectionHistory", value); }
 		}
+		public AndroidLogcat AndroidLogcat
+		{
+			get { return get<AndroidLogcat>("AndroidLogcat"); }
+			set { set("AndroidLogcat", value); }
+		}
 		public string LogFilePath
 		{
 			get { return get<string>("LogFilePath"); }
@@ -355,6 +360,7 @@ namespace RyLogViewer
 			NetworkConnectionHistory        = new NetConn[0];
 			SerialConnectionHistory         = new SerialConn[0];
 			PipeConnectionHistory           = new PipeConn[0];
+			AndroidLogcat                   = new AndroidLogcat();
 			LogFilePath                     = "";
 		}
 		public Settings(string filepath)
@@ -430,7 +436,8 @@ namespace RyLogViewer
 					typeof(SerialConn),
 					typeof(SerialConn[]),
 					typeof(PipeConn),
-					typeof(PipeConn[])
+					typeof(PipeConn[]),
+					typeof(AndroidLogcat)
 				};
 			}
 		}

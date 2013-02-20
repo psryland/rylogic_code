@@ -308,6 +308,26 @@ namespace RyLogViewer
 		}
 	}
 
+	[DataContract]
+	public class AndroidLogcat :ICloneable
+	{
+		[DataMember] public string AdbFullPath = "";
+
+		public AndroidLogcat() {}
+		public AndroidLogcat(AndroidLogcat rhs)
+		{
+			AdbFullPath = rhs.AdbFullPath;
+		}
+		public override string ToString()
+		{
+			return AdbFullPath;
+		}
+		public object Clone()
+		{
+			return new AndroidLogcat(this);
+		}
+	}
+
 	public static class Misc
 	{
 		/// <summary>Watch window helper for converting byte buffers to strings</summary>
