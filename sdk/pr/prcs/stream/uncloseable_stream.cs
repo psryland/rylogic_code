@@ -18,9 +18,9 @@ namespace pr.stream
 		private bool m_closed = false; // True when the wrapped stream has been closed
 		
 		public UncloseableStream(Stream stream) :base(stream) {}
-		public override bool CanRead            { get { return m_closed ? false : base.CanRead; } }
-		public override bool CanSeek            { get { return m_closed ? false : base.CanSeek; } }
-		public override bool CanWrite           { get { return m_closed ? false : base.CanWrite; } }
+		public override bool CanRead            { get { return !m_closed && base.CanRead; } }
+		public override bool CanSeek            { get { return !m_closed && base.CanSeek; } }
+		public override bool CanWrite           { get { return !m_closed && base.CanWrite; } }
 		public override long Length             { get { CheckClosed(); return base.Length; } }
 		public override long Position           { get { CheckClosed(); return base.Position; } set { CheckClosed(); base.Position = value; } }
 

@@ -41,15 +41,6 @@ namespace pr.extn
 			if (typeof(T) == typeof(char  )) return (T)(object)AsChar  (arr);
 			throw new NotSupportedException("Type " + typeof(T).Name + " not supported in As<T>");
 		}
-
-		/// <summary>Equivalent to C's memcmp() function</summary>
-		public static int Compare(this byte[] lhs, byte[] rhs)
-		{
-			for (int i = 0, iend = Math.Min(lhs.Length,rhs.Length); i != iend; ++i)
-				if (lhs[i] != rhs[i])
-					return lhs[i] - rhs[i];
-			return lhs.Length - rhs.Length;
-		}
 	}
 }
 

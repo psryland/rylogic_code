@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using pr.extn;
 using pr.stream;
@@ -54,7 +55,16 @@ namespace pr.gfx
 		//   Fields[Count]
 		//   ByteOffsetToNextIFD (typically = 0 meaning no more)
 		//   OversizedData
-		//
+		
+		/// <summary>Names for the various ifd tables within a jpg file</summary>
+		public enum IFDTable
+		{
+			IFD0,
+			IFD1,
+			SubIFD,
+			GpsIFD,
+		}
+
 		/// <summary>All Exif tags as per the Exif standard 2.2, JEITA CP-2451</summary>
 		public enum Tag :ushort
 		{
@@ -90,10 +100,10 @@ namespace pr.gfx
 			YCbCrSubSampling            = 0x212,
 			YCbCrPositioning            = 0x213,
 			ReferenceBlackWhite         = 0x214,
-			Copyright                   = 0x8298,
 			
-			SubIFDOffset             = 0x8769,
-			GPSIFDOffset             = 0x8825,
+			Copyright                   = 0x8298,
+			SubIFDOffset                = 0x8769,
+			GPSIFDOffset                = 0x8825,
 			
 			// SubIFD items
 			ExposureTime             = 0x829A,
@@ -275,6 +285,25 @@ namespace pr.gfx
 			}
 		}
 
+		/// <summary>Return the ifd table that 'tag' is typically found in</summary>
+		public static IFDTable TableAffinity(Tag tag)
+		{
+			// IFD0 items
+			if (tag >= Tag.ImageWidth && tag <= Tag.ReferenceBlackWhite) return IFDTable.IFD0;
+			if (tag == Tag.Copyright || tag == Tag.SubIFDOffset || tag == Tag.GPSIFDOffset) return IFDTable.IFD0;
+			
+			// SubIFD items
+			if (tag >= Tag.ExposureTime && tag <= Tag.ImageUniqueID)
+				return IFDTable.SubIFD;
+			
+			// GPS subifd items
+			if (tag >= Tag.GPSVersionID && tag <= Tag.GPSDifferential)
+				return IFDTable.GpsIFD;
+			
+			// Dunno
+			return IFDTable.IFD0;
+		}
+
 		/// <summary>Exceptions raised by this library</summary>
 		public class Exception :System.Exception
 		{
@@ -299,7 +328,12 @@ namespace pr.gfx
 			{
 				get
 				{
-					if (DataType == TiffDataType.SByte || DataType == TiffDataType.SShort || DataType == TiffDataType.SLong) return BitConverter.ToInt32(Data, 0);
+					if (DataType == TiffDataType.SByte)  return Data[0];
+					if (DataType == TiffDataType.UByte)  return Data[0];
+					if (DataType == TiffDataType.SShort) return BitConverter.ToInt16(Data, 0);
+					if (DataType == TiffDataType.UShort) return BitConverter.ToUInt16(Data, 0);
+					if (DataType == TiffDataType.SLong)  return BitConverter.ToInt32(Data, 0);
+					if (DataType == TiffDataType.ULong)  return (int)BitConverter.ToUInt32(Data, 0);
 					throw new ArgumentException("Contained data type is not a signed integral type");
 				}
 			}
@@ -307,7 +341,12 @@ namespace pr.gfx
 			{
 				get
 				{
-					if (DataType == TiffDataType.UByte || DataType == TiffDataType.UShort || DataType == TiffDataType.ULong) return BitConverter.ToUInt32(Data, 0);
+					if (DataType == TiffDataType.UByte)  return Data[0];
+					if (DataType == TiffDataType.SByte)  return Data[0];
+					if (DataType == TiffDataType.UShort) return BitConverter.ToUInt16(Data, 0);
+					if (DataType == TiffDataType.SShort) return (uint)BitConverter.ToInt16(Data, 0);
+					if (DataType == TiffDataType.ULong)  return BitConverter.ToUInt32(Data, 0);
+					if (DataType == TiffDataType.SLong)  return (uint)BitConverter.ToInt32(Data, 0);
 					throw new ArgumentException("Contained data type is not an unsigned integral type");
 				}
 			}
@@ -375,6 +414,24 @@ namespace pr.gfx
 
 			/// <summary>The Exif data associated with the thumbnail</summary>
 			IExifData ThumbnailExif { get; }
+
+			/// <summary>Add/Update an exif field</summary>
+			void Set(Tag tag, Field field);
+			void Set(Tag tag, byte[] b);
+			void Set(Tag tag, byte b);
+			void Set(Tag tag, sbyte b);
+			void Set(Tag tag, ushort b);
+			void Set(Tag tag, short b);
+			void Set(Tag tag, uint b);
+			void Set(Tag tag, int b);
+			void Set(Tag tag, float b);
+			void Set(Tag tag, double b);
+			void Set(Tag tag, uint n, uint d);
+			void Set(Tag tag, int n, int d);
+			void Set(Tag tag, string s);
+
+			/// <summary>Delete an exif field. Returns true if the field was deleted</summary>
+			bool Delete(Tag tag);
 		}
 
 		/// <summary>Private interface for setting up an exif data accessor object</summary>
@@ -403,6 +460,9 @@ namespace pr.gfx
 
 			/// <summary>Read and store info about an image thumbnail</summary>
 			void ReadThumbnail(BinaryReaderEx br, int length);
+
+			/// <summary>Add/Update an exif field on this ifd table (not recursive)</summary>
+			void AddOrUpdate(Tag tag, Field value);
 		}
 
 		/// <summary>Common implementation of Exif data access</summary>
@@ -462,6 +522,44 @@ namespace pr.gfx
 
 			/// <summary>The Exif data associated with the thumbnail</summary>
 			public IExifData ThumbnailExif { get { return NextIfd; } }
+
+			/// <summary>Add/Update an exif field</summary>
+			public void Set(Tag tag, Field field)
+			{
+				switch (TableAffinity(tag))
+				{
+				default: throw new ArgumentOutOfRangeException();
+				case IFDTable.IFD0:   AddOrUpdate(tag, field); break;
+				case IFDTable.IFD1:   NextIfd.AddOrUpdate(tag, field); break;
+				case IFDTable.SubIFD: SubIfd .AddOrUpdate(tag, field); break;
+				case IFDTable.GpsIFD: GpsIfd .AddOrUpdate(tag, field); break;
+				}
+			}
+			public void Set(Tag tag, byte[] b)       { Set(tag, new Field(tag, TiffDataType.Undefined, (uint)b.Length, b)); }
+			public void Set(Tag tag, byte b)         { Set(tag, new Field(tag, TiffDataType.UByte, 1, new[]{b})); }
+			public void Set(Tag tag, sbyte b)        { Set(tag, new Field(tag, TiffDataType.SByte, 1, new[]{(byte)b})); }
+			public void Set(Tag tag, ushort b)       { Set(tag, new Field(tag, TiffDataType.UShort, 1, BitConverter.GetBytes(b))); }
+			public void Set(Tag tag, short b)        { Set(tag, new Field(tag, TiffDataType.SShort, 1, BitConverter.GetBytes(b))); }
+			public void Set(Tag tag, uint b)         { Set(tag, new Field(tag, TiffDataType.ULong, 1, BitConverter.GetBytes(b))); }
+			public void Set(Tag tag, int b)          { Set(tag, new Field(tag, TiffDataType.SLong, 1, BitConverter.GetBytes(b))); }
+			public void Set(Tag tag, float b)        { Set(tag, new Field(tag, TiffDataType.Single, 1, BitConverter.GetBytes(b))); }
+			public void Set(Tag tag, double b)       { Set(tag, new Field(tag, TiffDataType.Double, 1, BitConverter.GetBytes(b))); }
+			public void Set(Tag tag, uint n, uint d) { Set(tag, new Field(tag, TiffDataType.URational, 1, BitConverter.GetBytes(n).Concat(BitConverter.GetBytes(d)).ToArray())); }
+			public void Set(Tag tag, int n, int d)   { Set(tag, new Field(tag, TiffDataType.SRational, 1, BitConverter.GetBytes(n).Concat(BitConverter.GetBytes(d)).ToArray())); }
+			public void Set(Tag tag, string s)       { Set(tag, new Field(tag, TiffDataType.AsciiStrings, (uint)s.Length, Encoding.ASCII.GetBytes(s))); }
+
+			/// <summary>Delete an exif field</summary>
+			public bool Delete(Tag tag)
+			{
+				if (m_ifd.Remove(tag)) return true;
+				if (m_sub_ifd != null && m_sub_ifd.Delete(tag)) return true;
+				if (m_gps_ifd != null && m_gps_ifd.Delete(tag)) return true;
+				if (m_nxt_ifd != null && m_nxt_ifd.Delete(tag)) return true;
+				return false;
+			}
+
+			/// <summary>Add/Update an exif field on this ifd table (not recursive)</summary>
+			public abstract void AddOrUpdate(Tag tag, Field field);
 
 			/// <summary>Returns access to the next IFD table</summary>
 			public abstract IExifDataInternal NextIfd { get; }
@@ -531,17 +629,24 @@ namespace pr.gfx
 				br.BaseStream.Read(thumb, 0, thumb.Length);
 				m_Thumbnail = thumb;
 			}
+
+			/// <summary>Add/Update an exif field</summary>
+			public override void AddOrUpdate(Tag tag, Field field)
+			{
+				m_ifd[tag] = field;
+			}
 		}
 
 		/// <summary>An index for the exif data in a jpg image</summary>
-		private class Index :ExifDataBase<long>, IExifData ,IExifDataInternal
+		private class Index :ExifDataBase<long>, IExifData ,IExifDataInternal ,IDisposable
 		{
 			private readonly BinaryReaderEx m_br;
 			private long m_tiff_header_start;
 			private long m_thumbnail_offset;
 			private int m_thumbnail_length;
 			
-			public Index(Stream stream) { m_br = new BinaryReaderEx(new UncloseableStream(stream)); }
+			public Index(Stream stream) { m_br = new BinaryReaderEx(stream); }
+			public void Dispose() { m_br.Dispose(); }
 
 			/// <summary>Jpg thumbnail data</summary>
 			public override byte[] Thumbnail { get { return m_thumbnail_length != 0 ? m_br.ReadBytes(m_thumbnail_offset, m_thumbnail_length) : null; } }
@@ -593,6 +698,12 @@ namespace pr.gfx
 				m_thumbnail_offset = br.BaseStream.Position;
 				m_thumbnail_length = length;
 				br.BaseStream.Position += length;
+			}
+
+			/// <summary>Add/Update an exif field</summary>
+			public override void AddOrUpdate(Tag tag, Field field)
+			{
+				throw new NotSupportedException("Modifying IFD tables is not supported when exif is being read directly from a stream");
 			}
 		}
 
@@ -662,13 +773,13 @@ namespace pr.gfx
 				if (exif_data_size == 0) return data;
 				
 				// Next is the Exif data itself. It starts with the ASCII string "Exif\0\0".
-				if (ExifIdentifier.Compare(br.ReadBytes(6)) != 0)
+				if (!ExifIdentifier.SequenceEqual(br.ReadBytes(6)))
 					throw new Exception("Malformed Exif data");
 				
 				// We're now into the TIFF format
 				// Here the byte alignment may be different. II for Intel, MM for Motorola
 				var tiff_hdr_start = br.BaseStream.Position;
-				br.LittleEndian = IntelIdentifier.Compare(br.ReadBytes(2)) == 0;
+				br.LittleEndian = IntelIdentifier.SequenceEqual(br.ReadBytes(2));
 				
 				// Next 2 bytes are always the same.
 				if (br.ReadUShort() != TiffDataIdentifier)
@@ -692,6 +803,7 @@ namespace pr.gfx
 		{
 			if (src == null) throw new Exception("Exif data must be an instance returned from this library");
 			if (!src.CanSeek) throw new Exception("Loading Exif data requires a seek-able stream");
+			if (ReferenceEquals(src,dst)) throw new Exception("Cannot read from and write to the same stream");
 			
 			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
 			using (var bw = new BinaryWriterEx(new UncloseableStream(dst)))
@@ -767,7 +879,7 @@ namespace pr.gfx
 					else
 					{
 						br.BaseStream.Position = section_start;
-						var copied = br.BaseStream.CopyNTo(bw.BaseStream, size);
+						var copied = br.BaseStream.CopyTo(size, bw.BaseStream);
 						if (copied != size) throw new IOException("Error while writing to output stream");
 					}
 				}
@@ -776,7 +888,7 @@ namespace pr.gfx
 				br.BaseStream.Position = section_start;
 				var scan_data_size = br.BaseStream.Length - br.BaseStream.Position - 2;
 				if (scan_data_size > 0)
-					br.BaseStream.CopyNTo(bw.BaseStream, scan_data_size);
+					br.BaseStream.CopyTo(scan_data_size, bw.BaseStream);
 				
 				// Copy the Jpg end of image marker
 				bw.Write(br.ReadBytes(2));
@@ -998,11 +1110,11 @@ namespace pr.gfx
 			/// <summary>Set to true if the provided stream contains little endian data</summary>
 			public bool LittleEndian { get; set; }
 
-			// ReSharper disable UnusedMember.Local
-			public BinaryReaderEx(Stream input) { m_br = new BinaryReader(new UncloseableStream(input)); }
+			// ReSharper disable UnusedMember.Local, MemberCanBePrivate.Local
+			public BinaryReaderEx(Stream input) :this(input, Encoding.UTF8) {}
 			public BinaryReaderEx(Stream input, Encoding encoding) { m_br = new BinaryReader(new UncloseableStream(input), encoding); }
 			public void Dispose() { m_br.Dispose(); }
-			// ReSharper restore UnusedMember.Local
+			// ReSharper restore UnusedMember.Local, MemberCanBePrivate.Local
 
 			/// <summary>Access to the underlying stream</summary>
 			public Stream BaseStream { get { return m_br.BaseStream; } }
@@ -1055,11 +1167,11 @@ namespace pr.gfx
 			/// <summary>Set to true if the provided stream contains little endian data</summary>
 			public bool LittleEndian { private get; set; }
 
-			// ReSharper disable UnusedMember.Local
-			public BinaryWriterEx(Stream input) { m_bw = new BinaryWriter(new UncloseableStream(input)); }
+			// ReSharper disable UnusedMember.Local, MemberCanBePrivate.Local
+			public BinaryWriterEx(Stream input) :this(input, Encoding.UTF8) {}
 			public BinaryWriterEx(Stream input, Encoding encoding) { m_bw = new BinaryWriter(new UncloseableStream(input), encoding); }
 			public void Dispose() { m_bw.Dispose(); }
-			// ReSharper restore UnusedMember.Local
+			// ReSharper restore UnusedMember.Local, MemberCanBePrivate.Local
 
 			/// <summary>Access to the underlying stream</summary>
 			public Stream BaseStream { get { return m_bw.BaseStream; } }
@@ -1150,6 +1262,37 @@ namespace pr
 			Assert.AreEqual(exif_in.Count, exif_out.Count);
 			Assert.AreEqual(exif_in[Exif.Tag.FocalLength ].AsReal, exif_out[Exif.Tag.FocalLength ].AsReal);
 			Assert.AreEqual(exif_in[Exif.Tag.ExposureTime].AsReal, exif_out[Exif.Tag.ExposureTime].AsReal);
+		}
+		[Test] public static void TestExif_AddRemoveFields()
+		{
+			var exif = Exif.Load(SrcImage);
+			
+			// Update the field
+			exif.Set(Exif.Tag.Orientation, (ushort)3);
+			Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+			
+			// Save to the file
+			Exif.Save(SrcImage, exif, DstImage);
+			exif = Exif.Load(DstImage);
+			Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+			
+			// Remove the field
+			exif.Delete(Exif.Tag.Orientation);
+			Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
+			
+			// Save to file
+			Exif.Save(SrcImage, exif, DstImage);
+			exif = Exif.Load(DstImage);
+			Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
+			
+			// Restore the field
+			exif.Set(Exif.Tag.Orientation, (ushort)1);
+			Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+			
+			// Save to file
+			Exif.Save(SrcImage, exif, DstImage);
+			exif = Exif.Load(DstImage);
+			Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
 		}
 	}
 }

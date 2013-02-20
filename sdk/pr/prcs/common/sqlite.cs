@@ -2718,13 +2718,13 @@ namespace pr.common
 			[Conditional("SQLITE_TRACE")] public static void Dump()
 			{
 				foreach (var t in m_trace)
-					Debug.WriteLine("\nQuery:\n"+t.Value.CallStack);
+					System.Diagnostics.Debug.WriteLine("\nQuery:\n"+t.Value.CallStack);
 			}
 			
 			/// <summary>Write trace information to the debug output window</summary>
 			[Conditional("SQLITE_TRACE")] public static void WriteLine(string str)
 			{
-				Debug.WriteLine("[SQLite]:"+str);
+				System.Diagnostics.Debug.WriteLine("[SQLite]:"+str);
 			}
 		}
 		#endregion

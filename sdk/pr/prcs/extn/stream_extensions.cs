@@ -12,13 +12,13 @@ namespace pr.extn
 	public static class StreamExtensions
 	{
 		/// <summary>Copies a maximum of 'count' bytes from this stream to 'dst'. Returns the number of bytes copied</summary>
-		public static long CopyNTo(this Stream src, Stream dst, long count)
+		public static long CopyTo(this Stream src, long count, Stream dst)
 		{
-			return src.CopyNTo(dst, count, 4096);
+			return src.CopyTo(count, dst, 4096);
 		}
 
 		/// <summary>Copies a maximum of 'count' bytes from this stream to 'dst' using the given buffer size. Returns the number of bytes copied</summary>
-		public static long CopyNTo(this Stream src, Stream dst, long count, int buffer_size)
+		public static long CopyTo(this Stream src, long count, Stream dst, int buffer_size)
 		{
 			byte[] buffer = new byte[buffer_size];
 			long copied = 0;
@@ -42,7 +42,7 @@ namespace pr
 			using (var ms0 = new MemoryStream(new byte[]{1,2,3,4,5,6,7,8}, false))
 			using (var ms1 = new MemoryStream())
 			{
-				ms0.CopyNTo(ms1, 5);
+				ms0.CopyTo(5, ms1);
 				Assert.AreEqual(8, ms0.Length);
 				Assert.AreEqual(5, ms1.Length);
 				
