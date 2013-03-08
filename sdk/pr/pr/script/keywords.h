@@ -7,7 +7,7 @@
 #ifndef PR_SCRIPT_RESULT
 #define PR_SCRIPT_RESULT(name, value)
 #endif
-PR_SCRIPT_RESULT(Success                         ,= 1)
+PR_SCRIPT_RESULT(Success                         ,= 0)
 PR_SCRIPT_RESULT(Failed                          ,= 0x80000000)
 PR_SCRIPT_RESULT(InvalidIdentifier               ,)
 PR_SCRIPT_RESULT(InvalidString                   ,)
