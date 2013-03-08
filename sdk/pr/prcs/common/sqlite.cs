@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -197,17 +196,18 @@ namespace pr.common
 				type == typeof(UInt32)         ||
 				type == typeof(Int64)          ||
 				type == typeof(UInt64)         ||
+				type == typeof(DateTimeOffset) ||
 				type.IsEnum)
 				return DataType.Integer;
 			if (type == typeof(Single)         ||
 				type == typeof(Double))
 				return DataType.Real;
 			if (type == typeof(String)         ||
-				type == typeof(DateTimeOffset) ||
 				type == typeof(Guid)           ||
 				type == typeof(Decimal))
 				return DataType.Text;
-			if (type == typeof(byte[]))
+			if (type == typeof(byte[])         ||
+				type == typeof(int[]))
 				return DataType.Blob;
 			
 			throw new NotSupportedException(
@@ -217,12 +217,15 @@ namespace pr.common
 		}
 
 		/// <summary>A helper for gluing strings together</summary>
-		public static string Sql(params string[] parts)
+		public static string Sql(params object[] parts)
 		{
 			return Sql(m_sql_cached_sb, parts);
 		}
-		public static string Sql(StringBuilder sb, params string[] parts)
+		public static string Sql(StringBuilder sb, params object[] parts)
 		{
+			// Do not change this to automatically add white space,
+			// 'p' might be within quoted string which can turn this:
+			//  name='DomType0' into this: name=' DomType0 ';
 			sb.Length = 0;
 			foreach (var p in parts) sb.Append(p);
 			return sb.ToString();
@@ -313,7 +316,7 @@ namespace pr.common
 		private static sqlite3_stmt Compile(sqlite3 db, string sql_string)
 		{
 			Trace.WriteLine(string.Format("Compiling sql string '{0}'", sql_string));
-			Debug.Assert(!db.IsInvalid, "Database handle invalid");
+			System.Diagnostics.Debug.Assert(!db.IsInvalid, "Database handle invalid");
 			
 			sqlite3_stmt stmt;
 			var buf_utf8 = StrToUTF8(sql_string);
@@ -399,10 +402,21 @@ namespace pr.common
 				if (value == null) Null(stmt, idx);
 				else sqlite3_bind_text16(stmt, idx, (string)value, -1, TransientData);
 			}
-			public static void Blob(sqlite3_stmt stmt, int idx, object value)
+			public static void ByteArray(sqlite3_stmt stmt, int idx, object value)
 			{
 				if (value == null) Null(stmt, idx);
 				else sqlite3_bind_blob(stmt, idx, (byte[])value, ((byte[])value).Length, TransientData);
+			}
+			public static void IntArray(sqlite3_stmt stmt, int idx, object value)
+			{
+				if (value == null) Null(stmt, idx);
+				else
+				{
+					var iarr = (int[])value;
+					var barr = new byte[Buffer.ByteLength(iarr)];
+					Buffer.BlockCopy(iarr, 0, barr, 0, barr.Length);
+					sqlite3_bind_blob(stmt, idx, barr, barr.Length, TransientData);
+				}
 			}
 			public static void Guid(sqlite3_stmt stmt, int idx, object value)
 			{
@@ -439,7 +453,8 @@ namespace pr.common
 					Add(typeof(float)          ,Float         );
 					Add(typeof(double)         ,Double        );
 					Add(typeof(string)         ,Text          );
-					Add(typeof(byte[])         ,Blob          );
+					Add(typeof(byte[])         ,ByteArray     );
+					Add(typeof(int[])          ,IntArray      );
 					Add(typeof(Guid)           ,Guid          );
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 				}
@@ -520,20 +535,39 @@ namespace pr.common
 				if (ptr != IntPtr.Zero) return Marshal.PtrToStringUni(ptr);
 				return string.Empty;
 			}
-			public static object Blob(sqlite3_stmt stmt, int idx)
+			private static void Blob(sqlite3_stmt stmt, int idx, out IntPtr ptr, out int len)
 			{
 				// Read the blob size limit
 				var db = sqlite3_db_handle(stmt);
 				var max_size = sqlite3_limit(db, Limit.Length, -1);
 				
 				// sqlite returns null if this column is null
-				var ptr = sqlite3_column_blob(stmt, idx); // have to call this first
-				var len = sqlite3_column_bytes(stmt, idx);
-				if (len < 0 || len > max_size) throw Exception.New(Result.Corrupt, "Blob data size exceeds database maximum size limit");
+				ptr = sqlite3_column_blob(stmt, idx); // have to call this first
+				len = sqlite3_column_bytes(stmt, idx);
+				if (len < 0 || len > max_size)
+					throw Exception.New(Result.Corrupt, "Blob data size exceeds database maximum size limit");
+			}
+
+			public static object ByteArray(sqlite3_stmt stmt, int idx)
+			{
+				IntPtr ptr; int len;
+				Blob(stmt, idx, out ptr, out len);
 				
 				// Copy the blob out of the db
 				byte[] blob = new byte[len];
-				if (len != 0) Marshal.Copy(ptr, blob, 0, len);
+				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
+				return blob;
+			}
+			public static object IntArray(sqlite3_stmt stmt, int idx)
+			{
+				IntPtr ptr; int len;
+				Blob(stmt, idx, out ptr, out len);
+				if ((len % sizeof(int)) != 0)
+					throw Exception.New(Result.Corrupt, "Blob data is not an even multiple of Int32s");
+				
+				// Copy the blob out of the db
+				int[] blob = new int[len / sizeof(int)];
+				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
 				return blob;
 			}
 			public static object Guid(sqlite3_stmt stmt, int idx)
@@ -566,7 +600,8 @@ namespace pr.common
 					Add(typeof(float)          ,Float         );
 					Add(typeof(double)         ,Double        );
 					Add(typeof(string)         ,Text          );
-					Add(typeof(byte[])         ,Blob          );
+					Add(typeof(byte[])         ,ByteArray     );
+					Add(typeof(int[])          ,IntArray      );
 					Add(typeof(Guid)           ,Guid          );
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 				}
@@ -646,7 +681,7 @@ namespace pr.common
 			private readonly sqlite3 m_db;
 			
 			private readonly int m_creation_thread;
-			[Conditional("DEBUG")] public void AssertCorrectThread()
+			[System.Diagnostics.Conditional("DEBUG")] public void AssertCorrectThread()
 			{
 				if (m_creation_thread != Thread.CurrentThread.ManagedThreadId)
 					throw Exception.New(Result.Misuse, "Cross-thread use of Sqlite ORM");
@@ -682,7 +717,7 @@ namespace pr.common
 				get
 				{
 					AssertCorrectThread();
-					Debug.Assert(!m_db.IsInvalid, "Invalid database handle");
+					System.Diagnostics.Debug.Assert(!m_db.IsInvalid, "Invalid database handle");
 					return m_db;
 				}
 			}
@@ -765,7 +800,7 @@ namespace pr.common
 			}
 			public void DropTable(Type type, bool if_exists = true)
 			{
-				var meta = TableMetaData.GetMetaData(type);
+				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				var opts = if_exists ? "if exists " : "";
 				Execute(Sql("drop table ",opts,meta.Name));
 			}
@@ -773,7 +808,7 @@ namespace pr.common
 			/// <summary>Return the sql string used to create a table for 'type'</summary>
 			public static string CreateTableString(Type type, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
 			{
-				var meta = TableMetaData.GetMetaData(type);
+				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				return Sql("create table ",on_constraint == OnCreateConstraint.Reject?string.Empty:"if not exists ",meta.Name,"(\n",meta.Decl(),")");
 			}
 
@@ -796,7 +831,7 @@ namespace pr.common
 			}
 			public void CreateTable(Type type, Func<object> factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
 			{
-				var meta = TableMetaData.GetMetaData(type);
+				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				if (factory != null) meta.Factory = factory;
 				
 				if (on_constraint == OnCreateConstraint.AlterTable && TableExists(type))
@@ -813,7 +848,7 @@ namespace pr.common
 			public void AlterTable(Type type)
 			{
 				// Read the columns that we want the table to have
-				var meta = TableMetaData.GetMetaData(type);
+				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				var cols0 = meta.Columns.Select(x => x.Name).ToList();
 				
 				// Read the existing columns that the table has
@@ -855,7 +890,7 @@ namespace pr.common
 			}
 			public void RenameTable(Type type, string new_name, bool update_meta_data = true)
 			{
-				var meta = TableMetaData.GetMetaData(type);
+				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				var sql = Sql("alter table ",meta.Name," rename to ",new_name);
 				Execute(sql);
 				if (update_meta_data)
@@ -902,6 +937,12 @@ namespace pr.common
 				return Table<T>().Insert(item, on_constraint);
 			}
 
+			/// <summary>Insert 'item' into a table based on it's reflected type</summary>
+			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			{
+				return Table(item.GetType()).Insert(item, on_constraint);
+			}
+
 			/// <summary>Update the row corresponding to 'item' in a table of type 'T'</summary>
 			public int Update<T>(T item)
 			{
@@ -912,6 +953,18 @@ namespace pr.common
 			public int Delete<T>(T item)
 			{
 				return Table<T>().Delete(item);
+			}
+
+			/// <summary>Returns the table meta data for 'T'</summary>
+			public TableMetaData TableMetaData<T>()
+			{
+				return TableMetaData(typeof(T));
+			}
+
+			/// <summary>Returns the table meta data for 'type'</summary>
+			public TableMetaData TableMetaData(Type type)
+			{
+				return Sqlite.TableMetaData.GetMetaData(type);
 			}
 		}
 
@@ -1012,15 +1065,6 @@ namespace pr.common
 				var item = Find<T>(key1);
 				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key: "+key1);
 				return item;
-			}
-
-			/// <summary>
-			/// Insert an item into the table.<para/>
-			/// Note: insert will *NOT* change the primary keys/autoincrement members of 'item'.
-			/// Make sure you call 'Get()' or the other overload of Insert to get the updated item.</summary>
-			public int Insert<T>(T item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			{
-				return Insert((object)item, on_constraint);
 			}
 
 			/// <summary>Insert an item into the table.<para/>
@@ -1687,7 +1731,7 @@ namespace pr.common
 			/// <summary>Returns the m_stmt field after asserting it's validity</summary>
 			public sqlite3_stmt Stmt
 			{
-				get { Debug.Assert(!m_stmt.IsInvalid, "Invalid query object"); return m_stmt; }
+				get { System.Diagnostics.Debug.Assert(!m_stmt.IsInvalid, "Invalid query object"); return m_stmt; }
 			}
 
 			/// <summary>Call when done with this query</summary>
@@ -1950,7 +1994,8 @@ namespace pr.common
 				Trace.WriteLine(string.Format("Creating table meta data for '{0}'", type.Name));
 				
 				// Get the table attribute
-				var attr = type.GetCustomAttributes(typeof(TableAttribute), false).Cast<TableAttribute>().FirstOrDefault() ?? new TableAttribute();
+				var attrs = type.GetCustomAttributes(typeof(TableAttribute), true);
+				var attr = attrs.Length != 0 ? (TableAttribute)attrs[0] : new TableAttribute();
 				
 				Type = type;
 				Name = type.Name;
@@ -2233,14 +2278,14 @@ namespace pr.common
 			{
 				Trace.WriteLine(string.Format("   Column: '{0}'", mi.Name));
 				var attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault() ?? new ColumnAttribute();
-				var underlying_type = Nullable.GetUnderlyingType(type);
+				var is_nullable = Nullable.GetUnderlyingType(type) != null;
 				
 				Name            = mi.Name;
 				SqlDataType     = attr.SqlDataType != DataType.Null ? attr.SqlDataType : SqlType(type);
 				Constraints     = attr.Constraints ?? "";
 				IsPk            = attr.PrimaryKey;
 				IsAutoInc       = attr.AutoInc;
-				IsNotNull       = type.IsValueType && underlying_type == null;
+				IsNotNull       = type.IsValueType && !is_nullable;
 				IsCollate       = false;
 				Order           = OrderBaseValue + attr.Order;
 				ClrType         = type;
@@ -2248,33 +2293,32 @@ namespace pr.common
 				// Setup the bind and read methods
 				try
 				{
-					if (ClrType.IsEnum)
+					if (!is_nullable)
 					{
-						// Special case enums
-						BindFn = BindFunction[typeof(int)];
-						ReadFn = ReadFunction[typeof(int)];
+						var bind_type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+						BindFn = BindFunction[bind_type];
+						ReadFn = ReadFunction[bind_type];
 					}
-					else if (underlying_type != null)
+					else // nullable type, wrap the binding functions
 					{
-						var bind = BindFunction[underlying_type];
+						var base_type = Nullable.GetUnderlyingType(type);
+						var is_enum   = base_type.IsEnum;
+						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
+						
+						var bind = BindFunction[bind_type];
+						var read = ReadFunction[bind_type];
 						BindFn = (stmt,idx,obj) =>
 							{
 								if (obj != null) bind(stmt, idx, obj);
 								else sqlite3_bind_null(stmt, idx);
 							};
-						
-						var read = ReadFunction[underlying_type];
 						ReadFn = (stmt,idx) =>
 							{
-								return sqlite3_column_type(stmt, idx) != DataType.Null
-									? read(stmt, idx)
-									: null;
+								if (sqlite3_column_type(stmt, idx) == DataType.Null) return null;
+								var obj = read(stmt, idx);
+								if (is_enum) obj = Enum.ToObject(base_type, obj);
+								return obj;
 							};
-					}
-					else
-					{
-						BindFn = BindFunction[ClrType];
-						ReadFn = ReadFunction[ClrType];
 					}
 					return;
 				}
@@ -2368,7 +2412,7 @@ namespace pr.common
 		/// Controls the mapping from .NET type to database table.
 		/// By default, all public properties (including inherited properties) are used as columns,
 		/// this can be changed using the PropertyBindingFlags/FieldBindingFlags properties.</summary>
-		[AttributeUsage(AttributeTargets.Class|AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+		[AttributeUsage(AttributeTargets.Class|AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
 		public class TableAttribute :Attribute
 		{
 			/// <summary>
@@ -2703,26 +2747,26 @@ namespace pr.common
 			private static readonly Dictionary<Query, Info> m_trace = new Dictionary<Query,Info>();
 			
 			/// <summary>Records the creation of a new Query object</summary>
-			[Conditional("SQLITE_TRACE")] public static void QueryCtor(Query query)
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryCtor(Query query)
 			{
 				m_trace.Add(query, new Info());
 			}
 			
 			/// <summary>Records the destruction of a Query object</summary>
-			[Conditional("SQLITE_TRACE")] public static void QueryDtor(Query query)
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryDtor(Query query)
 			{
 				m_trace.Remove(query);
 			}
 			
 			/// <summary>Dumps the existing Query objects to standard error</summary>
-			[Conditional("SQLITE_TRACE")] public static void Dump()
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void Dump()
 			{
 				foreach (var t in m_trace)
 					System.Diagnostics.Debug.WriteLine("\nQuery:\n"+t.Value.CallStack);
 			}
 			
 			/// <summary>Write trace information to the debug output window</summary>
-			[Conditional("SQLITE_TRACE")] public static void WriteLine(string str)
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void WriteLine(string str)
 			{
 				System.Diagnostics.Debug.WriteLine("[SQLite]:"+str);
 			}
@@ -2821,12 +2865,14 @@ namespace pr
 			[Sqlite.Column(Order=14)] public string         m_string;
 			[Sqlite.Column(Order=15)] public byte[]         m_buf;
 			[Sqlite.Column(Order=16)] public byte[]         m_empty_buf;
-			[Sqlite.Column(Order=17)] public Guid           m_guid;
-			[Sqlite.Column(Order=18)] public SomeEnum       m_enum;
-			[Sqlite.Column(Order=19)] public DateTimeOffset m_dt_offset;
-			[Sqlite.Column(Order=20, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
-			[Sqlite.Column(Order=21)] public int?           m_nullint;
-			[Sqlite.Column(Order=22)] public long?          m_nulllong;
+			[Sqlite.Column(Order=17)] public int[]          m_int_buf;
+			[Sqlite.Column(Order=18)] public Guid           m_guid;
+			[Sqlite.Column(Order=19)] public SomeEnum       m_enum;
+			[Sqlite.Column(Order=20)] public SomeEnum?      m_nullenum;
+			[Sqlite.Column(Order=21)] public DateTimeOffset m_dt_offset;
+			[Sqlite.Column(Order=22, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
+			[Sqlite.Column(Order=23)] public int?           m_nullint;
+			[Sqlite.Column(Order=24)] public long?          m_nulllong;
 			
 			// ReSharper disable UnusedAutoPropertyAccessor.Local
 			public int Ignored { get; set; }
@@ -2852,8 +2898,10 @@ namespace pr
 				m_string    = "string";
 				m_buf       = new byte[]{0,1,2,3,4,5,6,7,8,9};
 				m_empty_buf = null;
+				m_int_buf   = new[]{0x10000000,0x20000000,0x30000000,0x40000000};
 				m_guid      = Guid.NewGuid();
 				m_enum      = SomeEnum.One;
+				m_nullenum  = SomeEnum.Two;
 				m_dt_offset = DateTimeOffset.UtcNow;
 				m_custom    = new Custom();
 				m_nullint   = 23;
@@ -2881,7 +2929,9 @@ namespace pr
 				if (!Equals(other.m_string, m_string)       ) return false;
 				if (!Equals(other.m_buf, m_buf)             ) return false;
 				if (!Equals(other.m_empty_buf, m_empty_buf) ) return false;
+				if (!Equals(other.m_int_buf, m_int_buf)     ) return false;
 				if (!Equals(other.m_enum, m_enum)           ) return false;
+				if (!Equals(other.m_nullenum, m_nullenum)   ) return false;
 				if (!other.m_guid.Equals(m_guid)            ) return false;
 				if (!other.m_dt_offset.Equals(m_dt_offset)  ) return false;
 				if (!other.m_custom.Equals(m_custom)        ) return false;
@@ -2890,7 +2940,7 @@ namespace pr
 				//&& other.Ignored == Ignored
 				return true;
 			}
-			private static bool Equals(byte[] arr1, byte[] arr2)
+			private static bool Equals<T>(T[] arr1, T[] arr2)
 			{
 				if (arr1 == null) return arr2 == null || arr2.Length == 0;
 				if (arr2 == null) return arr1.Length == 0;
@@ -3008,6 +3058,18 @@ namespace pr
 			public Guid   Prop3 { get; set; }
 			public int    NewProp { get; set; }
 		}
+
+		// Tests inherited Sqlite attributes
+		[Sqlite.Table(PrimaryKey = "PK", PKAutoInc = true)]
+		public class DomType5Base
+		{
+			public int PK { get; set; }
+		}
+		public class DomType5 :DomType5Base
+		{
+			public string Data { get; set; }
+		}
+
 		// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
 		#endregion
 
@@ -3020,7 +3082,7 @@ namespace pr
 
 			// Copy sqlite3.dll to test folder
 			var src_dir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\sqlite\lib\"));
-			var src_file = Regex.Replace(Environment.CurrentDirectory, @"(.*)\\(.*?)\\(.*?)$", "sqlite3.$2.$3.dll");
+			var src_file = Regex.Replace(Environment.CurrentDirectory, @"(.*)\\(.*?)\\(.*?)$", "sqlite3.$2.$3.dll").Replace(@".x86.",@".win32.");
 			File.Copy(Path.Combine(src_dir, src_file), Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
 
 			// Register custom type bind/read methods
@@ -3087,10 +3149,10 @@ namespace pr
 				
 				// Check the table
 				var table = db.Table<DomType1>();
-				Assert.AreEqual(23, table.ColumnCount);
+				Assert.AreEqual(25, table.ColumnCount);
 				using (var q = table.Query("select * from "+table.Name))
 				{
-					Assert.AreEqual(23, q.ColumnCount);
+					Assert.AreEqual(25, q.ColumnCount);
 					Assert.AreEqual("m_key"       ,q.ColumnName( 0));
 					Assert.AreEqual("m_bool"      ,q.ColumnName( 1));
 					Assert.AreEqual("m_sbyte"     ,q.ColumnName( 2));
@@ -3108,12 +3170,14 @@ namespace pr
 					Assert.AreEqual("m_string"    ,q.ColumnName(14));
 					Assert.AreEqual("m_buf"       ,q.ColumnName(15));
 					Assert.AreEqual("m_empty_buf" ,q.ColumnName(16));
-					Assert.AreEqual("m_guid"      ,q.ColumnName(17));
-					Assert.AreEqual("m_enum"      ,q.ColumnName(18));
-					Assert.AreEqual("m_dt_offset" ,q.ColumnName(19));
-					Assert.AreEqual("m_custom"    ,q.ColumnName(20));
-					Assert.AreEqual("m_nullint"   ,q.ColumnName(21));
-					Assert.AreEqual("m_nulllong"  ,q.ColumnName(22));
+					Assert.AreEqual("m_int_buf"   ,q.ColumnName(17));
+					Assert.AreEqual("m_guid"      ,q.ColumnName(18));
+					Assert.AreEqual("m_enum"      ,q.ColumnName(19));
+					Assert.AreEqual("m_nullenum"  ,q.ColumnName(20));
+					Assert.AreEqual("m_dt_offset" ,q.ColumnName(21));
+					Assert.AreEqual("m_custom"    ,q.ColumnName(22));
+					Assert.AreEqual("m_nullint"   ,q.ColumnName(23));
+					Assert.AreEqual("m_nulllong"  ,q.ColumnName(24));
 				}
 				
 				// Create some objects to stick in the table
@@ -3143,7 +3207,7 @@ namespace pr
 				Assert.IsTrue(obj3.Equals(OBJ3));
 				
 				// Check parameter binding
-				using (var q = table.Query("select m_string,m_int from "+table.Name+" where m_string = @p1 and m_int = @p2"))
+				using (var q = table.Query(Sqlite.Sql("select m_string,m_int from ",table.Name," where m_string = @p1 and m_int = @p2")))
 				{
 					Assert.AreEqual(2, q.ParmCount);
 					Assert.AreEqual("@p1", q.ParmName(1));
@@ -3538,7 +3602,8 @@ namespace pr
 					Assert.AreEqual(5, list.Count);
 				}
 				{// Where clause
-					var q = table.Where(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three);
+					// ReSharper disable RedundantCast
+					var q = table.Where(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three); // Cast needed to test expressions
 					var list = q.ToList();
 					Assert.AreEqual(7, list.Count);
 					Assert.AreEqual(0, list[0].Inc_Key);
@@ -3548,6 +3613,7 @@ namespace pr
 					Assert.AreEqual(3, list[4].Inc_Key);
 					Assert.AreEqual(8, list[5].Inc_Key);
 					Assert.AreEqual(2, list[6].Inc_Key);
+					// ReSharper restore RedundantCast
 				}
 				{// Where clause with 'like' method calling 'RowCount'
 					var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
@@ -3569,7 +3635,7 @@ namespace pr
 					Assert.AreEqual(2, list[9].Inc_Key);
 				}
 				{// Contains clause
-					var set = new List<string>{"2","4","8"};
+					var set = new[]{"2","4","8"};
 					var q = from x in table where set.Contains(x.Inc_Value) select x;
 					var list = q.ToList();
 					Assert.AreEqual(3, list.Count);
@@ -3786,6 +3852,41 @@ namespace pr
 					Assert.AreEqual(23, list[0].m_nullint);
 					Assert.AreEqual(23, list[1].m_nullint);
 				}
+			}
+		}
+		[Test] public static void TestSqlite_AttributeInheritance()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a simple table
+				db.DropTable<DomType5>();
+				db.CreateTable<DomType5>();
+				Assert.IsTrue(db.TableExists<DomType5>());
+				var table = db.Table<DomType5>();
+				
+				var meta = db.TableMetaData<DomType5>();
+				Assert.AreEqual(2, meta.ColumnCount);
+				Assert.AreEqual(1, meta.Pks.Length);
+				Assert.AreEqual("PK", meta.Pks[0].Name);
+				Assert.AreEqual(1, meta.NonPks.Length);
+				Assert.AreEqual("Data", meta.NonPks[0].Name);
+				
+				// Create some objects to stick in the table
+				var obj1 = new DomType5{Data = "1"};
+				var obj2 = new DomType5{Data = "2"};
+				var obj3 = new DomType5{Data = "3"};
+				var obj4 = new DomType5{Data = "4"};
+				
+				// Insert stuff
+				Assert.AreEqual(1, table.Insert(obj1));
+				Assert.AreEqual(1, table.Insert(obj2));
+				Assert.AreEqual(1, table.Insert(obj3));
+				Assert.AreEqual(1, table.Insert(obj4));
+				Assert.AreEqual(4, table.RowCount);
 			}
 		}
 	}
