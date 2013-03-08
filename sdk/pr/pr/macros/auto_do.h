@@ -9,12 +9,14 @@
 #ifndef PR_AUTO_DO_H
 #define PR_AUTO_DO_H
 
-#define PR_AUTO_DO(type, variable, what_to_do) \
-struct AutoDo##type##variable \
-{ \
-	AutoDo##type##variable(const type& var) : variable(var)	{} \
-	~AutoDo##type##variable()								{ what_to_do } \
-	type variable; \
-} auto_##variable(variable);
+#include <pr/macros/join.h>
 
-#endif//PR_AUTO_DO_H
+#define PR_AUTO_DO(type, variable, what_to_do) \
+struct PR_JOIN(AutoDo,__LINE__) \
+{ \
+	type variable; \
+	PR_JOIN(AutoDo,__LINE__)(const type& var) :variable(var) {} \
+	~PR_JOIN(AutoDo,__LINE__)()                              { what_to_do } \
+} PR_JOIN(auto_,__LINE__)(variable);
+
+#endif
