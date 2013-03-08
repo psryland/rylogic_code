@@ -16,6 +16,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Xml;
 using pr.maths;
 using pr.util;
 
@@ -509,28 +510,25 @@ namespace pr.util
 		/// Serialise an instance of type 'T' to xml.
 		/// 'T' should be decorated with [DataContract],[DataMember] attributes.
 		/// You also need to add custom types as '[KnownType(typeof(CustomType))]' attributes</summary>
-		public static string ToXml(T obj)
+		public static string ToXml(T obj, bool pretty = false)
 		{
-			using (var m = new MemoryStream())
-			using (var r = new StreamReader(m))
+			var sb = new StringBuilder();
+			var settings = pretty ? new XmlWriterSettings{Indent = true, IndentChars = "  ", Encoding = Encoding.UTF8, NewLineOnAttributes = false} : new XmlWriterSettings();
+			using (var x = XmlWriter.Create(sb, settings))
 			{
 				var s = new DataContractSerializer(typeof(T));
-				s.WriteObject(m, obj);
-				m.Position = 0;
-				return r.ReadToEnd();
+				s.WriteObject(x, obj);
 			}
+			return sb.ToString();
 		}
 
 		/// <summary>Deserialise an instance of type 'T' from xml.</summary>
 		public static T FromXml(string xml)
 		{
-			using (var m = new MemoryStream())
+			using (var r = XmlReader.Create(new StringReader(xml)))
 			{
-				var data = Encoding.UTF8.GetBytes(xml);
-				m.Write(data, 0, data.Length);
-				m.Position = 0;
 				var s = new DataContractSerializer(typeof(T));
-				return (T)s.ReadObject(m);
+				return (T)s.ReadObject(r);
 			}
 		}
 
@@ -613,7 +611,14 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		[Test] public static void TestByteArrayCompare()
+		[DataContract] public class XmlableType
+		{
+			[DataMember] public int    Int    { get; set; }
+			[DataMember] public string String { get; set; }
+			[DataMember] public Point  Point  { get; set; }
+		}
+
+		[Test] public static void TestUtils_ByteArrayCompare()
 		{
 			byte[] lhs = new byte[]{1,2,3,4,5};
 			byte[] rhs = new byte[]{3,4,5,6,7};
@@ -624,26 +629,34 @@ namespace pr
 			Assert.AreEqual(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
 			Assert.AreEqual( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
 		}
-		[Test] public static void TestUtils()
+		[Test] public static void TestUtils_Convert()
 		{
-			{// Conv
-				int[] src = {1,2,3,4};
-				List<int> dst = new List<int>(Util.Conv(src, i=>i*2));
-				for (int i = 0; i != src.Length; ++i) Assert.AreEqual(dst[i], 2*src[i]);
-			}
-			{// ToBytes[]/FromBytes[]
-				const ulong num = 12345678910111213;
-				byte[] bytes = Util.ToBytes(num);
-				Assert.AreEqual(8, bytes.Length);
-				Util.FromBytes<ulong>(bytes);
-			}
+			int[] src = {1,2,3,4};
+			List<int> dst = new List<int>(Util.Conv(src, i=>i*2));
+			for (int i = 0; i != src.Length; ++i) Assert.AreEqual(dst[i], 2*src[i]);
 		}
-		[Test] public static void TestPropertyName()
+		[Test] public static void TestUtils_ToFromByteArray()
+		{
+			const ulong num = 12345678910111213;
+			byte[] bytes = Util.ToBytes(num);
+			Assert.AreEqual(8, bytes.Length);
+			Util.FromBytes<ulong>(bytes);
+		}
+		[Test] public static void TestUtils_MemberName()
 		{
 			Assert.AreEqual("X", Util<Point>.MemberName(p=>p.X));
 			Assert.AreEqual("BaseStream", Util<StreamWriter>.MemberName(s=>s.BaseStream));
 		}
-		[Test] public static void TestPrettySize()
+		[Test] public static void TestUtils_ToFromXml()
+		{
+			var x1 = new XmlableType{Int = 1, String = "2", Point = new Point(3,4)};
+			var xml = Util<XmlableType>.ToXml(x1, true);
+			var x2 = Util<XmlableType>.FromXml(xml);
+			Assert.AreEqual(x1.Int, x2.Int);
+			Assert.AreEqual(x1.String, x2.String);
+			Assert.AreEqual(x1.Point, x2.Point);
+		}
+		[Test] public static void TestUtils_PrettySize()
 		{
 			Func<long,string> pretty = size => { return Util.PrettySize(size, true, 1) + " " + Util.PrettySize(size, false, 1); };
 
