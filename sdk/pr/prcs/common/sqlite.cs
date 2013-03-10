@@ -931,28 +931,22 @@ namespace pr.common
 				return Table<T>().Get(keys);
 			}
 
-			/// <summary>Insert 'item' into a table of type 'T'</summary>
-			public int Insert<T>(T item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			{
-				return Table<T>().Insert(item, on_constraint);
-			}
-
 			/// <summary>Insert 'item' into a table based on it's reflected type</summary>
 			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
 				return Table(item.GetType()).Insert(item, on_constraint);
 			}
 
-			/// <summary>Update the row corresponding to 'item' in a table of type 'T'</summary>
-			public int Update<T>(T item)
+			/// <summary>Update the row corresponding to 'item' in a table based on it's reflected type</summary>
+			public int Update(object item)
 			{
-				return Table<T>().Update(item);
+				return Table(item.GetType()).Update(item);
 			}
 
-			/// <summary>Delete the row corresponding to 'item' from a table of type 'T'</summary>
-			public int Delete<T>(T item)
+			/// <summary>Delete the row corresponding to 'item' from a table based on it's reflected type</summary>
+			public int Delete(object item)
 			{
-				return Table<T>().Delete(item);
+				return Table(item.GetType()).Delete(item);
 			}
 
 			/// <summary>Returns the table meta data for 'T'</summary>
