@@ -856,12 +856,12 @@ namespace pr.common
 				var cols1 = EnumRows<TableInfo>(sql).Select(x => x.name).ToList();
 				
 				// Sqlite does not support the drop column syntax
-				//// For each column in cols1, that isn't in cols0, drop it
-				//foreach (var c in cols1)
-				//{
-				//    if (cols0.Contains(c)) continue;
-				//    Execute(Sql("alter table ",meta.Name," drop column ",c));
-				//}
+				// // For each column in cols1, that isn't in cols0, drop it
+				// foreach (var c in cols1)
+				// {
+				//     if (cols0.Contains(c)) continue;
+				//     Execute(Sql("alter table ",meta.Name," drop column ",c));
+				// }
 					
 				// For each column in cols0, that isn't in cols1, add it
 				for (int i = 0, iend = cols0.Count; i != iend; ++i)
@@ -1196,7 +1196,89 @@ namespace pr.common
 
 			/// <summary>Read only access to the generated sql arguments</summary>
 			public List<object> Arguments { get { return m_cmd.Arguments; } }
- 
+
+			/// <summary>Return the first row. Throws if no rows found</summary>
+			public T First<T>()
+			{
+				m_cmd.Take(1);
+				try { return ((IEnumerable<T>)this).First(); } finally { m_cmd.Reset(); }
+			}
+			public T First<T>(Expression<Func<T,bool>> pred)
+			{
+				m_cmd.Where(pred);
+				return First<T>();
+			}
+
+			/// <summary>Return the first row or null</summary>
+			public T FirstOrDefault<T>()
+			{
+				m_cmd.Take(1);
+				try { return this.OfType<T>().FirstOrDefault(); } finally { m_cmd.Reset(); }
+			}
+			public T FirstOrDefault<T>(Expression<Func<T,bool>> pred)
+			{
+				m_cmd.Where(pred);
+				return FirstOrDefault<T>();
+			}
+
+			/// <summary>Add a 'count' clause to row enumeration</summary>
+			public int Count<T>(Expression<Func<T,bool>> pred)
+			{
+				m_cmd.Where(pred);
+				return RowCount;
+			}
+			public int Count() // Overload added to prevent accidental use of Linq-to-Objects Count() extension
+			{
+				return RowCount;
+			}
+
+			/// <summary>Delete rows from the table</summary>
+			public int Delete<T>(Expression<Func<T,bool>> pred)
+			{
+				m_cmd.Where(pred);
+				return Delete();
+			}
+			public int Delete()
+			{
+				GenerateExpression("delete");
+				try { return m_db.Execute(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
+			}
+
+			/// <summary>Add a 'where' clause to row enumeration</summary>
+			public Table Where<T>(Expression<Func<T,bool>> pred)
+			{
+				m_cmd.Where(pred);
+				return this;
+			}
+
+			/// <summary>Add an 'OrderBy' clause to row enumeration</summary>
+			public Table OrderBy<T,U>(Expression<Func<T,U>> pred)
+			{
+				m_cmd.OrderBy(pred, true);
+				return this;
+			}
+
+			/// <summary>Add an 'OrderByDescending' clause to row enumeration</summary>
+			public Table OrderByDescending<T,U>(Expression<Func<T,U>> pred)
+			{
+				m_cmd.OrderBy(pred, false);
+				return this;
+			}
+
+			/// <summary>Add a 'limit' clause to row enumeration</summary>
+			public Table Take(int n)
+			{
+				m_cmd.Take(n);
+				return this;
+			}
+
+			/// <summary>Add an 'offset' clause to row enumeration</summary>
+			public Table Skip(int n)
+			{
+				m_cmd.Skip(n);
+				return this;
+			}
+
 			/// <summary>Wraps an sql expression for enumerating the rows of this table</summary>
 			protected class CmdExpr
 			{
@@ -1595,83 +1677,63 @@ namespace pr.common
 			/// <summary>Return the first row. Throws if no rows found</summary>
 			public T First()
 			{
-				m_cmd.Take(1);
-				try { return ((IEnumerable<T>)this).First(); } finally { m_cmd.Reset(); }
+				return First<T>();
 			}
 			public T First(Expression<Func<T,bool>> pred)
 			{
-				m_cmd.Where(pred);
-				return First();
+				return First<T>(pred);
 			}
 
 			/// <summary>Return the first row or null</summary>
-			public T FirstOrDefault(Expression<Func<T,bool>> pred)
-			{
-				m_cmd.Where(pred);
-				return FirstOrDefault();
-			}
 			public T FirstOrDefault()
 			{
-				m_cmd.Take(1);
-				try { return ((IEnumerable<T>)this).FirstOrDefault(); } finally { m_cmd.Reset(); }
+				return FirstOrDefault<T>();
+			}
+			public T FirstOrDefault(Expression<Func<T,bool>> pred)
+			{
+				return FirstOrDefault<T>(pred);
 			}
 
 			/// <summary>Add a 'count' clause to row enumeration</summary>
 			public int Count(Expression<Func<T,bool>> pred)
 			{
-				m_cmd.Where(pred);
-				return RowCount;
-			}
-			public int Count() // Overload added to prevent accidental use of Linq-to-Objects Count() extension
-			{
-				return RowCount;
+				return Count<T>(pred);
 			}
 
 			/// <summary>Delete rows from the table</summary>
 			public int Delete(Expression<Func<T,bool>> pred)
 			{
-				m_cmd.Where(pred);
-				return Delete();
-			}
-			public int Delete()
-			{
-				GenerateExpression("delete");
-				try { return m_db.Execute(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
+				return Delete<T>(pred);
 			}
 
 			/// <summary>Add a 'where' clause to row enumeration</summary>
 			public Table<T> Where(Expression<Func<T,bool>> pred)
 			{
-				m_cmd.Where(pred);
-				return this;
+				return (Table<T>)Where<T>(pred);
 			}
 
 			/// <summary>Add an 'OrderBy' clause to row enumeration</summary>
 			public Table<T> OrderBy<U>(Expression<Func<T,U>> pred)
 			{
-				m_cmd.OrderBy(pred, true);
-				return this;
+				return (Table<T>)OrderBy<T,U>(pred);
 			}
 
 			/// <summary>Add an 'OrderByDescending' clause to row enumeration</summary>
 			public Table<T> OrderByDescending<U>(Expression<Func<T,U>> pred)
 			{
-				m_cmd.OrderBy(pred, false);
-				return this;
+				return (Table<T>)OrderByDescending<T,U>(pred);
 			}
 
 			/// <summary>Add a 'limit' clause to row enumeration</summary>
-			public Table<T> Take(int n)
+			public new Table<T> Take(int n)
 			{
-				m_cmd.Take(n);
-				return this;
+				return (Table<T>)base.Take(n);
 			}
 
 			/// <summary>Add an 'offset' clause to row enumeration</summary>
-			public Table<T> Skip(int n)
+			public new Table<T> Skip(int n)
 			{
-				m_cmd.Skip(n);
-				return this;
+				return (Table<T>)base.Skip(n);
 			}
 
 			/// <summary>IEnumerable(T) interface</summary>
@@ -2103,7 +2165,7 @@ namespace pr.common
 			public void BindPks(sqlite3_stmt stmt, int first_idx, params object[] keys)
 			{
 				if (first_idx < 1) throw new ArgumentException("Parameter binding indices start at 1 so 'first_idx' must be >= 1");
-				if (Pks.Length != keys.Length) throw new ArgumentException("Not enough primary key values passed for type "+Name);
+				if (Pks.Length != keys.Length) throw new ArgumentException("Incorrect number of primary keys passed for type "+Name);
 				if (Pks.Length == 0) throw new ArgumentException("Attempting to bind primary keys for a type without primary keys");
 				
 				int idx = 0;
@@ -2169,7 +2231,6 @@ namespace pr.common
 					// Since sqlite does not support dropping columns in a table, it's likely,
 					// for backwards compatibility, that a table will contain columns that don't
 					// correspond to a property or field in 'item'. These columns are silently ignored.
-					//if (col == null) throw new ArgumentException("'item' does not contain a property or field called '"+cname+"'");
 					if (col == null) continue;
 					
 					col.Set(item, col.ReadFn(stmt, i));
@@ -2620,7 +2681,6 @@ namespace pr.common
 		#region Imported functions
 
 		// ReSharper disable InconsistentNaming,UnusedMember.Local
-		//private static readonly IntPtr StaticData  = new IntPtr(0);
 		private static readonly IntPtr TransientData = new IntPtr(-1);
 		private delegate void sqlite3_destructor_type(IntPtr ptr);
 
@@ -2810,6 +2870,7 @@ namespace pr
 
 		public interface IDomType0
 		{
+			int      Inc_Key  { get; set; }
 			SomeEnum Inc_Enum { get; set; }
 		}
 
@@ -2931,7 +2992,6 @@ namespace pr
 				if (!other.m_custom.Equals(m_custom)        ) return false;
 				if (Math.Abs(other.m_float   - m_float  ) > float .Epsilon) return false;
 				if (Math.Abs(other.m_double  - m_double ) > double.Epsilon) return false;
-				//&& other.Ignored == Ignored
 				return true;
 			}
 			private static bool Equals<T>(T[] arr1, T[] arr2)
@@ -3723,7 +3783,7 @@ namespace pr
 					Assert.AreEqual(2, list[4].Inc_Key);
 				}
 				#pragma warning disable 168
-				{//Check sql strings are correct
+				{// Check sql strings are correct
 					string sql;
 					
 					sql = table.Where(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
@@ -3745,6 +3805,194 @@ namespace pr
 					Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
 					
 					var w = table.Delete(x => x.Inc_Key == 2);
+					sql = table.SqlString;
+					Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
+				}
+				#pragma warning restore 168
+			}
+		}
+		[Test] public static void TestSqlite_UntypedExprTree()
+		{
+			TestSqlite_OneTimeOnly();
+			
+			// Create/Open the database connection
+			const string FilePath = "tmpDB.db";
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a simple table
+				db.DropTable<DomType0>();
+				db.CreateTable<DomType0>();
+				Assert.IsTrue(db.TableExists<DomType0>());
+				var table = db.Table(typeof(DomType0));
+				
+				// Insert stuff
+				Assert.AreEqual(1, table.Insert(new DomType0(4)));
+				Assert.AreEqual(1, table.Insert(new DomType0(1)));
+				Assert.AreEqual(1, table.Insert(new DomType0(0)));
+				Assert.AreEqual(1, table.Insert(new DomType0(5)));
+				Assert.AreEqual(1, table.Insert(new DomType0(7)));
+				Assert.AreEqual(1, table.Insert(new DomType0(9)));
+				Assert.AreEqual(1, table.Insert(new DomType0(6)));
+				Assert.AreEqual(1, table.Insert(new DomType0(3)));
+				Assert.AreEqual(1, table.Insert(new DomType0(8)));
+				Assert.AreEqual(1, table.Insert(new DomType0(2)));
+				Assert.AreEqual(10, table.RowCount);
+				
+				string sql_count = "select count(*) from "+table.Name;
+				using (var q = table.Query(sql_count))
+					Assert.AreEqual(sql_count, q.SqlString);
+				
+				// Do some expression tree queries
+				{// Count clause
+					var q = table.Count<DomType0>(x => (x.Inc_Key % 3) == 0);
+					Assert.AreEqual(4, q);
+				}
+				{// Where clause
+					// ReSharper disable RedundantCast
+					var q = table.Where<DomType0>(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three).Cast<IDomType0>(); // Cast needed to test expressions
+					var list = q.ToList();
+					Assert.AreEqual(7, list.Count);
+					Assert.AreEqual(0, list[0].Inc_Key);
+					Assert.AreEqual(5, list[1].Inc_Key);
+					Assert.AreEqual(9, list[2].Inc_Key);
+					Assert.AreEqual(6, list[3].Inc_Key);
+					Assert.AreEqual(3, list[4].Inc_Key);
+					Assert.AreEqual(8, list[5].Inc_Key);
+					Assert.AreEqual(2, list[6].Inc_Key);
+					// ReSharper restore RedundantCast
+				}
+				{// Where clause with 'like' method calling 'RowCount'
+					var q = table.Where<DomType0>(x => SqlMethods.Like(x.Inc_Value, "5")).RowCount;
+					Assert.AreEqual(1, q);
+				}
+				{// Where clause with x => true
+					var q = table.Where<DomType0>(x => true).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(10, list.Count);
+					Assert.AreEqual(4, list[0].Inc_Key);
+					Assert.AreEqual(1, list[1].Inc_Key);
+					Assert.AreEqual(0, list[2].Inc_Key);
+					Assert.AreEqual(5, list[3].Inc_Key);
+					Assert.AreEqual(7, list[4].Inc_Key);
+					Assert.AreEqual(9, list[5].Inc_Key);
+					Assert.AreEqual(6, list[6].Inc_Key);
+					Assert.AreEqual(3, list[7].Inc_Key);
+					Assert.AreEqual(8, list[8].Inc_Key);
+					Assert.AreEqual(2, list[9].Inc_Key);
+				}
+				{// Contains clause
+					var set = new[]{"2","4","8"};
+					var q = table.Where<DomType0>(x => set.Contains(x.Inc_Value)).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(3, list.Count);
+					Assert.AreEqual(4, list[0].Inc_Key);
+					Assert.AreEqual(8, list[1].Inc_Key);
+					Assert.AreEqual(2, list[2].Inc_Key);
+				}
+				{// NOT Contains clause
+					var set = new List<string>{"2","4","8","5","9"};
+					var q = table.Where<DomType0>(x => set.Contains(x.Inc_Value) == false).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(5, list.Count);
+					Assert.AreEqual(1, list[0].Inc_Key);
+					Assert.AreEqual(0, list[1].Inc_Key);
+					Assert.AreEqual(7, list[2].Inc_Key);
+					Assert.AreEqual(6, list[3].Inc_Key);
+					Assert.AreEqual(3, list[4].Inc_Key);
+				}
+				{// NOT Contains clause
+					var set = new List<string>{"2","4","8","5","9"};
+					var q = table.Where<DomType0>(x => !set.Contains(x.Inc_Value)).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(5, list.Count);
+					Assert.AreEqual(1, list[0].Inc_Key);
+					Assert.AreEqual(0, list[1].Inc_Key);
+					Assert.AreEqual(7, list[2].Inc_Key);
+					Assert.AreEqual(6, list[3].Inc_Key);
+					Assert.AreEqual(3, list[4].Inc_Key);
+				}
+				{// OrderBy clause
+					var q = table.OrderByDescending<DomType0,int>(x => x.Inc_Key).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(10, list.Count);
+					for (int i = 0; i != 10; ++i)
+						Assert.AreEqual(9-i, list[i].Inc_Key);
+				}
+				{// Where and OrderBy clause
+					var q = table.Where<DomType0>(x => ((x.Inc_Key*4 + 2 - 1)/3) >= 5).OrderBy<DomType0,string>(x => x.Inc_Value).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(6, list.Count);
+					for (int i = 0; i != 6; ++i)
+						Assert.AreEqual(4+i, list[i].Inc_Key);
+				}
+				{// Skip
+					var q = table.Where<DomType0>(x => x.Inc_Key <= 5).Skip(2).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(4, list.Count);
+					Assert.AreEqual(0, list[0].Inc_Key);
+					Assert.AreEqual(5, list[1].Inc_Key);
+					Assert.AreEqual(3, list[2].Inc_Key);
+					Assert.AreEqual(2, list[3].Inc_Key);
+				}
+				{// Take
+					var q = table.Where<DomType0>(x => x.Inc_Key >= 5).Take(2).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(2, list.Count);
+					Assert.AreEqual(5, list[0].Inc_Key);
+					Assert.AreEqual(7, list[1].Inc_Key);
+				}
+				{// Skip and Take
+					var q = table.Where<DomType0>(x => x.Inc_Key >= 5).Skip(2).Take(2).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(2, list.Count);
+					Assert.AreEqual(9, list[0].Inc_Key);
+					Assert.AreEqual(6, list[1].Inc_Key);
+				}
+				{// Null test
+					var q = table.Where<DomType0>(x => x.Inc_Value != null).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(10, list.Count);
+				}
+				{// Type conversions
+					var q = table.Where<DomType0>(x => (float) x.Inc_Key > 2.5f && (float) x.Inc_Key < 7.5f).Cast<DomType0>();
+					var list = q.ToList();
+					Assert.AreEqual(5, list.Count);
+					Assert.AreEqual(4, list[0].Inc_Key);
+					Assert.AreEqual(5, list[1].Inc_Key);
+					Assert.AreEqual(7, list[2].Inc_Key);
+					Assert.AreEqual(6, list[3].Inc_Key);
+					Assert.AreEqual(3, list[4].Inc_Key);
+				}
+				{// Delete
+					var q = table.Delete<DomType0>(x => x.Inc_Key >= 5);
+					var list = table.Cast<DomType0>().ToList();
+					Assert.AreEqual(5, q);
+					Assert.AreEqual(5, list.Count);
+					Assert.AreEqual(4, list[0].Inc_Key);
+					Assert.AreEqual(1, list[1].Inc_Key);
+					Assert.AreEqual(0, list[2].Inc_Key);
+					Assert.AreEqual(3, list[3].Inc_Key);
+					Assert.AreEqual(2, list[4].Inc_Key);
+				}
+				#pragma warning disable 168
+				{// Check sql strings are correct
+					string sql;
+					
+					sql = table.Where<DomType0>(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
+					
+					sql = table.Where<DomType0>(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
+					
+					var t = table.FirstOrDefault<DomType0>(x => x.Inc_Key == 4);
+					sql = table.SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
+					
+					var l = table.Where<DomType0>(x => x.Inc_Key == 4).Take(4).Skip(2).Cast<DomType0>().ToList();
+					sql = table.SqlString;
+					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
+					
+					var w = table.Delete<DomType0>(x => x.Inc_Key == 2);
 					sql = table.SqlString;
 					Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
 				}
