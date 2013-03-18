@@ -101,6 +101,43 @@ namespace pr.common
 			Done       = 101  // sqlite3_step() has finished executing
 		}
 
+		public enum AuthorizerActionCode
+		{                               //   3rd             4th parameter
+			CREATE_INDEX        =  1,   // Index Name      Table Name      
+			CREATE_TABLE        =  2,   // Table Name      NULL            
+			CREATE_TEMP_INDEX   =  3,   // Index Name      Table Name      
+			CREATE_TEMP_TABLE   =  4,   // Table Name      NULL            
+			CREATE_TEMP_TRIGGER =  5,   // Trigger Name    Table Name      
+			CREATE_TEMP_VIEW    =  6,   // View Name       NULL            
+			CREATE_TRIGGER      =  7,   // Trigger Name    Table Name      
+			CREATE_VIEW         =  8,   // View Name       NULL            
+			DELETE              =  9,   // Table Name      NULL            
+			DROP_INDEX          = 10,   // Index Name      Table Name      
+			DROP_TABLE          = 11,   // Table Name      NULL            
+			DROP_TEMP_INDEX     = 12,   // Index Name      Table Name      
+			DROP_TEMP_TABLE     = 13,   // Table Name      NULL            
+			DROP_TEMP_TRIGGER   = 14,   // Trigger Name    Table Name      
+			DROP_TEMP_VIEW      = 15,   // View Name       NULL            
+			DROP_TRIGGER        = 16,   // Trigger Name    Table Name      
+			DROP_VIEW           = 17,   // View Name       NULL            
+			INSERT              = 18,   // Table Name      NULL            
+			PRAGMA              = 19,   // Pragma Name     1st arg or NULL 
+			READ                = 20,   // Table Name      Column Name     
+			SELECT              = 21,   // NULL            NULL            
+			TRANSACTION         = 22,   // Operation       NULL            
+			UPDATE              = 23,   // Table Name      Column Name     
+			ATTACH              = 24,   // Filename        NULL            
+			DETACH              = 25,   // Database Name   NULL            
+			ALTER_TABLE         = 26,   // Database Name   Table Name      
+			REINDEX             = 27,   // Index Name      NULL            
+			ANALYZE             = 28,   // Table Name      NULL            
+			CREATE_VTABLE       = 29,   // Table Name      Module Name     
+			DROP_VTABLE         = 30,   // Table Name      Module Name     
+			FUNCTION            = 31,   // NULL            Function Name   
+			SAVEPOINT           = 32,   // Operation       Savepoint Name  
+			COPY                =  0,   // No longer used                  
+		}
+
 		/// <summary>Flags passed to the sqlite3_open_v2 function</summary>
 		[Flags] public enum OpenFlags
 		{
@@ -165,6 +202,14 @@ namespace pr.common
 			SingleThread = 1,
 			MultiThread  = 2,
 			Serialized   = 3
+		}
+
+		/// <summary>Row change type provided in the RowChanged event</summary>
+		public enum ChangeType
+		{
+			Insert = AuthorizerActionCode.INSERT,
+			Update = AuthorizerActionCode.UPDATE,
+			Delete = AuthorizerActionCode.DELETE
 		}
 
 		#endregion
@@ -254,6 +299,7 @@ namespace pr.common
 			}
 			
 			var meta = TableMetaData.GetMetaData(type);
+			if (meta.NonAutoIncs.Length == 0) throw Exception.New(Result.Misuse, "Cannot insert an item no fields (or with auto increment fields only)");
 			return Sql(
 				"insert ",cons," into ",meta.Name," (",
 				string.Join(",", from c in meta.NonAutoIncs select c.Name),
@@ -266,6 +312,8 @@ namespace pr.common
 		public static string SqlUpdateCmd(Type type)
 		{
 			var meta = TableMetaData.GetMetaData(type);
+			if (meta.Pks.Length    == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
+			if (meta.NonPks.Length == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no non-primary key fields since there are no fields to change");
 			return Sql(
 				"update ",meta.Name," set ",
 				string.Join(",", meta.NonPks.Select(x => x.Name+" = ?")),
@@ -278,6 +326,7 @@ namespace pr.common
 		public static string SqlDeleteCmd(Type type)
 		{
 			var meta = TableMetaData.GetMetaData(type);
+			if (meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot delete an item with no primary keys since it cannot be identified");
 			return Sql("delete from ",meta.Name," where ",meta.PkConstraints());
 		}
 
@@ -285,6 +334,7 @@ namespace pr.common
 		public static string SqlGetCmd(Type type)
 		{
 			var meta = TableMetaData.GetMetaData(type);
+			if (meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot get an item with no primary keys since it cannot be identified");
 			return Sql("select * from ",meta.Name," where ",meta.PkConstraints());
 		}
 
@@ -675,10 +725,135 @@ namespace pr.common
 
 		#endregion
 
+		#region Object cache
+		
+		public interface ICache
+		{
+			/// <summary>Gets/Sets the maximum number of objects to store in the cache</summary>
+			long MaxCachedObjectCount { get; set; }
+
+			/// <summary>Returns true if an object with a primary key matching 'key' is currently cached</summary>
+			bool IsCached(object key);
+
+			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
+			object Get(object key, Func<object> on_miss);
+
+			/// <summary>Remove a cached item with a given key</summary>
+			void InvalidateRow(object key);
+		}
+
+		/// <summary>A dummy cache that does no caching</summary>
+		private class PassThruCache :ICache
+		{
+			/// <summary>Gets/Sets the maximum number of objects to store in the cache</summary>
+			public long MaxCachedObjectCount { get { return 0; } set {} }
+
+			/// <summary>Returns true if an object with a primary key matching 'key' is currently cached</summary>
+			public bool IsCached(object key) { return false; }
+
+			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
+			public object Get(object key, Func<object> on_miss) { return on_miss(); }
+			
+			/// <summary>Remove a cached item with a given key</summary>
+			public void InvalidateRow(object key) {}
+		}
+
+		/// <summary>A per-table object cache for types with a single integral primary key</summary>
+		private class ObjectCache :ICache
+		{
+			/// <summary>Wrapper of an object from a table in the db and it's row id</summary>
+			private class CacheEntry
+			{
+				public readonly object Object;
+				public readonly long RowId;
+				public CacheEntry(object obj, long row_id) { Object = obj; RowId = row_id; }
+			}
+			private readonly TableMetaData m_meta;
+			private readonly LinkedList<CacheEntry> m_cache; // A cache of objects read from the db
+			private readonly Dictionary<long ,LinkedListNode<CacheEntry>> m_lookup; // A map from row id to cache item
+
+			public ObjectCache(Type type)
+			{
+				m_meta = TableMetaData.GetMetaData(type);
+				m_cache = new LinkedList<CacheEntry>();
+				m_lookup = new Dictionary<long ,LinkedListNode<CacheEntry>>();
+			}
+
+			/// <summary>Get/Set an upper limit on the number of cached objects</summary>
+			public long MaxCachedObjectCount
+			{
+				get { return m_max_cached_object_count; }
+				set { m_max_cached_object_count = value; LimitCacheSize(); }
+			}
+			private long m_max_cached_object_count = 100;
+
+			/// <summary>Returns true if an object with the given primary key is in the cache</summary>
+			public bool IsCached(object key)
+			{
+				var row_id = Convert.ToInt64(key);
+				return m_lookup.ContainsKey(row_id);
+			}
+
+			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
+			public object Get(object key, Func<object> on_miss)
+			{
+				var row_id = Convert.ToInt64(key);
+				
+				// Use the lookup map to find the node in the cache
+				LinkedListNode<CacheEntry> node;
+				if (m_lookup.TryGetValue(row_id, out node))
+				{
+					// If found, move it to the head of the cache
+					m_cache.Remove(node);
+					m_cache.AddFirst(node);
+				}
+				else
+				{
+					// Cache miss, read it from the db
+					var item = on_miss();
+					if (item == null) return null;
+					System.Diagnostics.Debug.Assert(item.GetType() == m_meta.Type, "Wrong object type for this cache");
+
+					// Create a new node and add to the cache
+					node = m_cache.AddFirst(new CacheEntry(item, row_id));
+					m_lookup[row_id] = node;
+					LimitCacheSize();
+				}
+				return m_meta.Clone(node.Value.Object);
+			}
+
+			/// <summary>Reduces the size of the cache to within 'MaxCacheSizeInBytes' or one item</summary>
+			private void LimitCacheSize()
+			{
+				while (m_cache.Count > MaxCachedObjectCount)
+					DeleteCachedItem(m_cache.Last);
+			}
+
+			/// <summary>Handles notification from the database that a row has changed</summary>
+			public void InvalidateRow(object key)
+			{
+				var row_id = Convert.ToInt64(key);
+				
+				// See if we have this row cached and if so, remove it
+				LinkedListNode<CacheEntry> node;
+				if (m_lookup.TryGetValue(row_id, out node))
+					DeleteCachedItem(node);
+			}
+
+			/// <summary>Delete a cached item</summary>
+			private void DeleteCachedItem(LinkedListNode<CacheEntry> node)
+			{
+				m_lookup.Remove(node.Value.RowId);
+				node.List.Remove(node);
+			}
+		}
+		#endregion
+
 		/// <summary>Represents a connection to an sqlite database file</summary>
 		public class Database :IDisposable
 		{
 			private readonly sqlite3 m_db;
+			private readonly Dictionary<string, ICache> m_caches;
 			
 			private readonly int m_creation_thread;
 			[System.Diagnostics.Conditional("DEBUG")] public void AssertCorrectThread()
@@ -700,6 +875,15 @@ namespace pr.common
 				var res = sqlite3_open_v2(filepath, out m_db, (int)flags, IntPtr.Zero);
 				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
 				Trace.WriteLine(string.Format("Database connection opened for '{0}'", filepath));
+				
+				// Initialise the per-table object caches
+				m_caches = new Dictionary<string, ICache>();
+				RowChanged += (s,a) =>
+					{
+						ICache cache;
+						if (m_caches.TryGetValue(a.TableName, out cache))
+							cache.InvalidateRow(a.RowId);
+					};
 				
 				// Default to no busy timeout
 				BusyTimeout = 0;
@@ -733,6 +917,21 @@ namespace pr.common
 					var res = sqlite3_busy_timeout(Handle, value);
 					if (res != Result.OK) throw Exception.New(res, "Failed to set the busy timeout to "+value+"ms");
 				}
+			}
+
+			/// <summary>Returns the object cache for a specific table</summary>
+			internal ICache ObjectCache(Type type)
+			{
+				ICache c;
+				if (!m_caches.TryGetValue(type.Name, out c))
+				{
+					var meta = TableMetaData(type);
+					if (meta.SingleIntegralPK)
+						m_caches.Add(type.Name, c = new ObjectCache(type));
+					else
+						m_caches.Add(type.Name, c = new PassThruCache());
+				}
+				return c;
 			}
 
 			/// <summary>Close a database file</summary>
@@ -920,16 +1119,20 @@ namespace pr.common
 			}
 
 			/// <summary>Find a row in a table of type 'T'</summary>
-			public T Find<T>(params object[] keys)
-			{
-				return Table<T>().Find(keys);
-			}
+			public object Find(Type type, params object[] keys)     { return Table(type).Find(type, keys); }
+			public object Find(Type type, object key1, object key2) { return Table(type).Find(type, key1, key2); }
+			public object Find(Type type, object key1)              { return Table(type).Find(type, key1); }
+			public T Find<T>(params object[] keys)                  { return Table<T>().Find(keys); }
+			public T Find<T>(object key1, object key2)              { return Table<T>().Find(key1, key2); }
+			public T Find<T>(object key1)                           { return Table<T>().Find(key1); }
 
 			/// <summary>Get a row from a table of type 'T'</summary>
-			public T Get<T>(params object[] keys)
-			{
-				return Table<T>().Get(keys);
-			}
+			public object Get(Type type, params object[] keys)      { return Table(type).Get(type, keys); }
+			public object Get(Type type, object key1, object key2)  { return Table(type).Get(type, key1, key2); }
+			public object Get(Type type, object key1)               { return Table(type).Get(type, key1); }
+			public T Get<T>(params object[] keys)                   { return Table<T>().Get(keys); }
+			public T Get<T>(object key1, object key2)               { return Table<T>().Get(key1, key2); }
+			public T Get<T>(object key1)                            { return Table<T>().Get(key1); }
 
 			/// <summary>Insert 'item' into a table based on it's reflected type</summary>
 			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
@@ -960,6 +1163,38 @@ namespace pr.common
 			{
 				return Sqlite.TableMetaData.GetMetaData(type);
 			}
+
+			/// <summary>
+			/// Raised whenever a row in the database is inserted, updated, or deleted.
+			/// Handlers of this event *must not* do anything that will modify the database connection
+			/// that invoked this event. Any actions to modify the database connection must be deferred
+			/// until after the completion of the Step() call that triggered the update event. Note that
+			/// sqlite3_prepare_v2() and sqlite3_step() both modify their database connections.</summary>
+			public event EventHandler<RowChangedArgs> RowChanged
+			{
+				add
+				{
+					m_update_cb = UpdateCB; // to prevent GC'ing
+					if (m_RowChangedInternal == null) sqlite3_update_hook(m_db, m_update_cb, IntPtr.Zero);
+					m_RowChangedInternal += value;
+				}
+				remove
+				{
+					m_RowChangedInternal -= value;
+					if (m_RowChangedInternal == null) sqlite3_update_hook(m_db, null, IntPtr.Zero);
+					m_update_cb = null; // to allow GC'ing
+				}
+			}
+			private EventHandler<RowChangedArgs> m_RowChangedInternal;
+			private UpdateHookCB m_update_cb;
+
+			/// <summary>Callback passed to the sqlite dll when RowChanged is subscribed to</summary>
+			private void UpdateCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id)
+			{
+				// 'db_name' is always "main". sqlite doesn't allow renaming of the db
+				if (m_RowChangedInternal == null) return;
+				m_RowChangedInternal(this, new RowChangedArgs((ChangeType)change_type, table_name, row_id));
+			}
 		}
 
 		/// <summary>Represents a single table in the database</summary>
@@ -968,19 +1203,33 @@ namespace pr.common
 			protected readonly TableMetaData m_meta;
 			protected readonly Database m_db; // The handle for the database connection
 			protected readonly CmdExpr m_cmd;
-
+			private readonly ICache m_cache;
+			
 			public Table(Type type, Database db)
 			{
 				if (db.Handle.IsInvalid) throw new ArgumentNullException("db", "Invalid database handle");
-				m_meta = TableMetaData.GetMetaData(type);
-				m_db   = db;
-				m_cmd  = new CmdExpr();
+				m_meta  = TableMetaData.GetMetaData(type);
+				m_db    = db;
+				m_cache = db.ObjectCache(type);
+				m_cmd   = new CmdExpr();
 			}
 
 			/// <summary>The name of this table</summary>
 			public string Name
 			{
 				get { return m_meta.Name; }
+			}
+
+			/// <summary>Return the meta data for this table</summary>
+			public TableMetaData MetaData
+			{
+				get { return m_meta; }
+			}
+
+			/// <summary>Return access to the cache used by this table</summary>
+			public ICache Cache
+			{
+				get { return m_cache; }
 			}
 
 			/// <summary>Gets the number of columns in this table</summary>
@@ -1008,62 +1257,87 @@ namespace pr.common
 			// ReSharper restore MemberHidesStaticFromOuterClass
 
 			/// <summary>Returns a row in the table or null if not found</summary>
+			public object Find(Type type, params object[] keys)
+			{
+				using (var get = new GetCmd(m_meta, m_db))
+				{
+					get.BindPks(type, 1, keys);
+					return get.Find();
+				}
+			}
 			public T Find<T>(params object[] keys)
 			{
-				using (var get = new GetCmd(m_meta, m_db))
-				{
-					get.BindPks(typeof(T), 1, keys);
-					return (T)get.Find();
-				}
+				return (T)Find(typeof(T), keys);
 			}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
+			public object Find(Type type, object key1, object key2) // overload for performance
+			{
+				using (var get = new GetCmd(m_meta, m_db))
+				{
+					get.BindPks(type, 1, key1, key2);
+					return get.Find();
+				}
+			}
 			public T Find<T>(object key1, object key2) // overload for performance
 			{
-				using (var get = new GetCmd(m_meta, m_db))
-				{
-					get.BindPks(typeof(T), 1, key1, key2);
-					return (T)get.Find();
-				}
+				return (T)Find(typeof(T), key1, key2);
 			}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
+			public object Find(Type type, object key1) // overload for performance
+			{
+				return m_cache.Get(key1, () =>
+					{
+						using (var get = new GetCmd(m_meta, m_db))
+						{
+							get.BindPks(type, 1, key1);
+							return get.Find();
+						}
+					});
+			}
 			public T Find<T>(object key1) // overload for performance
 			{
-				using (var get = new GetCmd(m_meta, m_db))
-				{
-					get.BindPks(typeof(T), 1, key1);
-					return (T)get.Find();
-				}
+				return (T)Find(typeof(T), key1);
 			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public T Get<T>(params object[] keys)
+			public object Get(Type type, params object[] keys)
 			{
-				var item = Find<T>(keys);
+				var item = Find(type, keys);
 				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key(s): "+string.Join(",", keys.Select(x=>x.ToString())));
 				return item;
 			}
+			public T Get<T>(params object[] keys)
+			{
+				return (T)Get(typeof(T), keys);
+			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public T Get<T>(object key1, object key2) // overload for performance
+			public object Get(Type type, object key1, object key2) // overload for performance
 			{
-				var item = Find<T>(key1, key2);
+				var item = Find(type, key1, key2);
 				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for keys: "+key1+","+key2);
 				return item;
 			}
+			public T Get<T>(object key1, object key2) // overload for performance
+			{
+				return (T)Get(typeof(T), key1, key2);
+			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public T Get<T>(object key1) // overload for performance
+			public object Get(Type type, object key1) // overload for performance
 			{
-				var item = Find<T>(key1);
+				var item = Find(type, key1);
 				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key: "+key1);
 				return item;
 			}
+			public T Get<T>(object key1) // overload for performance
+			{
+				return (T)Get(typeof(T), key1);
+			}
 
-			/// <summary>Insert an item into the table.<para/>
-			/// Note: insert will *NOT* change the primary keys/autoincrement members of 'item'.
-			/// Make sure you call 'Get()' or the other overload of Insert to get the updated item.</summary>
+			/// <summary>Insert an item into the table.</summary>
 			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
 				Trace.WriteLine(string.Format("Inserting {0}", m_meta.Name));
@@ -1140,6 +1414,7 @@ namespace pr.common
 			{
 				Trace.WriteLine(string.Format("Updating column {0} in table {1} (key: {2})", column_name, m_meta.Name, string.Join(",",keys)));
 				var column_meta = m_meta.Column(column_name);
+				if (m_meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
 				var sql = Sql("update ",m_meta.Name," set ",column_meta.Name," = ? where ",m_meta.PkConstraints());
 				using (var query = new Query(m_db, sql))
 				{
@@ -1279,6 +1554,7 @@ namespace pr.common
 				return this;
 			}
 
+			#region Command Expression
 			/// <summary>Wraps an sql expression for enumerating the rows of this table</summary>
 			protected class CmdExpr
 			{
@@ -1631,6 +1907,7 @@ namespace pr.common
 					return result;
 				}
 			}
+			#endregion
 		}
 
 		/// <summary>Represents a table within the database for a compile-time type 'T'.</summary>
@@ -1985,6 +2262,30 @@ namespace pr.common
 			}
 		}
 
+		#region RowChanged event args
+
+		/// <summary>Event args for the Database RowChanged event</summary>
+		public class RowChangedArgs :EventArgs
+		{
+			/// <summary>How the row was changed. One of Inserted, Updated, or Deleted</summary>
+			public ChangeType ChangeType { get; set; }
+
+			/// <summary>The name of the changed table</summary>
+			public string TableName { get; set; }
+
+			/// <summary>The id of the effected row</summary>
+			public long RowId { get; set; }
+
+			public RowChangedArgs(ChangeType change_type, string table_name, long row_id)
+			{
+				ChangeType   = change_type;
+				TableName    = table_name;
+				RowId        = row_id;
+			}
+		}
+		
+		#endregion
+
 		#region Table Meta Data
 		/// <summary>Mapping information from a type to columns in the table</summary>
 		public class TableMetaData
@@ -1999,42 +2300,45 @@ namespace pr.common
 					Meta.Add(type, meta = new TableMetaData(type));
 				return meta;
 			}
-			
+
 			/// <summary>The columns of the table</summary>
 			private readonly ColumnMetaData[] m_column;
-			
+
 			/// <summary>
 			/// Pointer to the single primary key column for this table or null
 			/// if the table has multiple primary keys</summary>
 			private readonly ColumnMetaData m_single_pk;
-			
+
 			/// <summary>The .NET type that this meta data is for</summary>
 			public Type Type { get; private set; }
-			
+
 			/// <summary>The table name (defaults to the type name)</summary>
 			public string Name { get; set; }
-			
+
 			/// <summary>Table constraints for this table (default is none)</summary>
 			public string Constraints { get; set; }
-			
+
 			/// <summary>Enumerate the column meta data</summary>
 			public IEnumerable<ColumnMetaData> Columns { get { return m_column; } }
-			
+
 			/// <summary>The primary key columns, in order</summary>
 			public ColumnMetaData[] Pks { get; private set; }
-			
+
 			/// <summary>The non primary key columns</summary>
 			public ColumnMetaData[] NonPks { get; private set; }
-			
+
 			/// <summary>The columns that aren't auto increment columns</summary>
 			public ColumnMetaData[] NonAutoIncs { get; private set; }
-			
+
 			/// <summary>Gets the number of columns in this table</summary>
 			public int ColumnCount { get { return m_column.Length; } }
-			
+
+			/// <summary>Returns true of there is only one primary key for this type and it is an integer (i.e. an alias for the row id)</summary>
+			public bool SingleIntegralPK { get { return m_single_pk != null && m_single_pk.SqlDataType == DataType.Integer; } }
+
 			/// <summary>True if the table uses multiple primary keys</summary>
 			public bool MultiplePK { get { return Pks.Length > 1; } }
-			
+
 			/// <summary>A factory method for creating instances of the type for this table</summary>
 			public Func<object> Factory { get; set; }
 
@@ -2221,8 +2525,7 @@ namespace pr.common
 			/// <summary>Populate the properties and fields of 'item' from the column values read from 'stmt'</summary>
 			public void ReadObj<T>(sqlite3_stmt stmt, T item)
 			{
-				if (item.GetType() != Type) throw new ArgumentException("'item' is not the correct type for this table");
-				
+				System.Diagnostics.Debug.Assert(item.GetType() == Type, "'item' is not the correct type for this table");
 				for (int i = 0, iend = sqlite3_column_count(stmt); i != iend; ++i)
 				{
 					var cname = sqlite3_column_name(stmt, i);
@@ -2235,6 +2538,16 @@ namespace pr.common
 					
 					col.Set(item, col.ReadFn(stmt, i));
 				}
+			}
+
+			/// <summary>Returns a shallow copy of 'obj' as a new instance</summary>
+			public object Clone(object item)
+			{
+				System.Diagnostics.Debug.Assert(item.GetType() == Type, "'item' is not the correct type for this table");
+				var clone = Factory();
+				foreach (var c in Columns)
+					c.Set(clone, c.Get(item));
+				return clone;
 			}
 
 			/// <summary>Returns a table declaration string for this table</summary>
@@ -2759,7 +3072,6 @@ namespace pr.common
 		[DllImport("sqlite3", EntryPoint = "sqlite3_column_bytes", CallingConvention=CallingConvention.Cdecl)]
 		private static extern int sqlite3_column_bytes(sqlite3_stmt stmt, int index);
 
-
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_parameter_count", CallingConvention=CallingConvention.Cdecl)]
 		private static extern int sqlite3_bind_parameter_count(sqlite3_stmt stmt);
 
@@ -2787,6 +3099,17 @@ namespace pr.common
 		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_blob", CallingConvention=CallingConvention.Cdecl)]
 		private static extern int sqlite3_bind_blob(sqlite3_stmt stmt, int index, byte[] val, int n, IntPtr destructor_cb);
 		// ReSharper restore InconsistentNaming,UnusedMember.Local
+
+		[DllImport("sqlite3", EntryPoint = "sqlite3_update_hook", CallingConvention=CallingConvention.Cdecl)]
+		private static extern IntPtr sqlite3_update_hook(sqlite3 db, UpdateHookCB cb, IntPtr ctx);
+	
+		/// <summary>Callback type for sqlite3_update_hook</summary>
+		/// <param name="ctx">A copy of the third argument to sqlite3_update_hook()</param>
+		/// <param name="change_type">One of SQLITE_INSERT, SQLITE_DELETE, or SQLITE_UPDATE</param>
+		/// <param name="db_name">The name of the affected database</param>
+		/// <param name="table_name">The name of the table containing the changed item</param>
+		/// <param name="row_id">The row id of the changed row</param>
+		public delegate void UpdateHookCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id);
 
 		#endregion
 
@@ -2840,1295 +3163,1402 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		#region DomTypes
-		// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
-		public enum SomeEnum { One, Two, Three }
-
-		// Tests user types can be mapped to table columns
-		private class Custom
+		internal static class TestSqlite
 		{
-			public string Str;
-			public Custom()           { Str = "I'm a custom object"; }
-			public Custom(string str) { Str = str; }
-			public bool Equals(Custom other)
-			{
-				if (ReferenceEquals(null, other)) return false;
-				if (ReferenceEquals(this, other)) return true;
-				return other.Str == Str;
-			}
-			
-			/// <summary>Binds this type to a parameter in a prepared statement</summary>
-			public static void SqliteBind(Sqlite.sqlite3_stmt stmt, int idx, object obj)
-			{
-				Sqlite.Bind.Text(stmt, idx, ((Custom)obj).Str);
-			}
-			public static Custom SqliteRead(Sqlite.sqlite3_stmt stmt, int idx)
-			{
-				return new Custom((string)Sqlite.Read.Text(stmt, idx));
-			}
-		}
+			#region DomTypes
+			// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
+			public enum SomeEnum { One, Two, Three }
 
-		public interface IDomType0
-		{
-			int      Inc_Key  { get; set; }
-			SomeEnum Inc_Enum { get; set; }
-		}
-
-		// Tests a basic default table
-		private class DomType0 :IDomType0
-		{
-			public  int      Inc_Key                 { get; set; }
-			public  string   Inc_Value               { get; set; }
-			public SomeEnum  Inc_Enum                { get; set; }
-			public  float    Ign_NoGetter            { set { } }
-			public  int      Ign_NoSetter            { get { return 42; } }
-			private bool     Ign_PrivateProp         { get; set; }
-			private int      m_ign_private_field;
-			public  short    Ign_PublicField;
-			public DomType0(){}
-			public DomType0(int seed)
+			// Tests user types can be mapped to table columns
+			private class Custom
 			{
-				Inc_Key = seed;
-				Inc_Value = seed.ToString();
-				Inc_Enum = (SomeEnum)(seed % 3);
-				Ign_NoGetter = seed;
-				Ign_PrivateProp = seed != 0;
-				m_ign_private_field = seed;
-				Ign_PublicField = (short)m_ign_private_field;
-			}
-			public override string ToString() { return Inc_Key + " " + Inc_Value; }
-		}
-
-		// Single primary key table
-		[Sqlite.Table(AllByDefault = false)]
-		private class DomType1
-		{
-			[Sqlite.Column(Order= 0, PrimaryKey = true, AutoInc = true, Constraints = "not null")] public int m_key;
-			[Sqlite.Column(Order= 1)] protected bool        m_bool;
-			[Sqlite.Column(Order= 2)] public sbyte          m_sbyte;
-			[Sqlite.Column(Order= 3)] public byte           m_byte;
-			[Sqlite.Column(Order= 4)] private char          m_char;
-			[Sqlite.Column(Order= 5)] private short         m_short {get;set;}
-			[Sqlite.Column(Order= 6)] public ushort         m_ushort {get;set;}
-			[Sqlite.Column(Order= 7)] public int            m_int;
-			[Sqlite.Column(Order= 8)] public uint           m_uint;
-			[Sqlite.Column(Order= 9)] public long           m_int64;
-			[Sqlite.Column(Order=10)] public ulong          m_uint64;
-			[Sqlite.Column(Order=11)] public decimal        m_decimal;
-			[Sqlite.Column(Order=12)] public float          m_float;
-			[Sqlite.Column(Order=13)] public double         m_double;
-			[Sqlite.Column(Order=14)] public string         m_string;
-			[Sqlite.Column(Order=15)] public byte[]         m_buf;
-			[Sqlite.Column(Order=16)] public byte[]         m_empty_buf;
-			[Sqlite.Column(Order=17)] public int[]          m_int_buf;
-			[Sqlite.Column(Order=18)] public Guid           m_guid;
-			[Sqlite.Column(Order=19)] public SomeEnum       m_enum;
-			[Sqlite.Column(Order=20)] public SomeEnum?      m_nullenum;
-			[Sqlite.Column(Order=21)] public DateTimeOffset m_dt_offset;
-			[Sqlite.Column(Order=22, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
-			[Sqlite.Column(Order=23)] public int?           m_nullint;
-			[Sqlite.Column(Order=24)] public long?          m_nulllong;
-			
-			// ReSharper disable UnusedAutoPropertyAccessor.Local
-			public int Ignored { get; set; }
-			// ReSharper restore UnusedAutoPropertyAccessor.Local
-			
-			public DomType1() {}
-			public DomType1(int val)
-			{
-				m_key       = -1;
-				m_bool      = true;
-				m_char      = 'X';
-				m_sbyte     = 12;
-				m_byte      = 12;
-				m_short     = 1234;
-				m_ushort    = 1234;
-				m_int       = 12345678;
-				m_uint      = 12345678;
-				m_int64     = 1234567890000;
-				m_uint64    = 1234567890000;
-				m_decimal   = 1234567890.123467890m;
-				m_float     = 1.234567f;
-				m_double    = 1.2345678987654321;
-				m_string    = "string";
-				m_buf       = new byte[]{0,1,2,3,4,5,6,7,8,9};
-				m_empty_buf = null;
-				m_int_buf   = new[]{0x10000000,0x20000000,0x30000000,0x40000000};
-				m_guid      = Guid.NewGuid();
-				m_enum      = SomeEnum.One;
-				m_nullenum  = SomeEnum.Two;
-				m_dt_offset = DateTimeOffset.UtcNow;
-				m_custom    = new Custom();
-				m_nullint   = 23;
-				m_nulllong  = null;
-				Ignored     = val;
-			}
-			public bool Equals(DomType1 other)
-			{
-				if (ReferenceEquals(null, other)) return false;
-				if (ReferenceEquals(this, other)) return true;
-				if (other.m_key      != m_key               ) return false;
-				if (other.m_bool     != m_bool              ) return false;
-				if (other.m_sbyte    != m_sbyte             ) return false;
-				if (other.m_byte     != m_byte              ) return false;
-				if (other.m_char     != m_char              ) return false;
-				if (other.m_short    != m_short             ) return false;
-				if (other.m_ushort   != m_ushort            ) return false;
-				if (other.m_int      != m_int               ) return false;
-				if (other.m_uint     != m_uint              ) return false;
-				if (other.m_int64    != m_int64             ) return false;
-				if (other.m_uint64   != m_uint64            ) return false;
-				if (other.m_decimal  != m_decimal           ) return false;
-				if (other.m_nullint  != m_nullint           ) return false;
-				if (other.m_nulllong != m_nulllong          ) return false;
-				if (!Equals(other.m_string, m_string)       ) return false;
-				if (!Equals(other.m_buf, m_buf)             ) return false;
-				if (!Equals(other.m_empty_buf, m_empty_buf) ) return false;
-				if (!Equals(other.m_int_buf, m_int_buf)     ) return false;
-				if (!Equals(other.m_enum, m_enum)           ) return false;
-				if (!Equals(other.m_nullenum, m_nullenum)   ) return false;
-				if (!other.m_guid.Equals(m_guid)            ) return false;
-				if (!other.m_dt_offset.Equals(m_dt_offset)  ) return false;
-				if (!other.m_custom.Equals(m_custom)        ) return false;
-				if (Math.Abs(other.m_float   - m_float  ) > float .Epsilon) return false;
-				if (Math.Abs(other.m_double  - m_double ) > double.Epsilon) return false;
-				return true;
-			}
-			private static bool Equals<T>(T[] arr1, T[] arr2)
-			{
-				if (arr1 == null) return arr2 == null || arr2.Length == 0;
-				if (arr2 == null) return arr1.Length == 0;
-				if (arr1.Length != arr2.Length) return false;
-				return arr1.SequenceEqual(arr2);
-			}
-		}
-
-		// Tests PKs named at class level, Unicode, non-int type primary keys
-		[Sqlite.Table(PrimaryKey = "PK", PKAutoInc = false, FieldBindingFlags = BindingFlags.Public)]
-		private class DomType2 :DomType2Base
-		{
-			public string UniStr; // Should be a column, because of the FieldBindingFlags
-			private bool Ign_PrivateField; // Should not be a column because private
-			
-			public DomType2() {}
-			public DomType2(string key, string str)
-			{
-				PK     = key;
-				UniStr = str;
-				Ign_PrivateField = true;
-				Ign_PrivateField = !Ign_PrivateField;
-			}
-			public bool Equals(DomType2 other)
-			{
-				if (ReferenceEquals(null, other)) return false;
-				if (ReferenceEquals(this, other)) return true;
-				if (other.UniStr != UniStr) return false;
-				return base.Equals(other);
-			}
-		}
-		private class DomType2Base
-		{
-			[Sqlite.Column] private int Inc_Explicit; // Should be a column, because explicitly named
-			
-			// Notice the DOMType2 class indicates this is the primary key from a separate class.
-			public string PK { get; protected set; }
-
-			protected DomType2Base()
-			{
-				Inc_Explicit = -2;
-			}
-			protected bool Equals(DomType2Base other)
-			{
-				if (ReferenceEquals(null, other)) return false;
-				if (ReferenceEquals(this, other)) return true;
-				if (other.PK           != PK          ) return false;
-				if (other.Inc_Explicit != Inc_Explicit) return false;
-				return true;
-			}
-		}
-
-		// Tests multiple primary keys, and properties in inherited/partial classes
-		[Sqlite.Table(Constraints = "primary key (Key1, Key2, Key3)")]
-		[Sqlite.IgnoreColumns("Ignored1")]
-		public partial class DomType3
-		{
-			public int    Key1 { get; set; }
-			public bool   Key2 { get; set; }
-			public string Prop1 { get; set; }
-			public float  Prop2 { get; set; }
-			public Guid   Prop3 { get; set; }
-			public float Ignored1 { get; set; }
-
-			public DomType3(){}
-			public DomType3(int key1, bool key2, string key3)
-			{
-				Key1 = key1;
-				Key2 = key2;
-				Key3 = key3;
-				Prop1 = key1.ToString() + " " + key2.ToString();
-				Prop2 = key1;
-				Prop3 = Guid.NewGuid();
-				Parent1 = key1;
-				PropA = key1.ToString() + " " + key2.ToString();
-				PropB = (SomeEnum)key1;
-				Ignored1 = 1f;
-				Ignored2 = 2.0;
-			}
-			public bool Equals(DomType3 other)
-			{
-				if (ReferenceEquals(null, other)) return false;
-				if (ReferenceEquals(this, other)) return true;
-				if (other.Key1    != Key1   ) return false;
-				if (other.Key2    != Key2   ) return false;
-				if (other.Prop1   != Prop1  ) return false;
-				if (Math.Abs(other.Prop2 - Prop2) > float.Epsilon) return false;
-				if (other.Prop3   != Prop3  ) return false;
-				if (other.Parent1 != Parent1) return false;
-				if (other.PropA   != PropA  ) return false;
-				if (other.PropB   != PropB  ) return false;
-				return true;
-			}
-		}
-		[Sqlite.IgnoreColumns("Ignored2")]
-		public partial class DomType3 :DomType3Base
-		{
-			public string   PropA { get; set; }
-			public SomeEnum PropB { get; set; }
-		}
-		public class DomType3Base
-		{
-			public int Parent1 { get; set; }
-			public string Key3 { get; set; }
-			public double Ignored2 { get; set; }
-		}
-
-		// Tests altering a table
-		public class DomType4
-		{
-			[Sqlite.Column(PrimaryKey = true)] public int Key1 { get; set; }
-			public bool   Key2 { get; set; }
-			public string Prop1 { get; set; }
-			public float  Prop2 { get; set; }
-			public Guid   Prop3 { get; set; }
-			public int    NewProp { get; set; }
-		}
-
-		// Tests inherited Sqlite attributes
-		[Sqlite.Table(PrimaryKey = "PK", PKAutoInc = true)]
-		public class DomType5Base
-		{
-			public int PK { get; set; }
-		}
-		public class DomType5 :DomType5Base
-		{
-			public string Data { get; set; }
-		}
-
-		// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
-		#endregion
-
-		// The test methods can run in any order, but we only want to do this stuff once
-		private static bool TestSqlite_OneTimeOnly_Done = false;
-		private static void TestSqlite_OneTimeOnly()
-		{
-			if (TestSqlite_OneTimeOnly_Done) return;
-			TestSqlite_OneTimeOnly_Done = true;
-
-			// Copy sqlite3.dll to test folder
-			var src_dir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\sqlite\lib\"));
-			var src_file = Regex.Replace(Environment.CurrentDirectory, @"(.*)\\(.*?)\\(.*?)$", "sqlite3.$2.$3.dll").Replace(@".x86.",@".win32.");
-			File.Copy(Path.Combine(src_dir, src_file), Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
-
-			// Register custom type bind/read methods
-			Sqlite.BindFunction.Add(typeof(Custom), Custom.SqliteBind);
-			Sqlite.ReadFunction.Add(typeof(Custom), Custom.SqliteRead);
-			
-			// Use single threading
-			Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
-		}
-
-		[Test] public static void TestSqlite_DefaultUse()
-		{
-			TestSqlite_OneTimeOnly();
-			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
-			{
-				// Create a simple table
-				db.DropTable<DomType0>();
-				db.CreateTable<DomType0>();
-				Assert.IsTrue(db.TableExists<DomType0>());
-				
-				// Check the table
-				var table = db.Table<DomType0>();
-				Assert.AreEqual(3, table.ColumnCount);
-				var column_names = new[]{"Inc_Key", "Inc_Value", "Inc_Enum"};
-				using (var q = table.Query("select * from "+table.Name))
+				public string Str;
+				public Custom()           { Str = "I'm a custom object"; }
+				public Custom(string str) { Str = str; }
+				public bool Equals(Custom other)
 				{
-					Assert.AreEqual(3, q.ColumnCount);
-					Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
-					Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
-					Assert.IsTrue(column_names.Contains(q.ColumnName(2)));
+					if (ReferenceEquals(null, other)) return false;
+					if (ReferenceEquals(this, other)) return true;
+					return other.Str == Str;
 				}
-				
-				// Create some objects to stick in the table
-				var obj1 = new DomType0(5);
-				var obj2 = new DomType0(6);
-				var obj3 = new DomType0(7);
-				
-				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(3, table.RowCount);
-				
-				string sql_count = "select count(*) from "+table.Name;
-				using (var q = table.Query(sql_count))
-					Assert.AreEqual(sql_count, q.SqlString);
-			}
-		}
-		[Test] public static void TestSqlite_TypicalUse()
-		{
-			TestSqlite_OneTimeOnly();
 			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
-			{
-				// Create a table
-				db.DropTable<DomType1>();
-				db.CreateTable<DomType1>();
-				Assert.IsTrue(db.TableExists<DomType1>());
-				
-				// Check the table
-				var table = db.Table<DomType1>();
-				Assert.AreEqual(25, table.ColumnCount);
-				using (var q = table.Query("select * from "+table.Name))
+				/// <summary>Binds this type to a parameter in a prepared statement</summary>
+				public static void SqliteBind(Sqlite.sqlite3_stmt stmt, int idx, object obj)
 				{
-					Assert.AreEqual(25, q.ColumnCount);
-					Assert.AreEqual("m_key"       ,q.ColumnName( 0));
-					Assert.AreEqual("m_bool"      ,q.ColumnName( 1));
-					Assert.AreEqual("m_sbyte"     ,q.ColumnName( 2));
-					Assert.AreEqual("m_byte"      ,q.ColumnName( 3));
-					Assert.AreEqual("m_char"      ,q.ColumnName( 4));
-					Assert.AreEqual("m_short"     ,q.ColumnName( 5));
-					Assert.AreEqual("m_ushort"    ,q.ColumnName( 6));
-					Assert.AreEqual("m_int"       ,q.ColumnName( 7));
-					Assert.AreEqual("m_uint"      ,q.ColumnName( 8));
-					Assert.AreEqual("m_int64"     ,q.ColumnName( 9));
-					Assert.AreEqual("m_uint64"    ,q.ColumnName(10));
-					Assert.AreEqual("m_decimal"   ,q.ColumnName(11));
-					Assert.AreEqual("m_float"     ,q.ColumnName(12));
-					Assert.AreEqual("m_double"    ,q.ColumnName(13));
-					Assert.AreEqual("m_string"    ,q.ColumnName(14));
-					Assert.AreEqual("m_buf"       ,q.ColumnName(15));
-					Assert.AreEqual("m_empty_buf" ,q.ColumnName(16));
-					Assert.AreEqual("m_int_buf"   ,q.ColumnName(17));
-					Assert.AreEqual("m_guid"      ,q.ColumnName(18));
-					Assert.AreEqual("m_enum"      ,q.ColumnName(19));
-					Assert.AreEqual("m_nullenum"  ,q.ColumnName(20));
-					Assert.AreEqual("m_dt_offset" ,q.ColumnName(21));
-					Assert.AreEqual("m_custom"    ,q.ColumnName(22));
-					Assert.AreEqual("m_nullint"   ,q.ColumnName(23));
-					Assert.AreEqual("m_nulllong"  ,q.ColumnName(24));
+					Sqlite.Bind.Text(stmt, idx, ((Custom)obj).Str);
 				}
-				
-				// Create some objects to stick in the table
-				var obj1 = new DomType1(5);
-				var obj2 = new DomType1(6);
-				var obj3 = new DomType1(7);
-				obj2.m_dt_offset = DateTimeOffset.UtcNow;
-				
-				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(3, table.RowCount);
-				
-				// Check Get() throws and Find() returns null if not found
-				Assert.IsNull(table.Find(0));
-				Sqlite.Exception err = null;
-				try { table.Get(4); } catch (Sqlite.Exception ex) { err = ex; }
-				Assert.IsTrue(err != null && err.Result == Sqlite.Result.NotFound);
-				
-				// Get stuff and check it's the same
-				var OBJ1 = table.Get(obj1.m_key);
-				var OBJ2 = table.Get(obj2.m_key);
-				var OBJ3 = table.Get(obj3.m_key);
-				Assert.IsTrue(obj1.Equals(OBJ1));
-				Assert.IsTrue(obj2.Equals(OBJ2));
-				Assert.IsTrue(obj3.Equals(OBJ3));
-				
-				// Check parameter binding
-				using (var q = table.Query(Sqlite.Sql("select m_string,m_int from ",table.Name," where m_string = @p1 and m_int = @p2")))
+				public static Custom SqliteRead(Sqlite.sqlite3_stmt stmt, int idx)
 				{
-					Assert.AreEqual(2, q.ParmCount);
-					Assert.AreEqual("@p1", q.ParmName(1));
-					Assert.AreEqual("@p2", q.ParmName(2));
-					Assert.AreEqual(1, q.ParmIndex("@p1"));
-					Assert.AreEqual(2, q.ParmIndex("@p2"));
-					q.BindParm(1, "string");
-					q.BindParm(2, 12345678);
-					
-					// Run the query
-					Assert.IsTrue(q.Step());
-					
-					// Read the results
-					Assert.AreEqual(2, q.ColumnCount);
-					Assert.AreEqual(Sqlite.DataType.Text    ,q.ColumnType(0));
-					Assert.AreEqual(Sqlite.DataType.Integer ,q.ColumnType(1));
-					Assert.AreEqual("m_string"              ,q.ColumnName(0));
-					Assert.AreEqual("m_int"                 ,q.ColumnName(1));
-					Assert.AreEqual("string"                ,q.ReadColumn<string>(0));
-					Assert.AreEqual(12345678                ,q.ReadColumn<int>(1));
-					
-					// There should be 3 rows
-					Assert.IsTrue(q.Step());
-					Assert.IsTrue(q.Step());
-					Assert.IsFalse(q.Step());
+					return new Custom((string)Sqlite.Read.Text(stmt, idx));
 				}
-				
-				// Update stuff
-				obj2.m_string = "I've been modified";
-				Assert.AreEqual(1, table.Update(obj2));
-				
-				// Get the updated stuff and check it's been updated
-				OBJ2 = table.Find(obj2.m_key);
-				Assert.IsNotNull(OBJ2);
-				Assert.IsTrue(obj2.Equals(OBJ2));
-				
-				// Delete something and check it's gone
-				Assert.AreEqual(1, table.Delete(obj3));
-				OBJ3 = table.Find(obj3.m_key);
-				Assert.IsNull(OBJ3);
-				
-				// Update a single column and check it
-				obj1.m_byte = 55;
-				Assert.AreEqual(1, table.Update("m_byte", obj1.m_byte, 1));
-				OBJ1 = table.Get(obj1.m_key);
-				Assert.IsNotNull(OBJ1);
-				Assert.IsTrue(obj1.Equals(OBJ1));
-				
-				// Read a single column
-				var val = table.ColumnValue<ushort>("m_ushort", 2);
-				Assert.AreEqual(obj2.m_ushort, val);
-				
-				// Add something back
-				Assert.AreEqual(1, table.Insert(obj3));
-				OBJ3 = table.Get(obj3.m_key);
-				Assert.IsNotNull(OBJ3);
-				Assert.IsTrue(obj3.Equals(OBJ3));
-				
-				// Update the column value for all rows
-				obj1.m_byte = obj2.m_byte = obj3.m_byte = 0xAB;
-				Assert.AreEqual(3, table.UpdateAll("m_byte", (byte)0xAB));
-				
-				// Enumerate objects
-				var objs = table.Select(x => x).ToArray();
-				Assert.AreEqual(3, objs.Length);
-				Assert.IsTrue(obj1.Equals(objs[0]));
-				Assert.IsTrue(obj2.Equals(objs[1]));
-				Assert.IsTrue(obj3.Equals(objs[2]));
-				
-				// Linq expressions
-				objs = (from a in table where a.m_string == "I've been modified" select a).ToArray();
-				Assert.AreEqual(1, objs.Length);
-				Assert.IsTrue(obj2.Equals(objs[0]));
 			}
-		}
-		[Test] public static void TestSqlite_MultiplePks()
-		{
-			TestSqlite_OneTimeOnly();
-			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+
+			public interface IDomType0
 			{
-				// Create a table
-				db.DropTable<DomType3>();
-				db.CreateTable<DomType3>();
-				Assert.IsTrue(db.TableExists<DomType3>());
-				
-				// Check the table
-				var table = db.Table<DomType3>();
-				Assert.AreEqual(9, table.ColumnCount);
-				using (var q = table.Query("select * from "+table.Name))
+				int      Inc_Key  { get; set; }
+				SomeEnum Inc_Enum { get; set; }
+			}
+
+			// Tests a basic default table
+			private class DomType0 :IDomType0
+			{
+				public  int      Inc_Key                 { get; set; }
+				public  string   Inc_Value               { get; set; }
+				public SomeEnum  Inc_Enum                { get; set; }
+				public  float    Ign_NoGetter            { set { } }
+				public  int      Ign_NoSetter            { get { return 42; } }
+				private bool     Ign_PrivateProp         { get; set; }
+				private int      m_ign_private_field;
+				public  short    Ign_PublicField;
+				public DomType0(){}
+				public DomType0(int seed)
 				{
-					var cols = q.ColumnNames.ToList();
-					Assert.AreEqual(9, q.ColumnCount);
-					Assert.IsTrue(cols.Contains("Key1"));
-					Assert.IsTrue(cols.Contains("Key2"));
-					Assert.IsTrue(cols.Contains("Key3"));
-					Assert.IsTrue(cols.Contains("Prop1"));
-					Assert.IsTrue(cols.Contains("Prop2"));
-					Assert.IsTrue(cols.Contains("Prop3"));
-					Assert.IsTrue(cols.Contains("PropA"));
-					Assert.IsTrue(cols.Contains("PropB"));
-					Assert.IsTrue(cols.Contains("Parent1"));
+					Inc_Key = seed;
+					Inc_Value = seed.ToString();
+					Inc_Enum = (SomeEnum)(seed % 3);
+					Ign_NoGetter = seed;
+					Ign_PrivateProp = seed != 0;
+					m_ign_private_field = seed;
+					Ign_PublicField = (short)m_ign_private_field;
 				}
-				
-				// Create some stuff
-				var obj1 = new DomType3(1, false, "first");
-				var obj2 = new DomType3(1, true , "first");
-				var obj3 = new DomType3(2, false, "first");
-				var obj4 = new DomType3(2, true , "first");
-				
-				// Insert it an check they're there
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(1, table.Insert(obj4));
-				Assert.AreEqual(4, table.RowCount);
-				
-				Assert.Throws<ArgumentException>(()=>table.Get(obj1.Key1, obj1.Key2));
-				
-				var OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
-				var OBJ2 = table.Get(obj2.Key1, obj2.Key2, obj2.Key3);
-				var OBJ3 = table.Get(obj3.Key1, obj3.Key2, obj3.Key3);
-				var OBJ4 = table.Get(obj4.Key1, obj4.Key2, obj4.Key3);
-				Assert.IsTrue(obj1.Equals(OBJ1));
-				Assert.IsTrue(obj2.Equals(OBJ2));
-				Assert.IsTrue(obj3.Equals(OBJ3));
-				Assert.IsTrue(obj4.Equals(OBJ4));
-				
-				// Check insert collisions
-				obj1.Prop1 = "I've been modified";
+				public override string ToString() { return Inc_Key + " " + Inc_Value; }
+			}
+
+			// Single primary key table
+			[Sqlite.Table(AllByDefault = false)]
+			private class DomType1
+			{
+				[Sqlite.Column(Order= 0, PrimaryKey = true, AutoInc = true, Constraints = "not null")] public int m_key;
+				[Sqlite.Column(Order= 1)] protected bool        m_bool;
+				[Sqlite.Column(Order= 2)] public sbyte          m_sbyte;
+				[Sqlite.Column(Order= 3)] public byte           m_byte;
+				[Sqlite.Column(Order= 4)] private char          m_char;
+				[Sqlite.Column(Order= 5)] private short         m_short {get;set;}
+				[Sqlite.Column(Order= 6)] public ushort         m_ushort {get;set;}
+				[Sqlite.Column(Order= 7)] public int            m_int;
+				[Sqlite.Column(Order= 8)] public uint           m_uint;
+				[Sqlite.Column(Order= 9)] public long           m_int64;
+				[Sqlite.Column(Order=10)] public ulong          m_uint64;
+				[Sqlite.Column(Order=11)] public decimal        m_decimal;
+				[Sqlite.Column(Order=12)] public float          m_float;
+				[Sqlite.Column(Order=13)] public double         m_double;
+				[Sqlite.Column(Order=14)] public string         m_string;
+				[Sqlite.Column(Order=15)] public byte[]         m_buf;
+				[Sqlite.Column(Order=16)] public byte[]         m_empty_buf;
+				[Sqlite.Column(Order=17)] public int[]          m_int_buf;
+				[Sqlite.Column(Order=18)] public Guid           m_guid;
+				[Sqlite.Column(Order=19)] public SomeEnum       m_enum;
+				[Sqlite.Column(Order=20)] public SomeEnum?      m_nullenum;
+				[Sqlite.Column(Order=21)] public DateTimeOffset m_dt_offset;
+				[Sqlite.Column(Order=22, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
+				[Sqlite.Column(Order=23)] public int?           m_nullint;
+				[Sqlite.Column(Order=24)] public long?          m_nulllong;
+			
+				// ReSharper disable UnusedAutoPropertyAccessor.Local
+				public int Ignored { get; set; }
+				// ReSharper restore UnusedAutoPropertyAccessor.Local
+			
+				public DomType1() {}
+				public DomType1(int val)
 				{
+					m_key       = -1;
+					m_bool      = true;
+					m_char      = 'X';
+					m_sbyte     = 12;
+					m_byte      = 12;
+					m_short     = 1234;
+					m_ushort    = 1234;
+					m_int       = 12345678;
+					m_uint      = 12345678;
+					m_int64     = 1234567890000;
+					m_uint64    = 1234567890000;
+					m_decimal   = 1234567890.123467890m;
+					m_float     = 1.234567f;
+					m_double    = 1.2345678987654321;
+					m_string    = "string";
+					m_buf       = new byte[]{0,1,2,3,4,5,6,7,8,9};
+					m_empty_buf = null;
+					m_int_buf   = new[]{0x10000000,0x20000000,0x30000000,0x40000000};
+					m_guid      = Guid.NewGuid();
+					m_enum      = SomeEnum.One;
+					m_nullenum  = SomeEnum.Two;
+					m_dt_offset = DateTimeOffset.UtcNow;
+					m_custom    = new Custom();
+					m_nullint   = 23;
+					m_nulllong  = null;
+					Ignored     = val;
+				}
+				public bool Equals(DomType1 other)
+				{
+					if (ReferenceEquals(null, other)) return false;
+					if (ReferenceEquals(this, other)) return true;
+					if (other.m_key      != m_key               ) return false;
+					if (other.m_bool     != m_bool              ) return false;
+					if (other.m_sbyte    != m_sbyte             ) return false;
+					if (other.m_byte     != m_byte              ) return false;
+					if (other.m_char     != m_char              ) return false;
+					if (other.m_short    != m_short             ) return false;
+					if (other.m_ushort   != m_ushort            ) return false;
+					if (other.m_int      != m_int               ) return false;
+					if (other.m_uint     != m_uint              ) return false;
+					if (other.m_int64    != m_int64             ) return false;
+					if (other.m_uint64   != m_uint64            ) return false;
+					if (other.m_decimal  != m_decimal           ) return false;
+					if (other.m_nullint  != m_nullint           ) return false;
+					if (other.m_nulllong != m_nulllong          ) return false;
+					if (!Equals(other.m_string, m_string)       ) return false;
+					if (!Equals(other.m_buf, m_buf)             ) return false;
+					if (!Equals(other.m_empty_buf, m_empty_buf) ) return false;
+					if (!Equals(other.m_int_buf, m_int_buf)     ) return false;
+					if (!Equals(other.m_enum, m_enum)           ) return false;
+					if (!Equals(other.m_nullenum, m_nullenum)   ) return false;
+					if (!other.m_guid.Equals(m_guid)            ) return false;
+					if (!other.m_dt_offset.Equals(m_dt_offset)  ) return false;
+					if (!other.m_custom.Equals(m_custom)        ) return false;
+					if (Math.Abs(other.m_float   - m_float  ) > float .Epsilon) return false;
+					if (Math.Abs(other.m_double  - m_double ) > double.Epsilon) return false;
+					return true;
+				}
+				private static bool Equals<T>(T[] arr1, T[] arr2)
+				{
+					if (arr1 == null) return arr2 == null || arr2.Length == 0;
+					if (arr2 == null) return arr1.Length == 0;
+					if (arr1.Length != arr2.Length) return false;
+					return arr1.SequenceEqual(arr2);
+				}
+			}
+
+			// Tests PKs named at class level, Unicode, non-int type primary keys
+			[Sqlite.Table(PrimaryKey = "PK", PKAutoInc = false, FieldBindingFlags = BindingFlags.Public)]
+			private class DomType2 :DomType2Base
+			{
+				public string UniStr; // Should be a column, because of the FieldBindingFlags
+				private bool Ign_PrivateField; // Should not be a column because private
+			
+				public DomType2() {}
+				public DomType2(string key, string str)
+				{
+					PK     = key;
+					UniStr = str;
+					Ign_PrivateField = true;
+					Ign_PrivateField = !Ign_PrivateField;
+				}
+				public bool Equals(DomType2 other)
+				{
+					if (ReferenceEquals(null, other)) return false;
+					if (ReferenceEquals(this, other)) return true;
+					if (other.UniStr != UniStr) return false;
+					return base.Equals(other);
+				}
+			}
+			private class DomType2Base
+			{
+				[Sqlite.Column] private int Inc_Explicit; // Should be a column, because explicitly named
+			
+				// Notice the DOMType2 class indicates this is the primary key from a separate class.
+				public string PK { get; protected set; }
+
+				protected DomType2Base()
+				{
+					Inc_Explicit = -2;
+				}
+				protected bool Equals(DomType2Base other)
+				{
+					if (ReferenceEquals(null, other)) return false;
+					if (ReferenceEquals(this, other)) return true;
+					if (other.PK           != PK          ) return false;
+					if (other.Inc_Explicit != Inc_Explicit) return false;
+					return true;
+				}
+			}
+
+			// Tests multiple primary keys, and properties in inherited/partial classes
+			[Sqlite.Table(Constraints = "primary key (Key1, Key2, Key3)")]
+			[Sqlite.IgnoreColumns("Ignored1")]
+			public partial class DomType3
+			{
+				public int    Key1 { get; set; }
+				public bool   Key2 { get; set; }
+				public string Prop1 { get; set; }
+				public float  Prop2 { get; set; }
+				public Guid   Prop3 { get; set; }
+				public float Ignored1 { get; set; }
+
+				public DomType3(){}
+				public DomType3(int key1, bool key2, string key3)
+				{
+					Key1 = key1;
+					Key2 = key2;
+					Key3 = key3;
+					Prop1 = key1.ToString() + " " + key2.ToString();
+					Prop2 = key1;
+					Prop3 = Guid.NewGuid();
+					Parent1 = key1;
+					PropA = key1.ToString() + " " + key2.ToString();
+					PropB = (SomeEnum)key1;
+					Ignored1 = 1f;
+					Ignored2 = 2.0;
+				}
+				public bool Equals(DomType3 other)
+				{
+					if (ReferenceEquals(null, other)) return false;
+					if (ReferenceEquals(this, other)) return true;
+					if (other.Key1    != Key1   ) return false;
+					if (other.Key2    != Key2   ) return false;
+					if (other.Prop1   != Prop1  ) return false;
+					if (Math.Abs(other.Prop2 - Prop2) > float.Epsilon) return false;
+					if (other.Prop3   != Prop3  ) return false;
+					if (other.Parent1 != Parent1) return false;
+					if (other.PropA   != PropA  ) return false;
+					if (other.PropB   != PropB  ) return false;
+					return true;
+				}
+			}
+			[Sqlite.IgnoreColumns("Ignored2")]
+			public partial class DomType3 :DomType3Base
+			{
+				public string   PropA { get; set; }
+				public SomeEnum PropB { get; set; }
+			}
+			public class DomType3Base
+			{
+				public int Parent1 { get; set; }
+				public string Key3 { get; set; }
+				public double Ignored2 { get; set; }
+			}
+
+			// Tests altering a table
+			public class DomType4
+			{
+				[Sqlite.Column(PrimaryKey = true)] public int Key1 { get; set; }
+				public bool   Key2 { get; set; }
+				public string Prop1 { get; set; }
+				public float  Prop2 { get; set; }
+				public Guid   Prop3 { get; set; }
+				public int    NewProp { get; set; }
+			}
+
+			// Tests inherited Sqlite attributes
+			[Sqlite.Table(PrimaryKey = "PK", PKAutoInc = true)]
+			public class DomType5Base
+			{
+				public int PK { get; set; }
+			}
+			public class DomType5 :DomType5Base
+			{
+				public string Data { get; set; }
+				public DomType5() {}
+				public DomType5(string data) { Data = data; }
+			}
+
+			// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
+			#endregion
+
+			// The test methods can run in any order, but we only want to do this stuff once
+			private static bool OneTimeOnly_Done = false;
+			private static void OneTimeOnly()
+			{
+				if (OneTimeOnly_Done) return;
+				OneTimeOnly_Done = true;
+
+				// Copy sqlite3.dll to test folder
+				var src_dir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\sqlite\lib\"));
+				var src_file = Regex.Replace(Environment.CurrentDirectory, @"(.*)\\(.*?)\\(.*?)$", "sqlite3.$2.$3.dll").Replace(@".x86.",@".win32.");
+				File.Copy(Path.Combine(src_dir, src_file), Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
+
+				// Register custom type bind/read methods
+				Sqlite.BindFunction.Add(typeof(Custom), Custom.SqliteBind);
+				Sqlite.ReadFunction.Add(typeof(Custom), Custom.SqliteRead);
+			
+				// Use single threading
+				Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
+			}
+
+			[Test] public static void DefaultUse()
+			{
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+				{
+					// Create a simple table
+					db.DropTable<DomType0>();
+					db.CreateTable<DomType0>();
+					Assert.IsTrue(db.TableExists<DomType0>());
+				
+					// Check the table
+					var table = db.Table<DomType0>();
+					Assert.AreEqual(3, table.ColumnCount);
+					var column_names = new[]{"Inc_Key", "Inc_Value", "Inc_Enum"};
+					using (var q = table.Query("select * from "+table.Name))
+					{
+						Assert.AreEqual(3, q.ColumnCount);
+						Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
+						Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
+						Assert.IsTrue(column_names.Contains(q.ColumnName(2)));
+					}
+				
+					// Create some objects to stick in the table
+					var obj1 = new DomType0(5);
+					var obj2 = new DomType0(6);
+					var obj3 = new DomType0(7);
+				
+					// Insert stuff
+					Assert.AreEqual(1, table.Insert(obj1));
+					Assert.AreEqual(1, table.Insert(obj2));
+					Assert.AreEqual(1, table.Insert(obj3));
+					Assert.AreEqual(3, table.RowCount);
+				
+					string sql_count = "select count(*) from "+table.Name;
+					using (var q = table.Query(sql_count))
+						Assert.AreEqual(sql_count, q.SqlString);
+				}
+			}
+			[Test] public static void TypicalUse()
+			{
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+				{
+					// Create a table
+					db.DropTable<DomType1>();
+					db.CreateTable<DomType1>();
+					Assert.IsTrue(db.TableExists<DomType1>());
+				
+					// Check the table
+					var table = db.Table<DomType1>();
+					Assert.AreEqual(25, table.ColumnCount);
+					using (var q = table.Query("select * from "+table.Name))
+					{
+						Assert.AreEqual(25, q.ColumnCount);
+						Assert.AreEqual("m_key"       ,q.ColumnName( 0));
+						Assert.AreEqual("m_bool"      ,q.ColumnName( 1));
+						Assert.AreEqual("m_sbyte"     ,q.ColumnName( 2));
+						Assert.AreEqual("m_byte"      ,q.ColumnName( 3));
+						Assert.AreEqual("m_char"      ,q.ColumnName( 4));
+						Assert.AreEqual("m_short"     ,q.ColumnName( 5));
+						Assert.AreEqual("m_ushort"    ,q.ColumnName( 6));
+						Assert.AreEqual("m_int"       ,q.ColumnName( 7));
+						Assert.AreEqual("m_uint"      ,q.ColumnName( 8));
+						Assert.AreEqual("m_int64"     ,q.ColumnName( 9));
+						Assert.AreEqual("m_uint64"    ,q.ColumnName(10));
+						Assert.AreEqual("m_decimal"   ,q.ColumnName(11));
+						Assert.AreEqual("m_float"     ,q.ColumnName(12));
+						Assert.AreEqual("m_double"    ,q.ColumnName(13));
+						Assert.AreEqual("m_string"    ,q.ColumnName(14));
+						Assert.AreEqual("m_buf"       ,q.ColumnName(15));
+						Assert.AreEqual("m_empty_buf" ,q.ColumnName(16));
+						Assert.AreEqual("m_int_buf"   ,q.ColumnName(17));
+						Assert.AreEqual("m_guid"      ,q.ColumnName(18));
+						Assert.AreEqual("m_enum"      ,q.ColumnName(19));
+						Assert.AreEqual("m_nullenum"  ,q.ColumnName(20));
+						Assert.AreEqual("m_dt_offset" ,q.ColumnName(21));
+						Assert.AreEqual("m_custom"    ,q.ColumnName(22));
+						Assert.AreEqual("m_nullint"   ,q.ColumnName(23));
+						Assert.AreEqual("m_nulllong"  ,q.ColumnName(24));
+					}
+				
+					// Create some objects to stick in the table
+					var obj1 = new DomType1(5);
+					var obj2 = new DomType1(6);
+					var obj3 = new DomType1(7);
+					obj2.m_dt_offset = DateTimeOffset.UtcNow;
+				
+					// Insert stuff
+					Assert.AreEqual(1, table.Insert(obj1));
+					Assert.AreEqual(1, table.Insert(obj2));
+					Assert.AreEqual(1, table.Insert(obj3));
+					Assert.AreEqual(3, table.RowCount);
+				
+					// Check Get() throws and Find() returns null if not found
+					Assert.IsNull(table.Find(0));
 					Sqlite.Exception err = null;
-					try { table.Insert(obj1); } catch (Sqlite.Exception ex) { err = ex; }
-					Assert.IsTrue(err != null && err.Result == Sqlite.Result.Constraint);
-					OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
-					Assert.IsNotNull(OBJ1);
-					Assert.IsFalse(obj1.Equals(OBJ1));
-				}
-				{
-					Sqlite.Exception err = null;
-					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Ignore); } catch (Sqlite.Exception ex) { err = ex; }
-					Assert.IsNull(err);
-					OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
-					Assert.IsNotNull(OBJ1);
-					Assert.IsFalse(obj1.Equals(OBJ1));
-				}
-				{
-					Sqlite.Exception err = null;
-					try { table.Insert(obj1, Sqlite.OnInsertConstraint.Replace); } catch (Sqlite.Exception ex) { err = ex; }
-					Assert.IsNull(err);
-					OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
+					try { table.Get(4); } catch (Sqlite.Exception ex) { err = ex; }
+					Assert.IsTrue(err != null && err.Result == Sqlite.Result.NotFound);
+				
+					// Get stuff and check it's the same
+					var OBJ1 = table.Get(obj1.m_key);
+					var OBJ2 = table.Get(obj2.m_key);
+					var OBJ3 = table.Get(obj3.m_key);
+					Assert.IsTrue(obj1.Equals(OBJ1));
+					Assert.IsTrue(obj2.Equals(OBJ2));
+					Assert.IsTrue(obj3.Equals(OBJ3));
+				
+					// Check parameter binding
+					using (var q = table.Query(Sqlite.Sql("select m_string,m_int from ",table.Name," where m_string = @p1 and m_int = @p2")))
+					{
+						Assert.AreEqual(2, q.ParmCount);
+						Assert.AreEqual("@p1", q.ParmName(1));
+						Assert.AreEqual("@p2", q.ParmName(2));
+						Assert.AreEqual(1, q.ParmIndex("@p1"));
+						Assert.AreEqual(2, q.ParmIndex("@p2"));
+						q.BindParm(1, "string");
+						q.BindParm(2, 12345678);
+					
+						// Run the query
+						Assert.IsTrue(q.Step());
+					
+						// Read the results
+						Assert.AreEqual(2, q.ColumnCount);
+						Assert.AreEqual(Sqlite.DataType.Text    ,q.ColumnType(0));
+						Assert.AreEqual(Sqlite.DataType.Integer ,q.ColumnType(1));
+						Assert.AreEqual("m_string"              ,q.ColumnName(0));
+						Assert.AreEqual("m_int"                 ,q.ColumnName(1));
+						Assert.AreEqual("string"                ,q.ReadColumn<string>(0));
+						Assert.AreEqual(12345678                ,q.ReadColumn<int>(1));
+					
+						// There should be 3 rows
+						Assert.IsTrue(q.Step());
+						Assert.IsTrue(q.Step());
+						Assert.IsFalse(q.Step());
+					}
+				
+					// Update stuff
+					obj2.m_string = "I've been modified";
+					Assert.AreEqual(1, table.Update(obj2));
+				
+					// Get the updated stuff and check it's been updated
+					OBJ2 = table.Find(obj2.m_key);
+					Assert.IsNotNull(OBJ2);
+					Assert.IsTrue(obj2.Equals(OBJ2));
+				
+					// Delete something and check it's gone
+					Assert.AreEqual(1, table.Delete(obj3));
+					OBJ3 = table.Find(obj3.m_key);
+					Assert.IsNull(OBJ3);
+				
+					// Update a single column and check it
+					obj1.m_byte = 55;
+					Assert.AreEqual(1, table.Update("m_byte", obj1.m_byte, 1));
+					OBJ1 = table.Get(obj1.m_key);
 					Assert.IsNotNull(OBJ1);
 					Assert.IsTrue(obj1.Equals(OBJ1));
+				
+					// Read a single column
+					var val = table.ColumnValue<ushort>("m_ushort", 2);
+					Assert.AreEqual(obj2.m_ushort, val);
+				
+					// Add something back
+					Assert.AreEqual(1, table.Insert(obj3));
+					OBJ3 = table.Get(obj3.m_key);
+					Assert.IsNotNull(OBJ3);
+					Assert.IsTrue(obj3.Equals(OBJ3));
+				
+					// Update the column value for all rows
+					obj1.m_byte = obj2.m_byte = obj3.m_byte = 0xAB;
+					Assert.AreEqual(3, table.UpdateAll("m_byte", (byte)0xAB));
+				
+					// Enumerate objects
+					var objs = table.Select(x => x).ToArray();
+					Assert.AreEqual(3, objs.Length);
+					Assert.IsTrue(obj1.Equals(objs[0]));
+					Assert.IsTrue(obj2.Equals(objs[1]));
+					Assert.IsTrue(obj3.Equals(objs[2]));
+				
+					// Linq expressions
+					objs = (from a in table where a.m_string == "I've been modified" select a).ToArray();
+					Assert.AreEqual(1, objs.Length);
+					Assert.IsTrue(obj2.Equals(objs[0]));
 				}
-				
-				// Update in a multiple pk table
-				obj2.PropA = "I've also been modified";
-				Assert.AreEqual(1, table.Update(obj2));
-				OBJ2 = table.Get(obj2.Key1, obj2.Key2, obj2.Key3);
-				Assert.IsNotNull(OBJ2);
-				Assert.IsTrue(obj2.Equals(OBJ2));
-				
-				// Delete in a multiple pk table
-				var keys = Sqlite.PrimaryKeys(obj3);
-				Assert.AreEqual(1, table.DeleteByKey(keys));
-				OBJ3 = table.Find(obj3.Key1, obj3.Key2, obj3.Key3);
-				Assert.IsNull(OBJ3);
 			}
-		}
-		[Test] public static void TestSqlite_Unicode()
-		{
-			TestSqlite_OneTimeOnly();
-			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			[Test] public static void MultiplePks()
 			{
-				// Create a table
-				db.DropTable<DomType2>();
-				db.CreateTable<DomType2>();
-				Assert.IsTrue(db.TableExists<DomType2>());
-				
-				// Check the table
-				var table = db.Table<DomType2>();
-				Assert.AreEqual(3, table.ColumnCount);
-				var column_names = new[]{"PK", "UniStr", "Inc_Explicit"};
-				using (var q = table.Query("select * from "+table.Name))
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
-					Assert.AreEqual(3        ,q.ColumnCount);
-					Assert.AreEqual("PK"     ,q.ColumnName(0));
-					Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
-					Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
+					// Create a table
+					db.DropTable<DomType3>();
+					db.CreateTable<DomType3>();
+					Assert.IsTrue(db.TableExists<DomType3>());
+				
+					// Check the table
+					var table = db.Table<DomType3>();
+					Assert.AreEqual(9, table.ColumnCount);
+					using (var q = table.Query("select * from "+table.Name))
+					{
+						var cols = q.ColumnNames.ToList();
+						Assert.AreEqual(9, q.ColumnCount);
+						Assert.IsTrue(cols.Contains("Key1"));
+						Assert.IsTrue(cols.Contains("Key2"));
+						Assert.IsTrue(cols.Contains("Key3"));
+						Assert.IsTrue(cols.Contains("Prop1"));
+						Assert.IsTrue(cols.Contains("Prop2"));
+						Assert.IsTrue(cols.Contains("Prop3"));
+						Assert.IsTrue(cols.Contains("PropA"));
+						Assert.IsTrue(cols.Contains("PropB"));
+						Assert.IsTrue(cols.Contains("Parent1"));
+					}
+				
+					// Create some stuff
+					var obj1 = new DomType3(1, false, "first");
+					var obj2 = new DomType3(1, true , "first");
+					var obj3 = new DomType3(2, false, "first");
+					var obj4 = new DomType3(2, true , "first");
+				
+					// Insert it an check they're there
+					Assert.AreEqual(1, table.Insert(obj1));
+					Assert.AreEqual(1, table.Insert(obj2));
+					Assert.AreEqual(1, table.Insert(obj3));
+					Assert.AreEqual(1, table.Insert(obj4));
+					Assert.AreEqual(4, table.RowCount);
+				
+					Assert.Throws<ArgumentException>(()=>table.Get(obj1.Key1, obj1.Key2));
+				
+					var OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
+					var OBJ2 = table.Get(obj2.Key1, obj2.Key2, obj2.Key3);
+					var OBJ3 = table.Get(obj3.Key1, obj3.Key2, obj3.Key3);
+					var OBJ4 = table.Get(obj4.Key1, obj4.Key2, obj4.Key3);
+					Assert.IsTrue(obj1.Equals(OBJ1));
+					Assert.IsTrue(obj2.Equals(OBJ2));
+					Assert.IsTrue(obj3.Equals(OBJ3));
+					Assert.IsTrue(obj4.Equals(OBJ4));
+				
+					// Check insert collisions
+					obj1.Prop1 = "I've been modified";
+					{
+						Sqlite.Exception err = null;
+						try { table.Insert(obj1); } catch (Sqlite.Exception ex) { err = ex; }
+						Assert.IsTrue(err != null && err.Result == Sqlite.Result.Constraint);
+						OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
+						Assert.IsNotNull(OBJ1);
+						Assert.IsFalse(obj1.Equals(OBJ1));
+					}
+					{
+						Sqlite.Exception err = null;
+						try { table.Insert(obj1, Sqlite.OnInsertConstraint.Ignore); } catch (Sqlite.Exception ex) { err = ex; }
+						Assert.IsNull(err);
+						OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
+						Assert.IsNotNull(OBJ1);
+						Assert.IsFalse(obj1.Equals(OBJ1));
+					}
+					{
+						Sqlite.Exception err = null;
+						try { table.Insert(obj1, Sqlite.OnInsertConstraint.Replace); } catch (Sqlite.Exception ex) { err = ex; }
+						Assert.IsNull(err);
+						OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
+						Assert.IsNotNull(OBJ1);
+						Assert.IsTrue(obj1.Equals(OBJ1));
+					}
+				
+					// Update in a multiple pk table
+					obj2.PropA = "I've also been modified";
+					Assert.AreEqual(1, table.Update(obj2));
+					OBJ2 = table.Get(obj2.Key1, obj2.Key2, obj2.Key3);
+					Assert.IsNotNull(OBJ2);
+					Assert.IsTrue(obj2.Equals(OBJ2));
+				
+					// Delete in a multiple pk table
+					var keys = Sqlite.PrimaryKeys(obj3);
+					Assert.AreEqual(1, table.DeleteByKey(keys));
+					OBJ3 = table.Find(obj3.Key1, obj3.Key2, obj3.Key3);
+					Assert.IsNull(OBJ3);
 				}
-				
-				// Insert some stuff and check it stores/reads back ok
-				var obj1 = new DomType2("123", "€€€€");
-				var obj2 = new DomType2("abc", "⽄畂卧湥敳慈摮敬⡲㐲ㄴ⤷›慃獵摥戠㩹樠癡⹡慬杮吮牨睯扡敬›潣⹭湩牴湡汥洮扯汩扥汵敬⹴牃獡剨灥牯楴杮匫獥楳湯瑓牡䕴捸灥楴湯›敓獳潩⁮瑓牡整㩤眠楚塄婐桹㐰慳扲汬穷䌰㡶啩扁搶睄畎䐱䭡䝭牌夳䉡獁െ");
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(2, table.RowCount);
-				var OBJ1 = table.Get(obj1.PK);
-				var OBJ2 = table.Get(obj2.PK);
-				Assert.IsTrue(obj1.Equals(OBJ1));
-				Assert.IsTrue(obj2.Equals(OBJ2));
-				
-				// Update Unicode stuff
-				obj2.UniStr = "獁㩹獁";
-				Assert.AreEqual(1, table.Update(obj2));
-				OBJ2 = table.Get(obj2.PK);
-				Assert.IsTrue(obj2.Equals(OBJ2));
 			}
-		}
-		[Test] public static void TestSqlite_Transactions()
-		{
-			TestSqlite_OneTimeOnly();
-			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			[Test] public static void Unicode()
 			{
-				// Create a table
-				db.DropTable<DomType1>();
-				db.CreateTable<DomType1>();
-				Assert.IsTrue(db.TableExists<DomType1>());
-				var table = db.Table<DomType1>();
-				
-				// Create objects
-				var objs = Enumerable.Range(0,10).Select(i => new DomType1(i)).ToList();
-				
-				// Add objects
-				try { using (new Sqlite.Transaction(db))
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
-					foreach (var x in objs) table.Insert(x);
-					throw new Exception("aborting insert");
-				}} catch {}
-				Assert.AreEqual(0, table.RowCount);
-				using (new Sqlite.Transaction(db))
+					// Create a table
+					db.DropTable<DomType2>();
+					db.CreateTable<DomType2>();
+					Assert.IsTrue(db.TableExists<DomType2>());
+				
+					// Check the table
+					var table = db.Table<DomType2>();
+					Assert.AreEqual(3, table.ColumnCount);
+					var column_names = new[]{"PK", "UniStr", "Inc_Explicit"};
+					using (var q = table.Query("select * from "+table.Name))
+					{
+						Assert.AreEqual(3        ,q.ColumnCount);
+						Assert.AreEqual("PK"     ,q.ColumnName(0));
+						Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
+						Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
+					}
+				
+					// Insert some stuff and check it stores/reads back ok
+					var obj1 = new DomType2("123", "€€€€");
+					var obj2 = new DomType2("abc", "⽄畂卧湥敳慈摮敬⡲㐲ㄴ⤷›慃獵摥戠㩹樠癡⹡慬杮吮牨睯扡敬›潣⹭湩牴湡汥洮扯汩扥汵敬⹴牃獡剨灥牯楴杮匫獥楳湯瑓牡䕴捸灥楴湯›敓獳潩⁮瑓牡整㩤眠楚塄婐桹㐰慳扲汬穷䌰㡶啩扁搶睄畎䐱䭡䝭牌夳䉡獁െ");
+					Assert.AreEqual(1, table.Insert(obj1));
+					Assert.AreEqual(1, table.Insert(obj2));
+					Assert.AreEqual(2, table.RowCount);
+					var OBJ1 = table.Get(obj1.PK);
+					var OBJ2 = table.Get(obj2.PK);
+					Assert.IsTrue(obj1.Equals(OBJ1));
+					Assert.IsTrue(obj2.Equals(OBJ2));
+				
+					// Update Unicode stuff
+					obj2.UniStr = "獁㩹獁";
+					Assert.AreEqual(1, table.Update(obj2));
+					OBJ2 = table.Get(obj2.PK);
+					Assert.IsTrue(obj2.Equals(OBJ2));
+				}
+			}
+			[Test] public static void Transactions()
+			{
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
-					foreach (var x in objs) table.Insert(x);
+					// Create a table
+					db.DropTable<DomType1>();
+					db.CreateTable<DomType1>();
+					Assert.IsTrue(db.TableExists<DomType1>());
+					var table = db.Table<DomType1>();
+				
+					// Create objects
+					var objs = Enumerable.Range(0,10).Select(i => new DomType1(i)).ToList();
+				
+					// Add objects
+					try { using (new Sqlite.Transaction(db))
+					{
+						foreach (var x in objs) table.Insert(x);
+						throw new Exception("aborting insert");
+					}} catch {}
+					Assert.AreEqual(0, table.RowCount);
+					using (new Sqlite.Transaction(db))
+					{
+						foreach (var x in objs) table.Insert(x);
+					}
+					Assert.AreEqual(0, table.RowCount);
+					using (var tranny = new Sqlite.Transaction(db))
+					{
+						foreach (var x in objs) table.Insert(x);
+						tranny.Commit();
+					}
+					Assert.AreEqual(objs.Count, table.RowCount);
 				}
-				Assert.AreEqual(0, table.RowCount);
-				using (var tranny = new Sqlite.Transaction(db))
+			}
+			[Test] public static void RuntimeTypes()
+			{
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
-					foreach (var x in objs) table.Insert(x);
-					tranny.Commit();
+					// Create a table
+					db.DropTable<DomType1>();
+					db.CreateTable<DomType1>();
+					Assert.IsTrue(db.TableExists<DomType1>());
+					var table = db.Table(typeof(DomType1));
+				
+					// Create objects
+					var objs = Enumerable.Range(0,10).Select(i => new DomType1(i)).ToList();
+					foreach (var x in objs)
+						Assert.AreEqual(1, table.Insert(x)); // insert without compile-time type info
+				
+					objs[5].m_string = "I am number 5";
+					Assert.AreEqual(1, table.Update(objs[5]));
+				
+					var OBJS = table.Cast<DomType1>().Select(x => x).ToList();
+					for (int i = 0, iend = objs.Count; i != iend; ++i)
+						Assert.IsTrue(objs[i].Equals(OBJS[i]));
 				}
-				Assert.AreEqual(objs.Count, table.RowCount);
 			}
-		}
-		[Test] public static void TestSqlite_RuntimeTypes()
-		{
-			TestSqlite_OneTimeOnly();
-			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			[Test] public static void AlterTable()
 			{
-				// Create a table
-				db.DropTable<DomType1>();
-				db.CreateTable<DomType1>();
-				Assert.IsTrue(db.TableExists<DomType1>());
-				var table = db.Table(typeof(DomType1));
-				
-				// Create objects
-				var objs = Enumerable.Range(0,10).Select(i => new DomType1(i)).ToList();
-				foreach (var x in objs)
-					Assert.AreEqual(1, table.Insert(x)); // insert without compile-time type info
-				
-				objs[5].m_string = "I am number 5";
-				Assert.AreEqual(1, table.Update(objs[5]));
-				
-				var OBJS = table.Cast<DomType1>().Select(x => x).ToList();
-				for (int i = 0, iend = objs.Count; i != iend; ++i)
-					Assert.IsTrue(objs[i].Equals(OBJS[i]));
-			}
-		}
-		[Test] public static void TestSqlite_AlterTable()
-		{
-			TestSqlite_OneTimeOnly();
+				OneTimeOnly();
 			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
-			{
-				// Create a table
-				db.DropTable<DomType3>();
-				db.CreateTable<DomType3>();
-				Assert.IsTrue(db.TableExists<DomType3>());
-				
-				// Check the table
-				var table3 = db.Table<DomType3>();
-				Assert.AreEqual(9, table3.ColumnCount);
-				using (var q = table3.Query("select * from "+table3.Name))
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
-					var cols = q.ColumnNames.ToList();
-					Assert.AreEqual(9, q.ColumnCount);
-					Assert.AreEqual(9, cols.Count);
-					Assert.IsTrue(cols.Contains("Key1"));
-					Assert.IsTrue(cols.Contains("Key2"));
-					Assert.IsTrue(cols.Contains("Key3"));
-					Assert.IsTrue(cols.Contains("Prop1"));
-					Assert.IsTrue(cols.Contains("Prop2"));
-					Assert.IsTrue(cols.Contains("Prop3"));
-					Assert.IsTrue(cols.Contains("PropA"));
-					Assert.IsTrue(cols.Contains("PropB"));
-					Assert.IsTrue(cols.Contains("Parent1"));
+					// Create a table
+					db.DropTable<DomType3>();
+					db.CreateTable<DomType3>();
+					Assert.IsTrue(db.TableExists<DomType3>());
+				
+					// Check the table
+					var table3 = db.Table<DomType3>();
+					Assert.AreEqual(9, table3.ColumnCount);
+					using (var q = table3.Query("select * from "+table3.Name))
+					{
+						var cols = q.ColumnNames.ToList();
+						Assert.AreEqual(9, q.ColumnCount);
+						Assert.AreEqual(9, cols.Count);
+						Assert.IsTrue(cols.Contains("Key1"));
+						Assert.IsTrue(cols.Contains("Key2"));
+						Assert.IsTrue(cols.Contains("Key3"));
+						Assert.IsTrue(cols.Contains("Prop1"));
+						Assert.IsTrue(cols.Contains("Prop2"));
+						Assert.IsTrue(cols.Contains("Prop3"));
+						Assert.IsTrue(cols.Contains("PropA"));
+						Assert.IsTrue(cols.Contains("PropB"));
+						Assert.IsTrue(cols.Contains("Parent1"));
+					}
+				
+					// Create some stuff
+					var obj1 = new DomType3(1, false, "first");
+					var obj2 = new DomType3(1, true , "first");
+					var obj3 = new DomType3(2, false, "first");
+					var obj4 = new DomType3(2, true , "first");
+				
+					// Insert it an check they're there
+					Assert.AreEqual(1, table3.Insert(obj1));
+					Assert.AreEqual(1, table3.Insert(obj2));
+					Assert.AreEqual(1, table3.Insert(obj3));
+					Assert.AreEqual(1, table3.Insert(obj4));
+					Assert.AreEqual(4, table3.RowCount);
+				
+					// Rename the table
+					db.DropTable<DomType4>();
+					db.RenameTable<DomType3>("DomType4", false);
+				
+					// Alter the table to DOMType4
+					db.AlterTable<DomType4>();
+					Assert.IsTrue(db.TableExists<DomType4>());
+				
+					// Check the table
+					var table4 = db.Table<DomType4>();
+					Assert.AreEqual(6, table4.ColumnCount);
+					using (var q = table4.Query("select * from "+table4.Name))
+					{
+						var cols = q.ColumnNames.ToList();
+						Assert.AreEqual(10, q.ColumnCount);
+						Assert.AreEqual(10, cols.Count);
+						Assert.IsTrue(cols.Contains("Key1"));
+						Assert.IsTrue(cols.Contains("Key2"));
+						Assert.IsTrue(cols.Contains("Key3"));
+						Assert.IsTrue(cols.Contains("Prop1"));
+						Assert.IsTrue(cols.Contains("Prop2"));
+						Assert.IsTrue(cols.Contains("Prop3"));
+						Assert.IsTrue(cols.Contains("PropA"));
+						Assert.IsTrue(cols.Contains("PropB"));
+						Assert.IsTrue(cols.Contains("Parent1"));
+						Assert.IsTrue(cols.Contains("NewProp"));
+					}
 				}
-				
-				// Create some stuff
-				var obj1 = new DomType3(1, false, "first");
-				var obj2 = new DomType3(1, true , "first");
-				var obj3 = new DomType3(2, false, "first");
-				var obj4 = new DomType3(2, true , "first");
-				
-				// Insert it an check they're there
-				Assert.AreEqual(1, table3.Insert(obj1));
-				Assert.AreEqual(1, table3.Insert(obj2));
-				Assert.AreEqual(1, table3.Insert(obj3));
-				Assert.AreEqual(1, table3.Insert(obj4));
-				Assert.AreEqual(4, table3.RowCount);
-				
-				// Rename the table
-				db.DropTable<DomType4>();
-				db.RenameTable<DomType3>("DomType4", false);
-				
-				// Alter the table to DOMType4
-				db.AlterTable<DomType4>();
-				Assert.IsTrue(db.TableExists<DomType4>());
-				
-				// Check the table
-				var table4 = db.Table<DomType4>();
-				Assert.AreEqual(6, table4.ColumnCount);
-				using (var q = table4.Query("select * from "+table4.Name))
+			}
+			[Test] public static void ExprTree()
+			{
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
-					var cols = q.ColumnNames.ToList();
-					Assert.AreEqual(10, q.ColumnCount);
-					Assert.AreEqual(10, cols.Count);
-					Assert.IsTrue(cols.Contains("Key1"));
-					Assert.IsTrue(cols.Contains("Key2"));
-					Assert.IsTrue(cols.Contains("Key3"));
-					Assert.IsTrue(cols.Contains("Prop1"));
-					Assert.IsTrue(cols.Contains("Prop2"));
-					Assert.IsTrue(cols.Contains("Prop3"));
-					Assert.IsTrue(cols.Contains("PropA"));
-					Assert.IsTrue(cols.Contains("PropB"));
-					Assert.IsTrue(cols.Contains("Parent1"));
-					Assert.IsTrue(cols.Contains("NewProp"));
+					// Create a simple table
+					db.DropTable<DomType0>();
+					db.CreateTable<DomType0>();
+					Assert.IsTrue(db.TableExists<DomType0>());
+					var table = db.Table<DomType0>();
+				
+					// Insert stuff
+					Assert.AreEqual(1, table.Insert(new DomType0(4)));
+					Assert.AreEqual(1, table.Insert(new DomType0(1)));
+					Assert.AreEqual(1, table.Insert(new DomType0(0)));
+					Assert.AreEqual(1, table.Insert(new DomType0(5)));
+					Assert.AreEqual(1, table.Insert(new DomType0(7)));
+					Assert.AreEqual(1, table.Insert(new DomType0(9)));
+					Assert.AreEqual(1, table.Insert(new DomType0(6)));
+					Assert.AreEqual(1, table.Insert(new DomType0(3)));
+					Assert.AreEqual(1, table.Insert(new DomType0(8)));
+					Assert.AreEqual(1, table.Insert(new DomType0(2)));
+					Assert.AreEqual(10, table.RowCount);
+				
+					string sql_count = "select count(*) from "+table.Name;
+					using (var q = table.Query(sql_count))
+						Assert.AreEqual(sql_count, q.SqlString);
+				
+					// Do some expression tree queries
+					{// Count clause
+						var q = table.Count(x => (x.Inc_Key % 3) == 0);
+						Assert.AreEqual(4, q);
+					}
+					{// Where clause
+						var q = from x in table where x.Inc_Key % 2 == 1 select x;
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+					}
+					{// Where clause
+						// ReSharper disable RedundantCast
+						var q = table.Where(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three); // Cast needed to test expressions
+						var list = q.ToList();
+						Assert.AreEqual(7, list.Count);
+						Assert.AreEqual(0, list[0].Inc_Key);
+						Assert.AreEqual(5, list[1].Inc_Key);
+						Assert.AreEqual(9, list[2].Inc_Key);
+						Assert.AreEqual(6, list[3].Inc_Key);
+						Assert.AreEqual(3, list[4].Inc_Key);
+						Assert.AreEqual(8, list[5].Inc_Key);
+						Assert.AreEqual(2, list[6].Inc_Key);
+						// ReSharper restore RedundantCast
+					}
+					{// Where clause with 'like' method calling 'RowCount'
+						var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
+						Assert.AreEqual(1, q);
+					}
+					{// Where clause with x => true
+						var q = table.Where(x => true);
+						var list = q.ToList();
+						Assert.AreEqual(10, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(1, list[1].Inc_Key);
+						Assert.AreEqual(0, list[2].Inc_Key);
+						Assert.AreEqual(5, list[3].Inc_Key);
+						Assert.AreEqual(7, list[4].Inc_Key);
+						Assert.AreEqual(9, list[5].Inc_Key);
+						Assert.AreEqual(6, list[6].Inc_Key);
+						Assert.AreEqual(3, list[7].Inc_Key);
+						Assert.AreEqual(8, list[8].Inc_Key);
+						Assert.AreEqual(2, list[9].Inc_Key);
+					}
+					{// Contains clause
+						var set = new[]{"2","4","8"};
+						var q = from x in table where set.Contains(x.Inc_Value) select x;
+						var list = q.ToList();
+						Assert.AreEqual(3, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(8, list[1].Inc_Key);
+						Assert.AreEqual(2, list[2].Inc_Key);
+					}
+					{// NOT Contains clause
+						var set = new List<string>{"2","4","8","5","9"};
+						var q = from x in table where set.Contains(x.Inc_Value) == false select x;
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(0, list[1].Inc_Key);
+						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(6, list[3].Inc_Key);
+						Assert.AreEqual(3, list[4].Inc_Key);
+					}
+					{// NOT Contains clause
+						var set = new List<string>{"2","4","8","5","9"};
+						var q = from x in table where !set.Contains(x.Inc_Value) select x;
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(0, list[1].Inc_Key);
+						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(6, list[3].Inc_Key);
+						Assert.AreEqual(3, list[4].Inc_Key);
+					}
+					{// OrderBy clause
+						var q = from x in table orderby x.Inc_Key descending select x;
+						var list = q.ToList();
+						Assert.AreEqual(10, list.Count);
+						for (int i = 0; i != 10; ++i)
+							Assert.AreEqual(9-i, list[i].Inc_Key);
+					}
+					{// Where and OrderBy clause
+						var q = from x in table where ((x.Inc_Key * 4 + 2 - 1) / 3) >= 5 orderby x.Inc_Value select x;
+						var list = q.ToList();
+						Assert.AreEqual(6, list.Count);
+						for (int i = 0; i != 6; ++i)
+							Assert.AreEqual(4+i, list[i].Inc_Key);
+					}
+					{// Skip
+						var q = table.Where(x => x.Inc_Key <= 5).Skip(2);
+						var list = q.ToList();
+						Assert.AreEqual(4, list.Count);
+						Assert.AreEqual(0, list[0].Inc_Key);
+						Assert.AreEqual(5, list[1].Inc_Key);
+						Assert.AreEqual(3, list[2].Inc_Key);
+						Assert.AreEqual(2, list[3].Inc_Key);
+					}
+					{// Take
+						var q = table.Where(x => x.Inc_Key >= 5).Take(2);
+						var list = q.ToList();
+						Assert.AreEqual(2, list.Count);
+						Assert.AreEqual(5, list[0].Inc_Key);
+						Assert.AreEqual(7, list[1].Inc_Key);
+					}
+					{// Skip and Take
+						var q = table.Where(x => x.Inc_Key >= 5).Skip(2).Take(2);
+						var list = q.ToList();
+						Assert.AreEqual(2, list.Count);
+						Assert.AreEqual(9, list[0].Inc_Key);
+						Assert.AreEqual(6, list[1].Inc_Key);
+					}
+					{// Null test
+						var q = from x in table where x.Inc_Value != null select x;
+						var list = q.ToList();
+						Assert.AreEqual(10, list.Count);
+					}
+					{// Type conversions
+						var q = from x in table where (float)x.Inc_Key > 2.5f && (float)x.Inc_Key < 7.5f select x;
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(5, list[1].Inc_Key);
+						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(6, list[3].Inc_Key);
+						Assert.AreEqual(3, list[4].Inc_Key);
+					}
+					{// Delete
+						var q = table.Delete(x => x.Inc_Key >= 5);
+						var list = table.ToList();
+						Assert.AreEqual(5, q);
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(1, list[1].Inc_Key);
+						Assert.AreEqual(0, list[2].Inc_Key);
+						Assert.AreEqual(3, list[3].Inc_Key);
+						Assert.AreEqual(2, list[4].Inc_Key);
+					}
+					#pragma warning disable 168
+					{// Check sql strings are correct
+						string sql;
+					
+						sql = table.Where(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
+					
+						sql = table.Where(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
+					
+						var t = table.FirstOrDefault(x => x.Inc_Key == 4);
+						sql = table.SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
+					
+						var l = table.Where(x => x.Inc_Key == 4).Take(4).Skip(2).ToList();
+						sql = table.SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
+					
+						var q = (from x in table where x.Inc_Key == 3 select new {x.Inc_Key, x.Inc_Value}).ToList();
+						sql = table.SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
+					
+						var w = table.Delete(x => x.Inc_Key == 2);
+						sql = table.SqlString;
+						Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
+					}
+					#pragma warning restore 168
 				}
 			}
-		}
-		[Test] public static void TestSqlite_ExprTree()
-		{
-			TestSqlite_OneTimeOnly();
-			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			[Test] public static void UntypedExprTree()
 			{
-				// Create a simple table
-				db.DropTable<DomType0>();
-				db.CreateTable<DomType0>();
-				Assert.IsTrue(db.TableExists<DomType0>());
-				var table = db.Table<DomType0>();
-				
-				// Insert stuff
-				Assert.AreEqual(1, table.Insert(new DomType0(4)));
-				Assert.AreEqual(1, table.Insert(new DomType0(1)));
-				Assert.AreEqual(1, table.Insert(new DomType0(0)));
-				Assert.AreEqual(1, table.Insert(new DomType0(5)));
-				Assert.AreEqual(1, table.Insert(new DomType0(7)));
-				Assert.AreEqual(1, table.Insert(new DomType0(9)));
-				Assert.AreEqual(1, table.Insert(new DomType0(6)));
-				Assert.AreEqual(1, table.Insert(new DomType0(3)));
-				Assert.AreEqual(1, table.Insert(new DomType0(8)));
-				Assert.AreEqual(1, table.Insert(new DomType0(2)));
-				Assert.AreEqual(10, table.RowCount);
-				
-				string sql_count = "select count(*) from "+table.Name;
-				using (var q = table.Query(sql_count))
-					Assert.AreEqual(sql_count, q.SqlString);
-				
-				// Do some expression tree queries
-				{// Count clause
-					var q = table.Count(x => (x.Inc_Key % 3) == 0);
-					Assert.AreEqual(4, q);
-				}
-				{// Where clause
-					var q = from x in table where x.Inc_Key % 2 == 1 select x;
-					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-				}
-				{// Where clause
-					// ReSharper disable RedundantCast
-					var q = table.Where(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three); // Cast needed to test expressions
-					var list = q.ToList();
-					Assert.AreEqual(7, list.Count);
-					Assert.AreEqual(0, list[0].Inc_Key);
-					Assert.AreEqual(5, list[1].Inc_Key);
-					Assert.AreEqual(9, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(3, list[4].Inc_Key);
-					Assert.AreEqual(8, list[5].Inc_Key);
-					Assert.AreEqual(2, list[6].Inc_Key);
-					// ReSharper restore RedundantCast
-				}
-				{// Where clause with 'like' method calling 'RowCount'
-					var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
-					Assert.AreEqual(1, q);
-				}
-				{// Where clause with x => true
-					var q = table.Where(x => true);
-					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
-					Assert.AreEqual(4, list[0].Inc_Key);
-					Assert.AreEqual(1, list[1].Inc_Key);
-					Assert.AreEqual(0, list[2].Inc_Key);
-					Assert.AreEqual(5, list[3].Inc_Key);
-					Assert.AreEqual(7, list[4].Inc_Key);
-					Assert.AreEqual(9, list[5].Inc_Key);
-					Assert.AreEqual(6, list[6].Inc_Key);
-					Assert.AreEqual(3, list[7].Inc_Key);
-					Assert.AreEqual(8, list[8].Inc_Key);
-					Assert.AreEqual(2, list[9].Inc_Key);
-				}
-				{// Contains clause
-					var set = new[]{"2","4","8"};
-					var q = from x in table where set.Contains(x.Inc_Value) select x;
-					var list = q.ToList();
-					Assert.AreEqual(3, list.Count);
-					Assert.AreEqual(4, list[0].Inc_Key);
-					Assert.AreEqual(8, list[1].Inc_Key);
-					Assert.AreEqual(2, list[2].Inc_Key);
-				}
-				{// NOT Contains clause
-					var set = new List<string>{"2","4","8","5","9"};
-					var q = from x in table where set.Contains(x.Inc_Value) == false select x;
-					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(0, list[1].Inc_Key);
-					Assert.AreEqual(7, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(3, list[4].Inc_Key);
-				}
-				{// NOT Contains clause
-					var set = new List<string>{"2","4","8","5","9"};
-					var q = from x in table where !set.Contains(x.Inc_Value) select x;
-					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(0, list[1].Inc_Key);
-					Assert.AreEqual(7, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(3, list[4].Inc_Key);
-				}
-				{// OrderBy clause
-					var q = from x in table orderby x.Inc_Key descending select x;
-					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
-					for (int i = 0; i != 10; ++i)
-						Assert.AreEqual(9-i, list[i].Inc_Key);
-				}
-				{// Where and OrderBy clause
-					var q = from x in table where ((x.Inc_Key * 4 + 2 - 1) / 3) >= 5 orderby x.Inc_Value select x;
-					var list = q.ToList();
-					Assert.AreEqual(6, list.Count);
-					for (int i = 0; i != 6; ++i)
-						Assert.AreEqual(4+i, list[i].Inc_Key);
-				}
-				{// Skip
-					var q = table.Where(x => x.Inc_Key <= 5).Skip(2);
-					var list = q.ToList();
-					Assert.AreEqual(4, list.Count);
-					Assert.AreEqual(0, list[0].Inc_Key);
-					Assert.AreEqual(5, list[1].Inc_Key);
-					Assert.AreEqual(3, list[2].Inc_Key);
-					Assert.AreEqual(2, list[3].Inc_Key);
-				}
-				{// Take
-					var q = table.Where(x => x.Inc_Key >= 5).Take(2);
-					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(5, list[0].Inc_Key);
-					Assert.AreEqual(7, list[1].Inc_Key);
-				}
-				{// Skip and Take
-					var q = table.Where(x => x.Inc_Key >= 5).Skip(2).Take(2);
-					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(9, list[0].Inc_Key);
-					Assert.AreEqual(6, list[1].Inc_Key);
-				}
-				{// Null test
-					var q = from x in table where x.Inc_Value != null select x;
-					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
-				}
-				{// Type conversions
-					var q = from x in table where (float)x.Inc_Key > 2.5f && (float)x.Inc_Key < 7.5f select x;
-					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(4, list[0].Inc_Key);
-					Assert.AreEqual(5, list[1].Inc_Key);
-					Assert.AreEqual(7, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(3, list[4].Inc_Key);
-				}
-				{// Delete
-					var q = table.Delete(x => x.Inc_Key >= 5);
-					var list = table.ToList();
-					Assert.AreEqual(5, q);
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(4, list[0].Inc_Key);
-					Assert.AreEqual(1, list[1].Inc_Key);
-					Assert.AreEqual(0, list[2].Inc_Key);
-					Assert.AreEqual(3, list[3].Inc_Key);
-					Assert.AreEqual(2, list[4].Inc_Key);
-				}
-				#pragma warning disable 168
-				{// Check sql strings are correct
-					string sql;
-					
-					sql = table.Where(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
-					
-					sql = table.Where(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
-					
-					var t = table.FirstOrDefault(x => x.Inc_Key == 4);
-					sql = table.SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
-					
-					var l = table.Where(x => x.Inc_Key == 4).Take(4).Skip(2).ToList();
-					sql = table.SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
-					
-					var q = (from x in table where x.Inc_Key == 3 select new {x.Inc_Key, x.Inc_Value}).ToList();
-					sql = table.SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
-					
-					var w = table.Delete(x => x.Inc_Key == 2);
-					sql = table.SqlString;
-					Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
-				}
-				#pragma warning restore 168
-			}
-		}
-		[Test] public static void TestSqlite_UntypedExprTree()
-		{
-			TestSqlite_OneTimeOnly();
+				OneTimeOnly();
 			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
-			{
-				// Create a simple table
-				db.DropTable<DomType0>();
-				db.CreateTable<DomType0>();
-				Assert.IsTrue(db.TableExists<DomType0>());
-				var table = db.Table(typeof(DomType0));
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+				{
+					// Create a simple table
+					db.DropTable<DomType0>();
+					db.CreateTable<DomType0>();
+					Assert.IsTrue(db.TableExists<DomType0>());
+					var table = db.Table(typeof(DomType0));
 				
-				// Insert stuff
-				Assert.AreEqual(1, table.Insert(new DomType0(4)));
-				Assert.AreEqual(1, table.Insert(new DomType0(1)));
-				Assert.AreEqual(1, table.Insert(new DomType0(0)));
-				Assert.AreEqual(1, table.Insert(new DomType0(5)));
-				Assert.AreEqual(1, table.Insert(new DomType0(7)));
-				Assert.AreEqual(1, table.Insert(new DomType0(9)));
-				Assert.AreEqual(1, table.Insert(new DomType0(6)));
-				Assert.AreEqual(1, table.Insert(new DomType0(3)));
-				Assert.AreEqual(1, table.Insert(new DomType0(8)));
-				Assert.AreEqual(1, table.Insert(new DomType0(2)));
-				Assert.AreEqual(10, table.RowCount);
+					// Insert stuff
+					Assert.AreEqual(1, table.Insert(new DomType0(4)));
+					Assert.AreEqual(1, table.Insert(new DomType0(1)));
+					Assert.AreEqual(1, table.Insert(new DomType0(0)));
+					Assert.AreEqual(1, table.Insert(new DomType0(5)));
+					Assert.AreEqual(1, table.Insert(new DomType0(7)));
+					Assert.AreEqual(1, table.Insert(new DomType0(9)));
+					Assert.AreEqual(1, table.Insert(new DomType0(6)));
+					Assert.AreEqual(1, table.Insert(new DomType0(3)));
+					Assert.AreEqual(1, table.Insert(new DomType0(8)));
+					Assert.AreEqual(1, table.Insert(new DomType0(2)));
+					Assert.AreEqual(10, table.RowCount);
 				
-				string sql_count = "select count(*) from "+table.Name;
-				using (var q = table.Query(sql_count))
-					Assert.AreEqual(sql_count, q.SqlString);
+					string sql_count = "select count(*) from "+table.Name;
+					using (var q = table.Query(sql_count))
+						Assert.AreEqual(sql_count, q.SqlString);
 				
-				// Do some expression tree queries
-				{// Count clause
-					var q = table.Count<DomType0>(x => (x.Inc_Key % 3) == 0);
-					Assert.AreEqual(4, q);
-				}
-				{// Where clause
-					// ReSharper disable RedundantCast
-					var q = table.Where<DomType0>(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three).Cast<IDomType0>(); // Cast needed to test expressions
-					var list = q.ToList();
-					Assert.AreEqual(7, list.Count);
-					Assert.AreEqual(0, list[0].Inc_Key);
-					Assert.AreEqual(5, list[1].Inc_Key);
-					Assert.AreEqual(9, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(3, list[4].Inc_Key);
-					Assert.AreEqual(8, list[5].Inc_Key);
-					Assert.AreEqual(2, list[6].Inc_Key);
-					// ReSharper restore RedundantCast
-				}
-				{// Where clause with 'like' method calling 'RowCount'
-					var q = table.Where<DomType0>(x => SqlMethods.Like(x.Inc_Value, "5")).RowCount;
-					Assert.AreEqual(1, q);
-				}
-				{// Where clause with x => true
-					var q = table.Where<DomType0>(x => true).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
-					Assert.AreEqual(4, list[0].Inc_Key);
-					Assert.AreEqual(1, list[1].Inc_Key);
-					Assert.AreEqual(0, list[2].Inc_Key);
-					Assert.AreEqual(5, list[3].Inc_Key);
-					Assert.AreEqual(7, list[4].Inc_Key);
-					Assert.AreEqual(9, list[5].Inc_Key);
-					Assert.AreEqual(6, list[6].Inc_Key);
-					Assert.AreEqual(3, list[7].Inc_Key);
-					Assert.AreEqual(8, list[8].Inc_Key);
-					Assert.AreEqual(2, list[9].Inc_Key);
-				}
-				{// Contains clause
-					var set = new[]{"2","4","8"};
-					var q = table.Where<DomType0>(x => set.Contains(x.Inc_Value)).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(3, list.Count);
-					Assert.AreEqual(4, list[0].Inc_Key);
-					Assert.AreEqual(8, list[1].Inc_Key);
-					Assert.AreEqual(2, list[2].Inc_Key);
-				}
-				{// NOT Contains clause
-					var set = new List<string>{"2","4","8","5","9"};
-					var q = table.Where<DomType0>(x => set.Contains(x.Inc_Value) == false).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(0, list[1].Inc_Key);
-					Assert.AreEqual(7, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(3, list[4].Inc_Key);
-				}
-				{// NOT Contains clause
-					var set = new List<string>{"2","4","8","5","9"};
-					var q = table.Where<DomType0>(x => !set.Contains(x.Inc_Value)).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(0, list[1].Inc_Key);
-					Assert.AreEqual(7, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(3, list[4].Inc_Key);
-				}
-				{// OrderBy clause
-					var q = table.OrderByDescending<DomType0,int>(x => x.Inc_Key).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
-					for (int i = 0; i != 10; ++i)
-						Assert.AreEqual(9-i, list[i].Inc_Key);
-				}
-				{// Where and OrderBy clause
-					var q = table.Where<DomType0>(x => ((x.Inc_Key*4 + 2 - 1)/3) >= 5).OrderBy<DomType0,string>(x => x.Inc_Value).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(6, list.Count);
-					for (int i = 0; i != 6; ++i)
-						Assert.AreEqual(4+i, list[i].Inc_Key);
-				}
-				{// Skip
-					var q = table.Where<DomType0>(x => x.Inc_Key <= 5).Skip(2).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(4, list.Count);
-					Assert.AreEqual(0, list[0].Inc_Key);
-					Assert.AreEqual(5, list[1].Inc_Key);
-					Assert.AreEqual(3, list[2].Inc_Key);
-					Assert.AreEqual(2, list[3].Inc_Key);
-				}
-				{// Take
-					var q = table.Where<DomType0>(x => x.Inc_Key >= 5).Take(2).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(5, list[0].Inc_Key);
-					Assert.AreEqual(7, list[1].Inc_Key);
-				}
-				{// Skip and Take
-					var q = table.Where<DomType0>(x => x.Inc_Key >= 5).Skip(2).Take(2).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(9, list[0].Inc_Key);
-					Assert.AreEqual(6, list[1].Inc_Key);
-				}
-				{// Null test
-					var q = table.Where<DomType0>(x => x.Inc_Value != null).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
-				}
-				{// Type conversions
-					var q = table.Where<DomType0>(x => (float) x.Inc_Key > 2.5f && (float) x.Inc_Key < 7.5f).Cast<DomType0>();
-					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(4, list[0].Inc_Key);
-					Assert.AreEqual(5, list[1].Inc_Key);
-					Assert.AreEqual(7, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(3, list[4].Inc_Key);
-				}
-				{// Delete
-					var q = table.Delete<DomType0>(x => x.Inc_Key >= 5);
-					var list = table.Cast<DomType0>().ToList();
-					Assert.AreEqual(5, q);
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(4, list[0].Inc_Key);
-					Assert.AreEqual(1, list[1].Inc_Key);
-					Assert.AreEqual(0, list[2].Inc_Key);
-					Assert.AreEqual(3, list[3].Inc_Key);
-					Assert.AreEqual(2, list[4].Inc_Key);
-				}
-				#pragma warning disable 168
-				{// Check sql strings are correct
-					string sql;
+					// Do some expression tree queries
+					{// Count clause
+						var q = table.Count<DomType0>(x => (x.Inc_Key % 3) == 0);
+						Assert.AreEqual(4, q);
+					}
+					{// Where clause
+						// ReSharper disable RedundantCast
+						var q = table.Where<DomType0>(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three).Cast<IDomType0>(); // Cast needed to test expressions
+						var list = q.ToList();
+						Assert.AreEqual(7, list.Count);
+						Assert.AreEqual(0, list[0].Inc_Key);
+						Assert.AreEqual(5, list[1].Inc_Key);
+						Assert.AreEqual(9, list[2].Inc_Key);
+						Assert.AreEqual(6, list[3].Inc_Key);
+						Assert.AreEqual(3, list[4].Inc_Key);
+						Assert.AreEqual(8, list[5].Inc_Key);
+						Assert.AreEqual(2, list[6].Inc_Key);
+						// ReSharper restore RedundantCast
+					}
+					{// Where clause with 'like' method calling 'RowCount'
+						var q = table.Where<DomType0>(x => SqlMethods.Like(x.Inc_Value, "5")).RowCount;
+						Assert.AreEqual(1, q);
+					}
+					{// Where clause with x => true
+						var q = table.Where<DomType0>(x => true).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(10, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(1, list[1].Inc_Key);
+						Assert.AreEqual(0, list[2].Inc_Key);
+						Assert.AreEqual(5, list[3].Inc_Key);
+						Assert.AreEqual(7, list[4].Inc_Key);
+						Assert.AreEqual(9, list[5].Inc_Key);
+						Assert.AreEqual(6, list[6].Inc_Key);
+						Assert.AreEqual(3, list[7].Inc_Key);
+						Assert.AreEqual(8, list[8].Inc_Key);
+						Assert.AreEqual(2, list[9].Inc_Key);
+					}
+					{// Contains clause
+						var set = new[]{"2","4","8"};
+						var q = table.Where<DomType0>(x => set.Contains(x.Inc_Value)).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(3, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(8, list[1].Inc_Key);
+						Assert.AreEqual(2, list[2].Inc_Key);
+					}
+					{// NOT Contains clause
+						var set = new List<string>{"2","4","8","5","9"};
+						var q = table.Where<DomType0>(x => set.Contains(x.Inc_Value) == false).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(0, list[1].Inc_Key);
+						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(6, list[3].Inc_Key);
+						Assert.AreEqual(3, list[4].Inc_Key);
+					}
+					{// NOT Contains clause
+						var set = new List<string>{"2","4","8","5","9"};
+						var q = table.Where<DomType0>(x => !set.Contains(x.Inc_Value)).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(0, list[1].Inc_Key);
+						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(6, list[3].Inc_Key);
+						Assert.AreEqual(3, list[4].Inc_Key);
+					}
+					{// OrderBy clause
+						var q = table.OrderByDescending<DomType0,int>(x => x.Inc_Key).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(10, list.Count);
+						for (int i = 0; i != 10; ++i)
+							Assert.AreEqual(9-i, list[i].Inc_Key);
+					}
+					{// Where and OrderBy clause
+						var q = table.Where<DomType0>(x => ((x.Inc_Key*4 + 2 - 1)/3) >= 5).OrderBy<DomType0,string>(x => x.Inc_Value).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(6, list.Count);
+						for (int i = 0; i != 6; ++i)
+							Assert.AreEqual(4+i, list[i].Inc_Key);
+					}
+					{// Skip
+						var q = table.Where<DomType0>(x => x.Inc_Key <= 5).Skip(2).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(4, list.Count);
+						Assert.AreEqual(0, list[0].Inc_Key);
+						Assert.AreEqual(5, list[1].Inc_Key);
+						Assert.AreEqual(3, list[2].Inc_Key);
+						Assert.AreEqual(2, list[3].Inc_Key);
+					}
+					{// Take
+						var q = table.Where<DomType0>(x => x.Inc_Key >= 5).Take(2).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(2, list.Count);
+						Assert.AreEqual(5, list[0].Inc_Key);
+						Assert.AreEqual(7, list[1].Inc_Key);
+					}
+					{// Skip and Take
+						var q = table.Where<DomType0>(x => x.Inc_Key >= 5).Skip(2).Take(2).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(2, list.Count);
+						Assert.AreEqual(9, list[0].Inc_Key);
+						Assert.AreEqual(6, list[1].Inc_Key);
+					}
+					{// Null test
+						var q = table.Where<DomType0>(x => x.Inc_Value != null).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(10, list.Count);
+					}
+					{// Type conversions
+						var q = table.Where<DomType0>(x => (float) x.Inc_Key > 2.5f && (float) x.Inc_Key < 7.5f).Cast<DomType0>();
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(5, list[1].Inc_Key);
+						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(6, list[3].Inc_Key);
+						Assert.AreEqual(3, list[4].Inc_Key);
+					}
+					{// Delete
+						var q = table.Delete<DomType0>(x => x.Inc_Key >= 5);
+						var list = table.Cast<DomType0>().ToList();
+						Assert.AreEqual(5, q);
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(1, list[1].Inc_Key);
+						Assert.AreEqual(0, list[2].Inc_Key);
+						Assert.AreEqual(3, list[3].Inc_Key);
+						Assert.AreEqual(2, list[4].Inc_Key);
+					}
+					#pragma warning disable 168
+					{// Check sql strings are correct
+						string sql;
 					
-					sql = table.Where<DomType0>(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
+						sql = table.Where<DomType0>(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
 					
-					sql = table.Where<DomType0>(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
+						sql = table.Where<DomType0>(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
 					
-					var t = table.FirstOrDefault<DomType0>(x => x.Inc_Key == 4);
-					sql = table.SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
+						var t = table.FirstOrDefault<DomType0>(x => x.Inc_Key == 4);
+						sql = table.SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
 					
-					var l = table.Where<DomType0>(x => x.Inc_Key == 4).Take(4).Skip(2).Cast<DomType0>().ToList();
-					sql = table.SqlString;
-					Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
+						var l = table.Where<DomType0>(x => x.Inc_Key == 4).Take(4).Skip(2).Cast<DomType0>().ToList();
+						sql = table.SqlString;
+						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
 					
-					var w = table.Delete<DomType0>(x => x.Inc_Key == 2);
-					sql = table.SqlString;
-					Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
-				}
-				#pragma warning restore 168
-			}
-		}
-		[Test] public static void TestSqlite_Nullables()
-		{
-			TestSqlite_OneTimeOnly();
-			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
-			{
-				// Create a simple table
-				db.DropTable<DomType1>();
-				db.CreateTable<DomType1>();
-				Assert.IsTrue(db.TableExists<DomType1>());
-				var table = db.Table<DomType1>();
-				
-				// Create some objects to stick in the table
-				var obj1 = new DomType1(1){m_nullint = 1, m_int = 4};
-				var obj2 = new DomType1(2){m_nulllong = null};
-				var obj3 = new DomType1(3){m_nullint = null};
-				var obj4 = new DomType1(4){m_nulllong = 2};
-				
-				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(1, table.Insert(obj4));
-				Assert.AreEqual(4, table.RowCount);
-				
-				{// non-null nullable
-					int? nullable = 1;
-					var q = table.Where(x => x.m_nullint == nullable);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(1, list[0].m_nullint);
-				}
-				{// non-null nullable
-					long? nullable = 2;
-					var q = table.Where(x => x.m_nulllong == nullable.Value);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(2, list[0].m_nulllong);
-				}
-				{// null nullable
-					int? nullable = null;
-					var q = table.Where(x => x.m_nullint == nullable);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(null, list[0].m_nullint);
-				}
-				{// null nullable
-					long? nullable = null;
-					var q = table.Where(x => x.m_nullint == nullable);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(null, list[0].m_nulllong);
-				}
-				{// expression nullable(not null) == non-nullable
-					const int target = 1;
-					var q = table.Where(x => x.m_nullint == target);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(1, list[0].m_nullint);
-				}
-				{// expression non-nullable == nullable(not null)
-					int? target = 4;
-					var q = table.Where(x => x.m_int == target);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(4, list[0].m_int);
-				}
-				{// expression nullable(null) == non-nullable
-					const long target = 2;
-					var q = table.Where(x => x.m_nulllong == target);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(2, list[0].m_nulllong);
-				}
-				{// expression non-nullable == nullable(null)
-					int? target = null;
-					var q = table.Where(x => x.m_int == target);
-					var list = q.ToList();
-					Assert.AreEqual(0, list.Count);
-				}
-				{// Testing members on nullable types
-					var q = table.Where(x => x.m_nullint.HasValue == false);
-					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(null, list[0].m_nullint);
-				}
-				{// Testing members on nullable types
-					var q = table.Where(x => x.m_nullint.HasValue && x.m_nullint.Value == 23);
-					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(23, list[0].m_nullint);
-					Assert.AreEqual(23, list[1].m_nullint);
+						var w = table.Delete<DomType0>(x => x.Inc_Key == 2);
+						sql = table.SqlString;
+						Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
+					}
+					#pragma warning restore 168
 				}
 			}
-		}
-		[Test] public static void TestSqlite_AttributeInheritance()
-		{
-			TestSqlite_OneTimeOnly();
-			
-			// Create/Open the database connection
-			const string FilePath = "tmpDB.db";
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			[Test] public static void Nullables()
 			{
-				// Create a simple table
-				db.DropTable<DomType5>();
-				db.CreateTable<DomType5>();
-				Assert.IsTrue(db.TableExists<DomType5>());
-				var table = db.Table<DomType5>();
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+				{
+					// Create a simple table
+					db.DropTable<DomType1>();
+					db.CreateTable<DomType1>();
+					Assert.IsTrue(db.TableExists<DomType1>());
+					var table = db.Table<DomType1>();
 				
-				var meta = db.TableMetaData<DomType5>();
-				Assert.AreEqual(2, meta.ColumnCount);
-				Assert.AreEqual(1, meta.Pks.Length);
-				Assert.AreEqual("PK", meta.Pks[0].Name);
-				Assert.AreEqual(1, meta.NonPks.Length);
-				Assert.AreEqual("Data", meta.NonPks[0].Name);
+					// Create some objects to stick in the table
+					var obj1 = new DomType1(1){m_nullint = 1, m_int = 4};
+					var obj2 = new DomType1(2){m_nulllong = null};
+					var obj3 = new DomType1(3){m_nullint = null};
+					var obj4 = new DomType1(4){m_nulllong = 2};
 				
-				// Create some objects to stick in the table
-				var obj1 = new DomType5{Data = "1"};
-				var obj2 = new DomType5{Data = "2"};
-				var obj3 = new DomType5{Data = "3"};
-				var obj4 = new DomType5{Data = "4"};
+					// Insert stuff
+					Assert.AreEqual(1, table.Insert(obj1));
+					Assert.AreEqual(1, table.Insert(obj2));
+					Assert.AreEqual(1, table.Insert(obj3));
+					Assert.AreEqual(1, table.Insert(obj4));
+					Assert.AreEqual(4, table.RowCount);
 				
-				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(1, table.Insert(obj4));
-				Assert.AreEqual(4, table.RowCount);
+					{// non-null nullable
+						int? nullable = 1;
+						var q = table.Where(x => x.m_nullint == nullable);
+						var list = q.ToList();
+						Assert.AreEqual(1, list.Count);
+						Assert.AreEqual(1, list[0].m_nullint);
+					}
+					{// non-null nullable
+						long? nullable = 2;
+						var q = table.Where(x => x.m_nulllong == nullable.Value);
+						var list = q.ToList();
+						Assert.AreEqual(1, list.Count);
+						Assert.AreEqual(2, list[0].m_nulllong);
+					}
+					{// null nullable
+						int? nullable = null;
+						var q = table.Where(x => x.m_nullint == nullable);
+						var list = q.ToList();
+						Assert.AreEqual(1, list.Count);
+						Assert.AreEqual(null, list[0].m_nullint);
+					}
+					{// null nullable
+						long? nullable = null;
+						var q = table.Where(x => x.m_nullint == nullable);
+						var list = q.ToList();
+						Assert.AreEqual(1, list.Count);
+						Assert.AreEqual(null, list[0].m_nulllong);
+					}
+					{// expression nullable(not null) == non-nullable
+						const int target = 1;
+						var q = table.Where(x => x.m_nullint == target);
+						var list = q.ToList();
+						Assert.AreEqual(1, list.Count);
+						Assert.AreEqual(1, list[0].m_nullint);
+					}
+					{// expression non-nullable == nullable(not null)
+						int? target = 4;
+						var q = table.Where(x => x.m_int == target);
+						var list = q.ToList();
+						Assert.AreEqual(1, list.Count);
+						Assert.AreEqual(4, list[0].m_int);
+					}
+					{// expression nullable(null) == non-nullable
+						const long target = 2;
+						var q = table.Where(x => x.m_nulllong == target);
+						var list = q.ToList();
+						Assert.AreEqual(1, list.Count);
+						Assert.AreEqual(2, list[0].m_nulllong);
+					}
+					{// expression non-nullable == nullable(null)
+						int? target = null;
+						var q = table.Where(x => x.m_int == target);
+						var list = q.ToList();
+						Assert.AreEqual(0, list.Count);
+					}
+					{// Testing members on nullable types
+						var q = table.Where(x => x.m_nullint.HasValue == false);
+						var list = q.ToList();
+						Assert.AreEqual(1, list.Count);
+						Assert.AreEqual(null, list[0].m_nullint);
+					}
+					{// Testing members on nullable types
+						var q = table.Where(x => x.m_nullint.HasValue && x.m_nullint.Value == 23);
+						var list = q.ToList();
+						Assert.AreEqual(2, list.Count);
+						Assert.AreEqual(23, list[0].m_nullint);
+						Assert.AreEqual(23, list[1].m_nullint);
+					}
+				}
+			}
+			[Test] public static void AttributeInheritance()
+			{
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+				{
+					// Create a simple table
+					db.DropTable<DomType5>();
+					db.CreateTable<DomType5>();
+					Assert.IsTrue(db.TableExists<DomType5>());
+					var table = db.Table<DomType5>();
+				
+					var meta = db.TableMetaData<DomType5>();
+					Assert.AreEqual(2, meta.ColumnCount);
+					Assert.AreEqual(1, meta.Pks.Length);
+					Assert.AreEqual("PK", meta.Pks[0].Name);
+					Assert.AreEqual(1, meta.NonPks.Length);
+					Assert.AreEqual("Data", meta.NonPks[0].Name);
+				
+					// Create some objects to stick in the table
+					var obj1 = new DomType5{Data = "1"};
+					var obj2 = new DomType5{Data = "2"};
+					var obj3 = new DomType5{Data = "3"};
+					var obj4 = new DomType5{Data = "4"};
+				
+					// Insert stuff
+					Assert.AreEqual(1, table.Insert(obj1));
+					Assert.AreEqual(1, table.Insert(obj2));
+					Assert.AreEqual(1, table.Insert(obj3));
+					Assert.AreEqual(1, table.Insert(obj4));
+					Assert.AreEqual(4, table.RowCount);
+				}
+			}
+			[Test] public static void RowChangedEvents()
+			{
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+				{
+					// Sign up a handler for row changed
+					Sqlite.RowChangedArgs args = null;
+					db.RowChanged += (s,a) => args = a;
+					
+					// Create a simple table
+					db.DropTable<DomType5>();
+					db.CreateTable<DomType5>();
+					Assert.IsTrue(db.TableExists<DomType5>());
+					var table = db.Table<DomType5>();
+					
+					// Create some objects to stick in the table
+					var obj1 = new DomType5("One");
+					var obj2 = new DomType5("Two");
+				
+					// Insert stuff and check the event fires
+					table.Insert(obj1);
+					Assert.AreEqual(Sqlite.ChangeType.Insert ,args.ChangeType);
+					Assert.AreEqual("DomType5"               ,args.TableName);
+					Assert.AreEqual(1                        ,args.RowId);
+				
+					db.Insert(obj2);
+					Assert.AreEqual(Sqlite.ChangeType.Insert ,args.ChangeType);
+					Assert.AreEqual("DomType5"               ,args.TableName);
+					Assert.AreEqual(2                        ,args.RowId);
+				
+					obj1.Data = "Updated";
+					table.Update(obj1);
+					Assert.AreEqual(Sqlite.ChangeType.Update ,args.ChangeType);
+					Assert.AreEqual("DomType5"               ,args.TableName);
+					Assert.AreEqual(1                        ,args.RowId);
+				
+					db.Delete(obj2);
+					Assert.AreEqual(Sqlite.ChangeType.Delete ,args.ChangeType);
+					Assert.AreEqual("DomType5"               ,args.TableName);
+					Assert.AreEqual(2                        ,args.RowId);
+				}
+			}
+			[Test] public static void ObjectCache()
+			{
+				OneTimeOnly();
+			
+				// Create/Open the database connection
+				const string FilePath = "tmpDB.db";
+				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+				{
+					// Create a simple table
+					db.DropTable<DomType5>();
+					db.CreateTable<DomType5>();
+					Assert.IsTrue(db.TableExists<DomType5>());
+					var table = db.Table<DomType5>();
+					
+					var obj1 = new DomType5("One");
+					var obj2 = new DomType5("Two");
+					var obj3 = new DomType5("Fre");
+					
+					// Insert some stuff
+					table.Insert(obj1);
+					table.Insert(obj2);
+					table.Insert(obj3);
+					
+					// Check the cache
+					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
+					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
+					Assert.IsFalse(table.Cache.IsCached(obj3.PK));
+					
+					table.Get<DomType5>(1);
+					table.Get<DomType5>(2);
+					table.Get<DomType5>(3);
+					Assert.IsTrue(table.Cache.IsCached(obj1.PK));
+					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
+					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
+					
+					table.Cache.MaxCachedObjectCount = 2;
+					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
+					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
+					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
+					
+					table.Cache.MaxCachedObjectCount = 1;
+					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
+					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
+					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
+					
+					var o2_a = table.Get<DomType5>(2);
+					
+					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
+					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
+					Assert.IsFalse(table.Cache.IsCached(obj3.PK));
+
+					var o2_b = table.Get<DomType5>(2);
+					Assert.IsTrue(o2_a != null);
+					Assert.IsTrue(o2_b != null);
+					Assert.IsTrue(!ReferenceEquals(o2_a,o2_b));
+				}
 			}
 		}
 	}
