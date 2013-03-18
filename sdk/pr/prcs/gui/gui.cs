@@ -19,5 +19,11 @@ namespace pr.gui
 		{
 			return new SuspendedLayoutScope(ctrl, layout_on_resume);
 		}
+
+		/// <summary>Wrapper of begin invoke that takes a lambda</summary>
+		public static IAsyncResult BeginInvoke(this Form form, Action action)
+		{
+			return form.BeginInvoke(action);
+		}
 	}
 }

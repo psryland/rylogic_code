@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
+using pr.extn;
 using pr.maths;
 using pr.util;
 
@@ -544,20 +545,6 @@ namespace pr.util
 				: ((MemberExpression) expression.Body).Member.Name;
 		}
 
-		/// <summary>Returns all inherited properties for a type</summary>
-		public static IEnumerable<PropertyInfo> AllProps(Type type, BindingFlags flags)
-		{
-			if (type == null || type == typeof(object)) return Enumerable.Empty<PropertyInfo>();
-			return AllProps(type.BaseType, flags).Concat(type.GetProperties(flags|BindingFlags.DeclaredOnly));
-		}
-
-		/// <summary>Returns all inherited fields for a type</summary>
-		public static IEnumerable<FieldInfo> AllFields(Type type, BindingFlags flags)
-		{
-			if (type == null || type == typeof(object)) return Enumerable.Empty<FieldInfo>();
-			return AllFields(type.BaseType, flags).Concat(type.GetFields(flags|BindingFlags.DeclaredOnly));
-		}
-
 		/// <summary>
 		/// Find all types derived from 'T'<para/>
 		/// Use: var output = FindAllDerivedTypes&lt;System.IO.Stream&gt;();<para/>
@@ -579,7 +566,7 @@ namespace pr.util
 		/// <summary>Copies all of the fields of 'from' into 'to'. Returns 'to' for method chaining</summary>
 		public static T ShallowCopy(T from, T to)
 		{
-			foreach (var x in AllFields(typeof(T), BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
+			foreach (var x in TypeExtensions.AllFields(typeof(T), BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
 				x.SetValue(to, x.GetValue(from));
 			return to;
 		}
@@ -611,14 +598,16 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		[DataContract] public class XmlableType
+		internal static class TestUtils
+		{
+			[DataContract] public class XmlableType
 		{
 			[DataMember] public int    Int    { get; set; }
 			[DataMember] public string String { get; set; }
 			[DataMember] public Point  Point  { get; set; }
 		}
 
-		[Test] public static void TestUtils_ByteArrayCompare()
+			[Test] public static void TestUtils_ByteArrayCompare()
 		{
 			byte[] lhs = new byte[]{1,2,3,4,5};
 			byte[] rhs = new byte[]{3,4,5,6,7};
@@ -629,50 +618,51 @@ namespace pr
 			Assert.AreEqual(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
 			Assert.AreEqual( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
 		}
-		[Test] public static void TestUtils_Convert()
+			[Test] public static void TestUtils_Convert()
 		{
 			int[] src = {1,2,3,4};
 			List<int> dst = new List<int>(Util.Conv(src, i=>i*2));
 			for (int i = 0; i != src.Length; ++i) Assert.AreEqual(dst[i], 2*src[i]);
 		}
-		[Test] public static void TestUtils_ToFromByteArray()
+			[Test] public static void TestUtils_ToFromByteArray()
 		{
 			const ulong num = 12345678910111213;
 			byte[] bytes = Util.ToBytes(num);
 			Assert.AreEqual(8, bytes.Length);
 			Util.FromBytes<ulong>(bytes);
 		}
-		[Test] public static void TestUtils_MemberName()
+			[Test] public static void TestUtils_MemberName()
 		{
 			Assert.AreEqual("X", Util<Point>.MemberName(p=>p.X));
 			Assert.AreEqual("BaseStream", Util<StreamWriter>.MemberName(s=>s.BaseStream));
 		}
-		[Test] public static void TestUtils_ToFromXml()
-		{
-			var x1 = new XmlableType{Int = 1, String = "2", Point = new Point(3,4)};
-			var xml = Util<XmlableType>.ToXml(x1, true);
-			var x2 = Util<XmlableType>.FromXml(xml);
-			Assert.AreEqual(x1.Int, x2.Int);
-			Assert.AreEqual(x1.String, x2.String);
-			Assert.AreEqual(x1.Point, x2.Point);
-		}
-		[Test] public static void TestUtils_PrettySize()
-		{
-			Func<long,string> pretty = size => { return Util.PrettySize(size, true, 1) + " " + Util.PrettySize(size, false, 1); };
+			[Test] public static void TestUtils_ToFromXml()
+			{
+				var x1 = new XmlableType{Int = 1, String = "2", Point = new Point(3,4)};
+				var xml = Util<XmlableType>.ToXml(x1, true);
+				var x2 = Util<XmlableType>.FromXml(xml);
+				Assert.AreEqual(x1.Int, x2.Int);
+				Assert.AreEqual(x1.String, x2.String);
+				Assert.AreEqual(x1.Point, x2.Point);
+			}
+			[Test] public static void TestUtils_PrettySize()
+			{
+				Func<long,string> pretty = size => { return Util.PrettySize(size, true, 1) + " " + Util.PrettySize(size, false, 1); };
 
-			Assert.AreEqual(      "0B 0iB"      , pretty(0));
-			Assert.AreEqual(     "27B 27iB"     , pretty(27));
-			Assert.AreEqual(    "999B 999iB"    , pretty(999));
-			Assert.AreEqual(   "1.0KB 1000iB"   , pretty(1000));
-			Assert.AreEqual(   "1.0KB 1023iB"   , pretty(1023));
-			Assert.AreEqual(   "1.0KB 1.0KiB"   , pretty(1024));
-			Assert.AreEqual(   "1.7KB 1.7KiB"   , pretty(1728));
-			Assert.AreEqual( "110.6KB 108.0KiB" , pretty(110592));
-			Assert.AreEqual(   "7.1MB 6.8MiB"   , pretty(7077888));
-			Assert.AreEqual( "453.0MB 432.0MiB" , pretty(452984832));
-			Assert.AreEqual(  "29.0GB 27.0GiB"  , pretty(28991029248));
-			Assert.AreEqual(   "1.9TB 1.7TiB"   , pretty(1855425871872));
-			Assert.AreEqual(   "9.2EB 8.0EiB"   , pretty(9223372036854775807));
+				Assert.AreEqual(      "0B 0iB"      , pretty(0));
+				Assert.AreEqual(     "27B 27iB"     , pretty(27));
+				Assert.AreEqual(    "999B 999iB"    , pretty(999));
+				Assert.AreEqual(   "1.0KB 1000iB"   , pretty(1000));
+				Assert.AreEqual(   "1.0KB 1023iB"   , pretty(1023));
+				Assert.AreEqual(   "1.0KB 1.0KiB"   , pretty(1024));
+				Assert.AreEqual(   "1.7KB 1.7KiB"   , pretty(1728));
+				Assert.AreEqual( "110.6KB 108.0KiB" , pretty(110592));
+				Assert.AreEqual(   "7.1MB 6.8MiB"   , pretty(7077888));
+				Assert.AreEqual( "453.0MB 432.0MiB" , pretty(452984832));
+				Assert.AreEqual(  "29.0GB 27.0GiB"  , pretty(28991029248));
+				Assert.AreEqual(   "1.9TB 1.7TiB"   , pretty(1855425871872));
+				Assert.AreEqual(   "9.2EB 8.0EiB"   , pretty(9223372036854775807));
+			}
 		}
 	}
 }

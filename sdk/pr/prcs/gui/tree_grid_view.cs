@@ -1041,113 +1041,116 @@ namespace pr.gui
 namespace pr
 {
 	using NUnit.Framework;
-	using pr.gui;
+	using gui;
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		[Test] public static void TestTGV1()
+		internal static class TestTreeGridView
 		{
-			TreeGridView grid0 = new TreeGridView();
-			grid0.Columns.Add(new TreeGridColumn{HeaderText="col0"});
-			grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col1"});
-			grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col2"});
+			[Test] public static void TestTGV1()
+			{
+				TreeGridView grid0 = new TreeGridView();
+				grid0.Columns.Add(new TreeGridColumn{HeaderText="col0"});
+				grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col1"});
+				grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col2"});
 		
-			TreeGridNode a0 = grid0.Nodes.Add("a0");
-			TreeGridNode a0_0 = a0.Nodes.Add("a0_0");
-			TreeGridNode a0_1 = a0.Nodes.Add("a0_1");
-			TreeGridNode a0_0_0 = a0_0.Nodes.Add("a0_0_0");
-			TreeGridNode a0_0_1 = a0_0.Nodes.Add("a0_0_1");
-			TreeGridNode a0_0_2 = a0_0.Nodes.Add("a0_0_2");
+				TreeGridNode a0 = grid0.Nodes.Add("a0");
+				TreeGridNode a0_0 = a0.Nodes.Add("a0_0");
+				TreeGridNode a0_1 = a0.Nodes.Add("a0_1");
+				TreeGridNode a0_0_0 = a0_0.Nodes.Add("a0_0_0");
+				TreeGridNode a0_0_1 = a0_0.Nodes.Add("a0_0_1");
+				TreeGridNode a0_0_2 = a0_0.Nodes.Add("a0_0_2");
 
-			Assert.True(grid0.Nodes.Count == 1);
-			Assert.True(a0.Nodes.Count == 2);
-			Assert.True(a0_0.Nodes.Count == 3);
-			Assert.True(a0_1.Nodes.Count == 0);
+				Assert.True(grid0.Nodes.Count == 1);
+				Assert.True(a0.Nodes.Count == 2);
+				Assert.True(a0_0.Nodes.Count == 3);
+				Assert.True(a0_1.Nodes.Count == 0);
 
-			// Moving branches around in the tree
-			a0_0_0.Parent = a0_1;
-			a0_0_1.Parent = a0_1;
-			a0_0_2.Parent = a0_1;
-			Assert.True(grid0.Nodes.Count == 1);
-			Assert.True(a0.Nodes.Count == 2);
-			Assert.True(a0_0.Nodes.Count == 0);
-			Assert.True(a0_1.Nodes.Count == 3);
+				// Moving branches around in the tree
+				a0_0_0.Parent = a0_1;
+				a0_0_1.Parent = a0_1;
+				a0_0_2.Parent = a0_1;
+				Assert.True(grid0.Nodes.Count == 1);
+				Assert.True(a0.Nodes.Count == 2);
+				Assert.True(a0_0.Nodes.Count == 0);
+				Assert.True(a0_1.Nodes.Count == 3);
 
-			// Detaching branches
-			a0_1.Parent = null;
+				// Detaching branches
+				a0_1.Parent = null;
 
-			Assert.True(grid0.Nodes.Count == 1);
-			Assert.True(a0.Nodes.Count == 1);
-			Assert.True(a0_0.Nodes.Count == 0);
-			Assert.True(a0_1.Nodes.Count == 3);
+				Assert.True(grid0.Nodes.Count == 1);
+				Assert.True(a0.Nodes.Count == 1);
+				Assert.True(a0_0.Nodes.Count == 0);
+				Assert.True(a0_1.Nodes.Count == 3);
 
-			// Circular connections disallowed
-			Assert.Throws(typeof(InvalidOperationException), ()=>{a0_1.Parent = a0_0_0;});
-		}
+				// Circular connections disallowed
+				Assert.Throws(typeof(InvalidOperationException), ()=>{a0_1.Parent = a0_0_0;});
+			}
 
-		[Test] public static void TestTGV2()
-		{
-			TreeGridView grid0 = new TreeGridView();
-			grid0.Columns.Add(new TreeGridColumn{HeaderText="col0"});
-			grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col1"});
-			grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col2"});
-			TreeGridView grid1 = new TreeGridView();
-			grid1.Columns.Add(new TreeGridColumn{HeaderText="col0"});
+			[Test] public static void TestTGV2()
+			{
+				TreeGridView grid0 = new TreeGridView();
+				grid0.Columns.Add(new TreeGridColumn{HeaderText="col0"});
+				grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col1"});
+				grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col2"});
+				TreeGridView grid1 = new TreeGridView();
+				grid1.Columns.Add(new TreeGridColumn{HeaderText="col0"});
 			
-			TreeGridNode a0 = grid0.Nodes.Add("a0", 0, 0);
-			a0.Nodes.Add("a0_0", 0, 0);
-			a0.Nodes.Add("a0_1", 0, 0);
+				TreeGridNode a0 = grid0.Nodes.Add("a0", 0, 0);
+				a0.Nodes.Add("a0_0", 0, 0);
+				a0.Nodes.Add("a0_1", 0, 0);
 
-			// Can't move nodes between grids
-			Assert.Throws(typeof(InvalidOperationException), ()=>{grid1.Nodes.Add(a0);});
+				// Can't move nodes between grids
+				Assert.Throws(typeof(InvalidOperationException), ()=>{grid1.Nodes.Add(a0);});
 			
-		//    grid0.Nodes.Add(a0);
-		//    grid0.Nodes.Insert(1, b0);
+			//    grid0.Nodes.Add(a0);
+			//    grid0.Nodes.Insert(1, b0);
 
-		//    Assert.True(grid0.Nodes.Count == 2 && grid1.Nodes.Count == 0);
-		//    Assert.AreSame(a0, grid0.Nodes[0]);
-		//    Assert.AreSame(b0, grid0.Nodes[1]);
-		//    Assert.AreSame(grid0, a0.Grid);
-		//    Assert.AreSame(grid0, b0.Grid);
+			//    Assert.True(grid0.Nodes.Count == 2 && grid1.Nodes.Count == 0);
+			//    Assert.AreSame(a0, grid0.Nodes[0]);
+			//    Assert.AreSame(b0, grid0.Nodes[1]);
+			//    Assert.AreSame(grid0, a0.Grid);
+			//    Assert.AreSame(grid0, b0.Grid);
 
-		//    grid0.Nodes.Remove(a0);
+			//    grid0.Nodes.Remove(a0);
 
-		//    Assert.True(grid0.Nodes.Count == 1 && grid1.Nodes.Count == 0);
-		//    Assert.AreSame(b0, grid0.Nodes[0]);
-		//    Assert.AreSame(null, a0.Grid);
-		//    Assert.AreSame(grid0, b0.Grid);
+			//    Assert.True(grid0.Nodes.Count == 1 && grid1.Nodes.Count == 0);
+			//    Assert.AreSame(b0, grid0.Nodes[0]);
+			//    Assert.AreSame(null, a0.Grid);
+			//    Assert.AreSame(grid0, b0.Grid);
 
-		//    grid1.Nodes.Add(a0);
+			//    grid1.Nodes.Add(a0);
 
-		//    Assert.True(grid0.Nodes.Count == 1 && grid1.Nodes.Count == 1);
-		//    Assert.AreSame(a0, grid1.Nodes[0]);
-		//    Assert.AreSame(b0, grid0.Nodes[0]);
-		//    Assert.AreSame(grid1, a0.Grid);
-		//    Assert.AreSame(grid0, b0.Grid);
+			//    Assert.True(grid0.Nodes.Count == 1 && grid1.Nodes.Count == 1);
+			//    Assert.AreSame(a0, grid1.Nodes[0]);
+			//    Assert.AreSame(b0, grid0.Nodes[0]);
+			//    Assert.AreSame(grid1, a0.Grid);
+			//    Assert.AreSame(grid0, b0.Grid);
 
-		//    grid1.Nodes.Add(b0);
+			//    grid1.Nodes.Add(b0);
 
-		//    Assert.True(grid0.Nodes.Count == 0 && grid1.Nodes.Count == 2);
-		//    Assert.AreSame(a0, grid1.Nodes[0]);
-		//    Assert.AreSame(b0, grid1.Nodes[1]);
-		//    Assert.AreSame(grid1, a0.Grid);
-		//    Assert.AreSame(grid1, b0.Grid);
+			//    Assert.True(grid0.Nodes.Count == 0 && grid1.Nodes.Count == 2);
+			//    Assert.AreSame(a0, grid1.Nodes[0]);
+			//    Assert.AreSame(b0, grid1.Nodes[1]);
+			//    Assert.AreSame(grid1, a0.Grid);
+			//    Assert.AreSame(grid1, b0.Grid);
 
-		//    grid0.Nodes.Add(a0);
-		//    grid0.Nodes.Add(b0);
+			//    grid0.Nodes.Add(a0);
+			//    grid0.Nodes.Add(b0);
 
-		//    Assert.True(grid0.Nodes.Count == 2 && grid1.Nodes.Count == 0);
-		//    Assert.AreSame(a0, grid0.Nodes[0]);
-		//    Assert.AreSame(b0, grid0.Nodes[1]);
-		//    Assert.AreSame(grid0, a0.Grid);
-		//    Assert.AreSame(grid0, b0.Grid);
+			//    Assert.True(grid0.Nodes.Count == 2 && grid1.Nodes.Count == 0);
+			//    Assert.AreSame(a0, grid0.Nodes[0]);
+			//    Assert.AreSame(b0, grid0.Nodes[1]);
+			//    Assert.AreSame(grid0, a0.Grid);
+			//    Assert.AreSame(grid0, b0.Grid);
 
-		//    grid0.Nodes.Remove(a0);
-		//    grid0.Nodes.Remove(b0);
+			//    grid0.Nodes.Remove(a0);
+			//    grid0.Nodes.Remove(b0);
 
-		//    Assert.True(grid0.Nodes.Count == 0 && grid1.Nodes.Count == 0);
-		//    Assert.AreSame(null, a0.Grid);
-		//    Assert.AreSame(null, b0.Grid);
+			//    Assert.True(grid0.Nodes.Count == 0 && grid1.Nodes.Count == 0);
+			//    Assert.AreSame(null, a0.Grid);
+			//    Assert.AreSame(null, b0.Grid);
+			}
 		}
 	}
 }

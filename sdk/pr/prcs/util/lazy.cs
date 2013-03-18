@@ -36,38 +36,41 @@ namespace pr.util
 namespace pr
 {
 	using NUnit.Framework;
-	using Lazy=pr.util.Lazy;
+	using util;
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		internal class Thing
+		internal static class TestLazy
 		{
-			public bool m_evaluated;
-			public bool m_expect_call;
+			private class Thing
+			{
+				private bool m_evaluated;
+				public bool m_expect_call;
 			
-			public string GenerateString()
-			{
-				m_evaluated = true;
-				return "<insert lots of work here>";
+				public string GenerateString()
+				{
+					m_evaluated = true;
+					return "<insert lots of work here>";
+				}
+				public void LazyCall(Lazy<string> str)
+				{
+					Assert.False(m_evaluated);
+					string s = str;
+					Assert.True(!m_expect_call || m_evaluated);
+					m_evaluated = false;
+				}
 			}
-			public void LazyCall(pr.util.Lazy<string> str)
-			{
-				Assert.False(m_evaluated);
-				string s = str;
-				Assert.True(!m_expect_call || m_evaluated);
-				m_evaluated = false;
-			}
-		}
 
-		[Test] public static void TestLazy()
-		{
-			Thing thing = new Thing();
+			[Test] public static void LazyNew()
+			{
+				Thing thing = new Thing();
 			
-			thing.m_expect_call = true;
-			thing.LazyCall(Lazy.New(thing.GenerateString));
+				thing.m_expect_call = true;
+				thing.LazyCall(Lazy.New(thing.GenerateString));
 			
-			thing.m_expect_call = false;
-			thing.LazyCall("immediate");
+				thing.m_expect_call = false;
+				thing.LazyCall("immediate");
+			}
 		}
 	}
 }

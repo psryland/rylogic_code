@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-using pr.attrib;
 
 namespace pr.attrib
 {
@@ -121,44 +120,47 @@ namespace pr.attrib
 namespace pr
 {
 	using NUnit.Framework;
-	using DescriptionAttribute=System.ComponentModel.DescriptionAttribute;
+	using attrib;
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		private enum EType
+		internal static class TestStringAttr
 		{
-			[String("Value 0")]
-			[Description("The zeroth value")]
-			Value0,
+			private enum EType
+			{
+				[String("Value 0")]
+				[System.ComponentModel.DescriptionAttribute("The zeroth value")]
+				Value0,
 
-			[String("Value 1")]
-			[Description("The first value")]
-			Value1,
-		}
-		private class C
-		{
-			[String("C Field")]    private readonly int m_field;
-			[String("C Property")] private int Prop {get;set;}
-			public C() { Prop = 1; m_field = 2; Prop = m_field; m_field = Prop; }
-		}
-		[Test] public static void TestStrAttr()
-		{
-			const EType e = EType.Value0;
-			Assert.AreEqual("Value 0", e.StrAttr());
-			Assert.AreEqual("Value 1", EType.Value1.StrAttr());
-			Assert.AreEqual("The zeroth value", e.DescAttr());
-			Assert.AreEqual("The first value", EType.Value1.DescAttr());
-			Assert.AreEqual("", ((EType)100).StrAttr());
-			Assert.AreEqual("", ((EType)100).DescAttr());
+				[String("Value 1")]
+				[System.ComponentModel.DescriptionAttribute("The first value")]
+				Value1,
+			}
+			private class C
+			{
+				[String("C Field")]    private readonly int m_field;
+				[String("C Property")] private int Prop {get;set;}
+				public C() { Prop = 1; m_field = 2; Prop = m_field; m_field = Prop; }
+			}
+			[Test] public static void TestStrAttr()
+			{
+				const EType e = EType.Value0;
+				Assert.AreEqual("Value 0", e.StrAttr());
+				Assert.AreEqual("Value 1", EType.Value1.StrAttr());
+				Assert.AreEqual("The zeroth value", e.DescAttr());
+				Assert.AreEqual("The first value", EType.Value1.DescAttr());
+				Assert.AreEqual("", ((EType)100).StrAttr());
+				Assert.AreEqual("", ((EType)100).DescAttr());
 
-			C c = new C();
-			Assert.AreEqual("C Property" ,c.StrAttr("Prop"));
-			Assert.AreEqual("C Field"    ,c.StrAttr("m_field"));
-			Assert.AreEqual(""           ,c.StrAttr("NotThere"));
+				C c = new C();
+				Assert.AreEqual("C Property" ,c.StrAttr("Prop"));
+				Assert.AreEqual("C Field"    ,c.StrAttr("m_field"));
+				Assert.AreEqual(""           ,c.StrAttr("NotThere"));
 
-			string[] strs = StringAttr.StringArray(typeof(EType), false);
-			Assert.AreEqual("Value 0", strs[0]);
-			Assert.AreEqual("Value 1", strs[1]);
+				string[] strs = StringAttr.StringArray(typeof(EType), false);
+				Assert.AreEqual("Value 0", strs[0]);
+				Assert.AreEqual("Value 1", strs[1]);
+			}
 		}
 	}
 }

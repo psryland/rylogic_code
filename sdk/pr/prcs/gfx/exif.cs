@@ -11,27 +11,36 @@ namespace pr.gfx
 	/// <summary>Based on http://www.cipa.jp/english/hyoujunka/kikaku/pdf/DC-008-2010_E.pdf</summary>
 	public static class Exif
 	{
-		// ReSharper disable UnusedMember.Local
-		private const ushort TiffDataIdentifier           = 0x002A;
-		private static readonly byte[] ExifIdentifier     = new[]{(byte)'E',(byte)'x',(byte)'i',(byte)'f',(byte)'\0',(byte)'\0'};
-		private static readonly byte[] IntelIdentifier    = new[]{(byte)'I',(byte)'I'};
-		private static readonly byte[] MotorolaIdentifier = new[]{(byte)'M',(byte)'M'};
-		// ReSharper restore UnusedMember.Local
-
 		/// <summary>Structure markers within a jpg file</summary>
 		public static class JpgMarker
 		{
-			public const byte Start  = 0xFF;  // All markers are 2 bytes, beginning with 'Start' followed by one of these below
+			// All markers are 2 bytes, beginning with 'Start' followed by one of these below
+			public const byte Start  = 0xFF;
+			
+			// The following order is a typical layout of sections within a jpg file
 			public const byte SOI    = 0xD8;  // Start of Image
+			public const byte APP0   = 0xE0;  // Application marker segment 0
 			public const byte APP1   = 0xE1;  // Application marker segment 1 (for Exif data)
 			public const byte APP2   = 0xE2;  // Application marker segment 2 (for FlashPix Extension data)
-			                                  // (Optional up to 0xEF)
+			public const byte APP3   = 0xE3;  // Application marker segment 3
+			public const byte APP4   = 0xE4;  // Application marker segment 4
+			public const byte APP5   = 0xE5;  // Application marker segment 5
+			public const byte APP6   = 0xE6;  // Application marker segment 6
+			public const byte APP7   = 0xE7;  // Application marker segment 7
+			public const byte APP8   = 0xE8;  // Application marker segment 8
+			public const byte APP9   = 0xE9;  // Application marker segment 9
+			public const byte APPA   = 0xEA;  // Application marker segment A
+			public const byte APPB   = 0xEB;  // Application marker segment B
+			public const byte APPC   = 0xEC;  // Application marker segment C
+			public const byte APPD   = 0xED;  // Application marker segment D
+			public const byte APPE   = 0xEE;  // Application marker segment E
+			public const byte APPF   = 0xEF;  // Application marker segment F
 			public const byte DQT    = 0xDB;  // Define Quantization Table
 			public const byte DHT    = 0xC4;  // Define Huffman Table
 			public const byte DRI    = 0xDD;  // Define Restart Interoperability
 			public const byte SOF    = 0xC0;  // Start of Frame
 			public const byte SOS    = 0xDA;  // Start of Scan
-			                                  // Compressed data goes here
+			public const byte ScanData = 0;   // Compressed data goes here (there is no section for the scan data)
 			public const byte EOI    = 0xD9;  // End of Image
 		}
 
@@ -259,6 +268,45 @@ namespace pr.gfx
 			PentaxPEFCompressed            = 65535,
 		}
 
+		/// <summary>
+		/// Constants for the Tag.Orientation value
+		/// From here: http://sylvana.net/jpegcrop/exif_orientation.html
+		/// How to understand this enum:<para/>
+		/// E.g.<para/>
+		///   Value #6 in the enum says that the 0th row in the stored image is the right side of the captured scene,<para/>
+		///   and the 0th column in the stored image is the top side of the captured scene.<para/>
+		/// </summary>
+		public enum Orientation
+		{
+			// For convenience, here is what the letter F would look like if it were tagged correctly and
+			// displayed by a program that ignores the orientation tag (thus showing the stored image):
+			//     1        2       3      4         5            6           7          8
+			//   888888  888888      88  88      8888888888  88                  88  8888888888
+			//   88          88      88  88      88  88      88  88          88  88      88  88
+			//   8888      8888    8888  8888    88          8888888888  8888888888          88
+			//   88          88      88  88
+			//   88          88  888888  888888
+			TopLeft     = 1,
+			TopRight    = 2,
+			BottomRight = 3,
+			BottomLeft  = 4,
+			LeftTop     = 5,
+			RightTop    = 6,
+			RightBottom = 7,
+			LeftBottom  = 8,
+		}
+
+		/// <summary>Describes the file offset of a section within a jpg file</summary>
+		public class JpgSection
+		{
+			public byte Marker;
+			public long Offset;
+			public long Size;
+			public JpgSection() {}
+			public JpgSection(byte mark, long offset, long size) { Marker = mark; Offset = offset; Size = size; }
+			public override string ToString() { return "Mark: 0xFF"+Marker.ToString("X")+" Size:"+Size+" Offset:"+Offset; }
+		}
+
 		/// <summary>Return the size in bytes corresponding to a data type</summary>
 		public static int SizeInBytes(TiffDataType dt)
 		{
@@ -303,6 +351,50 @@ namespace pr.gfx
 			// Dunno
 			return IFDTable.IFD0;
 		}
+
+		/// <summary>Index the sections within a jpg file</summary>
+		public static List<JpgSection> IndexJpg(Stream src)
+		{
+			long pos = src.Position;
+			try
+			{
+				var index = new List<JpgSection>();
+				
+				var buf = new byte[2];
+				src.Position = 2; // skip the SOI mark
+				for (var section_start = src.Position; src.Position != src.Length; section_start = src.Position)
+				{
+					int b0;
+					
+					if ((b0 = src.ReadByte()) == -1) break; // end of file
+					if (b0 != JpgMarker.Start)
+					{
+						// Not a section start, must be the scan data
+						index.Add(new JpgSection(JpgMarker.ScanData, section_start, src.Length - section_start - 2));
+						src.Position = src.Length - 2;
+					}
+					else
+					{
+						int b1;
+						if ((b1 = src.ReadByte()) == -1) break; // end of file
+						src.Read(buf,0,2);
+						if (BitConverter.IsLittleEndian) Array.Reverse(buf);
+						var section_size = BitConverter.ToUInt16(buf,0) + 2; // +2 to include the section marker
+						index.Add(new JpgSection((byte)b1, section_start, section_size));
+						src.Position = section_start + section_size;
+					}
+				}
+				return index;
+			}
+			finally { src.Position = pos; }
+		}
+
+		// ReSharper disable UnusedMember.Local
+		private const ushort TiffDataIdentifier           = 0x002A;
+		private static readonly byte[] ExifIdentifier     = new[]{(byte)'E',(byte)'x',(byte)'i',(byte)'f',(byte)'\0',(byte)'\0'};
+		private static readonly byte[] IntelIdentifier    = new[]{(byte)'I',(byte)'I'};
+		// private static readonly byte[] MotorolaIdentifier = new[]{(byte)'M',(byte)'M'}; // For future reference here is the other option
+		// ReSharper restore UnusedMember.Local
 
 		/// <summary>Exceptions raised by this library</summary>
 		public class Exception :System.Exception
@@ -707,6 +799,26 @@ namespace pr.gfx
 			}
 		}
 
+		/// <summary>Create a new instance of exif data</summary>
+		public static IExifData Create()
+		{
+			return new Data();
+		}
+
+		/// <summary>Returns true if the file at 'filepath' contains the markers of a jpg file</summary>
+		public static bool IsJpgFile(string filepath)
+		{
+			if (!File.Exists(filepath)) return false;
+			using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read))
+			{
+				if (fs.Length < 4) return false;
+				if (fs.ReadByte() != JpgMarker.Start || fs.ReadByte() != JpgMarker.SOI) return false;
+				fs.Position = fs.Length - 2;
+				if (fs.ReadByte() != JpgMarker.Start || fs.ReadByte() != JpgMarker.EOI) return false;
+			}
+			return true;
+		}
+
 		/// <summary>Load the Exif data from a Jpg image into memory</summary>
 		public static IExifData Load(string filepath, bool load_thumbnail = true)
 		{
@@ -746,27 +858,22 @@ namespace pr.gfx
 			if (src == null) throw new ArgumentNullException("src", "Null Jpg stream");
 			if (!src.CanSeek) throw new Exception("Loading Exif data requires a seek-able stream");
 			
+			// Check that 'src' is a Jpg file
+			if (src.ReadByte() != JpgMarker.Start || src.ReadByte() != JpgMarker.SOI)
+				throw new Exception("Source is not a Jpg data");
+			
+			// Find the exif data section
+			var index = IndexJpg(src);
+			var exif_section = index.Find(x => x.Marker == JpgMarker.APP1);
+			if (exif_section == null)
+				return data; // no exif data, return an empty object
+			
+			// Populate the Exif.Data
+			src.Position = exif_section.Offset + 2; // +2 to skip the marker
 			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
 			{
-				// JPEG encoding uses big endian (i.e. Motorola) byte aligns.
-				// The TIFF encoding found later in the document will specify
-				// the byte aligns used for the rest of the document.
+				// Jpg's use big endian (i.e. Motorola).
 				br.LittleEndian = false;
-				
-				// Check that this is a Jpg file
-				if (br.ReadByte() != JpgMarker.Start || br.ReadByte() != JpgMarker.SOI)
-					throw new Exception("Source is not a Jpg data");
-				
-				// The file has a number of blocks (Exif/JFIF), each of which has a tag number
-				// followed by a length. We scan the document until the required tag (0xFFE1)
-				// is found. All tags start with FF, so a non FF tag indicates an error.
-				
-				// Scan to the start of the Exif data
-				for (;!br.EndOfStream && br.ReadByte() == JpgMarker.Start && br.ReadByte() != JpgMarker.APP1;)
-					br.BaseStream.Seek(br.ReadUShort() - 2, SeekOrigin.Current);
-				if (br.EndOfStream) return data; // No Exif data found, return an empty data object
-				
-				// Populate the Exif.Data
 				
 				// The next 2 bytes are the size of the Exif data.
 				var exif_data_size = br.ReadUShort();
@@ -805,94 +912,117 @@ namespace pr.gfx
 			if (!src.CanSeek) throw new Exception("Loading Exif data requires a seek-able stream");
 			if (ReferenceEquals(src,dst)) throw new Exception("Cannot read from and write to the same stream");
 			
+			// Check that 'src' is a Jpg file
+			if (src.ReadByte() != JpgMarker.Start || src.ReadByte() != JpgMarker.SOI)
+				throw new Exception("Source is not a Jpg data");
+			
+			// Index the src jpg to figure out where the exif data should be inserted
+			// If the file contains an APP0 section, put the exif data (APP1) after it.
+			// If the file contains an APP2 section, put the exif data (APP1) before it.
+			// Otherwise, put the exif data immediately after the SOI marker
+			var index = IndexJpg(src);
+			JpgSection jpg_section;
+			long insert_exif_offset = 2;
+			if ((jpg_section = index.Find(x =>x.Marker == JpgMarker.APP0)) != null) { insert_exif_offset = jpg_section.Offset + jpg_section.Size; }
+			if ((jpg_section = index.Find(x =>x.Marker == JpgMarker.APP2)) != null) { insert_exif_offset = jpg_section.Offset; }
+			
 			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
 			using (var bw = new BinaryWriterEx(new UncloseableStream(dst)))
 			{
-				long section_start;
-				
 				// JPEG encoding uses big endian (i.e. Motorola) byte aligns.
 				// The TIFF encoding found later in the document will specify
 				// the byte aligns used for the rest of the document.
 				bw.LittleEndian = false;
 				
-				// Copy the Jpg start of image marker
-				bw.Write(br.ReadBytes(2));
-				
-				// Write the exif data section
-				{
-					section_start = br.BaseStream.Position;
-					
-					// Write the exif data marker
-					bw.Write(JpgMarker.Start);
-					bw.Write(JpgMarker.APP1);
-						
-					// Write the section size
-					var section_size_offset = bw.BaseStream.Position;
-					bw.Write((ushort)0); // Will update this at the end
-						
-					// Write the Exif identifier tag
-					bw.Write(ExifIdentifier);
-					var tiff_header_start = bw.BaseStream.Position;
-					bw.LittleEndian = true; // Intel is little endian
-						
-					// Use Intel endian-ness
-					bw.Write(IntelIdentifier);
-						
-					// Write the TIFF data id
-					bw.Write(TiffDataIdentifier);
-						
-					// Write the offset to the main IFD table
-					bw.Write((uint)(bw.BaseStream.Position + sizeof(uint) - tiff_header_start));
-						
-					// Write the ifd tables
-					WriteExifTable(bw, exif_data, tiff_header_start);
-					bw.LittleEndian = false; // Back to Motorola endian
-						
-					// Write the thumbnail image
-					var thumb = exif_data.Thumbnail;
-					if (thumb != null)
-						bw.Write(thumb);
-						
-					// Update the section size
-					bw.Write(section_size_offset, (ushort)(bw.BaseStream.Position - section_start - 2)); // section size doesn't include the marker
-				}
+				// Write the Jpg start of image marker
+				bw.Write(JpgMarker.Start);
+				bw.Write(JpgMarker.SOI);
 				
 				// Copy the sections of the source jpg, excluding the exif data section.
 				// When we encounter an unmarked section, that should be the scan data.
-				for (;!br.EndOfStream;)
+				for (long section_start = br.BaseStream.Position; !br.EndOfStream; section_start = br.BaseStream.Position)
 				{
-					section_start = br.BaseStream.Position;
+					// Write the exif data section at the appropriate location
+					if (section_start == insert_exif_offset)
+					{
+						WriteExif(bw, exif_data);
+						insert_exif_offset = -1;
+						continue;
+					}
+					
 					var b0 = br.ReadByte();
 					var b1 = br.ReadByte();
-					var size = br.ReadUShort() + 2; // +2 to include the section marker
+					var section_size = br.ReadUShort() + 2; // +2 to include the section marker
 					
-					// Not a section
+					// Not a section, must be up to the scan data
 					if (b0 != JpgMarker.Start)
+					{
+						var scan_data_size = br.BaseStream.Length - section_start - 2;
+						if (scan_data_size > 0)
+						{
+							br.BaseStream.Position = section_start;
+							br.BaseStream.CopyTo(scan_data_size, bw.BaseStream);
+						}
 						break;
+					}
 					
 					// If this is the Exif data section, skip it
 					if (b1 == JpgMarker.APP1)
 					{
-						br.BaseStream.Position = section_start + size;
+						br.BaseStream.Position = section_start + section_size;
+						continue;
 					}
-					// Otherwise, copy the section to the dst stream
-					else
-					{
-						br.BaseStream.Position = section_start;
-						var copied = br.BaseStream.CopyTo(size, bw.BaseStream);
-						if (copied != size) throw new IOException("Error while writing to output stream");
-					}
+					
+					// Otherwise, copy the section to the 'dst' stream
+					br.BaseStream.Position = section_start;
+					var copied = br.BaseStream.CopyTo(section_size, bw.BaseStream);
+					if (copied != section_size) throw new IOException("Error while writing to output stream");
 				}
 				
-				// Copy the scan data
-				br.BaseStream.Position = section_start;
-				var scan_data_size = br.BaseStream.Length - br.BaseStream.Position - 2;
-				if (scan_data_size > 0)
-					br.BaseStream.CopyTo(scan_data_size, bw.BaseStream);
-				
-				// Copy the Jpg end of image marker
-				bw.Write(br.ReadBytes(2));
+				// Write the Jpg end of image marker
+				bw.Write(JpgMarker.Start);
+				bw.Write(JpgMarker.EOI);
 			}
+		}
+
+		/// <summary>Write exif data as a section in 'bw'</summary>
+		private static void WriteExif(BinaryWriterEx bw, IExifDataInternal exif_data)
+		{
+			var section_start = bw.BaseStream.Position;
+			
+			// Write the exif data marker
+			bw.Write(JpgMarker.Start);
+			bw.Write(JpgMarker.APP1);
+			
+			// Write the section size
+			var section_size_offset = bw.BaseStream.Position;
+			bw.Write((ushort)0); // Will update this at the end
+			
+			// Write the Exif identifier tag
+			bw.Write(ExifIdentifier);
+			var tiff_header_start = bw.BaseStream.Position;
+			bw.LittleEndian = true; // Intel is little endian
+			
+			// Use Intel endian-ness
+			bw.Write(IntelIdentifier);
+			
+			// Write the TIFF data id
+			bw.Write(TiffDataIdentifier);
+			
+			// Write the offset to the main IFD table
+			bw.Write((uint)(bw.BaseStream.Position + sizeof(uint) - tiff_header_start));
+			
+			// Write the ifd tables
+			WriteExifTable(bw, exif_data, tiff_header_start);
+			bw.LittleEndian = false; // Back to Motorola endian
+			
+			// Write the thumbnail image
+			var thumb = exif_data.Thumbnail;
+			if (thumb != null)
+				bw.Write(thumb);
+			
+			// Update the section size
+			bw.Write(section_size_offset, (ushort)(bw.BaseStream.Position - section_start - 2)); // section size doesn't include the marker
 		}
 
 		/// <summary>Parses IFD tables from 'br' into 'exif_data'. Assumes 'br' is positioned at the start of the table</summary>
@@ -1236,63 +1366,93 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		private const string SrcImage = @"Q:\sdk\pr\prcs\unittest_resources\exif_image.jpg";
-		private const string DstImage = @"Q:\sdk\pr\prcs\unittest_resources\exif_image_out.jpg";
+		internal static class TestExif
+		{
+			private const string SrcImageWith    = @"Q:\sdk\pr\prcs\unittest_resources\exif_image_with.jpg";
+			private const string SrcImageWithout = @"Q:\sdk\pr\prcs\unittest_resources\exif_image_without.jpg";
+			private const string DstImage        = @"Q:\sdk\pr\prcs\unittest_resources\exif_image_out.jpg";
 		
-		[Test] public static void TestExif_LoadExifToMemory()
-		{
-			var exif = Exif.Load(SrcImage);
-			Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal, float.Epsilon);
-		}
-		[Test] public static void TestExif_ReadExifFromFile()
-		{
-			using (var fs = new FileStream(SrcImage, FileMode.Open, FileAccess.Read, FileShare.Read))
+			[Test] public static void TestExif_LoadExifToMemory()
 			{
-				var exif = Exif.Read(fs);
-				Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal);
+				{
+					var exif = Exif.Load(SrcImageWith);
+					Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal, float.Epsilon);
+				}
+				{
+					var exif = Exif.Load(SrcImageWithout);
+					Assert.AreEqual(0, exif.Count);
+				}
 			}
-		}
-		[Test] public static void TestExif_WriteExifToFile()
-		{
-			var exif_in = Exif.Load(SrcImage);
-			Exif.Save(SrcImage, exif_in, DstImage);
-			var exif_out = Exif.Load(DstImage);
+			[Test] public static void TestExif_ReadExifFromFile()
+			{
+				using (var fs = new FileStream(SrcImageWith, FileMode.Open, FileAccess.Read, FileShare.Read))
+				{
+					var exif = Exif.Read(fs);
+					Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal);
+				}
+				using (var fs = new FileStream(SrcImageWithout, FileMode.Open, FileAccess.Read, FileShare.Read))
+				{
+					var exif = Exif.Read(fs);
+					Assert.AreEqual(0, exif.Count);
+				}
+			}
+			[Test] public static void TestExif_WriteExifToFile()
+			{
+				var exif_in = Exif.Load(SrcImageWith);
+				Exif.Save(SrcImageWith, exif_in, DstImage);
+				var exif_out = Exif.Load(DstImage);
 			
-			Assert.DoesNotThrow(() => new Bitmap(DstImage), "Output jpg image is invalid");
-			Assert.AreEqual(exif_in.Count, exif_out.Count);
-			Assert.AreEqual(exif_in[Exif.Tag.FocalLength ].AsReal, exif_out[Exif.Tag.FocalLength ].AsReal);
-			Assert.AreEqual(exif_in[Exif.Tag.ExposureTime].AsReal, exif_out[Exif.Tag.ExposureTime].AsReal);
-		}
-		[Test] public static void TestExif_AddRemoveFields()
-		{
-			var exif = Exif.Load(SrcImage);
+				Assert.DoesNotThrow(() => new Bitmap(DstImage), "Output jpg image is invalid");
+				Assert.AreEqual(exif_in.Count, exif_out.Count);
+				Assert.AreEqual(exif_in[Exif.Tag.FocalLength ].AsReal, exif_out[Exif.Tag.FocalLength ].AsReal);
+				Assert.AreEqual(exif_in[Exif.Tag.ExposureTime].AsReal, exif_out[Exif.Tag.ExposureTime].AsReal);
+			}
+			[Test] public static void TestExif_AddRemoveFields()
+			{
+				var exif = Exif.Load(SrcImageWith);
 			
-			// Update the field
-			exif.Set(Exif.Tag.Orientation, (ushort)3);
-			Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+				// Update the field
+				exif.Set(Exif.Tag.Orientation, (ushort)3);
+				Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
 			
-			// Save to the file
-			Exif.Save(SrcImage, exif, DstImage);
-			exif = Exif.Load(DstImage);
-			Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+				// Save to the file
+				Exif.Save(SrcImageWith, exif, DstImage);
+				exif = Exif.Load(DstImage);
+				Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
 			
-			// Remove the field
-			exif.Delete(Exif.Tag.Orientation);
-			Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
+				// Remove the field
+				exif.Delete(Exif.Tag.Orientation);
+				Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
 			
-			// Save to file
-			Exif.Save(SrcImage, exif, DstImage);
-			exif = Exif.Load(DstImage);
-			Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
+				// Save to file
+				Exif.Save(SrcImageWith, exif, DstImage);
+				exif = Exif.Load(DstImage);
+				Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
 			
-			// Restore the field
-			exif.Set(Exif.Tag.Orientation, (ushort)1);
-			Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+				// Restore the field
+				exif.Set(Exif.Tag.Orientation, (ushort)1);
+				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
 			
-			// Save to file
-			Exif.Save(SrcImage, exif, DstImage);
-			exif = Exif.Load(DstImage);
-			Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+				// Save to file
+				Exif.Save(SrcImageWith, exif, DstImage);
+				exif = Exif.Load(DstImage);
+				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+			}
+			[Test] public static void TestExif_AddExifToFileWithout()
+			{
+				// Check the file has none to start with
+				var exif = Exif.Load(SrcImageWithout);
+				Assert.AreEqual(0, exif.Count);
+			
+				// Create a new instance of exif data and add a field
+				exif = Exif.Create();
+				exif.Set(Exif.Tag.Orientation, 1);
+				Exif.Save(SrcImageWithout, exif, DstImage);
+			
+				// Read the saved file and check the tag is there
+				exif = Exif.Load(DstImage);
+				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+			}
 		}
 	}
 }

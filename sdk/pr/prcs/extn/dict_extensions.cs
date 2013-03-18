@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace pr.extn
 {
@@ -19,6 +20,21 @@ namespace pr.extn
 				if (!comparer.Equals(kvp.Value, secondValue)) return false;
 			}
 			return true;
+		}
+
+		/// <summary>Get or add a new item in the dictionary</summary>
+		public static TValue GetOrAdd<TKey,TValue>(this IDictionary<TKey,TValue> dic, TKey key, Func<TKey,TValue> factory)
+		{
+			TValue value;
+			if (!dic.TryGetValue(key, out value))
+				dic.Add(key, value = factory(key));
+			return value;
+		}
+
+		/// <summary>Get or add a new item in the dictionary</summary>
+		public static TValue GetOrAdd<TKey,TValue>(this IDictionary<TKey,TValue> dic, TKey key) where TValue :new()
+		{
+			return dic.GetOrAdd(key, k => new TValue());
 		}
 	}
 }

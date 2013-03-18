@@ -223,6 +223,7 @@
     <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
+    <Compile Include="extn\type_extensions.cs" />
     <Compile Include="extn\xml_extensions.cs" />
     <Compile Include="gfx\colour128.cs" />
     <Compile Include="gfx\colour32.cs" />

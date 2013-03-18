@@ -4,9 +4,7 @@
 //***************************************************
 
 using System;
-using System.Collections.Generic;
 using System.Text;
-using pr.extn;
 
 namespace pr.extn
 {
@@ -17,6 +15,12 @@ namespace pr.extn
 		public static string Fmt(this string fmt, params object[] args)
 		{
 			return string.Format(fmt, args);
+		}
+
+		/// <summary>Returns true if this string is not null or empty</summary>
+		public static bool HasValue(this string str)
+		{
+			return !string.IsNullOrEmpty(str);
 		}
 
 		/// <summary>Word wraps the given text to fit within the specified width.</summary>
@@ -248,19 +252,23 @@ return sb.ToString();
 namespace pr
 {
 	using NUnit.Framework;
+	using extn;
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		[Test] public static void TestStringExtensions()
+		internal static class TestStringExtensions
 		{
-			//                    "123456789ABCDE"
-			const string text   = "   A long string that\nis\r\nto be word wrapped";
-			const string result = "   A long\n"+
-			                      "string that\n"+
-			                      "is to be word\n"+
-			                      "wrapped";
-			string r = text.WordWrap(14);
-			Assert.AreEqual(result, r);
+			[Test] public static void TestStringExtensions()
+			{
+				//                    "123456789ABCDE"
+				const string text   = "   A long string that\nis\r\nto be word wrapped";
+				const string result = "   A long\n"+
+				                      "string that\n"+
+				                      "is to be word\n"+
+				                      "wrapped";
+				string r = text.WordWrap(14);
+				Assert.AreEqual(result, r);
+			}
 		}
 	}
 }

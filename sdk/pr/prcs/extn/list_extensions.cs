@@ -67,6 +67,13 @@ namespace pr.extn
 			return true;
 		}
 
+		/// <summary>Add a range of elements to the list</summary>
+		public static void AddRange<T>(this IList<T> list, IEnumerable<T> items)
+		{
+			foreach (var i in items)
+				list.Add(i);
+		}
+
 		/// <summary>Swap elements in the list</summary>
 		public static void Swap<T>(this IList<T> list, int index0, int index1)
 		{
