@@ -8,10 +8,15 @@
 
 using namespace pr::rdr;
 
-pr::rdr::Texture2D::Texture2D()
+pr::rdr::Texture2D::Texture2D(TextureManager* mgr)
 :m_t2s(pr::m4x4Identity)
 ,m_tex()
+,m_srv()
 ,m_info()
+,m_samp()
+,m_id()
+,m_mgr(mgr)
+,m_name()
 {}
 
 // Refcounting cleanup function

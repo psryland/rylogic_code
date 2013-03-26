@@ -4,7 +4,7 @@
 //*****************************************************************************
 
 #pragma once
-#ifndef PR_MATHS_SCALER_H
+#if !defined(PR_MATHS_SCALER_H)
 #define PR_MATHS_SCALER_H
 
 #include "pr/maths/forward.h"
@@ -13,22 +13,22 @@
 namespace pr
 {
 	// Get the 'X','Y','Z', or 'W' value from a scaler
-	template <typename T> inline T GetX(T x) { return x; }
-	template <typename T> inline T GetY(T x) { return x; }
-	template <typename T> inline T GetZ(T x) { return x; }
-	template <typename T> inline T GetW(T x) { return x; }
+	template <typename T> inline T GetX(T const& x) { return x; }
+	template <typename T> inline T GetY(T const& x) { return x; }
+	template <typename T> inline T GetZ(T const& x) { return x; }
+	template <typename T> inline T GetW(T const& x) { return x; }
 	
-	template <typename T> inline int   AsInt(T x)  { return static_cast<int>(x); }
-	template <typename T> inline float AsReal(T x) { return static_cast<float>(x); }
+	template <typename T> inline int   AsInt (T const& x)  { return static_cast<int>(x); }
+	template <typename T> inline float AsReal(T const& x) { return static_cast<float>(x); }
 	
-	template <typename T> inline float GetXf(T x) { return AsReal(GetX(x)); }
-	template <typename T> inline float GetYf(T x) { return AsReal(GetY(x)); }
-	template <typename T> inline float GetZf(T x) { return AsReal(GetZ(x)); }
-	template <typename T> inline float GetWf(T x) { return AsReal(GetW(x)); }
-	template <typename T> inline int   GetXi(T x) { return AsInt(GetX(x)); }
-	template <typename T> inline int   GetYi(T x) { return AsInt(GetY(x)); }
-	template <typename T> inline int   GetZi(T x) { return AsInt(GetZ(x)); }
-	template <typename T> inline int   GetWi(T x) { return AsInt(GetW(x)); }
+	template <typename T> inline float GetXf(T const& x) { return AsReal(GetX(x)); }
+	template <typename T> inline float GetYf(T const& x) { return AsReal(GetY(x)); }
+	template <typename T> inline float GetZf(T const& x) { return AsReal(GetZ(x)); }
+	template <typename T> inline float GetWf(T const& x) { return AsReal(GetW(x)); }
+	template <typename T> inline int   GetXi(T const& x) { return AsInt(GetX(x)); }
+	template <typename T> inline int   GetYi(T const& x) { return AsInt(GetY(x)); }
+	template <typename T> inline int   GetZi(T const& x) { return AsInt(GetZ(x)); }
+	template <typename T> inline int   GetWi(T const& x) { return AsInt(GetW(x)); }
 	
 	template <typename FromType, typename ToType> inline ToType To(FromType const& from) { return static_cast<ToType const&>(from); }
 	

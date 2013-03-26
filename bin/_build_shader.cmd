@@ -28,9 +28,9 @@ set shdr=%file:~-2%
 
 ::Choose the compiler profile based on file extension
 if [%shdr%]==[vs] (
-	set profile=/Tvs_4_1
+	set profile=/Tvs_5_0
 ) else if [%shdr%]==[ps] (
-	set profile=/Tps_4_1
+	set profile=/Tps_5_0
 )
 
 ::Choose the output file to generate
@@ -47,7 +47,7 @@ set includes=/I%srcdir%\..
 set defines=/DSHADER_BUILD=1
 
 ::Set other command line options
-set options=/nologo /Gis /Ges
+set options=/nologo /Gis /Ges /Zi
 
 ::Build the shader
 cd %srcdir%

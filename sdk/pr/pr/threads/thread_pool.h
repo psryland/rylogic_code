@@ -7,6 +7,7 @@
 #ifndef PR_THREADS_THREADPOOL_H
 #define PR_THREADS_THREADPOOL_H
 
+#include <vector>
 #include <windows.h>
 #include <process.h>
 #include "pr/macros/stringise.h"

@@ -20,6 +20,12 @@ namespace pr.extn
 			if (type == null || type == typeof(object)) return Enumerable.Empty<FieldInfo>();
 			return AllFields(type.BaseType, flags).Concat(type.GetFields(flags|BindingFlags.DeclaredOnly));
 		}
+
+		/// <summary>Find all types derived from this type</summary>
+		public static List<Type> DerivedTypes(this Type type)
+		{
+			return Assembly.GetAssembly(type).GetTypes().Where(t => t != type && type.IsAssignableFrom(t)).ToList();
+		}
 	}
 }
 #if PR_UNITTESTS

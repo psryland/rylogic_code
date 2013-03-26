@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- http://code.msdn.microsoft.com/Writing-type-visualizers-2eae77a2 -->
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+	<!-- RefPtr -->
+	<Type Name="pr::RefPtr&lt;*&gt;">
+		<DisplayString>{*m_ptr}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_ptr</ExpandedItem> 
+		</Expand>
+	</Type>
+	<Type Name="D3DPtr&lt;*&gt;">
+		<DisplayString>{*m_ptr}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_ptr</ExpandedItem> 
+		</Expand>
+	</Type>
+
+	<!-- pr::Array -->
+	<Type Name="pr::Array&lt;*,*,*,*&gt;">
+		<DisplayString>[{m_count}] {m_ptr}</DisplayString>
+		<Expand>
+			<Item Name="[count]">{m_count}</Item>
+			<Item Name="[capacity]">{m_capacity}</Item>
+			<ArrayItems>
+				<Size>m_count</Size>
+				<ValuePointer>m_ptr</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<!-- pr::string -->
+	<Type Name="pr::string&lt;char,*,*,*&gt;">
+		<DisplayString>[{m_count-1}] {m_ptr,s}</DisplayString>
+		<StringView>m_ptr,su</StringView>
+	</Type>
+	<Type Name="pr::string&lt;wchar_t,*,*,*&gt;">
+		<DisplayString>[{m_count-1}] {m_ptr,su}</DisplayString>
+		<StringView>m_ptr,su</StringView>
+	</Type>
+
+	<!-- Maths -->
+	<Type Name="pr::v2">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_v2"></DisplayString>
+	</Type>
+	<Type Name="pr::v3">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_v3"></DisplayString>
+	</Type>
+	<Type Name="pr::v4">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_v4"></DisplayString>
+	</Type>
+	<Type Name="pr::m3x3">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_m3x3"></DisplayString>
+	</Type>
+	<Type Name="pr::m4x4">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_m4x4"></DisplayString>
+	</Type>
+	<Type Name="pr::Quat">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_Quaternion"></DisplayString>
+	</Type>
+	<Type Name="pr::iv2">
+		<DisplayString>{x} {y}</DisplayString>
+	</Type>
+	<Type Name="pr::iv4">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_iv4"></DisplayString>
+	</Type>
+	<Type Name="pr::BoundingBox">
+		<DisplayString>radius={m_radius.x} {m_radius.y} {m_radius.z} {m_radius.w} centre={m_centre.x} {m_centre.y} {m_centre.z} {m_centre.w}</DisplayString>
+	</Type>
+	<Type Name="pr::BoundingSphere">
+		<DisplayString>radius={m_radius} centre={m_centre}</DisplayString>
+	</Type>
+	<Type Name="pr::Plane">
+		<DisplayString>{m_dx} {m_dy} {m_dz} {m_dist}</DisplayString>
+	</Type>
+	<Type Name="pr::Line3">
+		<DisplayString>Pt:{m_point} Dir:{m_line}</DisplayString>
+	</Type>
+	<Type Name="pr::FRect">
+		<DisplayString>{m_left} {m_top} {m_right} {m_bottom}</DisplayString>
+	</Type>
+	<Type Name="pr::IRect">
+		<DisplayString>{m_min.x} {m_min.y} {m_max.x} {m_max.y}</DisplayString>
+	</Type>
+	<Type Name="pr::Spline">
+		<DisplayString>{m_geometry}</DisplayString>
+	</Type>
+	<Type Name="pr::Frustum">
+		<DisplayString>{m_frustum}</DisplayString>
+	</Type>
+	<Type Name="pr::LargeInt">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_LargeInt"></DisplayString>
+	</Type>
+	<Type Name="pr::Rand">
+		<DisplayString>{m_value}</DisplayString>
+	</Type>
+
+	<!-- Renderer11 -->
+	<Type Name="pr::rdr::BaseShader">
+		<DisplayString>{m_name}</DisplayString>
+	</Type>
+	
+</AutoVisualizer>

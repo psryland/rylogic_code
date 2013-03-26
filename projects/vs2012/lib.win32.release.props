@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <TargetPlatform>x86</TargetPlatform>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OutDir>..\..\obj2012\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IntDir>..\..\obj2012\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup />
+  <PropertyGroup>
+    <IncludePath>..\..\sdk\stlport;$(IncludePath)</IncludePath>
+    <TargetExt>.lib</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link />
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include;..\..\sdk\lua\lua\src;..\..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <WarningLevel>Level4</WarningLevel>
+      <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <Optimization>Full</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <OpenMPSupport>true</OpenMPSupport>
+      <DisableSpecificWarnings>4351</DisableSpecificWarnings>
+    </ClCompile>
+    <PostBuildEvent>
+      <Command>q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(Platform) $(Configuration)</Command>
+      <Message>Publishing library</Message>
+    </PostBuildEvent>
+    <Lib>
+      <TargetMachine>MachineX86</TargetMachine>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="TargetPlatform">
+      <Value>$(TargetPlatform)</Value>
+      <EnvironmentVariable>true</EnvironmentVariable>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

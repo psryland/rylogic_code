@@ -353,19 +353,19 @@ namespace pr
 						Val args[2];
 						if (!Eval(expr += 4, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'mod'");
-						result[ridx] = fmod(args[0].db(), args[1].db());
+						result[ridx] = ::fmod(args[0].db(), args[1].db());
 					}break;
 				case ETok_Ceil:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ceil(rhs.db());
+					result[ridx] = ::ceil(rhs.db());
 					break;
 				case ETok_Floor:
 					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
-					result[ridx] = floor(rhs.db());
+					result[ridx] = ::floor(rhs.db());
 					break;
 				case ETok_Round:
 					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
-					result[ridx] = floor(rhs.db() + 0.5);
+					result[ridx] = ::floor(rhs.db() + 0.5);
 					break;
 				case ETok_Min:
 					{
@@ -390,69 +390,69 @@ namespace pr
 					}break;
 				case ETok_Abs:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = abs(rhs.m_fp ? rhs.db() : rhs.ll());
+					result[ridx] = ::abs(rhs.m_fp ? rhs.db() : rhs.ll());
 					break;
 				case ETok_Sin:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = sin(rhs.db());
+					result[ridx] = ::sin(rhs.db());
 					break;
 				case ETok_Cos:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = cos(rhs.db());
+					result[ridx] = ::cos(rhs.db());
 					break;
 				case ETok_Tan:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = tan(rhs.db());
+					result[ridx] = ::tan(rhs.db());
 					break;
 				case ETok_ASin:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = asin(rhs.db());
+					result[ridx] = ::asin(rhs.db());
 					break;
 				case ETok_ACos:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = acos(rhs.db());
+					result[ridx] = ::acos(rhs.db());
 					break;
 				case ETok_ATan:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = atan(rhs.db());
+					result[ridx] = ::atan(rhs.db());
 					break;
 				case ETok_ATan2:
 					{
 						Val args[2];
 						if (!Eval(expr += 5, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'atan2'");
-						result[ridx] = atan2(args[0].db(), args[1].db());
+						result[ridx] = ::atan2(args[0].db(), args[1].db());
 					}break;
 				case ETok_SinH:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = sinh(rhs.db());
+					result[ridx] = ::sinh(rhs.db());
 					break;
 				case ETok_CosH:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = cosh(rhs.db());
+					result[ridx] = ::cosh(rhs.db());
 					break;
 				case ETok_TanH:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = tanh(rhs.db());
+					result[ridx] = ::tanh(rhs.db());
 					break;
 				case ETok_Exp:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = exp(rhs.db());
+					result[ridx] = ::exp(rhs.db());
 					break;
 				case ETok_Log:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = log(rhs.db());
+					result[ridx] = ::log(rhs.db());
 					break;
 				case ETok_Log10:
 					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
-					result[ridx] = log10(rhs.db());
+					result[ridx] = ::log10(rhs.db());
 					break;
 				case ETok_Pow:
 					{
 						Val args[2];
 						if (!Eval(expr += 3, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'pow'");
-						result[ridx] = pow(args[0].db(), args[1].db());
+						result[ridx] = ::pow(args[0].db(), args[1].db());
 					}break;
 				case ETok_Sqr:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
@@ -460,28 +460,28 @@ namespace pr
 					break;
 				case ETok_Sqrt:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = sqrt(rhs.db());
+					result[ridx] = ::sqrt(rhs.db());
 					break;
 				case ETok_Len2:
 					{
 						Val args[2];
 						if (!Eval(expr += 4, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'len2'");
-						result[ridx] = sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db());
+						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db());
 					}break;
 				case ETok_Len3:
 					{
 						Val args[3];
 						if (!Eval(expr += 4, args, 3, idx, tok)) return false;
 						if (idx+1 != 3) throw std::exception("insufficient parameters for 'len3'");
-						result[ridx] = sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db());
+						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db());
 					}break;
 				case ETok_Len4:
 					{
 						Val args[4];
 						if (!Eval(expr += 4, args, 4, idx, tok)) return false;
 						if (idx+1 != 4) throw std::exception("insufficient parameters for 'len4'");
-						result[ridx] = sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db() + args[3].db()*args[3].db());
+						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db() + args[3].db()*args[3].db());
 					}break;
 				case ETok_Deg:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;

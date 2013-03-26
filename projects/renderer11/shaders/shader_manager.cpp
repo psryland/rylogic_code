@@ -37,36 +37,45 @@ pr::rdr::ShaderManager::~ShaderManager()
 }
 
 // Builds the basic parts of a shader.
-pr::rdr::ShaderPtr& pr::rdr::ShaderManager::InitShader(pr::rdr::ShaderPtr& shdr, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc)
+pr::rdr::ShaderPtr pr::rdr::ShaderManager::InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc)
 {
-	PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == 0, "A shader with this Id already exists");
+	D3DPtr<ID3D11InputLayout>     iplayout;
+	D3DPtr<ID3D11VertexShader>    vs;
+	D3DPtr<ID3D11PixelShader>     ps;
+	EGeom::Type geom_mask = 0;
 	
 	// If 'id' doesn't exist (or is Auto), allocate a new shader
 	if (vsdesc != 0)
 	{
 		// Create the shader
-		pr::Throw(m_device->CreateVertexShader(vsdesc->m_data, vsdesc->m_size, 0, &shdr->m_vs.m_ptr));
-		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_vs, pr::FmtS("vshdr <RdrId:%d>", shdr->m_id)));
+		pr::Throw(m_device->CreateVertexShader(vsdesc->m_data, vsdesc->m_size, 0, &vs.m_ptr));
 		
 		// Create the input layout
-		pr::Throw(m_device->CreateInputLayout(vsdesc->m_iplayout, UINT(vsdesc->m_iplayout_count), vsdesc->m_data, vsdesc->m_size, &shdr->m_iplayout.m_ptr));
-		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_iplayout, pr::FmtS("iplayout <RdrId:%d>", shdr->m_id)));
+		pr::Throw(m_device->CreateInputLayout(vsdesc->m_iplayout, UINT(vsdesc->m_iplayout_count), vsdesc->m_data, vsdesc->m_size, &iplayout.m_ptr));
 		
 		// Set the minimum vertex format mask
-		shdr->m_geom_mask = vsdesc->m_geom_mask;
+		geom_mask = vsdesc->m_geom_mask;
 	}
 	if (psdesc != 0)
 	{
 		// Create the pixel shader
-		pr::Throw(m_device->CreatePixelShader(psdesc->m_data, psdesc->m_size, 0, &shdr->m_ps.m_ptr));
-		PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_ps, pr::FmtS("pshdr <RdrId:%d>", shdr->m_id)));
+		pr::Throw(m_device->CreatePixelShader(psdesc->m_data, psdesc->m_size, 0, &ps.m_ptr));
 	}
 	
-	// Populate the remaining shader instance variables
-	shdr->m_mgr  = this;
-	shdr->Setup  = setup;
-	shdr->m_name = shader::ToString(shdr->m_id);
-	shdr->m_sort_id = m_lookup_shader.size() % pr::rdr::sortkey::MaxShaderId;
+	// Allocate the new shader instance
+	ShaderPtr shdr = create(this);
+	shdr->m_iplayout  = iplayout;
+	shdr->m_vs        = vs;
+	shdr->m_ps        = ps;
+	shdr->m_id        = id == AutoId ? MakeId(shdr.m_ptr) : id;
+	shdr->Setup       = setup;
+	shdr->m_name      = EShader::ToString(shdr->m_id);
+	shdr->m_geom_mask = geom_mask;
+	shdr->m_sort_id   = m_lookup_shader.size() % pr::rdr::sortkey::MaxShaderId;
+	PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == 0, "A shader with this Id already exists");
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_vs, pr::FmtS("vshdr <RdrId:%d>", shdr->m_id)));
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_ps, pr::FmtS("pshdr <RdrId:%d>", shdr->m_id)));
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_iplayout, pr::FmtS("iplayout <RdrId:%d>", shdr->m_id)));
 	AddLookup(m_lookup_shader, shdr->m_id, shdr.m_ptr);
 	
 	// The ShaderManager acts as a container of custom shaders. We need to
@@ -110,45 +119,50 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShader(RdrId id) const
 // Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'
 pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShaderFor(EGeom::Type geom_mask) const
 {
-	pr::rdr::BaseShader const* closest = 0;
-	pr::uint matching_bit_count = 0;
+	pr::rdr::BaseShader const* cheapest = 0; // This is the shader that matches all bits in 'geom_mask' with the fewest extra bits
+	pr::rdr::BaseShader const* closest = 0;  // This is the shader that matches the most bits in 'geom_mask'
+	pr::uint cheapest_bit_count = pr::maths::uint_max;
+	pr::uint closest_bit_count  = 0;
 	for (auto i = begin(m_lookup_shader), iend = end(m_lookup_shader); i != iend; ++i)
 	{
 		BaseShader const& shdr = *i->second;
 		
-		// Doesn't meet minimum requirements?
-		if (!pr::AllSet(geom_mask, shdr.m_geom_mask))
-			continue;
-		
 		// Quick out on an exact match
 		if (shdr.m_geom_mask == geom_mask)
-			closest = &shdr;
+			return const_cast<BaseShader*>(&shdr); // const_cast because pr::RefPtr only handles non-const pointers
 		
-		// Otherwise find the shader that uses the most fields of geom_mask
-		// 'geom_mask' has all of the 'shdr.m_geom_mask' bits set, plus some extra bits
-		// so just finding the 'shdr.m_geom_mask' with the most bits will find the best match
-		pr::uint match_count = pr::CountBits((pr::uint)shdr.m_geom_mask);
-		if (match_count >= matching_bit_count)
+		// If the shader supports all the bits in 'geom_mask' with extras, find the cheapest
+		pr::uint count = pr::CountBits(shdr.m_geom_mask);
+		if (pr::AllSet(shdr.m_geom_mask, geom_mask))
 		{
-			// Typically, more complex shaders have higher valued geom masks, when the number
-			// of matching bits is equal choose the highest mask value to (hopefully) get the better shader
-			if (match_count == matching_bit_count && closest != 0 && shdr.m_geom_mask < closest->m_geom_mask)
-				continue;
-			
-			matching_bit_count = match_count;
-			closest = &shdr;
+			if (cheapest_bit_count > count)
+			{
+				cheapest = &shdr;
+				cheapest_bit_count = count;
+			}
+		}
+		// Otherwise, find the shader that supports the most bits of 'geom_mask'
+		else
+		{
+			if (closest_bit_count < count)
+			{
+				closest = &shdr;
+				closest_bit_count = count;
+			}
 		}
 	}
 	
+	// Choose the cheapest over the closest
+	if (cheapest != 0)
+		return const_cast<BaseShader*>(cheapest);
+	if (closest != 0)
+		return const_cast<BaseShader*>(closest);
+	
 	// Throw if nothing suitable is found
-	if (matching_bit_count == 0)
-	{
-		std::string msg = pr::Fmt("No suitable shader found that supports geometry mask: %X\nAvailable Shaders:\n" ,geom_mask);
-		for (auto i = begin(m_lookup_shader), iend = end(m_lookup_shader); i != iend; ++i)
-			msg += pr::Fmt("   %s - geometry mask: %X\n" ,i->second->m_name.c_str() ,i->second->m_geom_mask);
-		
-		PR_ASSERT(PR_DBG_RDR, false, msg.c_str());
-		throw pr::Exception<HRESULT>(E_FAIL, msg);
-	}
-	return const_cast<BaseShader*>(closest);
+	std::string msg = pr::Fmt("No suitable shader found that supports geometry mask: %X\nAvailable Shaders:\n" ,geom_mask);
+	for (auto i = begin(m_lookup_shader), iend = end(m_lookup_shader); i != iend; ++i)
+		msg += pr::Fmt("   %s - geometry mask: %X\n" ,i->second->m_name.c_str() ,i->second->m_geom_mask);
+	
+	PR_ASSERT(PR_DBG_RDR, false, msg.c_str());
+	throw pr::Exception<HRESULT>(ERROR_NOT_SUPPORTED, msg);
 }

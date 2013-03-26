@@ -34,6 +34,10 @@ namespace pr
 		template <typename Derived>
 		class Thread
 		{
+		public:
+			typedef Thread<Derived> base;
+
+		private:
 			HANDLE        m_thread_handle; // Worker thread handle
 			HANDLE        m_cancel_event;  // True when cancel has been signalled
 			HANDLE        m_pause_event;   // True when pausing or unpausing

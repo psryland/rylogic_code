@@ -20,10 +20,10 @@ namespace pr
 			//void        GenerateNormals(ModelPtr& model, Range const* vrange = 0, Range const* irange = 0);
 			//void        SetVertexColours(MLock& mlock, Colour32 colour, Range const* vrange = 0);
 
-			//// Line
-			//void        LineSize(Range& vrange, Range& irange, std::size_t num_lines);
-			//Settings    LineModelSettings(std::size_t num_lines);
-			//ModelPtr    Line    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			// Line
+			void        LineSize(std::size_t num_lines, Range& vrange, Range& irange);
+			//MdlSettings LineModelSettings(std::size_t num_lines);
+			//ModelPtr    Line    (MLock& mlock  ,ShaderManager& mgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 			//ModelPtr    Line    (Renderer& rdr                          ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 			//ModelPtr    Line    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 			//ModelPtr    Line    (Renderer& rdr                          ,v4 const* point ,std::size_t num_lines                        ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);

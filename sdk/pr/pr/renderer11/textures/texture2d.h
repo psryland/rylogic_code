@@ -31,7 +31,7 @@ namespace pr
 			string32        m_name;            // Human readable id for the texture
 			//VideoPtr      m_video;           // Non-null if this texture is the output of a video
 			
-			Texture2D();
+			explicit Texture2D(TextureManager* mgr);
 			
 			// Refcounting cleanup function
 			static void RefCountZero(pr::RefCount<Texture2D>* doomed);

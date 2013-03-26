@@ -64,6 +64,7 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 ,m_drawlist(rdr)
 ,m_background_colour(pr::ColourBlack)
 ,m_cbuf_frame()
+,m_rs(rdr.m_rs_mgr.RasterState(ERasterState::SolidCullBack))
 {
 	CBufFrame scene_constants = {};
 	scene_constants.m_c2w = view.m_c2w;
@@ -122,7 +123,7 @@ void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear
 		dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
 		dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 	}
-	
+
 	// Loop over the elements in the draw list
 	Drawlist::DLECont::const_iterator dle = m_drawlist.begin(), dle_end = m_drawlist.end();
 	for (;dle != dle_end; ++dle)
@@ -130,10 +131,10 @@ void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear
 		Nugget const&       nugget = *dle->m_nugget;
 		BaseInstance const& inst   = *dle->m_instance;
 		ShaderPtr const&    shader = nugget.m_draw.m_shader;
-		
+
 		// Bind the shader to the device
-		shader->Setup(dc, nugget, inst, m_view);
-		
+		shader->Setup(dc, nugget, inst, *this);
+
 		// Add the nugget to the device context
 		dc->DrawIndexed(
 			UINT(nugget.m_irange.size()),

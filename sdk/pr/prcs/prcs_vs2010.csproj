@@ -305,6 +305,7 @@
     <Compile Include="util\profile.cs" />
     <Compile Include="stream\progress_stream.cs" />
     <Compile Include="stream\stream_wrapper.cs" />
+    <Compile Include="util\reflect.cs" />
     <Compile Include="util\scope.cs" />
     <Compile Include="util\string_transform.cs" />
     <Compile Include="stream\uncloseable_stream.cs">

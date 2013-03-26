@@ -37,13 +37,13 @@ namespace pr
 		return value;
 	}
 	
-	// Returns true if any bits in 'value & mask' are set
+	// Returns true if any bits in 'value & mask != 0'
 	template <typename T, typename U> inline bool AnySet(T value, U mask)
 	{
 		return (value & static_cast<T>(mask)) != 0;
 	}
 	
-	// Return true if all bits in 'value & mask' are set
+	// Return true if all bits in 'value & mask == mask'
 	template <typename T, typename U> inline bool AllSet(T value, U mask)
 	{
 		return (value & static_cast<T>(mask)) == static_cast<T>(mask);

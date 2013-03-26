@@ -62,6 +62,7 @@ namespace pr
 			{
 				pr::rdr::SceneView const& view = e.m_scene->m_view;
 				m_inst.m_i2w = pr::Scale4x4(m_scale, view.m_c2w.pos);
+				m_inst.m_i2w = pr::Translation(0,0,0);
 				e.m_scene->AddInstance(m_inst);
 			}
 			
@@ -191,7 +192,6 @@ namespace pr
 					pr::rdr::Range vrange = pr::rdr::Range::make(i*4, (i+1)*4);
 					pr::rdr::Range irange = pr::rdr::Range::make(i*6, (i+1)*6);
 					m_inst.m_model->CreateNugget(method, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, &vrange, &irange);
-					
 				}
 				
 				// Set the sortkey so that the skybox draws last

@@ -11,6 +11,7 @@
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/render/scene_view.h"
+#include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/util/lock.h"
 #include "renderer11/shaders/cbuffer.h"
 
@@ -56,8 +57,22 @@ void SetupIA(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget)
 	// Bind the index buffer to the IA
 	dc->IASetIndexBuffer(mb.m_ib.m_ptr, mb.m_ib.m_format, 0);
 		
-	// Tell the IA would sort of primitives to expect
+	// Tell the IA what sort of primitives to expect
 	dc->IASetPrimitiveTopology(nugget.m_prim_topo);
+}
+
+// Set the rasterizer states
+void SetupRS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, Scene const& scene) 
+{
+	auto& draw = nugget.m_draw;
+	if (draw.m_rstates != 0)
+		dc->RSSetState(draw.m_rstates.m_ptr);
+	else if (draw.m_shader->m_rs != 0)
+		dc->RSSetState(draw.m_shader->m_rs.m_ptr);
+	else if (scene.m_rs != 0)
+		dc->RSSetState(scene.m_rs.m_ptr);
+	else
+		dc->RSSetState(0);
 }
 
 // Set the transform properties of CBufModel
@@ -89,24 +104,31 @@ struct TxTint :BaseShader
 	{
 		VShaderDesc vsdesc(VertP(), txfm_tint_vs); 
 		PShaderDesc psdesc(txfm_tint_ps);
-		pr::rdr::ShaderPtr shdr = sm.CreateShader<TxTint>(shader::TxTint, TxTint::Setup, &vsdesc, &psdesc);
+		
+		pr::rdr::ShaderPtr shdr = sm.CreateShader<TxTint>(EShader::TxTint, TxTint::Setup, &vsdesc, &psdesc);
 		CreateCBufModel(device, shdr->m_cbuf);
 	}
-	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, SceneView const& view)
+	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{
 		TxTint const* me = static_cast<TxTint const*>(nugget.m_draw.m_shader.m_ptr);
 		
 		// Fill out the model constants buffer and bind it to the VS stage
 		CBufModel cb = {};
-		Txfm(inst, view, cb);
+		Txfm(inst, scene.m_view, cb);
 		Tint(inst, cb);
 		*Lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
 		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
 		
-		// Setup the input assembler and bind the shaders
+		// Setup the input assembler
 		SetupIA(dc, nugget);
+		
+		// Set the raster state
+		SetupRS(dc, nugget, scene);
+		
+		// Bind the shaders
 		me->Bind(dc);
 	}
+	explicit TxTint(ShaderManager* mgr) :BaseShader(mgr) {}
 };
 
 // TxTintPvc ***********************************************************
@@ -116,24 +138,31 @@ struct TxTintPvc :BaseShader
 	{
 		VShaderDesc vsdesc(VertPC(), txfm_tint_pvc_vs);
 		PShaderDesc psdesc(txfm_tint_pvc_ps);
-		pr::rdr::ShaderPtr shdr = sm.CreateShader<TxTintPvc>(shader::TxTintPvc, TxTintPvc::Setup, &vsdesc, &psdesc);
+		
+		pr::rdr::ShaderPtr shdr = sm.CreateShader<TxTintPvc>(EShader::TxTintPvc, TxTintPvc::Setup, &vsdesc, &psdesc);
 		CreateCBufModel(device, shdr->m_cbuf);
 	}
-	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, SceneView const& view)
+	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{
 		TxTintPvc const* me = static_cast<TxTintPvc const*>(nugget.m_draw.m_shader.m_ptr);
 		
 		// Fill out the model constants buffer and bind it to the VS stage
 		CBufModel cb = {};
-		Txfm(inst, view, cb);
+		Txfm(inst, scene.m_view, cb);
 		Tint(inst, cb);
 		*Lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
 		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
 		
-		// Setup the input assembler and bind the shaders
+		// Setup the input assembler
 		SetupIA(dc, nugget);
+
+		// Set the raster state
+		SetupRS(dc, nugget, scene);
+
+		// Bind the shaders
 		me->Bind(dc);
 	};
+	explicit TxTintPvc(ShaderManager* mgr) :BaseShader(mgr) {}
 };
 
 // TxTintTex ***********************************************************
@@ -146,7 +175,8 @@ struct TxTintTex :BaseShader
 		// Create the shader
 		VShaderDesc vsdesc(VertPT(), txfm_tint_tex_vs);
 		PShaderDesc psdesc(txfm_tint_tex_ps);
-		pr::RefPtr<TxTintTex> shdr = sm.CreateShader<TxTintTex>(shader::TxTintTex, TxTintTex::Setup, &vsdesc, &psdesc);
+		
+		pr::RefPtr<TxTintTex> shdr = sm.CreateShader<TxTintTex>(EShader::TxTintTex, TxTintTex::Setup, &vsdesc, &psdesc);
 		CreateCBufModel(device, shdr->m_cbuf);
 	
 		// Create a texture sampler
@@ -154,13 +184,13 @@ struct TxTintTex :BaseShader
 		pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_samp_state.m_ptr));
 		PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_samp_state, "tex0 sampler"));
 	}
-	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, SceneView const& view)
+	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{
 		TxTintTex const* me = static_cast<TxTintTex const*>(nugget.m_draw.m_shader.m_ptr);
 		
 		// Fill out the model constants buffer and bind it to the VS stage
 		CBufModel cb = {};
-		Txfm(inst, view, cb);
+		Txfm(inst, scene.m_view, cb);
 		Tint(inst, cb);
 		Tex0(nugget.m_draw, cb);
 		*Lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
@@ -170,10 +200,16 @@ struct TxTintTex :BaseShader
 		dc->PSSetShaderResources(0, 1, &nugget.m_draw.m_tex_diffuse->m_srv.m_ptr);
 		dc->PSSetSamplers(0, 1, &me->m_samp_state.m_ptr);
 		
-		// Setup the input assembler and bind the shaders
+		// Setup the input assembler
 		SetupIA(dc, nugget);
+
+		// Set the raster state
+		SetupRS(dc, nugget, scene);
+
+		// Bind the shaders
 		me->Bind(dc);
 	};
+	explicit TxTintTex(ShaderManager* mgr) :BaseShader(mgr) {}
 };
 
 // Create the built-in shaders

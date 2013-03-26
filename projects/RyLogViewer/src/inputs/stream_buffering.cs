@@ -29,6 +29,7 @@ namespace RyLogViewer
 		/// <summary>Launch a process, piping its output into a temporary file</summary>
 		private void LaunchProcess(LaunchApp conn)
 		{
+			Debug.Assert(conn != null);
 			BufferedProcess buffered_process = null;
 			try
 			{

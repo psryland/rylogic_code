@@ -25,21 +25,21 @@ namespace sol
 	{
 		static wstring DataPath(wstring const& relpath)
 		{
-			return pr::filesys::CombinePath<wstring>(L"D:/Users/Paul/Rylogic/local/media", relpath);
+			return pr::filesys::CombinePath<wstring>(L"Q:\\local\\media", relpath);
 		}
 	};
 
 	// Main app logic
 	struct Main :pr::app::Main<UserSettings, MainGUI>
 	{
-		//pr::app::Skybox m_skybox;
+		pr::app::Skybox m_skybox;
 		pr::app::Gimble m_gimble;
 		
 		wchar_t const* AppTitle() const { return L"Sol"; };
 		
 		Main(MainGUI& gui)
 		:base(pr::app::DefaultSetup(), gui)
-		//,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/galaxy1/galaxy??.dds"), pr::app::Skybox::SixSidedCube)
+		,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/galaxy1/galaxy??.dds"), pr::app::Skybox::SixSidedCube)
 		//,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/sky1/skybox-clouds-few-noon.dds"), pr::app::Skybox::FiveSidedCube)
 		,m_gimble(m_rdr)
 		{

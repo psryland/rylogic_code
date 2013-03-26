@@ -15,18 +15,22 @@ namespace pr
 	namespace rdr
 	{
 		// Encapsulates the resources needed to draw a render nugget
+		// These were 'materials' in the old renderer
 		struct DrawMethod
 		{
 			// The shader that does the rendering.
 			pr::rdr::ShaderPtr m_shader;
 			
+			// Rasterizer states
+			D3DPtr<ID3D11RasterizerState> m_rstates;
+
 			// The properties used by 'm_shader'.
 			// Since 'm_shader' can point to any shader, not all of these properties
 			// are used by every shader. The client has to know which shader they're using
 			// and which properties need to be fill in for it to work correctly. Shaders
-			// need to handle uninitialised properties sanely.
+			// need to handle uninitialized properties sanely.
 			pr::rdr::Texture2DPtr m_tex_diffuse; // Base diffuse texture
-			pr::rdr::Texture2DPtr m_tex_env_map; // Environment map (todo: make into a cude texture)
+			pr::rdr::Texture2DPtr m_tex_env_map; // Environment map (todo: make into a cube texture)
 		};
 	}
 }

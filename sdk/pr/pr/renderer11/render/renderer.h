@@ -12,6 +12,7 @@
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/textures/texture_manager.h"
+#include "pr/renderer11/render/raster_state_manager.h"
 #include "pr/renderer11/util/allocator.h"
 
 namespace pr
@@ -86,10 +87,11 @@ namespace pr
 	{
 	public:
 		// These manager classes from part of the public interface of the renderer
-		pr::rdr::ModelManager   m_mdl_mgr;
-		pr::rdr::ShaderManager  m_shdr_mgr;
-		pr::rdr::TextureManager m_tex_mgr;
-		
+		pr::rdr::ModelManager       m_mdl_mgr;
+		pr::rdr::ShaderManager      m_shdr_mgr;
+		pr::rdr::TextureManager     m_tex_mgr;
+		pr::rdr::RasterStateManager m_rs_mgr;
+
 		Renderer(pr::rdr::RdrSettings const& settings);
 		~Renderer();
 		

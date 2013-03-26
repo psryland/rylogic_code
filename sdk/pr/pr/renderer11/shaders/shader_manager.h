@@ -19,8 +19,9 @@ namespace pr
 		class ShaderManager
 		{
 			typedef Lookup<RdrId, BaseShader*> ShaderLookup;
+			typedef std::function<ShaderPtr(pr::rdr::ShaderManager*)> ShaderAlex;
 
-			pr::rdr::MemFuncs    m_mem;
+			pr::rdr::MemFuncs    m_mem; // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
 			D3DPtr<ID3D11Device> m_device;
 			ShaderLookup         m_lookup_shader;  // A map from shader id to existing shader instances
 			
@@ -34,7 +35,7 @@ namespace pr
 			void CreateStockShaders();
 			
 			// Builds the basic parts of a shader.
-			pr::rdr::ShaderPtr& InitShader(pr::rdr::ShaderPtr& shdr, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc);
+			pr::rdr::ShaderPtr InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc);
 			
 		public:
 			ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
@@ -44,15 +45,14 @@ namespace pr
 			// Pass nulls for 'vsdesc', 'psdesc' if they're not needed
 			template <class ShaderType> pr::rdr::ShaderPtr CreateShader(RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc)
 			{
-				// Allocate the new shader instance
-				pr::rdr::ShaderPtr inst = pr::rdr::Allocator<ShaderType>(m_mem).New();
-				inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
-				return InitShader(inst, setup, vsdesc, psdesc);
+				// Create a lambda for allocating the shader
+				ShaderAlex create = [&](pr::rdr::ShaderManager* mgr){ return pr::rdr::Allocator<ShaderType>(m_mem).New(mgr); };
+				return InitShader(create, id, setup, vsdesc, psdesc);
 			}
 
 			// Return the shader corresponding to 'id' or null if not found
 			pr::rdr::ShaderPtr FindShader(RdrId id) const;
-			
+
 			// Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'
 			pr::rdr::ShaderPtr FindShaderFor(EGeom::Type geom_mask) const;
 			template <class Vert> pr::rdr::ShaderPtr FindShaderFor() const { return FindShaderFor(Vert::GeomMask); }

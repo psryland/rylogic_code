@@ -71,7 +71,7 @@ namespace pr
 			// Return a pointer to an existing texture
 			pr::rdr::Texture2DPtr FindTexture(RdrId id) const
 			{
-				TextureLookup::const_iterator i = m_lookup_tex.find(id);
+				auto i = m_lookup_tex.find(id);
 				return i != m_lookup_tex.end() ? i->second : 0;
 			}
 		};

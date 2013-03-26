@@ -17,12 +17,12 @@ namespace pr
 		{
 			return static_cast<RdrId>(ptr - (T const*)0);
 		}
-		
-		// Make a RdrId from 'unique_name'
-		template <typename T> inline RdrId MakeId(T const& unique_name)
+
+		// Make a RdrId from 'unique_thing'
+		template <typename T> inline RdrId MakeId(T const& unique_thing)
 		{
 			::std::hash<T> hasher;
-			return hasher(unique_name);
+			return hasher(unique_thing);
 		}
 
 		// Return the immediate device context for a device
@@ -55,7 +55,7 @@ namespace pr
 		// Return information about a surface determined from its dimensions and format
 		// Any of the pointer parameters can be null
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
-		
+
 		// Helper for checking values are not overwritten in a lookup table
 		template <class Table, typename Key, typename Value> inline void AddLookup(Table& table, Key key, Value value)
 		{

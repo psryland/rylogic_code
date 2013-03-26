@@ -242,9 +242,10 @@ namespace Csex
 			var groupsOfConflicts = FindReferencesWithTheSameShortNameButDiffererntFullNames(references);
 			foreach (var group in groupsOfConflicts)
 			{
+				Console.Out.WriteLine();
 				Console.Out.WriteLine("Possible conflicts for {0}:", group.Key);
 				foreach (var reference in group)
-					Console.Out.WriteLine("{0} references {1}" ,reference.Assembly.Name.PadRight(25) ,reference.ReferencedAssembly.FullName);
+					Console.Out.WriteLine("{0,-30} references {1}" ,reference.Assembly.Name ,reference.ReferencedAssembly.FullName);
 			}
 		}
 		private IEnumerable<IGrouping<string, Reference>> FindReferencesWithTheSameShortNameButDiffererntFullNames(IEnumerable<Reference> references)

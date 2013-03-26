@@ -93,7 +93,7 @@ PS_OUTPUT main(VS_OUTPUT In)
 	EXPAND(Out.diff0 = In.diff0; , PR_RDR_SHADER_TINT0)
 	
 	// Texture2D (with transform)
-	EXPAND(Out.diff0 = tex2D(m_tex0, In.tex0) * Out.diff0 ;,PR_RDR_SHADER_TEX0)
+	EXPAND(Out.diff0 = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff0 ;,PR_RDR_SHADER_TEX0)
 	return Out;
 }
 #endif

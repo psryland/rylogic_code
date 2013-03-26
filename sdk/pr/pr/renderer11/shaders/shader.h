@@ -13,33 +13,8 @@ namespace pr
 {
 	namespace rdr
 	{
-		namespace shader
-		{
-			enum Type
-			{
-				TxTint,
-				TxTintPvc,
-				TxTintTex,
-				NumberOf,
-			};
-			inline char const* ToString(size_t type)
-			{
-				switch (static_cast<Type>(type)) {
-				default:         return "";
-				case TxTint:     return "TxTint";
-				case TxTintPvc:  return "TxTintPvc";
-				case TxTintTex:  return "TxTintTex";
-				}
-			}
-			inline Type Parse(char const* str)
-			{
-				int i; for (i = 0; i != NumberOf && ::_stricmp(str, ToString(static_cast<Type>(i))) != 0; ++i) {}
-				return static_cast<Type>(i);
-			}
-		}
-		
 		// User provided callback function for binding a shader to the device context
-		typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, SceneView const& view)> ShaderSetupFunc;
+		typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)> ShaderSetupFunc;
 		
 		// Initialisation data for a shader
 		struct ShaderDesc
@@ -88,7 +63,8 @@ namespace pr
 		};
 		
 		// The base class of a custom shader.
-		// All shaders must inherit this class
+		// All shaders must inherit this class.
+		// This is kind of like an old school effect
 		struct BaseShader :pr::RefCount<BaseShader>
 		{
 			D3DPtr<ID3D11InputLayout>       m_iplayout;        // The input layout compatible with this shader
@@ -98,26 +74,28 @@ namespace pr
 			D3DPtr<ID3D11GeometryShader>    m_gs;              // The geometry shader (null if not used)
 			D3DPtr<ID3D11HullShader>        m_hs;              // The hull shader (null if not used)
 			D3DPtr<ID3D11DomainShader>      m_ds;              // The domain shader (null if not used)
+			D3DPtr<ID3D11RasterizerState>   m_rs;              // The default rasterizer state
 			RdrId                           m_id;              // Id for this shader instance
 			EGeom::Type                     m_geom_mask;       // The geometry type supported by this shader
 			ShaderManager*                  m_mgr;             // The shader manager that created this shader
 			string32                        m_name;            // Human readable id for the texture
 			SortKeyId                       m_sort_id;
-		
+
+			explicit BaseShader(ShaderManager* mgr);
 			virtual ~BaseShader() {}
-			
+
 			// User provided callback for binding this shader to a device context
 			ShaderSetupFunc Setup;
-			
-			// Refcounting cleanup function
+
+			// Ref counting cleanup function
 			static void RefCountZero(pr::RefCount<BaseShader>* doomed);
-			
+
 		protected:
 			// Use the shader manager 'CreateShader'
 			// factory method to create new shaders
 			friend struct pr::rdr::Allocator<BaseShader>;
 			BaseShader();
-			
+
 			// Set the non-null shaders to the device context
 			void Bind(D3DPtr<ID3D11DeviceContext>& dc) const;
 		};

@@ -1,7 +1,7 @@
+$Generate=false
 ;*********************************************************************************************
 ;Pauls additions
 ;*********************************************************************************************
-$Generate=false
 std::basic_string<char,std::char_traits<char>,std::allocator<char> >         =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_stdstring)
 std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> > =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_stdstringstream)
 std::basic_ifstream<char, std::char_traits<char> >                           =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_stdifstream)
@@ -35,7 +35,6 @@ pr::D3DPtr<*>                               =<m_ptr>
 pr::pod_array<*>                            =size=<m_count> <m_array[0]> <m_array[1]> <m_array[2]> ...
 pr::profiler::Profile                       =<m_name>
 pr::Stack<*>                                =size=<m_size>
-pr::string<*>                               =[<m_count-1>] <m_ptr,s>
 pr::chain::impl::const_iteartor<*,*>        =<m_elem->m_obj>
 pr::chain::impl::iteartor<*,*>              =<m_elem->m_obj>
 
@@ -135,92 +134,6 @@ Token                                       =$ADDIN(W:\software\PC\lib\rb_autoex
 Vector2                                     =<x> <y>
 ScanIntersect                               =UID:<m_uid> H:<m_is_horizontal> {<m_location.x> <m_location.y>}
 
-;Reflections
-MAv2                                        =<m_Vector.v[0]> <m_Vector.v[1]>
-MAv3                                        =<m_Vector.v[0]> <m_Vector.v[1]> <m_Vector.v[2]>
-MAv4                                        =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_v4)
-MAm3                                        =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_m3x3)
-MAm4                                        =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_m4x4)
-MAq                                         =$ADDIN(q:\sdk\pr\lib\prautoexp.win32.release.dll,AddIn_Quaternion)
-static_inst::Instance                       =$ADDIN(R:\Toolchain\Bin\DLL\ri_autoexp.dll,AddIn_StaticInst)
-PHcontainer<*>                              =size=<m_num_items> [<m_used[0]> <m_used[0].m_container_data.m_next[0]> ...]
-PHbounds                                    =l=<box.corner[0]> u=<box.corner[1]>
-; --- Model ---
-PHbox                                       =x=<boxSize[0]> y=<boxSize[1]> z=<boxSize[2]>
-PHcylinder                                  =r=<radius> h=<height>
-PHsphere                                    =r=<radius>
-PHpolyFace                                  =<index[0],u> <index[1],u> <index[2],u>
-PHpolyNbr                                   =count=<nbr_count> first=<first_nbr>
-PHpolytope                                  =v_size=<vert_count> f_size=<face_count>
-PHprimitive                                 =$ADDIN(R:\Toolchain\Bin\DLL\ri_autoexp.dll,AddIn_PHprimitive)
-PHcollisionModel                            =count=<count> bounds=<boundingRadius>
-PHmodelReference                            =$ADDIN(R:\Toolchain\Bin\DLL\ri_autoexp.dll,AddIn_PHmodelReference)
-PHmodelList                                 =models=<nModels> prims=<nPrimitives>
-; --- Rigidbodies ---
-PHbaseObj                                   =<m_type> pos={<m_object_to_world.m_Matrix.col[3].m_Vector.v[0]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[1]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[2]>}
-PHobject                                    =<m_name> <m_type> pos={<m_object_to_world.m_Matrix.col[3].m_Vector.v[0]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[1]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[2]>}
-; --- Multibodies ---
-PHmulti                                     =size=<nbodies> <**objects>
-PHlink                                      =jtype=<jtype> num_out=<outn> vel=<m_velocity> angv=<m_ang_velocity>
-PHmultiContainer                            =maxmultis=<maxmultis> maxnbodies=<maxnbodies> maxout=<maxout>
-; --- Dynamics ---
-PHdynamics                                  =<m_motion_type> mass=<1.0/m_inv_mass> pos={<m_object_to_world.m_Matrix.col[3].m_Vector.v[0]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[1]> <m_object_to_world.m_Matrix.col[3].m_Vector.v[2]>} vel=<m_velocity> angm=<m_ang_momentum>
-PHdynamicsWPtr                              =<m_dyn>
-PHdynamicsRPtr                              =<m_dyn>
-; --- Broadphase ---
-BPsubList                                   =base=<m_listbase_and_length&0xFFF> len=<m_listbase_and_length/4096>
-BPnode                                      =lvl=<m_level> x=<m_indexX> z=<m_indexZ> <m_instance_sublist>
-BPstaticObject                              =col=<m_collision_model_ref> gfx=<m_graphic_instance_ref>
-BPstatics                                   =x=<m_MinX> z=<m_MinZ> size=<m_RegionSize> i=<m_IndexX> j=<m_IndexZ> nodes=<m_iNumNodes> statics=<m_iNumStatics>
-BPstaticsHeader                             =size=<m_PhysicsBPstaticsSize> statics=<m_PhysicsBPstatics>
-BPcoord                                     =<m_type> <m_value>
-BPcoordList                                 =<m_max_list_elements>
-BPdynamicObject                             =<m_object[0]>
-BPoverlapTable                              =size=<m_num_overlaps>
-BPobjectPair                                =<m_objA> <m_objB> <m_pair_flags>
-BPregion                                    =<m_pStaticData>
-BPbroadphase                                =<m_current_state> <m_region> ovrlaps=<m_num_overlaps> adovrlaps=<m_num_additional_overlaps>
-BPsearchArea                                =<m_type> l=<m_lower> u=<m_upper> pt=<m_start> dir=<m_direction>
-BPsearchData                                =<m_num_areas> <m_start_node> <m_region> <m_node> <m_node_index>
-; --- Engine ---
-PHengine                                    =step=<m_step_counter> obj_count=<m_objects->m_num_items>
-; --- Cache ---
-collision::Cache                            =A=<m_primA> B=<m_primB> sep=<m_separating_axis> id_p=<m_prev_p_id> id_q=<m_prev_q_id>
-collision::IdPairCache::IdPair              =<p> <q>
-collision::IdPairCache                      =size=<m_size> <m_id>
-;PHmatrixCache
-;PHobjectCache
-;PHoverlapCache
-;PHoverlapCachePool
-;PHoverlapCacheOverlaps
-;PHoverlapCacheSafeArea
-;PHoverlapCacheQTLevel
-;PHoverlapCacheQTNodes
-;PHoverlapCacheStatics
-; --- Collision ---
-collision::Vert                             =p={<m_id_p> <m_p>} q={<m_id_q> <m_q>} <m_r> <m_direction>
-collision::Triangle                         =<m_vert[0]> <m_vert[1]> <m_vert[2]> <m_direction> <m_distance>
-collision::Simplex                          =count=<m_num_vertices> bary=<m_bary_coords>
-collision::TrackVert                        =<m_vert> <m_distance> <m_offset>
-PHclosestPoints                             =<pointA> <pointB> norm=<normal> dist=<distance>
-;PHframe
-;PHcollisionFrameObject
-;PHcollisionFrameInfo
-;PHcollisionObjectOutput
-;PHcollisionOutput
-;PHworldCollisionResult
-;PHlineCollisionParams
-;PHlineCollisionResult
-;PHcylinderCollisionParams
-;PHcylinderCollisionResult
-;PHobjectAndLineCheckParams
-;PHobjectAndLineCheckResult
-;PHcharacterWorldCollisionParams
-;PHcharacterWorldCollisionResult
-
-;Reflections task scheduler
-ri::task::CDebugInfo::STask                 =running=<m_bRunning> fin=<m_bFinished> func=<m_pFunction> iter=<m_nIterations>
-
 ; Work In progress
 pr::ph::convex_decom::Vert                  =set=<m_set_id> nbrs=<m_nbrs> zdv=<m_zdv> next=<m_next>
 pr::ph::convex_decom::Edge                  =<m_i0> <m_i1> cv=<m_concavity>
@@ -238,7 +151,7 @@ pr::tetramesh::Edge                         =edge={<m_i0>,<m_i1>} ccv=<m_concavi
 ;****************************************************************************
 ;PR visualizers
 ;****************************************************************************
-pr::Array<*>{
+pr::Array<*,*,*,*>{
 	preview
 	( 
 		#(
@@ -265,7 +178,7 @@ pr::Array<*>{
 		)
 	)
 }
-pr::string<char,*>{
+pr::string<char,*,*,*>{
 	preview
 	( 
 		#("[",$e.m_count-1,"]",[$e.m_ptr,s])
@@ -287,7 +200,7 @@ pr::string<char,*>{
 		)
 	)
 }
-pr::string<wchar_t,*>{
+pr::string<wchar_t,*,*,*>{
 	preview
 	( 
 		#("[",$e.m_count-1,"]",[$e.m_ptr,su])
@@ -312,4 +225,3 @@ pr::string<wchar_t,*>{
 ;****************************************************************************
 ;PR visualizers end
 ;****************************************************************************
-

@@ -32,6 +32,8 @@
 #include "pr/common/fmt.h"
 #include "pr/common/stackdump.h"
 #include "pr/common/refcount.h"
+#include "pr/common/log.h"
+
 //namespace pr
 //{
 //	// Example code:
@@ -121,23 +123,6 @@ namespace pr
 //			struct MemberOffsets;
 //			class  Iter;
 //		}
-		
-		// Render states
-//		class RenderStateManager;
-		namespace rs
-		{
-//			struct State;
-			struct Block;
-//			struct StateEx;
-//			struct DeviceState;
-//			namespace stack_frame
-//			{
-//				struct Viewport;
-//				struct DLE;
-//				struct DLEShadows;
-//				struct RSB;
-//			}
-		}
 
 //		// Lighting
 //		struct Light;
@@ -225,7 +210,41 @@ namespace pr
 				ModelConstants = 1,
 			};
 		}
-//		namespace EQuality
+		namespace EShader
+		{
+			enum Type
+			{
+				TxTint,
+				TxTintPvc,
+				TxTintTex,
+				NumberOf,
+			};
+			inline char const* ToString(size_t type)
+			{
+				switch (static_cast<Type>(type)) {
+				default:         return "";
+				case TxTint:     return "TxTint";
+				case TxTintPvc:  return "TxTintPvc";
+				case TxTintTex:  return "TxTintTex";
+				}
+			}
+			inline Type Parse(char const* str)
+			{
+				int i; for (i = 0; i != NumberOf && ::_stricmp(str, ToString(static_cast<Type>(i))) != 0; ++i) {}
+				return static_cast<Type>(i);
+			}
+		}
+		namespace ERasterState
+		{
+			enum Type
+			{
+				SolidCullNone,
+				SolidCullBack,
+				SolidCullFront,
+				WireCullNone,
+			};
+		}
+		//		namespace EQuality
 //		{
 //			enum Type { Low,  Medium, High, NumberOf };
 //			inline char const* ToString(Type type)

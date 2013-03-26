@@ -204,12 +204,15 @@ namespace pr.common
 			Serialized   = 3
 		}
 
-		/// <summary>Row change type provided in the RowChanged event</summary>
+		/// <summary>Change type provided in the DataChanged event</summary>
 		public enum ChangeType
 		{
-			Insert = AuthorizerActionCode.INSERT,
-			Update = AuthorizerActionCode.UPDATE,
-			Delete = AuthorizerActionCode.DELETE
+			Insert      = AuthorizerActionCode.INSERT,
+			Update      = AuthorizerActionCode.UPDATE,
+			Delete      = AuthorizerActionCode.DELETE,
+			CreateTable = AuthorizerActionCode.CREATE_TABLE,
+			AlterTable  = AuthorizerActionCode.ALTER_TABLE,
+			DropTable   = AuthorizerActionCode.DROP_TABLE,
 		}
 
 		#endregion
@@ -819,7 +822,11 @@ namespace pr.common
 					m_lookup[row_id] = node;
 					LimitCacheSize();
 				}
+				#if CACHE_RETURNS_CLONES
 				return m_meta.Clone(node.Value.Object);
+				#else
+				return node.Value.Object; // Danger, this should really be immutable
+				#endif
 			}
 
 			/// <summary>Reduces the size of the cache to within 'MaxCacheSizeInBytes' or one item</summary>
@@ -869,7 +876,15 @@ namespace pr.common
 			public Database(string filepath, OpenFlags flags = OpenFlags.Create|OpenFlags.ReadWrite)
 			{
 				Filepath = filepath;
+				ReadItemHook = x => x;
+				WriteItemHook = x => x;
 				m_creation_thread = Thread.CurrentThread.ManagedThreadId;
+				#if MONOTOUCH
+				m_db_singleton = this;
+				m_update_cb = UpdateCBStatic; // To prevent GC'ing
+				#else
+				m_update_cb = UpdateCB; // To prevent GC'ing
+				#endif
 				
 				// Open the database file
 				var res = sqlite3_open_v2(filepath, out m_db, (int)flags, IntPtr.Zero);
@@ -878,7 +893,7 @@ namespace pr.common
 				
 				// Initialise the per-table object caches
 				m_caches = new Dictionary<string, ICache>();
-				RowChanged += (s,a) =>
+				DataChanged += (s,a) =>
 					{
 						ICache cache;
 						if (m_caches.TryGetValue(a.TableName, out cache))
@@ -934,6 +949,12 @@ namespace pr.common
 				return c;
 			}
 
+			/// <summary>A method that allows interception of all database object reads</summary>
+			public Func<object,object> ReadItemHook { get; set; }
+
+			/// <summary>A method that allows interception of all database object writes</summary>
+			public Func<object,object> WriteItemHook { get; set; }
+
 			/// <summary>Close a database file</summary>
 			public void Close()
 			{
@@ -979,17 +1000,15 @@ namespace pr.common
 			}
 
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
-			public IEnumerable<T> EnumRows<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
-			{
-				using (var query = new Query(this, sql, parms, first_idx))
-					foreach (var r in query.Rows<T>())
-						yield return r; // Can't just return Rows<T>() because Dispose() is called on query
-			}
 			public IEnumerable EnumRows(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
 				using (var query = new Query(this, sql, parms, first_idx))
 					foreach (var r in query.Rows(type))
-						yield return r; // Can't just return Rows<T>() because Dispose() is called on query
+						yield return r; // Can't just return query.Rows(type) because Dispose() is called on query
+			}
+			public IEnumerable<T> EnumRows<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				return EnumRows(typeof(T), sql, parms, first_idx).Cast<T>();
 			}
 
 			/// <summary>Drop any existing table created for type 'T'</summary>
@@ -1002,6 +1021,7 @@ namespace pr.common
 				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				var opts = if_exists ? "if exists " : "";
 				Execute(Sql("drop table ",opts,meta.Name));
+				RaiseDataChangedEvent(ChangeType.DropTable, meta.Name, 0);
 			}
 
 			/// <summary>Return the sql string used to create a table for 'type'</summary>
@@ -1036,7 +1056,10 @@ namespace pr.common
 				if (on_constraint == OnCreateConstraint.AlterTable && TableExists(type))
 					AlterTable(type);
 				else
+				{
 					Execute(Sql(CreateTableString(type, on_constraint)));
+					RaiseDataChangedEvent(ChangeType.CreateTable, meta.Name, 0);
+				}
 			}
 			
 			/// <summary>Alters an existing table to match the columns for 'type'</summary>
@@ -1069,6 +1092,7 @@ namespace pr.common
 					if (cols1.Contains(c)) continue;
 					Execute(Sql("alter table ",meta.Name," add column ",meta.Column(i).ColumnDef(true)));
 				}
+				RaiseDataChangedEvent(ChangeType.AlterTable, meta.Name, 0);
 			}
 
 			/// <summary>Returns true if a table for type 'T' exists</summary>
@@ -1170,11 +1194,10 @@ namespace pr.common
 			/// that invoked this event. Any actions to modify the database connection must be deferred
 			/// until after the completion of the Step() call that triggered the update event. Note that
 			/// sqlite3_prepare_v2() and sqlite3_step() both modify their database connections.</summary>
-			public event EventHandler<RowChangedArgs> RowChanged
+			public event EventHandler<DataChangedArgs> DataChanged
 			{
 				add
 				{
-					m_update_cb = UpdateCB; // to prevent GC'ing
 					if (m_RowChangedInternal == null) sqlite3_update_hook(m_db, m_update_cb, IntPtr.Zero);
 					m_RowChangedInternal += value;
 				}
@@ -1182,19 +1205,31 @@ namespace pr.common
 				{
 					m_RowChangedInternal -= value;
 					if (m_RowChangedInternal == null) sqlite3_update_hook(m_db, null, IntPtr.Zero);
-					m_update_cb = null; // to allow GC'ing
 				}
 			}
-			private EventHandler<RowChangedArgs> m_RowChangedInternal;
-			private UpdateHookCB m_update_cb;
+			private EventHandler<DataChangedArgs> m_RowChangedInternal;
+			private void RaiseDataChangedEvent(ChangeType change_type, string table_name, long row_id)
+			{
+				if (m_RowChangedInternal == null) return;
+				m_RowChangedInternal(this, new DataChangedArgs(change_type, table_name, row_id));
+			}
+			private readonly UpdateHookCB m_update_cb;
 
-			/// <summary>Callback passed to the sqlite dll when RowChanged is subscribed to</summary>
+			/// <summary>Callback passed to the sqlite dll when DataChanged is subscribed to</summary>
 			private void UpdateCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id)
 			{
 				// 'db_name' is always "main". sqlite doesn't allow renaming of the db
-				if (m_RowChangedInternal == null) return;
-				m_RowChangedInternal(this, new RowChangedArgs((ChangeType)change_type, table_name, row_id));
+				RaiseDataChangedEvent((ChangeType)change_type, table_name, row_id);
 			}
+			
+			#if MONOTOUCH
+			private static Database m_db_singleton;
+			[MonoTouch.MonoPInvokeCallbackAttribute(typeof(UpdateHookCB))]
+			private static void UpdateCBStatic(IntPtr ctx, int change_type, string db_name, string table_name, long row_id)
+			{
+				m_db_singleton.UpdateCB(ctx, change_type, db_name, table_name, row_id);
+			}
+			#endif
 		}
 
 		/// <summary>Represents a single table in the database</summary>
@@ -1341,6 +1376,7 @@ namespace pr.common
 			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
 				Trace.WriteLine(string.Format("Inserting {0}", m_meta.Name));
+				item = m_db.WriteItemHook(item);
 				using (var insert = new InsertCmd(m_meta, m_db, on_constraint)) // Create the sql query
 				{
 					insert.BindObj(item); // Bind 'item' to it
@@ -1354,6 +1390,7 @@ namespace pr.common
 			public int Update(object item)
 			{
 				Trace.WriteLine(string.Format("Updating {0}", m_meta.Name));
+				item = m_db.WriteItemHook(item);
 				using (var query = new Query(m_db, SqlUpdateCmd(m_meta.Type)))
 				{
 					int idx = 1; // binding parameters are indexed from 1
@@ -1488,7 +1525,7 @@ namespace pr.common
 			public T FirstOrDefault<T>()
 			{
 				m_cmd.Take(1);
-				try { return this.OfType<T>().FirstOrDefault(); } finally { m_cmd.Reset(); }
+				try { return this.Cast<T>().FirstOrDefault(); } finally { m_cmd.Reset(); }
 			}
 			public T FirstOrDefault<T>(Expression<Func<T,bool>> pred)
 			{
@@ -1855,14 +1892,18 @@ namespace pr.common
 					case ExpressionType.Not:
 					case ExpressionType.UnaryPlus:
 					case ExpressionType.Negate:
+					#if !MONOTOUCH
 					case ExpressionType.OnesComplement:
+					#endif
 						#region Unary Expressions
 						{
 							switch (expr.NodeType) {
 							case ExpressionType.Not:            result.Text.Append(" not "); break;
 							case ExpressionType.UnaryPlus:      result.Text.Append('+'); break;
 							case ExpressionType.Negate:         result.Text.Append('-'); break;
+							#if !MONOTOUCH
 							case ExpressionType.OnesComplement: result.Text.Append('~'); break;
+							#endif
 							}
 							result.Text.Append("(");
 							Translate(((UnaryExpression)expr).Operand, result);
@@ -2025,21 +2066,23 @@ namespace pr.common
 		/// <summary>Represents an sqlite prepared statement and iterative result (wraps an sqlite3_stmt handle).</summary>
 		public class Query :IDisposable
 		{
+			protected readonly Database m_db;
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
 			protected bool m_row_end;      // True once the last row has been read
 			
 			public override string ToString()  { return SqlString; }
 			
-			public Query(sqlite3_stmt stmt)
+			public Query(Database db, sqlite3_stmt stmt)
 			{
 				if (stmt.IsInvalid) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
+				m_db = db;
 				m_stmt = stmt;
 				m_row_end = false;
 				Trace.QueryCtor(this);
 				Trace.WriteLine(string.Format("Query created '{0}'", SqlString));
 			}
 			public Query(Database db, string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
-			:this(Compile(db.Handle, sql_string))
+			:this(db, Compile(db.Handle, sql_string))
 			{
 				if (parms != null)
 					BindParms(first_idx, parms);
@@ -2240,16 +2283,6 @@ namespace pr.common
 			}
 
 			/// <summary>Enumerate over the result rows of this query, interpreting each row as type 'T'</summary>
-			public IEnumerable<T> Rows<T>()
-			{
-				var meta = TableMetaData.GetMetaData(typeof(T));
-				while (Step())
-				{
-					var obj = meta.Factory();
-					meta.ReadObj(Stmt, obj);
-					yield return (T)obj;
-				}
-			}
 			public IEnumerable Rows(Type type)
 			{
 				var meta = TableMetaData.GetMetaData(type);
@@ -2257,15 +2290,19 @@ namespace pr.common
 				{
 					var obj = meta.Factory();
 					meta.ReadObj(Stmt, obj);
-					yield return obj;
+					yield return m_db.ReadItemHook(obj);
 				}
+			}
+			public IEnumerable<T> Rows<T>()
+			{
+				return Rows(typeof(T)).Cast<T>();
 			}
 		}
 
-		#region RowChanged event args
+		#region DataChanged event args
 
-		/// <summary>Event args for the Database RowChanged event</summary>
-		public class RowChangedArgs :EventArgs
+		/// <summary>Event args for the Database DataChanged event</summary>
+		public class DataChangedArgs :EventArgs
 		{
 			/// <summary>How the row was changed. One of Inserted, Updated, or Deleted</summary>
 			public ChangeType ChangeType { get; set; }
@@ -2276,7 +2313,7 @@ namespace pr.common
 			/// <summary>The id of the effected row</summary>
 			public long RowId { get; set; }
 
-			public RowChangedArgs(ChangeType change_type, string table_name, long row_id)
+			public DataChangedArgs(ChangeType change_type, string table_name, long row_id)
 			{
 				ChangeType   = change_type;
 				TableName    = table_name;
@@ -2308,6 +2345,14 @@ namespace pr.common
 			/// Pointer to the single primary key column for this table or null
 			/// if the table has multiple primary keys</summary>
 			private readonly ColumnMetaData m_single_pk;
+
+			#if !MONOTOUCH
+			/// <summary>Compiled lambda method for testing two 'Type' instances as equal</summary>
+			private readonly MethodInfo m_method_equal;
+
+			/// <summary>Compiled lambda method for returning a shallow copy of an object</summary>
+			private readonly MethodInfo m_method_clone;
+			#endif
 
 			/// <summary>The .NET type that this meta data is for</summary>
 			public Type Type { get; private set; }
@@ -2431,17 +2476,23 @@ namespace pr.common
 				NonPks      = m_column.Where(x => !x.IsPk).ToArray();
 				NonAutoIncs = m_column.Where(x => !x.IsAutoInc).ToArray();
 				m_single_pk = Pks.Count() == 1 ? Pks.First() : null;
+				
+				#if !MONOTOUCH
+				// Initialise the generated methods for this type
+				m_method_equal = typeof(MethodGenerator<>).MakeGenericType(Type).GetMethod("Equal", BindingFlags.Static|BindingFlags.Public);
+				m_method_clone = typeof(MethodGenerator<>).MakeGenericType(Type).GetMethod("Clone", BindingFlags.Static|BindingFlags.Public);
+				#endif
 			}
 
 			/// <summary>Returns all inherited properties for a type</summary>
-			private IEnumerable<PropertyInfo> AllProps(Type type, BindingFlags flags)
+			private static IEnumerable<PropertyInfo> AllProps(Type type, BindingFlags flags)
 			{
 				if (type == null || type == typeof(object)) return Enumerable.Empty<PropertyInfo>();
 				return AllProps(type.BaseType, flags).Concat(type.GetProperties(flags|BindingFlags.DeclaredOnly));
 			}
 
 			/// <summary>Returns all inherited fields for a type</summary>
-			private IEnumerable<FieldInfo> AllFields(Type type, BindingFlags flags)
+			private static IEnumerable<FieldInfo> AllFields(Type type, BindingFlags flags)
 			{
 				if (type == null || type == typeof(object)) return Enumerable.Empty<FieldInfo>();
 				return AllFields(type.BaseType, flags).Concat(type.GetFields(flags|BindingFlags.DeclaredOnly));
@@ -2544,11 +2595,61 @@ namespace pr.common
 			public object Clone(object item)
 			{
 				System.Diagnostics.Debug.Assert(item.GetType() == Type, "'item' is not the correct type for this table");
+				#if MONOTOUCH
 				var clone = Factory();
 				foreach (var c in Columns)
 					c.Set(clone, c.Get(item));
 				return clone;
+				#else
+				return m_method_clone.Invoke(null, new[]{item});
+				#endif
 			}
+
+			/// <summary>Returns true of 'lhs' and 'rhs' are equal instances of this table type</summary>
+			public bool Equal(object lhs, object rhs)
+			{
+				System.Diagnostics.Debug.Assert(lhs.GetType() == Type, "'lhs' is not the correct type for this table");
+				System.Diagnostics.Debug.Assert(rhs.GetType() == Type, "'rhs' is not the correct type for this table");
+				#if MONOTOUCH
+				foreach (var c in Columns)
+					if (!c.Get(lhs).Equals(c.Get(rhs)))
+						return false;
+				return true;
+				#else
+				return (bool)m_method_equal.Invoke(null, new[]{lhs, rhs});
+				#endif
+			}
+
+			// ReSharper disable UnusedMember.Local
+			/// <summary>Helper class for generating compiled lambda expressions</summary>
+			private static class MethodGenerator<T>
+			{
+				/// <summary>Test two instances of 'T' for having equal fields</summary>
+				public static bool Equal(object lhs, object rhs) { return m_func_equal((T)lhs, (T)rhs); }
+				private static readonly Func<T,T,bool> m_func_equal = EqualFunc();
+				private static Func<T,T,bool> EqualFunc()
+				{
+					var lhs = Expression.Parameter(typeof(T), "lhs");
+					var rhs = Expression.Parameter(typeof(T), "rhs");
+					Expression body = Expression.Constant(true);
+					foreach (var f in AllFields(typeof(T), BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
+						body = Expression.AndAlso(Expression.Equal(Expression.Field(lhs, f), Expression.Field(rhs, f)), body);
+					return Expression.Lambda<Func<T,T,bool>>(body, lhs, rhs).Compile();
+				}
+
+				/// <summary>Returns a shallow copy of 'obj' as a new instance</summary>
+				public static object Clone(object obj) { return m_func_clone((T)obj); }
+				private static readonly Func<T,T> m_func_clone = CloneFunc();
+				private static Func<T,T> CloneFunc()
+				{
+					var p = Expression.Parameter(typeof(T), "obj");
+					var bindings = AllFields(typeof(T), BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public)
+						.Select(x => (MemberBinding)Expression.Bind(x, Expression.Field(p,x)));
+					Expression body = Expression.MemberInit(Expression.New(typeof(T)), bindings);
+					return Expression.Lambda<Func<T,T>>(body, p).Compile();
+				}
+			}
+			// ReSharper restore UnusedMember.Local
 
 			/// <summary>Returns a table declaration string for this table</summary>
 			public string Decl()
@@ -2588,46 +2689,49 @@ namespace pr.common
 		public class ColumnMetaData
 		{
 			public const int OrderBaseValue = 0xFFFF;
-			
+
+			/// <summary>The member info for the member represented by this column</summary>
+			public MemberInfo MemberInfo;
+
 			/// <summary>The name of the column</summary>
-			public string Name;
-			
+			public string Name { get { return MemberInfo.Name; } }
+
 			/// <summary>The data type of the column</summary>
 			public DataType SqlDataType;
-			
+
 			/// <summary>Column constraints for this column</summary>
 			public string Constraints;
-			
+
 			/// <summary>True if this column is a primary key</summary>
 			public bool IsPk;
-			
+
 			/// <summary>True if this column is an auto increment column</summary>
 			public bool IsAutoInc;
-			
+
 			/// <summary>True if this column cannot be null</summary>
 			public bool IsNotNull;
-			
+
 			/// <summary>True for collate columns</summary>
 			public bool IsCollate;
-			
+
 			/// <summary>An ordering field used to define the column order in a table</summary>
 			public int Order;
-			
+
 			/// <summary>The .NET type of the property or field on the object</summary>
 			public Type ClrType;
-			
+
 			/// <summary>Returns the value of this column from an object of type 'ClrType'</summary>
 			public Func<object,object> Get { get; set; }
-			
+
 			/// <summary>Sets the value of this column in an object of type 'ClrType'</summary>
 			public Action<object,object> Set { get; set; }
-			
+
 			/// <summary>Binds the value from this column to parameter 'index' in 'stmt'</summary>
 			public Bind.Func BindFn;
-			
+
 			/// <summary>Reads column 'index' from 'stmt' and sets the corresponding property or field in 'obj'</summary>
 			public Read.Func ReadFn;
-			
+
 			public ColumnMetaData(PropertyInfo pi)
 			{
 				Get = obj => pi.GetValue(obj, null);
@@ -2648,7 +2752,7 @@ namespace pr.common
 				var attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault() ?? new ColumnAttribute();
 				var is_nullable = Nullable.GetUnderlyingType(type) != null;
 				
-				Name            = mi.Name;
+				MemberInfo      = mi;
 				SqlDataType     = attr.SqlDataType != DataType.Null ? attr.SqlDataType : SqlType(type);
 				Constraints     = attr.Constraints ?? "";
 				IsPk            = attr.PrimaryKey;
@@ -2991,6 +3095,120 @@ namespace pr.common
 
 		#endregion
 
+		#region Sqlite.Pred
+
+		/// <summary>SQL predicate expression composer</summary>
+		public class Pred
+		{
+			public readonly string Expr;
+		
+			private Pred(string expr)
+			{
+				Expr = expr;
+			}
+
+			public override string ToString()
+			{
+				return Expr;
+			}
+
+			/// <summary>Helper for turning properties into their string name</summary>
+			private static string AsStr<U,V>(Expression<Func<U,V>> expression)
+			{
+				UnaryExpression unex = expression.Body as UnaryExpression;
+				return unex != null && unex.NodeType == ExpressionType.Convert
+					? ((MemberExpression) unex.Operand).Member.Name
+					: ((MemberExpression) expression.Body).Member.Name;
+			}
+
+			/// <summary>Helper for converting a generic 'value' into its sql form</summary>
+			private static string AsStr(object value)
+			{
+				if (value == null)
+					return null;
+				
+				var type = value.GetType();
+				
+				// Enums and bools need converting to ints
+				if (type.IsEnum || type == typeof(bool))
+					return Convert.ToInt32(value).ToString();
+				
+				// Strings need wrapping in quotes
+				if (type == typeof(string))
+					return "'"+value+"'";
+				
+				// DateTimeOffsets should be int64 values
+				if (type == typeof(DateTimeOffset))
+					return ((DateTimeOffset)value).Ticks.ToString();
+				
+				// Otherwise, just convert to a string
+				return value.ToString();
+			}
+			
+			public bool IsEmpty
+			{
+				get { return string.IsNullOrEmpty(Expr); }
+			}
+			public static Pred Nothing()
+			{
+				return new Pred(string.Empty);
+			}
+			public static Pred Equal<U,V>(Expression<Func<U,V>> field, V value)
+			{
+				var val = AsStr(value);
+				return val != null
+					? new Pred(Sql("(",AsStr(field)," == ",val,")"))
+					: new Pred(Sql("(",AsStr(field)," is null",")"));
+			}
+			public static Pred NotEqual<U,V>(Expression<Func<U,V>> field, V value)
+			{
+				// Special case for enums, we have to convert them to ints first
+				var val = AsStr(value);
+				return val != null
+					? new Pred(Sql("(",AsStr(field)," != ",val,")"))
+					: new Pred(Sql("(",AsStr(field)," is not null",")"));
+			}
+			public static Pred In<U,V>(Expression<Func<U,V>> field, IEnumerable<V> value)
+			{
+				var vals = string.Join(",",value.Select(x => AsStr(x)));
+				return new Pred(Sql("(",AsStr(field)," in ",vals,")"));
+			}
+			public static Pred NotIn<U,V>(Expression<Func<U,V>> field, IEnumerable<V> value)
+			{
+				var vals = string.Join(",",value.Select(x => AsStr(x)));
+				return new Pred(Sql("(",AsStr(field)," not in ",vals,")"));
+			}
+			public static Pred And(params Pred[] sql)
+			{
+				var sb = m_sql_cached_sb;
+				sb.Clear();
+				sb.Append("(");
+				foreach (var s in sql)
+				{
+					if (s.IsEmpty) continue;
+					if (sb.Length != 1) sb.Append(" and ");
+					sb.Append(s.Expr);
+				}
+				sb.Append(")");
+				return sb.Length != 2 ? new Pred(sb.ToString()) : Nothing();
+			}
+			public static Pred Or(params Pred[] sql)
+			{
+				var sb = m_sql_cached_sb;
+				sb.Clear();
+				sb.Append("(");
+				foreach (var s in sql)
+				{
+					if (s.IsEmpty) continue;
+					if (sb.Length != 1) sb.Append(" or ");
+					sb.Append(s.Expr);
+				}
+				sb.Append(")");
+				return sb.Length != 2 ? new Pred(sb.ToString()) : Nothing();
+			}
+		}
+		#endregion Sqlite.Pred
+
 		#region Imported functions
 
 		// ReSharper disable InconsistentNaming,UnusedMember.Local
@@ -3160,6 +3378,7 @@ namespace pr
 	using System.IO;
 	using System.Text.RegularExpressions;
 	using common;
+	using util;
 	
 	[TestFixture] internal static partial class UnitTests
 	{
@@ -4467,8 +4686,8 @@ namespace pr
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Sign up a handler for row changed
-					Sqlite.RowChangedArgs args = null;
-					db.RowChanged += (s,a) => args = a;
+					Sqlite.DataChangedArgs args = null;
+					db.DataChanged += (s,a) => args = a;
 					
 					// Create a simple table
 					db.DropTable<DomType5>();
@@ -4549,16 +4768,44 @@ namespace pr
 					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
 					
 					var o2_a = table.Get<DomType5>(2);
-					
 					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
 					Assert.IsFalse(table.Cache.IsCached(obj3.PK));
-
+					
 					var o2_b = table.Get<DomType5>(2);
 					Assert.IsTrue(o2_a != null);
 					Assert.IsTrue(o2_b != null);
-					Assert.IsTrue(!ReferenceEquals(o2_a,o2_b));
+					Assert.IsTrue(ReferenceEquals(o2_a,o2_b));
+					
+					// Check that changes to the object automatically invalidate the cache
+					obj2.Data = "Changed";
+					table.Update(obj2);
+					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
+					
+					var o2_c = table.Get<DomType5>(2);
+					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
+					Assert.IsTrue(table.MetaData.Equal(obj2, o2_c));
+					
+					// Check deleting an object also removes it from the cache
+					table.Delete(obj2);
+					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
 				}
+			}
+			[Test] public static void PredicateComposition()
+			{
+				var expr = 
+					Sqlite.Pred.Or(
+						Sqlite.Pred.And(
+							Sqlite.Pred.Equal<DomType1,int>(x => x.m_int, 2),
+							Sqlite.Pred.NotEqual<DomType1,string>(x => x.m_string, "blah")
+							),
+						Sqlite.Pred.And(
+							Sqlite.Pred.Equal<DomType1,DateTimeOffset>(x => x.m_dt_offset, DateTimeOffset.MinValue),
+							Sqlite.Pred.NotIn<DomType1,SomeEnum>(x => x.m_enum, Enum<SomeEnum>.Values)
+							),
+						Sqlite.Pred.Equal<DomType1,int?>(x => x.m_nullint, null)
+						);
+				Assert.AreEqual("(((m_int == 2) and (m_string != 'blah')) or ((m_dt_offset == 0) and (m_enum not in 0,1,2)) or (m_nullint is null))", expr.Expr);
 			}
 		}
 	}

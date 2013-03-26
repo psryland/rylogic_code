@@ -4,6 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/util/util.h"
+#include "pr/renderer11/util/wrappers.h"
 
 using namespace pr::rdr;
 
@@ -209,3 +210,4 @@ void pr::rdr::GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num
 	}
 	*num_bytes = *row_bytes * *num_rows;
 }
+

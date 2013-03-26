@@ -9,10 +9,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -507,6 +507,26 @@ namespace pr.util
 	/// <summary>Type specific utility methods</summary>
 	public static class Util<T>
 	{
+		/// <summary>Serialise 'obj' to a byte array. 'T' must have the [Serializable] attribute</summary>
+		public static byte[] ToBlob(T obj)
+		{
+			using (var ms = new MemoryStream())
+			{
+				new BinaryFormatter().Serialize(ms, obj);
+				return ms.ToArray();
+			}
+		}
+
+		/// <summary>Deserialise 'blob' to an instance of 'T'</summary>
+		public static T FromBlob(byte[] blob)
+		{
+			using (var ms = new MemoryStream(blob, false))
+			{
+				var obj = new BinaryFormatter().Deserialize(ms);
+				return (T)obj;
+			}
+		}
+
 		/// <summary>
 		/// Serialise an instance of type 'T' to xml.
 		/// 'T' should be decorated with [DataContract],[DataMember] attributes.
@@ -533,40 +553,10 @@ namespace pr.util
 			}
 		}
 
-		/// <summary>
-		/// Derives the name of a property from the given lambda expression and returns it as string.
-		/// Example: DateTime.Now.PropertyName(s => s.Ticks) returns "Ticks"
-		/// </summary>
-		public static string MemberName<Ret>(Expression<Func<T,Ret>> expression)
-		{
-			UnaryExpression unex = expression.Body as UnaryExpression;
-			return unex != null && unex.NodeType == ExpressionType.Convert
-				? ((MemberExpression) unex.Operand).Member.Name
-				: ((MemberExpression) expression.Body).Member.Name;
-		}
-
-		/// <summary>
-		/// Find all types derived from 'T'<para/>
-		/// Use: var output = FindAllDerivedTypes&lt;System.IO.Stream&gt;();<para/>
-		///  foreach (var type in output)<para/>
-		///  {<para/>
-		///     Console.WriteLine(type.Name);<para/>
-		///  }<para/>
-		/// </summary>
-		public static List<Type> FindAllDerivedTypes()
-		{
-			return FindAllDerivedTypes(Assembly.GetAssembly(typeof(T)));
-		}
-		private static List<Type> FindAllDerivedTypes(Assembly assembly)
-		{
-			var derivedType = typeof(T);
-			return assembly.GetTypes().Where(t => t != derivedType && derivedType.IsAssignableFrom(t)).ToList();
-		}
-		
 		/// <summary>Copies all of the fields of 'from' into 'to'. Returns 'to' for method chaining</summary>
 		public static T ShallowCopy(T from, T to)
 		{
-			foreach (var x in TypeExtensions.AllFields(typeof(T), BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
+			foreach (var x in typeof(T).AllFields(BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
 				x.SetValue(to, x.GetValue(from));
 			return to;
 		}
@@ -580,13 +570,18 @@ namespace pr.util
 			return (T)Enum.Parse(typeof(T), value);
 		}
 		
-		/// <summary>Returns the next enum value after 'value'.
-		/// Note: this is really enum abuse. Use sparingly</summary>
+		/// <summary>Returns the next enum value after 'value'. Note: this is really enum abuse. Use sparingly</summary>
 		public static T Cycle(T src)
 		{
 			T[] arr = (T[])Enum.GetValues(typeof(T));
 			int i = Array.IndexOf(arr, src) + 1;
 			return (i >= 0 && i < arr.Length) ? arr[i] : arr[0];
+		}
+
+		/// <summary>Returns all values of the enum as a collection</summary>
+		public static IEnumerable<T> Values
+		{
+			get { return Enum.GetValues(typeof(T)).Cast<T>(); }
 		}
 	}
 }
@@ -600,14 +595,22 @@ namespace pr
 	{
 		internal static class TestUtils
 		{
-			[DataContract] public class XmlableType
-		{
-			[DataMember] public int    Int    { get; set; }
-			[DataMember] public string String { get; set; }
-			[DataMember] public Point  Point  { get; set; }
-		}
+			[DataContract] [Serializable] public class SerialisableType
+			{
+				public enum SomeEnum
+				{
+					[EnumMember] One,
+					[EnumMember] Two,
+					[EnumMember] Three,
+				}
+				[DataMember] public int      Int    { get; set; }
+				[DataMember] public string   String { get; set; }
+				[DataMember] public Point    Point  { get; set; }
+				[DataMember] public SomeEnum EEnum  { get; set; }
+				[DataMember] public int[]    Data   { get; set; }
+			}
 
-			[Test] public static void TestUtils_ByteArrayCompare()
+			[Test] public static void ByteArrayCompare()
 		{
 			byte[] lhs = new byte[]{1,2,3,4,5};
 			byte[] rhs = new byte[]{3,4,5,6,7};
@@ -618,34 +621,42 @@ namespace pr
 			Assert.AreEqual(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
 			Assert.AreEqual( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
 		}
-			[Test] public static void TestUtils_Convert()
+			[Test] public static void Convert()
 		{
 			int[] src = {1,2,3,4};
 			List<int> dst = new List<int>(Util.Conv(src, i=>i*2));
 			for (int i = 0; i != src.Length; ++i) Assert.AreEqual(dst[i], 2*src[i]);
 		}
-			[Test] public static void TestUtils_ToFromByteArray()
+			[Test] public static void ToFromByteArray()
 		{
 			const ulong num = 12345678910111213;
 			byte[] bytes = Util.ToBytes(num);
 			Assert.AreEqual(8, bytes.Length);
 			Util.FromBytes<ulong>(bytes);
 		}
-			[Test] public static void TestUtils_MemberName()
-		{
-			Assert.AreEqual("X", Util<Point>.MemberName(p=>p.X));
-			Assert.AreEqual("BaseStream", Util<StreamWriter>.MemberName(s=>s.BaseStream));
-		}
-			[Test] public static void TestUtils_ToFromXml()
+			[Test] public static void ToFromXml()
 			{
-				var x1 = new XmlableType{Int = 1, String = "2", Point = new Point(3,4)};
-				var xml = Util<XmlableType>.ToXml(x1, true);
-				var x2 = Util<XmlableType>.FromXml(xml);
+				var x1 = new SerialisableType{Int = 1, String = "2", Point = new Point(3,4), EEnum = SerialisableType.SomeEnum.Two, Data = new[]{1,2,3,4}};
+				var xml = Util<SerialisableType>.ToXml(x1, true);
+				var x2 = Util<SerialisableType>.FromXml(xml);
 				Assert.AreEqual(x1.Int, x2.Int);
 				Assert.AreEqual(x1.String, x2.String);
 				Assert.AreEqual(x1.Point, x2.Point);
+				Assert.AreEqual(x1.EEnum, x2.EEnum);
+				Assert.IsTrue(x1.Data.SequenceEqual(x2.Data));
 			}
-			[Test] public static void TestUtils_PrettySize()
+			[Test] public static void ToFromBinary()
+			{
+				var x1 = new SerialisableType{Int = 1, String = "2", Point = new Point(3,4), EEnum = SerialisableType.SomeEnum.Two, Data = new[]{1,2,3,4}};
+				var xml = Util<SerialisableType>.ToBlob(x1);
+				var x2 = Util<SerialisableType>.FromBlob(xml);
+				Assert.AreEqual(x1.Int, x2.Int);
+				Assert.AreEqual(x1.String, x2.String);
+				Assert.AreEqual(x1.Point, x2.Point);
+				Assert.AreEqual(x1.EEnum, x2.EEnum);
+				Assert.IsTrue(x1.Data.SequenceEqual(x2.Data));
+			}
+			[Test] public static void PrettySize()
 			{
 				Func<long,string> pretty = size => { return Util.PrettySize(size, true, 1) + " " + Util.PrettySize(size, false, 1); };
 

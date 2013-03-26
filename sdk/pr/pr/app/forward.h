@@ -53,6 +53,7 @@
 #include "pr/common/windows_com.h"
 #include "pr/common/keystate.h"
 #include "pr/common/colour.h"
+#include "pr/common/log.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/stringconversion.h"
 #include "pr/str/prstring.h"
@@ -64,6 +65,8 @@
 #include "pr/gui/recent_files.h"
 #include "pr/script/script_forward.h"
 #include "pr/renderer11/renderer.h"
+#include "pr/threads/thread.h"
+#include "pr/threads/thread_pool.h"
 
 namespace pr
 {

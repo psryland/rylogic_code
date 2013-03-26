@@ -34,12 +34,24 @@
 			this.m_btn_browse_adb = new System.Windows.Forms.Button();
 			this.m_listbox_devices = new System.Windows.Forms.ListBox();
 			this.label2 = new System.Windows.Forms.Label();
-			this.textBox2 = new System.Windows.Forms.TextBox();
+			this.m_edit_adb_command = new System.Windows.Forms.TextBox();
 			this.m_lbl_logcat_command = new System.Windows.Forms.Label();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_group = new System.Windows.Forms.GroupBox();
+			this.m_listbox_log_buffers = new System.Windows.Forms.ListBox();
+			this.m_lbl_log_buffers = new System.Windows.Forms.Label();
+			this.m_btn_browse_output_file = new System.Windows.Forms.Button();
+			this.m_edit_output_file = new System.Windows.Forms.TextBox();
+			this.m_check_capture_to_log = new System.Windows.Forms.CheckBox();
+			this.m_btn_refresh = new System.Windows.Forms.Button();
+			this.m_text_adb_status = new System.Windows.Forms.Label();
+			this.m_grid_filterspec = new System.Windows.Forms.DataGridView();
+			this.m_lbl_filterspec = new System.Windows.Forms.Label();
+			this.m_combo_log_format = new System.Windows.Forms.ComboBox();
+			this.m_lbl_log_format = new System.Windows.Forms.Label();
 			this.m_group.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_filterspec)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// m_edit_adb_fullpath
@@ -48,7 +60,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_adb_fullpath.Location = new System.Drawing.Point(63, 12);
 			this.m_edit_adb_fullpath.Name = "m_edit_adb_fullpath";
-			this.m_edit_adb_fullpath.Size = new System.Drawing.Size(300, 20);
+			this.m_edit_adb_fullpath.Size = new System.Drawing.Size(367, 20);
 			this.m_edit_adb_fullpath.TabIndex = 0;
 			// 
 			// label1
@@ -63,7 +75,7 @@
 			// m_btn_browse_adb
 			// 
 			this.m_btn_browse_adb.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_browse_adb.Location = new System.Drawing.Point(369, 10);
+			this.m_btn_browse_adb.Location = new System.Drawing.Point(436, 10);
 			this.m_btn_browse_adb.Name = "m_btn_browse_adb";
 			this.m_btn_browse_adb.Size = new System.Drawing.Size(40, 23);
 			this.m_btn_browse_adb.TabIndex = 2;
@@ -75,9 +87,10 @@
 			this.m_listbox_devices.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_listbox_devices.FormattingEnabled = true;
+			this.m_listbox_devices.IntegralHeight = false;
 			this.m_listbox_devices.Location = new System.Drawing.Point(9, 32);
 			this.m_listbox_devices.Name = "m_listbox_devices";
-			this.m_listbox_devices.Size = new System.Drawing.Size(125, 173);
+			this.m_listbox_devices.Size = new System.Drawing.Size(125, 188);
 			this.m_listbox_devices.TabIndex = 3;
 			// 
 			// label2
@@ -85,25 +98,25 @@
 			this.label2.AutoSize = true;
 			this.label2.Location = new System.Drawing.Point(6, 16);
 			this.label2.Name = "label2";
-			this.label2.Size = new System.Drawing.Size(49, 13);
+			this.label2.Size = new System.Drawing.Size(104, 13);
 			this.label2.TabIndex = 4;
-			this.label2.Text = "Devices:";
+			this.label2.Text = "Connected Devices:";
 			// 
-			// textBox2
+			// m_edit_adb_command
 			// 
-			this.textBox2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+			this.m_edit_adb_command.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.textBox2.Location = new System.Drawing.Point(12, 280);
-			this.textBox2.Multiline = true;
-			this.textBox2.Name = "textBox2";
-			this.textBox2.Size = new System.Drawing.Size(397, 52);
-			this.textBox2.TabIndex = 5;
+			this.m_edit_adb_command.Location = new System.Drawing.Point(12, 297);
+			this.m_edit_adb_command.Multiline = true;
+			this.m_edit_adb_command.Name = "m_edit_adb_command";
+			this.m_edit_adb_command.Size = new System.Drawing.Size(464, 52);
+			this.m_edit_adb_command.TabIndex = 5;
 			// 
 			// m_lbl_logcat_command
 			// 
 			this.m_lbl_logcat_command.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_lbl_logcat_command.AutoSize = true;
-			this.m_lbl_logcat_command.Location = new System.Drawing.Point(12, 264);
+			this.m_lbl_logcat_command.Location = new System.Drawing.Point(12, 281);
 			this.m_lbl_logcat_command.Name = "m_lbl_logcat_command";
 			this.m_lbl_logcat_command.Size = new System.Drawing.Size(93, 13);
 			this.m_lbl_logcat_command.TabIndex = 6;
@@ -113,7 +126,7 @@
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(253, 338);
+			this.m_btn_ok.Location = new System.Drawing.Point(320, 355);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 7;
@@ -124,7 +137,7 @@
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(334, 338);
+			this.m_btn_cancel.Location = new System.Drawing.Point(401, 355);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_cancel.TabIndex = 8;
@@ -136,13 +149,137 @@
 			this.m_group.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_group.Controls.Add(this.m_lbl_log_format);
+			this.m_group.Controls.Add(this.m_combo_log_format);
+			this.m_group.Controls.Add(this.m_lbl_filterspec);
+			this.m_group.Controls.Add(this.m_grid_filterspec);
+			this.m_group.Controls.Add(this.m_listbox_log_buffers);
+			this.m_group.Controls.Add(this.m_lbl_log_buffers);
+			this.m_group.Controls.Add(this.m_btn_browse_output_file);
+			this.m_group.Controls.Add(this.m_edit_output_file);
+			this.m_group.Controls.Add(this.m_check_capture_to_log);
 			this.m_group.Controls.Add(this.m_listbox_devices);
 			this.m_group.Controls.Add(this.label2);
-			this.m_group.Location = new System.Drawing.Point(12, 39);
+			this.m_group.Location = new System.Drawing.Point(12, 47);
 			this.m_group.Name = "m_group";
-			this.m_group.Size = new System.Drawing.Size(396, 222);
+			this.m_group.Size = new System.Drawing.Size(463, 226);
 			this.m_group.TabIndex = 9;
 			this.m_group.TabStop = false;
+			// 
+			// m_listbox_log_buffers
+			// 
+			this.m_listbox_log_buffers.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_listbox_log_buffers.FormattingEnabled = true;
+			this.m_listbox_log_buffers.IntegralHeight = false;
+			this.m_listbox_log_buffers.Location = new System.Drawing.Point(140, 32);
+			this.m_listbox_log_buffers.Name = "m_listbox_log_buffers";
+			this.m_listbox_log_buffers.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
+			this.m_listbox_log_buffers.Size = new System.Drawing.Size(61, 104);
+			this.m_listbox_log_buffers.TabIndex = 15;
+			// 
+			// m_lbl_log_buffers
+			// 
+			this.m_lbl_log_buffers.AutoSize = true;
+			this.m_lbl_log_buffers.Location = new System.Drawing.Point(137, 16);
+			this.m_lbl_log_buffers.Name = "m_lbl_log_buffers";
+			this.m_lbl_log_buffers.Size = new System.Drawing.Size(64, 13);
+			this.m_lbl_log_buffers.TabIndex = 14;
+			this.m_lbl_log_buffers.Text = "Log Buffers:";
+			// 
+			// m_btn_browse_output_file
+			// 
+			this.m_btn_browse_output_file.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_browse_output_file.Location = new System.Drawing.Point(417, 197);
+			this.m_btn_browse_output_file.Name = "m_btn_browse_output_file";
+			this.m_btn_browse_output_file.Size = new System.Drawing.Size(40, 23);
+			this.m_btn_browse_output_file.TabIndex = 13;
+			this.m_btn_browse_output_file.Text = "...";
+			this.m_btn_browse_output_file.UseVisualStyleBackColor = true;
+			// 
+			// m_edit_output_file
+			// 
+			this.m_edit_output_file.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_edit_output_file.Location = new System.Drawing.Point(140, 199);
+			this.m_edit_output_file.Name = "m_edit_output_file";
+			this.m_edit_output_file.Size = new System.Drawing.Size(271, 20);
+			this.m_edit_output_file.TabIndex = 6;
+			// 
+			// m_check_capture_to_log
+			// 
+			this.m_check_capture_to_log.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_check_capture_to_log.AutoSize = true;
+			this.m_check_capture_to_log.Location = new System.Drawing.Point(140, 176);
+			this.m_check_capture_to_log.Name = "m_check_capture_to_log";
+			this.m_check_capture_to_log.Size = new System.Drawing.Size(156, 17);
+			this.m_check_capture_to_log.TabIndex = 5;
+			this.m_check_capture_to_log.Text = "Capture logcat output to file";
+			this.m_check_capture_to_log.UseVisualStyleBackColor = true;
+			// 
+			// m_btn_refresh
+			// 
+			this.m_btn_refresh.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_btn_refresh.Location = new System.Drawing.Point(15, 355);
+			this.m_btn_refresh.Name = "m_btn_refresh";
+			this.m_btn_refresh.Size = new System.Drawing.Size(75, 23);
+			this.m_btn_refresh.TabIndex = 10;
+			this.m_btn_refresh.Text = "Refresh";
+			this.m_btn_refresh.UseVisualStyleBackColor = true;
+			// 
+			// m_text_adb_status
+			// 
+			this.m_text_adb_status.AutoSize = true;
+			this.m_text_adb_status.ForeColor = System.Drawing.SystemColors.ControlDark;
+			this.m_text_adb_status.Location = new System.Drawing.Point(69, 36);
+			this.m_text_adb_status.Name = "m_text_adb_status";
+			this.m_text_adb_status.Size = new System.Drawing.Size(175, 13);
+			this.m_text_adb_status.TabIndex = 12;
+			this.m_text_adb_status.Text = "Android Debug Bridge version 0.0.0";
+			this.m_text_adb_status.Visible = false;
+			// 
+			// m_grid_filterspec
+			// 
+			this.m_grid_filterspec.AllowUserToResizeRows = false;
+			this.m_grid_filterspec.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_grid_filterspec.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid_filterspec.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid_filterspec.Location = new System.Drawing.Point(210, 32);
+			this.m_grid_filterspec.Name = "m_grid_filterspec";
+			this.m_grid_filterspec.RowHeadersWidth = 24;
+			this.m_grid_filterspec.Size = new System.Drawing.Size(247, 104);
+			this.m_grid_filterspec.TabIndex = 16;
+			// 
+			// m_lbl_filterspec
+			// 
+			this.m_lbl_filterspec.AutoSize = true;
+			this.m_lbl_filterspec.Location = new System.Drawing.Point(207, 16);
+			this.m_lbl_filterspec.Name = "m_lbl_filterspec";
+			this.m_lbl_filterspec.Size = new System.Drawing.Size(65, 13);
+			this.m_lbl_filterspec.TabIndex = 17;
+			this.m_lbl_filterspec.Text = "Filter Specs:";
+			// 
+			// m_combo_log_format
+			// 
+			this.m_combo_log_format.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_combo_log_format.FormattingEnabled = true;
+			this.m_combo_log_format.Location = new System.Drawing.Point(210, 147);
+			this.m_combo_log_format.Name = "m_combo_log_format";
+			this.m_combo_log_format.Size = new System.Drawing.Size(247, 21);
+			this.m_combo_log_format.TabIndex = 18;
+			// 
+			// m_lbl_log_format
+			// 
+			this.m_lbl_log_format.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_lbl_log_format.AutoSize = true;
+			this.m_lbl_log_format.Location = new System.Drawing.Point(140, 150);
+			this.m_lbl_log_format.Name = "m_lbl_log_format";
+			this.m_lbl_log_format.Size = new System.Drawing.Size(63, 13);
+			this.m_lbl_log_format.TabIndex = 19;
+			this.m_lbl_log_format.Text = "Log Format:";
 			// 
 			// AndroidLogcatUI
 			// 
@@ -150,12 +287,14 @@
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(421, 373);
+			this.ClientSize = new System.Drawing.Size(488, 390);
+			this.Controls.Add(this.m_text_adb_status);
+			this.Controls.Add(this.m_btn_refresh);
 			this.Controls.Add(this.m_group);
 			this.Controls.Add(this.m_btn_cancel);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_lbl_logcat_command);
-			this.Controls.Add(this.textBox2);
+			this.Controls.Add(this.m_edit_adb_command);
 			this.Controls.Add(this.m_btn_browse_adb);
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.m_edit_adb_fullpath);
@@ -164,6 +303,7 @@
 			this.Text = "Android Logcat";
 			this.m_group.ResumeLayout(false);
 			this.m_group.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_filterspec)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
@@ -176,10 +316,21 @@
 		private System.Windows.Forms.Button m_btn_browse_adb;
 		private System.Windows.Forms.ListBox m_listbox_devices;
 		private System.Windows.Forms.Label label2;
-		private System.Windows.Forms.TextBox textBox2;
+		private System.Windows.Forms.TextBox m_edit_adb_command;
 		private System.Windows.Forms.Label m_lbl_logcat_command;
 		private System.Windows.Forms.Button m_btn_ok;
 		private System.Windows.Forms.Button m_btn_cancel;
 		private System.Windows.Forms.GroupBox m_group;
+		private System.Windows.Forms.Button m_btn_refresh;
+		private System.Windows.Forms.Label m_text_adb_status;
+		private System.Windows.Forms.CheckBox m_check_capture_to_log;
+		private System.Windows.Forms.TextBox m_edit_output_file;
+		private System.Windows.Forms.Button m_btn_browse_output_file;
+		private System.Windows.Forms.Label m_lbl_log_buffers;
+		private System.Windows.Forms.ListBox m_listbox_log_buffers;
+		private System.Windows.Forms.Label m_lbl_filterspec;
+		private System.Windows.Forms.DataGridView m_grid_filterspec;
+		private System.Windows.Forms.Label m_lbl_log_format;
+		private System.Windows.Forms.ComboBox m_combo_log_format;
 	}
 }

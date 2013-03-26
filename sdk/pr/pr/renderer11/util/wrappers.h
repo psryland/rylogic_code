@@ -172,9 +172,9 @@ namespace pr
 			void InitDefaults()
 			{
 				Filter         = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-				AddressU       = D3D11_TEXTURE_ADDRESS_WRAP;
-				AddressV       = D3D11_TEXTURE_ADDRESS_WRAP;
-				AddressW       = D3D11_TEXTURE_ADDRESS_WRAP;
+				AddressU       = D3D11_TEXTURE_ADDRESS_CLAMP;
+				AddressV       = D3D11_TEXTURE_ADDRESS_CLAMP;
+				AddressW       = D3D11_TEXTURE_ADDRESS_CLAMP;
 				MipLODBias     = 0.0f;
 				MaxAnisotropy  = 1;
 				ComparisonFunc = D3D11_COMPARISON_ALWAYS;
@@ -206,6 +206,37 @@ namespace pr
 			}
 		};
 		
+		// Rasterizer description (render states)
+		struct RasterizerDesc :D3D11_RASTERIZER_DESC
+		{
+			RasterizerDesc
+			(
+				D3D11_FILL_MODE fill          = D3D11_FILL_SOLID,
+				D3D11_CULL_MODE cull          = D3D11_CULL_BACK,
+				bool depth_clip_enable        = true,
+				bool front_ccw                = true,
+				bool multisample_enable       = false,
+				bool antialiased_line_enable  = false,
+				bool scissor_enable           = false,
+				int depth_bias                = 0,
+				float depth_bias_clamp        = 0.0f,
+				float slope_scaled_depth_bias = 0.0f
+			)
+			:D3D11_RASTERIZER_DESC()
+			{
+				FillMode              = fill;
+				CullMode              = cull;
+				FrontCounterClockwise = front_ccw;
+				DepthBias             = depth_bias;
+				MultisampleEnable     = multisample_enable;
+				SlopeScaledDepthBias  = slope_scaled_depth_bias;
+				DepthClipEnable       = depth_clip_enable;
+				ScissorEnable         = scissor_enable;
+				DepthBiasClamp        = depth_bias_clamp;
+				AntialiasedLineEnable = antialiased_line_enable;
+			}
+		};
+
 		// Shader resource view
 		struct ShaderResViewDesc :D3D11_SHADER_RESOURCE_VIEW_DESC
 		{

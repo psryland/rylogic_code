@@ -47,7 +47,7 @@ namespace pr
 			static CAppModule s_module;
 			return s_module;
 		}
-		
+
 		// Custom apps must implement this function.
 		// Note: they can simply call the template version below for default creation
 		std::shared_ptr<ATL::CWindow> CreateGUI(LPTSTR lpstrCmdLine);
@@ -58,12 +58,12 @@ namespace pr
 			if (gui->Create(0) == 0) throw pr::Exception<HRESULT>(E_FAIL, "Main window creation failed");
 			return ptr;
 		}
-		
+
 		// This type is a default and example of a setup object for the app.
 		// It can be subclassed, or used directly
 		struct DefaultSetup
 		{
-			// Returns a type contain information needed to initialise the UserSettings type in Main
+			// Returns a type containing information needed to initialise the UserSettings type in Main
 			// Note: in this case the user settings type must have a constructor taking a void* argument
 			virtual void* UserSettings(HWND) { return 0; }
 			

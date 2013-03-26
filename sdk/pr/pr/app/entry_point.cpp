@@ -9,6 +9,7 @@
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
 	int nRet;
+	std::string err_msg;
 	try
 	{
 		// CoInitialise COM
@@ -35,20 +36,33 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		// Run the app message pump
 		nRet = msg_loop.Run();
 	}
-	catch (pr::Exception<HRESULT> const& ex)
+	catch (std::exception const& ex)
 	{
 		DWORD last_error = GetLastError();
 		HRESULT res = HRESULT_FROM_WIN32(last_error);
-		std::string err = ex.m_msg;
-		err += pr::Fmt("\nCode: %X - %s", res, pr::HrMsg(res).c_str());
-		::MessageBoxA(0, err.c_str(), "Error During Application Startup", MB_OK|MB_ICONERROR);
+		err_msg = ex.what();
+		if (res != S_OK) err_msg += pr::Fmt("\nLast Error Code: %X - %s", res, pr::HrMsg(res).c_str());
 		nRet = -1;
 	}
 	catch (...)
 	{
-		::MessageBoxA(0, "Shutting down due to an unknown exception", "Application Error", MB_OK|MB_ICONERROR);
+		err_msg = "Shutting down due to an unknown exception";
 		nRet = -1;
 	}
+	
+	if (nRet == -1)
+	{
+		struct ShowMB :pr::threads::Thread<ShowMB>
+		{
+			void Main(void* ctx) { ::MessageBoxA(0, static_cast<char const*>(ctx), "Application Error", MB_OK|MB_ICONERROR); }
+			using base::Start;
+			using base::Join;
+		};
+		ShowMB show_mb;
+		show_mb.Start((void*)err_msg.c_str());
+		show_mb.Join();
+	}
+		
 	pr::app::Module().RemoveMessageLoop();
 	pr::app::Module().Term();
 	return nRet;

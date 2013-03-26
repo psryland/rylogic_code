@@ -59,10 +59,23 @@ namespace pr
 	
 				// Create the main app logic
 				try { m_main = new Main(static_cast<DerivedGUI&>(*this)); }
+				catch (std::exception const& ex)
+				{
+					char const* err_msg = pr::FmtS("Failed to create application\nReturned error: %s", ex.what());
+					MessageBox(err_msg, "Application Startup Error", MB_OK|MB_ICONERROR);
+					PR_LOG(Error, err_msg);
+					CloseApp(E_FAIL);
+					return E_FAIL;
+				}
 				catch (...)
 				{
-					throw;
+					char const* err_msg = pr::FmtS("Failed to create application due to an unknown exception");
+					MessageBox(err_msg, "Application Startup Error", MB_OK|MB_ICONERROR);
+					PR_LOG(Error, err_msg);
+					CloseApp(E_FAIL);
+					return E_FAIL;
 				}
+				
 				SetWindowTextW(m_hWnd, m_main->AppTitle());
 				OnTimerTick(0); // Initiate the render timer
 				return S_OK;
@@ -202,7 +215,13 @@ namespace pr
 				m_main->NavZ(delta / (float)WHEEL_DELTA);
 				return FALSE; // ie. we handled this wheel message
 			}
-			
+
+			// Key handlers
+			virtual void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+			{
+
+			}
+
 			// Message Map
 			enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100, ID_MAIN_RENDER_TIMER = 100 };
 			DECLARE_FRAME_WND_CLASS(_T("PR_APP_MAIN_GUI"), IDR_MAINFRAME);
@@ -218,6 +237,7 @@ namespace pr
 				MSG_WM_SIZING(OnSizing)
 				MSG_WM_EXITSIZEMOVE(OnExitSizeMove)
 				MSG_WM_SIZE(OnSize)
+				MSG_WM_KEYDOWN(OnKeyDown)
 				MSG_WM_LBUTTONDOWN(OnMouseDown)
 				MSG_WM_RBUTTONDOWN(OnMouseDown)
 				MSG_WM_LBUTTONUP(OnMouseUp)

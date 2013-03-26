@@ -258,7 +258,7 @@ namespace pr
 	{
 		internal static class TestStringExtensions
 		{
-			[Test] public static void TestStringExtensions()
+			[Test] public static void WordWrap()
 			{
 				//                    "123456789ABCDE"
 				const string text   = "   A long string that\nis\r\nto be word wrapped";

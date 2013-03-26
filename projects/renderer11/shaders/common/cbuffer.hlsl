@@ -68,8 +68,8 @@ struct CBufModel
 
 // Texture2D /w sampler
 #if SHADER_BUILD
-Texture2D    m_texture0 :register(t0);
-SamplerState m_tex0     :register(s0);
+Texture2D<float4> m_texture0 :register(t0);
+SamplerState      m_sampler0 :register(s0);
 #endif
 
 #endif

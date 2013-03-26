@@ -27,7 +27,7 @@ namespace pr
 			,m_dealloc(dealloc)
 			{}
 		};
-		
+
 		// An C++ standard compliant allocator that uses the client provided MemFuncs
 		template <typename T> struct Allocator :MemFuncs
 		{
@@ -58,10 +58,15 @@ namespace pr
 			void          construct (pointer p)                       { new (p) T; }
 			void          construct (pointer p, const_reference val)  { new (p) T(val); }
 			void          destroy   (pointer p)                       { if (p) p->~T(); }
-			
+			template <typename U1>             void construct(pointer p, U1 const& parm1)                  { new (p) T(parm1); }
+			template <typename U1,typename U2> void construct(pointer p, U1 const& parm1, U2 const& parm2) { new (p) T(parm1,parm2); }
+
 			// helpers
-			T*   New()        { pointer p = allocate(1); construct(p); return p; }
-			void Delete(T* p) { destroy(p); deallocate(p, 1); }
+			T*   New()                                                                  { pointer p = allocate(1); construct(p); return p; }
+			T*   New(const_reference val)                                               { pointer p = allocate(1); construct(p, val); return p; }
+			template <typename U1>             T* New(U1 const& parm1)                  { pointer p = allocate(1); construct(p, parm1); return p; }
+			template <typename U1,typename U2> T* New(U1 const& parm1, U2 const& parm2) { pointer p = allocate(1); construct(p, parm1, parm2); return p; }
+			void Delete(T* p)                                                           { destroy(p); deallocate(p, 1); }
 		};
 		template <typename T, typename U> inline bool operator == (Allocator<T> const& lhs, Allocator<U> const& rhs) { return lhs.m_alloc == rhs.m_alloc && lhs.m_dealloc == rhs.m_dealloc; }
 		template <typename T, typename U> inline bool operator != (Allocator<T> const& lhs, Allocator<U> const& rhs) { return !(lhs == rhs); }
