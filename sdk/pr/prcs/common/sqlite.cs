@@ -1,4 +1,8 @@
-﻿using System;
+﻿#if !MONOTOUCH
+#define COMPILED_LAMBDAS
+#endif
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -2346,7 +2350,7 @@ namespace pr.common
 			/// if the table has multiple primary keys</summary>
 			private readonly ColumnMetaData m_single_pk;
 
-			#if !MONOTOUCH
+			#if COMPILED_LAMBDAS
 			/// <summary>Compiled lambda method for testing two 'Type' instances as equal</summary>
 			private readonly MethodInfo m_method_equal;
 
@@ -2477,7 +2481,7 @@ namespace pr.common
 				NonAutoIncs = m_column.Where(x => !x.IsAutoInc).ToArray();
 				m_single_pk = Pks.Count() == 1 ? Pks.First() : null;
 				
-				#if !MONOTOUCH
+				#if COMPILED_LAMBDAS
 				// Initialise the generated methods for this type
 				m_method_equal = typeof(MethodGenerator<>).MakeGenericType(Type).GetMethod("Equal", BindingFlags.Static|BindingFlags.Public);
 				m_method_clone = typeof(MethodGenerator<>).MakeGenericType(Type).GetMethod("Clone", BindingFlags.Static|BindingFlags.Public);
@@ -2595,32 +2599,28 @@ namespace pr.common
 			public object Clone(object item)
 			{
 				System.Diagnostics.Debug.Assert(item.GetType() == Type, "'item' is not the correct type for this table");
-				#if MONOTOUCH
-				var clone = Factory();
-				foreach (var c in Columns)
-					c.Set(clone, c.Get(item));
-				return clone;
-				#else
+				#if COMPILED_LAMBDAS
 				return m_method_clone.Invoke(null, new[]{item});
+				#else
+				return MethodGenerator.Clone(item);
 				#endif
 			}
+			public T Clone<T>(T item) { return (T)Clone((object)item); }
 
 			/// <summary>Returns true of 'lhs' and 'rhs' are equal instances of this table type</summary>
 			public bool Equal(object lhs, object rhs)
 			{
 				System.Diagnostics.Debug.Assert(lhs.GetType() == Type, "'lhs' is not the correct type for this table");
 				System.Diagnostics.Debug.Assert(rhs.GetType() == Type, "'rhs' is not the correct type for this table");
-				#if MONOTOUCH
-				foreach (var c in Columns)
-					if (!c.Get(lhs).Equals(c.Get(rhs)))
-						return false;
-				return true;
-				#else
+				#if COMPILED_LAMBDAS
 				return (bool)m_method_equal.Invoke(null, new[]{lhs, rhs});
+				#else
+				return MethodGenerator.Equal(lhs,rhs);
 				#endif
 			}
 
 			// ReSharper disable UnusedMember.Local
+			#if COMPILED_LAMBDAS
 			/// <summary>Helper class for generating compiled lambda expressions</summary>
 			private static class MethodGenerator<T>
 			{
@@ -2649,6 +2649,27 @@ namespace pr.common
 					return Expression.Lambda<Func<T,T>>(body, p).Compile();
 				}
 			}
+			#else
+			/// <summary>Helper class for housing the runtime equivalents of the methods in MethodGenerator(T)</summary>
+			private static class MethodGenerator
+			{
+				public static bool Equal(object lhs, object rhs)
+				{
+					if (lhs.GetType() != rhs.GetType()) return false;
+					foreach (var f in AllFields(lhs.GetType(), BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
+						if (!Equals(f.GetValue(lhs), f.GetValue(rhs)))
+							return false;
+					return true;
+				}
+				public static object Clone(object obj)
+				{
+					object clone = Activator.CreateInstance(obj.GetType());
+					foreach (var f in AllFields(obj.GetType(), BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
+						f.SetValue(clone, f.GetValue(obj));
+					return clone;
+				}
+			}
+			#endif
 			// ReSharper restore UnusedMember.Local
 
 			/// <summary>Returns a table declaration string for this table</summary>
@@ -3666,6 +3687,7 @@ namespace pr
 			public class DomType5 :DomType5Base
 			{
 				public string Data { get; set; }
+				[Sqlite.Ignore] public int Tmp { get; set; }
 				public DomType5() {}
 				public DomType5(string data) { Data = data; }
 			}
@@ -4777,14 +4799,19 @@ namespace pr
 					Assert.IsTrue(o2_b != null);
 					Assert.IsTrue(ReferenceEquals(o2_a,o2_b));
 					
+					o2_b.Tmp = 5;
+					var o2_c = table.MetaData.Clone(o2_b);
+					Assert.IsTrue(!ReferenceEquals(o2_b, o2_c));
+					Assert.AreEqual(o2_b.Tmp, o2_c.Tmp);
+
 					// Check that changes to the object automatically invalidate the cache
 					obj2.Data = "Changed";
 					table.Update(obj2);
 					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
 					
-					var o2_c = table.Get<DomType5>(2);
+					var o2_d = table.Get<DomType5>(2);
 					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
-					Assert.IsTrue(table.MetaData.Equal(obj2, o2_c));
+					Assert.IsTrue(table.MetaData.Equal(obj2, o2_d));
 					
 					// Check deleting an object also removes it from the cache
 					table.Delete(obj2);
