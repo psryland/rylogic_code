@@ -8,55 +8,56 @@ echo =================
 echo.
 
 ::Load Rylogic environment variables and check version
+if [%RylogicEnv%]==[] (
+ 	echo ERROR: The 'RylogicEnv' environment variable is not set.
+	goto :error
+)
 call %RylogicEnv%
-if %RylogicEnvVersion% lss 1 (
- 	echo RylogicEnv.cmd out of date. Please update
-	goto :end
+if %RylogicEnvVersion% lss 3 (
+	echo ERROR: '%RylogicEnv%' is out of date. Please update.
+	goto :error
 )
 
 set dstdir=Q:\bin
-for %%p in (x86 x64) do call :copy_linedrawer_files %%p
-if errorlevel 1 goto :error
-goto :end
 
-::Copy subroutine
-:copy_linedrawer_files
-	setlocal
-	if errorlevel 1 goto :eof
+::Export for each platform
+for %%p in (x86 x64) do (
+	echo.
+	set platform=%%p
+	if [!platform!] == [x86] set platform=win32
 	
 	echo --------------------------------------------------
-	echo %1 Release
-	echo.
+	echo !platform! Release
 	
-	set ldrdir=linedrawer.%1
-	set bindir=..\..\obj\linedrawer\%1\release
-	if [%1]==[x86] set bindir=..\..\obj\linedrawer\win32\release
-
+	set ldrdir=linedrawer.!platform!
+	set bindir=..\..\obj\linedrawer\!platform!\release
+	
 	::ensure the directory exists and is empty
-	if not exist "%dstdir%\%ldrdir%" mkdir "%dstdir%\%ldrdir%"
-	del "%dstdir%\%ldrdir%\*.*" /Q
+	if not exist "!dstdir!\!ldrdir!" mkdir "!dstdir!\!ldrdir!"
+	del "!dstdir!\!ldrdir!\*.*" /Q
+	if errorlevel 1 goto :error
 	
-	echo Copying linedrawer files to "%dstdir%\%ldrdir%"
-	call copy "%bindir%\linedrawer.exe" "%dstdir%\%ldrdir%\" /Y /F
-	if errorlevel 1 goto :eof
+	echo Copying linedrawer files to "!dstdir!\!ldrdir!"
+	call copy "!bindir!\linedrawer.exe" "!dstdir!\!ldrdir!\" /Y /F
+	if errorlevel 1 goto :error
 
 	echo Creating zip file
-	if exist "%dstdir%\%ldrdir%.zip" del "%dstdir%\%ldrdir%.zip" /Q
-	"%zip%" a "%dstdir%\%ldrdir%.zip" "%dstdir%\%ldrdir%"
-	if errorlevel 1 goto :eof
+	if exist "!dstdir!\!ldrdir!.zip" del "!dstdir!\!ldrdir!.zip" /Q
+	"!zip!" a "!dstdir!\!ldrdir!.zip" "!dstdir!\!ldrdir!"
+	if errorlevel 1 goto :error
+)
 
-	echo.
-	endlocal
+echo.
+echo     Success.
+echo.
+ping -n 1 -w 5000 1.1.1.1 >nul
 goto :eof
 
-:end
-echo success.
-pause
-start explorer "%dstdir%"
-goto :eof
-
+::Error exit
 :error
-echo Error occurred.
+echo.
+echo     Release Failed.
+echo.
 pause
 goto :eof
 

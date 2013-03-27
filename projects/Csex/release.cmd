@@ -1,6 +1,6 @@
 ::
 :: Use:
-::   release.cmd [noexplorer]
+::   release.cmd
 @echo off
 SetLocal EnableDelayedExpansion 
 set PATH=Q:\sdk\pr\cmd\;%PATH%
@@ -21,32 +21,32 @@ if %RylogicEnvVersion% lss 3 (
 	goto :error
 )
 
-set srcdir=Q:\projects\Csex
 set dstdir=Q:\bin
+set srcdir=Q:\projects\Csex
 set symdir=Q:\local\symbols
 set bindir=%srcdir%\bin\release
 
-::Export for each platform (only x86 at the moment)
+::Export for each platform
 for %%p in (x86 x64) do (
 	echo.
 	set csexdir=csex.%%p
 	
 	::Ensure directories exist and are empty
-	if not exist "%dstdir%\%csexdir%" mkdir "%dstdir%\%csexdir%"
-	del "%dstdir%\%csexdir%\*.*" /Q
+	if not exist "!dstdir!\!csexdir!" mkdir "!dstdir!\!csexdir!"
+	del "!dstdir!\!csexdir!\*.*" /Q
 	if errorlevel 1 goto :error
-	if not exist "%symdir%\%csexdir%" mkdir "%symdir%\%csexdir%"
-	del "%symdir%\%csexdir%\*.*" /Q
+	if not exist "!symdir!\!csexdir!" mkdir "!symdir!\!csexdir!"
+	del "!symdir!\!csexdir!\*.*" /Q
 	if errorlevel 1 goto :error
 	
-	echo Copying files to "%dstdir%\%csexdir%"
-	call copy "%bindir%\csex.exe" "%dstdir%\%csexdir%\" /Y /F
+	echo Copying files to "!dstdir!\!csexdir!"
+	call copy "!bindir!\csex.exe" "!dstdir!\!csexdir!\" /Y /F
 	if errorlevel 1 goto :error
-	call copy "%bindir%\csex.pdb" "%symdir%\%csexdir%\" /Y /F
+	call copy "!bindir!\csex.pdb" "!symdir!\!csexdir!\" /Y /F
 	if errorlevel 1 goto :error
-	call copy "%bindir%\pr.dll" "%dstdir%\%csexdir%\" /Y /F
+	call copy "!bindir!\pr.dll" "!dstdir!\!csexdir!\" /Y /F
 	if errorlevel 1 goto :error
-	call copy "%bindir%\pr.pdb" "%symdir%\%csexdir%\" /Y /F
+	call copy "!bindir!\pr.pdb" "!symdir!\!csexdir!\" /Y /F
 	if errorlevel 1 goto :error
 )
 
