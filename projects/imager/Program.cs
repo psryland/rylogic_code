@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using pr.extn;
 using pr.util;
 
 namespace imager
@@ -19,7 +20,7 @@ namespace imager
 			try
 			{
 				
-				Log.Info(null, "args: {0}", string.Join(" ",args));
+				Log.Info(null, "args: {0}".Fmt(string.Join(" ",args)));
 
 				// Parse screen saver arguments
 				if (args.Length >= 1)
