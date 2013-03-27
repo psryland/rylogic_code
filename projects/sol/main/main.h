@@ -43,7 +43,8 @@ namespace sol
 		//,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/sky1/skybox-clouds-few-noon.dds"), pr::app::Skybox::FiveSidedCube)
 		,m_gimble(m_rdr)
 		{
-
+			// Enable wireframe
+			//m_scene.m_rs = m_rdr.m_rs_mgr.RasterState(pr::rdr::ERasterState::WireCullNone);
 		}
 	};
 	

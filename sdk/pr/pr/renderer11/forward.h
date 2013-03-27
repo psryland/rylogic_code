@@ -87,7 +87,7 @@ namespace pr
 		typedef pr::uint8  byte;
 //		typedef pr::uint8  ViewportId;
 //		typedef pr::uint16 Index;
-		typedef size_t     RdrId;
+		typedef uintptr_t  RdrId;
 		typedef pr::uint32 SortKey;
 		typedef pr::uint16 SortKeyId;
 		RdrId const AutoId = ~0U; // A special value for automatically generating an Id

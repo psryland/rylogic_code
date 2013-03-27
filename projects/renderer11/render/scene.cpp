@@ -139,7 +139,7 @@ void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear
 		dc->DrawIndexed(
 			UINT(nugget.m_irange.size()),
 			UINT(nugget.m_irange.m_begin),
-			UINT(nugget.m_vrange.m_begin));
+			0);
 	}
 }
 

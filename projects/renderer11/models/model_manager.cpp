@@ -34,7 +34,7 @@ pr::rdr::ModelBufferPtr pr::rdr::ModelManager::CreateModelBuffer(MdlSettings con
 		mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 		mb->m_vb.m_used.set(0, 0);
 		mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
-		PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb, pr::FmtS("model buffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
+		PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_vb, pr::FmtS("model vbuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 	}
 	{// Create an index buffer
 		SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
@@ -42,7 +42,7 @@ pr::rdr::ModelBufferPtr pr::rdr::ModelManager::CreateModelBuffer(MdlSettings con
 		mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 		mb->m_ib.m_used.set(0, 0);
 		mb->m_ib.m_format = settings.m_ib.Format;
-		PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib, pr::FmtS("model buffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
+		PR_EXPAND(PR_DBG_RDR, NameResource(mb->m_ib, pr::FmtS("model ibuffer <V:%d,I:%d>", settings.m_vb.ElemCount, settings.m_ib.ElemCount)));
 	}
 	return mb;
 }

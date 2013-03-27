@@ -17,35 +17,10 @@ namespace pr
 		// with enum values don't generate signed/unsigned warnings
 		typedef int HashValue;
 		typedef long long HashValue64;
-		typedef unsigned char uchar;
+		typedef unsigned char uint8;
 		typedef unsigned int  uint;
 		typedef unsigned long long uint64;
-		
-		// Termination predicates
-		struct Sentinal
-		{
-			char m_sentinal;
-			Sentinal(char sentinal = 0) :m_sentinal(sentinal) {}
-			bool operator ()(char ch) const { return ch == m_sentinal; }
-		};
-		struct Delimiters
-		{
-			char const* m_delim; // The null terminated list of delimiters
-			Delimiters(char const* delim) :m_delim(delim) {}
-			bool operator ()(char ch) const { char const* s = m_delim; for (; *s && *s != ch; ++s) {} return *s != 0; }
-		};
-		
-		// Adapters
-		template <typename titer> struct AdpLower
-		{
-			titer m_src;
-			AdpLower(titer src) :m_src(src) {}
-			AdpLower& operator ++()         { ++m_src; return *this; }
-			char      operator * () const   { return static_cast<char>(::tolower(*m_src)); }
-		};
-		template <typename titer>           inline AdpLower<titer>  Lower(titer src)       { return AdpLower<titer>(src); }
-		template <typename tchar, size_t N> inline AdpLower<tchar*> Lower(tchar (&src)[N]) { return AdpLower<tchar*>(src); }
-		
+
 		// CRC32 table - the polynomial '0x1EDC6F41' is chosen because that's what the intrinsics are based on
 		// Hopefully, one day I can optionally compile in the intrinsic versions without changing the generated hashes
 		template <typename Uint, Uint Poly> struct CRCTable
@@ -64,87 +39,142 @@ namespace pr
 		};
 		typedef CRCTable<uint   , 0x1EDC6F41U>   CRCTable32;
 		typedef CRCTable<uint64 , 0x1EDC6F41ULL> CRCTable64;
-		
+
 		// Convert a contiguous block of bytes to a hash
 		inline HashValue HashData(void const* data, size_t size, HashValue hash = -1)
 		{
 			uint const*  table = CRCTable32::Data();
-			uchar const* src   = static_cast<uchar const*>(data);
+			uint8 const* src   = static_cast<uint8 const*>(data);
 			uint&        h     = reinterpret_cast<uint&>  (hash);
 			for (; size--; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
 			return hash;
 		}
-		
+
 		// Convert a contiguous block of bytes into a 64bit hash
 		inline HashValue64 HashData64(void const* data, size_t size, HashValue64 hash = -1LL)
 		{
 			uint64 const* table = CRCTable64::Data();
-			uchar const*  src   = static_cast<uchar const*>(data);
+			uint8 const*  src   = static_cast<uint8 const*>(data);
 			uint64&       h     = reinterpret_cast<uint64&>(hash);
 			for (; size--; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
 			return hash;
 		}
-		
-		// Hash a range of bytes
-		template <typename Iter> inline HashValue HashC(Iter first, Iter last, HashValue hash = -1)
+
+		// Convert a range of types to a hash.
+		// Note *src is assumed to be an arbitrary sized contiguous object
+		template <typename Iter> inline HashValue Hash(Iter& first, Iter last, HashValue hash = -1)
 		{
 			uint const* table = CRCTable32::Data();
 			uint&       h     = reinterpret_cast<uint&>(hash);
-			for (; !(first == last); ++first) { h = table[(h ^ *first) & 0xff] ^ (h >> 8); }
+			for (; first != last; ++first)
+			{
+				// hash over the range of bytes pointed to by *src
+				uint8 const* s = reinterpret_cast<uint8 const*>(first);
+				uint8 const* s_end = s + sizeof(*first);
+				for (; s != s_end; ++s)
+					h = table[(h ^ *s) & 0xff] ^ (h >> 8);
+			}
 			return hash;
 		}
-		
-		// Convert a character source into a hash value. Reads from '*src' until 'term(*src)' is true
+
+		// Convert a range of types to a hash.
+		// Note *src is assumed to be an arbitrary sized contiguous object
+		template <typename Iter> inline HashValue HashC(Iter first, Iter last, HashValue hash = -1)
+		{
+			return Hash(first, last, hash);
+		}
+
+		// Convert a collection of types terminated by 'term' to a hash.
+		// Note *src is assumed to be an arbitrary sized contiguous object
 		template <typename Iter, typename Term> inline HashValue Hash(Iter& src, Term term, HashValue hash = -1)
 		{
 			uint const* table = CRCTable32::Data();
 			uint&       h     = reinterpret_cast<uint&>(hash);
-			for (; !term(*src); ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
+			for (; *src != term; ++src)
+			{
+				// hash over the range of bytes pointed to by *src
+				Term const& elem = *src;
+				uint8 const* s = reinterpret_cast<uint8 const*>(&elem);
+				uint8 const* s_end = s + sizeof(Term);
+				for (; s != s_end; ++s)
+					h = table[(h ^ *s) & 0xff] ^ (h >> 8);
+			}
 			return hash;
 		}
-		template <typename Iter, typename Term> inline HashValue HashC(Iter src, Term term, HashValue hash = -1)
+
+		// Convert a collection of types terminated by 'term' to a hash.
+		// Note *src is assumed to be an arbitrary sized contiguous object
+		template <typename Iter, typename Term> inline HashValue HashC(Iter& src, Term term, HashValue hash = -1)
 		{
-			return Hash<Iter, Term>(src, term, hash);
+			return Hash(src, term, hash);
 		}
-		
-		// Convert the input to lower case before creating a hash
-		template <typename Iter, typename Term> inline HashValue HashLwr(Iter src, Term term, HashValue hash = -1)
+
+		// Hash a char string
+		inline HashValue Hash(char const*& src, char term = 0, HashValue hash = -1)
 		{
-			return HashC(Lower(src), term, hash);
+			uint const* table = CRCTable32::Data();
+			uint&       h     = reinterpret_cast<uint&>(hash);
+			for (; *src != term; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
+			return hash;
 		}
-		template <typename Iter> inline HashValue HashLwr(Iter src, HashValue hash = -1)
+
+		// Hash a char string
+		inline HashValue HashC(char const* src, char term = 0, HashValue hash = -1)
 		{
-			return HashC(Lower(src), Sentinal(), hash);
+			return Hash(src, term, hash);
 		}
-		
-		// Read from 'src' until it returns null
-		template <typename Iter> inline HashValue Hash(Iter& src, HashValue hash = -1)
+
+		// Hash a wchar_t string
+		inline HashValue Hash(wchar_t const*& src, wchar_t term = 0, HashValue hash = -1)
 		{
-			return Hash<Iter, Sentinal>(src, Sentinal(), hash);
+			uint const* table = CRCTable32::Data();
+			uint&       h     = reinterpret_cast<uint&>(hash);
+			for (; *src != term; ++src)
+			{
+				uint8 const* s = reinterpret_cast<uint8 const*>(src);
+				h = table[(h ^ *s++) & 0xff] ^ (h >> 8);
+				h = table[(h ^ *s++) & 0xff] ^ (h >> 8);
+			}
+			return hash;
 		}
-		template <typename Iter> inline HashValue HashC(Iter src, HashValue hash = -1)
+
+		// Hash a wchar_t string
+		inline HashValue HashC(wchar_t const* src, wchar_t term = 0, HashValue hash = -1)
 		{
-			return Hash<Iter, Sentinal>(src, Sentinal(), hash);
+			return Hash(src, term, hash);
 		}
-		
+
+		// Hash a char string converting it's characters to lower case first
+		inline HashValue HashLwr(char const* src, char term = 0, HashValue hash = -1)
+		{
+			struct Lowerer
+			{
+				char const* m_src;
+				Lowerer(char const* src) :m_src(src) {}
+				Lowerer& operator ++()         { ++m_src; return *this; }
+				char     operator * () const   { return static_cast<char>(::tolower(*m_src)); }
+			} lowerer(src);
+			return Hash(lowerer, term, hash);
+		}
+
 		// http://www.azillionmonkeys.com/qed/hash.html, © Copyright 2004-2008 by Paul Hsieh
 		inline uint FastHash(void const* data, uint len, uint hash)
 		{
 			// Local function for reading 16bit chunks of 'data'
-			struct This { static unsigned short Read16bits(uchar const* d)
+			struct This { static unsigned short Read16bits(uint8 const* d)
 			{
 				#if (defined(__GNUC__) && defined(__i386__)) || defined(__WATCOMC__) || defined(_MSC_VER) || defined (__BORLANDC__) || defined (__TURBOC__)
 				return *reinterpret_cast<unsigned short const*>(d);
 				#else
-				return (static_cast<uint>(reinterpret_cast<uchar const*>(d)[1]) << 8) +
-						static_cast<uint>(reinterpret_cast<uchar const*>(d)[0]);
+				return (static_cast<uint>(reinterpret_cast<uint8 const*>(d)[1]) << 8) +
+						static_cast<uint>(reinterpret_cast<uint8 const*>(d)[0]);
 				#endif
 			}};
 
 			if (len == 0 || data == 0)
 				return 0;
 
-			uchar const* ptr = static_cast<uchar const*>(data);
+			uint8 const* ptr = static_cast<uint8 const*>(data);
 			uint tmp;
 			uint rem = len & 3;
 			len >>= 2;

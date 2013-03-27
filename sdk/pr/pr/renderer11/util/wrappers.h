@@ -77,7 +77,7 @@ namespace pr
 			DXGI_FORMAT Format;    // The buffer format
 			
 			IBufferDesc() :BufferDesc() {}
-			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_VERTEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_INDEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
 			:BufferDesc(count, data, usage, bind_flags, cpu_access, res_flag)
 			,Format(format)
 			{}

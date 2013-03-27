@@ -219,7 +219,9 @@ namespace pr
 			// Key handlers
 			virtual void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			{
-
+				(void)nChar;
+				(void)nRepCnt;
+				(void)nFlags;
 			}
 
 			// Message Map

@@ -89,16 +89,11 @@ namespace pr
 				};
 				pr::uint16 const indices[] = 
 				{
-					0,  1,  2,
-					0,  2,  3,
-					0,  4,  5,
-					0,  5,  1,
-					1,  6,  7,
-					1,  7,  2,
-					2,  8,  9,
-					2,  9,  3,
-					3, 10, 11,
-					3, 11,  0,
+					0,  1,  2,  0,  2,  3,
+					0,  4,  5,  0,  5,  1,
+					1,  6,  7,  1,  7,  2,
+					2,  8,  9,  2,  9,  3,
+					3, 10, 11,  3, 11,  0,
 				};
 				
 				// Create the skybox model
@@ -113,8 +108,6 @@ namespace pr
 				// Load the skybox texture
 				pr::rdr::TextureDesc desc;
 				method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, desc, texpath.c_str());
-				//m_tex[0]->m_addr_mode.m_addrU = D3DTADDRESS_CLAMP;
-				//m_tex[0]->m_addr_mode.m_addrV = D3DTADDRESS_CLAMP;
 				
 				// Create the render nugget
 				m_inst.m_model->CreateNugget(method, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -156,12 +149,12 @@ namespace pr
 				};
 				pr::uint16 const indices[] =
 				{
-					 0, 1, 2,  0, 2, 3,
-					 4, 5, 6,  4, 6, 7,
-					 8, 9,10,  8,10,11,
-					12,13,14, 12,14,15,
-					16,17,18, 16,18,19,
-					20,21,22, 20,22,23,
+					 0, 1, 2,  0, 2, 3, // 0 - 6
+					 4, 5, 6,  4, 6, 7, // 6 - 12
+					 8, 9,10,  8,10,11, // 12 - 18
+					12,13,14, 12,14,15, // 18 - 24
+					16,17,18, 16,18,19, // 24 - 30
+					20,21,22, 20,22,23, // 30 - 36
 				};
 				
 				// Create the skybox model
@@ -185,8 +178,6 @@ namespace pr
 					tpath[ofs+1] = axes[i][1];
 					pr::rdr::TextureDesc desc;
 					method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, desc, tpath.c_str());
-					//m_tex.back()->m_addr_mode.m_addrU = D3DTADDRESS_CLAMP;
-					//m_tex.back()->m_addr_mode.m_addrV = D3DTADDRESS_CLAMP;
 					
 					// Create the render nugget for this face of the skybox
 					pr::rdr::Range vrange = pr::rdr::Range::make(i*4, (i+1)*4);

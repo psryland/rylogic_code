@@ -256,7 +256,7 @@ namespace pr
 				// Add the template
 				Template tmp;
 				tmp.m_type_info = pr::hash::HashC(typeid(Type).name());
-				tmp.m_type_name = pr::hash::Hash(template_desc, pr::hash::Sentinal(',')); ++template_desc;
+				tmp.m_type_name = pr::hash::Hash(template_desc, ','); ++template_desc;
 				PR_ASSERT(PR_ARCHIVE_DBG, !IsBuiltinType(tmp.m_type_name), "Do not register template descriptions for built-in types");
 				PR_ASSERT(PR_ARCHIVE_DBG, !IsTemplateTypeInfo(tmp.m_type_info), "Template already defined for this type");
 				PR_ASSERT(PR_ARCHIVE_DBG, !IsTemplateName(tmp.m_type_name), "Template for type with this name already defined");
@@ -271,8 +271,8 @@ namespace pr
 					
 					// Add a field to the template
 					Field field;
-					field.m_type	= pr::hash::Hash(template_desc, pr::hash::Sentinal(':'));	++template_desc;
-					field.m_name	= pr::hash::Hash(template_desc, pr::hash::Sentinal(':'));	++template_desc;
+					field.m_type	= pr::hash::Hash(template_desc, ':');	++template_desc;
+					field.m_name	= pr::hash::Hash(template_desc, ':');	++template_desc;
 					field.m_count	= strtoul(template_desc, (char**)&template_desc, 10);		template_desc += int(*template_desc == ',');
 					field.m_offset	= offset;
 

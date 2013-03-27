@@ -64,7 +64,7 @@ namespace pr
 				};
 				
 				// Create the gimble model
-				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts,indices, "gimble"));
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices, "gimble"));
 				
 				pr::rdr::DrawMethod method;
 				
