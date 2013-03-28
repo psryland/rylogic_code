@@ -152,6 +152,7 @@
     <Compile Include="common\hglobal.cs" />
     <Compile Include="common\mime.cs" />
     <Compile Include="common\rtf.cs" />
+    <Compile Include="common\cache.cs" />
     <Compile Include="crypt\activation_code.cs" />
     <Compile Include="common\span.cs" />
     <Compile Include="common\pin.cs" />

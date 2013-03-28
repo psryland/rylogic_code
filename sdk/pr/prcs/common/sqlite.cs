@@ -5,6 +5,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -275,12 +276,17 @@ namespace pr.common
 		}
 		public static string Sql(StringBuilder sb, params object[] parts)
 		{
+			sb.Length = 0;
+			SqlAppend(sb, parts);
+			return sb.ToString();
+		}
+		public static void SqlAppend(StringBuilder sb, params object[] parts)
+		{
 			// Do not change this to automatically add white space,
 			// 'p' might be within quoted string which can turn this:
 			//  name='DomType0' into this: name=' DomType0 ';
-			sb.Length = 0;
-			foreach (var p in parts) sb.Append(p);
-			return sb.ToString();
+			foreach (var p in parts)
+				sb.Append(p);
 		}
 		private static readonly StringBuilder m_sql_cached_sb = new StringBuilder();
 
@@ -370,15 +376,13 @@ namespace pr.common
 		}
 
 		/// <summary>Compiles an sql string into an sqlite3 statement</summary>
-		private static sqlite3_stmt Compile(sqlite3 db, string sql_string)
+		private static sqlite3_stmt Compile(Database db, string sql_string)
 		{
 			Trace.WriteLine(string.Format("Compiling sql string '{0}'", sql_string));
-			System.Diagnostics.Debug.Assert(!db.IsInvalid, "Database handle invalid");
-			
 			sqlite3_stmt stmt;
 			var buf_utf8 = StrToUTF8(sql_string);
-			var res = sqlite3_prepare_v2(db, buf_utf8, buf_utf8.Length, out stmt, IntPtr.Zero);
-			if (res != Result.OK) throw Exception.New(res, ErrorMsg(db));
+			var res = sqlite3_prepare_v2(db.Handle, buf_utf8, buf_utf8.Length, out stmt, IntPtr.Zero);
+			if (res != Result.OK) throw Exception.New(res, ErrorMsg(db.Handle));
 			return stmt;
 		}
 
@@ -444,7 +448,7 @@ namespace pr.common
 			public static void Decimal(sqlite3_stmt stmt, int idx, object value)
 			{
 				var dec = (decimal)value;
-				sqlite3_bind_text16(stmt, idx, dec.ToString(), -1, TransientData);
+				sqlite3_bind_text16(stmt, idx, dec.ToString(CultureInfo.InvariantCulture), -1, TransientData);
 			}
 			public static void Float(sqlite3_stmt stmt, int idx, object value)
 			{
@@ -672,6 +676,133 @@ namespace pr.common
 
 		#endregion
 
+		#region SqlStr - Methods for converting clr types into sql strings
+
+		/// <summary>Methods for converting CLR type values into sql strings</summary>
+		public static class SqlStr
+		{
+			public static string Null(object value)
+			{
+				return "null";
+			}
+			public static string Bool(object value)
+			{
+				return (bool)value ? "1" : "0";
+			}
+			public static string SByte(object value)
+			{
+				return ((sbyte)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string Byte(object value)
+			{
+				return ((byte)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string Char(object value)
+			{
+				return "'" + (char)value + "'";
+			}
+			public static string Short(object value)
+			{
+				return ((short)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string UShort(object value)
+			{
+				return ((ushort)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string Int(object value)
+			{
+				return ((int)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string UInt(object value)
+			{
+				return ((uint)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string Long(object value)
+			{
+				return ((long)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string ULong(object value)
+			{
+				return ((ulong)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string Decimal(object value)
+			{
+				return "'" + ((decimal)value).ToString(CultureInfo.InvariantCulture) + "'";
+			}
+			public static string Float(object value)
+			{
+				return ((float)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string Double(object value)
+			{
+				return ((double)value).ToString(CultureInfo.InvariantCulture);
+			}
+			public static string Text(object value)
+			{
+				return value != null
+					? "'" + ((string)value).Replace("'","''") + "'"
+					: "''";
+			}
+			public static string ByteArray(object value)
+			{
+				var arr = (byte[])value;
+				var sb = new StringBuilder(3+arr.Length*2);
+				sb.Append("x'");
+				foreach (var b in arr)
+					sb.Append(b.ToString("X2"));
+				sb.Append("'");
+				return sb.ToString();
+			}
+			public static string IntArray(object value)
+			{
+				var arr = (int[])value;
+				var buf = new byte[arr.Length * sizeof(int)];
+				Buffer.BlockCopy(arr, 0, buf, 0, buf.Length);
+				return ByteArray(buf);
+			}
+			public static string Guid(object value)
+			{
+				return ((Guid)value).ToString();
+			}
+			public static string DateTimeOffset(object value)
+			{
+				return Long(((DateTimeOffset)value).Ticks);
+			}
+			
+			public delegate object Func(string value);
+			public class Map :Dictionary<Type, Func>
+			{
+				public Map()
+				{
+					Add(typeof(bool)           ,Bool          );
+					Add(typeof(sbyte)          ,SByte         );
+					Add(typeof(byte)           ,Byte          );
+					Add(typeof(char)           ,Char          );
+					Add(typeof(short)          ,Short         );
+					Add(typeof(ushort)         ,UShort        );
+					Add(typeof(int)            ,Int           );
+					Add(typeof(uint)           ,UInt          );
+					Add(typeof(long)           ,Long          );
+					Add(typeof(ulong)          ,ULong         );
+					Add(typeof(decimal)        ,Decimal       );
+					Add(typeof(float)          ,Float         );
+					Add(typeof(double)         ,Double        );
+					Add(typeof(string)         ,Text          );
+					Add(typeof(byte[])         ,ByteArray     );
+					Add(typeof(int[])          ,IntArray      );
+					Add(typeof(Guid)           ,Guid          );
+					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
+				}
+			}
+		}
+
+		/// <summary>
+		/// A lookup table from ClrType to sqlstr function.
+		/// Users can add custom types and functions to this map if needed</summary>
+		public static readonly SqlStr.Map SqlStrFunction = new SqlStr.Map();
+
+		#endregion
+
 		#region Sqlite3 handle wrappers
 
 		public abstract class SQLiteHandle :SafeHandle
@@ -732,131 +863,106 @@ namespace pr.common
 
 		#endregion
 
-		#region Object cache
-		
-		public interface ICache
-		{
-			/// <summary>Gets/Sets the maximum number of objects to store in the cache</summary>
-			long MaxCachedObjectCount { get; set; }
-
-			/// <summary>Returns true if an object with a primary key matching 'key' is currently cached</summary>
-			bool IsCached(object key);
-
-			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
-			object Get(object key, Func<object> on_miss);
-
-			/// <summary>Remove a cached item with a given key</summary>
-			void InvalidateRow(object key);
-		}
-
-		/// <summary>A dummy cache that does no caching</summary>
-		private class PassThruCache :ICache
-		{
-			/// <summary>Gets/Sets the maximum number of objects to store in the cache</summary>
-			public long MaxCachedObjectCount { get { return 0; } set {} }
-
-			/// <summary>Returns true if an object with a primary key matching 'key' is currently cached</summary>
-			public bool IsCached(object key) { return false; }
-
-			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
-			public object Get(object key, Func<object> on_miss) { return on_miss(); }
-			
-			/// <summary>Remove a cached item with a given key</summary>
-			public void InvalidateRow(object key) {}
-		}
+		#region Caches
 
 		/// <summary>A per-table object cache for types with a single integral primary key</summary>
-		private class ObjectCache :ICache
+		internal class ObjectCache :ICache<object,object>
 		{
-			/// <summary>Wrapper of an object from a table in the db and it's row id</summary>
-			private class CacheEntry
-			{
-				public readonly object Object;
-				public readonly long RowId;
-				public CacheEntry(object obj, long row_id) { Object = obj; RowId = row_id; }
-			}
-			private readonly TableMetaData m_meta;
-			private readonly LinkedList<CacheEntry> m_cache; // A cache of objects read from the db
-			private readonly Dictionary<long ,LinkedListNode<CacheEntry>> m_lookup; // A map from row id to cache item
+			private readonly Cache<long,object> m_cache = new Cache<long, object>();
+ 			private readonly TableMetaData m_meta;
 
 			public ObjectCache(Type type)
 			{
 				m_meta = TableMetaData.GetMetaData(type);
-				m_cache = new LinkedList<CacheEntry>();
-				m_lookup = new Dictionary<long ,LinkedListNode<CacheEntry>>();
 			}
 
+			/// <summary>The number of items in the cache</summary>
+			public int Count { get { return m_cache.Count; } }
+
 			/// <summary>Get/Set an upper limit on the number of cached objects</summary>
-			public long MaxCachedObjectCount
+			public int Capacity
 			{
-				get { return m_max_cached_object_count; }
-				set { m_max_cached_object_count = value; LimitCacheSize(); }
+				get { return m_cache.Capacity; }
+				set { m_cache.Capacity = value; }
 			}
-			private long m_max_cached_object_count = 100;
 
 			/// <summary>Returns true if an object with the given primary key is in the cache</summary>
 			public bool IsCached(object key)
 			{
 				var row_id = Convert.ToInt64(key);
-				return m_lookup.ContainsKey(row_id);
+				return m_cache.IsCached(row_id);
 			}
 
 			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
-			public object Get(object key, Func<object> on_miss)
+			public object Get(object key, Func<object,object> on_miss, Action<object,object> on_hit = null)
 			{
 				var row_id = Convert.ToInt64(key);
+				var obj = m_cache.Get(row_id,
+					k =>
+						{
+							var item = on_miss(key);
+							System.Diagnostics.Debug.Assert(item == null || item.GetType() == m_meta.Type, "Wrong object type for this cache");
+							return item;
+						},
+					(k,v) =>
+						{
+							if (on_hit != null)
+								on_hit(key, v);
+						});
 				
-				// Use the lookup map to find the node in the cache
-				LinkedListNode<CacheEntry> node;
-				if (m_lookup.TryGetValue(row_id, out node))
-				{
-					// If found, move it to the head of the cache
-					m_cache.Remove(node);
-					m_cache.AddFirst(node);
-				}
-				else
-				{
-					// Cache miss, read it from the db
-					var item = on_miss();
-					if (item == null) return null;
-					System.Diagnostics.Debug.Assert(item.GetType() == m_meta.Type, "Wrong object type for this cache");
-
-					// Create a new node and add to the cache
-					node = m_cache.AddFirst(new CacheEntry(item, row_id));
-					m_lookup[row_id] = node;
-					LimitCacheSize();
-				}
 				#if CACHE_RETURNS_CLONES
-				return m_meta.Clone(node.Value.Object);
+				return m_meta.Clone(obj);
 				#else
-				return node.Value.Object; // Danger, this should really be immutable
+				return obj; // Danger, this should really be immutable
 				#endif
 			}
 
-			/// <summary>Reduces the size of the cache to within 'MaxCacheSizeInBytes' or one item</summary>
-			private void LimitCacheSize()
+			/// <summary>Handles notification from the database that a row has changed</summary>
+			public void Invalidate(object key)
 			{
-				while (m_cache.Count > MaxCachedObjectCount)
-					DeleteCachedItem(m_cache.Last);
+				var row_id = Convert.ToInt64(key);
+				m_cache.Invalidate(row_id);
+			}
+		}
+
+		/// <summary>A cache of compiled queries</summary>
+		internal class QueryCache
+		{
+			private readonly Cache<string,Query> m_cache = new Cache<string, Query>();
+			private readonly Database m_db;
+
+			public QueryCache(Database db) { m_db = db; }
+
+			/// <summary>The number of items in the cache</summary>
+			public int Count { get { return m_cache.Count; } }
+
+			/// <summary>Get/Set an upper limit on the number of cached items</summary>
+			public int Capacity { get { return m_cache.Capacity; } set { m_cache.Capacity = value; } }
+
+			/// <summary>Returns true if an object with the given key is in the cache</summary>
+			public bool IsCached(string key) { return m_cache.IsCached(key); }
+
+			/// <summary>Returns a query from the cache</summary>
+			public Query Get(string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				return m_cache.Get(sql_string,
+					k =>
+						{
+							// Create a new compiled query.
+							// Cancel closing while the query is still in the cache.
+							var q = new Query(m_db, sql_string, parms, first_idx);
+							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
+							return q;
+						},
+					(k,v) =>
+						{
+							// Before returning a cached query, reset it
+							v.Reset();
+						});
 			}
 
 			/// <summary>Handles notification from the database that a row has changed</summary>
-			public void InvalidateRow(object key)
-			{
-				var row_id = Convert.ToInt64(key);
-				
-				// See if we have this row cached and if so, remove it
-				LinkedListNode<CacheEntry> node;
-				if (m_lookup.TryGetValue(row_id, out node))
-					DeleteCachedItem(node);
-			}
-
-			/// <summary>Delete a cached item</summary>
-			private void DeleteCachedItem(LinkedListNode<CacheEntry> node)
-			{
-				m_lookup.Remove(node.Value.RowId);
-				node.List.Remove(node);
-			}
+			public void Invalidate(string key) { m_cache.Invalidate(key); }
 		}
 		#endregion
 
@@ -864,7 +970,8 @@ namespace pr.common
 		public class Database :IDisposable
 		{
 			private readonly sqlite3 m_db;
-			private readonly Dictionary<string, ICache> m_caches;
+			private readonly Dictionary<string, ICache<object,object>> m_caches;
+			private readonly QueryCache m_query_cache;
 			
 			private readonly int m_creation_thread;
 			[System.Diagnostics.Conditional("DEBUG")] public void AssertCorrectThread()
@@ -896,13 +1003,16 @@ namespace pr.common
 				Trace.WriteLine(string.Format("Database connection opened for '{0}'", filepath));
 				
 				// Initialise the per-table object caches
-				m_caches = new Dictionary<string, ICache>();
+				m_caches = new Dictionary<string, ICache<object,object>>();
 				DataChanged += (s,a) =>
 					{
-						ICache cache;
+						ICache<object,object> cache;
 						if (m_caches.TryGetValue(a.TableName, out cache))
-							cache.InvalidateRow(a.RowId);
+							cache.Invalidate(a.RowId);
 					};
+				
+				// Initialise the query cache
+				m_query_cache = new QueryCache(this){Capacity = 50};
 				
 				// Default to no busy timeout
 				BusyTimeout = 0;
@@ -938,20 +1048,35 @@ namespace pr.common
 				}
 			}
 
-			/// <summary>Returns the object cache for a specific table</summary>
-			internal ICache ObjectCache(Type type)
+			/// <summary>Set the maximum number of instances of a type to cache</summary>
+			public void SetQueryCacheCapacity(int limit)
 			{
-				ICache c;
+				QueryCache.Capacity = limit;
+			}
+
+			/// <summary>Set the maximum number of instances of a type to cache</summary>
+			public void SetObjectCacheCapacity(Type type, int limit)
+			{
+				ObjectCache(type).Capacity = limit;
+			}
+
+			/// <summary>Returns the object cache for a specific table</summary>
+			internal ICache<object,object> ObjectCache(Type type)
+			{
+				ICache<object,object> c;
 				if (!m_caches.TryGetValue(type.Name, out c))
 				{
 					var meta = TableMetaData(type);
 					if (meta.SingleIntegralPK)
 						m_caches.Add(type.Name, c = new ObjectCache(type));
 					else
-						m_caches.Add(type.Name, c = new PassThruCache());
+						m_caches.Add(type.Name, c = new PassThruCache<object,object>());
 				}
 				return c;
 			}
+
+			/// <summary>Return access to the query cache</summary>
+			internal QueryCache QueryCache { get { return m_query_cache; } }
 
 			/// <summary>A method that allows interception of all database object reads</summary>
 			public Func<object,object> ReadItemHook { get; set; }
@@ -965,6 +1090,10 @@ namespace pr.common
 				AssertCorrectThread();
 				Trace.WriteLine(string.Format("Closing database connection{0}", m_db.IsClosed ? " (already closed)" : ""));
 				if (m_db.IsClosed) return;
+				
+				// Release cached objects
+				foreach (var x in m_caches) x.Value.Capacity = 0;
+				m_query_cache.Capacity = 0;
 				
 				// Release the db handle
 				m_db.Close();
@@ -984,7 +1113,7 @@ namespace pr.common
 			/// Returns the number of rows affected by the operation</summary>
 			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (var query = new Query(this, sql, parms, first_idx))
+				using (var query = QueryCache.Get(sql, parms, first_idx))
 				{
 					query.Step();
 					return sqlite3_changes(m_db);
@@ -994,7 +1123,7 @@ namespace pr.common
 			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
 			public int ExecuteScalar(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (var query = new Query(this, sql, parms, first_idx))
+				using (var query = QueryCache.Get(sql, parms, first_idx))
 				{
 					if (!query.Step()) throw Exception.New(Result.Error, "Scalar query returned no results");
 					int value = (int)Read.Int(query.Stmt, 0);
@@ -1006,7 +1135,7 @@ namespace pr.common
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
 			public IEnumerable EnumRows(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (var query = new Query(this, sql, parms, first_idx))
+				using (var query = QueryCache.Get(sql, parms, first_idx))
 					foreach (var r in query.Rows(type))
 						yield return r; // Can't just return query.Rows(type) because Dispose() is called on query
 			}
@@ -1242,15 +1371,14 @@ namespace pr.common
 			protected readonly TableMetaData m_meta;
 			protected readonly Database m_db; // The handle for the database connection
 			protected readonly CmdExpr m_cmd;
-			private readonly ICache m_cache;
-			
+
 			public Table(Type type, Database db)
 			{
 				if (db.Handle.IsInvalid) throw new ArgumentNullException("db", "Invalid database handle");
-				m_meta  = TableMetaData.GetMetaData(type);
-				m_db    = db;
-				m_cache = db.ObjectCache(type);
-				m_cmd   = new CmdExpr();
+				m_meta = TableMetaData.GetMetaData(type);
+				m_db   = db;
+				m_cmd  = new CmdExpr();
+				Cache  = db.ObjectCache(type);
 			}
 
 			/// <summary>The name of this table</summary>
@@ -1266,10 +1394,7 @@ namespace pr.common
 			}
 
 			/// <summary>Return access to the cache used by this table</summary>
-			public ICache Cache
-			{
-				get { return m_cache; }
-			}
+			public ICache<object,object> Cache { get; private set; }
 
 			/// <summary>Gets the number of columns in this table</summary>
 			public int ColumnCount
@@ -1291,97 +1416,119 @@ namespace pr.common
 			/// <summary>General sql query on the table</summary>
 			public Query Query(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				return new Query(m_db, sql, parms, first_idx);
+				return m_db.QueryCache.Get(sql, parms, first_idx);
 			}
 			// ReSharper restore MemberHidesStaticFromOuterClass
 
+			/// <summary>
+			/// Executes an sql command that is expected to not return results. (e.g. Insert/Update/Delete).
+			/// Returns the number of rows affected by the operation</summary>
+			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				return m_db.Execute(sql, parms, first_idx);
+			}
+
+			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
+			public int ExecuteScalar(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				return m_db.ExecuteScalar(sql, parms, first_idx);
+			}
+
+			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
+			public IEnumerable EnumRows(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				return m_db.EnumRows(m_meta.Type, sql, parms, first_idx);
+			}
+			public IEnumerable<T> EnumRows<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				return EnumRows(sql, parms, first_idx).Cast<T>();
+			}
+
 			/// <summary>Returns a row in the table or null if not found</summary>
-			public object Find(Type type, params object[] keys)
+			public object Find(params object[] keys)
 			{
 				using (var get = new GetCmd(m_meta, m_db))
 				{
-					get.BindPks(type, 1, keys);
+					get.BindPks(m_meta.Type, 1, keys);
 					return get.Find();
 				}
 			}
 			public T Find<T>(params object[] keys)
 			{
-				return (T)Find(typeof(T), keys);
+				return (T)Find(keys);
 			}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
-			public object Find(Type type, object key1, object key2) // overload for performance
+			public object Find(object key1, object key2) // overload for performance
 			{
 				using (var get = new GetCmd(m_meta, m_db))
 				{
-					get.BindPks(type, 1, key1, key2);
+					get.BindPks(m_meta.Type, 1, key1, key2);
 					return get.Find();
 				}
 			}
 			public T Find<T>(object key1, object key2) // overload for performance
 			{
-				return (T)Find(typeof(T), key1, key2);
+				return (T)Find(key1, key2);
 			}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
-			public object Find(Type type, object key1) // overload for performance
+			public object Find(object key1) // overload for performance
 			{
-				return m_cache.Get(key1, () =>
+				return Cache.Get(key1, k =>
 					{
 						using (var get = new GetCmd(m_meta, m_db))
 						{
-							get.BindPks(type, 1, key1);
+							get.BindPks(m_meta.Type, 1, key1);
 							return get.Find();
 						}
 					});
 			}
 			public T Find<T>(object key1) // overload for performance
 			{
-				return (T)Find(typeof(T), key1);
+				return (T)Find(key1);
 			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public object Get(Type type, params object[] keys)
+			public object Get(params object[] keys)
 			{
-				var item = Find(type, keys);
+				var item = Find(keys);
 				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key(s): "+string.Join(",", keys.Select(x=>x.ToString())));
 				return item;
 			}
 			public T Get<T>(params object[] keys)
 			{
-				return (T)Get(typeof(T), keys);
+				return (T)Get(keys);
 			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public object Get(Type type, object key1, object key2) // overload for performance
+			public object Get(object key1, object key2) // overload for performance
 			{
-				var item = Find(type, key1, key2);
+				var item = Find(key1, key2);
 				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for keys: "+key1+","+key2);
 				return item;
 			}
 			public T Get<T>(object key1, object key2) // overload for performance
 			{
-				return (T)Get(typeof(T), key1, key2);
+				return (T)Get(key1, key2);
 			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public object Get(Type type, object key1) // overload for performance
+			public object Get(object key1) // overload for performance
 			{
-				var item = Find(type, key1);
+				var item = Find(key1);
 				if (ReferenceEquals(item, null)) throw Exception.New(Result.NotFound, "Row not found for key: "+key1);
 				return item;
 			}
 			public T Get<T>(object key1) // overload for performance
 			{
-				return (T)Get(typeof(T), key1);
+				return (T)Get(key1);
 			}
 
 			/// <summary>Insert an item into the table.</summary>
 			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
-				Trace.WriteLine(string.Format("Inserting {0}", m_meta.Name));
-				item = m_db.WriteItemHook(item);
-				using (var insert = new InsertCmd(m_meta, m_db, on_constraint)) // Create the sql query
+				using (var insert = new InsertCmd(m_meta.Type, m_db, on_constraint)) // Create the sql query
 				{
 					insert.BindObj(item); // Bind 'item' to it
 					var count = insert.Run();  // Run the query
@@ -1393,18 +1540,11 @@ namespace pr.common
 			/// <summary>Update 'item' in the table</summary>
 			public int Update(object item)
 			{
-				Trace.WriteLine(string.Format("Updating {0}", m_meta.Name));
-				item = m_db.WriteItemHook(item);
-				using (var query = new Query(m_db, SqlUpdateCmd(m_meta.Type)))
+				using (var update = new UpdateCmd(m_meta.Type, m_db)) // Create the sql query
 				{
-					int idx = 1; // binding parameters are indexed from 1
-					foreach (var c in m_meta.NonPks)
-						c.BindFn(query.Stmt, idx++, c.Get(item));
-					foreach (var c in m_meta.Pks)
-						c.BindFn(query.Stmt, idx++, c.Get(item));
-					
-					query.Step();
-					return query.RowsChanged;
+					update.BindObj(item); // Bind 'item' to it
+					var count = update.Run(); // Run the query
+					return count;
 				}
 			}
 
@@ -1418,7 +1558,7 @@ namespace pr.common
 			public int DeleteByKey(params object[] keys)
 			{
 				Trace.WriteLine(string.Format("Deleting {0} (key: {1})", m_meta.Name, string.Join(",",keys)));
-				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
+				using (var query = m_db.QueryCache.Get(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, keys);
 					query.Step();
@@ -1430,7 +1570,7 @@ namespace pr.common
 			public int DeleteByKey(object key1, object key2) // overload for performance
 			{
 				Trace.WriteLine(string.Format("Deleting {0} (key: {1},{2})", m_meta.Name, key1, key2));
-				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
+				using (var query = m_db.QueryCache.Get(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, key1, key2);
 					query.Step();
@@ -1442,7 +1582,7 @@ namespace pr.common
 			public int DeleteByKey(object key1) // overload for performance
 			{
 				Trace.WriteLine(string.Format("Deleting {0} (key: {1})", m_meta.Name, key1));
-				using (var query = new Query(m_db, SqlDeleteCmd(m_meta.Type)))
+				using (var query = m_db.QueryCache.Get(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, key1);
 					query.Step();
@@ -1457,7 +1597,7 @@ namespace pr.common
 				var column_meta = m_meta.Column(column_name);
 				if (m_meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
 				var sql = Sql("update ",m_meta.Name," set ",column_meta.Name," = ? where ",m_meta.PkConstraints());
-				using (var query = new Query(m_db, sql))
+				using (var query = m_db.QueryCache.Get(sql))
 				{
 					column_meta.BindFn(query.Stmt, 1, value);
 					query.BindPks(m_meta.Type, 2, keys);
@@ -1472,7 +1612,7 @@ namespace pr.common
 				Trace.WriteLine(string.Format("Updating column {0} in table {1} (all rows)", column_name, m_meta.Name));
 				var column_meta = m_meta.Column(column_name);
 				var sql = Sql("update ",m_meta.Name," set ",column_name," = ?");
-				using (var query = new Query(m_db, sql))
+				using (var query = m_db.QueryCache.Get(sql))
 				{
 					column_meta.BindFn(query.Stmt, 1, value);
 					query.Step();
@@ -1485,7 +1625,7 @@ namespace pr.common
 			{
 				var column_meta = m_meta.Column(column_name);
 				var sql = Sql("select ",column_meta.Name," from ",m_meta.Name," where ",m_meta.PkConstraints());
-				using (var query = new Query(m_db, sql))
+				using (var query = m_db.QueryCache.Get(sql))
 				{
 					query.BindPks(m_meta.Type, 1, keys);
 					query.Step();
@@ -1961,37 +2101,37 @@ namespace pr.common
 			public Table(Database db) :base(typeof(T), db) {}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
-			public T Find(params object[] keys)
+			public new T Find(params object[] keys)
 			{
 				return Find<T>(keys);
 			}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
-			public T Find(object key1, object key2) // overload for performance
+			public new T Find(object key1, object key2) // overload for performance
 			{
 				return Find<T>(key1, key2);
 			}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
-			public T Find(object key1) // overload for performance
+			public new T Find(object key1) // overload for performance
 			{
 				return Find<T>(key1);
 			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public T Get(params object[] keys)
+			public new T Get(params object[] keys)
 			{
 				return Get<T>(keys);
 			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public T Get(object key1, object key2) // overload for performance
+			public new T Get(object key1, object key2) // overload for performance
 			{
 				return Get<T>(key1, key2);
 			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
-			public T Get(object key1) // overload for performance
+			public new T Get(object key1) // overload for performance
 			{
 				return Get<T>(key1);
 			}
@@ -2086,7 +2226,7 @@ namespace pr.common
 				Trace.WriteLine(string.Format("Query created '{0}'", SqlString));
 			}
 			public Query(Database db, string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
-			:this(db, Compile(db.Handle, sql_string))
+			:this(db, Compile(db, sql_string))
 			{
 				if (parms != null)
 					BindParms(first_idx, parms);
@@ -2120,11 +2260,24 @@ namespace pr.common
 				Trace.WriteLine(string.Format("Query closed{0}", m_stmt.IsClosed ? " (already closed)" : ""));
 				if (m_stmt.IsClosed) return;
 				
+				// Call the event to see if we cancel closing the query
+				var cancel = new QueryClosingEventArgs();
+				if (Closing != null) Closing(this, cancel);
+				if (cancel.Cancel) return;
+				
 				// After 'sqlite3_finalize()', it is illegal to use m_stmt. So save 'db' here first
 				sqlite3 db = sqlite3_db_handle(m_stmt);
 				m_stmt.Close();
 				if (m_stmt.CloseResult != Result.OK)
 					throw Exception.New(m_stmt.CloseResult, ErrorMsg(db));
+			}
+			
+			/// <summary>An event raised when this query is closing</summary>
+			public event EventHandler<QueryClosingEventArgs> Closing;
+			public class QueryClosingEventArgs :EventArgs
+			{
+				public bool Cancel { get { return m_cancel; } set { m_cancel |= value; } }
+				private bool m_cancel;
 			}
 
 			/// <summary>Return the number of parameters in this statement</summary>
@@ -2368,7 +2521,7 @@ namespace pr.common
 			public string Constraints { get; set; }
 
 			/// <summary>Enumerate the column meta data</summary>
-			public IEnumerable<ColumnMetaData> Columns { get { return m_column; } }
+			public ColumnMetaData[] Columns { get { return m_column; } }
 
 			/// <summary>The primary key columns, in order</summary>
 			public ColumnMetaData[] Pks { get; private set; }
@@ -2564,13 +2717,13 @@ namespace pr.common
 			/// Bind the values of the properties/fields in 'item' to the parameters
 			/// in prepared statement 'stmt'. 'ofs' is the index offset of the first
 			/// parameter to start binding from.</summary>
-			public void BindObj<T>(sqlite3_stmt stmt, int first_idx, T item)
+			public void BindObj<T>(sqlite3_stmt stmt, int first_idx, T item, IEnumerable<ColumnMetaData> columns)
 			{
 				if (first_idx < 1) throw new ArgumentException("parameter binding indices start at 1 so 'first_idx' must be >= 1");
 				if (item.GetType() != Type) throw new ArgumentException("'item' is not the correct type for this table");
 				
 				int idx = 0; // binding parameters are indexed from 1
-				foreach (var c in NonAutoIncs)
+				foreach (var c in columns)
 				{
 					c.BindFn(stmt, first_idx+idx, c.Get(item));
 					++idx;
@@ -2847,26 +3000,60 @@ namespace pr.common
 		/// <summary>A specialised query used for inserting objects into a table</summary>
 		public class InsertCmd :Query
 		{
-			protected readonly TableMetaData m_meta;
+			/// <summary>The type metadata for this insert command</summary>
+			public TableMetaData MetaData { get; protected set; }
 
 			/// <summary>Creates a compiled query for inserting an object of type 'type' into a table.</summary>
-			public InsertCmd(TableMetaData meta, Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			:base(db, SqlInsertCmd(meta.Type, on_constraint))
+			public InsertCmd(Type type, Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			:base(db, SqlInsertCmd(type, on_constraint))
 			{
-				m_meta = meta;
+				MetaData = db.TableMetaData(type);
 			}
 
 			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
 			public void BindObj(object item)
 			{
-				m_meta.BindObj(m_stmt, 1, item);
+				item = m_db.WriteItemHook(item);
+				MetaData.BindObj(m_stmt, 1, item, MetaData.NonAutoIncs);
 			}
 
 			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
 			public int Run()
 			{
+				Trace.WriteLine(string.Format("Inserting {0}", MetaData.Name));
 				Step();
 				if (!RowEnd) throw Exception.New(Result.Misuse, "Insert returned more than one row");
+				return RowsChanged;
+			}
+		}
+
+		/// <summary>A specialised query used for updating objects into a table</summary>
+		public class UpdateCmd :Query
+		{
+			/// <summary>The type metadata for this update command</summary>
+			public TableMetaData MetaData { get; protected set; }
+
+			/// <summary>Creates a compiled query for updating an object of type 'type' into a table.</summary>
+			public UpdateCmd(Type type, Database db)
+			:base(db, SqlUpdateCmd(type))
+			{
+				MetaData = db.TableMetaData(type);
+			}
+
+			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
+			public void BindObj(object item)
+			{
+				item = m_db.WriteItemHook(item);
+				MetaData.BindObj(m_stmt, 1, item, MetaData.NonPks);
+				MetaData.BindObj(m_stmt, 1 + MetaData.NonPks.Length, item, MetaData.Pks);
+			}
+
+			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
+			public int Run()
+			{
+				Trace.WriteLine(string.Format("Updating {0}", MetaData.Name));
+				Step();
+				if (!RowEnd) throw Exception.New(Result.Misuse, "Updating returned more than one row");
 				return RowsChanged;
 			}
 		}
@@ -2874,14 +3061,15 @@ namespace pr.common
 		/// <summary>A specialised query used for getting objects from the db</summary>
 		public class GetCmd :Query
 		{
-			protected readonly TableMetaData m_meta;
+			/// <summary>The type metadata for this insert command</summary>
+			public TableMetaData MetaData { get; protected set; }
 
 			/// <summary>
 			/// Create a compiled query for getting an object of type 'T' from a table.
 			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
 			public GetCmd(TableMetaData meta, Database db) :base(db, SqlGetCmd(meta.Type))
 			{
-				m_meta = meta;
+				MetaData = meta;
 			}
 
 			/// <summary>
@@ -2891,8 +3079,8 @@ namespace pr.common
 			{
 				Step();
 				if (RowEnd) return null;
-				var item = m_meta.Factory();
-				m_meta.ReadObj(m_stmt, item);
+				var item = MetaData.Factory();
+				MetaData.ReadObj(m_stmt, item);
 				return item;
 			}
 		}
@@ -3152,7 +3340,7 @@ namespace pr.common
 				
 				// Enums and bools need converting to ints
 				if (type.IsEnum || type == typeof(bool))
-					return Convert.ToInt32(value).ToString();
+					return Convert.ToInt32(value).ToString(CultureInfo.InvariantCulture);
 				
 				// Strings need wrapping in quotes
 				if (type == typeof(string))
@@ -3160,7 +3348,7 @@ namespace pr.common
 				
 				// DateTimeOffsets should be int64 values
 				if (type == typeof(DateTimeOffset))
-					return ((DateTimeOffset)value).Ticks.ToString();
+					return ((DateTimeOffset)value).Ticks.ToString(CultureInfo.InvariantCulture);
 				
 				// Otherwise, just convert to a string
 				return value.ToString();
@@ -3454,7 +3642,7 @@ namespace pr
 				public DomType0(int seed)
 				{
 					Inc_Key = seed;
-					Inc_Value = seed.ToString();
+					Inc_Value = seed.ToString(CultureInfo.InvariantCulture);
 					Inc_Enum = (SomeEnum)(seed % 3);
 					Ign_NoGetter = seed;
 					Ign_PrivateProp = seed != 0;
@@ -3630,11 +3818,11 @@ namespace pr
 					Key1 = key1;
 					Key2 = key2;
 					Key3 = key3;
-					Prop1 = key1.ToString() + " " + key2.ToString();
+					Prop1 = key1.ToString(CultureInfo.InvariantCulture) + " " + key2.ToString(CultureInfo.InvariantCulture);
 					Prop2 = key1;
 					Prop3 = Guid.NewGuid();
 					Parent1 = key1;
-					PropA = key1.ToString() + " " + key2.ToString();
+					PropA = key1.ToString(CultureInfo.InvariantCulture) + " " + key2.ToString(CultureInfo.InvariantCulture);
 					PropB = (SomeEnum)key1;
 					Ignored1 = 1f;
 					Ignored2 = 2.0;
@@ -4779,12 +4967,12 @@ namespace pr
 					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
 					
-					table.Cache.MaxCachedObjectCount = 2;
+					table.Cache.Capacity = 2;
 					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
 					
-					table.Cache.MaxCachedObjectCount = 1;
+					table.Cache.Capacity = 1;
 					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
 					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
