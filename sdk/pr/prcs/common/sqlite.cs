@@ -520,12 +520,42 @@ namespace pr.common
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 				}
 			}
-		}
+			
+			/// <summary>
+			/// A lookup table from ClrType to binding function.
+			/// Users can add custom types and binding functions to this map if needed</summary>
+			public static readonly Map FunctionMap = new Map();
 
-		/// <summary>
-		/// A lookup table from ClrType to binding function.
-		/// Users can add custom types and binding functions to this map if needed</summary>
-		public static readonly Bind.Map BindFunction = new Bind.Map();
+			/// <summary>Returns a bind function appropriate for 'type'</summary>
+			public static Func FuncFor(Type type)
+			{
+				try
+				{
+					var is_nullable = Nullable.GetUnderlyingType(type) != null;
+					if (!is_nullable)
+					{
+						var bind_type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+						return FunctionMap[bind_type];
+					}
+					else // nullable type, wrap the binding functions
+					{
+						var base_type = Nullable.GetUnderlyingType(type);
+						var is_enum   = base_type.IsEnum;
+						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
+						return (stmt,idx,obj) =>
+							{
+								if (obj != null) FunctionMap[bind_type](stmt, idx, obj);
+								else sqlite3_bind_null(stmt, idx);
+							};
+					}
+				}
+				catch (KeyNotFoundException) {}
+				throw new KeyNotFoundException(
+					"A bind function was not found for type '"+type.Name+"'\r\n" +
+					"Custom types need to register a Bind/Read function in the " +
+					"BindFunction/ReadFunction map before being used");
+			}
+		}
 		
 		#endregion
 
@@ -667,12 +697,47 @@ namespace pr.common
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 				}
 			}
-		}
 
-		/// <summary>
-		/// A lookup table from ClrType to reading function.
-		/// Users can add custom types and reading functions to this map if needed</summary>
-		public static readonly Read.Map ReadFunction = new Read.Map();
+			/// <summary>
+			/// A lookup table from ClrType to reading function.
+			/// Users can add custom types and reading functions to this map if needed</summary>
+			public static readonly Map FunctionMap = new Map();
+
+			/// <summary>Returns a read function appropriate for 'type'</summary>
+			public static Func FuncFor(Type type)
+			{
+				// Setup the bind and read methods
+				try
+				{
+					var is_nullable = Nullable.GetUnderlyingType(type) != null;
+					if (!is_nullable)
+					{
+						var bind_type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+						return type.IsEnum
+							? (stmt,idx) => Enum.ToObject(type, FunctionMap[bind_type](stmt,idx))
+							: FunctionMap[type];
+					}
+					else // nullable type, wrap the binding functions
+					{
+						var base_type = Nullable.GetUnderlyingType(type);
+						var is_enum   = base_type.IsEnum;
+						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
+						return (stmt,idx) =>
+							{
+								if (sqlite3_column_type(stmt, idx) == DataType.Null) return null;
+								var obj = FunctionMap[bind_type](stmt, idx);
+								if (is_enum) obj = Enum.ToObject(base_type, obj);
+								return obj;
+							};
+					}
+				}
+				catch (KeyNotFoundException) {}
+				throw new KeyNotFoundException(
+					"A bind or read function was not found for type '"+type.Name+"'\r\n" +
+					"Custom types need to register a Bind/Read function in the " +
+					"BindFunction/ReadFunction map before being used");
+			}
+		}
 
 		#endregion
 
@@ -1065,12 +1130,7 @@ namespace pr.common
 				
 				// Initialise the per-table object caches
 				m_caches = new Dictionary<string, ICache<object,object>>();
-				DataChanged += (s,a) =>
-					{
-						ICache<object,object> cache;
-						if (m_caches.TryGetValue(a.TableName, out cache))
-							cache.Invalidate(a.RowId);
-					};
+				DataChanged += InvalidateCachesOnDataChanged;
 				
 				// Initialise the query cache
 				m_query_cache = new QueryCache(this){Capacity = 50};
@@ -1187,10 +1247,7 @@ namespace pr.common
 			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
 				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
-				{
-					query.Step();
-					return sqlite3_changes(m_db);
-				}
+					return query.Run();
 			}
 
 			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
@@ -1437,7 +1494,30 @@ namespace pr.common
 				// 'db_name' is always "main". sqlite doesn't allow renaming of the db
 				RaiseDataChangedEvent((ChangeType)change_type, table_name, row_id);
 			}
-			
+
+			/// <summary>Handler for the data changed event to invalidate cached objects</summary>
+			private void InvalidateCachesOnDataChanged(object sender, DataChangedArgs args)
+			{
+				ICache<object,object> cache;
+				if (m_caches.TryGetValue(args.TableName, out cache))
+				{
+					switch (args.ChangeType)
+					{
+					default: throw new ArgumentOutOfRangeException();
+					case ChangeType.Insert:
+					case ChangeType.Update:
+					case ChangeType.Delete:
+						cache.Invalidate(args.RowId);
+						break;
+					case ChangeType.CreateTable:
+					case ChangeType.AlterTable:
+					case ChangeType.DropTable:
+						cache.Flush();
+						break;
+					}
+				}
+			}
+
 			#if MONOTOUCH
 			private static Database m_db_singleton;
 			[MonoTouch.MonoPInvokeCallbackAttribute(typeof(UpdateHookCB))]
@@ -2436,7 +2516,7 @@ namespace pr.common
 			/// <summary>Bind a value to a specific parameter</summary>
 			public void BindParm<T>(int idx, T value)
 			{
-				var bind = BindFunction[typeof(T)];
+				var bind = Bind.FuncFor(typeof(T));
 				bind(m_stmt, idx, value);
 			}
 
@@ -2448,7 +2528,7 @@ namespace pr.common
 				foreach (var p in parms)
 				{
 					if (p == null) Bind.Null(m_stmt, first_idx++);
-					else BindFunction[p.GetType()](m_stmt, first_idx++, p);
+					else Bind.FuncFor(p.GetType())(m_stmt, first_idx++, p);
 				}
 			}
 
@@ -2465,8 +2545,8 @@ namespace pr.common
 			/// To reuse the Query, call Reset(), then bind new keys, then call Step() again</summary>
 			public void BindParms(int first_idx, object parm1, object parm2) // overload for performance
 			{
-				BindFunction[parm1.GetType()](m_stmt, first_idx+0, parm1);
-				BindFunction[parm1.GetType()](m_stmt, first_idx+1, parm2);
+				Bind.FuncFor(parm1.GetType())(m_stmt, first_idx+0, parm1);
+				Bind.FuncFor(parm1.GetType())(m_stmt, first_idx+1, parm2);
 			}
 
 			/// <summary>
@@ -2474,7 +2554,7 @@ namespace pr.common
 			/// To reuse the Query, call Reset(), then bind new keys, then call Step() again</summary>
 			public void BindParms(int first_idx, object parm1) // overload for performance
 			{
-				BindFunction[parm1.GetType()](m_stmt, first_idx, parm1);
+				Bind.FuncFor(parm1.GetType())(m_stmt, first_idx, parm1);
 			}
 
 			/// <summary>
@@ -2536,7 +2616,11 @@ namespace pr.common
 			public virtual int Run()
 			{
 				int rows_changed = 0;
-				while (Step()) rows_changed += RowsChanged;
+				while (!RowEnd)
+				{
+					Step();
+					rows_changed += RowsChanged;
+				}
 				return rows_changed;
 			}
 
@@ -2579,8 +2663,7 @@ namespace pr.common
 			/// <summary>Read the value of a particular column</summary>
 			public T ReadColumn<T>(int idx)
 			{
-				var read = ReadFunction[typeof(T)];
-				return (T)read(m_stmt, idx);
+				return (T)Read.FuncFor(typeof(T))(m_stmt, idx);
 			}
 
 			/// <summary>Enumerate over the result rows of this query, interpreting each row as type 'T'</summary>
@@ -3205,70 +3288,6 @@ namespace pr.common
 			/// <summary>Reads column 'index' from 'stmt' and sets the corresponding property or field in 'obj'</summary>
 			public Read.Func ReadFn;
 
-			/// <summary>Returns a bind function appropriate for 'type'</summary>
-			public static Bind.Func GetBindFunction(Type type)
-			{
-				try
-				{
-					var is_nullable = Nullable.GetUnderlyingType(type) != null;
-					if (!is_nullable)
-					{
-						var bind_type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
-						return BindFunction[bind_type];
-					}
-					else // nullable type, wrap the binding functions
-					{
-						var base_type = Nullable.GetUnderlyingType(type);
-						var is_enum   = base_type.IsEnum;
-						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
-						return (stmt,idx,obj) =>
-							{
-								if (obj != null) BindFunction[bind_type](stmt, idx, obj);
-								else sqlite3_bind_null(stmt, idx);
-							};
-					}
-				}
-				catch (KeyNotFoundException) {}
-				throw new KeyNotFoundException(
-					"A bind function was not found for type '"+type.Name+"'\r\n" +
-					"Custom types need to register a Bind/Read function in the " +
-					"BindFunction/ReadFunction map before being used");
-			}
-
-			public static Read.Func GetReadFunction(Type type)
-			{
-				// Setup the bind and read methods
-				try
-				{
-					var is_nullable = Nullable.GetUnderlyingType(type) != null;
-					if (!is_nullable)
-					{
-						var bind_type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
-						return type.IsEnum
-							? (stmt,idx) => Enum.ToObject(type, ReadFunction[bind_type](stmt,idx))
-							: ReadFunction[type];
-					}
-					else // nullable type, wrap the binding functions
-					{
-						var base_type = Nullable.GetUnderlyingType(type);
-						var is_enum   = base_type.IsEnum;
-						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
-						return (stmt,idx) =>
-							{
-								if (sqlite3_column_type(stmt, idx) == DataType.Null) return null;
-								var obj = ReadFunction[bind_type](stmt, idx);
-								if (is_enum) obj = Enum.ToObject(base_type, obj);
-								return obj;
-							};
-					}
-				}
-				catch (KeyNotFoundException) {}
-				throw new KeyNotFoundException(
-					"A bind or read function was not found for type '"+type.Name+"'\r\n" +
-					"Custom types need to register a Bind/Read function in the " +
-					"BindFunction/ReadFunction map before being used");
-			}
-
 			public ColumnMetaData(PropertyInfo pi)
 			{
 				Get = obj => pi.GetValue(obj, null);
@@ -3307,8 +3326,8 @@ namespace pr.common
 				ClrType         = type;
 				
 				// Setup the bind and read methods
-				BindFn = GetBindFunction(type);
-				ReadFn = GetReadFunction(type);
+				BindFn = Bind.FuncFor(type);
+				ReadFn = Read.FuncFor(type);
 				Trace.WriteLine(string.Format("   Column: '{0}'", Name));
 			}
 
@@ -4026,8 +4045,8 @@ namespace pr
 				File.Copy(Path.Combine(src_dir, src_file), Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
 
 				// Register custom type bind/read methods
-				Sqlite.BindFunction.Add(typeof(Custom), Custom.SqliteBind);
-				Sqlite.ReadFunction.Add(typeof(Custom), Custom.SqliteRead);
+				Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);
+				Sqlite.Read.FunctionMap.Add(typeof(Custom), Custom.SqliteRead);
 			
 				// Use single threading
 				Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
