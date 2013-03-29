@@ -1,8 +1,3 @@
-//***********************************************
-// CacheBase
-//  Copyright © Rylogic Ltd 2013
-//***********************************************
-
 using System;
 using System.Collections.Generic;
 
@@ -16,6 +11,9 @@ namespace pr.common
 		/// <summary>Get/Set an upper limit on the number of cached items</summary>
 		int Capacity { get; set; }
 
+		/// <summary>Return performance data for the cache</summary>
+		CacheStats Stats { get; }
+
 		/// <summary>Returns true if an object with the given key is in the cache</summary>
 		bool IsCached(TKey key);
 
@@ -24,6 +22,17 @@ namespace pr.common
 
 		/// <summary>Handles notification from the database that a row has changed</summary>
 		void Invalidate(TKey key);
+
+		/// <summary>Removed all cached items from the cache</summary>
+		void Flush();
+	}
+
+	public struct CacheStats
+	{
+		public int Hits { get; set; }
+		public int Misses { get; set; }
+		public float Performance { get { return Hits / (float)(Hits + Misses); } }
+		public void Clear() { Hits = Misses = 0; }
 	}
 
 	/// <summary>Generic, count limited, cache implementation</summary>
@@ -52,6 +61,10 @@ namespace pr.common
 		}
 		private int m_capacity = 100;
 
+		/// <summary>Return performance data for the cache</summary>
+		public CacheStats Stats { get { return m_stats; } }
+		private CacheStats m_stats = new CacheStats();
+
 		/// <summary>Returns true if an object with the given key is in the cache</summary>
 		public bool IsCached(TKey key) { return m_lookup.ContainsKey(key); }
 
@@ -62,6 +75,8 @@ namespace pr.common
 			LinkedListNode<Entry> node;
 			if (m_lookup.TryGetValue(key, out node))
 			{
+				m_stats.Hits++;
+
 				// If found, move it to the head of the cache list
 				m_cache.Remove(node);
 				m_cache.AddFirst(node);
@@ -72,6 +87,8 @@ namespace pr.common
 			}
 			else
 			{
+				m_stats.Misses++;
+				
 				// Cache miss, read it
 				var item = on_miss(key);
 				if (Equals(item, default(TItem)))
@@ -92,6 +109,14 @@ namespace pr.common
 			LinkedListNode<Entry> node;
 			if (m_lookup.TryGetValue(key, out node))
 				DeleteCachedItem(node);
+		}
+
+		/// <summary>Removed all cached items from the cache</summary>
+		public void Flush()
+		{
+			int cap = Capacity;
+			Capacity = 0;
+			Capacity = cap;
 		}
 
 		/// <summary>Reduces the size of the cache to 'MaxCachedItemsCount' items</summary>
@@ -121,13 +146,24 @@ namespace pr.common
 		/// <summary>Gets/Sets the maximum number of objects to store in the cache</summary>
 		public int Capacity { get { return 0; } set {} }
 
+		/// <summary>Return performance data for the cache</summary>
+		public CacheStats Stats { get { return m_stats; } }
+		private CacheStats m_stats;
+
 		/// <summary>Returns true if an object with a primary key matching 'key' is currently cached</summary>
 		public bool IsCached(TKey key) { return false; }
 
 		/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
-		public TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null) { return on_miss(key); }
-			
+		public TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null)
+		{
+			m_stats.Misses++;
+			return on_miss(key);
+		}
+
 		/// <summary>Remove a cached item with a given key</summary>
 		public void Invalidate(TKey key) {}
+
+		/// <summary>Removed all cached items from the cache</summary>
+		public void Flush() {}
 	}
 }

@@ -886,6 +886,9 @@ namespace pr.common
 				set { m_cache.Capacity = value; }
 			}
 
+			/// <summary>Return performance data for the cache</summary>
+			public CacheStats Stats { get { return m_cache.Stats; } }
+
 			/// <summary>Returns true if an object with the given primary key is in the cache</summary>
 			public bool IsCached(object key)
 			{
@@ -923,10 +926,13 @@ namespace pr.common
 				var row_id = Convert.ToInt64(key);
 				m_cache.Invalidate(row_id);
 			}
+
+			/// <summary>Removed all cached items from the cache</summary>
+			public void Flush() { m_cache.Flush(); }
 		}
 
 		/// <summary>A cache of compiled queries</summary>
-		internal class QueryCache
+		internal class QueryCache :ICache<string,Query>
 		{
 			private readonly Cache<string,Query> m_cache = new Cache<string, Query>();
 			private readonly Database m_db;
@@ -939,11 +945,20 @@ namespace pr.common
 			/// <summary>Get/Set an upper limit on the number of cached items</summary>
 			public int Capacity { get { return m_cache.Capacity; } set { m_cache.Capacity = value; } }
 
+			/// <summary>Return performance data for the cache</summary>
+			public CacheStats Stats { get { return m_cache.Stats; } }
+
 			/// <summary>Returns true if an object with the given key is in the cache</summary>
 			public bool IsCached(string key) { return m_cache.IsCached(key); }
 
+			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
+			Query ICache<string, Query>.Get(string key, Func<string, Query> on_miss, Action<string, Query> on_hit)
+			{
+				return GetQuery(key);
+			}
+
 			/// <summary>Returns a query from the cache</summary>
-			public Query Get(string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
+			public Query GetQuery(string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
 			{
 				return m_cache.Get(sql_string,
 					k =>
@@ -954,18 +969,64 @@ namespace pr.common
 							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
 							return q;
 						},
-					(k,v) =>
+					(k,v) => v.Reset()); // Before returning the cached query, reset it
+			}
+
+			/// <summary>Returns an insert query from the cache</summary>
+			public InsertCmd InsertCmd(Type type, OnInsertConstraint on_constraint)
+			{
+				return (InsertCmd)m_cache.Get(SqlInsertCmd(type, on_constraint),
+					k =>
 						{
-							// Before returning a cached query, reset it
-							v.Reset();
-						});
+							// Create a new compiled insert query
+							var q = new InsertCmd(type, m_db, on_constraint);
+							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
+							return q;
+						},
+						(k,v) => v.Reset()); // Before returning the cached query, reset it
+					
+			}
+
+			/// <summary>Returns an insert query from the cache</summary>
+			public UpdateCmd UpdateCmd(Type type)
+			{
+				return (UpdateCmd)m_cache.Get(SqlUpdateCmd(type),
+					k =>
+						{
+							// Create a new compiled insert query
+							var q = new UpdateCmd(type, m_db);
+							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
+							return q;
+						},
+						(k,v) => v.Reset()); // Before returning the cached query, reset it
+					
+			}
+
+			/// <summary>Returns an insert query from the cache</summary>
+			public GetCmd GetCmd(Type type)
+			{
+				return (GetCmd)m_cache.Get(SqlGetCmd(type),
+					k =>
+						{
+							// Create a new compiled insert query
+							var q = new GetCmd(type, m_db);
+							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
+							return q;
+						},
+						(k,v) => v.Reset()); // Before returning the cached query, reset it
+					
 			}
 
 			/// <summary>Handles notification from the database that a row has changed</summary>
 			public void Invalidate(string key) { m_cache.Invalidate(key); }
+
+			/// <summary>Removed all cached items from the cache</summary>
+			public void Flush() { m_cache.Flush(); }
 		}
 		#endregion
 
+		#region Database
+		// ReSharper disable MemberHidesStaticFromOuterClass
 		/// <summary>Represents a connection to an sqlite database file</summary>
 		public class Database :IDisposable
 		{
@@ -1060,6 +1121,18 @@ namespace pr.common
 				ObjectCache(type).Capacity = limit;
 			}
 
+			/// <summary>Flush the query cache</summary>
+			public void FlushQueryCache()
+			{
+				QueryCache.Flush();
+			}
+
+			/// <summary>Flush the query cache</summary>
+			public void FlushObjectCache(Type type)
+			{
+				ObjectCache(type).Flush();
+			}
+
 			/// <summary>Returns the object cache for a specific table</summary>
 			internal ICache<object,object> ObjectCache(Type type)
 			{
@@ -1113,7 +1186,7 @@ namespace pr.common
 			/// Returns the number of rows affected by the operation</summary>
 			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (var query = QueryCache.Get(sql, parms, first_idx))
+				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
 				{
 					query.Step();
 					return sqlite3_changes(m_db);
@@ -1123,7 +1196,7 @@ namespace pr.common
 			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
 			public int ExecuteScalar(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (var query = QueryCache.Get(sql, parms, first_idx))
+				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
 				{
 					if (!query.Step()) throw Exception.New(Result.Error, "Scalar query returned no results");
 					int value = (int)Read.Int(query.Stmt, 0);
@@ -1135,7 +1208,7 @@ namespace pr.common
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
 			public IEnumerable EnumRows(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				using (var query = QueryCache.Get(sql, parms, first_idx))
+				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
 					foreach (var r in query.Rows(type))
 						yield return r; // Can't just return query.Rows(type) because Dispose() is called on query
 			}
@@ -1253,7 +1326,6 @@ namespace pr.common
 					meta.Name = new_name;
 			}
 
-			// ReSharper disable MemberHidesStaticFromOuterClass
 			/// <summary>Return an existing table for type 'T'</summary>
 			public Table<T> Table<T>()
 			{
@@ -1267,7 +1339,6 @@ namespace pr.common
 			{
 				return new Table(type, this);
 			}
-			// ReSharper restore MemberHidesStaticFromOuterClass
 
 			/// <summary>Factory method for creating Sqlite.Transaction instances</summary>
 			public Transaction NewTransaction()
@@ -1275,6 +1346,18 @@ namespace pr.common
 				return new Transaction(this);
 			}
 
+			/// <summary>General sql query on table(T)</summary>
+			public Query Query(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				return Table(type).Query(sql, parms, first_idx);
+			}
+			
+			/// <summary>General sql query on table(T)</summary>
+			public Query Query<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				return Query(typeof(T), sql, parms, first_idx);
+			}
+			
 			/// <summary>Find a row in a table of type 'T'</summary>
 			public object Find(Type type, params object[] keys)     { return Table(type).Find(type, keys); }
 			public object Find(Type type, object key1, object key2) { return Table(type).Find(type, key1, key2); }
@@ -1364,7 +1447,10 @@ namespace pr.common
 			}
 			#endif
 		}
+		// ReSharper restore MemberHidesStaticFromOuterClass
+		#endregion
 
+		#region Table
 		/// <summary>Represents a single table in the database</summary>
 		public class Table :IEnumerable
 		{
@@ -1407,7 +1493,7 @@ namespace pr.common
 			{
 				get
 				{
-					GenerateExpression("select count(*)");
+					GenerateExpression(null, "count");
 					try { return m_db.ExecuteScalar(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
 				}
 			}
@@ -1416,7 +1502,7 @@ namespace pr.common
 			/// <summary>General sql query on the table</summary>
 			public Query Query(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				return m_db.QueryCache.Get(sql, parms, first_idx);
+				return m_db.QueryCache.GetQuery(sql, parms, first_idx);
 			}
 			// ReSharper restore MemberHidesStaticFromOuterClass
 
@@ -1447,7 +1533,7 @@ namespace pr.common
 			/// <summary>Returns a row in the table or null if not found</summary>
 			public object Find(params object[] keys)
 			{
-				using (var get = new GetCmd(m_meta, m_db))
+				using (var get = m_db.QueryCache.GetCmd(m_meta.Type))
 				{
 					get.BindPks(m_meta.Type, 1, keys);
 					return get.Find();
@@ -1461,7 +1547,7 @@ namespace pr.common
 			/// <summary>Returns a row in the table or null if not found</summary>
 			public object Find(object key1, object key2) // overload for performance
 			{
-				using (var get = new GetCmd(m_meta, m_db))
+				using (var get = m_db.QueryCache.GetCmd(m_meta.Type))
 				{
 					get.BindPks(m_meta.Type, 1, key1, key2);
 					return get.Find();
@@ -1477,7 +1563,7 @@ namespace pr.common
 			{
 				return Cache.Get(key1, k =>
 					{
-						using (var get = new GetCmd(m_meta, m_db))
+						using (var get = m_db.QueryCache.GetCmd(m_meta.Type))
 						{
 							get.BindPks(m_meta.Type, 1, key1);
 							return get.Find();
@@ -1528,7 +1614,7 @@ namespace pr.common
 			/// <summary>Insert an item into the table.</summary>
 			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
-				using (var insert = new InsertCmd(m_meta.Type, m_db, on_constraint)) // Create the sql query
+				using (var insert = m_db.QueryCache.InsertCmd(m_meta.Type, on_constraint))
 				{
 					insert.BindObj(item); // Bind 'item' to it
 					var count = insert.Run();  // Run the query
@@ -1540,7 +1626,7 @@ namespace pr.common
 			/// <summary>Update 'item' in the table</summary>
 			public int Update(object item)
 			{
-				using (var update = new UpdateCmd(m_meta.Type, m_db)) // Create the sql query
+				using (var update = m_db.QueryCache.UpdateCmd(m_meta.Type))
 				{
 					update.BindObj(item); // Bind 'item' to it
 					var count = update.Run(); // Run the query
@@ -1558,7 +1644,7 @@ namespace pr.common
 			public int DeleteByKey(params object[] keys)
 			{
 				Trace.WriteLine(string.Format("Deleting {0} (key: {1})", m_meta.Name, string.Join(",",keys)));
-				using (var query = m_db.QueryCache.Get(SqlDeleteCmd(m_meta.Type)))
+				using (var query = m_db.QueryCache.GetQuery(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, keys);
 					query.Step();
@@ -1570,7 +1656,7 @@ namespace pr.common
 			public int DeleteByKey(object key1, object key2) // overload for performance
 			{
 				Trace.WriteLine(string.Format("Deleting {0} (key: {1},{2})", m_meta.Name, key1, key2));
-				using (var query = m_db.QueryCache.Get(SqlDeleteCmd(m_meta.Type)))
+				using (var query = m_db.QueryCache.GetQuery(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, key1, key2);
 					query.Step();
@@ -1582,7 +1668,7 @@ namespace pr.common
 			public int DeleteByKey(object key1) // overload for performance
 			{
 				Trace.WriteLine(string.Format("Deleting {0} (key: {1})", m_meta.Name, key1));
-				using (var query = m_db.QueryCache.Get(SqlDeleteCmd(m_meta.Type)))
+				using (var query = m_db.QueryCache.GetQuery(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, key1);
 					query.Step();
@@ -1597,7 +1683,7 @@ namespace pr.common
 				var column_meta = m_meta.Column(column_name);
 				if (m_meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
 				var sql = Sql("update ",m_meta.Name," set ",column_meta.Name," = ? where ",m_meta.PkConstraints());
-				using (var query = m_db.QueryCache.Get(sql))
+				using (var query = m_db.QueryCache.GetQuery(sql))
 				{
 					column_meta.BindFn(query.Stmt, 1, value);
 					query.BindPks(m_meta.Type, 2, keys);
@@ -1612,7 +1698,7 @@ namespace pr.common
 				Trace.WriteLine(string.Format("Updating column {0} in table {1} (all rows)", column_name, m_meta.Name));
 				var column_meta = m_meta.Column(column_name);
 				var sql = Sql("update ",m_meta.Name," set ",column_name," = ?");
-				using (var query = m_db.QueryCache.Get(sql))
+				using (var query = m_db.QueryCache.GetQuery(sql))
 				{
 					column_meta.BindFn(query.Stmt, 1, value);
 					query.Step();
@@ -1625,7 +1711,7 @@ namespace pr.common
 			{
 				var column_meta = m_meta.Column(column_name);
 				var sql = Sql("select ",column_meta.Name," from ",m_meta.Name," where ",m_meta.PkConstraints());
-				using (var query = m_db.QueryCache.Get(sql))
+				using (var query = m_db.QueryCache.GetQuery(sql))
 				{
 					query.BindPks(m_meta.Type, 1, keys);
 					query.Step();
@@ -1642,7 +1728,7 @@ namespace pr.common
 			}
 
 			/// <summary>Generate the sql string and arguments</summary>
-			public Table GenerateExpression(string select = "select *") { m_cmd.Generate(m_meta.Type, select); return this; }
+			public Table GenerateExpression(string select = null, string func = null) { m_cmd.Generate(m_meta.Type, select, func); return this; }
 
 			/// <summary>Resets the generated sql string and arguments. Mainly used when an expression is generated but not used</summary>
 			public Table ResetExpression() { m_cmd.Reset(); return this; }
@@ -1700,6 +1786,14 @@ namespace pr.common
 				try { return m_db.Execute(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
 			}
 
+			/// <summary>Add a 'select' clause to row enumeration</summary>
+			public IEnumerable<U> Select<T,U>(Expression<Func<T,U>> pred)
+			{
+				m_cmd.Select(pred);
+				GenerateExpression();
+				try { return m_db.EnumRows<U>(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
+			}
+
 			/// <summary>Add a 'where' clause to row enumeration</summary>
 			public Table Where<T>(Expression<Func<T,bool>> pred)
 			{
@@ -1739,6 +1833,7 @@ namespace pr.common
 			/// <summary>Wraps an sql expression for enumerating the rows of this table</summary>
 			protected class CmdExpr
 			{
+				private Expression m_select;
 				private Expression m_where;
 				private string m_order;
 				private int? m_take;
@@ -1767,6 +1862,7 @@ namespace pr.common
 				/// <summary>A flag to indicate that the expression has been used</summary>
 				public void Reset()
 				{
+					m_select = null;
 					m_where = null;
 					m_order = null;
 					m_take = null;
@@ -1778,6 +1874,15 @@ namespace pr.common
 				{
 					SqlString = null;
 					Arguments = null;
+				}
+
+				/// <summary>Add a specific select clause to the command</summary>
+				public void Select(Expression expr)
+				{
+					Ungenerate();
+					var lambda = expr as LambdaExpression;
+					if (lambda != null) expr = lambda.Body;
+					m_select = expr;
 				}
 
 				/// <summary>Add a 'where' clause to the command</summary>
@@ -1820,12 +1925,22 @@ namespace pr.common
 				}
 
 				/// <summary>Return an sql string representing this command</summary>
-				public void Generate(Type type, string select)
+				public void Generate(Type type, string select = null, string func = null)
 				{
 					var meta = TableMetaData.GetMetaData(type);
 					var cmd = new TranslateResult();
-					cmd.Text.Append(Sql(select," from ",meta.Name));
+					select = select ?? "select";
 					
+					cmd.Text.Append(select);
+					if (select == "select")
+					{
+						cmd.Text.Append(' ');
+						if (func != null) cmd.Text.Append(func).Append('(');
+						var clause = m_select != null ? Translate(m_select).Text.ToString() : "";
+						cmd.Text.Append(clause.Length != 0 ? clause : "*");
+						if (func != null) cmd.Text.Append(')');
+					}
+					cmd.Text.Append(" from ").Append(meta.Name);
 					if (m_where != null)
 					{
 						var clause = Translate(m_where);
@@ -1892,6 +2007,14 @@ namespace pr.common
 						{
 							return result;
 						}
+					case ExpressionType.New:
+						#region New
+						{
+							var ne = (NewExpression)expr;
+							result.Text.Append(string.Join(",", ne.Members.Select(x => x.Name)));
+ 							break;
+						}
+						#endregion
 					case ExpressionType.MemberAccess:
 						#region Member Access
 						{
@@ -2094,7 +2217,9 @@ namespace pr.common
 			}
 			#endregion
 		}
+		#endregion
 
+		#region Table<T>
 		/// <summary>Represents a table within the database for a compile-time type 'T'.</summary>
 		public class Table<T> :Table ,IEnumerable<T>
 		{
@@ -2168,22 +2293,28 @@ namespace pr.common
 				return Delete<T>(pred);
 			}
 
+			/// <summary>Add a 'select' clause to row enumeration</summary>
+			public IEnumerable<U> Select<U>(Expression<Func<T,U>> pred)
+			{
+				return Select<T,U>(pred);
+			}
+
 			/// <summary>Add a 'where' clause to row enumeration</summary>
 			public Table<T> Where(Expression<Func<T,bool>> pred)
 			{
-				return (Table<T>)Where<T>(pred);
+				return (Table<T>)base.Where(pred);
 			}
 
 			/// <summary>Add an 'OrderBy' clause to row enumeration</summary>
 			public Table<T> OrderBy<U>(Expression<Func<T,U>> pred)
 			{
-				return (Table<T>)OrderBy<T,U>(pred);
+				return (Table<T>)base.OrderBy(pred);
 			}
 
 			/// <summary>Add an 'OrderByDescending' clause to row enumeration</summary>
 			public Table<T> OrderByDescending<U>(Expression<Func<T,U>> pred)
 			{
-				return (Table<T>)OrderByDescending<T,U>(pred);
+				return (Table<T>)base.OrderByDescending(pred);
 			}
 
 			/// <summary>Add a 'limit' clause to row enumeration</summary>
@@ -2206,13 +2337,15 @@ namespace pr.common
 				return m_db.EnumRows<T>(m_cmd.SqlString, m_cmd.Arguments).GetEnumerator();
 			}
 		}
+		#endregion
 
+		#region Query
 		/// <summary>Represents an sqlite prepared statement and iterative result (wraps an sqlite3_stmt handle).</summary>
 		public class Query :IDisposable
 		{
 			protected readonly Database m_db;
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
-			protected bool m_row_end;      // True once the last row has been read
+			protected bool m_row_end; // True once the last row has been read
 			
 			public override string ToString()  { return SqlString; }
 			
@@ -2266,17 +2399,17 @@ namespace pr.common
 				if (cancel.Cancel) return;
 				
 				// After 'sqlite3_finalize()', it is illegal to use m_stmt. So save 'db' here first
-				sqlite3 db = sqlite3_db_handle(m_stmt);
+				Reset(); // Call reset to clear any error code from failed queries.
 				m_stmt.Close();
 				if (m_stmt.CloseResult != Result.OK)
-					throw Exception.New(m_stmt.CloseResult, ErrorMsg(db));
+					throw Exception.New(m_stmt.CloseResult, ErrorMsg(m_db.Handle));
 			}
 			
 			/// <summary>An event raised when this query is closing</summary>
 			public event EventHandler<QueryClosingEventArgs> Closing;
 			public class QueryClosingEventArgs :EventArgs
 			{
-				public bool Cancel { get { return m_cancel; } set { m_cancel |= value; } }
+				public bool Cancel { get { return m_cancel; } set { m_cancel = m_cancel || value; } }
 				private bool m_cancel;
 			}
 
@@ -2380,8 +2513,11 @@ namespace pr.common
 			/// <summary>Reset the prepared statement object back to its initial state, ready to be re-executed.</summary>
 			public void Reset()
 			{
-				var res = sqlite3_reset(Stmt);
-				if (res != Result.OK) throw Exception.New(res, ErrorMsg(sqlite3_db_handle(m_stmt)));
+				// The result from 'sqlite3_reset' reflects the error code of the last 'sqlite3_step'
+				// call. This is legacy behaviour, now step returns the error code immediately. For
+				// this reason we can ignore the error code returned by reset here.
+				m_row_end = false;
+				sqlite3_reset(Stmt);
 			}
 
 			/// <summary>Iterate to the next row in the result. Returns true if there are more rows available</summary>
@@ -2390,10 +2526,18 @@ namespace pr.common
 				var res = sqlite3_step(Stmt);
 				switch (res)
 				{
-				default: throw Exception.New(res, ErrorMsg(sqlite3_db_handle(m_stmt)));
+				default: throw Exception.New(res, ErrorMsg(m_db.Handle));
 				case Result.Done: m_row_end = true; return false;
 				case Result.Row: return true;
 				}
+			}
+
+			/// <summary>Run the query until RowEnd is true. Returns the number of rows changed. Call 'Reset()' before running the command again</summary>
+			public virtual int Run()
+			{
+				int rows_changed = 0;
+				while (Step()) rows_changed += RowsChanged;
+				return rows_changed;
 			}
 
 			/// <summary>Returns true when the last row has been read</summary>
@@ -2405,7 +2549,7 @@ namespace pr.common
 			/// <summary>Returns the number of rows changed as a result of the last 'step()'</summary>
 			public int RowsChanged
 			{
-				get { return sqlite3_changes(sqlite3_db_handle(Stmt)); }
+				get { return sqlite3_changes(m_db.Handle); }
 			}
 
 			/// <summary>Returns the number of columns in the result of this query</summary>
@@ -2445,8 +2589,7 @@ namespace pr.common
 				var meta = TableMetaData.GetMetaData(type);
 				while (Step())
 				{
-					var obj = meta.Factory();
-					meta.ReadObj(Stmt, obj);
+					var obj = meta.ReadObj(Stmt);
 					yield return m_db.ReadItemHook(obj);
 				}
 			}
@@ -2455,6 +2598,96 @@ namespace pr.common
 				return Rows(typeof(T)).Cast<T>();
 			}
 		}
+		#endregion
+
+		#region Specialised query sub-classes
+
+		/// <summary>A specialised query used for inserting objects into a table</summary>
+		public class InsertCmd :Query
+		{
+			/// <summary>The type metadata for this insert command</summary>
+			public TableMetaData MetaData { get; protected set; }
+
+			/// <summary>Creates a compiled query for inserting an object of type 'type' into a table.</summary>
+			public InsertCmd(Type type, Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			:base(db, SqlInsertCmd(type, on_constraint))
+			{
+				MetaData = db.TableMetaData(type);
+			}
+
+			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
+			public void BindObj(object item)
+			{
+				item = m_db.WriteItemHook(item);
+				MetaData.BindObj(m_stmt, 1, item, MetaData.NonAutoIncs);
+			}
+
+			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
+			public override int Run()
+			{
+				Trace.WriteLine(string.Format("Inserting {0}", MetaData.Name));
+				Step();
+				if (!RowEnd) throw Exception.New(Result.Misuse, "Insert returned more than one row");
+				return RowsChanged;
+			}
+		}
+
+		/// <summary>A specialised query used for updating objects into a table</summary>
+		public class UpdateCmd :Query
+		{
+			/// <summary>The type metadata for this update command</summary>
+			public TableMetaData MetaData { get; protected set; }
+
+			/// <summary>Creates a compiled query for updating an object of type 'type' into a table.</summary>
+			public UpdateCmd(Type type, Database db)
+			:base(db, SqlUpdateCmd(type))
+			{
+				MetaData = db.TableMetaData(type);
+			}
+
+			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
+			public void BindObj(object item)
+			{
+				item = m_db.WriteItemHook(item);
+				MetaData.BindObj(m_stmt, 1, item, MetaData.NonPks);
+				MetaData.BindObj(m_stmt, 1 + MetaData.NonPks.Length, item, MetaData.Pks);
+			}
+
+			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
+			public override int Run()
+			{
+				Trace.WriteLine(string.Format("Updating {0}", MetaData.Name));
+				Step();
+				if (!RowEnd) throw Exception.New(Result.Misuse, "Updating returned more than one row");
+				return RowsChanged;
+			}
+		}
+
+		/// <summary>A specialised query used for getting objects from the db</summary>
+		public class GetCmd :Query
+		{
+			/// <summary>The type metadata for this insert command</summary>
+			public TableMetaData MetaData { get; protected set; }
+
+			/// <summary>
+			/// Create a compiled query for getting an object of type 'T' from a table.
+			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
+			public GetCmd(Type type, Database db) :base(db, SqlGetCmd(type))
+			{
+				MetaData = db.TableMetaData(type);
+			}
+
+			/// <summary>
+			/// Populates 'item' and returns true if the query finds a row, otherwise returns false.
+			/// Remember to call 'Reset()' before running the command again</summary>
+			public object Find()
+			{
+				foreach (var x in Rows(MetaData.Type)) return x;
+				return null;
+			}
+		}
+
+		#endregion
 
 		#region DataChanged event args
 
@@ -2541,11 +2774,18 @@ namespace pr.common
 			/// <summary>True if the table uses multiple primary keys</summary>
 			public bool MultiplePK { get { return Pks.Length > 1; } }
 
+			/// <summary>The kind of table represented by this meta data</summary>
+			public Kind TableKind { get; private set; }
+			public enum Kind
+			{
+				Unknown,  // Unknown
+				Table,    // A normal sql table
+				AnonType, // An anonymous class
+				PrimitiveType // A primitive type
+			}
+
 			/// <summary>A factory method for creating instances of the type for this table</summary>
 			public Func<object> Factory { get; set; }
-
-			/// <summary>A default method to use as a factory method for creating instances of type 'Type'</summary>
-			public object DefaultFactory() { return Activator.CreateInstance(Type); }
 
 			/// <summary>
 			/// Constructs the meta data for mapping a type to a database table.
@@ -2562,34 +2802,62 @@ namespace pr.common
 				Type = type;
 				Name = type.Name;
 				Constraints = attr.Constraints ?? "";
-				Factory = DefaultFactory;
+				Factory = () => Activator.CreateInstance(Type);
+				TableKind = Kind.Unknown;
 				
 				// Build a collection of columns to ignore
 				var ignored = new List<string>();
 				foreach (var ign in type.GetCustomAttributes(typeof(IgnoreColumnsAttribute), true).Cast<IgnoreColumnsAttribute>())
 					ignored.AddRange(ign.Ignore.Split(',').Select(x => x.Trim()));
 				
+				// Tests if a member should be included as a column in the table
+				Func<MemberInfo, List<string>, bool> inc_member = (mi,marked) =>
+					!mi.GetCustomAttributes(typeof(IgnoreAttribute), false).Any() &&  // doesn't have the ignore attribute and,
+					!ignored.Contains(mi.Name) &&                                     // isn't in the ignore list and,
+					(mi.GetCustomAttributes(typeof(ColumnAttribute), false).Any() ||  // has the column attribute or,
+					(attr.AllByDefault && marked.Contains(mi.Name)));                 // all in by default and 'mi' is in the collection of found columns
+				
+				const BindingFlags binding_flags = BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;
+				var pflags = attr.PropertyBindingFlags != BindingFlags.Default ? attr.PropertyBindingFlags |BindingFlags.Instance : BindingFlags.Default;
+				var fflags = attr.FieldBindingFlags    != BindingFlags.Default ? attr.FieldBindingFlags    |BindingFlags.Instance : BindingFlags.Default;
+				
 				// Create a collection of the columns of this table
 				var cols = new List<ColumnMetaData>();
 				{
-					// Tests if a member should be included as a column in the table
-					Func<MemberInfo, List<string>, bool> inc_member = (mi,def) =>
-						!mi.GetCustomAttributes(typeof(IgnoreAttribute), false).Any() &&  // doesn't have the ignore attribute and,
-						!ignored.Contains(mi.Name) &&                                     // isn't in the ignore list and,
-						(mi.GetCustomAttributes(typeof(ColumnAttribute), false).Any() ||  // has the column attribute or,
-						(attr.AllByDefault && def.Contains(mi.Name)));                         // all in by default and 'mi' is in the collection of found columns
-					
 					// If AllByDefault is enabled, get a collection of the properties/fields indicated by the binding flags in the attribute
-					var pflags = attr.PropertyBindingFlags != BindingFlags.Default ? attr.PropertyBindingFlags |BindingFlags.Instance : BindingFlags.Default;
-					var fflags = attr.FieldBindingFlags    != BindingFlags.Default ? attr.FieldBindingFlags    |BindingFlags.Instance : BindingFlags.Default;
-					var by_def = !attr.AllByDefault ? null :
+					var mark = !attr.AllByDefault ? null :
 						type.GetProperties(pflags).Where(x => x.CanRead && x.CanWrite).Select(x => x.Name).Concat(
 						type.GetFields    (fflags).Select(x => x.Name)).ToList();
 					
 					// Check all public/non-public properties/fields
-					const BindingFlags binding_flags = BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;
-					cols.AddRange(AllProps (type, binding_flags).Where(pi => inc_member(pi, by_def)).Select(pi => new ColumnMetaData(pi)));
-					cols.AddRange(AllFields(type, binding_flags).Where(fi => inc_member(fi, by_def)).Select(fi => new ColumnMetaData(fi)));
+					cols.AddRange(AllProps (type, binding_flags).Where(pi => inc_member(pi,mark)).Select(pi => new ColumnMetaData(pi)));
+					cols.AddRange(AllFields(type, binding_flags).Where(fi => inc_member(fi,mark)).Select(fi => new ColumnMetaData(fi)));
+					
+					// If we found read/write properties or fields then this is a normal db table type
+					if (cols.Count != 0)
+						TableKind = Kind.Table;
+				}
+				
+				// If no read/write columns were found, look for readonly columns
+				if (TableKind == Kind.Unknown)
+				{
+					// If AllByDefault is enabled, get a collection of the properties/fields indicated by the binding flags in the attribute
+					var mark = !attr.AllByDefault ? null :
+						type.GetProperties(pflags).Where(x => x.CanRead).Select(x => x.Name).Concat(
+						type.GetFields    (fflags).Select(x => x.Name)).ToList();
+					
+					// If we find public readonly properties or fields
+					cols.AddRange(AllProps(type, binding_flags).Where(pi => inc_member(pi,mark)).Select(x => new ColumnMetaData(x)));
+					cols.AddRange(AllProps(type, binding_flags).Where(fi => inc_member(fi,mark)).Select(x => new ColumnMetaData(x)));
+					if (cols.Count != 0)
+						TableKind = Kind.AnonType;
+				}
+				
+				// If still not columns found, check whether 'type' is a primitive type
+				if (TableKind == Kind.Unknown)
+				{
+					cols.Add(new ColumnMetaData(type));
+					TableKind = Kind.PrimitiveType;
 				}
 				
 				// If a primary key is named in the class level attribute, mark it
@@ -2717,7 +2985,7 @@ namespace pr.common
 			/// Bind the values of the properties/fields in 'item' to the parameters
 			/// in prepared statement 'stmt'. 'ofs' is the index offset of the first
 			/// parameter to start binding from.</summary>
-			public void BindObj<T>(sqlite3_stmt stmt, int first_idx, T item, IEnumerable<ColumnMetaData> columns)
+			public void BindObj(sqlite3_stmt stmt, int first_idx, object item, IEnumerable<ColumnMetaData> columns)
 			{
 				if (first_idx < 1) throw new ArgumentException("parameter binding indices start at 1 so 'first_idx' must be >= 1");
 				if (item.GetType() != Type) throw new ArgumentException("'item' is not the correct type for this table");
@@ -2731,21 +2999,52 @@ namespace pr.common
 			}
 
 			/// <summary>Populate the properties and fields of 'item' from the column values read from 'stmt'</summary>
-			public void ReadObj<T>(sqlite3_stmt stmt, T item)
+			public object ReadObj(sqlite3_stmt stmt)
 			{
-				System.Diagnostics.Debug.Assert(item.GetType() == Type, "'item' is not the correct type for this table");
-				for (int i = 0, iend = sqlite3_column_count(stmt); i != iend; ++i)
+				var column_count = sqlite3_column_count(stmt);
+				if (column_count == 0)
+					return null;
+				
+				object obj;
+				if (TableKind == Kind.Table)
 				{
-					var cname = sqlite3_column_name(stmt, i);
-					var col = Column(cname);
+					obj = Factory();
+					for (int i = 0; i != column_count; ++i)
+					{
+						var cname = sqlite3_column_name(stmt, i);
+						var col = Column(cname);
 					
-					// Since sqlite does not support dropping columns in a table, it's likely,
-					// for backwards compatibility, that a table will contain columns that don't
-					// correspond to a property or field in 'item'. These columns are silently ignored.
-					if (col == null) continue;
+						// Since sqlite does not support dropping columns in a table, it's likely,
+						// for backwards compatibility, that a table will contain columns that don't
+						// correspond to a property or field in 'item'. These columns are silently ignored.
+						if (col == null) continue;
 					
-					col.Set(item, col.ReadFn(stmt, i));
+						col.Set(obj, col.ReadFn(stmt, i));
+					}
 				}
+				else if (TableKind == Kind.AnonType)
+				{
+					var args = new List<object>();
+					for (int i = 0; i != column_count; ++i)
+					{
+						var cname = sqlite3_column_name(stmt, i);
+						var col = Column(cname);
+						if (col == null) continue;
+						
+						args.Add(col.ReadFn(stmt,i));
+					}
+					obj = Activator.CreateInstance(Type, args.ToArray(), null);
+				}
+				else if (TableKind == Kind.PrimitiveType)
+				{
+					var col = Column(0);
+					obj = col.ReadFn(stmt,0);
+				}
+				else
+				{
+					obj = null;
+				}
+				return obj;
 			}
 
 			/// <summary>Returns a shallow copy of 'obj' as a new instance</summary>
@@ -2868,7 +3167,7 @@ namespace pr.common
 			public MemberInfo MemberInfo;
 
 			/// <summary>The name of the column</summary>
-			public string Name { get { return MemberInfo.Name; } }
+			public string Name { get { return MemberInfo != null ? MemberInfo.Name : string.Empty; } }
 
 			/// <summary>The data type of the column</summary>
 			public DataType SqlDataType;
@@ -2906,6 +3205,70 @@ namespace pr.common
 			/// <summary>Reads column 'index' from 'stmt' and sets the corresponding property or field in 'obj'</summary>
 			public Read.Func ReadFn;
 
+			/// <summary>Returns a bind function appropriate for 'type'</summary>
+			public static Bind.Func GetBindFunction(Type type)
+			{
+				try
+				{
+					var is_nullable = Nullable.GetUnderlyingType(type) != null;
+					if (!is_nullable)
+					{
+						var bind_type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+						return BindFunction[bind_type];
+					}
+					else // nullable type, wrap the binding functions
+					{
+						var base_type = Nullable.GetUnderlyingType(type);
+						var is_enum   = base_type.IsEnum;
+						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
+						return (stmt,idx,obj) =>
+							{
+								if (obj != null) BindFunction[bind_type](stmt, idx, obj);
+								else sqlite3_bind_null(stmt, idx);
+							};
+					}
+				}
+				catch (KeyNotFoundException) {}
+				throw new KeyNotFoundException(
+					"A bind function was not found for type '"+type.Name+"'\r\n" +
+					"Custom types need to register a Bind/Read function in the " +
+					"BindFunction/ReadFunction map before being used");
+			}
+
+			public static Read.Func GetReadFunction(Type type)
+			{
+				// Setup the bind and read methods
+				try
+				{
+					var is_nullable = Nullable.GetUnderlyingType(type) != null;
+					if (!is_nullable)
+					{
+						var bind_type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+						return type.IsEnum
+							? (stmt,idx) => Enum.ToObject(type, ReadFunction[bind_type](stmt,idx))
+							: ReadFunction[type];
+					}
+					else // nullable type, wrap the binding functions
+					{
+						var base_type = Nullable.GetUnderlyingType(type);
+						var is_enum   = base_type.IsEnum;
+						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
+						return (stmt,idx) =>
+							{
+								if (sqlite3_column_type(stmt, idx) == DataType.Null) return null;
+								var obj = ReadFunction[bind_type](stmt, idx);
+								if (is_enum) obj = Enum.ToObject(base_type, obj);
+								return obj;
+							};
+					}
+				}
+				catch (KeyNotFoundException) {}
+				throw new KeyNotFoundException(
+					"A bind or read function was not found for type '"+type.Name+"'\r\n" +
+					"Custom types need to register a Bind/Read function in the " +
+					"BindFunction/ReadFunction map before being used");
+			}
+
 			public ColumnMetaData(PropertyInfo pi)
 			{
 				Get = obj => pi.GetValue(obj, null);
@@ -2918,12 +3281,19 @@ namespace pr.common
 				Set = fi.SetValue;
 				Init(fi, fi.FieldType);
 			}
-			
+			public ColumnMetaData(Type type)
+			{
+				Get = obj => obj;
+				Set = (obj,val) => { throw new NotImplementedException(); };
+				Init(null, type);
+			}
+
 			/// <summary>Common constructor code</summary>
 			private void Init(MemberInfo mi, Type type)
 			{
-				Trace.WriteLine(string.Format("   Column: '{0}'", mi.Name));
-				var attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault() ?? new ColumnAttribute();
+				ColumnAttribute attr = null;
+				if (mi != null) attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault();
+				if (attr == null) attr = new ColumnAttribute();
 				var is_nullable = Nullable.GetUnderlyingType(type) != null;
 				
 				MemberInfo      = mi;
@@ -2937,42 +3307,9 @@ namespace pr.common
 				ClrType         = type;
 				
 				// Setup the bind and read methods
-				try
-				{
-					if (!is_nullable)
-					{
-						var bind_type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
-						BindFn = BindFunction[bind_type];
-						ReadFn = ReadFunction[bind_type];
-					}
-					else // nullable type, wrap the binding functions
-					{
-						var base_type = Nullable.GetUnderlyingType(type);
-						var is_enum   = base_type.IsEnum;
-						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
-						
-						var bind = BindFunction[bind_type];
-						var read = ReadFunction[bind_type];
-						BindFn = (stmt,idx,obj) =>
-							{
-								if (obj != null) bind(stmt, idx, obj);
-								else sqlite3_bind_null(stmt, idx);
-							};
-						ReadFn = (stmt,idx) =>
-							{
-								if (sqlite3_column_type(stmt, idx) == DataType.Null) return null;
-								var obj = read(stmt, idx);
-								if (is_enum) obj = Enum.ToObject(base_type, obj);
-								return obj;
-							};
-					}
-					return;
-				}
-				catch (KeyNotFoundException) {}
-				throw new KeyNotFoundException(
-					"A bind or read function was not found for type '"+ClrType.Name+"'\r\n" +
-					"Custom types need to register a Bind/Read function in the " +
-					"BindFunction/ReadFunction map before being used");
+				BindFn = GetBindFunction(type);
+				ReadFn = GetReadFunction(type);
+				Trace.WriteLine(string.Format("   Column: '{0}'", Name));
 			}
 
 			/// <summary>Returns the column definition for this column</summary>
@@ -2993,98 +3330,6 @@ namespace pr.common
 				return sb.ToString();
 			}
 		}
-		#endregion
-
-		#region Specialised query sub-classes
-
-		/// <summary>A specialised query used for inserting objects into a table</summary>
-		public class InsertCmd :Query
-		{
-			/// <summary>The type metadata for this insert command</summary>
-			public TableMetaData MetaData { get; protected set; }
-
-			/// <summary>Creates a compiled query for inserting an object of type 'type' into a table.</summary>
-			public InsertCmd(Type type, Database db, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
-			:base(db, SqlInsertCmd(type, on_constraint))
-			{
-				MetaData = db.TableMetaData(type);
-			}
-
-			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
-			public void BindObj(object item)
-			{
-				item = m_db.WriteItemHook(item);
-				MetaData.BindObj(m_stmt, 1, item, MetaData.NonAutoIncs);
-			}
-
-			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
-			public int Run()
-			{
-				Trace.WriteLine(string.Format("Inserting {0}", MetaData.Name));
-				Step();
-				if (!RowEnd) throw Exception.New(Result.Misuse, "Insert returned more than one row");
-				return RowsChanged;
-			}
-		}
-
-		/// <summary>A specialised query used for updating objects into a table</summary>
-		public class UpdateCmd :Query
-		{
-			/// <summary>The type metadata for this update command</summary>
-			public TableMetaData MetaData { get; protected set; }
-
-			/// <summary>Creates a compiled query for updating an object of type 'type' into a table.</summary>
-			public UpdateCmd(Type type, Database db)
-			:base(db, SqlUpdateCmd(type))
-			{
-				MetaData = db.TableMetaData(type);
-			}
-
-			/// <summary>Bind the values in 'item' to this insert query making it ready for running</summary>
-			public void BindObj(object item)
-			{
-				item = m_db.WriteItemHook(item);
-				MetaData.BindObj(m_stmt, 1, item, MetaData.NonPks);
-				MetaData.BindObj(m_stmt, 1 + MetaData.NonPks.Length, item, MetaData.Pks);
-			}
-
-			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
-			public int Run()
-			{
-				Trace.WriteLine(string.Format("Updating {0}", MetaData.Name));
-				Step();
-				if (!RowEnd) throw Exception.New(Result.Misuse, "Updating returned more than one row");
-				return RowsChanged;
-			}
-		}
-
-		/// <summary>A specialised query used for getting objects from the db</summary>
-		public class GetCmd :Query
-		{
-			/// <summary>The type metadata for this insert command</summary>
-			public TableMetaData MetaData { get; protected set; }
-
-			/// <summary>
-			/// Create a compiled query for getting an object of type 'T' from a table.
-			/// Users can then bind primary keys, and run the query repeatedly to get multiple items.</summary>
-			public GetCmd(TableMetaData meta, Database db) :base(db, SqlGetCmd(meta.Type))
-			{
-				MetaData = meta;
-			}
-
-			/// <summary>
-			/// Populates 'item' and returns true if the query finds a row, otherwise returns false.
-			/// Remember to call 'Reset()' before running the command again</summary>
-			public object Find()
-			{
-				Step();
-				if (RowEnd) return null;
-				var item = MetaData.Factory();
-				MetaData.ReadObj(m_stmt, item);
-				return item;
-			}
-		}
-
 		#endregion
 
 		#region Attribute types
@@ -3304,120 +3549,6 @@ namespace pr.common
 
 		#endregion
 
-		#region Sqlite.Pred
-
-		/// <summary>SQL predicate expression composer</summary>
-		public class Pred
-		{
-			public readonly string Expr;
-		
-			private Pred(string expr)
-			{
-				Expr = expr;
-			}
-
-			public override string ToString()
-			{
-				return Expr;
-			}
-
-			/// <summary>Helper for turning properties into their string name</summary>
-			private static string AsStr<U,V>(Expression<Func<U,V>> expression)
-			{
-				UnaryExpression unex = expression.Body as UnaryExpression;
-				return unex != null && unex.NodeType == ExpressionType.Convert
-					? ((MemberExpression) unex.Operand).Member.Name
-					: ((MemberExpression) expression.Body).Member.Name;
-			}
-
-			/// <summary>Helper for converting a generic 'value' into its sql form</summary>
-			private static string AsStr(object value)
-			{
-				if (value == null)
-					return null;
-				
-				var type = value.GetType();
-				
-				// Enums and bools need converting to ints
-				if (type.IsEnum || type == typeof(bool))
-					return Convert.ToInt32(value).ToString(CultureInfo.InvariantCulture);
-				
-				// Strings need wrapping in quotes
-				if (type == typeof(string))
-					return "'"+value+"'";
-				
-				// DateTimeOffsets should be int64 values
-				if (type == typeof(DateTimeOffset))
-					return ((DateTimeOffset)value).Ticks.ToString(CultureInfo.InvariantCulture);
-				
-				// Otherwise, just convert to a string
-				return value.ToString();
-			}
-			
-			public bool IsEmpty
-			{
-				get { return string.IsNullOrEmpty(Expr); }
-			}
-			public static Pred Nothing()
-			{
-				return new Pred(string.Empty);
-			}
-			public static Pred Equal<U,V>(Expression<Func<U,V>> field, V value)
-			{
-				var val = AsStr(value);
-				return val != null
-					? new Pred(Sql("(",AsStr(field)," == ",val,")"))
-					: new Pred(Sql("(",AsStr(field)," is null",")"));
-			}
-			public static Pred NotEqual<U,V>(Expression<Func<U,V>> field, V value)
-			{
-				// Special case for enums, we have to convert them to ints first
-				var val = AsStr(value);
-				return val != null
-					? new Pred(Sql("(",AsStr(field)," != ",val,")"))
-					: new Pred(Sql("(",AsStr(field)," is not null",")"));
-			}
-			public static Pred In<U,V>(Expression<Func<U,V>> field, IEnumerable<V> value)
-			{
-				var vals = string.Join(",",value.Select(x => AsStr(x)));
-				return new Pred(Sql("(",AsStr(field)," in ",vals,")"));
-			}
-			public static Pred NotIn<U,V>(Expression<Func<U,V>> field, IEnumerable<V> value)
-			{
-				var vals = string.Join(",",value.Select(x => AsStr(x)));
-				return new Pred(Sql("(",AsStr(field)," not in ",vals,")"));
-			}
-			public static Pred And(params Pred[] sql)
-			{
-				var sb = m_sql_cached_sb;
-				sb.Clear();
-				sb.Append("(");
-				foreach (var s in sql)
-				{
-					if (s.IsEmpty) continue;
-					if (sb.Length != 1) sb.Append(" and ");
-					sb.Append(s.Expr);
-				}
-				sb.Append(")");
-				return sb.Length != 2 ? new Pred(sb.ToString()) : Nothing();
-			}
-			public static Pred Or(params Pred[] sql)
-			{
-				var sb = m_sql_cached_sb;
-				sb.Clear();
-				sb.Append("(");
-				foreach (var s in sql)
-				{
-					if (s.IsEmpty) continue;
-					if (sb.Length != 1) sb.Append(" or ");
-					sb.Append(s.Expr);
-				}
-				sb.Append(")");
-				return sb.Length != 2 ? new Pred(sb.ToString()) : Nothing();
-			}
-		}
-		#endregion Sqlite.Pred
-
 		#region Imported functions
 
 		// ReSharper disable InconsistentNaming,UnusedMember.Local
@@ -3587,7 +3718,6 @@ namespace pr
 	using System.IO;
 	using System.Text.RegularExpressions;
 	using common;
-	using util;
 	
 	[TestFixture] internal static partial class UnitTests
 	{
@@ -4490,7 +4620,7 @@ namespace pr
 							Assert.AreEqual(4+i, list[i].Inc_Key);
 					}
 					{// Skip
-						var q = table.Where(x => x.Inc_Key <= 5).Skip(2);
+						var q = table.Where(x => x.Inc_Key <= 5).Where(x => x.Inc_Value != "").Skip(2);
 						var list = q.ToList();
 						Assert.AreEqual(4, list.Count);
 						Assert.AreEqual(0, list[0].Inc_Key);
@@ -4538,10 +4668,47 @@ namespace pr
 						Assert.AreEqual(3, list[3].Inc_Key);
 						Assert.AreEqual(2, list[4].Inc_Key);
 					}
+					{// Select
+						var q = table.Select(x => x.Inc_Key);
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(typeof(List<int>), list.GetType());
+						Assert.AreEqual(4, list[0]);
+						Assert.AreEqual(1, list[1]);
+						Assert.AreEqual(0, list[2]);
+						Assert.AreEqual(3, list[3]);
+						Assert.AreEqual(2, list[4]);
+					}
+					{// Select tuple
+						var q = table.Select(x => new{x.Inc_Key, x.Inc_Enum});
+						var list = q.ToList();
+						Assert.AreEqual(5, list.Count);
+						Assert.AreEqual(4, list[0].Inc_Key);
+						Assert.AreEqual(1, list[1].Inc_Key);
+						Assert.AreEqual(0, list[2].Inc_Key);
+						Assert.AreEqual(3, list[3].Inc_Key);
+						Assert.AreEqual(2, list[4].Inc_Key);
+						Assert.AreEqual(SomeEnum.Two   ,list[0].Inc_Enum);
+						Assert.AreEqual(SomeEnum.Two   ,list[1].Inc_Enum);
+						Assert.AreEqual(SomeEnum.One   ,list[2].Inc_Enum);
+						Assert.AreEqual(SomeEnum.One   ,list[3].Inc_Enum);
+						Assert.AreEqual(SomeEnum.Three ,list[4].Inc_Enum);
+					}
 					#pragma warning disable 168
 					{// Check sql strings are correct
 						string sql;
-					
+						
+						var a = table.Where(x => x.Inc_Key == 3).Select(x => x.Inc_Enum).ToList();
+						sql = table.SqlString;
+						Assert.AreEqual("select Inc_Enum from DomType0 where (Inc_Key==?)", sql);
+						
+						var b = table.Where(x => x.Inc_Key == 3).Select(x => new{x.Inc_Value,x.Inc_Enum}).ToList();
+						sql = table.SqlString;
+						Assert.AreEqual("select Inc_Value,Inc_Enum from DomType0 where (Inc_Key==?)", sql);
+						
+						sql = table.Where(x => (x.Inc_Key & 0x3) == 0x1).GenerateExpression().ResetExpression().SqlString;
+						Assert.AreEqual("select * from DomType0 where ((Inc_Key&?)==?)", sql);
+						
 						sql = table.Where(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
 					
@@ -4558,7 +4725,7 @@ namespace pr
 					
 						var q = (from x in table where x.Inc_Key == 3 select new {x.Inc_Key, x.Inc_Value}).ToList();
 						sql = table.SqlString;
-						Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
+						Assert.AreEqual("select Inc_Key,Inc_Value from DomType0 where (Inc_Key==?)", sql);
 					
 						var w = table.Delete(x => x.Inc_Key == 2);
 						sql = table.SqlString;
@@ -5005,22 +5172,6 @@ namespace pr
 					table.Delete(obj2);
 					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
 				}
-			}
-			[Test] public static void PredicateComposition()
-			{
-				var expr = 
-					Sqlite.Pred.Or(
-						Sqlite.Pred.And(
-							Sqlite.Pred.Equal<DomType1,int>(x => x.m_int, 2),
-							Sqlite.Pred.NotEqual<DomType1,string>(x => x.m_string, "blah")
-							),
-						Sqlite.Pred.And(
-							Sqlite.Pred.Equal<DomType1,DateTimeOffset>(x => x.m_dt_offset, DateTimeOffset.MinValue),
-							Sqlite.Pred.NotIn<DomType1,SomeEnum>(x => x.m_enum, Enum<SomeEnum>.Values)
-							),
-						Sqlite.Pred.Equal<DomType1,int?>(x => x.m_nullint, null)
-						);
-				Assert.AreEqual("(((m_int == 2) and (m_string != 'blah')) or ((m_dt_offset == 0) and (m_enum not in 0,1,2)) or (m_nullint is null))", expr.Expr);
 			}
 		}
 	}
