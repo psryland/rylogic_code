@@ -195,6 +195,7 @@ public:
 		return m_xySplitterPos;
 	}
 
+	// pr: added this	
 	int GetSplitterPosPct() const
 	{
 		return ::MulDiv(m_nProportionalPos, 100, m_nPropMax);
@@ -819,7 +820,7 @@ public:
 			m_nProportionalPos = ::MulDiv(m_xySplitterPos, m_nPropMax, cxyTotal);
 		else
 			m_nProportionalPos = 0;
-		//ATLTRACE2(atlTraceUI, 0, _T("CSplitterImpl::StoreProportionalPos - %i\n"), m_nProportionalPos);
+		//pr ATLTRACE2(atlTraceUI, 0, _T("CSplitterImpl::StoreProportionalPos - %i\n"), m_nProportionalPos);
 	}
 
 	void UpdateProportionalPos()
