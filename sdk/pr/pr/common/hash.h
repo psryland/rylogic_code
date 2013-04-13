@@ -110,22 +110,23 @@ namespace pr
 		}
 
 		// Hash a char string
-		inline HashValue Hash(char const*& src, char term = 0, HashValue hash = -1)
+		inline HashValue Hash(char const*& src, char term, HashValue hash)
 		{
 			uint const* table = CRCTable32::Data();
 			uint&       h     = reinterpret_cast<uint&>(hash);
 			for (; *src != term; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
 			return hash;
 		}
+		inline HashValue Hash(char const*& src, char term) { return Hash(src, term, -1); }
+		inline HashValue Hash(char const*& src)            { return Hash(src, 0, -1); }
 
 		// Hash a char string
-		inline HashValue HashC(char const* src, char term = 0, HashValue hash = -1)
-		{
-			return Hash(src, term, hash);
-		}
+		inline HashValue HashC(char const* src, char term, HashValue hash) { return Hash(src, term, hash); }
+		inline HashValue HashC(char const* src, char term) { return HashC(src, term, -1); }
+		inline HashValue HashC(char const* src)            { return HashC(src, 0, -1); }
 
 		// Hash a wchar_t string
-		inline HashValue Hash(wchar_t const*& src, wchar_t term = 0, HashValue hash = -1)
+		inline HashValue Hash(wchar_t const*& src, wchar_t term, HashValue hash)
 		{
 			uint const* table = CRCTable32::Data();
 			uint&       h     = reinterpret_cast<uint&>(hash);
@@ -137,12 +138,13 @@ namespace pr
 			}
 			return hash;
 		}
+		inline HashValue Hash(wchar_t const*& src, wchar_t term) { return Hash(src, term, -1); }
+		inline HashValue Hash(wchar_t const*& src)               { return Hash(src, 0, -1); }
 
 		// Hash a wchar_t string
-		inline HashValue HashC(wchar_t const* src, wchar_t term = 0, HashValue hash = -1)
-		{
-			return Hash(src, term, hash);
-		}
+		inline HashValue HashC(wchar_t const* src, wchar_t term, HashValue hash) { return Hash(src, term, hash); }
+		inline HashValue HashC(wchar_t const* src, wchar_t term) { return HashC(src, term, -1); }
+		inline HashValue HashC(wchar_t const* src)               { return HashC(src, 0, -1); }
 
 		// Hash a char string converting it's characters to lower case first
 		inline HashValue HashLwr(char const* src, char term = 0, HashValue hash = -1)

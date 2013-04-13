@@ -63,8 +63,10 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 ,m_view(view)
 ,m_drawlist(rdr)
 ,m_background_colour(pr::ColourBlack)
+,m_global_light()
 ,m_cbuf_frame()
-,m_rs(rdr.m_rs_mgr.RasterState(ERasterState::SolidCullBack))
+,m_rs(rdr.m_rs_mgr.RasterState(ERasterState::SolidCullNone))
+,m_stereoscopic(false)
 {
 	CBufFrame scene_constants = {};
 	scene_constants.m_c2w = view.m_c2w;
@@ -93,16 +95,61 @@ void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) cons
 	dc->RSSetViewports(1, &m_viewport);
 	
 	{// Set the frame constant variables
-		CBufFrame scene_constants;
-		scene_constants.m_c2w = m_view.m_c2w;
-		scene_constants.m_w2c = pr::GetInverse(m_view.m_c2w);
-		*Lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufFrame>() = scene_constants;
+		CBufFrame buf;
+		buf.m_c2w                = m_view.m_c2w;
+		buf.m_w2c                = pr::GetInverse(m_view.m_c2w);
+		buf.m_w2s                = m_view.m_c2s * pr::GetInverseFast(m_view.m_c2w);
+		buf.m_global_lighting    = pr::v4::make(static_cast<float>(m_global_light.m_type),0.0f,0.0f,0.0f);
+		buf.m_ws_light_direction = m_global_light.m_direction;
+		buf.m_ws_light_position  = m_global_light.m_position;
+		buf.m_light_ambient      = m_global_light.m_ambient;
+		buf.m_light_colour       = m_global_light.m_diffuse;
+		buf.m_light_specular     = pr::Colour::make(m_global_light.m_specular, m_global_light.m_specular_power);
+		*Lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufFrame>() = buf;
 		
 		// Bind the frame constants to the shader
 		dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
 	}
 	
 	DoRender(dc, clear_bb);
+
+	//WriteNV3DSig(dc);
+}
+
+void pr::rdr::Scene::WriteNV3DSig(D3DPtr<ID3D11DeviceContext>& dc) const
+{
+	const uint NVSTEREO_IMAGE_SIGNATURE = 0x4433564e; //NV3D
+	// ORedflags in the dwFlagsfielsof the _Nv_Stereo_Image_Headerstructure above
+#define SIH_SWAP_EYES 0x00000001
+#define SIH_SCALE_TO_FIT 0x00000002
+
+	struct NvStereoImageHeader
+	{
+		unsigned int dwSignature;
+		unsigned int dwWidth;
+		unsigned int dwHeight;
+		unsigned int dwBPP;
+		unsigned int dwFlags;
+	};
+
+	D3DPtr<ID3D11RenderTargetView> rtv;
+	dc->OMGetRenderTargets(1, &rtv.m_ptr, 0);
+
+	D3DPtr<ID3D11Resource> res;
+	rtv->GetResource(&res.m_ptr);
+
+	Lock lock(dc, res, 0, D3D11_MAP_WRITE_DISCARD, 0);
+	
+	// write stereo signature in the last raw of the stereo image
+	auto pSIH = reinterpret_cast<NvStereoImageHeader*>(lock.ptr<uint8>() + ((int)m_viewport.Height - 1) * lock.RowPitch());
+
+	// Update the signature header values
+	pSIH->dwSignature = NVSTEREO_IMAGE_SIGNATURE;
+	pSIH->dwBPP = 32;
+	//pSIH->dwFlags = SIH_SWAP_EYES; // Src image has left on left and right on right, thats why this flag is not needed.
+	pSIH->dwFlags = SIH_SCALE_TO_FIT;
+	pSIH->dwWidth = (int)m_viewport.Width *2;
+	pSIH->dwHeight = (int)m_viewport.Height;
 }
 
 // SceneForward ***********************************************************
@@ -133,7 +180,7 @@ void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear
 		ShaderPtr const&    shader = nugget.m_draw.m_shader;
 
 		// Bind the shader to the device
-		shader->Setup(dc, nugget, inst, *this);
+		shader->Bind(dc, nugget, inst, *this);
 
 		// Add the nugget to the device context
 		dc->DrawIndexed(

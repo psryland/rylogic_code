@@ -18,7 +18,8 @@ namespace pr
 		template
 		<
 			typename DerivedGUI,
-			typename Main
+			typename Main,
+			typename MessageLoop = CMessageLoop // Alternatives are: SimMsgLoop
 		>
 		struct MainGUI
 			:WTL::CFrameWindowImpl<DerivedGUI>
@@ -27,22 +28,34 @@ namespace pr
 		{
 			// Define this type as base as a helper for derived type constructors
 			// so they can call: MyType(...) :base(..) {}
-			typedef MainGUI<DerivedGUI, Main> base;
+			typedef MainGUI<DerivedGUI, Main, MessageLoop> base;
 			
-			Main*  m_main;          // The app logic object
-			DWORD  m_my_thread_id;  // The thread this gui object was created on
-			bool   m_resizing;      // True during a resize of the main window
-			bool   m_nav_enabled;   // True to allow default mouse navigation
+			MessageLoop m_msg_loop;      // The message pump
+			Main*       m_main;          // The app logic object
+			DWORD       m_my_thread_id;  // The thread this gui object was created on
+			bool        m_resizing;      // True during a resize of the main window
+			bool        m_nav_enabled;   // True to allow default mouse navigation
 			
 			MainGUI()
-			:m_main(0)
+			:m_msg_loop()
+			,m_main(0)
 			,m_my_thread_id(GetCurrentThreadId())
 			,m_resizing(false)
 			,m_nav_enabled(false)
-			{}
+			{
+				// Register this class for message filtering and idle updates
+				m_msg_loop.AddMessageFilter(this);
+				m_msg_loop.AddIdleHandler(this);
+
+				// The main window message loop
+				// The app module maintains a map from thread id to message loop.
+				// We could use this to add method loops for other threads if needed
+				pr::app::Module().AddMessageLoop(&m_msg_loop);
+			}
 			virtual ~MainGUI()
 			{
 				PR_ASSERT(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
+				pr::app::Module().RemoveMessageLoop();
 			}
 			
 			// Create/Destroy the main window
@@ -51,12 +64,7 @@ namespace pr
 				//// Set icons
 				//SetIcon((HICON)::LoadImage(create->hInstance, "MainIcon", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,TRUE);
 				//SetIcon((HICON)::LoadImage(create->hInstance, "MainIcon", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,FALSE);
-	
-				// Register this class for message filtering and idle updates
-				CMessageLoop* loop = pr::app::Module().GetMessageLoop();
-				loop->AddMessageFilter(this);
-				loop->AddIdleHandler(this);
-	
+
 				// Create the main app logic
 				try { m_main = new Main(static_cast<DerivedGUI&>(*this)); }
 				catch (std::exception const& ex)
@@ -75,9 +83,14 @@ namespace pr
 					CloseApp(E_FAIL);
 					return E_FAIL;
 				}
-				
+
+				// Window title
 				SetWindowTextW(m_hWnd, m_main->AppTitle());
-				OnTimerTick(0); // Initiate the render timer
+
+				// Note: derived classes may need to set up a method for rendering,
+				// By default, rendering occurs in OnPaint(), however if a SimMsgLoop
+				// is used, the derived class will need to register a step context that
+				// calls Render()
 				return S_OK;
 			}
 			virtual void OnDestroy()
@@ -94,7 +107,7 @@ namespace pr
 				::PostQuitMessage(exit_code);
 				m_hWnd = 0;
 			}
-			
+
 			// Idle handler
 			BOOL OnIdle()
 			{
@@ -104,7 +117,7 @@ namespace pr
 			{
 				return FALSE;
 			}
-			
+
 			// Handle menu commands
 			void OnSysCommand(UINT wparam, WTL::CPoint const&)
 			{
@@ -124,7 +137,7 @@ namespace pr
 					break;
 				}
 			}
-			
+
 			// Rendering the window
 			virtual LRESULT OnEraseBkGnd(HDC hdc)
 			{
@@ -147,13 +160,6 @@ namespace pr
 			{
 				if (m_main/* && !m_resizing*/) m_main->Render();
 				SetMsgHandled(FALSE);
-			}
-			virtual void OnTimerTick(UINT_PTR)
-			{
-				// If a refresh has been flagged, render now
-				//if (m_refresh)
-				m_main->DoRender();
-				SetTimer(ID_MAIN_RENDER_TIMER, 1, 0);
 			}
 
 			// Resizing handlers
@@ -225,7 +231,7 @@ namespace pr
 			}
 
 			// Message Map
-			enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100, ID_MAIN_RENDER_TIMER = 100 };
+			enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100 };
 			DECLARE_FRAME_WND_CLASS(_T("PR_APP_MAIN_GUI"), IDR_MAINFRAME);
 			BEGIN_MSG_MAP(MainGUI)
 				MSG_WM_CREATE(OnCreate)
@@ -234,7 +240,6 @@ namespace pr
 				MSG_WM_COMMAND(OnCommand)
 				MSG_WM_ERASEBKGND(OnEraseBkGnd)
 				MSG_WM_PAINT(OnPaint)
-				MSG_WM_TIMER(OnTimerTick)
 				MSG_WM_GETMINMAXINFO(OnGetMinMaxInfo)
 				MSG_WM_SIZING(OnSizing)
 				MSG_WM_EXITSIZEMOVE(OnExitSizeMove)

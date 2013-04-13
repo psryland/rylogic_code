@@ -95,6 +95,11 @@
 		<DisplayString>{m_value}</DisplayString>
 	</Type>
 
+	<!-- Geometry -->
+	<Type Name="pr::Colour32">
+		<DisplayString>{m_aarrggbb,x}</DisplayString>
+	</Type>
+
 	<!-- Renderer11 -->
 	<Type Name="pr::rdr::BaseShader">
 		<DisplayString>{m_name}</DisplayString>

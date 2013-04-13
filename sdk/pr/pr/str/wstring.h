@@ -8,6 +8,9 @@
 
 #include <windows.h>
 #include <string>
+#include "pr/macros/link.h"
+
+#pragma message(PR_LINK "wstring.h is deprecated, use tostring.h instead")
 
 namespace pr
 {

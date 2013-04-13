@@ -10,6 +10,43 @@
 
 using namespace pr::rdr;
 
+#if PR_RDR_RUNTIME_SHADERS
+// Look for a compiled shader object file by the name 'compiled_shader_filename'
+// If the file exists, check the last modified time, and if newer, replace the shader 'ptr' and update 'last_modified'
+void RefreshShaders(D3DPtr<ID3D11Device>& device, ShaderPtr const& shader)
+{
+	wchar_t const* shader_directory = L"Q:\\projects\\renderer11\\shaders\\compiled";
+	time_t last_mod, newest = shader->m_last_modified;
+	std::wstring filepath;
+	
+	// Check the VS
+	filepath = pr::filesys::CombinePath<std::wstring>(shader_directory, pr::To<std::wstring>(shader->m_name+".vs.cso"));
+	if (pr::filesys::FileExists(filepath) && (last_mod = pr::filesys::GetFileTimeStats(filepath).m_last_modified) > shader->m_last_modified)
+	{
+		std::vector<pr::uint8> buf;
+		if (pr::FileToBuffer(filepath.c_str(), buf) && !buf.empty())
+		{
+			pr::Throw(device->CreateVertexShader(&buf[0], buf.size(), 0, &shader->m_vs.m_ptr));
+			if (last_mod > newest) newest = last_mod;
+		}
+	}
+
+	// Check the PS
+	filepath = pr::filesys::CombinePath<std::wstring>(shader_directory, pr::To<std::wstring>(shader->m_name+".ps.cso"));
+	if (pr::filesys::FileExists(filepath) && (last_mod = pr::filesys::FileTimeStats(filepath.c_str()).m_last_modified) > shader->m_last_modified)
+	{
+		std::vector<pr::uint8> buf;
+		if (pr::FileToBuffer(filepath.c_str(), buf) && !buf.empty())
+		{
+			pr::Throw(device->CreatePixelShader(&buf[0], buf.size(), 0, &shader->m_ps.m_ptr));
+			if (last_mod > newest) newest = last_mod;
+		}
+	}
+
+	shader->m_last_modified = newest;
+}
+#endif
+
 pr::rdr::ShaderManager::ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device)
 :m_mem(mem)
 ,m_device(device)
@@ -26,7 +63,7 @@ pr::rdr::ShaderManager::~ShaderManager()
 	dc->GSSetShader(0, 0, 0);
 	dc->HSSetShader(0, 0, 0);
 	dc->DSSetShader(0, 0, 0);
-	
+
 	// Release the ref added in CreateShader()
 	while (!m_lookup_shader.empty())
 	{
@@ -37,22 +74,22 @@ pr::rdr::ShaderManager::~ShaderManager()
 }
 
 // Builds the basic parts of a shader.
-pr::rdr::ShaderPtr pr::rdr::ShaderManager::InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc)
+pr::rdr::ShaderPtr pr::rdr::ShaderManager::InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name)
 {
 	D3DPtr<ID3D11InputLayout>     iplayout;
 	D3DPtr<ID3D11VertexShader>    vs;
 	D3DPtr<ID3D11PixelShader>     ps;
-	EGeom::Type geom_mask = 0;
-	
+	EGeom geom_mask = 0;
+
 	// If 'id' doesn't exist (or is Auto), allocate a new shader
 	if (vsdesc != 0)
 	{
 		// Create the shader
 		pr::Throw(m_device->CreateVertexShader(vsdesc->m_data, vsdesc->m_size, 0, &vs.m_ptr));
-		
+
 		// Create the input layout
 		pr::Throw(m_device->CreateInputLayout(vsdesc->m_iplayout, UINT(vsdesc->m_iplayout_count), vsdesc->m_data, vsdesc->m_size, &iplayout.m_ptr));
-		
+
 		// Set the minimum vertex format mask
 		geom_mask = vsdesc->m_geom_mask;
 	}
@@ -61,23 +98,33 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::InitShader(ShaderAlex create, RdrId i
 		// Create the pixel shader
 		pr::Throw(m_device->CreatePixelShader(psdesc->m_data, psdesc->m_size, 0, &ps.m_ptr));
 	}
-	
+
+	// If runtime shaders is enabled, wrap the setup function in a function
+	// that loads data from a compiled shader object file if it exists and is newer
+	#if PR_RDR_RUNTIME_SHADERS
+	setup = [=](D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
+	{
+		RefreshShaders(m_device, nugget.m_draw.m_shader);
+		setup(dc, nugget, inst, scene);
+	};
+	#endif
+
 	// Allocate the new shader instance
 	ShaderPtr shdr = create(this);
-	shdr->m_iplayout  = iplayout;
-	shdr->m_vs        = vs;
-	shdr->m_ps        = ps;
-	shdr->m_id        = id == AutoId ? MakeId(shdr.m_ptr) : id;
-	shdr->Setup       = setup;
-	shdr->m_name      = EShader::ToString(shdr->m_id);
-	shdr->m_geom_mask = geom_mask;
-	shdr->m_sort_id   = m_lookup_shader.size() % pr::rdr::sortkey::MaxShaderId;
+	shdr->m_iplayout   = iplayout;
+	shdr->m_vs         = vs;
+	shdr->m_ps         = ps;
+	shdr->m_id         = id == AutoId ? MakeId(shdr.m_ptr) : id;
+	shdr->m_setup_func = setup;
+	shdr->m_name       = name;
+	shdr->m_geom_mask  = geom_mask;
+	shdr->m_sort_id    = m_lookup_shader.size() % pr::rdr::sortkey::MaxShaderId;
 	PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == 0, "A shader with this Id already exists");
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_vs, pr::FmtS("vshdr <RdrId:%d>", shdr->m_id)));
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_ps, pr::FmtS("pshdr <RdrId:%d>", shdr->m_id)));
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(shdr->m_iplayout, pr::FmtS("iplayout <RdrId:%d>", shdr->m_id)));
 	AddLookup(m_lookup_shader, shdr->m_id, shdr.m_ptr);
-	
+
 	// The ShaderManager acts as a container of custom shaders. We need to
 	// prevent the shader from immediately being destroyed even if the caller
 	// holds no references to the shader
@@ -117,7 +164,7 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShader(RdrId id) const
 }
 
 // Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'
-pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShaderFor(EGeom::Type geom_mask) const
+pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShaderFor(EGeom geom_mask) const
 {
 	pr::rdr::BaseShader const* cheapest = 0; // This is the shader that matches all bits in 'geom_mask' with the fewest extra bits
 	pr::rdr::BaseShader const* closest = 0;  // This is the shader that matches the most bits in 'geom_mask'
@@ -132,7 +179,7 @@ pr::rdr::ShaderPtr pr::rdr::ShaderManager::FindShaderFor(EGeom::Type geom_mask) 
 			return const_cast<BaseShader*>(&shdr); // const_cast because pr::RefPtr only handles non-const pointers
 		
 		// If the shader supports all the bits in 'geom_mask' with extras, find the cheapest
-		pr::uint count = pr::CountBits(shdr.m_geom_mask);
+		pr::uint count = pr::CountBits<pr::uint>(shdr.m_geom_mask);
 		if (pr::AllSet(shdr.m_geom_mask, geom_mask))
 		{
 			if (cheapest_bit_count > count)

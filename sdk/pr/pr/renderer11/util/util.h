@@ -41,7 +41,7 @@ namespace pr
 			device->GetImmediateContext(&dc.m_ptr);
 			return dc;
 		}
-		
+
 		// Compile time type to dxgi_format conversion
 		template <typename Idx> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN; };
 		template <> struct DxFormat<pr::uint16> { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT; };
@@ -50,17 +50,17 @@ namespace pr
 		template <> struct DxFormat<pr::v3>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT; };
 		template <> struct DxFormat<pr::v4>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
 		template <> struct DxFormat<pr::Colour> { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
-		
+
 		// Returns the number of primitives implied by an index count and geometry topology
 		size_t PrimCount(size_t icount, D3D11_PRIMITIVE_TOPOLOGY topo);
-		
+
 		// Returns the number of indices implied by a primitive count and geometry topology
 		size_t IndexCount(size_t pcount, D3D11_PRIMITIVE_TOPOLOGY topo);
 
 		// Returns the number of bits per pixel for a given d3d format
 		size_t BitsPerPixel(DXGI_FORMAT fmt);
 		inline size_t BytesPerPixel(DXGI_FORMAT fmt) { return BitsPerPixel(fmt) >> 3; }
-		
+
 		// Return information about a surface determined from its dimensions and format
 		// Any of the pointer parameters can be null
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
@@ -71,15 +71,15 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, table.count(key) == 0, "Overwriting an existing lookup table item");
 			table[key] = value;
 		}
-		
+
 		// Set the name on a d3d resource (debug only)
 		template <typename T> inline void NameResource(D3DPtr<T>& res, char const* name)
 		{
-			#if PR_DBG_RDR
+#if PR_DBG_RDR
 			string32 res_name = name;
 			pr::Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
-			#endif
-		}	
+#endif
+		}
 	}
 }
 

@@ -303,7 +303,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractBool(bool_) && SectionEnd();
 			}
-			
+
 			// Extract an integral type from the source.
 			template <typename Int> bool ExtractInt(Int& int_, int radix)
 			{
@@ -314,7 +314,18 @@ namespace pr
 			{
 				return SectionStart() && ExtractInt(int_, radix) && SectionEnd();
 			}
-			
+
+			// Extract an enum value from the source.
+			template <typename Enum> bool ExtractEnum(Enum& enum_)
+			{
+				if (pr::str::ExtractEnum(enum_, m_src, m_delim)) return true;
+				return ReportError(EResult::TokenNotFound, "enum integral expected");
+			}
+			template <typename Enum> bool ExtractEnumS(Enum& enum_)
+			{
+				return SectionStart() && ExtractEnum(enum_) && SectionEnd();
+			}
+
 			// Extract a real from the source.
 			template <typename Real> bool ExtractReal(Real& real_)
 			{
@@ -325,7 +336,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractReal(real_) && SectionEnd();
 			}
-			
+
 			// Extract an array of bools from the source.
 			template <typename Bool> bool ExtractBoolArray(Bool* bools, std::size_t num_bools)
 			{

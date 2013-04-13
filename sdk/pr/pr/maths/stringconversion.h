@@ -8,28 +8,25 @@
 
 #include <string>
 #include "pr/maths/maths.h"
+#include "pr/str/tostring.h"
 
 namespace pr
 {
 	// Convert to/from std::string/char const*
-	template <typename ToType> inline ToType      To             (double f);
-	template <>                inline std::string To<std::string>(double f)                    { char buf[_CVTBUFSIZE]; _gcvt_s (buf, sizeof(buf), f, 12);    return buf; }
-	template <typename ToType> inline ToType      To             (long i, int radix = 10);
-	template <>                inline std::string To<std::string>(long i, int radix)           { char buf[128];         _ltoa_s (i, buf, sizeof(buf), radix); return buf; }
-	template <typename ToType> inline ToType      To             (pr::ulong u, int radix = 10);
-	template <>                inline std::string To<std::string>(pr::ulong u, int radix)      { char buf[128];         _ultoa_s(u, buf, sizeof(buf), radix); return buf; }
-	template <typename ToType> inline ToType      To             (v3 const& v);
-	template <>                inline std::string To<std::string>(v3 const& v)                 { return To<std::string>(v.x) + " " + To<std::string>(v.y) + " " + To<std::string>(v.z); }
-	template <typename ToType> inline ToType      To             (v4 const& v);
-	template <>                inline std::string To<std::string>(v4 const& v)                 { return To<std::string>(v.xyz()) + " " + To<std::string>(v.w); }
-	template <typename ToType> inline ToType      To             (m3x3 const& m);
-	template <>                inline std::string To<std::string>(m3x3 const& m)               { return To<std::string>(m.x.xyz()) + " " + To<std::string>(m.y.xyz()) + " " + To<std::string>(m.z.xyz()); }
-	template <typename ToType> inline ToType      To             (m4x4 const& m);
-	template <>                inline std::string To<std::string>(m4x4 const& m)               { return To<std::string>(m.x) + " " + To<std::string>(m.y) + " " + To<std::string>(m.z) + " " + To<std::string>(m.w); }
+	template <typename ToType> inline ToType To(v3 const& v);
+	template <typename ToType> inline ToType To(v4 const& v);
+	template <typename ToType> inline ToType To(m3x3 const& m);
+	template <typename ToType> inline ToType To(m4x4 const& m);
+	template <>                inline std::string To<std::string>(v3 const& v)   { return To<std::string>(v.x)       + " " + To<std::string>(v.y)       + " " + To<std::string>(v.z); }
+	template <>                inline std::string To<std::string>(v4 const& v)   { return To<std::string>(v.xyz())   + " " + To<std::string>(v.w); }
+	template <>                inline std::string To<std::string>(m3x3 const& m) { return To<std::string>(m.x.xyz()) + " " + To<std::string>(m.y.xyz()) + " " + To<std::string>(m.z.xyz()); }
+	template <>                inline std::string To<std::string>(m4x4 const& m) { return To<std::string>(m.x)       + " " + To<std::string>(m.y)       + " " + To<std::string>(m.z)        + " " + To<std::string>(m.w); }
 	
-	template <typename ToType> inline ToType      To             (char const* s, char const** end = 0, int radix = 10);
+	template <typename ToType> inline ToType      To             (char const* s, char const** end, int radix = 10);
 	template <>                inline double      To<double>     (char const* s, char const** end, int)          { return                       strtod (s, (char**)end); }
+	template <>                inline double      To<double>     (char const* s)                                 { return To<double>(s, 0); }
 	template <>                inline float       To<float>      (char const* s, char const** end, int)          { return static_cast<float>   (strtod (s, (char**)end)); }
+	template <>                inline float       To<float>      (char const* s)                                 { return To<float>(s, 0); }
 	template <>                inline int         To<int>        (char const* s, char const** end, int radix)    { return static_cast<int>     (strtol (s, (char**)end, radix)); }
 	template <>                inline pr::uint    To<pr::uint>   (char const* s, char const** end, int radix)    { return static_cast<pr::uint>(strtoul(s, (char**)end, radix)); }
 	template <>                inline pr::v4      To<pr::v4>     (char const* s, char const** end, int)
@@ -39,7 +36,7 @@ namespace pr
 		if (end) *end = str;
 		return v;
 	}
-	template <>                inline pr::m4x4    To<pr::m4x4>    (char const* s, char const** end, int)
+	template <>                inline pr::m4x4    To<pr::m4x4>   (char const* s, char const** end, int)
 	{
 		pr::m4x4 m;  pr::v4* v = m.ToArray();  char const* str = s;
 		for (int i = 0; i != 4; ++i) *v++ = To<pr::v4>(str, &str);

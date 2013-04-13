@@ -277,7 +277,7 @@ namespace pr
 	inline Colour32 RandomRGB(Rnd& rnd)          { return RandomRGB(rnd, 1.0f); }
 	inline Colour32 RandomRGB()                  { return RandomRGB(rand::Rand()); }
 	
-	// Equivelent to D3DCOLORVALUE
+	// Equivalent to D3DCOLORVALUE
 	struct Colour
 	{
 		float r,g,b,a;
@@ -285,10 +285,12 @@ namespace pr
 		static Colour make(float r, float g, float b, float a)   { Colour c; return c.set(r,g,b,a); }
 		static Colour make(uint8 r, uint8 g, uint8 b, uint8 a)   { Colour c; return c.set(r,g,b,a); }
 		static Colour make(Colour32 c32)                         { Colour c; return c.set(c32); }
+		static Colour make(Colour32 c32, float alpha)            { Colour c; return c.set(c32, alpha); }
 
 		Colour&      set(float r_, float g_, float b_, float a_) { r = r_; g = g_; b = b_; a = a_; return *this; }
 		Colour&      set(uint8 r_, uint8 g_, uint8 b_, uint8 a_) { return set(r_/255.0f, g_/255.0f, b_/255.0f, a_/255.0f); }
-		Colour&      set(Colour32 c32)                           { return set(  c32.r(),   c32.g(),   c32.b(),   c32.a()); }
+		Colour&      set(Colour32 c32)                           { return set(c32.r(), c32.g(), c32.b(), c32.a()); }
+		Colour&      set(Colour32 c32, float alpha)              { return set(c32.r()/255.0f, c32.g()/255.0f, c32.b()/255.0f, alpha); }
 		Colour&      zero()                                      { r = g = b = a = 0.0f; return *this; }
 		Colour&      one()                                       { r = g = b = a = 1.0f; return *this; }
 		Colour32     argb() const	                             { return Colour32::make(r,g,b,a); }

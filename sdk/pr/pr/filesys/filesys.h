@@ -109,29 +109,26 @@ namespace pr
 		namespace impl
 		{
 			// Unicode handling
-			template <typename Char> inline int access(Char const* filename, int access_mode);
-			template <> inline int access(char    const* filename, int access_mode) { return ::_access (filename, access_mode); }
-			template <> inline int access(wchar_t const* filename, int access_mode) { return ::_waccess(filename, access_mode); }
+			inline int access(char    const* filename, int access_mode) { return ::_access (filename, access_mode); }
+			inline int access(wchar_t const* filename, int access_mode) { return ::_waccess(filename, access_mode); }
 			
-			template <typename Char> inline int rename(Char const* oldname, Char const* newname);
-			template <> inline int rename(char    const* oldname, char    const* newname) { return ::rename  (oldname, newname); }
-			template <> inline int rename(wchar_t const* oldname, wchar_t const* newname) { return ::_wrename(oldname, newname); }
+			inline int rename(char    const* oldname, char    const* newname) { return ::rename  (oldname, newname); }
+			inline int rename(wchar_t const* oldname, wchar_t const* newname) { return ::_wrename(oldname, newname); }
 			
-			template <typename Char> inline int remove(Char const* path);
-			template <> inline int remove(char    const* path) { return ::remove  (path); }
-			template <> inline int remove(wchar_t const* path) { return ::_wremove(path); }
+			inline int remove(char    const* path) { return ::remove  (path); }
+			inline int remove(wchar_t const* path) { return ::_wremove(path); }
 			
-			template <typename Char> inline int mkdir(Char const* dirname);
-			template <> inline int mkdir(char    const* dirname) { return ::_mkdir (dirname); }
-			template <> inline int mkdir(wchar_t const* dirname) { return ::_wmkdir(dirname); }
+			inline int mkdir(char    const* dirname) { return ::_mkdir (dirname); }
+			inline int mkdir(wchar_t const* dirname) { return ::_wmkdir(dirname); }
 			
-			template <typename Char> inline int rmdir(Char const* dirname);
-			template <> inline int rmdir(char    const* dirname) { return ::_rmdir (dirname); }
-			template <> inline int rmdir(wchar_t const* dirname) { return ::_wrmdir(dirname); }
+			inline int rmdir(char    const* dirname) { return ::_rmdir (dirname); }
+			inline int rmdir(wchar_t const* dirname) { return ::_wrmdir(dirname); }
 			
-			template <typename Char> inline Char* fullpath(Char* abs_path, Char const* rel_path, size_t max_length);
-			template <> inline char*    fullpath(char*    abs_path, char    const* rel_path, size_t max_length) { return ::_fullpath (abs_path, rel_path, max_length); }
-			template <> inline wchar_t* fullpath(wchar_t* abs_path, wchar_t const* rel_path, size_t max_length) { return ::_wfullpath(abs_path, rel_path, max_length); }
+			inline char*    fullpath(char*    abs_path, char    const* rel_path, size_t max_length) { return ::_fullpath (abs_path, rel_path, max_length); }
+			inline wchar_t* fullpath(wchar_t* abs_path, wchar_t const* rel_path, size_t max_length) { return ::_wfullpath(abs_path, rel_path, max_length); }
+
+			inline int stat64(char const* filepath, struct __stat64* info)    { return _stat64(filepath, info); }
+			inline int stat64(wchar_t const* filepath, struct __stat64* info) { return _wstat64(filepath, info); }
 		}
 		
 		// Return true if 'ch' is a directory marker
@@ -568,16 +565,20 @@ namespace pr
 		
 		// Return the creation, last modified, and last access time of a file
 		// Note: these timestamps are in UTC unix time
-		template <typename String> inline FileTime GetFileTimeStats(String const& str)
+		template <typename tchar> inline FileTime FileTimeStats(tchar const* str)
 		{
 			FileTime file_time = {0, 0, 0};
 
 			struct __stat64 info;
-			if (_stat64(str.c_str(), &info) != 0) return file_time;
+			if (impl::stat64(str, &info) != 0) return file_time;
 			file_time.m_created       = info.st_ctime;
 			file_time.m_last_modified = info.st_mtime;
 			file_time.m_last_access   = info.st_atime;
 			return file_time;
+		}
+		template <typename String> inline FileTime GetFileTimeStats(String const& str)
+		{
+			return FileTimeStats(str.c_str());
 		}
 		
 		// Return true if 'filepath' is a file that exists

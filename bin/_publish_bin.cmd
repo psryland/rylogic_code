@@ -12,9 +12,13 @@ set config=%3
 set dstdir=q:\bin\%4
 
 ::Load Rylogic environment variables and check version
+if [%RylogicEnv%]==[] (
+	echo ERROR: The 'RylogicEnv' environment variable is not set.
+	goto :eof
+)
 call %RylogicEnv%
 if %RylogicEnvVersion% lss 1 (
- 	echo RylogicEnv.cmd out of date. Please update
+	echo ERROR: '%RylogicEnv%' is out of date. Please update.
 	goto :eof
 )
 

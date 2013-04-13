@@ -28,6 +28,12 @@
     <Filter Include="util">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
     </Filter>
+    <Filter Include="geometry">
+      <UniqueIdentifier>{3d2fa85d-bf15-40ad-adb4-35386e2505df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lights">
+      <UniqueIdentifier>{cc088da9-e2ac-4a6d-a7a8-7b3d89d4b0b4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\renderer11\util\stdafx.h">
@@ -128,6 +134,18 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\raster_state_manager.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\line.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\box.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\common.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light.h">
+      <Filter>lights</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -187,6 +205,9 @@
     <ClCompile Include="..\renderer11\render\raster_state_manager.cpp">
       <Filter>render</Filter>
     </ClCompile>
+    <ClCompile Include="..\renderer11\lights\light.cpp">
+      <Filter>lights</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\bin\_build_shader.cmd">
@@ -224,5 +245,7 @@
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.ps.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.ps.hlsl" />
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.vs.hlsl" />
   </ItemGroup>
 </Project>

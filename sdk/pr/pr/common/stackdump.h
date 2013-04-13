@@ -46,8 +46,8 @@
 #include <functional>
 //#include "pr/common/assert.h"
 //#include "pr/common/fmt.h"
-//#include "pr/str/wstring.h"
 //#include "pr/macros/link.h"
+#include "pr/str/tostring.h"
 #pragma warning(pop)
 
 #pragma comment(lib, "dbghelp.lib")
@@ -224,8 +224,8 @@ namespace pr
 				module.dwSize = sizeof(module);
 				for (BOOL ok = toolhelp.Module32First(snapshot, &module); ok; ok = toolhelp.Module32Next(snapshot, &module))
 				{
-					std::string exe_path = pr::str::ToAString<std::string>(module.szExePath);
-					std::string mod_name = pr::str::ToAString<std::string>(module.szModule);
+					std::string exe_path = pr::Narrow(module.szExePath);
+					std::string mod_name = pr::Narrow(module.szModule);
 					SymLoadModule64(Process(), 0, (PSTR)exe_path.c_str(), (PSTR)mod_name.c_str(), reinterpret_cast<DWORD64>(module.modBaseAddr), module.modBaseSize);
 				}
 			}

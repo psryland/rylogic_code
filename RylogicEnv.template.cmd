@@ -18,12 +18,12 @@ rem Boilerplate:
 ::	goto :eof
 ::)
 ::call %RylogicEnv%
-::if %RylogicEnvVersion% lss 3 (
+::if %RylogicEnvVersion% lss 4 (
 ::	echo ERROR: '%RylogicEnv%' is out of date. Please update.
 ::	goto :eof
 ::)
 
-set RylogicEnvVersion=3
+set RylogicEnvVersion=4
 
 set user=Paul
 set machine=Rylogic
@@ -42,3 +42,4 @@ set silverlight_root=C:\Program Files ^(x86^)\Microsoft SDKs\Silverlight\v5.0
 set java_sdkdir=C:\Program Files\Java\jdk1.6.0_38
 set android_sdkdir=C:\Program Files ^(x86^)\Android\android-sdk
 set adb=C:\Program Files ^(x86^)\Android\android-sdk\platform-tools\adb.exe
+set vc_env=D:\Program Files ^(x86^)\Microsoft Visual Studio 11.0\VC\vcvarsall.bat

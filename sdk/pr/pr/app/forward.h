@@ -88,7 +88,7 @@ namespace pr
 		typedef pr::string<wchar_t> wstring;
 		typedef pr::string<char>    string;
 		
-		template <typename DerivedGUI, typename Main> struct MainGUI;
+		template <typename DerivedGUI, typename Main, typename MessageLoop> struct MainGUI;
 		template <typename UserSettings, typename MainGUI> struct Main;
 		CAppModule& Module();
 	}

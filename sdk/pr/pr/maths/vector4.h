@@ -104,23 +104,23 @@ namespace pr
 	inline float GetW(v4 const& v) { return v.w; }
 	
 	// Assignment operators
-	template <typename T> inline v4& operator += (v4& lhs, T rhs) { lhs.x += GetXf(rhs); lhs.y += GetYf(rhs); lhs.z += GetZf(rhs); lhs.w += GetWf(rhs); return lhs; }
-	template <typename T> inline v4& operator -= (v4& lhs, T rhs) { lhs.x -= GetXf(rhs); lhs.y -= GetYf(rhs); lhs.z -= GetZf(rhs); lhs.w -= GetWf(rhs); return lhs; }
-	template <typename T> inline v4& operator *= (v4& lhs, T rhs) { lhs.x *= GetXf(rhs); lhs.y *= GetYf(rhs); lhs.z *= GetZf(rhs); lhs.w *= GetWf(rhs); return lhs; }
-	template <typename T> inline v4& operator /= (v4& lhs, T rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x /= GetXf(rhs);              lhs.y /= GetYf(rhs);              lhs.z /= GetZf(rhs);              lhs.w /= GetWf(rhs);              return lhs; }
-	template <typename T> inline v4& operator %= (v4& lhs, T rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x  = Fmod(lhs.x, GetXf(rhs)); lhs.y  = Fmod(lhs.y, GetYf(rhs)); lhs.z  = Fmod(lhs.z, GetZf(rhs)); lhs.w  = Fmod(lhs.w, GetWf(rhs)); return lhs; }
+	template <typename T> inline v4& operator += (v4& lhs, T const& rhs) { lhs.x += GetXf(rhs); lhs.y += GetYf(rhs); lhs.z += GetZf(rhs); lhs.w += GetWf(rhs); return lhs; }
+	template <typename T> inline v4& operator -= (v4& lhs, T const& rhs) { lhs.x -= GetXf(rhs); lhs.y -= GetYf(rhs); lhs.z -= GetZf(rhs); lhs.w -= GetWf(rhs); return lhs; }
+	template <typename T> inline v4& operator *= (v4& lhs, T const& rhs) { lhs.x *= GetXf(rhs); lhs.y *= GetYf(rhs); lhs.z *= GetZf(rhs); lhs.w *= GetWf(rhs); return lhs; }
+	template <typename T> inline v4& operator /= (v4& lhs, T const& rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x /= GetXf(rhs);              lhs.y /= GetYf(rhs);              lhs.z /= GetZf(rhs);              lhs.w /= GetWf(rhs);              return lhs; }
+	template <typename T> inline v4& operator %= (v4& lhs, T const& rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x  = Fmod(lhs.x, GetXf(rhs)); lhs.y  = Fmod(lhs.y, GetYf(rhs)); lhs.z  = Fmod(lhs.z, GetZf(rhs)); lhs.w  = Fmod(lhs.w, GetWf(rhs)); return lhs; }
 	
 	// Binary operators
-	template <typename T> inline v4 operator + (v4 const& lhs, T rhs) { v4 v = lhs; return v += rhs; }
-	template <typename T> inline v4 operator - (v4 const& lhs, T rhs) { v4 v = lhs; return v -= rhs; }
-	template <typename T> inline v4 operator * (v4 const& lhs, T rhs) { v4 v = lhs; return v *= rhs; }
-	template <typename T> inline v4 operator / (v4 const& lhs, T rhs) { v4 v = lhs; return v /= rhs; }
-	template <typename T> inline v4 operator % (v4 const& lhs, T rhs) { v4 v = lhs; return v %= rhs; }
-	inline v4 operator + (float lhs, v4 const& rhs)                   { v4 v = rhs; return v += lhs; }
-	inline v4 operator - (float lhs, v4 const& rhs)                   { v4 v = rhs; return v -= lhs; }
-	inline v4 operator * (float lhs, v4 const& rhs)                   { v4 v = rhs; return v *= lhs; }
-	inline v4 operator / (float lhs, v4 const& rhs)                   { PR_ASSERT(PR_DBG_MATHS, All4(rhs,maths::NonZero<float>), ""); return v4::make(     lhs /GetXf(rhs),       lhs /GetYf(rhs),       lhs /GetZf(rhs),       lhs /GetWf(rhs)); }
-	inline v4 operator % (float lhs, v4 const& rhs)                   { PR_ASSERT(PR_DBG_MATHS, All4(rhs,maths::NonZero<float>), ""); return v4::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs)), Fmod(lhs, GetZf(rhs)), Fmod(lhs, GetWf(rhs))); }
+	template <typename T> inline v4 operator + (v4 const& lhs, T const& rhs) { v4 v = lhs; return v += rhs; }
+	template <typename T> inline v4 operator - (v4 const& lhs, T const& rhs) { v4 v = lhs; return v -= rhs; }
+	template <typename T> inline v4 operator * (v4 const& lhs, T const& rhs) { v4 v = lhs; return v *= rhs; }
+	template <typename T> inline v4 operator / (v4 const& lhs, T const& rhs) { v4 v = lhs; return v /= rhs; }
+	template <typename T> inline v4 operator % (v4 const& lhs, T const& rhs) { v4 v = lhs; return v %= rhs; }
+	inline v4 operator + (float lhs, v4 const& rhs)                          { v4 v = rhs; return v += lhs; }
+	inline v4 operator - (float lhs, v4 const& rhs)                          { v4 v = rhs; return v -= lhs; }
+	inline v4 operator * (float lhs, v4 const& rhs)                          { v4 v = rhs; return v *= lhs; }
+	inline v4 operator / (float lhs, v4 const& rhs)                          { PR_ASSERT(PR_DBG_MATHS, All4(rhs,maths::NonZero<float>), ""); return v4::make(     lhs /GetXf(rhs),       lhs /GetYf(rhs),       lhs /GetZf(rhs),       lhs /GetWf(rhs)); }
+	inline v4 operator % (float lhs, v4 const& rhs)                          { PR_ASSERT(PR_DBG_MATHS, All4(rhs,maths::NonZero<float>), ""); return v4::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs)), Fmod(lhs, GetZf(rhs)), Fmod(lhs, GetWf(rhs))); }
 	
 	// Unary operators
 	inline v4 operator + (v4 const& v) { return v; }

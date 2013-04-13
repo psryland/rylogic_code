@@ -21,7 +21,7 @@
 #include "pr/common/windows_com.h"
 #include "pr/common/clipboard.h"
 #include "pr/str/prstring.h"
-#include "pr/str/wstring.h"
+#include "pr/str/tostring.h"
 #include "pr/threads/process.h"
 #include "pr/filesys/filesys.h"
 #include "pr/filesys/fileex.h"
@@ -37,6 +37,10 @@
 using namespace pr;
 using namespace pr::cmdline;
 
+namespace pr 
+{
+template <> std::string ToString<long>(long l) { PR_ASSERT(1, false, ""); return ""; }
+}
 namespace cex
 {
 	char const VersionString[] = "v1.1";
@@ -438,7 +442,7 @@ namespace cex
 	struct Clip :ICex
 	{
 		std::string m_text;
-		bool m_lwr, m_upr, m_fwdslash, m_bkslash, m_cstr;
+		bool m_lwr, m_upr, m_fwdslash, m_bkslash, m_cstr, m_dopaste;
 		std::string m_newline;
 		Clip() :m_text() ,m_lwr(false) ,m_upr(false) ,m_fwdslash(false) ,m_bkslash(false) ,m_cstr(false) ,m_newline() {}
 		void ShowHelp() const
@@ -451,7 +455,11 @@ namespace cex
 				"  -fwdslash : converts any directory marks to forward slashes\n"
 				"  -bkslash : converts any directory marks to back slashes\n"
 				"  -cstr : converts the copied text to a C\\C++ style string by adding escape characters\n"
-				"  -crlf|cr|lf : convert newlines to the dos,mac,linux format\n";
+				"  -crlf|cr|lf : convert newlines to the dos,mac,linux format\n"
+				"\n"
+				" Syntax: Cex -clip -paste\n"
+				"   Paste the clipboard contents to stdout\n"
+				;
 		}
 		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
 		{
@@ -464,6 +472,7 @@ namespace cex
 			if (str::EqualI(option, "-crlf"    )) { m_newline = "\r\n"; return true; }
 			if (str::EqualI(option, "-cr"      )) { m_newline = "\r"; return true; }
 			if (str::EqualI(option, "-lf"      )) { m_newline = "\n"; return true; }
+			if (str::EqualI(option, "-paste"   )) { m_dopaste = true; return true; }
 			return ICex::CmdLineOption(option, arg, arg_end);
 		}
 		bool CmdLineData(TArgIter& arg, TArgIter)
@@ -474,6 +483,14 @@ namespace cex
 		}
 		int Run()
 		{
+			if (m_dopaste)
+			{
+				std::string output;
+				if (!pr::GetClipBoardText(GetConsoleWindow(), output)) return -1;
+				std::cout << output;
+				return 0;
+			}
+
 			// Perform optional conversions
 			if (m_lwr)              { pr::str::LowerCase(m_text); }
 			if (m_upr)              { pr::str::UpperCase(m_text); }

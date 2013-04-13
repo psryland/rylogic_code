@@ -15,84 +15,94 @@ namespace pr
 		// Position only vertex
 		struct VertP
 		{
-			enum { GeomMask = EGeom::Pos };
-			
-			pr::v3 m_pos;
-			
+			enum { GeomMask = EGeom::Vert };
+
+			v3 m_pos;
+
 			// The vertex layout description
-			static D3D11_INPUT_ELEMENT_DESC const (&Layout())[1]
+			static D3D11_INPUT_ELEMENT_DESC const(&Layout())[1]
 			{
 				static D3D11_INPUT_ELEMENT_DESC const s_desc[] =
 				{
-					{"POSITION" ,0 ,DXGI_FORMAT_R32G32B32_FLOAT ,0 ,0 ,D3D11_INPUT_PER_VERTEX_DATA ,0},
-				};
-				return s_desc;
-			}
-		};
-		
-		// Position and colour
-		struct VertPC
-		{
-			enum { GeomMask = EGeom::Pos | EGeom::Diff };
-			
-			pr::v3     m_pos;
-			pr::Colour m_col;
-			
-			// The vertex layout description
-			static D3D11_INPUT_ELEMENT_DESC const (&Layout())[2]
-			{
-				static D3D11_INPUT_ELEMENT_DESC const s_desc[] =
-				{
-					{"POSITION" ,0 ,DXGI_FORMAT_R32G32B32_FLOAT    ,0 ,0  ,D3D11_INPUT_PER_VERTEX_DATA ,0},
-					{"COLOR"    ,0 ,DXGI_FORMAT_R32G32B32A32_FLOAT ,0 ,12 ,D3D11_INPUT_PER_VERTEX_DATA ,0},
-				};
-				return s_desc;
-			}
-		};
-		
-		// Position, Diffuse Texture
-		struct VertPT
-		{
-			enum { GeomMask = EGeom::Pos | EGeom::Tex0 };
-			
-			pr::v3     m_pos;
-			pr::v2     m_tex;
-			
-			// The vertex layout description
-			static D3D11_INPUT_ELEMENT_DESC const (&Layout())[2]
-			{
-				static D3D11_INPUT_ELEMENT_DESC const s_desc[] =
-				{
-					{"POSITION" ,0 ,DXGI_FORMAT_R32G32B32_FLOAT    ,0 ,0  ,D3D11_INPUT_PER_VERTEX_DATA ,0},
-					{"TEXCOORD" ,0 ,DXGI_FORMAT_R32G32_FLOAT       ,0 ,12 ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+					{"POSITION" ,0 ,DXGI_FORMAT_R32G32B32_FLOAT ,0 ,offsetof(VertP,m_pos) ,D3D11_INPUT_PER_VERTEX_DATA ,0},
 				};
 				return s_desc;
 			}
 		};
 
-		// Position, Normal, Diffuse Texture, Colour
-		struct VertPNTC
+		inline void SetPC  (VertP& vert, v4 const& pos, Colour32)                       { vert.m_pos = pos.xyz(); }
+		inline void SetPCNT(VertP& vert, v4 const& pos, Colour32, v4 const&, v2 const&) { vert.m_pos = pos.xyz(); }
+
+		// Position and colour
+		struct VertPC
 		{
-			enum { GeomMask = EGeom::Pos | EGeom::Diff | EGeom::Norm | EGeom::Tex0 };
-			
-			pr::v3     m_pos;
-			pr::Colour m_col;
-			pr::v3     m_norm;
-			pr::v2     m_tex;
-			
+			enum { GeomMask = EGeom::Vert | EGeom::Colr };
+
+			v3     m_pos;
+			Colour m_col;
+
 			// The vertex layout description
-			static D3D11_INPUT_ELEMENT_DESC const (&Layout())[4]
+			static D3D11_INPUT_ELEMENT_DESC const(&Layout())[2]
 			{
 				static D3D11_INPUT_ELEMENT_DESC const s_desc[] =
 				{
-					{"POSITION" ,0 ,DXGI_FORMAT_R32G32B32_FLOAT    ,0 ,0  ,D3D11_INPUT_PER_VERTEX_DATA ,0},
-					{"COLOR"    ,0 ,DXGI_FORMAT_R32G32B32A32_FLOAT ,0 ,32 ,D3D11_INPUT_PER_VERTEX_DATA ,0},
-					{"NORMAL"   ,0 ,DXGI_FORMAT_R32G32B32_FLOAT    ,0 ,12 ,D3D11_INPUT_PER_VERTEX_DATA ,0},
-					{"TEXCOORD" ,0 ,DXGI_FORMAT_R32G32_FLOAT       ,0 ,24 ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+					{"POSITION" ,0 ,DXGI_FORMAT_R32G32B32_FLOAT    ,0 ,offsetof(VertPC,m_pos) ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+					{"COLOR"    ,0 ,DXGI_FORMAT_R32G32B32A32_FLOAT ,0 ,offsetof(VertPC,m_col) ,D3D11_INPUT_PER_VERTEX_DATA ,0},
 				};
 				return s_desc;
 			}
 		};
+
+		inline void SetPC  (VertPC& vert, v4 const& pos, Colour32 col)                       { vert.m_pos = pos.xyz(); vert.m_col = col; }
+		inline void SetPCNT(VertPC& vert, v4 const& pos, Colour32 col, v4 const&, v2 const&) { vert.m_pos = pos.xyz(); vert.m_col = col; }
+
+		// Position, Diffuse Texture
+		struct VertPT
+		{
+			enum { GeomMask = EGeom::Vert | EGeom::Tex0 };
+
+			v3     m_pos;
+			v2     m_tex;
+
+			// The vertex layout description
+			static D3D11_INPUT_ELEMENT_DESC const(&Layout())[2]
+			{
+				static D3D11_INPUT_ELEMENT_DESC const s_desc[] =
+				{
+					{"POSITION" ,0 ,DXGI_FORMAT_R32G32B32_FLOAT    ,0 ,offsetof(VertPT,m_pos) ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+					{"TEXCOORD" ,0 ,DXGI_FORMAT_R32G32_FLOAT       ,0 ,offsetof(VertPT,m_tex) ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+				};
+				return s_desc;
+			}
+		};
+
+		// Position, Colour, Normal, Diffuse Texture
+		struct VertPCNT
+		{
+			enum { GeomMask = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0 };
+
+			v3     m_pos;
+			Colour m_col;
+			v3     m_norm;
+			v2     m_tex;
+
+			// The vertex layout description
+			static D3D11_INPUT_ELEMENT_DESC const(&Layout())[4]
+			{
+				static D3D11_INPUT_ELEMENT_DESC const s_desc[] =
+				{
+					{"POSITION" ,0 ,DXGI_FORMAT_R32G32B32_FLOAT    ,0 ,offsetof(VertPCNT,m_pos)  ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+					{"COLOR"    ,0 ,DXGI_FORMAT_R32G32B32A32_FLOAT ,0 ,offsetof(VertPCNT,m_col)  ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+					{"NORMAL"   ,0 ,DXGI_FORMAT_R32G32B32_FLOAT    ,0 ,offsetof(VertPCNT,m_norm) ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+					{"TEXCOORD" ,0 ,DXGI_FORMAT_R32G32_FLOAT       ,0 ,offsetof(VertPCNT,m_tex)  ,D3D11_INPUT_PER_VERTEX_DATA ,0},
+				};
+				return s_desc;
+			}
+		};
+
+		// Don't set values that aren't given
+		inline void SetPC  (VertPCNT& vert, v4 const& pos, Colour32 col)                                { vert.m_pos = pos.xyz(); vert.m_col = col; }
+		inline void SetPCNT(VertPCNT& vert, v4 const& pos, Colour32 col, v4 const& norm, v2 const& tex) { vert.m_pos = pos.xyz(); vert.m_col = col; vert.m_norm = norm.xyz(); vert.m_tex = tex; }
 	}
 }
 

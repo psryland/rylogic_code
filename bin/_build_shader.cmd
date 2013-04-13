@@ -4,17 +4,23 @@
 ::*********************************************
 ::Build shaders using fxc.exe
 ::Use:
-:: _build_shader.cmd $(Fullpath)
+:: _build_shader.cmd $(Fullpath) [pp] [obj]
 :: This will compile the shader into a header file in the same directory as $(Fullpath)
 @echo OFF
 SetLocal EnableDelayedExpansion 
 set PATH=Q:\sdk\pr\cmd\;%PATH%
 
 set fullpath=%1
+set pp=
+set obj=
+if [%2]==[pp]  set pp=1
+if [%3]==[pp]  set pp=1
+if [%2]==[obj] set obj=1
+if [%3]==[obj] set obj=1
 
 ::Load Rylogic environment variables and check version
 if [%RylogicEnv%]==[] (
- 	echo ERROR: The 'RylogicEnv' environment variable is not set.
+	echo ERROR: The 'RylogicEnv' environment variable is not set.
 	goto :eof
 )
 call %RylogicEnv%
@@ -31,11 +37,17 @@ if [%shdr%]==[vs] (
 	set profile=/Tvs_5_0
 ) else if [%shdr%]==[ps] (
 	set profile=/Tps_5_0
+) else if [%shdr%]==[gs] (
+	set profile=/Tgs_5_0
+) else (
+	echo ERROR: Unknown shader type '%shdr%'
+	goto :eof
 )
 
 ::Choose the output file to generate
 set outdir=%srcdir%\..\compiled
 set output=/Fh"%outdir%\%file%.h"
+if [%obj%]==[1] set output=!output! /Fo"%outdir%\%file%.cso"
 
 ::Set the variable name to the name of the file
 set varname=/Vn%file:~0,-3%_%shdr%
@@ -54,7 +66,9 @@ cd %srcdir%
 "%fxc%" "%fullpath%" %profile% %output% %varname% %includes% %defines% %options%
 
 ::Generate preprocessed output
-::set ppoutput=%outdir%\%file%.pp
-::"%fxc%" "%fullpath%" /P"%ppoutput%" %includes% %defines% %options%
-::Q:\bin\textformatter.exe -f "%ppoutput%" -newlines 0 2
-::"%textedit%" "%ppoutput%"
+if [%pp%]==[1] (
+	set ppoutput=%outdir%\%file%.pp
+	"%fxc%" "%fullpath%" /P"!ppoutput!" %includes% %defines% %options%
+	Q:\bin\textformatter.exe -f "!ppoutput!" -newlines 0 1
+	"!textedit!" "!ppoutput!"
+)

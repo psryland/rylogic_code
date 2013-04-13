@@ -130,7 +130,7 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 			tex->m_tex  = existing.m_tex;
 			tex->m_info = existing.m_info;
 			tex->m_id   = MakeId(tex.m_ptr);
-			tex->m_name = pr::str::ToAString<string32>(filepath);
+			tex->m_name = pr::To<string32>(filepath);
 			AddLookup(m_lookup_tex, tex->m_id, tex.m_ptr);
 			return tex;
 		}
@@ -172,7 +172,7 @@ pr::rdr::Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr
 	inst->m_info = info;
 	inst->m_id   = id == AutoId ? MakeId(inst.m_ptr) : id;
 	inst->m_srv  = srv;
-	inst->m_name = pr::str::ToAString<string32>(filepath);
+	inst->m_name = pr::To<string32>(filepath);
 	AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
 	return inst;
 }

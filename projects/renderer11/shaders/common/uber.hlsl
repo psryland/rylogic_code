@@ -41,10 +41,11 @@ struct VS_INPUT
 // Vertex output format
 struct VS_OUTPUT
 {
-	EXPAND(float4 ss_pos :SV_Position ;,PR_RDR_SHADER_VSOUT_SSPOS4)
-	EXPAND(float4 ws_pos :Position1   ;,PR_RDR_SHADER_VSOUT_WSPOS4)
-	EXPAND(float4 diff0  :Color0      ;,PR_RDR_SHADER_VSOUT_DIFF0 )
-	EXPAND(float2 tex0   :TexCoord0   ;,PR_RDR_SHADER_VSOUT_2DTEX0)
+	EXPAND(float4 ss_pos  :SV_Position ;,PR_RDR_SHADER_VSOUT_SSPOS4)
+	EXPAND(float4 ws_pos  :Position1   ;,PR_RDR_SHADER_VSOUT_WSPOS4)
+	EXPAND(float4 ws_norm :Normal      ;,PR_RDR_SHADER_VSOUT_WSNORM4)
+	EXPAND(float4 diff0   :Color0      ;,PR_RDR_SHADER_VSOUT_DIFF0 )
+	EXPAND(float2 tex0    :TexCoord0   ;,PR_RDR_SHADER_VSOUT_2DTEX0)
 };
 
 // Pixel output format
@@ -60,21 +61,21 @@ VS_OUTPUT main(VS_INPUT In)
 	VS_OUTPUT Out;
 	EXPAND(float4 ms_pos  = float4(In.pos ,1) ;,PR_RDR_SHADER_VSIN_POS3 )
 	EXPAND(float4 ms_norm = float4(In.norm,0) ;,PR_RDR_SHADER_VSIN_NORM3)
-	
+
 	// Transform
-	EXPAND(Out.ss_pos = mul(m_o2s ,ms_pos ) ;,PR_RDR_SHADER_TXFM  )
-	EXPAND(Out.ws_pos = mul(m_o2w ,ms_pos ) ;,PR_RDR_SHADER_TXFMWS)
-	EXPAND(Out.norm   = mul(m_n2w ,ms_norm) ;,PR_RDR_SHADER_TXFMWS)
-	
+	EXPAND(Out.ss_pos  = mul(m_o2s ,ms_pos ) ;,PR_RDR_SHADER_TXFM  )
+	EXPAND(Out.ws_pos  = mul(m_o2w ,ms_pos ) ;,PR_RDR_SHADER_TXFMWS)
+	EXPAND(Out.ws_norm = mul(m_n2w ,ms_norm) ;,PR_RDR_SHADER_TXFMWS)
+
 	// Tinting
 	EXPAND(Out.diff0 = m_tint ;,PR_RDR_SHADER_TINT0)
-	
+
 	// Per Vertex colour
 	EXPAND(Out.diff0 = In.diff0 * Out.diff0 ;,PR_RDR_SHADER_PVC)
-	
+
 	// Texture2D (with transform)
 	EXPAND(Out.tex0 = mul(m_tex2surf0, float4(In.tex0,0,1)).xy ;,PR_RDR_SHADER_TEX0)
-	
+
 	return Out;
 }
 #endif
@@ -84,17 +85,68 @@ VS_OUTPUT main(VS_INPUT In)
 PS_OUTPUT main(VS_OUTPUT In)
 {
 	PS_OUTPUT Out;
-	Out.diff0 = float4(1,1,0,1);
-	
+	Out.diff0 = float4(1,1,1,1);
+
 	// Transform
-	EXPAND(In.ws_norm = normalize(In.ws_norm) ;,PR_RDR_SHADER_TXFMWS)
-	
+	EXPAND(In.ws_norm = normalize(In.ws_norm); , PR_RDR_SHADER_TXFMWS)
+
 	// Tinting
 	EXPAND(Out.diff0 = In.diff0; , PR_RDR_SHADER_TINT0)
-	
+
 	// Texture2D (with transform)
 	EXPAND(Out.diff0 = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff0 ;,PR_RDR_SHADER_TEX0)
+
+	// Lighting
+	EXPAND(Out.diff0 = Illuminate(In.ws_pos, In.ws_norm, m_c2w[3], Out.diff0); ,PR_RDR_SHADER_LIGHTING)
+
 	return Out;
+}
+#endif
+
+#if PR_RDR_SHADER_GS
+//  input topology    size of input array           comments
+//  point             1                             a single vertex of input geometry
+//  line              2                             two adjacent vertices
+//  triangle          3                             three vertices of a triangle
+//  lineadj           4                             two vertices defining a line segment, as well as vertices adjacent to the segment end points
+//  triangleadj       6                             describes a triangle as well as 3 surrounding triangles
+//  output topology        comments
+//  PointStream            output is interpreted as a series of disconnected points
+//  LineStream             each vertex in the list is connected with the next by a line segment
+//  TriangleStream         the first 3 vertices in the stream will become the first triangle; any additional vertices become additional triangles (when combined with the previous 2)
+
+// Stereo triangle geometry shader
+[maxvertexcount(6)]
+void main(triangle VS_OUTPUT In[3], inout TriangleStream<VS_OUTPUT> TriStream)
+{
+	VS_OUTPUT Out;
+	float4x4 w2s;
+
+	// Left
+	w2s = m_w2s;
+	for (int i = 0; i != 3; ++i)
+	{
+		Out.ss_pos   = mul(w2s, In[i].ws_pos);
+		Out.ws_pos   = In[i].ws_pos;
+		Out.ws_norm  = In[i].ws_norm;
+		Out.diff0    = In[i].diff0;
+		Out.tex0     = In[i].tex0;
+		TriStream.Append(Out);
+	}
+	TriStream.RestartStrip();
+
+	// Right
+	w2s = m_w2s;
+	for (int i = 0; i != 3; ++i)
+	{
+		Out.ss_pos   = mul(w2s, In[i].ws_pos);
+		Out.ws_pos   = In[i].ws_pos;
+		Out.ws_norm  = In[i].ws_norm;
+		Out.diff0    = In[i].diff0;
+		Out.tex0     = In[i].tex0;
+		TriStream.Append(Out);
+	}
+	TriStream.RestartStrip();
 }
 #endif
 

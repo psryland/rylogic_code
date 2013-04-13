@@ -41,7 +41,7 @@ namespace pr
 				ByteWidth           = UINT(sizeof(Elem) * count); // Size of the buffer in bytes
 				Usage               = usage;                      // How the buffer will be used
 				BindFlags           = bind_flags;                 // How the buffer will be bound (i.e. can it be a render target too?)
-				CPUAccessFlags      = cpu_access;                 // What acces the CPU needs. (if data provided, assume none)
+				CPUAccessFlags      = cpu_access;                 // What access the CPU needs. (if data provided, assume none)
 				MiscFlags           = res_flag;                   // General flags for the resource
 				StructureByteStride = sizeof(Elem);               // For structured buffers
 			}
@@ -53,7 +53,7 @@ namespace pr
 				ByteWidth           = UINT(sizeof(Elem) * Sz); // Size of the buffer in bytes
 				Usage               = usage;                   // How the buffer will be used
 				BindFlags           = bind_flag;               // How the buffer will be bound (i.e. can it be a render target too?)
-				CPUAccessFlags      = 0;                       // What acces the CPU needs. (if data provided, assume none)
+				CPUAccessFlags      = 0;                       // What access the CPU needs. (if data provided, assume none)
 				MiscFlags           = res_flag;                // General flags for the resource
 				StructureByteStride = sizeof(Elem);            // For structured buffers
 			}

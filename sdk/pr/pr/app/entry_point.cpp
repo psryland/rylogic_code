@@ -23,18 +23,14 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		
 		// Initialise the WTL module singleton
 		pr::Throw(pr::app::Module().Init(NULL, hInstance));
-		
-		// The main window message loop
-		CMessageLoop msg_loop;
-		pr::app::Module().AddMessageLoop(&msg_loop);
-		
-		// Create an instance of the main window
+
+		// Create an instance of the main window and start it running
+		// The gui should create it's own message loop and register it
+		// with the app module (and clean it up on destruction)
 		std::shared_ptr<ATL::CWindow> gui = pr::app::CreateGUI(lpstrCmdLine);
 		gui->ShowWindow(nCmdShow);
 		gui->UpdateWindow();
-		
-		// Run the app message pump
-		nRet = msg_loop.Run();
+		nRet = pr::app::Module().GetMessageLoop()->Run();
 	}
 	catch (std::exception const& ex)
 	{
@@ -49,7 +45,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		err_msg = "Shutting down due to an unknown exception";
 		nRet = -1;
 	}
-	
+
 	if (nRet == -1)
 	{
 		struct ShowMB :pr::threads::Thread<ShowMB>
@@ -62,8 +58,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		show_mb.Start((void*)err_msg.c_str());
 		show_mb.Join();
 	}
-		
-	pr::app::Module().RemoveMessageLoop();
+
 	pr::app::Module().Term();
 	return nRet;
 }

@@ -177,8 +177,8 @@ namespace pr
 	inline bool FEqlZero(m4x4 const& lhs, float tol)               { return FEqlZero4(lhs.x, tol) && FEqlZero4(lhs.y, tol) && FEqlZero4(lhs.z, tol) && FEqlZero4(lhs.pos, tol); }
 	inline bool operator == (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator < (m4x4 const& lhs, m4x4 const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator > (m4x4 const& lhs, m4x4 const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+	inline bool operator <  (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+	inline bool operator >  (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 	

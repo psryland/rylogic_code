@@ -382,7 +382,7 @@ namespace pr.common
 			sqlite3_stmt stmt;
 			var buf_utf8 = StrToUTF8(sql_string);
 			var res = sqlite3_prepare_v2(db.Handle, buf_utf8, buf_utf8.Length, out stmt, IntPtr.Zero);
-			if (res != Result.OK) throw Exception.New(res, ErrorMsg(db.Handle));
+			if (res != Result.OK) throw Exception.New(res, string.Format("Error compiling sql string '{0}' "+Environment.NewLine+"Sqlite Error: {1}",sql_string, ErrorMsg(db.Handle)));
 			return stmt;
 		}
 
@@ -1034,7 +1034,12 @@ namespace pr.common
 							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
 							return q;
 						},
-					(k,v) => v.Reset()); // Before returning the cached query, reset it
+					(k,v) =>
+						{
+							v.Reset(); // Before returning the cached query, reset it
+							if (parms != null)
+								v.BindParms(first_idx, parms);
+						});
 			}
 
 			/// <summary>Returns an insert query from the cache</summary>
@@ -1416,17 +1421,17 @@ namespace pr.common
 			}
 			
 			/// <summary>Find a row in a table of type 'T'</summary>
-			public object Find(Type type, params object[] keys)     { return Table(type).Find(type, keys); }
-			public object Find(Type type, object key1, object key2) { return Table(type).Find(type, key1, key2); }
-			public object Find(Type type, object key1)              { return Table(type).Find(type, key1); }
+			public object Find(Type type, params object[] keys)     { return Table(type).Find(keys); }
+			public object Find(Type type, object key1, object key2) { return Table(type).Find(key1, key2); }
+			public object Find(Type type, object key1)              { return Table(type).Find(key1); }
 			public T Find<T>(params object[] keys)                  { return Table<T>().Find(keys); }
 			public T Find<T>(object key1, object key2)              { return Table<T>().Find(key1, key2); }
 			public T Find<T>(object key1)                           { return Table<T>().Find(key1); }
 
 			/// <summary>Get a row from a table of type 'T'</summary>
-			public object Get(Type type, params object[] keys)      { return Table(type).Get(type, keys); }
-			public object Get(Type type, object key1, object key2)  { return Table(type).Get(type, key1, key2); }
-			public object Get(Type type, object key1)               { return Table(type).Get(type, key1); }
+			public object Get(Type type, params object[] keys)      { return Table(type).Get(keys); }
+			public object Get(Type type, object key1, object key2)  { return Table(type).Get(key1, key2); }
+			public object Get(Type type, object key1)               { return Table(type).Get(key1); }
 			public T Get<T>(params object[] keys)                   { return Table<T>().Get(keys); }
 			public T Get<T>(object key1, object key2)               { return Table<T>().Get(key1, key2); }
 			public T Get<T>(object key1)                            { return Table<T>().Get(key1); }
@@ -2091,8 +2096,8 @@ namespace pr.common
 						#region New
 						{
 							var ne = (NewExpression)expr;
-							result.Text.Append(string.Join(",", ne.Members.Select(x => x.Name)));
- 							break;
+							result.Text.Append(string.Join(",", ne.Arguments.Select(x => Translate(x).Text)));
+							break;
 						}
 						#endregion
 					case ExpressionType.MemberAccess:

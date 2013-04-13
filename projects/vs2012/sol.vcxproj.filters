@@ -69,5 +69,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\constants.h">
       <Filter>sdk\maths</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\sim_message_loop.h">
+      <Filter>sdk\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\hresult.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

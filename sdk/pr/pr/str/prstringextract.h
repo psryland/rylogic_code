@@ -2,14 +2,14 @@
 // String extract functions
 //  Copyright © Rylogic Ltd 2008
 //***********************************************************************
-	
+
 #ifndef PR_STR_STRING_EXTRACT_H
 #define PR_STR_STRING_EXTRACT_H
-	
+
 #include <cstdlib>
 #include <cerrno>
 #include "pr/str/prstringcore.h"
-	
+
 namespace pr
 {
 	namespace str
@@ -347,7 +347,20 @@ namespace pr
 		{
 			return ExtractInt(intg, radix, src, delim);
 		}
-		
+
+		// This is basically a convenience wrapper around ExtractInt
+		template <typename Enum, typename Iter> bool ExtractEnum(Enum& enum_, Iter& src, char const* delim = 0)
+		{
+			long val;
+			if (!ExtractInt(val, 10, src, delim)) return false;
+			enum_ = static_cast<Enum>(val);
+			return true;
+		}
+		template <typename Enum, typename Iter> bool ExtractEnumC(Enum& enum_, Iter src, char const* delim = 0)
+		{
+			return ExtractEnum(enum_, src, delim);
+		}
+
 		// Extract a floating point number from 'src'
 		// Expects 'src' to point to a string of the following form:
 		// [delim] [{+|-}][digits][.digits][{d|D|e|E}[{+|-}]digits]
@@ -381,7 +394,7 @@ namespace pr
 		{
 			return ExtractReal(real, src, delim);
 		}
-		
+
 		// Extract an array of bools from 'src' template <typename Bool, typename Iter>
 		template <typename Bool, typename Iter> inline bool ExtractBoolArray(Bool* bool_, size_t count, Iter& src, char const* delim = 0)
 		{

@@ -10,6 +10,7 @@
 #include "pr/renderer11/render/drawlist.h"
 #include "pr/renderer11/render/gbuffer.h"
 #include "pr/renderer11/render/scene_view.h"
+#include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/util/wrappers.h"
 
 namespace pr
@@ -17,8 +18,7 @@ namespace pr
 	namespace rdr
 	{
 		// A scene is a view into the 3D world that can be rendered. Typically most applications only have
-		// one scene however, examples of multiple scenes are: the rear vision mirror in a car, or two views
-		// of the same objects in a magic-eye style stereo view.
+		// one scene however, examples of multiple scenes are: the rear vision mirror in a car.
 		// A scene has a viewport which defines the area of the window that the scene draws into.
 		// A scene contains a drawlist
 		struct Scene
@@ -29,8 +29,11 @@ namespace pr
 			pr::rdr::SceneView   m_view;              // Represents the camera properties used to project onto the screen
 			pr::rdr::Drawlist    m_drawlist;          // The list of elements to draw
 			pr::Colour           m_background_colour; // The colour to clear the background to
+			Light                m_global_light;      // The global light to use
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
 			D3DPtr<ID3D11RasterizerState> m_rs;       // Default raster states for the scene
+			bool                 m_stereoscopic;      // Render the scene in stereoscopic mode
+
 			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());
 
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
@@ -62,6 +65,8 @@ namespace pr
 			void Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb = true) const;
 
 		protected:
+			void WriteNV3DSig(D3DPtr<ID3D11DeviceContext>& dc) const;
+
 			// Resize the viewport on back buffer resize
 			void OnEvent(pr::rdr::Evt_Resize const& evt);
 

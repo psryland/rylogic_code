@@ -6,14 +6,14 @@
 //	std::string, std::wstring, etc
 //	char[], wchar_t[], etc
 //	char*, wchar_t*, etc
-	
+
 #ifndef PR_STR_STRING_CORE_H
 #define PR_STR_STRING_CORE_H
-	
+
 #include <cstddef>
 #include <ctype.h>
 #include <functional>
-	
+
 //"pr/common/assert.h" should be included prior to this for pr asserts
 #ifndef PR_ASSERT
 #   define PR_ASSERT_STR_DEFINED

@@ -85,19 +85,19 @@ namespace pr
 	inline bool    FEql    (double a, double b, double tol = pr::maths::tiny)                   { return !FGtr(a,b,tol) && !FLess(a,b,tol); }
 	inline bool    FEqlZero(double a, double tol = pr::maths::tiny)                             { return Abs(a) <= tol; }
 	
-	template <typename T> inline bool   Equal2(T lhs, T rhs)                                    { return GetX(lhs) == GetX(rhs) && GetY(lhs) == GetY(rhs); }
-	template <typename T> inline bool   Equal3(T lhs, T rhs)                                    { return Equal2(lhs,rhs) && GetZ(lhs) == GetZ(rhs); }
-	template <typename T> inline bool   Equal4(T lhs, T rhs)                                    { return Equal3(lhs,rhs) && GetW(lhs) == GetW(rhs); }
-	template <typename T> inline bool   IsZero2(T v)                                            { return GetX(v) == 0 && GetY(v) == 0; }
-	template <typename T> inline bool   IsZero3(T v)                                            { return IsZero2(v) && GetZ(v) == 0; }
-	template <typename T> inline bool   IsZero4(T v)                                            { return IsZero3(v) && GetW(v) == 0; }
+	template <typename T> inline bool   Equal2(T const& lhs, T const& rhs)                      { return GetX(lhs) == GetX(rhs) && GetY(lhs) == GetY(rhs); }
+	template <typename T> inline bool   Equal3(T const& lhs, T const& rhs)                      { return Equal2(lhs,rhs) && GetZ(lhs) == GetZ(rhs); }
+	template <typename T> inline bool   Equal4(T const& lhs, T const& rhs)                      { return Equal3(lhs,rhs) && GetW(lhs) == GetW(rhs); }
+	template <typename T> inline bool   IsZero2(T const& v)                                     { return GetX(v) == 0 && GetY(v) == 0; }
+	template <typename T> inline bool   IsZero3(T const& v)                                     { return IsZero2(v) && GetZ(v) == 0; }
+	template <typename T> inline bool   IsZero4(T const& v)                                     { return IsZero3(v) && GetW(v) == 0; }
 
-	template <typename T> inline bool   FEql2    (T lhs, T rhs, float tol = pr::maths::tiny)    { return FEql(GetXf(lhs), GetXf(rhs), tol) && FEql(GetYf(lhs), GetYf(rhs), tol); }
-	template <typename T> inline bool   FEql3    (T lhs, T rhs, float tol = pr::maths::tiny)    { return FEql2(lhs, rhs, tol) && FEql(GetZf(lhs), GetZf(rhs), tol); }
-	template <typename T> inline bool   FEql4    (T lhs, T rhs, float tol = pr::maths::tiny)    { return FEql3(lhs, rhs, tol) && FEql(GetWf(lhs), GetWf(rhs), tol); }
-	template <typename T> inline bool   FEqlZero2(T lhs, float tol = pr::maths::tiny)           { return Length2Sq(lhs) < Sqr(tol); }
-	template <typename T> inline bool   FEqlZero3(T lhs, float tol = pr::maths::tiny)           { return Length3Sq(lhs) < Sqr(tol); }
-	template <typename T> inline bool   FEqlZero4(T lhs, float tol = pr::maths::tiny)           { return Length4Sq(lhs) < Sqr(tol); }
+	template <typename T> inline bool   FEql2    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql(GetXf(lhs), GetXf(rhs), tol) && FEql(GetYf(lhs), GetYf(rhs), tol); }
+	template <typename T> inline bool   FEql3    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql2(lhs, rhs, tol) && FEql(GetZf(lhs), GetZf(rhs), tol); }
+	template <typename T> inline bool   FEql4    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql3(lhs, rhs, tol) && FEql(GetWf(lhs), GetWf(rhs), tol); }
+	template <typename T> inline bool   FEqlZero2(T const& lhs, float tol = pr::maths::tiny)               { return Length2Sq(lhs) < Sqr(tol); }
+	template <typename T> inline bool   FEqlZero3(T const& lhs, float tol = pr::maths::tiny)               { return Length3Sq(lhs) < Sqr(tol); }
+	template <typename T> inline bool   FEqlZero4(T const& lhs, float tol = pr::maths::tiny)               { return Length4Sq(lhs) < Sqr(tol); }
 	
 	template <typename T, typename Pred> inline bool Any2(T const& v, Pred pred)                { return pred(GetX(v)) || pred(GetY(v)); }
 	template <typename T, typename Pred> inline bool Any3(T const& v, Pred pred)                { return Any2(v, pred) || pred(GetZ(v)); }
@@ -149,21 +149,21 @@ namespace pr
 	template <typename T> inline bool   IsNormal3(T const& v)                                   { return FEql(Length3Sq(v), 1.0f); }
 	template <typename T> inline bool   IsNormal4(T const& v)                                   { return FEql(Length4Sq(v), 1.0f); }
 	
-	inline float   DegreesToRadians(float degrees)                            { return degrees * 1.74532e-2f; }
-	inline float   RadiansToDegrees(float radians)                            { return radians * 5.72957e+1f; }
-	inline uint32  High32(uint64 const& i)                                    { return reinterpret_cast<uint32 const*>(&i)[0]; }
-	inline uint32  Low32 (uint64 const& i)                                    { return reinterpret_cast<uint32 const*>(&i)[1]; }
-	inline uint32& High32(uint64& i)                                          { return reinterpret_cast<uint32*>(&i)[0]; }
-	inline uint32& Low32 (uint64& i)                                          { return reinterpret_cast<uint32*>(&i)[1]; }
-	inline uint16  High16(uint32 const& i)                                    { return reinterpret_cast<uint16 const*>(&i)[0]; }
-	inline uint16  Low16 (uint32 const& i)                                    { return reinterpret_cast<uint16 const*>(&i)[1]; }
-	inline uint16& High16(uint32& i)                                          { return reinterpret_cast<uint16*>(&i)[0]; }
-	inline uint16& Low16 (uint32& i)                                          { return reinterpret_cast<uint16*>(&i)[1]; }
-	inline uint8   High8 (uint16 const& i)                                    { return reinterpret_cast<uint8 const*>(&i)[0]; }
-	inline uint8   Low8  (uint16 const& i)                                    { return reinterpret_cast<uint8 const*>(&i)[1]; }
-	inline uint8&  High8 (uint16& i)                                          { return reinterpret_cast<uint8*>(&i)[0]; }
-	inline uint8&  Low8  (uint16& i)                                          { return reinterpret_cast<uint8*>(&i)[1]; }
-	template <typename T> inline T Lerp(T src, T dest, float frac)            { return static_cast<T>(src + frac * (dest - src)); }
+	inline float   DegreesToRadians(float degrees)                                   { return degrees * 1.74532e-2f; }
+	inline float   RadiansToDegrees(float radians)                                   { return radians * 5.72957e+1f; }
+	inline uint32  High32(uint64 const& i)                                           { return reinterpret_cast<uint32 const*>(&i)[0]; }
+	inline uint32  Low32 (uint64 const& i)                                           { return reinterpret_cast<uint32 const*>(&i)[1]; }
+	inline uint32& High32(uint64& i)                                                 { return reinterpret_cast<uint32*>(&i)[0]; }
+	inline uint32& Low32 (uint64& i)                                                 { return reinterpret_cast<uint32*>(&i)[1]; }
+	inline uint16  High16(uint32 const& i)                                           { return reinterpret_cast<uint16 const*>(&i)[0]; }
+	inline uint16  Low16 (uint32 const& i)                                           { return reinterpret_cast<uint16 const*>(&i)[1]; }
+	inline uint16& High16(uint32& i)                                                 { return reinterpret_cast<uint16*>(&i)[0]; }
+	inline uint16& Low16 (uint32& i)                                                 { return reinterpret_cast<uint16*>(&i)[1]; }
+	inline uint8   High8 (uint16 const& i)                                           { return reinterpret_cast<uint8 const*>(&i)[0]; }
+	inline uint8   Low8  (uint16 const& i)                                           { return reinterpret_cast<uint8 const*>(&i)[1]; }
+	inline uint8&  High8 (uint16& i)                                                 { return reinterpret_cast<uint8*>(&i)[0]; }
+	inline uint8&  Low8  (uint16& i)                                                 { return reinterpret_cast<uint8*>(&i)[1]; }
+	template <typename T> inline T Lerp(T const& src, T const& dest, float frac)     { return static_cast<T>(src + frac * (dest - src)); }
 	
 	v2      Slerp(const v2& src, const v2& dest, float frac);
 	v3      Slerp(const v3& src, const v3& dest, float frac);

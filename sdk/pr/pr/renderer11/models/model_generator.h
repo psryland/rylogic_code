@@ -15,22 +15,17 @@ namespace pr
 	{
 		namespace model
 		{
-			//// General
-			//void        GenerateNormals(MLock& mlock, Range const* vrange = 0, Range const* irange = 0);
-			//void        GenerateNormals(ModelPtr& model, Range const* vrange = 0, Range const* irange = 0);
-			//void        SetVertexColours(MLock& mlock, Colour32 colour, Range const* vrange = 0);
-
-			// Line
-			void        LineSize(std::size_t num_lines, Range& vrange, Range& irange);
-			//MdlSettings LineModelSettings(std::size_t num_lines);
-			//ModelPtr    Line    (MLock& mlock  ,ShaderManager& mgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Line    (Renderer& rdr                          ,v4 const* point ,std::size_t num_lines                        ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Line    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_lines                        ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Line    (Renderer& rdr                          ,v4 const* point ,std::size_t num_lines                        ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    LineD   (MLock& mlock  ,MaterialManager& matmgr ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    LineD   (Renderer& rdr                          ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 const* colours, std::size_t num_colours ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    LineD   (MLock& mlock  ,MaterialManager& matmgr ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    LineD   (Renderer& rdr                          ,v4 const* points ,v4 const* directions ,std::size_t num_lines ,Colour32 colour = Colour32White                          ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			// Lines
+			// Generate lines from an array of start point, end point pairs.
+			// 'num_lines' is the number of start/end point pairs in the following arrays
+			// 'points' is the input array of start and end points for lines.
+			// 'num_colours' should be either, 0, 1, or num_lines * 2
+			// 'colours' is an input array of colour values or a pointer to a single colour.
+			// 'mat' is an optional material to use for the lines
+			ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0);
+			ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,Colour32 colour ,DrawMethod const* mat = 0);
+			ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0);
+			ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,Colour32 colour ,DrawMethod const* mat = 0);
 
 			//// Quad
 			//void        QuadSize(Range& vrange, Range& irange, std::size_t num_quads);
@@ -46,15 +41,11 @@ namespace pr
 			//ModelPtr    SphereRxyz(MLock& mlock ,MaterialManager& matmgr ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 			//ModelPtr    SphereRxyz(Renderer& rdr                         ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			//// Box
-			//void        BoxSize(Range& vrange, Range& irange, std::size_t num_boxes);
-			//Settings    BoxModelSettings(std::size_t num_boxes);
-			//ModelPtr    Box     (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_boxes, m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Box     (Renderer& rdr                          ,v4 const* point ,std::size_t num_boxes, m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Box     (MLock& mlock  ,MaterialManager& matmgr ,v4 const& dim ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Box     (Renderer& rdr                          ,v4 const& dim ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    BoxList (MLock& mlock  ,MaterialManager& matmgr ,v4 const& dim ,v4 const* positions ,std::size_t num_boxes ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    BoxList (Renderer& rdr                          ,v4 const& dim ,v4 const* positions ,std::size_t num_boxes ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			// Boxes
+			ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
+			ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, m4x4 const& o2w, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
+			ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w, Colour32 colour, DrawMethod const* mat = 0);
+			ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& dim, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
 
 			//// Cone
 			//void        ConeSize(Range& vrange, Range& irange, std::size_t layers, std::size_t wedges);
@@ -135,6 +126,11 @@ namespace pr
 			//	mlock.m_irange.m_begin += irange->size();
 			//	return mlock.m_model;
 			//}
+//// General
+//void        GenerateNormals(MLock& mlock, Range const* vrange = 0, Range const* irange = 0);
+//void        GenerateNormals(ModelPtr& model, Range const* vrange = 0, Range const* irange = 0);
+//void        SetVertexColours(MLock& mlock, Colour32 colour, Range const* vrange = 0);
+
 		}
 	}
 }

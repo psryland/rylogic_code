@@ -24,12 +24,35 @@ cbuffer CBufFrame :register(b0)
 	// Camera transform
 	matrix m_c2w :packoffset(c0); // camera to world
 	matrix m_w2c :packoffset(c4); // world to camera
+	matrix m_w2s :packoffset(c8); // world to screen
+
+	// Global lighting
+	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
+	float4 m_global_lighting    :packoffset(c12); // Encoded info for global lighting
+	float4 m_ws_light_direction :packoffset(c13); // The direction of the global light source
+	float4 m_ws_light_position  :packoffset(c14); // The position of the global light source
+	float4 m_light_ambient      :packoffset(c15); // The colour of the ambient light
+	float4 m_light_colour       :packoffset(c16); // The colour of the directional light
+	float4 m_light_specular     :packoffset(c17); // The colour of the specular light. alpha channel is specular power
+	float4 m_spot               :packoffset(c18); // x = inner cos angle, y = outer cos angle, z = range, w = falloff
 };
 #else
 struct CBufFrame
 {
-	pr::m4x4 m_c2w;
-	pr::m4x4 m_w2c;
+	// Camera transform
+	pr::m4x4 m_c2w; // camera to world
+	pr::m4x4 m_w2c; // world to camera
+	pr::m4x4 m_w2s; // world to screen
+
+	// Global lighting
+	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
+	pr::v4 m_global_lighting;    // Encoded info for global lighting
+	pr::v4 m_ws_light_direction; // The direction of the global light source
+	pr::v4 m_ws_light_position;  // The position of the global light source
+	pr::Colour m_light_ambient;  // The colour of the ambient light
+	pr::Colour m_light_colour;   // The colour of the directional light
+	pr::Colour m_light_specular; // The colour of the specular light. alpha channel is specular power
+	pr::v4 m_spot;               // x = inner cos angle, y = outer cos angle, z = range, w = falloff
 };
 #endif
 
@@ -46,7 +69,7 @@ cbuffer CBufModel :register(b1)
 
 	// Tinting
 	EXPAND(float4 m_tint :packoffset(c12) ;,PR_RDR_SHADER_TINT0) // object tint colour
-	
+
 	// Texture2D
 	EXPAND(matrix m_tex2surf0 :packoffset(c13) ;,PR_RDR_SHADER_TEX0) // texture to surface transform
 };
@@ -57,10 +80,10 @@ struct CBufModel
 	pr::m4x4   m_o2s;
 	pr::m4x4   m_o2w;
 	pr::m4x4   m_n2w;
-	
+
 	// Tinting
 	pr::Colour m_tint;
-	
+
 	// Texture2D
 	pr::m4x4 m_tex2surf0;
 };

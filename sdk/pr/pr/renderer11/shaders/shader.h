@@ -32,8 +32,8 @@ namespace pr
 		struct VShaderDesc :ShaderDesc
 		{
 			D3D11_INPUT_ELEMENT_DESC const* m_iplayout; // The input layout description
-			size_t               m_iplayout_count;      // The number of elements in the input layout
-			pr::rdr::EGeom::Type m_geom_mask;           // The minimum requirements of the vertex format
+			size_t m_iplayout_count;    // The number of elements in the input layout
+			pr::rdr::EGeom m_geom_mask; // The minimum requirements of the vertex format
 			
 			// Initialise the shader description.
 			// 'Vert' should be a vertex type containing the minimum required fields for the VS
@@ -76,16 +76,18 @@ namespace pr
 			D3DPtr<ID3D11DomainShader>      m_ds;              // The domain shader (null if not used)
 			D3DPtr<ID3D11RasterizerState>   m_rs;              // The default rasterizer state
 			RdrId                           m_id;              // Id for this shader instance
-			EGeom::Type                     m_geom_mask;       // The geometry type supported by this shader
+			EGeom                           m_geom_mask;       // The geometry type supported by this shader
 			ShaderManager*                  m_mgr;             // The shader manager that created this shader
 			string32                        m_name;            // Human readable id for the texture
-			SortKeyId                       m_sort_id;
+			SortKeyId                       m_sort_id;         //
+			ShaderSetupFunc                 m_setup_func;      // User provided callback for binding this shader to a device context
+			time_t                          m_last_modified;   // Support for dynamically loading shaders at runtime (unused when PR_RDR_RUNTIME_SHADERS is not defined)
 
 			explicit BaseShader(ShaderManager* mgr);
 			virtual ~BaseShader() {}
 
-			// User provided callback for binding this shader to a device context
-			ShaderSetupFunc Setup;
+			// Bind the shader to the device context in preparation for rendering
+			void Bind(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene);
 
 			// Ref counting cleanup function
 			static void RefCountZero(pr::RefCount<BaseShader>* doomed);
@@ -95,9 +97,6 @@ namespace pr
 			// factory method to create new shaders
 			friend struct pr::rdr::Allocator<BaseShader>;
 			BaseShader();
-
-			// Set the non-null shaders to the device context
-			void Bind(D3DPtr<ID3D11DeviceContext>& dc) const;
 		};
 
 		//// A collection of shaders (kinda like an effect)

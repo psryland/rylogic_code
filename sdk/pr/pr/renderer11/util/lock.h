@@ -115,7 +115,7 @@ namespace pr
 		};
 
 		// Model Lock - an object for scoped locking of a model vertex and
-		// index buffer and for keeping track of ranges as it you fill it with stuff
+		// index buffer and for keeping track of ranges as you fill it with stuff
 		struct MLock
 		{
 			Lock     m_local_vlock;  // A local vertex lock to allow the caller to not provide one

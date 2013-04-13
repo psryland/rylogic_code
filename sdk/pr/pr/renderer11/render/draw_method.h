@@ -19,8 +19,8 @@ namespace pr
 		struct DrawMethod
 		{
 			// The shader that does the rendering.
-			pr::rdr::ShaderPtr m_shader;
-			
+			ShaderPtr m_shader;
+
 			// Rasterizer states
 			D3DPtr<ID3D11RasterizerState> m_rstates;
 
@@ -29,8 +29,15 @@ namespace pr
 			// are used by every shader. The client has to know which shader they're using
 			// and which properties need to be fill in for it to work correctly. Shaders
 			// need to handle uninitialized properties sanely.
-			pr::rdr::Texture2DPtr m_tex_diffuse; // Base diffuse texture
-			pr::rdr::Texture2DPtr m_tex_env_map; // Environment map (todo: make into a cube texture)
+			Texture2DPtr m_tex_diffuse; // Base diffuse texture
+			Texture2DPtr m_tex_env_map; // Environment map (todo: make into a cube texture)
+
+			DrawMethod(ShaderPtr shader = 0, D3DPtr<ID3D11RasterizerState> rstates = 0, Texture2DPtr diffuse = 0, Texture2DPtr env_map = 0)
+			:m_shader(shader)
+			,m_rstates(rstates)
+			,m_tex_diffuse(diffuse)
+			,m_tex_env_map(env_map)
+			{}
 		};
 	}
 }

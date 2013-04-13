@@ -25,6 +25,7 @@
 #include "pr/macros/link.h"
 #include "pr/macros/count_of.h"
 #include "pr/macros/repeat.h"
+#include "pr/macros/enum.h"
 #include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 #include "pr/common/hresult.h"
@@ -64,14 +65,13 @@
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
 #include "pr/str/prstring.h"
-#include "pr/str/wstring.h"
 #include "pr/str/prstdstring.h"
+#include "pr/str/tostring.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/storage/nugget_file/nuggetfile.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/stringconversion.h"
-#include "pr/geometry/geometry.h"
 #include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_helper.h"
 #include "pr/camera/camera.h"
@@ -168,8 +168,8 @@ namespace pr
 		struct Nugget;         typedef pr::chain::head<Nugget, struct ChainGroupNugget> TNuggetChain;
 		struct VertP;
 		struct VertPC;
-		struct VertPT;
-		struct VertPNTC;
+		struct VertPCT;
+		struct VertPCNT;
 		struct MdlSettings;
 		
 		// Instances
@@ -181,7 +181,7 @@ namespace pr
 		struct DrawMethod;
 		struct Drawlist;
 		struct DrawListElement;
-		
+
 		// Enums
 		namespace ERenderMethod
 		{
@@ -191,60 +191,53 @@ namespace pr
 		{
 			enum Type { WarnedNoRenderNuggets = 1 << 0 };
 		}
-		namespace EGeom
-		{
-			typedef int Type;
-			enum
-			{
-				Pos  = 1 << 0,  // Object space 3D position
-				Diff = 1 << 1,  // Diffuse base colour
-				Norm = 1 << 2,  // Object space 3D normal
-				Tex0 = 1 << 3,  // Diffuse texture
-			};
-		}
-		namespace EConstBuf
-		{
-			enum Type
-			{
-				FrameConstants = 0,
-				ModelConstants = 1,
-			};
-		}
-		namespace EShader
-		{
-			enum Type
-			{
-				TxTint,
-				TxTintPvc,
-				TxTintTex,
-				NumberOf,
-			};
-			inline char const* ToString(size_t type)
-			{
-				switch (static_cast<Type>(type)) {
-				default:         return "";
-				case TxTint:     return "TxTint";
-				case TxTintPvc:  return "TxTintPvc";
-				case TxTintTex:  return "TxTintTex";
-				}
-			}
-			inline Type Parse(char const* str)
-			{
-				int i; for (i = 0; i != NumberOf && ::_stricmp(str, ToString(static_cast<Type>(i))) != 0; ++i) {}
-				return static_cast<Type>(i);
-			}
-		}
-		namespace ERasterState
-		{
-			enum Type
-			{
-				SolidCullNone,
-				SolidCullBack,
-				SolidCullFront,
-				WireCullNone,
-			};
-		}
-		//		namespace EQuality
+
+		// EGeom
+		#define PR_ENUM(x)\
+			x(Unknown ,= 0     )\
+			x(Vert    ,= 1 << 0) /* Object space 3D position */ \
+			x(Colr    ,= 1 << 1) /* Diffuse base colour      */ \
+			x(Norm    ,= 1 << 2) /* Object space 3D normal   */ \
+			x(Tex0    ,= 1 << 3) /* Diffuse texture          */
+		PR_DECLARE_ENUM_FLAGS(EGeom, PR_ENUM);
+		#undef PR_ENUM
+
+		// EConstBuf
+		#define PR_ENUM(x)\
+			x(FrameConstants ,= 0)\
+			x(ModelConstants ,= 1)
+		PR_DECLARE_ENUM(EConstBuf, PR_ENUM);
+		#undef PR_ENUM
+
+		// EShader
+		#define PR_ENUM(x)\
+			x(TxTint         ,)\
+			x(TxTintPvc      ,)\
+			x(TxTintTex      ,)\
+			x(TxTintPvcLitTex,)
+		PR_DECLARE_ENUM(EShader, PR_ENUM);
+		#undef PR_ENUM
+
+		// ERasterState
+		#define PR_ENUM(x)\
+			x(Unknown        ,)\
+			x(SolidCullNone  ,)\
+			x(SolidCullBack  ,)\
+			x(SolidCullFront ,)\
+			x(WireCullNone   ,)
+		PR_DECLARE_ENUM(ERasterState, PR_ENUM);
+		#undef PR_ENUM
+
+		// ELight
+		#define PR_ENUM(x)\
+			x(Ambient     ,)\
+			x(Directional ,)\
+			x(Point       ,)\
+			x(Spot        ,)
+		PR_DECLARE_ENUM(ELight, PR_ENUM);
+		#undef PR_ENUM
+
+//		namespace EQuality
 //		{
 //			enum Type { Low,  Medium, High, NumberOf };
 //			inline char const* ToString(Type type)
@@ -282,25 +275,7 @@ namespace pr
 //				return static_cast<Type>(i);
 //			}
 //		}
-//		namespace ELight
-//		{
-//			enum Type { Ambient, Directional, Point, Spot, NumberOf };
-//			inline char const* ToString(Type type)
-//			{
-//				switch (type) {
-//				default:          return "";
-//				case Ambient:     return "Ambient";
-//				case Directional: return "Directional";
-//				case Point:       return "Point";
-//				case Spot:        return "Spot";
-//				}
-//			}
-//			inline Type Parse(char const* str)
-//			{
-//				int i; for (i = 0; i != NumberOf && !pr::str::EqualI(str, ToString(static_cast<Type>(i))); ++i) {}
-//				return static_cast<Type>(i);
-//			}
-//		}
+
 //		namespace EStockEffect
 //		{
 //			enum Type
@@ -347,6 +322,11 @@ namespace pr
 			explicit Evt_SceneRender(pr::rdr::Scene* scene) :m_scene(scene) {}
 		};
 	}
+
+	//To<> overloads
+	template <> inline rdr::string32 To<rdr::string32>(char const* from)     { return from; }
+	template <> inline rdr::string32 To<rdr::string32>(wchar_t const* from)  { return pr::Narrow(from, wcslen(from)); }
+
 }
 
 #endif

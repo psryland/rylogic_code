@@ -8,17 +8,17 @@
 //  {
 //      // Create a UserSettings object for loading/saving app settings
 //      struct UserSettings { UserSettings(void*) {} }; // dummy
-//      
+//
 //      // Derive a application logic type from pr::app::Main
 //      struct Main :pr::app::Main<UserSettings, MainGUI>
 //      {
 //           wchar_t const* AppTitle() const { return L"My New App"; };
-//           
+//
 //           Main(MainGUI& gui)
 //           :base(pr::app::DefaultSetup(), gui)
 //           {}
 //      };
-//      
+//
 //      // Derive a GUI class from pr::app::MainGUI
 //      struct MainGUI :pr::app::MainGUI<MainGUI, Main>
 //      {
@@ -66,11 +66,11 @@ namespace pr
 			// Returns a type containing information needed to initialise the UserSettings type in Main
 			// Note: in this case the user settings type must have a constructor taking a void* argument
 			virtual void* UserSettings(HWND) { return 0; }
-			
+
 			// Return settings to configure the render
 			virtual pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, client_area); }
 		};
-		
+
 		// This type contains the main app logic. It's lifetime is controlled by the GUI.
 		// Apps should inherit this type providing custom functionality where required
 		template
@@ -83,14 +83,14 @@ namespace pr
 			// Define this type as base as a helper for derived type constructors
 			// so they can call: MyType(...) :base(..) {}
 			typedef Main<UserSettings,MainGUI> base;
-			
+
 			UserSettings           m_settings;    // Application wide user settings
 			pr::Renderer           m_rdr;         // The renderer
 			pr::rdr::SceneForward  m_scene;       // The main view
 			pr::Camera             m_cam;         // A camera
 			MainGUI&               m_gui;         // The GUI that owns this app logic class
 			bool                   m_rdr_pending; // Render call batching, true if render has been called at least once
-			
+
 			// Construct using a template setup object.
 			template <typename Setup>
 			Main(Setup setup, MainGUI& gui)
@@ -102,16 +102,16 @@ namespace pr
 			,m_rdr_pending(false)
 			{
 				m_scene.m_background_colour.set(0.5f,0.5f,0.5f,1.0f);
-				
+
 				// Position the camera
 				m_cam.Aspect(1.0f);
 				m_cam.FovY(pr::maths::tau_by_8);
 				m_cam.LookAt(
 					pr::v4::make(0, 0, 1.0f / (float)tan(m_cam.m_fovY/2.0f), 1.0f),
-					pr::v4Origin, 
+					pr::v4Origin,
 					pr::v4YAxis, true);
 				//m_view0.CameraToWorld(m_cam.CameraToWorld());
-				
+
 				//// Configure a light
 				//pr::rdr::Light& light = m_rdr.m_light_mgr.m_light[0];
 				//light.m_type           = pr::rdr::ELight::Directional;
@@ -122,15 +122,15 @@ namespace pr
 				//light.m_specular_power = 0;
 				//light.m_cast_shadows   = false;
 			}
-			
+
 			virtual ~Main()
 			{}
-			
+
 			// Mouse navigation
 			virtual void Nav(pr::v2 const& pt, int btn_state, bool nav_start_stop)
 			{
 				if (nav_start_stop) m_cam.MoveRef(pt, btn_state);
-				else                m_cam.Move   (pt, btn_state);
+				else                m_cam.Move(pt, btn_state);
 				Render();
 			}
 			virtual void NavZ(float delta)
@@ -138,45 +138,45 @@ namespace pr
 				m_cam.MoveZ(delta, true);
 				Render();
 			}
-			
+
 			// The size of the window has changed
 			virtual void Resize(pr::iv2 const& size)
 			{
 				m_rdr.Resize(size);
 				m_cam.Aspect(size.x / float(size.y));
 			}
-			
+
 			// Request a render.
 			// Note: this can be called many times per frame which minimal cost
 			virtual void Render()
 			{
 				m_rdr_pending = true;
 			}
-			
+
 			// The actual call to d3d present
 			virtual void DoRender(bool force = false)
 			{
 				// Only render if asked to
 				if (!m_rdr_pending && !force)
 					return;
-				
+
 				// Allow new render requests now
 				m_rdr_pending = false;
-				
+
 				// Set the camera position
 				m_scene.SetView(m_cam);
-				
+
 				// Reset and rebuild the drawlist
 				m_scene.ClearDrawlist();
 				m_scene.UpdateDrawlist();
-				
+
 				// Render the viewports
 				m_scene.Render();
-				
+
 				// Show the result
 				m_rdr.Present();
 			}
-			
+
 		private:
 			Main(Main const&);
 			Main& operator=(Main const&);

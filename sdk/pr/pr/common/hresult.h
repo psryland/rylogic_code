@@ -2,22 +2,22 @@
 // HRESULT error codes
 //  Copyright © Rylogic Ltd 2011
 //********************************
-//
+
+#pragma once
 #ifndef PR_HRESULT_H
 #define PR_HRESULT_H
 
 #include <stdio.h>
 #include <windows.h>
 #include <vector>
+#include <type_traits>
+#include "pr/common/assert.h"
 #include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/exception.h"
-#include "pr/str/wstring.h"
+#include "pr/str/tostring.h"
 
-//#ifndef _D3D9_H_
-//#error where's d3d9.h?
-//#endif
 
 // Support d3d errors if the header has been included before now. Dodgy I know :/
 #if defined(PR_SUPPORT_D3D_HRESULTS) || defined(_D3D9_H_)
@@ -26,15 +26,18 @@
 	#define PR_SUPPORT_D3D_ERRORS
 #endif
 
-// Define some standard windows defines/macros in case windows headers
-// are not already included. All from WinError.h
-typedef long HRESULT;
+enum HResult
+{
+	Ok   = HRESULT(S_OK),
+	Fail = HRESULT(E_FAIL),
+};
 
 namespace pr
 {
 	// Forward declare the ToString function
+	// Here 'Result' is expected to be an enum error code
 	template <typename Result> std::string ToString(Result result);
-	
+
 	// Convert an HRESULT into an error message string
 	inline std::string HrMsg(HRESULT hr)
 	{
@@ -44,7 +47,7 @@ namespace pr
 	}
 
 	// Convert an HRESULT into a string
-	template <> inline std::string ToString<HRESULT>(HRESULT result)
+	template <> inline std::string ToString<HResult>(HResult result)
 	{
 		// If it's a d3d error code
 		#ifdef PR_SUPPORT_D3D_ERRORS
@@ -52,9 +55,9 @@ namespace pr
 		{
 			std::string dx_err;
 			dx_err  = "D3DError: ";
-			dx_err += pr::str::ToAString<std::string>(DXGetErrorString(result));
+			dx_err += pr::To<std::string>(DXGetErrorString(result));
 			dx_err += "\nD3D Description: ";
-			dx_err += pr::str::ToAString<std::string>(DXGetErrorDescription(result));
+			dx_err += pr::To<std::string>(DXGetErrorDescription(result));
 			return dx_err.c_str();
 		}
 		#endif
@@ -62,24 +65,29 @@ namespace pr
 		// else ask windows
 		LPVOID lpMsgBuf;
 		if (!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL)) return "Unknown error code";
-		std::string err_msg = pr::str::ToAString<std::string>((LPCTSTR)lpMsgBuf);
+		std::string err_msg = pr::To<std::string>((LPCTSTR)lpMsgBuf);
 		LocalFree(lpMsgBuf);
 		return err_msg;
 	}
-	
+
 	// A string to put the last error message into
 	inline std::string& Reason()
 	{
 		static std::string s_reason;
 		return s_reason;
 	}
-	
+
+	template <typename T> struct is_int64 { static const bool value = false; };
+	template <> struct is_int64<__int64> { static const bool value = true; };
+
 	// Success / Failure / Verify
 	template <typename Result> inline bool Failed   (Result result) { return !Succeeded(result); }
 	template <typename Result> inline void Verify   (Result result) { PR_ASSERT(PR_DBG, Succeeded(result), Reason().c_str()); (void)result; }
 	template <typename Result> inline void Throw    (Result result) { if (!Succeeded(result)) throw pr::Exception<Result>(result, Reason().c_str()); }
 	template <typename Result> inline bool Succeeded(Result result)
 	{
+		static_assert(std::is_enum<Result>::value, "Only enum result codes should be used as ToString() for other types has a different meaning");
+
 		if (result >= 0) return true;
 		Reason() = pr::ToString<Result>(result);
 		PR_INFO(PR_DBG, Reason().c_str());
@@ -92,6 +100,9 @@ namespace pr
 		PR_INFO(PR_DBG, Reason().c_str());
 		return false;
 	}
+	// Specialisations for non-enum types
+	template <> inline bool Succeeded(__int64 result) { return Succeeded(static_cast<HResult>(result)); }
+	template <> inline bool Succeeded(long result)    { return Succeeded(static_cast<HResult>(result)); }
 }
 
 #undef PR_SUPPORT_D3D_ERRORS

@@ -53,7 +53,7 @@
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/models/input_layout.h"
 //#include "pr/renderer/models/quadbuffer.h"
-//#include "pr/renderer/models/modelgenerator.h"
+#include "pr/renderer11/models/model_generator.h"
 
 // Instances
 #include "pr/renderer11/instances/instance.h"

@@ -47,7 +47,7 @@ namespace pr
 			Skybox(pr::Renderer& rdr, wstring const& texpath, Style tex_style)
 			:m_inst()
 			,m_tex()
-			,m_scale(1000.0f)
+			,m_scale(100.0f)
 			{
 				switch (tex_style)
 				{
@@ -62,7 +62,6 @@ namespace pr
 			{
 				pr::rdr::SceneView const& view = e.m_scene->m_view;
 				m_inst.m_i2w = pr::Scale4x4(m_scale, view.m_c2w.pos);
-				m_inst.m_i2w = pr::Translation(0,0,0);
 				e.m_scene->AddInstance(m_inst);
 			}
 			

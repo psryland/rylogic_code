@@ -29,8 +29,12 @@ pr::rdr::RasterStateManager::~RasterStateManager()
 	while (!m_lookup_rs.empty())
 	{
 		auto iter = begin(m_lookup_rs);
-		PR_INFO_EXP(PR_DBG_RDR, pr::PtrRefCount(iter->second) == 1, pr::FmtS("External references to raster state %d still exist", iter->first));
+		#if PR_DBG_RDR
+		long ref_count = pr::PtrRefCount(iter->second);
+		PR_INFO_EXP(PR_DBG_RDR, ref_count == 1, pr::FmtS("%d external references to raster state %d still exist" ,ref_count ,iter->first));
+		#endif
 		iter->second->Release();
+		m_lookup_rs.erase(iter);
 	}
 }
 

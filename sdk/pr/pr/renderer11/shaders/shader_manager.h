@@ -35,7 +35,7 @@ namespace pr
 			void CreateStockShaders();
 			
 			// Builds the basic parts of a shader.
-			pr::rdr::ShaderPtr InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc);
+			pr::rdr::ShaderPtr InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name);
 			
 		public:
 			ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
@@ -43,18 +43,18 @@ namespace pr
 			
 			// Create a custom shader object.
 			// Pass nulls for 'vsdesc', 'psdesc' if they're not needed
-			template <class ShaderType> pr::rdr::ShaderPtr CreateShader(RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc)
+			template <class ShaderType> pr::rdr::ShaderPtr CreateShader(RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name)
 			{
 				// Create a lambda for allocating the shader
 				ShaderAlex create = [&](pr::rdr::ShaderManager* mgr){ return pr::rdr::Allocator<ShaderType>(m_mem).New(mgr); };
-				return InitShader(create, id, setup, vsdesc, psdesc);
+				return InitShader(create, id, setup, vsdesc, psdesc, name);
 			}
 
 			// Return the shader corresponding to 'id' or null if not found
 			pr::rdr::ShaderPtr FindShader(RdrId id) const;
 
 			// Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'
-			pr::rdr::ShaderPtr FindShaderFor(EGeom::Type geom_mask) const;
+			pr::rdr::ShaderPtr FindShaderFor(EGeom geom_mask) const;
 			template <class Vert> pr::rdr::ShaderPtr FindShaderFor() const { return FindShaderFor(Vert::GeomMask); }
 		};
 	}

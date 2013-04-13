@@ -206,7 +206,7 @@ namespace pr
 	
 	// Fill a buffer with the contents of a file
 	// Note: the buffer could be a std::string
-	template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer, DWORD sharing = FILE_SHARE_READ|FILE_SHARE_WRITE)
+	template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer, DWORD sharing)
 	{
 		Handle h = FileOpen(filename, GENERIC_READ, sharing, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 		if (h == INVALID_HANDLE_VALUE) return false;
@@ -215,13 +215,21 @@ namespace pr
 		buffer.resize(buf_size + file_size);
 		return FileRead(h, &buffer[buf_size], file_size);
 	}
-	template <typename tchar, typename tbuf> inline tbuf FileToBuffer(tchar const* filename, DWORD sharing = FILE_SHARE_READ|FILE_SHARE_WRITE)
+	template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer)
+	{
+		return FileToBuffer(filename, buffer, FILE_SHARE_READ|FILE_SHARE_WRITE);
+	}
+	template <typename tchar, typename tbuf> inline tbuf FileToBuffer(tchar const* filename, DWORD sharing)
 	{
 		tbuf result;
 		if (!FileToBuffer(filename, result, sharing)) result.clear();
 		return result;
 	}
-	
+	template <typename tchar, typename tbuf> inline tbuf FileToBuffer(tchar const* filename)
+	{
+		return FileToBuffer(filename, FILE_SHARE_READ|FILE_SHARE_WRITE);
+	}
+
 	// Write a file with 'buffer' as the contents
 	// Note: 'buffer' may be a string
 	template <typename tchar> inline bool BufferToFile(void const* buffer, DWORD size, tchar const* filename, bool append)
