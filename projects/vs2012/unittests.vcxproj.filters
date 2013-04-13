@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="sdk">
+      <UniqueIdentifier>{019a8c89-fbb4-4a54-93cc-fdc5fbcea942}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\common">
+      <UniqueIdentifier>{fe0ac628-890b-4bfe-8d87-e873b38e4fda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\str">
+      <UniqueIdentifier>{ebce1b8f-1215-430d-be29-f2fd16a54f4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\macros">
+      <UniqueIdentifier>{77b2edf5-8bf7-4c07-aaf7-dd10d7c9bd4a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\unittests\unittests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\sdk\pr\pr\common\repeater.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\str\tostring.h">
+      <Filter>sdk\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\unittests.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\to.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\macros\enum.h">
+      <Filter>sdk\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\unittests\pp_output.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
