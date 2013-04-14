@@ -21,7 +21,7 @@ namespace pr { namespace rdr { namespace model
 	// Line *****************************************************************************************
 	namespace lines
 	{
-		typedef std::vector<VertPC>     VCont;
+		typedef std::vector<LineVerts>  VCont;
 		typedef std::vector<pr::uint16> ICont;
 		template <typename GenFunc> pr::rdr::ModelPtr Create(Renderer& rdr, std::size_t num_lines, DrawMethod const* mat, GenFunc GenerateFunc)
 		{
@@ -41,7 +41,7 @@ namespace pr { namespace rdr { namespace model
 			model->m_bbox = props.m_bbox;
 
 			// Create the render nugget
-			auto local_mat = mat ? *mat : DrawMethod(rdr.m_shdr_mgr.FindShaderFor(VertPC::GeomMask));
+			auto local_mat = mat ? *mat : DrawMethod(rdr.m_shdr_mgr.FindShaderFor(LineVerts::GeomMask));
 			//SetAlphaRenderStates(local_mat.m_rsb, has_alpha);
 			model->CreateNugget(local_mat, D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
@@ -72,7 +72,7 @@ namespace pr { namespace rdr { namespace model
 	// Box *****************************************************************************************
 	namespace boxes
 	{
-		typedef std::vector<VertPCNT>   VCont;
+		typedef std::vector<BoxVerts> VCont;
 		typedef std::vector<pr::uint16> ICont;
 		template <typename GenFunc> pr::rdr::ModelPtr Create(Renderer& rdr, std::size_t num_boxes, DrawMethod const* mat, GenFunc& GenerateFunc)
 		{
@@ -92,7 +92,7 @@ namespace pr { namespace rdr { namespace model
 			model->m_bbox = props.m_bbox;
 
 			// Create the render nugget
-			auto local_mat = mat ? *mat : DrawMethod(rdr.m_shdr_mgr.FindShaderFor(VertPCNT::GeomMask));
+			auto local_mat = mat ? *mat : DrawMethod(rdr.m_shdr_mgr.FindShaderFor(BoxVerts::GeomMask));
 			//SetAlphaRenderStates(local_mat.m_rsb, has_alpha);
 			model->CreateNugget(local_mat, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 

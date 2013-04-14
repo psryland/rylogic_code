@@ -49,6 +49,11 @@ set outdir=%srcdir%\..\compiled
 set output=/Fh"%outdir%\%file%.h"
 if [%obj%]==[1] set output=!output! /Fo"%outdir%\%file%.cso"
 
+::Delete previous output
+if exist "%outdir%\%file%.h"   del "%outdir%\%file%.h"
+if exist "%outdir%\%file%.cso" del "%outdir%\%file%.cso"
+if exist "%outdir%\%file%.pp"  del "%outdir%\%file%.pp"
+
 ::Set the variable name to the name of the file
 set varname=/Vn%file:~0,-3%_%shdr%
 
@@ -70,5 +75,5 @@ if [%pp%]==[1] (
 	set ppoutput=%outdir%\%file%.pp
 	"%fxc%" "%fullpath%" /P"!ppoutput!" %includes% %defines% %options%
 	Q:\bin\textformatter.exe -f "!ppoutput!" -newlines 0 1
-	"!textedit!" "!ppoutput!"
 )
+::"!textedit!" "!ppoutput!"

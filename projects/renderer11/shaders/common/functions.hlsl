@@ -51,9 +51,7 @@ float4 Illuminate(float4 ws_pos, float4 ws_norm, float4 ws_cam, float4 unlit_dif
 	float4 ltspec = 0;
 	float4 ws_toeye_norm = normalize(ws_cam - ws_pos);
 
-	//for (int i = 0; i != m_lighting.x; ++i)
-	//{
-	//	ltdiff += m_light_ambient;
+	ltdiff += m_light_ambient;
 
 	float intensity = 0;
 	if      (m_global_lighting.x == 1.0) intensity = LightDirectional(m_ws_light_direction ,ws_norm         ,unlit_diff.a);
@@ -63,7 +61,7 @@ float4 Illuminate(float4 ws_pos, float4 ws_norm, float4 ws_cam, float4 unlit_dif
 
 	float4 ws_light_dir = (m_global_lighting.x == 1.0) ? m_ws_light_direction : normalize(ws_pos - m_ws_light_position);
 	ltspec += intensity * float4(m_light_specular.rgb,1) * LightSpecular(ws_light_dir ,m_light_specular.a ,ws_norm ,ws_toeye_norm ,unlit_diff.a);
-	//}
+
 	return saturate(2.0*(ltdiff-0.5)*unlit_diff + ltspec + unlit_diff);
 }
 

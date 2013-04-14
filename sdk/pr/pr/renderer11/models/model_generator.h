@@ -22,6 +22,7 @@ namespace pr
 			// 'num_colours' should be either, 0, 1, or num_lines * 2
 			// 'colours' is an input array of colour values or a pointer to a single colour.
 			// 'mat' is an optional material to use for the lines
+			typedef VertPC LineVerts;
 			ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0);
 			ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,Colour32 colour ,DrawMethod const* mat = 0);
 			ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0);
@@ -42,6 +43,7 @@ namespace pr
 			//ModelPtr    SphereRxyz(Renderer& rdr                         ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
 			// Boxes
+			typedef VertPCNT BoxVerts;
 			ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
 			ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, m4x4 const& o2w, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
 			ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w, Colour32 colour, DrawMethod const* mat = 0);

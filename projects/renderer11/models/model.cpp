@@ -45,6 +45,8 @@ bool pr::rdr::Model::MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type, uint fl
 // Ranges are model relative, i.e. the first vert in the model is range [0,1)
 void pr::rdr::Model::CreateNugget(pr::rdr::DrawMethod const& meth, D3D11_PRIMITIVE_TOPOLOGY prim_type, Range const* v_range, Range const* i_range)
 {
+	PR_ASSERT(PR_DBG_RDR, meth.m_shader != 0, "The draw method must contain a shader");
+
 	Range vrange, irange;
 	if (v_range) { vrange = *v_range; vrange.shift((int)m_vrange.m_begin); PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, vrange), "This range exceeds the size of this model"); }
 	else         { vrange = m_vrange; }

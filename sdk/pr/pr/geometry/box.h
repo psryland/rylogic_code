@@ -130,6 +130,9 @@ namespace pr
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Boxes(std::size_t num_boxes, TVertCIter points, m4x4 const& o2w, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices, pr::uint16 ibase = 0)
 		{
+			if (o2w == m4x4Identity)
+				return Boxes(num_boxes, points, num_colours, colours, out_verts, out_indices, ibase);
+
 			// An iterator wrapper for applying a transform to 'points'
 			Transformer<TVertCIter> tx(points, o2w);
 			return Boxes(num_boxes, tx, num_colours, colours, out_verts, out_indices, ibase);

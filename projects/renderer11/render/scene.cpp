@@ -105,10 +105,12 @@ void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) cons
 		buf.m_light_ambient      = m_global_light.m_ambient;
 		buf.m_light_colour       = m_global_light.m_diffuse;
 		buf.m_light_specular     = pr::Colour::make(m_global_light.m_specular, m_global_light.m_specular_power);
+		buf.m_spot               = pr::v4::make(m_global_light.m_inner_cos_angle, m_global_light.m_outer_cos_angle, m_global_light.m_range, m_global_light.m_falloff);
 		*Lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufFrame>() = buf;
 		
 		// Bind the frame constants to the shader
 		dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
+		dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
 	}
 	
 	DoRender(dc, clear_bb);

@@ -48,6 +48,7 @@ void Txfm(BaseInstance const& inst, SceneView const& view, CBufModel& cb)
 	pr::m4x4 w2c = pr::GetInverseFast(view.m_c2w);
 	pr::m4x4 c2s; if (!FindC2S(inst, c2s)) c2s = view.m_c2s;
 	cb.m_o2s = c2s * w2c * o2w;
+	cb.m_o2w = o2w;
 }
 
 // Set the tint properties of CBufModel
@@ -175,7 +176,7 @@ struct TxTintPvcLitTex :BaseShader
 	}
 	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{
-		TxTintTex const* me = static_cast<TxTintTex const*>(nugget.m_draw.m_shader.m_ptr);
+		TxTintPvcLitTex const* me = static_cast<TxTintPvcLitTex const*>(nugget.m_draw.m_shader.m_ptr);
 		
 		// Fill out the model constants buffer and bind it to the VS stage
 		CBufModel cb = {};

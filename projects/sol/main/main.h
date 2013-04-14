@@ -48,13 +48,17 @@ namespace sol
 			for (int i = 0; i != 20; ++i)
 				points.push_back(pr::Random4(pr::v4Origin, 5.0f));
 
+			pr::rdr::DrawMethod method;
+			method.m_shader      = rdr.m_shdr_mgr.FindShaderFor(pr::rdr::model::BoxVerts::GeomMask);
+			method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::TextureDesc(), ResMgr::DataPath(L"textures\\smiling gekko.dds").c_str());
+
 			// Create the model
 			//m_inst.m_model = pr::rdr::model::BoxList(rdr, points.size(), &points[0], pr::v4::make(0.1f, 0.2f, 0.05f,0), 1, &pr::Colour32Red);
-			m_inst.m_model = pr::rdr::model::Box(rdr, pr::v4::make(0.2f,0.2f,0.2f,0.0f), pr::m4x4Identity, pr::Colour32Red);
+			m_inst.m_model = pr::rdr::model::Box(rdr, pr::v4::make(0.2f,0.2f,0.2f,0.0f), pr::m4x4Identity, pr::Colour32White, &method);
 			m_inst.m_i2w = pr::Translation(0,0,0);
 		}
 
-		// Add the skybox to a viewport
+		// Add to a viewport
 		void OnEvent(pr::rdr::Evt_SceneRender const& e)
 		{
 			e.m_scene->AddInstance(m_inst);
@@ -62,7 +66,9 @@ namespace sol
 	};
 
 	// Main app logic
-	struct Main :pr::app::Main<UserSettings, MainGUI>
+	struct Main
+		:pr::app::Main<UserSettings, MainGUI>
+		,pr::events::IRecv<pr::rdr::Evt_SceneRender>
 	{
 		//pr::app::Skybox m_skybox;
 		pr::app::Gimble m_gimble;
@@ -80,6 +86,13 @@ namespace sol
 			// Enable wireframe
 			//m_scene.m_rs = m_rdr.m_rs_mgr.RasterState(pr::rdr::ERasterState::WireCullNone);
 			m_scene.m_stereoscopic = true;
+			m_scene.m_global_light.m_diffuse = pr::Colour32Blue;
+		}
+
+		// Add to a viewport
+		void OnEvent(pr::rdr::Evt_SceneRender const& e)
+		{
+			e.m_scene->m_global_light.m_direction = e.m_scene->m_view.m_c2w * pr::v4::normal3(-1.0f, -2.0f, -3.0f, 0.0f);
 		}
 	};
 

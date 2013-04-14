@@ -65,7 +65,7 @@ VS_OUTPUT main(VS_INPUT In)
 	// Transform
 	EXPAND(Out.ss_pos  = mul(m_o2s ,ms_pos ) ;,PR_RDR_SHADER_TXFM  )
 	EXPAND(Out.ws_pos  = mul(m_o2w ,ms_pos ) ;,PR_RDR_SHADER_TXFMWS)
-	EXPAND(Out.ws_norm = mul(m_n2w ,ms_norm) ;,PR_RDR_SHADER_TXFMWS)
+	EXPAND(Out.ws_norm = mul(m_o2w ,ms_norm) ;,PR_RDR_SHADER_TXFMWS)
 
 	// Tinting
 	EXPAND(Out.diff0 = m_tint ;,PR_RDR_SHADER_TINT0)

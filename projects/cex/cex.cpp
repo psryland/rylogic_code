@@ -444,7 +444,7 @@ namespace cex
 		std::string m_text;
 		bool m_lwr, m_upr, m_fwdslash, m_bkslash, m_cstr, m_dopaste;
 		std::string m_newline;
-		Clip() :m_text() ,m_lwr(false) ,m_upr(false) ,m_fwdslash(false) ,m_bkslash(false) ,m_cstr(false) ,m_newline() {}
+		Clip() :m_text() ,m_lwr(false) ,m_upr(false) ,m_fwdslash(false) ,m_bkslash(false) ,m_cstr(false) ,m_dopaste(false) ,m_newline() {}
 		void ShowHelp() const
 		{
 			std::cout <<
