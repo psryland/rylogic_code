@@ -12,13 +12,14 @@
 #include "pr/renderer11/util/lock.h"
 #include "pr/geometry/line.h"
 #include "pr/geometry/box.h"
+#include "pr/geometry/sphere.h"
 
 using namespace pr::rdr;
 using namespace pr::rdr::model;
 
 namespace pr { namespace rdr { namespace model
 {
-	// Line *****************************************************************************************
+	// Line ***************************************************************************************
 	namespace lines
 	{
 		typedef std::vector<LineVerts>  VCont;
@@ -69,7 +70,7 @@ namespace pr { namespace rdr { namespace model
 		return lines::Create(rdr, num_lines, mat, gen);
 	}
 
-	// Box *****************************************************************************************
+	// Box ****************************************************************************************
 	namespace boxes
 	{
 		typedef std::vector<BoxVerts> VCont;
@@ -119,5 +120,41 @@ namespace pr { namespace rdr { namespace model
 		auto gen = [=](boxes::VCont::iterator vb, boxes::ICont::iterator ib){ return pr::geometry::BoxList(num_boxes, positions, dim, num_colours, colours, vb, ib); };
 		return boxes::Create(rdr, num_boxes, mat, gen);
 	}
-		
+
+	// Sphere *************************************************************************************
+	namespace sphere
+	{
+		typedef std::vector<SphereVerts> VCont;
+		typedef std::vector<pr::uint16> ICont;
+		template <typename GenFunc> pr::rdr::ModelPtr Create(Renderer& rdr, std::size_t divisions, DrawMethod const* mat, GenFunc& GenerateFunc)
+		{
+			// Determine the buffer requirements for the lines
+			Range vrange,irange;
+			pr::geometry::SphereSize(divisions, vrange, irange);
+
+			// Generate the sphere in local buffers
+			VCont verts  (vrange.size());
+			ICont indices(irange.size());
+			pr::geometry::Props props = GenerateFunc(begin(verts), begin(indices));
+
+			// Create the model
+			VBufferDesc vb(verts.size(), &verts[0]);
+			IBufferDesc ib(indices.size(), &indices[0]);
+			ModelPtr model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib));
+			model->m_bbox = props.m_bbox;
+
+			// Create the render nugget
+			auto local_mat = mat ? *mat : DrawMethod(rdr.m_shdr_mgr.FindShaderFor(SphereVerts::GeomMask));
+			//SetAlphaRenderStates(local_mat.m_rsb, has_alpha);
+			model->CreateNugget(local_mat, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			return model;
+		}
+	}
+	pr::rdr::ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t divisions, Colour32 colour, DrawMethod const* mat)
+	{
+		auto gen = [=](sphere::VCont::iterator vb, sphere::ICont::iterator ib){ return pr::geometry::Geosphere(radius, divisions, colour, vb, ib); };
+		return sphere::Create(rdr, divisions, mat, gen);
+	}
+
 }}}

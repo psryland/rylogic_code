@@ -36,7 +36,9 @@ namespace pr
 			//ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 			//ModelPtr    Quad    (Renderer& rdr                          ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			//// Sphere
+			// Sphere
+			typedef VertPCNT SphereVerts;
+			ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t divisions, Colour32 colour = Colour32White, DrawMethod const* mat = 0);
 			//void        SphereSize(Range& vrange, Range& irange, std::size_t divisions);
 			//Settings    SphereModelSettings(std::size_t divisions);
 			//ModelPtr    SphereRxyz(MLock& mlock ,MaterialManager& matmgr ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);

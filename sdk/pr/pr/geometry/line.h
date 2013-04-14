@@ -1,6 +1,6 @@
 //********************************
-// Line geometry
-//  Copyright © Rylogic Ltd 2006
+// Geometry
+//  Copyright © Rylogic Ltd 2013
 //********************************
 #pragma once
 #ifndef PR_GEOMETRY_LINE_H

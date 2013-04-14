@@ -54,7 +54,7 @@ namespace sol
 
 			// Create the model
 			//m_inst.m_model = pr::rdr::model::BoxList(rdr, points.size(), &points[0], pr::v4::make(0.1f, 0.2f, 0.05f,0), 1, &pr::Colour32Red);
-			m_inst.m_model = pr::rdr::model::Box(rdr, pr::v4::make(0.2f,0.2f,0.2f,0.0f), pr::m4x4Identity, pr::Colour32White, &method);
+			m_inst.m_model = pr::rdr::model::Sphere(rdr, pr::v4::make(0.6f,0.2f,0.4f,0.0f), 3, pr::Colour32White, &method);
 			m_inst.m_i2w = pr::Translation(0,0,0);
 		}
 

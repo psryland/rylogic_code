@@ -146,6 +146,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light.h">
       <Filter>lights</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\sphere.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
