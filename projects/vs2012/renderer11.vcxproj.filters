@@ -149,6 +149,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\geometry\sphere.h">
       <Filter>geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -205,9 +208,6 @@
     <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\render\raster_state_manager.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
     <ClCompile Include="..\renderer11\lights\light.cpp">
       <Filter>lights</Filter>
     </ClCompile>
@@ -248,7 +248,5 @@
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.ps.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.ps.hlsl" />
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.vs.hlsl" />
   </ItemGroup>
 </Project>

@@ -24,6 +24,7 @@ namespace pr
 		struct Scene
 			:pr::events::IRecv<pr::rdr::Evt_Resize>
 		{
+			// Note: scenes are copyable
 			pr::Renderer*        m_rdr;               // The renderer
 			pr::rdr::Viewport    m_viewport;          // Represents the rectangular area on screen
 			pr::rdr::SceneView   m_view;              // Represents the camera properties used to project onto the screen
@@ -33,12 +34,16 @@ namespace pr
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
 			D3DPtr<ID3D11RasterizerState> m_rs;       // Default raster states for the scene
 			bool                 m_stereoscopic;      // Render the scene in stereoscopic mode
+			float                m_eye_separation;    // The distance between the eyes in stereoscopic mode
 
 			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());
 
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
 			void SetView(SceneView const& view) { m_view = view; }
 			void SetView(pr::Camera const& cam) { SetView(pr::rdr::SceneView(cam)); }
+			
+			// Set stereoscopic rendering mode
+			void Stereoscopic(bool state, float eye_separation);
 
 			// Get/Set the on-screen visible area of this scene when rendered
 			pr::rdr::Viewport const& Viewport() const        { return m_viewport; }
@@ -65,13 +70,11 @@ namespace pr
 			void Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb = true) const;
 
 		protected:
-			void WriteNV3DSig(D3DPtr<ID3D11DeviceContext>& dc) const;
-
 			// Resize the viewport on back buffer resize
 			void OnEvent(pr::rdr::Evt_Resize const& evt);
 
 			// Implementation of rendering for the derived scene type
-			virtual void DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const = 0;
+			virtual void DoRender(D3DPtr<ID3D11DeviceContext>& dc) const = 0;
 		};
 
 		// A scene rendered using forward rendering techniques
@@ -81,7 +84,7 @@ namespace pr
 			
 		private:
 			// Implementation of rendering for the derived scene type
-			void DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const;
+			void DoRender(D3DPtr<ID3D11DeviceContext>& dc) const;
 		};
 
 		// A scene rendered using deferred rendering techniques
@@ -92,7 +95,7 @@ namespace pr
 			SceneDeferred(pr::Renderer& rdr, SceneView const& view = SceneView());
 			
 			// Implementation of rendering for the derived scene type
-			void DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const;
+			void DoRender(D3DPtr<ID3D11DeviceContext>& dc) const;
 		};
 	}
 }

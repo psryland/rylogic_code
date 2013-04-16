@@ -135,6 +135,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\geometry\box.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\line.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\common.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\sphere.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\config\config.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\forward.h" />
@@ -177,7 +178,6 @@
     <ClCompile Include="..\renderer11\config\config.cpp" />
     <ClCompile Include="..\renderer11\lights\light.cpp" />
     <ClCompile Include="..\renderer11\models\model_generator.cpp" />
-    <ClCompile Include="..\renderer11\render\raster_state_manager.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
     <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp" />
@@ -221,14 +221,6 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.vs.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.ps.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.vs.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

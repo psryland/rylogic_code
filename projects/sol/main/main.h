@@ -49,12 +49,13 @@ namespace sol
 				points.push_back(pr::Random4(pr::v4Origin, 5.0f));
 
 			pr::rdr::DrawMethod method;
-			method.m_shader      = rdr.m_shdr_mgr.FindShaderFor(pr::rdr::model::BoxVerts::GeomMask);
+			method.m_shader      = rdr.m_shdr_mgr.FindShaderFor(pr::rdr::model::QuadVert::GeomMask);
 			method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::TextureDesc(), ResMgr::DataPath(L"textures\\smiling gekko.dds").c_str());
 
 			// Create the model
 			//m_inst.m_model = pr::rdr::model::BoxList(rdr, points.size(), &points[0], pr::v4::make(0.1f, 0.2f, 0.05f,0), 1, &pr::Colour32Red);
-			m_inst.m_model = pr::rdr::model::Sphere(rdr, pr::v4::make(0.6f,0.2f,0.4f,0.0f), 3, pr::Colour32White, &method);
+			//m_inst.m_model = pr::rdr::model::Sphere(rdr, pr::v4::make(0.6f,0.2f,0.4f,0.0f), 3, pr::Colour32White, &method);
+			m_inst.m_model = pr::rdr::model::Quad(rdr, pr::v4Origin, pr::v4Zero, pr::v4Zero, 2.0f, 1.0f, pr::iv2::make(6,3), pr::Colour32White, pr::v2Zero, 2.0f*pr::v2One, &method);
 			m_inst.m_i2w = pr::Translation(0,0,0);
 		}
 
@@ -73,6 +74,7 @@ namespace sol
 		//pr::app::Skybox m_skybox;
 		pr::app::Gimble m_gimble;
 		TestModel m_test;
+		bool m_wireframe;
 
 		wchar_t const* AppTitle() const { return L"Sol"; };
 
@@ -82,6 +84,7 @@ namespace sol
 		//,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/sky1/skybox-clouds-few-noon.dds"), pr::app::Skybox::FiveSidedCube)
 		,m_gimble(m_rdr)
 		,m_test(m_rdr)
+		,m_wireframe(false)
 		{
 			// Enable wireframe
 			//m_scene.m_rs = m_rdr.m_rs_mgr.RasterState(pr::rdr::ERasterState::WireCullNone);
@@ -94,6 +97,16 @@ namespace sol
 		{
 			e.m_scene->m_global_light.m_direction = e.m_scene->m_view.m_c2w * pr::v4::normal3(-1.0f, -2.0f, -3.0f, 0.0f);
 		}
+
+		void ToggleWireframe()
+		{
+			m_wireframe = !m_wireframe;
+			m_scene.m_rs = m_wireframe ? m_rdr.m_rs_mgr.WireCullNone() : m_rdr.m_rs_mgr.SolidCullNone();
+		}
+		void ToggleStereo()
+		{
+			m_scene.Stereoscopic(!m_scene.m_stereoscopic, 0.1f);
+		}
 	};
 
 	struct MainGUI :pr::app::MainGUI<MainGUI, Main, pr::SimMsgLoop>
@@ -104,6 +117,24 @@ namespace sol
 			m_msg_loop.AddStepContext([this](double){ m_main->DoRender(true); }, 60.0f, false);
 			return S_OK;
 		}
+		virtual void OnKeyUp(UINT nChar, UINT, UINT)
+		{
+			if (nChar == 'W' && pr::KeyDown(VK_CONTROL))
+			{
+				m_main->ToggleWireframe();
+				return;
+			}
+			if (nChar == 'S' && pr::KeyDown(VK_CONTROL))
+			{
+				m_main->ToggleStereo();
+				return;
+			}
+			SetMsgHandled(FALSE);
+		}
+		BEGIN_MSG_MAP(x)
+			MSG_WM_KEYUP(OnKeyUp)
+			CHAIN_MSG_MAP(base)
+		END_MSG_MAP()
 	};
 }
 

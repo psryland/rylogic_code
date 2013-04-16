@@ -6,11 +6,6 @@
 #ifndef PR_GEOMETRY_SPHERE_H
 #define PR_GEOMETRY_SPHERE_H
 
-#include "pr/common/valuecast.h"
-#include "pr/common/colour.h"
-#include "pr/common/range.h"
-#include "pr/common/array.h"
-#include "pr/maths/maths.h"
 #include "pr/geometry/common.h"
 
 namespace pr
@@ -47,8 +42,6 @@ namespace pr
 			typedef pr::Array<GeosphereFace, 1024> TFaceCont;
 			typedef pr::Array<Child>  TChild;
 			typedef pr::Array<TChild> TVertexLookupCont;
-
-			template <typename T> T remove_ref(T&);
 
 			// A struct to hold all of the generation data
 			struct CreateGeosphereData
@@ -177,7 +170,7 @@ namespace pr
 
 		// Generate an ellipsoid geosphere
 		template <typename TVertIter, typename TIdxIter>
-		Props Geosphere(v4 const& radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices, pr::uint16 ibase = 0)
+		Props Geosphere(v4 const& radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
 			// Preallocate buffers to compile the geosphere into
 			pr::Range<> vrange, irange;
@@ -205,10 +198,10 @@ namespace pr
 			}
 			for (auto i = begin(faces), iend = end(faces); i != iend; ++i)
 			{
-				typedef decltype(impl::geosphere::remove_ref(*out_indices)) VIdx;
-				*out_indices++ = value_cast<VIdx>(ibase + i->m_vidx[0]);
-				*out_indices++ = value_cast<VIdx>(ibase + i->m_vidx[1]);
-				*out_indices++ = value_cast<VIdx>(ibase + i->m_vidx[2]);
+				typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+				*out_indices++ = value_cast<VIdx>(i->m_vidx[0]);
+				*out_indices++ = value_cast<VIdx>(i->m_vidx[1]);
+				*out_indices++ = value_cast<VIdx>(i->m_vidx[2]);
 			}
 
 			Props props;
@@ -219,9 +212,9 @@ namespace pr
 
 		// Generate a spherically geosphere
 		template <typename TVertIter, typename TIdxIter>
-		Props Geosphere(float radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices, pr::uint16 ibase = 0)
+		Props Geosphere(float radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
-			return Geosphere(v4::make(radius, radius, radius, 0.0f), diviions, colour, out_verts, out_indices, ibase);
+			return Geosphere(v4::make(radius, radius, radius, 0.0f), divisions, colour, out_verts, out_indices);
 		}
 	}
 }

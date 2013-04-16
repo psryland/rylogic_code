@@ -86,7 +86,7 @@ namespace pr
 	class Renderer :rdr::RdrState
 	{
 	public:
-		// These manager classes from part of the public interface of the renderer
+		// These manager classes form part of the public interface of the renderer
 		pr::rdr::ModelManager       m_mdl_mgr;
 		pr::rdr::ShaderManager      m_shdr_mgr;
 		pr::rdr::TextureManager     m_tex_mgr;

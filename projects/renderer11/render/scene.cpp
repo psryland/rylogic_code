@@ -65,8 +65,9 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 ,m_background_colour(pr::ColourBlack)
 ,m_global_light()
 ,m_cbuf_frame()
-,m_rs(rdr.m_rs_mgr.RasterState(ERasterState::SolidCullNone))
+,m_rs(rdr.m_rs_mgr.SolidCullNone())
 ,m_stereoscopic(false)
+,m_eye_separation(0.1f)
 {
 	CBufFrame scene_constants = {};
 	scene_constants.m_c2w = view.m_c2w;
@@ -77,53 +78,54 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 	PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "CBufFrame"));
 }
 
+// Set stereoscopic rendering mode
+void pr::rdr::Scene::Stereoscopic(bool state, float eye_separation)
+{
+	// NVidia 3D works like this:
+	// - Create a render target with dimensions 2*width,height+1
+	// - Render the left eye to [0,width), right to [width,2*width)
+	// - Write the NV_STEREO_IMAGE_SIGNITURE in row 'height'
+	// - CopySubResourceRegion to the back buffer
+	m_eye_separation = eye_separation;
+	if (m_stereoscopic == state) return;
+}
+
 // Resize the viewport on back buffer resize
 void pr::rdr::Scene::OnEvent(pr::rdr::Evt_Resize const& evt)
 {
+	// Todo, this is assuming the viewport covers the entire back buffer
+	// it won't work for viewports that are sub regions of the screen
 	if (evt.m_done)
 		m_viewport = evt.m_area;
 }
 
-// Render the draw list for this viewport
-void pr::rdr::Scene::Render(bool clear_bb) const
+// Set the frame constant variables
+void BindFrameContants(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Buffer> const& cbuf_frame, SceneView const& view, Light const& global_light)
 {
-	D3DPtr<ID3D11DeviceContext> dc = m_rdr->ImmediateDC();
-	Render(dc, clear_bb);
-}
-void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
-{
-	dc->RSSetViewports(1, &m_viewport);
-	
-	{// Set the frame constant variables
-		CBufFrame buf;
-		buf.m_c2w                = m_view.m_c2w;
-		buf.m_w2c                = pr::GetInverse(m_view.m_c2w);
-		buf.m_w2s                = m_view.m_c2s * pr::GetInverseFast(m_view.m_c2w);
-		buf.m_global_lighting    = pr::v4::make(static_cast<float>(m_global_light.m_type),0.0f,0.0f,0.0f);
-		buf.m_ws_light_direction = m_global_light.m_direction;
-		buf.m_ws_light_position  = m_global_light.m_position;
-		buf.m_light_ambient      = m_global_light.m_ambient;
-		buf.m_light_colour       = m_global_light.m_diffuse;
-		buf.m_light_specular     = pr::Colour::make(m_global_light.m_specular, m_global_light.m_specular_power);
-		buf.m_spot               = pr::v4::make(m_global_light.m_inner_cos_angle, m_global_light.m_outer_cos_angle, m_global_light.m_range, m_global_light.m_falloff);
-		*Lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufFrame>() = buf;
+	CBufFrame buf;
+	buf.m_c2w                = view.m_c2w;
+	buf.m_w2c                = pr::GetInverse(view.m_c2w);
+	buf.m_w2s                = view.m_c2s * pr::GetInverseFast(view.m_c2w);
+	buf.m_global_lighting    = pr::v4::make(static_cast<float>(global_light.m_type),0.0f,0.0f,0.0f);
+	buf.m_ws_light_direction = global_light.m_direction;
+	buf.m_ws_light_position  = global_light.m_position;
+	buf.m_light_ambient      = global_light.m_ambient;
+	buf.m_light_colour       = global_light.m_diffuse;
+	buf.m_light_specular     = pr::Colour::make(global_light.m_specular, global_light.m_specular_power);
+	buf.m_spot               = pr::v4::make(global_light.m_inner_cos_angle, global_light.m_outer_cos_angle, global_light.m_range, global_light.m_falloff);
+	*Lock(dc, cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufFrame>() = buf;
 		
-		// Bind the frame constants to the shader
-		dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
-		dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
-	}
-	
-	DoRender(dc, clear_bb);
-
-	//WriteNV3DSig(dc);
+	// Bind the frame constants to the shaders
+	dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &cbuf_frame.m_ptr);
+	dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &cbuf_frame.m_ptr);
 }
 
-void pr::rdr::Scene::WriteNV3DSig(D3DPtr<ID3D11DeviceContext>& dc) const
+// Write the nvidia 3D Vision signiture into the frame buffer
+void WriteNV3DSig(D3DPtr<ID3D11DeviceContext>& dc, pr::rdr::Viewport const& viewport)
 {
-	const uint NVSTEREO_IMAGE_SIGNATURE = 0x4433564e; //NV3D
-	// ORedflags in the dwFlagsfielsof the _Nv_Stereo_Image_Headerstructure above
-#define SIH_SWAP_EYES 0x00000001
-#define SIH_SCALE_TO_FIT 0x00000002
+	unsigned int const NVSTEREO_IMAGE_SIGNATURE = 0x4433564e; //NV3D
+	unsigned int const SIH_SWAP_EYES = 0x00000001; // ORedflags in the dwFlagsfielsof the _Nv_Stereo_Image_Headerstructure
+	unsigned int const SIH_SCALE_TO_FIT = 0x00000002;
 
 	struct NvStereoImageHeader
 	{
@@ -143,25 +145,24 @@ void pr::rdr::Scene::WriteNV3DSig(D3DPtr<ID3D11DeviceContext>& dc) const
 	Lock lock(dc, res, 0, D3D11_MAP_WRITE_DISCARD, 0);
 	
 	// write stereo signature in the last raw of the stereo image
-	auto pSIH = reinterpret_cast<NvStereoImageHeader*>(lock.ptr<uint8>() + ((int)m_viewport.Height - 1) * lock.RowPitch());
+	auto pSIH = reinterpret_cast<NvStereoImageHeader*>(lock.ptr<pr::uint8>() + ((int)viewport.Height - 1) * lock.RowPitch());
 
 	// Update the signature header values
 	pSIH->dwSignature = NVSTEREO_IMAGE_SIGNATURE;
 	pSIH->dwBPP = 32;
 	//pSIH->dwFlags = SIH_SWAP_EYES; // Src image has left on left and right on right, thats why this flag is not needed.
 	pSIH->dwFlags = SIH_SCALE_TO_FIT;
-	pSIH->dwWidth = (int)m_viewport.Width *2;
-	pSIH->dwHeight = (int)m_viewport.Height;
+	pSIH->dwWidth = (int)viewport.Width *2;
+	pSIH->dwHeight = (int)viewport.Height;
 }
 
-// SceneForward ***********************************************************
-
-pr::rdr::SceneForward::SceneForward(pr::Renderer& rdr, SceneView const& view)
-:Scene(rdr, view)
-{}
-
-// Render the scene using the standard forward rendering technique
-void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
+// Render the draw list for this viewport
+void pr::rdr::Scene::Render(bool clear_bb) const
+{
+	D3DPtr<ID3D11DeviceContext> dc = m_rdr->ImmediateDC();
+	Render(dc, clear_bb);
+}
+void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
 {
 	// Clear the back buffer and depth/stencil
 	if (clear_bb)
@@ -173,6 +174,40 @@ void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear
 		dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 	}
 
+	//if (m_stereoscopic)
+	//{
+	//	SceneView eye[EEye::NumberOf];
+	//	m_view.Stereo(m_eye_separation, eye);
+
+	//	for (int i = 0; i != EEye::NumberOf; ++i)
+	//	{
+	//		rdr::Viewport vp = m_viewport;
+	//		if (i == EEye::Right) vp.TopLeftX += vp.Width;
+	//		dc->RSSetViewports(1, &vp);
+	//		BindFrameContants(dc, m_cbuf_frame, eye[i], m_global_light);
+
+	//		DoRender(dc);
+	//		WriteNV3DSig(dc, m_viewport);
+	//	}
+	//}
+	//else
+	{
+		dc->RSSetViewports(1, &m_viewport);
+		BindFrameContants(dc, m_cbuf_frame, m_view, m_global_light);
+
+		DoRender(dc);
+	}
+}
+
+// SceneForward ***********************************************************
+
+pr::rdr::SceneForward::SceneForward(pr::Renderer& rdr, SceneView const& view)
+:Scene(rdr, view)
+{}
+
+// Render the scene using the standard forward rendering technique
+void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc) const
+{
 	// Loop over the elements in the draw list
 	Drawlist::DLECont::const_iterator dle = m_drawlist.begin(), dle_end = m_drawlist.end();
 	for (;dle != dle_end; ++dle)
@@ -203,10 +238,9 @@ pr::rdr::SceneDeferred::SceneDeferred(pr::Renderer& rdr, SceneView const& view)
 }
 
 // Render the scene using the deferred rendering technique
-void pr::rdr::SceneDeferred::DoRender(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
+void pr::rdr::SceneDeferred::DoRender(D3DPtr<ID3D11DeviceContext>& dc) const
 {
 	(void)dc;
-	(void)clear_bb;
 	//// Clear the render targets
 	//if (clear_bb)
 	//{

@@ -218,16 +218,6 @@ namespace pr
 		PR_DECLARE_ENUM(EShader, PR_ENUM);
 		#undef PR_ENUM
 
-		// ERasterState
-		#define PR_ENUM(x)\
-			x(Unknown        ,)\
-			x(SolidCullNone  ,)\
-			x(SolidCullBack  ,)\
-			x(SolidCullFront ,)\
-			x(WireCullNone   ,)
-		PR_DECLARE_ENUM(ERasterState, PR_ENUM);
-		#undef PR_ENUM
-
 		// ELight
 		#define PR_ENUM(x)\
 			x(Ambient     ,)\
@@ -237,7 +227,14 @@ namespace pr
 		PR_DECLARE_ENUM(ELight, PR_ENUM);
 		#undef PR_ENUM
 
-//		namespace EQuality
+		// EEye
+		#define PR_ENUM(x)\
+			x(Left  ,= 0)\
+			x(Right ,= 1)
+		PR_DECLARE_ENUM(EEye, PR_ENUM);
+		#undef PR_ENUM
+
+		//		namespace EQuality
 //		{
 //			enum Type { Low,  Medium, High, NumberOf };
 //			inline char const* ToString(Type type)

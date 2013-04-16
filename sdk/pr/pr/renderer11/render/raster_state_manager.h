@@ -22,22 +22,26 @@ namespace pr
 		// Render states are now rasterizer states
 		class RasterStateManager
 		{
-			typedef Lookup<RdrId, ID3D11RasterizerState*> RasterStateLookup;
-
 			D3DPtr<ID3D11Device> m_device;
-			RasterStateLookup m_lookup_rs;  // A map from RasterState id to an existing raster state instance
 
 		public:
-			RasterStateManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
-			~RasterStateManager();
+			RasterStateManager(D3DPtr<ID3D11Device>& device)
+			:m_device(device)
+			{}
 
 			// Create a raster state
-			// If 'out_id' is given it's set to the id assigned to the raster state
-			// and can be used in the other overload of this method
-			D3DPtr<ID3D11RasterizerState> RasterState(RdrId id, pr::rdr::RasterizerDesc const& desc, RdrId* out_id = 0);
+			D3DPtr<ID3D11RasterizerState> RasterState(pr::rdr::RasterizerDesc const& desc) const
+			{
+				D3DPtr<ID3D11RasterizerState> rs;
+				pr::Throw(m_device->CreateRasterizerState(&desc, &rs.m_ptr));
+				return rs;
+			}
 
-			// Get a pre-existing raster state by it's id
-			D3DPtr<ID3D11RasterizerState> RasterState(RdrId id);
+			// Some common raster states
+			D3DPtr<ID3D11RasterizerState> SolidCullNone () const { return RasterState(RasterizerDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE)); }
+			D3DPtr<ID3D11RasterizerState> SolidCullBack () const { return RasterState(RasterizerDesc(D3D11_FILL_SOLID, D3D11_CULL_BACK)); }
+			D3DPtr<ID3D11RasterizerState> SolidCullFront() const { return RasterState(RasterizerDesc(D3D11_FILL_SOLID, D3D11_CULL_FRONT)); }
+			D3DPtr<ID3D11RasterizerState> WireCullNone  () const { return RasterState(RasterizerDesc(D3D11_FILL_WIREFRAME, D3D11_CULL_NONE)); }
 		};
 	}
 }

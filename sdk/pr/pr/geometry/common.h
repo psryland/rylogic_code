@@ -6,8 +6,12 @@
 #ifndef PR_GEOMETRY_COMMON_H
 #define PR_GEOMETRY_COMMON_H
 
-#include "pr/maths/maths.h"
+#include "pr/common/valuecast.h"
+#include "pr/common/colour.h"
+#include "pr/common/range.h"
+#include "pr/common/array.h"
 #include "pr/common/repeater.h"
+#include "pr/maths/maths.h"
 
 namespace pr
 {
@@ -66,6 +70,13 @@ namespace pr
 			Transformer& operator ++() { ++m_pt; return *this; }
 			Transformer(TVertCIter points, m4x4 const& o2w) :m_pt(points) ,m_o2w(&o2w) {}
 		};
+
+		namespace impl
+		{
+			// meta code helper
+			template <typename T> T remove_ref(T&);
+		}
+
 	}
 }
 

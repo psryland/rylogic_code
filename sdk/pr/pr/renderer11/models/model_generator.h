@@ -22,13 +22,19 @@ namespace pr
 			// 'num_colours' should be either, 0, 1, or num_lines * 2
 			// 'colours' is an input array of colour values or a pointer to a single colour.
 			// 'mat' is an optional material to use for the lines
-			typedef VertPC LineVerts;
+			typedef VertPC LineVert;
 			ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0);
 			ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,Colour32 colour ,DrawMethod const* mat = 0);
 			ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0);
 			ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,Colour32 colour ,DrawMethod const* mat = 0);
 
-			//// Quad
+			// Quad
+			typedef VertPCNT QuadVert;
+			ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions, Colour32 colour, v2 const& tex_origin, v2 const& tex_dim, DrawMethod const* mat);
+			ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, DrawMethod const* mat = 0);
+			ModelPtr Quad(Renderer& rdr, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, DrawMethod const* mat = 0);
+			ModelPtr Quad(Renderer& rdr, v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, v2 const& tex_origin = v2Zero, v2 const& tex_dim = v2One, DrawMethod const* mat = 0);
+	
 			//void        QuadSize(Range& vrange, Range& irange, std::size_t num_quads);
 			//Settings    QuadModelSettings(std::size_t num_quads);
 			//ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_quads ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
@@ -36,20 +42,16 @@ namespace pr
 			//ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 			//ModelPtr    Quad    (Renderer& rdr                          ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			// Sphere
-			typedef VertPCNT SphereVerts;
-			ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t divisions, Colour32 colour = Colour32White, DrawMethod const* mat = 0);
-			//void        SphereSize(Range& vrange, Range& irange, std::size_t divisions);
-			//Settings    SphereModelSettings(std::size_t divisions);
-			//ModelPtr    SphereRxyz(MLock& mlock ,MaterialManager& matmgr ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    SphereRxyz(Renderer& rdr                         ,float xradius ,float yradius ,float zradius ,v4 const& position ,std::size_t divisions = 1 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-
 			// Boxes
-			typedef VertPCNT BoxVerts;
+			typedef VertPCNT BoxVert;
 			ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
 			ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, m4x4 const& o2w, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
 			ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w, Colour32 colour, DrawMethod const* mat = 0);
 			ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& dim, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
+
+			// Sphere
+			typedef VertPCNT SphereVert;
+			ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t divisions, Colour32 colour = Colour32White, DrawMethod const* mat = 0);
 
 			//// Cone
 			//void        ConeSize(Range& vrange, Range& irange, std::size_t layers, std::size_t wedges);

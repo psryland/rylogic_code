@@ -70,12 +70,12 @@
 //#include "pr/renderer/materials/textures/texturefilter.h"
 //#include "pr/renderer/materials/video/video.h"
 
-//// Lighting
-//#include "pr/renderer/lighting/light.h"
+// Lighting
+#include "pr/renderer11/lights/light.h"
 //#include "pr/renderer/lighting/lightingmanager.h"
 
-//// Render states
-//#include "pr/renderer/renderstates/renderstate.h"
+// Rasterizer states
+#include "pr/renderer11/render/raster_state_manager.h"
 //#include "pr/renderer/renderstates/stackframes.h"
 //#include "pr/renderer/renderstates/renderstatemanager.h"
 

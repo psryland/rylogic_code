@@ -222,18 +222,10 @@ namespace pr
 				return FALSE; // ie. we handled this wheel message
 			}
 
-			// Key handlers
-			virtual void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
-			{
-				(void)nChar;
-				(void)nRepCnt;
-				(void)nFlags;
-			}
-
 			// Message Map
 			enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100 };
 			DECLARE_FRAME_WND_CLASS(_T("PR_APP_MAIN_GUI"), IDR_MAINFRAME);
-			BEGIN_MSG_MAP(MainGUI)
+			BEGIN_MSG_MAP(x)
 				MSG_WM_CREATE(OnCreate)
 				MSG_WM_DESTROY(OnDestroy)
 				MSG_WM_SYSCOMMAND(OnSysCommand)
@@ -244,7 +236,6 @@ namespace pr
 				MSG_WM_SIZING(OnSizing)
 				MSG_WM_EXITSIZEMOVE(OnExitSizeMove)
 				MSG_WM_SIZE(OnSize)
-				MSG_WM_KEYDOWN(OnKeyDown)
 				MSG_WM_LBUTTONDOWN(OnMouseDown)
 				MSG_WM_RBUTTONDOWN(OnMouseDown)
 				MSG_WM_LBUTTONUP(OnMouseUp)
