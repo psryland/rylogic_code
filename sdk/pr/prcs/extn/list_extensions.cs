@@ -175,7 +175,7 @@ namespace pr.extn
 				int c = cmp(list[m]);       // <0 means list[m] is less than the target element
 				if (c == 0) { return m; }
 				if (c <  0) { if (m == b){return ~e;} b = m; continue; }
-				if (c >  0) { if (m == b){return ~b;} e = m; continue; }
+				if (c >  0) { if (m == b){return ~b;} e = m; }
 			}
 		}
 
@@ -267,11 +267,11 @@ namespace pr.extn
 		}
 		public static int Partition<T>(this IList<T> list, IComparer<T> comparer)
 		{
-			return list.Partition(new Comparison<T>((x,y) => comparer.Compare(x, y)));
+			return list.Partition(comparer.Compare);
 		}
 		public static int Partition<T>(this IList<T> list) where T : IComparable<T>
 		{
-			return list.Partition(new Comparison<T>((x, y) => x.CompareTo(y)));
+			return list.Partition((x, y) => x.CompareTo(y));
 		}
 		
 		/// <summary>Sort the list using the quick sort algorithm</summary>
@@ -308,11 +308,11 @@ namespace pr.extn
 		}
 		public static T QuickSelect<T>(this IList<T> list, int k, IComparer<T> comparer)
 		{
-			return list.QuickSelect(k, new Comparison<T>((x, y) => comparer.Compare(x, y)));
+			return list.QuickSelect(k, comparer.Compare);
 		}
 		public static T QuickSelect<T>(this IList<T> list, int k) where T : IComparable<T>
 		{
-			return list.QuickSelect(k, new Comparison<T>((x, y) => x.CompareTo(y)));
+			return list.QuickSelect(k, (x, y) => x.CompareTo(y));
 		}
 	}
 }
@@ -321,29 +321,32 @@ namespace pr.extn
 namespace pr
 {
 	using NUnit.Framework;
-	using pr.maths;
+	using maths;
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		[Test] public static void TestListExtensions()
+		internal static partial class TestExtensions
 		{
-			Random rng = new Random();
-			List<int> list = new List<int>(100);
+			[Test] public static void ListExtensions()
+			{
+				Random rng = new Random();
+				List<int> list = new List<int>(100);
 
-			for (int i = 0; i != 100; ++i)
-				list.Add(rng.Next(10));
+				for (int i = 0; i != 100; ++i)
+					list.Add(rng.Next(10));
 			
-			list.Sort(0, list.Count, (lhs,rhs)=>{return Maths.Compare(lhs,rhs);});
+				list.Sort(0, list.Count, Maths.Compare);
 
-			int last = list.Unique(0, 50);
-			for (int i = 0; i < last; ++i)
-			for (int j = i+1; j < last; ++j)
-				Assert.AreNotEqual(list[i], list[j]);
+				int last = list.Unique(0, 50);
+				for (int i = 0; i < last; ++i)
+				for (int j = i+1; j < last; ++j)
+					Assert.AreNotEqual(list[i], list[j]);
 
-			list.Unique();
-			for (int i = 0; i < list.Count; ++i)
-			for (int j = i+1; j < list.Count; ++j)
-				Assert.AreNotEqual(list[i], list[j]);
+				list.Unique();
+				for (int i = 0; i < list.Count; ++i)
+				for (int j = i+1; j < list.Count; ++j)
+					Assert.AreNotEqual(list[i], list[j]);
+			}
 		}
 	}
 }

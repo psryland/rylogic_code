@@ -22,7 +22,8 @@ namespace pr.common
 	//
 	// Decoding is the process in reverse.  A 'decode' lookup table has been created to avoid string scans.
 
-	public static class Base64
+	// Note: you should probably use Convert.ToBase64String()...
+	public static class Base64Encoding
 	{
 		private static readonly byte[] m_enc = Encoding.ASCII.GetBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"); // Translation Table as described in RFC1113
 		private static readonly byte[] m_dec = {
@@ -115,49 +116,52 @@ namespace pr
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		[Test] public static void TestBase64()
+		internal static class TestBase64
 		{
-			// All bytes from 0 to ff
-			byte[] sbuf = new byte[256]; for (int i = 0; i != 256; ++i) sbuf[i] = (byte)i;
-			byte[] dbuf = Encoding.ASCII.GetBytes("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIj"+
-								"JCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZH"+
-								"SElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWpr"+
-								"bG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P"+
-								"kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKz"+
-								"tLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX"+
-								"2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7"+
-								"/P3+/w==");
+			[Test] public static void Base64()
+			{
+				// All bytes from 0 to ff
+				byte[] sbuf = new byte[256]; for (int i = 0; i != 256; ++i) sbuf[i] = (byte)i;
+				byte[] dbuf = Encoding.ASCII.GetBytes("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIj"+
+									"JCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZH"+
+									"SElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWpr"+
+									"bG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P"+
+									"kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKz"+
+									"tLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX"+
+									"2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7"+
+									"/P3+/w==");
 
-			int len = Base64.EncodeSize(sbuf.Length);
-			Assert.AreEqual(dbuf.Length, len);
+				int len = Base64Encoding.EncodeSize(sbuf.Length);
+				Assert.AreEqual(dbuf.Length, len);
 
-			int dst_length;
-			byte[] dst = new byte[len];
-			Base64.Encode(sbuf, dst, out dst_length);
-			Assert.AreEqual(dbuf.Length, dst_length);
-			for (int i = 0; i != dbuf.Length; ++i)
-				Assert.AreEqual(dbuf[i], dst[i]);
+				int dst_length;
+				byte[] dst = new byte[len];
+				Base64Encoding.Encode(sbuf, dst, out dst_length);
+				Assert.AreEqual(dbuf.Length, dst_length);
+				for (int i = 0; i != dbuf.Length; ++i)
+					Assert.AreEqual(dbuf[i], dst[i]);
 		
-			len = Base64.DecodeSize(dbuf.Length);
-			Assert.True(len >= sbuf.Length);
+				len = Base64Encoding.DecodeSize(dbuf.Length);
+				Assert.True(len >= sbuf.Length);
 
-			int src_length;
-			byte[] src = new byte[len];
-			Base64.Decode(dst, src, out src_length);
-			Assert.AreEqual(sbuf.Length, src_length);
-			for (int i = 0; i != sbuf.Length; ++i)
-				Assert.AreEqual(sbuf[i], src[i]);
+				int src_length;
+				byte[] src = new byte[len];
+				Base64Encoding.Decode(dst, src, out src_length);
+				Assert.AreEqual(sbuf.Length, src_length);
+				for (int i = 0; i != sbuf.Length; ++i)
+					Assert.AreEqual(sbuf[i], src[i]);
 
-			// Random binary data
-			Random r = new Random();
-			for (int i = 0; i != sbuf.Length; ++i)
-				sbuf[i] = (byte)(r.Next(0xFF));
+				// Random binary data
+				Random r = new Random();
+				for (int i = 0; i != sbuf.Length; ++i)
+					sbuf[i] = (byte)(r.Next(0xFF));
 
-			Base64.Encode(sbuf, dst, out dst_length);
-			Base64.Decode(dst,  src, out src_length);
-			Assert.AreEqual(sbuf.Length, src_length);
-			for (int i = 0; i != sbuf.Length; ++i)
-				Assert.AreEqual(sbuf[i], src[i]);
+				Base64Encoding.Encode(sbuf, dst, out dst_length);
+				Base64Encoding.Decode(dst,  src, out src_length);
+				Assert.AreEqual(sbuf.Length, src_length);
+				for (int i = 0; i != sbuf.Length; ++i)
+					Assert.AreEqual(sbuf[i], src[i]);
+			}
 		}
 	}
 }

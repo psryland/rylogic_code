@@ -365,58 +365,61 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		private static event Action<int> BooEvent;
+		internal static partial class TestExtensions
+		{
+			private static event Action<int> BooEvent;
 		
-		private static readonly List<string> collected = new List<string>();
-		private static readonly List<string> hit       = new List<string>();
-		private class Gun
-		{
-			public event Action<Gun> Bang;
-			~Gun()              { collected.Add("gun"); }
-			public void Shoot() { Bang.Raise(this); }
-		}
-		private class Target
-		{
-			private readonly string m_name;
-			public Target(string name) { m_name = name; }
-			~Target()                  { collected.Add(m_name); }
-			public void OnHit(Gun gun) { hit.Add(m_name); }
-		}
+			private static readonly List<string> collected = new List<string>();
+			private static readonly List<string> hit       = new List<string>();
+			private class Gun
+			{
+				public event Action<Gun> Bang;
+				~Gun()              { collected.Add("gun"); }
+				public void Shoot() { Bang.Raise(this); }
+			}
+			private class Target
+			{
+				private readonly string m_name;
+				public Target(string name) { m_name = name; }
+				~Target()                  { collected.Add(m_name); }
+				public void OnHit(Gun gun) { hit.Add(m_name); }
+			}
 		
-		[Test] public static void TestEventExtensions()
-		{
-			// Test event suspend/resume
-			int boo_raised = 0;
-			BooEvent += (i)=> { ++boo_raised; };
-			BooEvent.Suspend();
-			BooEvent.Raise(0);
-			BooEvent.Raise(1);
-			BooEvent.Raise(2);
-			BooEvent.Raise(3);
-			Assert.IsTrue(BooEvent.Resume());
-			Assert.AreEqual(0, boo_raised);
+			[Test] public static void EventExtns()
+			{
+				// Test event suspend/resume
+				int boo_raised = 0;
+				BooEvent += (i)=> { ++boo_raised; };
+				BooEvent.Suspend();
+				BooEvent.Raise(0);
+				BooEvent.Raise(1);
+				BooEvent.Raise(2);
+				BooEvent.Raise(3);
+				Assert.IsTrue(BooEvent.Resume());
+				Assert.AreEqual(0, boo_raised);
 			
-			// ReSharper disable RedundantAssignment
-			// Test weak event handlers
-			Gun gun = new Gun();
-			Target bob = new Target("bob");
-			Target fred = new Target("fred");
-			gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak((h)=>gun.Bang -= h);
-			gun.Bang += fred.OnHit;
-			gun.Shoot();
-			Assert.Contains("bob", hit);
-			Assert.Contains("fred", hit);
+				// ReSharper disable RedundantAssignment
+				// Test weak event handlers
+				Gun gun = new Gun();
+				Target bob = new Target("bob");
+				Target fred = new Target("fred");
+				gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak((h)=>gun.Bang -= h);
+				gun.Bang += fred.OnHit;
+				gun.Shoot();
+				Assert.Contains("bob", hit);
+				Assert.Contains("fred", hit);
 			
-			hit.Clear();
-			bob = null;
-			fred = null;
-			GC.Collect(); Thread.Sleep(100); // bob collected here, but not fred
-			Assert.IsTrue(collected.Contains("bob"));
-			Assert.IsFalse(collected.Contains("fred"));
-			gun.Shoot(); // fred still shot here
-			Assert.IsFalse(hit.Contains("bob"));
-			Assert.IsTrue(hit.Contains("fred"));
-			// ReSharper restore RedundantAssignment
+				hit.Clear();
+				bob = null;
+				fred = null;
+				GC.Collect(); Thread.Sleep(100); // bob collected here, but not fred
+				Assert.IsTrue(collected.Contains("bob"));
+				Assert.IsFalse(collected.Contains("fred"));
+				gun.Shoot(); // fred still shot here
+				Assert.IsFalse(hit.Contains("bob"));
+				Assert.IsTrue(hit.Contains("fred"));
+				// ReSharper restore RedundantAssignment
+			}
 		}
 	}
 }

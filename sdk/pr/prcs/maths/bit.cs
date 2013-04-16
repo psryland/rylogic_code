@@ -244,48 +244,51 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		[Test] public static void TestBit()
+		internal static class TestBit
 		{
-			const string bitstr0 = "100100010100110010110";
-			const string bitstr1 = "011011101011001101001";
-			uint bits0 = Bit.Parse(bitstr0);
-			uint bits1 = Bit.Parse(bitstr1);
+			[Test] public static void BitFunctions()
+			{
+				const string bitstr0 = "100100010100110010110";
+				const string bitstr1 = "011011101011001101001";
+				uint bits0 = Bit.Parse(bitstr0);
+				uint bits1 = Bit.Parse(bitstr1);
 			
-			Assert.AreEqual(bitstr0 ,Bit.ToString(bits0));
-			Assert.AreEqual(bitstr1 ,Bit.ToString(bits1, bitstr1.Length));
+				Assert.AreEqual(bitstr0 ,Bit.ToString(bits0));
+				Assert.AreEqual(bitstr1 ,Bit.ToString(bits1, bitstr1.Length));
 
-			Assert.False(Bit.AnySet(bits0,bits1));
+				Assert.False(Bit.AnySet(bits0,bits1));
 		
-			Assert.AreEqual(8  ,Bit.BitIndex(bits0, 4));
-			Assert.AreEqual(13 ,Bit.BitIndex(bits0, 6));
-			Assert.AreEqual(-1 ,Bit.BitIndex(bits0, 11));
+				Assert.AreEqual(8  ,Bit.BitIndex(bits0, 4));
+				Assert.AreEqual(13 ,Bit.BitIndex(bits0, 6));
+				Assert.AreEqual(-1 ,Bit.BitIndex(bits0, 11));
 
-			List<uint> bitidx = new List<uint>(Bit.EnumBits(bits0));
-			Assert.AreEqual(bitidx.ToArray(), new[]{1,2,4,7,8,11,13,17,20});
-		}
+				List<uint> bitidx = new List<uint>(Bit.EnumBits(bits0));
+				Assert.AreEqual(bitidx.ToArray(), new[]{1,2,4,7,8,11,13,17,20});
+			}
 		
-		public enum NonFlags
-		{
-			One = 1,
-			Two = 2,
-		}
-		[Flags] public enum Flags
-		{
-			One   = 1 << 0,
-			Two   = 1 << 1,
-			Three = 1 << 2,
-			Four  = 1 << 3,
-			Five  = 1 << 4,
-		}
+			public enum NonFlags
+			{
+				One = 1,
+				Two = 2,
+			}
+			[Flags] public enum Flags
+			{
+				One   = 1 << 0,
+				Two   = 1 << 1,
+				Three = 1 << 2,
+				Four  = 1 << 3,
+				Five  = 1 << 4,
+			}
 
-		[Test] public static void TestEnumBit()
-		{
-			NonFlags nf = NonFlags.One;
-			Flags f = Flags.One;
+			[Test] public static void EnumBits()
+			{
+				NonFlags nf = NonFlags.One;
+				Flags f = Flags.One;
 			
-			Assert.Throws(typeof(ArgumentException), ()=>f.HasFlag(nf));
-			Assert.IsTrue(f.HasFlag(Flags.One));
-			Assert.IsFalse(f.HasFlag(Flags.One|Flags.Two));
+				Assert.Throws(typeof(ArgumentException), () => Assert.True(f.HasFlag(nf)));
+				Assert.IsTrue(f.HasFlag(Flags.One));
+				Assert.IsFalse(f.HasFlag(Flags.One|Flags.Two));
+			}
 		}
 	}
 }

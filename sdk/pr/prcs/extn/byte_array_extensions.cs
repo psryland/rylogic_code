@@ -52,23 +52,26 @@ namespace pr
 
 	[TestFixture] internal partial class UnitTests
 	{
-		[Test] public static void TestByteArrayAs()
+		internal static partial class TestExtensions
 		{
-			var b0 = new byte[]{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-			var b1 = new byte[]{0x00, 0x00, 0x80, 0x3f};
-			var b2 = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F};
-			Assert.AreEqual(0x01                  ,b0.AsUInt8 ());
-			Assert.AreEqual(0x0201                ,b0.AsUInt16());
-			Assert.AreEqual(0x04030201            ,b0.AsUInt32());
-			Assert.AreEqual(0x0807060504030201    ,b0.AsUInt64());
-			Assert.AreEqual(0x01                  ,b0.AsInt8  ());
-			Assert.AreEqual(0x0201                ,b0.AsInt16 ());
-			Assert.AreEqual(0x04030201            ,b0.AsInt32 ());
-			Assert.AreEqual(0x0807060504030201    ,b0.AsInt64 ());
-			Assert.AreEqual(1f                    ,b1.AsFloat ());
-			Assert.AreEqual(1.0                   ,b2.AsDouble());
-			Assert.AreEqual(true                  ,b0.AsBool  ());
-			Assert.AreEqual((char)0x0201          ,b0.AsChar  ());
+			[Test] public static void ByteArrayAs()
+			{
+				var b0 = new byte[]{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+				var b1 = new byte[]{0x00, 0x00, 0x80, 0x3f};
+				var b2 = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F};
+				Assert.AreEqual(0x01                  ,b0.AsUInt8 ());
+				Assert.AreEqual(0x0201                ,b0.AsUInt16());
+				Assert.AreEqual(0x04030201            ,b0.AsUInt32());
+				Assert.AreEqual(0x0807060504030201    ,b0.AsUInt64());
+				Assert.AreEqual(0x01                  ,b0.AsInt8  ());
+				Assert.AreEqual(0x0201                ,b0.AsInt16 ());
+				Assert.AreEqual(0x04030201            ,b0.AsInt32 ());
+				Assert.AreEqual(0x0807060504030201    ,b0.AsInt64 ());
+				Assert.AreEqual(1f                    ,b1.AsFloat ());
+				Assert.AreEqual(1.0                   ,b2.AsDouble());
+				Assert.AreEqual(true                  ,b0.AsBool  ());
+				Assert.AreEqual((char)0x0201          ,b0.AsChar  ());
+			}
 		}
 	}
 }

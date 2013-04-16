@@ -16,7 +16,11 @@ namespace pr.util
 			var ue = expression.Body as UnaryExpression;
 			if (ue != null && ue.NodeType == ExpressionType.Convert)
 				return ((MemberExpression) ue.Operand).Member.Name;
-			
+
+			var mc = expression.Body as MethodCallExpression;
+			if (mc != null)
+				return mc.Method.Name;
+
 			return ((MemberExpression) expression.Body).Member.Name;
 		}
 
@@ -48,7 +52,7 @@ namespace pr
 	{
 		internal static class TestReflect
 		{
-			[Test] public static void TestUtils_MemberName()
+			[Test] public static void MemberName()
 			{
 				Assert.AreEqual("X", Reflect<Point>.MemberName(p => p.X));
 				Assert.AreEqual("Offset", Reflect<Point>.MemberName(p => p.Offset(0,0)));

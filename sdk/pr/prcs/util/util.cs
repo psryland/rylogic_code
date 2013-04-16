@@ -17,9 +17,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
-using pr.extn;
 using pr.maths;
-using pr.util;
 
 namespace pr.util
 {
@@ -552,14 +550,6 @@ namespace pr.util
 				return (T)s.ReadObject(r);
 			}
 		}
-
-		/// <summary>Copies all of the fields of 'from' into 'to'. Returns 'to' for method chaining</summary>
-		public static T ShallowCopy(T from, T to)
-		{
-			foreach (var x in typeof(T).AllFields(BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public))
-				x.SetValue(to, x.GetValue(from));
-			return to;
-		}
 	}
 	
 	/// <summary>Enum parse helper</summary>
@@ -590,7 +580,8 @@ namespace pr.util
 namespace pr
 {
 	using NUnit.Framework;
-	
+	using util;
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static class TestUtils

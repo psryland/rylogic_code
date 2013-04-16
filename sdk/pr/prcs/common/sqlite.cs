@@ -1389,7 +1389,7 @@ namespace pr.common
 			}
 
 			/// <summary>Return an existing table for type 'T'</summary>
-			public Table<T> Table<T>()
+			[System.Diagnostics.DebuggerStepThrough] public Table<T> Table<T>()
 			{
 				return new Table<T>(this);
 			}
@@ -1397,7 +1397,7 @@ namespace pr.common
 			/// <summary>
 			/// Return an existing table for runtime type 'type'.
 			/// 'factory' is a factory method for creating instances of type 'type'. It null, then Activator.CreateInstance is used.</summary>
-			public Table Table(Type type)
+			[System.Diagnostics.DebuggerStepThrough] public Table Table(Type type)
 			{
 				return new Table(type, this);
 			}

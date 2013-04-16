@@ -1561,114 +1561,115 @@ namespace pr
 	using NUnit.Framework;
 	using common;
 
-	[TestFixture]
-	internal static partial class UnitTests
+	[TestFixture] internal static partial class UnitTests
 	{
-		[Test]
-		public static void TestRtf()
+		internal static class TestRtf
 		{
-			var rtf = new Rtf.Builder();
-			rtf.Append("A basic string\n");
-			
-			rtf.TextStyle = new Rtf.TextStyle
+			[Test] public static void RtfDoc()
 			{
-				FontIndex = rtf.FontIndex(Rtf.FontDesc.CourierNew),
-				FontStyle = Rtf.EFontStyle.Italic|Rtf.EFontStyle.Underline,
-				ForeColourIndex = rtf.ColourIndex(Color.Red),
-				BackColourIndex = rtf.ColourIndex(Color.Green)
-			};
-			rtf.Append("Text in CourierNew font in Red/Green plus italic and underlined\n");
+				var rtf = new Rtf.Builder();
+				rtf.Append("A basic string\n");
 			
-			rtf.TextStyle = Rtf.TextStyle.Default;
-			rtf.AppendLine("A normal string with a new line");
+				rtf.TextStyle = new Rtf.TextStyle
+				{
+					FontIndex = rtf.FontIndex(Rtf.FontDesc.CourierNew),
+					FontStyle = Rtf.EFontStyle.Italic|Rtf.EFontStyle.Underline,
+					ForeColourIndex = rtf.ColourIndex(Color.Red),
+					BackColourIndex = rtf.ColourIndex(Color.Green)
+				};
+				rtf.Append("Text in CourierNew font in Red/Green plus italic and underlined\n");
 			
-			rtf.TextStyle = new Rtf.TextStyle
-			{
-				FontIndex = rtf.FontIndex(Rtf.FontDesc.MSSansSerif),
-				FontSize = 24,
-				FontStyle = Rtf.EFontStyle.Underline|Rtf.EFontStyle.Bold,
-				ForeColourIndex = rtf.ColourIndex(Color.Blue),
-			};
-			rtf.Append("Bold big blue values of other types:\n");
+				rtf.TextStyle = Rtf.TextStyle.Default;
+				rtf.AppendLine("A normal string with a new line");
 			
-			rtf.DefaultParaStyle = new Rtf.ParagraphStyle{LineIndent = 400};
-			rtf.TextStyle = new Rtf.TextStyle
-			{
-				FontIndex = rtf.FontIndex(Rtf.FontDesc.ComicSansMS),
-				FontSize = 10,
-				FontStyle = Rtf.EFontStyle.Regular,
-				BackColourIndex = rtf.ColourIndex(Color.DarkGray)
-			};
-			rtf.Append("byte.MaxValue     : ").Append(byte.MaxValue     ).AppendLine();
-			rtf.Append("sbyte.MinValue    : ").Append(sbyte.MinValue    ).AppendLine();
-			rtf.Append("'X'               : ").Append('X'               ).AppendLine();
-			rtf.Append("short.MinValue    : ").Append(short.MinValue    ).AppendLine();
-			rtf.Append("ushort.MaxValue   : ").Append(ushort.MaxValue   ).AppendLine();
-			rtf.Append("int.MinValue      : ").Append(int.MinValue      ).AppendLine();
-			rtf.Append("uint.MaxValue     : ").Append(uint.MaxValue     ).AppendLine();
-			rtf.Append("long.MinValue     : ").Append(long.MinValue     ).AppendLine();
-			rtf.Append("ulong.MaxValue    : ").Append(ulong.MaxValue    ).AppendLine();
-			rtf.Append("float.MinValue    : ").Append(float.MinValue    ).AppendLine();
-			rtf.Append("double.MaxValue   : ").Append(double.MaxValue   ).AppendLine();
-			rtf.Append("decimal.MaxValue  : ").Append(decimal.MaxValue  ).AppendLine();
+				rtf.TextStyle = new Rtf.TextStyle
+				{
+					FontIndex = rtf.FontIndex(Rtf.FontDesc.MSSansSerif),
+					FontSize = 24,
+					FontStyle = Rtf.EFontStyle.Underline|Rtf.EFontStyle.Bold,
+					ForeColourIndex = rtf.ColourIndex(Color.Blue),
+				};
+				rtf.Append("Bold big blue values of other types:\n");
 			
-			rtf.DefaultParaStyle = new Rtf.ParagraphStyle{Alignment = Rtf.EAlign.Right};
-			rtf.TextStyle = new Rtf.TextStyle{ForeColourIndex = rtf.ColourIndex(Color.DarkMagenta)};
-			rtf.AppendLine("I'm right aligned");
+				rtf.DefaultParaStyle = new Rtf.ParagraphStyle{LineIndent = 400};
+				rtf.TextStyle = new Rtf.TextStyle
+				{
+					FontIndex = rtf.FontIndex(Rtf.FontDesc.ComicSansMS),
+					FontSize = 10,
+					FontStyle = Rtf.EFontStyle.Regular,
+					BackColourIndex = rtf.ColourIndex(Color.DarkGray)
+				};
+				rtf.Append("byte.MaxValue     : ").Append(byte.MaxValue     ).AppendLine();
+				rtf.Append("sbyte.MinValue    : ").Append(sbyte.MinValue    ).AppendLine();
+				rtf.Append("'X'               : ").Append('X'               ).AppendLine();
+				rtf.Append("short.MinValue    : ").Append(short.MinValue    ).AppendLine();
+				rtf.Append("ushort.MaxValue   : ").Append(ushort.MaxValue   ).AppendLine();
+				rtf.Append("int.MinValue      : ").Append(int.MinValue      ).AppendLine();
+				rtf.Append("uint.MaxValue     : ").Append(uint.MaxValue     ).AppendLine();
+				rtf.Append("long.MinValue     : ").Append(long.MinValue     ).AppendLine();
+				rtf.Append("ulong.MaxValue    : ").Append(ulong.MaxValue    ).AppendLine();
+				rtf.Append("float.MinValue    : ").Append(float.MinValue    ).AppendLine();
+				rtf.Append("double.MaxValue   : ").Append(double.MaxValue   ).AppendLine();
+				rtf.Append("decimal.MaxValue  : ").Append(decimal.MaxValue  ).AppendLine();
 			
-			rtf.DefaultParaStyle = Rtf.ParagraphStyle.Default;
-			rtf .Append(new Rtf.TextStyle{FontStyle = Rtf.EFontStyle.Super})
-				.Append("Superscript")
-				.Append(Rtf.TextStyle.Default)
-				.Append("Words")
-				.Append(new Rtf.TextStyle{FontStyle = Rtf.EFontStyle.Sub})
-				.Append("Subscript");
+				rtf.DefaultParaStyle = new Rtf.ParagraphStyle{Alignment = Rtf.EAlign.Right};
+				rtf.TextStyle = new Rtf.TextStyle{ForeColourIndex = rtf.ColourIndex(Color.DarkMagenta)};
+				rtf.AppendLine("I'm right aligned");
+			
+				rtf.DefaultParaStyle = Rtf.ParagraphStyle.Default;
+				rtf .Append(new Rtf.TextStyle{FontStyle = Rtf.EFontStyle.Super})
+					.Append("Superscript")
+					.Append(Rtf.TextStyle.Default)
+					.Append("Words")
+					.Append(new Rtf.TextStyle{FontStyle = Rtf.EFontStyle.Sub})
+					.Append("Subscript");
 
-			var para = new Rtf.Paragraph{ParaStyle = new Rtf.ParagraphStyle{FirstIndent = 800, LineIndent = 400, ParaSpacing = 200, Hyphenation = true}};
-			para.Append("I'm the start of a paragraph. ")
-				.Append("I'm some more words in the middle of the paragraph. These words make the paragraph fairly long which is good for testing. ")
-				.Append("I'm the end of the paragraph.");
-			rtf.Append(para);
+				var para = new Rtf.Paragraph{ParaStyle = new Rtf.ParagraphStyle{FirstIndent = 800, LineIndent = 400, ParaSpacing = 200, Hyphenation = true}};
+				para.Append("I'm the start of a paragraph. ")
+					.Append("I'm some more words in the middle of the paragraph. These words make the paragraph fairly long which is good for testing. ")
+					.Append("I'm the end of the paragraph.");
+				rtf.Append(para);
 			
-			rtf.Append(new Rtf.PageBreak());
+				rtf.Append(new Rtf.PageBreak());
 			
-			para = new Rtf.Paragraph(para.ParaStyle);
-			para.Append("I'm a new short paragraph.");
-			rtf.Append(para);
+				para = new Rtf.Paragraph(para.ParaStyle);
+				para.Append("I'm a new short paragraph.");
+				rtf.Append(para);
 
-			var bulletlist = new Rtf.BulletList(false);
-			bulletlist.Add("My first point");
-			bulletlist.Add(new Rtf.TextSpan("My next point"){Style = new Rtf.TextStyle{FontStyle = Rtf.EFontStyle.Bold}});
-			rtf.Append(bulletlist);
+				var bulletlist = new Rtf.BulletList(false);
+				bulletlist.Add("My first point");
+				bulletlist.Add(new Rtf.TextSpan("My next point"){Style = new Rtf.TextStyle{FontStyle = Rtf.EFontStyle.Bold}});
+				rtf.Append(bulletlist);
 
-			var numberedlist = new Rtf.BulletList(true);
-			numberedlist.Add("First");
-			numberedlist.Add("Second");
-			rtf.Append(numberedlist);
+				var numberedlist = new Rtf.BulletList(true);
+				numberedlist.Add("First");
+				numberedlist.Add("Second");
+				rtf.Append(numberedlist);
 
-			using (var bm = Image.FromFile(@"z:\pictures\gekko\Smiling gekko 150x121.jpg"))
-			{
-				var img = new Rtf.EmbeddedImage(bm);
-				rtf.Append(img);
+				using (var bm = Image.FromFile(@"z:\pictures\gekko\Smiling gekko 150x121.jpg"))
+				{
+					var img = new Rtf.EmbeddedImage(bm);
+					rtf.Append(img);
+				}
+
+				var table = new Rtf.Table(3,3);
+				table[0,0].Append(new Rtf.Paragraph("Hello")).Append(new Rtf.Paragraph("World"));
+				table[0,1].Append("0x1");
+				table[0,2].Append("0x2");
+				table[1,0].Append("1x0");
+				table[1,1].Append("This is the middle cell");
+				table[1,2].Append("1x2");
+				table[2,0].Append("2x0");
+				table[2,1].Append("2x1");
+				table[2,2].Append("The last cell");
+				table.SetColumnStyle(0, new Rtf.Table.CellStyle{CellSize = 2000});
+				table.SetColumnStyle(1, new Rtf.Table.CellStyle{CellSize = 4000});
+				table.SetColumnStyle(2, new Rtf.Table.CellStyle{CellSize = 3000});
+				rtf.Append(table);
+
+				var str = rtf.ToString();
+				File.WriteAllText("tmp.rtf", str);
 			}
-
-			var table = new Rtf.Table(3,3);
-			table[0,0].Append(new Rtf.Paragraph("Hello")).Append(new Rtf.Paragraph("World"));
-			table[0,1].Append("0x1");
-			table[0,2].Append("0x2");
-			table[1,0].Append("1x0");
-			table[1,1].Append("This is the middle cell");
-			table[1,2].Append("1x2");
-			table[2,0].Append("2x0");
-			table[2,1].Append("2x1");
-			table[2,2].Append("The last cell");
-			table.SetColumnStyle(0, new Rtf.Table.CellStyle{CellSize = 2000});
-			table.SetColumnStyle(1, new Rtf.Table.CellStyle{CellSize = 4000});
-			table.SetColumnStyle(2, new Rtf.Table.CellStyle{CellSize = 3000});
-			rtf.Append(table);
-
-			var str = rtf.ToString();
-			File.WriteAllText("tmp.rtf", str);
 		}
 	}
 }

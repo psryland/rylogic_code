@@ -10,6 +10,14 @@ namespace pr.extn
 {
 	public static class StringBuilderExtensions
 	{
+		/// <summary>Append a bunch of stuff</summary>
+		public static StringBuilder Append(this StringBuilder sb, params object[] parts)
+		{
+			foreach (var p in parts)
+				sb.Append(p.ToString());
+			return sb;
+		}
+
 		///// <summary>Return a substring of the internal string</summary>
 		//public static string Substring(this StringBuilder sb, int startIndex, int length)
 		//{

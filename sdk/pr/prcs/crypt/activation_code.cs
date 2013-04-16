@@ -109,39 +109,42 @@ namespace pr
 	
 	[TestFixture] internal partial class UnitTests
 	{
-		[Test] public static void TestActivationCode()
+		internal static class TestActivationCode
 		{
-			// Generate a public and private key.
-			// Save the public key in the app (in a resource file)
-			// Save the private key somewhere safe, you need that to generate more code numbers for the app
-			string pub, priv;
-			Crypt.GenerateRSAKeyPair(out pub, out priv, 384);
-			Assert.AreNotEqual(pub, priv);
+			[Test] public static void ActivationCodeGen()
+			{
+				// Generate a public and private key.
+				// Save the public key in the app (in a resource file)
+				// Save the private key somewhere safe, you need that to generate more code numbers for the app
+				string pub, priv;
+				Crypt.GenerateRSAKeyPair(out pub, out priv, 384);
+				Assert.AreNotEqual(pub, priv);
 			
-			// Generate a code number for the app
-			var key = ActivationCode.Generate(priv);
+				// Generate a code number for the app
+				var key = ActivationCode.Generate(priv);
 			
-			// Pretend this is in the app:
+				// Pretend this is in the app:
 			
-			// Quick check that the key is entered correctly
-			var valid = ActivationCode.CheckCrc(key);
-			Assert.IsTrue(valid);
+				// Quick check that the key is entered correctly
+				var valid = ActivationCode.CheckCrc(key);
+				Assert.IsTrue(valid);
 
-			// Validate the code number
-			valid = ActivationCode.Validate(key, pub);
-			Assert.IsTrue(valid);
+				// Validate the code number
+				valid = ActivationCode.Validate(key, pub);
+				Assert.IsTrue(valid);
 			
-			{
-				var sb = new StringBuilder(key); sb[2] = sb[2] == 'A' ? 'B' : 'A';
-				var key1 = sb.ToString();
-				valid = ActivationCode.Validate(key1, pub);
-				Assert.IsFalse(valid);
-			}
-			{
-				var sb = new StringBuilder(key); var tmp = sb[2]; sb[2] = sb[3]; sb[3] = tmp;
-				var key1 = sb.ToString();
-				valid = ActivationCode.Validate(key1, pub);
-				Assert.IsFalse(valid);
+				{
+					var sb = new StringBuilder(key); sb[2] = sb[2] == 'A' ? 'B' : 'A';
+					var key1 = sb.ToString();
+					valid = ActivationCode.Validate(key1, pub);
+					Assert.IsFalse(valid);
+				}
+				{
+					var sb = new StringBuilder(key); var tmp = sb[2]; sb[2] = sb[3]; sb[3] = tmp;
+					var key1 = sb.ToString();
+					valid = ActivationCode.Validate(key1, pub);
+					Assert.IsFalse(valid);
+				}
 			}
 		}
 	}

@@ -211,35 +211,38 @@ namespace pr
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		[Test] public static void TestBase32()
+		internal static class TestBase32
 		{
+			[Test] public static void Base32()
 			{
-				var data = new byte[]{0xff};
-				var enc = Base32Encoding.ToString(data);
-				var dec = Base32Encoding.ToBytes(enc);
-				Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
-				Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
-			}
-			{
-				var data = new byte[256];
-				for (int i = 0; i != data.Length; ++i) data[i] = (byte)i;
-				var enc = Base32Encoding.ToString(data);
-				var dec = Base32Encoding.ToBytes(enc);
-				Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
-				Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
-			}
-			var rand = new Random(42);
-			for (int i = 0; i != 100; ++i)
-			{
-				var data = new byte[rand.Next(16000)];
-				rand.NextBytes(data);
-				var enc = Base32Encoding.ToString(data);
-				var dec = Base32Encoding.ToBytes(enc);
-				Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
-				Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				{
+					var data = new byte[]{0xff};
+					var enc = Base32Encoding.ToString(data);
+					var dec = Base32Encoding.ToBytes(enc);
+					Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
+					Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
+					Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				}
+				{
+					var data = new byte[256];
+					for (int i = 0; i != data.Length; ++i) data[i] = (byte)i;
+					var enc = Base32Encoding.ToString(data);
+					var dec = Base32Encoding.ToBytes(enc);
+					Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
+					Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
+					Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				}
+				var rand = new Random(42);
+				for (int i = 0; i != 100; ++i)
+				{
+					var data = new byte[rand.Next(16000)];
+					rand.NextBytes(data);
+					var enc = Base32Encoding.ToString(data);
+					var dec = Base32Encoding.ToBytes(enc);
+					Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
+					Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
+					Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				}
 			}
 		}
 	}

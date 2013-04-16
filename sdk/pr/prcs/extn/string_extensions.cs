@@ -256,9 +256,9 @@ namespace pr
 	
 	[TestFixture] internal static partial class UnitTests
 	{
-		internal static class TestStringExtensions
+		internal static partial class TestExtensions
 		{
-			[Test] public static void WordWrap()
+			[Test] public static void StringWordWrap()
 			{
 				//                    "123456789ABCDE"
 				const string text   = "   A long string that\nis\r\nto be word wrapped";

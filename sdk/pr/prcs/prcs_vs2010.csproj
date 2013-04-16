@@ -298,6 +298,7 @@
     <Compile Include="util\csv_data.cs" />
     <Compile Include="util\eql.cs" />
     <Compile Include="util\event_batcher.cs" />
+    <Compile Include="util\sherlock.cs" />
     <Compile Include="util\file_watch.cs" />
     <Compile Include="util\generic_type_converter.cs" />
     <Compile Include="util\lazy.cs" />
