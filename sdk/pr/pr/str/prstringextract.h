@@ -332,8 +332,9 @@ namespace pr
 			for (; i < sizeof(str) && *src; ++src)
 			{
 				int ch = ::toupper(*src);
-				if (ch >= '0' && ch <= '9' && (ch - '0'     ) < radix) { str[i++] = static_cast<char>(ch); continue; }
-				if (ch >= 'A' && ch <= 'Z' && (ch - 'A' + 10) < radix) { str[i++] = static_cast<char>(ch); continue; }
+				int dec_ch = ch - '0', hex_ch = ch - 'A';
+				if (dec_ch >= 0 && dec_ch <= 9  && (dec_ch     ) < radix) { str[i++] = static_cast<char>(ch); continue; }
+				if (hex_ch >= 0 && hex_ch <= 25 && (hex_ch + 10) < radix) { str[i++] = static_cast<char>(ch); continue; }
 				break;
 			}
 			if (i == sizeof(str)) return false;
