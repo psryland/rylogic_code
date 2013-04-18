@@ -152,7 +152,6 @@ namespace pr
 		template <typename T, typename U> static void Check(T const& result, U const& expected, char const* expr, char const* file, int line)
 		{
 			++TestCount();
-			auto type_name = typeid(T).name();
 			if (UTEqual(result, expected)) return;
 			std::string r = pr::To<std::string>(result);
 			std::string e = pr::To<std::string>(expected);

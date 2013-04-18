@@ -24,9 +24,20 @@
     </ClCompile>
     <ClCompile Include="Q:\sdk\pr\pr\lua\lua_core.c" />
     <ClCompile Include="Q:\sdk\pr\pr\lua\lua_lib.c" />
-    <ClCompile Include="Q:\sdk\sqlite\sqlite3.c" />
+    <ClCompile Include="Q:\sdk\sqlite\sqlite3.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Level3</WarningLevel>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\sdk\pr\pr\app\forward.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\app\gimble.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\app\main.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\app\main_gui.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\app\sim_message_loop.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\app\skybox.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\alloca.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\allocator.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\archiver.h" />
@@ -110,6 +121,15 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\vectormap.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windowfunctions.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windows_com.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\autofile.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\directorytree.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\file.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\fileex.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\filesys.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\filesyswin.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\filewatch.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\findfiles.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\recurse_directory.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\align.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\auto_do.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\count_of.h" />
@@ -289,7 +309,6 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
@@ -306,7 +325,6 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
@@ -318,10 +336,13 @@
     <PostBuildEvent>
       <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -342,7 +363,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>

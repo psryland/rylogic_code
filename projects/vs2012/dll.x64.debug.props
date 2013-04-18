@@ -36,7 +36,7 @@
     <ClCompile>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include;..\..\sdk\lua\lua\src;..\..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include;..\..\sdk\sqlite;..\..\sdk\lua\lua\src;..\..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <Optimization>Disabled</Optimization>

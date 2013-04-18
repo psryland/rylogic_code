@@ -1427,24 +1427,24 @@ namespace pr
 			PR_CHECK(pr::string<>("A") <= pr::string<>("AB"), true);
 			PR_CHECK(pr::string<>("B") >= pr::string<>("B") , true);
 
-			PR_CHECK(str0.find("Jang", 1, 4)                                         , 3);
-			PR_CHECK(str0.find(pr::string<>("ang"), 2)                               , 4);
-			PR_CHECK(str0.find_first_of(pr::string<>("n"), 0)                        , 2);
-			PR_CHECK(str0.find_first_of("J", 1, 1)                                   , 3);
-			PR_CHECK(str0.find_first_of("J", 0)                                      , 0);
-			PR_CHECK(str0.find_first_of('n', 3)                                      , 5);
-			PR_CHECK(str0.find_last_of(pr::string<>("n"), pr::string<>::npos)        , 5);
-			PR_CHECK(str0.find_last_of("J", 3, 1)                                    , 3);
-			PR_CHECK(str0.find_last_of("J", pr::string<>::npos)                      , 3);
-			PR_CHECK(str0.find_last_of('a', pr::string<>::npos)                      , 4);
-			PR_CHECK(str0.find_first_not_of(pr::string<>("Jin"), 0)                  , 4);
-			PR_CHECK(str0.find_first_not_of("ing", 1, 3)                             , 3);
-			PR_CHECK(str0.find_first_not_of("inJ", 0)                                , 4);
-			PR_CHECK(str0.find_first_not_of('J', 1)                                  , 1);
-			PR_CHECK(str0.find_last_not_of(pr::string<>("Jang"), pr::string<>::npos) , 1);
-			PR_CHECK(str0.find_last_not_of("Jang", 4, 4)                             , 1);
-			PR_CHECK(str0.find_last_not_of("an", 5)                                  , 3);
-			PR_CHECK(str0.find_last_not_of('n', 5)                                   , 4);
+			PR_CHECK(str0.find("Jang", 1, 4)                                         , 3U);
+			PR_CHECK(str0.find(pr::string<>("ang"), 2)                               , 4U);
+			PR_CHECK(str0.find_first_of(pr::string<>("n"), 0)                        , 2U);
+			PR_CHECK(str0.find_first_of("J", 1, 1)                                   , 3U);
+			PR_CHECK(str0.find_first_of("J", 0)                                      , 0U);
+			PR_CHECK(str0.find_first_of('n', 3)                                      , 5U);
+			PR_CHECK(str0.find_last_of(pr::string<>("n"), pr::string<>::npos)        , 5U);
+			PR_CHECK(str0.find_last_of("J", 3, 1)                                    , 3U);
+			PR_CHECK(str0.find_last_of("J", pr::string<>::npos)                      , 3U);
+			PR_CHECK(str0.find_last_of('a', pr::string<>::npos)                      , 4U);
+			PR_CHECK(str0.find_first_not_of(pr::string<>("Jin"), 0)                  , 4U);
+			PR_CHECK(str0.find_first_not_of("ing", 1, 3)                             , 3U);
+			PR_CHECK(str0.find_first_not_of("inJ", 0)                                , 4U);
+			PR_CHECK(str0.find_first_not_of('J', 1)                                  , 1U);
+			PR_CHECK(str0.find_last_not_of(pr::string<>("Jang"), pr::string<>::npos) , 1U);
+			PR_CHECK(str0.find_last_not_of("Jang", 4, 4)                             , 1U);
+			PR_CHECK(str0.find_last_not_of("an", 5)                                  , 3U);
+			PR_CHECK(str0.find_last_not_of('n', 5)                                   , 4U);
 
 			PR_CHECK(str1.substr(6, 4), "Monk");
 
@@ -1453,7 +1453,7 @@ namespace pr
 			{
 				str0.insert(str0.begin() ,'A'+(i%24));
 				str0.insert(str0.end()   ,'A'+(i%24));
-				PR_CHECK(str0.size(), (1+i) * 2);
+				PR_CHECK(str0.size(), size_t((1+i) * 2));
 			}
 
 			str4 = "abcdef";
@@ -1462,7 +1462,7 @@ namespace pr
 
 			std::string str5 = "ABCDEFG";
 			str5.replace(1, 3, "bcde", 2);
-			PR_CHECK(str5.size(), 6);
+			PR_CHECK(str5.size(), 6U);
 
 			pr::string<> str6 = "abcdefghij";
 			str6.replace(0, 3, pr::string<>("AB"));              PR_CHECK(str6, "ABdefghij");

@@ -35,6 +35,12 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="sdk\filesys">
+      <UniqueIdentifier>{8f25f7c8-8312-4e4c-a497-837416ae7cef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\app">
+      <UniqueIdentifier>{3b2e8c0f-39bf-461e-9421-2f53ee2bfc0d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -632,6 +638,51 @@
     </ClInclude>
     <ClInclude Include="Q:\sdk\sqlite\sqlite3.h">
       <Filter>sqlite3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\autofile.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\directorytree.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\file.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\fileex.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\filesys.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\filesyswin.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\filewatch.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\findfiles.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\filesys\recurse_directory.h">
+      <Filter>sdk\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\forward.h">
+      <Filter>sdk\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\gimble.h">
+      <Filter>sdk\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\main.h">
+      <Filter>sdk\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\main_gui.h">
+      <Filter>sdk\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\sim_message_loop.h">
+      <Filter>sdk\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\skybox.h">
+      <Filter>sdk\app</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

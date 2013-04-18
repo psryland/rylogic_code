@@ -1154,7 +1154,7 @@ namespace pr
 					arr0.resize(5);
 					arr0.shrink_to_fit();
 					PR_CHECK(arr0.size(), 5U);
-					PR_CHECK(arr0.capacity(), arr0.LocalLength);
+					PR_CHECK(arr0.capacity(), size_t(arr0.LocalLength));
 				}
 				PR_CHECK(g_object_count, g_start_object_count);
 			}
