@@ -78,9 +78,6 @@ pr::m4x4 pr::rdr::Light::Projection(float centre_dist) const
 PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 #undef PR_ENUM
 
-// Check the hash values are correct
-PR_EXPAND(PR_DBG_RDR, static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW>(pr::hash::HashC);)
-
 // Get/Set light settings
 std::string pr::rdr::Light::Settings() const
 {
@@ -121,6 +118,9 @@ bool pr::rdr::Light::Settings(char const* settings)
 		pr::script::PtrSrc src(settings);
 		reader.ErrorHandler() = &error_handler;
 		reader.AddSource(src);
+
+		// Check the hash values are correct
+		PR_EXPAND(PR_DBG_RDR, static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW>([&](char const* s) { return reader.HashKeyword(s); }));
 
 		ELightKW kw;
 		while (reader.NextKeywordH(kw))

@@ -200,8 +200,11 @@ namespace pr
 			using namespace pr;
 			using namespace pr::script;
 
-			pr::CheckHashEnum<script::EKeyword>  (pr::hash::HashC, [](char const* msg){ PR_FAIL(msg); });
-			pr::CheckHashEnum<script::EPPKeyword>(pr::hash::HashC, [](char const* msg){ PR_FAIL(msg); });
+			auto hasher  = [](char const* s) { return pr::hash::HashC(s); };
+			auto on_fail = [](char const* m) { PR_FAIL(m); };
+
+			pr::CheckHashEnum<script::EKeyword  >(hasher, on_fail);
+			pr::CheckHashEnum<script::EPPKeyword>(hasher, on_fail);
 		}
 	}
 }

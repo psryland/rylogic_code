@@ -16,7 +16,7 @@
 #define PR_MACROS_ENUM_H
 
 #include <exception>
-#include <type_traits>
+#include <functional>
 
 //"pr/common/assert.h" should be included prior to this for pr asserts
 #ifndef PR_ASSERT
@@ -177,18 +177,16 @@ namespace pr
 {
 	// Used to check enums where the value of each member should be the hash of its string name
 	// Use this method by declaring a static bool and assigning it to the result of this function
-	template <typename TEnum> inline bool CheckHashEnum(int (*hash_func)(char const*), void (*on_fail)(char const*) = nullptr)
+	template <typename TEnum, typename THashFunc, typename TFailFunc> inline bool CheckHashEnum(THashFunc hash_func, TFailFunc on_fail)
 	{
 		bool result = true;
-		if (on_fail == nullptr) on_fail = [](char const* msg){ throw std::exception(msg); };
-
 		std::string str;
 		for (int i = 0; i != TEnum::NumberOf; ++i)
 		{
 			auto name = TEnum::MemberName(i);
 			auto val  = TEnum::Member(i);
 			auto hash = hash_func(name);
-			if (val != hash)
+			if (hash != static_cast<int>(val))
 			{
 				str += FmtS("\n%s::%-48s hash value should be 0x%08X", TEnum::EnumName(), name, hash);
 				result = false;
@@ -196,6 +194,14 @@ namespace pr
 		}
 		if (!result) on_fail(str.c_str());
 		return result;
+	}
+	template <typename TEnum, typename THashFunc> inline bool CheckHashEnum(THashFunc hash_func)
+	{
+		return CheckHashEnum<TEnum>(hash_func, [](char const* msg)
+			{
+				std::cerr << msg;
+				throw std::exception(msg);
+			});
 	}
 }
 
