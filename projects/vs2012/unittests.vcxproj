@@ -22,14 +22,208 @@
     <ClCompile Include="..\unittests\unittests.cpp">
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
     </ClCompile>
+    <ClCompile Include="Q:\sdk\pr\pr\lua\lua_core.c" />
+    <ClCompile Include="Q:\sdk\pr\pr\lua\lua_lib.c" />
+    <ClCompile Include="Q:\sdk\sqlite\sqlite3.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\sdk\pr\pr\common\alloca.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\allocator.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\archiver.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\array.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\assert.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\atl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\autoptr.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\base64.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\bit_array.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\byte_data.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\byte_ptr_cast.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\chain.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\clipboard.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\colour.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\command_line.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\console.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\container_functions.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\crc.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\d3dinstance.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\d3dptr.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\dependency.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\discretepidcontroller.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\event.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\events.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\exception.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\expr_eval.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\fixedpodarray.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\fmt.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\guid.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\hardtypedef.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\hash.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\hresult.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\ienumoutput.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\imposter.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\inplacealloc.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\ireport.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\istream.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\kdtree.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\keystate.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\log.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\mempool.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\min_max_fix.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\msgbox.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\multi_cast.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\objectpool.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\observe.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\pipe.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\pollingtoevent.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\predicate.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\prlink.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\prlog.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\procttree.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\profile.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\profilemanager.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\property.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\proxy.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\prsegmentedlist.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\prsortkey.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\prtypes.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\quadtree.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\queue.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\range.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\refcount.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\refptr.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\registrykey.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\resource.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\serialportio.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\stack.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\testbed3d.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\timers.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\to.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\repeater.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\triangulartable.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\unittests.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\valuecast.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\vectormap.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\windowfunctions.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\windows_com.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\align.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\auto_do.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\count_of.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\enum.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\foreach.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\for_each.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\join.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\link.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\no_copying.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\on_exit.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\repeat.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\stringise.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\bitfunctions.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\boundingbox.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\boundingbox_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\boundingsphere.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\boundingsphere_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\compressionfunctions.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\constants.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\conversion.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\convexhull.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\forward.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\frect.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\frect_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\frustum.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\frustum_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\geometryfunctions.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\geometryfunctions_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\irect.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\irect_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\ivector2.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\ivector2_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\ivector4.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\ivector4_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\largeint.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\line3.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\line3_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\macros.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\maths.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\mathsassert.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\matrix2x2.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\matrix2x2_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\matrix3x3.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\matrix3x3_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\matrix4x4.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\matrix4x4_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\orientedbox.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\orientedbox_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\perlinnoise.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\plane.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\polynomial.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\primes.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\pr_to_ode.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\quaternion.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\quaternion_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\rand.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\rand_mt19937.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\scalar.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\scalar_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\spatial.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\spline.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\stat.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\triangulate.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\vector2.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\vector2_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\vector3.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\vector3_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\vector4.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\vector4_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\vector_rand.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\storage\csv.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\storage\xml.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstdstring.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstring.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstringcore.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstringextract.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstringstream.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\str\prstringutility.h" />
     <ClInclude Include="..\..\sdk\pr\pr\str\tostring.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\atomic.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\background_task.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\critical_section.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\event.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\ipc.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\item_queue.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\mutex.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\process.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\semaphore.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\sim_message_pump.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\thread.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\thread_pool.h" />
     <ClInclude Include="..\unittests\pp_output.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\lua\lua.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\char_stream.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\comment_strip.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\embedded_code.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\embedded_lua.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\keywords.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\pp_includes.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\pp_macro.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\pp_macro_db.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\preprocessor.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\reader.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\script.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\script_core.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\script_forward.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\stream_stack.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\token.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\script\tokeniser.h" />
+    <ClInclude Include="Q:\sdk\sqlite\sqlite3.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\unittests\run_tests.cmd" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
@@ -105,7 +299,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>$(TargetPath) runtests</Command>
+      <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -122,7 +316,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>$(TargetPath) runtests</Command>
+      <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -143,7 +337,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>$(TargetPath) runtests</Command>
+      <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -164,7 +358,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>$(TargetPath) runtests</Command>
+      <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

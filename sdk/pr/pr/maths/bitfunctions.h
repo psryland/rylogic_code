@@ -166,4 +166,18 @@ namespace pr
 	}
 }
 
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_maths_bitfunctions)
+		{
+		}
+	}
+}
+#endif
+
 #endif

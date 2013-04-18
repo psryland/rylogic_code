@@ -845,9 +845,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector4_impl.h">
       <Filter>sdk\pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\maths\windows_conv.h">
-      <Filter>sdk\pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\log.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>

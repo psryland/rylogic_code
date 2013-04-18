@@ -2,6 +2,7 @@
 // Script charactor source
 //  Copyright © Rylogic Ltd 2007
 //**********************************
+#pragma once
 #ifndef PR_SCRIPT_COMMENT_STRIP_H
 #define PR_SCRIPT_COMMENT_STRIP_H
 
@@ -57,5 +58,48 @@ namespace pr
 		};
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_script_comment_strip)
+		{
+			using namespace pr;
+			using namespace pr::script;
+
+			char const* str_in = 
+				"123// comment         \n"
+				"456/* block */789     \n"
+				"// many               \n"
+				"// lines              \n"
+				"// \"string\"         \n"
+				"/* \"string\" */      \n"
+				"\"string \\\" /*a*/ //b\"  \n"
+				"/not a comment\n"
+				"/*\n"
+				"  more lines\n"
+				"*/\n";
+			char const* str_out = 
+				"123\n"
+				"456789     \n"
+				"\n"
+				"\n"
+				"\n"
+				"      \n"
+				"\"string \\\" /*a*/ //b\"  \n"
+				"/not a comment\n"
+				"\n";
+			PtrSrc src(str_in);
+			CommentStrip strip(src);
+			for (;*str_out; ++strip, ++str_out)
+				PR_CHECK(*strip, *str_out);
+			PR_CHECK(*strip, 0);
+		}
+	}
+}
+#endif
 
 #endif

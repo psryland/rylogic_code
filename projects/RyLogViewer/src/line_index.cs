@@ -426,7 +426,7 @@ namespace RyLogViewer
 			// Buffer file data
 			count -= (int)(file.Position - pos);
 			int read = file.Read(buf, 0, count);
-			if (read != count) throw new IOException("failed to read file over range ["+pos+","+(pos+count)+"). Read "+read+"/"+count+" bytes.");
+			if (read != count) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(pos,pos+count,count,read));
 			if (backward) file.Seek(-read, SeekOrigin.Current);
 			return read;
 		}

@@ -42,7 +42,7 @@
 #include "pr/maths/bitfunctions.h"
 #include "pr/maths/geometryfunctions.h"
 #include "pr/maths/compressionfunctions.h"
-#include "pr/maths/stringconversion.h"
+#include "pr/maths/conversion.h"
 
 #include "pr/maths/scalar_impl.h"
 #include "pr/maths/vector2_impl.h"

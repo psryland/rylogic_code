@@ -31,6 +31,10 @@
 #   define PR_ASSERT_DEFINED
 #   define PR_ASSERT(grp, exp, str)
 #endif
+#if _MSC_VER <= 1700
+#   define PR_NOEXCEPT_DEFINED
+#   define PR_NOEXCEPT throw()
+#endif
 
 namespace pr
 {
@@ -339,7 +343,7 @@ namespace pr
 		
 		// move construct
 		#if _MSC_VER >= 1600
-		Array(Array&& right)
+		Array(Array&& right) PR_NOEXCEPT
 		:m_ptr(local_ptr())
 		,m_capacity(LocalLength)
 		,m_count(0)
@@ -347,7 +351,7 @@ namespace pr
 		{
 			_Assign(std::forward<Array>(right));
 		}
-		template <int L, bool F, class A> Array(Array<Type,L,F,A>&& right)
+		template <int L, bool F, class A> Array(Array<Type,L,F,A>&& right) PR_NOEXCEPT
 		:m_ptr(local_ptr())
 		,m_capacity(LocalLength)
 		,m_count(0)
@@ -567,14 +571,14 @@ namespace pr
 		// move right
 		#if _MSC_VER >= 1600
 		// explicit move right
-		Array& operator = (Array&& right)
+		Array& operator = (Array&& right) PR_NOEXCEPT
 		{
 			_Assign(std::forward<Array>(right));
 			return *this;
 		}
 		
 		// move right from any pr::Array<>
-		template <int L,bool F,typename A> Array& operator = (Array<Type,L,F,A>&& right)
+		template <int L,bool F,typename A> Array& operator = (Array<Type,L,F,A>&& right) PR_NOEXCEPT
 		{
 			_Assign(std::forward< Array<Type,L,F,A> >(right));
 			return *this;
@@ -766,7 +770,7 @@ namespace pr
 		
 		// Assign by moving right
 		#if _MSC_VER >= 1600
-		template <int L,bool F,typename A> void _Assign(Array<Type,L,F,A>&& right)
+		template <int L,bool F,typename A> void _Assign(Array<Type,L,F,A>&& right) PR_NOEXCEPT
 		{
 			// Same object, do nothing
 			if (isthis(right)) {}
@@ -863,6 +867,309 @@ namespace pr
 	};
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/common/refcount.h"
+#include "pr/common/refptr.h"
+
+namespace pr
+{
+	namespace unittests
+	{
+		struct Single :pr::RefCount<Single>
+		{
+			static void RefCountZero(RefCount<Single>*) {}
+		} g_single;
+
+		int g_start_object_count, g_object_count = 0;;
+		inline void ConstrCall() { ++g_object_count; }
+		inline void DestrCall() { --g_object_count; }
+
+		typedef unsigned int uint;
+		struct Type
+		{
+			uint val;
+			pr::RefPtr<Single> ptr;
+			operator uint() const                             { return val; }
+
+			Type()       :val(0) ,ptr(&g_single)              { ConstrCall(); }
+			Type(uint w) :val(w) ,ptr(&g_single)              { ConstrCall(); }
+			Type(Type const& rhs) :val(rhs.val) ,ptr(rhs.ptr) { ConstrCall(); }
+			~Type()
+			{
+				DestrCall();
+				if (ptr.m_ptr != &g_single)
+					throw std::exception("destructing an invalid Type");
+				val = 0xcccccccc;
+			}
+		};
+
+		typedef pr::Array<Type, 8, false> Array0;
+		typedef pr::Array<Type, 16, true> Array1;
+		std::vector<Type> ints;
+
+		PRUnitTest(pr_common_array)
+		{
+			ints.resize(16);
+			for (uint i = 0; i != 16; ++i) ints[i] = Type(i);
+
+			g_start_object_count = g_object_count;
+			{
+				Array0 arr;
+				PR_CHECK(arr.empty(), true);
+				PR_CHECK(arr.size(), 0U);
+			}
+			PR_CHECK(g_object_count, g_start_object_count);
+			g_start_object_count = g_object_count;
+			{
+				Array1 arr(15);
+				PR_CHECK(!arr.empty(), true);
+				PR_CHECK(arr.size(), 15U);
+			}
+			PR_CHECK(g_object_count, g_start_object_count);
+			g_start_object_count = g_object_count;
+			{
+				Array0 arr(5U, 3);
+				PR_CHECK(arr.size(), 5U);
+				for (size_t i = 0; i != 5; ++i)
+					PR_CHECK(arr[i], 3U);
+			}
+			PR_CHECK(g_object_count, g_start_object_count);
+			g_start_object_count = g_object_count;
+			{
+				Array0 arr0(5U,3);
+				Array1 arr1(arr0);
+				PR_CHECK(arr1.size(), arr0.size());
+				for (size_t i = 0; i != arr0.size(); ++i)
+					PR_CHECK(arr1[i], arr0[i]);
+			}
+			PR_CHECK(g_object_count, g_start_object_count);
+			g_start_object_count = g_object_count;
+			{
+				std::vector<uint> vec0(4U, 6);
+				Array0 arr1(vec0);
+				PR_CHECK(arr1.size(), vec0.size());
+				for (size_t i = 0; i != vec0.size(); ++i)
+					PR_CHECK(arr1[i], vec0[i]);
+			}
+			PR_CHECK(g_object_count, g_start_object_count);
+			{//RefCounting0
+				PR_CHECK(g_single.m_ref_count, 16);
+			}
+			{//Assign
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr0;
+					arr0.assign(3U, 5);
+					PR_CHECK(arr0.size(), 3U);
+					for (size_t i = 0; i != 3; ++i)
+						PR_CHECK(arr0[i], 5U);
+
+					Array1 arr1;
+					arr1.assign(&ints[0], &ints[8]);
+					PR_CHECK(arr1.size(), 8U);
+					for (size_t i = 0; i != 8; ++i)
+						PR_CHECK(arr1[i], ints[i]);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{//RefCounting1
+				PR_CHECK(g_single.m_ref_count, 16);
+			}
+			{//Clear
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr0(ints.begin(), ints.end());
+					arr0.clear();
+					PR_CHECK(arr0.empty(), true);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{//RefCounting2
+				PR_CHECK(g_single.m_ref_count, 16);
+			}
+			{//Erase
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr0(ints.begin(), ints.begin() + 8);
+					Array0::const_iterator b = arr0.begin();
+					arr0.erase(b + 3, b + 5);
+					PR_CHECK(arr0.size(), 6U);
+					for (size_t i = 0; i != 3; ++i) PR_CHECK(arr0[i], ints[i]  );
+					for (size_t i = 3; i != 6; ++i) PR_CHECK(arr0[i], ints[i+2]);
+				}
+				PR_CHECK(g_object_count,g_start_object_count);
+				g_start_object_count = g_object_count;
+				{
+					Array1 arr1(ints.begin(), ints.begin() + 4);
+					arr1.erase(arr1.begin() + 2);
+					PR_CHECK(arr1.size(), 3U);
+					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr1[i], ints[i]  );
+					for (size_t i = 2; i != 3; ++i) PR_CHECK(arr1[i], ints[i+1]);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr2(ints.begin(), ints.begin() + 5);
+					arr2.erase_fast(arr2.begin() + 2);
+					PR_CHECK(arr2.size(), 4U);
+					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr2[i], ints[i]);
+					PR_CHECK(arr2[2], ints[4]);
+					for (size_t i = 3; i != 4; ++i) PR_CHECK(arr2[i], ints[i]);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{//RefCounting3
+				PR_CHECK(g_single.m_ref_count, 16);
+			}
+			{//Insert
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr0;
+					arr0.insert(arr0.end(), 4U, 9);
+					PR_CHECK(arr0.size(), 4U);
+					for (size_t i = 0; i != 4; ++i)
+						PR_CHECK(arr0[i], 9U);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+				g_start_object_count = g_object_count;
+				{
+					Array1 arr1(4U, 6);
+					arr1.insert(arr1.begin() + 2, &ints[2], &ints[7]);
+					PR_CHECK(arr1.size(), 9U);
+					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr1[i], 6U);
+					for (size_t i = 2; i != 7; ++i) PR_CHECK(arr1[i], ints[i]);
+					for (size_t i = 7; i != 9; ++i) PR_CHECK(arr1[i], 6U);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{//RefCounting4
+				PR_CHECK(g_single.m_ref_count, 16);
+			}
+			{//PushPop
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr;
+					arr.insert(arr.begin(), &ints[0], &ints[4]);
+					arr.pop_back();
+					PR_CHECK(arr.size(), 3U);
+					for (size_t i = 0; i != 3; ++i)
+						PR_CHECK(arr[i], ints[i]);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+				g_start_object_count = g_object_count;
+				{
+					Array1 arr;
+					arr.reserve(4);
+					for (int i = 0; i != 4; ++i) arr.push_back_fast(i);
+					for (int i = 4; i != 9; ++i) arr.push_back(i);
+					for (size_t i = 0; i != 9; ++i)
+						PR_CHECK(arr[i], ints[i]);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+				g_start_object_count = g_object_count;
+				{
+					Array1 arr;
+					arr.insert(arr.begin(), &ints[0], &ints[4]);
+					arr.resize(3);
+					PR_CHECK(arr.size(), 3U);
+					for (size_t i = 0; i != 3; ++i)
+						PR_CHECK(arr[i], ints[i]);
+					arr.resize(6);
+					PR_CHECK(arr.size(), 6U);
+					for (size_t i = 0; i != 3; ++i)
+						PR_CHECK(arr[i], ints[i]);
+					for (size_t i = 3; i != 6; ++i)
+						PR_CHECK(arr[i], 0U);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{//RefCounting5
+				PR_CHECK(g_single.m_ref_count, 16);
+			}
+			{//Operators
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr0(4U, 1);
+					Array0 arr1(3U, 2);
+					arr1 = arr0;
+					PR_CHECK(arr0.size(), 4U);
+					PR_CHECK(arr1.size(), 4U);
+					for (size_t i = 0; i != 4; ++i)
+						PR_CHECK(arr1[i], arr0[i]);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr0(4U, 1);
+					Array1 arr2;
+					arr2 = arr0;
+					PR_CHECK(arr0.size(), 4U);
+					PR_CHECK(arr2.size(), 4U);
+					for (size_t i = 0; i != 4; ++i)
+						PR_CHECK(arr2[i], arr0[i]);
+		
+					struct L
+					{
+						static std::vector<Type> Conv(std::vector<Type> v) { return v; }
+					};
+					std::vector<Type> vec0 = L::Conv(arr0);
+					PR_CHECK(vec0.size(), 4U);
+					for (size_t i = 0; i != 4; ++i)
+						PR_CHECK(vec0[i], arr0[i]);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{//RefCounting6
+				PR_CHECK(g_single.m_ref_count, 16);
+			}
+			{//Mem
+				g_start_object_count = g_object_count;
+				{
+					Array0 arr0;
+					arr0.reserve(100);
+					for (uint i = 0; i != 50; ++i) arr0.push_back(i);
+					PR_CHECK(arr0.capacity(), 100U);
+					arr0.shrink_to_fit();
+					PR_CHECK(arr0.capacity(), 50U);
+					arr0.resize(1);
+					arr0.shrink_to_fit();
+					PR_CHECK(arr0.capacity(), (size_t)arr0.LocalLength);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{//RefCounting
+				ints.clear();
+				PR_CHECK(g_single.m_ref_count, 0);
+			}
+			{//AlignedTypes
+				g_start_object_count = g_object_count;
+				{
+					pr::Spline spline = pr::Spline::make(pr::Random3N(1.0f), pr::Random3N(1.0f), pr::Random3N(1.0f), pr::Random3N(1.0f));
+		
+					pr::Array<pr::v4> arr0;
+					pr::Raster(spline, arr0, 100);
+		
+					PR_CHECK(arr0.capacity() > arr0.LocalLength, true);
+					arr0.resize(5);
+					arr0.shrink_to_fit();
+					PR_CHECK(arr0.size(), 5U);
+					PR_CHECK(arr0.capacity(), arr0.LocalLength);
+				}
+				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{//GlobalConstrDestrCount
+				PR_CHECK(g_object_count, 0);
+			}
+		}
+	}
+}
+#endif
+
+#ifdef PR_NOEXCEPT_DEFINED
+#   undef PR_NOEXCEPT_DEFINED
+#   undef PR_NOEXCEPT
+#endif
 #ifdef PR_ASSERT_DEFINED
 #   undef PR_ASSERT_DEFINED
 #   undef PR_ASSERT

@@ -61,7 +61,7 @@ namespace pr
 			return Compare(lhs, rhs, Pred_CompareNoCase());
 		}
 		
-		// Return the number of occurances of 'what' in 'str'
+		// Return the number of occurrences of 'what' in 'str'
 		template <typename tstr1, typename tstr2> size_t Count(tstr1 const& str, tstr2 const& what)
 		{
 			typedef typename Traits<tstr1>::citer citer;
@@ -354,5 +354,156 @@ namespace pr
 		}
 	}
 }
-	
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_str_prstringutility)
+		{
+			using namespace pr;
+			using namespace pr::str;
+
+			{//EnsureNewline
+				std::string thems_without   = "without";
+				std::wstring thems_with     = L"with\n";
+				EnsureNewline(thems_without);
+				EnsureNewline(thems_with);
+				PR_CHECK(*(--End(thems_without)),'\n');
+				PR_CHECK(*(--End(thems_with))   ,L'\n');
+			}
+			{//Contains
+				std::string src = "string";
+				PR_CHECK(Contains(src, "in") , true);
+				PR_CHECK(Contains(src, "ing"), true);
+				PR_CHECK(ContainsNoCase(src, "iNg"), true);
+				PR_CHECK(ContainsNoCase(src, "inG"), true);
+			}
+			{//Compare
+				std::string src = "string1";
+				PR_CHECK(Compare(src, "string2") , -1);
+				PR_CHECK(Compare(src, "string1") ,  0);
+				PR_CHECK(Compare(src, "string0") ,  1);
+				PR_CHECK(Compare(src, "string11"), -1);
+				PR_CHECK(Compare(src, "string")  ,  1);
+				PR_CHECK(CompareNoCase(src, "striNg2" ), -1);
+				PR_CHECK(CompareNoCase(src, "stRIng1" ),  0);
+				PR_CHECK(CompareNoCase(src, "strinG0" ),  1);
+				PR_CHECK(CompareNoCase(src, "string11"), -1);
+				PR_CHECK(CompareNoCase(src, "strinG"  ),  1);
+			}
+			{//Count
+				char            narr[] = "s0tr0";
+				wchar_t         wide[] = L"s0tr0";
+				std::string     cstr   = "s0tr0";
+				std::wstring    wstr   = L"s0tr0";
+				PR_CHECK(Count(narr, "0t"), 1U);
+				PR_CHECK(Count(wide, "0") , 2U);
+				PR_CHECK(Count(cstr, "0") , 2U);
+				PR_CHECK(Count(wstr, "0t"), 1U);
+			}
+			{//CompressWhiteSpace
+				char src[] = "\n\nstuff     with  \n  white\n   space   \n in   ";
+				char res[] = "stuff with\nwhite\nspace\nin";
+				CompressWhiteSpace(src, " \n", ' ', true);
+				PR_CHECK(src, res);
+			}
+			{//Tokenise
+				char const src[] = "tok0 tok1 tok2 \"tok3 and tok3\" tok4";
+				std::vector<std::string> tokens;
+				Tokenise(src, tokens);
+				PR_CHECK(tokens.size(), 5U);
+				PR_CHECK(tokens[0].c_str(), "tok0"          );
+				PR_CHECK(tokens[1].c_str(), "tok1"          );
+				PR_CHECK(tokens[2].c_str(), "tok2"          );
+				PR_CHECK(tokens[3].c_str(), "tok3 and tok3" );
+				PR_CHECK(tokens[4].c_str(), "tok4"          );
+			}
+			{//StripComments
+				char src[] =
+					"//Line Comment\n"
+					"Not a comment\n"
+					"/* multi\n"
+					"-line comment*/";
+				char res[] = "Not a comment\n";
+				PR_CHECK(StripCppComments(src), res);
+			}
+			{//Replace
+				char src[] = "Bite my shiny donkey metal donkey";
+				char res1[] = "Bite my shiny arse metal arse";
+				char res2[] = "Bite my shiny donkey metal donkey";
+				PR_CHECK(Replace(src, "donkey", "arse"), size_t(2));
+				PR_CHECK(src, res1);
+				PR_CHECK(Replace(src, "arse", "donkey"), size_t(2));
+				PR_CHECK(src, res2);
+			}
+			{//ConvertToCString
+				char const str[] = "Not a \"Cstring\". \a \b \f \n \r \t \v \\ \? \' ";
+				char const res[] = "Not a \\\"Cstring\\\". \\a \\b \\f \\n \\r \\t \\v \\\\ \\? \\\' ";
+				std::string cstr1 = StringToCString<std::string>(str);
+				PR_CHECK(str::Equal(cstr1, res), true);
+				std::string str1 = CStringToString<std::string>(cstr1);
+				PR_CHECK(str::Equal(str1, str), true);
+			}
+			{//FindIdentifier
+				char const str[] = "aid id iid    id aiden";
+				wchar_t id[] = L"id";
+				size_t idx = FindIdentifier(str, id);    PR_CHECK(idx, 4U);
+				idx = FindIdentifier(str, id, idx+1, 3); PR_CHECK(idx, 8U);
+				idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 14U);
+				idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 22U);
+			}
+			{//Quotes
+				char empty[3] = "";
+				wchar_t one[4] = L"1";
+				std::string two = "\"two\"";
+				std::wstring three = L"three";
+				PR_CHECK(str::Equal("\"\""       ,Quotes(empty ,true)), true);
+				PR_CHECK(str::Equal("\"1\""      ,Quotes(one   ,true)), true);
+				PR_CHECK(str::Equal("\"two\""    ,Quotes(two   ,true)), true);
+				PR_CHECK(str::Equal(L"\"three\"" ,Quotes(three ,true)), true);
+				PR_CHECK(str::Equal(""       ,Quotes(empty ,false)), true);
+				PR_CHECK(str::Equal("1"      ,Quotes(one   ,false)), true);
+				PR_CHECK(str::Equal("two"    ,Quotes(two   ,false)), true);
+				PR_CHECK(str::Equal(L"three" ,Quotes(three ,false)), true);
+			}
+			{//ParseNumber
+				char const* str = "-3.12e+03F,0x1234abcd,077,1ULL,";
+				pr::str::NumType::Type type; bool unsignd; bool ll;
+				char const* s = str;
+				size_t count;
+				count = pr::str::ParseNumber(s, type, unsignd, ll);
+				PR_CHECK(count   ,10U);
+				PR_CHECK(type    ,pr::str::NumType::FP);
+				PR_CHECK(unsignd ,false);
+				PR_CHECK(ll      ,false);
+
+				s += 1;
+				count = pr::str::ParseNumber(s, type, unsignd, ll);
+				PR_CHECK(count   ,10U);
+				PR_CHECK(type    ,pr::str::NumType::Hex);
+				PR_CHECK(unsignd ,false);
+				PR_CHECK(ll      ,false);
+
+				s += 1;
+				count = pr::str::ParseNumber(s, type, unsignd, ll);
+				PR_CHECK(count   ,3U);
+				PR_CHECK(type    ,pr::str::NumType::Oct);
+				PR_CHECK(unsignd ,false);
+				PR_CHECK(ll      ,false);
+
+				s += 1;
+				count = pr::str::ParseNumber(s, type, unsignd, ll);
+				PR_CHECK(count   ,4U);
+				PR_CHECK(type    ,pr::str::NumType::Dec);
+				PR_CHECK(unsignd ,true);
+				PR_CHECK(ll      ,true);
+			}
+		}
+	}
+}
+#endif
+
 #endif

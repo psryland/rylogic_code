@@ -54,7 +54,6 @@
 #include "pr/common/keystate.h"
 #include "pr/common/colour.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/stringconversion.h"
 #include "pr/str/prstring.h"
 #include "pr/filesys/fileex.h"
 #include "pr/camera/camera.h"

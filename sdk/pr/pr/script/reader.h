@@ -9,12 +9,13 @@
 // - Embedded Lua Code:
 //   Use an 'EmbeddedLua' char stream 
 
+#pragma once
 #ifndef PR_SCRIPT_READER_H
 #define PR_SCRIPT_READER_H
-	
+
 #include "pr/maths/maths.h"
 #include "pr/script/script.h"
-	
+
 namespace pr
 {
 	namespace script
@@ -28,7 +29,7 @@ namespace pr
 			virtual ~IErrorHandler() {}
 			virtual void IErrorHandler_ImplementationVersion0() = 0;
 			virtual void IErrorHandler_ShowMessage(char const*) {}
-			virtual void IErrorHandler_Error(pr::script::EResult::Type result, char const* error_msg, pr::script::Loc const& loc)
+			virtual void IErrorHandler_Error(pr::script::EResult result, char const* error_msg, pr::script::Loc const& loc)
 			{
 				// Report a basic error message.
 				// To implement script history, users should use a history char stream
@@ -475,12 +476,12 @@ namespace pr
 			}
 			
 			// Allow users to report errors via the internal error handler
-			bool ReportError(EResult::Type result)
+			bool ReportError(EResult result)
 			{
-				if (m_error_handler) m_error_handler->IErrorHandler_Error(result, ToString(result), m_src.loc());
+				if (m_error_handler) m_error_handler->IErrorHandler_Error(result, pr::ToString(result), m_src.loc());
 				return false;
 			}
-			bool ReportError(EResult::Type result, char const* msg)
+			bool ReportError(EResult result, char const* msg)
 			{
 				if (m_error_handler) m_error_handler->IErrorHandler_Error(result, msg, m_src.loc());
 				return false;
@@ -493,6 +494,132 @@ namespace pr
 		};
 	}
 }
-	
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_script_reader)
+		{
+			char const* src = 
+				"#define NUM 23\n"
+				"*Identifier ident\n"
+				"*String \"simple string\"\n"
+				"*CString \"C:\\\\Path\\\\Filename.txt\"\n"
+				"*Bool true\n"
+				"*Intg -NUM\n"
+				"*Intg16 ABCDEF00\n"
+				"*Real -2.3e+3\n"
+				"*BoolArray 1 0 true false\n"
+				"*IntArray -3 2 +1 -0\n"
+				"*RealArray 2.3 -1.0e-1 2 -0.2\n"
+				"*Vector3 1.0 2.0 3.0\n"
+				"*Vector4 4.0 3.0 2.0 1.0\n"
+				"*Quaternion 0.0 -1.0 -2.0 -3.0\n"
+				"*M3x3 1.0 0.0 0.0  0.0 1.0 0.0  0.0 0.0 1.0\n"
+				"*M4x4 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0\n"
+				"*Data 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 00\n"
+				"*Junk\n"
+				"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
+				"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
+				"*LastThing";
+
+			char kw[50];
+			pr::hash::HashValue hashed_kw = 0;
+			std::string str;
+			bool bval = false, barray[4];
+			int ival = 0, iarray[4];
+			unsigned int uival = 0;
+			float fval = 0.0f, farray[4];
+			pr::v4 vec = pr::v4Zero;
+			pr::Quat quat = pr::QuatIdentity;
+			pr::m3x3 mat3;
+			pr::m4x4 mat4;
+
+			{// basic extract methods
+				pr::script::Loc    loc;
+				pr::script::PtrSrc ptr(src, &loc);
+				pr::script::Reader reader;
+				reader.CaseSensitiveKeywords(true);
+				reader.AddSource(ptr);
+			
+				PR_CHECK(reader.CaseSensitiveKeywords()     ,true);
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Identifier"                  );
+				PR_CHECK(reader.ExtractIdentifier(str)      ,true); PR_CHECK(str             , "ident"                       );
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "String"                      );
+				PR_CHECK(reader.ExtractString(str)          ,true); PR_CHECK(str             , "simple string"               );
+				PR_CHECK(reader.NextKeywordH(hashed_kw)     ,true); PR_CHECK(hashed_kw       , reader.HashKeyword("CString") );
+				PR_CHECK(reader.ExtractCString(str)         ,true); PR_CHECK(str             , "C:\\Path\\Filename.txt"      );
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Bool"                        );
+				PR_CHECK(reader.ExtractBool(bval)           ,true); PR_CHECK(bval            , true                          );
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Intg"                        );
+				PR_CHECK(reader.ExtractInt(ival, 10)        ,true); PR_CHECK(ival            , -23                           );
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Intg16"                      );
+				PR_CHECK(reader.ExtractInt(uival, 16)       ,true); PR_CHECK(uival           , 0xABCDEF00                    );
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Real"                        );
+				PR_CHECK(reader.ExtractReal(fval)           ,true); PR_CHECK(fval            , -2.3e+3                       );
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "BoolArray"                   );
+				PR_CHECK(reader.ExtractBoolArray(barray, 4) ,true);
+				PR_CHECK(barray[0], true );
+				PR_CHECK(barray[1], false);
+				PR_CHECK(barray[2], true );
+				PR_CHECK(barray[3], false);
+				PR_CHECK(reader.NextKeywordS(kw), true);             PR_CHECK(std::string(kw) , "IntArray");
+				PR_CHECK(reader.ExtractIntArray(iarray, 4, 10), true);
+				PR_CHECK(iarray[0], -3);
+				PR_CHECK(iarray[1], +2);
+				PR_CHECK(iarray[2], +1);
+				PR_CHECK(iarray[3], -0);
+				PR_CHECK(reader.NextKeywordS(kw), true);             PR_CHECK(std::string(kw) , "RealArray");
+				PR_CHECK(reader.ExtractRealArray(farray, 4), true);
+				PR_CHECK(farray[0], 2.3f    );
+				PR_CHECK(farray[1], -1.0e-1f);
+				PR_CHECK(farray[2], +2.0f   );
+				PR_CHECK(farray[3], -0.2f   );
+				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Vector3");
+				PR_CHECK(reader.ExtractVector3(vec,-1.0f) , true); PR_CHECK(pr::FEql4(vec, pr::v4::make(1.0f, 2.0f, 3.0f,-1.0f)), true);
+				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Vector4");
+				PR_CHECK(reader.ExtractVector4(vec)       , true); PR_CHECK(pr::FEql4(vec, pr::v4::make(4.0f, 3.0f, 2.0f, 1.0f)), true);
+				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Quaternion");
+				PR_CHECK(reader.ExtractQuaternion(quat)   , true); PR_CHECK(pr::FEql4(quat, pr::Quat::make(0.0f, -1.0f, -2.0f, -3.0f)), true);
+				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "M3x3");
+				PR_CHECK(reader.ExtractMatrix3x3(mat3)    , true); PR_CHECK(pr::FEql(mat3, pr::m3x3Identity), true);
+				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "M4x4");
+				PR_CHECK(reader.ExtractMatrix4x4(mat4)    , true); PR_CHECK(pr::FEql(mat4, pr::m4x4Identity), true);
+				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Data");
+				PR_CHECK(reader.ExtractData(kw, 16)       , true); PR_CHECK(std::string(kw) , "ABCDEFGHIJKLMNO");
+				PR_CHECK(reader.FindNextKeyword("Section"), true); str.resize(0);
+				PR_CHECK(reader.ExtractSection(str, false), true); PR_CHECK(str, "*SubSection { *Data \n 23 \"With a }\\\"string\\\"{ in it\" }");
+				PR_CHECK(reader.FindNextKeyword("Section"), true); str.resize(0);
+				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "LastThing");
+				PR_CHECK(!reader.IsKeyword()              , true);
+				PR_CHECK(!reader.IsSectionStart()         , true);
+				PR_CHECK(!reader.IsSectionEnd()           , true);
+				PR_CHECK(reader.IsSourceEnd()             , true);
+			}
+			{
+				char const* src = 
+					"A.B\n"
+					"a.b.c\n"
+					"A.B.C.D\n"
+					;
+		
+				pr::script::Loc    loc;
+				pr::script::PtrSrc ptr(src, &loc);
+				pr::script::Reader reader;
+				reader.CaseSensitiveKeywords(true);
+				reader.AddSource(ptr);
+			
+				std::string s0,s1,s2,s3;
+				reader.ExtractIdentifier(s0,s1,'.');        PR_CHECK(s0 == "A" && s1 == "B", true);
+				reader.ExtractIdentifier(s0,s1,s2,'.');     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);
+				reader.ExtractIdentifier(s0,s1,s2,s3,'.');  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);
+			}
+		}
+	}
+}
 #endif
-	
+
+#endif

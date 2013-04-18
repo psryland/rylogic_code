@@ -14,5 +14,6 @@
 #include "pr/str/prstringextract.h"
 #include "pr/str/prstringutility.h"
 #include "pr/str/prstdstring.h"
+#include "pr/str/tostring.h"
 
 #endif

@@ -2,13 +2,14 @@
 // Script charactor source stack
 //  Copyright © Rylogic Ltd 2007
 //**********************************
-	
+
+#pragma once
 #ifndef PR_SCRIPT_STREAM_STACK_H
 #define PR_SCRIPT_STREAM_STACK_H
-	
+
 #include "pr/script/script_core.h"
 #include "pr/script/char_stream.h"
-	
+
 namespace pr
 {
 	namespace script
@@ -82,5 +83,41 @@ namespace pr
 		};
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_script_stream_stack)
+		{
+			using namespace pr;
+			using namespace pr::script;
+
+			{//SrcStack
+				char const* str1 = "one";
+				char const* str2 = "two";
+				PtrSrc src1(str1);
+				PtrSrc src2(str2);
+				SrcStack stack(src1);
+
+				for (int i = 0; i != 2; ++i, ++stack)
+					PR_CHECK(*stack, str1[i]);
+
+				stack.push(src2);
+
+				for (int i = 0; i != 3; ++i, ++stack)
+					PR_CHECK(*stack, str2[i]);
+
+				for (int i = 2; i != 3; ++i, ++stack)
+					PR_CHECK(*stack, str1[i]);
+
+				PR_CHECK(*stack, 0);
+			}
+		}
+	}
+}
+#endif
 
 #endif

@@ -244,7 +244,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\spatial.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\spline.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\stat.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\maths\stringconversion.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\conversion.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\triangulate.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector2.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector2_impl.h" />

@@ -532,5 +532,146 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_str_prstringextract)
+		{
+			using namespace pr;
+			using namespace pr::str;
+
+			{//ExtractLine
+				wchar_t const* src = L"abcefg\n";
+				char line[10];
+				PR_CHECK(ExtractLineC(line, src, false), true); PR_CHECK(Equal(line, "abcefg")   ,true);
+				PR_CHECK(ExtractLineC(line, src, true) , true); PR_CHECK(Equal(line, "abcefg\n") ,true);
+			}
+			{//ExtractIdentifier
+				wchar_t const* src = L"\t\n\r Ident { 10.9 }";
+				wchar_t const* s = src;
+				char identifier[10];
+				PR_CHECK(ExtractIdentifier(identifier, s) ,true);
+				PR_CHECK(Equal(identifier, "Ident")       ,true);
+			}
+			{//ExtractString
+				std::wstring src = L"\n \"String String\" ";
+				wchar_t const* s = src.c_str();
+				char string[20];
+				PR_CHECK(ExtractString(string, s)       ,true);
+				PR_CHECK(Equal(string, "String String") ,true);
+			}
+			{//ExtractCString
+				std::wstring wstr;
+				PR_CHECK(ExtractCStringC(wstr, "  \" \\\\\\b\\f\\n\\r\\t\\v\\?\\'\\\" \" ") ,true);
+				PR_CHECK(Equal(wstr, " \\\b\f\n\r\t\v\?\'\" ")                              ,true);
+
+				char narr[2];
+				PR_CHECK(ExtractCStringC(narr, "  '\\n'  ") ,true);
+				PR_CHECK(Equal(narr, "\n")                  ,true);
+				PR_CHECK(ExtractCStringC(narr, "  'a'  ")   ,true);
+				PR_CHECK(Equal(narr, "a")                   ,true);
+			}
+			{//ExtractBool
+				char  src[] = "true false 1";
+				char const* s = src;
+				bool  bbool = 0;
+				int   ibool = 0;
+				float fbool = 0;
+				PR_CHECK(ExtractBool(bbool, s) ,true); PR_CHECK(bbool ,true);
+				PR_CHECK(ExtractBool(ibool, s) ,true); PR_CHECK(ibool ,0   );
+				PR_CHECK(ExtractBool(fbool, s) ,true); PR_CHECK(fbool ,1.0f);
+			}
+			{//ExtractInt
+				char  c = 0;      unsigned char  uc = 0;
+				short s = 0;      unsigned short us = 0;
+				int   i = 0;      unsigned int   ui = 0;
+				long  l = 0;      unsigned long  ul = 0;
+				long long ll = 0; unsigned long long ull = 0;
+				float  f = 0;     double d = 0;
+				{
+					char src[] = "\n -1.14 ";
+					PR_CHECK(ExtractIntC(c  ,10 ,src) ,true);   PR_CHECK(c  ,(char)-1);
+					PR_CHECK(ExtractIntC(uc ,10 ,src) ,true);   PR_CHECK(uc ,(unsigned char)0xff);
+					PR_CHECK(ExtractIntC(s  ,10 ,src) ,true);   PR_CHECK(s  ,(short)-1);
+					PR_CHECK(ExtractIntC(us ,10 ,src) ,true);   PR_CHECK(us ,(unsigned short)0xffff);
+					PR_CHECK(ExtractIntC(i  ,10 ,src) ,true);   PR_CHECK(i  ,(int)-1);
+					PR_CHECK(ExtractIntC(ui ,10 ,src) ,true);   PR_CHECK(ui ,(unsigned int)0xffffffff);
+					PR_CHECK(ExtractIntC(l  ,10 ,src) ,true);   PR_CHECK(l  ,(long)-1);
+					PR_CHECK(ExtractIntC(ul ,10 ,src) ,true);   PR_CHECK(ul ,(unsigned long)0xffffffff);
+					PR_CHECK(ExtractIntC(ll ,10 ,src) ,true);   PR_CHECK(ll ,(long long)-1);
+					PR_CHECK(ExtractIntC(ull,10 ,src) ,true);   PR_CHECK(ull,(unsigned long long)0xffffffffffffffffL);
+					PR_CHECK(ExtractIntC(f  ,10 ,src) ,true);   PR_CHECK(f  ,(float)-1.0f);
+					PR_CHECK(ExtractIntC(d  ,10 ,src) ,true);   PR_CHECK(d  ,(double)-1.0);
+				}
+				{
+					char src[] = "0x1abcZ", *ptr = src;
+					PR_CHECK(ExtractInt(i,0,ptr), true);
+					PR_CHECK(i    ,0x1abc);
+					PR_CHECK(*ptr ,'Z');
+				}
+			}
+			{// ExtractReal
+				float f = 0; double d = 0; int i = 0;
+				{
+					char src[] = "\n 3.14 ";
+					PR_CHECK(ExtractRealC(f ,src) ,true); PR_CLOSE(f, 3.14f, 0.00001f);
+					PR_CHECK(ExtractRealC(d ,src) ,true); PR_CLOSE(d, 3.14 , 0.00001);
+					PR_CHECK(ExtractRealC(i ,src) ,true); PR_CHECK(i, 3);
+				}
+				{
+					char src[] = "-1.25e-4Z", *ptr = src;
+					PR_CHECK(ExtractReal(d, ptr) ,true);
+					PR_CHECK(d ,-1.25e-4);
+					PR_CHECK(*ptr, 'Z');
+				}
+			}
+			{//ExtractBoolArray
+				char src[] = "\n true 1 TRUE ";
+				float f[3] = {0,0,0};
+				PR_CHECK(ExtractBoolArrayC(f, 3, src), true);
+				PR_CHECK(f[0], 1.0f);
+				PR_CHECK(f[1], 1.0f);
+				PR_CHECK(f[2], 1.0f);
+			}
+			{//ExtractRealArray
+				char src[] = "\n 3.14\t3.14e0\n-3.14 ";
+				float  f[3] = {0,0,0};
+				double d[3] = {0,0,0};
+				int    i[3] = {0,0,0};
+				PR_CHECK(ExtractRealArrayC(f, 3, src) ,true);    PR_CLOSE(f[0], 3.14f, 0.00001f); PR_CLOSE(f[1], 3.14f, 0.00001f); PR_CLOSE(f[2], -3.14f, 0.00001f);
+				PR_CHECK(ExtractRealArrayC(d, 3, src) ,true);    PR_CLOSE(d[0], 3.14 , 0.00001);  PR_CLOSE(d[1], 3.14 , 0.00001);  PR_CLOSE(d[2], -3.14 , 0.00001);
+				PR_CHECK(ExtractRealArrayC(i, 3, src) ,true);    PR_CHECK(i[0], 3);               PR_CHECK(i[1] ,3);               PR_CHECK(i[2], -3);
+			}
+			{//ExtractIntArray
+				char src[] = "\n \t3  1 \n -2\t ";
+				int i[3] = {0,0,0};
+				unsigned int u[3] = {0,0,0};
+				float        f[3] = {0,0,0};
+				double       d[3] = {0,0,0};
+				PR_CHECK(ExtractIntArrayC(i, 3, 10, src), true); PR_CHECK(i[0], 3);               PR_CHECK(i[1], 1);               PR_CHECK(i[2], -2);
+				PR_CHECK(ExtractIntArrayC(u, 3, 10, src), true); PR_CHECK(i[0], 3);               PR_CHECK(i[1], 1);               PR_CHECK(i[2], -2);
+				PR_CHECK(ExtractIntArrayC(f, 3, 10, src), true); PR_CLOSE(f[0], 3.f, 0.00001f);   PR_CLOSE(f[1], 1.f, 0.00001f);   PR_CLOSE(f[2], -2.f, 0.00001f);
+				PR_CHECK(ExtractIntArrayC(d, 3, 10, src), true); PR_CLOSE(d[0], 3.0, 0.00001);    PR_CLOSE(d[1], 1.0, 0.00001);    PR_CLOSE(d[2], -2.0, 0.00001);
+			}
+			{//ExtractNumber
+				char    src0[] =  "-3.24e-39f";
+				wchar_t src1[] = L"0x123abcUL";
+				char    src2[] =  "01234567";
+				wchar_t src3[] = L"-34567L";
+		
+				float f = 0; int i = 0; bool fp = false;
+				PR_CHECK(ExtractNumberC(i,f,fp,src0) ,true); PR_CHECK( fp, true); PR_CHECK(f ,-3.24e-39f);
+				PR_CHECK(ExtractNumberC(i,f,fp,src1) ,true); PR_CHECK(!fp, true); PR_CHECK((unsigned long)i, 0x123abcUL);
+				PR_CHECK(ExtractNumberC(i,f,fp,src2) ,true); PR_CHECK(!fp, true); PR_CHECK(i ,01234567);
+				PR_CHECK(ExtractNumberC(i,f,fp,src3) ,true); PR_CHECK(!fp, true); PR_CHECK((long)i ,-34567L);
+			}
+		}
+	}
+}
+#endif
+
 #endif
 

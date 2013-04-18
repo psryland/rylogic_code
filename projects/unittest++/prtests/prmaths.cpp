@@ -4,7 +4,6 @@
 #include "unittest++/1.3/src/unittest++.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/stat.h"
-#include "pr/maths/windows_conv.h"
 #include "pr/macros/link.h"
 
 using namespace pr;

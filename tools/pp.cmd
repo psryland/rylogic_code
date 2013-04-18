@@ -50,14 +50,34 @@ set defines=^
  /D PR_UNITTESTS
 
 cl %flags% %includes% %defines% /Fi"%outpath%" "%filepath%"
+if errorlevel 1 goto :error
 echo.
 
 echo Cleaning PP output:
 q:\bin\textformatter.exe -f "%outpath%" -newlines 0 1
 echo.
 
+echo Astyling output
+Q:\tools\AStyle\astyle.exe --options="Q:\tools\astyle\format_with_newlines.cfg" "%outpath%"
+echo.
+
 echo Showing PP output:
 "%textedit%" "%outpath%"
 echo.
+
+goto :success
+
+:error
+echo.
+echo Failed.
+echo.
+pause
+goto :eof
+
+:success
+echo.
+echo Success.
+echo
+ping -n 1 -w 1000 1.1.1.1 >nul
 
 EndLocal

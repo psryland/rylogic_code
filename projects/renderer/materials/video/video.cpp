@@ -263,7 +263,7 @@ void pr::rdr::Video::CreateFromFile(D3DPtr<IDirect3DDevice9>& d3d_device, char c
 	      graph_builder->QueryInterface(IID_IVideoWindow   ,(void**)&m_video_window.m_ptr);
 
 	// Generate the graph
-	std::wstring fpath = pr::str::ToWString<std::wstring>(filepath);
+	std::wstring fpath = pr::To<std::wstring>(filepath);
 	Throw(graph_builder->RenderFile(fpath.c_str(), 0));
 	Throw(m_media_control->StopWhenReady());
 	m_filepath = filepath;

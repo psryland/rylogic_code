@@ -3,8 +3,8 @@
 //  Copyright © Rylogic Ltd 2009
 //*******************************************************************************************
 #pragma once
-#ifndef PR_REPEATER_H
-#define PR_REPEATER_H
+#ifndef PR_COMMON_REPEATER_H
+#define PR_COMMON_REPEATER_H
 
 namespace pr
 {
@@ -81,22 +81,25 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr
 {
-	PRUnitTest(Repeater)
+	namespace unittests
 	{
-		std::vector<int> vec;
-		vec.push_back(0);
-		vec.push_back(1);
-		vec.push_back(2);
+		PRUnitTest(pr_common_repeater)
+		{
+			std::vector<int> vec;
+			vec.push_back(0);
+			vec.push_back(1);
+			vec.push_back(2);
 
-		auto rep = pr::CreateRepeater(begin(vec), vec.size(), 6, -1);
-		PR_CHECK(*rep  ,  0); ++rep;
-		PR_CHECK(*rep  ,  0); rep++;
-		PR_CHECK(*rep++,  1);
-		PR_CHECK(*rep++,  1);
-		PR_CHECK(*rep++,  2);
-		PR_CHECK(*rep++,  2);
-		PR_CHECK(*rep++, -1);
-		PR_CHECK(*rep++, -1);
+			auto rep = pr::CreateRepeater(begin(vec), vec.size(), 6, -1);
+			PR_CHECK(*rep  ,  0); ++rep;
+			PR_CHECK(*rep  ,  0); rep++;
+			PR_CHECK(*rep++,  1);
+			PR_CHECK(*rep++,  1);
+			PR_CHECK(*rep++,  2);
+			PR_CHECK(*rep++,  2);
+			PR_CHECK(*rep++, -1);
+			PR_CHECK(*rep++, -1);
+		}
 	}
 }
 #endif

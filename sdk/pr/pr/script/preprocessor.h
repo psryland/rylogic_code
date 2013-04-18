@@ -155,7 +155,7 @@ namespace pr
 					throw Exception(EResult::InvalidIdentifier, m_buf.loc(), "invalid preprocessor command");
 				
 				// Find the hash of the pp command
-				EPPKeyword::Type kw = static_cast<EPPKeyword::Type>(Hash::String(id));
+				EPPKeyword kw = EPPKeyword::From(Hash::String(id));
 				switch (kw)
 				{
 				default:
@@ -436,7 +436,7 @@ namespace pr
 					if (!pr::str::IsIdentifier(*m_buf, true)) continue;
 					
 					m_buf.BufferIdentifier();
-					EPPKeyword::Type kw = static_cast<EPPKeyword::Type>(m_buf.Hash());
+					EPPKeyword kw = EPPKeyword::From(m_buf.Hash());
 					nest += int(kw == EPPKeyword::Ifdef || kw == EPPKeyword::Ifndef || kw == EPPKeyword::If);
 					nest -= int(kw == EPPKeyword::Endif || (nest == 1 && (kw == EPPKeyword::Elif || kw == EPPKeyword::Else)));
 					if (nest == 0) { m_buf.push_front('#'); break; }
@@ -448,5 +448,278 @@ namespace pr
 		};
 	}
 }
-	
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/script/embedded_lua.h"
+
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_script_preprocessor)
+		{
+			using namespace pr;
+			using namespace pr::script;
+
+			{// ignored stuff
+				char const* str_in =
+					"\"#if ignore #define this stuff\"\n"
+					;
+				char const* str_out =
+					"\"#if ignore #define this stuff\"\n"
+					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// simple macros
+				char const* str_in =
+					"#  define ONE 1 // ignore me \n"
+					"#  define NOT_ONE (!ONE) /*and me*/ \n"
+					"ONE\n"
+					"NOT_ONE\n"
+					;
+				char const* str_out =
+					"1\n"
+					"(!1)\n"
+					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// simple macro functions
+				char const* str_in =
+					"#\tdefine PLUS(x,y) \\\n"
+					" (x)+(y) xx 0x _0x  \n"
+					"PLUS  (1,(2,3))\n"
+					;
+				char const* str_out =
+					"(1)+((2,3)) xx 01 _0x\n"
+					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// recursive macros
+				char const* str_in =
+					"#define C(x) A(x) B(x) C(x)\n"
+					"#define B(x) C(x)\n"
+					"#define A(x) B(x)\n"
+					"A(1)\n"
+					;
+				char const* str_out =
+					"A(1) B(1) C(1)\n"
+					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// #eval
+				char const* str_in =
+					"#eval{1+#eval{1+1}}\n"
+					;
+				char const* str_out =
+					"3\n"
+					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// recursive macros/evals
+				char const* str_in =
+					"#define X 3.0\n"
+					"#define Y 4.0\n"
+					"#define Len2 #eval{len2(X,Y)}\n"
+					"#eval{X + Len2}\n";
+				char const* str_out =
+					"8\n";
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// includes
+				char const* str_in =
+					"#  define ONE 1 // ignore me \n"
+					"#include \"inc\"\n"
+					;
+				char const* str_out =
+					"included 1\n"
+					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				StrIncludes includes; includes.m_strings["inc"] = "included ONE";
+				Preprocessor pp(src, &macros, &includes, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// #if/#else/#etc
+				char const* str_in =
+					"#  define ONE 1 // ignore me \n"
+					"#  define NOT_ONE (!ONE) /*and me*/ \n"
+					"#\tdefine PLUS(x,y) (x)+(y) xx 0x _0x  \n"
+					"#ifdef ZERO\n"
+					"#if NESTED\n"
+					"  not output \"ignore #else\" \n"
+					"#endif\n"
+					"#elif (!NOT_ONE) && defined(PLUS)\n"
+					"  output\n"
+					"#else\n"
+					"  not output\n"
+					"#endif\n"
+					"#ifndef ZERO\n"
+					"#if defined(ZERO) || defined(PLUS)\n"
+					"  output this\n"
+					"#else\n"
+					"  but not this\n"
+					"#endif\n"
+					"#endif\n"
+					"#undef ONE\n"
+					"#ifdef ONE\n"
+					"  don't output\n"
+					"#endif\n"
+					"#define TWO\n"
+					"#ifdef TWO\n"
+					"  two defined\n"
+					"#endif\n"
+					;
+				char const* str_out =
+					"  output\n"
+					"  output this\n"
+					"  two defined\n"
+					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// miscellaneous
+				char const* str_in =
+					"\"#error this would throw an error\"\n"
+					"#pragma ignore this\n"
+					"#line ignore this\n"
+					"#warning ignore this\n"
+					"lastword"
+					"#define ONE 1\n"
+					"#eval{ONE+2-4+len2(3,4)}\n"
+					"#define EVAL(x) #eval{x+1}\n"
+					"EVAL(1)\n"
+					"#lit Any old ch*rac#ers #if I {feel} #include --cheese like #en#end\n"
+					"// #if 1 comments \n"
+					"/*should pass thru #else*/\n"
+					"#embedded(lua) --lua code\n return \"hello world\" #end\n"
+					;
+				char const* str_out =
+					"\"#error this would throw an error\"\n"
+					"lastword"
+					"4\n"
+					"2\n"
+					"Any old ch*rac#ers #if I {feel} #include --cheese like #en\n"
+					"// #if 1 comments \n"
+					"/*should pass thru #else*/\n"
+					"hello world\n"
+					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				StrIncludes includes; includes.m_strings["inc"] = "included ONE";
+				EmbeddedLua lua_handler;
+				Preprocessor pp(src, &macros, &includes, &lua_handler);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// Preprocessor with no macro or include handler
+				char const* str_in =
+					"\t      \n"
+					"\"#if ignore #define this stuff\"\n"
+					"#  define ONE 1     \n"
+					"#  define NOT_ONE (!ONE)  \n"
+					"#\tdefine PLUS(x,y) \\\n"
+					" (x)+(y) xx 0x _0x  \n"
+					"ONE\n"
+					"PLUS  (1,(2,3))\n"
+					"#define C(x) A(x) B(x) C(x)\n"
+					"#define B(x) C(x)\n"
+					"#define A(x) B(x)\n"
+					"A(1)\n"
+					"#include \"inc\"\n"
+					"#ifdef ZERO\n"
+					"#if 0\n"
+					"  not output \"ignore #else\" \n"
+					"#endif\n"
+					"#elif (!0) && defined(PLUS)\n"
+					"  output\n"
+					"#else\n"
+					"  not output\n"
+					"#endif\n"
+					"#ifndef ZERO\n"
+					"#if defined(ZERO) || defined(PLUS)\n"
+					"  output this\n"
+					"#else\n"
+					"  but not this\n"
+					"#endif\n"
+					"#endif\n"
+					"#undef ONE\n"
+					"#ifdef ONE\n"
+					"  don't output\n"
+					"#endif\n"
+					"\"#error this would throw an error\"\n"
+					"#pragma ignore this\n"
+					"#line ignore this\n"
+					"#warning ignore this\n"
+					"lastword"
+					"#define ONE 1\n"
+					"#eval{ONE+2-4+len2(3,4)}\n"
+					"#lit Any old ch*rac#ers #if I {feel} #include --cheese like #en#end\n"
+					"// #if 1 comments \n"
+					"/*should pass thru #else*/\n"
+					//"#lua --lua code\n return \"hello world\" #end\n"
+					;
+				char const* str_out =
+					"\t      \n"
+					"\"#if ignore #define this stuff\"\n"
+					"ONE\n"
+					"PLUS  (1,(2,3))\n"
+					"A(1)\n"
+					"\n"
+					"  not output\n"
+					"\"#error this would throw an error\"\n"
+					"lastword0\n"
+					"Any old ch*rac#ers #if I {feel} #include --cheese like #en\n"
+					"// #if 1 comments \n"
+					"/*should pass thru #else*/\n"
+					//"#lua --lua code\n return \"hello world\" #end\n"
+				;
+				PtrSrc src(str_in);
+				Preprocessor pp(src, 0, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+		}
+	}
+}
+#endif
+
 #endif

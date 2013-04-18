@@ -16,8 +16,9 @@ namespace pr
 		template <typename Tvr, typename Tir>
 		void SphereSize(std::size_t divisions, pr::Range<Tvr>& vrange, pr::Range<Tir>& irange)
 		{
-			vrange.set(0, 3 + 10 * Pow2(2 * divisions) + 11 * Pow2(divisions));
-			irange.set(0, 3 * 10 * Pow2(2 * divisions + 1));
+			int div = value_cast<int>(divisions);
+			vrange.set(0, value_cast<Tvr>(3 + 10 * Pow2(2 * div) + 11 * Pow2(div)) );
+			irange.set(0, value_cast<Tir>(3 * 10 * Pow2(2 * div + 1))              );
 		}
 
 		namespace impl { namespace geosphere
@@ -50,11 +51,12 @@ namespace pr
 				TVertCont*        m_vcont;
 				TFaceCont*        m_fcont;
 				v4                m_radius;
-				uint              m_divisions;
+				std::size_t       m_divisions;
 			};
 
 			// Create a vertex and add it to the vertex container
-			inline pr::uint AddVertex(v4 const& norm, v2 const& uv, CreateGeosphereData& data)
+			// Returns the index position of the vertex
+			inline std::size_t AddVertex(v4 const& norm, v2 const& uv, CreateGeosphereData& data)
 			{
 				PR_ASSERT(PR_DBG, IsNormal3(norm), "");
 

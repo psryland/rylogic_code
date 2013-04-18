@@ -1,29 +1,26 @@
 //***********************************************************************
-// 'To' functions
+// 'To' conversion
 //  Copyright © Rylogic Ltd 2008
 //***********************************************************************
+
+#pragma once
+#ifndef PR_COMMON_TO_H
+#define PR_COMMON_TO_H
 
 #include <string>
 
 namespace pr
 {
-	// Template type conversions - Add overloads and specialisations as needed
-	template <typename ToType> inline ToType To(bool x)                                   { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(char x)                                   { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(short x, int radix = 10)                  { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(int x, int radix = 10)                    { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(long x, int radix = 10)                   { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(long long x)                              { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(unsigned char x, int radix = 10)          { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(unsigned short x, int radix = 10)         { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(unsigned int x, int radix = 10)           { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(unsigned long x, int radix = 10)          { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(unsigned long long x)                     { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(float x)                                  { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(double x)                                 { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(long double x)                            { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(char const* from)                         { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(wchar_t const* from)                      { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(std::string const& from)                  { static_assert(false, "No conversion from to this type available"); }
-	template <typename ToType> inline ToType To(std::wstring const& from)                 { static_assert(false, "No conversion from to this type available"); }
+	// Specialise this struct for specific conversions
+	template <typename TTo, typename TFrom> struct Convert
+	{
+		static TTo To(TFrom const&)      { static_assert(false, "No conversion from this type available"); }
+		static TTo To(TFrom const&, int) { static_assert(false, "No conversion from this type available"); }
+	};
+
+	// Convert 'from' to 'to'
+	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from)            { return Convert<TTo,TFrom>::To(from); }
+	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from, int radix) { return Convert<TTo,TFrom>::To(from, radix); }
 }
+
+#endif

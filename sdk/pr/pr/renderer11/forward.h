@@ -71,7 +71,6 @@
 #include "pr/filesys/filesys.h"
 #include "pr/storage/nugget_file/nuggetfile.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/stringconversion.h"
 #include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_helper.h"
 #include "pr/camera/camera.h"
@@ -193,45 +192,45 @@ namespace pr
 		}
 
 		// EGeom
-		#define PR_ENUM(x)\
-			x(Unknown ,= 0     )\
-			x(Vert    ,= 1 << 0) /* Object space 3D position */ \
-			x(Colr    ,= 1 << 1) /* Diffuse base colour      */ \
-			x(Norm    ,= 1 << 2) /* Object space 3D normal   */ \
-			x(Tex0    ,= 1 << 3) /* Diffuse texture          */
-		PR_DECLARE_ENUM_FLAGS(EGeom, PR_ENUM);
+		#define PR_ENUM(x) /*
+			*/x(Unknown ,= 0     ) /*
+			*/x(Vert    ,= 1 << 0) /* Object space 3D position
+			*/x(Colr    ,= 1 << 1) /* Diffuse base colour
+			*/x(Norm    ,= 1 << 2) /* Object space 3D normal
+			*/x(Tex0    ,= 1 << 3) // Diffuse texture
+		PR_DEFINE_ENUM2_FLAGS(EGeom, PR_ENUM);
 		#undef PR_ENUM
 
 		// EConstBuf
 		#define PR_ENUM(x)\
-			x(FrameConstants ,= 0)\
-			x(ModelConstants ,= 1)
-		PR_DECLARE_ENUM(EConstBuf, PR_ENUM);
+			x(FrameConstants)\
+			x(ModelConstants)
+		PR_DEFINE_ENUM1(EConstBuf, PR_ENUM);
 		#undef PR_ENUM
 
 		// EShader
 		#define PR_ENUM(x)\
-			x(TxTint         ,)\
-			x(TxTintPvc      ,)\
-			x(TxTintTex      ,)\
-			x(TxTintPvcLitTex,)
-		PR_DECLARE_ENUM(EShader, PR_ENUM);
+			x(TxTint         )\
+			x(TxTintPvc      )\
+			x(TxTintTex      )\
+			x(TxTintPvcLitTex)
+		PR_DEFINE_ENUM1(EShader, PR_ENUM);
 		#undef PR_ENUM
 
 		// ELight
 		#define PR_ENUM(x)\
-			x(Ambient     ,)\
-			x(Directional ,)\
-			x(Point       ,)\
-			x(Spot        ,)
-		PR_DECLARE_ENUM(ELight, PR_ENUM);
+			x(Ambient    )\
+			x(Directional)\
+			x(Point      )\
+			x(Spot       )
+		PR_DEFINE_ENUM1(ELight, PR_ENUM);
 		#undef PR_ENUM
 
 		// EEye
 		#define PR_ENUM(x)\
-			x(Left  ,= 0)\
-			x(Right ,= 1)
-		PR_DECLARE_ENUM(EEye, PR_ENUM);
+			x(Left )\
+			x(Right)
+		PR_DEFINE_ENUM1(EEye, PR_ENUM);
 		#undef PR_ENUM
 
 		//		namespace EQuality
@@ -319,11 +318,6 @@ namespace pr
 			explicit Evt_SceneRender(pr::rdr::Scene* scene) :m_scene(scene) {}
 		};
 	}
-
-	//To<> overloads
-	template <> inline rdr::string32 To<rdr::string32>(char const* from)     { return from; }
-	template <> inline rdr::string32 To<rdr::string32>(wchar_t const* from)  { return pr::Narrow(from, wcslen(from)); }
-
 }
 
 #endif

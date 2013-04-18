@@ -6,15 +6,14 @@
 #ifndef PR_GUI_MISC_H
 #define PR_GUI_MISC_H
 
+#include <string>
+#include <windows.h>
 #include "pr/common/min_max_fix.h"
 #include "pr/common/assert.h"
 #include "pr/common/byte_data.h"
 #include "pr/filesys/fileex.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/windows_conv.h"
 #include "pr/threads/critical_section.h"
-#include <string>
-#include <windows.h>
 
 namespace pr
 {

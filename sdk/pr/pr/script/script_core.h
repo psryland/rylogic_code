@@ -31,17 +31,17 @@ namespace pr
 		// The string type to use.
 		// 'pr::string<>' uses the short string optimisation
 		typedef pr::string<char, 32> string;
-		
+
 		// Use the stl for wide strings
 		typedef std::wstring wstring;
-		
+
 		typedef unsigned int uint;
 		typedef long long int64;
 		typedef unsigned long long uint64;
-		
+
 		inline int const*  As32(int64 const& val) { return reinterpret_cast<int const*>(&val); }
 		inline int*        As32(int64&       val) { return reinterpret_cast<int*>      (&val); }
-		
+
 		// A location within a source file
 		struct Loc
 		{
@@ -59,7 +59,7 @@ namespace pr
 			if (lhs.m_line != rhs.m_line) return lhs.m_line < rhs.m_line;
 			return lhs.m_col <= rhs.m_col;
 		}
-		
+
 		// An 8-character buffer for doing short string matches
 		struct Buf8
 		{
@@ -88,7 +88,7 @@ namespace pr
 		};
 		inline bool operator == (Buf8 const& lhs, Buf8 const& rhs) { return lhs.m_ui == rhs.m_ui; }
 		inline bool operator != (Buf8 const& lhs, Buf8 const& rhs) { return lhs.m_ui != rhs.m_ui; }
-		
+
 		// Text consumer helpers
 		struct Eat
 		{
@@ -101,7 +101,7 @@ namespace pr
 			template <typename Ptr> static void BlockComment(Ptr& ptr)      { for (char prev = 0; *ptr && !(prev == '*' && *ptr == '/'); prev = *ptr, ++ptr) {} if (*ptr) ++ptr; }
 			template <typename Ptr> static void LineComment(Ptr& ptr)       { Line(ptr, false); }
 		};
-		
+
 		// Hash helpers
 		struct Hash
 		{
@@ -128,7 +128,7 @@ namespace pr
 				return String(str.c_str());
 			}
 		};
-		
+
 		// Stick a formatted string in place of a normal string
 		// Use this instead of pr::FmtS() because its thread safe
 		inline string fmt(const char* format, ...)
@@ -140,9 +140,9 @@ namespace pr
 			va_end(args);
 			return str;
 		}
-		
+
 		// Convert a result with details message and location into a string
-		inline string ErrMsg(pr::script::EResult::Type result, char const* details, Loc const& loc)
+		inline string ErrMsg(pr::script::EResult result, char const* details, Loc const& loc)
 		{
 			return fmt(
 					"Error:\n"
@@ -151,25 +151,25 @@ namespace pr
 					"  Source: %s\n"
 					"  Line: %d\n"
 					"  Column: %d\n"
-					,pr::script::ToString(result)
+					,pr::ToString(result)
 					,details
 					,loc.m_file.c_str()
 					,loc.m_line+1
 					,loc.m_col+1);
 		}
-		
+
 		// Script exceptions
-		struct Exception :pr::Exception<pr::script::EResult::Type>
+		struct Exception :pr::Exception<pr::script::EResult>
 		{
 			Loc m_loc;
 			virtual Loc const& loc() const { return m_loc; }
 			string msg() const { return ErrMsg(code(), what(), loc()); }
-			Exception() :pr::Exception<EResult::Type>() ,m_loc() {}
-			Exception(EResult::Type result, Loc const& loc, char const* msg) :pr::Exception<EResult::Type>(result, msg) ,m_loc(loc) {}
-			Exception(EResult::Type result, Loc const& loc, string const& msg) :pr::Exception<EResult::Type>(result, msg.c_str()) ,m_loc(loc) {}
+			Exception() :pr::Exception<EResult>() ,m_loc() {}
+			Exception(EResult result, Loc const& loc, char const* msg) :pr::Exception<EResult>(result, msg) ,m_loc(loc) {}
+			Exception(EResult result, Loc const& loc, string const& msg) :pr::Exception<EResult>(result, msg.c_str()) ,m_loc(loc) {}
 		};
-		
-		// Debugging function to check the keyword hashcodes
+
+		// Debugging function to check the keyword hash codes
 		inline bool ValidateKeywordHashcodes()
 		{
 #			define PR_SCRIPT_KEYWORD(name,text,hashcode)    PR_ASSERT(PR_DBG, Hash::String(text) == hashcode, fmt("Hash value for "#name" is incorrect. Should be: 0x%08x\n", Hash::String(text)).c_str());
@@ -180,6 +180,47 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_script_script_core)
+		{
+			using namespace pr;
+			using namespace pr::script;
+
+			{//Buf8
+				Buf8 _123("123");
+				Buf8 _12345678("12345678");
+				Buf8 _678("678");
+
+				Buf8 buf;
+				PR_CHECK(buf.m_len, 0);
+				buf.push_back('1');
+				buf.push_back('2');
+				buf.push_back('3');
+				PR_CHECK(buf.size(), 3);
+				PR_CHECK(buf == _123, true);
+				PR_CHECK(buf != _12345678, true);
+				buf.push_back('4');
+				buf.push_back('5');
+				buf.push_back('6');
+				buf.push_back('7');
+				buf.push_back('8');
+				PR_CHECK(buf == _12345678, true);
+				PR_CHECK(buf[0], '1'); buf.pop_front();
+				PR_CHECK(buf[0], '2'); buf.pop_front();
+				PR_CHECK(buf[0], '3'); buf.pop_front();
+				PR_CHECK(buf[0], '4'); buf.pop_front();
+				PR_CHECK(buf[0], '5'); buf.pop_front();
+				PR_CHECK(buf == _678, true);
+			}
+		}
+	}
+}
+#endif
 #pragma warning (pop)
 
 #endif

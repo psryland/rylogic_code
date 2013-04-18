@@ -18,13 +18,6 @@ namespace pr
 		PR_ASSERT(PR_DBG, static_cast<FromType>(static_cast<ToType>(value)) == value, "data lost in cast");
 		return static_cast<ToType>(value);
 	}
-
-	// No need to check when the types are the same
-	template <typename Type>
-	inline Type value_cast(Type value)
-	{
-		return value;
-	}
 }
 
 #endif

@@ -79,6 +79,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;PR_PH_BUILD</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent />
   </ItemDefinitionGroup>
@@ -91,6 +92,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;PR_PH_BUILD</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent />
   </ItemDefinitionGroup>
@@ -107,6 +109,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;PR_PH_BUILD</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent />
   </ItemDefinitionGroup>
@@ -123,6 +126,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;PR_PH_BUILD</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent />
   </ItemDefinitionGroup>

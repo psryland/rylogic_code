@@ -118,7 +118,7 @@ bool pr::rdr::Light::Settings(char const* settings)
 		*this = light;
 		return true;
 	}
-	catch (pr::script::EResult::Type) {}
+	catch (pr::script::EResult) {}
 	return false;
 }
 	

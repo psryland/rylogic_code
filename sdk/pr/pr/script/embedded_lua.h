@@ -7,6 +7,7 @@
 
 #include "pr/script/embedded_code.h"
 #include "pr/lua/lua.h"
+// Requires lua.lib
 
 namespace pr
 {

@@ -132,9 +132,9 @@ struct MediaFileFilter
 	
 	MediaFileFilter(UserSettings const& settings)
 	:m_filter(4)
-	,m_image_extns(pr::str::ToWString<std::wstring>(settings.m_image_extns))
-	,m_video_extns(pr::str::ToWString<std::wstring>(settings.m_video_extns))
-	,m_audio_extns(pr::str::ToWString<std::wstring>(settings.m_audio_extns))
+	,m_image_extns(pr::To<std::wstring>(settings.m_image_extns))
+	,m_video_extns(pr::To<std::wstring>(settings.m_video_extns))
+	,m_audio_extns(pr::To<std::wstring>(settings.m_audio_extns))
 	,m_all_extns()
 	{
 		pr::str::Replace(m_image_extns, L"+", L"*."); pr::str::Replace(m_image_extns, L"-", L"*.");
@@ -179,7 +179,7 @@ void MainGUI::OnCommand(UINT, INT wID, HWND)
 			}
 			
 			// Open the file
-			string filepath = pr::str::ToAString<string>(path);
+			string filepath = pr::To<string>(path);
 			m_recent.Add(filepath.c_str(), true);
 			m_img->SetMedia(MediaFile(filepath));
 		}break;

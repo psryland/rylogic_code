@@ -145,9 +145,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\stat.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\maths\stringconversion.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\triangulate.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -179,6 +176,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\geometryfunctions_impl.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\maths\conversion.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

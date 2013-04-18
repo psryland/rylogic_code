@@ -13,6 +13,7 @@
 #include <locale>
 #include <vector>
 #include "pr/common/to.h"
+#include "pr/str/prstring.h"
 
 namespace pr
 {
@@ -50,43 +51,143 @@ namespace pr
 	template <std::size_t Len> inline std::wstring Widen (wchar_t const (&from)[Len]) { return Widen(from, Len); }
 	template <std::size_t Len> inline std::wstring Widen (char    const (&from)[Len]) { return Widen(from, Len); }
 
+	namespace impl
+	{
+		// Convert a signed/unsigned int to a string. buf should be at least 65 characters long
+		template <size_t Sz> static char*    itostr (long long from         , char    (&buf)[Sz], int radix) { ::_i64toa_s (from, buf, Sz, radix); return buf; }
+		template <size_t Sz> static wchar_t* itostr (long long from         , wchar_t (&buf)[Sz], int radix) { ::_i64tow_s (from, buf, Sz, radix); return buf; }
+		template <size_t Sz> static char*    uitostr(unsigned long long from, char    (&buf)[Sz], int radix) { ::_ui64toa_s(from, buf, Sz, radix); return buf; }
+		template <size_t Sz> static wchar_t* uitostr(unsigned long long from, wchar_t (&buf)[Sz], int radix) { ::_ui64tow_s(from, buf, Sz, radix); return buf; }
+	}
+
 	// To<std::string>
-	template <> inline std::string To<std::string>(unsigned long from, int radix)         { char buf[128]; _ultoa_s(from, buf, radix); return buf; }
-	template <> inline std::string To<std::string>(unsigned int from, int radix)          { return To<std::string>(static_cast<unsigned long>(from), radix); }
-	template <> inline std::string To<std::string>(unsigned short from, int radix)        { return To<std::string>(static_cast<unsigned long>(from), radix); }
-	template <> inline std::string To<std::string>(unsigned char from, int radix)         { return To<std::string>(static_cast<unsigned long>(from), radix); }
-	template <> inline std::string To<std::string>(long from, int radix)                  { char buf[128]; _ltoa_s (from, buf, radix); return buf; }
-	template <> inline std::string To<std::string>(int from, int radix)                   { return To<std::string>(static_cast<long>(from), radix); }
-	template <> inline std::string To<std::string>(short from, int radix)                 { return To<std::string>(static_cast<long>(from), radix); }
-	template <> inline std::string To<std::string>(char from)                             { return std::string(1, from); }
-	template <> inline std::string To<std::string>(bool from)                             { return from ? "true" : "false"; }
-	template <> inline std::string To<std::string>(long double from)                      { return std::to_string(from); }//char buf[_CVTBUFSIZE]; _gcvt_s(buf, from, 12); return buf; }
-	template <> inline std::string To<std::string>(double from)                           { return To<std::string>(static_cast<long double>(from)); }
-	template <> inline std::string To<std::string>(float from)                            { return To<std::string>(static_cast<long double>(from)); }
-	template <> inline std::string To<std::string>(char const* from)                      { return from; }
-	template <> inline std::string To<std::string>(std::string const& from)               { return from; }
-	template <> inline std::string To<std::string>(wchar_t const* from)                   { return Narrow(from, wcslen(from)); }
-	template <> inline std::string To<std::string>(std::wstring const& from)              { return Narrow(from.c_str(), from.size()); }
+	template <typename TFrom> struct Convert<std::string,TFrom>
+	{
+		static std::string To(bool from)                           { return from ? "true" : "false"; }
+		static std::string To(char from)                           { return std::string(1, from); }
+		static std::string To(long long from, int radix)           { char buf[128]; return impl::itostr(from, buf, radix); }
+		static std::string To(long long from)                      { return To(from, 10); }
+		static std::string To(long from, int radix)                { return To(static_cast<long long>(from), radix); }
+		static std::string To(long from)                           { return To(from, 10); }
+		static std::string To(int from, int radix)                 { return To(static_cast<long long>(from), radix); }
+		static std::string To(int from)                            { return To(from, 10); }
+		static std::string To(short from, int radix)               { return To(static_cast<long long>(from), radix); }
+		static std::string To(short from)                          { return To(from, 10); }
+		static std::string To(unsigned long long from, int radix)  { char buf[128]; return impl::uitostr(from, buf, radix); }
+		static std::string To(unsigned long long from)             { return To(from, 10); }
+		static std::string To(unsigned long from, int radix)       { return To(static_cast<unsigned long long>(from), radix); }
+		static std::string To(unsigned long from)                  { return To(from, 10); }
+		static std::string To(unsigned int from, int radix)        { return To(static_cast<unsigned long long>(from), radix); }
+		static std::string To(unsigned int from)                   { return To(from, 10); }
+		static std::string To(unsigned short from, int radix)      { return To(static_cast<unsigned long long>(from), radix); }
+		static std::string To(unsigned short from)                 { return To(from, 10); }
+		static std::string To(unsigned char from, int radix)       { return To(static_cast<unsigned long long>(from), radix); }
+		static std::string To(unsigned char from)                  { return To(from, 10); }
+		static std::string To(long double from)                    { return std::to_string(from); }
+		static std::string To(double from)                         { return To(static_cast<long double>(from)); }
+		static std::string To(float from)                          { return To(static_cast<long double>(from)); }
+		static std::string To(wchar_t const* from)                 { return Narrow(from, wcslen(from)); }
+		static std::string To(char const* from)                    { return from; }
+		static std::string To(std::string const& from)             { return from; }
+		static std::string To(std::wstring const& from)            { return Narrow(from.c_str(), from.size()); }
+	};
 
 	// To<std::wstring>
-	template <> inline std::wstring To<std::wstring>(unsigned long from, int radix)       { wchar_t buf[128]; _ultow_s(from, buf, radix); return buf; }
-	template <> inline std::wstring To<std::wstring>(unsigned int from, int radix)        { return To<std::wstring>(static_cast<unsigned long>(from), radix); }
-	template <> inline std::wstring To<std::wstring>(unsigned short from, int radix)      { return To<std::wstring>(static_cast<unsigned long>(from), radix); }
-	template <> inline std::wstring To<std::wstring>(unsigned char from, int radix)       { return To<std::wstring>(static_cast<unsigned long>(from), radix); }
-	template <> inline std::wstring To<std::wstring>(long from, int radix)                { wchar_t buf[128]; _ltow_s(from, buf, radix); return buf; }
-	template <> inline std::wstring To<std::wstring>(int from, int radix)                 { return To<std::wstring>(static_cast<long>(from), radix); }
-	template <> inline std::wstring To<std::wstring>(short from, int radix)               { return To<std::wstring>(static_cast<long>(from), radix); }
-	template <> inline std::wstring To<std::wstring>(char from)                           { return std::wstring(1, from); }
-	template <> inline std::wstring To<std::wstring>(bool from)                           { return from ? L"true" : L"false"; }
-	template <> inline std::wstring To<std::wstring>(long double from)                    { return std::to_wstring(from); }
-	template <> inline std::wstring To<std::wstring>(double from)                         { return std::to_wstring(static_cast<long double>(from)); }
-	template <> inline std::wstring To<std::wstring>(float from)                          { return std::to_wstring(static_cast<long double>(from)); }
-	template <> inline std::wstring To<std::wstring>(wchar_t const* from)                 { return from; }
-	template <> inline std::wstring To<std::wstring>(std::wstring const& from)            { return from; }
-	template <> inline std::wstring To<std::wstring>(char const* from)                    { return Widen(from, strlen(from)); }
-	template <> inline std::wstring To<std::wstring>(std::string const& from)             { return Widen(from.c_str(), from.size()); }
+	template <typename TFrom> struct Convert<std::wstring,TFrom>
+	{
+		static std::wstring To(bool from)                           { return from ? L"true" : L"false"; }
+		static std::wstring To(char from)                           { return std::wstring(1, from); }
+		static std::wstring To(long long from, int radix)           { wchar_t buf[128]; return impl::itostr(from, buf, radix); }
+		static std::wstring To(long long from)                      { return To(from, 10); }
+		static std::wstring To(long from, int radix)                { return To(static_cast<long long>(from), radix); }
+		static std::wstring To(long from)                           { return To(from, 10); }
+		static std::wstring To(int from, int radix)                 { return To(static_cast<long long>(from), radix); }
+		static std::wstring To(int from)                            { return To(from, 10); }
+		static std::wstring To(short from, int radix)               { return To(static_cast<long long>(from), radix); }
+		static std::wstring To(short from)                          { return To(from, 10); }
+		static std::wstring To(unsigned long long from, int radix)  { wchar_t buf[128]; return impl::uitostr(from, buf, radix); }
+		static std::wstring To(unsigned long long from)             { return To(from, 10); }
+		static std::wstring To(unsigned long from, int radix)       { return To(static_cast<unsigned long long>(from), radix); }
+		static std::wstring To(unsigned long from)                  { return To(from, 10); }
+		static std::wstring To(unsigned int from, int radix)        { return To(static_cast<unsigned long long>(from), radix); }
+		static std::wstring To(unsigned int from)                   { return To(from, 10); }
+		static std::wstring To(unsigned short from, int radix)      { return To(static_cast<unsigned long long>(from), radix); }
+		static std::wstring To(unsigned short from)                 { return To(from, 10); }
+		static std::wstring To(unsigned char from, int radix)       { return To(static_cast<unsigned long long>(from), radix); }
+		static std::wstring To(unsigned char from)                  { return To(from, 10); }
+		static std::wstring To(long double from)                    { return std::to_wstring(from); }
+		static std::wstring To(double from)                         { return To(static_cast<long double>(from)); }
+		static std::wstring To(float from)                          { return To(static_cast<long double>(from)); }
+		static std::wstring To(wchar_t const* from)                 { return from; }
+		static std::wstring To(char const* from)                    { return Widen(from, strlen(from)); }
+		static std::wstring To(std::string const& from)             { return Widen(from.c_str(), from.size()); }
+		static std::wstring To(std::wstring const& from)            { return from; }
+	};
+
+	// To<pr::string>
+	template <typename Char, typename TFrom, int LocalCount, bool Fixed, typename Allocator>
+	struct Convert<pr::string<Char,LocalCount,Fixed,Allocator>, TFrom>
+	{
+	private:
+		typedef pr::string<Char,LocalCount,Fixed,Allocator> pr_string;
+	public:
+		static pr_string To(bool from)                           { return from ? L"true" : L"false"; }
+		static pr_string To(char from)                           { return std::wstring(1, from); }
+		static pr_string To(long long from, int radix)           { Char buf[128]; return impl::itostr(from, buf, radix); }
+		static pr_string To(long long from)                      { return To(from, 10); }
+		static pr_string To(long from, int radix)                { return To(static_cast<long long>(from), radix); }
+		static pr_string To(long from)                           { return To(from, 10); }
+		static pr_string To(int from, int radix)                 { return To(static_cast<long long>(from), radix); }
+		static pr_string To(int from)                            { return To(from, 10); }
+		static pr_string To(short from, int radix)               { return To(static_cast<long long>(from), radix); }
+		static pr_string To(short from)                          { return To(from, 10); }
+		static pr_string To(unsigned long long from, int radix)  { wchar_t buf[128]; return impl::uitostr(from, buf, radix); }
+		static pr_string To(unsigned long long from)             { return To(from, 10); }
+		static pr_string To(unsigned long from, int radix)       { return To(static_cast<unsigned long long>(from), radix); }
+		static pr_string To(unsigned long from)                  { return To(from, 10); }
+		static pr_string To(unsigned int from, int radix)        { return To(static_cast<unsigned long long>(from), radix); }
+		static pr_string To(unsigned int from)                   { return To(from, 10); }
+		static pr_string To(unsigned short from, int radix)      { return To(static_cast<unsigned long long>(from), radix); }
+		static pr_string To(unsigned short from)                 { return To(from, 10); }
+		static pr_string To(unsigned char from, int radix)       { return To(static_cast<unsigned long long>(from), radix); }
+		static pr_string To(unsigned char from)                  { return To(from, 10); }
+		static pr_string To(long double from)                    { return std::to_wstring(from); }
+		static pr_string To(double from)                         { return To(static_cast<long double>(from)); }
+		static pr_string To(float from)                          { return To(static_cast<long double>(from)); }
+		static pr_string To(wchar_t const* from)                 { return Narrow(from, wcslen(from)); }
+		static pr_string To(char const* from)                    { return from; }
+		static pr_string To(std::string const& from)             { return from; }
+		static pr_string To(std::wstring const& from)            { return Narrow(from.c_str(), from.size()); }
+	};
 }
 
-// Can't add unittests because the unit test framework uses this header
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_str_tostring)
+		{
+			char         narr[] =  "junk_str_junk";
+			wchar_t      wide[] = L"junk_str_junk";
+			std::string  cstr   =  "junk_str_junk";
+			std::wstring wstr   = L"junk_str_junk";
+			pr::string<> pstr   =  "junk_str_junk";
 
+			PR_CHECK(pr::To<std::wstring>(narr), wstr);
+			PR_CHECK(pr::To<std::wstring>(wide), wstr);
+			PR_CHECK(pr::To<std::wstring>(cstr), wstr);
+			PR_CHECK(pr::To<std::wstring>(wstr), wstr);
+			PR_CHECK(pr::To<std::wstring>(pstr), wstr);
+
+			PR_CHECK(pr::To<std::string>(narr), cstr);
+			PR_CHECK(pr::To<std::string>(wide), cstr);
+			PR_CHECK(pr::To<std::string>(cstr), cstr);
+			PR_CHECK(pr::To<std::string>(wstr), cstr);
+			PR_CHECK(pr::To<std::string>(pstr), cstr);
+		}
+	}
+}
+#endif
 #endif

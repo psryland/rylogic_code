@@ -42,6 +42,7 @@
 #include <atlcrack.h>
 
 // pr
+#include "pr/macros/enum.h"
 #include "pr/macros/count_of.h"
 #include "pr/common/assert.h"
 #include "pr/common/exception.h"
@@ -55,7 +56,6 @@
 #include "pr/common/colour.h"
 #include "pr/common/log.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/stringconversion.h"
 #include "pr/str/prstring.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
@@ -72,22 +72,19 @@ namespace pr
 {
 	namespace app
 	{
-		namespace EResult
-		{
-			enum Type
-			{
-				Success = 0,
-				Failed  = 0x80000000,
-				StartupFailed,
-				SettingsNotFound,
-				SettingsOutOfDate,
-			};
-		}
-		
-		typedef pr::Exception<EResult::Type> Exception;
+		#define PR_ENUM(x)\
+			x(Success           ,= 0          )\
+			x(Failed            ,= 0x80000000 )\
+			x(StartupFailed     ,             )\
+			x(SettingsNotFound  ,             )\
+			x(SettingsOutOfDate ,             )
+		PR_DEFINE_ENUM2(EResult, PR_ENUM);
+		#undef PR_ENUM
+
+		typedef pr::Exception<EResult> Exception;
 		typedef pr::string<wchar_t> wstring;
 		typedef pr::string<char>    string;
-		
+
 		template <typename DerivedGUI, typename Main, typename MessageLoop> struct MainGUI;
 		template <typename UserSettings, typename MainGUI> struct Main;
 		CAppModule& Module();

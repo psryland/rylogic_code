@@ -4,7 +4,7 @@
 #include "unittest++/1.3/src/unittest++.h"
 #include "pr/common/assert.h"
 #include "pr/str/prstring.h"
-#include "pr/str/wstring.h"
+#include "pr/str/tostring.h"
 #include "pr/str/prstdstring.h"
 #include <string>
 
@@ -563,17 +563,17 @@ SUITE(PRStringTests)
 		std::wstring wstr   = L"junk_str_junk";
 		pr::string<> pstr   =  "junk_str_junk";
 		
-		CHECK(pr::str::ToWString<std::wstring>(narr) == wstr);
-		CHECK(pr::str::ToWString<std::wstring>(wide) == wstr);
-		CHECK(pr::str::ToWString<std::wstring>(cstr) == wstr);
-		CHECK(pr::str::ToWString<std::wstring>(wstr) == wstr);
-		CHECK(pr::str::ToWString<std::wstring>(pstr) == wstr);
+		CHECK(pr::To<std::wstring>(narr) == wstr);
+		CHECK(pr::To<std::wstring>(wide) == wstr);
+		CHECK(pr::To<std::wstring>(cstr) == wstr);
+		CHECK(pr::To<std::wstring>(wstr) == wstr);
+		CHECK(pr::To<std::wstring>(pstr) == wstr);
 		
-		CHECK(pr::str::ToAString<std::string>(narr) == cstr);
-		CHECK(pr::str::ToAString<std::string>(wide) == cstr);
-		CHECK(pr::str::ToAString<std::string>(cstr) == cstr);
-		CHECK(pr::str::ToAString<std::string>(wstr) == cstr);
-		CHECK(pr::str::ToAString<std::string>(pstr) == cstr);
+		CHECK(pr::To<std::string>(narr) == cstr);
+		CHECK(pr::To<std::string>(wide) == cstr);
+		CHECK(pr::To<std::string>(cstr) == cstr);
+		CHECK(pr::To<std::string>(wstr) == cstr);
+		CHECK(pr::To<std::string>(pstr) == cstr);
 	}
 	// PrStdString *****************************************************************************
 	TEST(PrStdString)

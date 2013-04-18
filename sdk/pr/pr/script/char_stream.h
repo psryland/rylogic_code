@@ -282,4 +282,106 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_script_char_stream)
+		{
+			using namespace pr;
+			using namespace pr::script;
+
+			{//StringSrc
+				char const* str = "This is a stream of characters\n";
+				PtrSrc src(str);
+				for (;*str; ++str, ++src)
+					PR_CHECK(*src, *str);
+				PR_CHECK(*src, 0);
+			}
+			{//FileSrc
+				char const* str = "This is a stream of characters\n";
+				char const* filepath = "test_file_source.pr_script";
+				{
+					std::ofstream file(filepath);
+					file << str;
+				}
+				{
+					FileSrc src(filepath);
+					for (; *str; ++str, ++src)
+						PR_CHECK(*src, *str);
+					PR_CHECK(*src, 0);
+				}
+				{
+					pr::filesys::EraseFile<std::string>(filepath);
+					PR_CHECK(!pr::filesys::FileExists(filepath), true);
+				}
+			}
+			{//Buffer
+				char const* str1 = "1234567890";
+				PtrSrc src(str1);
+		
+				Buffer<> buf(src);                      PR_CHECK(buf.empty(), true);
+				PR_CHECK(*buf  , '1');                  PR_CHECK(buf.empty(), true);
+				PR_CHECK(buf[0], '1');                  PR_CHECK(buf.size(), 1U);
+				PR_CHECK(buf[1], '2');                  PR_CHECK(buf.size(), 2U);
+				PR_CHECK(buf.match(str1, 4), true);     PR_CHECK(buf.size(), 4U);
+
+				++buf;                                  PR_CHECK(buf.size(), 3U);
+				PR_CHECK(*buf  , '2');                  PR_CHECK(buf.size(), 3U);
+				PR_CHECK(buf[0], '2');                  PR_CHECK(buf.size(), 3U);
+				PR_CHECK(buf[1], '3');                  PR_CHECK(buf.size(), 3U);
+				PR_CHECK(buf.match(&str1[1], 4), true); PR_CHECK(buf.size(), 4U);
+				PR_CHECK(!buf.match("235"), true);      PR_CHECK(buf.size(), 4U);
+
+				buf += 4;                               PR_CHECK(buf.empty(), true);
+				PR_CHECK(!buf.match("6780"), true);     PR_CHECK(buf.size(), 4U);
+			}
+			{//History
+				char const* str_in = "12345678";
+				PtrSrc src(str_in);
+				History<4> hist(src);   PR_CHECK(pr::str::Equal(hist.history(), "")    , true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "1")   , true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "12")  , true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "123") , true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "1234"), true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "2345"), true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "3456"), true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "4567"), true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "5678"), true);
+				++hist;                 PR_CHECK(pr::str::Equal(hist.history(), "5678"), true); // ++hist doesn't call next(), so the history isn't changed
+			}
+			{//TxfmSrc
+				char const* str_in = "CaMeLCasE";
+				char const* str_lwr = "camelcase";
+				char const* str_upr = "CAMELCASE";
+				{ // no change
+					PtrSrc src(str_in);
+					TxfmSrc nch(src);
+					for (char const* out = str_in; *out; ++nch, ++out)
+						PR_CHECK(*nch, *out);
+					PR_CHECK(*nch, 0);
+				}
+				{ // lower case
+					PtrSrc src(str_in);
+					TxfmSrc lwr(src, ::tolower);
+					for (char const* out = str_lwr; *out; ++lwr, ++out)
+						PR_CHECK(*lwr, *out);
+					PR_CHECK(*lwr, 0);
+				}
+				{ // upper case
+					PtrSrc src(str_in);
+					TxfmSrc upr(src);
+					upr.set_transform(::toupper);
+					for (char const* out = str_upr; *out; ++upr, ++out)
+						PR_CHECK(*upr, *out);
+					PR_CHECK(*upr, 0);
+				}
+			}
+		}
+	}
+}
+#endif
+
 #endif

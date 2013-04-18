@@ -10,6 +10,7 @@
 #include <vector>
 #include <windows.h>
 #include <process.h>
+#include <functional>
 #include "pr/macros/stringise.h"
 #include "pr/common/assert.h"
 #include "pr/threads/event.h"
@@ -23,8 +24,11 @@ namespace pr
 	{
 		class ThreadPool
 		{
-			typedef void (*TaskFunc)(void* ctx, void* data);
-			
+		public:
+			//typedef void (*TaskFunc)(void* ctx, void* data);
+			typedef std::function<void(void*,void*)> TaskFunc;//(void* ctx, void* data)
+
+		private:
 			// Creates a unique static reference to 'this_' thread pool.
 			// Each thread pool has it's own static reference so the ThreadPool is not a singleton.
 			struct StaticRef
@@ -47,7 +51,7 @@ namespace pr
 				TaskFunc m_func;
 				void*    m_ctx;
 				void*    m_data;
-				Task() :m_func(0) ,m_ctx(0) ,m_data(0) {}
+				Task() :m_func(nullptr) ,m_ctx(0) ,m_data(0) {}
 				Task(TaskFunc func, void* ctx, void* data) :m_func(func) ,m_ctx(ctx) ,m_data(data) {}
 			};
 			typedef pr::threads::ItemQueue<Task> TaskQueue;
@@ -152,5 +156,64 @@ namespace pr
 }
 
 #pragma warning (default: 4355) // 'this' used in constructor
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		struct ThreadpoolTest
+		{
+			pr::threads::Event m_go;
+			pr::threads::Event m_stop;
+			volatile long m_running;
+			volatile long m_complete;
+			
+			ThreadpoolTest()
+			:m_go(TRUE, FALSE)
+			,m_stop(TRUE, FALSE)
+			,m_running()
+			,m_complete()
+			{}
+		};
+
+		PRUnitTest(pr_threads_thread_pool)
+		{
+			using namespace pr;
+
+			std::unique_ptr<ThreadpoolTest> tp(new ThreadpoolTest());
+			std::function<void(void*,void*)> task = [&](void*,void*)
+				{
+					tp->m_go.Wait();   ::InterlockedIncrement(&tp->m_running);
+					tp->m_stop.Wait(); ::InterlockedDecrement(&tp->m_running);
+				};
+
+			pr::threads::ThreadPool thread_pool;
+			PR_CHECK(thread_pool.ThreadCount() >= 1, true);
+
+			for (int i = 0; i != thread_pool.ThreadCount(); ++i)
+				thread_pool.QueueTask(task, 0, 0);
+
+			for (int i = 0; i != 2; ++i)
+				thread_pool.QueueTask(task, 0, 0);
+
+			tp->m_go.Signal();
+			for (int i = 0; i != 50 && tp->m_running != thread_pool.ThreadCount(); ++i) { Sleep(1); }
+			PR_CHECK(tp->m_running             , thread_pool.ThreadCount());
+			PR_CHECK(thread_pool.RunningTasks(), tp->m_running);
+			PR_CHECK(thread_pool.QueuedTasks() , 2);
+			PR_CHECK(thread_pool.Busy()        , true);
+
+			tp->m_stop.Signal();
+			for (int i = 0; i != 50 && tp->m_complete != thread_pool.ThreadCount() + 2; ++i) { Sleep(1); }
+			PR_CHECK(tp->m_running, 0);
+			PR_CHECK(thread_pool.RunningTasks(), tp->m_running);
+			PR_CHECK(thread_pool.QueuedTasks(), 0);
+			PR_CHECK(!thread_pool.Busy(), true);
+		}
+	}
+}
+#endif
 
 #endif

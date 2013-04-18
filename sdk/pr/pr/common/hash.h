@@ -70,7 +70,7 @@ namespace pr
 			{
 				// hash over the range of bytes pointed to by *src
 				uint8 const* s = reinterpret_cast<uint8 const*>(first);
-				uint8 const* s_end = s + sizeof(*first);
+				uint8 const* s_end = s + sizeof(uint8);
 				for (; s != s_end; ++s)
 					h = table[(h ^ *s) & 0xff] ^ (h >> 8);
 			}
@@ -95,7 +95,7 @@ namespace pr
 				// hash over the range of bytes pointed to by *src
 				Term const& elem = *src;
 				uint8 const* s = reinterpret_cast<uint8 const*>(&elem);
-				uint8 const* s_end = s + sizeof(Term);
+				uint8 const* s_end = s + sizeof(uint8);
 				for (; s != s_end; ++s)
 					h = table[(h ^ *s) & 0xff] ^ (h >> 8);
 			}
@@ -147,7 +147,7 @@ namespace pr
 		inline HashValue HashC(wchar_t const* src)               { return HashC(src, 0, -1); }
 
 		// Hash a char string converting it's characters to lower case first
-		inline HashValue HashLwr(char const* src, char term = 0, HashValue hash = -1)
+		inline HashValue HashLwr(char const* src, char term, HashValue hash)
 		{
 			struct Lowerer
 			{
@@ -158,6 +158,8 @@ namespace pr
 			} lowerer(src);
 			return Hash(lowerer, term, hash);
 		}
+		inline HashValue HashLwr(char const* src, char term) { return HashLwr(src, term, -1); }
+		inline HashValue HashLwr(char const* src)            { return HashLwr(src, 0, -1); }
 
 		// http://www.azillionmonkeys.com/qed/hash.html, © Copyright 2004-2008 by Paul Hsieh
 		inline uint FastHash(void const* data, uint len, uint hash)

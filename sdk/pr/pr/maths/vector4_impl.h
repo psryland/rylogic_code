@@ -169,4 +169,45 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_maths_vector4)
+		{
+			v4 V1 = {1,2,3,4};
+			V1 = pr::v4Zero;
+			PR_CHECK(IsZero3(V1), true);
+			PR_CHECK(IsZero4(V1), true);
+			PR_CHECK(FEqlZero3(V1), true);
+			PR_CHECK(FEqlZero4(V1), true);
+
+			V1.set(4,2,-5,1);
+			PR_CHECK(Length3(V1) != Length4(V1), true);
+			PR_CHECK(IsNormal3(V1), false);
+			PR_CHECK(IsNormal4(V1), false);
+
+			V1.w = 0.0f;
+			v4 V2 = V1;
+			Normalise3(V2);
+			PR_CHECK(FEql3(GetNormal3(V1), V2), true);
+
+			V1.w = 1.0f;
+			v4 V3 = V1;
+			Normalise4(V3);
+			PR_CHECK(FEql4(GetNormal4(V1), V3), true);
+
+			V1.set(-2,  4,  2,  6);
+			V2.set(3, -5,  2, -4);
+			m4x4 a2b = CrossProductMatrix4x4(V1);
+			v4 V4 = a2b * V2; V4;
+			V3 = Cross3(V1, V2);
+			PR_CHECK(FEql3(V4, V3), true);
+		}
+	}
+}
+#endif
+
 #endif

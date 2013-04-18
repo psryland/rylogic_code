@@ -2,6 +2,7 @@
 // Script charactor source
 //  Copyright © Rylogic Ltd 2007
 //**********************************
+#pragma once
 #ifndef PR_SCRIPT_EMBEDDED_CODE_H
 #define PR_SCRIPT_EMBEDDED_CODE_H
 

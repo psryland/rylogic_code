@@ -649,9 +649,258 @@ namespace pr
 
 #pragma warning (pop)
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_str_prstringcore)
+		{
+			using namespace pr;
+			using namespace pr::str;
+
+			{// Empty
+				char            narr[] = "";
+				std::wstring    wstr   = L"str";
+				PR_CHECK(Empty(narr), true);
+				PR_CHECK(Empty(wstr), false);
+			}
+			{//Length
+				char            narr[] = "length7";
+				wchar_t         wide[] = L"length7";
+				std::string     cstr   = "length7";
+				std::wstring    wstr   = L"length7";
+				PR_CHECK(Length(narr), size_t(7));
+				PR_CHECK(Length(wide), size_t(7));
+				PR_CHECK(Length(cstr), size_t(7));
+				PR_CHECK(Length(wstr), size_t(7));
+			}
+			{//Equal
+				char            narr[] = "str";
+				wchar_t         wide[] = L"str";
+				std::string     cstr   = "str1";
+				std::wstring    wstr   = L"str";
+				PR_CHECK( Equal(narr, narr) &&  Equal(narr, wide) && !Equal(narr, cstr) &&  Equal(narr, wstr), true);
+				PR_CHECK( Equal(wide, narr) &&  Equal(wide, wide) && !Equal(wide, cstr) &&  Equal(wide, wstr), true);
+				PR_CHECK(!Equal(cstr, narr) && !Equal(cstr, wide) &&  Equal(cstr, cstr) && !Equal(cstr, wstr), true);
+				PR_CHECK( Equal(wstr, narr) &&  Equal(wstr, wide) && !Equal(wstr, cstr) &&  Equal(wstr, wstr), true);
+			}
+			{//EqualI
+				char            narr[] = "StR";
+				wchar_t         wide[] = L"sTr";
+				std::string     cstr   = "sTR";
+				std::wstring    wstr   = L"STr";
+				PR_CHECK(EqualI(narr, narr) && EqualI(narr, wide) && EqualI(narr, cstr) && EqualI(narr, wstr), true);
+				PR_CHECK(EqualI(wide, narr) && EqualI(wide, wide) && EqualI(wide, cstr) && EqualI(wide, wstr), true);
+				PR_CHECK(EqualI(cstr, narr) && EqualI(cstr, wide) && EqualI(cstr, cstr) && EqualI(cstr, wstr), true);
+				PR_CHECK(EqualI(wstr, narr) && EqualI(wstr, wide) && EqualI(wstr, cstr) && EqualI(wstr, wstr), true);
+			}
+			{//EqualN
+				char            narr[] =  "str0";
+				wchar_t         wide[] = L"str1";
+				std::string     cstr   =  "str2";
+				std::wstring    wstr   = L"str3";
+				PR_CHECK(EqualN(narr, narr, 3) &&  EqualN(narr, narr, 4) &&  EqualN(narr, narr, 5), true);
+				PR_CHECK(EqualN(narr, wide, 3) && !EqualN(narr, wide, 4) && !EqualN(narr, wide, 5), true);
+				PR_CHECK(EqualN(narr, cstr, 3) && !EqualN(narr, cstr, 4) && !EqualN(narr, cstr, 5), true);
+				PR_CHECK(EqualN(narr, wstr, 3) && !EqualN(narr, wstr, 4) && !EqualN(narr, wstr, 5), true);
+				PR_CHECK(EqualN(narr,  "str0") && !EqualN(narr,  "str"), true);
+				PR_CHECK(EqualN(wide, L"str1") && !EqualN(wide, L"str"), true);
+				PR_CHECK(EqualN(cstr,  "str2") && !EqualN(cstr,  "str"), true);
+				PR_CHECK(EqualN(wstr, L"str3") && !EqualN(wstr, L"str"), true);
+			}
+			{//EqualNI
+				char            narr[] = "sTr0";
+				wchar_t         wide[] = L"Str1";
+				std::string     cstr   = "stR2";
+				std::wstring    wstr   = L"sTR3";
+				PR_CHECK(EqualNI(narr, narr, 3) &&  EqualNI(narr, narr, 4) &&  EqualNI(narr, narr, 5), true);
+				PR_CHECK(EqualNI(narr, wide, 3) && !EqualNI(narr, wide, 4) && !EqualNI(narr, wide, 5), true);
+				PR_CHECK(EqualNI(narr, cstr, 3) && !EqualNI(narr, cstr, 4) && !EqualNI(narr, cstr, 5), true);
+				PR_CHECK(EqualNI(narr, wstr, 3) && !EqualNI(narr, wstr, 4) && !EqualNI(narr, wstr, 5), true);
+				PR_CHECK(EqualNI(narr,  "str0") && !EqualNI(narr,  "str"), true);
+				PR_CHECK(EqualNI(wide, L"str1") && !EqualNI(wide, L"str"), true);
+				PR_CHECK(EqualNI(cstr,  "str2") && !EqualNI(cstr,  "str"), true);
+				PR_CHECK(EqualNI(wstr, L"str3") && !EqualNI(wstr, L"str"), true);
+			}
+			{//Resize
+				char            narr[4] = {'a','a','a','a'};
+				wchar_t         wide[4] = {L'a',L'a',L'a',L'a'};
+				std::string     cstr    = "aaaa";
+				std::wstring    wstr    = L"aaaa";
+				Resize(narr, 2); Resize(narr, 3, 'b'); PR_CHECK(Equal(narr, "aab"), true);
+				Resize(wide, 2); Resize(wide, 3, 'b'); PR_CHECK(Equal(wide, "aab"), true);
+				Resize(cstr, 2); Resize(cstr, 3, 'b'); PR_CHECK(Equal(cstr, "aab"), true);
+				Resize(wstr, 2); Resize(wstr, 3, 'b'); PR_CHECK(Equal(wstr, "aab"), true);
+			}
+			{//Assign
+				char*           src0 = "str";
+				std::string     src1 = "str";
+				char            narr[4];
+				wchar_t         wide[4];
+				std::string     cstr;
+				std::wstring    wstr;
+				Assign(src0, src0 + 3, 0, narr, 4);             PR_CHECK(Equal(narr, "str"), true);
+				Assign(src1.begin(), src1.end(), 0, wide, 4);   PR_CHECK(Equal(wide, "str"), true);
+				Assign(src0, src0 + 3, 0, cstr);                PR_CHECK(Equal(cstr, "str"), true);
+				Assign(src0, src0 + 3, 0, wstr);                PR_CHECK(Equal(wstr, "str"), true);
+			}
+			{//FindChar
+				std::string src = "str";
+				wchar_t ch = L't';
+				PR_CHECK(*FindChar(src.begin(), src.end(), ch), 't');
+				PR_CHECK(*FindChar(src.c_str(), ch)           , 't');
+			}
+			{//FindStr
+				char src[] = "string";
+				PR_CHECK(FindStr(src, src+sizeof(src), "in") , &src[3]);
+				PR_CHECK(FindStr(src, "in")                  , &src[3]);
+			}
+			{//FindFirst
+				char         narr[] = "AaBbAaBb";
+				wchar_t      wide[] = L"AaBbAaBb";
+				std::string  cstr   = "AaBbAaBb";
+				std::wstring wstr   = L"AaBbAaBb";
+				PR_CHECK(Equal(FindFirst(narr, IsOneOf<>("bB")), "BbAaBb"), true);
+				PR_CHECK(Equal(FindFirst(wide, NotOneOf<>("AaB")), "bAaBb"), true);
+				PR_CHECK(*FindFirst(narr, IsOneOf<>("c")) == 0, true);
+				PR_CHECK(FindFirst(cstr.begin(), cstr.end(), IsOneOf<>("b")) - cstr.begin()   , 3);
+				PR_CHECK(FindFirst(wstr.begin(), wstr.end(), NotOneOf<>("Aab")) - wstr.begin(), 2);
+				PR_CHECK(wstr.end() == FindFirst(wstr.begin(), wstr.end(), NotOneOf<>("AabB")), true);
+			}
+			{//FindLast
+				char         narr[] = "AaBbAaBb";
+				wchar_t      wide[] = L"AaBbAaBb";
+				std::string  cstr   = "AaBbAaBb";
+				std::wstring wstr   = L"AaBbAaBb";
+				PR_CHECK(Equal(FindLast(narr, IsOneOf<>("bB")), "b"), true);
+				PR_CHECK(Equal(FindLast(wide, NotOneOf<>("ABb")), "aBb"), true);
+				PR_CHECK(*FindLast(narr, IsOneOf<>("c")) == 0, true);
+				PR_CHECK(FindLast(cstr.begin(), cstr.end(), IsOneOf<>("B")) - cstr.begin()    ,6);
+				PR_CHECK(FindLast(wstr.begin(), wstr.end(), NotOneOf<>("Bab")) - wstr.begin() ,4);
+				PR_CHECK(wstr.end() == FindLast(wstr.begin(), wstr.end(), NotOneOf<>("AabB")), true);
+			}
+			{//FindFirstOf
+				char         narr[] = "AaAaAa";
+				wchar_t      wide[] = L"AaAaAa";
+				std::string  cstr   = "AaAaAa";
+				std::wstring wstr   = L"AaAaAa";
+				PR_CHECK(Equal(FindFirstOf(narr, "A"), "AaAaAa"), true);
+				PR_CHECK(Equal(FindFirstOf(wide, "a"), "aAaAa"), true);
+				PR_CHECK(*FindFirstOf(wide, "B") == 0, true);
+				PR_CHECK(FindFirstOf(cstr.begin(), cstr.end(), "A") - cstr.begin(), 0);
+				PR_CHECK(FindFirstOf(wstr.begin(), wstr.end(), "a") - wstr.begin(), 1);
+				PR_CHECK(wstr.end() == FindFirstOf(wstr.begin(), wstr.end(), "B"), true);
+			}
+			{//FindLastOf
+				char         narr[] = "AaAaAa";
+				wchar_t      wide[] = L"AaAaa";
+				std::string  cstr   = "AaAaaa";
+				std::wstring wstr   = L"Aaaaa";
+				PR_CHECK(Equal(FindLastOf(narr, L"A"), "Aa"), true);
+				PR_CHECK(Equal(FindLastOf(wide, L"A"), "Aaa"), true);
+				PR_CHECK(*FindLastOf(wide, L"B") == 0, true);
+				PR_CHECK(FindLastOf(cstr.begin(), cstr.end(), "A") - cstr.begin(), 2);
+				PR_CHECK(FindLastOf(wstr.begin(), wstr.end(), "A") - wstr.begin(), 0);
+				PR_CHECK(wstr.end() == FindLastOf(wstr.begin(), wstr.end(), "B"), true);
+			}
+			{//FindFirstNotOf
+				char         narr[] = "junk_str_junk";
+				wchar_t      wide[] = L"junk_str_junk";
+				std::string  cstr   = "junk_str_junk";
+				std::wstring wstr   = L"junk_str_junk";
+				PR_CHECK(Equal(FindFirstNotOf(narr, "_knuj"), "str_junk"), true);
+				PR_CHECK(Equal(FindFirstNotOf(wide, "_knuj"), "str_junk"), true);
+				PR_CHECK(*FindFirstNotOf(wide, "_knujstr") == 0, true);
+				PR_CHECK(FindFirstNotOf(cstr.begin(), cstr.end(), "_knuj") - cstr.begin(), 5);
+				PR_CHECK(FindFirstNotOf(wstr.begin(), wstr.end(), "_knuj") - wstr.begin(), 5);
+				PR_CHECK(wstr.end() == FindFirstNotOf(wstr.begin(), wstr.end(), "_knujstr"), true);
+			}
+			{//FindLastNotOf
+				char         narr[] = "junk_str_junk";
+				wchar_t      wide[] = L"junk_str_junk";
+				std::string  cstr   = "junk_str_junk";
+				std::wstring wstr   = L"junk_str_junk";
+				PR_CHECK(Equal(FindLastNotOf(narr, "_knuj"), "r_junk"), true);
+				PR_CHECK(Equal(FindLastNotOf(wide, "_knuj"), "r_junk"), true);
+				PR_CHECK(*FindLastNotOf(wide, "_knujstr") == 0, true);
+				PR_CHECK(FindLastNotOf(cstr.begin(), cstr.end(), "_knuj") - cstr.begin() ,7);
+				PR_CHECK(FindLastNotOf(wstr.begin(), wstr.end(), "_knuj") - wstr.begin() ,7);
+				PR_CHECK(wstr.end() == FindLastNotOf(wstr.begin(), wstr.end(), "_knujstr"), true);
+			}
+			{//UpperCase
+				wchar_t src0[] = L"caSe";
+				std::string dest0;
+				PR_CHECK(Equal(UpperCase(src0, dest0), L"CASE"), true);
+				PR_CHECK(Equal(UpperCase(src0), L"CASE"), true);
+
+				wchar_t src1[] = L"caSe";
+				wchar_t dest1[5];
+				PR_CHECK(Equal(UpperCase(src1, dest1, 5), L"CASE"), true);
+				PR_CHECK(Equal(UpperCase(src1), L"CASE"), true);
+			}
+			{//LowerCase
+				wchar_t src0[] = L"caSe";
+				std::string dest0;
+				PR_CHECK(Equal(LowerCase(src0, dest0), L"case"), true);
+				PR_CHECK(Equal(LowerCase(src0), L"case"), true);
+
+				wchar_t src1[] = L"caSe";
+				wchar_t dest1[5];
+				PR_CHECK(Equal(LowerCase(src1, dest1, 5), L"case"), true);
+				PR_CHECK(Equal(LowerCase(src1), L"case"), true);
+			}
+			{//SubStr
+				char    narr[] = "SubstringExtract";
+				wchar_t wide[] = L"SubstringExtract";
+
+				std::string out0;
+				SubStr(narr, 3, 6, out0);
+				PR_CHECK(Equal(out0, "string"), true);
+
+				char out1[7];
+				SubStr(wide, 3, 6, out1);
+				PR_CHECK(Equal(out1, "string"), true);
+			}
+			{//Split
+				typedef std::vector<std::string> StrVec;
+				char str[] = "1,,2,3,4";
+				char res[][2] = {"1","","2","3","4"};
+
+				StrVec buf;
+				pr::str::Split(str, ",", std::back_inserter(buf));
+				for (StrVec::const_iterator i = buf.begin(), iend = buf.end(); i != iend; ++i)
+					PR_CHECK(Equal(*i, res[i - buf.begin()]), true);
+			}
+			{//Trim
+				char         narr[] = " \t,1234\n";
+				wchar_t      wide[] = L" \t,1234\n";
+				std::string  cstr   = " \t,1234\n";
+				std::wstring wstr   = L" \t,1234\n";
+				PR_CHECK(Equal(Trim(narr, IsWhiteSpace<char>    ,true, true), ",1234"), true);
+				PR_CHECK(Equal(Trim(wide, IsWhiteSpace<wchar_t> ,true, true), L",1234"), true);
+				PR_CHECK(Equal(Trim(cstr, IsWhiteSpace<char>    ,true, false), ",1234\n"), true);
+				PR_CHECK(Equal(Trim(wstr, IsWhiteSpace<wchar_t> ,false, true), " \t,1234"), true);
+			}
+			{//TrimChars
+				char         narr[] = " \t,1234\n";
+				wchar_t      wide[] = L" \t,1234\n";
+				std::string  cstr   = " \t,1234\n";
+				std::wstring wstr   = L" \t,1234\n";
+				PR_CHECK(Equal(TrimChars(narr,  " \t,\n" ,true  ,true),  "1234"), true);
+				PR_CHECK(Equal(TrimChars(wide, L" \t,\n" ,true  ,true), L"1234"), true);
+				PR_CHECK(Equal(TrimChars(cstr,  " \t,\n" ,true  ,false),  "1234\n"), true);
+				PR_CHECK(Equal(TrimChars(wstr, L" \t,\n" ,false ,true), L" \t,1234"), true);
+			}
+		}
+	}
+}
+#endif
+
 #ifdef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT
 #endif
-	
+
 #endif

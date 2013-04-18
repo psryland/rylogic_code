@@ -198,6 +198,20 @@ namespace pr
 				Abs(lhs.m_centre.y - rhs.m_centre.y) <= (lhs.m_radius.y + rhs.m_radius.y) &&
 				Abs(lhs.m_centre.z - rhs.m_centre.z) <= (lhs.m_radius.z + rhs.m_radius.z);
 	}
-}//namespace pr
+}
 
-#endif//PR_MATHS_BOUNDING_BOX_IMPL_H
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_maths_boundingbox)
+		{
+		
+		}
+	}
+}
+#endif
+
+#endif

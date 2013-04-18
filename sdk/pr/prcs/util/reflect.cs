@@ -21,7 +21,11 @@ namespace pr.util
 			if (mc != null)
 				return mc.Method.Name;
 
-			return ((MemberExpression) expression.Body).Member.Name;
+			var me = expression.Body as MemberExpression;
+			if (me != null)
+				return me.Member.Name;
+
+			throw new NotImplementedException("Unknown expression type");
 		}
 
 		/// <summary>
@@ -29,15 +33,19 @@ namespace pr.util
 		/// Example: Reflect&lt;DateTime&gt;.MemberName(s => s.Ticks) returns "Ticks" </summary>
 		public static string MemberName(Expression<Action<T>> expression)
 		{
-			var mce = expression.Body as MethodCallExpression;
-			if (mce != null)
-				return mce.Method.Name;
-			
 			var ue = expression.Body as UnaryExpression;
 			if (ue != null && ue.NodeType == ExpressionType.Convert)
 				return ((MemberExpression) ue.Operand).Member.Name;
-			
-			return ((MemberExpression) expression.Body).Member.Name;
+
+			var mce = expression.Body as MethodCallExpression;
+			if (mce != null)
+				return mce.Method.Name;
+
+			var me = expression.Body as MemberExpression;
+			if (me != null)
+				return me.Member.Name;
+
+			throw new NotImplementedException("Unknown expression type");
 		}
 	}
 }

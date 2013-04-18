@@ -75,7 +75,7 @@ pr::m4x4 pr::rdr::Light::Projection(float centre_dist) const
 	x(FOff ,= 0x14C9C72F)\
 	x(Shdw ,= 0x0FF86A40)\
 	x(On   ,= 0x0E59DCC9)
-PR_DECLARE_ENUM(ELightKW, PR_ENUM);
+PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 #undef PR_ENUM
 
 // Check the hash values are correct
@@ -145,6 +145,6 @@ bool pr::rdr::Light::Settings(char const* settings)
 		*this = light;
 		return true;
 	}
-	catch (pr::script::EResult::Type) {}
+	catch (pr::script::EResult) {}
 	return false;
 }

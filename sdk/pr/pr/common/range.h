@@ -2,15 +2,16 @@
 // Range
 //  Copyright © Rylogic Ltd 2011
 //************************************************************************
-#ifndef PR_RANGE_H
-#define PR_RANGE_H
-	
-//"pr/common/assert.h" should be included prior to this for pr asserts
+
+#pragma once
+#ifndef PR_COMMON_RANGE_H
+#define PR_COMMON_RANGE_H
+
 #ifndef PR_ASSERT
 #   define PR_ASSERT_DEFINED
 #   define PR_ASSERT(grp, exp, str)
 #endif
-	
+
 namespace pr
 {
 	// A range representation
@@ -124,10 +125,114 @@ namespace pr
 		else if (rhs.m_end   > range.m_end  ) { range.m_end   = rhs.m_end; }
 	}
 }
-	
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(TestName)
+		{
+			using namespace pr;
+			{
+				typedef pr::Range<int> IRange;
+				IRange r0 = IRange::make(0,5);
+				IRange r1 = IRange::make(5,10);
+				IRange r2 = IRange::make(3,7);
+				IRange r3 = IRange::make(0,10);
+
+				PR_CHECK(r0.empty(), false);
+				PR_CHECK(r0.size() , 5U);
+
+				PR_CHECK(r0.contains(-1), false);
+				PR_CHECK(r0.contains(0) , true );
+				PR_CHECK(r0.contains(4) , true );
+				PR_CHECK(r0.contains(5) , false);
+				PR_CHECK(r0.contains(6) , false);
+
+				PR_CHECK(r3.contains(r0), true  );
+				PR_CHECK(r3.contains(r1), true  );
+				PR_CHECK(r3.contains(r2), true  );
+				PR_CHECK(r2.contains(r0), false );
+				PR_CHECK(r2.contains(r1), false );
+				PR_CHECK(r2.contains(r3), false );
+				PR_CHECK(r1.contains(r0), false );
+				PR_CHECK(r0.contains(r1), false );
+
+				PR_CHECK(r3.intersects(r0), true );
+				PR_CHECK(r3.intersects(r1), true );
+				PR_CHECK(r3.intersects(r2), true );
+				PR_CHECK(r2.intersects(r0), true );
+				PR_CHECK(r2.intersects(r1), true );
+				PR_CHECK(r2.intersects(r3), true );
+				PR_CHECK(r1.intersects(r0), false);
+				PR_CHECK(r0.intersects(r1), false);
+
+				r0.shift(3);
+				r1.shift(-2);
+				PR_CHECK(r0 == r1, true);
+
+				PR_CHECK(r3.mid() == r2.mid(), true);
+
+				r0.shift(-3);
+				r0.resize(3);
+				PR_CHECK(r0.size(), 3U);
+			}
+			{//IterRange
+				typedef std::vector<int> Vec;
+				typedef pr::Range<Vec::const_iterator> IRange;
+				Vec vec; for (int i = 0; i != 10; ++i) vec.push_back(i);
+
+				IRange r0 = IRange::make(vec.begin(),vec.begin()+5);
+				IRange r1 = IRange::make(vec.begin()+5,vec.end());
+				IRange r2 = IRange::make(vec.begin()+3,vec.begin()+7);
+				IRange r3 = IRange::make(vec.begin(),vec.end());
+
+				PR_CHECK(r0.empty() ,false);
+				PR_CHECK(r0.size()  ,5U);
+
+				PR_CHECK(r0.contains(vec.begin())     ,true  );
+				PR_CHECK(r0.contains(vec.begin() + 4) ,true  );
+				PR_CHECK(r0.contains(vec.begin() + 5) ,false );
+				PR_CHECK(r0.contains(vec.end())       ,false );
+
+				PR_CHECK(r3.contains(r0), true  );
+				PR_CHECK(r3.contains(r1), true  );
+				PR_CHECK(r3.contains(r2), true  );
+				PR_CHECK(r2.contains(r0), false );
+				PR_CHECK(r2.contains(r1), false );
+				PR_CHECK(r2.contains(r3), false );
+				PR_CHECK(r1.contains(r0), false );
+				PR_CHECK(r0.contains(r1), false );
+
+				PR_CHECK(r3.intersects(r0), true  );
+				PR_CHECK(r3.intersects(r1), true  );
+				PR_CHECK(r3.intersects(r2), true  );
+				PR_CHECK(r2.intersects(r0), true  );
+				PR_CHECK(r2.intersects(r1), true  );
+				PR_CHECK(r2.intersects(r3), true  );
+				PR_CHECK(r1.intersects(r0), false );
+				PR_CHECK(r0.intersects(r1), false );
+
+				r0.shift(3);
+				r1.shift(-2);
+				PR_CHECK(r0 == r1, true);
+
+				PR_CHECK(r3.mid() == r2.mid(), true);
+
+				r0.shift(-3);
+				r0.resize(3);
+				PR_CHECK(r0.size(), 3U);
+			}
+		}
+	}
+}
+#endif
+
 #ifdef PR_ASSERT_DEFINED
 #   undef PR_ASSERT_DEFINED
 #   undef PR_ASSERT
 #endif
-	
+
 #endif

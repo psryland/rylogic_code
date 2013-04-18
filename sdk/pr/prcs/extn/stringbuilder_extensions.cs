@@ -13,8 +13,7 @@ namespace pr.extn
 		/// <summary>Append a bunch of stuff</summary>
 		public static StringBuilder Append(this StringBuilder sb, params object[] parts)
 		{
-			foreach (var p in parts)
-				sb.Append(p.ToString());
+			foreach (var p in parts) sb.Append(p.ToString());
 			return sb;
 		}
 

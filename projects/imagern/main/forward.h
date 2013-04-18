@@ -39,6 +39,7 @@
 #include "pr/maths/maths.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
+#include "pr/str/tostring.h"
 #include "pr/macros/count_of.h"
 #include "pr/gui/recent_files.h"
 #include "pr/gui/misc.h"

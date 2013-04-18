@@ -114,6 +114,63 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		namespace evt
+		{
+			struct Evt
+			{
+				mutable int m_order;
+				Evt() :m_order(0) {}
+			};
+			struct Thing0 :pr::events::IRecv<Evt>
+			{
+				int m_recv;
+				Thing0() :pr::events::IRecv<Evt>(0) ,m_recv() {}
+				void OnEvent(Evt const& e) { m_recv = ++e.m_order; }
+			};
+			struct Thing1 :pr::events::IRecv<Evt>
+			{
+				int m_recv;
+				Thing1() :pr::events::IRecv<Evt>(1) ,m_recv() {}
+				void OnEvent(Evt const& e) { m_recv = ++e.m_order; }
+			};
+		}
+
+		PRUnitTest(pr_common_events)
+		{
+			{// IRecvEvents
+				{
+					evt::Thing0 thing0;
+					evt::Thing1 thing1;
+					pr::events::Send(evt::Evt());
+					PR_CHECK(thing0.m_recv, 2);
+					PR_CHECK(thing1.m_recv, 1);
+				}
+				{
+					evt::Thing1 thing1;
+					evt::Thing0 thing0;
+					pr::events::Send(evt::Evt());
+					PR_CHECK(thing0.m_recv, 2);
+					PR_CHECK(thing1.m_recv, 1);
+				}
+				{
+					evt::Thing0 thing0;
+					evt::Thing1 thing1;
+					pr::events::Send(evt::Evt(), false);
+					PR_CHECK(thing0.m_recv, 1);
+					PR_CHECK(thing1.m_recv, 2);
+				}
+			}
+		}
+	}
+}
+#endif
+
 #pragma warning (pop)
 
 #endif
