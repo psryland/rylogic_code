@@ -139,10 +139,9 @@ namespace pr
 			}
 			if (meth.m_tex_diffuse)
 			{
-				TextureDesc const& info = meth.m_tex_diffuse->m_info;
-				key   |= info.SortId << sortkey::TextureIdOfs;
-				alpha |= info.Alpha;
-				PR_ASSERT(PR_DBG_RDR, info.SortId < sortkey::MaxTextureId, "texture sort id overflow");
+				key   |= meth.m_tex_diffuse->m_sort_id << sortkey::TextureIdOfs;
+				alpha |= meth.m_tex_diffuse->m_has_alpha;
+				PR_ASSERT(PR_DBG_RDR, meth.m_tex_diffuse->m_sort_id < sortkey::MaxTextureId, "texture sort id overflow");
 			}
 				
 			//rs::State const* rsb = mat.m_rsb.Find(D3DRS_ALPHABLENDENABLE);

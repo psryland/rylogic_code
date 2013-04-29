@@ -58,7 +58,7 @@ namespace pr
 				StructureByteStride = sizeof(Elem);            // For structured buffers
 			}
 		};
-		
+
 		// Vertex buffer flavour of a buffer description
 		struct VBufferDesc :BufferDesc
 		{
@@ -70,7 +70,7 @@ namespace pr
 			:BufferDesc(Sz, data, usage, bind_flags, cpu_access, res_flag)
 			{}
 		};
-		
+
 		// Index buffer flavour of a buffer description
 		struct IBufferDesc :BufferDesc
 		{
@@ -86,7 +86,7 @@ namespace pr
 			,Format(format)
 			{}
 		};
-		
+
 		// Constants buffer flavour of a buffer description
 		struct CBufferDesc :BufferDesc
 		{
@@ -95,7 +95,7 @@ namespace pr
 			:BufferDesc(size, (byte*)0, usage, bind_flags, cpu_access, res_flag)
 			{}
 		};
-		
+
 		// Multi sampling description
 		struct MultiSamp :DXGI_SAMPLE_DESC
 		{
@@ -112,19 +112,10 @@ namespace pr
 				Quality = quality;
 			}
 		};
-		
+
 		// Texture buffer description
 		struct TextureDesc :D3D11_TEXTURE2D_DESC
 		{
-			// These members should be set by the user when creating the texture.
-			bool        Alpha;         // True if the texture contains alpha
-			UINT        Pitch;         // The size in rows of one row in the texture
-			UINT        PitchPerSlice; // The total size in bytes for the surface. For 3D textures this is the size per 'page'
-			
-			// These members are set when the texture is created
-			RdrId       TexSrcId;      // An id identifying the source this texture was created from
-			SortKeyId   SortId;        // A sort key component for this texture
-			
 			TextureDesc()
 			:D3D11_TEXTURE2D_DESC()
 			{
@@ -136,8 +127,6 @@ namespace pr
 				InitDefaults();
 				Width          = pitch;
 				Height         = height;
-				Pitch          = pitch;
-				PitchPerSlice  = pitch * height;
 				MipLevels      = mips;
 				Format         = format;
 			}
@@ -145,29 +134,35 @@ namespace pr
 			{
 				Width          = 0;
 				Height         = 0;
-				Pitch          = 0;
-				PitchPerSlice  = 0;
 				MipLevels      = 1;
 				ArraySize      = 1;
 				Format         = DXGI_FORMAT_R8G8B8A8_UNORM;
-				Alpha          = false;
 				SampleDesc     = MultiSamp();
 				Usage          = D3D11_USAGE_DEFAULT;
 				BindFlags      = D3D11_BIND_UNORDERED_ACCESS;
 				CPUAccessFlags = 0;
 				MiscFlags      = 0;
-				TexSrcId       = 0;
-				SortId         = 0;
 			}
 		};
-		
+
 		// Texture sampler description
 		struct SamplerDesc :D3D11_SAMPLER_DESC
 		{
-			SamplerDesc()
-			:D3D11_SAMPLER_DESC()
+			static SamplerDesc ClampSampler() { return SamplerDesc(); }
+			static SamplerDesc WrapSampler()  { return SamplerDesc(D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP); }
+			
+			SamplerDesc(
+				D3D11_TEXTURE_ADDRESS_MODE addrU = D3D11_TEXTURE_ADDRESS_CLAMP,
+				D3D11_TEXTURE_ADDRESS_MODE addrV = D3D11_TEXTURE_ADDRESS_CLAMP,
+				D3D11_TEXTURE_ADDRESS_MODE addrW = D3D11_TEXTURE_ADDRESS_CLAMP,
+				D3D11_FILTER filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR)
+				:D3D11_SAMPLER_DESC()
 			{
 				InitDefaults();
+				Filter         = filter;
+				AddressU       = addrU;
+				AddressV       = addrV;
+				AddressW       = addrW;
 			}
 			void InitDefaults()
 			{
@@ -205,7 +200,7 @@ namespace pr
 				SysMemSlicePitch = sizeof(InitType);
 			}
 		};
-		
+
 		// Rasterizer description (render states)
 		struct RasterizerDesc :D3D11_RASTERIZER_DESC
 		{
@@ -237,7 +232,7 @@ namespace pr
 			}
 		};
 
-		// Shader resource view
+		// Shader resource view description
 		struct ShaderResViewDesc :D3D11_SHADER_RESOURCE_VIEW_DESC
 		{
 			ShaderResViewDesc()
@@ -251,6 +246,34 @@ namespace pr
 			}
 		};
 
+		// Render target view description
+		struct RenderTargetViewDesc :D3D11_RENDER_TARGET_VIEW_DESC
+		{
+			RenderTargetViewDesc()
+			:D3D11_RENDER_TARGET_VIEW_DESC()
+			{}
+			explicit RenderTargetViewDesc(DXGI_FORMAT format, D3D11_RTV_DIMENSION view_dim = D3D11_RTV_DIMENSION_TEXTURE2D)
+			:D3D11_RENDER_TARGET_VIEW_DESC()
+			{
+				Format = format;
+				ViewDimension = view_dim;
+			}
+		};
+
+		// Depth stencil view description
+		struct DepthStencilViewDesc :D3D11_DEPTH_STENCIL_VIEW_DESC
+		{
+			DepthStencilViewDesc()
+			:D3D11_DEPTH_STENCIL_VIEW_DESC()
+			{}
+			explicit DepthStencilViewDesc(DXGI_FORMAT format, D3D11_DSV_DIMENSION view_dim = D3D11_DSV_DIMENSION_TEXTURE2D)
+			:D3D11_DEPTH_STENCIL_VIEW_DESC()
+			{
+				Format = format;
+				ViewDimension = view_dim;
+			}
+		};
+		
 		// Display mode description
 		struct DisplayMode :DXGI_MODE_DESC
 		{
@@ -277,7 +300,7 @@ namespace pr
 				Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
 			}
 		};
-		
+
 		// Viewport description
 		struct Viewport :D3D11_VIEWPORT
 		{
@@ -333,6 +356,9 @@ namespace pr
 				pr::FRect r = pr::FRect::make(rect);
 				set(r.X(), r.Y(), r.SizeX(), r.SizeY());
 			}
+
+			size_t WidthUI() const  { return static_cast<size_t>(Width); }
+			size_t HeightUI() const { return static_cast<size_t>(Height); }
 		};
 	}
 }

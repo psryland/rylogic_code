@@ -47,27 +47,26 @@ namespace pr
 		public:
 			TextureManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
 			~TextureManager();
-			
-			// Create a texture instance.
-			// 'id' is the id to assign to this texture, use AutoId if you want a new instance regardless of whether there is an existing one or not.
-			// If 'id' already exists, create a new texture instance (with a new id) that points to the same d3d texture as the existing one.
-			// If 'id' does not exist, create a new d3d texture initialised with 'data','data_size' and a new texture instance that points to this d3d texture.
-			// 'pitch' is the size in bytes of the stride of 'data'.
-			// If 'data' or 'data_size' is 0, the texture is left uninitialised.
-			// Throws if creation fails. On success returns a pointer to the created texture.
-			pr::rdr::Texture2DPtr CreateTexture2D(RdrId id, pr::rdr::TextureDesc const& desc, void const* data = 0);
-			
+
+			// Create a new texture instance.
+			// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
+			// 'text_desc' is a description of the texture to be created
+			// 'data' is an optional pointer to the texture data with which to initialise the texture with
+			// 'samp_desc' is an optional sampler description used to initialise the sampler state to use with this texture
+			Texture2DPtr CreateTexture2D(RdrId id, pr::rdr::TextureDesc tex_desc, pr::rdr::SamplerDesc const& sam_desc = SamplerDesc(), void const* data = 0);
+
+			// Create a new texture instance that uses the same d3d texture as an existing texture.
+			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
+			// 'existing' is an existing texture instance to clone
+			// 'sam_desc' is an optional sampler state description to set on the clone.
+			Texture2DPtr CloneTexture2D(RdrId id, Texture2DPtr const& existing, pr::rdr::SamplerDesc const* sam_desc = nullptr);
+
 			// Create a texture instance from a dds file.
 			// 'filepath' can be a special string identifying a stock texture (e.g.  #black, #white, #checker, etc)
-			// If 'id' does not exist, creates a d3d texture corresponding to 'filepath' (loads if not already loaded)
-			// If 'id' already exists, create a new texture instance (with a new id) that points to the same d3d texture as the existing texture.
-			// If 'id' does not exist, get a d3d texture corresponding to 'filepath' (load if not already loaded) and 
-			//  a new texture instance that points to this d3d texture.
-			// If width/height are 0 the dimensions of the image file are used as the texture size.
 			// Throws if creation fails. On success returns a pointer to the created texture.
-			pr::rdr::Texture2DPtr CreateTexture2D(RdrId id, pr::rdr::TextureDesc const& desc, wchar_t const* filepath);
-			pr::rdr::Texture2DPtr CreateTexture2D(RdrId id, pr::rdr::TextureDesc const& desc, char const* filepath); // define this so that the void const* version doesn't get used by accident
-			
+			pr::rdr::Texture2DPtr CreateTexture2D(RdrId id, pr::rdr::SamplerDesc const& sam_desc, wchar_t const* filepath);
+			pr::rdr::Texture2DPtr CreateTexture2D(RdrId id, pr::rdr::SamplerDesc const& sam_desc, char const* filepath);
+
 			// Return a pointer to an existing texture
 			pr::rdr::Texture2DPtr FindTexture(RdrId id) const
 			{

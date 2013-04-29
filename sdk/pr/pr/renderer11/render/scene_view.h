@@ -20,13 +20,13 @@ namespace pr
 			float m_fovY;         // FOV
 			float m_aspect;       // Aspect ratio = width / height
 			float m_centre_dist;  // Distance to the centre of the frustum
+			float m_near;         // The distance to the near plane
+			float m_far;          // The distance to the far plane
 			bool  m_orthographic; // True for orthographic projection
 
 			SceneView();
 			SceneView(pr::m4x4 const& c2w, float fovY, float aspect, float centre_dist, bool orthographic);
 			SceneView(pr::Camera const& cam);
-			float NearPlane() const   { return m_centre_dist * 0.01f; }
-			float FarPlane() const    { return m_centre_dist * 100.0f; }
 			pr::v4 FocusPoint() const { return m_c2w.pos - m_c2w.z * m_centre_dist; }
 			void UpdateCameraToScreen();
 

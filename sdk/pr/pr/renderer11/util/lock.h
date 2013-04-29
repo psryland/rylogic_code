@@ -37,21 +37,21 @@ namespace pr
 		//
 		//  Read this: http://msdn.microsoft.com/en-us/library/windows/desktop/bb205132(v=vs.85).aspx
 		//
-		// If the app needs to use ID3D10Device::CopyResource or ID3D10Device::CopySubresourceRegion to copy GPU output back to 
-		// CPU accessible memory, it needs 2 be done frames before calling Map on the result of the copy to prevent any performance
-		// loss (i.e. CPU waits for GPU to do the copy, then GPU waits for CPU to finish the Map()/Unmap())
-		//  
+		// If the app needs to use ID3D10Device::CopyResource or ID3D10Device::CopySubresourceRegion to copy GPU output back to
+		// CPU accessible memory, it needs to be done 2 frames before calling Map on the result of the copy to prevent any
+		// performance loss (i.e. CPU waits for GPU to do the copy, then GPU waits for CPU to finish the Map()/Unmap())
 
 		// A scope object for locking (or "mapping") a resource so that the CPU can access it
 		// Mapping:   Gets a pointer to the data contained in a subresource, and denies the GPU access to that subresource.
 		// Unmapping: Invalidate the pointer to a resource and re-enable the GPU's access to that resource.
 		struct Lock :private D3D11_MAPPED_SUBRESOURCE
 		{
-			D3DPtr<ID3D11DeviceContext> m_dc;    // Locking is done by the DC.
-			D3DPtr<ID3D11Resource>      m_res;   // The resource to be locked
-			UINT                        m_sub;   // e.g. mip level (use 0 for V/I buffers)
-			Range                       m_range; // The range of elements locked.
-			
+			D3DPtr<ID3D11DeviceContext> m_dc;     // Locking is done by the DC.
+			D3DPtr<ID3D11Resource>      m_res;    // The resource to be locked
+			UINT                        m_sub;    // e.g. mip level (use 0 for V/I buffers)
+			std::size_t                 m_stride; // The size of each element (in bytes)
+			Range                       m_range;  // The range of the data intended for modification (in units of stride bytes)
+
 			// Provide a 'dc' if you want to use a deferred context to lock the resource.
 			// This will override the 'dc' passed to Map by the renderer manager classes (which will pass in the immediate dc)
 			// Note: that to map a deferred context, you can only use write discard or write no overwrite.
@@ -60,18 +60,19 @@ namespace pr
 			,m_dc()
 			,m_res(0)
 			,m_sub(0)
+			,m_stride()
 			,m_range()
 			{}
-			Lock(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Resource> const& res, UINT sub, D3D11_MAP map_type, UINT flags)
+			Lock(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Resource> const& res, UINT sub, D3D11_MAP map_type, UINT flags, std::size_t stride, Range range = RangeZero)
 			{
 				PR_ASSERT(PR_DBG_RDR, (flags & D3D11_MAP_FLAG_DO_NOT_WAIT) == 0, "Don't use this constructor with this flag");
-				Map(dc, res, sub, map_type, flags);
+				Map(dc, res, sub, map_type, flags, stride, range);
 			}
 			~Lock()
 			{
 				Unmap();
 			}
-			
+
 			// Returns a pointer to the mapped memory
 			// SDK Notes: *Don't read from a subresource mapped for writing*
 			//  When you pass D3D11_MAP_WRITE, D3D11_MAP_WRITE_DISCARD, or D3D11_MAP_WRITE_NO_OVERWRITE to the MapType parameter,
@@ -80,30 +81,38 @@ namespace pr
 			//  allocated with PAGE_WRITECOMBINE, and your app must honor all restrictions that are associated with such memory.
 			// The SDK recommends using volatile pointers (but struct assignment for volatiles requires cv-qualified assignment operators)
 			// Just don't read from ptr()...
-			template <typename Type> Type* ptr()
-			{
-				return static_cast<Type*>(pData);
-			}
-			
+			pr::uint8 const* data() const                    { return static_cast<pr::uint8 const*>(pData) + m_stride * m_range.m_begin; }
+			pr::uint8*       data()                          { return static_cast<pr::uint8*>      (pData) + m_stride * m_range.m_begin; }
+			pr::uint8 const* end() const                     { return static_cast<pr::uint8 const*>(pData) + m_stride * m_range.m_end; }
+			pr::uint8*       end()                           { return static_cast<pr::uint8*>      (pData) + m_stride * m_range.m_end; }
+			template <typename Type> Type const* ptr() const { return static_cast<Type const*>(pData) + m_range.m_begin; }
+			template <typename Type> Type* ptr()             { return static_cast<Type*>      (pData) + m_range.m_begin; }
+			template <typename Type> Type const* end() const { return static_cast<Type const*>(pData) + m_range.m_end; }
+			template <typename Type> Type* end()             { return static_cast<Type*>      (pData) + m_range.m_end; }
+
 			// For mapped textures
 			UINT RowPitch() const   { return pr::type_ptr<D3D11_MAPPED_SUBRESOURCE>(this)->RowPitch; }
 			UINT DepthPitch() const { return pr::type_ptr<D3D11_MAPPED_SUBRESOURCE>(this)->DepthPitch; }
-			
+
 			// Maps a resource to CPU accessable memory
 			// Only returns false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' is used in 'flags'
-			bool Map(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Resource> const& res, UINT sub, D3D11_MAP map_type, UINT flags)
+			// Mapping a resource maps the entire thing. The 'range' and 'stride' parameters
+			// just allow passing of the size of the mapped data around with the lock object.
+			bool Map(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Resource> const& res, UINT sub, D3D11_MAP map_type, UINT flags, std::size_t stride, Range range)
 			{
 				PR_ASSERT(PR_DBG_RDR, m_dc == 0, "Already mapped");
 				m_dc = dc;
-				
+
 				// Do not wait means the caller expects the map to potentially not to work
 				HRESULT hr = m_dc->Map(res.m_ptr, sub, map_type, flags, this);
 				if ((flags&D3D11_MAP_FLAG_DO_NOT_WAIT) == 0) pr::Throw(hr);
-				m_res = res;
-				m_sub = sub;
+
+				m_res    = res;
+				m_sub    = sub;
+				m_stride = stride;
+				m_range  = range;
 				return pr::Succeeded(hr);
 			}
-			
 			void Unmap()
 			{
 				if (!m_res) return;
@@ -112,6 +121,20 @@ namespace pr
 				m_res = 0;
 				m_dc = 0;
 			}
+		};
+		template <typename TType> struct LockT :Lock
+		{
+			LockT(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Resource> const& res, UINT sub, D3D11_MAP map_type, UINT flags, Range range = RangeZero)
+			:Lock(dc, res, sub, map_type, flags, sizeof(TType), range)
+			{}
+			bool Map(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Resource> const& res, UINT sub, D3D11_MAP map_type, UINT flags, Range range = RangeZero)
+			{
+				return Lock::Map(dc, res, sub, map_type, flags, sizeof(TType), range);
+			}
+			TType const* ptr() const { return Lock::ptr<TType>(); }
+			TType*       ptr()       { return Lock::ptr<TType>(); }
+			TType const* end() const { return Lock::end<TType>(); }
+			TType*       end()       { return Lock::end<TType>(); }
 		};
 
 		// Model Lock - an object for scoped locking of a model vertex and
@@ -123,14 +146,10 @@ namespace pr
 			ModelPtr m_model;        // Pointer to the model whose buffers we're locking
 			Lock&    m_vlock;        // The vertex buffer lock for the model
 			Lock&    m_ilock;        // The index buffer lock for the model
-			Range    m_vrange;       // The editable range of the model vertices
-			Range    m_irange;       // The editable range of the model indices
 
 			MLock(ModelPtr& model, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0);
 			MLock(ModelPtr& model, Lock& vlock, Lock& ilock, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0);
-			MLock(ModelPtr& model, Range const& vrange, Range const& irange, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0);
-			MLock(ModelPtr& model, Lock& vlock, Lock& ilock, Range const& vrange, Range const& irange, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0);
-			
+
 			MLock(MLock const&); // no copying
 			MLock& operator=(MLock const&);
 

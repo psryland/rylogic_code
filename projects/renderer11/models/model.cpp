@@ -14,13 +14,13 @@
 using namespace pr::rdr;
 
 pr::rdr::Model::Model()
-:m_model_buffer()
-,m_vrange()
-,m_irange()
-,m_nuggets()
-,m_bbox(pr::BBoxReset)
-,m_name()
-,m_dbg_flags(0)
+	:m_model_buffer()
+	,m_vrange()
+	,m_irange()
+	,m_nuggets()
+	,m_bbox(pr::BBoxReset)
+	,m_name()
+	,m_dbg_flags(0)
 {}
 pr::rdr::Model::~Model()
 {
@@ -28,38 +28,38 @@ pr::rdr::Model::~Model()
 }
 
 // Access to the vertex/index buffers
-bool pr::rdr::Model::MapVerts(pr::rdr::Lock& lock, D3D11_MAP map_type, uint flags, pr::rdr::Range v_range)
+bool pr::rdr::Model::MapVerts(Lock& lock, D3D11_MAP map_type, uint flags, Range vrange)
 {
-	if (v_range == pr::rdr::RangeZero) v_range  = m_vrange;
-	else v_range.shift((int)m_vrange.m_begin);
-	return m_model_buffer->MapVerts(lock, map_type, flags, v_range);
+	if (vrange == RangeZero) vrange  = m_vrange;
+	else vrange.shift((int)m_vrange.m_begin);
+	return m_model_buffer->MapVerts(lock, map_type, flags, vrange);
 }
-bool pr::rdr::Model::MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type, uint flags, pr::rdr::Range i_range)
+bool pr::rdr::Model::MapIndices(Lock& lock, D3D11_MAP map_type, uint flags, Range irange)
 {
-	if (i_range == RangeZero) i_range  = m_irange;
-	else                      i_range.shift((int)m_irange.m_begin);
-	return m_model_buffer->MapIndices(lock, map_type, flags, i_range);
+	if (irange == RangeZero) irange  = m_irange;
+	else irange.shift((int)m_irange.m_begin);
+	return m_model_buffer->MapIndices(lock, map_type, flags, irange);
 }
 
 // Call to create a render nugget from a range within this model that uses 'material'
 // Ranges are model relative, i.e. the first vert in the model is range [0,1)
-void pr::rdr::Model::CreateNugget(pr::rdr::DrawMethod const& meth, D3D11_PRIMITIVE_TOPOLOGY prim_type, Range const* v_range, Range const* i_range)
+void pr::rdr::Model::CreateNugget(pr::rdr::DrawMethod const& meth, D3D11_PRIMITIVE_TOPOLOGY prim_type, Range const* vrange_, Range const* irange_)
 {
 	PR_ASSERT(PR_DBG_RDR, meth.m_shader != 0, "The draw method must contain a shader");
 
 	Range vrange, irange;
-	if (v_range) { vrange = *v_range; vrange.shift((int)m_vrange.m_begin); PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, vrange), "This range exceeds the size of this model"); }
+	if (vrange_) { vrange = *vrange_; vrange.shift((int)m_vrange.m_begin); PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, vrange), "This range exceeds the size of this model"); }
 	else         { vrange = m_vrange; }
-	if (i_range) { irange = *i_range; irange.shift((int)m_irange.m_begin); PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, irange), "This range exceeds the size of this model"); }
+	if (irange_) { irange = *irange_; irange.shift((int)m_irange.m_begin); PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, irange), "This range exceeds the size of this model"); }
 	else         { irange = m_irange; }
-	
+
 	// Verify the ranges do not overlap existing nuggets, that's probably an error
 	#if PR_DBG_RDR
 	PR_ASSERT(PR_DBG_RDR, irange.empty() == vrange.empty(), "Illogical combination of Irange and Vrange");
 	for (TNuggetChain::const_iterator i = m_nuggets.begin(), iend = m_nuggets.end(); i != iend; ++i)
 		PR_ASSERT(PR_DBG_RDR, !Intersect(irange, i->m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
 	#endif
-	
+
 	if (!irange.empty())
 	{
 		m_nuggets.push_back(*m_model_buffer->m_mdl_mgr->m_alex_nugget.New());

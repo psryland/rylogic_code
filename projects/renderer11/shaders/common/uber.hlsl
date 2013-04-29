@@ -39,7 +39,7 @@ struct VS_INPUT
 };
 
 // Vertex output format
-struct VS_OUTPUT
+struct PS_INPUT
 {
 	EXPAND(float4 ss_pos  :SV_Position ;,PR_RDR_SHADER_VSOUT_SSPOS4)
 	EXPAND(float4 ws_pos  :Position1   ;,PR_RDR_SHADER_VSOUT_WSPOS4)
@@ -56,9 +56,9 @@ struct PS_OUTPUT
 
 // Main vertex shader
 #if PR_RDR_SHADER_VS
-VS_OUTPUT main(VS_INPUT In)
+PS_INPUT main(VS_INPUT In)
 {
-	VS_OUTPUT Out;
+	PS_INPUT Out;
 	EXPAND(float4 ms_pos  = float4(In.pos ,1) ;,PR_RDR_SHADER_VSIN_POS3 )
 	EXPAND(float4 ms_norm = float4(In.norm,0) ;,PR_RDR_SHADER_VSIN_NORM3)
 
@@ -66,7 +66,13 @@ VS_OUTPUT main(VS_INPUT In)
 	EXPAND(Out.ss_pos  = mul(m_o2s ,ms_pos ) ;,PR_RDR_SHADER_TXFM  )
 	EXPAND(Out.ws_pos  = mul(m_o2w ,ms_pos ) ;,PR_RDR_SHADER_TXFMWS)
 	EXPAND(Out.ws_norm = mul(m_o2w ,ms_norm) ;,PR_RDR_SHADER_TXFMWS)
-
+	const int C = 1;
+	const float Near = 0.01;
+	const float Far = 100000000.0;
+	//Out.ss_pos.z = log(C*Out.ss_pos.z + 1) / log(C*Far + 1) * Out.ss_pos.w;
+    //Out.ss_pos.z = 2.0*log(Out.ss_pos.w/Near)/log(Far/Near) * Out.ss_pos.w; 
+    //Out.ss_pos.z = 2.0*log(Out.ss_pos.z/Near)/log(Far/Near) ;//* Out.ss_pos.w; 
+	
 	// Tinting
 	EXPAND(Out.diff0 = m_tint ;,PR_RDR_SHADER_TINT0)
 
@@ -82,7 +88,7 @@ VS_OUTPUT main(VS_INPUT In)
 
 // Main pixel shader
 #if PR_RDR_SHADER_PS
-PS_OUTPUT main(VS_OUTPUT In)
+PS_OUTPUT main(PS_INPUT In)
 {
 	PS_OUTPUT Out;
 	Out.diff0 = float4(1,1,1,1);
@@ -117,9 +123,9 @@ PS_OUTPUT main(VS_OUTPUT In)
 
 // Stereo triangle geometry shader
 [maxvertexcount(6)]
-void main(triangle VS_OUTPUT In[3], inout TriangleStream<VS_OUTPUT> TriStream)
+void main(triangle PS_INPUT In[3], inout TriangleStream<PS_INPUT> TriStream)
 {
-	VS_OUTPUT Out;
+	PS_INPUT Out;
 	float4x4 w2s;
 
 	// Left

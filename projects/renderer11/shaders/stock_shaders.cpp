@@ -61,7 +61,14 @@ void Tint(BaseInstance const& inst, CBufModel& cb)
 // Set the texture properties
 void Tex0(DrawMethod const& meth, CBufModel& cb)
 {
-	cb.m_tex2surf0 = meth.m_tex_diffuse ? meth.m_tex_diffuse->m_t2s : pr::m4x4Identity;
+	if (meth.m_tex_diffuse != nullptr)
+	{
+		cb.m_tex2surf0 = meth.m_tex_diffuse->m_t2s;
+	}
+	else
+	{
+		cb.m_tex2surf0 = pr::m4x4Identity;
+	}
 }
 
 // TxTint *************************************************************
@@ -83,7 +90,10 @@ struct TxTint :BaseShader
 		CBufModel cb = {};
 		Txfm(inst, scene.m_view, cb);
 		Tint(inst, cb);
-		*Lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
+		{
+			LockT<CBufModel> lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
+			*lock.ptr() = cb;
+		}
 		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
 	}
 	explicit TxTint(ShaderManager* mgr) :BaseShader(mgr) {}
@@ -108,7 +118,10 @@ struct TxTintPvc :BaseShader
 		CBufModel cb = {};
 		Txfm(inst, scene.m_view, cb);
 		Tint(inst, cb);
-		*Lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
+		{
+			LockT<CBufModel> lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
+			*lock.ptr() = cb;
+		}
 		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
 	};
 	explicit TxTintPvc(ShaderManager* mgr) :BaseShader(mgr) {}
@@ -135,21 +148,26 @@ struct TxTintTex :BaseShader
 	}
 	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{
-		TxTintTex const* me = static_cast<TxTintTex const*>(nugget.m_draw.m_shader.m_ptr);
-		
 		// Fill out the model constants buffer and bind it to the VS stage
 		CBufModel cb = {};
 		Txfm(inst, scene.m_view, cb);
 		Tint(inst, cb);
 		Tex0(nugget.m_draw, cb);
-		*Lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
-		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
-		
-		// Set the texture and sampler
-		if (nugget.m_draw.m_tex_diffuse != nullptr)
 		{
-			dc->PSSetShaderResources(0, 1, &nugget.m_draw.m_tex_diffuse->m_srv.m_ptr);
-			dc->PSSetSamplers(0, 1, &me->m_samp_state.m_ptr);
+			LockT<CBufModel> lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
+			*lock.ptr() = cb;
+		}
+
+		// Set constants for the vertex shader
+		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
+
+		// Set constants for the pixel shader
+		auto& tex_diffuse = nugget.m_draw.m_tex_diffuse;
+		if (tex_diffuse != nullptr)
+		{
+			// Set the shader resource view of the texture and the texture sampler
+			dc->PSSetShaderResources(0, 1, &tex_diffuse->m_srv.m_ptr);
+			dc->PSSetSamplers(0, 1, &tex_diffuse->m_samp.m_ptr);
 		}
 	};
 	explicit TxTintTex(ShaderManager* mgr) :BaseShader(mgr) {}
@@ -158,8 +176,6 @@ struct TxTintTex :BaseShader
 // TxTintPvcLitTex ***********************************************************
 struct TxTintPvcLitTex :BaseShader
 {
-	D3DPtr<ID3D11SamplerState> m_samp_state;
-	
 	static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
 	{
 		// Create the shader
@@ -168,31 +184,31 @@ struct TxTintPvcLitTex :BaseShader
 		
 		pr::RefPtr<TxTintTex> shdr = sm.CreateShader<TxTintPvcLitTex>(EShader::TxTintPvcLitTex, TxTintPvcLitTex::Setup, &vsdesc, &psdesc, "txfm_tint_pvc_lit_tex");
 		CreateCBufModel(device, shdr->m_cbuf);
-	
-		// Create a texture sampler
-		SamplerDesc sdesc;
-		pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_samp_state.m_ptr));
-		PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_samp_state, "tex0 sampler"));
 	}
 	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{
-		TxTintPvcLitTex const* me = static_cast<TxTintPvcLitTex const*>(nugget.m_draw.m_shader.m_ptr);
-		
 		// Fill out the model constants buffer and bind it to the VS stage
 		CBufModel cb = {};
 		Txfm(inst, scene.m_view, cb);
 		Tint(inst, cb);
 		Tex0(nugget.m_draw, cb);
-		*Lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0).ptr<CBufModel>() = cb;
-		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
-		
-		// Set the texture and sampler
-		if (nugget.m_draw.m_tex_diffuse != nullptr)
 		{
-			dc->PSSetShaderResources(0, 1, &nugget.m_draw.m_tex_diffuse->m_srv.m_ptr);
-			dc->PSSetSamplers(0, 1, &me->m_samp_state.m_ptr);
+			LockT<CBufModel> lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
+			*lock.ptr() = cb;
 		}
-	};
+
+		// Set constants for the vertex shader
+		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
+
+		// Set constants for the pixel shader
+		auto& tex_diffuse = nugget.m_draw.m_tex_diffuse;
+		if (tex_diffuse != nullptr)
+		{
+			// Set the shader resource view of the texture and the texture sampler
+			dc->PSSetShaderResources(0, 1, &tex_diffuse->m_srv.m_ptr);
+			dc->PSSetSamplers(0, 1, &tex_diffuse->m_samp.m_ptr);
+		}
+	}
 	explicit TxTintPvcLitTex(ShaderManager* mgr) :BaseShader(mgr) {}
 };
 

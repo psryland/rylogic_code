@@ -34,22 +34,6 @@
 #include "pr/common/stackdump.h"
 #include "pr/common/refcount.h"
 #include "pr/common/log.h"
-
-//namespace pr
-//{
-//	// Example code:
-//	#define PR_REFPTR_TRACE 1
-//	template <typename T> inline long PtrRefCount(T*);
-//	template <typename T> inline void RefPtrTrace(bool, T*){}
-//	template <> inline void RefPtrTrace<ID3D11DeviceContext>(bool add, ID3D11DeviceContext* ptr)
-//	{
-//		OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
-//		pr::StackDump(3,5,[](std::string const& file, int line)
-//		{
-//			OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line));
-//		});
-//	}
-//}
 #include "pr/common/refptr.h"
 #include "pr/common/d3dptr.h"
 #include "pr/common/chain.h"
@@ -69,11 +53,19 @@
 #include "pr/str/tostring.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
+#include "pr/camera/camera.h"
 #include "pr/storage/nugget_file/nuggetfile.h"
 #include "pr/maths/maths.h"
 #include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_helper.h"
-#include "pr/camera/camera.h"
+
+#include "pr/geometry/line.h"
+#include "pr/geometry/quad.h"
+#include "pr/geometry/box.h"
+#include "pr/geometry/sphere.h"
+#include "pr/geometry/cylinder.h"
+#include "pr/geometry/mesh.h"
+#include "pr/geometry/utility.h"
 
 #define PR_DBG_RDR PR_DBG
 
@@ -84,17 +76,15 @@ namespace pr
 	namespace rdr
 	{
 		typedef pr::uint8  byte;
-//		typedef pr::uint8  ViewportId;
-//		typedef pr::uint16 Index;
 		typedef uintptr_t  RdrId;
 		typedef pr::uint32 SortKey;
 		typedef pr::uint16 SortKeyId;
 		RdrId const AutoId = ~0U; // A special value for automatically generating an Id
 		
 		typedef pr::string<char, 32>     string32;
+		typedef pr::string<char, 512>    string512;
 		typedef pr::string<wchar_t, 32>  wstring32;
 		typedef pr::string<wchar_t, 256> wstring256;
-//		typedef pr::string<char, 1024> string1024;
 		typedef pr::Range<size_t> Range;
 		const Range RangeZero = {0,0};
 
@@ -114,47 +104,25 @@ namespace pr
 
 		// Input layouts
 		class InputLayoutManager;
-//		class  VertexFormatManager;
-//		namespace vf
-//		{
-//			typedef pr::uint32 Type;
-//			typedef pr::uint32 Format;
-//			struct MemberOffsets;
-//			class  Iter;
-//		}
 
-//		// Lighting
-//		struct Light;
-//		class  LightingManager;
-		
+		// Lighting
+		struct Light;
+
 		// Shaders
 		class  ShaderManager;
 		struct ShaderDesc;
-		struct BaseShader;   typedef pr::RefPtr<BaseShader> ShaderPtr;
+		struct BaseShader;
+		typedef pr::RefPtr<BaseShader> ShaderPtr;
 		
 		// Textures
 		class  TextureManager;
 		struct TextureDesc;
-		struct Texture2D;     typedef pr::RefPtr<Texture2D> Texture2DPtr;
+		struct Texture2D;
+		typedef pr::RefPtr<Texture2D> Texture2DPtr;
 //		struct TextureFilter;
 //		struct TextureAddrMode;
-//		namespace effect
-//		{
-//			struct Desc;
-//			namespace frag
-//			{
-//				struct Header;
-//				struct Txfm;
-//				struct Tinting;
-//				struct PVC;
-//				struct Texture2D;
-//				struct EnvMap;
-//				struct Lighting;
-//				struct Terminate;
-//			}
-//		}
-//		
-//		// Video
+
+		// Video
 //		struct Video;
 //		struct AllocPres;
 //		typedef pr::RefPtr<Video> VideoPtr;
@@ -177,6 +145,7 @@ namespace pr
 		// Scenes
 		struct SceneView;
 		struct Scene;
+		struct Stereo;
 		struct DrawMethod;
 		struct Drawlist;
 		struct DrawListElement;

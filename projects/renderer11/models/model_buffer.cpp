@@ -13,9 +13,9 @@
 using namespace pr::rdr;
 
 pr::rdr::ModelBuffer::ModelBuffer()
-:m_vb()
-,m_ib()
-,m_mdl_mgr()
+	:m_vb()
+	,m_ib()
+	,m_mdl_mgr()
 {}
 
 // Returns true if 'settings' describe a model format that is compatible with this model buffer
@@ -23,7 +23,7 @@ bool pr::rdr::ModelBuffer::IsCompatible(MdlSettings const& settings) const
 {
 	if (m_vb == 0 || m_ib == 0)
 		return false;
-	
+
 	for (int i = 0; i != 2; ++i)
 	{
 		D3D11_BUFFER_DESC lhs; i == 0 ? m_vb->GetDesc(&lhs) : m_ib->GetDesc(&lhs);
@@ -49,7 +49,7 @@ pr::rdr::Range pr::rdr::ModelBuffer::ReserveVerts(size_t vcount)
 	m_vb.m_used.m_end += vcount;
 	return range;
 }
-	
+
 // Reserve indices from this model buffer
 pr::rdr::Range pr::rdr::ModelBuffer::ReserveIndices(size_t icount)
 {
@@ -61,31 +61,29 @@ pr::rdr::Range pr::rdr::ModelBuffer::ReserveIndices(size_t icount)
 
 // Access to the vertex/index buffers
 // Only return false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw
-bool pr::rdr::ModelBuffer::MapVerts(pr::rdr::Lock& lock, D3D11_MAP map_type, UINT flags, pr::rdr::Range v_range)
+bool pr::rdr::ModelBuffer::MapVerts(pr::rdr::Lock& lock, D3D11_MAP map_type, UINT flags, Range vrange)
 {
 	PR_ASSERT(PR_DBG_RDR, m_vb, "This model buffer has not been created");
 	PR_ASSERT(PR_DBG_RDR, lock.m_res == 0, "This lock has already been used, make a new one");
-	PR_ASSERT(PR_DBG_RDR, IsWithin(m_vb.m_used, v_range), "Lock range exceeds the used size of this model buffer");
-	
-	if (v_range == RangeZero) lock.m_range = m_vb.m_used;
-	else                      lock.m_range = v_range;
-	
+
+	// If no subrange is given, use the entire buffer
+	if (vrange == RangeZero) vrange = m_vb.m_used;
+
 	D3DPtr<ID3D11DeviceContext> dc = ImmediateDC(m_mdl_mgr->m_device);
 	D3DPtr<ID3D11Resource> res = m_vb.m_ptr;
-	return lock.Map(dc, res, 0, map_type, flags); 
+	return lock.Map(dc, res, 0, map_type, flags, m_vb.m_stride, vrange);
 }
-bool pr::rdr::ModelBuffer::MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type, UINT flags, pr::rdr::Range i_range)
+bool pr::rdr::ModelBuffer::MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type, UINT flags, Range irange)
 {
 	PR_ASSERT(PR_DBG_RDR, m_ib, "This model buffer has not been created");
 	PR_ASSERT(PR_DBG_RDR, lock.m_res == 0, "This lock has already been used, make a new one");
-	PR_ASSERT(PR_DBG_RDR, IsWithin(m_ib.m_used, i_range), "Lock range exceeds the used size of this model buffer");
-	
-	if (i_range == RangeZero) lock.m_range = m_ib.m_used;
-	else                      lock.m_range = i_range;
-	
+
+	// If no subrange is given, use the entire buffer
+	if (irange == RangeZero) irange = m_ib.m_used;
+
 	D3DPtr<ID3D11DeviceContext> dc = ImmediateDC(m_mdl_mgr->m_device);
 	D3DPtr<ID3D11Resource> res = m_ib.m_ptr;
-	return lock.Map(dc, res, 0, map_type, flags); 
+	return lock.Map(dc, res, 0, map_type, flags, BytesPerPixel(m_ib.m_format), irange);
 }
 
 // Refcounting cleanup function
