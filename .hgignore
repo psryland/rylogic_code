@@ -41,3 +41,4 @@ miscellaneous/VisualStudio Mods/VS2010_Settings.vssettings
 miscellaneous/VisualStudio Mods/VS2008_Settings.vssettings
 tools/ResEdit/ResEdit.xml
 projects/vs2012/pr_applog.log
+sdk/pr/prcs/unittest_resources/exif_image_out.jpg
