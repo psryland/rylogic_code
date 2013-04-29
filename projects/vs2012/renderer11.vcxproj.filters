@@ -152,6 +152,21 @@
     <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h">
       <Filter>geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\renderer11\render\stereo.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\cylinder.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh_tools.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\utility.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -202,20 +217,17 @@
     <ClCompile Include="..\renderer11\textures\texture_manager.cpp">
       <Filter>textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\models\model_generator.cpp">
-      <Filter>models</Filter>
-    </ClCompile>
     <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\lights\light.cpp">
       <Filter>lights</Filter>
     </ClCompile>
+    <ClCompile Include="..\renderer11\render\stereo.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bin\_build_shader.cmd">
-      <Filter>shaders</Filter>
-    </None>
     <None Include="..\renderer11\shaders\common\functions.hlsl">
       <Filter>shaders\common</Filter>
     </None>

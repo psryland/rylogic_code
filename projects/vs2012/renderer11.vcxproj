@@ -71,9 +71,9 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;PR_RDR_RUNTIME_SHADERS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -89,9 +89,9 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -107,10 +107,10 @@
     <ClCompile />
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;PR_RDR_RUNTIME_SHADERS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
       <BrowseInformation>true</BrowseInformation>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <CustomBuild>
       <AdditionalInputs>%(RelativeDir)\..\common\uber.hlsl;%(RelativeDir)\..\common\cbuffer.hlsl;%(RelativeDir)\..\common\functions.hlsl;%(RelativeDir)\..\common\uber_defines.hlsl;%(AdditionalInputs)</AdditionalInputs>
@@ -123,9 +123,9 @@
     <ClCompile />
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <CustomBuild>
       <AdditionalInputs>%(RelativeDir)\..\common\uber.hlsl;%(RelativeDir)\..\common\cbuffer.hlsl;%(RelativeDir)\..\common\functions.hlsl;%(RelativeDir)\..\common\uber_defines.hlsl;%(AdditionalInputs)</AdditionalInputs>
@@ -133,10 +133,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\sdk\pr\pr\geometry\box.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\cylinder.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\line.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\common.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh_tools.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\sphere.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\utility.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\config\config.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\forward.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\instances\instance.h" />
@@ -170,6 +174,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\stock_resources.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\util.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\wrappers.h" />
+    <ClInclude Include="..\renderer11\render\stereo.h" />
     <ClInclude Include="..\renderer11\shaders\cbuffer.h" />
     <ClInclude Include="..\renderer11\util\stdafx.h" />
   </ItemGroup>
@@ -177,7 +182,7 @@
     <ClCompile Include="..\..\sdk\pr\pr\renderer11\util\util.cpp" />
     <ClCompile Include="..\renderer11\config\config.cpp" />
     <ClCompile Include="..\renderer11\lights\light.cpp" />
-    <ClCompile Include="..\renderer11\models\model_generator.cpp" />
+    <ClCompile Include="..\renderer11\render\stereo.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
     <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp" />
@@ -200,7 +205,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bin\_build_shader.cmd" />
     <None Include="..\renderer11\shaders\common\cbuffer.hlsl" />
     <None Include="..\renderer11\shaders\common\functions.hlsl" />
     <None Include="..\renderer11\shaders\common\uber.hlsl" />

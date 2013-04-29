@@ -167,7 +167,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\largeint.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\line3.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\line3_impl.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\maths\macros.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\maths.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\mathsassert.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\matrix2x2.h" />
@@ -309,8 +308,8 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -324,8 +323,8 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -344,8 +343,8 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -362,8 +361,8 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

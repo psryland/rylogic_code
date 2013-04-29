@@ -150,9 +150,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\line3_impl.h">
       <Filter>sdk\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\maths\macros.h">
-      <Filter>sdk\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\maths.h">
       <Filter>sdk\maths</Filter>
     </ClInclude>

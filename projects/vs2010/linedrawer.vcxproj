@@ -90,7 +90,6 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_MATHS_USE_D3DX=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -131,7 +130,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
-      <PreprocessorDefinitions>PR_MATHS_USE_D3DX=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
