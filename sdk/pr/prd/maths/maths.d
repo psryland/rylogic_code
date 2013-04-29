@@ -18,23 +18,27 @@ const float  pi_by_180 = 1.745329e-2F;
 const float  l80_by_pi = 5.729578e+1F;
 const double dbl_tiny  = 1.000000e-12;
 
-struct v2
+align (16) struct v2
 {
-	union {
-	struct { float x,y; }
-	float[2] arr;
+	union
+	{
+		struct { float x,y; }
+		float[2] arr;
 	}
-	
-	immutable static v2 zero   = v2(0,0);
-	immutable static v2 xaxis  = v2(1,0);
-	immutable static v2 yaxis  = v2(0,1);
+
+	//bug immutable static v2 zero   = v2(0,0);
+	//bug immutable static v2 xaxis  = v2(1,0);
+	//bug immutable static v2 yaxis  = v2(0,1);
+	static v2 zero () { return v2(0,0); }
+	static v2 xaxis() { return v2(1,0); }
+	static v2 yaxis() { return v2(0,1); }
 
 	this(float x_)                                          { set(x_); }
 	this(float x_, float y_)                                { set(x_, y_); }
-	
-	ref v2 set(float x_)                                    { arr = x_; return this; }
+
 	ref v2 set(float x_, float y_)                          { x = x_; y = y_; return this; }
-	
+	ref v2 set(float x_)                                    { return set(x_,x_); }
+
 	@property int     ix() const pure                       { return cast(int)x; }
 	@property int     iy() const pure                       { return cast(int)y; }
 	@property string  string2() const                       { return to!string(x)~' '~to!string(y); }
@@ -93,38 +97,43 @@ struct v2
 	static v2 random2(float mn, float mx) { return FRand(mn,mx) * random_normal(); }
 	static v2 random_normal()             { v2 v; do {v = random2(-1f,1f);} while (v.length2sq > 1f); return Normalise2(v); }
 }
-struct v3
+align (16) struct v3
 {
 	union {
 	struct { float x,y,z; }
 	struct { v2 xy; }
 	float[3] arr;
 	}
-	
-	immutable static v3 zero   = v3(0,0,0);
-	immutable static v3 xaxis  = v3(1,0,0);
-	immutable static v3 yaxis  = v3(0,1,0);
-	immutable static v3 zaxis  = v3(0,0,1);
-	
+
+	//bug immutable static v3 zero  = v3(0,0,0);
+	//bug immutable static v3 xaxis = v3(1,0,0);
+	//bug immutable static v3 yaxis = v3(0,1,0);
+	//bug immutable static v3 zaxis = v3(0,0,1);
+	static v3 zero () { return v3(0,0,0); }
+	static v3 xaxis() { return v3(1,0,0); }
+	static v3 yaxis() { return v3(0,1,0); }
+	static v3 zaxis() { return v3(0,0,1); }
+
 	this(float x_)                                          { set(x_); }
 	this(float x_, float y_, float z_)                      { set(x_, y_, z_); }
 	this(in v2 xy_, float z_)                               { set(xy_, z_); }
-	
-	ref v3 set(float x_)                                    { arr = x_; return this; }
+
 	ref v3 set(float x_, float y_, float z_)                { x = x_; y = y_; z = z_; return this; }
-	ref v3 set(in v2 xy, float z)                           { x = xy.x; y = xy.y; z = z; return this; }
-	
-	@property int     ix() const                            { return cast(int)x; }
-	@property int     iy() const                            { return cast(int)y; }
-	@property int     iz() const                            { return cast(int)z; }
-	@property string  string3() const                       { return to!string(x)~' '~to!string(y)~' '~to!string(z); }
-	@property float   length3sq() const                     { return Length3sq(x, y, z); }
-	@property float   length3() const                       { return Length3(x, y, z); }
-	
+	ref v3 set(in v2 xy, float z)                           { return set(xy.x, xy.y, z); }
+	ref v3 set(float x_)                                    { return set(x_,x_,x_); }
+
+	@property int      ix() const                           { return cast(int)x; }
+	@property int      iy() const                           { return cast(int)y; }
+	@property int      iz() const                           { return cast(int)z; }
+	@property string   string3() const                      { return to!string(x)~' '~to!string(y)~' '~to!string(z); }
+	@property float    length3sq() const                    { return Length3sq(x, y, z); }
+	@property float    length3() const                      { return Length3(x, y, z); }
+	@property float[3] array() const                        { return arr; }
+	@property ref float[3] array()                          { return arr; }
 	float     opIndex(size_t i) const                       { return arr[i]; }
-	//ref float opIndex(size_t i) const                       { return arr[i]; }
-	void  opIndexAssign(T)(T value, size_t i)               { arr[i] = cast(float)value; }
-	
+	ref float opIndex(size_t i)                             { return arr[i]; }
+	void      opIndexAssign(T)(T value, size_t i)           { arr[i] = cast(float)value; }
+
 	ref v3 opOpAssign(string op)(float rhs)
 	{
 		static if (op == "+") { xy += rhs; z += rhs; return this; }
@@ -140,7 +149,7 @@ struct v3
 		static if (op == "*") { xy *= rhs.xy; z *= rhs.z; return this; }
 		static if (op == "/") { assert(all3(rhs, &IsNonZero)); xy /= rhs.xy; z /= rhs.z; return this; }
 		static if (op == "%") { assert(all3(rhs, &IsNonZero)); xy %= rhs.xy; z %= rhs.z; return this; }
-	}	
+	}
 	v3 opUnary(string op)() const
 	{
 		static if (op == "+") { return this; }
@@ -173,7 +182,7 @@ struct v3
 	static v3 random3(float mn, float mx)                   { return FRand(mn,mx) * random_normal(); }
 	static v3 random_normal()                               { v3 v; do {v.set(FRand(-1f,1f),FRand(-1f,1f),FRand(-1f,1f));} while (v.length3sq > 1f); return Normalise3(v); }
 }
-struct v4
+align (16) struct v4
 {
 	union {
 	struct { float x,y,z,w; }
@@ -181,27 +190,33 @@ struct v4
 	struct { v2 xy,zw; }
 	float[4] arr;
 	}
-	
-	immutable static v4 zero   = v4(0,0,0,0);
-	immutable static v4 xaxis  = v4(1,0,0,0);
-	immutable static v4 yaxis  = v4(0,1,0,0);
-	immutable static v4 zaxis  = v4(0,0,1,0);
-	immutable static v4 waxis  = v4(0,0,0,1);
-	immutable static v4 origin = v4(0,0,0,1);
-	
+
+	//bug immutable static v4 zero   = v4(0,0,0,0);
+	//bug immutable static v4 xaxis  = v4(1,0,0,0);
+	//bug immutable static v4 yaxis  = v4(0,1,0,0);
+	//bug immutable static v4 zaxis  = v4(0,0,1,0);
+	//bug immutable static v4 waxis  = v4(0,0,0,1);
+	//bug immutable static v4 origin = v4(0,0,0,1);
+	static v4 zero  () { return v4(0,0,0,0); }
+	static v4 xaxis () { return v4(1,0,0,0); }
+	static v4 yaxis () { return v4(0,1,0,0); }
+	static v4 zaxis () { return v4(0,0,1,0); }
+	static v4 waxis () { return v4(0,0,0,1); }
+	static v4 origin() { return v4(0,0,0,1); }
+
 	this(float x_)                                          { set(x_); }
 	this(float x_, float y_, float z_, float w_)            { set(x_, y_, z_, w_); }
 	this(in v3 xyz_, float w_)                              { set(xyz_, w_); }
 	this(in v2 xy_, in v2 zw_)                              { set(xy_, zw_); }
-	
-	ref v4 set(float x_)                                    { arr = x_; return this; }
+
 	ref v4 set(float x_, float y_, float z_, float w_)      { x = x_; y = y_; z = z_; w = w_; return this; }
-	ref v4 set(in v3 xyz_, float w_)                        { xyz = xyz_; w = w_; return this; }
-	ref v4 set(in v2 xy_, in v2 zw_)                        { xy = xy_; zw = zw_; return this; }
-	
+	ref v4 set(in v3 xyz_, float w_)                        { return set(xyz.x, xyz.y, xyz.z, w_); }
+	ref v4 set(in v2 xy_, in v2 zw_)                        { return set(xy_.x, xy_.y, zw_.x, zw_.y); }
+	ref v4 set(float x_)                                    { return set(x_,x_,x_,x_); }
+
 	v4 w0() const                                           { return v4(x, y, z, 0f); }
 	v4 w1() const                                           { return v4(x, y, z, 1f); }
-	
+
 	@property int     ix() const                            { return cast(int)x; }
 	@property int     iy() const                            { return cast(int)y; }
 	@property int     iz() const                            { return cast(int)z; }
@@ -212,10 +227,10 @@ struct v4
 	@property float   length4sq() const                     { return Length4sq(x, y, z, w); }
 	@property float   length3() const                       { return Length3(x, y, z); }
 	@property float   length4() const                       { return Length4(x, y, z, w); }
-	
+
 	float     opIndex(size_t i) const                       { return arr[i]; }
 	ref float opIndex(size_t i)                             { return arr[i]; }
-	void opIndexAssign(T)(T value, size_t i)                { arr[i] = cast(float)value; }
+	void      opIndexAssign(T)(T value, size_t i)           { arr[i] = cast(float)value; }
 
 	ref v4 opOpAssign(string op)(float rhs)
 	{
@@ -268,22 +283,24 @@ struct v4
 	static v4 random4(float mn, float mx)                  { return FRand(mn,mx) * random_normal4(); }
 	static v4 random_normal4()                             { v4 v; do {v.set(FRand(-1f,1f),FRand(-1f,1f),FRand(-1f,1f),FRand(-1f,1f));} while (v.length3sq > 1f); return Normalise4(v); }
 }
-struct m3x3
+align (16) struct m3x3
 {
 	union {
 	struct { v4 x,y,z; }
 	v4[3] arr;
 	}
-	
-	immutable static m3x3 zero     = m3x3(v4.zero, v4.zero, v4.zero);
-	immutable static m3x3 identity = m3x3(v4.xaxis, v4.yaxis, v4.zaxis);
-	
+
+	//bug immutable static m3x3 zero     = m3x3(v4.zero, v4.zero, v4.zero);
+	//bug immutable static m3x3 identity = m3x3(v4.xaxis, v4.yaxis, v4.zaxis);
+	static m3x3 zero    () { return m3x3(v4.zero, v4.zero, v4.zero);    }
+	static m3x3 identity() { return m3x3(v4.xaxis, v4.yaxis, v4.zaxis); }
+
 	this(float x_)                                          { set(x_); }
 	this(in v4 x_, in v4 y_, in v4 z_)                      { set(x_, y_, z_); }
 	
 	ref m3x3 set(float x_)                                  { x.set(x_); y.set(x_); z.set(x_); return this; }
 	ref m3x3 set(in v4 x_, in v4 y_, in v4 z_)              { x = x_; y = y_; z = z_; return this; }
-	
+
 	v4   row(int i) const                                   { return v4(x[i], y[i], z[i], 0f); }
 	void row(int i, in v4 row)                              { x[i] = row.x; y[i] = row.y; z[i] = row.z; }
 	v4   col(int i) const                                   { return arr[i]; }
@@ -333,16 +350,18 @@ struct m3x3
 		static if (op == "*") { m3x3 m = this; return m *= lhs; }
 	}
 }
-struct m4x4
+align (16) struct m4x4
 {
 	union {
 	struct { v4 x,y,z,w; }
 	struct { m3x3 rot; v4 pos; }
 	v4[4] arr;
 	}
-	
-	immutable static m4x4 zero     = m4x4(v4.zero, v4.zero, v4.zero, v4.zero);
-	immutable static m4x4 identity = m4x4(v4.xaxis, v4.yaxis, v4.zaxis, v4.waxis);
+
+	//immutable static m4x4 zero     = m4x4(v4.zero, v4.zero, v4.zero, v4.zero);
+	//immutable static m4x4 identity = m4x4(v4.xaxis, v4.yaxis, v4.zaxis, v4.waxis);
+	static m4x4 zero    () { return m4x4(v4.zero, v4.zero, v4.zero, v4.zero);     }
+	static m4x4 identity() { return m4x4(v4.xaxis, v4.yaxis, v4.zaxis, v4.waxis); }
 
 	this(float x_)                                          { set(x_); }
 	this(in v4 x_, in v4 y_, in v4 z_, in v4 w_)            { set(x_, y_, z_, w_); }

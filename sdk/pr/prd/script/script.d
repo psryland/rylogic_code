@@ -27,8 +27,8 @@ struct Loc
 	int opCmp(ref const Loc rhs)
 	{
 		if (m_file != rhs.m_file) return cmp(m_file, rhs.m_file);
-		if (m_line != rhs.m_line) return m_line - rhs.m_line;
-		return m_col - rhs.m_col;
+		if (m_line != rhs.m_line) return cast(int)(m_line - rhs.m_line);
+		return cast(int)(m_col - rhs.m_col);
 	}
 }
 unittest
