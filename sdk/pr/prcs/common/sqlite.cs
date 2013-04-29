@@ -1022,69 +1022,62 @@ namespace pr.common
 				return GetQuery(key);
 			}
 
+			/// <summary>Helper method for creating new queries when a query is not in the cache</summary>
+			private Query OnMiss(string key, Func<Query> new_query)
+			{
+				// Create a new compiled query.
+				var query = new_query();
+				query.Closing += (s,a) =>
+					{
+						a.Cancel = m_cache.IsCached(key); // Cancel closing while the query is still in the cache.
+						query.Reset();
+						Trace.QueryInUse(query, false);
+					};
+				Trace.QueryInUse(query, true);
+				return query;
+			}
+
+			/// <summary>Helper method for creating new queries when a query is not in the cache</summary>
+			private void OnHit(Query query, IEnumerable<object> parms = null, int first_idx = 1)
+			{
+				// Before returning the cached query, reset it
+				query.Reset();
+				if (parms != null)
+					query.BindParms(first_idx, parms);
+				
+				Trace.QueryInUse(query, true);
+			}
+
 			/// <summary>Returns a query from the cache</summary>
 			public Query GetQuery(string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
 			{
-				return m_cache.Get(sql_string,
-					k =>
-						{
-							// Create a new compiled query.
-							// Cancel closing while the query is still in the cache.
-							var q = new Query(m_db, sql_string, parms, first_idx);
-							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
-							return q;
-						},
-					(k,v) =>
-						{
-							v.Reset(); // Before returning the cached query, reset it
-							if (parms != null)
-								v.BindParms(first_idx, parms);
-						});
+				return m_cache.Get(sql_string
+					,k     => OnMiss(k, () => new Query(m_db, sql_string, parms, first_idx))
+					,(k,v) => OnHit(v, parms, first_idx));
 			}
 
 			/// <summary>Returns an insert query from the cache</summary>
 			public InsertCmd InsertCmd(Type type, OnInsertConstraint on_constraint)
 			{
-				return (InsertCmd)m_cache.Get(SqlInsertCmd(type, on_constraint),
-					k =>
-						{
-							// Create a new compiled insert query
-							var q = new InsertCmd(type, m_db, on_constraint);
-							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
-							return q;
-						},
-						(k,v) => v.Reset()); // Before returning the cached query, reset it
-					
+				return (InsertCmd)m_cache.Get(SqlInsertCmd(type, on_constraint)
+					,k     => OnMiss(k, () => new InsertCmd(type, m_db, on_constraint))
+					,(k,v) => OnHit(v));
 			}
 
 			/// <summary>Returns an insert query from the cache</summary>
 			public UpdateCmd UpdateCmd(Type type)
 			{
-				return (UpdateCmd)m_cache.Get(SqlUpdateCmd(type),
-					k =>
-						{
-							// Create a new compiled insert query
-							var q = new UpdateCmd(type, m_db);
-							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
-							return q;
-						},
-						(k,v) => v.Reset()); // Before returning the cached query, reset it
-					
+				return (UpdateCmd)m_cache.Get(SqlUpdateCmd(type)
+					,k => OnMiss(k, () => new UpdateCmd(type, m_db))
+					,(k,v) => OnHit(v));
 			}
 
 			/// <summary>Returns an insert query from the cache</summary>
 			public GetCmd GetCmd(Type type)
 			{
-				return (GetCmd)m_cache.Get(SqlGetCmd(type),
-					k =>
-						{
-							// Create a new compiled insert query
-							var q = new GetCmd(type, m_db);
-							q.Closing += (s,a) => a.Cancel = m_cache.IsCached(k);
-							return q;
-						},
-						(k,v) => v.Reset()); // Before returning the cached query, reset it
-					
+				return (GetCmd)m_cache.Get(SqlGetCmd(type)
+					,k     => OnMiss(k, () => new GetCmd(type, m_db))
+					,(k,v) => OnHit(v));
 			}
 
 			/// <summary>Handles notification from the database that a row has changed</summary>
@@ -1237,7 +1230,7 @@ namespace pr.common
 				m_db.Close();
 				if (m_db.CloseResult == Result.Busy)
 				{
-					Trace.Dump();
+					Trace.Dump(false);
 					throw Exception.New(m_db.CloseResult, "Could not close database handle, there are still prepared statements that haven't been 'finalized' or blob handles that haven't been closed.");
 				}
 				if (m_db.CloseResult != Result.OK)
@@ -2440,7 +2433,7 @@ namespace pr.common
 				m_db = db;
 				m_stmt = stmt;
 				m_row_end = false;
-				Trace.QueryCtor(this);
+				Trace.QueryCreated(this);
 				Trace.WriteLine(string.Format("Query created '{0}'", SqlString));
 			}
 			public Query(Database db, string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
@@ -2448,10 +2441,6 @@ namespace pr.common
 			{
 				if (parms != null)
 					BindParms(first_idx, parms);
-			}
-			~Query()
-			{
-				Trace.QueryDtor(this);
 			}
 
 			/// <summary>IDisposable</summary>
@@ -2475,9 +2464,9 @@ namespace pr.common
 			/// <summary>Call when done with this query</summary>
 			public void Close()
 			{
-				Trace.WriteLine(string.Format("Query closed{0}", m_stmt.IsClosed ? " (already closed)" : ""));
 				if (m_stmt.IsClosed) return;
-				
+				Trace.WriteLine(string.Format("Query closed '{0}'", SqlString));
+
 				// Call the event to see if we cancel closing the query
 				var cancel = new QueryClosingEventArgs();
 				if (Closing != null) Closing(this, cancel);
@@ -2488,6 +2477,8 @@ namespace pr.common
 				m_stmt.Close();
 				if (m_stmt.CloseResult != Result.OK)
 					throw Exception.New(m_stmt.CloseResult, ErrorMsg(m_db.Handle));
+				
+				Trace.QueryClosed(this);
 			}
 			
 			/// <summary>An event raised when this query is closing</summary>
@@ -3538,7 +3529,6 @@ namespace pr.common
 					m_completed = true;
 					m_transaction_in_progress = false;
 				}
-
 			}
 			public void Dispose()
 			{
@@ -3559,7 +3549,17 @@ namespace pr.common
 		public class Exception :System.Exception
 		{
 			/// <summary>Helper for constructing new exceptions</summary>
-			public static Exception New(Result res, string message) { return new Exception(message){Result = res}; }
+			public static Exception New(Result res, string message)
+			{
+				// If tracing is enabled, append a list of the active query objects
+				#if SQLITE_TRACE
+				var sb = new StringBuilder();
+				Trace.Dump(sb, true);
+				message += sb.ToString();
+				#endif
+
+				return new Exception(message){Result = res};
+			}
 			
 			/// <summary>The result code associated with this exception</summary>
 			public Result Result { get; private set; }
@@ -3701,29 +3701,49 @@ namespace pr.common
 			private class Info
 			{
 				public string CallStack { get; private set; }
+				public bool InUse { get; set; }
 				public Info() { CallStack = Environment.StackTrace; }
 			}
 			private static readonly Dictionary<Query, Info> m_trace = new Dictionary<Query,Info>();
-			
+
 			/// <summary>Records the creation of a new Query object</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryCtor(Query query)
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryCreated(Query query)
 			{
 				m_trace.Add(query, new Info());
 			}
-			
+
 			/// <summary>Records the destruction of a Query object</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryDtor(Query query)
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryClosed(Query query)
 			{
 				m_trace.Remove(query);
 			}
-			
-			/// <summary>Dumps the existing Query objects to standard error</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void Dump()
+
+			/// <summary>Records the destruction of a Query object</summary>
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryInUse(Query query, bool in_use)
 			{
-				foreach (var t in m_trace)
-					System.Diagnostics.Debug.WriteLine("\nQuery:\n"+t.Value.CallStack);
+				m_trace[query].InUse = in_use;
 			}
-			
+
+			/// <summary>Dumps the existing Query objects to standard error</summary>
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void Dump(bool in_use_only)
+			{
+				if (m_trace.Count == 0) return;
+				var sb = new StringBuilder();
+				Dump(sb, in_use_only);
+				System.Diagnostics.Debug.WriteLine(sb.ToString());
+			}
+
+			/// <summary>Dumps the existing Query objects to 'sb'</summary>
+			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void Dump(StringBuilder sb, bool in_use_only)
+			{
+				if (m_trace.Count == 0) return;
+				foreach (var t in m_trace)
+				{
+					if (in_use_only && !t.Value.InUse) continue;
+					sb.AppendLine().Append("Query:").AppendLine().Append(t.Value.CallStack);
+				}
+			}
+
 			/// <summary>Write trace information to the debug output window</summary>
 			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void WriteLine(string str)
 			{
@@ -3784,7 +3804,7 @@ namespace pr
 			// Tests a basic default table
 			private class DomType0 :IDomType0
 			{
-				public  int      Inc_Key                 { get; set; }
+				[Sqlite.Column(PrimaryKey = true)] public int Inc_Key { get; set; }
 				public  string   Inc_Value               { get; set; }
 				public SomeEnum  Inc_Enum                { get; set; }
 				public  float    Ign_NoGetter            { set { } }
@@ -4395,32 +4415,48 @@ namespace pr
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a table
-					db.DropTable<DomType1>();
-					db.CreateTable<DomType1>();
-					Assert.IsTrue(db.TableExists<DomType1>());
-					var table = db.Table<DomType1>();
-				
-					// Create objects
-					var objs = Enumerable.Range(0,10).Select(i => new DomType1(i)).ToList();
-				
+					db.DropTable<DomType0>();
+					db.CreateTable<DomType0>();
+					Assert.IsTrue(db.TableExists<DomType0>());
+					
+					// Create and insert some objects
+					var objs = Enumerable.Range(0,10).Select(i => new DomType0(i)).ToList();
+					foreach (var x in objs.Take(3))
+						db.Insert(x, Sqlite.OnInsertConstraint.Replace);
+
+					var rows = db.EnumRows<DomType0>("select * from DomType0").ToList();
+					Assert.AreEqual(3, rows.Count);
+
 					// Add objects
-					try { using (new Sqlite.Transaction(db))
+					try
 					{
-						foreach (var x in objs) table.Insert(x);
-						throw new Exception("aborting insert");
-					}} catch {}
-					Assert.AreEqual(0, table.RowCount);
-					using (new Sqlite.Transaction(db))
-					{
-						foreach (var x in objs) table.Insert(x);
+						using (var tranny = db.NewTransaction())
+						{
+							int i = 0;
+							foreach (var x in objs)
+							{
+								if (++i == 5) throw new Exception("aborting insert");
+								db.Insert(x, Sqlite.OnInsertConstraint.Replace);
+							}
+							tranny.Commit();
+						}
 					}
-					Assert.AreEqual(0, table.RowCount);
-					using (var tranny = new Sqlite.Transaction(db))
+					catch {}
+					Assert.AreEqual(3, db.Table<DomType0>().RowCount);
+
+					using (var tranny = db.NewTransaction())
 					{
-						foreach (var x in objs) table.Insert(x);
+						foreach (var x in objs) db.Insert(x, Sqlite.OnInsertConstraint.Replace);
+						// No commit
+					}
+					Assert.AreEqual(3, db.Table<DomType0>().RowCount);
+
+					using (var tranny = db.NewTransaction())
+					{
+						foreach (var x in objs) db.Insert(x, Sqlite.OnInsertConstraint.Replace);
 						tranny.Commit();
 					}
-					Assert.AreEqual(objs.Count, table.RowCount);
+					Assert.AreEqual(objs.Count, db.Table<DomType0>().RowCount);
 				}
 			}
 			[Test] public static void RuntimeTypes()

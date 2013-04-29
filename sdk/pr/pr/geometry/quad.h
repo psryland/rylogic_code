@@ -49,10 +49,10 @@ namespace pr
 	{
 		// Returns the number of verts and indices needed to hold geometry for a quad/patch
 		template <typename Tvr, typename Tir>
-		void QuadSize(iv2 const& divisions, pr::Range<Tvr>& vrange, pr::Range<Tir>& irange)
+		void QuadSize(iv2 const& divisions, Tvr& vcount, Tir& icount)
 		{
-			vrange.set(0, 1 * (divisions.x + 2) * (divisions.y + 2));
-			irange.set(0, 6 * (divisions.x + 1) * (divisions.y + 1));
+			vcount = value_cast<Tvr>(1 * (divisions.x + 2) * (divisions.y + 2));
+			icount = value_cast<Tir>(6 * (divisions.x + 1) * (divisions.y + 1));
 		}
 
 		// Generate an NxM patch of triangles
@@ -64,7 +64,7 @@ namespace pr
 		// 'tex_origin' is the texture coordinate of the top/left corner
 		// 'tex_dim' is the normalised size of the texture over the quad
 		template <typename TVertIter, typename TIdxIter>
-		Props Quad(v4 const& origin, v4 const& quad_x, v4 const& quad_z, iv2 const& divisions, Colour32 colour, v2 const& tex_origin, v2 const& tex_dim, TVertIter out_verts, TIdxIter out_indices)
+		Props Quad(v4 const& origin, v4 const& quad_x, v4 const& quad_z, iv2 const& divisions, Colour32 colour, v2 const& tex_origin, v2 const& tex_dim, TVertIter v_out, TIdxIter i_out)
 		{
 			// Create the vertices
 			v4 norm = GetNormal3IfNonZero(Cross3(quad_z,quad_x));
@@ -75,25 +75,25 @@ namespace pr
 				v4 vert = origin + float(h) * step_y;
 				v2 uv   = v2::make(tex_origin.x, tex_origin.y + tex_dim.y*h/(hend - 1));
 				for (int w = 0, wend = divisions.x + 2; w != wend; ++w, vert += step_x, uv.x += tex_dim.x/(wend - 1))
-					SetPCNT(*out_verts++, vert, colour, norm, uv);
+					SetPCNT(*v_out++, vert, colour, norm, uv);
 			}
 
 			// Create the faces
 			int verts_per_row = divisions.x + 2;
-			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+			typedef decltype(impl::remove_ref(*i_out)) VIdx;
 			for (int h = 0, hend = divisions.y+1; h != hend; ++h)
 			{
 				int row = h * verts_per_row;
 				for (int w = 0, wend = divisions.x+1; w != wend; ++w)
 				{
 					int col = row + w;
-					*out_indices++ = value_cast<VIdx>(col);
-					*out_indices++ = value_cast<VIdx>(col + verts_per_row);
-					*out_indices++ = value_cast<VIdx>(col + 1);
+					*i_out++ = value_cast<VIdx>(col);
+					*i_out++ = value_cast<VIdx>(col + verts_per_row);
+					*i_out++ = value_cast<VIdx>(col + 1);
 					
-					*out_indices++ = value_cast<VIdx>(col + 1);
-					*out_indices++ = value_cast<VIdx>(col + verts_per_row);
-					*out_indices++ = value_cast<VIdx>(col + verts_per_row + 1);
+					*i_out++ = value_cast<VIdx>(col + 1);
+					*i_out++ = value_cast<VIdx>(col + verts_per_row);
+					*i_out++ = value_cast<VIdx>(col + verts_per_row + 1);
 				}
 			}
 
@@ -109,19 +109,19 @@ namespace pr
 
 		// Create a quad with a texture mapped over the whole surface
 		template <typename TVertIter, typename TIdxIter>
-		Props Quad(v4 const& origin, v4 const& quad_x, v4 const& quad_z, iv2 const& divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
+		Props Quad(v4 const& origin, v4 const& quad_x, v4 const& quad_z, iv2 const& divisions, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
-			return Quad(origin, quad_x, quad_z, divisions, colour, v2Zero, v2One, out_verts, out_indices);
+			return Quad(origin, quad_x, quad_z, divisions, colour, v2Zero, v2One, v_out, i_out);
 		}
 
 		// Create a simple quad, centred on the origin with a normal along the y axis, with a texture mapped over the whole surface
 		template <typename TVertIter, typename TIdxIter>
-		Props Quad(float width, float height, iv2 const& divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
+		Props Quad(float width, float height, iv2 const& divisions, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
 			v4 origin = v4::make(-0.5f * width, 0.f, -0.5f * height, 1.0f);
 			v4 quad_x = width  * v4XAxis;
 			v4 quad_z = height * v4ZAxis;
-			return Quad(origin, quad_x, quad_z, divisions, colour, out_verts, out_indices);
+			return Quad(origin, quad_x, quad_z, divisions, colour, v_out, i_out);
 		}
 
 		// Create a quad centred on an arbitrary position with a normal in the given direction.
@@ -129,7 +129,7 @@ namespace pr
 		// 'forward' is the normal direction of the quad (not necessarily normalised)
 		// 'top' is the up direction of the quad. Can be zero (defaults to -zaxis, then -xaxis), doesn't need to be orthogonal to 'forward'
 		template <typename TVertIter, typename TIdxIter>
-		Props Quad(v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions, Colour32 colour, v2 const& tex_origin, v2 const& tex_dim, TVertIter out_verts, TIdxIter out_indices)
+		Props Quad(v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions, Colour32 colour, v2 const& tex_origin, v2 const& tex_dim, TVertIter v_out, TIdxIter i_out)
 		{
 			v4 fwd = !IsZero3(forward) ? forward :  pr::v4YAxis;
 			v4 up  = !IsZero3(top)     ? top     : -pr::v4ZAxis;
@@ -138,7 +138,7 @@ namespace pr
 			v4 quad_x = width  * GetNormal3(Cross3(up, fwd));
 			v4 quad_z = height * GetNormal3(Cross3(quad_x, fwd));
 			v4 origin = centre - 0.5f * quad_x - 0.5f * quad_z;
-			return Quad(origin, quad_x, quad_z, divisions, colour, tex_origin, tex_dim, out_verts, out_indices);
+			return Quad(origin, quad_x, quad_z, divisions, colour, tex_origin, tex_dim, v_out, i_out);
 		}
 	}
 }

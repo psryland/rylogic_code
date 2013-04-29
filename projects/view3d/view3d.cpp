@@ -57,19 +57,19 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD ul_reason_for_call, LPVOID)
 #ifdef _MANAGED
 #pragma managed(pop)
 #endif
-	
+
 // Convert the public interface 'EModelType' into the renderers primitive type
 inline pr::rdr::model::EPrimitive::Type ModelTypeToPrimType(EView3DPrim::Type type)
 {
 	switch (type)
 	{
 	default: PR_ASSERT(PR_DBG, false, ""); return pr::rdr::model::EPrimitive::PointList;
-	case EView3DPrim::PointList:                  return pr::rdr::model::EPrimitive::PointList;
-	case EView3DPrim::LineList:                   return pr::rdr::model::EPrimitive::LineList;
-	case EView3DPrim::TriangleList:               return pr::rdr::model::EPrimitive::TriangleList;
+	case EView3DPrim::PointList:           return pr::rdr::model::EPrimitive::PointList;
+	case EView3DPrim::LineList:            return pr::rdr::model::EPrimitive::LineList;
+	case EView3DPrim::TriangleList:        return pr::rdr::model::EPrimitive::TriangleList;
 	}
 }
-	
+
 // Initialise the dll
 VIEW3D_API EView3DResult::Type __stdcall View3D_Initialise(HWND hwnd, pr::uint d3dcreate_flags, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb)
 {

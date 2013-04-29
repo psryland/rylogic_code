@@ -102,14 +102,6 @@ namespace pr
 	inline bool operator <= (v3 const& lhs, v3 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (v3 const& lhs, v3 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 
-	// D3DX conversion functions
-	#if PR_MATHS_USE_D3DX
-	inline D3DXVECTOR3 const& d3dv3(v3 const& v)   { return reinterpret_cast<D3DXVECTOR3 const&>(v); }
-	inline D3DXVECTOR3&       d3dv3(v3& v)         { return reinterpret_cast<D3DXVECTOR3&>      (v); }
-	inline D3DXVECTOR3 const& d3dv3(v4 const& v)   { return reinterpret_cast<D3DXVECTOR3 const&>(v); }
-	inline D3DXVECTOR3&       d3dv3(v4& v)         { return reinterpret_cast<D3DXVECTOR3&>      (v); }
-	#endif
-	
 	// Conversion functions between vector types
 	inline v2 const& cast_v2(v3 const& vec) { return reinterpret_cast<v2 const&>(vec); }
 	inline v2&       cast_v2(v3&       vec) { return reinterpret_cast<v2&>      (vec); }

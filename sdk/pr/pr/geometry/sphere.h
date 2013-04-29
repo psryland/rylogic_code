@@ -7,6 +7,7 @@
 #define PR_GEOMETRY_SPHERE_H
 
 #include "pr/geometry/common.h"
+#include "pr/linedrawer/ldr_helper.h"
 
 namespace pr
 {
@@ -14,11 +15,11 @@ namespace pr
 	{
 		// Returns the number of verts and number of indices needed to hold geometry for a geosphere
 		template <typename Tvr, typename Tir>
-		void SphereSize(std::size_t divisions, pr::Range<Tvr>& vrange, pr::Range<Tir>& irange)
+		void GeosphereSize(std::size_t divisions, Tvr& vcount, Tir& icount)
 		{
 			int div = value_cast<int>(divisions);
-			vrange.set(0, value_cast<Tvr>(3 + 10 * Pow2(2 * div) + 11 * Pow2(div)) );
-			irange.set(0, value_cast<Tir>(3 * 10 * Pow2(2 * div + 1))              );
+			vcount = value_cast<Tvr>(3 + 10 * Pow2(2 * div) + 11 * Pow2(div));
+			icount = value_cast<Tir>(3 * 10 * Pow2(2 * div + 1));
 		}
 
 		namespace impl { namespace geosphere
@@ -28,26 +29,29 @@ namespace pr
 			{
 				pr::v4 m_vert;
 				pr::v4 m_norm;
-				pr::v2 m_uv;
+				float m_ang;
+				bool m_pole;
 			};
 			struct GeosphereFace
 			{
 				VIndex m_vidx[3];
 			};
-			struct Child
+			struct Adjacent
 			{
-				VIndex m_other_parent;
-				VIndex m_child;
+				VIndex m_adjacent; // The adjacent vertex (not necessarily at the same recursion level)
+				VIndex m_child;    // The vertex between the associated vertex and 'm_adjacent' in the recursion level below 'm_adjacent'
+				Adjacent() {}
+				Adjacent(VIndex adj, VIndex child) :m_adjacent(adj) ,m_child(child) {}
 			};
 			typedef pr::Array<GeosphereVert, 1024> TVertCont;
 			typedef pr::Array<GeosphereFace, 1024> TFaceCont;
-			typedef pr::Array<Child>  TChild;
-			typedef pr::Array<TChild> TVertexLookupCont;
+			typedef pr::Array<Adjacent> TAdjacent;          // A collection of adjacent vertices
+			typedef pr::Array<TAdjacent> TVertexLookupCont; // A map from vertex -> adjacent vertices
 
 			// A struct to hold all of the generation data
 			struct CreateGeosphereData
 			{
-				TVertexLookupCont m_vlookup;
+				TVertexLookupCont m_adjacent;
 				TVertCont*        m_vcont;
 				TFaceCont*        m_fcont;
 				v4                m_radius;
@@ -56,7 +60,7 @@ namespace pr
 
 			// Create a vertex and add it to the vertex container
 			// Returns the index position of the vertex
-			inline std::size_t AddVertex(v4 const& norm, v2 const& uv, CreateGeosphereData& data)
+			inline std::size_t AddVertex(v4 const& norm, float ang, bool pole, CreateGeosphereData& data)
 			{
 				PR_ASSERT(PR_DBG, IsNormal3(norm), "");
 
@@ -64,48 +68,45 @@ namespace pr
 				GeosphereVert vertex;
 				vertex.m_vert = (data.m_radius * norm).w1();
 				vertex.m_norm = norm;
-				vertex.m_uv   = uv;
+				vertex.m_ang  = ang;
+				vertex.m_pole = pole;
 				data.m_vcont->push_back(vertex);
 
-				// Add an entry in the lookup table
-				data.m_vlookup.push_back(TChild());
-				data.m_vlookup.back().reserve(Max(3 << (data.m_divisions - 2), 3));
+				// Add an entry in the adjacency map
+				data.m_adjacent.push_back(TAdjacent());
 				return data.m_vcont->size() - 1;
 			}
 
 			// Get the vertex that has these two vertices as parents
-			VIndex GetVertex(VIndex parent1, VIndex parent2, CreateGeosphereData& data)
+			inline VIndex GetVertex(VIndex parent0, VIndex parent1, CreateGeosphereData& data)
 			{
-				auto& vlookup_p1 = data.m_vlookup[parent1];
-				auto& vlookup_p2 = data.m_vlookup[parent2];
+				// Get the containers of adjacent vertex for each of parent0, and parent1
+				// Note: Not using the lowest index value here because we want to minimise
+				// the lengths of the adjacency containers by adding any new adjacency info
+				// to the shortest container
+				auto& adj0 = data.m_adjacent[parent0];
+				auto& adj1 = data.m_adjacent[parent1];
 
-				// Try and find 'parent2' in 'vlookup_p1' or 'parent1' in 'vlookup_p2'
-				for (auto i = begin(vlookup_p1), i_end = end(vlookup_p1); i != i_end; ++i)
-					if (i->m_other_parent == parent2) return i->m_child;
-				for (auto i = begin(vlookup_p2), i_end = end(vlookup_p2); i != i_end; ++i)
-					if (i->m_other_parent == parent1) return i->m_child;
+				// Try and find 'parent1' in 'adj0' or 'parent0' in 'adj1'
+				for (auto i = begin(adj0), iend = end(adj0); i != iend; ++i)
+					if (i->m_adjacent == parent1) return i->m_child;
+				for (auto i = begin(adj1), iend = end(adj1); i != iend; ++i)
+					if (i->m_adjacent == parent0) return i->m_child;
 
-				// If it wasn't found add a vertex
-				auto& vert_a = (*data.m_vcont)[parent1].m_uv.x < (*data.m_vcont)[parent2].m_uv.x ? (*data.m_vcont)[parent1] : (*data.m_vcont)[parent2];
-				auto& vert_b = (*data.m_vcont)[parent1].m_uv.x < (*data.m_vcont)[parent2].m_uv.x ? (*data.m_vcont)[parent2] : (*data.m_vcont)[parent1];
-				v4 norm = GetNormal3(vert_a.m_norm + vert_b.m_norm);
-				v2 uv = v2::make(ATan2Positive(norm.y, norm.x) / maths::tau, (1.0f - norm.z) * 0.5f);
-				if (!(FGtrEql(uv.x, vert_a.m_uv.x) && FLessEql(uv.x, vert_b.m_uv.x))) { uv.x += 1.0f; }
-				PR_ASSERT(PR_DBG, FGtrEql(uv.x, vert_a.m_uv.x) && FLessEql(uv.x, vert_b.m_uv.x), "");
-				auto new_vert_index = AddVertex(norm, uv, data); // Remember this modifies data.m_vlookup
+				// If no child is found, add one
+				auto& v0 = (*data.m_vcont)[parent0];
+				auto& v1 = (*data.m_vcont)[parent1];
+				v4 norm = GetNormal3(v0.m_norm + v1.m_norm);
+				auto ang = v0.m_pole ? v1.m_ang : v1.m_pole ? v0.m_ang : (v0.m_ang + v1.m_ang) * 0.5f; // Use the average angle unless one of the verts is a pole
+				auto new_vidx = AddVertex(norm, ang, false, data);
 
-				// Add the entry to the parent with the least number of children
-				if (vlookup_p1.size() < vlookup_p2.size())
-				{
-					Child child = {parent2, new_vert_index};
-					vlookup_p1.push_back(child);
-				}
+				// Add an entry to the shortest adjacency map for this new child
+				if (adj0.size() < adj1.size())
+					adj0.push_back(Adjacent(parent1, new_vidx));
 				else
-				{
-					Child child = {parent1, new_vert_index};
-					vlookup_p2.push_back(child);
-				}
-				return new_vert_index;
+					adj1.push_back(Adjacent(parent0, new_vidx));
+
+				return new_vidx;
 			}
 
 				// Recursively add a face
@@ -143,29 +144,28 @@ namespace pr
 				float const H2   = -1.0f + A;
 				float const R    = Sqrt(1.0f - H1 * H1);
 				float const dAng = maths::tau / 5.0f;
-
+				float const ua[] = {0.0f,0.2f,0.4f,0.6f,0.8f,1.0f,1.2f};
+				float const ub[] = {0.1f,0.3f,0.5f,0.7f,0.9f,1.1f,1.3f};
+				
 				// Add the vertices
-				float ang1 = 0.0f, ang2 = maths::tau / 10.0f;
-				float ua = 0.0f, ub = 0.0f;
+				float ang1 = 0.0f, ang2 = dAng * 0.5f;
 				for (uint w = 0; w != 6; ++w, ang1 += dAng, ang2 += dAng)
 				{
 					v4 norm_a = v4::make(R * Cos(ang1), R * Sin(ang1), H1, 0.0f);
 					v4 norm_b = v4::make(R * Cos(ang2), R * Sin(ang2), H2, 0.0f);
-					float u_a = ATan2Positive(norm_a.y, norm_a.x) / maths::tau; ua = u_a + (u_a < ua);
-					float u_b = ATan2Positive(norm_b.y, norm_b.x) / maths::tau; ub = u_b + (u_b < ub);
-					AddVertex( v4ZAxis ,v2::make(ua, 0.0f), data);
-					AddVertex( norm_a  ,v2::make(ua, (1.0f - norm_a.z) * 0.5f), data);
-					AddVertex( norm_b  ,v2::make(ub, (1.0f - norm_b.z) * 0.5f), data);
-					AddVertex(-v4ZAxis ,v2::make(ub, 1.0f), data);
+					AddVertex( v4ZAxis ,ub[w] ,true  ,data);
+					AddVertex( norm_a  ,ua[w] ,false ,data);
+					AddVertex( norm_b  ,ub[w] ,false ,data);
+					AddVertex(-v4ZAxis ,ua[w+1] ,true  ,data);
 				}
 
 				// Add the faces
-				for (pr::uint16 i = 0; i != 5; ++i)
+				for (std::size_t i = 0, ibase = 0; i != 5; ++i, ibase += 4)
 				{
-					AddFace(i *4 + 0, i*4 + 1, (1+i)*4 + 1, 0, data);
-					AddFace(i *4 + 1, i*4 + 2, (1+i)*4 + 1, 0, data);
-					AddFace((1+i)*4 + 1, i*4 + 2, (1+i)*4 + 2, 0, data);
-					AddFace(i *4 + 2, i*4 + 3, (1+i)*4 + 2, 0, data);
+					AddFace(ibase + 0, ibase + 1, ibase + 5, 0, data);
+					AddFace(ibase + 1, ibase + 2, ibase + 5, 0, data);
+					AddFace(ibase + 5, ibase + 2, ibase + 6, 0, data);
+					AddFace(ibase + 6, ibase + 2, ibase + 3, 0, data);
 				}
 			}
 		}}
@@ -175,28 +175,26 @@ namespace pr
 		Props Geosphere(v4 const& radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
 			// Preallocate buffers to compile the geosphere into
-			pr::Range<> vrange, irange;
-			SphereSize(divisions, vrange, irange);
-			std::size_t num_verts = vrange.size();
-			std::size_t num_faces = irange.size() / 3;
-			impl::geosphere::TVertCont verts; verts.reserve(num_verts);
-			impl::geosphere::TFaceCont faces; faces.reserve(num_faces);
+			std::size_t vcount, icount;
+			GeosphereSize(divisions, vcount, icount);
+			impl::geosphere::TVertCont verts; verts.reserve(vcount);
+			impl::geosphere::TFaceCont faces; faces.reserve(icount / 3);
 
 			impl::geosphere::CreateGeosphereData data;
 			data.m_vcont     = &verts;
 			data.m_fcont     = &faces;
 			data.m_radius    = radius;
 			data.m_divisions = divisions;
-			data.m_vlookup.reserve(num_verts);
+			data.m_adjacent.reserve(vcount);
 			impl::geosphere::CreateIcosahedron(data);
 
-			PR_ASSERT(PR_DBG, verts.size() == num_verts, "Number of verts in geosphere calculated incorrectly");
-			PR_ASSERT(PR_DBG, faces.size() == num_faces, "Number of faces in geosphere calculated incorrectly");
+			PR_ASSERT(PR_DBG, verts.size() == vcount, "Number of verts in geosphere calculated incorrectly");
+			PR_ASSERT(PR_DBG, faces.size() == icount/3, "Number of faces in geosphere calculated incorrectly");
 
 			// Output the verts and indices
 			for (auto i = begin(verts), iend = end(verts); i != iend; ++i)
 			{
-				SetPCNT(*out_verts++, i->m_vert, colour, i->m_norm, i->m_uv);
+				SetPCNT(*out_verts++, i->m_vert, colour, i->m_norm, v2::make(i->m_ang, (1.0f - i->m_norm.z) * 0.5f));
 			}
 			for (auto i = begin(faces), iend = end(faces); i != iend; ++i)
 			{
@@ -212,11 +210,80 @@ namespace pr
 			return props;
 		}
 
-		// Generate a spherically geosphere
+		// Generate a spherical geosphere
 		template <typename TVertIter, typename TIdxIter>
 		Props Geosphere(float radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
 			return Geosphere(v4::make(radius, radius, radius, 0.0f), divisions, colour, out_verts, out_indices);
+		}
+
+		// Returns the number of verts and number of indices needed to hold geometry for a sphere
+		template <typename Tvr, typename Tir>
+		void SphereSize(std::size_t wedges, std::size_t layers, Tvr& vcount, Tir& icount)
+		{
+			if (wedges < 3) wedges = 3;
+			if (layers < 2) layers = 2;
+			vcount = value_cast<Tvr>((wedges + 1) * (layers + 1));
+			icount = value_cast<Tir>(3 * wedges * (2 * layers - 2));
+		}
+
+		// Generate a standard sphere
+		template <typename TVertIter, typename TIdxIter>
+		Props Sphere(v4 const& radius, std::size_t wedges, std::size_t layers, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
+		{
+			if (wedges < 3) wedges = 3;
+			if (layers < 2) layers = 2;
+
+			// Verts
+			for (std::size_t w = 0; w <= wedges; ++w)
+			{
+				v4 norm = v4ZAxis;
+				v2 uv   = v2::make(float(w + 0.5f) / wedges, 0.0f);
+				SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
+
+				for (std::size_t l = 1; l < layers; ++l)
+				{
+					float a = maths::tau * w / wedges;
+					float b = maths::tau_by_2 * l / layers;
+					norm = v4::make(Cos(a) * Sin(b), Sin(a) * Sin(b), Cos(b), 0.0f);
+					uv   = v2::make(float(w) / wedges, (1.0f - norm.z) * 0.5f);
+					SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
+				}
+
+				norm = -v4ZAxis;
+				uv   = v2::make(float(w + 0.5f) / wedges, 1.0f);
+				SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
+			}
+
+			// Faces
+			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+			std::size_t ibase = 0, ilayer = 0, verts_per_wedge = 1 + layers;
+			for (std::size_t w = 0; w != wedges; ++w, ibase += verts_per_wedge, ilayer = ibase)
+			{
+				*out_indices++ = value_cast<VIdx>(ilayer + 0);
+				*out_indices++ = value_cast<VIdx>(ilayer + 1);
+				*out_indices++ = value_cast<VIdx>(ilayer + 1 + verts_per_wedge);
+				++ilayer;
+				for (std::size_t l = 1; l != layers - 1; ++l)
+				{
+					
+					*out_indices++ = value_cast<VIdx>(ilayer + 0);
+					*out_indices++ = value_cast<VIdx>(ilayer + 1);
+					*out_indices++ = value_cast<VIdx>(ilayer + 0 + verts_per_wedge);
+					*out_indices++ = value_cast<VIdx>(ilayer + 0 + verts_per_wedge);
+					*out_indices++ = value_cast<VIdx>(ilayer + 1);
+					*out_indices++ = value_cast<VIdx>(ilayer + 1 + verts_per_wedge);
+					++ilayer;
+				}
+				*out_indices++ = value_cast<VIdx>(ilayer + 0 + verts_per_wedge);
+				*out_indices++ = value_cast<VIdx>(ilayer + 0 );
+				*out_indices++ = value_cast<VIdx>(ilayer + 1 );
+			}
+
+			Props props;
+			props.m_bbox = BoundingBox::make(pr::v4Origin, radius);
+			props.m_has_alpha = colour.a() != 0xFF;
+			return props;
 		}
 	}
 }

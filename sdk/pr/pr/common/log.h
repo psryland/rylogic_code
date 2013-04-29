@@ -14,14 +14,15 @@
 // {
 //    PR_LOG(Exception, e, "Tried and failed");
 // }
+
+// NOTE:
+// For some reason, defining PR_LOGGING=1 in the property sheets does not work
+// in VS2012. You have to define it in the project settings...
+
 #ifndef PR_COMMON_LOG_H
 #define PR_COMMON_LOG_H
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #include <windows.h>
-#else
-#include <sys/time.h>
-#endif
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -31,12 +32,12 @@ namespace pr
 {
 	namespace log
 	{
-		#ifdef PR_LOGGING
-		#define PR_LOG(level, message)          pr::log::Log.Write(pr::log::Level::level, __FILE__, __LINE__, message, 0)
-		#define PR_LOGE(level, except, message) pr::log::Log.Write(pr::log::Level::level, __FILE__, __LINE__, message, &except)
+		#if PR_LOGGING
+		#define PR_LOG(level, message)          do { pr::log::Log::Write(pr::log::Level::level, __FILE__, __LINE__, (message), 0);       } while (0)
+		#define PR_LOGE(level, except, message) do { pr::log::Log::Write(pr::log::Level::level, __FILE__, __LINE__, (message), &except); } while (0)
 		#else
-		#define PR_LOG(level, message)
-		#define PR_LOGE(level, except, message)
+		#define PR_LOG(level, message)          do {} while (0)
+		#define PR_LOGE(level, except, message) do {} while (0)
 		#endif
 
 		// Logging output levels
@@ -71,10 +72,24 @@ namespace pr
 
 		struct Log
 		{
-			// The file descriptor to send log statements to
-			static FILE*& Out()
+			// RAII Lock class
+			struct Lock
 			{
-				static FILE* out = stderr;
+				volatile long* m_lock;
+				Lock(volatile long* lock) :m_lock(lock) { for (; ::InterlockedCompareExchange(m_lock, 1, 0) != 0; Sleep(0)) {} }
+				~Lock() { ::InterlockedDecrement(m_lock); }
+			};
+			static volatile long* boundary()
+			{
+				static volatile long s_boundary = 0;
+				return &s_boundary;
+			}
+
+		public:
+			// The stream to send log data to
+			static std::ostream*& Out()
+			{
+				static std::ostream* out = &std::cerr;
 				return out;
 			}
 
@@ -85,22 +100,29 @@ namespace pr
 			}
 
 			// Write to the log
+			#if PR_LOGGING
 			static void Write(Level::Type level, char const* file, size_t line, char const* message, std::exception const* e)
 			{
-				auto out = Out();
-				if (!out || level < Level()) return;
+				Lock lock(boundary());
+				if (level < Level()) return;
 				
-				(void)file;
-				(void)line;
-				fprintf(out, "(%s) [%s] %s\n", Timestamp().c_str(), Level::ToString(level), message);
-				if (e) fprintf(out, "  Exception Message: %s\n", e->what());
-				fflush(out);
+				auto& out = *Out();
+				out << "(" << Timestamp() << ") [" << Level::ToString(level) << "] " <<  message << "\n";
+				if (e)
+				{
+					out << "  Exception Message: " << e->what() << "\n";
+					out << "  Source: " << file << "(" << line << ")\n";
+				}
+				out.flush();
 			}
+			#else
+			static void Write(Level::Type, char const*, size_t, char const*, std::exception const*) {}
+			#endif
 
 			// Returns the current timestamp
+			#if PR_LOGGING
 			static std::string Timestamp()
 			{
-				#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 				char buffer[200] = {};
 				if (GetTimeFormatA(LOCALE_USER_DEFAULT, 0, 0, "HH':'mm':'ss", buffer, sizeof(buffer)) == 0) return "";
 				
@@ -108,19 +130,10 @@ namespace pr
 				char result[100] = {};
 				std::sprintf(result, "%s.%03ld", buffer, (long)(GetTickCount() - first) % 1000); 
 				return result;
-				#else
-				char buffer[11];
-				time_t t;
-				time(&t);
-				tm r = {0};
-				strftime(buffer, sizeof(buffer), "%X", localtime_r(&t, &r));
-				struct timeval tv;
-				gettimeofday(&tv, 0);
-				char result[100] = {0};
-				std::sprintf(result, "%s.%03ld", buffer, (long)tv.tv_usec / 1000); 
-				return result;
-				#endif
 			}
+			#else
+			static std::string Timestamp() { return std::string(); }
+			#endif
 		};
 	}
 }

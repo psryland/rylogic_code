@@ -39,8 +39,9 @@ namespace pr
 	inline m4x4& m4x4::set(Quat const& quat, v4 const& translation)
 	{
 		PR_ASSERT(PR_DBG_MATHS, IsNormal4(quat), "'quat' should be a normalised quaternion");
-		#if PR_MATHS_USE_D3DX
-		D3DXMatrixRotationQuaternion(&d3dm4(*this), &d3dq(quat));
+		
+		#if PR_MATHS_USE_DIRECTMATH
+		dxm4(*this) = DirectX::XMMatrixRotationQuaternion(quat.vec);
 		#else
 		cast_m3x3(*this).set(quat);
 		#endif
@@ -51,8 +52,8 @@ namespace pr
 	inline m4x4& m4x4::set(v4 const& axis, float angle, v4 const& translation)
 	{
 		PR_ASSERT(PR_DBG_MATHS, IsNormal3(axis), "'axis' should be normalised");
-		#if PR_MATHS_USE_D3DX
-		D3DXMatrixRotationAxis(&d3dm4(*this), &d3dv3(axis), angle);
+		#if PR_MATHS_USE_DIRECTMATH
+		dxm4(*this) = DirectX::XMMatrixRotationAxis(axis.vec, angle);
 		#else
 		cast_m3x3(*this).set(axis, angle);
 		#endif
@@ -139,14 +140,12 @@ namespace pr
 	inline m4x4 operator * (m4x4 const& lhs, m4x4 const& rhs)
 	{
 		m4x4 ans;
-		#if PR_MATHS_USE_D3DX
-		D3DXMatrixMultiply(&d3dm4(ans), &d3dm4(rhs), &d3dm4(lhs));
+		#if PR_MATHS_USE_DIRECTMATH
+		dxm4(ans) = DirectX::XMMatrixMultiply(dxm4(rhs), dxm4(lhs));
 		#else
 		m4x4 lhs_t = GetTranspose4x4(lhs);
-		#pragma PR_OMP_PARALLEL_FOR
 		for (int j = 0; j < 4; ++j)
 		{
-			#pragma PR_OMP_PARALLEL_FOR
 			for (int i = 0; i < 4; ++i)
 				ans[j][i] = Dot4(lhs_t[i], rhs[j]);
 		}
@@ -156,11 +155,10 @@ namespace pr
 	inline v4 operator * (m4x4 const& lhs, v4 const& rhs)
 	{
 		v4 ans;
-		#if PR_MATHS_USE_D3DX
-		D3DXVec4Transform(&d3dv4(ans), &d3dv4(rhs), &d3dm4(lhs));
+		#if PR_MATHS_USE_DIRECTMATH
+		dxv4(ans) = DirectX::XMVector4Transform(dxv4(rhs), dxm4(lhs));
 		#else
 		m4x4 lhs_t = GetTranspose4x4(lhs);
-		#pragma PR_OMP_PARALLEL_FOR
 		for (int i = 0; i < 4; ++i)
 			ans[i] = Dot4(lhs_t[i], rhs);
 		#endif
@@ -182,10 +180,10 @@ namespace pr
 	inline bool operator <= (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 	
-	// D3DX conversion functions
-	#if PR_MATHS_USE_D3DX
-	inline D3DXMATRIX const& d3dm4(m4x4 const& m) { return reinterpret_cast<D3DXMATRIX const&>(m); }
-	inline D3DXMATRIX&       d3dm4(m4x4&       m) { return reinterpret_cast<D3DXMATRIX&>(m); }
+	// DirectXMath conversion functions
+	#if PR_MATHS_USE_DIRECTMATH
+	inline DirectX::XMMATRIX const& dxm4(m4x4 const& m) { return reinterpret_cast<DirectX::XMMATRIX const&>(m); }
+	inline DirectX::XMMATRIX&       dxm4(m4x4&       m) { return reinterpret_cast<DirectX::XMMATRIX&>(m); }
 	#endif
 	
 	// Conversion functions between vector types
@@ -246,8 +244,10 @@ namespace pr
 	// Return the 4x4 determinant of the arbitrary transform 'mat'
 	inline float Determinant4(pr::m4x4 const& mat)
 	{
-		#if PR_MATHS_USE_D3DX
-		return D3DXMatrixDeterminant(&d3dm4(mat));
+		#if PR_MATHS_USE_DIRECTMATH
+		v4 det;
+		dxv4(det) = DirectX::XMMatrixDeterminant(dxm4(mat));
+		return det.x;
 		#else
 		float c1 = (mat.z.z * mat.w.w) - (mat.z.w * mat.w.z);
 		float c2 = (mat.z.y * mat.w.w) - (mat.z.w * mat.w.y);
@@ -281,10 +281,9 @@ namespace pr
 	// Transpose the matrix
 	inline m4x4& Transpose4x4(m4x4& mat)
 	{
-		#if PR_MATHS_USE_D3DX
-		D3DXMatrixTranspose(&d3dm4(mat), &d3dm4(mat));
+		#if PR_MATHS_USE_DIRECTMATH
+		dxm4(mat) = DirectX::XMMatrixTranspose(dxm4(mat));
 		#else
-		#pragma PR_OMP_PARALLEL
 		{
 			Swap(mat.x.y, mat.y.x);
 			Swap(mat.x.z, mat.z.x);
@@ -333,10 +332,12 @@ namespace pr
 	// Invert this matrix
 	inline m4x4& Inverse(m4x4& mat)
 	{
-#if PR_MATHS_USE_D3DX
-		void* p = D3DXMatrixInverse(&d3dm4(mat), 0, &d3dm4(mat));
-		PR_ASSERT(PR_DBG_MATHS, p, "Matrix has no inverse"); (void)p;
-#else
+		#if PR_MATHS_USE_DIRECTMATH
+		v4 det;
+		dxv4(det) = DirectX::XMMatrixDeterminant(dxm4(mat));
+		dxm4(mat) = DirectX::XMMatrixInverse(&dxv4(det), dxm4(mat));
+		PR_ASSERT(PR_DBG_MATHS, det.x != 0.f, "Matrix has no inverse");
+		#else
 		m4x4  A = GetTranspose4x4(mat); // Take the transpose so that row operations are faster
 		m4x4& B = mat; B.identity();
 		
@@ -590,10 +591,6 @@ namespace pr
 	// Construct an orthographic projection matrix
 	inline m4x4& ProjectionOrthographic(m4x4& mat, float w, float h, float Znear, float Zfar, bool righthanded)
 	{
-#if PR_MATHS_USE_D3DX
-		if (righthanded) D3DXMatrixOrthoRH(&d3dm4(mat), w, h, Znear, Zfar);
-		else             D3DXMatrixOrthoLH(&d3dm4(mat), w, h, Znear, Zfar);
-#else
 		float diff = Zfar - Znear;
 		Zero(mat);
 		mat.x.x = 2.0f / w;
@@ -601,7 +598,6 @@ namespace pr
 		mat.z.z = Sign<float>(!righthanded) / diff;
 		mat.w.w = 1.0f;
 		mat.w.z = -Znear / diff;
-#endif
 		return mat;
 	}
 	inline m4x4 ProjectionOrthographic(float w, float h, float Znear, float Zfar, bool righthanded)
@@ -613,10 +609,6 @@ namespace pr
 	// Construct a perspective projection matrix
 	inline m4x4& ProjectionPerspective(m4x4& mat, float w, float h, float Znear, float Zfar, bool righthanded)
 	{
-#if PR_MATHS_USE_D3DX
-		if (righthanded) D3DXMatrixPerspectiveRH(&d3dm4(mat), w, h, Znear, Zfar);
-		else             D3DXMatrixPerspectiveLH(&d3dm4(mat), w, h, Znear, Zfar);
-#else
 		float zn   = 2.0f * Znear;
 		float diff = Zfar - Znear;
 		Zero(mat);
@@ -625,7 +617,6 @@ namespace pr
 		mat.z.w = Sign<float>(!righthanded);
 		mat.z.z = mat.z.w * Zfar / diff;
 		mat.w.z = -Znear * Zfar / diff;
-#endif
 		return mat;
 	}
 	inline m4x4 ProjectionPerspective(float w, float h, float Znear, float Zfar, bool righthanded)
@@ -637,10 +628,6 @@ namespace pr
 	// Construct a perspective projection matrix offset from the centre
 	inline m4x4& ProjectionPerspective(m4x4& mat, float l, float r, float t, float b, float Znear, float Zfar, bool righthanded)
 	{
-#if PR_MATHS_USE_D3DX
-		if (righthanded) D3DXMatrixPerspectiveOffCenterRH(&d3dm4(mat), l, r, b, t, Znear, Zfar);
-		else             D3DXMatrixPerspectiveOffCenterLH(&d3dm4(mat), l, r, b, t, Znear, Zfar);
-#else
 		float zn   = 2.0f * Znear;
 		float diff = Zfar - Znear;
 		Zero(mat);
@@ -651,7 +638,6 @@ namespace pr
 		mat.z.w = Sign<float>(!righthanded);
 		mat.z.z = mat.z.w * Zfar / diff;
 		mat.w.z = -Znear * Zfar / diff;
-#endif
 		return mat;
 	}
 	inline m4x4 ProjectionPerspective(float l, float r, float t, float b, float Znear, float Zfar, bool righthanded)
@@ -663,10 +649,6 @@ namespace pr
 	// Construct a perspective projection matrix using field of view
 	inline m4x4& ProjectionPerspectiveFOV(m4x4& mat, float fovY, float aspect, float Znear, float Zfar, bool righthanded)
 	{
-#if PR_MATHS_USE_D3DX
-		if (righthanded) D3DXMatrixPerspectiveFovRH(&d3dm4(mat), fovY, aspect, Znear, Zfar);
-		else             D3DXMatrixPerspectiveFovLH(&d3dm4(mat), fovY, aspect, Znear, Zfar);
-#else
 		float diff = Zfar - Znear;
 		Zero(mat);
 		mat.y.y = 1.0f / pr::Tan(fovY/2);
@@ -674,7 +656,6 @@ namespace pr
 		mat.z.w = Sign<float>(!righthanded);
 		mat.z.z = mat.z.w * Zfar / diff;
 		mat.w.z = -Znear * Zfar / diff;
-#endif
 		return mat;
 	}
 	inline m4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float Znear, float Zfar, bool righthanded)
@@ -688,10 +669,10 @@ namespace pr
 	inline m4x4 CrossProductMatrix4x4(v4 const& vec)
 	{
 		return m4x4::make(
-				   v4::make(0.0f,  vec.z, -vec.y, 0.0f),
-				   v4::make(-vec.z,   0.0f,  vec.x, 0.0f),
-				   v4::make(vec.y, -vec.x,   0.0f, 0.0f),
-				   v4Zero);
+			v4::make(0.0f,  vec.z, -vec.y, 0.0f),
+			v4::make(-vec.z,   0.0f,  vec.x, 0.0f),
+			v4::make(vec.y, -vec.x,   0.0f, 0.0f),
+			v4Zero);
 	}
 	
 	// Make an object to world transform from a direction vector and position

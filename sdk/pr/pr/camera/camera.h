@@ -97,25 +97,26 @@ namespace pr
 	//  point = v2::make(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
 	struct Camera
 	{
-		m4x4                   m_base_c2w;        // The starting position during a mouse movement
-		m4x4                   m_c2w;             // Camera to world transform
-		camera::NavKeyBindings m_key;             // Key bindings
-		float                  m_default_fovY;    // The default field of view
-		v4                     m_align;           // The directon to align 'up' to, or v4Zero
-		camera::LockMask       m_lock_mask;       // Locks on the allowed motion
-		bool                   m_orthographic;    // True for orthographic camera to screen transforms, false for perspective
-		float                  m_base_fovY;       // The starting fov during a mouse movement
-		float                  m_fovY;            // Field of view in the Y direction
-		float                  m_base_focus_dist; // The starting focus distance during a mouse movement
-		float                  m_focus_dist;      // Distance from the c2w position to the focus, down the z axis
-		float                  m_aspect;          // Aspect ratio = width/height
-		float                  m_near;            // The near plane as a multiple of the focus distance
-		float                  m_far;             // The near plane as a multiple of the focus distance
-		float                  m_accuracy_scale;  // Scale factor for high accuracy control
-		v2                     m_Lref;            // Movement start reference point for the left button
-		v2                     m_Rref;            // Movement start reference point for the right button
-		v2                     m_Mref;            // Movement start reference point for the middle button
-		bool                   m_moved;           // Dirty flag for when the camera moves
+		m4x4                   m_base_c2w;          // The starting position during a mouse movement
+		m4x4                   m_c2w;               // Camera to world transform
+		camera::NavKeyBindings m_key;               // Key bindings
+		float                  m_default_fovY;      // The default field of view
+		v4                     m_align;             // The directon to align 'up' to, or v4Zero
+		camera::LockMask       m_lock_mask;         // Locks on the allowed motion
+		bool                   m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
+		float                  m_base_fovY;         // The starting fov during a mouse movement
+		float                  m_fovY;              // Field of view in the Y direction
+		float                  m_base_focus_dist;   // The starting focus distance during a mouse movement
+		float                  m_focus_dist;        // Distance from the c2w position to the focus, down the z axis
+		float                  m_aspect;            // Aspect ratio = width/height
+		float                  m_near;              // The near plane as a multiple of the focus distance
+		float                  m_far;               // The near plane as a multiple of the focus distance
+		float                  m_accuracy_scale;    // Scale factor for high accuracy control
+		v2                     m_Lref;              // Movement start reference point for the left button
+		v2                     m_Rref;              // Movement start reference point for the right button
+		v2                     m_Mref;              // Movement start reference point for the middle button
+		bool                   m_moved;             // Dirty flag for when the camera moves
+		bool                   m_focus_rel_clip;    // True if the near/far clip planes should be relative to the focus point
 		
 		Camera(float fovY = pr::maths::tau_by_8, float aspect = 1.0f)
 		:m_base_c2w(m4x4Identity)
@@ -137,6 +138,7 @@ namespace pr
 		,m_Rref(v2Zero)
 		,m_Mref(v2Zero)
 		,m_moved(false)
+		,m_focus_rel_clip(true)
 		{}
 		
 		// Return the camera to world transform
@@ -164,7 +166,9 @@ namespace pr
 		}
 		m4x4 CameraToScreen() const
 		{
-			return CameraToScreen(m_focus_dist * m_near, m_focus_dist * m_far);
+			return m_focus_rel_clip
+				? CameraToScreen(m_focus_dist * m_near, m_focus_dist * m_far)
+				: CameraToScreen(m_near, m_far);
 		}
 		
 		// Return a point in normalised screen space, i.e. (-1,-1)->(1,1)
@@ -214,7 +218,15 @@ namespace pr
 			ws_point = m_c2w.pos;
 			ws_direction = pr::GetNormal3(pt - ws_point);
 		}
-		
+
+		// Set the distances to the near and far clip planes
+		void ClipPlanes(float near_, float far_, bool focus_relative_clip)
+		{
+			m_near = near_;
+			m_far = far_;
+			m_focus_rel_clip = focus_relative_clip;
+		}
+
 		// Return the aspect ratio
 		float Aspect() const
 		{

@@ -10,6 +10,7 @@ set targetpath=%1
 set platform=%2
 set config=%3
 set dstdir=%4
+set wordsize=
 
 ::Load Rylogic environment variables and check version
 if [%RylogicEnv%]==[] (
@@ -34,20 +35,41 @@ call lower_case extn
 
 if [%platform%]==[x86] set platform=win32
 if [%dstdir%]==[] set dstdir=%qdrive%\sdk\pr\lib
+if [%platform%]==[win32] (
+	set wordsize=32
+) else (
+	set wordsize=64
+)
 
 ::Copy the library file to the lib folder
 call copy "%targetpath%" "%dstdir%\%file%.%platform%.%config%.%extn%"  /Y /F /D
+if errorlevel 1 goto :error
 
 ::If there's an associated pdb file copy that too
 if exist "%srcdir%\%file%.pdb" (
 	call copy "%srcdir%\%file%.pdb" "%dstdir%\%file%.%platform%.%config%.pdb"  /Y /F /D
+	if errorlevel 1 goto :error
 )
 
 ::If the lib is a dll, look for an import library and copy that too, if it exists
 if [%extn%]==[dll] (
 	if exist "%srcdir%\%file%.lib" (
 		call copy "%srcdir%\%file%.lib" "%dstdir%\%file%.%platform%.%config%.lib" /Y /F /D
+		if errorlevel 1 goto :error
 	)
 )
 
+::Produce a OMF version of the lib
+::q:\tools\objconv -fOMF%wordsize% "%dstdir%\%file%.%platform%.%config%.%extn%" "%dstdir%\%file%.%platform%.%config%.omf.%extn%"
+::if errorlevel 1 goto :error
 
+goto :success
+
+:error
+echo.
+echo Failed.
+echo.
+goto :eof
+
+:success
+echo Succeeded.

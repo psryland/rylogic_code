@@ -15,10 +15,10 @@ namespace pr
 		// Returns the number of verts and number of indices needed to hold geometry for an
 		// array of 'num_lines' lines. (Lines given as start point, end point pairs)
 		template <typename Tvr, typename Tir>
-		void LineSize(std::size_t num_lines, pr::Range<Tvr>& vrange, pr::Range<Tir>& irange)
+		void LineSize(std::size_t num_lines, Tvr& vcount, Tir& icount)
 		{
-			vrange.set(0, 2 * num_lines);
-			irange.set(0, 2 * num_lines);
+			vcount = value_cast<Tvr>(2 * num_lines);
+			icount = value_cast<Tir>(2 * num_lines);
 		}
 
 		// Generate lines from an array of start point, end point pairs.
@@ -57,13 +57,6 @@ namespace pr
 			}
 			props.m_has_alpha = col.m_alpha;
 			return props;
-		}
-
-		// Create lines using a single colour
-		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
-		inline Props Lines(std::size_t num_lines ,TVertCIter points ,Colour32 colour ,TVertIter out_verts ,TIdxIter out_indices)
-		{
-			return Lines(num_lines ,points ,1 ,&colour ,out_verts ,out_indices);
 		}
 
 		// Create lines using collections of points and directions

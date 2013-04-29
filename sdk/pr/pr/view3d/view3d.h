@@ -15,8 +15,8 @@
 #include <windows.h>
 #include "pr/maths/maths.h"
 #include "pr/common/colour.h"
-// Note: the d3d headers are not included here and are not part of this interface
-// This allows the caller to use the renderer with referencing d3d
+// Note: the dx headers are not included here and are not part of this interface
+// This allows the caller to use the renderer with referencing dx
 
 namespace EView3DResult
 {

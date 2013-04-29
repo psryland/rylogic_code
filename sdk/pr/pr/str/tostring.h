@@ -17,6 +17,13 @@
 
 namespace pr
 {
+	// A static instance of the locale, because this thing takes ages to construct
+	inline std::locale const& locale()
+	{
+		static std::locale s_locale("");
+		return s_locale;
+	}
+
 	// Narrow
 	inline std::string Narrow(char const* from, std::size_t len = 0)
 	{
@@ -26,9 +33,8 @@ namespace pr
 	inline std::string Narrow(wchar_t const* from, std::size_t len = 0)
 	{
 		if (len == 0) len = wcslen(from);
-		std::locale const loc("");
 		std::vector<char> buffer(len + 1);
-		std::use_facet<std::ctype<wchar_t>>(loc).narrow(from, from + len, '_', &buffer[0]);
+		std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
 		return std::string(&buffer[0], &buffer[len]);
 	}
 	template <std::size_t Len> inline std::string Narrow(char const (&from)[Len])    { return Narrow(from, Len); }
@@ -43,9 +49,8 @@ namespace pr
 	inline std::wstring Widen(char const* from, std::size_t len = 0)
 	{
 		if (len == 0) len = strlen(from);
-		std::locale const loc("");
 		std::vector<wchar_t> buffer(len + 1);
-		std::use_facet<std::ctype<wchar_t>>(loc).widen(from, from + len, &buffer[0]);
+		std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
 		return std::wstring(&buffer[0], &buffer[len]);
 	}
 	template <std::size_t Len> inline std::wstring Widen (wchar_t const (&from)[Len]) { return Widen(from, Len); }
@@ -124,16 +129,54 @@ namespace pr
 		static std::wstring To(std::wstring const& from)            { return from; }
 	};
 
-	// To<pr::string>
-	template <typename Char, typename TFrom, int LocalCount, bool Fixed, typename Allocator>
-	struct Convert<pr::string<Char,LocalCount,Fixed,Allocator>, TFrom>
+	// To<pr::string<char>>
+	template <typename TFrom, int LocalCount, bool Fixed, typename Allocator>
+	struct Convert<pr::string<char,LocalCount,Fixed,Allocator>, TFrom>
 	{
 	private:
-		typedef pr::string<Char,LocalCount,Fixed,Allocator> pr_string;
+		typedef pr::string<char,LocalCount,Fixed,Allocator> pr_string;
+
+	public:
+		static pr_string To(bool from)                           { return from ? "true" : "false"; }
+		static pr_string To(char from)                           { return pr_string(1, from); }
+		static pr_string To(long long from, int radix)           { char buf[128]; return impl::itostr(from, buf, radix); }
+		static pr_string To(long long from)                      { return To(from, 10); }
+		static pr_string To(long from, int radix)                { return To(static_cast<long long>(from), radix); }
+		static pr_string To(long from)                           { return To(from, 10); }
+		static pr_string To(int from, int radix)                 { return To(static_cast<long long>(from), radix); }
+		static pr_string To(int from)                            { return To(from, 10); }
+		static pr_string To(short from, int radix)               { return To(static_cast<long long>(from), radix); }
+		static pr_string To(short from)                          { return To(from, 10); }
+		static pr_string To(unsigned long long from, int radix)  { char buf[128]; return impl::uitostr(from, buf, radix); }
+		static pr_string To(unsigned long long from)             { return To(from, 10); }
+		static pr_string To(unsigned long from, int radix)       { return To(static_cast<unsigned long long>(from), radix); }
+		static pr_string To(unsigned long from)                  { return To(from, 10); }
+		static pr_string To(unsigned int from, int radix)        { return To(static_cast<unsigned long long>(from), radix); }
+		static pr_string To(unsigned int from)                   { return To(from, 10); }
+		static pr_string To(unsigned short from, int radix)      { return To(static_cast<unsigned long long>(from), radix); }
+		static pr_string To(unsigned short from)                 { return To(from, 10); }
+		static pr_string To(unsigned char from, int radix)       { return To(static_cast<unsigned long long>(from), radix); }
+		static pr_string To(unsigned char from)                  { return To(from, 10); }
+		static pr_string To(long double from)                    { return std::to_string(from); }
+		static pr_string To(double from)                         { return To(static_cast<long double>(from)); }
+		static pr_string To(float from)                          { return To(static_cast<long double>(from)); }
+		static pr_string To(wchar_t const* from)                 { return Narrow(from, wcslen(from)); }
+		static pr_string To(char const* from)                    { return from; }
+		static pr_string To(std::string const& from)             { return from; }
+		static pr_string To(std::wstring const& from)            { return Narrow(from.c_str(), from.size()); }
+	};
+
+	// To<pr::string<wchar_t>>
+	template <typename TFrom, int LocalCount, bool Fixed, typename Allocator>
+	struct Convert<pr::string<wchar_t,LocalCount,Fixed,Allocator>, TFrom>
+	{
+	private:
+		typedef pr::string<wchar_t,LocalCount,Fixed,Allocator> pr_string;
+
 	public:
 		static pr_string To(bool from)                           { return from ? L"true" : L"false"; }
-		static pr_string To(char from)                           { return std::wstring(1, from); }
-		static pr_string To(long long from, int radix)           { Char buf[128]; return impl::itostr(from, buf, radix); }
+		static pr_string To(wchar_t from)                        { return pr_string(1, from); }
+		static pr_string To(long long from, int radix)           { wchar_t buf[128]; return impl::itostr(from, buf, radix); }
 		static pr_string To(long long from)                      { return To(from, 10); }
 		static pr_string To(long from, int radix)                { return To(static_cast<long long>(from), radix); }
 		static pr_string To(long from)                           { return To(from, 10); }
@@ -154,10 +197,10 @@ namespace pr
 		static pr_string To(long double from)                    { return std::to_wstring(from); }
 		static pr_string To(double from)                         { return To(static_cast<long double>(from)); }
 		static pr_string To(float from)                          { return To(static_cast<long double>(from)); }
-		static pr_string To(wchar_t const* from)                 { return Narrow(from, wcslen(from)); }
-		static pr_string To(char const* from)                    { return from; }
-		static pr_string To(std::string const& from)             { return from; }
-		static pr_string To(std::wstring const& from)            { return Narrow(from.c_str(), from.size()); }
+		static pr_string To(wchar_t const* from)                 { return from; }
+		static pr_string To(char const* from)                    { return Widen(from, strlen(from)); }
+		static pr_string To(std::string const& from)             { return Widen(from.c_str(), from.size()); }
+		static pr_string To(std::wstring const& from)            { return from; }
 	};
 }
 

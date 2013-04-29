@@ -107,9 +107,9 @@ namespace pr
 	// Order is roll, pitch, yaw because objects usually face along Z and have Y as up.
 	inline m3x3& m3x3::set(float pitch, float yaw, float roll)
 	{
-		#if PR_MATHS_USE_D3DX
+		#if PR_MATHS_USE_DIRECTMATH
 		m4x4 mat;
-		D3DXMatrixRotationYawPitchRoll(&d3dm4(mat), yaw, pitch, roll);
+		dxm4(mat) = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
 		return *this = cast_m3x3(mat);
 		#else
 		float cos_p = pr::Cos(pitch), sin_p = pr::Sin(pitch);
@@ -164,11 +164,9 @@ namespace pr
 	inline m3x3 operator * (m3x3 const& lhs, m3x3 const& rhs)
 	{
 		m3x3 ans, lhs_t = GetTranspose(lhs);
-		#pragma PR_OMP_PARALLEL_FOR
 		for (int j = 0; j < 3; ++j)
 		{
 			ans[j].w = 0.0f;
-			#pragma PR_OMP_PARALLEL_FOR
 			for (int i = 0; i < 3; ++i)
 				ans[j][i] = Dot3(lhs_t[i], rhs[j]);
 		}
@@ -178,7 +176,6 @@ namespace pr
 	{
 		v4 ans;
 		m3x3 lhs_t = GetTranspose(lhs);
-		#pragma PR_OMP_PARALLEL_FOR
 		for (int i = 0; i < 3; ++i)
 			ans[i] = Dot3(lhs_t[i], rhs);
 		ans.w = rhs.w;
@@ -188,7 +185,6 @@ namespace pr
 	{
 		v3 ans;
 		m3x3 lhs_t = GetTranspose(lhs);
-		#pragma PR_OMP_PARALLEL_FOR
 		for (int i = 0; i < 3; ++i)
 			ans[i] = Dot3(cast_v3(lhs_t[i]), rhs);
 		return ans;

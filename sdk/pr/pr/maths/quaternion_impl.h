@@ -74,8 +74,9 @@ namespace pr
 	// Create a quaternion from a rotation matrix
 	inline Quat& Quat::set(m4x4 const& m)
 	{
-		#if PR_MATHS_USE_D3DX
-		D3DXQuaternionRotationMatrix(&d3dq(*this), &d3dm4(m)); return *this;
+		#if PR_MATHS_USE_DIRECTMATH
+		dxv4(*this) = DirectX::XMQuaternionRotationMatrix(dxm4(m));
+		return *this;
 		#else
 		return set(cast_m3x3(m));
 		#endif

@@ -4,9 +4,15 @@
 //**********************************************************************************
 // Use this pointer to point to objects with 'AddRef' and 'Release' functions
 // Note: types that inherit pr::RefCount<> can be used
+//
+// Use the following registry key to prevent the debugger stepping into this type:
+//  [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\9.0\NativeDE\StepOver]
+//  "pr::RefPtr"="pr\\:\\:RefPtr.*\\:\\:.*=NoStepInto"
+// Inheriters use the IncRef/DecRef methods, so that stack tracing works
+
 #pragma once
-#ifndef PR_REF_POINTER_H
-#define PR_REF_POINTER_H
+#ifndef PR_COMMON_REFPTR_H
+#define PR_COMMON_REFPTR_H
 
 //"pr/common/assert.h" should be included prior to this for pr asserts
 #ifndef PR_ASSERT
@@ -32,11 +38,9 @@ namespace pr
 	#if PR_REFPTR_TRACE == 1
 	template <typename T> void RefPtrTrace(bool,T*);
 	#endif
-	
-	// Use the following registry key to prevent the debugger stepping into this type:
-	//	[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\9.0\NativeDE\StepOver]
-	//	"pr::RefPtr"="pr\\:\\:RefPtr.*\\:\\:.*=NoStepInto"
-	// Inheriters use the IncRef/DecRef methods, so that stack tracing works
+
+	// A ptr wrapper to a reference counting object.
+	// 'T' should have methods 'AddRef' and 'Release'
 	template <typename T> struct RefPtr
 	{
 		mutable T* m_ptr;

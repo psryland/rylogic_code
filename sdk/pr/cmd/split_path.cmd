@@ -12,6 +12,7 @@
 	set file=%3
 	set extn=%4
 	call set fullpath=%%%v%%%
+	if [%trace%]==[1] echo splitting path: "%fullpath%"
 	for /f "tokens=* delims= " %%I in ("%fullpath%") do set p=%%~dpI& set f=%%~nI& set e=%%~xI
 	if [%p:~-1,1%]==[\] (set p=%p:~0,-1%)
 	if [%e:~0,1%]==[.] (set e=%e:~1%)

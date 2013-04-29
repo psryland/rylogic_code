@@ -146,4 +146,67 @@ namespace pr
 	}
 }
 
-#endif//PR_GEOMETRY_MESH_TOOLS_H
+#endif
+
+/*
+// Generate normals for this model
+// Assumes the locked region of the model contains a triangle list
+void pr::rdr::model::GenerateNormals(MLock& mlock, Range const* v_range, Range const* i_range)
+{
+	if (!v_range) v_range = &mlock.m_vrange;
+	if (!i_range) i_range = &mlock.m_irange;
+	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_vlock.m_range, *v_range), "The provided vertex range is not within the locked range");
+	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_ilock.m_range, *i_range), "The provided index range is not within the locked range");
+	PR_ASSERT(PR_DBG_RDR, (i_range->size() % 3) == 0, "This function assumes the index range refers to a triangle list");
+	PR_ASSERT(PR_DBG_RDR, vf::GetFormat(mlock.m_model->GetVertexType()) & vf::EFormat::Norm, "Vertices must have normals");
+
+	// Initialise all of the normals to zero
+	vf::iterator vb = mlock.m_vlock.m_ptr + v_range->m_begin;
+	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
+		Zero(vb->normal());
+	
+	Index* ib = mlock.m_ilock.m_ptr + i_range->m_begin;
+	for (std::size_t f = 0, f_end = f + i_range->size()/3; f != f_end; ++f, ib += 3)
+	{
+		PR_ASSERT(PR_DBG_RDR, mlock.m_vlock.m_range.contains(ib[0]), "Face index refers outside of the locked vertex range");
+		PR_ASSERT(PR_DBG_RDR, mlock.m_vlock.m_range.contains(ib[1]), "Face index refers outside of the locked vertex range");
+		PR_ASSERT(PR_DBG_RDR, mlock.m_vlock.m_range.contains(ib[2]), "Face index refers outside of the locked vertex range");
+		vf::RefVertex v0 = mlock.m_vlock.m_ptr[ib[0]];
+		vf::RefVertex v1 = mlock.m_vlock.m_ptr[ib[1]];
+		vf::RefVertex v2 = mlock.m_vlock.m_ptr[ib[2]];
+
+		// Calculate a face normal
+		v3 norm = Cross3(v1.vertex() - v0.vertex(), v2.vertex() - v0.vertex());
+		Normalise3IfNonZero(norm);
+
+		// Add the normal to each vertex that references the face
+		v0.normal() += norm;
+		v1.normal() += norm;
+		v2.normal() += norm;
+	}
+
+	// Normalise all of the normals
+	vb = mlock.m_vlock.m_ptr + v_range->m_begin;
+	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
+		Normalise3IfNonZero(vb->normal());
+}
+void pr::rdr::model::GenerateNormals(ModelPtr& model, Range const* v_range, Range const* i_range)
+{
+	MLock mlock(model);
+	GenerateNormals(mlock, v_range, i_range);
+}
+	
+// Set the vertex colours in a model
+void pr::rdr::model::SetVertexColours(MLock& mlock, Colour32 colour, Range const* v_range)
+{
+	if (!v_range) v_range = &mlock.m_vrange;
+	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_vlock.m_range, *v_range), "The provided vertex range is not within the locked range");
+	PR_ASSERT(PR_DBG_RDR, vf::GetFormat(mlock.m_model->GetVertexType()) & vf::EFormat::Diff, "Vertices must have colours");
+
+	vf::iterator vb = mlock.m_vlock.m_ptr + v_range->m_begin;
+	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
+		vb->colour() = colour;
+}
+	
+
+*/

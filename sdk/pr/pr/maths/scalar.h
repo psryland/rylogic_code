@@ -41,7 +41,7 @@ namespace pr
 	inline float   ACos(float x)                              { return acosf(x); }
 	inline float   ATan(float x)                              { return atanf(x); }
 	inline float   ATan2(float y, float x)                    { return atan2f(y, x); }
-	inline float   ATan2Positive(float y, float x)            { float a = atan2f(y, x); return (a >= 0.0f)*a + (a < 0.0f)*(maths::tau + a); }
+	inline float   ATan2Positive(float y, float x)            { float a = atan2f(y, x); return a < 0.0f ? a += maths::tau : a; }
 	inline float   Sinh(float x)                              { return sinhf(x); }
 	inline float   Cosh(float x)                              { return coshf(x); }
 	inline float   Tanh(float x)                              { return tanhf(x); }

@@ -25,7 +25,7 @@ namespace pr
 		// 'count' is the number of available items pointed to by 'iter'
 		// 'output_count' is the number of times the iterator will be incremented
 		// 'def' is the value to return when 'iter' is exhausted
-		Repeater(TCIter iter, std::size_t count, std::size_t output_count, TItem def)
+		Repeater(TCIter iter, std::size_t count, std::size_t output_count, TItem const& def)
 		:m_iter(iter)
 		,m_count(count)
 		,m_repeat(output_count / (count + (count == 0)))
@@ -71,7 +71,7 @@ namespace pr
 	// 'count' is the number of available items pointed to by 'iter'
 	// 'output_count' is the number of times the iterator will be incremented
 	// 'def' is the value to return when 'iter' is exhausted
-	template <typename TCIter, typename TItem> Repeater<TCIter,TItem> CreateRepeater(TCIter iter, std::size_t count, std::size_t output_count, TItem def)
+	template <typename TCIter, typename TItem> Repeater<TCIter,TItem> CreateRepeater(TCIter iter, std::size_t count, std::size_t output_count, TItem const& def)
 	{
 		return Repeater<TCIter, TItem>(iter, count, output_count, def);
 	}

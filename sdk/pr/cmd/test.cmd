@@ -11,6 +11,30 @@ echo *********************
 echo Test Batch File
 echo *********************
 echo.
+set trace=1
+
+echo Test: is_directory
+call is_directory "..\cmd" result
+if [%result%]==[1] (
+	echo yep, it's a directory
+) else (
+	echo nope, it should be a directory
+)
+set fpath=..\cmd\test.cmd
+call is_directory "%fpath%" result
+if [%result%]==[0] (
+	echo yep, it's not a directory
+) else (
+	echo nope, it shouldn't be a directory
+)
+echo.
+
+echo Test: compare_timestamps
+call compare_timestamp "Q:\sdk\pr\cmd\test.cmd" "Q:\sdk\pr\cmd\wait.cmd" result
+if [%result%]==[1] echo file1 is newer than file2
+if [%result%]==[0] echo file1 is the same age as file2
+if [%result%]==[-1] echo file1 is older than file2
+goto :eof
 
 echo Test: runas_admin
 call runas_admin %~s0 %*

@@ -38,9 +38,19 @@
 #define PR_ENUM_TOSTRING2(id, val)      case id: return #id;
 #define PR_ENUM_TOSTRING3(id, str, val) case id: return str;
 
-#define PR_ENUM_FROMSTR1(id)           if (::strcmp(name, #id) == 0) return id;
-#define PR_ENUM_FROMSTR2(id, val)      if (::strcmp(name, #id) == 0) return id;
-#define PR_ENUM_FROMSTR3(id, str, val) if (::strcmp(name, str) == 0) return id;
+#define PR_ENUM_STRCMP1(id)            if (::strcmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMP2(id, val)       if (::strcmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMP3(id, str, val)  if (::strcmp(name, str) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI1(id)           if (::_stricmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI2(id, val)      if (::_stricmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI3(id, str, val) if (::_stricmp(name, str) == 0) { enum_ = id; return true; }
+
+#define PR_ENUM_WSTRCMP1(id)            if (::wcscmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMP2(id, val)       if (::wcscmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMP3(id, str, val)  if (::wcscmp(name, L##str) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI1(id)           if (::_wcsicmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI2(id, val)      if (::_wcsicmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI3(id, str, val) if (::_wcsicmp(name, L##str) == 0) { enum_ = id; return true; }
 
 #define PR_ENUM_TOTRUE1(id)           case id: return true;
 #define PR_ENUM_TOTRUE2(id, val)      case id: return true;
@@ -88,12 +98,56 @@ struct enum_name\
 		}\
 	}\
 \
-	/* Convert a string name into it's enum value (inverse of ToString)*/ \
-	static Enum_ Parse(char const* name)\
+	/* Try to convert a string name into it's enum value (inverse of ToString)*/ \
+	static bool TryParse(Enum_& enum_, char const* name, bool match_case = true)\
 	{\
-		enum_vals1(PR_ENUM_FROMSTR1)\
-		enum_vals2(PR_ENUM_FROMSTR2)\
-		enum_vals3(PR_ENUM_FROMSTR3)\
+		if (match_case)\
+		{\
+			enum_vals1(PR_ENUM_STRCMP1)\
+			enum_vals2(PR_ENUM_STRCMP2)\
+			enum_vals3(PR_ENUM_STRCMP3)\
+		}\
+		else\
+		{\
+			enum_vals1(PR_ENUM_STRCMPI1)\
+			enum_vals2(PR_ENUM_STRCMPI2)\
+			enum_vals3(PR_ENUM_STRCMPI3)\
+		}\
+		return false;\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static bool TryParse(Enum_& enum_, wchar_t const* name, bool match_case = true)\
+	{\
+		if (match_case)\
+		{\
+			enum_vals1(PR_ENUM_WSTRCMP1)\
+			enum_vals2(PR_ENUM_WSTRCMP2)\
+			enum_vals3(PR_ENUM_WSTRCMP3)\
+		}\
+		else\
+		{\
+			enum_vals1(PR_ENUM_WSTRCMPI1)\
+			enum_vals2(PR_ENUM_WSTRCMPI2)\
+			enum_vals3(PR_ENUM_WSTRCMPI3)\
+		}\
+		return false;\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static Enum_ Parse(char const* name, bool match_case = true)\
+	{\
+		Enum_ enum_;\
+		if (TryParse(enum_, name, match_case)) return enum_;\
+		PR_ASSERT(PR_DBG, false, "Parse failed, no matching value in enum "#enum_name);\
+		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static Enum_ Parse(wchar_t const* name, bool match_case = true)\
+	{\
+		Enum_ enum_;\
+		if (TryParse(enum_, name, match_case)) return enum_;\
 		PR_ASSERT(PR_DBG, false, "Parse failed, no matching value in enum "#enum_name);\
 		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
 	}\

@@ -15,10 +15,10 @@ namespace pr
 		// Returns the number of verts and number of indices needed to hold geometry for an
 		// array of 'num_boxes' boxes.
 		template <typename Tvr, typename Tir>
-		void BoxSize(std::size_t num_boxes, pr::Range<Tvr>& vrange, pr::Range<Tir>& irange)
+		void BoxSize(std::size_t num_boxes, Tvr& vcount, Tir& icount)
 		{
-			vrange.set(0, 24 * num_boxes);
-			irange.set(0, 36 * num_boxes);
+			vcount = value_cast<Tvr>(24 * num_boxes);
+			icount = value_cast<Tir>(36 * num_boxes);
 		}
 
 		// Generate boxes from an array of corners
@@ -76,11 +76,11 @@ namespace pr
 			v2 t01 = v2::make(0.0f, 1.0f);
 			v2 t10 = v2::make(1.0f, 0.0f);
 			v2 t11 = v2::make(1.0f, 1.0f);
-			
+
 			Props props;
 			TVertCIter v_in = points;
 			TVertIter v_out = out_verts;
-			TIdxIter i_out = out_indices;
+			TIdxIter  i_out = out_indices;
 			for (std::size_t i = 0; i != num_boxes; ++i)
 			{
 				// Read 8 points from the vertex and colour streams
@@ -133,7 +133,9 @@ namespace pr
 
 			// An iterator wrapper for applying a transform to 'points'
 			Transformer<TVertCIter> tx(points, o2w);
-			return Boxes(num_boxes, tx, num_colours, colours, out_verts, out_indices);
+			Props props = Boxes(num_boxes, tx, num_colours, colours, out_verts, out_indices);
+			props.m_bbox = o2w * props.m_bbox;
+			return props;
 		}
 
 		// Create a box with side half lengths = rad.x,rad.y,rad.z

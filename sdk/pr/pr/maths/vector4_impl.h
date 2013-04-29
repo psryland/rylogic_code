@@ -12,6 +12,24 @@
 
 namespace pr
 {
+	inline v4& v4::set(float x_)
+	{
+		#if PR_MATHS_USE_DIRECTMATH
+		vec = DirectX::XMVectorReplicate(x_);
+		#else
+		x = y = z = w = x_;
+		#endif
+		return *this;
+	}
+	inline v4& v4::set(float x_, float y_, float z_, float w_)
+	{
+		#if PR_MATHS_USE_DIRECTMATH
+		vec = DirectX::XMVectorSet(x_, y_, z_, w_);
+		#else
+		x = x_; y = y_; z = z_; w = w_;
+		#endif
+		return *this;
+	}
 	inline v4& v4::operator = (iv4 const& rhs)
 	{
 		return set(float(rhs.x), float(rhs.y), float(rhs.z), float(rhs.w));

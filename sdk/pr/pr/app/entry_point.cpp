@@ -12,6 +12,11 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	std::string err_msg;
 	try
 	{
+		#if PR_LOGGING
+		std::ofstream log("pr_applog.log", std::ofstream::out);
+		pr::log::Log::Out() = &log;
+		#endif
+
 		// CoInitialise COM
 		pr::InitCom init_com;
 

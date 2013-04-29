@@ -3,8 +3,8 @@
 //  Copyright © Rylogic Ltd 2009
 //***************************************************************************************************
 #pragma once
-#ifndef PR_RDR_RENDERER_INSTANCE_H
-#define PR_RDR_RENDERER_INSTANCE_H
+#ifndef PR_VIEW3D_RENDERER_INSTANCE_H
+#define PR_VIEW3D_RENDERER_INSTANCE_H
 
 #include <set>
 #include "pr/macros/count_of.h"

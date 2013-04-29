@@ -24,7 +24,7 @@ if [%RylogicEnv%]==[] (
 	goto :eof
 )
 call %RylogicEnv%
-if %RylogicEnvVersion% lss 1 (
+if %RylogicEnvVersion% lss 4 (
 	echo ERROR: '%RylogicEnv%' is out of date. Please update.
 	goto :eof
 )
@@ -64,7 +64,11 @@ set includes=/I%srcdir%\..
 set defines=/DSHADER_BUILD=1
 
 ::Set other command line options
-set options=/nologo /Gis /Ges /Zi
+set options=/nologo /Gis /Ges /WX
+
+:: uncomment this for debugging
+::echo Debugging options added
+::set options=%options% /Od /Zi
 
 ::Build the shader
 cd %srcdir%

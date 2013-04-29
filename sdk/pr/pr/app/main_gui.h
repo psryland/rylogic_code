@@ -16,11 +16,11 @@ namespace pr
 		// A base class for a main app window.
 		// Provides the common code support for a main 3D graphics window
 		template
-		<
+			<
 			typename DerivedGUI,
 			typename Main,
 			typename MessageLoop = CMessageLoop // Alternatives are: SimMsgLoop
-		>
+			>
 		struct MainGUI
 			:WTL::CFrameWindowImpl<DerivedGUI>
 			,WTL::CMessageFilter
@@ -29,19 +29,19 @@ namespace pr
 			// Define this type as base as a helper for derived type constructors
 			// so they can call: MyType(...) :base(..) {}
 			typedef MainGUI<DerivedGUI, Main, MessageLoop> base;
-			
+
 			MessageLoop m_msg_loop;      // The message pump
 			Main*       m_main;          // The app logic object
 			DWORD       m_my_thread_id;  // The thread this gui object was created on
 			bool        m_resizing;      // True during a resize of the main window
 			bool        m_nav_enabled;   // True to allow default mouse navigation
-			
+
 			MainGUI()
-			:m_msg_loop()
-			,m_main(0)
-			,m_my_thread_id(GetCurrentThreadId())
-			,m_resizing(false)
-			,m_nav_enabled(false)
+				:m_msg_loop()
+				,m_main(0)
+				,m_my_thread_id(GetCurrentThreadId())
+				,m_resizing(false)
+				,m_nav_enabled(false)
 			{
 				// Register this class for message filtering and idle updates
 				m_msg_loop.AddMessageFilter(this);
@@ -57,7 +57,7 @@ namespace pr
 				PR_ASSERT(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
 				pr::app::Module().RemoveMessageLoop();
 			}
-			
+
 			// Create/Destroy the main window
 			virtual LRESULT OnCreate(LPCREATESTRUCT)
 			{
@@ -188,7 +188,7 @@ namespace pr
 					// Find the new client area
 					pr::IRect area = pr::ClientArea(m_hWnd);
 					if (m_hWndStatusBar) area.m_max.y -= pr::WindowBounds(m_hWndStatusBar).SizeY();
-					
+
 					//SaveWindowBounds();
 					//UpdateUI();
 					UpdateLayout(true);
