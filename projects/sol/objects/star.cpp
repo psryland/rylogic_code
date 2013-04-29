@@ -3,6 +3,11 @@
 //  Copyright © Rylogic Ltd 2012
 //*****************************************************************************************
 #include "sol/main/stdafx.h"
-#if PR_LOGGING
-#pragma message ("PR_LOGGING defined")
-#endif
+#include "sol/objects/star.h"
+
+using namespace pr;
+using namespace sol;
+
+Star::Star(pr::v4 const& position, float radius, float mass, pr::Renderer& rdr, wchar_t const* texture)
+{}
+

@@ -20,6 +20,9 @@
     <Filter Include="sdk\maths">
       <UniqueIdentifier>{2c656cd4-86ca-40d0-bbac-dec2b31b36a5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="objects">
+      <UniqueIdentifier>{2a88c6d9-107b-44ab-8b9d-56c1bc6284e3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\app\entry_point.cpp">
@@ -30,6 +33,15 @@
     </ClCompile>
     <ClCompile Include="..\sol\main\main.cpp">
       <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sol\objects\astronomical_body.cpp">
+      <Filter>objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sol\objects\star.cpp">
+      <Filter>objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sol\objects\system.cpp">
+      <Filter>objects</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -74,6 +86,24 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\hresult.h">
       <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sol\main\asset_manager.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sol\objects\test_model.h">
+      <Filter>objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sol\main\main_gui.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sol\objects\astronomical_body.h">
+      <Filter>objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sol\objects\star.h">
+      <Filter>objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sol\objects\system.h">
+      <Filter>objects</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

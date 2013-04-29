@@ -83,9 +83,9 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -98,10 +98,10 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
       <BrowseInformation>true</BrowseInformation>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -119,9 +119,9 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -138,9 +138,9 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -165,6 +165,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\sol\objects\astronomical_body.cpp" />
+    <ClCompile Include="..\sol\objects\star.cpp" />
+    <ClCompile Include="..\sol\objects\system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\sdk\pr\pr\app\forward.h" />
@@ -180,7 +183,13 @@
     <ClInclude Include="..\..\sdk\pr\pr\threads\thread_pool.h" />
     <ClInclude Include="..\sol\main\forward.h" />
     <ClInclude Include="..\sol\main\main.h" />
+    <ClInclude Include="..\sol\main\asset_manager.h" />
+    <ClInclude Include="..\sol\main\main_gui.h" />
     <ClInclude Include="..\sol\main\stdafx.h" />
+    <ClInclude Include="..\sol\objects\astronomical_body.h" />
+    <ClInclude Include="..\sol\objects\star.h" />
+    <ClInclude Include="..\sol\objects\system.h" />
+    <ClInclude Include="..\sol\objects\test_model.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -3,24 +3,31 @@
 //  Copyright © Rylogic Ltd 2012
 //*****************************************************************************************
 #pragma once
-#ifndef PR_SOL_FORWARD_H
-#define PR_SOL_FORWARD_H
+#ifndef PR_SOL_MAIN_FORWARD_H
+#define PR_SOL_MAIN_FORWARD_H
+
+#include "pr/macros/enum.h"
 
 #include "pr/app/forward.h"
+#include "pr/app/main_gui.h"
+#include "pr/app/main.h"
+#include "pr/app/skybox.h"
+#include "pr/app/gimble.h"
+#include "pr/app/sim_message_loop.h"
 
 namespace sol
 {
-	namespace EException
-	{
-		enum Type
-		{
-			Fail,
-		};
-	}
-	typedef pr::Exception<EException::Type> Exception;
+	#define PR_ENUM(x)\
+		x(Fail)
+	PR_DEFINE_ENUM1(EException, PR_ENUM);
+	#undef PR_ENUM
+	typedef pr::Exception<EException> Exception;
 
 	struct MainGUI;
 	struct Main;
+
+	struct AstronomicalBody;
+	struct TestModel;
 
 	//char const* AppTitle();
 	//char const* AppString();
