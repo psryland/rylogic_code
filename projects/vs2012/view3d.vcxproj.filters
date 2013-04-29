@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="camera">
+      <UniqueIdentifier>{6ab12c5d-3166-4900-9228-2fc545650411}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lighting">
+      <UniqueIdentifier>{242341bf-7d1d-4ea8-b833-86a984170102}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="linedrawer">
+      <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk">
+      <UniqueIdentifier>{2e13382c-2c9f-488d-8851-229d4321e08b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\lua">
+      <UniqueIdentifier>{289d033a-d7cd-42ce-8422-6ed91b5659b7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\sdk\pr\pr\camera\trackball_3d.h">
+      <Filter>camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer\lighting\lighting_dlg.h">
+      <Filter>lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_object.h">
+      <Filter>linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.h">
+      <Filter>linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h">
+      <Filter>sdk\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="..\View3D\renderer_instance.h" />
+    <ClInclude Include="..\View3D\stdafx.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\view3d\view3d.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h">
+      <Filter>linedrawer</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">
+      <Filter>linedrawer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.cpp">
+      <Filter>linedrawer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\lua\lua_core.c">
+      <Filter>sdk\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\lua\lua_lib.c">
+      <Filter>sdk\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="..\View3D\renderer_instance.cpp" />
+    <ClCompile Include="..\view3d\stdafx.cpp" />
+    <ClCompile Include="..\View3D\view3d.cpp" />
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.cpp">
+      <Filter>linedrawer</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
