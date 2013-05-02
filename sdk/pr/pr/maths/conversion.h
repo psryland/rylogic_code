@@ -61,8 +61,8 @@ namespace pr
 	template <typename TFrom> struct Convert<IRect,TFrom>
 	{
 		#ifdef _WINDEF_
-		static IRect          To(RECT const& x) { return pr::IRect::make(x.left, x.top, x.right, x.bottom); }
-		static IRect          To(SIZE const& x) { return pr::IRect::make(0, 0, x.cx, x.cy); }
+		static IRect To(RECT const& x) { return pr::IRect::make(x.left, x.top, x.right, x.bottom); }
+		static IRect To(SIZE const& x) { return pr::IRect::make(0, 0, x.cx, x.cy); }
 		#endif
 	};
 	template <typename TTo> struct Convert<TTo,IRect>
@@ -70,6 +70,20 @@ namespace pr
 		#ifdef _WINDEF_
 		static RECT To(IRect const& x) { RECT r = {x.left, x.top, x.right, x.bottom}; return r; }
 		static SIZE To(IRect const& x) { SIZE s = {x.width(), x.height()}; return s; }
+		#endif
+	};
+
+	// To<iv2>
+	template <typename TFrom> struct Convert<iv2, TFrom>
+	{
+		static iv2 To(IRect const& x) { return iv2::make(x.SizeX(), x.SizeY()); }
+		#ifdef _WINDEF_
+		static iv2 To(RECT const& x) { return iv2::make(x.right - x.left, x.bottom - x.top); }
+		static iv2 To(SIZE const& x) { return iv2::make(x.cx, x.cy); }
+		#endif
+		#ifdef _GDIPLUS_H
+		static iv2 To(Gdiplus::Rect  const& x) { return iv2::make(x.Width, x.Height); }
+		static iv2 To(Gdiplus::RectF const& x) { return iv2::make(int(x.Width), int(x.Height)); }
 		#endif
 	};
 

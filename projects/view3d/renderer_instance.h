@@ -11,8 +11,7 @@
 #include "pr/maths/maths.h"
 #include "pr/camera/camera.h"
 #include "pr/script/embedded_lua.h"
-#include "pr/renderer/renderer.h"
-#include "pr/renderer/instances/instance.h"
+#include "pr/renderer11/renderer.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
@@ -23,12 +22,11 @@ namespace view3d
 	typedef std::set<View3DObject>  ObjectCont;
 	typedef std::set<View3DDrawset> DrawsetCont;
 
-	PR_RDR_DECLARE_INSTANCE_TYPE2
-	(
-		Instance
-		,pr::rdr::ModelPtr ,m_model ,pr::rdr::instance::ECpt_ModelPtr
-		,pr::m4x4          ,m_i2w   ,pr::rdr::instance::ECpt_I2WTransform
-	);
+	#define PR_RDR_INST(x)\
+		x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
+		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)
+	PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST)
+	#undef PR_RDR_INST
 
 	struct Drawset
 	{
@@ -54,11 +52,10 @@ namespace view3d
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
 		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	{
-		pr::rdr::Allocator         m_allocator;
 		pr::Renderer               m_renderer;
-		pr::rdr::Viewport          m_viewport;
-		pr::ldr::ObjectCont        m_scene;
-		pr::ldr::ObjectManagerDlg  m_scene_ui;
+		pr::rdr::SceneForward      m_scene;
+		pr::ldr::ObjectCont        m_obj_cont;
+		pr::ldr::ObjectManagerDlg  m_obj_cont_ui;
 		pr::ldr::MeasureDlg        m_measure_tool_ui;
 		pr::ldr::AngleDlg          m_angle_tool_ui;
 		pr::script::EmbeddedLua    m_lua;
@@ -69,7 +66,7 @@ namespace view3d
 		View3D_ReportErrorCB       m_error_cb;
 		View3D_SettingsChanged     m_settings_changed_cb;
 
-		RendererInstance(HWND hwnd, D3DDEVTYPE device_type, pr::uint d3dcreate_flags, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
+		RendererInstance(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
 		~RendererInstance();
 		void CreateStockObjects();
 

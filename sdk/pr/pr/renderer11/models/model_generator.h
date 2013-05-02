@@ -137,7 +137,7 @@ namespace pr
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w, Colour32 colour, DrawMethod const* mat = 0)
+			static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Box(rad, o2w, colour, vb, ib); };
 
@@ -145,9 +145,9 @@ namespace pr
 				pr::geometry::BoxSize(1, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& dim, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
+			static ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& rad, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
 			{
-				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::BoxList(num_boxes, positions, dim, num_colours, colours, vb, ib); };
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, vb, ib); };
 
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(num_boxes, vcount, icount);

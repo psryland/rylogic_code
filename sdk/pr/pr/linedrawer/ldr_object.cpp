@@ -159,7 +159,13 @@ long pr::ldr::LdrObject::Release() const
 }
 
 // LdrObject Creation functions *********************************************
-namespace pr { namespace ldr { typedef stdext::hash_map<pr::hash::HashValue, pr::rdr::ModelPtr> ModelCont; } }
+namespace pr
+{
+	namespace ldr
+	{
+		typedef std::unordered_map<pr::hash::HashValue, pr::rdr::ModelPtr> ModelCont;
+	}
+}
 
 // Helper object for passing parameters between parsing functions
 struct ParseParams
@@ -175,16 +181,16 @@ struct ParseParams
 	std::size_t                 m_start_time;
 	std::size_t                 m_last_update;
 
-	ParseParams
-		(pr::Renderer&              rdr
-		,pr::script::Reader&        reader
-		,pr::ldr::ObjectCont&       objects
-		,pr::ldr::ModelCont&        models
-		,pr::ldr::ContextId         context_id
-		,pr::hash::HashValue        keyword
-		,pr::ldr::LdrObject*        parent
-		,std::size_t&               obj_count
-		,std::size_t                start_time)
+	ParseParams(
+		pr::Renderer&              rdr,
+		pr::script::Reader&        reader,
+		pr::ldr::ObjectCont&       objects,
+		pr::ldr::ModelCont&        models,
+		pr::ldr::ContextId         context_id,
+		pr::hash::HashValue        keyword,
+		pr::ldr::LdrObject*        parent,
+		std::size_t&               obj_count,
+		std::size_t                start_time)
 		:m_rdr                     (rdr        )
 		,m_reader                  (reader     )
 		,m_objects                 (objects    )
@@ -197,11 +203,11 @@ struct ParseParams
 		,m_last_update             (start_time )
 	{}
 
-	ParseParams
-		(ParseParams&              p
-		,pr::ldr::ObjectCont&      objects
-		,pr::hash::HashValue       keyword
-		,pr::ldr::LdrObject*       parent)
+	ParseParams(
+		ParseParams&              p,
+		pr::ldr::ObjectCont&      objects,
+		pr::hash::HashValue       keyword,
+		pr::ldr::LdrObject*       parent)
 		:m_rdr                    (p.m_rdr        )
 		,m_reader                 (p.m_reader     )
 		,m_objects                (objects        )
@@ -394,7 +400,7 @@ bool ParseTexture(ParseParams& p, pr::rdr::Texture2DPtr& tex)
 	p.m_reader.ExtractString(tex_filepath);
 	if (!tex_filepath.empty())
 	{
-		pr::m4x4 t2s;
+		pr::m4x4 t2s = pr::m4x4Identity;
 		pr::rdr::SamplerDesc sam;
 
 		// Parse extra texture properties
@@ -445,15 +451,17 @@ bool ParseVideo(ParseParams& p, pr::rdr::Texture2DPtr& vid)
 	p.m_reader.ExtractString(filepath);
 	if (!filepath.empty())
 	{
-		// Load the video texture
-		try
-		{
-			//todo vid = p.m_rdr.m_tex_mgr.CreateVideoTexture(pr::rdr::AutoId, filepath.c_str());
-		}
-		catch (std::exception const& e)
-		{
-			p.m_reader.ReportError(pr::script::EResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
-		}
+		(void)vid;
+		//todo 
+		//// Load the video texture
+		//try
+		//{
+		//	vid = p.m_rdr.m_tex_mgr.CreateVideoTexture(pr::rdr::AutoId, filepath.c_str());
+		//}
+		//catch (std::exception const& e)
+		//{
+		//	p.m_reader.ReportError(pr::script::EResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
+		//}
 	}
 	p.m_reader.SectionEnd();
 	return true;
@@ -532,7 +540,8 @@ template <pr::ldr::ELdrObject::Enum_ LineType> void ParseLine(ParseParams& p)
 			}break;
 		case pr::ldr::ELdrObject::LineBox:
 			{
-				pr::v4 dim; p.m_reader.ExtractReal(dim.x);
+				pr::v4 dim;
+				p.m_reader.ExtractReal(dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else p.m_reader.ExtractReal(dim.y);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else p.m_reader.ExtractReal(dim.z);
 				dim *= 0.5f;
@@ -750,8 +759,8 @@ template <pr::ldr::ELdrObject::Enum_ PlaneType> void ParsePlane(ParseParams& p)
 		local_mat = p.m_rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPCNT>();
 		local_mat.m_tex_diffuse = texture;
 		mat = &local_mat;
-		if (texture->m_video)
-			texture->m_video->Play(true);
+		//if (texture->m_video)
+		//	texture->m_video->Play(true);
 	}
 
 	// Create the model
@@ -790,70 +799,75 @@ template <pr::ldr::ELdrObject::Enum_ BoxType> void ParseBox(ParseParams& p)
 		}
 		switch (BoxType)
 		{
-		case pr::ldr::ELdrObject::Box:{
-			create |= p.m_reader.ExtractReal(dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else create |= p.m_reader.ExtractReal(dim.y);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else create |= p.m_reader.ExtractReal(dim.z);
-									  }break;
-		case pr::ldr::ELdrObject::BoxLine:{
-			float w = 0.1f, h = 0.1f;
-			pr::v4 s0 = pr::v4Origin, s1 = pr::v4ZAxis;
-			create |= (p.m_reader.ExtractVector3(s0, 1.0f) && p.m_reader.ExtractVector3(s1, 1.0f) && p.m_reader.ExtractReal(w) && p.m_reader.ExtractReal(h));
-			pr::OriFromDir(b2w, s1 - s0, 2, up, (s1 + s0) * 0.5f);
-			dim.set(w, h, pr::Length3(s1 - s0), 0.0f);
-										  }break;
-		case pr::ldr::ELdrObject::BoxList:{
-			pr::v4 v;
-			p.m_reader.ExtractVector3(v, 0.0f);
-			if (dim == pr::v4Zero) dim = v;
-			else { position.push_back(v.w1()); create = true; }
-										  }break;
-		case pr::ldr::ELdrObject::FrustumWH:{
-			int axis_id = 2; float w = 1.0f, h = 1.0f, n = 0.0f, f = 1.0f;
-			create |= p.m_reader.ExtractInt(axis_id,10) && p.m_reader.ExtractReal(w) && p.m_reader.ExtractReal(h) && p.m_reader.ExtractReal(n) && p.m_reader.ExtractReal(f);
-			w *= 0.5f;
-			h *= 0.5f;
-			pt[0].set(-n*w, -n*h, n, 1.0f);
-			pt[1].set(-n*w,  n*h, n, 1.0f);
-			pt[2].set( n*w, -n*h, n, 1.0f);
-			pt[3].set( n*w,  n*h, n, 1.0f);
-			pt[4].set( f*w, -f*h, f, 1.0f);
-			pt[5].set( f*w,  f*h, f, 1.0f);
-			pt[6].set(-f*w, -f*h, f, 1.0f);
-			pt[7].set(-f*w,  f*h, f, 1.0f);
-			switch (axis_id){
-			default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-			case  1: b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
-			case -1: b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
-			case  2: b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
-			case -2: b2w = pr::Rotation4x4( pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
-			case  3: b2w = pr::m4x4Identity; break;
-			case -3: b2w = pr::Rotation4x4(0.0f ,pr::maths::tau_by_2 ,0.0f ,pr::v4Origin); break;
-			}
-											}break;
-		case pr::ldr::ELdrObject::FrustumFA:{
-			int axis_id = 2; float fovY = 90.0f, aspect = 1.0f, n = 0.0f, f = 1.0f;
-			create |= p.m_reader.ExtractInt(axis_id,10) && p.m_reader.ExtractReal(fovY) && p.m_reader.ExtractReal(aspect) && p.m_reader.ExtractReal(n) && p.m_reader.ExtractReal(f);
-			float h = pr::Tan(pr::DegreesToRadians(fovY * 0.5f));
-			float w = aspect * h;
-			pt[0].set(-n*w, -n*h, n, 1.0f);
-			pt[1].set(-n*w,  n*h, n, 1.0f);
-			pt[2].set( n*w, -n*h, n, 1.0f);
-			pt[3].set( n*w,  n*h, n, 1.0f);
-			pt[4].set( f*w, -f*h, f, 1.0f);
-			pt[5].set( f*w,  f*h, f, 1.0f);
-			pt[6].set(-f*w, -f*h, f, 1.0f);
-			pt[7].set(-f*w,  f*h, f, 1.0f);
-			switch (axis_id) {
-			default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
-			case  1: b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
-			case -1: b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
-			case  2: b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
-			case -2: b2w = pr::Rotation4x4( pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
-			case  3: b2w = pr::m4x4Identity; break;
-			case -3: b2w = pr::Rotation4x4(0.0f ,pr::maths::tau_by_2 ,0.0f ,pr::v4Origin); break;
-			}
-											}break;
+		case pr::ldr::ELdrObject::Box:
+			{
+				create |= p.m_reader.ExtractReal(dim.x);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else create |= p.m_reader.ExtractReal(dim.y);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else create |= p.m_reader.ExtractReal(dim.z);
+			}break;
+		case pr::ldr::ELdrObject::BoxLine:
+			{
+				float w = 0.1f, h = 0.1f;
+				pr::v4 s0 = pr::v4Origin, s1 = pr::v4ZAxis;
+				create |= (p.m_reader.ExtractVector3(s0, 1.0f) && p.m_reader.ExtractVector3(s1, 1.0f) && p.m_reader.ExtractReal(w) && p.m_reader.ExtractReal(h));
+				pr::OriFromDir(b2w, s1 - s0, 2, up, (s1 + s0) * 0.5f);
+				dim.set(w, h, pr::Length3(s1 - s0), 0.0f);
+			}break;
+		case pr::ldr::ELdrObject::BoxList:
+			{
+				pr::v4 v;
+				p.m_reader.ExtractVector3(v, 0.0f);
+				if (dim == pr::v4Zero) dim = v;
+				else { position.push_back(v.w1()); create = true; }
+			}break;
+		case pr::ldr::ELdrObject::FrustumWH:
+			{
+				int axis_id = 2; float w = 1.0f, h = 1.0f, n = 0.0f, f = 1.0f;
+				create |= p.m_reader.ExtractInt(axis_id,10) && p.m_reader.ExtractReal(w) && p.m_reader.ExtractReal(h) && p.m_reader.ExtractReal(n) && p.m_reader.ExtractReal(f);
+				w *= 0.5f;
+				h *= 0.5f;
+				pt[0].set(-n*w, -n*h, n, 1.0f);
+				pt[1].set(-n*w,  n*h, n, 1.0f);
+				pt[2].set( n*w, -n*h, n, 1.0f);
+				pt[3].set( n*w,  n*h, n, 1.0f);
+				pt[4].set( f*w, -f*h, f, 1.0f);
+				pt[5].set( f*w,  f*h, f, 1.0f);
+				pt[6].set(-f*w, -f*h, f, 1.0f);
+				pt[7].set(-f*w,  f*h, f, 1.0f);
+				switch (axis_id){
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
+				case  1: b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
+				case -1: b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
+				case  2: b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
+				case -2: b2w = pr::Rotation4x4( pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
+				case  3: b2w = pr::m4x4Identity; break;
+				case -3: b2w = pr::Rotation4x4(0.0f ,pr::maths::tau_by_2 ,0.0f ,pr::v4Origin); break;
+				}
+			}break;
+		case pr::ldr::ELdrObject::FrustumFA:
+			{
+				int axis_id = 2; float fovY = 90.0f, aspect = 1.0f, n = 0.0f, f = 1.0f;
+				create |= p.m_reader.ExtractInt(axis_id,10) && p.m_reader.ExtractReal(fovY) && p.m_reader.ExtractReal(aspect) && p.m_reader.ExtractReal(n) && p.m_reader.ExtractReal(f);
+				float h = pr::Tan(pr::DegreesToRadians(fovY * 0.5f));
+				float w = aspect * h;
+				pt[0].set(-n*w, -n*h, n, 1.0f);
+				pt[1].set(-n*w,  n*h, n, 1.0f);
+				pt[2].set( n*w, -n*h, n, 1.0f);
+				pt[3].set( n*w,  n*h, n, 1.0f);
+				pt[4].set( f*w, -f*h, f, 1.0f);
+				pt[5].set( f*w,  f*h, f, 1.0f);
+				pt[6].set(-f*w, -f*h, f, 1.0f);
+				pt[7].set(-f*w,  f*h, f, 1.0f);
+				switch (axis_id) {
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
+				case  1: b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
+				case -1: b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
+				case  2: b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
+				case -2: b2w = pr::Rotation4x4( pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
+				case  3: b2w = pr::m4x4Identity; break;
+				case -3: b2w = pr::Rotation4x4(0.0f ,pr::maths::tau_by_2 ,0.0f ,pr::v4Origin); break;
+				}
+			}break;
 		default:
 			p.m_reader.ReportError(pr::script::EResult::UnknownValue);
 			p.m_reader.FindSectionEnd();
@@ -874,12 +888,12 @@ template <pr::ldr::ELdrObject::Enum_ BoxType> void ParseBox(ParseParams& p)
 	{
 	default: PR_ASSERT(PR_DBG_LDROBJMGR, false, ""); return;
 	case pr::ldr::ELdrObject::Box:
-	case pr::ldr::ELdrObject::BoxLine:   obj->m_model = pr::rdr::model::Box(p.m_rdr, dim, b2w); break;
-	case pr::ldr::ELdrObject::BoxList:   obj->m_model = pr::rdr::model::BoxList(p.m_rdr, dim, &position[0], position.size()); break;
+	case pr::ldr::ELdrObject::BoxLine:   obj->m_model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, dim * 0.5f, b2w); break;
+	case pr::ldr::ELdrObject::BoxList:   obj->m_model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, position.size(), position.data(), dim * 0.5f); break;
 	case pr::ldr::ELdrObject::FrustumWH:
-	case pr::ldr::ELdrObject::FrustumFA: obj->m_model = pr::rdr::model::Box(p.m_rdr, pt, 1, b2w); break;
+	case pr::ldr::ELdrObject::FrustumFA: obj->m_model = pr::rdr::ModelGenerator<>::Boxes(p.m_rdr, 1, pt, b2w); break;
 	}
-	obj->m_model->SetName(obj->TypeAndName().c_str());
+	obj->m_model->m_name = obj->TypeAndName();
 
 	// Add the model and instance to the containers
 	p.m_models[pr::hash::HashC(obj->m_name.c_str())] = obj->m_model;
@@ -894,9 +908,9 @@ template <pr::ldr::ELdrObject::Enum_ SphereType> void ParseSphere(ParseParams& p
 	pr::ldr::LdrObjectPtr obj(new pr::ldr::LdrObject(attr, p.m_parent, p.m_context_id));
 
 	// Read the description of the model
-	float radius[3];
+	pr::v4 radius = pr::v4Zero;
 	int divisions = 3;
-	pr::rdr::TexturePtr texture = 0;
+	pr::rdr::Texture2DPtr texture = 0;
 	bool create = false;
 	p.m_reader.SectionStart();
 	while (!p.m_reader.IsSectionEnd())
@@ -915,12 +929,18 @@ template <pr::ldr::ELdrObject::Enum_ SphereType> void ParseSphere(ParseParams& p
 		switch (SphereType)
 		{
 		case pr::ldr::ELdrObject::Sphere:
-			create |= p.m_reader.ExtractReal(radius[0]);
-			radius[2] = radius[1] = radius[0];
-			break;
+			{
+				float r;
+				create |= p.m_reader.ExtractReal(r);
+				radius.set(r, 0.0f);
+			}break;
 		case pr::ldr::ELdrObject::SphereRxyz:
-			create |= (p.m_reader.ExtractReal(radius[0]) && p.m_reader.ExtractReal(radius[1]) && p.m_reader.ExtractReal(radius[2]));
-			break;
+			{
+				create |= 
+					p.m_reader.ExtractReal(radius.x) &&
+					p.m_reader.ExtractReal(radius.y) &&
+					p.m_reader.ExtractReal(radius.z);
+			}break;
 		}
 	}
 	p.m_reader.SectionEnd();
@@ -933,17 +953,19 @@ template <pr::ldr::ELdrObject::Enum_ SphereType> void ParseSphere(ParseParams& p
 	}
 
 	// If a texture was given, load it and create a material that uses it
-	pr::rdr::Material local_mat, *mat = 0;
+	pr::rdr::DrawMethod local_mat, *mat = 0;
 	if (texture)
 	{
-		local_mat = p.m_rdr.m_mat_mgr.GetMaterial(pr::geom::EVNCT);
-		local_mat.m_diffuse_texture = texture;
+		local_mat = p.m_rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPCNT>();
+		local_mat.m_tex_diffuse = texture;
 		mat = &local_mat;
+		//if (texture->m_video)
+		//	texture->m_video->Play(true);
 	}
 
 	// Create the model
-	obj->m_model = pr::rdr::model::SphereRxyz(p.m_rdr, radius[0], radius[1], radius[2], pr::v4Origin, divisions, pr::Colour32White, mat);
-	obj->m_model->SetName(obj->TypeAndName().c_str());
+	obj->m_model = pr::rdr::ModelGenerator<>::Geosphere(p.m_rdr, radius, divisions, pr::Colour32White, mat);
+	obj->m_model->m_name = obj->TypeAndName();
 
 	// Add the model and instance to the containers
 	p.m_models[pr::hash::HashC(obj->m_name.c_str())] = obj->m_model;
@@ -963,7 +985,7 @@ template <pr::ldr::ELdrObject::Enum_ ConeType> void ParseCone(ParseParams& p)
 	float radius[2] = {1.0f, 1.0f};
 	float scale[2] = {1.0f, 1.0f};
 	int layers = 1, wedges = 20;
-	pr::rdr::TexturePtr texture = 0;
+	pr::rdr::Texture2DPtr texture = 0;
 	bool create = true;
 	p.m_reader.SectionStart();
 	while (!p.m_reader.IsSectionEnd())
@@ -984,17 +1006,19 @@ template <pr::ldr::ELdrObject::Enum_ ConeType> void ParseCone(ParseParams& p)
 		switch (ConeType)
 		{
 		case pr::ldr::ELdrObject::CylinderHR:
-			create &= p.m_reader.ExtractInt(axis_id, 10);
-			create &= p.m_reader.ExtractReal(height);
-			create &= p.m_reader.ExtractReal(radius[0]);
-			radius[1] = radius[0];
-			break;
+			{
+				create &= p.m_reader.ExtractInt(axis_id, 10);
+				create &= p.m_reader.ExtractReal(height);
+				create &= p.m_reader.ExtractReal(radius[0]);
+				radius[1] = radius[0];
+			}break;
 		case pr::ldr::ELdrObject::ConeHR:
-			create &= p.m_reader.ExtractInt(axis_id, 10);
-			create &= p.m_reader.ExtractReal(height);
-			create &= p.m_reader.ExtractReal(radius[0]);
-			create &= p.m_reader.ExtractReal(radius[1]);
-			break;
+			{
+				create &= p.m_reader.ExtractInt(axis_id, 10);
+				create &= p.m_reader.ExtractReal(height);
+				create &= p.m_reader.ExtractReal(radius[0]);
+				create &= p.m_reader.ExtractReal(radius[1]);
+			}break;
 		case pr::ldr::ELdrObject::ConeHA:
 			{
 				float h0, h1, a;
@@ -1036,17 +1060,19 @@ template <pr::ldr::ELdrObject::Enum_ ConeType> void ParseCone(ParseParams& p)
 	}
 
 	// If a texture was given, load it and create a material that uses it
-	pr::rdr::Material local_mat, *mat = 0;
+	pr::rdr::DrawMethod local_mat, *mat = 0;
 	if (texture)
 	{
-		local_mat = p.m_rdr.m_mat_mgr.GetMaterial(pr::geom::EVNCT);
-		local_mat.m_diffuse_texture = texture;
+		local_mat = p.m_rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPCNT>();
+		local_mat.m_tex_diffuse = texture;
 		mat = &local_mat;
+		//if (texture->m_video)
+		//	texture->m_video->Play(true);
 	}
 
 	// Create the model
-	obj->m_model = pr::rdr::model::Cone(p.m_rdr ,height ,radius[0] ,radius[1] ,scale[0] ,scale[1] ,o2w ,layers ,wedges, pr::Colour32White, mat);
-	obj->m_model->SetName(obj->TypeAndName().c_str());
+	obj->m_model = pr::rdr::ModelGenerator<>::Cylinder(p.m_rdr ,radius[0] ,radius[1] ,height ,o2w ,scale[0] ,scale[1] ,wedges ,layers ,1 ,&pr::Colour32White ,mat);
+	obj->m_model->m_name = obj->TypeAndName();
 
 	// Add the model and instance to the containers
 	p.m_models[pr::hash::HashC(obj->m_name.c_str())] = obj->m_model;
@@ -1068,7 +1094,7 @@ template <pr::ldr::ELdrObject::Enum_ MeshType> void ParseMesh(ParseParams& p)
 	pr::Array<pr::uint16>   indices;
 
 	// Read the description of the model
-	pr::rdr::model::EPrimitive::Type prim_type = pr::rdr::model::EPrimitive::Invalid;
+	pr::rdr::EPrim prim_type = pr::rdr::EPrim::Invalid;
 	bool generate_normals = false;
 	pr::v4 v, n; pr::uint c; pr::v2 t;
 	p.m_reader.SectionStart();
@@ -1080,7 +1106,7 @@ template <pr::ldr::ELdrObject::Enum_ MeshType> void ParseMesh(ParseParams& p)
 			p.m_reader.FindSectionEnd();
 			break;
 		}
-		pr::ldr::EKeyword::Type kw = static_cast<pr::ldr::EKeyword::Type>(p.m_reader.NextKeywordH());
+		pr::ldr::EKeyword kw = p.m_reader.NextKeywordH<pr::ldr::EKeyword>();
 		switch (kw)
 		{
 		default:
@@ -1091,72 +1117,80 @@ template <pr::ldr::ELdrObject::Enum_ MeshType> void ParseMesh(ParseParams& p)
 				p.m_reader.ReportError(pr::script::EResult::UnknownToken);
 			}break;
 		case pr::ldr::EKeyword::Verts:
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd()) { p.m_reader.ExtractVector3(v, 1.0f); verts.push_back(v); }
-			p.m_reader.SectionEnd();
-			break;
+			{
+				p.m_reader.SectionStart();
+				while (!p.m_reader.IsSectionEnd()) { p.m_reader.ExtractVector3(v, 1.0f); verts.push_back(v); }
+				p.m_reader.SectionEnd();
+			}break;
 		case pr::ldr::EKeyword::Normals:
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd()) { p.m_reader.ExtractVector3(n, 0.0f); normals.push_back(n); }
-			p.m_reader.SectionEnd();
-			break;
+			{
+				p.m_reader.SectionStart();
+				while (!p.m_reader.IsSectionEnd()) { p.m_reader.ExtractVector3(n, 0.0f); normals.push_back(n); }
+				p.m_reader.SectionEnd();
+			}break;
 		case pr::ldr::EKeyword::Colours:
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd()) { p.m_reader.ExtractInt(c, 16); colours.push_back(pr::Colour32::make(c)); }
-			p.m_reader.SectionEnd();
-			break;
+			{
+				p.m_reader.SectionStart();
+				while (!p.m_reader.IsSectionEnd()) { p.m_reader.ExtractInt(c, 16); colours.push_back(pr::Colour32::make(c)); }
+				p.m_reader.SectionEnd();
+			}break;
 		case pr::ldr::EKeyword::TexCoords:
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd()) { p.m_reader.ExtractVector2(t); texs.push_back(t); }
-			p.m_reader.SectionEnd();
-			break;
+			{
+				p.m_reader.SectionStart();
+				while (!p.m_reader.IsSectionEnd()) { p.m_reader.ExtractVector2(t); texs.push_back(t); }
+				p.m_reader.SectionEnd();
+			}break;
 		case pr::ldr::EKeyword::Lines:
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd())
 			{
-				pr::uint16 idx[2]; p.m_reader.ExtractIntArray(idx, 2, 10);
-				indices.push_back(idx[0]);
-				indices.push_back(idx[1]);
-			}
-			p.m_reader.SectionEnd();
-			prim_type = pr::rdr::model::EPrimitive::LineList;
-			break;
+				p.m_reader.SectionStart();
+				while (!p.m_reader.IsSectionEnd())
+				{
+					pr::uint16 idx[2]; p.m_reader.ExtractIntArray(idx, 2, 10);
+					indices.push_back(idx[0]);
+					indices.push_back(idx[1]);
+				}
+				p.m_reader.SectionEnd();
+				prim_type = pr::rdr::EPrim::LineList;
+			}break;
 		case pr::ldr::EKeyword::Faces:
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd())
 			{
-				pr::uint16 idx[3]; p.m_reader.ExtractIntArray(idx, 3, 10);
-				indices.push_back(idx[0]);
-				indices.push_back(idx[1]);
-				indices.push_back(idx[2]);
-			}
-			p.m_reader.SectionEnd();
-			prim_type = pr::rdr::model::EPrimitive::TriangleList;
-			break;
+				p.m_reader.SectionStart();
+				while (!p.m_reader.IsSectionEnd())
+				{
+					pr::uint16 idx[3]; p.m_reader.ExtractIntArray(idx, 3, 10);
+					indices.push_back(idx[0]);
+					indices.push_back(idx[1]);
+					indices.push_back(idx[2]);
+				}
+				p.m_reader.SectionEnd();
+				prim_type = pr::rdr::EPrim::TriList;
+			}break;
 		case pr::ldr::EKeyword::Tetra:
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd())
 			{
-				pr::uint16 idx[4]; p.m_reader.ExtractIntArray(idx, 4, 10);
-				indices.push_back(idx[0]);
-				indices.push_back(idx[1]);
-				indices.push_back(idx[2]);
-				indices.push_back(idx[0]);
-				indices.push_back(idx[2]);
-				indices.push_back(idx[3]);
-				indices.push_back(idx[0]);
-				indices.push_back(idx[3]);
-				indices.push_back(idx[1]);
-				indices.push_back(idx[3]);
-				indices.push_back(idx[2]);
-				indices.push_back(idx[1]);
-			}
-			p.m_reader.SectionEnd();
-			prim_type = pr::rdr::model::EPrimitive::TriangleList;
-			break;
+				p.m_reader.SectionStart();
+				while (!p.m_reader.IsSectionEnd())
+				{
+					pr::uint16 idx[4]; p.m_reader.ExtractIntArray(idx, 4, 10);
+					indices.push_back(idx[0]);
+					indices.push_back(idx[1]);
+					indices.push_back(idx[2]);
+					indices.push_back(idx[0]);
+					indices.push_back(idx[2]);
+					indices.push_back(idx[3]);
+					indices.push_back(idx[0]);
+					indices.push_back(idx[3]);
+					indices.push_back(idx[1]);
+					indices.push_back(idx[3]);
+					indices.push_back(idx[2]);
+					indices.push_back(idx[1]);
+				}
+				p.m_reader.SectionEnd();
+				prim_type = pr::rdr::EPrim::TriList;
+			}break;
 		case pr::ldr::EKeyword::GenerateNormals:
-			generate_normals = true;
-			break;
+			{
+				generate_normals = true;
+			}break;
 		}
 	}
 	p.m_reader.SectionEnd();
@@ -1164,7 +1198,7 @@ template <pr::ldr::ELdrObject::Enum_ MeshType> void ParseMesh(ParseParams& p)
 	switch (MeshType)
 	{
 	case pr::ldr::ELdrObject::Mesh:
-		if (prim_type == pr::rdr::model::EPrimitive::LineList)
+		if (prim_type == pr::rdr::EPrim::LineList)
 		{
 			generate_normals = false;
 			normals.clear();
@@ -1179,19 +1213,13 @@ template <pr::ldr::ELdrObject::Enum_ MeshType> void ParseMesh(ParseParams& p)
 			verts.resize(num_verts);
 			indices.resize(3*num_faces);
 
-			prim_type = pr::rdr::model::EPrimitive::TriangleList;
+			prim_type = pr::rdr::EPrim::TriList;
 			generate_normals = true;
 		}break;
 	}
 
-	size_t num_verts = verts.size();
-	size_t num_norms = normals.size();
-	size_t num_colours = colours.size();
-	size_t num_texs = texs.size();
-	size_t num_indices = indices.size();
-
 	// Create the model
-	if (num_indices == 0 || num_verts == 0)
+	if (indices.empty() || verts.empty())
 	{
 		switch (MeshType)
 		{
@@ -1200,21 +1228,29 @@ template <pr::ldr::ELdrObject::Enum_ MeshType> void ParseMesh(ParseParams& p)
 		}
 	}
 
-	// Create a tint material
-	pr::GeomType                            geom_type  = pr::geom::EVertex;
-	if (num_norms != 0 || generate_normals) geom_type |= pr::geom::ENormal;
-	if (num_colours == num_verts)           geom_type |= pr::geom::EColour;
-	if (num_texs == num_verts)              geom_type |= pr::geom::ETexture;
+	// Generate normals if needed
+	if (generate_normals)
+	{
+		normals.resize(verts.size());
+		pr::geometry::GenerateNormals(indices.size(), indices.data(),
+			[&](std::size_t i){ return verts[i]; },
+			[&](std::size_t i){ return normals[i]; },
+			[&](std::size_t i, pr::v4 const& nm){ normals[i] = nm; });
+	}
 
 	// Create the model
-	obj->m_model = pr::rdr::model::Mesh(
-		p.m_rdr, prim_type, geom_type, num_indices, num_verts, &indices[0], &verts[0],
-		num_norms   == num_verts ? &normals[0] : 0,
-		num_colours == num_verts ? &colours[0] : 0,
-		num_texs    == num_verts ? &texs[0]    : 0,
-		pr::m4x4Identity);
-	obj->m_model->SetName(obj->TypeAndName().c_str());
-	if (generate_normals) pr::rdr::model::GenerateNormals(obj->m_model);
+	obj->m_model = pr::rdr::ModelGenerator<>::Mesh(
+		p.m_rdr,
+		prim_type,
+		verts.size(),
+		indices.size(),
+		verts.data(),
+		indices.data(),
+		colours.size(),
+		colours.data(),
+		normals.data(),
+		texs.data());
+	obj->m_model->m_name = obj->TypeAndName();
 
 	// Add the model and instance to the containers
 	p.m_models[pr::hash::HashC(obj->m_name.c_str())] = obj->m_model;

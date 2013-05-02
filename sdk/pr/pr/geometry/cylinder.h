@@ -40,11 +40,11 @@ namespace pr
 			if (wedges < 3) wedges = 3;
 			if (layers < 1) layers = 1;
 
-			pr::Range<> vrange,irange;
-			CylinderSize(wedges, layers, vrange, irange);
+			std::size_t vcount,icount;
+			CylinderSize(wedges, layers, vcount, icount);
 
 			// Colour iterator wrapper
-			ColourRepeater col(colours, num_colours, vrange.size(), pr::Colour32White);
+			ColourRepeater col(colours, num_colours, vcount, pr::Colour32White);
 
 			Props props;
 			typedef decltype(impl::remove_ref(*i_out)) VIdx;
@@ -53,7 +53,7 @@ namespace pr
 			float dz = height / layers;
 			float da = maths::tau / wedges;
 			std::size_t verts_per_layer = wedges + 1;
-			std::size_t ibase = 0, last = vrange.size() - 1;
+			std::size_t ibase = 0, last = vcount - 1;
 
 			v4 pt = o2w * v4::make(0, 0, z, 1.0f);
 			v4 nm = o2w * -v4ZAxis;

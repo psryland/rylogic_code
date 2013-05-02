@@ -176,6 +176,7 @@ namespace pr
 
 		// EPrim
 		#define PR_ENUM(x)\
+			x(Invalid   ,= D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)\
 			x(PointList ,= D3D11_PRIMITIVE_TOPOLOGY_POINTLIST)\
 			x(LineList  ,= D3D11_PRIMITIVE_TOPOLOGY_LINELIST)\
 			x(LineStrip ,= D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP)\

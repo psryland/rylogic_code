@@ -156,23 +156,23 @@ namespace pr
 			return Boxes(1, &pt[0], o2w, 1, &colour, out_verts, out_indices);
 		}
 
-		// Create boxes at each point in 'positions' with dimensions 'dim'
+		// Create boxes at each point in 'positions' with side hald lengths = rad.x,rad.y,rad.z
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
-		Props BoxList(std::size_t num_boxes, TVertCIter positions, v4 const& dim, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
+		Props BoxList(std::size_t num_boxes, TVertCIter positions, v4 const& rad, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			TVertCIter pos = positions;
 			std::vector<v4> points(8*num_boxes);
 			v4* pt = &points[0];
 			for (std::size_t i = 0; i != num_boxes; ++i, ++pos)
 			{
-				pt->set(pos->x - dim.x, pos->y - dim.y, pos->z - dim.z, 1.0f), ++pt;
-				pt->set(pos->x + dim.x, pos->y - dim.y, pos->z - dim.z, 1.0f), ++pt;
-				pt->set(pos->x - dim.x, pos->y + dim.y, pos->z - dim.z, 1.0f), ++pt;
-				pt->set(pos->x + dim.x, pos->y + dim.y, pos->z - dim.z, 1.0f), ++pt;
-				pt->set(pos->x - dim.x, pos->y - dim.y, pos->z + dim.z, 1.0f), ++pt;
-				pt->set(pos->x + dim.x, pos->y - dim.y, pos->z + dim.z, 1.0f), ++pt;
-				pt->set(pos->x - dim.x, pos->y + dim.y, pos->z + dim.z, 1.0f), ++pt;
-				pt->set(pos->x + dim.x, pos->y + dim.y, pos->z + dim.z, 1.0f), ++pt;
+				pt->set(pos->x - rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f), ++pt;
+				pt->set(pos->x + rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f), ++pt;
+				pt->set(pos->x - rad.x, pos->y + rad.y, pos->z - rad.z, 1.0f), ++pt;
+				pt->set(pos->x + rad.x, pos->y + rad.y, pos->z - rad.z, 1.0f), ++pt;
+				pt->set(pos->x - rad.x, pos->y - rad.y, pos->z + rad.z, 1.0f), ++pt;
+				pt->set(pos->x + rad.x, pos->y - rad.y, pos->z + rad.z, 1.0f), ++pt;
+				pt->set(pos->x - rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f), ++pt;
+				pt->set(pos->x + rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f), ++pt;
 			}
 			return Boxes(num_boxes, &points[0], num_colours, colours, out_verts, out_indices);
 		}

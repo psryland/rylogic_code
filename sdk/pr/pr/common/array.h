@@ -432,14 +432,14 @@ namespace pr
 			--m_count;
 		}
 		
-		// return pointer to the first element
+		// return pointer to the first element or null if the container is empty
 		const_pointer data() const
 		{
-			return m_ptr;
+			return m_count ? m_ptr : 0;
 		}
 		pointer data()
 		{
-			return m_ptr;
+			return m_count ? m_ptr : 0;
 		}
 		
 		// test if sequence is empty

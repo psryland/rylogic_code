@@ -83,8 +83,6 @@ namespace pr
 			v2 t11 = (t2q * v4::make(1.0f, 1.0f, 0.0f, 1.0f)).xy();
 
 			Props props;
-			TVertIter v_out = out_verts;
-			TIdxIter  i_out = out_indices;
 			for (std::size_t i = 0; i != num_quads; ++i)
 			{
 				v4 v0 = *verts++;
@@ -109,7 +107,7 @@ namespace pr
 
 				// Set faces
 				std::size_t ibase = i * 6;
-				typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+				typedef decltype(impl::remove_ref(*i_out)) VIdx;
 				*i_out++ = value_cast<VIdx>(ibase);
 				*i_out++ = value_cast<VIdx>(ibase + 1);
 				*i_out++ = value_cast<VIdx>(ibase + 2);

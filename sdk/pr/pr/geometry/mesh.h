@@ -26,7 +26,7 @@ namespace pr
 		// 'verts' and 'indices' are the basic model data
 		// 'num_colours' is the number of colours points to by 'colours', can be equal to 0, 1, or num_verts
 		// 'colours', 'normals', or 'tex_coords' must be null or point to 'num_verts' of each type
-		// Remember you can call "model->GenerateNormals()" to generate normals.
+		// Remember you can call "GenerateNormals()" to generate normals.
 		template <typename TVertCIter, typename TIdxCIter, typename TNormCIter, typename TVertIter, typename TIdxIter>
 		Props Mesh(
 			std::size_t num_verts,

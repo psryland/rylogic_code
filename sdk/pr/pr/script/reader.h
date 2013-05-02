@@ -42,7 +42,7 @@ namespace pr
 		{
 			void IErrorHandler_ImplementationVersion0() {}
 		};
-		
+
 		// pr script reader
 		struct Reader
 		{
@@ -56,37 +56,37 @@ namespace pr
 			IErrorHandler*  m_error_handler;
 			char const*     m_delim;
 			bool            m_case_sensitive_keywords;
-			
+
 			// Notes:
 			// - There is no default embedded code handler because typically you'd want to share
 			//   the code handling object across many instances of the script reader
-			
+
 			Reader(Reader const&); // no copying
 			Reader& operator=(Reader const&);
 			void EatWhiteSpace() { for (; *pr::str::FindChar(m_delim, *m_src) != 0; ++m_src) {} }
-			
+
 		public:
 			Reader()
-			:m_dft_macros()
-			,m_dft_includes()
-			,m_dft_errors()
-			,m_pp(&m_dft_macros, &m_dft_includes, 0)
-			,m_strip(m_pp)
-			,m_src(m_strip)
-			,m_error_handler(&m_dft_errors)
-			,m_delim(" \t\r\n\v,;")
-			,m_case_sensitive_keywords(false)
+				:m_dft_macros()
+				,m_dft_includes()
+				,m_dft_errors()
+				,m_pp(&m_dft_macros, &m_dft_includes, 0)
+				,m_strip(m_pp)
+				,m_src(m_strip)
+				,m_error_handler(&m_dft_errors)
+				,m_delim(" \t\r\n\v,;")
+				,m_case_sensitive_keywords(false)
 			{}
-			
+
 			// Interface pointers
 			IPPMacroDB*&    MacroHandler()   { return m_pp.m_macros; }
 			IIncludes*&     IncludeHandler() { return m_pp.m_includes; }
 			IEmbeddedCode*& CodeHandler()    { return m_pp.m_embedded; }
 			IErrorHandler*& ErrorHandler()   { return m_error_handler; }
-			
+
 			// User delimiter characters
 			char const*&    Delimiters()     { return m_delim; }
-			
+
 			// Push a source onto the input stack
 			// Note: specific overloads that add strings or files are not included
 			// as these require allocation. The client should create and control
@@ -99,7 +99,7 @@ namespace pr
 			{
 				AddSource(&src, false);
 			}
-			
+
 			// Get/Set whether keywords are case sensitive
 			// If false (default), then all keywords are returned as lower case
 			bool CaseSensitiveKeywords() const
@@ -110,28 +110,28 @@ namespace pr
 			{
 				m_case_sensitive_keywords = case_sensitive;
 			}
-			
+
 			// Return the hash of a keyword using the current reader settings
 			pr::hash::HashValue HashKeyword(char const* keyword) const
 			{
 				pr::hash::HashValue kw = m_case_sensitive_keywords ? pr::hash::HashC(keyword) : pr::hash::HashLwr(keyword);
 				return (kw & 0x7fffffff); // mask off msb so that enum's show up in the debugger
 			}
-			
+
 			// Return true if the end of the source has been reached
 			bool IsSourceEnd()
 			{
 				EatWhiteSpace();
 				return *m_src == 0;
 			}
-			
+
 			// Return true if the next token is a keyword
 			bool IsKeyword()
 			{
 				EatWhiteSpace();
 				return *m_src == '*';
 			}
-			
+
 			// Return true if the next non-whitespace character is the start/end of a section
 			bool IsSectionStart()
 			{
@@ -143,7 +143,7 @@ namespace pr
 				EatWhiteSpace();
 				return *m_src == '}';
 			}
-			
+
 			// Move to the start/end of a section and then one past it
 			bool SectionStart()
 			{
@@ -155,7 +155,7 @@ namespace pr
 				if (IsSectionEnd()) { ++m_src; return true; }
 				return ReportError(EResult::TokenNotFound, "expected '}'");
 			}
-			
+
 			// Move to the start of the next line
 			bool NewLine()
 			{
@@ -163,7 +163,7 @@ namespace pr
 				if (pr::str::IsNewLine(*m_src)) ++m_src; else return false;
 				return true;
 			}
-			
+
 			// Advance the source to the next '{' within the current scope
 			// On return the current position should be a section start character
 			// or the end of the current section or end of the input stream if not found
@@ -176,7 +176,7 @@ namespace pr
 				}
 				return *m_src == '{';
 			}
-			
+
 			// Advance the source to the end of the current section
 			// On return the current position should be the section end character
 			// or the end of the input stream (if called from file scope).
@@ -192,7 +192,7 @@ namespace pr
 				}
 				return *m_src == '}';
 			}
-			
+
 			// Scans forward until a keyword identifier is found within the current scope.
 			// Non-keyword tokens are skipped. If a section is found it is skipped.
 			// If a keyword is found, the source is position at the next character after the keyword
@@ -209,7 +209,7 @@ namespace pr
 				if (m_case_sensitive_keywords) return pr::str::ExtractIdentifier(kw, m_src, m_delim);
 				else { TxfmSrc src(m_src, ::tolower); return pr::str::ExtractIdentifier(kw, src, m_delim); }
 			}
-			
+
 			// As above except the hash of the keyword is returned instead (converted to an enum value)
 			template <typename Enum> bool NextKeywordH(Enum& enum_kw)
 			{
@@ -218,7 +218,7 @@ namespace pr
 				enum_kw = static_cast<Enum>(HashKeyword(kw.c_str()));
 				return true;
 			}
-			
+
 			// As above an error is reported if the next token is not a keyword
 			pr::hash::HashValue NextKeywordH()
 			{
@@ -226,7 +226,13 @@ namespace pr
 				if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, "keyword expected");
 				return kw;
 			}
-			
+
+			// As above an error is reported if the next token is not a keyword
+			template <typename Enum> Enum NextKeywordH()
+			{
+				return static_cast<Enum>(NextKeywordH());
+			}
+
 			// Scans forward until a keyword matching 'named_kw' is found within the current scope.
 			// Returns false if the named keyword is not found, true if it is
 			bool FindNextKeyword(char const* named_kw)
@@ -235,7 +241,7 @@ namespace pr
 				for (;NextKeywordH(kw_hashed) && kw_hashed != named_kw_hashed;) {}
 				return named_kw_hashed == kw_hashed;
 			}
-			
+
 			// Extract an identifier from the source.
 			// An identifier is one of (A-Z,a-z,'_') followed by (A-Z,a-z,'_',0-9) in a contiguous block
 			template <typename StrType> bool ExtractIdentifier(StrType& word)
@@ -247,7 +253,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractIdentifier(word) && SectionEnd();
 			}
-			
+
 			// Extract identifiers from the source separated by 'sep'
 			template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, char sep = '.')
 			{
@@ -270,7 +276,7 @@ namespace pr
 					ExtractIdentifier(word3)) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
-			
+
 			// Extract a string from the source.
 			// A string is a sequence of characters between quotes.
 			template <typename StrType> bool ExtractString(StrType& string)
@@ -282,7 +288,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractString(string) && SectionEnd();
 			}
-			
+
 			// Extract a C-style string from the source.
 			template <typename StrType> bool ExtractCString(StrType& cstring)
 			{
@@ -293,7 +299,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractCString(cstring) && SectionEnd();
 			}
-			
+
 			// Extract a bool from the source.
 			template <typename Bool> bool ExtractBool(Bool& bool_)
 			{
@@ -348,7 +354,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractBoolArray(bools, num_bools) && SectionEnd();
 			}
-			
+
 			// Extract an array of integral types from the source.
 			template <typename Int> bool ExtractIntArray(Int* ints, std::size_t num_ints, int radix)
 			{
@@ -359,7 +365,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractIntArray(ints, num_ints, radix) && SectionEnd();
 			}
-			
+
 			// Extract an array of reals from the source.
 			template <typename Real> bool ExtractRealArray(Real* reals, std::size_t num_reals)
 			{
@@ -370,7 +376,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractRealArray(reals, num_reals) && SectionEnd();
 			}
-			
+
 			// Extract a vector from the source
 			bool ExtractVector2(pr::v2& vector)
 			{
@@ -380,7 +386,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractVector2(vector) && SectionEnd();
 			}
-			
+
 			// Extract a vector from the source
 			bool ExtractVector3(pr::v4& vector, float w)
 			{
@@ -391,7 +397,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractVector3(vector, w) && SectionEnd();
 			}
-			
+
 			// Extract a vector from the source
 			bool ExtractVector4(pr::v4& vector)
 			{
@@ -401,7 +407,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractVector4(vector) && SectionEnd();
 			}
-			
+
 			// Extract a quaternion from the source
 			bool ExtractQuaternion(pr::Quat& quaternion)
 			{
@@ -411,7 +417,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractQuaternion(quaternion) && SectionEnd();
 			}
-			
+
 			// Extract a 3x3 matrix from the source
 			bool ExtractMatrix3x3(pr::m3x3& transform)
 			{
@@ -421,7 +427,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractMatrix3x3(transform) && SectionEnd();
 			}
-			
+
 			// Extract a 4x4 matrix from the source
 			bool ExtractMatrix4x4(pr::m4x4& transform)
 			{
@@ -431,7 +437,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractMatrix4x4(transform) && SectionEnd();
 			}
-			
+
 			// Extract a byte array
 			bool ExtractData(void* data, std::size_t length)
 			{
@@ -441,7 +447,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractData(data, length) && SectionEnd();
 			}
-			
+
 			// Extract a complete section as a preprocessed string.
 			// Note: To embed arbitrary text in a script use #lit/#end and then
 			// ExtractSection rather than ExtractLiteralSection.
@@ -465,7 +471,7 @@ namespace pr
 				if (IsSectionEnd()) ++m_src; else return ReportError(EResult::TokenNotFound, "expected '}'");
 				return true;
 			}
-			
+
 			// Allow extension methods. e.g:
 			// template <> bool pr::script::Reader::Extract<MyType>(MyType& my_type)
 			// { return ExtractInt(my_type.int, 10); // etc }
@@ -474,7 +480,7 @@ namespace pr
 			{
 				return SectionStart() && ExtractS(type) && SectionEnd();
 			}
-			
+
 			// Allow users to report errors via the internal error handler
 			bool ReportError(EResult result)
 			{
@@ -544,7 +550,7 @@ namespace pr
 				pr::script::Reader reader;
 				reader.CaseSensitiveKeywords(true);
 				reader.AddSource(ptr);
-			
+
 				PR_CHECK(reader.CaseSensitiveKeywords()     ,true);
 				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Identifier"                  );
 				PR_CHECK(reader.ExtractIdentifier(str)      ,true); PR_CHECK(str             , "ident"                       );
@@ -605,13 +611,13 @@ namespace pr
 					"a.b.c\n"
 					"A.B.C.D\n"
 					;
-		
+
 				pr::script::Loc    loc;
 				pr::script::PtrSrc ptr(src, &loc);
 				pr::script::Reader reader;
 				reader.CaseSensitiveKeywords(true);
 				reader.AddSource(ptr);
-			
+
 				std::string s0,s1,s2,s3;
 				reader.ExtractIdentifier(s0,s1,'.');        PR_CHECK(s0 == "A" && s1 == "B", true);
 				reader.ExtractIdentifier(s0,s1,s2,'.');     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);

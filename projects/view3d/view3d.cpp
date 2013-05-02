@@ -5,7 +5,7 @@
 	
 #include "stdafx.h"
 #include "view3d/renderer_instance.h"
-#include "pr/renderer/lighting/lighting_dlg.h"
+#include "pr/renderer11/lights/light_dlg.h"
 #include "pr/common/assert.h"
 #include "pr/common/array.h"
 #include "pr/filesys/fileex.h"
