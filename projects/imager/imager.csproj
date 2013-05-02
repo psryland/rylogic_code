@@ -136,6 +136,6 @@
   <PropertyGroup>
     <PostBuildEvent>
     </PostBuildEvent>
-    <PreBuildEvent>q:\sdk\pr\lib\_lib_copy.cmd view3d.dll $(PlatformName) $(ConfigurationName) $(TargetDir)</PreBuildEvent>
+    <PreBuildEvent>q:\tools\_lib_copy.cmd view3d.dll $(PlatformName) $(ConfigurationName) $(TargetDir)</PreBuildEvent>
   </PropertyGroup>
 </Project>

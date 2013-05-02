@@ -104,7 +104,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)"
+				CommandLine="q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 		<Configuration
@@ -198,7 +198,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)"
+				CommandLine="q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 	</Configurations>

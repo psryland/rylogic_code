@@ -73,7 +73,7 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>q:\bin\_publish_bin.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
+      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Publishing binary...</Message>
@@ -90,7 +90,7 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>q:\bin\_publish_bin.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
+      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Publishing binary...</Message>
@@ -111,7 +111,7 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>q:\bin\_publish_bin.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
+      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Publishing binary...</Message>
@@ -132,7 +132,7 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>q:\bin\_publish_bin.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
+      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>Publishing binary...</Message>

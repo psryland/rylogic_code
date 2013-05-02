@@ -57,7 +57,7 @@
       <OptimizeReferences>false</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(Platform) $(Configuration)</Command>
+      <Command>q:\tools\_publish_lib.cmd $(TargetPath) $(Platform) $(Configuration)</Command>
       <Message>Publishing library</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>

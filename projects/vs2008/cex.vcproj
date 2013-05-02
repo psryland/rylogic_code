@@ -91,7 +91,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="q:\bin\_publish_bin $(TargetPath) $(PlatformName) $(ConfigurationName)"
+				CommandLine="q:\tools\_publish_bin $(TargetPath) $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 		<Configuration
@@ -172,7 +172,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="q:\bin\_publish_bin $(TargetPath) $(PlatformName) $(ConfigurationName)"
+				CommandLine="q:\tools\_publish_bin $(TargetPath) $(PlatformName) $(ConfigurationName)"
 			/>
 		</Configuration>
 	</Configurations>

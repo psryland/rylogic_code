@@ -91,7 +91,7 @@
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="x64">
@@ -185,7 +185,7 @@
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Debug" platform="Win32">
@@ -279,7 +279,7 @@
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="Win32">
@@ -373,7 +373,7 @@
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Folder name="prd">
