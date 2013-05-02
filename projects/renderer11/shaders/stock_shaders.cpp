@@ -80,7 +80,7 @@ struct TxTint :BaseShader
 		PShaderDesc psdesc(txfm_tint_ps);
 		
 		pr::rdr::ShaderPtr shdr = sm.CreateShader<TxTint>(EShader::TxTint, TxTint::Setup, &vsdesc, &psdesc, "txfm_tint");
-		CreateCBufModel(device, shdr->m_cbuf);		
+		CreateCBufModel(device, shdr->m_cbuf);
 	}
 	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{

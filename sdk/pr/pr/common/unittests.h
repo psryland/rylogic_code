@@ -96,13 +96,13 @@ namespace pr
 					try
 					{
 						pr::rtc::StopWatch test_sw;
-						std::cout << test.m_name << std::string(40 - strlen(test.m_name), '.');
+						printf("%s%s", test.m_name, std::string(40 - strlen(test.m_name), '.').c_str());
 
 						test_sw.start();
 						test.m_func();
 						test_sw.stop();
 
-						std::cout << "success. (" << TestCount() << " tests in " << test_sw.period_ms() << "ms)\n";
+						printf("success. (%-4d tests in %7.3fms)\n", TestCount(), test_sw.period_ms());
 						++passed;
 					}
 					catch (std::exception const& e)

@@ -25,7 +25,7 @@ namespace sol
 	{
 		pr::app::Skybox m_skybox;
 		pr::app::Gimble m_gimble;
-		AstronomicalBody m_earth;
+		//AstronomicalBody m_earth;
 		//AstronomicalBody m_earth2;
 		//AstronomicalBody m_earth3;
 		//TestModel m_test1;
@@ -45,7 +45,7 @@ namespace sol
 		void ToggleWireframe()
 		{
 			m_wireframe = !m_wireframe;
-			m_scene.m_rs = m_wireframe ? m_rdr.m_rs_mgr.WireCullNone() : m_rdr.m_rs_mgr.SolidCullBack();
+			m_scene.m_rsb = m_wireframe ? pr::rdr::RSBlock::WireCullNone() : pr::rdr::RSBlock::SolidCullBack();
 		}
 		void ToggleStereo()
 		{

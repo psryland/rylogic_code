@@ -116,7 +116,9 @@ pr::Renderer::Renderer(pr::rdr::RdrSettings const& settings)
 ,m_mdl_mgr(m_settings.m_mem, m_device)
 ,m_shdr_mgr(m_settings.m_mem, m_device)
 ,m_tex_mgr(m_settings.m_mem, m_device)
-,m_rs_mgr(m_device)
+,m_bs_mgr(m_settings.m_mem, m_device)
+,m_ds_mgr(m_settings.m_mem, m_device)
+,m_rs_mgr(m_settings.m_mem, m_device)
 {}
 pr::Renderer::~Renderer()
 {

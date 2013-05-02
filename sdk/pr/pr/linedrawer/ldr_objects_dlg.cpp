@@ -2,16 +2,12 @@
 // Ldr Object Manager
 //  Copyright © Rylogic Ltd 2009
 //***************************************************************************************************
-#include <string>
-#include <sstream>
-#include <windows.h>
-#include <commctrl.h>
-#include "pr/common/min_max_fix.h"
+
+#include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/macros/count_of.h"
 #include "pr/common/assert.h"
 #include "pr/common/keystate.h"
 #include "pr/script/reader.h"
-#include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_object.h"
 	
 namespace pr
@@ -465,7 +461,7 @@ pr::uint pr::ldr::ObjectManagerDlg::SelectedCount() const
 	
 // Return a bounding box of the objects
 inline bool LdrObjectIsVisible(pr::ldr::LdrObject const& obj) { return obj.m_visible; }
-pr::BoundingBox pr::ldr::ObjectManagerDlg::GetBBox(EObjectBounds::Type bbox_type) const
+pr::BoundingBox pr::ldr::ObjectManagerDlg::GetBBox(EObjectBounds bbox_type) const
 {
 	pr::BoundingBox bbox = pr::BBoxReset;
 	switch (bbox_type)

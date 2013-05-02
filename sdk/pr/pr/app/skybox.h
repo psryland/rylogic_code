@@ -32,19 +32,20 @@ namespace pr
 			};
 
 			// A renderer instance type for the skybox
-			PR_RDR_DECLARE_INSTANCE_TYPE3(
-				Instance
-				,pr::m4x4            ,m_i2w   ,pr::rdr::EInstComp::I2WTransform
-				,pr::rdr::ModelPtr   ,m_model ,pr::rdr::EInstComp::ModelPtr
-				,pr::rdr::SKOverride ,m_sko   ,pr::rdr::EInstComp::SortkeyOverride
-				);
+			#define PR_RDR_INST(x)\
+				x(pr::m4x4            ,m_i2w   ,pr::rdr::EInstComp::I2WTransform   )\
+				x(pr::rdr::ModelPtr   ,m_model ,pr::rdr::EInstComp::ModelPtr       )\
+				x(pr::rdr::SKOverride ,m_sko   ,pr::rdr::EInstComp::SortkeyOverride)
+			PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST);
+			#undef PR_RDR_INST
+
 			typedef pr::Array<pr::rdr::Texture2DPtr> TexCont;
 
 			Instance m_inst;  // The skybox instance
 			TexCont  m_tex;   // The textures used in the skybox
 			float    m_scale; // Model scaler
 			m4x4     m_i2w;   // The base orientation transform for the skybox (updated with camera position in OnEvent)
-			
+
 			// Constructs a skybox model and instance.
 			// 'texpath' should be an unrolled cube texture
 			Skybox(pr::Renderer& rdr, wstring const& texpath, Style tex_style, float scale = 1000.0f)
@@ -84,7 +85,7 @@ namespace pr
 				pr::rdr::DrawMethod method;
 				method.m_shader      = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPT>();
 				method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::WrapSampler(), texpath.c_str());
-				method.m_rstates     = rdr.m_rs_mgr.SolidCullFront();
+				method.m_rsb         = pr::rdr::RSBlock::SolidCullFront();
 
 				// Create the skybox model
 				m_inst.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPT>::Geosphere(rdr, 1.0f, 3, Colour32White, &method);
@@ -131,7 +132,7 @@ namespace pr
 				method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::ClampSampler(), texpath.c_str());
 
 				// Create the render nugget
-				m_inst.m_model->CreateNugget(method, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				m_inst.m_model->CreateNugget(method, pr::rdr::EPrim::TriList);
 			}
 
 			// Create a model for a 6-sided cube
@@ -199,7 +200,7 @@ namespace pr
 					// Create the render nugget for this face of the skybox
 					pr::rdr::Range vrange = pr::rdr::Range::make(i*4, (i+1)*4);
 					pr::rdr::Range irange = pr::rdr::Range::make(i*6, (i+1)*6);
-					m_inst.m_model->CreateNugget(method, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, &vrange, &irange);
+					m_inst.m_model->CreateNugget(method, pr::rdr::EPrim::TriList, &vrange, &irange);
 				}
 			}
 		};

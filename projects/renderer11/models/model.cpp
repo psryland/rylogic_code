@@ -43,7 +43,7 @@ bool pr::rdr::Model::MapIndices(Lock& lock, D3D11_MAP map_type, uint flags, Rang
 
 // Call to create a render nugget from a range within this model that uses 'material'
 // Ranges are model relative, i.e. the first vert in the model is range [0,1)
-void pr::rdr::Model::CreateNugget(pr::rdr::DrawMethod const& meth, D3D11_PRIMITIVE_TOPOLOGY prim_type, Range const* vrange_, Range const* irange_)
+void pr::rdr::Model::CreateNugget(pr::rdr::DrawMethod const& meth, EPrim prim_type, Range const* vrange_, Range const* irange_)
 {
 	PR_ASSERT(PR_DBG_RDR, meth.m_shader != 0, "The draw method must contain a shader");
 

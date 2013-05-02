@@ -6,7 +6,7 @@
 ::Use:
 :: _build_shader.cmd $(Fullpath) [pp] [obj]
 :: This will compile the shader into a header file in the same directory as $(Fullpath)
-@echo OFF
+@echo off
 SetLocal EnableDelayedExpansion 
 set PATH=Q:\sdk\pr\cmd\;%PATH%
 
@@ -44,21 +44,22 @@ if [%shdr%]==[vs] (
 	goto :eof
 )
 
-::Choose the output file to generate
-set outdir=%srcdir%\..\compiled
-set output=/Fh"%outdir%\%file%.h"
-if [%obj%]==[1] set output=!output! /Fo"%outdir%\%file%.cso"
+::Delete potentially left over temporary output
+if exist "%outdir%\%file%.h.tmp"   del "%outdir%\%file%.h.tmp"
+if exist "%outdir%\%file%.cso.tmp" del "%outdir%\%file%.cso.tmp"
+if exist "%outdir%\%file%.pp"      del "%outdir%\%file%.pp"
+if exist "%outdir%\fxc_output.txt" del "%outdir%\fxc_output.txt"
 
-::Delete previous output
-if exist "%outdir%\%file%.h"   del "%outdir%\%file%.h"
-if exist "%outdir%\%file%.cso" del "%outdir%\%file%.cso"
-if exist "%outdir%\%file%.pp"  del "%outdir%\%file%.pp"
+::Choose the output files to generate
+set outdir=%srcdir%\..\compiled
+set output=/Fh"%outdir%\%file%.h.tmp"
+if [%obj%]==[1] set output=!output! /Fo"%outdir%\%file%.cso.tmp"
 
 ::Set the variable name to the name of the file
 set varname=/Vn%file:~0,-3%_%shdr%
 
 ::Set include paths
-set includes=/I%srcdir%\..
+set includes=/I"%srcdir%\.."
 
 ::Set defines
 set defines=/DSHADER_BUILD=1
@@ -71,8 +72,26 @@ set options=/nologo /Gis /Ges /WX
 ::set options=%options% /Od /Zi
 
 ::Build the shader
-cd %srcdir%
-"%fxc%" "%fullpath%" %profile% %output% %varname% %includes% %defines% %options%
+"%fxc%" "%fullpath%" %profile% %output% %varname% %includes% %defines% %options% >"%outdir%\fxc_output.txt"
+if errorlevel 1 goto :error
+
+::Compare the produced files with any existing ones, don't replace the files if they are identical
+::This prevents VS rebuilding all the time.
+set changed=0
+if exist "%outdir%\%file%.h" (
+	fc /B "%outdir%\%file%.h.tmp" "%outdir%\%file%.h" >nul
+	if errorlevel 1 set changed=1
+)
+if [%changed%]==[1] (
+	echo %file%.%extn%
+	move /Y "%outdir%\%file%.h.tmp"   "%outdir%\%file%.h"   >nul
+	if exist "%outdir%\%file%.cso.tmp" move /Y "%outdir%\%file%.cso.tmp" "%outdir%\%file%.cso" >nul
+)
+
+::Delete temporary output if still there
+if exist "%outdir%\%file%.h.tmp"   del "%outdir%\%file%.h.tmp"
+if exist "%outdir%\%file%.cso.tmp" del "%outdir%\%file%.cso.tmp"
+if exist "%outdir%\fxc_output.txt" del "%outdir%\fxc_output.txt"
 
 ::Generate preprocessed output
 if [%pp%]==[1] (
@@ -81,3 +100,9 @@ if [%pp%]==[1] (
 	Q:\bin\textformatter.exe -f "!ppoutput!" -newlines 0 1
 )
 ::"!textedit!" "!ppoutput!"
+
+goto :eof
+
+:error
+type "%outdir%\fxc_output.txt" 1>&2
+if exist "%outdir%\fxc_output.txt" del "%outdir%\fxc_output.txt"

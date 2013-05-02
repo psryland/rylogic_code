@@ -24,8 +24,10 @@ namespace pr
 // Add includes containing unittests here
 #include "pr/common/array.h"
 #include "pr/common/repeater.h"
+#include "pr/linedrawer/ldr_object.h"
 #include "pr/macros/enum.h"
 #include "pr/maths/maths.h"
+#include "pr/renderer11/renderer.h"
 #include "pr/script/script.h"
 #include "pr/script/reader.h"
 #include "pr/storage/sqlite.h"

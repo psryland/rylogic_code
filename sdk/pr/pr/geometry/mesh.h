@@ -58,7 +58,7 @@ namespace pr
 				pr::Encompase(props.m_bbox, pt);
 			}
 
-			// Faces
+			// Faces or edges or whatever
 			for (std::size_t i = 0; i != num_indices; ++i)
 				*i_out++ = *indices++;
 

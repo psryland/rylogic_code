@@ -131,9 +131,6 @@
     <ClInclude Include="..\renderer11\shaders\cbuffer.h">
       <Filter>shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\raster_state_manager.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\geometry\line.h">
       <Filter>geometry</Filter>
     </ClInclude>
@@ -166,6 +163,19 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\geometry\utility.h">
       <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\instance.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\raster_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\blend_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\depth_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h">
+      <Filter>render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

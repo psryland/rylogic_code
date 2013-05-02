@@ -33,7 +33,7 @@ namespace pr
 		//  +x, +y, +z  = 7
 		// 'num_boxes' is the number of boxes given in the 'points' array. (Should be 8 * its length)
 		// 'points' is the input array of corner points for the boxes
-		// 'num_colours' should be either, 0, 1, num_boxes, num_boxes*8 representing; no colour, 1 colour for all, 1 colour per box, or 1 colour per box vertex
+		// 'num_colours' should be either, 0, 1, num_boxes, or num_boxes*8 representing; no colour, 1 colour for all, 1 colour per box, or 1 colour per box vertex
 		// 'colours' is an input array of colour values, a pointer to a single colour, or null.
 		// 'out_verts' is an output iterator to receive the [vert,norm,colour,tex] data
 		// 'out_indices' is an output iterator to receive the index data

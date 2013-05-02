@@ -14,12 +14,12 @@ namespace sol
 	struct TestModel
 		:pr::events::IRecv<pr::rdr::Evt_SceneRender>
 	{
-		PR_RDR_DECLARE_INSTANCE_TYPE2
-		(
-			Instance
-			,pr::m4x4            ,m_i2w   ,pr::rdr::EInstComp::I2WTransform
-			,pr::rdr::ModelPtr   ,m_model ,pr::rdr::EInstComp::ModelPtr
-		);
+		// A renderer instance type for the body
+		#define PR_RDR_INST(x)\
+			x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
+			x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr    )
+		PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST);
+		#undef PR_RDR_INST
 
 		Instance m_inst;     // The renderer instance
 

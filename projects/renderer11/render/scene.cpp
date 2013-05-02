@@ -72,7 +72,8 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 	,m_background_colour(pr::ColourBlack)
 	,m_global_light()
 	,m_cbuf_frame()
-	,m_rs(rdr.m_rs_mgr.SolidCullBack())
+	,m_bsb()
+	,m_rsb(RSBlock::SolidCullBack())
 	,m_stereo()
 {
 	CBufFrame scene_constants = {};
@@ -139,6 +140,9 @@ void pr::rdr::Scene::Render(bool clear_bb) const
 }
 void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
 {
+	m_rdr->m_rs_mgr.Flush();
+	m_rdr->m_bs_mgr.Flush();
+
 	// Clear the back buffer and depth/stencil
 	if (clear_bb)
 	{

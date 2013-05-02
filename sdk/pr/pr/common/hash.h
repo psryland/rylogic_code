@@ -49,6 +49,10 @@ namespace pr
 			for (; size--; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
 			return hash;
 		}
+		template <typename T> inline HashValue HashObj(T const& obj, HashValue hash = -1)
+		{
+			return HashData(&obj, sizeof(obj), hash);
+		}
 
 		// Convert a contiguous block of bytes into a 64bit hash
 		inline HashValue64 HashData64(void const* data, size_t size, HashValue64 hash = -1LL)

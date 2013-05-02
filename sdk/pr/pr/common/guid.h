@@ -4,11 +4,12 @@
 //*********************************
 
 #pragma once
-#ifndef PR_GUID_H
-#define PR_GUID_H
+#ifndef PR_COMMON_GUID_H
+#define PR_COMMON_GUID_H
 
 #include <windows.h>
 #include <guiddef.h>
+#include <objbase.h>
 #include "pr/common/to.h"
 
 // Required lib: rpcrt4.lib

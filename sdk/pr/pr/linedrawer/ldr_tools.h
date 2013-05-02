@@ -15,7 +15,7 @@
 #include <atlctrls.h>
 #include <atldlgs.h>
 #include "pr/common/events.h"
-#include "pr/renderer/renderer.h"
+#include "pr/renderer11/forward.h"
 #include "pr/linedrawer/ldr_object.h"
 
 namespace pr

@@ -27,6 +27,7 @@ set RylogicEnvVersion=4
 
 set user=Paul
 set machine=Rylogic3
+set pr_root=Q:
 set qdrive=Q:
 set zdrive=Z:
 set cp=xcopy

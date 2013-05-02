@@ -143,8 +143,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\geometry\utility.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\config\config.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\forward.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\instance.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\instances\instance.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\blend_state.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\depth_state.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture2d.h" />
@@ -161,7 +165,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\draw_method.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\gbuffer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\renderer.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\raster_state_manager.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\raster_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\scene.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\scene_view.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\sortkey.h" />

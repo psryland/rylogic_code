@@ -10,6 +10,10 @@
 #include "pr/common/min_max_fix.h"
 #include <string>
 #include <set>
+#include <string>
+#include <sstream>
+#include <windows.h>
+#include <shellapi.h>
 #include <atlbase.h>
 #include <atlapp.h>
 #include <atlwin.h>
@@ -35,7 +39,9 @@ namespace pr
 		{
 			enum Type { Off, On, Toggle };
 		}
-		
+
+		//TODO, this should use the pImpl pattern and hide all the windows/atl includes in the cpp
+
 		// An interface for modifying the LdrObjects in existence.
 		// LdrObject is completely unaware that this class exists.
 		// Note: this object does not add references to LdrObjects
@@ -151,7 +157,7 @@ namespace pr
 			void InvSelection();
 			
 			// Return a bounding box of the objects
-			pr::BoundingBox GetBBox(EObjectBounds::Type bbox_type) const;
+			pr::BoundingBox GetBBox(EObjectBounds bbox_type) const;
 			
 			// Set the visibility of the currently selected objects
 			void SetVisibilty(ETriState::Type state, bool include_children);

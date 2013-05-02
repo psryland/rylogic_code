@@ -7,7 +7,7 @@
 #ifndef PR_RDR_LIGHT_H
 #define PR_RDR_LIGHT_H
 
-#include "pr/renderer/types/forward.h"
+#include "pr/renderer11/forward.h"
 
 namespace pr
 {

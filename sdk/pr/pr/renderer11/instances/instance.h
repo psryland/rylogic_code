@@ -22,37 +22,38 @@
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/models/model.h"
 #include "pr/renderer11/render/sortkey.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/raster_state.h"
 
 namespace pr
 {
 	namespace rdr
 	{
 		// Instance component types
-		namespace EInstComp
-		{
-			enum Type
-			{
-				ModelPtr,
-				I2WTransform,
-				I2WTransformPtr,
-				I2WTransformFuncPtr,
-				C2STransform,
-				C2STransformPtr,
-				SortkeyOverride,
-				RenderState,
-				TintColour32,
-				FirstUserCpt, // Clients may add other component types
-			};
-		}
-		
+		#define PR_ENUM(x)/*
+			*/x(ModelPtr           )/* pr::rdr::ModelPtr
+			*/x(I2WTransform       )/* pr::m4x4
+			*/x(I2WTransformPtr    )/* pr::m4x4*
+			*/x(I2WTransformFuncPtr)/* pr::m4x4 const& (*func)(void* context);
+			*/x(C2STransform       )/* pr::m4x4
+			*/x(C2STransformPtr    )/* pr::m4x4*
+			*/x(SortkeyOverride    )/* pr::rdr::SKOverride
+			*/x(BSBlock            )/* pr::rdr::BSBlock
+			*/x(DSBlock            )/* pr::rdr::DSBlock
+			*/x(RSBlock            )/* pr::rdr::RSBlock
+			*/x(TintColour32       )/* pr::Colour32
+			*/x(FirstUserCpt       ) // Clients may add other component types
+		PR_DEFINE_ENUM1(EInstComp, PR_ENUM);
+		#undef PR_ENUM
+
 		// Component description
 		struct CompDesc
 		{
 			pr::uint16 m_type;    // The type of component this is an offset to
 			pr::uint16 m_offset;  // Byte offset from the instance pointer
-			static CompDesc make(pr::uint16 type, pr::uint16 offset) { CompDesc c = {type, offset}; return c; }
+			static CompDesc make(EInstComp comp, pr::uint16 offset) { CompDesc c = {value_cast<pr::uint16>(comp.value), offset}; return c; }
 		};
-		
+
 		// The header for an instance. All instances must start with one of these
 		struct BaseInstance
 		{
@@ -85,17 +86,17 @@ namespace pr
 			template <typename Comp> inline Comp const& get(pr::uint16 comp_type, int index = 0) const
 			{
 				Comp const* comp = find<Comp>(comp_type, index);
-				PR_ASSERT(PR_DBG_RDR, comp != 0, "This instance does not have the requested component")
+				PR_ASSERT(PR_DBG_RDR, comp != 0, "This instance does not have the requested component");
 				return *comp;
 			}
 			template <typename Comp> inline Comp& get(pr::uint16 comp_type, int index = 0)
 			{
 				Comp* comp = find<Comp>(comp_type, index);
-				PR_ASSERT(PR_DBG_RDR, comp != 0, "This instance does not have the requested component")
+				PR_ASSERT(PR_DBG_RDR, comp != 0, "This instance does not have the requested component");
 				return *comp;
 			}
 		};
-		
+
 		// Helper Components/Functions **************************************
 		
 		// A component that gets an i2w transform via function pointer
@@ -133,102 +134,5 @@ namespace pr
 		}
 	}
 }
-
-// Instance type declaration helpers
-#define PR_RDR_DECLARE_INSTANCE_TYPE2(name, type1, name1, enum1, type2, name2, enum2)\
-	struct name\
-	{\
-		name() :name1() ,name2()\
-		{\
-			using namespace pr::rdr;\
-			m_base.m_cpt_count = 2;\
-			m_cpt[0] = CompDesc::make(enum1, offsetof(name, name1));\
-			m_cpt[1] = CompDesc::make(enum2, offsetof(name, name2));\
-		}\
-		pr::rdr::BaseInstance m_base;\
-		pr::rdr::CompDesc m_cpt[2];\
-		type1 name1;\
-		type2 name2;\
-	};
-#define PR_RDR_DECLARE_INSTANCE_TYPE3(name, type1, name1, enum1, type2, name2, enum2, type3, name3, enum3)\
-	struct name\
-	{\
-		name() :name1() ,name2() ,name3()\
-		{\
-			using namespace pr::rdr;\
-			m_base.m_cpt_count = 3;\
-			m_cpt[0] = CompDesc::make(enum1, offsetof(name, name1));\
-			m_cpt[1] = CompDesc::make(enum2, offsetof(name, name2));\
-			m_cpt[2] = CompDesc::make(enum3, offsetof(name, name3));\
-		}\
-		pr::rdr::BaseInstance m_base;\
-		pr::rdr::CompDesc m_cpt[3];\
-		type1 name1;\
-		type2 name2;\
-		type3 name3;\
-	};
-#define PR_RDR_DECLARE_INSTANCE_TYPE4(name, type1, name1, enum1, type2, name2, enum2, type3, name3, enum3, type4, name4, enum4)\
-	struct name\
-	{\
-		name() :name1() ,name2() ,name3() ,name4()\
-		{\
-			using namespace pr::rdr;\
-			m_base.m_cpt_count = 4;\
-			m_cpt[0] = CompDesc::make(enum1, offsetof(name, name1));\
-			m_cpt[1] = CompDesc::make(enum2, offsetof(name, name2));\
-			m_cpt[2] = CompDesc::make(enum3, offsetof(name, name3));\
-			m_cpt[3] = CompDesc::make(enum4, offsetof(name, name4));\
-		}\
-		pr::rdr::BaseInstance m_base;\
-		pr::rdr::CompDesc m_cpt[4];\
-		type1 name1;\
-		type2 name2;\
-		type3 name3;\
-		type4 name4;\
-	};
-#define PR_RDR_DECLARE_INSTANCE_TYPE5(name, type1, name1, enum1, type2, name2, enum2, type3, name3, enum3, type4, name4, enum4, type5, name5, enum5)\
-	struct name\
-	{\
-		name() :name1() ,name2() ,name3() ,name4() ,name5()\
-		{\
-			using namespace pr::rdr;\
-			m_base.m_cpt_count = 5;\
-			m_cpt[0] = CompDesc::make(enum1, offsetof(name, name1));\
-			m_cpt[1] = CompDesc::make(enum2, offsetof(name, name2));\
-			m_cpt[2] = CompDesc::make(enum3, offsetof(name, name3));\
-			m_cpt[3] = CompDesc::make(enum4, offsetof(name, name4));\
-			m_cpt[4] = CompDesc::make(enum5, offsetof(name, name5));\
-		}\
-		pr::rdr::BaseInstance m_base;\
-		pr::rdr::CompDesc m_cpt[5];\
-		type1 name1;\
-		type2 name2;\
-		type3 name3;\
-		type4 name4;\
-		type5 name5;\
-	};
-#define PR_RDR_DECLARE_INSTANCE_TYPE6(name, type1, name1, enum1, type2, name2, enum2, type3, name3, enum3, type4, name4, enum4, type5, name5, enum5, type6, name6, enum6)\
-	struct name\
-	{\
-		name() :name1() ,name2() ,name3() ,name4() ,name5() ,name6()\
-		{\
-			using namespace pr::rdr;\
-			m_base.m_cpt_count = 6;\
-			m_cpt[0] = CompDesc::make(enum1, offsetof(name, name1));\
-			m_cpt[1] = CompDesc::make(enum2, offsetof(name, name2));\
-			m_cpt[2] = CompDesc::make(enum3, offsetof(name, name3));\
-			m_cpt[3] = CompDesc::make(enum4, offsetof(name, name4));\
-			m_cpt[4] = CompDesc::make(enum5, offsetof(name, name5));\
-			m_cpt[5] = CompDesc::make(enum6, offsetof(name, name6));\
-		}\
-		pr::rdr::BaseInstance m_base;\
-		pr::rdr::CompDesc m_cpt[6];\
-		type1 name1;\
-		type2 name2;\
-		type3 name3;\
-		type4 name4;\
-		type5 name5;\
-		type6 name6;\
-	};
 
 #endif

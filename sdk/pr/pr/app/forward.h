@@ -27,6 +27,8 @@
 #include <vector>
 #include <list>
 #include <memory>
+#include <guiddef.h>
+#include <cguid.h>
 
 // wtl
 #include <atlbase.h>

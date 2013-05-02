@@ -3,8 +3,8 @@
 //  Copyright © Rylogic Ltd 2011
 //*****************************************
 #pragma once
-#ifndef PR_D3D_POINTER_H
-#define PR_D3D_POINTER_H
+#ifndef PR_COMMON_D3D_POINTER_H
+#define PR_COMMON_D3D_POINTER_H
 
 #include "pr/common/assert.h"
 #include "pr/common/refptr.h"
@@ -35,7 +35,11 @@ template <typename D3DInterfaceType> struct D3DPtr :pr::RefPtr<D3DInterfaceType>
 	:pr::RefPtr<D3DInterfaceType>(t)
 	{
 		if (m_ptr && !add_ref)
+		{
+			// Check that the pointer will still have at least one reference
+			PR_ASSERT(PR_DBG, pr::PtrRefCount(m_ptr) > 1, "This pointer only has one reference, 'add_ref = true' is needed");
 			DecRef(m_ptr);
+		}
 	}
 };
 

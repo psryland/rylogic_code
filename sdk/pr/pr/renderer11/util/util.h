@@ -52,10 +52,10 @@ namespace pr
 		template <> struct DxFormat<pr::Colour> { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
 
 		// Returns the number of primitives implied by an index count and geometry topology
-		size_t PrimCount(size_t icount, D3D11_PRIMITIVE_TOPOLOGY topo);
+		size_t PrimCount(size_t icount, EPrim topo);
 
 		// Returns the number of indices implied by a primitive count and geometry topology
-		size_t IndexCount(size_t pcount, D3D11_PRIMITIVE_TOPOLOGY topo);
+		size_t IndexCount(size_t pcount, EPrim topo);
 
 		// Returns the number of bits per pixel for a given d3d format
 		size_t BitsPerPixel(DXGI_FORMAT fmt);
@@ -64,6 +64,9 @@ namespace pr
 		// Return information about a surface determined from its dimensions and format
 		// Any of the pointer parameters can be null
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
+
+		// Helper for setting alpha blending states
+		void SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, int render_target, bool on, D3D11_BLEND_OP blend_op = D3D11_BLEND_OP_ADD, D3D11_BLEND src_blend = D3D11_BLEND_SRC_ALPHA, D3D11_BLEND dst_blend = D3D11_BLEND_INV_SRC_ALPHA);
 
 		// Helper for checking values are not overwritten in a lookup table
 		template <class Table, typename Key, typename Value> inline void AddLookup(Table& table, Key key, Value value)
@@ -75,11 +78,12 @@ namespace pr
 		// Set the name on a d3d resource (debug only)
 		template <typename T> inline void NameResource(D3DPtr<T>& res, char const* name)
 		{
-#if PR_DBG_RDR
+			#if PR_DBG_RDR
 			string32 res_name = name;
 			pr::Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
-#endif
+			#endif
 		}
+
 	}
 }
 

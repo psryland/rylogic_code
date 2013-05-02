@@ -12,7 +12,9 @@
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/textures/texture_manager.h"
-#include "pr/renderer11/render/raster_state_manager.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/util/allocator.h"
 
 namespace pr
@@ -88,6 +90,8 @@ namespace pr
 		pr::rdr::ModelManager       m_mdl_mgr;
 		pr::rdr::ShaderManager      m_shdr_mgr;
 		pr::rdr::TextureManager     m_tex_mgr;
+		pr::rdr::BlendStateManager  m_bs_mgr;
+		pr::rdr::DepthStateManager  m_ds_mgr;
 		pr::rdr::RasterStateManager m_rs_mgr;
 
 		Renderer(pr::rdr::RdrSettings const& settings);

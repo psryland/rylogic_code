@@ -10,6 +10,8 @@
 #include "pr/renderer11/render/drawlist.h"
 #include "pr/renderer11/render/gbuffer.h"
 #include "pr/renderer11/render/scene_view.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/util/wrappers.h"
 #
@@ -33,7 +35,8 @@ namespace pr
 			pr::Colour           m_background_colour; // The colour to clear the background to
 			Light                m_global_light;      // The global light to use
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
-			D3DPtr<ID3D11RasterizerState> m_rs;       // Default raster states for the scene
+			BSBlock              m_bsb;               // Blend states for the scene
+			RSBlock              m_rsb;               // Raster states for the scene
 			std::shared_ptr<Stereo> m_stereo;         // Helper used when renderering in stereoscopic mode
 
 			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());

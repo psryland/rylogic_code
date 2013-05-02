@@ -20,12 +20,10 @@ namespace pr
 
 		struct Nugget :pr::chain::link<Nugget, ChainGroupNugget>
 		{
-			typedef D3D11_PRIMITIVE_TOPOLOGY TopoType;
-			
 			ModelBufferPtr m_model_buffer; // The vertex and index buffers.
 			Range          m_vrange;       // The index offset into the vertex buffer and the number of vertices for this nugget (relative to model buffer, not model)
 			Range          m_irange;       // The index offset into the index buffer and the number of indices for this nugget (relative to model buffer, not model)
-			TopoType       m_prim_topo;    // The primitive topology for this nugget
+			EPrim          m_prim_topo;    // The primitive topology for this nugget
 			size_t         m_prim_count;   // The number of primitives in this nugget
 			DrawMethod     m_draw;         // The method to use to draw this nugget
 			SortKey        m_sort_key;     // A key for sorting this nugget

@@ -20,6 +20,11 @@
 #   define PR_ASSERT(grp, exp, str)
 #endif
 
+#define PR_REFPTR_TRACE 0
+#if PR_REFPTR_TRACE == 1
+#include "pr/common/stackdump.h"
+#endif
+
 namespace pr
 {
 	// A function prototype for clients to implement/specialise to aid stack traces, etc
@@ -36,7 +41,8 @@ namespace pr
 	//    });
 	// }
 	#if PR_REFPTR_TRACE == 1
-	template <typename T> void RefPtrTrace(bool,T*);
+	template <typename T> void RefPtrTrace(bool,T*) {}
+	template <typename T> long PtrRefCount(T*);
 	#endif
 
 	// A ptr wrapper to a reference counting object.
@@ -153,6 +159,17 @@ namespace pr
 			#if PR_REFPTR_TRACE == 1
 			RefPtrTrace(false, ptr);
 			#endif
+			
+			// Before releasing the reference, check that there is at least one reference to release
+			// This test will probably crash rather than assert, but hey, good enough.
+			// If this fails, check that two or more D3DPtrs haven't been created from the same raw pointer.
+			// e.g.
+			//   ID3DInterface* raw (ref count = 1)
+			//   D3DPtr p0(raw) (ref count = 1 still because the following DecRef)
+			//   D3DPtr p1(raw) (ref count = 1 still because the following DecRef)
+			//   p1->~D3DPtr()  (ref count = 0)
+			//   p0->~D3DPtr()  "app.exe has triggered a break point" (i.e. crashed)
+			PR_ASSERT(PR_DBG, pr::PtrRefCount(ptr) > 0, "Pointer reference count is 0");
 			ptr->Release();
 		}
 	};
@@ -163,6 +180,22 @@ namespace pr
 	template <typename T> inline bool operator >  (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr >  rhs.m_ptr; }
 	template <typename T> inline bool operator <= (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr <= rhs.m_ptr; }
 	template <typename T> inline bool operator >= (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr >= rhs.m_ptr; }
+
+	// Some helper trace methods
+	#if PR_REFPTR_TRACE == 1
+	#if defined(__d3d11_h__)
+		template <> inline void RefPtrTrace<ID3D11Device>(bool add, ID3D11Device* ptr)
+		{
+			OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
+			pr::StackDump(3,5,[](std::string const& file, int line){ OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line)); });
+		}
+		template <> inline void RefPtrTrace<ID3D11Buffer>(bool add, ID3D11Buffer* ptr)
+		{
+			OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
+			pr::StackDump(3,5,[](std::string const& file, int line){ OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line)); });
+		}
+	#endif
+	#endif
 }
 
 #ifdef PR_ASSERT_DEFINED

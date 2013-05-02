@@ -76,7 +76,8 @@ struct enum_name\
 		enum_vals2(PR_ENUM_COUNT2)\
 		enum_vals3(PR_ENUM_COUNT3);\
 \
-	/* The members of the enum */ \
+	/* The members of the enum. This can't be called 'Enum' or 'Type' because
+	   it doesn't compile if the enum contains a member with the same name*/ \
 	enum Enum_\
 	{\
 		enum_vals1(PR_ENUM_DEFINE1)\
@@ -91,7 +92,7 @@ struct enum_name\
 	static char const* ToString(Enum_ e)\
 	{\
 		switch (e) {\
-		default: PR_ASSERT(PR_DBG, false, "Not a member of enum "#enum_name); return "";\
+		default: notflags(PR_ASSERT(PR_DBG, false, "Not a member of enum "#enum_name);) return "";\
 		enum_vals1(PR_ENUM_TOSTRING1)\
 		enum_vals2(PR_ENUM_TOSTRING2)\
 		enum_vals3(PR_ENUM_TOSTRING3)\
@@ -201,9 +202,12 @@ struct enum_name\
 	notflags(explicit) enum_name(int x) :value(static_cast<Enum_>(x)) {}\
 	enum_name& operator = (Enum_ x)                                                        { value = x; return *this; }\
 	flags(enum_name& operator = (int x)                                                    { value = static_cast<Enum_>(x); return *this; })\
-	flags(Enum_ operator | (enum_name rhs) const                                           { return static_cast<Enum_>(value | rhs.value); })\
-	flags(Enum_ operator & (enum_name rhs) const                                           { return static_cast<Enum_>(value & rhs.value); })\
-	flags(Enum_ operator ^ (enum_name rhs) const                                           { return static_cast<Enum_>(value ^ rhs.value); })\
+	flags(enum_name& operator |= (Enum_ rhs)                                               { value = static_cast<Enum_>(value | rhs); return *this; })\
+	flags(enum_name& operator &= (Enum_ rhs)                                               { value = static_cast<Enum_>(value & rhs); return *this; })\
+	flags(enum_name& operator ^= (Enum_ rhs)                                               { value = static_cast<Enum_>(value ^ rhs); return *this; })\
+	flags(Enum_ operator | (Enum_ rhs) const                                               { return static_cast<Enum_>(value | rhs); })\
+	flags(Enum_ operator & (Enum_ rhs) const                                               { return static_cast<Enum_>(value & rhs); })\
+	flags(Enum_ operator ^ (Enum_ rhs) const                                               { return static_cast<Enum_>(value ^ rhs); })\
 	operator Enum_ const&() const                                                          { return value; }\
 	operator Enum_&()                                                                      { return value; }\
 	friend std::ostream& operator << (std::ostream& stream, enum_name const& enum_)        { return stream << enum_name::ToString(enum_); }\
@@ -339,6 +343,8 @@ namespace pr
 			TestEnum3 b3; b3 = TestEnum3::B;
 			TestEnum4 b4; b4 = TestEnum4::B;
 			TestEnum5 b5; b5 = TestEnum5::B;
+			TestEnum4 b6; b6 = TestEnum4::B; b6 |= TestEnum4::C;
+			TestEnum5 b7; b7 = TestEnum5::B; b7 |= TestEnum5::C;
 
 			PR_CHECK(a1.ToString(), "A");
 			PR_CHECK(a2.ToString(), "A");
@@ -351,6 +357,8 @@ namespace pr
 			PR_CHECK(b3.ToString(), "b");
 			PR_CHECK(b4.ToString(), "B");
 			PR_CHECK(b5.ToString(), "b");
+			PR_CHECK(b6.ToString(), "");
+			PR_CHECK(b7.ToString(), "c");
 
 			{
 				std::stringstream s; s << a1 << a2 << a3 << a4 << a5;

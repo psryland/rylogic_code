@@ -22,77 +22,95 @@ namespace pr
 			size_t      SizeInBytes() const { return ElemCount * StructureByteStride; }
 
 			BufferDesc()
-			:D3D11_BUFFER_DESC()
-			,Data(0)
-			,ElemCount(0)
+				:D3D11_BUFFER_DESC()
+				,Data(0)
+				,ElemCount(0)
 			{}
 			BufferDesc(D3DPtr<ID3D11Buffer> const& buf)
-			:D3D11_BUFFER_DESC()
-			,Data(0) // Would need to 'Map' to get this
-			,ElemCount(0)
+				:D3D11_BUFFER_DESC()
+				,Data(0) // Would need to 'Map' to get this
+				,ElemCount(0)
 			{
 				buf->GetDesc(this);
 			}
-			template <typename Elem> BufferDesc(size_t count, Elem const* data, D3D11_USAGE usage, D3D11_BIND_FLAG bind_flags, D3D11_CPU_ACCESS_FLAG cpu_access, D3D11_RESOURCE_MISC_FLAG res_flag)
-			:D3D11_BUFFER_DESC()
-			,Data(data)
-			,ElemCount(count)
+			BufferDesc(size_t count, size_t element_size_in_bytes, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_UNORDERED_ACCESS, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:D3D11_BUFFER_DESC()
 			{
-				ByteWidth           = UINT(sizeof(Elem) * count); // Size of the buffer in bytes
-				Usage               = usage;                      // How the buffer will be used
-				BindFlags           = bind_flags;                 // How the buffer will be bound (i.e. can it be a render target too?)
-				CPUAccessFlags      = cpu_access;                 // What access the CPU needs. (if data provided, assume none)
-				MiscFlags           = res_flag;                   // General flags for the resource
-				StructureByteStride = sizeof(Elem);               // For structured buffers
+				Init(count, element_size_in_bytes, 0, usage, bind_flags, cpu_access, res_flag);
 			}
-			template <typename Elem, size_t Sz> BufferDesc(Elem const (&data)[Sz], D3D11_USAGE usage, D3D11_BIND_FLAG bind_flags, D3D11_CPU_ACCESS_FLAG cpu_access, D3D11_RESOURCE_MISC_FLAG res_flag)
-			:D3D11_BUFFER_DESC()
-			,Data(data)
-			,ElemCount(Sz)
+			template <typename Elem> BufferDesc(size_t count, Elem const* data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_UNORDERED_ACCESS, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:D3D11_BUFFER_DESC()
 			{
-				ByteWidth           = UINT(sizeof(Elem) * Sz); // Size of the buffer in bytes
-				Usage               = usage;                   // How the buffer will be used
-				BindFlags           = bind_flag;               // How the buffer will be bound (i.e. can it be a render target too?)
-				CPUAccessFlags      = 0;                       // What access the CPU needs. (if data provided, assume none)
-				MiscFlags           = res_flag;                // General flags for the resource
-				StructureByteStride = sizeof(Elem);            // For structured buffers
+				Init(count, sizeof(Elem), data, usage, bind_flags, cpu_access, res_flag);
+			}
+			template <typename Elem, size_t Sz> BufferDesc(Elem const (&data)[Sz], D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_UNORDERED_ACCESS, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:D3D11_BUFFER_DESC()
+			{
+				Init(Sz, sizeof(Elem), data, usage, bind_flags, cpu_access, res_flag);
+			}
+			void Init(size_t count, size_t element_size_in_bytes, void const* data, D3D11_USAGE usage, D3D11_BIND_FLAG bind_flags, D3D11_CPU_ACCESS_FLAG cpu_access, D3D11_RESOURCE_MISC_FLAG res_flag)
+			{
+				Data                = data;                                // The initialisation data (or null)
+				ElemCount           = count;                               // The number of elements in the buffer
+				ByteWidth           = UINT(element_size_in_bytes * count); // Size of the buffer in bytes
+				Usage               = usage;                               // How the buffer will be used
+				BindFlags           = bind_flags;                          // How the buffer will be bound (i.e. can it be a render target too?)
+				CPUAccessFlags      = cpu_access;                          // What access the CPU needs. (if data provided, assume none)
+				MiscFlags           = res_flag;                            // General flags for the resource
+				StructureByteStride = UINT(element_size_in_bytes);         // For structured buffers
 			}
 		};
 
 		// Vertex buffer flavour of a buffer description
 		struct VBufferDesc :BufferDesc
 		{
-			VBufferDesc() :BufferDesc() {}
+			VBufferDesc()
+				:BufferDesc()
+			{}
+			VBufferDesc(size_t count, size_t element_size_in_bytes, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_VERTEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(count, element_size_in_bytes, usage, bind_flags, cpu_access, res_flag)
+			{}
 			template <typename Elem> VBufferDesc(size_t count, Elem const* data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_VERTEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-			:BufferDesc(count, data, usage, bind_flags, cpu_access, res_flag)
+				:BufferDesc(count, data, usage, bind_flags, cpu_access, res_flag)
 			{}
 			template <typename Elem, size_t Sz> VBufferDesc(Elem const (&data)[Sz], D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_VERTEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-			:BufferDesc(Sz, data, usage, bind_flags, cpu_access, res_flag)
+				:BufferDesc(Sz, data, usage, bind_flags, cpu_access, res_flag)
 			{}
+			template <typename Elem> static VBufferDesc Of(size_t count) { return VBufferDesc(count, static_cast<Elem const*>(0)); }
 		};
 
 		// Index buffer flavour of a buffer description
 		struct IBufferDesc :BufferDesc
 		{
 			DXGI_FORMAT Format;    // The buffer format
-			
-			IBufferDesc() :BufferDesc() {}
+
+			IBufferDesc()
+				:BufferDesc()
+				,Format(DXGI_FORMAT_UNKNOWN)
+			{}
+			IBufferDesc(size_t count, size_t element_size_in_bytes, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_INDEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(count, element_size_in_bytes, usage, bind_flags, cpu_access, res_flag)
+				,Format(format)
+			{}
 			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_INDEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-			:BufferDesc(count, data, usage, bind_flags, cpu_access, res_flag)
-			,Format(format)
+				:BufferDesc(count, data, usage, bind_flags, cpu_access, res_flag)
+				,Format(format)
 			{}
 			template <typename Elem, size_t Sz> IBufferDesc(Elem const (&data)[Sz], DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_INDEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-			:BufferDesc(Sz, data, usage, bind_flags, cpu_access, res_flag)
-			,Format(format)
+				:BufferDesc(Sz, data, usage, bind_flags, cpu_access, res_flag)
+				,Format(format)
 			{}
+			template <typename Elem> static IBufferDesc Of(size_t count) { return IBufferDesc(count, static_cast<Elem const*>(0)); }
 		};
 
 		// Constants buffer flavour of a buffer description
 		struct CBufferDesc :BufferDesc
 		{
-			CBufferDesc() :BufferDesc() {}
+			CBufferDesc()
+				:BufferDesc()
+			{}
 			CBufferDesc(size_t size, D3D11_USAGE usage = D3D11_USAGE_DYNAMIC, D3D11_BIND_FLAG bind_flags = D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE, D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-			:BufferDesc(size, (byte*)0, usage, bind_flags, cpu_access, res_flag)
+				:BufferDesc(size, (byte*)0, usage, bind_flags, cpu_access, res_flag)
 			{}
 		};
 
@@ -100,13 +118,13 @@ namespace pr
 		struct MultiSamp :DXGI_SAMPLE_DESC
 		{
 			MultiSamp()
-			:DXGI_SAMPLE_DESC()
+				:DXGI_SAMPLE_DESC()
 			{
 				Count   = 1;
 				Quality = 0;
 			}
 			MultiSamp(UINT count, UINT quality)
-			:DXGI_SAMPLE_DESC()
+				:DXGI_SAMPLE_DESC()
 			{
 				Count   = count;
 				Quality = quality;
@@ -117,12 +135,12 @@ namespace pr
 		struct TextureDesc :D3D11_TEXTURE2D_DESC
 		{
 			TextureDesc()
-			:D3D11_TEXTURE2D_DESC()
+				:D3D11_TEXTURE2D_DESC()
 			{
 				InitDefaults();
 			}
 			TextureDesc(UINT pitch, UINT height, UINT mips = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
-			:D3D11_TEXTURE2D_DESC(TextureDesc())
+				:D3D11_TEXTURE2D_DESC(TextureDesc())
 			{
 				InitDefaults();
 				Width          = pitch;
@@ -150,7 +168,7 @@ namespace pr
 		{
 			static SamplerDesc ClampSampler() { return SamplerDesc(); }
 			static SamplerDesc WrapSampler()  { return SamplerDesc(D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP); }
-			
+
 			SamplerDesc(
 				D3D11_TEXTURE_ADDRESS_MODE addrU = D3D11_TEXTURE_ADDRESS_CLAMP,
 				D3D11_TEXTURE_ADDRESS_MODE addrV = D3D11_TEXTURE_ADDRESS_CLAMP,
@@ -186,14 +204,14 @@ namespace pr
 		struct SubResourceData :D3D11_SUBRESOURCE_DATA
 		{
 			SubResourceData(void const* init_data, UINT pitch, UINT pitch_per_slice)
-			:D3D11_SUBRESOURCE_DATA()
+				:D3D11_SUBRESOURCE_DATA()
 			{
 				pSysMem          = init_data;       // Initialisation data for a resource
 				SysMemPitch      = pitch;           // used for 2D texture initialisation
 				SysMemSlicePitch = pitch_per_slice; // used for 3D texture initialisation
 			}
 			template <typename InitType> SubResourceData(InitType const& init)
-			:D3D11_SUBRESOURCE_DATA()
+				:D3D11_SUBRESOURCE_DATA()
 			{
 				pSysMem          = &init;
 				SysMemPitch      = 0;
@@ -201,11 +219,10 @@ namespace pr
 			}
 		};
 
-		// Rasterizer description (render states)
-		struct RasterizerDesc :D3D11_RASTERIZER_DESC
+		// Rasterizer state description
+		struct RasterStateDesc :D3D11_RASTERIZER_DESC
 		{
-			RasterizerDesc
-			(
+			RasterStateDesc(
 				D3D11_FILL_MODE fill          = D3D11_FILL_SOLID,
 				D3D11_CULL_MODE cull          = D3D11_CULL_BACK,
 				bool depth_clip_enable        = true,
@@ -215,9 +232,8 @@ namespace pr
 				bool scissor_enable           = false,
 				int depth_bias                = 0,
 				float depth_bias_clamp        = 0.0f,
-				float slope_scaled_depth_bias = 0.0f
-			)
-			:D3D11_RASTERIZER_DESC()
+				float slope_scaled_depth_bias = 0.0f)
+				:D3D11_RASTERIZER_DESC()
 			{
 				FillMode              = fill;
 				CullMode              = cull;
@@ -232,14 +248,56 @@ namespace pr
 			}
 		};
 
+		// Blend state description
+		struct BlendStateDesc :D3D11_BLEND_DESC
+		{
+			BlendStateDesc()
+				:D3D11_BLEND_DESC()
+			{
+				AlphaToCoverageEnable                 = FALSE;
+				IndependentBlendEnable                = FALSE;
+				RenderTarget[0].BlendEnable           = FALSE;
+				RenderTarget[0].SrcBlend              = D3D11_BLEND_ONE;
+				RenderTarget[0].DestBlend             = D3D11_BLEND_ZERO;
+				RenderTarget[0].BlendOp               = D3D11_BLEND_OP_ADD;
+				RenderTarget[0].SrcBlendAlpha         = D3D11_BLEND_ONE;
+				RenderTarget[0].DestBlendAlpha        = D3D11_BLEND_ZERO;
+				RenderTarget[0].BlendOpAlpha          = D3D11_BLEND_OP_ADD;
+				RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+			}
+		};
+
+		// DepthStencil state description
+		struct DepthStateDesc :D3D11_DEPTH_STENCIL_DESC
+		{
+			DepthStateDesc()
+				:D3D11_DEPTH_STENCIL_DESC()
+			{
+				DepthEnable                  = TRUE;
+				DepthWriteMask               = D3D11_DEPTH_WRITE_MASK_ALL;
+				DepthFunc                    = D3D11_COMPARISON_LESS;
+				StencilEnable                = FALSE;
+				StencilReadMask              = D3D11_DEFAULT_STENCIL_READ_MASK;
+				StencilWriteMask             = D3D11_DEFAULT_STENCIL_WRITE_MASK;
+				FrontFace.StencilFunc        = D3D11_COMPARISON_ALWAYS;
+				FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+				FrontFace.StencilPassOp      = D3D11_STENCIL_OP_KEEP;
+				FrontFace.StencilFailOp      = D3D11_STENCIL_OP_KEEP;
+				BackFace.StencilFunc         = D3D11_COMPARISON_ALWAYS;
+				BackFace.StencilDepthFailOp  = D3D11_STENCIL_OP_KEEP;
+				BackFace.StencilPassOp       = D3D11_STENCIL_OP_KEEP;
+				BackFace.StencilFailOp       = D3D11_STENCIL_OP_KEEP;
+			}
+		};
+
 		// Shader resource view description
 		struct ShaderResViewDesc :D3D11_SHADER_RESOURCE_VIEW_DESC
 		{
 			ShaderResViewDesc()
-			:D3D11_SHADER_RESOURCE_VIEW_DESC()
+				:D3D11_SHADER_RESOURCE_VIEW_DESC()
 			{}
 			ShaderResViewDesc(DXGI_FORMAT format, D3D11_SRV_DIMENSION view_dim)
-			:D3D11_SHADER_RESOURCE_VIEW_DESC()
+				:D3D11_SHADER_RESOURCE_VIEW_DESC()
 			{
 				Format = format;
 				ViewDimension = view_dim;
@@ -250,10 +308,10 @@ namespace pr
 		struct RenderTargetViewDesc :D3D11_RENDER_TARGET_VIEW_DESC
 		{
 			RenderTargetViewDesc()
-			:D3D11_RENDER_TARGET_VIEW_DESC()
+				:D3D11_RENDER_TARGET_VIEW_DESC()
 			{}
 			explicit RenderTargetViewDesc(DXGI_FORMAT format, D3D11_RTV_DIMENSION view_dim = D3D11_RTV_DIMENSION_TEXTURE2D)
-			:D3D11_RENDER_TARGET_VIEW_DESC()
+				:D3D11_RENDER_TARGET_VIEW_DESC()
 			{
 				Format = format;
 				ViewDimension = view_dim;
@@ -264,21 +322,21 @@ namespace pr
 		struct DepthStencilViewDesc :D3D11_DEPTH_STENCIL_VIEW_DESC
 		{
 			DepthStencilViewDesc()
-			:D3D11_DEPTH_STENCIL_VIEW_DESC()
+				:D3D11_DEPTH_STENCIL_VIEW_DESC()
 			{}
 			explicit DepthStencilViewDesc(DXGI_FORMAT format, D3D11_DSV_DIMENSION view_dim = D3D11_DSV_DIMENSION_TEXTURE2D)
-			:D3D11_DEPTH_STENCIL_VIEW_DESC()
+				:D3D11_DEPTH_STENCIL_VIEW_DESC()
 			{
 				Format = format;
 				ViewDimension = view_dim;
 			}
 		};
-		
+
 		// Display mode description
 		struct DisplayMode :DXGI_MODE_DESC
 		{
 			DisplayMode(UINT width = 1024, UINT height = 768, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
-			:DXGI_MODE_DESC()
+				:DXGI_MODE_DESC()
 			{
 				Width                   = width;
 				Height                  = height;
@@ -289,7 +347,7 @@ namespace pr
 				Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
 			}
 			DisplayMode(pr::iv2 const& area, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
-			:DXGI_MODE_DESC()
+				:DXGI_MODE_DESC()
 			{
 				Width                   = area.x;
 				Height                  = area.y;
@@ -315,7 +373,7 @@ namespace pr
 				PR_ASSERT(PR_DBG_RDR, min_depth >= 0.0f && min_depth <= 1.0f, "Min depth value out of range");
 				PR_ASSERT(PR_DBG_RDR, max_depth >= 0.0f && max_depth <= 1.0f, "Max depth value out of range");
 				PR_ASSERT(PR_DBG_RDR, min_depth <= max_depth, "Min and max depth values invalid");
-				
+
 				TopLeftX = x;
 				TopLeftY = y;
 				Width    = width;
@@ -324,34 +382,34 @@ namespace pr
 				MaxDepth = max_depth;
 				return *this;
 			}
-			
+
 			Viewport(float width, float height)
-			:D3D11_VIEWPORT()
+				:D3D11_VIEWPORT()
 			{
 				set(0.0f, 0.0f, width, height);
 			}
 			Viewport(UINT width, UINT height)
-			:D3D11_VIEWPORT()
+				:D3D11_VIEWPORT()
 			{
 				set(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
 			}
 			Viewport(float x, float y, float width, float height)
-			:D3D11_VIEWPORT()
+				:D3D11_VIEWPORT()
 			{
 				set(x, y, width, height);
 			}
 			Viewport(float x, float y, float width, float height, float min_depth, float max_depth)
-			:D3D11_VIEWPORT()
+				:D3D11_VIEWPORT()
 			{
 				set(x, y, width, height, min_depth, max_depth);
 			}
 			Viewport(pr::iv2 const& area)
-			:D3D11_VIEWPORT()
+				:D3D11_VIEWPORT()
 			{
 				set(0.0f, 0.0f, float(area.x), float(area.y));
 			}
 			Viewport(pr::IRect const& rect)
-			:D3D11_VIEWPORT()
+				:D3D11_VIEWPORT()
 			{
 				pr::FRect r = pr::FRect::make(rect);
 				set(r.X(), r.Y(), r.SizeX(), r.SizeY());

@@ -26,6 +26,7 @@ pr::rdr::TextureManager::TextureManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Dev
 pr::rdr::TextureManager::~TextureManager()
 {
 	// Release the ref added in CreateShader()
+	// When the textures delete themselves, they'll be removed from the lookup
 	while (!m_lookup_tex.empty())
 	{
 		auto iter = begin(m_lookup_tex);

@@ -8,9 +8,6 @@
 
 #include "pr/common/min_max_fix.h"
 
-#include <initguid.h>
-#include <malloc.h>
-#include <sdkddkver.h>
 #include <vector>
 #include <string>
 #include <list>
@@ -18,6 +15,8 @@
 #include <algorithm>
 #include <functional>
 #include <intrin.h>
+#include <malloc.h>
+#include <sdkddkver.h>
 #include <windows.h>
 #include <d3d11.h>
 #include <d3d11sdklayers.h>
@@ -118,9 +117,11 @@ namespace pr
 		class  TextureManager;
 		struct TextureDesc;
 		struct Texture2D;
+		struct AllocPres;
+		//struct Video;
 		typedef pr::RefPtr<Texture2D> Texture2DPtr;
-//		struct TextureFilter;
-//		struct TextureAddrMode;
+		//typedef pr::RefPtr<AllocPres> AllocPresPtr;
+		//typedef pr::RefPtr<Video>     VideoPtr;
 
 		// Video
 //		struct Video;
@@ -150,6 +151,11 @@ namespace pr
 		struct Drawlist;
 		struct DrawListElement;
 
+		// Rendering
+		struct BSBlock;
+		struct DSBlock;
+		struct RSBlock;
+
 		// Enums
 		namespace ERenderMethod
 		{
@@ -159,6 +165,24 @@ namespace pr
 		{
 			enum Type { WarnedNoRenderNuggets = 1 << 0 };
 		}
+
+		// EResult
+		#define PR_ENUM(x)/*
+			*/x(Success       ,= 0         )/*
+			*/x(Failed        ,= 0x80000000)/*
+			*/x(InvalidValue  ,)
+		PR_DEFINE_ENUM2(EResult, PR_ENUM);
+		#undef PR_ENUM
+
+		// EPrim
+		#define PR_ENUM(x)\
+			x(PointList ,= D3D11_PRIMITIVE_TOPOLOGY_POINTLIST)\
+			x(LineList  ,= D3D11_PRIMITIVE_TOPOLOGY_LINELIST)\
+			x(LineStrip ,= D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP)\
+			x(TriList   ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)\
+			x(TriStrip  ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP)
+		PR_DEFINE_ENUM2(EPrim, PR_ENUM);
+		#undef PR_ENUM
 
 		// EGeom
 		#define PR_ENUM(x) /*
@@ -184,6 +208,30 @@ namespace pr
 			x(TxTintTex      )\
 			x(TxTintPvcLitTex)
 		PR_DEFINE_ENUM1(EShader, PR_ENUM);
+		#undef PR_ENUM
+
+		// ETexAddrMode
+		#define PR_ENUM(x)\
+			x(Wrap       ,= D3D11_TEXTURE_ADDRESS_WRAP)\
+			x(Mirror     ,= D3D11_TEXTURE_ADDRESS_MIRROR)\
+			x(Clamp      ,= D3D11_TEXTURE_ADDRESS_CLAMP)\
+			x(Border     ,= D3D11_TEXTURE_ADDRESS_BORDER)\
+			x(MirrorOnce ,= D3D11_TEXTURE_ADDRESS_MIRROR_ONCE)
+		PR_DEFINE_ENUM2(ETexAddrMode, PR_ENUM);
+		#undef PR_ENUM
+
+		// EFilter - MinMagMip
+		#define PR_ENUM(x)\
+			x(Point             ,= D3D11_FILTER_MIN_MAG_MIP_POINT)\
+			x(PointPointLinear  ,= D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR)\
+			x(PointLinearPoint  ,= D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT)\
+			x(PointLinearLinear ,= D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR)\
+			x(LinearPointPoint  ,= D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT)\
+			x(LinearPointLinear ,= D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR)\
+			x(LinearLinearPoint ,= D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT)\
+			x(Linear            ,= D3D11_FILTER_MIN_MAG_MIP_LINEAR)\
+			x(Anisotropic       ,= D3D11_FILTER_ANISOTROPIC)
+		PR_DEFINE_ENUM2(EFilter, PR_ENUM);
 		#undef PR_ENUM
 
 		// ELight
@@ -220,41 +268,6 @@ namespace pr
 //				return static_cast<Type>(i);
 //			}
 //		}
-//		namespace EShaderVersion
-//		{
-//			enum Type { v0_0, v1_1, v1_4, v2_0, v3_0, NumberOf };
-//			inline char const* ToString(Type type)
-//			{
-//				switch (type) {
-//				default: return "";
-//				case v0_0: return "v0_0";
-//				case v1_1: return "v1_1";
-//				case v1_4: return "v1_4";
-//				case v2_0: return "v2_0";
-//				case v3_0: return "v3_0";
-//				}
-//			}
-//			inline Type Parse(char const* str)
-//			{
-//				int i; for (i = 0; i != NumberOf && !pr::str::EqualI(str, ToString(static_cast<Type>(i))); ++i) {}
-//				return static_cast<Type>(i);
-//			}
-//		}
-
-//		namespace EStockEffect
-//		{
-//			enum Type
-//			{
-//				TxTint = 1,
-//				TxTintPvc,
-//				TxTintTex,
-//				TxTintPvcTex,
-//				TxTintLitEnv,
-//				TxTintPvcLitEnv,
-//				TxTintTexLitEnv,
-//				TxTintPvcTexLitEnv,
-//			};
-//		}
 //		enum
 //		{
 //			MaxLights = 8,
@@ -288,5 +301,18 @@ namespace pr
 		};
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_renderer11_forward)
+		{
+		}
+	}
+}
+#endif
 
 #endif

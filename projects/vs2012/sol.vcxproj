@@ -86,11 +86,12 @@
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
+      <AdditionalOptions>/Zm150 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib;d3d11.lib;dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -102,11 +103,12 @@
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
       <BrowseInformation>true</BrowseInformation>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/Zm150 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib;d3d11.lib;dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib</AdditionalLibraryDirectories>
     </Link>
     <Bscmake>
@@ -122,13 +124,14 @@
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
+      <AdditionalOptions>/Zm150 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib;d3d11.lib;dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -141,13 +144,14 @@
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
+      <AdditionalOptions>/Zm150 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib;d3d11.lib;dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>

@@ -5,7 +5,9 @@
 #ifndef PR_MACROS_STRINGISE_H
 #define PR_MACROS_STRINGISE_H
 
-#define PR_STRINGISE_IMPL(x) #x
-#define PR_STRINGISE(x) PR_STRINGISE_IMPL(x)
+#ifndef PR_STRINGISE
+#  define PR_STRINGISE_IMPL(x) #x
+#  define PR_STRINGISE(x) PR_STRINGISE_IMPL(x)
+#endif
 
 #endif

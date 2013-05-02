@@ -8,6 +8,7 @@
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/config/config.h"
+//#include "pr/renderer11/textures/video.h"
 
 namespace pr
 {
@@ -29,7 +30,7 @@ namespace pr
 			bool                             m_has_alpha; // True if the texture contains alpha pixels
 			TextureManager*                  m_mgr;       // The texture manager that created this texture
 			string32                         m_name;      // Human readable id for the texture
-			//VideoPtr      m_video;           // Non-null if this texture is the output of a video
+			//VideoPtr                         m_video;     // Non-null if this texture is the output of a video
 
 			Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv, SamplerDesc const& sam_desc, SortKeyId sort_id);
 			Texture2D(TextureManager* mgr, TextureDesc const& tex_desc, SamplerDesc const& sam_desc, void const* data, SortKeyId sort_id);

@@ -9,8 +9,8 @@
 #include <windows.h>
 #include "pr/common/fmt.h"
 #include "pr/common/assert.h"
+#include "pr/str/prstdstring.h"
 #include "pr/maths/maths.h"
-#include "pr/geometry/geometry.h"
 
 namespace pr
 {
@@ -26,11 +26,11 @@ namespace pr
 		}
 		template <typename TStr> inline TStr& Vec3(v4 const& vec, TStr& str)
 		{
-			return str += Fmt("%f %f %f " ,vec.x ,vec.y ,vec.z);
+			return str += FmtS("%f %f %f " ,vec.x ,vec.y ,vec.z);
 		}
 		template <typename TStr> inline TStr& Vec4(v4 const& vec, TStr& str)
 		{
-			return str += Fmt("%f %f %f %f " ,vec.x ,vec.y ,vec.z ,vec.w);
+			return str += FmtS("%f %f %f %f " ,vec.x ,vec.y ,vec.z ,vec.w);
 		}
 		template <typename TStr> inline TStr& Pos(v4 const& vec, TStr& str)
 		{
@@ -46,16 +46,16 @@ namespace pr
 		}
 		template <typename TStr> inline TStr& Col(unsigned int colour, TStr& str)
 		{
-			return str += Fmt("%X", colour);
+			return str += FmtS("%X", colour);
 		}
 		template <typename TStr> inline TStr& GroupStart(char const* name, unsigned int colour, TStr& str)
 		{
-			return str += Fmt("*Group %s %08X {\n", name, colour);
+			return str += FmtS("*Group %s %08X {\n", name, colour);
 		}
 		template <typename TStr> inline TStr& GroupStart(char const* name, TStr& str)
 		{
 			if (name == 0 || *name == 0) name = "unnamed";
-			return str += Fmt("*Group %s {\n", name);
+			return str += FmtS("*Group %s {\n", name);
 		}
 		template <typename TStr> inline TStr& GroupEnd(TStr& str)
 		{
@@ -79,22 +79,22 @@ namespace pr
 		}
 		template <typename TStr> inline TStr& Vector(char const* name, unsigned int colour, v4 const& position, v4 const& direction, float point_radius, TStr& str)
 		{
-			str += Fmt("*Line %s %08X {0 0 0 %f %f %f *Box {%f} " ,name ,colour ,direction[0] ,direction[1] ,direction[2] ,point_radius);
+			str += FmtS("*Line %s %08X {0 0 0 %f %f %f *Box {%f} " ,name ,colour ,direction[0] ,direction[1] ,direction[2] ,point_radius);
 			if (position != pr::v4Origin) Position(position, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& Line(char const* name, unsigned int colour, v4 const& start, v4 const& end, TStr& str)
 		{
-			return str += Fmt("*Line %s %08X {%f %f %f %f %f %f}\n" ,name ,colour ,start[0] ,start[1] ,start[2] ,end[0] ,end[1] ,end[2]);
+			return str += FmtS("*Line %s %08X {%f %f %f %f %f %f}\n" ,name ,colour ,start[0] ,start[1] ,start[2] ,end[0] ,end[1] ,end[2]);
 		}
 		template <typename TStr> inline TStr& LineD(char const* name, unsigned int colour, v4 const& start, v4 const& direction, TStr& str)
 		{
-			return str += Fmt("*LineD %s %08X {%f %f %f %f %f %f}\n" ,name ,colour ,start[0] ,start[1] ,start[2] ,direction[0] ,direction[1] ,direction[2]);
+			return str += FmtS("*LineD %s %08X {%f %f %f %f %f %f}\n" ,name ,colour ,start[0] ,start[1] ,start[2] ,direction[0] ,direction[1] ,direction[2]);
 		}
 		template <typename TStr> inline TStr& Rectangle(char const* name, unsigned int colour, v4 const& TL, v4 const& BL, v4 const& BR, v4 const& TR, TStr& str)
 		{
-			return str += Fmt(
+			return str += FmtS(
 						"*Rectangle %s %08X "
 						"{ "
 							"%f %f %f  %f %f %f  %f %f %f  %f %f %f "
@@ -108,14 +108,14 @@ namespace pr
 		}
 		template <typename TStr> inline TStr& Circle(char const* name, unsigned int colour, v4 const& centre, int axis_id, float radius, TStr& str)
 		{
-			str += Fmt("*Circle %s %08X {%d %f " ,name ,colour ,axis_id ,radius);
+			str += FmtS("*Circle %s %08X {%d %f " ,name ,colour ,axis_id ,radius);
 			if (centre != pr::v4Origin) Position(centre, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& Spline(char const* name, unsigned int colour, pr::Spline const& spline, TStr& str)
 		{
-			str += Fmt("*Spline %s %08X {" ,name ,colour);
+			str += FmtS("*Spline %s %08X {" ,name ,colour);
 			Vec3(spline.x, str);
 			Vec3(spline.y, str);
 			Vec3(spline.z, str);
@@ -138,46 +138,47 @@ namespace pr
 		//}
 		template <typename TStr> inline TStr& Ellipse(char const* name, unsigned int colour, v4 const& centre, int axis_id, float major, float minor, TStr& str)
 		{
-			str += Fmt("*Ellipse %s %08X {%d %f %f " ,name ,colour ,axis_id ,major ,minor);
+			str += FmtS("*Ellipse %s %08X {%d %f %f " ,name ,colour ,axis_id ,major ,minor);
 			if (centre != pr::v4Origin) Position(centre, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& Sphere(char const* name, unsigned int colour, v4 const& position, float radius, TStr& str)
 		{
-			str += Fmt("*Sphere %s %08X {%f " ,name ,colour ,radius);
+			str += FmtS("*Sphere %s %08X {%f " ,name ,colour ,radius);
 			if (position != pr::v4Origin) Position(position, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& Box(char const* name, unsigned int colour, v4 const& position, float dim, TStr& str)
 		{
-			str += Fmt("*Box %s %08X {%f " ,name ,colour ,dim);
+			str += FmtS("*Box %s %08X {%f " ,name ,colour ,dim);
 			if (position != pr::v4Origin) Position(position, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& Box(char const* name, unsigned int colour, v4 const& position, v4 const& dim, TStr& str)
 		{
-			str += Fmt("*Box %s %08X {%f %f %f " ,name ,colour ,dim.x ,dim.y ,dim.z);
+			str += FmtS("*Box %s %08X {%f %f %f " ,name ,colour ,dim.x ,dim.y ,dim.z);
 			if (position != pr::v4Origin) Position(position, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& Box(char const* name, unsigned int colour, m4x4 const& o2w, v4 const& dim, TStr& str)
 		{
-			str += Fmt("*Box %s %08X {%f %f %f " ,name ,colour ,dim.x ,dim.y ,dim.z);
+			str += FmtS("*Box %s %08X {%f %f %f " ,name ,colour ,dim.x ,dim.y ,dim.z);
 			if (o2w != pr::m4x4Identity) Transform(o2w, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& BoxList(char const* name, unsigned int colour, pr::v4 const& dim, pr::v4 const* positions, int count, TStr& str)
 		{
-			str += Fmt("*Boxlist %s %08X { %f %f %f " ,name ,colour ,dim.x ,dim.y ,dim.z);
+			str += FmtS("*Boxlist %s %08X { %f %f %f " ,name ,colour ,dim.x ,dim.y ,dim.z);
 			for (int i = 0; i != count; ++i) Vec3(positions[i], str);
 			str += "}\n";
 			return str;
-		}		//template <typename TStr> inline void BoxLU(char const* name, unsigned int colour, v4 lower, v4 upper, TStr& str)
+		}
+		//template <typename TStr> inline void BoxLU(char const* name, unsigned int colour, v4 lower, v4 upper, TStr& str)
 		//{
 		//	str += Fmt(	"*BoxLU %s %08X {%f %f %f %f %f %f}\n" ,name ,colour ,lower.x ,lower.y ,lower.z ,upper.x ,upper.y ,upper.z);
 		//}
@@ -201,35 +202,35 @@ namespace pr
 		template <typename TStr> inline TStr& Frustum(char const* name, unsigned int colour, pr::Frustum const& f, m4x4 const& o2w, TStr& str)
 		{
 			pr::m4x4 f2w = o2w * pr::Translation(0.0f, 0.0f, f.ZDist());
-			str += Fmt(	"*FrustumFA %s %08X { %d %f %f %f %f " ,name ,colour ,-3 ,pr::RadiansToDegrees(f.FovY()) ,f.Aspect() ,0.0f ,f.ZDist());
+			str += FmtS("*FrustumFA %s %08X { %d %f %f %f %f " ,name ,colour ,-3 ,pr::RadiansToDegrees(f.FovY()) ,f.Aspect() ,0.0f ,f.ZDist());
 			Transform(f2w, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& FrustumFA(char const* name, unsigned int colour, int axis, float fovY, float aspect, float nplane, float fplane, m4x4 const& o2w, TStr& str)
 		{
-			str += Fmt(	"*FrustumFA %s %08X { %d %f %f %f %f " ,name ,colour ,axis ,pr::RadiansToDegrees(fovY) ,aspect ,nplane ,fplane);
+			str += FmtS("*FrustumFA %s %08X { %d %f %f %f %f " ,name ,colour ,axis ,pr::RadiansToDegrees(fovY) ,aspect ,nplane ,fplane);
 			if (o2w != pr::m4x4Identity) Transform(o2w, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& Cylinder(char const* name, unsigned int colour, m4x4 const& o2w, int axis_id, float height, float radius, TStr& str)
 		{
-			str += Fmt(	"*CylinderHR %s %08X { %d %f %f " ,name ,colour ,axis_id ,height ,radius);
+			str += FmtS("*CylinderHR %s %08X { %d %f %f " ,name ,colour ,axis_id ,height ,radius);
 			if (o2w != pr::m4x4Identity) Transform(o2w, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& CapsuleHR(char const* name, unsigned int colour, m4x4 const& o2w, int axis_id, float length, float radius, TStr& str)
 		{
-			str += Fmt(	"*CapsuleHR %s %08X { %d %f %f " ,name, colour ,axis_id ,length, radius);
+			str += FmtS("*CapsuleHR %s %08X { %d %f %f " ,name, colour ,axis_id ,length, radius);
 			if (o2w != m4x4Identity) Transform(o2w, str);
 			str += "}\n";
 			return str;
 		}
 		template <typename TStr> inline TStr& Quad(char const* name, unsigned int colour, v4 const& x1, v4 const& x2, v4 const& x3, v4 const& x4, TStr& str)
 		{
-			return str += Fmt(
+			return str += FmtS(
 						"*Quad %s %08X "
 						"{ "
 							" %f %f %f "
@@ -255,7 +256,7 @@ namespace pr
 			c[1] = -forward + left;
 			c[2] =  forward + left;
 			c[3] =  forward - left;
-			str += Fmt(	"*Quad %s %08X {" ,name ,colour);
+			str += FmtS("*Quad %s %08X {" ,name ,colour);
 			Vec3(c[0], str);
 			Vec3(c[1], str);
 			Vec3(c[2], str);
@@ -278,16 +279,16 @@ namespace pr
 		//}
 		template <typename TStr> inline TStr& Plane(char const* name, unsigned int colour, pr::Plane const& plane, v4 const& centre, float size, TStr& str)
 		{
-			str += Fmt("*Plane %s %08X {" ,name ,colour);
+			str += FmtS("*Plane %s %08X {" ,name ,colour);
 			Vec3(ClosestPoint_PointToPlane(centre, plane), str);
 			str += " ";
 			Vec3(plane::GetDirection(plane::GetNormal(plane)), str);
-			str += Fmt("%f %f}\n" ,size ,size);
+			str += FmtS("%f %f}\n" ,size ,size);
 			return str;
 		}
 		template <typename TStr> inline TStr& Triangle(char const* name, unsigned int colour, m4x4 const& o2w, v4 const& a, v4 const& b, v4 const& c, TStr& str)
 		{
-			str += Fmt("*Triangle %s %08X { " ,name ,colour);
+			str += FmtS("*Triangle %s %08X { " ,name ,colour);
 			Vec3(a, str);
 			Vec3(b, str);
 			Vec3(c, str);
@@ -297,7 +298,7 @@ namespace pr
 		}
 		template <typename TStr> inline TStr& Triangle(char const* name, unsigned int colour, m4x4 const& o2w, v4 const* verts, int const* faces, int num_faces, TStr& str)
 		{
-			str += Fmt("*Triangle %s %s\n{\n", name ,colour);
+			str += FmtS("*Triangle %s %s\n{\n", name ,colour);
 			for (int const* i = faces, *i_end = i + 3*num_faces; i < i_end;)
 			{
 				Vec3(verts[*i++], str);
@@ -315,7 +316,7 @@ namespace pr
 		}
 		template <typename TStr> inline TStr& Polytope(char const* name, unsigned int colour, m4x4 const& o2w, const v4* begin, const v4* end, TStr& str)
 		{
-			str += Fmt("*ConvexHull %s %08X {\n*Verts{\n", name, colour);
+			str += FmtS("*ConvexHull %s %08X {\n*Verts{\n", name, colour);
 			for (v4 const* v = begin; v != end; ++v)
 			{
 				Vec3(*v, str); str += "\n";
@@ -331,7 +332,7 @@ namespace pr
 		//	v4 y = tx.y * scale;
 		//	v4 z = tx.z * scale;
 		//	v4 w = tx.pos;
-		//	str += Fmt(	"*Matrix4x4 %s %08X "
+		//	str += FmtS("*Matrix4x4 %s %08X "
 		//				"{ "
 		//					"%f %f %f %f "
 		//					"%f %f %f %f "
@@ -347,7 +348,7 @@ namespace pr
 		//}
 		template <typename TStr> inline TStr& Axis(char const* name, uint colour, m4x4 const& basis, TStr& str)
 		{
-			str += Fmt(	"*Group %s %08X\n"
+			str += FmtS(	"*Group %s %08X\n"
 						"{\n"
 							" *Line X FFFF0000 { 0 0 0 1 0 0 }\n"
 							" *Line Y FF00FF00 { 0 0 0 0 1 0 }\n"
@@ -363,7 +364,7 @@ namespace pr
 		}
 		//template <typename TStr> inline void CrossHair(char const* name, unsigned int colour, v4 position, float size, TStr& str)
 		//{
-		//	str += Fmt(	"*Line %s %08X "
+		//	str += FmtS("*Line %s %08X "
 		//				"{ "
 		//					"%f 0 0 %f 0 0  0 %f 0 0 %f 0  0 0 %f 0 0 %f "
 		//					"*Position { %f %f %f } "
@@ -377,7 +378,7 @@ namespace pr
 		//{
 		//	v4 lower = bbox.Lower();
 		//	v4 upper = bbox.Upper();
-		//	str += Fmt(	"*BoxLU %s %08X "
+		//	str += FmtS("*BoxLU %s %08X "
 		//				"{ "
 		//					"%f %f %f "
 		//					"%f %f %f "
@@ -389,49 +390,49 @@ namespace pr
 		//}
 		//template <typename TStr> inline void OrientedBox(char const* name, unsigned int colour, const pr::OrientedBox& obox, TStr& str)
 		//{
-		//	str += Fmt("*Box %s %08X {" ,name ,colour);
+		//	str += FmtS("*Box %s %08X {" ,name ,colour);
 		//	Vec3(2.0f * obox.m_radius, str);
 		//	Txfm(obox.Getm4x4(), str)
 		//	str += "}\n";
 		//}
 		template <typename TStr, typename VCont, typename ICont> inline TStr& Mesh(char const* name, unsigned int colour, VCont const& verts, ICont const& faces, pr::m4x4 const& o2w, TStr& str)
 		{
-			str += Fmt( "*Mesh %s %08X {\n" ,name ,colour);
+			str += FmtS( "*Mesh %s %08X {\n" ,name ,colour);
 			if (o2w != pr::m4x4Identity) Transform(o2w, str);
 				str +=      "\t*Verts {";
 			for (VCont::const_iterator v = verts.begin(), vend = verts.end(); v != vend; ++v)
-				str += Fmt( "%3.3f %3.3f %3.3f  " ,v->x ,v->y ,v->z);
+				str += FmtS( "%3.3f %3.3f %3.3f  " ,v->x ,v->y ,v->z);
 				str +=      "}\n\t*Faces {";
 			for (ICont::const_iterator f = faces.begin(), fend = faces.end(); f != fend; f += 3)
-				str += Fmt( "%d %d %d  " ,*(f+0) ,*(f+1) ,*(f+2));
+				str += FmtS( "%d %d %d  " ,*(f+0) ,*(f+1) ,*(f+2));
 				str +=      "}\n\t*GenerateNormals\n"
 						"}\n";
 			return str;
 		}
-		template <typename TStr> inline void Mesh(char const* name, unsigned int colour, pr::Mesh const& mesh, TStr& str)
-		{
-			if (mesh.m_vertex.empty() || mesh.m_face.empty()) return;
-			bool gen_norms = IsZero3(mesh.m_vertex[0].m_normal);
+		//template <typename TStr> inline void Mesh(char const* name, unsigned int colour, pr::Mesh const& mesh, TStr& str)
+		//{
+		//	if (mesh.m_vertex.empty() || mesh.m_face.empty()) return;
+		//	bool gen_norms = IsZero3(mesh.m_vertex[0].m_normal);
 
-			str += Fmt("*Mesh %s %08X\n{\n" ,name ,colour);
-			str +=         "\t*Verts {\n";
-			for (TVertCont::const_iterator v = mesh.m_vertex.begin(), v_end = mesh.m_vertex.end(); v != v_end; ++v)
-			{	str += Fmt("\t%f %f %f\n" ,v->m_vertex.x ,v->m_vertex.y ,v->m_vertex.z); }
-			str +=         "\t}\n";
-			str +=         "\t*Faces {\n";
-			for (TFaceCont::const_iterator f = mesh.m_face.begin(), f_end = mesh.m_face.end(); f != f_end; ++f)
-			{	str += Fmt("\t%d %d %d\n" ,f->m_vert_index[0] ,f->m_vert_index[1] ,f->m_vert_index[2]); }
-			str +=         "\t}\n";
-			if (gen_norms)
-			{	str +=     "\t*GenerateNormals\n"; }
-			else {
-			str +=         "\t*Normals {\n";
-			for (TVertCont::const_iterator v = mesh.m_vertex.begin(), v_end = mesh.m_vertex.end(); v != v_end; ++v)
-			{	str += Fmt("\t%f %f %f\n" ,v->m_normal.x ,v->m_normal.y ,v->m_normal.z); }
-			str +=         "\t}\n";
-			str +=     "}\n";
-			}
-		}
+		//	str += FmtS("*Mesh %s %08X\n{\n" ,name ,colour);
+		//	str +=         "\t*Verts {\n";
+		//	for (TVertCont::const_iterator v = mesh.m_vertex.begin(), v_end = mesh.m_vertex.end(); v != v_end; ++v)
+		//	{	str += FmtS("\t%f %f %f\n" ,v->m_vertex.x ,v->m_vertex.y ,v->m_vertex.z); }
+		//	str +=         "\t}\n";
+		//	str +=         "\t*Faces {\n";
+		//	for (TFaceCont::const_iterator f = mesh.m_face.begin(), f_end = mesh.m_face.end(); f != f_end; ++f)
+		//	{	str += FmtS("\t%d %d %d\n" ,f->m_vert_index[0] ,f->m_vert_index[1] ,f->m_vert_index[2]); }
+		//	str +=         "\t}\n";
+		//	if (gen_norms)
+		//	{	str +=     "\t*GenerateNormals\n"; }
+		//	else {
+		//	str +=         "\t*Normals {\n";
+		//	for (TVertCont::const_iterator v = mesh.m_vertex.begin(), v_end = mesh.m_vertex.end(); v != v_end; ++v)
+		//	{	str += FmtS("\t%f %f %f\n" ,v->m_normal.x ,v->m_normal.y ,v->m_normal.z); }
+		//	str +=         "\t}\n";
+		//	str +=     "}\n";
+		//	}
+		//}
 	}
 }
 

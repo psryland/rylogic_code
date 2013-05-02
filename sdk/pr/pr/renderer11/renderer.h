@@ -25,6 +25,7 @@
 
 // Forward
 #include "pr/renderer11/forward.h"
+#include "pr/renderer11/instance.h"
 
 // Configuration
 #include "pr/renderer11/config/config.h"
@@ -34,6 +35,9 @@
 // Renderer
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/raster_state.h"
 
 //// Drawlist
 //#include "pr/renderer/viewport/sortkey.h"
@@ -52,7 +56,6 @@
 #include "pr/renderer11/models/model.h"
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/models/input_layout.h"
-//#include "pr/renderer/models/quadbuffer.h"
 #include "pr/renderer11/models/model_generator.h"
 
 // Instances
@@ -73,11 +76,6 @@
 // Lighting
 #include "pr/renderer11/lights/light.h"
 //#include "pr/renderer/lighting/lightingmanager.h"
-
-// Rasterizer states
-#include "pr/renderer11/render/raster_state_manager.h"
-//#include "pr/renderer/renderstates/stackframes.h"
-//#include "pr/renderer/renderstates/renderstatemanager.h"
 
 // Utility
 #include "pr/renderer11/util/allocator.h"

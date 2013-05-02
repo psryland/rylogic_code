@@ -35,7 +35,7 @@ namespace pr
 
 			// Helper function for creating a model
 			template <typename GenFunc>
-			static ModelPtr Create(Renderer& rdr, std::size_t vcount, std::size_t icount, D3D11_PRIMITIVE_TOPOLOGY topo, DrawMethod const* mat, GenFunc& GenerateFunc)
+			static ModelPtr Create(Renderer& rdr, std::size_t vcount, std::size_t icount, EPrim topo, DrawMethod const* mat, GenFunc& GenerateFunc)
 			{
 				// Generate the model in local buffers
 				Cont cont(vcount, icount);
@@ -67,7 +67,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::LineSize(num_lines, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_LINELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
 			}
 			static ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0)
 			{
@@ -75,7 +75,7 @@ namespace pr
 
 				std::size_t vrange, irange;
 				pr::geometry::LineSize(num_lines, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_LINELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
 			}
 			static ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,Colour32 colour ,DrawMethod const* mat = 0)
 			{
@@ -83,25 +83,25 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::LineSize(num_lines, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_LINELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
 			}
 
 			// Quad *******************************************************************************
-			static ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions, Colour32 colour, v2 const& tex_origin, v2 const& tex_dim, DrawMethod const* mat)
+			static ModelPtr Quad(Renderer& rdr, size_t num_quads, v4 const* verts, size_t num_colours = 0, Colour32 const* colours = 0, m4x4 const& t2q = m4x4Identity, DrawMethod const* mat = 0)
 			{
-				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, tex_origin, tex_dim, vb, ib); };
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(num_quads, verts, num_colours, colours, t2q, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::QuadSize(num_quads, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, t2q, vb, ib); };
 
 				std::size_t vcount, icount;
 				pr::geometry::QuadSize(divisions, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
-			}
-			static ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
-			{
-				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, vb, ib); };
-
-				std::size_t vcount, icount;
-				pr::geometry::QuadSize(divisions, vrange, irange);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 			static ModelPtr Quad(Renderer& rdr, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
 			{
@@ -109,7 +109,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::QuadSize(divisions, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 			static ModelPtr Quad(Renderer& rdr, v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, v2 const& tex_origin = v2Zero, v2 const& tex_dim = v2One, DrawMethod const* mat = 0)
 			{
@@ -117,7 +117,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::QuadSize(divisions, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 
 			// Boxes ******************************************************************************
@@ -127,7 +127,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 			static ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, m4x4 const& o2w, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
 			{
@@ -135,7 +135,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 			static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w, Colour32 colour, DrawMethod const* mat = 0)
 			{
@@ -143,7 +143,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(1, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 			static ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& dim, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
 			{
@@ -151,7 +151,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 
 			// Sphere *****************************************************************************
@@ -161,7 +161,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::GeosphereSize(divisions, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 			static ModelPtr Geosphere(Renderer& rdr, float radius, std::size_t divisions = 3, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
 			{
@@ -173,7 +173,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::SphereSize(wedges, layers, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 			static ModelPtr Sphere(Renderer& rdr, float radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
 			{
@@ -187,7 +187,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::CylinderSize(wedges, layers, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
 
 			// Capsule ****************************************************************************
@@ -197,13 +197,13 @@ namespace pr
 			//ModelPtr    CapsuleHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
 			// Mesh *******************************************************************************
-			static ModelPtr Mesh(Renderer& rdr, std::size_t num_verts, std::size_t num_indices, v4 const* verts, pr::uint16 const* indices, std::size_t num_colours = 0, Colour32 const* colours = 0, v4 const* normals = 0, v2 const* tex_coords = 0, DrawMethod const* mat = 0)
+			static ModelPtr Mesh(Renderer& rdr, EPrim prim_type, std::size_t num_verts, std::size_t num_indices, v4 const* verts, pr::uint16 const* indices, std::size_t num_colours = 0, Colour32 const* colours = 0, v4 const* normals = 0, v2 const* tex_coords = 0, DrawMethod const* mat = 0)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Mesh(num_verts, num_indices, verts, indices, num_colours, colours, normals, tex_coords, vb, ib); };
 
 				std::size_t vcount, icount;
 				pr::geometry::MeshSize(num_verts, num_indices, vcount, icount);
-				return Create(rdr, vcount, icount, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST, mat, gen);
+				return Create(rdr, vcount, icount, prim_type, mat, gen);
 			}
 
 			//// Utility ****************************************************************************

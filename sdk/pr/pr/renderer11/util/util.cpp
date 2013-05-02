@@ -5,35 +5,38 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/util/util.h"
 #include "pr/renderer11/util/wrappers.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/raster_state.h"
 
 using namespace pr::rdr;
 
 // Returns the number of primitives implied by an index count and geometry topology
-size_t pr::rdr::PrimCount(size_t icount, D3D11_PRIMITIVE_TOPOLOGY topo)
+size_t pr::rdr::PrimCount(size_t icount, EPrim topo)
 {
 	switch (topo)
 	{
 	default: PR_ASSERT(PR_DBG_RDR, false, "Unknown primitive type"); return 0;
-	case D3D11_PRIMITIVE_TOPOLOGY_POINTLIST:     return icount;
-	case D3D11_PRIMITIVE_TOPOLOGY_LINELIST:      PR_ASSERT(PR_DBG_RDR, (icount%2) == 0, "Incomplete primitive implied by icount"); return icount / 2;
-	case D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP:     PR_ASSERT(PR_DBG_RDR,  icount    >= 2, "Incomplete primitive implied by icount"); return icount - 1;
-	case D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST:  PR_ASSERT(PR_DBG_RDR, (icount%3) == 0, "Incomplete primitive implied by icount"); return icount / 3;
-	case D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP: PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by icount"); return icount - 2;
+	case EPrim::PointList: return icount;
+	case EPrim::LineList:  PR_ASSERT(PR_DBG_RDR, (icount%2) == 0, "Incomplete primitive implied by icount"); return icount / 2;
+	case EPrim::LineStrip: PR_ASSERT(PR_DBG_RDR,  icount    >= 2, "Incomplete primitive implied by icount"); return icount - 1;
+	case EPrim::TriList:   PR_ASSERT(PR_DBG_RDR, (icount%3) == 0, "Incomplete primitive implied by icount"); return icount / 3;
+	case EPrim::TriStrip:  PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by icount"); return icount - 2;
 	}
 }
 
 // Returns the number of indices implied by a primitive count and geometry topology
-size_t pr::rdr::IndexCount(size_t pcount, D3D11_PRIMITIVE_TOPOLOGY topo)
+size_t pr::rdr::IndexCount(size_t pcount, EPrim topo)
 {
 	if (pcount == 0) return 0;
 	switch (topo)
 	{
 	default: PR_ASSERT(PR_DBG_RDR, false, "Unknown primitive type"); return 0;
-	case D3D11_PRIMITIVE_TOPOLOGY_POINTLIST:     return pcount;
-	case D3D11_PRIMITIVE_TOPOLOGY_LINELIST:      return pcount * 2;
-	case D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP:     return pcount + 1;
-	case D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST:  return pcount * 3;
-	case D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP: return pcount + 2;
+	case EPrim::PointList: return pcount;
+	case EPrim::LineList:  return pcount * 2;
+	case EPrim::LineStrip: return pcount + 1;
+	case EPrim::TriList:   return pcount * 3;
+	case EPrim::TriStrip:  return pcount + 2;
 	}
 }
 
@@ -211,3 +214,26 @@ void pr::rdr::GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num
 	*num_bytes = *row_bytes * *num_rows;
 }
 
+// Helper for setting alpha blending states
+void pr::rdr::SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, int render_target, bool on, D3D11_BLEND_OP blend_op, D3D11_BLEND src_blend, D3D11_BLEND dst_blend)
+{
+	if (on)
+	{
+		// ZWrites need to be disabled too
+		bsb.Set(EBS::BlendEnable ,TRUE      ,render_target);
+		bsb.Set(EBS::BlendOp     ,blend_op  ,render_target);
+		bsb.Set(EBS::SrcBlend    ,src_blend ,render_target);
+		bsb.Set(EBS::DestBlend   ,dst_blend ,render_target);
+		dsb.Set(EDS::DepthEnable ,FALSE);
+		rsb.Set(ERS::CullMode    ,D3D11_CULL_NONE);
+	}
+	else
+	{
+		bsb.Clear(EBS::BlendEnable ,render_target);
+		bsb.Clear(EBS::BlendOp     ,render_target);
+		bsb.Clear(EBS::SrcBlend    ,render_target);
+		bsb.Clear(EBS::DestBlend   ,render_target);
+		dsb.Clear(EDS::DepthEnable);
+		rsb.Clear(ERS::CullMode);
+	}
+}

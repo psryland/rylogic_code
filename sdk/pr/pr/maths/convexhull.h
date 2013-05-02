@@ -10,7 +10,7 @@
 #include <iterator>
 #include <algorithm>
 #include "pr/common/assert.h"
-#include "pr/common/AllocA.h"
+#include "pr/common/alloca.h"
 #include "pr/maths/maths.h"
 
 #ifndef PR_DBG_CONVEX_HULL
