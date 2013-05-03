@@ -22,7 +22,7 @@
     <ClCompile>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
       <PreprocessorDefinitions>NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\directx9.0c\aug2009\include;..\..\sdk\wtl\v8.1\include;..\..\sdk\lua\lua\src;..\..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\directx9.0c\aug2009\include;..\..\sdk\wtl\v8.1\include;..\..\sdk\lua\lua\src;..\..\sdk\lua;..\..\sdk\sqlite</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <Optimization>Full</Optimization>

@@ -177,10 +177,9 @@ namespace pr
 {
 	// Used to check enums where the value of each member should be the hash of its string name
 	// Use this method by declaring a static bool and assigning it to the result of this function
-	template <typename TEnum> inline bool CheckHashEnum(int (*hash_func)(char const*), void (*on_fail)(char const*) = nullptr)
+	template <typename TEnum, typename HashFunc, typename OnFail> inline bool CheckHashEnum(HashFunc hash_func, OnFail on_fail)
 	{
 		bool result = true;
-		if (on_fail == nullptr) on_fail = [](char const* msg){ throw std::exception(msg); };
 
 		std::string str;
 		for (int i = 0; i != TEnum::NumberOf; ++i)
@@ -196,6 +195,10 @@ namespace pr
 		}
 		if (!result) on_fail(str.c_str());
 		return result;
+	}
+	template <typename TEnum, typename HashFunc, typename OnFail> inline bool CheckHashEnum(HashFunc hash_func)
+	{
+		return CheckHashEnum(hash_func, [](char const* msg){ throw std::exception(msg); });
 	}
 }
 
@@ -308,7 +311,7 @@ namespace pr
 
 			PR_CHECK(42 == a2, true);                                 // Implicitly convertible from enum to int
 			PR_CHECK(static_cast<TestEnum2>(43).value, TestEnum2::B); // Explicitly convertible from int to enum
-			PR_THROWS(TestEnum3 c = TestEnum3::From(4), std::exception);        // invalid conversion, 4 is not an enum value
+			PR_THROWS([&](){ TestEnum3 c = TestEnum3::From(4); }, std::exception);        // invalid conversion, 4 is not an enum value
 
 			TestEnum4 x = (TestEnum4::A | TestEnum4::B) & ~TestEnum4::C; // Flag enums can be combined and assigned
 
