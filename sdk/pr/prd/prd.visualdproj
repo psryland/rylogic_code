@@ -381,6 +381,9 @@
   <Folder name="db">
    <File path="db\sqlite.d" />
   </Folder>
+  <Folder name="renderer">
+   <File path="renderer\renderer.d" />
+  </Folder>
   <Folder name="maths">
    <File path="maths\maths.d" />
    <File path="maths\rand.d" />

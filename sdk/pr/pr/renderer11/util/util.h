@@ -61,8 +61,7 @@ namespace pr
 		size_t BitsPerPixel(DXGI_FORMAT fmt);
 		inline size_t BytesPerPixel(DXGI_FORMAT fmt) { return BitsPerPixel(fmt) >> 3; }
 
-		// Return information about a surface determined from its dimensions and format
-		// Any of the pointer parameters can be null
+		// Return information about a surface determined from its dimensions and format. Any of the pointer parameters can be null
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
 
 		// Helper for setting alpha blending states
@@ -84,6 +83,8 @@ namespace pr
 			#endif
 		}
 
+		// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
+		void TestSystemCompatibility();
 	}
 }
 

@@ -37,7 +37,7 @@ namespace pr
 		#define PR_LOGE(level, except, message) do { pr::log::Log::Write(pr::log::Level::level, __FILE__, __LINE__, (message), &except); } while (0)
 		#else
 		#define PR_LOG(level, message)          do {} while (0)
-		#define PR_LOGE(level, except, message) do {} while (0)
+		#define PR_LOGE(level, except, message) sizeof(except)
 		#endif
 
 		// Logging output levels

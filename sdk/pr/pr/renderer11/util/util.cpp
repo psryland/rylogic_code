@@ -237,3 +237,8 @@ void pr::rdr::SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, int ren
 		rsb.Clear(ERS::CullMode);
 	}
 }
+
+// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
+void pr::rdr::TestSystemCompatibility()
+{
+}

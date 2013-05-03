@@ -58,26 +58,6 @@ namespace EView3DLight
 		Spot
 	};
 }
-namespace EView3DGeom
-{
-	enum Type
-	{
-		EInvalid = 0,
-		EVertex  = 1 << 0,
-		ENormal  = 1 << 1,
-		EColour  = 1 << 2,
-		ETexture = 1 << 3,
-		EAll     =(1 << 4) - 1,
-		EVN      = EVertex | ENormal,
-		EVC      = EVertex           | EColour,
-		EVT      = EVertex                     | ETexture,
-		EVNC     = EVertex | ENormal | EColour,
-		EVNT     = EVertex | ENormal           | ETexture,
-		EVCT     = EVertex           | EColour | ETexture,
-		EVNCT    = EVertex | ENormal | EColour | ETexture,
-	};
-}
-
 namespace pr
 {
 	namespace ldr { struct LdrObject; }
@@ -86,7 +66,7 @@ namespace pr
 namespace view3d
 {
 	typedef pr::ldr::LdrObject Object;
-	typedef pr::rdr::Texture Texture;
+	typedef pr::rdr::Texture2D Texture;
 	struct Drawset;
 }
 typedef view3d::Drawset* View3DDrawset;
@@ -128,7 +108,6 @@ struct View3DLight
 };
 struct View3DMaterial
 {
-	pr::uint16         m_geom_type; // see EView3DGeom::Type
 	View3DTexture      m_diff_tex;
 	View3DTexture      m_env_map;
 };

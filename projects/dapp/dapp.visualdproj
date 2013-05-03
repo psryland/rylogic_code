@@ -83,7 +83,7 @@
   <cv2pdbOptions />
   <objfiles />
   <linkswitches />
-  <libfiles>ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
+  <libfiles>q:\sdk\pr\lib\renderer11.x64.$(Configuration).lib ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
   <libpaths>q:\sdk\pr\lib</libpaths>
   <deffile />
   <resfile />
@@ -177,7 +177,7 @@
   <cv2pdbOptions />
   <objfiles />
   <linkswitches />
-  <libfiles>ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib prd.$(platformname).$(configurationname).lib dgui.$(platformname).$(configurationname).lib </libfiles>
+  <libfiles>q:\sdk\pr\lib\renderer11.x64.$(Configuration).lib ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
   <libpaths>q:\sdk\pr\lib</libpaths>
   <deffile />
   <resfile />

@@ -186,6 +186,7 @@
     <ClCompile Include="..\..\sdk\pr\pr\renderer11\util\util.cpp" />
     <ClCompile Include="..\renderer11\config\config.cpp" />
     <ClCompile Include="..\renderer11\lights\light.cpp" />
+    <ClCompile Include="..\renderer11\render\scene_view.cpp" />
     <ClCompile Include="..\renderer11\render\stereo.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
