@@ -18,6 +18,9 @@ syntax: glob
 *.orig
 *.userprefs
 *ReSharper*
+dlang/2.05x
+dlang/2.062
+dlang/dmd2/
 renderer11/shaders/compiled/*
 RylogicEnv.cmd
 ResEdit.layout

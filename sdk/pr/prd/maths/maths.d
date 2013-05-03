@@ -197,30 +197,30 @@ align (16) struct v4
 	//bug immutable static v4 zaxis  = v4(0,0,1,0);
 	//bug immutable static v4 waxis  = v4(0,0,0,1);
 	//bug immutable static v4 origin = v4(0,0,0,1);
-	static v4 zero  () { return v4(0,0,0,0); }
-	static v4 xaxis () { return v4(1,0,0,0); }
-	static v4 yaxis () { return v4(0,1,0,0); }
-	static v4 zaxis () { return v4(0,0,1,0); }
-	static v4 waxis () { return v4(0,0,0,1); }
-	static v4 origin() { return v4(0,0,0,1); }
+	static v4 zero  () pure nothrow { return v4(0,0,0,0); }
+	static v4 xaxis () pure nothrow { return v4(1,0,0,0); }
+	static v4 yaxis () pure nothrow { return v4(0,1,0,0); }
+	static v4 zaxis () pure nothrow { return v4(0,0,1,0); }
+	static v4 waxis () pure nothrow { return v4(0,0,0,1); }
+	static v4 origin() pure nothrow { return v4(0,0,0,1); }
 
-	this(float x_)                                          { set(x_); }
-	this(float x_, float y_, float z_, float w_)            { set(x_, y_, z_, w_); }
-	this(in v3 xyz_, float w_)                              { set(xyz_, w_); }
-	this(in v2 xy_, in v2 zw_)                              { set(xy_, zw_); }
+	this(float x_) pure nothrow                                     { set(x_); }
+	this(float x_, float y_, float z_, float w_) pure nothrow       { set(x_, y_, z_, w_); }
+	this(in v3 xyz_, float w_) pure nothrow                         { set(xyz_, w_); }
+	this(in v2 xy_, in v2 zw_) pure nothrow                         { set(xy_, zw_); }
 
-	ref v4 set(float x_, float y_, float z_, float w_)      { x = x_; y = y_; z = z_; w = w_; return this; }
-	ref v4 set(in v3 xyz_, float w_)                        { return set(xyz.x, xyz.y, xyz.z, w_); }
-	ref v4 set(in v2 xy_, in v2 zw_)                        { return set(xy_.x, xy_.y, zw_.x, zw_.y); }
-	ref v4 set(float x_)                                    { return set(x_,x_,x_,x_); }
+	ref v4 set(float x_, float y_, float z_, float w_) pure nothrow { x = x_; y = y_; z = z_; w = w_; return this; }
+	ref v4 set(in v3 xyz_, float w_) pure nothrow                   { return set(xyz.x, xyz.y, xyz.z, w_); }
+	ref v4 set(in v2 xy_, in v2 zw_) pure nothrow                   { return set(xy_.x, xy_.y, zw_.x, zw_.y); }
+	ref v4 set(float x_) pure nothrow                               { return set(x_,x_,x_,x_); }
 
-	v4 w0() const                                           { return v4(x, y, z, 0f); }
-	v4 w1() const                                           { return v4(x, y, z, 1f); }
+	v4 w0() const pure nothrow                                      { return v4(x, y, z, 0f); }
+	v4 w1() const pure nothrow                                      { return v4(x, y, z, 1f); }
 
-	@property int     ix() const                            { return cast(int)x; }
-	@property int     iy() const                            { return cast(int)y; }
-	@property int     iz() const                            { return cast(int)z; }
-	@property int     iw() const                            { return cast(int)w; }
+	@property int     ix() const pure nothrow                       { return cast(int)x; }
+	@property int     iy() const pure nothrow                       { return cast(int)y; }
+	@property int     iz() const pure nothrow                       { return cast(int)z; }
+	@property int     iw() const pure nothrow                       { return cast(int)w; }
 	@property string  string3() const                       { return to!string(x)~' '~to!string(y)~' '~to!string(z); }
 	@property string  string4() const                       { return to!string(x)~' '~to!string(y)~' '~to!string(z)~' '~to!string(w); }
 	@property float   length3sq() const                     { return Length3sq(x, y, z); }
