@@ -3769,7 +3769,9 @@ namespace pr
 		{
 			#region DomTypes
 			// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
-			public enum SomeEnum { One, Two, Three }
+			public enum SomeEnum { One = 1, Two = 2, Three = 3 }
+
+			public static int s_counter = 0;
 
 			// Tests user types can be mapped to table columns
 			private class Custom
@@ -3815,9 +3817,9 @@ namespace pr
 				public DomType0(){}
 				public DomType0(int seed)
 				{
-					Inc_Key = seed;
+					Inc_Key = ++s_counter;
 					Inc_Value = seed.ToString(CultureInfo.InvariantCulture);
-					Inc_Enum = (SomeEnum)(seed % 3);
+					Inc_Enum = (SomeEnum)((seed % 3) + 1);
 					Ign_NoGetter = seed;
 					Ign_PrivateProp = seed != 0;
 					m_ign_private_field = seed;
@@ -4061,6 +4063,7 @@ namespace pr
 			private static bool OneTimeOnly_Done = false;
 			private static void OneTimeOnly()
 			{
+				s_counter = 0;
 				if (OneTimeOnly_Done) return;
 				OneTimeOnly_Done = true;
 
@@ -4594,7 +4597,7 @@ namespace pr
 					// Do some expression tree queries
 					{// Count clause
 						var q = table.Count(x => (x.Inc_Key % 3) == 0);
-						Assert.AreEqual(4, q);
+						Assert.AreEqual(3, q);
 					}
 					{// Where clause
 						var q = from x in table where x.Inc_Key % 2 == 1 select x;
@@ -4606,13 +4609,13 @@ namespace pr
 						var q = table.Where(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three); // Cast needed to test expressions
 						var list = q.ToList();
 						Assert.AreEqual(7, list.Count);
-						Assert.AreEqual(0, list[0].Inc_Key);
-						Assert.AreEqual(5, list[1].Inc_Key);
-						Assert.AreEqual(9, list[2].Inc_Key);
-						Assert.AreEqual(6, list[3].Inc_Key);
-						Assert.AreEqual(3, list[4].Inc_Key);
-						Assert.AreEqual(8, list[5].Inc_Key);
-						Assert.AreEqual(2, list[6].Inc_Key);
+						Assert.AreEqual(3, list[0].Inc_Key);
+						Assert.AreEqual(4, list[1].Inc_Key);
+						Assert.AreEqual(6, list[2].Inc_Key);
+						Assert.AreEqual(7, list[3].Inc_Key);
+						Assert.AreEqual(8, list[4].Inc_Key);
+						Assert.AreEqual(9, list[5].Inc_Key);
+						Assert.AreEqual(10, list[6].Inc_Key);
 						// ReSharper restore RedundantCast
 					}
 					{// Where clause with 'like' method calling 'RowCount'
@@ -4623,84 +4626,87 @@ namespace pr
 						var q = table.Where(x => true);
 						var list = q.ToList();
 						Assert.AreEqual(10, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(1, list[1].Inc_Key);
-						Assert.AreEqual(0, list[2].Inc_Key);
-						Assert.AreEqual(5, list[3].Inc_Key);
-						Assert.AreEqual(7, list[4].Inc_Key);
-						Assert.AreEqual(9, list[5].Inc_Key);
-						Assert.AreEqual(6, list[6].Inc_Key);
-						Assert.AreEqual(3, list[7].Inc_Key);
-						Assert.AreEqual(8, list[8].Inc_Key);
-						Assert.AreEqual(2, list[9].Inc_Key);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(2, list[1].Inc_Key);
+						Assert.AreEqual(3, list[2].Inc_Key);
+						Assert.AreEqual(4, list[3].Inc_Key);
+						Assert.AreEqual(5, list[4].Inc_Key);
+						Assert.AreEqual(6, list[5].Inc_Key);
+						Assert.AreEqual(7, list[6].Inc_Key);
+						Assert.AreEqual(8, list[7].Inc_Key);
+						Assert.AreEqual(9, list[8].Inc_Key);
+						Assert.AreEqual(10, list[9].Inc_Key);
 					}
 					{// Contains clause
 						var set = new[]{"2","4","8"};
 						var q = from x in table where set.Contains(x.Inc_Value) select x;
 						var list = q.ToList();
 						Assert.AreEqual(3, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(8, list[1].Inc_Key);
-						Assert.AreEqual(2, list[2].Inc_Key);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(9, list[1].Inc_Key);
+						Assert.AreEqual(10, list[2].Inc_Key);
 					}
 					{// NOT Contains clause
 						var set = new List<string>{"2","4","8","5","9"};
 						var q = from x in table where set.Contains(x.Inc_Value) == false select x;
 						var list = q.ToList();
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(1, list[0].Inc_Key);
-						Assert.AreEqual(0, list[1].Inc_Key);
-						Assert.AreEqual(7, list[2].Inc_Key);
-						Assert.AreEqual(6, list[3].Inc_Key);
-						Assert.AreEqual(3, list[4].Inc_Key);
+						Assert.AreEqual(2, list[0].Inc_Key);
+						Assert.AreEqual(3, list[1].Inc_Key);
+						Assert.AreEqual(5, list[2].Inc_Key);
+						Assert.AreEqual(7, list[3].Inc_Key);
+						Assert.AreEqual(8, list[4].Inc_Key);
 					}
 					{// NOT Contains clause
 						var set = new List<string>{"2","4","8","5","9"};
 						var q = from x in table where !set.Contains(x.Inc_Value) select x;
 						var list = q.ToList();
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(1, list[0].Inc_Key);
-						Assert.AreEqual(0, list[1].Inc_Key);
-						Assert.AreEqual(7, list[2].Inc_Key);
-						Assert.AreEqual(6, list[3].Inc_Key);
-						Assert.AreEqual(3, list[4].Inc_Key);
+						Assert.AreEqual(2, list[0].Inc_Key);
+						Assert.AreEqual(3, list[1].Inc_Key);
+						Assert.AreEqual(5, list[2].Inc_Key);
+						Assert.AreEqual(7, list[3].Inc_Key);
+						Assert.AreEqual(8, list[4].Inc_Key);
 					}
 					{// OrderBy clause
 						var q = from x in table orderby x.Inc_Key descending select x;
 						var list = q.ToList();
 						Assert.AreEqual(10, list.Count);
 						for (int i = 0; i != 10; ++i)
-							Assert.AreEqual(9-i, list[i].Inc_Key);
+							Assert.AreEqual(10-i, list[i].Inc_Key);
 					}
 					{// Where and OrderBy clause
-						var q = from x in table where ((x.Inc_Key * 4 + 2 - 1) / 3) >= 5 orderby x.Inc_Value select x;
+						var q = from x in table where x.Inc_Key >= 5 orderby x.Inc_Value select x;
 						var list = q.ToList();
 						Assert.AreEqual(6, list.Count);
-						for (int i = 0; i != 6; ++i)
-							Assert.AreEqual(4+i, list[i].Inc_Key);
+						Assert.AreEqual(10, list[0].Inc_Key);
+						Assert.AreEqual(8, list[1].Inc_Key);
+						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(5, list[3].Inc_Key);
+						Assert.AreEqual(9, list[4].Inc_Key);
+						Assert.AreEqual(6, list[5].Inc_Key);
 					}
 					{// Skip
 						var q = table.Where(x => x.Inc_Key <= 5).Where(x => x.Inc_Value != "").Skip(2);
 						var list = q.ToList();
-						Assert.AreEqual(4, list.Count);
-						Assert.AreEqual(0, list[0].Inc_Key);
-						Assert.AreEqual(5, list[1].Inc_Key);
-						Assert.AreEqual(3, list[2].Inc_Key);
-						Assert.AreEqual(2, list[3].Inc_Key);
+						Assert.AreEqual(3, list.Count);
+						Assert.AreEqual(3, list[0].Inc_Key);
+						Assert.AreEqual(4, list[1].Inc_Key);
+						Assert.AreEqual(5, list[2].Inc_Key);
 					}
 					{// Take
 						var q = table.Where(x => x.Inc_Key >= 5).Take(2);
 						var list = q.ToList();
 						Assert.AreEqual(2, list.Count);
 						Assert.AreEqual(5, list[0].Inc_Key);
-						Assert.AreEqual(7, list[1].Inc_Key);
+						Assert.AreEqual(6, list[1].Inc_Key);
 					}
 					{// Skip and Take
 						var q = table.Where(x => x.Inc_Key >= 5).Skip(2).Take(2);
 						var list = q.ToList();
 						Assert.AreEqual(2, list.Count);
-						Assert.AreEqual(9, list[0].Inc_Key);
-						Assert.AreEqual(6, list[1].Inc_Key);
+						Assert.AreEqual(7, list[0].Inc_Key);
+						Assert.AreEqual(8, list[1].Inc_Key);
 					}
 					{// Null test
 						var q = from x in table where x.Inc_Value != null select x;
@@ -4711,48 +4717,48 @@ namespace pr
 						var q = from x in table where (float)x.Inc_Key > 2.5f && (float)x.Inc_Key < 7.5f select x;
 						var list = q.ToList();
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(5, list[1].Inc_Key);
-						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(3, list[0].Inc_Key);
+						Assert.AreEqual(4, list[1].Inc_Key);
+						Assert.AreEqual(5, list[2].Inc_Key);
 						Assert.AreEqual(6, list[3].Inc_Key);
-						Assert.AreEqual(3, list[4].Inc_Key);
+						Assert.AreEqual(7, list[4].Inc_Key);
 					}
 					{// Delete
-						var q = table.Delete(x => x.Inc_Key >= 5);
+						var q = table.Delete(x => x.Inc_Key > 5);
 						var list = table.ToList();
 						Assert.AreEqual(5, q);
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(1, list[1].Inc_Key);
-						Assert.AreEqual(0, list[2].Inc_Key);
-						Assert.AreEqual(3, list[3].Inc_Key);
-						Assert.AreEqual(2, list[4].Inc_Key);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(2, list[1].Inc_Key);
+						Assert.AreEqual(3, list[2].Inc_Key);
+						Assert.AreEqual(4, list[3].Inc_Key);
+						Assert.AreEqual(5, list[4].Inc_Key);
 					}
 					{// Select
 						var q = table.Select(x => x.Inc_Key);
 						var list = q.ToList();
 						Assert.AreEqual(5, list.Count);
 						Assert.AreEqual(typeof(List<int>), list.GetType());
-						Assert.AreEqual(4, list[0]);
-						Assert.AreEqual(1, list[1]);
-						Assert.AreEqual(0, list[2]);
-						Assert.AreEqual(3, list[3]);
-						Assert.AreEqual(2, list[4]);
+						Assert.AreEqual(1, list[0]);
+						Assert.AreEqual(2, list[1]);
+						Assert.AreEqual(3, list[2]);
+						Assert.AreEqual(4, list[3]);
+						Assert.AreEqual(5, list[4]);
 					}
 					{// Select tuple
 						var q = table.Select(x => new{x.Inc_Key, x.Inc_Enum});
 						var list = q.ToList();
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(1, list[1].Inc_Key);
-						Assert.AreEqual(0, list[2].Inc_Key);
-						Assert.AreEqual(3, list[3].Inc_Key);
-						Assert.AreEqual(2, list[4].Inc_Key);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(2, list[1].Inc_Key);
+						Assert.AreEqual(3, list[2].Inc_Key);
+						Assert.AreEqual(4, list[3].Inc_Key);
+						Assert.AreEqual(5, list[4].Inc_Key);
 						Assert.AreEqual(SomeEnum.Two   ,list[0].Inc_Enum);
 						Assert.AreEqual(SomeEnum.Two   ,list[1].Inc_Enum);
 						Assert.AreEqual(SomeEnum.One   ,list[2].Inc_Enum);
-						Assert.AreEqual(SomeEnum.One   ,list[3].Inc_Enum);
-						Assert.AreEqual(SomeEnum.Three ,list[4].Inc_Enum);
+						Assert.AreEqual(SomeEnum.Three ,list[3].Inc_Enum);
+						Assert.AreEqual(SomeEnum.Two   ,list[4].Inc_Enum);
 					}
 					#pragma warning disable 168
 					{// Check sql strings are correct
@@ -4828,20 +4834,20 @@ namespace pr
 					// Do some expression tree queries
 					{// Count clause
 						var q = table.Count<DomType0>(x => (x.Inc_Key % 3) == 0);
-						Assert.AreEqual(4, q);
+						Assert.AreEqual(3, q);
 					}
 					{// Where clause
 						// ReSharper disable RedundantCast
 						var q = table.Where<DomType0>(x => ((IDomType0)x).Inc_Enum == SomeEnum.One || ((IDomType0)x).Inc_Enum == SomeEnum.Three).Cast<IDomType0>(); // Cast needed to test expressions
 						var list = q.ToList();
 						Assert.AreEqual(7, list.Count);
-						Assert.AreEqual(0, list[0].Inc_Key);
-						Assert.AreEqual(5, list[1].Inc_Key);
-						Assert.AreEqual(9, list[2].Inc_Key);
-						Assert.AreEqual(6, list[3].Inc_Key);
-						Assert.AreEqual(3, list[4].Inc_Key);
-						Assert.AreEqual(8, list[5].Inc_Key);
-						Assert.AreEqual(2, list[6].Inc_Key);
+						Assert.AreEqual(3, list[0].Inc_Key);
+						Assert.AreEqual(4, list[1].Inc_Key);
+						Assert.AreEqual(6, list[2].Inc_Key);
+						Assert.AreEqual(7, list[3].Inc_Key);
+						Assert.AreEqual(8, list[4].Inc_Key);
+						Assert.AreEqual(9, list[5].Inc_Key);
+						Assert.AreEqual(10, list[6].Inc_Key);
 						// ReSharper restore RedundantCast
 					}
 					{// Where clause with 'like' method calling 'RowCount'
@@ -4852,84 +4858,87 @@ namespace pr
 						var q = table.Where<DomType0>(x => true).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(10, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(1, list[1].Inc_Key);
-						Assert.AreEqual(0, list[2].Inc_Key);
-						Assert.AreEqual(5, list[3].Inc_Key);
-						Assert.AreEqual(7, list[4].Inc_Key);
-						Assert.AreEqual(9, list[5].Inc_Key);
-						Assert.AreEqual(6, list[6].Inc_Key);
-						Assert.AreEqual(3, list[7].Inc_Key);
-						Assert.AreEqual(8, list[8].Inc_Key);
-						Assert.AreEqual(2, list[9].Inc_Key);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(2, list[1].Inc_Key);
+						Assert.AreEqual(3, list[2].Inc_Key);
+						Assert.AreEqual(4, list[3].Inc_Key);
+						Assert.AreEqual(5, list[4].Inc_Key);
+						Assert.AreEqual(6, list[5].Inc_Key);
+						Assert.AreEqual(7, list[6].Inc_Key);
+						Assert.AreEqual(8, list[7].Inc_Key);
+						Assert.AreEqual(9, list[8].Inc_Key);
+						Assert.AreEqual(10, list[9].Inc_Key);
 					}
 					{// Contains clause
 						var set = new[]{"2","4","8"};
 						var q = table.Where<DomType0>(x => set.Contains(x.Inc_Value)).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(3, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(8, list[1].Inc_Key);
-						Assert.AreEqual(2, list[2].Inc_Key);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(9, list[1].Inc_Key);
+						Assert.AreEqual(10, list[2].Inc_Key);
 					}
 					{// NOT Contains clause
 						var set = new List<string>{"2","4","8","5","9"};
 						var q = table.Where<DomType0>(x => set.Contains(x.Inc_Value) == false).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(1, list[0].Inc_Key);
-						Assert.AreEqual(0, list[1].Inc_Key);
-						Assert.AreEqual(7, list[2].Inc_Key);
-						Assert.AreEqual(6, list[3].Inc_Key);
-						Assert.AreEqual(3, list[4].Inc_Key);
+						Assert.AreEqual(2, list[0].Inc_Key);
+						Assert.AreEqual(3, list[1].Inc_Key);
+						Assert.AreEqual(5, list[2].Inc_Key);
+						Assert.AreEqual(7, list[3].Inc_Key);
+						Assert.AreEqual(8, list[4].Inc_Key);
 					}
 					{// NOT Contains clause
 						var set = new List<string>{"2","4","8","5","9"};
 						var q = table.Where<DomType0>(x => !set.Contains(x.Inc_Value)).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(1, list[0].Inc_Key);
-						Assert.AreEqual(0, list[1].Inc_Key);
-						Assert.AreEqual(7, list[2].Inc_Key);
-						Assert.AreEqual(6, list[3].Inc_Key);
-						Assert.AreEqual(3, list[4].Inc_Key);
+						Assert.AreEqual(2, list[0].Inc_Key);
+						Assert.AreEqual(3, list[1].Inc_Key);
+						Assert.AreEqual(5, list[2].Inc_Key);
+						Assert.AreEqual(7, list[3].Inc_Key);
+						Assert.AreEqual(8, list[4].Inc_Key);
 					}
 					{// OrderBy clause
 						var q = table.OrderByDescending<DomType0,int>(x => x.Inc_Key).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(10, list.Count);
 						for (int i = 0; i != 10; ++i)
-							Assert.AreEqual(9-i, list[i].Inc_Key);
+							Assert.AreEqual(10-i, list[i].Inc_Key);
 					}
 					{// Where and OrderBy clause
-						var q = table.Where<DomType0>(x => ((x.Inc_Key*4 + 2 - 1)/3) >= 5).OrderBy<DomType0,string>(x => x.Inc_Value).Cast<DomType0>();
+						var q = table.Where<DomType0>(x => x.Inc_Key >= 5).OrderBy<DomType0,string>(x => x.Inc_Value).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(6, list.Count);
-						for (int i = 0; i != 6; ++i)
-							Assert.AreEqual(4+i, list[i].Inc_Key);
+						Assert.AreEqual(10, list[0].Inc_Key);
+						Assert.AreEqual(8, list[1].Inc_Key);
+						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(5, list[3].Inc_Key);
+						Assert.AreEqual(9, list[4].Inc_Key);
+						Assert.AreEqual(6, list[5].Inc_Key);
 					}
 					{// Skip
 						var q = table.Where<DomType0>(x => x.Inc_Key <= 5).Skip(2).Cast<DomType0>();
 						var list = q.ToList();
-						Assert.AreEqual(4, list.Count);
-						Assert.AreEqual(0, list[0].Inc_Key);
-						Assert.AreEqual(5, list[1].Inc_Key);
-						Assert.AreEqual(3, list[2].Inc_Key);
-						Assert.AreEqual(2, list[3].Inc_Key);
+						Assert.AreEqual(3, list.Count);
+						Assert.AreEqual(3, list[0].Inc_Key);
+						Assert.AreEqual(4, list[1].Inc_Key);
+						Assert.AreEqual(5, list[2].Inc_Key);
 					}
 					{// Take
 						var q = table.Where<DomType0>(x => x.Inc_Key >= 5).Take(2).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(2, list.Count);
 						Assert.AreEqual(5, list[0].Inc_Key);
-						Assert.AreEqual(7, list[1].Inc_Key);
+						Assert.AreEqual(6, list[1].Inc_Key);
 					}
 					{// Skip and Take
 						var q = table.Where<DomType0>(x => x.Inc_Key >= 5).Skip(2).Take(2).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(2, list.Count);
-						Assert.AreEqual(9, list[0].Inc_Key);
-						Assert.AreEqual(6, list[1].Inc_Key);
+						Assert.AreEqual(7, list[0].Inc_Key);
+						Assert.AreEqual(8, list[1].Inc_Key);
 					}
 					{// Null test
 						var q = table.Where<DomType0>(x => x.Inc_Value != null).Cast<DomType0>();
@@ -4940,22 +4949,22 @@ namespace pr
 						var q = table.Where<DomType0>(x => (float) x.Inc_Key > 2.5f && (float) x.Inc_Key < 7.5f).Cast<DomType0>();
 						var list = q.ToList();
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(5, list[1].Inc_Key);
-						Assert.AreEqual(7, list[2].Inc_Key);
+						Assert.AreEqual(3, list[0].Inc_Key);
+						Assert.AreEqual(4, list[1].Inc_Key);
+						Assert.AreEqual(5, list[2].Inc_Key);
 						Assert.AreEqual(6, list[3].Inc_Key);
-						Assert.AreEqual(3, list[4].Inc_Key);
+						Assert.AreEqual(7, list[4].Inc_Key);
 					}
 					{// Delete
-						var q = table.Delete<DomType0>(x => x.Inc_Key >= 5);
+						var q = table.Delete<DomType0>(x => x.Inc_Key > 5);
 						var list = table.Cast<DomType0>().ToList();
 						Assert.AreEqual(5, q);
 						Assert.AreEqual(5, list.Count);
-						Assert.AreEqual(4, list[0].Inc_Key);
-						Assert.AreEqual(1, list[1].Inc_Key);
-						Assert.AreEqual(0, list[2].Inc_Key);
-						Assert.AreEqual(3, list[3].Inc_Key);
-						Assert.AreEqual(2, list[4].Inc_Key);
+						Assert.AreEqual(1, list[0].Inc_Key);
+						Assert.AreEqual(2, list[1].Inc_Key);
+						Assert.AreEqual(3, list[2].Inc_Key);
+						Assert.AreEqual(4, list[3].Inc_Key);
+						Assert.AreEqual(5, list[4].Inc_Key);
 					}
 					#pragma warning disable 168
 					{// Check sql strings are correct

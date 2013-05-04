@@ -48,9 +48,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2010.csproj">
+    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
       <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>prcs_vs2010</Name>
+      <Name>prcs_vs2012</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

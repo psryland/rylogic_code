@@ -376,7 +376,7 @@ namespace pr
 
 			PR_CHECK(42 == a2, true);                                 // Implicitly convertible from enum to int
 			PR_CHECK(static_cast<TestEnum2>(43).value, TestEnum2::B); // Explicitly convertible from int to enum
-			PR_THROWS(TestEnum3 c = TestEnum3::From(4), std::exception);        // invalid conversion, 4 is not an enum value
+			PR_THROWS([&](){ TestEnum3 c = TestEnum3::From(4); }, std::exception);        // invalid conversion, 4 is not an enum value
 
 			TestEnum4 x = (TestEnum4::A | TestEnum4::B) & ~TestEnum4::C; // Flag enums can be combined and assigned
 

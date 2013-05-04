@@ -171,26 +171,49 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\sortkey.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture_manager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\allocator.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\dds_texture_loader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\demo_scene.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\lock.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\lookup.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\stock_resources.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\util.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\wrappers.h" />
+    <ClInclude Include="..\renderer11\directxtex\BC.h" />
+    <ClInclude Include="..\renderer11\directxtex\DDS.h" />
+    <ClInclude Include="..\renderer11\directxtex\DirectXTex.h" />
+    <ClInclude Include="..\renderer11\directxtex\DirectXTexP.h" />
+    <ClInclude Include="..\renderer11\directxtex\scoped.h" />
     <ClInclude Include="..\renderer11\render\stereo.h" />
     <ClInclude Include="..\renderer11\shaders\cbuffer.h" />
+    <ClInclude Include="..\renderer11\textures\dds_texture_loader.h" />
+    <ClInclude Include="..\renderer11\textures\wic_texture_loader.h" />
     <ClInclude Include="..\renderer11\util\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\renderer11\util\util.cpp" />
     <ClCompile Include="..\renderer11\config\config.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\BC.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\BC4BC5.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\BC6HBC7.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexCompress.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexConvert.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexD3D11.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexDDS.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexFlipRotate.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexImage.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexMipmaps.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexMisc.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexNormalMaps.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexResize.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexTGA.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexUtil.cpp" />
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexWIC.cpp" />
     <ClCompile Include="..\renderer11\lights\light.cpp" />
     <ClCompile Include="..\renderer11\render\scene_view.cpp" />
     <ClCompile Include="..\renderer11\render\stereo.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
     <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp" />
+    <ClCompile Include="..\renderer11\textures\dds_texture_loader.cpp" />
     <ClCompile Include="..\renderer11\textures\texture2d.cpp" />
     <ClCompile Include="..\renderer11\models\model.cpp" />
     <ClCompile Include="..\renderer11\models\model_buffer.cpp" />
@@ -200,7 +223,7 @@
     <ClCompile Include="..\renderer11\render\renderer.cpp" />
     <ClCompile Include="..\renderer11\render\scene.cpp" />
     <ClCompile Include="..\renderer11\textures\texture_manager.cpp" />
-    <ClCompile Include="..\renderer11\util\dds_texture_loader.cpp" />
+    <ClCompile Include="..\renderer11\textures\wic_texture_loader.cpp" />
     <ClCompile Include="..\renderer11\util\lock.cpp" />
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -210,6 +233,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\renderer11\directxtex\DirectXTex.inl" />
     <None Include="..\renderer11\shaders\common\cbuffer.hlsl" />
     <None Include="..\renderer11\shaders\common\functions.hlsl" />
     <None Include="..\renderer11\shaders\common\uber.hlsl" />

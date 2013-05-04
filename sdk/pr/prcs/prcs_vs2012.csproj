@@ -124,7 +124,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="nunit.framework">
-      <HintPath>..\..\nunit\net-2.0\framework\nunit.framework.dll</HintPath>
+      <HintPath>..\..\..\projects\vs2012\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="PresentationFramework">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
@@ -364,6 +364,7 @@
     <EmbeddedResource Include="SmilingGekko140x110.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config" />
     <None Include="Rylogic Limited Key File.pfx" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

@@ -167,12 +167,12 @@ namespace pr
 			std::string t = pr::To<std::string>(tol);
 			throw std::exception(pr::Fmt("%s(%d): '%s' was '%s', expected '%s ±%s'",file,line,expr,r.c_str(),e.c_str(),t.c_str()).c_str());
 		}
-		template <typename TExcept> static void Throws(std::function<void(void)> lambda, char const* expr, char const* file, int line)
+		template <typename TExcept, typename Func> static void Throws(Func func, char const* expr, char const* file, int line)
 		{
 			++TestCount();
 			bool threw = false;
 			bool threw_expected = false;
-			try             { lambda(); }
+			try             { func(); }
 			catch (TExcept) { threw = true; threw_expected = true; }
 			catch (...)     { threw = true; }
 			if (threw_expected) return;
@@ -185,14 +185,25 @@ namespace pr
 }
 
 // If this is giving an error like "int return type assumed" and PRUnitTest is
-// not defined, it means you having included the header containing the tests in
+// not defined, it means you haven't included the header containing the tests in
 // unittests.cpp
-#define PRUnitTest(test_name) \
-	template <typename T> void unittest_##test_name();\
-	static bool s_unittest_##test_name##__LINE__ = pr::unittests::AddTest(\
-		pr::unittests::UnitTestItem(#test_name, [](){ unittest_##test_name<void>(); })\
-		);\
-	template <typename T> void unittest_##test_name()
+#define PRUnitTest(testname) /*
+	*/template <typename T> void unittest_##testname();                               /* The unit test function forward declaration
+	*/inline void unittest_add_##testname##__LINE__() { unittest_##testname<void>(); }/* A function for adding a unit test item
+	*/static bool s_unittest_##testname##__LINE__ =                                   /* A static bool, that when constructed, causes a test item to be added for the test
+	*/	pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, unittest_add_##testname##__LINE__));\
+	template <typename T> void unittest_##testname()
+
+
+//// If this is giving an error like "int return type assumed" and PRUnitTest is
+//// not defined, it means you haven't included the header containing the tests in
+//// unittests.cpp
+//#define PRUnitTest(test_name) \
+//	template <typename T> void unittest_##test_name();\
+//	static bool s_unittest_##test_name##__LINE__ = pr::unittests::AddTest(\
+//		pr::unittests::UnitTestItem(#test_name, [](){ unittest_##test_name<void>(); })\
+//		);\
+//	template <typename T> void unittest_##test_name()
 
 #define PR_FAIL(msg)\
 	pr::unittests::Fail(msg, __FILE__, __LINE__)
@@ -203,8 +214,8 @@ namespace pr
 #define PR_CLOSE(expr, expected_result, tol)\
 	pr::unittests::Close((expr), (expected_result), (tol), #expr, __FILE__, __LINE__)
 
-#define PR_THROWS(expr, what)\
-	pr::unittests::Throws<what>([&](){expr;}, #expr, __FILE__, __LINE__)
+#define PR_THROWS(func, what)\
+	pr::unittests::Throws<what>(func, #func, __FILE__, __LINE__)
 
 #endif
 

@@ -7,19 +7,45 @@
 #include "pr/renderer11/textures/texture2d.h"
 #include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/util/allocator.h"
-#include "pr/renderer11/util/dds_texture_loader.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/util.h"
+#include "renderer11/textures/dds_texture_loader.h"
+#include "renderer11/textures/wic_texture_loader.h"
 
 using namespace pr::rdr;
+
+// Create a DX texture from a dds,jpg,png,tga,gif,bmp file
+void LoadTextureFromFile(D3DPtr<ID3D11Device>& device, wchar_t const* filepath, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv)
+{
+	using namespace DirectX;
+	auto extn = pr::filesys::GetExtensionInPlace(filepath);
+
+	// If the file is a dds file, use the faster dds loader
+	if (_wcsicmp(extn, L"dds") == 0)
+	{
+		// This doesn't support some dds formats tho, so might be worth trying the directxtex dds loader
+		D3DPtr<ID3D11Resource> res;
+		pr::Throw(DirectX::CreateDDSTextureFromFile(device.m_ptr, filepath, &res.m_ptr, &srv.m_ptr));
+		pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+	}
+	else
+	{
+		D3DPtr<ID3D11DeviceContext> dc;
+		device->GetImmediateContext(&dc.m_ptr);
+
+		// Otherwise, use the WIC loader
+		D3DPtr<ID3D11Resource> res;
+		pr::Throw(DirectX::CreateWICTextureFromFile(device.m_ptr, dc.m_ptr, filepath, &res.m_ptr, &srv.m_ptr));
+	}
+}
 
 //GUID const TexInfoGUID = {0x506e436e, 0x5a4f, 0x4190, 0x98, 0x43, 0x99, 0x7a, 0x19, 0xa8, 0xd8, 0x69}; // {506E436E-5A4F-4190-9843-997A19A8D869}
 
 pr::rdr::TextureManager::TextureManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device)
-:m_alex_tex2d(Allocator<Texture2D>(mem))
-,m_device(device)
-,m_lookup_tex(mem)
-,m_lookup_fname(mem)
+	:m_alex_tex2d(Allocator<Texture2D>(mem))
+	,m_device(device)
+	,m_lookup_tex(mem)
+	,m_lookup_fname(mem)
 {
 	// CreateStockTextures
 }
@@ -71,7 +97,7 @@ Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::Sampler
 		EStockTexture stock;
 		if (!EStockTexture::TryParse(stock, filepath + 1, false))
 			throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Unknown stock texture name: %s", filepath + 1));
-		
+
 		auto stock_tex = FindTexture(stock);
 		PR_ASSERT(PR_DBG_RDR, stock_tex != nullptr, "Stock texture not found");
 		return CloneTexture2D(id, stock_tex, &sam_desc);
@@ -93,10 +119,7 @@ Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::Sampler
 	}
 	else // Otherwise, if not loaded already, load now
 	{
-		// If not, create the d3d texture and populate from the file
-		D3DPtr<ID3D11Resource> res;
-		pr::Throw(pr::rdr::CreateDDSTextureFromFile(m_device.m_ptr, filepath, &res.m_ptr, &srv.m_ptr, 0));
-		pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+		LoadTextureFromFile(m_device, filepath, tex, srv);
 		AddLookup(m_lookup_fname, texfile_id, tex.m_ptr);
 	}
 
@@ -141,12 +164,12 @@ Texture2DPtr pr::rdr::TextureManager::CloneTexture2D(RdrId id, Texture2DPtr cons
 void pr::rdr::TextureManager::Delete(pr::rdr::Texture2D const* tex)
 {
 	if (tex == 0) return;
-	
+
 	// Find 'tex' in the map of RdrIds to texture instances
 	// We'll remove this, but first use it as a non-const reference
 	TextureLookup::iterator iter = m_lookup_tex.find(tex->m_id);
 	PR_ASSERT(PR_DBG_RDR, iter != m_lookup_tex.end(), "Texture not found");
-	
+
 	// If the d3d texture will be released when we clean up this texture
 	// then check whether it's in the fname lookup table and remove it if it is.
 	if (tex->m_src_id != 0 && tex->m_tex.RefCount() == 1)
@@ -154,7 +177,7 @@ void pr::rdr::TextureManager::Delete(pr::rdr::Texture2D const* tex)
 		TexFileLookup::iterator jter = m_lookup_fname.find(tex->m_src_id);
 		if (jter != m_lookup_fname.end()) m_lookup_fname.erase(jter);
 	}
-	
+
 	// Delete the texture and remove the entry from the RdrId lookup map
 	m_alex_tex2d.Delete(iter->second);
 	m_lookup_tex.erase(iter);

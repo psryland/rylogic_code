@@ -11,7 +11,7 @@ using namespace sol;
 
 sol::Main::Main(MainGUI& gui)
 	:base(pr::app::DefaultSetup(), gui)
-	,m_skybox(m_rdr, AssMgr::DataPath(L"skybox/space1/space??.dds"), pr::app::Skybox::SixSidedCube, 100000.0f)
+	,m_skybox(m_rdr, AssMgr::DataPath(L"skybox/space1/space??.png"), pr::app::Skybox::SixSidedCube, 100000.0f)
 	//,m_skybox(m_rdr, AssMgr::DataPath(L"skybox/galaxy1/galaxy??.dds"), pr::app::Skybox::SixSidedCube)
 	//,m_skybox(m_rdr, ResMgr::DataPath(L"skybox/sky1/skybox-clouds-few-noon.dds"), pr::app::Skybox::FiveSidedCube)
 	//,m_skybox(m_rdr, AssMgr::DataPath(L"skybox/sky1/sky_spheremap.dds"), pr::app::Skybox::Geosphere)

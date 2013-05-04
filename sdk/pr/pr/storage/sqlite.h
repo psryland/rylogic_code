@@ -1962,7 +1962,8 @@ namespace pr
 
 				PR_CHECK(table.Insert(Record('a')), 1);
 				PR_CHECK(table.Insert(Record('b')), 1);
-				PR_THROWS(table.Insert(Record('a')), pr::sqlite::Exception);
+				Record a('a');
+				PR_THROWS([&](){ table.Insert(a); }, pr::sqlite::Exception);
 				try { table.Insert(Record('b')); }
 				catch (pr::sqlite::Exception const& ex) { PR_CHECK(ex.code(), SQLITE_CONSTRAINT); }
 			}
