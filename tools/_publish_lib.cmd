@@ -33,12 +33,12 @@ call lower_case srcdir
 call lower_case file
 call lower_case extn
 
-if [%platform%]==[x86] set platform=win32
+::if [%platform%]==[x86] set platform=win32
 if [%dstdir%]==[] set dstdir=%qdrive%\sdk\pr\lib
-if [%platform%]==[win32] (
-	set wordsize=32
-) else (
+if [%platform%]==[x64] (
 	set wordsize=64
+) else (
+	set wordsize=32
 )
 
 ::Copy the library file to the lib folder

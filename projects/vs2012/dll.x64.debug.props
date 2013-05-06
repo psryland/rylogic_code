@@ -4,10 +4,10 @@
     <TargetPlatform>x64</TargetPlatform>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>..\..\obj2012\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>..\..\obj2012\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup>
-    <IntDir>..\..\obj2012\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(OutDir)</IntDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>
@@ -55,9 +55,10 @@
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <PostBuildEvent>
-      <Command>q:\tools\_publish_lib.cmd $(TargetPath) $(Platform) $(Configuration)</Command>
+      <Command>q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
       <Message>Publishing library</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>

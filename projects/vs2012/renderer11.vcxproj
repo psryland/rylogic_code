@@ -47,12 +47,12 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="lib.win32.debug.props" />
     <Import Project="fxc_build_rule.props" />
+    <Import Project="lib.x86.debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="lib.win32.release.props" />
     <Import Project="fxc_build_rule.props" />
+    <Import Project="lib.x86.release.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="lib.x64.debug.props" />

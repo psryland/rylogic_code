@@ -26,7 +26,7 @@ namespace EView3DResult
 		Failed,
 	};
 }
-namespace EView3DRenderMode
+namespace EView3DFillMode
 {
 	enum Type
 	{
@@ -128,7 +128,7 @@ typedef void (__stdcall *View3D_EditObjectCB)(
 extern "C"
 {
 	// Initialise/shutdown the dll
-	VIEW3D_API EView3DResult::Type     __stdcall View3D_Initialise(HWND hwnd, pr::uint d3dcreate_flags, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
+	VIEW3D_API EView3DResult::Type     __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
 	VIEW3D_API void                    __stdcall View3D_Shutdown();
 
 	// Draw sets
@@ -197,8 +197,8 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_Refresh                  ();
 	VIEW3D_API void                    __stdcall View3D_Resize                   (int width, int height);
 	VIEW3D_API void                    __stdcall View3D_Render                   (View3DDrawset drawset);
-	VIEW3D_API EView3DRenderMode::Type __stdcall View3D_RenderMode               (View3DDrawset drawset);
-	VIEW3D_API void                    __stdcall View3D_SetRenderMode            (View3DDrawset drawset, EView3DRenderMode::Type mode);
+	VIEW3D_API EView3DFillMode::Type   __stdcall View3D_FillMode                 (View3DDrawset drawset);
+	VIEW3D_API void                    __stdcall View3D_SetFillMode              (View3DDrawset drawset, EView3DFillMode::Type mode);
 	VIEW3D_API BOOL                    __stdcall View3D_Orthographic             (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_SetOrthographic          (View3DDrawset drawset, BOOL render2d);
 	VIEW3D_API int                     __stdcall View3D_BackGroundColour         (View3DDrawset drawset);

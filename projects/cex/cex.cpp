@@ -37,10 +37,6 @@
 using namespace pr;
 using namespace pr::cmdline;
 
-namespace pr 
-{
-template <> std::string ToString<long>(long l) { PR_ASSERT(1, false, ""); return ""; }
-}
 namespace cex
 {
 	char const VersionString[] = "v1.1";

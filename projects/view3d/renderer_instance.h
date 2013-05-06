@@ -30,16 +30,16 @@ namespace view3d
 
 	struct Drawset
 	{
-		ObjectCont                m_objects;                  // References to objects to draw in this drawset
-		pr::Camera                m_camera;                   // Camera control
-		pr::rdr::Light            m_light;                    // Light source for the set
-		bool                      m_light_is_camera_relative; // Whether the light is attached to the camera or not
-		EView3DRenderMode::Type   m_render_mode;              // Render mode
-		pr::Colour32              m_background_colour;        // The background colour for this drawset
-		bool                      m_focus_point_visible;      // True if we should draw the focus point
-		float                     m_focus_point_size;         // The base size of the focus point object
-		bool                      m_origin_point_visible;     // True if we should draw the origin point
-		float                     m_origin_point_size;        // The base size of the origin instance
+		ObjectCont            m_objects;                  // References to objects to draw in this drawset
+		pr::Camera            m_camera;                   // Camera control
+		pr::rdr::Light        m_light;                    // Light source for the set
+		bool                  m_light_is_camera_relative; // Whether the light is attached to the camera or not
+		EView3DFillMode::Type m_fill_mode;                // Fill mode
+		pr::Colour32          m_background_colour;        // The background colour for this drawset
+		bool                  m_focus_point_visible;      // True if we should draw the focus point
+		float                 m_focus_point_size;         // The base size of the focus point object
+		bool                  m_origin_point_visible;     // True if we should draw the origin point
+		float                 m_origin_point_size;        // The base size of the origin instance
 
 		Drawset();
 	};

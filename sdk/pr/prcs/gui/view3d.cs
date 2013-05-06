@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using pr.gfx;
 using pr.maths;
+using pr.extn;
+
 using HWND = System.IntPtr;
 using HDrawset = System.IntPtr;
 using HObject = System.IntPtr;
@@ -15,124 +17,160 @@ namespace pr.gui
 {
 	public class View3D :UserControl
 	{
-		private const string View3Ddll = "view3d.dll";
 		public const int DefaultContextId = 0;
 
+		#region Enumerations
 		public enum EResult
 		{
 			Success,
 			Failed,
+			InvalidValue,
 		}
-		[Flags] public enum ED3DCreateFlags :uint
+		[Flags] public enum EGeom
 		{
-			D3DCREATE_FPU_PRESERVE                  = 0x00000002U,
-			D3DCREATE_MULTITHREADED                 = 0x00000004U,
-			D3DCREATE_PUREDEVICE                    = 0x00000010U,
-			D3DCREATE_SOFTWARE_VERTEXPROCESSING     = 0x00000020U,
-			D3DCREATE_HARDWARE_VERTEXPROCESSING     = 0x00000040U,
-			D3DCREATE_MIXED_VERTEXPROCESSING        = 0x00000080U,
-			D3DCREATE_DISABLE_DRIVER_MANAGEMENT     = 0x00000100U,
-			D3DCREATE_ADAPTERGROUP_DEVICE           = 0x00000200U,
-			D3DCREATE_DISABLE_DRIVER_MANAGEMENT_EX  = 0x00000400U,
-			D3DCREATE_NOWINDOWCHANGES               = 0x00000800U,
+			Unknown  = 0,
+			Vert     = 1 << 0,
+			Colr     = 1 << 1,
+			Norm     = 1 << 2,
+			Tex0     = 1 << 3,
 		}
-		public enum EPrimType
+		public enum EPrim :uint
 		{
-			D3DPT_POINTLIST     = 1,
-			D3DPT_LINELIST      = 2,
-			D3DPT_LINESTRIP     = 3,
-			D3DPT_TRIANGLELIST  = 4,
-			D3DPT_TRIANGLESTRIP = 5,
-			D3DPT_TRIANGLEFAN   = 6,
-			D3DPT_FORCE_DWORD   = 0x7FFFFFFF,
+			D3D_PRIMITIVE_TOPOLOGY_UNDEFINED    = 0,
+			D3D_PRIMITIVE_TOPOLOGY_POINTLIST    = 1,
+			D3D_PRIMITIVE_TOPOLOGY_LINELIST     = 2,
+			D3D_PRIMITIVE_TOPOLOGY_LINESTRIP    = 3,
+			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST = 4,
+			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP= 5,
 		}
 		public enum EFormat :uint
 		{
-			D3DFMT_UNKNOWN              =  0,
-			D3DFMT_R8G8B8               = 20,
-			D3DFMT_A8R8G8B8             = 21,
-			D3DFMT_X8R8G8B8             = 22,
-			D3DFMT_R5G6B5               = 23,
-			D3DFMT_X1R5G5B5             = 24,
-			D3DFMT_A1R5G5B5             = 25,
-			D3DFMT_A4R4G4B4             = 26,
-			D3DFMT_R3G3B2               = 27,
-			D3DFMT_A8                   = 28,
-			D3DFMT_A8R3G3B2             = 29,
-			D3DFMT_X4R4G4B4             = 30,
-			D3DFMT_A2B10G10R10          = 31,
-			D3DFMT_A8B8G8R8             = 32,
-			D3DFMT_X8B8G8R8             = 33,
-			D3DFMT_G16R16               = 34,
-			D3DFMT_A2R10G10B10          = 35,
-			D3DFMT_A16B16G16R16         = 36,
-			D3DFMT_A8P8                 = 40,
-			D3DFMT_P8                   = 41,
-			D3DFMT_L8                   = 50,
-			D3DFMT_A8L8                 = 51,
-			D3DFMT_A4L4                 = 52,
-			D3DFMT_V8U8                 = 60,
-			D3DFMT_L6V5U5               = 61,
-			D3DFMT_X8L8V8U8             = 62,
-			D3DFMT_Q8W8V8U8             = 63,
-			D3DFMT_V16U16               = 64,
-			D3DFMT_A2W10V10U10          = 67,
-			D3DFMT_UYVY                 = ((byte)'U') | ((byte)'Y'<<8) | ((byte)'V'<<16) | ((byte)'Y'<<24),
-			D3DFMT_R8G8_B8G8            = ((byte)'R') | ((byte)'G'<<8) | ((byte)'B'<<16) | ((byte)'G'<<24),
-			D3DFMT_YUY2                 = ((byte)'Y') | ((byte)'U'<<8) | ((byte)'Y'<<16) | ((byte)'2'<<24),
-			D3DFMT_G8R8_G8B8            = ((byte)'G') | ((byte)'R'<<8) | ((byte)'G'<<16) | ((byte)'B'<<24),
-			D3DFMT_DXT1                 = ((byte)'D') | ((byte)'X'<<8) | ((byte)'T'<<16) | ((byte)'1'<<24),
-			D3DFMT_DXT2                 = ((byte)'D') | ((byte)'X'<<8) | ((byte)'T'<<16) | ((byte)'2'<<24),
-			D3DFMT_DXT3                 = ((byte)'D') | ((byte)'X'<<8) | ((byte)'T'<<16) | ((byte)'3'<<24),
-			D3DFMT_DXT4                 = ((byte)'D') | ((byte)'X'<<8) | ((byte)'T'<<16) | ((byte)'4'<<24),
-			D3DFMT_DXT5                 = ((byte)'D') | ((byte)'X'<<8) | ((byte)'T'<<16) | ((byte)'5'<<24),
-			D3DFMT_D16_LOCKABLE         = 70,
-			D3DFMT_D32                  = 71,
-			D3DFMT_D15S1                = 73,
-			D3DFMT_D24S8                = 75,
-			D3DFMT_D24X8                = 77,
-			D3DFMT_D24X4S4              = 79,
-			D3DFMT_D16                  = 80,
-			D3DFMT_D32F_LOCKABLE        = 82,
-			D3DFMT_D24FS8               = 83,
-			D3DFMT_L16                  = 81,
-			D3DFMT_VERTEXDATA           = 100,
-			D3DFMT_INDEX16              = 101,
-			D3DFMT_INDEX32              = 102,
-			D3DFMT_Q16W16V16U16         = 110,
-			D3DFMT_MULTI2_ARGB8         = ((byte)'M') | ((byte)'E'<<8) | ((byte)'T'<<16) | ((byte)'1'<<24),
-			D3DFMT_R16F                 = 111,
-			D3DFMT_G16R16F              = 112,
-			D3DFMT_A16B16G16R16F        = 113,
-			D3DFMT_R32F                 = 114,
-			D3DFMT_G32R32F              = 115,
-			D3DFMT_A32B32G32R32F        = 116,
-			D3DFMT_CxV8U8               = 117,
+			DXGI_FORMAT_UNKNOWN	                    = 0,
+			DXGI_FORMAT_R32G32B32A32_TYPELESS       = 1,
+			DXGI_FORMAT_R32G32B32A32_FLOAT          = 2,
+			DXGI_FORMAT_R32G32B32A32_UINT           = 3,
+			DXGI_FORMAT_R32G32B32A32_SINT           = 4,
+			DXGI_FORMAT_R32G32B32_TYPELESS          = 5,
+			DXGI_FORMAT_R32G32B32_FLOAT             = 6,
+			DXGI_FORMAT_R32G32B32_UINT              = 7,
+			DXGI_FORMAT_R32G32B32_SINT              = 8,
+			DXGI_FORMAT_R16G16B16A16_TYPELESS       = 9,
+			DXGI_FORMAT_R16G16B16A16_FLOAT          = 10,
+			DXGI_FORMAT_R16G16B16A16_UNORM          = 11,
+			DXGI_FORMAT_R16G16B16A16_UINT           = 12,
+			DXGI_FORMAT_R16G16B16A16_SNORM          = 13,
+			DXGI_FORMAT_R16G16B16A16_SINT           = 14,
+			DXGI_FORMAT_R32G32_TYPELESS             = 15,
+			DXGI_FORMAT_R32G32_FLOAT                = 16,
+			DXGI_FORMAT_R32G32_UINT                 = 17,
+			DXGI_FORMAT_R32G32_SINT                 = 18,
+			DXGI_FORMAT_R32G8X24_TYPELESS           = 19,
+			DXGI_FORMAT_D32_FLOAT_S8X24_UINT        = 20,
+			DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS    = 21,
+			DXGI_FORMAT_X32_TYPELESS_G8X24_UINT     = 22,
+			DXGI_FORMAT_R10G10B10A2_TYPELESS        = 23,
+			DXGI_FORMAT_R10G10B10A2_UNORM           = 24,
+			DXGI_FORMAT_R10G10B10A2_UINT            = 25,
+			DXGI_FORMAT_R11G11B10_FLOAT             = 26,
+			DXGI_FORMAT_R8G8B8A8_TYPELESS           = 27,
+			DXGI_FORMAT_R8G8B8A8_UNORM              = 28,
+			DXGI_FORMAT_R8G8B8A8_UNORM_SRGB         = 29,
+			DXGI_FORMAT_R8G8B8A8_UINT               = 30,
+			DXGI_FORMAT_R8G8B8A8_SNORM              = 31,
+			DXGI_FORMAT_R8G8B8A8_SINT               = 32,
+			DXGI_FORMAT_R16G16_TYPELESS             = 33,
+			DXGI_FORMAT_R16G16_FLOAT                = 34,
+			DXGI_FORMAT_R16G16_UNORM                = 35,
+			DXGI_FORMAT_R16G16_UINT                 = 36,
+			DXGI_FORMAT_R16G16_SNORM                = 37,
+			DXGI_FORMAT_R16G16_SINT                 = 38,
+			DXGI_FORMAT_R32_TYPELESS                = 39,
+			DXGI_FORMAT_D32_FLOAT                   = 40,
+			DXGI_FORMAT_R32_FLOAT                   = 41,
+			DXGI_FORMAT_R32_UINT                    = 42,
+			DXGI_FORMAT_R32_SINT                    = 43,
+			DXGI_FORMAT_R24G8_TYPELESS              = 44,
+			DXGI_FORMAT_D24_UNORM_S8_UINT           = 45,
+			DXGI_FORMAT_R24_UNORM_X8_TYPELESS       = 46,
+			DXGI_FORMAT_X24_TYPELESS_G8_UINT        = 47,
+			DXGI_FORMAT_R8G8_TYPELESS               = 48,
+			DXGI_FORMAT_R8G8_UNORM                  = 49,
+			DXGI_FORMAT_R8G8_UINT                   = 50,
+			DXGI_FORMAT_R8G8_SNORM                  = 51,
+			DXGI_FORMAT_R8G8_SINT                   = 52,
+			DXGI_FORMAT_R16_TYPELESS                = 53,
+			DXGI_FORMAT_R16_FLOAT                   = 54,
+			DXGI_FORMAT_D16_UNORM                   = 55,
+			DXGI_FORMAT_R16_UNORM                   = 56,
+			DXGI_FORMAT_R16_UINT                    = 57,
+			DXGI_FORMAT_R16_SNORM                   = 58,
+			DXGI_FORMAT_R16_SINT                    = 59,
+			DXGI_FORMAT_R8_TYPELESS                 = 60,
+			DXGI_FORMAT_R8_UNORM                    = 61,
+			DXGI_FORMAT_R8_UINT                     = 62,
+			DXGI_FORMAT_R8_SNORM                    = 63,
+			DXGI_FORMAT_R8_SINT                     = 64,
+			DXGI_FORMAT_A8_UNORM                    = 65,
+			DXGI_FORMAT_R1_UNORM                    = 66,
+			DXGI_FORMAT_R9G9B9E5_SHAREDEXP          = 67,
+			DXGI_FORMAT_R8G8_B8G8_UNORM             = 68,
+			DXGI_FORMAT_G8R8_G8B8_UNORM             = 69,
+			DXGI_FORMAT_BC1_TYPELESS                = 70,
+			DXGI_FORMAT_BC1_UNORM                   = 71,
+			DXGI_FORMAT_BC1_UNORM_SRGB              = 72,
+			DXGI_FORMAT_BC2_TYPELESS                = 73,
+			DXGI_FORMAT_BC2_UNORM                   = 74,
+			DXGI_FORMAT_BC2_UNORM_SRGB              = 75,
+			DXGI_FORMAT_BC3_TYPELESS                = 76,
+			DXGI_FORMAT_BC3_UNORM                   = 77,
+			DXGI_FORMAT_BC3_UNORM_SRGB              = 78,
+			DXGI_FORMAT_BC4_TYPELESS                = 79,
+			DXGI_FORMAT_BC4_UNORM                   = 80,
+			DXGI_FORMAT_BC4_SNORM                   = 81,
+			DXGI_FORMAT_BC5_TYPELESS                = 82,
+			DXGI_FORMAT_BC5_UNORM                   = 83,
+			DXGI_FORMAT_BC5_SNORM                   = 84,
+			DXGI_FORMAT_B5G6R5_UNORM                = 85,
+			DXGI_FORMAT_B5G5R5A1_UNORM              = 86,
+			DXGI_FORMAT_B8G8R8A8_UNORM              = 87,
+			DXGI_FORMAT_B8G8R8X8_UNORM              = 88,
+			DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM  = 89,
+			DXGI_FORMAT_B8G8R8A8_TYPELESS           = 90,
+			DXGI_FORMAT_B8G8R8A8_UNORM_SRGB         = 91,
+			DXGI_FORMAT_B8G8R8X8_TYPELESS           = 92,
+			DXGI_FORMAT_B8G8R8X8_UNORM_SRGB         = 93,
+			DXGI_FORMAT_BC6H_TYPELESS               = 94,
+			DXGI_FORMAT_BC6H_UF16                   = 95,
+			DXGI_FORMAT_BC6H_SF16                   = 96,
+			DXGI_FORMAT_BC7_TYPELESS                = 97,
+			DXGI_FORMAT_BC7_UNORM                   = 98,
+			DXGI_FORMAT_BC7_UNORM_SRGB              = 99,
+			DXGI_FORMAT_AYUV                        = 100,
+			DXGI_FORMAT_Y410                        = 101,
+			DXGI_FORMAT_Y416                        = 102,
+			DXGI_FORMAT_NV12                        = 103,
+			DXGI_FORMAT_P010                        = 104,
+			DXGI_FORMAT_P016                        = 105,
+			DXGI_FORMAT_420_OPAQUE                  = 106,
+			DXGI_FORMAT_YUY2                        = 107,
+			DXGI_FORMAT_Y210                        = 108,
+			DXGI_FORMAT_Y216                        = 109,
+			DXGI_FORMAT_NV11                        = 110,
+			DXGI_FORMAT_AI44                        = 111,
+			DXGI_FORMAT_IA44                        = 112,
+			DXGI_FORMAT_P8                          = 113,
+			DXGI_FORMAT_A8P8                        = 114,
+			DXGI_FORMAT_B4G4R4A4_UNORM              = 115,
+			DXGI_FORMAT_FORCE_UINT                  = 0xffffffff
 		}
-		public enum EView3DLight
+		public enum ELight
 		{
 			Ambient,
 			Directional,
 			Point,
 			Spot
 		}
-		public enum EView3DGeom
-		{
-			EInvalid = 0,
-			EVertex  = 1 << 0,
-			ENormal  = 1 << 1,
-			EColour  = 1 << 2,
-			ETexture = 1 << 3,
-			EAll     =(1 << 4) - 1,
-			EVN      = EVertex | ENormal,
-			EVC      = EVertex           | EColour,
-			EVT      = EVertex                     | ETexture,
-			EVNC     = EVertex | ENormal | EColour,
-			EVNT     = EVertex | ENormal           | ETexture,
-			EVCT     = EVertex           | EColour | ETexture,
-			EVNCT    = EVertex | ENormal | EColour | ETexture,
-		}
-		public enum ERenderMode
+		public enum EFillMode
 		{
 			Solid,
 			Wireframe,
@@ -144,18 +182,19 @@ namespace pr.gui
 			Right  = 1 << 1,
 			Middle = 1 << 2
 		}
+		#endregion
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct Vertex
+		public struct VertPCNT
 		{
-			public v4   m_vert;
-			public v4   m_norm;
+			public v4   m_pos;
 			public uint m_col;
-			public v2   m_tex;
-			public Vertex(v4 vert)                            { m_vert = vert; m_norm = v4.Zero; m_col = 0; m_tex = v2.Zero; }
-			public Vertex(v4 vert, uint col)                  { m_vert = vert; m_norm = v4.Zero; m_col = col; m_tex = v2.Zero; }
-			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_vert = vert; m_norm = norm; m_col = col; m_tex = tex; }
-			public override string ToString()                 { return "V:<" + m_vert + "> C:<" + m_col.ToString("X8") + ">"; }
+			public v4   m_norm;
+			public v2   m_uv;
+			public VertPCNT(v4 vert)                            { m_pos = vert; m_col = 0;   m_norm = v4.Zero; m_uv = v2.Zero; }
+			public VertPCNT(v4 vert, uint col)                  { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; }
+			public VertPCNT(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm;    m_uv = tex;     }
+			public override string ToString()                   { return "V:<{0}> C:<{1}>".Fmt(m_pos, m_col.ToString("X8")); }
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -165,20 +204,19 @@ namespace pr.gui
 			public uint    m_height;
 			public uint    m_depth;
 			public uint    m_mips;
-			public EFormat m_format; //D3DFORMAT
+			public EFormat m_format; //DXGI_FORMAT
 			public uint    m_image_file_format;//D3DXIMAGE_FILEFORMAT
 			public float   m_aspect { get {return (float)m_width / m_height;} }
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct Material
+		public struct DrawMethod
 		{
-			public ushort m_geom_type; // see EView3DGeom
+			public EGeom m_geom;
 			public IntPtr m_diff_tex;
 			public IntPtr m_env_map;
 		}
-	
-		// Exception
+
 		public class Exception : System.Exception
 		{
 			public EResult m_code = EResult.Success;
@@ -186,7 +224,7 @@ namespace pr.gui
 			public Exception(EResult code) :this("", code) {}
 			public Exception(string message) :this(message, EResult.Success) {}
 			public Exception(string message, EResult code) :base(message) { m_code = code; }
-		};
+		}
 
 		public delegate void ReportErrorCB(string msg);
 		public delegate void SettingsChangedCB();
@@ -195,104 +233,13 @@ namespace pr.gui
 		public delegate void EditObjectCB(
 			int vcount,
 			int icount,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] VertPCNT[] verts,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
 			ref int new_vcount,
 			ref int new_icount,
-			ref EPrimType prim_type,
-			ref Material mat,
+			ref EPrim prim_type,
+			ref DrawMethod mat,
 			IntPtr ctx);
-
-		// Initialise/shutdown the dll
-		[DllImport(View3Ddll)] private static extern EResult           View3D_Initialise(HWND hwnd, uint d3dcreate_flags, ReportErrorCB error_cb, SettingsChangedCB settings_changed_cb);
-		[DllImport(View3Ddll)] private static extern void              View3D_Shutdown();
-		
-		// Draw sets
-		[DllImport(View3Ddll)] private static extern IntPtr            View3D_GetSettings              (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetSettings              (HDrawset drawset, string settings);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetAddObjectsById    (HDrawset drawset, int context_id);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveObjectsById (HDrawset drawset, int context_id);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_DrawsetCreate            (out HDrawset handle);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetDelete            (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetAddObject         (HDrawset drawset, HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveObject      (HDrawset drawset, HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveAllObjects  (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern int               View3D_DrawsetObjectCount       (HDrawset drawset);
-
-		// Camera
-		[DllImport(View3Ddll)] private static extern void              View3D_CameraToWorld            (HDrawset drawset, out m4x4 c2w);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraToWorld         (HDrawset drawset, ref m4x4 c2w);
-		[DllImport(View3Ddll)] private static extern void              View3D_PositionCamera           (HDrawset drawset, ref v4 position, ref v4 lookat, ref v4 up);
-		[DllImport(View3Ddll)] private static extern float             View3D_FocusDistance            (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusDistance         (HDrawset drawset, float dist);
-		[DllImport(View3Ddll)] private static extern float             View3D_CameraAspect             (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraAspect          (HDrawset drawset, float aspect);
-		[DllImport(View3Ddll)] private static extern float             View3D_CameraFovX               (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraFovX            (HDrawset drawset, float fovX);
-		[DllImport(View3Ddll)] private static extern float             View3D_CameraFovY               (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraFovY            (HDrawset drawset, float fovY);
-		[DllImport(View3Ddll)] private static extern void              View3D_Navigate                 (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
-		[DllImport(View3Ddll)] private static extern void              View3D_NavigateZ                (HDrawset drawset, float delta);
-		[DllImport(View3Ddll)] private static extern void              View3D_ResetZoom                (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_CameraAlignAxis          (HDrawset drawset, out v4 axis);
-		[DllImport(View3Ddll)] private static extern void              View3D_AlignCamera              (HDrawset drawset, ref v4 axis);
-		[DllImport(View3Ddll)] private static extern void              View3D_ResetView                (HDrawset drawset, ref v4 forward, ref v4 up);
-		[DllImport(View3Ddll)] private static extern void              View3D_GetFocusPoint            (HDrawset drawset, out v4 position);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusPoint            (HDrawset drawset, ref v4 position);
-		[DllImport(View3Ddll)] private static extern void              View3D_WSRayFromScreenPoint     (HDrawset drawset, ref v2 screen, out v4 ws_point, out v4 ws_direction);
-
-		// Lights
-		[DllImport(View3Ddll)] private static extern View3DLight       View3D_LightProperties          (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref View3DLight light);
-		[DllImport(View3Ddll)] private static extern void              View3D_LightSource              (HDrawset drawset, ref v4 position, ref v4 direction, bool camera_relative);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowLightingDlg          (HDrawset drawset, HWND parent);
-	
-		// Objects
-		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id, out HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectDelete             (HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
-		[DllImport(View3Ddll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex);
-		[DllImport(View3Ddll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
-
-		// Materials
-		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureCreate            (IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format, out HTexture tex);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureCreateFromFile    (string tex_filepath, uint width, uint height, uint mips, uint filter, uint mip_filter, uint colour_key, out HTexture tex);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureLoadSurface       (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, uint filter, uint colour_key);
-		[DllImport(View3Ddll)] private static extern void              View3D_TextureDelete            (HTexture tex);
-		[DllImport(View3Ddll)] private static extern void              View3D_TextureGetInfo           (HTexture tex, out ImageInfo info);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureGetInfoFromFile   (string tex_filepath, out ImageInfo info);
-
-		// Rendering
-		[DllImport(View3Ddll)] private static extern void              View3D_Resize                   (int width, int height);
-		[DllImport(View3Ddll)] private static extern void              View3D_Render                   (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern ERenderMode       View3D_RenderMode               (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetOrthographic          (HDrawset drawset, bool render2d);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetRenderMode            (HDrawset drawset, ERenderMode mode);
-		[DllImport(View3Ddll)] private static extern int               View3D_BackGroundColour         (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetBackgroundColour      (HDrawset drawset, int aarrggbb);
-
-		// Tools
-		[DllImport(View3Ddll)] private static extern bool              View3D_MeasureToolVisible       ();
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowMeasureTool          (HDrawset drawset, bool show);
-		[DllImport(View3Ddll)] private static extern bool              View3D_AngleToolVisible         ();
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowAngleTool            (HDrawset drawset, bool show);
-
-		// Miscellaneous
-		[DllImport(View3Ddll)] private static extern void              View3D_CreateDemoScene          (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowDemoScript           ();
-		[DllImport(View3Ddll)] private static extern bool              View3D_FocusPointVisible        (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowFocusPoint           (HDrawset drawset, bool show);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusPointSize        (HDrawset drawset, float size);
-		[DllImport(View3Ddll)] private static extern bool              View3D_OriginVisible            (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowOrigin               (HDrawset drawset, bool show);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetOriginSize            (HDrawset drawset, float size);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowObjectManager        (bool show);
 
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
 		public event ReportErrorCB OnError;
@@ -318,8 +265,8 @@ namespace pr.gui
 		//			ReloadScene();
 		//	};
 
-		public View3D() :this(null, 0) {}
-		public View3D(ReportErrorCB error_cb, ED3DCreateFlags d3dcreate_flags)
+		public View3D() :this(null) {}
+		public View3D(ReportErrorCB error_cb)
 		{
 			InitializeComponent();
 			if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
@@ -331,7 +278,7 @@ namespace pr.gui
 			
 			// Initialise the renderer
 			IntPtr hwnd = Handle;
-			EResult res = View3D_Initialise(hwnd, (uint)d3dcreate_flags, m_error_cb, m_settings_changed_cb);
+			EResult res = View3D_Initialise(hwnd, m_error_cb, m_settings_changed_cb);
 			if (res != EResult.Success) throw new Exception(res);
 			m_dll_found = true;
 
@@ -475,9 +422,9 @@ namespace pr.gui
 			case Keys.W:
 				if ((e.Modifiers & Keys.Control) != 0)
 				{
-					int mode = (int)View3D_RenderMode(Drawset) + 1;
-					int modes = Enum.GetValues(typeof(ERenderMode)).Length;
-					RenderMode = (ERenderMode)(mode % modes);
+					int mode = (int)View3D_FillMode(Drawset) + 1;
+					int modes = Enum.GetValues(typeof(EFillMode)).Length;
+					FillMode = (EFillMode)(mode % modes);
 					View3D_Render(m_drawset);
 				}break;
 			}
@@ -714,10 +661,10 @@ namespace pr.gui
 
 		/// <summary>Get/Set the render mode</summary>
 		[Browsable(false)]
-		public ERenderMode RenderMode
+		public EFillMode FillMode
 		{
-			get { return m_dll_found ? View3D_RenderMode(Drawset) : ERenderMode.Solid; }
-			set { if (m_dll_found) View3D_SetRenderMode(Drawset, value); }
+			get { return m_dll_found ? View3D_FillMode(Drawset) : EFillMode.Solid; }
+			set { if (m_dll_found) View3D_SetFillMode(Drawset, value); }
 		}
 
 		/// <summary>Show/Hide the object manager UI</summary>
@@ -957,9 +904,9 @@ namespace pr.gui
 				{// Solid/Wireframe/Solid+Wire
 					ToolStripComboBox option = new ToolStripComboBox();
 					rdr_menu.DropDownItems.Add(option);
-					option.Items.AddRange(Enum.GetNames(typeof(ERenderMode)));
-					option.SelectedIndex = (int)View3D_RenderMode(m_drawset);
-					option.SelectedIndexChanged += delegate { View3D_SetRenderMode(m_drawset, (ERenderMode)option.SelectedIndex); Refresh(); };
+					option.Items.AddRange(Enum.GetNames(typeof(EFillMode)));
+					option.SelectedIndex = (int)View3D_FillMode(m_drawset);
+					option.SelectedIndexChanged += delegate { View3D_SetFillMode(m_drawset, (EFillMode)option.SelectedIndex); Refresh(); };
 				}
 				{// Render2D
 					ToolStripMenuItem option = new ToolStripMenuItem{Text = View3D_Orthographic(m_drawset) ? "Perspective" : "Orthographic"};
@@ -1200,7 +1147,7 @@ namespace pr.gui
 		[StructLayout(LayoutKind.Sequential)]
 		public struct View3DLight
 		{
-			public EView3DLight m_type;
+			public ELight       m_type;
 			public bool         m_on;
 			public v4           m_position;
 			public v4           m_direction;
@@ -1219,7 +1166,7 @@ namespace pr.gui
 			{
 				return new View3DLight
 				{
-					m_type           = EView3DLight.Directional,
+					m_type           = ELight.Directional,
 					m_on             = true,
 					m_position       = v4.Origin,
 					m_direction      = direction,
@@ -1231,5 +1178,100 @@ namespace pr.gui
 				};
 			}
 		}
+
+		#region DLL extern functions
+		// Initialise/shutdown the dll
+		private const string View3Ddll = "view3d.dll";
+		[DllImport(View3Ddll, CallingConvention = CallingConvention.StdCall)] private static extern int               View3D_Initialise2();
+		[DllImport(View3Ddll)] private static extern EResult           View3D_Initialise(HWND hwnd, ReportErrorCB error_cb, SettingsChangedCB settings_changed_cb);
+		[DllImport(View3Ddll)] private static extern void              View3D_Shutdown();
+		
+		// Draw sets
+		[DllImport(View3Ddll)] private static extern IntPtr            View3D_GetSettings              (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetSettings              (HDrawset drawset, string settings);
+		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetAddObjectsById    (HDrawset drawset, int context_id);
+		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveObjectsById (HDrawset drawset, int context_id);
+		[DllImport(View3Ddll)] private static extern EResult           View3D_DrawsetCreate            (out HDrawset handle);
+		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetDelete            (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetAddObject         (HDrawset drawset, HObject obj);
+		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveObject      (HDrawset drawset, HObject obj);
+		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveAllObjects  (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern int               View3D_DrawsetObjectCount       (HDrawset drawset);
+
+		// Camera
+		[DllImport(View3Ddll)] private static extern void              View3D_CameraToWorld            (HDrawset drawset, out m4x4 c2w);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraToWorld         (HDrawset drawset, ref m4x4 c2w);
+		[DllImport(View3Ddll)] private static extern void              View3D_PositionCamera           (HDrawset drawset, ref v4 position, ref v4 lookat, ref v4 up);
+		[DllImport(View3Ddll)] private static extern float             View3D_FocusDistance            (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusDistance         (HDrawset drawset, float dist);
+		[DllImport(View3Ddll)] private static extern float             View3D_CameraAspect             (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraAspect          (HDrawset drawset, float aspect);
+		[DllImport(View3Ddll)] private static extern float             View3D_CameraFovX               (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraFovX            (HDrawset drawset, float fovX);
+		[DllImport(View3Ddll)] private static extern float             View3D_CameraFovY               (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraFovY            (HDrawset drawset, float fovY);
+		[DllImport(View3Ddll)] private static extern void              View3D_Navigate                 (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
+		[DllImport(View3Ddll)] private static extern void              View3D_NavigateZ                (HDrawset drawset, float delta);
+		[DllImport(View3Ddll)] private static extern void              View3D_ResetZoom                (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_CameraAlignAxis          (HDrawset drawset, out v4 axis);
+		[DllImport(View3Ddll)] private static extern void              View3D_AlignCamera              (HDrawset drawset, ref v4 axis);
+		[DllImport(View3Ddll)] private static extern void              View3D_ResetView                (HDrawset drawset, ref v4 forward, ref v4 up);
+		[DllImport(View3Ddll)] private static extern void              View3D_GetFocusPoint            (HDrawset drawset, out v4 position);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusPoint            (HDrawset drawset, ref v4 position);
+		[DllImport(View3Ddll)] private static extern void              View3D_WSRayFromScreenPoint     (HDrawset drawset, ref v2 screen, out v4 ws_point, out v4 ws_direction);
+
+		// Lights
+		[DllImport(View3Ddll)] private static extern View3DLight       View3D_LightProperties          (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref View3DLight light);
+		[DllImport(View3Ddll)] private static extern void              View3D_LightSource              (HDrawset drawset, ref v4 position, ref v4 direction, bool camera_relative);
+		[DllImport(View3Ddll)] private static extern void              View3D_ShowLightingDlg          (HDrawset drawset, HWND parent);
+	
+		// Objects
+		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
+		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);
+		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id, out HObject obj);
+		[DllImport(View3Ddll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
+		[DllImport(View3Ddll)] private static extern void              View3D_ObjectDelete             (HObject obj);
+		[DllImport(View3Ddll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
+		[DllImport(View3Ddll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
+		[DllImport(View3Ddll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
+		[DllImport(View3Ddll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex);
+		[DllImport(View3Ddll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
+
+		// Materials
+		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureCreate            (IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format, out HTexture tex);
+		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureCreateFromFile    (string tex_filepath, uint width, uint height, uint mips, uint filter, uint mip_filter, uint colour_key, out HTexture tex);
+		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureLoadSurface       (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, uint filter, uint colour_key);
+		[DllImport(View3Ddll)] private static extern void              View3D_TextureDelete            (HTexture tex);
+		[DllImport(View3Ddll)] private static extern void              View3D_TextureGetInfo           (HTexture tex, out ImageInfo info);
+		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureGetInfoFromFile   (string tex_filepath, out ImageInfo info);
+
+		// Rendering
+		[DllImport(View3Ddll)] private static extern void              View3D_Resize                   (int width, int height);
+		[DllImport(View3Ddll)] private static extern void              View3D_Render                   (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern EFillMode         View3D_FillMode                 (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetOrthographic          (HDrawset drawset, bool render2d);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
+		[DllImport(View3Ddll)] private static extern int               View3D_BackGroundColour         (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetBackgroundColour      (HDrawset drawset, int aarrggbb);
+
+		// Tools
+		[DllImport(View3Ddll)] private static extern bool              View3D_MeasureToolVisible       ();
+		[DllImport(View3Ddll)] private static extern void              View3D_ShowMeasureTool          (HDrawset drawset, bool show);
+		[DllImport(View3Ddll)] private static extern bool              View3D_AngleToolVisible         ();
+		[DllImport(View3Ddll)] private static extern void              View3D_ShowAngleTool            (HDrawset drawset, bool show);
+
+		// Miscellaneous
+		[DllImport(View3Ddll)] private static extern void              View3D_CreateDemoScene          (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_ShowDemoScript           ();
+		[DllImport(View3Ddll)] private static extern bool              View3D_FocusPointVisible        (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_ShowFocusPoint           (HDrawset drawset, bool show);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusPointSize        (HDrawset drawset, float size);
+		[DllImport(View3Ddll)] private static extern bool              View3D_OriginVisible            (HDrawset drawset);
+		[DllImport(View3Ddll)] private static extern void              View3D_ShowOrigin               (HDrawset drawset, bool show);
+		[DllImport(View3Ddll)] private static extern void              View3D_SetOriginSize            (HDrawset drawset, float size);
+		[DllImport(View3Ddll)] private static extern void              View3D_ShowObjectManager        (bool show);
+		#endregion
 	}
 }

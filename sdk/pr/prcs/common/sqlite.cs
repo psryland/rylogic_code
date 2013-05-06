@@ -4068,9 +4068,10 @@ namespace pr
 				OneTimeOnly_Done = true;
 
 				// Copy sqlite3.dll to test folder
-				var src_dir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\sqlite\lib\"));
-				var src_file = Regex.Replace(Environment.CurrentDirectory, @"(.*)\\(.*?)\\(.*?)$", "sqlite3.$2.$3.dll").Replace(@".x86.",@".win32.");
-				File.Copy(Path.Combine(src_dir, src_file), Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
+				var src_file = Environment.Is64BitProcess
+					? @"Q:\sdk\sqlite\lib\sqlite3.x64.debug.dll"
+					: @"Q:\sdk\sqlite\lib\sqlite3.x86.debug.dll";
+				File.Copy(src_file,  Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
 
 				// Register custom type bind/read methods
 				Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);

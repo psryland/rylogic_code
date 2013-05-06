@@ -4,10 +4,10 @@
     <TargetPlatform>x64</TargetPlatform>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>..\..\obj2012\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>..\..\obj2012\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup>
-    <IntDir>..\..\obj2012\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(OutDir)</IntDir>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">

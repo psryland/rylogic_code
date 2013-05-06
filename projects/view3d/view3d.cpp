@@ -800,16 +800,16 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 	//	switch (drawset->m_render_mode)
 	//	{
 	//	default:break;
-	//	case EView3DRenderMode::Solid:    Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_SOLID); break;
-	//	case EView3DRenderMode::Wireframe:Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME); break;
-	//	case EView3DRenderMode::SolidWire:Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_SOLID); break;
+	//	case EView3DFillMode::Solid:    Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_SOLID); break;
+	//	case EView3DFillMode::Wireframe:Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME); break;
+	//	case EView3DFillMode::SolidWire:Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_SOLID); break;
 	//	}
 
 	//	// Render the viewport
 	//	Rdr().m_viewport.Render();
 
 	//	// Render wireframe over the top of the solid
-	//	if (drawset->m_render_mode == EView3DRenderMode::SolidWire)
+	//	if (drawset->m_render_mode == EView3DFillMode::SolidWire)
 	//	{
 	//		pr::rdr::rs::Block rsb_override;
 	//		rsb_override.SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
@@ -823,16 +823,16 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 	//}
 }
 
-// Get/Set the render mode for a drawset
-VIEW3D_API EView3DRenderMode::Type __stdcall View3D_RenderMode(View3DDrawset drawset)
+// Get/Set the fill mode for a drawset
+VIEW3D_API EView3DFillMode::Type __stdcall View3D_FillMode(View3DDrawset drawset)
 {
 	PR_ASSERT(PR_DBG, drawset != 0, "");
-	return drawset->m_render_mode;
+	return drawset->m_fill_mode;
 }
-VIEW3D_API void __stdcall View3D_SetRenderMode(View3DDrawset drawset, EView3DRenderMode::Type mode)
+VIEW3D_API void __stdcall View3D_SetFillMode(View3DDrawset drawset, EView3DFillMode::Type mode)
 {
 	PR_ASSERT(PR_DBG, drawset != 0, "");
-	drawset->m_render_mode = mode;
+	drawset->m_fill_mode = mode;
 }
 
 // Selected between perspective and orthographic projection

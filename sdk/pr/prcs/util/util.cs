@@ -18,6 +18,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
 using pr.maths;
+using pr.extn;
 
 namespace pr.util
 {
@@ -500,6 +501,69 @@ namespace pr.util
 			var fmt = "{0:N" + dp + "}{1}" + (si ? "B" : "iB");
 			return string.Format(fmt, bytes / Math.Pow(unit, exp), prefix);
 		}
+
+		/// <summary>
+		/// A helper for copying lib files to the current output directory
+		/// 'src_filepath' is the source lib name with {platform} and {config} optional substitution tags
+		/// 'dst_filepath' is the output lib name with {platform} and {config} optional substitution tags
+		/// If 'dst_filepath' already exists then it is overridden if 'overwrite' is true, otherwise 'DestExists' is returned
+		/// 'src_filepath' can be a relative path, if so, the search order is: local directory, Q:\sdk\pr\lib
+		/// </summary>
+		public static ELibCopyResult LibCopy(string src_filepath, string dst_filepath, bool overwrite)
+		{
+			// Do text substitutions
+			src_filepath = src_filepath.Replace("{platform}", Environment.Is64BitProcess ? "x64" : "x86");
+			dst_filepath = dst_filepath.Replace("{platform}", Environment.Is64BitProcess ? "x64" : "x86");
+
+			#if DEBUG
+			const string config = "debug";
+			#else
+			const string config = "release";
+			#endif
+			src_filepath = src_filepath.Replace("{config}", config);
+			dst_filepath = dst_filepath.Replace("{config}", config);
+
+			// Check if 'dst_filepath' already exists
+			dst_filepath = Path.GetFullPath(dst_filepath);
+			if (!overwrite && File.Exists(dst_filepath))
+			{
+				Log.Info(null, "LibCopy: Not copying {0} as {1} already exists".Fmt(src_filepath, dst_filepath));
+				return ELibCopyResult.DestExists;
+			}
+
+			// Get the full path for 'src_filepath'
+			for (;!Path.IsPathRooted(src_filepath);)
+			{
+				// If 'src_filepath' exists in the local directory
+				var full = Path.GetFullPath(src_filepath);
+				if (File.Exists(full))
+				{
+					src_filepath = full;
+					break;
+				}
+
+				// Get the pr libs directory
+				var pr_root = Environment.GetEnvironmentVariable("pr_root");
+				if (!pr_root.HasValue()) pr_root = @"q:";
+
+				full = Path.Combine(pr_root+@"\sdk\pr\lib", src_filepath);
+				if (File.Exists(full))
+				{
+					src_filepath = full;
+					break;
+				}
+
+				// Can't find 'src_filepath'
+				Log.Info(null, "LibCopy: Not copying {0}, file not found".Fmt(src_filepath, dst_filepath));
+				return ELibCopyResult.SrcNotFound;
+			}
+
+			// Copy the file
+			Log.Info(null, "LibCopy: {0} -> {1}".Fmt(src_filepath, dst_filepath));
+			File.Copy(src_filepath, dst_filepath, true);
+			return ELibCopyResult.Success;
+		}
+		public enum ELibCopyResult { Success, DestExists, SrcNotFound }
 	}
 	
 	/// <summary>Type specific utility methods</summary>
