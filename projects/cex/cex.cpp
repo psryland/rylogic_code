@@ -20,6 +20,8 @@
 #include "pr/common/hresult.h"
 #include "pr/common/windows_com.h"
 #include "pr/common/clipboard.h"
+#include "pr/common/hash.h"
+#include "pr/common/guid.h"
 #include "pr/str/prstring.h"
 #include "pr/str/tostring.h"
 #include "pr/threads/process.h"
@@ -33,6 +35,8 @@
 #import "libid:80cc9f66-e7d8-4ddd-85b6-d9e6cd0e93e2" version("8.0") lcid("0") raw_interfaces_only named_guids
 #pragma warning(default : 4146)
 #pragma warning(default : 4278)
+
+#pragma comment(lib, "Rpcrt4.lib")
 
 using namespace pr;
 using namespace pr::cmdline;
@@ -217,6 +221,7 @@ namespace cex
 		}
 		int Run()
 		{
+			using namespace ATL;
 			HRESULT result;
 			CLSID clsid;
 			for (;;)
@@ -258,7 +263,7 @@ namespace cex
 			
 				return 0;
 			}
-			std::cerr << "Failed to open file in VS.\nReason: " << pr::ToString(result) << "\n";
+			std::cerr << "Failed to open file in VS.\nReason: " << pr::To<std::string>(result) << "\n";
 			return -1;
 		}
 	};
@@ -497,6 +502,190 @@ namespace cex
 			return pr::SetClipBoardText(GetConsoleWindow(), m_text) ? 0 : -1;
 		}
 	};
+	// Hash ****************************************************************************
+	struct Hash :ICex
+	{
+		std::string m_text;
+		Hash() {}
+		void ShowHelp() const
+		{
+			std::cout <<
+				"Hash the given stdin data\n"
+				" Syntax: Cex -hash data_to_hash...\n"
+				;
+		}
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
+		{
+			if (str::EqualI(option, "-hash")) { return true; }
+			return ICex::CmdLineOption(option, arg, arg_end);
+		}
+		bool CmdLineData(TArgIter& arg, TArgIter arg_end)
+		{
+			m_text += *arg++;
+			return true;
+		}
+		int Run()
+		{
+			printf("%08X", pr::hash::HashC(m_text.c_str()));
+			return 0;
+		}
+	};
+	// Guid ****************************************************************************
+	struct Guid :ICex
+	{
+		Guid() {}
+		void ShowHelp() const
+		{
+			std::cout <<
+				"Generate a new GUID\n"
+				" Syntax: Cex -guid\n";
+		}
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
+		{
+			if (str::EqualI(option, "-guid")) { return true; }
+			return ICex::CmdLineOption(option, arg, arg_end);
+		}
+		bool CmdLineData(TArgIter& arg, TArgIter arg_end)
+		{
+			return ICex::CmdLineData(arg, arg_end);
+		}
+		int Run()
+		{
+			std::cout << pr::To<std::string>(pr::GenerateGUID());
+			return 0;
+		}
+	};
+	// HData ****************************************************************************
+	struct HData :ICex
+	{
+		std::string m_src;
+		std::string m_dst;
+		bool m_binary;
+		bool m_verbose;
+
+		HData()
+			:m_src()
+			,m_dst()
+			,m_binary(true)
+			,m_verbose(false)
+		{}
+		void ShowHelp() const
+		{
+			std::cout <<
+				"Convert a source file into a C/C++ compatible header file\n"
+				" Syntax: Cex -hdata -f src_file -o output_header_file [-t] [-v]\n"
+				"  -f   : the input file to be converted\n"
+				"  -o   : the output header file to generate\n"
+				"  -t   : output text data in the header (instead of binary data)\n"
+				"  -v   : verbose output\n";
+		}
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
+		{
+			if (str::EqualI(option, "-f") && arg != arg_end) { m_src = *arg++; return true; }
+			if (str::EqualI(option, "-o") && arg != arg_end) { m_dst = *arg++; return true; }
+			if (str::EqualI(option, "-t")) { m_binary = false; return true; }
+			if (str::EqualI(option, "-v")) { m_verbose = true; return true; }
+			return ICex::CmdLineOption(option, arg, arg_end);
+		}
+		bool CmdLineData(TArgIter& arg, TArgIter arg_end)
+		{
+			return ICex::CmdLineData(arg, arg_end);
+		}
+		int Run()
+		{
+			if (m_src.empty()) { printf("No source filepath provided\n"); return -1; }
+			if (m_dst.empty()) { printf("No output filepath provided\n"); return -1; }
+
+			// Open the source file
+			pr::Handle in_file = pr::FileOpen(m_src.c_str(), EFileOpen::Reading);
+			if (in_file == INVALID_HANDLE_VALUE) { printf("Failed to open the source file: '%s'\n", m_src.c_str()); return -1; }
+
+			// Open the output file
+			pr::Handle out_file = pr::FileOpen(m_dst.c_str(), EFileOpen::Writing);
+			if (out_file == INVALID_HANDLE_VALUE) { printf("Failed to open the output file: '%s'\n", m_dst.c_str()); return -1; }
+
+			if (m_binary)
+			{
+				WriteBinary(in_file, out_file);
+				if (m_verbose) printf("Output binary header data: '%s'\n", m_dst.c_str());
+			}
+			else
+			{
+				WriteText(in_file, out_file);
+				if (m_verbose) printf("Output text header data: '%s'\n", m_dst.c_str());
+			}
+			return 0;
+		}
+
+
+		// Write out binary header file data
+		void WriteBinary(pr::Handle& in_file, pr::Handle& out_file)
+		{
+			// Write the data
+			uint const BytesPerLine = 16;
+			unsigned char buffer[BytesPerLine + 1];
+			DWORD i, bytes_read;
+			do
+			{
+				std::string line;
+				pr::FileRead(in_file, buffer, BytesPerLine, &bytes_read);
+				for (i = 0; i != bytes_read; ++i)
+				{
+					line += Fmt("0x%2.2x, ", buffer[i]);
+					if ((i % 4) == 3) line += " ";
+					if ((i % 8) == 7) line += " ";
+
+					// Convert the buffer element to a character
+					if (!isalnum(buffer[i])) { buffer[i] = '.'; }
+				}
+				buffer[i] = 0;
+
+				// Add the comments
+				if (!line.empty()) line += Fmt("// %s\n", reinterpret_cast<char*>(buffer));
+
+				// Write the line
+				pr::FileWrite(out_file, line.c_str());
+			}
+			while (bytes_read == BytesPerLine);
+		}
+
+		// Write out text header file data
+		void WriteText(pr::Handle& in_file, pr::Handle& out_file)
+		{
+			uint const BlockReadSize = 4096;
+			char buffer[BlockReadSize];
+			DWORD bytes_read;
+			do
+			{
+				std::string line = "\"";
+				pr::FileRead(in_file, buffer, BlockReadSize, &bytes_read);
+				for (char *c = buffer, *c_end = buffer + bytes_read; c != c_end; ++c)
+				{
+					switch (*c)
+					{
+					default: line += *c;
+					case '\a': line += "\\a"; break;
+					case '\b': line += "\\b"; break;
+					case '\f': line += "\\f"; break;
+					case '\n': line += "\\n\"\n\""; break;
+					case '\r': line += "\\r"; break;
+					case '\t': line += "\\t"; break;
+					case '\v': line += "\\v"; break;
+					case '\\': line += "\\\\"; break;
+					case '\?': line += "\\?"; break;
+					case '\'': line += "\\'"; break;
+					case  '"': line += "\\\""; break;
+					}
+				}
+				line += "\"";
+
+				// Write the line
+				pr::FileWrite(out_file, line.c_str());
+			}
+			while (bytes_read == BlockReadSize);
+			pr::FileWrite(out_file, ";");
+		}
+	};
 	// NEW_COMMAND ****************************************************************************
 	struct NEW_COMMAND :ICex
 	{
@@ -560,6 +749,9 @@ public:
 			"    -shrename : Rename files using the explorer shell\n"
 			"    -shdelete : Delete filesusing the explorer shell\n"
 			"    -clip     : Clip text to the system clipboard\n"
+			"    -hash     : Generate a hash of the given text input\n"
+			"    -guid     : Generate a guid\n"
+			"    -hdata    : Convert a file to C/C++ header file data\n"
 			// NEW_COMMAND - add a help string
 			"\n"
 			"  Type Cex -command -help for help on a particular command\n"
@@ -669,6 +861,8 @@ public:
 			if (str::EqualI(option, "-shrename" )) { m_command = new cex::ShFileOp; break; }
 			if (str::EqualI(option, "-shdelete" )) { m_command = new cex::ShFileOp; break; }
 			if (str::EqualI(option, "-clip"     )) { m_command = new cex::Clip;     break; }
+			if (str::EqualI(option, "-hash"     )) { m_command = new cex::Hash;     break; }
+			if (str::EqualI(option, "-guid"     )) { m_command = new cex::Guid;     break; }
 			// NEW_COMMAND - handle the command
 			return ICex::CmdLineOption(option, arg, arg_end);
 		}
