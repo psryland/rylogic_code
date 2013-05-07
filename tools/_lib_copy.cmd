@@ -25,9 +25,9 @@ call lower_case dstdir
 ::if [%platform%]==[x86] set platform=win32
 
 if not exist "%dstdir%\" mkdir "%dstdir%\"
-call copy "%srcdir%\%file%.%platform%.%config%.%extn%" "%dstdir%\%file%.%extn%" /Y /F   
+call copy "%srcdir%\%file%.%platform%.%config%.%extn%" "%dstdir%\%file%.%extn%"
 if exist "%srcdir%\%file%.%platform%.%config%.pdb" (
-	call copy "%srcdir%\%file%.%platform%.%config%.pdb" "%dstdir%\%file%.pdb" /Y /F  
+	call copy "%srcdir%\%file%.%platform%.%config%.pdb" "%dstdir%\%file%.pdb"
 )
 
 

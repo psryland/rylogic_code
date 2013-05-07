@@ -62,17 +62,17 @@ goto :eof
 	del "%symdir%\%rlvdir%\*.*" /Q
 	
 	echo Copying files to "%dstdir%\%rlvdir%"
-	call copy "%bindir%\rylogviewer.exe" "%dstdir%\%rlvdir%\" /Y /F
+	call copy "%bindir%\rylogviewer.exe" "%dstdir%\%rlvdir%\"
 	if errorlevel 1 goto :eof
-	call copy "%bindir%\rylogviewer.pdb" "%symdir%\%rlvdir%\" /Y /F
+	call copy "%bindir%\rylogviewer.pdb" "%symdir%\%rlvdir%\"
 	if errorlevel 1 goto :eof
-	call copy "%bindir%\pr.dll" "%dstdir%\%rlvdir%\" /Y /F
+	call copy "%bindir%\pr.dll" "%dstdir%\%rlvdir%\"
 	if errorlevel 1 goto :eof
-	call copy "%bindir%\pr.pdb" "%symdir%\%rlvdir%\" /Y /F
+	call copy "%bindir%\pr.pdb" "%symdir%\%rlvdir%\"
 	if errorlevel 1 goto :eof
-	call copy "%bindir%\lib\clrdump.dll" "%dstdir%\%rlvdir%\lib\" /Y /F
+	call copy "%bindir%\lib\clrdump.dll" "%dstdir%\%rlvdir%\lib\"
 	if errorlevel 1 goto :eof
-	call copy "%bindir%\lib\dbghelp.dll" "%dstdir%\%rlvdir%\lib\" /Y /F
+	call copy "%bindir%\lib\dbghelp.dll" "%dstdir%\%rlvdir%\lib\"
 	if errorlevel 1 goto :eof
 
 	echo Creating zip file

@@ -25,35 +25,31 @@ set dstdir=Q:\bin
 set srcdir=Q:\projects\Csex
 set symdir=Q:\local\symbols
 set bindir=%srcdir%\bin\release
+set dst=%dstdir%\csex
+set sym=%symdir%\csex
 
-::Export for each platform
-for %%p in (x86 x64) do (
-	echo.
-	set csexdir=csex.%%p
-	
-	::Ensure directories exist and are empty
-	if not exist "!dstdir!\!csexdir!" mkdir "!dstdir!\!csexdir!"
-	del "!dstdir!\!csexdir!\*.*" /Q
-	if errorlevel 1 goto :error
-	if not exist "!symdir!\!csexdir!" mkdir "!symdir!\!csexdir!"
-	del "!symdir!\!csexdir!\*.*" /Q
-	if errorlevel 1 goto :error
-	
-	echo Copying files to "!dstdir!\!csexdir!"
-	call copy "!bindir!\csex.exe" "!dstdir!\!csexdir!\" /Y /F
-	if errorlevel 1 goto :error
-	call copy "!bindir!\csex.pdb" "!symdir!\!csexdir!\" /Y /F
-	if errorlevel 1 goto :error
-	call copy "!bindir!\pr.dll" "!dstdir!\!csexdir!\" /Y /F
-	if errorlevel 1 goto :error
-	call copy "!bindir!\pr.pdb" "!symdir!\!csexdir!\" /Y /F
-	if errorlevel 1 goto :error
-)
+::Ensure directories exist and are empty
+if not exist "!dst!" mkdir "!dst!"
+del "!dst!\*.*" /Q
+if errorlevel 1 goto :error
+if not exist "!sym!" mkdir "!sym!"
+del "!sym!\*.*" /Q
+if errorlevel 1 goto :error
+
+echo Copying files to "!dst!"
+call copy "!bindir!\csex.exe" "!dst!\csex.exe"
+if errorlevel 1 goto :error
+call copy "!bindir!\csex.pdb" "!sym!\csex.pdb"
+if errorlevel 1 goto :error
+call copy "!bindir!\pr.dll" "!dst!\pr.dll"
+if errorlevel 1 goto :error
+call copy "!bindir!\pr.pdb" "!sym!\pr.pdb"
+if errorlevel 1 goto :error
 
 echo.
 echo     Success.
 echo.
-ping -n 1 -w 5000 1.1.1.1 >nul
+call wait 5000
 goto :eof
 
 ::Error exit

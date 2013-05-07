@@ -57,5 +57,11 @@
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
+    <PostBuildEvent>
+      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Publishing binary...</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
 </Project>

@@ -13,7 +13,7 @@ if %RylogicEnvVersion% lss 1 (
 set srcdir=Q:\obj\clicket\win32\release
 set dstdir=Q:\bin
 
-call copy "%srcdir%\clicket.exe" "%dstdir%\clicket\"  /Y /F /D
+call copy "%srcdir%\clicket.exe" "%dstdir%\clicket\"
 
 echo Creating zip file
 "%zip%" a "%dstdir%\clicket.zip" "%dstdir%\clicket"

@@ -27,7 +27,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <OpenMPSupport>true</OpenMPSupport>
       <MinimalRebuild>true</MinimalRebuild>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
@@ -39,7 +39,7 @@
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
-	</ItemDefinitionGroup>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">
       <Value>$(TargetPlatform)</Value>

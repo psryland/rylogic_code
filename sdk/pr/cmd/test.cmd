@@ -120,10 +120,10 @@ echo %a%
 echo.
 
 echo Test: copy
-call copy test.cmd test_copy.cmd /Y /F /D
+call copy test.cmd test_copy.cmd
 if exist test_copy.cmd echo Copy succeeded
 if not exist test_copy.cmd echo Copy Failed
-call copy test.cmd test_copy.cmd /Y /F /D
+call copy test.cmd test_copy.cmd
 del test_copy.cmd
 echo.
 

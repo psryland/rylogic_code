@@ -1,6 +1,6 @@
 ::Post Build Event for exporting binary file to this local directory
 ::Use:
-::	_publish_bin $(TargetPath) $(PlatformName) $(ConfigurationName) [dstsubdir]
+::  _publish_bin $(TargetPath) $(PlatformTarget) $(ConfigurationName) [dstsubdir]
 
 @echo OFF
 SetLocal EnableDelayedExpansion 
@@ -9,7 +9,8 @@ set PATH=Q:\sdk\pr\cmd\;%PATH%
 set targetpath=%1
 set platform=%2
 set config=%3
-set dstdir=q:\bin\%4
+set dstsubdir=%4
+if [%platform%]==[win32] set platform=x86
 
 ::Load Rylogic environment variables and check version
 if [%RylogicEnv%]==[] (
@@ -30,29 +31,27 @@ call lower_case srcdir
 call lower_case file
 call lower_case extn
 
-::Ensure dstdir exists
-if not exist %dstdir% mkdir %dstdir%
+::Default to a subdir matching the target filename
+if [%dstsubdir%]==[] (
+	set dstsubdir=%file%
+)
 
-if [%platform%]==[win32] set platform=x86
+::Set the output directory and ensure it exists
+set dstdirroot=q:\bin
+set dstdir=%dstdirroot%\%dstsubdir%\%platform%
+if not exist "%dstdir%" mkdir "%dstdir%"
 
+::Only publish release builds
 if [%config%]==[release] (
 
 	::Copy the binary to the bin folder
-	call copy "%targetpath%" "%dstdir%\%file%.%platform%.%extn%"  /Y /F /D
+	call copy "%targetpath%" "%dstdir%\%file%.%extn%"
 
-	if [%arch%]==[%platform%] (
-		call copy "%dstdir%\%file%.%platform%.%extn%" "%dstdir%\%file%.%extn%"  /Y /F /D
+	:: If the system architecture matches this release, copy to the root dstdir
+	if [%platform%]==[%arch%] (
+		call copy "%dstdir%\%file%.%platform%.%extn%" "%dstdirroot%\%file%.%extn%"
 	)
 )
-REM if [%config%]==[debug] (
-
-	REM ::Copy the binary to the bin folder
-	REM call copy "%targetpath%" "%dstdir%\%file%.%platform%.%config%.%extn%"  /Y /F /D
-
-	REM ::If there's an associated pdb file copy that too
-	REM if exist "%srcdir%\%file%.pdb" (
-		REM call copy "%srcdir%\%file%.pdb" "%dstdir%\%file%.%platform%.%config%.pdb"  /Y /F /D
-REM )
 
 EndLocal
 

@@ -42,19 +42,19 @@ if [%platform%]==[x64] (
 )
 
 ::Copy the library file to the lib folder
-call copy "%targetpath%" "%dstdir%\%file%.%platform%.%config%.%extn%"  /Y /F /D
+call copy "%targetpath%" "%dstdir%\%file%.%platform%.%config%.%extn%"
 if errorlevel 1 goto :error
 
 ::If there's an associated pdb file copy that too
 if exist "%srcdir%\%file%.pdb" (
-	call copy "%srcdir%\%file%.pdb" "%dstdir%\%file%.%platform%.%config%.pdb"  /Y /F /D
+	call copy "%srcdir%\%file%.pdb" "%dstdir%\%file%.%platform%.%config%.pdb"
 	if errorlevel 1 goto :error
 )
 
 ::If the lib is a dll, look for an import library and copy that too, if it exists
 if [%extn%]==[dll] (
 	if exist "%srcdir%\%file%.lib" (
-		call copy "%srcdir%\%file%.lib" "%dstdir%\%file%.%platform%.%config%.lib" /Y /F /D
+		call copy "%srcdir%\%file%.lib" "%dstdir%\%file%.%platform%.%config%.lib"
 		if errorlevel 1 goto :error
 	)
 )
@@ -63,13 +63,10 @@ if [%extn%]==[dll] (
 ::q:\tools\objconv -fOMF%wordsize% "%dstdir%\%file%.%platform%.%config%.%extn%" "%dstdir%\%file%.%platform%.%config%.omf.%extn%"
 ::if errorlevel 1 goto :error
 
-goto :success
-
-:error
-echo.
-echo Failed.
-echo.
+:success
 goto :eof
 
-:success
-echo Succeeded.
+:error
+echo Failed to publish %targetpath%
+goto :eof
+

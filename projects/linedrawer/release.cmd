@@ -38,7 +38,7 @@ for %%p in (x86 x64) do (
 	if errorlevel 1 goto :error
 	
 	echo Copying linedrawer files to "!dstdir!\!ldrdir!"
-	call copy "!bindir!\linedrawer.exe" "!dstdir!\!ldrdir!\" /Y /F
+	call copy "!bindir!\linedrawer.exe" "!dstdir!\!ldrdir!\"
 	if errorlevel 1 goto :error
 
 	echo Creating zip file
