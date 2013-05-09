@@ -73,7 +73,7 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=0;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,9 +148,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\blend_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\depth_state.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\directxtex.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\Image.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture2d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model.h" />
@@ -179,7 +181,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\wrappers.h" />
     <ClInclude Include="..\renderer11\directxtex\BC.h" />
     <ClInclude Include="..\renderer11\directxtex\DDS.h" />
-    <ClInclude Include="..\renderer11\directxtex\DirectXTex.h" />
     <ClInclude Include="..\renderer11\directxtex\DirectXTexP.h" />
     <ClInclude Include="..\renderer11\directxtex\scoped.h" />
     <ClInclude Include="..\renderer11\render\stereo.h" />
@@ -233,7 +234,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\renderer11\directxtex\DirectXTex.inl" />
+    <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl" />
     <None Include="..\renderer11\shaders\common\cbuffer.hlsl" />
     <None Include="..\renderer11\shaders\common\functions.hlsl" />
     <None Include="..\renderer11\shaders\common\uber.hlsl" />

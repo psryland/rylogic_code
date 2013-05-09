@@ -6,10 +6,10 @@
 @echo OFF
 SetLocal EnableDelayedExpansion 
 
-set targetpath=%1
+set targetpath=%~1
 set platform=%2
 set config=%3
-set dstdir=%4
+set dstdir=%~4
 set wordsize=
 
 ::Load Rylogic environment variables and check version

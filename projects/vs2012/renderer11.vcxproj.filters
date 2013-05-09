@@ -183,9 +183,6 @@
     <ClInclude Include="..\renderer11\directxtex\DDS.h">
       <Filter>directxtex</Filter>
     </ClInclude>
-    <ClInclude Include="..\renderer11\directxtex\DirectXTex.h">
-      <Filter>directxtex</Filter>
-    </ClInclude>
     <ClInclude Include="..\renderer11\directxtex\DirectXTexP.h">
       <Filter>directxtex</Filter>
     </ClInclude>
@@ -196,6 +193,12 @@
       <Filter>textures</Filter>
     </ClInclude>
     <ClInclude Include="..\renderer11\textures\wic_texture_loader.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\directxtex.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\Image.h">
       <Filter>textures</Filter>
     </ClInclude>
   </ItemGroup>
@@ -325,7 +328,7 @@
     <None Include="..\renderer11\shaders\common\cbuffer.hlsl">
       <Filter>shaders\common</Filter>
     </None>
-    <None Include="..\renderer11\directxtex\DirectXTex.inl">
+    <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl">
       <Filter>directxtex</Filter>
     </None>
   </ItemGroup>

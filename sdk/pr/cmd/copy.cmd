@@ -7,7 +7,8 @@
 	setlocal
 	set src=%~f1
 	set dst=%~f2
+	echo 0 > "%dst%"
 	echo %src% -^> %dst%
-	xcopy "%src%" "%dst%" /Y /F /D >nul
+	xcopy "%src%" "%dst%" /Y /F >nul
 	endlocal
 goto :eof

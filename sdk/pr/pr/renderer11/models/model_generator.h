@@ -145,6 +145,10 @@ namespace pr
 				pr::geometry::BoxSize(1, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
+			static ModelPtr Box(Renderer& rdr, float rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
+			{
+				return Box(rdr, v4::make(rad), o2w, colour, mat);
+			}
 			static ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& rad, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, vb, ib); };

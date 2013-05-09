@@ -87,7 +87,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\pipe.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\pollingtoevent.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\predicate.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\prlink.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prlog.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\procttree.h" />
@@ -160,6 +159,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\geometryfunctions_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\irect.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\irect_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\isize.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\ivector2.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\ivector2_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\ivector4.h" />
@@ -199,6 +199,25 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector4.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector4_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector_rand.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedstorage.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedtype.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignmentof.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\and.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\constants.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\enableif.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\function_arity.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\if.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\isclass.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\ispod.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\ispointer.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\isprime.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\not.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\or.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\primegtreq.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\remove_pointer.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\squareroot.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\typelist.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\csv.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\xml.h" />
@@ -309,7 +328,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

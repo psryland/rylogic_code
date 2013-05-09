@@ -59,18 +59,6 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD ul_reason_for_call, LPVOID)
 #pragma managed(pop)
 #endif
 
-// Convert the public interface 'EModelType' into the renderers primitive type
-inline pr::rdr::EPrim ModelTypeToPrimType(EView3DPrim::Type type)
-{
-	switch (type)
-	{
-	default: PR_ASSERT(PR_DBG, false, ""); return pr::rdr::EPrim::PointList;
-	case EView3DPrim::PointList:           return pr::rdr::EPrim::PointList;
-	case EView3DPrim::LineList:            return pr::rdr::EPrim::LineList;
-	case EView3DPrim::TriangleList:        return pr::rdr::EPrim::TriList;
-	}
-}
-
 // Initialise the dll
 VIEW3D_API EView3DResult::Type __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb)
 {
@@ -87,7 +75,8 @@ VIEW3D_API EView3DResult::Type __stdcall View3D_Initialise(HWND hwnd, View3D_Rep
 	}
 	catch (std::exception const& e)
 	{
-		error_cb(pr::FmtS("Failed to initialise View3D.\nReason: %s\n", e.what()));
+		char const* msg = pr::FmtS("Failed to initialise View3D.\nReason: %s\n", e.what());
+		error_cb(msg);
 		return EView3DResult::Failed;
 	}
 	catch (...)
@@ -608,18 +597,17 @@ VIEW3D_API pr::BoundingBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
 // of the size appropriate for the given format. e.g. pr::uint px_data[width * height] for D3DFMT_A8R8G8B8
 // Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
-VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreate(void const* data, pr::uint data_size, pr::uint width, pr::uint height, pr::uint mips, pr::uint format, View3DTexture& tex)
+VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreate(size_t width, size_t height, DXGI_FORMAT format, void const* data, size_t data_size, size_t mips, View3DTexture& tex)
 {
 	try
 	{
-		(void)data_size;
-		pr::rdr::TextureDesc tdesc;
-		tdesc.Width = width;
-		tdesc.Height = height;
-		tdesc.MipLevels = mips;
-		tdesc.Format = static_cast<DXGI_FORMAT>(format);
+		pr::rdr::Image src = pr::rdr::Image::make(width, height, data, format);
+		if (src.m_pitch.x * src.m_pitch.y != data_size)
+			throw std::exception("Incorrect data size provided");
+		
+		pr::rdr::TextureDesc tdesc(src, mips);
 		pr::rdr::SamplerDesc sdesc;
-		pr::rdr::Texture2DPtr t = Rdr().m_renderer.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, tdesc, sdesc, data);
+		pr::rdr::Texture2DPtr t = Rdr().m_renderer.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, src, tdesc, sdesc);
 		tex = t.m_ptr; t.m_ptr = 0; // rely on the caller for correct reference counting
 		return EView3DResult::Success;
 	}

@@ -101,67 +101,67 @@ public:
 	}
 };
 	
-// Rendering options tab ********************************************************************************
-class COptionsRenderingTab
-	:public CDialogImpl<COptionsRenderingTab>
-	,public CWinDataExchange<COptionsRenderingTab>
-{
-	CComboBox m_combo_shader_version;
-	CComboBox m_combo_geometry_quality;
-	CComboBox m_combo_texture_quality;
-
-public:
-	pr::rdr::EShaderVersion::Type m_shader_version;
-	pr::rdr::EQuality::Type       m_geometry_quality;
-	pr::rdr::EQuality::Type       m_texture_quality;
-
-	enum { IDD = IDD_TAB_RENDERING };
-	BEGIN_MSG_MAP(COptionsRenderingTab)
-		MESSAGE_HANDLER(WM_INITDIALOG ,OnInitDialog)
-		MESSAGE_HANDLER(WM_DESTROY    ,OnDestroy)
-	END_MSG_MAP()
-	BEGIN_DDX_MAP(COptionsRenderingTab)
-		if (nCtlID == (UINT)-1 || nCtlID == IDC_COMBO_SHADER_VERSION)
-			if (bSaveAndValidate) m_shader_version = static_cast<pr::rdr::EShaderVersion::Type>(m_combo_shader_version.GetCurSel());
-			else                  m_combo_shader_version.SetCurSel(static_cast<int>(m_shader_version));
-		if (nCtlID == (UINT)-1 || nCtlID == IDC_COMBO_GEOMETRY_QUALITY)
-			if (bSaveAndValidate) m_geometry_quality = static_cast<pr::rdr::EQuality::Type>(m_combo_geometry_quality.GetCurSel());
-			else                  m_combo_geometry_quality.SetCurSel(static_cast<int>(m_geometry_quality));
-		if (nCtlID == (UINT)-1 || nCtlID == IDC_COMBO_TEXTURE_QUALITY)
-			if (bSaveAndValidate) m_texture_quality = static_cast<pr::rdr::EQuality::Type>(m_combo_texture_quality.GetCurSel());
-			else                  m_combo_texture_quality.SetCurSel(static_cast<int>(m_texture_quality));
-	END_DDX_MAP();
-
-	COptionsRenderingTab(UserSettings const& settings)
-	{
-		m_shader_version = settings.m_shader_version;
-		m_geometry_quality = settings.m_geometry_quality;
-		m_texture_quality = settings.m_texture_quality;
-	}
-
-	// Handler methods
-	LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
-	{
-		m_combo_shader_version.Attach(GetDlgItem(IDC_COMBO_SHADER_VERSION));
-		m_combo_geometry_quality.Attach(GetDlgItem(IDC_COMBO_GEOMETRY_QUALITY));
-		m_combo_texture_quality.Attach(GetDlgItem(IDC_COMBO_TEXTURE_QUALITY));
-		for (int i = 0; i != pr::rdr::EShaderVersion::NumberOf; ++i)
-			m_combo_shader_version.AddString(pr::rdr::EShaderVersion::ToString(static_cast<pr::rdr::EShaderVersion::Type>(i)));
-		for (int i = 0; i != pr::rdr::EQuality::NumberOf; ++i)
-			m_combo_geometry_quality.AddString(pr::rdr::EQuality::ToString(static_cast<pr::rdr::EQuality::Type>(i)));
-		for (int i = 0; i != pr::rdr::EQuality::NumberOf; ++i)
-			m_combo_texture_quality.AddString(pr::rdr::EQuality::ToString(static_cast<pr::rdr::EQuality::Type>(i)));
-
-		DoDataExchange(FALSE);
-		return S_OK;
-	}
-	LRESULT OnDestroy(UINT, WPARAM, LPARAM, BOOL&)
-	{
-		DoDataExchange(TRUE);
-		m_combo_shader_version.Detach();
-		return S_OK;
-	}
-};
+//// Rendering options tab ********************************************************************************
+//class COptionsRenderingTab
+//	:public CDialogImpl<COptionsRenderingTab>
+//	,public CWinDataExchange<COptionsRenderingTab>
+//{
+//	CComboBox m_combo_shader_version;
+//	CComboBox m_combo_geometry_quality;
+//	CComboBox m_combo_texture_quality;
+//
+//public:
+//	pr::rdr::EShaderVersion::Type m_shader_version;
+//	pr::rdr::EQuality::Type       m_geometry_quality;
+//	pr::rdr::EQuality::Type       m_texture_quality;
+//
+//	enum { IDD = IDD_TAB_RENDERING };
+//	BEGIN_MSG_MAP(COptionsRenderingTab)
+//		MESSAGE_HANDLER(WM_INITDIALOG ,OnInitDialog)
+//		MESSAGE_HANDLER(WM_DESTROY    ,OnDestroy)
+//	END_MSG_MAP()
+//	BEGIN_DDX_MAP(COptionsRenderingTab)
+//		if (nCtlID == (UINT)-1 || nCtlID == IDC_COMBO_SHADER_VERSION)
+//			if (bSaveAndValidate) m_shader_version = static_cast<pr::rdr::EShaderVersion::Type>(m_combo_shader_version.GetCurSel());
+//			else                  m_combo_shader_version.SetCurSel(static_cast<int>(m_shader_version));
+//		if (nCtlID == (UINT)-1 || nCtlID == IDC_COMBO_GEOMETRY_QUALITY)
+//			if (bSaveAndValidate) m_geometry_quality = static_cast<pr::rdr::EQuality::Type>(m_combo_geometry_quality.GetCurSel());
+//			else                  m_combo_geometry_quality.SetCurSel(static_cast<int>(m_geometry_quality));
+//		if (nCtlID == (UINT)-1 || nCtlID == IDC_COMBO_TEXTURE_QUALITY)
+//			if (bSaveAndValidate) m_texture_quality = static_cast<pr::rdr::EQuality::Type>(m_combo_texture_quality.GetCurSel());
+//			else                  m_combo_texture_quality.SetCurSel(static_cast<int>(m_texture_quality));
+//	END_DDX_MAP();
+//
+//	COptionsRenderingTab(UserSettings const& settings)
+//	{
+//		m_shader_version = settings.m_shader_version;
+//		m_geometry_quality = settings.m_geometry_quality;
+//		m_texture_quality = settings.m_texture_quality;
+//	}
+//
+//	// Handler methods
+//	LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+//	{
+//		m_combo_shader_version.Attach(GetDlgItem(IDC_COMBO_SHADER_VERSION));
+//		m_combo_geometry_quality.Attach(GetDlgItem(IDC_COMBO_GEOMETRY_QUALITY));
+//		m_combo_texture_quality.Attach(GetDlgItem(IDC_COMBO_TEXTURE_QUALITY));
+//		for (int i = 0; i != pr::rdr::EShaderVersion::NumberOf; ++i)
+//			m_combo_shader_version.AddString(pr::rdr::EShaderVersion::ToString(static_cast<pr::rdr::EShaderVersion::Type>(i)));
+//		for (int i = 0; i != pr::rdr::EQuality::NumberOf; ++i)
+//			m_combo_geometry_quality.AddString(pr::rdr::EQuality::ToString(static_cast<pr::rdr::EQuality::Type>(i)));
+//		for (int i = 0; i != pr::rdr::EQuality::NumberOf; ++i)
+//			m_combo_texture_quality.AddString(pr::rdr::EQuality::ToString(static_cast<pr::rdr::EQuality::Type>(i)));
+//
+//		DoDataExchange(FALSE);
+//		return S_OK;
+//	}
+//	LRESULT OnDestroy(UINT, WPARAM, LPARAM, BOOL&)
+//	{
+//		DoDataExchange(TRUE);
+//		m_combo_shader_version.Detach();
+//		return S_OK;
+//	}
+//};
 	
 // Rendering options tab ********************************************************************************
 class COptionsNavigationTab
@@ -225,7 +225,7 @@ class COptionsDlg
 
 public:
 	COptionsGeneralTab		m_tab_general;
-	COptionsRenderingTab	m_tab_rendering;
+	//COptionsRenderingTab	m_tab_rendering;
 	COptionsNavigationTab	m_tab_navigation;
 
 	enum { IDD = IDD_DIALOG_OPTIONS };
@@ -247,7 +247,7 @@ public:
 	:m_parent(parent)
 	,m_tab_main()
 	,m_tab_general(settings)
-	,m_tab_rendering(settings)
+	//,m_tab_rendering(settings)
 	,m_tab_navigation(settings)
 	{}
 	
@@ -260,10 +260,10 @@ public:
 		// Attach and initialise controls
 		m_tab_main.Attach(GetDlgItem(IDC_TAB_MAIN));
 		m_tab_general.Create(m_hWnd);
-		m_tab_rendering.Create(m_hWnd);
+		//m_tab_rendering.Create(m_hWnd);
 		m_tab_navigation.Create(m_hWnd);
 		m_tab_main.AddTab("General"    ,m_tab_general    ,TRUE  ,-1 ,(LPARAM)&m_tab_general);
-		m_tab_main.AddTab("Rendering"  ,m_tab_rendering  ,FALSE ,-1 ,(LPARAM)&m_tab_rendering);
+		//m_tab_main.AddTab("Rendering"  ,m_tab_rendering  ,FALSE ,-1 ,(LPARAM)&m_tab_rendering);
 		m_tab_main.AddTab("Navigation" ,m_tab_navigation ,FALSE ,-1 ,(LPARAM)&m_tab_navigation);
 		return S_OK;
 	}
@@ -289,9 +289,9 @@ public:
 		settings.m_focus_point_scale       = m_tab_general.m_focus_point_scale;
 		settings.m_msgbox_error_msgs       = m_tab_general.m_msgbox_error_msgs;
 		settings.m_ignore_missing_includes = m_tab_general.m_ignore_missing_includes;
-		settings.m_shader_version          = m_tab_rendering.m_shader_version;
-		settings.m_geometry_quality        = m_tab_rendering.m_geometry_quality;
-		settings.m_texture_quality         = m_tab_rendering.m_texture_quality;
+		//settings.m_shader_version          = m_tab_rendering.m_shader_version;
+		//settings.m_geometry_quality        = m_tab_rendering.m_geometry_quality;
+		//settings.m_texture_quality         = m_tab_rendering.m_texture_quality;
 		settings.m_camera_orbit_speed      = m_tab_navigation.m_camera_orbit_speed;
 	}
 };

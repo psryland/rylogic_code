@@ -13,10 +13,9 @@
 #endif
 
 #include <windows.h>
+#include <d3d11.h>
 #include "pr/maths/maths.h"
 #include "pr/common/colour.h"
-// Note: the dx headers are not included here and are not part of this interface
-// This allows the caller to use the renderer with referencing dx
 
 namespace EView3DResult
 {
@@ -39,13 +38,12 @@ namespace EView3DPrim
 {
 	enum Type
 	{
-		PointList     = 1,//D3DPT_POINTLIST,
-		LineList      = 2,//D3DPT_LINELIST,
-		LineStrip     = 3,//D3DPT_LINESTRIP,
-		TriangleList  = 4,//D3DPT_TRIANGLELIST,
-		TriangleStrip = 5,//D3DPT_TRIANGLESTRIP,
-		TriangleFan   = 6,//D3DPT_TRIANGLEFAN,
-		Invalid       = 0x7FFFFFFF,//D3DPT_FORCE_DWORD
+		Invalid   = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
+		PointList = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+		LineList  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+		LineStrip = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
+		TriList   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+		TriStrip  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
 	};
 }
 namespace EView3DLight
@@ -87,7 +85,7 @@ struct View3DImageInfo
 	pr::uint m_height;
 	pr::uint m_depth;
 	pr::uint m_mips;
-	pr::uint m_format; //D3DFORMAT
+	DXGI_FORMAT m_format;
 	pr::uint m_image_file_format;//D3DXIMAGE_FILEFORMAT
 };
 struct View3DLight
@@ -186,7 +184,7 @@ extern "C"
 	VIEW3D_API pr::BoundingBox         __stdcall View3D_ObjectBBoxMS             (View3DObject object);
 
 	// Materials
-	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureCreate            (void const* data, pr::uint data_size, pr::uint width, pr::uint height, pr::uint mips, pr::uint format, View3DTexture& tex);
+	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureCreate            (size_t width, size_t height, DXGI_FORMAT format, void const* data, size_t data_size, size_t mips, View3DTexture& tex);
 	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureCreateFromFile    (char const* tex_filepath, pr::uint width, pr::uint height, pr::uint mips, pr::uint filter, pr::uint mip_filter, pr::uint colour_key, View3DTexture& tex);
 	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureLoadSurface       (View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, pr::uint filter, pr::uint colour_key);
 	VIEW3D_API void                    __stdcall View3D_TextureDelete            (View3DTexture tex);

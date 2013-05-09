@@ -40,7 +40,7 @@ void NavManager::CameraAlign(pr::v4 const& up)
 {
 	m_camera.SetAlign(up);
 	if (m_camera.IsAligned()) m_reset_up = m_camera.m_align;
-	m_reset_forward = pr::Parallel(m_reset_up, pr::v4XAxis) ? pr::v4ZAxis      : pr::GetNormal3(pr::Cross3(pr::v4XAxis, m_reset_up));
+	m_reset_forward = pr::Parallel(m_reset_up, pr::v4XAxis) ? pr::v4ZAxis : pr::Normalise3(pr::Cross3(pr::v4XAxis, m_reset_up));
 }
 pr::v4 NavManager::CameraAlign() const
 {

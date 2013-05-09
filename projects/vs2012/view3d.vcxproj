@@ -83,7 +83,7 @@
       <MinimalRebuild>true</MinimalRebuild>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

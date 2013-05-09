@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/textures/texture_manager.h"
 #include "pr/renderer11/textures/texture2d.h"
+#include "pr/renderer11/textures/image.h"
 #include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/stock_resources.h"
@@ -39,19 +40,21 @@ void LoadTextureFromFile(D3DPtr<ID3D11Device>& device, wchar_t const* filepath, 
 	}
 }
 
-//GUID const TexInfoGUID = {0x506e436e, 0x5a4f, 0x4190, 0x98, 0x43, 0x99, 0x7a, 0x19, 0xa8, 0xd8, 0x69}; // {506E436E-5A4F-4190-9843-997A19A8D869}
-
 pr::rdr::TextureManager::TextureManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device)
 	:m_alex_tex2d(Allocator<Texture2D>(mem))
 	,m_device(device)
 	,m_lookup_tex(mem)
 	,m_lookup_fname(mem)
+	,m_stock_textures()
 {
-	// CreateStockTextures
+	CreateStockTextures();
 }
 pr::rdr::TextureManager::~TextureManager()
 {
-	// Release the ref added in CreateShader()
+	// Drop references to the stock textures
+	m_stock_textures.resize(0);
+
+	// Release the ref added in CreateTexture()
 	// When the textures delete themselves, they'll be removed from the lookup
 	while (!m_lookup_tex.empty())
 	{
@@ -63,18 +66,18 @@ pr::rdr::TextureManager::~TextureManager()
 
 // Create a new texture instance.
 // 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
-// 'tex_desc' is a description of the texture to be created
-// 'sam_desc' is an optional sampler description used to initialise the sampler state to use with this texture
-// 'data' is an optional pointer to the texture data with which to initialise the texture with
-Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::TextureDesc tex_desc, pr::rdr::SamplerDesc const& sam_desc, void const* data)
+// 'src' is the initialisation data
+// 'tdesc' is a description of the texture to be created
+// 'sdesc' is a description of the sampler to use
+Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc)
 {
 	// Check whether 'id' already exists, if so, throw.
-	if (id != AutoId && m_lookup_tex.find(id) == end(m_lookup_tex))
+	if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
 		throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 	// Allocate a new texture instance and d3d texture resource
-	SortKeyId sort_id = m_lookup_tex.size() % pr::rdr::sortkey::MaxTextureId;
-	Texture2DPtr inst = m_alex_tex2d.New(this, tex_desc, sam_desc, data, sort_id);
+	SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
+	Texture2DPtr inst = m_alex_tex2d.New(this, src, tdesc, sdesc, sort_id);
 	inst->m_id = AutoId ? MakeId(inst.m_ptr) : id;
 
 	// Add the texture instance to the lookup table
@@ -85,7 +88,7 @@ Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::Texture
 // Create a texture instance from a dds file.
 // 'filepath' can be a special string identifying a stock texture (e.g.  #black, #white, #checker, etc)
 // Throws if creation fails. On success returns a pointer to the created texture.
-Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::SamplerDesc const& sam_desc, wchar_t const* filepath)
+Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, wchar_t const* filepath)
 {
 	PR_ASSERT(PR_DBG_RDR, filepath != nullptr, "Filepath must be given");
 
@@ -124,7 +127,7 @@ Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::Sampler
 	}
 
 	// Allocate the texture instance
-	SortKeyId sort_id = m_lookup_tex.size() % pr::rdr::sortkey::MaxTextureId;
+	SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
 	Texture2DPtr inst = m_alex_tex2d.New(this, tex, srv, sam_desc, sort_id);
 	inst->m_id     = id == AutoId ? MakeId(inst.m_ptr) : id;
 	inst->m_src_id = texfile_id;
@@ -132,7 +135,7 @@ Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::Sampler
 	AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
 	return inst;
 }
-Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::SamplerDesc const& sam_desc, char const* filepath)
+Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, char const* filepath)
 {
 	return CreateTexture2D(id, sam_desc, pr::To<wstring256>(filepath).c_str());
 }
@@ -141,7 +144,7 @@ Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, pr::rdr::Sampler
 // 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 // 'existing' is an existing texture instance to clone
 // 'sam_desc' is an optional sampler state description to set on the clone.
-Texture2DPtr pr::rdr::TextureManager::CloneTexture2D(RdrId id, Texture2DPtr const& existing, pr::rdr::SamplerDesc const* sam_desc)
+Texture2DPtr pr::rdr::TextureManager::CloneTexture2D(RdrId id, Texture2DPtr const& existing, SamplerDesc const* sam_desc)
 {
 	// Check whether 'id' already exists, if so, throw.
 	if (id != AutoId && m_lookup_tex.find(id) == end(m_lookup_tex))
@@ -182,3 +185,33 @@ void pr::rdr::TextureManager::Delete(pr::rdr::Texture2D const* tex)
 	m_alex_tex2d.Delete(iter->second);
 	m_lookup_tex.erase(iter);
 }
+
+// Generates the stock textures
+void pr::rdr::TextureManager::CreateStockTextures()
+{
+	// Calling AddRef so that the textures are not destroyed immediately.
+	// This means the only reference to these textures is in the texture lookup map
+	{
+		pr::uint const data[] = {0};
+		Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+		TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
+		m_stock_textures.push_back(CreateTexture2D(EStockTexture::Black, src, tdesc, SamplerDesc::ClampSampler()));
+	}{
+		pr::uint const data[] = {0xFFFFFFFF};
+		Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+		TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
+		m_stock_textures.push_back(CreateTexture2D(EStockTexture::White, src, tdesc, SamplerDesc::ClampSampler()));
+	}{
+		pr::uint const data[] =
+		{
+			0xFFFFFFFF, 0, 0xFFFFFFFF, 0,
+			0, 0xFFFFFFFF, 0, 0xFFFFFFFF,
+			0xFFFFFFFF, 0, 0xFFFFFFFF, 0,
+			0, 0xFFFFFFFF, 0, 0xFFFFFFFF
+		};
+		Image src = Image::make(4, 4, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+		TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
+		m_stock_textures.push_back(CreateTexture2D(EStockTexture::Checker, src, tdesc, SamplerDesc::WrapSampler()));
+	}
+}
+

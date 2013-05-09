@@ -12,9 +12,6 @@
 #include "linedrawer/plugin/plugin_manager_dlg.h"
 #include "linedrawer/utility/misc.h"
 #include "linedrawer/utility/debug.h"
-#include "pr/renderer/lighting/lighting_dlg.h"
-#include "pr/network/web_get.h"
-#include "pr/storage/xml.h"
 
 namespace
 {

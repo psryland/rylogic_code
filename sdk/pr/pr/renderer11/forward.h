@@ -117,6 +117,7 @@ namespace pr
 		class  TextureManager;
 		struct TextureDesc;
 		struct Texture2D;
+		struct Image;
 		struct AllocPres;
 		//struct Video;
 		typedef pr::RefPtr<Texture2D> Texture2DPtr;

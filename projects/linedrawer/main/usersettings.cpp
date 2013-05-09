@@ -72,9 +72,9 @@ std::string UserSettings::Export() const
 
 	// Renderer
 	out << "\n";
-	out << "*ShaderVersion \"" << pr::rdr::EShaderVersion::ToString(m_shader_version) << "\"\n";
-	out << "*GeometryQuality " << m_geometry_quality << "\n";
-	out << "*TextureQuality " << m_texture_quality << "\n";
+	//out << "*ShaderVersion \"" << pr::rdr::EShaderVersion::ToString(m_shader_version) << "\"\n";
+	//out << "*GeometryQuality " << m_geometry_quality << "\n";
+	//out << "*TextureQuality " << m_texture_quality << "\n";
 	out << "*EnableResourceMonitor " << m_enable_resource_monitor << "\n";
 
 	// Light
@@ -151,24 +151,24 @@ bool UserSettings::Import(std::string settings)
 			case EUserSetting::CameraOrbitSpeed:      reader.ExtractReal(m_camera_orbit_speed);         break;
 
 			// Renderer
-			case EUserSetting::ShaderVersion:
-				{
-					std::string version;
-					reader.ExtractString(version);
-					m_shader_version = pr::rdr::EShaderVersion::Parse(version.c_str());
-				}break;
-			case EUserSetting::GeometryQuality:
-				{
-					int quality;
-					reader.ExtractInt(quality, 10);
-					m_geometry_quality = static_cast<pr::rdr::EQuality::Type>(pr::Clamp<int>(quality, pr::rdr::EQuality::Low, pr::rdr::EQuality::High));
-				}break;
-			case EUserSetting::TextureQuality:
-				{
-					int quality;
-					reader.ExtractInt(quality, 10);
-					m_texture_quality = static_cast<pr::rdr::EQuality::Type>(pr::Clamp<int>(quality, pr::rdr::EQuality::Low, pr::rdr::EQuality::High));
-				}break;
+			//case EUserSetting::ShaderVersion:
+			//	{
+			//		std::string version;
+			//		reader.ExtractString(version);
+			//		m_shader_version = pr::rdr::EShaderVersion::Parse(version.c_str());
+			//	}break;
+			//case EUserSetting::GeometryQuality:
+			//	{
+			//		int quality;
+			//		reader.ExtractInt(quality, 10);
+			//		m_geometry_quality = static_cast<pr::rdr::EQuality::Type>(pr::Clamp<int>(quality, pr::rdr::EQuality::Low, pr::rdr::EQuality::High));
+			//	}break;
+			//case EUserSetting::TextureQuality:
+			//	{
+			//		int quality;
+			//		reader.ExtractInt(quality, 10);
+			//		m_texture_quality = static_cast<pr::rdr::EQuality::Type>(pr::Clamp<int>(quality, pr::rdr::EQuality::Low, pr::rdr::EQuality::High));
+			//	}break;
 			case EUserSetting::EnableResourceMonitor:
 				{
 					reader.ExtractBool(m_enable_resource_monitor);

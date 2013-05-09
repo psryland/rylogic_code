@@ -6,10 +6,10 @@
 SetLocal EnableDelayedExpansion 
 set PATH=Q:\sdk\pr\cmd\;%PATH%
 
-set targetpath=%1
+set targetpath=%~1
 set platform=%2
 set config=%3
-set dstsubdir=%4
+set dstsubdir=%~4
 if [%platform%]==[win32] set platform=x86
 
 ::Load Rylogic environment variables and check version

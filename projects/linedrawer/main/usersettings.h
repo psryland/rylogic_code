@@ -27,9 +27,9 @@ LDR_SETTING(bool                          ,m_persist_object_state          ,Pers
 LDR_SETTING(pr::v4                        ,m_camera_align                  ,CameraAlignAxis              ,0x1e332604        ,pr::v4Zero)
 LDR_SETTING(bool                          ,m_camera_orbit                  ,CameraOrbit                  ,0x1d242e05        ,false)
 LDR_SETTING(float                         ,m_camera_orbit_speed            ,CameraOrbitSpeed             ,0x05a1619d        ,0.3f)
-LDR_SETTING(pr::rdr::EShaderVersion::Type ,m_shader_version                ,ShaderVersion                ,0x0588f82b        ,pr::rdr::EShaderVersion::v3_0)
-LDR_SETTING(pr::rdr::EQuality::Type       ,m_geometry_quality              ,GeometryQuality              ,0x1c0bba13        ,pr::rdr::EQuality::High)
-LDR_SETTING(pr::rdr::EQuality::Type       ,m_texture_quality               ,TextureQuality               ,0x17a72093        ,pr::rdr::EQuality::High)
+//LDR_SETTING(pr::rdr::EShaderVersion::Type ,m_shader_version                ,ShaderVersion                ,0x0588f82b        ,pr::rdr::EShaderVersion::v3_0)
+//LDR_SETTING(pr::rdr::EQuality::Type       ,m_geometry_quality              ,GeometryQuality              ,0x1c0bba13        ,pr::rdr::EQuality::High)
+//LDR_SETTING(pr::rdr::EQuality::Type       ,m_texture_quality               ,TextureQuality               ,0x17a72093        ,pr::rdr::EQuality::High)
 LDR_SETTING(bool                          ,m_enable_resource_monitor       ,EnableResourceMonitor        ,0x0924652f        ,false)
 LDR_SETTING(bool                          ,m_rendering_enabled             ,RenderingEnabled             ,0x12a0793e        ,true)
 LDR_SETTING(pr::Colour32                  ,m_background_colour             ,BackgroundColour             ,0x13f2d4d2        ,pr::Colour32::make(0xFF808080))
@@ -47,7 +47,6 @@ LDR_SETTING(std::string                   ,m_error_output_log_filename     ,Erro
 #ifndef LDR_USER_SETTINGS_H
 #define LDR_USER_SETTINGS_H
 
-#include "pr/renderer/renderer.h"
 #include "linedrawer/types/forward.h"
 
 // Generate an enum of the hash values

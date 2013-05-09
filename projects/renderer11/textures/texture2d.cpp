@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/textures/texture2d.h"
 #include "pr/renderer11/textures/texture_manager.h"
+#include "renderer11/directxtex/directxtex.h"
 
 using namespace pr::rdr;
 
@@ -22,7 +23,7 @@ pr::rdr::Texture2D::Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D>& tex,
 {
 	SamDesc(sam_desc);
 }
-pr::rdr::Texture2D::Texture2D(TextureManager* mgr, TextureDesc const& tex_desc, SamplerDesc const& sam_desc, void const* data, SortKeyId sort_id)
+pr::rdr::Texture2D::Texture2D(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc)
 	:m_t2s(pr::m4x4Identity)
 	,m_tex()
 	,m_srv()
@@ -34,8 +35,8 @@ pr::rdr::Texture2D::Texture2D(TextureManager* mgr, TextureDesc const& tex_desc, 
 	,m_mgr(mgr)
 	,m_name()
 {
-	TexDesc(tex_desc, data);
-	SamDesc(sam_desc);
+	TexDesc(src, tdesc, srvdesc);
+	SamDesc(sdesc);
 }
 pr::rdr::Texture2D::Texture2D(TextureManager* mgr, Texture2D const& existing, SortKeyId sort_id)
 	:m_t2s(existing.m_t2s)
@@ -50,26 +51,47 @@ pr::rdr::Texture2D::Texture2D(TextureManager* mgr, Texture2D const& existing, So
 	,m_name()
 {}
 
-// Get/Set the description of the current texture pointed to by 'm_tex'
-// Setting a new texture description, re-creates the texture and the srv
+// Get the description of the current texture pointed to by 'm_tex'
 TextureDesc pr::rdr::Texture2D::TexDesc() const
 {
 	TextureDesc desc;
 	if (m_tex != nullptr) m_tex->GetDesc(&desc);
 	return desc;
 }
-void pr::rdr::Texture2D::TexDesc(TextureDesc const& desc, void const* data)
-{
-	// Create the d3d resource
-	D3DPtr<ID3D11Texture2D> tex;
-	SubResourceData init_data(data, desc.Width, 0);
-	pr::Throw(m_mgr->m_device->CreateTexture2D(&desc,  &init_data, &tex.m_ptr));
 
-	// Create a shader resource view of the texture
+// Set a new texture description and re-create/reinitialise the texture and the srv.
+void pr::rdr::Texture2D::TexDesc(Image const& src, TextureDesc const& tdesc, ShaderResViewDesc const* srvdesc)
+{
+	D3DPtr<ID3D11Texture2D> tex;
 	D3DPtr<ID3D11ShaderResourceView> srv;
-	ShaderResViewDesc srv_desc(desc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
-	srv_desc.Texture2D.MipLevels = desc.MipLevels;
-	pr::Throw(m_mgr->m_device->CreateShaderResourceView(tex.m_ptr, &srv_desc, &srv.m_ptr));
+
+	// If initialisation data is provided, see if we need to generate mip maps
+	if (src.m_pixels != nullptr)
+	{
+		DirectX::Image img;
+		img.width      = src.m_dim.x;
+		img.height     = src.m_dim.y;
+		img.format     = src.m_format;
+		img.rowPitch   = src.m_pitch.x;
+		img.slicePitch = src.m_pitch.y;
+		img.pixels     = static_cast<uint8_t*>(const_cast<void*>(src.m_pixels));
+
+		DirectX::ScratchImage scratch;
+		if (tdesc.MipLevels != 1)
+			pr::Throw(DirectX::GenerateMipMaps(img, DirectX::TEX_FILTER_FANT, tdesc.MipLevels, scratch));
+		else
+			scratch.Initialize2D(img.format, img.width, img.height, tdesc.ArraySize, 1);
+
+		D3DPtr<ID3D11Resource> res;
+		pr::Throw(DirectX::CreateTexture(m_mgr->m_device.m_ptr, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &res.m_ptr));
+		pr::Throw(DirectX::CreateShaderResourceView(m_mgr->m_device.m_ptr, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &srv.m_ptr));
+		pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+	}
+	else
+	{
+		pr::Throw(m_mgr->m_device->CreateTexture2D(&tdesc, nullptr, &tex.m_ptr));
+		pr::Throw(m_mgr->m_device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
+	}
 
 	// Exception-safely save the pointers
 	m_tex = tex;

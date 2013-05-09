@@ -406,6 +406,6 @@ namespace DirectX
 	HRESULT CreateShaderResourceView( _In_ ID3D11Device* pDevice, _In_count_(nimages) const Image* srcImages, _In_ size_t nimages, _In_ const TexMetadata& metadata, _Deref_out_ ID3D11ShaderResourceView** ppSRV );
 	HRESULT CaptureTexture( _In_ ID3D11Device* pDevice, _In_ ID3D11DeviceContext* pContext, _In_ ID3D11Resource* pSource, _Out_ ScratchImage& result );
 
-#include "DirectXTex.inl"
+#include "directxtex.inl"
 
 }; // namespace

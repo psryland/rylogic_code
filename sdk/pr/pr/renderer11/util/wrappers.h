@@ -9,6 +9,7 @@
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/util.h"
+#include "pr/renderer11/textures/image.h"
 
 namespace pr
 {
@@ -139,27 +140,40 @@ namespace pr
 			{
 				InitDefaults();
 			}
-			TextureDesc(UINT pitch, UINT height, UINT mips = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
+			TextureDesc(size_t width, size_t height, size_t mips = 0U, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_USAGE usage = D3D11_USAGE_DEFAULT)
 				:D3D11_TEXTURE2D_DESC(TextureDesc())
 			{
 				InitDefaults();
-				Width          = pitch;
-				Height         = height;
-				MipLevels      = mips;
+				Width          = static_cast<UINT>(width);
+				Height         = static_cast<UINT>(height);
+				MipLevels      = static_cast<UINT>(mips); // 0 means use all mips down to 1x1
 				Format         = format;
+				Usage          = usage;
+			}
+			TextureDesc(Image const& src, size_t mips = 0U, D3D11_USAGE usage = D3D11_USAGE_DEFAULT)
+				:D3D11_TEXTURE2D_DESC(TextureDesc())
+			{
+				InitDefaults();
+				Width          = static_cast<UINT>(src.m_dim.x);
+				Height         = static_cast<UINT>(src.m_dim.y);
+				MipLevels      = static_cast<UINT>(mips); // 0 means use all mips down to 1x1
+				Format         = src.m_format;
+				Usage          = usage;
 			}
 			void InitDefaults()
 			{
-				Width          = 0;
-				Height         = 0;
-				MipLevels      = 1;
-				ArraySize      = 1;
+				// Notes about mips: if you use 'MipLevels' other than 1, you need to provide
+				// initialisation data for all of the generated mip levels as well
+				Width          = 0U;
+				Height         = 0U;
+				MipLevels      = 1U;
+				ArraySize      = 1U;
 				Format         = DXGI_FORMAT_R8G8B8A8_UNORM;
 				SampleDesc     = MultiSamp();
-				Usage          = D3D11_USAGE_DEFAULT;
-				BindFlags      = D3D11_BIND_UNORDERED_ACCESS;
-				CPUAccessFlags = 0;
-				MiscFlags      = 0;
+				Usage          = D3D11_USAGE_DEFAULT;// Other options: D3D11_USAGE_IMMUTABLE, D3D11_USAGE_DYNAMIC
+				BindFlags      = D3D11_BIND_SHADER_RESOURCE;
+				CPUAccessFlags = 0U;
+				MiscFlags      = 0U;
 			}
 		};
 
@@ -203,6 +217,9 @@ namespace pr
 		// Initialisation data
 		struct SubResourceData :D3D11_SUBRESOURCE_DATA
 		{
+			SubResourceData()
+				:D3D11_SUBRESOURCE_DATA()
+			{}
 			SubResourceData(void const* init_data, UINT pitch, UINT pitch_per_slice)
 				:D3D11_SUBRESOURCE_DATA()
 			{

@@ -37,10 +37,6 @@
 #include <atldlgs.h>
 #include <atlcrack.h>
 
-// d3d
-#include <d3d9.h>
-#include <d3dx9.h>
-
 // pr
 #include "pr/macros/count_of.h"
 #include "pr/common/assert.h"
@@ -56,13 +52,17 @@
 #include "pr/maths/maths.h"
 #include "pr/str/prstring.h"
 #include "pr/filesys/fileex.h"
+#include "pr/filesys/filesys.h"
 #include "pr/camera/camera.h"
 #include "pr/gui/menu_helper.h"
 #include "pr/gui/recent_files.h"
-#include "pr/renderer/renderer.h"
+#include "pr/renderer11/renderer.h"
+#include "pr/renderer11/lights/light_dlg.h"
 #include "pr/script/script_forward.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_forward.h"
+#include "pr/network/web_get.h"
+#include "pr/storage/xml.h"
 
 #define LDR_EXPORTS 1
 #include "pr/linedrawer/ldr_plugin_interface.h"

@@ -16,19 +16,16 @@
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
-#include "pr/renderer/renderer.h"
 
 class LineDrawer
 	:pr::cmdline::IOptionReceiver
 	,pr::events::IRecv<pr::ldr::Evt_SettingsChanged>
 	,pr::events::IRecv<pr::ldr::Evt_LdrObjectSelectionChanged>
-	,pr::events::IRecv<ldr::Event_AddToViewport>
+	,pr::events::IRecv<pr::rdr::Evt_SceneRender>
 {
 	UserSettings                     m_user_settings;
-	pr::rdr::Allocator               m_allocator;
 	pr::Renderer                     m_renderer;
-	pr::rdr::Viewport                m_viewport0;
-	pr::rdr::Viewport                m_viewport1;
+	pr::rdr::SceneForward            m_scene;
 	pr::Camera                       m_camera;
 	pr::ldr::LdrObjectStepData::Link m_step_objects;
 	pr::ldr::StockInstance           m_focus_point;
@@ -55,7 +52,7 @@ class LineDrawer
 	void OnEvent(pr::ldr::Evt_LdrObjectAdd const&);
 	void OnEvent(pr::ldr::Evt_LdrObjectDelete const&);
 	void OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&);
-	void OnEvent(ldr::Event_AddToViewport const&);
+	void OnEvent(pr::rdr::Evt_SceneRender const&);
 
 public:
 	// These types form part of the interface 
@@ -81,7 +78,7 @@ public:
 	void ReloadSourceData();
 
 	// Reset the camera to view all, selected, or visible objects
-	void ResetView(pr::ldr::EObjectBounds::Type view_type);
+	void ResetView(pr::ldr::EObjectBounds view_type);
 
 	// Generate a scene containing the supported line drawer objects
 	void CreateDemoScene();

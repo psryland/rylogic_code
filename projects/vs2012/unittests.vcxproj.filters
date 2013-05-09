@@ -41,6 +41,9 @@
     <Filter Include="sdk\app">
       <UniqueIdentifier>{3b2e8c0f-39bf-461e-9421-2f53ee2bfc0d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk\meta">
+      <UniqueIdentifier>{90fa2bb6-0623-4d6c-ad98-77ce092a0a6f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -411,9 +414,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\predicate.h">
       <Filter>sdk\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\prlink.h">
-      <Filter>sdk\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h">
       <Filter>sdk\common</Filter>
     </ClInclude>
@@ -680,6 +680,66 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\app\skybox.h">
       <Filter>sdk\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedstorage.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedtype.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignmentof.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\and.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\constants.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\enableif.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\function_arity.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\if.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\isclass.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\ispod.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\ispointer.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\isprime.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\not.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\or.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\primegtreq.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\remove_pointer.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\squareroot.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\typelist.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\maths\isize.h">
+      <Filter>sdk\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

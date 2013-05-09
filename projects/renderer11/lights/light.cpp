@@ -62,19 +62,19 @@ pr::m4x4 pr::rdr::Light::Projection(float centre_dist) const
 }
 
 #define PR_ENUM(x)\
-	x(Pos  ,= 0x0B5FC56C)\
-	x(Dir  ,= 0x0A792773)\
-	x(Type ,= 0x119E006A)\
-	x(Amb  ,= 0x1CB1C5AE)\
-	x(Diff ,= 0x13B95B1A)\
-	x(Spec ,= 0x0184DD00)\
-	x(SPwr ,= 0x104C3C82)\
-	x(InCA ,= 0x04017F1B)\
-	x(OtCA ,= 0x1398A506)\
-	x(Rng  ,= 0x164CFC58)\
-	x(FOff ,= 0x14C9C72F)\
-	x(Shdw ,= 0x0FF86A40)\
-	x(On   ,= 0x0E59DCC9)
+	x(Pos  ,= 0x13930DAF)\
+	x(Dir  ,= 0x1618B31F)\
+	x(Type ,= 0x19DA494A)\
+	x(Amb  ,= 0x1558CC98)\
+	x(Diff ,= 0x06868516)\
+	x(Spec ,= 0x1EEC863F)\
+	x(SPwr ,= 0x1C563FB0)\
+	x(InCA ,= 0x027932CE)\
+	x(OtCA ,= 0x178B4446)\
+	x(Rng  ,= 0x11F022C5)\
+	x(FOff ,= 0x1C689A1D)\
+	x(Shdw ,= 0x17CA424A)\
+	x(On   ,= 0x1E67B806)
 PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 #undef PR_ENUM
 

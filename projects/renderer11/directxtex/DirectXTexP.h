@@ -47,7 +47,7 @@
 #define DXGI_1_2_FORMATS
 #endif
 
-#include "directxtex.h"
+#include "DirectXTex.h"
 
 #include "scoped.h"
 

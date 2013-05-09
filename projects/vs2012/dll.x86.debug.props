@@ -8,6 +8,7 @@
     <IntDir>$(OutDir)</IntDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <TargetExt>.dll</TargetExt>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">

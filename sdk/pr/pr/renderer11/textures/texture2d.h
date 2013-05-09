@@ -33,14 +33,15 @@ namespace pr
 			//VideoPtr                         m_video;     // Non-null if this texture is the output of a video
 
 			Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv, SamplerDesc const& sam_desc, SortKeyId sort_id);
-			Texture2D(TextureManager* mgr, TextureDesc const& tex_desc, SamplerDesc const& sam_desc, void const* data, SortKeyId sort_id);
+			Texture2D(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc = nullptr);
 			Texture2D(TextureManager* mgr, Texture2D const& existing, SortKeyId sort_id);
 
-			// Get/Set the description of the current texture pointed to by 'm_tex'
-			// Setting a new texture description, re-creates the texture and the srv
+			// Get the description of the current texture pointed to by 'm_tex'
 			TextureDesc TexDesc() const;
-			void TexDesc(TextureDesc const& desc, void const* data);
 
+			// Set a new texture description and re-create/reinitialise the texture and the srv.
+			void TexDesc(Image const& src, TextureDesc const& tdesc, ShaderResViewDesc const* srvdesc = nullptr);
+			
 			// Get/Set the description of the current sampler state pointed to by 'm_samp'
 			// Setting a new sampler description, re-creates the sampler state
 			SamplerDesc SamDesc() const;

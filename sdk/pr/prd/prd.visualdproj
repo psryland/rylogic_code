@@ -49,7 +49,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -143,7 +143,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -237,7 +237,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -331,7 +331,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
