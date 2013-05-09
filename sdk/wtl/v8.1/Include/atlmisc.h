@@ -2022,7 +2022,7 @@ public:
 #endif
 
 		// try fixed buffer first (to avoid wasting space in the heap)
-		TCHAR szTemp[256];
+		TCHAR szTemp[256] = { 0 };
 		int nCount =  sizeof(szTemp) / sizeof(szTemp[0]);
 		int nLen = _LoadString(nID, szTemp, nCount);
 		if (nCount - nLen > CHAR_FUDGE)

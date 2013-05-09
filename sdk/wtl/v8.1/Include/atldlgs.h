@@ -483,7 +483,7 @@ public:
 		m_ofn.Flags |= OFN_ALLOWMULTISELECT;   // Force multiple selection mode
 
 #ifndef _UNICODE
-		OSVERSIONINFO ovi = { sizeof(ovi) };
+		OSVERSIONINFO ovi = { sizeof(OSVERSIONINFO) };
 		::GetVersionEx(&ovi);
 		m_bIsNT = (ovi.dwPlatformId == VER_PLATFORM_WIN32_NT);
 		if (m_bIsNT)
@@ -813,7 +813,7 @@ public:
 					// Get the ID-list and attributes of the file.
 					USES_CONVERSION;
 					int nFileNameLength = (int)(DWORD_PTR)(pChar - pAnchor);
-					TCHAR szFileName[MAX_PATH];
+					TCHAR szFileName[MAX_PATH] = { 0 };
 					SecureHelper::strncpy_x(szFileName, MAX_PATH, pAnchor, nFileNameLength);
 					LPITEMIDLIST pidl = NULL;
 					DWORD dwAttrib = SFGAO_LINK;
@@ -827,7 +827,7 @@ public:
 							if (SUCCEEDED(pFolder->BindToObject(pidl, NULL, IID_IShellLink, (void**)&pLink)))
 							{
 								// Get the shortcut's target path.
-								TCHAR szPath[MAX_PATH];
+								TCHAR szPath[MAX_PATH] = { 0 };
 								if (SUCCEEDED(pLink->GetPath(szPath, MAX_PATH, NULL, 0)))
 								{
 									// If the target path is longer than the shortcut name, then add on the number 

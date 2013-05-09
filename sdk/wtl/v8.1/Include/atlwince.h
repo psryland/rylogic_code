@@ -278,7 +278,7 @@ public:
 	{
 		T* pT = static_cast<T*>(this);
 		ATLASSERT(pT->IsWindow());
-		TCHAR sTitle[48];
+		TCHAR sTitle[48] = { 0 };
 
 		// Preparation
 		CPaintDC dc(pT->m_hWnd);
@@ -2951,7 +2951,7 @@ public:
 		{
 			m_SpinCtrl.Attach(hSpin);
 #ifdef DEBUG
-			TCHAR sClassName[16];
+			TCHAR sClassName[16] = { 0 };
 			::GetClassName(hSpin, sClassName, 16);
 			ATLASSERT(!_tcscmp(sClassName, UPDOWN_CLASS));
 			ATLASSERT(m_SpinCtrl.GetBuddy().m_hWnd == pT->m_hWnd);

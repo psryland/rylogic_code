@@ -3046,7 +3046,7 @@ public:
 	static CBrushHandle PASCAL GetHalftoneBrush()
 	{
 		HBRUSH halftoneBrush = NULL;
-		WORD grayPattern[8];
+		WORD grayPattern[8] = { 0 };
 		for(int i = 0; i < 8; i++)
 			grayPattern[i] = (WORD)(0x5555 << (i & 1));
 		HBITMAP grayBitmap = CreateBitmap(8, 8, 1, 1, &grayPattern);
