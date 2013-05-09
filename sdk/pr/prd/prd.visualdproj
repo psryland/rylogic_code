@@ -4,7 +4,7 @@
   <obj>0</obj>
   <link>0</link>
   <lib>1</lib>
-  <subsystem>0</subsystem>
+  <subsystem>2</subsystem>
   <multiobj>0</multiobj>
   <singleFileCompilation>0</singleFileCompilation>
   <oneobj>0</oneobj>
@@ -47,9 +47,9 @@
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath />
+  <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -91,14 +91,14 @@
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="x64">
   <obj>0</obj>
   <link>0</link>
   <lib>1</lib>
-  <subsystem>0</subsystem>
+  <subsystem>2</subsystem>
   <multiobj>0</multiobj>
   <singleFileCompilation>0</singleFileCompilation>
   <oneobj>0</oneobj>
@@ -141,9 +141,9 @@
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath />
+  <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -169,7 +169,7 @@
   <moduleDepsFile />
   <run>0</run>
   <runargs />
-  <runCv2pdb>0</runCv2pdb>
+  <runCv2pdb>1</runCv2pdb>
   <pathCv2pdb>$(VisualDInstallDir)cv2pdb\cv2pdb.exe</pathCv2pdb>
   <cv2pdbPre2043>0</cv2pdbPre2043>
   <cv2pdbNoDemangle>0</cv2pdbNoDemangle>
@@ -185,14 +185,14 @@
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Debug" platform="Win32">
   <obj>0</obj>
   <link>0</link>
   <lib>1</lib>
-  <subsystem>0</subsystem>
+  <subsystem>2</subsystem>
   <multiobj>0</multiobj>
   <singleFileCompilation>0</singleFileCompilation>
   <oneobj>0</oneobj>
@@ -235,9 +235,9 @@
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath />
+  <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -279,14 +279,14 @@
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="Win32">
   <obj>0</obj>
   <link>0</link>
   <lib>1</lib>
-  <subsystem>0</subsystem>
+  <subsystem>2</subsystem>
   <multiobj>0</multiobj>
   <singleFileCompilation>0</singleFileCompilation>
   <oneobj>0</oneobj>
@@ -329,9 +329,9 @@
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath />
+  <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -357,7 +357,7 @@
   <moduleDepsFile />
   <run>0</run>
   <runargs />
-  <runCv2pdb>0</runCv2pdb>
+  <runCv2pdb>1</runCv2pdb>
   <pathCv2pdb>$(VisualDInstallDir)cv2pdb\cv2pdb.exe</pathCv2pdb>
   <cv2pdbPre2043>0</cv2pdbPre2043>
   <cv2pdbNoDemangle>0</cv2pdbNoDemangle>
@@ -373,16 +373,13 @@
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Folder name="prd">
   <Folder name="app" />
   <Folder name="db">
    <File path="db\sqlite.d" />
-  </Folder>
-  <Folder name="renderer">
-   <File path="renderer\renderer.d" />
   </Folder>
   <Folder name="maths">
    <File path="maths\maths.d" />
@@ -393,6 +390,9 @@
   </Folder>
   <Folder name="storage">
    <File path="storage\settings.d" />
+  </Folder>
+  <Folder name="view3d">
+   <File path="view3d\view3d.d" />
   </Folder>
   <File path="all.d" />
  </Folder>

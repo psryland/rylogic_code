@@ -35,9 +35,9 @@
   <useInline>0</useInline>
   <release>0</release>
   <preservePaths>0</preservePaths>
-  <warnings>0</warnings>
-  <infowarnings>0</infowarnings>
-  <checkProperty>0</checkProperty>
+  <warnings>1</warnings>
+  <infowarnings>1</infowarnings>
+  <checkProperty>1</checkProperty>
   <genStackFrame>0</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
@@ -49,7 +49,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>q:\sdk\pr;q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -83,14 +83,14 @@
   <cv2pdbOptions />
   <objfiles />
   <linkswitches />
-  <libfiles>q:\sdk\pr\lib\renderer11.x64.$(Configuration).lib ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
+  <libfiles>Q:\sdk\pr\lib\prd.x64.$(Configuration).lib q:\sdk\pr\lib\view3d.x64.$(Configuration).lib q:\sdk\pr\lib\dgui.x64.$(Configuration).lib ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
   <libpaths>q:\sdk\pr\lib</libpaths>
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).exe</exefile>
   <useStdLibPath>0</useStdLibPath>
   <additionalOptions />
-  <preBuildCommand />
+  <preBuildCommand>call q:\tools\_lib_copy.cmd view3d.dll x64 $(Configuration) $(TargetDir)</preBuildCommand>
   <postBuildCommand />
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
@@ -98,7 +98,7 @@
   <obj>0</obj>
   <link>0</link>
   <lib>0</lib>
-  <subsystem>2</subsystem>
+  <subsystem>1</subsystem>
   <multiobj>0</multiobj>
   <singleFileCompilation>0</singleFileCompilation>
   <oneobj>0</oneobj>
@@ -129,9 +129,9 @@
   <useInline>0</useInline>
   <release>1</release>
   <preservePaths>0</preservePaths>
-  <warnings>0</warnings>
-  <infowarnings>0</infowarnings>
-  <checkProperty>0</checkProperty>
+  <warnings>1</warnings>
+  <infowarnings>1</infowarnings>
+  <checkProperty>1</checkProperty>
   <genStackFrame>0</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
@@ -143,7 +143,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>q:\sdk\pr;q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>$(ConfigurationName)</outdir>
+  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -177,14 +177,14 @@
   <cv2pdbOptions />
   <objfiles />
   <linkswitches />
-  <libfiles>q:\sdk\pr\lib\renderer11.x64.$(Configuration).lib ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
+  <libfiles>Q:\sdk\pr\lib\prd.x64.$(Configuration).lib q:\sdk\pr\lib\view3d.x64.$(Configuration).lib q:\sdk\pr\lib\dgui.x64.$(Configuration).lib ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
   <libpaths>q:\sdk\pr\lib</libpaths>
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).exe</exefile>
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
-  <preBuildCommand />
+  <preBuildCommand>call q:\tools\_lib_copy.cmd view3d.dll x64 $(Configuration) $(TargetDir)</preBuildCommand>
   <postBuildCommand />
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
@@ -223,9 +223,9 @@
   <useInline>0</useInline>
   <release>0</release>
   <preservePaths>0</preservePaths>
-  <warnings>0</warnings>
-  <infowarnings>0</infowarnings>
-  <checkProperty>0</checkProperty>
+  <warnings>1</warnings>
+  <infowarnings>1</infowarnings>
+  <checkProperty>1</checkProperty>
   <genStackFrame>0</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
@@ -237,7 +237,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>q:\sdk\pr;q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>obj\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -271,14 +271,14 @@
   <cv2pdbOptions />
   <objfiles />
   <linkswitches />
-  <libfiles>ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
+  <libfiles>Q:\sdk\pr\lib\prd.x64.$(Configuration).lib q:\sdk\pr\lib\view3d.x64.$(Configuration).lib q:\sdk\pr\lib\dgui.x64.$(Configuration).lib ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
   <libpaths>q:\sdk\pr\lib</libpaths>
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).exe</exefile>
   <useStdLibPath>0</useStdLibPath>
   <additionalOptions />
-  <preBuildCommand />
+  <preBuildCommand>call q:\tools\_lib_copy.cmd view3d.dll x64 $(Configuration) $(TargetDir)</preBuildCommand>
   <postBuildCommand />
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
@@ -286,7 +286,7 @@
   <obj>0</obj>
   <link>0</link>
   <lib>0</lib>
-  <subsystem>2</subsystem>
+  <subsystem>1</subsystem>
   <multiobj>0</multiobj>
   <singleFileCompilation>0</singleFileCompilation>
   <oneobj>0</oneobj>
@@ -317,9 +317,9 @@
   <useInline>0</useInline>
   <release>1</release>
   <preservePaths>0</preservePaths>
-  <warnings>0</warnings>
-  <infowarnings>0</infowarnings>
-  <checkProperty>0</checkProperty>
+  <warnings>1</warnings>
+  <infowarnings>1</infowarnings>
+  <checkProperty>1</checkProperty>
   <genStackFrame>0</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
@@ -331,7 +331,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>q:\sdk\pr;q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>$(ConfigurationName)</outdir>
+  <outdir>..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -365,14 +365,14 @@
   <cv2pdbOptions />
   <objfiles />
   <linkswitches />
-  <libfiles>ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib prd.$(platformname).$(configurationname).lib dgui.$(platformname).$(configurationname).lib </libfiles>
+  <libfiles>Q:\sdk\pr\lib\prd.x64.$(Configuration).lib q:\sdk\pr\lib\view3d.x64.$(Configuration).lib q:\sdk\pr\lib\dgui.x64.$(Configuration).lib ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
   <libpaths>q:\sdk\pr\lib</libpaths>
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).exe</exefile>
   <useStdLibPath>1</useStdLibPath>
   <additionalOptions />
-  <preBuildCommand />
+  <preBuildCommand>call q:\tools\_lib_copy.cmd view3d.dll x64 $(Configuration) $(TargetDir)</preBuildCommand>
   <postBuildCommand />
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>

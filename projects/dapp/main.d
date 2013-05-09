@@ -1,33 +1,26 @@
 module main;
 
 import dgui.all;
+import prd.view3d.view3d;
 
 class MainForm :Form
 {
-	private Button _btnOk;
+	private View3d m_view3d;
 
 	public this()
 	{
-		this.text = "DGui Events";
+		this.text = "DApp";
 		this.size = Size(300, 250);
 		this.startPosition = FormStartPosition.CENTER_SCREEN; // Set Form Position
 
-		this._btnOk = new Button();
-		this._btnOk.text = "Click Me!";
-		this._btnOk.dock = DockStyle.FILL; // Fill the whole form area
-		this._btnOk.parent = this;
-		this._btnOk.click.attach(&this.onBtnOkClick); //Attach the click event with the selected procedure
-	}
-
-	private void onBtnOkClick(Control sender, EventArgs e)
-	{
-		// Display a message box
-		MsgBox.show("OnClick", "Button.onClick()");
+		m_view3d = new View3d();
+		m_view3d.dock = DockStyle.FILL;
+		m_view3d.parent = this;
 	}
 }
 
 int main(string[] args)
 {
-	return Application.run(new MainForm()); // Start the application
+	return Application.run(new MainForm());
 }
 

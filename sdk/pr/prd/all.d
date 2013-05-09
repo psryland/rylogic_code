@@ -5,4 +5,5 @@ public import
 	prd.maths.maths,
 	prd.maths.rand,
 	prd.script.script,
-	prd.storage.settings;
+	prd.storage.settings,
+	prd.view3d.view3d;
