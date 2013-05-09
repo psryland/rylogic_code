@@ -335,7 +335,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 			if( FEqlZero3(dir) ) dir = line_s - line_e;
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, StartFile("C:/DeleteMe/raycast_nearest.pr_script");)
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::Box("Nearest", "FFFF0000", smplx.m_nearest, 0.02f);)
-				PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::LineD("Sep_axis", "FFFFFF00", smplx.m_nearest, dir.GetNormal3());)
+				PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::LineD("Sep_axis", "FFFFFF00", smplx.m_nearest, Normalise3(dir));)
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, EndFile();)
 		
 			v4 vert = SupportVertex(shape, dir, id, id);

@@ -388,7 +388,7 @@ namespace pr
 			//	light.m_diffuse			= Colour::make(1.0f, 1.0f, 1.0f, 1.0f);
 			//	light.m_specular		= Colour::make(0.2f, 0.2f, 0.2f, 1.0f);
 			//	light.m_specular_power	= 100.0f;		
-			//	light.m_direction		= -GetNormal3(v4XAxis + v4YAxis + v4ZAxis);
+			//	light.m_direction		= -Normalise3(v4XAxis + v4YAxis + v4ZAxis);
 			//	light.m_type           = pr::rdr::ELight::Directional;
 			//	light.m_on             = true;
 

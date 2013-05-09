@@ -59,7 +59,7 @@ v4 pr::ph::SupportVertex(ShapeSphere const& shape, v4 const& direction, std::siz
 	PR_PROFILE_SCOPE(PR_PROFILE_SUPPORT_VERTS, phSupVertSph);
 
 	// We need to quantise the normal otherwise the iterative algorithms perform badly
-	v4 dir = GetNormal3(direction);
+	v4 dir = Normalise3(direction);
 	
 	// Generate an id for the vertex in this direction
 	sup_vert_id = 

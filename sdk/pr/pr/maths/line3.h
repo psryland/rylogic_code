@@ -22,7 +22,7 @@ namespace pr
 		Line3& set(v4 const& point, v4 const& line)  { m_point = point; m_line = line; return *this; }
 		v4     start() const                         { return m_point; }
 		v4     end() const                           { return m_point + m_line; }
-		v4     normal() const                        { return GetNormal3(m_line); }
+		v4     normal() const                        { return Normalise3(m_line); }
 		v4     operator()(float t) const             { return m_point + t * m_line; }
 		
 		static Line3 make(v4 const& point, v4 const& line) { Line3 l; return l.set(point, line); }

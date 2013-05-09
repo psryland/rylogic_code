@@ -84,7 +84,7 @@ namespace pr
 	inline v3 SLerp3(v3 const& src, v3 const& dest, float frac)
 	{
 		float s_len = Length3(src), d_len = Length3(dest);
-		return (s_len + frac*(d_len - s_len)) * GetNormal3(src + frac*(dest - src)); 
+		return (s_len + frac*(d_len - s_len)) * Normalise3(src + frac*(dest - src)); 
 	}
 	inline float CosAngle3(v3 const& lhs, v3 const& rhs)
 	{

@@ -282,7 +282,7 @@ namespace pr
 			str += FmtS("*Plane %s %08X {" ,name ,colour);
 			Vec3(ClosestPoint_PointToPlane(centre, plane), str);
 			str += " ";
-			Vec3(plane::GetDirection(plane::GetNormal(plane)), str);
+			Vec3(plane::GetDirection(plane::Normalise(plane)), str);
 			str += FmtS("%f %f}\n" ,size ,size);
 			return str;
 		}

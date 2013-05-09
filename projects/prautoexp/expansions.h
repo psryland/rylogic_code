@@ -70,7 +70,6 @@ extern "C" ADDIN_API HRESULT WINAPI AddIn_stdifstream        (DWORD dwAddress, D
 extern "C" ADDIN_API HRESULT WINAPI AddIn_stdofstream        (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 extern "C" ADDIN_API HRESULT WINAPI AddIn_Quaternion         (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 extern "C" ADDIN_API HRESULT WINAPI AddIn_MD5                (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
-extern "C" ADDIN_API HRESULT WINAPI AddIn_GeomType           (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 extern "C" ADDIN_API HRESULT WINAPI AddIn_LargeInt           (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 extern "C" ADDIN_API HRESULT WINAPI AddIn_QuaternionAsMatrix (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);
 extern "C" ADDIN_API HRESULT WINAPI AddIn_phShape            (DWORD dwAddress, DbgHelper* pHelper, int nBase, BOOL bUniStrings, char *pResult, size_t max, DWORD reserved);

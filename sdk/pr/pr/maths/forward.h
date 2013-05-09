@@ -66,6 +66,7 @@ namespace pr
 	struct Line3;
 	struct FRect;
 	struct IRect;
+	struct ISize;
 	struct iv2;
 	struct iv4;
 	struct Frustum;

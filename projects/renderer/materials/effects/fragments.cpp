@@ -211,9 +211,9 @@ void pr::rdr::effect::frag::Txfm::SetParameters(void const* fragment, D3DPtr<ID3
 	{
 		PR_ASSERT(PR_DBG_RDR, FEql(last_i2w.w.w, 1.0f), "Invalid instance to world transform found");
 		pr::m4x4 n2w = last_i2w;
-		n2w.x.w = 0.0f; if (!FEqlZero3(n2w.x)) Normalise3(n2w.x);
-		n2w.y.w = 0.0f; if (!FEqlZero3(n2w.y)) Normalise3(n2w.y);
-		n2w.z.w = 0.0f; if (!FEqlZero3(n2w.z)) Normalise3(n2w.z);
+		n2w.x.w = 0.0f; if (!FEqlZero3(n2w.x)) n2w.x = Normalise3(n2w.x);
+		n2w.y.w = 0.0f; if (!FEqlZero3(n2w.y)) n2w.y = Normalise3(n2w.y);
+		n2w.z.w = 0.0f; if (!FEqlZero3(n2w.z)) n2w.z = Normalise3(n2w.z);
 		n2w.w = pr::v4Origin;
 		Verify(d3ddevice->SetTransform(D3DTS_WORLD    ,&reinterpret_cast<const D3DXMATRIX&>(last_i2w)));
 		Verify(effect->SetMatrix(me.m_object_to_world ,&reinterpret_cast<const D3DXMATRIX&>(last_i2w)));
@@ -977,7 +977,7 @@ bool pr::rdr::effect::frag::SMap::CreateProjection(int face, pr::Frustum const& 
 			br = w2s * BR;
 
 			// Rotate so that TL is above BL and TR is above BR (i.e. the left and right edges are vertical)
-			pr::v2 ledge = GetNormal2((tl - bl).xy());
+			pr::v2 ledge = Normalise2((tl - bl).xy());
 			pr::m4x4 R = pr::m4x4Identity;
 			R.x.set( ledge.y,  ledge.x, 0, 0);
 			R.y.set(-ledge.x,  ledge.y, 0, 0);

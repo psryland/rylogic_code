@@ -15,7 +15,7 @@ namespace pr
 	inline float Distance_PointToPlane(v4 const& point, v4 const& a, v4 const& b, v4 const& c)
 	{
 		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f, "");
-		v4 plane = GetNormal3(Cross3(b - a, c - a));
+		v4 plane = Normalise3(Cross3(b - a, c - a));
 		plane.w = -Dot3(plane, a);
 		return Dot4(plane, point);
 	}

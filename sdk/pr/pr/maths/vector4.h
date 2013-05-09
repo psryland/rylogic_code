@@ -156,6 +156,8 @@ namespace pr
 	int     LargestElement2(v4 const& v);
 	int     LargestElement3(v4 const& v);
 	int     LargestElement4(v4 const& v);
+	v4      Normalise3(v4 const& v);
+	v4      Normalise4(v4 const& v);
 	v4      Abs(v4 const& v);
 	v4      Trunc(v4 const& v);
 	v4      Frac(v4 const& v);

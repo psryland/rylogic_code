@@ -228,4 +228,42 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_common_hash)
+		{
+			enum
+			{
+				Blah = -0x7FFFFFFF,
+			};
+			char const data[] = "Paul was here. CrC this, mofo";
+			char const data2[] = "paul was here. crc this, mofo";
+			{
+				pr::hash::HashValue h0 = pr::hash::HashData(data, sizeof(data));
+				PR_CHECK(h0,h0);
+			
+				pr::hash::HashValue64 h1 = pr::hash::HashData64(data, sizeof(data));
+				PR_CHECK(h1,h1);
+			}
+			{ // Check accumulative hash works
+				pr::hash::HashValue h0 = pr::hash::HashData(data, sizeof(data));
+				pr::hash::HashValue h1 = pr::hash::HashData(data + 5, sizeof(data) - 5, pr::hash::HashData(data, 5));
+				pr::hash::HashValue h2 = pr::hash::HashData(data + 9, sizeof(data) - 9, pr::hash::HashData(data, 9));
+				PR_CHECK(h0, h1);
+				PR_CHECK(h0, h2);
+			}
+			{
+				pr::hash::HashValue h0 = pr::hash::HashLwr(data);
+				pr::hash::HashValue h1 = pr::hash::HashC(data2);
+				PR_CHECK(h1, h0);
+			}
+		}
+	}
+}
+#endif
+
 #endif

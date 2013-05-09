@@ -12,6 +12,10 @@
 namespace pr
 {
 	// Specialise this struct for specific conversions
+	// Use specialisations of 'TTo' otherwise abiguous overloads will be created
+	// e.g.
+	//  // To<X>
+	//  template <typename TFrom> struct Convert<X,TFrom> {};
 	template <typename TTo, typename TFrom> struct Convert
 	{
 		static TTo To(TFrom const&)      { static_assert(false, "No conversion from this type available"); }

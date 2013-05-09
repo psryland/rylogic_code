@@ -90,7 +90,8 @@ namespace pr
 		float s = Sqrt(Length3Sq(from) * Length3Sq(to)) + d;
 		if (FEql(s, 0.0f)) { axis = Perpendicular(to); s = 0.0f; }  // vectors are 180 degrees apart
 		set(axis.x, axis.y, axis.z, s);
-		return Normalise4(*this);
+		*this = Normalise4(*this);
+		return *this;
 	}
 	
 	// Quaternion multiply
@@ -172,7 +173,7 @@ namespace pr
 		}
 		else // "src" and "dst" quaternions are very close
 		{
-			return GetNormal4(Lerp(src, abs_dst, frac));
+			return Normalise4(Lerp(src, abs_dst, frac));
 		}
 	}
 	

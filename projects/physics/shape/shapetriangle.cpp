@@ -20,7 +20,7 @@ ShapeTriangle& ShapeTriangle::set(v4 const& a, v4 const& b, v4 const& c, const m
 	m_v.x = a;
 	m_v.y = b;
 	m_v.z = c;
-	m_v.w = GetNormal3(Cross3(b-a,c-b));
+	m_v.w = Normalise3(Cross3(b-a,c-b));
 	CalcBBox(*this, m_base.m_bbox);
 	return *this;
 }

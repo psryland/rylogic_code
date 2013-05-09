@@ -192,7 +192,7 @@ int main(int, char*[])
 		{
 			point.Set(Cos(w * da) * xradius, Sin(w * da) * yradius, z,    1.0f);
 			norm .Set(Cos(w * da) / xradius, Sin(w * da) / yradius, 0.0f, 0.0f);
-			norm.Normalise3();
+			norm = Normalise3(norm);
 
 			Print(point, norm, v2::make(w / (float)m_wedges, z + 0.5f));
 		}

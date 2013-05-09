@@ -17,6 +17,9 @@
 #include <exception>
 #include <algorithm>
 
+#pragma comment(lib, "xmllite.lib")
+#pragma comment(lib, "shlwapi.lib")
+
 namespace pr
 {
 	namespace xml
@@ -83,29 +86,29 @@ namespace pr
 			StrVec			m_comments;		// Comments
 
 			Node()
-			:m_tag		(L"root")
-			,m_cdata	(false)
+				:m_tag		(L"root")
+				,m_cdata	(false)
 			{}
 			template <typename Str1>
 			explicit Node(Str1 const& tag)
-			:m_prefix	()
-			,m_tag		(str(tag))
-			,m_value	()
-			,m_cdata	(false)
+				:m_prefix	()
+				,m_tag		(str(tag))
+				,m_value	()
+				,m_cdata	(false)
 			{}
 			template <typename Str1, typename Str2>
 			Node(Str1 const& tag, Str2 const& value)
-			:m_prefix	()
-			,m_tag		(str(tag))
-			,m_value	(str(value))
-			,m_cdata	(false)
+				:m_prefix	()
+				,m_tag		(str(tag))
+				,m_value	(str(value))
+				,m_cdata	(false)
 			{}
 			template <typename Str1, typename Str2, typename Str3>
 			Node(Str1 const& prefix, Str2 const& tag, Str3 const& value, bool cdata = false)
-			:m_prefix	(str(prefix))
-			,m_tag		(str(tag))
-			,m_value	(str(value))
-			,m_cdata	(cdata)
+				:m_prefix	(str(prefix))
+				,m_tag		(str(tag))
+				,m_value	(str(value))
+				,m_cdata	(cdata)
 			{}
 
 			template <typename Type>	Type			as() const;
@@ -119,7 +122,7 @@ namespace pr
 			template <>					float			as() const { return static_cast<float>(_wtof(m_value.c_str())); }
 			template <>					double			as() const { return _wtof(m_value.c_str()); }
 			template <>					std::string		as() const { return std::string(m_value.begin(), m_value.end()); }
-			
+
 			NodeVec::const_iterator		begin() const	{ return m_child.begin(); }
 			NodeVec::const_iterator		end() const		{ return m_child.end(); }
 			NodeVec::iterator			begin()			{ return m_child.begin(); }
@@ -130,7 +133,7 @@ namespace pr
 
 			Node& add(Node const& node)					{ m_child.push_back(node); return m_child.back(); }
 		};
-	
+
 		namespace impl
 		{
 			// Parse xml tag attributes
@@ -267,7 +270,7 @@ namespace pr
 
 				// Begin the element
 				if (FAILED(hr = writer->WriteStartElement(0, node.m_tag.c_str(), 0))) throw hr;
-	    
+
 				// Write the attributes
 				for (AttrVec::const_iterator i = node.m_attr.begin(), i_end = node.m_attr.end(); i != i_end; ++i)
 					if (FAILED(hr = writer->WriteAttributeString(i->m_prefix.c_str(), i->m_localname.c_str(), 0, i->m_value.c_str())))
@@ -368,7 +371,7 @@ namespace pr
 				if (properties & EProperty_OmitXmlDeclaration) 
 					if (FAILED(hr = writer->SetProperty(XmlWriterProperty_OmitXmlDeclaration, TRUE)))
 						throw hr;
-		
+
 				// Start the document
 				if (FAILED(hr = writer->WriteStartDocument(XmlStandalone_Omit))) throw hr;
 

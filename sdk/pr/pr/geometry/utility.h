@@ -40,7 +40,7 @@ namespace pr
 				v4 const& v2 = GetV(i2);
 
 				// Calculate the face normal
-				v4 norm = GetNormal3IfNonZero(Cross3(v1 - v0, v2 - v0));
+				v4 norm = Normalise3IfNonZero(Cross3(v1 - v0, v2 - v0));
 
 				// Add the normal to each vertex that references the face
 				SetN(i0, GetN(i0) + norm);
@@ -51,7 +51,7 @@ namespace pr
 			// Normalise all of the normals
 			ib = indices;
 			for (std::size_t i = 0; i != num_indices; ++i, ++ib)
-				SetN(*ib, GetNormal3IfNonZero(GetN(*ib)));
+				SetN(*ib, Normalise3IfNonZero(GetN(*ib)));
 		}
 	}
 }

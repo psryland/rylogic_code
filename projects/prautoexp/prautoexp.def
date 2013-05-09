@@ -15,7 +15,6 @@ EXPORTS
 	AddIn_stdofstream
 	AddIn_Quaternion
 	AddIn_MD5
-	AddIn_GeomType
 	AddIn_LargeInt
 	AddIn_QuaternionAsMatrix
 	AddIn_phShape

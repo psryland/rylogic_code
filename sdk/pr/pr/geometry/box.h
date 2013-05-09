@@ -66,7 +66,7 @@ namespace pr
 			std::size_t const icount = sizeof(indices)/sizeof(indices[0]);
 
 			// Helper function for generating normals
-			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return GetNormal3IfNonZero(Cross3(c - b, a - b)); };
+			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3IfNonZero(Cross3(c - b, a - b)); };
 
 			// Colour iterator wrapper
 			ColourRepeater col(colours, num_colours, 8*num_boxes, Colour32White);

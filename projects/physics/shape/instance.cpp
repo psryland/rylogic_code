@@ -93,7 +93,7 @@ void Instance::Step(float elapsed_seconds)
 float Instance::GetEnergy(const v4& gravity) const
 {
 	// mgh + 0.5mv^2 + 0.5wIw
-	float potential			= gravity.Length3() * -Dot3(gravity.GetNormal3(), (*m_object_to_world)[3]);
+	float potential			= gravity.Length3() * -Dot3(Normalise3(gravity), (*m_object_to_world)[3]);
 	float linear_kinetic	= 0.5f * Mass() * m_velocity.Length3Sq();
 	float ang_kinetic		= 0.5f * Dot3(m_ang_velocity, m_ang_momentum);
 	return potential + linear_kinetic + ang_kinetic;

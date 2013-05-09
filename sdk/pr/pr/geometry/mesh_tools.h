@@ -43,7 +43,7 @@ namespace pr
 						pr::Vert& V1 = mesh.m_vertex[face.m_vert_index[1]];
 						pr::Vert& V2 = mesh.m_vertex[face.m_vert_index[2]];
 						pr::v4 face_norm = pr::Cross3(V1.m_vertex - V0.m_vertex, V2.m_vertex - V0.m_vertex);
-						Normalise3(face_norm);
+						face_norm = Normalise3(face_norm);
 
 						// Add the face normal to each vertex that references the face
 						V0.m_normal += face_norm;
@@ -55,7 +55,7 @@ namespace pr
 					vb = &mesh.m_vertex[0];
 					for (uint v = 0; v < num_vertices; ++v)
 					{ 
-						Normalise3IfNonZero(vb->m_normal);
+						vb->m_normal = Normalise3IfNonZero(vb->m_normal);
 						++vb;
 					}
 				}
@@ -177,7 +177,7 @@ void pr::rdr::model::GenerateNormals(MLock& mlock, Range const* v_range, Range c
 
 		// Calculate a face normal
 		v3 norm = Cross3(v1.vertex() - v0.vertex(), v2.vertex() - v0.vertex());
-		Normalise3IfNonZero(norm);
+		norm = Normalise3IfNonZero(norm);
 
 		// Add the normal to each vertex that references the face
 		v0.normal() += norm;
@@ -188,7 +188,7 @@ void pr::rdr::model::GenerateNormals(MLock& mlock, Range const* v_range, Range c
 	// Normalise all of the normals
 	vb = mlock.m_vlock.m_ptr + v_range->m_begin;
 	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
-		Normalise3IfNonZero(vb->normal());
+		vb->normal() = Normalise3IfNonZero(vb->normal());
 }
 void pr::rdr::model::GenerateNormals(ModelPtr& model, Range const* v_range, Range const* i_range)
 {

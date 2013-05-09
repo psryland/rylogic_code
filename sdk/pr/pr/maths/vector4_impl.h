@@ -80,6 +80,26 @@ namespace pr
 		int i = (v.x < v.y), j = (v.z < v.w) + 2;
 		return (v[i] < v[j]) ? j : i;
 	}
+	inline v4 Normalise3(v4 const& v)
+	{
+		#if PR_MATHS_USE_DIRECTMATH
+		v4 vec;
+		dxv4(vec) = DirectX::XMVector3Normalize(v.vec);
+		return vec;
+		#else
+		return v / Length3(v);
+		#endif
+	}
+	inline v4 Normalise4(v4 const& v)
+	{
+		#if PR_MATHS_USE_DIRECTMATH
+		v4 vec;
+		dxv4(vec) = DirectX::XMVector4Normalize(v.vec);
+		return vec;
+		#else
+		return v / Length4(v);
+		#endif
+	}
 	inline v4 Abs(v4 const& v)
 	{
 		return v4::make(Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w));
@@ -195,34 +215,47 @@ namespace pr
 	{
 		PRUnitTest(pr_maths_vector4)
 		{
-			v4 V1 = {1,2,3,4};
-			V1 = pr::v4Zero;
-			PR_CHECK(IsZero3(V1), true);
-			PR_CHECK(IsZero4(V1), true);
-			PR_CHECK(FEqlZero3(V1), true);
-			PR_CHECK(FEqlZero4(V1), true);
+			#if PR_MATHS_USE_DIRECTMATH
+			{
+				v4 V0 = v4::make(1,2,3,4);
+				DirectX::XMVECTORF32 VX0;
+				VX0.v = dxv4(V0);
+				PR_CHECK(V0.x, VX0.f[0]);
+				PR_CHECK(V0.y, VX0.f[1]);
+				PR_CHECK(V0.z, VX0.f[2]);
+				PR_CHECK(V0.w, VX0.f[3]);
+			}
+			#endif
+			{// Operations
+				PR_CHECK(IsZero3(pr::v4::make(0,0,0,1)), true);
+				PR_CHECK(IsZero4(pr::v4Zero), true);
+				PR_CHECK(FEqlZero3(pr::v4::make(1e-20f,0,0,1)), true);
+				PR_CHECK(FEqlZero4(pr::v4::make(1e-20f,0,0,1e-19f)), true);
 
-			V1.set(4,2,-5,1);
-			PR_CHECK(Length3(V1) != Length4(V1), true);
-			PR_CHECK(IsNormal3(V1), false);
-			PR_CHECK(IsNormal4(V1), false);
+				v4 V1 = {1,2,3,4};
+				float len1_3 = (float)::sqrt(1*1 + 2*2 + 3*3);
+				float len1_4 = (float)::sqrt(1*1 + 2*2 + 3*3 + 4*4);
+			
+				PR_CLOSE(Length3(V1), len1_3, pr::maths::tiny);
+				PR_CLOSE(Length4(V1), len1_4, pr::maths::tiny);
+				PR_CHECK(IsNormal3(V1), false);
+				PR_CHECK(IsNormal4(V1), false);
 
-			V1.w = 0.0f;
-			v4 V2 = V1;
-			Normalise3(V2);
-			PR_CHECK(FEql3(GetNormal3(V1), V2), true);
+				v4 V2 = Normalise3(V1);
+				PR_CLOSE(Length3(V2) , 1.0f, pr::maths::tiny);
+				PR_CHECK(Length4(V2) > 1.0f, true);
 
-			V1.w = 1.0f;
-			v4 V3 = V1;
-			Normalise4(V3);
-			PR_CHECK(FEql4(GetNormal4(V1), V3), true);
+				v4 V3 = Normalise4(V1);
+				PR_CHECK(Length3(V3) < 1.0f, true);
+				PR_CLOSE(Length4(V3) , 1.0f, pr::maths::tiny);
 
-			V1.set(-2,  4,  2,  6);
-			V2.set(3, -5,  2, -4);
-			m4x4 a2b = CrossProductMatrix4x4(V1);
-			v4 V4 = a2b * V2; V4;
-			V3 = Cross3(V1, V2);
-			PR_CHECK(FEql3(V4, V3), true);
+				V1.set(-2,  4,  2,  6);
+				V2.set( 3, -5,  2, -4);
+				m4x4 a2b = CrossProductMatrix4x4(V1);
+				v4 V4 = a2b * V2; V4;
+				V3 = Cross3(V1, V2);
+				PR_CHECK(FEql3(V4, V3), true);
+			}
 		}
 	}
 }

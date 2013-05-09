@@ -295,7 +295,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="gen_licence.cmd" />
-    <None Include="release.bat" />
+    <None Include="release.cmd" />
     <None Include="Resources\executable.png" />
     <None Include="Resources\edit_add.png" />
     <None Include="Resources\edit_save.png" />
@@ -369,7 +369,7 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>Q:\bin\csex.x86\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>
+    <PostBuildEvent>Q:\bin\csex\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

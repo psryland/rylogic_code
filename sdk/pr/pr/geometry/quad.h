@@ -71,7 +71,7 @@ namespace pr
 		Props Quad(size_t num_quads, TVertCIter verts, size_t num_colours, Colour32 const* colours, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
 			// Helper function for generating normals
-			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return GetNormal3IfNonZero(Cross3(c - b, a - b)); };
+			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3IfNonZero(Cross3(c - b, a - b)); };
 
 			// Colour iterator wrapper
 			ColourRepeater col(colours, num_colours, num_quads * 4, Colour32White);
@@ -150,7 +150,7 @@ namespace pr
 		Props Quad(v4 const& origin, v4 const& quad_x, v4 const& quad_z, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
 			// Create the vertices
-			v4 norm = GetNormal3IfNonZero(Cross3(quad_z,quad_x));
+			v4 norm = Normalise3IfNonZero(Cross3(quad_z,quad_x));
 			v4 step_x = quad_x / (divisions.x + 1);
 			v4 step_y = quad_z / (divisions.y + 1);
 			v2 uvbase = (t2q * v4Origin).xy();
@@ -222,8 +222,8 @@ namespace pr
 			v4 up  = !IsZero3(top)     ? top     : -pr::v4ZAxis;
 			if (Parallel(up, fwd)) up = -pr::v4XAxis;
 
-			v4 quad_x = width  * GetNormal3(Cross3(up, fwd));
-			v4 quad_z = height * GetNormal3(Cross3(quad_x, fwd));
+			v4 quad_x = width  * Normalise3(Cross3(up, fwd));
+			v4 quad_z = height * Normalise3(Cross3(quad_x, fwd));
 			v4 origin = centre - 0.5f * quad_x - 0.5f * quad_z;
 			return Quad(origin, quad_x, quad_z, divisions, colour, t2q, v_out, i_out);
 		}

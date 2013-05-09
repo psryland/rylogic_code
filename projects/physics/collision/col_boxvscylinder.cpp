@@ -80,7 +80,7 @@ namespace pr
 				v4 cyl_point = data.m_cyl_pos - (Sign(ratio)*data.m_cyl.m_height)*data.m_cyl_axis;
 				if( 1.0 - cos_angle > maths::tiny )
 				{
-					v4 radius = GetNormal3(Cross3(data.m_cyl_axis, Cross3(data.m_cyl_axis, sep_axis)));
+					v4 radius = Normalise3(Cross3(data.m_cyl_axis, Cross3(data.m_cyl_axis, sep_axis)));
 					cyl_point += data.m_cyl.m_radius * radius;
 					data.m_penetration	= depth;
 					data.m_axis			= -sep_axis;
@@ -194,7 +194,7 @@ namespace pr
 				v4 sep_axis = Cross3(data.m_a2w[i], data.m_cyl_axis);
 				if( FEqlZero3(sep_axis) ) sep_axis = data.m_diff - Dot3(data.m_diff, data.m_cyl_axis) * data.m_cyl_axis;
 				if( FEqlZero3(sep_axis) ) return true;
-				Normalise3(sep_axis);
+				sep_axis = Normalise3(sep_axis);
 
 				uint j = (i+1)%3;
 				uint k = (i+2)%3;
@@ -320,7 +320,7 @@ namespace pr
 				// box edge and the tangent to the cylinder at 'point'
 				sep_axis = Cross3(data.m_a2w[i], Cross3(point - data.m_cyl_pos, cyl_axis));
 				if( FEqlZero3(sep_axis) )	return true;
-				Normalise3(sep_axis);
+				sep_axis = Normalise3(sep_axis);
 				if( Dot3(sep_axis, data.m_cyl_pos - point) < 0.0f ) sep_axis = -sep_axis; // 'sep_axis' pointing from A to B
 				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, StartFile("C:/DeleteMe/collision_sepaxis.pr_script"));
 				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, ldr::LineD("sep_axis", "FFFFFF00", point, sep_axis));

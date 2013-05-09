@@ -96,7 +96,7 @@ namespace pr
 				// If no child is found, add one
 				auto& v0 = (*data.m_vcont)[parent0];
 				auto& v1 = (*data.m_vcont)[parent1];
-				v4 norm = GetNormal3(v0.m_norm + v1.m_norm);
+				v4 norm = Normalise3(v0.m_norm + v1.m_norm);
 				auto ang = v0.m_pole ? v1.m_ang : v1.m_pole ? v0.m_ang : (v0.m_ang + v1.m_ang) * 0.5f; // Use the average angle unless one of the verts is a pole
 				auto new_vidx = AddVertex(norm, ang, false, data);
 

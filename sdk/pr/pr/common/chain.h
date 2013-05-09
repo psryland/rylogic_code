@@ -338,4 +338,96 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		struct Member
+		{
+			int m_i;
+			Member *m_next, *m_prev;
+			Member(int i) :m_i(i) { pr::chain::Init(*this); }
+		};
+		struct Field
+		{
+			int m_i;
+			pr::chain::Link<Field> m_link;
+			Field(int i) :m_i(i) { m_link.init(this); }
+		};
+		PRUnitTest(pr_common_chain)
+		{
+			{// Member chain
+				Member m0(0), m1(1), m2(2);
+				pr::chain::Insert(m2, m1);
+				pr::chain::Insert(m1, m0);
+				PR_CHECK(pr::chain::Size(m0) ,3U);
+				PR_CHECK(pr::chain::Size(m1) ,3U);
+				PR_CHECK(pr::chain::Size(m2) ,3U);
+				{
+					pr::chain::Iter<Member> iter(m0);
+					PR_CHECK(iter->m_i, 0); ++iter;
+					PR_CHECK(iter->m_i, 1); ++iter;
+					PR_CHECK(iter->m_i, 2); ++iter;
+					PR_CHECK(iter == 0, true);
+				}
+		
+				Member m3(3), m4(4), m5(5);
+				pr::chain::Insert(m5, m4);
+				pr::chain::Insert(m4, m3);
+				PR_CHECK(pr::chain::Size(m4), 3U);
+				{
+					pr::chain::Iter<Member> iter(m4);
+					PR_CHECK(iter->m_i, 4); --iter;
+					PR_CHECK(iter->m_i, 3); --iter;
+					PR_CHECK(iter->m_i, 5); --iter;
+					PR_CHECK(iter == 0, true);
+				}
+		
+				pr::chain::Remove(m5);
+				PR_CHECK(pr::chain::Size(m3), 2U);
+				PR_CHECK(pr::chain::Size(m4), 2U);
+		
+				pr::chain::Join(m0, m3);
+				{
+					pr::chain::Iter<Member> iter(m0);
+					PR_CHECK(iter->m_i, 0); ++iter;
+					PR_CHECK(iter->m_i, 1); ++iter;
+					PR_CHECK(iter->m_i, 2); ++iter;
+					PR_CHECK(iter->m_i, 3); ++iter;
+					PR_CHECK(iter->m_i, 4); ++iter;
+					PR_CHECK(iter == 0, true);
+				}
+			}
+			{
+				pr::chain::Link<Field> head;
+				Field f0(0), f1(1), f2(2);
+				pr::chain::Insert(head, f0.m_link);
+				pr::chain::Insert(head, f1.m_link);
+				pr::chain::Insert(head, f2.m_link);
+				{
+					pr::chain::Link<Field>* i = head.begin();
+					PR_CHECK(i->m_owner->m_i, 0); i = i->m_next;
+					PR_CHECK(i->m_owner->m_i, 1); i = i->m_next;
+					PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
+					PR_CHECK(i == &head, true);
+				}
+		
+				Field f3(f2), f4(4); f4 = f3; // copy construct/assignment
+				{
+					pr::chain::Link<Field>* i = head.begin();
+					PR_CHECK(i->m_owner->m_i, 0); i = i->m_next;
+					PR_CHECK(i->m_owner->m_i, 1); i = i->m_next;
+					PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
+					PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
+					PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
+					PR_CHECK(i == &head, true);
+				}
+			}
+		}
+	}
+}
+#endif
+
 #endif

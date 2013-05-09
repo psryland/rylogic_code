@@ -22,7 +22,7 @@ namespace pr
 		// are called 'Set' to stop clashes with overloaded function names
 		inline Plane& set(Plane& plane, float dx, float dy, float dz, float dist)	{ return plane.set(dx, dy, dz, -dist); }
 		inline Plane& set(Plane& plane, v4 const& point, v4 const& direction)		{ plane = direction; plane.w = -Dot3(point, direction); return plane; }
-		inline Plane& set(Plane& plane, v4 const& a, v4 const& b, v4 const& c)		{ plane = GetNormal3(Cross3(b-a, c-a)); plane.w = -Dot3(a, plane); return plane; }
+		inline Plane& set(Plane& plane, v4 const& a, v4 const& b, v4 const& c)		{ plane = Normalise3(Cross3(b-a, c-a)); plane.w = -Dot3(a, plane); return plane; }
 		inline Plane& set(Plane& plane, v4 const& norm, float dist)					{ plane = norm; plane.w = -dist; return plane; }
 		inline Plane  make(float dx, float dy, float dz, float dist)				{ return v4::make(dx, dy, dz, dist); }
 		inline Plane  make(v4 const& point, v4 const& direction)					{ Plane p; return set(p, point, direction); }
@@ -30,8 +30,7 @@ namespace pr
 		inline Plane  make(v4 const& norm, float dist)								{ Plane p; return set(p, norm, dist); }
 		inline v4     GetDirection(Plane const& plane)								{ return v4::make(plane.x, plane.y, plane.z, 0.0f); }
 		inline float  GetDistance(Plane const& plane)								{ return -plane.w; }
-		inline Plane& Normalise(Plane& plane)										{ return plane /= Length3(plane); }
-		inline Plane  GetNormal(Plane const& plane)									{ return plane /  Length3(plane); }
+		inline Plane  Normalise(Plane const& plane)									{ return plane / Length3(plane); }
 
 		// Make a best fit plane for a set of points. (designed for polygons really)
 		// This is using Newell's method of projecting the points into the yz, xz, and xy planes
@@ -49,7 +48,7 @@ namespace pr
 				plane.z += (i->x - j->x) * (i->y + j->y);	// Projection onto XY
 				centre  += *j;
 			}
-			Normalise3(plane);
+			plane = Normalise3(plane);
 			plane.w = Dot4(centre, plane) / (end - begin);	// Centre / (end - begin) is the true centre
 		}
 
@@ -58,8 +57,7 @@ namespace pr
 			Plane p;
 			return set(p, begin, end);
 		}
-	}//namespace plane
+	}
+}
 
-}//namespace pr
-
-#endif//PR_MATHS_PLANE_H
+#endif

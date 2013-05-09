@@ -505,7 +505,7 @@ void SceneManager::CastRay(bool apply_impulse)
 			// Apply an impulse that will change the velocity
 			static float deltav = 5.0f;
 			float strength = PhysicsEngine::ObjectGetMass(hit_object) * deltav;
-			col_data.m_impulse = strength * GetNormal3(ray);
+			col_data.m_impulse = strength * Normalise3(ray);
 			col_data.m_objA = hit_object;
 			PhysicsEngine::ObjectApplyImpulse(hit_object, col_data.m_impulse, col_data.m_point);
 			GetPropFromPhysObj(hit_object)->OnCollision(col_data);

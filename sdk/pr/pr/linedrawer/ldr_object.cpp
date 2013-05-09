@@ -315,9 +315,9 @@ void ParseTransform(pr::script::Reader& reader, pr::m4x4& o2w)
 			}break;
 		case pr::ldr::EKeyword::Normalise:
 			{
-				pr::Normalise3(p2w.x);
-				pr::Normalise3(p2w.y);
-				pr::Normalise3(p2w.z);
+				p2w.x = pr::Normalise3(p2w.x);
+				p2w.y = pr::Normalise3(p2w.y);
+				p2w.z = pr::Normalise3(p2w.z);
 			}break;
 		case pr::ldr::EKeyword::Orthonormalise:
 			{
@@ -722,7 +722,7 @@ template <pr::ldr::ELdrObject::Enum_ PlaneType> void ParsePlane(ParseParams& p)
 				create &= p.m_reader.ExtractReal(w);
 				create &= p.m_reader.ExtractReal(h);
 
-				pr::Normalise3(fwd);
+				fwd = pr::Normalise3(fwd);
 				pr::v4 up = pr::Perpendicular(fwd);
 				pr::v4 left = pr::Cross3(up, fwd);
 				up   *= h * 0.5f;

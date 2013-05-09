@@ -30,7 +30,7 @@ Couple::Couple(Shape const& shapeA, m4x4 const& a2w, Shape const& shapeB, m4x4 c
 		// separating vector from the difference in positions.
 		m_separating_axis = m_b2w.pos - m_a2w.pos;
 		if( IsZero3(m_separating_axis) )	{ m_separating_axis = v4XAxis; }
-		else								{ Normalise3(m_separating_axis); }
+		else								{ m_separating_axis = Normalise3(m_separating_axis); }
 	}
 	else
 	{

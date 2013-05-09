@@ -258,7 +258,7 @@ void Parser::ParseGravityField(ScriptLoader& loader)
 		}
 	}
 	loader.FindSectionEnd();
-	if( gravity.m_type == parse::Gravity::EType_Directional ) Normalise3(gravity.m_direction);
+	if( gravity.m_type == parse::Gravity::EType_Directional ) gravity.m_direction = Normalise3(gravity.m_direction);
 	m_output.m_gravity.push_back(gravity);
 }
 

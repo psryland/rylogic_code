@@ -270,6 +270,9 @@ namespace pr
 			std::string TypeAndName() const;
 
 			// Recursively add this object and its children to a scene
+			// Note, LdrObject does not inherit Evt_SceneRender, because child LdrObjects need to be
+			// added using the parents transform. Any app containing LdrObjects should handle the scene
+			// render event and then call 'AddToScene' on all of the root objects only
 			void AddToScene(pr::rdr::Scene& scene, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity);
 
 			// ToDo, do this in a way that will actually work

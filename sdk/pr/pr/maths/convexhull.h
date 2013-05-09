@@ -97,7 +97,7 @@ namespace pr
 				v4 e0 = data.m_vcont[*(data.m_vbegin + b)] - A;
 				v4 e1 = data.m_vcont[*(data.m_vbegin + c)] - A;
 				v4& plane = *data.m_hs_last;
-				plane   = GetNormal3(Cross3(e0, e1));
+				plane   = Normalise3(Cross3(e0, e1));
 				plane.w = -Dot3(plane, A);
 				++data.m_hs_last;
 	

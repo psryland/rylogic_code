@@ -114,9 +114,9 @@ namespace pr
 
 				global_sw.stop();
 				if (failed == 0)
-					std::cout << " **** UnitTest results: All passed. (taking " << global_sw.period_ms() << "ms) **** \n";
+					printf(" **** UnitTest results: All %d tests passed. (taking %7.3fms) **** \n", failed+passed, global_sw.period_ms());
 				else
-					std::cout << " **** UnitTest results: " << failed << " of " << failed+passed << " failed. **** \n";
+					printf(" **** UnitTest results: %d of %d failed. **** \n", failed, failed+passed);
 				return failed == 0 ? 0 : -1;
 			}
 			catch (...)
@@ -133,6 +133,14 @@ namespace pr
 		template <typename T, size_t Len1, size_t Len2> inline bool UTEqual(T const (&lhs)[Len1], T const (&rhs)[Len2])
 		{
 			return Len1 == Len2 && memcmp(lhs, rhs, sizeof(T) * Len1) == 0;
+		}
+		inline bool UTEqual(double lhs, double rhs)
+		{
+			return ::abs(rhs - lhs) < DBL_EPSILON;
+		}
+		inline bool UTEqual(float lhs, float rhs)
+		{
+			return ::fabs(rhs - lhs) < FLT_EPSILON;
 		}
 		inline bool UTEqual(char const* lhs, char const* rhs)
 		{
@@ -187,23 +195,12 @@ namespace pr
 // If this is giving an error like "int return type assumed" and PRUnitTest is
 // not defined, it means you haven't included the header containing the tests in
 // unittests.cpp
-#define PRUnitTest(testname) /*
-	*/template <typename T> void unittest_##testname();                               /* The unit test function forward declaration
-	*/inline void unittest_add_##testname##__LINE__() { unittest_##testname<void>(); }/* A function for adding a unit test item
-	*/static bool s_unittest_##testname##__LINE__ =                                   /* A static bool, that when constructed, causes a test item to be added for the test
-	*/	pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, unittest_add_##testname##__LINE__));\
+#define PRUnitTest(testname)/*
+	*/template <typename T> void unittest_##testname();                     /* The unit test function forward declaration
+	*/inline void unittest_add_##testname() { unittest_##testname<void>(); }/* A function for adding a unit test item
+	*/static bool s_unittest_##testname =                                   /* A static bool, that when constructed, causes a test item to be added for the test
+	*/	pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, unittest_add_##testname));\
 	template <typename T> void unittest_##testname()
-
-
-//// If this is giving an error like "int return type assumed" and PRUnitTest is
-//// not defined, it means you haven't included the header containing the tests in
-//// unittests.cpp
-//#define PRUnitTest(test_name) \
-//	template <typename T> void unittest_##test_name();\
-//	static bool s_unittest_##test_name##__LINE__ = pr::unittests::AddTest(\
-//		pr::unittests::UnitTestItem(#test_name, [](){ unittest_##test_name<void>(); })\
-//		);\
-//	template <typename T> void unittest_##test_name()
 
 #define PR_FAIL(msg)\
 	pr::unittests::Fail(msg, __FILE__, __LINE__)

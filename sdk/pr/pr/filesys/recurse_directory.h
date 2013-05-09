@@ -100,4 +100,41 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/filesys/filesys.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_filesys_recurse_directory)
+		{
+			struct CB
+			{
+				static bool SkipDir  (const char*, void*) { return false; }
+				static bool EnumFiles(const char* pathname, void* context)
+				{
+					int* found = static_cast<int*>(context);
+					std::string extn = pr::filesys::GetExtension<std::string>(pathname);
+					if      (extn.compare("cpp") == 0) ++found[0];
+					else if (extn.compare("c")   == 0) ++found[1];
+					else if (extn.compare("h")   == 0) ++found[2];
+					else                               ++found[3];
+					return true;
+				}
+			};
+		
+			int found[4] = {}; // 0-*.cpp, 1-*.c, 2-*.h, 3-other
+			std::string root = "Q:\\projects\\unittests";
+			PR_CHECK(pr::filesys::RecurseFiles(root, CB::EnumFiles, "*.cpp;*.c", found, CB::SkipDir), true);
+			PR_CHECK(pr::filesys::RecurseFiles(root, CB::EnumFiles, "*.h;*.cmd", found, CB::SkipDir), true);
+			PR_CHECK(found[0] == 1, true);
+			PR_CHECK(found[1] == 0, true);
+			PR_CHECK(found[2] == 1, true);
+			PR_CHECK(found[3] == 1, true);
+		}
+	}
+}
+#endif
+
 #endif

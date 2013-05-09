@@ -216,7 +216,7 @@ namespace pr
 		{
 			pr::v4 pt = WSPointFromScreenPoint(screen);
 			ws_point = m_c2w.pos;
-			ws_direction = pr::GetNormal3(pt - ws_point);
+			ws_direction = pr::Normalise3(pt - ws_point);
 		}
 
 		// Set the distances to the near and far clip planes

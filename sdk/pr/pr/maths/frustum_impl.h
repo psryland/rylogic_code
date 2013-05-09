@@ -22,10 +22,10 @@ namespace pr
 		m_Tnorms.y.set(   -z, 0.0f, -width  * 0.5f, 0.0f); // right
 		m_Tnorms.z.set( 0.0f,   -z, -height * 0.5f, 0.0f); // top
 		m_Tnorms.w.set( 0.0f,    z, -height * 0.5f, 0.0f); // bottom
-		Normalise3(m_Tnorms.x);
-		Normalise3(m_Tnorms.y);
-		Normalise3(m_Tnorms.z);
-		Normalise3(m_Tnorms.w);
+		m_Tnorms.x = Normalise3(m_Tnorms.x);
+		m_Tnorms.y = Normalise3(m_Tnorms.y);
+		m_Tnorms.z = Normalise3(m_Tnorms.z);
+		m_Tnorms.w = Normalise3(m_Tnorms.w);
 		Transpose4x4(m_Tnorms);
 		ZDist(zfar);
 		return *this;

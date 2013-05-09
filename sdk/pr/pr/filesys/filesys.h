@@ -2,15 +2,13 @@
 // File path/File system operations
 //  Copyright © Rylogic Ltd 2009
 //**********************************************
-//
-//	Pathname	= full path e.g. Drive:/path/path/file.ext
-//	Drive		= the drive e.g. "P". No ':'
-//	Path		= the directory without the drive. No leading '/', no trailing '/'. e.g. Path/path
-//	Directory	= the drive + path. no trailing '/'. e.g P:/Path/path
-//	Extension	= the last string following a '.'
-//	Filename	= file name including extension
-//	FileTitle	= file name not including extension
-//
+// Pathname  = full path e.g. Drive:/path/path/file.ext
+// Drive     = the drive e.g. "P". No ':'
+// Path      = the directory without the drive. No leading '/', no trailing '/'. e.g. Path/path
+// Directory = the drive + path. no trailing '/'. e.g P:/Path/path
+// Extension = the last string following a '.'
+// Filename  = file name including extension
+// FileTitle = file name not including extension
 // A full pathname = drive + ":/" + path + "/" + filetitle + "." + extension
 //
 #ifndef PR_FILESYS_FILESYS_H
@@ -28,8 +26,8 @@
 #include <algorithm>
 
 #ifndef PR_ASSERT
-#	define PR_ASSERT_DEFINED
-#	define PR_ASSERT(grp, exp, str)
+#  define PR_ASSERT_DEFINED
+#  define PR_ASSERT(grp, exp, str)
 #endif
 
 namespace pr
@@ -742,9 +740,232 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_filesys_filesys)
+		{
+			{//Quotes
+				std::string no_quotes = "path\\path\\file.extn";
+				std::string has_quotes = "\"path\\path\\file.extn\"";
+				std::string p = no_quotes;
+				pr::filesys::RemoveQuotes(p); PR_CHECK(no_quotes , p);
+				pr::filesys::AddQuotes(p);    PR_CHECK(has_quotes, p);
+				pr::filesys::AddQuotes(p);    PR_CHECK(has_quotes, p);
+			}
+			{//Slashes
+				std::string has_slashes1 = "\\path\\path\\";
+				std::string has_slashes2 = "/path/path/";
+				std::string no_slashes1 = "path\\path";
+				std::string no_slashes2 = "path/path";
+
+				pr::filesys::RemoveLeadingBackSlash(has_slashes1);
+				pr::filesys::RemoveLastBackSlash(has_slashes1);
+				PR_CHECK(no_slashes1, has_slashes1);
+
+				pr::filesys::RemoveLeadingBackSlash(has_slashes2);
+				pr::filesys::RemoveLastBackSlash(has_slashes2);
+				PR_CHECK(no_slashes2, has_slashes2);
+			}
+			{//Canonicalise
+				std::string p0 = "C:\\path/.././path\\path\\path\\../../../file.ext";
+				std::string P0 = "C:\\file.ext";
+				pr::filesys::Canonicalise(p0);
+				PR_CHECK(P0, p0);
+
+				std::string p1 = ".././path\\path\\path\\../../../file.ext";
+				std::string P1 = "..\\file.ext";
+				pr::filesys::Canonicalise(p1);
+				PR_CHECK(P1, p1);
+			}
+			{//Standardise
+				std::string p0 = "c:\\path/.././Path\\PATH\\path\\../../../PaTH\\File.EXT";
+				std::string P0 = "c:\\path\\file.ext";
+				pr::filesys::Standardise(p0);
+				PR_CHECK(P0, p0);
+			}
+			{//Make
+				std::string p0 = pr::filesys::Make<std::string>("c:\\", "/./path0/path1/path2\\../", "./path3/file", "extn");
+				std::string P0 = "c:\\path0\\path1\\path3\\file.extn";
+				PR_CHECK(P0, p0);
+
+				std::string p1 = pr::filesys::Make<std::string>("c:\\./path0/path1/path2\\../", "./path3/file", "extn");
+				std::string P1 = "c:\\path0\\path1\\path3\\file.extn";
+				PR_CHECK(P1, p1);
+
+				std::string p2 = pr::filesys::Make<std::string>("c:\\./path0/path1/path2\\..", "./path3/file.extn");
+				std::string P2 = "c:\\path0\\path1\\path3\\file.extn";
+				PR_CHECK(P2, p2);
+			}
+			{//GetDrive
+				std::string p0 = pr::filesys::GetDrive<std::string>("drive:/path");
+				std::string P0 = "drive";
+				PR_CHECK(P0, p0);
+			}
+			{//GetPath
+				std::string p0 = pr::filesys::GetPath<std::string>("drive:/path0/path1/file.ext");
+				std::string P0 = "path0/path1";
+				PR_CHECK(P0, p0);
+			}
+			{//GetDirectory
+				std::string p0 = pr::filesys::GetDirectory<std::string>("drive:/path0/path1/file.ext");
+				std::string P0 = "drive:/path0/path1";
+				PR_CHECK(P0, p0);
+			}
+			{//GetExtension
+				std::string p0 = pr::filesys::GetExtension<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+				std::string P0 = "extn";
+				PR_CHECK(P0, p0);
+			}
+			{//GetFilename
+				std::string p0 = pr::filesys::GetFilename<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+				std::string P0 = "file.stuff.extn";
+				PR_CHECK(P0, p0);
+			}
+			{//GetFiletitle
+				std::string p0 = pr::filesys::GetFiletitle<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+				std::string P0 = "file.stuff";
+				PR_CHECK(P0, p0);
+			}
+			{//RmvDrive
+				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+				std::string P0 = "pa.th0/path1/file.stuff.extn";
+				p0 = pr::filesys::RmvDrive(p0);
+				PR_CHECK(P0, p0);
+			}
+			{//RmvPath
+				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+				std::string P0 = "drive:/file.stuff.extn";
+				p0 = pr::filesys::RmvPath(p0);
+				PR_CHECK(P0, p0);
+			}
+			{//RmvDirectory
+				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+				std::string P0 = "file.stuff.extn";
+				p0 = pr::filesys::RmvDirectory(p0);
+				PR_CHECK(P0, p0);
+			}
+			{//RmvExtension
+				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+				std::string P0 = "drive:/pa.th0/path1/file.stuff";
+				p0 = pr::filesys::RmvExtension(p0);
+				PR_CHECK(P0, p0);
+			}
+			{//RmvFilename
+				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+				std::string P0 = "drive:/pa.th0/path1";
+				p0 = pr::filesys::RmvFilename(p0);
+				PR_CHECK(P0, p0);
+			}
+			{//RmvFiletitle
+				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+				std::string P0 = "drive:/pa.th0/path1/.extn";
+				p0 = pr::filesys::RmvFiletitle(p0);
+				PR_CHECK(P0, p0);
+			}
+			{//Files
+				std::string dir = pr::filesys::CurrentDirectory<std::string>();
+				PR_CHECK(pr::filesys::DirectoryExists(dir), true);
+
+				std::string fn = pr::filesys::MakeUniqueFilename<std::string>("test_fileXXXXXX");
+				PR_CHECK(pr::filesys::FileExists(fn), false);
+
+				std::string path = pr::filesys::Make(dir, fn);
+
+				std::ofstream f(path.c_str());
+				f << "Hello World";
+				f.close();
+
+				PR_CHECK(pr::filesys::FileExists(path), true);
+				std::string fn2 = pr::filesys::MakeUniqueFilename<std::string>("test_fileXXXXXX");
+				std::string path2 = pr::filesys::GetFullPath(fn2);
+
+				pr::filesys::RenameFile(path, path2);
+				PR_CHECK(pr::filesys::FileExists(path2), true);
+				PR_CHECK(pr::filesys::FileExists(path), false);
+
+				pr::filesys::CpyFile(path2, path);
+				PR_CHECK(pr::filesys::FileExists(path2), true);
+				PR_CHECK(pr::filesys::FileExists(path), true);
+
+				pr::filesys::EraseFile(path2);
+				PR_CHECK(pr::filesys::FileExists(path2), false);
+				PR_CHECK(pr::filesys::FileExists(path), true);
+
+				__int64 size = pr::filesys::FileLength(path);
+				PR_CHECK(size, 11);
+
+				unsigned int attr = pr::filesys::GetAttribs(path);
+				unsigned int flags = pr::filesys::EAttrib::File|pr::filesys::EAttrib::WriteAccess|pr::filesys::EAttrib::ReadAccess;
+				PR_CHECK(attr, flags);
+
+				attr = pr::filesys::GetAttribs(dir);
+				flags = pr::filesys::EAttrib::Directory|pr::filesys::EAttrib::WriteAccess|pr::filesys::EAttrib::ReadAccess|pr::filesys::EAttrib::ExecAccess;
+				PR_CHECK(attr, flags);
+
+				std::string drive = pr::filesys::GetDrive(path);
+				unsigned __int64 disk_free = pr::filesys::GetDiskFree(drive[0]);
+				unsigned __int64 disk_size = pr::filesys::GetDiskSize(drive[0]);
+				PR_CHECK(disk_size > disk_free, true);
+
+				pr::filesys::EraseFile(path);
+				PR_CHECK(pr::filesys::FileExists(path), false);
+			}
+			{//DirectoryOps
+				{
+					std::string p0 = "C:/path0/../";
+					std::string p1 = "./path4/path5";
+					std::string P  = "C:\\path4\\path5";
+					std::string R  = pr::filesys::CombinePath(p0, p1);
+					PR_CHECK(P, R);
+				}
+				{
+					std::string p0 = "C:/path0/path1/path2/path3/file.extn";
+					std::string p1 = "C:/path0/path4/path5";
+					std::string P  = "../../path1/path2/path3/file.extn";
+					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					PR_CHECK(P, R);
+				}
+				{
+					std::string p0 = "/path1/path2/file.extn";
+					std::string p1 = "/path1/path3/path4";
+					std::string P  = "../../path2/file.extn";
+					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					PR_CHECK(P, R);
+				}
+				{
+					std::string p0 = "/path1/file.extn";
+					std::string p1 = "/path1";
+					std::string P  = "file.extn";
+					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					PR_CHECK(P, R);
+				}
+				{
+					std::string p0 = "path1/file.extn";
+					std::string p1 = "path2";
+					std::string P  = "../path1/file.extn";
+					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					PR_CHECK(P, R);
+				}
+				{
+					std::string p0 = "c:/path1/file.extn";
+					std::string p1 = "d:/path2";
+					std::string P  = "c:/path1/file.extn";
+					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					PR_CHECK(P, R);
+				}
+			}
+		}
+	}
+}
+#endif
+
 #ifdef PR_ASSERT_DEFINED
-#	undef PR_ASSERT_DEFINED
-#	undef PR_ASSERT
+#  undef PR_ASSERT_DEFINED
+#  undef PR_ASSERT
 #endif
 
 #endif

@@ -57,22 +57,6 @@ namespace pr
 		static TTo To(m4x4&& from) { return To<TTo>(v.x) + " " + To<TTo>(v.y) + " " + To<TTo>(v.z) + " " + To<TTo>(v.w); }
 	};
 
-	// To<IRect>
-	template <typename TFrom> struct Convert<IRect,TFrom>
-	{
-		#ifdef _WINDEF_
-		static IRect To(RECT const& x) { return pr::IRect::make(x.left, x.top, x.right, x.bottom); }
-		static IRect To(SIZE const& x) { return pr::IRect::make(0, 0, x.cx, x.cy); }
-		#endif
-	};
-	template <typename TTo> struct Convert<TTo,IRect>
-	{
-		#ifdef _WINDEF_
-		static RECT To(IRect const& x) { RECT r = {x.left, x.top, x.right, x.bottom}; return r; }
-		static SIZE To(IRect const& x) { SIZE s = {x.width(), x.height()}; return s; }
-		#endif
-	};
-
 	// To<iv2>
 	template <typename TFrom> struct Convert<iv2, TFrom>
 	{
@@ -87,13 +71,48 @@ namespace pr
 		#endif
 	};
 
-	//// Convert from RECT
-	//template <>                inline pr::IRect      To<pr::IRect>      (RECT const& rect) { return pr::IRect::make(rect.left, rect.top, rect.right, rect.bottom); }
-	//template <>                inline SIZE           To<SIZE>           (RECT const& rect) { SIZE s = {rect.right - rect.left, rect.bottom - rect.top}; return s; }
-	
+	// To<IRect>
+	template <typename TFrom> struct Convert<IRect,TFrom>
+	{
+		static IRect To(iv2 const& x) { return IRect::make(0, 0, x.x, x.y); }
+		#ifdef _WINDEF_
+		static IRect To(RECT const& x) { return IRect::make(x.left, x.top, x.right, x.bottom); }
+		static IRect To(SIZE const& x) { return IRect::make(0, 0, x.cx, x.cy); }
+		#endif
+	};
+
+	#ifdef _WINDEF_
+
+	// To<SIZE>
+	template <typename TFrom> struct Convert<SIZE,TFrom>
+	{
+		static SIZE To(IRect const& x) { SIZE s = {x.width(), x.height()}; return s; }
+		static SIZE To(RECT const& x)  { SIZE s = {x.right - x.left, x.bottom - x.top}; return s; }
+	};
+
+	// To<RECT>
+	template <typename TFrom> struct Convert<RECT,TFrom>
+	{
+		static RECT To(IRect const& x) { RECT r = {x.left, x.top, x.right, x.bottom}; return r; }
+		static RECT To(SIZE const& x)  { RECT r = {0, 0, x.cx, x.cy}; return r; }
+	};
+
+	#endif
+
 	#ifdef _GDIPLUS_H
-	template <> inline Gdiplus::Rect  To<Gdiplus::Rect >(RECT const& x) { return Gdiplus::Rect(x.left, x.top, x.right - x.left, x.bottom - x.top); }
-	template <> inline Gdiplus::RectF To<Gdiplus::RectF>(RECT const& x) { return Gdiplus::RectF(float(rect.left), float(rect.top), float(rect.right - rect.left), float(rect.bottom - rect.top)); }
+
+	// To<Gdiplus::Rect>
+	template <typename TFrom> struct Convert<Gdiplus::Rect,TFrom>
+	{
+		static Gdiplus::Rect  To(RECT const& x) { return Gdiplus::Rect(x.left, x.top, x.right - x.left, x.bottom - x.top); }
+	};
+
+	// To<Gdiplus::RectF>
+	template <typename TFrom> struct Convert<Gdiplus::RectF,TFrom>
+	{
+		static Gdiplus::RectF To(RECT const& x) { return Gdiplus::RectF(float(rect.left), float(rect.top), float(rect.right - rect.left), float(rect.bottom - rect.top)); }
+	};
+
 	#endif
 
 

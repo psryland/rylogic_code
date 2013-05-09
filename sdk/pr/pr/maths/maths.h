@@ -33,6 +33,7 @@
 #include "pr/maths/line3.h"
 #include "pr/maths/irect.h"
 #include "pr/maths/frect.h"
+#include "pr/maths/isize.h"
 #include "pr/maths/spline.h"
 #include "pr/maths/frustum.h"
 #include "pr/maths/polynomial.h"
