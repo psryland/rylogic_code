@@ -32,10 +32,11 @@ obj2008/
 obj2010/
 obj2012/
 bin/
-bin2008/
-bin2010/
 .svn/
 .metadata/
+.nuget/
+packages/
+TestResults/
 media/
 ideas/
 thirdparty/
