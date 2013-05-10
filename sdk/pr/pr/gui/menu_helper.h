@@ -120,7 +120,7 @@ namespace pr
 			{
 				return m_max_length;
 			}
-			void MaxLength(int max_length)
+			void MaxLength(size_t max_length)
 			{
 				m_max_length = max_length;
 				if (m_menu_items.size() <= m_max_length) return;

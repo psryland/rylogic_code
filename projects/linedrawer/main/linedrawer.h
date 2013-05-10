@@ -8,7 +8,7 @@
 
 #include "linedrawer/types/forward.h"
 #include "linedrawer/types/ldrevent.h"
-#include "linedrawer/main/usersettings.h"
+#include "linedrawer/main/user_settings.h"
 #include "linedrawer/main/navmanager.h"
 #include "linedrawer/main/file_sources.h"
 #include "linedrawer/main/lua_source.h"

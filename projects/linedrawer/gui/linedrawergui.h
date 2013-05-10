@@ -14,6 +14,7 @@
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "linedrawer/resources/linedrawer.resources.h"
 #include "linedrawer/main/linedrawer.h"
+#include "linedrawer/main/user_settings.h"
 #include "linedrawer/types/ldrevent.h"
 #include "linedrawer/utility/misc.h"
 #include "pr/gui/messagemap_dbg.h"
@@ -37,6 +38,7 @@ class LineDrawerGUI
 	,public pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	,public pr::events::IRecv<pr::ldr::Evt_AddBegin>
 	,public pr::events::IRecv<pr::ldr::Evt_AddEnd>
+	,public pr::events::IRecv<pr::settings::Evt<UserSettings> >
 	,public pr::gui::RecentFiles::IHandler
 {
 	enum
@@ -228,7 +230,8 @@ public:
 	void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&);
 	void OnEvent(pr::ldr::Evt_AddBegin const&);
 	void OnEvent(pr::ldr::Evt_AddEnd const&);
-	
+	void OnEvent(pr::settings::Evt<UserSettings> const&);
+
 	// Recent files callbacks
 	void MenuList_OnClick(pr::gui::MenuList* sender, pr::gui::MenuList::Item const& item);
 	void MenuList_ListChanged(pr::gui::MenuList* sender);

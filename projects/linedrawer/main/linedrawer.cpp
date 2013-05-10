@@ -49,7 +49,7 @@ LineDrawer::LineDrawer(LineDrawerGUI& ui, char const* cmdline)
 	,m_test_point_enable(false)
 	,m_ui(ui)
 	,m_rdr(m_renderer)
-	,m_nav(m_camera, pr::To<pr::IRect>(m_rdr.DisplayArea()), m_user_settings.m_camera_align)
+	,m_nav(m_camera, pr::To<pr::IRect>(m_rdr.DisplayArea()), m_user_settings.m_CameraAlignAxis)
 	,m_store()
 	,m_store_ui(ui.m_hWnd)
 	,m_plugin_mgr(this)
@@ -179,20 +179,20 @@ void LineDrawer::CreateStockModels()
 void LineDrawer::Render()
 {
 	// Ignore render calls if the user settings say rendering is disabled
-	if (!m_user_settings.m_rendering_enabled)
+	if (!m_user_settings.m_RenderingEnabled)
 		return;
 
 	// Update the position of the focus point
-	if (m_user_settings.m_show_focus_point)
+	if (m_user_settings.m_ShowFocusPoint)
 	{
-		float scale = m_user_settings.m_focus_point_scale * m_nav.FocusDistance();
+		float scale = m_user_settings.m_FocusPointScale * m_nav.FocusDistance();
 		pr::Scale4x4(m_focus_point.m_i2w, scale, m_nav.FocusPoint());
 	}
 
 	// Update the scale of the origin
-	if (m_user_settings.m_show_origin)
+	if (m_user_settings.m_ShowOrigin)
 	{
-		float scale = m_user_settings.m_focus_point_scale * pr::Length3(m_camera.CameraToWorld().pos);
+		float scale = m_user_settings.m_FocusPointScale * pr::Length3(m_camera.CameraToWorld().pos);
 		pr::Scale4x4(m_origin_point.m_i2w, scale, pr::v4Origin);
 	}
 
@@ -200,16 +200,16 @@ void LineDrawer::Render()
 	//m_nav.PositionCamera();
 
 	// Update the lighting. If lighting is camera relative, adjust the position and direction
-	m_scene.m_global_light = m_user_settings.m_light;
-	if (m_user_settings.m_light_is_camera_relative)
+	m_scene.m_global_light = m_user_settings.m_Light;
+	if (m_user_settings.m_LightIsCameraRelative)
 	{
 		pr::rdr::Light& light = m_scene.m_global_light;
-		light.m_direction = m_camera.CameraToWorld() * m_user_settings.m_light.m_direction;
-		light.m_position  = m_camera.CameraToWorld() * m_user_settings.m_light.m_position;
+		light.m_direction = m_camera.CameraToWorld() * m_user_settings.m_Light.m_direction;
+		light.m_position  = m_camera.CameraToWorld() * m_user_settings.m_Light.m_position;
 	}
 
 	// Set the background colour
-	m_scene.m_background_colour = m_user_settings.m_background_colour;
+	m_scene.m_background_colour = m_user_settings.m_BackgroundColour;
 
 	// Add objects to the viewport
 	m_scene.ClearDrawlist();
@@ -219,7 +219,7 @@ void LineDrawer::Render()
 	m_scene.SetView(m_camera);
 
 	// Update the fill mode for the scene
-	switch (m_user_settings.m_global_render_mode) {
+	switch (m_user_settings.m_GlobalRenderMode) {
 	case EGlobalRenderMode::Solid:        m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
 	case EGlobalRenderMode::Wireframe:    m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME); break;
 	case EGlobalRenderMode::SolidAndWire: m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
@@ -229,7 +229,7 @@ void LineDrawer::Render()
 	m_scene.Render();
 
 	// Render the wireframe over the top of the solid
-	if (m_user_settings.m_global_render_mode == EGlobalRenderMode::SolidAndWire)
+	if (m_user_settings.m_GlobalRenderMode == EGlobalRenderMode::SolidAndWire)
 	{
 		m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
 		m_scene.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
@@ -329,7 +329,7 @@ void LineDrawer::CreateDemoScene()
 // User settings have been changed
 void LineDrawer::OnEvent(pr::ldr::Evt_SettingsChanged const&)
 {
-	m_user_settings.m_objmgr_settings = m_store_ui.Settings();
+	m_user_settings.m_ObjectManagerSettings = m_store_ui.Settings();
 }
 
 // An object has been added to the object manager
@@ -352,7 +352,7 @@ void LineDrawer::OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&)
 	pr::Scale4x4(m_selection_box.m_i2w, bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
 
 	// Request a refresh when the selection changes (if the selection box is visible)
-	if (m_user_settings.m_show_selection_box)
+	if (m_user_settings.m_ShowSelectionBox)
 		pr::events::Send(ldr::Event_Refresh());
 }
 
@@ -360,11 +360,11 @@ void LineDrawer::OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&)
 void LineDrawer::OnEvent(pr::rdr::Evt_SceneRender const& e)
 {
 	// Render the focus point
-	if (m_user_settings.m_show_focus_point)
+	if (m_user_settings.m_ShowFocusPoint)
 		e.m_scene->AddInstance(m_focus_point);
 
 	// Render the origin
-	if (m_user_settings.m_show_origin)
+	if (m_user_settings.m_ShowOrigin)
 		e.m_scene->AddInstance(m_origin_point);
 
 	// Render the test point
@@ -372,7 +372,7 @@ void LineDrawer::OnEvent(pr::rdr::Evt_SceneRender const& e)
 		e.m_scene->AddInstance(m_test_point);
 
 	// Render the selection box
-	if (m_user_settings.m_show_selection_box && m_store_ui.SelectedCount() != 0)
+	if (m_user_settings.m_ShowSelectionBox && m_store_ui.SelectedCount() != 0)
 		e.m_scene->AddInstance(m_selection_box);
 
 	// Tools instances

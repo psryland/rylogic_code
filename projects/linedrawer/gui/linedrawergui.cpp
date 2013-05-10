@@ -20,14 +20,14 @@ namespace
 
 // Constructor
 LineDrawerGUI::LineDrawerGUI()
-:m_ldr(0)
-,m_status()
-,m_recent_files()
-,m_saved_views()
-,m_sizing(false)
-,m_refresh(false)
-,m_suspend_render(false)
-,m_mouse_status_updates(true)
+	:m_ldr(0)
+	,m_status()
+	,m_recent_files()
+	,m_saved_views()
+	,m_sizing(false)
+	,m_refresh(false)
+	,m_suspend_render(false)
+	,m_mouse_status_updates(true)
 {}
 LineDrawerGUI::~LineDrawerGUI()
 {
@@ -40,36 +40,36 @@ BOOL LineDrawerGUI::OnInitDialog(CWindow, LPARAM)
 	//// center the dialog on the screen
 	//CenterWindow();
 	extern CAppModule g_app_module;
-	
+
 	// set icons
 	HICON hIcon      = (HICON)::LoadImage(g_app_module.GetResourceInstance(), MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR);
 	HICON hIconSmall = (HICON)::LoadImage(g_app_module.GetResourceInstance(), MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
 	SetIcon(hIcon, TRUE);
 	SetIcon(hIconSmall, FALSE);
-	
+
 	// Load accelerators
 	m_haccel = (HACCEL)::LoadAccelerators(g_app_module.GetResourceInstance(), MAKEINTRESOURCE(IDR_ACCELERATOR2));
-	
+
 	// Register object for message filtering and idle updates
 	CMessageLoop* loop = g_app_module.GetMessageLoop(); ATLASSERT(loop != NULL);
 	loop->AddMessageFilter(this);
-	
+
 	// Controls
 	int status_panes[] = {-1};
 	m_status.Create(m_hWnd, 0, TEXT(""), WS_CHILD|WS_VISIBLE|CCS_BOTTOM|CCS_ADJUSTABLE|SBARS_SIZEGRIP, 0, IDC_STATUSBAR_MAIN);
 	m_status.SetParts(1, status_panes);
-	
+
 	// Initialise the menu lists
 	m_recent_files.Attach(pr::gui::GetMenuByName(GetMenu(), TEXT("&File,&Recent Files"))      ,ID_FILE_RECENTFILES      ,0xffffffff ,this);
 	m_saved_views .Attach(pr::gui::GetMenuByName(GetMenu(), TEXT("&Navigation,&Saved Views")) ,ID_NAVIGATION_SAVEDVIEWS ,0xffffffff ,this);
-	
+
 	// Initialise the resize dialog, controls to be resized need to have been created
 	DlgResize_Init();
-	
+
 	// Set minimum window size
 	m_ptMinTrackSize.x = 320;
 	m_ptMinTrackSize.y = 200;
-	
+
 	// Create the main app object
 	try { m_ldr = new LineDrawer(*this, GetCommandLineA()); }
 	catch (std::exception const& e)
@@ -80,22 +80,22 @@ BOOL LineDrawerGUI::OnInitDialog(CWindow, LPARAM)
 		CloseApp(-1);
 		return TRUE;
 	}
-	
+
 	// Initialise the object manager
-	m_ldr->m_store_ui.Settings(m_ldr->Settings().m_objmgr_settings.c_str());
-	
+	m_ldr->m_store_ui.Settings(m_ldr->Settings().m_ObjectManagerSettings.c_str());
+
 	// Initialise the recent files list and saved views
-	m_recent_files.MaxLength(m_ldr->Settings().m_max_recent_files);
-	m_saved_views .MaxLength(m_ldr->Settings().m_max_saved_views);
-	m_recent_files.Import(m_ldr->Settings().m_recent_files);
-	
+	m_recent_files.MaxLength(m_ldr->Settings().m_MaxRecentFiles);
+	m_saved_views .MaxLength(m_ldr->Settings().m_MaxSavedViews);
+	m_recent_files.Import(m_ldr->Settings().m_RecentFiles);
+
 	// Update the state of the UI
 	UpdateUI();
-	
+
 	// Set the initial camera position
 	m_ldr->ResetView(pr::ldr::EObjectBounds::All);
-	m_ldr->m_nav.CameraAlign(m_ldr->Settings().m_camera_align);
-	
+	m_ldr->m_nav.CameraAlign(m_ldr->Settings().m_CameraAlignAxis);
+
 	// Start the main timer
 	OnTimerTick(0);
 	return TRUE;
@@ -105,15 +105,15 @@ BOOL LineDrawerGUI::OnInitDialog(CWindow, LPARAM)
 BOOL LineDrawerGUI::PreTranslateMessage(MSG* pMsg)
 {
 	//pr::DebugMessage(pMsg);
-	
+
 	// Forward messages for the store ui to that dialog
 	if (m_ldr != 0 && m_ldr->m_store_ui.IsChild(pMsg->hwnd))
 		return IsDialogMessage(pMsg);
-		
+
 	// Handle key accelerators
 	if (::TranslateAccelerator(m_hWnd, m_haccel, pMsg) != 0)
 		return TRUE;
-		
+
 	// Intersept key presses
 	if (pMsg->message == WM_KEYDOWN)
 	{
@@ -121,7 +121,7 @@ BOOL LineDrawerGUI::PreTranslateMessage(MSG* pMsg)
 		ProcessWindowMessage(pMsg->hwnd, pMsg->message, pMsg->wParam, pMsg->lParam, result);
 		return TRUE; // has been translated and dispatched
 	}
-	
+
 	// Don't call IsDialogMessage(pMsg) because we don't want typical
 	// dialog window-like keyboard behaviour (e.g. tab or arrow keys
 	// to switch focus between controls, etc)
@@ -134,7 +134,7 @@ BOOL LineDrawerGUI::OnIdle(int)
 	// If the settings have changed, save them
 	if (m_ldr->Settings().SaveRequired())
 		m_ldr->Settings().Save();
-		
+
 	return FALSE;
 }
 
@@ -142,26 +142,26 @@ BOOL LineDrawerGUI::OnIdle(int)
 void LineDrawerGUI::OnTimerTick(UINT_PTR)
 {
 	// If file watching is turned on, look for changed files
-	if (m_ldr->Settings().m_watch_for_changed_files)
+	if (m_ldr->Settings().m_WatchForChangedFiles)
 		m_ldr->m_files.RefreshChangedFiles();
-		
+
 	// Orbit the camera if enabled
-	if (m_ldr->Settings().m_camera_orbit)
+	if (m_ldr->Settings().m_CameraOrbit)
 	{
-		m_ldr->m_nav.OrbitCamera(m_ldr->Settings().m_camera_orbit_speed);
+		m_ldr->m_nav.OrbitCamera(m_ldr->Settings().m_CameraOrbitSpeed);
 		m_refresh = true;
 	}
-	
+
 	// Poll stepable plugin's
 	m_ldr->m_plugin_mgr.Poll();
-	
+
 	// If a refresh has been flagged, render now
 	//if (m_refresh)
 	{
 		m_ldr->Render();
 		m_refresh = false;
 	}
-	
+
 	SetTimer(ID_MAIN_TIMER, 1, 0);
 }
 
@@ -204,7 +204,7 @@ BOOL LineDrawerGUI::OnEraseBkgnd(CDCHandle dc)
 	SetMsgHandled(FALSE);
 	if (m_sizing)
 	{
-		CBrush brush; brush.CreateSolidBrush(m_ldr->Settings().m_background_colour.GetColorRef());
+		CBrush brush; brush.CreateSolidBrush(m_ldr->Settings().m_BackgroundColour.GetColorRef());
 		CRect r; GetClientRect(&r);
 		CPoint ctr = r.CenterPoint();
 		dc.FillRect(&r, brush);
@@ -228,11 +228,11 @@ void LineDrawerGUI::OnDropFiles(HDROP hDropInfo)
 {
 	UINT num_files = ::DragQueryFileA(hDropInfo, 0xFFFFFFFF, NULL, 0);
 	if (num_files == 0) return;
-	
+
 	// Clear the data unless shift is held down
 	if (!pr::KeyDown(VK_SHIFT))
 		m_ldr->m_files.Clear();
-		
+
 	// Load the files
 	std::string path;
 	for (UINT i = 0; i != num_files; ++i)
@@ -246,17 +246,17 @@ void LineDrawerGUI::OnDropFiles(HDROP hDropInfo)
 // Open a text panel for adding new ldr objects immediately
 LRESULT LineDrawerGUI::OnFileNew(WORD, WORD, HWND, BOOL&)
 {
-	CTextEntryDlg dlg(m_hWnd, "Create new ldr objects:", m_ldr->Settings().m_new_object_string.c_str(), true);
+	CTextEntryDlg dlg(m_hWnd, "Create new ldr objects:", m_ldr->Settings().m_NewObjectString.c_str(), true);
 	pr::IRect r  = pr::WindowBounds(m_hWnd);
 	dlg.m_width  = pr::Max(100, r.SizeX() - 50);
 	dlg.m_height = pr::Max(60,  r.SizeY() - 50);
 	if (dlg.DoModal() != IDOK) return S_OK;
-	
+
 	try
 	{
-		m_ldr->Settings().m_new_object_string = dlg.m_body;
+		m_ldr->Settings().m_NewObjectString = dlg.m_body;
 		m_ldr->Settings().Save();
-		pr::ldr::AddString(m_ldr->m_rdr, m_ldr->Settings().m_new_object_string.c_str(), m_ldr->m_store);
+		pr::ldr::AddString(m_ldr->m_rdr, m_ldr->Settings().m_NewObjectString.c_str(), m_ldr->m_store);
 		m_refresh = true;
 	}
 	catch (LdrException const& e)
@@ -350,7 +350,7 @@ LRESULT LineDrawerGUI::OnNavAlign(WORD, WORD wID, HWND, BOOL&)
 	case ID_NAV_ALIGN_Z:       m_ldr->m_nav.CameraAlign(pr::v4ZAxis); break;
 	case ID_NAV_ALIGN_CURRENT: m_ldr->m_nav.CameraAlign(m_ldr->m_nav.CameraToWorld().y); break;
 	}
-	m_ldr->Settings().m_camera_align = m_ldr->m_nav.CameraAlign();
+	m_ldr->Settings().m_CameraAlignAxis = m_ldr->m_nav.CameraAlign();
 	UpdateUI();
 	m_refresh = true;
 	return S_OK;
@@ -371,7 +371,7 @@ LRESULT LineDrawerGUI::OnViewAxis(WORD, WORD wID, HWND, BOOL&)
 	case ID_VIEW_AXIS_NEGZ:     axis = -pr::v4ZAxis; break;
 	case ID_VIEW_AXIS_POSXYZ:   axis = -pr::v4::make(0.577350f, 0.577350f, 0.577350f, 0.0f); break;
 	}
-	
+
 	pr::m4x4 c2w = m_ldr->m_nav.CameraToWorld();
 	pr::v4 focus = m_ldr->m_nav.FocusPoint();
 	pr::v4 cam = focus + axis * m_ldr->m_nav.FocusDistance();
@@ -393,7 +393,7 @@ LRESULT LineDrawerGUI::OnSaveView(WORD, WORD wID, HWND, BOOL&)
 	{
 		CTextEntryDlg dlg(m_hWnd, "Label for this view", pr::FmtS("view%d", m_saved_views.Items().size()), false);
 		if (dlg.DoModal() != IDOK) return S_OK;
-		
+
 		NavManager::SavedViewID id = m_ldr->m_nav.SaveView();
 		m_saved_views.Add(dlg.m_body.c_str(), (void*)id, false, true);
 	}
@@ -405,13 +405,13 @@ LRESULT LineDrawerGUI::OnSetFocusPosition(WORD, WORD, HWND, BOOL&)
 {
 	CTextEntryDlg dlg(m_hWnd, "Entry focus point position", "0 0 0", false);
 	if (dlg.DoModal() != IDOK) return S_OK;
-	
+
 	float pos[3];
 	if (pr::str::ExtractRealArrayC(&pos[0], 3, dlg.m_body.c_str()))
 		m_ldr->m_nav.FocusPoint(pr::v4::make(pos, 1.0f));
 	else
 		MessageBoxA("Format incorrect", "Focus point not set", MB_OK|MB_ICONERROR);
-		
+
 	m_refresh = true;
 	return S_OK;
 }
@@ -419,7 +419,7 @@ LRESULT LineDrawerGUI::OnSetFocusPosition(WORD, WORD, HWND, BOOL&)
 // Toggle camera orbit mode
 LRESULT LineDrawerGUI::OnOrbit(WORD, WORD, HWND, BOOL&)
 {
-	m_ldr->Settings().m_camera_orbit = !m_ldr->Settings().m_camera_orbit;
+	m_ldr->Settings().m_CameraOrbit = !m_ldr->Settings().m_CameraOrbit;
 	m_ldr->m_nav.OrbitCamera(0.0f);
 	UpdateUI();
 	return S_OK;
@@ -459,7 +459,7 @@ LRESULT LineDrawerGUI::OnDataClearScene(WORD, WORD, HWND, BOOL&)
 // Toggle auto refresh file sources
 LRESULT LineDrawerGUI::OnDataAutoRefresh(WORD, WORD, HWND, BOOL&)
 {
-	m_ldr->Settings().m_watch_for_changed_files = !m_ldr->Settings().m_watch_for_changed_files;
+	m_ldr->Settings().m_WatchForChangedFiles = !m_ldr->Settings().m_WatchForChangedFiles;
 	UpdateUI();
 	return S_OK;
 }
@@ -467,7 +467,7 @@ LRESULT LineDrawerGUI::OnDataAutoRefresh(WORD, WORD, HWND, BOOL&)
 // Toggle visibility of the focus point
 LRESULT LineDrawerGUI::OnShowFocus(WORD, WORD, HWND, BOOL&)
 {
-	m_ldr->Settings().m_show_focus_point = !m_ldr->Settings().m_show_focus_point;
+	m_ldr->Settings().m_ShowFocusPoint = !m_ldr->Settings().m_ShowFocusPoint;
 	UpdateUI();
 	m_refresh = true;
 	return S_OK;
@@ -476,7 +476,7 @@ LRESULT LineDrawerGUI::OnShowFocus(WORD, WORD, HWND, BOOL&)
 // Toggle visibility of the origin point
 LRESULT LineDrawerGUI::OnShowOrigin(WORD, WORD, HWND, BOOL&)
 {
-	m_ldr->Settings().m_show_origin = !m_ldr->Settings().m_show_origin;
+	m_ldr->Settings().m_ShowOrigin = !m_ldr->Settings().m_ShowOrigin;
 	UpdateUI();
 	m_refresh = true;
 	return S_OK;
@@ -485,7 +485,7 @@ LRESULT LineDrawerGUI::OnShowOrigin(WORD, WORD, HWND, BOOL&)
 // Toggle visibility of the selection box
 LRESULT LineDrawerGUI::OnShowSelection(WORD, WORD, HWND, BOOL&)
 {
-	m_ldr->Settings().m_show_selection_box = !m_ldr->Settings().m_show_selection_box;
+	m_ldr->Settings().m_ShowSelectionBox = !m_ldr->Settings().m_ShowSelectionBox;
 	UpdateUI();
 	m_refresh = true;
 	return S_OK;
@@ -494,7 +494,7 @@ LRESULT LineDrawerGUI::OnShowSelection(WORD, WORD, HWND, BOOL&)
 // Toggle visibility of the object space bounding boxes
 LRESULT LineDrawerGUI::OnShowObjBBoxes(WORD, WORD, HWND, BOOL&)
 {
-	m_ldr->Settings().m_show_object_bboxes = !m_ldr->Settings().m_show_object_bboxes;
+	m_ldr->Settings().m_ShowObjectBBoxes = !m_ldr->Settings().m_ShowObjectBBoxes;
 	UpdateUI();
 	m_refresh = true;
 	return S_OK;
@@ -503,8 +503,8 @@ LRESULT LineDrawerGUI::OnShowObjBBoxes(WORD, WORD, HWND, BOOL&)
 // Cycle through solid, wireframe, and solid+wire
 LRESULT LineDrawerGUI::OnToggleRenderMode(WORD, WORD, HWND, BOOL&)
 {
-	int mode = (m_ldr->Settings().m_global_render_mode + 1) % EGlobalRenderMode::NumberOf;
-	m_ldr->Settings().m_global_render_mode = static_cast<EGlobalRenderMode::Type>(mode);
+	int mode = (m_ldr->Settings().m_GlobalRenderMode + 1) % EGlobalRenderMode::NumberOf;
+	m_ldr->Settings().m_GlobalRenderMode = static_cast<EGlobalRenderMode::Type>(mode);
 	UpdateUI();
 	m_refresh = true;
 	return S_OK;
@@ -528,23 +528,23 @@ LRESULT LineDrawerGUI::OnShowLightingDlg(WORD, WORD, HWND, BOOL&)
 		PreviewLighting(LineDrawer* ldr) :m_ldr(ldr) {}
 		void operator()(pr::rdr::Light const& light, bool camera_relative)
 		{
-			pr::rdr::Light prev_light   = m_ldr->Settings().m_light;
-			bool           prev_cam_rel = m_ldr->Settings().m_light_is_camera_relative;
-			m_ldr->Settings().m_light                    = light;
-			m_ldr->Settings().m_light_is_camera_relative = camera_relative;
+			pr::rdr::Light prev_light   = m_ldr->Settings().m_Light;
+			bool           prev_cam_rel = m_ldr->Settings().m_LightIsCameraRelative;
+			m_ldr->Settings().m_Light                    = light;
+			m_ldr->Settings().m_LightIsCameraRelative = camera_relative;
 			m_ldr->Render();
-			m_ldr->Settings().m_light                    = prev_light;
-			m_ldr->Settings().m_light_is_camera_relative = prev_cam_rel;
+			m_ldr->Settings().m_Light                 = prev_light;
+			m_ldr->Settings().m_LightIsCameraRelative = prev_cam_rel;
 		}
 	};
-	
+
 	PreviewLighting pv(m_ldr);
 	pr::rdr::LightingDlg<PreviewLighting> dlg(pv);
-	dlg.m_light           = m_ldr->Settings().m_light;
-	dlg.m_camera_relative = m_ldr->Settings().m_light_is_camera_relative;
+	dlg.m_light           = m_ldr->Settings().m_Light;
+	dlg.m_camera_relative = m_ldr->Settings().m_LightIsCameraRelative;
 	if (dlg.DoModal(m_hWnd) != IDOK) return S_OK;
-	m_ldr->Settings().m_light                    = dlg.m_light;
-	m_ldr->Settings().m_light_is_camera_relative = dlg.m_camera_relative;
+	m_ldr->Settings().m_Light                 = dlg.m_light;
+	m_ldr->Settings().m_LightIsCameraRelative = dlg.m_camera_relative;
 	m_refresh = true;
 	return S_OK;
 }
@@ -564,8 +564,8 @@ LRESULT LineDrawerGUI::OnShowToolDlg(WORD, WORD wID, HWND, BOOL&)
 // Set the window draw order so that the line drawer window is always on top
 LRESULT LineDrawerGUI::OnWindowAlwaysOnTop(WORD, WORD, HWND, BOOL&)
 {
-	m_ldr->Settings().m_always_on_top = !m_ldr->Settings().m_always_on_top;
-	SetWindowPos(m_ldr->Settings().m_always_on_top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
+	m_ldr->Settings().m_AlwaysOnTop = !m_ldr->Settings().m_AlwaysOnTop;
+	SetWindowPos(m_ldr->Settings().m_AlwaysOnTop ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
 	UpdateUI();
 	return S_OK;
 }
@@ -573,9 +573,9 @@ LRESULT LineDrawerGUI::OnWindowAlwaysOnTop(WORD, WORD, HWND, BOOL&)
 // Set the background colour
 LRESULT LineDrawerGUI::OnWindowBackgroundColour(WORD, WORD, HWND, BOOL&)
 {
-	CColorDialog dlg(m_ldr->Settings().m_background_colour.GetColorRef(), 0, m_hWnd);
+	CColorDialog dlg(m_ldr->Settings().m_BackgroundColour.GetColorRef(), 0, m_hWnd);
 	if (dlg.DoModal() != IDOK) return S_OK;
-	m_ldr->Settings().m_background_colour = dlg.GetColor() & 0x00FFFFFF;
+	m_ldr->Settings().m_BackgroundColour = dlg.GetColor() & 0x00FFFFFF;
 	m_refresh = true;
 	return S_OK;
 }
@@ -592,7 +592,7 @@ LRESULT LineDrawerGUI::OnCheckForUpdates(WORD, WORD, HWND, BOOL&)
 {
 	std::string version;
 	pr::network::WebGet("http://www.rylogic.co.nz/latest_versions.html", version);
-	
+
 	pr::xml::Node root;
 	HRESULT hr = pr::xml::Load(version.c_str(), version.size(), root);
 	if (FAILED(hr))
@@ -600,7 +600,7 @@ LRESULT LineDrawerGUI::OnCheckForUpdates(WORD, WORD, HWND, BOOL&)
 		MessageBoxA("Version information invalid", "Check For Updates", MB_OK|MB_ICONERROR);
 		return S_OK;
 	}
-	
+
 	return S_OK;
 }
 
@@ -670,7 +670,7 @@ LRESULT LineDrawerGUI::OnMouseButton(UINT, WPARAM wParam, LPARAM lParam, BOOL&)
 	else                ReleaseCapture();
 	if (m_ldr->m_nav.MouseInput(mouse_loc, btn_state, true))
 		m_ldr->Render();
-	
+
 	MouseStatusUpdate(mouse_loc);
 	return S_OK;
 }
@@ -682,7 +682,7 @@ LRESULT LineDrawerGUI::OnMouseMove(UINT, WPARAM wParam, LPARAM lParam, BOOL&)
 	int    btn_state = ButtonState(wParam);
 	if (m_ldr->m_nav.MouseInput(mouse_loc, btn_state, false))
 		m_ldr->Render();
-		
+
 	MouseStatusUpdate(mouse_loc);
 	return S_OK;
 }
@@ -693,7 +693,7 @@ LRESULT LineDrawerGUI::OnMouseWheel(UINT, WPARAM wParam, LPARAM lParam, BOOL&)
 	pr::v2 mouse_loc = MouseLocation(lParam);
 	if (m_ldr->m_nav.MouseWheel(mouse_loc, WheelDelta(wParam)))
 		m_ldr->Render();
-		
+
 	MouseStatusUpdate(mouse_loc);
 	return S_OK;
 }
@@ -705,7 +705,7 @@ LRESULT LineDrawerGUI::OnMouseDblClick(UINT, WPARAM wParam, LPARAM lParam, BOOL&
 	int    btn_state = ButtonState(wParam);
 	if (m_ldr->m_nav.MouseDblClick(mouse_loc, btn_state))
 		m_ldr->Render();
-		
+
 	MouseStatusUpdate(mouse_loc);
 	return S_OK;
 }
@@ -729,7 +729,7 @@ void LineDrawerGUI::Resize()
 void LineDrawerGUI::FileNew(char const* filepath)
 {
 	CloseHandle(pr::FileOpen(filepath, pr::EFileOpen::Writing));
-	
+
 	FileOpen(filepath, false);
 	StrList list; list.push_back(filepath);
 	OpenTextEditor(list);
@@ -740,22 +740,22 @@ void LineDrawerGUI::FileOpen(char const* filepath, bool additive)
 {
 	// Add the file to the recent files list
 	m_recent_files.Add(filepath, true);
-	
+
 	// Clear data from other files, unless this is an additive open
 	if (!additive) m_ldr->m_files.Clear();
 	m_ldr->m_files.Add(filepath);
-	
+
 	// Reset the camera if flagged
-	if (m_ldr->Settings().m_reset_camera_on_load)
+	if (m_ldr->Settings().m_ResetCameraOnLoad)
 		m_ldr->ResetView(pr::ldr::EObjectBounds::All);
-		
+
 	// Set the window title
 	pr::string<> title;
 	title += ldr::AppTitle();
 	title += " - ";
 	title += filepath;
 	SetWindowTextA(title.c_str());
-	
+
 	// Refresh
 	m_refresh = true;
 }
@@ -764,22 +764,22 @@ void LineDrawerGUI::FileOpen(char const* filepath, bool additive)
 void LineDrawerGUI::OpenTextEditor(StrList const& files)
 {
 	// If no path to a text editor is provided, ignore the command
-	std::string cmd = m_ldr->Settings().m_text_editor_cmd;
+	std::string cmd = m_ldr->Settings().m_TextEditorCmd;
 	if (cmd.empty())
 	{
 		MessageBoxA("Text editor not provided. Check options", "Editor startup error", MB_OK);
 		return;
 	}
-	
+
 	// Build the command line string
 	for (StrList::const_iterator i = files.begin(), iend = files.end(); i != iend; ++i)
 		cmd += " \"" + *i + "\"";
-		
+
 	STARTUPINFO suinfo = {sizeof(STARTUPINFO)};
 	PROCESS_INFORMATION proc_info;
 	if (CreateProcessA(0, &cmd[0], 0, 0, FALSE, NORMAL_PRIORITY_CLASS, 0, 0, &suinfo, &proc_info) == FALSE)
 		MessageBoxA(pr::FmtS("Failed to start text editor: '%s'", cmd.c_str()), "Editor startup error", MB_OK);
-		
+
 	CloseHandle(proc_info.hThread);
 	CloseHandle(proc_info.hProcess);
 }
@@ -788,42 +788,42 @@ void LineDrawerGUI::OpenTextEditor(StrList const& files)
 void LineDrawerGUI::UpdateUI()
 {
 	// Camera orbit
-	CheckMenuItem(GetMenu(), ID_NAVIGATION_ORBIT ,m_ldr->Settings().m_camera_orbit ? MF_CHECKED : MF_UNCHECKED);
-	
+	CheckMenuItem(GetMenu(), ID_NAVIGATION_ORBIT ,m_ldr->Settings().m_CameraOrbit ? MF_CHECKED : MF_UNCHECKED);
+
 	// Auto refresh
-	CheckMenuItem(GetMenu(), ID_DATA_AUTOREFRESH ,m_ldr->Settings().m_watch_for_changed_files ? MF_CHECKED : MF_UNCHECKED);
-	
+	CheckMenuItem(GetMenu(), ID_DATA_AUTOREFRESH ,m_ldr->Settings().m_WatchForChangedFiles ? MF_CHECKED : MF_UNCHECKED);
+
 	// Stock models
-	CheckMenuItem(GetMenu(), ID_RENDERING_SHOWFOCUS        ,m_ldr->Settings().m_show_focus_point   ? MF_CHECKED : MF_UNCHECKED);
-	CheckMenuItem(GetMenu(), ID_RENDERING_SHOWORIGIN       ,m_ldr->Settings().m_show_origin        ? MF_CHECKED : MF_UNCHECKED);
-	CheckMenuItem(GetMenu(), ID_RENDERING_SHOWSELECTION    ,m_ldr->Settings().m_show_selection_box ? MF_CHECKED : MF_UNCHECKED);
-	CheckMenuItem(GetMenu(), ID_RENDERING_SHOWOBJECTBBOXES ,m_ldr->Settings().m_show_object_bboxes ? MF_CHECKED : MF_UNCHECKED);
-	
+	CheckMenuItem(GetMenu(), ID_RENDERING_SHOWFOCUS        ,m_ldr->Settings().m_ShowFocusPoint   ? MF_CHECKED : MF_UNCHECKED);
+	CheckMenuItem(GetMenu(), ID_RENDERING_SHOWORIGIN       ,m_ldr->Settings().m_ShowOrigin        ? MF_CHECKED : MF_UNCHECKED);
+	CheckMenuItem(GetMenu(), ID_RENDERING_SHOWSELECTION    ,m_ldr->Settings().m_ShowSelectionBox ? MF_CHECKED : MF_UNCHECKED);
+	CheckMenuItem(GetMenu(), ID_RENDERING_SHOWOBJECTBBOXES ,m_ldr->Settings().m_ShowObjectBBoxes ? MF_CHECKED : MF_UNCHECKED);
+
 	// Set the text to the "next" mode
-	switch (m_ldr->Settings().m_global_render_mode)
+	switch (m_ldr->Settings().m_GlobalRenderMode)
 	{
 	case 0: ModifyMenu(GetMenu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Wireframe\tCtrl+W");  break;
 	case 1: ModifyMenu(GetMenu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Wire + Solid\tCtrl+W"); break;
 	case 2: ModifyMenu(GetMenu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Solid\tCtrl+W");      break;
 	}
-	
+
 	// Align axis checked items
-	pr::v4 cam_align = m_ldr->Settings().m_camera_align;
+	pr::v4 cam_align = m_ldr->Settings().m_CameraAlignAxis;
 	CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_NONE    ,cam_align == pr::v4Zero  ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_X       ,cam_align == pr::v4XAxis ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_Y       ,cam_align == pr::v4YAxis ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_Z       ,cam_align == pr::v4ZAxis ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_CURRENT ,cam_align != pr::v4Zero && cam_align != pr::v4XAxis &&  cam_align != pr::v4YAxis && cam_align != pr::v4ZAxis ? MF_CHECKED : MF_UNCHECKED);
-	
+
 	// Render 2d menu item
 	ModifyMenu(GetMenu(), ID_RENDERING_RENDER2D, MF_BYCOMMAND, ID_RENDERING_RENDER2D, m_ldr->m_nav.Render2D() ? "&Perspective" : "&Orthographic");
-	
+
 	// The tools windows
 	CheckMenuItem(GetMenu(), ID_TOOLS_MEASURE ,m_ldr->m_measure_tool_ui.IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
 	CheckMenuItem(GetMenu(), ID_TOOLS_ANGLE   ,m_ldr->m_angle_tool_ui  .IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
-	
+
 	// Topmost window
-	CheckMenuItem(GetMenu(), ID_WINDOW_ALWAYSONTOP, m_ldr->Settings().m_always_on_top ? MF_CHECKED : MF_UNCHECKED);
+	CheckMenuItem(GetMenu(), ID_WINDOW_ALWAYSONTOP, m_ldr->Settings().m_AlwaysOnTop ? MF_CHECKED : MF_UNCHECKED);
 }
 
 // Update the status text
@@ -837,8 +837,8 @@ void LineDrawerGUI::MouseStatusUpdate(pr::v2 const& mouse_location)
 		pr::v4 mouse_ws = m_ldr->m_nav.WSPointFromScreenPoint(mouse_ss);
 		pr::v4 focus_ws = m_ldr->m_nav.FocusPoint();
 		status += pr::FmtS("Mouse: {%3.3f %3.3f %3.3f} Focus: {%3.3f %3.3f %3.3f}"
-						   ,mouse_ws.x ,mouse_ws.y ,mouse_ws.z
-						   ,focus_ws.x ,focus_ws.y ,focus_ws.z);
+			,mouse_ws.x ,mouse_ws.y ,mouse_ws.z
+			,focus_ws.x ,focus_ws.y ,focus_ws.z);
 	}
 	{
 		// Display zoom
@@ -873,7 +873,7 @@ void LineDrawerGUI::OnEvent(ldr::Event_Warn const& e)
 // Handle error events
 void LineDrawerGUI::OnEvent(ldr::Event_Error const& e)
 {
-	if (!m_ldr || m_ldr->Settings().m_msgbox_error_msgs)
+	if (!m_ldr || m_ldr->Settings().m_ErrorOutputMsgBox)
 		::MessageBoxA(m_hWnd, e.m_msg.c_str(), "Linedrawer Error", MB_OK|MB_ICONERROR);
 	else
 	{} // error msg on status line
@@ -943,6 +943,12 @@ void LineDrawerGUI::OnEvent(pr::ldr::Evt_AddEnd const&)
 	m_refresh = true;
 }
 
+// Occurs when an error happens during UserSetting parsing
+void LineDrawerGUI::OnEvent(pr::settings::Evt<UserSettings> const& e)
+{
+	MessageBox(e.m_msg.c_str(), "Settings Error", MB_OK);
+}
+
 // Recent files onclick
 void LineDrawerGUI::MenuList_OnClick(pr::gui::MenuList* sender, pr::gui::MenuList::Item const& item)
 {
@@ -963,11 +969,9 @@ void LineDrawerGUI::MenuList_ListChanged(pr::gui::MenuList* sender)
 {
 	if (static_cast<pr::gui::RecentFiles*>(sender) == &m_recent_files)
 	{
-		m_ldr->Settings().m_recent_files = m_recent_files.Export();
+		m_ldr->Settings().m_RecentFiles = m_recent_files.Export();
 	}
 	if (sender == &m_saved_views)
 	{
 	}
 }
-
-

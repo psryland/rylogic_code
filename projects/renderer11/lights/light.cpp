@@ -100,23 +100,16 @@ std::string pr::rdr::Light::Settings() const
 		;
 	return out.str();
 }
-bool pr::rdr::Light::Settings(char const* settings)
+void pr::rdr::Light::Settings(char const* settings)
 {
 	try
 	{
-		struct ErrorHandler :pr::script::IErrorHandler
-		{
-			void IErrorHandler_ImplementationVersion0() {}
-			void IErrorHandler_ShowMessage(char const* str) {::MessageBoxA(::GetFocus(), str, "Light Settings Invalid", MB_OK);}
-		} error_handler;
-
 		// Parse the settings for light, if no errors are found update *this
 		Light light;
 
 		// Parse the settings
 		pr::script::Reader reader;
 		pr::script::PtrSrc src(settings);
-		reader.ErrorHandler() = &error_handler;
 		reader.AddSource(src);
 
 		// Check the hash values are correct
@@ -143,8 +136,9 @@ bool pr::rdr::Light::Settings(char const* settings)
 			}
 		}
 		*this = light;
-		return true;
 	}
-	catch (pr::script::EResult) {}
-	return false;
+	catch (pr::script::Exception const& e)
+	{
+		throw pr::Exception<HRESULT>(E_INVALIDARG, e.what());
+	}
 }

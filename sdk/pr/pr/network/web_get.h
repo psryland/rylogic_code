@@ -11,6 +11,8 @@
 #include <wininet.h> // link to wininet.lib
 #include "pr/filesys/fileex.h"
 
+#pragma comment(lib, "wininet.lib")
+
 namespace pr
 {
 	namespace network

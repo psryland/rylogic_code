@@ -218,7 +218,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\meta\squareroot.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\typelist.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\csv.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\storage\settings.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\xml.h" />
     <ClInclude Include="..\..\sdk\pr\pr\str\prstdstring.h" />

@@ -166,7 +166,7 @@ namespace pr
 		inline HashValue HashLwr(char const* src)            { return HashLwr(src, 0, -1); }
 
 		// http://www.azillionmonkeys.com/qed/hash.html, © Copyright 2004-2008 by Paul Hsieh
-		inline uint FastHash(void const* data, uint len, uint hash)
+		inline HashValue FastHash(void const* data, size_t len, HashValue hash)
 		{
 			// Local function for reading 16bit chunks of 'data'
 			struct This { static unsigned short Read16bits(uint8 const* d)
@@ -225,6 +225,7 @@ namespace pr
 			hash += hash >> 6;
 			return hash;
 		}
+		inline HashValue FastHash(void const* data, size_t len) { return FastHash(data, len, -1); }
 	}
 }
 

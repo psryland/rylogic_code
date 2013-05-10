@@ -87,7 +87,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;wininet.lib;xmllite.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -108,7 +108,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;wininet.lib;xmllite.lib;shlwapi.lib;</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -130,7 +130,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;wininet.lib;xmllite.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -151,7 +151,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;wininet.lib;xmllite.lib;shlwapi.lib;</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -175,7 +175,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\linedrawer\main\usersettings.cpp" />
     <ClCompile Include="..\linedrawer\gui\linedrawergui.cpp" />
     <ClCompile Include="..\linedrawer\plugin\plugin_manager_dlg.cpp" />
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">
@@ -222,6 +221,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_forward.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h" />
@@ -231,11 +231,11 @@
     <ClInclude Include="..\linedrawer\main\lua_source.h" />
     <ClInclude Include="..\linedrawer\main\navmanager.h" />
     <ClInclude Include="..\linedrawer\main\stdafx.h" />
-    <ClInclude Include="..\linedrawer\main\usersettings.h" />
     <ClInclude Include="..\linedrawer\gui\about_dlg.h" />
     <ClInclude Include="..\linedrawer\gui\linedrawergui.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\menu_helper.h" />
     <ClInclude Include="..\linedrawer\gui\options_dlg.h" />
+    <ClInclude Include="..\linedrawer\main\user_settings.h" />
     <ClInclude Include="..\linedrawer\plugin\plugin_manager_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\progress_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\recent_files.h" />
@@ -247,7 +247,6 @@
     <ClInclude Include="..\linedrawer\types\ldrexception.h" />
     <ClInclude Include="..\linedrawer\utility\debug.h" />
     <ClInclude Include="..\linedrawer\utility\misc.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\camera\trackball_3d.h" />
     <ClInclude Include="..\linedrawer\input\keybindings.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_object.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_plugin_interface.h" />

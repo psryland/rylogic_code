@@ -59,9 +59,6 @@
     <ClCompile Include="..\linedrawer\main\stdafx.cpp">
       <Filter>main</Filter>
     </ClCompile>
-    <ClCompile Include="..\linedrawer\main\usersettings.cpp">
-      <Filter>main</Filter>
-    </ClCompile>
     <ClCompile Include="..\linedrawer\gui\linedrawergui.cpp">
       <Filter>gui</Filter>
     </ClCompile>
@@ -106,9 +103,6 @@
     <ClInclude Include="..\linedrawer\main\stdafx.h">
       <Filter>main</Filter>
     </ClInclude>
-    <ClInclude Include="..\linedrawer\main\usersettings.h">
-      <Filter>main</Filter>
-    </ClInclude>
     <ClInclude Include="..\linedrawer\gui\about_dlg.h">
       <Filter>gui</Filter>
     </ClInclude>
@@ -151,9 +145,6 @@
     <ClInclude Include="..\linedrawer\utility\misc.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\camera\trackball_3d.h">
-      <Filter>camera</Filter>
-    </ClInclude>
     <ClInclude Include="..\linedrawer\input\keybindings.h">
       <Filter>input</Filter>
     </ClInclude>
@@ -192,6 +183,12 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h">
       <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h">
+      <Filter>camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\user_settings.h">
+      <Filter>main</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

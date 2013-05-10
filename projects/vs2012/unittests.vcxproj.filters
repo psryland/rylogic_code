@@ -44,6 +44,9 @@
     <Filter Include="sdk\meta">
       <UniqueIdentifier>{90fa2bb6-0623-4d6c-ad98-77ce092a0a6f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk\network">
+      <UniqueIdentifier>{c6b2ab90-2d54-4ce5-8c83-84b1a254948f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -740,6 +743,12 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\isize.h">
       <Filter>sdk\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h">
+      <Filter>sdk\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\storage\settings.h">
+      <Filter>sdk\storage</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

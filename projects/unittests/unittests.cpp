@@ -40,6 +40,7 @@ namespace pr
 #include "pr/script/reader.h"
 #include "pr/storage/csv.h"
 #include "pr/storage/sqlite.h"
+#include "pr/storage/settings.h"
 #include "pr/str/prstring.h"
 #include "pr/threads/thread_pool.h"
 

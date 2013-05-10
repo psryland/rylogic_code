@@ -8,7 +8,7 @@
 
 #include "linedrawer/types/forward.h"
 #include "linedrawer/resources/linedrawer.resources.h"
-#include "linedrawer/main/usersettings.h"
+#include "linedrawer/main/user_settings.h"
 #include "linedrawer/utility/misc.h"
 #include "pr/gui/wtl_tab_view_ctrl.h"
 
@@ -64,11 +64,11 @@ public:
 
 	COptionsGeneralTab(UserSettings const& settings)
 	{
-		m_text_editor_cmd         = settings.m_text_editor_cmd;
-		m_focus_point_scale       = settings.m_focus_point_scale;
-		m_reset_camera_on_load    = settings.m_reset_camera_on_load;
-		m_msgbox_error_msgs       = settings.m_msgbox_error_msgs;
-		m_ignore_missing_includes = settings.m_ignore_missing_includes;
+		m_text_editor_cmd         = settings.m_TextEditorCmd;
+		m_focus_point_scale       = settings.m_FocusPointScale;
+		m_reset_camera_on_load    = settings.m_ResetCameraOnLoad;
+		m_msgbox_error_msgs       = settings.m_ErrorOutputMsgBox;
+		m_ignore_missing_includes = settings.m_IgnoreMissingIncludes;
 	}
 
 	// Handler methods
@@ -192,7 +192,7 @@ public:
 
 	COptionsNavigationTab(UserSettings const& settings)
 	{
-		m_camera_orbit_speed = settings.m_camera_orbit_speed;
+		m_camera_orbit_speed = settings.m_CameraOrbitSpeed;
 	}
 
 	// Handler methods
@@ -284,15 +284,12 @@ public:
 	// Return the settings
 	void GetSettings(UserSettings& settings) const
 	{
-		settings.m_text_editor_cmd         = m_tab_general.m_text_editor_cmd;
-		settings.m_reset_camera_on_load    = m_tab_general.m_reset_camera_on_load;
-		settings.m_focus_point_scale       = m_tab_general.m_focus_point_scale;
-		settings.m_msgbox_error_msgs       = m_tab_general.m_msgbox_error_msgs;
-		settings.m_ignore_missing_includes = m_tab_general.m_ignore_missing_includes;
-		//settings.m_shader_version          = m_tab_rendering.m_shader_version;
-		//settings.m_geometry_quality        = m_tab_rendering.m_geometry_quality;
-		//settings.m_texture_quality         = m_tab_rendering.m_texture_quality;
-		settings.m_camera_orbit_speed      = m_tab_navigation.m_camera_orbit_speed;
+		settings.m_TextEditorCmd         = m_tab_general.m_text_editor_cmd;
+		settings.m_ResetCameraOnLoad     = m_tab_general.m_reset_camera_on_load;
+		settings.m_FocusPointScale       = m_tab_general.m_focus_point_scale;
+		settings.m_ErrorOutputMsgBox     = m_tab_general.m_msgbox_error_msgs;
+		settings.m_IgnoreMissingIncludes = m_tab_general.m_ignore_missing_includes;
+		settings.m_CameraOrbitSpeed      = m_tab_navigation.m_camera_orbit_speed;
 	}
 };
 
