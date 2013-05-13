@@ -4,6 +4,7 @@
 
 @echo off
 SetLocal EnableDelayedExpansion 
+cls
 
 ::Assign variables from inputs
 set targetpath=%~1
