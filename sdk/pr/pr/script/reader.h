@@ -323,10 +323,21 @@ namespace pr
 			}
 
 			// Extract an enum value from the source.
+			template <typename Enum> bool ExtractEnumValue(Enum& enum_)
+			{
+				if (pr::str::ExtractEnumValue(enum_, m_src, m_delim)) return true;
+				return ReportError(EResult::TokenNotFound, "enum integral value expected");
+			}
+			template <typename Enum> bool ExtractEnumValueS(Enum& enum_)
+			{
+				return SectionStart() && ExtractEnum(enum_) && SectionEnd();
+			}
+
+			// Extract an enum identifier from the source.
 			template <typename Enum> bool ExtractEnum(Enum& enum_)
 			{
 				if (pr::str::ExtractEnum(enum_, m_src, m_delim)) return true;
-				return ReportError(EResult::TokenNotFound, "enum integral expected");
+				return ReportError(EResult::TokenNotFound, "enum member string name expected");
 			}
 			template <typename Enum> bool ExtractEnumS(Enum& enum_)
 			{

@@ -8,7 +8,7 @@
 //     */x(A, "a", = 0)/* comment 
 //     */x(B, "b", = 1)/* comment 
 //     */x(C, "c", = 2)/* comment 
-//  PR_DEFINE_ENUM(TestEnum1, PR_ENUM)
+//  PR_DEFINE_ENUM3(TestEnum1, PR_ENUM)
 //  #undef PR_ENUM
 //*/
 
@@ -67,6 +67,9 @@
 #define PR_DEFINE_ENUM_IMPL(enum_name, enum_vals1, enum_vals2, enum_vals3, notflags, flags)\
 struct enum_name\
 {\
+	/* Type trait tag */\
+	struct is_enum;\
+\
 	/* The name of the enum type */ \
 	static char const* EnumName() { return #enum_name; }\
 \
@@ -233,6 +236,14 @@ struct enum_name\
 
 namespace pr
 {
+	// A type trait for detecting PR_ENUM types
+	template <typename TEnum> struct is_enum
+	{
+		template <typename U> static char (&resolve(typename U::is_enum*))[2];
+		template <typename U> static char resolve(...);
+		enum { value = sizeof(resolve<TEnum>(0)) - 1 };
+	};
+
 	// Used to check enums where the value of each member should be the hash of its string name
 	// Use this method by declaring a static bool and assigning it to the result of this function
 	template <typename TEnum, typename THashFunc, typename TFailFunc> inline bool CheckHashEnum(THashFunc hash_func, TFailFunc on_fail)

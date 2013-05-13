@@ -46,20 +46,20 @@ public:
 	END_DLGRESIZE_MAP()
 	BEGIN_DDX_MAP(COptionsGeneralTab)
 		if (nCtlID == (UINT)-1 || nCtlID == IDC_EDIT_TEXT_EDITOR_CMD)
-			if (bSaveAndValidate) m_text_editor_cmd = pr::GetCtrlText(m_edit_text_editor_cmd);
-			else                  m_edit_text_editor_cmd.SetWindowText(m_text_editor_cmd.c_str());
+		if (bSaveAndValidate) m_text_editor_cmd = pr::GetCtrlText(m_edit_text_editor_cmd);
+		else                  m_edit_text_editor_cmd.SetWindowText(m_text_editor_cmd.c_str());
 		if (nCtlID == (UINT)-1 || nCtlID == IDC_SLIDER_FOCUS_POINT_SCALE)
 			if (bSaveAndValidate) m_focus_point_scale = m_slider_focus_point_scale.GetPos() * 0.002f;
 			else                  m_slider_focus_point_scale.SetPos(pr::Clamp(int(m_focus_point_scale * 500.0f), 0, 100));
-		if (nCtlID == (UINT)-1 || nCtlID == IDC_CHECK_RESET_CAM_ON_LOAD)
-			if (bSaveAndValidate) m_reset_camera_on_load = m_check_reset_camera_on_load.GetCheck() == BST_CHECKED;
-			else                  m_check_reset_camera_on_load.SetCheck(m_reset_camera_on_load ? BST_CHECKED : BST_UNCHECKED);
-		if (nCtlID == (UINT)-1 || nCtlID == IDC_CHECK_MSGBOX_ERROR_MSGS)
-			if (bSaveAndValidate) m_msgbox_error_msgs = m_check_msgbox_error_msgs.GetCheck() == BST_CHECKED;
-			else                  m_check_msgbox_error_msgs.SetCheck(m_msgbox_error_msgs ? BST_CHECKED : BST_UNCHECKED);
-		if (nCtlID == (UINT)-1 || nCtlID == IDC_CHECK_IGNORE_MISSING_INCLUDES)
-			if (bSaveAndValidate) m_ignore_missing_includes = m_check_ignore_missing_includes.GetCheck() == BST_CHECKED;
-			else                  m_check_ignore_missing_includes.SetCheck(m_ignore_missing_includes ? BST_CHECKED : BST_UNCHECKED);
+			if (nCtlID == (UINT)-1 || nCtlID == IDC_CHECK_RESET_CAM_ON_LOAD)
+				if (bSaveAndValidate) m_reset_camera_on_load = m_check_reset_camera_on_load.GetCheck() == BST_CHECKED;
+				else                  m_check_reset_camera_on_load.SetCheck(m_reset_camera_on_load ? BST_CHECKED : BST_UNCHECKED);
+				if (nCtlID == (UINT)-1 || nCtlID == IDC_CHECK_MSGBOX_ERROR_MSGS)
+					if (bSaveAndValidate) m_msgbox_error_msgs = m_check_msgbox_error_msgs.GetCheck() == BST_CHECKED;
+					else                  m_check_msgbox_error_msgs.SetCheck(m_msgbox_error_msgs ? BST_CHECKED : BST_UNCHECKED);
+					if (nCtlID == (UINT)-1 || nCtlID == IDC_CHECK_IGNORE_MISSING_INCLUDES)
+						if (bSaveAndValidate) m_ignore_missing_includes = m_check_ignore_missing_includes.GetCheck() == BST_CHECKED;
+						else                  m_check_ignore_missing_includes.SetCheck(m_ignore_missing_includes ? BST_CHECKED : BST_UNCHECKED);
 	END_DDX_MAP();
 
 	COptionsGeneralTab(UserSettings const& settings)
@@ -100,7 +100,7 @@ public:
 		return S_OK;
 	}
 };
-	
+
 //// Rendering options tab ********************************************************************************
 //class COptionsRenderingTab
 //	:public CDialogImpl<COptionsRenderingTab>
@@ -162,7 +162,7 @@ public:
 //		return S_OK;
 //	}
 //};
-	
+
 // Rendering options tab ********************************************************************************
 class COptionsNavigationTab
 	:public CDialogImpl<COptionsNavigationTab>
@@ -186,8 +186,8 @@ public:
 	END_DLGRESIZE_MAP()
 	BEGIN_DDX_MAP(COptionsNavigationTab)
 		if (nCtlID == (UINT)-1 || nCtlID == IDC_SLIDER_CAM_ORBIT_SPEED)
-			if (bSaveAndValidate) m_camera_orbit_speed = m_slider_camera_orbit_speed.GetPos() * 0.01f;
-			else                  m_slider_camera_orbit_speed.SetPos(pr::Clamp<int>(int(m_camera_orbit_speed * 100.0f), -CamOrbitSpeedLimit, CamOrbitSpeedLimit));
+		if (bSaveAndValidate) m_camera_orbit_speed = m_slider_camera_orbit_speed.GetPos() * 0.01f;
+		else                  m_slider_camera_orbit_speed.SetPos(pr::Clamp<int>(int(m_camera_orbit_speed * 100.0f), -CamOrbitSpeedLimit, CamOrbitSpeedLimit));
 	END_DDX_MAP();
 
 	COptionsNavigationTab(UserSettings const& settings)
@@ -220,22 +220,22 @@ class COptionsDlg
 	:public CDialogImpl<COptionsDlg>
 	,public CDialogResize<COptionsDlg>
 {
-	HWND					m_parent;
-	CWTLTabViewCtrl			m_tab_main;
+	HWND            m_parent;
+	CWTLTabViewCtrl m_tab_main;
 
 public:
-	COptionsGeneralTab		m_tab_general;
-	//COptionsRenderingTab	m_tab_rendering;
-	COptionsNavigationTab	m_tab_navigation;
+	COptionsGeneralTab m_tab_general;
+	//COptionsRenderingTab m_tab_rendering;
+	COptionsNavigationTab m_tab_navigation;
 
 	enum { IDD = IDD_DIALOG_OPTIONS };
 	BEGIN_MSG_MAP(COptionsDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG		,OnInitDialog)
-		MESSAGE_HANDLER(WM_SIZE				,OnSize)
-		COMMAND_ID_HANDLER(IDOK				,OnCloseDialog)
-		COMMAND_ID_HANDLER(IDCANCEL			,OnCloseDialog)
-		NOTIFY_HANDLER(IDC_TAB_MAIN			,TCN_SELCHANGE	,m_tab_main.OnSelectionChanged)
-		CHAIN_MSG_MAP						(CDialogResize<COptionsDlg>)
+		MESSAGE_HANDLER(WM_INITDIALOG ,OnInitDialog)
+		MESSAGE_HANDLER(WM_SIZE       ,OnSize)
+		COMMAND_ID_HANDLER(IDOK       ,OnCloseDialog)
+		COMMAND_ID_HANDLER(IDCANCEL   ,OnCloseDialog)
+		NOTIFY_HANDLER(IDC_TAB_MAIN   ,TCN_SELCHANGE ,m_tab_main.OnSelectionChanged)
+		CHAIN_MSG_MAP(CDialogResize<COptionsDlg>)
 	END_MSG_MAP()
 	BEGIN_DLGRESIZE_MAP(COptionsDlg)
 		DLGRESIZE_CONTROL(IDC_TAB_MAIN		,DLSZ_SIZE_X|DLSZ_SIZE_Y)
@@ -244,13 +244,13 @@ public:
 	END_DLGRESIZE_MAP()
 
 	COptionsDlg(UserSettings const& settings, HWND parent = 0)
-	:m_parent(parent)
-	,m_tab_main()
-	,m_tab_general(settings)
-	//,m_tab_rendering(settings)
-	,m_tab_navigation(settings)
+		:m_parent(parent)
+		,m_tab_main()
+		,m_tab_general(settings)
+		//,m_tab_rendering(settings)
+		,m_tab_navigation(settings)
 	{}
-	
+
 	// Handler methods
 	LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	{
@@ -280,7 +280,7 @@ public:
 		bHandled = FALSE;
 		return S_OK;
 	}
-	
+
 	// Return the settings
 	void GetSettings(UserSettings& settings) const
 	{

@@ -504,7 +504,7 @@ LRESULT LineDrawerGUI::OnShowObjBBoxes(WORD, WORD, HWND, BOOL&)
 LRESULT LineDrawerGUI::OnToggleRenderMode(WORD, WORD, HWND, BOOL&)
 {
 	int mode = (m_ldr->Settings().m_GlobalRenderMode + 1) % EGlobalRenderMode::NumberOf;
-	m_ldr->Settings().m_GlobalRenderMode = static_cast<EGlobalRenderMode::Type>(mode);
+	m_ldr->Settings().m_GlobalRenderMode = static_cast<EGlobalRenderMode>(mode);
 	UpdateUI();
 	m_refresh = true;
 	return S_OK;

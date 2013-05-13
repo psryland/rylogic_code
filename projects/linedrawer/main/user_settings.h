@@ -14,10 +14,8 @@ namespace pr
 	namespace settings
 	{
 		// Export/Import function overloads - overload as necessary
-		inline std::string Write(pr::rdr::Light const& t)                               { return t.Settings(); }
-		inline int         Write(EGlobalRenderMode::Type t)                             { return t; }
-		inline bool        Read(pr::script::Reader& reader, pr::rdr::Light& t)          { std::string s; bool res = reader.ExtractSection(s, false); t.Settings(s.c_str()); return res; }
-		inline bool        Read(pr::script::Reader& reader, EGlobalRenderMode::Type& t) { return reader.ExtractEnumS(t); }
+		inline std::string Write(pr::rdr::Light const& t)                         { return t.Settings(); }
+		inline bool        Read(pr::script::Reader& reader, pr::rdr::Light& t)    { std::string s; bool res = reader.ExtractSection(s, false); t.Settings(s.c_str()); return res; }
 	}
 }
 
@@ -46,7 +44,7 @@ namespace pr
 	x(bool                    ,EnableResourceMonitor  ,false                          ,0x0924652f        ,)\
 	x(bool                    ,RenderingEnabled       ,true                           ,0x12a0793e        ,)\
 	x(pr::Colour32            ,BackgroundColour       ,pr::Colour32Gray               ,0x13f2d4d2        ,"The background colour")\
-	x(EGlobalRenderMode::Type ,GlobalRenderMode       ,EGlobalRenderMode::Solid       ,0x106641db        ,)\
+	x(EGlobalRenderMode       ,GlobalRenderMode       ,EGlobalRenderMode::Solid       ,0x106641db        ,)\
 	x(pr::rdr::Light          ,Light                  ,                               ,0x08eeae72        ,"Global lighting properties")\
 	x(bool                    ,LightIsCameraRelative  ,true                           ,0x0e1123a0        ,)\
 	x(bool                    ,IgnoreMissingIncludes  ,true                           ,0x13eca235        ,)\

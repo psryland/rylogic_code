@@ -350,11 +350,24 @@ namespace pr
 		}
 
 		// This is basically a convenience wrapper around ExtractInt
-		template <typename Enum, typename Iter> bool ExtractEnum(Enum& enum_, Iter& src, char const* delim = 0)
+		template <typename Enum, typename Iter> bool ExtractEnumValue(Enum& enum_, Iter& src, char const* delim = 0)
 		{
 			long val;
 			if (!ExtractInt(val, 10, src, delim)) return false;
 			enum_ = static_cast<Enum>(val);
+			return true;
+		}
+		template <typename Enum, typename Iter> bool ExtractEnumValueC(Enum& enum_, Iter src, char const* delim = 0)
+		{
+			return ExtractEnum(enum_, src, delim);
+		}
+
+		// Extracts an enum by its string name. For use with 'PR_ENUM' defined enums
+		template <typename Enum, typename Iter> bool ExtractEnum(Enum& enum_, Iter& src, char const* delim = 0)
+		{
+			decltype(*src) val[512];
+			if (!ExtractIdentifier(val, src, delim)) return false;
+			enum_ = Enum::Parse(val);
 			return true;
 		}
 		template <typename Enum, typename Iter> bool ExtractEnumC(Enum& enum_, Iter src, char const* delim = 0)

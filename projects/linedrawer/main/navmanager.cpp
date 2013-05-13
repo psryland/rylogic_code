@@ -90,8 +90,8 @@ bool NavManager::MouseInput(pr::v2 const& pos, int button_state, bool start_or_e
 	{
 	default:break;
 	case ENavMode::Navigation:
-		if (start_or_end)		m_camera.MoveRef(NormalisedScreenSpace(pos, m_client_area), button_state);
-		else if (button_state)	m_camera.Move   (NormalisedScreenSpace(pos, m_client_area), button_state);
+		if (start_or_end)      m_camera.MoveRef(NormalisedScreenSpace(pos, m_client_area), button_state);
+		else if (button_state) m_camera.Move   (NormalisedScreenSpace(pos, m_client_area), button_state);
 		return true;
 	case ENavMode::Manipulation:
 		break;

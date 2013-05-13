@@ -31,8 +31,8 @@ namespace pr
 	namespace settings
 	{
 		// Export/Import function overloads - overload as necessary (with appropriate return types)
-		template <typename T> inline T const& Write(T const& t)                      { static_assert(false, "No suitable pr::settings::Write() overload for this type"); return t; }
-		template <typename T> inline bool     Read(pr::script::Reader& reader, T& t) { static_assert(false, "No suitable pr::settings::Read() overload for this type"); }
+		//template <typename T> inline T const& Write(T const& t)                      { static_assert(false, "No suitable pr::settings::Write() overload for this type"); return t; }
+		//template <typename T> inline bool     Read(pr::script::Reader& reader, T& t) { static_assert(false, "No suitable pr::settings::Read() overload for this type"); }
 	}
 }
 namespace pr
@@ -70,6 +70,9 @@ namespace pr
 		inline bool Read(pr::script::Reader& reader, pr::v4& t)       { return reader.ExtractVector4S(t); }
 		inline bool Read(pr::script::Reader& reader, pr::Colour32& t) { return reader.ExtractIntS(t.m_aarrggbb, 16); }
 		inline bool Read(pr::script::Reader& reader, std::string& t)  { return reader.ExtractStringS(t); }
+		
+		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, char const*>::type Write(TEnum t)                             { return TEnum::ToString(t); }
+		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, bool>::type        Read(pr::script::Reader& reader, TEnum& t) { return reader.ExtractEnumS(t); }
 	}
 
 	// A base class for settings types
@@ -188,7 +191,7 @@ namespace pr
 #define PR_SETTINGS_ENUM_TOSTRING(type, name, default_value, hashvalue, description) case name: return #name;
 #define PR_SETTINGS_ENUM_FIELDS(type, name, default_value, hashvalue, description)   name,
 #define PR_SETTINGS_COUNT(type, name, default_value, hashvalue, description)         +1
-#define PR_SETTINGS_READ(type, name, default_value, hashvalue, description)          case name: return pr::settings::Read(reader, m_##name); 
+#define PR_SETTINGS_READ(type, name, default_value, hashvalue, description)          case name: return pr::settings::Read(reader, m_##name);
 #define PR_SETTINGS_WRITE(type, name, default_value, hashvalue, description)         case name: out << '*' << #name << " {" << pr::settings::Write(m_##name) << "}" << (""description[0]?" // "description:"") << "\r\n"; break;
 
 #define PR_DEFINE_SETTINGS(settings_name, x)\
@@ -255,25 +258,39 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/macros/enum.h"
 namespace pr
 {
 	namespace unittests
 	{
-		//x(type, name, default_value, hashvalue, description)
-		#define PR_SETTING(x)\
-			x(int          , count    , 2                     , 0x153E841B, "")\
-			x(float        , scale    , 3.14f                 , 0x1837069D, "")\
-			x(unsigned int , mask     , 0xABCU                , 0x061897B0, "")\
-			x(pr::Colour32 , colour   , pr::Colour32Green     , 0x08B2C176, "the colour")\
-			x(pr::v2       , area     , pr::v2::make(1,2)     , 0x1A1C8937, "")\
-			x(pr::v4       , position , pr::v4::make(1,2,3,1) , 0x06302A63, "")\
-			x(std::string  , name     , "hello settings"      , 0x0C08C4A4, "")
-		PR_DEFINE_SETTINGS(TestSettings, PR_SETTING);
-		#undef PR_SETTING
+		namespace settings
+		{
+			#define PR_ENUM(x)\
+			x(One)\
+			x(Two)\
+			x(Three)
+			PR_DEFINE_ENUM1(TestEnum, PR_ENUM);
+			#undef PR_ENUM
+
+			//x(type, name, default_value, hashvalue, description)
+			#define PR_SETTING(x)\
+				x(int          , count    , 2                     , 0x153E841B, "")\
+				x(float        , scale    , 3.14f                 , 0x1837069D, "")\
+				x(unsigned int , mask     , 0xABCU                , 0x061897B0, "")\
+				x(pr::Colour32 , colour   , pr::Colour32Green     , 0x08B2C176, "the colour")\
+				x(pr::v2       , area     , pr::v2::make(1,2)     , 0x1A1C8937, "")\
+				x(pr::v4       , position , pr::v4::make(1,2,3,1) , 0x06302A63, "")\
+				x(std::string  , name     , "hello settings"      , 0x0C08C4A4, "")\
+				x(TestEnum     , emun     , TestEnum::Two         , 0x079F037D, "")
+			PR_DEFINE_SETTINGS(Settings, PR_SETTING);
+			#undef PR_SETTING
+		}
 
 		PRUnitTest(pr_storage_settings)
 		{
-			TestSettings s;
+			using namespace settings;
+
+			Settings s;
 			PR_CHECK(s.m_count    , 2                     );
 			PR_CHECK(s.m_scale    , 3.14f                 );
 			PR_CHECK(s.m_mask     , 0xABCU                );
@@ -281,6 +298,7 @@ namespace pr
 			PR_CHECK(s.m_area     , pr::v2::make(1,2)     );
 			PR_CHECK(s.m_position , pr::v4::make(1,2,3,1) );
 			PR_CHECK(s.m_name     , "hello settings"      );
+			PR_CHECK(s.m_emun     , TestEnum::Two         );
 			PR_CHECK(s.SaveRequired(), false);
 
 			s.m_count    = 4                     ;
@@ -290,6 +308,7 @@ namespace pr
 			s.m_area     = pr::v2One             ;
 			s.m_position = pr::v4::make(3,2,1,1) ;
 			s.m_name     = "renamed"             ;
+			s.m_emun     = TestEnum::Three       ;
 			PR_CHECK(s.SaveRequired(), true);
 			PR_CHECK(s.m_count    , 4                     );
 			PR_CHECK(s.m_scale    , 1.6f                  );
@@ -298,6 +317,7 @@ namespace pr
 			PR_CHECK(s.m_area     , pr::v2One             );
 			PR_CHECK(s.m_position , pr::v4::make(3,2,1,1) );
 			PR_CHECK(s.m_name     , "renamed"             );
+			PR_CHECK(s.m_emun     , TestEnum::Three       );
 
 			std::string settings = s.Export();
 			PR_CHECK(settings,
@@ -307,9 +327,10 @@ namespace pr
 				"*colour {FF0000FF} // the colour\r\n"
 				"*area {1.000000 1.000000}\r\n"
 				"*position {3.000000 2.000000 1.000000 1.000000}\r\n"
-				"*name {\"renamed\"}\r\n");
+				"*name {\"renamed\"}\r\n"
+				"*emun {Three}\r\n");
 
-			TestSettings s2;
+			Settings s2;
 			s2.Import(settings);
 			PR_CHECK(s2.m_count    , 4                     );
 			PR_CHECK(s2.m_scale    , 1.6f                  );
@@ -318,6 +339,7 @@ namespace pr
 			PR_CHECK(s2.m_area     , pr::v2One             );
 			PR_CHECK(s2.m_position , pr::v4::make(3,2,1,1) );
 			PR_CHECK(s2.m_name     , "renamed"             );
+			PR_CHECK(s2.m_emun     , TestEnum::Three       );
 			PR_CHECK(s2.SaveRequired(), false);
 		}
 	}

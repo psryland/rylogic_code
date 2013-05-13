@@ -39,6 +39,7 @@
 
 // pr
 #include "pr/macros/count_of.h"
+#include "pr/macros/enum.h"
 #include "pr/common/assert.h"
 #include "pr/common/exception.h"
 #include "pr/common/hresult.h"
@@ -67,55 +68,44 @@
 #define LDR_EXPORTS 1
 #include "pr/linedrawer/ldr_plugin_interface.h"
 
-namespace ELdrException
-{
-	enum Type
-	{
-		NotSpecified,
-		FileNotFound,
-		FailedToLoad,
-		IncorrectVersion,
-		InvalidUserSettings,
-		SourceScriptError,
-		OperationCancelled,
-	};
-}
-typedef pr::Exception<ELdrException::Type> LdrException;
-namespace EScreenView
-{
-	enum Type
-	{
-		Default,
-		Stereo
-	};
-}
-namespace EGlobalRenderMode
-{
-	enum Type
-	{
-		Solid,
-		Wireframe,
-		SolidAndWire,
-		NumberOf
-	};
-}
-namespace EMouseButton
-{
-	enum Type
-	{
-		Left   = 1 << 0,
-		Right  = 1 << 1,
-		Middle = 1 << 2
-	};
-}
-namespace ENavMode
-{
-	enum Type
-	{
-		Navigation,
-		Manipulation
-	};
-}
+#define PR_ENUM(x)\
+	x(NotSpecified       )\
+	x(FileNotFound       )\
+	x(FailedToLoad       )\
+	x(IncorrectVersion   )\
+	x(InvalidUserSettings)\
+	x(SourceScriptError  )\
+	x(OperationCancelled )
+PR_DEFINE_ENUM1(ELdrException, PR_ENUM);
+#undef PR_ENUM
+
+#define PR_ENUM(x)\
+	x(Solid)\
+	x(Wireframe)\
+	x(SolidAndWire)
+PR_DEFINE_ENUM1(EGlobalRenderMode, PR_ENUM);
+#undef PR_ENUM
+
+#define PR_ENUM(x)\
+	x(Left   ,= 1 << 0)\
+	x(Right  ,= 1 << 1)\
+	x(Middle ,= 1 << 2)
+PR_DEFINE_ENUM2_FLAGS(EMouseButton, PR_ENUM);
+#undef PR_ENUM
+
+#define PR_ENUM(x)\
+	x(Navigation  )\
+	x(Manipulation)
+PR_DEFINE_ENUM1(ENavMode, PR_ENUM);
+#undef PR_ENUM
+
+#define PR_ENUM(x)\
+	x(Default)\
+	x(Stereo)
+PR_DEFINE_ENUM1(EScreenView, PR_ENUM);
+#undef PR_ENUM
+
+typedef pr::Exception<ELdrException> LdrException;
 
 // Main app
 class  LineDrawerGUI;
