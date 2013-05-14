@@ -351,5 +351,19 @@
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.ps.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.vs.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.ps.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.ps.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.vs.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -47,6 +47,9 @@ BOOL LineDrawerGUI::OnInitDialog(CWindow, LPARAM)
 	SetIcon(hIcon, TRUE);
 	SetIcon(hIconSmall, FALSE);
 
+	// Set the title
+	SetWindowTextA(ldr::AppTitle());
+
 	// Load accelerators
 	m_haccel = (HACCEL)::LoadAccelerators(g_app_module.GetResourceInstance(), MAKEINTRESOURCE(IDR_ACCELERATOR2));
 
@@ -74,7 +77,7 @@ BOOL LineDrawerGUI::OnInitDialog(CWindow, LPARAM)
 	try { m_ldr = new LineDrawer(*this, GetCommandLineA()); }
 	catch (std::exception const& e)
 	{
-		std::string msg = "Line Drawer failed to start due to an exception.\nReason: ";
+		std::string msg = pr::Fmt("%s failed to start due to an exception.\nReason: ", ldr::AppTitle());
 		msg += e.what();
 		::MessageBoxA(m_hWnd, msg.c_str(), "Startup failure", MB_OK|MB_ICONERROR);
 		CloseApp(-1);

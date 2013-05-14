@@ -1,6 +1,8 @@
 module prd.view3d.view3d;
 
 import dgui.all;
+import std.stdio;
+import std.conv;
 
 public enum EView3DResult
 {
@@ -25,7 +27,8 @@ extern (Windows)
 {
 	void ErrorCB(const (char)* msg)
 	{
-
+		writeln(to!(string)(msg));
+		MessageBoxA(null, msg, "Error", MB_OK);
 	}
 
 	void SettingsChangedCB()

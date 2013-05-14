@@ -35,9 +35,9 @@
   <useInline>0</useInline>
   <release>0</release>
   <preservePaths>0</preservePaths>
-  <warnings>0</warnings>
-  <infowarnings>0</infowarnings>
-  <checkProperty>0</checkProperty>
+  <warnings>1</warnings>
+  <infowarnings>1</infowarnings>
+  <checkProperty>1</checkProperty>
   <genStackFrame>0</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
@@ -61,7 +61,7 @@
   <doHdrGeneration>0</doHdrGeneration>
   <hdrdir />
   <hdrname />
-  <doXGeneration>1</doXGeneration>
+  <doXGeneration>0</doXGeneration>
   <xfilename>$(IntDir)\$(TargetName).json</xfilename>
   <debuglevel>0</debuglevel>
   <debugids />
@@ -88,7 +88,7 @@
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
-  <useStdLibPath>1</useStdLibPath>
+  <useStdLibPath>0</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
   <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
@@ -129,9 +129,9 @@
   <useInline>0</useInline>
   <release>1</release>
   <preservePaths>0</preservePaths>
-  <warnings>0</warnings>
-  <infowarnings>0</infowarnings>
-  <checkProperty>0</checkProperty>
+  <warnings>1</warnings>
+  <infowarnings>1</infowarnings>
+  <checkProperty>1</checkProperty>
   <genStackFrame>0</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
@@ -182,10 +182,10 @@
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
-  <useStdLibPath>1</useStdLibPath>
+  <useStdLibPath>0</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand />
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Debug" platform="Win32">
@@ -223,9 +223,9 @@
   <useInline>0</useInline>
   <release>0</release>
   <preservePaths>0</preservePaths>
-  <warnings>0</warnings>
-  <infowarnings>0</infowarnings>
-  <checkProperty>0</checkProperty>
+  <warnings>1</warnings>
+  <infowarnings>1</infowarnings>
+  <checkProperty>1</checkProperty>
   <genStackFrame>0</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
@@ -276,10 +276,10 @@
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
-  <useStdLibPath>1</useStdLibPath>
+  <useStdLibPath>0</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand />
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="Win32">
@@ -317,9 +317,9 @@
   <useInline>0</useInline>
   <release>1</release>
   <preservePaths>0</preservePaths>
-  <warnings>0</warnings>
-  <infowarnings>0</infowarnings>
-  <checkProperty>0</checkProperty>
+  <warnings>1</warnings>
+  <infowarnings>1</infowarnings>
+  <checkProperty>1</checkProperty>
   <genStackFrame>0</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
@@ -370,10 +370,10 @@
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
-  <useStdLibPath>1</useStdLibPath>
+  <useStdLibPath>0</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand />
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Folder name="prd">

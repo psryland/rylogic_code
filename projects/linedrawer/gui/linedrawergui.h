@@ -249,4 +249,4 @@ private:
 	void ShowAbout() const;
 };
 
-#endif//LDR_LINEDRAWER_GUI_H
+#endif

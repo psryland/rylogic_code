@@ -78,7 +78,7 @@ Texture2DPtr pr::rdr::TextureManager::CreateTexture2D(RdrId id, Image const& src
 	// Allocate a new texture instance and d3d texture resource
 	SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
 	Texture2DPtr inst = m_alex_tex2d.New(this, src, tdesc, sdesc, sort_id);
-	inst->m_id = AutoId ? MakeId(inst.m_ptr) : id;
+	inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 
 	// Add the texture instance to the lookup table
 	AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);

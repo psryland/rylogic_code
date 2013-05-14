@@ -237,6 +237,8 @@ struct enum_name\
 namespace pr
 {
 	// A type trait for detecting PR_ENUM types
+	// Use with std::enable_if, e.g.
+	// template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, char const*>::type Func(TEnum t) { return TEnum::ToString(t); }
 	template <typename TEnum> struct is_enum
 	{
 		template <typename U> static char (&resolve(typename U::is_enum*))[2];

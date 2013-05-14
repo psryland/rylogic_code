@@ -79,7 +79,8 @@ namespace pr
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
 
 		// Helper for setting alpha blending states
-		void SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, int render_target, bool on, D3D11_BLEND_OP blend_op = D3D11_BLEND_OP_ADD, D3D11_BLEND src_blend = D3D11_BLEND_SRC_ALPHA, D3D11_BLEND dst_blend = D3D11_BLEND_INV_SRC_ALPHA);
+		void SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, bool on, int render_target = 0, D3D11_BLEND_OP blend_op = D3D11_BLEND_OP_ADD, D3D11_BLEND src_blend = D3D11_BLEND_SRC_ALPHA, D3D11_BLEND dst_blend = D3D11_BLEND_INV_SRC_ALPHA);
+		void SetAlphaBlending(DrawMethod& mat, bool on, int render_target = 0, D3D11_BLEND_OP blend_op = D3D11_BLEND_OP_ADD, D3D11_BLEND src_blend = D3D11_BLEND_SRC_ALPHA, D3D11_BLEND dst_blend = D3D11_BLEND_INV_SRC_ALPHA);
 
 		// Helper for checking values are not overwritten in a lookup table
 		template <class Table, typename Key, typename Value> inline void AddLookup(Table& table, Key key, Value value)

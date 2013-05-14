@@ -47,10 +47,23 @@ namespace pr
 				ModelPtr model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib));
 				model->m_bbox = props.m_bbox;
 
-				// Create the render nugget
-				auto local_mat = mat ? *mat : DrawMethod(rdr.m_shdr_mgr.FindShaderFor(Cont::GeomMask));
-				//SetAlphaRenderStates(local_mat.m_rsb, has_alpha);
-				model->CreateNugget(local_mat, topo);
+				// If a material is given, use it to create a render nugget for the whole model
+				// Otherwise, create a default material
+				if (mat)
+				{
+					model->CreateNugget(*mat, topo);
+				}
+				else
+				{
+					// Create a material to use and a render nugget for the whole model
+					DrawMethod lmat(rdr.m_shdr_mgr.FindShaderFor(Cont::GeomMask));
+					if (Cont::GeomMask & EGeom::Tex0)
+						lmat.m_tex_diffuse = rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::White);
+					if (props.m_has_alpha)
+						pr::rdr::SetAlphaBlending(lmat, true);
+					
+					model->CreateNugget(lmat, topo);
+				}
 				return model;
 			}
 

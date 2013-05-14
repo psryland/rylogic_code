@@ -17,4 +17,5 @@ System::System(int seed)
 // 
 void System::GenerateStars(int seed)
 {
+	(void)seed;
 }

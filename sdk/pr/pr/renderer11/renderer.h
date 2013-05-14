@@ -73,6 +73,7 @@
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/wrappers.h"
 #include "pr/renderer11/util/lock.h"
+#include "pr/renderer11/util/stock_resources.h"
 
 #undef PR_RENDERER_INTERFACE_INCLUDE
 #endif

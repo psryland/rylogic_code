@@ -29,9 +29,9 @@ align (16) struct v2
 	//bug immutable static v2 zero   = v2(0,0);
 	//bug immutable static v2 xaxis  = v2(1,0);
 	//bug immutable static v2 yaxis  = v2(0,1);
-	static v2 zero () { return v2(0,0); }
-	static v2 xaxis() { return v2(1,0); }
-	static v2 yaxis() { return v2(0,1); }
+	@property static v2 zero () { return v2(0,0); }
+	@property static v2 xaxis() { return v2(1,0); }
+	@property static v2 yaxis() { return v2(0,1); }
 
 	this(float x_)                                          { set(x_); }
 	this(float x_, float y_)                                { set(x_, y_); }
@@ -70,9 +70,9 @@ align (16) struct v2
 		static if (op == "+") { return this; }
 		static if (op == "-") { return v2(-x, -y); }
 	}
-	v2 opBinary(string op)(float rhs) const // todo: compiler bug preventing float being a template parameter
+	v2 opBinary(string op)(float rhs) const
 	{
-		static if (op == "+") { v2 v = this; return v += rhs; } // todo: compiler bug preventing float being a template parameter
+		static if (op == "+") { v2 v = this; return v += rhs; }
 		static if (op == "-") { v2 v = this; return v -= rhs; }
 		static if (op == "*") { v2 v = this; return v *= rhs; }
 		static if (op == "/") { v2 v = this; return v /= rhs; }
@@ -109,10 +109,10 @@ align (16) struct v3
 	//bug immutable static v3 xaxis = v3(1,0,0);
 	//bug immutable static v3 yaxis = v3(0,1,0);
 	//bug immutable static v3 zaxis = v3(0,0,1);
-	static v3 zero () { return v3(0,0,0); }
-	static v3 xaxis() { return v3(1,0,0); }
-	static v3 yaxis() { return v3(0,1,0); }
-	static v3 zaxis() { return v3(0,0,1); }
+	@property static v3 zero () { return v3(0,0,0); }
+	@property static v3 xaxis() { return v3(1,0,0); }
+	@property static v3 yaxis() { return v3(0,1,0); }
+	@property static v3 zaxis() { return v3(0,0,1); }
 
 	this(float x_)                                          { set(x_); }
 	this(float x_, float y_, float z_)                      { set(x_, y_, z_); }
@@ -128,8 +128,7 @@ align (16) struct v3
 	@property string   string3() const                      { return to!string(x)~' '~to!string(y)~' '~to!string(z); }
 	@property float    length3sq() const                    { return Length3sq(x, y, z); }
 	@property float    length3() const                      { return Length3(x, y, z); }
-	@property float[3] array() const                        { return arr; }
-	@property ref float[3] array()                          { return arr; }
+
 	float     opIndex(size_t i) const                       { return arr[i]; }
 	ref float opIndex(size_t i)                             { return arr[i]; }
 	void      opIndexAssign(T)(T value, size_t i)           { arr[i] = cast(float)value; }
@@ -155,7 +154,7 @@ align (16) struct v3
 		static if (op == "+") { return this; }
 		static if (op == "-") { return v3(-x, -y, -z); }
 	}
-	v3 opBinary(string op)(float rhs) const // todo: compiler bug preventing float being a template parameter
+	v3 opBinary(string op)(float rhs) const
 	{
 		static if (op == "+") { v3 v = this; return v += rhs; }
 		static if (op == "-") { v3 v = this; return v -= rhs; }
@@ -197,12 +196,12 @@ align (16) struct v4
 	//bug immutable static v4 zaxis  = v4(0,0,1,0);
 	//bug immutable static v4 waxis  = v4(0,0,0,1);
 	//bug immutable static v4 origin = v4(0,0,0,1);
-	static v4 zero  () pure nothrow { return v4(0,0,0,0); }
-	static v4 xaxis () pure nothrow { return v4(1,0,0,0); }
-	static v4 yaxis () pure nothrow { return v4(0,1,0,0); }
-	static v4 zaxis () pure nothrow { return v4(0,0,1,0); }
-	static v4 waxis () pure nothrow { return v4(0,0,0,1); }
-	static v4 origin() pure nothrow { return v4(0,0,0,1); }
+	@property static v4 zero  () pure nothrow { return v4(0,0,0,0); }
+	@property static v4 xaxis () pure nothrow { return v4(1,0,0,0); }
+	@property static v4 yaxis () pure nothrow { return v4(0,1,0,0); }
+	@property static v4 zaxis () pure nothrow { return v4(0,0,1,0); }
+	@property static v4 waxis () pure nothrow { return v4(0,0,0,1); }
+	@property static v4 origin() pure nothrow { return v4(0,0,0,1); }
 
 	this(float x_) pure nothrow                                     { set(x_); }
 	this(float x_, float y_, float z_, float w_) pure nothrow       { set(x_, y_, z_, w_); }
@@ -292,8 +291,8 @@ align (16) struct m3x3
 
 	//bug immutable static m3x3 zero     = m3x3(v4.zero, v4.zero, v4.zero);
 	//bug immutable static m3x3 identity = m3x3(v4.xaxis, v4.yaxis, v4.zaxis);
-	static m3x3 zero    () { return m3x3(v4.zero, v4.zero, v4.zero);    }
-	static m3x3 identity() { return m3x3(v4.xaxis, v4.yaxis, v4.zaxis); }
+	@property static m3x3 zero    () { return m3x3(v4.zero, v4.zero, v4.zero);    }
+	@property static m3x3 identity() { return m3x3(v4.xaxis, v4.yaxis, v4.zaxis); }
 
 	this(float x_)                                          { set(x_); }
 	this(in v4 x_, in v4 y_, in v4 z_)                      { set(x_, y_, z_); }
@@ -305,7 +304,7 @@ align (16) struct m3x3
 	void row(int i, in v4 row)                              { x[i] = row.x; y[i] = row.y; z[i] = row.z; }
 	v4   col(int i) const                                   { return arr[i]; }
 	void col(int i, in v4 col)                              { arr[i] = col; }
-	
+
 	v4     opIndex(size_t i) const                          { return arr[i]; }
 	ref v4 opIndex(size_t i)                                { return arr[i]; }
 	void opIndexAssign(T)(T value, size_t i)                { arr[i] = cast(v4)value; }
@@ -358,22 +357,22 @@ align (16) struct m4x4
 	v4[4] arr;
 	}
 
-	//immutable static m4x4 zero     = m4x4(v4.zero, v4.zero, v4.zero, v4.zero);
-	//immutable static m4x4 identity = m4x4(v4.xaxis, v4.yaxis, v4.zaxis, v4.waxis);
-	static m4x4 zero    () { return m4x4(v4.zero, v4.zero, v4.zero, v4.zero);     }
-	static m4x4 identity() { return m4x4(v4.xaxis, v4.yaxis, v4.zaxis, v4.waxis); }
+	//bug immutable static m4x4 zero     = m4x4(v4.zero, v4.zero, v4.zero, v4.zero);
+	//bug immutable static m4x4 identity = m4x4(v4.xaxis, v4.yaxis, v4.zaxis, v4.waxis);
+	@property static m4x4 zero    () { return m4x4(v4.zero, v4.zero, v4.zero, v4.zero);     }
+	@property static m4x4 identity() { return m4x4(v4.xaxis, v4.yaxis, v4.zaxis, v4.waxis); }
 
 	this(float x_)                                          { set(x_); }
 	this(in v4 x_, in v4 y_, in v4 z_, in v4 w_)            { set(x_, y_, z_, w_); }
 	
 	ref m4x4 set(float x_)                                  { x.set(x_); y.set(x_); z.set(x_); w.set(x_); return this; }
 	ref m4x4 set(in v4 x_, in v4 y_, in v4 z_, in v4 w_)    { x = x_; y = y_; z = z_; w = w_; return this; }
-	
+
 	v4   row(int i) const                                   { return v4(x[i], y[i], z[i], w[i]); }
 	void row(int i, in v4 row)                              { x[i] = row.x; y[i] = row.y; z[i] = row.z; w[i] = row.w; }
 	v4   col(int i) const                                   { return arr[i]; }
 	void col(int i, in v4 col)                              { arr[i] = col; }
-	
+
 	v4     opIndex(size_t i) const                          { return arr[i]; }
 	ref v4 opIndex(size_t i)                                { return arr[i]; }
 	void opIndexAssign(T)(T value, size_t i)                { arr[i] = cast(v4)value; }

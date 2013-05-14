@@ -33,6 +33,7 @@ void RefreshShaders(D3DPtr<ID3D11Device>& device, ShaderPtr const& shader)
 		{
 			pr::Throw(device->CreateVertexShader(&buf[0], buf.size(), 0, &shader->m_vs.m_ptr));
 			if (last_mod > newest) newest = last_mod;
+			PR_INFO(1, pr::FmtS("Vertex shader %s replaced", filepath.c_str()));
 		}
 	}
 
@@ -45,6 +46,7 @@ void RefreshShaders(D3DPtr<ID3D11Device>& device, ShaderPtr const& shader)
 		{
 			pr::Throw(device->CreatePixelShader(&buf[0], buf.size(), 0, &shader->m_ps.m_ptr));
 			if (last_mod > newest) newest = last_mod;
+			PR_INFO(1, pr::FmtS("Pixel shader %s replaced", filepath.c_str()));
 		}
 	}
 

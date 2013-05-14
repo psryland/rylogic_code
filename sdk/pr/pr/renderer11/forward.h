@@ -208,6 +208,7 @@ namespace pr
 			x(TxTint         )\
 			x(TxTintPvc      )\
 			x(TxTintTex      )\
+			x(TxTintPvcLit   )\
 			x(TxTintPvcLitTex)
 		PR_DEFINE_ENUM1(EShader, PR_ENUM);
 		#undef PR_ENUM

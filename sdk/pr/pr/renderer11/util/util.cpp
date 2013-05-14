@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/util/util.h"
 #include "pr/renderer11/util/wrappers.h"
+#include "pr/renderer11/render/draw_method.h"
 #include "pr/renderer11/render/blend_state.h"
 #include "pr/renderer11/render/depth_state.h"
 #include "pr/renderer11/render/raster_state.h"
@@ -154,7 +155,7 @@ void pr::rdr::GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num
 }
 
 // Helper for setting alpha blending states
-void pr::rdr::SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, int render_target, bool on, D3D11_BLEND_OP blend_op, D3D11_BLEND src_blend, D3D11_BLEND dst_blend)
+void pr::rdr::SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, bool on, int render_target, D3D11_BLEND_OP blend_op, D3D11_BLEND src_blend, D3D11_BLEND dst_blend)
 {
 	if (on)
 	{
@@ -175,6 +176,10 @@ void pr::rdr::SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, int ren
 		dsb.Clear(EDS::DepthEnable);
 		rsb.Clear(ERS::CullMode);
 	}
+}
+void pr::rdr::SetAlphaBlending(DrawMethod& mat, bool on, int render_target, D3D11_BLEND_OP blend_op, D3D11_BLEND src_blend, D3D11_BLEND dst_blend)
+{
+	SetAlphaBlending(mat.m_bsb, mat.m_dsb, mat.m_rsb, on, render_target, blend_op, src_blend, dst_blend);
 }
 
 // Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features

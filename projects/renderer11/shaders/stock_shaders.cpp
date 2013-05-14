@@ -24,6 +24,8 @@ namespace pr
 		// include generated header files
 		#include "renderer11/shaders/compiled/txfm_tint.vs.h"
 		#include "renderer11/shaders/compiled/txfm_tint.ps.h"
+		#include "renderer11/shaders/compiled/txfm_tint_pvc_lit.vs.h"
+		#include "renderer11/shaders/compiled/txfm_tint_pvc_lit.ps.h"
 		#include "renderer11/shaders/compiled/txfm_tint_pvc_lit_tex.vs.h"
 		#include "renderer11/shaders/compiled/txfm_tint_pvc_lit_tex.ps.h"
 		#include "renderer11/shaders/compiled/txfm_tint_pvc.vs.h"
@@ -54,7 +56,7 @@ void Txfm(BaseInstance const& inst, SceneView const& view, CBufModel& cb)
 // Set the tint properties of CBufModel
 void Tint(BaseInstance const& inst, CBufModel& cb)
 {
-	pr::Colour const* col = inst.find<pr::Colour>(EInstComp::TintColour32);
+	pr::Colour32 const* col = inst.find<pr::Colour32>(EInstComp::TintColour32);
 	cb.m_tint = col ? *col : pr::ColourWhite;
 }
 
@@ -173,6 +175,35 @@ struct TxTintTex :BaseShader
 	explicit TxTintTex(ShaderManager* mgr) :BaseShader(mgr) {}
 };
 
+// TxTintPvcLit ***********************************************************************************
+struct TxTintPvcLit :BaseShader
+{
+	static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
+	{
+		// Create the shader
+		VShaderDesc vsdesc(VertPCNT(), txfm_tint_pvc_lit_vs);
+		PShaderDesc psdesc(txfm_tint_pvc_lit_ps);
+		
+		auto shdr = sm.CreateShader<TxTintPvcLit>(EShader::TxTintPvcLit, TxTintPvcLit::Setup, &vsdesc, &psdesc, "txfm_tint_pvc_lit");
+		CreateCBufModel(device, shdr->m_cbuf);
+	}
+	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
+	{
+		// Fill out the model constants buffer and bind it to the VS stage
+		CBufModel cb = {};
+		Txfm(inst, scene.m_view, cb);
+		Tint(inst, cb);
+		{
+			LockT<CBufModel> lock(dc, nugget.m_draw.m_shader->m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
+			*lock.ptr() = cb;
+		}
+
+		// Set constants for the vertex shader
+		dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &nugget.m_draw.m_shader->m_cbuf.m_ptr);
+	}
+	explicit TxTintPvcLit(ShaderManager* mgr) :BaseShader(mgr) {}
+};
+
 // TxTintPvcLitTex ***********************************************************
 struct TxTintPvcLitTex :BaseShader
 {
@@ -182,7 +213,7 @@ struct TxTintPvcLitTex :BaseShader
 		VShaderDesc vsdesc(VertPCNT(), txfm_tint_pvc_lit_tex_vs);
 		PShaderDesc psdesc(txfm_tint_pvc_lit_tex_ps);
 		
-		pr::RefPtr<TxTintTex> shdr = sm.CreateShader<TxTintPvcLitTex>(EShader::TxTintPvcLitTex, TxTintPvcLitTex::Setup, &vsdesc, &psdesc, "txfm_tint_pvc_lit_tex");
+		auto shdr = sm.CreateShader<TxTintPvcLitTex>(EShader::TxTintPvcLitTex, TxTintPvcLitTex::Setup, &vsdesc, &psdesc, "txfm_tint_pvc_lit_tex");
 		CreateCBufModel(device, shdr->m_cbuf);
 	}
 	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
@@ -218,6 +249,7 @@ void pr::rdr::ShaderManager::CreateStockShaders()
 	TxTint         ::Create(*this, m_device);
 	TxTintPvc      ::Create(*this, m_device);
 	TxTintTex      ::Create(*this, m_device);
+	TxTintPvcLit   ::Create(*this, m_device);
 	TxTintPvcLitTex::Create(*this, m_device);
 }
 

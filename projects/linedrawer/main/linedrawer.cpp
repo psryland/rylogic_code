@@ -13,7 +13,7 @@
 
 namespace ldr
 {
-	char const AppName[]   = "LineDrawer";
+	char const AppName[]   = "Alzatool";
 	char const Version[]   = "4.00.00";
 	char const Copyright[] = "Copyright © Rylogic Limited 2002";
 	pr::ldr::ContextId LdrContext = 0xFFFFFFFF;

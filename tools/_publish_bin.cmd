@@ -4,13 +4,7 @@
 
 @echo OFF
 SetLocal EnableDelayedExpansion 
-set PATH=Q:\sdk\pr\cmd\;%PATH%
-
-set targetpath=%~1
-set platform=%2
-set config=%3
-set dstsubdir=%~4
-if [%platform%]==[win32] set platform=x86
+::cls
 
 ::Load Rylogic environment variables and check version
 if [%RylogicEnv%]==[] (
@@ -22,6 +16,13 @@ if %RylogicEnvVersion% lss 1 (
 	echo ERROR: '%RylogicEnv%' is out of date. Please update.
 	goto :eof
 )
+set PATH=%qdrive%\sdk\pr\cmd\;%PATH%
+
+set targetpath=%~1
+set platform=%2
+set config=%3
+set dstsubdir=%~4
+if [%platform%]==[win32] set platform=x86
 
 call split_path targetpath srcdir file extn
 call lower_case targetpath
@@ -49,7 +50,7 @@ if [%config%]==[release] (
 
 	:: If the system architecture matches this release, copy to the root dstdir
 	if [%platform%]==[%arch%] (
-		call copy "%dstdir%\%file%.%platform%.%extn%" "%dstdirroot%\%file%.%extn%"
+		call copy "%dstdir%\%file%.%extn%" "%dstdirroot%\%file%.%extn%"
 	)
 )
 

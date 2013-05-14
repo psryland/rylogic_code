@@ -64,5 +64,8 @@
       <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
       <Message>Publishing binary...</Message>
     </PostBuildEvent>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
 </Project>

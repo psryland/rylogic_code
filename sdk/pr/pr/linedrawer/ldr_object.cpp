@@ -474,16 +474,16 @@ template <pr::ldr::ELdrObject::Enum_ LineType> void ParseLine(ParseParams& p)
 	pr::ldr::ObjectAttributes attr = ParseAttributes(p.m_reader, LineType);
 	pr::ldr::LdrObjectPtr obj(new pr::ldr::LdrObject(attr, p.m_parent, p.m_context_id));
 
-	// These could be a scratch buffer to save on allocs
-	pr::Array<pr::v4> point;
+	pr::Array<pr::v4>       point;
 	pr::Array<pr::Colour32> colour;
-	pr::Array<pr::uint16> index;
-
-	// Read the description of the model
+	pr::Array<pr::uint16>   index;
 	pr::v4 p0, p1 = pr::v4Zero;
 	pr::Colour32 col;
-	bool linemesh = false, per_line_colour = false;
+	bool linemesh = false;
+	bool per_line_colour = false;
 	int faceting = 50;
+
+	// Read the description of the model
 	p.m_reader.SectionStart();
 	while (!p.m_reader.IsSectionEnd())
 	{
@@ -493,7 +493,11 @@ template <pr::ldr::ELdrObject::Enum_ LineType> void ParseLine(ParseParams& p)
 			ParseParams pp(p, obj->m_child, kw, obj.m_ptr);
 			if (ParseLdrObject(pp)) continue;
 			if (ParseProperties(pp, kw, obj)) continue;
-			if (kw == pr::ldr::EKeyword::Coloured) { per_line_colour = true; continue; }
+			if (kw == pr::ldr::EKeyword::Coloured)
+			{
+				per_line_colour = true;
+				continue;
+			}
 			if (kw == pr::ldr::EKeyword::Param)
 			{
 				float t[2];
@@ -656,11 +660,11 @@ template <pr::ldr::ELdrObject::Enum_ PlaneType> void ParsePlane(ParseParams& p)
 	// These could be a scratch buffer to save on allocs
 	pr::Array<pr::v4> point;
 	pr::Array<pr::Colour32> colour;
-
-	// Read the description of the model
 	pr::rdr::Texture2DPtr texture = 0;
 	bool per_vert_colour = false;
 	bool create = true;
+
+	// Read the description of the model
 	p.m_reader.SectionStart();
 	while (!p.m_reader.IsSectionEnd())
 	{
@@ -779,11 +783,13 @@ template <pr::ldr::ELdrObject::Enum_ BoxType> void ParseBox(ParseParams& p)
 	pr::ldr::ObjectAttributes attr = ParseAttributes(p.m_reader, BoxType);
 	pr::ldr::LdrObjectPtr obj(new pr::ldr::LdrObject(attr, p.m_parent, p.m_context_id));
 
-	// Read the description of the model
 	pr::Array<pr::v4, 16> position;
-	pr::v4 dim = pr::v4Zero, pt[8], up = pr::v4YAxis;
+	pr::v4 pt[8], dim = pr::v4Zero, up = pr::v4YAxis;
 	pr::m4x4 b2w = pr::m4x4Identity;
+	pr::rdr::Texture2DPtr texture = 0;
 	bool create = false;
+
+	// Read the description of the model
 	p.m_reader.SectionStart();
 	while (!p.m_reader.IsSectionEnd())
 	{
@@ -793,7 +799,8 @@ template <pr::ldr::ELdrObject::Enum_ BoxType> void ParseBox(ParseParams& p)
 			ParseParams pp(p, obj->m_child, kw, obj.m_ptr);
 			if (ParseLdrObject(pp)) continue;
 			if (ParseProperties(pp, kw, obj)) continue;
-			if (kw == pr::ldr::EKeyword::Up)      { p.m_reader.ExtractVector3S(up, 0.0f); continue; }
+			if (kw == pr::ldr::EKeyword::Up) { p.m_reader.ExtractVector3S(up, 0.0f); continue; }
+			if (kw == pr::ldr::EKeyword::Texture) { ParseTexture(p, texture); continue; }
 			p.m_reader.ReportError(pr::script::EResult::UnknownToken);
 			continue;
 		}
@@ -876,11 +883,19 @@ template <pr::ldr::ELdrObject::Enum_ BoxType> void ParseBox(ParseParams& p)
 	}
 	p.m_reader.SectionEnd();
 
-	// Create the model
 	if (!create)
 	{
 		p.m_reader.ReportError("Box object description incomplete");
 		return;
+	}
+
+	// If a texture was given, load it and create a material that uses it
+	pr::rdr::DrawMethod local_mat, *mat = 0;
+	if (texture)
+	{
+		local_mat = p.m_rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPCNT>();
+		local_mat.m_tex_diffuse = texture;
+		mat = &local_mat;
 	}
 
 	// Create the model
@@ -888,10 +903,10 @@ template <pr::ldr::ELdrObject::Enum_ BoxType> void ParseBox(ParseParams& p)
 	{
 	default: PR_ASSERT(PR_DBG_LDROBJMGR, false, ""); return;
 	case pr::ldr::ELdrObject::Box:
-	case pr::ldr::ELdrObject::BoxLine:   obj->m_model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, dim * 0.5f, b2w); break;
-	case pr::ldr::ELdrObject::BoxList:   obj->m_model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, position.size(), position.data(), dim * 0.5f); break;
+	case pr::ldr::ELdrObject::BoxLine:   obj->m_model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, dim * 0.5f, b2w, pr::Colour32White, mat); break;
+	case pr::ldr::ELdrObject::BoxList:   obj->m_model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, position.size(), position.data(), dim * 0.5f, 0, 0, mat); break;
 	case pr::ldr::ELdrObject::FrustumWH:
-	case pr::ldr::ELdrObject::FrustumFA: obj->m_model = pr::rdr::ModelGenerator<>::Boxes(p.m_rdr, 1, pt, b2w); break;
+	case pr::ldr::ELdrObject::FrustumFA: obj->m_model = pr::rdr::ModelGenerator<>::Boxes(p.m_rdr, 1, pt, b2w, 0, 0, mat); break;
 	}
 	obj->m_model->m_name = obj->TypeAndName();
 

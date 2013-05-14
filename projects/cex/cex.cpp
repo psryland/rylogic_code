@@ -519,7 +519,7 @@ namespace cex
 			if (str::EqualI(option, "-hash")) { return true; }
 			return ICex::CmdLineOption(option, arg, arg_end);
 		}
-		bool CmdLineData(TArgIter& arg, TArgIter arg_end)
+		bool CmdLineData(TArgIter& arg, TArgIter)
 		{
 			m_text += *arg++;
 			return true;

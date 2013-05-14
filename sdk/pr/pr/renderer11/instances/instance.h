@@ -67,33 +67,33 @@ namespace pr
 			CompDesc*       end()         { return begin() + m_cpt_count; }
 			
 			// Find the 'index'th component in this instance. Returns non-null if the component was found
-			template <typename Comp> Comp const* find(uint16 comp_type, int index = 0) const
+			template <typename Comp> Comp const* find(EInstComp comp, int index = 0) const
 			{
 				for (CompDesc const *i = begin(), *iend = end(); i != iend; ++i)
-					if (i->m_type == comp_type && index-- == 0)
+					if (i->m_type == comp && index-- == 0)
 						return pr::type_ptr<Comp>(pr::byte_ptr(this) + i->m_offset);
 				return 0;
 			}
-			template <typename Comp> Comp* find(uint16 comp_type, int index = 0)
+			template <typename Comp> Comp* find(EInstComp comp, int index = 0)
 			{
 				for (CompDesc *i = begin(), *iend = end(); i != iend; ++i)
-					if (i->m_type == comp_type && index-- == 0)
+					if (i->m_type == comp && index-- == 0)
 						return pr::type_ptr<Comp>(pr::byte_ptr(this) + i->m_offset);
 				return 0;
 			}
 			
 			// Get the 'index'th component in this instance
-			template <typename Comp> inline Comp const& get(pr::uint16 comp_type, int index = 0) const
+			template <typename Comp> inline Comp const& get(EInstComp comp, int index = 0) const
 			{
-				Comp const* comp = find<Comp>(comp_type, index);
-				PR_ASSERT(PR_DBG_RDR, comp != 0, "This instance does not have the requested component");
-				return *comp;
+				Comp const* c = find<Comp>(comp, index);
+				PR_ASSERT(PR_DBG_RDR, c != 0, "This instance does not have the requested component");
+				return *c;
 			}
-			template <typename Comp> inline Comp& get(pr::uint16 comp_type, int index = 0)
+			template <typename Comp> inline Comp& get(EInstComp comp, int index = 0)
 			{
-				Comp* comp = find<Comp>(comp_type, index);
-				PR_ASSERT(PR_DBG_RDR, comp != 0, "This instance does not have the requested component");
-				return *comp;
+				Comp* c = find<Comp>(comp, index);
+				PR_ASSERT(PR_DBG_RDR, c != 0, "This instance does not have the requested component");
+				return *c;
 			}
 		};
 
