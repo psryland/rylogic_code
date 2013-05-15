@@ -16,6 +16,8 @@
 #define _WTL_NO_CSTRING
 
 #include "pr/common/min_max_fix.h"
+#include <windows.h>
+#include <shellapi.h>
 
 // std
 #include <iostream>
@@ -34,6 +36,8 @@
 #include <atlddx.h>
 #include <atlframe.h>
 #include <atlctrls.h>
+//#include <atlctrlx.h>
+#include <atlctrlw.h>
 #include <atldlgs.h>
 #include <atlcrack.h>
 
@@ -57,11 +61,13 @@
 #include "pr/camera/camera.h"
 #include "pr/gui/menu_helper.h"
 #include "pr/gui/recent_files.h"
+#include "pr/gui/progress_dlg.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"
 #include "pr/script/script_forward.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_forward.h"
+#include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/network/web_get.h"
 #include "pr/storage/xml.h"
 

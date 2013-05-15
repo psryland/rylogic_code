@@ -7,7 +7,7 @@
 #include <sstream>
 #include <unordered_map>
 #include "pr/linedrawer/ldr_object.h"
-#include "pr/linedrawer/ldr_objects_dlg.h"
+//#include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/common/assert.h"
 #include "pr/common/hash.h"
 #include "pr/common/windows_com.h"

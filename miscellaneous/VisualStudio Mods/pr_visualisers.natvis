@@ -2,6 +2,11 @@
 <!-- http://code.msdn.microsoft.com/Writing-type-visualizers-2eae77a2 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
+	<!-- std -->
+	<Type Name="std::string">
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_stdstring"></DisplayString>
+	</Type>
+
 	<!-- RefPtr -->
 	<Type Name="pr::RefPtr&lt;*&gt;">
 		<DisplayString>{*m_ptr}</DisplayString>

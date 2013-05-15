@@ -2,23 +2,24 @@
 // Console
 //  Copyright © Rylogic Ltd 2010
 //**************************************************************************************
-#ifndef PR_CONSOLE_H
-#define PR_CONSOLE_H
+#ifndef PR_COMMON_CONSOLE_H
+#define PR_COMMON_CONSOLE_H
 
 #if _WIN32_WINNT < 0x0500
-#	error "Console requires _WIN32_WINNT >= 0x0500"
-#endif//_WIN32_WINNT < 0x0500
+#  error "Console requires _WIN32_WINNT >= 0x0500"
+#endif
 
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include <algorithm>
 #include <windows.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <io.h>
-#include <iostream>
-#include <fstream>
 #include <conio.h>
 #include <crtdbg.h>
-#include <string>
-#include <sstream>
 #include <stdarg.h>
 #include <tchar.h>
 
@@ -38,9 +39,36 @@ namespace pr
 				Any   = Key|Mouse|Size|Menu|Focus,
 			};
 		}
+		namespace EAnchor
+		{
+			enum Type
+			{
+				Left         = 1 << 0,
+				HCentre      = 1 << 1,
+				Right        = 1 << 2,
+				Top          = 1 << 3,
+				VCentre      = 1 << 4,
+				Bottom       = 1 << 5,
+
+				TopLeft      = Top|Left,
+				TopCentre    = Top|HCentre,
+				TopRight     = Top|Right,
+				MiddleLeft   = VCentre|Left,
+				MiddleCentre = VCentre|HCentre,
+				MiddleRight  = VCentre|Right,
+				BottomLeft   = Bottom|Left,
+				BottomCentre = Bottom|HCentre,
+				BottomRight  = Bottom|Right,
+			};
+		}
 
 		typedef INPUT_RECORD Event;
 		typedef BOOL (__stdcall *HandlerFunction)(DWORD ctrl_type);
+
+		struct ConsoleScreenBufferInfo :CONSOLE_SCREEN_BUFFER_INFOEX
+		{
+			ConsoleScreenBufferInfo() :CONSOLE_SCREEN_BUFFER_INFOEX() { cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX); }
+		};
 
 		class Console
 		{
@@ -54,11 +82,11 @@ namespace pr
 
 		public:
 			Console()
-			:m_stdout(0)
-			,m_stdin(0)
-			,m_opened(false)
-			,m_base(10)
-			,m_digits(3)
+				:m_stdout(0)
+				,m_stdin(0)
+				,m_opened(false)
+				,m_base(10)
+				,m_digits(3)
 			{
 				// I can't figure this console redirecting stuff out. It seems sometimes you need
 				// to call 'RedirectIOToConsole()', other times that doesn't work but 'ReopenStdio()'
@@ -67,24 +95,24 @@ namespace pr
 				if (!Attach())
 					Open();
 			}
-	
+
 			~Console()
 			{
 				Close();
 			}
-	
+
 			// Return the hwnd for the console window
 			HWND GetWindowHandle() const
 			{
 				return GetConsoleWindow();
 			}
-	
+
 			// Return true if the console window has focus
 			bool HasFocus() const
 			{
 				return GetForegroundWindow() == GetConsoleWindow();
 			}
-	
+
 			// Open a console window
 			void Open()
 			{
@@ -98,9 +126,14 @@ namespace pr
 			void Open(short columns, short lines)
 			{
 				Open();
-				SetConsoleDimensions(columns, lines);
+				auto info = Info();
+				info.srWindow.Left   = 0;
+				info.srWindow.Top    = 0;
+				info.srWindow.Right  = info.dwSize.X = info.dwMaximumWindowSize.X = columns;
+				info.srWindow.Bottom = info.dwSize.Y = info.dwMaximumWindowSize.Y = lines;
+				Info(info);
 			}
-	
+
 			// Closes the console window
 			void Close()
 			{
@@ -111,7 +144,7 @@ namespace pr
 				if (m_console_created)	FreeConsole();
 				m_opened = false;
 			}
-	
+
 			//// Reopen the stdio file descriptors
 			//void ReopenStdio()
 			//{
@@ -123,7 +156,7 @@ namespace pr
 			//	freopen_s(stdout ,"CONOUT$" ,"wb" ,stdout);
 			//	freopen_s(stderr ,"CONOUT$" ,"wb" ,stderr);
 			//}
-	
+
 			// Redirect IO to console
 			void RedirectIOToConsole()
 			{
@@ -152,7 +185,7 @@ namespace pr
 				// point to console as well
 				std::ios::sync_with_stdio();
 			}
-	
+
 			// Attach to an existing console window
 			bool Attach()
 			{
@@ -160,34 +193,66 @@ namespace pr
 				m_opened = AttachConsole(DWORD(-1)) == TRUE;
 				return m_opened;
 			}
-	
+
 			// Return true if the console is open
 			bool IsOpen() const
 			{
 				return m_opened;
 			}
-	
-			// Return the dimensions of the console window
-			COORD GetConsoleDimensions()
+
+			// Get/Set the position of the window
+			RECT WindowRect() const
 			{
-				CONSOLE_SCREEN_BUFFER_INFO csbi;
-				GetConsoleScreenBufferInfo(m_stdout, &csbi);
-				return csbi.dwSize;
+				RECT rect;
+				::GetWindowRect(GetWindowHandle(), &rect);
+				return rect;
 			}
-			void GetConsoleDimensions(short& columns, short& lines)
+			void WindowPosition(int x, int y)
 			{
-				COORD size = GetConsoleDimensions();
-				columns = size.X;
-				lines   = size.Y;
+				RECT rect = WindowRect();
+				int w = rect.right - rect.left;
+				int h = rect.bottom - rect.top;
+				::MoveWindow(GetWindowHandle(), x, y, w, h, FALSE);
 			}
-	
-			// Set the buffer size for the console
-			void SetConsoleDimensions(short columns, short lines)
+			void WindowPosition(EAnchor::Type anchor, int dx = 0, int dy = 0)
 			{
-				COORD size = {columns, lines};
-				SetConsoleScreenBufferSize(m_stdout, size);
+				int sx = GetSystemMetrics(SM_CXSCREEN);
+				int sy = GetSystemMetrics(SM_CYSCREEN);
+				RECT rect = WindowRect();
+				int w = rect.right - rect.left;
+				int h = rect.bottom - rect.top;
+
+				// Find the coordinate to write the string at
+				short cx = 0, cy = 0;
+				if (anchor & EAnchor::Left   ) cx = dx + 0;
+				if (anchor & EAnchor::HCentre) cx = dx + (sx - w) / 2;
+				if (anchor & EAnchor::Right  ) cx = dx + (sx - w);
+				if (anchor & EAnchor::Top    ) cy = dy + 0;
+				if (anchor & EAnchor::VCentre) cy = dy + (sy - h) / 2;
+				if (anchor & EAnchor::Bottom ) cy = dy + (sy - h);
+
+				WindowPosition(cx, cy);
 			}
-	
+
+
+			// Get/Set the dimensions of the console window and/or buffer
+			// Note, the buffer must not be smaller than the window or the window larger than the buffer
+			ConsoleScreenBufferInfo Info() const
+			{
+				ConsoleScreenBufferInfo info;
+				GetConsoleScreenBufferInfoEx(m_stdout, &info);
+				return info;
+			}
+			void Info(ConsoleScreenBufferInfo info)
+			{
+				info.dwSize.X = std::min(info.dwSize.X, info.dwMaximumWindowSize.X);
+				info.dwSize.Y = std::min(info.dwSize.Y, info.dwMaximumWindowSize.Y);
+				info.dwCursorPosition.X = std::max(std::min(info.dwCursorPosition.X, info.dwSize.X), SHORT(0));
+				info.dwCursorPosition.Y = std::max(std::min(info.dwCursorPosition.Y, info.dwSize.Y), SHORT(0));
+				if (!SetConsoleScreenBufferInfoEx(m_stdout, &info))
+					throw std::exception("Failed to set console dimensions");
+			}
+
 			// Return the position of the cursor
 			COORD GetCursor()
 			{
@@ -195,7 +260,7 @@ namespace pr
 				GetConsoleScreenBufferInfo(m_stdout, &csbi);
 				return csbi.dwCursorPosition;
 			}
-	
+
 			// Position the cursor in the window
 			void SetCursor(COORD coord)
 			{
@@ -206,7 +271,7 @@ namespace pr
 				COORD coord = {cx, cy};
 				SetCursor(coord);
 			}
-	
+
 			// Set an event handler routine for the console, only affects this console, doesn't require removing
 			// 'ctrl_type' is one of:
 			//	CTRL_C_EVENT - Ctrl+C
@@ -221,7 +286,7 @@ namespace pr
 			{
 				SetConsoleCtrlHandler(func, add);
 			}
-	
+
 			// Clear the whole console
 			void Clear()
 			{
@@ -229,7 +294,7 @@ namespace pr
 				CONSOLE_SCREEN_BUFFER_INFO csbi;
 				GetConsoleScreenBufferInfo(m_stdout, &csbi);
 				unsigned int num_chars = csbi.dwSize.X * csbi.dwSize.Y;
-				
+
 				// Fill the area with blanks
 				COORD topleft = {0, 0}; 
 				DWORD chars_written;
@@ -240,11 +305,11 @@ namespace pr
 
 				// Set the buffer's attributes accordingly
 				FillConsoleOutputAttribute(m_stdout, csbi.wAttributes, num_chars, topleft, &chars_written);
-			    
+
 				// Set the cursor back to cx,cy
 				SetCursor(0, 0);
 			}
-	
+
 			// Clear a rectangular area in the console
 			// If size_x == 0 or size_y == 0 then the current console width/height is used
 			void Clear(short x, short y, short size_x, short size_y)
@@ -261,7 +326,7 @@ namespace pr
 				size_y = (size_y == 0) ? csbi.dwSize.Y : size_y;
 				size_x = (size_x < 0) ? 0 : (x + size_x > csbi.dwSize.X) ? csbi.dwSize.X - x : size_x;
 				size_y = (size_y < 0) ? 0 : (y + size_y > csbi.dwSize.Y) ? csbi.dwSize.Y - y : size_y;
-				
+
 				// Fill the area with blanks
 				COORD topleft = {x, y}; 
 				for( topleft.Y = y; topleft.Y != y + size_y; ++topleft.Y )
@@ -275,24 +340,24 @@ namespace pr
 					// Set the buffer's attributes accordingly
 					FillConsoleOutputAttribute(m_stdout, csbi.wAttributes, size_x, topleft, &chars_written);
 				}
-			    
+
 				// Set the cursor back to x,y
 				SetCursor(x, y);
 			}
-	
+
 			// Flush all input events from the input buffer
 			void Flush()
 			{
 				FlushConsoleInputBuffer(m_stdin);
 			}
-	
+
 			// Return the number of events in the input buffer
 			DWORD GetInputEventCount()
 			{
 				DWORD count;
 				return GetNumberOfConsoleInputEvents(m_stdin, &count) ? count : 0;
 			}
-	
+
 			// Return the next event from the input buffer without removing it
 			Event PeekInputEvent()
 			{
@@ -310,7 +375,7 @@ namespace pr
 				ReadConsoleInput(m_stdin, &in, 1, &read);
 				return in;
 			}
-	
+
 			// Wait for a specific event to be next in the console input buffer
 			// This function blocks for up to 'timeout_ms'
 			// 'event_type' is a combination of 'EEvent'
@@ -324,19 +389,19 @@ namespace pr
 				}
 				return false;
 			}
-	
+
 			// Wait for a key to be pressed
 			void WaitKey()
 			{
 				WaitForEvent(EEvent::Key, INFINITE);
 			}
-	
+
 			// Returns true if input data is waiting, equivalent to _kbhit()
 			bool KBHit()
 			{
 				return WaitForEvent(EEvent::Key, 0);
 			}
-	
+
 			// Look for an ascii char in the input buffer.
 			bool SeekChar()
 			{
@@ -349,7 +414,7 @@ namespace pr
 				}
 				return false;
 			}
-	
+
 			// Consume input events upto and including the next 'key' event
 			// Returns true if a char was read from the input buffer
 			bool ReadChar(char& ch)
@@ -359,7 +424,7 @@ namespace pr
 				ch = in.Event.KeyEvent.uChar.AsciiChar;
 				return true;
 			}
-	
+
 			// Read a character, blocks until input is available
 			char GetChar()
 			{
@@ -367,7 +432,7 @@ namespace pr
 				for (;!ReadChar(ch);) WaitForEvent(EEvent::Key, INFINITE);
 				return ch;
 			}
-	
+
 			// Read up to a '\n' character
 			// Blocks until a return character is read
 			std::string GetLine()
@@ -375,8 +440,10 @@ namespace pr
 				std::string str;
 				for (char ch = GetChar(); ch != '\n' && ch != '\r'; ch = GetChar())
 					str.push_back(ch);
+				Flush();
+				return str;
 			}
-	
+
 			// Read number characters from the console.
 			// Blocks until the first non-digit character is read
 			std::string GetNumber()
@@ -385,7 +452,7 @@ namespace pr
 				for (char ch = GetChar(); isdigit(ch) || ch == '.' || ch == 'e' || ch == 'E' || ch == '-' || ch == '+'; ch = GetChar())
 					str.push_back(ch);
 			}
-	
+
 			// Get a specific number of characters from the console
 			// Blocks until 'max_length' chars are read
 			void GetString(std::string& str, std::size_t max_length)
@@ -394,21 +461,64 @@ namespace pr
 				for (std::size_t i = 0; i != max_length; ++i)
 					str.push_back(GetChar());
 			}
-	
+
 			// Write text to the output window
-			void Write(std::string const& str)
+			void Write(char const* str, size_t ofs, size_t count)
 			{
 				DWORD chars_written;
-				WriteConsole(m_stdout, str.c_str(), (DWORD)str.size(), &chars_written, 0);
+				WriteConsole(m_stdout, str + ofs, DWORD(count), &chars_written, 0);
 			}
-	
+			void Write(char const* str)
+			{
+				Write(str, 0, strlen(str));
+			}
+
+			// Write text to the output window
+			void Write(std::string const& str, size_t ofs = 0U, size_t count = ~0U)
+			{
+				Write(str.c_str(), ofs, std::min(str.size() - ofs, count));
+			}
+
 			// Write text to the output window at a specified position
-			void Write(short cx, short cy, std::string const& str)
+			void Write(short cx, short cy, std::string const& str, size_t ofs = 0U, size_t count = ~0U)
 			{
 				SetCursor(cx, cy);
-				Write(str);
+				Write(str, ofs, count);
 			}
-	
+
+			// Write text to the output window at a specified position
+			void Write(EAnchor::Type anchor, short dx, short dy, std::string const& str)
+			{
+				// Find the dimensions of the string
+				int sx = 0, sy = 0, x = 0;
+				for (auto i = std::begin(str), iend = std::end(str); i != iend; ++i)
+				{
+					if (*i == '\n')    { ++sy; x = 0; }
+					else if (++x > sx) { ++sx; }
+				}
+
+				// Get the console dimensions
+				auto info = Info();
+				short maxx = info.dwMaximumWindowSize.X, maxy = info.dwMaximumWindowSize.Y;
+
+				// Find the coordinate to write the string at
+				short cx = 0, cy = 0;
+				if (anchor & EAnchor::Left   ) cx = dx + 0;
+				if (anchor & EAnchor::HCentre) cx = dx + (maxx - sx) / 2;
+				if (anchor & EAnchor::Right  ) cx = dx + (maxx - sx);
+				if (anchor & EAnchor::Top    ) cy = dy + 0;
+				if (anchor & EAnchor::VCentre) cy = dy + (maxy - sy) / 2;
+				if (anchor & EAnchor::Bottom ) cy = dy + (maxy - sy);
+
+				// Write the string, line by line
+				for (size_t i = 0, iend = str.find('\n', 0); i != std::string::npos; i = iend, iend = str.find('\n',i+1))
+					Write(cx, cy++, str, i, iend - i);
+			}
+			void Write(EAnchor::Type anchor, std::string const& str)
+			{
+				Write(anchor, 0, 0, str);
+			}
+			
 			// Stream a type to/from the console
 			template <typename Type> Console& operator << (Type type)
 			{
@@ -423,20 +533,20 @@ namespace pr
 				return *this;
 			}
 		};
-	
+
 		// Write output to the console using various methods
 		// Handy way to test if it's working
 		inline void OutputTest()
 		{
 			int iVar;
-		
+
 			// test stdio
 			fprintf(stdout, "Test output to stdout\n");
 			fprintf(stderr, "Test output to stderr\n");
 			fprintf(stdout, "Enter an integer to test stdin: ");
 			scanf_s("%d", &iVar);
 			printf("You entered %d\n", iVar);
-		
+
 			//test iostreams
 			std::cout << "Test output to cout" << std::endl;
 			std::cerr << "Test output to cerr" << std::endl;
@@ -444,7 +554,7 @@ namespace pr
 			std::cout << "Enter an integer to test cin: ";
 			std::cin >> iVar;
 			std::cout << "You entered " << iVar << std::endl;
-		
+
 			// test wide iostreams
 			std::wcout << L"Test output to wcout" << std::endl;
 			std::wcerr << L"Test output to wcerr" << std::endl;
@@ -452,7 +562,7 @@ namespace pr
 			std::wcout << L"Enter an integer to test wcin: ";
 			std::wcin >> iVar;
 			std::wcout << L"You entered " << iVar << std::endl;
-		
+
 			// test CrtDbg output
 			_CrtSetReportMode( _CRT_ASSERT, _CRTDBG_MODE_FILE );
 			_CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR );

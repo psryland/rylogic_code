@@ -37,6 +37,9 @@ namespace pr
 		typedef pr::RefPtr<LdrObject> LdrObjectPtr;
 		typedef pr::Array<LdrObjectPtr, 8> ObjectCont;
 
+		static HTREEITEM const INVALID_TREE_ITEM =  0;
+		static int const       INVALID_LIST_ITEM = -1;
+
 		// Ldr object types
 		#define PR_ENUM(x)\
 			x(Unknown          ,= 0x062170b2)\
