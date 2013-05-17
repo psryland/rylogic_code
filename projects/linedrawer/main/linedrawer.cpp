@@ -18,8 +18,8 @@ namespace ldr
 	char const Copyright[] = "Copyright © Rylogic Limited 2002";
 	pr::ldr::ContextId LdrContext = 0xFFFFFFFF;
 	char const* AppTitle()      { return AppName; }
-	char const* AppString()     { return pr::FmtX<struct X>("%s - Version: %s\r\n%s\r\nAll Rights Reserved.", AppName, Version, Copyright); }
-	char const* AppStringLine() { return pr::FmtX<struct X>("%s - Version: %s %s", AppName, Version, Copyright); }
+	char const* AppString()     { return pr::FmtX<LineDrawer, 128>("%s - Version: %s\r\n%s\r\nAll Rights Reserved.", AppName, Version, Copyright); }
+	char const* AppStringLine() { return pr::FmtX<LineDrawer, 128>("%s - Version: %s %s", AppName, Version, Copyright); }
 }
 
 // Return the filename for the user settings file

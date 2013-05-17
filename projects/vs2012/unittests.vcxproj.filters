@@ -750,6 +750,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\storage\settings.h">
       <Filter>sdk\storage</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h">
+      <Filter>sdk\maths</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\unittests\run_tests.cmd">

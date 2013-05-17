@@ -219,7 +219,7 @@ namespace pr
 		{\
 			switch (setting)\
 			{\
-			default: return pr::FmtX<struct X>("Unknown setting. Hash value = %d", setting);\
+			default: return pr::FmtS("Unknown setting. Hash value = %d", setting);\
 			x(PR_SETTINGS_ENUM_TOSTRING)\
 			};\
 		}\

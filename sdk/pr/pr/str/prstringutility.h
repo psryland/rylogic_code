@@ -2,13 +2,13 @@
 // Utility String functions
 //  Copyright © Rylogic Ltd 2008
 //***********************************************************************
-	
+
 #ifndef PR_STR_STRING_UTILITY_H
 #define PR_STR_STRING_UTILITY_H
-	
+
 #include "pr/common/crc.h"
 #include "pr/str/prstringcore.h"
-	
+
 namespace pr
 {
 	namespace str
@@ -24,7 +24,7 @@ namespace pr
 			tstr s = str;
 			return EnsureNewline(s);
 		}
-		
+
 		// Return true if 'src' contains 'what'
 		template <typename tstr1, typename tstr2> inline bool Contains(tstr1 const& src, tstr2 const& what)
 		{
@@ -34,10 +34,10 @@ namespace pr
 		{
 			return FindStrNoCase(Begin(src), End(src), what) != End(src);
 		}
-		
+
 		struct Pred_Compare       { template <typename L, typename R> int  operator() (L lhs, R rhs) const { return (lhs > rhs) - (rhs > lhs); } };
 		struct Pred_CompareNoCase { template <typename L, typename R> int  operator() (L lhs, R rhs) const { lhs = static_cast<L>(tolower(lhs)); rhs = static_cast<R>(tolower(rhs)); return (lhs > rhs) - (rhs > lhs); } };
-		
+
 		// Return the lexicographical comparison of two strings.
 		// Returns 0 if equal, -1 if lhs < rhs, or +1 if lhs > rhs
 		template <typename tstr1, typename tstr2, typename Pred> inline int Compare(tstr1 const& lhs, tstr2 const& rhs, Pred pred)
@@ -60,7 +60,7 @@ namespace pr
 		{
 			return Compare(lhs, rhs, Pred_CompareNoCase());
 		}
-		
+
 		// Return the number of occurrences of 'what' in 'str'
 		template <typename tstr1, typename tstr2> size_t Count(tstr1 const& str, tstr2 const& what)
 		{
@@ -76,7 +76,7 @@ namespace pr
 			}
 			return count;
 		}
-		
+
 		// Replace blocks of delimiter characters with a single delimiter
 		// The first delimiter of the block is kept unless a '\n' is found
 		// in which case the '\n' is used as the single delimiter.
@@ -84,7 +84,7 @@ namespace pr
 		{
 			typedef typename Traits<tstr1>::value_type tchar;
 			if (Empty(src)) return;
-			
+
 			tchar* in = &src[0], *out = in;
 			in = FindFirstNotOf(in, delim);
 			while( *in )
@@ -101,7 +101,7 @@ namespace pr
 			typedef typename Traits<tstr>::value_type value_type;
 			return CompressWhiteSpace(src, Delim(static_cast<value_type const*>(0)), ws_char, preserve_newlines);
 		}
-		
+
 		// Convert a string into an array of tokens
 		template <typename tstr1, typename tstr_cont, typename tstr2> void Tokenise(tstr1 const& src, tstr_cont& tokens, tstr2 const* delim)
 		{
@@ -130,14 +130,14 @@ namespace pr
 			typedef typename Traits<tstr>::value_type value_type;
 			return Tokenise(src, tokens, Delim(static_cast<value_type const*>(0)));
 		}
-		
+
 		// Strip sections from a string
 		// Pass null to 'block_start','block_end' or 'line' to ignore that section type
 		template <typename tstr1, typename tstr2> tstr1& Strip(tstr1& src, tstr2* block_start, tstr2* block_end, tstr2* line)
 		{
 			typedef typename Traits<tstr1>::value_type tchar;
 			if (Empty(src)) return src;
-			
+
 			bool block = block_start != 0 && block_end != 0;
 			size_t lc_len  = line  ? Length(line)        : 0;
 			size_t bcs_len = block ? Length(block_start) : 0;
@@ -163,13 +163,13 @@ namespace pr
 			Resize(src, static_cast<size_t>(out - &src[0]));
 			return src;
 		}
-		
+
 		// Strip C++ style comments from a string
 		template <typename tstr> inline tstr& StripCppComments(tstr& src)
 		{
 			return Strip(src, "/*", "*/", "//");
 		}
-		
+
 		// Replace instances of 'what' with 'with'
 		template <typename tstr1, typename tstr2, typename tstr3> size_t Replace(tstr1& src, tstr2 const& what, tstr3 const& with)
 		{
@@ -190,7 +190,7 @@ namespace pr
 					s += what_len;
 					++count;
 				}
-				
+
 				size_t new_size = src_len - what_len*count + with_len*count;
 				Resize(src, new_size);
 			}
@@ -199,7 +199,7 @@ namespace pr
 				count = Count(src, what);
 				size_t new_size = src_len - what_len*count + with_len*count;
 				Resize(src, new_size);
-				
+
 				tchar* out = &src[0] + new_size;
 				for (tchar const* s = &src[0] + src_len; s != out;)
 				{
@@ -224,7 +224,7 @@ namespace pr
 			size_t size = Length(src) * sizeof(Traits<tstr>::value_type);
 			return Crc(data, size);
 		}
-		
+
 		// Convert a normal string into a C-style string
 		// This is the std::string -esk version. char* version not implemented yet...
 		template <typename tstr2, typename tstr1> inline tstr2 StringToCString(tstr1 const& src)
@@ -252,14 +252,14 @@ namespace pr
 			}
 			return dst;
 		}
-		
+
 		// Convert a C-style string into a normal string
 		// This is the std::string -esk version. char* version not implemented yet...
 		template <typename tstr2, typename tstr1> inline tstr2 CStringToString(tstr1 const& src)
 		{
 			typedef typename Traits<tstr1>::value_type tchar;
 			if (Empty(src)) return src;
-			
+
 			tstr1 dst;
 			for (tchar const* s = &src[0]; *s; ++s)
 			{
@@ -288,7 +288,7 @@ namespace pr
 			}
 			return dst;
 		}
-		
+
 		// Look for 'identifier' within the range [ofs, ofs+count) of 'src'
 		// returning the index of it's position or ofs+count if not found.
 		// identifier will be a complete identifier based on the char class IsIdentifier()
@@ -302,16 +302,16 @@ namespace pr
 			{
 				iter = FindStr(iter, end, identifier);
 				if (iter == end) return ofs + count;
-				
+
 				// Look for any identifier characters after iter + id_len
 				Traits<tstr1>::citer j = iter + id_len;
 				if (j != end && IsIdentifier(*j, false)) continue;
-				
+
 				// Look for any identifier characters before iter
 				for (j = iter; j > begin && IsIdentifier(*(--j), false);) {}
 				for (        ; j != iter && !IsIdentifier(*j, true); ++j) {}
 				if  (j != iter) continue;
-				
+
 				return static_cast<size_t>(iter - begin);
 			}
 		}
@@ -323,7 +323,7 @@ namespace pr
 		{
 			return FindIdentifier(src, identifier, 0);
 		}
-		
+
 		// Add/Remove quotes from a string if it doesn't already have them
 		template <typename tstr> inline tstr& Quotes(tstr& str, bool add)
 		{
@@ -351,6 +351,29 @@ namespace pr
 		{
 			tstr s = str;
 			return Quotes(s, add);
+		}
+
+
+		// Convert a size in bytes to a 'pretty' size in KB,MB,GB,etc
+		// 'bytes' - the input data size
+		// 'si' - true to use 1000bytes = 1kb, false for 1024bytes = 1kb
+		// 'dp' - number of decimal places to use
+		inline std::string PrettySize(long long bytes, bool si, int dp)
+		{
+			int unit = si ? 1000 : 1024;
+			if (bytes < unit) return std::to_string(bytes) + (si ? "B" : "iB");
+			int exp = int(::log(bytes) / ::log(unit));
+			double pretty_size = bytes/::pow(unit, exp);
+			char prefix = "KMGTPE"[exp-1];
+			
+			char fmt[32];
+			if (_snprintf_s(fmt, sizeof(fmt), "%%1.%df%%c%%s", dp) < 0)
+				throw std::exception("PrettySize failed");
+			
+			char buf[128];
+			int len = _snprintf_s(buf, sizeof(buf), fmt, pretty_size, prefix, si?"B":"iB");
+			if (len < 0 || len >= sizeof(buf)) throw std::exception("PrettySize failed");
+			return std::string(buf, len);
 		}
 	}
 }
@@ -500,6 +523,22 @@ namespace pr
 				PR_CHECK(type    ,pr::str::NumType::Dec);
 				PR_CHECK(unsignd ,true);
 				PR_CHECK(ll      ,true);
+			}
+			{//Pretty size
+				auto pretty = [](long long bytes){ return PrettySize(bytes, true, 1) + " " + PrettySize(bytes, false, 1); };
+				PR_CHECK(      "0B 0iB"      , pretty(0));
+				PR_CHECK(     "27B 27iB"     , pretty(27));
+				PR_CHECK(    "999B 999iB"    , pretty(999));
+				PR_CHECK(   "1.0KB 1000iB"   , pretty(1000));
+				PR_CHECK(   "1.0KB 1023iB"   , pretty(1023));
+				PR_CHECK(   "1.0KB 1.0KiB"   , pretty(1024));
+				PR_CHECK(   "1.7KB 1.7KiB"   , pretty(1728));
+				PR_CHECK( "110.6KB 108.0KiB" , pretty(110592));
+				PR_CHECK(   "7.1MB 6.8MiB"   , pretty(7077888));
+				PR_CHECK( "453.0MB 432.0MiB" , pretty(452984832));
+				PR_CHECK(  "29.0GB 27.0GiB"  , pretty(28991029248));
+				PR_CHECK(   "1.9TB 1.7TiB"   , pretty(1855425871872));
+				PR_CHECK(   "9.2EB 8.0EiB"   , pretty(9223372036854775807));
 			}
 		}
 	}

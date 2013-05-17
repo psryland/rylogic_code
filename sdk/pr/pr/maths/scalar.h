@@ -224,8 +224,8 @@ namespace pr
 			uint   u  , u0  = rng.u32()                   , u1  = rng.u32();
 			int    i  , i0  = rng.i32()                   , i1  = rng.i32();
 			long   l  , l0  = rng.i32()                   , l1  = rng.i32();
-			float  f  , f0  = rng.f32()                   , f1  = rng.f32();
-			double d  , d0  = rng.d32()                   , d1  = rng.d32();
+			float  f  , f0  = rng.flt()                   , f1  = rng.flt();
+			double d  , d0  = rng.dbl()                   , d1  = rng.dbl();
 			v2     V2 , V20 = Random2(rng, v2Zero, 10.0f) , V21 = Random2(rng, v2Zero, 10.0f);
 			v3     V3 , V30 = Random3(rng, v3Zero, 10.0f) , V31 = Random3(rng, v3Zero, 10.0f);
 			v4     V4 , V40 = Random4(rng, v4Zero, 10.0f) , V41 = Random4(rng, v4Zero, 10.0f);
@@ -262,8 +262,8 @@ namespace pr
 			u  = Clamp(uint(rng.u32())             ,Min(u0 , u1) ,Max(u0 , u1));
 			i  = Clamp(int(rng.i32())              ,Min(i0 , i1) ,Max(i0 , i1));
 			l  = Clamp(rng.i32()                   ,Min(l0 , l1) ,Max(l0 , l1));
-			f  = Clamp(rng.f32()                   ,Min(f0 , f1) ,Max(f0 , f1));
-			d  = Clamp(rng.d32()                   ,Min(d0 , d1) ,Max(d0 , d1));
+			f  = Clamp(rng.flt()                   ,Min(f0 , f1) ,Max(f0 , f1));
+			d  = Clamp(rng.dbl()                   ,Min(d0 , d1) ,Max(d0 , d1));
 			V2 = Clamp(Random2(rng, v2Zero, 10.0f) ,Min(V20,V21) ,Max(V20,V21));
 			V3 = Clamp(Random3(rng, v3Zero, 10.0f) ,Min(V30,V31) ,Max(V30,V31));
 			V4 = Clamp(Random4(rng, v4Zero, 10.0f) ,Min(V40,V41) ,Max(V40,V41));

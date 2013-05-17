@@ -11,6 +11,7 @@
 #include <malloc.h>
 #include <string>
 #include "pr/threads/mutex.h"
+#include "pr/common/datetime.h"
 #include "pr/common/fmt.h"
 #include "pr/common/alloca.h"
 #include "pr/common/byte_ptr_cast.h"
@@ -453,4 +454,15 @@ ADDIN_API HRESULT WINAPI AddIn_LuaState(DWORD, DbgHelper* pHelper, int, BOOL, ch
 	return S_OK;
 }
 
+// Expand a pr::DateTime
+ADDIN_API HRESULT WINAPI AddIn_DateTime(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
+{
+	ReentryGuard guard;
 
+	pr::DateTime dt;
+	if (FAILED(pHelper->Read(dt))) return E_FAIL;
+	//auto tm = dt.utc_time();
+	//tm.pretty();
+	_snprintf(pResult, max, "%s", ::ctime(&dt.ticks));
+	return S_OK;
+}

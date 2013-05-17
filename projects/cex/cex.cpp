@@ -392,7 +392,7 @@ namespace cex
 				{
 					var.clear();
 					std::vector<std::string> paths;
-					pr::str::Split(arg, ",", std::back_inserter(paths));
+					pr::str::Split(arg, ",", [&](std::string const& arg, size_t i, size_t iend){ paths.push_back(arg.substr(i, iend-i)); });
 					for (std::vector<std::string>::const_iterator i = paths.begin(), iend = paths.end(); i != iend; ++i) var.append(pr::filesys::GetFullPath(*i)).push_back('\0');
 					var.push_back('\0');
 					return &var[0];
@@ -401,7 +401,7 @@ namespace cex
 				{
 					var = 0;
 					std::vector<std::string> flags;
-					pr::str::Split(arg, ",", std::back_inserter(flags));
+					pr::str::Split(arg, ",", [&](std::string const& arg, size_t i, size_t iend){ flags.push_back(arg.substr(i,iend-i)); });
 					for (std::vector<std::string>::const_iterator i = flags.begin(), iend = flags.end(); i != iend; ++i)
 					{
 						if (str::EqualI(*i, "AllowUndo"             )) { var |= FOF_ALLOWUNDO;             continue; }

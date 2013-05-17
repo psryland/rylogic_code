@@ -18,13 +18,6 @@
 #include <exception>
 #include <functional>
 
-//"pr/common/assert.h" should be included prior to this for pr asserts
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#   define PR_DBG 0
-#endif
-
 // Macro enum generator functions
 #define PR_ENUM_DEFINE1(id)           id,
 #define PR_ENUM_DEFINE2(id, val)      id val,
@@ -143,7 +136,6 @@ struct enum_name\
 	{\
 		Enum_ enum_;\
 		if (TryParse(enum_, name, match_case)) return enum_;\
-		PR_ASSERT(PR_DBG, false, "Parse failed, no matching value in enum "#enum_name);\
 		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
 	}\
 \
@@ -152,7 +144,6 @@ struct enum_name\
 	{\
 		Enum_ enum_;\
 		if (TryParse(enum_, name, match_case)) return enum_;\
-		PR_ASSERT(PR_DBG, false, "Parse failed, no matching value in enum "#enum_name);\
 		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
 	}\
 \
@@ -275,12 +266,6 @@ namespace pr
 			});
 	}
 }
-
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
-#   undef PR_DBG
-#endif
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"

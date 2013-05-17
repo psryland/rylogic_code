@@ -58,6 +58,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\crc.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dinstance.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dptr.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\dependency.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\discretepidcontroller.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\event.h" />
@@ -107,6 +108,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\serialportio.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stack.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\testbed3d.h" />

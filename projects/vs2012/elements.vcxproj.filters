@@ -5,18 +5,80 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="ui">
+      <UniqueIdentifier>{80df82f9-5abb-42ba-9867-8acec82961fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk">
+      <UniqueIdentifier>{ff377e68-7517-4510-b2ed-388ee57266c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\pr">
+      <UniqueIdentifier>{98f9b0f4-017e-40e4-829c-e8e7deffee96}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\elements\attribute.h">
+    <ClInclude Include="..\elements\ship.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\elements\element.h">
+    <ClInclude Include="..\elements\game_instance.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\game_constants.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\stdafx.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\material.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\world_state.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\console_ui.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\console.h">
+      <Filter>sdk\pr</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h">
+      <Filter>sdk\pr</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\fmt.h">
+      <Filter>sdk\pr</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h">
+      <Filter>sdk\pr</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\elements\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\elements\game_instance.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\game_constants.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\stdafx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\ship.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\world_state.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\console_ui.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\elements\design.txt">
+      <Filter>src</Filter>
+    </Text>
   </ItemGroup>
 </Project>

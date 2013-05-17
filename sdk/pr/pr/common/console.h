@@ -22,52 +22,148 @@
 #include <crtdbg.h>
 #include <stdarg.h>
 #include <tchar.h>
+#include "pr/macros/enum.h"
+#include "pr/str/prstring.h"
 
 namespace pr
 {
 	namespace console
 	{
-		namespace EEvent
-		{
-			enum Type
-			{
-				Key   = KEY_EVENT,                // Event contains key event record
-				Mouse = MOUSE_EVENT,              // Event contains mouse event record
-				Size  = WINDOW_BUFFER_SIZE_EVENT, // Event contains window change event record
-				Menu  = MENU_EVENT,               // Event contains menu event record
-				Focus = FOCUS_EVENT,              // event contains focus change
-				Any   = Key|Mouse|Size|Menu|Focus,
-			};
-		}
-		namespace EAnchor
-		{
-			enum Type
-			{
-				Left         = 1 << 0,
-				HCentre      = 1 << 1,
-				Right        = 1 << 2,
-				Top          = 1 << 3,
-				VCentre      = 1 << 4,
-				Bottom       = 1 << 5,
+		#define PR_ENUM(x)\
+			x(Key   , = KEY_EVENT                 )\
+			x(Mouse , = MOUSE_EVENT               )\
+			x(Size  , = WINDOW_BUFFER_SIZE_EVENT  )\
+			x(Menu  , = MENU_EVENT                )\
+			x(Focus , = FOCUS_EVENT               )\
+			x(Any   , = Key|Mouse|Size|Menu|Focus )
+		PR_DEFINE_ENUM2_FLAGS(EEvent, PR_ENUM);
+		#undef PR_ENUM
 
-				TopLeft      = Top|Left,
-				TopCentre    = Top|HCentre,
-				TopRight     = Top|Right,
-				MiddleLeft   = VCentre|Left,
-				MiddleCentre = VCentre|HCentre,
-				MiddleRight  = VCentre|Right,
-				BottomLeft   = Bottom|Left,
-				BottomCentre = Bottom|HCentre,
-				BottomRight  = Bottom|Right,
-			};
-		}
+		#define PR_ENUM(x)\
+			x(Left         , = 1 << 0          )\
+			x(HCentre      , = 1 << 1          )\
+			x(Right        , = 1 << 2          )\
+			x(Top          , = 1 << 3          )\
+			x(VCentre      , = 1 << 4          )\
+			x(Bottom       , = 1 << 5          )\
+			x(TopLeft      , = Top|Left        )\
+			x(TopCentre    , = Top|HCentre     )\
+			x(TopRight     , = Top|Right       )\
+			x(MiddleLeft   , = VCentre|Left    )\
+			x(MiddleCentre , = VCentre|HCentre )\
+			x(MiddleRight  , = VCentre|Right   )\
+			x(BottomLeft   , = Bottom|Left     )\
+			x(BottomCentre , = Bottom|HCentre  )\
+			x(BottomRight  , = Bottom|Right    )
+		PR_DEFINE_ENUM2_FLAGS(EAnchor, PR_ENUM);
+		#undef PR_ENUM
 
+		#define PR_ENUM(x)\
+			x(Black       , = 0                     )\
+			x(Blue        , = 1 << 0                )\
+			x(Green       , = 1 << 1                )\
+			x(Red         , = 1 << 2                )\
+			x(Cyan        , = Blue|Green            )\
+			x(Purple      , = Blue|Red              )\
+			x(Yellow      , = Green|Red             )\
+			x(Grey        , = Blue|Green|Red        )\
+			x(LightBlue   , = (1<<3)|Blue           )\
+			x(LightGreen  , = (1<<3)|Green          )\
+			x(LightRed    , = (1<<3)|Red            )\
+			x(LightCyan   , = (1<<3)|Blue|Green     )\
+			x(LightPurple , = (1<<3)|Blue|Red       )\
+			x(LightYellow , = (1<<3)|Green|Red      )\
+			x(White       , = (1<<3)|Red|Green|Blue )
+		PR_DEFINE_ENUM2_FLAGS(EColour, PR_ENUM);
+		#undef PR_ENUM
+
+		class Console;
 		typedef INPUT_RECORD Event;
 		typedef BOOL (__stdcall *HandlerFunction)(DWORD ctrl_type);
 
+		// Helper to correctly initialise CONSOLE_SCREEN_BUFFER_INFOEX
 		struct ConsoleScreenBufferInfo :CONSOLE_SCREEN_BUFFER_INFOEX
 		{
 			ConsoleScreenBufferInfo() :CONSOLE_SCREEN_BUFFER_INFOEX() { cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX); }
+		};
+
+		// Helper for combining fore and back colours
+		struct Colours
+		{
+			WORD m_colours;
+			Colours(WORD colours) :m_colours(colours) {}
+			Colours(EColour fore = EColour::White, EColour back = EColour::Black) :m_colours((back << 4) | fore) {}
+			operator WORD() const { return m_colours; }
+		};
+
+		// RAII object for preserving the cursor position
+		struct CursorScope
+		{
+			Console* m_cons;
+			COORD m_cursor_pos;
+			CursorScope(Console& cons);
+			~CursorScope();
+		};
+
+		// RAII object for pushing console colours
+		struct ColourScope
+		{
+			Console* m_cons;
+			WORD m_colours;
+			ColourScope(Console& cons);
+			~ColourScope();
+		};
+
+		// A helper for drawing rectangular blocks of text in the console
+		struct Pad
+		{
+			struct Item
+			{
+				enum EWhat { Unknown, NewLine, String, Colour } m_what;
+				union { void* m_ptr; std::string* m_line; Colours* m_colour; };
+				Item(EWhat what, void* ptr = 0) :m_what(what), m_ptr(ptr) {}
+				Item(std::string* line) :m_what(String), m_line(line) {}
+				Item(Colours* colour) :m_what(Colour), m_colour(colour) {}
+			};
+
+			Colours m_colours;
+			int m_width, m_height, m_w;
+			std::vector<Item> m_items;
+
+			Pad(EColour fore = EColour::White, EColour back = EColour::Black) :m_colours(fore,back) ,m_width(0) ,m_height(0) ,m_w(0) ,m_items() {}
+			~Pad() { for (auto& i : m_items) delete i.m_ptr; }
+			
+			// Stream anything to the pad
+			template <typename T> Pad& operator << (T t)
+			{
+				std::stringstream out; out << t;
+				return *this << out.str();
+			}
+
+			// Stream a string to the pad
+			Pad& operator << (std::string const& s)
+			{
+				pr::str::Split(s,"\n", [&](std::string const& s, int i, int iend)
+					{
+						m_items.push_back(new std::string(s.c_str()+i, s.c_str()+iend));
+						m_w += (iend - i);
+						m_width = std::max(m_width, m_w);
+						if (s[iend] == '\n')
+						{
+							m_items.push_back(Item(Item::NewLine));
+							m_w = 0;
+							m_height++;
+						}
+					});
+				return *this;
+			}
+
+			// Stream a colour change
+			Pad& operator << (Colours c)
+			{
+				m_items.push_back(new Colours(c));
+				return *this;
+			}
 		};
 
 		class Console
@@ -80,6 +176,8 @@ namespace pr
 			int    m_base;
 			int    m_digits;
 
+			friend struct CursorScope;
+			friend struct ColourScope;
 		public:
 			Console()
 				:m_stdout(0)
@@ -123,7 +221,7 @@ namespace pr
 				m_stderr = GetStdHandle(STD_ERROR_HANDLE);
 				m_opened = true;
 			}
-			void Open(short columns, short lines)
+			void Open(int columns, int lines)
 			{
 				Open();
 				auto info = Info();
@@ -214,7 +312,7 @@ namespace pr
 				int h = rect.bottom - rect.top;
 				::MoveWindow(GetWindowHandle(), x, y, w, h, FALSE);
 			}
-			void WindowPosition(EAnchor::Type anchor, int dx = 0, int dy = 0)
+			void WindowPosition(EAnchor anchor, int dx = 0, int dy = 0)
 			{
 				int sx = GetSystemMetrics(SM_CXSCREEN);
 				int sy = GetSystemMetrics(SM_CYSCREEN);
@@ -223,7 +321,7 @@ namespace pr
 				int h = rect.bottom - rect.top;
 
 				// Find the coordinate to write the string at
-				short cx = 0, cy = 0;
+				int cx = 0, cy = 0;
 				if (anchor & EAnchor::Left   ) cx = dx + 0;
 				if (anchor & EAnchor::HCentre) cx = dx + (sx - w) / 2;
 				if (anchor & EAnchor::Right  ) cx = dx + (sx - w);
@@ -233,7 +331,6 @@ namespace pr
 
 				WindowPosition(cx, cy);
 			}
-
 
 			// Get/Set the dimensions of the console window and/or buffer
 			// Note, the buffer must not be smaller than the window or the window larger than the buffer
@@ -253,24 +350,15 @@ namespace pr
 					throw std::exception("Failed to set console dimensions");
 			}
 
-			// Return the position of the cursor
-			COORD GetCursor()
-			{
-				CONSOLE_SCREEN_BUFFER_INFO csbi;
-				GetConsoleScreenBufferInfo(m_stdout, &csbi);
-				return csbi.dwCursorPosition;
-			}
+			// Get/Set the position of the cursor
+			COORD Cursor() const { return Info().dwCursorPosition; }
+			void Cursor(COORD coord) { SetConsoleCursorPosition(m_stdout, coord); }
+			void Cursor(int cx, int cy) { COORD coord = {short(cx), short(cy)}; Cursor(coord); }
 
-			// Position the cursor in the window
-			void SetCursor(COORD coord)
-			{
-				SetConsoleCursorPosition(m_stdout, coord);
-			}
-			void SetCursor(short cx, short cy)
-			{
-				COORD coord = {cx, cy};
-				SetCursor(coord);
-			}
+			// Get/Set the colour to use
+			Colours Colour() const { return Info().wAttributes; }
+			void Colour(Colours c) { SetConsoleTextAttribute(m_stdout, c); }
+			void Colour(EColour fore, EColour back) { Colour(Colours(fore,back)); }
 
 			// Set an event handler routine for the console, only affects this console, doesn't require removing
 			// 'ctrl_type' is one of:
@@ -291,23 +379,16 @@ namespace pr
 			void Clear()
 			{
 				// Get the number of character cells in the current buffer
-				CONSOLE_SCREEN_BUFFER_INFO csbi;
-				GetConsoleScreenBufferInfo(m_stdout, &csbi);
-				unsigned int num_chars = csbi.dwSize.X * csbi.dwSize.Y;
+				auto info = Info();
+				unsigned int num_chars = info.dwSize.X * info.dwSize.Y;
+
+				CursorScope scope(*this);
 
 				// Fill the area with blanks
-				COORD topleft = {0, 0}; 
+				COORD topleft = {0, 0};
 				DWORD chars_written;
-				FillConsoleOutputCharacter(m_stdout, _T(' '), num_chars, topleft, &chars_written);
-
-				// Get the current text attribute
-				GetConsoleScreenBufferInfo(m_stdout, &csbi);
-
-				// Set the buffer's attributes accordingly
-				FillConsoleOutputAttribute(m_stdout, csbi.wAttributes, num_chars, topleft, &chars_written);
-
-				// Set the cursor back to cx,cy
-				SetCursor(0, 0);
+				FillConsoleOutputCharacterA(m_stdout, ' ', num_chars, topleft, &chars_written);
+				FillConsoleOutputAttribute(m_stdout, info.wAttributes, num_chars, topleft, &chars_written);
 			}
 
 			// Clear a rectangular area in the console
@@ -315,34 +396,28 @@ namespace pr
 			void Clear(short x, short y, short size_x, short size_y)
 			{
 				// Use the whole screen clear
-				if (x == 0 && y == 0 && size_x == 0 && size_y == 0) return Clear();
+				if (x == 0 && y == 0 && size_x == 0 && size_y == 0)
+					return Clear();
+
+				CursorScope scope(*this);
 
 				// Get the number of character cells in the current buffer
-				CONSOLE_SCREEN_BUFFER_INFO csbi;
-				GetConsoleScreenBufferInfo(m_stdout, &csbi);
-				x	   = (x < 0) ? 0 : (x >= csbi.dwSize.X) ? csbi.dwSize.X - 1 : x;
-				y	   = (y < 0) ? 0 : (y >= csbi.dwSize.Y) ? csbi.dwSize.Y - 1 : y;
-				size_x = (size_x == 0) ? csbi.dwSize.X : size_x;
-				size_y = (size_y == 0) ? csbi.dwSize.Y : size_y;
-				size_x = (size_x < 0) ? 0 : (x + size_x > csbi.dwSize.X) ? csbi.dwSize.X - x : size_x;
-				size_y = (size_y < 0) ? 0 : (y + size_y > csbi.dwSize.Y) ? csbi.dwSize.Y - y : size_y;
+				auto info = Info();
+				x      = (x < 0) ? 0 : (x >= info.dwSize.X) ? info.dwSize.X - 1 : x;
+				y      = (y < 0) ? 0 : (y >= info.dwSize.Y) ? info.dwSize.Y - 1 : y;
+				size_x = (size_x == 0) ? info.dwSize.X : size_x;
+				size_y = (size_y == 0) ? info.dwSize.Y : size_y;
+				size_x = (size_x < 0) ? 0 : (x + size_x > info.dwSize.X) ? info.dwSize.X - x : size_x;
+				size_y = (size_y < 0) ? 0 : (y + size_y > info.dwSize.Y) ? info.dwSize.Y - y : size_y;
 
 				// Fill the area with blanks
 				COORD topleft = {x, y}; 
-				for( topleft.Y = y; topleft.Y != y + size_y; ++topleft.Y )
+				for (topleft.Y = y; topleft.Y != y + size_y; ++topleft.Y)
 				{
 					DWORD chars_written;
-					FillConsoleOutputCharacter(m_stdout, _T(' '), size_x, topleft, &chars_written);
-
-					// Get the current text attribute
-					GetConsoleScreenBufferInfo(m_stdout, &csbi);
-
-					// Set the buffer's attributes accordingly
-					FillConsoleOutputAttribute(m_stdout, csbi.wAttributes, size_x, topleft, &chars_written);
+					FillConsoleOutputCharacterA(m_stdout, ' ', size_x, topleft, &chars_written);
+					FillConsoleOutputAttribute(m_stdout, info.wAttributes, size_x, topleft, &chars_written);
 				}
-
-				// Set the cursor back to x,y
-				SetCursor(x, y);
 			}
 
 			// Flush all input events from the input buffer
@@ -480,14 +555,14 @@ namespace pr
 			}
 
 			// Write text to the output window at a specified position
-			void Write(short cx, short cy, std::string const& str, size_t ofs = 0U, size_t count = ~0U)
+			void Write(int cx, int cy, std::string const& str, size_t ofs = 0U, size_t count = ~0U)
 			{
-				SetCursor(cx, cy);
+				Cursor(short(cx), short(cy));
 				Write(str, ofs, count);
 			}
 
 			// Write text to the output window at a specified position
-			void Write(EAnchor::Type anchor, short dx, short dy, std::string const& str)
+			void Write(EAnchor anchor, int dx, int dy, std::string const& str)
 			{
 				// Find the dimensions of the string
 				int sx = 0, sy = 0, x = 0;
@@ -499,10 +574,10 @@ namespace pr
 
 				// Get the console dimensions
 				auto info = Info();
-				short maxx = info.dwMaximumWindowSize.X, maxy = info.dwMaximumWindowSize.Y;
+				int maxx = info.dwMaximumWindowSize.X, maxy = info.dwMaximumWindowSize.Y;
 
 				// Find the coordinate to write the string at
-				short cx = 0, cy = 0;
+				int cx = 0, cy = 0;
 				if (anchor & EAnchor::Left   ) cx = dx + 0;
 				if (anchor & EAnchor::HCentre) cx = dx + (maxx - sx) / 2;
 				if (anchor & EAnchor::Right  ) cx = dx + (maxx - sx);
@@ -514,11 +589,41 @@ namespace pr
 				for (size_t i = 0, iend = str.find('\n', 0); i != std::string::npos; i = iend, iend = str.find('\n',i+1))
 					Write(cx, cy++, str, i, iend - i);
 			}
-			void Write(EAnchor::Type anchor, std::string const& str)
+			void Write(EAnchor anchor, std::string const& str)
 			{
 				Write(anchor, 0, 0, str);
 			}
-			
+
+			// Write a Pad helper object to the screen
+			void Write(EAnchor anchor, Pad const& pad, int dx = 0, int dy = 0)
+			{
+				CursorScope scope0(*this);
+				ColourScope scope1(*this);
+
+				COORD loc = CursorLocation(anchor, dx, dy, pad.m_width, pad.m_height);
+
+				Colour(pad.m_colours);
+				Clear(loc.X, loc.Y, pad.m_width, pad.m_height);
+
+				Cursor(loc);
+				for (auto& item : pad.m_items)
+				{
+					switch (item.m_what)
+					{
+					case Pad::Item::NewLine:
+						loc.Y++;
+						Cursor(loc);
+						break;
+					case Pad::Item::String:
+						Write(item.m_line->c_str(), 0, item.m_line->size());
+						break;
+					case Pad::Item::Colour:
+						Colour(*item.m_colour);
+						break;
+					}
+				}
+			}
+
 			// Stream a type to/from the console
 			template <typename Type> Console& operator << (Type type)
 			{
@@ -532,7 +637,35 @@ namespace pr
 				strm >> type;
 				return *this;
 			}
+
+			// Returns the top left corner for a rectangular region with dimensions 'width/height'
+			// anchored to 'anchor' offset by 'dx,dy'
+			COORD CursorLocation(EAnchor anchor, int dx, int dy, int width, int height)
+			{
+				// Get the console dimensions
+				auto info = Info();
+				int wx = info.srWindow.Right - info.srWindow.Left;
+				int wy = info.srWindow.Bottom - info.srWindow.Top;
+
+				// Find the coordinate to write the string at
+				COORD c;
+				if (anchor & EAnchor::Left   ) c.X = dx + 0;
+				if (anchor & EAnchor::HCentre) c.X = dx + (wx - width) / 2;
+				if (anchor & EAnchor::Right  ) c.X = dx + (wx - width) + 1;
+				if (anchor & EAnchor::Top    ) c.Y = dy + 0;
+				if (anchor & EAnchor::VCentre) c.Y = dy + (wy - height) / 2;
+				if (anchor & EAnchor::Bottom ) c.Y = dy + (wy - height) + 1;
+				return c;
+			}
 		};
+
+		// RAII object for preserving the cursor position
+		inline CursorScope::CursorScope(Console& cons) :m_cons(&cons) ,m_cursor_pos(m_cons->Cursor()) {}
+		inline CursorScope::~CursorScope() { m_cons->Cursor(m_cursor_pos); }
+
+		// RAII object for pushing console colours
+		inline ColourScope::ColourScope(Console& cons) :m_cons(&cons) ,m_colours(m_cons->Info().wAttributes) {}
+		inline ColourScope::~ColourScope() { SetConsoleTextAttribute(m_cons->m_stdout, m_colours); }
 
 		// Write output to the console using various methods
 		// Handy way to test if it's working

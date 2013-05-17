@@ -11,6 +11,7 @@
 
 #include <string>
 #include <functional>
+#include <atlbase.h>
 #include <atlapp.h>
 #include "pr/common/timers.h"
 #include "pr/common/log.h"

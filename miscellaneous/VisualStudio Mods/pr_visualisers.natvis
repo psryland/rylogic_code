@@ -2,11 +2,6 @@
 <!-- http://code.msdn.microsoft.com/Writing-type-visualizers-2eae77a2 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-	<!-- std -->
-	<Type Name="std::string">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_stdstring"></DisplayString>
-	</Type>
-
 	<!-- RefPtr -->
 	<Type Name="pr::RefPtr&lt;*&gt;">
 		<DisplayString>{*m_ptr}</DisplayString>
@@ -23,10 +18,13 @@
 
 	<!-- pr::Array -->
 	<Type Name="pr::Array&lt;*,*,*,*&gt;">
+		<AlternativeType Name="pr::Array&lt;*,*,*&gt;" />
+		<AlternativeType Name="pr::Array&lt;*,*&gt;" />
+		<AlternativeType Name="pr::Array&lt;*&gt;" />
 		<DisplayString>[{m_count}] {m_ptr}</DisplayString>
 		<Expand>
-			<Item Name="[count]">{m_count}</Item>
-			<Item Name="[capacity]">{m_capacity}</Item>
+			<Item Name="[count]">m_count</Item>
+			<Item Name="[capacity]">m_capacity</Item>
 			<ArrayItems>
 				<Size>m_count</Size>
 				<ValuePointer>m_ptr</ValuePointer>

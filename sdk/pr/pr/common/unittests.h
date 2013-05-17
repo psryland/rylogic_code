@@ -37,10 +37,8 @@ namespace pr
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include "pr/common/assert.h"
-#include "pr/common/timers.h"
-#include "pr/common/fmt.h"
-//#include "pr/str/tostring.h" - don't include tostring, so that it can have unit tests
+#include <chrono>
+#include <cstdarg>
 
 namespace pr
 {
@@ -82,9 +80,7 @@ namespace pr
 		{
 			try
 			{
-				pr::rtc::StopWatch global_sw;
-				global_sw.start();
-
+				auto T0 = std::chrono::high_resolution_clock::now();
 				std::sort(std::begin(Tests()), std::end(Tests()));
 
 				int passed = 0;
@@ -95,14 +91,13 @@ namespace pr
 					TestCount() = 0;
 					try
 					{
-						pr::rtc::StopWatch test_sw;
 						printf("%s%s", test.m_name, std::string(40 - strlen(test.m_name), '.').c_str());
 
-						test_sw.start();
+						auto t0 = std::chrono::high_resolution_clock::now();
 						test.m_func();
-						test_sw.stop();
+						auto t1 = std::chrono::high_resolution_clock::now();
 
-						printf("success. (%-4d tests in %7.3fms)\n", TestCount(), test_sw.period_ms());
+						printf("success. (%-4d tests in %7.3fms)\n", TestCount(), std::chrono::duration_cast<std::chrono::microseconds>(t1-t0).count());
 						++passed;
 					}
 					catch (std::exception const& e)
@@ -112,9 +107,9 @@ namespace pr
 					}
 				}
 
-				global_sw.stop();
+				auto T1 = std::chrono::high_resolution_clock::now();
 				if (failed == 0)
-					printf(" **** UnitTest results: All %d tests passed. (taking %7.3fms) **** \n", failed+passed, global_sw.period_ms());
+					printf(" **** UnitTest results: All %d tests passed. (taking %7.3fms) **** \n", failed+passed, std::chrono::duration_cast<std::chrono::microseconds>(T1-T0).count());
 				else
 					printf(" **** UnitTest results: %d of %d failed. **** \n", failed, failed+passed);
 				return failed == 0 ? 0 : -1;
@@ -124,6 +119,17 @@ namespace pr
 				std::cout << "UnitTests could not complete due to an unhandled exception\n";
 				return -1;
 			}
+		}
+
+		// Printf helper
+		inline char const* FmtS(char const* format, ...)
+		{
+			static char buf[512] = {};
+			va_list arglist;
+			va_start(arglist, format);
+			_vsprintf_p(buf, 1023, format, arglist);
+			va_end(arglist);
+			return buf;
 		}
 
 		template <typename T, typename U> inline bool UTEqual(T const& lhs, U const& rhs)
@@ -152,20 +158,20 @@ namespace pr
 		}
 
 		// Unit test check functions
-		static void Fail(char const* msg, char const* file, int line)
+		inline void Fail(char const* msg, char const* file, int line)
 		{
 			++TestCount();
-			throw std::exception((pr::Fmt("%s(%d):",file,line) + msg).c_str());
+			throw std::exception(FmtS("%s(%d):%s",file,line,msg));
 		}
-		template <typename T, typename U> static void Check(T const& result, U const& expected, char const* expr, char const* file, int line)
+		template <typename T, typename U> inline void Check(T const& result, U const& expected, char const* expr, char const* file, int line)
 		{
 			++TestCount();
 			if (UTEqual(result, expected)) return;
 			std::string r = pr::To<std::string>(result);
 			std::string e = pr::To<std::string>(expected);
-			throw std::exception(pr::Fmt("%s(%d): '%s' was '%s', expected '%s'",file,line,expr,r.c_str(),e.c_str()).c_str());
+			throw std::exception(FmtS("%s(%d): '%s' was '%s', expected '%s'",file,line,expr,r.c_str(),e.c_str()));
 		}
-		template <typename T> static void Close(T const& result, T const& expected, T tol, char const* expr, char const* file, int line)
+		template <typename T> inline void Close(T const& result, T const& expected, T tol, char const* expr, char const* file, int line)
 		{
 			++TestCount();
 			T diff = expected - result;
@@ -173,9 +179,9 @@ namespace pr
 			std::string r = pr::To<std::string>(result);
 			std::string e = pr::To<std::string>(expected);
 			std::string t = pr::To<std::string>(tol);
-			throw std::exception(pr::Fmt("%s(%d): '%s' was '%s', expected '%s ±%s'",file,line,expr,r.c_str(),e.c_str(),t.c_str()).c_str());
+			throw std::exception(FmtS("%s(%d): '%s' was '%s', expected '%s ±%s'",file,line,expr,r.c_str(),e.c_str(),t.c_str()));
 		}
-		template <typename TExcept, typename Func> static void Throws(Func func, char const* expr, char const* file, int line)
+		template <typename TExcept, typename Func> inline void Throws(Func func, char const* expr, char const* file, int line)
 		{
 			++TestCount();
 			bool threw = false;
@@ -187,7 +193,7 @@ namespace pr
 			char const* e = threw
 				? "threw an exception of an unexpected type"
 				: "didn't throw when it was expected to";
-			throw std::exception(pr::Fmt("%s(%d): '%s' %s",file,line,expr,e).c_str());
+			throw std::exception(FmtS("%s(%d): '%s' %s",file,line,expr,e));
 		}
 	}
 }

@@ -583,22 +583,17 @@ namespace pr
 		// Split a string at 'delims' outputting each sub string to 'out'
 		template <typename tstr1, typename tchar, typename tout> inline void Split(tstr1 const& src, tchar const* delims, tout out)
 		{
-			std::string tmp;
 			size_t i = 0, j = 0, jend = Length(src);
 			for (; j != jend; ++j)
 			{
 				if (*FindChar(delims, src[j]) == 0) continue;
-				SubStr(src, i, j-i, tmp);
-				*out++ = tmp.c_str();
-				i = j+1;
+				out(src, i, j);
+				i = j + 1;
 			}
 			if (i != j)
-			{
-				SubStr(src, i, j-i, tmp);
-				*out++ = tmp.c_str();
-			}
+				out(src, i, j);
 		}
-		
+
 		// Trim characters from a string
 		template <typename tstr, typename tpred> inline tstr& Trim(tstr& src, tpred pred, bool front, bool back)
 		{
@@ -869,7 +864,7 @@ namespace pr
 				char res[][2] = {"1","","2","3","4"};
 
 				StrVec buf;
-				pr::str::Split(str, ",", std::back_inserter(buf));
+				pr::str::Split(str, ",", [&](char const* s, size_t i, size_t iend){ buf.push_back(std::string(s+i, s+iend)); });
 				for (StrVec::const_iterator i = buf.begin(), iend = buf.end(); i != iend; ++i)
 					PR_CHECK(Equal(*i, res[i - buf.begin()]), true);
 			}

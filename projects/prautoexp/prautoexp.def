@@ -19,4 +19,5 @@ EXPORTS
 	AddIn_QuaternionAsMatrix
 	AddIn_phShape
 	AddIn_LuaState
+	AddIn_DateTime
 	
