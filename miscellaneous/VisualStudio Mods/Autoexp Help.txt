@@ -1,0 +1,15 @@
+Help links:
+ http://msdn.microsoft.com/en-us/library/vstudio/jj620914.aspx
+ http://code.msdn.microsoft.com/Writing-type-visualizers-2eae77a2
+ 
+VS2012 doesn't need autoexp.dat
+
+Debug visualisers (natvis files)
+[HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\11.0_Config\Debugger]
+"EnableNatvisDiagnostics"=dword:00000001
+
+Tools->Options->General->Show raw structure of objects in variables windows
+
+The Natvis framework is not used for visualizations when:
+ - Mixed mode debugging a desktop application (i.e. an app that is not a Windows Store app) and the Managed C++ Compatibility Mode option is checked in the Debugging/General page of the Visual Studio Options dialog box.
+ - C/C++ edit and continue is enabled in the Debugging/Edit and Continue page of the Visual Studio Options dialog box.
