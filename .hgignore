@@ -32,6 +32,7 @@ obj2008/
 obj2010/
 obj2012/
 bin/
+bin_stable/
 .svn/
 .metadata/
 .nuget/
