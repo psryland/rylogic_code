@@ -3,16 +3,48 @@
 
 namespace ele
 {
+	// The element names, using real names for now for testing
+	ElementName const g_element_names[] =
+	{
+		{"Hydrogen"   , "H" },
+		{"Helium"     , "He"},
+		{"LIthium"    , "Li"},
+		{"Beryllium"  , "Be"},
+		{"Boron"      , "B" },
+		{"Carbon"     , "C" },
+		{"Nitrogen"   , "N" },
+		{"Oxygen"     , "O" },
+		{"Fluorine"   , "F" },
+		{"Neon"       , "Ne"},
+		{"Sodium"     , "Na"},
+		{"Magnesium"  , "Mg"},
+		{"Aluminium"  , "Al"},
+		{"Silicon"    , "Si"},
+		{"Phosphorus" , "P" },
+		{"Sulfur"     , "S" },
+		{"Clorine"    , "Cl"},
+		{"Argon"      , "Ar"},
+		{"Potassium"  , "K" },
+		{"Calcium"    , "Ca"},
+	};
+
 	// Contains the randomly generated constants for an instance of the game
 	GameConstants::GameConstants(int seed)
 	{
 		pr::Rnd rnd(seed);
 
+		// The universal speed of light
+		m_speed_of_light = 2.99792458e8;
+
 		// The universal gravitational constant
 		m_gravitational_constant = 6.6738e-11;
 
-		// The universal speed of light
-		m_speed_of_light = 2.99792458e8;
+		// The mass of a proton
+		m_proton_mass = 1.67262178e-27;
+
+		// The collection of element names
+		m_element_count = length(g_element_names);
+		m_element_name  = &g_element_names[0];
 
 		// Pick a star mass approximately the same as the sun
 		const pr::kilograms_t suns_mass = 2.0e30;
@@ -38,12 +70,5 @@ namespace ele
 		// The ship is roughly 10% bigger than the volume of it's contents
 		m_ship_volume_scaler = rnd.dbl2(1.11, 0.1);
 		m_ship_construction_rate = rnd.dbl2(10.0, 2.0);
-
-		// The required field strength at the surface of the ship needed to protect it
-		m_shield_protective_field_strength = rnd.dbl2(1.0, 0.5);
-		m_field_boost_scaler = rnd.dbl2(1.0,0.0);
-
-		// The energy needed per cubic metre of computer systems
-		m_systems_energy_requirement = rnd.dbl2(5.0,0.0);
 	}
 }

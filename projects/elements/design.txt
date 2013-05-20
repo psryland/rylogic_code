@@ -1,53 +1,75 @@
-Elements:
+Escape Velocity:
 
  Scientists discover that the star in your solar system is in the last stages of its life and will go supernova
- within a few years. The only hope for the survival of your civilisation is to build a space craft capable of
- leaving your solar system. Unfortunately the materials and technology needed to achieve this have not yet been
- discovered. As the foremost authority in material sciences, you are tasked with discovering the materials needed
- to build the space craft that will ultimately be the salvation of your civilisation.
+ within a year. The only hope for the survival of your civilisation is to build a space craft capable of
+ leaving your solar system. Your civilisation has a number of existing known materials but none is currently
+ suitable for this task. As the leading scientist of your time, you are tasked with researching new materials and
+ designing a space craft that will ultimately be the salvation of your civilisation.
 
- Aim:
+ Building a suitable space craft essentially boils down to two goals, choosing a material from which to build the
+ craft, and finding a fuel (combination of materials) that can provide the thrust needed to achieve escape velocity.
+ 
+ Player objective:
   Discover the materials needed to build a space craft capable of reaching escape velocity from your solar system
   transporting as many of your population as possible before your solar system is destroyed.
   (Time frame = time till super nova, points = number of population saved)
 
- Building a suitable space craft relies on advancing materials and technology in four main areas:
-  Fuel, Structural materials, Computing technology, Energy Shields
+ Gameplay:
+  Each game is different due to a randomly choosen set of valence levels for the elements in the game universe.
+  All materials are the combination of two elements only (in the required ratios to produce stable combinations).
+  The player starts with a set of materials that they can combine to produce new materials. The combination
+  processes model real chemical reaction processes so that the player is able to roughly predict the outcome
+  of reacting two materials.
+  The materials the player is trying to find are:
+   - a strong ship building material (strongly bonded material with low atomic weight)
+   - two materials that react vigously to use as fuel (materials that produce a strong exothermic reaction and hence
+     produce a high exhaust velocity). Atomic weight of the fuel is also important as it effects the mass of the ship.
+  The names of the elements are choosen randomly. The material names are then derived based on the ratio of elements
+   in the material. e.g. moronium (Mr) and bananite (Ba) in MrBa2 = moronium-di-bananite
+  The reaction of two materials can be endothermic or exothermic. Endothermic reactions require energy input which
+   defines the rate that that material can be produced, exothermic reactions happen instantly. Players will likely
+   need endothermic reactions to produce the two elements needed for fuel.
 
- Fuel is needed to supply power to the space craft. This includes the energy needed to propel the craft to escape
-  velocity, as well as meet the energy requirements of the life support, computer systems, and shields. The fuel
-  itself has weight which increases the energy requirement for the craft. Fuel weight reduces the number of your
-  population that can be saved. Fuel research is a quest to maximise the energy / weight (energy density) of the
-  material you choose to use for fuel.
+ Game Views:
+  There are three main views in the game:
+  -Home View
+    -shows a countdown timer till the star explodes, the star mass, distance from the star
+    -shows a summary of the known materials and how much you have in your stockpile.
+    -shows a summary of your current leading ship design
+  -Ship Design view
+    -where you choose what materials to use for your ship and fuel
+    -the number of passengers your ship will carry
+    -the mass of fuel to carry
+    -the rate the ship will burn the fuel
+  -Material Lab view
+    -the interface for combining materials
+    -show detailed info about materials (name, elements, atomic weight, rarity, periodic table?)
 
- Structural Materials:
-  are the materials you need to build the space craft from. The ideal material for building
-  a space craft is one that is extremely light, yet strong enough to survive the launch and powered flight. In 
-  this line of research, a material that maximises its strength to weight ratio should be sort.
+ Physics:
+  Escape Velocity = Sqrt(2 * G * M / r), G = 6.67x10^-11 m³kg^-1s^-2, M = star mass, r = distance from star
+  Rocket Thrust:
+    Assume rocket constructed in space, only gravity influence is the star
+    mass(t)         = total_mass - t*mass_flow_rate
+	max_burn_time   = fuel_mass / mass_flow_rate
+	velocity(t)     = integrate(acceleration(t)) from 0 to t
+	acceleration(t) = total_force(t) / mass(t)
+	total_force(t)  = gravity_force(t) + thrust_force
+	thrust_force    = exhaust_velocity * mass_flow_rate + (pressure_at_nozzle_exit - atmospheric_pressure) * area_of_nozzle_exit
+	gravity_force   = G * star_mass * mass(t) / distance(t)²
+	distance(t)     = initial_distance + integrate(velocity(t)) from 0 to t
+	max_velocity    = velocity(max_burn_time)
+   Assuming space flight only, so atmospheric_pressure = 0
+   Assuming thrust_force is constant, i.e. mass_flow_rate and exhaust_velocity are constant
+   escape velocity is reached if max_velocity > escape_velocity
+   Note, circular dependency: velocity->accel->gravity_force->distance->velocity hence, iterative solver needed
 
- Computing Systems:
-  controls the life support, navigation, and other systems of the space craft. Materials used in
-  the computing technology must be as energy efficient as possible to reduce the fuel requirement. Since the most energy
-  efficient computer systems are all based on optical technology, a material that minimises optical resistence and
-  weight is needed.
-
- Energy Shields:
-  are needed to protect the space craft and its occupants from the radiation and debris encountered
-  when travelling through space. It is already known that some materials exhibit a weak field that repels particles
-  and radiation. By suppling energy to these materials the effect can be amplified. Research is needed to find a
-  material in which this effect is sufficient to protect the space craft.
-
- As the lead researcher, your tasks are:
-  -to suggest the ways in which materials should be combined so as to hopefully produce new materials more suited
-   to space craft construction
-  -to create the specifications for the space craft:
-     -how many people it will carry
-       => size
-          => amount of material needed, material strength => energy needed for escape velocity
-          => time to build
-       => range of protective field => energy needed
-       => computer systems needed => energy needed
-       energy needed => amount of fuel => weight => energy needed
+ Chemistry:
+  The chemistry of materials is defined by the valences of the elements (electrons per level). In our universe these
+  are: 2,8,8,18,18,32. The atomic weight of an element is the number of electrons it has (in its non-ionised state),
+  the number of electrons relative to how filled each valence level is controls how two elements react, how strongly
+  they become bonded when in a material.
+  In this simplified model, materials always consist of two elements (in various ratios)
+  Stability of a material depends on how close to filling the valence levels the element combination is
 
  Game Systems:
   Start with a random set of materials with random properties.
@@ -59,11 +81,6 @@ Elements:
    simulation determines the viability of the craft. A percentage of the materials used in the test craft are consumed
  The materials that can be discovered are generated randomly on game start by starting with four ideal materials and
   generating backwards to produce enough intermediate materials (game difficulty control, more = harder)
-
- Physics:
-  Escape Velocity = Sqrt(2 * G * M / r), G = 6.67x10^-11 m³kg^-1s^-2, M = star mass, r = distance from star
-  Energy Required = 0.5 * ship_mass * (Escape Velocity)^2
-  Shield field strength = A / (Br² + 1), A = Input energy, B = Materials field falloff
 
  Material generation:
   Start with four materials suitably choosen to save 1000 people given the star mass and distance from star
@@ -84,5 +101,3 @@ Elements:
 
  The game starts with a subset of the starting materials, the remaining starting materials are 'discovered'
  at random intervals throughout the first quarter of the time till super nova
-
- Combine():

@@ -14,6 +14,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <vector>
 #include <windows.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -73,7 +74,8 @@ namespace pr
 			x(LightCyan   , = (1<<3)|Blue|Green     )\
 			x(LightPurple , = (1<<3)|Blue|Red       )\
 			x(LightYellow , = (1<<3)|Green|Red      )\
-			x(White       , = (1<<3)|Red|Green|Blue )
+			x(White       , = (1<<3)|Red|Green|Blue )\
+			x(Default     , = 1 << 16               )
 		PR_DEFINE_ENUM2_FLAGS(EColour, PR_ENUM);
 		#undef PR_ENUM
 
@@ -90,10 +92,19 @@ namespace pr
 		// Helper for combining fore and back colours
 		struct Colours
 		{
-			WORD m_colours;
-			Colours(WORD colours) :m_colours(colours) {}
-			Colours(EColour fore = EColour::White, EColour back = EColour::Black) :m_colours((back << 4) | fore) {}
-			operator WORD() const { return m_colours; }
+			EColour m_fore;
+			EColour m_back;
+			Colours() :m_fore(EColour::Default) ,m_back(EColour::Default) {}
+			Colours(EColour fore) :m_fore(fore) ,m_back(EColour::Default) {}
+			Colours(EColour fore, EColour back) :m_fore(fore) ,m_back(back) {}
+			static Colours From(WORD colours) { return Colours(colours & 0xf, (colours >> 4) & 0xf); }
+			operator WORD() const { return WORD((m_back << 4) | m_fore); }
+			Colours Merge(Colours rhs) const
+			{
+				return Colours(
+					rhs.m_fore != EColour::Default ? rhs.m_fore : m_fore,
+					rhs.m_back != EColour::Default ? rhs.m_back : m_back);
+			}
 		};
 
 		// RAII object for preserving the cursor position
@@ -109,10 +120,11 @@ namespace pr
 		struct ColourScope
 		{
 			Console* m_cons;
-			WORD m_colours;
+			Colours m_colours;
 			ColourScope(Console& cons);
 			~ColourScope();
 		};
+
 
 		// A helper for drawing rectangular blocks of text in the console
 		struct Pad
@@ -126,13 +138,30 @@ namespace pr
 				Item(Colours* colour) :m_what(Colour), m_colour(colour) {}
 			};
 
+			std::string m_title;
 			Colours m_colours;
-			int m_width, m_height, m_w;
+			EColour m_border;
+			int m_width;
+			int m_height;
+			int m_w, m_h;
 			std::vector<Item> m_items;
 
-			Pad(EColour fore = EColour::White, EColour back = EColour::Black) :m_colours(fore,back) ,m_width(0) ,m_height(0) ,m_w(0) ,m_items() {}
-			~Pad() { for (auto& i : m_items) delete i.m_ptr; }
-			
+			Pad(std::string title = "", EColour fore = EColour::Default, EColour back = EColour::Default, EColour border = EColour::Default)
+				:m_title(title)
+				,m_colours(fore, back)
+				,m_border(border)
+				,m_width(0)
+				,m_height(1)
+				,m_w(0)
+				,m_h(1)
+				,m_items()
+			{}
+			~Pad()
+			{
+				for (auto& i : m_items)
+					delete i.m_ptr;
+			}
+
 			// Stream anything to the pad
 			template <typename T> Pad& operator << (T t)
 			{
@@ -143,17 +172,18 @@ namespace pr
 			// Stream a string to the pad
 			Pad& operator << (std::string const& s)
 			{
-				pr::str::Split(s,"\n", [&](std::string const& s, int i, int iend)
+				pr::str::Split(s,"\n", [&](std::string const& s, size_t i, size_t iend)
 					{
-						m_items.push_back(new std::string(s.c_str()+i, s.c_str()+iend));
-						m_w += (iend - i);
-						m_width = std::max(m_width, m_w);
-						if (s[iend] == '\n')
+						m_items.push_back(new std::string(s.substr(i, iend-i)));
+						m_w += int(iend - i);
+						if (iend != int(s.size()) && s[iend] == '\n')
 						{
 							m_items.push_back(Item(Item::NewLine));
 							m_w = 0;
-							m_height++;
+							++m_h;
 						}
+						m_width  = std::max(m_width, m_w);
+						m_height = std::max(m_height, m_h);
 					});
 				return *this;
 			}
@@ -164,6 +194,10 @@ namespace pr
 				m_items.push_back(new Colours(c));
 				return *this;
 			}
+
+		private:
+			Pad(Pad const&);
+			Pad& operator =(Pad const&);
 		};
 
 		class Console
@@ -227,8 +261,8 @@ namespace pr
 				auto info = Info();
 				info.srWindow.Left   = 0;
 				info.srWindow.Top    = 0;
-				info.srWindow.Right  = info.dwSize.X = info.dwMaximumWindowSize.X = columns;
-				info.srWindow.Bottom = info.dwSize.Y = info.dwMaximumWindowSize.Y = lines;
+				info.srWindow.Right  = info.dwSize.X = info.dwMaximumWindowSize.X = SHORT(columns);
+				info.srWindow.Bottom = info.dwSize.Y = info.dwMaximumWindowSize.Y = SHORT(lines);
 				Info(info);
 			}
 
@@ -354,10 +388,11 @@ namespace pr
 			COORD Cursor() const { return Info().dwCursorPosition; }
 			void Cursor(COORD coord) { SetConsoleCursorPosition(m_stdout, coord); }
 			void Cursor(int cx, int cy) { COORD coord = {short(cx), short(cy)}; Cursor(coord); }
+			void Cursor(EAnchor anchor, int dx = 0, int dy = 0) { Cursor(CursorLocation(anchor, dx, dy, 1, 1)); }
 
 			// Get/Set the colour to use
 			Colours Colour() const { return Info().wAttributes; }
-			void Colour(Colours c) { SetConsoleTextAttribute(m_stdout, c); }
+			void Colour(Colours c) { if (!SetConsoleTextAttribute(m_stdout, c)) throw std::exception("Failed to set colour text attributes"); }
 			void Colour(EColour fore, EColour back) { Colour(Colours(fore,back)); }
 
 			// Set an event handler routine for the console, only affects this console, doesn't require removing
@@ -393,7 +428,7 @@ namespace pr
 
 			// Clear a rectangular area in the console
 			// If size_x == 0 or size_y == 0 then the current console width/height is used
-			void Clear(short x, short y, short size_x, short size_y)
+			void Clear(int x, int y, int size_x, int size_y)
 			{
 				// Use the whole screen clear
 				if (x == 0 && y == 0 && size_x == 0 && size_y == 0)
@@ -411,10 +446,10 @@ namespace pr
 				size_y = (size_y < 0) ? 0 : (y + size_y > info.dwSize.Y) ? info.dwSize.Y - y : size_y;
 
 				// Fill the area with blanks
-				COORD topleft = {x, y}; 
-				for (topleft.Y = y; topleft.Y != y + size_y; ++topleft.Y)
+				for (int i = y, iend = y + size_y; i != iend; ++i)
 				{
 					DWORD chars_written;
+					COORD topleft = {short(x), short(y)};
 					FillConsoleOutputCharacterA(m_stdout, ' ', size_x, topleft, &chars_written);
 					FillConsoleOutputAttribute(m_stdout, info.wAttributes, size_x, topleft, &chars_written);
 				}
@@ -597,14 +632,39 @@ namespace pr
 			// Write a Pad helper object to the screen
 			void Write(EAnchor anchor, Pad const& pad, int dx = 0, int dy = 0)
 			{
-				CursorScope scope0(*this);
-				ColourScope scope1(*this);
+				CursorScope s0(*this);
+				ColourScope s1(*this);
 
-				COORD loc = CursorLocation(anchor, dx, dy, pad.m_width, pad.m_height);
+				int w = pad.m_width;
+				int h = pad.m_height;
+				if (pad.m_border != EColour::Default) { w += 2; h += 2; }
+				else if (!pad.m_title.empty()) { h += 1; }
+				COORD loc = CursorLocation(anchor, dx, dy, w, h);
 
-				Colour(pad.m_colours);
-				Clear(loc.X, loc.Y, pad.m_width, pad.m_height);
+				// Draw the border
+				if (pad.m_border != EColour::Default || !pad.m_title.empty())
+				{
+					auto c = s1.m_colours.Merge(pad.m_colours);
+					if (pad.m_border != EColour::Default) c.m_back = pad.m_border;
+					Colour(c); Clear(loc.X, loc.Y, w, h);
+					loc.X += 1; loc.Y += pad.m_title.empty();
+					w -= 2; h -= 1 + pad.m_title.empty();
+				}
 
+				// Draw the title
+				if (!pad.m_title.empty())
+				{
+					Colour(s1.m_colours.Merge(pad.m_colours));
+					Write(loc.X + (w - int(pad.m_title.size()))/2, loc.Y, pad.m_title);
+					loc.Y += 1; h -= 1;
+				}
+
+				// Clear the pad background
+				Colours pad_colour(s1.m_colours.Merge(pad.m_colours));
+				Colour(pad_colour);
+				Clear(loc.X, loc.Y, w, h);
+
+				// Draw the pad content
 				Cursor(loc);
 				for (auto& item : pad.m_items)
 				{
@@ -618,7 +678,7 @@ namespace pr
 						Write(item.m_line->c_str(), 0, item.m_line->size());
 						break;
 					case Pad::Item::Colour:
-						Colour(*item.m_colour);
+						Colour(pad_colour.Merge(*item.m_colour));
 						break;
 					}
 				}
@@ -649,22 +709,21 @@ namespace pr
 
 				// Find the coordinate to write the string at
 				COORD c;
-				if (anchor & EAnchor::Left   ) c.X = dx + 0;
-				if (anchor & EAnchor::HCentre) c.X = dx + (wx - width) / 2;
-				if (anchor & EAnchor::Right  ) c.X = dx + (wx - width) + 1;
-				if (anchor & EAnchor::Top    ) c.Y = dy + 0;
-				if (anchor & EAnchor::VCentre) c.Y = dy + (wy - height) / 2;
-				if (anchor & EAnchor::Bottom ) c.Y = dy + (wy - height) + 1;
+				if (anchor & EAnchor::Left   ) c.X = SHORT(dx + 0);
+				if (anchor & EAnchor::HCentre) c.X = SHORT(dx + (wx - width) / 2);
+				if (anchor & EAnchor::Right  ) c.X = SHORT(dx + (wx - width) + 1);
+				if (anchor & EAnchor::Top    ) c.Y = SHORT(dy + 0);
+				if (anchor & EAnchor::VCentre) c.Y = SHORT(dy + (wy - height) / 2);
+				if (anchor & EAnchor::Bottom ) c.Y = SHORT(dy + (wy - height) + 1);
 				return c;
 			}
 		};
-
 		// RAII object for preserving the cursor position
 		inline CursorScope::CursorScope(Console& cons) :m_cons(&cons) ,m_cursor_pos(m_cons->Cursor()) {}
 		inline CursorScope::~CursorScope() { m_cons->Cursor(m_cursor_pos); }
 
 		// RAII object for pushing console colours
-		inline ColourScope::ColourScope(Console& cons) :m_cons(&cons) ,m_colours(m_cons->Info().wAttributes) {}
+		inline ColourScope::ColourScope(Console& cons) :m_cons(&cons) ,m_colours(Colours::From(m_cons->Info().wAttributes)) {}
 		inline ColourScope::~ColourScope() { SetConsoleTextAttribute(m_cons->m_stdout, m_colours); }
 
 		// Write output to the console using various methods

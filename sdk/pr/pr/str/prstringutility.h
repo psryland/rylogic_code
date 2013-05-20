@@ -6,6 +6,7 @@
 #ifndef PR_STR_STRING_UTILITY_H
 #define PR_STR_STRING_UTILITY_H
 
+#include <string>
 #include "pr/common/crc.h"
 #include "pr/str/prstringcore.h"
 

@@ -22,6 +22,7 @@ namespace ele
 		// The material to use for fuel and how much is onboard
 		Material m_fuel;
 		pr::kilograms_t m_fuel_mass;
+		pr::kilograms_p_sec_t m_fuel_burn_rate;
 
 		// The material that the ship is made out of 
 		Material m_structure;
@@ -47,10 +48,14 @@ namespace ele
 		// The mass of just the ship, not including everything in it
 		pr::kilograms_t m_structural_mass;
 
+		pr::seconds_t m_max_burn_time;
 		//// The energy required to get the ship to escape velocity
 		//joules_t m_energy_requirement;
 
 		Ship();
+
+		// Returns the total mass of the ship at time 't'
+		pr::kilograms_t TotalMass(pr::seconds_t t) const;
 
 		// Calculate the derived fields from the given materials
 		void CalculateDerivedFields(GameConstants constants);

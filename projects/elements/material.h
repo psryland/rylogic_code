@@ -1,39 +1,36 @@
 #pragma once
 
 #include "elements/forward.h"
+#include "elements/element.h"
 
 namespace ele
 {
 	// The stuff that the universe has in it
 	struct Material
 	{
-		// The name of the material
-		std::string m_name;
+		// The elements that this material is made of
+		// m_metal * m_metal_count + m_nonmetal * m_nonmetal_count
+		Element m_metal;
+		Element m_nonmetal;
+		size_t m_metal_count;
+		size_t m_nonmetal_count;
 
-		// The density of the material
-		pr::kilograms_p_metre³_t m_density;
+		// The name of the material (derived from the elements)
+		std::string Name(GameConstants const& consts) const;
 
-		// Controls the field strength of this material.
-		// field_strength = 1 / (m_field_falloff * r² + 1)
-		double m_field_falloff;
+		// The atomic weight of the material (derived from the elements)
+		size_t AtomicWeight() const;
 
-		// The fraction of the material that is converted to energy when reacted
-		// e.g
-		//  if we have 1kg of fuel, and a reaction_ratio of 0.1
-		//  0.1kg of fuel is converted to the energy that accelerates the remaining 0.9kg to a velocity Ve (exhaust velocity)
-		//  E = mc² so E = 0.1 * c²
-		// Relativistic kinectic energy, E = mc²(gamma - 1), gamma = 1/sqrt(1 - (v/c)²)
-		//  v = c * sqrt(1 - 1/(E/mc² + 1)²)
-		double m_reaction_ratio;
+		// The density of the material at room temperature
+		pr::kilograms_p_metre³_t Density() const { return 1.0; }
 
-		// Unique id generator for the materials
-		static size_t Id() { static int s_id = 0; return ++s_id; }
-		
-		Material()
-			:m_name(pr::FmtS("material%d", Id()))
-			,m_density(1.0)
-			,m_field_falloff(1.0)
-			,m_reaction_ratio(0.0001)
-		{}
+		//PR_SQLITE_TABLE(Material,"")
+		//PR_SQLITE_COLUMN(Id           ,m_id            ,integer ,"primary key not null")
+		//PR_SQLITE_COLUMN(Name         ,m_name          ,text    ,"")
+		//PR_SQLITE_COLUMN(AtomicWeight ,m_atomic_weight ,real    ,"")
+		//PR_SQLITE_COLUMN(Discovered   ,m_discovered    ,integer ,"")
+		//PR_SQLITE_TABLE_END()
+
+		Material();
 	};
 }

@@ -15,7 +15,9 @@ namespace ele
 		void Run(double elapsed);
 
 		void Render();
+		void RenderHomeView();
 		void RenderWorldState();
+		void RenderMaterialInventory();
 		void RenderShipSpec();
 		void RenderMenu();
 	};

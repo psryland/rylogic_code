@@ -4,7 +4,7 @@
 
 namespace ele
 {
-	const pr::seconds_t TimeTillNova = 2 * 365 * 24 * 60 * 60;
+	const pr::seconds_t TimeTillNova = 365 * 24 * 60 * 60;
 	WorldState::WorldState(GameConstants& constants)
 		:m_constants(constants)
 		,m_time_till_nova(TimeTillNova)

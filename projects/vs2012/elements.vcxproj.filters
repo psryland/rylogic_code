@@ -14,6 +14,18 @@
     <Filter Include="sdk\pr">
       <UniqueIdentifier>{98f9b0f4-017e-40e4-829c-e8e7deffee96}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk\sqlite">
+      <UniqueIdentifier>{32149f03-f313-4523-ae2a-0c94a520eb42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\pr\macros">
+      <UniqueIdentifier>{58ed8f1c-5ca2-4784-a12d-63e584585861}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\pr\common">
+      <UniqueIdentifier>{8dc16bfb-e835-4560-a13e-642272749bfc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\pr\storage">
+      <UniqueIdentifier>{7b0f1b1d-3ac0-45af-bb7a-7ba92372e7c1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\elements\ship.h">
@@ -40,17 +52,32 @@
     <ClInclude Include="..\elements\console_ui.h">
       <Filter>ui</Filter>
     </ClInclude>
+    <ClInclude Include="..\elements\stockpile.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\sqlite\sqlite3.h">
+      <Filter>sdk\sqlite</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\element.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\macros\no_copy.h">
+      <Filter>sdk\pr\macros</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\console.h">
-      <Filter>sdk\pr</Filter>
+      <Filter>sdk\pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h">
-      <Filter>sdk\pr</Filter>
+      <Filter>sdk\pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\fmt.h">
-      <Filter>sdk\pr</Filter>
+      <Filter>sdk\pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h">
-      <Filter>sdk\pr</Filter>
+      <Filter>sdk\pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h">
+      <Filter>sdk\pr\storage</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -74,6 +101,18 @@
     </ClCompile>
     <ClCompile Include="..\elements\console_ui.cpp">
       <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\stockpile.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\sqlite\sqlite3.c">
+      <Filter>sdk\sqlite</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\material.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\element.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

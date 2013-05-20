@@ -3,16 +3,21 @@
 
 namespace ele
 {
+
+
 	GameInstance::GameInstance(int seed)
 		:m_constants(seed)
 		,m_world_state(m_constants)
+		,m_stockpile()
 		,m_ship()
-	{}
+		,m_view(EView::Home)
+	{
+	}
 
 	void GameInstance::Step(pr::seconds_t elapsed)
 	{
 		m_world_state.Step(elapsed);
-
+		m_stockpile.Step(elapsed);
 	}
 
 	// Called at the end of the game when the star goes nova
