@@ -2423,7 +2423,6 @@ namespace pr.common
 		{
 			protected readonly Database m_db;
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
-			protected bool m_row_end; // True once the last row has been read
 			
 			public override string ToString()  { return SqlString; }
 			
@@ -2432,7 +2431,6 @@ namespace pr.common
 				if (stmt.IsInvalid) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
 				m_db = db;
 				m_stmt = stmt;
-				m_row_end = false;
 				Trace.QueryCreated(this);
 				Trace.WriteLine(string.Format("Query created '{0}'", SqlString));
 			}
@@ -2592,7 +2590,6 @@ namespace pr.common
 				// The result from 'sqlite3_reset' reflects the error code of the last 'sqlite3_step'
 				// call. This is legacy behaviour, now step returns the error code immediately. For
 				// this reason we can ignore the error code returned by reset here.
-				m_row_end = false;
 				sqlite3_reset(Stmt);
 			}
 
@@ -2603,28 +2600,19 @@ namespace pr.common
 				switch (res)
 				{
 				default: throw Exception.New(res, ErrorMsg(m_db.Handle));
-				case Result.Done: m_row_end = true; return false;
+				case Result.Done: return false;
 				case Result.Row: return true;
 				}
 			}
 
-			/// <summary>Run the query until RowEnd is true. Returns the number of rows changed. Call 'Reset()' before running the command again</summary>
+			/// <summary>Run the query until Step returns false. Returns the number of rows changed. Call 'Reset()' before running the command again</summary>
 			public virtual int Run()
 			{
 				int rows_changed = 0;
-				while (!RowEnd)
-				{
-					Step();
-					rows_changed += RowsChanged;
-				}
-				return rows_changed;
+				while (Step()) rows_changed += RowsChanged;
+				return rows_changed + RowsChanged;
 			}
 
-			/// <summary>Returns true when the last row has been read</summary>
-			public bool RowEnd
-			{
-				get { return m_row_end; }
-			}
 
 			/// <summary>Returns the number of rows changed as a result of the last 'step()'</summary>
 			public int RowsChanged
@@ -2706,7 +2694,6 @@ namespace pr.common
 			{
 				Trace.WriteLine(string.Format("Inserting {0}", MetaData.Name));
 				Step();
-				if (!RowEnd) throw Exception.New(Result.Misuse, "Insert returned more than one row");
 				return RowsChanged;
 			}
 		}
@@ -2737,7 +2724,6 @@ namespace pr.common
 			{
 				Trace.WriteLine(string.Format("Updating {0}", MetaData.Name));
 				Step();
-				if (!RowEnd) throw Exception.New(Result.Misuse, "Updating returned more than one row");
 				return RowsChanged;
 			}
 		}
