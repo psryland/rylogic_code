@@ -756,6 +756,15 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h">
       <Filter>sdk\maths</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\gcf.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\min_max.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\abs.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\unittests\run_tests.cmd">

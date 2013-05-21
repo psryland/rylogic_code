@@ -201,6 +201,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector4.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector4_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector_rand.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\abs.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\alignedstorage.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\alignedtype.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\alignmentof.h" />
@@ -208,11 +209,13 @@
     <ClInclude Include="..\..\sdk\pr\pr\meta\constants.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\enableif.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\function_arity.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\gcf.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\if.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\isclass.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\ispod.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\ispointer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\isprime.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\min_max.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\not.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\or.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\primegtreq.h" />
