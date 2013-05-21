@@ -79,6 +79,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h">
       <Filter>sdk\pr\storage</Filter>
     </ClInclude>
+    <ClInclude Include="..\elements\lab.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\elements\main.cpp">
@@ -112,6 +115,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\elements\element.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\lab.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

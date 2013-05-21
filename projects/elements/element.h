@@ -8,26 +8,34 @@ namespace ele
 	struct Element
 	{
 		// Where this element lives in the period table
-		size_t m_atomic_weight;
+		size_t m_atomic_number;
 
-		// The index of the element name in the element names table
-		size_t m_name_idx;
+		// The name of the element
+		ElementName const* m_name;
+
+		// The period within the periodic table (i.e. row)
+		size_t m_period;
+
+		// The number of free electrons this element has in its non-ionised state
+		size_t m_free_electrons;
+
+		// The number of electrons needed to fill this electron shell (from its non-ionised state)
+		size_t m_free_holes;
 
 		// True once this element has been discovered
 		bool m_discovered;
 
-		//PR_SQLITE_TABLE(Element,"")
-		//PR_SQLITE_COLUMN(AtomicWeight ,m_atomic_weight ,integer ,"primary key not null")
-		//PR_SQLITE_COLUMN(NameIdx      ,m_name_idx      ,integer ,"")
-		//PR_SQLITE_COLUMN(Discovered   ,m_discovered    ,integer ,"")
-		//PR_SQLITE_TABLE_END()
-
 		Element();
+		Element(size_t atomic_number, GameConstants const& consts);
 
-		// Return the name of the element
-		char const* Name(GameConstants const& consts) const;
+		// Returns true if this element is closer to the left side of
+		// the periodic table than the right
+		bool IsMetal() const { return m_free_electrons > m_free_holes; }
 
-		// Return the symbol name of the element
-		char const* Symbol(GameConstants const& consts) const;
+		// Electronegativity is a measure of how strongly an element pulls on it's electrons
+		// It's affected by the number of protons in the nucleous and the distance of the outer
+		// electron shell from the nucleous
+		double ElectroNegativity(GameConstants const& consts) const;
+
 	};
 }

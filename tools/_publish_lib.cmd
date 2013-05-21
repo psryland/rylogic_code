@@ -1,6 +1,6 @@
 ::Post Build Event for exporting library files to a directory
 ::Use:
-:: _publish_lib $(TargetPath) $(PlatformName) $(ConfigurationName) dstdir
+:: _publish_lib $(TargetPath) $(PlatformName) $(ConfigurationName) [dstdir]
 :: This will copy mylib.dll to "%dstdir%\mylib.platform.config.dll and optionally the pdb if it exists
 :: 'dstdir' is optional, if not given it will default to "%qdrive%\sdk\pr\lib"
 @echo OFF

@@ -152,6 +152,7 @@
     <ClInclude Include="..\..\sdk\sqlite\sqlite3.h" />
     <ClInclude Include="..\elements\console_ui.h" />
     <ClInclude Include="..\elements\element.h" />
+    <ClInclude Include="..\elements\lab.h" />
     <ClInclude Include="..\elements\stockpile.h" />
     <ClInclude Include="..\elements\world_state.h" />
     <ClInclude Include="..\elements\material.h" />
@@ -171,6 +172,7 @@
     <ClCompile Include="..\elements\console_ui.cpp" />
     <ClCompile Include="..\elements\element.cpp" />
     <ClCompile Include="..\elements\game_instance.cpp" />
+    <ClCompile Include="..\elements\lab.cpp" />
     <ClCompile Include="..\elements\main.cpp" />
     <ClCompile Include="..\elements\game_constants.cpp" />
     <ClCompile Include="..\elements\material.cpp" />

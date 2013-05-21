@@ -8,7 +8,7 @@ namespace ele
 	// A wrapper around the store of materials
 	struct Stockpile
 	{
-		typedef std::vector<Material> MatCont;
+		typedef std::map<pr::hash::HashValue, Material> MatCont;
 		MatCont m_mats;
 
 		Stockpile();
@@ -16,6 +16,5 @@ namespace ele
 		// Add a new material to the stock pile
 		void Add(Material m);
 		void Step(pr::seconds_t elapsed);
-
 	};
 }

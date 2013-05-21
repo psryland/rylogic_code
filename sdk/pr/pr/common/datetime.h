@@ -34,30 +34,30 @@ namespace pr
 			case Years:
 				{
 					long years = long(seconds / seconds_p_year);
-					s.append(pr::FmtS("%d years ", years));
+					s.append(pr::FmtS("%dyrs ", years));
 					seconds -= years * seconds_p_year;
 				}// fallthru
 			case Days:
 				{
 					long days = long(seconds / seconds_p_day);
-					s.append(pr::FmtS("%d days ", days));
+					s.append(pr::FmtS("%ddays ", days));
 					seconds -= days * seconds_p_day;
 				}// fallthru
 			case Hours:
 				{
 					long hours = long(seconds / seconds_p_hour);
-					s.append(pr::FmtS("%d hours ", hours));
+					s.append(pr::FmtS("%dhrs ", hours));
 					seconds -= hours * seconds_p_hour;
 				}// fallthru
 			case Minutes:
 				{
 					long mins = long(seconds / seconds_p_min);
-					s.append(pr::FmtS("%d mins ", mins));
+					s.append(pr::FmtS("%dmins ", mins));
 					seconds -= mins * seconds_p_min;
 				}// fallthru
 			case Seconds:
 				{
-					s.append(pr::FmtS("%2.3f secs ", seconds));
+					s.append(pr::FmtS("%2.3fsecs ", seconds));
 				}// fallthru
 			}
 			s.resize(s.size() - 1);

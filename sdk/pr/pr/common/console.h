@@ -644,6 +644,7 @@ namespace pr
 				// Draw the border
 				if (pad.m_border != EColour::Default || !pad.m_title.empty())
 				{
+					Cursor(loc);
 					auto c = s1.m_colours.Merge(pad.m_colours);
 					if (pad.m_border != EColour::Default) c.m_back = pad.m_border;
 					Colour(c); Clear(loc.X, loc.Y, w, h);
@@ -654,6 +655,7 @@ namespace pr
 				// Draw the title
 				if (!pad.m_title.empty())
 				{
+					Cursor(loc);
 					Colour(s1.m_colours.Merge(pad.m_colours));
 					Write(loc.X + (w - int(pad.m_title.size()))/2, loc.Y, pad.m_title);
 					loc.Y += 1; h -= 1;

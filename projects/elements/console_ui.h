@@ -16,6 +16,9 @@ namespace ele
 
 		void Render();
 		void RenderHomeView();
+		void RenderShipView();
+		void RenderLabView();
+		void RenderLaunchView();
 		void RenderWorldState();
 		void RenderMaterialInventory();
 		void RenderShipSpec();

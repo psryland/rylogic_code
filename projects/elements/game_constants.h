@@ -13,11 +13,16 @@ namespace ele
 		// A table of the element names, of length m_element_count
 		ElementName const* m_element_name;
 
+		// The valency levels of the elements
+		size_t m_valency_levels[10];
+
+
 		// The universal speed of light
 		pr::metres_p_sec_t m_speed_of_light;
 
 		// The universal gravitational constant
 		pr::metres³_p_kilogram_p_sec²_t m_gravitational_constant;
+
 
 		// The mass of a proton
 		pr::kilograms_t m_proton_mass;

@@ -9,28 +9,25 @@ namespace ele
 	struct Material
 	{
 		// The elements that this material is made of
-		// m_metal * m_metal_count + m_nonmetal * m_nonmetal_count
-		Element m_metal;
-		Element m_nonmetal;
-		size_t m_metal_count;
-		size_t m_nonmetal_count;
+		// m_elem1 * m_count1 + m_elem2 * m_count2
+		Element m_elem1;
+		Element m_elem2;
+		size_t m_count1;
+		size_t m_count2;
 
 		// The name of the material (derived from the elements)
-		std::string Name(GameConstants const& consts) const;
+		std::string m_name;
 
-		// The atomic weight of the material (derived from the elements)
-		size_t AtomicWeight() const;
+		// A hash code for materials of this type
+		pr::hash::HashValue m_hash;
+
+		//// The atomic weight of the material (derived from the elements)
+		//size_t AtomicWeight() const;
 
 		// The density of the material at room temperature
 		pr::kilograms_p_metre³_t Density() const { return 1.0; }
 
-		//PR_SQLITE_TABLE(Material,"")
-		//PR_SQLITE_COLUMN(Id           ,m_id            ,integer ,"primary key not null")
-		//PR_SQLITE_COLUMN(Name         ,m_name          ,text    ,"")
-		//PR_SQLITE_COLUMN(AtomicWeight ,m_atomic_weight ,real    ,"")
-		//PR_SQLITE_COLUMN(Discovered   ,m_discovered    ,integer ,"")
-		//PR_SQLITE_TABLE_END()
-
 		Material();
+		Material(Element e1, size_t c1, Element e2, size_t c2);
 	};
 }

@@ -6,26 +6,27 @@ namespace ele
 	// The element names, using real names for now for testing
 	ElementName const g_element_names[] =
 	{
-		{"Hydrogen"   , "H" },
-		{"Helium"     , "He"},
-		{"LIthium"    , "Li"},
-		{"Beryllium"  , "Be"},
-		{"Boron"      , "B" },
-		{"Carbon"     , "C" },
-		{"Nitrogen"   , "N" },
-		{"Oxygen"     , "O" },
-		{"Fluorine"   , "F" },
-		{"Neon"       , "Ne"},
-		{"Sodium"     , "Na"},
-		{"Magnesium"  , "Mg"},
-		{"Aluminium"  , "Al"},
-		{"Silicon"    , "Si"},
-		{"Phosphorus" , "P" },
-		{"Sulfur"     , "S" },
-		{"Clorine"    , "Cl"},
-		{"Argon"      , "Ar"},
-		{"Potassium"  , "K" },
-		{"Calcium"    , "Ca"},
+		{""           , ""  , ""        },
+		{"hydrogen"   , "H" , "hydr"    },
+		{"helium"     , "He", "hel"     },
+		{"lithium"    , "Li", "lithim"  },
+		{"beryllium"  , "Be", "beryll"  },
+		{"boron"      , "B" , "bor"     },
+		{"carbon"     , "C" , "carbon"  },
+		{"nitrogen"   , "N" , "nitr"    },
+		{"oxygen"     , "O" , "ox"      },
+		{"fluorine"   , "F" , "fluor"   },
+		{"neon"       , "Ne", "neon"    },
+		{"sodium"     , "Na", "sodim"   },
+		{"magnesium"  , "Mg", "magnesim"},
+		{"aluminium"  , "Al", "alumin"  },
+		{"silicon"    , "Si", "silic"   },
+		{"phosphorus" , "P" , "phosph"  },
+		{"sulfur"     , "S" , "sulf"    },
+		{"chlorine"   , "Cl", "chlor"   },
+		{"argon"      , "Ar", "argon"   },
+		{"potassium"  , "K" , "potassim"},
+		{"calcium"    , "Ca", "calc"    },
 	};
 
 	// Contains the randomly generated constants for an instance of the game
@@ -42,9 +43,20 @@ namespace ele
 		// The mass of a proton
 		m_proton_mass = 1.67262178e-27;
 
+
 		// The collection of element names
-		m_element_count = length(g_element_names);
+		m_element_count = PR_COUNTOF(g_element_names);
 		m_element_name  = &g_element_names[0];
+
+		// The valency levels of the elements
+		static_assert(PR_COUNTOF(m_valency_levels) > 2, "");
+		m_valency_levels[0] = 0;
+		m_valency_levels[1] = size_t(rnd.int1(1,4));
+		for (size_t i = 2; i != PR_COUNTOF(m_valency_levels); ++i)
+		{
+			size_t v = 1 + m_valency_levels[i-1];
+			m_valency_levels[i] = size_t(rnd.dbl1(1.3*v, 2.9*v));
+		}
 
 		// Pick a star mass approximately the same as the sun
 		const pr::kilograms_t suns_mass = 2.0e30;

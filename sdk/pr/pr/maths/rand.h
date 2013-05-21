@@ -20,7 +20,8 @@ namespace pr
 		ulong  u32()                      { return MersenneTwister::u32(); }
 		ulong  u32(ulong mn, ulong mx)    { return mn == mx ? mx : ((u32() % (mx - mn)) + mn); }
 		long   i32()                      { return MersenneTwister::i32(); }
-		long   i32(long mn, long mx)      { return mn == mx ? mx : ((i32() % (mx - mn)) + mn); }
+		long   int1(long mn, long mx)     { return mn == mx ? mx : ((i32() % (mx - mn)) + mn); }
+		long   int2(long avr, long d)     { return d == 0 ? avr : ((i32() % (2*d) - d) + avr); }
 		uint8  u8()                       { return static_cast<uint8>(u32() >> 24); }
 		uint8  u8(uint8 mn, uint8 mx)     { return mn == mx ? mx : ((u8() % (mx - mn)) + mn); }
 		double dbl()                      { return MersenneTwister::f32(); }
@@ -38,7 +39,8 @@ namespace pr
 		inline uint   u32()                      { return Rand().u32(); }
 		inline uint   u32(uint mn, uint mx)      { return Rand().u32(mn,mx); }
 		inline int    i32()                      { return Rand().i32(); }
-		inline int    i32(int mn, int mx)        { return Rand().i32(mn,mx); }
+		inline int    int1(int mn, int mx)       { return Rand().int1(mn,mx); }
+		inline int    int2(int avr, int d)       { return Rand().int2(avr,d); }
 		inline uint8  u8()                       { return Rand().u8(); }
 		inline uint8  u8(uint8 mn, uint8 mx)     { return Rand().u8(mn,mx); }
 		inline double dbl()                      { return Rand().dbl(); }

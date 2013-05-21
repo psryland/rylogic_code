@@ -12,6 +12,7 @@ namespace ele
 		,m_loop()
 	{
 		m_cons.Open(140, 40);
+		m_cons.DoubleBuffer();
 		m_cons.Colour(EColour::Black, EColour::Grey);
 		m_loop.AddStepContext("step", [this](double elapsed){ Run(elapsed); }, 1.0f, true);
 		m_loop.Run();
@@ -28,20 +29,38 @@ namespace ele
 		m_cons.Clear();
 		switch (m_inst->m_view)
 		{
-		case EView::Home:
-			RenderHomeView();
-			break;
+		case EView::Home:        RenderHomeView(); break;
+		case EView::ShipDesign:  RenderShipView(); break;
+		case EView::MaterialLab: RenderLabView(); break;
+		case EView::Launch:      RenderLaunchView(); break;
 		}
-		//RenderWorldState();
-		//RenderShipSpec();
-		//RenderMenu();
+		m_cons.FlipBuffer();
 	}
 
 	void ConsoleUI::RenderHomeView()
 	{
 		RenderWorldState();
 		RenderMaterialInventory();
-		
+		RenderMenu();
+		//RenderWorldState();
+		//RenderShipSpec();
+		//RenderMenu();
+	}
+
+	void ConsoleUI::RenderShipView()
+	{
+		RenderMenu();
+	}
+
+	void ConsoleUI::RenderLabView()
+	{
+		RenderMaterialInventory();
+		RenderMenu();
+	}
+
+	void ConsoleUI::RenderLaunchView()
+	{
+		RenderMenu();
 	}
 
 	void ConsoleUI::RenderWorldState()
@@ -67,17 +86,12 @@ namespace ele
 	{
 		Colours black(EColour::Black);
 		Colours green(EColour::Green);
-		char const* fmt = "%-20s | %10s | %10s";
 		
 		Pad pad(" Material Stockpile ", EColour::Black);
-		pad
-			<< pr::FmtS(fmt, "Material Name", "Stock (kg)", "Rate (kg/s)");
-
+		pad << pr::FmtS("%-30s | %10s | %10s\n", "Material Name", "Stock (kg)", "Rate (kg/s)");
 		for (auto& i : m_inst->m_stockpile.m_mats)
-		{
-			pad
-				<< pr::FmtS(fmt, i.Name(m_inst->m_constants).c_str(), 1, 1);
-		}
+			pad << pr::FmtS("%-30s | %10d | %10d\n", i.second.m_name.c_str(), 1, 1);
+		
 		m_cons.Write(EAnchor::TopLeft, pad);
 	}
 
@@ -91,11 +105,11 @@ namespace ele
 		Pad pad(" Ship Specifications ", EColour::Black);
 		pad
 			<< "      Passenger Count: " << c1 << ship.m_passenger_count << c0 << "\n"
-			<< "        Fuel Material: " << ship.m_fuel.Name(m_inst->m_constants) << "\n"
+			<< "        Fuel Material: " << ship.m_fuel.m_name << "\n"
 			<< "            Fuel Mass: " << ship.m_fuel_mass << "kg\n"
-			<< "  Structural Material: " << ship.m_structure.Name(m_inst->m_constants) << "\n"
-			<< "     Systems Material: " << ship.m_systems.Name(m_inst->m_constants) << "\n"
-			<< "      Shield Material: " << ship.m_shield.Name(m_inst->m_constants) << "\n"
+			<< "  Structural Material: " << ship.m_structure.m_name << "\n"
+			<< "     Systems Material: " << ship.m_systems.m_name << "\n"
+			<< "      Shield Material: " << ship.m_shield.m_name << "\n"
 			<< "          Shield Mass: " << ship.m_shield_mass << "kg\n"
 			<< "\n"
 			<< "    Construction Time: " << c1 << build_time << c0 << "\n"
@@ -109,14 +123,13 @@ namespace ele
 	{
 		Colours c0(EColour::Blue);
 		Pad pad("Menu", EColour::Black);
-		pad
-			<< " Menu:\n" << c0
-			<< "   S - Change ship spec\n"
-			<< "   M - Material Research\n"
-			<< "   L - Launch\n"
-			<< "=>"
-			;
-		m_cons.Cursor(EAnchor::BottomLeft, 2, 0);
+		pad << " Menu:\n" << c0;
+		if (m_inst->m_view != EView::Home       ) pad << "   H - Home\n";
+		if (m_inst->m_view != EView::ShipDesign ) pad << "   S - Ship Design\n";
+		if (m_inst->m_view != EView::MaterialLab) pad << "   M - Materials Lab\n";
+		if (m_inst->m_view != EView::Launch     ) pad << "   L - Launch Ship (end game)\n";
+		pad << "=>";
 		m_cons.Write(EAnchor::BottomLeft, pad);
+		m_cons.Cursor(EAnchor::BottomLeft, 2, 0);
 	}
 }

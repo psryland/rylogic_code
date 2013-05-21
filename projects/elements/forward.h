@@ -3,6 +3,7 @@
 // std
 #include <string>
 #include <vector>
+#include <map>
 #include <algorithm>
 #include <iostream>
 
@@ -11,9 +12,11 @@
 #include "pr/common/fmt.h"
 #include "pr/common/console.h"
 #include "pr/common/datetime.h"
+#include "pr/common/hash.h"
 #include "pr/common/si_units.h"
 #include "pr/macros/enum.h"
 #include "pr/macros/no_copy.h"
+#include "pr/macros/count_of.h"
 #include "pr/app/sim_message_loop.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/rand.h"
@@ -29,21 +32,47 @@ namespace ele
 	#define PR_ENUM(x)\
 		x(Home)\
 		x(ShipDesign)\
-		x(MatResearch)\
+		x(MaterialLab)\
 		x(Launch)
 	PR_DEFINE_ENUM1(EView, PR_ENUM);
 	#undef PR_ENUM
 
+	// The following steps take you through the process of building a chemical name, using compound XaYb as an example:
+	// 1 Is X hydrogen?
+	//  If so, the compound is probably an acid and may use a common name. If X isn't hydrogen, proceed to Step 2.
+	// 2 Is X a nonmetal or a metal?
+	//  If X is a nonmetal, then the compound is molecular. For molecular compounds, use numeric prefixes before each
+	//  element's name to specify the number of each element. If there's only one atom of element X, no prefix is
+	//  required before the name of X. Use the suffix –ide after the element name for Y. If X is a metal, then the
+	//  compound is ionic; proceed to Step 3.
+	// 3 Is X a metal that has variable charge?
+	//  If X has a variable charge (often, these are group B metals), you must specify its charge within the compound
+	//  by using a Roman numeral within parentheses between the element names for X and Y. For example, use (II) for
+	//  Fe2+ and (III) for Fe3+. Proceed to Step 4.
+	// 4 Is Y a polyatomic ion?
+	//  If Y is a polyatomic ion, use the appropriate name for that ion. Usually, polyatomic anions have an ending
+	//  of –ate or –ite (corresponding to related ions that contain more or less oxygen, respectively). Another common
+	//  ending for polyatomic ions is –ide, as in hydroxide (OH–) and cyanide (CN–). If Y is not a polyatomic ion,
+	//  use the suffix –ide after the name of Y.
 	struct ElementName
 	{
-		char m_name[16];   // E.g. Moronium
-		char m_symbol[3];  // E.g  Mr
+		// Full element name (all lower case)
+		// e.g. hydrogen, sodium, iron, carbon, oxygen, sulfur, fluorine, argon
+		char m_fullname[16];
+
+		// Symbol
+		// e.g  H, Na, Fe, C, O, S, Ar
+		char m_symbol[3];
+
+		// The suffix form of the element name (only really needed for nonmetals)
+		// will have one of 'ide','ite','ate' appended
+		// e.g. hydr, sodim, ferr, carb, ox, sul, fluor, argon
+		char m_sufix_form[16];
 	};
 
 	template <typename T> inline T sqr(T t)    { return static_cast<T>(t * t); }
 	template <typename T> inline T sqrt(T t)   { return static_cast<T>(std::sqrt(t)); }
 	template <typename T> inline T cubert(T t) { return static_cast<T>(std::pow(t, 1.0/3.0)); }
 	template <typename T> inline T ln(T t)     { return static_cast<T>(std::log(t)); }
-	template <typename T, size_t Sz> inline size_t length(T const (&)[Sz]) { return Sz; }
 }
 

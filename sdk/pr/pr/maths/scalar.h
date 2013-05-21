@@ -195,6 +195,10 @@ namespace pr
 		while (b) { int t = b; b = a % b; a = t; }
 		return a;
 	}
+	inline int LeastCommonMultiple(int a, int b)
+	{
+		return (a*b) / GreatestCommonFactor(a,b);
+	}
 
 	// Predicates
 	namespace maths
