@@ -1,6 +1,6 @@
-//**************************************************************************************
+﻿//**************************************************************************************
 // Console
-//  Copyright � Rylogic Ltd 2010
+//  Copyright © Rylogic Ltd 2010
 //**************************************************************************************
 #ifndef PR_COMMON_CONSOLE_H
 #define PR_COMMON_CONSOLE_H
@@ -51,7 +51,7 @@ namespace pr
 			x(TopCentre    , = Top|HCentre     )\
 			x(TopRight     , = Top|Right       )\
 			x(MiddleLeft   , = VCentre|Left    )\
-			x(MiddleCentre , = VCentre|HCentre )\
+			x(Centre       , = VCentre|HCentre )\
 			x(MiddleRight  , = VCentre|Right   )\
 			x(BottomLeft   , = Bottom|Left     )\
 			x(BottomCentre , = Bottom|HCentre  )\
@@ -87,6 +87,14 @@ namespace pr
 		struct ConsoleScreenBufferInfo :CONSOLE_SCREEN_BUFFER_INFOEX
 		{
 			ConsoleScreenBufferInfo() :CONSOLE_SCREEN_BUFFER_INFOEX() { cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX); }
+		};
+
+		// Helper to wrap 'COORD'
+		struct Coord :COORD
+		{
+			Coord() :COORD() {}
+			Coord(COORD c) :COORD(c) {}
+			Coord(int x, int y) { X = short(x); Y = short(y); }
 		};
 
 		// Helper for combining fore and back colours
@@ -125,31 +133,35 @@ namespace pr
 			~ColourScope();
 		};
 
-
 		// A helper for drawing rectangular blocks of text in the console
 		struct Pad
 		{
 			struct Item
 			{
-				enum EWhat { Unknown, NewLine, String, Colour } m_what;
-				union { void* m_ptr; std::string* m_line; Colours* m_colour; };
+				enum EWhat { Unknown, NewLine, String, WString, Colour } m_what;
+				union { void* m_ptr; std::string* m_line; std::wstring* m_wline; Colours* m_colour; };
 				Item(EWhat what, void* ptr = 0) :m_what(what), m_ptr(ptr) {}
-				Item(std::string* line) :m_what(String), m_line(line) {}
-				Item(Colours* colour) :m_what(Colour), m_colour(colour) {}
+				Item(std::string* line)  :m_what(String ), m_line(line) {}
+				Item(std::wstring* line) :m_what(WString), m_wline(line) {}
+				Item(Colours* colour)    :m_what(Colour ), m_colour(colour) {}
 			};
 
-			std::string m_title;
 			Colours m_colours;
-			EColour m_border;
+			Colours m_border;
+			Colours m_title_colour;
+			std::string m_title;
+			EAnchor m_title_anchor;
 			int m_width;
 			int m_height;
 			int m_w, m_h;
 			std::vector<Item> m_items;
 
-			Pad(std::string title = "", EColour fore = EColour::Default, EColour back = EColour::Default, EColour border = EColour::Default)
-				:m_title(title)
-				,m_colours(fore, back)
-				,m_border(border)
+			Pad(EColour fore = EColour::Default, EColour back = EColour::Default)
+				:m_colours(fore, back)
+				,m_border()
+				,m_title_colour()
+				,m_title()
+				,m_title_anchor(EAnchor::TopCentre)
 				,m_width(0)
 				,m_height(1)
 				,m_w(0)
@@ -162,6 +174,14 @@ namespace pr
 					delete i.m_ptr;
 			}
 
+			// Set the title for the pad
+			void Title(std::string title) { Title(title, m_colours.m_fore, EAnchor::TopCentre); }
+			void Title(std::string title, Colours colour, EAnchor anchor) { m_title = title; m_title_colour = colour; m_title_anchor = anchor; }
+
+			// Set the border colours (use Default,Default for no border)
+			void Border(EColour fore)               { Border(fore, m_colours.m_back); }
+			void Border(EColour fore, EColour back) { m_border.m_fore = fore; m_border.m_back = back; }
+
 			// Stream anything to the pad
 			template <typename T> Pad& operator << (T t)
 			{
@@ -170,20 +190,19 @@ namespace pr
 			}
 
 			// Stream a string to the pad
-			Pad& operator << (std::string const& s)
+			template <typename Char> Pad& operator << (std::basic_string<Char> const& s)
 			{
-				pr::str::Split(s,"\n", [&](std::string const& s, size_t i, size_t iend)
+				Char const delim[] = {Char('\n'), 0};
+				pr::str::Split<std::basic_string<Char>, Char>(s, delim, [&](std::basic_string<Char> const& s, size_t i, size_t iend)
 					{
-						m_items.push_back(new std::string(s.substr(i, iend-i)));
-						m_w += int(iend - i);
-						if (iend != int(s.size()) && s[iend] == '\n')
+						m_items.push_back(new std::basic_string<Char>(s.substr(i, iend-i)));
+						m_width  = std::max(m_width, m_w += int(iend - i));
+						if (iend != s.size() && s[iend] == Char('\n'))
 						{
 							m_items.push_back(Item(Item::NewLine));
+							m_height = std::max(m_height, ++m_h);
 							m_w = 0;
-							++m_h;
 						}
-						m_width  = std::max(m_width, m_w);
-						m_height = std::max(m_height, m_h);
 					});
 				return *this;
 			}
@@ -200,25 +219,70 @@ namespace pr
 			Pad& operator =(Pad const&);
 		};
 
+		template <typename Str> inline void append(Str& str, size_t count, typename Str::value_type ch) { str.append(count, ch); }
+		template <typename Str> inline void resize(Str& str, size_t sz)                                 { str.resize(sz); }
+		template <typename Str> inline size_t size(Str& str)                                            { return str.size(); }
+		template <typename Str> inline bool empty(Str& str)                                             { return str.empty(); }
+
 		class Console
 		{
-			HANDLE m_stdout;
-			HANDLE m_stdin;
-			HANDLE m_stderr;
-			bool   m_opened;
-			bool   m_console_created;
-			int    m_base;
-			int    m_digits;
+			HANDLE  m_stdout; 
+			HANDLE  m_stdin;
+			HANDLE  m_stderr;
+			HANDLE  m_buf[2]; // Handles for screen buffers
+			HANDLE* m_front;  // Front buffer for double buffered console
+			HANDLE* m_back;   // Back buffer for double buffered console
+			Colours m_colour;
+			int     m_base;
+			int     m_digits;
+			bool    m_opened;
+			bool    m_console_created;
+			bool    m_double_buffered;
 
 			friend struct CursorScope;
 			friend struct ColourScope;
+
+			void Throw(int result, char const* msg) const
+			{
+				if (result != 0) return;
+
+				// Retrieve the system error message for the last-error code
+				char lpMsgBuf[1024];
+				DWORD dw = GetLastError(); 
+				FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), lpMsgBuf, sizeof(lpMsgBuf), NULL);
+				std::string err; err.append(msg).append("\n").append(lpMsgBuf).append("\n");
+				LocalFree(lpMsgBuf);
+
+				throw std::exception(err.c_str());
+			}
+
+			struct traits
+			{
+				// Write to the back buffer, it will point to the active screen buffer when double buffering isn't enabled
+				static void write(HANDLE out, char    const* str, size_t ofs, size_t count) { DWORD chars_written; WriteConsoleA(out, str + ofs, DWORD(count), &chars_written, 0); }
+				static void write(HANDLE out, wchar_t const* str, size_t ofs, size_t count) { DWORD chars_written; WriteConsoleW(out, str + ofs, DWORD(count), &chars_written, 0); }
+				static size_t length(char const* str)    { return strlen(str); }
+				static size_t length(wchar_t const* str) { return wcslen(str); }
+				static void read(KEY_EVENT_RECORD evt, char&    ch) { ch = evt.uChar.AsciiChar; }
+				static void read(KEY_EVENT_RECORD evt, wchar_t& ch) { ch = evt.uChar.UnicodeChar; }
+			};
+
+
+
 		public:
 			Console()
-				:m_stdout(0)
-				,m_stdin(0)
-				,m_opened(false)
+				:m_stdout()
+				,m_stdin()
+				,m_stderr()
+				,m_buf()
+				,m_front(&m_stdout)
+				,m_back(&m_stdout)
 				,m_base(10)
+				,m_colour(EColour::Black, EColour::Grey)
 				,m_digits(3)
+				,m_opened(false)
+				,m_console_created(false)
+				,m_double_buffered(false)
 			{
 				// I can't figure this console redirecting stuff out. It seems sometimes you need
 				// to call 'RedirectIOToConsole()', other times that doesn't work but 'ReopenStdio()'
@@ -233,16 +297,12 @@ namespace pr
 				Close();
 			}
 
-			// Return the hwnd for the console window
-			HWND GetWindowHandle() const
+			// Attach to an existing console window
+			bool Attach()
 			{
-				return GetConsoleWindow();
-			}
-
-			// Return true if the console window has focus
-			bool HasFocus() const
-			{
-				return GetForegroundWindow() == GetConsoleWindow();
+				m_console_created = false;
+				m_opened = AttachConsole(DWORD(-1)) == TRUE;
+				return m_opened;
 			}
 
 			// Open a console window
@@ -250,9 +310,10 @@ namespace pr
 			{
 				if (m_opened) return;
 				m_console_created = AllocConsole() == TRUE;
-				m_stdout = GetStdHandle(STD_OUTPUT_HANDLE);
-				m_stdin  = GetStdHandle(STD_INPUT_HANDLE);
-				m_stderr = GetStdHandle(STD_ERROR_HANDLE);
+				Throw((m_stdout = GetStdHandle(STD_OUTPUT_HANDLE)) != INVALID_HANDLE_VALUE, "Duplicate stdout handle failed");
+				Throw((m_stdin  = GetStdHandle(STD_INPUT_HANDLE )) != INVALID_HANDLE_VALUE, "Duplicate stdin handle failed" );
+				Throw((m_stderr = GetStdHandle(STD_ERROR_HANDLE )) != INVALID_HANDLE_VALUE, "Duplicate stderr handle failed");
+				m_buf[0] = m_buf[1] = INVALID_HANDLE_VALUE;
 				m_opened = true;
 			}
 			void Open(int columns, int lines)
@@ -265,29 +326,6 @@ namespace pr
 				info.srWindow.Bottom = info.dwSize.Y = info.dwMaximumWindowSize.Y = SHORT(lines);
 				Info(info);
 			}
-
-			// Closes the console window
-			void Close()
-			{
-				if (!m_opened) return;
-				if (m_stdout != GetStdHandle(STD_OUTPUT_HANDLE)) CloseHandle(m_stdin);
-				if (m_stdin  != GetStdHandle(STD_INPUT_HANDLE )) CloseHandle(m_stdout);
-				if (m_stderr != GetStdHandle(STD_ERROR_HANDLE )) CloseHandle(m_stderr);
-				if (m_console_created)	FreeConsole();
-				m_opened = false;
-			}
-
-			//// Reopen the stdio file descriptors
-			//void ReopenStdio()
-			//{
-			//	FILE arr[3]
-			//	FILE* = &arr[0];
-			//	&(FILE*)[0]
-			//	FILE** f = &__iob_func()[0];
-			//	freopen_s(stdin  ,"CONIN$"  ,"rb" ,stdin );
-			//	freopen_s(stdout ,"CONOUT$" ,"wb" ,stdout);
-			//	freopen_s(stderr ,"CONOUT$" ,"wb" ,stderr);
-			//}
 
 			// Redirect IO to console
 			void RedirectIOToConsole()
@@ -318,19 +356,129 @@ namespace pr
 				std::ios::sync_with_stdio();
 			}
 
-			// Attach to an existing console window
-			bool Attach()
+			// Closes the console window
+			void Close()
 			{
+				if (!m_opened) return;
+				CloseHandle(m_stdout);
+				CloseHandle(m_stdin);
+				CloseHandle(m_stderr);
+				CloseHandle(m_buf[0]);
+				CloseHandle(m_buf[1]);
+				if (m_console_created) FreeConsole();
 				m_console_created = false;
-				m_opened = AttachConsole(DWORD(-1)) == TRUE;
-				return m_opened;
+				m_opened = false;
+			}
+			void CloseHandle(HANDLE& handle)
+			{
+				if (handle == INVALID_HANDLE_VALUE) return;
+				if (handle == GetStdHandle(STD_OUTPUT_HANDLE)) return;
+				if (handle == GetStdHandle(STD_INPUT_HANDLE )) return;
+				if (handle == GetStdHandle(STD_ERROR_HANDLE )) return;
+				CloseHandle(handle);
+				handle = INVALID_HANDLE_VALUE;
+			}
+
+			// Get/Set the dimensions of the console window and/or buffer
+			// Note, the buffer must not be smaller than the window or the window larger than the buffer
+			ConsoleScreenBufferInfo Info() const
+			{
+				ConsoleScreenBufferInfo info;
+				Throw(GetConsoleScreenBufferInfoEx(*m_back, &info), "Failed to read console info");
+				return info;
+			}
+			void Info(ConsoleScreenBufferInfo info)
+			{
+				info.dwSize.X = std::min(info.dwSize.X, info.dwMaximumWindowSize.X);
+				info.dwSize.Y = std::min(info.dwSize.Y, info.dwMaximumWindowSize.Y);
+				info.dwCursorPosition.X = std::max(std::min(info.dwCursorPosition.X, info.dwSize.X), SHORT(0));
+				info.dwCursorPosition.Y = std::max(std::min(info.dwCursorPosition.Y, info.dwSize.Y), SHORT(0));
+				Throw(SetConsoleScreenBufferInfoEx(*m_back , &info), "Failed to set console dimensions");
+				Throw(SetConsoleScreenBufferInfoEx(*m_front, &info), "Failed to set console dimensions");
+			}
+
+			// Get/Set the highlevel console output mode
+			DWORD OutMode() const
+			{
+				DWORD mode;
+				Throw(GetConsoleMode(*m_back, &mode), "failed to read console output mode");
+				return mode;
+			}
+			void OutMode(DWORD mode)
+			{
+				Throw(SetConsoleMode(*m_back,  mode), "failed to set console output mode");
+				Throw(SetConsoleMode(*m_front, mode), "failed to set console output mode");
+			}
+
+			// Get/Set the highlevel console input mode
+			DWORD InMode() const
+			{
+				DWORD mode;
+				Throw(GetConsoleMode(m_stdin, &mode), "failed to read console input mode");
+				return mode;
+			}
+			void InMode(DWORD mode)
+			{
+				Throw(SetConsoleMode(m_stdin,  mode), "failed to set console input mode");
+			}
+
+			// Return the hwnd for the console window
+			HWND GetWindowHandle() const
+			{
+				return GetConsoleWindow();
+			}
+
+			// Return true if the console window has focus
+			bool HasFocus() const
+			{
+				return GetForegroundWindow() == GetConsoleWindow();
+			}
+
+			// Get/Set auto scrolling for the console
+			bool AutoScroll() const  { return (OutMode() & ENABLE_WRAP_AT_EOL_OUTPUT) != 0; }
+			void AutoScroll(bool on) { if (on) OutMode(OutMode() | ENABLE_WRAP_AT_EOL_OUTPUT); else OutMode(OutMode() & ~ENABLE_WRAP_AT_EOL_OUTPUT); }
+
+			// Get/Set echo mode
+			bool Echo() const { return (InMode() & ENABLE_ECHO_INPUT) != 0; }
+			void Echo(bool on) { if (on) InMode(InMode() | ENABLE_ECHO_INPUT); else InMode(InMode() & ~ENABLE_ECHO_INPUT); }
+
+			// Get/Set double buffering for the console
+			bool DoubleBuffered() const { return m_double_buffered; }
+			void DoubleBuffered(bool on)
+			{
+				if (on == m_double_buffered) return;
+				if (on)
+				{
+					auto info = Info();
+					m_buf[0] = CreateConsoleScreenBuffer(GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE, nullptr, CONSOLE_TEXTMODE_BUFFER, nullptr);
+					m_buf[1] = CreateConsoleScreenBuffer(GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE, nullptr, CONSOLE_TEXTMODE_BUFFER, nullptr);
+					Throw(m_buf[0] != INVALID_HANDLE_VALUE, "Failed to create console screen buffer");
+					Throw(m_buf[1] != INVALID_HANDLE_VALUE, "Failed to create console screen buffer");
+					m_back  = &m_buf[0];
+					m_front = &m_buf[1];
+					Throw(SetConsoleScreenBufferInfoEx(*m_back , &info), "Failed to set console dimensions");
+					Throw(SetConsoleScreenBufferInfoEx(*m_front, &info), "Failed to set console dimensions");
+					FlipBuffer();
+					m_double_buffered = true;
+				}
+				else
+				{
+					CloseHandle(m_buf[0]);
+					CloseHandle(m_buf[1]);
+					m_back = m_front = &m_stdout;
+					m_double_buffered = false;
+				}
+			}
+
+			// Flip the front/back buffer
+			void FlipBuffer()
+			{
+				std::swap(m_back, m_front);
+				Throw(SetConsoleActiveScreenBuffer(*m_front), "Set console active buffer failed");
 			}
 
 			// Return true if the console is open
-			bool IsOpen() const
-			{
-				return m_opened;
-			}
+			bool IsOpen() const { return m_opened; }
 
 			// Get/Set the position of the window
 			RECT WindowRect() const
@@ -366,42 +514,24 @@ namespace pr
 				WindowPosition(cx, cy);
 			}
 
-			// Get/Set the dimensions of the console window and/or buffer
-			// Note, the buffer must not be smaller than the window or the window larger than the buffer
-			ConsoleScreenBufferInfo Info() const
-			{
-				ConsoleScreenBufferInfo info;
-				GetConsoleScreenBufferInfoEx(m_stdout, &info);
-				return info;
-			}
-			void Info(ConsoleScreenBufferInfo info)
-			{
-				info.dwSize.X = std::min(info.dwSize.X, info.dwMaximumWindowSize.X);
-				info.dwSize.Y = std::min(info.dwSize.Y, info.dwMaximumWindowSize.Y);
-				info.dwCursorPosition.X = std::max(std::min(info.dwCursorPosition.X, info.dwSize.X), SHORT(0));
-				info.dwCursorPosition.Y = std::max(std::min(info.dwCursorPosition.Y, info.dwSize.Y), SHORT(0));
-				if (!SetConsoleScreenBufferInfoEx(m_stdout, &info))
-					throw std::exception("Failed to set console dimensions");
-			}
-
 			// Get/Set the position of the cursor
 			COORD Cursor() const { return Info().dwCursorPosition; }
-			void Cursor(COORD coord) { SetConsoleCursorPosition(m_stdout, coord); }
-			void Cursor(int cx, int cy) { COORD coord = {short(cx), short(cy)}; Cursor(coord); }
-			void Cursor(EAnchor anchor, int dx = 0, int dy = 0) { Cursor(CursorLocation(anchor, dx, dy, 1, 1)); }
+			void Cursor(COORD coord) { SetConsoleCursorPosition(*m_back, coord); }
+			void Cursor(int x, int y) { Cursor(Coord(x,y)); }
+			void Cursor(EAnchor anchor, int dx = 0, int dy = 0) { Cursor(CursorLocation(anchor, 1, 1, dx, dy)); }
 
 			// Get/Set the colour to use
 			Colours Colour() const { return Info().wAttributes; }
-			void Colour(Colours c) { if (!SetConsoleTextAttribute(m_stdout, c)) throw std::exception("Failed to set colour text attributes"); }
+			void Colour(Colours c) { Throw(SetConsoleTextAttribute(*m_back, m_colour.Merge(c)), "Failed to set colour text attributes"); }
 			void Colour(EColour fore, EColour back) { Colour(Colours(fore,back)); }
 
-			// Set an event handler routine for the console, only affects this console, doesn't require removing
+			// Set an event handler routine for the console, only affects this console, doesn't require removing.
 			// 'ctrl_type' is one of:
-			//	CTRL_C_EVENT - Ctrl+C
-			//	CTRL_BREAK_EVENT - Ctrl+Break
-			//	CTRL_CLOSE_EVENT - Close button pressed
-			//	CTRL_LOGOFF_EVENT - User log off
-			//	CTRL_SHUTDOWN_EVENT - System shutdown
+			// CTRL_C_EVENT - Ctrl+C
+			// CTRL_BREAK_EVENT - Ctrl+Break
+			// CTRL_CLOSE_EVENT - Close button pressed
+			// CTRL_LOGOFF_EVENT - User log off
+			// CTRL_SHUTDOWN_EVENT - System shutdown
 			// Handler routines form a stack, last added = first called. Return true if the handler handles the event
 			// 'add' indicates whether the handler should be added or removed.
 			// if 'HandlerRoutine' is null, 'add' == true means ignore Ctrl+C, 'add' == false means exit on Ctrl+C
@@ -410,48 +540,47 @@ namespace pr
 				SetConsoleCtrlHandler(func, add);
 			}
 
-			// Clear the whole console
-			void Clear()
+			// Clear the console
+			void Clear() { Clear(m_colour); }
+			void Clear(Colours col)
 			{
+				CursorScope s0(*this);
+				auto c = m_colour.Merge(col);
+
 				// Get the number of character cells in the current buffer
 				auto info = Info();
 				unsigned int num_chars = info.dwSize.X * info.dwSize.Y;
 
-				CursorScope scope(*this);
-
 				// Fill the area with blanks
-				COORD topleft = {0, 0};
+				Coord topleft(0,0);
 				DWORD chars_written;
-				FillConsoleOutputCharacterA(m_stdout, ' ', num_chars, topleft, &chars_written);
-				FillConsoleOutputAttribute(m_stdout, info.wAttributes, num_chars, topleft, &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L' ', num_chars, topleft, &chars_written);
+				FillConsoleOutputAttribute (*m_back, c, num_chars, topleft, &chars_written);
 			}
-
-			// Clear a rectangular area in the console
-			// If size_x == 0 or size_y == 0 then the current console width/height is used
-			void Clear(int x, int y, int size_x, int size_y)
+			void Clear(int x, int y, int sx, int sy) { Clear(x,y,sx,sy,m_colour); }
+			void Clear(int x, int y, int sx, int sy, Colours col) { Clear(x,y,sx,sy,true,col); }
+			void Clear(int x, int y, int sx, int sy, bool clear_text, Colours col)
 			{
-				// Use the whole screen clear
-				if (x == 0 && y == 0 && size_x == 0 && size_y == 0)
-					return Clear();
-
-				CursorScope scope(*this);
+				CursorScope s0(*this);
+				auto c = m_colour.Merge(col);
 
 				// Get the number of character cells in the current buffer
 				auto info = Info();
-				x      = (x < 0) ? 0 : (x >= info.dwSize.X) ? info.dwSize.X - 1 : x;
-				y      = (y < 0) ? 0 : (y >= info.dwSize.Y) ? info.dwSize.Y - 1 : y;
-				size_x = (size_x == 0) ? info.dwSize.X : size_x;
-				size_y = (size_y == 0) ? info.dwSize.Y : size_y;
-				size_x = (size_x < 0) ? 0 : (x + size_x > info.dwSize.X) ? info.dwSize.X - x : size_x;
-				size_y = (size_y < 0) ? 0 : (y + size_y > info.dwSize.Y) ? info.dwSize.Y - y : size_y;
+				x  = (x  <  0) ? 0 : (x >= info.dwSize.X) ? info.dwSize.X - 1 : x;
+				y  = (y  <  0) ? 0 : (y >= info.dwSize.Y) ? info.dwSize.Y - 1 : y;
+				sx = (sx == 0) ? info.dwSize.X : sx;
+				sy = (sy == 0) ? info.dwSize.Y : sy;
+				sx = (sx <  0) ? 0 : (x + sx > info.dwSize.X) ? info.dwSize.X - x : sx;
+				sy = (sy <  0) ? 0 : (y + sy > info.dwSize.Y) ? info.dwSize.Y - y : sy;
 
 				// Fill the area with blanks
-				for (int i = y, iend = y + size_y; i != iend; ++i)
+				for (int yend = y + sy; y != yend; ++y)
 				{
 					DWORD chars_written;
-					COORD topleft = {short(x), short(y)};
-					FillConsoleOutputCharacterA(m_stdout, ' ', size_x, topleft, &chars_written);
-					FillConsoleOutputAttribute(m_stdout, info.wAttributes, size_x, topleft, &chars_written);
+					Coord pt(x,y);
+					FillConsoleOutputAttribute (*m_back, c, sx, pt, &chars_written);
+					if (clear_text)
+						FillConsoleOutputCharacterW(*m_back, L' ', sx, pt, &chars_written);
 				}
 			}
 
@@ -461,36 +590,57 @@ namespace pr
 				FlushConsoleInputBuffer(m_stdin);
 			}
 
+
+			// Create separate FIFO buffers for the event types; key, mouse, etc..
+			// Create a pump input function that reads from the input events adding to the appropriate buffer
+			// Write methods for getting from a FIFO buffer that handle
+
+
 			// Return the number of events in the input buffer
-			DWORD GetInputEventCount()
+			DWORD InputEventCount() const
 			{
 				DWORD count;
-				return GetNumberOfConsoleInputEvents(m_stdin, &count) ? count : 0;
+				Throw(GetNumberOfConsoleInputEvents(m_stdin, &count), "Failed to read input event count");
+				return count;
 			}
 
 			// Return the next event from the input buffer without removing it
-			Event PeekInputEvent()
+			Event PeekInputEvent() const
 			{
-				_ASSERT(GetInputEventCount() != 0);
+				_ASSERT(InputEventCount() != 0);
 				Event in; DWORD read;
-				PeekConsoleInput(m_stdin, &in, 1, &read);
+				Throw(PeekConsoleInputW(m_stdin, &in, 1, &read), "Failed to peek a console input event");
 				return in;
 			}
 
 			// Return the next event from the input buffer
-			Event ReadInputEvent()
+			Event ReadInputEvent() const
 			{
-				_ASSERT(GetInputEventCount() != 0);
+				_ASSERT(InputEventCount() != 0);
 				Event in; DWORD read;
-				ReadConsoleInput(m_stdin, &in, 1, &read);
+				Throw(ReadConsoleInputW(m_stdin, &in, 1, &read), "Failed to read a console input event");
 				return in;
+			}
+
+			// Comsume input events until one that passes 'pred' is found.
+			// Returns true if an event is found, false if the input buffer empties first
+			template <typename Pred> bool SeekEvent(Pred pred) const
+			{
+				for (;InputEventCount() != 0; ReadInputEvent())
+					if (pred(PeekInputEvent()))
+						return true;
+				return false;
+			}
+			bool SeekKeyEvent() const
+			{
+				return SeekEvent([](Event e){ return (e.EventType & EEvent::Key) != 0; });
 			}
 
 			// Wait for a specific event to be next in the console input buffer
 			// This function blocks for up to 'timeout_ms'
 			// 'event_type' is a combination of 'EEvent'
 			// Returns true if the correct event occurred, false if the wait timed out
-			bool WaitForEvent(WORD event_type, DWORD timeout_ms)
+			bool WaitForEvent(WORD event_type, DWORD timeout_ms) const
 			{
 				while (WaitForSingleObject(m_stdin, timeout_ms) == WAIT_OBJECT_0)
 				{
@@ -501,132 +651,186 @@ namespace pr
 			}
 
 			// Wait for a key to be pressed
-			void WaitKey()
+			void WaitKey() const
 			{
 				WaitForEvent(EEvent::Key, INFINITE);
 			}
 
 			// Returns true if input data is waiting, equivalent to _kbhit()
-			bool KBHit()
+			bool KBHit() const
 			{
 				return WaitForEvent(EEvent::Key, 0);
 			}
 
-			// Look for an ascii char in the input buffer.
-			bool SeekChar()
-			{
-				for (;GetInputEventCount() != 0; ReadInputEvent())
-				{
-					Event in = PeekInputEvent();
-					if ((in.EventType & EEvent::Key) == 0) continue;
-					if (in.Event.KeyEvent.uChar.AsciiChar == 0) continue;
-					return true;
-				}
-				return false;
-			}
-
 			// Consume input events upto and including the next 'key' event
-			// Returns true if a char was read from the input buffer
-			bool ReadChar(char& ch)
+			// Returns true if a char was read from the input buffer, false if timed out
+			// 'wait_ms' is the length of time to wait for a key event
+			template <typename Char> bool ReadChar(Char& ch, DWORD wait_ms = 0) const
 			{
-				if (!SeekChar()) return false;
-				Event in = ReadInputEvent();
-				ch = in.Event.KeyEvent.uChar.AsciiChar;
-				return true;
+				for(;;)
+				{
+					if (SeekKeyEvent())
+					{
+						traits::read(ReadInputEvent().Event.KeyEvent, ch);
+						return true;
+					}
+					if (!WaitForEvent(EEvent::Key, wait_ms))
+					{
+						return false;
+					}
+				}
 			}
 
-			// Read a character, blocks until input is available
-			char GetChar()
+			// Read charactors from the console that pass 'pred'
+			template <typename Str, typename Pred> Str Read(Pred pred, DWORD wait_ms = INFINITE) const
 			{
-				char ch;
-				for (;!ReadChar(ch);) WaitForEvent(EEvent::Key, INFINITE);
-				return ch;
+				typedef Str::value_type Char;
+				Str str;
+				for (;;)
+				{
+					Char ch;
+					if (!ReadChar(ch, wait_ms))
+						return str;
+					if (!pred(ch))
+						return str;
+					push_back(str, ch);
+				}
 			}
 
-			// Read up to a '\n' character
-			// Blocks until a return character is read
-			std::string GetLine()
+			// Read up to a '\n' character. Blocks until a return character is read
+			template <typename Str> Str ReadLine(DWORD wait_ms = INFINITE) const
 			{
-				std::string str;
-				for (char ch = GetChar(); ch != '\n' && ch != '\r'; ch = GetChar())
-					str.push_back(ch);
-				Flush();
-				return str;
+				typedef Str::value_type Char;
+				return Read([](Char ch){ return ch != Char('\n'); }, wait_ms);
 			}
 
-			// Read number characters from the console.
-			// Blocks until the first non-digit character is read
-			std::string GetNumber()
+			// Read number characters from the console. Blocks until the first non-digit character is read
+			template <typename Str> Str ReadNumber(DWORD wait_ms = INFINITE) const
 			{
-				std::string str;
-				for (char ch = GetChar(); isdigit(ch) || ch == '.' || ch == 'e' || ch == 'E' || ch == '-' || ch == '+'; ch = GetChar())
-					str.push_back(ch);
+				typedef Str::value_type Char;
+				return Read([](Char ch){ return (ch >= Char('0') && ch <= Char('9')) || ch == Char('.') || ch == Char('e') || ch == Char('E') || ch == Char('-') || ch == Char('+'); }, wait_ms);
 			}
 
-			// Get a specific number of characters from the console
-			// Blocks until 'max_length' chars are read
-			void GetString(std::string& str, std::size_t max_length)
+			//// Accumulates keyboard input on repeated calls until a complete line has been
+			//// entered or until escape is pressed while 'input' is empty.
+			//// Returns true if 'input' contains a complete line or escape was pressed, false otherwise.
+			//template <typename Str> bool AccumulateLine(Str& input, bool& escape)
+			//{
+			//	typedef Str::value_type Char;
+			//	escape = false;
+			//	for (;;)
+			//	{
+			//		if (!SeekKeyEvent()) return false;
+			//		auto evt = ReadInputEvent();
+			//		Coord pos = Cursor();
+
+			//		// Enter terminates the line of user input
+			//		if (evt.Event.KeyEvent.wVirtualKeyCode == VK_RETURN)
+			//		{
+			//			return true;
+			//		}
+			//		if (evt.Event.KeyEvent.wVirtualKeyCode == VK_ESCAPE)
+			//		{
+			//			// Escape, when 'input' is not empty, clears the user input
+			//			if (!empty(input))
+			//			{
+			//				// Reset the input and erase the echoed characters
+			//				WORD w = std::min(WORD(size(input)), WORD(pos.X));
+			//				Clear(pos.X -= w, pos.Y, w, 1);
+			//				Cursor(pos);
+			//				resize(input, 0);
+			//				return false;
+			//			}
+			//			escape = true;
+			//			return true;
+			//		}
+			//		if (evt.Event.KeyEvent.wVirtualKeyCode == VK_DELETE)
+			//		{
+			//			WORD w = std::min(WORD(size(input)), evt.Event.KeyEvent.wRepeatCount);
+			//			Clear(pos.X -= w, pos.Y, w, 1);
+			//			Cursor(pos);
+			//			resize(input, size(input) - w);
+			//			return false;
+			//		}
+			//		if (evt.Event.KeyEvent.wVirtualKeyCode == VK_TAB)
+			//		{
+			//			append(input, evt.Event.KeyEvent.wRepeatCount, Char('\t'));
+			//			return false;
+			//		}
+			//		
+			//		Char ch;
+			//		traits::read(evt.Event.KeyEvent, ch);
+			//		if (ch != 0)
+			//			append(input, evt.Event.KeyEvent.wRepeatCount, ch);
+			//		return false;
+			//	}
+			//}
+
+			// Write text to the output window
+			template <typename Char> void Write(Char const* str, size_t ofs, size_t count)
 			{
-				str.reserve(max_length);
-				for (std::size_t i = 0; i != max_length; ++i)
-					str.push_back(GetChar());
+				traits::write(*m_back, str, ofs, count);
+			}
+			template <typename Char> void Write(Char const* str)
+			{
+				Write(str, 0, traits::len(str));
 			}
 
 			// Write text to the output window
-			void Write(char const* str, size_t ofs, size_t count)
+			template <typename Char> void Write(std::basic_string<Char> const& str, size_t ofs, size_t count)
 			{
-				DWORD chars_written;
-				WriteConsole(m_stdout, str + ofs, DWORD(count), &chars_written, 0);
+				Write(str.c_str(), ofs, count);
 			}
-			void Write(char const* str)
+			template <typename Char> void Write(std::basic_string<Char> const& str)
 			{
-				Write(str, 0, strlen(str));
-			}
-
-			// Write text to the output window
-			void Write(std::string const& str, size_t ofs = 0U, size_t count = ~0U)
-			{
-				Write(str.c_str(), ofs, std::min(str.size() - ofs, count));
+				Write(str.c_str(), 0, str.size());
 			}
 
 			// Write text to the output window at a specified position
-			void Write(int cx, int cy, std::string const& str, size_t ofs = 0U, size_t count = ~0U)
+			template <typename Char> void Write(int x, int y, Char const* str, size_t ofs, size_t count)
 			{
-				Cursor(short(cx), short(cy));
+				Cursor(x,y);
 				Write(str, ofs, count);
 			}
+			template <typename Char> void Write(int x, int y, Char const* str)
+			{
+				Write(x, y, str, 0, traits::length(str));
+			}
+			template <typename Char> void Write(int x, int y, std::basic_string<Char> const& str, size_t ofs, size_t count)
+			{
+				Write(x, y, str.c_str(), ofs, count);
+			}
+			template <typename Char> void Write(int x, int y, std::basic_string<Char> const& str)
+			{
+				Write(x, y, str.c_str(), 0, str.size());
+			}
 
 			// Write text to the output window at a specified position
-			void Write(EAnchor anchor, int dx, int dy, std::string const& str)
+			template <typename Char> void Write(EAnchor anchor, Char const* str, int dx = 0, int dy = 0)
 			{
-				// Find the dimensions of the string
-				int sx = 0, sy = 0, x = 0;
-				for (auto i = std::begin(str), iend = std::end(str); i != iend; ++i)
-				{
-					if (*i == '\n')    { ++sy; x = 0; }
-					else if (++x > sx) { ++sx; }
-				}
+				int sx,sy;
+				MeasureString(str, sx, sy);
 
 				// Get the console dimensions
 				auto info = Info();
-				int maxx = info.dwMaximumWindowSize.X, maxy = info.dwMaximumWindowSize.Y;
+				int maxx = info.dwMaximumWindowSize.X;
+				int maxy = info.dwMaximumWindowSize.Y;
 
 				// Find the coordinate to write the string at
-				int cx = 0, cy = 0;
-				if (anchor & EAnchor::Left   ) cx = dx + 0;
-				if (anchor & EAnchor::HCentre) cx = dx + (maxx - sx) / 2;
-				if (anchor & EAnchor::Right  ) cx = dx + (maxx - sx);
-				if (anchor & EAnchor::Top    ) cy = dy + 0;
-				if (anchor & EAnchor::VCentre) cy = dy + (maxy - sy) / 2;
-				if (anchor & EAnchor::Bottom ) cy = dy + (maxy - sy);
+				int x = 0, y = 0;
+				if (anchor & EAnchor::Left   ) x = dx + 0;
+				if (anchor & EAnchor::HCentre) x = dx + (maxx - sx) / 2;
+				if (anchor & EAnchor::Right  ) x = dx + (maxx - sx);
+				if (anchor & EAnchor::Top    ) y = dy + 0;
+				if (anchor & EAnchor::VCentre) y = dy + (maxy - sy) / 2;
+				if (anchor & EAnchor::Bottom ) y = dy + (maxy - sy);
 
 				// Write the string, line by line
-				for (size_t i = 0, iend = str.find('\n', 0); i != std::string::npos; i = iend, iend = str.find('\n',i+1))
-					Write(cx, cy++, str, i, iend - i);
-			}
-			void Write(EAnchor anchor, std::string const& str)
-			{
-				Write(anchor, 0, 0, str);
+				for (Char const *e, *p = str; *p; ++p)
+				{
+					for (e = p + 1; *e && *e != Char('\n'); ++e) {}
+					Write(x, y++, p, 0, e - p - 1);
+				}
 			}
 
 			// Write a Pad helper object to the screen
@@ -634,37 +838,40 @@ namespace pr
 			{
 				CursorScope s0(*this);
 				ColourScope s1(*this);
+				auto base_colour = s1.m_colours;
 
+				// Get the basic area of the pad
 				int w = pad.m_width;
 				int h = pad.m_height;
-				if (pad.m_border != EColour::Default) { w += 2; h += 2; }
-				else if (!pad.m_title.empty()) { h += 1; }
-				COORD loc = CursorLocation(anchor, dx, dy, w, h);
+				bool has_border = pad.m_border != Colours();
+				bool has_title  = pad.m_title.empty() == false;
 
-				// Draw the border
-				if (pad.m_border != EColour::Default || !pad.m_title.empty())
+				if (has_border)     { h += 2; w += 2; }
+				else if (has_title) { h += 1; }
+				Coord loc = CursorLocation(anchor, w, h, dx, dy);
+
+				if (has_border)
 				{
-					Cursor(loc);
-					auto c = s1.m_colours.Merge(pad.m_colours);
-					if (pad.m_border != EColour::Default) c.m_back = pad.m_border;
-					Colour(c); Clear(loc.X, loc.Y, w, h);
-					loc.X += 1; loc.Y += pad.m_title.empty();
-					w -= 2; h -= 1 + pad.m_title.empty();
+					Colour(base_colour.Merge(pad.m_border));
+					WriteBox(anchor, w, h, dx, dy);
+				}
+				if (has_title)
+				{
+					Colour(base_colour.Merge(pad.m_title_colour));
+					int xofs;
+					if (pad.m_title_anchor & EAnchor::Left   ) xofs = 0;
+					if (pad.m_title_anchor & EAnchor::HCentre) xofs = int((w - pad.m_title.size()) / 2);
+					if (pad.m_title_anchor & EAnchor::Right  ) xofs = int(w - pad.m_title.size());
+					Write(loc.X + xofs, loc.Y, pad.m_title.c_str());
 				}
 
-				// Draw the title
-				if (!pad.m_title.empty())
-				{
-					Cursor(loc);
-					Colour(s1.m_colours.Merge(pad.m_colours));
-					Write(loc.X + (w - int(pad.m_title.size()))/2, loc.Y, pad.m_title);
-					loc.Y += 1; h -= 1;
-				}
+				if (has_border)     { h -= 2; w -= 2; loc.X += 1; loc.Y += 1; }
+				else if (has_title) { h -= 1; loc.Y += 1; }
 
 				// Clear the pad background
-				Colours pad_colour(s1.m_colours.Merge(pad.m_colours));
+				Colours pad_colour = base_colour.Merge(pad.m_colours);
 				Colour(pad_colour);
-				Clear(loc.X, loc.Y, w, h);
+				Clear(loc.X, loc.Y, w, h, pad_colour);
 
 				// Draw the pad content
 				Cursor(loc);
@@ -679,11 +886,32 @@ namespace pr
 					case Pad::Item::String:
 						Write(item.m_line->c_str(), 0, item.m_line->size());
 						break;
+					case Pad::Item::WString:
+						Write(item.m_wline->c_str(), 0, item.m_wline->size());
+						break;
 					case Pad::Item::Colour:
 						Colour(pad_colour.Merge(*item.m_colour));
 						break;
 					}
 				}
+			}
+
+			// Draw a box with size sx,sy
+			void WriteBox(EAnchor anchor, int w, int h, int dx = 0, int dy = 0)
+			{
+				DWORD chars_written;
+				Coord loc = CursorLocation(anchor, w, h, dx, dy);
+				FillConsoleOutputCharacterW(*m_back, L'╔', 1  , Coord(loc.X    ,loc.Y), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'═', w-2, Coord(loc.X+1  ,loc.Y), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'╗', 1  , Coord(loc.X+w-1,loc.Y), &chars_written);
+				for (int y = loc.Y+1, yend = y+h-2; y != yend; ++y)
+				{
+					FillConsoleOutputCharacterW(*m_back, L'║', 1, Coord(loc.X    ,y), &chars_written);
+					FillConsoleOutputCharacterW(*m_back, L'║', 1, Coord(loc.X+w-1,y), &chars_written);
+				}
+				FillConsoleOutputCharacterW(*m_back, L'╚', 1  , Coord(loc.X    ,loc.Y+h-1), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'═', w-2, Coord(loc.X+1  ,loc.Y+h-1), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'╝', 1  , Coord(loc.X+w-1,loc.Y+h-1), &chars_written);
 			}
 
 			// Stream a type to/from the console
@@ -700,9 +928,8 @@ namespace pr
 				return *this;
 			}
 
-			// Returns the top left corner for a rectangular region with dimensions 'width/height'
-			// anchored to 'anchor' offset by 'dx,dy'
-			COORD CursorLocation(EAnchor anchor, int dx, int dy, int width, int height)
+			// Returns the top left corner for a rectangular region with dimensions 'width/height' anchored to 'anchor' offset by 'dx,dy'
+			Coord CursorLocation(EAnchor anchor, int width, int height, int dx = 0, int dy = 0)
 			{
 				// Get the console dimensions
 				auto info = Info();
@@ -710,7 +937,7 @@ namespace pr
 				int wy = info.srWindow.Bottom - info.srWindow.Top;
 
 				// Find the coordinate to write the string at
-				COORD c;
+				Coord c;
 				if (anchor & EAnchor::Left   ) c.X = SHORT(dx + 0);
 				if (anchor & EAnchor::HCentre) c.X = SHORT(dx + (wx - width) / 2);
 				if (anchor & EAnchor::Right  ) c.X = SHORT(dx + (wx - width) + 1);
@@ -719,17 +946,28 @@ namespace pr
 				if (anchor & EAnchor::Bottom ) c.Y = SHORT(dy + (wy - height) + 1);
 				return c;
 			}
+
+			// Returns the rectangular area needed to contain 'str'
+			template <typename Char> void MeasureString(Char const* str, int& w, int& h)
+			{
+				int x = 0; w = 0; h = 0;
+				for (Char const* p = str; *p; ++p)
+				{
+					if (*p == Char('\n')) { ++h; x = 0; }
+					else if (++x > w)     { ++w; }
+				}
+			}
 		};
+
 		// RAII object for preserving the cursor position
 		inline CursorScope::CursorScope(Console& cons) :m_cons(&cons) ,m_cursor_pos(m_cons->Cursor()) {}
 		inline CursorScope::~CursorScope() { m_cons->Cursor(m_cursor_pos); }
 
 		// RAII object for pushing console colours
 		inline ColourScope::ColourScope(Console& cons) :m_cons(&cons) ,m_colours(Colours::From(m_cons->Info().wAttributes)) {}
-		inline ColourScope::~ColourScope() { SetConsoleTextAttribute(m_cons->m_stdout, m_colours); }
+		inline ColourScope::~ColourScope() { SetConsoleTextAttribute(*m_cons->m_back, m_colours); }
 
-		// Write output to the console using various methods
-		// Handy way to test if it's working
+		// Write output to the console using various methods. Handy way to test if it's working
 		inline void OutputTest()
 		{
 			int iVar;
@@ -770,6 +1008,7 @@ namespace pr
 			_ASSERTE( 0 && "testing _ASSERTE" );
 		}
 	}
+
 	typedef console::Console Console;
 
 	// Singleton access to the console

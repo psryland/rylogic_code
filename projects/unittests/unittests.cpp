@@ -19,6 +19,7 @@ namespace pr
 #endif
 */
 #include <tchar.h>
+#include <algorithm>
 #include "pr/common/unittests.h"
 
 // Add includes containing unittests here
@@ -51,7 +52,10 @@ namespace pr
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	if (argc == 2 && _tcscmp(argv[1], _T("runtests")) == 0)
-		return pr::unittests::RunAllTests();
+	bool runtests = argc >= 2 && std::any_of(argv + 1, argv + argc, [](_TCHAR* x){ return _tcscmp(x, _T("runtests")) == 0;} );
+	bool wordy    = argc >= 2 && std::any_of(argv + 1, argv + argc, [](_TCHAR* x){ return _tcscmp(x, _T("verbose")) == 0;} );
+	if (runtests)
+		return pr::unittests::RunAllTests(wordy);
+	
 	return 0;
 }

@@ -82,6 +82,12 @@
     <ClInclude Include="..\elements\lab.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\elements\bond.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\reaction.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\elements\main.cpp">
@@ -118,6 +124,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\elements\lab.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\reaction.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

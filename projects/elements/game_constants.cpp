@@ -30,32 +30,49 @@ namespace ele
 	};
 
 	// Contains the randomly generated constants for an instance of the game
-	GameConstants::GameConstants(int seed)
+	GameConstants::GameConstants(int seed, bool real_chemistry)
 	{
 		pr::Rnd rnd(seed);
 
-		// The universal speed of light
-		m_speed_of_light = 2.99792458e8;
-
-		// The universal gravitational constant
+		m_max_game_duration      = 30 * 60 * 60; // 30 minutes
+		m_start_time_till_nova   = 365 * 24 * 60 * 60;
+		m_time_scaler            = m_start_time_till_nova / m_max_game_duration;
+		m_speed_of_light         = 2.99792458e8;
 		m_gravitational_constant = 6.6738e-11;
+		m_coulomb_constant       = 1;
+		m_proton_mass            = 1.67262178e-27;
+		m_zeffective_scaler      = 0.3;
 
-		// The mass of a proton
-		m_proton_mass = 1.67262178e-27;
-
-
-		// The collection of element names
 		m_element_count = PR_COUNTOF(g_element_names);
 		m_element_name  = &g_element_names[0];
 
-		// The valency levels of the elements
-		static_assert(PR_COUNTOF(m_valency_levels) > 2, "");
-		m_valency_levels[0] = 0;
-		m_valency_levels[1] = size_t(rnd.int1(1,4));
-		for (size_t i = 2; i != PR_COUNTOF(m_valency_levels); ++i)
+		static_assert(PR_COUNTOF(m_valence_levels) > 2, "");
+		if (real_chemistry)
 		{
-			size_t v = 1 + m_valency_levels[i-1];
-			m_valency_levels[i] = size_t(rnd.dbl1(1.3*v, 2.9*v));
+			// The total numbers of electrons at each orbital level
+			m_valence_levels[0] = 0;
+			m_valence_levels[1] = 2;
+			m_valence_levels[2] = 10;
+			m_valence_levels[3] = 18;
+			m_valence_levels[4] = 36;
+			m_valence_levels[5] = 54;
+			m_valence_levels[6] = 86;
+			m_valence_levels[6] = 118;
+		}
+		else
+		{
+			// The total numbers of electrons at each orbital level
+			m_valence_levels[0] = 0;
+			m_valence_levels[1] = size_t(rnd.int1(1,4));
+			for (size_t i = 2; i != PR_COUNTOF(m_valence_levels); ++i)
+			{
+				size_t v = 1 + m_valence_levels[i-1];
+				m_valence_levels[i] = size_t(rnd.dbl1(1.3*v, 2.9*v));
+			}
+		}
+		for (size_t i = 0; i != PR_COUNTOF(m_orbital_radius); ++i)
+		{
+			m_orbital_radius[i] = m_valence_levels[i]; // will do for now...
 		}
 
 		// Pick a star mass approximately the same as the sun

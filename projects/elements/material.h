@@ -12,6 +12,10 @@ namespace ele
 		// m_elem1 * m_count1 + m_elem2 * m_count2
 		Element m_elem1;
 		Element m_elem2;
+
+		// True if this is an ionic bond otherwise covalent.
+		bool m_ionic;
+
 		size_t m_count1;
 		size_t m_count2;
 
@@ -21,6 +25,9 @@ namespace ele
 		// A hash code for materials of this type
 		pr::hash::HashValue m_hash;
 
+		// The configuration of the material
+		size_t m_bonds[EPerm2::NumberOf];
+
 		//// The atomic weight of the material (derived from the elements)
 		//size_t AtomicWeight() const;
 
@@ -28,6 +35,6 @@ namespace ele
 		pr::kilograms_p_metre³_t Density() const { return 1.0; }
 
 		Material();
-		Material(Element e1, size_t c1, Element e2, size_t c2);
+		Material(Element e1, Element e2, GameConstants const& consts);
 	};
 }

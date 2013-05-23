@@ -31,11 +31,5 @@ namespace ele
 		// Returns true if this element is closer to the left side of
 		// the periodic table than the right
 		bool IsMetal() const { return m_free_electrons > m_free_holes; }
-
-		// Electronegativity is a measure of how strongly an element pulls on it's electrons
-		// It's affected by the number of protons in the nucleous and the distance of the outer
-		// electron shell from the nucleous
-		double ElectroNegativity(GameConstants const& consts) const;
-
 	};
 }

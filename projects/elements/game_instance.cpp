@@ -1,21 +1,23 @@
 #include "elements/stdafx.h"
 #include "elements/game_instance.h"
+#include "elements/material.h"
 
 namespace ele
 {
 	GameInstance::GameInstance(int seed)
-		:m_constants(seed)
-		,m_world_state(m_constants)
+		:m_consts(seed, true)
+		,m_world_state(m_consts)
 		,m_stockpile()
+		,m_lab(m_consts)
 		,m_ship()
 		,m_view(EView::Home)
 	{
 		// Add some materials
 		for (int i = 0; i != 10; ++i)
 		{
-			Element e1(pr::rand::int1(1,m_constants.m_element_count), m_constants);
-			Element e2(pr::rand::int1(1,m_constants.m_element_count), m_constants);
-			m_stockpile.Add(Material(e1,e2.m_free_holes,e2,e1.m_free_electrons));
+			Element e1(pr::rand::int1(1,m_consts.m_element_count), m_consts);
+			Element e2(pr::rand::int1(1,m_consts.m_element_count), m_consts);
+			m_stockpile.Add(Material(e1,e2,m_consts));
 		}
 	}
 

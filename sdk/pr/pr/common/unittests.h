@@ -76,7 +76,7 @@ namespace pr
 		}
 
 		// Run all of the registered unit tests
-		inline int RunAllTests()
+		inline int RunAllTests(bool wordy)
 		{
 			try
 			{
@@ -91,13 +91,13 @@ namespace pr
 					TestCount() = 0;
 					try
 					{
-						printf("%s%s", test.m_name, std::string(40 - strlen(test.m_name), '.').c_str());
+						if (wordy) printf("%s%s", test.m_name, std::string(40 - strlen(test.m_name), '.').c_str());
 
 						auto t0 = std::chrono::high_resolution_clock::now();
 						test.m_func();
 						auto t1 = std::chrono::high_resolution_clock::now();
 
-						printf("success. (%-4d tests in %7.3fms)\n", TestCount(), std::chrono::duration_cast<std::chrono::microseconds>(t1-t0).count());
+						if (wordy) printf("success. (%-4d tests in %7.3fms)\n", TestCount(), std::chrono::duration_cast<std::chrono::microseconds>(t1-t0).count());
 						++passed;
 					}
 					catch (std::exception const& e)

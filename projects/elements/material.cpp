@@ -2,61 +2,64 @@
 #include "elements/material.h"
 #include "elements/element.h"
 #include "elements/game_constants.h"
+#include "elements/lab.h"
 
 namespace ele
 {
-	// The name of the material (derived from the elements)
-	inline std::string MaterialName(Element e1, size_t c1, Element e2, size_t c2)
-	{
-		char const* num[] =
-		{
-			// 0 - 23
-			"","mono","di","tri","tetra","penta","hexa","hepta","octa","nona","deca",
-			"undeca","dodeca","trideca","tetradeca","pentadeca","hexadeca","heptadeca","octadeca","nonadeca",
-			"icosa","heicosa","docosa","tricosa"
-		};
-		auto IsVowel = [](char x){ return x == 'a' || x == 'e' || x == 'i' || x == 'o' || x == 'u' || x == 'y'; };
-
-		std::string name;
-		if (c1 > 1)
-		{
-			name.append(num[c1]);
-			if (IsVowel(e1.m_name->m_fullname[0]) && c1 > 3)
-				name.resize(name.size() - 1);
-		}
-		name.append(e1.m_name->m_fullname);
-		name.append(" ");
-		if (c2 > 1 || !e1.IsMetal())
-		{
-			name.append(num[c2]);
-			if (IsVowel(e2.m_name->m_sufix_form[0]) && (c2 != 2 || c2 != 3))
-				name.resize(name.size() - 1);
-		}
-		name.append(e2.m_name->m_sufix_form);
-		name.append("ide");
-		return name;
-	}
-
-	// The stuff that the universe has in it
 	Material::Material()
 		:m_elem1()
 		,m_elem2()
+		,m_ionic(false)
 		,m_count1(0)
 		,m_count2(0)
 		,m_name()
 		,m_hash(0)
+		,m_bonds()
 	{}
-
-	//
-	Material::Material(Element e1, size_t c1, Element e2, size_t c2)
-		:m_elem1(e1)
-		,m_elem2(e2)
-		,m_count1(c1)
-		,m_count2(c2)
-		,m_name(MaterialName(e1,c1,e2,c2))
+	Material::Material(Element e1, Element e2, GameConstants const& consts)
+		:m_elem1(e1.m_free_electrons < e2.m_free_electrons ? e1 : e2)
+		,m_elem2(e1.m_free_electrons < e2.m_free_electrons ? e2 : e1)
+		,m_ionic(IsIonicBond(m_elem1, m_elem2))
+		,m_count1(m_elem2.m_free_holes     / pr::GreatestCommonFactor(m_elem1.m_free_electrons, m_elem2.m_free_holes))
+		,m_count2(m_elem1.m_free_electrons / pr::GreatestCommonFactor(m_elem1.m_free_electrons, m_elem2.m_free_holes))
+		,m_name(MaterialName(m_elem1, m_count1, m_elem2, m_count2))
 		,m_hash(pr::hash::HashC(m_name.c_str()))
+		,m_bonds()
 	{
-		// Two non-metals are allowed tho
-		//PR_ASSERT(PR_DBG, !(e1.IsMetal() && e2.IsMetal()), "Cannot make a material from two metals");
+		using namespace EPerm2;
+
+		// Find the bond configuration by making the strongest bonds first
+		Bond bonds[NumberOf];
+		BondStrengths(m_elem1, m_elem2, consts, bonds);
+		OrderByStrength(bonds);
+		
+		size_t count1 = m_count1;
+		size_t count2 = m_count2;
+		
+		// Create bonds until at least one of the elements is used up
+		for (auto bond : bonds)
+		{
+			size_t c;
+			switch (bond.m_perm)
+			{
+			case AA:
+				c = count1/2;
+				count1 -= c*2;
+				m_bonds[AA] += c;
+				break;
+			case BB:
+				c = count2/2;
+				count2 -= c*2;
+				m_bonds[BB] += c;
+				break;
+			case AB:
+				c = std::min(count1,count2);
+				count1 -= c;
+				count2 -= c;
+				m_bonds[AB] += c;
+			}
+		}
+		// The bonds calculated so far are the minimum needed. If these produce
+		// two distinct sets (i.e. no AB bonds) then the material is unstable
 	}
 }

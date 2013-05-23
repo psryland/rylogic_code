@@ -150,9 +150,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\macros\no_copy.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h" />
     <ClInclude Include="..\..\sdk\sqlite\sqlite3.h" />
+    <ClInclude Include="..\elements\bond.h" />
     <ClInclude Include="..\elements\console_ui.h" />
     <ClInclude Include="..\elements\element.h" />
     <ClInclude Include="..\elements\lab.h" />
+    <ClInclude Include="..\elements\reaction.h" />
     <ClInclude Include="..\elements\stockpile.h" />
     <ClInclude Include="..\elements\world_state.h" />
     <ClInclude Include="..\elements\material.h" />
@@ -176,6 +178,7 @@
     <ClCompile Include="..\elements\main.cpp" />
     <ClCompile Include="..\elements\game_constants.cpp" />
     <ClCompile Include="..\elements\material.cpp" />
+    <ClCompile Include="..\elements\reaction.cpp" />
     <ClCompile Include="..\elements\ship.cpp" />
     <ClCompile Include="..\elements\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -4,6 +4,7 @@
 #include "elements/game_constants.h"
 #include "elements/world_state.h"
 #include "elements/stockpile.h"
+#include "elements/lab.h"
 #include "elements/ship.h"
 
 namespace ele
@@ -11,9 +12,10 @@ namespace ele
 	// A container for the game instance
 	struct GameInstance
 	{
-		GameConstants m_constants;
+		GameConstants m_consts;
 		WorldState    m_world_state;
 		Stockpile     m_stockpile;
+		Lab           m_lab;
 		Ship          m_ship;
 		EView         m_view;          // The current active game view
 

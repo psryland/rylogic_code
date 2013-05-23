@@ -10,9 +10,12 @@ namespace ele
 		:m_inst(&inst)
 		,m_cons()
 		,m_loop()
+		,m_input()
 	{
-		m_cons.Open(140, 40);
-		m_cons.DoubleBuffer();
+		m_cons.Open(140, 60);
+		//m_cons.DoubleBuffered(true);
+		m_cons.AutoScroll(false);
+		m_cons.Echo(false);
 		m_cons.Colour(EColour::Black, EColour::Grey);
 		m_loop.AddStepContext("step", [this](double elapsed){ Run(elapsed); }, 1.0f, true);
 		m_loop.Run();
@@ -22,6 +25,12 @@ namespace ele
 	{
 		m_inst->Step(elapsed);
 		Render();
+		//Input();
+	}
+
+	void ConsoleUI::Input()
+	{
+
 	}
 
 	void ConsoleUI::Render()
@@ -66,33 +75,34 @@ namespace ele
 	void ConsoleUI::RenderWorldState()
 	{
 		auto& ws = m_inst->m_world_state;
-		auto& cons = m_inst->m_constants;
+		auto& cons = m_inst->m_consts;
 		Colours red(EColour::Red);
 		Colours blue(EColour::Blue);
 		auto ttl = pr::datetime::ToCountdownString(ws.m_time_till_nova, pr::datetime::EMaxUnit::Days);
 
-		Pad pad(" World State ", EColour::Black, EColour::Default, EColour::Blue);
+		Pad pad(EColour::Black, EColour::Default);
+		pad.Title(" World State ");
+		pad.Border(EColour::Blue);
 		pad
-			<< red  << "       Time till nova: " << ttl << "\n"
-			<< blue << "            Star Mass: " << cons.m_star_mass << "kg\n"
-			        << "   Distance from Star: " << cons.m_star_distance << "m\n"
-			        << "      Escape Velocity: " << cons.m_escape_velocity << "m/s\n"
-			        << "Required Acceleration: " << ws.m_required_acceleration << "m/s/s\n";
-		m_cons.Write(EAnchor::TopRight, pad);
+			<< red  << "       Time till nova: " << ttl << blue
+			<< "\n" << "            Star Mass: " << cons.m_star_mass << "kg"
+			<< "\n" << "   Distance from Star: " << cons.m_star_distance << "m"
+			<< "\n" << "      Escape Velocity: " << cons.m_escape_velocity << "m/s"
+			<< "\n" << "Required Acceleration: " << ws.m_required_acceleration << "m/s/s";
+		m_cons.Write(EAnchor::TopRight, pad, 0, 3);
 	}
 
 	// Render the list of materials
 	void ConsoleUI::RenderMaterialInventory()
 	{
-		Colours black(EColour::Black);
-		Colours green(EColour::Green);
-		
-		Pad pad(" Material Stockpile ", EColour::Black);
-		pad << pr::FmtS("%-30s | %10s | %10s\n", "Material Name", "Stock (kg)", "Rate (kg/s)");
+		Pad pad(EColour::Black);
+		pad.Title(" Material Stockpile ");
+		pad.Border(EColour::Blue);
+		pad << pr::FmtS("%-30s | %10s | %10s\n", "Material Name", "Stock (kg)", "Rate (kg/s)") << Colours(EColour::Blue);
 		for (auto& i : m_inst->m_stockpile.m_mats)
 			pad << pr::FmtS("%-30s | %10d | %10d\n", i.second.m_name.c_str(), 1, 1);
 		
-		m_cons.Write(EAnchor::TopLeft, pad);
+		m_cons.Write(EAnchor::TopLeft, pad, 0, 3);
 	}
 
 	void ConsoleUI::RenderShipSpec()
@@ -102,7 +112,8 @@ namespace ele
 		Colours c1(EColour::Red);
 		auto build_time = pr::datetime::ToCountdownString(ship.m_construction_time, pr::datetime::EMaxUnit::Days);
 
-		Pad pad(" Ship Specifications ", EColour::Black);
+		Pad pad(EColour::Black);
+		pad.Title(" Ship Specifications ");
 		pad
 			<< "      Passenger Count: " << c1 << ship.m_passenger_count << c0 << "\n"
 			<< "        Fuel Material: " << ship.m_fuel.m_name << "\n"
@@ -116,14 +127,13 @@ namespace ele
 			<< "           Total Mass: " << ship.m_total_mass << "\n"
 			<< "         Total Volume: " << ship.m_total_volume << "\n"
 			;
-		m_cons.Write(EAnchor::TopRight, pad);
+		m_cons.Write(EAnchor::TopRight, pad, 0, 3);
 	}
 
 	void ConsoleUI::RenderMenu()
 	{
-		Colours c0(EColour::Blue);
-		Pad pad("Menu", EColour::Black);
-		pad << " Menu:\n" << c0;
+		Pad pad(EColour::Green);
+		pad.Title(" Menu ", Colours(EColour::Black), EAnchor::Left);
 		if (m_inst->m_view != EView::Home       ) pad << "   H - Home\n";
 		if (m_inst->m_view != EView::ShipDesign ) pad << "   S - Ship Design\n";
 		if (m_inst->m_view != EView::MaterialLab) pad << "   M - Materials Lab\n";

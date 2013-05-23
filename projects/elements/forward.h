@@ -37,6 +37,10 @@ namespace ele
 	PR_DEFINE_ENUM1(EView, PR_ENUM);
 	#undef PR_ENUM
 
+	// Permutations
+	namespace EPerm2 { enum { AA,AB,BB, NumberOf }; }
+	namespace EPerm4 { enum { AA,AB,AC,AD,BB,BC,BD,CC,CD,DD, NumberOf }; }
+		
 	// The following steps take you through the process of building a chemical name, using compound XaYb as an example:
 	// 1 Is X hydrogen?
 	//  If so, the compound is probably an acid and may use a common name. If X isn't hydrogen, proceed to Step 2.

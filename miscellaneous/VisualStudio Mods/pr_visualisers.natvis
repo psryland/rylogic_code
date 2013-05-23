@@ -108,4 +108,8 @@
 		<DisplayString>{m_name}</DisplayString>
 	</Type>
 	
+	<!-- Elements -->
+	<Type Name="ele::Element">
+		<DisplayString>{m_name->m_fullname}</DisplayString>
+	</Type>
 </AutoVisualizer>

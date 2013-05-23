@@ -9,10 +9,13 @@ namespace ele
 		GameInstance* m_inst;
 		pr::Console m_cons;
 		pr::SimMsgLoop m_loop;
+		std::string m_input;
 
 		ConsoleUI(GameInstance& inst);
 
 		void Run(double elapsed);
+
+		void Input();
 
 		void Render();
 		void RenderHomeView();
