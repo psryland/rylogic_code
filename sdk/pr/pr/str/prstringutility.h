@@ -354,12 +354,11 @@ namespace pr
 			return Quotes(s, add);
 		}
 
-
 		// Convert a size in bytes to a 'pretty' size in KB,MB,GB,etc
 		// 'bytes' - the input data size
 		// 'si' - true to use 1000bytes = 1kb, false for 1024bytes = 1kb
 		// 'dp' - number of decimal places to use
-		inline std::string PrettySize(long long bytes, bool si, int dp)
+		inline std::string PrettyBytes(long long bytes, bool si, int dp)
 		{
 			int unit = si ? 1000 : 1024;
 			if (bytes < unit) return std::to_string(bytes) + (si ? "B" : "iB");
@@ -375,6 +374,34 @@ namespace pr
 			int len = _snprintf_s(buf, sizeof(buf), fmt, pretty_size, prefix, si?"B":"iB");
 			if (len < 0 || len >= sizeof(buf)) throw std::exception("PrettySize failed");
 			return std::string(buf, len);
+		}
+
+		// Convert a number into a 'pretty' number
+		// e.g. 1.234e10 = 12,340,000,000
+		// 'num' should be a number in base units
+		// 'unit' is the power of 10 to round to
+		// 'dp' is the number of decimal places to write
+		// 'sep' is the separator character to use
+		inline std::string PrettyNumber(double num, long decade, int dp, char sep = ',')
+		{
+			double unit = ::pow(10,decade);
+			double pretty_size = num / unit;
+
+			char fmt[32];
+			if (_snprintf_s(fmt, sizeof(fmt), "%%1.%df", dp) < 0)
+				throw std::exception("PrettyNumber failed");
+
+			char buf[128];
+			int len = _snprintf_s(buf, sizeof(buf), fmt, pretty_size);
+			if (len < 0 || len >= sizeof(buf)) throw std::exception("PrettyNumber failed");
+
+			std::string str = std::string(buf, len);
+			if (sep != 0)
+			{
+				for (int i = int(str.size() - dp - 1); (i -= 3) > 0;)
+					str.insert(i, 1, sep);
+			}
+			return str;
 		}
 	}
 }
@@ -526,20 +553,26 @@ namespace pr
 				PR_CHECK(ll      ,true);
 			}
 			{//Pretty size
-				auto pretty = [](long long bytes){ return PrettySize(bytes, true, 1) + " " + PrettySize(bytes, false, 1); };
-				PR_CHECK(      "0B 0iB"      , pretty(0));
-				PR_CHECK(     "27B 27iB"     , pretty(27));
-				PR_CHECK(    "999B 999iB"    , pretty(999));
-				PR_CHECK(   "1.0KB 1000iB"   , pretty(1000));
-				PR_CHECK(   "1.0KB 1023iB"   , pretty(1023));
-				PR_CHECK(   "1.0KB 1.0KiB"   , pretty(1024));
-				PR_CHECK(   "1.7KB 1.7KiB"   , pretty(1728));
-				PR_CHECK( "110.6KB 108.0KiB" , pretty(110592));
-				PR_CHECK(   "7.1MB 6.8MiB"   , pretty(7077888));
-				PR_CHECK( "453.0MB 432.0MiB" , pretty(452984832));
-				PR_CHECK(  "29.0GB 27.0GiB"  , pretty(28991029248));
-				PR_CHECK(   "1.9TB 1.7TiB"   , pretty(1855425871872));
-				PR_CHECK(   "9.2EB 8.0EiB"   , pretty(9223372036854775807));
+				auto pretty = [](long long bytes){ return PrettyBytes(bytes, true, 1) + " " + PrettyBytes(bytes, false, 1); };
+				PR_CHECK(pretty(0)                   ,      "0B 0iB"      );
+				PR_CHECK(pretty(27)                  ,     "27B 27iB"     );
+				PR_CHECK(pretty(999)                 ,    "999B 999iB"    );
+				PR_CHECK(pretty(1000)                ,   "1.0KB 1000iB"   );
+				PR_CHECK(pretty(1023)                ,   "1.0KB 1023iB"   );
+				PR_CHECK(pretty(1024)                ,   "1.0KB 1.0KiB"   );
+				PR_CHECK(pretty(1728)                ,   "1.7KB 1.7KiB"   );
+				PR_CHECK(pretty(110592)              , "110.6KB 108.0KiB" );
+				PR_CHECK(pretty(7077888)             ,   "7.1MB 6.8MiB"   );
+				PR_CHECK(pretty(452984832)           , "453.0MB 432.0MiB" );
+				PR_CHECK(pretty(28991029248)         ,  "29.0GB 27.0GiB"  );
+				PR_CHECK(pretty(1855425871872)       ,   "1.9TB 1.7TiB"   );
+				PR_CHECK(pretty(9223372036854775807) ,   "9.2EB 8.0EiB"   );
+			}
+			{//Pretty Number
+				PR_CHECK(PrettyNumber(1.234e10, 6, 3) , "12,340.000");
+				PR_CHECK(PrettyNumber(1.234e10, 3, 3) , "12,340,000.000");
+				PR_CHECK(PrettyNumber(1.234e-10, -3, 3) , "0.000");
+				PR_CHECK(PrettyNumber(1.234e-10, -12, 3) , "123.400");
 			}
 		}
 	}

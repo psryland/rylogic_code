@@ -36,8 +36,8 @@ namespace ele
 		:m_consts(consts)
 	{
 		// Generate graph data
-		for (int i = 0; i != consts.m_element_count; ++i)
-		for (int j = 0; j != consts.m_element_count; ++j)
+		for (size_t i = 0; i != consts.m_element_count; ++i)
+		for (size_t j = 0; j != consts.m_element_count; ++j)
 		{
 			Element ei(i+1, m_consts);
 			Element ej(j+1, m_consts);

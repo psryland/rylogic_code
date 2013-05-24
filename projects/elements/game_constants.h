@@ -13,6 +13,9 @@ namespace ele
 		// The starting time till the star goes nova
 		pr::seconds_t m_start_time_till_nova;
 
+		// The error margin for the time till the star goes nova
+		pr::seconds_t m_start_time_till_nova_error_margin;
+
 		// The countdown till nova is a large value but we want each game to last a
 		// fixed time. This scales game seconds to make the nova time = max_game_time
 		double m_time_scaler;
@@ -74,8 +77,17 @@ namespace ele
 		// The ships volume is this much bigger than it's contents
 		double m_ship_volume_scaler;
 
+		// A limit on the available resources, to be divided amoung the research efforts
+		size_t m_total_man_power;
+
 		// How quickly the ship can be built
 		pr::metres³_p_day_t m_ship_construction_rate;
+
+		// The total man days needed to discover the star mass
+		man_days_t m_star_mass_discovery_effort;
+
+		// The total man days needed to discover the star distance
+		man_days_t m_star_distance_discovery_effort;
 
 		GameConstants(int seed, bool real_chemistry);
 	};

@@ -18,16 +18,20 @@ namespace pr
 	{
 		enum EMaxUnit { Years, Days, Hours, Minutes, Seconds };
 
+		// Ignores leap years
+		static double const seconds_p_min  = 60.0;
+		static double const seconds_p_hour = 60.0 * seconds_p_min;
+		static double const seconds_p_day  = 24.0 * seconds_p_hour;
+		static double const seconds_p_year = 365.0 * seconds_p_day;
+
+		// Conversion helpers
+		inline double DaysToSeconds(double days) { return days * seconds_p_day; }
+		inline double SecondsToDays(double secs) { return secs / seconds_p_day; }
+
 		// Convert a duration into a count down
 		// XXX days XX hours XX mins XX secs
 		inline std::string ToCountdownString(double seconds, EMaxUnit max_unit)
 		{
-			// Ignore leap years
-			double const seconds_p_min  = 60.0;
-			double const seconds_p_hour = 60.0 * seconds_p_min;
-			double const seconds_p_day  = 24.0 * seconds_p_hour;
-			double const seconds_p_year = 365.0 * seconds_p_day;
-			
 			std::string s;
 			switch (max_unit)
 			{

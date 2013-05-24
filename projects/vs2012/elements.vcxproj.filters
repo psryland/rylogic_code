@@ -88,6 +88,18 @@
     <ClInclude Include="..\elements\reaction.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\elements\view_intro.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\iview.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\view_home.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\research_effort.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\elements\main.cpp">
@@ -127,6 +139,15 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\elements\reaction.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\view_intro.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\view_home.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\research_effort.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

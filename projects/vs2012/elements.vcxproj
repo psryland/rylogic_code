@@ -81,7 +81,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x0500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
@@ -95,7 +94,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x0500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
@@ -108,7 +106,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -126,7 +123,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -153,9 +149,13 @@
     <ClInclude Include="..\elements\bond.h" />
     <ClInclude Include="..\elements\console_ui.h" />
     <ClInclude Include="..\elements\element.h" />
+    <ClInclude Include="..\elements\iview.h" />
     <ClInclude Include="..\elements\lab.h" />
     <ClInclude Include="..\elements\reaction.h" />
+    <ClInclude Include="..\elements\research_effort.h" />
     <ClInclude Include="..\elements\stockpile.h" />
+    <ClInclude Include="..\elements\view_home.h" />
+    <ClInclude Include="..\elements\view_intro.h" />
     <ClInclude Include="..\elements\world_state.h" />
     <ClInclude Include="..\elements\material.h" />
     <ClInclude Include="..\elements\forward.h" />
@@ -170,6 +170,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Level3</WarningLevel>
     </ClCompile>
     <ClCompile Include="..\elements\console_ui.cpp" />
     <ClCompile Include="..\elements\element.cpp" />
@@ -179,6 +183,7 @@
     <ClCompile Include="..\elements\game_constants.cpp" />
     <ClCompile Include="..\elements\material.cpp" />
     <ClCompile Include="..\elements\reaction.cpp" />
+    <ClCompile Include="..\elements\research_effort.cpp" />
     <ClCompile Include="..\elements\ship.cpp" />
     <ClCompile Include="..\elements\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -187,6 +192,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\elements\stockpile.cpp" />
+    <ClCompile Include="..\elements\view_home.cpp" />
+    <ClCompile Include="..\elements\view_intro.cpp" />
     <ClCompile Include="..\elements\world_state.cpp" />
   </ItemGroup>
   <ItemGroup>

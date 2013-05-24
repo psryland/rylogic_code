@@ -19,7 +19,7 @@ namespace ele
 		Bond(int perm = 0, double strength = 0, size_t count = 0)
 			:m_perm(perm)
 			,m_strength(strength)
-			,m_count()
+			,m_count(count)
 		{}
 	};
 

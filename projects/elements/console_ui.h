@@ -1,30 +1,21 @@
 #pragma once
 
 #include "elements/forward.h"
+#include "elements/iview.h"
 
 namespace ele
 {
 	struct ConsoleUI
 	{
-		GameInstance* m_inst;
+		GameInstance& m_inst;
 		pr::Console m_cons;
 		pr::SimMsgLoop m_loop;
-		std::string m_input;
+		std::shared_ptr<IView> m_view;
 
 		ConsoleUI(GameInstance& inst);
-
 		void Run(double elapsed);
 
-		void Input();
-
-		void Render();
-		void RenderHomeView();
-		void RenderShipView();
-		void RenderLabView();
-		void RenderLaunchView();
-		void RenderWorldState();
-		void RenderMaterialInventory();
-		void RenderShipSpec();
-		void RenderMenu();
+	private:
+		PR_NO_COPY(ConsoleUI);
 	};
 }

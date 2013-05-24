@@ -23,17 +23,23 @@
 
 namespace ele
 {
+	typedef double man_days_t;
+	typedef double man_power_t;
+
 	struct GameInstance;
 	struct GameConstants;
 	struct Element;
 	struct Material;
 	struct Ship;
+	struct ResearchEffort;
 
 	#define PR_ENUM(x)\
+		x(Intro)\
 		x(Home)\
 		x(ShipDesign)\
 		x(MaterialLab)\
-		x(Launch)
+		x(Launch)\
+		x(SameView)
 	PR_DEFINE_ENUM1(EView, PR_ENUM);
 	#undef PR_ENUM
 

@@ -49,6 +49,7 @@ namespace ele
 		// volume = (2 * tau * r³)/3
 		// r = ³root((3*volume)/(2*tau))
 		pr::metres_t radius = cubert(1.5 * m_total_volume / pr::maths::tau);
+		(void)radius;
 
 		// Determine the mass of structural material needed and the total ship mass
 		m_structural_mass = (m_total_volume - contents_volume) * m_structure.Density();

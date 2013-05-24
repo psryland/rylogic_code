@@ -18,6 +18,7 @@ namespace ele
 		
 	void Stockpile::Step(pr::seconds_t elapsed)
 	{
+		(void)elapsed;
 	}
 }
 

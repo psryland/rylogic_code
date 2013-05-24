@@ -34,14 +34,15 @@ namespace ele
 	{
 		pr::Rnd rnd(seed);
 
-		m_max_game_duration      = 30 * 60 * 60; // 30 minutes
-		m_start_time_till_nova   = 365 * 24 * 60 * 60;
-		m_time_scaler            = m_start_time_till_nova / m_max_game_duration;
-		m_speed_of_light         = 2.99792458e8;
-		m_gravitational_constant = 6.6738e-11;
-		m_coulomb_constant       = 1;
-		m_proton_mass            = 1.67262178e-27;
-		m_zeffective_scaler      = 0.3;
+		m_max_game_duration                 = 30 * 60 * 60; // 30 minutes
+		m_start_time_till_nova              = 365 * 24 * 60 * 60;
+		m_start_time_till_nova_error_margin = 20 * 24 * 60 * 60;
+		m_time_scaler                       = m_start_time_till_nova / m_max_game_duration;
+		m_speed_of_light                    = 2.99792458e8;
+		m_gravitational_constant            = 6.6738e-11;
+		m_coulomb_constant                  = 1;
+		m_proton_mass                       = 1.67262178e-27;
+		m_zeffective_scaler                 = 0.3;
 
 		m_element_count = PR_COUNTOF(g_element_names);
 		m_element_name  = &g_element_names[0];
@@ -96,8 +97,17 @@ namespace ele
 		m_average_passenger_personal_space          = rnd.dbl2(2.0, 0.5);
 		m_average_passenger_required_systems_volume = rnd.dbl2(5.0, 1.0);
 
+		// The total number of people available to work
+		m_total_man_power = rnd.int2(10000, 0);
+
 		// The ship is roughly 10% bigger than the volume of it's contents
 		m_ship_volume_scaler = rnd.dbl2(1.11, 0.1);
 		m_ship_construction_rate = rnd.dbl2(10.0, 2.0);
+
+		// The total man days needed to discover the star mass
+		m_star_mass_discovery_effort = rnd.dbl2(1000, 0.0);
+
+		// The rate at which the star distance can be discovered proportional to the main hours assigned
+		m_star_distance_discovery_effort = rnd.dbl2(1000, 0.0);
 	}
 }

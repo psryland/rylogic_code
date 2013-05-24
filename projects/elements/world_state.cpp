@@ -7,6 +7,8 @@ namespace ele
 	WorldState::WorldState(GameConstants const& consts)
 		:m_consts(consts)
 		,m_time_till_nova(consts.m_start_time_till_nova)
+		,m_star_distance_research(consts.m_star_distance_discovery_effort, 0.0, consts)
+		,m_star_mass_research(consts.m_star_mass_discovery_effort, 0.0, consts)
 		,m_required_acceleration(0)
 	{}
 

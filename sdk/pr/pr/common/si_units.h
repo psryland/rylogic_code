@@ -8,6 +8,8 @@
 
 namespace pr
 {
+	typedef double scaler_t;                       // A dimensionless unit used to scale
+	typedef double fraction_t;                     // A value between 0 and 1
 	typedef double seconds_t;
 	typedef double kilograms_t;
 	typedef double kilograms_p_sec_t;
@@ -22,7 +24,6 @@ namespace pr
 	typedef double joules_t;
 	typedef double joules_p_metres³_t;
 	typedef double joules_p_kilogram_t;
-	typedef double field_strength_t;
 	typedef double metres³_p_kilogram_p_sec²_t;
 }
 

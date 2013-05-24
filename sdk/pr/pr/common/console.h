@@ -15,6 +15,7 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
+#include <deque>
 #include <windows.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -25,6 +26,7 @@
 #include <tchar.h>
 #include "pr/macros/enum.h"
 #include "pr/str/prstring.h"
+#include "pr/common/event.h"
 
 namespace pr
 {
@@ -60,22 +62,22 @@ namespace pr
 		#undef PR_ENUM
 
 		#define PR_ENUM(x)\
-			x(Black       , = 0                     )\
-			x(Blue        , = 1 << 0                )\
-			x(Green       , = 1 << 1                )\
-			x(Red         , = 1 << 2                )\
-			x(Cyan        , = Blue|Green            )\
-			x(Purple      , = Blue|Red              )\
-			x(Yellow      , = Green|Red             )\
-			x(Grey        , = Blue|Green|Red        )\
-			x(LightBlue   , = (1<<3)|Blue           )\
-			x(LightGreen  , = (1<<3)|Green          )\
-			x(LightRed    , = (1<<3)|Red            )\
-			x(LightCyan   , = (1<<3)|Blue|Green     )\
-			x(LightPurple , = (1<<3)|Blue|Red       )\
-			x(LightYellow , = (1<<3)|Green|Red      )\
-			x(White       , = (1<<3)|Red|Green|Blue )\
-			x(Default     , = 1 << 16               )
+			x(Black        , = 0                     )\
+			x(Blue         , = 1 << 0                )\
+			x(Green        , = 1 << 1                )\
+			x(Red          , = 1 << 2                )\
+			x(Cyan         , = Blue|Green            )\
+			x(Purple       , = Blue|Red              )\
+			x(Yellow       , = Green|Red             )\
+			x(Grey         , = Blue|Green|Red        )\
+			x(BrightBlue   , = (1<<3)|Blue           )\
+			x(BrightGreen  , = (1<<3)|Green          )\
+			x(BrightRed    , = (1<<3)|Red            )\
+			x(BrightCyan   , = (1<<3)|Blue|Green     )\
+			x(BrightPurple , = (1<<3)|Blue|Red       )\
+			x(BrightYellow , = (1<<3)|Green|Red      )\
+			x(White        , = (1<<3)|Red|Green|Blue )\
+			x(Default      , = 1 << 16               )
 		PR_DEFINE_ENUM2_FLAGS(EColour, PR_ENUM);
 		#undef PR_ENUM
 
@@ -107,6 +109,7 @@ namespace pr
 			Colours(EColour fore, EColour back) :m_fore(fore) ,m_back(back) {}
 			static Colours From(WORD colours) { return Colours(colours & 0xf, (colours >> 4) & 0xf); }
 			operator WORD() const { return WORD((m_back << 4) | m_fore); }
+			bool operator == (Colours const& rhs) const { return m_fore == rhs.m_fore && m_back == rhs.m_back; }
 			Colours Merge(Colours rhs) const
 			{
 				return Colours(
@@ -182,6 +185,28 @@ namespace pr
 			void Border(EColour fore)               { Border(fore, m_colours.m_back); }
 			void Border(EColour fore, EColour back) { m_border.m_fore = fore; m_border.m_back = back; }
 
+			// True if the pad has a border
+			bool HasBorder() const { return !(m_border == Colours()); }
+
+			// True if the pad has a title
+			bool HasTitle() const { return !m_title.empty(); }
+
+			// Get/Set the size of the pad
+			SIZE Size() const
+			{
+				SIZE sz = {m_width, m_height};
+				if (HasBorder()) { sz.cx += 2; sz.cy += 2; }
+				else if (HasTitle()) { sz.cy += 1; }
+				return sz;
+			}
+			void Size(SIZE sz)
+			{
+				if (HasBorder()) { sz.cx -= 2; sz.cy -= 2; }
+				else if (HasTitle()) { sz.cy -= 1; }
+				m_width = sz.cx;
+				m_height = sz.cy;
+			}
+
 			// Stream anything to the pad
 			template <typename T> Pad& operator << (T t)
 			{
@@ -213,6 +238,11 @@ namespace pr
 				m_items.push_back(new Colours(c));
 				return *this;
 			}
+			Pad& operator << (EColour::Enum_ c)
+			{
+				m_items.push_back(new Colours(c));
+				return *this;
+			}
 
 		private:
 			Pad(Pad const&);
@@ -238,6 +268,9 @@ namespace pr
 			bool    m_opened;
 			bool    m_console_created;
 			bool    m_double_buffered;
+			std::string m_input;
+			std::deque<KEY_EVENT_RECORD> m_fifo_keyboard;
+			std::deque<MOUSE_EVENT_RECORD> m_fifo_mouse;
 
 			friend struct CursorScope;
 			friend struct ColourScope;
@@ -267,7 +300,29 @@ namespace pr
 				static void read(KEY_EVENT_RECORD evt, wchar_t& ch) { ch = evt.uChar.UnicodeChar; }
 			};
 
+			// Translate events in the keyboard fifo
+			// Generate events on complete lines.
+			// This allows affectively asynchronous std::cin reads which normally isn't possible (ie. cin.readsome() doesn't work)
+			void TranslateKeyEvents()
+			{
+				//OutputDebugStringA(pr::FmtS("%d - %d - %d (%d) vk:%d scan:%d\n", k.bKeyDown, k.dwControlKeyState, k.uChar.AsciiChar, k.wRepeatCount, k.wVirtualKeyCode, k.wVirtualScanCode));
+				//1 - 32 - 8 (1) vk:8 scan:14
+				//0 - 32 - 8 (1) vk:8 scan:14
+				//1 - 32 - 8 (1) vk:8 scan:14
+				//0 - 32 - 8 (1) vk:8 scan:14
+				//1 - 32 - 113 (1) vk:81 scan:16
+				//0 - 32 - 113 (1) vk:81 scan:16
+				//1 - 32 - 119 (1) vk:87 scan:17
+				//0 - 32 - 119 (1) vk:87 scan:17
+				//1 - 32 - 100 (1) vk:68 scan:32
+				//0 - 32 - 100 (1) vk:68 scan:32
 
+			}
+			void TranslateMouseEvents()
+			{}
+			// Create separate FIFO buffers for the event types; key, mouse, etc..
+			// Create a pump input function that reads from the input events adding to the appropriate buffer
+			// Write methods for getting from a FIFO buffer that handle
 
 		public:
 			Console()
@@ -283,6 +338,7 @@ namespace pr
 				,m_opened(false)
 				,m_console_created(false)
 				,m_double_buffered(false)
+				,m_input()
 			{
 				// I can't figure this console redirecting stuff out. It seems sometimes you need
 				// to call 'RedirectIOToConsole()', other times that doesn't work but 'ReopenStdio()'
@@ -590,11 +646,42 @@ namespace pr
 				FlushConsoleInputBuffer(m_stdin);
 			}
 
+			// Multicast delegate for receiving notification of a change to the keyboard input
+			pr::event<void(std::string const&)> TextInputChanged;
 
-			// Create separate FIFO buffers for the event types; key, mouse, etc..
-			// Create a pump input function that reads from the input events adding to the appropriate buffer
-			// Write methods for getting from a FIFO buffer that handle
+			// Call this method to consume input events on stdin
+			void PumpInput()
+			{
+				const size_t max_fifo_size = 1024;
 
+				for(;WaitForEvent(EEvent::Any, 0);)
+				{
+					Event in[128]; DWORD read;
+					Throw(ReadConsoleInputW(m_stdin, in, 128, &read), "Failed to read a console input events");
+					for (DWORD i = 0; i != read; ++i)
+					{
+						auto& k = in[i].Event.KeyEvent;
+						switch (in[i].EventType)
+						{
+						default: throw std::exception("Unknown input event type");
+						case EEvent::Key:
+							if (m_fifo_keyboard.size() < max_fifo_size)
+								m_fifo_keyboard.push_back(in[i].Event.KeyEvent);
+							break;
+						case EEvent::Mouse:
+							if (m_fifo_mouse.size() < max_fifo_size)
+								m_fifo_mouse.push_back(in[i].Event.MouseEvent);
+							break;
+						case EEvent::Size:
+							break;
+						case EEvent::Menu:
+							break;
+						case EEvent::Focus:
+							break;
+						}
+					}
+				}
+			}
 
 			// Return the number of events in the input buffer
 			DWORD InputEventCount() const
@@ -620,20 +707,6 @@ namespace pr
 				Event in; DWORD read;
 				Throw(ReadConsoleInputW(m_stdin, &in, 1, &read), "Failed to read a console input event");
 				return in;
-			}
-
-			// Comsume input events until one that passes 'pred' is found.
-			// Returns true if an event is found, false if the input buffer empties first
-			template <typename Pred> bool SeekEvent(Pred pred) const
-			{
-				for (;InputEventCount() != 0; ReadInputEvent())
-					if (pred(PeekInputEvent()))
-						return true;
-				return false;
-			}
-			bool SeekKeyEvent() const
-			{
-				return SeekEvent([](Event e){ return (e.EventType & EEvent::Key) != 0; });
 			}
 
 			// Wait for a specific event to be next in the console input buffer
@@ -663,22 +736,42 @@ namespace pr
 			}
 
 			// Consume input events upto and including the next 'key' event
+			// Calls 'func' on the key event and if true is returned, returns true. Returns false on timeout
+			template <typename Func> bool ReadKeyEvent(Func func, DWORD wait_ms = INFINITE) const
+			{
+				for(;WaitForEvent(EEvent::Key, wait_ms);)
+				{
+					auto evt = ReadInputEvent().Event.KeyEvent;
+					if (func(evt))
+						return true;
+				}
+				return false;
+			}
+
+			// Consume input events upto and including the next 'key' event
+			// Returns the VK_KEY code for the input keyboard event
+			// Returns true if a key was read, false on timeout
+			bool ReadKey(int& vk, DWORD wait_ms = INFINITE) const
+			{
+				return ReadKeyEvent([&](KEY_EVENT_RECORD evt)
+					{
+						if (!evt.bKeyDown) return false;
+						vk = evt.wVirtualKeyCode;
+						return true;
+					}, wait_ms);
+			}
+
+			// Consume input events upto and including the next 'key' event
 			// Returns true if a char was read from the input buffer, false if timed out
 			// 'wait_ms' is the length of time to wait for a key event
-			template <typename Char> bool ReadChar(Char& ch, DWORD wait_ms = 0) const
+			template <typename Char> bool ReadChar(Char& ch, DWORD wait_ms = INFINITE) const
 			{
-				for(;;)
-				{
-					if (SeekKeyEvent())
+				return ReadKeyEvent([&](KEY_EVENT_RECORD evt)
 					{
+						if (!evt.bKeyDown) return false;
 						traits::read(ReadInputEvent().Event.KeyEvent, ch);
 						return true;
-					}
-					if (!WaitForEvent(EEvent::Key, wait_ms))
-					{
-						return false;
-					}
-				}
+					}, wait_ms);
 			}
 
 			// Read charactors from the console that pass 'pred'
@@ -711,60 +804,59 @@ namespace pr
 				return Read([](Char ch){ return (ch >= Char('0') && ch <= Char('9')) || ch == Char('.') || ch == Char('e') || ch == Char('E') || ch == Char('-') || ch == Char('+'); }, wait_ms);
 			}
 
-			//// Accumulates keyboard input on repeated calls until a complete line has been
-			//// entered or until escape is pressed while 'input' is empty.
-			//// Returns true if 'input' contains a complete line or escape was pressed, false otherwise.
-			//template <typename Str> bool AccumulateLine(Str& input, bool& escape)
-			//{
-			//	typedef Str::value_type Char;
-			//	escape = false;
-			//	for (;;)
-			//	{
-			//		if (!SeekKeyEvent()) return false;
-			//		auto evt = ReadInputEvent();
-			//		Coord pos = Cursor();
+			// Accumulates keyboard input on repeated calls until a complete line has been
+			// entered or until escape is pressed while 'input' is empty.
+			// Returns true if 'input' contains a complete line or escape was pressed, false otherwise.
+			template <typename Str> bool AccumulateLine(Str& input, bool& escape)
+			{
+				typedef Str::value_type Char;
+				escape = false;
+				for (;;)
+				{
+					if (!WaitForEvent(EEvent::Key, 0)) return false;
+					auto evt = ReadInputEvent();
 
-			//		// Enter terminates the line of user input
-			//		if (evt.Event.KeyEvent.wVirtualKeyCode == VK_RETURN)
-			//		{
-			//			return true;
-			//		}
-			//		if (evt.Event.KeyEvent.wVirtualKeyCode == VK_ESCAPE)
-			//		{
-			//			// Escape, when 'input' is not empty, clears the user input
-			//			if (!empty(input))
-			//			{
-			//				// Reset the input and erase the echoed characters
-			//				WORD w = std::min(WORD(size(input)), WORD(pos.X));
-			//				Clear(pos.X -= w, pos.Y, w, 1);
-			//				Cursor(pos);
-			//				resize(input, 0);
-			//				return false;
-			//			}
-			//			escape = true;
-			//			return true;
-			//		}
-			//		if (evt.Event.KeyEvent.wVirtualKeyCode == VK_DELETE)
-			//		{
-			//			WORD w = std::min(WORD(size(input)), evt.Event.KeyEvent.wRepeatCount);
-			//			Clear(pos.X -= w, pos.Y, w, 1);
-			//			Cursor(pos);
-			//			resize(input, size(input) - w);
-			//			return false;
-			//		}
-			//		if (evt.Event.KeyEvent.wVirtualKeyCode == VK_TAB)
-			//		{
-			//			append(input, evt.Event.KeyEvent.wRepeatCount, Char('\t'));
-			//			return false;
-			//		}
-			//		
-			//		Char ch;
-			//		traits::read(evt.Event.KeyEvent, ch);
-			//		if (ch != 0)
-			//			append(input, evt.Event.KeyEvent.wRepeatCount, ch);
-			//		return false;
-			//	}
-			//}
+					// Enter terminates the line of user input
+					if (evt.Event.KeyEvent.wVirtualKeyCode == VK_RETURN)
+					{
+						return true;
+					}
+					if (evt.Event.KeyEvent.wVirtualKeyCode == VK_ESCAPE)
+					{
+						// Escape, when 'input' is not empty, clears the user input
+						if (!empty(input))
+						{
+							// Reset the input and erase the echoed characters
+							WORD w = std::min(WORD(size(input)), WORD(pos.X));
+							Clear(pos.X -= w, pos.Y, w, 1);
+							Cursor(pos);
+							resize(input, 0);
+							return false;
+						}
+						escape = true;
+						return true;
+					}
+					if (evt.Event.KeyEvent.wVirtualKeyCode == VK_DELETE)
+					{
+						WORD w = std::min(WORD(size(input)), evt.Event.KeyEvent.wRepeatCount);
+						Clear(pos.X -= w, pos.Y, w, 1);
+						Cursor(pos);
+						resize(input, size(input) - w);
+						return false;
+					}
+					if (evt.Event.KeyEvent.wVirtualKeyCode == VK_TAB)
+					{
+						append(input, evt.Event.KeyEvent.wRepeatCount, Char('\t'));
+						return false;
+					}
+					
+					Char ch;
+					traits::read(evt.Event.KeyEvent, ch);
+					if (ch != 0)
+						append(input, evt.Event.KeyEvent.wRepeatCount, ch);
+					return false;
+				}
+			}
 
 			// Write text to the output window
 			template <typename Char> void Write(Char const* str, size_t ofs, size_t count)
@@ -843,30 +935,28 @@ namespace pr
 				// Get the basic area of the pad
 				int w = pad.m_width;
 				int h = pad.m_height;
-				bool has_border = pad.m_border != Colours();
-				bool has_title  = pad.m_title.empty() == false;
 
-				if (has_border)     { h += 2; w += 2; }
-				else if (has_title) { h += 1; }
+				if (pad.HasBorder())     { h += 2; w += 2; }
+				else if (pad.HasTitle()) { h += 1; }
 				Coord loc = CursorLocation(anchor, w, h, dx, dy);
 
-				if (has_border)
+				if (pad.HasBorder())
 				{
 					Colour(base_colour.Merge(pad.m_border));
 					WriteBox(anchor, w, h, dx, dy);
 				}
-				if (has_title)
+				if (pad.HasTitle())
 				{
 					Colour(base_colour.Merge(pad.m_title_colour));
-					int xofs;
+					int xofs = 0;
 					if (pad.m_title_anchor & EAnchor::Left   ) xofs = 0;
 					if (pad.m_title_anchor & EAnchor::HCentre) xofs = int((w - pad.m_title.size()) / 2);
 					if (pad.m_title_anchor & EAnchor::Right  ) xofs = int(w - pad.m_title.size());
 					Write(loc.X + xofs, loc.Y, pad.m_title.c_str());
 				}
 
-				if (has_border)     { h -= 2; w -= 2; loc.X += 1; loc.Y += 1; }
-				else if (has_title) { h -= 1; loc.Y += 1; }
+				if (pad.HasBorder())     { h -= 2; w -= 2; loc.X += 1; loc.Y += 1; }
+				else if (pad.HasTitle()) { h -= 1; loc.Y += 1; }
 
 				// Clear the pad background
 				Colours pad_colour = base_colour.Merge(pad.m_colours);
@@ -899,16 +989,21 @@ namespace pr
 			// Draw a box with size sx,sy
 			void WriteBox(EAnchor anchor, int w, int h, int dx = 0, int dy = 0)
 			{
+				auto c = Colour();
 				DWORD chars_written;
 				Coord loc = CursorLocation(anchor, w, h, dx, dy);
+				FillConsoleOutputAttribute(*m_back, c, w, Coord(loc.X  ,loc.Y), &chars_written);
 				FillConsoleOutputCharacterW(*m_back, L'╔', 1  , Coord(loc.X    ,loc.Y), &chars_written);
 				FillConsoleOutputCharacterW(*m_back, L'═', w-2, Coord(loc.X+1  ,loc.Y), &chars_written);
 				FillConsoleOutputCharacterW(*m_back, L'╗', 1  , Coord(loc.X+w-1,loc.Y), &chars_written);
 				for (int y = loc.Y+1, yend = y+h-2; y != yend; ++y)
 				{
+					FillConsoleOutputAttribute(*m_back, c, 1, Coord(loc.X    ,y), &chars_written);
+					FillConsoleOutputAttribute(*m_back, c, 1, Coord(loc.X+w-1,y), &chars_written);
 					FillConsoleOutputCharacterW(*m_back, L'║', 1, Coord(loc.X    ,y), &chars_written);
 					FillConsoleOutputCharacterW(*m_back, L'║', 1, Coord(loc.X+w-1,y), &chars_written);
 				}
+				FillConsoleOutputAttribute(*m_back, c, w, Coord(loc.X  ,loc.Y+h-1), &chars_written);
 				FillConsoleOutputCharacterW(*m_back, L'╚', 1  , Coord(loc.X    ,loc.Y+h-1), &chars_written);
 				FillConsoleOutputCharacterW(*m_back, L'═', w-2, Coord(loc.X+1  ,loc.Y+h-1), &chars_written);
 				FillConsoleOutputCharacterW(*m_back, L'╝', 1  , Coord(loc.X+w-1,loc.Y+h-1), &chars_written);
@@ -948,7 +1043,7 @@ namespace pr
 			}
 
 			// Returns the rectangular area needed to contain 'str'
-			template <typename Char> void MeasureString(Char const* str, int& w, int& h)
+			template <typename Char> static void MeasureString(Char const* str, int& w, int& h)
 			{
 				int x = 0; w = 0; h = 0;
 				for (Char const* p = str; *p; ++p)

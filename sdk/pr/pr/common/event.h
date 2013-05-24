@@ -3,8 +3,8 @@
 //  Copyright © Oct 2009 Paul Ryland
 //******************************************
 
-#ifndef PR_EVENT_H
-#define PR_EVENT_H
+#ifndef PR_COMMON_EVENT_H
+#define PR_COMMON_EVENT_H
 
 #include <vector>
 #include <algorithm>
