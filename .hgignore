@@ -17,6 +17,7 @@ syntax: glob
 *.user
 *.orig
 *.userprefs
+*.vssettings
 *ReSharper*
 dlang/2.05x
 dlang/2.062

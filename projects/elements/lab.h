@@ -35,5 +35,5 @@ namespace ele
 	// The atoms of covalent materials are bound tightly to each other in stable molecules, but those molecules are generally not very
 	// strongly attracted to other molecules in the material. On the other hand, the atoms (ions) in ionic materials show strong attractions
 	// to other ions in their vicinity. This generally leads to low melting points for covalent solids, and high melting points for ionic solids.
-	bool IsIonicBond(Element elem1, Element elem2);
+	double BondIonicity(Element elem1, Element elem2);
 }

@@ -2,6 +2,7 @@
 
 #include "elements/forward.h"
 #include "elements/element.h"
+#include "elements/bond.h"
 
 namespace ele
 {
@@ -13,8 +14,9 @@ namespace ele
 		Element m_elem1;
 		Element m_elem2;
 
-		// True if this is an ionic bond otherwise covalent.
-		bool m_ionic;
+		// A measure of how ionic the bond is.
+		// Ionic bonds tend to form strong macro structures (e.g. crystal lattices)
+		double m_ionicity;
 
 		size_t m_count1;
 		size_t m_count2;
@@ -26,7 +28,10 @@ namespace ele
 		pr::hash::HashValue m_hash;
 
 		// The configuration of the material
-		size_t m_bonds[EPerm2::NumberOf];
+		Bond m_bonds[EPerm2::NumberOf];
+
+		// True if this is a stable material, false otherwise
+		bool m_stable;
 
 		//// The atomic weight of the material (derived from the elements)
 		//size_t AtomicWeight() const;

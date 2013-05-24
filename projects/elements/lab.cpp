@@ -35,12 +35,14 @@ namespace ele
 	Lab::Lab(GameConstants const& consts)
 		:m_consts(consts)
 	{
-		Element e15(15, m_consts);
-		Element e9(9, m_consts);
-		Element e3(3, m_consts);
-		Element e11(11, m_consts);
-		Material m1(e15,e9,m_consts);
-		Material m2(e3,e11,m_consts);
+		// Generate graph data
+		for (int i = 0; i != consts.m_element_count; ++i)
+		for (int j = 0; j != consts.m_element_count; ++j)
+		{
+			Element ei(i+1, m_consts);
+			Element ej(j+1, m_consts);
+			Material mat(ei,ej,m_consts);
+		}
 	}
 
 	// Generate the name of a material formed from the given elements
@@ -53,28 +55,36 @@ namespace ele
 
 		auto IsVowel = [](char x){ return x == 'a' || x == 'e' || x == 'i' || x == 'o' || x == 'u' || x == 'y'; };
 
-		auto& e1 = elem1.m_free_electrons < elem2.m_free_electrons ? elem1 : elem2;
-		auto& e2 = elem1.m_free_electrons < elem2.m_free_electrons ? elem2 : elem1;
-		auto& c1 = elem1.m_free_electrons < elem2.m_free_electrons ? count1 : count2;
-		auto& c2 = elem1.m_free_electrons < elem2.m_free_electrons ? count2 : count1;
+		bool flip = elem1.m_atomic_number == 1 || elem2.m_valence_electrons < elem1.m_valence_electrons;
+		auto& e1 = flip ? elem2 : elem1;
+		auto& e2 = flip ? elem1 : elem2;
+		auto& c1 = flip ? count2 : count1;
+		auto& c2 = flip ? count1 : count2;
 
 		std::string name;
-		if (c1 > 1)
+		if (elem1.m_atomic_number == elem2.m_atomic_number)
 		{
-			name.append(num[c1]);
-			if (IsVowel(e1.m_name->m_fullname[0]) && c1 > 3)
-				name.resize(name.size() - 1);
+			name.append(e1.m_name->m_fullname);
 		}
-		name.append(e1.m_name->m_fullname);
-		name.append(" ");
-		if (c2 > 1 || !e1.IsMetal())
+		else
 		{
-			name.append(num[c2]);
-			if (IsVowel(e2.m_name->m_sufix_form[0]) && (c2 != 2 || c2 != 3))
-				name.resize(name.size() - 1);
+			if (c1 > 1)
+			{
+				name.append(num[c1]);
+				if (IsVowel(e1.m_name->m_fullname[0]) && c1 > 3)
+					name.resize(name.size() - 1);
+			}
+			name.append(e1.m_name->m_fullname);
+			name.append(" ");
+			if (c2 > 1 && !e1.IsMetal())
+			{
+				name.append(num[c2]);
+				if (IsVowel(e2.m_name->m_sufix_form[0]) && (c2 != 2 || c2 != 3))
+					name.resize(name.size() - 1);
+			}
+			name.append(e2.m_name->m_sufix_form);
+			name.append("ide");
 		}
-		name.append(e2.m_name->m_sufix_form);
-		name.append("ide");
 		return name;
 	}
 
@@ -91,11 +101,11 @@ namespace ele
 		// The proton charges are the effective (Zeff) positive charge, the electron charge is
 		// the charge of the maximum number of electrons that can be borrowed when trying to fill the
 		// the outer orbital.
-		double P1 = +1.0 * elem1.m_free_electrons;
-		double P2 = +1.0 * elem2.m_free_electrons;
-		double E1 = -1.0 * elem1.m_free_electrons + std::min(elem1.m_free_holes, elem2.m_free_electrons);
-		double E2 = -1.0 * elem2.m_free_electrons + std::min(elem2.m_free_holes, elem1.m_free_electrons);
-		double r  = consts.m_orbital_radius[elem1.m_period] + consts.m_orbital_radius[elem2.m_period];
+		double P1 = +1.0 * elem1.m_valence_electrons;
+		double P2 = +1.0 * elem2.m_valence_electrons;
+		double E1 = -1.0 * elem1.m_valence_electrons + std::min(elem1.m_valence_holes, elem2.m_valence_electrons);
+		double E2 = -1.0 * elem2.m_valence_electrons + std::min(elem2.m_valence_holes, elem1.m_valence_electrons);
+		double r  = consts.m_orbital_radius[elem1.m_period+1] + consts.m_orbital_radius[elem2.m_period+1];
 		
 		double strength = consts.m_coulomb_constant * (P1*E2 + P2*E1 + P1*P2 + E1*E2) / sqr(r);
 		return strength;
@@ -114,7 +124,6 @@ namespace ele
 	void BondStrengths(Material mat1, Material mat2, GameConstants const& consts, Bond (&bonds)[EPerm4::NumberOf])
 	{
 		using namespace EPerm4;
-
 		auto& a = mat1.m_elem1;
 		auto& b = mat1.m_elem2;
 		auto& c = mat2.m_elem1;
@@ -132,18 +141,24 @@ namespace ele
 		bonds[DD] = Bond(DD, BondStrength(d, d, consts));
 	}
 
-	// Returns true if 'elem1' and 'elem2' would be ionically bonded (as opposed to covalently bonded)
-	bool IsIonicBond(Element elem1, Element elem2)
+	// Returns a factor describing how 'ionic' the bond is.
+	// Higher bond ionicity suggests higher macro material strength (melting point, etc)
+	// Lower ionicity suggests weak inter-molecular bonding (lower melting points, etc)
+	double BondIonicity(Element elem1, Element elem2)
 	{
 		// Ionic bonds form between elements that are at opposite edges of the periodic table
-		auto& e1 = elem1.m_free_electrons < elem2.m_free_electrons ? elem1 : elem2;
-		auto& e2 = elem1.m_free_electrons < elem2.m_free_electrons ? elem2 : elem1;
-		
-		// Hyrdogen is always covalently bonded, otherwise ionic if the elements are near the edges of the periodic table
-		return
-			e1.m_atomic_number != 1 &&
-			e2.m_atomic_number != 1 &&
-			e1.m_free_electrons <= e1.m_period + 1 &&
-			e2.m_free_holes     <= e2.m_period + 1;
+		auto& e1 = elem1.m_valence_electrons < elem2.m_valence_electrons ? elem1 : elem2;
+		auto& e2 = elem1.m_valence_electrons < elem2.m_valence_electrons ? elem2 : elem1;
+
+		// Elements of the same type are always covalently bonded (one can't pull an electron from the other)
+		if (e1.m_atomic_number == e2.m_atomic_number) return 0.0;
+
+		// Noble gases don't bond to anything
+		if (e1.m_valence_electrons == 0 || e2.m_valence_electrons == 0) return 0.0;
+
+		// +1,-1 bonds are purely ionic, ramping down based on period
+		double i1 = pr::Clamp(1.0 - (std::min(e1.m_valence_electrons,e1.m_valence_holes) - 1.0) / (e1.m_period+1), 0.0, 1.0);
+		double i2 = pr::Clamp(1.0 - (std::min(e2.m_valence_electrons,e2.m_valence_holes) - 1.0) / (e2.m_period+1), 0.0, 1.0);
+		return i1 * i2;
 	}
 }

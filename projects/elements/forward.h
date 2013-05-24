@@ -40,6 +40,7 @@ namespace ele
 	// Permutations
 	namespace EPerm2 { enum { AA,AB,BB, NumberOf }; }
 	namespace EPerm4 { enum { AA,AB,AC,AD,BB,BC,BD,CC,CD,DD, NumberOf }; }
+	namespace EElemMask { enum { A = 1<<0, B = 1<<1, C = 1<<2, D = 1<<3, ABCD = A|B|C|D, AB = A|B }; }
 		
 	// The following steps take you through the process of building a chemical name, using compound XaYb as an example:
 	// 1 Is X hydrogen?

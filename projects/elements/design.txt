@@ -99,5 +99,13 @@ Escape Velocity:
      Choose O such that Combine(a * N, b * O) = M
      Add M to the allowed materials, O and N to the starting materials
 
- The game starts with a subset of the starting materials, the remaining starting materials are 'discovered'
- at random intervals throughout the first quarter of the time till super nova
+ Materials are introduced as 'ore' containing unknown elements. By reacting them with known elements
+  the properties can be determined (Players start with some known elements). E.g. if you start with NaCl
+  and react it with Blah Ore (XY), to produce NaX YCl, you can then infer something about X and Y.
+
+ At game start, star mass, and distance from star are not known. These must be researched in order to 
+  determine required ship specs.
+
+ Game intro start with a message from a solar observatry saying "Feck, Star's a gonner.." (to that effect)
+
+

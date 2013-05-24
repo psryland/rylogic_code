@@ -17,10 +17,10 @@ namespace ele
 		size_t m_period;
 
 		// The number of free electrons this element has in its non-ionised state
-		size_t m_free_electrons;
+		size_t m_valence_electrons;
 
 		// The number of electrons needed to fill this electron shell (from its non-ionised state)
-		size_t m_free_holes;
+		size_t m_valence_holes;
 
 		// True once this element has been discovered
 		bool m_discovered;
@@ -28,8 +28,10 @@ namespace ele
 		Element();
 		Element(size_t atomic_number, GameConstants const& consts);
 
-		// Returns true if this element is closer to the left side of
-		// the periodic table than the right
-		bool IsMetal() const { return m_free_electrons > m_free_holes; }
+		// Returns true if this element is a nobal gas
+		bool IsNobal() const { return m_valence_electrons == 0; }
+
+		// Returns true if this element is closer to the left side of the periodic table than the right
+		bool IsMetal() const { return m_atomic_number != 1 && m_valence_electrons < m_valence_holes; }
 	};
 }
