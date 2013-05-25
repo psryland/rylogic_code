@@ -91,7 +91,7 @@ namespace pr
 			static void Destruct(T*)			{}
 			static void DestructRange(T*, T*)	{}
 		};
-		typedef typename mpl::if_< mpl::is_pod<T>, POD<T>, NonPOD<T> >::type Constructor;
+		typedef typename meta::if_< meta::is_pod<T>, POD<T>, NonPOD<T> >::type Constructor;
 
 		struct Block
 		{

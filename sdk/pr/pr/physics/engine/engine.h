@@ -85,7 +85,7 @@ namespace pr
 				IPreCollisionObserver*	pre_col					= 0,
 				IPstCollisionObserver*	pst_col					= 0,
 				std::size_t				constraint_buffer_size	= 65536,
-				std::size_t				collision_cache_size	= pr::mpl::prime_gtreq<1000>::value,
+				std::size_t				collision_cache_size	= pr::meta::prime_gtreq<1000>::value,
 				AllocFunction			allocate				= pr::DefaultAlloc,
 				DeallocFunction			deallocate				= pr::DefaultDealloc
 				);

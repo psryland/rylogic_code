@@ -31,7 +31,7 @@ namespace pr
 		{
 			template <typename T> void operator () (T& t) const
 			{
-				typedef typename mpl::if_< mpl::is_pointer<T>, impl::PtrRelease<T>, impl::RefRelease<T> >::type Type;
+				typedef typename meta::if_< meta::is_pointer<T>, impl::PtrRelease<T>, impl::RefRelease<T> >::type Type;
 				Type::Release(t);
 			}
 		};

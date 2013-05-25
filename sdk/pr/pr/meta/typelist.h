@@ -9,7 +9,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		struct tl_empty {};
 		

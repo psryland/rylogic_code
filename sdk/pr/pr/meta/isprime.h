@@ -7,7 +7,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		namespace impl
 		{
@@ -34,7 +34,7 @@ namespace pr
 				template <std::size_t N, bool ObviousNonPrime>
 				struct impl
 				{
-					enum { value = impl2<N, pr::mpl::square_root<N>::value, 1, false, false>::value };
+					enum { value = impl2<N, pr::meta::square_root<N>::value, 1, false, false>::value };
 				};
 
 				template <std::size_t N>
@@ -43,14 +43,14 @@ namespace pr
 					enum { value = false };
 				};
 			}
-		}//namespace impl
+		}
 
 		template <std::size_t N>
 		struct is_prime
 		{
 			enum { value = impl::is_prime::impl<N, (N < 2) || (N != 2 && !(N % 2))>::value };
 		};
-	}//namespace mpl
-}//namespace pr
+	}
+}
 
-#endif//PR_META_IS_PRIME_H
+#endif

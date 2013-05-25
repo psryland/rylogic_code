@@ -268,9 +268,10 @@ namespace pr
 			bool    m_opened;
 			bool    m_console_created;
 			bool    m_double_buffered;
-			std::string m_input;
-			std::deque<KEY_EVENT_RECORD> m_fifo_keyboard;
-			std::deque<MOUSE_EVENT_RECORD> m_fifo_mouse;
+			size_t  m_max_input_buffer_size;
+			bool    m_unicode_input;
+			std::string m_inputa;
+			std::wstring m_inputw;
 
 			friend struct CursorScope;
 			friend struct ColourScope;
@@ -300,24 +301,7 @@ namespace pr
 				static void read(KEY_EVENT_RECORD evt, wchar_t& ch) { ch = evt.uChar.UnicodeChar; }
 			};
 
-			// Translate events in the keyboard fifo
-			// Generate events on complete lines.
-			// This allows affectively asynchronous std::cin reads which normally isn't possible (ie. cin.readsome() doesn't work)
-			void TranslateKeyEvents()
-			{
-				//OutputDebugStringA(pr::FmtS("%d - %d - %d (%d) vk:%d scan:%d\n", k.bKeyDown, k.dwControlKeyState, k.uChar.AsciiChar, k.wRepeatCount, k.wVirtualKeyCode, k.wVirtualScanCode));
-				//1 - 32 - 8 (1) vk:8 scan:14
-				//0 - 32 - 8 (1) vk:8 scan:14
-				//1 - 32 - 8 (1) vk:8 scan:14
-				//0 - 32 - 8 (1) vk:8 scan:14
-				//1 - 32 - 113 (1) vk:81 scan:16
-				//0 - 32 - 113 (1) vk:81 scan:16
-				//1 - 32 - 119 (1) vk:87 scan:17
-				//0 - 32 - 119 (1) vk:87 scan:17
-				//1 - 32 - 100 (1) vk:68 scan:32
-				//0 - 32 - 100 (1) vk:68 scan:32
 
-			}
 			void TranslateMouseEvents()
 			{}
 			// Create separate FIFO buffers for the event types; key, mouse, etc..
@@ -338,7 +322,9 @@ namespace pr
 				,m_opened(false)
 				,m_console_created(false)
 				,m_double_buffered(false)
-				,m_input()
+				,m_unicode_input(false)
+				,m_inputa()
+				,m_inputw()
 			{
 				// I can't figure this console redirecting stuff out. It seems sometimes you need
 				// to call 'RedirectIOToConsole()', other times that doesn't work but 'ReopenStdio()'
@@ -647,30 +633,42 @@ namespace pr
 			}
 
 			// Multicast delegate for receiving notification of a change to the keyboard input
-			pr::event<void(std::string const&)> TextInputChanged;
+			pr::Event<void(std::string const&)> LineInputA;
+			pr::Event<void(std::wstring const&)> LineInputW;
 
 			// Call this method to consume input events on stdin
 			void PumpInput()
 			{
-				const size_t max_fifo_size = 1024;
-
 				for(;WaitForEvent(EEvent::Any, 0);)
 				{
 					Event in[128]; DWORD read;
 					Throw(ReadConsoleInputW(m_stdin, in, 128, &read), "Failed to read a console input events");
 					for (DWORD i = 0; i != read; ++i)
 					{
-						auto& k = in[i].Event.KeyEvent;
+				
 						switch (in[i].EventType)
 						{
 						default: throw std::exception("Unknown input event type");
 						case EEvent::Key:
-							if (m_fifo_keyboard.size() < max_fifo_size)
-								m_fifo_keyboard.push_back(in[i].Event.KeyEvent);
-							break;
+							{
+								auto& k = in[i].Event.KeyEvent;
+								//OutputDebugStringA(pr::FmtS("%d - %d - %d (%d) vk:%d scan:%d\n", k.bKeyDown, k.dwControlKeyState, k.uChar.AsciiChar, k.wRepeatCount, k.wVirtualKeyCode, k.wVirtualScanCode));
+								if (!k.bKeyDown) break;
+								if (m_unicode_input)
+								{
+									if (m_inputw.size() >= m_max_input_buffer_size) continue;
+									m_inputw.push_back(k.uChar.UnicodeChar);
+									LineInputW(m_inputw);
+								}
+								else
+								{
+									if (m_inputa.size() >= m_max_input_buffer_size) continue;
+									m_inputa.push_back(k.uChar.AsciiChar);
+									LineInputA(m_inputa);
+								}
+								break;
+							}
 						case EEvent::Mouse:
-							if (m_fifo_mouse.size() < max_fifo_size)
-								m_fifo_mouse.push_back(in[i].Event.MouseEvent);
 							break;
 						case EEvent::Size:
 							break;
@@ -923,6 +921,10 @@ namespace pr
 					for (e = p + 1; *e && *e != Char('\n'); ++e) {}
 					Write(x, y++, p, 0, e - p - 1);
 				}
+			}
+			template <typename Char> void Write(EAnchor anchor, std::basic_string<Char> const& str, int dx = 0, int dy = 0)
+			{
+				Write(anchor, str.c_str(), dx, dy);
 			}
 
 			// Write a Pad helper object to the screen

@@ -73,7 +73,7 @@ namespace pr
 
 	template <typename Type> struct Imposter
 	{
-		typedef typename pr::mpl::aligned_storage<sizeof(Type), pr::mpl::alignment_of<Type>::value>::type Buffer;
+		typedef typename pr::meta::aligned_storage<sizeof(Type), pr::meta::alignment_of<Type>::value>::type Buffer;
 		typedef typename Type AliasType;
 
 		Buffer m_buf;   // The buffer containing the type

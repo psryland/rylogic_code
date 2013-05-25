@@ -61,8 +61,8 @@ void ConstraintAccumulator::SetBufferSize(std::size_t constraint_buffer_size_in_
 	{
 		m_num_sets = 0;
 		uint estimated_num_pairs = static_cast<uint>(1 + constraint_buffer_size_in_bytes / (sizeof(ConstraintBlock) + sizeof(Constraint)));
-		m_buffer	= static_cast<uint8*>			(m_Allocate(constraint_buffer_size_in_bytes, mpl::alignment_of<ConstraintBlock>::value));
-		m_pairs		= static_cast<ConstraintBlock**>(m_Allocate(estimated_num_pairs * sizeof(ConstraintBlock*), mpl::alignment_of<ConstraintBlock*>::value));
+		m_buffer	= static_cast<uint8*>			(m_Allocate(constraint_buffer_size_in_bytes, meta::alignment_of<ConstraintBlock>::value));
+		m_pairs		= static_cast<ConstraintBlock**>(m_Allocate(estimated_num_pairs * sizeof(ConstraintBlock*), meta::alignment_of<ConstraintBlock*>::value));
 		m_buffer_end = m_buffer + constraint_buffer_size_in_bytes;
 		m_buffer_ptr = m_buffer;
 		m_num_pairs = 0;

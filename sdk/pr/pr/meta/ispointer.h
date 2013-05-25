@@ -11,7 +11,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		#if _MSC_VER >= 1600
 
@@ -50,7 +50,7 @@ namespace pr
 		};
 
 		#endif// Not vc7.0
-	}//namespace mpl
-}//namespace pr
+	}
+}
 
-#endif//PR_META_IS_POINTER_H
+#endif

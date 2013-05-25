@@ -12,7 +12,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		namespace impl
 		{
@@ -26,7 +26,7 @@ namespace pr
 #define PR_IMPL_REGISTER_TYPEOF2(N,T)\
 	namespace pr\
 	{\
-		namespace mpl\
+		namespace meta\
 		{\
 			namespace impl\
 			{\
@@ -66,7 +66,7 @@ namespace pr
 // Use:
 //  std::vector<int> cont;
 //  for (typeof(cont)::iterator i = cont.begin(), iend = cont.end(); i != iend; ++i) {}
-#define typeof(x) pr::mpl::impl::size_to_type<sizeof(*pr::mpl::impl::type_to_size(x))>::type
+#define typeof(x) pr::meta::impl::size_to_type<sizeof(*pr::meta::impl::type_to_size(x))>::type
 
 PR_REGISTER_TYPEOF(bool)
 PR_REGISTER_TYPEOF(char)

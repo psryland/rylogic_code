@@ -11,7 +11,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		#if _MSC_VER >= 1600
 
@@ -72,8 +72,8 @@ namespace pr
 			typedef typename impl::if_impl::Impl<expression::value>::template Impl2<true_case, false_case>::type type;
 		};
 
-		#endif// Not vc7.0
-	}//namespace mpl
-}//namespace pr
+		#endif
+	}
+}
 
-#endif//PR_META_IF_H
+#endif

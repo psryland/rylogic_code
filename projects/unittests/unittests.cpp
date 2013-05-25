@@ -27,6 +27,7 @@ namespace pr
 #include "pr/common/base64.h"
 #include "pr/common/chain.h"
 #include "pr/common/expr_eval.h"
+#include "pr/common/event.h"
 #include "pr/common/fmt.h"
 #include "pr/common/hash.h"
 #include "pr/common/imposter.h"

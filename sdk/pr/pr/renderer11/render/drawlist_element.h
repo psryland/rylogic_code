@@ -22,7 +22,7 @@ namespace pr
 		};
 		inline bool operator < (DrawListElement const& lhs, DrawListElement const& rhs) { return lhs.m_sort_key < rhs.m_sort_key; }
 		
-		static_assert(pr::mpl::is_pod<DrawListElement>::value, "Drawlist elements must be POD types");
+		static_assert(pr::meta::is_pod<DrawListElement>::value, "Drawlist elements must be POD types");
 	}
 }
 
