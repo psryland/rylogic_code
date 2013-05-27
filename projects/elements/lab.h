@@ -14,7 +14,6 @@ namespace ele
 
 		explicit Lab(GameConstants const& consts);
 
-	private:
 		PR_NO_COPY(Lab);
 	};
 

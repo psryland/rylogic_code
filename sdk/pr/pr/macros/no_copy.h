@@ -10,12 +10,21 @@
 //  {
 //     int& m_ref;
 //     MyType(int& i) :m_ref(i) {}
-//
-//  private: // this is optional
 //     PR_NO_COPY(MyType);
 //  };
+#if _MSC_VER <= 1700
+
 #define PR_NO_COPY(type)\
-	type(type const&);\
-	type& operator=(type const&)
+	private:\
+		type(type const&);\
+		type& operator=(type const&)
+
+#else // C++0X
+
+#define PR_NO_COPY(type)\
+	type(type const&) = delete;\
+	type& operator=(type const&) = delete
+
+#endif
 
 #endif

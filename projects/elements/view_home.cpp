@@ -18,27 +18,31 @@ namespace ele
 		,m_redraw_timer(redraw_time)
 	{
 		m_cons.Clear();
+		
+		// Set the input location. Rendering should not change this
+		m_cons.Cursor(EAnchor::BottomLeft, 3, 0);
 	}
 
 	EView ViewHome::Step(double elapsed)
 	{
-		char buf[1024];
-		size_t count = std::cin.readsome(buf, sizeof(buf));
-		if (count != 0)
-		{
-			m_input.append(buf,count);
-		}
-
 		m_redraw_timer += elapsed;
 		if (m_redraw_timer > redraw_time)
 		{
 			m_redraw_timer = 0;
+			
+			CursorScope s0(m_cons);
 			RenderCountdown();
 			RenderResearchStatus();
 			RenderShipSpec();
 			RenderMenu();
 		}
 		return EView::SameView;
+	}
+
+	void ViewHome::Input(std::string const& line)
+	{
+		//m_inputCurren
+		OutputDebugStringA(pr::FmtS("Input: %s\n", line.c_str()));
 	}
 
 	void ViewHome::RenderCountdown() const
@@ -53,7 +57,7 @@ namespace ele
 		m_cons.Write(EAnchor::TopRight, pad, 0, PadCountDownDy);
 		PadCountDownHeight = pad.Size().cy;
 	}
-	
+
 	void ViewHome::RenderResearchStatus() const
 	{
 		auto& ws = m_inst.m_world_state;
@@ -139,8 +143,7 @@ namespace ele
 		if (m_inst.m_view != EView::ShipDesign ) pad << "   S - Ship Design\n";
 		if (m_inst.m_view != EView::MaterialLab) pad << "   M - Materials Lab\n";
 		if (m_inst.m_view != EView::Launch     ) pad << "   L - Launch Ship (end game)\n";
-		pad << "=> " << m_input;
+		pad << "=> " << EColour::Black << Pad::CurrentInput;
 		m_cons.Write(EAnchor::BottomLeft, pad);
-		m_cons.Cursor(EAnchor::BottomLeft, 2, 0);
 	}
 }

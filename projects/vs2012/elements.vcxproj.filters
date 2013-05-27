@@ -100,7 +100,7 @@
     <ClInclude Include="..\elements\research_effort.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\event.h">
+    <ClInclude Include="..\..\sdk\pr\pr\common\events.h">
       <Filter>sdk\pr\common</Filter>
     </ClInclude>
   </ItemGroup>

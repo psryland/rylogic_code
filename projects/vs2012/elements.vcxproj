@@ -141,7 +141,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\sdk\pr\pr\common\console.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\event.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\events.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\fmt.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\no_copy.h" />

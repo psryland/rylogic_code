@@ -25,13 +25,26 @@
 #include <stdarg.h>
 #include <tchar.h>
 #include "pr/macros/enum.h"
+#include "pr/macros/no_copy.h"
 #include "pr/str/prstring.h"
-#include "pr/common/event.h"
+#include "pr/common/events.h"
 
 namespace pr
 {
 	namespace console
 	{
+		class Console;
+		typedef INPUT_RECORD Event;
+		typedef BOOL (__stdcall *HandlerFunction)(DWORD ctrl_type);
+
+		// Generic string operations
+		template <typename Str> inline void append(Str& str, size_t count, typename Str::value_type ch) { str.append(count, ch); }
+		template <typename Str> inline void resize(Str& str, size_t sz)                                 { str.resize(sz); }
+		template <typename Str> inline size_t size(Str& str)                                            { return str.size(); }
+		template <typename Str> inline bool empty(Str& str)                                             { return str.empty(); }
+
+		#pragma region Enums
+
 		#define PR_ENUM(x)\
 			x(Key   , = KEY_EVENT                 )\
 			x(Mouse , = MOUSE_EVENT               )\
@@ -81,9 +94,9 @@ namespace pr
 		PR_DEFINE_ENUM2_FLAGS(EColour, PR_ENUM);
 		#undef PR_ENUM
 
-		class Console;
-		typedef INPUT_RECORD Event;
-		typedef BOOL (__stdcall *HandlerFunction)(DWORD ctrl_type);
+		#pragma endregion
+
+		#pragma region Wrapper structs
 
 		// Helper to correctly initialise CONSOLE_SCREEN_BUFFER_INFOEX
 		struct ConsoleScreenBufferInfo :CONSOLE_SCREEN_BUFFER_INFOEX
@@ -98,6 +111,7 @@ namespace pr
 			Coord(COORD c) :COORD(c) {}
 			Coord(int x, int y) { X = short(x); Y = short(y); }
 		};
+
 
 		// Helper for combining fore and back colours
 		struct Colours
@@ -118,6 +132,10 @@ namespace pr
 			}
 		};
 
+		#pragma endregion
+
+		#pragma region Scope structs
+
 		// RAII object for preserving the cursor position
 		struct CursorScope
 		{
@@ -136,16 +154,54 @@ namespace pr
 			~ColourScope();
 		};
 
+		#pragma endregion
+
+		#pragma region Events
+
+		// An event raised when a key event is 'pumped'
+		struct Evt_Key
+		{
+			KEY_EVENT_RECORD const& m_key;
+			Evt_Key(KEY_EVENT_RECORD const& k) :m_key(k) {}
+			PR_NO_COPY(Evt_Key);
+		};
+
+		// An event raised when escape is pressed (while there is no user input)
+		struct Evt_Escape
+		{};
+
+		// An event raised when tab is pressed
+		struct Evt_Tab
+		{};
+
+		// An event raised whenever a function key is pressed
+		struct Evt_FunctionKey
+		{
+			int m_num; // 1 - 24 for F1 -> F24
+			Evt_FunctionKey(int vk) :m_num(vk - VK_F1) {}
+		};
+
+		// An event raised when a line of user input is available
+		template <typename Char> struct Evt_Line
+		{
+			std::basic_string<Char> const& m_input;
+			Evt_Line(std::basic_string<Char> const& input) :m_input(input) {}
+			PR_NO_COPY(Evt_Line);
+		};
+
+		#pragma endregion
+
 		// A helper for drawing rectangular blocks of text in the console
 		struct Pad
 		{
+			enum EItem { Unknown, NewLine, String, WString, Colour, CurrentInput };
 			struct Item
 			{
-				enum EWhat { Unknown, NewLine, String, WString, Colour } m_what;
-				union { void* m_ptr; std::string* m_line; std::wstring* m_wline; Colours* m_colour; };
-				Item(EWhat what, void* ptr = 0) :m_what(what), m_ptr(ptr) {}
-				Item(std::string* line)  :m_what(String ), m_line(line) {}
-				Item(std::wstring* line) :m_what(WString), m_wline(line) {}
+				EItem m_what;
+				union { void* m_ptr; std::string* m_linea; std::wstring* m_linew; Colours* m_colour; };
+				Item(EItem what, void* ptr) :m_what(what), m_ptr(ptr) {}
+				Item(std::string* line)  :m_what(String ), m_linea(line) {}
+				Item(std::wstring* line) :m_what(WString), m_linew(line) {}
 				Item(Colours* colour)    :m_what(Colour ), m_colour(colour) {}
 			};
 
@@ -224,7 +280,7 @@ namespace pr
 						m_width  = std::max(m_width, m_w += int(iend - i));
 						if (iend != s.size() && s[iend] == Char('\n'))
 						{
-							m_items.push_back(Item(Item::NewLine));
+							m_items.push_back(Item(NewLine, 0));
 							m_height = std::max(m_height, ++m_h);
 							m_w = 0;
 						}
@@ -244,19 +300,166 @@ namespace pr
 				return *this;
 			}
 
-		private:
-			Pad(Pad const&);
-			Pad& operator =(Pad const&);
-		};
+			// A special type to represent the current user input
+			Pad& operator << (EItem item)
+			{
+				m_items.push_back(Item(item, 0));
+				return *this;
+			}
 
-		template <typename Str> inline void append(Str& str, size_t count, typename Str::value_type ch) { str.append(count, ch); }
-		template <typename Str> inline void resize(Str& str, size_t sz)                                 { str.resize(sz); }
-		template <typename Str> inline size_t size(Str& str)                                            { return str.size(); }
-		template <typename Str> inline bool empty(Str& str)                                             { return str.empty(); }
+			PR_NO_COPY(Pad);
+		};
 
 		class Console
 		{
-			HANDLE  m_stdout; 
+			// Helpers for reading/writing char/wchar_t
+			struct traits
+			{
+				static size_t length(char const* str)    { return strlen(str); }
+				static size_t length(wchar_t const* str) { return wcslen(str); }
+				static void read(KEY_EVENT_RECORD evt, char&    ch) { ch = evt.uChar.AsciiChar; }
+				static void read(KEY_EVENT_RECORD evt, wchar_t& ch) { ch = evt.uChar.UnicodeChar; }
+				static void write(HANDLE out, char    const* str, size_t ofs, size_t count) { DWORD chars_written; WriteConsoleA(out, str + ofs, DWORD(count), &chars_written, 0); }
+				static void write(HANDLE out, wchar_t const* str, size_t ofs, size_t count) { DWORD chars_written; WriteConsoleW(out, str + ofs, DWORD(count), &chars_written, 0); }
+				static void fill(HANDLE out, char    ch, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputCharacterA(out, ch, count, loc, &chars_written); }
+				static void fill(HANDLE out, wchar_t ch, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputCharacterW(out, ch, count, loc, &chars_written); }
+				static void fill(HANDLE out, WORD   col, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputAttribute(out, col, count, loc, &chars_written); }
+				static void fill(HANDLE out, char    ch, WORD col, size_t count, COORD loc) { fill(out, ch, count, loc); fill(out, col, count, loc); }
+				static void fill(HANDLE out, wchar_t ch, WORD col, size_t count, COORD loc) { fill(out, ch, count, loc); fill(out, col, count, loc); }
+			};
+
+			#pragma region LineInput
+
+			// A helper object for managing line input
+			template <typename Char> struct LineInput
+			{
+				std::basic_string<Char> m_text;  // The current line input
+				size_t m_caret;                  // The cursor position with 'm_text'
+				Console& m_cons;                 // The console to echo the line input to
+				bool m_echo;                     // True if we should echo to the output buffer
+				
+				LineInput(Console& cons)
+					:m_text()
+					,m_caret()
+					,m_cons(cons)
+					,m_echo(true)
+				{}
+				bool empty() const
+				{
+					return m_text.empty();
+				}
+				size_t word_boundary(size_t caret, bool fwd) const
+				{
+					size_t end = fwd * m_text.size();
+					if (fwd)
+					{
+						for (;caret != end && !isspace(m_text[caret]); ++caret) {} // skip over non-ws
+						for (;caret != end &&  isspace(m_text[caret]); ++caret) {} // Find the next non-ws
+					}
+					else
+					{
+						for (;caret != end &&  isspace(m_text[caret]); --caret) {} // Find the next non-ws
+						for (;caret != end && !isspace(m_text[caret]); --caret) {} // skip over non-ws
+						caret += caret != 0;
+					}
+					return caret;
+				}
+				void left(bool word_skip)
+				{
+					if (m_caret == 0) return;
+					size_t caret = m_caret - 1;
+					if (word_skip) caret = word_boundary(caret, false);
+					if (m_echo) m_cons.Cursor(m_cons.Cursor(), caret - m_caret, 0);
+					m_caret = caret;
+				}
+				void right(bool word_skip)
+				{
+					if (m_caret == m_text.size()) return;
+					size_t caret = m_caret + 1;
+					if (word_skip) caret = word_boundary(caret, true);
+					if (m_echo) m_cons.Cursor(m_cons.Cursor(), caret - m_caret, 0);
+					m_caret = caret;
+				}
+				void home()
+				{
+					if (m_caret == 0) return;
+					if (m_echo) m_cons.Cursor(m_cons.Cursor(), 0 - m_caret, 0);
+					m_caret = 0;
+				}
+				void end()
+				{
+					if (m_caret == m_text.size()) return;
+					if (m_echo) m_cons.Cursor(m_cons.Cursor(), m_text.size() - m_caret, 0);
+					m_caret = m_text.size();
+				}
+				void reset()
+				{
+					if (m_echo)
+					{
+						m_cons.Cursor(m_cons.Cursor(), 0 - m_caret, 0);
+						m_cons.Fill(' ', m_text.size());
+					}
+					m_text.resize(0);
+					m_caret = 0;
+				}
+				void write(Char ch)
+				{
+					if (m_caret == m_text.size())
+					{
+						if (m_echo) m_cons.Write(&ch, 0, 1);
+						m_text.push_back(ch);
+					}
+					else
+					{
+						if (m_echo)
+						{
+							auto cur = m_cons.Cursor();
+							m_cons.Write(&ch, 0, 1);
+							m_cons.Write(m_text.c_str(), m_caret, m_text.size() - m_caret);
+							m_cons.Cursor(cur, 1, 0);
+						}
+						m_text.insert(m_text.begin() + m_caret, 1, ch);
+					}
+					++m_caret;
+				}
+				void delback(bool whole_word)
+				{
+					if (m_caret == 0) return;
+					size_t caret = m_caret - 1;
+					if (whole_word) caret = word_boundary(caret, false);
+					if (m_echo)
+					{
+						int dx = caret - m_caret;
+						auto cur = m_cons.Cursor();
+						m_cons.Cursor(cur, dx, 0);
+						m_cons.Write(m_text.c_str(), m_caret, m_text.size() - m_caret);
+						m_cons.Write(std::string(size_t(-dx), ' '));
+						m_cons.Cursor(cur, dx, 0);
+					}
+					m_text.erase(m_text.begin() + caret, m_text.begin() + m_caret);
+					m_caret = caret;
+				}
+				void delfwd(bool whole_word)
+				{
+					if (m_caret == m_text.size()) return;
+					size_t caret = m_caret + 1;
+					if (whole_word) caret = word_boundary(caret, true);
+					if (m_echo)
+					{
+						int dx = caret - m_caret;
+						auto cur = m_cons.Cursor();
+						m_cons.Write(m_text.c_str(), m_caret + dx, m_text.size() - caret);
+						m_cons.Write(std::string(size_t(dx), ' '));
+						m_cons.Cursor(cur);
+					}
+					m_text.erase(m_text.begin() + m_caret, m_text.begin() + caret);
+				}
+				PR_NO_COPY(LineInput);
+			};
+
+			#pragma endregion
+
+			HANDLE  m_stdout;
 			HANDLE  m_stdin;
 			HANDLE  m_stderr;
 			HANDLE  m_buf[2]; // Handles for screen buffers
@@ -268,10 +471,9 @@ namespace pr
 			bool    m_opened;
 			bool    m_console_created;
 			bool    m_double_buffered;
-			size_t  m_max_input_buffer_size;
 			bool    m_unicode_input;
-			std::string m_inputa;
-			std::wstring m_inputw;
+			LineInput<char>    m_linea;    // Buffer of line input
+			LineInput<wchar_t> m_linew;   // Buffer of line input
 
 			friend struct CursorScope;
 			friend struct ColourScope;
@@ -290,23 +492,50 @@ namespace pr
 				throw std::exception(err.c_str());
 			}
 
-			struct traits
+			// Convert a stream of key event records into user input, handling special keys
+			template <typename Char> void TranslateKeyEvent(KEY_EVENT_RECORD const& k, LineInput<Char>& line)
 			{
-				// Write to the back buffer, it will point to the active screen buffer when double buffering isn't enabled
-				static void write(HANDLE out, char    const* str, size_t ofs, size_t count) { DWORD chars_written; WriteConsoleA(out, str + ofs, DWORD(count), &chars_written, 0); }
-				static void write(HANDLE out, wchar_t const* str, size_t ofs, size_t count) { DWORD chars_written; WriteConsoleW(out, str + ofs, DWORD(count), &chars_written, 0); }
-				static size_t length(char const* str)    { return strlen(str); }
-				static size_t length(wchar_t const* str) { return wcslen(str); }
-				static void read(KEY_EVENT_RECORD evt, char&    ch) { ch = evt.uChar.AsciiChar; }
-				static void read(KEY_EVENT_RECORD evt, wchar_t& ch) { ch = evt.uChar.UnicodeChar; }
-			};
+				// Notify of the key press
+				pr::events::Send(Evt_Key(k));
+				if (!k.bKeyDown)
+					return;
 
+				Char ch; traits::read(k, ch);
+				for (int i = 0; i != k.wRepeatCount; ++i)
+				{
+					bool ctrl = (k.dwControlKeyState & (LEFT_CTRL_PRESSED|RIGHT_CTRL_PRESSED)) != 0;
+					switch (k.wVirtualKeyCode)
+					{
+					default:
+						if (k.wVirtualKeyCode >= VK_F1 && k.wVirtualKeyCode <= VK_F24)
+							pr::events::Send(Evt_FunctionKey(k.wVirtualKeyCode));
+						if (ch != 0)
+							line.write(ch);
+						break;
+					case VK_TAB:
+						pr::events::Send(Evt_Tab());
+						break;
+					case VK_RETURN:
+						pr::events::Send(Evt_Line<Char>(line.m_text));
+						line.reset();
+						break;
+					case VK_ESCAPE:
+						if (!line.empty()) line.reset();
+						else pr::events::Send(Evt_Escape());
+						break;
+					case VK_BACK:    line.delback(ctrl); break;
+					case VK_DELETE:  line.delfwd(ctrl);  break;
+					case VK_LEFT:    line.left(ctrl);    break;
+					case VK_RIGHT:   line.right(ctrl);   break;
+					case VK_HOME:    line.home();        break;
+					case VK_END:     line.end();         break;
+					}
+				}
+			}
 
+			// Convert a stream of mouse event records into mouse events
 			void TranslateMouseEvents()
 			{}
-			// Create separate FIFO buffers for the event types; key, mouse, etc..
-			// Create a pump input function that reads from the input events adding to the appropriate buffer
-			// Write methods for getting from a FIFO buffer that handle
 
 		public:
 			Console()
@@ -323,8 +552,8 @@ namespace pr
 				,m_console_created(false)
 				,m_double_buffered(false)
 				,m_unicode_input(false)
-				,m_inputa()
-				,m_inputw()
+				,m_linea(*this)
+				,m_linew(*this)
 			{
 				// I can't figure this console redirecting stuff out. It seems sometimes you need
 				// to call 'RedirectIOToConsole()', other times that doesn't work but 'ReopenStdio()'
@@ -558,7 +787,14 @@ namespace pr
 
 			// Get/Set the position of the cursor
 			COORD Cursor() const { return Info().dwCursorPosition; }
-			void Cursor(COORD coord) { SetConsoleCursorPosition(*m_back, coord); }
+			void Cursor(COORD coord, int dx = 0, int dy = 0)
+			{
+				// Limit the cursor position to within the console buffer
+				auto info = Info();
+				coord.X = SHORT(std::max(std::min(coord.X + dx, int(info.dwSize.X)), 0));
+				coord.Y = SHORT(std::max(std::min(coord.Y + dy, int(info.dwSize.Y)), 0));
+				Throw(SetConsoleCursorPosition(*m_back, coord), "Failed to set cursor position");
+			}
 			void Cursor(int x, int y) { Cursor(Coord(x,y)); }
 			void Cursor(EAnchor anchor, int dx = 0, int dy = 0) { Cursor(CursorLocation(anchor, 1, 1, dx, dy)); }
 
@@ -586,26 +822,19 @@ namespace pr
 			void Clear() { Clear(m_colour); }
 			void Clear(Colours col)
 			{
-				CursorScope s0(*this);
-				auto c = m_colour.Merge(col);
-
 				// Get the number of character cells in the current buffer
 				auto info = Info();
 				unsigned int num_chars = info.dwSize.X * info.dwSize.Y;
 
 				// Fill the area with blanks
-				Coord topleft(0,0);
-				DWORD chars_written;
-				FillConsoleOutputCharacterW(*m_back, L' ', num_chars, topleft, &chars_written);
-				FillConsoleOutputAttribute (*m_back, c, num_chars, topleft, &chars_written);
+				traits::fill(*m_back, L' ', m_colour.Merge(col), num_chars, Coord(0,0));
 			}
 			void Clear(int x, int y, int sx, int sy) { Clear(x,y,sx,sy,m_colour); }
 			void Clear(int x, int y, int sx, int sy, Colours col) { Clear(x,y,sx,sy,true,col); }
 			void Clear(int x, int y, int sx, int sy, bool clear_text, Colours col)
 			{
 				CursorScope s0(*this);
-				auto c = m_colour.Merge(col);
-
+				
 				// Get the number of character cells in the current buffer
 				auto info = Info();
 				x  = (x  <  0) ? 0 : (x >= info.dwSize.X) ? info.dwSize.X - 1 : x;
@@ -616,13 +845,11 @@ namespace pr
 				sy = (sy <  0) ? 0 : (y + sy > info.dwSize.Y) ? info.dwSize.Y - y : sy;
 
 				// Fill the area with blanks
+				auto c = m_colour.Merge(col);
 				for (int yend = y + sy; y != yend; ++y)
 				{
-					DWORD chars_written;
-					Coord pt(x,y);
-					FillConsoleOutputAttribute (*m_back, c, sx, pt, &chars_written);
-					if (clear_text)
-						FillConsoleOutputCharacterW(*m_back, L' ', sx, pt, &chars_written);
+					if (clear_text) traits::fill(*m_back, L' ', c, sx, Coord(x,y));
+					else            traits::fill(*m_back,       c, sx, Coord(x,y));
 				}
 			}
 
@@ -632,11 +859,7 @@ namespace pr
 				FlushConsoleInputBuffer(m_stdin);
 			}
 
-			// Multicast delegate for receiving notification of a change to the keyboard input
-			pr::Event<void(std::string const&)> LineInputA;
-			pr::Event<void(std::wstring const&)> LineInputW;
-
-			// Call this method to consume input events on stdin
+			// Call this method to consume input events on stdin for forward them to events
 			void PumpInput()
 			{
 				for(;WaitForEvent(EEvent::Any, 0);)
@@ -645,29 +868,16 @@ namespace pr
 					Throw(ReadConsoleInputW(m_stdin, in, 128, &read), "Failed to read a console input events");
 					for (DWORD i = 0; i != read; ++i)
 					{
-				
 						switch (in[i].EventType)
 						{
-						default: throw std::exception("Unknown input event type");
+						default:
+							throw std::exception("Unknown input event type");
 						case EEvent::Key:
-							{
-								auto& k = in[i].Event.KeyEvent;
-								//OutputDebugStringA(pr::FmtS("%d - %d - %d (%d) vk:%d scan:%d\n", k.bKeyDown, k.dwControlKeyState, k.uChar.AsciiChar, k.wRepeatCount, k.wVirtualKeyCode, k.wVirtualScanCode));
-								if (!k.bKeyDown) break;
-								if (m_unicode_input)
-								{
-									if (m_inputw.size() >= m_max_input_buffer_size) continue;
-									m_inputw.push_back(k.uChar.UnicodeChar);
-									LineInputW(m_inputw);
-								}
-								else
-								{
-									if (m_inputa.size() >= m_max_input_buffer_size) continue;
-									m_inputa.push_back(k.uChar.AsciiChar);
-									LineInputA(m_inputa);
-								}
-								break;
-							}
+							if (m_unicode_input)
+								TranslateKeyEvent(in[i].Event.KeyEvent, m_linew);
+							else
+								TranslateKeyEvent(in[i].Event.KeyEvent, m_linea);
+							break;
 						case EEvent::Mouse:
 							break;
 						case EEvent::Size:
@@ -735,6 +945,7 @@ namespace pr
 
 			// Consume input events upto and including the next 'key' event
 			// Calls 'func' on the key event and if true is returned, returns true. Returns false on timeout
+			// Note: these Read methods are basic and don't provide echoing etc. Use PumpInput() preferably
 			template <typename Func> bool ReadKeyEvent(Func func, DWORD wait_ms = INFINITE) const
 			{
 				for(;WaitForEvent(EEvent::Key, wait_ms);)
@@ -768,6 +979,7 @@ namespace pr
 					{
 						if (!evt.bKeyDown) return false;
 						traits::read(ReadInputEvent().Event.KeyEvent, ch);
+						if (ch == 0) return false;
 						return true;
 					}, wait_ms);
 			}
@@ -802,58 +1014,17 @@ namespace pr
 				return Read([](Char ch){ return (ch >= Char('0') && ch <= Char('9')) || ch == Char('.') || ch == Char('e') || ch == Char('E') || ch == Char('-') || ch == Char('+'); }, wait_ms);
 			}
 
-			// Accumulates keyboard input on repeated calls until a complete line has been
-			// entered or until escape is pressed while 'input' is empty.
-			// Returns true if 'input' contains a complete line or escape was pressed, false otherwise.
-			template <typename Str> bool AccumulateLine(Str& input, bool& escape)
+			// Write N characters to the output window without changing the current cursor position
+			// This method treats the console buffer as a 1D array and ignores auto scroll
+			template <typename Char> void Fill(int x, int y, Char ch, size_t count = 1)
 			{
-				typedef Str::value_type Char;
-				escape = false;
-				for (;;)
-				{
-					if (!WaitForEvent(EEvent::Key, 0)) return false;
-					auto evt = ReadInputEvent();
-
-					// Enter terminates the line of user input
-					if (evt.Event.KeyEvent.wVirtualKeyCode == VK_RETURN)
-					{
-						return true;
-					}
-					if (evt.Event.KeyEvent.wVirtualKeyCode == VK_ESCAPE)
-					{
-						// Escape, when 'input' is not empty, clears the user input
-						if (!empty(input))
-						{
-							// Reset the input and erase the echoed characters
-							WORD w = std::min(WORD(size(input)), WORD(pos.X));
-							Clear(pos.X -= w, pos.Y, w, 1);
-							Cursor(pos);
-							resize(input, 0);
-							return false;
-						}
-						escape = true;
-						return true;
-					}
-					if (evt.Event.KeyEvent.wVirtualKeyCode == VK_DELETE)
-					{
-						WORD w = std::min(WORD(size(input)), evt.Event.KeyEvent.wRepeatCount);
-						Clear(pos.X -= w, pos.Y, w, 1);
-						Cursor(pos);
-						resize(input, size(input) - w);
-						return false;
-					}
-					if (evt.Event.KeyEvent.wVirtualKeyCode == VK_TAB)
-					{
-						append(input, evt.Event.KeyEvent.wRepeatCount, Char('\t'));
-						return false;
-					}
-					
-					Char ch;
-					traits::read(evt.Event.KeyEvent, ch);
-					if (ch != 0)
-						append(input, evt.Event.KeyEvent.wRepeatCount, ch);
-					return false;
-				}
+				auto info = Info();
+				traits::fill(*m_back, ch, info.wAttributes, count, Coord(x,y));
+			}
+			template <typename Char> void Fill(Char ch, size_t count = 1)
+			{
+				auto info = Info();
+				traits::fill(*m_back, ch, info.wAttributes, count, info.dwCursorPosition);
 			}
 
 			// Write text to the output window
@@ -863,7 +1034,7 @@ namespace pr
 			}
 			template <typename Char> void Write(Char const* str)
 			{
-				Write(str, 0, traits::len(str));
+				Write(str, 0, traits::length(str));
 			}
 
 			// Write text to the output window
@@ -901,19 +1072,19 @@ namespace pr
 				int sx,sy;
 				MeasureString(str, sx, sy);
 
-				// Get the console dimensions
-				auto info = Info();
-				int maxx = info.dwMaximumWindowSize.X;
-				int maxy = info.dwMaximumWindowSize.Y;
+				// Get the console window dimensions
+				auto wind = Info().srWindow;
+				int wx = wind.Right - wind.Left;
+				int wy = wind.Bottom - wind.Top;
 
 				// Find the coordinate to write the string at
 				int x = 0, y = 0;
-				if (anchor & EAnchor::Left   ) x = dx + 0;
-				if (anchor & EAnchor::HCentre) x = dx + (maxx - sx) / 2;
-				if (anchor & EAnchor::Right  ) x = dx + (maxx - sx);
-				if (anchor & EAnchor::Top    ) y = dy + 0;
-				if (anchor & EAnchor::VCentre) y = dy + (maxy - sy) / 2;
-				if (anchor & EAnchor::Bottom ) y = dy + (maxy - sy);
+				if (anchor & EAnchor::Left   ) x = dx + wind.Left + 0;
+				if (anchor & EAnchor::HCentre) x = dx + wind.Left + (wx - sx) / 2;
+				if (anchor & EAnchor::Right  ) x = dx + wind.Left + (wx - sx);
+				if (anchor & EAnchor::Top    ) y = dy + wind.Left + 0;
+				if (anchor & EAnchor::VCentre) y = dy + wind.Left + (wy - sy) / 2;
+				if (anchor & EAnchor::Bottom ) y = dy + wind.Left + (wy - sy);
 
 				// Write the string, line by line
 				for (Char const *e, *p = str; *p; ++p)
@@ -927,7 +1098,8 @@ namespace pr
 				Write(anchor, str.c_str(), dx, dy);
 			}
 
-			// Write a Pad helper object to the screen
+			// Write a Pad helper object to the screen.
+			// Cursor position and current colour are not changed by this method
 			void Write(EAnchor anchor, Pad const& pad, int dx = 0, int dy = 0)
 			{
 				CursorScope s0(*this);
@@ -971,18 +1143,24 @@ namespace pr
 				{
 					switch (item.m_what)
 					{
-					case Pad::Item::NewLine:
+					default:
+						throw std::exception("Unknown pad item");
+					case Pad::NewLine:
 						loc.Y++;
 						Cursor(loc);
 						break;
-					case Pad::Item::String:
-						Write(item.m_line->c_str(), 0, item.m_line->size());
+					case Pad::String:
+						Write(item.m_linea->c_str(), 0, item.m_linea->size());
 						break;
-					case Pad::Item::WString:
-						Write(item.m_wline->c_str(), 0, item.m_wline->size());
+					case Pad::WString:
+						Write(item.m_linew->c_str(), 0, item.m_linew->size());
 						break;
-					case Pad::Item::Colour:
+					case Pad::Colour:
 						Colour(pad_colour.Merge(*item.m_colour));
+						break;
+					case Pad::CurrentInput:
+						if (m_unicode_input) Write(m_linew.m_text);
+						else Write(m_linea.m_text);
 						break;
 					}
 				}

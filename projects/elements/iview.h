@@ -20,8 +20,7 @@ namespace ele
 
 		// Step the view, returns the next view to display
 		virtual EView Step(double elapsed) = 0;
-	
-	private:
+
 		PR_NO_COPY(IView);
 	};
 }

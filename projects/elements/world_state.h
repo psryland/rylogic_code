@@ -29,8 +29,7 @@ namespace ele
 
 		// Advance the world state by 'elapsed' seconds
 		bool Step(pr::seconds_t elapsed);
-	
-	private:
+
 		PR_NO_COPY(WorldState);
 	};
 }

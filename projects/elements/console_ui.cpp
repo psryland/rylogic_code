@@ -13,13 +13,13 @@ namespace ele
 		:m_inst(inst)
 		,m_cons()
 		,m_loop()
-		,m_view(new ViewIntro(m_cons, m_inst))
+		//,m_view(new ViewIntro(m_cons, m_inst))
+		,m_view(new ViewHome(m_cons, m_inst))
 	{
 		m_cons.Open(140, 60);
 		m_cons.AutoScroll(false);
 		m_cons.Echo(false);
 		m_cons.Colour(EColour::Black, EColour::Grey);
-		m_cons.LineInputA += [this](std::string const& line) { m_cons.Write(EAnchor::Centre, line.c_str()); }
 		m_loop.AddStepContext("step", [this](double elapsed){ Run(elapsed); }, 10.0f, true);
 		m_loop.Run();
 	}
@@ -28,7 +28,6 @@ namespace ele
 	{
 		m_inst.Step(elapsed);
 		m_cons.PumpInput();
-		return;
 		switch (m_view->Step(elapsed))
 		{
 		default: throw std::exception("Unknown view type");
