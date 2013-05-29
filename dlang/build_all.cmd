@@ -32,6 +32,12 @@ set VisualStudioVersion=11.0
 if errorlevel 1 goto :error
 xcopy "%dmdroot%\src\dmd\src\vcbuild\x64\Release\dmd_msc.exe" "%dmdroot%\windows\bin\dmd.exe" /Y /F
 echo.
+::cd "%dmdroot%\src\dmd\src"
+::set DM_HOME=%dmdroot%
+::call "%vc_env%"
+::"%mk%" -f win32.mak CC=vcbuild\dmc_cl INCLUDE=vcbuild DEBUG=/O2 dmd.exe
+::if errorlevel 1 goto :error
+::echo.
 
 echo ------------------------------------------------------------------------
 echo Making druntime

@@ -1,9 +1,11 @@
 #include "elements/stdafx.h"
 #include "elements/console_ui.h"
 #include "elements/game_instance.h"
-#include "elements/iview.h"
+#include "elements/view_base.h"
 #include "elements/view_intro.h"
 #include "elements/view_home.h"
+#include "elements/view_lab.h"
+#include "elements/view_ship.h"
 
 using namespace pr::console;
 
@@ -26,13 +28,19 @@ namespace ele
 
 	void ConsoleUI::Run(double elapsed)
 	{
+		// Step the game
 		m_inst.Step(elapsed);
+
+		// Step the view
 		m_cons.PumpInput();
 		switch (m_view->Step(elapsed))
 		{
 		default: throw std::exception("Unknown view type");
-		case EView::SameView: break;
-		case EView::Home: m_view.reset(new ViewHome(m_cons, m_inst)); break;
+		case EView::SameView:    break;
+		case EView::Home:        m_view.reset(new ViewHome(m_cons, m_inst)); break;
+		case EView::MaterialLab: m_view.reset(new ViewLab(m_cons, m_inst)); break;
+		case EView::ShipDesign:  m_view.reset(new ViewShip(m_cons, m_inst)); break;
+		case EView::Launch:      break;
 		}
 	}
 /*

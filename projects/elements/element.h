@@ -22,6 +22,13 @@ namespace ele
 		// The number of electrons needed to fill this electron shell (from its non-ionised state)
 		size_t m_valence_holes;
 
+		// A measure of the pull the element has on other electrons
+		// In the real world, this increases from bottom left to top right of the periodic table
+		// with a range from ~0.5(Francium) to 4 (Fluorine). The Ionicity of a bond between two
+		// elements is determined from difference in electronegativity. On the 0.5->4.0 scale
+		// any bond with a difference > ~1.8 is considered ionic.
+		pr::fraction_t m_electro_negativity;
+
 		// True once this element has been discovered
 		bool m_discovered;
 

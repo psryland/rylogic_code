@@ -32,7 +32,7 @@ namespace ele
 		PR_ASSERT(PR_DBG, atomic_number > 0 && atomic_number <= consts.m_element_count, "");
 
 		m_atomic_number  = atomic_number;
-		m_name           = &consts.m_element_name[m_atomic_number];
+		m_name           = &consts.m_element_name[m_atomic_number - 1];
 		m_period         = Period(m_atomic_number, consts);
 		m_valence_electrons = m_atomic_number != consts.m_valence_levels[m_period+1] ? m_atomic_number - consts.m_valence_levels[m_period] : 0;
 		m_valence_holes     = m_atomic_number != consts.m_valence_levels[m_period+1] ? consts.m_valence_levels[m_period+1] - m_atomic_number : 0;

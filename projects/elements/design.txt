@@ -15,13 +15,13 @@ Escape Velocity:
   (Time frame = time till super nova, points = number of population saved)
 
  Gameplay:
-  Each game is different due to a randomly choosen set of valence levels for the elements in the game universe.
+  Each game is different due to a randomly choosen number of electrons per orbital for the elements in the game universe.
   All materials are the combination of two elements only (in the required ratios to produce stable combinations).
   The player starts with a set of materials that they can combine to produce new materials. The combination
   processes model real chemical reaction processes so that the player is able to roughly predict the outcome
   of reacting two materials.
   The materials the player is trying to find are:
-   - a strong ship building material (strongly bonded material with low atomic weight)
+   - a strong ship building material (strongly bonded material with low atomic weight, highly ionic)
    - two materials that react vigously to use as fuel (materials that produce a strong exothermic reaction and hence
      produce a high exhaust velocity). Atomic weight of the fuel is also important as it effects the mass of the ship.
   The names of the elements are choosen randomly. The material names are then derived based on the ratio of elements
@@ -70,6 +70,10 @@ Escape Velocity:
   they become bonded when in a material.
   In this simplified model, materials always consist of two elements (in various ratios)
   Stability of a material depends on how close to filling the valence levels the element combination is
+  
+  The ideal material to build the space craft out of is a strong/light metal alloy. There doesn't seem to be any
+  periodic table inspired pattern for what makes an allow strong, so pick a light metal and the elements that froms the
+  highest total bond energy
 
  Game Systems:
   Start with a random set of materials with random properties.

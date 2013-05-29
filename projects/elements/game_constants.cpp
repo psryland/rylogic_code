@@ -6,7 +6,6 @@ namespace ele
 	// The element names, using real names for now for testing
 	ElementName const g_element_names[] =
 	{
-		{""           , ""  , ""        },
 		{"hydrogen"   , "H" , "hydr"    },
 		{"helium"     , "He", "hel"     },
 		{"lithium"    , "Li", "lithim"  },

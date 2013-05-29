@@ -108,6 +108,14 @@
 		<DisplayString>{m_name}</DisplayString>
 	</Type>
 	
+	<!-- Console -->
+	<Type Name="pr::console::Coord">
+		<DisplayString>{X},{Y}</DisplayString>
+	</Type>
+	<Type Name="pr::console::Colours">
+		<DisplayString>{m_fore.value}|{m_back.value}</DisplayString>
+	</Type>
+
 	<!-- Elements -->
 	<Type Name="ele::Element">
 		<DisplayString>{m_name->m_fullname}</DisplayString>

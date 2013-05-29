@@ -1,48 +1,42 @@
 #include "elements/stdafx.h"
 #include "elements/view_home.h"
-#include "elements/iview.h"
+#include "elements/view_base.h"
 #include "elements/game_instance.h"
 
 using namespace pr::console;
 
 namespace ele
 {
-	const pr::seconds_t redraw_time = 1.0;
+	const pr::seconds_t CountDownRedrawTimer = 1.0;
 	const int PadRightSideWidth = 60;
-	const int PadCountDownDy = 3;
 	int PadCountDownHeight;
 	int PadResourceHeight;
 
 	ViewHome::ViewHome(pr::Console& cons, GameInstance& inst)
-		:IView(cons, inst)
-		,m_redraw_timer(redraw_time)
+		:ViewBase(cons, inst)
+		,m_countdown_redraw_timer(CountDownRedrawTimer)
 	{
-		m_cons.Clear();
-		
-		// Set the input location. Rendering should not change this
-		m_cons.Cursor(EAnchor::BottomLeft, 3, 0);
+		Render();
 	}
 
-	EView ViewHome::Step(double elapsed)
+	EView ViewHome::Step(pr::seconds_t elapsed)
 	{
-		m_redraw_timer += elapsed;
-		if (m_redraw_timer > redraw_time)
-		{
-			m_redraw_timer = 0;
-			
-			CursorScope s0(m_cons);
+		m_countdown_redraw_timer += elapsed;
+		if (m_countdown_redraw_timer< CountDownRedrawTimer || (m_countdown_redraw_timer = 0) != 0)
 			RenderCountdown();
-			RenderResearchStatus();
-			RenderShipSpec();
-			RenderMenu();
-		}
-		return EView::SameView;
+		
+		return m_view;
 	}
 
-	void ViewHome::Input(std::string const& line)
+	void ViewHome::Render() const
 	{
-		//m_inputCurren
-		OutputDebugStringA(pr::FmtS("Input: %s\n", line.c_str()));
+		Scope s(m_cons);
+
+		m_cons.Write(EAnchor::TopLeft, "Home");
+		RenderCountdown();
+		RenderResearchStatus();
+		RenderShipSpec();
+		RenderMenu(EView::Home, strvec_t());
 	}
 
 	void ViewHome::RenderCountdown() const
@@ -53,9 +47,10 @@ namespace ele
 		pad << EColour::Red       << "       Time till nova: "
 			<< EColour::BrightRed << pr::datetime::ToCountdownString(m_inst.m_world_state.m_time_till_nova, pr::datetime::EMaxUnit::Days);
 
-		pad.m_width = PadRightSideWidth;
-		m_cons.Write(EAnchor::TopRight, pad, 0, PadCountDownDy);
-		PadCountDownHeight = pad.Size().cy;
+		pad.Width(PadRightSideWidth);
+		pad.AutoSize();
+		pad.Draw(m_cons, EAnchor::TopRight, 0, TitleHeight);
+		PadCountDownHeight = pad.WindowHeight();
 	}
 
 	void ViewHome::RenderResearchStatus() const
@@ -106,9 +101,10 @@ namespace ele
 				pad << "   " << EColour::Red << "(awaiting discoveries)\n";
 		}
 
-		pad.m_width = PadRightSideWidth;
-		m_cons.Write(EAnchor::TopRight, pad, 0, PadCountDownDy + PadCountDownHeight);
-		PadResourceHeight = pad.Size().cy;
+		pad.Width(PadRightSideWidth);
+		pad.AutoSize();
+		pad.Draw(m_cons, EAnchor::TopRight, 0, TitleHeight + PadCountDownHeight);
+		PadResourceHeight = pad.WindowHeight();
 	}
 
 	void ViewHome::RenderShipSpec() const
@@ -131,19 +127,15 @@ namespace ele
 		pad << EColour::Blue << "           Total Mass: " << EColour::BrightBlue << ship.m_total_mass       << "\n";
 		pad << EColour::Blue << "         Total Volume: " << EColour::BrightBlue << ship.m_total_volume     << "\n";
 
-		pad.m_width = PadRightSideWidth;
-		m_cons.Write(EAnchor::TopRight, pad, 0, PadCountDownDy + PadCountDownHeight + PadResourceHeight);
+		pad.Width(PadRightSideWidth);
+		pad.AutoSize();
+		pad.Draw(m_cons, EAnchor::TopRight, 0, TitleHeight + PadCountDownHeight + PadResourceHeight);
 	}
 
-	void ViewHome::RenderMenu() const
+	void ViewHome::OnEvent(pr::console::Evt_Line<char> const& e)
 	{
-		Pad pad(EColour::Green);
-		pad.Title(" Menu ", Colours(EColour::Black), EAnchor::Left);
-		if (m_inst.m_view != EView::Home       ) pad << "   H - Home\n";
-		if (m_inst.m_view != EView::ShipDesign ) pad << "   S - Ship Design\n";
-		if (m_inst.m_view != EView::MaterialLab) pad << "   M - Materials Lab\n";
-		if (m_inst.m_view != EView::Launch     ) pad << "   L - Launch Ship (end game)\n";
-		pad << "=> " << EColour::Black << Pad::CurrentInput;
-		m_cons.Write(EAnchor::BottomLeft, pad);
+		std::string option = e.m_input;
+		std::transform(begin(option), end(option), begin(option), ::tolower);
+		ViewBase::HandleOption(EView::Home, option);
 	}
 }

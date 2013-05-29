@@ -13,22 +13,31 @@ namespace ele
 		// m_elem1 * m_count1 + m_elem2 * m_count2
 		Element m_elem1;
 		Element m_elem2;
-
-		// A measure of how ionic the bond is.
-		// Ionic bonds tend to form strong macro structures (e.g. crystal lattices)
-		double m_ionicity;
-
 		size_t m_count1;
 		size_t m_count2;
 
 		// The name of the material (derived from the elements)
 		std::string m_name;
+		std::string m_name_symbolic;
 
-		// A hash code for materials of this type
-		pr::hash::HashValue m_hash;
+		// The index of this material in the possible combinations
+		size_t m_index;
 
 		// The configuration of the material
 		Bond m_bonds[EPerm2::NumberOf];
+
+		// A measure of how ionic the bond is.
+		// Ionic bonds tend to form strong macro structures (e.g. crystal lattices)
+		double m_ionicity;
+
+		// The measure of how strongly bonded this material is
+		pr::joules_t m_enthalpy;
+
+		double m_molar_mass;
+
+		double m_melting_point;
+
+		pr::kilograms_p_metre³_t m_density;
 
 		// True if this is a stable material, false otherwise
 		bool m_stable;

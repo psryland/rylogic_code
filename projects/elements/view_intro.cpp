@@ -1,6 +1,5 @@
 #include "elements/stdafx.h"
 #include "elements/view_intro.h"
-#include "elements/view_home.h"
 #include "elements/game_instance.h"
 
 using namespace pr::console;
@@ -10,7 +9,7 @@ namespace ele
 	const double seconds_per_page = 20.0;
 
 	ViewIntro::ViewIntro(pr::Console& cons, GameInstance& inst)
-		:IView(cons, inst)
+		:ViewBase(cons, inst)
 		,m_page(-1)
 		,m_display_time(seconds_per_page)
 	{}
@@ -18,21 +17,27 @@ namespace ele
 	// Step the view, returns the next view to display
 	EView ViewIntro::Step(double elapsed)
 	{
-		// Check for enter or space to skip
-		int vk;
-		if (m_cons.ReadKey(vk, 0) && (vk == VK_SPACE || vk == VK_RETURN || vk == VK_ESCAPE))
-			m_display_time += seconds_per_page;
-
 		m_display_time += elapsed;
-		if (m_display_time < seconds_per_page)
+		if (m_display_time < seconds_per_page || (m_display_time = 0) != 0)
 			return EView::SameView;
-		m_display_time = 0.0;
+		
+		if (++m_page == 4)
+			return EView::Home;
+
+		Render();
+		return EView::SameView;
+	}
+
+	void ViewIntro::Render() const
+	{
+		Scope s(m_cons);
+		m_cons.Clear();
 
 		Pad pad;
 		pad.Border(EColour::Blue);
-		switch (++m_page)
+		switch (m_page)
 		{
-		default: return EView::Home;
+		default:break;
 		case 0:
 			pad << Colours(EColour::Blue)
 				<< "2143-05-03 - UN Low Orbit Solar Observatory:     \n"
@@ -78,10 +83,19 @@ namespace ele
 				<< "\n";
 			break;
 		}
+		pad.AutoSize();
+		pad.Draw(m_cons, EAnchor::Centre);
+	}
 
-		m_cons.Clear();
-		m_cons.Write(EAnchor::Centre, pad);
-
-		return EView::SameView;
+	void ViewIntro::OnEvent(pr::console::Evt_KeyDown const& e)
+	{
+		// Check for enter, space, escape to skip
+		int vk = e.m_key.wVirtualKeyCode;
+		if (vk == VK_SPACE || vk == VK_RETURN || vk == VK_ESCAPE)
+		{
+			m_display_time += seconds_per_page;
+			return;
+		}
+		ViewBase::HandleKeyEvent(EView::Intro, e);
 	}
 }

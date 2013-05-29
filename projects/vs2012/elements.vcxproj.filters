@@ -26,6 +26,9 @@
     <Filter Include="sdk\pr\storage">
       <UniqueIdentifier>{7b0f1b1d-3ac0-45af-bb7a-7ba92372e7c1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk\pr\str">
+      <UniqueIdentifier>{b3a8b120-eb19-412c-918b-7877dd047b09}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\elements\ship.h">
@@ -91,9 +94,6 @@
     <ClInclude Include="..\elements\view_intro.h">
       <Filter>ui</Filter>
     </ClInclude>
-    <ClInclude Include="..\elements\iview.h">
-      <Filter>ui</Filter>
-    </ClInclude>
     <ClInclude Include="..\elements\view_home.h">
       <Filter>ui</Filter>
     </ClInclude>
@@ -102,6 +102,18 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\events.h">
       <Filter>sdk\pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\view_lab.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\view_base.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\view_ship.h">
+      <Filter>ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\str\tostring.h">
+      <Filter>sdk\pr\str</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -152,6 +164,15 @@
     </ClCompile>
     <ClCompile Include="..\elements\research_effort.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\view_lab.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\view_base.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\view_ship.cpp">
+      <Filter>ui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

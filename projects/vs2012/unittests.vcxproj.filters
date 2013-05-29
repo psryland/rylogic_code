@@ -765,6 +765,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\meta\abs.h">
       <Filter>sdk\meta</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\enumerable.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\unittests\run_tests.cmd">

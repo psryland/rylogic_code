@@ -13,27 +13,33 @@ namespace ele
 		if (Idx == 2) return e1.m_valence_electrons / pr::GreatestCommonFactor(e1.m_valence_electrons, e2.m_valence_holes);
 		return 0;
 	}
+	size_t MaterialIndex(Element e1, Element e2, GameConstants const& consts)
+	{
+		return (e1.m_atomic_number - 1) * consts.m_element_count + (e2.m_atomic_number - 1);
+	}
 
 	Material::Material()
 		:m_elem1()
 		,m_elem2()
-		,m_ionicity()
 		,m_count1()
 		,m_count2()
 		,m_name()
-		,m_hash()
+		,m_symbolic_name()
+		,m_index()
 		,m_bonds()
+		,m_ionicity()
 		,m_stable(false)
 	{}
 	Material::Material(Element e1, Element e2, GameConstants const& consts)
 		:m_elem1(e1.m_valence_electrons < e2.m_valence_electrons ? e1 : e2)
 		,m_elem2(e1.m_valence_electrons < e2.m_valence_electrons ? e2 : e1)
-		,m_ionicity(BondIonicity(m_elem1, m_elem2))
 		,m_count1(ElementRatio<1>(m_elem1, m_elem2))
 		,m_count2(ElementRatio<2>(m_elem1, m_elem2))
 		,m_name(MaterialName(m_elem1, m_count1, m_elem2, m_count2))
-		,m_hash(pr::hash::HashC(m_name.c_str()))
+		,m_symbolic_name(MaterialSymName(m_elem1, m_count1, m_elem2, m_count2))
+		,m_index(MaterialIndex(m_elem1, m_elem2, consts))
 		,m_bonds()
+		,m_ionicity(BondIonicity(m_elem1, m_elem2))
 		,m_stable(false)
 	{
 		using namespace EPerm2;
@@ -75,9 +81,12 @@ namespace ele
 			break;
 		}
 
-		m_stable =
+		// The bond energy of the material is the sum of the individual bond energies
+		m_enthalpy =
 			m_bonds[AA].m_count * m_bonds[AA].m_strength +
 			m_bonds[AB].m_count * m_bonds[AB].m_strength +
-			m_bonds[BB].m_count * m_bonds[BB].m_strength > 0.0;
+			m_bonds[BB].m_count * m_bonds[BB].m_strength;
+
+
 	}
 }

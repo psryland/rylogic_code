@@ -20,11 +20,13 @@
 #include "pr/app/sim_message_loop.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/rand.h"
+#include "pr/str/tostring.h"
 
 namespace ele
 {
 	typedef double man_days_t;
 	typedef double man_power_t;
+	typedef std::vector<std::string> strvec_t;
 
 	struct GameInstance;
 	struct GameConstants;
@@ -33,6 +35,8 @@ namespace ele
 	struct Ship;
 	struct ResearchEffort;
 
+	// An id for each view. These are only used by the view layer,
+	// the game instance does not have any concept of the 'current view'
 	#define PR_ENUM(x)\
 		x(Intro)\
 		x(Home)\

@@ -34,15 +34,32 @@ namespace ele
 
 	Lab::Lab(GameConstants const& consts)
 		:m_consts(consts)
+		,m_elements()
 	{
-		// Generate graph data
+		// Populate the container of elements
+		for (size_t i = 0; i != consts.m_element_count; ++i)
+			m_elements.push_back(Element(i+1, m_consts));
+
+		// Populate the container of materials
+		// Generate every possible combination, keeping only those
+		// that are stable
+		m_mats.reserve(sqr(consts.m_element_count));
 		for (size_t i = 0; i != consts.m_element_count; ++i)
 		for (size_t j = 0; j != consts.m_element_count; ++j)
 		{
-			Element ei(i+1, m_consts);
-			Element ej(j+1, m_consts);
-			Material mat(ei,ej,m_consts);
+			Material mat(m_elements[i], m_elements[j], m_consts);
+			m_mats.push_back(mat);
 		}
+
+
+		//// Generate graph data
+		//for (size_t i = 0; i != consts.m_element_count; ++i)
+		//for (size_t j = 0; j != consts.m_element_count; ++j)
+		//{
+		//	Element ei(i+1, m_consts);
+		//	Element ej(j+1, m_consts);
+		//	Material mat(ei,ej,m_consts);
+		//}
 	}
 
 	// Generate the name of a material formed from the given elements
@@ -85,6 +102,20 @@ namespace ele
 			name.append(e2.m_name->m_sufix_form);
 			name.append("ide");
 		}
+		return name;
+	}
+
+	// Generate the symbollic name of a material formed from the given elements
+	std::string MaterialSymName(Element elem1, size_t count1, Element elem2, size_t count2)
+	{
+		bool flip = elem1.m_atomic_number == 1 || elem2.m_valence_electrons < elem1.m_valence_electrons;
+		auto& e1 = flip ? elem2 : elem1;
+		auto& e2 = flip ? elem1 : elem2;
+		auto& c1 = flip ? count2 : count1;
+		auto& c2 = flip ? count1 : count2;
+
+		std::string name;
+		name.append(e1.m_name->m_symbol).append(pr::To<std::string>(c1)).append(e2.m_name->m_symbol).append(pr::To<std::string>(c2));
 		return name;
 	}
 

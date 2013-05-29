@@ -13,7 +13,8 @@ namespace ele
 	// Add a new material to the stock pile
 	void Stockpile::Add(Material m)
 	{
-		m_mats[m.m_hash] = m;
+		(void)m;
+		//m_mats[m.m_hash] = m;
 	}
 		
 	void Stockpile::Step(pr::seconds_t elapsed)

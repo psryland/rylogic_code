@@ -24,6 +24,7 @@
 #include <crtdbg.h>
 #include <stdarg.h>
 #include <tchar.h>
+#include <new>
 #include "pr/macros/enum.h"
 #include "pr/macros/no_copy.h"
 #include "pr/str/prstring.h"
@@ -42,6 +43,10 @@ namespace pr
 		template <typename Str> inline void resize(Str& str, size_t sz)                                 { str.resize(sz); }
 		template <typename Str> inline size_t size(Str& str)                                            { return str.size(); }
 		template <typename Str> inline bool empty(Str& str)                                             { return str.empty(); }
+		inline long width(RECT const& r)                                                                { return r.right - r.left; }
+		inline long height(RECT const& r)                                                               { return r.bottom - r.top; }
+		inline long width(SMALL_RECT const& r)                                                          { return r.Right - r.Left; }
+		inline long height(SMALL_RECT const& r)                                                         { return r.Bottom - r.Top; }
 
 		#pragma region Enums
 
@@ -134,36 +139,23 @@ namespace pr
 
 		#pragma endregion
 
-		#pragma region Scope structs
-
-		// RAII object for preserving the cursor position
-		struct CursorScope
-		{
-			Console* m_cons;
-			COORD m_cursor_pos;
-			CursorScope(Console& cons);
-			~CursorScope();
-		};
-
-		// RAII object for pushing console colours
-		struct ColourScope
-		{
-			Console* m_cons;
-			Colours m_colours;
-			ColourScope(Console& cons);
-			~ColourScope();
-		};
-
-		#pragma endregion
-
 		#pragma region Events
 
-		// An event raised when a key event is 'pumped'
+		// An event raised when a key event is 'pumped'.
+		// Note: sends both key down and key up events
 		struct Evt_Key
 		{
 			KEY_EVENT_RECORD const& m_key;
 			Evt_Key(KEY_EVENT_RECORD const& k) :m_key(k) {}
 			PR_NO_COPY(Evt_Key);
+		};
+
+		// An event raised when a key event is 'pumped'. Down events only
+		struct Evt_KeyDown
+		{
+			KEY_EVENT_RECORD const& m_key;
+			Evt_KeyDown(KEY_EVENT_RECORD const& k) :m_key(k) {}
+			PR_NO_COPY(Evt_KeyDown);
 		};
 
 		// An event raised when escape is pressed (while there is no user input)
@@ -190,125 +182,6 @@ namespace pr
 		};
 
 		#pragma endregion
-
-		// A helper for drawing rectangular blocks of text in the console
-		struct Pad
-		{
-			enum EItem { Unknown, NewLine, String, WString, Colour, CurrentInput };
-			struct Item
-			{
-				EItem m_what;
-				union { void* m_ptr; std::string* m_linea; std::wstring* m_linew; Colours* m_colour; };
-				Item(EItem what, void* ptr) :m_what(what), m_ptr(ptr) {}
-				Item(std::string* line)  :m_what(String ), m_linea(line) {}
-				Item(std::wstring* line) :m_what(WString), m_linew(line) {}
-				Item(Colours* colour)    :m_what(Colour ), m_colour(colour) {}
-			};
-
-			Colours m_colours;
-			Colours m_border;
-			Colours m_title_colour;
-			std::string m_title;
-			EAnchor m_title_anchor;
-			int m_width;
-			int m_height;
-			int m_w, m_h;
-			std::vector<Item> m_items;
-
-			Pad(EColour fore = EColour::Default, EColour back = EColour::Default)
-				:m_colours(fore, back)
-				,m_border()
-				,m_title_colour()
-				,m_title()
-				,m_title_anchor(EAnchor::TopCentre)
-				,m_width(0)
-				,m_height(1)
-				,m_w(0)
-				,m_h(1)
-				,m_items()
-			{}
-			~Pad()
-			{
-				for (auto& i : m_items)
-					delete i.m_ptr;
-			}
-
-			// Set the title for the pad
-			void Title(std::string title) { Title(title, m_colours.m_fore, EAnchor::TopCentre); }
-			void Title(std::string title, Colours colour, EAnchor anchor) { m_title = title; m_title_colour = colour; m_title_anchor = anchor; }
-
-			// Set the border colours (use Default,Default for no border)
-			void Border(EColour fore)               { Border(fore, m_colours.m_back); }
-			void Border(EColour fore, EColour back) { m_border.m_fore = fore; m_border.m_back = back; }
-
-			// True if the pad has a border
-			bool HasBorder() const { return !(m_border == Colours()); }
-
-			// True if the pad has a title
-			bool HasTitle() const { return !m_title.empty(); }
-
-			// Get/Set the size of the pad
-			SIZE Size() const
-			{
-				SIZE sz = {m_width, m_height};
-				if (HasBorder()) { sz.cx += 2; sz.cy += 2; }
-				else if (HasTitle()) { sz.cy += 1; }
-				return sz;
-			}
-			void Size(SIZE sz)
-			{
-				if (HasBorder()) { sz.cx -= 2; sz.cy -= 2; }
-				else if (HasTitle()) { sz.cy -= 1; }
-				m_width = sz.cx;
-				m_height = sz.cy;
-			}
-
-			// Stream anything to the pad
-			template <typename T> Pad& operator << (T t)
-			{
-				std::stringstream out; out << t;
-				return *this << out.str();
-			}
-
-			// Stream a string to the pad
-			template <typename Char> Pad& operator << (std::basic_string<Char> const& s)
-			{
-				Char const delim[] = {Char('\n'), 0};
-				pr::str::Split<std::basic_string<Char>, Char>(s, delim, [&](std::basic_string<Char> const& s, size_t i, size_t iend)
-					{
-						m_items.push_back(new std::basic_string<Char>(s.substr(i, iend-i)));
-						m_width  = std::max(m_width, m_w += int(iend - i));
-						if (iend != s.size() && s[iend] == Char('\n'))
-						{
-							m_items.push_back(Item(NewLine, 0));
-							m_height = std::max(m_height, ++m_h);
-							m_w = 0;
-						}
-					});
-				return *this;
-			}
-
-			// Stream a colour change
-			Pad& operator << (Colours c)
-			{
-				m_items.push_back(new Colours(c));
-				return *this;
-			}
-			Pad& operator << (EColour::Enum_ c)
-			{
-				m_items.push_back(new Colours(c));
-				return *this;
-			}
-
-			// A special type to represent the current user input
-			Pad& operator << (EItem item)
-			{
-				m_items.push_back(Item(item, 0));
-				return *this;
-			}
-
-			PR_NO_COPY(Pad);
-		};
 
 		class Console
 		{
@@ -497,8 +370,8 @@ namespace pr
 			{
 				// Notify of the key press
 				pr::events::Send(Evt_Key(k));
-				if (!k.bKeyDown)
-					return;
+				if (!k.bKeyDown) return;
+				pr::events::Send(Evt_KeyDown(k));
 
 				Char ch; traits::read(k, ch);
 				for (int i = 0; i != k.wRepeatCount; ++i)
@@ -748,6 +621,14 @@ namespace pr
 				Throw(SetConsoleActiveScreenBuffer(*m_front), "Set console active buffer failed");
 			}
 
+			// Get/Set unicode input
+			bool UnicodeInput() const { return m_unicode_input; }
+			void UnicodeInput(bool on) { m_unicode_input = on; }
+
+			// Get the currently buffered line input
+			std::string LineInputA() const { return m_linea.m_text; }
+			std::wstring LineInputW() const { return m_linew.m_text; }
+
 			// Return true if the console is open
 			bool IsOpen() const { return m_opened; }
 
@@ -791,8 +672,8 @@ namespace pr
 			{
 				// Limit the cursor position to within the console buffer
 				auto info = Info();
-				coord.X = SHORT(std::max(std::min(coord.X + dx, int(info.dwSize.X)), 0));
-				coord.Y = SHORT(std::max(std::min(coord.Y + dy, int(info.dwSize.Y)), 0));
+				coord.X = SHORT(std::max(std::min(coord.X + dx, int(info.dwSize.X - 1)), 0));
+				coord.Y = SHORT(std::max(std::min(coord.Y + dy, int(info.dwSize.Y - 1)), 0));
 				Throw(SetConsoleCursorPosition(*m_back, coord), "Failed to set cursor position");
 			}
 			void Cursor(int x, int y) { Cursor(Coord(x,y)); }
@@ -833,8 +714,6 @@ namespace pr
 			void Clear(int x, int y, int sx, int sy, Colours col) { Clear(x,y,sx,sy,true,col); }
 			void Clear(int x, int y, int sx, int sy, bool clear_text, Colours col)
 			{
-				CursorScope s0(*this);
-				
 				// Get the number of character cells in the current buffer
 				auto info = Info();
 				x  = (x  <  0) ? 0 : (x >= info.dwSize.X) ? info.dwSize.X - 1 : x;
@@ -1074,23 +953,24 @@ namespace pr
 
 				// Get the console window dimensions
 				auto wind = Info().srWindow;
-				int wx = wind.Right - wind.Left;
-				int wy = wind.Bottom - wind.Top;
+				int wx = wind.Right - wind.Left + 1;
+				int wy = wind.Bottom - wind.Top + 1;
 
 				// Find the coordinate to write the string at
 				int x = 0, y = 0;
 				if (anchor & EAnchor::Left   ) x = dx + wind.Left + 0;
 				if (anchor & EAnchor::HCentre) x = dx + wind.Left + (wx - sx) / 2;
 				if (anchor & EAnchor::Right  ) x = dx + wind.Left + (wx - sx);
-				if (anchor & EAnchor::Top    ) y = dy + wind.Left + 0;
-				if (anchor & EAnchor::VCentre) y = dy + wind.Left + (wy - sy) / 2;
-				if (anchor & EAnchor::Bottom ) y = dy + wind.Left + (wy - sy);
+				if (anchor & EAnchor::Top    ) y = dy + wind.Top  + 0;
+				if (anchor & EAnchor::VCentre) y = dy + wind.Top  + (wy - sy) / 2;
+				if (anchor & EAnchor::Bottom ) y = dy + wind.Top  + (wy - sy);
 
 				// Write the string, line by line
-				for (Char const *e, *p = str; *p; ++p)
+				for (Char const *p = str, *e = str; *p; p = ++e)
 				{
-					for (e = p + 1; *e && *e != Char('\n'); ++e) {}
-					Write(x, y++, p, 0, e - p - 1);
+					for (; *e && *e != Char('\n'); ++e) {}
+					Write(x, y++, p, 0, e - p);
+					if (*e == 0) break;
 				}
 			}
 			template <typename Char> void Write(EAnchor anchor, std::basic_string<Char> const& str, int dx = 0, int dy = 0)
@@ -1098,95 +978,33 @@ namespace pr
 				Write(anchor, str.c_str(), dx, dy);
 			}
 
-			// Write a Pad helper object to the screen.
-			// Cursor position and current colour are not changed by this method
-			void Write(EAnchor anchor, Pad const& pad, int dx = 0, int dy = 0)
+			// Draw a box with size sx,sy anchored to a screen point
+			void WriteBox(EAnchor anchor, int w, int h, int dx = 0, int dy = 0)
 			{
-				CursorScope s0(*this);
-				ColourScope s1(*this);
-				auto base_colour = s1.m_colours;
-
-				// Get the basic area of the pad
-				int w = pad.m_width;
-				int h = pad.m_height;
-
-				if (pad.HasBorder())     { h += 2; w += 2; }
-				else if (pad.HasTitle()) { h += 1; }
 				Coord loc = CursorLocation(anchor, w, h, dx, dy);
-
-				if (pad.HasBorder())
-				{
-					Colour(base_colour.Merge(pad.m_border));
-					WriteBox(anchor, w, h, dx, dy);
-				}
-				if (pad.HasTitle())
-				{
-					Colour(base_colour.Merge(pad.m_title_colour));
-					int xofs = 0;
-					if (pad.m_title_anchor & EAnchor::Left   ) xofs = 0;
-					if (pad.m_title_anchor & EAnchor::HCentre) xofs = int((w - pad.m_title.size()) / 2);
-					if (pad.m_title_anchor & EAnchor::Right  ) xofs = int(w - pad.m_title.size());
-					Write(loc.X + xofs, loc.Y, pad.m_title.c_str());
-				}
-
-				if (pad.HasBorder())     { h -= 2; w -= 2; loc.X += 1; loc.Y += 1; }
-				else if (pad.HasTitle()) { h -= 1; loc.Y += 1; }
-
-				// Clear the pad background
-				Colours pad_colour = base_colour.Merge(pad.m_colours);
-				Colour(pad_colour);
-				Clear(loc.X, loc.Y, w, h, pad_colour);
-
-				// Draw the pad content
-				Cursor(loc);
-				for (auto& item : pad.m_items)
-				{
-					switch (item.m_what)
-					{
-					default:
-						throw std::exception("Unknown pad item");
-					case Pad::NewLine:
-						loc.Y++;
-						Cursor(loc);
-						break;
-					case Pad::String:
-						Write(item.m_linea->c_str(), 0, item.m_linea->size());
-						break;
-					case Pad::WString:
-						Write(item.m_linew->c_str(), 0, item.m_linew->size());
-						break;
-					case Pad::Colour:
-						Colour(pad_colour.Merge(*item.m_colour));
-						break;
-					case Pad::CurrentInput:
-						if (m_unicode_input) Write(m_linew.m_text);
-						else Write(m_linea.m_text);
-						break;
-					}
-				}
+				WriteBox(loc.X, loc.Y, w, h);
 			}
 
-			// Draw a box with size sx,sy
-			void WriteBox(EAnchor anchor, int w, int h, int dx = 0, int dy = 0)
+			// Draw a box with size sx,sy at x,y
+			void WriteBox(int x, int y, int w, int h)
 			{
 				auto c = Colour();
 				DWORD chars_written;
-				Coord loc = CursorLocation(anchor, w, h, dx, dy);
-				FillConsoleOutputAttribute(*m_back, c, w, Coord(loc.X  ,loc.Y), &chars_written);
-				FillConsoleOutputCharacterW(*m_back, L'╔', 1  , Coord(loc.X    ,loc.Y), &chars_written);
-				FillConsoleOutputCharacterW(*m_back, L'═', w-2, Coord(loc.X+1  ,loc.Y), &chars_written);
-				FillConsoleOutputCharacterW(*m_back, L'╗', 1  , Coord(loc.X+w-1,loc.Y), &chars_written);
-				for (int y = loc.Y+1, yend = y+h-2; y != yend; ++y)
+				FillConsoleOutputAttribute(*m_back, c, w, Coord(x,y), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'╔', 1  , Coord(x    ,y), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'═', w-2, Coord(x+1  ,y), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'╗', 1  , Coord(x+w-1,y), &chars_written);
+				for (int i = y+1, iend = i+h-2; i != iend; ++i)
 				{
-					FillConsoleOutputAttribute(*m_back, c, 1, Coord(loc.X    ,y), &chars_written);
-					FillConsoleOutputAttribute(*m_back, c, 1, Coord(loc.X+w-1,y), &chars_written);
-					FillConsoleOutputCharacterW(*m_back, L'║', 1, Coord(loc.X    ,y), &chars_written);
-					FillConsoleOutputCharacterW(*m_back, L'║', 1, Coord(loc.X+w-1,y), &chars_written);
+					FillConsoleOutputAttribute(*m_back, c, 1, Coord(x    ,i), &chars_written);
+					FillConsoleOutputAttribute(*m_back, c, 1, Coord(x+w-1,i), &chars_written);
+					FillConsoleOutputCharacterW(*m_back, L'║', 1, Coord(x    ,i), &chars_written);
+					FillConsoleOutputCharacterW(*m_back, L'║', 1, Coord(x+w-1,i), &chars_written);
 				}
-				FillConsoleOutputAttribute(*m_back, c, w, Coord(loc.X  ,loc.Y+h-1), &chars_written);
-				FillConsoleOutputCharacterW(*m_back, L'╚', 1  , Coord(loc.X    ,loc.Y+h-1), &chars_written);
-				FillConsoleOutputCharacterW(*m_back, L'═', w-2, Coord(loc.X+1  ,loc.Y+h-1), &chars_written);
-				FillConsoleOutputCharacterW(*m_back, L'╝', 1  , Coord(loc.X+w-1,loc.Y+h-1), &chars_written);
+				FillConsoleOutputAttribute(*m_back, c, w, Coord(x,y+h-1), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'╚', 1  , Coord(x    ,y+h-1), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'═', w-2, Coord(x+1  ,y+h-1), &chars_written);
+				FillConsoleOutputCharacterW(*m_back, L'╝', 1  , Coord(x+w-1,y+h-1), &chars_written);
 			}
 
 			// Stream a type to/from the console
@@ -1225,7 +1043,7 @@ namespace pr
 			// Returns the rectangular area needed to contain 'str'
 			template <typename Char> static void MeasureString(Char const* str, int& w, int& h)
 			{
-				int x = 0; w = 0; h = 0;
+				int x = 0; w = 0; h = 1;
 				for (Char const* p = str; *p; ++p)
 				{
 					if (*p == Char('\n')) { ++h; x = 0; }
@@ -1234,13 +1052,421 @@ namespace pr
 			}
 		};
 
+		#pragma region Scope structs
+
 		// RAII object for preserving the cursor position
-		inline CursorScope::CursorScope(Console& cons) :m_cons(&cons) ,m_cursor_pos(m_cons->Cursor()) {}
-		inline CursorScope::~CursorScope() { m_cons->Cursor(m_cursor_pos); }
+		struct CursorScope
+		{
+			Console& m_cons;
+			COORD m_pos;
+			CursorScope(Console& cons) :m_cons(cons) ,m_pos(m_cons.Cursor()) {}
+			~CursorScope() { m_cons.Cursor(m_pos); }
+			PR_NO_COPY(CursorScope);
+		};
 
 		// RAII object for pushing console colours
-		inline ColourScope::ColourScope(Console& cons) :m_cons(&cons) ,m_colours(Colours::From(m_cons->Info().wAttributes)) {}
-		inline ColourScope::~ColourScope() { SetConsoleTextAttribute(*m_cons->m_back, m_colours); }
+		struct ColourScope
+		{
+			Console& m_cons;
+			Colours m_colours;
+			ColourScope(Console& cons) :m_cons(cons) ,m_colours(Colours::From(m_cons.Info().wAttributes)) {}
+			~ColourScope() { SetConsoleTextAttribute(*m_cons.m_back, m_colours); }
+			PR_NO_COPY(ColourScope);
+		};
+
+		// RAII object for pushing console colours and cursor position
+		struct Scope
+		{
+			CursorScope m_cur;
+			ColourScope m_col;
+			Scope(Console& cons) :m_cur(cons) ,m_col(cons) {}
+			PR_NO_COPY(Scope);
+		};
+
+		#pragma endregion
+
+		// A helper for drawing rectangular blocks of text in the console
+		struct Pad
+		{
+			enum EItem { Unknown, NewLine, CurrentInput, AString, WString, SetColours, SetCursor };
+		
+		private:
+			struct Item
+			{
+				EItem m_what;
+				union
+				{
+					void* m_ptr;
+					std::string* m_linea;
+					std::wstring* m_linew;
+					Colours* m_colour;
+					Coord* m_cursor;
+				};
+				
+				Item(EItem what)        :m_what(what)        ,m_ptr(0) {}
+				Item(std::string line)  :m_what(AString)     ,m_linea(new std::string(line)) {}
+				Item(std::wstring line) :m_what(WString)     ,m_linew(new std::wstring(line)) {}
+				Item(Colours colour)    :m_what(SetColours)  ,m_colour(new Colours(colour)) {}
+				Item(Coord coord)       :m_what(SetCursor)   ,m_cursor(new Coord(coord)) {}
+				~Item() { delete m_ptr; }
+
+				Item(Item const& rhs) :m_what(rhs.m_what) ,m_ptr()
+				{
+					switch (m_what)
+					{
+					default: throw std::exception("Unknown item type");
+					case Unknown:      break;
+					case NewLine:      break;
+					case AString:      m_linea  = new std::string(*rhs.m_linea); break;
+					case WString:      m_linew  = new std::wstring(*rhs.m_linew); break;
+					case SetColours:   m_colour = new Colours(*rhs.m_colour); break;
+					case SetCursor:    m_cursor = new Coord(*rhs.m_cursor); break;
+					case CurrentInput: break;
+					}
+				}
+				Item(Item&& rhs) :m_what(rhs.m_what) ,m_ptr(rhs.m_ptr)
+				{
+					rhs.m_what = Unknown;
+					rhs.m_ptr = 0;
+				}
+				Item& operator = (Item const& rhs) { this->~Item(); new (this) Item(rhs); }
+				Item& operator = (Item&& rhs)      { this->~Item(); new (this) Item((Item&&)rhs); }
+			};
+
+			Colours m_colours;
+			Colours m_border;
+			Colours m_title_colour;
+			std::string m_title;
+			EAnchor m_title_anchor;
+			Colours m_selection_colour;
+			size_t m_width;
+			size_t m_height;
+			size_t m_line_count;
+			Coord m_display_offset; // The top/left corner of the view to display within the pad
+			int m_selected;     // using sign values so that negatives are accepted (and then clamped to [0,..) otherwise they just roll over)
+			std::vector<Item> m_items;
+		
+		public:
+			Pad(EColour fore = EColour::Default, EColour back = EColour::Default)
+				:m_colours(fore, back)
+				,m_border()
+				,m_title_colour()
+				,m_title()
+				,m_title_anchor()
+				,m_selection_colour()
+				,m_width()
+				,m_height()
+				,m_line_count()
+				,m_display_offset()
+				,m_selected()
+				,m_items()
+			{
+				Clear();
+			}
+
+			void Clear() { Clear(true, true, true); }
+			void Clear(bool dimensions, bool title, bool border)
+			{
+				if (dimensions)
+				{
+					m_width = 0;
+					m_height = 0;
+				}
+				if (title)
+				{
+					m_title.clear();
+					m_title_colour = Colours();
+					m_title_anchor = EAnchor::TopCentre;
+				}
+				if (border)
+				{
+					m_border = Colours();
+				}
+				m_selection_colour = Colours(EColour::Green, EColour::Default);
+				m_items.clear();
+				m_line_count = 0;
+				m_display_offset = Coord();
+				m_selected = -1;
+			}
+
+			// Get/Set the fore/back colours for the pad
+			Colours Colour() const { return m_colours; }
+			void Colour(Colours c) { m_colours = c; }
+
+			// Set the title for the pad
+			void Title(std::string title) { Title(title, m_colours.m_fore, EAnchor::TopCentre); }
+			void Title(std::string title, Colours colour, EAnchor anchor)
+			{
+				m_title = title;
+				m_title_colour = colour;
+				m_title_anchor = anchor;
+			}
+
+			// Set the border colours (use Default,Default for no border)
+			void Border(EColour fore)               { Border(fore, m_colours.m_back); }
+			void Border(EColour fore, EColour back) { m_border.m_fore = fore; m_border.m_back = back; }
+
+			// True if the pad has a border
+			bool HasBorder() const { return !(m_border == Colours()); }
+
+			// True if the pad has a title
+			bool HasTitle() const { return !m_title.empty(); }
+
+			// Returns the bounds of the pad including title and border (if present) (in screen space)
+			RECT WindowRect(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			{
+				int w = WindowWidth();
+				int h = WindowHeight();
+				Coord loc = cons.CursorLocation(anchor, w, h, dx, dy);
+				
+				RECT wr;
+				wr.left   = loc.X;
+				wr.top    = loc.Y;
+				wr.right  = loc.X + w;
+				wr.bottom = loc.Y + h;
+				return wr;
+			}
+
+			// Returns the bounds of the content of the pad in screen space
+			RECT ClientRect(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			{
+				RECT wr = WindowRect(cons, anchor, dx, dy);
+				if (HasBorder())
+				{
+					wr.top    += 1;
+					wr.bottom -= 1;
+					wr.left   += 1;
+					wr.right  -= 1;
+				}
+				else if (HasTitle())
+				{
+					wr.top += 1;
+				}
+				return wr;
+			}
+
+			// Get/Set the client area width/height
+			size_t WindowWidth() const      { return m_width  + (HasBorder() ? 2 : 0); }
+			size_t WindowHeight() const      { return m_height + (HasBorder() ? 2 : HasTitle() ? 1 : 0); }
+			SIZE   WindowSize() const       { SIZE sz = {long(WindowWidth()), long(WindowHeight())}; return sz; }
+			size_t Width() const            { return m_width; }
+			size_t Height() const           { return m_height; }
+			SIZE   Size() const             { SIZE sz = {long(Width()), long(Height())}; return sz; }
+			void   Width(size_t w)          { m_width = w; }
+			void   Height(size_t h)         { m_height = h; }
+			void   Size(size_t w, size_t h) { m_width = w; m_height = h; }
+
+			// Get/Set the first column/line to display in the pad
+			// Uses a signed value so that negative values are accepted but clamped to [0,line_count-height)
+			Coord DisplayOffset() const { return m_display_offset; }
+			void DisplayOffset(int dx, int dy) { DisplayOffset(Coord(dx,dy)); }
+			void DisplayOffset(Coord ofs)
+			{
+				SIZE sz = PreferredSize();
+				int x_max = std::max(0, int(sz.cx - m_width));
+				int y_max = std::max(0, int(sz.cy - m_height));
+				ofs.X = short(std::max(std::min(int(ofs.X), x_max), 0));
+				ofs.Y = short(std::max(std::min(int(ofs.Y), y_max), 0));
+				m_display_offset = ofs;
+			}
+
+			// Get/Set the selected line
+			int Selected() const { return m_selected; }
+			void Selected(int s) { m_selected = std::max(std::min(s, int(m_line_count)), -1); }
+
+			// Get the number of lines contained in the pad
+			int LineCount() const { return m_line_count; }
+
+			// Stream anything to the pad
+			template <typename T> Pad& operator << (T t)
+			{
+				std::stringstream out; out << t;
+				return *this << out.str();
+			}
+
+			// Stream a string to the pad
+			Pad& operator << (std::string const& s)
+			{
+				char const delim[] = "\n";
+				if (m_line_count == 0 && !s.empty()) m_line_count = 1;
+				pr::str::Split(s, delim, [&](std::string const& s, size_t i, size_t iend)
+					{
+						// Concat lines where possible
+						if (!m_items.empty() && m_items.back().m_what == EItem::AString) m_items.back().m_linea->append(s);
+						else m_items.push_back(s.substr(i, iend-i));
+						if (iend != s.size() && s[iend] == '\n') { m_items.push_back(NewLine); ++m_line_count; }
+					});
+				return *this;
+			}
+			Pad& operator << (std::wstring const& s)
+			{
+				wchar_t const delim[] = L"\n";
+				if (m_line_count == 0 && !s.empty()) m_line_count = 1;
+				pr::str::Split(s, delim, [&](std::wstring const& s, size_t i, size_t iend)
+					{
+						if (!m_items.empty() && m_items.back().m_what == EItem::WString) m_items.back().m_linew->append(s);
+						else m_items.push_back(s.substr(i, iend-i));
+						if (iend != s.size() && s[iend] == L'\n') { m_items.push_back(NewLine); ++m_line_count; }
+					});
+				return *this;
+			}
+
+			// Stream a colour change
+			Pad& operator << (Colours c)
+			{
+				m_items.push_back(c);
+				return *this;
+			}
+			Pad& operator << (EColour::Enum_ c)
+			{
+				m_items.push_back(Colours(c));
+				return *this;
+			}
+
+			// Stream a coordinate position
+			Pad& operator << (Coord c)
+			{
+				m_items.push_back(c);
+				return *this;
+			}
+
+			// A special type
+			Pad& operator << (EItem item)
+			{
+				m_items.push_back(item);
+				return *this;
+			}
+
+			// Draw the title and border to 'cons'
+			void DrawFrame(Console& cons, RECT wr, Colours base_colour) const
+			{
+				int w = width(wr), h = height(wr);
+
+				// Clear the pad background
+				Colours pad_colour = base_colour.Merge(m_colours);
+				cons.Colour(pad_colour);
+				cons.Clear(wr.left, wr.top, w, h, pad_colour);
+
+				// Draw the border
+				if (HasBorder())
+				{
+					cons.Colour(base_colour.Merge(m_border));
+					cons.WriteBox(wr.left, wr.top, w, h);
+				}
+
+				// Draw the title
+				if (HasTitle())
+				{
+					cons.Colour(base_colour.Merge(m_title_colour));
+					int xofs = 0;
+					if (m_title_anchor & EAnchor::Left   ) xofs = 0;
+					if (m_title_anchor & EAnchor::HCentre) xofs = int((w - m_title.size()) / 2);
+					if (m_title_anchor & EAnchor::Right  ) xofs = int( w - m_title.size());
+					cons.Write(wr.left + xofs, wr.top, m_title.c_str());
+				}
+			}
+
+			// Draw a string from the pad into the console, clipped by the bounds of the pad
+			// 'loc' is the pad-space location of the current cursor position
+			template <typename Char> void DrawLine(Console& cons, std::basic_string<Char> const& line, Coord loc) const
+			{
+				int s = std::min<int>(std::max(m_display_offset.X - loc.X, 0), line.size());
+				int c = std::min<int>(line.size() - s, m_width);
+				cons.Write(line.c_str(), size_t(s), size_t(c));
+			}
+
+			// Draw the pad content to 'cons'
+			void DrawContent(Console& cons, RECT cr, Colours base_colour) const
+			{
+				Colours pad_colour = base_colour.Merge(m_colours);
+				Colours col = pad_colour;
+				Coord cur(0,0);
+				Coord ofs(0,0); // ofs from 'cur'
+				bool set_cur = true;
+				bool set_col = true;
+				int line_index = 0;
+
+				// Draw the pad content
+				for (auto& item : m_items)
+				{
+					if (item.m_what == Pad::NewLine   ) { ++line_index; ofs.X = 0; ++ofs.Y; set_cur = true; continue; }
+					if (item.m_what == Pad::SetCursor ) { cur = *item.m_cursor; ofs.X = ofs.Y = 0; set_cur = true; continue; }
+					if (item.m_what == Pad::SetColours) { col = *item.m_colour; set_col = true; continue; }
+
+					Coord loc(cur.X + ofs.X, cur.Y + ofs.Y);
+
+					// Skip lines that are outside the bounds of the pad
+					if (loc.Y < m_display_offset.Y || loc.Y >= int(m_display_offset.Y + m_height))
+						continue;
+					
+					if (line_index == m_selected || line_index == m_selected + 1) set_col = true;
+					if (set_cur && (set_cur = false) == false) cons.Cursor(cr.left + cur.X + ofs.X - m_display_offset.X, cr.top + cur.Y + ofs.Y - m_display_offset.Y);
+					if (set_col && (set_col = false) == false) cons.Colour(line_index == m_selected ? pad_colour.Merge(m_selection_colour) : col);
+
+					switch (item.m_what)
+					{
+					default:
+						throw std::exception("Unknown pad item");
+					case Pad::NewLine:
+					case Pad::SetColours:
+					case Pad::SetCursor:
+						break;
+					case Pad::AString:
+						DrawLine(cons, *item.m_linea, loc);
+						break;
+					case Pad::WString:
+						DrawLine(cons, *item.m_linew, loc);
+						break;
+					case Pad::CurrentInput:
+						if (cons.UnicodeInput()) DrawLine(cons, cons.LineInputW(), loc);
+						else                     DrawLine(cons, cons.LineInputA(), loc);
+						break;
+					}
+				}
+			}
+
+			// Write the Pad to 'cons'. Cursor position and current colour are not changed by this method
+			virtual void Draw(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			{
+				Scope s(cons);
+				if (m_width == 0 || m_height == 0) throw std::exception("pad has an invalid size");
+				DrawFrame(cons, WindowRect(cons,anchor,dx,dy), s.m_col.m_colours);
+				DrawContent(cons, ClientRect(cons,anchor,dx,dy), s.m_col.m_colours);
+			}
+
+			// Returns the size the pad should have to display all content
+			SIZE PreferredSize() const { return PreferredSize(std::string()); }
+			template <typename Char> SIZE PreferredSize(std::basic_string<Char> const& current_input) const
+			{
+				Coord cur(0,0);
+				SIZE sz = {0, 1};
+				int w = 0, h = 1;
+				for (auto& item : m_items)
+				{
+					switch (item.m_what)
+					{
+					default: throw std::exception("Unknown pad item");
+					case Pad::SetColours:break;
+					case Pad::NewLine: ++h; w = 0; break;
+					case Pad::AString: w += item.m_linea->size(); break;
+					case Pad::WString: w += item.m_linew->size(); break;
+					case Pad::SetCursor: cur = *item.m_cursor; w = 0; h = 0; break;
+					case Pad::CurrentInput: w += current_input.size(); break;
+					}
+					sz.cx = std::max(sz.cx, long(cur.X + w));
+					sz.cy = std::max(sz.cy, long(cur.Y + h));
+				}
+				return sz;
+			}
+
+			// Set the size of the client area to contain the content
+			void AutoSize()
+			{
+				SIZE sz = PreferredSize();
+				if (m_width  == 0) m_width  = size_t(sz.cx);
+				if (m_height == 0) m_height = size_t(sz.cy);
+			}
+		};
 
 		// Write output to the console using various methods. Handy way to test if it's working
 		inline void OutputTest()

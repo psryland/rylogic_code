@@ -26,6 +26,7 @@ namespace pr
 #include "pr/common/array.h"
 #include "pr/common/base64.h"
 #include "pr/common/chain.h"
+#include "pr/common/enumerable.h"
 #include "pr/common/expr_eval.h"
 #include "pr/common/event.h"
 #include "pr/common/fmt.h"

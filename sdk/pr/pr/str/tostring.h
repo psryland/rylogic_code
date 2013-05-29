@@ -202,6 +202,24 @@ namespace pr
 		static pr_string To(std::string const& from)             { return Widen(from.c_str(), from.size()); }
 		static pr_string To(std::wstring const& from)            { return from; }
 	};
+
+	// To<int>
+	template <typename TFrom> struct Convert<int,TFrom>
+	{
+		static int To(char const* from, int radix)               { return static_cast<int>(::strtol(from, 0, radix)); }
+		static int To(wchar_t const* from, int radix)            { return static_cast<int>(::wcstol(from, 0, radix)); }
+		static int To(std::string const& from, int radix)        { return static_cast<int>(::strtol(from.c_str(), 0, radix)); }
+		static int To(std::wstring const& from, int radix)       { return static_cast<int>(::wcstol(from.c_str(), 0, radix)); }
+	};
+
+	// To<size_t>
+	template <typename TFrom> struct Convert<size_t,TFrom>
+	{
+		static int To(char const* from, int radix)               { return static_cast<size_t>(::strtoul(from, 0, radix)); }
+		static int To(wchar_t const* from, int radix)            { return static_cast<size_t>(::wcstoul(from, 0, radix)); }
+		static int To(std::string const& from, int radix)        { return static_cast<size_t>(::strtoul(from.c_str(), 0, radix)); }
+		static int To(std::wstring const& from, int radix)       { return static_cast<size_t>(::wcstoul(from.c_str(), 0, radix)); }
+	};
 }
 
 #if PR_UNITTESTS
@@ -229,6 +247,9 @@ namespace pr
 			PR_CHECK(pr::To<std::string>(cstr), cstr);
 			PR_CHECK(pr::To<std::string>(wstr), cstr);
 			PR_CHECK(pr::To<std::string>(pstr), cstr);
+
+			PR_CHECK(pr::To<int>("1234",10), 1234);
+			PR_CHECK(pr::To<int>(L"1234",10), 1234);
 		}
 	}
 }

@@ -61,6 +61,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\dependency.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\discretepidcontroller.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\enumerable.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\event.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\events.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\exception.h" />

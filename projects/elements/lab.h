@@ -10,7 +10,12 @@ namespace ele
 	// Used to create materials
 	struct Lab
 	{
+		typedef std::vector<Material> MatCont;
+		typedef std::vector<Element> ElemCont;
+
 		GameConstants const& m_consts;
+		ElemCont m_elements;
+		MatCont m_mats;
 
 		explicit Lab(GameConstants const& consts);
 
@@ -19,6 +24,9 @@ namespace ele
 
 	// Generate the name of a material formed from the given elements
 	std::string MaterialName(Element elem1, size_t count1, Element elem2, size_t count2);
+
+	// Generate the symbollic name of a material formed from the given elements
+	std::string MaterialSymName(Element elem1, size_t count1, Element elem2, size_t count2);
 
 	// Calculates a bond strength between the given elements
 	// Negative values mean no bond will form

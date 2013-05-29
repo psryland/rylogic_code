@@ -17,11 +17,13 @@ namespace ele
 		Stockpile     m_stockpile;
 		Lab           m_lab;
 		Ship          m_ship;
-		EView         m_view;          // The current active game view
 
 		GameInstance(int seed);
 
 		void Step(pr::seconds_t elapsed);
+
+		// Generates the starting materials
+		void GenerateStartingMaterials();
 
 		// Called at the end of the game when the star goes nova
 		void Supernova();

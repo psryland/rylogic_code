@@ -10,15 +10,17 @@ namespace ele
 		,m_stockpile()
 		,m_lab(m_consts)
 		,m_ship()
-		,m_view(EView::Home)
 	{
-		// Add some materials
-		for (int i = 0; i != 10; ++i)
-		{
-			Element e1(pr::rand::int1(1,m_consts.m_element_count), m_consts);
-			Element e2(pr::rand::int1(1,m_consts.m_element_count), m_consts);
-			m_stockpile.Add(Material(e1,e2,m_consts));
-		}
+		// Generate the starting materials
+		GenerateStartingMaterials();
+
+		//// Add some materials
+		//for (int i = 0; i != 10; ++i)
+		//{
+		//	Element e1(pr::rand::int1(1,m_consts.m_element_count), m_consts);
+		//	Element e2(pr::rand::int1(1,m_consts.m_element_count), m_consts);
+		//	m_stockpile.Add(Material(e1,e2,m_consts));
+		//}
 	}
 
 	void GameInstance::Step(pr::seconds_t elapsed)
@@ -27,7 +29,24 @@ namespace ele
 		m_stockpile.Step(elapsed);
 	}
 
-	// Called at the end of the game when the star goes nova
+	// Generates the starting materials
+	void GameInstance::GenerateStartingMaterials()
+	{
+		// Start with the ideal materials and generate materials backwards to get the starting materials
+
+		// Determine the ideal material for building the space craft by sorting the list of possible
+		// materials by their total bond energy
+		std::vector<Material const*> mats;
+		for (auto& m : m_lab.m_mats) mats.push_back(&m);
+		std::sort(std::begin(mats), std::end(mats), [=](Material const* lhs, Material const* rhs){ return lhs->m_enthalpy > rhs->m_enthalpy; });
+		
+		//
+		// by picking randomly from the 5 lightest metals and then choosing the
+		// material that forms
+		// 
+	}
+
+		// Called at the end of the game when the star goes nova
 	void GameInstance::Supernova()
 	{
 	}
