@@ -171,8 +171,8 @@ struct enum_name\
 		return ToString(Member(index));\
 	}\
 \
-	/* Returns an enum member by index */ \
-	static Enum_ Member(int index)\
+	/* Returns an enum member by index. (const& so that address of can be used) */ \
+	static Enum_ const& Member(int index)\
 	{\
 		static Enum_ const map[] =\
 		{\
@@ -183,6 +183,18 @@ struct enum_name\
 		if (index < 0 || index >= NumberOf)\
 			throw std::exception("index out of range for enum "#enum_name);\
 		return map[index];\
+	}\
+\
+	/* Returns an iterator range for iterating over each element in the enum*/\
+	static pr::EnumMemberEnumerator<enum_name> Members()\
+	{\
+		return pr::EnumMemberEnumerator<enum_name>();\
+	}\
+\
+	/* Returns an iterator range for iterating over each element in the enum*/\
+	static pr::EnumMemberNameEnumerator<enum_name> MemberNames()\
+	{\
+		return pr::EnumMemberNameEnumerator<enum_name>();\
 	}\
 \
 	/* Converts this enum value to a string */ \
@@ -235,6 +247,46 @@ namespace pr
 		template <typename U> static char (&resolve(typename U::is_enum*))[2];
 		template <typename U> static char resolve(...);
 		enum { value = sizeof(resolve<TEnum>(0)) - 1 };
+	};
+
+	// Iterators for iterating over enum members/member names
+	template <typename TEnum> struct EnumMemberIterator
+	{
+		int m_idx;
+		explicit EnumMemberIterator(int idx) :m_idx(idx) {}
+		TEnum operator *() const                        { return TEnum::Member(m_idx); }
+		EnumMemberIterator& operator ++()               { ++m_idx; return *this; }
+		EnumMemberIterator& operator --()               { --m_idx; return *this; }
+		EnumMemberIterator operator ++(int)             { return EnumMemberIterator(m_idx++); }
+		EnumMemberIterator operator --(int)             { return EnumMemberIterator(m_idx--); }
+		bool operator == (EnumMemberIterator rhs) const { return m_idx == rhs.m_idx; }
+		bool operator != (EnumMemberIterator rhs) const { return m_idx != rhs.m_idx; }
+		bool operator <  (EnumMemberIterator rhs) const { return m_idx <  rhs.m_idx; }
+	};
+	template <typename TEnum> struct EnumMemberNameIterator
+	{
+		int m_idx;
+		explicit EnumMemberNameIterator(int idx) :m_idx(idx) {}
+		char const* operator *() const                      { return TEnum::MemberName(m_idx); }
+		EnumMemberNameIterator& operator ++()               { ++m_idx; return *this; }
+		EnumMemberNameIterator& operator --()               { --m_idx; return *this; }
+		EnumMemberNameIterator operator ++(int)             { return EnumMemberNameIterator(m_idx++); }
+		EnumMemberNameIterator operator --(int)             { return EnumMemberNameIterator(m_idx--); }
+		bool operator == (EnumMemberNameIterator rhs) const { return m_idx == rhs.m_idx; }
+		bool operator != (EnumMemberNameIterator rhs) const { return m_idx != rhs.m_idx; }
+		bool operator <  (EnumMemberNameIterator rhs) const { return m_idx <  rhs.m_idx; }
+	};
+
+	// Proxy objects that allow for (TEnum e : TEnum::Members()) {}
+	template <typename TEnum> struct EnumMemberEnumerator
+	{
+		EnumMemberIterator<TEnum> begin() const { return EnumMemberIterator<TEnum>(0); }
+		EnumMemberIterator<TEnum> end() const   { return EnumMemberIterator<TEnum>(TEnum::NumberOf); }
+	};
+	template <typename TEnum> struct EnumMemberNameEnumerator
+	{
+		EnumMemberNameIterator<TEnum> begin() const { return EnumMemberNameIterator<TEnum>(0); }
+		EnumMemberNameIterator<TEnum> end() const   { return EnumMemberNameIterator<TEnum>(TEnum::NumberOf); }
 	};
 
 	// Used to check enums where the value of each member should be the hash of its string name
@@ -377,6 +429,7 @@ namespace pr
 			PR_THROWS([&](){ TestEnum3 c = TestEnum3::From(4); }, std::exception);        // invalid conversion, 4 is not an enum value
 
 			TestEnum4 x = (TestEnum4::A | TestEnum4::B) & ~TestEnum4::C; // Flag enums can be combined and assigned
+			PR_CHECK(x == 42U, false); // Implicitly convertible to unsigned int (flags only)
 
 			char const* names[] = {"A","B","C"};
 			TestEnum1::Enum_ values[] = {TestEnum1::A, TestEnum1::B, TestEnum1::C};
@@ -384,6 +437,17 @@ namespace pr
 			{
 				PR_CHECK(TestEnum1::MemberName(i), names[i]);     // Access names by index
 				PR_CHECK(TestEnum1::Member(i), values[i]);        // Access members by index
+			}
+
+			{
+				int idx = 0;
+				for (TestEnum1 e : TestEnum1::Members())
+					PR_CHECK(e, TestEnum1::Member(idx++));
+			}
+			{
+				int idx = 0;
+				for (auto e : TestEnum1::MemberNames())
+					PR_CHECK(e, TestEnum1::MemberName(idx++));
 			}
 		}
 	}

@@ -746,8 +746,8 @@ namespace pr
 			}
 			{//m4x4CreateFrom
 				v4 V1 = Random3(0.0f, 10.0f, 1.0f);
-				m4x4 a2b; a2b.set(Random3N(0.0f), rand::flt2(0, maths::tau_by_2), Random3(0.0f, 10.0f, 1.0f));
-				m4x4 b2c; b2c.set(Random3N(0.0f), rand::flt2(0, maths::tau_by_2), Random3(0.0f, 10.0f, 1.0f));
+				m4x4 a2b; a2b.set(Random3N(0.0f), rand::fltc(0, maths::tau_by_2), Random3(0.0f, 10.0f, 1.0f));
+				m4x4 b2c; b2c.set(Random3N(0.0f), rand::fltc(0, maths::tau_by_2), Random3(0.0f, 10.0f, 1.0f));
 				PR_CHECK(IsOrthonormal(a2b), true);
 				PR_CHECK(IsOrthonormal(b2c), true);
 				v4 V2 = a2b * V1;
@@ -763,7 +763,7 @@ namespace pr
 				PR_CHECK(IsOrthonormal(m2), true);
 				PR_CHECK(FEql(m1, m2), true);
 
-				float ang = rand::flt2(0.0f,1.0f);
+				float ang = rand::fltc(0.0f,1.0f);
 				v4 axis = Random3N(0.0f);
 				m1; Rotation4x4(m1, axis, ang, v4Origin);
 				m2; m2.set(Quat::make(axis, ang), v4Origin);
@@ -772,7 +772,7 @@ namespace pr
 				PR_CHECK(FEql(m1, m2), true);
 			}
 			{//m4x4CreateFrom3
-				m4x4 a2b; a2b.set(Random3N(0.0f), rand::flt2(0.0f,1.0f), Random3(0.0f, 10.0f, 1.0f));
+				m4x4 a2b; a2b.set(Random3N(0.0f), rand::fltc(0.0f,1.0f), Random3(0.0f, 10.0f, 1.0f));
 				a2b = m4x4::make(
 					v4::make(0.58738488f,  0.60045743f,  0.54261398f, 0.0f),
 					v4::make(-0.47383153f,  0.79869330f, -0.37090793f, 0.0f),

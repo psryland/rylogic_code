@@ -21,6 +21,7 @@ syntax: glob
 *ReSharper*
 dlang/2.05x
 dlang/2.062
+dlang/dm/
 dlang/dmd2/
 renderer11/shaders/compiled/*
 RylogicEnv.cmd

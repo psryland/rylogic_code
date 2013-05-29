@@ -14,22 +14,23 @@ namespace pr
 	// Map the MT to a shorter name and simpler interface
 	struct Rnd :private MersenneTwister
 	{
+		// 'r' stands for 'range', 'c' stands for 'centred'
 		Rnd() {}
 		explicit Rnd(ulong s) :MersenneTwister(s) {}
 		void   seed(ulong s)              { MersenneTwister::seed(s); }
 		ulong  u32()                      { return MersenneTwister::u32(); }
 		ulong  u32(ulong mn, ulong mx)    { return mn == mx ? mx : ((u32() % (mx - mn)) + mn); }
 		long   i32()                      { return MersenneTwister::i32(); }
-		long   int1(long mn, long mx)     { return mn == mx ? mx : ((i32() % (mx - mn)) + mn); }
-		long   int2(long avr, long d)     { return d == 0 ? avr : ((i32() % (2*d) - d) + avr); }
+		long   i32r(long mn, long mx)     { return mn == mx ? mx : ((i32() % (mx - mn)) + mn); }
+		long   i32c(long avr, long d)     { return d == 0 ? avr : ((i32() % (2*d) - d) + avr); }
 		uint8  u8()                       { return static_cast<uint8>(u32() >> 24); }
 		uint8  u8(uint8 mn, uint8 mx)     { return mn == mx ? mx : ((u8() % (mx - mn)) + mn); }
 		double dbl()                      { return MersenneTwister::f32(); }
-		double dbl1(double mn, double mx) { return dbl() * (mx - mn) + mn; }
-		double dbl2(double avr, double d) { return (2.0 * dbl() - 1.0) * d + avr; }
+		double dblr(double mn, double mx) { return dbl() * (mx - mn) + mn; }
+		double dblc(double avr, double d) { return (2.0 * dbl() - 1.0) * d + avr; }
 		float  flt()                      { return static_cast<float>(dbl()); }
-		float  flt1(float mn, float mx)   { return static_cast<float>(dbl1(mn, mx)); }
-		float  flt2(float avr, float d)   { return static_cast<float>(dbl1(avr, d)); }
+		float  fltr(float mn, float mx)   { return static_cast<float>(dblr(mn, mx)); }
+		float  fltc(float avr, float d)   { return static_cast<float>(dblc(avr, d)); }
 	};
 	
 	namespace rand
@@ -39,16 +40,16 @@ namespace pr
 		inline uint   u32()                      { return Rand().u32(); }
 		inline uint   u32(uint mn, uint mx)      { return Rand().u32(mn,mx); }
 		inline int    i32()                      { return Rand().i32(); }
-		inline int    int1(int mn, int mx)       { return Rand().int1(mn,mx); }
-		inline int    int2(int avr, int d)       { return Rand().int2(avr,d); }
+		inline int    i32r(int mn, int mx)       { return Rand().i32r(mn,mx); }
+		inline int    i32c(int avr, int d)       { return Rand().i32c(avr,d); }
 		inline uint8  u8()                       { return Rand().u8(); }
 		inline uint8  u8(uint8 mn, uint8 mx)     { return Rand().u8(mn,mx); }
 		inline double dbl()                      { return Rand().dbl(); }
-		inline double dbl1(double mn, double mx) { return Rand().dbl1(mn,mx); }
-		inline double dbl2(double avr, double d) { return Rand().dbl2(avr,d); }
+		inline double dblr(double mn, double mx) { return Rand().dblr(mn,mx); }
+		inline double dblc(double avr, double d) { return Rand().dblc(avr,d); }
 		inline float  flt()                      { return Rand().flt(); }
-		inline float  flt1(float mn, float mx)   { return Rand().flt1(mn,mx); }
-		inline float  flt2(float avr, float d)   { return Rand().flt1(avr,d); }
+		inline float  fltr(float mn, float mx)   { return Rand().fltr(mn,mx); }
+		inline float  fltc(float avr, float d)   { return Rand().fltc(avr,d); }
 	}
 	
 	// Random integer generator

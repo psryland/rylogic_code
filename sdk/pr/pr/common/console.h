@@ -126,7 +126,9 @@ namespace pr
 			Colours() :m_fore(EColour::Default) ,m_back(EColour::Default) {}
 			Colours(EColour fore) :m_fore(fore) ,m_back(EColour::Default) {}
 			Colours(EColour fore, EColour back) :m_fore(fore) ,m_back(back) {}
-			static Colours From(WORD colours) { return Colours(colours & 0xf, (colours >> 4) & 0xf); }
+			Colours(EColour::Enum_ fore) :m_fore(fore) ,m_back(EColour::Default) {}
+			Colours(EColour::Enum_ fore, EColour::Enum_ back) :m_fore(fore) ,m_back(back) {}
+			static Colours From(WORD colours) { Colours c; c.m_fore = colours & 0xf; c.m_back = (colours >> 4) & 0xf; return c; }
 			operator WORD() const { return WORD((m_back << 4) | m_fore); }
 			bool operator == (Colours const& rhs) const { return m_fore == rhs.m_fore && m_back == rhs.m_back; }
 			Colours Merge(Colours rhs) const
@@ -680,7 +682,7 @@ namespace pr
 			void Cursor(EAnchor anchor, int dx = 0, int dy = 0) { Cursor(CursorLocation(anchor, 1, 1, dx, dy)); }
 
 			// Get/Set the colour to use
-			Colours Colour() const { return Info().wAttributes; }
+			Colours Colour() const { return Colours::From(Info().wAttributes); }
 			void Colour(Colours c) { Throw(SetConsoleTextAttribute(*m_back, m_colour.Merge(c)), "Failed to set colour text attributes"); }
 			void Colour(EColour fore, EColour back) { Colour(Colours(fore,back)); }
 
@@ -1194,6 +1196,7 @@ namespace pr
 			void Colour(Colours c) { m_colours = c; }
 
 			// Set the title for the pad
+			std::string Title() const { return m_title; }
 			void Title(std::string title) { Title(title, m_colours.m_fore, EAnchor::TopCentre); }
 			void Title(std::string title, Colours colour, EAnchor anchor)
 			{
@@ -1359,9 +1362,9 @@ namespace pr
 				{
 					cons.Colour(base_colour.Merge(m_title_colour));
 					int xofs = 0;
-					if (m_title_anchor & EAnchor::Left   ) xofs = 0;
+					if (m_title_anchor & EAnchor::Left   ) xofs = 0 + HasBorder();
 					if (m_title_anchor & EAnchor::HCentre) xofs = int((w - m_title.size()) / 2);
-					if (m_title_anchor & EAnchor::Right  ) xofs = int( w - m_title.size());
+					if (m_title_anchor & EAnchor::Right  ) xofs = int( w - m_title.size() - HasBorder());
 					cons.Write(wr.left + xofs, wr.top, m_title.c_str());
 				}
 			}

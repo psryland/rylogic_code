@@ -43,11 +43,16 @@ namespace pr
 		TIter m_iter, m_end;
 		TPred m_pred;
 
-		FilterIter(TIter iter, TIter end, TPred pred) :m_iter(iter) ,m_end(end) ,m_pred(pred) {}
-		FilterIter& operator ++() { for (; m_iter != m_end && !m_pred(*m_iter); ++m_iter) {} return *this; }
+		FilterIter(TIter iter, TIter end, TPred pred) :m_iter(iter) ,m_end(end) ,m_pred(pred) { find_next_valid(); }
+		FilterIter& operator ++() { ++m_iter; find_next_valid(); return *this; }
 		auto operator *() -> decltype(*m_iter) const { return *m_iter; }
 		bool operator == (FilterIter const& rhs) const { return m_iter == rhs.m_iter; }
 		bool operator != (FilterIter const& rhs) const { return m_iter != rhs.m_iter; }
+	private:
+		void find_next_valid()
+		{
+			for (; m_iter != m_end && !m_pred(*m_iter); ++m_iter) {}
+		}
 	};
 
 	// Construct an enumerable from a predicate
@@ -93,17 +98,23 @@ namespace pr
 		{
 			using namespace pr::unittests::enumerable;
 
-			Foo foo;
-
-			for (auto& i : foo.OddInts())
-				i *= 10;
-
-			for (auto& i : pr::MakeEnumerable(foo.m_int, [=](int item){ return (item % 2) == 0; }))
-				i *= -10;
-
-			PR_CHECK(foo.m_int[0], 10);
-			PR_CHECK(foo.m_int[1], -20);
-			PR_CHECK(foo.m_int[2], 30);
+			{
+				Foo foo;
+				for (auto& i : foo.OddInts())
+					i *= 10;
+				PR_CHECK(foo.m_int[0], 10);
+				PR_CHECK(foo.m_int[1], 2);
+				PR_CHECK(foo.m_int[2], 30);
+			}
+			{
+				Foo foo;
+				for (auto& i : pr::MakeEnumerable(foo.m_int, [](int item){ return (item % 2) == 0; }))
+					i *= -10;
+				
+				PR_CHECK(foo.m_int[0], 1);
+				PR_CHECK(foo.m_int[1], -20);
+				PR_CHECK(foo.m_int[2], 3);
+			}
 		}
 	}
 }
