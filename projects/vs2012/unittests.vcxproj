@@ -116,7 +116,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\timers.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\to.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\repeater.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\triangulartable.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\unittests.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\valuecast.h" />

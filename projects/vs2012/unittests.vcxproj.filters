@@ -489,9 +489,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\timers.h">
       <Filter>sdk\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\triangulartable.h">
-      <Filter>sdk\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h">
       <Filter>sdk\common</Filter>
     </ClInclude>
@@ -766,6 +763,9 @@
       <Filter>sdk\meta</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\enumerable.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h">
       <Filter>sdk\common</Filter>
     </ClInclude>
   </ItemGroup>
