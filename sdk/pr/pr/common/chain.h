@@ -133,8 +133,15 @@ namespace pr
 			Link*       begin()           { return m_next; }
 			Link const* end() const       { return this; }
 			Link*       end()             { return this; }
+
+			friend void swap(Link<Owner>& lhs, Link<Owner>& rhs)
+			{
+				std::swap(lhs.m_owner, rhs.m_owner);
+				std::swap(lhs.m_next, rhs.m_next);
+				std::swap(lhs.m_prev, rhs.m_prev);
+			}
 		};
-		
+
 		// Mixin chain ******************************************
 		// Simple usage:
 		//    struct MyClass : public chain::link<MyClass>
