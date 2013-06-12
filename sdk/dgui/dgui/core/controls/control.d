@@ -637,7 +637,11 @@ abstract class Control: Handle!(HWND), IDisposable
 			}
 			return m.Result;
 		}
-		catch (Exception) { return E_FAIL; }
+		catch (Exception)
+		{
+			assert(false, "msgRouter failed");
+			return E_FAIL;
+		}
 	}
 
 	private void onMenuCommand(WPARAM wParam, LPARAM lParam)

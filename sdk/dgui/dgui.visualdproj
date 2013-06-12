@@ -132,7 +132,7 @@
   <warnings>1</warnings>
   <infowarnings>1</infowarnings>
   <checkProperty>1</checkProperty>
-  <genStackFrame>0</genStackFrame>
+  <genStackFrame>1</genStackFrame>
   <pic>0</pic>
   <cov>0</cov>
   <nofloat>0</nofloat>
