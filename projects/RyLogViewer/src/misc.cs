@@ -155,12 +155,12 @@ namespace RyLogViewer
 	[DataContract]
 	public class LaunchApp :ICloneable
 	{
-		[DataMember] public string Executable       = string.Empty;
-		[DataMember] public string Arguments        = string.Empty;
-		[DataMember] public string WorkingDirectory = string.Empty;
-		[DataMember] public string OutputFilepath   = string.Empty;
-		[DataMember] public bool   ShowWindow       = false;
-		[DataMember] public bool   AppendOutputFile = true;
+		[DataMember] public string      Executable       = string.Empty;
+		[DataMember] public string      Arguments        = string.Empty;
+		[DataMember] public string      WorkingDirectory = string.Empty;
+		[DataMember] public string      OutputFilepath   = string.Empty;
+		[DataMember] public bool        ShowWindow       = false;
+		[DataMember] public bool        AppendOutputFile = true;
 		[DataMember] public StandardStreams Streams = StandardStreams.Stdout|StandardStreams.Stderr;
 		
 		public bool CaptureStdout { get { return (Streams & StandardStreams.Stdout) != 0; } }

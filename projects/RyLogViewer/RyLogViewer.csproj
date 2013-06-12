@@ -289,14 +289,8 @@
     <EmbeddedResource Include="docs\RegexQuickRef.html" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
-      <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>prcs_vs2012</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="gen_licence.cmd" />
-    <None Include="release.cmd" />
+    <None Include="deploy.cmd" />
     <None Include="Resources\executable.png" />
     <None Include="Resources\edit_add.png" />
     <None Include="Resources\edit_save.png" />
@@ -367,7 +361,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
+      <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
+      <Name>prcs_vs2012</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>Q:\bin\csex\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>

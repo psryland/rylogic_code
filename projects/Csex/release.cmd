@@ -1,14 +1,9 @@
 ::
 :: Use:
-::   release.cmd
+::   release.cmd [noninteractive]
 @echo off
 SetLocal EnableDelayedExpansion 
-set PATH=Q:\sdk\pr\cmd\;%PATH%
 cls
-echo =================
-echo Releasing Csex
-echo =================
-echo.
 
 ::Load Rylogic environment variables and check version
 if [%RylogicEnv%]==[] (
@@ -21,12 +16,24 @@ if %RylogicEnvVersion% lss 3 (
 	goto :error
 )
 
-set dstdir=Q:\bin
-set srcdir=Q:\projects\Csex
-set symdir=Q:\local\symbols
-set bindir=%srcdir%\bin\release
+set noninteractive=%1
+set PATH=%qdrive%\sdk\pr\cmd\;%PATH%
+set dstdir=%qdrive%\bin
+set srcdir=%qdrive%\projects\Csex
+set symdir=%qdrive%\local\symbols
+set config=release
 set dst=%dstdir%\csex
 set sym=%symdir%\csex
+set bindir=%srcdir%\bin\%config%
+
+echo *************************************************************************
+echo  Csex Deploy
+echo   Copyright © Rylogic Limited 2013
+echo.
+echo    Destination: %dst%
+echo  Configuration: %config%
+echo *************************************************************************
+if [%noninteractive%] == [] pause
 
 ::Ensure directories exist and are empty
 if not exist "!dst!" mkdir "!dst!"
@@ -49,7 +56,7 @@ if errorlevel 1 goto :error
 echo.
 echo     Success.
 echo.
-call wait 5000
+if [%noninteractive%] == [] call wait 5000
 goto :eof
 
 ::Error exit

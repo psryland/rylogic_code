@@ -8,9 +8,10 @@
 :is_directory
 	setlocal EnableDelayedExpansion EnableExtensions
 	set attr=%~a1
+	if [%attr%]==[] set attr=---
 	set dirattr=%attr:~0,1%
 	set result=%2
-	if [%trace%]==[1] echo Testing if %1 is a directory, storing the result in '%2'. attr=%attr% dirattr=%dirattr%
+	if [%trace%]==[1] ( echo Testing if %1 is a directory, storing the result in '%2'. attr='%attr%' dirattr='%dirattr%' )
 	if /I [%dirattr%]==[d] (
 		endlocal & set %result%=1
 	) else (

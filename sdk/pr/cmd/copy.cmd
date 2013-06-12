@@ -7,7 +7,9 @@
 	setlocal
 	set src=%~f1
 	set dst=%~f2
-	echo 0 > "%dst%"
+	if [%trace%]==[1] ( echo copying '%src%' to '%dst%' )
+	call is_directory "%dst%" result
+	if [%result%]==[0] echo 0 > "%dst%"
 	echo %src% -^> %dst%
 	xcopy "%src%" "%dst%" /Y /F >nul
 	endlocal

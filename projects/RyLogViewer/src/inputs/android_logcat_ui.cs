@@ -101,10 +101,11 @@ namespace RyLogViewer
 			// Log out capture file
 			m_combo_output_file.ToolTip(m_tt, "The file path to save captured logcat output to");
 			m_combo_output_file.Load(m_settings.AndroidLogcat.OutputFilepathHistory);
-			m_combo_output_file.Enabled = false;
+			m_combo_output_file.Enabled = m_check_capture_to_log.Checked;
 
+			// Browse for capture output file
 			m_btn_browse_output_file.ToolTip(m_tt, "Browse the file system for the file to write logcat output to");
-			m_btn_browse_output_file.Enabled = false;
+			m_btn_browse_output_file.Enabled = m_check_capture_to_log.Checked;
 			m_btn_browse_output_file.Click += (s,a) =>
 				{
 					var dlg = new OpenFileDialog();
@@ -116,7 +117,7 @@ namespace RyLogViewer
 			// Append to existing
 			m_check_append.ToolTip(m_tt, "If checked, captured output is appended to the capture file.\r\nIf not, then the capture file is overwritten");
 			m_check_append.Checked = Launch.AppendOutputFile;
-			m_check_append.Enabled = false;
+			m_check_append.Enabled = m_check_capture_to_log.Checked;
 
 			// Refresh button
 			m_btn_refresh.ToolTip(m_tt, "Repopulate this dialog with data collected using adb.exe");
@@ -148,12 +149,12 @@ namespace RyLogViewer
 						logcat_settings.LogBuffers          = m_listbox_log_buffers.SelectedIndices.Cast<AndroidLogcat.ELogBuffer>().ToArray();
 						logcat_settings.FilterSpecs         = m_filterspecs.ToArray();
 						logcat_settings.LogFormat           = (AndroidLogcat.ELogFormat)m_combo_log_format.SelectedIndex;
-						m_settings.AndroidLogcat = logcat_settings;
 
-						var output_file_history = new List<string>(m_settings.AndroidLogcat.OutputFilepathHistory);
+						var output_file_history = m_settings.AndroidLogcat.OutputFilepathHistory.ToList();
 						Misc.AddToHistoryList(output_file_history, Launch.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
-						m_settings.AndroidLogcat.OutputFilepathHistory = output_file_history.ToArray();
-						m_settings.Save();
+						logcat_settings.OutputFilepathHistory = output_file_history.ToArray();
+
+						m_settings.AndroidLogcat = logcat_settings;
 					}
 				};
 
