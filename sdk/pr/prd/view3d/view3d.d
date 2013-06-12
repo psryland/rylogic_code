@@ -28,7 +28,8 @@ extern (Windows)
 	void ErrorCB(const (char)* msg)
 	{
 		writeln(to!(string)(msg));
-		MessageBoxA(null, msg, "Error", MB_OK);
+		MsgBox.show("Error", to!(string)(msg));
+		//MessageBoxA(null, msg, "Error", MB_OK);
 	}
 
 	void SettingsChangedCB()

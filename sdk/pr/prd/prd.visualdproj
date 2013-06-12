@@ -49,7 +49,7 @@
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>..\..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>Q:\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -91,7 +91,8 @@
   <useStdLibPath>0</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>echo Running PBE
+call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="x64">
@@ -136,14 +137,14 @@
   <pic>0</pic>
   <cov>0</cov>
   <nofloat>0</nofloat>
-  <Dversion>2.043</Dversion>
+  <Dversion>2</Dversion>
   <ignoreUnsupportedPragmas>0</ignoreUnsupportedPragmas>
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
   <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>..\..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>Q:\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -185,7 +186,8 @@
   <useStdLibPath>0</useStdLibPath>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand />
+  <postBuildCommand>echo Running PBE
+call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Debug" platform="Win32">
@@ -381,6 +383,7 @@
   <Folder name="db">
    <File path="db\sqlite.d" />
   </Folder>
+  <Folder name="gui" />
   <Folder name="maths">
    <File path="maths\maths.d" />
    <File path="maths\rand.d" />

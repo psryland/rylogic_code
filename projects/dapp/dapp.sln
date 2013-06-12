@@ -7,11 +7,6 @@ Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "dapp", "dapp.visualdproj", 
 		{EEA55F87-F7C4-4000-A316-172CCA83C6E9} = {EEA55F87-F7C4-4000-A316-172CCA83C6E9}
 	EndProjectSection
 EndProject
-Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "prd", "..\..\sdk\pr\prd\prd.visualdproj", "{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}"
-	ProjectSection(ProjectDependencies) = postProject
-		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "renderer11", "..\vs2012\renderer11.vcxproj", "{6EC3B435-2551-48FE-84F4-EDED821A48D0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d", "..\vs2012\view3d.vcxproj", "{363D015B-B545-4623-A5CE-61245C9BF1F8}"
@@ -20,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d", "..\vs2012\view3d.
 	EndProjectSection
 EndProject
 Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "dgui", "..\..\sdk\dgui\dgui.visualdproj", "{EEA55F87-F7C4-4000-A316-172CCA83C6E9}"
+EndProject
+Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "prd", "..\..\sdk\pr\prd\prd.visualdproj", "{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,13 +33,6 @@ Global
 		{5A572A45-4691-42DE-A628-E7F7466B459C}.Release|Win32.ActiveCfg = Release|Win32
 		{5A572A45-4691-42DE-A628-E7F7466B459C}.Release|Win32.Build.0 = Release|Win32
 		{5A572A45-4691-42DE-A628-E7F7466B459C}.Release|x64.ActiveCfg = Release|x64
-		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Debug|Win32.ActiveCfg = Debug|Win32
-		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Debug|Win32.Build.0 = Debug|Win32
-		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Debug|x64.ActiveCfg = Debug|x64
-		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Debug|x64.Build.0 = Debug|x64
-		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|Win32.ActiveCfg = Release|Win32
-		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|Win32.Build.0 = Release|Win32
-		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|x64.ActiveCfg = Release|x64
 		{6EC3B435-2551-48FE-84F4-EDED821A48D0}.Debug|Win32.ActiveCfg = Debug|Win32
 		{6EC3B435-2551-48FE-84F4-EDED821A48D0}.Debug|Win32.Build.0 = Debug|Win32
 		{6EC3B435-2551-48FE-84F4-EDED821A48D0}.Debug|x64.ActiveCfg = Debug|x64
@@ -67,6 +57,14 @@ Global
 		{EEA55F87-F7C4-4000-A316-172CCA83C6E9}.Release|Win32.Build.0 = Release|Win32
 		{EEA55F87-F7C4-4000-A316-172CCA83C6E9}.Release|x64.ActiveCfg = Release|x64
 		{EEA55F87-F7C4-4000-A316-172CCA83C6E9}.Release|x64.Build.0 = Release|x64
+		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Debug|Win32.Build.0 = Debug|Win32
+		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Debug|x64.ActiveCfg = Debug|x64
+		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Debug|x64.Build.0 = Debug|x64
+		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|Win32.ActiveCfg = Release|Win32
+		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|Win32.Build.0 = Release|Win32
+		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|x64.ActiveCfg = Release|x64
+		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
