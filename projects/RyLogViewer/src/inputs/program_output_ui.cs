@@ -28,8 +28,7 @@ namespace RyLogViewer
 			
 			// Command line
 			m_combo_launch_cmdline.ToolTip(m_tt, "Command line for the application to launch");
-			foreach (var s in m_history) m_combo_launch_cmdline.Items.Add(s);
-			if (m_history.Count != 0) m_combo_launch_cmdline.SelectedIndex = 0;
+			m_combo_launch_cmdline.Load(m_history);
 			m_combo_launch_cmdline.TextChanged += (s,a)=>
 				{
 					Launch.Executable = m_combo_launch_cmdline.Text;

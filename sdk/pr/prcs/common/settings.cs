@@ -184,10 +184,18 @@ namespace pr.common
 			Debug.Assert(!string.IsNullOrEmpty(filepath));
 			
 			Filepath = filepath;
-			Data     = new List<Pair>(Default.Data);
+			Data = new List<Pair>(Default.Data);
 			
-			try { Load(Filepath); }
-			catch (Exception ex) { Debug.WriteLine(ex); }
+			try
+			{
+				Load(Filepath);
+			}
+			catch (Exception ex)
+			{
+				// If anything goes wrong, use the defaults
+				Log.Exception(this, ex, "Failed to load settings from {0}".Fmt(filepath));
+				Data = new List<Pair>(Default.Data);
+			}
 			AutoSaveOnChanges = true;
 		}
 		
@@ -223,8 +231,14 @@ namespace pr.common
 		{
 			Filepath = filepath;
 			if (!File.Exists(filepath))
+			{
+				Log.Info(this, "Settings file {0} not found, using defaults".Fmt(filepath));
 				Reset();
-			
+				return; // Reset will recursively call Load again
+			}
+
+			Log.Debug(this, "Settings file {0} not found, using defaults".Fmt(filepath));
+
 			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
 			using (FileStream fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read))
 			{
@@ -265,7 +279,9 @@ namespace pr.common
 				
 				// Save the settings version
 				set(version_key, Version);
-				
+
+				Log.Debug(this, "Saving settings to file {0}".Fmt(filepath));
+
 				// Perform the save
 				DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
 				using (XmlWriter fs = XmlWriter.Create(filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
@@ -304,8 +320,8 @@ namespace pr
 	{
 		private sealed class Settings :SettingsBase<Settings>
 		{
-			public string   Str { get { return get<string  >("Str"); } set { set("Str", value); } }
-			public int      Int { get { return get<int     >("Int"); } set { set("Int", value); } }
+			public string   Str { get { return get<string  >("Str"); } private set { set("Str", value); } }
+			public int      Int { get { return get<int     >("Int"); } private set { set("Int", value); } }
 			
 			public Settings()
 			{

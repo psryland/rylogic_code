@@ -63,9 +63,10 @@ namespace RyLogViewer
 		{
 			m_startup_options = startup_options;
 			m_settings = new Settings(m_startup_options.SettingsPath);
+
 			Log.Register(m_settings.LogFilePath, false);
 			Log.Info(this, "App Startup: {0}".Fmt(DateTime.Now));
-			
+
 			InitializeComponent();
 			AllowTransparency = true;
 			
@@ -364,6 +365,7 @@ namespace RyLogViewer
 		{
 			using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
 			{
+				CancelBuildLineIndex();
 				m_line_index.Clear();
 				m_watch.Remove(m_filepath);
 				if (m_buffered_process    != null) m_buffered_process.Dispose();
@@ -382,7 +384,9 @@ namespace RyLogViewer
 				m_filepos = 0;
 				m_fileend = 0;
 			}
-			UpdateUI();
+
+			// Initiate a UI update after any existing queued events
+			BeginInvoke(() => UpdateUI());
 		}
 		
 		/// <summary>Prompt to open a log file</summary>
@@ -510,7 +514,7 @@ namespace RyLogViewer
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
 		{
 			// Leave rendering to the grid while events are suspended
-			if (GridEventsBlocked)
+			if (GridEventsBlocked || !FileOpen)
 			{
 				e.Handled = false;
 				return;
@@ -636,9 +640,15 @@ namespace RyLogViewer
 		{
 			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit) return;
 			const float Limit = 1f / Constants.AutoScrollAtBoundaryLimit;
-			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount - 1);
+			float ratio = Maths.Frac(0, SelectedRow, m_grid.RowCount - 1);
 			if (ratio < 0f + Limit) BuildLineIndex(LineStartIndexRange.Begin, false);
 			if (ratio > 1f - Limit) BuildLineIndex(LineStartIndexRange.End  , false);
+		}
+
+		/// <summary>Helper for passing an action directly to BeginInvoke</summary>
+		private void BeginInvoke(Action action)
+		{
+			base.BeginInvoke(action);
 		}
 
 		/// <summary>Handle global command keys</summary>
@@ -957,9 +967,8 @@ namespace RyLogViewer
 					try { res = INet.EndCheckForUpdate(ar); }
 					catch (OperationCanceledException) {}
 					catch (Exception ex) { err = ex; }
-						
-					Action done = () => HandleCheckForUpdateResult(res, err, show_dialog);
-					BeginInvoke(done);
+
+					BeginInvoke(() => HandleCheckForUpdateResult(res, err, show_dialog));
 				};
 			
 			// Use a web proxy if it specified in the settings
@@ -1403,7 +1412,7 @@ namespace RyLogViewer
 			else
 			{
 				m_status_progress.Visible = true;
-				m_status_progress.Value = (int)(Maths.Ratio(0, current, total) * 100);
+				m_status_progress.Value = (int)(Maths.Frac(0, current, total) * 100);
 			}
 		}
 

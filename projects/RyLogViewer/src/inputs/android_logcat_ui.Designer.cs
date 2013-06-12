@@ -39,17 +39,18 @@
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_group = new System.Windows.Forms.GroupBox();
+			this.m_check_append = new System.Windows.Forms.CheckBox();
+			this.m_combo_output_file = new System.Windows.Forms.ComboBox();
+			this.m_lbl_log_format = new System.Windows.Forms.Label();
+			this.m_combo_log_format = new System.Windows.Forms.ComboBox();
+			this.m_lbl_filterspec = new System.Windows.Forms.Label();
+			this.m_grid_filterspec = new System.Windows.Forms.DataGridView();
 			this.m_listbox_log_buffers = new System.Windows.Forms.ListBox();
 			this.m_lbl_log_buffers = new System.Windows.Forms.Label();
 			this.m_btn_browse_output_file = new System.Windows.Forms.Button();
-			this.m_edit_output_file = new System.Windows.Forms.TextBox();
 			this.m_check_capture_to_log = new System.Windows.Forms.CheckBox();
 			this.m_btn_refresh = new System.Windows.Forms.Button();
 			this.m_text_adb_status = new System.Windows.Forms.Label();
-			this.m_grid_filterspec = new System.Windows.Forms.DataGridView();
-			this.m_lbl_filterspec = new System.Windows.Forms.Label();
-			this.m_combo_log_format = new System.Windows.Forms.ComboBox();
-			this.m_lbl_log_format = new System.Windows.Forms.Label();
 			this.m_group.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filterspec)).BeginInit();
 			this.SuspendLayout();
@@ -90,7 +91,7 @@
 			this.m_listbox_devices.IntegralHeight = false;
 			this.m_listbox_devices.Location = new System.Drawing.Point(9, 32);
 			this.m_listbox_devices.Name = "m_listbox_devices";
-			this.m_listbox_devices.Size = new System.Drawing.Size(125, 188);
+			this.m_listbox_devices.Size = new System.Drawing.Size(125, 210);
 			this.m_listbox_devices.TabIndex = 3;
 			// 
 			// label2
@@ -106,17 +107,17 @@
 			// 
 			this.m_edit_adb_command.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_adb_command.Location = new System.Drawing.Point(12, 297);
+			this.m_edit_adb_command.Location = new System.Drawing.Point(12, 314);
 			this.m_edit_adb_command.Multiline = true;
 			this.m_edit_adb_command.Name = "m_edit_adb_command";
-			this.m_edit_adb_command.Size = new System.Drawing.Size(464, 52);
+			this.m_edit_adb_command.Size = new System.Drawing.Size(464, 35);
 			this.m_edit_adb_command.TabIndex = 5;
 			// 
 			// m_lbl_logcat_command
 			// 
 			this.m_lbl_logcat_command.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_lbl_logcat_command.AutoSize = true;
-			this.m_lbl_logcat_command.Location = new System.Drawing.Point(12, 281);
+			this.m_lbl_logcat_command.Location = new System.Drawing.Point(12, 298);
 			this.m_lbl_logcat_command.Name = "m_lbl_logcat_command";
 			this.m_lbl_logcat_command.Size = new System.Drawing.Size(93, 13);
 			this.m_lbl_logcat_command.TabIndex = 6;
@@ -149,6 +150,8 @@
 			this.m_group.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_group.Controls.Add(this.m_check_append);
+			this.m_group.Controls.Add(this.m_combo_output_file);
 			this.m_group.Controls.Add(this.m_lbl_log_format);
 			this.m_group.Controls.Add(this.m_combo_log_format);
 			this.m_group.Controls.Add(this.m_lbl_filterspec);
@@ -156,15 +159,78 @@
 			this.m_group.Controls.Add(this.m_listbox_log_buffers);
 			this.m_group.Controls.Add(this.m_lbl_log_buffers);
 			this.m_group.Controls.Add(this.m_btn_browse_output_file);
-			this.m_group.Controls.Add(this.m_edit_output_file);
 			this.m_group.Controls.Add(this.m_check_capture_to_log);
 			this.m_group.Controls.Add(this.m_listbox_devices);
 			this.m_group.Controls.Add(this.label2);
 			this.m_group.Location = new System.Drawing.Point(12, 47);
 			this.m_group.Name = "m_group";
-			this.m_group.Size = new System.Drawing.Size(463, 226);
+			this.m_group.Size = new System.Drawing.Size(463, 248);
 			this.m_group.TabIndex = 9;
 			this.m_group.TabStop = false;
+			// 
+			// m_check_append
+			// 
+			this.m_check_append.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_check_append.AutoSize = true;
+			this.m_check_append.Location = new System.Drawing.Point(341, 225);
+			this.m_check_append.Name = "m_check_append";
+			this.m_check_append.Size = new System.Drawing.Size(113, 17);
+			this.m_check_append.TabIndex = 21;
+			this.m_check_append.Text = "Append to existing";
+			this.m_check_append.UseVisualStyleBackColor = true;
+			// 
+			// m_combo_output_file
+			// 
+			this.m_combo_output_file.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_combo_output_file.FormattingEnabled = true;
+			this.m_combo_output_file.Location = new System.Drawing.Point(140, 199);
+			this.m_combo_output_file.Name = "m_combo_output_file";
+			this.m_combo_output_file.Size = new System.Drawing.Size(268, 21);
+			this.m_combo_output_file.TabIndex = 20;
+			// 
+			// m_lbl_log_format
+			// 
+			this.m_lbl_log_format.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_lbl_log_format.AutoSize = true;
+			this.m_lbl_log_format.Location = new System.Drawing.Point(140, 152);
+			this.m_lbl_log_format.Name = "m_lbl_log_format";
+			this.m_lbl_log_format.Size = new System.Drawing.Size(63, 13);
+			this.m_lbl_log_format.TabIndex = 19;
+			this.m_lbl_log_format.Text = "Log Format:";
+			// 
+			// m_combo_log_format
+			// 
+			this.m_combo_log_format.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_combo_log_format.FormattingEnabled = true;
+			this.m_combo_log_format.Location = new System.Drawing.Point(210, 149);
+			this.m_combo_log_format.Name = "m_combo_log_format";
+			this.m_combo_log_format.Size = new System.Drawing.Size(247, 21);
+			this.m_combo_log_format.TabIndex = 18;
+			// 
+			// m_lbl_filterspec
+			// 
+			this.m_lbl_filterspec.AutoSize = true;
+			this.m_lbl_filterspec.Location = new System.Drawing.Point(207, 16);
+			this.m_lbl_filterspec.Name = "m_lbl_filterspec";
+			this.m_lbl_filterspec.Size = new System.Drawing.Size(65, 13);
+			this.m_lbl_filterspec.TabIndex = 17;
+			this.m_lbl_filterspec.Text = "Filter Specs:";
+			// 
+			// m_grid_filterspec
+			// 
+			this.m_grid_filterspec.AllowUserToResizeRows = false;
+			this.m_grid_filterspec.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_grid_filterspec.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid_filterspec.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid_filterspec.Location = new System.Drawing.Point(210, 32);
+			this.m_grid_filterspec.Name = "m_grid_filterspec";
+			this.m_grid_filterspec.RowHeadersWidth = 24;
+			this.m_grid_filterspec.Size = new System.Drawing.Size(247, 111);
+			this.m_grid_filterspec.TabIndex = 16;
 			// 
 			// m_listbox_log_buffers
 			// 
@@ -175,7 +241,7 @@
 			this.m_listbox_log_buffers.Location = new System.Drawing.Point(140, 32);
 			this.m_listbox_log_buffers.Name = "m_listbox_log_buffers";
 			this.m_listbox_log_buffers.SelectionMode = System.Windows.Forms.SelectionMode.MultiSimple;
-			this.m_listbox_log_buffers.Size = new System.Drawing.Size(61, 104);
+			this.m_listbox_log_buffers.Size = new System.Drawing.Size(61, 111);
 			this.m_listbox_log_buffers.TabIndex = 15;
 			// 
 			// m_lbl_log_buffers
@@ -190,21 +256,12 @@
 			// m_btn_browse_output_file
 			// 
 			this.m_btn_browse_output_file.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_browse_output_file.Location = new System.Drawing.Point(417, 197);
+			this.m_btn_browse_output_file.Location = new System.Drawing.Point(414, 199);
 			this.m_btn_browse_output_file.Name = "m_btn_browse_output_file";
 			this.m_btn_browse_output_file.Size = new System.Drawing.Size(40, 23);
 			this.m_btn_browse_output_file.TabIndex = 13;
 			this.m_btn_browse_output_file.Text = "...";
 			this.m_btn_browse_output_file.UseVisualStyleBackColor = true;
-			// 
-			// m_edit_output_file
-			// 
-			this.m_edit_output_file.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_output_file.Location = new System.Drawing.Point(140, 199);
-			this.m_edit_output_file.Name = "m_edit_output_file";
-			this.m_edit_output_file.Size = new System.Drawing.Size(271, 20);
-			this.m_edit_output_file.TabIndex = 6;
 			// 
 			// m_check_capture_to_log
 			// 
@@ -237,49 +294,6 @@
 			this.m_text_adb_status.TabIndex = 12;
 			this.m_text_adb_status.Text = "Android Debug Bridge version 0.0.0";
 			this.m_text_adb_status.Visible = false;
-			// 
-			// m_grid_filterspec
-			// 
-			this.m_grid_filterspec.AllowUserToResizeRows = false;
-			this.m_grid_filterspec.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_grid_filterspec.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-			this.m_grid_filterspec.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_filterspec.Location = new System.Drawing.Point(210, 32);
-			this.m_grid_filterspec.Name = "m_grid_filterspec";
-			this.m_grid_filterspec.RowHeadersWidth = 24;
-			this.m_grid_filterspec.Size = new System.Drawing.Size(247, 104);
-			this.m_grid_filterspec.TabIndex = 16;
-			// 
-			// m_lbl_filterspec
-			// 
-			this.m_lbl_filterspec.AutoSize = true;
-			this.m_lbl_filterspec.Location = new System.Drawing.Point(207, 16);
-			this.m_lbl_filterspec.Name = "m_lbl_filterspec";
-			this.m_lbl_filterspec.Size = new System.Drawing.Size(65, 13);
-			this.m_lbl_filterspec.TabIndex = 17;
-			this.m_lbl_filterspec.Text = "Filter Specs:";
-			// 
-			// m_combo_log_format
-			// 
-			this.m_combo_log_format.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_combo_log_format.FormattingEnabled = true;
-			this.m_combo_log_format.Location = new System.Drawing.Point(210, 147);
-			this.m_combo_log_format.Name = "m_combo_log_format";
-			this.m_combo_log_format.Size = new System.Drawing.Size(247, 21);
-			this.m_combo_log_format.TabIndex = 18;
-			// 
-			// m_lbl_log_format
-			// 
-			this.m_lbl_log_format.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			this.m_lbl_log_format.AutoSize = true;
-			this.m_lbl_log_format.Location = new System.Drawing.Point(140, 150);
-			this.m_lbl_log_format.Name = "m_lbl_log_format";
-			this.m_lbl_log_format.Size = new System.Drawing.Size(63, 13);
-			this.m_lbl_log_format.TabIndex = 19;
-			this.m_lbl_log_format.Text = "Log Format:";
 			// 
 			// AndroidLogcatUI
 			// 
@@ -324,7 +338,6 @@
 		private System.Windows.Forms.Button m_btn_refresh;
 		private System.Windows.Forms.Label m_text_adb_status;
 		private System.Windows.Forms.CheckBox m_check_capture_to_log;
-		private System.Windows.Forms.TextBox m_edit_output_file;
 		private System.Windows.Forms.Button m_btn_browse_output_file;
 		private System.Windows.Forms.Label m_lbl_log_buffers;
 		private System.Windows.Forms.ListBox m_listbox_log_buffers;
@@ -332,5 +345,7 @@
 		private System.Windows.Forms.DataGridView m_grid_filterspec;
 		private System.Windows.Forms.Label m_lbl_log_format;
 		private System.Windows.Forms.ComboBox m_combo_log_format;
+		private System.Windows.Forms.ComboBox m_combo_output_file;
+		private System.Windows.Forms.CheckBox m_check_append;
 	}
 }

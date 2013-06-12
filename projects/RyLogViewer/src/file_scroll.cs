@@ -150,8 +150,8 @@ namespace RyLogViewer
 			var thm   = ThumbRange;
 			var total = TotalRange;
 			
-			int top  = (int)(Maths.Ratio(0, thm.Begin, total.Count) * Height);
-			int hite = (int)(Maths.Ratio(0, thm.Count  , total.Count) * Height);
+			int top  = (int)(Maths.Frac(0, thm.Begin, total.Count) * Height);
+			int hite = (int)(Maths.Frac(0, thm.Count  , total.Count) * Height);
 			var thumb_rect = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,hite));
 			
 			// Fix up thumbs that are too small
@@ -181,8 +181,8 @@ namespace RyLogViewer
 			var thumb_rect = MakeThumbRect(bounds);
 			foreach (var r in Ranges)
 			{
-				int top  = (int)(Maths.Ratio(0, r.Range.Begin, total.Count) * height);
-				int hite = (int)(Math.Max(1, Maths.Ratio(0, r.Range.Count  , total.Count) * height));
+				int top  = (int)(Maths.Frac(0, r.Range.Begin, total.Count) * height);
+				int hite = (int)(Math.Max(1, Maths.Frac(0, r.Range.Count  , total.Count) * height));
 				r.m_rect = new Rectangle(bounds.X, bounds.Y + top, bounds.Width, Math.Max(1,hite));
 				r.m_rect .Inflate(-2,0);
 			}
@@ -226,7 +226,7 @@ namespace RyLogViewer
 		private void ScrollThumbPos(int y)
 		{
 			Range thm = ThumbRange;
-			thm.Mid = (long)(Maths.Ratio(0, y, Height) * TotalRange.Count);
+			thm.Mid = (long)(Maths.Frac(0, y, Height) * TotalRange.Count);
 			ThumbRange = thm;
 			RaiseScrollEvent();
 		}

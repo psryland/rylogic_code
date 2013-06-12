@@ -437,7 +437,8 @@ namespace RyLogViewer
 					typeof(SerialConn[]),
 					typeof(PipeConn),
 					typeof(PipeConn[]),
-					typeof(AndroidLogcat)
+					typeof(AndroidLogcat),
+					typeof(AndroidLogcat.FilterSpec)
 				};
 			}
 		}

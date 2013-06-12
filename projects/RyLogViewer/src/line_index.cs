@@ -117,7 +117,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Cause a currently running BuildLineIndex call to be cancelled</summary>
-		private void CancelBuildLineIndex() // will be used when caching numbers of lines, not byte range
+		private void CancelBuildLineIndex()
 		{
 			Log.Info(this, "build (id {0}) cancelled".Fmt(m_build_issue));
 			Interlocked.Increment(ref m_build_issue);
@@ -309,7 +309,7 @@ namespace RyLogViewer
 								List<Range> line_index = bwd_line_buf.Concat(fwd_line_buf).ToList();
 							
 								// Marshal the results back to the main thread
-								Action MergeLineIndexDelegate = () =>
+								BeginInvoke(() =>
 								{
 									// This lambda runs in the main thread, so if the build issue is the same at
 									// the start of this method it can't be changed until after this function returns.
@@ -331,8 +331,7 @@ namespace RyLogViewer
 									// side effect of triggering a signing test of the exe because
 									// that test is done in a destructor
 									GC.Collect();
-								};
-								BeginInvoke(MergeLineIndexDelegate);
+								});
 							}
 						}
 						catch (OperationCanceledException) {}

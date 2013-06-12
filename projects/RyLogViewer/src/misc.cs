@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Ports;
@@ -154,10 +155,10 @@ namespace RyLogViewer
 	[DataContract]
 	public class LaunchApp :ICloneable
 	{
-		[DataMember] public string Executable       = "";
-		[DataMember] public string Arguments        = "";
-		[DataMember] public string WorkingDirectory = "";
-		[DataMember] public string OutputFilepath   = "";
+		[DataMember] public string Executable       = string.Empty;
+		[DataMember] public string Arguments        = string.Empty;
+		[DataMember] public string WorkingDirectory = string.Empty;
+		[DataMember] public string OutputFilepath   = string.Empty;
 		[DataMember] public bool   ShowWindow       = false;
 		[DataMember] public bool   AppendOutputFile = true;
 		[DataMember] public StandardStreams Streams = StandardStreams.Stdout|StandardStreams.Stderr;
@@ -189,15 +190,15 @@ namespace RyLogViewer
 	[DataContract]
 	public class NetConn :ICloneable
 	{
-		[DataMember] public string       Hostname         = "";
+		[DataMember] public string       Hostname         = string.Empty;
 		[DataMember] public ushort       Port             = 5555;
 		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
 		[DataMember] public Proxy.EType  ProxyType        = Proxy.EType.None;
-		[DataMember] public string       ProxyHostname    = "";
+		[DataMember] public string       ProxyHostname    = string.Empty;
 		[DataMember] public ushort       ProxyPort        = 5555;
-		[DataMember] public string       ProxyUserName    = "";
-		             public string       ProxyPassword    = ""; // don't store passwords
-		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public string       ProxyUserName    = string.Empty;
+		             public string       ProxyPassword    = string.Empty; // don't store passwords
+		[DataMember] public string       OutputFilepath   = string.Empty;
 		[DataMember] public bool         AppendOutputFile = true;
 
 		public NetConn() {}
@@ -231,7 +232,7 @@ namespace RyLogViewer
 		// If the connected device uses these signals, it will not transmit before
 		// the signals are set
 
-		[DataMember] public string       CommPort         = "";
+		[DataMember] public string       CommPort         = string.Empty;
 		[DataMember] public int          BaudRate         = 9600;
 		[DataMember] public int          DataBits         = 8;
 		[DataMember] public Parity       Parity           = Parity.None;
@@ -239,7 +240,7 @@ namespace RyLogViewer
 		[DataMember] public Handshake    FlowControl      = Handshake.None;
 		[DataMember] public bool         DtrEnable        = true;
 		[DataMember] public bool         RtsEnable        = true;
-		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public string       OutputFilepath   = string.Empty;
 		[DataMember] public bool         AppendOutputFile = true;
 		
 		public SerialConn() {}
@@ -273,9 +274,9 @@ namespace RyLogViewer
 		// If the connected device uses these signals, it will not transmit before
 		// the signals are set
 
-		[DataMember] public string       ServerName       = "";
-		[DataMember] public string       PipeName         = "";
-		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public string       ServerName       = string.Empty;
+		[DataMember] public string       PipeName         = string.Empty;
+		[DataMember] public string       OutputFilepath   = string.Empty;
 		[DataMember] public bool         AppendOutputFile = true;
 		
 		public string PipeAddr
@@ -311,7 +312,24 @@ namespace RyLogViewer
 	[DataContract]
 	public class AndroidLogcat :ICloneable
 	{
-		[DataMember] public string AdbFullPath = "";
+		public enum ELogBuffer { Main, System, Radio, Events }
+		public enum ELogFormat { Brief, Process, Tag, Thread, Raw, Time, ThreadTime, Long }
+		public enum EFilterPriority { Verbose, Debug, Info, Warn, Error, Fatal, Silent}
+		[DataContract] public class FilterSpec
+		{
+			[DataMember] public string Tag { get; private set; }
+			[DataMember] public EFilterPriority Priority { get; private set; }
+			public FilterSpec(string tag, EFilterPriority priority) { Tag = tag; Priority = priority; }
+		}
+
+		[DataMember] public string       AdbFullPath           = string.Empty;
+		[DataMember] public string       SelectedDevice        = string.Empty;
+		[DataMember] public bool         CaptureOutputToFile   = false;
+		[DataMember] public string[]     OutputFilepathHistory = new string[0];
+		[DataMember] public bool         AppendOutputFile      = true;
+		[DataMember] public ELogBuffer[] LogBuffers            = new []{ELogBuffer.Main, ELogBuffer.System};
+		[DataMember] public FilterSpec[] FilterSpecs           = new []{new FilterSpec("*", EFilterPriority.Info)};
+		[DataMember] public ELogFormat   LogFormat             = ELogFormat.Time;
 
 		public AndroidLogcat() {}
 		public AndroidLogcat(AndroidLogcat rhs)
@@ -362,7 +380,14 @@ namespace RyLogViewer
 			while (list.Count > max_history_length)
 				list.RemoveAt(list.Count - 1);
 		}
-		
+
+		/// <summary>Helper for populating a combo box from an array of items</summary>
+		public static void Load<T>(this ComboBox combo, IList<T> items)
+		{
+			foreach (var s in items) combo.Items.Add(s);
+			if (items.Count != 0) combo.SelectedIndex = 0;
+		}
+
 		/// <summary>A wrapper around showing message boxes for exceptions</summary>
 		public static void ShowErrorMessage(IWin32Window owner, Exception exception, string caption, string title)
 		{

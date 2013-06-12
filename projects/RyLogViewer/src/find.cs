@@ -130,7 +130,7 @@ namespace RyLogViewer
 					int last_progress = 0;
 					ProgressFunc report_progress = (scanned, length) =>
 						{
-							int progress = (int)(100 * Maths.Ratio(0,scanned,length));
+							int progress = (int)(100 * Maths.Frac(0,scanned,length));
 							if (progress != last_progress)
 							{
 								bgw.ReportProgress(progress);
