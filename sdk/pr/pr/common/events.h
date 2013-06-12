@@ -8,6 +8,7 @@
 #define PR_COMMON_EVENTS_H
 
 #include <cassert>
+#include <mutex>
 #include <thread>
 #include <type_traits>
 #include "pr/common/chain.h"
@@ -59,8 +60,10 @@ namespace pr
 			}
 			virtual ~IRecv()
 			{
-				assert((!is_subscribed() || (ChainFlags() & EControlFlags::ChainLocked) == 0) && "can't delete objects in the event chain while 'Send' is in progress");
+				// Note: if a receiver is added to the pending queue during a
+				// Send() call, this unsubscribe call will remove it.
 				unsubscribe();
+				assert(!is_subscribed() && "can't delete objects in the live event chain while 'Send' is in progress");
 			}
 
 			IRecv& operator = (IRecv const& rhs)
@@ -89,7 +92,8 @@ namespace pr
 			}
 
 			// Subscribe or unsubscribe. Use thing.subscribe<EventType>(true), needed for multiple inheritance
-			template <typename TEvtType> typename std::enable_if<std::is_same<TEvtType,EventType>::value>::type subscribe(bool on)
+			//template <typename T> typename std::enable_if<std::is_same<T,EventType>::value, void>::type
+			void subscribe(bool on)
 			{
 				if (on) subscribe();
 				else unsubscribe();
@@ -240,7 +244,7 @@ namespace pr
 				{
 					auto doomed = i; i = i->m_next;
 					if (doomed->m_owner->m_control & EControlFlags::Remove)
-						doomed->m_owner->subscribe<EventType>(false);
+						doomed->m_owner->subscribe(false);
 				}
 			}
 
@@ -250,7 +254,7 @@ namespace pr
 				IRecv<EventType>::ChainFlags() &= ~EControlFlags::Pending;
 				auto& pending = IRecv<EventType>::PendingChain();
 				while (!pending.empty())
-					std::begin(pending)->m_owner->subscribe<EventType>(true);
+					std::begin(pending)->m_owner->subscribe(true);
 			}
 		}
 	}

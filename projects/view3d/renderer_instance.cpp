@@ -48,8 +48,8 @@ RendererInstance::RendererInstance(HWND hwnd, View3D_ReportErrorCB error_cb, Vie
 	m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
 
 	// Sign up for events now
-	static_cast<pr::events::IRecv<pr::ldr::Evt_Refresh         >&>(*this).subscribe();
-	static_cast<pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>&>(*this).subscribe();
+	pr::events::IRecv<pr::ldr::Evt_Refresh         >::subscribe(true);
+	pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>::subscribe(true);
 }
 
 RendererInstance::~RendererInstance()

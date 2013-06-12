@@ -19,7 +19,8 @@ namespace pr
 		explicit Rnd(ulong s) :MersenneTwister(s) {}
 		void   seed(ulong s)              { MersenneTwister::seed(s); }
 		ulong  u32()                      { return MersenneTwister::u32(); }
-		ulong  u32(ulong mn, ulong mx)    { return mn == mx ? mx : ((u32() % (mx - mn)) + mn); }
+		ulong  u32r(ulong mn, ulong mx)   { return mn == mx ? mx : ((u32() % (mx - mn)) + mn); }
+		ulong  u32c(ulong avr, ulong d)   { return d == 0 ? avr : ((u32() % (2*d) - d) + avr); }
 		long   i32()                      { return MersenneTwister::i32(); }
 		long   i32r(long mn, long mx)     { return mn == mx ? mx : ((i32() % (mx - mn)) + mn); }
 		long   i32c(long avr, long d)     { return d == 0 ? avr : ((i32() % (2*d) - d) + avr); }
@@ -38,7 +39,8 @@ namespace pr
 		inline Rnd&   Rand()                     { static Rnd s_rnd; return s_rnd; }
 		inline void   Seed(uint seed)            { Rand().seed(seed); }
 		inline uint   u32()                      { return Rand().u32(); }
-		inline uint   u32(uint mn, uint mx)      { return Rand().u32(mn,mx); }
+		inline uint   u32r(uint mn, uint mx)     { return Rand().u32r(mn,mx); }
+		inline uint   u32c(uint avr, uint d)     { return Rand().u32c(avr,d); }
 		inline int    i32()                      { return Rand().i32(); }
 		inline int    i32r(int mn, int mx)       { return Rand().i32r(mn,mx); }
 		inline int    i32c(int avr, int d)       { return Rand().i32c(avr,d); }
@@ -50,6 +52,9 @@ namespace pr
 		inline float  flt()                      { return Rand().flt(); }
 		inline float  fltr(float mn, float mx)   { return Rand().fltr(mn,mx); }
 		inline float  fltc(float avr, float d)   { return Rand().fltc(avr,d); }
+
+		template <typename T> T range(T mn, T mx)   { return static_cast<T>(Rand().u32r(mn,mx)); }
+		template <typename T> T centred(T mn, T mx) { return static_cast<T>(Rand().u32c(mn,mx)); }
 	}
 	
 	// Random integer generator

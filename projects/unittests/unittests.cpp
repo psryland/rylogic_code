@@ -34,6 +34,7 @@ namespace pr
 #include "pr/common/imposter.h"
 #include "pr/common/repeater.h"
 #include "pr/common/datetime.h"
+#include "pr/common/tri_table.h"
 #include "pr/filesys/filesys.h"
 #include "pr/filesys/findfiles.h"
 #include "pr/filesys/recurse_directory.h"

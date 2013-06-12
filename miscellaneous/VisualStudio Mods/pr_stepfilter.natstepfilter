@@ -3,4 +3,6 @@
 	<Function><Name>pr::Array.*</Name><Action>NoStepInto</Action></Function>
 	<Function><Name>pr::string.*</Name><Action>NoStepInto</Action></Function>
 	<Function><Name>pr::RefPtr&lt;.*</Name><Action>NoStepInto</Action></Function>
+	<Function><Name>std::.*</Name><Action>NoStepInto</Action></Function>
+<!--<Function><Name>std::vector&lt;.*</Name><Action>NoStepInto</Action></Function>-->
 </StepFilter>

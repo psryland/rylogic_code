@@ -25,16 +25,19 @@
 #include <stdarg.h>
 #include <tchar.h>
 #include <new>
+#include <cassert>
 #include "pr/macros/enum.h"
 #include "pr/macros/no_copy.h"
 #include "pr/str/prstring.h"
 #include "pr/common/events.h"
+#include "pr/common/event.h"
 
 namespace pr
 {
 	namespace console
 	{
 		class Console;
+		struct Pad;
 		typedef INPUT_RECORD Event;
 		typedef BOOL (__stdcall *HandlerFunction)(DWORD ctrl_type);
 
@@ -160,6 +163,14 @@ namespace pr
 			PR_NO_COPY(Evt_KeyDown);
 		};
 
+		// An event raised when a line of user input is available
+		template <typename Char> struct Evt_Line
+		{
+			std::basic_string<Char> const& m_input;
+			Evt_Line(std::basic_string<Char> const& input) :m_input(input) {}
+			PR_NO_COPY(Evt_Line);
+		};
+
 		// An event raised when escape is pressed (while there is no user input)
 		struct Evt_Escape
 		{};
@@ -175,12 +186,12 @@ namespace pr
 			Evt_FunctionKey(int vk) :m_num(vk - VK_F1) {}
 		};
 
-		// An event raised when a line of user input is available
-		template <typename Char> struct Evt_Line
+		// An event raised whenever a pad receives focus
+		struct Evt_FocusChanged
 		{
-			std::basic_string<Char> const& m_input;
-			Evt_Line(std::basic_string<Char> const& input) :m_input(input) {}
-			PR_NO_COPY(Evt_Line);
+			Pad const& m_pad;
+			explicit Evt_FocusChanged(Pad const& pad) :m_pad(pad) {}
+			PR_NO_COPY(Evt_FocusChanged);
 		};
 
 		#pragma endregion
@@ -188,6 +199,7 @@ namespace pr
 		class Console
 		{
 			// Helpers for reading/writing char/wchar_t
+			#pragma region Traits
 			struct traits
 			{
 				static size_t length(char const* str)    { return strlen(str); }
@@ -202,6 +214,7 @@ namespace pr
 				static void fill(HANDLE out, char    ch, WORD col, size_t count, COORD loc) { fill(out, ch, count, loc); fill(out, col, count, loc); }
 				static void fill(HANDLE out, wchar_t ch, WORD col, size_t count, COORD loc) { fill(out, ch, count, loc); fill(out, col, count, loc); }
 			};
+			#pragma endregion
 
 			#pragma region LineInput
 
@@ -1088,7 +1101,16 @@ namespace pr
 		#pragma endregion
 
 		// A helper for drawing rectangular blocks of text in the console
+		#pragma region Pad
 		struct Pad
+			:private pr::events::IRecv<Evt_Key>
+			,private pr::events::IRecv<Evt_KeyDown>
+			,private pr::events::IRecv<Evt_Line<char>>
+			,private pr::events::IRecv<Evt_Line<wchar_t>>
+			,private pr::events::IRecv<Evt_Escape>
+			,private pr::events::IRecv<Evt_Tab>
+			,private pr::events::IRecv<Evt_FunctionKey>
+			,private pr::events::IRecv<Evt_FocusChanged>
 		{
 			enum EItem { Unknown, NewLine, CurrentInput, AString, WString, SetColours, SetCursor };
 		
@@ -1145,12 +1167,30 @@ namespace pr
 			size_t m_height;
 			size_t m_line_count;
 			Coord m_display_offset; // The top/left corner of the view to display within the pad
-			int m_selected;     // using sign values so that negatives are accepted (and then clamped to [0,..) otherwise they just roll over)
+			int m_selected;         // using sign values so that negatives are accepted (and then clamped to [0,..) otherwise they just roll over)
+			bool m_focused;         // True if this pad has input focus
 			std::vector<Item> m_items;
-		
+
+			// Forward console events to attached handlers
+			void OnEvent(Evt_Key const& e)           { OnKey(*this, e);         }
+			void OnEvent(Evt_KeyDown const& e)       { OnKeyDown(*this, e);     }
+			void OnEvent(Evt_Line<char> const& e)    { OnLineA(*this, e);       }
+			void OnEvent(Evt_Line<wchar_t> const& e) { OnLineW(*this, e);       }
+			void OnEvent(Evt_Escape const& e)        { OnEscape(*this, e);      }
+			void OnEvent(Evt_Tab const& e)           { OnTab(*this, e);         }
+			void OnEvent(Evt_FunctionKey const& e)   { OnFunctionKey(*this, e); }
+			void OnEvent(Evt_FocusChanged const& e)  { Focus(&e.m_pad == this); }
+
 		public:
 			Pad(EColour fore = EColour::Default, EColour back = EColour::Default)
-				:m_colours(fore, back)
+				:pr::events::IRecv<Evt_Key>(0,false)
+				,pr::events::IRecv<Evt_KeyDown>(0,false)
+				,pr::events::IRecv<Evt_Line<char>>(0,false)
+				,pr::events::IRecv<Evt_Line<wchar_t>>(0,false)
+				,pr::events::IRecv<Evt_Escape>(0,false)
+				,pr::events::IRecv<Evt_Tab>(0,false)
+				,pr::events::IRecv<Evt_FunctionKey>(0,false)
+				,m_colours(fore, back)
 				,m_border()
 				,m_title_colour()
 				,m_title()
@@ -1161,14 +1201,43 @@ namespace pr
 				,m_line_count()
 				,m_display_offset()
 				,m_selected()
+				,m_focused()
 				,m_items()
 			{
 				Clear();
 			}
 
-			void Clear() { Clear(true, true, true); }
-			void Clear(bool dimensions, bool title, bool border)
+			// Raised when a key event occurs while this pad has focus
+			pr::Event<void(Pad&,Evt_Key const&)> OnKey;
+
+			// Raised when a key down event occurs while this pad has focus
+			pr::Event<void(Pad&,Evt_KeyDown const&)> OnKeyDown;
+			
+			// Raised when a line of user input has been entered while this pad has focus
+			pr::Event<void(Pad&,Evt_Line<char> const&)> OnLineA;
+			pr::Event<void(Pad&,Evt_Line<wchar_t> const&)> OnLineW;
+
+			// Raised when the escape key is pressed while this pad has focus
+			pr::Event<void(Pad&,Evt_Escape const&)> OnEscape;
+			
+			// Raised when the tab key is pressed while this pad has focus
+			pr::Event<void(Pad&,Evt_Tab const&)> OnTab;
+			
+			// Raised when a function key is pressed while this pad has focus
+			pr::Event<void(Pad&,Evt_FunctionKey const&)> OnFunctionKey;
+
+			// Raised when focus changes for this pad
+			pr::Event<void(Pad&)> OnFocusChanged;
+
+			// Clear the contents of the pad an optionally the pad properties
+			void Clear(bool content = true, bool dimensions = true, bool title = true, bool title_colour = true, bool border = true, bool selection_colour = true)
 			{
+				if (content)
+				{
+					m_items.clear();
+					m_line_count = 0;
+					m_selected = -1;
+				}
 				if (dimensions)
 				{
 					m_width = 0;
@@ -1177,6 +1246,9 @@ namespace pr
 				if (title)
 				{
 					m_title.clear();
+				}
+				if (title_colour)
+				{
 					m_title_colour = Colours();
 					m_title_anchor = EAnchor::TopCentre;
 				}
@@ -1184,16 +1256,40 @@ namespace pr
 				{
 					m_border = Colours();
 				}
-				m_selection_colour = Colours(EColour::Green, EColour::Default);
-				m_items.clear();
-				m_line_count = 0;
+				if (selection_colour)
+				{
+					m_selection_colour = Colours(EColour::Green, EColour::Default);
+				}
 				m_display_offset = Coord();
-				m_selected = -1;
+			}
+
+			// Get/Set whether this pad has input focus
+			bool Focus() const { return m_focused; }
+			void Focus(bool on)
+			{
+				using namespace pr::events;
+				if (m_focused == on) return;
+				IRecv<Evt_Key          >::subscribe(on);
+				IRecv<Evt_KeyDown      >::subscribe(on);
+				IRecv<Evt_Line<char>   >::subscribe(on);
+				IRecv<Evt_Line<wchar_t>>::subscribe(on);
+				IRecv<Evt_Escape       >::subscribe(on);
+				IRecv<Evt_Tab          >::subscribe(on);
+				IRecv<Evt_FunctionKey  >::subscribe(on);
+				m_focused = on;
+				if (on) pr::events::Send(Evt_FocusChanged(*this)); // notify the other pads
+				OnFocusChanged(*this); // notify observers
 			}
 
 			// Get/Set the fore/back colours for the pad
 			Colours Colour() const { return m_colours; }
+			void Colour(EColour fore, EColour back = EColour::Default) { Colour(Colours(fore,back)); }
 			void Colour(Colours c) { m_colours = c; }
+
+			// Get/Set the fore/back colours for selected items in the pad
+			Colours SelectionColour() const {  return m_selection_colour; }
+			void SelectionColour(EColour fore, EColour back = EColour::Default) { Colour(Colours(fore,back)); }
+			void SelectionColour(Colours c) { m_selection_colour = c; }
 
 			// Set the title for the pad
 			std::string Title() const { return m_title; }
@@ -1216,24 +1312,24 @@ namespace pr
 			bool HasTitle() const { return !m_title.empty(); }
 
 			// Returns the bounds of the pad including title and border (if present) (in screen space)
-			RECT WindowRect(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			RECT WindowRect(Coord loc) const
 			{
-				int w = WindowWidth();
-				int h = WindowHeight();
-				Coord loc = cons.CursorLocation(anchor, w, h, dx, dy);
-				
 				RECT wr;
 				wr.left   = loc.X;
 				wr.top    = loc.Y;
-				wr.right  = loc.X + w;
-				wr.bottom = loc.Y + h;
+				wr.right  = loc.X + WindowWidth();
+				wr.bottom = loc.Y + WindowHeight();
 				return wr;
+			}
+			RECT WindowRect(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			{
+				return WindowRect(cons.CursorLocation(anchor, WindowWidth(), WindowHeight(), dx, dy));
 			}
 
 			// Returns the bounds of the content of the pad in screen space
-			RECT ClientRect(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			RECT ClientRect(Coord loc) const
 			{
-				RECT wr = WindowRect(cons, anchor, dx, dy);
+				RECT wr = WindowRect(loc);
 				if (HasBorder())
 				{
 					wr.top    += 1;
@@ -1246,6 +1342,10 @@ namespace pr
 					wr.top += 1;
 				}
 				return wr;
+			}
+			RECT ClientRect(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			{
+				return ClientRect(cons.CursorLocation(anchor, WindowWidth(), WindowHeight(), dx, dy));
 			}
 
 			// Get/Set the client area width/height
@@ -1429,12 +1529,20 @@ namespace pr
 			}
 
 			// Write the Pad to 'cons'. Cursor position and current colour are not changed by this method
-			virtual void Draw(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			void Draw(Console& cons, Coord loc) const
 			{
 				Scope s(cons);
-				if (m_width == 0 || m_height == 0) throw std::exception("pad has an invalid size");
-				DrawFrame(cons, WindowRect(cons,anchor,dx,dy), s.m_col.m_colours);
-				DrawContent(cons, ClientRect(cons,anchor,dx,dy), s.m_col.m_colours);
+				assert(m_width != 0 && m_height != 0 && "pad has an invalid size");
+				DrawFrame(cons, WindowRect(loc), s.m_col.m_colours);
+				DrawContent(cons, ClientRect(loc), s.m_col.m_colours);
+			}
+			void Draw(Console& cons, int x, int y) const
+			{
+				Draw(cons, Coord(x,y));
+			}
+			void Draw(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
+			{
+				Draw(cons, cons.CursorLocation(anchor, WindowWidth(), WindowHeight(), dx, dy));
 			}
 
 			// Returns the size the pad should have to display all content
@@ -1470,6 +1578,14 @@ namespace pr
 				if (m_height == 0) m_height = size_t(sz.cy);
 			}
 		};
+		#pragma endregion
+
+		#pragma region PadContainer
+		struct PadContainer
+		{
+			std::list<Pad> m_pads;
+		};
+		#pragma endregion
 
 		// Write output to the console using various methods. Handy way to test if it's working
 		inline void OutputTest()

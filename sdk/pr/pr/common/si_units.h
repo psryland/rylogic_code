@@ -22,9 +22,15 @@ namespace pr
 	typedef double metres³_p_day_t;
 	typedef double days_t;
 	typedef double joules_t;
+	typedef double kelvin_t;
+	typedef double celsius_t;
 	typedef double joules_p_metres³_t;
 	typedef double joules_p_kilogram_t;
 	typedef double metres³_p_kilogram_p_sec²_t;
+
+	// Conversions
+	inline kelvin_t CelsiusToKelvin(celsius_t c) { return c + 273.15; }
+	inline celsius_t KelvinToCelsius(kelvin_t c) { return c - 273.15; }
 }
 
 #endif

@@ -156,19 +156,19 @@ namespace pr
 		// Boolean test for no assigned handlers
 		operator bool_type() const
 		{
-			return !m_funcs.empty() ? &bool_tester::x : static_cast<bool_type>(0);
+			return !m_handlers.empty() ? &bool_tester::x : static_cast<bool_type>(0);
 		}
 
 		// Detach all handlers. NOTE: this invalidates all associated Handler's
 		void reset()
 		{
-			m_funcs.clear();
+			m_handlers.clear();
 		}
 
 		// Number of attached handlers
 		size_t count() const
 		{
-			return m_funcs.size();
+			return m_handlers.size();
 		}
 
 		// Append a handler to the event
@@ -178,7 +178,12 @@ namespace pr
 			m_handlers.push_back(handler);
 			return handler.m_id;
 		}
-
+		pr::EventHandlerId operator = (std::function<FunctionType> func)
+		{
+			reset();
+			return *this += func;
+		}
+		
 		// Remove a handler from the event
 		void operator -= (pr::EventHandlerId handler_id)
 		{
@@ -196,6 +201,8 @@ namespace pr
 	{
 		struct EventTest
 		{
+			int m_evt0_handled;
+
 			pr::Event<void()>                        OnEvtNoUsed;
 			pr::Event<void()>                        OnEvt0;
 			pr::Event<void(int)>                     OnEvt1;
@@ -203,6 +210,12 @@ namespace pr
 			pr::Event<void(int,int,int)>             OnEvt3;
 			pr::Event<void(int,int,int,int)>         OnEvt4;
 			pr::Event<void(int,int,int,int,int)>     OnEvt5;
+
+			EventTest()
+				:m_evt0_handled(0)
+			{
+				OnEvt0 += std::bind(&EventTest::Evt0Handler, this);
+			}
 
 			void RaiseEvents()
 			{
@@ -213,6 +226,11 @@ namespace pr
 				OnEvt3(1,2,3);
 				OnEvt4(1,2,3,4);
 				OnEvt5(1,2,3,4,5);
+			}
+
+			void Evt0Handler()
+			{
+				++m_evt0_handled;
 			}
 		};
 
@@ -271,6 +289,8 @@ namespace pr
 			test.RaiseEvents();
 			test2.RaiseEvents();
 			PR_CHECK(y, 3);
+
+			PR_CHECK(test.m_evt0_handled, 9);
 		}
 	}
 }
