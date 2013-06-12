@@ -31,7 +31,7 @@ enum SplitOrientation
 
 class SplitPanel: LayoutControl
 {
-	private const int SPLITTER_SIZE = 8;
+	private enum SPLITTER_SIZE = 8;
 	
 	private SplitOrientation _splitOrientation = SplitOrientation.VERTICAL;
 	private bool _downing = false;

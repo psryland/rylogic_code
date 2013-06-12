@@ -337,15 +337,15 @@ class ListView: OwnerDrawControl
 		{
 			return ViewStyle.LARGE_ICON;
 		}
-		else if(this.getStyle & ViewStyle.SMALL_ICON)
+		else if(this.getStyle() & ViewStyle.SMALL_ICON)
 		{
 			return ViewStyle.SMALL_ICON;
 		}
-		else if(this.getStyle & ViewStyle.LIST)
+		else if(this.getStyle() & ViewStyle.LIST)
 		{
 			return ViewStyle.LIST;
 		}
-		else if(this.getStyle & ViewStyle.REPORT)
+		else if(this.getStyle() & ViewStyle.REPORT)
 		{
 			return ViewStyle.REPORT;
 		}
