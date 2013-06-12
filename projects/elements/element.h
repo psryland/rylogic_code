@@ -8,7 +8,7 @@ namespace ele
 	struct Element
 	{
 		// Where this element lives in the period table
-		size_t m_atomic_number;
+		atomic_number_t m_atomic_number;
 
 		// The name of the element
 		ElementName const* m_name;
@@ -29,11 +29,17 @@ namespace ele
 		// any bond with a difference > ~1.8 is considered ionic.
 		pr::fraction_t m_electro_negativity;
 
-		// True once this element has been discovered
-		bool m_discovered;
+		// The melting/boiling points of the element
+		pr::celsius_t m_melting_point;
+		pr::celsius_t m_boiling_point;
+
+		pr::metres_t m_atomic_radius;
+
+		// A bit mask of the property values that are known for this element
+		EElemProp m_known_properties;
 
 		Element();
-		Element(size_t atomic_number, GameConstants const& consts);
+		Element(atomic_number_t atomic_number, GameConstants const& consts);
 
 		// Returns true if this element is a nobal gas
 		bool IsNobal() const { return m_valence_electrons == 0; }

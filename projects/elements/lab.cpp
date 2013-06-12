@@ -4,6 +4,7 @@
 #include "elements/bond.h"
 #include "elements/material.h"
 #include "elements/element.h"
+#include "elements/game_events.h"
 
 namespace ele
 {
@@ -29,38 +30,99 @@ namespace ele
 	// from the nucleus will be able to get through to attract the extra electrons. Once you have filled the p orbital completely, you now have to add to the next level s orbital,
 	// to which very little extra charge from the nucleus can get through. There are also a few issues with electrons being lower in energy if there are a lot of other electrons
 	// around with the same n, l, and Ms values that contribute to the octet rule, but it mainly has to do with charge and charge shielding.
-
 	// For simplicity, assume full valence shells shield 100% of the charge, valence electrons shield 60%
 
 	Lab::Lab(GameConstants const& consts)
 		:m_consts(consts)
 		,m_elements()
+		,m_materials()
+		,m_element_order()
+		,m_materials_order()
+		,m_known_properties()
 	{
 		// Populate the container of elements
-		for (size_t i = 0; i != consts.m_element_count; ++i)
-			m_elements.push_back(Element(i+1, m_consts));
+		for (atomic_number_t i = 1; i <= consts.m_element_count; ++i)
+			m_elements.push_back(Element(i, m_consts));
 
-		// Populate the container of materials
-		// Generate every possible combination, keeping only those
-		// that are stable
-		m_mats.reserve(sqr(consts.m_element_count));
+		// Populate the container of materials. Generate every possible combination
+		m_materials.resize(pr::tri_table::Size<pr::tri_table::Inclusive>(consts.m_element_count));
 		for (size_t i = 0; i != consts.m_element_count; ++i)
-		for (size_t j = 0; j != consts.m_element_count; ++j)
+		for (size_t j = i; j != consts.m_element_count; ++j)
 		{
 			Material mat(m_elements[i], m_elements[j], m_consts);
-			m_mats.push_back(mat);
+			m_materials[mat.m_index] = mat;
 		}
+		PR_ASSERT(PR_DBG, m_materials.size() == pr::tri_table::Size<pr::tri_table::Inclusive>(consts.m_element_count), "");
 
+		// The properties of the elements that the player knows about
+		m_known_properties |= EElemProp::Existence;
+		m_known_properties |= EElemProp::Name;
+		m_known_properties |= EElemProp::MeltingPoint;
+		m_known_properties |= EElemProp::BoilingPoint;
 
-		//// Generate graph data
-		//for (size_t i = 0; i != consts.m_element_count; ++i)
-		//for (size_t j = 0; j != consts.m_element_count; ++j)
-		//{
-		//	Element ei(i+1, m_consts);
-		//	Element ej(j+1, m_consts);
-		//	Material mat(ei,ej,m_consts);
-		//}
+		// Set the display order collection
+		UpdateDisplayOrder();
 	}
+
+	// Update the display order of the elements based on what the player
+	// currently knowns about them. Order is atomic number, alphabetical
+	void Lab::UpdateDisplayOrder()
+	{
+		// Only the elements that are known to exist are visible
+		m_element_order = Where(m_elements, [](Element const& elem){ return pr::AllSet(elem.m_known_properties, EElemProp::Existence); });
+		std::sort(std::begin(m_element_order), std::end(m_element_order), [](Element const* lhs, Element const* rhs)
+		{
+			bool al = pr::AllSet(lhs->m_known_properties, EElemProp::AtomicNumber);
+			bool ar = pr::AllSet(rhs->m_known_properties, EElemProp::AtomicNumber);
+			if (al != ar) return al;
+			if (al && ar) return lhs->m_atomic_number < rhs->m_atomic_number;
+			return strcmp(lhs->m_name->m_fullname, rhs->m_name->m_fullname) < 0;
+		});
+
+		// Only materials that have been discovered are visible
+		m_materials_order = Where(m_materials,[](Material const& mat){ return mat.m_discovered; });
+		std::sort(std::begin(m_materials_order), std::end(m_materials_order), [](Material const* lhs, Material const* rhs)
+		{
+			return lhs->m_name < rhs->m_name;
+		});
+	}
+
+	// Called to 'discover' a new element
+	void Lab::DiscoverElement(atomic_number_t atomic_number)
+	{
+		auto& element = m_elements[atomic_number - 1];
+		PR_ASSERT(PR_DBG, !pr::AllSet(element.m_known_properties, EElemProp::Existence), "Element already discovered");
+
+		// We now know of it's existence, and it's been named
+		element.m_known_properties |= EElemProp::Existence;
+		element.m_known_properties |= EElemProp::Name;
+		UpdateDisplayOrder();
+
+		pr::events::Send(Evt_Discovery(&element));
+	}
+
+	// Called to 'discover' a material
+	void Lab::DiscoverMaterial(int index)
+	{
+		auto& material = m_materials[index];
+		PR_ASSERT(PR_DBG, !material.m_discovered, "Material already discovered");
+
+		material.UpdateName(material.m_name_common);
+		material.m_discovered = true;
+		UpdateDisplayOrder();
+
+		pr::events::Send(Evt_Discovery(&material));
+	}
+
+	// Returns a collection of the materials related to 'elem'
+	MatCPtrCont Lab::RelatedMaterials(Element const& elem) const
+	{
+		atomic_number_t num = elem.m_atomic_number;
+		return SelectWhere(m_materials_order,
+			[ ](Material const* m){ return m; },
+			[=](Material const* m){ return m->m_elem1.m_atomic_number == num || m->m_elem2.m_atomic_number == num; });
+	}
+
 
 	// Generate the name of a material formed from the given elements
 	std::string MaterialName(Element elem1, size_t count1, Element elem2, size_t count2)

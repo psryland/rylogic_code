@@ -25,6 +25,9 @@ namespace ele
 		// The acceleration required of the ship in order to reach escape velocity in time
 		pr::metres_p_sec²_t m_required_acceleration;
 
+		// The average local temperature, this increases as the star nears super nova
+		pr::celsius_t m_average_local_temperature;
+
 		WorldState(GameConstants const& consts);
 
 		// Advance the world state by 'elapsed' seconds

@@ -19,15 +19,23 @@ namespace ele
 		,m_period()
 		,m_valence_electrons()
 		,m_valence_holes()
-		,m_discovered(false)
+		,m_electro_negativity()
+		,m_melting_point()
+		,m_boiling_point()
+		,m_atomic_radius()
+		,m_known_properties()
 	{}
-	Element::Element(size_t atomic_number, GameConstants const& consts)
+	Element::Element(atomic_number_t atomic_number, GameConstants const& consts)
 		:m_atomic_number()
 		,m_name()
 		,m_period()
 		,m_valence_electrons()
 		,m_valence_holes()
-		,m_discovered(false)
+		,m_electro_negativity()
+		,m_melting_point()
+		,m_boiling_point()
+		,m_atomic_radius()
+		,m_known_properties()
 	{
 		PR_ASSERT(PR_DBG, atomic_number > 0 && atomic_number <= consts.m_element_count, "");
 
@@ -39,5 +47,8 @@ namespace ele
 
 		PR_ASSERT(PR_DBG, m_valence_electrons >= 0 && m_valence_electrons <= consts.m_valence_levels[m_period+1] - consts.m_valence_levels[m_period], "");
 		PR_ASSERT(PR_DBG, m_valence_holes     >= 0 && m_valence_holes     <= consts.m_valence_levels[m_period+1] - consts.m_valence_levels[m_period], "");
+
+		// All elements start with a name
+		m_known_properties |= EElemProp::Name;
 	}
 }

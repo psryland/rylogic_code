@@ -6,6 +6,7 @@
 #include <map>
 #include <algorithm>
 #include <iostream>
+#include <functional>
 
 // pr
 #include "pr/common/assert.h"
@@ -14,6 +15,7 @@
 #include "pr/common/datetime.h"
 #include "pr/common/hash.h"
 #include "pr/common/si_units.h"
+#include "pr/common/tri_table.h"
 #include "pr/macros/enum.h"
 #include "pr/macros/no_copy.h"
 #include "pr/macros/count_of.h"
@@ -24,6 +26,7 @@
 
 namespace ele
 {
+	typedef size_t atomic_number_t;
 	typedef double man_days_t;
 	typedef double man_power_t;
 	typedef std::vector<std::string> strvec_t;
@@ -35,6 +38,13 @@ namespace ele
 	struct Ship;
 	struct ResearchEffort;
 
+	typedef std::vector<Element>         ElemCont;
+	typedef std::vector<Material>        MatCont;
+	typedef std::vector<Element*>        ElemPtrCont;
+	typedef std::vector<Element const*>  ElemCPtrCont;
+	typedef std::vector<Material*>       MatPtrCont;
+	typedef std::vector<Material const*> MatCPtrCont;
+
 	// An id for each view. These are only used by the view layer,
 	// the game instance does not have any concept of the 'current view'
 	#define PR_ENUM(x)\
@@ -45,6 +55,19 @@ namespace ele
 		x(Launch)\
 		x(SameView)
 	PR_DEFINE_ENUM1(EView, PR_ENUM);
+	#undef PR_ENUM
+
+	// Element properties
+	#define PR_ENUM(x)\
+		x(Existence         ,= 1 << 0)\
+		x(Name              ,= 1 << 1)\
+		x(AtomicNumber      ,= 1 << 2)\
+		x(MeltingPoint      ,= 1 << 3)\
+		x(BoilingPoint      ,= 1 << 4)\
+		x(ValenceElectrons  ,= 1 << 5)\
+		x(ElectroNegativity ,= 1 << 6)\
+		x(AtomicRadius      ,= 1 << 7)
+	PR_DEFINE_ENUM2_FLAGS(EElemProp, PR_ENUM);
 	#undef PR_ENUM
 
 	// Permutations
@@ -89,5 +112,50 @@ namespace ele
 	template <typename T> inline T sqrt(T t)   { return static_cast<T>(std::sqrt(t)); }
 	template <typename T> inline T cubert(T t) { return static_cast<T>(std::pow(t, 1.0/3.0)); }
 	template <typename T> inline T ln(T t)     { return static_cast<T>(std::log(t)); }
+
+	// Returns a vector of the results that pass 'pred' converted by 'select'
+	template <typename TCont, typename TSelect, typename TPred>
+	inline auto SelectWhere(TCont const& cont, TSelect select, TPred pred) -> std::vector<decltype(select(cont.front()))>
+	{
+		std::vector<decltype(select(cont.front()))> vec;
+		for (auto& i : cont)
+		{
+			if (!pred(i)) continue;
+			vec.push_back(select(i));
+		}
+		return vec;
+	}
+
+	// Returns a vector of the results of 'select'
+	template <typename TCont, typename TPred>
+	inline auto Where(TCont& cont, TPred pred) -> std::vector<typename TCont::value_type*>
+	{
+		std::vector<typename TCont::value_type*> vec;
+		for (auto& i : cont)
+		{
+			if (!pred(i)) continue;
+			vec.push_back(&i);
+		}
+		return vec;
+	}
+
+	// Returns a vector of the results of 'select'
+	template <typename TCont, typename TSelect>
+	inline auto Select(TCont& cont, TSelect select) -> std::vector<decltype(select())>
+	{
+		std::vector<decltype(select())> vec;
+		for (auto& i : cont)
+		{
+			vec.push_back(select(i));
+		}
+		return vec;
+	}
+
+	// Return a pointer to an item in 'cont' if index is within range, otherwise return nullptr
+	template <typename TCont> inline typename TCont::pointer Find(TCont& cont, int index)
+	{
+		if (index < 0 || index >= int(cont.size())) return nullptr;
+		return &cont[index];
+	}
 }
 

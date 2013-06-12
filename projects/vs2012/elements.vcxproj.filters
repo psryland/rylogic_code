@@ -115,11 +115,20 @@
     <ClInclude Include="..\..\sdk\pr\pr\str\tostring.h">
       <Filter>sdk\pr\str</Filter>
     </ClInclude>
+    <ClInclude Include="..\elements\game_events.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h">
+      <Filter>sdk\pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\event.h">
+      <Filter>sdk\pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\elements\view_prompt_box.h">
+      <Filter>ui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\elements\main.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\elements\game_instance.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -172,6 +181,9 @@
       <Filter>ui</Filter>
     </ClCompile>
     <ClCompile Include="..\elements\view_ship.cpp">
+      <Filter>ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\elements\main.cpp">
       <Filter>ui</Filter>
     </ClCompile>
   </ItemGroup>

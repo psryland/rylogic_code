@@ -141,9 +141,11 @@
   <ItemGroup>
     <ClInclude Include="..\..\sdk\pr\pr\common\console.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\event.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\events.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\fmt.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\no_copy.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h" />
     <ClInclude Include="..\..\sdk\pr\pr\str\tostring.h" />
@@ -151,6 +153,7 @@
     <ClInclude Include="..\elements\bond.h" />
     <ClInclude Include="..\elements\console_ui.h" />
     <ClInclude Include="..\elements\element.h" />
+    <ClInclude Include="..\elements\game_events.h" />
     <ClInclude Include="..\elements\view_base.h" />
     <ClInclude Include="..\elements\lab.h" />
     <ClInclude Include="..\elements\reaction.h" />
@@ -159,6 +162,7 @@
     <ClInclude Include="..\elements\view_home.h" />
     <ClInclude Include="..\elements\view_intro.h" />
     <ClInclude Include="..\elements\view_lab.h" />
+    <ClInclude Include="..\elements\view_prompt_box.h" />
     <ClInclude Include="..\elements\view_ship.h" />
     <ClInclude Include="..\elements\world_state.h" />
     <ClInclude Include="..\elements\material.h" />

@@ -17,8 +17,9 @@ namespace ele
 		size_t m_count2;
 
 		// The name of the material (derived from the elements)
-		std::string m_name;
-		std::string m_name_symbolic;
+		std::string m_name;          // Its full chemical name
+		std::string m_name_symbolic; // Symbolic name
+		std::string m_name_common;   // What the layman call it
 
 		// The index of this material in the possible combinations
 		size_t m_index;
@@ -36,6 +37,7 @@ namespace ele
 		double m_molar_mass;
 
 		double m_melting_point;
+		double m_boiling_point;
 
 		pr::kilograms_p_metre³_t m_density;
 
@@ -48,7 +50,13 @@ namespace ele
 		// The density of the material at room temperature
 		pr::kilograms_p_metre³_t Density() const { return 1.0; }
 
+		// True if this material is known to the player
+		bool m_discovered;
+
 		Material();
 		Material(Element e1, Element e2, GameConstants const& consts);
+
+		// Call to update the name
+		void UpdateName(std::string const& common_name);
 	};
 }

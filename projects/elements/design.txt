@@ -62,6 +62,15 @@ Escape Velocity:
    Assuming thrust_force is constant, i.e. mass_flow_rate and exhaust_velocity are constant
    escape velocity is reached if max_velocity > escape_velocity
    Note, circular dependency: velocity->accel->gravity_force->distance->velocity hence, iterative solver needed
+   Temperature:
+    As the star gets closer to supernova, the local temperature increases, remember to consider the melting points
+    of the ship material and fuel.
+    T(d) = Ts * sqrt(Rs / 2*d)
+    where:
+      Ts = average sun temperature ~ 6000K.
+      Rs = sun radius ~ 695,000km
+      d = average distance sun-planet ~ 149,600,000km
+      T = average planet temperature. ~16.18°C
 
  Chemistry:
   The chemistry of materials is defined by the valences of the elements (electrons per level). In our universe these

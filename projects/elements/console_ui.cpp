@@ -16,7 +16,8 @@ namespace ele
 		,m_cons()
 		,m_loop()
 		//,m_view(new ViewIntro(m_cons, m_inst))
-		,m_view(new ViewHome(m_cons, m_inst))
+		//,m_view(new ViewHome(m_cons, m_inst))
+		,m_view(new ViewLab(m_cons, m_inst))
 	{
 		m_cons.Open(140, 60);
 		m_cons.AutoScroll(false);
@@ -95,8 +96,5 @@ namespace ele
 		
 		m_cons.Write(EAnchor::TopLeft, pad, 0, 3);
 	}
-
-
-
 	*/
 }

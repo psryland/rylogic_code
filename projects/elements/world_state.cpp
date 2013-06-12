@@ -10,6 +10,7 @@ namespace ele
 		,m_star_distance_research(consts.m_star_distance_discovery_effort, 0.0, consts)
 		,m_star_mass_research(consts.m_star_mass_discovery_effort, 0.0, consts)
 		,m_required_acceleration(0)
+		,m_average_local_temperature()
 	{}
 
 	// Returns false if the star has gone nova
@@ -25,6 +26,9 @@ namespace ele
 		// Given the time remaining, this is the average acceleration that the ship needs to escape
 		m_required_acceleration = m_consts.m_escape_velocity / m_time_till_nova;
 
+		// todo
+		m_average_local_temperature = 16.18;
+			//pr::KelvinToCelsius(m_consts.m_star_temperature * sqrt(m_consts.m_star_radius
 		return true;
 	}
 }

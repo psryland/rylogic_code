@@ -62,5 +62,10 @@ namespace ele
 			m_view = EView::Home;
 			return;
 		}
+		if (e.m_key.wVirtualKeyCode == VK_RETURN)
+		{
+			Render();
+			return;
+		}
 	}
 }

@@ -9,8 +9,13 @@ namespace ele
 	struct Reaction
 	{
 		// The materials going into the reaction
-		Material m_mat1;
-		Material m_mat2;
+		Material const* m_mat1;
+		Material const* m_mat2;
+
+		// The energy input to the reaction
+		// Needed for endothermic reactions to do anything
+		// Could be things like heating, laser light, etc
+		double m_input_energy;
 
 		// The materials produced by the reaction.
 		// If empty, then the materials don't react
@@ -19,7 +24,10 @@ namespace ele
 		// The energy of the reaction (-ve = endothermic)
 		double m_energy_change;
 
-		Reaction(Material mat1, Material mat2, GameConstants const& consts);
+		Reaction();
+		Reaction(Material const& mat1, Material const& mat2);
+
+		void Do(GameConstants const& consts);
 	};
 
 }

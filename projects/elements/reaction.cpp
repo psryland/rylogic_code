@@ -6,24 +6,39 @@
 
 namespace ele
 {
-	// Represents the result of a reaction between two materials
-	Reaction::Reaction(Material mat1, Material mat2, GameConstants const& consts)
-		:m_mat1(mat1)
-		,m_mat2(mat2)
+	Reaction::Reaction()
+		:m_mat1()
+		,m_mat2()
+		,m_input_energy()
 		,m_out()
+		,m_energy_change()
+	{}
+
+	// Represents the result of a reaction between two materials
+	Reaction::Reaction(Material const& mat1, Material const& mat2)
+		:m_mat1(&mat1)
+		,m_mat2(&mat2)
+		,m_input_energy(0)
+		,m_out()
+		,m_energy_change(0)
+	{}
+
+	void Reaction::Do(GameConstants const& consts)
 	{
 		using namespace EPerm4;
-		auto& a = m_mat1.m_elem1;
-		auto& b = m_mat1.m_elem2;
-		auto& c = m_mat2.m_elem1;
-		auto& d = m_mat2.m_elem2;
+		PR_ASSERT(PR_DBG, m_mat1 != nullptr && m_mat2 != nullptr, "Don't call 'Do' untill materials have been assigned");
+
+		auto& a = m_mat1->m_elem1;
+		auto& b = m_mat1->m_elem2;
+		auto& c = m_mat2->m_elem1;
+		auto& d = m_mat2->m_elem2;
 		
 		// The four elements have the possibility of forming these 10 pairs:
 		// AA,AB,AC,AD,BB,BC,BD,CC,CD,DD
 		// Determine the bond strength of each pair and pick the strongest bonds
 		// as the new materials produced
 		Bond bonds[NumberOf];
-		BondStrengths(mat1, mat2, consts, bonds);
+		BondStrengths(*m_mat1, *m_mat2, consts, bonds);
 		OrderByStrength(bonds);
 
 		int used = 0; // bit mask of elements available

@@ -13,14 +13,6 @@ namespace ele
 	{
 		// Generate the starting materials
 		GenerateStartingMaterials();
-
-		//// Add some materials
-		//for (int i = 0; i != 10; ++i)
-		//{
-		//	Element e1(pr::rand::int1(1,m_consts.m_element_count), m_consts);
-		//	Element e2(pr::rand::int1(1,m_consts.m_element_count), m_consts);
-		//	m_stockpile.Add(Material(e1,e2,m_consts));
-		//}
 	}
 
 	void GameInstance::Step(pr::seconds_t elapsed)
@@ -32,12 +24,33 @@ namespace ele
 	// Generates the starting materials
 	void GameInstance::GenerateStartingMaterials()
 	{
+		{//hack
+			// "Discover" some elements
+			auto e1 = pr::rand::range<atomic_number_t>(1, m_consts.m_element_count);
+			auto e2 = pr::rand::range<atomic_number_t>(1, m_consts.m_element_count);
+			auto e3 = pr::rand::range<atomic_number_t>(1, m_consts.m_element_count);
+			auto e4 = pr::rand::range<atomic_number_t>(1, m_consts.m_element_count);
+			auto e5 = pr::rand::range<atomic_number_t>(1, m_consts.m_element_count);
+			m_lab.DiscoverElement(e1);
+			m_lab.DiscoverElement(e2);
+			m_lab.DiscoverElement(e3);
+		
+			// Discover some materials using these elements, plus some unknown elements
+			m_lab.DiscoverMaterial(MaterialIndex(e1,e2));
+			m_lab.DiscoverMaterial(MaterialIndex(e1,e3));
+			m_lab.DiscoverMaterial(MaterialIndex(e2,e3));
+			m_lab.DiscoverMaterial(MaterialIndex(e1,e4));
+			m_lab.DiscoverMaterial(MaterialIndex(e5,e3));
+			m_lab.DiscoverMaterial(MaterialIndex(e4,e5));
+		}
+		
+		
 		// Start with the ideal materials and generate materials backwards to get the starting materials
 
 		// Determine the ideal material for building the space craft by sorting the list of possible
 		// materials by their total bond energy
 		std::vector<Material const*> mats;
-		for (auto& m : m_lab.m_mats) mats.push_back(&m);
+		for (auto& m : m_lab.m_materials) mats.push_back(&m);
 		std::sort(std::begin(mats), std::end(mats), [=](Material const* lhs, Material const* rhs){ return lhs->m_enthalpy > rhs->m_enthalpy; });
 		
 		//
