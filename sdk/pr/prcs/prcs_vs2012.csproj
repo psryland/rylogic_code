@@ -55,6 +55,7 @@
     <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
     <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
     <UseVSHostingProcess>true</UseVSHostingProcess>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -95,10 +96,12 @@
     <Compile Include="common\base32.cs" />
     <Compile Include="common\cmdline.cs" />
     <Compile Include="common\console_indent.cs" />
+    <Compile Include="common\enum_ex.cs" />
     <Compile Include="common\hglobal.cs" />
     <Compile Include="common\mime.cs" />
     <Compile Include="common\rtf.cs" />
     <Compile Include="common\cache.cs" />
+    <Compile Include="container\tri_table.cs" />
     <Compile Include="crypt\activation_code.cs" />
     <Compile Include="common\span.cs" />
     <Compile Include="common\pin.cs" />
@@ -156,6 +159,7 @@
     <Compile Include="directshow.net\VidPort.cs" />
     <Compile Include="directshow.net\Vmr9.cs" />
     <Compile Include="directshow.net\VmRender.cs" />
+    <Compile Include="extn\array_extensions.cs" />
     <Compile Include="extn\byte_array_extensions.cs" />
     <Compile Include="extn\dict_extensions.cs" />
     <Compile Include="extn\datagridview_extensions.cs">
@@ -167,6 +171,7 @@
     <Compile Include="extn\list_extensions.cs" />
     <Compile Include="extn\object_extensions.cs" />
     <Compile Include="extn\path_extensions.cs" />
+    <Compile Include="extn\random_extensions.cs" />
     <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />

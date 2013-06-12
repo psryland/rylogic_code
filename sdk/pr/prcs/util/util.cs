@@ -64,7 +64,7 @@ namespace pr.util
 		}
 
 		/// <summary>Helper for allocating an array of default constructed classes</summary>
-		public static T[] New<T>(uint count) where T : new()
+		public static T[] NewArray<T>(uint count) where T : new()
 		{
 			T[] arr = new T[count];
 			for (uint i = 0; i != count; ++i) arr[i] = new T();
@@ -72,7 +72,7 @@ namespace pr.util
 		}
 
 		/// <summary>Helper for allocating an array of constructed classes</summary>
-		public static T[] New<T>(uint count, Func<uint, T> construct)
+		public static T[] NewArray<T>(uint count, Func<uint, T> construct)
 		{
 			T[] arr = new T[count];
 			for (uint i = 0; i != count; ++i) arr[i] = construct(i);

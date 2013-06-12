@@ -118,7 +118,7 @@ namespace pr.maths
 		/// <summary>Construct a random quaternion rotation</summary>
 		public static v4 Random(Rand r)
 		{
-			return Make(v4.Normalise3(v4.Random3(0.0f)), r.Float(0.0f, Maths.m_tau));
+			return Make(v4.Normalise3(v4.Random3(0.0f)), r.Float(0.0f, Maths.Tau));
 		}
 
 		/// <summary>Spherically interpolate between quaternions</summary>
