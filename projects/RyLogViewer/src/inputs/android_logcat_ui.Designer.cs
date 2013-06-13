@@ -51,6 +51,7 @@
 			this.m_check_capture_to_log = new System.Windows.Forms.CheckBox();
 			this.m_btn_refresh = new System.Windows.Forms.Button();
 			this.m_text_adb_status = new System.Windows.Forms.Label();
+			this.m_btn_connect = new System.Windows.Forms.Button();
 			this.m_group.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filterspec)).BeginInit();
 			this.SuspendLayout();
@@ -91,7 +92,7 @@
 			this.m_listbox_devices.IntegralHeight = false;
 			this.m_listbox_devices.Location = new System.Drawing.Point(9, 32);
 			this.m_listbox_devices.Name = "m_listbox_devices";
-			this.m_listbox_devices.Size = new System.Drawing.Size(125, 210);
+			this.m_listbox_devices.Size = new System.Drawing.Size(125, 179);
 			this.m_listbox_devices.TabIndex = 3;
 			// 
 			// label2
@@ -150,6 +151,7 @@
 			this.m_group.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_group.Controls.Add(this.m_btn_connect);
 			this.m_group.Controls.Add(this.m_check_append);
 			this.m_group.Controls.Add(this.m_combo_output_file);
 			this.m_group.Controls.Add(this.m_lbl_log_format);
@@ -295,6 +297,15 @@
 			this.m_text_adb_status.Text = "Android Debug Bridge version 0.0.0";
 			this.m_text_adb_status.Visible = false;
 			// 
+			// m_btn_connect
+			// 
+			this.m_btn_connect.Location = new System.Drawing.Point(9, 217);
+			this.m_btn_connect.Name = "m_btn_connect";
+			this.m_btn_connect.Size = new System.Drawing.Size(125, 23);
+			this.m_btn_connect.TabIndex = 22;
+			this.m_btn_connect.Text = "Connect...";
+			this.m_btn_connect.UseVisualStyleBackColor = true;
+			// 
 			// AndroidLogcatUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
@@ -347,5 +358,6 @@
 		private System.Windows.Forms.ComboBox m_combo_log_format;
 		private System.Windows.Forms.ComboBox m_combo_output_file;
 		private System.Windows.Forms.CheckBox m_check_append;
+		private System.Windows.Forms.Button m_btn_connect;
 	}
 }

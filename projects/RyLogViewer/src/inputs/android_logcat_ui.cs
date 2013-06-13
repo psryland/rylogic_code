@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -15,7 +14,7 @@ namespace RyLogViewer
 	public partial class AndroidLogcatUI :Form
 	{
 		private readonly ToolTip m_tt;
-		private readonly Settings m_settings;
+		private readonly AndroidLogcat m_settings;
 		private readonly BindingList<string> m_device_list;
 		private readonly BindingList<AndroidLogcat.FilterSpec> m_filterspecs;
 
@@ -26,9 +25,9 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_tt = new ToolTip();
-			m_settings = settings;
+			m_settings = new AndroidLogcat(settings.AndroidLogcat);
 			m_device_list = new BindingList<string>();
-			m_filterspecs = new BindingList<AndroidLogcat.FilterSpec>(m_settings.AndroidLogcat.FilterSpecs);
+			m_filterspecs = new BindingList<AndroidLogcat.FilterSpec>(m_settings.FilterSpecs.ToList());
 			Launch = new LaunchApp();
 
 			const string prompt_text = "<Please set the path to adb.exe>";
@@ -68,29 +67,42 @@ namespace RyLogViewer
 			m_listbox_devices.DataSource = m_device_list;
 			m_listbox_devices.SelectedIndexChanged += (s,a) => UpdateAdbCommand();
 
+			// Connect button
+			m_btn_connect.ToolTip(m_tt, "Connect to an android device via USB or TCP/IP");
+			m_btn_connect.Click += (s,a) => ConnectDevice();
+			m_btn_connect.Enabled = false; // Until a valid adb path is set
+
 			// Log buffers (main and system by default)
 			m_listbox_log_buffers.ToolTip(m_tt, "The android log buffers to output");
 			m_listbox_log_buffers.DataSource = Enum.GetNames(typeof(AndroidLogcat.ELogBuffer)).Select(x => x.ToLowerInvariant()).ToArray();
-			foreach (var x in m_settings.AndroidLogcat.LogBuffers) m_listbox_log_buffers.SetSelected((int)x,true);
+			foreach (var x in m_settings.LogBuffers) m_listbox_log_buffers.SetSelected((int)x,true);
 			m_listbox_log_buffers.SelectedIndexChanged += (s,a) => UpdateAdbCommand();
 			
 			// Filter specs
 			m_grid_filterspec.ToolTip(m_tt, "Configure filters to apply to the logcat output. Tag = '*' applies the filter to all log entries");
 			m_grid_filterspec.AutoGenerateColumns = false;
-			m_grid_filterspec.Columns.Add(new DataGridViewTextBoxColumn{DataPropertyName = "Tag",});
-			m_grid_filterspec.Columns.Add(new DataGridViewComboBoxColumn{DataPropertyName = "Priority", DataSource = Enum.GetValues(typeof(AndroidLogcat.EFilterPriority)), Sorted = false});
+			m_grid_filterspec.Columns.Add(new DataGridViewTextBoxColumn
+			{
+				DataPropertyName = Reflect<AndroidLogcat.FilterSpec>.MemberName(x => x.Tag)
+			});
+			m_grid_filterspec.Columns.Add(new DataGridViewComboBoxColumn
+			{
+				DataPropertyName = Reflect<AndroidLogcat.FilterSpec>.MemberName(x=>x.Priority),
+				DataSource = Enum.GetValues(typeof(AndroidLogcat.EFilterPriority)),
+				Sorted = false
+			});
 			m_grid_filterspec.DataSource = m_filterspecs;
 			m_filterspecs.ListChanged += (s,a) => UpdateAdbCommand();
 			
 			// Log format
 			m_combo_log_format.ToolTip(m_tt, "Select the format of the log output");
 			m_combo_log_format.DataSource = Enum.GetNames(typeof(AndroidLogcat.ELogFormat)).Select(x => x.ToLowerInvariant()).ToArray();
-			m_combo_log_format.SelectedIndex = (int)m_settings.AndroidLogcat.LogFormat;
+			m_combo_log_format.SelectedIndex = (int)m_settings.LogFormat;
 			m_combo_log_format.SelectedIndexChanged += (s,a) => UpdateAdbCommand();
 			
 			// Capture log output
 			m_check_capture_to_log.ToolTip(m_tt, "Enable capturing the logcat output to a file");
-			m_check_capture_to_log.Checked = m_settings.AndroidLogcat.CaptureOutputToFile;
+			m_check_capture_to_log.Checked = m_settings.CaptureOutputToFile;
 			m_check_capture_to_log.CheckedChanged += (s,a) =>
 				{
 					m_combo_output_file.Enabled      = m_check_capture_to_log.Checked;
@@ -100,7 +112,7 @@ namespace RyLogViewer
 			
 			// Log out capture file
 			m_combo_output_file.ToolTip(m_tt, "The file path to save captured logcat output to");
-			m_combo_output_file.Load(m_settings.AndroidLogcat.OutputFilepathHistory);
+			m_combo_output_file.Load(m_settings.OutputFilepathHistory);
 			m_combo_output_file.Enabled = m_check_capture_to_log.Checked;
 
 			// Browse for capture output file
@@ -129,32 +141,35 @@ namespace RyLogViewer
 					// If launch is selected, add the launch command line to the history
 					if (DialogResult == DialogResult.OK)
 					{
-						string exe, args;
-						GenerateAdbCommand(out exe, out args);
-
-						// Update the launch options
-						Launch.Executable       = exe;
-						Launch.Arguments        = args;
-						Launch.WorkingDirectory = Path.GetDirectoryName(Launch.Executable) ?? string.Empty;
-						Launch.OutputFilepath   = (string)m_combo_output_file.SelectedItem ?? string.Empty;
-						Launch.ShowWindow       = false;
-						Launch.AppendOutputFile = m_check_append.Checked;
-						Launch.Streams          = StandardStreams.Stdout|StandardStreams.Stderr;
+						// Cancelled until we're sure we have a valid launch command
+						DialogResult = DialogResult.Cancel;
 
 						// Save settings - Only save here, so that cancel causes settings to be unchanged
-						var logcat_settings = new AndroidLogcat();
-						logcat_settings.AdbFullPath         = m_edit_adb_fullpath.Text;
-						logcat_settings.CaptureOutputToFile = m_check_capture_to_log.Checked;
-						logcat_settings.AppendOutputFile    = m_check_append.Checked;
-						logcat_settings.LogBuffers          = m_listbox_log_buffers.SelectedIndices.Cast<AndroidLogcat.ELogBuffer>().ToArray();
-						logcat_settings.FilterSpecs         = m_filterspecs.ToArray();
-						logcat_settings.LogFormat           = (AndroidLogcat.ELogFormat)m_combo_log_format.SelectedIndex;
+						m_settings.AdbFullPath         = m_edit_adb_fullpath.Text;
+						m_settings.CaptureOutputToFile = m_check_capture_to_log.Checked;
+						m_settings.AppendOutputFile    = m_check_append.Checked;
+						m_settings.LogBuffers          = m_listbox_log_buffers.SelectedIndices.Cast<AndroidLogcat.ELogBuffer>().ToArray();
+						m_settings.FilterSpecs         = m_filterspecs.ToArray();
+						m_settings.LogFormat           = (AndroidLogcat.ELogFormat)m_combo_log_format.SelectedIndex;
+						Misc.AddToHistoryList(ref m_settings.OutputFilepathHistory, m_combo_output_file.Text, true, Constants.MaxOutputFileHistoryLength);
+						settings.AndroidLogcat = m_settings;
 
-						var output_file_history = m_settings.AndroidLogcat.OutputFilepathHistory.ToList();
-						Misc.AddToHistoryList(output_file_history, Launch.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
-						logcat_settings.OutputFilepathHistory = output_file_history.ToArray();
+						// Use cancelled if no device was selected
+						if (m_listbox_devices.SelectedItem != null)
+						{
+							string exe, args;
+							GenerateAdbCommand(out exe, out args);
 
-						m_settings.AndroidLogcat = logcat_settings;
+							// Update the launch options
+							Launch.Executable       = exe;
+							Launch.Arguments        = args;
+							Launch.WorkingDirectory = Path.GetDirectoryName(Launch.Executable) ?? string.Empty;
+							Launch.OutputFilepath   = m_combo_output_file.Text;
+							Launch.ShowWindow       = false;
+							Launch.AppendOutputFile = m_check_append.Checked;
+							Launch.Streams          = StandardStreams.Stdout|StandardStreams.Stderr;
+							DialogResult = DialogResult.OK;
+						}
 					}
 				};
 
@@ -165,9 +180,9 @@ namespace RyLogViewer
 		private void AutoDetectAdbPath()
 		{
 			// If the full path is saved in the settings, use that
-			if (m_settings.AndroidLogcat.AdbFullPath.HasValue())
+			if (m_settings.AdbFullPath.HasValue())
 			{
-				SetAdbPath(m_settings.AndroidLogcat.AdbFullPath);
+				SetAdbPath(m_settings.AdbFullPath);
 				return;
 			}
 			
@@ -194,14 +209,14 @@ namespace RyLogViewer
 			// Reject invalid paths
 			if (path == null || !File.Exists(path))
 				return;
-			
+
 			// If hint text is shown, clear it first
 			if (m_edit_adb_fullpath.ForeColor == Color.LightGray)
 			{
 				m_edit_adb_fullpath.ForeColor = Color.Black;
 				m_edit_adb_fullpath.Text = string.Empty;
 			}
-			
+
 			// Only set when different
 			if (m_edit_adb_fullpath.Text != path)
 			{
@@ -234,6 +249,8 @@ namespace RyLogViewer
 		{
 			try
 			{
+				m_btn_connect.Enabled = false;
+
 				// Only if adb.exe is found
 				if (!File.Exists(m_edit_adb_fullpath.Text))
 					return;
@@ -251,7 +268,10 @@ namespace RyLogViewer
 					if (device.Length == 0) continue;
 					m_device_list.Add(device[0].Trim());
 				}
-				
+
+				// Enable the connect button
+				m_btn_connect.Enabled = true;
+
 				UpdateAdbCommand();
 			}
 			catch (Exception ex)
@@ -278,25 +298,36 @@ namespace RyLogViewer
 
 			// -s device-id
 			if (m_listbox_devices.SelectedItem != null)
-			{
 				sb.Append(" -s ").Append(m_listbox_devices.SelectedItem);
-			}
-			
+
 			// logcat
 			sb.Append(" logcat");
-			
+
 			// log buffers
 			foreach (var i in m_listbox_log_buffers.SelectedItems)
 				sb.Append(" -b ").Append(i);
-			
+
 			// log format
 			sb.Append(" -v ").Append(m_combo_log_format.SelectedItem.ToString().ToLowerInvariant());
-			
+
 			// Filter specs
 			foreach (var i in m_filterspecs)
 				sb.Append(' ').Append(i.Tag).Append(':').Append(i.Priority.ToString()[0]);
-			
+
 			args = sb.ToString();
+		}
+
+		/// <summary>Show the connect to device dialog</summary>
+		private void ConnectDevice()
+		{
+			var dlg = new AndroidConnectDeviceUI(m_settings);
+			if (dlg.ShowDialog() != DialogResult.OK) return;
+			if (m_settings.ConnectionType == AndroidLogcat.EConnectionType.Tcpip)
+				Adb("connect " + m_settings.IPAddressHistory[0]);
+			else
+				Adb("usb");
+			
+			this.BeginInvoke(PopulateUsingAdb);
 		}
 	}
 }

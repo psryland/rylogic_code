@@ -386,7 +386,7 @@ namespace RyLogViewer
 			}
 
 			// Initiate a UI update after any existing queued events
-			BeginInvoke(() => UpdateUI());
+			this.BeginInvoke(() => UpdateUI());
 		}
 		
 		/// <summary>Prompt to open a log file</summary>
@@ -643,12 +643,6 @@ namespace RyLogViewer
 			float ratio = Maths.Frac(0, SelectedRow, m_grid.RowCount - 1);
 			if (ratio < 0f + Limit) BuildLineIndex(LineStartIndexRange.Begin, false);
 			if (ratio > 1f - Limit) BuildLineIndex(LineStartIndexRange.End  , false);
-		}
-
-		/// <summary>Helper for passing an action directly to BeginInvoke</summary>
-		private void BeginInvoke(Action action)
-		{
-			base.BeginInvoke(action);
 		}
 
 		/// <summary>Handle global command keys</summary>
@@ -968,7 +962,7 @@ namespace RyLogViewer
 					catch (OperationCanceledException) {}
 					catch (Exception ex) { err = ex; }
 
-					BeginInvoke(() => HandleCheckForUpdateResult(res, err, show_dialog));
+					this.BeginInvoke(() => HandleCheckForUpdateResult(res, err, show_dialog));
 				};
 			
 			// Use a web proxy if it specified in the settings

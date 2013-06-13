@@ -957,7 +957,7 @@
             this.toolStripSeparator14,
             this.m_cmenu_toggle_bookmark});
 			this.m_cmenu_grid.Name = "m_cmenu_grid";
-			this.m_cmenu_grid.Size = new System.Drawing.Size(169, 270);
+			this.m_cmenu_grid.Size = new System.Drawing.Size(169, 248);
 			// 
 			// m_cmenu_select_all
 			// 

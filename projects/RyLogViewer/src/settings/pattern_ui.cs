@@ -211,7 +211,7 @@ namespace RyLogViewer
 				m_btn_add.Enabled = Pattern.ExprValid;
 				
 				// Highlight the expression background to show valid regex
-				m_edit_match.BackColor = Pattern.ExprValid ? Color.LightGreen : Color.LightSalmon;
+				m_edit_match.BackColor = Misc.FieldBkColor(Pattern.ExprValid);
 			
 				// Preserve the current caret position
 				int start = m_edit_test.SelectionStart;

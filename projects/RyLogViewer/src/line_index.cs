@@ -309,7 +309,7 @@ namespace RyLogViewer
 								List<Range> line_index = bwd_line_buf.Concat(fwd_line_buf).ToList();
 							
 								// Marshal the results back to the main thread
-								BeginInvoke(() =>
+								this.BeginInvoke(() =>
 								{
 									// This lambda runs in the main thread, so if the build issue is the same at
 									// the start of this method it can't be changed until after this function returns.

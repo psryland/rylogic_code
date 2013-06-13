@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
+using System.Drawing;
 using System.IO.Ports;
+using System.Linq;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,6 +19,7 @@ namespace RyLogViewer
 		public const string EvalLicence             = "Evaluation Licence";
 		public const string AppIdentifier           = "rylogviewer.x86";
 		public const string UpdateUrl               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
+		public const int MaxHistoryDefault          = 10;
 		public const int PortNumberMin              = 0;
 		public const int PortNumberWebProxyDefault  = 8080;
 		public const int PortNumberMax              = 65535;
@@ -315,26 +315,42 @@ namespace RyLogViewer
 		public enum ELogBuffer { Main, System, Radio, Events }
 		public enum ELogFormat { Brief, Process, Tag, Thread, Raw, Time, ThreadTime, Long }
 		public enum EFilterPriority { Verbose, Debug, Info, Warn, Error, Fatal, Silent}
+		public enum EConnectionType { Usb, Tcpip }
 		[DataContract] public class FilterSpec
 		{
-			[DataMember] public string Tag { get; private set; }
-			[DataMember] public EFilterPriority Priority { get; private set; }
+			// no private setters, they are used to make the grid cells editable
+			[DataMember] public string Tag { get; set; }
+			[DataMember] public EFilterPriority Priority { get; set; }
+			public FilterSpec() { Tag = "*"; Priority = EFilterPriority.Verbose; }
 			public FilterSpec(string tag, EFilterPriority priority) { Tag = tag; Priority = priority; }
 		}
 
-		[DataMember] public string       AdbFullPath           = string.Empty;
-		[DataMember] public string       SelectedDevice        = string.Empty;
-		[DataMember] public bool         CaptureOutputToFile   = false;
-		[DataMember] public string[]     OutputFilepathHistory = new string[0];
-		[DataMember] public bool         AppendOutputFile      = true;
-		[DataMember] public ELogBuffer[] LogBuffers            = new []{ELogBuffer.Main, ELogBuffer.System};
-		[DataMember] public FilterSpec[] FilterSpecs           = new []{new FilterSpec("*", EFilterPriority.Info)};
-		[DataMember] public ELogFormat   LogFormat             = ELogFormat.Time;
-
+		[DataMember] public string          AdbFullPath           = string.Empty;
+		[DataMember] public string          SelectedDevice        = string.Empty;
+		[DataMember] public bool            CaptureOutputToFile   = false;
+		[DataMember] public string[]        OutputFilepathHistory = new string[0];
+		[DataMember] public bool            AppendOutputFile      = true;
+		[DataMember] public ELogBuffer[]    LogBuffers            = new []{ELogBuffer.Main, ELogBuffer.System};
+		[DataMember] public FilterSpec[]    FilterSpecs           = new []{new FilterSpec("*", EFilterPriority.Verbose)};
+		[DataMember] public ELogFormat      LogFormat             = ELogFormat.Time;
+		[DataMember] public EConnectionType ConnectionType        = EConnectionType.Usb;
+		[DataMember] public string[]        IPAddressHistory      = new string[0];
+		[DataMember] public int             ConnectionPort        = 5555;
+		
 		public AndroidLogcat() {}
 		public AndroidLogcat(AndroidLogcat rhs)
 		{
-			AdbFullPath = rhs.AdbFullPath;
+			AdbFullPath           = rhs.AdbFullPath;
+			SelectedDevice        = rhs.SelectedDevice;
+			CaptureOutputToFile   = rhs.CaptureOutputToFile;
+			OutputFilepathHistory = rhs.OutputFilepathHistory.Dup();
+			AppendOutputFile      = rhs.AppendOutputFile;
+			LogBuffers            = rhs.LogBuffers.Dup();
+			FilterSpecs           = rhs.FilterSpecs.Dup();
+			LogFormat             = rhs.LogFormat;
+			ConnectionType        = rhs.ConnectionType;
+			IPAddressHistory      = rhs.IPAddressHistory.Dup();
+			ConnectionPort        = rhs.ConnectionPort;
 		}
 		public override string ToString()
 		{
@@ -348,6 +364,11 @@ namespace RyLogViewer
 
 	public static class Misc
 	{
+		/// <summary>Return a background colour appropriate for a validity state</summary>
+		public static Color FieldBkColor(bool is_valid) { return is_valid ? FieldValid : FieldInvalid; }
+		public static Color FieldValid   = Color.LightGreen;
+		public static Color FieldInvalid = Color.Salmon;
+
 		/// <summary>Watch window helper for converting byte buffers to strings</summary>
 		public static string BufToStr(byte[] buf, int start, int len)
 		{
@@ -381,6 +402,15 @@ namespace RyLogViewer
 				list.RemoveAt(list.Count - 1);
 		}
 
+		/// <summary>Add 'item' to a history list of items.</summary>
+		public static void AddToHistoryList<T>(ref T[] arr, T item, bool ignore_case, int max_history_length)
+		{
+			var list = arr.ToList();
+			AddToHistoryList(list, item, ignore_case, max_history_length);
+			Array.Resize(ref arr, list.Count);
+			Array.Copy(list.ToArray(), arr, arr.Length);
+		}
+
 		/// <summary>Helper for populating a combo box from an array of items</summary>
 		public static void Load<T>(this ComboBox combo, IList<T> items)
 		{
@@ -403,5 +433,11 @@ namespace RyLogViewer
 			m_error_dialog_visible = false;
 		}
 		private static bool m_error_dialog_visible;
+
+		/// <summary>Helper for passing an action directly to BeginInvoke</summary>
+		public static void BeginInvoke<TForm>(this TForm form, Action action) where TForm:Form
+		{
+			form.BeginInvoke(action);
+		}
 	}
 }
