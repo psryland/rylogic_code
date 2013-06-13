@@ -20,7 +20,7 @@ namespace pr.gui
 		private bool m_dragging = false;
 
 		/// <summary>The total unzoomed size of the represented range</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The total unzoomed size of the represented range")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The total unzoomed size of the represented range")]
 		public Range TotalRange
 		{
 			get { return m_total_range; }
@@ -29,15 +29,15 @@ namespace pr.gui
 				if (Equals(m_total_range, value)) return;
 				if (value.Count <= 0) value.End = value.Begin + 1;
 				m_total_range   = value;
+				m_zoomed_range  = value;
 				m_visible_range = Range.Constrain(m_visible_range, m_total_range);
-				m_zoomed_range  = Range.Constrain(m_zoomed_range, m_total_range);
 				Invalidate();
 			}
 		}
 		private Range m_total_range;
 
 		/// <summary>The size of the total range after zooming</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The size of the total range after zooming")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The size of the total range after zooming")]
 		public Range ZoomedRange
 		{
 			get { return m_zoomed_range; }
@@ -53,7 +53,7 @@ namespace pr.gui
 		private Range m_zoomed_range;
 
 		/// <summary>The size of the visible region of the represented range</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The size of the visible region of the represented range")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The size of the visible region of the represented range")]
 		public Range VisibleRange
 		{
 			get { return m_visible_range; }
@@ -69,11 +69,11 @@ namespace pr.gui
 		private Range m_visible_range;
 
 		/// <summary>Effectively the maximum zoom allowed = TotalRange.Count / MinimumVisibleRangeSize</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("Effectively the maximum zoom allowed = TotalRange.Count / MinimumVisibleRangeSize")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("Effectively the maximum zoom allowed = TotalRange.Count / MinimumVisibleRangeSize")]
 		public int MinimumVisibleRangeSize { get; set; }
 
 		/// <summary>The number of steps to move on page down/up</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The number of steps to move on page down/up")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The number of steps to move on page down/up")]
 		public long LargeChange
 		{
 			get { return m_large_change; }
@@ -82,7 +82,7 @@ namespace pr.gui
 		private long m_large_change;
 
 		/// <summary>The number of steps to move on arrow down/up</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The number of steps to move on arrow down/up")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The number of steps to move on arrow down/up")]
 		public long SmallChange
 		{
 			get { return m_small_change; }
@@ -90,18 +90,18 @@ namespace pr.gui
 		}
 		private long m_small_change;
 
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The colour of the highlight showing the visible region")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The colour of the highlight showing the visible region")]
 		public Color VisibleRangeColor { get; set; }
 
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The border colour that delimits the visible region")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The border colour that delimits the visible region")]
 		public Color VisibleRangeBorderColor { get; set; }
 
 		/// <summary>The background colour of the scroller</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("TrackColor")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("TrackColor")]
 		public Color TrackColor { get; set; }
 
 		/// <summary>The zoom factor</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), DefaultValue(false), Category("Behavior"), Description("The zoom factor")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The zoom factor")]
 		public float Zoom
 		{
 			get { return m_total_range.Count / (float)m_zoomed_range.Count; }
@@ -148,6 +148,7 @@ namespace pr.gui
 			MinimumVisibleRangeSize = 20;
 			VisibleRangeColor       = Color.FromArgb(unchecked((int)0x80008000));
 			VisibleRangeBorderColor = Color.FromArgb(unchecked((int)0xFF008000));
+			TrackColor              = SystemColors.ControlDark;
 			SetStyle(
 				ControlStyles.OptimizedDoubleBuffer |
 				ControlStyles.AllPaintingInWmPaint|
@@ -202,7 +203,7 @@ namespace pr.gui
 			base.OnPaint(e);
 
 			// Find the bounding area of the control
-			var bounds = Bounds;
+			var bounds = ClientRectangle;
 			bounds.Inflate(-1,-1);
 			if (bounds.Width <= 0 || bounds.Height <= 0)
 				return;
@@ -256,7 +257,7 @@ namespace pr.gui
 		protected override void OnSizeChanged(EventArgs e)
 		{
 			base.OnSizeChanged(e);
-			Region = new Region(Gfx.RoundedRectanglePath(Bounds, m_corner_radius)); // Set the clip boundary
+			//Region = new Region(Gfx.RoundedRectanglePath(Bounds, m_corner_radius)); // Set the clip boundary
 		}
 
 		/// <summary>Set the centre of the visible range to client rect relative coord 'y'</summary>
