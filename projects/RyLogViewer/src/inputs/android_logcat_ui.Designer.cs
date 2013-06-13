@@ -39,6 +39,7 @@
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_group = new System.Windows.Forms.GroupBox();
+			this.m_btn_connect = new System.Windows.Forms.Button();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
 			this.m_combo_output_file = new System.Windows.Forms.ComboBox();
 			this.m_lbl_log_format = new System.Windows.Forms.Label();
@@ -51,7 +52,6 @@
 			this.m_check_capture_to_log = new System.Windows.Forms.CheckBox();
 			this.m_btn_refresh = new System.Windows.Forms.Button();
 			this.m_text_adb_status = new System.Windows.Forms.Label();
-			this.m_btn_connect = new System.Windows.Forms.Button();
 			this.m_group.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_filterspec)).BeginInit();
 			this.SuspendLayout();
@@ -169,6 +169,15 @@
 			this.m_group.Size = new System.Drawing.Size(463, 248);
 			this.m_group.TabIndex = 9;
 			this.m_group.TabStop = false;
+			// 
+			// m_btn_connect
+			// 
+			this.m_btn_connect.Location = new System.Drawing.Point(9, 217);
+			this.m_btn_connect.Name = "m_btn_connect";
+			this.m_btn_connect.Size = new System.Drawing.Size(125, 23);
+			this.m_btn_connect.TabIndex = 22;
+			this.m_btn_connect.Text = "Connect...";
+			this.m_btn_connect.UseVisualStyleBackColor = true;
 			// 
 			// m_check_append
 			// 
@@ -297,15 +306,6 @@
 			this.m_text_adb_status.Text = "Android Debug Bridge version 0.0.0";
 			this.m_text_adb_status.Visible = false;
 			// 
-			// m_btn_connect
-			// 
-			this.m_btn_connect.Location = new System.Drawing.Point(9, 217);
-			this.m_btn_connect.Name = "m_btn_connect";
-			this.m_btn_connect.Size = new System.Drawing.Size(125, 23);
-			this.m_btn_connect.TabIndex = 22;
-			this.m_btn_connect.Text = "Connect...";
-			this.m_btn_connect.UseVisualStyleBackColor = true;
-			// 
 			// AndroidLogcatUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
@@ -325,6 +325,7 @@
 			this.Controls.Add(this.m_edit_adb_fullpath);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "AndroidLogcatUI";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Android Logcat";
 			this.m_group.ResumeLayout(false);
 			this.m_group.PerformLayout();

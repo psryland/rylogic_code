@@ -321,7 +321,7 @@ namespace RyLogViewer
 		private void ConnectDevice()
 		{
 			var dlg = new AndroidConnectDeviceUI(m_settings);
-			if (dlg.ShowDialog() != DialogResult.OK) return;
+			if (dlg.ShowDialog(this) != DialogResult.OK) return;
 			if (m_settings.ConnectionType == AndroidLogcat.EConnectionType.Tcpip)
 				Adb("connect " + m_settings.IPAddressHistory[0]);
 			else

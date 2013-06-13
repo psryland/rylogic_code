@@ -175,7 +175,9 @@ namespace RyLogViewer
 			var bounds = e.ClipRectangle; bounds.Inflate(-1,0);
 			var height = bounds.Height;
 			var total = TotalRange;
-			
+			if (bounds.Width <= 0 || bounds.Height <= 0)
+				return;
+
 			// Rectum?
 			var back_rect = bounds;
 			var thumb_rect = MakeThumbRect(bounds);
@@ -258,10 +260,10 @@ namespace RyLogViewer
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			base.OnKeyDown(e);
-			if (e.KeyCode == Keys.PageUp  )          { Range thm = ThumbRange; thm.Shift(-m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.PageDown)          { Range thm = ThumbRange; thm.Shift(+m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.Up   && e.Control) { Range thm = ThumbRange; thm.Shift(-m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.Down && e.Control) { Range thm = ThumbRange; thm.Shift(+m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.PageUp  )          { Range thm = ThumbRange; thm = thm.Shift(-m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.PageDown)          { Range thm = ThumbRange; thm = thm.Shift(+m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.Up   && e.Control) { Range thm = ThumbRange; thm = thm.Shift(-m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.Down && e.Control) { Range thm = ThumbRange; thm = thm.Shift(+m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
 		}
 	}
 }

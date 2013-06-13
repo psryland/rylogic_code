@@ -274,7 +274,7 @@ namespace RyLogViewer
 											return true;
 									
 										// Convert the byte range to a file range
-										line.Shift(baddr);
+										line = line.Shift(baddr);
 										Debug.Assert(new Range(0,fileend).Contains(line));
 										line_buf[0].Add(line);
 										Debug.Assert(line_buf[0].Count <= line_limit[0]);

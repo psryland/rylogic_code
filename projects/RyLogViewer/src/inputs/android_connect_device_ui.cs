@@ -190,6 +190,7 @@ namespace RyLogViewer
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "AndroidConnectDeviceUI";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Connect Device";
 			this.ResumeLayout(false);
 			this.PerformLayout();
