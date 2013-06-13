@@ -55,7 +55,7 @@
     <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
     <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
     <UseVSHostingProcess>true</UseVSHostingProcess>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -218,6 +218,9 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="gui\vt100.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\zoom_scroll.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="inet\check_for_updates.cs" />
