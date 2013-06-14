@@ -1,6 +1,8 @@
-﻿#if !MONOTOUCH
+﻿
+#if !MONOTOUCH
 #define COMPILED_LAMBDAS
 #endif
+//#define WP8_SQLITE
 
 using System;
 using System.Collections;
@@ -9,11 +11,16 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
+
+#if WP8_SQLITE
+//using Sqlite.Sqlite3;
+//using System.Data.SQLite;
+#else
+#endif
 
 // Usage:
 // - Your domain objects must be classes with a default constructor.
@@ -49,6 +56,12 @@ using System.Threading;
 
 namespace pr.common
 {
+	#if WP8_SQLITE
+	using Dll = Sqlite.Wp8Binding;
+	#else
+	using Dll = Sqlite.NativeBinding;
+	#endif
+
 	/// <summary>A simple sqlite .net ORM</summary>
 	public static class Sqlite
 	{
@@ -224,13 +237,21 @@ namespace pr.common
 
 		#region Global methods
 
+		/// <summary>Callback type for sqlite3_update_hook</summary>
+		/// <param name="ctx">A copy of the third argument to sqlite3_update_hook()</param>
+		/// <param name="change_type">One of SQLITE_INSERT, SQLITE_DELETE, or SQLITE_UPDATE</param>
+		/// <param name="db_name">The name of the affected database</param>
+		/// <param name="table_name">The name of the table containing the changed item</param>
+		/// <param name="row_id">The row id of the changed row</param>
+		public delegate void UpdateHookCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id);
+
 		/// <summary>
 		/// Sets a global configuration option for sqlite. Must be called prior
 		/// to initialisation or after shutdown of sqlite. Initialisation happens
 		/// implicitly when Open is called.</summary>
 		public static void Configure(ConfigOption option)
 		{
-			sqlite3_config(option);
+			Dll.Config(option);
 		}
 
 		/// <summary>Returns the sqlite data type to use for a given .NET type.</summary>
@@ -358,40 +379,11 @@ namespace pr.common
 			return Sql("select * from ",meta.Name);
 		}
 
-		/// <summary>Converts a C# string (in UTF-16) to a byte array in UTF-8</summary>
-		private static byte[] StrToUTF8(string str)
-		{
-			return Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(str));
-		}
-
-		/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string into a .NET string</summary>
-		private static string UTF8toStr(IntPtr utf8ptr)
-		{
-			if (utf8ptr == IntPtr.Zero) return null;
-			var str = Marshal.PtrToStringAnsi(utf8ptr);
-			if (str == null) return null;
-			var bytes = new byte[str.Length];
-			Marshal.Copy(utf8ptr, bytes, 0, bytes.Length);
-			return Encoding.UTF8.GetString(bytes);
-		}
-
 		/// <summary>Compiles an sql string into an sqlite3 statement</summary>
 		private static sqlite3_stmt Compile(Database db, string sql_string)
 		{
 			Trace.WriteLine(string.Format("Compiling sql string '{0}'", sql_string));
-			sqlite3_stmt stmt;
-			var buf_utf8 = StrToUTF8(sql_string);
-			var res = sqlite3_prepare_v2(db.Handle, buf_utf8, buf_utf8.Length, out stmt, IntPtr.Zero);
-			if (res != Result.OK) throw Exception.New(res, string.Format("Error compiling sql string '{0}' "+Environment.NewLine+"Sqlite Error: {1}",sql_string, ErrorMsg(db.Handle)));
-			return stmt;
-		}
-
-		/// <summary>Returns the error message for the last error returned from sqlite</summary>
-		private static string ErrorMsg(sqlite3 db)
-		{
-			// sqlite3 manages the memory allocated for the returned error message
-			// so we don't need to call sqlite_free on the returned pointer
-			return Marshal.PtrToStringUni(sqlite3_errmsg16(db));
+			return Dll.Prepare(db.Handle, sql_string);
 		}
 
 		#endregion
@@ -403,70 +395,70 @@ namespace pr.common
 		{
 			public static void Null(sqlite3_stmt stmt, int idx)
 			{
-				sqlite3_bind_null(stmt, idx);
+				Dll.BindNull(stmt, idx);
 			}
 			public static void Bool(sqlite3_stmt stmt, int idx, object value) // Could use Convert.ToXYZ() here, but straight casts are faster
 			{
-				sqlite3_bind_int(stmt, idx, (bool)value ? 1 : 0);
+				Dll.BindInt(stmt, idx, (bool)value ? 1 : 0);
 			}
 			public static void SByte(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int(stmt, idx, (sbyte)value);
+				Dll.BindInt(stmt, idx, (sbyte)value);
 			}
 			public static void Byte(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int(stmt, idx, (byte)value);
+				Dll.BindInt(stmt, idx, (byte)value);
 			}
 			public static void Char(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int(stmt, idx, (Char)value);
+				Dll.BindInt(stmt, idx, (Char)value);
 			}
 			public static void Short(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int(stmt, idx, (short)value);
+				Dll.BindInt(stmt, idx, (short)value);
 			}
 			public static void UShort(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int(stmt, idx, (ushort)value);
+				Dll.BindInt(stmt, idx, (ushort)value);
 			}
 			public static void Int(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int(stmt, idx, (int)value);
+				Dll.BindInt(stmt, idx, (int)value);
 			}
 			public static void UInt(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int64(stmt, idx, (uint)value);
+				Dll.BindInt64(stmt, idx, (uint)value);
 			}
 			public static void Long(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int64(stmt, idx, (long)value);
+				Dll.BindInt64(stmt, idx, (long)value);
 			}
 			public static void ULong(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_int64(stmt, idx, Convert.ToInt64(value)); // Use Convert to trap overflow exceptions
+				Dll.BindInt64(stmt, idx, Convert.ToInt64(value)); // Use Convert to trap overflow exceptions
 			}
 			public static void Decimal(sqlite3_stmt stmt, int idx, object value)
 			{
 				var dec = (decimal)value;
-				sqlite3_bind_text16(stmt, idx, dec.ToString(CultureInfo.InvariantCulture), -1, TransientData);
+				Dll.BindText(stmt, idx, dec.ToString(CultureInfo.InvariantCulture));
 			}
 			public static void Float(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_double(stmt, idx, (float)value);
+				Dll.BindDouble(stmt, idx, (float)value);
 			}
 			public static void Double(sqlite3_stmt stmt, int idx, object value)
 			{
-				sqlite3_bind_double(stmt, idx, (double)value);
+				Dll.BindDouble(stmt, idx, (double)value);
 			}
 			public static void Text(sqlite3_stmt stmt, int idx, object value)
 			{
 				if (value == null) Null(stmt, idx);
-				else sqlite3_bind_text16(stmt, idx, (string)value, -1, TransientData);
+				else Dll.BindText(stmt, idx, (string)value);
 			}
 			public static void ByteArray(sqlite3_stmt stmt, int idx, object value)
 			{
 				if (value == null) Null(stmt, idx);
-				else sqlite3_bind_blob(stmt, idx, (byte[])value, ((byte[])value).Length, TransientData);
+				else Dll.BindBlob(stmt, idx, (byte[])value, ((byte[])value).Length);
 			}
 			public static void IntArray(sqlite3_stmt stmt, int idx, object value)
 			{
@@ -476,7 +468,7 @@ namespace pr.common
 					var iarr = (int[])value;
 					var barr = new byte[Buffer.ByteLength(iarr)];
 					Buffer.BlockCopy(iarr, 0, barr, 0, barr.Length);
-					sqlite3_bind_blob(stmt, idx, barr, barr.Length, TransientData);
+					Dll.BindBlob(stmt, idx, barr, barr.Length);
 				}
 			}
 			public static void Guid(sqlite3_stmt stmt, int idx, object value)
@@ -545,7 +537,7 @@ namespace pr.common
 						return (stmt,idx,obj) =>
 							{
 								if (obj != null) FunctionMap[bind_type](stmt, idx, obj);
-								else sqlite3_bind_null(stmt, idx);
+								else Dll.BindNull(stmt, idx);
 							};
 					}
 				}
@@ -566,84 +558,66 @@ namespace pr.common
 		{
 			public static object Bool(sqlite3_stmt stmt, int idx)
 			{
-				return sqlite3_column_int(stmt, idx) != 0; // Sqlite returns 0 if this column is null
+				return Dll.ColumnInt(stmt, idx) != 0; // Sqlite returns 0 if this column is null
 			}
 			public static object SByte(sqlite3_stmt stmt, int idx)
 			{
-				return (sbyte)sqlite3_column_int(stmt, idx); // Sqlite returns 0 if this column is null
+				return (sbyte)Dll.ColumnInt(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object Byte(sqlite3_stmt stmt, int idx)
 			{
-				return (byte)sqlite3_column_int(stmt, idx); // Sqlite returns 0 if this column is null
+				return (byte)Dll.ColumnInt(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object Char(sqlite3_stmt stmt, int idx)
 			{
-				return (char)sqlite3_column_int(stmt, idx); // Sqlite returns 0 if this column is null
+				return (char)Dll.ColumnInt(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object Short(sqlite3_stmt stmt, int idx)
 			{
-				return (short)sqlite3_column_int(stmt, idx); // Sqlite returns 0 if this column is null
+				return (short)Dll.ColumnInt(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object UShort(sqlite3_stmt stmt, int idx)
 			{
-				return (ushort)sqlite3_column_int(stmt, idx); // Sqlite returns 0 if this column is null
+				return (ushort)Dll.ColumnInt(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object Int(sqlite3_stmt stmt, int idx)
 			{
-				return sqlite3_column_int(stmt, idx); // Sqlite returns 0 if this column is null
+				return Dll.ColumnInt(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object UInt(sqlite3_stmt stmt, int idx)
 			{
-				return (uint)sqlite3_column_int64(stmt, idx); // Sqlite returns 0 if this column is null
+				return (uint)Dll.ColumnInt64(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object Long(sqlite3_stmt stmt, int idx)
 			{
-				return sqlite3_column_int64(stmt, idx); // Sqlite returns 0 if this column is null
+				return Dll.ColumnInt64(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object ULong(sqlite3_stmt stmt, int idx)
 			{
-				return (ulong)sqlite3_column_int64(stmt, idx); // Sqlite returns 0 if this column is null
+				return (ulong)Dll.ColumnInt64(stmt, idx); // Sqlite returns 0 if this column is null
 			}
 			public static object Decimal(sqlite3_stmt stmt, int idx)
 			{
-				var ptr = sqlite3_column_text16(stmt, idx); // Sqlite returns null if this column is null
-				if (ptr == IntPtr.Zero) return 0m;
-				var str = Marshal.PtrToStringUni(ptr);
-				if (str == null) return 0m;
-				return decimal.Parse(str);
+				var str = Dll.ColumnString(stmt, idx);
+				return str.Length != 0 ? decimal.Parse(str) : 0m;
 			}
 			public static object Float(sqlite3_stmt stmt, int idx)
 			{
-				return (float)sqlite3_column_double(stmt, idx); // Sqlite returns 0.0 if this column is null
+				return (float)Dll.ColumnDouble(stmt, idx); // Sqlite returns 0.0 if this column is null
 			}
 			public static object Double(sqlite3_stmt stmt, int idx)
 			{
-				return sqlite3_column_double(stmt, idx); // Sqlite returns 0.0 if this column is null
+				return Dll.ColumnDouble(stmt, idx); // Sqlite returns 0.0 if this column is null
 			}
 			public static object Text(sqlite3_stmt stmt, int idx)
 			{
-				var ptr = sqlite3_column_text16(stmt, idx); // Sqlite returns null if this column is null
-				if (ptr != IntPtr.Zero) return Marshal.PtrToStringUni(ptr);
-				return string.Empty;
+				return Dll.ColumnString(stmt, idx);
 			}
-			private static void Blob(sqlite3_stmt stmt, int idx, out IntPtr ptr, out int len)
-			{
-				// Read the blob size limit
-				var db = sqlite3_db_handle(stmt);
-				var max_size = sqlite3_limit(db, Limit.Length, -1);
-				
-				// sqlite returns null if this column is null
-				ptr = sqlite3_column_blob(stmt, idx); // have to call this first
-				len = sqlite3_column_bytes(stmt, idx);
-				if (len < 0 || len > max_size)
-					throw Exception.New(Result.Corrupt, "Blob data size exceeds database maximum size limit");
-			}
-
 			public static object ByteArray(sqlite3_stmt stmt, int idx)
 			{
 				IntPtr ptr; int len;
-				Blob(stmt, idx, out ptr, out len);
-				
+				Dll.ColumnBlob(stmt, idx, out ptr, out len);
+
 				// Copy the blob out of the db
 				byte[] blob = new byte[len];
 				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
@@ -652,7 +626,7 @@ namespace pr.common
 			public static object IntArray(sqlite3_stmt stmt, int idx)
 			{
 				IntPtr ptr; int len;
-				Blob(stmt, idx, out ptr, out len);
+				Dll.ColumnBlob(stmt, idx, out ptr, out len);
 				if ((len % sizeof(int)) != 0)
 					throw Exception.New(Result.Corrupt, "Blob data is not an even multiple of Int32s");
 				
@@ -724,7 +698,7 @@ namespace pr.common
 						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
 						return (stmt,idx) =>
 							{
-								if (sqlite3_column_type(stmt, idx) == DataType.Null) return null;
+								if (Dll.ColumnType(stmt, idx) == DataType.Null) return null;
 								var obj = FunctionMap[bind_type](stmt, idx);
 								if (is_enum) obj = Enum.ToObject(base_type, obj);
 								return obj;
@@ -868,62 +842,36 @@ namespace pr.common
 
 		#endregion
 
-		#region Sqlite3 handle wrappers
+		#region Handles
 
-		public abstract class SQLiteHandle :SafeHandle
+		public interface sqlite3
 		{
-			/// <summary>The result from the 'sqlite3_close' call</summary>
-			public Result CloseResult { get; protected set; }
+			/// <summary>The result from closing this handle</summary>
+			Result CloseResult { get; }
 
-			/// <summary>Internal constructor used to create safehandles that optionally own the handle</summary>
-			protected SQLiteHandle(IntPtr initial_ptr, bool owns_handle) :base(IntPtr.Zero, owns_handle)
-			{
-				CloseResult = Result.Empty; // Initialise to 'empty' so we know when its been set
-				SetHandle(initial_ptr);
-			}
+			/// <summary>True if the handle is invalid</summary>
+			bool IsInvalid { get; }
 
-			/// <summary>True if the contained handle is invalid</summary>
-			public override bool IsInvalid
-			{
-				[PrePrepareMethod]
-				[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-				get { return handle == IntPtr.Zero; }
-			}
+			/// <summary>True if the handle has been closed</summary>
+			bool IsClosed { get; }
 
+			/// <summary>Close the handle</summary>
+			void Close();
 		}
-		
-		/// <summary>A wrapper for unmanaged sqlite database connection handles</summary>
-		public sealed class sqlite3 :SQLiteHandle
-		{
-			public sqlite3() :base(IntPtr.Zero, true) {}
-			public sqlite3(IntPtr non_owned_handle) :base(non_owned_handle, false) {}
 
-			/// <summary>Frees the handle.</summary>
-			[PrePrepareMethod][ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-			protected override bool ReleaseHandle()
-			{
-				Trace.WriteLine(string.Format("Releasing sqlite3 handle ({0})", handle));
-				CloseResult = sqlite3_close(handle);
-				handle = IntPtr.Zero;
-				return true;
-			}
-		}
-		
-		/// <summary>A wrapper for unmanaged sqlite prepared statement handles</summary>
-		public sealed class sqlite3_stmt :SQLiteHandle
+		public interface sqlite3_stmt
 		{
-			public sqlite3_stmt() :base(IntPtr.Zero, true) {}
-			public sqlite3_stmt(IntPtr non_owned_handle) :base(non_owned_handle, false) {}
-			
-			/// <summary>Frees the handle.</summary>
-			[PrePrepareMethod][ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
-			protected override bool ReleaseHandle()
-			{
-				Trace.WriteLine(string.Format("Releasing sqlite3_stmt handle ({0})", handle));
-				CloseResult = sqlite3_finalize(handle);
-				handle = IntPtr.Zero;
-				return true;
-			}
+			/// <summary>The result from closing this handle</summary>
+			Result CloseResult { get; }
+
+			/// <summary>True if the handle is invalid</summary>
+			bool IsInvalid { get; }
+
+			/// <summary>True if the handle has been closed</summary>
+			bool IsClosed { get; }
+
+			/// <summary>Close the handle</summary>
+			void Close();
 		}
 
 		#endregion
@@ -1122,8 +1070,7 @@ namespace pr.common
 				#endif
 				
 				// Open the database file
-				var res = sqlite3_open_v2(filepath, out m_db, (int)flags, IntPtr.Zero);
-				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
+				m_db = Dll.Open(filepath, flags);
 				Trace.WriteLine(string.Format("Database connection opened for '{0}'", filepath));
 				
 				// Initialise the per-table object caches
@@ -1160,11 +1107,7 @@ namespace pr.common
 			/// will return Result.Busy. Set to 0 to turn off the busy wait handler.</summary>
 			public int BusyTimeout
 			{
-				set
-				{
-					var res = sqlite3_busy_timeout(Handle, value);
-					if (res != Result.OK) throw Exception.New(res, "Failed to set the busy timeout to "+value+"ms");
-				}
+				set { Dll.BusyTimeout(Handle, value); }
 			}
 
 			/// <summary>Set the maximum number of instances of a type to cache</summary>
@@ -1469,13 +1412,13 @@ namespace pr.common
 			{
 				add
 				{
-					if (m_RowChangedInternal == null) sqlite3_update_hook(m_db, m_update_cb, IntPtr.Zero);
+					if (m_RowChangedInternal == null) Dll.UpdateHook(m_db, m_update_cb, IntPtr.Zero);
 					m_RowChangedInternal += value;
 				}
 				remove
 				{
 					m_RowChangedInternal -= value;
-					if (m_RowChangedInternal == null) sqlite3_update_hook(m_db, null, IntPtr.Zero);
+					if (m_RowChangedInternal == null) Dll.UpdateHook(m_db, null, IntPtr.Zero);
 				}
 			}
 			private EventHandler<DataChangedArgs> m_RowChangedInternal;
@@ -2114,13 +2057,13 @@ namespace pr.common
 								{
 									if (me.Member.Name == "HasValue")
 									{
-										result.Text.Append("(").Append(res.Text.ToString()).Append(" is not null)");
+										result.Text.Append("(").Append(res.Text).Append(" is not null)");
 									}
 									else if (me.Member.Name == "Value")
 									{
 										// This handles this case "table.Where(x => x.nullable.Value == 5)",
 										// i.e. the resulting sql should be "select * from table where nullable == 5"
-										result.Text.Append(res.Text.ToString());
+										result.Text.Append(res.Text);
 									}
 									else
 									{
@@ -2146,7 +2089,7 @@ namespace pr.common
 							}
 							
 							// Handle IEnumerable
-							if (ob != null && ob is IEnumerable && !(ob is string))
+							if (ob is IEnumerable && !(ob is string))
 							{
 								result.Text.Append("(");
 								foreach (var a in (IEnumerable)ob)
@@ -2450,7 +2393,7 @@ namespace pr.common
 			/// <summary>The string used to construct this query statement</summary>
 			public string SqlString
 			{
-				get { return sqlite3_sql(m_stmt); }
+				get { return Dll.SqlString(m_stmt); }
 			}
 
 			/// <summary>Returns the m_stmt field after asserting it's validity</summary>
@@ -2474,7 +2417,7 @@ namespace pr.common
 				Reset(); // Call reset to clear any error code from failed queries.
 				m_stmt.Close();
 				if (m_stmt.CloseResult != Result.OK)
-					throw Exception.New(m_stmt.CloseResult, ErrorMsg(m_db.Handle));
+					throw Exception.New(m_stmt.CloseResult, Dll.ErrorMsg(m_db.Handle));
 				
 				Trace.QueryClosed(this);
 			}
@@ -2490,13 +2433,13 @@ namespace pr.common
 			/// <summary>Return the number of parameters in this statement</summary>
 			public int ParmCount
 			{
-				get { return sqlite3_bind_parameter_count(Stmt); }
+				get { return Dll.BindParameterCount(Stmt); }
 			}
 
 			/// <summary>Return the index for the parameter named 'name'</summary>
 			public int ParmIndex(string name)
 			{
-				int idx = sqlite3_bind_parameter_index(Stmt, name);
+				int idx = Dll.BindParameterIndex(Stmt, name);
 				if (idx == 0) throw Exception.New(Result.Error, "Parameter name not found");
 				return idx;
 			}
@@ -2504,7 +2447,7 @@ namespace pr.common
 			/// <summary>Return the name of a parameter by index</summary>
 			public string ParmName(int idx)
 			{
-				return UTF8toStr(sqlite3_bind_parameter_name(Stmt, idx));
+				return Dll.BindParameterName(Stmt, idx);
 			}
 
 			/// <summary>Bind a value to a specific parameter</summary>
@@ -2587,19 +2530,16 @@ namespace pr.common
 			/// <summary>Reset the prepared statement object back to its initial state, ready to be re-executed.</summary>
 			public void Reset()
 			{
-				// The result from 'sqlite3_reset' reflects the error code of the last 'sqlite3_step'
-				// call. This is legacy behaviour, now step returns the error code immediately. For
-				// this reason we can ignore the error code returned by reset here.
-				sqlite3_reset(Stmt);
+				Dll.Reset(Stmt);
 			}
 
 			/// <summary>Iterate to the next row in the result. Returns true if there are more rows available</summary>
 			public bool Step()
 			{
-				var res = sqlite3_step(Stmt);
+				var res = Dll.Step(Stmt);
 				switch (res)
 				{
-				default: throw Exception.New(res, ErrorMsg(m_db.Handle));
+				default: throw Exception.New(res, Dll.ErrorMsg(m_db.Handle));
 				case Result.Done: return false;
 				case Result.Row: return true;
 				}
@@ -2617,25 +2557,25 @@ namespace pr.common
 			/// <summary>Returns the number of rows changed as a result of the last 'step()'</summary>
 			public int RowsChanged
 			{
-				get { return sqlite3_changes(m_db.Handle); }
+				get { return Dll.Changes(m_db.Handle); }
 			}
 
 			/// <summary>Returns the number of columns in the result of this query</summary>
 			public int ColumnCount
 			{
-				get { return sqlite3_column_count(Stmt); }
+				get { return Dll.ColumnCount(Stmt); }
 			}
 
 			/// <summary>Return the sql data type for a specific column</summary>
 			public DataType ColumnType(int idx)
 			{
-				return sqlite3_column_type(m_stmt, idx);
+				return Dll.ColumnType(m_stmt, idx);
 			}
 
 			/// <summary>Returns the name of the column at position 'idx'</summary>
 			public string ColumnName(int idx)
 			{
-				return sqlite3_column_name(Stmt, idx);
+				return Dll.ColumnName(Stmt, idx);
 			}
 
 			/// <summary>Enumerates the columns in the result</summary>
@@ -3066,7 +3006,7 @@ namespace pr.common
 			/// <summary>Populate the properties and fields of 'item' from the column values read from 'stmt'</summary>
 			public object ReadObj(sqlite3_stmt stmt)
 			{
-				var column_count = sqlite3_column_count(stmt);
+				var column_count = Dll.ColumnCount(stmt);
 				if (column_count == 0)
 					return null;
 				
@@ -3076,7 +3016,7 @@ namespace pr.common
 					obj = Factory();
 					for (int i = 0; i != column_count; ++i)
 					{
-						var cname = sqlite3_column_name(stmt, i);
+						var cname = Dll.ColumnName(stmt, i);
 						var col = Column(cname);
 					
 						// Since sqlite does not support dropping columns in a table, it's likely,
@@ -3092,7 +3032,7 @@ namespace pr.common
 					var args = new List<object>();
 					for (int i = 0; i != column_count; ++i)
 					{
-						var cname = sqlite3_column_name(stmt, i);
+						var cname = Dll.ColumnName(stmt, i);
 						var col = Column(cname);
 						if (col == null) continue;
 						
@@ -3216,7 +3156,7 @@ namespace pr.common
 			public void SetAutoIncPK(object obj, sqlite3 db)
 			{
 				if (m_single_pk == null || !m_single_pk.IsAutoInc) return;
-				int id = (int)sqlite3_last_insert_rowid(db);
+				int id = (int)Dll.LastInsertRowId(db);
 				m_single_pk.Set(obj, id);
 			}
 		}
@@ -3559,126 +3499,578 @@ namespace pr.common
 
 		#endregion
 
-		#region Imported functions
-
+		#region DLL Binding
 		// ReSharper disable InconsistentNaming,UnusedMember.Local
-		private static readonly IntPtr TransientData = new IntPtr(-1);
-		private delegate void sqlite3_destructor_type(IntPtr ptr);
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_config", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_config(ConfigOption option);
+		#if WP8_SQLITE
+		public static class Wp8Binding
+		{
+			private class Wp8Sqlite3Handle :sqlite3
+			{
+				//private ::Sqlite.Database m_db;
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_open_v2", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_open_v2(string filepath, out sqlite3 db, int flags, IntPtr zvfs);
+				/// <summary>The result from closing this handle</summary>
+				public Result CloseResult { get; private set; }
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_busy_timeout", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_busy_timeout(sqlite3 db, int milliseconds);
+				/// <summary>True if the handle is invalid</summary>
+				public bool IsInvalid { get; private set; }
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_close", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_close(IntPtr db);
+				/// <summary>True if the handle has been closed</summary>
+				public bool IsClosed { get; private set; }
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_free", CallingConvention=CallingConvention.Cdecl)]
-		private static extern void sqlite3_free(IntPtr ptr);
+				/// <summary>Close the handle</summary>
+				public void Close() { throw new NotImplementedException(); }
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_db_handle", CallingConvention=CallingConvention.Cdecl)]
-		private static extern IntPtr sqlite3_db_handle_impl(sqlite3_stmt stmt);
-		private static sqlite3 sqlite3_db_handle(sqlite3_stmt stmt) { return new sqlite3(sqlite3_db_handle_impl(stmt)); }
+			private class Wp8Sqlite3StmtHandle :sqlite3_stmt
+			{
+				//private ::Sqlite.Statement m_db;
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_limit", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_limit(sqlite3 db, Limit limit_category, int new_value);
+				/// <summary>The result from closing this handle</summary>
+				public Result CloseResult { get; private set; }
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_prepare_v2", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_prepare_v2(sqlite3 db, byte[] sql, int num_bytes, out sqlite3_stmt stmt, IntPtr pzTail);
+				/// <summary>True if the handle is invalid</summary>
+				public bool IsInvalid { get; private set; }
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_changes", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_changes(sqlite3 db);
+				/// <summary>True if the handle has been closed</summary>
+				public bool IsClosed { get; private set; }
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_last_insert_rowid", CallingConvention=CallingConvention.Cdecl)]
-		private static extern long sqlite3_last_insert_rowid(sqlite3 db);
+				/// <summary>Close the handle</summary>
+				public void Close() { throw new NotImplementedException(); }
+			}
+			
+			/// <summary>Set a configuration setting for the database</summary>
+			public static Result Config(ConfigOption option)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_errmsg16", CallingConvention=CallingConvention.Cdecl)]
-		private static extern IntPtr sqlite3_errmsg16(sqlite3 db);
+			/// <summary>Open a database file</summary>
+			public static sqlite3 Open(string filepath, OpenFlags flags)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_reset", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_reset(sqlite3_stmt stmt);
+			/// <summary>Set the busy wait timeout on the db</summary>
+			public static void BusyTimeout(sqlite3 db, int milliseconds)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_step", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_step(sqlite3_stmt stmt);
+			/// <summary>Creates a prepared statement from an sql string</summary>
+			public static sqlite3_stmt Prepare(sqlite3 db, string sql_string)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_finalize", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Result sqlite3_finalize(IntPtr stmt);
+			/// <summary>Returns the number of rows changed by the last operation</summary>
+			public static int Changes(sqlite3 db)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_sql", CallingConvention=CallingConvention.Cdecl)]
-		private static extern IntPtr sqlite3_sql_impl(sqlite3_stmt stmt);
-		private static string sqlite3_sql(sqlite3_stmt stmt) { return UTF8toStr(sqlite3_sql_impl(stmt)); } // this assumes sqlite3_prepare_v2 was used to create 'stmt'
+			/// <summary>Returns the RowId for the last inserted row</summary>
+			public static long LastInsertRowId(sqlite3 db)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_name16", CallingConvention=CallingConvention.Cdecl)]
-		private static extern IntPtr sqlite3_column_name16_impl(sqlite3_stmt stmt, int index);
-		private static string sqlite3_column_name(sqlite3_stmt stmt, int index) { return Marshal.PtrToStringUni(sqlite3_column_name16_impl(stmt, index)); }
+			/// <summary>Returns the error message for the last error returned from sqlite</summary>
+			public static string ErrorMsg(sqlite3 db)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_count", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_column_count(sqlite3_stmt stmt);
+			/// <summary>Reset a prepared statement</summary>
+			public static void Reset(sqlite3_stmt stmt)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_type", CallingConvention=CallingConvention.Cdecl)]
-		private static extern DataType sqlite3_column_type(sqlite3_stmt stmt, int index);
+			/// <summary>Step a prepared statement</summary>
+			public static Result Step(sqlite3_stmt stmt)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_int64", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Int64 sqlite3_column_int64(sqlite3_stmt stmt, int index);
+			/// <summary>Returns the string used to create a prepared statement</summary>
+			public static string SqlString(sqlite3_stmt stmt)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_int", CallingConvention=CallingConvention.Cdecl)]
-		private static extern Int32 sqlite3_column_int(sqlite3_stmt stmt, int index);
+			/// <summary>Returns the name of the column with 0-based index 'index'</summary>
+			public static string ColumnName(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_double", CallingConvention=CallingConvention.Cdecl)]
-		private static extern double sqlite3_column_double(sqlite3_stmt stmt, int index);
+			/// <summary>Returns the number of columns in the result of a prepared statement</summary>
+			public static int ColumnCount(sqlite3_stmt stmt)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_text16", CallingConvention=CallingConvention.Cdecl)]
-		private static extern IntPtr sqlite3_column_text16(sqlite3_stmt stmt, int index);
+			/// <summary>Returns the internal data type for the column with 0-based index 'index'</summary>
+			public static DataType ColumnType(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_blob", CallingConvention=CallingConvention.Cdecl)]
-		private static extern IntPtr sqlite3_column_blob(sqlite3_stmt stmt, int index);
+			/// <summary>Returns the value from the column with 0-based index 'index' as an int</summary>
+			public static Int32 ColumnInt(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_column_bytes", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_column_bytes(sqlite3_stmt stmt, int index);
+			/// <summary>Returns the value from the column with 0-based index 'index' as an int64</summary>
+			public static Int64 ColumnInt64(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_parameter_count", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_bind_parameter_count(sqlite3_stmt stmt);
+			/// <summary>Returns the value from the column with 0-based index 'index' as a double</summary>
+			public static Double ColumnDouble(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_parameter_index", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_bind_parameter_index(sqlite3_stmt stmt, string name);
+			/// <summary>Returns the value from the column with 0-based index 'index' as a string</summary>
+			public static String ColumnString(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_parameter_name", CallingConvention=CallingConvention.Cdecl)]
-		private static extern IntPtr sqlite3_bind_parameter_name(sqlite3_stmt stmt, int index);
+			/// <summary>Returns the value from the column with 0-based index 'index' as an IntPtr</summary>
+			public static void ColumnBlob(sqlite3_stmt stmt, int index, out IntPtr ptr, out int len)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_null", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_bind_null(sqlite3_stmt stmt, int index);
+			/// <summary>Returns the size of the data in the column with 0-based index 'index'</summary>
+			public static int ColumnBytes(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_int", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_bind_int(sqlite3_stmt stmt, int index, int val);
+			/// <summary>Return the number of parameters in a prepared statement</summary>
+			public static int BindParameterCount(sqlite3_stmt stmt)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_int64", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_bind_int64(sqlite3_stmt stmt, int index, long val);
+			/// <summary>Return the index for the parameter named 'name'</summary>
+			public static int BindParameterIndex(sqlite3_stmt stmt, string name)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_double", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_bind_double(sqlite3_stmt stmt, int index, double val);
+			/// <summary>Return the name of a parameter from its index</summary>
+			public static string BindParameterName(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_text16", CallingConvention=CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-		private static extern int sqlite3_bind_text16(sqlite3_stmt stmt, int index, string val, int n, IntPtr destructor_cb);
+			/// <summary>Bind null to 1-based parameter index 'index'</summary>
+			public static void BindNull(sqlite3_stmt stmt, int index)
+			{
+				throw new NotImplementedException();
+			}
 
-		[DllImport("sqlite3", EntryPoint = "sqlite3_bind_blob", CallingConvention=CallingConvention.Cdecl)]
-		private static extern int sqlite3_bind_blob(sqlite3_stmt stmt, int index, byte[] val, int n, IntPtr destructor_cb);
+			/// <summary>Bind an integer value to 1-based parameter index 'index'</summary>
+			public static void BindInt(sqlite3_stmt stmt, int index, int val)
+			{
+				throw new NotImplementedException();
+			}
+
+			/// <summary>Bind an integer64 value to 1-based parameter index 'index'</summary>
+			public static void BindInt64(sqlite3_stmt stmt, int index, long val)
+			{
+				throw new NotImplementedException();
+			}
+
+			/// <summary>Bind a double value to 1-based parameter index 'index'</summary>
+			public static void BindDouble(sqlite3_stmt stmt, int index, double val)
+			{
+				throw new NotImplementedException();
+			}
+
+			/// <summary>Bind a string to 1-based parameter index 'index'</summary>
+			public static void BindText(sqlite3_stmt stmt, int index, string val)
+			{
+				throw new NotImplementedException();
+			}
+
+			/// <summary>Bind a byte array to 1-based parameter index 'index'</summary>
+			public static void BindBlob(sqlite3_stmt stmt, int index, byte[] val, int length)
+			{
+				throw new NotImplementedException();
+			}
+
+			/// <summary>Set the update hook callback function</summary>
+			public static void UpdateHook(sqlite3 db, UpdateHookCB cb, IntPtr ctx)
+			{
+				throw new NotImplementedException();
+			}
+		}
+		#else
+		public static class NativeBinding
+		{
+			/// <summary>Based class for wrappers of native sqlite handles</summary>
+			private abstract class SQLiteHandle :SafeHandle
+			{
+				/// <summary>The result from the 'sqlite3_close' call</summary>
+				public Result CloseResult { get; set; }
+
+				/// <summary>Default constructor contains an owned, but invalid handle</summary>
+				protected SQLiteHandle() :base(IntPtr.Zero, true)
+				{}
+
+				/// <summary>Internal constructor used to create safehandles that optionally own the handle</summary>
+				protected SQLiteHandle(IntPtr initial_ptr, bool owns_handle) :base(IntPtr.Zero, owns_handle)
+				{
+					CloseResult = Result.Empty; // Initialise to 'empty' so we know when its been set
+					SetHandle(initial_ptr);
+				}
+
+				/// <summary>True if the contained handle is invalid</summary>
+				public override bool IsInvalid
+				{
+					get { return handle == IntPtr.Zero; }
+				}
+			}
+		
+			/// <summary>A wrapper for unmanaged sqlite database connection handles</summary>
+			private class NativeSqlite3Handle :SQLiteHandle ,sqlite3
+			{
+				public NativeSqlite3Handle() {}
+				public NativeSqlite3Handle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {}
+
+				/// <summary>Frees the handle.</summary>
+				protected override bool ReleaseHandle()
+				{
+					Trace.WriteLine(string.Format("Releasing sqlite3 handle ({0})", handle));
+					CloseResult = sqlite3_close(handle);
+					handle = IntPtr.Zero;
+					return true;
+				}
+			}
+		
+			/// <summary>A wrapper for unmanaged sqlite prepared statement handles</summary>
+			private class NativeSqlite3StmtHandle :SQLiteHandle, sqlite3_stmt
+			{
+				public NativeSqlite3StmtHandle() {}
+				public NativeSqlite3StmtHandle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {}
+			
+				/// <summary>Frees the handle.</summary>
+				protected override bool ReleaseHandle()
+				{
+					Trace.WriteLine(string.Format("Releasing sqlite3_stmt handle ({0})", handle));
+					CloseResult = sqlite3_finalize(handle);
+					handle = IntPtr.Zero;
+					return true;
+				}
+			}
+
+			/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string into a .NET string</summary>
+			private static string UTF8toStr(IntPtr utf8ptr)
+			{
+				if (utf8ptr == IntPtr.Zero) return null;
+				var str = Marshal.PtrToStringAnsi(utf8ptr);
+				if (str == null) return null;
+				var bytes = new byte[str.Length];
+				Marshal.Copy(utf8ptr, bytes, 0, bytes.Length);
+				return Encoding.UTF8.GetString(bytes);
+			}
+
+			/// <summary>Converts a C# string (in UTF-16) to a byte array in UTF-8</summary>
+			private static byte[] StrToUTF8(string str)
+			{
+				return Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(str));
+			}
+
+			private static readonly IntPtr TransientData = new IntPtr(-1);
+			private delegate void sqlite3_destructor_type(IntPtr ptr);
+
+			[DllImport("sqlite3", EntryPoint = "sqlite3_close", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_close(IntPtr db);
+
+			[DllImport("sqlite3", EntryPoint = "sqlite3_finalize", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_finalize(IntPtr stmt);
+
+			[DllImport("sqlite3", EntryPoint = "sqlite3_free", CallingConvention=CallingConvention.Cdecl)]
+			private static extern void sqlite3_free(IntPtr ptr);
+
+			[DllImport("sqlite3", EntryPoint = "sqlite3_db_handle", CallingConvention=CallingConvention.Cdecl)]
+			private static extern NativeSqlite3Handle sqlite3_db_handle(NativeSqlite3StmtHandle stmt);
+
+			[DllImport("sqlite3", EntryPoint = "sqlite3_limit", CallingConvention=CallingConvention.Cdecl)]
+			private static extern int sqlite3_limit(NativeSqlite3Handle db, Limit limit_category, int new_value);
+
+			/// <summary>Set a configuration setting for the database</summary>
+			public static Result Config(ConfigOption option)
+			{
+				return sqlite3_config(option);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_config", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_config(ConfigOption option);
+
+			/// <summary>Open a database file</summary>
+			public static sqlite3 Open(string filepath, OpenFlags flags)
+			{
+				NativeSqlite3Handle db;
+				var res = sqlite3_open_v2(filepath, out db, (int)flags, IntPtr.Zero);
+				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
+				return db;
+				
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_open_v2", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_open_v2(string filepath, out NativeSqlite3Handle db, int flags, IntPtr zvfs);
+
+			/// <summary>Set the busy wait timeout on the db</summary>
+			public static void BusyTimeout(sqlite3 db, int milliseconds)
+			{
+				var r = sqlite3_busy_timeout((NativeSqlite3Handle)db, milliseconds);
+				if (r != Result.OK) throw Exception.New(r, "Failed to set the busy timeout to "+milliseconds+"ms");
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_busy_timeout", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_busy_timeout(NativeSqlite3Handle db, int milliseconds);
+
+			/// <summary>Creates a prepared statement from an sql string</summary>
+			public static sqlite3_stmt Prepare(sqlite3 db, string sql_string)
+			{
+				NativeSqlite3StmtHandle stmt;
+				var buf_utf8 = StrToUTF8(sql_string);
+				var res = sqlite3_prepare_v2((NativeSqlite3Handle)db, buf_utf8, buf_utf8.Length, out stmt, IntPtr.Zero);
+				if (res != Result.OK) throw Exception.New(res, string.Format("Error compiling sql string '{0}' "+Environment.NewLine+"Sqlite Error: {1}",sql_string, ErrorMsg(db)));
+				return stmt;
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_prepare_v2", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_prepare_v2(NativeSqlite3Handle db, byte[] sql, int num_bytes, out NativeSqlite3StmtHandle stmt, IntPtr pzTail);
+
+			/// <summary>Returns the number of rows changed by the last operation</summary>
+			public static int Changes(sqlite3 db)
+			{
+				return sqlite3_changes((NativeSqlite3Handle)db);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_changes", CallingConvention=CallingConvention.Cdecl)]
+			private static extern int sqlite3_changes(NativeSqlite3Handle db);
+
+			/// <summary>Returns the RowId for the last inserted row</summary>
+			public static long LastInsertRowId(sqlite3 db)
+			{
+				return sqlite3_last_insert_rowid((NativeSqlite3Handle)db);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_last_insert_rowid", CallingConvention=CallingConvention.Cdecl)]
+			private static extern long sqlite3_last_insert_rowid(NativeSqlite3Handle db);
+
+			/// <summary>Returns the error message for the last error returned from sqlite</summary>
+			public static string ErrorMsg(sqlite3 db)
+			{
+				// sqlite3 manages the memory allocated for the returned error message
+				// so we don't need to call sqlite_free on the returned pointer
+				return Marshal.PtrToStringUni(sqlite3_errmsg16((NativeSqlite3Handle)db));
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_errmsg16", CallingConvention=CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_errmsg16(NativeSqlite3Handle db);
+
+			/// <summary>Reset a prepared statement</summary>
+			public static void Reset(sqlite3_stmt stmt)
+			{
+				// The result from 'sqlite3_reset' reflects the error code of the last 'sqlite3_step'
+				// call. This is legacy behaviour, now step returns the error code immediately. For
+				// this reason we can ignore the error code returned by reset.
+				sqlite3_reset((NativeSqlite3StmtHandle)stmt);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_reset", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_reset(NativeSqlite3StmtHandle stmt);
+
+			/// <summary>Step a prepared statement</summary>
+			public static Result Step(sqlite3_stmt stmt)
+			{
+				return sqlite3_step((NativeSqlite3StmtHandle)stmt);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_step", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_step(NativeSqlite3StmtHandle stmt);
+
+			/// <summary>Returns the string used to create a prepared statement</summary>
+			public static string SqlString(sqlite3_stmt stmt)
+			{
+				return UTF8toStr(sqlite3_sql((NativeSqlite3StmtHandle)stmt)); // this assumes sqlite3_prepare_v2 was used to create 'stmt'
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_sql", CallingConvention=CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_sql(NativeSqlite3StmtHandle stmt);
+
+			/// <summary>Returns the name of the column with 0-based index 'index'</summary>
+			public static string ColumnName(sqlite3_stmt stmt, int index)
+			{
+				return Marshal.PtrToStringUni(sqlite3_column_name16((NativeSqlite3StmtHandle)stmt, index));
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_name16", CallingConvention=CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_column_name16(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Returns the number of columns in the result of a prepared statement</summary>
+			public static int ColumnCount(sqlite3_stmt stmt)
+			{
+				return sqlite3_column_count((NativeSqlite3StmtHandle)stmt);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_count", CallingConvention=CallingConvention.Cdecl)]
+			private static extern int sqlite3_column_count(NativeSqlite3StmtHandle stmt);
+
+			/// <summary>Returns the internal data type for the column with 0-based index 'index'</summary>
+			public static DataType ColumnType(sqlite3_stmt stmt, int index)
+			{
+				return sqlite3_column_type((NativeSqlite3StmtHandle)stmt, index);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_type", CallingConvention=CallingConvention.Cdecl)]
+			private static extern DataType sqlite3_column_type(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Returns the value from the column with 0-based index 'index' as an int</summary>
+			public static Int32 ColumnInt(sqlite3_stmt stmt, int index)
+			{
+				return sqlite3_column_int((NativeSqlite3StmtHandle)stmt, index);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_int", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Int32 sqlite3_column_int(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Returns the value from the column with 0-based index 'index' as an int64</summary>
+			public static Int64 ColumnInt64(sqlite3_stmt stmt, int index)
+			{
+				return sqlite3_column_int64((NativeSqlite3StmtHandle)stmt, index);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_int64", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Int64 sqlite3_column_int64(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Returns the value from the column with 0-based index 'index' as a double</summary>
+			public static Double ColumnDouble(sqlite3_stmt stmt, int index)
+			{
+				return sqlite3_column_double((NativeSqlite3StmtHandle)stmt, index);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_double", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Double sqlite3_column_double(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Returns the value from the column with 0-based index 'index' as a string</summary>
+			public static String ColumnString(sqlite3_stmt stmt, int index)
+			{
+				var ptr = sqlite3_column_text16((NativeSqlite3StmtHandle)stmt, index); // Sqlite returns null if this column is null
+				if (ptr != IntPtr.Zero) return Marshal.PtrToStringUni(ptr);
+				return string.Empty;
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_text16", CallingConvention=CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_column_text16(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Returns the value from the column with 0-based index 'index' as an IntPtr</summary>
+			public static void ColumnBlob(sqlite3_stmt stmt, int index, out IntPtr ptr, out int len)
+			{
+				// Read the blob size limit
+				var db = sqlite3_db_handle((NativeSqlite3StmtHandle)stmt);
+				var max_size = sqlite3_limit(db, Limit.Length, -1);
+				
+				// sqlite returns null if this column is null
+				ptr = sqlite3_column_blob((NativeSqlite3StmtHandle)stmt, index); // have to call this first
+				len = sqlite3_column_bytes((NativeSqlite3StmtHandle)stmt, index);
+				if (len < 0 || len > max_size) throw Exception.New(Result.Corrupt, "Blob data size exceeds database maximum size limit");
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_blob", CallingConvention=CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_column_blob(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Returns the size of the data in the column with 0-based index 'index'</summary>
+			public static int ColumnBytes(sqlite3_stmt stmt, int index)
+			{
+				return sqlite3_column_bytes((NativeSqlite3StmtHandle)stmt, index);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_column_bytes", CallingConvention=CallingConvention.Cdecl)]
+			private static extern int sqlite3_column_bytes(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Return the number of parameters in a prepared statement</summary>
+			public static int BindParameterCount(sqlite3_stmt stmt)
+			{
+				return sqlite3_bind_parameter_count((NativeSqlite3StmtHandle)stmt);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_parameter_count", CallingConvention=CallingConvention.Cdecl)]
+			private static extern int sqlite3_bind_parameter_count(NativeSqlite3StmtHandle stmt);
+
+			/// <summary>Return the index for the parameter named 'name'</summary>
+			public static int BindParameterIndex(sqlite3_stmt stmt, string name)
+			{
+				return sqlite3_bind_parameter_index((NativeSqlite3StmtHandle)stmt, name);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_parameter_index", CallingConvention=CallingConvention.Cdecl)]
+			private static extern int sqlite3_bind_parameter_index(NativeSqlite3StmtHandle stmt, string name);
+
+			/// <summary>Return the name of a parameter from its index</summary>
+			public static string BindParameterName(sqlite3_stmt stmt, int index)
+			{
+				return UTF8toStr(sqlite3_bind_parameter_name((NativeSqlite3StmtHandle)stmt, index));
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_parameter_name", CallingConvention=CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_bind_parameter_name(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Bind null to 1-based parameter index 'index'</summary>
+			public static void BindNull(sqlite3_stmt stmt, int index)
+			{
+				var r = sqlite3_bind_null((NativeSqlite3StmtHandle)stmt, index);
+				if (r != Result.OK) throw Exception.New(r, "Bind null failed");
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_null", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_bind_null(NativeSqlite3StmtHandle stmt, int index);
+
+			/// <summary>Bind an integer value to 1-based parameter index 'index'</summary>
+			public static void BindInt(sqlite3_stmt stmt, int index, int val)
+			{
+				var r = sqlite3_bind_int((NativeSqlite3StmtHandle)stmt, index, val);
+				if (r != Result.OK) throw Exception.New(r, "Bind int failed");
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_int", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_bind_int(NativeSqlite3StmtHandle stmt, int index, int val);
+
+			/// <summary>Bind an integer64 value to 1-based parameter index 'index'</summary>
+			public static void BindInt64(sqlite3_stmt stmt, int index, long val)
+			{
+				var r = sqlite3_bind_int64((NativeSqlite3StmtHandle)stmt, index, val);
+				if (r != Result.OK) throw Exception.New(r, "Bind int64 failed");
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_int64", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_bind_int64(NativeSqlite3StmtHandle stmt, int index, long val);
+
+			/// <summary>Bind a double value to 1-based parameter index 'index'</summary>
+			public static void BindDouble(sqlite3_stmt stmt, int index, double val)
+			{
+				var r = sqlite3_bind_double((NativeSqlite3StmtHandle)stmt, index, val);
+				if (r != Result.OK) throw Exception.New(r, "Bind double failed");
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_double", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_bind_double(NativeSqlite3StmtHandle stmt, int index, double val);
+
+			/// <summary>Bind a string to 1-based parameter index 'index'</summary>
+			public static void BindText(sqlite3_stmt stmt, int index, string val)
+			{
+				var r = sqlite3_bind_text16((NativeSqlite3StmtHandle)stmt, index, val, -1, TransientData);
+				if (r != Result.OK) throw Exception.New(r, "Bind string failed");
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_text16", CallingConvention=CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+			private static extern Result sqlite3_bind_text16(NativeSqlite3StmtHandle stmt, int index, string val, int n, IntPtr destructor_cb);
+
+			/// <summary>Bind a byte array to 1-based parameter index 'index'</summary>
+			public static void BindBlob(sqlite3_stmt stmt, int index, byte[] val, int length)
+			{
+				var r = sqlite3_bind_blob((NativeSqlite3StmtHandle)stmt, index, val, length, TransientData);
+				if (r != Result.OK) throw Exception.New(r, "Bind blob failed");
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_bind_blob", CallingConvention=CallingConvention.Cdecl)]
+			private static extern Result sqlite3_bind_blob(NativeSqlite3StmtHandle stmt, int index, byte[] val, int n, IntPtr destructor_cb);
+
+			/// <summary>Set the update hook callback function</summary>
+			public static void UpdateHook(sqlite3 db, UpdateHookCB cb, IntPtr ctx)
+			{
+				sqlite3_update_hook((NativeSqlite3Handle)db, cb, ctx);
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_update_hook", CallingConvention=CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_update_hook(NativeSqlite3Handle db, UpdateHookCB cb, IntPtr ctx);
+		}
+		#endif
+
 		// ReSharper restore InconsistentNaming,UnusedMember.Local
-
-		[DllImport("sqlite3", EntryPoint = "sqlite3_update_hook", CallingConvention=CallingConvention.Cdecl)]
-		private static extern IntPtr sqlite3_update_hook(sqlite3 db, UpdateHookCB cb, IntPtr ctx);
-	
-		/// <summary>Callback type for sqlite3_update_hook</summary>
-		/// <param name="ctx">A copy of the third argument to sqlite3_update_hook()</param>
-		/// <param name="change_type">One of SQLITE_INSERT, SQLITE_DELETE, or SQLITE_UPDATE</param>
-		/// <param name="db_name">The name of the affected database</param>
-		/// <param name="table_name">The name of the table containing the changed item</param>
-		/// <param name="row_id">The row id of the changed row</param>
-		public delegate void UpdateHookCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id);
-
 		#endregion
 
 		#region SQLITE_TRACE
@@ -3746,7 +4138,6 @@ namespace pr
 	using NUnit.Framework;
 	using System.Data.Linq.SqlClient;
 	using System.IO;
-	using System.Text.RegularExpressions;
 	using common;
 	
 	[TestFixture] internal static partial class UnitTests
@@ -4434,7 +4825,7 @@ namespace pr
 					catch {}
 					Assert.AreEqual(3, db.Table<DomType0>().RowCount);
 
-					using (var tranny = db.NewTransaction())
+					using (db.NewTransaction())
 					{
 						foreach (var x in objs) db.Insert(x, Sqlite.OnInsertConstraint.Replace);
 						// No commit
