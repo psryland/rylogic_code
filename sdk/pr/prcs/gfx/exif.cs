@@ -299,12 +299,12 @@ namespace pr.gfx
 		/// <summary>Describes the file offset of a section within a jpg file</summary>
 		public class JpgSection
 		{
-			public byte Marker;
-			public long Offset;
-			public long Size;
+			public readonly byte Marker;
+			public readonly long Offset;
+			public readonly long Size;
 			public JpgSection() {}
 			public JpgSection(byte mark, long offset, long size) { Marker = mark; Offset = offset; Size = size; }
-			public override string ToString() { return "Mark: 0xFF"+Marker.ToString("X")+" Size:"+Size+" Offset:"+Offset; }
+			public override string ToString() { return "Mark: 0xFF"+(Marker).ToString("X")+" Size:"+Size+" Offset:"+Offset; }
 		}
 
 		/// <summary>Return the size in bytes corresponding to a data type</summary>
@@ -312,7 +312,7 @@ namespace pr.gfx
 		{
 			switch (dt)
 			{
-			default: throw new ArgumentOutOfRangeException("dt",dt,"Unknown Tiff data type");
+			default: throw new ArgumentOutOfRangeException("dt","Unknown Tiff data type");
 			case TiffDataType.UByte:
 			case TiffDataType.AsciiStrings:
 			case TiffDataType.SByte:
@@ -470,7 +470,7 @@ namespace pr.gfx
 			}
 			public string AsString
 			{
-				get { return Encoding.ASCII.GetString(Data); }
+				get { return Encoding.UTF8.GetString(Data, 0, Data.Length); }
 			}
 
 			public Field() {}
@@ -637,7 +637,7 @@ namespace pr.gfx
 			public void Set(Tag tag, double b)       { Set(tag, new Field(tag, TiffDataType.Double, 1, BitConverter.GetBytes(b))); }
 			public void Set(Tag tag, uint n, uint d) { Set(tag, new Field(tag, TiffDataType.URational, 1, BitConverter.GetBytes(n).Concat(BitConverter.GetBytes(d)).ToArray())); }
 			public void Set(Tag tag, int n, int d)   { Set(tag, new Field(tag, TiffDataType.SRational, 1, BitConverter.GetBytes(n).Concat(BitConverter.GetBytes(d)).ToArray())); }
-			public void Set(Tag tag, string s)       { Set(tag, new Field(tag, TiffDataType.AsciiStrings, (uint)s.Length, Encoding.ASCII.GetBytes(s))); }
+			public void Set(Tag tag, string s)       { Set(tag, new Field(tag, TiffDataType.AsciiStrings, (uint)s.Length, Encoding.UTF8.GetBytes(s))); }
 
 			/// <summary>Delete an exif field</summary>
 			public bool Delete(Tag tag)
@@ -863,7 +863,7 @@ namespace pr.gfx
 			
 			// Find the exif data section
 			var index = IndexJpg(src);
-			var exif_section = index.Find(x => x.Marker == JpgMarker.APP1);
+			var exif_section = index.First(x => x.Marker == JpgMarker.APP1);
 			if (exif_section == null)
 				return data; // no exif data, return an empty object
 			
@@ -922,8 +922,8 @@ namespace pr.gfx
 			var index = IndexJpg(src);
 			JpgSection jpg_section;
 			long insert_exif_offset = 2;
-			if ((jpg_section = index.Find(x =>x.Marker == JpgMarker.APP0)) != null) { insert_exif_offset = jpg_section.Offset + jpg_section.Size; }
-			if ((jpg_section = index.Find(x =>x.Marker == JpgMarker.APP2)) != null) { insert_exif_offset = jpg_section.Offset; }
+			if ((jpg_section = index.First(x =>x.Marker == JpgMarker.APP0)) != null) { insert_exif_offset = jpg_section.Offset + jpg_section.Size; }
+			if ((jpg_section = index.First(x =>x.Marker == JpgMarker.APP2)) != null) { insert_exif_offset = jpg_section.Offset; }
 			
 			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
 			using (var bw = new BinaryWriterEx(new UncloseableStream(dst)))

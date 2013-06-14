@@ -12,13 +12,11 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 
 #if WP8_SQLITE
 //using Sqlite.Sqlite3;
-//using System.Data.SQLite;
 #else
 #endif
 
@@ -2366,7 +2364,7 @@ namespace pr.common
 		{
 			protected readonly Database m_db;
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
-			
+
 			public override string ToString()  { return SqlString; }
 			
 			public Query(Database db, sqlite3_stmt stmt)
@@ -3431,7 +3429,7 @@ namespace pr.common
 				m_completed = false;
 				lock (m_lock)
 				{
-					if (m_transaction_in_progress) throw new ApplicationException("Nested transactions are not allowed");
+					if (m_transaction_in_progress) throw new Exception("Nested transactions are not allowed");
 					m_db.Execute("begin transaction");
 					m_transaction_in_progress = true;
 				}
@@ -3440,7 +3438,7 @@ namespace pr.common
 			{
 				lock (m_lock)
 				{
-					if (m_completed) throw new ApplicationException("Transaction already completed");
+					if (m_completed) throw new Exception("Transaction already completed");
 					m_db.Execute("commit");
 					m_completed = true;
 					m_transaction_in_progress = false;
@@ -3450,7 +3448,7 @@ namespace pr.common
 			{
 				lock (m_lock)
 				{
-					if (m_completed) throw new ApplicationException("Transaction already completed");
+					if (m_completed) throw new Exception("Transaction already completed");
 					m_db.Execute("rollback");
 					m_completed = true;
 					m_transaction_in_progress = false;
@@ -3492,7 +3490,6 @@ namespace pr.common
 			
 			public Exception() {}
 			public Exception(string message):base(message) {}
-			public Exception(SerializationInfo info, StreamingContext context) :base(info, context) {}
 			public Exception(string message, System.Exception inner_exception):base(message, inner_exception) {}
 			public override string ToString() { return string.Format("{0} - {1}" ,Result ,Message); }
 		}
@@ -3780,7 +3777,7 @@ namespace pr.common
 				if (str == null) return null;
 				var bytes = new byte[str.Length];
 				Marshal.Copy(utf8ptr, bytes, 0, bytes.Length);
-				return Encoding.UTF8.GetString(bytes);
+				return Encoding.UTF8.GetString(bytes, 0, bytes.Length);
 			}
 
 			/// <summary>Converts a C# string (in UTF-16) to a byte array in UTF-8</summary>
@@ -4080,7 +4077,7 @@ namespace pr.common
 			{
 				public string CallStack { get; private set; }
 				public bool InUse { get; set; }
-				public Info() { CallStack = Environment.StackTrace; }
+				public Info() { CallStack = new System.Diagnostics.StackTrace().ToString(); }
 			}
 			private static readonly Dictionary<Query, Info> m_trace = new Dictionary<Query,Info>();
 
