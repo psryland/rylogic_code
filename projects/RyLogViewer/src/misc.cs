@@ -24,14 +24,14 @@ namespace RyLogViewer
 		public const int PortNumberMin              = 0;
 		public const int PortNumberWebProxyDefault  = 8080;
 		public const int PortNumberMax              = 65535;
-		public const int FileBufSizeMin             = 1 * OneMB;
-		public const int FileBufSizeDefault         = 10 * OneMB;
+		public const int FileBufSizeMin             = 256 * OneKB;
+		public const int FileBufSizeDefault         = 1 * OneMB;
 		public const int FileBufSizeMax             = 100 * OneMB;
 		public const int MaxLineLengthMin           = 1 * OneKB;
 		public const int MaxLineLengthDefault       = 16 * OneKB;
 		public const int MaxLineLengthMax           = 128 * OneKB;
 		public const int LineCacheCountMin          = 1;
-		public const int LineCacheCountDefault      = 10000;
+		public const int LineCacheCountDefault      = 1000;
 		public const int LineCacheCountMax          = 99999999;
 		public const int ColumnCountMin             = 1;
 		public const int ColumnCountDefault         = 1;
@@ -329,7 +329,6 @@ namespace RyLogViewer
 		[DataMember] public string          AdbFullPath           = string.Empty;
 		[DataMember] public string          SelectedDevice        = string.Empty;
 		[DataMember] public bool            CaptureOutputToFile   = false;
-		[DataMember] public string[]        OutputFilepathHistory = new string[0];
 		[DataMember] public bool            AppendOutputFile      = true;
 		[DataMember] public ELogBuffer[]    LogBuffers            = new []{ELogBuffer.Main, ELogBuffer.System};
 		[DataMember] public FilterSpec[]    FilterSpecs           = new []{new FilterSpec("*", EFilterPriority.Verbose)};
@@ -344,7 +343,6 @@ namespace RyLogViewer
 			AdbFullPath           = rhs.AdbFullPath;
 			SelectedDevice        = rhs.SelectedDevice;
 			CaptureOutputToFile   = rhs.CaptureOutputToFile;
-			OutputFilepathHistory = rhs.OutputFilepathHistory.Dup();
 			AppendOutputFile      = rhs.AppendOutputFile;
 			LogBuffers            = rhs.LogBuffers.Dup();
 			FilterSpecs           = rhs.FilterSpecs.Dup();
