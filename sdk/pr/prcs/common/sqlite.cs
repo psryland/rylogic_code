@@ -3819,7 +3819,6 @@ namespace pr.common
 				var res = sqlite3_open_v2(filepath, out db, (int)flags, IntPtr.Zero);
 				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
 				return db;
-				
 			}
 			[DllImport("sqlite3", EntryPoint = "sqlite3_open_v2", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_open_v2(string filepath, out NativeSqlite3Handle db, int flags, IntPtr zvfs);

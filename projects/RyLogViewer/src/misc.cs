@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows.Forms;
 using pr.inet;
 using pr.extn;
@@ -364,6 +365,10 @@ namespace RyLogViewer
 
 	public static class Misc
 	{
+		/// <summary>Returns true if this is the main thread</summary>
+		public static bool IsMainThread { get { return Thread.CurrentThread.ManagedThreadId == m_main_thread_id; } }
+		private static readonly int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
+		
 		/// <summary>Return a background colour appropriate for a validity state</summary>
 		public static Color FieldBkColor(bool is_valid) { return is_valid ? FieldValid : FieldInvalid; }
 		public static Color FieldValid   = Color.LightGreen;

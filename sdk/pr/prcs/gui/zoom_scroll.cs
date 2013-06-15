@@ -164,6 +164,11 @@ namespace pr.gui
 			base.Dispose(disposing);
 			Application.RemoveMessageFilter(m_hoverscroll);
 		}
+		protected override void OnSizeChanged(EventArgs e)
+		{
+			base.OnSizeChanged(e);
+			Region = new Region(Gfx.RoundedRectanglePath(ClientRectangle, m_corner_radius)); // Set the clip boundary
+		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			base.OnKeyDown(e);
@@ -217,7 +222,7 @@ namespace pr.gui
 			Point pt1 = new Point(bounds.Right, 0);
 
 			// Background
-			c0 = Gfx.Blend(TrackColor, Color.White, 0.2f);
+			c0 = Gfx.Blend(Color.Black, TrackColor, 0.7f);
 			c1 = TrackColor;
 			using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1)) // This throws OutOfMemoryException if pt0 == pt1.. ffs MS..
 				gfx.FillRectangle(bsh, bounds);
@@ -236,7 +241,7 @@ namespace pr.gui
 			// Draw the visible range
 			if (bounds.Width > 2)
 			{
-				int sy  = (int)(Maths.Frac(total.Begin, VisibleRange.Begin, total.End) * bounds.Height);
+				int sy = (int)(Maths.Frac(total.Begin, VisibleRange.Begin, total.End) * bounds.Height);
 				int ey = (int)(Maths.Frac(total.Begin, VisibleRange.End,   total.End) * bounds.Height);
 				var r = new Rectangle(bounds.X+1, bounds.Y + sy, bounds.Width-2, ey - sy);
 				using (var bsh = new SolidBrush(VisibleRangeColor))
@@ -253,11 +258,6 @@ namespace pr.gui
 
 			// Borders
 			gfx.DrawRectangleRounded(SystemPens.ControlDarkDark, bounds, m_corner_radius);
-		}
-		protected override void OnSizeChanged(EventArgs e)
-		{
-			base.OnSizeChanged(e);
-			//Region = new Region(Gfx.RoundedRectanglePath(Bounds, m_corner_radius)); // Set the clip boundary
 		}
 
 		/// <summary>Set the centre of the visible range to client rect relative coord 'y'</summary>

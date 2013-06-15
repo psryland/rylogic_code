@@ -43,6 +43,7 @@ namespace RyLogViewer
 		private readonly ToolTip m_tt;                        // Tooltips
 		private readonly ToolTip m_balloon;                   // A hint balloon tooltip
 		private readonly Form[] m_tab_cycle;                  // The forms that Ctrl+Tab cycles through
+		private readonly RefCount m_suspend_grid_events;      // A ref count of nested calls that tell event handlers to ignore grid events
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
 		private string m_filepath;                            // The path of the log file we're viewing
@@ -54,7 +55,6 @@ namespace RyLogViewer
 		private long m_fileend;                               // The last known size of the file
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
 		private int m_line_cache_count;                       // The number of lines to scan about the currently selected row
-		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
 		private bool m_alternating_line_colours;              // Cache the alternating line colours setting for performance
 		private bool m_tail_enabled;                          // Cache whether tail mode is enabled
 		private bool m_first_row_is_odd;                      // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
@@ -85,29 +85,31 @@ namespace RyLogViewer
 					a.Cancel = res == DialogResult.Cancel;
 				};
 			
-			m_watch              = new FileWatch();
-			m_watch_timer        = new Timer{Interval = Constants.FilePollingRate};
-			m_batch_set_col_size = new EventBatcher(100, this);
-			m_highlights         = new List<Highlight>();
-			m_filters            = new List<Filter>();
-			m_transforms         = new List<Transform>();
-			m_clkactions         = new List<ClkAction>();
-			m_find_history       = new BindingSource{DataSource = new BindingList<Pattern>()};
-			m_find_ui            = new FindUI(this, m_find_history){Visible = false};
-			m_bookmarks          = new BindingSource{DataSource = new BindingList<Bookmark>()};
-			m_bookmarks_ui       = new BookmarksUI(this, m_bookmarks){Visible = false};
-			m_tt                 = new ToolTip();
-			m_balloon            = new ToolTip{IsBalloon = true};
-			m_tab_cycle          = new Form[]{this, m_find_ui, m_bookmarks_ui};
-			m_notify_icon        = new NotifyIcon{Icon = Icon};
-			m_line_index         = new List<Range>();
-			m_filepath           = null;
-			m_file               = null;
-			m_filepos            = 0;
-			m_fileend            = 0;
-			m_bufsize            = m_settings.FileBufSize;
-			m_line_cache_count   = m_settings.LineCacheCount;
-			m_tail_enabled       = m_settings.TailEnabled;
+			m_watch               = new FileWatch();
+			m_watch_timer         = new Timer{Interval = Constants.FilePollingRate};
+			m_batch_set_col_size  = new EventBatcher(100, this);
+			m_highlights          = new List<Highlight>();
+			m_filters             = new List<Filter>();
+			m_transforms          = new List<Transform>();
+			m_clkactions          = new List<ClkAction>();
+			m_find_history        = new BindingSource{DataSource = new BindingList<Pattern>()};
+			m_find_ui             = new FindUI(this, m_find_history){Visible = false};
+			m_bookmarks           = new BindingList<Bookmark>();
+			m_bs_bookmarks        = new BindingSource{DataSource = m_bookmarks};
+			m_bookmarks_ui        = new BookmarksUI(this, m_bs_bookmarks){Visible = false};
+			m_tt                  = new ToolTip();
+			m_balloon             = new ToolTip{IsBalloon = true};
+			m_tab_cycle           = new Form[]{this, m_find_ui, m_bookmarks_ui};
+			m_notify_icon         = new NotifyIcon{Icon = Icon};
+			m_suspend_grid_events = new RefCount();
+			m_line_index          = new List<Range>();
+			m_filepath            = null;
+			m_file                = null;
+			m_filepos             = 0;
+			m_fileend             = 0;
+			m_bufsize             = m_settings.FileBufSize;
+			m_line_cache_count    = m_settings.LineCacheCount;
+			m_tail_enabled        = m_settings.TailEnabled;
 			
 			// Startup options
 			ApplyStartupOptions();
@@ -241,7 +243,7 @@ namespace RyLogViewer
 			// File Watcher
 			m_watch_timer.Tick += (s,a)=>
 				{
-					try { m_watch.CheckForChangedFiles(); }
+					try { if (!ReloadInProgress) m_watch.CheckForChangedFiles(); }
 					catch (Exception ex) { Log.Exception(this, ex, "CheckForChangedFiles failed"); }
 				};
 			
@@ -252,8 +254,7 @@ namespace RyLogViewer
 			InitFind();
 			
 			// Bookmarks
-			m_bookmarks.CurrentChanged     += (s,a) => SelectBookmark((Bookmark)m_bookmarks.Current);
-			m_bookmarks.CurrentItemChanged += (s,a) => SelectBookmark((Bookmark)m_bookmarks.Current);
+			m_bs_bookmarks.PositionChanged += (s,a) => SelectBookmark(m_bs_bookmarks.Position);
 			m_bookmarks_ui.NextBookmark    += NextBookmark;
 			m_bookmarks_ui.PrevBookmark    += PrevBookmark;
 			
@@ -363,7 +364,7 @@ namespace RyLogViewer
 		/// <summary>Close the current log file</summary>
 		private void CloseLogFile()
 		{
-			using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+			using (m_suspend_grid_events.Refer)
 			{
 				CancelBuildLineIndex();
 				m_line_index.Clear();
@@ -421,12 +422,12 @@ namespace RyLogViewer
 				m_file = LoadFile(filepath);
 				m_filepath = filepath;
 				m_filepos = m_settings.OpenAtEnd ? m_file.Length : 0;
-				
+
 				// Setup the watcher to watch for file changes
 				// Start the build in an invoke so that checking for file changes doesn't cause reentrancy
 				m_watch.Add(m_filepath, (fp,ctx) => { OnFileChanged(); return true; });
 				m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
-				
+
 				BuildLineIndex(m_filepos, true, ()=>
 					{
 						SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
@@ -532,14 +533,15 @@ namespace RyLogViewer
 				// Read the line from the cache
 				var line = ReadLine(e.RowIndex);
 				var hl   = line[e.ColumnIndex].HL;
-				
+
 				// If the line is bookmarked, use the bookmark colour
-				if (m_bookmarks.Count != 0 && m_bookmarks.List.IndexOf<Bookmark>(x => x.Range.Contains(line.LineStartAddr)) != -1)
+				if (m_bookmarks.Count != 0 && m_bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
 				{
 					e.CellStyle.BackColor = m_settings.BookmarkColour;
 					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
 					e.PaintContent(e.ClipBounds);
 				}
+
 				// Check if the cell value has a highlight pattern it matches
 				else if (hl != null)
 				{
@@ -1111,7 +1113,7 @@ namespace RyLogViewer
 			}
 			set
 			{
-				using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+				using (m_suspend_grid_events.Refer)
 				{
 					value = m_grid.SelectRow(value);
 					Log.Info(this, "Row {0} selected".Fmt(value));
@@ -1140,7 +1142,7 @@ namespace RyLogViewer
 		/// <summary>Returns true if grid event handlers should process grid events</summary>
 		private bool GridEventsBlocked
 		{
-			get { return m_suspend_grid_events != 0; }
+			get { return m_suspend_grid_events.Count != 0; }
 		}
 
 		/// <summary>Helper for setting the grid row count without event handlers being fired</summary>
@@ -1262,7 +1264,11 @@ namespace RyLogViewer
 			}
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
-			
+
+			// File scroll
+			m_scroll_file.TrackColor = m_settings.ScrollBarFileRangeColour;
+			m_scroll_file.ThumbColor = m_settings.ScrollBarCachedRangeColour;
+
 			// Ensure rows are re-rendered
 			InvalidateCache();
 			UpdateUI();
@@ -1291,7 +1297,7 @@ namespace RyLogViewer
 							m_first_row_is_odd = !m_first_row_is_odd;
 						
 						// Ensure the grid has the correct number of rows
-						using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+						using (m_suspend_grid_events.Refer)
 							SetGridRowCount(m_line_index.Count, row_delta);
 					
 						SetGridColumnSizes();
@@ -1300,7 +1306,7 @@ namespace RyLogViewer
 					{
 						m_grid.ColumnHeadersVisible = false;
 						m_grid.ColumnCount = 1;
-						using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+						using (m_suspend_grid_events.Refer)
 							SetGridRowCount(0, 0);
 					}
 				}
@@ -1410,35 +1416,29 @@ namespace RyLogViewer
 			}
 		}
 
+
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
-			// The file scroll bar is only visible when part of the file is loaded
-			if (m_line_index.Count == m_settings.LineCacheCount || m_fileend > m_settings.FileBufSize)
-			{
-				Range range = LineIndexRange;
-				if (!range.Equals(m_scroll_file.ThumbRange))
-					Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Begin, range.End, FileByteRange.Begin, FileByteRange.End));
+			Range range = LineIndexRange;
+			if (!range.Equals(m_scroll_file.ThumbRange))
+				Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Begin, range.End, FileByteRange.Begin, FileByteRange.End));
+
+			m_scroll_file.Visible    = true;
+			m_scroll_file.TotalRange = FileByteRange;
+			m_scroll_file.ThumbRange = range;
+			m_scroll_file.Width      = m_settings.FileScrollWidth;
+
+			m_scroll_file.Ranges.Clear();
+			m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(DisplayedRowsRange ,m_settings.ScrollBarDisplayRangeColour));
+			m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(SelectedRowRange   ,m_settings.LineSelectBackColour       ));
 				
-				m_scroll_file.Visible    = true;
-				m_scroll_file.TotalRange = FileByteRange;
-				m_scroll_file.ThumbRange = range;
-				m_scroll_file.Width      = m_settings.FileScrollWidth;
-				
-				m_scroll_file.Ranges.Clear();
-				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(range              ,m_settings.ScrollBarFileRangeColour   ));
-				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(DisplayedRowsRange ,m_settings.ScrollBarDisplayRangeColour));
-				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(SelectedRowRange   ,m_settings.LineSelectBackColour       ));
-				
-				// Add marks for the bookmarked positions
-				var bkmark_colour = m_settings.BookmarkColour;
-				foreach (var bk in m_bookmarks)
-					m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(((Bookmark)bk).Range, bkmark_colour));
-			}
-			else
-			{
-				m_scroll_file.Visible = false;
-			}
+			// Add marks for the bookmarked positions
+			var bkmark_colour = m_settings.BookmarkColour;
+			foreach (var bk in m_bookmarks)
+				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(bk.Range, bkmark_colour));
+
+			m_scroll_file.Refresh();
 		}
 		
 		/// <summary>Create a message that displays for a period then disappears</summary>

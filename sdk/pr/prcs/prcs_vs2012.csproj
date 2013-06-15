@@ -99,6 +99,7 @@
     <Compile Include="common\enum_ex.cs" />
     <Compile Include="common\hglobal.cs" />
     <Compile Include="common\mime.cs" />
+    <Compile Include="common\ref_count.cs" />
     <Compile Include="common\rtf.cs" />
     <Compile Include="common\cache.cs" />
     <Compile Include="container\tri_table.cs" />
@@ -160,6 +161,7 @@
     <Compile Include="directshow.net\Vmr9.cs" />
     <Compile Include="directshow.net\VmRender.cs" />
     <Compile Include="extn\array_extensions.cs" />
+    <Compile Include="extn\binding_source_extensions.cs" />
     <Compile Include="extn\byte_array_extensions.cs" />
     <Compile Include="extn\dict_extensions.cs" />
     <Compile Include="extn\datagridview_extensions.cs">
@@ -183,6 +185,9 @@
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gui\dock_container.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="gui\subrange_scroll.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\graph_control.cs">
       <SubType>UserControl</SubType>

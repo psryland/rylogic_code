@@ -123,7 +123,6 @@
 			this.m_status_progress = new System.Windows.Forms.ToolStripProgressBar();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
-			this.m_grid = new System.Windows.Forms.DataGridView();
 			this.m_cmenu_grid = new System.Windows.Forms.ContextMenuStrip(this.components);
 			this.m_cmenu_select_all = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_cmenu_copy = new System.Windows.Forms.ToolStripMenuItem();
@@ -139,6 +138,7 @@
 			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_grid = new DGV();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
@@ -148,8 +148,8 @@
 			this.m_toolstrip_cont.TopToolStripPanel.SuspendLayout();
 			this.m_toolstrip_cont.SuspendLayout();
 			this.m_table.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.m_cmenu_grid.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// m_toolstrip
@@ -900,9 +900,11 @@
 			// 
 			// m_table
 			// 
-			this.m_table.ColumnCount = 2;
+			this.m_table.ColumnCount = 3;
 			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+			this.m_table.ContextMenuStrip = this.m_cmenu_grid;
 			this.m_table.Controls.Add(this.m_grid, 0, 0);
 			this.m_table.Controls.Add(this.m_scroll_file, 1, 0);
 			this.m_table.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -912,32 +914,6 @@
 			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table.Size = new System.Drawing.Size(587, 410);
 			this.m_table.TabIndex = 5;
-			// 
-			// m_grid
-			// 
-			this.m_grid.AllowUserToAddRows = false;
-			this.m_grid.AllowUserToDeleteRows = false;
-			this.m_grid.AllowUserToOrderColumns = true;
-			this.m_grid.AllowUserToResizeRows = false;
-			this.m_grid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
-			this.m_grid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid.ContextMenuStrip = this.m_cmenu_grid;
-			this.m_grid.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
-			this.m_grid.Location = new System.Drawing.Point(3, 3);
-			this.m_grid.Name = "m_grid";
-			this.m_grid.ReadOnly = true;
-			this.m_grid.RowHeadersVisible = false;
-			this.m_grid.RowTemplate.Height = 18;
-			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.ShowCellErrors = false;
-			this.m_grid.ShowCellToolTips = false;
-			this.m_grid.ShowEditingIcon = false;
-			this.m_grid.ShowRowErrors = false;
-			this.m_grid.Size = new System.Drawing.Size(563, 404);
-			this.m_grid.TabIndex = 3;
-			this.m_grid.VirtualMode = true;
 			// 
 			// m_cmenu_grid
 			// 
@@ -1039,20 +1015,47 @@
 			this.m_cmenu_toggle_bookmark.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_toggle_bookmark.Text = "Toggle &Bookmark";
 			// 
+			// m_grid
+			// 
+			this.m_grid.AllowUserToAddRows = false;
+			this.m_grid.AllowUserToDeleteRows = false;
+			this.m_grid.AllowUserToOrderColumns = true;
+			this.m_grid.AllowUserToResizeRows = false;
+			this.m_grid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
+			this.m_grid.ClipboardCopyMode = System.Windows.Forms.DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
+			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid.ContextMenuStrip = this.m_cmenu_grid;
+			this.m_grid.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_grid.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
+			this.m_grid.Location = new System.Drawing.Point(3, 3);
+			this.m_grid.Name = "m_grid";
+			this.m_grid.ReadOnly = true;
+			this.m_grid.RowHeadersVisible = false;
+			this.m_grid.RowTemplate.Height = 18;
+			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid.ShowCellErrors = false;
+			this.m_grid.ShowCellToolTips = false;
+			this.m_grid.ShowEditingIcon = false;
+			this.m_grid.ShowRowErrors = false;
+			this.m_grid.Size = new System.Drawing.Size(557, 404);
+			this.m_grid.TabIndex = 3;
+			this.m_grid.VirtualMode = true;
+			// 
 			// m_scroll_file
 			// 
 			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_scroll_file.LargeChange = ((long)(1));
-			this.m_scroll_file.Location = new System.Drawing.Point(569, 0);
-			this.m_scroll_file.Margin = new System.Windows.Forms.Padding(0);
+			this.m_scroll_file.Location = new System.Drawing.Point(566, 3);
 			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
 			this.m_scroll_file.MinThumbSize = 20;
 			this.m_scroll_file.Name = "m_scroll_file";
-			this.m_scroll_file.Size = new System.Drawing.Size(18, 410);
+			this.m_scroll_file.Overlay = null;
+			this.m_scroll_file.OverlayAttributes = null;
+			this.m_scroll_file.Size = new System.Drawing.Size(18, 404);
 			this.m_scroll_file.SmallChange = ((long)(1));
 			this.m_scroll_file.TabIndex = 4;
-			this.m_scroll_file.ThumbColor = System.Drawing.SystemColors.ControlLight;
-			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlDark;
+			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
+			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
 			// 
 			// Main
 			// 
@@ -1081,8 +1084,8 @@
 			this.m_toolstrip_cont.ResumeLayout(false);
 			this.m_toolstrip_cont.PerformLayout();
 			this.m_table.ResumeLayout(false);
-			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.m_cmenu_grid.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.ResumeLayout(false);
 
 		}
@@ -1101,7 +1104,7 @@
 		private System.Windows.Forms.ToolStripSeparator m_sep2;
 		private System.Windows.Forms.ToolStripButton m_btn_jump_to_end;
 		private System.Windows.Forms.ToolStripContainer m_toolstrip_cont;
-		private System.Windows.Forms.DataGridView m_grid;
+		private DGV m_grid;
 		private System.Windows.Forms.ToolStripSeparator m_sep;
 		private System.Windows.Forms.ToolStripButton m_btn_highlights;
 		private System.Windows.Forms.ToolStripButton m_btn_filters;

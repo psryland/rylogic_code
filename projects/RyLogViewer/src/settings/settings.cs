@@ -90,6 +90,11 @@ namespace RyLogViewer
 			get { return get<Color>("ScrollBarFileRangeColour"); }
 			set { set("ScrollBarFileRangeColour", value); }
 		}
+		public Color  ScrollBarCachedRangeColour
+		{
+			get { return get<Color>("ScrollBarCachedRangeColour"); }
+			set { set("ScrollBarCachedRangeColour", value); }
+		}
 		public Color  ScrollBarDisplayRangeColour
 		{
 			get { return get<Color>("ScrollBarDisplayRangeColour"); }
@@ -307,7 +312,7 @@ namespace RyLogViewer
 			LicenceHolder                   = Constants.EvalLicence;
 			Company                         = "";
 			RecentFiles                     = "";
-			Font                            = new Font("Microsoft Sans Serif", 8.25f, GraphicsUnit.Point);
+			Font                            = new Font("Consolas", 8.25f, GraphicsUnit.Point);
 			RestoreScreenLoc                = true;
 			ScreenPosition                  = new Point(50, 50);
 			WindowSize                      = new Size(640, 480);
@@ -319,9 +324,10 @@ namespace RyLogViewer
 			LineForeColour1                 = Color.Black;
 			LineForeColour2                 = Color.Black;
 			FileScrollWidth                 = Constants.FileScrollWidthDefault;
-			ScrollBarFileRangeColour        = Color.FromArgb(128, Color.White);
-			ScrollBarDisplayRangeColour     = Color.FromArgb(128, Color.SteelBlue);
-			BookmarkColour                  = Color.LightSkyBlue;
+			ScrollBarFileRangeColour        = Color.FromArgb(0x80, Color.White);
+			ScrollBarCachedRangeColour      = Color.FromArgb(0x40, Color.LightBlue);
+			ScrollBarDisplayRangeColour     = Color.FromArgb(0x80, Color.SteelBlue);
+			BookmarkColour                  = Color.Violet;
 			RowHeight                       = Constants.RowHeightDefault;
 			LoadLastFile                    = false;
 			LastLoadedFile                  = "";

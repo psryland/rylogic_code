@@ -110,7 +110,20 @@ namespace RyLogViewer
 		/// Builder threads abort as soon as possible when they notice this
 		/// value is not equal to their startup issue number</summary>
 		private static int m_build_issue;
-		private bool m_reload_in_progress; // Should only be set/tested in the main thread
+		private bool ReloadInProgress
+		{
+			get
+			{
+				Debug.Assert(Misc.IsMainThread, "ReloadInProgress should only be set/tested in the main thread");
+				return m_reload_in_progress_impl;
+			}
+			set
+			{
+				Debug.Assert(Misc.IsMainThread, "ReloadInProgress should only be set/tested in the main thread");
+				m_reload_in_progress_impl = value;
+			}
+		}
+		private bool m_reload_in_progress_impl;
 		private static bool BuildCancelled(int build_issue)
 		{
 			return Interlocked.CompareExchange(ref m_build_issue, build_issue, build_issue) != build_issue;
@@ -139,12 +152,12 @@ namespace RyLogViewer
 					return;
 				
 				// Incremental updates cannot supplant reloads
-				if (m_reload_in_progress && reload == false)
+				if (ReloadInProgress && reload == false)
 					return;
 				
 				// Cause any existing builds to stop by changing the issue number
 				Interlocked.Increment(ref m_build_issue);
-				m_reload_in_progress = reload;
+				ReloadInProgress = reload;
 				Log.Info(this, "build start request (id {0})".Fmt(m_build_issue));
 				//Log.Info(this, "build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
 			
@@ -325,7 +338,7 @@ namespace RyLogViewer
 									m_watch.CheckForChangedFiles();
 									
 									if (on_success != null) on_success();
-									m_reload_in_progress = false;
+									ReloadInProgress = false;
 									
 									// Trigger a collect to free up memory, this also has the 
 									// side effect of triggering a signing test of the exe because
@@ -337,26 +350,26 @@ namespace RyLogViewer
 						catch (OperationCanceledException) {}
 						catch (FileNotFoundException)
 						{
-							Action report_error = () => SetTransientStatusMessage(string.Format("Error reading {0}", Path.GetFileName(m_filepath)), Color.White, Color.DarkRed);
-							BeginInvoke(report_error);
+							this.BeginInvoke(() => SetTransientStatusMessage(string.Format("Error reading {0}", Path.GetFileName(m_filepath)), Color.White, Color.DarkRed));
 						}
 						catch (Exception ex)
 						{
 							Log.Exception(this, ex, "Exception ended BuildLineIndex() call");
-							Action report_error = () => Misc.ShowErrorMessage(this, ex, "Scanning the log file ended with an error.", "Scanning file terminated");
-							BeginInvoke(report_error);
+							this.BeginInvoke(() => Misc.ShowErrorMessage(this, ex, "Scanning the log file ended with an error.", "Scanning file terminated"));
 						}
 						finally
 						{
-							Action update_progress_bar = () => UpdateStatusProgress(1,1);
-							BeginInvoke(update_progress_bar);
-							m_reload_in_progress = false;
+							this.BeginInvoke(() =>
+								{
+									UpdateStatusProgress(1,1);
+									ReloadInProgress = false;
+								});
 						}
 					}, m_build_issue);
 				return;
 			}
 			catch (Exception ex) { err = ex; }
-			m_reload_in_progress = false;
+			ReloadInProgress = false;
 			Log.Exception(this, err, "Failed to build index list for {0}".Fmt(m_filepath));
 			Misc.ShowErrorMessage(this, err, "Scanning the log file ended with an error.", "Scanning file terminated");
 		}

@@ -3,9 +3,11 @@
 //  Copyright © Rylogic Ltd 2008
 //***************************************************
 
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows.Forms;
+using System.Threading;
+using Timer = System.Windows.Forms.Timer;
 
 namespace pr.util
 {
@@ -122,12 +124,12 @@ namespace pr.util
 		/// <summary>Check the collection of filepaths for those that have changed</summary>
 		public void CheckForChangedFiles()
 		{
-			if (m_in_check_for_changes) return;
-			m_in_check_for_changes = true;
-			try
+			// Prevent reentrancy.
+			// This is not done in a worker thread because the main blocking call is
+			// 'f.m_info.Refresh()' which blocks all threads so there's no point.
+			if (!m_in_check_for_changes) try
 			{
-				// Build a collection of the changed files to prevent reentrancy problems
-				// with the callbacks modifying the 'm_files' collection.
+				m_in_check_for_changes = true;
 				m_changed_files.Clear();
 				foreach (WatchedFile f in m_files)
 				{

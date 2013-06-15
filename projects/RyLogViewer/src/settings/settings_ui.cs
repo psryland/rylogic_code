@@ -339,6 +339,8 @@ namespace RyLogViewer
 		/// <summary>Hook up events for the log view tab</summary>
 		private void SetupLogViewTab()
 		{
+			string tt;
+
 			// Selection colour
 			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view");
 			m_lbl_selection_example.MouseClick += (s,a)=>
@@ -387,18 +389,7 @@ namespace RyLogViewer
 					m_settings.RowHeight = (int)m_spinner_row_height.Value;
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
-			
-			// File scroll width
-			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
-			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
-			m_spinner_file_scroll_width.Maximum = Constants.FileScrollMaxWidth;
-			m_spinner_file_scroll_width.Value = Maths.Clamp(m_settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
-			m_spinner_file_scroll_width.ValueChanged += (s,a)=>
-				{
-					m_settings.FileScrollWidth = (int)m_spinner_file_scroll_width.Value;
-					WhatsChanged |= EWhatsChanged.Rendering;
-				};
-			
+
 			// Font 
 			m_text_font.ToolTip(m_tt, "The font used to display the log file data");
 			m_text_font.Text = string.Format("{0}, {1}pt" ,m_settings.Font.Name ,m_settings.Font.Size);
@@ -413,6 +404,51 @@ namespace RyLogViewer
 					m_text_font.Font = dg.Font;
 					m_settings.Font = dg.Font;
 				};
+
+			// File scroll width
+			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
+			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
+			m_spinner_file_scroll_width.Maximum = Constants.FileScrollMaxWidth;
+			m_spinner_file_scroll_width.Value = Maths.Clamp(m_settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
+			m_spinner_file_scroll_width.ValueChanged += (s,a)=>
+				{
+					m_settings.FileScrollWidth = (int)m_spinner_file_scroll_width.Value;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+
+			tt = "The colour of the currently cached portion of the log file";
+			m_lbl_fs_cached_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_cached_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_cached_colour.BackColor = m_settings.ScrollBarCachedRangeColour;
+			m_lbl_fs_edit_cached_colour.MouseClick += (s,a)=>
+				{
+					m_settings.ScrollBarCachedRangeColour = PickColour(m_settings.ScrollBarCachedRangeColour);
+					m_lbl_fs_edit_cached_colour.BackColor = m_settings.ScrollBarCachedRangeColour;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+
+			tt = "The colour of the currently visible portion of the log file";
+			m_lbl_fs_visible_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_visible_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_visible_colour.BackColor = m_settings.ScrollBarDisplayRangeColour;
+			m_lbl_fs_edit_visible_colour.MouseClick += (s,a)=>
+				{
+					m_settings.ScrollBarDisplayRangeColour = PickColour(m_settings.ScrollBarDisplayRangeColour);
+					m_lbl_fs_edit_visible_colour.BackColor = m_settings.ScrollBarDisplayRangeColour;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+
+			tt = "The colour of the bookmarked locations";
+			m_lbl_fs_bookmark_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_bookmark_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_bookmark_colour.BackColor = m_settings.BookmarkColour;
+			m_lbl_fs_edit_bookmark_colour.MouseClick += (s,a)=>
+				{
+					m_settings.BookmarkColour = PickColour(m_settings.BookmarkColour);
+					m_lbl_fs_edit_bookmark_colour.BackColor = m_settings.BookmarkColour;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+			
 		}
 		
 		/// <summary>Hook up events for the highlights tab</summary>
@@ -797,7 +833,7 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Helper for create a text colour pick menu</summary>
+		/// <summary>Helper for creating a text colour picker menu</summary>
 		private static void PickColours(Control ctrl, int x, int y, EventHandler pick_fore, EventHandler pick_back)
 		{
 			var menu = new ContextMenuStrip();
@@ -805,7 +841,14 @@ namespace RyLogViewer
 			menu.Items.Add(new ToolStripMenuItem(Resources.ChangeBackColour, null, pick_back));
 			menu.Show(ctrl, x, y);
 		}
-		
+
+		/// <summary>Colour picker helper</summary>
+		private Color PickColour(Color current)
+		{
+			var d = new ColorDialog{AllowFullOpen = true, AnyColor = true, Color = current};
+			return d.ShowDialog(this) == DialogResult.OK ? d.Color : current;
+		}
+
 		/// <summary>Update the UI state based on current settings</summary>
 		private void UpdateUI()
 		{
@@ -861,13 +904,6 @@ namespace RyLogViewer
 			{
 				ResumeLayout();
 			}
-		}
-
-		/// <summary>Colour picker helper</summary>
-		private Color PickColour(Color current)
-		{
-			var d = new ColorDialog{AllowFullOpen = true, AnyColor = true, Color = current};
-			return d.ShowDialog(this) == DialogResult.OK ? d.Color : current;
 		}
 	}
 }
