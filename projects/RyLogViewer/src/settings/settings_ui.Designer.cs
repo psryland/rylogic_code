@@ -69,12 +69,19 @@
 			this.m_check_save_screen_loc = new System.Windows.Forms.CheckBox();
 			this.m_check_load_last_file = new System.Windows.Forms.CheckBox();
 			this.m_tab_logview = new System.Windows.Forms.TabPage();
+			this.m_group_file_scroll = new System.Windows.Forms.GroupBox();
+			this.m_lbl_fs_cached_colour = new System.Windows.Forms.Label();
+			this.m_lbl_fs_edit_cached_colour = new System.Windows.Forms.Label();
+			this.m_lbl_fs_bookmark_colour = new System.Windows.Forms.Label();
+			this.m_lbl_fs_edit_bookmark_colour = new System.Windows.Forms.Label();
+			this.m_lbl_fs_visible_colour = new System.Windows.Forms.Label();
+			this.m_lbl_fs_edit_visible_colour = new System.Windows.Forms.Label();
+			this.m_spinner_file_scroll_width = new System.Windows.Forms.NumericUpDown();
+			this.m_lbl_file_scroll_width = new System.Windows.Forms.Label();
 			this.m_group_font = new System.Windows.Forms.GroupBox();
 			this.m_btn_change_font = new System.Windows.Forms.Button();
 			this.m_text_font = new System.Windows.Forms.TextBox();
 			this.m_group_log_text_colours = new System.Windows.Forms.GroupBox();
-			this.m_spinner_file_scroll_width = new System.Windows.Forms.NumericUpDown();
-			this.m_lbl_file_scroll_width = new System.Windows.Forms.Label();
 			this.m_lbl_line2_example = new System.Windows.Forms.Label();
 			this.m_lbl_line1_example = new System.Windows.Forms.Label();
 			this.m_lbl_row_height = new System.Windows.Forms.Label();
@@ -84,10 +91,6 @@
 			this.m_lbl_selection_colour = new System.Windows.Forms.Label();
 			this.m_check_alternate_line_colour = new System.Windows.Forms.CheckBox();
 			this.m_tab_highlight = new System.Windows.Forms.TabPage();
-			this.m_split_hl = new System.Windows.Forms.SplitContainer();
-			this.m_table_hl = new System.Windows.Forms.TableLayoutPanel();
-			this.m_grid_highlight = new System.Windows.Forms.DataGridView();
-			this.label2 = new System.Windows.Forms.Label();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
 			this.m_split_ft = new System.Windows.Forms.SplitContainer();
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
@@ -105,21 +108,18 @@
 			this.label5 = new System.Windows.Forms.Label();
 			this.m_grid_action = new System.Windows.Forms.DataGridView();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
-			this.m_group_file_scroll = new System.Windows.Forms.GroupBox();
-			this.m_lbl_fs_edit_visible_colour = new System.Windows.Forms.Label();
-			this.m_lbl_fs_visible_colour = new System.Windows.Forms.Label();
-			this.m_lbl_fs_bookmark_colour = new System.Windows.Forms.Label();
-			this.m_lbl_fs_edit_bookmark_colour = new System.Windows.Forms.Label();
+			this.m_split_hl = new System.Windows.Forms.SplitContainer();
 			this.m_pattern_hl = new RyLogViewer.PatternUI();
+			this.m_table_hl = new System.Windows.Forms.TableLayoutPanel();
+			this.m_grid_highlight = new System.Windows.Forms.DataGridView();
 			this.m_pattern_set_hl = new RyLogViewer.PatternSetHL();
+			this.label2 = new System.Windows.Forms.Label();
 			this.m_pattern_ft = new RyLogViewer.PatternUI();
 			this.m_pattern_set_ft = new RyLogViewer.PatternSetFT();
 			this.m_pattern_tx = new RyLogViewer.TransformUI();
 			this.m_pattern_set_tx = new RyLogViewer.PatternSetTX();
 			this.m_pattern_ac = new RyLogViewer.PatternUI();
 			this.m_pattern_set_ac = new RyLogViewer.PatternSetAC();
-			this.m_lbl_fs_cached_colour = new System.Windows.Forms.Label();
-			this.m_lbl_fs_edit_cached_colour = new System.Windows.Forms.Label();
 			this.m_tabctrl.SuspendLayout();
 			this.m_tab_general.SuspendLayout();
 			this.m_group_settings.SuspendLayout();
@@ -132,17 +132,12 @@
 			this.m_group_startup.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_web_proxy_port)).BeginInit();
 			this.m_tab_logview.SuspendLayout();
+			this.m_group_file_scroll.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_file_scroll_width)).BeginInit();
 			this.m_group_font.SuspendLayout();
 			this.m_group_log_text_colours.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_spinner_file_scroll_width)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_row_height)).BeginInit();
 			this.m_tab_highlight.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_split_hl)).BeginInit();
-			this.m_split_hl.Panel1.SuspendLayout();
-			this.m_split_hl.Panel2.SuspendLayout();
-			this.m_split_hl.SuspendLayout();
-			this.m_table_hl.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_grid_highlight)).BeginInit();
 			this.m_tab_filter.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_split_ft)).BeginInit();
 			this.m_split_ft.Panel1.SuspendLayout();
@@ -164,7 +159,12 @@
 			this.m_split_ac.SuspendLayout();
 			this.m_table_ac.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_action)).BeginInit();
-			this.m_group_file_scroll.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_split_hl)).BeginInit();
+			this.m_split_hl.Panel1.SuspendLayout();
+			this.m_split_hl.Panel2.SuspendLayout();
+			this.m_split_hl.SuspendLayout();
+			this.m_table_hl.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_highlight)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// m_tabctrl
@@ -638,6 +638,99 @@
 			this.m_tab_logview.Text = "Appearance";
 			this.m_tab_logview.UseVisualStyleBackColor = true;
 			// 
+			// m_group_file_scroll
+			// 
+			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_cached_colour);
+			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_edit_cached_colour);
+			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_bookmark_colour);
+			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_edit_bookmark_colour);
+			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_visible_colour);
+			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_edit_visible_colour);
+			this.m_group_file_scroll.Controls.Add(this.m_spinner_file_scroll_width);
+			this.m_group_file_scroll.Controls.Add(this.m_lbl_file_scroll_width);
+			this.m_group_file_scroll.Location = new System.Drawing.Point(328, 4);
+			this.m_group_file_scroll.Name = "m_group_file_scroll";
+			this.m_group_file_scroll.Size = new System.Drawing.Size(163, 193);
+			this.m_group_file_scroll.TabIndex = 6;
+			this.m_group_file_scroll.TabStop = false;
+			this.m_group_file_scroll.Text = "File Scroll Bar";
+			// 
+			// m_lbl_fs_cached_colour
+			// 
+			this.m_lbl_fs_cached_colour.AutoSize = true;
+			this.m_lbl_fs_cached_colour.Location = new System.Drawing.Point(17, 47);
+			this.m_lbl_fs_cached_colour.Name = "m_lbl_fs_cached_colour";
+			this.m_lbl_fs_cached_colour.Size = new System.Drawing.Size(80, 13);
+			this.m_lbl_fs_cached_colour.TabIndex = 19;
+			this.m_lbl_fs_cached_colour.Text = "Cached Colour:";
+			// 
+			// m_lbl_fs_edit_cached_colour
+			// 
+			this.m_lbl_fs_edit_cached_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_lbl_fs_edit_cached_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_lbl_fs_edit_cached_colour.Location = new System.Drawing.Point(98, 43);
+			this.m_lbl_fs_edit_cached_colour.Name = "m_lbl_fs_edit_cached_colour";
+			this.m_lbl_fs_edit_cached_colour.Size = new System.Drawing.Size(59, 21);
+			this.m_lbl_fs_edit_cached_colour.TabIndex = 18;
+			this.m_lbl_fs_edit_cached_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+			// 
+			// m_lbl_fs_bookmark_colour
+			// 
+			this.m_lbl_fs_bookmark_colour.AutoSize = true;
+			this.m_lbl_fs_bookmark_colour.Location = new System.Drawing.Point(6, 104);
+			this.m_lbl_fs_bookmark_colour.Name = "m_lbl_fs_bookmark_colour";
+			this.m_lbl_fs_bookmark_colour.Size = new System.Drawing.Size(91, 13);
+			this.m_lbl_fs_bookmark_colour.TabIndex = 17;
+			this.m_lbl_fs_bookmark_colour.Text = "Bookmark Colour:";
+			// 
+			// m_lbl_fs_edit_bookmark_colour
+			// 
+			this.m_lbl_fs_edit_bookmark_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_lbl_fs_edit_bookmark_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_lbl_fs_edit_bookmark_colour.Location = new System.Drawing.Point(98, 100);
+			this.m_lbl_fs_edit_bookmark_colour.Name = "m_lbl_fs_edit_bookmark_colour";
+			this.m_lbl_fs_edit_bookmark_colour.Size = new System.Drawing.Size(59, 21);
+			this.m_lbl_fs_edit_bookmark_colour.TabIndex = 16;
+			this.m_lbl_fs_edit_bookmark_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+			// 
+			// m_lbl_fs_visible_colour
+			// 
+			this.m_lbl_fs_visible_colour.AutoSize = true;
+			this.m_lbl_fs_visible_colour.Location = new System.Drawing.Point(24, 76);
+			this.m_lbl_fs_visible_colour.Name = "m_lbl_fs_visible_colour";
+			this.m_lbl_fs_visible_colour.Size = new System.Drawing.Size(73, 13);
+			this.m_lbl_fs_visible_colour.TabIndex = 15;
+			this.m_lbl_fs_visible_colour.Text = "Visible Colour:";
+			// 
+			// m_lbl_fs_edit_visible_colour
+			// 
+			this.m_lbl_fs_edit_visible_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_lbl_fs_edit_visible_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_lbl_fs_edit_visible_colour.Location = new System.Drawing.Point(98, 72);
+			this.m_lbl_fs_edit_visible_colour.Name = "m_lbl_fs_edit_visible_colour";
+			this.m_lbl_fs_edit_visible_colour.Size = new System.Drawing.Size(59, 21);
+			this.m_lbl_fs_edit_visible_colour.TabIndex = 9;
+			this.m_lbl_fs_edit_visible_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+			// 
+			// m_spinner_file_scroll_width
+			// 
+			this.m_spinner_file_scroll_width.Location = new System.Drawing.Point(98, 17);
+			this.m_spinner_file_scroll_width.Name = "m_spinner_file_scroll_width";
+			this.m_spinner_file_scroll_width.Size = new System.Drawing.Size(59, 20);
+			this.m_spinner_file_scroll_width.TabIndex = 5;
+			// 
+			// m_lbl_file_scroll_width
+			// 
+			this.m_lbl_file_scroll_width.AutoSize = true;
+			this.m_lbl_file_scroll_width.Location = new System.Drawing.Point(40, 19);
+			this.m_lbl_file_scroll_width.Name = "m_lbl_file_scroll_width";
+			this.m_lbl_file_scroll_width.Size = new System.Drawing.Size(57, 13);
+			this.m_lbl_file_scroll_width.TabIndex = 14;
+			this.m_lbl_file_scroll_width.Text = "Bar Width:";
+			// 
 			// m_group_font
 			// 
 			this.m_group_font.Controls.Add(this.m_btn_change_font);
@@ -682,22 +775,6 @@
 			this.m_group_log_text_colours.TabIndex = 4;
 			this.m_group_log_text_colours.TabStop = false;
 			this.m_group_log_text_colours.Text = "Log View Style";
-			// 
-			// m_spinner_file_scroll_width
-			// 
-			this.m_spinner_file_scroll_width.Location = new System.Drawing.Point(98, 17);
-			this.m_spinner_file_scroll_width.Name = "m_spinner_file_scroll_width";
-			this.m_spinner_file_scroll_width.Size = new System.Drawing.Size(59, 20);
-			this.m_spinner_file_scroll_width.TabIndex = 5;
-			// 
-			// m_lbl_file_scroll_width
-			// 
-			this.m_lbl_file_scroll_width.AutoSize = true;
-			this.m_lbl_file_scroll_width.Location = new System.Drawing.Point(40, 19);
-			this.m_lbl_file_scroll_width.Name = "m_lbl_file_scroll_width";
-			this.m_lbl_file_scroll_width.Size = new System.Drawing.Size(57, 13);
-			this.m_lbl_file_scroll_width.TabIndex = 14;
-			this.m_lbl_file_scroll_width.Text = "Bar Width:";
 			// 
 			// m_lbl_line2_example
 			// 
@@ -790,72 +867,6 @@
 			this.m_tab_highlight.TabIndex = 1;
 			this.m_tab_highlight.Text = "Highlight";
 			this.m_tab_highlight.UseVisualStyleBackColor = true;
-			// 
-			// m_split_hl
-			// 
-			this.m_split_hl.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_split_hl.Location = new System.Drawing.Point(0, 1);
-			this.m_split_hl.Margin = new System.Windows.Forms.Padding(0);
-			this.m_split_hl.Name = "m_split_hl";
-			this.m_split_hl.Orientation = System.Windows.Forms.Orientation.Horizontal;
-			// 
-			// m_split_hl.Panel1
-			// 
-			this.m_split_hl.Panel1.Controls.Add(this.m_pattern_hl);
-			// 
-			// m_split_hl.Panel2
-			// 
-			this.m_split_hl.Panel2.Controls.Add(this.m_table_hl);
-			this.m_split_hl.Size = new System.Drawing.Size(498, 429);
-			this.m_split_hl.SplitterDistance = 148;
-			this.m_split_hl.TabIndex = 3;
-			// 
-			// m_table_hl
-			// 
-			this.m_table_hl.CellBorderStyle = System.Windows.Forms.TableLayoutPanelCellBorderStyle.Single;
-			this.m_table_hl.ColumnCount = 1;
-			this.m_table_hl.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.m_table_hl.Controls.Add(this.m_grid_highlight, 0, 1);
-			this.m_table_hl.Controls.Add(this.m_pattern_set_hl, 0, 2);
-			this.m_table_hl.Controls.Add(this.label2, 0, 0);
-			this.m_table_hl.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_table_hl.Location = new System.Drawing.Point(0, 0);
-			this.m_table_hl.Margin = new System.Windows.Forms.Padding(0);
-			this.m_table_hl.Name = "m_table_hl";
-			this.m_table_hl.RowCount = 3;
-			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle());
-			this.m_table_hl.Size = new System.Drawing.Size(498, 277);
-			this.m_table_hl.TabIndex = 2;
-			// 
-			// m_grid_highlight
-			// 
-			this.m_grid_highlight.AllowUserToAddRows = false;
-			this.m_grid_highlight.AllowUserToOrderColumns = true;
-			this.m_grid_highlight.AllowUserToResizeRows = false;
-			this.m_grid_highlight.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-			this.m_grid_highlight.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-			this.m_grid_highlight.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_grid_highlight.Location = new System.Drawing.Point(1, 34);
-			this.m_grid_highlight.Margin = new System.Windows.Forms.Padding(0);
-			this.m_grid_highlight.MultiSelect = false;
-			this.m_grid_highlight.Name = "m_grid_highlight";
-			this.m_grid_highlight.RowHeadersWidth = 24;
-			this.m_grid_highlight.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_highlight.Size = new System.Drawing.Size(496, 201);
-			this.m_grid_highlight.TabIndex = 0;
-			// 
-			// label2
-			// 
-			this.label2.AutoSize = true;
-			this.label2.Location = new System.Drawing.Point(4, 1);
-			this.label2.Name = "label2";
-			this.label2.Padding = new System.Windows.Forms.Padding(3);
-			this.label2.Size = new System.Drawing.Size(313, 32);
-			this.label2.TabIndex = 2;
-			this.label2.Text = "A line in the log is highlighted based on the first match in this list.\r\nThe list" +
-    " order can be changed by dragging the rows.\r\n";
 			// 
 			// m_tab_filter
 			// 
@@ -1109,63 +1120,26 @@
 			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
 			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
 			this.m_image_list.Images.SetKeyName(0, "fileclose.png");
+			this.m_image_list.Images.SetKeyName(1, "pencil.png");
 			// 
-			// m_group_file_scroll
+			// m_split_hl
 			// 
-			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_cached_colour);
-			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_edit_cached_colour);
-			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_bookmark_colour);
-			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_edit_bookmark_colour);
-			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_visible_colour);
-			this.m_group_file_scroll.Controls.Add(this.m_lbl_fs_edit_visible_colour);
-			this.m_group_file_scroll.Controls.Add(this.m_spinner_file_scroll_width);
-			this.m_group_file_scroll.Controls.Add(this.m_lbl_file_scroll_width);
-			this.m_group_file_scroll.Location = new System.Drawing.Point(328, 4);
-			this.m_group_file_scroll.Name = "m_group_file_scroll";
-			this.m_group_file_scroll.Size = new System.Drawing.Size(163, 193);
-			this.m_group_file_scroll.TabIndex = 6;
-			this.m_group_file_scroll.TabStop = false;
-			this.m_group_file_scroll.Text = "File Scroll Bar";
+			this.m_split_hl.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_split_hl.Location = new System.Drawing.Point(0, 1);
+			this.m_split_hl.Margin = new System.Windows.Forms.Padding(0);
+			this.m_split_hl.Name = "m_split_hl";
+			this.m_split_hl.Orientation = System.Windows.Forms.Orientation.Horizontal;
 			// 
-			// m_lbl_fs_edit_visible_colour
+			// m_split_hl.Panel1
 			// 
-			this.m_lbl_fs_edit_visible_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_lbl_fs_edit_visible_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_fs_edit_visible_colour.Location = new System.Drawing.Point(98, 72);
-			this.m_lbl_fs_edit_visible_colour.Name = "m_lbl_fs_edit_visible_colour";
-			this.m_lbl_fs_edit_visible_colour.Size = new System.Drawing.Size(59, 21);
-			this.m_lbl_fs_edit_visible_colour.TabIndex = 9;
-			this.m_lbl_fs_edit_visible_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+			this.m_split_hl.Panel1.Controls.Add(this.m_pattern_hl);
 			// 
-			// m_lbl_fs_visible_colour
+			// m_split_hl.Panel2
 			// 
-			this.m_lbl_fs_visible_colour.AutoSize = true;
-			this.m_lbl_fs_visible_colour.Location = new System.Drawing.Point(24, 76);
-			this.m_lbl_fs_visible_colour.Name = "m_lbl_fs_visible_colour";
-			this.m_lbl_fs_visible_colour.Size = new System.Drawing.Size(73, 13);
-			this.m_lbl_fs_visible_colour.TabIndex = 15;
-			this.m_lbl_fs_visible_colour.Text = "Visible Colour:";
-			// 
-			// m_lbl_fs_bookmark_colour
-			// 
-			this.m_lbl_fs_bookmark_colour.AutoSize = true;
-			this.m_lbl_fs_bookmark_colour.Location = new System.Drawing.Point(6, 104);
-			this.m_lbl_fs_bookmark_colour.Name = "m_lbl_fs_bookmark_colour";
-			this.m_lbl_fs_bookmark_colour.Size = new System.Drawing.Size(91, 13);
-			this.m_lbl_fs_bookmark_colour.TabIndex = 17;
-			this.m_lbl_fs_bookmark_colour.Text = "Bookmark Colour:";
-			// 
-			// m_lbl_fs_edit_bookmark_colour
-			// 
-			this.m_lbl_fs_edit_bookmark_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_lbl_fs_edit_bookmark_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_fs_edit_bookmark_colour.Location = new System.Drawing.Point(98, 100);
-			this.m_lbl_fs_edit_bookmark_colour.Name = "m_lbl_fs_edit_bookmark_colour";
-			this.m_lbl_fs_edit_bookmark_colour.Size = new System.Drawing.Size(59, 21);
-			this.m_lbl_fs_edit_bookmark_colour.TabIndex = 16;
-			this.m_lbl_fs_edit_bookmark_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+			this.m_split_hl.Panel2.Controls.Add(this.m_table_hl);
+			this.m_split_hl.Size = new System.Drawing.Size(498, 429);
+			this.m_split_hl.SplitterDistance = 148;
+			this.m_split_hl.TabIndex = 3;
 			// 
 			// m_pattern_hl
 			// 
@@ -1179,6 +1153,42 @@
 			this.m_pattern_hl.TabIndex = 0;
 			this.m_pattern_hl.TestText = "Enter text here to test your pattern";
 			// 
+			// m_table_hl
+			// 
+			this.m_table_hl.CellBorderStyle = System.Windows.Forms.TableLayoutPanelCellBorderStyle.Single;
+			this.m_table_hl.ColumnCount = 1;
+			this.m_table_hl.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table_hl.Controls.Add(this.m_grid_highlight, 0, 1);
+			this.m_table_hl.Controls.Add(this.m_pattern_set_hl, 0, 2);
+			this.m_table_hl.Controls.Add(this.label2, 0, 0);
+			this.m_table_hl.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_table_hl.Location = new System.Drawing.Point(0, 0);
+			this.m_table_hl.Margin = new System.Windows.Forms.Padding(0);
+			this.m_table_hl.Name = "m_table_hl";
+			this.m_table_hl.RowCount = 3;
+			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table_hl.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.m_table_hl.Size = new System.Drawing.Size(498, 277);
+			this.m_table_hl.TabIndex = 2;
+			// 
+			// m_grid_highlight
+			// 
+			this.m_grid_highlight.AllowUserToAddRows = false;
+			this.m_grid_highlight.AllowUserToOrderColumns = true;
+			this.m_grid_highlight.AllowUserToResizeRows = false;
+			this.m_grid_highlight.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid_highlight.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+			this.m_grid_highlight.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_grid_highlight.Location = new System.Drawing.Point(1, 34);
+			this.m_grid_highlight.Margin = new System.Windows.Forms.Padding(0);
+			this.m_grid_highlight.MultiSelect = false;
+			this.m_grid_highlight.Name = "m_grid_highlight";
+			this.m_grid_highlight.RowHeadersWidth = 24;
+			this.m_grid_highlight.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid_highlight.Size = new System.Drawing.Size(496, 201);
+			this.m_grid_highlight.TabIndex = 0;
+			// 
 			// m_pattern_set_hl
 			// 
 			this.m_pattern_set_hl.AutoSize = true;
@@ -1189,6 +1199,17 @@
 			this.m_pattern_set_hl.Name = "m_pattern_set_hl";
 			this.m_pattern_set_hl.Size = new System.Drawing.Size(496, 40);
 			this.m_pattern_set_hl.TabIndex = 1;
+			// 
+			// label2
+			// 
+			this.label2.AutoSize = true;
+			this.label2.Location = new System.Drawing.Point(4, 1);
+			this.label2.Name = "label2";
+			this.label2.Padding = new System.Windows.Forms.Padding(3);
+			this.label2.Size = new System.Drawing.Size(313, 32);
+			this.label2.TabIndex = 2;
+			this.label2.Text = "A line in the log is highlighted based on the first match in this list.\r\nThe list" +
+    " order can be changed by dragging the rows.\r\n";
 			// 
 			// m_pattern_ft
 			// 
@@ -1260,26 +1281,6 @@
 			this.m_pattern_set_ac.Size = new System.Drawing.Size(496, 40);
 			this.m_pattern_set_ac.TabIndex = 1;
 			// 
-			// m_lbl_fs_cached_colour
-			// 
-			this.m_lbl_fs_cached_colour.AutoSize = true;
-			this.m_lbl_fs_cached_colour.Location = new System.Drawing.Point(17, 47);
-			this.m_lbl_fs_cached_colour.Name = "m_lbl_fs_cached_colour";
-			this.m_lbl_fs_cached_colour.Size = new System.Drawing.Size(80, 13);
-			this.m_lbl_fs_cached_colour.TabIndex = 19;
-			this.m_lbl_fs_cached_colour.Text = "Cached Colour:";
-			// 
-			// m_lbl_fs_edit_cached_colour
-			// 
-			this.m_lbl_fs_edit_cached_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_lbl_fs_edit_cached_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_fs_edit_cached_colour.Location = new System.Drawing.Point(98, 43);
-			this.m_lbl_fs_edit_cached_colour.Name = "m_lbl_fs_edit_cached_colour";
-			this.m_lbl_fs_edit_cached_colour.Size = new System.Drawing.Size(59, 21);
-			this.m_lbl_fs_edit_cached_colour.TabIndex = 18;
-			this.m_lbl_fs_edit_cached_colour.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-			// 
 			// SettingsUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1307,20 +1308,15 @@
 			this.m_group_startup.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_web_proxy_port)).EndInit();
 			this.m_tab_logview.ResumeLayout(false);
+			this.m_group_file_scroll.ResumeLayout(false);
+			this.m_group_file_scroll.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_file_scroll_width)).EndInit();
 			this.m_group_font.ResumeLayout(false);
 			this.m_group_font.PerformLayout();
 			this.m_group_log_text_colours.ResumeLayout(false);
 			this.m_group_log_text_colours.PerformLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_spinner_file_scroll_width)).EndInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_row_height)).EndInit();
 			this.m_tab_highlight.ResumeLayout(false);
-			this.m_split_hl.Panel1.ResumeLayout(false);
-			this.m_split_hl.Panel2.ResumeLayout(false);
-			((System.ComponentModel.ISupportInitialize)(this.m_split_hl)).EndInit();
-			this.m_split_hl.ResumeLayout(false);
-			this.m_table_hl.ResumeLayout(false);
-			this.m_table_hl.PerformLayout();
-			((System.ComponentModel.ISupportInitialize)(this.m_grid_highlight)).EndInit();
 			this.m_tab_filter.ResumeLayout(false);
 			this.m_split_ft.Panel1.ResumeLayout(false);
 			this.m_split_ft.Panel2.ResumeLayout(false);
@@ -1345,8 +1341,13 @@
 			this.m_table_ac.ResumeLayout(false);
 			this.m_table_ac.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_action)).EndInit();
-			this.m_group_file_scroll.ResumeLayout(false);
-			this.m_group_file_scroll.PerformLayout();
+			this.m_split_hl.Panel1.ResumeLayout(false);
+			this.m_split_hl.Panel2.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.m_split_hl)).EndInit();
+			this.m_split_hl.ResumeLayout(false);
+			this.m_table_hl.ResumeLayout(false);
+			this.m_table_hl.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_grid_highlight)).EndInit();
 			this.ResumeLayout(false);
 
 		}

@@ -244,7 +244,9 @@ namespace RyLogViewer
 			// File Watcher
 			m_watch_timer.Tick += (s,a)=>
 				{
-					try { if (!ReloadInProgress) m_watch.CheckForChangedFiles(); }
+					if (ReloadInProgress) return;
+					if (WindowState == FormWindowState.Minimized) return;
+					try { m_watch.CheckForChangedFiles(); }
 					catch (Exception ex) { Log.Exception(this, ex, "CheckForChangedFiles failed"); }
 				};
 			

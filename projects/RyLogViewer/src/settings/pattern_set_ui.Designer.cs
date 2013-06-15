@@ -60,7 +60,7 @@
 			this.m_btn_save.AutoSize = true;
 			this.m_btn_save.ImageIndex = 0;
 			this.m_btn_save.ImageList = this.m_image_list;
-			this.m_btn_save.Location = new System.Drawing.Point(259, 5);
+			this.m_btn_save.Location = new System.Drawing.Point(304, 5);
 			this.m_btn_save.Name = "m_btn_save";
 			this.m_btn_save.Size = new System.Drawing.Size(39, 28);
 			this.m_btn_save.TabIndex = 2;
@@ -72,7 +72,7 @@
 			this.m_btn_load.AutoSize = true;
 			this.m_btn_load.ImageIndex = 1;
 			this.m_btn_load.ImageList = this.m_image_list;
-			this.m_btn_load.Location = new System.Drawing.Point(304, 5);
+			this.m_btn_load.Location = new System.Drawing.Point(259, 5);
 			this.m_btn_load.Name = "m_btn_load";
 			this.m_btn_load.Size = new System.Drawing.Size(39, 28);
 			this.m_btn_load.TabIndex = 3;

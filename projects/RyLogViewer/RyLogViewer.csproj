@@ -353,6 +353,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\book.png" />
+    <None Include="Resources\pencil.png" />
     <None Include="Resources\public_key.xml" />
     <None Include="Rylogic Limited Key File.pfx" />
     <None Include="src\licence\private_key.xml" />
