@@ -13,8 +13,8 @@ namespace RyLogViewer
 	{
 		[Serializable] protected class Set
 		{
-			public string Filepath { get; set; }
-			public string Name { get { return Path.GetFileNameWithoutExtension(Filepath); } }
+			public string Filepath      { get; set; }
+			public string Name          { get { return Path.GetFileNameWithoutExtension(Filepath); } }
 			public Set()                { Filepath = ""; }
 			public Set(string filepath) { Filepath = filepath; }
 			public Set(XElement node)
@@ -25,15 +25,14 @@ namespace RyLogViewer
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add
-				(
-					new XElement(XmlTag.Filepath ,Filepath)
-				);
+				node.Add(new XElement(XmlTag.Filepath ,Filepath));
 				return node;
 			}
 		}
+		private class IgnoreIndexChange {}
 
 		private const string PatternSetXmlTag = "patternset";
+		private readonly Set m_dummy = new Set(@"x:\(Select Pattern Set).tmp");
 		protected readonly List<Set> m_sets;
 		private readonly ToolTip m_tt;
 		protected Settings m_settings;
@@ -52,69 +51,88 @@ namespace RyLogViewer
 			m_tt = new ToolTip();
 			m_sets = new List<Set>();
 			UpdateUI();
-			
+
 			// Combo
 			m_combo_sets.ToolTip(m_tt, "Select a pattern set from this list to merge with or replace the existing patterns");
 			m_combo_sets.DisplayMember = Reflect<Set>.MemberName(x=>x.Name);
 			m_combo_sets.SelectedIndex = 0;
 			m_combo_sets.SelectedIndexChanged += (s,a)=>
 				{
-					if (m_combo_sets.SelectedIndex <= 0) return;
-					Set set = (Set)m_combo_sets.SelectedItem;
-					
-					// Pop up a menu with options to merge/replace
-					ContextMenuStrip menu = new ContextMenuStrip();
-					menu.Items.Add("Replace patterns"  , null, (ss,aa)=>{ ClearPatterns(); AddPatternSet(set); });
-					menu.Items.Add("Merge patterns"    , null, (ss,aa)=>{ AddPatternSet(set); });
-					menu.Items.Add(new ToolStripSeparator());
-					menu.Items.Add("Delete Pattern Set", null, (ss,aa)=>{ DeletePatternSet(set); });
-					menu.Show(MousePosition);
-				};
-			
-			// Save the current list of patterns as a pattern set
-			m_btn_save.ToolTip(m_tt, "Save the current list of patterns as a pattern set");
-			m_btn_save.Click += (s,a)=>
-				{
-					// Ask for a name for the set
-					SaveFileDialog fd = new SaveFileDialog{Filter = PatternSetFilter, CreatePrompt = false, OverwritePrompt = true};
-					if (fd.ShowDialog(this) != DialogResult.OK) return;
-			
-					try
-					{
-						// Export the current patterns as xml
-						XDocument doc = new XDocument(new XElement(XmlTag.Root));
-						if (doc.Root == null) throw new ApplicationException("failed to add root xml element");
-						CurrentSetToXml(doc.Root);
-					
-						// Write the current set to a file in the app path
-						doc.Save(fd.FileName);
-						
-						// Add an entry to the pattern set collection
-						Set set = new Set(fd.FileName);
-						m_sets.RemoveAll(ps => ps.Name == set.Name);
-						m_sets.Insert(0, set);
-						UpdateUI();
-					}
-					catch (Exception ex)
-					{
-						MessageBox.Show(this, string.Format(Resources.CreatePatternSetFailedMsg, ex.Message), Resources.CreatePatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
-					}
+					if (m_combo_sets.SelectedItem == null || m_combo_sets.SelectedItem == m_dummy) return;
+					if (m_combo_sets.Tag is IgnoreIndexChange) { m_combo_sets.Tag = null; return; }
+					PatternSetSelected((Set)m_combo_sets.SelectedItem);
 				};
 			
 			// Load a pattern set from file
 			m_btn_load.ToolTip(m_tt, "Load a pattern set from file");
-			m_btn_load.Click += (s,a)=>
-				{
-					// Ask for the file location
-					OpenFileDialog fd = new OpenFileDialog{Filter = PatternSetFilter, CheckFileExists = true};
-					if (fd.ShowDialog(this) != DialogResult.OK) return;
-					m_sets.Add(new Set(fd.FileName));
-					UpdateUI();
-				};
+			m_btn_load.Click += (s,a)=> LoadPatternSet();
+
+			// Save the current list of patterns as a pattern set
+			m_btn_save.ToolTip(m_tt, "Save the current list of patterns as a pattern set");
+			m_btn_save.Click += (s,a)=> SavePatternSet();
 		}
 
 		/// <summary>Return the pattern set filter</summary>
 		protected abstract string PatternSetFilter { get; }
+
+		/// <summary>Load a pattern set from file and add it to the set list</summary>
+		private void LoadPatternSet()
+		{
+			// Ask for the file location
+			OpenFileDialog fd = new OpenFileDialog{Filter = PatternSetFilter, CheckFileExists = true};
+			if (fd.ShowDialog(this) != DialogResult.OK) return;
+			AddToPatternSetList(new Set(fd.FileName), true);
+		}
+
+		/// <summary>Save the current set as a pattern set</summary>
+		private void SavePatternSet()
+		{
+			// Ask for a name for the set
+			SaveFileDialog fd = new SaveFileDialog{Filter = PatternSetFilter, CreatePrompt = false, OverwritePrompt = true};
+			if (fd.ShowDialog(this) != DialogResult.OK) return;
+
+			try
+			{
+				// Export the current patterns as xml
+				XDocument doc = new XDocument(new XElement(XmlTag.Root));
+				if (doc.Root == null) throw new ApplicationException("failed to add root xml element");
+				CurrentSetToXml(doc.Root);
+
+				// Write the current set to a file in the app path
+				doc.Save(fd.FileName);
+
+				// Add an entry to the pattern set collection
+				AddToPatternSetList(new Set(fd.FileName), false);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, string.Format(Resources.CreatePatternSetFailedMsg, ex.Message), Resources.CreatePatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		/// <summary>Add 'set' to the list of pattern sets, and optional show the 'replace/merge' menu</summary>
+		private void AddToPatternSetList(Set set, bool show_menu)
+		{
+			// Remove any existing sets with the same name (Note, dummy is only in m_combo.Items)
+			m_sets.RemoveAll(ps => ps.Name == set.Name);
+			m_sets.Insert(0, set);
+			UpdateUI(set);
+
+			if (show_menu)
+				PatternSetSelected(set);
+		}
+
+		/// <summary>Pops up a context menu at the mouse location giving the options of what to do with a pattern set</summary>
+		private void PatternSetSelected(Set set)
+		{
+			// Pop up a menu with options to merge/replace
+			ContextMenuStrip menu = new ContextMenuStrip();
+			menu.Items.Add("Replace existing patterns"  , null, (ss,aa) => { ClearPatterns(); AddPatternSet(set); });
+			menu.Items.Add("Merge with existing patterns", null, (ss,aa) => AddPatternSet(set));
+			menu.Items.Add(new ToolStripSeparator());
+			menu.Items.Add("<Remove from this list>", null, (ss,aa) => RemovePatternSet(set));
+			menu.Show(m_combo_sets, m_combo_sets.Width - menu.PreferredSize.Width, m_combo_sets.Height);
+		}
 
 		/// <summary>Add the patterns in 'set' to the current list</summary>
 		private void AddPatternSet(Set set)
@@ -123,6 +141,8 @@ namespace RyLogViewer
 			{
 				XDocument doc = XDocument.Load(set.Filepath);
 				if (doc.Root == null) throw new InvalidDataException("root xml node not found");
+
+				// Merge the patterns with the existing ones
 				MergePatterns(doc.Root);
 			}
 			catch (Exception ex)
@@ -130,44 +150,31 @@ namespace RyLogViewer
 				Misc.ShowErrorMessage(this, ex, string.Format("Could not load pattern set {0}.", set.Filepath), Resources.LoadPatternSetFailed);
 			}
 		}
-		
+
 		/// <summary>Remove a pattern set from the list</summary>
-		private void DeletePatternSet(Set set)
+		private void RemovePatternSet(Set set)
 		{
-			DialogResult res = MessageBox.Show(this, string.Format(Resources.DeletePatternSetFileX, set.Filepath), Resources.ConfirmDelete, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-			if (res != DialogResult.Yes) return;
-			try
-			{
-				File.Delete(set.Filepath);
-				m_sets.Remove(set);
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, string.Format(Resources.CouldNotDeletePatternSetFileX, set.Filepath ,ex.Message), Resources.DeleteFailed, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-				return;
-			}
-			m_combo_sets.SelectedIndex = 0;
-			UpdateUI();
+			m_sets.Remove(set);
+			UpdateUI(m_dummy);
 		}
-		
-		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
-		protected abstract void CurrentSetToXml(XElement parent);
-		
-		/// <summary>Clear the current set of patterns</summary>
-		protected abstract void ClearPatterns();
-		
-		/// <summary>Add the patterns in 'node' to the current list</summary>
-		protected abstract void MergePatterns(XElement node); 
-		
+
 		/// <summary>Update UI elements based on current state</summary>
-		protected void UpdateUI()
+		protected void UpdateUI() { UpdateUI((Set)m_combo_sets.SelectedItem); }
+		private void UpdateUI(Set selected)
 		{
+			// Populate the combo
 			m_combo_sets.Items.Clear();
-			m_combo_sets.Items.Add(new Set(@"x:\(Select Pattern Set).tmp"));
+			m_combo_sets.Items.Add(m_dummy);
 			foreach (var set in m_sets)
 				m_combo_sets.Items.Add(set);
+
+			// Set the selected index in the combo
+			var idx = m_combo_sets.Items.IndexOf(selected ?? m_dummy);
+			m_combo_sets.Tag = new IgnoreIndexChange();
+			m_combo_sets.SelectedIndex = idx;
+			m_combo_sets.Tag = null;
 		}
-		
+
 		/// <summary>Generate a list of pattern sets from xml</summary>
 		protected void Import(string pattern_sets)
 		{
@@ -191,6 +198,15 @@ namespace RyLogViewer
 			
 			return doc.ToString(SaveOptions.None);
 		}
+
+		/// <summary>Save the current list of patterns as an xml child of 'parent'</summary>
+		protected abstract void CurrentSetToXml(XElement parent);
+
+		/// <summary>Clear the current set of patterns</summary>
+		protected abstract void ClearPatterns();
+
+		/// <summary>Add the patterns in 'node' to the current list</summary>
+		protected abstract void MergePatterns(XElement node); 
 	}
 
 	
