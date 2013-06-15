@@ -297,8 +297,8 @@ namespace RyLogViewer
 								// Callback for updating progress
 								ProgressFunc progress = (scanned, length) =>
 									{
-										Action update_progress_bar = () => UpdateStatusProgress(scanned, length);
-										BeginInvoke(update_progress_bar);
+										int n = fwd_line_buf.Count + bwd_line_buf.Count, d = line_limit[0];
+										this.BeginInvoke(() => UpdateStatusProgress(n,d));
 										return !BuildCancelled(build_issue);
 									};
 								

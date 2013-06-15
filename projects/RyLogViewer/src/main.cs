@@ -198,6 +198,7 @@ namespace RyLogViewer
 			
 			// Scrollbar
 			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file");
+			m_scroll_file.MinThumbSize = 1;
 			m_scroll_file.ScrollEnd += (s,a)=>
 				{
 					// Update on ScrollEnd not value changed, since
