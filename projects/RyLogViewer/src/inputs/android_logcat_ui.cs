@@ -28,6 +28,7 @@ namespace RyLogViewer
 			m_settings = new AndroidLogcat(settings.AndroidLogcat);
 			m_device_list = new BindingList<string>();
 			m_filterspecs = new BindingList<AndroidLogcat.FilterSpec>(m_settings.FilterSpecs.ToList());
+			var output_filepaths = settings.OutputFilepathHistory;
 			Launch = new LaunchApp();
 
 			const string prompt_text = "<Please set the path to adb.exe>";
@@ -112,7 +113,7 @@ namespace RyLogViewer
 			
 			// Log out capture file
 			m_combo_output_file.ToolTip(m_tt, "The file path to save captured logcat output to");
-			m_combo_output_file.Load(m_settings.OutputFilepathHistory);
+			m_combo_output_file.Load(output_filepaths);
 			m_combo_output_file.Enabled = m_check_capture_to_log.Checked;
 
 			// Browse for capture output file
@@ -151,8 +152,10 @@ namespace RyLogViewer
 						m_settings.LogBuffers          = m_listbox_log_buffers.SelectedIndices.Cast<AndroidLogcat.ELogBuffer>().ToArray();
 						m_settings.FilterSpecs         = m_filterspecs.ToArray();
 						m_settings.LogFormat           = (AndroidLogcat.ELogFormat)m_combo_log_format.SelectedIndex;
-						Misc.AddToHistoryList(ref m_settings.OutputFilepathHistory, m_combo_output_file.Text, true, Constants.MaxOutputFileHistoryLength);
 						settings.AndroidLogcat = m_settings;
+
+						Misc.AddToHistoryList(ref output_filepaths, m_combo_output_file.Text, true, Constants.MaxOutputFileHistoryLength);
+						settings.OutputFilepathHistory = output_filepaths;
 
 						// Use cancelled if no device was selected
 						if (m_listbox_devices.SelectedItem != null)
