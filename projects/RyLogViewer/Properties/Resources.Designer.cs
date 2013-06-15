@@ -457,6 +457,16 @@ namespace RyLogViewer.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap find_search {
+            get {
+                object obj = ResourceManager.GetObject("find_search", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap folder_with_file {
             get {
                 object obj = ResourceManager.GetObject("folder_with_file", resourceCulture);
@@ -693,6 +703,25 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap quick_filter {
+            get {
+                object obj = ResourceManager.GetObject("quick_filter", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Quick filter; keep highlighted rows only.
+        /// </summary>
+        internal static string QuickFilter {
+            get {
+                return ResourceManager.GetString("QuickFilter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Reading File Failed.
         /// </summary>
         internal static string ReadingFileFailed {
@@ -786,21 +815,21 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Show the find dialog.
+        /// </summary>
+        internal static string ShowFindDialog {
+            get {
+                return ResourceManager.GetString("ShowFindDialog", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Left click to enable/disable highlighting.
         ///Right click to show the highlighting dialog.
         /// </summary>
         internal static string ShowHighlightsDialog {
             get {
                 return ResourceManager.GetString("ShowHighlightsDialog", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Show the options dialog.
-        /// </summary>
-        internal static string ShowOptionsDialog {
-            get {
-                return ResourceManager.GetString("ShowOptionsDialog", resourceCulture);
             }
         }
         

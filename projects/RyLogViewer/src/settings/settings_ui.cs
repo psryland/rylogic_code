@@ -747,8 +747,8 @@ namespace RyLogViewer
 				break;
 			case ColumnNames.Behaviour:
 				if (ft != null) switch (ft.IfMatch) {
-				case Filter.EIfMatch.Keep: e.Value = "Keep"; break;
-				case Filter.EIfMatch.Reject: e.Value = "Reject"; break;
+				case EIfMatch.Keep:   e.Value = "Keep"; break;
+				case EIfMatch.Reject: e.Value = "Reject"; break;
 				}
 				break;
 			case ColumnNames.ClickAction:
@@ -788,7 +788,7 @@ namespace RyLogViewer
 			case ColumnNames.Behaviour:
 				if (ft != null)
 				{
-					ft.IfMatch = Enum<Filter.EIfMatch>.Cycle(ft.IfMatch);
+					ft.IfMatch = Enum<EIfMatch>.Cycle(ft.IfMatch);
 				}
 				break;
 			case ColumnNames.ClickAction:

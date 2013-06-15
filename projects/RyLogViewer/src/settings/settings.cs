@@ -165,6 +165,11 @@ namespace RyLogViewer
 			get { return get<int>("WebProxyPort"); }
 			set { set("WebProxyPort", value); }
 		}
+		public bool   QuickFilterEnabled
+		{
+			get { return get<bool>("QuickFilterEnabled"); }
+			set { set("QuickFilterEnabled", value); }
+		}
 		public bool   HighlightsEnabled
 		{
 			get { return get<bool>("HighlightsEnabled"); }
@@ -340,6 +345,7 @@ namespace RyLogViewer
 			UseWebProxy                     = false;
 			WebProxyHost                    = "";
 			WebProxyPort                    = Constants.PortNumberWebProxyDefault;
+			QuickFilterEnabled              = false;
 			HighlightsEnabled               = true;
 			FiltersEnabled                  = false;
 			TransformsEnabled               = false;

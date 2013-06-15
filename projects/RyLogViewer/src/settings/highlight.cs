@@ -6,14 +6,16 @@ using System.Xml.Linq;
 
 namespace RyLogViewer
 {
-	public class Highlight :Pattern
+	public class Highlight :Pattern, IFilter
 	{
+		/// <summary>Defines what a match with this filter means</summary>
+		public EIfMatch IfMatch { get { return EIfMatch.Keep; } }
+
 		/// <summary>Foreground colour of highlight</summary>
 		public Color ForeColour { get; set; }
-		
+
 		/// <summary>Background colour of highlight</summary>
 		public Color BackColour { get; set; }
-		
 
 		public Highlight()
 		{
@@ -25,6 +27,7 @@ namespace RyLogViewer
 			ForeColour = rhs.ForeColour;
 			BackColour = rhs.BackColour;
 		}
+
 		/// <summary>Construct from xml description</summary>
 		public Highlight(XElement node) :base(node)
 		{
@@ -45,7 +48,7 @@ namespace RyLogViewer
 			);
 			return node;
 		}
-		
+
 		/// <summary>Reads an xml description of the highlight expressions</summary>
 		public static List<Highlight> Import(string highlights)
 		{
@@ -59,7 +62,7 @@ namespace RyLogViewer
 			
 			return list;
 		}
-		
+
 		/// <summary>Serialise the highlight patterns to xml</summary>
 		public static string Export(List<Highlight> highlights)
 		{
@@ -71,7 +74,7 @@ namespace RyLogViewer
 			
 			return doc.ToString(SaveOptions.None);
 		}
-		
+
 		/// <summary>Creates a new object that is a copy of the current instance.</summary>
 		public override object Clone()
 		{

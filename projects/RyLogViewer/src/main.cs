@@ -57,6 +57,7 @@ namespace RyLogViewer
 		private int m_line_cache_count;                       // The number of lines to scan about the currently selected row
 		private bool m_alternating_line_colours;              // Cache the alternating line colours setting for performance
 		private bool m_tail_enabled;                          // Cache whether tail mode is enabled
+		private bool m_quick_filter_enabled;                  // True if only rows with highlights should be displayed
 		private bool m_first_row_is_odd;                      // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
 
 		public Main(StartupOptions startup_options)
@@ -168,6 +169,8 @@ namespace RyLogViewer
 			m_btn_open_log.Click           += (s,a) => OpenLogFile();
 			m_btn_refresh.ToolTipText       = Resources.ReloadLogFile;
 			m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
+			m_btn_quick_filter.ToolTipText  = Resources.QuickFilter;
+			m_btn_quick_filter.Click       += (s,a) => EnableQuickFilter(m_btn_quick_filter.Checked);
 			m_btn_highlights.ToolTipText    = Resources.ShowHighlightsDialog;
 			m_btn_highlights.Click         += (s,a) => EnableHighlights(m_btn_highlights.Checked);
 			m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
@@ -180,8 +183,8 @@ namespace RyLogViewer
 			m_btn_actions.ToolTipText       = Resources.ShowActionsDialog;
 			m_btn_actions.Click            += (s,a) => EnableActions(m_btn_actions.Checked);
 			m_btn_actions.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Actions); };
-			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
-			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
+			m_btn_find.ToolTipText          = Resources.ShowFindDialog;
+			m_btn_find.Click               += (s,a) => ShowFindDialog();
 			m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
 			m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
 			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
@@ -436,8 +439,11 @@ namespace RyLogViewer
 						SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
 						
 						// Show a hint if filters are active, the file isn't empty, but there are no visible rows
-						if (m_grid.RowCount == 0 && m_fileend != 0 && m_filters.Count != 0)
-							ShowHintBalloon("Filters are currently active", m_btn_filters);
+						if (m_grid.RowCount == 0 && m_fileend != 0)
+						{
+							if (m_filters.Count != 0)        ShowHintBalloon("Filters are currently active", m_btn_filters);
+							else if (m_quick_filter_enabled) ShowHintBalloon("Filters are currently active", m_btn_quick_filter);
+						}
 					});
 				return;
 			}
@@ -708,7 +714,19 @@ namespace RyLogViewer
 			// Open the dropped file
 			OpenLogFile(files[0]);
 		}
-		
+
+		/// <summary>Turn on/off quick filter mode</summary>
+		private void EnableQuickFilter(bool enable)
+		{
+			var current = SelectedRowRange.Begin;
+			m_settings.QuickFilterEnabled = enable;
+			ApplySettings();
+			BuildLineIndex(m_filepos, true, ()=>
+				{
+					SelectedRow = LineIndex(m_line_index, current);
+				});
+		}
+
 		/// <summary>Turn on/off highlights</summary>
 		private void EnableHighlights(bool enable)
 		{
@@ -1215,6 +1233,7 @@ namespace RyLogViewer
 			m_line_cache_count         = m_settings.LineCacheCount;
 			m_alternating_line_colours = m_settings.AlternateLineColours;
 			m_tail_enabled             = m_settings.TailEnabled;
+			m_quick_filter_enabled     = m_settings.QuickFilterEnabled;
 			
 			// Tail
 			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
@@ -1344,13 +1363,14 @@ namespace RyLogViewer
 				m_menu_tools_clear_log_file.Enabled                = FileOpen;
 			
 				// Toolbar
-				m_btn_highlights.Checked = m_settings.HighlightsEnabled;
-				m_btn_filters.Checked    = m_settings.FiltersEnabled;
-				m_btn_transforms.Checked = m_settings.TransformsEnabled;
-				m_btn_actions.Checked    = m_settings.ActionsEnabled;
-				m_btn_tail.Checked       = m_settings.TailEnabled;
-				m_btn_watch.Checked      = m_watch_timer.Enabled;
-				m_btn_additive.Checked   = m_settings.FileChangesAdditive;
+				m_btn_quick_filter.Checked = m_settings.QuickFilterEnabled;
+				m_btn_highlights.Checked   = m_settings.HighlightsEnabled;
+				m_btn_filters.Checked      = m_settings.FiltersEnabled;
+				m_btn_transforms.Checked   = m_settings.TransformsEnabled;
+				m_btn_actions.Checked      = m_settings.ActionsEnabled;
+				m_btn_tail.Checked         = m_settings.TailEnabled;
+				m_btn_watch.Checked        = m_watch_timer.Enabled;
+				m_btn_additive.Checked     = m_settings.FileChangesAdditive;
 			
 				// Status and title
 				UpdateStatus();

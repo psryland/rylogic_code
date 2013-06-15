@@ -33,14 +33,14 @@
 			this.m_toolstrip = new System.Windows.Forms.ToolStrip();
 			this.m_btn_open_log = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_refresh = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_quick_filter = new System.Windows.Forms.ToolStripButton();
 			this.m_sep = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_highlights = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_filters = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_transforms = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_actions = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_btn_options = new System.Windows.Forms.ToolStripButton();
-			this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_btn_find = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_bookmarks = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_jump_to_start = new System.Windows.Forms.ToolStripButton();
@@ -159,14 +159,14 @@
 			this.m_toolstrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_btn_open_log,
             this.m_btn_refresh,
+            this.m_btn_quick_filter,
             this.m_sep,
             this.m_btn_highlights,
             this.m_btn_filters,
             this.m_btn_transforms,
             this.m_btn_actions,
             this.toolStripSeparator9,
-            this.m_btn_options,
-            this.toolStripSeparator12,
+            this.m_btn_find,
             this.m_btn_bookmarks,
             this.toolStripSeparator1,
             this.m_btn_jump_to_start,
@@ -177,7 +177,7 @@
             this.m_btn_additive});
 			this.m_toolstrip.Location = new System.Drawing.Point(3, 24);
 			this.m_toolstrip.Name = "m_toolstrip";
-			this.m_toolstrip.Size = new System.Drawing.Size(406, 31);
+			this.m_toolstrip.Size = new System.Drawing.Size(459, 31);
 			this.m_toolstrip.TabIndex = 0;
 			// 
 			// m_btn_open_log
@@ -199,6 +199,16 @@
 			this.m_btn_refresh.Name = "m_btn_refresh";
 			this.m_btn_refresh.Size = new System.Drawing.Size(28, 28);
 			this.m_btn_refresh.Text = "Refresh";
+			// 
+			// m_btn_quick_filter
+			// 
+			this.m_btn_quick_filter.CheckOnClick = true;
+			this.m_btn_quick_filter.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_quick_filter.Image = global::RyLogViewer.Properties.Resources.quick_filter;
+			this.m_btn_quick_filter.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_quick_filter.Name = "m_btn_quick_filter";
+			this.m_btn_quick_filter.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_quick_filter.Text = "Quick Filter";
 			// 
 			// m_sep
 			// 
@@ -250,19 +260,14 @@
 			this.toolStripSeparator9.Name = "toolStripSeparator9";
 			this.toolStripSeparator9.Size = new System.Drawing.Size(6, 31);
 			// 
-			// m_btn_options
+			// m_btn_find
 			// 
-			this.m_btn_options.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_options.Image = global::RyLogViewer.Properties.Resources.options;
-			this.m_btn_options.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_options.Name = "m_btn_options";
-			this.m_btn_options.Size = new System.Drawing.Size(28, 28);
-			this.m_btn_options.Text = "Show Options";
-			// 
-			// toolStripSeparator12
-			// 
-			this.toolStripSeparator12.Name = "toolStripSeparator12";
-			this.toolStripSeparator12.Size = new System.Drawing.Size(6, 31);
+			this.m_btn_find.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_find.Image = global::RyLogViewer.Properties.Resources.find_search;
+			this.m_btn_find.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_find.Name = "m_btn_find";
+			this.m_btn_find.Size = new System.Drawing.Size(28, 28);
+			this.m_btn_find.Text = "toolStripButton1";
 			// 
 			// m_btn_bookmarks
 			// 
@@ -1141,7 +1146,6 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
-		private System.Windows.Forms.ToolStripButton m_btn_options;
 		private RyLogViewer.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
 		private System.Windows.Forms.ToolStripButton m_btn_watch;
@@ -1187,7 +1191,6 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_register;
 		private System.Windows.Forms.ToolStripButton m_btn_tail;
 		private System.Windows.Forms.ToolStripButton m_btn_bookmarks;
-		private System.Windows.Forms.ToolStripSeparator toolStripSeparator12;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator13;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_toggle_bookmark;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_next_bookmark;
@@ -1202,6 +1205,8 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards_androidlogcat;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator17;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator16;
+		private System.Windows.Forms.ToolStripButton m_btn_find;
+		private System.Windows.Forms.ToolStripButton m_btn_quick_filter;
 	}
 }
 

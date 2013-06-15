@@ -353,12 +353,14 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\book.png" />
+    <None Include="Resources\quick_filter.png" />
     <None Include="Resources\pencil.png" />
     <None Include="Resources\public_key.xml" />
     <None Include="Rylogic Limited Key File.pfx" />
     <None Include="src\licence\private_key.xml" />
     <None Include="Resources\bottom.png" />
     <None Include="Resources\bookmark.png" />
+    <None Include="Resources\find_search.png" />
     <Content Include="Resources\green_tick.png" />
     <EmbeddedResource Include="docs\CommandLineRef.html" />
     <Content Include="lib\ClrDump.dll">

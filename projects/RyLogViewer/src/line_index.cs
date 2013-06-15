@@ -174,7 +174,16 @@ namespace RyLogViewer
 					? (byte[])GuessRowDelimiter(m_filepath, encoding).Clone()
 					: (byte[])m_row_delim.Clone();
 				
-				List<Filter> filters = m_filters.ToList();
+				List<IFilter> filters;
+				if (m_quick_filter_enabled)
+				{
+					filters = m_highlights.ToList<IFilter>();
+					filters.Add(Filter.RejectAll); // Add a RejectAll so that non-highlighted means discard
+				}
+				else
+				{
+					filters = m_filters.ToList<IFilter>();
+				}
 			
 				long max_line_length  = m_settings.MaxLineLength;
 				long bufsize          = m_bufsize;
@@ -689,12 +698,12 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Tests 'text' against each of the filters in 'filters'</summary>
-		private static bool PassesFilters(string text, IEnumerable<Filter> filters)
+		private static bool PassesFilters(string text, IEnumerable<IFilter> filters)
 		{
 			foreach (var ft in filters)
 			{
 				if (!ft.IsMatch(text)) continue;
-				return ft.IfMatch == Filter.EIfMatch.Keep;
+				return ft.IfMatch == EIfMatch.Keep;
 			}
 			return true;
 		}

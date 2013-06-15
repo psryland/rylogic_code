@@ -12,6 +12,7 @@ namespace RyLogViewer
 		/// <summary>Returns true if the pattern is active</summary>
 		bool Active { get; set; }
 	}
+
 	public class Pattern :IPattern
 	{
 		private EPattern m_patn_type;
