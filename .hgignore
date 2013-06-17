@@ -35,6 +35,7 @@ obj2010/
 obj2012/
 bin/
 bin_stable/
+*/Setup/Express/*
 .svn/
 .metadata/
 .nuget/
