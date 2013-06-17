@@ -54,11 +54,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="release.cmd" />
+    <None Include="deploy.cmd" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>$(ProjectDir)release.cmd noninteractive 1&gt;nul</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

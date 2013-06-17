@@ -21,6 +21,7 @@ set PATH=%qdrive%\sdk\pr\cmd\;%PATH%
 set dstdir=%qdrive%\bin
 set srcdir=%qdrive%\projects\Csex
 set symdir=%qdrive%\local\symbols
+set proj=%srcdir%\Csex_vs2012.csproj
 set config=release
 set dst=%dstdir%\csex
 set sym=%symdir%\csex
@@ -34,6 +35,11 @@ echo    Destination: %dst%
 echo  Configuration: %config%
 echo *************************************************************************
 if [%noninteractive%] == [] pause
+
+echo.
+echo Building the exe...
+"%msbuild%" "%proj%" /p:Configuration=%config%;Platform=AnyCPU
+if errorlevel 1 goto :error
 
 ::Ensure directories exist and are empty
 if not exist "!dst!" mkdir "!dst!"
