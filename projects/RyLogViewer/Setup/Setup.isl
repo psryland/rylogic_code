@@ -345,6 +345,7 @@
 		<row><td>ISO19770_LocalTag</td><td>{9855C1AC-3795-440A-B283-14FB6F710EB7}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISO19770_SystemTag</td><td>{82E6B0AB-DF91-4F59-B03D-743A1A6E5D8F}</td><td>CommonAppDataFolder</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISX_DEFAULTCOMPONENT</td><td>{324F665A-60C6-4746-8107-461BECD0652D}</td><td>LIB</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ISX_DEFAULTCOMPONENT1</td><td>{5D895DFD-7470-4843-87F8-85DCE4E9785F}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>RyLogViewer.Primary_output2</td><td>{9B21223C-6837-4646-9C38-3F7D55206ECC}</td><td>INSTALLDIR</td><td>2</td><td/><td>rylogviewer.primary_output2</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>dbghelp.dll</td><td>{130A67FD-B292-4AFF-A7BB-84F4B41AF5BB}</td><td>LIB</td><td>2</td><td/><td>dbghelp.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>prcs_vs2012.Primary_output2</td><td>{C15F12D9-A6B2-46E4-B8BF-307310BEFFCF}</td><td>INSTALLDIR</td><td>2</td><td/><td>prcs_vs2012.primary_output2</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
@@ -1059,6 +1060,7 @@
 		<col key="yes" def="s72">Component_</col>
 		<row><td>CommonAppDataFolder</td><td>ISO19770_SystemTag</td></row>
 		<row><td>INSTALLDIR</td><td>ISO19770_LocalTag</td></row>
+		<row><td>INSTALLDIR</td><td>ISX_DEFAULTCOMPONENT1</td></row>
 		<row><td>LIB</td><td>ISX_DEFAULTCOMPONENT</td></row>
 	</table>
 
@@ -1178,6 +1180,7 @@
 		<row><td>USERPROFILE</td><td>TARGETDIR</td><td>.:USERPR~1|UserProfile</td><td/><td>0</td><td/></row>
 		<row><td>WindowsFolder</td><td>TARGETDIR</td><td>.:Windows</td><td/><td>0</td><td/></row>
 		<row><td>WindowsVolume</td><td>TARGETDIR</td><td>.:WinRoot</td><td/><td>0</td><td/></row>
+		<row><td>newfolder1</td><td>ProgramMenuFolder</td><td>##ID_STRING4##</td><td/><td>1</td><td/></row>
 	</table>
 
 	<table name="DrLocator">
@@ -1873,6 +1876,7 @@
 		<row><td>AlwaysInstall</td><td>ISO19770_LocalTag</td></row>
 		<row><td>AlwaysInstall</td><td>ISO19770_SystemTag</td></row>
 		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT</td></row>
+		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT1</td></row>
 		<row><td>AlwaysInstall</td><td>RyLogViewer.Primary_output2</td></row>
 		<row><td>AlwaysInstall</td><td>dbghelp.dll</td></row>
 		<row><td>AlwaysInstall</td><td>prcs_vs2012.Primary_output2</td></row>
@@ -2154,6 +2158,7 @@
 		<row><td>ISO19770_LocalTag</td><td/><td/><td>_4BDF7029_A0D5_4A7D_8B9E_0676A97812AB_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISO19770_SystemTag</td><td/><td/><td>_C4923418_1A23_4486_BF84_B3F2AA8B5BAE_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISX_DEFAULTCOMPONENT</td><td/><td/><td>_FE499FC8_5F72_4459_BD23_0725883F8C0B_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ISX_DEFAULTCOMPONENT1</td><td/><td/><td>_28CC9EA7_C685_4B7E_9DB3_EFC6A414763D_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>RyLogViewer.Primary_output2</td><td/><td/><td>_61884C51_510C_49B0_8C96_29144AB72CC2_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>dbghelp.dll</td><td/><td/><td>_6AE141B5_99AD_479F_B72F_5270A3B75444_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>prcs_vs2012.Primary_output2</td><td/><td/><td>_F4E27322_BF90_49D2_AE9C_0861137C98A3_FILTER</td><td/><td/><td/><td/></row>
@@ -3894,6 +3899,9 @@
 		<row><td>ID_STRING1</td><td>1033</td><td/><td>0</td><td/><td>-1960710700</td></row>
 		<row><td>ID_STRING2</td><td>1033</td><td>http://www.RylogicLimited.com</td><td>0</td><td/><td>-1960713099</td></row>
 		<row><td>ID_STRING3</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>-1960713099</td></row>
+		<row><td>ID_STRING4</td><td>1033</td><td>RYLOGV~1|RylogViewer</td><td>0</td><td/><td>-1826535571</td></row>
+		<row><td>ID_STRING5</td><td>1033</td><td>RYLOGV~1|RylogViewer</td><td>0</td><td/><td>-1826510995</td></row>
+		<row><td>ID_STRING6</td><td>1033</td><td>UNINST~1|Uninstall RylogViewer</td><td>0</td><td/><td>-1826496659</td></row>
 		<row><td>IIDS_UITEXT_FeatureUninstalled</td><td>1033</td><td>This feature will remain uninstalled.</td><td>0</td><td/><td>-1960714796</td></row>
 	</table>
 
@@ -4005,6 +4013,7 @@
 		<col def="S255">ISBuildSourcePath</col>
 		<col def="I2">ISIconIndex</col>
 		<row><td>ARPPRODUCTICON.exe</td><td/><td>&lt;ISProductFolder&gt;\redist\Language Independent\OS Independent\setupicon.ico</td><td>0</td></row>
+		<row><td>NewShortcut2_1121501753A14233AB461F623D7E2245.exe</td><td/><td>D:\Program Files (x86)\InstallShield\2012SpringLE\Redist\Language Independent\OS Independent\uninstall.ico</td><td>0</td></row>
 	</table>
 
 	<table name="IniFile">
@@ -4137,7 +4146,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>ISTheme</td><td>InstallShield Blue.theme</td></row>
 		<row><td>ISUSLock</td><td>{82C31F65-77DA-43E3-9316-ECCB7CC49620}</td></row>
 		<row><td>ISUSSignature</td><td>{E8E09799-41BC-4C49-BED3-B874F883106D}</td></row>
-		<row><td>ISVisitedViews</td><td>viewAssistant,viewProject,viewUpgradePaths,viewUpdateService,viewRelease,viewSupportFiles,viewCustomActions,viewUI,viewAppFiles,viewISToday,viewSystemSearch,viewDependencies,viewRealSetupDesign</td></row>
+		<row><td>ISVisitedViews</td><td>viewAssistant,viewProject,viewUpgradePaths,viewUpdateService,viewRelease,viewSupportFiles,viewCustomActions,viewUI,viewAppFiles,viewISToday,viewSystemSearch,viewDependencies,viewRealSetupDesign,viewShortcuts</td></row>
 		<row><td>Limited</td><td>1</td></row>
 		<row><td>LockPermissionMode</td><td>1</td></row>
 		<row><td>MsiExecCmdLineOptions</td><td/></row>
@@ -4596,6 +4605,8 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<col def="L255">FileName</col>
 		<col def="s72">DirProperty</col>
 		<col def="i2">InstallMode</col>
+		<row><td>NewShortcut1</td><td>RyLogViewer.Primary_output2</td><td/><td>newfolder1</td><td>2</td></row>
+		<row><td>NewShortcut2</td><td>ISX_DEFAULTCOMPONENT1</td><td/><td>newfolder1</td><td>2</td></row>
 	</table>
 
 	<table name="RemoveIniFile">
@@ -4681,6 +4692,8 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<col def="S255">ISComments</col>
 		<col def="S255">ISShortcutName</col>
 		<col def="I4">ISAttributes</col>
+		<row><td>NewShortcut1</td><td>newfolder1</td><td>##ID_STRING5##</td><td>RyLogViewer.Primary_output2</td><td>AlwaysInstall</td><td/><td/><td/><td/><td/><td>1</td><td/><td/><td/><td/><td/><td/><td/><td/></row>
+		<row><td>NewShortcut2</td><td>newfolder1</td><td>##ID_STRING6##</td><td>ISX_DEFAULTCOMPONENT1</td><td>[SystemFolder]MsiExec.exe</td><td>/x [ProductCode]</td><td/><td/><td>NewShortcut2_1121501753A14233AB461F623D7E2245.exe</td><td>0</td><td>1</td><td/><td/><td/><td/><td/><td/><td/><td/></row>
 	</table>
 
 	<table name="Signature">
