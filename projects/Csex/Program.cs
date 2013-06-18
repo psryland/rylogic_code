@@ -28,13 +28,17 @@ namespace Csex
 			try { CmdLine.Parse(this, m_args); }
 			catch (Exception ex)
 			{
-				Console.WriteLine("Error: "+ex.Message);
+				Console.WriteLine("Error: {0}",ex.Message);
 				ShowHelp();
 				return;
 			}
 
 			if (m_cmd == null) { ShowHelp(); return; }
-			m_cmd.Run();
+			try { m_cmd.Run(); }
+			catch (Exception ex)
+			{
+				Console.WriteLine("Error: {0}",ex.Message);
+			}
 		}
 
 		/// <summary>Display help information in the case of an invalid command line</summary>
@@ -261,8 +265,12 @@ namespace Csex
 		{
 			var references = new List<Reference>();
 			foreach (var assembly in assemblies)
-			foreach (var referencedAssembly in assembly.GetReferencedAssemblies())
-				references.Add(new Reference{Assembly = assembly.GetName(),ReferencedAssembly = referencedAssembly});
+			{
+				if (assembly == null) continue;
+				foreach (var referencedAssembly in assembly.GetReferencedAssemblies())
+					references.Add(new Reference{Assembly = assembly.GetName(),ReferencedAssembly = referencedAssembly});
+			}
+
 			return references;
 		}
 		private IEnumerable<Assembly> GetAllAssemblies(string path)
@@ -271,7 +279,18 @@ namespace Csex
 			var directoryToSearch = new DirectoryInfo(path);
 			files.AddRange(directoryToSearch.GetFiles("*.dll", SearchOption.AllDirectories));
 			files.AddRange(directoryToSearch.GetFiles("*.exe", SearchOption.AllDirectories));
-			return files.ConvertAll(file => Assembly.LoadFile(file.FullName));
+			return files.ConvertAll(file =>
+				{
+					try
+					{
+						return Assembly.LoadFile(file.FullName);
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine("Failed to load assembly: {0}\r\nReason: {1}\r\n{2}", file.FullName, ex.GetType().Name, ex.Message);
+						return (Assembly)null;
+					}
+				});
 		}
 	}
 	#endregion
