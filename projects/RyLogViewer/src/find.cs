@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
@@ -29,7 +28,7 @@ namespace RyLogViewer
 			// if the find pattern is currently empty
 			if (m_find_ui.Pattern.Expr.Length == 0)
 			{
-				int row_index = SelectedRow;
+				int row_index = SelectedRowIndex;
 				if (row_index != -1)
 					m_find_ui.Pattern = new Pattern(EPattern.Substring, ReadLine(row_index).RowText);
 			}
@@ -78,10 +77,10 @@ namespace RyLogViewer
 		{
 			if (!PreFind())
 				return;
-			
-			var start = m_line_index[SelectedRow].End;
+
+			var start = SelectedRowByteOffset;
 			Log.Info(this, "FindNext starting from {0}".Fmt(start));
-			
+
 			long found;
 			if (Find(m_find_ui.Pattern, start, false, out found) && found == -1)
 				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
@@ -92,10 +91,10 @@ namespace RyLogViewer
 		{
 			if (!PreFind())
 				return;
-			
-			var start = SelectedRowRange.Begin;
+
+			var start = SelectedRowByteOffset;
 			Log.Info(this, "FindPrev starting from {0}".Fmt(start));
-			
+
 			long found;
 			if (Find(m_find_ui.Pattern, start, true, out found) && found == -1)
 				SetTransientStatusMessage("Start of file", Color.Azure, Color.Blue);
@@ -121,31 +120,26 @@ namespace RyLogViewer
 			//        });
 			//    done.WaitOne();
 			//}
-
-
-			ProgressForm search = new ProgressForm("Searching...", "", (s,a)=>
+			var search = new ProgressForm("Searching...", "", null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
-					BackgroundWorker bgw = (BackgroundWorker)s;
-					
 					int last_progress = 0;
 					ProgressFunc report_progress = (scanned, length) =>
 						{
 							int progress = (int)(100 * Maths.Frac(0,scanned,length));
 							if (progress != last_progress)
 							{
-								bgw.ReportProgress(progress);
+								cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});
 								last_progress = progress;
 							}
-							return !bgw.CancellationPending;
+							return !s.CancelPending;
 						};
-					
+
 					// Searching....
 					at = DoFind(pat, start, backward, report_progress);
-					a.Cancel = bgw.CancellationPending;
-					
+
 					// We can call BuildLineIndex in this thread context because we know
 					// we're in a modal dialog.
-					if (at != -1 && !a.Cancel)
+					if (at != -1 && !s.CancelPending)
 					{
 						Action select = ()=>SelectRowByAddr(at);
 						Invoke(select);

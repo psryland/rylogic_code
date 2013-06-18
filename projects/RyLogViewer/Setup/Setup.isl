@@ -341,12 +341,12 @@
 		<col def="S0">ISDotNetInstallerArgsCommit</col>
 		<col def="S0">ISDotNetInstallerArgsUninstall</col>
 		<col def="S0">ISDotNetInstallerArgsRollback</col>
-		<row><td>ClrDump.dll</td><td>{233DB565-B9F1-43F4-B545-C65B6BA7C9CC}</td><td>LIB</td><td>2</td><td/><td>clrdump.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ClrDump.dll</td><td>{1B87CF6A-F2CA-46D9-AE49-CB7D361127BE}</td><td>LIB</td><td>2</td><td/><td>clrdump.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISO19770_LocalTag</td><td>{9855C1AC-3795-440A-B283-14FB6F710EB7}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISO19770_SystemTag</td><td>{82E6B0AB-DF91-4F59-B03D-743A1A6E5D8F}</td><td>CommonAppDataFolder</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISX_DEFAULTCOMPONENT</td><td>{324F665A-60C6-4746-8107-461BECD0652D}</td><td>LIB</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>RyLogViewer.Primary_output2</td><td>{9B21223C-6837-4646-9C38-3F7D55206ECC}</td><td>INSTALLDIR</td><td>2</td><td/><td>rylogviewer.primary_output2</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
-		<row><td>dbghelp.dll</td><td>{0ADDBDFB-7F1B-4E4C-8395-C942F7336334}</td><td>LIB</td><td>2</td><td/><td>dbghelp.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>dbghelp.dll</td><td>{130A67FD-B292-4AFF-A7BB-84F4B41AF5BB}</td><td>LIB</td><td>2</td><td/><td>dbghelp.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>prcs_vs2012.Primary_output2</td><td>{C15F12D9-A6B2-46E4-B8BF-307310BEFFCF}</td><td>INSTALLDIR</td><td>2</td><td/><td>prcs_vs2012.primary_output2</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 	</table>
 
@@ -558,7 +558,7 @@
 		<row><td>LicenseAgreement</td><td>DlgLine</td><td>Line</td><td>48</td><td>234</td><td>326</td><td>0</td><td>1</td><td/><td/><td/><td/><td>0</td><td/><td/><td/></row>
 		<row><td>LicenseAgreement</td><td>DlgTitle</td><td>Text</td><td>13</td><td>6</td><td>292</td><td>25</td><td>65539</td><td/><td>##IDS__IsLicenseDlg_LicenseAgreement##</td><td/><td/><td>0</td><td/><td/><td/></row>
 		<row><td>LicenseAgreement</td><td>ISPrintButton</td><td>PushButton</td><td>301</td><td>188</td><td>65</td><td>17</td><td>3</td><td/><td>##IDS_PRINT_BUTTON##</td><td>Agree</td><td/><td>0</td><td/><td/><td/></row>
-		<row><td>LicenseAgreement</td><td>Memo</td><td>ScrollableText</td><td>8</td><td>55</td><td>358</td><td>130</td><td>7</td><td/><td/><td/><td/><td>0</td><td/><td>&lt;ISProductFolder&gt;\Redist\0409\Eula.rtf</td><td/></row>
+		<row><td>LicenseAgreement</td><td>Memo</td><td>ScrollableText</td><td>8</td><td>55</td><td>358</td><td>130</td><td>7</td><td/><td/><td/><td/><td>0</td><td/><td>Q:\miscellaneous\licences\RylogicSingleUserLicence.rtf</td><td/></row>
 		<row><td>LicenseAgreement</td><td>Next</td><td>PushButton</td><td>230</td><td>243</td><td>66</td><td>17</td><td>3</td><td/><td>##IDS_NEXT##</td><td>Cancel</td><td/><td>0</td><td/><td/><td/></row>
 		<row><td>MaintenanceType</td><td>Back</td><td>PushButton</td><td>164</td><td>243</td><td>66</td><td>17</td><td>3</td><td/><td>##IDS_BACK##</td><td>Next</td><td/><td>0</td><td/><td/><td/></row>
 		<row><td>MaintenanceType</td><td>Banner</td><td>Bitmap</td><td>0</td><td>0</td><td>374</td><td>44</td><td>1</td><td/><td/><td/><td/><td>0</td><td/><td/><td>NewBinary1</td></row>
@@ -1890,8 +1890,8 @@
 		<col def="S255">ISBuildSourcePath</col>
 		<col def="I4">ISAttributes</col>
 		<col def="S72">ISComponentSubFolder_</col>
-		<row><td>clrdump.dll</td><td>ClrDump.dll</td><td>ClrDump.dll</td><td>0</td><td/><td/><td/><td>1</td><td>Q:\projects\RyLogViewer\bin\Release\lib\ClrDump.dll</td><td>1</td><td/></row>
-		<row><td>dbghelp.dll</td><td>dbghelp.dll</td><td>dbghelp.dll</td><td>0</td><td/><td/><td/><td>1</td><td>Q:\projects\RyLogViewer\bin\Release\lib\dbghelp.dll</td><td>1</td><td/></row>
+		<row><td>clrdump.dll</td><td>ClrDump.dll</td><td>ClrDump.dll</td><td>0</td><td/><td/><td/><td>1</td><td>Q:\projects\RyLogViewer\lib\ClrDump.dll</td><td>1</td><td/></row>
+		<row><td>dbghelp.dll</td><td>dbghelp.dll</td><td>dbghelp.dll</td><td>0</td><td/><td/><td/><td>1</td><td>Q:\projects\RyLogViewer\lib\dbghelp.dll</td><td>1</td><td/></row>
 		<row><td>prcs_vs2012.primary_output2</td><td>prcs_vs2012.Primary_output2</td><td>prcs_vs2012.Primary output</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;prcs_vs2012&gt;|Built</td><td>3</td><td/></row>
 		<row><td>rylogviewer.primary_output2</td><td>RyLogViewer.Primary_output2</td><td>RyLogViewer.Primary output</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;RyLogViewer&gt;|Built</td><td>3</td><td/></row>
 	</table>
@@ -2150,12 +2150,12 @@
 		<col def="S0">FTPLocation</col>
 		<col def="S0">HTTPLocation</col>
 		<col def="S0">Miscellaneous</col>
-		<row><td>ClrDump.dll</td><td/><td/><td>_99D30173_E65C_4302_9EDB_00222B5DDDD2_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ClrDump.dll</td><td/><td/><td>_EBF37CAF_D4E8_4D64_8C09_88B463C23F24_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISO19770_LocalTag</td><td/><td/><td>_4BDF7029_A0D5_4A7D_8B9E_0676A97812AB_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISO19770_SystemTag</td><td/><td/><td>_C4923418_1A23_4486_BF84_B3F2AA8B5BAE_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISX_DEFAULTCOMPONENT</td><td/><td/><td>_FE499FC8_5F72_4459_BD23_0725883F8C0B_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>RyLogViewer.Primary_output2</td><td/><td/><td>_61884C51_510C_49B0_8C96_29144AB72CC2_FILTER</td><td/><td/><td/><td/></row>
-		<row><td>dbghelp.dll</td><td/><td/><td>_C3A59447_663D_442B_BE04_72EE14E6D254_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>dbghelp.dll</td><td/><td/><td>_6AE141B5_99AD_479F_B72F_5270A3B75444_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>prcs_vs2012.Primary_output2</td><td/><td/><td>_F4E27322_BF90_49D2_AE9C_0861137C98A3_FILTER</td><td/><td/><td/><td/></row>
 	</table>
 

@@ -47,7 +47,7 @@ namespace RyLogViewer
 			m_bs_bookmarks.ResetBindings(false);
 
 			// Restore the selected row
-			SelectedRow = row_index;
+			SelectedRowIndex = row_index;
 		}
 
 		/// <summary>Scroll to the next bookmark after the current selected row</summary>
@@ -55,7 +55,7 @@ namespace RyLogViewer
 		{
 			if (m_bookmarks.Count == 0) return;
 			
-			var row_index = SelectedRow;
+			var row_index = SelectedRowIndex;
 			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
 
 			// Look for the first bookmark after line.Begin
@@ -70,7 +70,7 @@ namespace RyLogViewer
 		{
 			if (m_bookmarks.Count == 0) return;
 
-			var row_index = SelectedRow;
+			var row_index = SelectedRowIndex;
 			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
 
 			// Look for the first bookmark after line.Begin

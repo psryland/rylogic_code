@@ -93,15 +93,24 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Returns the bounding byte range of the currently selected rows.</summary>
-		private Range SelectedRowRange
+		/// <summary>Returns the bounding byte ranges of the currently selected rows.</summary>
+		private IEnumerable<Range> SelectedRowRanges
 		{
 			get
 			{
+				int row_index = -1;
 				Range rng = Range.Invalid;
-				foreach (DataGridViewRow r in m_grid.SelectedRows)
+				foreach (DataGridViewRow r in m_grid.SelectedRows.Cast<DataGridViewRow>().OrderBy(x => x.Index))
+				{
+					if (row_index + 1 != r.Index)
+					{
+						if (row_index != -1) yield return rng;
+						rng = Range.Invalid;
+					}
 					rng.Encompase(m_line_index[r.Index]);
-				return !rng.Equals(Range.Invalid) ? rng : Range.Zero;
+					row_index = r.Index;
+				}
+				if (!rng.Equals(Range.Invalid)) yield return rng;
 			}
 		}
 		

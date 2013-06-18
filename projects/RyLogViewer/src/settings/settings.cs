@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Net.Sockets;
 using System.Windows.Forms;
 using pr.common;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -149,6 +150,11 @@ namespace RyLogViewer
 		{
 			get { return get<bool>("CheckForUpdates"); }
 			set { set("CheckForUpdates", value); }
+		}
+		public string CheckForUpdatesServer
+		{
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.CheckForUpdatesServer)); }
+			set { set(Reflect<Settings>.MemberName(x => x.CheckForUpdatesServer), value); }
 		}
 		public bool   UseWebProxy
 		{
@@ -342,6 +348,7 @@ namespace RyLogViewer
 			AlwaysOnTop                     = false;
 			ShowTOTD                        = true;
 			CheckForUpdates                 = true;
+			CheckForUpdatesServer           = "http://www.rylogic.co.nz:80/";
 			UseWebProxy                     = false;
 			WebProxyHost                    = "";
 			WebProxyPort                    = Constants.PortNumberWebProxyDefault;

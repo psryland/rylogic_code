@@ -1,105 +1,85 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Drawing;
+using System.Threading;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using pr.maths;
-using pr.util;
 
 namespace pr.gui
 {
-	// A progress dialog that runs a delegate in the background while showing progress
-	// Usage:
-	//	int result = 0;
-	//	ProgressForm task = new ProgressForm("Chore", "Doing a long winded task", delegate (object i, DoWorkEventArgs e)
-	//	{
-	//		BackgroundWorker bgw = (BackgroundWorker)i;
-	//		for (result = 0; result != 100 && !bgw.CancellationPending; ++result)
-	//		{
-	//			bgw.ReportProgress(result);
-	//			Thread.Sleep(100);
-	//		}
-	//		e.Cancel = bgw.CancellationPending;
-	//	});
-	//DialogResult res = task.ShowDialog(this);
-	//MessageBox.Show("result got to " + result + " and the dialog returned " + res);
 	public sealed class ProgressForm :Form
 	{
 		public class UserState
 		{
-			/// <summary>Control the visibility of the progress bar.</summary>
-			public bool? ProgressBarVisible = null;
-			
-			/// <summary>Control the style of the progress bar</summary>
-			public ProgressBarStyle? ProgressBarStyle = null;
-			
-			/// <summary>Dialog icon</summary>
-			public Icon Icon = null;
-			
-			/// <summary>Dialog title</summary>
-			public string Title = null;
-			
-			/// <summary>Change the description. 'null' means don't change</summary>
-			public string Description = null;
+			/// <summary>Progress completeness [0f,1f]. Null means unknown</summary>
+			public float? FractionComplete { get; set; }
+
+			/// <summary>Control the visibility of the progress bar. Null means don't change</summary>
+			public bool? ProgressBarVisible { get; set; }
+
+			/// <summary>Control the style of the progress bar. Null means don't change</summary>
+			public ProgressBarStyle? ProgressBarStyle { get; set; }
+
+			/// <summary>Dialog icon. Null means don't change</summary>
+			public Icon Icon { get; set; }
+
+			/// <summary>Dialog title. Null means don't change</summary>
+			public string Title { get; set; }
+
+			/// <summary>Change the description. Null means don't changee</summary>
+			public string Description { get; set; }
+
+			/// <summary>Duplicate this object</summary>
+			public UserState Clone() { return (UserState)MemberwiseClone(); }
 		}
 
-		private readonly BackgroundWorker m_bgw;
 		private readonly ProgressBar m_progress;
-		private readonly Button m_button;
 		private readonly Label m_description;
-		private bool m_cancel_allowed;
+		private readonly Button m_button;
+		private Exception m_error;
 
-		/// <summary>Allow/Disallow the cancel button to cause</summary>
-		public bool AllowCancel
-		{
-			get { return m_cancel_allowed; }
-			set
-			{
-				m_cancel_allowed = value;
-				m_button.Enabled = m_cancel_allowed;
-			}
-		}
-		
-		/// <summary>Any exception thrown in the worker thread</summary>
-		public Exception Error { get; private set; }
+		/// <summary>An event raised when the task is complete</summary>
+		public ManualResetEvent Done { get; private set; }
 
-		public ProgressForm(string title, string description, DoWorkEventHandler func) :this(title, description, func, null) {}
-		public ProgressForm(string title, string description, DoWorkEventHandler func, object argument)
+		/// <summary>An event used to signal the other thread to cancel</summary>
+		public ManualResetEvent CancelSignal { get; private set; }
+		public bool CancelPending { get { return CancelSignal.WaitOne(0); } }
+
+		/// <summary>The result returned from the function</summary>
+		public Exception Result { get; private set; }
+
+		/// <summary>Progress callback function, called from 'func' to update the progress bar</summary>
+		public delegate void Progress(UserState us);
+
+		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, Action<ProgressForm, object, Progress> func, object arg = null)
 		{
-			// Setup the bgw
-			m_bgw = new BackgroundWorker
-			{
-				WorkerReportsProgress = true,
-				WorkerSupportsCancellation = true,
-			};
-			m_bgw.DoWork += func;
-			m_bgw.ProgressChanged += (s,e)=>
+			m_progress = new ProgressBar{Style = style};
+			m_description = new Label{Text = desc ?? string.Empty, AutoSize = false};
+			m_button = new Button{Text = "Cancel", DialogResult = DialogResult.Cancel, UseVisualStyleBackColor = true, TabIndex = 1};
+			m_button.Click += (s,a) => CancelSignal.Set();
+
+			Done         = new ManualResetEvent(false);
+			CancelSignal = new ManualResetEvent(false);
+			var dispatcher = Dispatcher.CurrentDispatcher;
+
+			// Start the task
+			ThreadPool.QueueUserWorkItem(x =>
 				{
-					m_progress.Value = (int)Maths.Lerp(m_progress.Minimum, m_progress.Maximum, Maths.Clamp(e.ProgressPercentage * 0.01f, 0f, 1f));
-					UserState us = e.UserState as UserState;
-					if (us != null)
+					try
 					{
-						if (us.Title              != null) Text = us.Title;
-						if (us.Description        != null) m_description.Text = us.Description;
-						if (us.Icon               != null) Icon = us.Icon;
-						if (us.ProgressBarVisible != null) m_progress.Visible = us.ProgressBarVisible.Value;
-						if (us.ProgressBarStyle   != null) m_progress.Style = us.ProgressBarStyle.Value;
+						func(this, x, us => dispatcher.BeginInvoke(new Progress(UpdateProgress), us.Clone()));
+						dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
 					}
-				};
-			m_bgw.RunWorkerCompleted += (s,e)=>
-				{
-					Log.Info(this, "Progress form worker complete");
-					if ((Error = e.Error) != null) DialogResult = DialogResult.Abort;
-					else if (e.Cancelled)          DialogResult = DialogResult.Cancel;
-					else                           DialogResult = DialogResult.OK;
-					if (Visible) BeginInvoke(new Action(Close));
-				};
-			
-			m_description = new Label{Text = description, AutoSize = false};
-			m_progress = new ProgressBar();
-			m_button = new Button{Text = "Cancel", DialogResult = DialogResult.Cancel, UseVisualStyleBackColor = true, TabIndex = 1, Enabled = false};
-			m_button.Click += (s,a)=>{ if (AllowCancel) m_bgw.CancelAsync(); };
-			
-			Text                = title;
+					catch (Exception ex)
+					{
+						m_error = ex;
+					}
+					Done.Set();
+				}, arg);
+
+			Text = title ?? string.Empty;
+			if (icon != null) Icon = icon;
+
 			StartPosition       = FormStartPosition.CenterParent;
 			FormBorderStyle     = FormBorderStyle.FixedDialog;
 			AutoScaleDimensions = new SizeF(6F, 13F);
@@ -109,30 +89,59 @@ namespace pr.gui
 			Controls.Add(m_progress);
 			Controls.Add(m_button);
 			DoLayout();
-			
-			Shown += (s,a)=>
-				{
-					m_bgw.RunWorkerAsync(argument);
-					AllowCancel = true;
-				};
+
 			SizeChanged += (s,e) => DoLayout();
-			FormClosing += (s,e) =>
+
+			FormClosing += (s,a) =>
 				{
-					e.Cancel = m_bgw.IsBusy; // Don't allow the form to close until the worker has finished
-				};
-			FormClosed += (s,e) =>
-				{
-					if (Error == null) return;
-					if (Error.InnerException != null) throw Error.InnerException;
-					throw Error;
+					if (Done.WaitOne(0) && m_error != null)
+						throw m_error;
+					
+					DialogResult = CancelSignal.WaitOne(0)
+						? DialogResult.Cancel
+						: DialogResult.OK;
 				};
 		}
-		
-		/// <summary>Layout the controls on the form</summary>
+
+		/// <summary>Show the dialog after a few milliseconds</summary>
+		public DialogResult ShowDialog(IWin32Window owner, int delay_ms = 0)
+		{
+			if (Done.WaitOne(delay_ms))
+				return DialogResult.OK; // done already
+			
+			return base.ShowDialog(owner);
+		}
+
+		/// <summary>Update the state of the progress form</summary>
+		private void UpdateProgress(UserState us)
+		{
+			if (us.FractionComplete != null)
+			{
+				m_progress.Value = (int)Maths.Lerp(m_progress.Minimum, m_progress.Maximum, Maths.Clamp(us.FractionComplete.Value,0f,1f));
+				if (us.FractionComplete == 1f)
+					Close();
+			}
+
+			if (us.Title != null)
+				Text = us.Title;
+
+			if (us.Description != null)
+				m_description.Text = us.Description;
+
+			if (us.Icon != null)
+				Icon = us.Icon;
+
+			if (us.ProgressBarVisible != null)
+				m_progress.Visible = us.ProgressBarVisible.Value;
+
+			if (us.ProgressBarStyle != null)
+				m_progress.Style = us.ProgressBarStyle.Value;
+		}
+
+		/// <summary>Layout the form</summary>
 		private void DoLayout()
 		{
 			const int space = 10;
-			
 			SuspendLayout();
 			m_description.Location = new Point(space, space);
 			m_description.Size     = new Size(m_description.PreferredWidth, m_description.PreferredHeight);

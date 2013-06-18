@@ -133,7 +133,7 @@ namespace RyLogViewer
 			m_menu_edit_find.Click                  += (s,a) => ShowFindDialog();
 			m_menu_edit_find_next.Click             += (s,a) => FindNext();
 			m_menu_edit_find_prev.Click             += (s,a) => FindPrev();
-			m_menu_edit_toggle_bookmark.Click       += (s,a) => ToggleBookmark(SelectedRow);
+			m_menu_edit_toggle_bookmark.Click       += (s,a) => ToggleBookmark(SelectedRowIndex);
 			m_menu_edit_next_bookmark.Click         += (s,a) => NextBookmark();
 			m_menu_edit_prev_bookmark.Click         += (s,a) => PrevBookmark();
 			m_menu_edit_clearall_bookmarks.Click    += (s,a) => m_bookmarks.Clear();
@@ -188,9 +188,9 @@ namespace RyLogViewer
 			m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
 			m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
 			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
-			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRow = 0);
+			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRowIndex = 0);
 			m_btn_jump_to_end.ToolTipText   = Resources.ScrollToEnd;
-			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRowIndex = m_grid.RowCount - 1);
 			m_btn_tail.ToolTipText          = Resources.WatchTail;
 			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
 			m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
@@ -408,14 +408,24 @@ namespace RyLogViewer
 					if (fd.ShowDialog() != DialogResult.OK) return;
 					filepath = fd.FileName;
 				}
-			
+
 				// Reject invalid file paths
-				if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
+				if (string.IsNullOrEmpty(filepath))
+				{
+					MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, string.Empty), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					return;
+				}
+
+				// Check that the file exists, this can take ages if 'filepath' is a network file
+				bool file_exists = false;
+				var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = File.Exists(filepath));
+				if (dlg.ShowDialog(this, 500) != DialogResult.OK) return;
+				if (!file_exists)
 				{
 					MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
 					return;
 				}
-				
+
 				if (add_to_recent)
 				{
 					m_recent.Add(filepath);
@@ -436,7 +446,7 @@ namespace RyLogViewer
 
 				BuildLineIndex(m_filepos, true, ()=>
 					{
-						SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
+						SelectedRowIndex = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
 						
 						// Show a hint if filters are active, the file isn't empty, but there are no visible rows
 						if (m_grid.RowCount == 0 && m_fileend != 0)
@@ -547,7 +557,7 @@ namespace RyLogViewer
 				if (m_bookmarks.Count != 0 && m_bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
 				{
 					e.CellStyle.BackColor = m_settings.BookmarkColour;
-					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
+					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRowIndex);
 					e.PaintContent(e.ClipBounds);
 				}
 
@@ -570,7 +580,7 @@ namespace RyLogViewer
 				}
 				else
 				{
-					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
+					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRowIndex);
 					e.PaintContent(e.ClipBounds);
 				}
 			}
@@ -581,7 +591,7 @@ namespace RyLogViewer
 		private void GridSelectionChanged(object sender, EventArgs e)
 		{
 			if (GridEventsBlocked) return;
-			EnableTail(SelectedRow == m_grid.RowCount - 1);
+			EnableTail(SelectedRowIndex == m_grid.RowCount - 1);
 			UpdateStatus();
 		}
 
@@ -621,7 +631,7 @@ namespace RyLogViewer
 			var pt = m_grid.PointToClient(((ContextMenuStrip)sender).Location);
 			var hit = m_grid.HitTest(pt.X, pt.Y);
 			if (hit.RowIndex < 0 || hit.RowIndex >= m_grid.RowCount) return;
-			SelectedRow = hit.RowIndex;
+			SelectedRowIndex = hit.RowIndex;
 			
 			if (args.ClickedItem == m_cmenu_highlight_row) { ShowOptions(SettingsUI.ETab.Highlights); return; }
 			if (args.ClickedItem == m_cmenu_filter_row   ) { ShowOptions(SettingsUI.ETab.Filters   ); return; }
@@ -651,7 +661,7 @@ namespace RyLogViewer
 		{
 			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit) return;
 			const float Limit = 1f / Constants.AutoScrollAtBoundaryLimit;
-			float ratio = Maths.Frac(0, SelectedRow, m_grid.RowCount - 1);
+			float ratio = Maths.Frac(0, SelectedRowIndex, m_grid.RowCount - 1);
 			if (ratio < 0f + Limit) BuildLineIndex(LineStartIndexRange.Begin, false);
 			if (ratio > 1f - Limit) BuildLineIndex(LineStartIndexRange.End  , false);
 		}
@@ -672,14 +682,14 @@ namespace RyLogViewer
 			case Keys.Escape:                     CancelBuildLineIndex();             return true;
 			case Keys.F2:                         NextBookmark();                     return true;
 			case Keys.F2|Keys.Shift:              PrevBookmark();                     return true;
-			case Keys.F2|Keys.Control:            ToggleBookmark(SelectedRow);        return true;
+			case Keys.F2|Keys.Control:            ToggleBookmark(SelectedRowIndex);        return true;
 			case Keys.F3:                         FindNext();                         return true;
 			case Keys.F3|Keys.Shift:              FindPrev();                         return true;
-			case Keys.F3|Keys.Control:            SetFindPattern(SelectedRow, true);  return true;
-			case Keys.F3|Keys.Shift|Keys.Control: SetFindPattern(SelectedRow, false); return true;
+			case Keys.F3|Keys.Control:            SetFindPattern(SelectedRowIndex, true);  return true;
+			case Keys.F3|Keys.Shift|Keys.Control: SetFindPattern(SelectedRowIndex, false); return true;
 			case Keys.F5:                         BuildLineIndex(m_filepos, true);    return true;
-			case Keys.PageUp  |Keys.Control:      BuildLineIndex(0        , false, () => SelectedRow = 0                  ); return true;
-			case Keys.PageDown|Keys.Control:      BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1); return true;
+			case Keys.PageUp  |Keys.Control:      BuildLineIndex(0        , false, () => SelectedRowIndex = 0                  ); return true;
+			case Keys.PageDown|Keys.Control:      BuildLineIndex(m_fileend, false, () => SelectedRowIndex = m_grid.RowCount - 1); return true;
 			case Keys.Tab|Keys.Control:
 				{
 					int idx = (m_tab_cycle.IndexOf(x => ReferenceEquals(x,caller)) + 1) % m_tab_cycle.Length;
@@ -718,12 +728,13 @@ namespace RyLogViewer
 		/// <summary>Turn on/off quick filter mode</summary>
 		private void EnableQuickFilter(bool enable)
 		{
-			var current = SelectedRowRange.Begin;
+			int row_index = SelectedRowIndex;
+			var current = row_index != -1 ? m_line_index[row_index].Begin : -1;
 			m_settings.QuickFilterEnabled = enable;
 			ApplySettings();
 			BuildLineIndex(m_filepos, true, ()=>
 				{
-					SelectedRow = LineIndex(m_line_index, current);
+					SelectedRowIndex = LineIndex(m_line_index, current);
 				});
 		}
 
@@ -739,12 +750,13 @@ namespace RyLogViewer
 		/// <summary>Turn on/off filters</summary>
 		private void EnableFilters(bool enable)
 		{
-			var current = SelectedRowRange.Begin;
+			int row_index = SelectedRowIndex;
+			var current = row_index != -1 ? m_line_index[row_index].Begin : -1;
 			m_settings.FiltersEnabled = enable;
 			ApplySettings();
 			BuildLineIndex(m_filepos, true, ()=>
 				{
-					SelectedRow = LineIndex(m_line_index, current);
+					SelectedRowIndex = LineIndex(m_line_index, current);
 				});
 		}
 
@@ -917,7 +929,7 @@ namespace RyLogViewer
 		{
 			string row_text = "";
 			string test_text = "<Enter test text here>";
-			int init_row = SelectedRow;
+			int init_row = SelectedRowIndex;
 			if (init_row != -1)
 				row_text = test_text = ReadLine(init_row).RowText.Trim();
 			
@@ -995,21 +1007,21 @@ namespace RyLogViewer
 				try { proxy =  new WebProxy(m_settings.WebProxyHost, m_settings.WebProxyPort); }
 				catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}".Fmt(m_settings.WebProxyHost, m_settings.WebProxyPort)); }
 			}
-			
+
+			string update_url = m_settings.CheckForUpdatesServer + "versions/rylogviewer.xml";
+
 			// Start the check for updates
 			if (show_dialog)
 			{
-				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", (s,a)=>
+				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", null, ProgressBarStyle.Marquee, (s,a,cb)=>
 					{
-						BackgroundWorker bgw = (BackgroundWorker)s;
-						bgw.ReportProgress(100, new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
-						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, null, proxy);
-						
-						// Wait till the operation completes, or until cancel is singled
-						for (;!bgw.CancellationPending && !async.AsyncWaitHandle.WaitOne(500);) {}
-						a.Cancel = bgw.CancellationPending;
+						cb(new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
+						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, proxy);
 
-						if (!a.Cancel) callback(async);
+						// Wait till the operation completes, or until cancel is singled
+						for (;!s.CancelPending && !async.AsyncWaitHandle.WaitOne(500);) {}
+
+						if (!s.CancelPending) callback(async);
 						else INet.CancelCheckForUpdate(async);
 					});
 				dg.ShowDialog(this);
@@ -1017,7 +1029,7 @@ namespace RyLogViewer
 			else
 			{
 				// Start the asynchronous check for updates
-				INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, callback, proxy);
+				INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, callback, proxy);
 			}
 		}
 
@@ -1106,31 +1118,36 @@ namespace RyLogViewer
 			return m_encoding.GetBytes(Misc.Robitise(col_delim));
 		}
 
-		/// <summary>Selected the row in the file that contains the byte offset 'addr'</summary>
+		/// <summary>Select the row in the file that contains the byte offset 'addr'</summary>
 		private void SelectRowByAddr(long addr)
 		{
 			// If 'addr' is within the currently loaded range, select the row now
 			if (LineIndexRange.Contains(addr))
 			{
-				SelectedRow = LineIndex(m_line_index, addr);
+				SelectedRowIndex = LineIndex(m_line_index, addr);
 			}
 			// Otherwise, load the range around 'addr', then select the row
 			else
 			{
-				BuildLineIndex(addr, false, ()=> SelectedRow = LineIndex(m_line_index, addr));
+				BuildLineIndex(addr, false, ()=> SelectedRowIndex = LineIndex(m_line_index, addr));
 			}
 		}
 
 		/// <summary>
 		/// Get/Set the currently selected grid row. Get returns -1 if there are no rows in the grid.
 		/// Setting the selected row clamps to the range [0,RowCount) and makes it visible in the grid (if possible)</summary>
-		private int SelectedRow
+		private int SelectedRowIndex
 		{
 			get
 			{
-				return m_grid.GetCellCount(DataGridViewElementStates.Selected) != 0
-					? m_grid.SelectedRows[0].Index
-					: -1;
+				// If the current row is selected, return that
+				var row = m_grid.CurrentRow;
+				if (row != null && row.Selected) return row.Index;
+				return -1;
+				//// Otherwise return the vi
+				//return m_grid.GetCellCount(DataGridViewElementStates.Selected) != 0
+				//	? m_grid.SelectedRows[0].Index
+				//	: -1;
 			}
 			set
 			{
@@ -1143,7 +1160,19 @@ namespace RyLogViewer
 				}
 			}
 		}
-		
+
+		/// <summary>Returns the byte offset of the selected row, or 0 if there is no selection</summary>
+		private long SelectedRowByteOffset
+		{
+			get
+			{
+				var idx = SelectedRowIndex;
+				if (idx == -1) idx = 0;
+				Debug.Assert(idx >= 0 && idx < m_line_index.Count, "SelectedRowByteOffset should not be called when there are no lines");
+				return m_line_index[idx].Begin;
+			}
+		}
+
 		/// <summary>Return true if we should auto scroll</summary>
 		private bool AutoScrollTail
 		{
@@ -1172,21 +1201,30 @@ namespace RyLogViewer
 			bool auto_scroll_tail = AutoScrollTail;
 			if (m_grid.RowCount != count || row_delta != 0)
 			{
-				// Preserve the selected row index and first visible row index (if possible)
+				// Record data so that we can preserve the selected rows and first visible rows
 				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
-				int selected = SelectedRow;
-				SelectedRow = -1;
+				var selected = SelectedRowIndex;
+				var selected_rows = m_grid.SelectedRows.Cast<DataGridViewRow>().Select(x => x.Index + row_delta).OrderBy(x => x).ToList();
+				SelectedRowIndex = -1;
 				
-				Log.Info(this, "RowCount changed. Row delta {0}. Selected row: {1}->{2}. First visible row: {3}->{4}. Auto scroll {5}".Fmt(row_delta ,selected ,selected+row_delta ,first_vis ,first_vis+row_delta ,auto_scroll_tail));
+				Log.Info(this, "RowCount changed. Row delta {0}.".Fmt(row_delta));
 				m_grid.RowCount = 0;
 				m_grid.RowCount = count;
 				
 				// Restore the selected row, and the first visible row
 				if (count != 0)
 				{
-					// Restore the selected row, and the first visible row
-					m_grid.SelectRow(auto_scroll_tail ? m_grid.RowCount - 1 : selected + row_delta);
+					// Restore the selected rows, and the first visible row
 					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
+					if (auto_scroll_tail) m_grid.SelectRow(m_grid.RowCount - 1);
+					else if (selected != -1)
+					{
+						m_grid.SelectRow(selected + row_delta);
+
+						int i = selected_rows.BinarySearch(x => x.CompareTo(0));
+						for (i = (i >= 0) ? i : ~i; i != selected_rows.Count; ++i)
+							m_grid.Rows[i].Selected = true;
+					}
 				}
 			}
 			if (auto_scroll_tail) ShowLastRow();
@@ -1408,7 +1446,7 @@ namespace RyLogViewer
 					};
 
 				// Get current file position
-				int r = SelectedRow;
+				int r = SelectedRowIndex;
 				long p = (r != -1) ? m_line_index[r].Begin : 0;
 				StringBuilder pos = pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
 				StringBuilder len = pretty(new StringBuilder(m_file.Length.ToString(CultureInfo.InvariantCulture)));
@@ -1439,7 +1477,6 @@ namespace RyLogViewer
 			}
 		}
 
-
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
@@ -1453,9 +1490,10 @@ namespace RyLogViewer
 			m_scroll_file.Width      = m_settings.FileScrollWidth;
 
 			m_scroll_file.Ranges.Clear();
-			m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(DisplayedRowsRange ,m_settings.ScrollBarDisplayRangeColour));
-			m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(SelectedRowRange   ,m_settings.LineSelectBackColour       ));
-				
+			m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(DisplayedRowsRange, m_settings.ScrollBarDisplayRangeColour));
+			foreach (var sel_range in SelectedRowRanges)
+				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(sel_range, m_settings.LineSelectBackColour));
+
 			// Add marks for the bookmarked positions
 			var bkmark_colour = m_settings.BookmarkColour;
 			foreach (var bk in m_bookmarks)
