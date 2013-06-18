@@ -542,15 +542,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to File path &apos;{0}&apos; is invalid or does not exist.
-        /// </summary>
-        internal static string InvalidFileMsg {
-            get {
-                return ResourceManager.GetString("InvalidFileMsg", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Invalid File Path.
         /// </summary>
         internal static string InvalidFilePath {

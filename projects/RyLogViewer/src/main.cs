@@ -410,7 +410,7 @@ namespace RyLogViewer
 				// Reject invalid file paths
 				if (string.IsNullOrEmpty(filepath))
 				{
-					MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, string.Empty), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					MessageBox.Show(this, "File path is invalid", Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
 					return;
 				}
 
@@ -420,7 +420,16 @@ namespace RyLogViewer
 				if (dlg.ShowDialog(this, 500) != DialogResult.OK) return;
 				if (!file_exists)
 				{
-					MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					if (m_recent.IsInRecents(filepath))
+					{
+						var res = MessageBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(filepath), Resources.InvalidFilePath, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
+						if (res == DialogResult.Yes)
+							m_recent.Remove(filepath, true);
+					}
+					else
+					{
+						MessageBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					}
 					return;
 				}
 

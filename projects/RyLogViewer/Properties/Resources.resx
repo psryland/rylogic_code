@@ -379,10 +379,6 @@ Right click to show the actions dialog</value>
   <data name="ShowBookmarksDialog" xml:space="preserve">
     <value>Show the bookmarks dialog</value>
   </data>
-  <data name="InvalidFileMsg" xml:space="preserve">
-    <value>File path '{0}' is invalid or does not exist</value>
-    <comment>Show the invalid filepath</comment>
-  </data>
   <data name="ExportFailed" xml:space="preserve">
     <value>Export Failed</value>
   </data>

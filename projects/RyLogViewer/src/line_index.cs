@@ -368,7 +368,7 @@ namespace RyLogViewer
 						catch (OperationCanceledException) {}
 						catch (FileNotFoundException)
 						{
-							this.BeginInvoke(() => SetTransientStatusMessage(string.Format("Error reading {0}", Path.GetFileName(m_filepath)), Color.White, Color.DarkRed));
+							this.BeginInvoke(() => SetStaticStatusMessage(string.Format("Error reading {0}", Path.GetFileName(m_filepath)), Color.White, Color.DarkRed));
 						}
 						catch (Exception ex)
 						{
