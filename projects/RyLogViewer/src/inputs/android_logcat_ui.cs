@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
@@ -231,20 +232,26 @@ namespace RyLogViewer
 		/// <summary>Run the adb app returning the output</summary>
 		private string Adb(string args)
 		{
-			// Determine the available devices
-			var start = new ProcessStartInfo
+			string result = string.Empty;
+			var run = new ProgressForm("Adb Executing", null, null, ProgressBarStyle.Marquee, (s,a,cb) =>
 				{
-					FileName               = m_edit_adb_fullpath.Text,
-					Arguments              = args,
-					RedirectStandardOutput = true,
-					RedirectStandardError  = true,
-					UseShellExecute        =  false,
-					CreateNoWindow         = true,
-					WindowStyle            = ProcessWindowStyle.Hidden,
-				};
-			var proc = Process.Start(start);
-			if (!proc.Start()) throw new Exception("Failed to start adb.exe");
-			return proc.StandardOutput.ReadToEnd();
+					// Determine the available devices
+					var start = new ProcessStartInfo
+						{
+							FileName               = m_edit_adb_fullpath.Text,
+							Arguments              = args,
+							RedirectStandardOutput = true,
+							RedirectStandardError  = true,
+							UseShellExecute        =  false,
+							CreateNoWindow         = true,
+							WindowStyle            = ProcessWindowStyle.Hidden,
+						};
+					var proc = Process.Start(start);
+					if (!proc.Start()) throw new Exception("Failed to start adb.exe");
+					result = proc.StandardOutput.ReadToEnd();
+				});
+			if (run.ShowDialog(this, 500) != DialogResult.OK) return string.Empty;
+			return result;
 		}
 
 		/// <summary>Populate the fields of the control using adb.exe</summary>
