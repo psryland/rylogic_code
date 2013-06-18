@@ -19,6 +19,12 @@ set dstdir=%qdrive%\bin
 set symdir=%qdrive%\local\symbols
 set proj=%srcdir%\RylogViewer.sln
 set rlvdir=rylogviewer
+
+echo Have you created the 'Upgrade Path' in the setup project^?
+echo This is needed so that the new installer will replace the existing installation if there.
+set /p confirm=^(y/n^):
+if not [%confirm%]==[y] goto :error
+
 set /p config=Configuration (debug, release):
 
 echo *************************************************************************
@@ -38,8 +44,6 @@ if errorlevel 1 goto :error
 ::Ensure directories exist and are empty
 if not exist "%dstdir%\%rlvdir%" mkdir "%dstdir%\%rlvdir%"
 del "%dstdir%\%rlvdir%\*.*" /Q
-if not exist "%dstdir%\%rlvdir%\lib" mkdir "%dstdir%\%rlvdir%\lib"
-del "%dstdir%\%rlvdir%\lib\*.*" /Q
 if not exist "%symdir%\%rlvdir%" mkdir "%symdir%\%rlvdir%"
 del "%symdir%\%rlvdir%\*.*" /Q
 
@@ -54,15 +58,19 @@ call copy "%bindir%\pr.dll" "%dstdir%\%rlvdir%\"
 if errorlevel 1 goto :error
 call copy "%bindir%\pr.pdb" "%symdir%\%rlvdir%\"
 if errorlevel 1 goto :error
-call copy "%bindir%\lib\clrdump.dll" "%dstdir%\%rlvdir%\lib\"
-if errorlevel 1 goto :error
-call copy "%bindir%\lib\dbghelp.dll" "%dstdir%\%rlvdir%\lib\"
-if errorlevel 1 goto :error
 
+echo.
 echo Creating zip file...
 if exist "%dstdir%\%rlvdir%.zip" del "%dstdir%\%rlvdir%.zip" /Q
 "%zip%" a "%dstdir%\%rlvdir%.zip" "%dstdir%\%rlvdir%"
 if errorlevel 1 goto :error
+
+if exist "%srcdir%\setup\setup\express\singleimage\diskimages\disk1\setup.exe" (
+	echo.
+	echo Copying RylogViewerSetup.exe to www...
+	call copy "%srcdir%\setup\setup\express\singleimage\diskimages\disk1\setup.exe" "%wwwroot%\data\RylogViewerSetup.exe"
+	if errorlevel 1 goto :error
+)
 
 echo.
 echo    Success.

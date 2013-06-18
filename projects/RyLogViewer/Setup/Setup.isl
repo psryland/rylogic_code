@@ -341,13 +341,10 @@
 		<col def="S0">ISDotNetInstallerArgsCommit</col>
 		<col def="S0">ISDotNetInstallerArgsUninstall</col>
 		<col def="S0">ISDotNetInstallerArgsRollback</col>
-		<row><td>ClrDump.dll</td><td>{1B87CF6A-F2CA-46D9-AE49-CB7D361127BE}</td><td>LIB</td><td>2</td><td/><td>clrdump.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISO19770_LocalTag</td><td>{9855C1AC-3795-440A-B283-14FB6F710EB7}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISO19770_SystemTag</td><td>{82E6B0AB-DF91-4F59-B03D-743A1A6E5D8F}</td><td>CommonAppDataFolder</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
-		<row><td>ISX_DEFAULTCOMPONENT</td><td>{324F665A-60C6-4746-8107-461BECD0652D}</td><td>LIB</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISX_DEFAULTCOMPONENT1</td><td>{5D895DFD-7470-4843-87F8-85DCE4E9785F}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>RyLogViewer.Primary_output2</td><td>{9B21223C-6837-4646-9C38-3F7D55206ECC}</td><td>INSTALLDIR</td><td>2</td><td/><td>rylogviewer.primary_output2</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
-		<row><td>dbghelp.dll</td><td>{130A67FD-B292-4AFF-A7BB-84F4B41AF5BB}</td><td>LIB</td><td>2</td><td/><td>dbghelp.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>prcs_vs2012.Primary_output2</td><td>{C15F12D9-A6B2-46E4-B8BF-307310BEFFCF}</td><td>INSTALLDIR</td><td>2</td><td/><td>prcs_vs2012.primary_output2</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 	</table>
 
@@ -1061,7 +1058,6 @@
 		<row><td>CommonAppDataFolder</td><td>ISO19770_SystemTag</td></row>
 		<row><td>INSTALLDIR</td><td>ISO19770_LocalTag</td></row>
 		<row><td>INSTALLDIR</td><td>ISX_DEFAULTCOMPONENT1</td></row>
-		<row><td>LIB</td><td>ISX_DEFAULTCOMPONENT</td></row>
 	</table>
 
 	<table name="CustomAction">
@@ -1077,6 +1073,7 @@
 		<row><td>ISSelfRegisterCosting</td><td>1</td><td>ISSELFREG.DLL</td><td>ISSelfRegisterCosting</td><td/><td/></row>
 		<row><td>ISSelfRegisterFiles</td><td>3073</td><td>ISSELFREG.DLL</td><td>ISSelfRegisterFiles</td><td/><td/></row>
 		<row><td>ISSelfRegisterFinalize</td><td>1</td><td>ISSELFREG.DLL</td><td>ISSelfRegisterFinalize</td><td/><td/></row>
+		<row><td>ISSetAllUsers</td><td>257</td><td>SetAllUsers.dll</td><td>SetAllUsers</td><td/><td/></row>
 		<row><td>ISUnSelfRegisterFiles</td><td>3073</td><td>ISSELFREG.DLL</td><td>ISUnSelfRegisterFiles</td><td/><td/></row>
 		<row><td>LaunchProgramFileFromSetupCompleteSuccess</td><td>1</td><td>NewBinary19</td><td>LaunchProgram</td><td/><td/></row>
 		<row><td>SetARPINSTALLLOCATION</td><td>51</td><td>ARPINSTALLLOCATION</td><td>[INSTALLDIR]</td><td/><td/></row>
@@ -1156,7 +1153,6 @@
 		<row><td>ISMyCompanyDir</td><td>ProgramFilesFolder</td><td>MYCOMP~1|My Company Name</td><td/><td>0</td><td/></row>
 		<row><td>ISMyProductDir</td><td>ISMyCompanyDir</td><td>MYPROD~1|My Product Name</td><td/><td>0</td><td/></row>
 		<row><td>ISYourDataBaseDir</td><td>INSTALLDIR</td><td>Database</td><td/><td>0</td><td/></row>
-		<row><td>LIB</td><td>INSTALLDIR</td><td>lib</td><td/><td>0</td><td/></row>
 		<row><td>LocalAppDataFolder</td><td>TARGETDIR</td><td>.:LocalA~1|LocalAppData</td><td/><td>0</td><td/></row>
 		<row><td>MY_PRODUCT_NAME</td><td>RYLOGIC_LIMITED</td><td>MYPROD~1|My Product Name</td><td/><td>0</td><td/></row>
 		<row><td>MyPicturesFolder</td><td>TARGETDIR</td><td>.:MyPict~1|MyPictures</td><td/><td>0</td><td/></row>
@@ -1872,13 +1868,10 @@
 	<table name="FeatureComponents">
 		<col key="yes" def="s38">Feature_</col>
 		<col key="yes" def="s72">Component_</col>
-		<row><td>AlwaysInstall</td><td>ClrDump.dll</td></row>
 		<row><td>AlwaysInstall</td><td>ISO19770_LocalTag</td></row>
 		<row><td>AlwaysInstall</td><td>ISO19770_SystemTag</td></row>
-		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT</td></row>
 		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT1</td></row>
 		<row><td>AlwaysInstall</td><td>RyLogViewer.Primary_output2</td></row>
-		<row><td>AlwaysInstall</td><td>dbghelp.dll</td></row>
 		<row><td>AlwaysInstall</td><td>prcs_vs2012.Primary_output2</td></row>
 	</table>
 
@@ -1894,8 +1887,6 @@
 		<col def="S255">ISBuildSourcePath</col>
 		<col def="I4">ISAttributes</col>
 		<col def="S72">ISComponentSubFolder_</col>
-		<row><td>clrdump.dll</td><td>ClrDump.dll</td><td>ClrDump.dll</td><td>0</td><td/><td/><td/><td>1</td><td>Q:\projects\RyLogViewer\lib\ClrDump.dll</td><td>1</td><td/></row>
-		<row><td>dbghelp.dll</td><td>dbghelp.dll</td><td>dbghelp.dll</td><td>0</td><td/><td/><td/><td>1</td><td>Q:\projects\RyLogViewer\lib\dbghelp.dll</td><td>1</td><td/></row>
 		<row><td>prcs_vs2012.primary_output2</td><td>prcs_vs2012.Primary_output2</td><td>prcs_vs2012.Primary output</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;prcs_vs2012&gt;|Built</td><td>3</td><td/></row>
 		<row><td>rylogviewer.primary_output2</td><td>RyLogViewer.Primary_output2</td><td>RyLogViewer.Primary output</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;RyLogViewer&gt;|Built</td><td>3</td><td/></row>
 	</table>
@@ -2154,13 +2145,10 @@
 		<col def="S0">FTPLocation</col>
 		<col def="S0">HTTPLocation</col>
 		<col def="S0">Miscellaneous</col>
-		<row><td>ClrDump.dll</td><td/><td/><td>_EBF37CAF_D4E8_4D64_8C09_88B463C23F24_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISO19770_LocalTag</td><td/><td/><td>_4BDF7029_A0D5_4A7D_8B9E_0676A97812AB_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISO19770_SystemTag</td><td/><td/><td>_C4923418_1A23_4486_BF84_B3F2AA8B5BAE_FILTER</td><td/><td/><td/><td/></row>
-		<row><td>ISX_DEFAULTCOMPONENT</td><td/><td/><td>_FE499FC8_5F72_4459_BD23_0725883F8C0B_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISX_DEFAULTCOMPONENT1</td><td/><td/><td>_28CC9EA7_C685_4B7E_9DB3_EFC6A414763D_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>RyLogViewer.Primary_output2</td><td/><td/><td>_61884C51_510C_49B0_8C96_29144AB72CC2_FILTER</td><td/><td/><td/><td/></row>
-		<row><td>dbghelp.dll</td><td/><td/><td>_6AE141B5_99AD_479F_B72F_5270A3B75444_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>prcs_vs2012.Primary_output2</td><td/><td/><td>_F4E27322_BF90_49D2_AE9C_0861137C98A3_FILTER</td><td/><td/><td/><td/></row>
 	</table>
 
@@ -2231,6 +2219,7 @@
 	<table name="ISDependency">
 		<col key="yes" def="S50">ISDependency</col>
 		<col def="I2">Exclude</col>
+		<row><td>CLRDUMP.DLL</td><td>1</td></row>
 		<row><td>MICROSOFT.CSHARP.DLL</td><td>1</td></row>
 		<row><td>SQLITE3.DLL</td><td>1</td></row>
 		<row><td>SYSTEM.COMPONENTMODEL.COMPOSITION.DLL</td><td>1</td></row>
@@ -2553,7 +2542,7 @@
 		<row><td>DVD-18</td><td>Express</td><td>&lt;ISProjectDataFolder&gt;</td><td>Default</td><td>3</td><td>1033</td><td>0</td><td>2</td><td>Intel</td><td/><td>1033</td><td>0</td><td>15.83</td><td>1</td><td>2048</td><td/><td>0</td><td/><td>MediaLocation</td><td/><td>http://</td><td/><td/><td/><td/><td>75805</td><td/><td/><td/><td>3</td></row>
 		<row><td>DVD-5</td><td>Express</td><td>&lt;ISProjectDataFolder&gt;</td><td>Default</td><td>3</td><td>1033</td><td>0</td><td>2</td><td>Intel</td><td/><td>1033</td><td>0</td><td>4.38</td><td>1</td><td>2048</td><td/><td>0</td><td/><td>MediaLocation</td><td/><td>http://</td><td/><td/><td/><td/><td>75805</td><td/><td/><td/><td>3</td></row>
 		<row><td>DVD-9</td><td>Express</td><td>&lt;ISProjectDataFolder&gt;</td><td>Default</td><td>3</td><td>1033</td><td>0</td><td>2</td><td>Intel</td><td/><td>1033</td><td>0</td><td>7.95</td><td>1</td><td>2048</td><td/><td>0</td><td/><td>MediaLocation</td><td/><td>http://</td><td/><td/><td/><td/><td>75805</td><td/><td/><td/><td>3</td></row>
-		<row><td>SingleImage</td><td>Express</td><td>&lt;ISProjectDataFolder&gt;</td><td>PackageName</td><td>1</td><td>1033</td><td>0</td><td>1</td><td>Intel</td><td/><td>1033</td><td>0</td><td>0</td><td>0</td><td>0</td><td/><td>0</td><td/><td>MediaLocation</td><td/><td>http://</td><td/><td/><td/><td/><td>108573</td><td/><td/><td/><td>3</td></row>
+		<row><td>SingleImage</td><td>Express</td><td>&lt;ISProjectDataFolder&gt;</td><td>PackageName</td><td>1</td><td>1033</td><td>0</td><td>1</td><td>Intel</td><td/><td>1033</td><td>0</td><td>0</td><td>0</td><td>0</td><td/><td>0</td><td/><td>MediaLocation</td><td/><td>http://</td><td/><td/><td/><td/><td>108573</td><td/><td/><td/><td>1</td></row>
 		<row><td>WebDeployment</td><td>Express</td><td>&lt;ISProjectDataFolder&gt;</td><td>PackageName</td><td>4</td><td>1033</td><td>2</td><td>1</td><td>Intel</td><td/><td>1033</td><td>0</td><td>0</td><td>0</td><td>0</td><td/><td>0</td><td/><td>MediaLocation</td><td/><td>http://</td><td/><td/><td/><td/><td>124941</td><td/><td/><td/><td>3</td></row>
 	</table>
 
@@ -2796,7 +2785,7 @@
 		<col def="I2">Encoded</col>
 		<col def="S0">Comment</col>
 		<col def="I4">TimeStamp</col>
-		<row><td>COMPANY_NAME</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>-1960713099</td></row>
+		<row><td>COMPANY_NAME</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>-1692323040</td></row>
 		<row><td>DN_AlwaysInstall</td><td>1033</td><td>Always Install</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>IDPROP_EXPRESS_LAUNCH_CONDITION_COLOR</td><td>1033</td><td>The color settings of your system are not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>IDPROP_EXPRESS_LAUNCH_CONDITION_DOTNETVERSION40CLIENT</td><td>1033</td><td>Microsoft .NET Framework 4.0 Client Package or greater needs to be installed for this installation to continue.</td><td>0</td><td/><td>-1960741515</td></row>
@@ -3897,8 +3886,8 @@
 		<row><td>IDS__TargetReq_DESC_RAM</td><td>1033</td><td>The amount of RAM is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>IDS__TargetReq_DESC_RESOLUTION</td><td>1033</td><td>The screen resolution is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>ID_STRING1</td><td>1033</td><td/><td>0</td><td/><td>-1960710700</td></row>
-		<row><td>ID_STRING2</td><td>1033</td><td>http://www.RylogicLimited.com</td><td>0</td><td/><td>-1960713099</td></row>
-		<row><td>ID_STRING3</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>-1960713099</td></row>
+		<row><td>ID_STRING2</td><td>1033</td><td>http://www.RylogicLimited.com</td><td>0</td><td/><td>-1692323040</td></row>
+		<row><td>ID_STRING3</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>-1692323040</td></row>
 		<row><td>ID_STRING4</td><td>1033</td><td>RYLOGV~1|RylogViewer</td><td>0</td><td/><td>-1826535571</td></row>
 		<row><td>ID_STRING5</td><td>1033</td><td>RYLOGV~1|RylogViewer</td><td>0</td><td/><td>-1826510995</td></row>
 		<row><td>ID_STRING6</td><td>1033</td><td>UNINST~1|Uninstall RylogViewer</td><td>0</td><td/><td>-1826496659</td></row>
@@ -4012,7 +4001,7 @@
 		<col def="V0">Data</col>
 		<col def="S255">ISBuildSourcePath</col>
 		<col def="I2">ISIconIndex</col>
-		<row><td>ARPPRODUCTICON.exe</td><td/><td>&lt;ISProductFolder&gt;\redist\Language Independent\OS Independent\setupicon.ico</td><td>0</td></row>
+		<row><td>ARPPRODUCTICON.exe</td><td/><td>Q:\projects\RyLogViewer\RyLog.ico</td><td>0</td></row>
 		<row><td>NewShortcut2_1121501753A14233AB461F623D7E2245.exe</td><td/><td>D:\Program Files (x86)\InstallShield\2012SpringLE\Redist\Language Independent\OS Independent\uninstall.ico</td><td>0</td></row>
 	</table>
 
@@ -4059,6 +4048,7 @@
 		<row><td>ISSelfRegisterCosting</td><td/><td>2201</td><td/><td/></row>
 		<row><td>ISSelfRegisterFiles</td><td/><td>5601</td><td/><td/></row>
 		<row><td>ISSelfRegisterFinalize</td><td/><td>6601</td><td/><td/></row>
+		<row><td>ISSetAllUsers</td><td>Not Installed</td><td>10</td><td/><td/></row>
 		<row><td>ISUnSelfRegisterFiles</td><td/><td>2202</td><td/><td/></row>
 		<row><td>InstallFiles</td><td/><td>4000</td><td>InstallFiles</td><td/></row>
 		<row><td>InstallFinalize</td><td/><td>6600</td><td>InstallFinalize</td><td/></row>
@@ -4146,7 +4136,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>ISTheme</td><td>InstallShield Blue.theme</td></row>
 		<row><td>ISUSLock</td><td>{82C31F65-77DA-43E3-9316-ECCB7CC49620}</td></row>
 		<row><td>ISUSSignature</td><td>{E8E09799-41BC-4C49-BED3-B874F883106D}</td></row>
-		<row><td>ISVisitedViews</td><td>viewAssistant,viewProject,viewUpgradePaths,viewUpdateService,viewRelease,viewSupportFiles,viewCustomActions,viewUI,viewAppFiles,viewISToday,viewSystemSearch,viewDependencies,viewRealSetupDesign,viewShortcuts</td></row>
+		<row><td>ISVisitedViews</td><td>viewAssistant,viewProject,viewUpgradePaths,viewUpdateService,viewRelease,viewSupportFiles,viewCustomActions,viewUI,viewAppFiles,viewISToday,viewSystemSearch,viewDependencies,viewRealSetupDesign,viewShortcuts,viewObjects</td></row>
 		<row><td>Limited</td><td>1</td></row>
 		<row><td>LockPermissionMode</td><td>1</td></row>
 		<row><td>MsiExecCmdLineOptions</td><td/></row>
@@ -4178,6 +4168,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>FileCost</td><td/><td>900</td><td>FileCost</td><td/></row>
 		<row><td>FindRelatedProducts</td><td/><td>430</td><td>FindRelatedProducts</td><td/></row>
 		<row><td>ISPreventDowngrade</td><td>ISFOUNDNEWERPRODUCTVERSION</td><td>450</td><td>ISPreventDowngrade</td><td/></row>
+		<row><td>ISSetAllUsers</td><td>Not Installed</td><td>10</td><td/><td/></row>
 		<row><td>InstallWelcome</td><td>Not Installed</td><td>1210</td><td>InstallWelcome</td><td/></row>
 		<row><td>IsolateComponents</td><td/><td>950</td><td>IsolateComponents</td><td/></row>
 		<row><td>LaunchConditions</td><td>Not Installed</td><td>410</td><td>LaunchConditions</td><td/></row>
@@ -4526,7 +4517,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>PROGMSG_IIS_ROLLBACKVROOTS</td><td>##IDS_PROGMSG_IIS_ROLLBACKVROOTS##</td><td/></row>
 		<row><td>PROGMSG_IIS_ROLLBACKWEBSERVICEEXTENSIONS</td><td>##IDS_PROGMSG_IIS_ROLLBACKWEBSERVICEEXTENSIONS##</td><td/></row>
 		<row><td>PROGRAMFILETOLAUNCHATEND</td><td>[INSTALLDIR]RyLogViewer.Primary output</td><td/></row>
-		<row><td>ProductCode</td><td>{9BCA371D-7872-48A3-B6E6-A9634D0CC66D}</td><td/></row>
+		<row><td>ProductCode</td><td>{F8489126-31A6-4EE4-8BD9-3F88298609F0}</td><td/></row>
 		<row><td>ProductName</td><td>RylogViewer</td><td/></row>
 		<row><td>ProductVersion</td><td>1.00.0000</td><td/></row>
 		<row><td>ProgressType0</td><td>install</td><td/></row>
@@ -4541,7 +4532,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>SERIALNUMBER</td><td/><td/></row>
 		<row><td>SERIALNUMVALSUCCESSRETVAL</td><td>1</td><td/></row>
 		<row><td>SHOWLAUNCHPROGRAM</td><td>-1</td><td/></row>
-		<row><td>SecureCustomProperties</td><td>ISFOUNDNEWERPRODUCTVERSION;USERNAME;COMPANYNAME;ISX_SERIALNUM;SUPPORTDIR;DOTNETVERSION40CLIENT</td><td/></row>
+		<row><td>SecureCustomProperties</td><td>ISFOUNDNEWERPRODUCTVERSION;USERNAME;COMPANYNAME;ISX_SERIALNUM;SUPPORTDIR;DOTNETVERSION40CLIENT;ISACTIONPROP2</td><td/></row>
 		<row><td>SelectedSetupType</td><td>##IDS__DisplayName_Typical##</td><td/></row>
 		<row><td>SetupType</td><td>Typical</td><td/></row>
 		<row><td>UpgradeCode</td><td>{9895513E-D38A-499A-BF79-D14255254D8A}</td><td/></row>
@@ -4816,6 +4807,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<col def="s72">ActionProperty</col>
 		<col def="S72">ISDisplayName</col>
 		<row><td>{00000000-0000-0000-0000-000000000000}</td><td>***ALL_VERSIONS***</td><td></td><td></td><td>2</td><td/><td>ISFOUNDNEWERPRODUCTVERSION</td><td>ISPreventDowngrade</td></row>
+		<row><td>{9895513E-D38A-499A-BF79-D14255254D8A}</td><td>0.00.0000</td><td>100.00.0000</td><td>1033</td><td>256</td><td/><td>ISACTIONPROP2</td><td>Release-19/06/2013</td></row>
 	</table>
 
 	<table name="Verb">

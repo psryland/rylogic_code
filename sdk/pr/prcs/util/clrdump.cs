@@ -8,6 +8,8 @@ namespace pr.util
 	/// <summary>Bindings for clrdump. Ensure the clrdump and dbghelp dlls are in a subdirectory called 'lib'</summary>
 	public static class ClrDump
 	{
+		// clrdump.dll is 32-bit only :(
+
 		[return: MarshalAs(UnmanagedType.Bool)]
 		[DllImport("lib\\clrdump.dll", CharSet=CharSet.Unicode, SetLastError=true)]
 		public static extern bool CreateDump(int ProcessId, string FileName, MINIDUMP_TYPE DumpType, int ExcThreadId, IntPtr ExtPtrs);

@@ -295,15 +295,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Dump Files (*.dmp)|*.dmp|All files (*.*)|*.*.
-        /// </summary>
-        internal static string DumpFileFilter {
-            get {
-                return ResourceManager.GetString("DumpFileFilter", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Edit.
         /// </summary>
         internal static string Edit {

@@ -12,7 +12,7 @@ if [%RylogicEnv%]==[] (
 	goto :eof
 )
 call %RylogicEnv%
-if %RylogicEnvVersion% lss 5 (
+if %RylogicEnvVersion% lss 6 (
 	echo ERROR: '%RylogicEnv%' is out of date. Please update.
 	goto :eof
 )

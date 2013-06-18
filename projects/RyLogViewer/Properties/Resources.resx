@@ -346,9 +346,6 @@ Right click to show the actions dialog</value>
   <data name="CSVFileFilter" xml:space="preserve">
     <value>CSV Files (*.csv)|*.csv|All files (*.*)|*.*</value>
   </data>
-  <data name="DumpFileFilter" xml:space="preserve">
-    <value>Dump Files (*.dmp)|*.dmp|All files (*.*)|*.*</value>
-  </data>
   <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\gray_cross.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>

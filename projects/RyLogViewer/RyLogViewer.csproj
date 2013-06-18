@@ -372,12 +372,6 @@
     <None Include="Resources\find_search.png" />
     <Content Include="Resources\green_tick.png" />
     <EmbeddedResource Include="docs\CommandLineRef.html" />
-    <Content Include="lib\ClrDump.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="lib\dbghelp.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
