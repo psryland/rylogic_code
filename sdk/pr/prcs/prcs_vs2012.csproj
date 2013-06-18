@@ -69,15 +69,11 @@
     <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
     <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
   </PropertyGroup>
-  <Choose>
-    <When Condition=" '$(Configuration)'=='Debug' ">
-      <ItemGroup>
-        <Reference Include="nunit.framework">
-          <HintPath>..\..\..\projects\vs2012\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
+  <ItemGroup Condition="'$(Configuration)'=='Debug'">
+    <Reference Include="nunit.framework">
+      <HintPath>..\..\..\projects\vs2012\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="PresentationFramework">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
