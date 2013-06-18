@@ -226,7 +226,8 @@ namespace RyLogViewer
 			m_grid.KeyDown             += DataGridView_Extensions.SelectAll;
 			m_grid.KeyDown             += DataGridView_Extensions.Copy;
 			m_grid.KeyUp               += (s,a) => LoadNearBoundary();
-			m_grid.MouseUp             += (s,a) => { if (a.Button == MouseButtons.Left) LoadNearBoundary(); };
+			m_grid.MouseUp             += (s,a) => GridMouseButton(a, false);
+			m_grid.MouseDown           += (s,a) => GridMouseButton(a, true);
 			m_grid.CellValueNeeded     += CellValueNeeded;
 			m_grid.CellPainting        += CellPainting;
 			m_grid.SelectionChanged    += GridSelectionChanged;
@@ -237,13 +238,8 @@ namespace RyLogViewer
 			
 			// Grid context menu
 			m_cmenu_grid.ItemClicked    += GridContextMenu;
-			m_cmenu_grid.VisibleChanged += (s,a) =>
-				{
-					m_cmenu_grid.Tag = MousePosition; // save the mouse position in 'Tag'
-					m_cmenu_copy.Enabled = m_grid.SelectedCells.Count != 0;
-					m_cmenu_select_all.Enabled = m_grid.RowCount != 0;
-				};
-			
+			m_cmenu_grid.VisibleChanged += SetGridContextMenuVisibility;
+
 			// File Watcher
 			m_watch_timer.Tick += (s,a)=>
 				{
@@ -615,35 +611,72 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Handler for mouse down/up events on the grid</summary>
+		private void GridMouseButton(MouseEventArgs args, bool button_down)
+		{
+			switch (args.Button)
+			{
+			case MouseButtons.Left:
+				if (!button_down) LoadNearBoundary();
+				break;
+			case MouseButtons.Right:
+				if (button_down && SelectedRowCount <= 1)
+				{
+					var hit = m_grid.HitTest(args.X, args.Y);
+					if (hit.RowIndex >= 0 && hit.RowIndex < m_grid.RowCount)
+						SelectedRowIndex = hit.RowIndex;
+				}
+				break;
+			}
+		}
+
 		/// <summary>Handle grid context menu actions</summary>
 		private void GridContextMenu(object sender, ToolStripItemClickedEventArgs args)
 		{
 			// Note: I'm not attaching event handlers to each context menu item because
 			// some items require the selected row to be set and some don't. Plus the
 			// individual handlers don't have access to the click location
-			
+
+			// Find the row that the context menu was opened on
+			var pt = m_grid.PointToClient(((ContextMenuStrip)sender).Location);
+			var hit = m_grid.HitTest(pt.X, pt.Y);
+			if (hit.RowIndex < 0 || hit.RowIndex >= m_grid.RowCount)
+				return;
+
 			// Clipboard operations
 			if (args.ClickedItem == m_cmenu_copy      ) { DataGridView_Extensions.Copy(m_grid);      return; }
 			if (args.ClickedItem == m_cmenu_select_all) { DataGridView_Extensions.SelectAll(m_grid); return; }
 			if (args.ClickedItem == m_cmenu_clear_log ) { ClearLogFile(); return; }
-			
-			// Find the row that the context menu was opened on
-			var pt = m_grid.PointToClient(((ContextMenuStrip)sender).Location);
-			var hit = m_grid.HitTest(pt.X, pt.Y);
-			if (hit.RowIndex < 0 || hit.RowIndex >= m_grid.RowCount) return;
-			SelectedRowIndex = hit.RowIndex;
-			
+
 			if (args.ClickedItem == m_cmenu_highlight_row) { ShowOptions(SettingsUI.ETab.Highlights); return; }
 			if (args.ClickedItem == m_cmenu_filter_row   ) { ShowOptions(SettingsUI.ETab.Filters   ); return; }
 			if (args.ClickedItem == m_cmenu_transform_row) { ShowOptions(SettingsUI.ETab.Transforms); return; }
 			if (args.ClickedItem == m_cmenu_action_row   ) { ShowOptions(SettingsUI.ETab.Actions   ); return; }
-			
+
 			// Find operations
 			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(); return; }
 			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(); return; }
-			
+
 			// Bookmarks
 			if (args.ClickedItem == m_cmenu_toggle_bookmark) { ToggleBookmark(hit.RowIndex); }
+		}
+
+		/// <summary>Set the visibility of context menu options</summary>
+		private void SetGridContextMenuVisibility(object sender, EventArgs args)
+		{
+			bool has_rows                   = m_grid.RowCount != 0;
+			bool has_selected_rows          = SelectedRowCount != 0;
+			m_cmenu_grid.Tag                = MousePosition; // save the mouse position in 'Tag'
+			m_cmenu_copy.Enabled            = has_selected_rows;
+			m_cmenu_select_all.Enabled      = has_rows;
+			m_cmenu_clear_log.Enabled       = has_rows;
+			m_cmenu_highlight_row.Enabled   = has_selected_rows;
+			m_cmenu_filter_row.Enabled      = has_selected_rows;
+			m_cmenu_transform_row.Enabled   = has_selected_rows;
+			m_cmenu_action_row.Enabled      = has_selected_rows;
+			m_cmenu_find_next.Enabled       = has_rows;
+			m_cmenu_find_prev.Enabled       = has_rows;
+			m_cmenu_toggle_bookmark.Enabled = has_rows;
 		}
 
 		/// <summary>Called when the grid is scrolled</summary>
@@ -1144,10 +1177,6 @@ namespace RyLogViewer
 				var row = m_grid.CurrentRow;
 				if (row != null && row.Selected) return row.Index;
 				return -1;
-				//// Otherwise return the vi
-				//return m_grid.GetCellCount(DataGridViewElementStates.Selected) != 0
-				//	? m_grid.SelectedRows[0].Index
-				//	: -1;
 			}
 			set
 			{
@@ -1159,6 +1188,12 @@ namespace RyLogViewer
 						UpdateStatus();
 				}
 			}
+		}
+
+		/// <summary>Returns the number of selected rows</summary>
+		private int SelectedRowCount
+		{
+			get { return m_grid.Rows.GetRowCount(DataGridViewElementStates.Selected); }
 		}
 
 		/// <summary>Returns the byte offset of the selected row, or 0 if there is no selection</summary>
@@ -1503,7 +1538,7 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Create a message that displays for a period then disappears</summary>
-		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, int display_time_ms = 2000)
+		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, TimeSpan display_time_ms)
 		{
 			m_status_message.Text = text;
 			m_status_message.Visible = true;
@@ -1515,21 +1550,28 @@ namespace RyLogViewer
 			if (timer != null) timer.Dispose();
 			
 			// Attach a new timer to the status message
-			m_status_message.Tag = timer = new Timer{Enabled = true, Interval = display_time_ms};
-			timer.Tick += (s,a)=>
-				{
-					// When the timer fires, if we're still associated with
-					// the status message, null out the text and remove our self
-					if (s != m_status_message.Tag) return;
-					m_status_message.Text = Resources.Idle;
-					m_status_message.Visible = false;
-					m_status_message.Tag = null;
-					((Timer)s).Dispose();
-				};
+			if (display_time_ms != TimeSpan.MaxValue)
+			{
+				m_status_message.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.TotalMilliseconds};
+				timer.Tick += (s,a)=>
+					{
+						// When the timer fires, if we're still associated with
+						// the status message, null out the text and remove our self
+						if (s != m_status_message.Tag) return;
+						m_status_message.Text = Resources.Idle;
+						m_status_message.Visible = false;
+						m_status_message.Tag = null;
+						((Timer)s).Dispose();
+					};
+			}
 		}
-		private void SetTransientStatusMessage(string text, int display_time_ms = 2000)
+		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol)
 		{
-			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control, display_time_ms);
+			SetTransientStatusMessage(text, frcol, bkcol, TimeSpan.FromSeconds(2));
+		}
+		private void SetTransientStatusMessage(string text)
+		{
+			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
 		}
 
 		/// <summary>Display the hint balloon</summary>
