@@ -98,9 +98,9 @@ namespace pr.common
 		/// <summary>Read a settings value</summary>
 		protected Value get<Value>(string key)
 		{
-			int idx = Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+			int idx = index(key);
 			if (idx >= 0) return (Value)Data[idx].Value;
-			idx = Default.Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+			idx = Default.index(key);
 			if (idx >= 0) return (Value)Default.Data[idx].Value;
 			throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
 				"This is probably because there is no default value set "+
@@ -111,7 +111,7 @@ namespace pr.common
 		protected void set<Value>(string key, Value value)
 		{
 			// Key not in the data yet? Must be initial value from startup
-			int idx = Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+			int idx = index(key);
 			if (idx < 0) { Data.Insert(~idx, new Pair{Key = key, Value = value}); return; }
 				
 			object old_value = Data[idx].Value;
@@ -122,7 +122,19 @@ namespace pr.common
 			if (!args.Cancel) Data[idx].Value = value;
 			if (SettingChanged != null && key != version_key) SettingChanged(this, new SettingChangedEventArgs(key, old_value, value));
 		}
-		
+
+		/// <summary>Return the index of 'key' in the data. Returned value is negative if not found</summary>
+		protected int index(string key)
+		{
+			return Data.BinarySearch(x => string.CompareOrdinal(x.Key, key));
+		}
+
+		/// <summary>Returns true if 'key' is present within the data</summary>
+		protected bool has(string key)
+		{
+			return index(key) >= 0;
+		}
+
 		/// <summary>An event raised when a settings is about to change value</summary>
 		public event EventHandler<SettingsChangingEventArgs> SettingChanging;
 		public class SettingsChangingEventArgs :CancelEventArgs
@@ -245,7 +257,14 @@ namespace pr.common
 				Data = (List<Pair>)ser.ReadObject(fs);
 				Data.Sort((lhs,rhs) => string.CompareOrdinal(lhs.Key, rhs.Key));
 			}
-			
+
+			// Add any default options that aren't in the settings file
+			foreach (var i in Default.Data)
+			{
+				if (has(i.Key)) continue;
+				set(i.Key, i.Value);
+			}
+
 			// Check the version of the settings
 			string version = get<string>(version_key);
 			if (version != Version)
