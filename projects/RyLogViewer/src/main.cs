@@ -386,6 +386,8 @@ namespace RyLogViewer
 				m_file = null;
 				m_filepos = 0;
 				m_fileend = 0;
+				SetTransientStatusMessage(null);
+				SetStaticStatusMessage(null);
 			}
 
 			// Initiate a UI update after any existing queued events
@@ -1536,31 +1538,31 @@ namespace RyLogViewer
 
 			m_scroll_file.Refresh();
 		}
-		
-		/// <summary>Create a message that displays for a period then disappears</summary>
+
+		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
 		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, TimeSpan display_time_ms)
 		{
-			m_status_message.Text = text;
-			m_status_message.Visible = true;
-			m_status_message.ForeColor = frcol;
-			m_status_message.BackColor = bkcol;
-			
+			m_status_message_trans.Text = text ?? string.Empty;
+			m_status_message_trans.Visible = text.HasValue();
+			m_status_message_trans.ForeColor = frcol;
+			m_status_message_trans.BackColor = bkcol;
+
 			// If the status message has a timer already, dispose it
-			Timer timer = m_status_message.Tag as Timer;
+			Timer timer = m_status_message_trans.Tag as Timer;
 			if (timer != null) timer.Dispose();
-			
+
 			// Attach a new timer to the status message
-			if (display_time_ms != TimeSpan.MaxValue)
+			if (text.HasValue() && display_time_ms != TimeSpan.MaxValue)
 			{
-				m_status_message.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.TotalMilliseconds};
+				m_status_message_trans.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.TotalMilliseconds};
 				timer.Tick += (s,a)=>
 					{
 						// When the timer fires, if we're still associated with
 						// the status message, null out the text and remove our self
-						if (s != m_status_message.Tag) return;
-						m_status_message.Text = Resources.Idle;
-						m_status_message.Visible = false;
-						m_status_message.Tag = null;
+						if (s != m_status_message_trans.Tag) return;
+						m_status_message_trans.Text = Resources.Idle;
+						m_status_message_trans.Visible = false;
+						m_status_message_trans.Tag = null;
 						((Timer)s).Dispose();
 					};
 			}
@@ -1572,6 +1574,19 @@ namespace RyLogViewer
 		private void SetTransientStatusMessage(string text)
 		{
 			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
+		}
+
+		/// <summary>Create a status message that displays until cleared. Use null or "" to hide the status</summary>
+		private void SetStaticStatusMessage(string text, Color frcol, Color bkcol)
+		{
+			m_status_message_fixed.Text = text ?? string.Empty;
+			m_status_message_fixed.Visible = text.HasValue();
+			m_status_message_fixed.ForeColor = frcol;
+			m_status_message_fixed.BackColor = bkcol;
+		}
+		private void SetStaticStatusMessage(string text)
+		{
+			SetStaticStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
 		}
 
 		/// <summary>Display the hint balloon</summary>
