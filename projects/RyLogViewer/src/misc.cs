@@ -18,7 +18,7 @@ namespace RyLogViewer
 	{
 		public const string SupportEmail            = "support@rylogic.co.nz";
 		public const string EvalLicence             = "Evaluation Licence";
-		public const string AppIdentifier           = "rylogviewer.x86";
+		public const string AppIdentifier           = "rylogviewer";
 		public const int MaxHistoryDefault          = 10;
 		public const int PortNumberMin              = 0;
 		public const int PortNumberWebProxyDefault  = 8080;

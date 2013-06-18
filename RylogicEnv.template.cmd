@@ -18,12 +18,12 @@ rem Boilerplate:
 ::	goto :eof
 ::)
 ::call %RylogicEnv%
-::if %RylogicEnvVersion% lss 5 (
+::if %RylogicEnvVersion% lss 6 (
 ::	echo ERROR: '%RylogicEnv%' is out of date. Please update.
 ::	goto :eof
 ::)
 
-set RylogicEnvVersion=5
+set RylogicEnvVersion=6
 
 set user=Paul
 set machine=Rylogic3
@@ -47,3 +47,4 @@ set android_sdkdir=D:\Program Files ^(x86^)\Android\android-sdk
 set adb=D:\Program Files ^(x86^)\Android\android-sdk\platform-tools\adb.exe
 set dmdroot=Q:\dlang\dmd2
 set dmd=%dmdroot%\windows\bin\dmd.exe
+set wwwroot=Z:\www\rylogic.co.nz
