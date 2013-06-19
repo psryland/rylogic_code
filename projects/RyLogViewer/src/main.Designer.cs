@@ -119,6 +119,7 @@
 			this.m_status_line_end = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_encoding = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_spring = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_message_fixed = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_message_trans = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_progress = new System.Windows.Forms.ToolStripProgressBar();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
@@ -140,7 +141,6 @@
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_grid = new RyLogViewer.DGV();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.m_status_message_fixed = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -814,9 +814,9 @@
             this.m_status_line_end,
             this.m_status_encoding,
             this.m_status_spring,
-            this.m_status_message_fixed,
+            this.m_status_progress,
             this.m_status_message_trans,
-            this.m_status_progress});
+            this.m_status_message_fixed});
 			this.m_status.Location = new System.Drawing.Point(0, 0);
 			this.m_status.Name = "m_status";
 			this.m_status.Size = new System.Drawing.Size(835, 24);
@@ -860,6 +860,17 @@
 			this.m_status_spring.Size = new System.Drawing.Size(221, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_status_message_fixed
+			// 
+			this.m_status_message_fixed.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_message_fixed.Name = "m_status_message_fixed";
+			this.m_status_message_fixed.Size = new System.Drawing.Size(89, 19);
+			this.m_status_message_fixed.Text = "Static Message";
+			this.m_status_message_fixed.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.m_status_message_fixed.Visible = false;
 			// 
 			// m_status_message_trans
 			// 
@@ -1063,17 +1074,6 @@
 			this.m_scroll_file.TabIndex = 4;
 			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
 			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
-			// 
-			// m_status_message_fixed
-			// 
-			this.m_status_message_fixed.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
-			this.m_status_message_fixed.Name = "m_status_message_fixed";
-			this.m_status_message_fixed.Size = new System.Drawing.Size(89, 19);
-			this.m_status_message_fixed.Text = "Static Message";
-			this.m_status_message_fixed.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			this.m_status_message_fixed.Visible = false;
 			// 
 			// Main
 			// 

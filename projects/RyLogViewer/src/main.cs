@@ -822,11 +822,9 @@ namespace RyLogViewer
 		/// <summary>Turn on/off tail mode</summary>
 		private void EnableTail(bool enabled)
 		{
-			if (enabled != m_tail_enabled)
-			{
-				m_settings.TailEnabled = m_tail_enabled = enabled;
-				UpdateUI();
-			}
+			if (enabled == m_tail_enabled) return;
+			m_settings.TailEnabled = m_tail_enabled = enabled;
+			ApplySettings();
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
@@ -1030,6 +1028,21 @@ namespace RyLogViewer
 			new TipOfTheDay(m_settings).ShowDialog(this);
 		}
 
+		/// <summary>Returns the web proxy to use, if specified in the settings</summary>
+		private IWebProxy Proxy
+		{
+			get
+			{
+				IWebProxy proxy = WebRequest.DefaultWebProxy;
+				if (m_settings.UseWebProxy && !m_settings.WebProxyHost.HasValue())
+				{
+					try { proxy =  new WebProxy(m_settings.WebProxyHost, m_settings.WebProxyPort); }
+					catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}".Fmt(m_settings.WebProxyHost, m_settings.WebProxyPort)); }
+				}
+				return proxy;
+			}
+		}
+
 		/// <summary>Check a remote server for the latest version information</summary>
 		private void CheckForUpdates(bool show_dialog)
 		{
@@ -1043,14 +1056,6 @@ namespace RyLogViewer
 
 					this.BeginInvoke(() => HandleCheckForUpdateResult(res, err, show_dialog));
 				};
-			
-			// Use a web proxy if it specified in the settings
-			IWebProxy proxy = WebRequest.DefaultWebProxy;
-			if (m_settings.UseWebProxy && !string.IsNullOrEmpty(m_settings.WebProxyHost))
-			{
-				try { proxy =  new WebProxy(m_settings.WebProxyHost, m_settings.WebProxyPort); }
-				catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}".Fmt(m_settings.WebProxyHost, m_settings.WebProxyPort)); }
-			}
 
 			string update_url = m_settings.CheckForUpdatesServer + "versions/rylogviewer.xml";
 
@@ -1060,7 +1065,7 @@ namespace RyLogViewer
 				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", null, ProgressBarStyle.Marquee, (s,a,cb)=>
 					{
 						cb(new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
-						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, proxy);
+						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, Proxy);
 
 						// Wait till the operation completes, or until cancel is singled
 						for (;!s.CancelPending && !async.AsyncWaitHandle.WaitOne(500);) {}
@@ -1073,7 +1078,7 @@ namespace RyLogViewer
 			else
 			{
 				// Start the asynchronous check for updates
-				INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, callback, proxy);
+				INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, callback, Proxy);
 			}
 		}
 
@@ -1114,13 +1119,7 @@ namespace RyLogViewer
 					SetTransientStatusMessage("New Version Available!", Color.Green, SystemColors.Control);
 					if (show_dialog)
 					{
-						var dg = new NewVersionForm
-						{
-							CurrentVersion = this_version.ToString(),
-							LatestVersion  = othr_version.ToString(),
-							WebsiteUrl     = res.InfoURL,
-							DownloadUrl    = res.DownloadURL
-						};
+						var dg = new NewVersionForm(this_version.ToString(), othr_version.ToString(), res.InfoURL, res.DownloadURL, Proxy);
 						dg.ShowDialog(this);
 					}
 				}
@@ -1262,7 +1261,7 @@ namespace RyLogViewer
 				{
 					// Restore the selected rows, and the first visible row
 					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
-					if (auto_scroll_tail) m_grid.SelectRow(m_grid.RowCount - 1);
+					if (auto_scroll_tail) SelectedRowIndex = m_grid.RowCount - 1;//m_grid.SelectRow(m_grid.RowCount - 1);
 					else if (selected != -1)
 					{
 						m_grid.SelectRow(selected + row_delta);

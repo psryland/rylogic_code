@@ -75,6 +75,7 @@ namespace pr.gui
 						m_error = ex;
 					}
 					Done.Set();
+					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
 				}, arg);
 
 			Text = title ?? string.Empty;
