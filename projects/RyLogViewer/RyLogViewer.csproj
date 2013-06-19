@@ -297,7 +297,9 @@
     <EmbeddedResource Include="src\settings\transform_ui.resx">
       <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="docs\RegexQuickRef.html" />
+    <Content Include="docs\RegexQuickRef.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="gen_licence.cmd" />
@@ -340,23 +342,41 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\VersionHistory.html" />
+    <Content Include="docs\totd_background.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\VersionHistory.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\TotD0.html" />
+    <Content Include="docs\totd0.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\TotD1.html" />
+    <Content Include="docs\totd1.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\TotD2.html" />
+    <Content Include="docs\totd2.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\SwizzleQuickRef.html" />
-    <EmbeddedResource Include="docs\TransformQuickRef.html" />
+    <Content Include="docs\SwizzleQuickRef.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\TransformQuickRef.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="docs\totd.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\book.png" />
     <None Include="Resources\quick_filter.png" />
     <None Include="Resources\pencil.png" />
@@ -367,13 +387,18 @@
     <None Include="Resources\bookmark.png" />
     <None Include="Resources\find_search.png" />
     <Content Include="Resources\green_tick.png" />
-    <EmbeddedResource Include="docs\CommandLineRef.html" />
+    <Content Include="docs\CommandLineRef.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>prcs_vs2012</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

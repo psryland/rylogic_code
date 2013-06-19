@@ -344,6 +344,7 @@
 		<row><td>ISO19770_LocalTag</td><td>{9855C1AC-3795-440A-B283-14FB6F710EB7}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISO19770_SystemTag</td><td>{82E6B0AB-DF91-4F59-B03D-743A1A6E5D8F}</td><td>CommonAppDataFolder</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISX_DEFAULTCOMPONENT1</td><td>{5D895DFD-7470-4843-87F8-85DCE4E9785F}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>RyLogViewer.Content_Files</td><td>{3CFF9968-405B-4C3C-BC94-14DD38284B05}</td><td>INSTALLDIR</td><td>2</td><td/><td>rylogviewer.content_files</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>RyLogViewer.Primary_output2</td><td>{9B21223C-6837-4646-9C38-3F7D55206ECC}</td><td>INSTALLDIR</td><td>2</td><td/><td>rylogviewer.primary_output2</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>prcs_vs2012.Primary_output2</td><td>{C15F12D9-A6B2-46E4-B8BF-307310BEFFCF}</td><td>INSTALLDIR</td><td>2</td><td/><td>prcs_vs2012.primary_output2</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 	</table>
@@ -1871,6 +1872,7 @@
 		<row><td>AlwaysInstall</td><td>ISO19770_LocalTag</td></row>
 		<row><td>AlwaysInstall</td><td>ISO19770_SystemTag</td></row>
 		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT1</td></row>
+		<row><td>AlwaysInstall</td><td>RyLogViewer.Content_Files</td></row>
 		<row><td>AlwaysInstall</td><td>RyLogViewer.Primary_output2</td></row>
 		<row><td>AlwaysInstall</td><td>prcs_vs2012.Primary_output2</td></row>
 	</table>
@@ -1888,6 +1890,7 @@
 		<col def="I4">ISAttributes</col>
 		<col def="S72">ISComponentSubFolder_</col>
 		<row><td>prcs_vs2012.primary_output2</td><td>prcs_vs2012.Primary_output2</td><td>prcs_vs2012.Primary output</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;prcs_vs2012&gt;|Built</td><td>3</td><td/></row>
+		<row><td>rylogviewer.content_files</td><td>RyLogViewer.Content_Files</td><td>RyLogViewer.Content Files</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;RyLogViewer&gt;|ContentFiles</td><td>3</td><td/></row>
 		<row><td>rylogviewer.primary_output2</td><td>RyLogViewer.Primary_output2</td><td>RyLogViewer.Primary output</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;RyLogViewer&gt;|Built</td><td>3</td><td/></row>
 	</table>
 
@@ -2148,6 +2151,7 @@
 		<row><td>ISO19770_LocalTag</td><td/><td/><td>_4BDF7029_A0D5_4A7D_8B9E_0676A97812AB_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISO19770_SystemTag</td><td/><td/><td>_C4923418_1A23_4486_BF84_B3F2AA8B5BAE_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISX_DEFAULTCOMPONENT1</td><td/><td/><td>_28CC9EA7_C685_4B7E_9DB3_EFC6A414763D_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>RyLogViewer.Content_Files</td><td/><td/><td>_4C7E145F_8F20_4676_9D23_B0E6090511BC_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>RyLogViewer.Primary_output2</td><td/><td/><td>_61884C51_510C_49B0_8C96_29144AB72CC2_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>prcs_vs2012.Primary_output2</td><td/><td/><td>_F4E27322_BF90_49D2_AE9C_0861137C98A3_FILTER</td><td/><td/><td/><td/></row>
 	</table>
