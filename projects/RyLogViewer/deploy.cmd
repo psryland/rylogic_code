@@ -20,7 +20,7 @@ set symdir=%qdrive%\local\symbols
 set proj=%srcdir%\RylogViewer.sln
 set rlvdir=rylogviewer
 
-echo Have you created the 'Upgrade Path' in the setup project^?
+echo Is there an 'Upgrade Path' in the setup project and have you changed the Product GUID and version^?
 echo This is needed so that the new installer will replace the existing installation if there.
 set /p confirm=^(y/n^):
 if not [%confirm%]==[y] goto :error

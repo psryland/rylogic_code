@@ -3886,11 +3886,13 @@
 		<row><td>IDS__TargetReq_DESC_RAM</td><td>1033</td><td>The amount of RAM is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>IDS__TargetReq_DESC_RESOLUTION</td><td>1033</td><td>The screen resolution is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>ID_STRING1</td><td>1033</td><td/><td>0</td><td/><td>-1960710700</td></row>
-		<row><td>ID_STRING2</td><td>1033</td><td>http://www.RylogicLimited.com</td><td>0</td><td/><td>-1692323040</td></row>
+		<row><td>ID_STRING2</td><td>1033</td><td>http://www.rylogic.co.nz/</td><td>0</td><td/><td>-1692283819</td></row>
 		<row><td>ID_STRING3</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>-1692323040</td></row>
 		<row><td>ID_STRING4</td><td>1033</td><td>RYLOGV~1|RylogViewer</td><td>0</td><td/><td>-1826535571</td></row>
 		<row><td>ID_STRING5</td><td>1033</td><td>RYLOGV~1|RylogViewer</td><td>0</td><td/><td>-1826510995</td></row>
 		<row><td>ID_STRING6</td><td>1033</td><td>UNINST~1|Uninstall RylogViewer</td><td>0</td><td/><td>-1826496659</td></row>
+		<row><td>ID_STRING7</td><td>1033</td><td>support@rylogic.co.nz</td><td>0</td><td/><td>-1692275627</td></row>
+		<row><td>ID_STRING8</td><td>1033</td><td>Advanced log viewer by Rylogic Limited</td><td>0</td><td/><td>-1692285835</td></row>
 		<row><td>IIDS_UITEXT_FeatureUninstalled</td><td>1033</td><td>This feature will remain uninstalled.</td><td>0</td><td/><td>-1960714796</td></row>
 	</table>
 
@@ -4445,6 +4447,8 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<col def="L0">Value</col>
 		<col def="S255">ISComments</col>
 		<row><td>ALLUSERS</td><td>1</td><td/></row>
+		<row><td>ARPCOMMENTS</td><td>##ID_STRING8##</td><td/></row>
+		<row><td>ARPCONTACT</td><td>##ID_STRING7##</td><td/></row>
 		<row><td>ARPINSTALLLOCATION</td><td/><td/></row>
 		<row><td>ARPNOMODIFY</td><td>1</td><td/></row>
 		<row><td>ARPPRODUCTICON</td><td>ARPPRODUCTICON.exe</td><td/></row>
@@ -4517,9 +4521,9 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>PROGMSG_IIS_ROLLBACKVROOTS</td><td>##IDS_PROGMSG_IIS_ROLLBACKVROOTS##</td><td/></row>
 		<row><td>PROGMSG_IIS_ROLLBACKWEBSERVICEEXTENSIONS</td><td>##IDS_PROGMSG_IIS_ROLLBACKWEBSERVICEEXTENSIONS##</td><td/></row>
 		<row><td>PROGRAMFILETOLAUNCHATEND</td><td>[INSTALLDIR]RyLogViewer.Primary output</td><td/></row>
-		<row><td>ProductCode</td><td>{F8489126-31A6-4EE4-8BD9-3F88298609F0}</td><td/></row>
+		<row><td>ProductCode</td><td>{85BC5021-1EA0-44D9-961E-9EE0E8E32231}</td><td/></row>
 		<row><td>ProductName</td><td>RylogViewer</td><td/></row>
-		<row><td>ProductVersion</td><td>1.00.0000</td><td/></row>
+		<row><td>ProductVersion</td><td>1.00.0001</td><td/></row>
 		<row><td>ProgressType0</td><td>install</td><td/></row>
 		<row><td>ProgressType1</td><td>Installing</td><td/></row>
 		<row><td>ProgressType2</td><td>installed</td><td/></row>
@@ -4807,7 +4811,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<col def="s72">ActionProperty</col>
 		<col def="S72">ISDisplayName</col>
 		<row><td>{00000000-0000-0000-0000-000000000000}</td><td>***ALL_VERSIONS***</td><td></td><td></td><td>2</td><td/><td>ISFOUNDNEWERPRODUCTVERSION</td><td>ISPreventDowngrade</td></row>
-		<row><td>{9895513E-D38A-499A-BF79-D14255254D8A}</td><td>0.00.0000</td><td>100.00.0000</td><td>1033</td><td>256</td><td/><td>ISACTIONPROP2</td><td>Release-19/06/2013</td></row>
+		<row><td>{9895513E-D38A-499A-BF79-D14255254D8A}</td><td>0.00.0000</td><td>100.00.0000</td><td>1033</td><td>768</td><td/><td>ISACTIONPROP2</td><td>Release-19/06/2013</td></row>
 	</table>
 
 	<table name="Verb">
