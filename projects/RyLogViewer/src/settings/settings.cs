@@ -13,143 +13,143 @@ namespace RyLogViewer
 	{
 		public string LicenceHolder
 		{
-			get { return get<string>("LicenceHolder"); }
-			set { set("LicenceHolder", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.LicenceHolder)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LicenceHolder), value); }
 		}
 		public string Company
 		{
-			get { return get<string>("Company"); }
-			set { set("Company", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.Company)); }
+			set { set(Reflect<Settings>.MemberName(x => x.Company), value); }
 		}
 		public string RecentFiles
 		{
-			get { return get<string>("RecentFiles"); }
-			set { set("RecentFiles", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.RecentFiles)); }
+			set { set(Reflect<Settings>.MemberName(x => x.RecentFiles), value); }
 		}
 		public Font   Font
 		{
-			get { return get<Font>("Font"); }
-			set { set("Font", value); }
+			get { return get<Font>(Reflect<Settings>.MemberName(x => x.Font)); }
+			set { set(Reflect<Settings>.MemberName(x => x.Font), value); }
 		}
 		public bool   RestoreScreenLoc
 		{
-			get { return get<bool>("RestoreScreenLoc"); }
-			set { set("RestoreScreenLoc", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.RestoreScreenLoc)); }
+			set { set(Reflect<Settings>.MemberName(x => x.RestoreScreenLoc), value); }
 		}
 		public Point  ScreenPosition
 		{
-			get { return get<Point>("ScreenPosition"); }
-			set { set("ScreenPosition", value); }
+			get { return get<Point>(Reflect<Settings>.MemberName(x => x.ScreenPosition)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ScreenPosition), value); }
 		}
 		public Size   WindowSize
 		{
-			get { return get<Size>("WindowSize"); }
-			set { set("WindowSize", value); }
+			get { return get<Size>(Reflect<Settings>.MemberName(x => x.WindowSize)); }
+			set { set(Reflect<Settings>.MemberName(x => x.WindowSize), value); }
 		}
 		public bool   AlternateLineColours
 		{
-			get { return get<bool>("AlternateLineColours"); }
-			set { set("AlternateLineColours", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.AlternateLineColours)); }
+			set { set(Reflect<Settings>.MemberName(x => x.AlternateLineColours), value); }
 		}
 		public Color  LineSelectBackColour
 		{
-			get { return get<Color>("LineSelectBackColour"); }
-			set { set("LineSelectBackColour", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.LineSelectBackColour)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LineSelectBackColour), value); }
 		}
 		public Color  LineSelectForeColour
 		{
-			get { return get<Color>("LineSelectForeColour"); }
-			set { set("LineSelectForeColour", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.LineSelectForeColour)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LineSelectForeColour), value); }
 		}
 		public Color  LineBackColour1
 		{
-			get { return get<Color>("LineBackColour1"); }
-			set { set("LineBackColour1", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.LineBackColour1)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LineBackColour1), value); }
 		}
 		public Color  LineBackColour2
 		{
-			get { return get<Color>("LineBackColour2"); }
-			set { set("LineBackColour2", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.LineBackColour2)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LineBackColour2), value); }
 		}
 		public Color  LineForeColour1
 		{
-			get { return get<Color>("LineForeColour1"); }
-			set { set("LineForeColour1", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.LineForeColour1)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LineForeColour1), value); }
 		}
 		public Color  LineForeColour2
 		{
-			get { return get<Color>("LineForeColour2"); }
-			set { set("LineForeColour2", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.LineForeColour2)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LineForeColour2), value); }
 		}
 		public int    FileScrollWidth
 		{
-			get { return get<int>("FileScrollWidth"); }
-			set { set("FileScrollWidth", value); }
+			get { return get<int>(Reflect<Settings>.MemberName(x => x.FileScrollWidth)); }
+			set { set(Reflect<Settings>.MemberName(x => x.FileScrollWidth), value); }
 		}
 		public Color  ScrollBarFileRangeColour
 		{
-			get { return get<Color>("ScrollBarFileRangeColour"); }
-			set { set("ScrollBarFileRangeColour", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.ScrollBarFileRangeColour)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ScrollBarFileRangeColour), value); }
 		}
 		public Color  ScrollBarCachedRangeColour
 		{
-			get { return get<Color>("ScrollBarCachedRangeColour"); }
-			set { set("ScrollBarCachedRangeColour", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.ScrollBarCachedRangeColour)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ScrollBarCachedRangeColour), value); }
 		}
 		public Color  ScrollBarDisplayRangeColour
 		{
-			get { return get<Color>("ScrollBarDisplayRangeColour"); }
-			set { set("ScrollBarDisplayRangeColour", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.ScrollBarDisplayRangeColour)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ScrollBarDisplayRangeColour), value); }
 		}
 		public Color  BookmarkColour
 		{
-			get { return get<Color>("BookmarkColour"); }
-			set { set("BookmarkColour", value); }
+			get { return get<Color>(Reflect<Settings>.MemberName(x => x.BookmarkColour)); }
+			set { set(Reflect<Settings>.MemberName(x => x.BookmarkColour), value); }
 		}
 		public int    RowHeight
 		{
-			get { return get<int>("RowHeight"); }
-			set { set("RowHeight", value); }
+			get { return get<int>(Reflect<Settings>.MemberName(x => x.RowHeight)); }
+			set { set(Reflect<Settings>.MemberName(x => x.RowHeight), value); }
 		}
 		public bool   LoadLastFile
 		{
-			get { return get<bool>("LoadLastFile"); }
-			set { set("LoadLastFile", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.LoadLastFile)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LoadLastFile), value); }
 		}
 		public string LastLoadedFile
 		{
-			get { return get<string>("LastLoadedFile"); }
-			set { set("LastLoadedFile", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.LastLoadedFile)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LastLoadedFile), value); }
 		}
 		public bool   OpenAtEnd
 		{
-			get { return get<bool>("OpenAtEnd"); }
-			set { set("OpenAtEnd", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.OpenAtEnd)); }
+			set { set(Reflect<Settings>.MemberName(x => x.OpenAtEnd), value); }
 		}
 		public bool   FileChangesAdditive
 		{
-			get { return get<bool>("FileChangesAdditive"); }
-			set { set("FileChangesAdditive", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.FileChangesAdditive)); }
+			set { set(Reflect<Settings>.MemberName(x => x.FileChangesAdditive), value); }
 		}
 		public bool   IgnoreBlankLines
 		{
-			get { return get<bool>("IgnoreBlankLines"); }
-			set { set("IgnoreBlankLines", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.IgnoreBlankLines)); }
+			set { set(Reflect<Settings>.MemberName(x => x.IgnoreBlankLines), value); }
 		}
 		public bool   AlwaysOnTop
 		{
-			get { return get<bool>("AlwaysOnTop"); }
-			set { set("AlwaysOnTop", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.AlwaysOnTop)); }
+			set { set(Reflect<Settings>.MemberName(x => x.AlwaysOnTop), value); }
 		}
 		public bool   ShowTOTD
 		{
-			get { return get<bool>("ShowTOTD"); }
-			set { set("ShowTOTD", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.ShowTOTD)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ShowTOTD), value); }
 		}
 		public bool   CheckForUpdates
 		{
-			get { return get<bool>("CheckForUpdates"); }
-			set { set("CheckForUpdates", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.CheckForUpdates)); }
+			set { set(Reflect<Settings>.MemberName(x => x.CheckForUpdates), value); }
 		}
 		public string CheckForUpdatesServer
 		{
@@ -158,163 +158,163 @@ namespace RyLogViewer
 		}
 		public bool   UseWebProxy
 		{
-			get { return get<bool>("UseWebProxy"); }
-			set { set("UseWebProxy", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.UseWebProxy)); }
+			set { set(Reflect<Settings>.MemberName(x => x.UseWebProxy), value); }
 		}
 		public string WebProxyHost
 		{
-			get { return get<string>("WebProxyHost"); }
-			set { set("WebProxyHost", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.WebProxyHost)); }
+			set { set(Reflect<Settings>.MemberName(x => x.WebProxyHost), value); }
 		}
 		public int    WebProxyPort
 		{
-			get { return get<int>("WebProxyPort"); }
-			set { set("WebProxyPort", value); }
+			get { return get<int>(Reflect<Settings>.MemberName(x => x.WebProxyPort)); }
+			set { set(Reflect<Settings>.MemberName(x => x.WebProxyPort), value); }
 		}
 		public bool   QuickFilterEnabled
 		{
-			get { return get<bool>("QuickFilterEnabled"); }
-			set { set("QuickFilterEnabled", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.QuickFilterEnabled)); }
+			set { set(Reflect<Settings>.MemberName(x => x.QuickFilterEnabled), value); }
 		}
 		public bool   HighlightsEnabled
 		{
-			get { return get<bool>("HighlightsEnabled"); }
-			set { set("HighlightsEnabled", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.HighlightsEnabled)); }
+			set { set(Reflect<Settings>.MemberName(x => x.HighlightsEnabled), value); }
 		}
 		public bool   FiltersEnabled
 		{
-			get { return get<bool>("FiltersEnabled"); }
-			set { set("FiltersEnabled", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.FiltersEnabled)); }
+			set { set(Reflect<Settings>.MemberName(x => x.FiltersEnabled), value); }
 		}
 		public bool   TransformsEnabled
 		{
-			get { return get<bool>("TransformsEnabled"); }
-			set { set("TransformsEnabled", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.TransformsEnabled)); }
+			set { set(Reflect<Settings>.MemberName(x => x.TransformsEnabled), value); }
 		}
 		public bool   ActionsEnabled
 		{
-			get { return get<bool>("ActionsEnabled"); }
-			set { set("ActionsEnabled", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.ActionsEnabled)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ActionsEnabled), value); }
 		}
 		public bool   TailEnabled
 		{
-			get { return get<bool>("TailEnabled"); }
-			set { set("TailEnabled", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.TailEnabled)); }
+			set { set(Reflect<Settings>.MemberName(x => x.TailEnabled), value); }
 		}
 		public bool   WatchEnabled
 		{
-			get { return get<bool>("WatchEnabled"); }
-			set { set("WatchEnabled", value); }
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.WatchEnabled)); }
+			set { set(Reflect<Settings>.MemberName(x => x.WatchEnabled), value); }
 		}
 		public int    FileBufSize
 		{
-			get { return get<int>("FileBufSize"); }
-			set { set("FileBufSize", value); }
+			get { return get<int>(Reflect<Settings>.MemberName(x => x.FileBufSize)); }
+			set { set(Reflect<Settings>.MemberName(x => x.FileBufSize), value); }
 		}
 		public int    MaxLineLength
 		{
-			get { return get<int>("MaxLineLength"); }
-			set { set("MaxLineLength", value); }
+			get { return get<int>(Reflect<Settings>.MemberName(x => x.MaxLineLength)); }
+			set { set(Reflect<Settings>.MemberName(x => x.MaxLineLength), value); }
 		}
 		public int    LineCacheCount
 		{
-			get { return get<int>("LineCacheCount"); }
-			set { set("LineCacheCount", value); }
+			get { return get<int>(Reflect<Settings>.MemberName(x => x.LineCacheCount)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LineCacheCount), value); }
 		}
 		public string HighlightPatterns
 		{
-			get { return get<string>("HighlightPatterns"); }
-			set { set("HighlightPatterns", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.HighlightPatterns)); }
+			set { set(Reflect<Settings>.MemberName(x => x.HighlightPatterns), value); }
 		}
 		public string FilterPatterns
 		{
-			get { return get<string>("FilterPatterns"); }
-			set { set("FilterPatterns", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.FilterPatterns)); }
+			set { set(Reflect<Settings>.MemberName(x => x.FilterPatterns), value); }
 		}
 		public string TransformPatterns
 		{
-			get { return get<string>("TransformPatterns"); }
-			set { set("TransformPatterns", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.TransformPatterns)); }
+			set { set(Reflect<Settings>.MemberName(x => x.TransformPatterns), value); }
 		}
 		public string ActionPatterns
 		{
-			get { return get<string>("ActionPatterns"); }
-			set { set("ActionPatterns", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.ActionPatterns)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ActionPatterns), value); }
 		}
 		public string HighlightPatternSets
 		{
-			get { return get<string>("HighlightPatternSets"); }
-			set { set("HighlightPatternSets", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.HighlightPatternSets)); }
+			set { set(Reflect<Settings>.MemberName(x => x.HighlightPatternSets), value); }
 		}
 		public string FilterPatternSets
 		{
-			get { return get<string>("FilterPatternSets"); }
-			set { set("FilterPatternSets", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.FilterPatternSets)); }
+			set { set(Reflect<Settings>.MemberName(x => x.FilterPatternSets), value); }
 		}
 		public string TransformPatternSets
 		{
-			get { return get<string>("TransformPatternSets"); }
-			set { set("TransformPatternSets", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.TransformPatternSets)); }
+			set { set(Reflect<Settings>.MemberName(x => x.TransformPatternSets), value); }
 		}
 		public string ActionPatternSets
 		{
-			get { return get<string>("ActionPatternSets"); }
-			set { set("ActionPatternSets", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.ActionPatternSets)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ActionPatternSets), value); }
 		}
 		public string RowDelimiter
 		{
-			get { return get<string>("RowDelimiter"); }
-			set { set("RowDelimiter", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.RowDelimiter)); }
+			set { set(Reflect<Settings>.MemberName(x => x.RowDelimiter), value); }
 		}
 		public string ColDelimiter
 		{
-			get { return get<string>("ColDelimiter"); }
-			set { set("ColDelimiter", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.ColDelimiter)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ColDelimiter), value); }
 		}
 		public int    ColumnCount
 		{
-			get { return get<int>("ColumnCount"); }
-			set { set("ColumnCount", value); }
+			get { return get<int>(Reflect<Settings>.MemberName(x => x.ColumnCount)); }
+			set { set(Reflect<Settings>.MemberName(x => x.ColumnCount), value); }
 		}
 		public string Encoding
 		{
-			get { return get<string>("Encoding"); }
-			set { set("Encoding", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.Encoding)); }
+			set { set(Reflect<Settings>.MemberName(x => x.Encoding), value); }
 		}
 		public string[] OutputFilepathHistory
 		{
-			get { return get<string[]>("OutputFilepathHistory"); }
-			set { set("OutputFilepathHistory", value); }
+			get { return get<string[]>(Reflect<Settings>.MemberName(x => x.OutputFilepathHistory)); }
+			set { set(Reflect<Settings>.MemberName(x => x.OutputFilepathHistory), value); }
 		}
 		public LaunchApp[] LogProgramOutputHistory
 		{
-			get { return get<LaunchApp[]>("LogProgramOutputHistory"); }
-			set { set("LogProgramOutputHistory", value); }
+			get { return get<LaunchApp[]>(Reflect<Settings>.MemberName(x => x.LogProgramOutputHistory)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LogProgramOutputHistory), value); }
 		}
 		public NetConn[] NetworkConnectionHistory
 		{
-			get { return get<NetConn[]>("NetworkConnectionHistory"); }
-			set { set("NetworkConnectionHistory", value); }
+			get { return get<NetConn[]>(Reflect<Settings>.MemberName(x => x.NetworkConnectionHistory)); }
+			set { set(Reflect<Settings>.MemberName(x => x.NetworkConnectionHistory), value); }
 		}
 		public SerialConn[] SerialConnectionHistory
 		{
-			get { return get<SerialConn[]>("SerialConnectionHistory"); }
-			set { set("SerialConnectionHistory", value); }
+			get { return get<SerialConn[]>(Reflect<Settings>.MemberName(x => x.SerialConnectionHistory)); }
+			set { set(Reflect<Settings>.MemberName(x => x.SerialConnectionHistory), value); }
 		}
 		public PipeConn[] PipeConnectionHistory
 		{
-			get { return get<PipeConn[]>("PipeConnectionHistory"); }
-			set { set("PipeConnectionHistory", value); }
+			get { return get<PipeConn[]>(Reflect<Settings>.MemberName(x => x.PipeConnectionHistory)); }
+			set { set(Reflect<Settings>.MemberName(x => x.PipeConnectionHistory), value); }
 		}
 		public AndroidLogcat AndroidLogcat
 		{
-			get { return get<AndroidLogcat>("AndroidLogcat"); }
-			set { set("AndroidLogcat", value); }
+			get { return get<AndroidLogcat>(Reflect<Settings>.MemberName(x => x.AndroidLogcat)); }
+			set { set(Reflect<Settings>.MemberName(x => x.AndroidLogcat), value); }
 		}
 		public string LogFilePath
 		{
-			get { return get<string>("LogFilePath"); }
-			set { set("LogFilePath", value); }
+			get { return get<string>(Reflect<Settings>.MemberName(x => x.LogFilePath)); }
+			set { set(Reflect<Settings>.MemberName(x => x.LogFilePath), value); }
 		}
 
 		// Default construct settings
