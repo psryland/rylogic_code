@@ -46,8 +46,7 @@ namespace RyLogViewer
 		private readonly RefCount m_suspend_grid_events;      // A ref count of nested calls that tell event handlers to ignore grid events
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
-		private string m_filepath;                            // The path of the log file we're viewing
-		private FileStream m_file;                            // A file stream of 'm_filepath'
+		private IFileSource m_file;                           // A file stream source
 		private byte[] m_row_delim;                           // The row delimiter converted from a string to a byte[] using the current encoding
 		private byte[] m_col_delim;                           // The column delimiter, cached to prevent m_settings access in CellNeeded
 		private int m_row_height;                             // The row height, cached to prevent settings lookups in CellNeeded
@@ -104,7 +103,6 @@ namespace RyLogViewer
 			m_notify_icon         = new NotifyIcon{Icon = Icon};
 			m_suspend_grid_events = new RefCount();
 			m_line_index          = new List<Range>();
-			m_filepath            = null;
 			m_file                = null;
 			m_filepos             = 0;
 			m_fileend             = 0;
@@ -370,19 +368,18 @@ namespace RyLogViewer
 			{
 				CancelBuildLineIndex();
 				m_line_index.Clear();
-				m_watch.Remove(m_filepath);
+				if (FileOpen) m_watch.Remove(m_file.Filepaths);
 				if (m_buffered_process    != null) m_buffered_process.Dispose();
 				if (m_buffered_tcp_netconn != null) m_buffered_tcp_netconn.Dispose();
 				if (m_buffered_udp_netconn != null) m_buffered_udp_netconn.Dispose();
 				if (m_buffered_serialconn != null) m_buffered_serialconn.Dispose();
 				if (m_buffered_pipeconn   != null) m_buffered_pipeconn.Dispose();
-				if (FileOpen) m_file.Dispose();
 				m_buffered_process = null;
 				m_buffered_tcp_netconn = null;
 				m_buffered_udp_netconn = null;
 				m_buffered_serialconn = null;
 				m_buffered_pipeconn = null;
-				m_filepath = null;
+				if (FileOpen) m_file.Dispose();
 				m_file = null;
 				m_filepos = 0;
 				m_fileend = 0;
@@ -415,10 +412,7 @@ namespace RyLogViewer
 				}
 
 				// Check that the file exists, this can take ages if 'filepath' is a network file
-				bool file_exists = false;
-				var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = File.Exists(filepath));
-				if (dlg.ShowDialog(this, 500) != DialogResult.OK) return;
-				if (!file_exists)
+				if (!Misc.FileExists(this, filepath))
 				{
 					if (m_recent.IsInRecents(filepath))
 					{
@@ -442,13 +436,11 @@ namespace RyLogViewer
 				
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
 				CloseLogFile();
-				m_file = LoadFile(filepath);
-				m_filepath = filepath;
-				m_filepos = m_settings.OpenAtEnd ? m_file.Length : 0;
+				m_file = new SingleFile(filepath).Open();
+				m_filepos = m_settings.OpenAtEnd ? m_file.Stream.Length : 0;
 
 				// Setup the watcher to watch for file changes
-				// Start the build in an invoke so that checking for file changes doesn't cause reentrancy
-				m_watch.Add(m_filepath, (fp,ctx) => { OnFileChanged(); return true; });
+				m_watch.Add(m_file.Filepaths, (fp,ctx) => { OnFileChanged(); return true; });
 				m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
 
 				BuildLineIndex(m_filepos, true, ()=>
@@ -477,6 +469,7 @@ namespace RyLogViewer
 		{
 			var dg = new AndroidLogcatUI(m_settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			ApplySettings();
 			LaunchProcess(dg.Launch);
 		}
 
@@ -519,10 +512,10 @@ namespace RyLogViewer
 		/// <summary>Called when the log file is noticed to have changed</summary>
 		private void OnFileChanged()
 		{
-			long len = m_file.Length;
-			Log.Info(this, "File {0} changed. File length: {1}".Fmt(m_filepath, len));
-			long filepos = AutoScrollTail ? m_file.Length : m_filepos;
-			bool reload  = m_file.Length < m_fileend || !m_settings.FileChangesAdditive;
+			long len = m_file.Stream.Length;
+			Log.Info(this, "File {0} changed. File length: {1}".Fmt(m_file.Name, len));
+			long filepos = AutoScrollTail ? m_file.Stream.Length : m_filepos;
+			bool reload  = m_file.Stream.Length < m_fileend || !m_settings.FileChangesAdditive;
 			BuildLineIndex(filepos, reload);
 		}
 		
@@ -698,9 +691,7 @@ namespace RyLogViewer
 			SetGridColumnSizes();
 		}
 
-		/// <summary>
-		/// Tests whether the currently selected row is near the start or end of
-		/// the line range and causes a reload if it is</summary>
+		/// <summary>Tests whether the currently selected row is near the start or end of the line range and causes a reload if it is</summary>
 		private void LoadNearBoundary()
 		{
 			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit) return;
@@ -846,35 +837,27 @@ namespace RyLogViewer
 		/// <summary>Try to remove data from the log file</summary>
 		private void ClearLogFile()
 		{
-			if (!FileOpen || !File.Exists(m_filepath)) return;
-			Exception err;
-			try // recreating the file
+			var err = m_file.Clear();
+			if (err == null)
 			{
-				using (new FileStream(m_filepath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {}
-				OpenLogFile(m_filepath); // reopen the file to purge any cached data
-				return;
+				InvalidateCache();
 			}
-			catch {}
-			try // deleting the file
+			else
 			{
-				File.Delete(m_filepath);
-				OpenLogFile(m_filepath); // reopen the file to purge any cached data
-				return;
+				MessageBox.Show(this, string.Format(
+					"Clearing file {0} failed.\r\n" +
+					"Reason: {1}\r\n" +
+					"\r\n" +
+					"Usually clearing the log file fails if another application holds an " +
+					"exclusive lock on the file. Stop any processes that are using the file " +
+					"and try again. Note, if you are using 'Log Program Output', the program " +
+					"you are running may be holding the file lock."
+					,m_file.Name
+					,err.Message)
+					,Resources.ClearLogFailed
+					,MessageBoxButtons.OK
+					,MessageBoxIcon.Information);
 			}
-			catch (Exception ex) { err = ex; }
-			MessageBox.Show(this, string.Format(
-				"Clearing file {0} failed.\r\n" +
-				"Reason: {1}\r\n" +
-				"\r\n" +
-				"Usually clearing the log file fails if another application holds an " +
-				"exclusive lock on the file. Stop any processes that are using the file " +
-				"and try again. Note, if you are using 'Log Program Output', the program " +
-				"you are running may be holding the file lock."
-				,m_filepath
-				,err.Message)
-				,Resources.ClearLogFailed
-				,MessageBoxButtons.OK
-				,MessageBoxIcon.Information);
 		}
 
 		/// <summary>Enable/Disable ghost mode</summary>
@@ -923,7 +906,7 @@ namespace RyLogViewer
 		/// <summary>Set the encoding to use with loaded files. 'null' means auto detect</summary>
 		private void SetEncoding(Encoding encoding)
 		{
-			string enc_name = encoding == null ? "" : encoding.EncodingName;
+			string enc_name = encoding == null ? string.Empty : encoding.EncodingName;
 			if (enc_name == m_settings.Encoding) return; // not changed.
 			
 			// If a specific encoding is given, use it.
@@ -949,7 +932,7 @@ namespace RyLogViewer
 			case ELineEnding.CRLF:   row_delim = "<CR><LF>"; break;
 			case ELineEnding.LF:     row_delim = "<LF>"; break;
 			case ELineEnding.Custom:
-				ShowOptions(SettingsUI.ETab.General);
+				ShowOptions(SettingsUI.ETab.General, SettingsUI.ESpecial.ShowLineEndingTip);
 				return;
 			}
 			if (row_delim == m_settings.RowDelimiter) return; // not changed
@@ -967,7 +950,7 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Display the options dialog</summary>
-		private void ShowOptions(SettingsUI.ETab tab)
+		private void ShowOptions(SettingsUI.ETab tab, SettingsUI.ESpecial special = SettingsUI.ESpecial.None)
 		{
 			string row_text = "";
 			string test_text = "<Enter test text here>";
@@ -977,7 +960,7 @@ namespace RyLogViewer
 			
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
-			var ui = new SettingsUI(m_settings, tab);
+			var ui = new SettingsUI(m_settings, tab, special);
 			switch (tab)
 			{
 			default: throw new ArgumentOutOfRangeException("tab");
@@ -1150,14 +1133,14 @@ namespace RyLogViewer
 		{
 			// If 'row_delim' is empty, this is the auto detect case, in which case we don't
 			// modify it from what it's already set to. Auto detect will set it on file load.
-			if (row_delim.Length == 0) return m_row_delim;
+			if (row_delim.Length == 0) return m_row_delim ?? m_encoding.GetBytes("\n");
 			return m_encoding.GetBytes(Misc.Robitise(row_delim));
 		}
 
 		/// <summary>Convert a column delimiter string into an encoded byte array</summary>
 		private byte[] GetColDelim(string col_delim)
 		{
-			// If 'col_delim' is empty, then there is not column delimiter.
+			// If 'col_delim' is empty, then there is no column delimiter.
 			return m_encoding.GetBytes(Misc.Robitise(col_delim));
 		}
 
@@ -1479,7 +1462,7 @@ namespace RyLogViewer
 			}
 			else
 			{
-				Text = string.Format("{0} - {1}" ,m_filepath ,Resources.AppTitle);
+				Text = "{0} - {1}".Fmt(m_file.Name,Resources.AppTitle);
 				m_status_spring.Text = "";
 				
 				// Add comma's to a large number
@@ -1494,7 +1477,7 @@ namespace RyLogViewer
 				int r = SelectedRowIndex;
 				long p = (r != -1) ? m_line_index[r].Begin : 0;
 				StringBuilder pos = pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
-				StringBuilder len = pretty(new StringBuilder(m_file.Length.ToString(CultureInfo.InvariantCulture)));
+				StringBuilder len = pretty(new StringBuilder(m_file.Stream.Length.ToString(CultureInfo.InvariantCulture)));
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;

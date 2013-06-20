@@ -321,8 +321,8 @@ namespace RyLogViewer
 		public Settings()
 		{
 			LicenceHolder                   = Constants.EvalLicence;
-			Company                         = "";
-			RecentFiles                     = "";
+			Company                         = string.Empty;
+			RecentFiles                     = string.Empty;
 			Font                            = new Font("Consolas", 8.25f, GraphicsUnit.Point);
 			RestoreScreenLoc                = true;
 			ScreenPosition                  = new Point(50, 50);
@@ -341,7 +341,7 @@ namespace RyLogViewer
 			BookmarkColour                  = Color.Violet;
 			RowHeight                       = Constants.RowHeightDefault;
 			LoadLastFile                    = false;
-			LastLoadedFile                  = "";
+			LastLoadedFile                  = string.Empty;
 			OpenAtEnd                       = true;
 			FileChangesAdditive             = true;
 			IgnoreBlankLines                = false;
@@ -350,7 +350,7 @@ namespace RyLogViewer
 			CheckForUpdates                 = true;
 			CheckForUpdatesServer           = "http://www.rylogic.co.nz:80/";
 			UseWebProxy                     = false;
-			WebProxyHost                    = "";
+			WebProxyHost                    = string.Empty;
 			WebProxyPort                    = Constants.PortNumberWebProxyDefault;
 			QuickFilterEnabled              = false;
 			HighlightsEnabled               = true;
@@ -370,17 +370,17 @@ namespace RyLogViewer
 			FilterPatternSets               = "<root/>";
 			TransformPatternSets            = "<root/>";
 			ActionPatternSets               = "<root/>";
-			RowDelimiter                    = ""; // stored in humanised form
-			ColDelimiter                    = ""; // stored in humanised form
+			RowDelimiter                    = string.Empty; // stored in humanised form, empty means auto detect
+			ColDelimiter                    = string.Empty; // stored in humanised form, empty means auto detect
 			ColumnCount                     = 1;
-			Encoding                        = "";
+			Encoding                        = string.Empty; // empty means auto detect
 			OutputFilepathHistory           = new string[0];
 			LogProgramOutputHistory         = new LaunchApp[0];
 			NetworkConnectionHistory        = new NetConn[0];
 			SerialConnectionHistory         = new SerialConn[0];
 			PipeConnectionHistory           = new PipeConn[0];
 			AndroidLogcat                   = new AndroidLogcat();
-			LogFilePath                     = "";
+			LogFilePath                     = string.Empty;
 		}
 		public Settings(string filepath)
 		:base(filepath)

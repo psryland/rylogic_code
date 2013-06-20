@@ -94,6 +94,13 @@ namespace pr.util
 			m_files.Add(new WatchedFile(filepath, on_changed, 0, null));
 		}
 
+		/// <summary>Add a set of files to be watched.</summary>
+		public void Add(IEnumerable<string> filepaths, FileChangedHandler on_changed)
+		{
+			foreach (var f in filepaths)
+				Add(f, on_changed);
+		}
+
 		/// <summary>Add a file to be watched.
 		/// 'id' is a user provided id for identifying file groups
 		/// 'ctx' is a user provided context passed back in the 'on_changed' callback</summary>
@@ -103,16 +110,23 @@ namespace pr.util
 			m_files.Add(new WatchedFile(filepath, on_changed, id, ctx));
 		}
 
+		/// <summary>Stop watching a set of files</summary>
+		public void Remove(IEnumerable<string> filepaths)
+		{
+			foreach (var f in filepaths)
+				Remove(f);
+		}
+
 		/// <summary>Stop watching a file</summary>
 		public void Remove(string filepath)
 		{
-			m_files.RemoveAll(delegate (WatchedFile f) {return f.m_filepath == filepath;});
+			m_files.RemoveAll(f => f.m_filepath == filepath);
 		}
 
 		/// <summary>Remove all watches matching 'id'</summary>
 		public void RemoveAll(int id)
 		{
-			m_files.RemoveAll(delegate (WatchedFile f) {return f.m_id == id;});
+			m_files.RemoveAll(f => f.m_id == id);
 		}
 
 		/// <summary>Remove all watched files</summary>

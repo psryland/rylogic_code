@@ -119,10 +119,10 @@ namespace RyLogViewer
 			try
 			{
 				// Read the whole line into m_buf
-				m_file.Flush();
-				m_file.Seek(rng.Begin, SeekOrigin.Begin);
+				//m_file.Flush(); why??
+				m_file.Stream.Seek(rng.Begin, SeekOrigin.Begin);
 				m_line_buf = rng.Count <= m_line_buf.Length ? m_line_buf : new byte[rng.Count];
-				int read = m_file.Read(m_line_buf, 0, (int)rng.Count);
+				int read = m_file.Stream.Read(m_line_buf, 0, (int)rng.Count);
 				if (read != rng.Count) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(rng.Begin, rng.End, rng.Count, read));
 			
 				line.Read(rng.Begin, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights, m_transforms);

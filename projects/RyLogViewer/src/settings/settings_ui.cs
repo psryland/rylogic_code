@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -18,7 +19,8 @@ namespace RyLogViewer
 		private readonly List<Transform> m_transforms;  // The transforms currently in the grid 
 		private readonly List<ClkAction> m_actions;     // The actions currently in the grid 
 		private readonly ToolTip         m_tt;          // Tooltips
-		
+		private readonly ToolTip         m_balloon;     // Balloon hits
+
 		public enum ETab
 		{
 			General    = 0,
@@ -37,7 +39,16 @@ namespace RyLogViewer
 			public const string Behaviour    = "IfMatch";
 			public const string ClickAction  = "ClickAction";
 		}
-		
+
+		public enum ESpecial
+		{
+			None,
+
+			// Show a tip balloon over the line ending field
+			ShowLineEndingTip,
+		}
+		private ESpecial m_special;
+
 		/// <summary>Returns a bit mask of the settings data that's changed</summary>
 		public EWhatsChanged WhatsChanged { get; private set; }
 		
@@ -57,17 +68,19 @@ namespace RyLogViewer
 		public PatternUI ActionUI { get { return m_pattern_ac; } }
 		public bool ActionsChanged { get; set; }
 		
-		public SettingsUI(Settings settings, ETab tab)
+		public SettingsUI(Settings settings, ETab tab, ESpecial special = ESpecial.None)
 		{
 			InitializeComponent();
 			KeyPreview    = true;
 			m_settings    = settings;
+			m_special     = special;
 			m_highlights  = Highlight.Import(m_settings.HighlightPatterns);
 			m_filters     = Filter   .Import(m_settings.FilterPatterns   );
 			m_transforms  = Transform.Import(m_settings.TransformPatterns);
 			m_actions     = ClkAction.Import(m_settings.ActionPatterns   );
 			m_tt          = new ToolTip();
-			
+			m_balloon     = new ToolTip{IsBalloon = true,UseFading = true};
+
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter());
@@ -94,6 +107,7 @@ namespace RyLogViewer
 			Shown += (s,a) =>
 				{
 					FocusInput();
+					PerformSpecial();
 				};
 
 			// Save on close
@@ -662,6 +676,22 @@ namespace RyLogViewer
 			case ETab.Filters:    m_pattern_ft.FocusInput(); break;
 			case ETab.Transforms: m_pattern_tx.FocusInput(); break;
 			case ETab.Actions:    m_pattern_ac.FocusInput(); break;
+			}
+		}
+
+		/// <summary>Execute any special behaviour</summary>
+		private void PerformSpecial()
+		{
+			switch (m_special)
+			{
+			default: Debug.Assert(false, "Unknown special behaviour"); break;
+			case ESpecial.None: break;
+			case ESpecial.ShowLineEndingTip:
+				{
+					m_edit_line_ends.ShowHintBalloon(m_balloon, "Set the line ending characters to expect in the log data.\r\nUse '<CR>' for carriage return, '<LF>' for line feed.\r\nLeave blank to auto detect");
+					m_special = ESpecial.None;
+					break;
+				}
 			}
 		}
 

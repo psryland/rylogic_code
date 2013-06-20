@@ -157,6 +157,7 @@ namespace RyLogViewer
 
 						Misc.AddToHistoryList(ref output_filepaths, m_combo_output_file.Text, true, Constants.MaxOutputFileHistoryLength);
 						settings.OutputFilepathHistory = output_filepaths;
+						settings.RowDelimiter = "<CR><CR><LF>";
 
 						// Use cancelled if no device was selected
 						if (m_listbox_devices.SelectedItem != null)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Net.Sockets;
@@ -9,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using pr.gui;
 using pr.inet;
 using pr.extn;
 
@@ -411,6 +413,16 @@ namespace RyLogViewer
 			AddToHistoryList(list, item, ignore_case, max_history_length);
 			Array.Resize(ref arr, list.Count);
 			Array.Copy(list.ToArray(), arr, arr.Length);
+		}
+
+		/// <summary>Checks for the existance of a file without blocking the UI</summary>
+		public static bool FileExists(IWin32Window owner, string filepath)
+		{
+			// Check that the file exists, this can take ages if 'filepath' is a network file
+			bool file_exists = false;
+			var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = File.Exists(filepath));
+			dlg.ShowDialog(owner, 500);
+			return file_exists;
 		}
 
 		/// <summary>Helper for populating a combo box from an array of items</summary>

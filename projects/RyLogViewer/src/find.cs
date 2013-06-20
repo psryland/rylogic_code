@@ -108,18 +108,6 @@ namespace RyLogViewer
 			// Although this search runs in a background thread, it's wrapped in a modal
 			// dialog box, so it should be ok to use class members directly
 			long at = -1;
-			
-			//using (var done = new ManualResetEvent(false))
-			//{
-			//    ThreadPool.QueueUserWorkItem(x =>
-			//        {
-			//            // ReSharper disable AccessToDisposedClosure
-			//            at = DoFind(pat, start, backward, (c,l)=>true);
-			//            done.Set();
-			//            // ReSharper restore AccessToDisposedClosure
-			//        });
-			//    done.WaitOne();
-			//}
 			var search = new ProgressForm("Searching...", "", null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
 					int last_progress = 0;
@@ -160,7 +148,7 @@ namespace RyLogViewer
 		private long DoFind(Pattern pat, long start, bool backward, ProgressFunc report_progress)
 		{
 			long at = -1;
-			using (var file = LoadFile(m_filepath))
+			using (var file = m_file.NewInstance().Open())
 			{
 				bool ignore_blanks    = m_settings.IgnoreBlankLines;
 				List<Filter> filters  = m_filters;
