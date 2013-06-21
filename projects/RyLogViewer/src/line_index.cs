@@ -168,12 +168,13 @@ namespace RyLogViewer
 				// Find the byte range of the file currently loaded
 				Range line_start_range = LineStartIndexRange;
 
-				bool certain = false;
 				Debug.Assert(m_encoding != null);
 				Debug.Assert(m_row_delim != null);
+				bool certain;
 
 				// If the settings say auto detect encoding, and this is a reload
 				// then detect the encoding, otherwise use what it is currently set to
+				certain = false;
 				var encoding = !reload || m_settings.Encoding.Length != 0
 					? (Encoding)m_encoding.Clone()
 					: GuessEncoding(m_file, out certain);
@@ -181,15 +182,11 @@ namespace RyLogViewer
 
 				// If the settings say auto detect the row delimiters, and this is a reload
 				// then detect them, otherwise use what is currently set
+				certain = false;
 				var row_delim = !reload || m_settings.RowDelimiter.Length != 0
 					? (byte[])m_row_delim.Clone()
 					: GuessRowDelimiter(m_file, encoding, m_settings.MaxLineLength, out certain);
 				if (certain) m_row_delim = (byte[])row_delim.Clone();
-
-				// If the row delimiters aren't yet known, but 'GuessRowDelimiter' is certain
-				// about it's prediction, then set them now.
-				if (m_row_delim == null && certain)
-					m_row_delim = (byte[])row_delim.Clone();
 
 				// Get a copy of the filters to apply
 				List<IFilter> filters;

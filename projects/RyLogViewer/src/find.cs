@@ -25,14 +25,13 @@ namespace RyLogViewer
 		private void ShowFindDialog()
 		{
 			// Initialise the find string from the selected row
-			// if the find pattern is currently empty
-			if (m_find_ui.Pattern.Expr.Length == 0)
+			int row_index = SelectedRowIndex;
+			if (row_index != -1)
 			{
-				int row_index = SelectedRowIndex;
-				if (row_index != -1)
-					m_find_ui.Pattern = new Pattern(EPattern.Substring, ReadLine(row_index).RowText);
+				var row_text = ReadLine(row_index).RowText.Trim();
+				m_find_ui.Pattern = new Pattern(EPattern.Substring, row_text);
 			}
-			
+
 			// Display the find window
 			m_find_ui.Display();
 		}
@@ -41,7 +40,8 @@ namespace RyLogViewer
 		private void SetFindPattern(int row_index, bool find_next)
 		{
 			if (row_index == -1) return;
-			m_find_ui.Pattern = new Pattern(EPattern.Substring, ReadLine(row_index).RowText);
+			var row_text = ReadLine(row_index).RowText.Trim();
+			m_find_ui.Pattern = new Pattern(EPattern.Substring, row_text);
 			if (find_next) FindNext();
 			else           FindPrev();
 		}
@@ -78,7 +78,7 @@ namespace RyLogViewer
 			if (!PreFind())
 				return;
 
-			var start = SelectedRowByteOffset;
+			var start = SelectedRowByteRange.End;
 			Log.Info(this, "FindNext starting from {0}".Fmt(start));
 
 			long found;
@@ -92,7 +92,7 @@ namespace RyLogViewer
 			if (!PreFind())
 				return;
 
-			var start = SelectedRowByteOffset;
+			var start = SelectedRowByteRange.Begin;
 			Log.Info(this, "FindPrev starting from {0}".Fmt(start));
 
 			long found;

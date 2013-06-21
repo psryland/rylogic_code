@@ -715,7 +715,7 @@ namespace RyLogViewer
 				m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
 		}
 
-		/// <summary>DragDrop functionality for grid rows</summary>
+		/// <summary>OnDragDrop functionality for grid rows</summary>
 		private void DoDragDrop<T>(DataGridView grid, List<T> patterns, DragEventArgs args, bool test_can_drop)
 		{
 			args.Effect = DragDropEffects.None;

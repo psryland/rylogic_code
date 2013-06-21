@@ -515,7 +515,13 @@ namespace RyLogViewer
 		{
 			var dg = new AggregateFilesUI();
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			OpenAggregateLogFile(dg.Filepaths.ToList());
+			
+			var filepaths = dg.Filepaths.ToList();
+			if (filepaths.Count == 0) return;
+			if (filepaths.Count == 1)
+				OpenSingleLogFile(filepaths[0], true);
+			else
+				OpenAggregateLogFile(filepaths);
 		}
 
 		/// <summary>Open a standard out connection</summary>
@@ -1235,14 +1241,14 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns the byte offset of the selected row, or 0 if there is no selection</summary>
-		private long SelectedRowByteOffset
+		private Range SelectedRowByteRange
 		{
 			get
 			{
 				var idx = SelectedRowIndex;
 				if (idx == -1) idx = 0;
 				Debug.Assert(idx >= 0 && idx < m_line_index.Count, "SelectedRowByteOffset should not be called when there are no lines");
-				return m_line_index[idx].Begin;
+				return m_line_index[idx];
 			}
 		}
 

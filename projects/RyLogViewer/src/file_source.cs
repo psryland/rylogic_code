@@ -170,13 +170,14 @@ namespace RyLogViewer
 			{
 				var n = Path.GetFileNameWithoutExtension(f) ?? "logfile";
 				name.Length = Math.Min(name.Length, n.Length);
-				for (int i = 0; i != name.Length; ++i)
+				for (int i = 0; i < name.Length; ++i)
 				{
-					if (n[i] != name[i])
-						name[i] = 'x';
+					if (n[i] == name[i]) continue;
+					name.Length = i;
 				}
 			}
-			Name = name + ".aggregated" + Path.GetExtension(m_filepaths[0]);
+			if (name.Length == 0) name.Append("log");
+			Name = name.Append(".aggregated").Append(Path.GetExtension(m_filepaths[0])).ToString();
 			PsuedoFilepath = Path.Combine(dir, Name);
 		}
 	}

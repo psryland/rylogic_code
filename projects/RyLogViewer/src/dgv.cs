@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -7,8 +8,6 @@ namespace RyLogViewer
 	{
 		public DGV()
 		{
-			//VerticalScrollBar  .VisibleChanged += (s,a) => VerticalScrollBar  .Visible = true;
-			//HorizontalScrollBar.VisibleChanged += (s,a) => HorizontalScrollBar.Visible = true;
 		}
 	}
 }

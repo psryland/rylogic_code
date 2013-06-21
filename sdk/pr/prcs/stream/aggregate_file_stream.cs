@@ -43,7 +43,9 @@ namespace pr.stream
 
 		public AggregateFileStream(IEnumerable<string> filepaths, FileShare file_share = FileShare.None, int buffer_size = 0x1000, FileOptions file_options = FileOptions.None)
 		{
-			FileShare = file_share;
+			FileShare      = file_share;
+			FileBufferSize = buffer_size;
+			FileOptions    = file_options;
 			m_files = new List<FileInfo>();
 			foreach (var f in filepaths)
 				m_files.Add(new FileInfo(f));
@@ -200,10 +202,7 @@ namespace pr.stream
 		{
 			throw new NotSupportedException();
 		}
-		public override void Flush()
-		{
-			throw new NotSupportedException();
-		}
+		public override void Flush() {}
 
 		/// <summary>Closes the stream and releases any resources</summary>
 		public override void Close()

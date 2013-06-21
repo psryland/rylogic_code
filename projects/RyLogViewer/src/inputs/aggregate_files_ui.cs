@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
@@ -7,39 +9,73 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	public partial class AggregateFilesUI :Form
+	public sealed class AggregateFilesUI :Form
 	{
-		private readonly BindingList<string> m_filepaths; 
+		private readonly BindingList<FileInfo> m_filepaths; 
 		private readonly BindingSource m_bs_filepaths;
+		private readonly DragDrop m_dragdrop;
 		private DataGridView m_grid;
 		private Label m_lbl_instructions;
 		private Button m_btn_ok;
 		private Button m_btn_add_files;
 		private Button m_btn_cancel;
-		private ToolTip m_tt;
+		private readonly ToolTip m_tt;
 
 		/// <summary>The selected filepaths</summary>
-		public IEnumerable<string> Filepaths { get { return m_filepaths; } }
+		public IEnumerable<string> Filepaths { get { return m_filepaths.Select(x => x.FullName); } }
 
 		public AggregateFilesUI()
 		{
 			InitializeComponent();
-			m_filepaths = new BindingList<string>();
+			m_filepaths = new BindingList<FileInfo>();
 			m_bs_filepaths = new BindingSource{DataSource = m_filepaths};
 			m_tt = new ToolTip();
 
+			m_dragdrop = new DragDrop();
+			m_dragdrop.DoDrop += DropFiles;
+			m_dragdrop.DoDrop += DataGridView_Extensions.DragDrop_DoDropMoveRow;
+
+			// Allow file drop on the form
+			AllowDrop = true;
+			m_dragdrop.Attach(this);
+
+			m_grid.AllowDrop = true;
 			m_grid.AutoGenerateColumns = false;
-			m_grid.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = "File Path"});
+			m_grid.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = "File Path", DataPropertyName = Reflect<FileInfo>.MemberName(x => x.FullName)});
 			m_grid.DataSource = m_bs_filepaths;
-			m_grid.DragDropRowOrdering(true);
-			
+			m_grid.MouseDown += DataGridView_Extensions.DragDrop_DragRow;
+			m_dragdrop.Attach(m_grid);
+
 			m_btn_add_files.ToolTip(m_tt, "Browse for files to add");
 			m_btn_add_files.Click += (s,a) =>
 				{
 					var dlg = new OpenFileDialog{Filter = Resources.LogFileFilter, Multiselect = true};
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
-					m_filepaths.AddRange(dlg.FileNames);
+					m_filepaths.AddRange(dlg.FileNames.Select(x => new FileInfo(x)));
 				};
+
+			// Enabled the ok button when there is one or more files
+			m_btn_ok.Enabled = false;
+			m_bs_filepaths.ListChanged += (s,a) =>
+				{
+					m_btn_ok.Enabled = m_bs_filepaths.Count != 0;
+				};
+		}
+
+		/// <summary>Drop file paths into the grid</summary>
+		private bool DropFiles(object sender, DragEventArgs args, DragDrop.EDrop mode)
+		{
+			args.Effect = DragDropEffects.None;
+			if (!args.Data.GetDataPresent(DataFormats.FileDrop))
+				return false;
+
+			args.Effect = DragDropEffects.Copy;
+			if (mode != pr.util.DragDrop.EDrop.Drop)
+				return true;
+
+			var filepaths = (string[])args.Data.GetData(DataFormats.FileDrop);
+			m_filepaths.AddRange(filepaths.Select(x => new FileInfo(x)));
+			return true;
 		}
 
 		#region Windows Form Designer generated code
@@ -128,7 +164,6 @@ namespace RyLogViewer
 			// m_btn_add_files
 			// 
 			this.m_btn_add_files.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_add_files.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_add_files.Location = new System.Drawing.Point(7, 372);
 			this.m_btn_add_files.Name = "m_btn_add_files";
 			this.m_btn_add_files.Size = new System.Drawing.Size(93, 23);
