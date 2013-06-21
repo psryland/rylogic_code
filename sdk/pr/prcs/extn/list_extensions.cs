@@ -82,7 +82,7 @@ namespace pr.extn
 			list[index0] = list[index1];
 			list[index1] = tmp;
 		}
-		
+
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
 		public static int IndexOf<T>(this System.Collections.IList list, Func<T,bool> pred, int start_index, int count)
 		{

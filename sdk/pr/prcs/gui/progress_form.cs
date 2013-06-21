@@ -53,9 +53,9 @@ namespace pr.gui
 
 		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, Action<ProgressForm, object, Progress> func, object arg = null)
 		{
-			m_progress = new ProgressBar{Style = style};
-			m_description = new Label{Text = desc ?? string.Empty, AutoSize = false};
-			m_button = new Button{Text = "Cancel", DialogResult = DialogResult.Cancel, UseVisualStyleBackColor = true, TabIndex = 1};
+			m_progress = new ProgressBar{Style = style, Anchor = AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top};
+			m_description = new Label{Text = desc ?? string.Empty, AutoSize = false, Anchor = AnchorStyles.Top|AnchorStyles.Left};
+			m_button = new Button{Text = "Cancel", DialogResult = DialogResult.Cancel, UseVisualStyleBackColor = true, TabIndex = 1, Anchor = AnchorStyles.Bottom|AnchorStyles.Right};
 			m_button.Click += (s,a) => CancelSignal.Set();
 
 			Done         = new ManualResetEvent(false);
@@ -92,7 +92,6 @@ namespace pr.gui
 			DoLayout();
 
 			SizeChanged += (s,e) => DoLayout();
-
 			FormClosing += (s,a) =>
 				{
 					if (Done.WaitOne(0) && m_error != null)
@@ -105,12 +104,12 @@ namespace pr.gui
 		}
 
 		/// <summary>Show the dialog after a few milliseconds</summary>
-		public DialogResult ShowDialog(IWin32Window owner, int delay_ms = 0)
+		public DialogResult ShowDialog(Form parent, int delay_ms = 0)
 		{
 			if (Done.WaitOne(delay_ms))
 				return DialogResult.OK; // done already
-			
-			return base.ShowDialog(owner);
+
+			return base.ShowDialog(parent);
 		}
 
 		/// <summary>Update the state of the progress form</summary>
@@ -127,7 +126,10 @@ namespace pr.gui
 				Text = us.Title;
 
 			if (us.Description != null)
+			{
 				m_description.Text = us.Description;
+				DoLayout();
+			}
 
 			if (us.Icon != null)
 				Icon = us.Icon;
@@ -144,15 +146,22 @@ namespace pr.gui
 		{
 			const int space = 10;
 			SuspendLayout();
+
+			// Determine the vertical and left positions
 			m_description.Location = new Point(space, space);
 			m_description.Size     = new Size(m_description.PreferredWidth, m_description.PreferredHeight);
 			m_progress.Location    = new Point(space, m_description.Bottom + space);
-			m_progress.Width       = Math.Max(300, ClientSize.Width - 2*space);
+			m_progress.Width       = Math.Max(300, m_description.PreferredWidth);
 			m_button.Location      = new Point(m_progress.Right - m_button.Width, m_progress.Bottom + space);
+
+			// Find the bounds of the controls
 			Rectangle bounds = Rectangle.Empty;
-			foreach (Control c in Controls) bounds = Rectangle.Union(bounds, c.Bounds);
+			foreach (Control c in Controls)
+				bounds = Rectangle.Union(bounds, c.Bounds);
+
+			// Set the dialog size
 			ClientSize = bounds.Size + new Size(space, space);
-			
+
 			ResumeLayout(false);
 			PerformLayout();
 		}

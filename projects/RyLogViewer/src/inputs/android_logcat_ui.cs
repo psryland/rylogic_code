@@ -17,6 +17,7 @@ namespace RyLogViewer
 		private readonly ToolTip m_tt;
 		private readonly AndroidLogcat m_settings;
 		private readonly BindingList<string> m_device_list;
+		private readonly BindingSource m_bs_device_list;
 		private readonly BindingList<AndroidLogcat.FilterSpec> m_filterspecs;
 
 		/// <summary>The command line to execute</summary>
@@ -28,6 +29,7 @@ namespace RyLogViewer
 			m_tt = new ToolTip();
 			m_settings = new AndroidLogcat(settings.AndroidLogcat);
 			m_device_list = new BindingList<string>();
+			m_bs_device_list = new BindingSource{DataSource = m_device_list};
 			m_filterspecs = new BindingList<AndroidLogcat.FilterSpec>(m_settings.FilterSpecs.ToList());
 			var output_filepaths = settings.OutputFilepathHistory;
 			Launch = new LaunchApp();
@@ -53,7 +55,10 @@ namespace RyLogViewer
 					if (!((TextBox)s).Modified) return;
 					SetAdbPath(m_edit_adb_fullpath.Text);
 				};
-			
+
+			// The version info printed by adb
+			UpdateAdbVersionInfo(false);
+
 			// Browse for the adb path
 			m_btn_browse_adb.ToolTip(m_tt, "Browse the file system for the android debug bridge executable ('adb.exe')");
 			m_btn_browse_adb.Click += (s,a) =>
@@ -66,8 +71,12 @@ namespace RyLogViewer
 			
 			// Devices list
 			m_listbox_devices.ToolTip(m_tt, "The android devices current connected to adb. Hit 'Refresh' to repopulate this list");
-			m_listbox_devices.DataSource = m_device_list;
-			m_listbox_devices.SelectedIndexChanged += (s,a) => UpdateAdbCommand();
+			m_listbox_devices.DataSource = m_bs_device_list;
+			m_bs_device_list.CurrentChanged += (s,a) =>
+				{
+					UpdateAdbCommand();
+					m_btn_ok.Enabled = m_bs_device_list.CurrentOrDefault() != null;
+				};
 
 			// Connect button
 			m_btn_connect.ToolTip(m_tt, "Connect to an android device via USB or TCP/IP");
@@ -137,6 +146,24 @@ namespace RyLogViewer
 			m_btn_refresh.ToolTip(m_tt, "Repopulate this dialog with data collected using adb.exe");
 			m_btn_refresh.Click += (s,a) => PopulateUsingAdb();
 
+			// Reset adb button
+			m_btn_resetadb.ToolTip(m_tt, "Restart the adb server process.\r\nCan solve problems when connecting to devices");
+			m_btn_resetadb.Enabled = false; // unless there is an adb path
+			m_btn_resetadb.Click += (s,a) =>
+				{
+					Adb("kill-server");
+					Adb("start-server");
+					PopulateUsingAdb();
+				};
+
+			// Ok button
+			m_btn_ok.Enabled = m_listbox_devices.SelectedItem != null;
+
+			Load += (s,a) =>
+				{
+					AutoDetectAdbPath();
+				};
+
 			// Save settings on close
 			FormClosing += (s,a)=>
 				{
@@ -177,8 +204,29 @@ namespace RyLogViewer
 						}
 					}
 				};
+		}
 
-			AutoDetectAdbPath();
+		/// <summary>Clear or set the adb version info</summary>
+		private void UpdateAdbVersionInfo(bool read)
+		{
+			if (read && ValidAdbPath)
+			{
+				m_text_adb_status.Text = Adb("version").Trim('\r','\n');
+				m_text_adb_status.ForeColor = Color.ForestGreen;
+				m_text_adb_status.Visible = true;
+			}
+			else
+			{
+				m_text_adb_status.Text = "No connection to adb.exe";
+				m_text_adb_status.ForeColor = Color.Firebrick;
+				m_text_adb_status.Visible = true;
+			}
+		}
+
+		/// <summary>True if the adb path appears valid</summary>
+		private bool ValidAdbPath
+		{
+			get { return m_edit_adb_fullpath.Text != null && File.Exists(m_edit_adb_fullpath.Text); }
 		}
 
 		/// <summary>Search for the full path of adb.exe</summary>
@@ -212,7 +260,7 @@ namespace RyLogViewer
 		private void SetAdbPath(string path)
 		{
 			// Reject invalid paths
-			if (path == null || !File.Exists(path))
+			if (!File.Exists(path))
 				return;
 
 			// If hint text is shown, clear it first
@@ -234,25 +282,64 @@ namespace RyLogViewer
 		private string Adb(string args)
 		{
 			string result = string.Empty;
-			var run = new ProgressForm("Adb Executing", null, null, ProgressBarStyle.Marquee, (s,a,cb) =>
+			var desc = "Executing:\r\n\r\n{0} {1}".Fmt(m_edit_adb_fullpath.Text, args);
+			var run = new ProgressForm("Adb Command Executing", desc, Icon, ProgressBarStyle.Marquee, (form,x,cb) =>
 				{
 					// Determine the available devices
-					var start = new ProcessStartInfo
+					using (var proc = new Process())
+					{
+						// The only way to read both stdout and stderr and avoid
+						// deadlocks is to do it this way...
+						proc.StartInfo = new ProcessStartInfo
 						{
 							FileName               = m_edit_adb_fullpath.Text,
 							Arguments              = args,
 							RedirectStandardOutput = true,
 							RedirectStandardError  = true,
-							UseShellExecute        =  false,
+							UseShellExecute        = false,
 							CreateNoWindow         = true,
 							WindowStyle            = ProcessWindowStyle.Hidden,
 						};
-					var proc = Process.Start(start);
-					if (!proc.Start()) throw new Exception("Failed to start adb.exe");
-					result = proc.StandardOutput.ReadToEnd();
+						var sb_out = new StringBuilder();
+						var sb_err = new StringBuilder();
+						proc.OutputDataReceived += (s,a) => sb_out.AppendLine(a.Data);
+						proc.ErrorDataReceived  += (s,a) => sb_err.AppendLine(a.Data);
+						if (!proc.Start())
+							throw new Exception("Failed to start adb.exe");
+
+						proc.BeginOutputReadLine();
+						proc.BeginErrorReadLine();
+
+						while (!proc.WaitForExit(200))
+						{
+							if (!form.CancelPending) continue;
+							proc.Kill();
+							proc.WaitForExit();
+							break;
+						}
+
+						// If the command completed, read the output
+						if (proc.ExitCode < 0)
+							throw new Exception("Error code: {0}\r\nResult:\r\n{1}".Fmt(proc.ExitCode, sb_err.ToString()));
+
+						proc.Close();
+
+						Log.Debug(this, sb_out.ToString());
+						Log.Debug(this, sb_err.ToString());
+
+						result = sb_out.ToString();
+					}
 				});
-			if (run.ShowDialog(this, 500) != DialogResult.OK) return string.Empty;
-			return result;
+
+			try
+			{
+				return run.ShowDialog(this, 500) == DialogResult.OK ? result : string.Empty;
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, "Adb returned an error.\r\n{0}".Fmt(ex.InnerException.MessageFull()), "Adb Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return string.Empty;
+			}
 		}
 
 		/// <summary>Populate the fields of the control using adb.exe</summary>
@@ -263,13 +350,11 @@ namespace RyLogViewer
 				m_btn_connect.Enabled = false;
 
 				// Only if adb.exe is found
-				if (!File.Exists(m_edit_adb_fullpath.Text))
+				if (!ValidAdbPath)
 					return;
-				
-				// Set the version output
-				m_text_adb_status.Text = Adb("version");
-				m_text_adb_status.Visible = true;
-				
+
+				UpdateAdbVersionInfo(true);
+
 				// Setup the device list
 				var devices = Adb("devices").Split(new[]{Environment.NewLine,"\n","\r"}, StringSplitOptions.RemoveEmptyEntries);
 				m_device_list.Clear();
@@ -282,6 +367,7 @@ namespace RyLogViewer
 
 				// Enable the connect button
 				m_btn_connect.Enabled = true;
+				m_btn_resetadb.Enabled = true;
 
 				UpdateAdbCommand();
 			}
@@ -333,11 +419,12 @@ namespace RyLogViewer
 		{
 			var dlg = new AndroidConnectDeviceUI(m_settings);
 			if (dlg.ShowDialog(this) != DialogResult.OK) return;
-			if (m_settings.ConnectionType == AndroidLogcat.EConnectionType.Tcpip)
-				Adb("connect " + m_settings.IPAddressHistory[0]);
-			else
-				Adb("usb");
-			
+
+			var result = (m_settings.ConnectionType == AndroidLogcat.EConnectionType.Tcpip)
+				? Adb("connect " + m_settings.IPAddressHistory[0])
+				: Adb("usb");
+
+			MessageBox.Show(this, result, "Adb Connect Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
 			this.BeginInvoke(PopulateUsingAdb);
 		}
 	}
