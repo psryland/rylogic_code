@@ -3,6 +3,7 @@
 //***************************************************
 
 using System;
+using System.Collections;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.maths;
@@ -243,13 +244,13 @@ namespace pr.extn
 			for (int i = 0; i != w.Length; ++i) w[i] = grid.Columns[i].FillWeight;
 			return w;
 		}
-		
+
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
 		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
 		{
 			return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
 		}
-		
+
 		/// <summary>
 		/// Sets the selection to row 'index'. If the grid has rows, clamps 'index' to [-1,RowCount).
 		/// If index == -1, the selection is cleared. Returns the row actually selected.</summary>
@@ -275,6 +276,75 @@ namespace pr.extn
 		{
 			var row = FirstSelectedRow(grid);
 			return row != null ? row.Index : -1;
+		}
+
+		/// <summary>Configure handlers on the grid to support drag'n'drop row reordering</summary>
+		public static void DragDropRowOrdering(this DataGridView grid, bool enable)
+		{
+			grid.AllowDrop = enable;
+			if (enable)
+			{
+				grid.MouseDown += DragDrop_MouseDown;
+				grid.DragOver  += DragDrop_Drop;
+			}
+			else
+			{
+				grid.MouseDown -= DragDrop_MouseDown;
+				grid.DragOver  -= DragDrop_Drop;
+			}
+		}
+
+		private class DragDropRow
+		{
+			public int RowIndex { get; private set; }
+			public DragDropRow(DataGridViewRow row)
+			{
+				RowIndex = row.Index;
+			}
+		}
+
+		/// <summary>Begin a grid drag-drop operation</summary>
+		private static void DragDrop_MouseDown(object sender, MouseEventArgs e)
+		{
+			var grid = (DataGridView)sender;
+			var hit = grid.HitTest(e.X, e.Y);
+			if (hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount)
+				grid.DoDragDrop(new DragDropRow(grid.Rows[hit.RowIndex]), DragDropEffects.Move);
+		}
+
+		/// <summary>Handle drag over events during a drag-drop operation</summary>
+		private static void DragDrop_Drop(object sender, DragEventArgs args)
+		{
+			var grid = (DataGridView)sender;
+			args.Effect = DragDropEffects.None;
+			if (!args.Data.GetDataPresent(typeof(DragDropRow)))
+				return;
+
+			// Find where the mouse is over the grid
+			Point pt = grid.PointToClient(new Point(args.X, args.Y));
+			var hit = grid.HitTest(pt.X, pt.Y);
+			if (hit.Type != DataGridViewHitTestType.RowHeader || hit.RowIndex < 0 || hit.RowIndex >= grid.RowCount)
+				return;
+
+			var row = (DragDropRow)args.Data.GetData(typeof(DragDropRow));
+			int idx1 = row.RowIndex;
+			int idx2 = hit.RowIndex;
+			args.Effect = args.AllowedEffect;
+
+			var list = grid.DataSource as IList;
+			if (list == null)
+				throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
+
+			// Swap the rows
+			object tmp = list[idx1];
+			list[idx1] = list[idx2];
+			list[idx2] = tmp;
+
+			//FlagAsChanged(grid);
+
+			// Invalidate the rows so that they draw again
+			grid.InvalidateRow(idx1);
+			grid.InvalidateRow(idx2);
 		}
 	}
 

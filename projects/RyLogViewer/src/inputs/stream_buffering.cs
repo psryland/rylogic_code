@@ -48,7 +48,7 @@ namespace RyLogViewer
 					};
 			
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_process.Filepath, !buffered_process.TmpFile);
+				OpenSingleLogFile(buffered_process.Filepath, !buffered_process.TmpFile);
 				buffered_process.Start();
 				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
 
@@ -90,7 +90,7 @@ namespace RyLogViewer
 					};
 
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_tcp_netconn.Filepath, !buffered_tcp_netconn.TmpFile);
+				OpenSingleLogFile(buffered_tcp_netconn.Filepath, !buffered_tcp_netconn.TmpFile);
 				buffered_tcp_netconn.Start(this);
 				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
 
@@ -133,7 +133,7 @@ namespace RyLogViewer
 					};
 
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_udp_netconn.Filepath, !buffered_udp_netconn.TmpFile);
+				OpenSingleLogFile(buffered_udp_netconn.Filepath, !buffered_udp_netconn.TmpFile);
 				buffered_udp_netconn.Start();
 				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
 
@@ -176,7 +176,7 @@ namespace RyLogViewer
 					};
 
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_serialconn.Filepath, !buffered_serialconn.TmpFile);
+				OpenSingleLogFile(buffered_serialconn.Filepath, !buffered_serialconn.TmpFile);
 				buffered_serialconn.Start();
 				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
 
@@ -218,7 +218,7 @@ namespace RyLogViewer
 					};
 
 				// Open the capture file
-				OpenLogFile(buffered_pipeconn.Filepath, !buffered_pipeconn.TmpFile);
+				OpenSingleLogFile(buffered_pipeconn.Filepath, !buffered_pipeconn.TmpFile);
 				buffered_pipeconn.Start(this);
 				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
 

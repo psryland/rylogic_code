@@ -54,6 +54,7 @@
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_wizards = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_wizards_androidlogcat = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_wizards_aggregatelogfile = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator17 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_serial_port = new System.Windows.Forms.ToolStripMenuItem();
@@ -119,9 +120,9 @@
 			this.m_status_line_end = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_encoding = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_spring = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_status_message_fixed = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_status_message_trans = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_progress = new System.Windows.Forms.ToolStripProgressBar();
+			this.m_status_message_trans = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_status_message_fixed = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip_cont = new System.Windows.Forms.ToolStripContainer();
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
 			this.m_cmenu_grid = new System.Windows.Forms.ContextMenuStrip(this.components);
@@ -388,6 +389,7 @@
 			// m_menu_file_wizards
 			// 
 			this.m_menu_file_wizards.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_wizards_aggregatelogfile,
             this.m_menu_file_wizards_androidlogcat});
 			this.m_menu_file_wizards.Name = "m_menu_file_wizards";
 			this.m_menu_file_wizards.Size = new System.Drawing.Size(216, 22);
@@ -396,8 +398,14 @@
 			// m_menu_file_wizards_androidlogcat
 			// 
 			this.m_menu_file_wizards_androidlogcat.Name = "m_menu_file_wizards_androidlogcat";
-			this.m_menu_file_wizards_androidlogcat.Size = new System.Drawing.Size(156, 22);
-			this.m_menu_file_wizards_androidlogcat.Text = "Android Logcat";
+			this.m_menu_file_wizards_androidlogcat.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_file_wizards_androidlogcat.Text = "&Android Logcat";
+			// 
+			// m_menu_file_wizards_aggregatelogfile
+			// 
+			this.m_menu_file_wizards_aggregatelogfile.Name = "m_menu_file_wizards_aggregatelogfile";
+			this.m_menu_file_wizards_aggregatelogfile.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_file_wizards_aggregatelogfile.Text = "A&ggregate Log File";
 			// 
 			// toolStripSeparator17
 			// 
@@ -857,20 +865,15 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(221, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(552, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
-			// m_status_message_fixed
+			// m_status_progress
 			// 
-			this.m_status_message_fixed.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
-            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
-			this.m_status_message_fixed.Name = "m_status_message_fixed";
-			this.m_status_message_fixed.Size = new System.Drawing.Size(89, 19);
-			this.m_status_message_fixed.Text = "Static Message";
-			this.m_status_message_fixed.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			this.m_status_message_fixed.Visible = false;
+			this.m_status_progress.Name = "m_status_progress";
+			this.m_status_progress.Size = new System.Drawing.Size(100, 18);
+			this.m_status_progress.Visible = false;
 			// 
 			// m_status_message_trans
 			// 
@@ -883,11 +886,16 @@
 			this.m_status_message_trans.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			this.m_status_message_trans.Visible = false;
 			// 
-			// m_status_progress
+			// m_status_message_fixed
 			// 
-			this.m_status_progress.Name = "m_status_progress";
-			this.m_status_progress.Size = new System.Drawing.Size(100, 18);
-			this.m_status_progress.Visible = false;
+			this.m_status_message_fixed.BorderSides = ((System.Windows.Forms.ToolStripStatusLabelBorderSides)((((System.Windows.Forms.ToolStripStatusLabelBorderSides.Left | System.Windows.Forms.ToolStripStatusLabelBorderSides.Top) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
+            | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
+			this.m_status_message_fixed.Name = "m_status_message_fixed";
+			this.m_status_message_fixed.Size = new System.Drawing.Size(89, 19);
+			this.m_status_message_fixed.Text = "Static Message";
+			this.m_status_message_fixed.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.m_status_message_fixed.Visible = false;
 			// 
 			// m_toolstrip_cont
 			// 
@@ -1221,6 +1229,7 @@
 		private System.Windows.Forms.ToolStripButton m_btn_find;
 		private System.Windows.Forms.ToolStripButton m_btn_quick_filter;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_message_fixed;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards_aggregatelogfile;
 	}
 }
 

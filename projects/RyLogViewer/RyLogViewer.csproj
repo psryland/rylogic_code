@@ -104,6 +104,9 @@
     <Compile Include="src\find.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\inputs\aggregate_files_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\inputs\android_logcat_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -239,6 +242,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\ghost_mode_ui.resx">
       <DependentUpon>ghost_mode_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\inputs\aggregate_files_ui.resx">
+      <DependentUpon>aggregate_files_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\inputs\android_logcat_ui.resx">
       <DependentUpon>android_logcat_ui.cs</DependentUpon>

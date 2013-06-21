@@ -1,11 +1,12 @@
 ﻿<assembly name="pr">
-    <!--The attribute name contains the assembly name. If you don't specify the version,
-    this files attributes will be applied to all versions of the assemblies of that name-->
-    <member name="M:pr.extn.StringExtensions.Fmt(this System.String, params System.Object[])">
-        <!--This shows the name of the member whose attributes are complemented;
-        the notation is the same as XmlDoc-->
-        <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)">
-			<argument>fmt</argument>
-		</attribute>
+	<!--
+		Symlink this file here:
+		D:\Program Files (x86)\JetBrains\ReSharper\v7.0\Bin\ExternalAnnotations\pr.ExternalAnnotations\pr\pr.xml
+	-->
+	<member name="M:pr.extn.StringExtensions.Fmt(System.String,System.Object[])">
+        <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>fmt</argument></attribute>
+    </member>
+    <member name="M:pr.extn.Test.FmtTest(System.String,System.Object[])">
+        <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>fmt</argument></attribute>
     </member>
 </assembly>

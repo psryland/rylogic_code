@@ -416,12 +416,12 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Checks for the existance of a file without blocking the UI</summary>
-		public static bool FileExists(IWin32Window owner, string filepath)
+		public static bool FileExists(Form parent, string filepath)
 		{
 			// Check that the file exists, this can take ages if 'filepath' is a network file
 			bool file_exists = false;
 			var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = File.Exists(filepath));
-			dlg.ShowDialog(owner, 500);
+			dlg.ShowDialog(parent, 500);
 			return file_exists;
 		}
 

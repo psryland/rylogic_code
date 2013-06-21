@@ -78,7 +78,7 @@ namespace RyLogViewer
 			}
 			
 			// Recent files menu
-			m_recent = new RecentFiles(m_menu_file_recent, OpenLogFile);
+			m_recent = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true));
 			m_recent.ClearRecentFilesListEvent += (s,a) =>
 				{
 					var res = MessageBox.Show(this, "Do you want to clear the recent files list?", "Clear Recent Files", MessageBoxButtons.OKCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
@@ -116,55 +116,56 @@ namespace RyLogViewer
 			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(a.Key ,a.OldValue ,a.NewValue));
 			
 			// Menu
-			m_menu.Location                          = Point.Empty;
-			m_menu_file_open.Click                  += (s,a) => OpenLogFile();
-			m_menu_file_wizards_androidlogcat.Click += (s,a) => AndroidLogcatWizard();
-			m_menu_file_open_stdout.Click           += (s,a) => LogProgramOutput();
-			m_menu_file_open_serial_port.Click      += (s,a) => LogSerialPort();
-			m_menu_file_open_network.Click          += (s,a) => LogNetworkOutput();
-			m_menu_file_open_named_pipe.Click       += (s,a) => LogNamedPipeOutput();
-			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
-			m_menu_file_export.Click                += (s,a) => ShowExportDialog();
-			m_menu_file_exit.Click                  += (s,a) => Close();
-			m_menu_edit_selectall.Click             += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
-			m_menu_edit_copy.Click                  += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
-			m_menu_edit_find.Click                  += (s,a) => ShowFindDialog();
-			m_menu_edit_find_next.Click             += (s,a) => FindNext();
-			m_menu_edit_find_prev.Click             += (s,a) => FindPrev();
-			m_menu_edit_toggle_bookmark.Click       += (s,a) => ToggleBookmark(SelectedRowIndex);
-			m_menu_edit_next_bookmark.Click         += (s,a) => NextBookmark();
-			m_menu_edit_prev_bookmark.Click         += (s,a) => PrevBookmark();
-			m_menu_edit_clearall_bookmarks.Click    += (s,a) => m_bookmarks.Clear();
-			m_menu_edit_bookmarks.Click             += (s,a) => ShowBookmarksDialog();
-			m_menu_encoding_detect.Click            += (s,a) => SetEncoding(null);
-			m_menu_encoding_ascii.Click             += (s,a) => SetEncoding(Encoding.ASCII           );
-			m_menu_encoding_utf8.Click              += (s,a) => SetEncoding(Encoding.UTF8            );
-			m_menu_encoding_ucs2_littleendian.Click += (s,a) => SetEncoding(Encoding.Unicode         );
-			m_menu_encoding_ucs2_bigendian.Click    += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
-			m_menu_line_ending_detect.Click         += (s,a) => SetLineEnding(ELineEnding.Detect);
-			m_menu_line_ending_cr.Click             += (s,a) => SetLineEnding(ELineEnding.CR    );
-			m_menu_line_ending_crlf.Click           += (s,a) => SetLineEnding(ELineEnding.CRLF  );
-			m_menu_line_ending_lf.Click             += (s,a) => SetLineEnding(ELineEnding.LF    );
-			m_menu_line_ending_custom.Click         += (s,a) => SetLineEnding(ELineEnding.Custom);
-			m_menu_tools_alwaysontop.Click          += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
-			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
-			m_menu_tools_clear_log_file.Click       += (s,a) => ClearLogFile();
-			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
-			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
-			m_menu_tools_transforms.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
-			m_menu_tools_actions.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
-			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General   );
-			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
-			m_menu_help_check_for_updates.Click     += (s,a) => CheckForUpdates(true);
-			m_menu_help_visit_store.Click           += (s,a) => VisitStore();
-			m_menu_help_register.Click              += (s,a) => ShowActivation();
-			m_menu_help_about.Click                 += (s,a) => ShowAbout();
+			m_menu.Location                             = Point.Empty;
+			m_menu_file_open.Click                     += (s,a) => OpenSingleLogFile(null, true);
+			m_menu_file_wizards_androidlogcat.Click    += (s,a) => AndroidLogcatWizard();
+			m_menu_file_wizards_aggregatelogfile.Click += (s,a) => AggregateFileWizard();
+			m_menu_file_open_stdout.Click              += (s,a) => LogProgramOutput();
+			m_menu_file_open_serial_port.Click         += (s,a) => LogSerialPort();
+			m_menu_file_open_network.Click             += (s,a) => LogNetworkOutput();
+			m_menu_file_open_named_pipe.Click          += (s,a) => LogNamedPipeOutput();
+			m_menu_file_close.Click                    += (s,a) => CloseLogFile();
+			m_menu_file_export.Click                   += (s,a) => ShowExportDialog();
+			m_menu_file_exit.Click                     += (s,a) => Close();
+			m_menu_edit_selectall.Click                += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
+			m_menu_edit_copy.Click                     += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
+			m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
+			m_menu_edit_find_next.Click                += (s,a) => FindNext();
+			m_menu_edit_find_prev.Click                += (s,a) => FindPrev();
+			m_menu_edit_toggle_bookmark.Click          += (s,a) => ToggleBookmark(SelectedRowIndex);
+			m_menu_edit_next_bookmark.Click            += (s,a) => NextBookmark();
+			m_menu_edit_prev_bookmark.Click            += (s,a) => PrevBookmark();
+			m_menu_edit_clearall_bookmarks.Click       += (s,a) => m_bookmarks.Clear();
+			m_menu_edit_bookmarks.Click                += (s,a) => ShowBookmarksDialog();
+			m_menu_encoding_detect.Click               += (s,a) => SetEncoding(null);
+			m_menu_encoding_ascii.Click                += (s,a) => SetEncoding(Encoding.ASCII           );
+			m_menu_encoding_utf8.Click                 += (s,a) => SetEncoding(Encoding.UTF8            );
+			m_menu_encoding_ucs2_littleendian.Click    += (s,a) => SetEncoding(Encoding.Unicode         );
+			m_menu_encoding_ucs2_bigendian.Click       += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
+			m_menu_line_ending_detect.Click            += (s,a) => SetLineEnding(ELineEnding.Detect);
+			m_menu_line_ending_cr.Click                += (s,a) => SetLineEnding(ELineEnding.CR    );
+			m_menu_line_ending_crlf.Click              += (s,a) => SetLineEnding(ELineEnding.CRLF  );
+			m_menu_line_ending_lf.Click                += (s,a) => SetLineEnding(ELineEnding.LF    );
+			m_menu_line_ending_custom.Click            += (s,a) => SetLineEnding(ELineEnding.Custom);
+			m_menu_tools_alwaysontop.Click             += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
+			m_menu_tools_ghost_mode.Click              += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
+			m_menu_tools_clear_log_file.Click          += (s,a) => ClearLogFile();
+			m_menu_tools_highlights.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+			m_menu_tools_filters.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
+			m_menu_tools_transforms.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
+			m_menu_tools_actions.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
+			m_menu_tools_options.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.General   );
+			m_menu_help_totd.Click                     += (s,a) => ShowTotD();
+			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
+			m_menu_help_visit_store.Click              += (s,a) => VisitStore();
+			m_menu_help_register.Click                 += (s,a) => ShowActivation();
+			m_menu_help_about.Click                    += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
 			m_toolstrip.Location            = new Point(0,30);
 			m_btn_open_log.ToolTipText      = Resources.OpenLogFile;
-			m_btn_open_log.Click           += (s,a) => OpenLogFile();
+			m_btn_open_log.Click           += (s,a) => OpenSingleLogFile(null, true);
 			m_btn_refresh.ToolTipText       = Resources.ReloadLogFile;
 			m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
 			m_btn_quick_filter.ToolTipText  = Resources.QuickFilter;
@@ -339,11 +340,11 @@ namespace RyLogViewer
 			// Parse command line
 			if (su.FileToLoad != null)
 			{
-				OpenLogFile(su.FileToLoad);
+				OpenSingleLogFile(su.FileToLoad, true);
 			}
 			else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
 			{
-				OpenLogFile(m_settings.LastLoadedFile);
+				OpenSingleLogFile(m_settings.LastLoadedFile, true);
 			}
 			
 			// Show the TotD
@@ -390,9 +391,65 @@ namespace RyLogViewer
 			// Initiate a UI update after any existing queued events
 			this.BeginInvoke(() => UpdateUI());
 		}
-		
-		/// <summary>Prompt to open a log file</summary>
-		private void OpenLogFile(string filepath, bool add_to_recent)
+
+		/// <summary>Checks each file in 'filepaths' is valid. Returns false and displays an error if not</summary>
+		private bool ValidateFilepaths(IEnumerable<string> filepaths)
+		{
+			foreach (var file in filepaths)
+			{
+				// Reject invalid file paths
+				if (!file.HasValue())
+				{
+					MessageBox.Show(this, "File path is invalid", Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					return false;
+				}
+
+				// Check that the file exists, this can take ages if 'filepath' is a network file
+				if (!Misc.FileExists(this, file))
+				{
+					if (m_recent.IsInRecents(file))
+					{
+						var res = MessageBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
+						if (res == DialogResult.Yes)
+							m_recent.Remove(file, true);
+					}
+					else
+					{
+						MessageBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					}
+					return false;
+				}
+			}
+			return true;
+		}
+
+		/// <summary>Adopt a new file source, closing any previously open file source</summary>
+		private void NewFileSource(IFileSource file)
+		{
+			CloseLogFile();
+			m_file = file.Open();
+
+			m_filepos = m_settings.OpenAtEnd ? m_file.Stream.Length : 0;
+
+			// Setup the watcher to watch for file changes
+			m_watch.Add(m_file.Filepaths, (fp,ctx) => { OnFileChanged(); return true; });
+			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
+
+			BuildLineIndex(m_filepos, true, ()=>
+				{
+					SelectedRowIndex = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
+						
+					// Show a hint if filters are active, the file isn't empty, but there are no visible rows
+					if (m_grid.RowCount == 0 && m_fileend != 0)
+					{
+						if (m_filters.Count != 0)        ShowHintBalloon("Filters are currently active", m_btn_filters);
+						else if (m_quick_filter_enabled) ShowHintBalloon("Filters are currently active", m_btn_quick_filter);
+					}
+				});
+		}
+
+		/// <summary>Open a single log file, prompting if 'filepath' is null</summary>
+		private void OpenSingleLogFile(string filepath, bool add_to_recent)
 		{
 			try
 			{
@@ -404,28 +461,9 @@ namespace RyLogViewer
 					filepath = fd.FileName;
 				}
 
-				// Reject invalid file paths
-				if (string.IsNullOrEmpty(filepath))
-				{
-					MessageBox.Show(this, "File path is invalid", Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+				// Check the filepath is valid
+				if (!ValidateFilepaths(Enumerable.Repeat(filepath, 1)))
 					return;
-				}
-
-				// Check that the file exists, this can take ages if 'filepath' is a network file
-				if (!Misc.FileExists(this, filepath))
-				{
-					if (m_recent.IsInRecents(filepath))
-					{
-						var res = MessageBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(filepath), Resources.InvalidFilePath, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
-						if (res == DialogResult.Yes)
-							m_recent.Remove(filepath, true);
-					}
-					else
-					{
-						MessageBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
-					}
-					return;
-				}
 
 				if (add_to_recent)
 				{
@@ -435,33 +473,32 @@ namespace RyLogViewer
 				}
 				
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
-				CloseLogFile();
-				m_file = new SingleFile(filepath).Open();
-				m_filepos = m_settings.OpenAtEnd ? m_file.Stream.Length : 0;
-
-				// Setup the watcher to watch for file changes
-				m_watch.Add(m_file.Filepaths, (fp,ctx) => { OnFileChanged(); return true; });
-				m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
-
-				BuildLineIndex(m_filepos, true, ()=>
-					{
-						SelectedRowIndex = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
-						
-						// Show a hint if filters are active, the file isn't empty, but there are no visible rows
-						if (m_grid.RowCount == 0 && m_fileend != 0)
-						{
-							if (m_filters.Count != 0)        ShowHintBalloon("Filters are currently active", m_btn_filters);
-							else if (m_quick_filter_enabled) ShowHintBalloon("Filters are currently active", m_btn_quick_filter);
-						}
-					});
-				return;
+				NewFileSource(new SingleFile(filepath));
 			}
-			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, string.Format("Failed to open file {0} due to an error.", filepath), Resources.FailedToLoadFile); }
-			CloseLogFile();
+			catch (Exception ex)
+			{
+				Misc.ShowErrorMessage(this, ex, "Failed to open file {0} due to an error.".Fmt(filepath), Resources.FailedToLoadFile);
+				CloseLogFile();
+			}
 		}
-		private void OpenLogFile(string filepath = null)
+
+		/// <summary>Open multiple log files in aggregate</summary>
+		private void OpenAggregateLogFile(List<string> filepaths)
 		{
-			OpenLogFile(filepath, true);
+			try
+			{
+				// Check the filepath is valid
+				if (!ValidateFilepaths(filepaths))
+					return;
+
+				// Switch files - open the file to make sure it's accessible (and to hold a lock)
+				NewFileSource(new AggregateFile(filepaths));
+			}
+			catch (Exception ex)
+			{
+				Misc.ShowErrorMessage(this, ex, "Failed to open aggregate log files due to an error.", Resources.FailedToLoadFile);
+				CloseLogFile();
+			}
 		}
 
 		/// <summary>Show the android device log wizard</summary>
@@ -471,6 +508,14 @@ namespace RyLogViewer
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			ApplySettings();
 			LaunchProcess(dg.Launch);
+		}
+
+		/// <summary>Show the aggregate log file wizard</summary>
+		private void AggregateFileWizard()
+		{
+			var dg = new AggregateFilesUI();
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			OpenAggregateLogFile(dg.Filepaths.ToList());
 		}
 
 		/// <summary>Open a standard out connection</summary>
@@ -757,7 +802,7 @@ namespace RyLogViewer
 			if (test_can_drop) return;
 			
 			// Open the dropped file
-			OpenLogFile(files[0]);
+			OpenSingleLogFile(files[0], true);
 		}
 
 		/// <summary>Turn on/off quick filter mode</summary>
