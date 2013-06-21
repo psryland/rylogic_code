@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.gui;
 using pr.util;
 
@@ -39,7 +40,7 @@ namespace RyLogViewer
 			// Version history
 			m_btn_version_history.Click += (s,a)=>
 				{
-					HelpUI.ShowResource(this, "RyLogViewer.docs.VersionHistory.html", Assembly.GetExecutingAssembly(), "Version History");
+					HelpUI.ShowHtml(this, Resources.version_history, "Version History");
 				};
 		}
 

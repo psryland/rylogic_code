@@ -1,0 +1,50 @@
+﻿-----------------------------------------------------------------
+Example log file for demonstrating the features of RyLogViewer
+-----------------------------------------------------------------
+The sections below demonstrate each of the key features of RyLogViewer.
+View the log file in a text editor such as notepad to compare it with
+
+
+<Highlighting>
+Highlighting is a useful feature for making the important lines
+in the log file stand out. An example would be to highlight lines
+in the log output of a program.
+e.g.
+	Error: this line contains an error message
+	Warn: this line contains a warning message
+	Info: this line contains general information
+	Debug: this line contains debug output
+
+<Filters>
+Filtering allows lines to be specifically excluded or specifically included.
+For example, in the lines below, filtering is used to remove all lines that
+contain a Filter### line ending in an odd value, except for those ending with
+a 5.
+e.g.
+	Filter001 - line 1
+	Filter002 - line 2
+	Filter003 - line 3
+	Filter004 - line 4
+	Filter005 - line 5
+	Filter006 - line 6
+	Filter007 - line 7
+	Filter008 - line 8
+	Filter009 - line 9
+	Filter010 - line 10
+	Filter011 - line 11
+	Filter012 - line 12
+	Filter013 - line 13
+	Filter014 - line 14
+	Filter015 - line 15
+	Filter016 - line 16
+	Filter017 - line 17
+	Filter018 - line 18
+	Filter019 - line 19
+	Filter020 - line 20
+
+
+<Transforms>
+
+<Actions>
+
+

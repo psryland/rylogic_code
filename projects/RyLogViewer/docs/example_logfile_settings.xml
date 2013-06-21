@@ -1,0 +1,438 @@
+﻿<ArrayOfsetting xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.datacontract.org/2004/07/pr.common">
+  <setting>
+    <key>ActionPatternSets</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root /&gt;</value>
+  </setting>
+  <setting>
+    <key>ActionPatterns</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root /&gt;</value>
+  </setting>
+  <setting>
+    <key>ActionsEnabled</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>AlternateLineColours</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>AlwaysOnTop</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>AndroidLogcat</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:AndroidLogcat">
+      <d3p1:AdbFullPath>D:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe</d3p1:AdbFullPath>
+      <d3p1:AppendOutputFile>true</d3p1:AppendOutputFile>
+      <d3p1:CaptureOutputToFile>true</d3p1:CaptureOutputToFile>
+      <d3p1:ConnectionPort>5555</d3p1:ConnectionPort>
+      <d3p1:ConnectionType>Tcpip</d3p1:ConnectionType>
+      <d3p1:FilterSpecs>
+        <d3p1:AndroidLogcat.FilterSpec>
+          <d3p1:Priority>Verbose</d3p1:Priority>
+          <d3p1:Tag>*</d3p1:Tag>
+        </d3p1:AndroidLogcat.FilterSpec>
+      </d3p1:FilterSpecs>
+      <d3p1:IPAddressHistory xmlns:d4p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
+        <d4p1:string>192.168.100.159</d4p1:string>
+        <d4p1:string>192.168.100.162</d4p1:string>
+      </d3p1:IPAddressHistory>
+      <d3p1:LogBuffers>
+        <d3p1:AndroidLogcat.ELogBuffer>Main</d3p1:AndroidLogcat.ELogBuffer>
+      </d3p1:LogBuffers>
+      <d3p1:LogFormat>Time</d3p1:LogFormat>
+      <d3p1:SelectedDevice></d3p1:SelectedDevice>
+    </value>
+  </setting>
+  <setting>
+    <key>BookmarkColour</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>162</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>1</d3p1:state>
+      <d3p1:value>0</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>CheckForUpdates</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>CheckForUpdatesServer</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">http://www.rylogic.co.nz:80/</value>
+  </setting>
+  <setting>
+    <key>ColDelimiter</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string"></value>
+  </setting>
+  <setting>
+    <key>ColumnCount</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:int">1</value>
+  </setting>
+  <setting>
+    <key>Company</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string"></value>
+  </setting>
+  <setting>
+    <key>Encoding</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string"></value>
+  </setting>
+  <setting>
+    <key>FileBufSize</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:int">1048576</value>
+  </setting>
+  <setting>
+    <key>FileChangesAdditive</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>FileScrollWidth</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:int">20</value>
+  </setting>
+  <setting>
+    <key>FilterPatternSets</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root /&gt;</value>
+  </setting>
+  <setting>
+    <key>FilterPatterns</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
+  &lt;filter&gt;
+    &lt;expr&gt;^\tFilter[0-9]{2}[5]&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;ifmatch&gt;Keep&lt;/ifmatch&gt;
+  &lt;/filter&gt;
+  &lt;filter&gt;
+    &lt;expr&gt;^\tFilter[0-9]{2}[1,3,5,7,9]&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;ifmatch&gt;Reject&lt;/ifmatch&gt;
+  &lt;/filter&gt;
+  &lt;filter&gt;
+    &lt;expr&gt;^\tFilter[0-9]{3}&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;Substring&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;ifmatch&gt;Reject&lt;/ifmatch&gt;
+  &lt;/filter&gt;
+&lt;/root&gt;</value>
+  </setting>
+  <setting>
+    <key>FiltersEnabled</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>Font</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Font">
+      <Name xmlns:d4p1="http://www.w3.org/2001/XMLSchema" i:type="d4p1:string" xmlns="">Consolas</Name>
+      <Size xmlns:d4p1="http://www.w3.org/2001/XMLSchema" i:type="d4p1:float" xmlns="">8.25</Size>
+      <Style i:type="d3p1:FontStyle" xmlns="">Regular</Style>
+      <Unit i:type="d3p1:GraphicsUnit" xmlns="">Point</Unit>
+    </value>
+  </setting>
+  <setting>
+    <key>HighlightPatternSets</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
+  &lt;patternset&gt;
+    &lt;filepath&gt;I:\MagicBullet\src\MagicBullet\MobileBullet\tools\RylogViewer\vlm_highlights.rylog_highlights&lt;/filepath&gt;
+  &lt;/patternset&gt;
+&lt;/root&gt;</value>
+  </setting>
+  <setting>
+    <key>HighlightPatterns</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
+  &lt;highlight&gt;
+    &lt;expr&gt;[A-Z]{2,}&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;forecolour&gt;FFFFFF00&lt;/forecolour&gt;
+    &lt;backcolour&gt;FF808080&lt;/backcolour&gt;
+  &lt;/highlight&gt;
+  &lt;highlight&gt;
+    &lt;expr&gt;Error:&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;Substring&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;forecolour&gt;FFFFFFFF&lt;/forecolour&gt;
+    &lt;backcolour&gt;FF8B0000&lt;/backcolour&gt;
+  &lt;/highlight&gt;
+  &lt;highlight&gt;
+    &lt;expr&gt;Warn:&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;Substring&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
+    &lt;backcolour&gt;FFFFFF00&lt;/backcolour&gt;
+  &lt;/highlight&gt;
+  &lt;highlight&gt;
+    &lt;expr&gt;Info:&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;Substring&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
+    &lt;backcolour&gt;FF80FFFF&lt;/backcolour&gt;
+  &lt;/highlight&gt;
+  &lt;highlight&gt;
+    &lt;expr&gt;Debug:&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;Substring&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;forecolour&gt;FF808080&lt;/forecolour&gt;
+    &lt;backcolour&gt;FFC0C0C0&lt;/backcolour&gt;
+  &lt;/highlight&gt;
+&lt;/root&gt;</value>
+  </setting>
+  <setting>
+    <key>HighlightsEnabled</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>IgnoreBlankLines</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>LastLoadedFile</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">Q:\projects\RyLogViewer\docs\example_logfile.txt</value>
+  </setting>
+  <setting>
+    <key>LicenceHolder</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">Evaluation Licence</value>
+  </setting>
+  <setting>
+    <key>LineBackColour1</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>165</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>1</d3p1:state>
+      <d3p1:value>0</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>LineBackColour2</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>164</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>1</d3p1:state>
+      <d3p1:value>0</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>LineCacheCount</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:int">1000</value>
+  </setting>
+  <setting>
+    <key>LineForeColour1</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>35</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>1</d3p1:state>
+      <d3p1:value>0</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>LineForeColour2</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>35</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>1</d3p1:state>
+      <d3p1:value>0</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>LineSelectBackColour</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>53</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>1</d3p1:state>
+      <d3p1:value>0</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>LineSelectForeColour</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>164</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>1</d3p1:state>
+      <d3p1:value>0</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>LoadLastFile</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>LogFilePath</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string"></value>
+  </setting>
+  <setting>
+    <key>LogProgramOutputHistory</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfLaunchApp" />
+  </setting>
+  <setting>
+    <key>MaxLineLength</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:int">16384</value>
+  </setting>
+  <setting>
+    <key>NetworkConnectionHistory</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfNetConn" />
+  </setting>
+  <setting>
+    <key>OpenAtEnd</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>OutputFilepathHistory</key>
+    <value xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" i:type="d3p1:ArrayOfstring">
+      <d3p1:string>D:\deleteme\logcat_192_168_100_159.txt</d3p1:string>
+      <d3p1:string>D:\deleteme\logcat_192_168_100_162.txt</d3p1:string>
+      <d3p1:string></d3p1:string>
+    </value>
+  </setting>
+  <setting>
+    <key>PipeConnectionHistory</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfPipeConn" />
+  </setting>
+  <setting>
+    <key>QuickFilterEnabled</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>RecentFiles</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">Q:\projects\RyLogViewer\docs\example_logfile.txt,Q:\miscellaneous\VisualStudio Mods\pr_visualisers.natvis,Q:\miscellaneous\VisualStudio Mods\pr_stepfilter.natstepfilter,D:\deleteme\testlog.txt,D:\deleteme\logcat_192_168_100_159.txt,D:\deleteme\logcat_192_168_100_162.txt,D:\deleteme\logcat_emulator.txt</value>
+  </setting>
+  <setting>
+    <key>RestoreScreenLoc</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>RowDelimiter</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string"></value>
+  </setting>
+  <setting>
+    <key>RowHeight</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:int">18</value>
+  </setting>
+  <setting>
+    <key>ScreenPosition</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Point">
+      <d3p1:x>855</d3p1:x>
+      <d3p1:y>196</d3p1:y>
+    </value>
+  </setting>
+  <setting>
+    <key>ScrollBarCachedRangeColour</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>0</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>2</d3p1:state>
+      <d3p1:value>1085135078</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>ScrollBarDisplayRangeColour</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>0</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>2</d3p1:state>
+      <d3p1:value>2152104628</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>ScrollBarFileRangeColour</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
+      <d3p1:knownColor>0</d3p1:knownColor>
+      <d3p1:name i:nil="true" />
+      <d3p1:state>2</d3p1:state>
+      <d3p1:value>2164260863</d3p1:value>
+    </value>
+  </setting>
+  <setting>
+    <key>SerialConnectionHistory</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfSerialConn" />
+  </setting>
+  <setting>
+    <key>ShowTOTD</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>TailEnabled</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>TransformPatternSets</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root /&gt;</value>
+  </setting>
+  <setting>
+    <key>TransformPatterns</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
+  &lt;transform&gt;
+    &lt;match&gt;
+      &lt;expr&gt;&amp;lt;{title}&amp;gt;&lt;/expr&gt;
+      &lt;active&gt;true&lt;/active&gt;
+      &lt;patntype&gt;Substring&lt;/patntype&gt;
+      &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+      &lt;invert&gt;false&lt;/invert&gt;
+      &lt;binary&gt;true&lt;/binary&gt;
+    &lt;/match&gt;
+    &lt;replace&gt;{title}&lt;/replace&gt;
+    &lt;subs&gt;
+      &lt;sub&gt;
+        &lt;name&gt;Upper Case&lt;/name&gt;
+        &lt;id&gt;title&lt;/id&gt;
+        &lt;subdata /&gt;
+      &lt;/sub&gt;
+    &lt;/subs&gt;
+  &lt;/transform&gt;
+&lt;/root&gt;</value>
+  </setting>
+  <setting>
+    <key>TransformsEnabled</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>UseWebProxy</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>WatchEnabled</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+  </setting>
+  <setting>
+    <key>WebProxyHost</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string"></value>
+  </setting>
+  <setting>
+    <key>WebProxyPort</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:int">8080</value>
+  </setting>
+  <setting>
+    <key>WindowSize</key>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Size">
+      <d3p1:height>588</d3p1:height>
+      <d3p1:width>822</d3p1:width>
+    </value>
+  </setting>
+  <setting>
+    <key>__SettingsVersion</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">v1.0</value>
+  </setting>
+</ArrayOfsetting>

@@ -250,9 +250,9 @@ Error: {0}</value>
   <data name="ReloadLogFile" xml:space="preserve">
     <value>Reload the current log file</value>
   </data>
-	<data name='QuickFilter' xml:space='preserve'>
-		<value>Quick filter; keep highlighted rows only</value>
-	</data>
+  <data name="QuickFilter" xml:space="preserve">
+    <value>Quick filter; keep highlighted rows only</value>
+  </data>
   <data name="ReadingFileFailed" xml:space="preserve">
     <value>Reading File Failed</value>
   </data>
@@ -393,5 +393,11 @@ Right click to show the actions dialog</value>
   </data>
   <data name="quick_filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\quick_filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="version_history" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\version_history.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="regex_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\regex_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
 </root>

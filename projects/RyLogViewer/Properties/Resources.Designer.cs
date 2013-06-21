@@ -732,6 +732,26 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///    &lt;head&gt;
+        ///        &lt;title&gt;Regular Expressions - Quick Reference&lt;/title&gt;
+        ///        &lt;style type=&quot;text/css&quot;&gt;
+        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
+        ///            th { border:1px solid black; border-collapse:collapse; }
+        ///            td { border:1px solid black; border-collapse:collapse; }
+        ///            .mono { font-family:monospace; font-size:0.8em; }
+        ///        &lt;/style&gt;
+        ///    &lt;/head&gt;
+        ///    &lt;body&gt;
+        ///        &lt;h2 style=&quot;text-align: [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string regex_quick_ref {
+            get {
+                return ResourceManager.GetString("regex_quick_ref", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Reload the current log file.
         /// </summary>
         internal static string ReloadLogFile {
@@ -831,6 +851,26 @@ namespace RyLogViewer.Properties {
         internal static string UnknownCmdLineOption {
             get {
                 return ResourceManager.GetString("UnknownCmdLineOption", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///    &lt;head&gt;
+        ///        &lt;title&gt;Version History&lt;/title&gt;
+        ///        &lt;style type=&quot;text/css&quot;&gt;
+        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
+        ///            th { border:1px solid black; border-collapse:collapse; }
+        ///            td { border:1px solid black; border-collapse:collapse; }
+        ///            .version_label { font-size:1.2em; font-weight:bolder; font-style:italic; }
+        ///            .date_label {}
+        ///        &lt;/style&gt;
+        ///    &lt;/head&gt;
+        ///    &lt;body&gt;        /// [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string version_history {
+            get {
+                return ResourceManager.GetString("version_history", resourceCulture);
             }
         }
         

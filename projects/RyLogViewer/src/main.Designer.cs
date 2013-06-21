@@ -53,8 +53,8 @@
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_wizards = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_wizards_androidlogcat = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_wizards_aggregatelogfile = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_wizards_androidlogcat = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator17 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_open_stdout = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_serial_port = new System.Windows.Forms.ToolStripMenuItem();
@@ -140,8 +140,9 @@
 			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_grid = new RyLogViewer.DGV();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.m_menu_evaluation_version = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_grid = new RyLogViewer.DGV();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -350,7 +351,8 @@
             this.m_menu_encoding,
             this.m_menu_line_ending,
             this.m_menu_tools,
-            this.m_menu_help});
+            this.m_menu_help,
+            this.m_menu_evaluation_version});
 			this.m_menu.Location = new System.Drawing.Point(0, 0);
 			this.m_menu.Name = "m_menu";
 			this.m_menu.Size = new System.Drawing.Size(835, 24);
@@ -395,17 +397,17 @@
 			this.m_menu_file_wizards.Size = new System.Drawing.Size(216, 22);
 			this.m_menu_file_wizards.Text = "&Wizards";
 			// 
-			// m_menu_file_wizards_androidlogcat
-			// 
-			this.m_menu_file_wizards_androidlogcat.Name = "m_menu_file_wizards_androidlogcat";
-			this.m_menu_file_wizards_androidlogcat.Size = new System.Drawing.Size(173, 22);
-			this.m_menu_file_wizards_androidlogcat.Text = "&Android Logcat";
-			// 
 			// m_menu_file_wizards_aggregatelogfile
 			// 
 			this.m_menu_file_wizards_aggregatelogfile.Name = "m_menu_file_wizards_aggregatelogfile";
 			this.m_menu_file_wizards_aggregatelogfile.Size = new System.Drawing.Size(173, 22);
 			this.m_menu_file_wizards_aggregatelogfile.Text = "A&ggregate Log File";
+			// 
+			// m_menu_file_wizards_androidlogcat
+			// 
+			this.m_menu_file_wizards_androidlogcat.Name = "m_menu_file_wizards_androidlogcat";
+			this.m_menu_file_wizards_androidlogcat.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_file_wizards_androidlogcat.Text = "&Android Logcat";
 			// 
 			// toolStripSeparator17
 			// 
@@ -1041,6 +1043,31 @@
 			this.m_cmenu_toggle_bookmark.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_toggle_bookmark.Text = "Toggle &Bookmark";
 			// 
+			// m_scroll_file
+			// 
+			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_scroll_file.LargeChange = ((long)(1));
+			this.m_scroll_file.Location = new System.Drawing.Point(808, 3);
+			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
+			this.m_scroll_file.MinThumbSize = 20;
+			this.m_scroll_file.Name = "m_scroll_file";
+			this.m_scroll_file.Overlay = null;
+			this.m_scroll_file.OverlayAttributes = null;
+			this.m_scroll_file.Size = new System.Drawing.Size(18, 401);
+			this.m_scroll_file.SmallChange = ((long)(1));
+			this.m_scroll_file.TabIndex = 4;
+			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
+			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
+			// 
+			// m_menu_evaluation_version
+			// 
+			this.m_menu_evaluation_version.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+			this.m_menu_evaluation_version.ForeColor = System.Drawing.Color.Red;
+			this.m_menu_evaluation_version.Name = "m_menu_evaluation_version";
+			this.m_menu_evaluation_version.Padding = new System.Windows.Forms.Padding(40, 0, 40, 0);
+			this.m_menu_evaluation_version.Size = new System.Drawing.Size(224, 20);
+			this.m_menu_evaluation_version.Text = "*** Evaluation Version ***";
+			// 
 			// m_grid
 			// 
 			this.m_grid.AllowUserToAddRows = false;
@@ -1066,22 +1093,6 @@
 			this.m_grid.Size = new System.Drawing.Size(799, 401);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
-			// 
-			// m_scroll_file
-			// 
-			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_scroll_file.LargeChange = ((long)(1));
-			this.m_scroll_file.Location = new System.Drawing.Point(808, 3);
-			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
-			this.m_scroll_file.MinThumbSize = 20;
-			this.m_scroll_file.Name = "m_scroll_file";
-			this.m_scroll_file.Overlay = null;
-			this.m_scroll_file.OverlayAttributes = null;
-			this.m_scroll_file.Size = new System.Drawing.Size(18, 401);
-			this.m_scroll_file.SmallChange = ((long)(1));
-			this.m_scroll_file.TabIndex = 4;
-			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
-			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
 			// 
 			// Main
 			// 
@@ -1230,6 +1241,7 @@
 		private System.Windows.Forms.ToolStripButton m_btn_quick_filter;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_message_fixed;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards_aggregatelogfile;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_evaluation_version;
 	}
 }
 

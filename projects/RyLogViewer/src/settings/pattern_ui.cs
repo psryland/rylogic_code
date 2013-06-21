@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.gui;
 using pr.util;
 
@@ -61,13 +62,7 @@ namespace RyLogViewer
 			get
 			{
 				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
-					,RegexQuickRef
-					,Assembly.GetExecutingAssembly()
-					,"Regular Expression Help"
-					,new Size(1,1)
-					,new Size(640,480)
-					,ToolForm.EPin.TopRight));
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Size(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight));
 			}
 		}
 		

@@ -228,6 +228,8 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <None Include="Resources\regex_quick_ref.html" />
+    <None Include="Resources\version_history.html" />
     <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
     </EmbeddedResource>
@@ -304,9 +306,11 @@
     <EmbeddedResource Include="src\settings\transform_ui.resx">
       <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <Content Include="docs\RegexQuickRef.html">
+    <Content Include="docs\example_logfile_settings.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="docs\help.html" />
+    <Content Include="docs\highlighting.html" />
   </ItemGroup>
   <ItemGroup>
     <None Include="gen_licence.cmd" />
@@ -349,10 +353,8 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="docs\totd_background.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\VersionHistory.html">
+    <Content Include="docs\totd3.html" />
+    <Content Include="docs\background.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -384,6 +386,7 @@
     <Content Include="docs\totd.css">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Resources\background.png" />
     <Content Include="Resources\book.png" />
     <None Include="Resources\quick_filter.png" />
     <None Include="Resources\pencil.png" />
@@ -393,6 +396,10 @@
     <None Include="Resources\bottom.png" />
     <None Include="Resources\bookmark.png" />
     <None Include="Resources\find_search.png" />
+    <Content Include="Resources\evaluation_version.html" />
+    <Content Include="docs\example_logfile.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\green_tick.png" />
     <Content Include="docs\CommandLineRef.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

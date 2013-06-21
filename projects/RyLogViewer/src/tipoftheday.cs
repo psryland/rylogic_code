@@ -24,18 +24,17 @@ namespace RyLogViewer
 		public int TipIndex
 		{
 			get { return m_tip_index; }
-			set { m_tip_index = value % m_totd.Count; }//m_html.Navigate("about:blank"); }
+			set { m_tip_index = value % m_totd.Count; }
 		}
 		private int m_tip_index;
 
-		internal TipOfTheDay(Settings settings)
+		public TipOfTheDay(Settings settings)
 		{
 			InitializeComponent();
 			m_tip_index = 0;
-			m_totd = new List<FileInfo>(new DirectoryInfo(@".\docs").GetFiles("totd*.html"));
+			m_totd = new List<FileInfo>(ScanFiles());
 			if (m_totd.Count == 0) return;
 
-			//m_html.DocumentText = "<html/>";
 			m_html.Url = new Uri(m_totd[TipIndex].FullName);
 			m_check_show_on_startup.Checked = settings.ShowTOTD;
 			m_check_show_on_startup.CheckedChanged += (s,a)=>
@@ -52,43 +51,12 @@ namespace RyLogViewer
 					TipIndex += m_totd.Count - 1;
 					m_html.Url = new Uri(m_totd[TipIndex].FullName);
 				};
-			//m_html.DocumentCompleted += (s,a)=>
-			//	{
-			//		try
-			//		{
-			//			// ReSharper disable PossibleNullReferenceException
-			//			//var totd = Docs.TotD.Tip(TipIndex);
-			//			//totd = Regex.Replace(totd, @"<link.*?stylesheet.*/>", "<style>\n"+Docs.TotD.CSS+"\n</style>");
-			//			//var totd = File.ReadAllText(m_totd[TipIndex].FullName);
-			//			//m_html.Document.OpenNew(true);
-			//			//m_html.Url = new Uri(m_totd[TipIndex].FullName);
-			//			//var head = (HtmlDocument)m_html.Document.DomDocument;//GetElementsByTagName("head")[0];
-			//			//var style = head.CreateElement("style");
-			//			//style.InnerHtml = Docs.TotD.CSS;
+		}
 
-			//			//Assembly ass = Assembly.GetExecutingAssembly();
-			//			//Stream stream = ass.GetManifestResourceStream("RyLogViewer.docs.TotD"+m_tip_index+".html");
-			//			//if (stream == null)
-			//			//{
-			//			//	m_tip_index = 0; 
-			//			//	stream =
-			//			//		ass.GetManifestResourceStream("RyLogViewer.docs.TotD"+m_tip_index+".html") ??
-			//			//		new MemoryStream(Encoding.ASCII.GetBytes("Tip of the Day data missing"));
-			//			//}
-			//			//if (m_html.Document != null)
-			//			//{
-			//			//	m_html.Document.OpenNew(true);
-			//			//	using (TextReader r = new StreamReader(stream))
-			//			//		m_html.Document.Write(r.ReadToEnd());
-			//			//}
-
-			//			// ReSharper restore PossibleNullReferenceException
-			//		}
-			//		catch (Exception ex)
-			//		{
-			//			Log.Exception(this, ex, "Failed to set Tip of the Day html content");
-			//		}
-			//	};
+		/// <summary>Search for tip of the day files</summary>
+		private IEnumerable<FileInfo> ScanFiles()
+		{
+			return new DirectoryInfo(@".\docs").GetFiles("totd*.html");
 		}
 
 		#region Windows Form Designer generated code

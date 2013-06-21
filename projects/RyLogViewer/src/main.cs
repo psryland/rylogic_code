@@ -109,7 +109,10 @@ namespace RyLogViewer
 			m_bufsize             = m_settings.FileBufSize;
 			m_line_cache_count    = m_settings.LineCacheCount;
 			m_tail_enabled        = m_settings.TailEnabled;
-			
+
+			var lic = new Licence(m_startup_options.AppDataDir);
+			m_menu_evaluation_version.Visible = !lic.Valid;
+
 			// Startup options
 			ApplyStartupOptions();
 			
@@ -160,6 +163,7 @@ namespace RyLogViewer
 			m_menu_help_visit_store.Click              += (s,a) => VisitStore();
 			m_menu_help_register.Click                 += (s,a) => ShowActivation();
 			m_menu_help_about.Click                    += (s,a) => ShowAbout();
+			m_menu_evaluation_version.Click            += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
