@@ -228,6 +228,9 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <None Include="Resources\swizzle_quick_ref.html" />
+    <None Include="Resources\command_line_ref.html" />
+    <Content Include="Resources\transform_quick_ref.html" />
     <None Include="Resources\regex_quick_ref.html" />
     <None Include="Resources\version_history.html" />
     <EmbeddedResource Include="src\about.resx">
@@ -375,14 +378,6 @@
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="docs\SwizzleQuickRef.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\TransformQuickRef.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="docs\totd.css">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -401,9 +396,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\green_tick.png" />
-    <Content Include="docs\CommandLineRef.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">

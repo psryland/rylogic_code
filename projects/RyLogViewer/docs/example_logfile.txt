@@ -1,14 +1,14 @@
-﻿-----------------------------------------------------------------
-Example log file for demonstrating the features of RyLogViewer
------------------------------------------------------------------
-The sections below demonstrate each of the key features of RyLogViewer.
-View the log file in a text editor such as notepad to compare it with
-
+﻿<----------------------------------------------------------------->
+<Example log file for demonstrating the features of RyLogViewer>
+<----------------------------------------------------------------->
+The sections below quickly demonstrate each of the key features of
+RyLogViewer. View this file in a text editor such as notepad to
+compare its contents with how it is displayed in RyLogViewer.
 
 <Highlighting>
 Highlighting is a useful feature for making the important lines
 in the log file stand out. An example would be to highlight lines
-in the log output of a program.
+in the output of a program.
 e.g.
 	Error: this line contains an error message
 	Warn: this line contains a warning message
@@ -42,9 +42,22 @@ e.g.
 	Filter019 - line 19
 	Filter020 - line 20
 
-
 <Transforms>
+Transforms provide a way to re-format the log data. This can include swapping
+parts of a line around, changing case, or substituting text based on a lookup
+table. For example, the following lines map windows error codes to their string
+equivalents:
+	An error of type 0 occurred
+	An error of type 1 occurred
+	An error of type 2 occurred
+	An error of type 3 occurred
+	An error of type 4 occurred
+	An error of type 5 occurred
+	An error of type 6 occurred
 
 <Actions>
-
+Actions allow a program or batch file to be started by double clicking on a line
+in the log file. For example, double clicking on the following line should launch
+notepad with this file:
+  example_logfile.txt
 

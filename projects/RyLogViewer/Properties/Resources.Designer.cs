@@ -212,6 +212,24 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///    &lt;head&gt;
+        ///        &lt;title&gt;Command Line Syntax&lt;/title&gt;
+        ///        &lt;style type=&quot;text/css&quot;&gt;
+        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
+        ///            th { border:1px solid black; border-collapse:collapse; }
+        ///            td { border:1px solid black; border-collapse:collapse; }
+        ///            .mono { font-family:monospace; font-size:0.8em; }
+        ///            .mono_indent { font-family:monospace; font-size:0.8em; padding-left:20px; }
+        ///   [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string command_line_ref {
+            get {
+                return ResourceManager.GetString("command_line_ref", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Confirm Clear Log.
         /// </summary>
         internal static string ConfirmClearLog {
@@ -842,6 +860,47 @@ namespace RyLogViewer.Properties {
         internal static string ShowTransformsDialog {
             get {
                 return ResourceManager.GetString("ShowTransformsDialog", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///    &lt;head&gt;
+        ///        &lt;title&gt;Swizzle - Quick Reference&lt;/title&gt;
+        ///        &lt;style type=&quot;text/css&quot;&gt;
+        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
+        ///            th { border:1px solid black; border-collapse:collapse; }
+        ///            td { border:1px solid black; border-collapse:collapse; }
+        ///            .mono { font-family:monospace; font-size:0.8em; }
+        ///            .mono { }
+        ///        &lt;/style&gt;
+        ///    &lt;/head&gt;
+        ///    &lt;body&gt;
+        ///        &lt;div&gt;&lt;h2 st [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string swizzle_quick_ref {
+            get {
+                return ResourceManager.GetString("swizzle_quick_ref", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///    &lt;head&gt;
+        ///        &lt;title&gt;Match Pattern - Quick Reference&lt;/title&gt;
+        ///        &lt;style type=&quot;text/css&quot;&gt;
+        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
+        ///            th { border:1px solid black; border-collapse:collapse; }
+        ///            td { border:1px solid black; border-collapse:collapse; }
+        ///        &lt;/style&gt;
+        ///    &lt;/head&gt;
+        ///    &lt;body&gt;
+        ///        &lt;h2 style=&quot;text-align:center&quot;&gt;Match Pattern - Quick Reference&lt;/h2&gt;
+        ///        &lt;p&gt;The match pa [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string transform_quick_ref {
+            get {
+                return ResourceManager.GetString("transform_quick_ref", resourceCulture);
             }
         }
         

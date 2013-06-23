@@ -400,4 +400,13 @@ Right click to show the actions dialog</value>
   <data name="regex_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\regex_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
+  <data name="transform_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\transform_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="command_line_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\command_line_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="swizzle_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\swizzle_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
 </root>

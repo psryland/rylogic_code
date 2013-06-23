@@ -83,7 +83,7 @@
   </setting>
   <setting>
     <key>FileChangesAdditive</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
   </setting>
   <setting>
     <key>FileScrollWidth</key>
@@ -321,7 +321,7 @@
   </setting>
   <setting>
     <key>RestoreScreenLoc</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
   </setting>
   <setting>
     <key>RowDelimiter</key>
@@ -334,8 +334,8 @@
   <setting>
     <key>ScreenPosition</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Point">
-      <d3p1:x>855</d3p1:x>
-      <d3p1:y>196</d3p1:y>
+      <d3p1:x>2026</d3p1:x>
+      <d3p1:y>38</d3p1:y>
     </value>
   </setting>
   <setting>
@@ -386,18 +386,18 @@
     <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
   &lt;transform&gt;
     &lt;match&gt;
-      &lt;expr&gt;&amp;lt;{title}&amp;gt;&lt;/expr&gt;
+      &lt;expr&gt;&amp;lt;(&amp;lt;title&amp;gt;.*)&amp;gt;&lt;/expr&gt;
       &lt;active&gt;true&lt;/active&gt;
-      &lt;patntype&gt;Substring&lt;/patntype&gt;
+      &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
       &lt;ignorecase&gt;false&lt;/ignorecase&gt;
       &lt;invert&gt;false&lt;/invert&gt;
       &lt;binary&gt;true&lt;/binary&gt;
     &lt;/match&gt;
-    &lt;replace&gt;{title}&lt;/replace&gt;
+    &lt;replace&gt;(1)&lt;/replace&gt;
     &lt;subs&gt;
       &lt;sub&gt;
         &lt;name&gt;Upper Case&lt;/name&gt;
-        &lt;id&gt;title&lt;/id&gt;
+        &lt;id&gt;1&lt;/id&gt;
         &lt;subdata /&gt;
       &lt;/sub&gt;
     &lt;/subs&gt;
@@ -427,8 +427,8 @@
   <setting>
     <key>WindowSize</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Size">
-      <d3p1:height>588</d3p1:height>
-      <d3p1:width>822</d3p1:width>
+      <d3p1:height>951</d3p1:height>
+      <d3p1:width>854</d3p1:width>
     </value>
   </setting>
   <setting>
