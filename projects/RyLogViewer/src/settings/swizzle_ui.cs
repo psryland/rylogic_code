@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Reflection;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.gui;
 using pr.util;
 
@@ -11,7 +11,6 @@ namespace RyLogViewer
 	/// <summary>A UI for configuring a swizzle element</summary>
 	public partial class SwizzleUI :Form
 	{
-		private const string SwizzleQuickRef = "RyLogViewer.docs.SwizzleQuickRef.html";
 		private readonly ToolTip m_tt;
 		private HelpUI           m_dlg_help;
 		
@@ -26,14 +25,7 @@ namespace RyLogViewer
 		{
 			get
 			{
-				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
-					,SwizzleQuickRef
-					,Assembly.GetExecutingAssembly()
-					,"Swizzle Help"
-					,new Size(1,1)
-					,new Size(640,480)
-					,ToolForm.EPin.TopRight));
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(this, Resources.swizzle_quick_ref, "Swizzle Help", new Size(1,1), new Size(640,480), ToolForm.EPin.TopRight));
 			}
 		}
 		
@@ -80,9 +72,9 @@ namespace RyLogViewer
 				catch (Exception ex)
 				{
 					m_edit_source.BackColor = Color.LightSalmon;
-					m_edit_output  .BackColor = Color.LightSalmon;
+					m_edit_output.BackColor = Color.LightSalmon;
 					m_edit_source.ToolTip(m_tt, ex.Message);
-					m_edit_output  .ToolTip(m_tt, ex.Message);
+					m_edit_output.ToolTip(m_tt, ex.Message);
 				}
 			}
 			finally

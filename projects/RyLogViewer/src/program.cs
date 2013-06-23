@@ -15,7 +15,6 @@ namespace RyLogViewer
 {
 	static class program
 	{
-		private const string CommandLineRef = "RyLogViewer.docs.CommandLineRef.html";
 		private static StartupOptions StartupOptions;
 
 		/// <summary>The main entry point for the application.</summary>
@@ -43,7 +42,7 @@ namespace RyLogViewer
 					,"Command Line Error"
 					,MessageBoxButtons.OK
 					,MessageBoxIcon.Error);
-				HelpUI.ShowResource(null, CommandLineRef, Assembly.GetExecutingAssembly(), Resources.AppTitle);
+				HelpUI.ShowHtml(null, Resources.command_line_ref, Resources.AppTitle);
 				Environment.ExitCode = 1;
 				return;
 			}
@@ -51,7 +50,7 @@ namespace RyLogViewer
 			// If they just want help displayed...
 			if (StartupOptions.ShowHelp)
 			{
-				HelpUI.ShowResource(null, CommandLineRef, Assembly.GetExecutingAssembly(), Resources.AppTitle);
+				HelpUI.ShowHtml(null, Resources.command_line_ref, Resources.AppTitle);
 				Environment.ExitCode = 1;
 				return;
 			}

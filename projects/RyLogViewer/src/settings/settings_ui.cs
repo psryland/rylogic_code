@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -88,6 +89,7 @@ namespace RyLogViewer
 			m_pattern_ac.NewPattern(new ClkAction());
 			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
+			m_tabctrl.Deselecting += (s,a) => TabChanging(a);
 			m_tabctrl.SelectedIndexChanged += (s,a) => FocusInput();
 
 			SetupGeneralTab();
@@ -649,6 +651,31 @@ namespace RyLogViewer
 				{
 					UpdateUI();
 				};
+		}
+
+		/// <summary>Called as the tab is changing/closing</summary>
+		private void TabChanging(TabControlCancelEventArgs args)
+		{
+			if (args.Action == TabControlAction.Deselecting)
+			{
+				SavePatternChanges(m_pattern_hl, m_highlights, "Highlighting", args);
+				SavePatternChanges(m_pattern_ft, m_filters, "Filtering", args);
+				SavePatternChanges(m_pattern_tx, m_transforms, "Transform", args);
+				SavePatternChanges(m_pattern_ac, m_actions, "Click action", args);
+			}
+		}
+
+		/// <summary>Helper for prompting to save changes to a pattern before leaving the tab</summary>
+		private void SavePatternChanges<TPattern>(IPatternUI pattern_ui, List<TPattern> patterns, string text, CancelEventArgs args) where TPattern:IPattern,new()
+		{
+			if (pattern_ui.UnsavedChanges)
+			{
+				var res = MessageBox.Show(this, "{0} pattern contains unsaved changes.\r\n\r\nSave changes?".Fmt(text),"Unsaved Changes",MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+				if (res == DialogResult.Cancel) { args.Cancel = true; return; }
+				if (res == DialogResult.No) { pattern_ui.NewPattern(new TPattern()); return; }
+				if (pattern_ui.IsNew) patterns.Add((TPattern)pattern_ui.Pattern);
+				pattern_ui.NewPattern(new TPattern());
+			}
 		}
 
 		/// <summary>Reset the settings to their default values</summary>
