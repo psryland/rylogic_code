@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.common;
@@ -9,8 +10,20 @@ namespace RyLogViewer
 {
 	public interface IPattern :ICloneable
 	{
+		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
+		EPattern PatnType { get; set; }
+
+		/// <summary>The pattern to use when matching</summary>
+		string Expr { get; set; }
+
+		/// <summary>True if the pattern should ignore case</summary>
+		bool IgnoreCase { get; set; }
+
 		/// <summary>Returns true if the pattern is active</summary>
 		bool Active { get; set; }
+
+		/// <summary>Returns the names of the capture groups in this pattern</summary>
+		string[] CaptureGroupNames { get; }
 	}
 
 	public class Pattern :IPattern
@@ -27,47 +40,54 @@ namespace RyLogViewer
 		public EPattern PatnType
 		{
 			get { return m_patn_type; }
-			set { m_patn_type = value; m_compiled_patn = null; }
+			set { m_patn_type = value; m_compiled_patn = null; RaisePatternChanged(); }
 		}
 
 		/// <summary>The pattern to use when matching</summary>
 		public string Expr
 		{
 			get { return m_expr; }
-			set { m_expr = value; m_compiled_patn = null; }
+			set { m_expr = value; m_compiled_patn = null; RaisePatternChanged(); }
 		}
 
 		/// <summary>True if the pattern should ignore case</summary>
 		public bool IgnoreCase
 		{
 			get { return m_ignore_case; }
-			set { m_ignore_case = value; m_compiled_patn = null; }
+			set { m_ignore_case = value; m_compiled_patn = null; RaisePatternChanged(); }
 		}
 
 		/// <summary>True if the pattern is active</summary>
 		public bool Active
 		{
 			get { return m_active; }
-			set { m_active = value; }
+			set { m_active = value; RaisePatternChanged(); }
 		}
 
 		/// <summary>Invert the results of a match</summary>
 		public bool Invert
 		{
 			get { return m_invert; }
-			set { m_invert = value; }
+			set { m_invert = value; RaisePatternChanged(); }
 		}
 
 		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
 		public bool BinaryMatch
 		{
 			get { return m_binary_match; }
-			set { m_binary_match = value; }
+			set { m_binary_match = value; RaisePatternChanged(); }
+		}
+
+		/// <summary>Raised whenever data on this pattern changes</summary>
+		public event EventHandler PatternChanged;
+		private void RaisePatternChanged()
+		{
+			if (PatternChanged == null) return;
+			PatternChanged(this, EventArgs.Empty);
 		}
 
 		public Pattern() :this(EPattern.Substring, "")
 		{}
-
 		public Pattern(EPattern patn_type, string expr)
 		{
 			PatnType    = patn_type;
@@ -77,7 +97,6 @@ namespace RyLogViewer
 			Invert      = false;
 			BinaryMatch = true;
 		}
-
 		public Pattern(Pattern rhs)
 		{
 			Expr        = rhs.Expr;
@@ -97,7 +116,7 @@ namespace RyLogViewer
 				{
 				default: throw new ArgumentOutOfRangeException();
 				case EPattern.Substring:         return Regex.Escape(Expr);
-				case EPattern.Wildcard:          return Regex.Escape(Expr).Replace("\\*", ".*").Replace("\\?", ".");
+				case EPattern.Wildcard:          return Regex.Escape(Expr).Replace("\\*", "(.*)").Replace("\\?", ".");
 				case EPattern.RegularExpression: return Expr;
 				}
 			}
@@ -108,6 +127,7 @@ namespace RyLogViewer
 		{
 			get
 			{
+				// Don't make this public because it throws if the regex string isn't valid
 				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
 				return m_compiled_patn ?? (m_compiled_patn = new Regex(RegexString, opts));
 			}
@@ -197,6 +217,18 @@ namespace RyLogViewer
 				yield return new Span(x[i], x[i+1] - x[i]);
 		}
 
+		/// <summary>Returns the names of the capture groups in this pattern</summary>
+		public string[] CaptureGroupNames
+		{
+			get
+			{
+				if (!ExprValid) return new string[0];
+				if (PatnType == EPattern.RegularExpression || PatnType == EPattern.Wildcard)
+					return Regex.GetGroupNames();
+				return new string[0];
+			}
+		}
+
 		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
 		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
 		{
@@ -205,7 +237,7 @@ namespace RyLogViewer
 			{
 				int i = 0;
 				foreach (var s in Match(text))
-					yield return new KeyValuePair<string, string>((++i).ToString(), text.Substring(s.Index,s.Count));
+					yield return new KeyValuePair<string, string>((++i).ToString(CultureInfo.InvariantCulture), text.Substring(s.Index,s.Count));
 			}
 			else
 			{
@@ -283,3 +315,26 @@ namespace RyLogViewer
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+
+	[TestFixture] internal static partial class RyLogViewerUnitTests
+	{
+		internal static class TestPattern
+		{
+			[TestFixtureSetUp] public static void Setup()
+			{
+			}
+			[TestFixtureTearDown] public static void CleanUp()
+			{
+			}
+			[Test] public static void TestMatches()
+			{
+			}
+		}
+	}
+}
+#endif

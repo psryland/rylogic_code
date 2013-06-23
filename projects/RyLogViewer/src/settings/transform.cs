@@ -69,31 +69,31 @@ namespace RyLogViewer
 		public Dictionary<string, ITxfmSub> Subs { get; private set; }
 		
 		/// <summary>The pattern used to match rows that will have the transform applied.</summary>
-		public string Match
+		public string Expr
 		{
 			get { return m_match.Expr; }
-			set { m_match.Expr = value; m_compiled_patn = null; UpdateSubs(); }
+			set { m_match.Expr = value; }
 		}
 
 		/// <summary>The pattern type to interpret 'match' as</summary>
 		public EPattern PatnType
 		{
 			get { return m_match.PatnType; }
-			set { m_match.PatnType = value; m_compiled_patn = null; UpdateSubs(); }
+			set { m_match.PatnType = value; }
 		}
 
 		/// <summary>True if the match pattern should ignore case</summary>
 		public bool IgnoreCase
 		{
 			get { return m_match.IgnoreCase; }
-			set { m_match.IgnoreCase = value; m_compiled_patn = null; UpdateSubs(); }
+			set { m_match.IgnoreCase = value;  }
 		}
 
 		/// <summary>True if this transform should be applied</summary>
 		public bool Active
 		{
 			get { return m_match.Active; }
-			set { m_match.Active = value; m_compiled_patn = null; UpdateSubs(); }
+			set { m_match.Active = value; }
 		}
 
 		/// <summary>The template string used to create the transformed row</summary>
@@ -103,21 +103,20 @@ namespace RyLogViewer
 		{
 			m_match      = new Pattern();
 			Subs         = new Dictionary<string, ITxfmSub>();
-			Match        = "";
+			Expr        = "";
 			Replace      = "";
 			IgnoreCase   = false;
 			Active       = true;
+			m_match.PatternChanged += HandlePatternChanged;
 		}
-
 		private Transform(Transform rhs)
 		{
 			m_match    = new Pattern(rhs.m_match);
 			Subs       = new Dictionary<string, ITxfmSub>(rhs.Subs);
 			Replace    = rhs.Replace;
 			Active     = rhs.Active;
+			m_match.PatternChanged += HandlePatternChanged;
 		}
-
-		/// <summary>Construct from xml description</summary>
 		public Transform(XElement node)
 		{
 			// ReSharper disable PossibleNullReferenceException
@@ -135,7 +134,16 @@ namespace RyLogViewer
 				catch { sub = new SubNoChange{Id = id}; }
 				Subs.Add(sub.Id, sub);
 			}
+
+			m_match.PatternChanged += HandlePatternChanged;
 			// ReSharper restore PossibleNullReferenceException
+		}
+
+		/// <summary>Handles 'm_match' being changed</summary>
+		private void HandlePatternChanged(object sender, EventArgs args)
+		{
+			m_compiled_patn = null;
+			UpdateSubs();
 		}
 
 		/// <summary>Export this type to an xml node</summary>
@@ -219,12 +227,13 @@ namespace RyLogViewer
 			}
 		}
 
-		public List<string> CaptureIds
+		/// <summary>Returns the names of the capture groups in this pattern</summary>
+		public string[] CaptureGroupNames
 		{
 			get
 			{
-				try { return new List<string>(Regex.GetGroupNames().Skip(1)); }
-				catch { return new List<string>(); }
+				try { return Regex.GetGroupNames(); }
+				catch { return new string[0]; }
 			}
 		}
 
@@ -274,7 +283,7 @@ namespace RyLogViewer
 		/// <summary>Return true if 'text' matches the 'Match' pattern</summary>
 		public bool IsMatch(string text)
 		{
-			return Match.Length != 0 && IsValid && Regex.IsMatch(text);
+			return Expr.Length != 0 && IsValid && Regex.IsMatch(text);
 		}
 
 		/// <summary>Apply the transform to 'text' and return the mapping of capture groups in 'text' and in the returned result</summary>
@@ -292,12 +301,12 @@ namespace RyLogViewer
 			var caps = new Dictionary<string,Capture>();
 			
 			// Get the map of capture ids to captured values from 'text'
-			var ids  = CaptureIds;     // The collection of tags in the match template
-			var grps = match.Groups;   // The captures from 'text' (starting at index 1, elem zero is always the whole match)
-			Debug.Assert(ids.Count == grps.Count - 1, "Expected the number of capture ids and number of regex capture groups to be the same");
-			for (int i = 0; i != ids.Count; ++i)
+			var ids  = CaptureGroupNames;  // The collection of tags in the match template
+			var grps = match.Groups;       // The captures from 'text' (starting at index 1, elem zero is always the whole match)
+			Debug.Assert(ids.Length == grps.Count, "Expected the number of capture ids and number of regex capture groups to be the same");
+			for (int i = 0; i != ids.Length; ++i)
 			{
-				Capture cap = new Capture(ids[i], grps[i+1].Value, new Span(grps[i+1].Index, grps[i+1].Length));
+				Capture cap = new Capture(ids[i], grps[i].Value, new Span(grps[i].Index, grps[i].Length));
 				caps.Add(cap.Id, cap);
 				src_caps.Add(cap);
 			}
@@ -345,12 +354,12 @@ namespace RyLogViewer
 			var caps = new Dictionary<string,Capture>();
 			
 			// Get the map of capture ids to captured values from 'text'
-			var ids  = CaptureIds;     // The collection of tags in the match template
-			var grps = match.Groups;   // The captures from 'text' (starting at index 1, elem zero is always the whole match)
-			Debug.Assert(ids.Count == grps.Count - 1, "Expected the number of capture ids and number of regex capture groups to be the same");
-			for (int i = 0; i != ids.Count; ++i)
+			var ids  = CaptureGroupNames; // The collection of tags in the match template
+			var grps = match.Groups;      // The captures from 'text' (starting at index 1, elem zero is always the whole match)
+			Debug.Assert(ids.Length == grps.Count, "Expected the number of capture ids and number of regex capture groups to be the same");
+			for (int i = 0; i != ids.Length; ++i)
 			{
-				Capture cap = new Capture(ids[i], grps[i+1].Value);
+				Capture cap = new Capture(ids[i], grps[i].Value);
 				caps.Add(cap.Id, cap);
 			}
 			
@@ -381,7 +390,7 @@ namespace RyLogViewer
 			
 			// Build a new map of capture ids to default substitution objects
 			Subs = new Dictionary<string,ITxfmSub>();
-			foreach (var id in CaptureIds)
+			foreach (var id in CaptureGroupNames)
 				Subs.Add(id, new SubNoChange{Id = id});
 			
 			// Merge the old list of subs back into the Subs map
@@ -444,7 +453,7 @@ namespace RyLogViewer
 		/// <summary>Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.</summary>
 		public override string ToString()
 		{
-			return Match;
+			return Expr;
 		}
 	}
 }

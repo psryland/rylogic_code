@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Reflection;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.gfx;
 using pr.gui;
 using pr.util;
@@ -14,7 +14,6 @@ namespace RyLogViewer
 	public class TransformUI :UserControl ,IPatternUI
 	{
 		private enum BtnImageIdx { AddNew = 0, Save = 1 }
-		private const string TransformQuickRef = "RyLogViewer.docs.TransformQuickRef.html";
 		private static class ColumnNames
 		{
 			public const string Id   = "Id";
@@ -29,13 +28,13 @@ namespace RyLogViewer
 		
 		private readonly ToolTip m_tt;
 		private HelpUI           m_dlg_help;
-		private List<string>     m_cap_ids;
+		private string[]         m_cap_ids;
 		private Transform        m_transform;
 		private TextBox          m_edit_match;
 		private TextBox          m_edit_replace;
 		private DataGridView     m_grid_subs;
 		private Label            m_lbl_match;
-		private Label m_lbl_replace;
+		private Label            m_lbl_replace;
 		private CheckBox         m_check_ignore_case;
 		private Button           m_btn_add;
 		private Button           m_btn_regex_help;
@@ -55,32 +54,30 @@ namespace RyLogViewer
 		private Panel            m_panel_match;
 		private TableLayoutPanel m_table;
 		private Panel            m_panel_replace;
-		private Panel            m_panel_eqv_regex;
+		private Panel m_panel_eqv_regex;
 		private RichTextBox      m_edit_result;
 		
 		/// <summary>The pattern being controlled by this UI</summary>
 		[Browsable(false)]
 		public Transform Transform { get { return m_transform; } }
-		
+		IPattern IPatternUI.Pattern { get { return Transform; } }
+
 		/// <summary>The test text to use</summary>
 		public string TestText { get { return m_edit_test.Text; } set { m_edit_test.Text = value; } }
 
 		/// <summary>True if the edited pattern is a new instance</summary>
 		public bool IsNew { get; private set; }
-		
+
+		/// <summary>True if the pattern contains unsaved changes</summary>
+		public bool UnsavedChanges { get { return Transform.Expr.Length != 0 || Transform.Replace.Length != 0; } }
+
 		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
 		private HelpUI MatchFieldHelpUI
 		{
 			get
 			{
 				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
-					,TransformQuickRef
-					,Assembly.GetExecutingAssembly()
-					,"Transform Help"
-					,new Size(1,1)
-					,new Size(640,480)
-					,ToolForm.EPin.TopRight));
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.transform_quick_ref, "Transform Help", new Size(1,1), new Size(640,480), ToolForm.EPin.TopRight));
 			}
 		}
 
@@ -98,7 +95,7 @@ namespace RyLogViewer
 			m_btn_add.Click += (s,a)=>
 				{
 					if (Add == null) return;
-					if (Transform.Match.Length == 0) return;
+					if (Transform.Expr.Length == 0) return;
 					Add(this, EventArgs.Empty);
 				};
 
@@ -120,7 +117,7 @@ namespace RyLogViewer
 			// Match (tooltip set in UpdateUI())
 			m_edit_match.TextChanged += (s,a)=>
 				{
-					Transform.Match = m_edit_match.Text;
+					Transform.Expr = m_edit_match.Text;
 					UpdateUI();
 				};
 
@@ -170,14 +167,15 @@ namespace RyLogViewer
 			// Substitutions
 			m_grid_subs.VirtualMode = true;
 			m_grid_subs.AutoGenerateColumns = false;
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Id   ,HeaderText = "Id"      ,FillWeight = 20 ,ReadOnly = true});
-			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type ,HeaderText = "Name"    ,FillWeight = 30 ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Data ,HeaderText = "Data"    ,FillWeight = 50 ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Id   ,HeaderText = "Id"            ,FillWeight = 20 ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type ,HeaderText = "Name"          ,FillWeight = 30 ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Data ,HeaderText = "Configuration" ,FillWeight = 50 ,ReadOnly = true});
 			m_grid_subs.CurrentCellDirtyStateChanged += (s,a) => m_grid_subs.CommitEdit(DataGridViewDataErrorContexts.Commit);
 			m_grid_subs.CellValueNeeded  += CellValueNeeded;
 			m_grid_subs.CellValuePushed  += CellValuePushed;
 			m_grid_subs.CellPainting     += CellPainting;
 			m_grid_subs.CellClick        += CellClick;
+			m_grid_subs.CellDoubleClick  += CellDoubleClick;
 			
 			// Test text
 			m_edit_test.ToolTip(m_tt, "Enter text here on which to test your pattern.");
@@ -207,7 +205,7 @@ namespace RyLogViewer
 		{
 			e.Value = string.Empty;
 			DataGridView grid = (DataGridView)sender;
-			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Count) return;
+			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Length) return;
 			if (!Transform.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
 			
 			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
@@ -224,7 +222,7 @@ namespace RyLogViewer
 		private void CellValuePushed(object sender, DataGridViewCellValueEventArgs e)
 		{
 			DataGridView grid = (DataGridView)sender;
-			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Count) return;
+			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Length) return;
 			if (!Transform.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
 
 			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
@@ -274,6 +272,22 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Handle double clicks on cells</summary>
+		private void CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+		{
+			DataGridView grid = (DataGridView)sender;
+			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) return;
+			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
+			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			switch (grid.Columns[e.ColumnIndex].Name)
+			{
+			default: return;
+			case ColumnNames.Id:
+				m_edit_replace.SelectedText = "{"+sub.Id+"}";
+				break;
+			}
+		}
+
 		/// <summary>Select 'tx' as a new transform</summary>
 		public void NewPattern(IPattern tx)
 		{
@@ -304,12 +318,12 @@ namespace RyLogViewer
 				m_in_update_ui = true;
 				SuspendLayout();
 			
-				m_cap_ids = Transform.CaptureIds;
-				m_grid_subs.RowCount = m_cap_ids.Count;
+				m_cap_ids = Transform.CaptureGroupNames;
+				m_grid_subs.RowCount = m_cap_ids.Length;
 				m_grid_subs.Refresh();
 			
-				m_btn_add.Enabled           = Transform.IsValid && Transform.Match.Length != 0;
-				m_edit_match.Text           = Transform.Match;
+				m_btn_add.Enabled           = Transform.IsValid && Transform.Expr.Length != 0;
+				m_edit_match.Text           = Transform.Expr;
 				m_edit_eqv_regex.Text       = Transform.RegexString;
 				m_edit_replace.Text         = Transform.Replace;
 				m_radio_substring.Checked   = Transform.PatnType == EPattern.Substring;

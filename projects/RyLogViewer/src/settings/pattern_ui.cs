@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Reflection;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.gui;
@@ -12,6 +12,12 @@ namespace RyLogViewer
 {
 	interface IPatternUI
 	{
+		/// <summary>True if the pattern currently displayed is new, vs editing an existing pattern</summary>
+		bool IsNew { get; }
+
+		/// <summary>True if the pattern contains unsaved changes</summary>
+		bool UnsavedChanges { get; }
+
 		/// <summary>Set a new pattern for the UI</summary>
 		void NewPattern(IPattern pat);
 
@@ -20,12 +26,14 @@ namespace RyLogViewer
 
 		/// <summary>Set focus to the primary input field</summary>
 		void FocusInput();
+
+		/// <summary>Return the pattern currently being edited</summary>
+		IPattern Pattern { get; }
 	}
 	public class PatternUI :UserControl ,IPatternUI
 	{
 		enum BtnImageIdx { AddNew = 0, Save = 1 }
-		private const string RegexQuickRef = "RyLogViewer.docs.RegexQuickRef.html";
-		
+
 		// Some of these are public to allow clients to hide bits of the UI
 		private readonly ToolTip m_tt;
 		private HelpUI           m_dlg_help;
@@ -49,13 +57,17 @@ namespace RyLogViewer
 		
 		/// <summary>The pattern being controlled by this UI</summary>
 		public Pattern Pattern { get { return m_pattern; } }
-		
+		IPattern IPatternUI.Pattern { get { return Pattern; } }
+
 		/// <summary>Access to the test text field</summary>
 		public string TestText { get { return m_edit_test.Text; } set { m_edit_test.Text = value; } }
 
 		/// <summary>True if the edited pattern is a new instance</summary>
 		public bool IsNew { get; private set; }
-		
+
+		/// <summary>True if the pattern contains unsaved changes</summary>
+		public bool UnsavedChanges { get { return Pattern.Expr.Length != 0; } }
+
 		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
 		private HelpUI RegexHelpUI
 		{
@@ -223,7 +235,10 @@ namespace RyLogViewer
 				m_edit_test.SelectionLength = length;
 
 				// Populate the groups grid
-				m_grid_grps.DataSource = Pattern.CaptureGroups(m_edit_test.Text).ToList();
+				var groups = new Dictionary<string, string>();
+				foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
+				foreach (var cap in Pattern.CaptureGroups(m_edit_test.Text)) groups[cap.Key] = cap.Value;
+				m_grid_grps.DataSource = groups.ToList();//Pattern.CaptureGroups(m_edit_test.Text).ToList();
 			}
 			finally
 			{
@@ -232,7 +247,7 @@ namespace RyLogViewer
 			}
 		}
 		private bool m_in_update_iu;
-		
+
 		#region Component Designer generated code
 		
 		/// <summary>Required designer variable.</summary>
@@ -456,11 +471,11 @@ namespace RyLogViewer
 			// 
 			this.m_lbl_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_groups.AutoSize = true;
-			this.m_lbl_groups.Location = new System.Drawing.Point(352, 59);
+			this.m_lbl_groups.Location = new System.Drawing.Point(312, 60);
 			this.m_lbl_groups.Name = "m_lbl_groups";
-			this.m_lbl_groups.Size = new System.Drawing.Size(53, 13);
+			this.m_lbl_groups.Size = new System.Drawing.Size(93, 13);
 			this.m_lbl_groups.TabIndex = 17;
-			this.m_lbl_groups.Text = "...Groups:";
+			this.m_lbl_groups.Text = "...Capture Groups:";
 			this.m_lbl_groups.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// PatternUI
