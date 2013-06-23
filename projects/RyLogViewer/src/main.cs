@@ -656,7 +656,8 @@ namespace RyLogViewer
 			if (!m_settings.ActionsEnabled) return;
 			if (args.RowIndex < 0 || args.RowIndex > m_line_index.Count) return;
 
-			var columns = ReadLine(args.RowIndex).Column;
+			var line = ReadLine(args.RowIndex);
+			var columns = line.Column;
 			if (args.ColumnIndex < 0 || args.ColumnIndex > columns.Count) return;
 
 			// Read the text for the column and look for a matching action
@@ -664,7 +665,7 @@ namespace RyLogViewer
 			foreach (var a in m_clkactions)
 			{
 				if (!a.IsMatch(text)) continue;
-				try { a.Execute(text); }
+				try { a.Execute(text, m_file.FilepathAt(line.LineStartAddr)); }
 				catch { SetTransientStatusMessage("Action Failed", Color.Red, SystemColors.Control); }
 				break;
 			}
@@ -1030,7 +1031,7 @@ namespace RyLogViewer
 				ui.FilterUI.TestText = test_text;
 				break;
 			case SettingsUI.ETab.Transforms:
-				ui.TransformUI.Transform.Match = row_text;
+				ui.TransformUI.Transform.Expr = row_text;
 				ui.TransformUI.Transform.Replace = row_text;
 				ui.TransformUI.TestText = test_text;
 				break;
