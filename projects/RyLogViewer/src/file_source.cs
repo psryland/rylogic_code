@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -16,6 +17,9 @@ namespace RyLogViewer
 
 		/// <summary>A full filepath that represents the associated files for use when generating output temp/export files</summary>
 		string PsuedoFilepath { get; }
+
+		/// <summary>Returns the full filepath for the file that contains byte offset 'offset'</summary>
+		string FilepathAt(long offset);
 
 		/// <summary>The filepaths associated with this file source</summary>
 		IEnumerable<string> Filepaths { get; }
@@ -43,6 +47,9 @@ namespace RyLogViewer
 
 		/// <summary>A full filepath that represents the associated files for use when generating output temp/export files</summary>
 		public string PsuedoFilepath { get { return m_filepath; } }
+
+		/// <summary>Returns the full filepath for the file that contains byte offset 'offset'</summary>
+		public string FilepathAt(long offset) { return m_filepath; }
 
 		/// <summary>The filepaths associated with this file source</summary>
 		public IEnumerable<string> Filepaths { get { return Enumerable.Repeat(m_filepath,1); } }
@@ -126,12 +133,21 @@ namespace RyLogViewer
 		/// <summary>A full filepath that represents the associated files for use when generating output temp/export files</summary>
 		public string PsuedoFilepath { get; private set; }
 
+		/// <summary>Returns the full filepath for the file that contains byte offset 'offset'</summary>
+		public string FilepathAt(long offset) 
+		{
+			Debug.Assert(Stream != null, "FileSource must be opened first");
+			var fidx = Stream.FileIndexAtOffset(offset);
+			return Stream.Files[fidx].FullName;
+		}
+
 		/// <summary>The filepaths associated with this file source</summary>
 		public IEnumerable<string> Filepaths { get { return m_filepaths; } }
 
 		/// <summary>The file stream to read from</summary>
-		public Stream Stream { get; private set; }
-
+		private AggregateFileStream Stream { get; set; }
+		Stream IFileSource.Stream { get { return Stream; } }
+		
 		/// <summary>Open the associated files making 'Stream' valid</summary>
 		public IFileSource Open()
 		{

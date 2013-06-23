@@ -63,8 +63,12 @@ namespace pr.stream
 			m_position = 0;
 			m_fs = null;
 			m_fs_index = -1;
+			if (FileStream == null) {} // Force 'FileStream' to be created so that a lock is held from construction
 		}
 
+		/// <summary>Get the files that make up this aggregate file stream</summary>
+		public List<FileInfo> Files { get { return m_files; } }
+ 
 		/// <summary>Returns the file stream appropriate for the current 'Position' value</summary>
 		public FileStream FileStream
 		{
