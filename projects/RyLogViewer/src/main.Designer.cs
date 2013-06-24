@@ -115,6 +115,7 @@
 			this.m_menu_help_register = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_evaluation_version = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
 			this.m_status_filesize = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_line_end = new System.Windows.Forms.ToolStripStatusLabel();
@@ -140,9 +141,10 @@
 			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
-			this.m_menu_evaluation_version = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_grid = new RyLogViewer.DGV();
+			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_help_view_help = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -765,11 +767,13 @@
 			// m_menu_help
 			// 
 			this.m_menu_help.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_help_view_help,
             this.m_menu_help_totd,
-            this.m_menu_help_check_for_updates,
             this.toolStripSeparator11,
             this.m_menu_help_visit_store,
             this.m_menu_help_register,
+            this.toolStripSeparator12,
+            this.m_menu_help_check_for_updates,
             this.toolStripSeparator2,
             this.m_menu_help_about});
 			this.m_menu_help.Name = "m_menu_help";
@@ -779,42 +783,51 @@
 			// m_menu_help_totd
 			// 
 			this.m_menu_help_totd.Name = "m_menu_help_totd";
-			this.m_menu_help_totd.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_totd.Size = new System.Drawing.Size(173, 22);
 			this.m_menu_help_totd.Text = "&Tip of the Day";
 			// 
 			// m_menu_help_check_for_updates
 			// 
 			this.m_menu_help_check_for_updates.Name = "m_menu_help_check_for_updates";
-			this.m_menu_help_check_for_updates.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_check_for_updates.Size = new System.Drawing.Size(173, 22);
 			this.m_menu_help_check_for_updates.Text = "Check for &Updates";
 			// 
 			// toolStripSeparator11
 			// 
 			this.toolStripSeparator11.Name = "toolStripSeparator11";
-			this.toolStripSeparator11.Size = new System.Drawing.Size(168, 6);
+			this.toolStripSeparator11.Size = new System.Drawing.Size(170, 6);
 			// 
 			// m_menu_help_visit_store
 			// 
 			this.m_menu_help_visit_store.Name = "m_menu_help_visit_store";
-			this.m_menu_help_visit_store.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_visit_store.Size = new System.Drawing.Size(173, 22);
 			this.m_menu_help_visit_store.Text = "&Visit Store";
 			// 
 			// m_menu_help_register
 			// 
 			this.m_menu_help_register.Name = "m_menu_help_register";
-			this.m_menu_help_register.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_register.Size = new System.Drawing.Size(173, 22);
 			this.m_menu_help_register.Text = "&Register...";
 			// 
 			// toolStripSeparator2
 			// 
 			this.toolStripSeparator2.Name = "toolStripSeparator2";
-			this.toolStripSeparator2.Size = new System.Drawing.Size(168, 6);
+			this.toolStripSeparator2.Size = new System.Drawing.Size(170, 6);
 			// 
 			// m_menu_help_about
 			// 
 			this.m_menu_help_about.Name = "m_menu_help_about";
-			this.m_menu_help_about.Size = new System.Drawing.Size(171, 22);
+			this.m_menu_help_about.Size = new System.Drawing.Size(173, 22);
 			this.m_menu_help_about.Text = "&About";
+			// 
+			// m_menu_evaluation_version
+			// 
+			this.m_menu_evaluation_version.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+			this.m_menu_evaluation_version.ForeColor = System.Drawing.Color.Red;
+			this.m_menu_evaluation_version.Name = "m_menu_evaluation_version";
+			this.m_menu_evaluation_version.Padding = new System.Windows.Forms.Padding(40, 0, 40, 0);
+			this.m_menu_evaluation_version.Size = new System.Drawing.Size(224, 20);
+			this.m_menu_evaluation_version.Text = "*** Evaluation Version ***";
 			// 
 			// m_status
 			// 
@@ -1043,31 +1056,6 @@
 			this.m_cmenu_toggle_bookmark.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_toggle_bookmark.Text = "Toggle &Bookmark";
 			// 
-			// m_scroll_file
-			// 
-			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_scroll_file.LargeChange = ((long)(1));
-			this.m_scroll_file.Location = new System.Drawing.Point(808, 3);
-			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
-			this.m_scroll_file.MinThumbSize = 20;
-			this.m_scroll_file.Name = "m_scroll_file";
-			this.m_scroll_file.Overlay = null;
-			this.m_scroll_file.OverlayAttributes = null;
-			this.m_scroll_file.Size = new System.Drawing.Size(18, 401);
-			this.m_scroll_file.SmallChange = ((long)(1));
-			this.m_scroll_file.TabIndex = 4;
-			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
-			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
-			// 
-			// m_menu_evaluation_version
-			// 
-			this.m_menu_evaluation_version.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-			this.m_menu_evaluation_version.ForeColor = System.Drawing.Color.Red;
-			this.m_menu_evaluation_version.Name = "m_menu_evaluation_version";
-			this.m_menu_evaluation_version.Padding = new System.Windows.Forms.Padding(40, 0, 40, 0);
-			this.m_menu_evaluation_version.Size = new System.Drawing.Size(224, 20);
-			this.m_menu_evaluation_version.Text = "*** Evaluation Version ***";
-			// 
 			// m_grid
 			// 
 			this.m_grid.AllowUserToAddRows = false;
@@ -1093,6 +1081,34 @@
 			this.m_grid.Size = new System.Drawing.Size(799, 401);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
+			// 
+			// m_scroll_file
+			// 
+			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_scroll_file.LargeChange = ((long)(1));
+			this.m_scroll_file.Location = new System.Drawing.Point(808, 3);
+			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
+			this.m_scroll_file.MinThumbSize = 20;
+			this.m_scroll_file.Name = "m_scroll_file";
+			this.m_scroll_file.Overlay = null;
+			this.m_scroll_file.OverlayAttributes = null;
+			this.m_scroll_file.Size = new System.Drawing.Size(18, 401);
+			this.m_scroll_file.SmallChange = ((long)(1));
+			this.m_scroll_file.TabIndex = 4;
+			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
+			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
+			// 
+			// toolStripSeparator12
+			// 
+			this.toolStripSeparator12.Name = "toolStripSeparator12";
+			this.toolStripSeparator12.Size = new System.Drawing.Size(170, 6);
+			// 
+			// m_menu_help_view_help
+			// 
+			this.m_menu_help_view_help.Name = "m_menu_help_view_help";
+			this.m_menu_help_view_help.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F1)));
+			this.m_menu_help_view_help.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_view_help.Text = "View &Help";
 			// 
 			// Main
 			// 
@@ -1242,6 +1258,8 @@
 		private System.Windows.Forms.ToolStripStatusLabel m_status_message_fixed;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards_aggregatelogfile;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_evaluation_version;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_view_help;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator12;
 	}
 }
 

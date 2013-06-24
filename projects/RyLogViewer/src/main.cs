@@ -158,10 +158,11 @@ namespace RyLogViewer
 			m_menu_tools_transforms.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
 			m_menu_tools_actions.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
 			m_menu_tools_options.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.General   );
+			m_menu_help_view_help.Click                += (s,a) => ShowHelp();
 			m_menu_help_totd.Click                     += (s,a) => ShowTotD();
-			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
 			m_menu_help_visit_store.Click              += (s,a) => VisitStore();
 			m_menu_help_register.Click                 += (s,a) => ShowActivation();
+			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
 			m_menu_help_about.Click                    += (s,a) => ShowAbout();
 			m_menu_evaluation_version.Click            += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
@@ -1060,7 +1061,27 @@ namespace RyLogViewer
 				UpdateUI();
 			}
 		}
-		
+
+		/// <summary>Launch a web browser in order to view the html documentation</summary>
+		private void ShowHelp()
+		{
+			try
+			{
+				var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
+				var start_page = Path.Combine(dir, @"docs\help.html");
+				Process.Start(start_page);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this,
+					"Unable to display the help documentation do to an error.\r\n" +
+					"Error Message: {0}\r\n".Fmt(ex.Message) +
+					"\r\n" +
+					"The expected location of the main documentation file is <install directory>\\docs\\help.html",
+					"Missing help files", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
 		/// <summary>Show the TotD dialog</summary>
 		private void ShowTotD()
 		{

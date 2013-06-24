@@ -235,6 +235,9 @@
     </Compile>
     <None Include="Resources\swizzle_quick_ref.html" />
     <None Include="Resources\command_line_ref.html" />
+    <Content Include="docs\totd7.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\transform_quick_ref.html" />
     <None Include="Resources\regex_quick_ref.html" />
     <None Include="Resources\version_history.html" />
@@ -317,8 +320,12 @@
     <Content Include="docs\example_logfile_settings.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="docs\help.html" />
-    <Content Include="docs\highlighting.html" />
+    <Content Include="docs\help.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\highlighting.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="gen_licence.cmd" />
@@ -361,7 +368,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="docs\totd3.html" />
+    <Content Include="docs\totd3.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\background.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
