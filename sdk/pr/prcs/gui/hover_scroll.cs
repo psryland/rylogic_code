@@ -14,7 +14,7 @@ namespace pr.gui
 	//  m_hoverscroll = new HoverScroll();
 	//  Application.AddMessageFilter(m_hoverscroll);
 	//  Application.RemoveMessageFilter(m_hoverscroll);
-	public class HoverScroll :IMessageFilter
+	public class HoverScroll :IMessageFilter ,IDisposable
 	{
 		// P/Invoke declarations
 		[DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point pt);
@@ -23,8 +23,15 @@ namespace pr.gui
 		/// <summary>The window handles of the controls that should detect hoverscrolling</summary>
 		public List<IntPtr> WindowHandles { get; private set; }
 
-		public HoverScroll()                     { WindowHandles = new List<IntPtr>(); }
-		public HoverScroll(params IntPtr[] wnds) { WindowHandles = new List<IntPtr>(wnds); }
+		public HoverScroll(params IntPtr[] wnds)
+		{
+			WindowHandles = new List<IntPtr>(wnds);
+			Application.AddMessageFilter(this);
+		}
+		public void Dispose()
+		{
+			Application.RemoveMessageFilter(this);
+		}
 
 		public bool PreFilterMessage(ref Message m)
 		{

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
@@ -11,9 +10,8 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	public class TransformUI :UserControl ,IPatternUI
+	public class TransformUI :PatternUIBase<Transform> ,IPatternUI
 	{
-		private enum BtnImageIdx { AddNew = 0, Save = 1 }
 		private static class ColumnNames
 		{
 			public const string Id   = "Id";
@@ -26,10 +24,8 @@ namespace RyLogViewer
 			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
 		};
 		
-		private readonly ToolTip m_tt;
 		private HelpUI           m_dlg_help;
 		private string[]         m_cap_ids;
-		private Transform        m_transform;
 		private TextBox          m_edit_match;
 		private TextBox          m_edit_replace;
 		private DataGridView     m_grid_subs;
@@ -54,49 +50,19 @@ namespace RyLogViewer
 		private Panel            m_panel_match;
 		private TableLayoutPanel m_table;
 		private Panel            m_panel_replace;
-		private Panel m_panel_eqv_regex;
+		private Panel            m_panel_eqv_regex;
 		private RichTextBox      m_edit_result;
-		
-		/// <summary>The pattern being controlled by this UI</summary>
-		[Browsable(false)]
-		public Transform Transform { get { return m_transform; } }
-		IPattern IPatternUI.Pattern { get { return Transform; } }
 
-		/// <summary>The test text to use</summary>
-		public string TestText { get { return m_edit_test.Text; } set { m_edit_test.Text = value; } }
-
-		/// <summary>True if the edited pattern is a new instance</summary>
-		public bool IsNew { get; private set; }
-
-		/// <summary>True if the pattern contains unsaved changes</summary>
-		public bool UnsavedChanges { get { return Transform.Expr.Length != 0 || Transform.Replace.Length != 0; } }
-
-		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
-		private HelpUI MatchFieldHelpUI
-		{
-			get
-			{
-				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.transform_quick_ref, "Transform Help", new Size(1,1), new Size(640,480), ToolForm.EPin.TopRight));
-			}
-		}
-
-		/// <summary>Raised when the 'Add' button is hit and the pattern field contains a valid pattern</summary>
-		public event EventHandler Add;
-		
 		public TransformUI()
 		{
 			InitializeComponent();
-			m_transform = new Transform();
-			m_tt = new ToolTip();
-			
+
 			// Add/Update
 			m_btn_add.ToolTip(m_tt, "Adds a new transform, or updates an existing transform");
 			m_btn_add.Click += (s,a)=>
 				{
-					if (Add == null) return;
-					if (Transform.Expr.Length == 0) return;
-					Add(this, EventArgs.Empty);
+					if (!CommitEnabled) return;
+					RaiseCommitEvent();
 				};
 
 			// Match help
@@ -117,7 +83,8 @@ namespace RyLogViewer
 			// Match (tooltip set in UpdateUI())
 			m_edit_match.TextChanged += (s,a)=>
 				{
-					Transform.Expr = m_edit_match.Text;
+					if (!((TextBox)s).Modified) return;
+					Pattern.Expr = m_edit_match.Text;
 					UpdateUI();
 				};
 
@@ -125,42 +92,42 @@ namespace RyLogViewer
 			m_radio_substring.ToolTip(m_tt, "Match any occurrence of the pattern as a substring");
 			m_radio_substring.Click += (s,a)=>
 				{
-					if (m_radio_substring.Checked) Transform.PatnType = EPattern.Substring;
+					if (m_radio_substring.Checked) Pattern.PatnType = EPattern.Substring;
 					UpdateUI();
 				};
-			
+
 			// Match - Wildcard
 			m_radio_wildcard.ToolTip(m_tt, "Match using wildcards, where '*' matches any number of characters and '?' matches any single character");
 			m_radio_wildcard.Click += (s,a)=>
 				{
-					if (m_radio_wildcard.Checked) Transform.PatnType = EPattern.Wildcard;
+					if (m_radio_wildcard.Checked) Pattern.PatnType = EPattern.Wildcard;
 					UpdateUI();
 				};
-			
+
 			// Match - Regex
 			m_radio_regex.ToolTip(m_tt, "Match using a regular expression");
 			m_radio_regex.Click += (s,a)=>
 				{
-					if (m_radio_regex.Checked) Transform.PatnType = EPattern.RegularExpression;
+					if (m_radio_regex.Checked) Pattern.PatnType = EPattern.RegularExpression;
 					UpdateUI();
 				};
-			
+
 			// Match - Ignore case
 			m_check_ignore_case.ToolTip(m_tt, "Enable to have the template ignore case when matching");
 			m_check_ignore_case.Click += (s,a)=>
 				{
-					Transform.IgnoreCase = m_check_ignore_case.Checked;
+					Pattern.IgnoreCase = m_check_ignore_case.Checked;
 					UpdateUI();
 				};
-			
+
 			// Match - compiled regex
 			m_edit_eqv_regex.ToolTip(m_tt, "The regular expression that the Match field is converted into.\r\nVisible here for reference and diagnostic purposes");
-			
+
 			// Replace (tooltip set in UpdateUI())
 			m_edit_replace.TextChanged += (s,a)=>
 				{
 					if (!((TextBox)s).Modified) return;
-					Transform.Replace = m_edit_replace.Text;
+					Pattern.Replace = m_edit_replace.Text;
 					UpdateUI();
 				};
 
@@ -176,9 +143,10 @@ namespace RyLogViewer
 			m_grid_subs.CellPainting     += CellPainting;
 			m_grid_subs.CellClick        += CellClick;
 			m_grid_subs.CellDoubleClick  += CellDoubleClick;
-			
+
 			// Test text
 			m_edit_test.ToolTip(m_tt, "Enter text here on which to test your pattern.");
+			m_edit_test.Text = PatternUI.DefaultTestText;
 			m_edit_test.TextChanged += (s,a)=>
 				{
 					UpdateUI();
@@ -186,16 +154,17 @@ namespace RyLogViewer
 
 			// Result text
 			m_edit_result.ToolTip(m_tt, "Shows the result of applying the transform to the text in the test area above");
-			
-			VisibleChanged += (s,a)=>
-				{
-					if (!Visible) return;
-					UpdateUI();
-				};
+		}
+
+		/// <summary>Access to the test text field</summary>
+		public override string TestText
+		{
+			get { return m_edit_test.Text; }
+			set { m_edit_test.Text = value; }
 		}
 
 		/// <summary>Set focus to the primary input field</summary>
-		public void FocusInput()
+		public override void FocusInput()
 		{
 			m_edit_match.Focus();
 		}
@@ -206,9 +175,9 @@ namespace RyLogViewer
 			e.Value = string.Empty;
 			DataGridView grid = (DataGridView)sender;
 			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Length) return;
-			if (!Transform.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
+			if (!Pattern.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
 			
-			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			ITxfmSub sub = Pattern.Subs[m_cap_ids[e.RowIndex]];
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default:               e.Value = string.Empty; break;
@@ -223,16 +192,16 @@ namespace RyLogViewer
 		{
 			DataGridView grid = (DataGridView)sender;
 			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Length) return;
-			if (!Transform.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
+			if (!Pattern.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
 
-			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			ITxfmSub sub = Pattern.Subs[m_cap_ids[e.RowIndex]];
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Type:
 				if (!e.Value.Equals(sub.Name))
 				{
 					var new_sub = Transform.SubLoader.Create(sub.Id, (string)e.Value);
-					Transform.Subs[m_cap_ids[e.RowIndex]] = new_sub;
+					Pattern.Subs[m_cap_ids[e.RowIndex]] = new_sub;
 					grid.Invalidate();
 				}
 				break;
@@ -245,7 +214,7 @@ namespace RyLogViewer
 		{
 			e.Handled = false;
 			DataGridView grid = (DataGridView)sender;
-			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) return;
+			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Id:
@@ -259,9 +228,9 @@ namespace RyLogViewer
 		private void CellClick(object sender, DataGridViewCellEventArgs e)
 		{
 			DataGridView grid = (DataGridView)sender;
-			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) return;
+			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			ITxfmSub sub = Pattern.Subs[m_cap_ids[e.RowIndex]];
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
@@ -276,9 +245,9 @@ namespace RyLogViewer
 		private void CellDoubleClick(object sender, DataGridViewCellEventArgs e)
 		{
 			DataGridView grid = (DataGridView)sender;
-			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) return;
+			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			ITxfmSub sub = Pattern.Subs[m_cap_ids[e.RowIndex]];
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
@@ -288,127 +257,104 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Select 'tx' as a new transform</summary>
-		public void NewPattern(IPattern tx)
-		{
-			IsNew = true;
-			m_transform = (Transform)tx;
-			m_btn_add.ImageIndex = (int)BtnImageIdx.AddNew;
-			m_btn_add.ToolTip(m_tt, "Add this new transform");
-			UpdateUI();
-		}
-
-		/// <summary>Select a pattern into the UI for editting</summary>
-		public void EditPattern(IPattern tx)
-		{
-			IsNew = false;
-			m_transform = (Transform)tx;
-			m_btn_add.ImageIndex = (int)BtnImageIdx.Save;
-			m_btn_add.ToolTip(m_tt, "Finish editing this transform");
-			UpdateUI();
-		}
-		
 		/// <summary>Prevents reentrant calls to UpdateUI. Yes this is the best way to do it /cry</summary>
-		private bool m_in_update_ui;
-		private void UpdateUI()
+		protected override void UpdateUIInternal()
 		{
-			if (m_in_update_ui) return;
-			try
+			m_cap_ids = Pattern.CaptureGroupNames;
+			m_grid_subs.RowCount = m_cap_ids.Length;
+			m_grid_subs.Refresh();
+			
+			m_btn_add.Enabled           = Pattern.IsValid && Pattern.Expr.Length != 0;
+			m_edit_match.Text           = Pattern.Expr;
+			m_edit_eqv_regex.Text       = Pattern.RegexString;
+			m_edit_replace.Text         = Pattern.Replace;
+			m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
+			m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
+			m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
+			m_check_ignore_case.Checked = Pattern.IgnoreCase;
+				
+			// Show/Hide the eqv regex
+			m_table.Height = m_table.PreferredSize.Height;
+			m_split_subs.Top = m_table.Bottom;
+			m_split_subs.Height = m_split_subs.Parent.Height - m_split_subs.Top - 3;
+				
+			// Highlight the match/replace fields if in error
+			var ex0 = Pattern.ValidateExpr();
+			string tt0 = ex0 == null
+				? "The pattern used to identify rows to transform.\r\n" +
+					(Pattern.PatnType == EPattern.RegularExpression
+						? "Capture groups are defined using the usual regular expression syntax for capture groups e.g. (.*),(<tag>?.*),etc\r\n"
+						: "Create capture groups using '{' and '}', e.g. {one},{2},{tag},etc\r\n")
+				: "Invalid match pattern - " + ex0.Message;
+			var ex1 = Pattern.ValidateReplace();
+			string tt1 = ex1 == null
+				? "The template for the transformed result.\r\nUse the capture groups created in the Match field"
+				: "Invalid replace template - " + ex1.Message;
+			m_lbl_match   .ToolTip(m_tt, tt0);
+			m_edit_match  .ToolTip(m_tt, tt0);
+			m_lbl_replace .ToolTip(m_tt, tt1);
+			m_edit_replace.ToolTip(m_tt, tt1);
+			m_edit_match  .BackColor = ex0 == null ? SystemColors.Window : Color.LightSalmon;
+			m_edit_replace.BackColor = ex1 == null ? SystemColors.Window : Color.LightSalmon;
+				
+			// Apply the transform to the test text if not in error
+			if (ex0 == null && ex1 == null)
 			{
-				m_in_update_ui = true;
-				SuspendLayout();
+				// Preserve the current carot position
+				int start  = m_edit_test.SelectionStart;
+				int length = m_edit_test.SelectionLength;
 			
-				m_cap_ids = Transform.CaptureGroupNames;
-				m_grid_subs.RowCount = m_cap_ids.Length;
-				m_grid_subs.Refresh();
+				// Reset the highlighting
+				m_edit_test.SelectAll();
+				m_edit_test.SelectionBackColor = Color.White;
 			
-				m_btn_add.Enabled           = Transform.IsValid && Transform.Expr.Length != 0;
-				m_edit_match.Text           = Transform.Expr;
-				m_edit_eqv_regex.Text       = Transform.RegexString;
-				m_edit_replace.Text         = Transform.Replace;
-				m_radio_substring.Checked   = Transform.PatnType == EPattern.Substring;
-				m_radio_wildcard.Checked    = Transform.PatnType == EPattern.Wildcard;
-				m_radio_regex.Checked       = Transform.PatnType == EPattern.RegularExpression;
-				m_check_ignore_case.Checked = Transform.IgnoreCase;
-				
-				// Show/Hide the eqv regex
-				m_table.Height = m_table.PreferredSize.Height;
-				m_split_subs.Top = m_table.Bottom;
-				m_split_subs.Height = m_split_subs.Parent.Height - m_split_subs.Top - 3;
-				
-				// Highlight the match/replace fields if in error
-				var ex0 = Transform.ValidateExpr();
-				string tt0 = ex0 == null
-					? "The pattern used to identify rows to transform.\r\n" +
-						(Transform.PatnType == EPattern.RegularExpression
-							? "Capture groups are defined using the usual regular expression syntax for capture groups e.g. (.*),(<tag>?.*),etc\r\n"
-							: "Create capture groups using '{' and '}', e.g. {one},{2},{tag},etc\r\n")
-					: "Invalid match pattern - " + ex0.Message;
-				var ex1 = Transform.ValidateReplace();
-				string tt1 = ex1 == null
-					? "The template for the transformed result.\r\nUse the capture groups created in the Match field"
-					: "Invalid replace template - " + ex1.Message;
-				m_lbl_match   .ToolTip(m_tt, tt0);
-				m_edit_match  .ToolTip(m_tt, tt0);
-				m_lbl_replace .ToolTip(m_tt, tt1);
-				m_edit_replace.ToolTip(m_tt, tt1);
-				m_edit_match  .BackColor = ex0 == null ? SystemColors.Window : Color.LightSalmon;
-				m_edit_replace.BackColor = ex1 == null ? SystemColors.Window : Color.LightSalmon;
-				
-				// Apply the transform to the test text if not in error
-				if (ex0 == null && ex1 == null)
+				string[] lines = m_edit_test.Lines;
+			
+				// Apply the transform to each line in the test text
+				m_edit_result.Clear();
+				for (int i = 0, iend = lines.Length; i != iend; ++i)
 				{
-					// Preserve the current carot position
-					int start  = m_edit_test.SelectionStart;
-					int length = m_edit_test.SelectionLength;
-			
-					// Reset the highlighting
-					m_edit_test.SelectAll();
-					m_edit_test.SelectionBackColor = Color.White;
-			
-					string[] lines = m_edit_test.Lines;
-			
-					// Apply the transform to each line in the test text
-					m_edit_result.Clear();
-					for (int i = 0, iend = lines.Length; i != iend; ++i)
+					m_edit_result.Select(m_edit_result.TextLength, 0);
+					if (i != 0) m_edit_result.SelectedText = Environment.NewLine;
+					if (!Pattern.IsMatch(lines[i]))
 					{
-						m_edit_result.Select(m_edit_result.TextLength, 0);
-						if (i != 0) m_edit_result.SelectedText = Environment.NewLine;
-						if (!Transform.IsMatch(lines[i]))
-						{
-							m_edit_result.SelectedText = lines[i];
-						}
-						else
-						{
-							int starti = m_edit_test.GetFirstCharIndexFromLine(i);
-							int startj = m_edit_result.TextLength;
+						m_edit_result.SelectedText = lines[i];
+					}
+					else
+					{
+						int starti = m_edit_test.GetFirstCharIndexFromLine(i);
+						int startj = m_edit_result.TextLength;
 					
-							List<Transform.Capture> src_caps, dst_caps;
-							string result = Transform.Txfm(lines[i], out src_caps, out dst_caps);
-							m_edit_result.SelectedText = result;
+						List<Transform.Capture> src_caps, dst_caps;
+						string result = Pattern.Txfm(lines[i], out src_caps, out dst_caps);
+						m_edit_result.SelectedText = result;
 
-							// Highlight the capture groups in the test text and the result
-							int j = 0; foreach (var s in src_caps)
-							{
-								m_edit_test.Select(starti + s.Span.Index, s.Span.Count);
-								m_edit_test.SelectionBackColor = BkColors[j++ % BkColors.Length];
-							}
-							j = 0; foreach (var s in dst_caps)
-							{
-								m_edit_result.Select(startj + s.Span.Index, s.Span.Count);
-								m_edit_result.SelectionBackColor = BkColors[j++ % BkColors.Length];
-							}
+						// Highlight the capture groups in the test text and the result
+						int j = 0; foreach (var s in src_caps)
+						{
+							m_edit_test.Select(starti + s.Span.Index, s.Span.Count);
+							m_edit_test.SelectionBackColor = BkColors[j++ % BkColors.Length];
+						}
+						j = 0; foreach (var s in dst_caps)
+						{
+							m_edit_result.Select(startj + s.Span.Index, s.Span.Count);
+							m_edit_result.SelectionBackColor = BkColors[j++ % BkColors.Length];
 						}
 					}
-					
-					// Restore the selection
-					m_edit_test.Select(start, length);
 				}
+					
+				// Restore the selection
+				m_edit_test.Select(start, length);
 			}
-			finally
+		}
+
+		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
+		private HelpUI MatchFieldHelpUI
+		{
+			get
 			{
-				m_in_update_ui = false;
-				ResumeLayout();
+				Debug.Assert(ParentForm != null);
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.transform_quick_ref, "Transform Help", new Size(1,1), new Size(640,480), ToolForm.EPin.TopRight));
 			}
 		}
 

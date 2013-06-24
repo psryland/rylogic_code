@@ -121,13 +121,12 @@ namespace RyLogViewer
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			ClkAction rhs = obj as ClkAction;
-			return 
-				rhs != null &&
-				base.Equals(obj) &&
-				Executable      .Equals(rhs.Executable      ) &&
-				Arguments       .Equals(rhs.Arguments       ) &&
-				WorkingDirectory.Equals(rhs.WorkingDirectory);
+			var rhs = obj as ClkAction;
+			return rhs != null
+				&& base.Equals(obj)
+				&& Equals(Executable      , rhs.Executable      )
+				&& Equals(Arguments       , rhs.Arguments       )
+				&& Equals(WorkingDirectory, rhs.WorkingDirectory);
 		}
 
 		/// <summary>Value hash code</summary>

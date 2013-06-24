@@ -1009,7 +1009,7 @@ namespace RyLogViewer
 		private void ShowOptions(SettingsUI.ETab tab, SettingsUI.ESpecial special = SettingsUI.ESpecial.None)
 		{
 			string row_text = "";
-			string test_text = "<Enter test text here>";
+			string test_text = PatternUI.DefaultTestText;
 			int init_row = SelectedRowIndex;
 			if (init_row != -1)
 				row_text = test_text = ReadLine(init_row).RowText.Trim();
@@ -1031,8 +1031,8 @@ namespace RyLogViewer
 				ui.FilterUI.TestText = test_text;
 				break;
 			case SettingsUI.ETab.Transforms:
-				ui.TransformUI.Transform.Expr = row_text;
-				ui.TransformUI.Transform.Replace = row_text;
+				ui.TransformUI.Pattern.Expr = row_text;
+				ui.TransformUI.Pattern.Replace = row_text;
 				ui.TransformUI.TestText = test_text;
 				break;
 			case SettingsUI.ETab.Actions:

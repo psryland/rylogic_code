@@ -54,7 +54,7 @@ namespace RyLogViewer
 				return false;
 			
 			// Check if m_find_ui has a valid find pattern
-			if (m_find_ui.Pattern.Expr.Length == 0 || !m_find_ui.Pattern.ExprValid)
+			if (m_find_ui.Pattern.Expr.Length == 0 || !m_find_ui.Pattern.IsValid)
 				return false;
 			
 			var pattern = new Pattern(m_find_ui.Pattern);

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
@@ -10,34 +9,11 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	interface IPatternUI
+	public class PatternUI :PatternUIBase<Pattern>,IPatternUI
 	{
-		/// <summary>True if the pattern currently displayed is new, vs editing an existing pattern</summary>
-		bool IsNew { get; }
+		public const string DefaultTestText = "Enter text here to test your pattern";
 
-		/// <summary>True if the pattern contains unsaved changes</summary>
-		bool UnsavedChanges { get; }
-
-		/// <summary>Set a new pattern for the UI</summary>
-		void NewPattern(IPattern pat);
-
-		/// <summary>Select a pattern into the UI for editing</summary>
-		void EditPattern(IPattern pat);
-
-		/// <summary>Set focus to the primary input field</summary>
-		void FocusInput();
-
-		/// <summary>Return the pattern currently being edited</summary>
-		IPattern Pattern { get; }
-	}
-	public class PatternUI :UserControl ,IPatternUI
-	{
-		enum BtnImageIdx { AddNew = 0, Save = 1 }
-
-		// Some of these are public to allow clients to hide bits of the UI
-		private readonly ToolTip m_tt;
 		private HelpUI           m_dlg_help;
-		private Pattern          m_pattern;
 		private ImageList        m_image_list;
 		private Button           m_btn_regex_help;
 		private CheckBox         m_check_invert;
@@ -54,38 +30,10 @@ namespace RyLogViewer
 		private DataGridView     m_grid_grps;
 		private Label            m_lbl_groups;
 		private RichTextBox      m_edit_test;
-		
-		/// <summary>The pattern being controlled by this UI</summary>
-		public Pattern Pattern { get { return m_pattern; } }
-		IPattern IPatternUI.Pattern { get { return Pattern; } }
 
-		/// <summary>Access to the test text field</summary>
-		public string TestText { get { return m_edit_test.Text; } set { m_edit_test.Text = value; } }
-
-		/// <summary>True if the edited pattern is a new instance</summary>
-		public bool IsNew { get; private set; }
-
-		/// <summary>True if the pattern contains unsaved changes</summary>
-		public bool UnsavedChanges { get { return Pattern.Expr.Length != 0; } }
-
-		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
-		private HelpUI RegexHelpUI
-		{
-			get
-			{
-				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Size(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight));
-			}
-		}
-		
-		/// <summary>Raised when the 'Add' button is hit and the pattern field contains a valid pattern</summary>
-		public event EventHandler Add;
-		
 		public PatternUI()
 		{
 			InitializeComponent();
-			m_pattern = null;
-			m_tt = new ToolTip();
 			string tt;
 
 			// Pattern
@@ -103,23 +51,22 @@ namespace RyLogViewer
 					a.Handled = a.KeyCode == Keys.Enter;
 					if (a.Handled) m_btn_add.PerformClick();
 				};
-			
+
 			// Regex help
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");
 			m_btn_regex_help.Click += (s,a)=>
 				{
 					RegexHelpUI.Display();
 				};
-			
+
 			// Add/Update
 			m_btn_add.ToolTip(m_tt, "Adds a new pattern, or updates an existing pattern");
 			m_btn_add.Click += (s,a)=>
 				{
-					if (Add == null) return;
-					if (!Pattern.ExprValid) return;
-					Add(this, EventArgs.Empty);
+					if (!CommitEnabled) return;
+					RaiseCommitEvent();
 				};
-			
+
 			// Substring
 			m_radio_substring.ToolTip(m_tt, "Match any occurrence of the pattern as a substring");
 			m_radio_substring.Click += (s,a)=>
@@ -127,7 +74,7 @@ namespace RyLogViewer
 					if (m_radio_substring.Checked) Pattern.PatnType = EPattern.Substring;
 					UpdateUI();
 				};
-			
+
 			// Wildcard
 			m_radio_wildcard.ToolTip(m_tt, "Match using wildcards, where '*' matches any number of characters and '?' matches any single character");
 			m_radio_wildcard.Click += (s,a)=>
@@ -135,7 +82,7 @@ namespace RyLogViewer
 					if (m_radio_wildcard.Checked) Pattern.PatnType = EPattern.Wildcard;
 					UpdateUI();
 				};
-			
+
 			// Regex
 			m_radio_regex.ToolTip(m_tt, "Match using a regular expression");
 			m_radio_regex.Click += (s,a)=>
@@ -143,7 +90,7 @@ namespace RyLogViewer
 					if (m_radio_regex.Checked) Pattern.PatnType = EPattern.RegularExpression;
 					UpdateUI();
 				};
-			
+
 			// Ignore case
 			m_check_ignore_case.ToolTip(m_tt, "Enable to have the pattern ignore case when matching");
 			m_check_ignore_case.Click += (s,a)=>
@@ -151,7 +98,7 @@ namespace RyLogViewer
 					Pattern.IgnoreCase = m_check_ignore_case.Checked;
 					UpdateUI();
 				};
-			
+
 			// Invert
 			m_check_invert.ToolTip(m_tt, "Invert the match result. e.g the pattern 'a' matches anything without the letter 'a' when this option is checked");
 			m_check_invert.Click += (s,a)=>
@@ -159,94 +106,82 @@ namespace RyLogViewer
 					Pattern.Invert = m_check_invert.Checked;
 					UpdateUI();
 				};
-			
+
 			// Test text
 			m_edit_test.ToolTip(m_tt, "A area for testing your pattern. Add any text you like here");
+			m_edit_test.Text = DefaultTestText;
 			m_edit_test.TextChanged += (s,a)=>
 				{
 					if (!((RichTextBox)s).Modified) return;
 					UpdateUI();
 				};
-			
+
 			// Groups
 			m_grid_grps.AutoGenerateColumns = false;
 			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Tag"   ,HeaderText="Tag"   ,FillWeight=1 ,DataPropertyName = "Key"  });
 			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Value" ,HeaderText="Value" ,FillWeight=2 ,DataPropertyName = "Value"});
 		}
 
+		/// <summary>Access to the test text field</summary>
+		public override string TestText
+		{
+			get { return m_edit_test.Text; }
+			set { m_edit_test.Text = value; }
+		}
+
 		/// <summary>Set focus to the primary input field</summary>
-		public void FocusInput()
+		public override void FocusInput()
 		{
 			m_edit_match.Focus();
 		}
 
-		/// <summary>Select 'pat' as a new pattern</summary>
-		public void NewPattern(IPattern pat)
+		/// <summary>Update UI elements based on the current pattern state</summary>
+		protected override void UpdateUIInternal()
 		{
-			IsNew = true;
-			m_pattern = (Pattern)pat;
-			m_btn_add.ImageIndex = (int)BtnImageIdx.AddNew;
-			m_btn_add.ToolTip(m_tt, "Add this new pattern");
-			UpdateUI();
+			m_edit_match.Text           = Pattern.Expr;
+			m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
+			m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
+			m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
+			m_check_ignore_case.Checked = Pattern.IgnoreCase;
+			m_check_invert.Checked      = Pattern.Invert;
+
+			m_btn_add.ToolTip(m_tt, IsNew ? "Add this new pattern" : "Save changes to this pattern");
+			m_btn_add.ImageIndex = (int)(IsNew ? EBtnImageIdx.AddNew : EBtnImageIdx.Save);
+			m_btn_add.Enabled = CommitEnabled;
+
+			// Highlight the expression background to show valid regex
+			m_edit_match.BackColor = Misc.FieldBkColor(Pattern.IsValid);
+
+			// Preserve the current caret position
+			int start = m_edit_test.SelectionStart;
+			int length = m_edit_test.SelectionLength;
+			m_edit_test.SelectAll();
+			m_edit_test.SelectionBackColor = Color.White;
+			foreach (var r in Pattern.Match(m_edit_test.Text))
+			{
+				m_edit_test.SelectionStart     = r.Index;
+				m_edit_test.SelectionLength    = r.Count;
+				m_edit_test.SelectionBackColor = Color.LightBlue;
+			}
+			m_edit_test.SelectionStart  = start;
+			m_edit_test.SelectionLength = length;
+
+			// Populate the groups grid
+			var groups = new Dictionary<string, string>();
+			foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
+			foreach (var cap in Pattern.CaptureGroups(m_edit_test.Text)) groups[cap.Key] = cap.Value;
+			m_grid_grps.DataSource = groups.ToList();
 		}
 
-		/// <summary>Select a pattern into the UI for editing</summary>
-		public void EditPattern(IPattern pat)
+		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
+		private HelpUI RegexHelpUI
 		{
-			IsNew = false;
-			m_pattern = (Pattern)pat;
-			m_btn_add.ImageIndex = (int)BtnImageIdx.Save;
-			m_btn_add.ToolTip(m_tt, "Finish editing this pattern");
-			UpdateUI();
-		}
-		
-		/// <summary>Update UI elements based on the current settings</summary>
-		private void UpdateUI()
-		{
-			if (m_in_update_iu) return;
-			try
+			get
 			{
-				m_in_update_iu = true;
-				SuspendLayout();
-				m_edit_match.Text           = Pattern.Expr;
-				m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
-				m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
-				m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
-				m_check_ignore_case.Checked = Pattern.IgnoreCase;
-				m_check_invert.Checked      = Pattern.Invert;
-				
-				m_btn_add.Enabled = Pattern.ExprValid;
-				
-				// Highlight the expression background to show valid regex
-				m_edit_match.BackColor = Misc.FieldBkColor(Pattern.ExprValid);
-			
-				// Preserve the current caret position
-				int start = m_edit_test.SelectionStart;
-				int length = m_edit_test.SelectionLength;
-				m_edit_test.SelectAll();
-				m_edit_test.SelectionBackColor = Color.White;
-				foreach (var r in Pattern.Match(m_edit_test.Text))
-				{
-					m_edit_test.SelectionStart     = r.Index;
-					m_edit_test.SelectionLength    = r.Count;
-					m_edit_test.SelectionBackColor = Color.LightBlue;
-				}
-				m_edit_test.SelectionStart  = start;
-				m_edit_test.SelectionLength = length;
-
-				// Populate the groups grid
-				var groups = new Dictionary<string, string>();
-				foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
-				foreach (var cap in Pattern.CaptureGroups(m_edit_test.Text)) groups[cap.Key] = cap.Value;
-				m_grid_grps.DataSource = groups.ToList();//Pattern.CaptureGroups(m_edit_test.Text).ToList();
-			}
-			finally
-			{
-				m_in_update_iu = false;
-				ResumeLayout();
+				Debug.Assert(ParentForm != null);
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Size(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight));
 			}
 		}
-		private bool m_in_update_iu;
 
 		#region Component Designer generated code
 		

@@ -108,6 +108,7 @@ namespace RyLogViewer
 			IgnoreCase   = false;
 			Active       = true;
 			m_match.PatternChanged += HandlePatternChanged;
+			UpdateSubs();
 		}
 		private Transform(Transform rhs)
 		{
@@ -116,6 +117,7 @@ namespace RyLogViewer
 			Replace    = rhs.Replace;
 			Active     = rhs.Active;
 			m_match.PatternChanged += HandlePatternChanged;
+			UpdateSubs();
 		}
 		public Transform(XElement node)
 		{
@@ -136,6 +138,7 @@ namespace RyLogViewer
 			}
 
 			m_match.PatternChanged += HandlePatternChanged;
+			UpdateSubs();
 			// ReSharper restore PossibleNullReferenceException
 		}
 
@@ -432,16 +435,16 @@ namespace RyLogViewer
 		{
 			return new Transform(this);
 		}
-		
+
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			Transform rhs = obj as Transform;
+			var rhs = obj as Transform;
 			return rhs != null
-				&& m_match.Equals(rhs.m_match)
-				&& Replace.Equals(rhs.Replace);
+				&& Equals(m_match, rhs.m_match)
+				&& Equals(Replace, rhs.Replace);
 		}
-		
+
 		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{

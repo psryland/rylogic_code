@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gui;
 using pr.maths;
 using pr.util;
 using RyLogViewer.Properties;
@@ -14,13 +15,14 @@ namespace RyLogViewer
 {
 	public partial class SettingsUI :Form
 	{
-		private readonly Settings        m_settings;    // The app settings changed by this UI
-		private readonly List<Highlight> m_highlights;  // The highlight patterns currently in the grid
-		private readonly List<Filter>    m_filters;     // The filter patterns currently in the grid
-		private readonly List<Transform> m_transforms;  // The transforms currently in the grid 
-		private readonly List<ClkAction> m_actions;     // The actions currently in the grid 
-		private readonly ToolTip         m_tt;          // Tooltips
-		private readonly ToolTip         m_balloon;     // Balloon hits
+		private readonly Settings        m_settings;     // The app settings changed by this UI
+		private readonly List<Highlight> m_highlights;   // The highlight patterns currently in the grid
+		private readonly List<Filter>    m_filters;      // The filter patterns currently in the grid
+		private readonly List<Transform> m_transforms;   // The transforms currently in the grid 
+		private readonly List<ClkAction> m_actions;      // The actions currently in the grid 
+		private readonly ToolTip         m_tt;           // Tooltips
+		private readonly ToolTip         m_balloon;      // Balloon hits
+		private readonly HoverScroll     m_hover_scroll; // Hoverscroll for the pattern grid
 
 		public enum ETab
 		{
@@ -68,23 +70,24 @@ namespace RyLogViewer
 		/// <summary>Access to the action pattern ui</summary>
 		public PatternUI ActionUI { get { return m_pattern_ac; } }
 		public bool ActionsChanged { get; set; }
-		
+
 		public SettingsUI(Settings settings, ETab tab, ESpecial special = ESpecial.None)
 		{
 			InitializeComponent();
-			KeyPreview    = true;
-			m_settings    = settings;
-			m_special     = special;
-			m_highlights  = Highlight.Import(m_settings.HighlightPatterns);
-			m_filters     = Filter   .Import(m_settings.FilterPatterns   );
-			m_transforms  = Transform.Import(m_settings.TransformPatterns);
-			m_actions     = ClkAction.Import(m_settings.ActionPatterns   );
-			m_tt          = new ToolTip();
-			m_balloon     = new ToolTip{IsBalloon = true,UseFading = true};
+			KeyPreview     = true;
+			m_settings     = settings;
+			m_special      = special;
+			m_highlights   = Highlight.Import(m_settings.HighlightPatterns);
+			m_filters      = Filter   .Import(m_settings.FilterPatterns   );
+			m_transforms   = Transform.Import(m_settings.TransformPatterns);
+			m_actions      = ClkAction.Import(m_settings.ActionPatterns   );
+			m_tt           = new ToolTip();
+			m_balloon      = new ToolTip{IsBalloon = true,UseFading = true};
+			m_hover_scroll = new HoverScroll();
 
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
-			m_pattern_ft.NewPattern(new Filter());
+			m_pattern_ft.NewPattern(new Filter()   );
 			m_pattern_tx.NewPattern(new Transform());
 			m_pattern_ac.NewPattern(new ClkAction());
 			
@@ -110,6 +113,13 @@ namespace RyLogViewer
 				{
 					FocusInput();
 					PerformSpecial();
+				};
+
+			// Watch for unsaved changes on closing
+			Closing += (s,a) =>
+				{
+					Focus(); // grab focus to ensure all controls persist their state
+					SavePatternChanges(a); // Watch for unsaved changes
 				};
 
 			// Save on close
@@ -489,7 +499,7 @@ namespace RyLogViewer
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.SelectAll;
-			m_grid_highlight.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_highlight, m_highlights, a.Row.Index);
+			m_grid_highlight.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_highlight, m_highlights, m_pattern_hl, a.Row.Index);
 			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown      (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop       (m_grid_highlight, m_highlights, a, false);
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
@@ -497,18 +507,19 @@ namespace RyLogViewer
 			m_grid_highlight.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
 			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
-			m_grid_highlight.CellContextMenuStripNeeded += (s,a)=> OnCellClick (m_grid_highlight, m_highlights, m_pattern_hl, a);
-			
+			m_grid_highlight.CellContextMenuStripNeeded += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
+
+			m_hover_scroll.WindowHandles.Add(m_grid_highlight.Handle);
+
 			// Highlight pattern
-			m_pattern_hl.Add += (s,a)=>
+			m_pattern_hl.Commit += (s,a)=>
 				{
 					WhatsChanged |= EWhatsChanged.Rendering;
-					if (m_pattern_hl.IsNew) m_highlights.Add((Highlight)m_pattern_hl.Pattern);
-					m_pattern_hl.NewPattern(new Highlight());
+					CommitPattern(m_pattern_hl, m_highlights);
 					HighlightsChanged = true;
 					UpdateUI();
 				};
-			
+
 			// Highlight pattern sets
 			m_pattern_set_hl.Init(m_settings, m_highlights);
 			m_pattern_set_hl.CurrentSetChanged += (s,a)=>
@@ -531,7 +542,7 @@ namespace RyLogViewer
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
-			m_grid_filter.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_filter, m_filters, a.Row.Index);
+			m_grid_filter.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_filter, m_filters, m_pattern_ft, a.Row.Index);
 			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown      (m_grid_filter, m_filters, a);
 			m_grid_filter.DragOver           += (s,a)=> DoDragDrop       (m_grid_filter, m_filters, a, false);
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
@@ -539,7 +550,9 @@ namespace RyLogViewer
 			m_grid_filter.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_filter, m_filters, m_pattern_ft, a);
 			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_filter, m_filters, a);
 			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
-			
+
+			m_hover_scroll.WindowHandles.Add(m_grid_filter.Handle);
+
 			// Check reject all by default
 			m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
 			m_check_reject_all_by_default.Click += (s,a)=>
@@ -553,11 +566,10 @@ namespace RyLogViewer
 				};
 			
 			// Filter pattern
-			m_pattern_ft.Add += (s,a)=>
+			m_pattern_ft.Commit += (s,a)=>
 				{
 					WhatsChanged |= EWhatsChanged.FileParsing;
-					if (m_pattern_ft.IsNew) m_filters.Add((Filter)m_pattern_ft.Pattern);
-					m_pattern_ft.NewPattern(new Filter());
+					CommitPattern(m_pattern_ft, m_filters);
 					FiltersChanged = true;
 					UpdateUI();
 				};
@@ -583,7 +595,7 @@ namespace RyLogViewer
 			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_transform.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_transform.KeyDown            += DataGridView_Extensions.SelectAll;
-			m_grid_transform.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_transform, m_transforms, a.Row.Index);
+			m_grid_transform.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_transform, m_transforms, m_pattern_tx, a.Row.Index);
 			m_grid_transform.MouseDown          += (s,a)=> OnMouseDown      (m_grid_transform, m_transforms, a);
 			m_grid_transform.DragOver           += (s,a)=> DoDragDrop       (m_grid_transform, m_transforms, a, false);
 			m_grid_transform.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_transform, m_transforms, a);
@@ -591,13 +603,14 @@ namespace RyLogViewer
 			m_grid_transform.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_transform, m_transforms, m_pattern_tx, a);
 			m_grid_transform.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_transform, m_transforms, a);
 			m_grid_transform.DataError          += (s,a)=> a.Cancel = true;
-			
+
+			m_hover_scroll.WindowHandles.Add(m_grid_transform.Handle);
+
 			// Transform
-			m_pattern_tx.Add += (s,a)=>
+			m_pattern_tx.Commit += (s,a)=>
 				{
 					WhatsChanged |= EWhatsChanged.Rendering;
-					if (m_pattern_tx.IsNew) m_transforms.Add(m_pattern_tx.Transform);
-					m_pattern_tx.NewPattern(new Transform());
+					CommitPattern(m_pattern_tx, m_transforms);
 					TransformsChanged = true;
 					UpdateUI();
 				};
@@ -625,7 +638,7 @@ namespace RyLogViewer
 			m_grid_action.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_action.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_action.KeyDown          += DataGridView_Extensions.SelectAll;
-			m_grid_action.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_action, m_actions, a.Row.Index);
+			m_grid_action.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_action, m_actions, m_pattern_ac, a.Row.Index);
 			m_grid_action.MouseDown        += (s,a)=> OnMouseDown      (m_grid_action, m_actions, a);
 			m_grid_action.DragOver         += (s,a)=> DoDragDrop       (m_grid_action, m_actions, a, false);
 			m_grid_action.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_action, m_actions, a);
@@ -633,14 +646,15 @@ namespace RyLogViewer
 			m_grid_action.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_action, m_actions, m_pattern_ac, a);
 			m_grid_action.CellFormatting   += (s,a)=> OnCellFormatting (m_grid_action, m_actions, a);
 			m_grid_action.DataError        += (s,a)=> a.Cancel = true;
-			m_grid_action.CellContextMenuStripNeeded += (s,a)=> OnCellClick (m_grid_action, m_actions, m_pattern_ac, a);
-			
+			m_grid_action.CellContextMenuStripNeeded += (s,a)=> OnCellClick(m_grid_action, m_actions, m_pattern_ac, a);
+
+			m_hover_scroll.WindowHandles.Add(m_grid_action.Handle);
+
 			// Action pattern
-			m_pattern_ac.Add += (s,a)=>
+			m_pattern_ac.Commit += (s,a)=>
 				{
 					WhatsChanged |= EWhatsChanged.Nothing;
-					if (m_pattern_ac.IsNew) m_actions.Add((ClkAction)m_pattern_ac.Pattern);
-					m_pattern_ac.NewPattern(new ClkAction());
+					CommitPattern(m_pattern_ac, m_actions);
 					ActionsChanged = true;
 					UpdateUI();
 				};
@@ -653,29 +667,41 @@ namespace RyLogViewer
 				};
 		}
 
-		/// <summary>Called as the tab is changing/closing</summary>
-		private void TabChanging(TabControlCancelEventArgs args)
+		/// <summary>Check all pattern tabs for unsaved changes and prompt to save if any</summary>
+		private void SavePatternChanges(CancelEventArgs args)
 		{
-			if (args.Action == TabControlAction.Deselecting)
-			{
-				SavePatternChanges(m_pattern_hl, m_highlights, "Highlighting", args);
-				SavePatternChanges(m_pattern_ft, m_filters, "Filtering", args);
-				SavePatternChanges(m_pattern_tx, m_transforms, "Transform", args);
-				SavePatternChanges(m_pattern_ac, m_actions, "Click action", args);
-			}
+			SavePatternChanges(m_pattern_hl, m_highlights, "Highlighting", args);
+			SavePatternChanges(m_pattern_ft, m_filters   , "Filtering"   , args);
+			SavePatternChanges(m_pattern_tx, m_transforms, "Transform"   , args);
+			SavePatternChanges(m_pattern_ac, m_actions   , "Click action", args);
 		}
 
 		/// <summary>Helper for prompting to save changes to a pattern before leaving the tab</summary>
 		private void SavePatternChanges<TPattern>(IPatternUI pattern_ui, List<TPattern> patterns, string text, CancelEventArgs args) where TPattern:IPattern,new()
 		{
-			if (pattern_ui.UnsavedChanges)
+			if (pattern_ui.HasUnsavedChanges)
 			{
 				var res = MessageBox.Show(this, "{0} pattern contains unsaved changes.\r\n\r\nSave changes?".Fmt(text),"Unsaved Changes",MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 				if (res == DialogResult.Cancel) { args.Cancel = true; return; }
-				if (res == DialogResult.No) { pattern_ui.NewPattern(new TPattern()); return; }
-				if (pattern_ui.IsNew) patterns.Add((TPattern)pattern_ui.Pattern);
-				pattern_ui.NewPattern(new TPattern());
+				if (res == DialogResult.No)     { pattern_ui.NewPattern(new TPattern()); return; }
+				if (!pattern_ui.CommitEnabled)  { args.Cancel = true; return; }
+				CommitPattern(pattern_ui, patterns);
 			}
+		}
+
+		/// <summary>Save a modified pattern from a pattern UI</summary>
+		private void CommitPattern<TPattern>(IPatternUI pattern_ui, List<TPattern> patterns) where TPattern:IPattern,new()
+		{
+			if (pattern_ui.IsNew) patterns.Add((TPattern)pattern_ui.Pattern);
+			else                  patterns.Replace((TPattern)pattern_ui.Original, (TPattern)pattern_ui.Pattern);
+			pattern_ui.NewPattern(new TPattern());
+		}
+
+		/// <summary>Called as the tab is changing/closing</summary>
+		private void TabChanging(TabControlCancelEventArgs args)
+		{
+			if (args.Action == TabControlAction.Deselecting)
+				SavePatternChanges(args);
 		}
 
 		/// <summary>Reset the settings to their default values</summary>
@@ -732,13 +758,19 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Delete a pattern</summary>
-		private void OnDeletingRow<T>(DataGridView grid, List<T> patterns, int index)
+		private void OnDeletingRow<TPattern>(DataGridView grid, List<TPattern> patterns, IPatternUI pattern_ui, int index) where TPattern:IPattern,new()
 		{
 			// Note, don't update the grid here or it causes an ArgumentOutOfRange exception.
 			// Other stuff must be using the grid row that will be deleted.
+
+			// If the deleted row is currently being edited, remove it from the editor first
+			if (ReferenceEquals(pattern_ui.Original, patterns[index]))
+				pattern_ui.NewPattern(new TPattern());
+
 			patterns.RemoveAt(index);
 			FlagAsChanged(grid);
-			if (typeof(T) == typeof(Filter))
+
+			if (typeof(TPattern) == typeof(Filter))
 				m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
 		}
 
@@ -752,17 +784,15 @@ namespace RyLogViewer
 			if (hit.Type != DataGridViewHitTestType.RowHeader || hit.RowIndex < 0 || hit.RowIndex >= patterns.Count) return;
 			args.Effect = args.AllowedEffect;
 			if (test_can_drop) return;
-			
+
 			// Swap the rows
 			T pat = (T)args.Data.GetData(typeof(T));
 			int idx1 = patterns.IndexOf(pat);
 			int idx2 = hit.RowIndex;
-			T tmp = patterns[idx1];
-			patterns[idx1] = patterns[idx2];
-			patterns[idx2] = tmp;
+			patterns.Swap(idx1, idx2);
 			grid.InvalidateRow(idx1);
 			grid.InvalidateRow(idx2);
-			
+
 			FlagAsChanged(grid);
 		}
 
@@ -857,6 +887,12 @@ namespace RyLogViewer
 				}
 				break;
 			}
+
+			//// Context menu for the grid
+			//var menu = new ContextMenuStrip();
+			//menu.Items.Add("Delete pattern", null, (ss,aa) => patterns.RemoveAt(e.RowIndex));
+			//menu.Show(pt);
+
 			FlagAsChanged(grid);
 		}
 

@@ -126,6 +126,11 @@
     <Compile Include="src\settings\clkaction_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\settings\ipattern.cs" />
+    <Compile Include="src\settings\ipattern_ui.cs" />
+    <Compile Include="src\settings\pattern_ui_base.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="src\startup_options.cs" />
     <Compile Include="src\export_ui.cs">
       <SubType>Form</SubType>

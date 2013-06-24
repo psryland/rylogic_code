@@ -8,24 +8,6 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	public interface IPattern :ICloneable
-	{
-		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
-		EPattern PatnType { get; set; }
-
-		/// <summary>The pattern to use when matching</summary>
-		string Expr { get; set; }
-
-		/// <summary>True if the pattern should ignore case</summary>
-		bool IgnoreCase { get; set; }
-
-		/// <summary>Returns true if the pattern is active</summary>
-		bool Active { get; set; }
-
-		/// <summary>Returns the names of the capture groups in this pattern</summary>
-		string[] CaptureGroupNames { get; }
-	}
-
 	public class Pattern :IPattern
 	{
 		private EPattern m_patn_type;
@@ -134,7 +116,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Return true if the contained expression is valid</summary>
-		public bool ExprValid
+		public bool IsValid
 		{
 			get
 			{
@@ -222,7 +204,7 @@ namespace RyLogViewer
 		{
 			get
 			{
-				if (!ExprValid) return new string[0];
+				if (!IsValid) return new string[0];
 				if (PatnType == EPattern.RegularExpression || PatnType == EPattern.Wildcard)
 					return Regex.GetGroupNames();
 				return new string[0];
@@ -232,7 +214,7 @@ namespace RyLogViewer
 		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
 		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
 		{
-			if (!IsMatch(text) || !ExprValid) yield break;
+			if (!IsMatch(text) || !IsValid) yield break;
 			if (PatnType != EPattern.RegularExpression)
 			{
 				int i = 0;
@@ -286,14 +268,14 @@ namespace RyLogViewer
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			Pattern rhs = obj as Pattern;
+			var rhs = obj as Pattern;
 			return rhs != null
-				&& Expr       .Equals(rhs.Expr       )
-				&& Active     .Equals(rhs.Active     )
-				&& PatnType   .Equals(rhs.PatnType   )
-				&& IgnoreCase .Equals(rhs.IgnoreCase )
-				&& Invert     .Equals(rhs.Invert     )
-				&& BinaryMatch.Equals(rhs.BinaryMatch);
+				&& rhs.m_patn_type     == m_patn_type
+				&& rhs.m_expr          == m_expr
+				&& rhs.m_ignore_case   == m_ignore_case
+				&& rhs.m_active        == m_active
+				&& rhs.m_invert        == m_invert
+				&& rhs.m_binary_match  == m_binary_match;
 		}
 
 		/// <summary>Value hash code</summary>

@@ -93,12 +93,10 @@ namespace RyLogViewer
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			Filter rhs = obj as Filter;
-			return 
-				rhs != null
+			var rhs = obj as Filter;
+			return rhs != null
 				&& base.Equals(obj)
-				&& IfMatch.Equals(rhs.IfMatch)
-				;
+				&& IfMatch.Equals(rhs.IfMatch);
 		}
 		
 		/// <summary>Value hash code</summary>

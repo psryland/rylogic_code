@@ -84,12 +84,11 @@ namespace RyLogViewer
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			Highlight rhs = obj as Highlight;
-			return 
-				rhs != null &&
-				base.Equals(obj) &&
-				ForeColour.Equals(rhs.ForeColour) &&
-				BackColour.Equals(rhs.BackColour);
+			var rhs = obj as Highlight;
+			return rhs != null
+				&& base.Equals(obj)
+				&& ForeColour.Equals(rhs.ForeColour)
+				&& BackColour.Equals(rhs.BackColour);
 		}
 
 		/// <summary>Value hash code</summary>
