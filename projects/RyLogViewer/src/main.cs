@@ -1273,7 +1273,7 @@ namespace RyLogViewer
 		/// <summary>Show the about dialog</summary>
 		private void ShowAbout()
 		{
-			new About(new Licence(m_startup_options.AppDataDir)).ShowDialog(this);
+			new About(m_startup_options).ShowDialog(this);
 		}
 
 		/// <summary>Convert an encoding name to encoding object</summary>

@@ -249,7 +249,7 @@ namespace pr.common
 				return; // Reset will recursively call Load again
 			}
 
-			Log.Debug(this, "Settings file {0} not found, using defaults".Fmt(filepath));
+			Log.Debug(this, "Loading settings file {0}".Fmt(filepath));
 
 			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
 			using (FileStream fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read))

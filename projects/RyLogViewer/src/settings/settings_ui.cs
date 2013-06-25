@@ -15,14 +15,14 @@ namespace RyLogViewer
 {
 	public partial class SettingsUI :Form
 	{
-		private readonly Settings        m_settings;     // The app settings changed by this UI
-		private readonly List<Highlight> m_highlights;   // The highlight patterns currently in the grid
-		private readonly List<Filter>    m_filters;      // The filter patterns currently in the grid
-		private readonly List<Transform> m_transforms;   // The transforms currently in the grid 
-		private readonly List<ClkAction> m_actions;      // The actions currently in the grid 
-		private readonly ToolTip         m_tt;           // Tooltips
-		private readonly ToolTip         m_balloon;      // Balloon hits
-		private readonly HoverScroll     m_hover_scroll; // Hoverscroll for the pattern grid
+		private readonly Settings    m_settings;     // The app settings changed by this UI
+		private readonly ToolTip     m_tt;           // Tooltips
+		private readonly ToolTip     m_balloon;      // Balloon hits
+		private readonly HoverScroll m_hover_scroll; // Hoverscroll for the pattern grid
+		private List<Highlight>      m_highlights;   // The highlight patterns currently in the grid
+		private List<Filter>         m_filters;      // The filter patterns currently in the grid
+		private List<Transform>      m_transforms;   // The transforms currently in the grid 
+		private List<ClkAction>      m_actions;      // The actions currently in the grid 
 
 		public enum ETab
 		{
@@ -77,13 +77,10 @@ namespace RyLogViewer
 			KeyPreview     = true;
 			m_settings     = settings;
 			m_special      = special;
-			m_highlights   = Highlight.Import(m_settings.HighlightPatterns);
-			m_filters      = Filter   .Import(m_settings.FilterPatterns   );
-			m_transforms   = Transform.Import(m_settings.TransformPatterns);
-			m_actions      = ClkAction.Import(m_settings.ActionPatterns   );
 			m_tt           = new ToolTip();
 			m_balloon      = new ToolTip{IsBalloon = true,UseFading = true};
 			m_hover_scroll = new HoverScroll();
+			ReadSettings();
 
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
@@ -139,7 +136,16 @@ namespace RyLogViewer
 			UpdateUI();
 			WhatsChanged = EWhatsChanged.Nothing;
 		}
-		
+
+		/// <summary>Populate the internal lists from the settings data</summary>
+		private void ReadSettings()
+		{
+			m_highlights = Highlight.Import(m_settings.HighlightPatterns);
+			m_filters    = Filter   .Import(m_settings.FilterPatterns   );
+			m_transforms = Transform.Import(m_settings.TransformPatterns);
+			m_actions    = ClkAction.Import(m_settings.ActionPatterns   );
+		}
+
 		/// <summary>Hook up events for the general tab</summary>
 		private void SetupGeneralTab()
 		{
@@ -343,6 +349,7 @@ namespace RyLogViewer
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_settings.Filepath = dg.FileName;
 					m_settings.Reload();
+					ReadSettings();
 					UpdateUI();
 					WhatsChanged |= EWhatsChanged.Everything;
 				};

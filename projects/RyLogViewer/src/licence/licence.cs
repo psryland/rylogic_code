@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using RyLogViewer.Properties;
 using pr.common;
+using pr.extn;
 using pr.util;
 
 namespace RyLogViewer
@@ -151,33 +152,26 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns a text summary of the licence info</summary>
-		public string InfoStringRtf()
+		public Rtf.Builder InfoStringRtf()
 		{
 			var rtf = new Rtf.Builder();
 			if (!Valid)
 			{
-				rtf.Append(new Rtf.TextStyle{FontSize = 14, FontStyle = Rtf.EFontStyle.Bold, ForeColourIndex = rtf.ColourIndex(Color.DarkRed)});
-				rtf.Append("EVALUATION LICENCE").AppendLine();
-				rtf.Append(Rtf.TextStyle.Default);
-				rtf.Append("Limitations are applied.");
+				rtf.Append(new Rtf.TextStyle{FontSize = 10, FontStyle = Rtf.EFontStyle.Bold, ForeColourIndex = rtf.ColourIndex(Color.DarkRed)});
+				rtf.AppendLine("EVALUATION LICENCE");
+				rtf.Append(new Rtf.TextStyle{FontSize = 8, FontStyle = Rtf.EFontStyle.Regular});
+				rtf.AppendLine("This copy of RyLogViewer is for evaluation purposes only.");
+				rtf.AppendLine("If you find it useful, please consider purchasing a license.");
 			}
 			else
 			{
-				rtf.Append("Licenced To:").AppendLine();
-				rtf.Append(new Rtf.TextStyle{ForeColourIndex = rtf.ColourIndex(Color.DarkBlue)});
-				rtf.Append(LicenceHolder).AppendLine();
-				if (!string.IsNullOrEmpty(Company)) rtf.Append(Company).AppendLine();
-				//TimeSpan usage = new TimeSpan(10000);
-				//return string.Format(
-				//    "Evaluation Licence\r\n" +
-				//    "\r\n" +
-				//    "Active Usage: {0}"
-				//    ,usage.ToString());
+				rtf.AppendLine("Licenced To:");
+				rtf.Append(new Rtf.TextStyle{FontSize = 8, ForeColourIndex = rtf.ColourIndex(Color.DarkBlue)});
+				rtf.AppendLine(LicenceHolder);
+				if (Company.HasValue()) rtf.AppendLine(Company);
 			}
-			return rtf.ToString();
+			return rtf;
 		}
-
-
 	}
 
 	public partial class Main :Form

@@ -5,6 +5,8 @@
 
 using System.Reflection;
 using System.Windows.Forms;
+using pr.maths;
+using pr.util;
 
 namespace pr.extn
 {
@@ -17,6 +19,23 @@ namespace pr.extn
 			pi.SetValue(ctl, state, null);
 			MethodInfo mi = ctl.GetType().GetMethod("SetStyle", BindingFlags.Instance|BindingFlags.NonPublic);
 			mi.Invoke(ctl, new object[]{ControlStyles.DoubleBuffer|ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint, state});
+		}
+
+		/// <summary>Returns a disposable object that preserves the current selected</summary>
+		public static Scope SelectionScope(this TextBoxBase edit)
+		{
+			int start = 0, end = 0;
+			return Scope.Create(
+				() =>
+				{
+					start = edit.SelectionStart;
+					end   = start + edit.SelectionLength;
+				},
+				() =>
+				{
+					edit.SelectionStart  = Maths.Clamp(start, 0, edit.TextLength);
+					edit.SelectionLength = Maths.Clamp(end, 0, edit.TextLength) - edit.SelectionStart;
+				});
 		}
 	}
 }

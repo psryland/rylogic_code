@@ -23,26 +23,3 @@ namespace RyLogViewer
 		bool IsValid { get; }
 	}
 }
-
-#if PR_UNITTESTS
-namespace pr
-{
-	using NUnit.Framework;
-
-	[TestFixture] internal static partial class RyLogViewerUnitTests
-	{
-		internal static class TestPattern
-		{
-			[TestFixtureSetUp] public static void Setup()
-			{
-			}
-			[TestFixtureTearDown] public static void CleanUp()
-			{
-			}
-			[Test] public static void TestMatches()
-			{
-			}
-		}
-	}
-}
-#endif

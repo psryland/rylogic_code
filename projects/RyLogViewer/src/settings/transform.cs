@@ -240,6 +240,12 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
+		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
+		{
+			return m_match.CaptureGroups(text);
+		}
+
 		/// <summary>Returns the collection of Tags and their character spans in 'str'</summary>
 		private static IEnumerable<Tag> GetTags(string str)
 		{
@@ -467,3 +473,70 @@ namespace RyLogViewer
 	}
 }
 
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using RyLogViewer;
+
+	[TestFixture] internal static partial class RyLogViewerUnitTests
+	{
+		internal static class TestTransform
+		{
+			[TestFixtureSetUp] public static void Setup()
+			{
+			}
+			[TestFixtureTearDown] public static void CleanUp()
+			{
+			}
+			private static void Check(Transform pat, string test, string[] grp_names, string[] captures)
+			{
+				Assert.IsTrue(pat.IsMatch(test));
+				var caps = pat.CaptureGroups(test).ToArray();
+
+				Assert.AreEqual(grp_names.Length, caps.Length);
+				Assert.AreEqual(captures.Length, caps.Length);
+
+				for (int i = 0; i != caps.Length; ++i)
+				{
+					Assert.AreEqual(grp_names[i], caps[i].Key);
+					Assert.AreEqual(captures[i], caps[i].Value);
+				}
+			}
+			[Test] public static void SubStringMatches()
+			{
+				//Check(new Transform(EPattern.Substring, "test"), 
+				//	"A test string",
+				//	new[]{"1"},
+				//	new[]{"test"});
+			}
+			[Test] public static void WildcardMatches()
+			{
+				//Check(new Pattern(EPattern.Wildcard, "test"),
+				//	"A test string",
+				//	new[]{"0"},
+				//	new[]{"test"});
+				//Check(new Pattern(EPattern.Wildcard, "*test"),
+				//	"A test string",
+				//	new[]{"0","1"},
+				//	new[]{"A test", "A "});
+				//Check(new Pattern(EPattern.Wildcard, "test*"),
+				//	"A test string",
+				//	new[]{"0","1"},
+				//	new[]{"test string"," string"});
+				//Check(new Pattern(EPattern.Wildcard, "A * string"),
+				//	"A test string",
+				//	new[]{"0","1"},
+				//	new[]{"A test string","test"});
+			}
+			[Test] public static void RegexMatches()
+			{
+				//Check(new Pattern(EPattern.RegularExpression, "A * string"),
+				//	"A test string",
+				//	new[]{"0","1"},
+				//	new[]{"A test string","test"});
+			}
+		}
+	}
+}
+#endif

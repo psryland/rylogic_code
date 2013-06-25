@@ -28,9 +28,9 @@ namespace RyLogViewer
 					return string.Format(
 						"No lines detected within a {0} byte block.\r\n" +
 						"\r\n" +
-						"This might be due to a line in the log file being larger than {0} bytes, or that the line endings are not being detected correctly.\r\n" +
+						"This might be due to one or more lines in the log file being larger than {0} bytes, or that the line endings are not being detected correctly.\r\n" +
 						"If lines longer than {0} bytes are expected, increase the 'Maximum Line Length' option under settings.\r\n" +
-						"Otherwise, check the line ending and text encoding settings. You may have to specify these values explicitly rather than using automatic detection."
+						"Otherwise, check the settings under the 'Line Ending' menu and the 'Encoding' menu. You may have to specify these values explicitly rather than using automatic detection."
 						, m_buf_size);
 				}
 			}
