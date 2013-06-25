@@ -372,7 +372,7 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Nothing;
 				};
 		}
-		
+
 		/// <summary>Hook up events for the log view tab</summary>
 		private void SetupAppearanceTab()
 		{
@@ -487,7 +487,7 @@ namespace RyLogViewer
 				};
 			
 		}
-		
+
 		/// <summary>Hook up events for the highlights tab</summary>
 		private void SetupHighlightTab()
 		{

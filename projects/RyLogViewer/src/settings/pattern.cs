@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -89,148 +88,6 @@ namespace RyLogViewer
 			Invert      = rhs.Invert;
 			BinaryMatch = rhs.BinaryMatch;
 		}
-		
-		/// <summary>Converts the current search pattern to a string that can be used as a regex</summary>
-		public string RegexString
-		{
-			get
-			{
-				switch (PatnType)
-				{
-				default: throw new ArgumentOutOfRangeException();
-				case EPattern.Substring:         return Regex.Escape(Expr);
-				case EPattern.Wildcard:          return Regex.Escape(Expr).Replace("\\*", "(.*)").Replace("\\?", ".");
-				case EPattern.RegularExpression: return Expr;
-				}
-			}
-		}
-
-		/// <summary>Converts this pattern into a compiled regex pattern</summary>
-		private Regex Regex
-		{
-			get
-			{
-				// Don't make this public because it throws if the regex string isn't valid
-				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
-				return m_compiled_patn ?? (m_compiled_patn = new Regex(RegexString, opts));
-			}
-		}
-
-		/// <summary>Return true if the contained expression is valid</summary>
-		public bool IsValid
-		{
-			get
-			{
-				try
-				{
-					switch (PatnType)
-					{
-					default: throw new ArgumentException("Unknown pattern type");
-					case EPattern.Substring: return true;
-					case EPattern.Wildcard:
-					case EPattern.RegularExpression: return Regex != null;
-					}
-				} catch { return false; }
-			}
-		}
-
-		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
-		public bool IsMatch(string text)
-		{
-			if (!Active) return false;
-			bool match = false;
-			switch (PatnType)
-			{
-			case EPattern.Substring:
-				{
-					StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-					match = Expr.Length != 0 && text.IndexOf(Expr, 0, cmp) != -1;
-					break;
-				}
-			case EPattern.Wildcard:
-			case EPattern.RegularExpression:
-				{
-					try { match = Expr.Length != 0 && Regex.IsMatch(text); } catch (ArgumentException) {}
-					break;
-				}
-			}
-			
-			return Invert ? !match : match;
-		}
-		
-		/// <summary>Return the range of 'text' that matches this pattern</summary>
-		public IEnumerable<Span> Match(string text)
-		{
-			if (!Active || text == null) yield break;
-			
-			var x = new List<int>();
-			if (Invert) x.Add(0);
-			try
-			{
-				switch (PatnType)
-				{
-				case EPattern.Substring:
-					{
-						StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-						if (Expr.Length != 0)
-						{
-							for (int i = text.IndexOf(Expr, 0, cmp); i != -1; i = text.IndexOf(Expr, i + Expr.Length, cmp))
-							{
-								x.Add(i);
-								x.Add(i + Expr.Length);
-							}
-						}
-						break;
-					}
-				case EPattern.Wildcard:
-				case EPattern.RegularExpression:
-					{
-						foreach (Match m in Regex.Matches(text))
-						{
-							if (m.Length == 0) continue;
-							x.Add(m.Index);
-							x.Add(m.Index + m.Length);
-						}
-						break;
-					}
-				}
-			} catch (ArgumentException) {}
-			if (Invert) x.Add(text.Length);
-			for (int i = 0; i != x.Count; i += 2)
-				yield return new Span(x[i], x[i+1] - x[i]);
-		}
-
-		/// <summary>Returns the names of the capture groups in this pattern</summary>
-		public string[] CaptureGroupNames
-		{
-			get
-			{
-				if (!IsValid) return new string[0];
-				if (PatnType == EPattern.RegularExpression || PatnType == EPattern.Wildcard)
-					return Regex.GetGroupNames();
-				return new string[0];
-			}
-		}
-
-		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
-		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
-		{
-			if (!IsMatch(text) || !IsValid) yield break;
-			if (PatnType == EPattern.Substring)
-			{
-				int i = 0;
-				foreach (var s in Match(text))
-					yield return new KeyValuePair<string, string>((++i).ToString(CultureInfo.InvariantCulture), text.Substring(s.Index,s.Count));
-			}
-			else
-			{
-				Match match = Regex.Match(text);
-				var names = Regex.GetGroupNames();
-				var grps  = match.Groups;
-				for (int i = 0; i != grps.Count; ++i)
-					yield return new KeyValuePair<string, string>(names[i], grps[i].Value);
-			}
-		}
 
 		/// <summary>Construct from xml description</summary>
 		public Pattern(XElement node)
@@ -244,7 +101,7 @@ namespace RyLogViewer
 			BinaryMatch = bool.Parse(node.Element(XmlTag.Binary    ).Value);
 			// ReSharper restore PossibleNullReferenceException
 		}
-		
+
 		/// <summary>Export this pattern as xml</summary>
 		public virtual XElement ToXml(XElement node)
 		{
@@ -258,6 +115,130 @@ namespace RyLogViewer
 				new XElement(XmlTag.Binary     ,BinaryMatch)
 			);
 			return node;
+		}
+
+		/// <summary>Returns the match template as a compiled regular expression</summary>
+		private Regex Regex
+		{
+			get
+			{
+				if (m_compiled_patn != null)
+					return m_compiled_patn;
+
+				// Notes:
+				//  If an expression can't be represented in substr,wildcard form, harden up and use a regex
+
+				// Convert the match string into a regular expression string and
+				// replace the capture group tags with regex capture groups
+				string expr = Expr;
+
+				// If the expression is a regex, expect regex capture group syntax
+				// Otherwise, expect capture groups of the form: {tag}
+				if (PatnType != EPattern.RegularExpression)
+				{
+					// Collapse all whitespace to a single space character
+					expr = Regex.Replace(expr, @"\s+", " ");
+
+					// Escape the regex special chars
+					expr = Regex.Escape(expr);
+
+					// Replace wildcards with Regex equivalents
+					if (PatnType == EPattern.Wildcard)
+						expr = expr.Replace(@"\*", @".*").Replace(@"\?", @".");
+
+					// Replace the (now escaped) '{tag}' capture
+					// groups with named regular expression capture groups
+					expr = Regex.Replace(expr, @"\\{(\w+)}", @"(?<$1>.*)");
+
+					// Replace all escaped whitespace with '\s+'
+					expr = expr.Replace(@"\ ", @"\s+");
+
+					// Allow expressions the end with whitespace to also match the eol char
+					if (expr.EndsWith(@"\s+"))
+					{
+						expr = expr.Remove(expr.Length - 3, 3);
+						expr = expr + @"(?:$|\s)";
+					}
+				}
+
+				// Compile the expression
+				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
+				return m_compiled_patn = new Regex(expr, opts);
+			}
+		}
+
+		/// <summary>Returns null if the match field is valid, otherwise an exception describing what's wrong</summary>
+		public Exception ValidateExpr()
+		{
+			try
+			{
+				// Compiling the Regex will throw if there's something wrong with it. It will never be null
+				if (Regex == null)
+					return new ArgumentException("The regular expression is null");
+				
+				// No prob, bob!
+				return null;
+			}
+			catch (Exception ex) { return ex; }
+		}
+
+		/// <summary>Returns true if the match expression is valid</summary>
+		public virtual bool IsValid
+		{
+			get { return ValidateExpr() == null; }
+		}
+
+		/// <summary>Returns the names of the capture groups in this pattern</summary>
+		public string[] CaptureGroupNames
+		{
+			get
+			{
+				try { return Regex.GetGroupNames(); }
+				catch { return new string[0]; }
+			}
+		}
+
+		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
+		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
+		{
+			if (!IsMatch(text) || !IsValid) yield break;
+			Match match = Regex.Match(text);
+			var names = Regex.GetGroupNames();
+			var grps = match.Groups;
+			for (int i = 0; i != grps.Count; ++i)
+				yield return new KeyValuePair<string, string>(names[i], grps[i].Value);
+		}
+
+		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
+		public bool IsMatch(string text)
+		{
+			if (!Active || !IsValid) return false;
+			bool match = Expr.Length != 0 && Regex.IsMatch(text);
+			return Invert ? !match : match;
+		}
+
+		/// <summary>Return the range of 'text' that matches this pattern</summary>
+		public IEnumerable<Span> Match(string text)
+		{
+			if (!Active || text == null) yield break;
+
+			var x = new List<int>();
+
+			if (Invert) x.Add(0);
+			try
+			{
+				foreach (Match m in Regex.Matches(text))
+				{
+					if (m.Length == 0) continue;
+					x.Add(m.Index);
+					x.Add(m.Index + m.Length);
+				}
+			}
+			catch (ArgumentException) {}
+			if (Invert) x.Add(text.Length);
+
+			for (int i = 0; i != x.Count; i += 2)
+				yield return new Span(x[i], x[i+1] - x[i]);
 		}
 
 		/// <summary>Creates a new object that is a copy of the current instance.</summary>
@@ -282,16 +263,17 @@ namespace RyLogViewer
 		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{
+			// ReSharper disable NonReadonlyFieldInGetHashCode
 			return
-				Expr       .GetHashCode()^
-				Active     .GetHashCode()^
-				PatnType   .GetHashCode()^
-				IgnoreCase .GetHashCode()^
-				Invert     .GetHashCode()^
-				BinaryMatch.GetHashCode();
+				m_patn_type   .GetHashCode()^
+				m_expr        .GetHashCode()^
+				m_ignore_case .GetHashCode()^
+				m_active      .GetHashCode()^
+				m_invert      .GetHashCode()^
+				m_binary_match.GetHashCode();
+			// ReSharper restore NonReadonlyFieldInGetHashCode
 		}
 
-		/// <summary>Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.</summary>
 		public override string ToString()
 		{
 			return Expr;

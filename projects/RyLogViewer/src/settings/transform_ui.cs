@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.gfx;
@@ -10,22 +11,24 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	public class TransformUI :PatternUIBase<Transform> ,IPatternUI
+	public class TransformUI :TransformUIImpl ,IPatternUI
 	{
 		private static class ColumnNames
 		{
-			public const string Id   = "Id";
-			public const string Type = "Type";
-			public const string Data = "Data";
+			public const string Tag   = "Tag";
+			public const string Value = "Value";
+			public const string Type  = "Type";
+			public const string Cfg  = "Cfg";
 		}
 		private static readonly Color[] BkColors = new[]
 		{
 			Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
 			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
 		};
-		
+		private readonly Image NullImage = new Bitmap(1,1);
+
+		private List<KeyValuePair<string,string>> m_caps;
 		private HelpUI           m_dlg_help;
-		private string[]         m_cap_ids;
 		private TextBox          m_edit_match;
 		private TextBox          m_edit_replace;
 		private DataGridView     m_grid_subs;
@@ -56,6 +59,7 @@ namespace RyLogViewer
 		public TransformUI()
 		{
 			InitializeComponent();
+			m_caps = new List<KeyValuePair<string, string>>();
 
 			// Add/Update
 			m_btn_add.ToolTip(m_tt, "Adds a new transform, or updates an existing transform");
@@ -134,9 +138,10 @@ namespace RyLogViewer
 			// Substitutions
 			m_grid_subs.VirtualMode = true;
 			m_grid_subs.AutoGenerateColumns = false;
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Id   ,HeaderText = "Id"            ,FillWeight = 20 ,ReadOnly = true});
-			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type ,HeaderText = "Name"          ,FillWeight = 30 ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Data ,HeaderText = "Configuration" ,FillWeight = 50 ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Tag   ,HeaderText = "Tag"       ,FillWeight = 11.5f ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Value ,HeaderText = "Value"     ,FillWeight = 37.6f ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type  ,HeaderText = "Transform" ,FillWeight = 25.8f ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
+			m_grid_subs.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Cfg   ,HeaderText = string.Empty,FillWeight =  5.0f ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_subs.CurrentCellDirtyStateChanged += (s,a) => m_grid_subs.CommitEdit(DataGridViewDataErrorContexts.Commit);
 			m_grid_subs.CellValueNeeded  += CellValueNeeded;
 			m_grid_subs.CellValuePushed  += CellValuePushed;
@@ -174,16 +179,31 @@ namespace RyLogViewer
 		{
 			e.Value = string.Empty;
 			DataGridView grid = (DataGridView)sender;
-			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Length) return;
-			if (!Pattern.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
-			
-			ITxfmSub sub = Pattern.Subs[m_cap_ids[e.RowIndex]];
+			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
+			var cap = m_caps[e.RowIndex];
+
+			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
-			default:               e.Value = string.Empty; break;
-			case ColumnNames.Id:   e.Value = sub.Id;   break;
-			case ColumnNames.Type: e.Value = sub.Name; break;
-			case ColumnNames.Data: e.Value = sub.ConfigSummary; break;
+			default:
+				Debug.Assert(false, "Unknown column name");
+				break;
+			case ColumnNames.Tag:
+				e.Value = cap.Key;
+				break;
+			case ColumnNames.Value:
+				e.Value = cap.Value;
+				break;
+			case ColumnNames.Type:
+				if (sub != null)
+				{
+					e.Value = sub.Name;
+					grid[e.ColumnIndex,e.RowIndex].ToolTipText = sub.ConfigSummary; 
+				}
+				break;
+			case ColumnNames.Cfg:
+				e.Value = sub != null && sub.Configurable ? Resources.pencil : NullImage;
+				break;
 			}
 		}
 
@@ -191,17 +211,17 @@ namespace RyLogViewer
 		private void CellValuePushed(object sender, DataGridViewCellValueEventArgs e)
 		{
 			DataGridView grid = (DataGridView)sender;
-			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Length) return;
-			if (!Pattern.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
+			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
+			var cap = m_caps[e.RowIndex];
 
-			ITxfmSub sub = Pattern.Subs[m_cap_ids[e.RowIndex]];
+			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Type:
-				if (!e.Value.Equals(sub.Name))
+				if (sub != null && !e.Value.Equals(sub.Name))
 				{
 					var new_sub = Transform.SubLoader.Create(sub.Id, (string)e.Value);
-					Pattern.Subs[m_cap_ids[e.RowIndex]] = new_sub;
+					Pattern.Subs[cap.Key] = new_sub;
 					grid.Invalidate();
 				}
 				break;
@@ -217,7 +237,7 @@ namespace RyLogViewer
 			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
-			case ColumnNames.Id:
+			case ColumnNames.Tag:
 				e.CellStyle.BackColor = BkColors[e.RowIndex % BkColors.Length];
 				e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, Color.Black, 0.2f);
 				break;
@@ -230,12 +250,14 @@ namespace RyLogViewer
 			DataGridView grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			ITxfmSub sub = Pattern.Subs[m_cap_ids[e.RowIndex]];
+			var cap = m_caps[e.RowIndex];
+
+			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
-			case ColumnNames.Data:
-				sub.Config(this);
+			case ColumnNames.Cfg:
+				if (sub != null) sub.Config(this);
 				UpdateUI();
 				break;
 			}
@@ -247,12 +269,15 @@ namespace RyLogViewer
 			DataGridView grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			ITxfmSub sub = Pattern.Subs[m_cap_ids[e.RowIndex]];
+			var cap = m_caps[e.RowIndex];
+
+			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
-			case ColumnNames.Id:
-				m_edit_replace.SelectedText = "{"+sub.Id+"}";
+			case ColumnNames.Tag:
+				if (sub != null)
+					m_edit_replace.SelectedText = "{"+sub.Id+"}";
 				break;
 			}
 		}
@@ -260,10 +285,6 @@ namespace RyLogViewer
 		/// <summary>Prevents reentrant calls to UpdateUI. Yes this is the best way to do it /cry</summary>
 		protected override void UpdateUIInternal()
 		{
-			m_cap_ids = Pattern.CaptureGroupNames;
-			m_grid_subs.RowCount = m_cap_ids.Length;
-			m_grid_subs.Refresh();
-
 			m_edit_match.Text           = Pattern.Expr;
 			m_edit_eqv_regex.Text       = Pattern.RegexString;
 			m_edit_replace.Text         = Pattern.Replace;
@@ -306,13 +327,13 @@ namespace RyLogViewer
 				// Preserve the current carot position
 				int start  = m_edit_test.SelectionStart;
 				int length = m_edit_test.SelectionLength;
-			
+
 				// Reset the highlighting
 				m_edit_test.SelectAll();
 				m_edit_test.SelectionBackColor = Color.White;
-			
+
 				string[] lines = m_edit_test.Lines;
-			
+
 				// Apply the transform to each line in the test text
 				m_edit_result.Clear();
 				for (int i = 0, iend = lines.Length; i != iend; ++i)
@@ -345,10 +366,19 @@ namespace RyLogViewer
 						}
 					}
 				}
-					
+
 				// Restore the selection
 				m_edit_test.Select(start, length);
+
+				// Updates the caps data because on the line that the 
+				var groups = new Dictionary<string, string>();
+				foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
+				foreach (var cap in Pattern.CaptureGroups(m_edit_test.Text)) groups[cap.Key] = cap.Value;
+				m_caps = groups.ToList();
 			}
+
+			m_grid_subs.RowCount = m_caps.Count;
+			m_grid_subs.Refresh();
 		}
 
 		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
@@ -389,6 +419,7 @@ namespace RyLogViewer
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TransformUI));
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_btn_add = new System.Windows.Forms.Button();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
@@ -465,7 +496,7 @@ namespace RyLogViewer
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(202, 45);
+			this.m_edit_test.Size = new System.Drawing.Size(202, 55);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
@@ -476,7 +507,7 @@ namespace RyLogViewer
 			this.m_edit_result.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_result.Name = "m_edit_result";
 			this.m_edit_result.ReadOnly = true;
-			this.m_edit_result.Size = new System.Drawing.Size(202, 60);
+			this.m_edit_result.Size = new System.Drawing.Size(202, 75);
 			this.m_edit_result.TabIndex = 0;
 			this.m_edit_result.Text = "This is the resulting text after replacement";
 			// 
@@ -524,8 +555,8 @@ namespace RyLogViewer
 			// m_split_test.Panel2
 			// 
 			this.m_split_test.Panel2.Controls.Add(this.m_edit_result);
-			this.m_split_test.Size = new System.Drawing.Size(204, 113);
-			this.m_split_test.SplitterDistance = 47;
+			this.m_split_test.Size = new System.Drawing.Size(204, 138);
+			this.m_split_test.SplitterDistance = 57;
 			this.m_split_test.TabIndex = 8;
 			// 
 			// m_lbl_match
@@ -553,15 +584,25 @@ namespace RyLogViewer
 			this.m_grid_subs.AllowUserToResizeRows = false;
 			this.m_grid_subs.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_subs.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
-			this.m_grid_subs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Control;
+			dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.WindowText;
+			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+			this.m_grid_subs.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+			this.m_grid_subs.ColumnHeadersHeight = 20;
+			this.m_grid_subs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_subs.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid_subs.Location = new System.Drawing.Point(0, 0);
 			this.m_grid_subs.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_subs.MultiSelect = false;
 			this.m_grid_subs.Name = "m_grid_subs";
 			this.m_grid_subs.RowHeadersVisible = false;
+			this.m_grid_subs.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
 			this.m_grid_subs.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_subs.Size = new System.Drawing.Size(284, 113);
+			this.m_grid_subs.Size = new System.Drawing.Size(284, 138);
 			this.m_grid_subs.TabIndex = 0;
 			// 
 			// m_split_subs
@@ -580,7 +621,7 @@ namespace RyLogViewer
 			// m_split_subs.Panel2
 			// 
 			this.m_split_subs.Panel2.Controls.Add(this.m_grid_subs);
-			this.m_split_subs.Size = new System.Drawing.Size(492, 113);
+			this.m_split_subs.Size = new System.Drawing.Size(492, 138);
 			this.m_split_subs.SplitterDistance = 204;
 			this.m_split_subs.TabIndex = 49;
 			// 
@@ -755,7 +796,7 @@ namespace RyLogViewer
 			this.Margin = new System.Windows.Forms.Padding(0);
 			this.MinimumSize = new System.Drawing.Size(498, 212);
 			this.Name = "TransformUI";
-			this.Size = new System.Drawing.Size(498, 212);
+			this.Size = new System.Drawing.Size(498, 237);
 			this.m_split_test.Panel1.ResumeLayout(false);
 			this.m_split_test.Panel2.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_split_test)).EndInit();
@@ -782,6 +823,18 @@ namespace RyLogViewer
 		}
 
 		#endregion
+	}
 
+	/// <summary>Workaround for the retarded VS designer</summary>
+	public class TransformUIImpl :PatternUIBase<Transform>
+	{
+		/// <summary>Access to the test text field</summary>
+		public override string TestText { get; set; }
+
+		/// <summary>Set focus to the primary input field</summary>
+		public override void FocusInput() {}
+
+		/// <summary>Update the UI elements based on the current pattern</summary>
+		protected override void UpdateUIInternal() {}
 	}
 }

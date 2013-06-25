@@ -9,7 +9,7 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	public class PatternUI :PatternUIBase<Pattern>,IPatternUI
+	public class PatternUI :PatternUIImpl, IPatternUI
 	{
 		public const string DefaultTestText = "Enter text here to test your pattern";
 
@@ -118,8 +118,8 @@ namespace RyLogViewer
 
 			// Groups
 			m_grid_grps.AutoGenerateColumns = false;
-			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Tag"   ,HeaderText="Tag"   ,FillWeight=1 ,DataPropertyName = "Key"  });
-			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Value" ,HeaderText="Value" ,FillWeight=2 ,DataPropertyName = "Value"});
+			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Tag"   ,HeaderText="Tag"   ,FillWeight=1 ,DataPropertyName = "Key"  , ToolTipText = "The names of the capture groups identified in the match pattern"});
+			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Value" ,HeaderText="Value" ,FillWeight=2 ,DataPropertyName = "Value", ToolTipText = "The values of the capture groups based on the test text and the match pattern"});
 		}
 
 		/// <summary>Access to the test text field</summary>
@@ -138,6 +138,7 @@ namespace RyLogViewer
 		/// <summary>Update UI elements based on the current pattern state</summary>
 		protected override void UpdateUIInternal()
 		{
+			if (Pattern == null) return;
 			m_edit_match.Text           = Pattern.Expr;
 			m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
 			m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
@@ -205,6 +206,7 @@ namespace RyLogViewer
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternUI));
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			this.m_check_invert = new System.Windows.Forms.CheckBox();
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();
 			this.m_btn_add = new System.Windows.Forms.Button();
@@ -293,7 +295,7 @@ namespace RyLogViewer
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(267, 85);
+			this.m_edit_test.Size = new System.Drawing.Size(245, 85);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
@@ -377,7 +379,7 @@ namespace RyLogViewer
 			// 
 			this.m_split.Panel2.Controls.Add(this.m_grid_grps);
 			this.m_split.Size = new System.Drawing.Size(402, 87);
-			this.m_split.SplitterDistance = 269;
+			this.m_split.SplitterDistance = 247;
 			this.m_split.TabIndex = 16;
 			// 
 			// m_grid_grps
@@ -388,8 +390,17 @@ namespace RyLogViewer
 			this.m_grid_grps.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_grps.BackgroundColor = System.Drawing.SystemColors.ControlLightLight;
 			this.m_grid_grps.BorderStyle = System.Windows.Forms.BorderStyle.None;
-			this.m_grid_grps.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_grps.ColumnHeadersVisible = false;
+			this.m_grid_grps.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
+			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Control;
+			dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.WindowText;
+			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+			this.m_grid_grps.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+			this.m_grid_grps.ColumnHeadersHeight = 20;
+			this.m_grid_grps.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_grps.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid_grps.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
 			this.m_grid_grps.Location = new System.Drawing.Point(0, 0);
@@ -397,9 +408,9 @@ namespace RyLogViewer
 			this.m_grid_grps.Name = "m_grid_grps";
 			this.m_grid_grps.ReadOnly = true;
 			this.m_grid_grps.RowHeadersVisible = false;
-			this.m_grid_grps.RowTemplate.Height = 16;
+			this.m_grid_grps.RowTemplate.Height = 18;
 			this.m_grid_grps.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_grps.Size = new System.Drawing.Size(127, 85);
+			this.m_grid_grps.Size = new System.Drawing.Size(149, 85);
 			this.m_grid_grps.TabIndex = 0;
 			// 
 			// m_lbl_groups
@@ -443,5 +454,18 @@ namespace RyLogViewer
 
 		}
 		#endregion
+	}
+
+	/// <summary>Workaround for the retarded VS designer</summary>
+	public class PatternUIImpl :PatternUIBase<Pattern>
+	{
+		/// <summary>Access to the test text field</summary>
+		public override string TestText { get; set; }
+
+		/// <summary>Set focus to the primary input field</summary>
+		public override void FocusInput() {}
+
+		/// <summary>Update the UI elements based on the current pattern</summary>
+		protected override void UpdateUIInternal() {}
 	}
 }

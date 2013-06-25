@@ -17,6 +17,9 @@ namespace RyLogViewer
 			m_values = new Dictionary<string, string>();
 		}
 
+		/// <summary>True if this substitution can be configured</summary>
+		public override bool Configurable { get { return true; } }
+
 		/// <summary>A summary of the configuration for this transform substitution</summary>
 		public override string ConfigSummary
 		{
