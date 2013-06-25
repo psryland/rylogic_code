@@ -4135,16 +4135,17 @@ namespace pr
 	using System.Data.Linq.SqlClient;
 	using System.IO;
 	using common;
-	
+	using util;
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static class TestSqlite
 		{
+			private static string FilePath;
+
 			#region DomTypes
 			// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
 			public enum SomeEnum { One = 1, Two = 2, Three = 3 }
-
-			public static int s_counter = 0;
 
 			// Tests user types can be mapped to table columns
 			private class Custom
@@ -4188,9 +4189,9 @@ namespace pr
 				private int      m_ign_private_field;
 				public  short    Ign_PublicField;
 				public DomType0(){}
-				public DomType0(int seed)
+				public DomType0(ref int key, int seed)
 				{
-					Inc_Key = ++s_counter;
+					Inc_Key = ++key;
 					Inc_Value = seed.ToString(CultureInfo.InvariantCulture);
 					Inc_Enum = (SomeEnum)((seed % 3) + 1);
 					Ign_NoGetter = seed;
@@ -4432,34 +4433,26 @@ namespace pr
 			// ReSharper restore FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
 			#endregion
 
-			// The test methods can run in any order, but we only want to do this stuff once
-			private static bool OneTimeOnly_Done = false;
-			private static void OneTimeOnly()
+			[TestFixtureSetUp] public static void Setup()
 			{
-				s_counter = 0;
-				if (OneTimeOnly_Done) return;
-				OneTimeOnly_Done = true;
-
 				// Copy sqlite3.dll to test folder
 				var src_file = Environment.Is64BitProcess
 					? @"Q:\sdk\sqlite\lib\sqlite3.x64.debug.dll"
 					: @"Q:\sdk\sqlite\lib\sqlite3.x86.debug.dll";
-				File.Copy(src_file,  Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
+				File.Copy(src_file, Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
 
 				// Register custom type bind/read methods
 				Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);
 				Sqlite.Read.FunctionMap.Add(typeof(Custom), Custom.SqliteRead);
-			
+
 				// Use single threading
 				Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
-			}
 
+				FilePath = new FileInfo("tmpDB.db").FullName;
+			}
 			[Test] public static void DefaultUse()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a simple table
@@ -4480,9 +4473,10 @@ namespace pr
 					}
 				
 					// Create some objects to stick in the table
-					var obj1 = new DomType0(5);
-					var obj2 = new DomType0(6);
-					var obj3 = new DomType0(7);
+					int key = 0;
+					var obj1 = new DomType0(ref key, 5);
+					var obj2 = new DomType0(ref key, 6);
+					var obj3 = new DomType0(ref key, 7);
 				
 					// Insert stuff
 					Assert.AreEqual(1, table.Insert(obj1));
@@ -4497,10 +4491,7 @@ namespace pr
 			}
 			[Test] public static void TypicalUse()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a table
@@ -4646,10 +4637,7 @@ namespace pr
 			}
 			[Test] public static void MultiplePks()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a table
@@ -4742,10 +4730,7 @@ namespace pr
 			}
 			[Test] public static void Unicode()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a table
@@ -4785,10 +4770,7 @@ namespace pr
 			}
 			[Test] public static void Transactions()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a table
@@ -4797,7 +4779,8 @@ namespace pr
 					Assert.IsTrue(db.TableExists<DomType0>());
 					
 					// Create and insert some objects
-					var objs = Enumerable.Range(0,10).Select(i => new DomType0(i)).ToList();
+					int key = 0;
+					var objs = Enumerable.Range(0,10).Select(i => new DomType0(ref key, i)).ToList();
 					foreach (var x in objs.Take(3))
 						db.Insert(x, Sqlite.OnInsertConstraint.Replace);
 
@@ -4838,10 +4821,7 @@ namespace pr
 			}
 			[Test] public static void RuntimeTypes()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a table
@@ -4865,10 +4845,7 @@ namespace pr
 			}
 			[Test] public static void AlterTable()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a table
@@ -4939,10 +4916,7 @@ namespace pr
 			}
 			[Test] public static void ExprTree()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a simple table
@@ -4952,16 +4926,10 @@ namespace pr
 					var table = db.Table<DomType0>();
 				
 					// Insert stuff
-					Assert.AreEqual(1, table.Insert(new DomType0(4)));
-					Assert.AreEqual(1, table.Insert(new DomType0(1)));
-					Assert.AreEqual(1, table.Insert(new DomType0(0)));
-					Assert.AreEqual(1, table.Insert(new DomType0(5)));
-					Assert.AreEqual(1, table.Insert(new DomType0(7)));
-					Assert.AreEqual(1, table.Insert(new DomType0(9)));
-					Assert.AreEqual(1, table.Insert(new DomType0(6)));
-					Assert.AreEqual(1, table.Insert(new DomType0(3)));
-					Assert.AreEqual(1, table.Insert(new DomType0(8)));
-					Assert.AreEqual(1, table.Insert(new DomType0(2)));
+					int key = 0;
+					var values = new[]{4,1,0,5,7,9,6,3,8,2};
+					foreach (var v in values)
+						Assert.AreEqual(1, table.Insert(new DomType0(ref key, v)));
 					Assert.AreEqual(10, table.RowCount);
 				
 					string sql_count = "select count(*) from "+table.Name;
@@ -5176,10 +5144,7 @@ namespace pr
 			}
 			[Test] public static void UntypedExprTree()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a simple table
@@ -5189,16 +5154,10 @@ namespace pr
 					var table = db.Table(typeof(DomType0));
 				
 					// Insert stuff
-					Assert.AreEqual(1, table.Insert(new DomType0(4)));
-					Assert.AreEqual(1, table.Insert(new DomType0(1)));
-					Assert.AreEqual(1, table.Insert(new DomType0(0)));
-					Assert.AreEqual(1, table.Insert(new DomType0(5)));
-					Assert.AreEqual(1, table.Insert(new DomType0(7)));
-					Assert.AreEqual(1, table.Insert(new DomType0(9)));
-					Assert.AreEqual(1, table.Insert(new DomType0(6)));
-					Assert.AreEqual(1, table.Insert(new DomType0(3)));
-					Assert.AreEqual(1, table.Insert(new DomType0(8)));
-					Assert.AreEqual(1, table.Insert(new DomType0(2)));
+					int key = 0;
+					var values = new[]{4,1,0,5,7,9,6,3,8,2};
+					foreach (var v in values)
+						Assert.AreEqual(1, table.Insert(new DomType0(ref key, v)));
 					Assert.AreEqual(10, table.RowCount);
 				
 					string sql_count = "select count(*) from "+table.Name;
@@ -5367,10 +5326,7 @@ namespace pr
 			}
 			[Test] public static void Nullables()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a simple table
@@ -5464,10 +5420,7 @@ namespace pr
 			}
 			[Test] public static void AttributeInheritance()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a simple table
@@ -5499,10 +5452,7 @@ namespace pr
 			}
 			[Test] public static void RowChangedEvents()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Sign up a handler for row changed
@@ -5544,10 +5494,7 @@ namespace pr
 			}
 			[Test] public static void ObjectCache()
 			{
-				OneTimeOnly();
-			
 				// Create/Open the database connection
-				const string FilePath = "tmpDB.db";
 				using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
 				{
 					// Create a simple table
@@ -5606,11 +5553,19 @@ namespace pr
 					obj2.Data = "Changed";
 					table.Update(obj2);
 					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
-					
+
 					var o2_d = table.Get<DomType5>(2);
 					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
 					Assert.IsTrue(table.MetaData.Equal(obj2, o2_d));
-					
+
+					// Check that changes via individual column updates also invalidate the cache
+					obj2.Data = "ChangedAgain";
+					table.Update(Reflect<DomType5>.MemberName(x => x.Data), obj2.Data, obj2.PK);
+					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
+					var o2_e = table.Get<DomType5>(2);
+					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
+					Assert.IsTrue(table.MetaData.Equal(obj2, o2_e));
+
 					// Check deleting an object also removes it from the cache
 					table.Delete(obj2);
 					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
