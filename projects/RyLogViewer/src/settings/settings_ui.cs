@@ -96,7 +96,7 @@ namespace RyLogViewer
 			m_tabctrl.SelectedIndexChanged += (s,a) => FocusInput();
 
 			SetupGeneralTab();
-			SetupLogViewTab();
+			SetupAppearanceTab();
 			SetupHighlightTab();
 			SetupFilterTab();
 			SetupTransformTab();
@@ -363,12 +363,12 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Hook up events for the log view tab</summary>
-		private void SetupLogViewTab()
+		private void SetupAppearanceTab()
 		{
 			string tt;
 
 			// Selection colour
-			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view");
+			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view\r\nClick here to modify the colours");
 			m_lbl_selection_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_selection_example, a.X, a.Y,
@@ -378,7 +378,7 @@ namespace RyLogViewer
 				};
 			
 			// Log text colour
-			m_lbl_line1_example.ToolTip(m_tt, "Set the foreground and background colours in the log view");
+			m_lbl_line1_example.ToolTip(m_tt, "Set the foreground and background colours in the log view\r\nClick here to modify the colours");
 			m_lbl_line1_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_line1_example, a.X, a.Y,
@@ -388,7 +388,7 @@ namespace RyLogViewer
 				};
 			
 			// Alt log text colour
-			m_lbl_line2_example.ToolTip(m_tt, "Set the foreground and background colours for odd numbered rows in the log view");
+			m_lbl_line2_example.ToolTip(m_tt, "Set the foreground and background colours for odd numbered rows in the log view\r\nClick here to modify the colours");
 			m_lbl_line2_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_line2_example, a.X, a.Y,
@@ -442,7 +442,7 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 
-			tt = "The colour of the currently cached portion of the log file";
+			tt = "The colour representing the cached portion of the log file in the file scroll bar\r\nClick here to modify the colour";
 			m_lbl_fs_cached_colour.ToolTip(m_tt, tt);
 			m_lbl_fs_edit_cached_colour.ToolTip(m_tt, tt);
 			m_lbl_fs_edit_cached_colour.BackColor = m_settings.ScrollBarCachedRangeColour;
@@ -453,7 +453,7 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 
-			tt = "The colour of the currently visible portion of the log file";
+			tt = "The colour representing the portion of the log file currently on screen\r\nClick here to modify the colour";
 			m_lbl_fs_visible_colour.ToolTip(m_tt, tt);
 			m_lbl_fs_edit_visible_colour.ToolTip(m_tt, tt);
 			m_lbl_fs_edit_visible_colour.BackColor = m_settings.ScrollBarDisplayRangeColour;
@@ -464,7 +464,7 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 
-			tt = "The colour of the bookmarked locations";
+			tt = "The colour of the bookmarked locations\r\nClick here to modify the colour";
 			m_lbl_fs_bookmark_colour.ToolTip(m_tt, tt);
 			m_lbl_fs_edit_bookmark_colour.ToolTip(m_tt, tt);
 			m_lbl_fs_edit_bookmark_colour.BackColor = m_settings.BookmarkColour;
