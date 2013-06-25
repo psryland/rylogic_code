@@ -226,8 +226,7 @@ namespace RyLogViewer
 				
 				// Compile the expression
 				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
-				m_compiled_patn = new Regex(expr, opts);
-				return m_compiled_patn;
+				return m_compiled_patn = new Regex(expr, opts);
 			}
 		}
 
@@ -314,23 +313,25 @@ namespace RyLogViewer
 				caps.Add(cap.Id, cap);
 				src_caps.Add(cap);
 			}
-
-			string replace = Replace;
-
+			
+			string result = text;
+			result = result.Remove(grps[0].Index, grps[0].Length);
+			result = result.Insert(grps[0].Index, Replace);
+			
 			// Build a list of the tags to be replaced in the result string
-			List<Tag> rtags = GetTags(replace).ToList();
-
+			List<Tag> rtags = GetTags(result).ToList();
+			
 			// Perform the substitutions
 			int ofs = 0;
 			foreach (Tag t in rtags)
 			{
 				string sub = Subs[t.Id].Result(caps[t.Id].Elem);
-				replace = replace.Remove(t.Span.Index + ofs, t.Span.Count);
-				replace = replace.Insert(t.Span.Index + ofs, sub);
+				result = result.Remove(t.Span.Index + ofs, t.Span.Count);
+				result = result.Insert(t.Span.Index + ofs, sub);
 				dst_caps.Add(new Capture(t.Id, sub, new Span(t.Span.Index + ofs, sub.Length)));
 				ofs += sub.Length - t.Span.Count;
 			}
-
+			
 			// Sort 'dst_caps' so that it's in the same order as 'src_caps'
 			for (int i = 0, j = 0; i != src_caps.Count && j != dst_caps.Count; ++i)
 			{
@@ -341,24 +342,23 @@ namespace RyLogViewer
 				// If found move it to position j
 				if (idx != -1) dst_caps.Swap(idx, j++);
 			}
-
-			// The transform only replaces the portion of 'text' that matches the pattern.
-			var result = text.Remove(grps[0].Index, grps[0].Length);
-			result = result.Insert(grps[0].Index, replace);
 			return result;
 		}
 
 		/// <summary>Apply the transform to 'text' (as fast as possible).</summary>
 		public string Txfm(string text)
 		{
+			// This method is a duplicate of the one above, but is optimised for transforming
+			// rows from the log file.
+
 			Debug.Assert(IsValid, "Shouldn't be calling this unless the transform is valid");
-			
+
 			// If 'text' doesn't match the 'Match' expression, return the string unchanged
 			Match match = Regex.Match(text);
 			if (!match.Success) return text;
-			
+
 			var caps = new Dictionary<string,Capture>();
-			
+
 			// Get the map of capture ids to captured values from 'text'
 			var ids  = CaptureGroupNames; // The collection of tags in the match template
 			var grps = match.Groups;      // The captures from 'text' (starting at index 1, elem zero is always the whole match)
@@ -368,14 +368,17 @@ namespace RyLogViewer
 				Capture cap = new Capture(ids[i], grps[i].Value);
 				caps.Add(cap.Id, cap);
 			}
-			
+
+			// Transform works by only replacing the portion of 'text' that matches the
+			// pattern. If users want to replace the entire line they need to setup the
+			// pattern so that it matches the entire line.
 			string result = text;
 			result = result.Remove(grps[0].Index, grps[0].Length);
 			result = result.Insert(grps[0].Index, Replace);
-			
+
 			// Build a list of the tags to be replaced in the result string
 			List<Tag> rtags = (from t in GetTags(result) where ids.Contains(t.Id) select t).ToList();
-			
+
 			// Perform the substitutions
 			int ofs = 0;
 			foreach (Tag t in rtags)
