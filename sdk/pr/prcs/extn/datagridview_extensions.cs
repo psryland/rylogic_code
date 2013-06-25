@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.maths;
@@ -249,7 +250,16 @@ namespace pr.extn
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
 		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
 		{
-			return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
+			int i = grid.Rows.GetFirstRow(DataGridViewElementStates.Selected);
+			return i != -1 ? grid.Rows[i] : null;
+			//return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
+		}
+
+		/// <summary>Returns an enumerator for accessing rows with the given property</summary>
+		public static IEnumerable<DataGridViewRow> GetRowsWithState(this DataGridView grid, DataGridViewElementStates state)
+		{
+			for (int i = grid.Rows.GetFirstRow(state); i != -1; i = grid.Rows.GetNextRow(i, state))
+				yield return grid.Rows[i];
 		}
 
 		/// <summary>

@@ -48,15 +48,6 @@ namespace pr.util
 			return Maths.Compare(llength, rlength);
 		}
 
-		/// <summary>Enable double buffering for the control</summary>
-		public static void DblBuffer(this Control ctl)
-		{
-			PropertyInfo pi = ctl.GetType().GetProperty("DoubleBuffered", BindingFlags.Instance|BindingFlags.NonPublic);
-			pi.SetValue(ctl, true, null);
-			MethodInfo mi = ctl.GetType().GetMethod("SetStyle", BindingFlags.Instance|BindingFlags.NonPublic);
-			mi.Invoke(ctl, new object[]{ControlStyles.DoubleBuffer|ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint, true});
-		}
-
 		/// <summary>Convert a collection of 'U' into a collection of 'T' using 'conv' to do the conversion</summary>
 		public static IEnumerable<T> Conv<T,U>(IEnumerable<U> collection, Func<U, T> conv)
 		{
