@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.common;
+using pr.extn;
 using pr.util;
 
 namespace RyLogViewer
@@ -68,8 +69,7 @@ namespace RyLogViewer
 			PatternChanged(this, EventArgs.Empty);
 		}
 
-		public Pattern() :this(EPattern.Substring, "")
-		{}
+		public Pattern() :this(EPattern.Substring, string.Empty) {}
 		public Pattern(EPattern patn_type, string expr)
 		{
 			PatnType    = patn_type;
@@ -88,8 +88,6 @@ namespace RyLogViewer
 			Invert      = rhs.Invert;
 			BinaryMatch = rhs.BinaryMatch;
 		}
-
-		/// <summary>Construct from xml description</summary>
 		public Pattern(XElement node)
 		{
 			// ReSharper disable PossibleNullReferenceException
@@ -118,7 +116,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns the match template as a compiled regular expression</summary>
-		private Regex Regex
+		protected Regex Regex
 		{
 			get
 			{
@@ -164,6 +162,16 @@ namespace RyLogViewer
 				// Compile the expression
 				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
 				return m_compiled_patn = new Regex(expr, opts);
+			}
+		}
+
+		/// <summary>Return the compiled regex string for reference</summary>
+		public string RegexString
+		{
+			get
+			{
+				var ex = ValidateExpr();
+				return ex == null ? Regex.ToString() : "Expression invalid - {0}".Fmt(ex.Message);
 			}
 		}
 

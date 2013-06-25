@@ -156,6 +156,13 @@ namespace RyLogViewer
 				{
 					UpdateUI();
 				};
+			int last_selected_line = -1;
+			m_edit_test.SelectionChanged += (s,a) =>
+				{
+					var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
+					if (last_selected_line != idx) last_selected_line = idx; else return;
+					UpdateUI();
+				};
 
 			// Result text
 			m_edit_result.ToolTip(m_tt, "Shows the result of applying the transform to the text in the test area above");
@@ -370,10 +377,12 @@ namespace RyLogViewer
 				// Restore the selection
 				m_edit_test.Select(start, length);
 
-				// Updates the caps data because on the line that the 
+				// Updates the caps data based on the line that the cursor's in
+				var line_index = m_edit_test.GetLineFromCharIndex(start);
+				var line = line_index >= 0 && line_index < lines.Length ? lines[line_index] : string.Empty;
 				var groups = new Dictionary<string, string>();
 				foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
-				foreach (var cap in Pattern.CaptureGroups(m_edit_test.Text)) groups[cap.Key] = cap.Value;
+				foreach (var cap in Pattern.CaptureGroups(line)) groups[cap.Key] = cap.Value;
 				m_caps = groups.ToList();
 			}
 
