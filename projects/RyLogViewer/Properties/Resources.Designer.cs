@@ -779,24 +779,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Scroll to the last log file row.
-        /// </summary>
-        internal static string ScrollToEnd {
-            get {
-                return ResourceManager.GetString("ScrollToEnd", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Scroll to the first log file row.
-        /// </summary>
-        internal static string ScrollToStart {
-            get {
-                return ResourceManager.GetString("ScrollToStart", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Settings Files (*.xml)|*.xml|All files (*.*)|*.*.
         /// </summary>
         internal static string SettingsFileFilter {

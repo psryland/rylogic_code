@@ -93,7 +93,11 @@ namespace RyLogViewer
 			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
 			m_tabctrl.Deselecting += (s,a) => TabChanging(a);
-			m_tabctrl.SelectedIndexChanged += (s,a) => FocusInput();
+			m_tabctrl.SelectedIndexChanged += (s,a) =>
+				{
+					UpdateUI();
+					FocusInput();
+				};
 
 			SetupGeneralTab();
 			SetupAppearanceTab();

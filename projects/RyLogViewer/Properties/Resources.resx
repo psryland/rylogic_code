@@ -181,14 +181,8 @@
   <data name="XmlOrCsvFileFilter" xml:space="preserve">
     <value>XML Files (*.xml)|*.xml|CSV Files (*.csv)|*.csv</value>
   </data>
-  <data name="ScrollToStart" xml:space="preserve">
-    <value>Scroll to the first log file row</value>
-  </data>
   <data name="green_up" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\green_up.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="ScrollToEnd" xml:space="preserve">
-    <value>Scroll to the last log file row</value>
   </data>
   <data name="CreatePatternSetFailed" xml:space="preserve">
     <value>Add Pattern Set Failed</value>

@@ -192,9 +192,9 @@ namespace RyLogViewer
 			m_btn_find.Click               += (s,a) => ShowFindDialog();
 			m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
 			m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
-			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
+			m_btn_jump_to_start.ToolTipText = "Selected the first row in the log file";
 			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRowIndex = 0);
-			m_btn_jump_to_end.ToolTipText   = Resources.ScrollToEnd;
+			m_btn_jump_to_end.ToolTipText   = "Selected the last row in the log file";
 			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRowIndex = m_grid.RowCount - 1);
 			m_btn_tail.ToolTipText          = Resources.WatchTail;
 			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);

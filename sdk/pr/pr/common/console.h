@@ -1559,10 +1559,10 @@ namespace pr
 					default: throw std::exception("Unknown pad item");
 					case Pad::SetColours:break;
 					case Pad::NewLine: ++h; w = 0; break;
-					case Pad::AString: w += item.m_linea->size(); break;
-					case Pad::WString: w += item.m_linew->size(); break;
+					case Pad::AString: w += (int)item.m_linea->size(); break;
+					case Pad::WString: w += (int)item.m_linew->size(); break;
 					case Pad::SetCursor: cur = *item.m_cursor; w = 0; h = 0; break;
-					case Pad::CurrentInput: w += current_input.size(); break;
+					case Pad::CurrentInput: w += (int)current_input.size(); break;
 					}
 					sz.cx = std::max(sz.cx, long(cur.X + w));
 					sz.cy = std::max(sz.cy, long(cur.Y + h));

@@ -226,7 +226,8 @@ namespace RyLogViewer
 				
 				// Compile the expression
 				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
-				return m_compiled_patn = new Regex(expr, opts);
+				m_compiled_patn = new Regex(expr, opts);
+				return m_compiled_patn;
 			}
 		}
 
@@ -313,25 +314,23 @@ namespace RyLogViewer
 				caps.Add(cap.Id, cap);
 				src_caps.Add(cap);
 			}
-			
-			string result = text;
-			result = result.Remove(grps[0].Index, grps[0].Length);
-			result = result.Insert(grps[0].Index, Replace);
-			
+
+			string replace = Replace;
+
 			// Build a list of the tags to be replaced in the result string
-			List<Tag> rtags = GetTags(result).ToList();
-			
+			List<Tag> rtags = GetTags(replace).ToList();
+
 			// Perform the substitutions
 			int ofs = 0;
 			foreach (Tag t in rtags)
 			{
 				string sub = Subs[t.Id].Result(caps[t.Id].Elem);
-				result = result.Remove(t.Span.Index + ofs, t.Span.Count);
-				result = result.Insert(t.Span.Index + ofs, sub);
+				replace = replace.Remove(t.Span.Index + ofs, t.Span.Count);
+				replace = replace.Insert(t.Span.Index + ofs, sub);
 				dst_caps.Add(new Capture(t.Id, sub, new Span(t.Span.Index + ofs, sub.Length)));
 				ofs += sub.Length - t.Span.Count;
 			}
-			
+
 			// Sort 'dst_caps' so that it's in the same order as 'src_caps'
 			for (int i = 0, j = 0; i != src_caps.Count && j != dst_caps.Count; ++i)
 			{
@@ -342,6 +341,10 @@ namespace RyLogViewer
 				// If found move it to position j
 				if (idx != -1) dst_caps.Swap(idx, j++);
 			}
+
+			// The transform only replaces the portion of 'text' that matches the pattern.
+			var result = text.Remove(grps[0].Index, grps[0].Length);
+			result = result.Insert(grps[0].Index, replace);
 			return result;
 		}
 

@@ -263,8 +263,7 @@ namespace RyLogViewer
 			m_cap_ids = Pattern.CaptureGroupNames;
 			m_grid_subs.RowCount = m_cap_ids.Length;
 			m_grid_subs.Refresh();
-			
-			m_btn_add.Enabled           = Pattern.IsValid && Pattern.Expr.Length != 0;
+
 			m_edit_match.Text           = Pattern.Expr;
 			m_edit_eqv_regex.Text       = Pattern.RegexString;
 			m_edit_replace.Text         = Pattern.Replace;
@@ -272,12 +271,16 @@ namespace RyLogViewer
 			m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
 			m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
 			m_check_ignore_case.Checked = Pattern.IgnoreCase;
-				
+
+			m_btn_add.ToolTip(m_tt, IsNew ? "Add this new pattern" : "Save changes to this pattern");
+			m_btn_add.ImageIndex = (int)(IsNew ? EBtnImageIdx.AddNew : EBtnImageIdx.Save);
+			m_btn_add.Enabled = CommitEnabled;
+
 			// Show/Hide the eqv regex
 			m_table.Height = m_table.PreferredSize.Height;
 			m_split_subs.Top = m_table.Bottom;
 			m_split_subs.Height = m_split_subs.Parent.Height - m_split_subs.Top - 3;
-				
+
 			// Highlight the match/replace fields if in error
 			var ex0 = Pattern.ValidateExpr();
 			string tt0 = ex0 == null

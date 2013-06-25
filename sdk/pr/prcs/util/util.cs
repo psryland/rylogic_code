@@ -241,7 +241,35 @@ namespace pr.util
 			try { action(); } finally { Monitor.Exit(obj); }
 			return true;
 		}
-		
+
+		/// <summary>Excute a function in a background thread and terminate it if it doesn't finished before 'timeout'</summary>
+		public static TResult RunWithTimeout<TResult>(Func<TResult> proc, int duration)
+		{
+			var r = default(TResult);
+			Exception ex = null;
+			using (var reset = new AutoResetEvent(false))
+			{
+				// Can't use the thread pool for this because we abort the thread
+				var thread = new Thread(() =>
+					{
+						// ReSharper disable AccessToDisposedClosure
+						try { r = proc(); }
+						catch (Exception e) { ex = e; }
+						reset.Set();
+						// ReSharper restore AccessToDisposedClosure
+					});
+				thread.Start();
+				if (!reset.WaitOne(duration))
+				{
+					thread.Abort();
+					throw new TimeoutException();
+				}
+			}
+			if (ex != null)
+				throw ex;
+			return r;
+		}
+
 		/// <summary>Helper method for converting a filename extension to a mime type</summary>
 		public static string MimeFromExtn(string extn)
 		{
