@@ -1,0 +1,141 @@
+﻿*
+{
+	font-family: arial;
+	font-size: 100%;
+	text-align: justify;
+	font-weight: normal;
+}
+
+body
+{
+}
+
+table
+{
+	border: 1px solid black;
+	border-collapse: collapse;
+}
+
+th
+{
+	border: 1px solid black;
+	border-collapse: collapse;
+}
+
+td
+{
+	border: 1px solid black;
+	border-collapse: collapse;
+}
+
+p
+{
+	margin: 0px;
+}
+
+b
+{
+	font-weight: bolder;
+}
+
+img.centred
+{
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+#main_help
+{
+	background: url(background.png) no-repeat;
+}
+
+#main_title
+{
+	margin: 10px;
+	margin-bottom: 20px;
+}
+
+	#main_title img
+	{
+		margin-right: 20px;
+		vertical-align: text-bottom;
+		margin-bottom: -10px;
+	}
+
+	#main_title span
+	{
+		font-size: 180%;
+		font-weight: bold;
+		margin-bottom: 20px;
+	}
+
+#main_table
+{
+	height: 1800px;
+}
+
+.left_panel
+{
+	vertical-align: top;
+	width: 180px;
+}
+
+.right_panel
+{
+	width: 600px;
+	height: 100%;
+}
+
+.menu1
+{
+	font-weight: bold;
+	line-height: 220%;
+	margin-left: 10px;
+}
+
+.menu2
+{
+	font-size: 90%;
+	margin-left: 30px;
+}
+
+#details
+{
+	border: 0px;
+}
+
+.title
+{
+	font-size: 150%;
+	font-weight: bold;
+	margin-bottom: 10px;
+}
+
+.tag_label
+{
+	font-weight: bold;
+	font-style: italic;
+}
+
+.content
+{
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+.child_list_elem
+{
+	margin: 0px;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	list-style-type: disc;
+}
+
+.code
+{
+	font-family: monospace;
+	font-size: 140%;
+	font-weight: 600;
+	margin: 10px;
+}

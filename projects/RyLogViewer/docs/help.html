@@ -1,26 +1,36 @@
-﻿<html xmlns="http://www.w3.org/1999/xhtml">
+﻿<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<title>RyLogViewer Help</title>
-		<link rel='stylesheet' type='text/css' href='totd.css' />
+		<link rel='stylesheet' type='text/css' href='help.css' />
+		<base target="_top" />
+		<meta http-equiv="refresh" content="1">
 	</head>
-	<body>
-		<div class="title">RyLogViewer Help</div>
-		<div>
-			<a href="highlighting.html">Highlighting</a>
-			General Description
-			Android Developers
+	<body id="main_help">
+		<div id="main_title">
+			<img src="book.png" alt="Logo"/>
+			<span>RyLogViewer Help</span>
 		</div>
-		<div class="content">
-			RylogViewer is designed to work with very large text files that are 
-			changing dynamically. It continuously displays the file content, 
-			updating as it changes similar to the Unix 'tail' command. 
-			In addition, powerful pattern matching options allow highlighting, 
-			filtering, text transformations, and custom actions. There is searching, 
-			bookmarking, and support for common text encodings. RylogViewer can display 
-			live program output, or data received over a serial port, TCP/UDP connection 
-			or named pipe.
+		<div>
+			<table id="main_table">
+				<tr>
+					<td class="left_panel">
+						<div class="left_panel">
+							<a href="general.html" target="details"><span class="menu1">General Description</span></a><br/>
+							<a href="highlighting.html" target="details"><span class="menu1">Highlighting</span></a><br/>
+							<a href="highlighting.html#match_type"><span class="menu2">Match Type</span></a><br />
+							<a href="filtering.html" target="details"><span class="menu1">Filtering</span></a><br />
+							<a href="transforms.html" target="details"><span class="menu1">Transforms</span></a><br />
+							<a href="click actions.html" target="details"><span class="menu1">Click Actions</span></a><br/>
+						</div>
+					</td>
+					<td class="right_panel">
+						<iframe name="details" id="details" class="right_panel" src="highlighting.html" >
+							This browser does not support iframes
+						</iframe>
+					</td>
+				</tr>
+			</table>
 		</div>
 	</body>
 </html>
-
-

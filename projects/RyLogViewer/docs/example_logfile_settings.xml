@@ -162,16 +162,6 @@
     <key>HighlightPatterns</key>
     <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
   &lt;highlight&gt;
-    &lt;expr&gt;^([A-Z]{2,})|(-{2,})&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;forecolour&gt;FF80FF00&lt;/forecolour&gt;
-    &lt;backcolour&gt;FF808080&lt;/backcolour&gt;
-  &lt;/highlight&gt;
-  &lt;highlight&gt;
     &lt;expr&gt;Error:&lt;/expr&gt;
     &lt;active&gt;true&lt;/active&gt;
     &lt;patntype&gt;Substring&lt;/patntype&gt;
@@ -210,6 +200,16 @@
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;forecolour&gt;FF808080&lt;/forecolour&gt;
     &lt;backcolour&gt;FFC0C0C0&lt;/backcolour&gt;
+  &lt;/highlight&gt;
+  &lt;highlight&gt;
+    &lt;expr&gt;^([A-Z]{2,})|(-{2,})&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
+    &lt;backcolour&gt;FF808080&lt;/backcolour&gt;
   &lt;/highlight&gt;
 &lt;/root&gt;</value>
   </setting>
@@ -329,7 +329,7 @@
   </setting>
   <setting>
     <key>RecentFiles</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">Q:\projects\RyLogViewer\docs\example_logfile.txt,Q:\miscellaneous\VisualStudio Mods\pr_visualisers.natvis,Q:\miscellaneous\VisualStudio Mods\pr_stepfilter.natstepfilter,D:\deleteme\testlog.txt,D:\deleteme\logcat_192_168_100_159.txt,D:\deleteme\logcat_192_168_100_162.txt,D:\deleteme\logcat_emulator.txt</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">Q:\projects\RyLogViewer\docs\example_logfile.txt,D:\deleteme\logcat_192_168_100_162.txt,D:\deleteme\testlog.txt,D:\deleteme\logcat_192_168_100_159.txt,D:\deleteme\logcat_emulator.txt,Q:\miscellaneous\VisualStudio Mods\pr_visualisers.natvis,Q:\miscellaneous\VisualStudio Mods\pr_stepfilter.natstepfilter</value>
   </setting>
   <setting>
     <key>RestoreScreenLoc</key>
@@ -346,8 +346,8 @@
   <setting>
     <key>ScreenPosition</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Point">
-      <d3p1:x>655</d3p1:x>
-      <d3p1:y>88</d3p1:y>
+      <d3p1:x>2052</d3p1:x>
+      <d3p1:y>-55</d3p1:y>
     </value>
   </setting>
   <setting>
@@ -397,14 +397,12 @@
     <key>TransformPatterns</key>
     <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
   &lt;transform&gt;
-    &lt;match&gt;
-      &lt;expr&gt;^&amp;lt;(.*)&amp;gt;&lt;/expr&gt;
-      &lt;active&gt;true&lt;/active&gt;
-      &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-      &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-      &lt;invert&gt;false&lt;/invert&gt;
-      &lt;binary&gt;true&lt;/binary&gt;
-    &lt;/match&gt;
+    &lt;expr&gt;&amp;lt;(.*)&amp;gt;&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
     &lt;replace&gt;{1}&lt;/replace&gt;
     &lt;subs&gt;
       &lt;sub&gt;
@@ -416,76 +414,6 @@
         &lt;name&gt;Upper Case&lt;/name&gt;
         &lt;id&gt;1&lt;/id&gt;
         &lt;subdata /&gt;
-      &lt;/sub&gt;
-    &lt;/subs&gt;
-  &lt;/transform&gt;
-  &lt;transform&gt;
-    &lt;match&gt;
-      &lt;expr&gt;An error of type {code} occurred&lt;/expr&gt;
-      &lt;active&gt;true&lt;/active&gt;
-      &lt;patntype&gt;Substring&lt;/patntype&gt;
-      &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-      &lt;invert&gt;false&lt;/invert&gt;
-      &lt;binary&gt;true&lt;/binary&gt;
-    &lt;/match&gt;
-    &lt;replace&gt;Windows result code: {code}&lt;/replace&gt;
-    &lt;subs&gt;
-      &lt;sub&gt;
-        &lt;name&gt;No Change&lt;/name&gt;
-        &lt;id&gt;0&lt;/id&gt;
-        &lt;subdata /&gt;
-      &lt;/sub&gt;
-      &lt;sub&gt;
-        &lt;name&gt;Code Lookup&lt;/name&gt;
-        &lt;id&gt;code&lt;/id&gt;
-        &lt;subdata&gt;
-          &lt;codevalues&gt;
-            &lt;cv&gt;
-              &lt;c&gt;0&lt;/c&gt;
-              &lt;v&gt;ERROR_SUCCESS - The operation completed successfully&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;1&lt;/c&gt;
-              &lt;v&gt;ERROR_INVALID_FUNCTION - Incorrect function&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;2&lt;/c&gt;
-              &lt;v&gt;ERROR_FILE_NOT_FOUND - The system cannot find the file specified&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;3&lt;/c&gt;
-              &lt;v&gt;ERROR_PATH_NOT_FOUND - The system cannot find the path specified&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;4&lt;/c&gt;
-              &lt;v&gt;ERROR_TOO_MANY_OPEN_FILES - The system cannot open the file&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;5&lt;/c&gt;
-              &lt;v&gt;ERROR_ACCESS_DENIED - Access is denied&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;6&lt;/c&gt;
-              &lt;v&gt;ERROR_INVALID_HANDLE - The handle is invalid&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;7&lt;/c&gt;
-              &lt;v&gt;ERROR_ARENA_THRASHED - The storage control blocks were destroyed&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;8&lt;/c&gt;
-              &lt;v&gt;ERROR_NOT_ENOUGH_MEMORY - Not enough storage is available to process this command&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;9&lt;/c&gt;
-              &lt;v&gt;ERROR_INVALID_BLOCK - The storage control block address is invalid&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;10&lt;/c&gt;
-              &lt;v&gt;ERROR_BAD_ENVIRONMENT - The environment is incorrect&lt;/v&gt;
-            &lt;/cv&gt;
-          &lt;/codevalues&gt;
-        &lt;/subdata&gt;
       &lt;/sub&gt;
     &lt;/subs&gt;
   &lt;/transform&gt;

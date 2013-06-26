@@ -235,6 +235,12 @@
     </Compile>
     <None Include="Resources\swizzle_quick_ref.html" />
     <None Include="Resources\command_line_ref.html" />
+    <Content Include="docs\book.png" />
+    <Content Include="docs\filtering.html" />
+    <Content Include="docs\general.html" />
+    <Content Include="docs\help.css" />
+    <Content Include="docs\highlighting.png" />
+    <Content Include="docs\pattern_wildcard.png" />
     <Content Include="docs\totd7.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
