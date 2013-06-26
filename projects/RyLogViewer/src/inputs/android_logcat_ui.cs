@@ -356,7 +356,10 @@ namespace RyLogViewer
 				UpdateAdbVersionInfo(true);
 
 				// Setup the device list
-				var devices = Adb("devices").Split(new[]{Environment.NewLine,"\n","\r"}, StringSplitOptions.RemoveEmptyEntries);
+				var output = Adb("devices");
+				var ofs = output.IndexOf("List", StringComparison.Ordinal);
+				var list = ofs != -1 ? output.Substring(ofs) : string.Empty;
+				var devices = list.Split(new[]{Environment.NewLine,"\n","\r"}, StringSplitOptions.RemoveEmptyEntries);
 				m_device_list.Clear();
 				foreach (var device_row in devices.Skip(1))
 				{
