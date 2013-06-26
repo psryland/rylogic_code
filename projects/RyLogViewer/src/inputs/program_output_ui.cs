@@ -2,8 +2,8 @@
 using System.IO;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.maths;
-using pr.util;
 
 namespace RyLogViewer
 {
@@ -13,10 +13,10 @@ namespace RyLogViewer
 		private readonly List<LaunchApp> m_history;
 		private readonly List<string> m_outp_history;
 		private readonly ToolTip  m_tt;
-		
+
 		/// <summary>The command line to execute</summary>
-		public LaunchApp Launch;
-		
+		public LaunchApp Launch { get; set; }
+
 		public ProgramOutputUI(Settings settings)
 		{
 			InitializeComponent();

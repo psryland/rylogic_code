@@ -4,8 +4,8 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.gui;
-using pr.util;
 
 namespace RyLogViewer
 {
@@ -108,7 +108,7 @@ namespace RyLogViewer
 				};
 
 			// Test text
-			m_edit_test.ToolTip(m_tt, "A area for testing your pattern. Add any text you like here");
+			m_edit_test.ToolTip(m_tt, "An area for testing your pattern.\r\nAdd any text you like here");
 			m_edit_test.Text = DefaultTestText;
 			m_edit_test.TextChanged += (s,a)=>
 				{

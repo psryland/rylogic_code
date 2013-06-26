@@ -5,9 +5,9 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.gfx;
 using pr.gui;
-using pr.util;
 
 namespace RyLogViewer
 {
@@ -165,7 +165,10 @@ namespace RyLogViewer
 				};
 
 			// Result text
-			m_edit_result.ToolTip(m_tt, "Shows the result of applying the transform to the text in the test area above");
+			m_edit_result.ToolTip(m_tt,
+				"Shows the result of applying the transform to the text in the test area above\r\n" +
+				"Transforms only replace the portion of the input text that they match.\r\n" +
+				"If you are trying to replace the whole line, your pattern needs to match the whole line");
 		}
 
 		/// <summary>Access to the test text field</summary>

@@ -2,7 +2,7 @@
 using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
-using pr.util;
+using pr.extn;
 
 namespace RyLogViewer
 {

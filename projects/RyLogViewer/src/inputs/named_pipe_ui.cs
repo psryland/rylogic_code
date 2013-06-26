@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.util;
+using pr.extn;
 
 namespace RyLogViewer
 {
@@ -15,7 +15,7 @@ namespace RyLogViewer
 		private string m_pipeaddr;
 			
 		/// <summary>The serial port connection properties selected</summary>
-		public PipeConn Conn;
+		public PipeConn Conn { get; set; }
 		
 		public NamedPipeUI(Settings settings)
 		{

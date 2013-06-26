@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Ports;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.util;
 
 namespace RyLogViewer
@@ -13,10 +14,10 @@ namespace RyLogViewer
 		private readonly List<SerialConn> m_history;
 		private readonly List<string> m_outp_history;
 		private readonly ToolTip m_tt;
-		
+
 		/// <summary>The serial port connection properties selected</summary>
-		public SerialConn Conn;
-		
+		public SerialConn Conn { get; set; }
+
 		public SerialConnectionUI(Settings settings)
 		{
 			InitializeComponent();

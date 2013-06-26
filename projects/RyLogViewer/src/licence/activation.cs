@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
-using pr.util;
+using pr.extn;
 
 namespace RyLogViewer
 {

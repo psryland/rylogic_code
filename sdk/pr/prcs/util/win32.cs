@@ -401,9 +401,21 @@ namespace pr.util
 			return true;
 		}
 
-		public static int MakeLParam(Point pt)
+		/// <summary>Pack a Point into an LPARAM</summary>
+		public static IntPtr PointToLParam(Point pt)
 		{
-			return (((pt.Y & 0xffff) << 16) | (pt.X & 0xffff));
+			return new IntPtr((((pt.Y & 0xffff) << 16) | (pt.X & 0xffff)));
+		}
+
+		/// <summary>Unpack a Point from an LPARAM</summary>
+		public static Point LParamToPoint(IntPtr lparam)
+		{
+			return new Point(lparam.ToInt32() & 0xffff, lparam.ToInt32() >> 16);;
+		}
+
+		public static HWND WindowFromPoint(Point pt)
+		{
+			return WindowFromPoint(POINT.FromPoint(pt));
 		}
 
 		public static int GetScrollBarPos(IntPtr hWnd, int nBar)

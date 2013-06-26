@@ -16,7 +16,6 @@ using System.Windows.Forms.VisualStyles;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.inet;
 using pr.maths;
@@ -205,7 +204,7 @@ namespace RyLogViewer
 			ToolStripManager.Renderer       = new CheckedButtonRenderer();
 			
 			// Scrollbar
-			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file");
+			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file\r\nClicking within here moves the cached position within the log file");
 			m_scroll_file.MinThumbSize = 1;
 			m_scroll_file.ScrollEnd += (s,a)=>
 				{
@@ -278,13 +277,8 @@ namespace RyLogViewer
 			SizeChanged += (s,a)=> UpdateUI();
 
 			// Shutdown
-			FormClosing += (s,a) =>
-				{
-					m_settings.ScreenPosition = Location;
-					m_settings.WindowSize = Size;
-					m_settings.RecentFiles = m_recent.Export();
-				};
-			
+			FormClosing += (s,a) => Shutdown();
+
 			InitCache();
 			ApplySettings();
 		}
@@ -364,6 +358,14 @@ namespace RyLogViewer
 				CheckForUpdates(false);
 		}
 
+		/// <summary>Calls as the main form is closing</summary>
+		private void Shutdown()
+		{
+			m_settings.ScreenPosition = Location;
+			m_settings.WindowSize = Size;
+			m_settings.RecentFiles = m_recent.Export();
+		}
+		
 		/// <summary>Returns true if there is a log file currently open</summary>
 		private bool FileOpen
 		{

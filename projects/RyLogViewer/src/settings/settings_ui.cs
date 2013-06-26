@@ -78,7 +78,7 @@ namespace RyLogViewer
 			m_settings     = settings;
 			m_special      = special;
 			m_tt           = new ToolTip();
-			m_balloon      = new ToolTip{IsBalloon = true,UseFading = true};
+			m_balloon      = new ToolTip{IsBalloon = true,UseFading = true,ReshowDelay = 0};
 			m_hover_scroll = new HoverScroll();
 			ReadSettings();
 
@@ -102,13 +102,6 @@ namespace RyLogViewer
 			SetupFilterTab();
 			SetupTransformTab();
 			SetupActionTab();
-			
-			// Escape to close
-			KeyDown += (s,a) =>
-				{
-					a.Handled = a.KeyCode == Keys.Escape;
-					if (a.Handled) Close();
-				};
 
 			Shown += (s,a) =>
 				{
@@ -766,6 +759,38 @@ namespace RyLogViewer
 			else if (grid == m_grid_filter   ) { FiltersChanged    = true; WhatsChanged |= EWhatsChanged.FileParsing; }
 			else if (grid == m_grid_transform) { TransformsChanged = true; WhatsChanged |= EWhatsChanged.FileParsing; }
 			else if (grid == m_grid_action   ) { ActionsChanged    = true; WhatsChanged |= EWhatsChanged.Nothing; }
+		}
+
+		/// <summary>Handle key down</summary>
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			switch (e.KeyCode)
+			{
+			default:
+				e.Handled = false;
+				break;
+			case Keys.Escape:
+				e.Handled = true;
+				Close();
+				break;
+			case Keys.F1:
+				{
+					e.Handled = true;
+					var ctrl = this.GetChildAtScreenPointRec(MousePosition);
+					if (ctrl != null)
+					{
+						var msg = ctrl.ToolTipText();
+						if (msg != null)
+						{
+							m_tt.Hide(ctrl);
+							m_balloon.Hide(ctrl);
+							ctrl.ShowHintBalloon(m_balloon, msg);
+						}
+					}
+				}
+				break;
+			}
+			base.OnKeyDown(e);
 		}
 
 		/// <summary>Delete a pattern</summary>

@@ -469,23 +469,6 @@ namespace pr.util
 			{"zip", "application/zip"}
 		};
 		#endregion
-		
-		/// <summary>Set the tooltip for this control</summary>
-		public static void ToolTip(this Control ctrl, ToolTip tt, string caption)
-		{
-			tt.SetToolTip(ctrl, caption);
-		}
-
-		/// <summary>Display a hint balloon</summary>
-		public static void ShowHintBalloon(this Control ctrl, ToolTip tt, string msg, int duration = 5000)
-		{
-			var parent = ctrl.FindForm();
-			if (parent == null) return;
-			var pt = ctrl.ClientRectangle.Centre();
-			tt.SetToolTip(ctrl, msg);
-			tt.Show(msg, ctrl, pt, duration);
-			tt.Popup += (s,a) => tt.SetToolTip(ctrl,null);
-		}
 
 		/// <summary>Return the value for 'key', if it doesn't exist, insert and return the result of calling 'def'</summary>
 		public static V GetOrAdd<K,V>(this Dictionary<K, V> dic, K key, Func<V> def)
