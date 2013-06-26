@@ -20,11 +20,7 @@ namespace RyLogViewer
 			public const string Type  = "Type";
 			public const string Cfg  = "Cfg";
 		}
-		private static readonly Color[] BkColors = new[]
-		{
-			Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
-			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
-		};
+
 		private readonly Image NullImage = new Bitmap(1,1);
 
 		private List<KeyValuePair<string,string>> m_caps;
@@ -248,7 +244,7 @@ namespace RyLogViewer
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Tag:
-				e.CellStyle.BackColor = BkColors[e.RowIndex % BkColors.Length];
+				e.CellStyle.BackColor = Constants.BkColors[e.RowIndex % Constants.BkColors.Length];
 				e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, Color.Black, 0.2f);
 				break;
 			}
@@ -330,58 +326,55 @@ namespace RyLogViewer
 			m_edit_replace.ToolTip(m_tt, tt1);
 			m_edit_match  .BackColor = ex0 == null ? SystemColors.Window : Color.LightSalmon;
 			m_edit_replace.BackColor = ex1 == null ? SystemColors.Window : Color.LightSalmon;
-				
+
 			// Apply the transform to the test text if not in error
 			if (ex0 == null && ex1 == null)
 			{
-				// Preserve the current carot position
-				int start  = m_edit_test.SelectionStart;
-				int length = m_edit_test.SelectionLength;
-
-				// Reset the highlighting
-				m_edit_test.SelectAll();
-				m_edit_test.SelectionBackColor = Color.White;
-
 				string[] lines = m_edit_test.Lines;
 
-				// Apply the transform to each line in the test text
-				m_edit_result.Clear();
-				for (int i = 0, iend = lines.Length; i != iend; ++i)
+				// Preserve the current carot position
+				using (m_edit_test.SelectionScope())
 				{
-					m_edit_result.Select(m_edit_result.TextLength, 0);
-					if (i != 0) m_edit_result.SelectedText = Environment.NewLine;
-					if (!Pattern.IsMatch(lines[i]))
-					{
-						m_edit_result.SelectedText = lines[i];
-					}
-					else
-					{
-						int starti = m_edit_test.GetFirstCharIndexFromLine(i);
-						int startj = m_edit_result.TextLength;
-					
-						List<Transform.Capture> src_caps, dst_caps;
-						string result = Pattern.Txfm(lines[i], out src_caps, out dst_caps);
-						m_edit_result.SelectedText = result;
+					// Reset the highlighting
+					m_edit_test.SelectAll();
+					m_edit_test.SelectionBackColor = Color.White;
 
-						// Highlight the capture groups in the test text and the result
-						int j = 0; foreach (var s in src_caps)
+					// Apply the transform to each line in the test text
+					m_edit_result.Clear();
+					for (int i = 0, iend = lines.Length; i != iend; ++i)
+					{
+						m_edit_result.Select(m_edit_result.TextLength, 0);
+						if (i != 0) m_edit_result.SelectedText = Environment.NewLine;
+						if (!Pattern.IsMatch(lines[i]))
 						{
-							m_edit_test.Select(starti + s.Span.Index, s.Span.Count);
-							m_edit_test.SelectionBackColor = BkColors[j++ % BkColors.Length];
+							m_edit_result.SelectedText = lines[i];
 						}
-						j = 0; foreach (var s in dst_caps)
+						else
 						{
-							m_edit_result.Select(startj + s.Span.Index, s.Span.Count);
-							m_edit_result.SelectionBackColor = BkColors[j++ % BkColors.Length];
+							int starti = m_edit_test.GetFirstCharIndexFromLine(i);
+							int startj = m_edit_result.TextLength;
+
+							List<Transform.Capture> src_caps, dst_caps;
+							string result = Pattern.Txfm(lines[i], out src_caps, out dst_caps);
+							m_edit_result.SelectedText = result;
+
+							// Highlight the capture groups in the test text and the result
+							int j = 0; foreach (var s in src_caps)
+							{
+								m_edit_test.Select(starti + s.Span.Index, s.Span.Count);
+								m_edit_test.SelectionBackColor = Constants.BkColors[j++ % Constants.BkColors.Length];
+							}
+							j = 0; foreach (var s in dst_caps)
+							{
+								m_edit_result.Select(startj + s.Span.Index, s.Span.Count);
+								m_edit_result.SelectionBackColor = Constants.BkColors[j++ % Constants.BkColors.Length];
+							}
 						}
 					}
 				}
 
-				// Restore the selection
-				m_edit_test.Select(start, length);
-
 				// Updates the caps data based on the line that the cursor's in
-				var line_index = m_edit_test.GetLineFromCharIndex(start);
+				var line_index = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
 				var line = line_index >= 0 && line_index < lines.Length ? lines[line_index] : string.Empty;
 				var groups = new Dictionary<string, string>();
 				foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;

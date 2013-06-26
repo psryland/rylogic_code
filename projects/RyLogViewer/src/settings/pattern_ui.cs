@@ -115,6 +115,13 @@ namespace RyLogViewer
 					if (!((RichTextBox)s).Modified) return;
 					UpdateUI();
 				};
+			int last_selected_line = -1;
+			m_edit_test.SelectionChanged += (s,a) =>
+				{
+					var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
+					if (last_selected_line != idx) last_selected_line = idx; else return;
+					UpdateUI();
+				};
 
 			// Groups
 			m_grid_grps.AutoGenerateColumns = false;
@@ -153,25 +160,40 @@ namespace RyLogViewer
 			// Highlight the expression background to show valid regex
 			m_edit_match.BackColor = Misc.FieldBkColor(Pattern.IsValid);
 
-			// Preserve the current caret position
-			int start = m_edit_test.SelectionStart;
-			int length = m_edit_test.SelectionLength;
-			m_edit_test.SelectAll();
-			m_edit_test.SelectionBackColor = Color.White;
-			foreach (var r in Pattern.Match(m_edit_test.Text))
+			// Update the highlighting of the test text if valid
+			if (Pattern.IsValid)
 			{
-				m_edit_test.SelectionStart     = r.Index;
-				m_edit_test.SelectionLength    = r.Count;
-				m_edit_test.SelectionBackColor = Color.LightBlue;
-			}
-			m_edit_test.SelectionStart  = start;
-			m_edit_test.SelectionLength = length;
+				string[] lines = m_edit_test.Lines;
 
-			// Populate the groups grid
-			var groups = new Dictionary<string, string>();
-			foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
-			foreach (var cap in Pattern.CaptureGroups(m_edit_test.Text)) groups[cap.Key] = cap.Value;
-			m_grid_grps.DataSource = groups.ToList();
+				// Preserve the current caret position
+				using (m_edit_test.SelectionScope())
+				{
+					// Reset the highlighting
+					m_edit_test.SelectAll();
+					m_edit_test.SelectionBackColor = Color.White;
+
+					// Apply the highlighting to each line in the test text
+					for (int i = 0, iend = lines.Length; i != iend; ++i)
+					{
+						int j = 0; foreach (var r in Pattern.Match(lines[i]))
+						{
+							int starti = m_edit_test.GetFirstCharIndexFromLine(i);
+
+							// Highlight the capture groups in the test text
+							m_edit_test.Select(starti + r.Index, r.Count);
+							m_edit_test.SelectionBackColor = Constants.BkColors[j++ % Constants.BkColors.Length];
+						}
+					}
+				}
+
+				// Updates the caps data based on the line that the cursor's in
+				var line_index = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
+				var line = line_index >= 0 && line_index < lines.Length ? lines[line_index] : string.Empty;
+				var groups = new Dictionary<string, string>();
+				foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
+				foreach (var cap in Pattern.CaptureGroups(line)) groups[cap.Key] = cap.Value;
+				m_grid_grps.DataSource = groups.ToList();
+			}
 		}
 
 		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>

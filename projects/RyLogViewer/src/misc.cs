@@ -52,6 +52,12 @@ namespace RyLogViewer
 		public const int MaxFindHistory             = 10;
 		public const int OneKB                      = 1024;
 		public const int OneMB                      = 1024*1024;
+
+		public static readonly Color[] BkColors = new[]
+			{
+				Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
+				Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
+			};
 	}
 
 	public enum EPattern

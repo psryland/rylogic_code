@@ -235,11 +235,11 @@ namespace RyLogViewer
 			if (Invert) x.Add(0);
 			try
 			{
-				foreach (Match m in Regex.Matches(text))
+				var grps = Regex.Match(text).Groups;
+				for (int i = 0; i != grps.Count; ++i)
 				{
-					if (m.Length == 0) continue;
-					x.Add(m.Index);
-					x.Add(m.Index + m.Length);
+					x.Add(grps[i].Index);
+					x.Add(grps[i].Index + grps[i].Length);
 				}
 			}
 			catch (ArgumentException) {}
