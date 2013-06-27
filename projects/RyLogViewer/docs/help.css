@@ -43,6 +43,8 @@ img.centred
 	display: block;
 	margin-left: auto;
 	margin-right: auto;
+	margin-top:20px;
+	margin-bottom:20px;
 }
 
 #main_help
@@ -50,44 +52,41 @@ img.centred
 	background: url(background.png) no-repeat;
 }
 
-#main_title
+#title_panel
 {
 	margin: 10px;
 	margin-bottom: 20px;
 }
 
-	#main_title img
+	#title_panel img
 	{
 		margin-right: 20px;
 		vertical-align: text-bottom;
 		margin-bottom: -10px;
 	}
 
-	#main_title span
+	#title_panel span
 	{
 		font-size: 180%;
 		font-weight: bold;
 		margin-bottom: 20px;
 	}
 
-#main_table
+#index_panel
 {
-	height: 1800px;
-}
-
-.left_panel
-{
+	float:left;
+	border:solid 1px black;
 	vertical-align: top;
 	padding: 10px;
-	width: 180px;
 }
 
-.right_panel
+#content_panel
 {
+	float:left;
 	vertical-align: top;
 	padding: 10px;
 	width: 600px;
-	height: 100%;
+	min-height: 821px;
 }
 
 .menu1
@@ -122,14 +121,15 @@ img.centred
 
 .tag_label
 {
+	line-height: 150%;
 	font-weight: bold;
 	font-style: italic;
 }
 
 .content
 {
-	margin-top: 10px;
-	margin-bottom: 10px;
+	margin-top: 5px;
+	margin-bottom: 15px;
 }
 
 .child_list_elem
@@ -143,7 +143,7 @@ img.centred
 .code
 {
 	font-family: monospace;
-	font-size: 140%;
+	font-size: 100%;
 	font-weight: 600;
 	margin: 10px;
 }

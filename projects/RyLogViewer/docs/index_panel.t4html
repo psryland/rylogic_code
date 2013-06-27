@@ -1,4 +1,4 @@
-﻿<div class="left_panel">
+﻿<div id="index_panel">
 	<a href="welcome.htm" class="menu1">Welcome</a><br />
 	<a href="overview.htm" class="menu1">Overview / Features</a><br />
 	<a href="installation.htm" class="menu1">Installation</a><br />

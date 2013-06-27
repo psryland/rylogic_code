@@ -2,27 +2,14 @@
 <#@output extension="htm"#>
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<head>
-		<#@include file="head.t4html"#>
-	</head>
+	<#@include file="head.t4html"#>
 	<body id="main_help">
 		<#@include file="title_panel.t4html"#>
-		<div>
-			<table id="main_table">
-				<tr>
-					<td class="left_panel">
-						<#@include file="index_panel.t4html"#>
-					</td>
-					<td class="right_panel">
-						<div id="details">
-							<div class="title">Overview and Features</div>
-							<div class="content">
-								
-							</div>
-						</div>
-					</td>
-				</tr>
-			</table>
+		<#@include file="index_panel.t4html"#>
+		<div id="content_panel">
+			<div class="title">Overview and Features</div>
+			<div class="content">
+			</div>
 		</div>
 	</body>
 </html>

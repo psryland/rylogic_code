@@ -233,6 +233,10 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <None Include="docs\pattern_editor.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>pattern_editor.htm</LastGenOutput>
+    </None>
     <None Include="docs\overview.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>overview.htm</LastGenOutput>
@@ -253,12 +257,19 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>filtering.htm</LastGenOutput>
     </None>
+    <Content Include="docs\pattern_editor.htm">
+      <DependentUpon>pattern_editor.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
     <Content Include="docs\overview.htm">
       <DependentUpon>overview.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <DesignTime>True</DesignTime>
     </Content>
+    <Content Include="docs\pattern_editor.png" />
     <Content Include="docs\welcome.htm">
       <DependentUpon>welcome.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
