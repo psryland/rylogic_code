@@ -1100,7 +1100,7 @@ namespace RyLogViewer
 			int init_row = SelectedRowIndex;
 			if (init_row != -1)
 				row_text = test_text = ReadLine(init_row).RowText.Trim();
-			
+
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
 			var ui = new SettingsUI(m_settings, tab, special);

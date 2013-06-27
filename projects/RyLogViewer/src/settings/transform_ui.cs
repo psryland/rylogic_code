@@ -85,6 +85,7 @@ namespace RyLogViewer
 				{
 					if (!((TextBox)s).Modified) return;
 					Pattern.Expr = m_edit_match.Text;
+					Touched = true;
 					UpdateUI();
 				};
 
@@ -117,6 +118,7 @@ namespace RyLogViewer
 			m_check_ignore_case.Click += (s,a)=>
 				{
 					Pattern.IgnoreCase = m_check_ignore_case.Checked;
+					Touched = true;
 					UpdateUI();
 				};
 
@@ -128,6 +130,7 @@ namespace RyLogViewer
 				{
 					if (!((TextBox)s).Modified) return;
 					Pattern.Replace = m_edit_replace.Text;
+					Touched = true;
 					UpdateUI();
 				};
 
@@ -153,8 +156,9 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			int last_selected_line = -1;
-			m_edit_test.SelectionChanged += (s,a) =>
+			m_edit_test.MouseUp += (s,a) =>
 				{
+					// Not using selection changed because it fires while drag selecting
 					var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
 					if (last_selected_line != idx) last_selected_line = idx; else return;
 					UpdateUI();
@@ -324,8 +328,8 @@ namespace RyLogViewer
 			m_edit_match  .ToolTip(m_tt, tt0);
 			m_lbl_replace .ToolTip(m_tt, tt1);
 			m_edit_replace.ToolTip(m_tt, tt1);
-			m_edit_match  .BackColor = ex0 == null ? SystemColors.Window : Color.LightSalmon;
-			m_edit_replace.BackColor = ex1 == null ? SystemColors.Window : Color.LightSalmon;
+			m_edit_match  .BackColor = Misc.FieldBkColor(ex0 == null);
+			m_edit_replace.BackColor = Misc.FieldBkColor(ex1 == null);
 
 			// Apply the transform to the test text if not in error
 			if (ex0 == null && ex1 == null)

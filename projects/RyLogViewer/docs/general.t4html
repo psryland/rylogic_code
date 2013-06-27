@@ -1,0 +1,35 @@
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<#@include file="head.t4html"#>
+	</head>
+	<body id="main_help">
+		<#@include file="title_panel.t4html"#>
+		<div>
+			<table id="main_table">
+				<tr>
+					<td class="left_panel">
+						<#@include file="left_panel.t4html"#>
+					</td>
+					<td class="right_panel">
+						<div id="details">
+							<div class="title">General Description</div>
+							<div class="content">
+								RylogViewer is designed to work with very large text files that are 
+								changing dynamically. It continuously displays the file content, 
+								updating as it changes similar to the Unix 'tail' command. 
+								In addition, powerful pattern matching options allow highlighting, 
+								filtering, text transformations, and custom actions. There is searching, 
+								bookmarking, and support for common text encodings. RylogViewer can display 
+								live program output, or data received over a serial port, TCP/UDP connection 
+								or named pipe.
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+	</body>
+</html>

@@ -184,35 +184,35 @@ namespace pr.util
 		/// <summary>Write debug trace statements into the log</summary>
 		public static void Debug(object sender, string str)
 		{
-			if (Level >= ELogLevel.Debug) return;
+			if (Level > ELogLevel.Debug) return;
 			Implementation.Debug(sender, str);
 		}
 
 		/// <summary>Write info to the current log</summary>
 		public static void Info(object sender, string str)
 		{
-			if (Level >= ELogLevel.Info) return;
+			if (Level > ELogLevel.Info) return;
 			Implementation.Info(sender, str);
 		}
 
 		/// <summary>Write info to the current log</summary>
 		public static void Warn(object sender, string str)
 		{
-			if (Level >= ELogLevel.Warn) return;
+			if (Level > ELogLevel.Warn) return;
 			Implementation.Warn(sender, str);
 		}
 
 		/// <summary>Write info to the current log</summary>
 		public static void Error(object sender, string str)
 		{
-			if (Level >= ELogLevel.Error) return;
+			if (Level > ELogLevel.Error) return;
 			Implementation.Error(sender, str);
 		}
 
 		/// <summary>Write info to the current log</summary>
 		public static void Exception(object sender, Exception ex, string str)
 		{
-			if (Level >= ELogLevel.Exception) return;
+			if (Level > ELogLevel.Exception) return;
 			Implementation.Exception(sender, ex, str);
 		}
 	}

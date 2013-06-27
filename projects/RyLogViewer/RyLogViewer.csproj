@@ -233,14 +233,49 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <None Include="docs\head.t4html" />
+    <None Include="docs\left_panel.t4html" />
+    <None Include="docs\title_panel.t4html" />
     <None Include="Resources\swizzle_quick_ref.html" />
     <None Include="Resources\command_line_ref.html" />
-    <Content Include="docs\book.png" />
-    <Content Include="docs\filtering.html" />
-    <Content Include="docs\general.html" />
-    <Content Include="docs\help.css" />
-    <Content Include="docs\highlighting.png" />
-    <Content Include="docs\pattern_wildcard.png" />
+    <Content Include="docs\book.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="docs\filtering.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>filtering.htm</LastGenOutput>
+    </None>
+    <None Include="docs\general.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>general.htm</LastGenOutput>
+    </None>
+    <Content Include="docs\filtering.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>filtering.t4html</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\general.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>general.t4html</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\help.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\highlighting.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>highlighting.t4html</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\highlighting.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\pattern_wildcard.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\totd7.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -326,12 +361,10 @@
     <Content Include="docs\example_logfile_settings.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="docs\help.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\highlighting.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Include="docs\highlighting.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>highlighting.htm</LastGenOutput>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="gen_licence.cmd" />

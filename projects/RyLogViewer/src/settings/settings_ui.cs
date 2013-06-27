@@ -21,8 +21,8 @@ namespace RyLogViewer
 		private readonly HoverScroll m_hover_scroll; // Hoverscroll for the pattern grid
 		private List<Highlight>      m_highlights;   // The highlight patterns currently in the grid
 		private List<Filter>         m_filters;      // The filter patterns currently in the grid
-		private List<Transform>      m_transforms;   // The transforms currently in the grid 
-		private List<ClkAction>      m_actions;      // The actions currently in the grid 
+		private List<Transform>      m_transforms;   // The transforms currently in the grid
+		private List<ClkAction>      m_actions;      // The actions currently in the grid
 
 		public enum ETab
 		{
@@ -696,7 +696,7 @@ namespace RyLogViewer
 		/// <summary>Save a modified pattern from a pattern UI</summary>
 		private void CommitPattern<TPattern>(IPatternUI pattern_ui, List<TPattern> patterns) where TPattern:IPattern,new()
 		{
-			if (pattern_ui.IsNew) patterns.Add((TPattern)pattern_ui.Pattern);
+			if (pattern_ui.IsNew) patterns.Insert(0, (TPattern)pattern_ui.Pattern);
 			else                  patterns.Replace((TPattern)pattern_ui.Original, (TPattern)pattern_ui.Pattern);
 			pattern_ui.NewPattern(new TPattern());
 		}

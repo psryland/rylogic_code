@@ -50,12 +50,15 @@ namespace RyLogViewer
 			UpdateUI();
 		}
 
+		/// <summary>True when user activity has changed something in the ui</summary>
+		public bool Touched { get; set; }
+
 		/// <summary>True if the pattern contains unsaved changes</summary>
 		public bool HasUnsavedChanges
 		{
 			get
 			{
-				return (IsNew && m_pattern.Expr.Length != 0)
+				return (IsNew && m_pattern.Expr.Length != 0 && Touched)
 					|| (!IsNew && !Equals(m_original, m_pattern));
 			}
 		}
@@ -81,7 +84,7 @@ namespace RyLogViewer
 		public abstract void FocusInput();
 
 		/// <summary>Prevents reentrant calls to UpdateUI. Yes this is the best way to do it /cry</summary>
-		private bool m_in_update_ui;
+		protected bool m_in_update_ui;
 		protected void UpdateUI()
 		{
 			if (m_in_update_ui) return;

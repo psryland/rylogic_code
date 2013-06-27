@@ -4,8 +4,10 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.common;
 using pr.extn;
 using pr.gui;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -34,16 +36,15 @@ namespace RyLogViewer
 		public PatternUI()
 		{
 			InitializeComponent();
-			string tt;
+			Touched = false;
 
 			// Pattern
-			tt = "A substring or regular expression to match";
-			m_lbl_match.ToolTip(m_tt, tt);
-			m_edit_match.ToolTip(m_tt, tt);
+			// Tool tip set in UpdateUI
 			m_edit_match.TextChanged += (s,a)=>
 				{
 					if (!((TextBox)s).Modified) return;
 					Pattern.Expr = m_edit_match.Text;
+					Touched = true;
 					UpdateUI();
 				};
 			m_edit_match.KeyDown += (s,a)=>
@@ -96,6 +97,7 @@ namespace RyLogViewer
 			m_check_ignore_case.Click += (s,a)=>
 				{
 					Pattern.IgnoreCase = m_check_ignore_case.Checked;
+					Touched = true;
 					UpdateUI();
 				};
 
@@ -104,6 +106,7 @@ namespace RyLogViewer
 			m_check_invert.Click += (s,a)=>
 				{
 					Pattern.Invert = m_check_invert.Checked;
+					Touched = true;
 					UpdateUI();
 				};
 
@@ -116,8 +119,9 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			int last_selected_line = -1;
-			m_edit_test.SelectionChanged += (s,a) =>
+			m_edit_test.MouseUp += (s,a) =>
 				{
+					// Not using selection changed because it fires while drag selecting
 					var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
 					if (last_selected_line != idx) last_selected_line = idx; else return;
 					UpdateUI();
@@ -158,6 +162,12 @@ namespace RyLogViewer
 			m_btn_add.Enabled = CommitEnabled;
 
 			// Highlight the expression background to show valid regex
+			var ex = Pattern.ValidateExpr();
+			string tt = ex == null
+				? "The pattern used to match rows in the log file."
+				: "Invalid match pattern - " + ex.Message;
+			m_lbl_match.ToolTip(m_tt, tt);
+			m_edit_match.ToolTip(m_tt, tt); 
 			m_edit_match.BackColor = Misc.FieldBkColor(Pattern.IsValid);
 
 			// Update the highlighting of the test text if valid
