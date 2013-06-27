@@ -2,7 +2,6 @@
 {
 	font-family: sans-serif;
 	font-size: 100%;
-	text-align: justify;
 	font-weight: normal;
 }
 
@@ -128,6 +127,7 @@ img.centred
 
 .content
 {
+	text-align: justify;
 	margin-top: 5px;
 	margin-bottom: 15px;
 }

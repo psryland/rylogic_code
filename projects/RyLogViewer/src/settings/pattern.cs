@@ -368,12 +368,26 @@ namespace pr
 					new[]{"0"},
 					new[]{"b2345e6g"});
 			}
-			[Test] public static void RegexMatches()
+			[Test] public static void RegexMatches0()
 			{
-				//Check(new Pattern(EPattern.RegularExpression, "A * string"),
-				//	"A test string",
-				//	new[]{"0","1"},
-				//	new[]{"A test string","test"});
+				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
+					"ab",
+					new[]{"0"},
+					new[]{"ab"});
+			}
+			[Test] public static void RegexMatches1()
+			{
+				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
+					"axb",
+					new[]{"0"},
+					new[]{"axb"});
+			}
+			[Test] public static void RegexMatches2()
+			{
+				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
+					"axxxxb",
+					new[]{"0"},
+					new[]{"axxxxb"});
 			}
 		}
 	}
