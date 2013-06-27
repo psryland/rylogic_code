@@ -305,11 +305,11 @@ namespace RyLogViewer
 			// m_lbl_match
 			// 
 			this.m_lbl_match.AutoSize = true;
-			this.m_lbl_match.Location = new System.Drawing.Point(30, 32);
+			this.m_lbl_match.Location = new System.Drawing.Point(28, 32);
 			this.m_lbl_match.Name = "m_lbl_match";
-			this.m_lbl_match.Size = new System.Drawing.Size(40, 13);
+			this.m_lbl_match.Size = new System.Drawing.Size(44, 13);
 			this.m_lbl_match.TabIndex = 14;
-			this.m_lbl_match.Text = "Match:";
+			this.m_lbl_match.Text = "Pattern:";
 			this.m_lbl_match.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_edit_match
@@ -387,11 +387,11 @@ namespace RyLogViewer
 			// m_lbl_match_type
 			// 
 			this.m_lbl_match_type.AutoSize = true;
-			this.m_lbl_match_type.Location = new System.Drawing.Point(3, 8);
+			this.m_lbl_match_type.Location = new System.Drawing.Point(1, 8);
 			this.m_lbl_match_type.Name = "m_lbl_match_type";
-			this.m_lbl_match_type.Size = new System.Drawing.Size(67, 13);
+			this.m_lbl_match_type.Size = new System.Drawing.Size(71, 13);
 			this.m_lbl_match_type.TabIndex = 15;
-			this.m_lbl_match_type.Text = "Match Type:";
+			this.m_lbl_match_type.Text = "Pattern Type:";
 			this.m_lbl_match_type.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_split

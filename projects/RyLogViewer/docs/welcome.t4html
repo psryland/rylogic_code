@@ -1,0 +1,37 @@
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<#@include file="head.t4html"#>
+	</head>
+	<body id="main_help">
+		<#@include file="title_panel.t4html"#>
+		<div>
+			<table id="main_table">
+				<tr>
+					<td class="left_panel">
+						<#@include file="index_panel.t4html"#>
+					</td>
+					<td class="right_panel">
+						<div id="details">
+							<div class="title">Welcome to RyLogViewer</div>
+							<div class="fine_print">Copyright © 2007-2013 Rylogic Limited</div>
+							<div class="content">
+								RyLogViewer is an application designed to make the viewing of log files 
+								or streaming log data easier through the use of highlighting, filtering, 
+								and text transformations. Log files are typically very large, so RyLogViewer 
+								has been designed to perform well with files of arbitrary size that are also 
+								possibly changing in real-time.
+							</div>
+							<div>
+								RyLogViewer is a .NET Framework 4.0 application designed to run on Microsoft 
+								Windows versions XP and later, both 32 and 64bit.
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</div>
+	</body>
+</html>

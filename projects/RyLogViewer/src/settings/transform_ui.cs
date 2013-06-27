@@ -541,7 +541,7 @@ namespace RyLogViewer
 			// m_check_ignore_case
 			// 
 			this.m_check_ignore_case.AutoSize = true;
-			this.m_check_ignore_case.Location = new System.Drawing.Point(330, 2);
+			this.m_check_ignore_case.Location = new System.Drawing.Point(333, 2);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
 			this.m_check_ignore_case.TabIndex = 3;
@@ -570,11 +570,11 @@ namespace RyLogViewer
 			// 
 			// m_lbl_match
 			// 
-			this.m_lbl_match.Location = new System.Drawing.Point(3, 2);
+			this.m_lbl_match.Location = new System.Drawing.Point(3, 3);
 			this.m_lbl_match.Name = "m_lbl_match";
 			this.m_lbl_match.Size = new System.Drawing.Size(70, 17);
 			this.m_lbl_match.TabIndex = 39;
-			this.m_lbl_match.Text = "Match:";
+			this.m_lbl_match.Text = "Pattern:";
 			this.m_lbl_match.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_edit_match
@@ -637,7 +637,7 @@ namespace RyLogViewer
 			// m_radio_regex
 			// 
 			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(215, 1);
+			this.m_radio_regex.Location = new System.Drawing.Point(218, 1);
 			this.m_radio_regex.Name = "m_radio_regex";
 			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
 			this.m_radio_regex.TabIndex = 3;
@@ -648,7 +648,7 @@ namespace RyLogViewer
 			// m_radio_wildcard
 			// 
 			this.m_radio_wildcard.AutoSize = true;
-			this.m_radio_wildcard.Location = new System.Drawing.Point(148, 1);
+			this.m_radio_wildcard.Location = new System.Drawing.Point(151, 1);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 2;
@@ -659,7 +659,7 @@ namespace RyLogViewer
 			// m_radio_substring
 			// 
 			this.m_radio_substring.AutoSize = true;
-			this.m_radio_substring.Location = new System.Drawing.Point(77, 1);
+			this.m_radio_substring.Location = new System.Drawing.Point(80, 1);
 			this.m_radio_substring.Name = "m_radio_substring";
 			this.m_radio_substring.Size = new System.Drawing.Size(69, 17);
 			this.m_radio_substring.TabIndex = 1;
@@ -681,9 +681,9 @@ namespace RyLogViewer
 			// 
 			this.m_lbl_matchtype.Location = new System.Drawing.Point(3, 0);
 			this.m_lbl_matchtype.Name = "m_lbl_matchtype";
-			this.m_lbl_matchtype.Size = new System.Drawing.Size(70, 17);
+			this.m_lbl_matchtype.Size = new System.Drawing.Size(71, 18);
 			this.m_lbl_matchtype.TabIndex = 53;
-			this.m_lbl_matchtype.Text = "Match Type:";
+			this.m_lbl_matchtype.Text = "Pattern Type:";
 			this.m_lbl_matchtype.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_btn_show_eqv_regex
