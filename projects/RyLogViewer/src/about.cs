@@ -70,7 +70,7 @@ namespace RyLogViewer
 				int s = duration.Seconds;
 
 				rtf.AppendLine();
-				rtf.Append(new Rtf.TextStyle(rtf.TextStyle){ForeColourIndex = rtf.ColourIndex(Color.Green)});
+				rtf.Append(new Rtf.TextStyle(rtf.TextStyle){ForeColourIndex = rtf.ColourIndex(m_licence.Valid ? Color.Green : Color.Red)});
 				rtf.Append("Installed for: ");
 				if (d             != 0) rtf.Append(" {0} days".Fmt(d));
 				if (d + h         != 0) rtf.Append(" {0} hours".Fmt(h));

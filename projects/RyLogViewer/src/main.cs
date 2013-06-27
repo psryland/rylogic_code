@@ -110,14 +110,11 @@ namespace RyLogViewer
 			m_line_cache_count    = m_settings.LineCacheCount;
 			m_tail_enabled        = m_settings.TailEnabled;
 
-			var lic = new Licence(m_startup_options.AppDataDir);
-			m_menu_evaluation_version.Visible = !lic.Valid;
-
 			// Startup options
 			ApplyStartupOptions();
-			
+
 			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(a.Key ,a.OldValue ,a.NewValue));
-			
+
 			// Menu
 			m_menu.Location                             = Point.Empty;
 			m_menu_file_open.Click                     += (s,a) => OpenSingleLogFile(null, true);
@@ -1524,7 +1521,7 @@ namespace RyLogViewer
 			InvalidateCache();
 			UpdateUI();
 		}
-		
+
 		/// <summary>
 		/// Update the UI with the current line index.
 		/// This method should be called whenever a changes occurs that requires
@@ -1536,7 +1533,7 @@ namespace RyLogViewer
 			{
 				m_in_update_ui = true;
 				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
-			
+
 				// Don't suspend events by removing/adding handlers because that pattern doesn't nest
 				using (m_grid.SuspendLayout(true))
 				{
@@ -1562,7 +1559,7 @@ namespace RyLogViewer
 					}
 				}
 				m_grid.Refresh();
-			
+
 				// Configure menus
 				bool file_open                            = FileOpen;
 				string enc                                = m_settings.Encoding;
@@ -1589,8 +1586,11 @@ namespace RyLogViewer
 				m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
 				m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
 				m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
-				m_menu_tools_clear_log_file.Enabled                = FileOpen;
-			
+				m_menu_tools_clear_log_file.Enabled = FileOpen;
+
+				var lic = new Licence(m_startup_options.AppDataDir);
+				m_menu_evaluation_version.Visible = !lic.Valid;
+
 				// Toolbar
 				m_btn_quick_filter.Checked = m_settings.QuickFilterEnabled;
 				m_btn_highlights.Checked   = m_settings.HighlightsEnabled;
