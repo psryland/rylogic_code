@@ -372,39 +372,48 @@ namespace pr
 
 				Assert.AreEqual(result, pat.Txfm(test));
 			}
-			[Test] public static void SubStringMatches()
+			[Test] public static void SubStringMatches0()
 			{
 				Check(new Transform(EPattern.Substring, "test", string.Empty), 
 					"A test string",
 					"A  string",
 					new[]{"0"},
 					new[]{"test"});
+			}
+			[Test] public static void SubStringMatches1()
+			{
 				Check(new Transform(EPattern.Substring, "test {a}", string.Empty), 
 					"A test string",
 					"A ",
 					new[]{"0","a"},
 					new[]{"test string", "string"});
+			}
+			[Test] public static void SubStringMatches2()
+			{
 				Check(new Transform(EPattern.Substring, "test {a}", "{a} {0}"), 
 					"A test string",
-					"test A test string",
+					"A string test string",
 					new[]{"0","a"},
-					new[]{"A test string", "test"});
+					new[]{"test string", "string"});
 			}
 			[Test] public static void WildcardMatches()
 			{
-				Check(new Transform(EPattern.Wildcard, "test {a} *ing", "{a} {0}"), 
+				Check(new Transform(EPattern.Wildcard, "* {a}ing", "{a} {0}"), 
 					"A test string",
-					"test A test string",
+					"str A test string",
 					new[]{"0","a"},
-					new[]{"A test string", "test"});
+					new[]{"A test string", "str"});
 			}
-			[Test] public static void RegexMatches()
+			[Test] public static void RegexMatches0()
 			{
 				Check(new Transform(EPattern.RegularExpression, "^(.*?) (.*?) (.*?)$", "{2} {1} {3}"), 
 					"A test string",
 					"test A string",
 					new[]{"0","1","2","3"},
 					new[]{"A test string","A","test","string"});
+			}
+			[Test] public static void RegexMatches1()
+			{
 				Check(new Transform(EPattern.RegularExpression, "^(?<a>.*?) (?<b>.*?) (?<c>.*?)$", "{b} {a} {c}"), 
 					"A test string",
 					"test A string",

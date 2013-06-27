@@ -292,7 +292,7 @@ namespace RyLogViewer
 			this.m_btn_add.Location = new System.Drawing.Point(356, 3);
 			this.m_btn_add.Name = "m_btn_add";
 			this.m_btn_add.Size = new System.Drawing.Size(46, 46);
-			this.m_btn_add.TabIndex = 8;
+			this.m_btn_add.TabIndex = 4;
 			this.m_btn_add.UseVisualStyleBackColor = true;
 			// 
 			// m_image_list
@@ -337,7 +337,7 @@ namespace RyLogViewer
 			this.m_btn_regex_help.Location = new System.Drawing.Point(333, 3);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
-			this.m_btn_regex_help.TabIndex = 7;
+			this.m_btn_regex_help.TabIndex = 6;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
 			// 
@@ -347,7 +347,7 @@ namespace RyLogViewer
 			this.m_radio_substring.Location = new System.Drawing.Point(3, 3);
 			this.m_radio_substring.Name = "m_radio_substring";
 			this.m_radio_substring.Size = new System.Drawing.Size(69, 17);
-			this.m_radio_substring.TabIndex = 1;
+			this.m_radio_substring.TabIndex = 0;
 			this.m_radio_substring.TabStop = true;
 			this.m_radio_substring.Text = "Substring";
 			this.m_radio_substring.UseVisualStyleBackColor = true;
@@ -358,7 +358,7 @@ namespace RyLogViewer
 			this.m_radio_wildcard.Location = new System.Drawing.Point(73, 3);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
-			this.m_radio_wildcard.TabIndex = 2;
+			this.m_radio_wildcard.TabIndex = 1;
 			this.m_radio_wildcard.TabStop = true;
 			this.m_radio_wildcard.Text = "Wildcard";
 			this.m_radio_wildcard.UseVisualStyleBackColor = true;
@@ -369,7 +369,7 @@ namespace RyLogViewer
 			this.m_radio_regex.Location = new System.Drawing.Point(141, 3);
 			this.m_radio_regex.Name = "m_radio_regex";
 			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
-			this.m_radio_regex.TabIndex = 3;
+			this.m_radio_regex.TabIndex = 2;
 			this.m_radio_regex.TabStop = true;
 			this.m_radio_regex.Text = "Regular Expression";
 			this.m_radio_regex.UseVisualStyleBackColor = true;
@@ -382,7 +382,7 @@ namespace RyLogViewer
 			this.m_group_patntype.Location = new System.Drawing.Point(75, 3);
 			this.m_group_patntype.Name = "m_group_patntype";
 			this.m_group_patntype.Size = new System.Drawing.Size(258, 23);
-			this.m_group_patntype.TabIndex = 1;
+			this.m_group_patntype.TabIndex = 5;
 			// 
 			// m_lbl_match_type
 			// 
@@ -412,7 +412,7 @@ namespace RyLogViewer
 			this.m_split.Panel2.Controls.Add(this.m_grid_grps);
 			this.m_split.Size = new System.Drawing.Size(402, 87);
 			this.m_split.SplitterDistance = 247;
-			this.m_split.TabIndex = 16;
+			this.m_split.TabIndex = 1;
 			// 
 			// m_grid_grps
 			// 
@@ -444,6 +444,7 @@ namespace RyLogViewer
 			this.m_grid_grps.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid_grps.Size = new System.Drawing.Size(149, 85);
 			this.m_grid_grps.TabIndex = 0;
+			this.m_grid_grps.TabStop = false;
 			// 
 			// m_lbl_groups
 			// 

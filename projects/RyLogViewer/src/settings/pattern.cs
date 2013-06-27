@@ -323,27 +323,50 @@ namespace pr
 			{
 				Check(new Pattern(EPattern.Substring, "test"),
 					"A test string",
-					new[]{"1"},
+					new[]{"0"},
 					new[]{"test"});
 			}
-			[Test] public static void WildcardMatches()
+			[Test] public static void WildcardMatches0()
 			{
 				Check(new Pattern(EPattern.Wildcard, "test"),
 					"A test string",
 					new[]{"0"},
 					new[]{"test"});
+			}
+			[Test] public static void WildcardMatches1()
+			{
 				Check(new Pattern(EPattern.Wildcard, "*test"),
 					"A test string",
-					new[]{"0","1"},
-					new[]{"A test", "A "});
+					new[]{"0"},
+					new[]{"A test"});
+			}
+			[Test] public static void WildcardMatches2()
+			{
 				Check(new Pattern(EPattern.Wildcard, "test*"),
 					"A test string",
-					new[]{"0","1"},
-					new[]{"test string"," string"});
+					new[]{"0"},
+					new[]{"test string"});
+			}
+			[Test] public static void WildcardMatches3()
+			{
 				Check(new Pattern(EPattern.Wildcard, "A * string"),
 					"A test string",
-					new[]{"0","1"},
-					new[]{"A test string","test"});
+					new[]{"0"},
+					new[]{"A test string"});
+			}
+			[Test] public static void WildcardMatches4()
+			{
+				Check(new Pattern(EPattern.Wildcard, "b*e?g"),
+					"abcdefgh",
+					new[]{"0"},
+					new[]{"bcdefg"});
+			}
+			[Test] public static void WildcardMatches5()
+			{
+				Check(new Pattern(EPattern.Wildcard, "b*e?g"),
+					"1b2345e6g7",
+					new[]{"0"},
+					new[]{"b2345e6g"});
 			}
 			[Test] public static void RegexMatches()
 			{

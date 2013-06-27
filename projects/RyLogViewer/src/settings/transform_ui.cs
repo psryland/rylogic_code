@@ -477,7 +477,7 @@ namespace RyLogViewer
 			this.m_btn_regex_help.Location = new System.Drawing.Point(3, 3);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
-			this.m_btn_regex_help.TabIndex = 4;
+			this.m_btn_regex_help.TabIndex = 3;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
 			// 
@@ -506,7 +506,7 @@ namespace RyLogViewer
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
 			this.m_edit_test.Size = new System.Drawing.Size(202, 55);
-			this.m_edit_test.TabIndex = 0;
+			this.m_edit_test.TabIndex = 2;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
 			// m_edit_result
@@ -536,7 +536,7 @@ namespace RyLogViewer
 			this.m_edit_replace.Location = new System.Drawing.Point(76, 0);
 			this.m_edit_replace.Name = "m_edit_replace";
 			this.m_edit_replace.Size = new System.Drawing.Size(340, 20);
-			this.m_edit_replace.TabIndex = 3;
+			this.m_edit_replace.TabIndex = 1;
 			// 
 			// m_check_ignore_case
 			// 
@@ -544,7 +544,7 @@ namespace RyLogViewer
 			this.m_check_ignore_case.Location = new System.Drawing.Point(330, 2);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
-			this.m_check_ignore_case.TabIndex = 1;
+			this.m_check_ignore_case.TabIndex = 3;
 			this.m_check_ignore_case.Text = "Ignore Case";
 			this.m_check_ignore_case.UseVisualStyleBackColor = true;
 			// 
@@ -566,7 +566,7 @@ namespace RyLogViewer
 			this.m_split_test.Panel2.Controls.Add(this.m_edit_result);
 			this.m_split_test.Size = new System.Drawing.Size(204, 138);
 			this.m_split_test.SplitterDistance = 57;
-			this.m_split_test.TabIndex = 8;
+			this.m_split_test.TabIndex = 0;
 			// 
 			// m_lbl_match
 			// 
@@ -584,7 +584,7 @@ namespace RyLogViewer
 			this.m_edit_match.Location = new System.Drawing.Point(76, 2);
 			this.m_edit_match.Name = "m_edit_match";
 			this.m_edit_match.Size = new System.Drawing.Size(340, 20);
-			this.m_edit_match.TabIndex = 2;
+			this.m_edit_match.TabIndex = 0;
 			// 
 			// m_grid_subs
 			// 
@@ -691,7 +691,7 @@ namespace RyLogViewer
 			this.m_btn_show_eqv_regex.Location = new System.Drawing.Point(3, 27);
 			this.m_btn_show_eqv_regex.Name = "m_btn_show_eqv_regex";
 			this.m_btn_show_eqv_regex.Size = new System.Drawing.Size(22, 21);
-			this.m_btn_show_eqv_regex.TabIndex = 55;
+			this.m_btn_show_eqv_regex.TabIndex = 4;
 			this.m_btn_show_eqv_regex.Text = "V";
 			this.m_btn_show_eqv_regex.UseVisualStyleBackColor = true;
 			// 
@@ -731,7 +731,7 @@ namespace RyLogViewer
 			this.m_panel_match_type.Margin = new System.Windows.Forms.Padding(0);
 			this.m_panel_match_type.Name = "m_panel_match_type";
 			this.m_panel_match_type.Size = new System.Drawing.Size(419, 22);
-			this.m_panel_match_type.TabIndex = 64;
+			this.m_panel_match_type.TabIndex = 5;
 			// 
 			// m_panel_match
 			// 
