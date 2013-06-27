@@ -31,8 +31,8 @@
 
 	<a href="pattern_editor.htm" class="menu1">Pattern Editor</a><br />
 	<a href="pattern_editor.htm#pattern_type" class="menu2">Pattern Types</a><br />
-	<a href="pattern_editor.htm#capture_groups" class="menu2">Capture Groups</a><br />
 	<a href="pattern_editor.htm#test_area" class="menu2">Pattern Testing</a><br />
+	<a href="pattern_editor.htm#capture_groups" class="menu2">Capture Groups</a><br />
 
 	<a href="transform.htm" class="menu1">Transform Editor</a><br />
 	<a href="transform.htm#operations" class="menu2">Operations</a><br />
