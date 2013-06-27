@@ -863,7 +863,7 @@ namespace pr.gfx
 			
 			// Find the exif data section
 			var index = IndexJpg(src);
-			var exif_section = index.First(x => x.Marker == JpgMarker.APP1);
+			var exif_section = index.FirstOrDefault(x => x.Marker == JpgMarker.APP1);
 			if (exif_section == null)
 				return data; // no exif data, return an empty object
 			
@@ -922,8 +922,8 @@ namespace pr.gfx
 			var index = IndexJpg(src);
 			JpgSection jpg_section;
 			long insert_exif_offset = 2;
-			if ((jpg_section = index.First(x =>x.Marker == JpgMarker.APP0)) != null) { insert_exif_offset = jpg_section.Offset + jpg_section.Size; }
-			if ((jpg_section = index.First(x =>x.Marker == JpgMarker.APP2)) != null) { insert_exif_offset = jpg_section.Offset; }
+			if ((jpg_section = index.FirstOrDefault(x =>x.Marker == JpgMarker.APP0)) != null) { insert_exif_offset = jpg_section.Offset + jpg_section.Size; }
+			if ((jpg_section = index.FirstOrDefault(x =>x.Marker == JpgMarker.APP2)) != null) { insert_exif_offset = jpg_section.Offset; }
 			
 			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
 			using (var bw = new BinaryWriterEx(new UncloseableStream(dst)))
