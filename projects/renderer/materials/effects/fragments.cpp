@@ -211,32 +211,32 @@ void pr::rdr::effect::frag::Txfm::SetParameters(void const* fragment, D3DPtr<ID3
 	{
 		PR_ASSERT(PR_DBG_RDR, FEql(last_i2w.w.w, 1.0f), "Invalid instance to world transform found");
 		pr::m4x4 n2w = last_i2w;
-		n2w.x.w = 0.0f; if (!FEqlZero3(n2w.x)) Normalise3(n2w.x);
-		n2w.y.w = 0.0f; if (!FEqlZero3(n2w.y)) Normalise3(n2w.y);
-		n2w.z.w = 0.0f; if (!FEqlZero3(n2w.z)) Normalise3(n2w.z);
+		n2w.x.w = 0.0f; if (!FEqlZero3(n2w.x)) n2w.x = Normalise3(n2w.x);
+		n2w.y.w = 0.0f; if (!FEqlZero3(n2w.y)) n2w.y = Normalise3(n2w.y);
+		n2w.z.w = 0.0f; if (!FEqlZero3(n2w.z)) n2w.z = Normalise3(n2w.z);
 		n2w.w = pr::v4Origin;
-		Verify(d3ddevice->SetTransform(D3DTS_WORLD    ,&d3dm4(last_i2w)));
-		Verify(effect->SetMatrix(me.m_object_to_world ,&d3dm4(last_i2w)));
-		Verify(effect->SetMatrix(me.m_norm_to_world   ,&d3dm4(n2w)));
+		Verify(d3ddevice->SetTransform(D3DTS_WORLD    ,&reinterpret_cast<const D3DXMATRIX&>(last_i2w)));
+		Verify(effect->SetMatrix(me.m_object_to_world ,&reinterpret_cast<const D3DXMATRIX&>(last_i2w)));
+		Verify(effect->SetMatrix(me.m_norm_to_world   ,&reinterpret_cast<const D3DXMATRIX&>(n2w)));
 	}
 	if (cache_state & EI2S)
 	{
-		Verify(effect->SetMatrix(me.m_object_to_screen ,&d3dm4(last_i2s)));
+		Verify(effect->SetMatrix(me.m_object_to_screen ,&reinterpret_cast<const D3DXMATRIX&>(last_i2s)));
 	}
 	if (cache_state & EW2C)
 	{
 		PR_ASSERT(PR_DBG_RDR, FEql(last_w2c.w.w, 1.0f), "Invalid world to camera transform found");
-		Verify(d3ddevice->SetTransform(D3DTS_VIEW     ,&d3dm4(last_w2c)));
-		Verify(effect->SetMatrix(me.m_world_to_camera ,&d3dm4(last_w2c)));
+		Verify(d3ddevice->SetTransform(D3DTS_VIEW     ,&reinterpret_cast<const D3DXMATRIX&>(last_w2c)));
+		Verify(effect->SetMatrix(me.m_world_to_camera ,&reinterpret_cast<const D3DXMATRIX&>(last_w2c)));
 	}
 	if (cache_state & EC2W)
 	{
-		Verify(effect->SetMatrix(me.m_camera_to_world ,&d3dm4(last_c2w)));
+		Verify(effect->SetMatrix(me.m_camera_to_world ,&reinterpret_cast<const D3DXMATRIX&>(last_c2w)));
 	}
 	if (cache_state & EC2S)
 	{
-		Verify(d3ddevice->SetTransform(D3DTS_PROJECTION ,&d3dm4(last_c2s)));
-		Verify(effect->SetMatrix(me.m_camera_to_screen  ,&d3dm4(last_c2s)));
+		Verify(d3ddevice->SetTransform(D3DTS_PROJECTION ,&reinterpret_cast<const D3DXMATRIX&>(last_c2s)));
+		Verify(effect->SetMatrix(me.m_camera_to_screen  ,&reinterpret_cast<const D3DXMATRIX&>(last_c2s)));
 	}
 }
 	
@@ -417,12 +417,12 @@ void pr::rdr::effect::frag::Texture2D::SetParameters(void const* fragment, D3DPt
 	if (!tex)
 	{
 		Verify(effect->SetTexture (me.m_texture     ,0));
-		Verify(effect->SetMatrix  (me.m_tex_to_surf ,&d3dm4(pr::m4x4Identity)));
+		Verify(effect->SetMatrix  (me.m_tex_to_surf ,&reinterpret_cast<const D3DXMATRIX&>(pr::m4x4Identity)));
 	}
 	else
 	{
 		Verify(effect->SetTexture (me.m_texture     ,tex->m_tex.m_ptr));
-		Verify(effect->SetMatrix  (me.m_tex_to_surf ,&d3dm4(tex->m_t2s)));
+		Verify(effect->SetMatrix  (me.m_tex_to_surf ,&reinterpret_cast<const D3DXMATRIX&>(tex->m_t2s)));
 		Verify(effect->SetInt     (me.m_mip_filter  ,tex->m_filter.m_mip));
 		Verify(effect->SetInt     (me.m_min_filter  ,tex->m_filter.m_min));
 		Verify(effect->SetInt     (me.m_mag_filter  ,tex->m_filter.m_mag));
@@ -735,8 +735,8 @@ void pr::rdr::effect::frag::Lighting::SetParameters(void const* fragment, D3DPtr
 		pr::Frustum f = viewport.ShadowFrustum();
 		pr::v4 fdim = f.Dim();
 		
-		Verify(effect->SetVector(me.m_smap_frust_dim ,&d3dv4(fdim)       ));
-		Verify(effect->SetMatrix(me.m_smap_frust     ,&d3dm4(f.m_Tnorms) ));
+		Verify(effect->SetVector(me.m_smap_frust_dim ,&reinterpret_cast<const D3DXVECTOR4&>(fdim)       ));
+		Verify(effect->SetMatrix(me.m_smap_frust     ,&reinterpret_cast<const D3DXMATRIX&>(f.m_Tnorms) ));
 		for (int i = 0; i != me.m_caster_count; ++i)
 			Verify(effect->SetTexture(me.m_smap[i], ltmgr.m_smap[i].m_ptr));
 	}
@@ -977,7 +977,7 @@ bool pr::rdr::effect::frag::SMap::CreateProjection(int face, pr::Frustum const& 
 			br = w2s * BR;
 
 			// Rotate so that TL is above BL and TR is above BR (i.e. the left and right edges are vertical)
-			pr::v2 ledge = GetNormal2((tl - bl).xy());
+			pr::v2 ledge = Normalise2((tl - bl).xy());
 			pr::m4x4 R = pr::m4x4Identity;
 			R.x.set( ledge.y,  ledge.x, 0, 0);
 			R.y.set(-ledge.x,  ledge.y, 0, 0);
@@ -1058,18 +1058,19 @@ bool pr::rdr::effect::frag::SMap::SetSceneParameters(void const* fragment, D3DPt
 		pr::plane::make(c2w.pos, c2w * frust.Normal(pass)) :
 		pr::plane::make(c2w.pos - frust.ZDist()*c2w.z, c2w.z);
 
-	Verify(effect->SetMatrix      (me.m_world_to_smap      ,&d3dm4(w2smap)              ));
-	Verify(effect->SetVector      (me.m_ws_smap_plane      ,&d3dv4(ws_smap_plane)       ));
-	Verify(effect->SetVector      (me.m_smap_frust_dim     ,&d3dv4(frust.Dim())         ));
+	v4 frust_dim = frust.Dim();
+	Verify(effect->SetMatrix      (me.m_world_to_smap      ,&reinterpret_cast<const D3DXMATRIX&>(w2smap)              ));
+	Verify(effect->SetVector      (me.m_ws_smap_plane      ,&reinterpret_cast<const D3DXVECTOR4&>(ws_smap_plane)       ));
+	Verify(effect->SetVector      (me.m_smap_frust_dim     ,&reinterpret_cast<const D3DXVECTOR4&>(frust_dim)         ));
 	Verify(effect->SetIntArray    (me.m_light_type         ,&light_type               ,1));
-	Verify(effect->SetVectorArray (me.m_ws_light_position  ,&d3dv4(light.m_position)  ,1));
-	Verify(effect->SetVectorArray (me.m_ws_light_direction ,&d3dv4(light.m_direction) ,1));
+	Verify(effect->SetVectorArray (me.m_ws_light_position  ,&reinterpret_cast<const D3DXVECTOR4&>(light.m_position)  ,1));
+	Verify(effect->SetVectorArray (me.m_ws_light_direction ,&reinterpret_cast<const D3DXVECTOR4&>(light.m_direction) ,1));
 	return true;
 }
 void pr::rdr::effect::frag::SMap::SetObjectToWorld(void const* fragment, D3DPtr<ID3DXEffect> effect, m4x4 const& o2w)
 {
 	SMap const& me = *frag_cast<SMap>(fragment);
-	Verify(effect->SetMatrix(me.m_object_to_world ,&d3dm4(o2w)));
+	Verify(effect->SetMatrix(me.m_object_to_world ,&reinterpret_cast<const D3DXMATRIX&>(o2w)));
 }
 	
 // effect::Desc *****************************************************

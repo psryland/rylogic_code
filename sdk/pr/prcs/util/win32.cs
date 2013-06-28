@@ -15,6 +15,7 @@ namespace pr.util
 	/// <summary>Win32 wrapper</summary>
 	public static class Win32
 	{
+		#region Windows Messages
 		public const uint WM_NULL                         = 0x0000;
 		public const uint WM_CREATE                       = 0x0001;
 		public const uint WM_DESTROY                      = 0x0002;
@@ -319,6 +320,7 @@ namespace pr.util
 
 		public const int WS_EX_LAYERED                    = 0x80000;
 		public const int WS_EX_TRANSPARENT                = 0x20;
+		#endregion 
 
 		public enum ScrollBarDirection
 		{
@@ -399,9 +401,21 @@ namespace pr.util
 			return true;
 		}
 
-		public static int MakeLParam(Point pt)
+		/// <summary>Pack a Point into an LPARAM</summary>
+		public static IntPtr PointToLParam(Point pt)
 		{
-			return (((pt.Y & 0xffff) << 16) | (pt.X & 0xffff));
+			return new IntPtr((((pt.Y & 0xffff) << 16) | (pt.X & 0xffff)));
+		}
+
+		/// <summary>Unpack a Point from an LPARAM</summary>
+		public static Point LParamToPoint(IntPtr lparam)
+		{
+			return new Point(lparam.ToInt32() & 0xffff, lparam.ToInt32() >> 16);;
+		}
+
+		public static HWND WindowFromPoint(Point pt)
+		{
+			return WindowFromPoint(POINT.FromPoint(pt));
 		}
 
 		public static int GetScrollBarPos(IntPtr hWnd, int nBar)
@@ -434,6 +448,8 @@ namespace pr.util
 
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);
 
+		[System.Security.SuppressUnmanagedCodeSecurity] // We won't use this maliciously
+		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)] public static extern bool PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 		[DllImport("user32.dll", EntryPoint="SendMessage")]       public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
 		[DllImport("user32.dll", EntryPoint="PostThreadMessage")] public static extern int    PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
 		[DllImport("user32.dll")]                                 public static extern int    CallNextHookEx(int idHook, int nCode, int wParam, IntPtr lParam);

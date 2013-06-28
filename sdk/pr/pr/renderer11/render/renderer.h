@@ -12,7 +12,9 @@
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/textures/texture_manager.h"
-#include "pr/renderer11/render/raster_state_manager.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/util/allocator.h"
 
 namespace pr
@@ -28,7 +30,6 @@ namespace pr
 			DisplayMode                  m_mode;               // Display mode to use (note: must be valid for the adapter, use FindClosestMatchingMode if needed)
 			MultiSamp                    m_multisamp;          // AA/Multisampling
 			UINT                         m_buffer_count;       // Number of buffers in the chain, 1 = front only, 2 = front and back, 3 = triple buffering, etc
-			DXGI_USAGE                   m_usage;              // Render target, shader resource view
 			DXGI_SWAP_EFFECT             m_swap_effect;        // How to swap the back buffer to the front buffer
 			UINT                         m_swap_chain_flags;   // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
 			D3DPtr<IDXGIAdapter>         m_adapter;            // The adapter to use. 0 means use the default
@@ -44,7 +45,6 @@ namespace pr
 			,m_mode(client_area)
 			,m_multisamp()
 			,m_buffer_count(2)
-			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT)
 			,m_swap_effect(DXGI_SWAP_EFFECT_SEQUENTIAL)
 			,m_swap_chain_flags(0)
 			,m_adapter(0)
@@ -73,8 +73,8 @@ namespace pr
 			D3DPtr<ID3D11RenderTargetView> m_main_rtv;
 			D3DPtr<ID3D11DepthStencilView> m_main_dsv;
 			pr::rdr::ERenderMethod::Type   m_rdr_method;
-			pr::iv2                        m_area;            // The size of the back buffer
-			bool                           m_idle;            // True while the window is occluded
+			pr::rdr::TextureDesc           m_bbdesc;  // The texture description of the back buffer
+			bool                           m_idle;    // True while the window is occluded
 		
 			RdrState(pr::rdr::RdrSettings const& settings);
 			virtual ~RdrState() {}
@@ -90,29 +90,34 @@ namespace pr
 		pr::rdr::ModelManager       m_mdl_mgr;
 		pr::rdr::ShaderManager      m_shdr_mgr;
 		pr::rdr::TextureManager     m_tex_mgr;
+		pr::rdr::BlendStateManager  m_bs_mgr;
+		pr::rdr::DepthStateManager  m_ds_mgr;
 		pr::rdr::RasterStateManager m_rs_mgr;
 
 		Renderer(pr::rdr::RdrSettings const& settings);
 		~Renderer();
-		
+
 		// Return the d3d device
 		D3DPtr<ID3D11Device> Device() const { return m_device; }
-		
+
 		// Return the immediate device context
 		D3DPtr<ID3D11DeviceContext> ImmediateDC() const { return m_immediate; }
-		
+
 		// Create a new deferred device context
 		D3DPtr<ID3D11DeviceContext> DeferredDC() const { return 0; };
-		
+
 		// Returns an allocator object suitable for allocating instances of 'T'
 		template <class Type> pr::rdr::Allocator<Type> Allocator() const { return pr::rdr::Allocator<Type>(m_settings.m_mem); }
-		
+
 		// Returns the size of the displayable area as known by the renderer
 		pr::iv2 DisplayArea() const;
-		
+
+		// The display mode of the main render target
+		DXGI_FORMAT DisplayFormat() const;
+
 		// Call when the window size changes (e.g. from a WM_SIZE message)
 		void Resize(pr::iv2 const& size);
-		
+
 		// Rendering:
 		//  For each scene to be rendered:
 		//     Build/Update the draw list for that scene

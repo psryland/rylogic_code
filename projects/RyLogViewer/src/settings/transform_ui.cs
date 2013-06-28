@@ -1,41 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Reflection;
+using System.Linq;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
+using pr.extn;
 using pr.gfx;
 using pr.gui;
-using pr.util;
 
 namespace RyLogViewer
 {
-	public class TransformUI :UserControl ,IPatternUI
+	public class TransformUI :TransformUIImpl ,IPatternUI
 	{
-		private enum BtnImageIdx { AddNew = 0, Save = 1 }
-		private const string TransformQuickRef = "RyLogViewer.docs.TransformQuickRef.html";
 		private static class ColumnNames
 		{
-			public const string Id   = "Id";
-			public const string Type = "Type";
-			public const string Data = "Data";
+			public const string Tag   = "Tag";
+			public const string Value = "Value";
+			public const string Type  = "Type";
+			public const string Cfg  = "Cfg";
 		}
-		private static readonly Color[] BkColors = new[]
-		{
-			Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
-			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
-		};
-		
-		private readonly ToolTip m_tt;
+
+		private readonly Image NullImage = new Bitmap(1,1);
+
+		private List<KeyValuePair<string,string>> m_caps;
 		private HelpUI           m_dlg_help;
-		private List<string>     m_cap_ids;
-		private Transform        m_transform;
 		private TextBox          m_edit_match;
 		private TextBox          m_edit_replace;
 		private DataGridView     m_grid_subs;
 		private Label            m_lbl_match;
-		private Label m_lbl_replace;
+		private Label            m_lbl_replace;
 		private CheckBox         m_check_ignore_case;
 		private Button           m_btn_add;
 		private Button           m_btn_regex_help;
@@ -57,49 +51,18 @@ namespace RyLogViewer
 		private Panel            m_panel_replace;
 		private Panel            m_panel_eqv_regex;
 		private RichTextBox      m_edit_result;
-		
-		/// <summary>The pattern being controlled by this UI</summary>
-		[Browsable(false)]
-		public Transform Transform { get { return m_transform; } }
-		
-		/// <summary>The test text to use</summary>
-		public string TestText { get { return m_edit_test.Text; } set { m_edit_test.Text = value; } }
 
-		/// <summary>True if the edited pattern is a new instance</summary>
-		public bool IsNew { get; private set; }
-		
-		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
-		private HelpUI MatchFieldHelpUI
-		{
-			get
-			{
-				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromResource(ParentForm
-					,TransformQuickRef
-					,Assembly.GetExecutingAssembly()
-					,"Transform Help"
-					,new Size(1,1)
-					,new Size(640,480)
-					,ToolForm.EPin.TopRight));
-			}
-		}
-
-		/// <summary>Raised when the 'Add' button is hit and the pattern field contains a valid pattern</summary>
-		public event EventHandler Add;
-		
 		public TransformUI()
 		{
 			InitializeComponent();
-			m_transform = new Transform();
-			m_tt = new ToolTip();
-			
+			m_caps = new List<KeyValuePair<string, string>>();
+
 			// Add/Update
 			m_btn_add.ToolTip(m_tt, "Adds a new transform, or updates an existing transform");
 			m_btn_add.Click += (s,a)=>
 				{
-					if (Add == null) return;
-					if (Transform.Match.Length == 0) return;
-					Add(this, EventArgs.Empty);
+					if (!CommitEnabled) return;
+					RaiseCommitEvent();
 				};
 
 			// Match help
@@ -120,7 +83,9 @@ namespace RyLogViewer
 			// Match (tooltip set in UpdateUI())
 			m_edit_match.TextChanged += (s,a)=>
 				{
-					Transform.Match = m_edit_match.Text;
+					if (!((TextBox)s).Modified) return;
+					Pattern.Expr = m_edit_match.Text;
+					Touched = true;
 					UpdateUI();
 				};
 
@@ -128,76 +93,93 @@ namespace RyLogViewer
 			m_radio_substring.ToolTip(m_tt, "Match any occurrence of the pattern as a substring");
 			m_radio_substring.Click += (s,a)=>
 				{
-					if (m_radio_substring.Checked) Transform.PatnType = EPattern.Substring;
+					if (m_radio_substring.Checked) Pattern.PatnType = EPattern.Substring;
 					UpdateUI();
 				};
-			
+
 			// Match - Wildcard
 			m_radio_wildcard.ToolTip(m_tt, "Match using wildcards, where '*' matches any number of characters and '?' matches any single character");
 			m_radio_wildcard.Click += (s,a)=>
 				{
-					if (m_radio_wildcard.Checked) Transform.PatnType = EPattern.Wildcard;
+					if (m_radio_wildcard.Checked) Pattern.PatnType = EPattern.Wildcard;
 					UpdateUI();
 				};
-			
+
 			// Match - Regex
 			m_radio_regex.ToolTip(m_tt, "Match using a regular expression");
 			m_radio_regex.Click += (s,a)=>
 				{
-					if (m_radio_regex.Checked) Transform.PatnType = EPattern.RegularExpression;
+					if (m_radio_regex.Checked) Pattern.PatnType = EPattern.RegularExpression;
 					UpdateUI();
 				};
-			
+
 			// Match - Ignore case
 			m_check_ignore_case.ToolTip(m_tt, "Enable to have the template ignore case when matching");
 			m_check_ignore_case.Click += (s,a)=>
 				{
-					Transform.IgnoreCase = m_check_ignore_case.Checked;
+					Pattern.IgnoreCase = m_check_ignore_case.Checked;
+					Touched = true;
 					UpdateUI();
 				};
-			
+
 			// Match - compiled regex
 			m_edit_eqv_regex.ToolTip(m_tt, "The regular expression that the Match field is converted into.\r\nVisible here for reference and diagnostic purposes");
-			
+
 			// Replace (tooltip set in UpdateUI())
 			m_edit_replace.TextChanged += (s,a)=>
 				{
 					if (!((TextBox)s).Modified) return;
-					Transform.Replace = m_edit_replace.Text;
+					Pattern.Replace = m_edit_replace.Text;
+					Touched = true;
 					UpdateUI();
 				};
 
 			// Substitutions
 			m_grid_subs.VirtualMode = true;
 			m_grid_subs.AutoGenerateColumns = false;
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Id   ,HeaderText = "Id"      ,FillWeight = 20 ,ReadOnly = true});
-			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type ,HeaderText = "Name"    ,FillWeight = 30 ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Data ,HeaderText = "Data"    ,FillWeight = 50 ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Tag   ,HeaderText = "Tag"       ,FillWeight = 11.5f ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Value ,HeaderText = "Value"     ,FillWeight = 37.6f ,ReadOnly = true});
+			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type  ,HeaderText = "Transform" ,FillWeight = 25.8f ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
+			m_grid_subs.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Cfg   ,HeaderText = string.Empty,FillWeight =  5.0f ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_subs.CurrentCellDirtyStateChanged += (s,a) => m_grid_subs.CommitEdit(DataGridViewDataErrorContexts.Commit);
 			m_grid_subs.CellValueNeeded  += CellValueNeeded;
 			m_grid_subs.CellValuePushed  += CellValuePushed;
 			m_grid_subs.CellPainting     += CellPainting;
 			m_grid_subs.CellClick        += CellClick;
-			
+			m_grid_subs.CellDoubleClick  += CellDoubleClick;
+
 			// Test text
 			m_edit_test.ToolTip(m_tt, "Enter text here on which to test your pattern.");
+			m_edit_test.Text = PatternUI.DefaultTestText;
 			m_edit_test.TextChanged += (s,a)=>
 				{
 					UpdateUI();
 				};
-
-			// Result text
-			m_edit_result.ToolTip(m_tt, "Shows the result of applying the transform to the text in the test area above");
-			
-			VisibleChanged += (s,a)=>
+			int last_selected_line = -1;
+			m_edit_test.SelectionChanged += (s,a) =>
 				{
-					if (!Visible) return;
+					if (MouseButtons != MouseButtons.None || ModifierKeys != Keys.None) return;
+					var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
+					if (last_selected_line != idx) last_selected_line = idx; else return;
 					UpdateUI();
 				};
+
+			// Result text
+			m_edit_result.ToolTip(m_tt,
+				"Shows the result of applying the transform to the text in the test area above\r\n" +
+				"Transforms only replace the portion of the input text that they match.\r\n" +
+				"If you are trying to replace the whole line, your pattern needs to match the whole line");
+		}
+
+		/// <summary>Access to the test text field</summary>
+		public override string TestText
+		{
+			get { return m_edit_test.Text; }
+			set { m_edit_test.Text = value; }
 		}
 
 		/// <summary>Set focus to the primary input field</summary>
-		public void FocusInput()
+		public override void FocusInput()
 		{
 			m_edit_match.Focus();
 		}
@@ -207,16 +189,31 @@ namespace RyLogViewer
 		{
 			e.Value = string.Empty;
 			DataGridView grid = (DataGridView)sender;
-			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Count) return;
-			if (!Transform.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
-			
-			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
+			var cap = m_caps[e.RowIndex];
+
+			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
-			default:               e.Value = string.Empty; break;
-			case ColumnNames.Id:   e.Value = sub.Id;   break;
-			case ColumnNames.Type: e.Value = sub.Name; break;
-			case ColumnNames.Data: e.Value = sub.ConfigSummary; break;
+			default:
+				Debug.Assert(false, "Unknown column name");
+				break;
+			case ColumnNames.Tag:
+				e.Value = cap.Key;
+				break;
+			case ColumnNames.Value:
+				e.Value = cap.Value;
+				break;
+			case ColumnNames.Type:
+				if (sub != null)
+				{
+					e.Value = sub.Name;
+					grid[e.ColumnIndex,e.RowIndex].ToolTipText = sub.ConfigSummary; 
+				}
+				break;
+			case ColumnNames.Cfg:
+				e.Value = sub != null && sub.Configurable ? Resources.pencil : NullImage;
+				break;
 			}
 		}
 
@@ -224,17 +221,17 @@ namespace RyLogViewer
 		private void CellValuePushed(object sender, DataGridViewCellValueEventArgs e)
 		{
 			DataGridView grid = (DataGridView)sender;
-			if (m_cap_ids == null || e.RowIndex < 0 || e.RowIndex >= m_cap_ids.Count) return;
-			if (!Transform.Subs.ContainsKey(m_cap_ids[e.RowIndex])) return;
+			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
+			var cap = m_caps[e.RowIndex];
 
-			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Type:
-				if (!e.Value.Equals(sub.Name))
+				if (sub != null && !e.Value.Equals(sub.Name))
 				{
 					var new_sub = Transform.SubLoader.Create(sub.Id, (string)e.Value);
-					Transform.Subs[m_cap_ids[e.RowIndex]] = new_sub;
+					Pattern.Subs[cap.Key] = new_sub;
 					grid.Invalidate();
 				}
 				break;
@@ -247,11 +244,11 @@ namespace RyLogViewer
 		{
 			e.Handled = false;
 			DataGridView grid = (DataGridView)sender;
-			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) return;
+			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
-			case ColumnNames.Id:
-				e.CellStyle.BackColor = BkColors[e.RowIndex % BkColors.Length];
+			case ColumnNames.Tag:
+				e.CellStyle.BackColor = Constants.BkColors[e.RowIndex % Constants.BkColors.Length];
 				e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, Color.Black, 0.2f);
 				break;
 			}
@@ -261,106 +258,98 @@ namespace RyLogViewer
 		private void CellClick(object sender, DataGridViewCellEventArgs e)
 		{
 			DataGridView grid = (DataGridView)sender;
-			if (e.RowIndex < 0 || e.RowIndex >= Transform.Subs.Count) return;
+			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			ITxfmSub sub = Transform.Subs[m_cap_ids[e.RowIndex]];
+			var cap = m_caps[e.RowIndex];
+
+			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
-			case ColumnNames.Data:
-				sub.Config(this);
+			case ColumnNames.Cfg:
+				if (sub != null) sub.Config(this);
 				UpdateUI();
 				break;
 			}
 		}
 
-		/// <summary>Select 'tx' as a new transform</summary>
-		public void NewPattern(IPattern tx)
+		/// <summary>Handle double clicks on cells</summary>
+		private void CellDoubleClick(object sender, DataGridViewCellEventArgs e)
 		{
-			IsNew = true;
-			m_transform = (Transform)tx;
-			m_btn_add.ImageIndex = (int)BtnImageIdx.AddNew;
-			m_btn_add.ToolTip(m_tt, "Add this new transform");
-			UpdateUI();
+			DataGridView grid = (DataGridView)sender;
+			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
+			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
+			var cap = m_caps[e.RowIndex];
+
+			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
+			switch (grid.Columns[e.ColumnIndex].Name)
+			{
+			default: return;
+			case ColumnNames.Tag:
+				if (sub != null)
+					m_edit_replace.SelectedText = "{"+sub.Id+"}";
+				break;
+			}
 		}
 
-		/// <summary>Select a pattern into the UI for editting</summary>
-		public void EditPattern(IPattern tx)
-		{
-			IsNew = false;
-			m_transform = (Transform)tx;
-			m_btn_add.ImageIndex = (int)BtnImageIdx.Save;
-			m_btn_add.ToolTip(m_tt, "Finish editing this transform");
-			UpdateUI();
-		}
-		
 		/// <summary>Prevents reentrant calls to UpdateUI. Yes this is the best way to do it /cry</summary>
-		private bool m_in_update_ui;
-		private void UpdateUI()
+		protected override void UpdateUIInternal()
 		{
-			if (m_in_update_ui) return;
-			try
+			m_edit_match.Text           = Pattern.Expr;
+			m_edit_eqv_regex.Text       = Pattern.RegexString;
+			m_edit_replace.Text         = Pattern.Replace;
+			m_radio_substring.Checked   = Pattern.PatnType == EPattern.Substring;
+			m_radio_wildcard.Checked    = Pattern.PatnType == EPattern.Wildcard;
+			m_radio_regex.Checked       = Pattern.PatnType == EPattern.RegularExpression;
+			m_check_ignore_case.Checked = Pattern.IgnoreCase;
+
+			m_btn_add.ToolTip(m_tt, IsNew ? "Add this new pattern" : "Save changes to this pattern");
+			m_btn_add.ImageIndex = (int)(IsNew ? EBtnImageIdx.AddNew : EBtnImageIdx.Save);
+			m_btn_add.Enabled = CommitEnabled;
+
+			// Show/Hide the eqv regex
+			m_table.Height = m_table.PreferredSize.Height;
+			m_split_subs.Top = m_table.Bottom;
+			m_split_subs.Height = m_split_subs.Parent.Height - m_split_subs.Top - 3;
+
+			// Highlight the match/replace fields if in error
+			var ex0 = Pattern.ValidateExpr();
+			string tt0 = ex0 == null
+				? "The pattern used to identify rows to transform.\r\n" +
+					(Pattern.PatnType == EPattern.RegularExpression
+						? "Capture groups are defined using the usual regular expression syntax for capture groups e.g. (.*),(<tag>?.*),etc\r\n"
+						: "Create capture groups using '{' and '}', e.g. {one},{2},{tag},etc\r\n")
+				: "Invalid match pattern - " + ex0.Message;
+			var ex1 = Pattern.ValidateReplace();
+			string tt1 = ex1 == null
+				? "The template for the transformed result.\r\nUse the capture groups created in the Match field"
+				: "Invalid replace template - " + ex1.Message;
+			m_lbl_match   .ToolTip(m_tt, tt0);
+			m_edit_match  .ToolTip(m_tt, tt0);
+			m_lbl_replace .ToolTip(m_tt, tt1);
+			m_edit_replace.ToolTip(m_tt, tt1);
+			m_edit_match  .BackColor = Misc.FieldBkColor(ex0 == null);
+			m_edit_replace.BackColor = Misc.FieldBkColor(ex1 == null);
+
+			// Apply the transform to the test text if not in error
+			if (ex0 == null && ex1 == null)
 			{
-				m_in_update_ui = true;
-				SuspendLayout();
-			
-				m_cap_ids = Transform.CaptureIds;
-				m_grid_subs.RowCount = m_cap_ids.Count;
-				m_grid_subs.Refresh();
-			
-				m_btn_add.Enabled           = Transform.IsValid && Transform.Match.Length != 0;
-				m_edit_match.Text           = Transform.Match;
-				m_edit_eqv_regex.Text       = Transform.RegexString;
-				m_edit_replace.Text         = Transform.Replace;
-				m_radio_substring.Checked   = Transform.PatnType == EPattern.Substring;
-				m_radio_wildcard.Checked    = Transform.PatnType == EPattern.Wildcard;
-				m_radio_regex.Checked       = Transform.PatnType == EPattern.RegularExpression;
-				m_check_ignore_case.Checked = Transform.IgnoreCase;
-				
-				// Show/Hide the eqv regex
-				m_table.Height = m_table.PreferredSize.Height;
-				m_split_subs.Top = m_table.Bottom;
-				m_split_subs.Height = m_split_subs.Parent.Height - m_split_subs.Top - 3;
-				
-				// Highlight the match/replace fields if in error
-				var ex0 = Transform.ValidateExpr();
-				string tt0 = ex0 == null
-					? "The pattern used to identify rows to transform.\r\n" +
-						(Transform.PatnType == EPattern.RegularExpression
-							? "Capture groups are defined using the usual regular expression syntax for capture groups e.g. (.*),(<tag>?.*),etc\r\n"
-							: "Create capture groups using '{' and '}', e.g. {one},{2},{tag},etc\r\n")
-					: "Invalid match pattern - " + ex0.Message;
-				var ex1 = Transform.ValidateReplace();
-				string tt1 = ex1 == null
-					? "The template for the transformed result.\r\nUse the capture groups created in the Match field"
-					: "Invalid replace template - " + ex1.Message;
-				m_lbl_match   .ToolTip(m_tt, tt0);
-				m_edit_match  .ToolTip(m_tt, tt0);
-				m_lbl_replace .ToolTip(m_tt, tt1);
-				m_edit_replace.ToolTip(m_tt, tt1);
-				m_edit_match  .BackColor = ex0 == null ? SystemColors.Window : Color.LightSalmon;
-				m_edit_replace.BackColor = ex1 == null ? SystemColors.Window : Color.LightSalmon;
-				
-				// Apply the transform to the test text if not in error
-				if (ex0 == null && ex1 == null)
+				string[] lines = m_edit_test.Lines;
+
+				// Preserve the current carot position
+				using (m_edit_test.SelectionScope())
 				{
-					// Preserve the current carot position
-					int start  = m_edit_test.SelectionStart;
-					int length = m_edit_test.SelectionLength;
-			
 					// Reset the highlighting
 					m_edit_test.SelectAll();
 					m_edit_test.SelectionBackColor = Color.White;
-			
-					string[] lines = m_edit_test.Lines;
-			
+
 					// Apply the transform to each line in the test text
 					m_edit_result.Clear();
 					for (int i = 0, iend = lines.Length; i != iend; ++i)
 					{
 						m_edit_result.Select(m_edit_result.TextLength, 0);
 						if (i != 0) m_edit_result.SelectedText = Environment.NewLine;
-						if (!Transform.IsMatch(lines[i]))
+						if (!Pattern.IsMatch(lines[i]))
 						{
 							m_edit_result.SelectedText = lines[i];
 						}
@@ -368,33 +357,46 @@ namespace RyLogViewer
 						{
 							int starti = m_edit_test.GetFirstCharIndexFromLine(i);
 							int startj = m_edit_result.TextLength;
-					
+
 							List<Transform.Capture> src_caps, dst_caps;
-							string result = Transform.Txfm(lines[i], out src_caps, out dst_caps);
+							string result = Pattern.Txfm(lines[i], out src_caps, out dst_caps);
 							m_edit_result.SelectedText = result;
 
 							// Highlight the capture groups in the test text and the result
 							int j = 0; foreach (var s in src_caps)
 							{
 								m_edit_test.Select(starti + s.Span.Index, s.Span.Count);
-								m_edit_test.SelectionBackColor = BkColors[j++ % BkColors.Length];
+								m_edit_test.SelectionBackColor = Constants.BkColors[j++ % Constants.BkColors.Length];
 							}
 							j = 0; foreach (var s in dst_caps)
 							{
 								m_edit_result.Select(startj + s.Span.Index, s.Span.Count);
-								m_edit_result.SelectionBackColor = BkColors[j++ % BkColors.Length];
+								m_edit_result.SelectionBackColor = Constants.BkColors[j++ % Constants.BkColors.Length];
 							}
 						}
 					}
-					
-					// Restore the selection
-					m_edit_test.Select(start, length);
 				}
+
+				// Updates the caps data based on the line that the cursor's in
+				var line_index = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
+				var line = line_index >= 0 && line_index < lines.Length ? lines[line_index] : string.Empty;
+				var groups = new Dictionary<string, string>();
+				foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
+				foreach (var cap in Pattern.CaptureGroups(line)) groups[cap.Key] = cap.Value;
+				m_caps = groups.ToList();
 			}
-			finally
+
+			m_grid_subs.RowCount = m_caps.Count;
+			m_grid_subs.Refresh();
+		}
+
+		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
+		private HelpUI MatchFieldHelpUI
+		{
+			get
 			{
-				m_in_update_ui = false;
-				ResumeLayout();
+				Debug.Assert(ParentForm != null);
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.transform_quick_ref, "Transform Help", new Size(1,1), new Size(640,480), ToolForm.EPin.TopRight));
 			}
 		}
 
@@ -426,6 +428,7 @@ namespace RyLogViewer
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TransformUI));
+			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_btn_add = new System.Windows.Forms.Button();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
@@ -474,7 +477,7 @@ namespace RyLogViewer
 			this.m_btn_regex_help.Location = new System.Drawing.Point(3, 3);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
-			this.m_btn_regex_help.TabIndex = 4;
+			this.m_btn_regex_help.TabIndex = 3;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
 			// 
@@ -502,8 +505,8 @@ namespace RyLogViewer
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(202, 45);
-			this.m_edit_test.TabIndex = 0;
+			this.m_edit_test.Size = new System.Drawing.Size(202, 55);
+			this.m_edit_test.TabIndex = 2;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			// 
 			// m_edit_result
@@ -513,7 +516,7 @@ namespace RyLogViewer
 			this.m_edit_result.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_result.Name = "m_edit_result";
 			this.m_edit_result.ReadOnly = true;
-			this.m_edit_result.Size = new System.Drawing.Size(202, 60);
+			this.m_edit_result.Size = new System.Drawing.Size(202, 75);
 			this.m_edit_result.TabIndex = 0;
 			this.m_edit_result.Text = "This is the resulting text after replacement";
 			// 
@@ -533,15 +536,15 @@ namespace RyLogViewer
 			this.m_edit_replace.Location = new System.Drawing.Point(76, 0);
 			this.m_edit_replace.Name = "m_edit_replace";
 			this.m_edit_replace.Size = new System.Drawing.Size(340, 20);
-			this.m_edit_replace.TabIndex = 3;
+			this.m_edit_replace.TabIndex = 1;
 			// 
 			// m_check_ignore_case
 			// 
 			this.m_check_ignore_case.AutoSize = true;
-			this.m_check_ignore_case.Location = new System.Drawing.Point(330, 2);
+			this.m_check_ignore_case.Location = new System.Drawing.Point(333, 2);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
-			this.m_check_ignore_case.TabIndex = 1;
+			this.m_check_ignore_case.TabIndex = 3;
 			this.m_check_ignore_case.Text = "Ignore Case";
 			this.m_check_ignore_case.UseVisualStyleBackColor = true;
 			// 
@@ -561,17 +564,17 @@ namespace RyLogViewer
 			// m_split_test.Panel2
 			// 
 			this.m_split_test.Panel2.Controls.Add(this.m_edit_result);
-			this.m_split_test.Size = new System.Drawing.Size(204, 113);
-			this.m_split_test.SplitterDistance = 47;
-			this.m_split_test.TabIndex = 8;
+			this.m_split_test.Size = new System.Drawing.Size(204, 138);
+			this.m_split_test.SplitterDistance = 57;
+			this.m_split_test.TabIndex = 0;
 			// 
 			// m_lbl_match
 			// 
-			this.m_lbl_match.Location = new System.Drawing.Point(3, 2);
+			this.m_lbl_match.Location = new System.Drawing.Point(3, 3);
 			this.m_lbl_match.Name = "m_lbl_match";
 			this.m_lbl_match.Size = new System.Drawing.Size(70, 17);
 			this.m_lbl_match.TabIndex = 39;
-			this.m_lbl_match.Text = "Match:";
+			this.m_lbl_match.Text = "Pattern:";
 			this.m_lbl_match.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_edit_match
@@ -581,7 +584,7 @@ namespace RyLogViewer
 			this.m_edit_match.Location = new System.Drawing.Point(76, 2);
 			this.m_edit_match.Name = "m_edit_match";
 			this.m_edit_match.Size = new System.Drawing.Size(340, 20);
-			this.m_edit_match.TabIndex = 2;
+			this.m_edit_match.TabIndex = 0;
 			// 
 			// m_grid_subs
 			// 
@@ -590,15 +593,25 @@ namespace RyLogViewer
 			this.m_grid_subs.AllowUserToResizeRows = false;
 			this.m_grid_subs.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_subs.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
-			this.m_grid_subs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.TopLeft;
+			dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Control;
+			dataGridViewCellStyle1.Font = new System.Drawing.Font("Microsoft Sans Serif", 6.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.WindowText;
+			dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+			dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+			dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+			this.m_grid_subs.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+			this.m_grid_subs.ColumnHeadersHeight = 20;
+			this.m_grid_subs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
 			this.m_grid_subs.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_grid_subs.Location = new System.Drawing.Point(0, 0);
 			this.m_grid_subs.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_subs.MultiSelect = false;
 			this.m_grid_subs.Name = "m_grid_subs";
 			this.m_grid_subs.RowHeadersVisible = false;
+			this.m_grid_subs.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
 			this.m_grid_subs.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_subs.Size = new System.Drawing.Size(284, 113);
+			this.m_grid_subs.Size = new System.Drawing.Size(284, 138);
 			this.m_grid_subs.TabIndex = 0;
 			// 
 			// m_split_subs
@@ -617,14 +630,14 @@ namespace RyLogViewer
 			// m_split_subs.Panel2
 			// 
 			this.m_split_subs.Panel2.Controls.Add(this.m_grid_subs);
-			this.m_split_subs.Size = new System.Drawing.Size(492, 113);
+			this.m_split_subs.Size = new System.Drawing.Size(492, 138);
 			this.m_split_subs.SplitterDistance = 204;
 			this.m_split_subs.TabIndex = 49;
 			// 
 			// m_radio_regex
 			// 
 			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(215, 1);
+			this.m_radio_regex.Location = new System.Drawing.Point(218, 1);
 			this.m_radio_regex.Name = "m_radio_regex";
 			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
 			this.m_radio_regex.TabIndex = 3;
@@ -635,7 +648,7 @@ namespace RyLogViewer
 			// m_radio_wildcard
 			// 
 			this.m_radio_wildcard.AutoSize = true;
-			this.m_radio_wildcard.Location = new System.Drawing.Point(148, 1);
+			this.m_radio_wildcard.Location = new System.Drawing.Point(151, 1);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 2;
@@ -646,7 +659,7 @@ namespace RyLogViewer
 			// m_radio_substring
 			// 
 			this.m_radio_substring.AutoSize = true;
-			this.m_radio_substring.Location = new System.Drawing.Point(77, 1);
+			this.m_radio_substring.Location = new System.Drawing.Point(80, 1);
 			this.m_radio_substring.Name = "m_radio_substring";
 			this.m_radio_substring.Size = new System.Drawing.Size(69, 17);
 			this.m_radio_substring.TabIndex = 1;
@@ -668,9 +681,9 @@ namespace RyLogViewer
 			// 
 			this.m_lbl_matchtype.Location = new System.Drawing.Point(3, 0);
 			this.m_lbl_matchtype.Name = "m_lbl_matchtype";
-			this.m_lbl_matchtype.Size = new System.Drawing.Size(70, 17);
+			this.m_lbl_matchtype.Size = new System.Drawing.Size(71, 18);
 			this.m_lbl_matchtype.TabIndex = 53;
-			this.m_lbl_matchtype.Text = "Match Type:";
+			this.m_lbl_matchtype.Text = "Pattern Type:";
 			this.m_lbl_matchtype.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			// 
 			// m_btn_show_eqv_regex
@@ -678,7 +691,7 @@ namespace RyLogViewer
 			this.m_btn_show_eqv_regex.Location = new System.Drawing.Point(3, 27);
 			this.m_btn_show_eqv_regex.Name = "m_btn_show_eqv_regex";
 			this.m_btn_show_eqv_regex.Size = new System.Drawing.Size(22, 21);
-			this.m_btn_show_eqv_regex.TabIndex = 55;
+			this.m_btn_show_eqv_regex.TabIndex = 4;
 			this.m_btn_show_eqv_regex.Text = "V";
 			this.m_btn_show_eqv_regex.UseVisualStyleBackColor = true;
 			// 
@@ -718,7 +731,7 @@ namespace RyLogViewer
 			this.m_panel_match_type.Margin = new System.Windows.Forms.Padding(0);
 			this.m_panel_match_type.Name = "m_panel_match_type";
 			this.m_panel_match_type.Size = new System.Drawing.Size(419, 22);
-			this.m_panel_match_type.TabIndex = 64;
+			this.m_panel_match_type.TabIndex = 5;
 			// 
 			// m_panel_match
 			// 
@@ -792,7 +805,7 @@ namespace RyLogViewer
 			this.Margin = new System.Windows.Forms.Padding(0);
 			this.MinimumSize = new System.Drawing.Size(498, 212);
 			this.Name = "TransformUI";
-			this.Size = new System.Drawing.Size(498, 212);
+			this.Size = new System.Drawing.Size(498, 237);
 			this.m_split_test.Panel1.ResumeLayout(false);
 			this.m_split_test.Panel2.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_split_test)).EndInit();
@@ -819,6 +832,18 @@ namespace RyLogViewer
 		}
 
 		#endregion
+	}
 
+	/// <summary>Workaround for the retarded VS designer</summary>
+	public class TransformUIImpl :PatternUIBase<Transform>
+	{
+		/// <summary>Access to the test text field</summary>
+		public override string TestText { get; set; }
+
+		/// <summary>Set focus to the primary input field</summary>
+		public override void FocusInput() {}
+
+		/// <summary>Update the UI elements based on the current pattern</summary>
+		protected override void UpdateUIInternal() {}
 	}
 }

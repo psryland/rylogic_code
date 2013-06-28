@@ -45,7 +45,7 @@ class MersenneTwister
 		int i, j, k;
 		Seed(19650218U);
 		i=1; j=0;
-		k = (N > init_key.length ? N : init_key.length);
+		k = cast(int)(N > init_key.length ? N : init_key.length);
 		for (; k; k--)
 		{
 			mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 30)) * 1664525U)) + init_key[j] + j; // non linear

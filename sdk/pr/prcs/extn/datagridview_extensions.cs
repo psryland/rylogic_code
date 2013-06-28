@@ -3,9 +3,12 @@
 //***************************************************
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.maths;
+using pr.util;
 
 namespace pr.extn
 {
@@ -243,13 +246,22 @@ namespace pr.extn
 			for (int i = 0; i != w.Length; ++i) w[i] = grid.Columns[i].FillWeight;
 			return w;
 		}
-		
+
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
 		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
 		{
-			return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
+			int i = grid.Rows.GetFirstRow(DataGridViewElementStates.Selected);
+			return i != -1 ? grid.Rows[i] : null;
+			//return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
 		}
-		
+
+		/// <summary>Returns an enumerator for accessing rows with the given property</summary>
+		public static IEnumerable<DataGridViewRow> GetRowsWithState(this DataGridView grid, DataGridViewElementStates state)
+		{
+			for (int i = grid.Rows.GetFirstRow(state); i != -1; i = grid.Rows.GetNextRow(i, state))
+				yield return grid.Rows[i];
+		}
+
 		/// <summary>
 		/// Sets the selection to row 'index'. If the grid has rows, clamps 'index' to [-1,RowCount).
 		/// If index == -1, the selection is cleared. Returns the row actually selected.</summary>
@@ -275,6 +287,60 @@ namespace pr.extn
 		{
 			var row = FirstSelectedRow(grid);
 			return row != null ? row.Index : -1;
+		}
+
+		/// <summary>Begin a row drag-drop operation on the grid</summary>
+		public static void DragDrop_DragRow(object sender, MouseEventArgs e)
+		{
+			var grid = (DataGridView)sender;
+			if (!(grid.DataSource is IList))
+				throw new InvalidOperationException("Drag-drop requires a grid with a data source convertable to an IList");
+
+			var hit = grid.HitTest(e.X, e.Y);
+			if (hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount)
+				grid.DoDragDrop(grid.Rows[hit.RowIndex], DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
+		}
+
+		/// <summary>A drag drop function for move a row in a grid to a new position</summary>
+		public static bool DragDrop_DoDropMoveRow(object sender, DragEventArgs args, DragDrop.EDrop mode)
+		{
+			// This method could be hooked up to a pr.util.DragDrop so the 
+			// events could come from anything. Only accept dgvs
+			var grid = sender as DataGridView;
+			if (grid == null)
+				return false;
+
+			// Must allow move and contain a row
+			if ((args.AllowedEffect & DragDropEffects.Move) == 0 || !args.Data.GetDataPresent(typeof(DataGridViewRow)))
+				return false;
+
+			// We'll use move thanks
+			args.Effect = DragDropEffects.Move;
+			if (mode != DragDrop.EDrop.Drop)
+				return true;
+
+			// Find where the mouse is over the grid
+			Point pt = grid.PointToClient(new Point(args.X, args.Y));
+			var hit = grid.HitTest(pt.X, pt.Y);
+			if (hit.Type != DataGridViewHitTestType.RowHeader || hit.RowIndex < 0 || hit.RowIndex >= grid.RowCount)
+				return true;
+
+			// Get the drag data
+			var row = (DataGridViewRow)args.Data.GetData(typeof(DataGridViewRow));
+			int idx1 = row.Index;
+			int idx2 = hit.RowIndex;
+
+			// Swap the rows
+			var list = grid.DataSource as IList;
+			if (list == null) throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
+			object tmp = list[idx1];
+			list[idx1] = list[idx2];
+			list[idx2] = tmp;
+
+			// Invalidate the rows so that they draw again
+			grid.InvalidateRow(idx1);
+			grid.InvalidateRow(idx2);
+			return true;
 		}
 	}
 
@@ -414,6 +480,10 @@ namespace pr.extn
 			gfx.FillRectangle(m_gray2, thumb_rect);
 		}
 	}
+
+
+
+
 
 
 	///// <summary>A cell editing control for colour cells</summary>

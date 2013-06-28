@@ -1,0 +1,156 @@
+﻿*
+{
+	font-family: sans-serif;
+	font-size: 100%;
+	font-weight: normal;
+}
+
+body
+{
+}
+
+table
+{
+	border: 1px solid black;
+	border-collapse: collapse;
+}
+
+th
+{
+	border: 1px solid black;
+	border-collapse: collapse;
+}
+
+td
+{
+	border: 1px solid black;
+	border-collapse: collapse;
+}
+
+p
+{
+	margin: 0px;
+}
+
+b
+{
+	font-weight: bolder;
+}
+
+img.centred
+{
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top:20px;
+	margin-bottom:20px;
+}
+
+#main_help
+{
+	background: url(background.png) no-repeat;
+}
+
+#title_panel
+{
+	margin: 10px;
+	margin-bottom: 20px;
+}
+
+	#title_panel img
+	{
+		margin-right: 20px;
+		vertical-align: text-bottom;
+		margin-bottom: -10px;
+	}
+
+	#title_panel span
+	{
+		font-size: 180%;
+		font-weight: bold;
+		margin-bottom: 20px;
+	}
+
+#index_panel
+{
+	float:left;
+	border:solid 1px black;
+	vertical-align: top;
+	padding: 10px;
+}
+
+#content_panel
+{
+	float:left;
+	vertical-align: top;
+	padding: 10px;
+	width: 600px;
+	min-height: 821px;
+}
+
+.menu1
+{
+	font-weight: bold;
+	line-height: 180%;
+}
+
+.menu2
+{
+	font-size: 90%;
+	margin-left: 20px;
+}
+
+#details
+{
+	border: 0px;
+}
+
+.title
+{
+	font-size: 150%;
+	font-weight: bold;
+	color: #000080;
+	margin-bottom: 10px;
+}
+
+.fine_print
+{
+	font-size: 60%;
+}
+
+.tag_label
+{
+	line-height: 150%;
+	font-weight: bold;
+	font-style: italic;
+}
+
+.content
+{
+	text-align: justify;
+	margin-top: 5px;
+	margin-bottom: 15px;
+}
+
+.child_list_elem
+{
+	margin: 0px;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	list-style-type: disc;
+}
+
+.code
+{
+	font-family: monospace;
+	font-size: 100%;
+	font-weight: 600;
+	margin: 10px;
+}
+
+.links
+{
+	margin-top:10px;
+	margin-left:30px;
+	margin-bottom:10px;
+}

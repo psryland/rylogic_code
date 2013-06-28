@@ -12,7 +12,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		namespace impl
 		{
@@ -24,10 +24,20 @@ namespace pr
 }
 
 #define PR_IMPL_REGISTER_TYPEOF2(N,T)\
-	namespace pr { namespace mpl { namespace impl {\
-	template<> struct size_to_type<N> { typedef T type; };\
-	char (*type_to_size(T&))[N];\
-	}}}
+	namespace pr\
+	{\
+		namespace meta\
+		{\
+			namespace impl\
+			{\
+				template<> struct size_to_type<N>
+				{\
+					typedef T type;\
+				};\
+				char (*type_to_size(T&))[N];\
+			}\
+		}\
+	}
 
 #define PR_IMPL_REGISTER_TYPEOF(N,T) PR_IMPL_REGISTER_TYPEOF2(N,T)
 
@@ -56,7 +66,7 @@ namespace pr
 // Use:
 //  std::vector<int> cont;
 //  for (typeof(cont)::iterator i = cont.begin(), iend = cont.end(); i != iend; ++i) {}
-#define typeof(x) pr::mpl::impl::size_to_type<sizeof(*pr::mpl::impl::type_to_size(x))>::type
+#define typeof(x) pr::meta::impl::size_to_type<sizeof(*pr::meta::impl::type_to_size(x))>::type
 
 PR_REGISTER_TYPEOF(bool)
 PR_REGISTER_TYPEOF(char)
@@ -73,5 +83,23 @@ PR_REGISTER_TYPEOF(float)
 PR_REGISTER_TYPEOF(double)
 PR_REGISTER_TYPEOF(std::string)
 PR_REGISTER_TYPEOF(std::wstring)
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_meta_typeof)
+		{
+			int a = 0;
+			typeof(a) b = 1;
+			double c = 0.0;
+			PR_CHECK(sizeof(typeof(c)) == sizeof(double));
+			c = a = b;
+		}
+	}
+}
+#endif
 
 #endif

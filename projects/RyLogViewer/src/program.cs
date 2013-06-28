@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Security.Permissions;
+using System.Text;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.gui;
 using pr.inet;
 using pr.util;
@@ -12,90 +15,116 @@ namespace RyLogViewer
 {
 	static class program
 	{
-		private const string CommandLineRef = "RyLogViewer.docs.CommandLineRef.html";
-		
+		private static StartupOptions StartupOptions;
+
 		/// <summary>The main entry point for the application.</summary>
-		[STAThread]
-		[SecurityPermission(SecurityAction.Demand,ControlAppDomain=true)] // for the unhandled exception handler
+		[STAThread] [SecurityPermission(SecurityAction.Demand,Flags=SecurityPermissionFlag.ControlAppDomain)] // for the unhandled exception handler
 		static void Main(string[] args)
 		{
-			// Register ClrDump handler
-			try { ClrDump.Init(DumpHandler); } catch { Log.Warn(null, "ClrDump not available"); }
-			
+			// Setup the unhandled exception handler
+			try { AppDomain.CurrentDomain.UnhandledException += HandleTheUnhandled; }
+			catch (Exception ex) { Log.Exception(null, ex, "Failed to set unhandled exception handler"); }
+
 			Environment.ExitCode = 0;
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			
+
 			// Start the main app
-			StartupOptions su = null; Exception err = null;
-			try { su = new StartupOptions(args); } catch (Exception ex) { err = ex; }
-			
-			// If there was an error, or they just want help displayed...
-			if (err != null || su.ShowHelp)
+			Exception err = null;
+			try { StartupOptions = new StartupOptions(args); } catch (Exception ex) { err = ex; }
+
+			// If there was an error display the error message
+			if (err != null)
 			{
-				if (err != null)
-				{
-					MessageBox.Show(string.Format(
-						"There is an error in the startup options provided.\r\n"+
-						"Error Details:\r\n{0}"
-						,err.Message)
-						,"Command Line Error"
-						,MessageBoxButtons.OK
-						,MessageBoxIcon.Error);
-				}
-				HelpUI.ShowResource(null, CommandLineRef, Assembly.GetExecutingAssembly(), Resources.AppTitle);
+				MessageBox.Show(
+					"There is an error in the startup options provided.\r\n"+
+					"Error Details:\r\n{0}".Fmt(err.Message)
+					,"Command Line Error"
+					,MessageBoxButtons.OK
+					,MessageBoxIcon.Error);
+				HelpUI.ShowHtml(null, Resources.command_line_ref, Resources.AppTitle);
 				Environment.ExitCode = 1;
 				return;
 			}
-			
-			// If an export path is given, run as a command line tool doing an export
-			if (su.ExportPath != null)
+
+			// If they just want help displayed...
+			if (StartupOptions.ShowHelp)
 			{
-				RyLogViewer.Main.ExportToFile(su);
+				HelpUI.ShowHtml(null, Resources.command_line_ref, Resources.AppTitle);
+				Environment.ExitCode = 1;
 				return;
 			}
-			
+
+			// If an export path is given, run as a command line tool doing an export
+			if (StartupOptions.ExportPath != null)
+			{
+				RyLogViewer.Main.ExportToFile(StartupOptions);
+				return;
+			}
+
 			// Otherwise show the app
-			Application.Run(new Main(su));
+			Application.Run(new Main(StartupOptions));
 		}
-		
-		/// <summary>Handle dumps</summary>
-		private static void DumpHandler(object sender, UnhandledExceptionEventArgs args)
+
+		/// <summary>Handle unhandled exceptions</summary>
+		private static void HandleTheUnhandled(object sender, UnhandledExceptionEventArgs args)
 		{
-			#if DEBUG
-			MessageBox.Show(string.Format(
-				"{0} has shutdown with the following error."+
-				"\r\nError: {1}"+
-				"\r\nVersion: {2}"+
-				"\r\n\r\nDeleting the applications settings file {3} (typically found here: 'C:\\Users\\<UserName>\\AppData\\Roaming\\Rylogic Limited\\RyLogViewer\\settings.xml') might prevent this problem."+
-				"\r\n\r\nPlease contact {4} with information about this error so that it can be fixed."+
-				"\r\n\r\nThanks"
-				,Util.GetAssemblyAttribute<AssemblyTitleAttribute>().Title
-				,args.ExceptionObject
-				,Util.AssemblyVersion()
-				,Path.GetFileName(Settings.Default.Filepath)
-				,Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company)
-				,"Unexpected Termination"
-				,MessageBoxButtons.OK
-				,MessageBoxIcon.Error);
-			#endif
-			
 			var res = MessageBox.Show(string.Format(
-				"An unhandled exception has occurred in {0}.\r\n" +
+				"{0} has shutdown with the following error.\r\n" +
+				"Error: {1}\r\n" +
 				"\r\n" +
-				"Creating a dump file and sending it to {1} will aid in the resolution of this issue.\r\n" +
+				"Deleting the applications settings file, '{2}', might prevent this problem.\r\n" +
 				"\r\n" +
-				"Choose 'Yes' to create a dump file, or 'No' to quit."
+				"Generating a report and sending it to {3} will aid in the resolution of this issue. The generated report is a plain text file that you can review before sending.\r\n" +
+				"\r\n" +
+				"Would you like to generate the report?\r\n" +
+				"\r\n" +
+				"Alternatively, please contact  {4}  with information about this error so that it can be fixed.\r\n" +
+				"\r\n" +
+				"Apologies for any inconvenience caused.\r\n"
 				,Application.ProductName
+				,args.ExceptionObject.GetType().Name
+				,StartupOptions != null ? StartupOptions.SettingsPath : Path.GetFileName(Settings.Default.Filepath)
+				,Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company
 				,Constants.SupportEmail)
 				,"Unexpected Termination"
-				,MessageBoxButtons.YesNo, MessageBoxIcon.Error);
+				,MessageBoxButtons.YesNo
+				,MessageBoxIcon.Error);
 			if (res == DialogResult.Yes)
 			{
-				var dg = new SaveFileDialog{Title = "Save dump file", Filter = Resources.DumpFileFilter, DefaultExt = "dmp", CheckPathExists = true};
+				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = "Crash Report Files (*.txt)|*.txt|All files (*.*)|*.*", DefaultExt = "txt", CheckPathExists = true};
 				if (dg.ShowDialog() == DialogResult.OK)
 				{
-					ClrDump.Dump(dg.FileName);
+					string settings = "Settings filepath unknown";
+					if (StartupOptions != null && StartupOptions.SettingsPath.HasValue() && File.Exists(StartupOptions.SettingsPath))
+						settings = File.ReadAllText(StartupOptions.SettingsPath);
+
+					var sb = new StringBuilder()
+						.Append(Application.ProductName).Append(" - Crash Report - ").Append(DateTime.UtcNow).AppendLine()
+						.AppendLine("---------------------------------------------------------------")
+						.AppendLine("[Unhandled Exception Type]")
+						.AppendLine(args.ExceptionObject.Dump())
+						.AppendLine()
+						.AppendLine("[Settings File Contents]")
+						.AppendLine(settings)
+						.AppendLine()
+						.AppendLine("[General]")
+						.AppendLine("Application Version: {0}".Fmt(Util.AssemblyVersion()))
+						.AppendLine(Environment.OSVersion.VersionString);
+					if (StartupOptions != null) sb
+						.AppendLine(StartupOptions.Dump());
+					sb
+						.AppendLine()
+						.AppendLine("[Additional Comments]")
+						.AppendLine("Any additional information about what you were doing when this crash occurred would be extremely helpful and appreciated");
+					File.WriteAllText(dg.FileName, sb.ToString());
+
+					try
+					{
+						if (MessageBox.Show("Preview the report before sending?", "Review Report", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+						Process.Start(dg.FileName);
+					} catch {}
+
 					try
 					{
 						// Try to create an email with the attachment ready to go

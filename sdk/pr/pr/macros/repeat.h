@@ -2,6 +2,30 @@
 // Repeat
 //  Copyright © Rylogic Ltd 2012
 //*************************************
+// Example:
+//  // Overloads taking various numbers of parameters
+//  #define PR_TN(n) typename U##n
+//  #define PR_PARM1(n) U##n const& parm##n
+//  #define PR_PARM2(n) parm##n
+//  #define PR_FUNC(n)\
+//  template <PR_REPEAT(n,PR_TN,PR_COMMA)> T* New(PR_REPEAT(n,PR_PARM1,PR_COMMA))\
+//  {\
+//     pointer p = allocate(1);\
+//     construct(p, PR_REPEAT(n,PR_PARM2,PR_COMMA));\
+//     return p;\
+//  }
+//  PR_FUNC(1)
+//  PR_FUNC(2)
+//  PR_FUNC(3)
+//  PR_FUNC(4)
+//  PR_FUNC(5)
+//  PR_FUNC(6)
+//  PR_FUNC(7)
+//  #undef PR_TN
+//  #undef PR_PARM1
+//  #undef PR_PARM2
+//  #undef PR_FUNC
+// Note: nested PR_REPEATs don't work because of the macro recursion rules
 #pragma once
 #ifndef PR_MACRO_REPEAT_H
 #define PR_MACRO_REPEAT_H

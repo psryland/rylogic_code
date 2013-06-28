@@ -7,7 +7,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		namespace impl
 		{
@@ -33,7 +33,7 @@ namespace pr
 			static const std::size_t value = impl::square_root_iter<16, N>::value;
 		};
 
-	}//namespace mpl
-}//namespace pr
+	}
+}
 
 #endif PR_META_SQRT_H

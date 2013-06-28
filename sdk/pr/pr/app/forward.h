@@ -27,6 +27,8 @@
 #include <vector>
 #include <list>
 #include <memory>
+#include <guiddef.h>
+#include <cguid.h>
 
 // wtl
 #include <atlbase.h>
@@ -55,6 +57,7 @@
 #include "pr/common/keystate.h"
 #include "pr/common/colour.h"
 #include "pr/common/log.h"
+#include "pr/common/console.h"
 #include "pr/maths/maths.h"
 #include "pr/str/prstring.h"
 #include "pr/filesys/fileex.h"

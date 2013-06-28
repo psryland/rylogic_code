@@ -9,7 +9,7 @@
 
 namespace TestMeta
 {
-	using namespace pr::mpl;
+	using namespace pr::meta;
 
 	// or_
 	PR_STATIC_ASSERT(  (or_<true_ , true_ >::value) );

@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gui;
 using pr.maths;
 using pr.util;
 using RyLogViewer.Properties;
@@ -12,13 +15,15 @@ namespace RyLogViewer
 {
 	public partial class SettingsUI :Form
 	{
-		private readonly Settings        m_settings;    // The app settings changed by this UI
-		private readonly List<Highlight> m_highlights;  // The highlight patterns currently in the grid
-		private readonly List<Filter>    m_filters;     // The filter patterns currently in the grid
-		private readonly List<Transform> m_transforms;  // The transforms currently in the grid 
-		private readonly List<ClkAction> m_actions;     // The actions currently in the grid 
-		private readonly ToolTip         m_tt;          // Tooltips
-		
+		private readonly Settings    m_settings;     // The app settings changed by this UI
+		private readonly ToolTip     m_tt;           // Tooltips
+		private readonly ToolTip     m_balloon;      // Balloon hits
+		private readonly HoverScroll m_hover_scroll; // Hoverscroll for the pattern grid
+		private List<Highlight>      m_highlights;   // The highlight patterns currently in the grid
+		private List<Filter>         m_filters;      // The filter patterns currently in the grid
+		private List<Transform>      m_transforms;   // The transforms currently in the grid
+		private List<ClkAction>      m_actions;      // The actions currently in the grid
+
 		public enum ETab
 		{
 			General    = 0,
@@ -37,7 +42,16 @@ namespace RyLogViewer
 			public const string Behaviour    = "IfMatch";
 			public const string ClickAction  = "ClickAction";
 		}
-		
+
+		public enum ESpecial
+		{
+			None,
+
+			// Show a tip balloon over the line ending field
+			ShowLineEndingTip,
+		}
+		private ESpecial m_special;
+
 		/// <summary>Returns a bit mask of the settings data that's changed</summary>
 		public EWhatsChanged WhatsChanged { get; private set; }
 		
@@ -56,44 +70,50 @@ namespace RyLogViewer
 		/// <summary>Access to the action pattern ui</summary>
 		public PatternUI ActionUI { get { return m_pattern_ac; } }
 		public bool ActionsChanged { get; set; }
-		
-		public SettingsUI(Settings settings, ETab tab)
+
+		public SettingsUI(Settings settings, ETab tab, ESpecial special = ESpecial.None)
 		{
 			InitializeComponent();
-			KeyPreview    = true;
-			m_settings    = settings;
-			m_highlights  = Highlight.Import(m_settings.HighlightPatterns);
-			m_filters     = Filter   .Import(m_settings.FilterPatterns   );
-			m_transforms  = Transform.Import(m_settings.TransformPatterns);
-			m_actions     = ClkAction.Import(m_settings.ActionPatterns   );
-			m_tt          = new ToolTip();
-			
+			KeyPreview     = true;
+			m_settings     = settings;
+			m_special      = special;
+			m_tt           = new ToolTip();
+			m_balloon      = new ToolTip{IsBalloon = true,UseFading = true,ReshowDelay = 0};
+			m_hover_scroll = new HoverScroll();
+			ReadSettings();
+
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
-			m_pattern_ft.NewPattern(new Filter());
+			m_pattern_ft.NewPattern(new Filter()   );
 			m_pattern_tx.NewPattern(new Transform());
 			m_pattern_ac.NewPattern(new ClkAction());
 			
 			m_settings.SettingChanged += (s,a) => UpdateUI();
-			m_tabctrl.SelectedIndexChanged += (s,a) => FocusInput();
+			m_tabctrl.Deselecting += (s,a) => TabChanging(a);
+			m_tabctrl.SelectedIndexChanged += (s,a) =>
+				{
+					UpdateUI();
+					FocusInput();
+				};
 
 			SetupGeneralTab();
-			SetupLogViewTab();
+			SetupAppearanceTab();
 			SetupHighlightTab();
 			SetupFilterTab();
 			SetupTransformTab();
 			SetupActionTab();
-			
-			// Escape to close
-			KeyDown += (s,a) =>
-				{
-					a.Handled = a.KeyCode == Keys.Escape;
-					if (a.Handled) Close();
-				};
 
 			Shown += (s,a) =>
 				{
 					FocusInput();
+					PerformSpecial();
+				};
+
+			// Watch for unsaved changes on closing
+			Closing += (s,a) =>
+				{
+					Focus(); // grab focus to ensure all controls persist their state
+					SavePatternChanges(a); // Watch for unsaved changes
 				};
 
 			// Save on close
@@ -109,7 +129,16 @@ namespace RyLogViewer
 			UpdateUI();
 			WhatsChanged = EWhatsChanged.Nothing;
 		}
-		
+
+		/// <summary>Populate the internal lists from the settings data</summary>
+		private void ReadSettings()
+		{
+			m_highlights = Highlight.Import(m_settings.HighlightPatterns);
+			m_filters    = Filter   .Import(m_settings.FilterPatterns   );
+			m_transforms = Transform.Import(m_settings.TransformPatterns);
+			m_actions    = ClkAction.Import(m_settings.ActionPatterns   );
+		}
+
 		/// <summary>Hook up events for the general tab</summary>
 		private void SetupGeneralTab()
 		{
@@ -313,6 +342,7 @@ namespace RyLogViewer
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_settings.Filepath = dg.FileName;
 					m_settings.Reload();
+					ReadSettings();
 					UpdateUI();
 					WhatsChanged |= EWhatsChanged.Everything;
 				};
@@ -335,12 +365,14 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Nothing;
 				};
 		}
-		
+
 		/// <summary>Hook up events for the log view tab</summary>
-		private void SetupLogViewTab()
+		private void SetupAppearanceTab()
 		{
+			string tt;
+
 			// Selection colour
-			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view");
+			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view\r\nClick here to modify the colours");
 			m_lbl_selection_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_selection_example, a.X, a.Y,
@@ -350,7 +382,7 @@ namespace RyLogViewer
 				};
 			
 			// Log text colour
-			m_lbl_line1_example.ToolTip(m_tt, "Set the foreground and background colours in the log view");
+			m_lbl_line1_example.ToolTip(m_tt, "Set the foreground and background colours in the log view\r\nClick here to modify the colours");
 			m_lbl_line1_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_line1_example, a.X, a.Y,
@@ -360,7 +392,7 @@ namespace RyLogViewer
 				};
 			
 			// Alt log text colour
-			m_lbl_line2_example.ToolTip(m_tt, "Set the foreground and background colours for odd numbered rows in the log view");
+			m_lbl_line2_example.ToolTip(m_tt, "Set the foreground and background colours for odd numbered rows in the log view\r\nClick here to modify the colours");
 			m_lbl_line2_example.MouseClick += (s,a)=>
 				{
 					PickColours(m_lbl_line2_example, a.X, a.Y,
@@ -387,18 +419,7 @@ namespace RyLogViewer
 					m_settings.RowHeight = (int)m_spinner_row_height.Value;
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
-			
-			// File scroll width
-			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
-			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
-			m_spinner_file_scroll_width.Maximum = Constants.FileScrollMaxWidth;
-			m_spinner_file_scroll_width.Value = Maths.Clamp(m_settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
-			m_spinner_file_scroll_width.ValueChanged += (s,a)=>
-				{
-					m_settings.FileScrollWidth = (int)m_spinner_file_scroll_width.Value;
-					WhatsChanged |= EWhatsChanged.Rendering;
-				};
-			
+
 			// Font 
 			m_text_font.ToolTip(m_tt, "The font used to display the log file data");
 			m_text_font.Text = string.Format("{0}, {1}pt" ,m_settings.Font.Name ,m_settings.Font.Size);
@@ -413,8 +434,53 @@ namespace RyLogViewer
 					m_text_font.Font = dg.Font;
 					m_settings.Font = dg.Font;
 				};
+
+			// File scroll width
+			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
+			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
+			m_spinner_file_scroll_width.Maximum = Constants.FileScrollMaxWidth;
+			m_spinner_file_scroll_width.Value = Maths.Clamp(m_settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
+			m_spinner_file_scroll_width.ValueChanged += (s,a)=>
+				{
+					m_settings.FileScrollWidth = (int)m_spinner_file_scroll_width.Value;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+
+			tt = "The colour representing the cached portion of the log file in the file scroll bar\r\nClick here to modify the colour";
+			m_lbl_fs_cached_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_cached_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_cached_colour.BackColor = m_settings.ScrollBarCachedRangeColour;
+			m_lbl_fs_edit_cached_colour.MouseClick += (s,a)=>
+				{
+					m_settings.ScrollBarCachedRangeColour = PickColour(m_settings.ScrollBarCachedRangeColour);
+					m_lbl_fs_edit_cached_colour.BackColor = m_settings.ScrollBarCachedRangeColour;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+
+			tt = "The colour representing the portion of the log file currently on screen\r\nClick here to modify the colour";
+			m_lbl_fs_visible_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_visible_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_visible_colour.BackColor = m_settings.ScrollBarDisplayRangeColour;
+			m_lbl_fs_edit_visible_colour.MouseClick += (s,a)=>
+				{
+					m_settings.ScrollBarDisplayRangeColour = PickColour(m_settings.ScrollBarDisplayRangeColour);
+					m_lbl_fs_edit_visible_colour.BackColor = m_settings.ScrollBarDisplayRangeColour;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+
+			tt = "The colour of the bookmarked locations\r\nClick here to modify the colour";
+			m_lbl_fs_bookmark_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_bookmark_colour.ToolTip(m_tt, tt);
+			m_lbl_fs_edit_bookmark_colour.BackColor = m_settings.BookmarkColour;
+			m_lbl_fs_edit_bookmark_colour.MouseClick += (s,a)=>
+				{
+					m_settings.BookmarkColour = PickColour(m_settings.BookmarkColour);
+					m_lbl_fs_edit_bookmark_colour.BackColor = m_settings.BookmarkColour;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+			
 		}
-		
+
 		/// <summary>Hook up events for the highlights tab</summary>
 		private void SetupHighlightTab()
 		{
@@ -433,11 +499,11 @@ namespace RyLogViewer
 			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active       ,HeaderText = Resources.Active       ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern      ,HeaderText = Resources.Pattern      ,FillWeight = 100 ,ReadOnly = true });
 			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Highlighting ,HeaderText = Resources.Highlighting ,FillWeight = 100 ,ReadOnly = true ,DefaultCellStyle = hl_style});
-			m_grid_highlight.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify       ,HeaderText = Resources.Edit         ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Modify       ,HeaderText = Resources.Edit         ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.SelectAll;
-			m_grid_highlight.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_highlight, m_highlights, a.Row.Index);
+			m_grid_highlight.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_highlight, m_highlights, m_pattern_hl, a.Row.Index);
 			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown      (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop       (m_grid_highlight, m_highlights, a, false);
 			m_grid_highlight.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_highlight, m_highlights, a);
@@ -445,18 +511,19 @@ namespace RyLogViewer
 			m_grid_highlight.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
 			m_grid_highlight.CellFormatting   += (s,a)=> OnCellFormatting (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DataError        += (s,a)=> a.Cancel = true;
-			m_grid_highlight.CellContextMenuStripNeeded += (s,a)=> OnCellClick (m_grid_highlight, m_highlights, m_pattern_hl, a);
-			
+			m_grid_highlight.CellContextMenuStripNeeded += (s,a)=> OnCellClick(m_grid_highlight, m_highlights, m_pattern_hl, a);
+
+			m_hover_scroll.WindowHandles.Add(m_grid_highlight.Handle);
+
 			// Highlight pattern
-			m_pattern_hl.Add += (s,a)=>
+			m_pattern_hl.Commit += (s,a)=>
 				{
 					WhatsChanged |= EWhatsChanged.Rendering;
-					if (m_pattern_hl.IsNew) m_highlights.Add((Highlight)m_pattern_hl.Pattern);
-					m_pattern_hl.NewPattern(new Highlight());
+					CommitPattern(m_pattern_hl, m_highlights);
 					HighlightsChanged = true;
 					UpdateUI();
 				};
-			
+
 			// Highlight pattern sets
 			m_pattern_set_hl.Init(m_settings, m_highlights);
 			m_pattern_set_hl.CurrentSetChanged += (s,a)=>
@@ -475,11 +542,11 @@ namespace RyLogViewer
 			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = Resources.Active  ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Behaviour ,HeaderText = Resources.IfMatch ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
 			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_filter.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify    ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Modify    ,HeaderText = Resources.Edit    ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
-			m_grid_filter.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_filter, m_filters, a.Row.Index);
+			m_grid_filter.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_filter, m_filters, m_pattern_ft, a.Row.Index);
 			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown      (m_grid_filter, m_filters, a);
 			m_grid_filter.DragOver           += (s,a)=> DoDragDrop       (m_grid_filter, m_filters, a, false);
 			m_grid_filter.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_filter, m_filters, a);
@@ -487,7 +554,9 @@ namespace RyLogViewer
 			m_grid_filter.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_filter, m_filters, m_pattern_ft, a);
 			m_grid_filter.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_filter, m_filters, a);
 			m_grid_filter.DataError          += (s,a)=> a.Cancel = true;
-			
+
+			m_hover_scroll.WindowHandles.Add(m_grid_filter.Handle);
+
 			// Check reject all by default
 			m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
 			m_check_reject_all_by_default.Click += (s,a)=>
@@ -501,11 +570,10 @@ namespace RyLogViewer
 				};
 			
 			// Filter pattern
-			m_pattern_ft.Add += (s,a)=>
+			m_pattern_ft.Commit += (s,a)=>
 				{
 					WhatsChanged |= EWhatsChanged.FileParsing;
-					if (m_pattern_ft.IsNew) m_filters.Add((Filter)m_pattern_ft.Pattern);
-					m_pattern_ft.NewPattern(new Filter());
+					CommitPattern(m_pattern_ft, m_filters);
 					FiltersChanged = true;
 					UpdateUI();
 				};
@@ -527,11 +595,11 @@ namespace RyLogViewer
 			m_grid_transform.ColumnCount         = m_grid_transform.RowCount = 0;
 			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_transform.Columns.Add(new DataGridViewButtonColumn {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_transform.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_transform.KeyDown            += DataGridView_Extensions.SelectAll;
-			m_grid_transform.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_transform, m_transforms, a.Row.Index);
+			m_grid_transform.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_transform, m_transforms, m_pattern_tx, a.Row.Index);
 			m_grid_transform.MouseDown          += (s,a)=> OnMouseDown      (m_grid_transform, m_transforms, a);
 			m_grid_transform.DragOver           += (s,a)=> DoDragDrop       (m_grid_transform, m_transforms, a, false);
 			m_grid_transform.CellValueNeeded    += (s,a)=> OnCellValueNeeded(m_grid_transform, m_transforms, a);
@@ -539,13 +607,14 @@ namespace RyLogViewer
 			m_grid_transform.CellDoubleClick    += (s,a)=> OnCellDoubleClick(m_grid_transform, m_transforms, m_pattern_tx, a);
 			m_grid_transform.CellFormatting     += (s,a)=> OnCellFormatting (m_grid_transform, m_transforms, a);
 			m_grid_transform.DataError          += (s,a)=> a.Cancel = true;
-			
+
+			m_hover_scroll.WindowHandles.Add(m_grid_transform.Handle);
+
 			// Transform
-			m_pattern_tx.Add += (s,a)=>
+			m_pattern_tx.Commit += (s,a)=>
 				{
 					WhatsChanged |= EWhatsChanged.Rendering;
-					if (m_pattern_tx.IsNew) m_transforms.Add(m_pattern_tx.Transform);
-					m_pattern_tx.NewPattern(new Transform());
+					CommitPattern(m_pattern_tx, m_transforms);
 					TransformsChanged = true;
 					UpdateUI();
 				};
@@ -569,11 +638,11 @@ namespace RyLogViewer
 			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active       ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern      ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
 			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.ClickAction  ,HeaderText = Resources.Action  ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_action.Columns.Add(new DataGridViewButtonColumn  {Name = ColumnNames.Modify       ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
+			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Modify       ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_action.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_action.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_action.KeyDown          += DataGridView_Extensions.SelectAll;
-			m_grid_action.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_action, m_actions, a.Row.Index);
+			m_grid_action.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_action, m_actions, m_pattern_ac, a.Row.Index);
 			m_grid_action.MouseDown        += (s,a)=> OnMouseDown      (m_grid_action, m_actions, a);
 			m_grid_action.DragOver         += (s,a)=> DoDragDrop       (m_grid_action, m_actions, a, false);
 			m_grid_action.CellValueNeeded  += (s,a)=> OnCellValueNeeded(m_grid_action, m_actions, a);
@@ -581,14 +650,15 @@ namespace RyLogViewer
 			m_grid_action.CellDoubleClick  += (s,a)=> OnCellDoubleClick(m_grid_action, m_actions, m_pattern_ac, a);
 			m_grid_action.CellFormatting   += (s,a)=> OnCellFormatting (m_grid_action, m_actions, a);
 			m_grid_action.DataError        += (s,a)=> a.Cancel = true;
-			m_grid_action.CellContextMenuStripNeeded += (s,a)=> OnCellClick (m_grid_action, m_actions, m_pattern_ac, a);
-			
+			m_grid_action.CellContextMenuStripNeeded += (s,a)=> OnCellClick(m_grid_action, m_actions, m_pattern_ac, a);
+
+			m_hover_scroll.WindowHandles.Add(m_grid_action.Handle);
+
 			// Action pattern
-			m_pattern_ac.Add += (s,a)=>
+			m_pattern_ac.Commit += (s,a)=>
 				{
 					WhatsChanged |= EWhatsChanged.Nothing;
-					if (m_pattern_ac.IsNew) m_actions.Add((ClkAction)m_pattern_ac.Pattern);
-					m_pattern_ac.NewPattern(new ClkAction());
+					CommitPattern(m_pattern_ac, m_actions);
 					ActionsChanged = true;
 					UpdateUI();
 				};
@@ -599,6 +669,43 @@ namespace RyLogViewer
 				{
 					UpdateUI();
 				};
+		}
+
+		/// <summary>Check all pattern tabs for unsaved changes and prompt to save if any</summary>
+		private void SavePatternChanges(CancelEventArgs args)
+		{
+			SavePatternChanges(m_pattern_hl, m_highlights, "Highlighting", args);
+			SavePatternChanges(m_pattern_ft, m_filters   , "Filtering"   , args);
+			SavePatternChanges(m_pattern_tx, m_transforms, "Transform"   , args);
+			SavePatternChanges(m_pattern_ac, m_actions   , "Click action", args);
+		}
+
+		/// <summary>Helper for prompting to save changes to a pattern before leaving the tab</summary>
+		private void SavePatternChanges<TPattern>(IPatternUI pattern_ui, List<TPattern> patterns, string text, CancelEventArgs args) where TPattern:IPattern,new()
+		{
+			if (pattern_ui.HasUnsavedChanges)
+			{
+				var res = MessageBox.Show(this, "{0} pattern contains unsaved changes.\r\n\r\nSave changes?".Fmt(text),"Unsaved Changes",MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+				if (res == DialogResult.Cancel) { args.Cancel = true; return; }
+				if (res == DialogResult.No)     { pattern_ui.NewPattern(new TPattern()); return; }
+				if (!pattern_ui.CommitEnabled)  { args.Cancel = true; return; }
+				CommitPattern(pattern_ui, patterns);
+			}
+		}
+
+		/// <summary>Save a modified pattern from a pattern UI</summary>
+		private void CommitPattern<TPattern>(IPatternUI pattern_ui, List<TPattern> patterns) where TPattern:IPattern,new()
+		{
+			if (pattern_ui.IsNew) patterns.Insert(0, (TPattern)pattern_ui.Pattern);
+			else                  patterns.Replace((TPattern)pattern_ui.Original, (TPattern)pattern_ui.Pattern);
+			pattern_ui.NewPattern(new TPattern());
+		}
+
+		/// <summary>Called as the tab is changing/closing</summary>
+		private void TabChanging(TabControlCancelEventArgs args)
+		{
+			if (args.Action == TabControlAction.Deselecting)
+				SavePatternChanges(args);
 		}
 
 		/// <summary>Reset the settings to their default values</summary>
@@ -629,6 +736,22 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Execute any special behaviour</summary>
+		private void PerformSpecial()
+		{
+			switch (m_special)
+			{
+			default: Debug.Assert(false, "Unknown special behaviour"); break;
+			case ESpecial.None: break;
+			case ESpecial.ShowLineEndingTip:
+				{
+					m_edit_line_ends.ShowHintBalloon(m_balloon, "Set the line ending characters to expect in the log data.\r\nUse '<CR>' for carriage return, '<LF>' for line feed.\r\nLeave blank to auto detect");
+					m_special = ESpecial.None;
+					break;
+				}
+			}
+		}
+
 		/// <summary>Set appropriate changed flags when a grid is changed</summary>
 		private void FlagAsChanged(DataGridView grid)
 		{
@@ -638,18 +761,56 @@ namespace RyLogViewer
 			else if (grid == m_grid_action   ) { ActionsChanged    = true; WhatsChanged |= EWhatsChanged.Nothing; }
 		}
 
+		/// <summary>Handle key down</summary>
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			switch (e.KeyCode)
+			{
+			default:
+				e.Handled = false;
+				break;
+			case Keys.Escape:
+				e.Handled = true;
+				Close();
+				break;
+			case Keys.F1:
+				{
+					e.Handled = true;
+					var ctrl = this.GetChildAtScreenPointRec(MousePosition);
+					if (ctrl != null)
+					{
+						var msg = ctrl.ToolTipText();
+						if (msg != null)
+						{
+							m_tt.Hide(ctrl);
+							m_balloon.Hide(ctrl);
+							ctrl.ShowHintBalloon(m_balloon, msg);
+						}
+					}
+				}
+				break;
+			}
+			base.OnKeyDown(e);
+		}
+
 		/// <summary>Delete a pattern</summary>
-		private void OnDeletingRow<T>(DataGridView grid, List<T> patterns, int index)
+		private void OnDeletingRow<TPattern>(DataGridView grid, List<TPattern> patterns, IPatternUI pattern_ui, int index) where TPattern:IPattern,new()
 		{
 			// Note, don't update the grid here or it causes an ArgumentOutOfRange exception.
 			// Other stuff must be using the grid row that will be deleted.
+
+			// If the deleted row is currently being edited, remove it from the editor first
+			if (ReferenceEquals(pattern_ui.Original, patterns[index]))
+				pattern_ui.NewPattern(new TPattern());
+
 			patterns.RemoveAt(index);
 			FlagAsChanged(grid);
-			if (typeof(T) == typeof(Filter))
+
+			if (typeof(TPattern) == typeof(Filter))
 				m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
 		}
 
-		/// <summary>DragDrop functionality for grid rows</summary>
+		/// <summary>OnDragDrop functionality for grid rows</summary>
 		private void DoDragDrop<T>(DataGridView grid, List<T> patterns, DragEventArgs args, bool test_can_drop)
 		{
 			args.Effect = DragDropEffects.None;
@@ -659,17 +820,15 @@ namespace RyLogViewer
 			if (hit.Type != DataGridViewHitTestType.RowHeader || hit.RowIndex < 0 || hit.RowIndex >= patterns.Count) return;
 			args.Effect = args.AllowedEffect;
 			if (test_can_drop) return;
-			
+
 			// Swap the rows
 			T pat = (T)args.Data.GetData(typeof(T));
 			int idx1 = patterns.IndexOf(pat);
 			int idx2 = hit.RowIndex;
-			T tmp = patterns[idx1];
-			patterns[idx1] = patterns[idx2];
-			patterns[idx2] = tmp;
+			patterns.Swap(idx1, idx2);
 			grid.InvalidateRow(idx1);
 			grid.InvalidateRow(idx2);
-			
+
 			FlagAsChanged(grid);
 		}
 
@@ -704,9 +863,6 @@ namespace RyLogViewer
 				if (pt != null && pt.Invert) val = "not "+val;
 				e.Value = val;
 				break;
-			case ColumnNames.Modify:
-				e.Value = "...";
-				break;
 			case ColumnNames.Highlighting:
 				e.Value = Resources.ClickToModifyHighlight;
 				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? hl.BackColour : Color.White;
@@ -714,8 +870,8 @@ namespace RyLogViewer
 				break;
 			case ColumnNames.Behaviour:
 				if (ft != null) switch (ft.IfMatch) {
-				case Filter.EIfMatch.Keep: e.Value = "Keep"; break;
-				case Filter.EIfMatch.Reject: e.Value = "Reject"; break;
+				case EIfMatch.Keep:   e.Value = "Keep"; break;
+				case EIfMatch.Reject: e.Value = "Reject"; break;
 				}
 				break;
 			case ColumnNames.ClickAction:
@@ -740,7 +896,9 @@ namespace RyLogViewer
 			{
 			default: return;
 			case ColumnNames.Active: pat.Active = !pat.Active; break;
-			case ColumnNames.Modify: ctrl.EditPattern(patterns[e.RowIndex]); break;
+			case ColumnNames.Modify:
+				ctrl.EditPattern(patterns[e.RowIndex]);
+				break;
 			case ColumnNames.Highlighting:
 				if (hl != null)
 				{
@@ -753,7 +911,7 @@ namespace RyLogViewer
 			case ColumnNames.Behaviour:
 				if (ft != null)
 				{
-					ft.IfMatch = Enum<Filter.EIfMatch>.Cycle(ft.IfMatch);
+					ft.IfMatch = Enum<EIfMatch>.Cycle(ft.IfMatch);
 				}
 				break;
 			case ColumnNames.ClickAction:
@@ -765,6 +923,12 @@ namespace RyLogViewer
 				}
 				break;
 			}
+
+			//// Context menu for the grid
+			//var menu = new ContextMenuStrip();
+			//menu.Items.Add("Delete pattern", null, (ss,aa) => patterns.RemoveAt(e.RowIndex));
+			//menu.Show(pt);
+
 			FlagAsChanged(grid);
 		}
 
@@ -794,10 +958,13 @@ namespace RyLogViewer
 			case ColumnNames.Active:
 				e.Value = pat.Active ? Resources.pattern_active : Resources.pattern_inactive;
 				break;
+			case ColumnNames.Modify:
+				e.Value = Resources.pencil;
+				break;
 			}
 		}
 
-		/// <summary>Helper for create a text colour pick menu</summary>
+		/// <summary>Helper for creating a text colour picker menu</summary>
 		private static void PickColours(Control ctrl, int x, int y, EventHandler pick_fore, EventHandler pick_back)
 		{
 			var menu = new ContextMenuStrip();
@@ -805,7 +972,14 @@ namespace RyLogViewer
 			menu.Items.Add(new ToolStripMenuItem(Resources.ChangeBackColour, null, pick_back));
 			menu.Show(ctrl, x, y);
 		}
-		
+
+		/// <summary>Colour picker helper</summary>
+		private Color PickColour(Color current)
+		{
+			var d = new ColorDialog{AllowFullOpen = true, AnyColor = true, Color = current};
+			return d.ShowDialog(this) == DialogResult.OK ? d.Color : current;
+		}
+
 		/// <summary>Update the UI state based on current settings</summary>
 		private void UpdateUI()
 		{
@@ -861,13 +1035,6 @@ namespace RyLogViewer
 			{
 				ResumeLayout();
 			}
-		}
-
-		/// <summary>Colour picker helper</summary>
-		private Color PickColour(Color current)
-		{
-			var d = new ColorDialog{AllowFullOpen = true, AnyColor = true, Color = current};
-			return d.ShowDialog(this) == DialogResult.OK ? d.Color : current;
 		}
 	}
 }

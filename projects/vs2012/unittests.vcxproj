@@ -58,8 +58,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\crc.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dinstance.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dptr.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\dependency.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\discretepidcontroller.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\enumerable.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\event.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\events.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\exception.h" />
@@ -87,7 +89,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\pipe.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\pollingtoevent.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\predicate.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\prlink.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prlog.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\procttree.h" />
@@ -108,13 +109,14 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\serialportio.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stack.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\testbed3d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\timers.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\to.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\repeater.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\triangulartable.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\unittests.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\valuecast.h" />
@@ -160,6 +162,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\geometryfunctions_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\irect.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\irect_impl.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\isize.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\ivector2.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\ivector2_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\ivector4.h" />
@@ -167,7 +170,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\largeint.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\line3.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\line3_impl.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\maths\macros.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\maths.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\mathsassert.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\matrix2x2.h" />
@@ -200,7 +202,31 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector4.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector4_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector_rand.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\abs.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedstorage.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedtype.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignmentof.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\and.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\constants.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\enableif.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\function_arity.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\gcf.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\if.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\isclass.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\ispod.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\ispointer.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\isprime.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\min_max.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\not.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\or.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\primegtreq.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\remove_pointer.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\squareroot.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\typelist.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\csv.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\storage\settings.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\xml.h" />
     <ClInclude Include="..\..\sdk\pr\pr\str\prstdstring.h" />
@@ -281,13 +307,13 @@
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="app.win32.debug.props" />
+    <Import Project="app.x86.debug.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="app.x64.debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="app.win32.release.props" />
+    <Import Project="app.x86.release.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="app.x64.release.props" />
@@ -309,8 +335,8 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -324,8 +350,8 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -344,8 +370,8 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -362,8 +388,8 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

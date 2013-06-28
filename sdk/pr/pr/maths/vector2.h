@@ -93,17 +93,7 @@ namespace pr
 	inline bool operator >  (v2 const& lhs, v2 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (v2 const& lhs, v2 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (v2 const& lhs, v2 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	
-	// D3DX conversion functions
-	#if PR_MATHS_USE_D3DX
-	inline D3DXVECTOR2 const& d3dv2(v2 const& v) { return reinterpret_cast<D3DXVECTOR2 const&>(v); }
-	inline D3DXVECTOR2&       d3dv2(v2&       v) { return reinterpret_cast<D3DXVECTOR2&>      (v); }
-	inline D3DXVECTOR2 const& d3dv2(v3 const& v) { return reinterpret_cast<D3DXVECTOR2 const&>(v); }
-	inline D3DXVECTOR2&       d3dv2(v3&       v) { return reinterpret_cast<D3DXVECTOR2&>      (v); }
-	inline D3DXVECTOR2 const& d3dv2(v4 const& v) { return reinterpret_cast<D3DXVECTOR2 const&>(v); }
-	inline D3DXVECTOR2&       d3dv2(v4&       v) { return reinterpret_cast<D3DXVECTOR2&>      (v); }
-	#endif
-	
+
 	// Min/Max/Clamp
 	template <> inline v2 Max(v2 const& lhs, v2 const& rhs)              { return v2::make(Max(lhs.x,rhs.x), Max(lhs.y,rhs.y)); }
 	template <> inline v2 Min(v2 const& lhs, v2 const& rhs)              { return v2::make(Min(lhs.x,rhs.x), Min(lhs.y,rhs.y)); }

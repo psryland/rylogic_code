@@ -37,19 +37,19 @@ goto :end
 	del "%dstdir%\%imgdir%\*.*" /Q
 
 	echo Copying imager files to "%dstdir%\%imgdir%"
-	call copy "%bindir%\imager.exe"                                  "%dstdir%\%imgdir%\"  /Y /F
+	call copy "%bindir%\imager.exe"                                  "%dstdir%\%imgdir%\"
 	if errorlevel 1 goto :eof
-	call copy "%bindir%\pr.dll"                                      "%dstdir%\%imgdir%\"  /Y /F
+	call copy "%bindir%\pr.dll"                                      "%dstdir%\%imgdir%\"
 	if errorlevel 1 goto :eof
-	call copy "%bindir%\view3d.dll"                                  "%dstdir%\%imgdir%\"  /Y /F
+	call copy "%bindir%\view3d.dll"                                  "%dstdir%\%imgdir%\"
 	if errorlevel 1 goto :eof
-	call copy "%srcdir%\install_screen_saver.cmd"                    "%dstdir%\%imgdir%\"  /Y /F
+	call copy "%srcdir%\install_screen_saver.cmd"                    "%dstdir%\%imgdir%\"
 	if errorlevel 1 goto :eof
-	call copy "q:\sdk\directx9.0c\aug2009\bin\%1\d3dcompiler_42.dll" "%dstdir%\%imgdir%\"  /Y /F
+	call copy "q:\sdk\directx9.0c\aug2009\bin\%1\d3dcompiler_42.dll" "%dstdir%\%imgdir%\"
 	if errorlevel 1 goto :eof
-	call copy "q:\sdk\directx9.0c\aug2009\bin\%1\d3dx9_42.dll"       "%dstdir%\%imgdir%\"  /Y /F
+	call copy "q:\sdk\directx9.0c\aug2009\bin\%1\d3dx9_42.dll"       "%dstdir%\%imgdir%\"
 	if errorlevel 1 goto :eof
-	call copy "q:\bin\cex.%1.exe"                                    "%dstdir%\%imgdir%\cex.exe"  /Y /F
+	call copy "q:\bin\cex.%1.exe"                                    "%dstdir%\%imgdir%\cex.exe"
 	if errorlevel 1 goto :eof
 	
 	echo Creating zip file

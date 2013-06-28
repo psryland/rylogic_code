@@ -41,6 +41,12 @@
     <Filter Include="sdk\app">
       <UniqueIdentifier>{3b2e8c0f-39bf-461e-9421-2f53ee2bfc0d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk\meta">
+      <UniqueIdentifier>{90fa2bb6-0623-4d6c-ad98-77ce092a0a6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\network">
+      <UniqueIdentifier>{c6b2ab90-2d54-4ce5-8c83-84b1a254948f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -148,9 +154,6 @@
       <Filter>sdk\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\line3_impl.h">
-      <Filter>sdk\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\maths\macros.h">
       <Filter>sdk\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\maths.h">
@@ -414,9 +417,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\predicate.h">
       <Filter>sdk\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\prlink.h">
-      <Filter>sdk\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h">
       <Filter>sdk\common</Filter>
     </ClInclude>
@@ -487,9 +487,6 @@
       <Filter>sdk\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\timers.h">
-      <Filter>sdk\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\triangulartable.h">
       <Filter>sdk\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h">
@@ -683,6 +680,93 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\app\skybox.h">
       <Filter>sdk\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedstorage.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedtype.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\alignmentof.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\and.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\constants.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\enableif.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\function_arity.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\if.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\isclass.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\ispod.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\ispointer.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\isprime.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\not.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\or.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\primegtreq.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\remove_pointer.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\squareroot.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\typelist.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\maths\isize.h">
+      <Filter>sdk\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h">
+      <Filter>sdk\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\storage\settings.h">
+      <Filter>sdk\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h">
+      <Filter>sdk\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\gcf.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\min_max.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\meta\abs.h">
+      <Filter>sdk\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\enumerable.h">
+      <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h">
+      <Filter>sdk\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

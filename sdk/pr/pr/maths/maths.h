@@ -4,15 +4,12 @@
 //*****************************************************************************
 
 #pragma once
-#ifndef PR_MATHS_H
-#define PR_MATHS_H
+#ifndef PR_MATHS_MATHS_H
+#define PR_MATHS_MATHS_H
 
 // Define switches:
-// PR_MATHS_USE_D3DX
-// PR_MATHS_USE_PR_ASSERT
-// PR_MATHS_USE_OPEN_MP
+// PR_MATHS_USE_DIRECTMATH
 // PR_MATHS_USE_INTRINSICS
-// PR_MATHS_USE_CREF
 // Also remember NOMINMAX
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
@@ -36,6 +33,7 @@
 #include "pr/maths/line3.h"
 #include "pr/maths/irect.h"
 #include "pr/maths/frect.h"
+#include "pr/maths/isize.h"
 #include "pr/maths/spline.h"
 #include "pr/maths/frustum.h"
 #include "pr/maths/polynomial.h"

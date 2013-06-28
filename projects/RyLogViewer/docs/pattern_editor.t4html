@@ -1,0 +1,150 @@
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<#@include file="head.t4html"#>
+	<body id="main_help">
+		<#@include file="title_panel.t4html"#>
+		<#@include file="index_panel.t4html"#>
+		<div id="content_panel">
+			<div class="title">Pattern Editor</div>
+			<div class="content">
+				Pattern matching is at the core of the highlighting, filtering, and transformation features
+				in RyLogViewer. The Pattern Editor shown in the image below appears on the
+				<a href="options_dialog.htm#highlighting">Highlighting Tab</a>,
+				<a href="options_dialog.htm#filtering">Filtering Tab</a>, and 
+				<a href="options_dialog.htm#actions">Actions Tab</a> of the
+				<a href="options_dialog.htm">Options Dialog</a>.
+				A slight variation of the pattern editor also appears on the
+				<a href="options_dialog.htm#transforms">Transform Tab</a>.
+			</div>
+			<div>
+				<img class="centred" src="pattern_editor.png" alt="pattern editor" usemap="#pattern_editor_map" />
+				<map id="pattern_editor_map" name="pattern_editor_map">
+					<area shape="rect" coords="71,11,91,31" href="#pattern_type" alt="" title="" />
+					<area shape="rect" coords="29,38,49,58" href="#pattern_field" alt="" title="" />
+					<area shape="rect" coords="75,62,95,82" href="#ignore_case" alt="" title="" />
+					<area shape="rect" coords="165,61,185,81" href="#invert_match" alt="" title="" />
+					<area shape="rect" coords="7,77,27,97" href="#test_area" alt="" title="" />
+					<area shape="rect" coords="312,76,332,96" href="#capture_groups" alt="" title="" />
+					<area shape="rect" coords="378,76,398,96" href="#capture_groups" alt="" title="" />
+					<area shape="rect" coords="418,7,438,27" href="#regex_quick_ref" alt="" title="" />
+					<area shape="rect" coords="487,7,507,27" href="#add_or_save" alt="" title="" />
+				</map>
+			</div>
+			<div class="content">
+				Select the numbered boxes in the image above to jump to the relevant description for each UI component.
+			</div>
+			<ol>
+				<li>
+					<a id="pattern_type" />
+					<span class="tag_label">Pattern Type</span>
+					<div class="content">
+						Use these radio buttons to select the type of pattern you plan to create. The 
+						versatility, but also complexity, of the patterns that can be created increases 
+						from left to right, with Substring being the simplest and Regular Expression being 
+						the most complex.
+					</div>
+					<ul>
+						<li class="child_list_elem">
+							<a id="pattern_substring" />
+							<span class="tag_label">Substring</span>
+							<div class="content">
+								This is the simplest pattern of all. The pattern matching algorithm 
+								looks for any occurrence of the sub string in each line of the log file text.
+								Those that contain at least one instance of the sub string are considered a match.
+							</div>
+						</li>
+						<li class="child_list_elem">
+							<a id="pattern_wildcard" />
+							<span class="tag_label">Wildcard</span>
+							<div class="content">
+								Wildcard patterns work in a similar way to Substring patterns. However, in a wildcard
+								pattern the <b>*</b> and <b>?</b> characters have special meaning:<br />
+								<div class="links">
+									<b>*</b> = <i>"match any number of characters"</i><br />
+									<b>?</b> = <i>"match any single character"</i>.<br />
+								</div>
+								So, as shown in the following image, the pattern <b>b*e?g</b> matches both 
+								<b>abcdefgh</b> and <b>1b2345e6g7</b> as follows:
+								<img class="centred" src="pattern_wildcard.png" alt="wildcard_pattern" />
+							</div>
+						</li>
+						<li class="child_list_elem">
+							<a id="pattern_regex" />
+							<span class="tag_label">Regular Expression</span>
+							<div class="content">
+								Regular expressions are the most versatile, but also the most complex form of pattern.
+								A full description of regular expression syntax is beyond the scope of this help document.
+								However, essentially, a regular expression is a sequence of symbols that encode a small program
+								which, when executed, can identify specific patterns in a body of text. For those not familiar
+								with the syntax, reading and/or creating a regular expression can be a difficult task. To help
+								with this, the pattern editor contains a <a href="#test_area">pattern preview area</a> that
+								aids in visualising how the pattern will behave for given lines of text.
+							</div>
+							<div class="content">
+								The secret to understanding a regular expression is being able to recognise and recall the meaning of 
+								specific symbol sequences. To help with this, RyLogViewer also includes a quick reference guide that can
+								be accessed via the <a href="#regex_quick_ref">Quick Reference Help</a> button [8]. When clicked, a small
+								window appears containing a concise summary of the common regular expression sequencies, along with their
+								meanings and examples.
+							</div>
+							<div class="content">
+								RyLogViewer is based on the .NET Framework 4.0 regular expression engine. To find out more visit these links:
+								<div class="links">
+									<a href="http://en.wikipedia.org/wiki/Regular_expression">Wikipedia - Regular Expression</a><br />
+									<a href="http://msdn.microsoft.com/en-us/library/az24scfc.aspx">MSDN Regular Expression - Quick Reference</a><br />
+								</div>
+							</div>
+						</li>
+					</ul>
+				</li>
+				<li>
+					<a id="pattern_field" />
+					<span class="tag_label">Pattern Field</span>
+					<div class="content">
+						This text box is where the pattern is entered. A green background will display when the pattern is 
+						syntactically valid, and a red background displays if the pattern contains an error. (Typically only 
+						regular expressions will contain errors).
+					</div>
+				</li>
+				<li>
+					<a id="ignore_case" />
+					<span class="tag_label">Ignore Case</span>
+					<div class="content">
+					</div>
+				</li>
+				<li>
+					<a id="invert_match" />
+					<span class="tag_label">Invert Match</span>
+					<div class="content">
+					</div>
+				</li>
+				<li>
+					<a id="test_area" />
+					<span class="tag_label">Pattern Preview</span>
+					<div class="content">
+					</div>
+				</li>
+				<li>
+					<a id="capture_groups" />
+					<span class="tag_label">Capture Groups</span>
+					<div class="content">
+					</div>
+				</li>
+				<li>
+					<a id="regex_quick_ref" />
+					<span class="tag_label">Regex Quick Reference</span>
+					<div class="content">
+					</div>
+				</li>
+				<li>
+					<a id="add_or_save" />
+					<span class="tag_label">Add/Save Button</span>
+					<div class="content">
+					</div>
+				</li>
+			</ol>
+		</div>
+	</body>
+</html>

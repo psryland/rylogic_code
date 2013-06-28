@@ -14,16 +14,25 @@ namespace pr.gui
 	//  m_hoverscroll = new HoverScroll();
 	//  Application.AddMessageFilter(m_hoverscroll);
 	//  Application.RemoveMessageFilter(m_hoverscroll);
-	public class HoverScroll :IMessageFilter
+	public class HoverScroll :IMessageFilter ,IDisposable
 	{
 		// P/Invoke declarations
 		[DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(Point pt);
 		[DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wp, IntPtr lp);
 
-		private readonly List<IntPtr> m_wnds = null;
+		/// <summary>The window handles of the controls that should detect hoverscrolling</summary>
+		public List<IntPtr> WindowHandles { get; private set; }
 
-		public HoverScroll() {}
-		public HoverScroll(params IntPtr[] wnds) { m_wnds = new List<IntPtr>(wnds); }
+		public HoverScroll(params IntPtr[] wnds)
+		{
+			WindowHandles = new List<IntPtr>(wnds);
+			Application.AddMessageFilter(this);
+		}
+		public void Dispose()
+		{
+			Application.RemoveMessageFilter(this);
+		}
+
 		public bool PreFilterMessage(ref Message m)
 		{
 			const int WM_MOUSEWHEEL = 0x20a;
@@ -33,10 +42,10 @@ namespace pr.gui
 			Point pos = new Point(m.LParam.ToInt32() & 0xffff, m.LParam.ToInt32() >> 16);
 			IntPtr hWnd = WindowFromPoint(pos);
 
-			if (hWnd == IntPtr.Zero) return false;						// No window...
-			if (hWnd == m.HWnd)	return false;							// Hovering over the correct control already
-			if (Control.FromHandle(hWnd) == null) return false;			// Not over a control
-			if (m_wnds != null && !m_wnds.Contains(hWnd)) return false;	// Not a control we're hoverscrolling
+			if (hWnd == IntPtr.Zero) return false;              // No window...
+			if (hWnd == m.HWnd)	return false;                   // Hovering over the correct control already
+			if (Control.FromHandle(hWnd) == null) return false; // Not over a control
+			if (WindowHandles.Count != 0 && !WindowHandles.Contains(hWnd)) return false; // Not a control we're hoverscrolling
 
 			SendMessage(hWnd, m.Msg, m.WParam, m.LParam);
 			return true;

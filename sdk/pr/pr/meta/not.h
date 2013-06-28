@@ -3,15 +3,14 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		template <typename T>
 		struct not_
 		{
 			enum { value = !T::value };
 		};
+	}
+}
 
-	}//namespace mpl
-}//namespace pr
-
-#endif//PR_META_NOT_H
+#endif

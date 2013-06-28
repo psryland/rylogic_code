@@ -40,7 +40,7 @@ namespace pr
 				m_broadphase				= 0;
 				m_terrain					= 0;
 				m_constraint_buffer_size	= 65536;
-				m_collision_cache_size		= pr::mpl::prime_gtreq<1000>::value;
+				m_collision_cache_size		= pr::meta::prime_gtreq<1000>::value;
 				m_pre_col_observer			= 0;
 				m_pst_col_observer			= 0;
 			};

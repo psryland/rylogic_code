@@ -126,7 +126,7 @@ namespace pr
 			static void DestructRange(Node*, Node*)	{}
 			static void Deallocate(Node* target)	{ operator delete (target); }
 		};
-		typedef typename mpl::if_< mpl::is_pod<T>, POD, NonPOD >::type Constructor;
+		typedef typename meta::if_< meta::is_pod<T>, POD, NonPOD >::type Constructor;
 
 	protected:	// Methods
 		Node*	_First() const		{ if( m_head ) {m_current = m_head;} return m_head; }

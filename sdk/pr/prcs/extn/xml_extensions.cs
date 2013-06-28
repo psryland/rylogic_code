@@ -192,7 +192,7 @@ namespace pr
 				XElement root = xml.Add2(new XElement("root"));      Assert.AreSame(xml.Root, root);
 			
 				List<int> ints = new List<int>{0,1,2,3,4};
-				Elem[] elems = Util.New(5, i => new Elem(i));
+				Elem[] elems = Util.NewArray(5, i => new Elem(i));
 				string s;
 
 				XElement xint = root.Add2("elem", 42);

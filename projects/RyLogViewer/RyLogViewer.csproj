@@ -29,26 +29,6 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-    <PlatformTarget>x86</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;PR_LOGGING</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-    <PlatformTarget>x86</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>RyLog.ico</ApplicationIcon>
   </PropertyGroup>
@@ -61,6 +41,30 @@
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>Rylogic Limited Key File.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;PR_UNITTESTS</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(Configuration)'=='Debug'">
+    <Reference Include="nunit.framework">
+      <HintPath>..\..\..\projects\vs2012\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -90,10 +94,17 @@
     <Compile Include="src\bookmarks_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\dgv.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="src\export.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\file_source.cs" />
     <Compile Include="src\find.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\inputs\aggregate_files_ui.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\inputs\android_logcat_ui.cs">
@@ -101,6 +112,9 @@
     </Compile>
     <Compile Include="src\inputs\android_logcat_ui.Designer.cs">
       <DependentUpon>android_logcat_ui.cs</DependentUpon>
+    </Compile>
+    <Compile Include="src\inputs\android_connect_device_ui.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\licence\activation.cs">
       <SubType>Form</SubType>
@@ -112,15 +126,17 @@
     <Compile Include="src\settings\clkaction_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\settings\ipattern.cs" />
+    <Compile Include="src\settings\ipattern_ui.cs" />
+    <Compile Include="src\settings\pattern_ui_base.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="src\startup_options.cs" />
     <Compile Include="src\export_ui.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\export_ui.Designer.cs">
       <DependentUpon>export_ui.cs</DependentUpon>
-    </Compile>
-    <Compile Include="src\file_scroll.cs">
-      <SubType>Component</SubType>
     </Compile>
     <Compile Include="src\settings\filter.cs" />
     <Compile Include="src\find_ui.cs">
@@ -217,6 +233,76 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <None Include="docs\pattern_editor.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>pattern_editor.htm</LastGenOutput>
+    </None>
+    <None Include="docs\overview.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>overview.htm</LastGenOutput>
+    </None>
+    <None Include="docs\welcome.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>welcome.htm</LastGenOutput>
+    </None>
+    <None Include="docs\head.t4html" />
+    <None Include="docs\index_panel.t4html" />
+    <None Include="docs\title_panel.t4html" />
+    <None Include="Resources\swizzle_quick_ref.html" />
+    <None Include="Resources\command_line_ref.html" />
+    <Content Include="docs\book.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="docs\filtering.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>filtering.htm</LastGenOutput>
+    </None>
+    <Content Include="docs\pattern_editor.htm">
+      <DependentUpon>pattern_editor.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\overview.htm">
+      <DependentUpon>overview.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\pattern_editor.png" />
+    <Content Include="docs\welcome.htm">
+      <DependentUpon>welcome.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\filtering.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>filtering.t4html</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\help.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\highlighting.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>highlighting.t4html</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\highlighting.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\pattern_wildcard.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\totd7.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\transform_quick_ref.html" />
+    <None Include="Resources\regex_quick_ref.html" />
+    <None Include="Resources\version_history.html" />
     <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
     </EmbeddedResource>
@@ -232,8 +318,14 @@
     <EmbeddedResource Include="src\ghost_mode_ui.resx">
       <DependentUpon>ghost_mode_ui.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="src\inputs\aggregate_files_ui.resx">
+      <DependentUpon>aggregate_files_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\inputs\android_logcat_ui.resx">
       <DependentUpon>android_logcat_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\inputs\android_connect_device_ui.resx">
+      <DependentUpon>android_connect_device_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\licence\activation.resx">
       <DependentUpon>activation.cs</DependentUpon>
@@ -287,17 +379,17 @@
     <EmbeddedResource Include="src\settings\transform_ui.resx">
       <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="docs\RegexQuickRef.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2010.csproj">
-      <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>prcs_vs2010</Name>
-    </ProjectReference>
+    <Content Include="docs\example_logfile_settings.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="docs\highlighting.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>highlighting.htm</LastGenOutput>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="gen_licence.cmd" />
-    <None Include="release.bat" />
+    <None Include="deploy.cmd" />
     <None Include="Resources\executable.png" />
     <None Include="Resources\edit_add.png" />
     <None Include="Resources\edit_save.png" />
@@ -336,42 +428,61 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\VersionHistory.html" />
+    <Content Include="docs\totd3.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\background.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\TotD0.html" />
+    <Content Include="docs\totd0.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\TotD1.html" />
+    <Content Include="docs\totd1.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\TotD2.html" />
+    <Content Include="docs\totd2.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="docs\SwizzleQuickRef.html" />
-    <EmbeddedResource Include="docs\TransformQuickRef.html" />
-  </ItemGroup>
-  <ItemGroup>
+    <Content Include="docs\totd.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\background.png" />
     <Content Include="Resources\book.png" />
+    <None Include="Resources\quick_filter.png" />
+    <None Include="Resources\pencil.png" />
     <None Include="Resources\public_key.xml" />
     <None Include="Rylogic Limited Key File.pfx" />
     <None Include="src\licence\private_key.xml" />
     <None Include="Resources\bottom.png" />
     <None Include="Resources\bookmark.png" />
+    <None Include="Resources\find_search.png" />
+    <Content Include="Resources\evaluation_version.html" />
+    <Content Include="docs\example_logfile.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\green_tick.png" />
-    <EmbeddedResource Include="docs\CommandLineRef.html" />
-    <Content Include="lib\ClrDump.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="lib\dbghelp.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
+      <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
+      <Name>prcs_vs2012</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>Q:\bin\csex.x86\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>
+    <PostBuildEvent>Q:\bin\csex\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -2,14 +2,16 @@
 // PR AutoExp
 // Copyright © Rylogic Ltd 2002
 //***********************************************************
-	
+
 #include <windows.h>
+#include <fstream>
 #include <stdio.h>
 #include <string.h>
 #include <tchar.h>
 #include <malloc.h>
 #include <string>
 #include "pr/threads/mutex.h"
+#include "pr/common/datetime.h"
 #include "pr/common/fmt.h"
 #include "pr/common/alloca.h"
 #include "pr/common/byte_ptr_cast.h"
@@ -17,26 +19,26 @@
 #include "pr/macros/link.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/largeint.h"
-#include "pr/geometry/geometry.h"
-#include "pr/renderer/materials/material.h"
 #include "pr/physics/physics.h"
 #include "pr/lua/lua.h"
 #include "lstate.h"
 #include "prautoexp/expansions.h"
-	
+
+using namespace pr;
+
 // Helper for debugging expansion functions.
 // Stops the debugger expanding types while in expansion functions
 struct ReentryGuard
 {
-	#ifdef _DEBUG
+#ifdef _DEBUG
 	pr::Mutex& guard() { static pr::Mutex mutex(FALSE, "rb_autoexp_mutex"); return mutex; }
 	ReentryGuard()     { if (!guard().Acquire(0)) throw std::exception(); }
 	~ReentryGuard()    { guard().UnAcquire(); }
-	#else
+#else
 	ReentryGuard()     {}
-	#endif
+#endif
 };
-	
+
 // Helper for std::string and std::wstring
 template <typename Str> struct stdstring :Str
 {
@@ -63,9 +65,9 @@ template <> HRESULT DbgHelper::Read(std::wstring& str, size_t ofs)
 {
 	stdstring<std::wstring> s; return s.Read(this, str, ofs);
 }
-	
+
 // Expansions ***********************************************
-	
+
 // Expand a v2
 ADDIN_API HRESULT WINAPI AddIn_v2(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -75,7 +77,7 @@ ADDIN_API HRESULT WINAPI AddIn_v2(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	_snprintf(pResult, max, "%f %f //Len2: %f", vec.x, vec.y, pr::Length2(vec));
 	return S_OK;
 }
-	
+
 // Expand a v3
 ADDIN_API HRESULT WINAPI AddIn_v3(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -85,7 +87,7 @@ ADDIN_API HRESULT WINAPI AddIn_v3(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	_snprintf(pResult, max, "%f %f %f //Len3: %f", vec.x, vec.y, vec.z, Length3(vec));
 	return S_OK;
 }
-	
+
 // Expand a v4
 ADDIN_API HRESULT WINAPI AddIn_v4(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -95,7 +97,7 @@ ADDIN_API HRESULT WINAPI AddIn_v4(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	_snprintf(pResult, max, "%f %f %f %f //Len3: %f Len4: %f", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
 	return S_OK;
 }
-	
+
 // Expand an iv4
 ADDIN_API HRESULT WINAPI AddIn_iv4(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -105,7 +107,7 @@ ADDIN_API HRESULT WINAPI AddIn_iv4(DWORD, DbgHelper* pHelper, int, BOOL, char *p
 	_snprintf(pResult, max, "%d %d %d %d //Len3: %f Len4: %f", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
 	return S_OK;
 }
-	
+
 // Expand an i64v4
 ADDIN_API HRESULT WINAPI AddIn_i64v4(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -115,14 +117,14 @@ ADDIN_API HRESULT WINAPI AddIn_i64v4(DWORD, DbgHelper* pHelper, int, BOOL, char 
 	_snprintf(pResult, max, "%lld %lld %lld %lld //Len3: %f Len4: %f", vec[0], vec[1], vec[2], vec[3], pr::Len3(vec[0], vec[1], vec[2]), pr::Len4(vec[0], vec[1], vec[2], vec[3]));
 	return S_OK;
 }
-	
+
 // Expand a m3x3
 ADDIN_API HRESULT WINAPI AddIn_m3x3(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
 	pr::m3x3 mat;
 	if (FAILED(pHelper->Read(mat))) return E_FAIL;
-	float ortho = Length3(Cross3(GetNormal3(mat.x), GetNormal3(mat.y)) - GetNormal3(mat.z));
+	float ortho = Length3(Cross3(Normalise3(mat.x), Normalise3(mat.y)) - Normalise3(mat.z));
 	_snprintf(pResult, max,
 		"\r\n%f \t%f \t%f "
 		"\r\n%f \t%f \t%f "
@@ -137,14 +139,14 @@ ADDIN_API HRESULT WINAPI AddIn_m3x3(DWORD, DbgHelper* pHelper, int, BOOL, char *
 		,ortho, Determinant3(mat));
 	return S_OK;
 }
-	
+
 // Expand a m4x4
 ADDIN_API HRESULT WINAPI AddIn_m4x4(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
 	pr::m4x4 mat;
 	if (FAILED(pHelper->Read(mat))) return E_FAIL;
-	float ortho = Length3(Cross3(GetNormal3(mat.x), GetNormal3(mat.y)) - GetNormal3(mat.z));
+	float ortho = Length3(Cross3(Normalise3(mat.x), Normalise3(mat.y)) - Normalise3(mat.z));
 	_snprintf(pResult, max,
 		"\r\n%f \t%f \t%f \t%f "
 		"\r\n%f \t%f \t%f \t%f "
@@ -161,7 +163,7 @@ ADDIN_API HRESULT WINAPI AddIn_m4x4(DWORD, DbgHelper* pHelper, int, BOOL, char *
 		,ortho ,Determinant4(mat));
 	return S_OK;
 }
-	
+
 // Expand a MAX Matrix3
 ADDIN_API HRESULT WINAPI AddIn_MAXMatrix3(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -174,12 +176,12 @@ ADDIN_API HRESULT WINAPI AddIn_MAXMatrix3(DWORD, DbgHelper* pHelper, int, BOOL, 
 		"\r\n%3.3f\t%3.3f\t%3.3f"
 		"\r\n%3.3f\t%3.3f\t%3.3f"
 		,mat[0][0], mat[1][0], mat[2][0]
-		,mat[0][1], mat[1][1], mat[2][1]
-		,mat[0][2], mat[1][2], mat[2][2]
-		,mat[0][3], mat[1][3], mat[2][3]);
+	,mat[0][1], mat[1][1], mat[2][1]
+	,mat[0][2], mat[1][2], mat[2][2]
+	,mat[0][3], mat[1][3], mat[2][3]);
 	return S_OK;
 }
-	
+
 // Show the size of a vector
 ADDIN_API HRESULT WINAPI AddIn_stdvector(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -189,7 +191,7 @@ ADDIN_API HRESULT WINAPI AddIn_stdvector(DWORD, DbgHelper* pHelper, int, BOOL, c
 	_snprintf(pResult, max, "size=%d bytes", buffer[2] - buffer[1]);
 	return S_OK;
 }
-	
+
 // Show the contents of a std::string
 ADDIN_API HRESULT WINAPI AddIn_stdstring(DWORD, DbgHelper* pHelper, int, BOOL, char*pResult, size_t max, DWORD)
 {
@@ -199,23 +201,23 @@ ADDIN_API HRESULT WINAPI AddIn_stdstring(DWORD, DbgHelper* pHelper, int, BOOL, c
 	_snprintf(pResult, max, "\"%s\"", str.c_str());
 	return S_OK;
 }
-	
+
 // inherit std::basic_ios because basic_ios has a protected empty constructor
 struct stdbase_ios :std::basic_ios<char, std::char_traits<char> > {};
-	
+
 // Show the state of a std::stringstream
 ADDIN_API HRESULT WINAPI AddIn_stdstringstream(DWORD, DbgHelper* pHelper, int, BOOL, char*pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
-	
+
 	std::stringstream strm;
 	size_t iofs = pr::byte_ptr(static_cast<std::istream::_Myios*>(&strm)) - pr::byte_ptr(&strm);
 	size_t oofs = pr::byte_ptr(static_cast<std::ostream::_Myios*>(&strm)) - pr::byte_ptr(&strm);
-	
+
 	stdbase_ios ibase_ios, obase_ios;
 	if (FAILED(pHelper->Read(ibase_ios, iofs))) return E_FAIL;
 	if (FAILED(pHelper->Read(obase_ios, oofs))) return E_FAIL;
-	
+
 	std::stringstream s;
 	s << "in:< ";
 	if (ibase_ios.bad() ) s << "bad ";
@@ -234,13 +236,13 @@ ADDIN_API HRESULT WINAPI AddIn_stdstringstream(DWORD, DbgHelper* pHelper, int, B
 ADDIN_API HRESULT WINAPI AddIn_stdifstream(DWORD, DbgHelper* pHelper, int, BOOL, char*pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
-	
+
 	std::ifstream strm;
 	size_t ofs = pr::byte_ptr(static_cast<std::ifstream::_Myios*>(&strm)) - pr::byte_ptr(&strm);
-	
+
 	stdbase_ios base_ios;
 	if (FAILED(pHelper->Read(base_ios, ofs))) return E_FAIL;
-	
+
 	std::stringstream s;
 	s << "in:< ";
 	if (base_ios.bad() ) s << "bad ";
@@ -254,13 +256,13 @@ ADDIN_API HRESULT WINAPI AddIn_stdifstream(DWORD, DbgHelper* pHelper, int, BOOL,
 ADDIN_API HRESULT WINAPI AddIn_stdofstream(DWORD, DbgHelper* pHelper, int, BOOL, char*pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
-	
+
 	std::ofstream strm;
 	size_t ofs = pr::byte_ptr(static_cast<std::ofstream::_Myios*>(&strm)) - pr::byte_ptr(&strm);
-	
+
 	stdbase_ios base_ios;
 	if (FAILED(pHelper->Read(base_ios, ofs))) return E_FAIL;
-	
+
 	std::stringstream s;
 	s << "out:< ";
 	if (base_ios.bad() ) s << "bad ";
@@ -285,7 +287,7 @@ ADDIN_API HRESULT WINAPI AddIn_stdofstream(DWORD, DbgHelper* pHelper, int, BOOL,
 //	base_ios->bad();
 //	return S_OK;
 //}
-	
+
 // Expand a quaternion
 ADDIN_API HRESULT WINAPI AddIn_Quaternion(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -296,7 +298,7 @@ ADDIN_API HRESULT WINAPI AddIn_Quaternion(DWORD, DbgHelper* pHelper, int, BOOL, 
 	_snprintf(pResult, max, "%f %f %f %f //Ang: %fdeg Len: %f", q[0], q[1], q[2], q[3], pr::RadiansToDegrees(angle), pr::Length4(q));
 	return S_OK;
 }
-	
+
 // Expand an MD5 value
 ADDIN_API HRESULT WINAPI AddIn_MD5(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -314,23 +316,7 @@ ADDIN_API HRESULT WINAPI AddIn_MD5(DWORD, DbgHelper* pHelper, int, BOOL, char *p
 		,md5[ 3], md5[ 2], md5[ 1], md5[ 0]);
 	return S_OK;
 }
-	
-// Expand a pr::GeomType
-ADDIN_API HRESULT WINAPI AddIn_GeomType(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
-{
-	ReentryGuard guard;
-	pr::GeomType geom_type;
-	if (FAILED(pHelper->Read(geom_type))) return E_FAIL;
 
-	if (max < 6) return E_FAIL;
-	pResult[0] = '\0';
-	if (geom_type & pr::geom::EVertex ) strcat(pResult, "V");
-	if (geom_type & pr::geom::ENormal ) strcat(pResult, "N");
-	if (geom_type & pr::geom::EColour ) strcat(pResult, "C");
-	if (geom_type & pr::geom::ETexture) strcat(pResult, "T");
-	return S_OK;
-}
-	
 // Expand a pr::LargeInt
 ADDIN_API HRESULT WINAPI AddIn_LargeInt(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -342,14 +328,14 @@ ADDIN_API HRESULT WINAPI AddIn_LargeInt(DWORD, DbgHelper* pHelper, int, BOOL, ch
 	_snprintf(pResult, max, "%s", str.c_str()); 
 	return S_OK;
 }
-	
+
 // Expand a pr::Quat as a matrix
 ADDIN_API HRESULT WINAPI AddIn_QuaternionAsMatrix(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
 	pr::Quat q;
 	if (FAILED(pHelper->Read(q))) return E_FAIL;
-	
+
 	pr::m3x3 mat = pr::m3x3::make(q);
 	_snprintf(pResult, max,
 		"\r\n%f\t%f\t%f"
@@ -360,13 +346,13 @@ ADDIN_API HRESULT WINAPI AddIn_QuaternionAsMatrix(DWORD, DbgHelper* pHelper, int
 		,mat.x.z, mat.y.z, mat.z.z);
 	return S_OK;
 }
-	
+
 // Expand a physics shape
 ADDIN_API HRESULT WINAPI AddIn_phShape(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
 	using namespace pr::ph;
 	ReentryGuard guard;
-	
+
 	Shape base;
 	if (FAILED(pHelper->Read(base))) return E_FAIL;
 	switch (base.m_type)
@@ -423,7 +409,7 @@ ADDIN_API HRESULT WINAPI AddIn_phShape(DWORD, DbgHelper* pHelper, int, BOOL, cha
 	}
 	return S_OK;
 }
-	
+
 // Expand a lua state stack
 ADDIN_API HRESULT WINAPI AddIn_LuaState(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
@@ -468,4 +454,15 @@ ADDIN_API HRESULT WINAPI AddIn_LuaState(DWORD, DbgHelper* pHelper, int, BOOL, ch
 	return S_OK;
 }
 
+// Expand a pr::DateTime
+ADDIN_API HRESULT WINAPI AddIn_DateTime(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
+{
+	ReentryGuard guard;
 
+	pr::DateTime dt;
+	if (FAILED(pHelper->Read(dt))) return E_FAIL;
+	//auto tm = dt.utc_time();
+	//tm.pretty();
+	_snprintf(pResult, max, "%s", ::ctime(&dt.ticks));
+	return S_OK;
+}

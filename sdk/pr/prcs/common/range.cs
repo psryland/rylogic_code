@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using pr.common;
+using pr.maths;
 
 namespace pr.common
 {
@@ -73,6 +74,13 @@ namespace pr.common
 			End   = Math.Max(End   ,rng.End  );
 		}
 
+		/// <summary>Returns a range scaled by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
+		public Range Scale(float scale)
+		{
+			var count = Count * scale;
+			return new Range(Begin, (long)(Begin + Count*scale)){Mid = Mid};
+		}
+
 		/// <summary>
 		/// Returns a range that is the union of this range with 'rng'
 		/// (basically the same as 'Encompase' except this range isn't modified.</summary>
@@ -97,10 +105,26 @@ namespace pr.common
 		}
 		
 		/// <summary>Move the range by an offset</summary>
-		public void Shift(long ofs)
+		public Range Shift(long ofs)
 		{
-			Begin += ofs;
-			End   += ofs;
+			return new Range(Begin + ofs, End + ofs);
+		}
+
+		/// <summary>Returns 'x' clamped by 'range'</summary>
+		public static Range Clamp(Range x, Range range)
+		{
+			return new Range(
+				Maths.Clamp(x.Begin, range.Begin, range.End),
+				Maths.Clamp(x.End, range.Begin, range.End));
+		}
+
+		/// <summary>Returns 'x' constrained by 'range'. i.e 'x' will be fitted within 'range' and only resized if x.Count > range.Count</summary>
+		public static Range Constrain(Range x, Range range)
+		{
+			if (x.Begin < range.Begin) x = x.Shift(range.Begin - x.Begin);
+			if (x.End   > range.End  ) x = x.Shift(range.End - x.End);
+			if (x.Begin < range.Begin) x.Begin = range.Begin;
+			return x;
 		}
 
 		/// <summary>String representation of the range</summary>

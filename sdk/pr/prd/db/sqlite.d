@@ -252,9 +252,9 @@ public:
 	/*
 	 * Bind string (text) value to parameter with index pos
 	 */
-	void bindOne(uint pos, string value)
+	void bindOne(int pos, string value)
 	{
-		throwOnError(sqlite3_bind_text(stmt, pos, &toStringz(value)[0], value.length, SQLITE_TRANSIENT));
+		throwOnError(sqlite3_bind_text(stmt, pos, &toStringz(value)[0], cast(int)value.length, SQLITE_TRANSIENT));
 	}
 	
 	/*

@@ -38,20 +38,15 @@ namespace pr
 	inline m2x2 operator * (m2x2 const& lhs, m2x2 const& rhs)
 	{
 		m2x2 ans, lhs_t = GetTranspose(lhs);
-		#pragma PR_OMP_PARALLEL_FOR
 		for (int j = 0; j < 2; ++j)
-		{
-			#pragma PR_OMP_PARALLEL_FOR
 			for (int i = 0; i < 2; ++i)
 				ans[j][i] = Dot2(lhs_t[i], rhs[j]);
-		}
 		return ans;
 	}
 	inline v2 operator * (m2x2 const& lhs, v2 const& rhs)
 	{
 		v2 ans;
 		m2x2 lhs_t = GetTranspose(lhs);
-		#pragma PR_OMP_PARALLEL_FOR
 		for (int i = 0; i < 2; ++i)
 			ans[i] = Dot2(lhs_t[i], rhs);
 		return ans;

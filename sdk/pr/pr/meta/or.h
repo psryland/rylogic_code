@@ -5,7 +5,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		namespace impl
 		{
@@ -36,7 +36,7 @@ namespace pr
 			enum { value = impl::or_<lhs>::template impl2< bool_<rhs> >::value };
 		};
 
-	}//namespace mpl
-}//namespace pr
+	}
+}
 
 #endif PR_META_OR_H

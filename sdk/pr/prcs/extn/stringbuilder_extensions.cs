@@ -3,6 +3,7 @@
 //  Copyright © Rylogic Ltd 2008
 //***************************************************
 
+using System.Collections.Generic;
 using System.Text;
 using pr.extn;
 
@@ -16,6 +17,49 @@ namespace pr.extn
 			foreach (var p in parts) sb.Append(p.ToString());
 			return sb;
 		}
+
+		/// <summary>Trim chars from the end of the string builder</summary>
+		public static StringBuilder TrimEnd(this StringBuilder sb, params char[] chars)
+		{
+			while (sb.Length != 0 && chars.IndexOf(sb[sb.Length-1]) != -1) --sb.Length;
+			return sb;
+		}
+
+		/// <summary>Trim chars from the start of the string builder</summary>
+		public static StringBuilder TrimStart(this StringBuilder sb, params char[] chars)
+		{
+			int i = 0;
+			while (i != sb.Length && chars.IndexOf(sb[i]) != -1) ++i;
+			return sb.Remove(0, i);
+		}
+
+		/// <summary>Trim characters from the start/end of the string</summary>
+		public static StringBuilder Trim(this StringBuilder sb, params char[] chars)
+		{
+			return sb.TrimStart(chars).TrimEnd(chars);
+		}
+
+		/// <summary>Append 'lines' ensuring exactly one new line between each</summary>
+		public static StringBuilder AppendLineList(this StringBuilder sb, params string[] lines)
+		{
+			sb.TrimEnd('\n','\r').AppendLine();
+			foreach (var line in lines)
+				sb.AppendLine(line.Trim('\n','\r'));
+			return sb;
+		}
+
+		/// <summary>Append 'line' ensuring exactly one new line in between</summary>
+		public static StringBuilder AppendLineList(this StringBuilder sb, string line)
+		{
+			return sb.TrimEnd('\n','\r').AppendLine().AppendLine(line.Trim('\n','\r'));
+		}
+
+		/// <summary>Append 'line' ensuring exactly one new line in between</summary>
+		public static StringBuilder AppendLineList(this StringBuilder sb, StringBuilder line)
+		{
+			return sb.TrimEnd('\n','\r').AppendLine().AppendLine(line.ToString());
+		}
+
 
 		///// <summary>Return a substring of the internal string</summary>
 		//public static string Substring(this StringBuilder sb, int startIndex, int length)
@@ -80,21 +124,7 @@ namespace pr.extn
 		//    return sb;
 		//}
 		
-		/// <summary>Trim characters from the start/end of the string</summary>
-		public static StringBuilder Trim(this StringBuilder sb)
-		{
-			string s = sb.ToString().Trim();
-			sb.Length = 0;
-			return sb.Append(s);
-		}
-		
-		/// <summary>Trim characters from the start/end of the string</summary>
-		public static StringBuilder Trim(this StringBuilder sb, params char[] trimChars)
-		{
-			string s = sb.ToString().Trim(trimChars);
-			sb.Length = 0;
-			return sb.Append(s);
-		}
+
 		
 		///// <summary>
 		///// Get index of a char
@@ -282,13 +312,18 @@ namespace pr
 	{
 		[Test] public static void TestStringBuilderExtensions()
 		{
+			const string  s = "  \t\nA string XXX\n  \t  ";
+
+			{// Trim start
+				var sb = new StringBuilder(s);
+				Assert.AreEqual(s.TrimStart(' ', '\t', '\n', 'X'), sb.TrimStart(' ', '\t', '\n', 'X').ToString());
+			}
+			{// Trim end
+				StringBuilder sb = new StringBuilder(s);
+				Assert.AreEqual(s.TrimEnd(' ', '\t', '\n', 'X'), sb.TrimEnd(' ', '\t', '\n', 'X').ToString());
+			}
 			{// Trim
-				const string  s = "  \t\nA string XXX\n  \t  ";
-				StringBuilder sb = new StringBuilder("  \t\nA string XXX\n  \t  ");
-				Assert.AreEqual(s.Trim(), sb.Trim().ToString());
-			}{
-				const string  s = "  \t\nA string XXX\n  \t  ";
-				StringBuilder sb = new StringBuilder("  \t\nA string XXX\n  \t  ");
+				StringBuilder sb = new StringBuilder(s);
 				Assert.AreEqual(s.Trim(' ', '\t', '\n', 'X'), sb.Trim(' ', '\t', '\n', 'X').ToString());
 			}
 		}

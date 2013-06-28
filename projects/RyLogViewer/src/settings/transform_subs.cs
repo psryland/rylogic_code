@@ -45,16 +45,19 @@ namespace RyLogViewer
 	{
 		/// <summary>The tag id for the substitution</summary>
 		string Id { get; set; }
-		
+
 		/// <summary>The friendly name for the substitution</summary>
 		string Name { get; }
-		
+
+		/// <summary>True if this substitution can be configured</summary>
+		bool Configurable { get; }
+
 		/// <summary>A summary of the configuration for this transform substitution</summary>
 		string ConfigSummary { get; }
-		
+
 		/// <summary>A method to setup the transform substitution's specific data</summary>
 		void Config(IWin32Window owner);
-		
+
 		/// <summary>Returns 'elem' transformed</summary>
 		string Result(string elem);
 
@@ -63,7 +66,7 @@ namespace RyLogViewer
 
 		/// <summary>Deserialise data for the substitution from an xml node</summary>
 		void FromXml(XElement node);
-		
+
 		/// <summary>Create a copy of this instance</summary>
 		ITxfmSub Clone();
 	}
@@ -71,13 +74,16 @@ namespace RyLogViewer
 	/// <summary>Common functionality for simple transform substitutions</summary>
 	public class TxfmSubBase :ITxfmSub
 	{
+		protected TxfmSubBase(string type) { Id = ""; Name = type; }
+
 		/// <summary>The tag id if this substitution. Should be something wrapped in '{','}'. E.g {boobs}</summary>
 		public string Id { get; set; }
 
 		/// <summary>A human readable name for the substitution</summary>
 		public string Name { get; private set; }
 
-		protected TxfmSubBase(string type) { Id = ""; Name = type; }
+		/// <summary>True if this substitution can be configured</summary>
+		public virtual bool Configurable { get { return false; } }
 
 		/// <summary>A summary of the configuration for this transform substitution</summary>
 		public virtual string ConfigSummary { get { return ""; } }

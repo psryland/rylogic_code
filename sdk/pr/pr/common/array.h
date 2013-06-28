@@ -139,14 +139,14 @@ namespace pr
 		typedef std::ptrdiff_t         difference_type;   // A type that provides the difference between the addresses of two elements in a array.
 		typedef Type                   value_type;        // A type that represents the data type stored in a array.
 		typedef Allocator              allocator_type;    // A type that represents the allocator class for the array object.
-		typedef typename pr::mpl::remove_pointer<Allocator>::type AllocType; // The type of the allocator ignoring pointers
+		typedef typename pr::meta::remove_pointer<Allocator>::type AllocType; // The type of the allocator ignoring pointers
 		
 		enum
 		{
 			LocalLength      = LocalCount,
 			LocalSizeInBytes = LocalCount * sizeof(value_type),
-			TypeIsPod        = pr::mpl::is_pod<Type>::value,
-			TypeAlignment    = pr::mpl::alignment_of<Type>::value,
+			TypeIsPod        = pr::meta::is_pod<Type>::value,
+			TypeAlignment    = pr::meta::alignment_of<Type>::value,
 		};
 		
 		// type specific traits
@@ -176,7 +176,7 @@ namespace pr
 		};
 		
 	private:
-		typedef typename pr::mpl::aligned_storage<sizeof(Type), pr::mpl::alignment_of<Type>::value>::type TLocalStore;
+		typedef typename pr::meta::aligned_storage<sizeof(Type), pr::meta::alignment_of<Type>::value>::type TLocalStore;
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays
 		Type*       m_ptr;                // Pointer to the array of data
 		size_type   m_capacity;           // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
@@ -188,10 +188,10 @@ namespace pr
 		
 		// Access to the allocator object (independant over whether its a pointer or instance)
 		// (enable_if requires type inference to work, hence the 'A' template parameter)
-		template <typename A> typename pr::mpl::enable_if<!pr::mpl::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return m_allocator; }
-		template <typename A> typename pr::mpl::enable_if< pr::mpl::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
-		template <typename A> typename pr::mpl::enable_if<!pr::mpl::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return m_allocator; }
-		template <typename A> typename pr::mpl::enable_if< pr::mpl::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return *m_allocator; }
+		template <typename A> typename pr::meta::enable_if<!pr::meta::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return m_allocator; }
+		template <typename A> typename pr::meta::enable_if< pr::meta::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
+		template <typename A> typename pr::meta::enable_if<!pr::meta::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return m_allocator; }
+		template <typename A> typename pr::meta::enable_if< pr::meta::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return *m_allocator; }
 		
 		// return true if 'ptr' points with the current container
 		bool inside(const_pointer ptr) const { return m_ptr <= ptr && ptr < m_ptr + m_count; }
@@ -432,14 +432,14 @@ namespace pr
 			--m_count;
 		}
 		
-		// return pointer to the first element
+		// return pointer to the first element or null if the container is empty
 		const_pointer data() const
 		{
-			return m_ptr;
+			return m_count ? m_ptr : 0;
 		}
 		pointer data()
 		{
-			return m_ptr;
+			return m_count ? m_ptr : 0;
 		}
 		
 		// test if sequence is empty

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -15,7 +16,6 @@ using System.Windows.Forms.VisualStyles;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.inet;
 using pr.maths;
@@ -25,7 +25,7 @@ using Timer = System.Windows.Forms.Timer;
 
 namespace RyLogViewer
 {
-	public partial class Main :Form
+	public sealed partial class Main :Form
 	{
 		private readonly StartupOptions m_startup_options;    // The options provided at startup
 		private readonly Settings m_settings;                 // App settings
@@ -43,10 +43,10 @@ namespace RyLogViewer
 		private readonly ToolTip m_tt;                        // Tooltips
 		private readonly ToolTip m_balloon;                   // A hint balloon tooltip
 		private readonly Form[] m_tab_cycle;                  // The forms that Ctrl+Tab cycles through
+		private readonly RefCount m_suspend_grid_events;      // A ref count of nested calls that tell event handlers to ignore grid events
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
-		private string m_filepath;                            // The path of the log file we're viewing
-		private FileStream m_file;                            // A file stream of 'm_filepath'
+		private IFileSource m_file;                           // A file stream source
 		private byte[] m_row_delim;                           // The row delimiter converted from a string to a byte[] using the current encoding
 		private byte[] m_col_delim;                           // The column delimiter, cached to prevent m_settings access in CellNeeded
 		private int m_row_height;                             // The row height, cached to prevent settings lookups in CellNeeded
@@ -54,21 +54,22 @@ namespace RyLogViewer
 		private long m_fileend;                               // The last known size of the file
 		private long m_bufsize;                               // Cached value of m_settings.FileBufSize
 		private int m_line_cache_count;                       // The number of lines to scan about the currently selected row
-		private int m_suspend_grid_events;                    // A ref count of nested called that tell event handlers to ignore grid events
 		private bool m_alternating_line_colours;              // Cache the alternating line colours setting for performance
 		private bool m_tail_enabled;                          // Cache whether tail mode is enabled
+		private bool m_quick_filter_enabled;                  // True if only rows with highlights should be displayed
 		private bool m_first_row_is_odd;                      // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
 
 		public Main(StartupOptions startup_options)
 		{
 			m_startup_options = startup_options;
 			m_settings = new Settings(m_startup_options.SettingsPath);
+
 			Log.Register(m_settings.LogFilePath, false);
 			Log.Info(this, "App Startup: {0}".Fmt(DateTime.Now));
-			
+
 			InitializeComponent();
 			AllowTransparency = true;
-			
+
 			if (m_settings.RestoreScreenLoc)
 			{
 				StartPosition = FormStartPosition.Manual;
@@ -77,94 +78,100 @@ namespace RyLogViewer
 			}
 			
 			// Recent files menu
-			m_recent = new RecentFiles(m_menu_file_recent, OpenLogFile);
+			m_recent = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true));
 			m_recent.ClearRecentFilesListEvent += (s,a) =>
 				{
 					var res = MessageBox.Show(this, "Do you want to clear the recent files list?", "Clear Recent Files", MessageBoxButtons.OKCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
 					a.Cancel = res == DialogResult.Cancel;
 				};
 			
-			m_watch              = new FileWatch();
-			m_watch_timer        = new Timer{Interval = Constants.FilePollingRate};
-			m_batch_set_col_size = new EventBatcher(100, this);
-			m_highlights         = new List<Highlight>();
-			m_filters            = new List<Filter>();
-			m_transforms         = new List<Transform>();
-			m_clkactions         = new List<ClkAction>();
-			m_find_history       = new BindingSource{DataSource = new BindingList<Pattern>()};
-			m_find_ui            = new FindUI(this, m_find_history){Visible = false};
-			m_bookmarks          = new BindingSource{DataSource = new BindingList<Bookmark>()};
-			m_bookmarks_ui       = new BookmarksUI(this, m_bookmarks){Visible = false};
-			m_tt                 = new ToolTip();
-			m_balloon            = new ToolTip{IsBalloon = true};
-			m_tab_cycle          = new Form[]{this, m_find_ui, m_bookmarks_ui};
-			m_notify_icon        = new NotifyIcon{Icon = Icon};
-			m_line_index         = new List<Range>();
-			m_filepath           = null;
-			m_file               = null;
-			m_filepos            = 0;
-			m_fileend            = 0;
-			m_bufsize            = m_settings.FileBufSize;
-			m_line_cache_count   = m_settings.LineCacheCount;
-			m_tail_enabled       = m_settings.TailEnabled;
-			
+			m_watch               = new FileWatch();
+			m_watch_timer         = new Timer{Interval = Constants.FilePollingRate};
+			m_batch_set_col_size  = new EventBatcher(100, this);
+			m_highlights          = new List<Highlight>();
+			m_filters             = new List<Filter>();
+			m_transforms          = new List<Transform>();
+			m_clkactions          = new List<ClkAction>();
+			m_find_history        = new BindingSource{DataSource = new BindingList<Pattern>()};
+			m_find_ui             = new FindUI(this, m_find_history){Visible = false};
+			m_bookmarks           = new BindingList<Bookmark>();
+			m_bs_bookmarks        = new BindingSource{DataSource = m_bookmarks};
+			m_bookmarks_ui        = new BookmarksUI(this, m_bs_bookmarks){Visible = false};
+			m_tt                  = new ToolTip();
+			m_balloon             = new ToolTip{IsBalloon = true};
+			m_tab_cycle           = new Form[]{this, m_find_ui, m_bookmarks_ui};
+			m_notify_icon         = new NotifyIcon{Icon = Icon};
+			m_suspend_grid_events = new RefCount();
+			m_line_index          = new List<Range>();
+			m_file                = null;
+			m_filepos             = 0;
+			m_fileend             = 0;
+			m_bufsize             = m_settings.FileBufSize;
+			m_line_cache_count    = m_settings.LineCacheCount;
+			m_tail_enabled        = m_settings.TailEnabled;
+
 			// Startup options
 			ApplyStartupOptions();
-			
+
 			m_settings.SettingChanged += (s,a)=> Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(a.Key ,a.OldValue ,a.NewValue));
-			
+
 			// Menu
-			m_menu.Location                          = Point.Empty;
-			m_menu_file_open.Click                  += (s,a) => OpenLogFile();
-			m_menu_file_wizards_androidlogcat.Click += (s,a) => AndroidLogcatWizard();
-			m_menu_file_open_stdout.Click           += (s,a) => LogProgramOutput();
-			m_menu_file_open_serial_port.Click      += (s,a) => LogSerialPort();
-			m_menu_file_open_network.Click          += (s,a) => LogNetworkOutput();
-			m_menu_file_open_named_pipe.Click       += (s,a) => LogNamedPipeOutput();
-			m_menu_file_close.Click                 += (s,a) => CloseLogFile();
-			m_menu_file_export.Click                += (s,a) => ShowExportDialog();
-			m_menu_file_exit.Click                  += (s,a) => Close();
-			m_menu_edit_selectall.Click             += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
-			m_menu_edit_copy.Click                  += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
-			m_menu_edit_find.Click                  += (s,a) => ShowFindDialog();
-			m_menu_edit_find_next.Click             += (s,a) => FindNext();
-			m_menu_edit_find_prev.Click             += (s,a) => FindPrev();
-			m_menu_edit_toggle_bookmark.Click       += (s,a) => ToggleBookmark(SelectedRow);
-			m_menu_edit_next_bookmark.Click         += (s,a) => NextBookmark();
-			m_menu_edit_prev_bookmark.Click         += (s,a) => PrevBookmark();
-			m_menu_edit_clearall_bookmarks.Click    += (s,a) => m_bookmarks.Clear();
-			m_menu_edit_bookmarks.Click             += (s,a) => ShowBookmarksDialog();
-			m_menu_encoding_detect.Click            += (s,a) => SetEncoding(null);
-			m_menu_encoding_ascii.Click             += (s,a) => SetEncoding(Encoding.ASCII           );
-			m_menu_encoding_utf8.Click              += (s,a) => SetEncoding(Encoding.UTF8            );
-			m_menu_encoding_ucs2_littleendian.Click += (s,a) => SetEncoding(Encoding.Unicode         );
-			m_menu_encoding_ucs2_bigendian.Click    += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
-			m_menu_line_ending_detect.Click         += (s,a) => SetLineEnding(ELineEnding.Detect);
-			m_menu_line_ending_cr.Click             += (s,a) => SetLineEnding(ELineEnding.CR    );
-			m_menu_line_ending_crlf.Click           += (s,a) => SetLineEnding(ELineEnding.CRLF  );
-			m_menu_line_ending_lf.Click             += (s,a) => SetLineEnding(ELineEnding.LF    );
-			m_menu_line_ending_custom.Click         += (s,a) => SetLineEnding(ELineEnding.Custom);
-			m_menu_tools_alwaysontop.Click          += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
-			m_menu_tools_ghost_mode.Click           += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
-			m_menu_tools_clear_log_file.Click       += (s,a) => ClearLogFile();
-			m_menu_tools_highlights.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
-			m_menu_tools_filters.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
-			m_menu_tools_transforms.Click           += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
-			m_menu_tools_actions.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
-			m_menu_tools_options.Click              += (s,a) => ShowOptions(SettingsUI.ETab.General   );
-			m_menu_help_totd.Click                  += (s,a) => ShowTotD();
-			m_menu_help_check_for_updates.Click     += (s,a) => CheckForUpdates(true);
-			m_menu_help_visit_store.Click           += (s,a) => VisitStore();
-			m_menu_help_register.Click              += (s,a) => ShowActivation();
-			m_menu_help_about.Click                 += (s,a) => ShowAbout();
+			m_menu.Location                             = Point.Empty;
+			m_menu_file_open.Click                     += (s,a) => OpenSingleLogFile(null, true);
+			m_menu_file_wizards_androidlogcat.Click    += (s,a) => AndroidLogcatWizard();
+			m_menu_file_wizards_aggregatelogfile.Click += (s,a) => AggregateFileWizard();
+			m_menu_file_open_stdout.Click              += (s,a) => LogProgramOutput();
+			m_menu_file_open_serial_port.Click         += (s,a) => LogSerialPort();
+			m_menu_file_open_network.Click             += (s,a) => LogNetworkOutput();
+			m_menu_file_open_named_pipe.Click          += (s,a) => LogNamedPipeOutput();
+			m_menu_file_close.Click                    += (s,a) => CloseLogFile();
+			m_menu_file_export.Click                   += (s,a) => ShowExportDialog();
+			m_menu_file_exit.Click                     += (s,a) => Close();
+			m_menu_edit_selectall.Click                += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
+			m_menu_edit_copy.Click                     += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
+			m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
+			m_menu_edit_find_next.Click                += (s,a) => FindNext();
+			m_menu_edit_find_prev.Click                += (s,a) => FindPrev();
+			m_menu_edit_toggle_bookmark.Click          += (s,a) => ToggleBookmark(SelectedRowIndex);
+			m_menu_edit_next_bookmark.Click            += (s,a) => NextBookmark();
+			m_menu_edit_prev_bookmark.Click            += (s,a) => PrevBookmark();
+			m_menu_edit_clearall_bookmarks.Click       += (s,a) => m_bookmarks.Clear();
+			m_menu_edit_bookmarks.Click                += (s,a) => ShowBookmarksDialog();
+			m_menu_encoding_detect.Click               += (s,a) => SetEncoding(null);
+			m_menu_encoding_ascii.Click                += (s,a) => SetEncoding(Encoding.ASCII           );
+			m_menu_encoding_utf8.Click                 += (s,a) => SetEncoding(Encoding.UTF8            );
+			m_menu_encoding_ucs2_littleendian.Click    += (s,a) => SetEncoding(Encoding.Unicode         );
+			m_menu_encoding_ucs2_bigendian.Click       += (s,a) => SetEncoding(Encoding.BigEndianUnicode);
+			m_menu_line_ending_detect.Click            += (s,a) => SetLineEnding(ELineEnding.Detect);
+			m_menu_line_ending_cr.Click                += (s,a) => SetLineEnding(ELineEnding.CR    );
+			m_menu_line_ending_crlf.Click              += (s,a) => SetLineEnding(ELineEnding.CRLF  );
+			m_menu_line_ending_lf.Click                += (s,a) => SetLineEnding(ELineEnding.LF    );
+			m_menu_line_ending_custom.Click            += (s,a) => SetLineEnding(ELineEnding.Custom);
+			m_menu_tools_alwaysontop.Click             += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
+			m_menu_tools_ghost_mode.Click              += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
+			m_menu_tools_clear_log_file.Click          += (s,a) => ClearLogFile();
+			m_menu_tools_highlights.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
+			m_menu_tools_filters.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
+			m_menu_tools_transforms.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Transforms);
+			m_menu_tools_actions.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
+			m_menu_tools_options.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.General   );
+			m_menu_help_view_help.Click                += (s,a) => ShowHelp();
+			m_menu_help_totd.Click                     += (s,a) => ShowTotD();
+			m_menu_help_visit_store.Click              += (s,a) => VisitStore();
+			m_menu_help_register.Click                 += (s,a) => ShowActivation();
+			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
+			m_menu_help_about.Click                    += (s,a) => ShowAbout();
+			m_menu_evaluation_version.Click            += (s,a) => ShowAbout();
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
 			m_toolstrip.Location            = new Point(0,30);
 			m_btn_open_log.ToolTipText      = Resources.OpenLogFile;
-			m_btn_open_log.Click           += (s,a) => OpenLogFile();
+			m_btn_open_log.Click           += (s,a) => OpenSingleLogFile(null, true);
 			m_btn_refresh.ToolTipText       = Resources.ReloadLogFile;
 			m_btn_refresh.Click            += (s,a) => BuildLineIndex(m_filepos, true);
+			m_btn_quick_filter.ToolTipText  = Resources.QuickFilter;
+			m_btn_quick_filter.Click       += (s,a) => EnableQuickFilter(m_btn_quick_filter.Checked);
 			m_btn_highlights.ToolTipText    = Resources.ShowHighlightsDialog;
 			m_btn_highlights.Click         += (s,a) => EnableHighlights(m_btn_highlights.Checked);
 			m_btn_highlights.MouseDown     += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Highlights); };
@@ -177,14 +184,14 @@ namespace RyLogViewer
 			m_btn_actions.ToolTipText       = Resources.ShowActionsDialog;
 			m_btn_actions.Click            += (s,a) => EnableActions(m_btn_actions.Checked);
 			m_btn_actions.MouseDown        += (s,a) => { if (a.Button == MouseButtons.Right) ShowOptions(SettingsUI.ETab.Actions); };
-			m_btn_options.ToolTipText       = Resources.ShowOptionsDialog;
-			m_btn_options.Click            += (s,a) => ShowOptions(SettingsUI.ETab.General);
+			m_btn_find.ToolTipText          = Resources.ShowFindDialog;
+			m_btn_find.Click               += (s,a) => ShowFindDialog();
 			m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
 			m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
-			m_btn_jump_to_start.ToolTipText = Resources.ScrollToStart;
-			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRow = 0);
-			m_btn_jump_to_end.ToolTipText   = Resources.ScrollToEnd;
-			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1);
+			m_btn_jump_to_start.ToolTipText = "Selected the first row in the log file";
+			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRowIndex = 0);
+			m_btn_jump_to_end.ToolTipText   = "Selected the last row in the log file";
+			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRowIndex = m_grid.RowCount - 1);
 			m_btn_tail.ToolTipText          = Resources.WatchTail;
 			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
 			m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
@@ -194,7 +201,8 @@ namespace RyLogViewer
 			ToolStripManager.Renderer       = new CheckedButtonRenderer();
 			
 			// Scrollbar
-			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file");
+			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file\r\nClicking within here moves the cached position within the log file");
+			m_scroll_file.MinThumbSize = 1;
 			m_scroll_file.ScrollEnd += (s,a)=>
 				{
 					// Update on ScrollEnd not value changed, since
@@ -219,27 +227,27 @@ namespace RyLogViewer
 			m_grid.KeyDown             += DataGridView_Extensions.SelectAll;
 			m_grid.KeyDown             += DataGridView_Extensions.Copy;
 			m_grid.KeyUp               += (s,a) => LoadNearBoundary();
-			m_grid.MouseUp             += (s,a) => { if (a.Button == MouseButtons.Left) LoadNearBoundary(); };
+			m_grid.MouseUp             += (s,a) => GridMouseButton(a, false);
+			m_grid.MouseDown           += (s,a) => GridMouseButton(a, true);
 			m_grid.CellValueNeeded     += CellValueNeeded;
+			m_grid.RowPrePaint         += RowPrePaint;
 			m_grid.CellPainting        += CellPainting;
+			m_grid.RowPostPaint        += RowPostPaint;
 			m_grid.SelectionChanged    += GridSelectionChanged;
 			m_grid.CellDoubleClick     += CellDoubleClick;
 			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
 			m_grid.DataError           += (s,a) => Debug.Assert(false);
 			m_grid.Scroll              += (s,a) => GridScroll();
-			
+
 			// Grid context menu
 			m_cmenu_grid.ItemClicked    += GridContextMenu;
-			m_cmenu_grid.VisibleChanged += (s,a) =>
-				{
-					m_cmenu_grid.Tag = MousePosition; // save the mouse position in 'Tag'
-					m_cmenu_copy.Enabled = m_grid.SelectedCells.Count != 0;
-					m_cmenu_select_all.Enabled = m_grid.RowCount != 0;
-				};
-			
+			m_cmenu_grid.VisibleChanged += SetGridContextMenuVisibility;
+
 			// File Watcher
 			m_watch_timer.Tick += (s,a)=>
 				{
+					if (ReloadInProgress) return;
+					if (WindowState == FormWindowState.Minimized) return;
 					try { m_watch.CheckForChangedFiles(); }
 					catch (Exception ex) { Log.Exception(this, ex, "CheckForChangedFiles failed"); }
 				};
@@ -251,8 +259,7 @@ namespace RyLogViewer
 			InitFind();
 			
 			// Bookmarks
-			m_bookmarks.CurrentChanged     += (s,a) => SelectBookmark((Bookmark)m_bookmarks.Current);
-			m_bookmarks.CurrentItemChanged += (s,a) => SelectBookmark((Bookmark)m_bookmarks.Current);
+			m_bs_bookmarks.PositionChanged += (s,a) => SelectBookmark(m_bs_bookmarks.Position);
 			m_bookmarks_ui.NextBookmark    += NextBookmark;
 			m_bookmarks_ui.PrevBookmark    += PrevBookmark;
 			
@@ -267,13 +274,8 @@ namespace RyLogViewer
 			SizeChanged += (s,a)=> UpdateUI();
 
 			// Shutdown
-			FormClosing += (s,a) =>
-				{
-					m_settings.ScreenPosition = Location;
-					m_settings.WindowSize = Size;
-					m_settings.RecentFiles = m_recent.Export();
-				};
-			
+			FormClosing += (s,a) => Shutdown();
+
 			InitCache();
 			ApplySettings();
 		}
@@ -337,11 +339,11 @@ namespace RyLogViewer
 			// Parse command line
 			if (su.FileToLoad != null)
 			{
-				OpenLogFile(su.FileToLoad);
+				OpenSingleLogFile(su.FileToLoad, true);
 			}
 			else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
 			{
-				OpenLogFile(m_settings.LastLoadedFile);
+				OpenSingleLogFile(m_settings.LastLoadedFile, true);
 			}
 			
 			// Show the TotD
@@ -353,6 +355,14 @@ namespace RyLogViewer
 				CheckForUpdates(false);
 		}
 
+		/// <summary>Calls as the main form is closing</summary>
+		private void Shutdown()
+		{
+			m_settings.ScreenPosition = Location;
+			m_settings.WindowSize = Size;
+			m_settings.RecentFiles = m_recent.Export();
+		}
+		
 		/// <summary>Returns true if there is a log file currently open</summary>
 		private bool FileOpen
 		{
@@ -362,31 +372,91 @@ namespace RyLogViewer
 		/// <summary>Close the current log file</summary>
 		private void CloseLogFile()
 		{
-			using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+			using (m_suspend_grid_events.Refer)
 			{
+				CancelBuildLineIndex();
 				m_line_index.Clear();
-				m_watch.Remove(m_filepath);
+				if (FileOpen) m_watch.Remove(m_file.Filepaths);
 				if (m_buffered_process    != null) m_buffered_process.Dispose();
 				if (m_buffered_tcp_netconn != null) m_buffered_tcp_netconn.Dispose();
 				if (m_buffered_udp_netconn != null) m_buffered_udp_netconn.Dispose();
 				if (m_buffered_serialconn != null) m_buffered_serialconn.Dispose();
 				if (m_buffered_pipeconn   != null) m_buffered_pipeconn.Dispose();
-				if (FileOpen) m_file.Dispose();
 				m_buffered_process = null;
 				m_buffered_tcp_netconn = null;
 				m_buffered_udp_netconn = null;
 				m_buffered_serialconn = null;
 				m_buffered_pipeconn = null;
-				m_filepath = null;
+				if (FileOpen) m_file.Dispose();
 				m_file = null;
 				m_filepos = 0;
 				m_fileend = 0;
+				SetTransientStatusMessage(null);
+				SetStaticStatusMessage(null);
 			}
-			UpdateUI();
+
+			// Initiate a UI update after any existing queued events
+			this.BeginInvoke(() => UpdateUI());
 		}
-		
-		/// <summary>Prompt to open a log file</summary>
-		private void OpenLogFile(string filepath, bool add_to_recent)
+
+		/// <summary>Checks each file in 'filepaths' is valid. Returns false and displays an error if not</summary>
+		private bool ValidateFilepaths(IEnumerable<string> filepaths)
+		{
+			foreach (var file in filepaths)
+			{
+				// Reject invalid file paths
+				if (!file.HasValue())
+				{
+					MessageBox.Show(this, "File path is invalid", Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					return false;
+				}
+
+				// Check that the file exists, this can take ages if 'filepath' is a network file
+				if (!Misc.FileExists(this, file))
+				{
+					if (m_recent.IsInRecents(file))
+					{
+						var res = MessageBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
+						if (res == DialogResult.Yes)
+							m_recent.Remove(file, true);
+					}
+					else
+					{
+						MessageBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					}
+					return false;
+				}
+			}
+			return true;
+		}
+
+		/// <summary>Adopt a new file source, closing any previously open file source</summary>
+		private void NewFileSource(IFileSource file)
+		{
+			CloseLogFile();
+			m_file = file.Open();
+
+			m_filepos = m_settings.OpenAtEnd ? m_file.Stream.Length : 0;
+
+			// Setup the watcher to watch for file changes
+			m_watch.Add(m_file.Filepaths, (fp,ctx) => { OnFileChanged(); return true; });
+			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
+
+			BuildLineIndex(m_filepos, true, ()=>
+				{
+					SelectedRowIndex = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
+						
+					// Show a hint if filters are active, the file isn't empty, but there are no visible rows
+					if (m_grid.RowCount == 0 && m_fileend != 0)
+					{
+						if (m_filters.Count != 0)        ShowHintBalloon("Filters are currently active", m_btn_filters);
+						else if (m_quick_filter_enabled) ShowHintBalloon("Filters are currently active", m_btn_quick_filter);
+					}
+				});
+		}
+
+		/// <summary>Open a single log file, prompting if 'filepath' is null</summary>
+		private void OpenSingleLogFile(string filepath, bool add_to_recent)
 		{
 			try
 			{
@@ -397,14 +467,11 @@ namespace RyLogViewer
 					if (fd.ShowDialog() != DialogResult.OK) return;
 					filepath = fd.FileName;
 				}
-			
-				// Reject invalid file paths
-				if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
-				{
-					MessageBox.Show(this, string.Format(Resources.InvalidFileMsg, filepath), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+
+				// Check the filepath is valid
+				if (!ValidateFilepaths(Enumerable.Repeat(filepath, 1)))
 					return;
-				}
-				
+
 				if (add_to_recent)
 				{
 					m_recent.Add(filepath);
@@ -413,32 +480,32 @@ namespace RyLogViewer
 				}
 				
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
-				CloseLogFile();
-				m_file = LoadFile(filepath);
-				m_filepath = filepath;
-				m_filepos = m_settings.OpenAtEnd ? m_file.Length : 0;
-				
-				// Setup the watcher to watch for file changes
-				// Start the build in an invoke so that checking for file changes doesn't cause reentrancy
-				m_watch.Add(m_filepath, (fp,ctx) => { OnFileChanged(); return true; });
-				m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
-				
-				BuildLineIndex(m_filepos, true, ()=>
-					{
-						SelectedRow = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
-						
-						// Show a hint if filters are active, the file isn't empty, but there are no visible rows
-						if (m_grid.RowCount == 0 && m_fileend != 0 && m_filters.Count != 0)
-							ShowHintBalloon("Filters are currently active", m_btn_filters);
-					});
-				return;
+				NewFileSource(new SingleFile(filepath));
 			}
-			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, string.Format("Failed to open file {0} due to an error.", filepath), Resources.FailedToLoadFile); }
-			CloseLogFile();
+			catch (Exception ex)
+			{
+				Misc.ShowErrorMessage(this, ex, "Failed to open file {0} due to an error.".Fmt(filepath), Resources.FailedToLoadFile);
+				CloseLogFile();
+			}
 		}
-		private void OpenLogFile(string filepath = null)
+
+		/// <summary>Open multiple log files in aggregate</summary>
+		private void OpenAggregateLogFile(List<string> filepaths)
 		{
-			OpenLogFile(filepath, true);
+			try
+			{
+				// Check the filepath is valid
+				if (!ValidateFilepaths(filepaths))
+					return;
+
+				// Switch files - open the file to make sure it's accessible (and to hold a lock)
+				NewFileSource(new AggregateFile(filepaths));
+			}
+			catch (Exception ex)
+			{
+				Misc.ShowErrorMessage(this, ex, "Failed to open aggregate log files due to an error.", Resources.FailedToLoadFile);
+				CloseLogFile();
+			}
 		}
 
 		/// <summary>Show the android device log wizard</summary>
@@ -446,7 +513,22 @@ namespace RyLogViewer
 		{
 			var dg = new AndroidLogcatUI(m_settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			ApplySettings();
 			LaunchProcess(dg.Launch);
+		}
+
+		/// <summary>Show the aggregate log file wizard</summary>
+		private void AggregateFileWizard()
+		{
+			var dg = new AggregateFilesUI();
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			
+			var filepaths = dg.Filepaths.ToList();
+			if (filepaths.Count == 0) return;
+			if (filepaths.Count == 1)
+				OpenSingleLogFile(filepaths[0], true);
+			else
+				OpenAggregateLogFile(filepaths);
 		}
 
 		/// <summary>Open a standard out connection</summary>
@@ -488,13 +570,13 @@ namespace RyLogViewer
 		/// <summary>Called when the log file is noticed to have changed</summary>
 		private void OnFileChanged()
 		{
-			long len = m_file.Length;
-			Log.Info(this, "File {0} changed. File length: {1}".Fmt(m_filepath, len));
-			long filepos = AutoScrollTail ? m_file.Length : m_filepos;
-			bool reload  = m_file.Length < m_fileend || !m_settings.FileChangesAdditive;
+			long len = m_file.Stream.Length;
+			Log.Info(this, "File {0} changed. File length: {1}".Fmt(m_file.Name, len));
+			long filepos = AutoScrollTail ? m_file.Stream.Length : m_filepos;
+			bool reload  = m_file.Stream.Length < m_fileend || !m_settings.FileChangesAdditive;
 			BuildLineIndex(filepos, reload);
 		}
-		
+
 		/// <summary>Supply the grid with values</summary>
 		private void CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
 		{
@@ -505,68 +587,146 @@ namespace RyLogViewer
 				catch { e.Value = ""; }
 			}
 		}
-		
+
+		/// <summary>Called before drawing the row background</summary>
+		private void RowPrePaint(object sender, DataGridViewRowPrePaintEventArgs e)
+		{
+			e.Handled = false;
+			var grid = (DataGridView)sender;
+			if (e.RowIndex < 0 || e.RowIndex >= grid.RowCount) return;
+
+			// Leave rendering to the grid while events are suspended
+			if (GridEventsBlocked || !FileOpen)
+				return;
+
+			// Read the line from the cache
+			var line = ReadLine(e.RowIndex);
+			var bounds = e.RowBounds;
+			Highlight hl;
+
+			e.PaintParts &= ~DataGridViewPaintParts.ContentBackground;
+			e.PaintParts &= ~DataGridViewPaintParts.Border;
+
+			// Give the illusion that the alternating row colour is moving with the overall file
+			Color bkcolour = m_grid.RowsDefaultCellStyle.BackColor;
+			if (m_alternating_line_colours)
+			{
+				var cs = ((e.RowIndex & 1) == 1) == m_first_row_is_odd
+					? m_grid.RowsDefaultCellStyle
+					: m_grid.AlternatingRowsDefaultCellStyle;
+
+				bkcolour = cs.BackColor;
+			}
+
+			// If the line is bookmarked, use the bookmark colour
+			if (m_bookmarks.Count != 0 && m_bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
+				bkcolour = m_settings.BookmarkColour;
+
+			// If the whole row is highlighted, do it
+			else if (line.Column.Count == 1 && (hl = line[0].HL) != null)
+				bkcolour = hl.BackColour; // Assuming hl.BinaryMatch here... todo support partial row highlighting...
+
+			// Paint the background
+			using (var b = new SolidBrush(bkcolour))
+				e.Graphics.FillRectangle(b, bounds);
+
+			// If the row is selected, use the selection colour
+			if ((e.State & DataGridViewElementStates.Selected) != 0)
+			{
+				// Fill the selected area in semi-transparent
+				using (var b = new SolidBrush(Color.FromArgb(128, m_grid.DefaultCellStyle.SelectionBackColor)))
+					e.Graphics.FillRectangle(b, bounds);
+			}
+
+			// Only using RowPrePaint to draw row backgrounds, therefore
+			// e.Handled is false to cause the CellPainting and RowPostPaint
+			// methods to be called
+		}
+
 		/// <summary>Draw the cell appropriate to any highlighting</summary>
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
 		{
+			e.Handled = false;
+			var grid = (DataGridView)sender;
+			if (e.RowIndex < 0 || e.RowIndex >= grid.RowCount) return;
+
 			// Leave rendering to the grid while events are suspended
-			if (GridEventsBlocked)
-			{
-				e.Handled = false;
+			if (GridEventsBlocked || !FileOpen)
 				return;
-			}
-			
-			// Give the illusion that the alternating row colour is moving with the overall file
-			if (m_alternating_line_colours)
+
+			e.Handled = true;
+
+			// Read the line from the cache
+			var line = ReadLine(e.RowIndex);
+			Highlight hl;
+
+			// If the line is bookmarked, use the bookmark colour
+			if (m_bookmarks.Count != 0 && m_bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
 			{
-				var cs = ((e.RowIndex & 1) == 1) == m_first_row_is_odd ? m_grid.RowsDefaultCellStyle : m_grid.AlternatingRowsDefaultCellStyle;
-				e.CellStyle.ApplyStyle(cs);
+				e.PaintContent(e.ClipBounds);
 			}
-			
-			if (e.RowIndex != -1)
+
+			// Check if the cell value has a highlight pattern it matches
+			else if ((hl = line[e.ColumnIndex].HL) != null)
 			{
-				// Read the line from the cache
-				var line = ReadLine(e.RowIndex);
-				var hl   = line[e.ColumnIndex].HL;
-				
-				// If the line is bookmarked, use the bookmark colour
-				if (m_bookmarks.Count != 0 && m_bookmarks.List.IndexOf<Bookmark>(x => x.Range.Contains(line.LineStartAddr)) != -1)
+				if (hl.BinaryMatch)
 				{
-					e.CellStyle.BackColor = m_settings.BookmarkColour;
-					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
+					e.CellStyle.BackColor = hl.BackColour;
+					e.CellStyle.ForeColor = hl.ForeColour;
 					e.PaintContent(e.ClipBounds);
-				}
-				// Check if the cell value has a highlight pattern it matches
-				else if (hl != null)
-				{
-					if (hl.BinaryMatch)
-					{
-						e.CellStyle.BackColor = hl.BackColour;
-						e.CellStyle.ForeColor = hl.ForeColour;
-						e.PaintBackground(e.ClipBounds, false);
-						e.PaintContent(e.ClipBounds);
-					}
-					else
-					{
-						//todo
-						e.PaintBackground(e.ClipBounds, false);
-						e.PaintContent(e.ClipBounds);
-					}
 				}
 				else
 				{
-					e.PaintBackground(e.ClipBounds, e.RowIndex == SelectedRow);
+					//todo
 					e.PaintContent(e.ClipBounds);
 				}
 			}
-			e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, m_grid.DefaultCellStyle.SelectionBackColor, 0.7f);
+			else
+			{
+				e.PaintContent(e.ClipBounds);
+			}
 		}
-		
+
+		/// <summary>Called after the cells have been drawn</summary>
+		private void RowPostPaint(object sender, DataGridViewRowPostPaintEventArgs e)
+		{
+			var grid = (DataGridView)sender;
+			if (e.RowIndex < 0 || e.RowIndex >= grid.RowCount) return;
+
+			// Leave rendering to the grid while events are suspended
+			if (GridEventsBlocked || !FileOpen)
+				return;
+
+			var bounds = e.RowBounds;
+
+			// Draw a box around the selection
+			if ((e.State & DataGridViewElementStates.Selected) != 0)
+			{
+				const float pen_width = 3f, pen_hwidth = pen_width*0.5f;
+				var fbounds = new RectangleF(bounds.Left + pen_hwidth, bounds.Top + pen_hwidth, bounds.Width - pen_width, bounds.Height - pen_width);
+
+				// Draw a border around the selection
+				using (var p = new Pen(m_grid.DefaultCellStyle.SelectionBackColor, pen_width){StartCap = LineCap.Square, EndCap = LineCap.Square})
+				{
+					e.Graphics.DrawLine(p, fbounds.Left , fbounds.Top, fbounds.Left , fbounds.Bottom);
+					e.Graphics.DrawLine(p, fbounds.Right, fbounds.Top, fbounds.Right, fbounds.Bottom);
+					if (e.RowIndex == 0 || !grid.Rows[e.RowIndex - 1].Selected)
+					{
+						e.Graphics.DrawLine(p, fbounds.Left, fbounds.Top, fbounds.Right, fbounds.Top);
+					}
+					if (e.RowIndex == grid.RowCount - 1 || !grid.Rows[e.RowIndex + 1].Selected)
+					{
+						e.Graphics.DrawLine(p, fbounds.Left, fbounds.Bottom, fbounds.Right, fbounds.Bottom);
+					}
+				}
+			}
+		}
+
 		/// <summary>Handler for selections made in the grid</summary>
 		private void GridSelectionChanged(object sender, EventArgs e)
 		{
 			if (GridEventsBlocked) return;
-			EnableTail(SelectedRow == m_grid.RowCount - 1);
+			EnableTail(SelectedRowIndex == m_grid.RowCount - 1);
 			UpdateStatus();
 		}
 
@@ -576,7 +736,8 @@ namespace RyLogViewer
 			if (!m_settings.ActionsEnabled) return;
 			if (args.RowIndex < 0 || args.RowIndex > m_line_index.Count) return;
 
-			var columns = ReadLine(args.RowIndex).Column;
+			var line = ReadLine(args.RowIndex);
+			var columns = line.Column;
 			if (args.ColumnIndex < 0 || args.ColumnIndex > columns.Count) return;
 
 			// Read the text for the column and look for a matching action
@@ -584,8 +745,27 @@ namespace RyLogViewer
 			foreach (var a in m_clkactions)
 			{
 				if (!a.IsMatch(text)) continue;
-				try { a.Execute(text); }
+				try { a.Execute(text, m_file.FilepathAt(line.LineStartAddr)); }
 				catch { SetTransientStatusMessage("Action Failed", Color.Red, SystemColors.Control); }
+				break;
+			}
+		}
+
+		/// <summary>Handler for mouse down/up events on the grid</summary>
+		private void GridMouseButton(MouseEventArgs args, bool button_down)
+		{
+			switch (args.Button)
+			{
+			case MouseButtons.Left:
+				if (!button_down) LoadNearBoundary();
+				break;
+			case MouseButtons.Right:
+				if (button_down && SelectedRowCount <= 1)
+				{
+					var hit = m_grid.HitTest(args.X, args.Y);
+					if (hit.RowIndex >= 0 && hit.RowIndex < m_grid.RowCount)
+						SelectedRowIndex = hit.RowIndex;
+				}
 				break;
 			}
 		}
@@ -596,29 +776,47 @@ namespace RyLogViewer
 			// Note: I'm not attaching event handlers to each context menu item because
 			// some items require the selected row to be set and some don't. Plus the
 			// individual handlers don't have access to the click location
-			
+
+			// Find the row that the context menu was opened on
+			var pt = m_grid.PointToClient(((ContextMenuStrip)sender).Location);
+			var hit = m_grid.HitTest(pt.X, pt.Y);
+			if (hit.RowIndex < 0 || hit.RowIndex >= m_grid.RowCount)
+				return;
+
 			// Clipboard operations
 			if (args.ClickedItem == m_cmenu_copy      ) { DataGridView_Extensions.Copy(m_grid);      return; }
 			if (args.ClickedItem == m_cmenu_select_all) { DataGridView_Extensions.SelectAll(m_grid); return; }
 			if (args.ClickedItem == m_cmenu_clear_log ) { ClearLogFile(); return; }
-			
-			// Find the row that the context menu was opened on
-			var pt = m_grid.PointToClient(((ContextMenuStrip)sender).Location);
-			var hit = m_grid.HitTest(pt.X, pt.Y);
-			if (hit.RowIndex < 0 || hit.RowIndex >= m_grid.RowCount) return;
-			SelectedRow = hit.RowIndex;
-			
+
 			if (args.ClickedItem == m_cmenu_highlight_row) { ShowOptions(SettingsUI.ETab.Highlights); return; }
 			if (args.ClickedItem == m_cmenu_filter_row   ) { ShowOptions(SettingsUI.ETab.Filters   ); return; }
 			if (args.ClickedItem == m_cmenu_transform_row) { ShowOptions(SettingsUI.ETab.Transforms); return; }
 			if (args.ClickedItem == m_cmenu_action_row   ) { ShowOptions(SettingsUI.ETab.Actions   ); return; }
-			
+
 			// Find operations
 			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(); return; }
 			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(); return; }
-			
+
 			// Bookmarks
 			if (args.ClickedItem == m_cmenu_toggle_bookmark) { ToggleBookmark(hit.RowIndex); }
+		}
+
+		/// <summary>Set the visibility of context menu options</summary>
+		private void SetGridContextMenuVisibility(object sender, EventArgs args)
+		{
+			bool has_rows                   = m_grid.RowCount != 0;
+			bool has_selected_rows          = SelectedRowCount != 0;
+			m_cmenu_grid.Tag                = MousePosition; // save the mouse position in 'Tag'
+			m_cmenu_copy.Enabled            = has_selected_rows;
+			m_cmenu_select_all.Enabled      = has_rows;
+			m_cmenu_clear_log.Enabled       = has_rows;
+			m_cmenu_highlight_row.Enabled   = has_selected_rows;
+			m_cmenu_filter_row.Enabled      = has_selected_rows;
+			m_cmenu_transform_row.Enabled   = has_selected_rows;
+			m_cmenu_action_row.Enabled      = has_selected_rows;
+			m_cmenu_find_next.Enabled       = has_rows;
+			m_cmenu_find_prev.Enabled       = has_rows;
+			m_cmenu_toggle_bookmark.Enabled = has_rows;
 		}
 
 		/// <summary>Called when the grid is scrolled</summary>
@@ -627,16 +825,18 @@ namespace RyLogViewer
 			if (GridEventsBlocked) return;
 			UpdateFileScroll();
 			SetGridColumnSizes();
+
+			// Selected rows use transparency so we need to invalidate the entire row
+			foreach (var r in m_grid.GetRowsWithState(DataGridViewElementStates.Displayed|DataGridViewElementStates.Selected))
+				m_grid.InvalidateRow(r.Index);
 		}
 
-		/// <summary>
-		/// Tests whether the currently selected row is near the start or end of
-		/// the line range and causes a reload if it is</summary>
+		/// <summary>Tests whether the currently selected row is near the start or end of the line range and causes a reload if it is</summary>
 		private void LoadNearBoundary()
 		{
 			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit) return;
 			const float Limit = 1f / Constants.AutoScrollAtBoundaryLimit;
-			float ratio = Maths.Ratio(0, SelectedRow, m_grid.RowCount - 1);
+			float ratio = Maths.Frac(0, SelectedRowIndex, m_grid.RowCount - 1);
 			if (ratio < 0f + Limit) BuildLineIndex(LineStartIndexRange.Begin, false);
 			if (ratio > 1f - Limit) BuildLineIndex(LineStartIndexRange.End  , false);
 		}
@@ -657,14 +857,14 @@ namespace RyLogViewer
 			case Keys.Escape:                     CancelBuildLineIndex();             return true;
 			case Keys.F2:                         NextBookmark();                     return true;
 			case Keys.F2|Keys.Shift:              PrevBookmark();                     return true;
-			case Keys.F2|Keys.Control:            ToggleBookmark(SelectedRow);        return true;
+			case Keys.F2|Keys.Control:            ToggleBookmark(SelectedRowIndex);        return true;
 			case Keys.F3:                         FindNext();                         return true;
 			case Keys.F3|Keys.Shift:              FindPrev();                         return true;
-			case Keys.F3|Keys.Control:            SetFindPattern(SelectedRow, true);  return true;
-			case Keys.F3|Keys.Shift|Keys.Control: SetFindPattern(SelectedRow, false); return true;
+			case Keys.F3|Keys.Control:            SetFindPattern(SelectedRowIndex, true);  return true;
+			case Keys.F3|Keys.Shift|Keys.Control: SetFindPattern(SelectedRowIndex, false); return true;
 			case Keys.F5:                         BuildLineIndex(m_filepos, true);    return true;
-			case Keys.PageUp  |Keys.Control:      BuildLineIndex(0        , false, () => SelectedRow = 0                  ); return true;
-			case Keys.PageDown|Keys.Control:      BuildLineIndex(m_fileend, false, () => SelectedRow = m_grid.RowCount - 1); return true;
+			case Keys.PageUp  |Keys.Control:      BuildLineIndex(0        , false, () => SelectedRowIndex = 0                  ); return true;
+			case Keys.PageDown|Keys.Control:      BuildLineIndex(m_fileend, false, () => SelectedRowIndex = m_grid.RowCount - 1); return true;
 			case Keys.Tab|Keys.Control:
 				{
 					int idx = (m_tab_cycle.IndexOf(x => ReferenceEquals(x,caller)) + 1) % m_tab_cycle.Length;
@@ -697,9 +897,22 @@ namespace RyLogViewer
 			if (test_can_drop) return;
 			
 			// Open the dropped file
-			OpenLogFile(files[0]);
+			OpenSingleLogFile(files[0], true);
 		}
-		
+
+		/// <summary>Turn on/off quick filter mode</summary>
+		private void EnableQuickFilter(bool enable)
+		{
+			int row_index = SelectedRowIndex;
+			var current = row_index != -1 ? m_line_index[row_index].Begin : -1;
+			m_settings.QuickFilterEnabled = enable;
+			ApplySettings();
+			BuildLineIndex(m_filepos, true, ()=>
+				{
+					SelectedRowIndex = LineIndex(m_line_index, current);
+				});
+		}
+
 		/// <summary>Turn on/off highlights</summary>
 		private void EnableHighlights(bool enable)
 		{
@@ -712,12 +925,13 @@ namespace RyLogViewer
 		/// <summary>Turn on/off filters</summary>
 		private void EnableFilters(bool enable)
 		{
-			var current = SelectedRowRange.Begin;
+			int row_index = SelectedRowIndex;
+			var current = row_index != -1 ? m_line_index[row_index].Begin : -1;
 			m_settings.FiltersEnabled = enable;
 			ApplySettings();
 			BuildLineIndex(m_filepos, true, ()=>
 				{
-					SelectedRow = LineIndex(m_line_index, current);
+					SelectedRowIndex = LineIndex(m_line_index, current);
 				});
 		}
 
@@ -739,11 +953,9 @@ namespace RyLogViewer
 		/// <summary>Turn on/off tail mode</summary>
 		private void EnableTail(bool enabled)
 		{
-			if (enabled != m_tail_enabled)
-			{
-				m_settings.TailEnabled = m_tail_enabled = enabled;
-				UpdateUI();
-			}
+			if (enabled == m_tail_enabled) return;
+			m_settings.TailEnabled = m_tail_enabled = enabled;
+			ApplySettings();
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
@@ -765,35 +977,27 @@ namespace RyLogViewer
 		/// <summary>Try to remove data from the log file</summary>
 		private void ClearLogFile()
 		{
-			if (!FileOpen || !File.Exists(m_filepath)) return;
-			Exception err;
-			try // recreating the file
+			var err = m_file.Clear();
+			if (err == null)
 			{
-				using (new FileStream(m_filepath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {}
-				OpenLogFile(m_filepath); // reopen the file to purge any cached data
-				return;
+				InvalidateCache();
 			}
-			catch {}
-			try // deleting the file
+			else
 			{
-				File.Delete(m_filepath);
-				OpenLogFile(m_filepath); // reopen the file to purge any cached data
-				return;
+				MessageBox.Show(this, string.Format(
+					"Clearing file {0} failed.\r\n" +
+					"Reason: {1}\r\n" +
+					"\r\n" +
+					"Usually clearing the log file fails if another application holds an " +
+					"exclusive lock on the file. Stop any processes that are using the file " +
+					"and try again. Note, if you are using 'Log Program Output', the program " +
+					"you are running may be holding the file lock."
+					,m_file.Name
+					,err.Message)
+					,Resources.ClearLogFailed
+					,MessageBoxButtons.OK
+					,MessageBoxIcon.Information);
 			}
-			catch (Exception ex) { err = ex; }
-			MessageBox.Show(this, string.Format(
-				"Clearing file {0} failed.\r\n" +
-				"Reason: {1}\r\n" +
-				"\r\n" +
-				"Usually clearing the log file fails if another application holds an " +
-				"exclusive lock on the file. Stop any processes that are using the file " +
-				"and try again. Note, if you are using 'Log Program Output', the program " +
-				"you are running may be holding the file lock."
-				,m_filepath
-				,err.Message)
-				,Resources.ClearLogFailed
-				,MessageBoxButtons.OK
-				,MessageBoxIcon.Information);
 		}
 
 		/// <summary>Enable/Disable ghost mode</summary>
@@ -842,7 +1046,7 @@ namespace RyLogViewer
 		/// <summary>Set the encoding to use with loaded files. 'null' means auto detect</summary>
 		private void SetEncoding(Encoding encoding)
 		{
-			string enc_name = encoding == null ? "" : encoding.EncodingName;
+			string enc_name = encoding == null ? string.Empty : encoding.EncodingName;
 			if (enc_name == m_settings.Encoding) return; // not changed.
 			
 			// If a specific encoding is given, use it.
@@ -868,7 +1072,7 @@ namespace RyLogViewer
 			case ELineEnding.CRLF:   row_delim = "<CR><LF>"; break;
 			case ELineEnding.LF:     row_delim = "<LF>"; break;
 			case ELineEnding.Custom:
-				ShowOptions(SettingsUI.ETab.General);
+				ShowOptions(SettingsUI.ETab.General, SettingsUI.ESpecial.ShowLineEndingTip);
 				return;
 			}
 			if (row_delim == m_settings.RowDelimiter) return; // not changed
@@ -886,17 +1090,17 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Display the options dialog</summary>
-		private void ShowOptions(SettingsUI.ETab tab)
+		private void ShowOptions(SettingsUI.ETab tab, SettingsUI.ESpecial special = SettingsUI.ESpecial.None)
 		{
 			string row_text = "";
-			string test_text = "<Enter test text here>";
-			int init_row = SelectedRow;
+			string test_text = PatternUI.DefaultTestText;
+			int init_row = SelectedRowIndex;
 			if (init_row != -1)
 				row_text = test_text = ReadLine(init_row).RowText.Trim();
-			
+
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
-			var ui = new SettingsUI(m_settings, tab);
+			var ui = new SettingsUI(m_settings, tab, special);
 			switch (tab)
 			{
 			default: throw new ArgumentOutOfRangeException("tab");
@@ -911,8 +1115,8 @@ namespace RyLogViewer
 				ui.FilterUI.TestText = test_text;
 				break;
 			case SettingsUI.ETab.Transforms:
-				ui.TransformUI.Transform.Match = row_text;
-				ui.TransformUI.Transform.Replace = row_text;
+				ui.TransformUI.Pattern.Expr = row_text;
+				ui.TransformUI.Pattern.Replace = row_text;
 				ui.TransformUI.TestText = test_text;
 				break;
 			case SettingsUI.ETab.Actions:
@@ -940,11 +1144,46 @@ namespace RyLogViewer
 				UpdateUI();
 			}
 		}
-		
+
+		/// <summary>Launch a web browser in order to view the html documentation</summary>
+		private void ShowHelp()
+		{
+			try
+			{
+				var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
+				var start_page = Path.Combine(dir, @"docs\help.html");
+				Process.Start(start_page);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this,
+					"Unable to display the help documentation do to an error.\r\n" +
+					"Error Message: {0}\r\n".Fmt(ex.Message) +
+					"\r\n" +
+					"The expected location of the main documentation file is <install directory>\\docs\\help.html",
+					"Missing help files", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
 		/// <summary>Show the TotD dialog</summary>
 		private void ShowTotD()
 		{
 			new TipOfTheDay(m_settings).ShowDialog(this);
+		}
+
+		/// <summary>Returns the web proxy to use, if specified in the settings</summary>
+		private IWebProxy Proxy
+		{
+			get
+			{
+				IWebProxy proxy = WebRequest.DefaultWebProxy;
+				if (m_settings.UseWebProxy && !m_settings.WebProxyHost.HasValue())
+				{
+					try { proxy =  new WebProxy(m_settings.WebProxyHost, m_settings.WebProxyPort); }
+					catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}".Fmt(m_settings.WebProxyHost, m_settings.WebProxyPort)); }
+				}
+				return proxy;
+			}
 		}
 
 		/// <summary>Check a remote server for the latest version information</summary>
@@ -957,33 +1196,24 @@ namespace RyLogViewer
 					try { res = INet.EndCheckForUpdate(ar); }
 					catch (OperationCanceledException) {}
 					catch (Exception ex) { err = ex; }
-						
-					Action done = () => HandleCheckForUpdateResult(res, err, show_dialog);
-					BeginInvoke(done);
+
+					this.BeginInvoke(() => HandleCheckForUpdateResult(res, err, show_dialog));
 				};
-			
-			// Use a web proxy if it specified in the settings
-			IWebProxy proxy = WebRequest.DefaultWebProxy;
-			if (m_settings.UseWebProxy && !string.IsNullOrEmpty(m_settings.WebProxyHost))
-			{
-				try { proxy =  new WebProxy(m_settings.WebProxyHost, m_settings.WebProxyPort); }
-				catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}".Fmt(m_settings.WebProxyHost, m_settings.WebProxyPort)); }
-			}
-			
+
+			string update_url = m_settings.CheckForUpdatesServer + "versions/rylogviewer.xml";
+
 			// Start the check for updates
 			if (show_dialog)
 			{
-				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", (s,a)=>
+				var dg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", null, ProgressBarStyle.Marquee, (s,a,cb)=>
 					{
-						BackgroundWorker bgw = (BackgroundWorker)s;
-						bgw.ReportProgress(100, new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
-						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, null, proxy);
-						
-						// Wait till the operation completes, or until cancel is singled
-						for (;!bgw.CancellationPending && !async.AsyncWaitHandle.WaitOne(500);) {}
-						a.Cancel = bgw.CancellationPending;
+						cb(new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
+						IAsyncResult async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, Proxy);
 
-						if (!a.Cancel) callback(async);
+						// Wait till the operation completes, or until cancel is singled
+						for (;!s.CancelPending && !async.AsyncWaitHandle.WaitOne(500);) {}
+
+						if (!s.CancelPending) callback(async);
 						else INet.CancelCheckForUpdate(async);
 					});
 				dg.ShowDialog(this);
@@ -991,7 +1221,7 @@ namespace RyLogViewer
 			else
 			{
 				// Start the asynchronous check for updates
-				INet.BeginCheckForUpdate(Constants.AppIdentifier, Constants.UpdateUrl, callback, proxy);
+				INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, callback, Proxy);
 			}
 		}
 
@@ -1032,13 +1262,7 @@ namespace RyLogViewer
 					SetTransientStatusMessage("New Version Available!", Color.Green, SystemColors.Control);
 					if (show_dialog)
 					{
-						var dg = new NewVersionForm
-						{
-							CurrentVersion = this_version.ToString(),
-							LatestVersion  = othr_version.ToString(),
-							WebsiteUrl     = res.InfoURL,
-							DownloadUrl    = res.DownloadURL
-						};
+						var dg = new NewVersionForm(this_version.ToString(), othr_version.ToString(), res.InfoURL, res.DownloadURL, Proxy);
 						dg.ShowDialog(this);
 					}
 				}
@@ -1048,7 +1272,7 @@ namespace RyLogViewer
 		/// <summary>Show the about dialog</summary>
 		private void ShowAbout()
 		{
-			new About(new Licence(m_startup_options.AppDataDir)).ShowDialog(this);
+			new About(m_startup_options).ShowDialog(this);
 		}
 
 		/// <summary>Convert an encoding name to encoding object</summary>
@@ -1069,46 +1293,47 @@ namespace RyLogViewer
 		{
 			// If 'row_delim' is empty, this is the auto detect case, in which case we don't
 			// modify it from what it's already set to. Auto detect will set it on file load.
-			if (row_delim.Length == 0) return m_row_delim;
+			if (row_delim.Length == 0) return m_row_delim ?? m_encoding.GetBytes("\n");
 			return m_encoding.GetBytes(Misc.Robitise(row_delim));
 		}
 
 		/// <summary>Convert a column delimiter string into an encoded byte array</summary>
 		private byte[] GetColDelim(string col_delim)
 		{
-			// If 'col_delim' is empty, then there is not column delimiter.
+			// If 'col_delim' is empty, then there is no column delimiter.
 			return m_encoding.GetBytes(Misc.Robitise(col_delim));
 		}
 
-		/// <summary>Selected the row in the file that contains the byte offset 'addr'</summary>
+		/// <summary>Select the row in the file that contains the byte offset 'addr'</summary>
 		private void SelectRowByAddr(long addr)
 		{
 			// If 'addr' is within the currently loaded range, select the row now
 			if (LineIndexRange.Contains(addr))
 			{
-				SelectedRow = LineIndex(m_line_index, addr);
+				SelectedRowIndex = LineIndex(m_line_index, addr);
 			}
 			// Otherwise, load the range around 'addr', then select the row
 			else
 			{
-				BuildLineIndex(addr, false, ()=> SelectedRow = LineIndex(m_line_index, addr));
+				BuildLineIndex(addr, false, ()=> SelectedRowIndex = LineIndex(m_line_index, addr));
 			}
 		}
 
 		/// <summary>
 		/// Get/Set the currently selected grid row. Get returns -1 if there are no rows in the grid.
 		/// Setting the selected row clamps to the range [0,RowCount) and makes it visible in the grid (if possible)</summary>
-		private int SelectedRow
+		private int SelectedRowIndex
 		{
 			get
 			{
-				return m_grid.GetCellCount(DataGridViewElementStates.Selected) != 0
-					? m_grid.SelectedRows[0].Index
-					: -1;
+				// If the current row is selected, return that
+				var row = m_grid.CurrentRow;
+				if (row != null && row.Selected) return row.Index;
+				return -1;
 			}
 			set
 			{
-				using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+				using (m_suspend_grid_events.Refer)
 				{
 					value = m_grid.SelectRow(value);
 					Log.Info(this, "Row {0} selected".Fmt(value));
@@ -1117,7 +1342,25 @@ namespace RyLogViewer
 				}
 			}
 		}
-		
+
+		/// <summary>Returns the number of selected rows</summary>
+		private int SelectedRowCount
+		{
+			get { return m_grid.Rows.GetRowCount(DataGridViewElementStates.Selected); }
+		}
+
+		/// <summary>Returns the byte offset of the selected row, or 0 if there is no selection</summary>
+		private Range SelectedRowByteRange
+		{
+			get
+			{
+				var idx = SelectedRowIndex;
+				if (idx == -1) idx = 0;
+				Debug.Assert(idx >= 0 && idx < m_line_index.Count, "SelectedRowByteOffset should not be called when there are no lines");
+				return m_line_index[idx];
+			}
+		}
+
 		/// <summary>Return true if we should auto scroll</summary>
 		private bool AutoScrollTail
 		{
@@ -1137,7 +1380,7 @@ namespace RyLogViewer
 		/// <summary>Returns true if grid event handlers should process grid events</summary>
 		private bool GridEventsBlocked
 		{
-			get { return m_suspend_grid_events != 0; }
+			get { return m_suspend_grid_events.Count != 0; }
 		}
 
 		/// <summary>Helper for setting the grid row count without event handlers being fired</summary>
@@ -1146,21 +1389,30 @@ namespace RyLogViewer
 			bool auto_scroll_tail = AutoScrollTail;
 			if (m_grid.RowCount != count || row_delta != 0)
 			{
-				// Preserve the selected row index and first visible row index (if possible)
+				// Record data so that we can preserve the selected rows and first visible rows
 				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
-				int selected = SelectedRow;
-				SelectedRow = -1;
+				var selected = SelectedRowIndex;
+				var selected_rows = m_grid.SelectedRows.Cast<DataGridViewRow>().Select(x => x.Index + row_delta).OrderBy(x => x).ToList();
+				SelectedRowIndex = -1;
 				
-				Log.Info(this, "RowCount changed. Row delta {0}. Selected row: {1}->{2}. First visible row: {3}->{4}. Auto scroll {5}".Fmt(row_delta ,selected ,selected+row_delta ,first_vis ,first_vis+row_delta ,auto_scroll_tail));
+				Log.Info(this, "RowCount changed. Row delta {0}.".Fmt(row_delta));
 				m_grid.RowCount = 0;
 				m_grid.RowCount = count;
 				
 				// Restore the selected row, and the first visible row
 				if (count != 0)
 				{
-					// Restore the selected row, and the first visible row
-					m_grid.SelectRow(auto_scroll_tail ? m_grid.RowCount - 1 : selected + row_delta);
+					// Restore the selected rows, and the first visible row
 					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
+					if (auto_scroll_tail) SelectedRowIndex = m_grid.RowCount - 1;//m_grid.SelectRow(m_grid.RowCount - 1);
+					else if (selected != -1)
+					{
+						m_grid.SelectRow(selected + row_delta);
+
+						int i = selected_rows.BinarySearch(x => x.CompareTo(0));
+						for (i = (i >= 0) ? i : ~i; i != selected_rows.Count; ++i)
+							m_grid.Rows[i].Selected = true;
+					}
 				}
 			}
 			if (auto_scroll_tail) ShowLastRow();
@@ -1207,6 +1459,7 @@ namespace RyLogViewer
 			m_line_cache_count         = m_settings.LineCacheCount;
 			m_alternating_line_colours = m_settings.AlternateLineColours;
 			m_tail_enabled             = m_settings.TailEnabled;
+			m_quick_filter_enabled     = m_settings.QuickFilterEnabled;
 			
 			// Tail
 			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
@@ -1259,12 +1512,16 @@ namespace RyLogViewer
 			}
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
-			
+
+			// File scroll
+			m_scroll_file.TrackColor = m_settings.ScrollBarFileRangeColour;
+			m_scroll_file.ThumbColor = m_settings.ScrollBarCachedRangeColour;
+
 			// Ensure rows are re-rendered
 			InvalidateCache();
 			UpdateUI();
 		}
-		
+
 		/// <summary>
 		/// Update the UI with the current line index.
 		/// This method should be called whenever a changes occurs that requires
@@ -1276,7 +1533,7 @@ namespace RyLogViewer
 			{
 				m_in_update_ui = true;
 				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
-			
+
 				// Don't suspend events by removing/adding handlers because that pattern doesn't nest
 				using (m_grid.SuspendLayout(true))
 				{
@@ -1288,7 +1545,7 @@ namespace RyLogViewer
 							m_first_row_is_odd = !m_first_row_is_odd;
 						
 						// Ensure the grid has the correct number of rows
-						using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+						using (m_suspend_grid_events.Refer)
 							SetGridRowCount(m_line_index.Count, row_delta);
 					
 						SetGridColumnSizes();
@@ -1297,12 +1554,12 @@ namespace RyLogViewer
 					{
 						m_grid.ColumnHeadersVisible = false;
 						m_grid.ColumnCount = 1;
-						using (Scope.Create(()=>++m_suspend_grid_events, ()=>--m_suspend_grid_events))
+						using (m_suspend_grid_events.Refer)
 							SetGridRowCount(0, 0);
 					}
 				}
 				m_grid.Refresh();
-			
+
 				// Configure menus
 				bool file_open                            = FileOpen;
 				string enc                                = m_settings.Encoding;
@@ -1329,16 +1586,20 @@ namespace RyLogViewer
 				m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
 				m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
 				m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
-				m_menu_tools_clear_log_file.Enabled                = FileOpen;
-			
+				m_menu_tools_clear_log_file.Enabled = FileOpen;
+
+				var lic = new Licence(m_startup_options.AppDataDir);
+				m_menu_evaluation_version.Visible = !lic.Valid;
+
 				// Toolbar
-				m_btn_highlights.Checked = m_settings.HighlightsEnabled;
-				m_btn_filters.Checked    = m_settings.FiltersEnabled;
-				m_btn_transforms.Checked = m_settings.TransformsEnabled;
-				m_btn_actions.Checked    = m_settings.ActionsEnabled;
-				m_btn_tail.Checked       = m_settings.TailEnabled;
-				m_btn_watch.Checked      = m_watch_timer.Enabled;
-				m_btn_additive.Checked   = m_settings.FileChangesAdditive;
+				m_btn_quick_filter.Checked = m_settings.QuickFilterEnabled;
+				m_btn_highlights.Checked   = m_settings.HighlightsEnabled;
+				m_btn_filters.Checked      = m_settings.FiltersEnabled;
+				m_btn_transforms.Checked   = m_settings.TransformsEnabled;
+				m_btn_actions.Checked      = m_settings.ActionsEnabled;
+				m_btn_tail.Checked         = m_settings.TailEnabled;
+				m_btn_watch.Checked        = m_watch_timer.Enabled;
+				m_btn_additive.Checked     = m_settings.FileChangesAdditive;
 			
 				// Status and title
 				UpdateStatus();
@@ -1364,7 +1625,7 @@ namespace RyLogViewer
 			}
 			else
 			{
-				Text = string.Format("{0} - {1}" ,m_filepath ,Resources.AppTitle);
+				Text = "{0} - {1}".Fmt(m_file.Name,Resources.AppTitle);
 				m_status_spring.Text = "";
 				
 				// Add comma's to a large number
@@ -1376,10 +1637,10 @@ namespace RyLogViewer
 					};
 
 				// Get current file position
-				int r = SelectedRow;
+				int r = SelectedRowIndex;
 				long p = (r != -1) ? m_line_index[r].Begin : 0;
 				StringBuilder pos = pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
-				StringBuilder len = pretty(new StringBuilder(m_file.Length.ToString(CultureInfo.InvariantCulture)));
+				StringBuilder len = pretty(new StringBuilder(m_file.Stream.Length.ToString(CultureInfo.InvariantCulture)));
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
@@ -1403,69 +1664,83 @@ namespace RyLogViewer
 			else
 			{
 				m_status_progress.Visible = true;
-				m_status_progress.Value = (int)(Maths.Ratio(0, current, total) * 100);
+				m_status_progress.Value = (int)(Maths.Frac(0, current, total) * 100);
 			}
 		}
 
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
-			// The file scroll bar is only visible when part of the file is loaded
-			if (m_line_index.Count == m_settings.LineCacheCount || m_fileend > m_settings.FileBufSize)
-			{
-				Range range = LineIndexRange;
-				if (!range.Equals(m_scroll_file.ThumbRange))
-					Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Begin, range.End, FileByteRange.Begin, FileByteRange.End));
-				
-				m_scroll_file.Visible    = true;
-				m_scroll_file.TotalRange = FileByteRange;
-				m_scroll_file.ThumbRange = range;
-				m_scroll_file.Width      = m_settings.FileScrollWidth;
-				
-				m_scroll_file.Ranges.Clear();
-				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(range              ,m_settings.ScrollBarFileRangeColour   ));
-				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(DisplayedRowsRange ,m_settings.ScrollBarDisplayRangeColour));
-				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(SelectedRowRange   ,m_settings.LineSelectBackColour       ));
-				
-				// Add marks for the bookmarked positions
-				var bkmark_colour = m_settings.BookmarkColour;
-				foreach (var bk in m_bookmarks)
-					m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(((Bookmark)bk).Range, bkmark_colour));
-			}
-			else
-			{
-				m_scroll_file.Visible = false;
-			}
+			Range range = LineIndexRange;
+			if (!range.Equals(m_scroll_file.ThumbRange))
+				Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Begin, range.End, FileByteRange.Begin, FileByteRange.End));
+
+			m_scroll_file.Visible    = true;
+			m_scroll_file.TotalRange = FileByteRange;
+			m_scroll_file.ThumbRange = range;
+			m_scroll_file.Width      = m_settings.FileScrollWidth;
+
+			m_scroll_file.Ranges.Clear();
+			m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(DisplayedRowsRange, m_settings.ScrollBarDisplayRangeColour));
+			foreach (var sel_range in SelectedRowRanges)
+				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(sel_range, m_settings.LineSelectBackColour));
+
+			// Add marks for the bookmarked positions
+			var bkmark_colour = m_settings.BookmarkColour;
+			foreach (var bk in m_bookmarks)
+				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(bk.Range, bkmark_colour));
+
+			m_scroll_file.Refresh();
 		}
-		
-		/// <summary>Create a message that displays for a period then disappears</summary>
-		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, int display_time_ms = 2000)
+
+		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
+		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, TimeSpan display_time_ms)
 		{
-			m_status_message.Text = text;
-			m_status_message.Visible = true;
-			m_status_message.ForeColor = frcol;
-			m_status_message.BackColor = bkcol;
-			
+			m_status_message_trans.Text = text ?? string.Empty;
+			m_status_message_trans.Visible = text.HasValue();
+			m_status_message_trans.ForeColor = frcol;
+			m_status_message_trans.BackColor = bkcol;
+
 			// If the status message has a timer already, dispose it
-			Timer timer = m_status_message.Tag as Timer;
+			Timer timer = m_status_message_trans.Tag as Timer;
 			if (timer != null) timer.Dispose();
-			
+
 			// Attach a new timer to the status message
-			m_status_message.Tag = timer = new Timer{Enabled = true, Interval = display_time_ms};
-			timer.Tick += (s,a)=>
-				{
-					// When the timer fires, if we're still associated with
-					// the status message, null out the text and remove our self
-					if (s != m_status_message.Tag) return;
-					m_status_message.Text = Resources.Idle;
-					m_status_message.Visible = false;
-					m_status_message.Tag = null;
-					((Timer)s).Dispose();
-				};
+			if (text.HasValue() && display_time_ms != TimeSpan.MaxValue)
+			{
+				m_status_message_trans.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.TotalMilliseconds};
+				timer.Tick += (s,a)=>
+					{
+						// When the timer fires, if we're still associated with
+						// the status message, null out the text and remove our self
+						if (s != m_status_message_trans.Tag) return;
+						m_status_message_trans.Text = Resources.Idle;
+						m_status_message_trans.Visible = false;
+						m_status_message_trans.Tag = null;
+						((Timer)s).Dispose();
+					};
+			}
 		}
-		private void SetTransientStatusMessage(string text, int display_time_ms = 2000)
+		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol)
 		{
-			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control, display_time_ms);
+			SetTransientStatusMessage(text, frcol, bkcol, TimeSpan.FromSeconds(2));
+		}
+		private void SetTransientStatusMessage(string text)
+		{
+			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
+		}
+
+		/// <summary>Create a status message that displays until cleared. Use null or "" to hide the status</summary>
+		private void SetStaticStatusMessage(string text, Color frcol, Color bkcol)
+		{
+			m_status_message_fixed.Text = text ?? string.Empty;
+			m_status_message_fixed.Visible = text.HasValue();
+			m_status_message_fixed.ForeColor = frcol;
+			m_status_message_fixed.BackColor = bkcol;
+		}
+		private void SetStaticStatusMessage(string text)
+		{
+			SetStaticStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
 		}
 
 		/// <summary>Display the hint balloon</summary>

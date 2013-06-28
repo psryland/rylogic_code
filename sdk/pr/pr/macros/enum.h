@@ -8,7 +8,7 @@
 //     */x(A, "a", = 0)/* comment 
 //     */x(B, "b", = 1)/* comment 
 //     */x(C, "c", = 2)/* comment 
-//  PR_DEFINE_ENUM(TestEnum1, PR_ENUM)
+//  PR_DEFINE_ENUM3(TestEnum1, PR_ENUM)
 //  #undef PR_ENUM
 //*/
 
@@ -16,14 +16,7 @@
 #define PR_MACROS_ENUM_H
 
 #include <exception>
-#include <type_traits>
-
-//"pr/common/assert.h" should be included prior to this for pr asserts
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#   define PR_DBG 0
-#endif
+#include <functional>
 
 // Macro enum generator functions
 #define PR_ENUM_DEFINE1(id)           id,
@@ -38,9 +31,19 @@
 #define PR_ENUM_TOSTRING2(id, val)      case id: return #id;
 #define PR_ENUM_TOSTRING3(id, str, val) case id: return str;
 
-#define PR_ENUM_FROMSTR1(id)           if (::strcmp(name, #id) == 0) return id;
-#define PR_ENUM_FROMSTR2(id, val)      if (::strcmp(name, #id) == 0) return id;
-#define PR_ENUM_FROMSTR3(id, str, val) if (::strcmp(name, str) == 0) return id;
+#define PR_ENUM_STRCMP1(id)            if (::strcmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMP2(id, val)       if (::strcmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMP3(id, str, val)  if (::strcmp(name, str) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI1(id)           if (::_stricmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI2(id, val)      if (::_stricmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI3(id, str, val) if (::_stricmp(name, str) == 0) { enum_ = id; return true; }
+
+#define PR_ENUM_WSTRCMP1(id)            if (::wcscmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMP2(id, val)       if (::wcscmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMP3(id, str, val)  if (::wcscmp(name, L##str) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI1(id)           if (::_wcsicmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI2(id, val)      if (::_wcsicmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI3(id, str, val) if (::_wcsicmp(name, L##str) == 0) { enum_ = id; return true; }
 
 #define PR_ENUM_TOTRUE1(id)           case id: return true;
 #define PR_ENUM_TOTRUE2(id, val)      case id: return true;
@@ -57,6 +60,9 @@
 #define PR_DEFINE_ENUM_IMPL(enum_name, enum_vals1, enum_vals2, enum_vals3, notflags, flags)\
 struct enum_name\
 {\
+	/* Type trait tag */\
+	struct is_enum;\
+\
 	/* The name of the enum type */ \
 	static char const* EnumName() { return #enum_name; }\
 \
@@ -66,7 +72,8 @@ struct enum_name\
 		enum_vals2(PR_ENUM_COUNT2)\
 		enum_vals3(PR_ENUM_COUNT3);\
 \
-	/* The members of the enum */ \
+	/* The members of the enum. This can't be called 'Enum' or 'Type' because
+	   it doesn't compile if the enum contains a member with the same name*/ \
 	enum Enum_\
 	{\
 		enum_vals1(PR_ENUM_DEFINE1)\
@@ -81,20 +88,62 @@ struct enum_name\
 	static char const* ToString(Enum_ e)\
 	{\
 		switch (e) {\
-		default: PR_ASSERT(PR_DBG, false, "Not a member of enum "#enum_name); return "";\
+		default: notflags(PR_ASSERT(PR_DBG, false, "Not a member of enum "#enum_name);) return "";\
 		enum_vals1(PR_ENUM_TOSTRING1)\
 		enum_vals2(PR_ENUM_TOSTRING2)\
 		enum_vals3(PR_ENUM_TOSTRING3)\
 		}\
 	}\
 \
-	/* Convert a string name into it's enum value (inverse of ToString)*/ \
-	static Enum_ Parse(char const* name)\
+	/* Try to convert a string name into it's enum value (inverse of ToString)*/ \
+	static bool TryParse(Enum_& enum_, char const* name, bool match_case = true)\
 	{\
-		enum_vals1(PR_ENUM_FROMSTR1)\
-		enum_vals2(PR_ENUM_FROMSTR2)\
-		enum_vals3(PR_ENUM_FROMSTR3)\
-		PR_ASSERT(PR_DBG, false, "Parse failed, no matching value in enum "#enum_name);\
+		if (match_case)\
+		{\
+			enum_vals1(PR_ENUM_STRCMP1)\
+			enum_vals2(PR_ENUM_STRCMP2)\
+			enum_vals3(PR_ENUM_STRCMP3)\
+		}\
+		else\
+		{\
+			enum_vals1(PR_ENUM_STRCMPI1)\
+			enum_vals2(PR_ENUM_STRCMPI2)\
+			enum_vals3(PR_ENUM_STRCMPI3)\
+		}\
+		return false;\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static bool TryParse(Enum_& enum_, wchar_t const* name, bool match_case = true)\
+	{\
+		if (match_case)\
+		{\
+			enum_vals1(PR_ENUM_WSTRCMP1)\
+			enum_vals2(PR_ENUM_WSTRCMP2)\
+			enum_vals3(PR_ENUM_WSTRCMP3)\
+		}\
+		else\
+		{\
+			enum_vals1(PR_ENUM_WSTRCMPI1)\
+			enum_vals2(PR_ENUM_WSTRCMPI2)\
+			enum_vals3(PR_ENUM_WSTRCMPI3)\
+		}\
+		return false;\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static Enum_ Parse(char const* name, bool match_case = true)\
+	{\
+		Enum_ enum_;\
+		if (TryParse(enum_, name, match_case)) return enum_;\
+		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static Enum_ Parse(wchar_t const* name, bool match_case = true)\
+	{\
+		Enum_ enum_;\
+		if (TryParse(enum_, name, match_case)) return enum_;\
 		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
 	}\
 \
@@ -122,8 +171,8 @@ struct enum_name\
 		return ToString(Member(index));\
 	}\
 \
-	/* Returns an enum member by index */ \
-	static Enum_ Member(int index)\
+	/* Returns an enum member by index. (const& so that address of can be used) */ \
+	static Enum_ const& Member(int index)\
 	{\
 		static Enum_ const map[] =\
 		{\
@@ -134,6 +183,18 @@ struct enum_name\
 		if (index < 0 || index >= NumberOf)\
 			throw std::exception("index out of range for enum "#enum_name);\
 		return map[index];\
+	}\
+\
+	/* Returns an iterator range for iterating over each element in the enum*/\
+	static pr::EnumMemberEnumerator<enum_name> Members()\
+	{\
+		return pr::EnumMemberEnumerator<enum_name>();\
+	}\
+\
+	/* Returns an iterator range for iterating over each element in the enum*/\
+	static pr::EnumMemberNameEnumerator<enum_name> MemberNames()\
+	{\
+		return pr::EnumMemberNameEnumerator<enum_name>();\
 	}\
 \
 	/* Converts this enum value to a string */ \
@@ -147,9 +208,12 @@ struct enum_name\
 	notflags(explicit) enum_name(int x) :value(static_cast<Enum_>(x)) {}\
 	enum_name& operator = (Enum_ x)                                                        { value = x; return *this; }\
 	flags(enum_name& operator = (int x)                                                    { value = static_cast<Enum_>(x); return *this; })\
-	flags(Enum_ operator | (enum_name rhs) const                                           { return static_cast<Enum_>(value | rhs.value); })\
-	flags(Enum_ operator & (enum_name rhs) const                                           { return static_cast<Enum_>(value & rhs.value); })\
-	flags(Enum_ operator ^ (enum_name rhs) const                                           { return static_cast<Enum_>(value ^ rhs.value); })\
+	flags(enum_name& operator |= (Enum_ rhs)                                               { value = static_cast<Enum_>(value | rhs); return *this; })\
+	flags(enum_name& operator &= (Enum_ rhs)                                               { value = static_cast<Enum_>(value & rhs); return *this; })\
+	flags(enum_name& operator ^= (Enum_ rhs)                                               { value = static_cast<Enum_>(value ^ rhs); return *this; })\
+	flags(Enum_ operator | (Enum_ rhs) const                                               { return static_cast<Enum_>(value | rhs); })\
+	flags(Enum_ operator & (Enum_ rhs) const                                               { return static_cast<Enum_>(value & rhs); })\
+	flags(Enum_ operator ^ (Enum_ rhs) const                                               { return static_cast<Enum_>(value ^ rhs); })\
 	operator Enum_ const&() const                                                          { return value; }\
 	operator Enum_&()                                                                      { return value; }\
 	friend std::ostream& operator << (std::ostream& stream, enum_name const& enum_)        { return stream << enum_name::ToString(enum_); }\
@@ -175,19 +239,68 @@ struct enum_name\
 
 namespace pr
 {
+	// A type trait for detecting PR_ENUM types
+	// Use with std::enable_if, e.g.
+	// template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, char const*>::type Func(TEnum t) { return TEnum::ToString(t); }
+	template <typename TEnum> struct is_enum
+	{
+		template <typename U> static char (&resolve(typename U::is_enum*))[2];
+		template <typename U> static char resolve(...);
+		enum { value = sizeof(resolve<TEnum>(0)) - 1 };
+	};
+
+	// Iterators for iterating over enum members/member names
+	template <typename TEnum> struct EnumMemberIterator
+	{
+		int m_idx;
+		explicit EnumMemberIterator(int idx) :m_idx(idx) {}
+		TEnum operator *() const                        { return TEnum::Member(m_idx); }
+		EnumMemberIterator& operator ++()               { ++m_idx; return *this; }
+		EnumMemberIterator& operator --()               { --m_idx; return *this; }
+		EnumMemberIterator operator ++(int)             { return EnumMemberIterator(m_idx++); }
+		EnumMemberIterator operator --(int)             { return EnumMemberIterator(m_idx--); }
+		bool operator == (EnumMemberIterator rhs) const { return m_idx == rhs.m_idx; }
+		bool operator != (EnumMemberIterator rhs) const { return m_idx != rhs.m_idx; }
+		bool operator <  (EnumMemberIterator rhs) const { return m_idx <  rhs.m_idx; }
+	};
+	template <typename TEnum> struct EnumMemberNameIterator
+	{
+		int m_idx;
+		explicit EnumMemberNameIterator(int idx) :m_idx(idx) {}
+		char const* operator *() const                      { return TEnum::MemberName(m_idx); }
+		EnumMemberNameIterator& operator ++()               { ++m_idx; return *this; }
+		EnumMemberNameIterator& operator --()               { --m_idx; return *this; }
+		EnumMemberNameIterator operator ++(int)             { return EnumMemberNameIterator(m_idx++); }
+		EnumMemberNameIterator operator --(int)             { return EnumMemberNameIterator(m_idx--); }
+		bool operator == (EnumMemberNameIterator rhs) const { return m_idx == rhs.m_idx; }
+		bool operator != (EnumMemberNameIterator rhs) const { return m_idx != rhs.m_idx; }
+		bool operator <  (EnumMemberNameIterator rhs) const { return m_idx <  rhs.m_idx; }
+	};
+
+	// Proxy objects that allow for (TEnum e : TEnum::Members()) {}
+	template <typename TEnum> struct EnumMemberEnumerator
+	{
+		EnumMemberIterator<TEnum> begin() const { return EnumMemberIterator<TEnum>(0); }
+		EnumMemberIterator<TEnum> end() const   { return EnumMemberIterator<TEnum>(TEnum::NumberOf); }
+	};
+	template <typename TEnum> struct EnumMemberNameEnumerator
+	{
+		EnumMemberNameIterator<TEnum> begin() const { return EnumMemberNameIterator<TEnum>(0); }
+		EnumMemberNameIterator<TEnum> end() const   { return EnumMemberNameIterator<TEnum>(TEnum::NumberOf); }
+	};
+
 	// Used to check enums where the value of each member should be the hash of its string name
 	// Use this method by declaring a static bool and assigning it to the result of this function
-	template <typename TEnum, typename HashFunc, typename OnFail> inline bool CheckHashEnum(HashFunc hash_func, OnFail on_fail)
+	template <typename TEnum, typename THashFunc, typename TFailFunc> inline bool CheckHashEnum(THashFunc hash_func, TFailFunc on_fail)
 	{
 		bool result = true;
-
 		std::string str;
 		for (int i = 0; i != TEnum::NumberOf; ++i)
 		{
 			auto name = TEnum::MemberName(i);
 			auto val  = TEnum::Member(i);
 			auto hash = hash_func(name);
-			if (val != hash)
+			if (hash != static_cast<int>(val))
 			{
 				str += FmtS("\n%s::%-48s hash value should be 0x%08X", TEnum::EnumName(), name, hash);
 				result = false;
@@ -196,17 +309,15 @@ namespace pr
 		if (!result) on_fail(str.c_str());
 		return result;
 	}
-	template <typename TEnum, typename HashFunc, typename OnFail> inline bool CheckHashEnum(HashFunc hash_func)
+	template <typename TEnum, typename THashFunc> inline bool CheckHashEnum(THashFunc hash_func)
 	{
-		return CheckHashEnum(hash_func, [](char const* msg){ throw std::exception(msg); });
+		return CheckHashEnum<TEnum>(hash_func, [](char const* msg)
+			{
+				std::cerr << msg;
+				throw std::exception(msg);
+			});
 	}
 }
-
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
-#   undef PR_DBG
-#endif
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -282,6 +393,8 @@ namespace pr
 			TestEnum3 b3; b3 = TestEnum3::B;
 			TestEnum4 b4; b4 = TestEnum4::B;
 			TestEnum5 b5; b5 = TestEnum5::B;
+			TestEnum4 b6; b6 = TestEnum4::B; b6 |= TestEnum4::C;
+			TestEnum5 b7; b7 = TestEnum5::B; b7 |= TestEnum5::C;
 
 			PR_CHECK(a1.ToString(), "A");
 			PR_CHECK(a2.ToString(), "A");
@@ -294,6 +407,8 @@ namespace pr
 			PR_CHECK(b3.ToString(), "b");
 			PR_CHECK(b4.ToString(), "B");
 			PR_CHECK(b5.ToString(), "b");
+			PR_CHECK(b6.ToString(), "");
+			PR_CHECK(b7.ToString(), "c");
 
 			{
 				std::stringstream s; s << a1 << a2 << a3 << a4 << a5;
@@ -314,6 +429,7 @@ namespace pr
 			PR_THROWS([&](){ TestEnum3 c = TestEnum3::From(4); }, std::exception);        // invalid conversion, 4 is not an enum value
 
 			TestEnum4 x = (TestEnum4::A | TestEnum4::B) & ~TestEnum4::C; // Flag enums can be combined and assigned
+			PR_CHECK(x == 42U, false); // Implicitly convertible to unsigned int (flags only)
 
 			char const* names[] = {"A","B","C"};
 			TestEnum1::Enum_ values[] = {TestEnum1::A, TestEnum1::B, TestEnum1::C};
@@ -321,6 +437,17 @@ namespace pr
 			{
 				PR_CHECK(TestEnum1::MemberName(i), names[i]);     // Access names by index
 				PR_CHECK(TestEnum1::Member(i), values[i]);        // Access members by index
+			}
+
+			{
+				int idx = 0;
+				for (TestEnum1 e : TestEnum1::Members())
+					PR_CHECK(e, TestEnum1::Member(idx++));
+			}
+			{
+				int idx = 0;
+				for (auto e : TestEnum1::MemberNames())
+					PR_CHECK(e, TestEnum1::MemberName(idx++));
 			}
 		}
 	}

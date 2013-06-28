@@ -6,7 +6,9 @@
 #ifndef PR_MACROS_JOIN_H
 #define PR_MACROS_JOIN_H
 
-#define PR_DO_JOIN(x,y) x##y
-#define PR_JOIN(x,y)    PR_DO_JOIN(x,y)
+#ifndef PR_JOIN
+#  define PR_DO_JOIN(x,y) x##y
+#  define PR_JOIN(x,y)    PR_DO_JOIN(x,y)
+#endif
 
 #endif

@@ -479,7 +479,7 @@ void pr::tetramesh::MeasureConcavity(tetramesh::Mesh const& mesh, Edge& edge)
 		PR_EXPAND(PR_LDR_TETRAMESH, StartFile("C:/Deleteme/tetramesh_dir.pr_script");)
 		PR_EXPAND(PR_LDR_TETRAMESH, ldr::Line("bridge", "FF00FF00", c, d);)
 		PR_EXPAND(PR_LDR_TETRAMESH, ldr::Line("nearest_points", "FF00FFFF", pt0, pt1);)
-		PR_EXPAND(PR_LDR_TETRAMESH, ldr::LineD("bisect", "FFFFFF00", 0.5f*(a+b), (pt0 - pt1).GetNormal3());)
+		PR_EXPAND(PR_LDR_TETRAMESH, ldr::LineD("bisect", "FFFFFF00", 0.5f*(a+b), Normalise3(pt0 - pt1));)
 		PR_EXPAND(PR_LDR_TETRAMESH, EndFile();)
 	}
 }

@@ -30,6 +30,7 @@
 //#include <strsafe.h>
 
 #include "pr/common/fmt.h"
+#include "pr/common/log.h"
 #include "pr/maths/maths.h"
 
 #endif

@@ -17,7 +17,7 @@ namespace pr
 {
 	struct Quat
 	{
-		#if PR_MATHS_USE_INTRINSICS
+		#if PR_MATHS_USE_INTRINSICS || PR_MATHS_USE_DIRECTMATH
 		#pragma warning(push)
 		#pragma warning(disable:4201)
 		union {
@@ -27,7 +27,11 @@ namespace pr
 				float z;
 				float w;
 			};
+			#if PR_MATHS_USE_DIRECTMATH
+			DirectX::XMVECTOR vec;
+			#else
 			__m128 vec;
+			#endif
 		};
 		#pragma warning(pop)
 		#else
@@ -94,10 +98,10 @@ namespace pr
 	inline bool operator <= (Quat const& lhs, Quat const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (Quat const& lhs, Quat const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 	
-	// D3DX conversion functions
-	#if PR_MATHS_USE_D3DX
-	inline D3DXQUATERNION const& d3dq(Quat const& quat) { return reinterpret_cast<D3DXQUATERNION const&>(quat); }
-	inline D3DXQUATERNION&       d3dq(Quat&       quat) { return reinterpret_cast<D3DXQUATERNION&>(quat); }
+	// DirectXMath conversion functions
+	#if PR_MATHS_USE_DIRECTMATH
+	inline DirectX::XMVECTOR const& dxv4(Quat const& quat) { return quat.vec; }
+	inline DirectX::XMVECTOR&       dxv4(Quat&       quat) { return quat.vec; }
 	#endif
 	
 	// Conversion functions between quaternions and vectors

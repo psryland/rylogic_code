@@ -73,7 +73,7 @@ namespace pr
 
 	template <typename Type> struct Imposter
 	{
-		typedef typename pr::mpl::aligned_storage<sizeof(Type), pr::mpl::alignment_of<Type>::value>::type Buffer;
+		typedef typename pr::meta::aligned_storage<sizeof(Type), pr::meta::alignment_of<Type>::value>::type Buffer;
 		typedef typename Type AliasType;
 
 		Buffer m_buf;   // The buffer containing the type
@@ -108,6 +108,64 @@ namespace pr
 		void destruct()                 { PR_ASSERT(PR_DBG, m_obj, ""); get().~Type(); m_obj = 0; }
 	};
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/filesys/filesys.h"
+namespace pr
+{
+	namespace unittests
+	{
+		namespace imposter
+		{
+			struct MyType
+			{
+				int m_value;
+				MyType(int value) :m_value(value) {}
+			};
+			typedef pr::Imposter<MyType> MyTypeImpost;
+
+			int FuncByValue(MyType mt)
+			{
+				return mt.m_value;
+			}
+			int FuncByRef(MyType const& mt)
+			{
+				return mt.m_value;
+			}
+			int FuncByAddr(MyType const* mt)
+			{
+				return mt->m_value;
+			}
+		}
+
+		PRUnitTest(pr_common_imposter)
+		{
+			using namespace pr::unittests::imposter;
+			{//Construction
+				MyTypeImpost impost;
+
+				pr::imposter::construct(impost, 5);
+				PR_CHECK(impost.get().m_value, 5);
+
+				MyTypeImpost impost2 = impost;
+				PR_CHECK(impost2.get().m_value, 5);
+
+				MyTypeImpost impost3;
+				//CHECK_ASSERT(impost3 = impost);
+		
+				pr::imposter::construct(impost3, 2);
+				impost3 = impost;
+				PR_CHECK(impost3.get().m_value, 5);
+
+				PR_CHECK(FuncByValue(impost), 5);
+				PR_CHECK(FuncByRef(impost2), 5);
+			}
+		}
+	}
+}
+#endif
+
 
 #endif
 

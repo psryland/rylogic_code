@@ -14,13 +14,13 @@ class NavManager
 {
 	typedef pr::Array<pr::Camera, 4> ViewCont;
 
-	pr::Camera&    m_camera;           // Camera we're controlling
-	ENavMode::Type m_ctrl_mode;        // The mode of control, either navigating or manipulating
-	pr::IRect      m_client_area;      // The size of the screen space area
-	pr::v4         m_reset_up;         // The up direction of the camera after a view reset
-	pr::v4         m_reset_forward;    // The forward direction of the camera after a view reset
-	pr::uint32     m_orbit_timer;      // A timer to ensuring constant orbit speed
-	ViewCont       m_views;            // Saved views
+	pr::Camera& m_camera;           // Camera we're controlling
+	ENavMode    m_ctrl_mode;        // The mode of control, either navigating or manipulating
+	pr::IRect   m_client_area;      // The size of the screen space area
+	pr::v4      m_reset_up;         // The up direction of the camera after a view reset
+	pr::v4      m_reset_forward;    // The forward direction of the camera after a view reset
+	pr::uint32  m_orbit_timer;      // A timer to ensuring constant orbit speed
+	ViewCont    m_views;            // Saved views
 
 public:
 	NavManager(pr::Camera& camera, pr::IRect client_area, pr::v4 const& reset_up);

@@ -52,18 +52,35 @@ namespace pr
 		template <> struct DxFormat<pr::Colour> { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
 
 		// Returns the number of primitives implied by an index count and geometry topology
-		size_t PrimCount(size_t icount, D3D11_PRIMITIVE_TOPOLOGY topo);
+		size_t PrimCount(size_t icount, EPrim topo);
 
 		// Returns the number of indices implied by a primitive count and geometry topology
-		size_t IndexCount(size_t pcount, D3D11_PRIMITIVE_TOPOLOGY topo);
+		size_t IndexCount(size_t pcount, EPrim topo);
 
 		// Returns the number of bits per pixel for a given d3d format
 		size_t BitsPerPixel(DXGI_FORMAT fmt);
 		inline size_t BytesPerPixel(DXGI_FORMAT fmt) { return BitsPerPixel(fmt) >> 3; }
 
-		// Return information about a surface determined from its dimensions and format
-		// Any of the pointer parameters can be null
+		// Returns the expected row and slice pitch for a given image width*height and format
+		pr::ISize Pitch(pr::ISize size, DXGI_FORMAT fmt);
+
+		// Returns the number of expected mip levels for a given width x height texture
+		size_t MipCount(pr::ISize size);
+
+		// Returns the dimensions of a mip level 'levels' below the given texture size
+		pr::ISize MipDimensions(pr::ISize size, size_t levels);
+
+		// Returns the number of pixels needed contain the data for a mip chain with 'levels' levels
+		// If 'levels' is 0, all mips down to 1x1 are assumed
+		// Note, size.x should be the pitch rather than width of the texture
+		size_t MipChainSize(pr::ISize size, size_t levels);
+
+		// Return information about a surface determined from its dimensions and format. Any of the pointer parameters can be null
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
+
+		// Helper for setting alpha blending states
+		void SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, bool on, int render_target = 0, D3D11_BLEND_OP blend_op = D3D11_BLEND_OP_ADD, D3D11_BLEND src_blend = D3D11_BLEND_SRC_ALPHA, D3D11_BLEND dst_blend = D3D11_BLEND_INV_SRC_ALPHA);
+		void SetAlphaBlending(DrawMethod& mat, bool on, int render_target = 0, D3D11_BLEND_OP blend_op = D3D11_BLEND_OP_ADD, D3D11_BLEND src_blend = D3D11_BLEND_SRC_ALPHA, D3D11_BLEND dst_blend = D3D11_BLEND_INV_SRC_ALPHA);
 
 		// Helper for checking values are not overwritten in a lookup table
 		template <class Table, typename Key, typename Value> inline void AddLookup(Table& table, Key key, Value value)
@@ -75,11 +92,14 @@ namespace pr
 		// Set the name on a d3d resource (debug only)
 		template <typename T> inline void NameResource(D3DPtr<T>& res, char const* name)
 		{
-#if PR_DBG_RDR
+			#if PR_DBG_RDR
 			string32 res_name = name;
 			pr::Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
-#endif
+			#endif
 		}
+
+		// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
+		void TestSystemCompatibility();
 	}
 }
 

@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.IO.Ports;
+using System.Linq;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows.Forms;
+using pr.gui;
 using pr.inet;
 using pr.extn;
 
@@ -15,21 +18,21 @@ namespace RyLogViewer
 {
 	public static class Constants
 	{
-		public const string SupportEmail            = "support+rylogviewer@rylogic.co.nz";
+		public const string SupportEmail            = "support@rylogic.co.nz";
 		public const string EvalLicence             = "Evaluation Licence";
-		public const string AppIdentifier           = "rylogviewer.x86";
-		public const string UpdateUrl               = "http://www.rylogic.co.nz:80/versions/rylogviewer.xml";
+		public const string AppIdentifier           = "rylogviewer";
+		public const int MaxHistoryDefault          = 10;
 		public const int PortNumberMin              = 0;
 		public const int PortNumberWebProxyDefault  = 8080;
 		public const int PortNumberMax              = 65535;
-		public const int FileBufSizeMin             = 1 * OneMB;
-		public const int FileBufSizeDefault         = 10 * OneMB;
+		public const int FileBufSizeMin             = 256 * OneKB;
+		public const int FileBufSizeDefault         = 1 * OneMB;
 		public const int FileBufSizeMax             = 100 * OneMB;
 		public const int MaxLineLengthMin           = 1 * OneKB;
 		public const int MaxLineLengthDefault       = 16 * OneKB;
 		public const int MaxLineLengthMax           = 128 * OneKB;
 		public const int LineCacheCountMin          = 1;
-		public const int LineCacheCountDefault      = 10000;
+		public const int LineCacheCountDefault      = 1000;
 		public const int LineCacheCountMax          = 99999999;
 		public const int ColumnCountMin             = 1;
 		public const int ColumnCountDefault         = 1;
@@ -49,6 +52,12 @@ namespace RyLogViewer
 		public const int MaxFindHistory             = 10;
 		public const int OneKB                      = 1024;
 		public const int OneMB                      = 1024*1024;
+
+		public static readonly Color[] BkColors = new[]
+			{
+				Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
+				Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
+			};
 	}
 
 	public enum EPattern
@@ -154,12 +163,12 @@ namespace RyLogViewer
 	[DataContract]
 	public class LaunchApp :ICloneable
 	{
-		[DataMember] public string Executable       = "";
-		[DataMember] public string Arguments        = "";
-		[DataMember] public string WorkingDirectory = "";
-		[DataMember] public string OutputFilepath   = "";
-		[DataMember] public bool   ShowWindow       = false;
-		[DataMember] public bool   AppendOutputFile = true;
+		[DataMember] public string      Executable       = string.Empty;
+		[DataMember] public string      Arguments        = string.Empty;
+		[DataMember] public string      WorkingDirectory = string.Empty;
+		[DataMember] public string      OutputFilepath   = string.Empty;
+		[DataMember] public bool        ShowWindow       = false;
+		[DataMember] public bool        AppendOutputFile = true;
 		[DataMember] public StandardStreams Streams = StandardStreams.Stdout|StandardStreams.Stderr;
 		
 		public bool CaptureStdout { get { return (Streams & StandardStreams.Stdout) != 0; } }
@@ -189,15 +198,15 @@ namespace RyLogViewer
 	[DataContract]
 	public class NetConn :ICloneable
 	{
-		[DataMember] public string       Hostname         = "";
+		[DataMember] public string       Hostname         = string.Empty;
 		[DataMember] public ushort       Port             = 5555;
 		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
 		[DataMember] public Proxy.EType  ProxyType        = Proxy.EType.None;
-		[DataMember] public string       ProxyHostname    = "";
+		[DataMember] public string       ProxyHostname    = string.Empty;
 		[DataMember] public ushort       ProxyPort        = 5555;
-		[DataMember] public string       ProxyUserName    = "";
-		             public string       ProxyPassword    = ""; // don't store passwords
-		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public string       ProxyUserName    = string.Empty;
+		             public string       ProxyPassword    = string.Empty; // don't store passwords
+		[DataMember] public string       OutputFilepath   = string.Empty;
 		[DataMember] public bool         AppendOutputFile = true;
 
 		public NetConn() {}
@@ -231,7 +240,7 @@ namespace RyLogViewer
 		// If the connected device uses these signals, it will not transmit before
 		// the signals are set
 
-		[DataMember] public string       CommPort         = "";
+		[DataMember] public string       CommPort         = string.Empty;
 		[DataMember] public int          BaudRate         = 9600;
 		[DataMember] public int          DataBits         = 8;
 		[DataMember] public Parity       Parity           = Parity.None;
@@ -239,7 +248,7 @@ namespace RyLogViewer
 		[DataMember] public Handshake    FlowControl      = Handshake.None;
 		[DataMember] public bool         DtrEnable        = true;
 		[DataMember] public bool         RtsEnable        = true;
-		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public string       OutputFilepath   = string.Empty;
 		[DataMember] public bool         AppendOutputFile = true;
 		
 		public SerialConn() {}
@@ -273,9 +282,9 @@ namespace RyLogViewer
 		// If the connected device uses these signals, it will not transmit before
 		// the signals are set
 
-		[DataMember] public string       ServerName       = "";
-		[DataMember] public string       PipeName         = "";
-		[DataMember] public string       OutputFilepath   = "";
+		[DataMember] public string       ServerName       = string.Empty;
+		[DataMember] public string       PipeName         = string.Empty;
+		[DataMember] public string       OutputFilepath   = string.Empty;
 		[DataMember] public bool         AppendOutputFile = true;
 		
 		public string PipeAddr
@@ -311,12 +320,43 @@ namespace RyLogViewer
 	[DataContract]
 	public class AndroidLogcat :ICloneable
 	{
-		[DataMember] public string AdbFullPath = "";
+		public enum ELogBuffer { Main, System, Radio, Events }
+		public enum ELogFormat { Brief, Process, Tag, Thread, Raw, Time, ThreadTime, Long }
+		public enum EFilterPriority { Verbose, Debug, Info, Warn, Error, Fatal, Silent}
+		public enum EConnectionType { Usb, Tcpip }
+		[DataContract] public class FilterSpec
+		{
+			// no private setters, they are used to make the grid cells editable
+			[DataMember] public string Tag { get; set; }
+			[DataMember] public EFilterPriority Priority { get; set; }
+			public FilterSpec() { Tag = "*"; Priority = EFilterPriority.Verbose; }
+			public FilterSpec(string tag, EFilterPriority priority) { Tag = tag; Priority = priority; }
+		}
 
+		[DataMember] public string          AdbFullPath           = string.Empty;
+		[DataMember] public string          SelectedDevice        = string.Empty;
+		[DataMember] public bool            CaptureOutputToFile   = false;
+		[DataMember] public bool            AppendOutputFile      = true;
+		[DataMember] public ELogBuffer[]    LogBuffers            = new []{ELogBuffer.Main, ELogBuffer.System};
+		[DataMember] public FilterSpec[]    FilterSpecs           = new []{new FilterSpec("*", EFilterPriority.Verbose)};
+		[DataMember] public ELogFormat      LogFormat             = ELogFormat.Time;
+		[DataMember] public EConnectionType ConnectionType        = EConnectionType.Usb;
+		[DataMember] public string[]        IPAddressHistory      = new string[0];
+		[DataMember] public int             ConnectionPort        = 5555;
+		
 		public AndroidLogcat() {}
 		public AndroidLogcat(AndroidLogcat rhs)
 		{
-			AdbFullPath = rhs.AdbFullPath;
+			AdbFullPath           = rhs.AdbFullPath;
+			SelectedDevice        = rhs.SelectedDevice;
+			CaptureOutputToFile   = rhs.CaptureOutputToFile;
+			AppendOutputFile      = rhs.AppendOutputFile;
+			LogBuffers            = rhs.LogBuffers.Dup();
+			FilterSpecs           = rhs.FilterSpecs.Dup();
+			LogFormat             = rhs.LogFormat;
+			ConnectionType        = rhs.ConnectionType;
+			IPAddressHistory      = rhs.IPAddressHistory.Dup();
+			ConnectionPort        = rhs.ConnectionPort;
 		}
 		public override string ToString()
 		{
@@ -330,6 +370,15 @@ namespace RyLogViewer
 
 	public static class Misc
 	{
+		/// <summary>Returns true if this is the main thread</summary>
+		public static bool IsMainThread { get { return Thread.CurrentThread.ManagedThreadId == m_main_thread_id; } }
+		private static readonly int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
+		
+		/// <summary>Return a background colour appropriate for a validity state</summary>
+		public static Color FieldBkColor(bool is_valid) { return is_valid ? FieldValid : FieldInvalid; }
+		public static Color FieldValid   = Color.LightGreen;
+		public static Color FieldInvalid = Color.Salmon;
+
 		/// <summary>Watch window helper for converting byte buffers to strings</summary>
 		public static string BufToStr(byte[] buf, int start, int len)
 		{
@@ -362,7 +411,33 @@ namespace RyLogViewer
 			while (list.Count > max_history_length)
 				list.RemoveAt(list.Count - 1);
 		}
-		
+
+		/// <summary>Add 'item' to a history list of items.</summary>
+		public static void AddToHistoryList<T>(ref T[] arr, T item, bool ignore_case, int max_history_length)
+		{
+			var list = arr.ToList();
+			AddToHistoryList(list, item, ignore_case, max_history_length);
+			Array.Resize(ref arr, list.Count);
+			Array.Copy(list.ToArray(), arr, arr.Length);
+		}
+
+		/// <summary>Checks for the existance of a file without blocking the UI</summary>
+		public static bool FileExists(Form parent, string filepath)
+		{
+			// Check that the file exists, this can take ages if 'filepath' is a network file
+			bool file_exists = false;
+			var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = File.Exists(filepath));
+			dlg.ShowDialog(parent, 500);
+			return file_exists;
+		}
+
+		/// <summary>Helper for populating a combo box from an array of items</summary>
+		public static void Load<T>(this ComboBox combo, IList<T> items)
+		{
+			foreach (var s in items) combo.Items.Add(s);
+			if (items.Count != 0) combo.SelectedIndex = 0;
+		}
+
 		/// <summary>A wrapper around showing message boxes for exceptions</summary>
 		public static void ShowErrorMessage(IWin32Window owner, Exception exception, string caption, string title)
 		{
@@ -378,5 +453,11 @@ namespace RyLogViewer
 			m_error_dialog_visible = false;
 		}
 		private static bool m_error_dialog_visible;
+
+		/// <summary>Helper for passing an action directly to BeginInvoke</summary>
+		public static void BeginInvoke<TForm>(this TForm form, Action action) where TForm:Form
+		{
+			form.BeginInvoke(action);
+		}
 	}
 }

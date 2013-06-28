@@ -4,9 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer", "Renderer.vcxproj", "{FB9D892B-A47A-4966-A0D6-45F7F259F654}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prcs_VS2010", "..\..\sdk\pr\prcs\prcs_VS2010.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
-	ProjectSection(ProjectDependencies) = postProject
-		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "imager_VS2010", "..\imager\imager_VS2010.csproj", "{D6EC6728-119F-4AF1-898A-DFCD15A1DADB}"
 	ProjectSection(ProjectDependencies) = postProject

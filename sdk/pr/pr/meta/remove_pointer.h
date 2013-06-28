@@ -6,7 +6,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		#if _MSC_VER >= 1600
 

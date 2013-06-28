@@ -40,7 +40,7 @@ void NavManager::CameraAlign(pr::v4 const& up)
 {
 	m_camera.SetAlign(up);
 	if (m_camera.IsAligned()) m_reset_up = m_camera.m_align;
-	m_reset_forward = pr::Parallel(m_reset_up, pr::v4XAxis) ? pr::v4ZAxis      : pr::GetNormal3(pr::Cross3(pr::v4XAxis, m_reset_up));
+	m_reset_forward = pr::Parallel(m_reset_up, pr::v4XAxis) ? pr::v4ZAxis : pr::Normalise3(pr::Cross3(pr::v4XAxis, m_reset_up));
 }
 pr::v4 NavManager::CameraAlign() const
 {
@@ -90,8 +90,8 @@ bool NavManager::MouseInput(pr::v2 const& pos, int button_state, bool start_or_e
 	{
 	default:break;
 	case ENavMode::Navigation:
-		if (start_or_end)		m_camera.MoveRef(NormalisedScreenSpace(pos, m_client_area), button_state);
-		else if (button_state)	m_camera.Move   (NormalisedScreenSpace(pos, m_client_area), button_state);
+		if (start_or_end)      m_camera.MoveRef(NormalisedScreenSpace(pos, m_client_area), button_state);
+		else if (button_state) m_camera.Move   (NormalisedScreenSpace(pos, m_client_area), button_state);
 		return true;
 	case ENavMode::Manipulation:
 		break;

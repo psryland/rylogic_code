@@ -13,10 +13,9 @@
 #endif
 
 #include <windows.h>
+#include <d3d11.h>
 #include "pr/maths/maths.h"
 #include "pr/common/colour.h"
-// Note: the d3d headers are not included here and are not part of this interface
-// This allows the caller to use the renderer with referencing d3d
 
 namespace EView3DResult
 {
@@ -26,7 +25,7 @@ namespace EView3DResult
 		Failed,
 	};
 }
-namespace EView3DRenderMode
+namespace EView3DFillMode
 {
 	enum Type
 	{
@@ -39,13 +38,12 @@ namespace EView3DPrim
 {
 	enum Type
 	{
-		PointList     = 1,//D3DPT_POINTLIST,
-		LineList      = 2,//D3DPT_LINELIST,
-		LineStrip     = 3,//D3DPT_LINESTRIP,
-		TriangleList  = 4,//D3DPT_TRIANGLELIST,
-		TriangleStrip = 5,//D3DPT_TRIANGLESTRIP,
-		TriangleFan   = 6,//D3DPT_TRIANGLEFAN,
-		Invalid       = 0x7FFFFFFF,//D3DPT_FORCE_DWORD
+		Invalid   = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
+		PointList = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+		LineList  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+		LineStrip = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
+		TriList   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+		TriStrip  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
 	};
 }
 namespace EView3DLight
@@ -58,26 +56,6 @@ namespace EView3DLight
 		Spot
 	};
 }
-namespace EView3DGeom
-{
-	enum Type
-	{
-		EInvalid = 0,
-		EVertex  = 1 << 0,
-		ENormal  = 1 << 1,
-		EColour  = 1 << 2,
-		ETexture = 1 << 3,
-		EAll     =(1 << 4) - 1,
-		EVN      = EVertex | ENormal,
-		EVC      = EVertex           | EColour,
-		EVT      = EVertex                     | ETexture,
-		EVNC     = EVertex | ENormal | EColour,
-		EVNT     = EVertex | ENormal           | ETexture,
-		EVCT     = EVertex           | EColour | ETexture,
-		EVNCT    = EVertex | ENormal | EColour | ETexture,
-	};
-}
-
 namespace pr
 {
 	namespace ldr { struct LdrObject; }
@@ -86,7 +64,7 @@ namespace pr
 namespace view3d
 {
 	typedef pr::ldr::LdrObject Object;
-	typedef pr::rdr::Texture Texture;
+	typedef pr::rdr::Texture2D Texture;
 	struct Drawset;
 }
 typedef view3d::Drawset* View3DDrawset;
@@ -107,7 +85,7 @@ struct View3DImageInfo
 	pr::uint m_height;
 	pr::uint m_depth;
 	pr::uint m_mips;
-	pr::uint m_format; //D3DFORMAT
+	DXGI_FORMAT m_format;
 	pr::uint m_image_file_format;//D3DXIMAGE_FILEFORMAT
 };
 struct View3DLight
@@ -128,7 +106,6 @@ struct View3DLight
 };
 struct View3DMaterial
 {
-	pr::uint16         m_geom_type; // see EView3DGeom::Type
 	View3DTexture      m_diff_tex;
 	View3DTexture      m_env_map;
 };
@@ -149,7 +126,7 @@ typedef void (__stdcall *View3D_EditObjectCB)(
 extern "C"
 {
 	// Initialise/shutdown the dll
-	VIEW3D_API EView3DResult::Type     __stdcall View3D_Initialise(HWND hwnd, pr::uint d3dcreate_flags, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
+	VIEW3D_API EView3DResult::Type     __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
 	VIEW3D_API void                    __stdcall View3D_Shutdown();
 
 	// Draw sets
@@ -207,7 +184,7 @@ extern "C"
 	VIEW3D_API pr::BoundingBox         __stdcall View3D_ObjectBBoxMS             (View3DObject object);
 
 	// Materials
-	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureCreate            (void const* data, pr::uint data_size, pr::uint width, pr::uint height, pr::uint mips, pr::uint format, View3DTexture& tex);
+	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureCreate            (size_t width, size_t height, DXGI_FORMAT format, void const* data, size_t data_size, size_t mips, View3DTexture& tex);
 	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureCreateFromFile    (char const* tex_filepath, pr::uint width, pr::uint height, pr::uint mips, pr::uint filter, pr::uint mip_filter, pr::uint colour_key, View3DTexture& tex);
 	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureLoadSurface       (View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, pr::uint filter, pr::uint colour_key);
 	VIEW3D_API void                    __stdcall View3D_TextureDelete            (View3DTexture tex);
@@ -218,8 +195,8 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_Refresh                  ();
 	VIEW3D_API void                    __stdcall View3D_Resize                   (int width, int height);
 	VIEW3D_API void                    __stdcall View3D_Render                   (View3DDrawset drawset);
-	VIEW3D_API EView3DRenderMode::Type __stdcall View3D_RenderMode               (View3DDrawset drawset);
-	VIEW3D_API void                    __stdcall View3D_SetRenderMode            (View3DDrawset drawset, EView3DRenderMode::Type mode);
+	VIEW3D_API EView3DFillMode::Type   __stdcall View3D_FillMode                 (View3DDrawset drawset);
+	VIEW3D_API void                    __stdcall View3D_SetFillMode              (View3DDrawset drawset, EView3DFillMode::Type mode);
 	VIEW3D_API BOOL                    __stdcall View3D_Orthographic             (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_SetOrthographic          (View3DDrawset drawset, BOOL render2d);
 	VIEW3D_API int                     __stdcall View3D_BackGroundColour         (View3DDrawset drawset);

@@ -1,4 +1,6 @@
-﻿using System.Windows.Forms;
+﻿using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows.Forms;
 using pr.common;
 using pr.extn;
 
@@ -20,7 +22,8 @@ namespace RyLogViewer
 
 	public partial class Main
 	{
-		private readonly BindingSource m_bookmarks;
+		private readonly BindingList<Bookmark> m_bookmarks;
+		private readonly BindingSource         m_bs_bookmarks;
 		
 		/// <summary>Show the bookmarks dialog</summary>
 		private void ShowBookmarksDialog()
@@ -34,38 +37,55 @@ namespace RyLogViewer
 		{
 			if (row_index < 0 || row_index >= m_line_index.Count) return;
 			var line = m_line_index[row_index];
-			
-			// Find a bookmark whose Position is contained in the range of row 'row_index'
-			int count = m_bookmarks.List.RemoveIf<Bookmark>(x => line.Contains(x.Range.Begin));
-			
-			// If no bookmarks where removed, add 'row_index' as a bookmark
-			if (count == 0)
-				m_bookmarks.Add(new Bookmark(line, ReadLine(row_index).RowText));
+
+			// Look for the bookmark
+			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Begin));
+			if (idx >= 0) // Bookmark was found, remove it
+				m_bookmarks.RemoveAt(idx);
+			else // Bookmark not found, insert it
+				m_bookmarks.Insert(~idx, new Bookmark(line, ReadLine(row_index).RowText));
+			m_bs_bookmarks.ResetBindings(false);
+
+			// Restore the selected row
+			SelectedRowIndex = row_index;
 		}
 
-		/// <summary>Scroll to the next bookmark</summary>
+		/// <summary>Scroll to the next bookmark after the current selected row</summary>
 		private void NextBookmark()
 		{
 			if (m_bookmarks.Count == 0) return;
-			if (m_bookmarks.Position + 1 == m_bookmarks.Count)
-				m_bookmarks.MoveFirst();
-			else
-				m_bookmarks.MoveNext();
+			
+			var row_index = SelectedRowIndex;
+			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
+
+			// Look for the first bookmark after line.Begin
+			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Begin + 1));
+			if (idx < 0) idx = ~idx;
+			if (idx == m_bookmarks.Count) idx = 0;
+			SelectBookmark(idx);
 		}
 
-		/// <summary>Scroll to the previous bookmark</summary>
+		/// <summary>Scroll to the previous bookmark before the current selected row</summary>
 		private void PrevBookmark()
 		{
 			if (m_bookmarks.Count == 0) return;
-			if (m_bookmarks.Position == 0)
-				m_bookmarks.MoveLast();
-			else
-				m_bookmarks.MovePrevious();
+
+			var row_index = SelectedRowIndex;
+			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
+
+			// Look for the first bookmark after line.Begin
+			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Begin));
+			if (idx < 0) idx = ~idx;
+			if (idx < 1) idx = m_bookmarks.Count;
+			SelectBookmark(idx - 1);
 		}
 
-		private void SelectBookmark(Bookmark bookmark)
+		/// <summary>Move to the bookmark with index 'idx'</summary>
+		private void SelectBookmark(int idx)
 		{
-			SelectRowByAddr(bookmark.Position);
+			if (idx < 0 || idx >= m_bookmarks.Count) return;
+			SelectRowByAddr(m_bookmarks[idx].Position);
+			m_bs_bookmarks.Position = idx;
 		}
 	}
 }

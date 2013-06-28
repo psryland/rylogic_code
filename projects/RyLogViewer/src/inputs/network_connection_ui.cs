@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.inet;
-using pr.util;
 
 namespace RyLogViewer
 {
@@ -16,7 +16,7 @@ namespace RyLogViewer
 		private readonly ToolTip m_tt;
 
 		/// <summary>The network connection properties selected</summary>
-		public NetConn Conn;
+		public NetConn Conn { get; set; }
 
 		public NetworkConnectionUI(Settings settings)
 		{

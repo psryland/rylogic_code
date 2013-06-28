@@ -3,28 +3,28 @@
 //  Copyright © Rylogic Ltd 2011
 //************************************************************************
 // Usage:
-//	struct Thing :pr::RefCount<Thing> {};
-//	Thing* thing = new Thing();
-//	thing->AddRef();
-//	thing->Release(); // thing deleted here
-//	
-//	Typically this would be used with pr::RefPtr<Thing>.
-//  e.g.
-//	{
-//		RefPtr<Thing> ptr(new Thing()); // thing deleted when last reference goes out of scope
-//	}
+//   struct Thing :pr::RefCount<Thing> {};
+//   Thing* thing = new Thing();
+//   thing->AddRef();
+//   thing->Release(); // thing deleted here
+//   
+//   Typically this would be used with pr::RefPtr<Thing>.
+//   e.g.
+//   {
+//       RefPtr<Thing> ptr(new Thing()); // thing deleted when last reference goes out of scope
+//   }
 //
-#ifndef PR_REF_COUNT_H
-#define PR_REF_COUNT_H
-	
+#ifndef PR_COMMON_REFCOUNT_H
+#define PR_COMMON_REFCOUNT_H
+
 #include <windows.h>
-	
+
 //"pr/common/assert.h" should be included prior to this for pr asserts
 #ifndef PR_ASSERT
 #   define PR_ASSERT_DEFINED
 #   define PR_ASSERT(grp, exp, str)
 #endif
-	
+
 namespace pr
 {
 	// Reference counting mix-in base class
@@ -73,6 +73,15 @@ namespace pr
 	template <typename T> inline long PtrRefCount(T* ptr)
 	{
 		if (!ptr) return 0;
+
+		// A crash here indicates that 'ptr' has already been released.
+		// If ptr is a D3DPtr, check that two or more D3DPtrs haven't
+		// been created from the same raw pointer. e.g.
+		// ID3DInterface* raw (ref count = 1)
+		// D3DPtr p0(raw) (ref count = 1 still because the DecRef in the constructor)
+		// D3DPtr p1(raw) (ref count = 1 still because the DecRef in the constructor)
+		// p1->~D3DPtr()  (ref count = 0)
+		// p0->~D3DPtr()  "app.exe has triggered a break point" (i.e. crashed)
 		long count = ptr->AddRef() - 1;
 		ptr->Release();
 		return count;

@@ -18,6 +18,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
 using pr.maths;
+using pr.extn;
 
 namespace pr.util
 {
@@ -47,15 +48,6 @@ namespace pr.util
 			return Maths.Compare(llength, rlength);
 		}
 
-		/// <summary>Enable double buffering for the control</summary>
-		public static void DblBuffer(this Control ctl)
-		{
-			PropertyInfo pi = ctl.GetType().GetProperty("DoubleBuffered", BindingFlags.Instance|BindingFlags.NonPublic);
-			pi.SetValue(ctl, true, null);
-			MethodInfo mi = ctl.GetType().GetMethod("SetStyle", BindingFlags.Instance|BindingFlags.NonPublic);
-			mi.Invoke(ctl, new object[]{ControlStyles.DoubleBuffer|ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint, true});
-		}
-
 		/// <summary>Convert a collection of 'U' into a collection of 'T' using 'conv' to do the conversion</summary>
 		public static IEnumerable<T> Conv<T,U>(IEnumerable<U> collection, Func<U, T> conv)
 		{
@@ -63,7 +55,7 @@ namespace pr.util
 		}
 
 		/// <summary>Helper for allocating an array of default constructed classes</summary>
-		public static T[] New<T>(uint count) where T : new()
+		public static T[] NewArray<T>(uint count) where T : new()
 		{
 			T[] arr = new T[count];
 			for (uint i = 0; i != count; ++i) arr[i] = new T();
@@ -71,7 +63,7 @@ namespace pr.util
 		}
 
 		/// <summary>Helper for allocating an array of constructed classes</summary>
-		public static T[] New<T>(uint count, Func<uint, T> construct)
+		public static T[] NewArray<T>(uint count, Func<uint, T> construct)
 		{
 			T[] arr = new T[count];
 			for (uint i = 0; i != count; ++i) arr[i] = construct(i);
@@ -249,7 +241,35 @@ namespace pr.util
 			try { action(); } finally { Monitor.Exit(obj); }
 			return true;
 		}
-		
+
+		/// <summary>Excute a function in a background thread and terminate it if it doesn't finished before 'timeout'</summary>
+		public static TResult RunWithTimeout<TResult>(Func<TResult> proc, int duration)
+		{
+			var r = default(TResult);
+			Exception ex = null;
+			using (var reset = new AutoResetEvent(false))
+			{
+				// Can't use the thread pool for this because we abort the thread
+				var thread = new Thread(() =>
+					{
+						// ReSharper disable AccessToDisposedClosure
+						try { r = proc(); }
+						catch (Exception e) { ex = e; }
+						reset.Set();
+						// ReSharper restore AccessToDisposedClosure
+					});
+				thread.Start();
+				if (!reset.WaitOne(duration))
+				{
+					thread.Abort();
+					throw new TimeoutException();
+				}
+			}
+			if (ex != null)
+				throw ex;
+			return r;
+		}
+
 		/// <summary>Helper method for converting a filename extension to a mime type</summary>
 		public static string MimeFromExtn(string extn)
 		{
@@ -449,13 +469,7 @@ namespace pr.util
 			{"zip", "application/zip"}
 		};
 		#endregion
-		
-		/// <summary>Set the tooltip for this control</summary>
-		public static void ToolTip(this Control ctrl, ToolTip tt, string caption)
-		{
-			tt.SetToolTip(ctrl, caption);
-		}
-		
+
 		/// <summary>Return the value for 'key', if it doesn't exist, insert and return the result of calling 'def'</summary>
 		public static V GetOrAdd<K,V>(this Dictionary<K, V> dic, K key, Func<V> def)
 		{
@@ -500,6 +514,69 @@ namespace pr.util
 			var fmt = "{0:N" + dp + "}{1}" + (si ? "B" : "iB");
 			return string.Format(fmt, bytes / Math.Pow(unit, exp), prefix);
 		}
+
+		/// <summary>
+		/// A helper for copying lib files to the current output directory
+		/// 'src_filepath' is the source lib name with {platform} and {config} optional substitution tags
+		/// 'dst_filepath' is the output lib name with {platform} and {config} optional substitution tags
+		/// If 'dst_filepath' already exists then it is overridden if 'overwrite' is true, otherwise 'DestExists' is returned
+		/// 'src_filepath' can be a relative path, if so, the search order is: local directory, Q:\sdk\pr\lib
+		/// </summary>
+		public static ELibCopyResult LibCopy(string src_filepath, string dst_filepath, bool overwrite)
+		{
+			// Do text substitutions
+			src_filepath = src_filepath.Replace("{platform}", Environment.Is64BitProcess ? "x64" : "x86");
+			dst_filepath = dst_filepath.Replace("{platform}", Environment.Is64BitProcess ? "x64" : "x86");
+
+			#if DEBUG
+			const string config = "debug";
+			#else
+			const string config = "release";
+			#endif
+			src_filepath = src_filepath.Replace("{config}", config);
+			dst_filepath = dst_filepath.Replace("{config}", config);
+
+			// Check if 'dst_filepath' already exists
+			dst_filepath = Path.GetFullPath(dst_filepath);
+			if (!overwrite && File.Exists(dst_filepath))
+			{
+				Log.Info(null, "LibCopy: Not copying {0} as {1} already exists".Fmt(src_filepath, dst_filepath));
+				return ELibCopyResult.DestExists;
+			}
+
+			// Get the full path for 'src_filepath'
+			for (;!Path.IsPathRooted(src_filepath);)
+			{
+				// If 'src_filepath' exists in the local directory
+				var full = Path.GetFullPath(src_filepath);
+				if (File.Exists(full))
+				{
+					src_filepath = full;
+					break;
+				}
+
+				// Get the pr libs directory
+				var pr_root = Environment.GetEnvironmentVariable("pr_root");
+				if (!pr_root.HasValue()) pr_root = @"q:";
+
+				full = Path.Combine(pr_root+@"\sdk\pr\lib", src_filepath);
+				if (File.Exists(full))
+				{
+					src_filepath = full;
+					break;
+				}
+
+				// Can't find 'src_filepath'
+				Log.Info(null, "LibCopy: Not copying {0}, file not found".Fmt(src_filepath, dst_filepath));
+				return ELibCopyResult.SrcNotFound;
+			}
+
+			// Copy the file
+			Log.Info(null, "LibCopy: {0} -> {1}".Fmt(src_filepath, dst_filepath));
+			File.Copy(src_filepath, dst_filepath, true);
+			return ELibCopyResult.Success;
+		}
+		public enum ELibCopyResult { Success, DestExists, SrcNotFound }
 	}
 	
 	/// <summary>Type specific utility methods</summary>

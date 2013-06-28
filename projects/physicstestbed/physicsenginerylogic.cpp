@@ -114,7 +114,7 @@ struct PhysicsEnginePrivate : pr::ph::IGravity, pr::ph::IMaterial, pr::ph::IPreC
 			default: PR_ASSERT(1, false); break;
 			case parse::Gravity::EType_Radial:
 				diff = i->m_centre - position;
-				if( !FEqlZero3(diff) ) grav += i->m_strength * GetNormal3(diff);
+				if( !FEqlZero3(diff) ) grav += i->m_strength * Normalise3(diff);
 				break;
 			case parse::Gravity::EType_Directional:
 				grav += i->m_direction * i->m_strength;

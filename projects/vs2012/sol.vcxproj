@@ -54,13 +54,13 @@
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="app.win32.debug.props" />
+    <Import Project="app.x86.debug.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="app.x64.debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="app.win32.release.props" />
+    <Import Project="app.x86.release.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="app.x64.release.props" />
@@ -83,14 +83,15 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
+      <AdditionalOptions>/Zm150 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib;d3d11.lib;dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(platformtarget).$(configurationname).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -98,15 +99,16 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
       <BrowseInformation>true</BrowseInformation>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/Zm150 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib;d3d11.lib;dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(platformtarget).$(configurationname).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib</AdditionalLibraryDirectories>
     </Link>
     <Bscmake>
@@ -119,16 +121,17 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
+      <AdditionalOptions>/Zm150 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib;d3d11.lib;dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(platformtarget).$(configurationname).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -138,16 +141,17 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX</PreprocessorDefinitions>
+      <AdditionalOptions>/Zm150 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>renderer11.$(platform).$(configurationname).lib;d3d11.lib;dxgi.lib</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.$(platformtarget).$(configurationname).lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\..\sdk\pr\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -165,6 +169,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\sol\objects\astronomical_body.cpp" />
+    <ClCompile Include="..\sol\objects\star.cpp" />
+    <ClCompile Include="..\sol\objects\system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\sdk\pr\pr\app\forward.h" />
@@ -180,7 +187,13 @@
     <ClInclude Include="..\..\sdk\pr\pr\threads\thread_pool.h" />
     <ClInclude Include="..\sol\main\forward.h" />
     <ClInclude Include="..\sol\main\main.h" />
+    <ClInclude Include="..\sol\main\asset_manager.h" />
+    <ClInclude Include="..\sol\main\main_gui.h" />
     <ClInclude Include="..\sol\main\stdafx.h" />
+    <ClInclude Include="..\sol\objects\astronomical_body.h" />
+    <ClInclude Include="..\sol\objects\star.h" />
+    <ClInclude Include="..\sol\objects\system.h" />
+    <ClInclude Include="..\sol\objects\test_model.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

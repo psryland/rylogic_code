@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.common;
+using pr.extn;
 using pr.util;
 
 namespace RyLogViewer
 {
-	public interface IPattern :ICloneable
-	{
-		/// <summary>Returns true if the pattern is active</summary>
-		bool Active { get; set; }
-	}
 	public class Pattern :IPattern
 	{
 		private EPattern m_patn_type;
@@ -26,47 +23,53 @@ namespace RyLogViewer
 		public EPattern PatnType
 		{
 			get { return m_patn_type; }
-			set { m_patn_type = value; m_compiled_patn = null; }
+			set { m_patn_type = value; m_compiled_patn = null; RaisePatternChanged(); }
 		}
 
 		/// <summary>The pattern to use when matching</summary>
 		public string Expr
 		{
 			get { return m_expr; }
-			set { m_expr = value; m_compiled_patn = null; }
+			set { m_expr = value; m_compiled_patn = null; RaisePatternChanged(); }
 		}
 
 		/// <summary>True if the pattern should ignore case</summary>
 		public bool IgnoreCase
 		{
 			get { return m_ignore_case; }
-			set { m_ignore_case = value; m_compiled_patn = null; }
+			set { m_ignore_case = value; m_compiled_patn = null; RaisePatternChanged(); }
 		}
 
 		/// <summary>True if the pattern is active</summary>
 		public bool Active
 		{
 			get { return m_active; }
-			set { m_active = value; }
+			set { m_active = value; RaisePatternChanged(); }
 		}
 
 		/// <summary>Invert the results of a match</summary>
 		public bool Invert
 		{
 			get { return m_invert; }
-			set { m_invert = value; }
+			set { m_invert = value; RaisePatternChanged(); }
 		}
 
 		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
 		public bool BinaryMatch
 		{
 			get { return m_binary_match; }
-			set { m_binary_match = value; }
+			set { m_binary_match = value; RaisePatternChanged(); }
 		}
 
-		public Pattern() :this(EPattern.Substring, "")
-		{}
+		/// <summary>Raised whenever data on this pattern changes</summary>
+		public event EventHandler PatternChanged;
+		private void RaisePatternChanged()
+		{
+			if (PatternChanged == null) return;
+			PatternChanged(this, EventArgs.Empty);
+		}
 
+		public Pattern() :this(EPattern.Substring, string.Empty) {}
 		public Pattern(EPattern patn_type, string expr)
 		{
 			PatnType    = patn_type;
@@ -76,7 +79,6 @@ namespace RyLogViewer
 			Invert      = false;
 			BinaryMatch = true;
 		}
-
 		public Pattern(Pattern rhs)
 		{
 			Expr        = rhs.Expr;
@@ -86,137 +88,6 @@ namespace RyLogViewer
 			Invert      = rhs.Invert;
 			BinaryMatch = rhs.BinaryMatch;
 		}
-		
-		/// <summary>Converts the current search pattern to a string that can be used as a regex</summary>
-		public string RegexString
-		{
-			get
-			{
-				switch (PatnType)
-				{
-				default: throw new ArgumentOutOfRangeException();
-				case EPattern.Substring:         return Regex.Escape(Expr);
-				case EPattern.Wildcard:          return Regex.Escape(Expr).Replace("\\*", ".*").Replace("\\?", ".");
-				case EPattern.RegularExpression: return Expr;
-				}
-			}
-		}
-
-		/// <summary>Converts this pattern into a compiled regex pattern</summary>
-		private Regex Regex
-		{
-			get
-			{
-				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
-				return m_compiled_patn ?? (m_compiled_patn = new Regex(RegexString, opts));
-			}
-		}
-
-		/// <summary>Return true if the contained expression is valid</summary>
-		public bool ExprValid
-		{
-			get
-			{
-				try
-				{
-					switch (PatnType)
-					{
-					default: throw new ArgumentException("Unknown pattern type");
-					case EPattern.Substring: return true;
-					case EPattern.Wildcard:
-					case EPattern.RegularExpression: return Regex != null;
-					}
-				} catch { return false; }
-			}
-		}
-
-		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
-		public bool IsMatch(string text)
-		{
-			if (!Active) return false;
-			bool match = false;
-			switch (PatnType)
-			{
-			case EPattern.Substring:
-				{
-					StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-					match = Expr.Length != 0 && text.IndexOf(Expr, 0, cmp) != -1;
-					break;
-				}
-			case EPattern.Wildcard:
-			case EPattern.RegularExpression:
-				{
-					try { match = Expr.Length != 0 && Regex.IsMatch(text); } catch (ArgumentException) {}
-					break;
-				}
-			}
-			
-			return Invert ? !match : match;
-		}
-		
-		/// <summary>Return the range of 'text' that matches this pattern</summary>
-		public IEnumerable<Span> Match(string text)
-		{
-			if (!Active || text == null) yield break;
-			
-			var x = new List<int>();
-			if (Invert) x.Add(0);
-			try
-			{
-				switch (PatnType)
-				{
-				case EPattern.Substring:
-					{
-						StringComparison cmp = IgnoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-						if (Expr.Length != 0)
-						{
-							for (int i = text.IndexOf(Expr, 0, cmp); i != -1; i = text.IndexOf(Expr, i + Expr.Length, cmp))
-							{
-								x.Add(i);
-								x.Add(i + Expr.Length);
-							}
-						}
-						break;
-					}
-				case EPattern.Wildcard:
-				case EPattern.RegularExpression:
-					{
-						foreach (Match m in Regex.Matches(text))
-						{
-							if (m.Length == 0) continue;
-							x.Add(m.Index);
-							x.Add(m.Index + m.Length);
-						}
-						break;
-					}
-				}
-			} catch (ArgumentException) {}
-			if (Invert) x.Add(text.Length);
-			for (int i = 0; i != x.Count; i += 2)
-				yield return new Span(x[i], x[i+1] - x[i]);
-		}
-
-		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
-		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
-		{
-			if (!IsMatch(text) || !ExprValid) yield break;
-			if (PatnType != EPattern.RegularExpression)
-			{
-				int i = 0;
-				foreach (var s in Match(text))
-					yield return new KeyValuePair<string, string>((++i).ToString(), text.Substring(s.Index,s.Count));
-			}
-			else
-			{
-				Match match = Regex.Match(text);
-				var names = Regex.GetGroupNames();
-				var grps  = match.Groups;
-				for (int i = 1; i < grps.Count; ++i)
-					yield return new KeyValuePair<string, string>(names[i], grps[i].Value);
-			}
-		}
-
-		/// <summary>Construct from xml description</summary>
 		public Pattern(XElement node)
 		{
 			// ReSharper disable PossibleNullReferenceException
@@ -228,7 +99,7 @@ namespace RyLogViewer
 			BinaryMatch = bool.Parse(node.Element(XmlTag.Binary    ).Value);
 			// ReSharper restore PossibleNullReferenceException
 		}
-		
+
 		/// <summary>Export this pattern as xml</summary>
 		public virtual XElement ToXml(XElement node)
 		{
@@ -244,6 +115,140 @@ namespace RyLogViewer
 			return node;
 		}
 
+		/// <summary>Returns the match template as a compiled regular expression</summary>
+		protected Regex Regex
+		{
+			get
+			{
+				if (m_compiled_patn != null)
+					return m_compiled_patn;
+
+				// Notes:
+				//  If an expression can't be represented in substr,wildcard form, harden up and use a regex
+
+				// Convert the match string into a regular expression string and
+				// replace the capture group tags with regex capture groups
+				string expr = Expr;
+
+				// If the expression is a regex, expect regex capture group syntax
+				// Otherwise, expect capture groups of the form: {tag}
+				if (PatnType != EPattern.RegularExpression)
+				{
+					// Collapse all whitespace to a single space character
+					expr = Regex.Replace(expr, @"\s+", " ");
+
+					// Escape the regex special chars
+					expr = Regex.Escape(expr);
+
+					// Replace wildcards with Regex equivalents
+					if (PatnType == EPattern.Wildcard)
+						expr = expr.Replace(@"\*", @".*").Replace(@"\?", @".");
+
+					// Replace the (now escaped) '{tag}' capture
+					// groups with named regular expression capture groups
+					expr = Regex.Replace(expr, @"\\{(\w+)}", @"(?<$1>.*)");
+
+					// Replace all escaped whitespace with '\s+'
+					expr = expr.Replace(@"\ ", @"\s+");
+
+					// Allow expressions the end with whitespace to also match the eol char
+					if (expr.EndsWith(@"\s+"))
+					{
+						expr = expr.Remove(expr.Length - 3, 3);
+						expr = expr + @"(?:$|\s)";
+					}
+				}
+
+				// Compile the expression
+				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
+				return m_compiled_patn = new Regex(expr, opts);
+			}
+		}
+
+		/// <summary>Return the compiled regex string for reference</summary>
+		public string RegexString
+		{
+			get
+			{
+				var ex = ValidateExpr();
+				return ex == null ? Regex.ToString() : "Expression invalid - {0}".Fmt(ex.Message);
+			}
+		}
+
+		/// <summary>Returns null if the match field is valid, otherwise an exception describing what's wrong</summary>
+		public Exception ValidateExpr()
+		{
+			try
+			{
+				// Compiling the Regex will throw if there's something wrong with it. It will never be null
+				if (Regex == null)
+					return new ArgumentException("The regular expression is null");
+				
+				// No prob, bob!
+				return null;
+			}
+			catch (Exception ex) { return ex; }
+		}
+
+		/// <summary>Returns true if the match expression is valid</summary>
+		public virtual bool IsValid
+		{
+			get { return ValidateExpr() == null; }
+		}
+
+		/// <summary>Returns the names of the capture groups in this pattern</summary>
+		public string[] CaptureGroupNames
+		{
+			get
+			{
+				try { return Regex.GetGroupNames(); }
+				catch { return new string[0]; }
+			}
+		}
+
+		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
+		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
+		{
+			if (!IsMatch(text) || !IsValid) yield break;
+			Match match = Regex.Match(text);
+			var names = Regex.GetGroupNames();
+			var grps = match.Groups;
+			for (int i = 0; i != grps.Count; ++i)
+				yield return new KeyValuePair<string, string>(names[i], grps[i].Value);
+		}
+
+		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
+		public bool IsMatch(string text)
+		{
+			if (!Active || !IsValid) return false;
+			bool match = Expr.Length != 0 && Regex.IsMatch(text);
+			return Invert ? !match : match;
+		}
+
+		/// <summary>Return the range of 'text' that matches this pattern</summary>
+		public IEnumerable<Span> Match(string text)
+		{
+			if (!Active || text == null) yield break;
+
+			var x = new List<int>();
+
+			if (Invert) x.Add(0);
+			try
+			{
+				var grps = Regex.Match(text).Groups;
+				for (int i = 0; i != grps.Count; ++i)
+				{
+					x.Add(grps[i].Index);
+					x.Add(grps[i].Index + grps[i].Length);
+				}
+			}
+			catch (ArgumentException) {}
+			if (Invert) x.Add(text.Length);
+
+			for (int i = 0; i != x.Count; i += 2)
+				yield return new Span(x[i], x[i+1] - x[i]);
+		}
+
 		/// <summary>Creates a new object that is a copy of the current instance.</summary>
 		public virtual object Clone()
 		{
@@ -253,32 +258,138 @@ namespace RyLogViewer
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			Pattern rhs = obj as Pattern;
+			var rhs = obj as Pattern;
 			return rhs != null
-				&& Expr       .Equals(rhs.Expr       )
-				&& Active     .Equals(rhs.Active     )
-				&& PatnType   .Equals(rhs.PatnType   )
-				&& IgnoreCase .Equals(rhs.IgnoreCase )
-				&& Invert     .Equals(rhs.Invert     )
-				&& BinaryMatch.Equals(rhs.BinaryMatch);
+				&& rhs.m_patn_type     == m_patn_type
+				&& rhs.m_expr          == m_expr
+				&& rhs.m_ignore_case   == m_ignore_case
+				&& rhs.m_active        == m_active
+				&& rhs.m_invert        == m_invert
+				&& rhs.m_binary_match  == m_binary_match;
 		}
 
 		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{
+			// ReSharper disable NonReadonlyFieldInGetHashCode
 			return
-				Expr       .GetHashCode()^
-				Active     .GetHashCode()^
-				PatnType   .GetHashCode()^
-				IgnoreCase .GetHashCode()^
-				Invert     .GetHashCode()^
-				BinaryMatch.GetHashCode();
+				m_patn_type   .GetHashCode()^
+				m_expr        .GetHashCode()^
+				m_ignore_case .GetHashCode()^
+				m_active      .GetHashCode()^
+				m_invert      .GetHashCode()^
+				m_binary_match.GetHashCode();
+			// ReSharper restore NonReadonlyFieldInGetHashCode
 		}
 
-		/// <summary>Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.</summary>
 		public override string ToString()
 		{
 			return Expr;
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using RyLogViewer;
+
+	[TestFixture] internal static partial class RyLogViewerUnitTests
+	{
+		internal static class TestPattern
+		{
+			[TestFixtureSetUp] public static void Setup()
+			{
+			}
+			[TestFixtureTearDown] public static void CleanUp()
+			{
+			}
+			private static void Check(Pattern pat, string test, string[] grp_names, string[] captures)
+			{
+				Assert.IsTrue(pat.IsMatch(test));
+				var caps = pat.CaptureGroups(test).ToArray();
+
+				Assert.AreEqual(grp_names.Length, caps.Length);
+				Assert.AreEqual(captures.Length, caps.Length);
+
+				for (int i = 0; i != caps.Length; ++i)
+				{
+					Assert.AreEqual(grp_names[i], caps[i].Key);
+					Assert.AreEqual(captures[i], caps[i].Value);
+				}
+			}
+			[Test] public static void SubStringMatches()
+			{
+				Check(new Pattern(EPattern.Substring, "test"),
+					"A test string",
+					new[]{"0"},
+					new[]{"test"});
+			}
+			[Test] public static void WildcardMatches0()
+			{
+				Check(new Pattern(EPattern.Wildcard, "test"),
+					"A test string",
+					new[]{"0"},
+					new[]{"test"});
+			}
+			[Test] public static void WildcardMatches1()
+			{
+				Check(new Pattern(EPattern.Wildcard, "*test"),
+					"A test string",
+					new[]{"0"},
+					new[]{"A test"});
+			}
+			[Test] public static void WildcardMatches2()
+			{
+				Check(new Pattern(EPattern.Wildcard, "test*"),
+					"A test string",
+					new[]{"0"},
+					new[]{"test string"});
+			}
+			[Test] public static void WildcardMatches3()
+			{
+				Check(new Pattern(EPattern.Wildcard, "A * string"),
+					"A test string",
+					new[]{"0"},
+					new[]{"A test string"});
+			}
+			[Test] public static void WildcardMatches4()
+			{
+				Check(new Pattern(EPattern.Wildcard, "b*e?g"),
+					"abcdefgh",
+					new[]{"0"},
+					new[]{"bcdefg"});
+			}
+			[Test] public static void WildcardMatches5()
+			{
+				Check(new Pattern(EPattern.Wildcard, "b*e?g"),
+					"1b2345e6g7",
+					new[]{"0"},
+					new[]{"b2345e6g"});
+			}
+			[Test] public static void RegexMatches0()
+			{
+				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
+					"ab",
+					new[]{"0"},
+					new[]{"ab"});
+			}
+			[Test] public static void RegexMatches1()
+			{
+				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
+					"axb",
+					new[]{"0"},
+					new[]{"axb"});
+			}
+			[Test] public static void RegexMatches2()
+			{
+				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
+					"axxxxb",
+					new[]{"0"},
+					new[]{"axxxxb"});
+			}
+		}
+	}
+}
+#endif

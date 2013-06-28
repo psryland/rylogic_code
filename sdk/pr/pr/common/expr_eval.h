@@ -2,20 +2,20 @@
 // Expression Evaluator
 //  Copyright © Rylogic Ltd 2008
 //*************************************************************
-	
+
 #ifndef PR_EXPR_EVAL_H
 #define PR_EXPR_EVAL_H
-	
+
 #include <string.h>
 #include <math.h>
 #include <exception>
 #include <errno.h>
-	
+
 #ifndef PR_ASSERT
 #   define PR_ASSERT_STR_DEFINED
 #   define PR_ASSERT(grp, exp, str)
 #endif
-	
+
 namespace pr
 {
 	namespace impl
@@ -79,17 +79,17 @@ namespace pr
 			ETok_CloseParenthesis,
 			ETok_NumberOf
 		};
-		
+
 		// An integral or floating point value
 		struct Val
 		{
 			union { unsigned long long m_ul; long long m_ll; double m_db; };  // The value
 			bool m_fp; // True if 'db' should be used, false if 'll'
-			
+
 			double             db() const { return m_fp ? m_db : m_ll; }
 			long long          ll() const { return m_fp ? static_cast<long long>(m_db) : m_ll; }
 			unsigned long long ul() const { return m_fp ? static_cast<unsigned long long>(m_db) : static_cast<unsigned long long>(m_ll); }
-			
+
 			Val() :m_ll() ,m_fp() {}
 			explicit Val(long long ll) :m_ll(ll) ,m_fp(false) {}
 			explicit Val(double    db) :m_db(db) ,m_fp(true)  {}
@@ -100,20 +100,20 @@ namespace pr
 			Val& operator = (long long            v) { m_ll = v; m_fp = false; return *this; }
 			Val& operator = (long                 v) { m_ll = v; m_fp = false; return *this; }
 			Val& operator = (bool                 v) { m_ll = v; m_fp = false; return *this; }
-			
+
 			// Read a value (greedily) from 'expr'
 			bool read(char const*& expr)
 			{
 				// Read as a floating point number
 				char* endf; errno = 0; double db = ::strtod(expr, &endf);
-				
+
 				// Read as a 32-bit int
 				char* endi; errno = 0; long long ll = ::strtol(expr, &endi, 0);
-				
+
 				// If more chars are read as a float, then assume a float
 				if (endi == expr && endf == expr) return false;
 				if (endf > endi) { expr += (endf - expr); *this = db; return true; }
-				
+
 				// Otherwise assume an integral type
 				// If an integral type, check for a type suffix
 				bool usign = *endi == 'u' || *endi == 'U'; endi += usign;
@@ -141,7 +141,7 @@ namespace pr
 		inline bool operator == (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? lhs.db() == rhs.db() : lhs.ll() == rhs.ll(); }
 		inline bool operator <  (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? lhs.db() <  rhs.db() : lhs.ll() <  rhs.ll(); }
 		inline bool operator <= (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? lhs.db() <= rhs.db() : lhs.ll() <= rhs.ll(); }
-		
+
 		// Extract a token from 'expr'
 		// If the token is a value then 'expr' is advanced past the value
 		// if it's an operator it isn't. This is so that operator precedense works
@@ -149,7 +149,7 @@ namespace pr
 		{
 			// Skip any leading whitespace
 			while (*expr && isspace(*expr)) { ++expr; }
-			
+
 			// Look for an operator
 			switch (tolower(*expr))
 			{
@@ -239,11 +239,11 @@ namespace pr
 				else if (_strnicmp(expr, "tau"   ,3) == 0) { expr += 3; val = 6.283185e+0F; return ETok_Value; }
 				else break;
 			}
-			
+
 			// If it's not an operator, try extracting an operand
 			return  val.read(expr) ? ETok_Value : ETok_Unknown;
 		}
-		
+
 		// Evaluate an expression.
 		inline bool Eval(char const*& expr, Val* result, int rmax, int& ridx, ETok prev_op)
 		{
@@ -257,7 +257,7 @@ namespace pr
 				else if (tok == ETok_Sub && prev_tok != ETok_Value) { sign = -1; tok = Token(++expr, lhs); }
 				else if (tok > ETok_Value && tok < prev_op) return true;
 				prev_tok = tok;
-				
+
 				switch (tok)
 				{
 				default:
@@ -510,7 +510,7 @@ namespace pr
 			return true;
 		}
 	}
-	
+
 	// Evaluate a floating point expression
 	template <typename ResType> inline ResType Evaluate(char const* expr)
 	{
@@ -518,7 +518,7 @@ namespace pr
 		impl::Eval(expr, &result, 1, ridx, impl::ETok_Unknown);
 		return static_cast<ResType>(result.db());
 	}
-	
+
 	// Evaluate an integral expression
 	template <typename ResType> inline ResType EvaluateI(char const* expr)
 	{
@@ -526,7 +526,7 @@ namespace pr
 		impl::Eval(expr, &result, 1, ridx, impl::ETok_Unknown);
 		return static_cast<ResType>(result.ll());
 	}
-	
+
 	// Helper overloads
 	inline bool Evaluate (char const* expr, double&             out) { try {out = Evaluate <double             >(expr); return true;} catch (std::exception const&) {return false;} }
 	inline bool Evaluate (char const* expr, float&              out) { try {out = Evaluate <float              >(expr); return true;} catch (std::exception const&) {return false;} }
@@ -538,10 +538,137 @@ namespace pr
 	inline bool EvaluateI(char const* expr, int&                out) { try {out = EvaluateI<int                >(expr); return true;} catch (std::exception const&) {return false;} }
 	inline bool EvaluateI(char const* expr, bool&               out) { try {out=!!EvaluateI<int                >(expr); return true;} catch (std::exception const&) {return false;} }
 }
-	
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/maths/maths.h"
+namespace pr
+{
+	namespace unittests
+	{
+		template <typename ResType> bool Expr(char const* expr, ResType result);
+		template <> bool Expr(char const* expr, double     result) { double     val; return pr::Evaluate (expr, val) && pr::FEql(val, result); }
+		template <> bool Expr(char const* expr, float      result) { float      val; return pr::Evaluate (expr, val) && pr::FEql(val, result); }
+		template <> bool Expr(char const* expr, pr::uint64 result) { pr::uint64 val; return pr::EvaluateI(expr, val) && val == result; }
+		template <> bool Expr(char const* expr, pr::int64  result) { pr::int64  val; return pr::EvaluateI(expr, val) && val == result; }
+		template <> bool Expr(char const* expr, pr::ulong  result) { pr::ulong  val; return pr::EvaluateI(expr, val) && val == result; }
+		template <> bool Expr(char const* expr, long       result) { long       val; return pr::EvaluateI(expr, val) && val == result; }
+		template <> bool Expr(char const* expr, pr::uint   result) { pr::uint   val; return pr::EvaluateI(expr, val) && val == result; }
+		template <> bool Expr(char const* expr, int        result) { int        val; return pr::EvaluateI(expr, val) && val == result; }
+		template <> bool Expr(char const* expr, bool       result) { bool       val; return pr::EvaluateI(expr, val) && val == result; }
+
+		#define EXPR(exp) Expr(#exp, (exp))
+
+		bool Val(char const* expr, double     result) { pr::impl::Val val; return val.read(expr) && result == val.db(); }
+		bool Val(char const* expr, long long  result) { pr::impl::Val val; return val.read(expr) && result == val.ll(); }
+		bool Val(char const* expr, int        result) { pr::impl::Val val; return val.read(expr) && result == val.ll(); }
+		bool Val(char const* expr, pr::uint   result) { pr::impl::Val val; return val.read(expr) && result == val.ll(); }
+		bool Val(char const* expr, pr::ulong  result) { pr::impl::Val val; return val.read(expr) && result == val.ll(); }
+		bool Val(char const* expr, pr::uint64 result) { pr::impl::Val val; return val.read(expr) && result == (pr::uint64)val.ll(); }
+
+		#define VAL(exp) Val(#exp, (exp))
+
+		PRUnitTest(pr_common_expr_eval)
+		{
+			float const TAU = pr::maths::tau;
+			float const PHI = pr::maths::phi;
+
+			PR_CHECK(VAL(1), true);
+			PR_CHECK(VAL(1.0), true);
+			PR_CHECK(VAL(-1), true);
+			PR_CHECK(VAL(-1.0), true);
+			PR_CHECK(VAL(10U), true);
+			PR_CHECK(VAL(100L), true);
+			PR_CHECK(VAL(-100L), true);
+			PR_CHECK(VAL(0x1000UL), true);
+			PR_CHECK(VAL(0x7FFFFFFF), true);
+			PR_CHECK(VAL(0x80000000), true);
+			PR_CHECK(VAL(0xFFFFFFFF), true);
+			PR_CHECK(VAL(0xFFFFFFFFU), true);
+			PR_CHECK(VAL(0xFFFFFFFFULL), true);
+			PR_CHECK(VAL(0x7FFFFFFFFFFFFFFFLL), true);
+			PR_CHECK(VAL(0xFFFFFFFFFFFFFFFFULL), true);
+
+			PR_CHECK(EXPR(1.0), true);
+			PR_CHECK(EXPR(+1.0), true);
+			PR_CHECK(EXPR(-1.0), true);
+			PR_CHECK(EXPR(8.0 * -1.0), true);
+			PR_CHECK(EXPR(1.0 + +2.0), true);
+			PR_CHECK(EXPR(1.0 - 2.0), true);
+			PR_CHECK(EXPR(1.0 * +2.0), true);
+			PR_CHECK(EXPR(1 / 2), true);
+			PR_CHECK(EXPR(1.0 / 2.0), true);
+			PR_CHECK(EXPR(1.0 / 2.0 + 3.0), true);
+			PR_CHECK(EXPR(1.0 / 2.0 * 3.0), true);
+			PR_CHECK(EXPR((1 || 0) && 2), true);
+			PR_CHECK(EXPR(((13 ^ 7) | 6) & 14), true);
+			PR_CHECK(EXPR((8 < 9) + (3 <= 3) + (8 > 9) + (2 >= 2) + (1 != 2) + (2 == 2)), true);
+			PR_CHECK(EXPR(1.0 + 2.0 * 3.0 - 4.0), true);
+			PR_CHECK(EXPR(2.0 * 3.0 + 1.0 - 4.0), true);
+			PR_CHECK(EXPR(1.0 - 4.0 + 2.0 * 3.0), true);
+			PR_CHECK(EXPR((1.0 + 2.0) * 3.0 - 4.0), true);
+			PR_CHECK(EXPR(1.0 + 2.0 * -(3.0 - 4.0)), true);
+			PR_CHECK(EXPR(1.0 + (2.0 * (3.0 - 4.0))), true);
+			PR_CHECK(EXPR((1.0 + 2.0) * (3.0 - 4.0)), true);
+			PR_CHECK(EXPR(~37 & ~0), true);
+			PR_CHECK(EXPR(!37 | !0), true);
+			PR_CHECK(EXPR(~(0xFFFFFFFF >> 2)), true);
+			PR_CHECK(EXPR(~(4294967295 >> 2)), true);
+			PR_CHECK(EXPR(~(0xFFFFFFFFLL >> 2)), true);
+			PR_CHECK(EXPR(~(4294967295LL >> 2)), true);
+			PR_CHECK(Expr("sin(1.0 + 2.0)"          ,::sin(1.0 + 2.0))  ,true);
+			PR_CHECK(Expr("cos(TAU)"                ,::cos(TAU))        ,true);
+			PR_CHECK(Expr("tan(PHI)"                ,::tan(PHI))        ,true);
+			PR_CHECK(Expr("abs( 1.0)"               ,::abs( 1.0))       ,true);
+			PR_CHECK(Expr("abs(-1.0)"               ,::abs(-1.0))       ,true);
+			PR_CHECK(EXPR(11 % 3), true);
+			PR_CHECK(Expr("fmod(11.3, 3.1)"         ,::fmod(11.3, 3.1)) ,true);
+			PR_CHECK(EXPR(3.0*fmod(17.3, 2.1)), true);
+			PR_CHECK(EXPR(1 << 10), true);
+			PR_CHECK(EXPR(1024 >> 3), true);
+			PR_CHECK(Expr("ceil(3.4)"                ,::ceil(3.4))                                    ,true);
+			PR_CHECK(Expr("ceil(-3.4)"               ,::ceil(-3.4))                                   ,true);
+			PR_CHECK(Expr("floor(3.4)"               ,::floor(3.4))                                   ,true);
+			PR_CHECK(Expr("floor(-3.4)"              ,::floor(-3.4))                                  ,true);
+			PR_CHECK(Expr("asin(-0.8)"               ,::asin(-0.8))                                   ,true);
+			PR_CHECK(Expr("acos(0.2)"                ,::acos(0.2))                                    ,true);
+			PR_CHECK(Expr("atan(2.3/12.9)"           ,::atan(2.3/12.9))                               ,true);
+			PR_CHECK(Expr("atan2(2.3,-3.9)"          ,::atan2(2.3,-3.9))                              ,true);
+			PR_CHECK(Expr("sinh(0.8)"                ,::sinh(0.8))                                    ,true);
+			PR_CHECK(Expr("cosh(0.2)"                ,::cosh(0.2))                                    ,true);
+			PR_CHECK(Expr("tanh(2.3)"                ,::tanh(2.3))                                    ,true);
+			PR_CHECK(Expr("exp(2.3)"                 ,::exp(2.3))                                     ,true);
+			PR_CHECK(Expr("log(209.3)"               ,::log(209.3))                                   ,true);
+			PR_CHECK(Expr("log10(209.3)"             ,::log10(209.3))                                 ,true);
+			PR_CHECK(Expr("pow(2.3, -1.3)"           ,::pow(2.3, -1.3))                               ,true);
+			PR_CHECK(Expr("sqrt(2.3)"                ,::sqrt(2.3))                                    ,true);
+			PR_CHECK(Expr("sqr(-2.3)"                ,pr::Sqr(-2.3))                                  ,true);
+			PR_CHECK(Expr("len2(3,4)"                ,::sqrt(3.0*3.0 + 4.0*4.0))                      ,true);
+			PR_CHECK(Expr("len3(3,4,5)"              ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0))            ,true);
+			PR_CHECK(Expr("len4(3,4,5,6)"            ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0 + 6.0*6.0))  ,true);
+			PR_CHECK(Expr("deg(-1.24)"               ,-1.24 * pr::maths::E60_by_tau)                  ,true);
+			PR_CHECK(Expr("rad(241.32)"              ,241.32 * pr::maths::tau_by_360)                 ,true);
+			PR_CHECK(Expr("round( 3.5)"              ,::floor(3.5 + 0.5))                             ,true);
+			PR_CHECK(Expr("round(-3.5)"              ,::floor(-3.5 + 0.5))                            ,true);
+			PR_CHECK(Expr("round( 3.2)"              ,::floor(3.2 + 0.5))                             ,true);
+			PR_CHECK(Expr("round(-3.2)"              ,::floor(-3.2 + 0.5))                            ,true);
+			PR_CHECK(Expr("min(-3.2, -3.4)"          ,pr::Min(-3.2, -3.4))                            ,true);
+			PR_CHECK(Expr("max(-3.2, -3.4)"          ,pr::Max(-3.2, -3.4))                            ,true);
+			PR_CHECK(Expr("clamp(10.0, -3.4, -3.2)"  ,pr::Clamp(10.0, -3.4, -3.2))                    ,true);
+			PR_CHECK(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(::sqrt(2.3)*-::abs(4%2)/15.0-::tan(TAU/-6))), true);
+			{
+				long long v1 = 0, v0 = 123456789000000LL / 2;
+				PR_CHECK(pr::EvaluateI("123456789000000 / 2", v1), true);
+				PR_CHECK(v0 == v1, true);
+			}
+		}
+	}
+}
+#endif
+
 #ifdef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT
 #endif
-	
+
 #endif

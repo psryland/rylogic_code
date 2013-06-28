@@ -1,0 +1,12 @@
+﻿<assembly name="pr">
+	<!--
+		Symlink this file here:
+		D:\Program Files (x86)\JetBrains\ReSharper\v7.0\Bin\ExternalAnnotations\pr.ExternalAnnotations\pr\pr.xml
+	-->
+	<member name="M:pr.extn.StringExtensions.Fmt(System.String,System.Object[])">
+        <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>fmt</argument></attribute>
+    </member>
+    <member name="M:pr.extn.Test.FmtTest(System.String,System.Object[])">
+        <attribute ctor="M:JetBrains.Annotations.StringFormatMethodAttribute.#ctor(System.String)"><argument>fmt</argument></attribute>
+    </member>
+</assembly>

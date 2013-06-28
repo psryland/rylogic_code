@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Drawing;
+using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
+using pr.common;
+using pr.extn;
 using pr.gui;
 using pr.util;
 
@@ -8,6 +13,9 @@ namespace RyLogViewer
 {
 	public class About :Form
 	{
+		private readonly Licence m_licence;
+		private readonly DateTimeOffset? m_installed_on;
+		private readonly Timer m_timer;
 		private Button m_btn_ok;
 		private TextBox m_edit_version;
 		private PictureBox pictureBox1;
@@ -15,11 +23,14 @@ namespace RyLogViewer
 		private Button m_btn_version_history;
 		private RichTextBox m_edit_licence;
 		private Label m_lbl_info;
-		
-		public About(Licence licence)
+
+		public About(StartupOptions startup_options)
 		{
 			InitializeComponent();
-			
+			m_licence = new Licence(startup_options.AppDataDir);
+			m_installed_on = InstalledOn(startup_options);
+			m_timer = new Timer{Interval = 1000};
+
 			// Version info
 			m_edit_version.Text = string.Format(
 				"{0} {1}"+
@@ -32,15 +43,66 @@ namespace RyLogViewer
 				,Util.AssemblyTimestamp() + Environment.NewLine
 				);
 			m_edit_version.Select(0,0);
-			
-			// Licence info
-			m_edit_licence.Rtf = licence.InfoStringRtf();
-			
+
 			// Version history
 			m_btn_version_history.Click += (s,a)=>
 				{
-					HelpUI.ShowResource(this, "RyLogViewer.docs.VersionHistory.html", Assembly.GetExecutingAssembly(), "Version History");
+					HelpUI.ShowHtml(this, Resources.version_history, "Version History");
 				};
+
+			// Update the text fields
+			m_timer.Tick += (s,a) => UpdateUI();
+			m_timer.Enabled = true;
+
+			UpdateUI();
+		}
+
+		/// <summary>Update the text fields of the about box</summary>
+		private void UpdateUI()
+		{
+			var rtf = m_licence.InfoStringRtf();
+			if (m_installed_on != null)
+			{
+				var duration = DateTimeOffset.UtcNow - m_installed_on.Value;
+				int d = duration.Days;
+				int h = duration.Hours;
+				int m = duration.Minutes;
+				int s = duration.Seconds;
+
+				rtf.AppendLine();
+				rtf.Append(new Rtf.TextStyle(rtf.TextStyle){ForeColourIndex = rtf.ColourIndex(m_licence.Valid ? Color.Green : Color.Red)});
+				rtf.Append("Installed for: ");
+				if (d             != 0) rtf.Append(" {0} days".Fmt(d));
+				if (d + h         != 0) rtf.Append(" {0} hours".Fmt(h));
+				if (d + h + m     != 0) rtf.Append(" {0} minutes".Fmt(m));
+				if (d + h + m + s != 0) rtf.Append(" {0} seconds".Fmt(s));
+				rtf.AppendLine();
+			}
+
+			using (m_edit_licence.SelectionScope())
+				m_edit_licence.Rtf = rtf.ToString();
+		}
+
+		/// <summary>Returns the time that the application has be in active use</summary>
+		public static TimeSpan ActiveUseTime(StartupOptions startup_options)
+		{
+			return TimeSpan.Zero;
+		}
+
+		/// <summary>Returns the time since the application was installed</summary>
+		public static DateTimeOffset? InstalledOn(StartupOptions startup_options)
+		{
+			try
+			{
+				// Look for folders that were created when the app was installed
+				var di = new DirectoryInfo(startup_options.AppDataDir);
+				return di.CreationTimeUtc;
+			}
+			catch (Exception ex)
+			{
+				Log.Exception(null, ex, "Could not determine time since installation");
+				return null;
+			}
 		}
 
 		#region Windows Form Designer generated code
@@ -100,8 +162,9 @@ namespace RyLogViewer
 			this.m_edit_version.Multiline = true;
 			this.m_edit_version.Name = "m_edit_version";
 			this.m_edit_version.ReadOnly = true;
-			this.m_edit_version.Size = new System.Drawing.Size(314, 74);
+			this.m_edit_version.Size = new System.Drawing.Size(314, 58);
 			this.m_edit_version.TabIndex = 10;
+			this.m_edit_version.Text = "Rylogic\r\nVersion\r\nBuilt:\r\nAll Rights Reserved";
 			this.m_edit_version.WordWrap = false;
 			// 
 			// pictureBox1
@@ -120,14 +183,14 @@ namespace RyLogViewer
 			this.m_lbl_info.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.m_lbl_info.Location = new System.Drawing.Point(66, 23);
 			this.m_lbl_info.Name = "m_lbl_info";
-			this.m_lbl_info.Size = new System.Drawing.Size(128, 24);
+			this.m_lbl_info.Size = new System.Drawing.Size(123, 24);
 			this.m_lbl_info.TabIndex = 8;
-			this.m_lbl_info.Text = "RyLog Viewer";
+			this.m_lbl_info.Text = "RyLogViewer";
 			// 
 			// m_lbl_licence
 			// 
 			this.m_lbl_licence.AutoSize = true;
-			this.m_lbl_licence.Location = new System.Drawing.Point(12, 141);
+			this.m_lbl_licence.Location = new System.Drawing.Point(9, 125);
 			this.m_lbl_licence.Name = "m_lbl_licence";
 			this.m_lbl_licence.Size = new System.Drawing.Size(69, 13);
 			this.m_lbl_licence.TabIndex = 14;
@@ -148,9 +211,9 @@ namespace RyLogViewer
 			this.m_edit_licence.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_licence.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_edit_licence.Location = new System.Drawing.Point(15, 157);
+			this.m_edit_licence.Location = new System.Drawing.Point(12, 141);
 			this.m_edit_licence.Name = "m_edit_licence";
-			this.m_edit_licence.Size = new System.Drawing.Size(311, 78);
+			this.m_edit_licence.Size = new System.Drawing.Size(314, 94);
 			this.m_edit_licence.TabIndex = 16;
 			this.m_edit_licence.Text = "";
 			// 
@@ -171,7 +234,7 @@ namespace RyLogViewer
 			this.MinimumSize = new System.Drawing.Size(229, 234);
 			this.Name = "About";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			this.Text = "RyLog Viewer";
+			this.Text = "About RyLogViewer";
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();
@@ -179,6 +242,5 @@ namespace RyLogViewer
 		}
 
 		#endregion
-
 	}
 }

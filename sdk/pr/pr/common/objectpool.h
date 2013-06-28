@@ -62,13 +62,13 @@ namespace pr
 			template <typename P1> static void Construct(T*, P1 p1)                          { new (target) T(p1); }
 			template <typename P1, typename P2> static void Construct(T*, P1 p1, P2 p2)      { new (target) T(p1); }
 		};
-		typedef typename pr::mpl::if_< pr::mpl::is_pod<Type>::value, POD<Type>, NonPOD<Type> >::type Constructor;
+		typedef typename pr::meta::if_< pr::meta::is_pod<Type>::value, POD<Type>, NonPOD<Type> >::type Constructor;
 	
 		// A block contains room for a 'NumPerBlock' array of 'Type'
 		struct Block
 		{
 			enum { SizeInBytes = NumPerBlock * sizeof(Type) };
-			typedef typename pr::mpl::aligned_storage<SizeInBytes, pr::mpl::alignment_of<Type>::value>::type TBuffer;
+			typedef typename pr::meta::aligned_storage<SizeInBytes, pr::meta::alignment_of<Type>::value>::type TBuffer;
 			byte* buffer() { return pr::byte_ptr(&m_block); }
 			
 			TBuffer m_block;
@@ -242,7 +242,7 @@ namespace pr
 		// from whereever they're being used and deletes them
 		void ReclaimAll()
 		{
-			PR_ASSERT(PR_DBG, pr::mpl::is_pod<Type>::value, "This method can only be used for POD types");
+			PR_ASSERT(PR_DBG, pr::meta::is_pod<Type>::value, "This method can only be used for POD types");
 			PR_EXPAND(PR_OP_MT, ScopedLock lock(m_semaphore));
 		
 			// Move 'm_current_block' to the first in the list

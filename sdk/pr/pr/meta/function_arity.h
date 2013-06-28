@@ -1,9 +1,13 @@
+//******************************************
+// Function Arity
+//  Copyright © Oct 2009 Paul Ryland
+//******************************************
 #ifndef PR_META_FUNCTION_ARITY_H
 #define PR_META_FUNCTION_ARITY_H
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		template <typename Function> struct function_arity;
 		template <typename R                                                                                                        > struct function_arity<R(                              )> { enum { value = 0 }; };

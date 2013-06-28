@@ -17,10 +17,10 @@ namespace pr
 	template <typename T> inline T GetY(T const& x) { return x; }
 	template <typename T> inline T GetZ(T const& x) { return x; }
 	template <typename T> inline T GetW(T const& x) { return x; }
-	
-	template <typename T> inline int   AsInt (T const& x)  { return static_cast<int>(x); }
+
+	template <typename T> inline int   AsInt (T const& x) { return static_cast<int>(x); }
 	template <typename T> inline float AsReal(T const& x) { return static_cast<float>(x); }
-	
+
 	template <typename T> inline float GetXf(T const& x) { return AsReal(GetX(x)); }
 	template <typename T> inline float GetYf(T const& x) { return AsReal(GetY(x)); }
 	template <typename T> inline float GetZf(T const& x) { return AsReal(GetZ(x)); }
@@ -29,9 +29,9 @@ namespace pr
 	template <typename T> inline int   GetYi(T const& x) { return AsInt(GetY(x)); }
 	template <typename T> inline int   GetZi(T const& x) { return AsInt(GetZ(x)); }
 	template <typename T> inline int   GetWi(T const& x) { return AsInt(GetW(x)); }
-	
+
 	template <typename FromType, typename ToType> inline ToType To(FromType const& from) { return static_cast<ToType const&>(from); }
-	
+
 	inline float   Ceil(float x)                              { return ceilf(x); }
 	inline float   Floor(float x)                             { return floorf(x); }
 	inline float   Sin(float x)                               { return sinf(x); }
@@ -41,7 +41,7 @@ namespace pr
 	inline float   ACos(float x)                              { return acosf(x); }
 	inline float   ATan(float x)                              { return atanf(x); }
 	inline float   ATan2(float y, float x)                    { return atan2f(y, x); }
-	inline float   ATan2Positive(float y, float x)            { float a = atan2f(y, x); return (a >= 0.0f)*a + (a < 0.0f)*(maths::tau + a); }
+	inline float   ATan2Positive(float y, float x)            { float a = atan2f(y, x); return a < 0.0f ? a += maths::tau : a; }
 	inline float   Sinh(float x)                              { return sinhf(x); }
 	inline float   Cosh(float x)                              { return coshf(x); }
 	inline float   Tanh(float x)                              { return tanhf(x); }
@@ -84,7 +84,7 @@ namespace pr
 	inline bool    FLessEql(double a, double b, double tol = pr::maths::tiny)                   { return !FGtr(a,b,tol); }
 	inline bool    FEql    (double a, double b, double tol = pr::maths::tiny)                   { return !FGtr(a,b,tol) && !FLess(a,b,tol); }
 	inline bool    FEqlZero(double a, double tol = pr::maths::tiny)                             { return Abs(a) <= tol; }
-	
+
 	template <typename T> inline bool   Equal2(T const& lhs, T const& rhs)                      { return GetX(lhs) == GetX(rhs) && GetY(lhs) == GetY(rhs); }
 	template <typename T> inline bool   Equal3(T const& lhs, T const& rhs)                      { return Equal2(lhs,rhs) && GetZ(lhs) == GetZ(rhs); }
 	template <typename T> inline bool   Equal4(T const& lhs, T const& rhs)                      { return Equal3(lhs,rhs) && GetW(lhs) == GetW(rhs); }
@@ -92,27 +92,28 @@ namespace pr
 	template <typename T> inline bool   IsZero3(T const& v)                                     { return IsZero2(v) && GetZ(v) == 0; }
 	template <typename T> inline bool   IsZero4(T const& v)                                     { return IsZero3(v) && GetW(v) == 0; }
 
-	template <typename T> inline bool   FEql2    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql(GetXf(lhs), GetXf(rhs), tol) && FEql(GetYf(lhs), GetYf(rhs), tol); }
-	template <typename T> inline bool   FEql3    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql2(lhs, rhs, tol) && FEql(GetZf(lhs), GetZf(rhs), tol); }
-	template <typename T> inline bool   FEql4    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql3(lhs, rhs, tol) && FEql(GetWf(lhs), GetWf(rhs), tol); }
+	template <typename T> inline bool   FEql     (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql(static_cast<float>(a), static_cast<float>(b)); }
+	template <typename T> inline bool   FEql2    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql(GetX(lhs), GetX(rhs), tol) && FEql(GetY(lhs), GetY(rhs), tol); }
+	template <typename T> inline bool   FEql3    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql2(lhs, rhs, tol) && FEql(GetZ(lhs), GetZ(rhs), tol); }
+	template <typename T> inline bool   FEql4    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql3(lhs, rhs, tol) && FEql(GetW(lhs), GetW(rhs), tol); }
 	template <typename T> inline bool   FEqlZero2(T const& lhs, float tol = pr::maths::tiny)               { return Length2Sq(lhs) < Sqr(tol); }
 	template <typename T> inline bool   FEqlZero3(T const& lhs, float tol = pr::maths::tiny)               { return Length3Sq(lhs) < Sqr(tol); }
 	template <typename T> inline bool   FEqlZero4(T const& lhs, float tol = pr::maths::tiny)               { return Length4Sq(lhs) < Sqr(tol); }
-	
+
 	template <typename T, typename Pred> inline bool Any2(T const& v, Pred pred)                { return pred(GetX(v)) || pred(GetY(v)); }
 	template <typename T, typename Pred> inline bool Any3(T const& v, Pred pred)                { return Any2(v, pred) || pred(GetZ(v)); }
 	template <typename T, typename Pred> inline bool Any4(T const& v, Pred pred)                { return Any3(v, pred) || pred(GetW(v)); }
 	template <typename T, typename Pred> inline bool All2(T const& v, Pred pred)                { return pred(GetX(v)) && pred(GetY(v)); }
 	template <typename T, typename Pred> inline bool All3(T const& v, Pred pred)                { return All2(v, pred) || pred(GetZ(v)); }
 	template <typename T, typename Pred> inline bool All4(T const& v, Pred pred)                { return All3(v, pred) || pred(GetW(v)); }
-	
+
 	template <typename T> inline T      Sign(bool positive)                                     { return static_cast<T>(2 * positive - 1); }
 	template <typename T> inline T      Sign(T sign)                                            { return static_cast<T>(2 * (sign >= 0) - 1); }
 	template <typename T> inline void   Swap(T& x, T& y)                                        { T tmp = x; x = y; y = tmp; }
-	
+
 	template <typename T> inline T      Sqr(T x)                                                { return x * x; }
 	template <typename T> inline T      Sqrt(T x)                                               { PR_ASSERT(PR_DBG_MATHS, x >= 0 && IsFinite(x), ""); return static_cast<T>(sqrt(static_cast<double>(x))); }
-	
+
 	template <typename T> inline T      Len2Sq(T x, T y)                                        { return Sqr(x) + Sqr(y); }
 	template <typename T> inline T      Len3Sq(T x, T y, T z)                                   { return Sqr(x) + Sqr(y) + Sqr(z); }
 	template <typename T> inline T      Len4Sq(T x, T y, T z, T w)                              { return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w); }
@@ -125,30 +126,24 @@ namespace pr
 	template <typename T> inline float  Length2(T const& x)                                     { return Sqrt(Length2Sq(x)); }
 	template <typename T> inline float  Length3(T const& x)                                     { return Sqrt(Length3Sq(x)); }
 	template <typename T> inline float  Length4(T const& x)                                     { return Sqrt(Length4Sq(x)); }
-	
+
 	template <typename T> inline T      Max  (T const& x, T const& y)                           { return (x > y) ? x : y; }
 	template <typename T> inline T      Min  (T const& x, T const& y)                           { return (x > y) ? y : x; }
 	template <typename T> inline T      Clamp(T const& x, T const& mn, T const& mx)             { PR_ASSERT(PR_DBG_MATHS, mn <= mx   , ""); return (mx < x) ? mx : (x < mn) ? mn : x; }
 	template <>           inline float  Max  (float const& x, float const& y)                   { PR_ASSERT(PR_DBG_MATHS, IsFinite(x), ""); return (x > y) ? x : y; }
 	template <>           inline float  Min  (float const& x, float const& y)                   { PR_ASSERT(PR_DBG_MATHS, IsFinite(x), ""); return (x > y) ? y : x; }
 	template <>           inline float  Clamp(float const& x, float const& mn, float const& mx) { PR_ASSERT(PR_DBG_MATHS, IsFinite(x) && mn <= mx, ""); return (mx < x) ? mx : (x < mn) ? mn : x; }
-	
-	template <typename T> inline T&     Normalise2(T& v)                                        { return v /= Length2(v); }
-	template <typename T> inline T&     Normalise3(T& v)                                        { return v /= Length3(v); }
-	template <typename T> inline T&     Normalise4(T& v)                                        { return v /= Length4(v); }
-	template <typename T> inline T      GetNormal2(T const& v)                                  { T x = v; return Normalise2(x); }
-	template <typename T> inline T      GetNormal3(T const& v)                                  { T x = v; return Normalise3(x); }
-	template <typename T> inline T      GetNormal4(T const& v)                                  { T x = v; return Normalise4(x); }
-	template <typename T> inline T&     Normalise2IfNonZero(T& v)                               { return IsZero2(v) ? v : Normalise2(v); }
-	template <typename T> inline T&     Normalise3IfNonZero(T& v)                               { return IsZero3(v) ? v : Normalise3(v); }
-	template <typename T> inline T&     Normalise4IfNonZero(T& v)                               { return IsZero4(v) ? v : Normalise4(v); }
-	template <typename T> inline T      GetNormal2IfNonZero(T const& v)                         { T x = v; return Normalise2IfNonZero(x); }
-	template <typename T> inline T      GetNormal3IfNonZero(T const& v)                         { T x = v; return Normalise3IfNonZero(x); }
-	template <typename T> inline T      GetNormal4IfNonZero(T const& v)                         { T x = v; return Normalise4IfNonZero(x); }
-	template <typename T> inline bool   IsNormal2(T const& v)                                   { return FEql(Length2Sq(v), 1.0f); }
-	template <typename T> inline bool   IsNormal3(T const& v)                                   { return FEql(Length3Sq(v), 1.0f); }
-	template <typename T> inline bool   IsNormal4(T const& v)                                   { return FEql(Length4Sq(v), 1.0f); }
-	
+
+	template <typename T> inline T      Normalise2(T const& v)                       { return v / Length2(v); }
+	template <typename T> inline T      Normalise3(T const& v)                       { return v / Length3(v); }
+	template <typename T> inline T      Normalise4(T const& v)                       { return v / Length4(v); }
+	template <typename T> inline T      Normalise2IfNonZero(T const& v)              { return IsZero2(v) ? v : Normalise2(v); }
+	template <typename T> inline T      Normalise3IfNonZero(T const& v)              { return IsZero3(v) ? v : Normalise3(v); }
+	template <typename T> inline T      Normalise4IfNonZero(T const& v)              { return IsZero4(v) ? v : Normalise4(v); }
+	template <typename T> inline bool   IsNormal2(T const& v)                        { return FEql(Length2Sq(v), 1.0f); }
+	template <typename T> inline bool   IsNormal3(T const& v)                        { return FEql(Length3Sq(v), 1.0f); }
+	template <typename T> inline bool   IsNormal4(T const& v)                        { return FEql(Length4Sq(v), 1.0f); }
+
 	inline float   DegreesToRadians(float degrees)                                   { return degrees * 1.74532e-2f; }
 	inline float   RadiansToDegrees(float radians)                                   { return radians * 5.72957e+1f; }
 	inline uint32  High32(uint64 const& i)                                           { return reinterpret_cast<uint32 const*>(&i)[0]; }
@@ -164,7 +159,7 @@ namespace pr
 	inline uint8&  High8 (uint16& i)                                                 { return reinterpret_cast<uint8*>(&i)[0]; }
 	inline uint8&  Low8  (uint16& i)                                                 { return reinterpret_cast<uint8*>(&i)[1]; }
 	template <typename T> inline T Lerp(T const& src, T const& dest, float frac)     { return static_cast<T>(src + frac * (dest - src)); }
-	
+
 	v2      Slerp(const v2& src, const v2& dest, float frac);
 	v3      Slerp(const v3& src, const v3& dest, float frac);
 	v4      Slerp3(const v4& src, const v4& dest, float frac);
@@ -178,7 +173,7 @@ namespace pr
 	float   CosAngle(float adj0, float adj1, float opp);
 	float   Angle(float adj0, float adj1, float opp);
 	float   Length(float adj0, float adj1, float angle);
-	
+
 	// Function objects for generating sequences
 	template <typename Type> struct ArithmeticSequence
 	{
@@ -192,7 +187,7 @@ namespace pr
 		GeometricSequence(Type initial_value = 0, Type ratio = Type(1)) :m_value(initial_value) ,m_ratio(ratio) {}
 		Type operator()() { Type v = m_value; m_value = static_cast<Type>(m_value * m_ratio); return v; }
 	};
-	
+
 	// Return the greatest common factor between 'a' and 'b'
 	// Uses the Euclidean algorithm. If the greatest common factor is 1, then 'a' and 'b' are co-prime
 	inline int GreatestCommonFactor(int a, int b)
@@ -200,7 +195,11 @@ namespace pr
 		while (b) { int t = b; b = a % b; a = t; }
 		return a;
 	}
-	
+	inline int LeastCommonMultiple(int a, int b)
+	{
+		return (a*b) / GreatestCommonFactor(a,b);
+	}
+
 	// Predicates
 	namespace maths
 	{
@@ -214,5 +213,77 @@ namespace pr
 		template <typename T=float> struct LessEq { bool operator()(T const& value) const {return value <= x;}  T x; LessEq (T const& x_):x(x_){}};
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_maths_scalar)
+		{
+			using namespace pr;
+			pr::Rnd rng;
+			uint8  b  , b0  = rng.u8()                    , b1  = rng.u8();
+			uint   u  , u0  = rng.u32()                   , u1  = rng.u32();
+			int    i  , i0  = rng.i32()                   , i1  = rng.i32();
+			long   l  , l0  = rng.i32()                   , l1  = rng.i32();
+			float  f  , f0  = rng.flt()                   , f1  = rng.flt();
+			double d  , d0  = rng.dbl()                   , d1  = rng.dbl();
+			v2     V2 , V20 = Random2(rng, v2Zero, 10.0f) , V21 = Random2(rng, v2Zero, 10.0f);
+			v3     V3 , V30 = Random3(rng, v3Zero, 10.0f) , V31 = Random3(rng, v3Zero, 10.0f);
+			v4     V4 , V40 = Random4(rng, v4Zero, 10.0f) , V41 = Random4(rng, v4Zero, 10.0f);
+
+			PR_CHECK(Min(b0 ,b1) , b0 < b1 ? b0 : b1);
+			PR_CHECK(Min(u0 ,u1) , u0 < u1 ? u0 : u1);
+			PR_CHECK(Min(i0 ,i1) , i0 < i1 ? i0 : i1);
+			PR_CHECK(Min(l0 ,l1) , l0 < l1 ? l0 : l1);
+			PR_CHECK(Min(f0 ,f1) , f0 < f1 ? f0 : f1);
+			PR_CHECK(Min(d0 ,d1) , d0 < d1 ? d0 : d1);
+
+			V2 = Min(V20,V21);
+			V3 = Min(V30,V31);
+			V4 = Min(V40,V41);
+			for (int i = 0; i != 2; ++i) PR_CHECK(V2[i] <= V20[i] && V2[i] <= V21[i], true);
+			for (int i = 0; i != 3; ++i) PR_CHECK(V3[i] <= V30[i] && V3[i] <= V31[i], true);
+			for (int i = 0; i != 4; ++i) PR_CHECK(V4[i] <= V40[i] && V4[i] <= V41[i], true);
+
+			PR_CHECK(Max(b0 , b1) , b0 < b1 ? b1 : b0);
+			PR_CHECK(Max(u0 , u1) , u0 < u1 ? u1 : u0);
+			PR_CHECK(Max(i0 , i1) , i0 < i1 ? i1 : i0);
+			PR_CHECK(Max(l0 , l1) , l0 < l1 ? l1 : l0);
+			PR_CHECK(Max(f0 , f1) , f0 < f1 ? f1 : f0);
+			PR_CHECK(Max(d0 , d1) , d0 < d1 ? d1 : d0);
+
+			V2 = Max(V20,V21);
+			V3 = Max(V30,V31);
+			V4 = Max(V40,V41);
+			for (int i = 0; i != 2; ++i) PR_CHECK(V2[i] >= V20[i] && V2[i] >= V21[i], true);
+			for (int i = 0; i != 3; ++i) PR_CHECK(V3[i] >= V30[i] && V3[i] >= V31[i], true);
+			for (int i = 0; i != 4; ++i) PR_CHECK(V4[i] >= V40[i] && V4[i] >= V41[i], true);
+
+			b  = Clamp(rng.u8()                    ,Min(b0 , b1) ,Max(b0 , b1));
+			u  = Clamp(uint(rng.u32())             ,Min(u0 , u1) ,Max(u0 , u1));
+			i  = Clamp(int(rng.i32())              ,Min(i0 , i1) ,Max(i0 , i1));
+			l  = Clamp(rng.i32()                   ,Min(l0 , l1) ,Max(l0 , l1));
+			f  = Clamp(rng.flt()                   ,Min(f0 , f1) ,Max(f0 , f1));
+			d  = Clamp(rng.dbl()                   ,Min(d0 , d1) ,Max(d0 , d1));
+			V2 = Clamp(Random2(rng, v2Zero, 10.0f) ,Min(V20,V21) ,Max(V20,V21));
+			V3 = Clamp(Random3(rng, v3Zero, 10.0f) ,Min(V30,V31) ,Max(V30,V31));
+			V4 = Clamp(Random4(rng, v4Zero, 10.0f) ,Min(V40,V41) ,Max(V40,V41));
+
+			PR_CHECK(Min(b0 , b1) <= b && b <= Max(b0 , b1), true);
+			PR_CHECK(Min(u0 , u1) <= u && u <= Max(u0 , u1), true);
+			PR_CHECK(Min(i0 , i1) <= i && i <= Max(i0 , i1), true);
+			PR_CHECK(Min(l0 , l1) <= l && l <= Max(l0 , l1), true);
+			PR_CHECK(Min(f0 , f1) <= f && f <= Max(f0 , f1), true);
+			PR_CHECK(Min(d0 , d1) <= d && d <= Max(d0 , d1), true);
+			for (int i = 0; i != 2; ++i) PR_CHECK(Min(V20[i],V21[i]) <= V2[i] && V2[i] <= Max(V20[i],V21[i]), true);
+			for (int i = 0; i != 3; ++i) PR_CHECK(Min(V30[i],V31[i]) <= V3[i] && V3[i] <= Max(V30[i],V31[i]), true);
+			for (int i = 0; i != 4; ++i) PR_CHECK(Min(V40[i],V41[i]) <= V4[i] && V4[i] <= Max(V40[i],V41[i]), true);
+		}
+	}
+}
+#endif
 
 #endif

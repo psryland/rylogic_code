@@ -3,3 +3,6 @@
 //  Copyright © Rylogic Ltd 2012
 //*****************************************************************************************
 #include "sol/main/stdafx.h"
+#if PR_LOGGING
+#pragma message ("PR_LOGGING defined")
+#endif

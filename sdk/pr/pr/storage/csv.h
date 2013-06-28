@@ -36,17 +36,17 @@ namespace pr
 			Loc() :row(0) ,col(0) {}
 			void inc(int ch) { if (ch == ',') { ++col; } else if (ch == '\n') { ++row; col = 0; } }
 		};
-		
+
 		// Range checked lookup
 		inline Str const& Item(Row const& row, std::size_t col)                  { static Str null_str; return (col < row.size()) ? row[col] : null_str; }
 		inline Row const& Item(Csv const& csv, std::size_t row)                  { static Row null_row; return (row < csv.size()) ? csv[row] : null_row; }
 		inline Str const& Item(Csv const& csv, std::size_t row, std::size_t col) { return Item(Item(csv, row), col); }
-		
+
 		// Range checked lookup that throws when out of range
 		inline Str const& ItemT(Row const& row, std::size_t col)                  { if (col >= row.size()) throw std::exception("column index out of range"); return row[col]; }
 		inline Row const& ItemT(Csv const& csv, std::size_t row)                  { if (row >= csv.size()) throw std::exception("row index out of range"   ); return csv[row]; }
 		inline Str const& ItemT(Csv const& csv, std::size_t row, std::size_t col) { return ItemT(ItemT(csv, row), col); }
-		
+
 		// Set an element in the csv
 		inline void SetItem(Csv& csv, std::size_t row, std::size_t col, Str const& str)
 		{
@@ -54,7 +54,7 @@ namespace pr
 			if (csv[row].size() <= col) csv[row].resize(col+1);
 			csv[row][col] = str;
 		}
-		
+
 		// This allows a 'Loc' to be used to remove ',' and '\n' characters from a stream
 		// while also maintaining the csv row,col position
 		template <typename Stream> inline Stream& operator >> (Stream& s, Loc& loc)
@@ -63,7 +63,7 @@ namespace pr
 			loc.inc(s.get());
 			return s;
 		}
-		
+
 		// Increment a stream to the next csv element
 		template <typename Stream> inline bool NextItem(Stream& file, Loc* loc = 0)
 		{
@@ -72,7 +72,7 @@ namespace pr
 			if (loc) loc->inc(ch);
 			return !file.bad();
 		}
-		
+
 		// Increment a stream to the next csv row
 		template <typename Stream> inline bool NextRow(Stream& file, Loc* loc = 0)
 		{
@@ -81,7 +81,7 @@ namespace pr
 			if (loc) loc->inc(ch);
 			return !file.bad();
 		}
-		
+
 		// Read one element from a stream
 		template <typename Stream> inline bool Read(Stream& file, Str& str, Loc* loc = 0)
 		{
@@ -98,7 +98,7 @@ namespace pr
 			str[i] = 0;
 			return !file.bad();
 		}
-		
+
 		// Read one row from the stream
 		template <typename Stream> inline bool Read(Stream& file, Row& row, Loc* loc = 0)
 		{
@@ -110,7 +110,7 @@ namespace pr
 			}
 			return !file.bad();
 		}
-		
+
 		// Read all csv data from a stream
 		template <typename Stream> inline bool Read(Stream& file, Csv& csv, Loc* loc = 0)
 		{
@@ -129,7 +129,7 @@ namespace pr
 			if (!row.empty()) csv.push_back(row);
 			return !file.bad();
 		}
-		
+
 		// Populate a Csv object from a file
 		template <typename tchar> inline bool Load(tchar const* csv_filename, Csv& csv, Loc* loc = 0)
 		{
@@ -137,21 +137,21 @@ namespace pr
 			if (!in.is_open()) return false;
 			return Read(in, csv, loc);
 		}
-		
+
 		// Write one row to a stream
 		template <typename Stream> inline void Write(Stream& file, Row& row)
 		{
 			for (Row::const_iterator i = row.begin(), iend = row.end(); i != iend; ++i)
 				file << *i << (iend-i > 1 ? ',' : '\n');
 		}
-		
+
 		// Write all csv data to a stream
 		template <typename Stream> inline void Write(Stream& file, Csv& csv)
 		{
 			for (Csv::const_iterator i = csv.begin(), iend = csv.end(); i != iend; ++i)
 				Write(file, *i);
 		}
-		
+
 		// Write a Csv object to a file
 		template <typename tchar> inline bool Save(tchar const* csv_filename, Csv const& csv)
 		{
@@ -165,7 +165,7 @@ namespace pr
 			}
 			return true;
 		}
-		
+
 		// Predicate for sorting on a column
 		template <typename ElemCompare = std::less<std::string> >
 		struct SortColumn
@@ -179,7 +179,7 @@ namespace pr
 				return m_compare(lhs[m_column], rhs[m_column]);
 			}
 		};
-		
+
 		// Predicate for making rows unique based on a particular column
 		template <typename ElemCompare = std::equal_to<std::string> >
 		struct UniqueColumn
@@ -195,10 +195,75 @@ namespace pr
 		};
 	}
 }
-	
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/filesys/filesys.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_storage_csv)
+		{
+			{//SaveCsv
+				pr::csv::Csv csv;
+				pr::csv::SetItem(csv, 1, 1, "Hello");
+				pr::csv::SetItem(csv, 1, 2, "World");
+				PR_CHECK(pr::csv::Save("test_csv.csv", csv), true);
+				PR_CHECK(pr::csv::Item(csv, 1,1), "Hello");
+				PR_CHECK(pr::csv::Item(csv, 1,2), "World");
+			}
+			{//LoadCsv
+				pr::csv::Csv csv;
+				PR_CHECK(pr::csv::Load("test_csv.csv", csv), true);
+				PR_CHECK(csv.size(), 2U);
+				PR_CHECK(csv[1].size(), 3U);
+				PR_CHECK(csv[1][1], "Hello");
+				PR_CHECK(csv[1][2], "World");
+			}
+			{//SaveCsvStream
+				std::ofstream csv("test_csv.csv");
+				PR_CHECK(csv.is_open(), true);
+				csv << "Hello,World\n";
+				csv << "a,,b,c\n";
+				csv << '\n';
+				csv << 1 << ',' << 2.0f << ',' << 3.0 << '\n';
+			}
+			{//LoadCsvStream
+				std::ifstream csv("test_csv.csv");
+				PR_CHECK(csv.is_open(), true);
+				pr::csv::Loc loc;
+
+				std::string s0; char s1[10];
+				PR_CHECK(pr::csv::Read(csv, s0, &loc), true);
+				PR_CHECK(pr::csv::Read(csv, s1, &loc), true);
+				PR_CHECK(s0, "Hello");
+				PR_CHECK(std::string(s1), "World");
+
+				char ch;
+				csv >> ch >> loc >> loc; PR_CHECK(ch, 'a');
+				csv >> ch >> loc; PR_CHECK(ch, 'b');
+				csv >> ch >> loc; PR_CHECK(ch, 'c');
+
+				pr::csv::NextItem(csv, &loc);
+				int i; float f; double d;
+				csv >> i >> loc >> f >> loc >> d >> loc;
+				PR_CHECK(i, 1);
+				PR_CHECK(f, 2.0f);
+				PR_CHECK(d, 3.0);
+				PR_CHECK(loc.row == 4 && loc.col == 0, true);
+			}
+			{//CsvCleanUp
+				PR_CHECK(pr::filesys::EraseFile<std::string>("test_csv.csv"), true);
+			}
+		}
+	}
+}
+#endif
+
 #ifdef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT_STR
 #endif
-	
+
 #endif

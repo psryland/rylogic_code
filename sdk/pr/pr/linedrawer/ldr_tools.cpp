@@ -9,35 +9,36 @@
 #include "pr/common/hash.h"
 #include "pr/gui/misc.h"
 #include "pr/gui/font_helper.h"
-	
+#include "pr/renderer11/renderer.h"
+
 // Measure *****************************************************************
-	
+
 // Special context id for private measure objects
 pr::ldr::ContextId pr::ldr::LdrMeasurePrivateContextId = pr::hash::HashC("Ldr Measure private context id");
-	
+
 pr::ldr::MeasureDlg::MeasureDlg(ReadPointCB read_point_cb ,void* ctx ,pr::Renderer& rdr ,HWND parent)
-:m_read_point_cb(read_point_cb)
-,m_read_point_ctx(ctx)
-,m_rdr(rdr)
-,m_parent(parent)
-,m_btn_point0()
-,m_btn_point1()
-,m_edit_details()
-,m_edit_details_font(pr::gui::CreateFontSimple(pr::gui::font::CourierNew, 16, 6))
-,m_point0(pr::v4Origin)
-,m_point1(pr::v4Origin)
-,m_measurement_gfx(0)
+	:m_read_point_cb(read_point_cb)
+	,m_read_point_ctx(ctx)
+	,m_rdr(rdr)
+	,m_parent(parent)
+	,m_btn_point0()
+	,m_btn_point1()
+	,m_edit_details()
+	,m_edit_details_font(pr::gui::CreateFontSimple(pr::gui::font::CourierNew, 16, 6))
+	,m_point0(pr::v4Origin)
+	,m_point1(pr::v4Origin)
+	,m_measurement_gfx(0)
 {
 	Create(parent);
 }
-	
+
 pr::ldr::MeasureDlg::~MeasureDlg()
 {
 	::DeleteObject(m_edit_details_font);
 	if (IsWindow())
 		DestroyWindow();
 }
-	
+
 // Handler methods ************************
 // First display of the ldr measure window
 LRESULT pr::ldr::MeasureDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
@@ -47,14 +48,14 @@ LRESULT pr::ldr::MeasureDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	// Initalise controls.
 	m_btn_point0  .Attach(GetDlgItem(IDC_POINT0));
 	m_btn_point1  .Attach(GetDlgItem(IDC_POINT1));
-	m_edit_details.Attach(GetDlgItem(IDC_DETAILS)); 
+	m_edit_details.Attach(GetDlgItem(IDC_DETAILS));
 	//m_edit_details.SetFont(m_edit_details_font);
 
 	DlgResize_Init();
 	UpdateMeasurementInfo();
 	return S_OK;
 }
-	
+
 // Clean up the tool window
 LRESULT pr::ldr::MeasureDlg::OnDestDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
@@ -63,14 +64,14 @@ LRESULT pr::ldr::MeasureDlg::OnDestDialog(UINT, WPARAM, LPARAM, BOOL&)
 	m_btn_point0.Detach();
 	return S_OK;
 }
-	
+
 // Hide the measure window
 LRESULT pr::ldr::MeasureDlg::OnClose(WORD, WORD, HWND, BOOL&)
 {
 	Show(false);
 	return S_OK;
 }
-	
+
 // Called when a measurement point is set
 LRESULT pr::ldr::MeasureDlg::OnSetPoint(WORD, WORD wID, HWND, BOOL&)
 {
@@ -79,27 +80,27 @@ LRESULT pr::ldr::MeasureDlg::OnSetPoint(WORD, WORD wID, HWND, BOOL&)
 	UpdateMeasurementInfo();
 	return S_OK;
 }
-	
+
 // Set the callback function for reading the world space point
 void pr::ldr::MeasureDlg::SetReadPointCB(ReadPointCB read_point_cb, void* ctx)
 {
 	m_read_point_cb = read_point_cb;
 	m_read_point_ctx = ctx;
 }
-	
+
 // Set the context for the Read Point callback
 void pr::ldr::MeasureDlg::SetReadPointCtx(void* ctx)
 {
 	m_read_point_ctx = ctx;
 }
-	
+
 // Display the window
 void pr::ldr::MeasureDlg::Show(bool show)
 {
 	bool visible = IsWindowVisible() != 0;
 	if (show != visible)
 		ShowWindow(show ? SW_SHOW : SW_HIDE);
-	
+
 	if (show)
 	{
 		if (m_parent == 0 || visible)
@@ -122,7 +123,7 @@ void pr::ldr::MeasureDlg::Show(bool show)
 		pr::events::Send(pr::ldr::Evt_LdrMeasureCloseWindow());
 	}
 }
-	
+
 // Update the text in the measurement details edit control
 void pr::ldr::MeasureDlg::UpdateMeasurementInfo()
 {
@@ -178,37 +179,37 @@ void pr::ldr::MeasureDlg::UpdateMeasurementInfo()
 		));
 	pr::events::Send(pr::ldr::Evt_LdrMeasureUpdate());
 }
-	
+
 // Angle *****************************************************************
-	
+
 // Special context id for private measure objects
 pr::ldr::ContextId pr::ldr::LdrAngleDlgPrivateContextId = pr::hash::HashC("Ldr Angle Dlg private context id");
-	
+
 pr::ldr::AngleDlg::AngleDlg(ReadPointCB read_point_cb ,void* ctx ,pr::Renderer& rdr ,HWND parent)
-:m_read_point_cb(read_point_cb)
-,m_read_point_ctx(ctx)
-,m_rdr(rdr)
-,m_parent(parent)
-,m_btn_origin()
-,m_btn_point0()
-,m_btn_point1()
-,m_edit_details()
-,m_edit_details_font(pr::gui::CreateFontSimple(pr::gui::font::CourierNew, 16, 6))
-,m_origin(pr::v4Origin)
-,m_point0(pr::v4Origin)
-,m_point1(pr::v4Origin)
-,m_angle_gfx(0)
+	:m_read_point_cb(read_point_cb)
+	,m_read_point_ctx(ctx)
+	,m_rdr(rdr)
+	,m_parent(parent)
+	,m_btn_origin()
+	,m_btn_point0()
+	,m_btn_point1()
+	,m_edit_details()
+	,m_edit_details_font(pr::gui::CreateFontSimple(pr::gui::font::CourierNew, 16, 6))
+	,m_origin(pr::v4Origin)
+	,m_point0(pr::v4Origin)
+	,m_point1(pr::v4Origin)
+	,m_angle_gfx(0)
 {
 	Create(parent);
 }
-	
+
 pr::ldr::AngleDlg::~AngleDlg()
 {
 	::DeleteObject(m_edit_details_font);
 	if (IsWindow())
 		DestroyWindow();
 }
-	
+
 // Handler methods ************************
 // First display of the tool window
 LRESULT pr::ldr::AngleDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
@@ -219,14 +220,14 @@ LRESULT pr::ldr::AngleDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	m_btn_origin  .Attach(GetDlgItem(IDC_ORIGIN));
 	m_btn_point0  .Attach(GetDlgItem(IDC_POINT0));
 	m_btn_point1  .Attach(GetDlgItem(IDC_POINT1));
-	m_edit_details.Attach(GetDlgItem(IDC_DETAILS)); 
+	m_edit_details.Attach(GetDlgItem(IDC_DETAILS));
 	//m_edit_details.SetFont(m_edit_details_font);
 
 	DlgResize_Init();
 	UpdateAngleInfo();
 	return S_OK;
 }
-	
+
 // Clean up the tool window
 LRESULT pr::ldr::AngleDlg::OnDestDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
@@ -236,14 +237,14 @@ LRESULT pr::ldr::AngleDlg::OnDestDialog(UINT, WPARAM, LPARAM, BOOL&)
 	m_btn_point0.Detach();
 	return S_OK;
 }
-	
+
 // Hide the measure window
 LRESULT pr::ldr::AngleDlg::OnClose(WORD, WORD, HWND, BOOL&)
 {
 	Show(false);
 	return S_OK;
 }
-	
+
 // Called when a point is set
 LRESULT pr::ldr::AngleDlg::OnSetPoint(WORD, WORD wID, HWND, BOOL&)
 {
@@ -256,28 +257,27 @@ LRESULT pr::ldr::AngleDlg::OnSetPoint(WORD, WORD wID, HWND, BOOL&)
 	UpdateAngleInfo();
 	return S_OK;
 }
-	
-	
+
 // Set the callback function for reading the world space point
 void pr::ldr::AngleDlg::SetReadPointCB(ReadPointCB read_point_cb, void* ctx)
 {
 	m_read_point_cb = read_point_cb;
 	m_read_point_ctx = ctx;
 }
-	
+
 // Set the context for the Read Point callback
 void pr::ldr::AngleDlg::SetReadPointCtx(void* ctx)
 {
 	m_read_point_ctx = ctx;
 }
-	
+
 // Display the window
 void pr::ldr::AngleDlg::Show(bool show)
 {
 	bool visible = IsWindowVisible() != 0;
 	if (show != visible)
 		ShowWindow(show ? SW_SHOW : SW_HIDE);
-	
+
 	if (show)
 	{
 		if (m_parent == 0 || visible)
@@ -300,7 +300,7 @@ void pr::ldr::AngleDlg::Show(bool show)
 		pr::events::Send(pr::ldr::Evt_LdrAngleDlgCloseWindow());
 	}
 }
-	
+
 // Update the text in the measurement details edit control
 void pr::ldr::AngleDlg::UpdateAngleInfo()
 {
@@ -320,7 +320,7 @@ void pr::ldr::AngleDlg::UpdateAngleInfo()
 		pr::ldr::AddString(m_rdr, str.c_str(), cont, LdrAngleDlgPrivateContextId);
 		if (!cont.empty()) m_angle_gfx = cont.back();
 	}
-	
+
 	pr::v4 e0   = m_point0 - m_origin;
 	pr::v4 e1   = m_point1 - m_origin;
 	pr::v4 e2   = m_point1 - m_point0;
@@ -328,7 +328,7 @@ void pr::ldr::AngleDlg::UpdateAngleInfo()
 	float edge1 = pr::Length3(e1);
 	float edge2 = pr::Length3(e2);
 	float ang   = (edge0 < pr::maths::tiny || edge1 < pr::maths::tiny) ? 0.0f :
-					pr::RadiansToDegrees(pr::ACos(pr::Clamp(pr::Dot3(e0,e1) / (edge0 * edge1), -1.0f, 1.0f)));
+		pr::RadiansToDegrees(pr::ACos(pr::Clamp(pr::Dot3(e0,e1) / (edge0 * edge1), -1.0f, 1.0f)));
 
 	// Update the text description
 	m_edit_details.SetWindowTextA(pr::FmtS(
@@ -343,4 +343,3 @@ void pr::ldr::AngleDlg::UpdateAngleInfo()
 		));
 	pr::events::Send(pr::ldr::Evt_LdrAngleDlgUpdate());
 }
-

@@ -7,27 +7,32 @@
 #ifndef PR_MATHS_FORWARD_H
 #define PR_MATHS_FORWARD_H
 
-#include "pr/maths/macros.h"
 #include "pr/maths/mathsassert.h"
-
 #include <intrin.h>
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
 #include <memory.h>
 
-#if PR_MATHS_USE_D3DX
-#  include <d3d9.h> // Required libs: d3d9.lib d3dx9.lib
-#  include <d3dx9.h>
+#define PR_MATHS_USE_D3DX ERROR_FIX_PLEASE
+#define PR_MATHS_USE_OPEN_MP ERROR_FIX_PLEASE
+#define PR_OMP_PARALLEL ERROR_FIX_PLEASE
+#define PR_OMP_PARALLEL_FOR ERROR_FIX_PLEASE
+
+#ifndef PR_MATHS_USE_DIRECTMATH
+#  if defined(DIRECTX_MATH_VERSION)
+#    define PR_MATHS_USE_DIRECTMATH 1
+#  else
+#    define PR_MATHS_USE_DIRECTMATH 0
+#  endif
 #endif
 
-#if PR_MATHS_USE_OPEN_MP
-#  include <omp.h>
-#  define PR_OMP_PARALLEL     omp parallel
-#  define PR_OMP_PARALLEL_FOR omp parallel for
-#else
-#  define PR_OMP_PARALLEL
-#  define PR_OMP_PARALLEL_FOR
+#ifndef PR_MATHS_USE_INTRINSICS
+#define PR_MATHS_USE_INTRINSICS 1
+#endif
+
+#if PR_MATHS_USE_DIRECTMATH
+#  include <directxmath.h>
 #endif
 
 #if PR_MATHS_USE_INTRINSICS
@@ -61,6 +66,7 @@ namespace pr
 	struct Line3;
 	struct FRect;
 	struct IRect;
+	struct ISize;
 	struct iv2;
 	struct iv4;
 	struct Frustum;

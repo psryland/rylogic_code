@@ -6,17 +6,13 @@
 #ifndef LDR_LINEDRAWER_GUI_H
 #define LDR_LINEDRAWER_GUI_H
 
-#include "pr/common/command_line.h"
-#include "pr/common/events.h"
-#include "pr/gui/recent_files.h"
-#include "pr/gui/menu_helper.h"
-#include "pr/gui/progress_dlg.h"
-#include "pr/linedrawer/ldr_objects_dlg.h"
+#include "linedrawer/types/forward.h"
 #include "linedrawer/resources/linedrawer.resources.h"
 #include "linedrawer/main/linedrawer.h"
+#include "linedrawer/main/user_settings.h"
 #include "linedrawer/types/ldrevent.h"
 #include "linedrawer/utility/misc.h"
-#include "pr/gui/messagemap_dbg.h"
+//#include "pr/gui/messagemap_dbg.h"
 
 class LineDrawerGUI
 	:public CDialogImpl<LineDrawerGUI>
@@ -37,6 +33,7 @@ class LineDrawerGUI
 	,public pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	,public pr::events::IRecv<pr::ldr::Evt_AddBegin>
 	,public pr::events::IRecv<pr::ldr::Evt_AddEnd>
+	,public pr::events::IRecv<pr::settings::Evt<UserSettings> >
 	,public pr::gui::RecentFiles::IHandler
 {
 	enum
@@ -228,7 +225,8 @@ public:
 	void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&);
 	void OnEvent(pr::ldr::Evt_AddBegin const&);
 	void OnEvent(pr::ldr::Evt_AddEnd const&);
-	
+	void OnEvent(pr::settings::Evt<UserSettings> const&);
+
 	// Recent files callbacks
 	void MenuList_OnClick(pr::gui::MenuList* sender, pr::gui::MenuList::Item const& item);
 	void MenuList_ListChanged(pr::gui::MenuList* sender);
@@ -246,4 +244,4 @@ private:
 	void ShowAbout() const;
 };
 
-#endif//LDR_LINEDRAWER_GUI_H
+#endif

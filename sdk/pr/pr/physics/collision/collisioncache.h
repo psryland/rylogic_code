@@ -31,7 +31,7 @@ namespace pr
 
 		struct CollisionCache
 		{
-			enum { MaxEntries = pr::mpl::prime_gtreq<1000>::value };
+			enum { MaxEntries = pr::meta::prime_gtreq<1000>::value };
 			collision::CacheData	m_data[MaxEntries];
 			std::size_t				m_counter;				// A rolling counter used to identify cache slots that haven't been used recently
 

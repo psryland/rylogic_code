@@ -13,131 +13,247 @@ namespace pr
 {
 	namespace rdr
 	{
-		namespace model
+		template <typename VType = VertPCNT, typename IType = pr::uint16> struct ModelGenerator
 		{
-			// Lines
+			// A container for the model data
+			struct Cont
+			{
+				typedef std::vector<VType> VCont;
+				typedef std::vector<IType> ICont;
+				typedef typename VCont::iterator VIter;
+				typedef typename ICont::iterator IIter;
+				VCont m_vcont;
+				ICont m_icont;
+
+				enum { GeomMask = VType::GeomMask };
+
+				Cont(std::size_t vcount, std::size_t icount)
+					:m_vcont(vcount)
+					,m_icont(icount)
+				{}
+			};
+
+			// Helper function for creating a model
+			template <typename GenFunc>
+			static ModelPtr Create(Renderer& rdr, std::size_t vcount, std::size_t icount, EPrim topo, DrawMethod const* mat, GenFunc& GenerateFunc)
+			{
+				// Generate the model in local buffers
+				Cont cont(vcount, icount);
+				pr::geometry::Props props = GenerateFunc(begin(cont.m_vcont), begin(cont.m_icont));
+
+				// Create the model
+				VBufferDesc vb(cont.m_vcont.size(), &cont.m_vcont[0]);
+				IBufferDesc ib(cont.m_icont.size(), &cont.m_icont[0]);
+				ModelPtr model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib));
+				model->m_bbox = props.m_bbox;
+
+				// If a material is given, use it to create a render nugget for the whole model
+				// Otherwise, create a default material
+				if (mat)
+				{
+					model->CreateNugget(*mat, topo);
+				}
+				else
+				{
+					// Create a material to use and a render nugget for the whole model
+					DrawMethod lmat(rdr.m_shdr_mgr.FindShaderFor(Cont::GeomMask));
+					if (Cont::GeomMask & EGeom::Tex0)
+						lmat.m_tex_diffuse = rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::White);
+					if (props.m_has_alpha)
+						pr::rdr::SetAlphaBlending(lmat, true);
+					
+					model->CreateNugget(lmat, topo);
+				}
+				return model;
+			}
+
+			// Lines ******************************************************************************
 			// Generate lines from an array of start point, end point pairs.
 			// 'num_lines' is the number of start/end point pairs in the following arrays
 			// 'points' is the input array of start and end points for lines.
 			// 'num_colours' should be either, 0, 1, or num_lines * 2
 			// 'colours' is an input array of colour values or a pointer to a single colour.
 			// 'mat' is an optional material to use for the lines
-			typedef VertPC LineVert;
-			ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0);
-			ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,Colour32 colour ,DrawMethod const* mat = 0);
-			ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0);
-			ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,Colour32 colour ,DrawMethod const* mat = 0);
+			static ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Lines(num_lines, points, num_colours, colours, vb, ib); };
 
-			// Quad
-			typedef VertPCNT QuadVert;
-			ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions, Colour32 colour, v2 const& tex_origin, v2 const& tex_dim, DrawMethod const* mat);
-			ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, DrawMethod const* mat = 0);
-			ModelPtr Quad(Renderer& rdr, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, DrawMethod const* mat = 0);
-			ModelPtr Quad(Renderer& rdr, v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, v2 const& tex_origin = v2Zero, v2 const& tex_dim = v2One, DrawMethod const* mat = 0);
-	
-			//void        QuadSize(Range& vrange, Range& irange, std::size_t num_quads);
-			//Settings    QuadModelSettings(std::size_t num_quads);
-			//ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const* point ,std::size_t num_quads ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Quad    (Renderer& rdr                          ,v4 const* point ,std::size_t num_quads ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Quad    (MLock& mlock  ,MaterialManager& matmgr ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    Quad    (Renderer& rdr                          ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours = 0 ,std::size_t num_colours = 0 ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+				std::size_t vcount, icount;
+				pr::geometry::LineSize(num_lines, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
+			}
+			static ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::LinesD(num_lines, points, directions, num_colours, colours, vb, ib); };
 
-			// Boxes
-			typedef VertPCNT BoxVert;
-			ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
-			ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, m4x4 const& o2w, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
-			ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w, Colour32 colour, DrawMethod const* mat = 0);
-			ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& dim, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0);
+				std::size_t vrange, irange;
+				pr::geometry::LineSize(num_lines, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
+			}
+			static ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,Colour32 colour ,DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::LinesD(num_lines, points, directions, colour, vb, ib); };
 
-			// Sphere
-			typedef VertPCNT SphereVert;
-			ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t divisions, Colour32 colour = Colour32White, DrawMethod const* mat = 0);
+				std::size_t vcount, icount;
+				pr::geometry::LineSize(num_lines, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
+			}
 
-			//// Cone
-			//void        ConeSize(Range& vrange, Range& irange, std::size_t layers, std::size_t wedges);
-			//Settings    ConeModelSettings(std::size_t layers, std::size_t wedges);
-			//ModelPtr    Cone(MLock& mlock  ,MaterialManager& matmgr         ,float height ,float radius0 ,float radius1 ,float xscale ,float yscale ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-	 	//	ModelPtr    Cone(Renderer& rdr                                  ,float height ,float radius0 ,float radius1 ,float xscale ,float yscale ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-			//ModelPtr    CylinderHRxy(MLock& mlock  ,MaterialManager& matmgr ,float height ,float xradius ,float yradius ,m4x4 const& o2w ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-	 	//	ModelPtr    CylinderHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w ,std::size_t layers = 1 ,std::size_t wedges = 20 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			// Quad *******************************************************************************
+			static ModelPtr Quad(Renderer& rdr, size_t num_quads, v4 const* verts, size_t num_colours = 0, Colour32 const* colours = 0, m4x4 const& t2q = m4x4Identity, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(num_quads, verts, num_colours, colours, t2q, vb, ib); };
 
-			//// Capsule
+				std::size_t vcount, icount;
+				pr::geometry::QuadSize(num_quads, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, t2q, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::QuadSize(divisions, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Quad(Renderer& rdr, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(width, height, divisions, colour, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::QuadSize(divisions, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Quad(Renderer& rdr, v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, v2 const& tex_origin = v2Zero, v2 const& tex_dim = v2One, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(centre, forward, top, width, height, divisions, colour, tex_origin, tex_dim, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::QuadSize(divisions, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+
+			// Boxes ******************************************************************************
+			static ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Boxes(num_boxes, points, num_colours, colours, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::BoxSize(num_boxes, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, m4x4 const& o2w, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Boxes(num_boxes, points, o2w, num_colours, colours, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::BoxSize(num_boxes, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Box(rad, o2w, colour, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::BoxSize(1, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Box(Renderer& rdr, float rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
+			{
+				return Box(rdr, v4::make(rad), o2w, colour, mat);
+			}
+			static ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& rad, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::BoxSize(num_boxes, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+
+			// Sphere *****************************************************************************
+			static ModelPtr Geosphere(Renderer& rdr, v4 const& radius, std::size_t divisions = 3, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Geosphere(radius, divisions, colour, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::GeosphereSize(divisions, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Geosphere(Renderer& rdr, float radius, std::size_t divisions = 3, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
+			{
+				return Geosphere(rdr, v4::make(radius, 0.0f), divisions, colour, mat);
+			}
+			static ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Sphere(radius, wedges, layers, colour, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::SphereSize(wedges, layers, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+			static ModelPtr Sphere(Renderer& rdr, float radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, DrawMethod const* mat = 0)
+			{
+				return Sphere(rdr, v4::make(radius, 0.0f), wedges, layers, colour, mat);
+			}
+
+			// Cylinder ***************************************************************************
+			static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, m4x4 const& o2w = m4x4Identity, float xscale = 1.0f, float yscale = 1.0f, std::size_t wedges = 20, std::size_t layers = 1, std::size_t num_colours = 0, Colour32 const* colours = 0, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Cylinder(radius0, radius1, height, o2w, xscale, yscale, wedges, layers, num_colours, colours, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::CylinderSize(wedges, layers, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
+			}
+
+			// Capsule ****************************************************************************
 			//void        CapsuleSize(Range& vrange, Range& irange, std::size_t divisions);
 			//Settings    CapsuleModelSettings(std::size_t divisions);
 			//ModelPtr    CapsuleHRxy(MLock& mlock  ,MaterialManager& matmgr ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
-	 	//	ModelPtr    CapsuleHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
+			//ModelPtr    CapsuleHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
-			//// Mesh
-			//template <typename Vert, typename Indx> MdlSettings MeshModelSettings(size_t vert_count, size_t indx_count)
+			// Mesh *******************************************************************************
+			static ModelPtr Mesh(Renderer& rdr, EPrim prim_type, std::size_t num_verts, std::size_t num_indices, v4 const* verts, pr::uint16 const* indices, std::size_t num_colours = 0, Colour32 const* colours = 0, v4 const* normals = 0, v2 const* tex_coords = 0, DrawMethod const* mat = 0)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Mesh(num_verts, num_indices, verts, indices, num_colours, colours, normals, tex_coords, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::MeshSize(num_verts, num_indices, vcount, icount);
+				return Create(rdr, vcount, icount, prim_type, mat, gen);
+			}
+
+			//// Utility ****************************************************************************
+			//// Generate normals for this model
+			//// Assumes the locked region of the model contains a triangle list
+			//// Note: you're probably better off generating the normals before creating the model.
+			//// That way you don't need to create a buffer that has CPU read/write access
+			//template <typename TVert> void GenerateNormals(MLock& mlock, Range const* vrange = 0, Range const* irange = 0)
 			//{
-			//	VBufferDesc vb(vert_count, (Vert*)0);
-			//	IBufferDesc ib(indx_count, (Indx*)0);
-			//	return MdlSettings(vb,ib);
+			//	if (!vrange) vrange = &mlock.m_vrange;
+			//	if (!irange) irange = &mlock.m_irange;
+			//	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_vlock.m_range, *vrange), "The provided vertex range is not within the locked range");
+			//	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_ilock.m_range, *irange), "The provided index range is not within the locked range");
+			//	PR_ASSERT(PR_DBG_RDR, (irange->size() % 3) == 0, "This function assumes the index range refers to a triangle list");
+
+			//	TVert* verts = mlock.m_vlock.ptr<TVert>()
+			//	pr::geometry::GenerateNormals();
 			//}
-			//template <typename Vert, typename Indx> ModelPtr Mesh(Renderer& rdr                          ,D3D11_PRIMITIVE_TOPOLOGY topo ,pr::GeomType geom_type ,std::size_t num_indices ,std::size_t num_verts ,rdr::Index const* indices ,v4 const* verts ,v4 const* normals ,Colour32 const* colours ,v2 const* tex_coords ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0)
+			//template <typename TVert> void GenerateNormals(ModelPtr& model, Range const* vrange, Range const* irange)
 			//{
-			//	// Handle optional parameters
-			//	Range local_vrange, local_irange;
-			//	if (!vrange) vrange = &local_vrange;
-			//	if (!irange) irange = &local_irange;
-			//	vrange->set(0, vert_count);
-			//	irange->set(0, indx_count);
-			//	
-			//	// Shift the ranges into the editable range in the model
-			//	vrange->shift((int)mlock.m_vrange.m_begin);
-			//	irange->shift((int)mlock.m_irange.m_begin);
-			//	PR_ASSERT(PR_DBG_RDR, mlock.m_vrange.contains(*vrange), "Insufficient space in model vertex buffer");
-			//	PR_ASSERT(PR_DBG_RDR, mlock.m_irange.contains(*irange), "Insufficient space in model index buffer");
-
-			//	pr::Array<Vert> v(vert_count);
-			//	
-			//	mlock.m_model = rdr.
+			//	MLock mlock(model);
+			//	GenerateNormals<TVert>(mlock, vrange, irange);
 			//}
-			//template <typename Vert, typename Indx> ModelPtr Mesh(MLock& mlock  ,MaterialManager& matmgr ,D3D11_PRIMITIVE_TOPOLOGY topo ,pr::GeomType geom_type ,std::size_t indx_count ,std::size_t vert_count ,rdr::Index const* indices ,v4 const* verts ,v4 const* normals ,Colour32 const* colours ,v2 const* tex_coords ,m4x4 const& o2w = pr::m4x4Identity ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0)
+			//void SetVertexColours(MLock& mlock, Colour32 colour, Range const* vrange = 0)
 			//{
-			//	
+			//	if (!vrange) vrange = &mlock.m_vrange;
+			//	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_vlock.m_range, *vrange), "The provided vertex range is not within the locked range");
 
-			//	bool has_alpha = false;
-			//	vf::iterator vb   = mlock.m_vlock.m_ptr + vrange->m_begin;
-			//	rdr::Index*  ib   = mlock.m_ilock.m_ptr + irange->m_begin;
-			//	rdr::Index   base = value_cast<rdr::Index>(vrange->m_begin);
-			//	for (std::size_t i = 0; i != num_verts; ++i)
-			//	{
-			//		v4 const*       v = verts++;
-			//		v4 const*       n = normals    ? normals++    : &v4YAxis;
-			//		Colour32 const* c = colours    ? colours++    : &colour;
-			//		v2 const*       t = tex_coords ? tex_coords++ : &v2Zero;
-			//		v4 point = o2w * *v;
-			//		v4 norm  = o2w * *n;
-			//		vb->set(point, norm, *c, *t); ++vb;
-
-			//		// Grow the bounding box
-			//		pr::Encompase(mlock.m_model->m_bbox, point);
-
-			//		// Look for alpha
-			//		has_alpha |= c->a() != 0xFF;
-			//	}
-			//	for (std::size_t i = 0; i != num_indices; ++i)
-			//	{
-			//		*ib++ = base + *indices++;
-			//	}
-
-			//	// Add a render nugget
-			//	rdr::Material local_mat = mat ? *mat : matmgr.GetMaterial(geom_type);
-			//	SetAlphaRenderStates(local_mat.m_rsb, has_alpha);
-			//	mlock.m_model->SetMaterial(local_mat, prim_type, false, vrange, irange);
-
-			//	// Update the editable ranges
-			//	mlock.m_vrange.m_begin += vrange->size();
-			//	mlock.m_irange.m_begin += irange->size();
-			//	return mlock.m_model;
+			//	TVert* vb = mlock.m_vlock.ptr + v_range->m_begin;
+			//	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
+			//		vb->colour() = colour;
 			//}
-//// General
-//void        GenerateNormals(MLock& mlock, Range const* vrange = 0, Range const* irange = 0);
-//void        GenerateNormals(ModelPtr& model, Range const* vrange = 0, Range const* irange = 0);
-//void        SetVertexColours(MLock& mlock, Colour32 colour, Range const* vrange = 0);
-
-		}
+		};
 	}
 }
 

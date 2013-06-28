@@ -181,14 +181,8 @@
   <data name="XmlOrCsvFileFilter" xml:space="preserve">
     <value>XML Files (*.xml)|*.xml|CSV Files (*.csv)|*.csv</value>
   </data>
-  <data name="ScrollToStart" xml:space="preserve">
-    <value>Scroll to the first log file row</value>
-  </data>
   <data name="green_up" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\green_up.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="ScrollToEnd" xml:space="preserve">
-    <value>Scroll to the last log file row</value>
   </data>
   <data name="CreatePatternSetFailed" xml:space="preserve">
     <value>Add Pattern Set Failed</value>
@@ -249,6 +243,9 @@ Error: {0}</value>
   </data>
   <data name="ReloadLogFile" xml:space="preserve">
     <value>Reload the current log file</value>
+  </data>
+  <data name="QuickFilter" xml:space="preserve">
+    <value>Quick filter; keep highlighted rows only</value>
   </data>
   <data name="ReadingFileFailed" xml:space="preserve">
     <value>Reading File Failed</value>
@@ -343,9 +340,6 @@ Right click to show the actions dialog</value>
   <data name="CSVFileFilter" xml:space="preserve">
     <value>CSV Files (*.csv)|*.csv|All files (*.*)|*.*</value>
   </data>
-  <data name="DumpFileFilter" xml:space="preserve">
-    <value>Dump Files (*.dmp)|*.dmp|All files (*.*)|*.*</value>
-  </data>
   <data name="pattern_inactive" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\gray_cross.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -370,15 +364,11 @@ Right click to show the actions dialog</value>
   <data name="BinaryMatch" xml:space="preserve">
     <value>Binary Match</value>
   </data>
-  <data name="ShowOptionsDialog" xml:space="preserve">
-    <value>Show the options dialog</value>
+  <data name="ShowFindDialog" xml:space="preserve">
+    <value>Show the find dialog</value>
   </data>
   <data name="ShowBookmarksDialog" xml:space="preserve">
     <value>Show the bookmarks dialog</value>
-  </data>
-  <data name="InvalidFileMsg" xml:space="preserve">
-    <value>File path '{0}' is invalid or does not exist</value>
-    <comment>Show the invalid filepath</comment>
   </data>
   <data name="ExportFailed" xml:space="preserve">
     <value>Export Failed</value>
@@ -388,5 +378,29 @@ Right click to show the actions dialog</value>
   </data>
   <data name="public_key" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\public_key.xml;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="pencil" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\pencil.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="find_search" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\find_search.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="quick_filter" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\quick_filter.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="version_history" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\version_history.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+  </data>
+  <data name="regex_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\regex_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="transform_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\transform_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="command_line_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\command_line_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="swizzle_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\swizzle_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
 </root>

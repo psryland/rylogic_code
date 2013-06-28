@@ -19,29 +19,21 @@ namespace pr
 {
 	struct v4
 	{
-		#if PR_MATHS_USE_INTRINSICS
 		#pragma warning(push)
-		#pragma warning(disable:4201)
+		#pragma warning(disable:4201) // nameless struct
 		union {
-			struct {
-				float x;
-				float y;
-				float z;
-				float w;
-			};
+			struct { float x,y,z,w; };
+			#if PR_MATHS_USE_DIRECTMATH
+			DirectX::XMVECTOR vec;
+			#elif PR_MATHS_USE_INTRINSICS
 			__m128 vec;
+			#endif
 		};
 		#pragma warning(pop)
-		#else
-		float x;
-		float y;
-		float z;
-		float w;
-		#endif
 		typedef float Array[4];
-		
-		v4&                       set(float x_)                               { x = y = z = w = x_; return *this; }
-		v4&                       set(float x_, float y_, float z_, float w_) { x = x_; y = y_; z = z_; w = w_; return *this; }
+
+		v4&                       set(float x_);
+		v4&                       set(float x_, float y_, float z_, float w_);
 		template <typename T> v4& set(T const& v, float z_, float w_)         { x = GetXf(v); y = GetYf(v); z = z_; w = w_; return *this; }
 		template <typename T> v4& set(T const& v, float w_)                   { x = GetXf(v); y = GetYf(v); z = GetZf(v); w = w_; return *this; }
 		template <typename T> v4& set(T const& v)                             { x = GetXf(v); y = GetYf(v); z = GetZf(v); w = GetWf(v); return *this; }
@@ -134,10 +126,10 @@ namespace pr
 	inline bool operator <= (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 	
-	// D3DX conversion functions
-	#if PR_MATHS_USE_D3DX
-	inline D3DXVECTOR4 const& d3dv4(v4 const& v) { return reinterpret_cast<D3DXVECTOR4 const&>(v); }
-	inline D3DXVECTOR4&       d3dv4(v4&       v) { return reinterpret_cast<D3DXVECTOR4&>      (v); }
+	// DirectXMath conversion functions
+	#if PR_MATHS_USE_DIRECTMATH
+	inline DirectX::XMVECTOR const& dxv4(v4 const& v) { return v.vec; }
+	inline DirectX::XMVECTOR&       dxv4(v4&       v) { return v.vec; }
 	#endif
 
 	// Conversion functions between vector types
@@ -164,6 +156,8 @@ namespace pr
 	int     LargestElement2(v4 const& v);
 	int     LargestElement3(v4 const& v);
 	int     LargestElement4(v4 const& v);
+	v4      Normalise3(v4 const& v);
+	v4      Normalise4(v4 const& v);
 	v4      Abs(v4 const& v);
 	v4      Trunc(v4 const& v);
 	v4      Frac(v4 const& v);

@@ -9,9 +9,9 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
-		// Note: if you get an error saying: "'type' : is not a member of 'pr::mpl::aligned_type<Alignment>'"
+		// Note: if you get an error saying: "'type' : is not a member of 'pr::meta::aligned_type<Alignment>'"
 		// Then it's probably because 'Alignment' is not one of the following specialisations
 		template <std::size_t Alignment> struct aligned_type {};
 

@@ -1,10 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Xml.Linq;
-using pr.util;
 
 namespace RyLogViewer
 {
+	public static class SpecialTags
+	{
+		public const string FileName = "{[FileName]}";
+		public const string FileDir  = "{[FileDir]}";
+	}
+
 	/// <summary>An action that occurs in responce to a click on a row that matches a pattern</summary>
 	public class ClkAction :Pattern
 	{
@@ -43,14 +49,18 @@ namespace RyLogViewer
 			// ReSharper restore PossibleNullReferenceException
 		}
 
-		/// <summary>Performs the click action using values 'text'</summary>
-		public void Execute(string text)
+		/// <summary>Performs the click action using 'text'. 'filepath' should be the full filepath containing the line 'text'</summary>
+		public void Execute(string text, string filepath)
 		{
 			// Substitute the capture groups into the arguments string
 			var grps = CaptureGroups(text);
 			string args = Arguments;
 			foreach (var c in grps)
-				args = args.Replace("{"+c.Key+"}", c.Value);
+				args = args.Replace("{"+c.Key+"}", c.Value.Trim());
+
+			// Perform special tag substitutions
+			args = args.Replace(SpecialTags.FileName, Path.GetFileName(filepath) ?? string.Empty);
+			args = args.Replace(SpecialTags.FileDir , Path.GetDirectoryName(filepath) ?? string.Empty);
 
 			// Create the process
 			ProcessStartInfo info = new ProcessStartInfo
@@ -111,13 +121,12 @@ namespace RyLogViewer
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			ClkAction rhs = obj as ClkAction;
-			return 
-				rhs != null &&
-				base.Equals(obj) &&
-				Executable      .Equals(rhs.Executable      ) &&
-				Arguments       .Equals(rhs.Arguments       ) &&
-				WorkingDirectory.Equals(rhs.WorkingDirectory);
+			var rhs = obj as ClkAction;
+			return rhs != null
+				&& base.Equals(obj)
+				&& Equals(Executable      , rhs.Executable      )
+				&& Equals(Arguments       , rhs.Arguments       )
+				&& Equals(WorkingDirectory, rhs.WorkingDirectory);
 		}
 
 		/// <summary>Value hash code</summary>

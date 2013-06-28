@@ -38,7 +38,7 @@ namespace pr
 			pr::v4	Start() const						{ return m_point + m_edge * m_t0; }
 			pr::v4	End() const							{ return m_point + m_edge * m_t1; }
 			pr::v4	Vector() const						{ return End() - Start(); }
-			pr::v4	Normal() const						{ return GetNormal3(m_edge); }
+			pr::v4	Normal() const						{ return Normalise3(m_edge); }
 			pr::v4	Midpoint() const					{ return m_point + m_edge * (0.5f * (m_t0 + m_t1)); }
 			LineEqn	Eqn() const							{ return LineEqn(m_point, m_edge); }
 			float	Length() const						{ return (m_t1 - m_t0) * Length3(m_edge); }

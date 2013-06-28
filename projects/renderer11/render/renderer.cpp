@@ -21,7 +21,7 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 ,m_main_rtv()
 ,m_main_dsv()
 ,m_feature_level()
-,m_area(pr::iv2Zero)
+,m_bbdesc()
 ,m_idle(false)
 {
 	// Check dlls,dx features,etc required to run the renderer are available
@@ -35,7 +35,7 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 	sd.BufferCount  = settings.m_buffer_count;
 	sd.BufferDesc   = settings.m_mode;
 	sd.SampleDesc   = settings.m_multisamp;
-	sd.BufferUsage  = settings.m_usage;
+	sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	sd.OutputWindow = settings.m_hwnd;
 	sd.Windowed     = settings.m_windowed;
 	sd.SwapEffect   = settings.m_swap_effect;
@@ -73,17 +73,16 @@ void pr::rdr::RdrState::InitMainRT()
 	// Get the back buffer so we can copy its properties
 	D3DPtr<ID3D11Texture2D> back_buffer;
 	pr::Throw(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer.m_ptr));
-	pr::rdr::TextureDesc bb_desc;
-	back_buffer->GetDesc(&bb_desc);
-	
+	back_buffer->GetDesc(&m_bbdesc);
+
 	// Create a render-target view of the back buffer
 	pr::Throw(m_device->CreateRenderTargetView(back_buffer.m_ptr, 0, &m_main_rtv.m_ptr));
-	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_main_rtv, pr::FmtS("main RT <%dx%d>", bb_desc.Width, bb_desc.Height)));
-	
+	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_main_rtv, pr::FmtS("main RT <%dx%d>", m_bbdesc.Width, m_bbdesc.Height)));
+
 	// Create a texture buffer that we will use as the depth buffer
 	pr::rdr::TextureDesc desc;
-	desc.Width              = bb_desc.Width;
-	desc.Height             = bb_desc.Height;
+	desc.Width              = m_bbdesc.Width;
+	desc.Height             = m_bbdesc.Height;
 	desc.MipLevels          = 1;
 	desc.ArraySize          = 1;
 	desc.Format             = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -94,7 +93,7 @@ void pr::rdr::RdrState::InitMainRT()
 	desc.MiscFlags          = 0;
 	D3DPtr<ID3D11Texture2D> depth_stencil;
 	pr::Throw(m_device->CreateTexture2D(&desc, 0, &depth_stencil.m_ptr));
-	
+
 	// Create a depth/stencil view of the texture buffer we just created
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
 	dsv_desc.Format             = desc.Format;
@@ -102,16 +101,13 @@ void pr::rdr::RdrState::InitMainRT()
 	dsv_desc.Texture2D.MipSlice = 0;
 	pr::Throw(m_device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_main_dsv, pr::FmtS("depth buffer <%dx%d>", desc.Width, desc.Height)));
-	
+
 	// Bind the render target and depth stencil to the immediate device context
 	m_immediate->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
 	
 	// Set the default viewport to all of the render target
-	Viewport vp(bb_desc.Width, bb_desc.Height);
+	Viewport vp(m_bbdesc.Width, m_bbdesc.Height);
 	m_immediate->RSSetViewports(1, &vp);
-	
-	// Save the actual back buffer size
-	m_area = pr::iv2::make(bb_desc.Width, bb_desc.Height);
 }
 
 // Construct the renderer
@@ -120,7 +116,9 @@ pr::Renderer::Renderer(pr::rdr::RdrSettings const& settings)
 ,m_mdl_mgr(m_settings.m_mem, m_device)
 ,m_shdr_mgr(m_settings.m_mem, m_device)
 ,m_tex_mgr(m_settings.m_mem, m_device)
-,m_rs_mgr(m_device)
+,m_bs_mgr(m_settings.m_mem, m_device)
+,m_ds_mgr(m_settings.m_mem, m_device)
+,m_rs_mgr(m_settings.m_mem, m_device)
 {}
 pr::Renderer::~Renderer()
 {
@@ -152,6 +150,14 @@ pr::iv2 pr::Renderer::DisplayArea() const
 	return pr::iv2::make(desc.BufferDesc.Width, desc.BufferDesc.Height);
 }
 
+// The display mode of the main render target
+DXGI_FORMAT pr::Renderer::DisplayFormat() const
+{
+	DXGI_SWAP_CHAIN_DESC desc;
+	pr::Throw(m_swap_chain->GetDesc(&desc));
+	return desc.BufferDesc.Format;
+}
+
 // Called when the window size changes (e.g. from a WM_SIZE message)
 void pr::Renderer::Resize(pr::iv2 const& size)
 {
@@ -179,7 +185,8 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 	// rather than copying a full screen's worth of data around.
 	
 	// Ignore resizes that aren't changes in size
-	if (size == m_area)
+	auto area = DisplayArea();
+	if (size == area)
 		return;
 	
 	// Ignore resizes to <= 0. Could report an error here, but what's the point? We handle it.
@@ -188,7 +195,7 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 	
 	// Notify that a resize of the swap chain is about to happen.
 	// Receivers need to ensure they don't have any outstanding references to the swap chain resources
-	pr::events::Send(Evt_Resize(false, m_area));
+	pr::events::Send(Evt_Resize(false, area));
 
 	// Drop the render targets from the immediate context
 	m_immediate->OMSetRenderTargets(0, 0, 0);
@@ -202,7 +209,8 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 	InitMainRT();
 	
 	// Notify that the resize is done
-	pr::events::Send(Evt_Resize(true, m_area));
+	area = DisplayArea();
+	pr::events::Send(Evt_Resize(true, area));
 }
 
 // Flip the scene to the display

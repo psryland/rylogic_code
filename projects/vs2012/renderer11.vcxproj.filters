@@ -34,6 +34,9 @@
     <Filter Include="lights">
       <UniqueIdentifier>{cc088da9-e2ac-4a6d-a7a8-7b3d89d4b0b4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="directxtex">
+      <UniqueIdentifier>{705f984a-2f8f-42a1-b08f-130712f327da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\renderer11\util\stdafx.h">
@@ -90,9 +93,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\util.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\dds_texture_loader.h">
-      <Filter>util</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\stock_resources.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -131,9 +131,6 @@
     <ClInclude Include="..\renderer11\shaders\cbuffer.h">
       <Filter>shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\raster_state_manager.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\geometry\line.h">
       <Filter>geometry</Filter>
     </ClInclude>
@@ -151,6 +148,58 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h">
       <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\render\stereo.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\cylinder.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh_tools.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\utility.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\instance.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\raster_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\blend_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\depth_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\directxtex\BC.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\directxtex\DDS.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\directxtex\DirectXTexP.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\directxtex\scoped.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\textures\dds_texture_loader.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\textures\wic_texture_loader.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\directxtex.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\Image.h">
+      <Filter>textures</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -184,9 +233,6 @@
     <ClCompile Include="..\..\sdk\pr\pr\renderer11\util\util.cpp">
       <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\util\dds_texture_loader.cpp">
-      <Filter>util</Filter>
-    </ClCompile>
     <ClCompile Include="..\renderer11\util\lock.cpp">
       <Filter>util</Filter>
     </ClCompile>
@@ -202,20 +248,74 @@
     <ClCompile Include="..\renderer11\textures\texture_manager.cpp">
       <Filter>textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\models\model_generator.cpp">
-      <Filter>models</Filter>
-    </ClCompile>
     <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\lights\light.cpp">
       <Filter>lights</Filter>
     </ClCompile>
+    <ClCompile Include="..\renderer11\render\stereo.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\render\scene_view.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\BC.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\BC4BC5.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\BC6HBC7.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexCompress.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexConvert.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexD3D11.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexDDS.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexFlipRotate.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexImage.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexMipmaps.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexMisc.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexNormalMaps.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexResize.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexTGA.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexUtil.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\directxtex\DirectXTexWIC.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\textures\dds_texture_loader.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\textures\wic_texture_loader.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bin\_build_shader.cmd">
-      <Filter>shaders</Filter>
-    </None>
     <None Include="..\renderer11\shaders\common\functions.hlsl">
       <Filter>shaders\common</Filter>
     </None>
@@ -227,6 +327,9 @@
     </None>
     <None Include="..\renderer11\shaders\common\cbuffer.hlsl">
       <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl">
+      <Filter>directxtex</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -248,5 +351,19 @@
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.ps.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.vs.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.ps.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.ps.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.vs.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

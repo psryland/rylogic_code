@@ -15,12 +15,17 @@ using namespace pr::rdr;
 // If the file exists, check the last modified time, and if newer, replace the shader 'ptr' and update 'last_modified'
 void RefreshShaders(D3DPtr<ID3D11Device>& device, ShaderPtr const& shader)
 {
+	// Only check every 5 seconds
+	static DWORD last_check = 0, check_frequency_ms = 5000;
+	if (GetTickCount() - last_check < check_frequency_ms) return;
+	last_check = GetTickCount();
+
 	wchar_t const* shader_directory = L"Q:\\projects\\renderer11\\shaders\\compiled";
 	time_t last_mod, newest = shader->m_last_modified;
-	std::wstring filepath;
+	wstring256 filepath;
 	
 	// Check the VS
-	filepath = pr::filesys::CombinePath<std::wstring>(shader_directory, pr::To<std::wstring>(shader->m_name+".vs.cso"));
+	filepath = pr::filesys::CombinePath<wstring256>(shader_directory, pr::To<wstring256>(shader->m_name+".vs.cso"));
 	if (pr::filesys::FileExists(filepath) && (last_mod = pr::filesys::GetFileTimeStats(filepath).m_last_modified) > shader->m_last_modified)
 	{
 		std::vector<pr::uint8> buf;
@@ -28,11 +33,12 @@ void RefreshShaders(D3DPtr<ID3D11Device>& device, ShaderPtr const& shader)
 		{
 			pr::Throw(device->CreateVertexShader(&buf[0], buf.size(), 0, &shader->m_vs.m_ptr));
 			if (last_mod > newest) newest = last_mod;
+			PR_INFO(1, pr::FmtS("Vertex shader %s replaced", filepath.c_str()));
 		}
 	}
 
 	// Check the PS
-	filepath = pr::filesys::CombinePath<std::wstring>(shader_directory, pr::To<std::wstring>(shader->m_name+".ps.cso"));
+	filepath = pr::filesys::CombinePath<wstring256>(shader_directory, pr::To<wstring256>(shader->m_name+".ps.cso"));
 	if (pr::filesys::FileExists(filepath) && (last_mod = pr::filesys::FileTimeStats(filepath.c_str()).m_last_modified) > shader->m_last_modified)
 	{
 		std::vector<pr::uint8> buf;
@@ -40,6 +46,7 @@ void RefreshShaders(D3DPtr<ID3D11Device>& device, ShaderPtr const& shader)
 		{
 			pr::Throw(device->CreatePixelShader(&buf[0], buf.size(), 0, &shader->m_ps.m_ptr));
 			if (last_mod > newest) newest = last_mod;
+			PR_INFO(1, pr::FmtS("Pixel shader %s replaced", filepath.c_str()));
 		}
 	}
 

@@ -2,33 +2,27 @@
 // Colour32
 //  Copyright © Rylogic Ltd 2009
 //*******************************************************************************************
-#ifndef PR_COLOUR_H
-#define PR_COLOUR_H
 #pragma once
-	
+#ifndef PR_COMMON_COLOUR_H
+#define PR_COMMON_COLOUR_H
+
 #include <memory.h>
 #include "pr/common/prtypes.h"
 #include "pr/maths/rand.h"
 #include "pr/maths/scalar.h"
-	
+
 #ifdef _WINGDI_
-#define SUPPORT_WINGDI(exp) exp
-#else//_WINGDI_
-#define SUPPORT_WINGDI(exp)
-#endif//_WINGDI_
-	
-#ifdef D3DCOLOR_DEFINED
-#define SUPPORT_D3DCOLOR(exp) exp
-#else//D3DCOLOR_DEFINED
-#define SUPPORT_D3DCOLOR(exp)
-#endif//D3DCOLOR_DEFINED
-	
-#ifdef D3DCOLORVALUE_DEFINED
-#define SUPPORT_D3DCOLORVALUE(exp) exp
-#else//D3DCOLORVALUE_DEFINED
-#define SUPPORT_D3DCOLORVALUE(exp)
-#endif//D3DCOLORVALUE_DEFINED
-	
+#  define PR_SUPPORT_WINGDI(exp) exp
+#else
+#  define PR_SUPPORT_WINGDI(exp)
+#endif
+
+#if defined(DIRECTX_MATH_VERSION)
+#  define PR_SUPPORT_DX(exp) exp
+#else
+#  define PR_SUPPORT_DX(exp)
+#endif
+
 namespace pr
 {
 	// Forward declaration
@@ -201,7 +195,7 @@ namespace pr
 		Colour32  operator !() const                            { return make((m_aarrggbb&0xFF000000) | (m_aarrggbb^0xFFFFFFFF)); }
 		operator uint32() const                                 { return m_aarrggbb; }
 		operator Colour() const;
-		SUPPORT_WINGDI(Colour32& operator = (const COLORREF& c) { set(GetRValue(c), GetGValue(c), GetBValue(c), uint8(255)); return *this; })
+		PR_SUPPORT_WINGDI(Colour32& operator = (const COLORREF& c) { set(GetRValue(c), GetGValue(c), GetBValue(c), uint8(255)); return *this; })
 		
 		Colour32& zero()                                        { m_aarrggbb = 0; return *this; }
 		Colour32& set(EColours::Type col)                       { m_aarrggbb = static_cast<uint32>(col); return *this; }
@@ -225,17 +219,13 @@ namespace pr
 		uint8    g() const                                      { return uint8((m_aarrggbb >>  8) & 0xFF); }
 		uint8    b() const                                      { return uint8((m_aarrggbb >>  0) & 0xFF); }
 		
-		SUPPORT_WINGDI(COLORREF GetColorRef() const             { return RGB(r(), g(), b()); })
+		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const             { return RGB(r(), g(), b()); })
 		inline uint8 const* ToArray() const                     { return reinterpret_cast<uint8 const*>(this); }
 		inline uint8*       ToArray()                           { return reinterpret_cast<uint8*>      (this); }
 		inline uint8 const& operator [] (std::size_t i) const   { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
 		inline uint8&       operator [] (std::size_t i)         { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
 	};
-	
-	// D3DX conversion functions
-	SUPPORT_D3DCOLOR(inline D3DCOLOR const& d3dc(Colour32 const& c) { return reinterpret_cast<D3DCOLOR const &>(c); })
-	SUPPORT_D3DCOLOR(inline D3DCOLOR&       d3dc(Colour32&       c) { return reinterpret_cast<D3DCOLOR&>       (c); })
-	
+
 	Colour32 const Colour32Zero   = { 0x00000000 };
 	Colour32 const Colour32One    = { 0xFFFFFFFF };
 	Colour32 const Colour32White  = { 0xFFFFFFFF };
@@ -277,11 +267,17 @@ namespace pr
 	inline Colour32 RandomRGB(Rnd& rnd)          { return RandomRGB(rnd, 1.0f); }
 	inline Colour32 RandomRGB()                  { return RandomRGB(rand::Rand()); }
 	
-	// Equivalent to D3DCOLORVALUE
+	// Equivalent to pr::v4, XMVECTOR, etc
 	struct Colour
 	{
-		float r,g,b,a;
-		
+		#pragma warning(push)
+		#pragma warning(disable:4201)
+		union {
+			struct { float r,g,b,a; };
+			PR_SUPPORT_DX(DirectX::XMVECTOR vec;)
+		};
+		#pragma warning(pop)
+
 		static Colour make(float r, float g, float b, float a)   { Colour c; return c.set(r,g,b,a); }
 		static Colour make(uint8 r, uint8 g, uint8 b, uint8 a)   { Colour c; return c.set(r,g,b,a); }
 		static Colour make(Colour32 c32)                         { Colour c; return c.set(c32); }
@@ -303,8 +299,8 @@ namespace pr
 		typedef float const (&array_ref)[4];
 		operator array_ref() const                               { return reinterpret_cast<array_ref>(*this); }
 		
-		SUPPORT_WINGDI(Colour& operator = (const COLORREF& c)    { set(GetRValue(c), GetGValue(c), GetBValue(c), 255); return *this; })
-		SUPPORT_WINGDI(COLORREF GetColorRef() const              { return RGB(r*255.0f, g*255.0f, b*255.0f); })
+		PR_SUPPORT_WINGDI(Colour& operator = (const COLORREF& c)    { set(GetRValue(c), GetGValue(c), GetBValue(c), 255); return *this; })
+		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const              { return RGB(r*255.0f, g*255.0f, b*255.0f); })
 	};
 	
 	Colour const ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -315,9 +311,9 @@ namespace pr
 	Colour const ColourGreen  = {0.0f, 1.0f, 0.0f, 1.0f};
 	Colour const ColourBlue   = {0.0f, 0.0f, 1.0f, 1.0f};
 	
-	// D3DX conversion functions
-	SUPPORT_D3DCOLORVALUE(inline D3DCOLORVALUE const& d3dcv(Colour const& c) { return reinterpret_cast<D3DCOLORVALUE const&>(c); })
-	SUPPORT_D3DCOLORVALUE(inline D3DCOLORVALUE&       d3dcv(Colour&       c) { return reinterpret_cast<D3DCOLORVALUE&>      (c); })
+	// DirectXMath conversion functions
+	PR_SUPPORT_DX(inline DirectX::XMVECTOR const& dxcv(Colour const& c) { return c.vec; })
+	PR_SUPPORT_DX(inline DirectX::XMVECTOR&       dxcv(Colour&       c) { return c.vec; })
 	
 	inline Colour32& Colour32::operator = (Colour const& c)             { return set(c.r, c.g, c.b, c.a); }
 	
@@ -369,5 +365,8 @@ namespace pr
 		return col;
 	}
 }
+
+#undef PR_SUPPORT_WINGDI
+#undef PR_SUPPORT_DX
 
 #endif

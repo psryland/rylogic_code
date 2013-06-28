@@ -12,6 +12,7 @@
 #include "pr/common/array.h"
 #include "pr/common/repeater.h"
 #include "pr/maths/maths.h"
+#include "pr/macros/enum.h"
 
 namespace pr
 {

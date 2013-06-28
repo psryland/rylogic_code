@@ -37,10 +37,8 @@ namespace pr
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include "pr/common/assert.h"
-#include "pr/common/timers.h"
-#include "pr/common/fmt.h"
-//#include "pr/str/tostring.h" - don't include tostring, so that it can have unit tests
+#include <chrono>
+#include <cstdarg>
 
 namespace pr
 {
@@ -78,13 +76,11 @@ namespace pr
 		}
 
 		// Run all of the registered unit tests
-		inline int RunAllTests()
+		inline int RunAllTests(bool wordy)
 		{
 			try
 			{
-				pr::rtc::StopWatch global_sw;
-				global_sw.start();
-
+				auto T0 = std::chrono::high_resolution_clock::now();
 				std::sort(std::begin(Tests()), std::end(Tests()));
 
 				int passed = 0;
@@ -95,14 +91,13 @@ namespace pr
 					TestCount() = 0;
 					try
 					{
-						pr::rtc::StopWatch test_sw;
-						std::cout << test.m_name << std::string(40 - strlen(test.m_name), '.');
+						if (wordy) printf("%s%s", test.m_name, std::string(40 - strlen(test.m_name), '.').c_str());
 
-						test_sw.start();
+						auto t0 = std::chrono::high_resolution_clock::now();
 						test.m_func();
-						test_sw.stop();
+						auto t1 = std::chrono::high_resolution_clock::now();
 
-						std::cout << "success. (" << TestCount() << " tests in " << test_sw.period_ms() << "ms)\n";
+						if (wordy) printf("success. (%-4d tests in %7.3fms)\n", TestCount(), std::chrono::duration_cast<std::chrono::microseconds>(t1-t0).count());
 						++passed;
 					}
 					catch (std::exception const& e)
@@ -112,11 +107,11 @@ namespace pr
 					}
 				}
 
-				global_sw.stop();
+				auto T1 = std::chrono::high_resolution_clock::now();
 				if (failed == 0)
-					std::cout << " **** UnitTest results: All passed. (taking " << global_sw.period_ms() << "ms) **** \n";
+					printf(" **** UnitTest results: All %d tests passed. (taking %7.3fms) **** \n", failed+passed, std::chrono::duration_cast<std::chrono::microseconds>(T1-T0).count());
 				else
-					std::cout << " **** UnitTest results: " << failed << " of " << failed+passed << " failed. **** \n";
+					printf(" **** UnitTest results: %d of %d failed. **** \n", failed, failed+passed);
 				return failed == 0 ? 0 : -1;
 			}
 			catch (...)
@@ -126,6 +121,17 @@ namespace pr
 			}
 		}
 
+		// Printf helper
+		inline char const* FmtS(char const* format, ...)
+		{
+			static char buf[512] = {};
+			va_list arglist;
+			va_start(arglist, format);
+			_vsprintf_p(buf, 1023, format, arglist);
+			va_end(arglist);
+			return buf;
+		}
+
 		template <typename T, typename U> inline bool UTEqual(T const& lhs, U const& rhs)
 		{
 			return lhs == rhs;
@@ -133,6 +139,14 @@ namespace pr
 		template <typename T, size_t Len1, size_t Len2> inline bool UTEqual(T const (&lhs)[Len1], T const (&rhs)[Len2])
 		{
 			return Len1 == Len2 && memcmp(lhs, rhs, sizeof(T) * Len1) == 0;
+		}
+		inline bool UTEqual(double lhs, double rhs)
+		{
+			return ::abs(rhs - lhs) < DBL_EPSILON;
+		}
+		inline bool UTEqual(float lhs, float rhs)
+		{
+			return ::fabs(rhs - lhs) < FLT_EPSILON;
 		}
 		inline bool UTEqual(char const* lhs, char const* rhs)
 		{
@@ -144,20 +158,20 @@ namespace pr
 		}
 
 		// Unit test check functions
-		static void Fail(char const* msg, char const* file, int line)
+		inline void Fail(char const* msg, char const* file, int line)
 		{
 			++TestCount();
-			throw std::exception((pr::Fmt("%s(%d):",file,line) + msg).c_str());
+			throw std::exception(FmtS("%s(%d):%s",file,line,msg));
 		}
-		template <typename T, typename U> static void Check(T const& result, U const& expected, char const* expr, char const* file, int line)
+		template <typename T, typename U> inline void Check(T const& result, U const& expected, char const* expr, char const* file, int line)
 		{
 			++TestCount();
 			if (UTEqual(result, expected)) return;
 			std::string r = pr::To<std::string>(result);
 			std::string e = pr::To<std::string>(expected);
-			throw std::exception(pr::Fmt("%s(%d): '%s' was '%s', expected '%s'",file,line,expr,r.c_str(),e.c_str()).c_str());
+			throw std::exception(FmtS("%s(%d): '%s' was '%s', expected '%s'",file,line,expr,r.c_str(),e.c_str()));
 		}
-		template <typename T> static void Close(T const& result, T const& expected, T tol, char const* expr, char const* file, int line)
+		template <typename T> inline void Close(T const& result, T const& expected, T tol, char const* expr, char const* file, int line)
 		{
 			++TestCount();
 			T diff = expected - result;
@@ -165,9 +179,9 @@ namespace pr
 			std::string r = pr::To<std::string>(result);
 			std::string e = pr::To<std::string>(expected);
 			std::string t = pr::To<std::string>(tol);
-			throw std::exception(pr::Fmt("%s(%d): '%s' was '%s', expected '%s ±%s'",file,line,expr,r.c_str(),e.c_str(),t.c_str()).c_str());
+			throw std::exception(FmtS("%s(%d): '%s' was '%s', expected '%s ±%s'",file,line,expr,r.c_str(),e.c_str(),t.c_str()));
 		}
-		template <typename TExcept, typename Func> static void Throws(Func func, char const* expr, char const* file, int line)
+		template <typename TExcept, typename Func> inline void Throws(Func func, char const* expr, char const* file, int line)
 		{
 			++TestCount();
 			bool threw = false;
@@ -179,7 +193,7 @@ namespace pr
 			char const* e = threw
 				? "threw an exception of an unexpected type"
 				: "didn't throw when it was expected to";
-			throw std::exception(pr::Fmt("%s(%d): '%s' %s",file,line,expr,e).c_str());
+			throw std::exception(FmtS("%s(%d): '%s' %s",file,line,expr,e));
 		}
 	}
 }
@@ -187,23 +201,12 @@ namespace pr
 // If this is giving an error like "int return type assumed" and PRUnitTest is
 // not defined, it means you haven't included the header containing the tests in
 // unittests.cpp
-#define PRUnitTest(testname) /*
-	*/template <typename T> void unittest_##testname();                               /* The unit test function forward declaration
-	*/inline void unittest_add_##testname##__LINE__() { unittest_##testname<void>(); }/* A function for adding a unit test item
-	*/static bool s_unittest_##testname##__LINE__ =                                   /* A static bool, that when constructed, causes a test item to be added for the test
-	*/	pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, unittest_add_##testname##__LINE__));\
+#define PRUnitTest(testname)/*
+	*/template <typename T> void unittest_##testname();                     /* The unit test function forward declaration
+	*/inline void unittest_add_##testname() { unittest_##testname<void>(); }/* A function for adding a unit test item
+	*/static bool s_unittest_##testname =                                   /* A static bool, that when constructed, causes a test item to be added for the test
+	*/	pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, unittest_add_##testname));\
 	template <typename T> void unittest_##testname()
-
-
-//// If this is giving an error like "int return type assumed" and PRUnitTest is
-//// not defined, it means you haven't included the header containing the tests in
-//// unittests.cpp
-//#define PRUnitTest(test_name) \
-//	template <typename T> void unittest_##test_name();\
-//	static bool s_unittest_##test_name##__LINE__ = pr::unittests::AddTest(\
-//		pr::unittests::UnitTestItem(#test_name, [](){ unittest_##test_name<void>(); })\
-//		);\
-//	template <typename T> void unittest_##test_name()
 
 #define PR_FAIL(msg)\
 	pr::unittests::Fail(msg, __FILE__, __LINE__)

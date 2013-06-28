@@ -97,11 +97,11 @@ namespace pr
 	bool operator <= (m4x4 const& lhs, m4x4 const& rhs);
 	bool operator >= (m4x4 const& lhs, m4x4 const& rhs);
 
-	// D3DX conversion functions
-	#if PR_MATHS_USE_D3DX
-	D3DXMATRIX const& d3dm4(m4x4 const& m);
-	D3DXMATRIX      & d3dm4(m4x4&       m);
-	#endif//PR_MATHS_USE_D3DX
+	// DirectXMath conversion functions
+	#if PR_MATHS_USE_DIRECTMATH
+	DirectX::XMMATRIX const& dxm4(m4x4 const& m);
+	DirectX::XMMATRIX      & dxm4(m4x4&       m);
+	#endif
 
 	// Conversion functions between vector types
 	m3x3 const& cast_m3x3(m4x4 const& mat);

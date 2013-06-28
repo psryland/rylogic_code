@@ -41,6 +41,7 @@
 			this.m_lbl_website = new System.Windows.Forms.Label();
 			this.m_lbl_latest_version = new System.Windows.Forms.Label();
 			this.m_lbl_current_version = new System.Windows.Forms.Label();
+			this.m_btn_install = new System.Windows.Forms.Button();
 			this.m_panel.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_pic)).BeginInit();
 			this.SuspendLayout();
@@ -79,11 +80,11 @@
 			// 
 			this.m_btn_ok.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(170, 161);
+			this.m_btn_ok.Location = new System.Drawing.Point(328, 161);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 3;
-			this.m_btn_ok.Text = "OK";
+			this.m_btn_ok.Text = "Later";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			// 
 			// m_panel
@@ -173,12 +174,24 @@
 			this.m_lbl_current_version.TabIndex = 3;
 			this.m_lbl_current_version.Text = "Current Version: ";
 			// 
+			// m_btn_install
+			// 
+			this.m_btn_install.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
+			this.m_btn_install.DialogResult = System.Windows.Forms.DialogResult.OK;
+			this.m_btn_install.Location = new System.Drawing.Point(247, 161);
+			this.m_btn_install.Name = "m_btn_install";
+			this.m_btn_install.Size = new System.Drawing.Size(75, 23);
+			this.m_btn_install.TabIndex = 5;
+			this.m_btn_install.Text = "Install Now";
+			this.m_btn_install.UseVisualStyleBackColor = true;
+			// 
 			// NewVersionForm
 			// 
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(415, 196);
+			this.Controls.Add(this.m_btn_install);
 			this.Controls.Add(this.m_panel);
 			this.Controls.Add(this.m_btn_ok);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
@@ -207,5 +220,6 @@
 		private System.Windows.Forms.PictureBox m_pic;
 		private System.Windows.Forms.Label m_edit_latest_version;
 		private System.Windows.Forms.Label m_edit_current_version;
+		private System.Windows.Forms.Button m_btn_install;
 	}
 }

@@ -147,7 +147,7 @@ Renderer::Renderer(rdr::RdrSettings const& settings)
 	Verify(m_d3d_device->SetViewport(&viewport));
 	
 	// Clear the backbuffer
-	Verify(m_d3d_device->Clear(0L, 0, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER|D3DCLEAR_STENCIL, d3dc(m_settings.m_background_colour), 1.0f, 0L));
+	Verify(m_d3d_device->Clear(0L, 0, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER|D3DCLEAR_STENCIL, (D3DCOLOR)m_settings.m_background_colour, 1.0f, 0L));
 	Verify(m_d3d_device->Present(0, 0, 0, 0));
 }
 
@@ -260,7 +260,7 @@ EResult::Type Renderer::BltBackBuffer()
 // Called by a viewport to clear the backbuffer after the viewport has been set
 void Renderer::ClearBackBuffer()
 {
-	Verify(m_d3d_device->Clear(0L, 0, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER|D3DCLEAR_STENCIL, d3dc(m_settings.m_background_colour), 1.0f, 0L));
+	Verify(m_d3d_device->Clear(0L, 0, D3DCLEAR_TARGET|D3DCLEAR_ZBUFFER|D3DCLEAR_STENCIL, (D3DCOLOR)m_settings.m_background_colour, 1.0f, 0L));
 }
 
 // Register a viewport

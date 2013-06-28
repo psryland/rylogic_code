@@ -25,6 +25,7 @@
 
 // Forward
 #include "pr/renderer11/forward.h"
+#include "pr/renderer11/instance.h"
 
 // Configuration
 #include "pr/renderer11/config/config.h"
@@ -34,16 +35,15 @@
 // Renderer
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/raster_state.h"
+#include "pr/renderer11/render/sortkey.h"
 
 //// Drawlist
-//#include "pr/renderer/viewport/sortkey.h"
 //#include "pr/renderer/viewport/viewport.h"
 //#include "pr/renderer/viewport/drawlist.h"
 //#include "pr/renderer/viewport/drawlist_element.h"
-//
-//// Vertex Formats
-//#include "pr/renderer/vertexformats/vertexformat.h"
-//#include "pr/renderer/vertexformats/vertexformatmanager.h"
 
 // Models
 #include "pr/renderer11/models/model_manager.h"
@@ -52,7 +52,6 @@
 #include "pr/renderer11/models/model.h"
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/models/input_layout.h"
-//#include "pr/renderer/models/quadbuffer.h"
 #include "pr/renderer11/models/model_generator.h"
 
 // Instances
@@ -65,25 +64,16 @@
 // Textures
 #include "pr/renderer11/textures/texture_manager.h"
 #include "pr/renderer11/textures/texture2d.h"
-//#include "pr/renderer/materials/effects/effect.h"
-//#include "pr/renderer/materials/effects/fragments.h"
-//#include "pr/renderer/materials/textures/texturefilter.h"
-//#include "pr/renderer/materials/video/video.h"
+//#include "pr/renderer11/textures/video.h"
 
 // Lighting
 #include "pr/renderer11/lights/light.h"
-//#include "pr/renderer/lighting/lightingmanager.h"
-
-// Rasterizer states
-#include "pr/renderer11/render/raster_state_manager.h"
-//#include "pr/renderer/renderstates/stackframes.h"
-//#include "pr/renderer/renderstates/renderstatemanager.h"
 
 // Utility
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/wrappers.h"
-//#include "pr/renderer/utility/errors.h"
-//#include "pr/renderer/utility/globalfunctions.h"
+#include "pr/renderer11/util/lock.h"
+#include "pr/renderer11/util/stock_resources.h"
 
 #undef PR_RENDERER_INTERFACE_INCLUDE
 #endif

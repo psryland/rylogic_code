@@ -2,8 +2,8 @@
 using System.IO;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.maths;
-using pr.util;
 
 namespace RyLogViewer
 {
@@ -13,10 +13,10 @@ namespace RyLogViewer
 		private readonly List<LaunchApp> m_history;
 		private readonly List<string> m_outp_history;
 		private readonly ToolTip  m_tt;
-		
+
 		/// <summary>The command line to execute</summary>
-		public LaunchApp Launch;
-		
+		public LaunchApp Launch { get; set; }
+
 		public ProgramOutputUI(Settings settings)
 		{
 			InitializeComponent();
@@ -28,8 +28,7 @@ namespace RyLogViewer
 			
 			// Command line
 			m_combo_launch_cmdline.ToolTip(m_tt, "Command line for the application to launch");
-			foreach (var s in m_history) m_combo_launch_cmdline.Items.Add(s);
-			if (m_history.Count != 0) m_combo_launch_cmdline.SelectedIndex = 0;
+			m_combo_launch_cmdline.Load(m_history);
 			m_combo_launch_cmdline.TextChanged += (s,a)=>
 				{
 					Launch.Executable = m_combo_launch_cmdline.Text;

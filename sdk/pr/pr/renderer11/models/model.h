@@ -29,13 +29,13 @@ namespace pr
 			
 			// Access to the vertex/index buffers
 			// Only returns false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw
-			bool MapVerts  (pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, pr::rdr::Range v_range = pr::rdr::RangeZero);
-			bool MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, pr::rdr::Range i_range = pr::rdr::RangeZero);
+			bool MapVerts  (Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, Range vrange = RangeZero);
+			bool MapIndices(Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, Range irange = RangeZero);
 			
 			// Call to create a render nugget from a range within this model that uses 'material'
 			// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 			// Remember you might need to delete render nuggets first
-			void CreateNugget(DrawMethod const& meth, D3D11_PRIMITIVE_TOPOLOGY prim_type, Range const* v_range = 0, Range const* i_range = 0);
+			void CreateNugget(DrawMethod const& meth, EPrim prim_type, Range const* v_range = 0, Range const* i_range = 0);
 			
 			// Call to release the nuggets that this model has been
 			// divided into. Nuggets are the contiguous sub groups

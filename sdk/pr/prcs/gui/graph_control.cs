@@ -1059,6 +1059,7 @@ namespace pr.gui
 					zoom_menu.DropDownItems.Add(default_zoom);
 					default_zoom.Click += delegate
 					{
+						FindDefaultRange();
 						ResetToDefaultRange();
 						Refresh();
 					};

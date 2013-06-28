@@ -83,16 +83,16 @@ namespace pr.inet
 					Uri uri = new Uri(url);
 					if (!Uri.IsWellFormedUriString(uri.AbsoluteUri, UriKind.Absolute))
 						throw new ArgumentException("Update URL is invalid");
-					
+
 					// Create a web client and grab the version xml data
 					string latest_version_xml = "";
 					Exception error = null;
 					using (WebClient web = new WebClient{Proxy = proxy})
 					using (ManualResetEvent got = new ManualResetEvent(false))
 					{
-						// ReSharper disable AccessToDisposedClosure
 						web.DownloadStringCompleted += (s,a) =>
 						{
+							// ReSharper disable AccessToDisposedClosure
 							try
 							{
 								error = a.Error;
@@ -101,15 +101,15 @@ namespace pr.inet
 							}
 							catch { }
 							finally { got.Set(); }
+							// ReSharper restore AccessToDisposedClosure
 						};
 						web.DownloadStringAsync(uri);
-						// ReSharper restore AccessToDisposedClosure
-						
+
 						// Wait for the download while polling the cancel pending flag
 						while (!got.WaitOne(100))
 							if (async.CancelPending)
 								web.CancelAsync();
-						
+
 						if (async.CancelPending)
 							throw new OperationCanceledException();
 						if (error != null)

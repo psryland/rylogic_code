@@ -32,7 +32,8 @@ void pr::rdr::Drawlist::Add(BaseInstance const& inst)
 		PR_INFO(PR_DBG_RDR, FmtS("This model ('%s') has no nuggets, you need to call SetMaterial() on the model first\n", model->m_name.c_str()));
 		model->m_dbg_flags |= EDbgRdrFlags::WarnedNoRenderNuggets;
 	}
-	PR_ASSERT(PR_DBG_RDR, FEql(GetO2W(inst).w.w, 1.0f), "Invalid instance transform");
+	m4x4 o2w = GetO2W(inst);
+	PR_ASSERT(PR_DBG_RDR, FEql(o2w.w.w, 1.0f), "Invalid instance transform");
 	#endif
 
 	// See if the instance has a sort key override

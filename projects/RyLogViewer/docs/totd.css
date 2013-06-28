@@ -1,0 +1,8 @@
+﻿* { }
+body { background: url('background.png') no-repeat; }
+table { border: 1px solid black; border-collapse: collapse; width: 70%; }
+th { border: 1px solid black; border-collapse: collapse; }
+td { border: 1px solid black; border-collapse: collapse; }
+p { font-family: arial; font-size: 0.8em; }
+.title { font-family: arial; text-align: center; font-size: 1.1em; font-weight: bold; }
+.content { font-family: arial; text-align: justify; font-size: 0.8em; font-weight: normal; margin-top: 10px; }

@@ -10,8 +10,11 @@
 #include "pr/renderer11/render/drawlist.h"
 #include "pr/renderer11/render/gbuffer.h"
 #include "pr/renderer11/render/scene_view.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/util/wrappers.h"
+#
 
 namespace pr
 {
@@ -32,18 +35,19 @@ namespace pr
 			pr::Colour           m_background_colour; // The colour to clear the background to
 			Light                m_global_light;      // The global light to use
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
-			D3DPtr<ID3D11RasterizerState> m_rs;       // Default raster states for the scene
-			bool                 m_stereoscopic;      // Render the scene in stereoscopic mode
-			float                m_eye_separation;    // The distance between the eyes in stereoscopic mode
+			BSBlock              m_bsb;               // Blend states for the scene
+			RSBlock              m_rsb;               // Raster states for the scene
+			std::shared_ptr<Stereo> m_stereo;         // Helper used when renderering in stereoscopic mode
 
 			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());
 
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
 			void SetView(SceneView const& view) { m_view = view; }
 			void SetView(pr::Camera const& cam) { SetView(pr::rdr::SceneView(cam)); }
-			
+
 			// Set stereoscopic rendering mode
-			void Stereoscopic(bool state, float eye_separation);
+			bool Stereoscopic() const { return m_stereo != nullptr; }
+			void Stereoscopic(bool state, float eye_separation, bool swap_eyes);
 
 			// Get/Set the on-screen visible area of this scene when rendered
 			pr::rdr::Viewport const& Viewport() const        { return m_viewport; }
@@ -81,7 +85,7 @@ namespace pr
 		struct SceneForward :Scene
 		{
 			SceneForward(pr::Renderer& rdr, SceneView const& view = SceneView());
-			
+
 		private:
 			// Implementation of rendering for the derived scene type
 			void DoRender(D3DPtr<ID3D11DeviceContext>& dc) const;
@@ -91,9 +95,9 @@ namespace pr
 		struct SceneDeferred :Scene
 		{
 			pr::rdr::GBuffer m_gbuffer; // GBuffer containing visible scene geometry
-			
+
 			SceneDeferred(pr::Renderer& rdr, SceneView const& view = SceneView());
-			
+
 			// Implementation of rendering for the derived scene type
 			void DoRender(D3DPtr<ID3D11DeviceContext>& dc) const;
 		};

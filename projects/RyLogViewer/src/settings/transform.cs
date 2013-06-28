@@ -9,7 +9,7 @@ using pr.extn;
 
 namespace RyLogViewer
 {
-	public class Transform :IPattern
+	public class Transform :Pattern ,IPattern
 	{
 		/// <summary>Represents a captured element with a source string</summary>
 		public class Capture
@@ -62,68 +62,27 @@ namespace RyLogViewer
 
 		public static TxfmSubLoader SubLoader { get { return m_subs_loader; } }
 		private static readonly TxfmSubLoader m_subs_loader = new TxfmSubLoader();
-		private readonly Pattern m_match;
-		private Regex  m_compiled_patn;
-		
-		/// <summary>A map of substitutions to apply for each capture tag</summary>
-		public Dictionary<string, ITxfmSub> Subs { get; private set; }
-		
-		/// <summary>The pattern used to match rows that will have the transform applied.</summary>
-		public string Match
+
+		public Transform() :this(EPattern.Substring, string.Empty, string.Empty) {}
+		public Transform(EPattern patn_type, string expr, string replace) :base(patn_type, expr)
 		{
-			get { return m_match.Expr; }
-			set { m_match.Expr = value; m_compiled_patn = null; UpdateSubs(); }
+			Subs = new Dictionary<string, ITxfmSub>();
+			Replace = replace;
+			PatternChanged += HandlePatternChanged;
+			UpdateSubs();
 		}
-
-		/// <summary>The pattern type to interpret 'match' as</summary>
-		public EPattern PatnType
+		private Transform(Transform rhs) :base(rhs)
 		{
-			get { return m_match.PatnType; }
-			set { m_match.PatnType = value; m_compiled_patn = null; UpdateSubs(); }
+			Subs = new Dictionary<string, ITxfmSub>(rhs.Subs);
+			Replace = rhs.Replace;
+			PatternChanged += HandlePatternChanged;
+			UpdateSubs();
 		}
-
-		/// <summary>True if the match pattern should ignore case</summary>
-		public bool IgnoreCase
-		{
-			get { return m_match.IgnoreCase; }
-			set { m_match.IgnoreCase = value; m_compiled_patn = null; UpdateSubs(); }
-		}
-
-		/// <summary>True if this transform should be applied</summary>
-		public bool Active
-		{
-			get { return m_match.Active; }
-			set { m_match.Active = value; m_compiled_patn = null; UpdateSubs(); }
-		}
-
-		/// <summary>The template string used to create the transformed row</summary>
-		public string Replace { get; set; }
-
-		public Transform()
-		{
-			m_match      = new Pattern();
-			Subs         = new Dictionary<string, ITxfmSub>();
-			Match        = "";
-			Replace      = "";
-			IgnoreCase   = false;
-			Active       = true;
-		}
-
-		private Transform(Transform rhs)
-		{
-			m_match    = new Pattern(rhs.m_match);
-			Subs       = new Dictionary<string, ITxfmSub>(rhs.Subs);
-			Replace    = rhs.Replace;
-			Active     = rhs.Active;
-		}
-
-		/// <summary>Construct from xml description</summary>
-		public Transform(XElement node)
+		public Transform(XElement node) :base(node)
 		{
 			// ReSharper disable PossibleNullReferenceException
-			m_match     = new Pattern(node.Element(XmlTag.Match));
-			Replace     = node.Element(XmlTag.Replace).Value;
-			
+			Replace = node.Element(XmlTag.Replace).Value;
+
 			Subs = new Dictionary<string, ITxfmSub>();
 			var subs = node.Element(XmlTag.Subs);
 			foreach (var s in subs.Elements(XmlTag.Sub))
@@ -135,12 +94,16 @@ namespace RyLogViewer
 				catch { sub = new SubNoChange{Id = id}; }
 				Subs.Add(sub.Id, sub);
 			}
+
+			PatternChanged += HandlePatternChanged;
+			UpdateSubs();
 			// ReSharper restore PossibleNullReferenceException
 		}
 
 		/// <summary>Export this type to an xml node</summary>
-		public XElement ToXml(XElement node)
+		public override XElement ToXml(XElement node)
 		{
+			// Prepare the subs node
 			var subs = new XElement(XmlTag.Subs);
 			foreach (var s in Subs)
 				subs.Add(new XElement(XmlTag.Sub,
@@ -148,84 +111,26 @@ namespace RyLogViewer
 					new XElement(XmlTag.Id   ,s.Value.Id  ),
 					s.Value.ToXml(new XElement(XmlTag.SubData))
 					));
+
+			base.ToXml(node);
 			node.Add
 			(
-				m_match.ToXml(new XElement(XmlTag.Match)),
 				new XElement(XmlTag.Replace ,Replace),
 				subs
 			);
 			return node;
 		}
-		
-		/// <summary>Return the compiled regex string for reference</summary>
-		public string RegexString
-		{
-			get
-			{
-				var ex = ValidateExpr();
-				return ex == null
-					? Regex.ToString()
-					: string.Format("Expression invalid - {0}", ex.Message);
-			}
-		}
 
-		/// <summary>Returns the match template as a compiled regular expression</summary>
-		private Regex Regex
-		{
-			get
-			{
-				if (m_compiled_patn != null)
-					return m_compiled_patn;
-				
-				// Notes:
-				//  If an expression can't be represented in substr,wildcard form, harden up and use a regex
-				
-				// Convert the match string into a regular expression string and
-				// replace the capture group tags with regex capture groups
-				string expr = m_match.Expr;
-				
-				// If the expression is a regex, expect regex capture group syntax
-				// Otherwise, expect capture groups of the form: {tag}
-				if (m_match.PatnType != EPattern.RegularExpression)
-				{
-					// Collapse all whitespace to a single space character
-					expr = Regex.Replace(expr, @"\s+", " ");
+		/// <summary>A map of substitutions to apply for each capture tag</summary>
+		public Dictionary<string, ITxfmSub> Subs { get; private set; }
 
-					// Escape the regex special chars
-					expr = Regex.Escape(expr);
-					
-					// Replace wildcards with Regex equivalents
-					if (PatnType == EPattern.Wildcard)
-						expr = expr.Replace(@"\*", @".*").Replace(@"\?", @".");
-					
-					// Replace the (now escaped) '{tag}' capture
-					// groups with named regular expression capture groups
-					expr = Regex.Replace(expr, @"\\{(\w+)}", @"(?<$1>.*)");
-					
-					// Replace all escaped whitespace with '\s+'
-					expr = expr.Replace(@"\ ", @"\s+");
-					
-					// Allow expressions the end with whitespace to also match the eol char
-					if (expr.EndsWith(@"\s+"))
-					{
-						expr = expr.Remove(expr.Length - 3, 3);
-						expr = expr + @"(?:$|\s)";
-					}
-				}
-				
-				// Compile the expression
-				RegexOptions opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
-				return m_compiled_patn = new Regex(expr, opts);
-			}
-		}
+		/// <summary>The template string used to create the transformed row</summary>
+		public string Replace { get; set; }
 
-		public List<string> CaptureIds
+		/// <summary>Handles 'm_match' being changed</summary>
+		private void HandlePatternChanged(object sender, EventArgs args)
 		{
-			get
-			{
-				try { return new List<string>(Regex.GetGroupNames().Skip(1)); }
-				catch { return new List<string>(); }
-			}
+			UpdateSubs();
 		}
 
 		/// <summary>Returns the collection of Tags and their character spans in 'str'</summary>
@@ -236,24 +141,9 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns true if the match expression is valid</summary>
-		public bool IsValid
+		public override bool IsValid
 		{
-			get { return ValidateExpr() == null && ValidateReplace() == null; }
-		}
-		
-		/// <summary>Returns null if the match field is valid, otherwise an exception describing what's wrong</summary>
-		public Exception ValidateExpr()
-		{
-			try
-			{
-				// Compiling the Regex will throw if there's something wrong with it. It will never be null
-				if (Regex == null)
-					return new ArgumentException("The regular expression is null");
-				
-				// No prob, bob!
-				return null;
-			}
-			catch (Exception ex) { return ex; }
+			get { return base.IsValid && ValidateReplace() == null; }
 		}
 
 		/// <summary>Returns null if the replace field is valid, otherwise an exception describing what's wrong</summary>
@@ -271,12 +161,6 @@ namespace RyLogViewer
 			catch (Exception ex) { return ex; }
 		}
 
-		/// <summary>Return true if 'text' matches the 'Match' pattern</summary>
-		public bool IsMatch(string text)
-		{
-			return Match.Length != 0 && IsValid && Regex.IsMatch(text);
-		}
-
 		/// <summary>Apply the transform to 'text' and return the mapping of capture groups in 'text' and in the returned result</summary>
 		public string Txfm(string text, out List<Capture> src_caps, out List<Capture> dst_caps)
 		{
@@ -292,12 +176,12 @@ namespace RyLogViewer
 			var caps = new Dictionary<string,Capture>();
 			
 			// Get the map of capture ids to captured values from 'text'
-			var ids  = CaptureIds;     // The collection of tags in the match template
-			var grps = match.Groups;   // The captures from 'text' (starting at index 1, elem zero is always the whole match)
-			Debug.Assert(ids.Count == grps.Count - 1, "Expected the number of capture ids and number of regex capture groups to be the same");
-			for (int i = 0; i != ids.Count; ++i)
+			var ids  = CaptureGroupNames;  // The collection of tags in the match template
+			var grps = match.Groups;       // The captures from 'text' (starting at index 1, elem zero is always the whole match)
+			Debug.Assert(ids.Length == grps.Count, "Expected the number of capture ids and number of regex capture groups to be the same");
+			for (int i = 0; i != ids.Length; ++i)
 			{
-				Capture cap = new Capture(ids[i], grps[i+1].Value, new Span(grps[i+1].Index, grps[i+1].Length));
+				Capture cap = new Capture(ids[i], grps[i].Value, new Span(grps[i].Index, grps[i].Length));
 				caps.Add(cap.Id, cap);
 				src_caps.Add(cap);
 			}
@@ -336,31 +220,37 @@ namespace RyLogViewer
 		/// <summary>Apply the transform to 'text' (as fast as possible).</summary>
 		public string Txfm(string text)
 		{
+			// This method is a duplicate of the one above, but is optimised for transforming
+			// rows from the log file.
+
 			Debug.Assert(IsValid, "Shouldn't be calling this unless the transform is valid");
-			
+
 			// If 'text' doesn't match the 'Match' expression, return the string unchanged
 			Match match = Regex.Match(text);
 			if (!match.Success) return text;
-			
+
 			var caps = new Dictionary<string,Capture>();
-			
+
 			// Get the map of capture ids to captured values from 'text'
-			var ids  = CaptureIds;     // The collection of tags in the match template
-			var grps = match.Groups;   // The captures from 'text' (starting at index 1, elem zero is always the whole match)
-			Debug.Assert(ids.Count == grps.Count - 1, "Expected the number of capture ids and number of regex capture groups to be the same");
-			for (int i = 0; i != ids.Count; ++i)
+			var ids  = CaptureGroupNames; // The collection of tags in the match template
+			var grps = match.Groups;      // The captures from 'text' (starting at index 1, elem zero is always the whole match)
+			Debug.Assert(ids.Length == grps.Count, "Expected the number of capture ids and number of regex capture groups to be the same");
+			for (int i = 0; i != ids.Length; ++i)
 			{
-				Capture cap = new Capture(ids[i], grps[i+1].Value);
+				Capture cap = new Capture(ids[i], grps[i].Value);
 				caps.Add(cap.Id, cap);
 			}
-			
+
+			// Transform works by only replacing the portion of 'text' that matches the
+			// pattern. If users want to replace the entire line they need to setup the
+			// pattern so that it matches the entire line.
 			string result = text;
 			result = result.Remove(grps[0].Index, grps[0].Length);
 			result = result.Insert(grps[0].Index, Replace);
-			
+
 			// Build a list of the tags to be replaced in the result string
 			List<Tag> rtags = (from t in GetTags(result) where ids.Contains(t.Id) select t).ToList();
-			
+
 			// Perform the substitutions
 			int ofs = 0;
 			foreach (Tag t in rtags)
@@ -372,7 +262,7 @@ namespace RyLogViewer
 			}
 			return result;
 		}
-		
+
 		/// <summary>Update the Subs map given the new match string</summary>
 		private void UpdateSubs()
 		{
@@ -381,7 +271,7 @@ namespace RyLogViewer
 			
 			// Build a new map of capture ids to default substitution objects
 			Subs = new Dictionary<string,ITxfmSub>();
-			foreach (var id in CaptureIds)
+			foreach (var id in CaptureGroupNames)
 				Subs.Add(id, new SubNoChange{Id = id});
 			
 			// Merge the old list of subs back into the Subs map
@@ -391,7 +281,7 @@ namespace RyLogViewer
 				Subs[s.Key] = s.Value;
 			}
 		}
-		
+
 		/// <summary>Reads an xml description of the transforms</summary>
 		public static List<Transform> Import(string filters)
 		{
@@ -405,7 +295,7 @@ namespace RyLogViewer
 			
 			return list;
 		}
-		
+
 		/// <summary>Serialise the highlight patterns to xml</summary>
 		public static string Export(IEnumerable<Transform> txfms)
 		{
@@ -417,35 +307,120 @@ namespace RyLogViewer
 			
 			return doc.ToString(SaveOptions.None);
 		}
-		
+
 		/// <summary>Creates a new object that is a copy of the current instance.</summary>
-		public object Clone()
+		public override object Clone()
 		{
 			return new Transform(this);
 		}
-		
+
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			Transform rhs = obj as Transform;
+			var rhs = obj as Transform;
 			return rhs != null
-				&& m_match.Equals(rhs.m_match)
-				&& Replace.Equals(rhs.Replace);
+				&& base.Equals(obj)
+				&& Equals(Replace, rhs.Replace);
 		}
-		
+
 		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{
+			// ReSharper disable NonReadonlyFieldInGetHashCode
 			return
-				m_match.GetHashCode()^
+				base.GetHashCode()^
 				Replace.GetHashCode();
+			// ReSharper restore NonReadonlyFieldInGetHashCode
 		}
-		
-		/// <summary>Returns a <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.</summary>
+
 		public override string ToString()
 		{
-			return Match;
+			return Expr;
 		}
 	}
 }
 
+#if PR_UNITTESTS
+namespace pr
+{
+	using NUnit.Framework;
+	using RyLogViewer;
+
+	[TestFixture] internal static partial class RyLogViewerUnitTests
+	{
+		internal static class TestTransform
+		{
+			[TestFixtureSetUp] public static void Setup()
+			{
+			}
+			[TestFixtureTearDown] public static void CleanUp()
+			{
+			}
+			private static void Check(Transform pat, string test, string result, string[] grp_names, string[] captures)
+			{
+				Assert.IsTrue(pat.IsMatch(test));
+				var caps = pat.CaptureGroups(test).ToArray();
+
+				Assert.AreEqual(grp_names.Length, caps.Length);
+				Assert.AreEqual(captures.Length, caps.Length);
+
+				for (int i = 0; i != caps.Length; ++i)
+				{
+					Assert.AreEqual(grp_names[i], caps[i].Key);
+					Assert.AreEqual(captures[i], caps[i].Value);
+				}
+
+				Assert.AreEqual(result, pat.Txfm(test));
+			}
+			[Test] public static void SubStringMatches0()
+			{
+				Check(new Transform(EPattern.Substring, "test", string.Empty), 
+					"A test string",
+					"A  string",
+					new[]{"0"},
+					new[]{"test"});
+			}
+			[Test] public static void SubStringMatches1()
+			{
+				Check(new Transform(EPattern.Substring, "test {a}", string.Empty), 
+					"A test string",
+					"A ",
+					new[]{"0","a"},
+					new[]{"test string", "string"});
+			}
+			[Test] public static void SubStringMatches2()
+			{
+				Check(new Transform(EPattern.Substring, "test {a}", "{a} {0}"), 
+					"A test string",
+					"A string test string",
+					new[]{"0","a"},
+					new[]{"test string", "string"});
+			}
+			[Test] public static void WildcardMatches()
+			{
+				Check(new Transform(EPattern.Wildcard, "* {a}ing", "{a} {0}"), 
+					"A test string",
+					"str A test string",
+					new[]{"0","a"},
+					new[]{"A test string", "str"});
+			}
+			[Test] public static void RegexMatches0()
+			{
+				Check(new Transform(EPattern.RegularExpression, "^(.*?) (.*?) (.*?)$", "{2} {1} {3}"), 
+					"A test string",
+					"test A string",
+					new[]{"0","1","2","3"},
+					new[]{"A test string","A","test","string"});
+			}
+			[Test] public static void RegexMatches1()
+			{
+				Check(new Transform(EPattern.RegularExpression, "^(?<a>.*?) (?<b>.*?) (?<c>.*?)$", "{b} {a} {c}"), 
+					"A test string",
+					"test A string",
+					new[]{"0","a","b","c"},
+					new[]{"A test string","A","test","string"});
+			}
+		}
+	}
+}
+#endif

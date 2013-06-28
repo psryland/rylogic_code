@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -17,7 +16,7 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	/// <summary>Parts of the Main form related to buffering non-file stream into an output file</summary>
+	/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
 	public partial class Main :Form
 	{
 		private BufferedProcess    m_buffered_process;
@@ -45,14 +44,14 @@ namespace RyLogViewer
 				// Give some UI feedback when the process ends
 				buffered_process.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage(string.Format("'{0}' exited", Path.GetFileName(conn.Executable)), Color.Azure, Color.Blue);
-						BeginInvoke(proc_exit);
+						this.BeginInvoke(() => SetStaticStatusMessage(string.Format("'{0}' exited", Path.GetFileName(conn.Executable)), Color.Black, Color.LightSalmon));
 					};
 			
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_process.Filepath, !buffered_process.TmpFile);
+				OpenSingleLogFile(buffered_process.Filepath, !buffered_process.TmpFile);
 				buffered_process.Start();
-				
+				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
+
 				// Pass over the ref
 				m_buffered_process = buffered_process;
 				buffered_process = null;
@@ -80,21 +79,21 @@ namespace RyLogViewer
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
 				CloseLogFile();
-				
+
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_tcp_netconn = new BufferedTcpNetConn(conn);
-				
+
 				// Give some UI feedback if the connection drops
 				buffered_tcp_netconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
-						BeginInvoke(proc_exit);
+						this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
 					};
-			
+
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_tcp_netconn.Filepath, !buffered_tcp_netconn.TmpFile);
+				OpenSingleLogFile(buffered_tcp_netconn.Filepath, !buffered_tcp_netconn.TmpFile);
 				buffered_tcp_netconn.Start(this);
-				
+				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
+
 				// Pass over the ref
 				m_buffered_tcp_netconn = buffered_tcp_netconn;
 				buffered_tcp_netconn = null;
@@ -123,21 +122,21 @@ namespace RyLogViewer
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
 				CloseLogFile();
-				
+
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_udp_netconn = new BufferedUdpNetConn(conn);
-				
+
 				// Give some UI feedback if the connection drops (not that there is a connection with Udp... on well..)
 				buffered_udp_netconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
-						BeginInvoke(proc_exit);
+						this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
 					};
-			
+
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_udp_netconn.Filepath, !buffered_udp_netconn.TmpFile);
+				OpenSingleLogFile(buffered_udp_netconn.Filepath, !buffered_udp_netconn.TmpFile);
 				buffered_udp_netconn.Start();
-				
+				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
+
 				// Pass over the ref
 				m_buffered_udp_netconn = buffered_udp_netconn;
 				buffered_udp_netconn = null;
@@ -166,20 +165,20 @@ namespace RyLogViewer
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
 				CloseLogFile();
-				
+
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_serialconn = new BufferedSerialConn(conn);
-				
+
 				// Give some UI feedback if the connection drops
 				buffered_serialconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
-						BeginInvoke(proc_exit);
+						this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
 					};
-			
+
 				// Open the capture file created by buffered_process
-				OpenLogFile(buffered_serialconn.Filepath, !buffered_serialconn.TmpFile);
+				OpenSingleLogFile(buffered_serialconn.Filepath, !buffered_serialconn.TmpFile);
 				buffered_serialconn.Start();
+				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
 
 				// Pass over the ref
 				m_buffered_serialconn = buffered_serialconn;
@@ -196,7 +195,7 @@ namespace RyLogViewer
 					buffered_serialconn.Dispose();
 			}
 		}
-		
+
 		/// <summary>Open a named pipe connection and log anything read</summary>
 		private void LogNamedPipeConnection(PipeConn conn)
 		{
@@ -208,21 +207,21 @@ namespace RyLogViewer
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
 				CloseLogFile();
-				
+
 				// Create the buffered pipe connection
 				buffered_pipeconn = new BufferedPipeConn(conn);
-				
+
 				// Give some UI feedback if the connection drops
 				buffered_pipeconn.ConnectionDropped += (s,a)=>
 					{
-						Action proc_exit = () => SetTransientStatusMessage("Connection dropped", Color.Azure, Color.Blue);
-						BeginInvoke(proc_exit);
+						this.BeginInvoke(() => SetStaticStatusMessage("Connection dropped", Color.Black, Color.LightSalmon));
 					};
-			
+
 				// Open the capture file
-				OpenLogFile(buffered_pipeconn.Filepath, !buffered_pipeconn.TmpFile);
+				OpenSingleLogFile(buffered_pipeconn.Filepath, !buffered_pipeconn.TmpFile);
 				buffered_pipeconn.Start(this);
-				
+				SetStaticStatusMessage("Connected", Color.Black, Color.LightGreen);
+
 				// Pass over the ref
 				m_buffered_pipeconn = buffered_pipeconn;
 				buffered_pipeconn = null;
@@ -269,8 +268,8 @@ namespace RyLogViewer
 		public event EventHandler ConnectionDropped;
 		protected void RaiseConnectionDropped()
 		{
-			if (ConnectionDropped != null)
-				ConnectionDropped(this, EventArgs.Empty);
+			if (ConnectionDropped == null) return;
+			ConnectionDropped(this, EventArgs.Empty);
 		}
 
 		protected BufferedStream(string output_filepath, bool append)
@@ -295,7 +294,7 @@ namespace RyLogViewer
 			// Open the file that will receive the captured output
 			m_outp = new FileStream(Filepath, mode, FileAccess.Write, FileShare.Read, BufBlockSize, opts);
 		}
-		
+
 		/// <summary>Should return true to continue reading data</summary>
 		protected abstract bool IsConnected { get; }
 
@@ -327,7 +326,7 @@ namespace RyLogViewer
 				RaiseConnectionDropped();
 			}
 		}
-		
+
 		/// <summary>Cleanup</summary>
 		public virtual void Dispose()
 		{
@@ -381,7 +380,7 @@ namespace RyLogViewer
 		{
 			m_process.Start();
 			Log.Info(this, "Process {0} started".Fmt(m_process.ProcessName));
-			
+
 			// Attach to the window console so we can forward received data to it
 			if (m_launch.ShowWindow)
 				Win32.AttachConsole(m_process.Id);
@@ -454,32 +453,32 @@ namespace RyLogViewer
 		/// <summary>Start asynchronously reading from the tcp client</summary>
 		public void Start(Main parent)
 		{
-			ProgressForm connect = new ProgressForm("Connecting..."
+			var connect = new ProgressForm("Connecting..."
 				,string.Format("Connecting to remote host: {0}:{1}", m_conn.Hostname, m_conn.Port)
-				,(s,a)=>
+				,null
+				,ProgressBarStyle.Marquee
+				, (s,a,cb)=>
 				{
-					BackgroundWorker bgw = (BackgroundWorker)s;
-					bgw.ReportProgress(0, new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
-					
+					cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
+
 					m_tcp = new TcpClient();
 					Proxy proxy = m_conn.ProxyType != Proxy.EType.None
 						? Proxy.Create(m_conn.ProxyType, m_conn.ProxyHostname, m_conn.ProxyPort, m_conn.ProxyUserName, m_conn.ProxyPassword)
 						: null;
-					
+
 					// Connect async
 					var ar = (proxy != null)
 						? proxy.BeginConnect(m_conn.Hostname, m_conn.Port)
 						: m_tcp.BeginConnect(m_conn.Hostname, m_conn.Port, null, null);
 
-					for (;!bgw.CancellationPending && !ar.AsyncWaitHandle.WaitOne(500);){}
-					a.Cancel = bgw.CancellationPending;
-					if (!a.Cancel)
+					for (;!s.CancelPending && !ar.AsyncWaitHandle.WaitOne(500);){}
+					if (!s.CancelPending)
 					{
 						if (proxy != null)
 							m_tcp = proxy.EndConnect(ar);
 						else
 							m_tcp.EndConnect(ar);
-						
+
 						NetworkStream stream = m_tcp.GetStream();
 						stream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(stream, m_buf));
 					}
@@ -666,16 +665,14 @@ namespace RyLogViewer
 		/// <summary>Start asynchronously reading from the tcp client</summary>
 		public void Start(Main parent)
 		{
-			ProgressForm connect = new ProgressForm("Connecting...", "Connecting to "+m_conn.PipeAddr, (s,a)=>
+			var connect = new ProgressForm("Connecting...", "Connecting to "+m_conn.PipeAddr, null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
-					BackgroundWorker bgw = (BackgroundWorker)s;
-					bgw.ReportProgress(0, new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
-					
-					while (!m_pipe.IsConnected && !bgw.CancellationPending)
+					cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
+
+					while (!m_pipe.IsConnected && !s.CancelPending)
 						try { m_pipe.Connect(100); } catch (TimeoutException) {}
-					
-					a.Cancel = bgw.CancellationPending;
-					if (!a.Cancel)
+
+					if (!s.CancelPending)
 					{
 						m_pipe.ReadMode = PipeTransmissionMode.Byte;
 						m_pipe.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(m_pipe, m_buf));

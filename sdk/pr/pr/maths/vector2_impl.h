@@ -78,7 +78,7 @@ namespace pr
 	inline v2 SLerp2(v2 const& src, v2 const& dest, float frac)
 	{
 		float s_len = Length2(src), d_len = Length2(dest);
-		return (s_len + frac*(d_len - s_len)) * GetNormal2(src + frac*(dest - src)); 
+		return (s_len + frac*(d_len - s_len)) * Normalise2(src + frac*(dest - src)); 
 	}
 	inline uint Quadrant(v2 const& v)
 	{

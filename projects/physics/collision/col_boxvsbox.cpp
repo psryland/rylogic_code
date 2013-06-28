@@ -228,7 +228,7 @@ namespace pr
 						v4 axis = Cross3(data.m_a2w[i], data.m_b2w[j]);
 						if( !FEqlZero3(axis) )
 						{
-							Normalise3(axis);
+							axis = Normalise3(axis);
 							Point pointA(data.m_a2w.pos);
 							Point pointB(data.m_b2w.pos);
 							float sep = Dot3(axis, a_to_b);

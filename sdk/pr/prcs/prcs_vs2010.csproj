@@ -377,6 +377,6 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>q:\sdk\pr\lib\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
+    <PostBuildEvent>q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
   </PropertyGroup>
 </Project>

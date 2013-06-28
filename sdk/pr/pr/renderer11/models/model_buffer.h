@@ -30,26 +30,26 @@ namespace pr
 			VBuf          m_vb;      // The vertex buffer
 			IBuf          m_ib;      // The index buffer
 			ModelManager* m_mdl_mgr; // The model manager that created this model buffer
-			
+
 			ModelBuffer();
-			
+
 			// Returns true if 'settings' describe a model format that is compatible with this model buffer
 			bool IsCompatible(MdlSettings const& settings) const;
-			
+
 			// Returns true if there is enough free space in this model for 'vcount' verts and 'icount' indices
 			bool IsRoomFor(size_t vcount, size_t icount) const;
-			
+
 			// Reserve 'vcount' verts from this model
 			Range ReserveVerts(size_t vcount);
-			
+
 			// Reserve 'icount' indices from this model
 			Range ReserveIndices(size_t icount);
-			
+
 			// Access to the vertex/index buffers
 			// Only returns false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw
-			bool MapVerts  (pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, pr::rdr::Range v_range = pr::rdr::RangeZero);
-			bool MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, pr::rdr::Range i_range = pr::rdr::RangeZero);
-			
+			bool MapVerts  (pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, Range vrange = RangeZero);
+			bool MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, Range irange = RangeZero);
+
 			// Refcounting cleanup function
 			static void RefCountZero(pr::RefCount<ModelBuffer>* doomed);
 		private:
@@ -60,4 +60,3 @@ namespace pr
 }
 
 #endif
-

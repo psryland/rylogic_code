@@ -11,10 +11,10 @@
 // PR_RDR_SHADER_VSIN_NORM3   - include normal (float3) in the vertex shader input
 // PR_RDR_SHADER_VSIN_DIFF0   - include pvc (float4) in the vertex shader input
 // PR_RDR_SHADER_VSIN_2DTEX0  - include 2d tex coords (float2) in the vertex shader input
-// PR_RDR_SHADER_VSOUT_SSPOS4 - include screen space position (float4) in the vertex shader output
-// PR_RDR_SHADER_VSOUT_WSPOS4 - include world space position (float4) in the vertex shader output
-// PR_RDR_SHADER_VSOUT_DIFF0  - include pvc (float4) in the vertex shader output
-// PR_RDR_SHADER_VSOUT_2DTEX0 - include 2d tex coords (float2) in the vertex shader output
+// PR_RDR_SHADER_PSIN_SSPOS4 - include screen space position (float4) in the vertex shader output
+// PR_RDR_SHADER_PSIN_WSPOS4 - include world space position (float4) in the vertex shader output
+// PR_RDR_SHADER_PSIN_DIFF0  - include pvc (float4) in the vertex shader output
+// PR_RDR_SHADER_PSIN_2DTEX0 - include 2d tex coords (float2) in the vertex shader output
 // PR_RDR_SHADER_TXFM         - use standard object to world transforms of verts
 // PR_RDR_SHADER_TXFMWS       - use standard object to world transforms of verts
 // PR_RDR_SHADER_TINT0        - base diffuse colour for the whole object
@@ -29,26 +29,26 @@
 #include "cbuffer.hlsl"
 #include "functions.hlsl"
 
-// Vertex input format
+// VS input format
 struct VS_INPUT
 {
 	EXPAND(float3 pos   :Position  ;,PR_RDR_SHADER_VSIN_POS3  )
-	EXPAND(float3 norm  :Normal    ;,PR_RDR_SHADER_VSIN_NORM3 )
 	EXPAND(float4 diff0 :Color0    ;,PR_RDR_SHADER_VSIN_DIFF0 )
+	EXPAND(float3 norm  :Normal    ;,PR_RDR_SHADER_VSIN_NORM3 )
 	EXPAND(float2 tex0  :TexCoord0 ;,PR_RDR_SHADER_VSIN_2DTEX0)
 };
 
-// Vertex output format
-struct VS_OUTPUT
+// PS input format
+struct PS_INPUT
 {
-	EXPAND(float4 ss_pos  :SV_Position ;,PR_RDR_SHADER_VSOUT_SSPOS4)
-	EXPAND(float4 ws_pos  :Position1   ;,PR_RDR_SHADER_VSOUT_WSPOS4)
-	EXPAND(float4 ws_norm :Normal      ;,PR_RDR_SHADER_VSOUT_WSNORM4)
-	EXPAND(float4 diff0   :Color0      ;,PR_RDR_SHADER_VSOUT_DIFF0 )
-	EXPAND(float2 tex0    :TexCoord0   ;,PR_RDR_SHADER_VSOUT_2DTEX0)
+	EXPAND(float4 ss_pos  :SV_Position ;,PR_RDR_SHADER_PSIN_SSPOS4)
+	EXPAND(float4 ws_pos  :Position1   ;,PR_RDR_SHADER_PSIN_WSPOS4)
+	EXPAND(float4 ws_norm :Normal      ;,PR_RDR_SHADER_PSIN_WSNORM4)
+	EXPAND(float4 diff0   :Color0      ;,PR_RDR_SHADER_PSIN_DIFF0 )
+	EXPAND(float2 tex0    :TexCoord0   ;,PR_RDR_SHADER_PSIN_2DTEX0)
 };
 
-// Pixel output format
+// PS output format
 struct PS_OUTPUT
 {
 	float4 diff0 :SV_Target;
@@ -56,25 +56,25 @@ struct PS_OUTPUT
 
 // Main vertex shader
 #if PR_RDR_SHADER_VS
-VS_OUTPUT main(VS_INPUT In)
+PS_INPUT main(VS_INPUT In)
 {
-	VS_OUTPUT Out;
-	EXPAND(float4 ms_pos  = float4(In.pos ,1) ;,PR_RDR_SHADER_VSIN_POS3 )
-	EXPAND(float4 ms_norm = float4(In.norm,0) ;,PR_RDR_SHADER_VSIN_NORM3)
+	PS_INPUT Out;
+	EXPAND(float4 ms_pos  = float4(In.pos ,1); , PR_RDR_SHADER_VSIN_POS3 )
+	EXPAND(float4 ms_norm = float4(In.norm,0); , PR_RDR_SHADER_VSIN_NORM3)
 
 	// Transform
-	EXPAND(Out.ss_pos  = mul(m_o2s ,ms_pos ) ;,PR_RDR_SHADER_TXFM  )
-	EXPAND(Out.ws_pos  = mul(m_o2w ,ms_pos ) ;,PR_RDR_SHADER_TXFMWS)
-	EXPAND(Out.ws_norm = mul(m_o2w ,ms_norm) ;,PR_RDR_SHADER_TXFMWS)
+	EXPAND(Out.ss_pos  = mul(m_o2s ,ms_pos ); , PR_RDR_SHADER_TXFM  )
+	EXPAND(Out.ws_pos  = mul(m_o2w ,ms_pos ); , PR_RDR_SHADER_TXFMWS)
+	EXPAND(Out.ws_norm = mul(m_o2w ,ms_norm); , PR_RDR_SHADER_TXFMWS)
 
 	// Tinting
-	EXPAND(Out.diff0 = m_tint ;,PR_RDR_SHADER_TINT0)
+	EXPAND(Out.diff0 = m_tint; , PR_RDR_SHADER_TINT0)
 
 	// Per Vertex colour
-	EXPAND(Out.diff0 = In.diff0 * Out.diff0 ;,PR_RDR_SHADER_PVC)
+	EXPAND(Out.diff0 = In.diff0 * Out.diff0; , PR_RDR_SHADER_PVC)
 
 	// Texture2D (with transform)
-	EXPAND(Out.tex0 = mul(m_tex2surf0, float4(In.tex0,0,1)).xy ;,PR_RDR_SHADER_TEX0)
+	EXPAND(Out.tex0 = mul(m_tex2surf0, float4(In.tex0,0,1)).xy; , PR_RDR_SHADER_TEX0)
 
 	return Out;
 }
@@ -82,7 +82,7 @@ VS_OUTPUT main(VS_INPUT In)
 
 // Main pixel shader
 #if PR_RDR_SHADER_PS
-PS_OUTPUT main(VS_OUTPUT In)
+PS_OUTPUT main(PS_INPUT In)
 {
 	PS_OUTPUT Out;
 	Out.diff0 = float4(1,1,1,1);
@@ -94,10 +94,10 @@ PS_OUTPUT main(VS_OUTPUT In)
 	EXPAND(Out.diff0 = In.diff0; , PR_RDR_SHADER_TINT0)
 
 	// Texture2D (with transform)
-	EXPAND(Out.diff0 = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff0 ;,PR_RDR_SHADER_TEX0)
+	EXPAND(Out.diff0 = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff0; , PR_RDR_SHADER_TEX0)
 
 	// Lighting
-	EXPAND(Out.diff0 = Illuminate(In.ws_pos, In.ws_norm, m_c2w[3], Out.diff0); ,PR_RDR_SHADER_LIGHTING)
+	EXPAND(Out.diff0 = Illuminate(In.ws_pos, In.ws_norm, m_c2w[3], Out.diff0); , PR_RDR_SHADER_LIGHTING)
 
 	return Out;
 }
@@ -117,9 +117,9 @@ PS_OUTPUT main(VS_OUTPUT In)
 
 // Stereo triangle geometry shader
 [maxvertexcount(6)]
-void main(triangle VS_OUTPUT In[3], inout TriangleStream<VS_OUTPUT> TriStream)
+void gs_main(triangle PS_INPUT In[3], inout TriangleStream<PS_INPUT> TriStream)
 {
-	VS_OUTPUT Out;
+	PS_INPUT Out;
 	float4x4 w2s;
 
 	// Left

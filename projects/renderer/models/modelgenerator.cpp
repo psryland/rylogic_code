@@ -42,8 +42,7 @@ void pr::rdr::model::GenerateNormals(MLock& mlock, Range const* v_range, Range c
 		vf::RefVertex v2 = mlock.m_vlock.m_ptr[ib[2]];
 
 		// Calculate a face normal
-		v3 norm = Cross3(v1.vertex() - v0.vertex(), v2.vertex() - v0.vertex());
-		Normalise3IfNonZero(norm);
+		v3 norm = Normalise3IfNonZero(Cross3(v1.vertex() - v0.vertex(), v2.vertex() - v0.vertex()));
 
 		// Add the normal to each vertex that references the face
 		v0.normal() += norm;
@@ -54,7 +53,7 @@ void pr::rdr::model::GenerateNormals(MLock& mlock, Range const* v_range, Range c
 	// Normalise all of the normals
 	vb = mlock.m_vlock.m_ptr + v_range->m_begin;
 	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
-		Normalise3IfNonZero(vb->normal());
+		vb->normal() = Normalise3IfNonZero(vb->normal());
 }
 void pr::rdr::model::GenerateNormals(ModelPtr& model, Range const* v_range, Range const* i_range)
 {
@@ -236,10 +235,10 @@ pr::rdr::ModelPtr pr::rdr::model::Quad(MLock& mlock, MaterialManager& matmgr, v4
 	rdr::Index   base = value_cast<rdr::Index>(v_range->m_begin);
 	for (std::size_t q = 0; q != num_quads; ++q, point += 4, base += 4, colours += col_inc)
 	{
-		vb->set(point[0], GetNormal3IfNonZero(Cross3(point[1] - point[0], point[3] - point[0])), colours[0], v2::make(0.0f, 1.0f));		++vb;
-		vb->set(point[1], GetNormal3IfNonZero(Cross3(point[2] - point[1], point[0] - point[1])), colours[1], v2::make(1.0f, 1.0f));		++vb;
-		vb->set(point[2], GetNormal3IfNonZero(Cross3(point[3] - point[2], point[1] - point[2])), colours[2], v2::make(1.0f, 0.0f));		++vb;
-		vb->set(point[3], GetNormal3IfNonZero(Cross3(point[0] - point[3], point[2] - point[3])), colours[3], v2::make(0.0f, 0.0f));		++vb;
+		vb->set(point[0], Normalise3IfNonZero(Cross3(point[1] - point[0], point[3] - point[0])), colours[0], v2::make(0.0f, 1.0f));		++vb;
+		vb->set(point[1], Normalise3IfNonZero(Cross3(point[2] - point[1], point[0] - point[1])), colours[1], v2::make(1.0f, 1.0f));		++vb;
+		vb->set(point[2], Normalise3IfNonZero(Cross3(point[3] - point[2], point[1] - point[2])), colours[2], v2::make(1.0f, 0.0f));		++vb;
+		vb->set(point[3], Normalise3IfNonZero(Cross3(point[0] - point[3], point[2] - point[3])), colours[3], v2::make(0.0f, 0.0f));		++vb;
 		
 		// Grow the bounding box
 		pr::Encompase(mlock.m_model->m_bbox, point[0]);
@@ -281,7 +280,7 @@ pr::rdr::ModelPtr pr::rdr::model::Quad(Renderer& rdr,v4 const* point ,std::size_
 }
 pr::rdr::ModelPtr pr::rdr::model::Quad(MLock& mlock ,MaterialManager& matmgr ,v4 const& centre ,v4 const& forward ,float width ,float height ,Colour32 const* colours ,std::size_t num_colours ,rdr::Material const* mat ,Range* v_range ,Range* i_range)
 {
-	pr::v4 fwd  = pr::GetNormal3(forward);
+	pr::v4 fwd  = pr::Normalise3(forward);
 	pr::v4 up   = pr::Perpendicular(fwd);
 	pr::v4 left = pr::Cross3(up, fwd);
 	up   *= height * 0.5f;
@@ -351,7 +350,7 @@ pr::rdr::ModelPtr pr::rdr::model::SphereRxyz(MLock& mlock, MaterialManager& matm
 		point.set(geo_vert.x * xradius, geo_vert.y * yradius, geo_vert.z * zradius, 1.0f);
 		norm .set(geo_vert.x / xradius, geo_vert.y / yradius, geo_vert.z / zradius, 0.0f);
 		point = position + point;
-		Normalise3(norm);
+		norm = Normalise3(norm);
 		vb->set(point, norm, colour, geo_uv);
 		pr::Encompase(mlock.m_model->m_bbox, point);
 		++vb;
@@ -437,35 +436,35 @@ pr::rdr::ModelPtr pr::rdr::model::Box(MLock& mlock, MaterialManager& matmgr, v4 
 		}
 
 		// Add the verts for the box
-		vb->set(pt[0], GetNormal3IfNonZero(Cross3(pt[1] - pt[0], pt[2] - pt[0])), colour), ++vb;
-		vb->set(pt[1], GetNormal3IfNonZero(Cross3(pt[3] - pt[1], pt[0] - pt[1])), colour), ++vb;
-		vb->set(pt[2], GetNormal3IfNonZero(Cross3(pt[0] - pt[2], pt[3] - pt[2])), colour), ++vb;
-		vb->set(pt[3], GetNormal3IfNonZero(Cross3(pt[2] - pt[3], pt[1] - pt[3])), colour), ++vb;
+		vb->set(pt[0], Normalise3IfNonZero(Cross3(pt[1] - pt[0], pt[2] - pt[0])), colour), ++vb;
+		vb->set(pt[1], Normalise3IfNonZero(Cross3(pt[3] - pt[1], pt[0] - pt[1])), colour), ++vb;
+		vb->set(pt[2], Normalise3IfNonZero(Cross3(pt[0] - pt[2], pt[3] - pt[2])), colour), ++vb;
+		vb->set(pt[3], Normalise3IfNonZero(Cross3(pt[2] - pt[3], pt[1] - pt[3])), colour), ++vb;
 
-		vb->set(pt[2], GetNormal3IfNonZero(Cross3(pt[3] - pt[2], pt[4] - pt[2])), colour), ++vb;
-		vb->set(pt[3], GetNormal3IfNonZero(Cross3(pt[5] - pt[3], pt[2] - pt[3])), colour), ++vb;
-		vb->set(pt[4], GetNormal3IfNonZero(Cross3(pt[2] - pt[4], pt[5] - pt[4])), colour), ++vb;
-		vb->set(pt[5], GetNormal3IfNonZero(Cross3(pt[4] - pt[5], pt[3] - pt[5])), colour), ++vb;
+		vb->set(pt[2], Normalise3IfNonZero(Cross3(pt[3] - pt[2], pt[4] - pt[2])), colour), ++vb;
+		vb->set(pt[3], Normalise3IfNonZero(Cross3(pt[5] - pt[3], pt[2] - pt[3])), colour), ++vb;
+		vb->set(pt[4], Normalise3IfNonZero(Cross3(pt[2] - pt[4], pt[5] - pt[4])), colour), ++vb;
+		vb->set(pt[5], Normalise3IfNonZero(Cross3(pt[4] - pt[5], pt[3] - pt[5])), colour), ++vb;
 
-		vb->set(pt[4], GetNormal3IfNonZero(Cross3(pt[5] - pt[4], pt[6] - pt[4])), colour), ++vb;
-		vb->set(pt[5], GetNormal3IfNonZero(Cross3(pt[7] - pt[5], pt[4] - pt[5])), colour), ++vb;
-		vb->set(pt[6], GetNormal3IfNonZero(Cross3(pt[4] - pt[6], pt[7] - pt[6])), colour), ++vb;
-		vb->set(pt[7], GetNormal3IfNonZero(Cross3(pt[6] - pt[7], pt[5] - pt[7])), colour), ++vb;
+		vb->set(pt[4], Normalise3IfNonZero(Cross3(pt[5] - pt[4], pt[6] - pt[4])), colour), ++vb;
+		vb->set(pt[5], Normalise3IfNonZero(Cross3(pt[7] - pt[5], pt[4] - pt[5])), colour), ++vb;
+		vb->set(pt[6], Normalise3IfNonZero(Cross3(pt[4] - pt[6], pt[7] - pt[6])), colour), ++vb;
+		vb->set(pt[7], Normalise3IfNonZero(Cross3(pt[6] - pt[7], pt[5] - pt[7])), colour), ++vb;
 
-		vb->set(pt[6], GetNormal3IfNonZero(Cross3(pt[7] - pt[6], pt[0] - pt[6])), colour), ++vb;
-		vb->set(pt[7], GetNormal3IfNonZero(Cross3(pt[1] - pt[7], pt[6] - pt[7])), colour), ++vb;
-		vb->set(pt[0], GetNormal3IfNonZero(Cross3(pt[6] - pt[0], pt[1] - pt[0])), colour), ++vb;
-		vb->set(pt[1], GetNormal3IfNonZero(Cross3(pt[0] - pt[1], pt[7] - pt[1])), colour), ++vb;
+		vb->set(pt[6], Normalise3IfNonZero(Cross3(pt[7] - pt[6], pt[0] - pt[6])), colour), ++vb;
+		vb->set(pt[7], Normalise3IfNonZero(Cross3(pt[1] - pt[7], pt[6] - pt[7])), colour), ++vb;
+		vb->set(pt[0], Normalise3IfNonZero(Cross3(pt[6] - pt[0], pt[1] - pt[0])), colour), ++vb;
+		vb->set(pt[1], Normalise3IfNonZero(Cross3(pt[0] - pt[1], pt[7] - pt[1])), colour), ++vb;
 
-		vb->set(pt[1], GetNormal3IfNonZero(Cross3(pt[7] - pt[1], pt[3] - pt[1])), colour), ++vb;
-		vb->set(pt[3], GetNormal3IfNonZero(Cross3(pt[1] - pt[3], pt[5] - pt[3])), colour), ++vb;
-		vb->set(pt[5], GetNormal3IfNonZero(Cross3(pt[3] - pt[5], pt[7] - pt[5])), colour), ++vb;
-		vb->set(pt[7], GetNormal3IfNonZero(Cross3(pt[5] - pt[7], pt[1] - pt[7])), colour), ++vb;
+		vb->set(pt[1], Normalise3IfNonZero(Cross3(pt[7] - pt[1], pt[3] - pt[1])), colour), ++vb;
+		vb->set(pt[3], Normalise3IfNonZero(Cross3(pt[1] - pt[3], pt[5] - pt[3])), colour), ++vb;
+		vb->set(pt[5], Normalise3IfNonZero(Cross3(pt[3] - pt[5], pt[7] - pt[5])), colour), ++vb;
+		vb->set(pt[7], Normalise3IfNonZero(Cross3(pt[5] - pt[7], pt[1] - pt[7])), colour), ++vb;
 
-		vb->set(pt[0], GetNormal3IfNonZero(Cross3(pt[2] - pt[0], pt[6] - pt[0])), colour), ++vb;
-		vb->set(pt[2], GetNormal3IfNonZero(Cross3(pt[4] - pt[2], pt[0] - pt[2])), colour), ++vb;
-		vb->set(pt[4], GetNormal3IfNonZero(Cross3(pt[6] - pt[4], pt[2] - pt[4])), colour), ++vb;
-		vb->set(pt[6], GetNormal3IfNonZero(Cross3(pt[0] - pt[6], pt[4] - pt[6])), colour), ++vb;
+		vb->set(pt[0], Normalise3IfNonZero(Cross3(pt[2] - pt[0], pt[6] - pt[0])), colour), ++vb;
+		vb->set(pt[2], Normalise3IfNonZero(Cross3(pt[4] - pt[2], pt[0] - pt[2])), colour), ++vb;
+		vb->set(pt[4], Normalise3IfNonZero(Cross3(pt[6] - pt[4], pt[2] - pt[4])), colour), ++vb;
+		vb->set(pt[6], Normalise3IfNonZero(Cross3(pt[0] - pt[6], pt[4] - pt[6])), colour), ++vb;
 
 		// Add the box indices
 		*ib++ = base +  0;
@@ -635,7 +634,7 @@ pr::rdr::ModelPtr pr::rdr::model::Cone(MLock& mlock ,MaterialManager& matmgr ,fl
 		{
 			float a = da*w + (l%2)*da*0.5f;
 			point = o2w * v4::make(Cos(a)*r*xscale ,Sin(a)*r*yscale ,z ,1.0f);
-			norm  = o2w * GetNormal3(v4::make(height*Cos(a+da*0.5f)/xscale ,height*Sin(a+da*0.5f)/yscale ,nz ,0.0f));
+			norm  = o2w * Normalise3(v4::make(height*Cos(a+da*0.5f)/xscale ,height*Sin(a+da*0.5f)/yscale ,nz ,0.0f));
 			uv    = v2::make(a / maths::tau, 1.0f - (z + height*0.5f) / height);
 			vb->set(point, norm, colour, uv); ++vb;
 			pr::Encompase(mlock.m_model->m_bbox, point);

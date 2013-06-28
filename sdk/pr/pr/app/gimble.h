@@ -15,14 +15,13 @@ namespace pr
 		// A gimble model
 		struct Gimble :pr::events::IRecv<pr::rdr::Evt_SceneRender>
 		{
-			// A renderer instance type for the gimble
-			PR_RDR_DECLARE_INSTANCE_TYPE2
-			(
-				Instance
-				,pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr
-				,pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform
-			);
-			
+			// A renderer instance type for the body
+			#define PR_RDR_INST(x)\
+				x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
+				x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr    )
+			PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST);
+			#undef PR_RDR_INST
+
 			Instance m_inst;    // The gimble instance
 			pr::v4   m_ofs_pos; // The offset position from the camera focus point
 			float    m_scale;   // A model size scaler.
@@ -72,7 +71,7 @@ namespace pr
 				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPC>();
 				
 				// Create a render nugget
-				m_inst.m_model->CreateNugget(method, D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+				m_inst.m_model->CreateNugget(method, pr::rdr::EPrim::LineList);
 			}
 		};
 	}

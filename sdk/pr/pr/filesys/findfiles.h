@@ -115,6 +115,29 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/filesys/filesys.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_filesys_findfiles)
+		{
+			bool found_cpp = false, found_h = false;
+			std::string root = "Q:\\projects\\unittests";
+			for (pr::filesys::FindFiles<> ff(root, "*.cpp;*.h"); !ff.done(); ff.next())
+			{
+				found_cpp |= pr::filesys::GetExtension<std::string>(ff.fullpath()).compare("cpp") == 0;
+				found_h   |= pr::filesys::GetExtension<std::string>(ff.fullpath()).compare("h") == 0;
+			}
+			PR_CHECK(found_cpp,true);
+			PR_CHECK(found_h,true);
+		}
+	}
+}
+#endif
+
 #pragma warning(default:4355) // 'this' used in constructor
 
 #endif

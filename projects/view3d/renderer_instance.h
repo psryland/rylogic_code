@@ -3,16 +3,15 @@
 //  Copyright © Rylogic Ltd 2009
 //***************************************************************************************************
 #pragma once
-#ifndef PR_RDR_RENDERER_INSTANCE_H
-#define PR_RDR_RENDERER_INSTANCE_H
+#ifndef PR_VIEW3D_RENDERER_INSTANCE_H
+#define PR_VIEW3D_RENDERER_INSTANCE_H
 
 #include <set>
 #include "pr/macros/count_of.h"
 #include "pr/maths/maths.h"
 #include "pr/camera/camera.h"
 #include "pr/script/embedded_lua.h"
-#include "pr/renderer/renderer.h"
-#include "pr/renderer/instances/instance.h"
+#include "pr/renderer11/renderer.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
@@ -23,25 +22,24 @@ namespace view3d
 	typedef std::set<View3DObject>  ObjectCont;
 	typedef std::set<View3DDrawset> DrawsetCont;
 
-	PR_RDR_DECLARE_INSTANCE_TYPE2
-	(
-		Instance
-		,pr::rdr::ModelPtr ,m_model ,pr::rdr::instance::ECpt_ModelPtr
-		,pr::m4x4          ,m_i2w   ,pr::rdr::instance::ECpt_I2WTransform
-	);
+	#define PR_RDR_INST(x)\
+		x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
+		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)
+	PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST)
+	#undef PR_RDR_INST
 
 	struct Drawset
 	{
-		ObjectCont                m_objects;                  // References to objects to draw in this drawset
-		pr::Camera                m_camera;                   // Camera control
-		pr::rdr::Light            m_light;                    // Light source for the set
-		bool                      m_light_is_camera_relative; // Whether the light is attached to the camera or not
-		EView3DRenderMode::Type   m_render_mode;              // Render mode
-		pr::Colour32              m_background_colour;        // The background colour for this drawset
-		bool                      m_focus_point_visible;      // True if we should draw the focus point
-		float                     m_focus_point_size;         // The base size of the focus point object
-		bool                      m_origin_point_visible;     // True if we should draw the origin point
-		float                     m_origin_point_size;        // The base size of the origin instance
+		ObjectCont            m_objects;                  // References to objects to draw in this drawset
+		pr::Camera            m_camera;                   // Camera control
+		pr::rdr::Light        m_light;                    // Light source for the set
+		bool                  m_light_is_camera_relative; // Whether the light is attached to the camera or not
+		EView3DFillMode::Type m_fill_mode;                // Fill mode
+		pr::Colour32          m_background_colour;        // The background colour for this drawset
+		bool                  m_focus_point_visible;      // True if we should draw the focus point
+		float                 m_focus_point_size;         // The base size of the focus point object
+		bool                  m_origin_point_visible;     // True if we should draw the origin point
+		float                 m_origin_point_size;        // The base size of the origin instance
 
 		Drawset();
 	};
@@ -54,11 +52,10 @@ namespace view3d
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
 		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	{
-		pr::rdr::Allocator         m_allocator;
 		pr::Renderer               m_renderer;
-		pr::rdr::Viewport          m_viewport;
-		pr::ldr::ObjectCont        m_scene;
-		pr::ldr::ObjectManagerDlg  m_scene_ui;
+		pr::rdr::SceneForward      m_scene;
+		pr::ldr::ObjectCont        m_obj_cont;
+		pr::ldr::ObjectManagerDlg  m_obj_cont_ui;
 		pr::ldr::MeasureDlg        m_measure_tool_ui;
 		pr::ldr::AngleDlg          m_angle_tool_ui;
 		pr::script::EmbeddedLua    m_lua;
@@ -69,7 +66,7 @@ namespace view3d
 		View3D_ReportErrorCB       m_error_cb;
 		View3D_SettingsChanged     m_settings_changed_cb;
 
-		RendererInstance(HWND hwnd, D3DDEVTYPE device_type, pr::uint d3dcreate_flags, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
+		RendererInstance(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
 		~RendererInstance();
 		void CreateStockObjects();
 

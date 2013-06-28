@@ -17,7 +17,12 @@ syntax: glob
 *.user
 *.orig
 *.userprefs
+*.vssettings
 *ReSharper*
+dlang/2.05x
+dlang/2.062
+dlang/dm/
+dlang/dmd2/
 renderer11/shaders/compiled/*
 RylogicEnv.cmd
 ResEdit.layout
@@ -29,10 +34,13 @@ obj2008/
 obj2010/
 obj2012/
 bin/
-bin2008/
-bin2010/
+bin_stable/
+*/Setup/Express/*
 .svn/
 .metadata/
+.nuget/
+packages/
+TestResults/
 media/
 ideas/
 thirdparty/
@@ -40,3 +48,5 @@ tools/Compressonator/
 miscellaneous/VisualStudio Mods/VS2010_Settings.vssettings
 miscellaneous/VisualStudio Mods/VS2008_Settings.vssettings
 tools/ResEdit/ResEdit.xml
+projects/vs2012/pr_applog.log
+sdk/pr/prcs/unittest_resources/exif_image_out.jpg

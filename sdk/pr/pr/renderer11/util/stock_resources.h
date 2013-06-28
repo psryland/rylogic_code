@@ -12,31 +12,12 @@ namespace pr
 {
 	namespace rdr
 	{
-		namespace EStockTexture
-		{
-			enum Type
-			{
-				Black,
-				White,
-				Checker,
-				NumberOf
-			};
-			inline wchar_t const* ToString(Type type)
-			{
-				switch (type)
-				{
-				default:      return L"";
-				case Black:   return L"black";
-				case White:   return L"white";
-				case Checker: return L"checker";
-				}
-			}
-			inline Type Parse(wchar_t const* str)
-			{
-				int i; for (i = 0; i != NumberOf && !pr::str::EqualI(str, ToString(static_cast<Type>(i))); ++i) {}
-				return static_cast<Type>(i);
-			}
-		}
+		#define PR_ENUM(x)\
+			x(Black   ,= 0x42001)\
+			x(White   ,= 0x42002)\
+			x(Checker ,= 0x42003)
+		PR_DEFINE_ENUM2(EStockTexture, PR_ENUM);
+		#undef PR_ENUM
 	}
 }
 

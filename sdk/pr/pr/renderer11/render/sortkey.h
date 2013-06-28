@@ -56,17 +56,13 @@ namespace pr
 			SortKey const AlphaMask     ((~0U >> (SortKeyBits - AlphaBits    )) << AlphaOfs    );
 			SortKey const SortGroupMask ((~0U >> (SortKeyBits - SortGroupBits)) << SortGroupOfs);
 		}
-		namespace ESortGroup
-		{
-			enum Type
-			{
-				Default    = ((sortkey::MaxSortGroups >> 1) & 0xFFFFFFFF),
-				Opaques    = Default,
-				Skybox     = Default + 1U,
-				AlphaBack  = Default + 5U,
-				AlphaFront = Default + 6U,
-			};
-		}
+		#define PR_ENUM(x)\
+			x(Default    ,= ((sortkey::MaxSortGroups >> 1) & 0xFFFFFFFF))\
+			x(Skybox     ,= Default + 1U)\
+			x(AlphaBack  ,= Default + 5U)\
+			x(AlphaFront ,= Default + 6U)
+		PR_DEFINE_ENUM2(ESortGroup, PR_ENUM);
+		#undef PR_ENUM
 		
 		// A sort key override is a mask that is applied to a sort key
 		// to override specific parts of the sort key.
@@ -116,7 +112,7 @@ namespace pr
 				m_key  &= ~sortkey::SortGroupMask;
 				return *this;
 			}
-			SKOverride& Group(ESortGroup::Type group)
+			SKOverride& Group(ESortGroup group)
 			{
 				PR_ASSERT(PR_DBG_RDR, group >= 0 && group < sortkey::MaxSortGroups, "sort group out of range");
 				m_mask |= static_cast<SortKey>(sortkey::SortGroupMask);
@@ -139,10 +135,9 @@ namespace pr
 			}
 			if (meth.m_tex_diffuse)
 			{
-				TextureDesc const& info = meth.m_tex_diffuse->m_info;
-				key   |= info.SortId << sortkey::TextureIdOfs;
-				alpha |= info.Alpha;
-				PR_ASSERT(PR_DBG_RDR, info.SortId < sortkey::MaxTextureId, "texture sort id overflow");
+				key   |= meth.m_tex_diffuse->m_sort_id << sortkey::TextureIdOfs;
+				alpha |= meth.m_tex_diffuse->m_has_alpha;
+				PR_ASSERT(PR_DBG_RDR, meth.m_tex_diffuse->m_sort_id < sortkey::MaxTextureId, "texture sort id overflow");
 			}
 				
 			//rs::State const* rsb = mat.m_rsb.Find(D3DRS_ALPHABLENDENABLE);
@@ -151,7 +146,7 @@ namespace pr
 			//	alpha |= true;
 			//}
 
-			key |= alpha ? ESortGroup::AlphaBack : ESortGroup::Opaques;
+			key |= alpha ? ESortGroup::AlphaBack : ESortGroup::Default;
 			key |= alpha << sortkey::AlphaOfs;
 			return key;
 		}

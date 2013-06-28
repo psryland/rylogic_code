@@ -8,9 +8,6 @@
 
 #include "pr/common/min_max_fix.h"
 
-#include <initguid.h>
-#include <malloc.h>
-#include <sdkddkver.h>
 #include <vector>
 #include <string>
 #include <list>
@@ -18,6 +15,8 @@
 #include <algorithm>
 #include <functional>
 #include <intrin.h>
+#include <malloc.h>
+#include <sdkddkver.h>
 #include <windows.h>
 #include <d3d11.h>
 #include <d3d11sdklayers.h>
@@ -34,22 +33,6 @@
 #include "pr/common/stackdump.h"
 #include "pr/common/refcount.h"
 #include "pr/common/log.h"
-
-//namespace pr
-//{
-//	// Example code:
-//	#define PR_REFPTR_TRACE 1
-//	template <typename T> inline long PtrRefCount(T*);
-//	template <typename T> inline void RefPtrTrace(bool, T*){}
-//	template <> inline void RefPtrTrace<ID3D11DeviceContext>(bool add, ID3D11DeviceContext* ptr)
-//	{
-//		OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
-//		pr::StackDump(3,5,[](std::string const& file, int line)
-//		{
-//			OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line));
-//		});
-//	}
-//}
 #include "pr/common/refptr.h"
 #include "pr/common/d3dptr.h"
 #include "pr/common/chain.h"
@@ -69,11 +52,19 @@
 #include "pr/str/tostring.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
+#include "pr/camera/camera.h"
 #include "pr/storage/nugget_file/nuggetfile.h"
 #include "pr/maths/maths.h"
 #include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_helper.h"
-#include "pr/camera/camera.h"
+
+#include "pr/geometry/line.h"
+#include "pr/geometry/quad.h"
+#include "pr/geometry/box.h"
+#include "pr/geometry/sphere.h"
+#include "pr/geometry/cylinder.h"
+#include "pr/geometry/mesh.h"
+#include "pr/geometry/utility.h"
 
 #define PR_DBG_RDR PR_DBG
 
@@ -84,17 +75,15 @@ namespace pr
 	namespace rdr
 	{
 		typedef pr::uint8  byte;
-//		typedef pr::uint8  ViewportId;
-//		typedef pr::uint16 Index;
 		typedef uintptr_t  RdrId;
 		typedef pr::uint32 SortKey;
 		typedef pr::uint16 SortKeyId;
 		RdrId const AutoId = ~0U; // A special value for automatically generating an Id
 		
 		typedef pr::string<char, 32>     string32;
+		typedef pr::string<char, 512>    string512;
 		typedef pr::string<wchar_t, 32>  wstring32;
 		typedef pr::string<wchar_t, 256> wstring256;
-//		typedef pr::string<char, 1024> string1024;
 		typedef pr::Range<size_t> Range;
 		const Range RangeZero = {0,0};
 
@@ -114,47 +103,28 @@ namespace pr
 
 		// Input layouts
 		class InputLayoutManager;
-//		class  VertexFormatManager;
-//		namespace vf
-//		{
-//			typedef pr::uint32 Type;
-//			typedef pr::uint32 Format;
-//			struct MemberOffsets;
-//			class  Iter;
-//		}
 
-//		// Lighting
-//		struct Light;
-//		class  LightingManager;
-		
+		// Lighting
+		struct Light;
+
 		// Shaders
 		class  ShaderManager;
 		struct ShaderDesc;
-		struct BaseShader;   typedef pr::RefPtr<BaseShader> ShaderPtr;
+		struct BaseShader;
+		typedef pr::RefPtr<BaseShader> ShaderPtr;
 		
 		// Textures
 		class  TextureManager;
 		struct TextureDesc;
-		struct Texture2D;     typedef pr::RefPtr<Texture2D> Texture2DPtr;
-//		struct TextureFilter;
-//		struct TextureAddrMode;
-//		namespace effect
-//		{
-//			struct Desc;
-//			namespace frag
-//			{
-//				struct Header;
-//				struct Txfm;
-//				struct Tinting;
-//				struct PVC;
-//				struct Texture2D;
-//				struct EnvMap;
-//				struct Lighting;
-//				struct Terminate;
-//			}
-//		}
-//		
-//		// Video
+		struct Texture2D;
+		struct Image;
+		struct AllocPres;
+		//struct Video;
+		typedef pr::RefPtr<Texture2D> Texture2DPtr;
+		//typedef pr::RefPtr<AllocPres> AllocPresPtr;
+		//typedef pr::RefPtr<Video>     VideoPtr;
+
+		// Video
 //		struct Video;
 //		struct AllocPres;
 //		typedef pr::RefPtr<Video> VideoPtr;
@@ -177,9 +147,15 @@ namespace pr
 		// Scenes
 		struct SceneView;
 		struct Scene;
+		struct Stereo;
 		struct DrawMethod;
 		struct Drawlist;
 		struct DrawListElement;
+
+		// Rendering
+		struct BSBlock;
+		struct DSBlock;
+		struct RSBlock;
 
 		// Enums
 		namespace ERenderMethod
@@ -190,6 +166,25 @@ namespace pr
 		{
 			enum Type { WarnedNoRenderNuggets = 1 << 0 };
 		}
+
+		// EResult
+		#define PR_ENUM(x)/*
+			*/x(Success       ,= 0         )/*
+			*/x(Failed        ,= 0x80000000)/*
+			*/x(InvalidValue  ,)
+		PR_DEFINE_ENUM2(EResult, PR_ENUM);
+		#undef PR_ENUM
+
+		// EPrim
+		#define PR_ENUM(x)\
+			x(Invalid   ,= D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)\
+			x(PointList ,= D3D11_PRIMITIVE_TOPOLOGY_POINTLIST)\
+			x(LineList  ,= D3D11_PRIMITIVE_TOPOLOGY_LINELIST)\
+			x(LineStrip ,= D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP)\
+			x(TriList   ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)\
+			x(TriStrip  ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP)
+		PR_DEFINE_ENUM2(EPrim, PR_ENUM);
+		#undef PR_ENUM
 
 		// EGeom
 		#define PR_ENUM(x) /*
@@ -213,8 +208,33 @@ namespace pr
 			x(TxTint         )\
 			x(TxTintPvc      )\
 			x(TxTintTex      )\
+			x(TxTintPvcLit   )\
 			x(TxTintPvcLitTex)
 		PR_DEFINE_ENUM1(EShader, PR_ENUM);
+		#undef PR_ENUM
+
+		// ETexAddrMode
+		#define PR_ENUM(x)\
+			x(Wrap       ,= D3D11_TEXTURE_ADDRESS_WRAP)\
+			x(Mirror     ,= D3D11_TEXTURE_ADDRESS_MIRROR)\
+			x(Clamp      ,= D3D11_TEXTURE_ADDRESS_CLAMP)\
+			x(Border     ,= D3D11_TEXTURE_ADDRESS_BORDER)\
+			x(MirrorOnce ,= D3D11_TEXTURE_ADDRESS_MIRROR_ONCE)
+		PR_DEFINE_ENUM2(ETexAddrMode, PR_ENUM);
+		#undef PR_ENUM
+
+		// EFilter - MinMagMip
+		#define PR_ENUM(x)\
+			x(Point             ,= D3D11_FILTER_MIN_MAG_MIP_POINT)\
+			x(PointPointLinear  ,= D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR)\
+			x(PointLinearPoint  ,= D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT)\
+			x(PointLinearLinear ,= D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR)\
+			x(LinearPointPoint  ,= D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT)\
+			x(LinearPointLinear ,= D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR)\
+			x(LinearLinearPoint ,= D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT)\
+			x(Linear            ,= D3D11_FILTER_MIN_MAG_MIP_LINEAR)\
+			x(Anisotropic       ,= D3D11_FILTER_ANISOTROPIC)
+		PR_DEFINE_ENUM2(EFilter, PR_ENUM);
 		#undef PR_ENUM
 
 		// ELight
@@ -251,41 +271,6 @@ namespace pr
 //				return static_cast<Type>(i);
 //			}
 //		}
-//		namespace EShaderVersion
-//		{
-//			enum Type { v0_0, v1_1, v1_4, v2_0, v3_0, NumberOf };
-//			inline char const* ToString(Type type)
-//			{
-//				switch (type) {
-//				default: return "";
-//				case v0_0: return "v0_0";
-//				case v1_1: return "v1_1";
-//				case v1_4: return "v1_4";
-//				case v2_0: return "v2_0";
-//				case v3_0: return "v3_0";
-//				}
-//			}
-//			inline Type Parse(char const* str)
-//			{
-//				int i; for (i = 0; i != NumberOf && !pr::str::EqualI(str, ToString(static_cast<Type>(i))); ++i) {}
-//				return static_cast<Type>(i);
-//			}
-//		}
-
-//		namespace EStockEffect
-//		{
-//			enum Type
-//			{
-//				TxTint = 1,
-//				TxTintPvc,
-//				TxTintTex,
-//				TxTintPvcTex,
-//				TxTintLitEnv,
-//				TxTintPvcLitEnv,
-//				TxTintTexLitEnv,
-//				TxTintPvcTexLitEnv,
-//			};
-//		}
 //		enum
 //		{
 //			MaxLights = 8,
@@ -319,5 +304,18 @@ namespace pr
 		};
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_renderer11_forward)
+		{
+		}
+	}
+}
+#endif
 
 #endif

@@ -4,7 +4,7 @@
 //*****************************************************************************************
 #include "linedrawer/main/stdafx.h"
 #include "linedrawer/main/file_sources.h"
-#include "linedrawer/main/usersettings.h"
+#include "linedrawer/main/user_settings.h"
 #include "linedrawer/types/ldrexception.h"
 #include "linedrawer/types/ldrevent.h"
 #include "pr/linedrawer/ldr_object.h"
@@ -77,7 +77,7 @@ void FileSources::Add(char const* filepath)
 				return src;
 			}
 		} includes;
-		includes.IgnoreMissing(m_settings.m_ignore_missing_includes);
+		includes.IgnoreMissing(m_settings.m_IgnoreMissingIncludes);
 		
 		// Add the file based on it's file type
 		std::string extn = pr::filesys::GetExtension(m_files.back());

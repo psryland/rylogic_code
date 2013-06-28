@@ -61,17 +61,30 @@ namespace pr.gui
 			m_on_click = on_click;
 		}
 
+		/// <summary>Returns true if the given filepath is in the recents list</summary>
+		public bool IsInRecents(string file)
+		{
+			return Files.FindIndex(f => String.Compare(f, file, StringComparison.OrdinalIgnoreCase) == 0) != -1;
+		}
+
 		/// <summary>Reset the recent files list</summary>
 		public void Clear()
 		{
 			m_files.Clear();
 			if (m_menu != null) m_menu.DropDownItems.Clear();
 		}
-		
+
+		/// <summary>Remove a filepath from the recents list</summary>
+		public void Remove(string file, bool update_menu)
+		{
+			m_files.RemoveAll(f => String.Compare(f, file, StringComparison.OrdinalIgnoreCase) == 0);
+			if (update_menu) UpdateMenu();
+		}
+
 		/// <summary>Add a file to the recent files list</summary>
 		public void Add(string file, bool update_menu)
 		{
-			m_files.Remove(file);
+			Remove(file, false);
 			m_files.Insert(0, file);
 			if (m_files.Count > MaxCount) m_files.RemoveAt(m_files.Count - 1);
 			if (update_menu) UpdateMenu();
@@ -95,6 +108,7 @@ namespace pr.gui
 					}));
 			
 			// Add a menu item for clearing the recent files list
+			m_menu.DropDownItems.Add(new ToolStripSeparator());
 			m_menu.DropDownItems.Add(new ToolStripMenuItem(ResetListText, null, (s,a) =>
 				{
 					var args = new CancelEventArgs();

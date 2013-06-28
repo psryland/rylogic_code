@@ -36,6 +36,7 @@ namespace pr
 		{
 			typedef LookupGenerator<Key, Value> generator;
 			typedef typename generator::type    base;
+			typedef typename generator::pair    pair;
 			
 			Lookup(pr::rdr::MemFuncs& mem)
 			:base(8, generator::hasher(), generator::keyeq(), generator::alloc(mem))

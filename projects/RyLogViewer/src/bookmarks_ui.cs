@@ -23,16 +23,11 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_marks = marks;
-			
+
 			m_grid.AutoGenerateColumns = false;
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn{Name = "FilePos" ,HeaderText = "File Position" ,DataPropertyName = "Position", ReadOnly = true ,FillWeight=1});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn{Name = "Text"    ,HeaderText = "Line Text"     ,DataPropertyName = "Text"    , ReadOnly = true ,FillWeight=2});
 			m_grid.DataSource = m_marks;
-			m_grid.CurrentCellChanged += (s,a) =>
-				{
-					if (m_grid.CurrentCell != null)
-						m_marks.Position = m_grid.CurrentCell.RowIndex;
-				};
 		}
 
 		/// <summary>Handle global command keys</summary>

@@ -23,7 +23,7 @@ namespace pr
 		template <typename GetSet, typename Get, typename Set> struct PropType<EPropertyType::Get   , GetSet, Get, Set> { typedef Get    type; };
 		template <typename GetSet, typename Get, typename Set> struct PropType<EPropertyType::Set   , GetSet, Get, Set> { typedef Set    type; };
 		
-		typedef pr::mpl::aligned_type<8>::type C;
+		typedef pr::meta::aligned_type<8>::type C;
 		
 		template <typename ValueType> struct PropertyBase
 		{
@@ -42,7 +42,7 @@ namespace pr
 		
 			template <typename Cont> void Bind(Cont* this_, ValueType (Cont::*getter)() const, void (Cont::*setter)(ValueType))
 			{
-				static_assert((pr::mpl::alignment_of<C>::value % pr::mpl::alignment_of<Cont>::value) == 0, "");
+				static_assert((pr::meta::alignment_of<C>::value % pr::meta::alignment_of<Cont>::value) == 0, "");
 				
 				m_cont = this_;
 				m_get = reinterpret_cast<Getter>(getter);

@@ -1,0 +1,96 @@
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<#@include file="head.t4html"#>
+	<body id="main_help">
+		<#@include file="title_panel.t4html"#>
+		<#@include file="index_panel.t4html"#>
+		<div id="content_panel">
+			<div class="title">Highlighting</div>
+			<div class="content">
+				Highlighting is one of the primary features of RyLogViewer. The purpose of highlighting 
+				is to make particular lines in the log file stand out based on their content. Many 
+				applications output  data to log files and often important information can be hard 
+				to spot amongst the stream of regular output.
+			</div>
+			<div>
+				<img class="centred" src="highlighting.png" alt="highlighting settings" usemap="#highlighting-map" />
+				<map id="highlighting-map" name="highlighting-map">
+					<area shape="rect" coords="9,50,29,71" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="33,77,53,96" target="_parent" href="#match_field" alt="" title="" />
+					<area shape="rect" coords="79,101,99,121" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="169,99,189,119" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="11,115,31,135" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="316,114,336,134" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="382,115,402,135" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="422,46,442,66" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="491,46,511,66" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="31,257,51,277" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="78,257,98,277" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="274,256,294,276" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="473,255,493,275" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="14,437,34,457" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="417,437,437,457" target="_parent" href="#pattern_regex" alt="" title="" />
+					<area shape="rect" coords="467,437,487,457" target="_parent" href="#pattern_regex" alt="" title="" />
+				</map>
+			</div>
+			<div class="content">
+				The image above labels each control in the highlighting pattern editor. A description 
+				of each control follows:
+			</div>
+			<ol>
+				<li>
+					<a id="match_type" />
+					<span class="tag_label">Match Type</span>
+					<div class="content">
+						Use these radio buttons to select the type of pattern you plan to create. The 
+						versatility, but also the complexity, of the patterns that can be created 
+						increases from left to right, with <a href="#pattern_substring">Substring</a>
+						being the simplest and <a href="#pattern_regex">Regular Expression</a> being 
+						the most complex.
+					</div>
+					<ul>
+						<li class="child_list_elem">
+							<a id="pattern_substring" />
+							<span class="tag_label">Substring</span>
+							<div class="content">
+								This is the simplest pattern of all. The pattern matching algorithm 
+								looks for any occurrence of the sub string in each line of the log file. 
+								Those in which the sub string is found are considered a match.
+							</div>
+						</li>
+						<li class="child_list_elem">
+							<a id="pattern_wildcard" />
+							<span class="tag_label">Wildcard</span>
+							<div class="content">
+								Wildcard patterns work in a similar way to <a href="#pattern_substring">Substring</a>
+								patterns. However, in a wildcard pattern the <b>*</b> and <b>?</b> characters have 
+								special meaning. <b>*</b> means <i>"match any number of characters"</i>, and <b>?</b>
+								means <i>"match any single character"</i>. So, as the following image shows, the pattern 
+								<span class="code">b*e?g</span>matches both<span class="code">abcdefgh</span>and
+								<span class="code">1b2345e6g7</span>as follows:
+								<img class="centred" src="pattern_wildcard.png" alt="wildcard_pattern" />
+							</div>
+						</li>
+						<li class="child_list_elem">
+							<a id="pattern_regex" />
+							<span class="tag_label">Regular Expression</span>
+							<div class="content">
+							</div>
+						</li>
+					</ul>
+				</li>
+				<li>
+					<a id="match_field" />
+					<span class="tag_label">Match Field</span>
+					<div class="content">
+						This text box is where the pattern is entered. A green background will display when the pattern is 
+						syntactically valid, and a red background displays if the pattern contains an error. (Typically only 
+						regular expressions have errors.)
+					</div>
+				</li>
+			</ol>
+		</div>
+	</body>
+</html>

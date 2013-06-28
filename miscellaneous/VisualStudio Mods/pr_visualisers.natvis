@@ -18,10 +18,13 @@
 
 	<!-- pr::Array -->
 	<Type Name="pr::Array&lt;*,*,*,*&gt;">
+		<AlternativeType Name="pr::Array&lt;*,*,*&gt;" />
+		<AlternativeType Name="pr::Array&lt;*,*&gt;" />
+		<AlternativeType Name="pr::Array&lt;*&gt;" />
 		<DisplayString>[{m_count}] {m_ptr}</DisplayString>
 		<Expand>
-			<Item Name="[count]">{m_count}</Item>
-			<Item Name="[capacity]">{m_capacity}</Item>
+			<Item Name="[count]">m_count</Item>
+			<Item Name="[capacity]">m_capacity</Item>
 			<ArrayItems>
 				<Size>m_count</Size>
 				<ValuePointer>m_ptr</ValuePointer>
@@ -41,28 +44,28 @@
 
 	<!-- Maths -->
 	<Type Name="pr::v2">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_v2"></DisplayString>
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_v2"></DisplayString>
 	</Type>
 	<Type Name="pr::v3">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_v3"></DisplayString>
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_v3"></DisplayString>
 	</Type>
 	<Type Name="pr::v4">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_v4"></DisplayString>
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_v4"></DisplayString>
 	</Type>
 	<Type Name="pr::m3x3">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_m3x3"></DisplayString>
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_m3x3"></DisplayString>
 	</Type>
 	<Type Name="pr::m4x4">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_m4x4"></DisplayString>
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_m4x4"></DisplayString>
 	</Type>
 	<Type Name="pr::Quat">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_Quaternion"></DisplayString>
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_Quaternion"></DisplayString>
 	</Type>
 	<Type Name="pr::iv2">
 		<DisplayString>{x} {y}</DisplayString>
 	</Type>
 	<Type Name="pr::iv4">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_iv4"></DisplayString>
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_iv4"></DisplayString>
 	</Type>
 	<Type Name="pr::BoundingBox">
 		<DisplayString>radius={m_radius.x} {m_radius.y} {m_radius.z} {m_radius.w} centre={m_centre.x} {m_centre.y} {m_centre.z} {m_centre.w}</DisplayString>
@@ -89,7 +92,7 @@
 		<DisplayString>{m_frustum}</DisplayString>
 	</Type>
 	<Type Name="pr::LargeInt">
-		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.win32.release.dll" Export="AddIn_LargeInt"></DisplayString>
+		<DisplayString LegacyAddin="q:\sdk\pr\lib\prautoexp.x86.release.dll" Export="AddIn_LargeInt"></DisplayString>
 	</Type>
 	<Type Name="pr::Rand">
 		<DisplayString>{m_value}</DisplayString>
@@ -105,4 +108,16 @@
 		<DisplayString>{m_name}</DisplayString>
 	</Type>
 	
+	<!-- Console -->
+	<Type Name="pr::console::Coord">
+		<DisplayString>{X},{Y}</DisplayString>
+	</Type>
+	<Type Name="pr::console::Colours">
+		<DisplayString>{m_fore.value}|{m_back.value}</DisplayString>
+	</Type>
+
+	<!-- Elements -->
+	<Type Name="ele::Element">
+		<DisplayString>{m_name->m_fullname}</DisplayString>
+	</Type>
 </AutoVisualizer>

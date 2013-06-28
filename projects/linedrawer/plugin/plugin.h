@@ -12,7 +12,7 @@
 #include "pr/linedrawer/ldr_plugin_interface.h"
 
 // A single dll plugin
-struct Plugin :pr::events::IRecv<ldr::Event_AddToViewport>
+struct Plugin :pr::events::IRecv<pr::rdr::Evt_SceneRender>
 {
 	HMODULE                      m_dll;
 	LineDrawer*                  m_ldr;
@@ -34,7 +34,7 @@ struct Plugin :pr::events::IRecv<ldr::Event_AddToViewport>
 	char const* Filepath() const { return m_filepath.c_str(); }
 	
 	// Called when the draw list is being built
-	void OnEvent(ldr::Event_AddToViewport const&);
+	void OnEvent(pr::rdr::Evt_SceneRender const&);
 	
 	// Call 'm_pi_initialise' to start the plugin.
 	// This is not done in the constructor as we want the plugin to be added to be

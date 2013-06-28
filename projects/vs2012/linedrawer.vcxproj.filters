@@ -1,0 +1,206 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="main">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="gui">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="types">
+      <UniqueIdentifier>{4be72a78-3b1d-4dda-a347-c82369ecc232}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resources">
+      <UniqueIdentifier>{4b02dc90-3953-4d85-b474-f5cf33b8949c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utility">
+      <UniqueIdentifier>{c147cc91-bea2-4338-a373-d0fb93268041}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="camera">
+      <UniqueIdentifier>{6d3aa1ac-aff6-46e9-91f0-ca70bf64eede}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="input">
+      <UniqueIdentifier>{7d3b9d63-96d4-48c4-8053-dbbe1db395e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="objects">
+      <UniqueIdentifier>{48eb4bae-1d23-493d-9fc3-29ae51fd204e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="plugin">
+      <UniqueIdentifier>{e855530b-0f40-4d70-aac2-321bb7a57748}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lights">
+      <UniqueIdentifier>{9e92bc4a-8f6e-4c23-94a9-d05d01f835eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lua">
+      <UniqueIdentifier>{ac4c665b-4eee-4f9e-926a-1daa00e47e5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tools">
+      <UniqueIdentifier>{a97bcce8-34b3-47d2-9c2a-1113b27b9756}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\linedrawer\main\file_sources.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\main\linedrawer.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\main\lua_source.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\main\main.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\main\navmanager.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\main\stdafx.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\gui\linedrawergui.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\plugin\plugin_manager_dlg.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">
+      <Filter>objects</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\plugin\plugin.cpp">
+      <Filter>plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\plugin\plugin_manager.cpp">
+      <Filter>plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\lua\lua_core.c">
+      <Filter>lua</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\lua\lua_lib.c">
+      <Filter>lua</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.cpp">
+      <Filter>objects</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\linedrawer\main\file_sources.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\linedrawer.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\lua_source.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\navmanager.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\stdafx.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\gui\about_dlg.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\gui\linedrawergui.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\menu_helper.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\gui\options_dlg.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\plugin\plugin_manager_dlg.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\progress_dlg.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\recent_files.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\gui\text_panel_dlg.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\wtl_tab_view_ctrl.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\types\forward.h">
+      <Filter>types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\types\ldrevent.h">
+      <Filter>types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\types\ldrexception.h">
+      <Filter>types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\utility\debug.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\utility\misc.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\input\keybindings.h">
+      <Filter>input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_object.h">
+      <Filter>objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_plugin_interface.h">
+      <Filter>plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\plugin\plugin.h">
+      <Filter>plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\plugin\plugin_manager.h">
+      <Filter>plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer\lighting\lighting_dlg.h">
+      <Filter>lights</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h">
+      <Filter>lua</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\resources\linedrawer.resources.h">
+      <Filter>resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h">
+      <Filter>objects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_forward.h">
+      <Filter>types</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h">
+      <Filter>camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\user_settings.h">
+      <Filter>main</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\linedrawer\resources\linedrawer.rc">
+      <Filter>resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\linedrawer\ThingsToGetRight.txt" />
+    <None Include="..\linedrawer\resources\linedrawer.ico">
+      <Filter>resources</Filter>
+    </None>
+    <None Include="..\linedrawer\release.cmd" />
+  </ItemGroup>
+</Project>

@@ -15,10 +15,10 @@ namespace pr
 		// Returns the number of verts and number of indices needed to hold geometry for an
 		// array of 'num_boxes' boxes.
 		template <typename Tvr, typename Tir>
-		void BoxSize(std::size_t num_boxes, pr::Range<Tvr>& vrange, pr::Range<Tir>& irange)
+		void BoxSize(std::size_t num_boxes, Tvr& vcount, Tir& icount)
 		{
-			vrange.set(0, 24 * num_boxes);
-			irange.set(0, 36 * num_boxes);
+			vcount = value_cast<Tvr>(24 * num_boxes);
+			icount = value_cast<Tir>(36 * num_boxes);
 		}
 
 		// Generate boxes from an array of corners
@@ -33,7 +33,7 @@ namespace pr
 		//  +x, +y, +z  = 7
 		// 'num_boxes' is the number of boxes given in the 'points' array. (Should be 8 * its length)
 		// 'points' is the input array of corner points for the boxes
-		// 'num_colours' should be either, 0, 1, num_boxes, num_boxes*8 representing; no colour, 1 colour for all, 1 colour per box, or 1 colour per box vertex
+		// 'num_colours' should be either, 0, 1, num_boxes, or num_boxes*8 representing; no colour, 1 colour for all, 1 colour per box, or 1 colour per box vertex
 		// 'colours' is an input array of colour values, a pointer to a single colour, or null.
 		// 'out_verts' is an output iterator to receive the [vert,norm,colour,tex] data
 		// 'out_indices' is an output iterator to receive the index data
@@ -66,7 +66,7 @@ namespace pr
 			std::size_t const icount = sizeof(indices)/sizeof(indices[0]);
 
 			// Helper function for generating normals
-			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return GetNormal3IfNonZero(Cross3(c - b, a - b)); };
+			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3IfNonZero(Cross3(c - b, a - b)); };
 
 			// Colour iterator wrapper
 			ColourRepeater col(colours, num_colours, 8*num_boxes, Colour32White);
@@ -76,11 +76,11 @@ namespace pr
 			v2 t01 = v2::make(0.0f, 1.0f);
 			v2 t10 = v2::make(1.0f, 0.0f);
 			v2 t11 = v2::make(1.0f, 1.0f);
-			
+
 			Props props;
 			TVertCIter v_in = points;
 			TVertIter v_out = out_verts;
-			TIdxIter i_out = out_indices;
+			TIdxIter  i_out = out_indices;
 			for (std::size_t i = 0; i != num_boxes; ++i)
 			{
 				// Read 8 points from the vertex and colour streams
@@ -133,7 +133,9 @@ namespace pr
 
 			// An iterator wrapper for applying a transform to 'points'
 			Transformer<TVertCIter> tx(points, o2w);
-			return Boxes(num_boxes, tx, num_colours, colours, out_verts, out_indices);
+			Props props = Boxes(num_boxes, tx, num_colours, colours, out_verts, out_indices);
+			props.m_bbox = o2w * props.m_bbox;
+			return props;
 		}
 
 		// Create a box with side half lengths = rad.x,rad.y,rad.z
@@ -154,23 +156,23 @@ namespace pr
 			return Boxes(1, &pt[0], o2w, 1, &colour, out_verts, out_indices);
 		}
 
-		// Create boxes at each point in 'positions' with dimensions 'dim'
+		// Create boxes at each point in 'positions' with side hald lengths = rad.x,rad.y,rad.z
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
-		Props BoxList(std::size_t num_boxes, TVertCIter positions, v4 const& dim, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
+		Props BoxList(std::size_t num_boxes, TVertCIter positions, v4 const& rad, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			TVertCIter pos = positions;
 			std::vector<v4> points(8*num_boxes);
 			v4* pt = &points[0];
 			for (std::size_t i = 0; i != num_boxes; ++i, ++pos)
 			{
-				pt->set(pos->x - dim.x, pos->y - dim.y, pos->z - dim.z, 1.0f), ++pt;
-				pt->set(pos->x + dim.x, pos->y - dim.y, pos->z - dim.z, 1.0f), ++pt;
-				pt->set(pos->x - dim.x, pos->y + dim.y, pos->z - dim.z, 1.0f), ++pt;
-				pt->set(pos->x + dim.x, pos->y + dim.y, pos->z - dim.z, 1.0f), ++pt;
-				pt->set(pos->x - dim.x, pos->y - dim.y, pos->z + dim.z, 1.0f), ++pt;
-				pt->set(pos->x + dim.x, pos->y - dim.y, pos->z + dim.z, 1.0f), ++pt;
-				pt->set(pos->x - dim.x, pos->y + dim.y, pos->z + dim.z, 1.0f), ++pt;
-				pt->set(pos->x + dim.x, pos->y + dim.y, pos->z + dim.z, 1.0f), ++pt;
+				pt->set(pos->x - rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f), ++pt;
+				pt->set(pos->x + rad.x, pos->y - rad.y, pos->z - rad.z, 1.0f), ++pt;
+				pt->set(pos->x - rad.x, pos->y + rad.y, pos->z - rad.z, 1.0f), ++pt;
+				pt->set(pos->x + rad.x, pos->y + rad.y, pos->z - rad.z, 1.0f), ++pt;
+				pt->set(pos->x - rad.x, pos->y - rad.y, pos->z + rad.z, 1.0f), ++pt;
+				pt->set(pos->x + rad.x, pos->y - rad.y, pos->z + rad.z, 1.0f), ++pt;
+				pt->set(pos->x - rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f), ++pt;
+				pt->set(pos->x + rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f), ++pt;
 			}
 			return Boxes(num_boxes, &points[0], num_colours, colours, out_verts, out_indices);
 		}

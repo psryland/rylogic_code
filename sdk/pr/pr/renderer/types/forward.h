@@ -15,11 +15,6 @@
 #include <list>
 #include <algorithm>
 #include <intrin.h>
-#include <d3d9.h>
-#include <d3dx9.h>
-#include <dxerr.h>
-#include <d3d9types.h>
-#include <d3d9caps.h>
 #include <windows.h>
 #include <malloc.h> // for _alloca
 
@@ -309,19 +304,6 @@ namespace pr
 				Renderer,
 			};
 		}
-		
-		// Events
-		struct Evt_DeviceLost
-		{
-		};
-		struct Evt_DeviceRestored
-		{
-			D3DPtr<IDirect3DDevice9> m_d3d_device;
-			pr::IRect                m_client_area;
-			Evt_DeviceRestored() :m_d3d_device() ,m_client_area() {}
-			Evt_DeviceRestored(D3DPtr<IDirect3DDevice9>& d3d_device) :m_d3d_device(d3d_device) ,m_client_area() {}
-			Evt_DeviceRestored(D3DPtr<IDirect3DDevice9>& d3d_device, pr::IRect const& client_area) :m_d3d_device(d3d_device) ,m_client_area(client_area) {}
-		};
 	}
 }
 

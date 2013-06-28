@@ -40,19 +40,19 @@ if [%param%]==[] (
 echo Deploying %srcdir% -^> %dstdir%...
 
 ::Copy web site files
-call copy "%srcdir%\*.shtml" "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.png"   "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.jpg"   "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.css"   "%dstdir%\" /Y /F /E %newer%
-call copy "%srcdir%\*.xml"   "%dstdir%\" /Y /F /E %newer%
+xcopy "%srcdir%\*.shtml" "%dstdir%\" /Y /F /E %newer%
+xcopy "%srcdir%\*.png"   "%dstdir%\" /Y /F /E %newer%
+xcopy "%srcdir%\*.jpg"   "%dstdir%\" /Y /F /E %newer%
+xcopy "%srcdir%\*.css"   "%dstdir%\" /Y /F /E %newer%
+xcopy "%srcdir%\*.xml"   "%dstdir%\" /Y /F /E %newer%
 
 ::Copy site data
-call copy "q:\bin\linedrawer.x86.zip"  "%dstdir%\data\" /F /Y %newer%
-call copy "q:\bin\linedrawer.x64.zip"  "%dstdir%\data\" /F /Y %newer%
-call copy "q:\bin\imager.x86.zip"      "%dstdir%\data\" /F /Y %newer%
-call copy "q:\bin\imager.x64.zip"      "%dstdir%\data\" /F /Y %newer%
-call copy "q:\bin\clicket.zip"         "%dstdir%\data\" /F /Y %newer%
-call copy "q:\bin\rylogviewer.x86.zip" "%dstdir%\data\" /F /Y %newer%
+xcopy "q:\bin\linedrawer.x86.zip"  "%dstdir%\data\" /F /Y %newer%
+xcopy "q:\bin\linedrawer.x64.zip"  "%dstdir%\data\" /F /Y %newer%
+xcopy "q:\bin\imager.x86.zip"      "%dstdir%\data\" /F /Y %newer%
+xcopy "q:\bin\imager.x64.zip"      "%dstdir%\data\" /F /Y %newer%
+xcopy "q:\bin\clicket.zip"         "%dstdir%\data\" /F /Y %newer%
+xcopy "q:\bin\rylogviewer.x86.zip" "%dstdir%\data\" /F /Y %newer%
 
 :end
 EndLocal

@@ -75,7 +75,7 @@
       <PrecompiledHeaderFile>renderer/utility/stdafx.h</PrecompiledHeaderFile>
       <BrowseInformation>true</BrowseInformation>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0400;PR_MATHS_USE_D3DX=1;PR_SUPPORT_D3D_HRESULTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0400;PR_SUPPORT_D3D_HRESULTS</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -105,7 +105,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer/utility/stdafx.h</PrecompiledHeaderFile>
       <BrowseInformation>true</BrowseInformation>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0400;PR_MATHS_USE_D3DX=1;PR_SUPPORT_D3D_HRESULTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0400;PR_SUPPORT_D3D_HRESULTS</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -139,7 +139,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer/utility/stdafx.h</PrecompiledHeaderFile>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0400;PR_MATHS_USE_D3DX=1;PR_SUPPORT_D3D_HRESULTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0400;PR_SUPPORT_D3D_HRESULTS</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -173,7 +173,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer/utility/stdafx.h</PrecompiledHeaderFile>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0400;PR_MATHS_USE_D3DX=1;PR_SUPPORT_D3D_HRESULTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0400;PR_SUPPORT_D3D_HRESULTS</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>

@@ -56,13 +56,6 @@ namespace ldr
 	struct Event_Refresh
 	{
 	};
-	
-	// An event signalled with the drawlist is being compiled
-	struct Event_AddToViewport
-	{
-		pr::rdr::Viewport* m_viewport;
-		Event_AddToViewport(pr::rdr::Viewport& viewport) :m_viewport(&viewport) {}
-	};
 }
 	
 #endif

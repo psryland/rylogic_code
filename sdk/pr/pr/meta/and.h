@@ -5,7 +5,7 @@
 
 namespace pr
 {
-	namespace mpl
+	namespace meta
 	{
 		namespace impl
 		{
@@ -22,7 +22,7 @@ namespace pr
 				template <typename rhs>
 				struct impl2 { enum { value = false }; };
 			};
-		}//namespace impl
+		}
 
 		template <typename lhs, typename rhs>
 		struct and_
@@ -36,7 +36,7 @@ namespace pr
 			enum { value = impl::and_<lhs>::template impl2< bool_<rhs> >::value };
 		};
 
-	}//namespace mpl
-}//namespace pr
+	}
+}
 
-#endif//PR_META_AND_H
+#endif

@@ -53,7 +53,7 @@ void AgentCache::SetCacheSize(std::size_t cache_size)
 	}
 	if( cache_size > 0 )
 	{
-		m_agent		 = static_cast<CollisionAgent*>(m_Allocate(cache_size * sizeof(CollisionAgent), mpl::alignment_of<CollisionAgent>::value));
+		m_agent		 = static_cast<CollisionAgent*>(m_Allocate(cache_size * sizeof(CollisionAgent), meta::alignment_of<CollisionAgent>::value));
 		m_max_agents = cache_size;
 	}
 	memset(m_agent, 0, m_max_agents * sizeof(CollisionAgent));

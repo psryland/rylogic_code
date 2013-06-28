@@ -7,7 +7,7 @@
 #ifndef PR_RDR_LIGHT_H
 #define PR_RDR_LIGHT_H
 
-#include "pr/renderer/types/forward.h"
+#include "pr/renderer11/forward.h"
 
 namespace pr
 {
@@ -39,8 +39,9 @@ namespace pr
 			pr::m4x4 Projection(float centre_dist) const;
 
 			// Get/Set light settings
+			// throws pr::Exception<HRESULT> if the settings are invalid
 			std::string Settings() const;
-			bool Settings(char const* settings);
+			void Settings(char const* settings);
 		};
 
 		inline bool operator == (Light const& lhs, Light const& rhs) { return memcmp(&lhs, &rhs, sizeof(Light)) == 0; }

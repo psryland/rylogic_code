@@ -143,6 +143,10 @@ namespace pr.maths
 			}
 			return count;
 		}
+		public static int CountBits(int value)
+		{
+			return CountBits(unchecked((uint)value));
+		}
 
 		/// <summary>Return the bit position of the 'n'th set bit, starting from the LSB.
 		/// 'n' is a zero based index, E.g.

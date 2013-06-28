@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.extn;
 using pr.util;
 
 namespace RyLogViewer
@@ -16,6 +17,7 @@ namespace RyLogViewer
 		private TextBox m_edit_startin;
 		private Button m_btn_ok;
 		private Button m_btn_cancel;
+		private Button m_btn_capture_groups;
 		private Button m_btn_browse;
 		
 		/// <summary>The action configured by this UI</summary>
@@ -68,6 +70,26 @@ namespace RyLogViewer
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_edit_exec.Text = dg.FileName;
 				};
+
+			// Capture groups button
+			m_btn_capture_groups.ToolTip(m_tt, "Displays a menu of the pattern match tags and special tags");
+			m_btn_capture_groups.Click += (s,a) =>
+				{
+					// Pop up a menu with the special tags
+					var menu = new ContextMenuStrip();
+					foreach (var x in Action.CaptureGroupNames)
+					{
+						var group_name = x;
+						menu.Items.Add("Capture Group: {0}".Fmt(group_name), null, (ss,aa) => m_edit_args.SelectedText = "{"+group_name+"}");
+					}
+					if (menu.Items.Count != 0)
+					{
+						menu.Items.Add(new ToolStripSeparator());
+					}
+					menu.Items.Add("Current file name"     , null, (ss,aa) => m_edit_args.SelectedText = SpecialTags.FileName);
+					menu.Items.Add("Current file directory", null, (ss,aa) => m_edit_args.SelectedText = SpecialTags.FileDir);
+					menu.Show(m_btn_capture_groups, m_btn_capture_groups.Width, 0);
+				};
 		}
 
 		#region Windows Form Designer generated code
@@ -106,6 +128,7 @@ namespace RyLogViewer
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_btn_browse = new System.Windows.Forms.Button();
+			this.m_btn_capture_groups = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
 			// m_lbl_exec
@@ -169,7 +192,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(220, 85);
+			this.m_btn_ok.Location = new System.Drawing.Point(139, 84);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 4;
@@ -180,7 +203,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(139, 85);
+			this.m_btn_cancel.Location = new System.Drawing.Point(220, 84);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_cancel.TabIndex = 3;
@@ -197,6 +220,15 @@ namespace RyLogViewer
 			this.m_btn_browse.Text = "...";
 			this.m_btn_browse.UseVisualStyleBackColor = true;
 			// 
+			// m_btn_capture_groups
+			// 
+			this.m_btn_capture_groups.Location = new System.Drawing.Point(262, 30);
+			this.m_btn_capture_groups.Name = "m_btn_capture_groups";
+			this.m_btn_capture_groups.Size = new System.Drawing.Size(33, 24);
+			this.m_btn_capture_groups.TabIndex = 6;
+			this.m_btn_capture_groups.Text = ">";
+			this.m_btn_capture_groups.UseVisualStyleBackColor = true;
+			// 
 			// ClkActionUI
 			// 
 			this.AcceptButton = this.m_btn_ok;
@@ -204,6 +236,7 @@ namespace RyLogViewer
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
 			this.ClientSize = new System.Drawing.Size(307, 116);
+			this.Controls.Add(this.m_btn_capture_groups);
 			this.Controls.Add(this.m_btn_browse);
 			this.Controls.Add(this.m_btn_cancel);
 			this.Controls.Add(this.m_btn_ok);

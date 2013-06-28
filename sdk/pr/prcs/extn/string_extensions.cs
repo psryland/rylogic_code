@@ -12,6 +12,7 @@ namespace pr.extn
 	public static class StringExtensions
 	{
 		/// <summary>Treats this string as a format string</summary>
+		[JetBrains.Annotations.StringFormatMethod("fmt")]
 		public static string Fmt(this string fmt, params object[] args)
 		{
 			return string.Format(fmt, args);
@@ -61,6 +62,18 @@ namespace pr.extn
 				}
 			}
 			return sb.ToString();
+		}
+
+		/// <summary>Append 'lines' delimited by single newline characters</summary>
+		public static string LineList(this string text, params string[] lines)
+		{
+			return new StringBuilder(text).AppendLineList(lines).ToString();
+		}
+
+		/// <summary>Append 'line' delimited by a single newline character</summary>
+		public static string LineList(this string text, string line)
+		{
+			return new StringBuilder(text).AppendLineList(line).ToString();
 		}
 
 		//public static string HaackFormat(this string format, object source)
@@ -268,6 +281,12 @@ namespace pr
 				                      "wrapped";
 				string r = text.WordWrap(14);
 				Assert.AreEqual(result, r);
+			}
+			[Test] public static void TestAppendLines()
+			{
+				const string s = "\n\n\rLine \n Line\n\r";
+				var str = s.LineList(s,s);
+				Assert.AreEqual("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
 			}
 		}
 	}

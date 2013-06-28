@@ -17,6 +17,8 @@ namespace pr.util
 			public Row() {}
 			public Row(IEnumerable<string> collection) :base(collection) {} 
 			public Row(int capacity) :base(capacity) {}
+			public new Row Add(string s) { base.Add(s); return this; }
+			public Row Add<T>(T s) { base.Add(s.ToString()); return this; }
 		}
 		
 		private readonly List<Row> m_data = new List<Row>();

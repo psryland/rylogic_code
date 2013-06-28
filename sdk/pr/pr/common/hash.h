@@ -49,6 +49,10 @@ namespace pr
 			for (; size--; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
 			return hash;
 		}
+		template <typename T> inline HashValue HashObj(T const& obj, HashValue hash = -1)
+		{
+			return HashData(&obj, sizeof(obj), hash);
+		}
 
 		// Convert a contiguous block of bytes into a 64bit hash
 		inline HashValue64 HashData64(void const* data, size_t size, HashValue64 hash = -1LL)
@@ -162,7 +166,7 @@ namespace pr
 		inline HashValue HashLwr(char const* src)            { return HashLwr(src, 0, -1); }
 
 		// http://www.azillionmonkeys.com/qed/hash.html, © Copyright 2004-2008 by Paul Hsieh
-		inline uint FastHash(void const* data, uint len, uint hash)
+		inline HashValue FastHash(void const* data, size_t len, HashValue hash)
 		{
 			// Local function for reading 16bit chunks of 'data'
 			struct This { static unsigned short Read16bits(uint8 const* d)
@@ -221,7 +225,46 @@ namespace pr
 			hash += hash >> 6;
 			return hash;
 		}
+		inline HashValue FastHash(void const* data, size_t len) { return FastHash(data, len, -1); }
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_common_hash)
+		{
+			enum
+			{
+				Blah = -0x7FFFFFFF,
+			};
+			char const data[] = "Paul was here. CrC this, mofo";
+			char const data2[] = "paul was here. crc this, mofo";
+			{
+				pr::hash::HashValue h0 = pr::hash::HashData(data, sizeof(data));
+				PR_CHECK(h0,h0);
+			
+				pr::hash::HashValue64 h1 = pr::hash::HashData64(data, sizeof(data));
+				PR_CHECK(h1,h1);
+			}
+			{ // Check accumulative hash works
+				pr::hash::HashValue h0 = pr::hash::HashData(data, sizeof(data));
+				pr::hash::HashValue h1 = pr::hash::HashData(data + 5, sizeof(data) - 5, pr::hash::HashData(data, 5));
+				pr::hash::HashValue h2 = pr::hash::HashData(data + 9, sizeof(data) - 9, pr::hash::HashData(data, 9));
+				PR_CHECK(h0, h1);
+				PR_CHECK(h0, h2);
+			}
+			{
+				pr::hash::HashValue h0 = pr::hash::HashLwr(data);
+				pr::hash::HashValue h1 = pr::hash::HashC(data2);
+				PR_CHECK(h1, h0);
+			}
+		}
+	}
+}
+#endif
 
 #endif

@@ -4,14 +4,23 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	public class Filter :Pattern
+	public enum EIfMatch
 	{
-		public enum EIfMatch
-		{
-			Keep,
-			Reject,
-		}
-		
+		Keep,
+		Reject,
+	}
+
+	public interface IFilter
+	{
+		/// <summary>Defines what a match with this filter means</summary>
+		EIfMatch IfMatch { get; }
+
+		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
+		bool IsMatch(string text);
+	}
+
+	public class Filter :Pattern, IFilter
+	{
 		/// <summary>Defines what a match with this filter means</summary>
 		public EIfMatch IfMatch { get; set; }
 
@@ -84,12 +93,10 @@ namespace RyLogViewer
 		/// <summary>Value equality test</summary>
 		public override bool Equals(object obj)
 		{
-			Filter rhs = obj as Filter;
-			return 
-				rhs != null
+			var rhs = obj as Filter;
+			return rhs != null
 				&& base.Equals(obj)
-				&& IfMatch.Equals(rhs.IfMatch)
-				;
+				&& IfMatch.Equals(rhs.IfMatch);
 		}
 		
 		/// <summary>Value hash code</summary>

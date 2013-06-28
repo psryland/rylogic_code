@@ -7,6 +7,8 @@
 #define PR_RDR_MATERIALS_SHADER_H
 
 #include "pr/renderer11/forward.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/util/wrappers.h"
 
 namespace pr
@@ -74,14 +76,15 @@ namespace pr
 			D3DPtr<ID3D11GeometryShader>    m_gs;              // The geometry shader (null if not used)
 			D3DPtr<ID3D11HullShader>        m_hs;              // The hull shader (null if not used)
 			D3DPtr<ID3D11DomainShader>      m_ds;              // The domain shader (null if not used)
-			D3DPtr<ID3D11RasterizerState>   m_rs;              // The default rasterizer state
 			RdrId                           m_id;              // Id for this shader instance
 			EGeom                           m_geom_mask;       // The geometry type supported by this shader
 			ShaderManager*                  m_mgr;             // The shader manager that created this shader
-			string32                        m_name;            // Human readable id for the texture
-			SortKeyId                       m_sort_id;         //
+			SortKeyId                       m_sort_id;         // A key used to order shaders next to each other in the drawlist
 			ShaderSetupFunc                 m_setup_func;      // User provided callback for binding this shader to a device context
+			BSBlock                         m_bsb;             // The blend state for the shader
+			RSBlock                         m_rsb;             // The rasterizer state for the shader
 			time_t                          m_last_modified;   // Support for dynamically loading shaders at runtime (unused when PR_RDR_RUNTIME_SHADERS is not defined)
+			string32                        m_name;            // Human readable id for the texture
 
 			explicit BaseShader(ShaderManager* mgr);
 			virtual ~BaseShader() {}
