@@ -2,180 +2,298 @@
 	<head>
 		<title>Regular Expressions - Quick Reference</title>
 		<style type="text/css">
-			* { font-family: sans-serif; font-size: 96% }
-			table { border:1px solid #006000; border-collapse:collapse; width:90%; margin-left:auto; margin-right: auto; }
-			th { border:1px solid #006000; border-collapse:collapse; font-style: italic; padding: 3px; }
-			td { border:1px solid #006000; border-collapse:collapse; margin:5px; padding: 3px; }
-			#title { text-align: center; font-weight: bolder; font-size: 150%; margin: 20px; color: #000060}
-			.heading { font-weight: bold; line-height: 150%; color: #000060 }
+			* { font-family: sans-serif; font-size: 96%; }
+			table { border: 1px solid #006000; border-collapse: collapse; width: 90%; margin-left: auto; margin-right: auto; }
+			th { border: 1px solid #006000; border-collapse: collapse; font-style: italic; padding: 3px; }
+			td { border: 1px solid #006000; border-collapse: collapse; margin: 5px; padding: 3px; }
+			#title { text-align: center; font-weight: bolder; font-size: 150%; margin: 20px; color: #000060; }
+			.heading { font-weight: bold; line-height: 150%; color: #000060; }
 			.content { text-align: justify; margin-top: 5px; margin-bottom: 15px; }
-			.mono { font-family:monospace; font-size:100%; }
-			.match { color: #00A000; }
+			.mono { font-family: monospace; font-size: 100%; }
+			.matchhl { color: #007000; background-color: #B0F0B0; }
+			.match { color: #007000; }
 			.nomatch { color: #C00000; }
 		</style>
-		<meta http-equiv="refresh" content="3"><!--hack-->
+		<meta http-equiv="refresh" content="3">
+		<!--hack-->
 	</head>
 	<body>
 		<div id="title">Regular Expressions - Quick Reference</div>
 		<div class="content">
-			RyLogViewer uses the .NET Framework 4.0 regular expression engine. For more detail see <a href="http://msdn.microsoft.com/en-us/library/hs600312.aspx">microsoft's documentation.</a>
+			RyLogViewer uses the .NET Framework 4.0 regular expression engine. For more details on regular
+			expression support see <a href="http://msdn.microsoft.com/en-us/library/hs600312.aspx">microsoft's documentation.</a>
 		</div>
 
-		<div class="heading">Quantifiers</div>
-		<p>A quantifier specifies how many instances of the previous element (which can be a character, a group, or a character class) must be present in the input string for a match to occur. Quantifiers include the language elements listed in the following table.</p>
+		<div class="heading">Character Classes</div>
+		<div class="content">
+			A character class represents a set of characters with a common attribute, such as digits, whitespace, within a range, etc.
+		</div>
 		<table>
 			<tbody>
 				<tr>
 					<th>Sequence</th>
 					<th>Meaning</th>
 					<th>Example</th>
-					<th>Matches / Non-matches</th>
+					<th><span class="match">Matches</span> / <span class="nomatch">Non-matches</span></th>
+				</tr>
+				<tr>
+					<td class="mono">.</td>
+					<td>
+						Matches any single character except \n (the newline character). To match a literal period
+						character (. or \u002E), precede it with an <a href="#escape_character">escape character</a>
+					</td>
+					<td class="mono">f.llst.p\.</td>
+					<td>
+						<span class="nomatch">fullstop</span>
+						<span class="matchhl">fullstop.</span>
+						<span class="matchhl">fallstep.</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">[CharacterList]</td>
+					<td>Matches any single character in the character list. Case-sensitive by default</td>
+					<td class="mono">[aeiouy]</td>
+					<td class="mono">
+						<span class="match">p</span><span class="matchhl">u</span><span class="match">rple</span>
+						<span class="match">m</span><span class="matchhl">o</span><span class="match">nkey</span>
+						<span class="match">d</span><span class="matchhl">i</span><span class="match">shwasher</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">[^CharacterList]</td>
+					<td>Matches any single character <i>not</i> in the character list. Case-sensitive by default</td>
+					<td class="mono">[^abc]</td>
+					<td class="mono">
+						<span class="match">b</span><span class="matchhl">o</span><span class="match">at</span>
+						<span class="match">ca</span><span class="matchhl">t</span>
+						<span class="matchhl">#</span><span class="match">123</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">[first-last]</td>
+					<td>Matches any single character in the given range, inclusively</td>
+					<td class="mono">[A-C]</td>
+					<td class="mono">
+						<span class="nomatch">fat</span>
+						<span class="match">c</span><span class="matchhl">A</span><span class="match">t</span>
+						<span class="matchhl">B</span><span class="match">AT</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">\w</td>
+					<td>Any word character, ie. a-z, A-Z, 0-9, or _</td>
+					<td class="mono">\w</td>
+					<td class="mono">
+						<span class="nomatch">#</span><span class="matchhl">1</span><span class="match">23</span>
+						<span class="matchhl">_</span><span class="match">up_</span>
+						<span class="nomatch">@#!$%^-</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">\W</td>
+					<td>Any non-word character excluding new line characters</td>
+					<td class="mono">\w</td>
+					<td class="mono">
+						<span class="matchhl">#</span><span class="match">123</span>
+						<span class="nomatch">_up_</span>
+						<span class="matchhl">@</span><span class="match">#!$%^-</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">\s</td>
+					<td>Any white-space character excluding new line characters</td>
+					<td class="mono">\w\s\w</td>
+					<td class="mono">
+						<span class="match">g</span><span class="matchhl">a p</span>
+						<span class="nomatch">gap</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">\S</td>
+					<td>Any non-white-space character excluding new line characters</td>
+					<td class="mono">{.\S.}</td>
+					<td class="mono">
+						<span class="matchhl">{ x }</span>
+						<span class="nomatch">{x x}</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">\d</td>
+					<td>Any decimal digit</td>
+					<td>\d</td>
+					<td class="mono">
+						<span class="nomatch">a</span><span class="matchhl">2</span><span class="nomatch">c</span>
+					</td>
+				</tr>
+				<tr>
+					<td class="mono">\D</td>
+					<td><p>Matches any character that is not a decimal digit.</p>
+					</td>
+					<td>
+						<p>\D</p>
+					</td>
+					<td>
+						<p>" ", "=", " ", "I", "V" in "4 = IV"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>\p{name}</td>
+					<td>Matches any single character in the Unicode general category or named block specified by name</td>
+					<td>
+						<p>\p{Lu}</p>
+						<p>\p{IsCyrillic}</p>
+					</td>
+					<td>
+						<p>"C", "L" in "City Lights"</p>
+						<p>"Д", "Ж" in "ДЖem"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>\P{name}</td>
+					<td>Matches any single character that is not in the Unicode general category or named block specified by name.</td>
+					<td>
+						<p>\P{Lu}</p>
+						<p>\P{IsCyrillic}</p>
+					</td>
+					<td>
+						<p>"i", "t", "y" in "City"</p>
+						<p>"e", "m" in "ДЖem"</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<div class="heading">Quantifiers</div>
+		<div class="content">
+			Quantifiers specify how many instances of the previous element (which can be a character,
+			a group, or a character class) must be present for a match to occur.
+		</div>
+		<table>
+			<tbody>
+				<tr>
+					<th>Sequence</th>
+					<th>Meaning</th>
+					<th>Example</th>
+					<th>
+						<span class="match">Matches</span>
+						/
+						<span class="nomatch">Non-matches</span></th>
 				</tr>
 				<tr>
 					<td class="mono">*</td>
-					<td>0 or more of the previous element</td>
+					<td>0 or more occurrences of the previous element</td>
 					<td class="mono">ax*b</td>
 					<td class="mono">
-						<span class="match">ab</span>,
-						<span class="match">axb</span>,
-						<span class="match">axxxxb</span>
+						<span class="matchhl">ab</span>
+						<span class="matchhl">axb</span>
+						<span class="matchhl">axxb</span>
+						<span class="matchhl">axxxb</span>
 					</td>
 				</tr>
 				<tr>
 					<td class="mono">+</td>
-					<td>1 or more of the previous element</td>
-					<td class="mono">ax+b</td>
+					<td>1 or more occurrences of the previous element</td>
+					<td class="mono">ax+</td>
 					<td class="mono">
-						<span class="nomatch">ab</span>,
-						<span class="match">axb</span>,
-						<span class="match">axxxb</span>
+						<span class="nomatch">ab</span>
+						<span class="matchhl">axb</span>
+						<span class="matchhl">axxb</span>
+						<span class="matchhl">axxxb</span>
 					</td>
 				</tr>
 				<tr>
-					<td>
-						<p>?</p>
-					</td>
-					<td>
-						<p>Matches the previous element zero or one time.</p>
-					</td>
-					<td>
-						<p>"rai?n"</p>
-					</td>
-					<td>
-						<p>"ran", "rain"</p>
+					<td class="mono">?</td>
+					<td>0 or 1 occurrence of the previous element, 1 preferred</td>
+					<td class="mono">ax?</td>
+					<td class="mono">
+						<span class="matchhl">a</span><span class="match">b</span>
+						<span class="matchhl">ax</span><span class="match">b</span>
+						<span class="matchhl">ax</span><span class="match">xb</span>
+						<span class="matchhl">ax</span><span class="match">xxb</span>
 					</td>
 				</tr>
 				<tr>
-					<td>
-						<p>{n}</p>
-					</td>
-					<td>
-						<p>Matches the previous element exactly n times.</p>
-					</td>
-					<td>
-						<p>",\d{3}"</p>
-					</td>
-					<td>
-						<p>",043" in "1,043.6", ",876", ",543", and ",210" in "9,876,543,210"</p>
+					<td class="mono">{n}</td>
+					<td>Exactly 'n' occurrences of the previous element</td>
+					<td class="mono">ax{2}b</td>
+					<td class="mono">
+						<span class="nomatch">ab</span>
+						<span class="nomatch">axb</span>
+						<span class="matchhl">axxb</span>
+						<span class="nomatch">axxxb</span>
 					</td>
 				</tr>
 				<tr>
-					<td>
-						<p>{n,}</p>
-					</td>
-					<td>
-						<p>Matches the previous element at least n times.</p>
-					</td>
-					<td>
-						<p>"\d{2,}"</p>
-					</td>
-					<td>
-						<p>"166", "29", "1930"</p>
+					<td class="mono">{n,}</td>
+					<td>At least 'n' occurrences of the previous element</td>
+					<td class="mono">ax{2,}b</td>
+					<td class="mono">
+						<span class="nomatch">ab</span>
+						<span class="nomatch">axb</span>
+						<span class="matchhl">axxb</span>
+						<span class="matchhl">axxxb</span>
 					</td>
 				</tr>
 				<tr>
-					<td>
-						<p>{n,m}</p>
-					</td>
-					<td>
-						<p>Matches the previous element at least n times, but no more than m times. </p>
-					</td>
-					<td>
-						<p>"\d{3,5}"</p>
-					</td>
-					<td>
-						<p>"166", "17668"</p>
-						<p>"19302" in "193024"</p>
+					<td class="mono">{n,m}</td>
+					<td>At least 'n', but no more than 'm' occurrences of the previous element</td>
+					<td class="mono">ax{1,2}b</td>
+					<td class="mono">
+						<span class="nomatch">ab</span>
+						<span class="matchhl">axb</span>
+						<span class="matchhl">axxb</span>
+						<span class="nomatch">axxxb</span>
 					</td>
 				</tr>
 				<tr>
-					<td>
-						<p>*?</p>
-					</td>
-					<td>
-						<p>Matches the previous element zero or more times, but as few times as possible. </p>
-					</td>
-					<td>
-						<p>\d*?\.\d</p>
-					</td>
-					<td>
-						<p>".0", "19.9", "219.9"</p>
+					<td class="mono">*?</td>
+					<td>0 or more occurrences of the previous element, but as few as possible</td>
+					<td class="mono">ax*?</td>
+					<td class="mono">
+						<span class="matchhl">a</span>
+						<span class="matchhl">a</span><span class="match">x</span>
+						<span class="matchhl">a</span><span class="match">xx</span>
+						<span class="matchhl">a</span><span class="match">xxx</span>
 					</td>
 				</tr>
 				<tr>
-					<td>
-						<p>+?</p>
-					</td>
-					<td>
-						<p>Matches the previous element one or more times, but as few times as possible. </p>
-					</td>
-					<td>
-						<p>"be+?"</p>
-					</td>
-					<td>
-						<p>"be" in "been", "be" in "bent"</p>
+					<td class="mono">+?</td>
+					<td>1 or more occurrences of the the previous element, but as few as possible</td>
+					<td class="mono">ax+?</td>
+					<td class="mono">
+						<span class="nomatch">a</span>
+						<span class="matchhl">ax</span>
+						<span class="matchhl">ax</span><span class="match">x</span>
+						<span class="matchhl">ax</span><span class="match">xx</span>
 					</td>
 				</tr>
 				<tr>
-					<td>
-						<p>??</p>
-					</td>
-					<td>
-						<p>Matches the previous element zero or one time, but as few times as possible.</p>
-					</td>
-					<td>
-						<p>"rai??n"</p>
-					</td>
-					<td>
-						<p>"ran", "rain"</p>
+					<td class="mono">??</td>
+					<td>0 or 1 occurrence, 0 preferred</td>
+					<td class="mono">ax??</td>
+					<td class="mono">
+						<span class="matchhl">a</span><span class="match">b</span>
+						<span class="matchhl">a</span><span class="match">xb</span>
+						<span class="matchhl">a</span><span class="match">xxb</span>
+						<span class="matchhl">a</span><span class="match">xxxb</span>
 					</td>
 				</tr>
 				<tr>
-					<td>
-						<p>{n}?</p>
-					</td>
-					<td>
-						<p>Matches the preceding element exactly n times.</p>
-					</td>
-					<td>
-						<p>",\d{3}?"</p>
-					</td>
-					<td>
-						<p>",043" in "1,043.6", ",876", ",543", and ",210" in "9,876,543,210"</p>
-					</td>
+					<td class="mono">{n}?</td>
+					<td>Exactly 'n' occurrences. Same as
+						<span class="mono">{n}</span></td>
+					<td></td>
+					<td></td>
 				</tr>
 				<tr>
-					<td>
-						<p>{n,}?</p>
-					</td>
-					<td>
-						<p>Matches the previous element at least n times, but as few times as possible.</p>
-					</td>
-					<td>
-						<p>"\d{2,}?"</p>
-					</td>
-					<td>
-						<p>"166", "29", "1930"</p>
+					<td class="mono">{n,}?</td>
+					<td>At least 'n' occurrences of the previous element, but as few as possible</td>
+					<td class="mono">ax{2,}?</td>
+					<td class="mono">
+						<span class="nomatch">ab</span>
+						<span class="nomatch">axb</span>
+						<span class="matchhl">axx</span><span class="match">b</span>
+						<span class="matchhl">axx</span><span class="match">xb</span>
 					</td>
 				</tr>
 				<tr>
@@ -195,75 +313,393 @@
 				</tr>
 			</tbody>
 		</table>
+
 		<div class="heading">Character Escapes</div>
 		<p>The backslash character (\) in a regular expression indicates that the character that follows it either is a special character, or should be interpreted literally.</p>
 		<table cellpadding="2px" align="center">
 			<tbody>
-				<tr style="font-style:italic"><th>Escape</th><th>Description</th><th>Example</th><th>Match Results</th></tr>
-				<tr><td>\a</td><td>Matches a bell character, \u0007.</td><td>\a</td><td>"\u0007" in "Error!" + '\u0007'</td></tr>
-				<tr><td>\b</td><td>In a character class, matches a backspace, \u0008.</td><td>[\b]{3,}</td><td>"\b\b\b\b" in "\b\b\b\b"</td></tr>
-				<tr><td>\t</td><td>Matches a tab, \u0009.</td><td>(\w+)\t</td><td>"item1\t", "item2\t" in "item1\titem2\t"</td></tr>
-				<tr><td>\r</td><td>Matches a carriage return, \u000D. (\r is not equivalent to the newline character, \n.)</td><td>\r\n(\w+)</td><td>"\r\nThese" in "\r\nThese are\ntwo lines."</td></tr>
-				<tr><td>\v</td><td>Matches a vertical tab, \u000B.</td><td>[\v]{2,}</td><td>"\v\v\v" in "\v\v\v"</td></tr>
-				<tr><td>\f</td><td>Matches a form feed, \u000C.</td><td>[\f]{2,}</td><td>"\f\f\f" in "\f\f\f"</td></tr>
-				<tr><td>\n</td><td>Matches a new line, \u000A.</td><td>\r\n(\w+)</td><td>"\r\nThese" in "\r\nThese are\ntwo lines."</td></tr>
-				<tr><td>\e</td><td>Matches an escape, \u001B.</td><td>\e</td><td>"\x001B" in "\x001B"</td></tr>
-				<tr><td>\ nnn</td><td>Uses octal representation to specify a character (nnn consists of up to three digits).</td><td>\w\040\w</td><td>"a b", "c d" in "a bc d"</td></tr>
-				<tr><td>\x nn</td><td>Uses hexadecimal representation to specify a character (nn consists of exactly two digits).</td><td>\w\x20\w</td><td>"a b", "c d" in "a bc d"</td></tr>
-				<tr><td>\c X<br />\c x</td><td>Matches the ASCII control character that is specified by X or x, where X or x is the letter of the control character.</td><td>\cC</td><td>"\x0003" in "\x0003" (Ctrl-C)</td></tr>
-				<tr><td>\u nnnn</td><td>Matches a Unicode character by using hexadecimal representation (exactly four digits, as represented by nnnn).</td><td>\w\u0020\w</td><td>"a b", "c d" in "a bc d"</td></tr>
-				<tr><td>\</td><td>When followed by a character that is not recognized as an escaped character in this and other tables in this topic, matches that character. For example, \* is the same as \x2A, and \. is the same as \x2E. This allows the regular expression engine to disambiguate language elements (such as * or ?) and character literals (represented by \* or \?).</td><td>\d+[\+-x\*]\d+\d+[\+-x\*\d+</td><td>"2+2" and "3*9" in "(2+2) * 3*9"</td></tr>
-			</tbody>
-		</table>
-		<h3>Character Classes</h3>
-		<p>A character class matches any one of a set of characters. Character classes include the language elements listed in the following table.</p>
-		<table cellpadding="2px" align="center">
-			<tbody>
-				<tr style="font-style:italic"><th>Character class</th><th>Description</th><th>Pattern</th><th>Matches</th></tr>
-				<tr><td>[character_group]</td><td>Matches any single character in character_group. By default, the match is case-sensitive.</td><td>[ae]</td><td><p>"a" in "gray"</p><p>"a", "e" in "lane"</p></td></tr>
-				<tr><td>[^character_group]</td><td>Negation: Matches any single character that is not in character_group. By default, characters in character_group are case-sensitive.</td><td>[^aei]</td><td>"r", "g", "n" in "reign"</td></tr>
-				<tr><td>[first-last]</td><td>Character range: Matches any single character in the range from first to last.</td><td>[A-Z]</td><td>"A", "B" in "AB123"</td></tr>
-				<tr><td>.</td><td><p>Wildcard: Matches any single character except \n.</p><p>To match a literal period character (. or \u002E), you must precede it with the escape character (\.).</p></td><td>a.e</td><td><p>"ave" in "nave"</p><p>"ate" in "water"</p></td></tr>
-				<tr><td>\p{name}</td><td>Matches any single character in the Unicode general category or named block specified by name</td><td><p>\p{Lu}</p><p>\p{IsCyrillic}</p></td><td><p>"C", "L" in "City Lights"</p><p>"Д", "Ж" in "ДЖem"</p></td></tr>
-				<tr><td>\P{name}</td><td>Matches any single character that is not in the Unicode general category or named block specified by name.</td><td><p>\P{Lu}</p><p>\P{IsCyrillic}</p></td><td><p>"i", "t", "y" in "City"</p><p>"e", "m" in "ДЖem"</p></td></tr>
-				<tr><td>\w</td><td>Matches any word character.</td><td>\w</td><td>"I", "D", "A", "1", "3" in "ID A1.3"</td></tr>
-				<tr><td><p>\W</p></td><td><p>Matches any non-word character.</p></td><td><p>\W</p></td><td><p>" ", "." in "ID A1.3"</p></td></tr>
-				<tr><td><p>\s</p></td><td><p>Matches any white-space character.</p></td><td><p>\w\s</p></td><td><p>"D " in "ID A1.3"</p></td></tr>
-				<tr><td><p>\S</p></td><td><p>Matches any non-white-space character.</p></td><td><p>\s\S</p></td><td><p>" _" in "int __ctr"</p></td></tr>
-				<tr><td><p>\d</p></td><td><p>Matches any decimal digit.</p></td><td><p>\d</p></td><td><p>"4" in "4 = IV"</p></td></tr>
-				<tr><td><p>\D</p></td><td><p>Matches any character that is not a decimal digit.</p></td><td><p>\D</p></td><td><p>" ", "=", " ", "I", "V" in "4 = IV"</p></td></tr>
+				<tr style="font-style: italic">
+					<th>Escape</th>
+					<th>Description</th>
+					<th>Example</th>
+					<th>Match Results</th>
+				</tr>
+				<tr>
+					<td>\a</td>
+					<td>Matches a bell character, \u0007.</td>
+					<td>\a</td>
+					<td>"\u0007" in "Error!" + '\u0007'</td>
+				</tr>
+				<tr>
+					<td>\b</td>
+					<td>In a character class, matches a backspace, \u0008.</td>
+					<td>[\b]{3,}</td>
+					<td>"\b\b\b\b" in "\b\b\b\b"</td>
+				</tr>
+				<tr>
+					<td>\t</td>
+					<td>Matches a tab, \u0009.</td>
+					<td>(\w+)\t</td>
+					<td>"item1\t", "item2\t" in "item1\titem2\t"</td>
+				</tr>
+				<tr>
+					<td>\r</td>
+					<td>Matches a carriage return, \u000D. (\r is not equivalent to the newline character, \n.)</td>
+					<td>\r\n(\w+)</td>
+					<td>"\r\nThese" in "\r\nThese are\ntwo lines."</td>
+				</tr>
+				<tr>
+					<td>\v</td>
+					<td>Matches a vertical tab, \u000B.</td>
+					<td>[\v]{2,}</td>
+					<td>"\v\v\v" in "\v\v\v"</td>
+				</tr>
+				<tr>
+					<td>\f</td>
+					<td>Matches a form feed, \u000C.</td>
+					<td>[\f]{2,}</td>
+					<td>"\f\f\f" in "\f\f\f"</td>
+				</tr>
+				<tr>
+					<td>\n</td>
+					<td>Matches a new line, \u000A.</td>
+					<td>\r\n(\w+)</td>
+					<td>"\r\nThese" in "\r\nThese are\ntwo lines."</td>
+				</tr>
+				<tr>
+					<td>\e</td>
+					<td>Matches an escape, \u001B.</td>
+					<td>\e</td>
+					<td>"\x001B" in "\x001B"</td>
+				</tr>
+				<tr>
+					<td>\ nnn</td>
+					<td>Uses octal representation to specify a character (nnn consists of up to three digits).</td>
+					<td>\w\040\w</td>
+					<td>"a b", "c d" in "a bc d"</td>
+				</tr>
+				<tr>
+					<td>\x nn</td>
+					<td>Uses hexadecimal representation to specify a character (nn consists of exactly two digits).</td>
+					<td>\w\x20\w</td>
+					<td>"a b", "c d" in "a bc d"</td>
+				</tr>
+				<tr>
+					<td>\c X<br />
+						\c x</td>
+					<td>Matches the ASCII control character that is specified by X or x, where X or x is the letter of the control character.</td>
+					<td>\cC</td>
+					<td>"\x0003" in "\x0003" (Ctrl-C)</td>
+				</tr>
+				<tr>
+					<td>\u nnnn</td>
+					<td>Matches a Unicode character by using hexadecimal representation (exactly four digits, as represented by nnnn).</td>
+					<td>\w\u0020\w</td>
+					<td>"a b", "c d" in "a bc d"</td>
+				</tr>
+				<tr>
+					<td><a id="escape_character" />\</td>
+					<td>When followed by a character that is not recognized as an escaped character in this and other tables in this topic, matches that character. For example, \* is the same as \x2A, and \. is the same as \x2E. This allows the regular expression engine to disambiguate language elements (such as * or ?) and character literals (represented by \* or \?).</td>
+					<td>\d+[\+-x\*]\d+\d+[\+-x\*\d+</td>
+					<td>"2+2" and "3*9" in "(2+2) * 3*9"</td>
+				</tr>
 			</tbody>
 		</table>
 		<h3>Anchors</h3>
 		<p>Anchors, or atomic zero-width assertions, cause a match to succeed or fail depending on the current position in the string, but they do not cause the engine to advance through the string or consume characters. The metacharacters listed in the following table are anchors.</p>
 		<table cellpadding="2px" align="center">
 			<tbody>
-				<tr style="font-style:italic"><th><p>Assertion</p></th><th><p>Description</p></th><th><p>Pattern</p></th><th><p>Matches</p></th></tr>
-				<tr><td><p>^</p></td><td><p>The match must start at the beginning of the string or line. </p></td><td><p>^\d{3}</p></td><td><p>"901" in </p><p>"901-333-"</p></td></tr>
-				<tr><td><p>$</p></td><td><p>The match must occur at the end of the string or before \n at the end of the line or string.</p></td><td><p>-\d{3}$</p></td><td><p>"-333" in </p><p>"-901-333"</p></td></tr>
-				<tr><td><p>\A</p></td><td><p>The match must occur at the start of the string.</p></td><td><p>\A\d{3}</p></td><td><p>"901" in </p><p>"901-333-"</p></td></tr>
-				<tr><td><p>\Z</p></td><td><p>The match must occur at the end of the string or before \n at the end of the string.</p></td><td><p>-\d{3}\Z</p></td><td><p>"-333" in </p><p>"-901-333"</p></td></tr>
-				<tr><td><p>\z</p></td><td><p>The match must occur at the end of the string.</p></td><td><p>-\d{3}\z</p></td><td><p>"-333" in </p><p>"-901-333"</p></td></tr>
-				<tr><td><p>\G</p></td><td><p>The match must occur at the point where the previous match ended.</p></td><td><p>\G\(\d\)</p></td><td><p>"(1)", "(3)", "(5)" in "(1)(3)(5)[7](9)"</p></td></tr>
-				<tr><td><p>\b</p></td><td><p>The match must occur on a boundary between a \w (alphanumeric) and a \W (nonalphanumeric) character.</p></td><td><p>\b\w+\s\w+\b   </p></td><td><p>"them theme" "them them" in "them theme them them" </p></td></tr>
-				<tr><td><p>\B</p></td><td><p>The match must not occur on a \b boundary.</p></td><td><p>\Bend\w*\b</p></td><td><p>"ends", "ender" in "end sends endure lender"</p></td></tr>
+				<tr style="font-style: italic">
+					<th>
+						<p>Assertion</p>
+					</th>
+					<th>
+						<p>Description</p>
+					</th>
+					<th>
+						<p>Pattern</p>
+					</th>
+					<th>
+						<p>Matches</p>
+					</th>
+				</tr>
+				<tr>
+					<td>
+						<p>^</p>
+					</td>
+					<td>
+						<p>The match must start at the beginning of the string or line. </p>
+					</td>
+					<td>
+						<p>^\d{3}</p>
+					</td>
+					<td>
+						<p>"901" in </p>
+						<p>"901-333-"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>$</p>
+					</td>
+					<td>
+						<p>The match must occur at the end of the string or before \n at the end of the line or string.</p>
+					</td>
+					<td>
+						<p>-\d{3}$</p>
+					</td>
+					<td>
+						<p>"-333" in </p>
+						<p>"-901-333"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>\A</p>
+					</td>
+					<td>
+						<p>The match must occur at the start of the string.</p>
+					</td>
+					<td>
+						<p>\A\d{3}</p>
+					</td>
+					<td>
+						<p>"901" in </p>
+						<p>"901-333-"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>\Z</p>
+					</td>
+					<td>
+						<p>The match must occur at the end of the string or before \n at the end of the string.</p>
+					</td>
+					<td>
+						<p>-\d{3}\Z</p>
+					</td>
+					<td>
+						<p>"-333" in </p>
+						<p>"-901-333"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>\z</p>
+					</td>
+					<td>
+						<p>The match must occur at the end of the string.</p>
+					</td>
+					<td>
+						<p>-\d{3}\z</p>
+					</td>
+					<td>
+						<p>"-333" in </p>
+						<p>"-901-333"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>\G</p>
+					</td>
+					<td>
+						<p>The match must occur at the point where the previous match ended.</p>
+					</td>
+					<td>
+						<p>\G\(\d\)</p>
+					</td>
+					<td>
+						<p>"(1)", "(3)", "(5)" in "(1)(3)(5)[7](9)"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>\b</p>
+					</td>
+					<td>
+						<p>The match must occur on a boundary between a \w (alphanumeric) and a \W (nonalphanumeric) character.</p>
+					</td>
+					<td>
+						<p>\b\w+\s\w+\b   </p>
+					</td>
+					<td>
+						<p>"them theme" "them them" in "them theme them them" </p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>\B</p>
+					</td>
+					<td>
+						<p>The match must not occur on a \b boundary.</p>
+					</td>
+					<td>
+						<p>\Bend\w*\b</p>
+					</td>
+					<td>
+						<p>"ends", "ender" in "end sends endure lender"</p>
+					</td>
+				</tr>
 			</tbody>
 		</table>
 		<h3>Grouping Constructs</h3>
 		<p>Grouping constructs delineate subexpressions of a regular expression and typically capture substrings of an input string. Grouping constructs include the language elements listed in the following table.</p>
 		<table cellpadding="2px" align="center">
 			<tbody>
-				<tr style="font-style:italic"><th><p>Grouping construct</p></th><th><p>Description</p></th><th><p>Pattern</p></th><th><p>Matches</p></th></tr>
-				<tr><td><p>(subexpression)</p></td><td><p>Captures the matched subexpression and assigns it a zero-based ordinal number.</p></td><td><p>(\w)\1</p></td><td><p>"ee" in "deep"</p></td></tr>
-				<tr><td><p>(?&lt;name&gt; subexpression)</p></td><td><p>Captures the matched subexpression into a named group.</p></td><td><p>(?&lt;double&gt;\w)\k&lt;double&gt;  </p></td><td><p>"ee" in "deep"</p></td></tr>
-				<tr><td><p>(?&lt;name1-name2&gt; subexpression)</p></td><td><p>Defines a balancing group definition. </p></td><td><p>(((?'Open'\()[^\(\)]*)+((?'Close-Open'\))[^\(\)]*)+)*(?(Open)(?!))$</p></td><td><p>"((1-3)*(3-1))" in "3+2^((1-3)*(3-1))"</p></td></tr>
-				<tr><td><p>(?: subexpression)</p></td><td><p>Defines a noncapturing group. </p></td><td><p>Write(?:Line)?</p></td><td><p>"WriteLine" in "Console.WriteLine()"</p></td></tr>
-				<tr><td><p>(?imnsx-imnsx: subexpression)</p></td><td><p>Applies or disables the specified options within subexpression.</p></td><td><p>A\d{2}(?i:\w+)\b</p></td><td><p>"A12xl", "A12XL" in "A12xl A12XL a12xl"</p></td></tr>
-				<tr><td><p>(?= subexpression)</p></td><td><p>Zero-width positive lookahead assertion. </p></td><td><p>\w+(?=\.)</p></td><td><p>"is", "ran", and "out" in "He is. The dog ran. The sun is out."</p></td></tr>
-				<tr><td><p>(?! subexpression)</p></td><td><p>Zero-width negative lookahead assertion.</p></td><td><p>\b(?!un)\w+\b</p></td><td><p>"sure", "used" in "unsure sure unity used"</p></td></tr>
-				<tr><td><p>(?&lt;= subexpression)</p></td><td><p>Zero-width positive lookbehind assertion. </p></td><td><p>(?&lt;=19)\d{2}\b</p></td><td><p>"99", "50", "05" in "1851 1999 1950 1905 2003"</p></td></tr>
-				<tr><td><p>(?&lt;! subexpression)</p></td><td><p>Zero-width negative lookbehind assertion. </p></td><td><p>(?&lt;!19)\d{2}\b</p></td><td><p>"51", "03" in "1851 1999 1950 1905 2003"</p></td></tr>
-				<tr><td><p>(?&gt;subexpression)</p></td><td><p>Nonbacktracking (or "greedy") subexpression. </p></td><td><p>[13579](?&gt;A+B+)</p></td><td><p>"1ABB", "3ABB", and "5AB" in "1ABB 3ABBC 5AB 5AC"</p></td></tr>
+				<tr style="font-style: italic">
+					<th>
+						<p>Grouping construct</p>
+					</th>
+					<th>
+						<p>Description</p>
+					</th>
+					<th>
+						<p>Pattern</p>
+					</th>
+					<th>
+						<p>Matches</p>
+					</th>
+				</tr>
+				<tr>
+					<td>
+						<p>(subexpression)</p>
+					</td>
+					<td>
+						<p>Captures the matched subexpression and assigns it a zero-based ordinal number.</p>
+					</td>
+					<td>
+						<p>(\w)\1</p>
+					</td>
+					<td>
+						<p>"ee" in "deep"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?&lt;name&gt; subexpression)</p>
+					</td>
+					<td>
+						<p>Captures the matched subexpression into a named group.</p>
+					</td>
+					<td>
+						<p>(?&lt;double&gt;\w)\k&lt;double&gt;  </p>
+					</td>
+					<td>
+						<p>"ee" in "deep"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?&lt;name1-name2&gt; subexpression)</p>
+					</td>
+					<td>
+						<p>Defines a balancing group definition. </p>
+					</td>
+					<td>
+						<p>(((?'Open'\()[^\(\)]*)+((?'Close-Open'\))[^\(\)]*)+)*(?(Open)(?!))$</p>
+					</td>
+					<td>
+						<p>"((1-3)*(3-1))" in "3+2^((1-3)*(3-1))"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?: subexpression)</p>
+					</td>
+					<td>
+						<p>Defines a noncapturing group. </p>
+					</td>
+					<td>
+						<p>Write(?:Line)?</p>
+					</td>
+					<td>
+						<p>"WriteLine" in "Console.WriteLine()"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?imnsx-imnsx: subexpression)</p>
+					</td>
+					<td>
+						<p>Applies or disables the specified options within subexpression.</p>
+					</td>
+					<td>
+						<p>A\d{2}(?i:\w+)\b</p>
+					</td>
+					<td>
+						<p>"A12xl", "A12XL" in "A12xl A12XL a12xl"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?= subexpression)</p>
+					</td>
+					<td>
+						<p>Zero-width positive lookahead assertion. </p>
+					</td>
+					<td>
+						<p>\w+(?=\.)</p>
+					</td>
+					<td>
+						<p>"is", "ran", and "out" in "He is. The dog ran. The sun is out."</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?! subexpression)</p>
+					</td>
+					<td>
+						<p>Zero-width negative lookahead assertion.</p>
+					</td>
+					<td>
+						<p>\b(?!un)\w+\b</p>
+					</td>
+					<td>
+						<p>"sure", "used" in "unsure sure unity used"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?&lt;= subexpression)</p>
+					</td>
+					<td>
+						<p>Zero-width positive lookbehind assertion. </p>
+					</td>
+					<td>
+						<p>(?&lt;=19)\d{2}\b</p>
+					</td>
+					<td>
+						<p>"99", "50", "05" in "1851 1999 1950 1905 2003"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?&lt;! subexpression)</p>
+					</td>
+					<td>
+						<p>Zero-width negative lookbehind assertion. </p>
+					</td>
+					<td>
+						<p>(?&lt;!19)\d{2}\b</p>
+					</td>
+					<td>
+						<p>"51", "03" in "1851 1999 1950 1905 2003"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?&gt;subexpression)</p>
+					</td>
+					<td>
+						<p>Nonbacktracking (or "greedy") subexpression. </p>
+					</td>
+					<td>
+						<p>[13579](?&gt;A+B+)</p>
+					</td>
+					<td>
+						<p>"1ABB", "3ABB", and "5AB" in "1ABB 3ABBC 5AB 5AC"</p>
+					</td>
+				</tr>
 			</tbody>
 		</table>
 
@@ -271,54 +707,335 @@
 		<p>A backreference allows a previously matched subexpression to be identified subsequently in the same regular expression. The following table lists the backreference constructs supported by regular expressions in the .NET Framework.</p>
 		<table cellpadding="2px" align="center">
 			<tbody>
-				<tr style="font-style:italic"><th><p>Backreference construct</p></th><th><p>Description</p></th><th><p>Pattern</p></th><th><p>Matches</p></th></tr>
-				<tr><td><p>\number</p></td><td><p>Backreference. Matches the value of a numbered subexpression.</p></td><td><p>(\w)\1</p></td><td><p>"ee" in "seek"</p></td></tr>
-				<tr><td><p>\k&lt;name&gt;</p></td><td><p>Named backreference. Matches the value of a named expression.</p></td><td><p>(?&lt;char&gt;\w)\k&lt;char&gt;</p></td><td><p>"ee" in "seek"</p></td></tr>
+				<tr style="font-style: italic">
+					<th>
+						<p>Backreference construct</p>
+					</th>
+					<th>
+						<p>Description</p>
+					</th>
+					<th>
+						<p>Pattern</p>
+					</th>
+					<th>
+						<p>Matches</p>
+					</th>
+				</tr>
+				<tr>
+					<td>
+						<p>\number</p>
+					</td>
+					<td>
+						<p>Backreference. Matches the value of a numbered subexpression.</p>
+					</td>
+					<td>
+						<p>(\w)\1</p>
+					</td>
+					<td>
+						<p>"ee" in "seek"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>\k&lt;name&gt;</p>
+					</td>
+					<td>
+						<p>Named backreference. Matches the value of a named expression.</p>
+					</td>
+					<td>
+						<p>(?&lt;char&gt;\w)\k&lt;char&gt;</p>
+					</td>
+					<td>
+						<p>"ee" in "seek"</p>
+					</td>
+				</tr>
 			</tbody>
 		</table>
 		<h3>Alternation Constructs</h3>
 		<p>Alternation constructs modify a regular expression to enable either/or matching. These constructs include the language elements listed in the following table.</p>
 		<table cellpadding="2px" align="center">
 			<tbody>
-				<tr style="font-style:italic"><th>Alternation construct</th><th>Description</th><th><p>Pattern</p></th><th><p>Matches</p></th></tr>
-				<tr><td><p>|</p></td><td><p>Matches any one element separated by the vertical bar (|) character.</p></td><td><p>th(e|is|at)</p></td><td><p>"the", "this" in "this is the day. "</p></td></tr>
-				<tr><td><p>(?(expression)yes|no)</p></td><td><p>Matches yes if expression matches; otherwise, matches the optional no part. expression is interpreted as a zero-width assertion. </p></td><td><p>(?(A)A\d{2}\b|\b\d{3}\b)</p></td><td><p>"A10", "910" in "A10 C103 910"</p></td></tr>
-				<tr><td><p>(?(name)yes|no)</p></td><td><p>Matches yes if the named capture name has a match; otherwise, matches the optional no. </p></td><td><p>(?&lt;quoted&gt;")?(?(quoted).+?"|\S+\s)</p></td><td><p>Dogs.jpg, "Yiska playing.jpg" in "Dogs.jpg "Yiska playing.jpg""</p></td></tr>
+				<tr style="font-style: italic">
+					<th>Alternation construct</th>
+					<th>Description</th>
+					<th>
+						<p>Pattern</p>
+					</th>
+					<th>
+						<p>Matches</p>
+					</th>
+				</tr>
+				<tr>
+					<td>
+						<p>|</p>
+					</td>
+					<td>
+						<p>Matches any one element separated by the vertical bar (|) character.</p>
+					</td>
+					<td>
+						<p>th(e|is|at)</p>
+					</td>
+					<td>
+						<p>"the", "this" in "this is the day. "</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?(expression)yes|no)</p>
+					</td>
+					<td>
+						<p>Matches yes if expression matches; otherwise, matches the optional no part. expression is interpreted as a zero-width assertion. </p>
+					</td>
+					<td>
+						<p>(?(A)A\d{2}\b|\b\d{3}\b)</p>
+					</td>
+					<td>
+						<p>"A10", "910" in "A10 C103 910"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>(?(name)yes|no)</p>
+					</td>
+					<td>
+						<p>Matches yes if the named capture name has a match; otherwise, matches the optional no. </p>
+					</td>
+					<td>
+						<p>(?&lt;quoted&gt;")?(?(quoted).+?"|\S+\s)</p>
+					</td>
+					<td>
+						<p>Dogs.jpg, "Yiska playing.jpg" in "Dogs.jpg "Yiska playing.jpg""</p>
+					</td>
+				</tr>
 			</tbody>
 		</table>
 		<p>Substitutions are regular expression language elements that are supported in replacement patterns. The metacharacters listed in the following table are atomic zero-width assertions.</p>
 		<table cellpadding="2px" align="center">
 			<tbody>
-				<tr style="font-style:italic"><th>Character</th><th>Description</th><th>Pattern</th><th>Replacement pattern</th><th>Input string</th><th><p>Result string</p></th></tr>
-				<tr><td><p>$number</p></td><td><p>Substitutes the substring matched by group number.</p></td><td><p>\b(\w+)(\s)(\w+)\b</p></td><td><p>$3$2$1</p></td><td><p>"one two" </p></td><td><p>"two one"</p></td></tr>
-				<tr><td><p>${name}</p></td><td><p>Substitutes the substring matched by the named group name.</p></td><td><p>\b(?&lt;word1&gt;\w+)(\s)(?&lt;word2&gt;\w+)\b</p></td><td><p>${word2} ${word1}</p></td><td><p>"one two" </p></td><td><p>"two one"</p></td></tr>
-				<tr><td><p>$$</p></td><td><p>Substitutes a literal "$".</p></td><td><p>\b(\d+)\s?USD</p></td><td><p>$$$1</p></td><td><p>"103 USD"</p></td><td><p>"$103"</p></td></tr>
-				<tr><td><p>$&amp;</p></td><td><p>Substitutes a copy of the whole match.</p></td><td><p>(\$*(\d*(\.+\d+)?){1})</p></td><td><p>**$&amp;</p></td><td><p>"$1.30"</p></td><td><p>"**$1.30**"</p></td></tr>
-				<tr><td><p>$`</p></td><td><p>Substitutes all the text of the input string before the match.</p></td><td><p>B+</p></td><td><p>$`</p></td><td><p>"AABBCC"</p></td><td><p>"AAAACC"</p></td></tr>
-				<tr><td><p>$'</p></td><td><p>Substitutes all the text of the input string after the match.</p></td><td><p>B+</p></td><td><p>$'</p></td><td><p>"AABBCC"</p></td><td><p>"AACCCC"</p></td></tr>
-				<tr><td><p>$+</p></td><td><p>Substitutes the last group that was captured.</p></td><td><p>B+(C+)</p></td><td><p>$+</p></td><td><p>"AABBCCDD"</p></td><td><p>AACCDD</p></td></tr>
-				<tr><td><p>$_</p></td><td><p>Substitutes the entire input string.</p></td><td><p>B+</p></td><td><p>$_</p></td><td><p>"AABBCC"</p></td><td><p>"AAAABBCCCC"</p></td></tr></tbody>
+				<tr style="font-style: italic">
+					<th>Character</th>
+					<th>Description</th>
+					<th>Pattern</th>
+					<th>Replacement pattern</th>
+					<th>Input string</th>
+					<th>
+						<p>Result string</p>
+					</th>
+				</tr>
+				<tr>
+					<td>
+						<p>$number</p>
+					</td>
+					<td>
+						<p>Substitutes the substring matched by group number.</p>
+					</td>
+					<td>
+						<p>\b(\w+)(\s)(\w+)\b</p>
+					</td>
+					<td>
+						<p>$3$2$1</p>
+					</td>
+					<td>
+						<p>"one two" </p>
+					</td>
+					<td>
+						<p>"two one"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>${name}</p>
+					</td>
+					<td>
+						<p>Substitutes the substring matched by the named group name.</p>
+					</td>
+					<td>
+						<p>\b(?&lt;word1&gt;\w+)(\s)(?&lt;word2&gt;\w+)\b</p>
+					</td>
+					<td>
+						<p>${word2} ${word1}</p>
+					</td>
+					<td>
+						<p>"one two" </p>
+					</td>
+					<td>
+						<p>"two one"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>$$</p>
+					</td>
+					<td>
+						<p>Substitutes a literal "$".</p>
+					</td>
+					<td>
+						<p>\b(\d+)\s?USD</p>
+					</td>
+					<td>
+						<p>$$$1</p>
+					</td>
+					<td>
+						<p>"103 USD"</p>
+					</td>
+					<td>
+						<p>"$103"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>$&amp;</p>
+					</td>
+					<td>
+						<p>Substitutes a copy of the whole match.</p>
+					</td>
+					<td>
+						<p>(\$*(\d*(\.+\d+)?){1})</p>
+					</td>
+					<td>
+						<p>**$&amp;</p>
+					</td>
+					<td>
+						<p>"$1.30"</p>
+					</td>
+					<td>
+						<p>"**$1.30**"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>$`</p>
+					</td>
+					<td>
+						<p>Substitutes all the text of the input string before the match.</p>
+					</td>
+					<td>
+						<p>B+</p>
+					</td>
+					<td>
+						<p>$`</p>
+					</td>
+					<td>
+						<p>"AABBCC"</p>
+					</td>
+					<td>
+						<p>"AAAACC"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>$'</p>
+					</td>
+					<td>
+						<p>Substitutes all the text of the input string after the match.</p>
+					</td>
+					<td>
+						<p>B+</p>
+					</td>
+					<td>
+						<p>$'</p>
+					</td>
+					<td>
+						<p>"AABBCC"</p>
+					</td>
+					<td>
+						<p>"AACCCC"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>$+</p>
+					</td>
+					<td>
+						<p>Substitutes the last group that was captured.</p>
+					</td>
+					<td>
+						<p>B+(C+)</p>
+					</td>
+					<td>
+						<p>$+</p>
+					</td>
+					<td>
+						<p>"AABBCCDD"</p>
+					</td>
+					<td>
+						<p>AACCDD</p>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<p>$_</p>
+					</td>
+					<td>
+						<p>Substitutes the entire input string.</p>
+					</td>
+					<td>
+						<p>B+</p>
+					</td>
+					<td>
+						<p>$_</p>
+					</td>
+					<td>
+						<p>"AABBCC"</p>
+					</td>
+					<td>
+						<p>"AAAABBCCCC"</p>
+					</td>
+				</tr>
+			</tbody>
 		</table>
 		<h3>Miscellaneous Constructs</h3>
 		<p>Miscellaneous constructs either modify a regular expression pattern or provide information about it. The following table lists the miscellaneous constructs supported by the .NET Framework.</p>
 		<table cellpadding="2px" align="center">
 			<tbody>
-				<tr style="font-style:italic"><th>Construct</th><th>Definition</th><th>Example</th></tr>
-				<tr><td>(?imnsx-imnsx)</td><td><p>Sets or disables options such as case insensitivity in the middle of a pattern. For more information, see Regular Expression Options.</p></td><td><p>\bA(?i)b\w+\b matches "ABA", "Able" in "ABA Able Act"</p></td></tr>
-				<tr><td>(?#comment)</td><td><p>Inline comment. The comment ends at the first closing parenthesis.</p></td><td><p>\bA(?#Matches words starting with A)\w+\b</p></td></tr>
-				<tr><td>#[to end of line]</td><td>X-mode comment. The comment starts at an unescaped # and continues to the end of the line.</td><td>(?x)\bA\w+\b#Matches words starting with A</td></tr>
+				<tr style="font-style: italic">
+					<th>Construct</th>
+					<th>Definition</th>
+					<th>Example</th>
+				</tr>
+				<tr>
+					<td>(?imnsx-imnsx)</td>
+					<td>
+						<p>Sets or disables options such as case insensitivity in the middle of a pattern. For more information, see Regular Expression Options.</p>
+					</td>
+					<td>
+						<p>\bA(?i)b\w+\b matches "ABA", "Able" in "ABA Able Act"</p>
+					</td>
+				</tr>
+				<tr>
+					<td>(?#comment)</td>
+					<td>
+						<p>Inline comment. The comment ends at the first closing parenthesis.</p>
+					</td>
+					<td>
+						<p>\bA(?#Matches words starting with A)\w+\b</p>
+					</td>
+				</tr>
+				<tr>
+					<td>#[to end of line]</td>
+					<td>X-mode comment. The comment starts at an unescaped # and continues to the end of the line.</td>
+					<td>(?x)\bA\w+\b#Matches words starting with A</td>
+				</tr>
 			</tbody>
 		</table>
 		<h3>Useful Examples:</h3>
 		<table cellpadding="2px" align="center">
 			<tbody>
-				<tr style="font-style:italic"><th>Description</th><th>Expression</th></tr>
-				<tr><td>Match a full file path</td><td class="mono">([a-zA-Z]{1}:)(\\[^\\/<>:\|\*\?\"]+)+\.[^\\/<>:\|\*\?\s]*</td></tr>
+				<tr style="font-style: italic">
+					<th>Description</th>
+					<th>Expression</th>
+				</tr>
+				<tr>
+					<td>Match a full file path</td>
+					<td class="mono">([a-zA-Z]{1}:)(\\[^\\/<>:\|\*\?\"]+)+\.[^\\/<>:\|\*\?\s]*</td>
+				</tr>
 			</tbody>
 		</table>
 		<h3>External Links:</h3>
 		<ul>
-			<li><p><a href="http://gskinner.com/RegExr/">gskinner.com</a> online regular expression tool.</p></li>
+			<li>
+				<p><a href="http://gskinner.com/RegExr/">gskinner.com</a> online regular expression tool.</p>
+			</li>
 		</ul>
-		</body>
+	</body>
 </html>

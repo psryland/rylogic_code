@@ -156,9 +156,9 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			int last_selected_line = -1;
-			m_edit_test.MouseUp += (s,a) =>
+			m_edit_test.SelectionChanged += (s,a) =>
 				{
-					// Not using selection changed because it fires while drag selecting
+					if (MouseButtons != MouseButtons.None || ModifierKeys != Keys.None) return;
 					var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
 					if (last_selected_line != idx) last_selected_line = idx; else return;
 					UpdateUI();
