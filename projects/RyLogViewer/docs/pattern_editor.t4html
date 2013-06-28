@@ -10,12 +10,13 @@
 			<div class="title">Pattern Editor</div>
 			<div class="content">
 				Pattern matching is at the core of the highlighting, filtering, and transformation features
-				in RyLogViewer. The Pattern Editor shown in the image below appears under the
+				in RyLogViewer. The Pattern Editor shown in the image below appears on the
 				<a href="options_dialog.htm#highlighting">Highlighting Tab</a>,
 				<a href="options_dialog.htm#filtering">Filtering Tab</a>, and 
 				<a href="options_dialog.htm#actions">Actions Tab</a> of the
-				<a href="options_dialog.htm">Options Dialog</a>. A slight variation of the pattern editor
-				also appears under the <a href="options_dialog.htm#transforms">Transform Tab</a>.
+				<a href="options_dialog.htm">Options Dialog</a>.
+				A slight variation of the pattern editor also appears on the
+				<a href="options_dialog.htm#transforms">Transform Tab</a>.
 			</div>
 			<div>
 				<img class="centred" src="pattern_editor.png" alt="pattern editor" usemap="#pattern_editor_map" />
