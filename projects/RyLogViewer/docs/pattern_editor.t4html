@@ -76,17 +76,17 @@
 							<div class="content">
 								Regular expressions are the most versatile, but also the most complex form of pattern.
 								A full description of regular expression syntax is beyond the scope of this help document.
-								However, essentially, a regular expression is a sequence of symbols that encode a small program
-								which, when executed, can identify specific patterns in a body of text. For those not familiar
-								with the syntax, reading and/or creating a regular expression can be a difficult task. To help
-								with this, the pattern editor contains a <a href="#test_area">pattern preview area</a> that
+								However, essentially, a regular expression is a sequence of symbols that encode a small program.
+								When executed, the regular expression identifies specific patterns in a body of text. For those
+								not familiar with the syntax, reading and/or creating a regular expression can be a difficult task.
+								To help with this, the pattern editor contains a <a href="#test_area">pattern testing area</a> that
 								aids in visualising how the pattern will behave for given lines of text.
 							</div>
 							<div class="content">
 								The secret to understanding a regular expression is being able to recognise and recall the meaning of 
 								specific symbol sequences. To help with this, RyLogViewer also includes a quick reference guide that can
 								be accessed via the <a href="#regex_quick_ref">Quick Reference Help</a> button [8]. When clicked, a small
-								window appears containing a concise summary of the common regular expression sequencies, along with their
+								window appears containing a concise summary of the common regular expression sequences, along with their
 								meanings and examples.
 							</div>
 							<div class="content">
@@ -103,45 +103,68 @@
 					<a id="pattern_field" />
 					<span class="tag_label">Pattern Field</span>
 					<div class="content">
-						This text box is where the pattern is entered. A green background will display when the pattern is 
-						syntactically valid, and a red background displays if the pattern contains an error. (Typically only 
-						regular expressions will contain errors).
+						This text field is where the pattern is entered. A green background will display when the pattern is 
+						syntactically valid, and a red background displays if the pattern contains an error. (Typically, only 
+						regular expressions will contain errors). How the pattern is interpreted depends on the pattern type
+						set immediately above.
 					</div>
 				</li>
 				<li>
 					<a id="ignore_case" />
 					<span class="tag_label">Ignore Case</span>
 					<div class="content">
+						Check this option to ignore differences in character case when matching the pattern. This option works
+						for all pattern types including regular expressions.
 					</div>
 				</li>
 				<li>
 					<a id="invert_match" />
 					<span class="tag_label">Invert Match</span>
 					<div class="content">
+						Check this option to invert the final match result. Sometimes it is easier to create a pattern for a
+						specific pattern and then highlight/filter/etc everything that isn't a match. This option works for
+						all pattern types including regular expressions.
 					</div>
 				</li>
 				<li>
 					<a id="test_area" />
-					<span class="tag_label">Pattern Preview</span>
+					<span class="tag_label">Pattern Testing</span>
 					<div class="content">
+						This text field is an area used for testing a pattern against arbitrary text. The pattern is applied
+						to each line in the test area and highlighting is used to show which parts of the text match the pattern
+						and the capture groups within the pattern.
 					</div>
 				</li>
 				<li>
 					<a id="capture_groups" />
 					<span class="tag_label">Capture Groups</span>
 					<div class="content">
+						This table lists the capture groups identified in the pattern, and shows their values when applied to
+						the line in the test area containing the cursor. The <i>tag</i> column lists the names of the capture
+						groups; either their ordinal number or given label.
+					</div>
+					<div class="content">
+						Capture groups are of limited use for highlighting, filtering, and click action patterns, however, they
+						are very useful for text transforms where they are referenced in the <i>Replace</i> template. See the 
+						documentation for <a href="transform.htm">text transforms</a> for more details.
 					</div>
 				</li>
 				<li>
 					<a id="regex_quick_ref" />
 					<span class="tag_label">Regex Quick Reference</span>
 					<div class="content">
+						When clicked, this button opens a window containing a quick reference guide for common regular expression
+						character sequences. It's purpose is as a 'cheat-sheet' when creating regular expressions.
 					</div>
 				</li>
 				<li>
 					<a id="add_or_save" />
 					<span class="tag_label">Add/Save Button</span>
 					<div class="content">
+						This button is used to add a new pattern to the <a href="pattern_list.htm">pattern list</a>, or to commit
+						any changes to a pattern that has been selected for editing. When the button shows the '+' icon, clicking
+						it will add a new pattern. When it shows the 'disc' icon, clicking it will save any modifications made to
+						the pattern that was previously selected for editing.
 					</div>
 				</li>
 			</ol>

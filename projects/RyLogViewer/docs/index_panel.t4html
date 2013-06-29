@@ -21,8 +21,8 @@
 	<a href="aggregate_files.htm" class="menu2">Aggregate Files</a><br />
 	<a href="android_logcat.htm" class="menu2">Android Logcat</a><br />
 
-	<a href="options_dialog.htm" class="menu1">Options Dialog</a><br />
-	<a href="options_dialog.htm#general" class="menu2">General</a><br />
+	<a href="options_general.htm" class="menu1">Options Dialog</a><br />
+	<a href="options_general.htm" class="menu2">General</a><br />
 	<a href="options_dialog.htm#appearance" class="menu2">Appearance</a><br />
 	<a href="options_dialog.htm#highlighting" class="menu2">Highlighing</a><br />
 	<a href="options_dialog.htm#filtering" class="menu2">Filtering</a><br />
@@ -30,9 +30,6 @@
 	<a href="options_dialog.htm#actions" class="menu2">Click Actions</a><br />
 
 	<a href="pattern_editor.htm" class="menu1">Pattern Editor</a><br />
-	<a href="pattern_editor.htm#pattern_type" class="menu2">Pattern Types</a><br />
-	<a href="pattern_editor.htm#test_area" class="menu2">Pattern Testing</a><br />
-	<a href="pattern_editor.htm#capture_groups" class="menu2">Capture Groups</a><br />
 
 	<a href="transform.htm" class="menu1">Transform Editor</a><br />
 	<a href="transform.htm#operations" class="menu2">Operations</a><br />

@@ -118,6 +118,14 @@ img.centred
 	font-size: 60%;
 }
 
+.section_title
+{
+	line-height: 150%;
+	font-weight: bold;
+	font-style: italic;
+	font-size: 120%;
+}
+
 .tag_label
 {
 	line-height: 150%;
@@ -146,6 +154,11 @@ img.centred
 	font-size: 100%;
 	font-weight: 600;
 	margin: 10px;
+}
+
+.mono
+{
+	font-family: monospace;
 }
 
 .links

@@ -233,6 +233,16 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <None Include="build_docs.cmd" />
+    <None Include="docs\options_appearance.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>options_appearance.htm</LastGenOutput>
+    </None>
+    <None Include="docs\options_dialog.t4html" />
+    <None Include="docs\options_general.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>options_general.htm</LastGenOutput>
+    </None>
     <None Include="docs\pattern_editor.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>pattern_editor.htm</LastGenOutput>
@@ -245,8 +255,12 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>welcome.htm</LastGenOutput>
     </None>
-    <None Include="docs\head.t4html" />
-    <None Include="docs\index_panel.t4html" />
+    <None Include="docs\head.t4html">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="docs\index_panel.t4html">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="docs\title_panel.t4html" />
     <None Include="Resources\swizzle_quick_ref.html" />
     <None Include="Resources\command_line_ref.html" />
@@ -257,6 +271,18 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>filtering.htm</LastGenOutput>
     </None>
+    <Content Include="docs\options_appearance.htm">
+      <DependentUpon>options_appearance.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\options_general.htm">
+      <DependentUpon>options_general.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
     <Content Include="docs\pattern_editor.htm">
       <DependentUpon>pattern_editor.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -270,6 +296,9 @@
       <DesignTime>True</DesignTime>
     </Content>
     <Content Include="docs\pattern_editor.png" />
+    <Content Include="docs\settings_general.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\welcome.htm">
       <DependentUpon>welcome.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
