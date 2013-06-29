@@ -234,6 +234,10 @@
       <SubType>UserControl</SubType>
     </Compile>
     <None Include="build_docs.cmd" />
+    <None Include="docs\main_window.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>main_window.htm</LastGenOutput>
+    </None>
     <None Include="docs\options_appearance.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>options_appearance.htm</LastGenOutput>
@@ -271,6 +275,15 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>filtering.htm</LastGenOutput>
     </None>
+    <Content Include="docs\main_window.htm">
+      <DependentUpon>main_window.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\main_view.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\options_appearance.htm">
       <DependentUpon>options_appearance.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -296,8 +309,13 @@
       <DesignTime>True</DesignTime>
     </Content>
     <Content Include="docs\pattern_editor.png" />
-    <Content Include="docs\settings_appearance.png" />
+    <Content Include="docs\settings_appearance.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\settings_general.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\tool_bar.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="docs\welcome.htm">

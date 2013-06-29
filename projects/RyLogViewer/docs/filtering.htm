@@ -6,22 +6,25 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<link rel='stylesheet' type='text/css' href='help.css' />
 	<base target="_parent" />
-	<!--<meta http-equiv="refresh" content="3"/>-->
+	<!---->
+	<meta http-equiv="refresh" content="3"/>
 	<script>
-		function HighlightListItem()
+		function HighlightListItem(item_id)
 		{
-		if (window.location.hash == null) return ;
-		item_id = window.location.hash.substr(1);
+			if (item_id == null)
+			{
+				if (window.location.hash == null) return;
+				item_id = window.location.hash.substr(1);
+			}
 
-		var elems = document.getElementsByTagName('*');
-		for (var i = 0; i != elems.length; ++i)
-		{
-		if ((' '+elems[i].className+' ').indexOf(' child_list_elem ') == -1) continue;
-		if (elems[i].id == item_id)
-		elems[i].style.background = 0xFFE0FFE0;
-		else
-		elems[i].style.background = 0xFFFFFFFF;
-		}
+			var elems = document.getElementsByTagName('li');
+			for (var i = 0; i != elems.length; ++i)
+			{
+				if (elems[i].id == item_id)
+					elems[i].className = 'child_list_elem_hl';
+				else
+					elems[i].className = 'child_list_elem';
+			}
 		}
 	</script>
 </head>
@@ -43,7 +46,7 @@
 
 	<a href="main_window.htm" class="menu1">Main Window</a><br />
 	<a href="main_window.htm#tool_bar" class="menu2">Tool Bar</a><br />
-	<a href="main_window.htm#file_scroll" class="menu2">File Indicator</a><br />
+	<a href="main_window.htm#file_scroll" class="menu2">File Scroll Indicator</a><br />
 	<a href="main_window.htm#encoding" class="menu2">Character Encoding</a><br />
 	<a href="main_window.htm#line_ending" class="menu2">Line Endings</a><br />
 	<a href="main_window.htm#search" class="menu2">Find Dialog</a><br />

@@ -9,7 +9,6 @@
 		<div id="content_panel">
 			<#@include file="options_dialog.t4html"#>
 
-			<a id="general" />
 			<div>
 				<span class="section_title">Appearance Tab</span>
 				<div class="content">

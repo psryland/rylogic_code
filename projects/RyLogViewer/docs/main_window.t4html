@@ -1,0 +1,52 @@
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<#@include file="head.t4html"#>
+	<body id="main_help">
+		<#@include file="title_panel.t4html"#>
+		<#@include file="index_panel.t4html"#>
+		<div id="content_panel">
+		<div class="title">Main Window</div>
+			<div class="content">
+			</div>
+			<div>
+				<div class="content">
+				</div>
+				<div>
+					<img class="centred" src="main_view.png" alt="main view" usemap="#main_view_map" />
+					<map id="main_view_map" name="main_view_map">
+						<area shape="rect" coords="7,75,27,95" href="#log_view" alt="" title=""/>
+						<area shape="rect" coords="11,42,31,62" href="#tool_bar" alt="" title=""/>
+						<area shape="rect" coords="638,76,658,96" href="#file_scroll" alt="" title=""/>
+						<area shape="rect" coords="8,506,28,526" href="#status_bar" alt="" title=""/>
+					</map>
+				</div>
+				<div class="content">
+					
+				</div>
+
+				<div id="log_view" class="section_title">Log View</div>
+
+				<div id="tool_bar">
+					<div class="section_title">Tool Bar</div>
+					<img class="centred" src="tool_bar.png" alt="tool bar" />
+				</div>
+				
+				<div id="file_scroll">
+					<div class="section_title">File Scroll Indicator</div>
+				</div>
+
+				<div id="encoding" class="section_title">Text Encoding</div>
+
+				<div id="line_ending" class="section_title">Line Endings</div>
+
+				<div id="search" class="section_title">Find Dialog</div>
+
+				<div id="bookmarks" class="section_title">Bookmarks</div>
+
+				<div id="status" class="section_title">Status</div>
+			</div>
+		</div>
+	</body>
+</html>
