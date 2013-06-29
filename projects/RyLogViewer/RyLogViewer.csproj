@@ -296,6 +296,7 @@
       <DesignTime>True</DesignTime>
     </Content>
     <Content Include="docs\pattern_editor.png" />
+    <Content Include="docs\settings_appearance.png" />
     <Content Include="docs\settings_general.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

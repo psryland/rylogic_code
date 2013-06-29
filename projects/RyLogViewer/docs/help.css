@@ -147,6 +147,14 @@ img.centred
 	margin-bottom: 10px;
 	list-style-type: disc;
 }
+.child_list_elem_hl
+{
+	margin: 0px;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	list-style-type: disc;
+	background-color: #E0FFE0
+}
 
 .code
 {

@@ -5,8 +5,24 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<link rel='stylesheet' type='text/css' href='help.css' />
 	<base target="_parent" />
-	<!---->
-	<meta http-equiv="refresh" content="3">
+	<!--<meta http-equiv="refresh" content="3"/>-->
+	<script>
+		function HighlightListItem()
+		{
+		if (window.location.hash == null) return ;
+		item_id = window.location.hash.substr(1);
+
+		var elems = document.getElementsByTagName('*');
+		for (var i = 0; i != elems.length; ++i)
+		{
+		if ((' '+elems[i].className+' ').indexOf(' child_list_elem ') == -1) continue;
+		if (elems[i].id == item_id)
+		elems[i].style.background = 0xFFE0FFE0;
+		else
+		elems[i].style.background = 0xFFFFFFFF;
+		}
+		}
+	</script>
 </head>
 
 	<body id="main_help">
@@ -39,7 +55,7 @@
 
 	<a href="options_general.htm" class="menu1">Options Dialog</a><br />
 	<a href="options_general.htm" class="menu2">General</a><br />
-	<a href="options_dialog.htm#appearance" class="menu2">Appearance</a><br />
+	<a href="options_appearance.htm" class="menu2">Appearance</a><br />
 	<a href="options_dialog.htm#highlighting" class="menu2">Highlighing</a><br />
 	<a href="options_dialog.htm#filtering" class="menu2">Filtering</a><br />
 	<a href="options_dialog.htm#transforms" class="menu2">Transforms</a><br />
