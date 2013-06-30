@@ -188,10 +188,10 @@
 							The options available in the <a href="main_window.htm#line_ending">Line Endings</a> menu include
 							the option for a custom line ending. This field is where the custom line ending is defined. Any
 							text can be used in this field. So, for example, a comma separated list could be interpreted as
-							rows by using ',' as the custom line ending. The special character sequences
-							<span class="mono">&lt;CR&gt;</span> and <span class="mono">&lt;LF&gt;</span> are interpreted
-							as the carriage return and line feed characters (<span class="mono">\u000D</span> and
-							<span class="mono">\u000A</span>) respectively.
+							rows by using ',' as the custom line ending. The special character sequences;
+							<span class="mono">&lt;CR&gt;</span>, <span class="mono">&lt;LF&gt;</span>, and
+							<span class="mono">&lt;TAB&gt;</span> are interpreted as carriage return, line feed, and the
+							tab character respectively (<span class="mono">\u000D, \u000A, and \u0009</span>).
 						</div>
 					</li>
 					<li class="child_list_elem" id="general_column_delimiters">

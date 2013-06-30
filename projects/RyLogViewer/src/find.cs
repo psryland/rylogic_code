@@ -42,8 +42,8 @@ namespace RyLogViewer
 			if (row_index == -1) return;
 			var row_text = ReadLine(row_index).RowText.Trim();
 			m_find_ui.Pattern = new Pattern(EPattern.Substring, row_text);
-			if (find_next) FindNext();
-			else           FindPrev();
+			if (find_next) FindNext(false);
+			else           FindPrev(false);
 		}
 
 		/// <summary>Prepare to execute the find command. Returns true if the find should execute</summary>
@@ -73,12 +73,12 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Search for the next occurrence of a pattern in the file</summary>
-		private void FindNext()
+		private void FindNext(bool from_start)
 		{
 			if (!PreFind())
 				return;
 
-			var start = SelectedRowByteRange.End;
+			var start = from_start ? FileByteRange.Begin : SelectedRowByteRange.End;
 			Log.Info(this, "FindNext starting from {0}".Fmt(start));
 
 			long found;
@@ -87,12 +87,12 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Search for an earlier occurrence of a pattern in the grid</summary>
-		private void FindPrev()
+		private void FindPrev(bool from_end)
 		{
 			if (!PreFind())
 				return;
 
-			var start = SelectedRowByteRange.Begin;
+			var start = from_end ? FileByteRange.End : SelectedRowByteRange.Begin;
 			Log.Info(this, "FindPrev starting from {0}".Fmt(start));
 
 			long found;
@@ -113,7 +113,7 @@ namespace RyLogViewer
 					int last_progress = 0;
 					ProgressFunc report_progress = (scanned, length) =>
 						{
-							int progress = (int)(100 * Maths.Frac(0,scanned,length));
+							int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
 							if (progress != last_progress)
 							{
 								cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});
@@ -135,7 +135,7 @@ namespace RyLogViewer
 				}){StartPosition = FormStartPosition.CenterParent};
 			
 			DialogResult res = DialogResult.Cancel;
-			try { res = search.ShowDialog(this); }
+			try { res = search.ShowDialog(this, 500); }
 			catch (OperationCanceledException) {}
 			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Find terminated by an error.", "Find error"); }
 			found = at;

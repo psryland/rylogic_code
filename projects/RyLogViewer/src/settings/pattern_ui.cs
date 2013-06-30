@@ -4,10 +4,8 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.common;
 using pr.extn;
 using pr.gui;
-using pr.util;
 
 namespace RyLogViewer
 {

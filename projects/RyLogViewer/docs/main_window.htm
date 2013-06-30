@@ -107,7 +107,7 @@
 				<img class="right_inset" src="main_view_context.png" alt="main view context menu"/>
 				<div class="content">
 					Right clicking in this view displays a context menu. The menu items are:
-					<table class="option_function_list">
+					<table class="minor_list">
 						<tbody>
 							<tr>
 								<th>Option</th>
@@ -161,7 +161,7 @@
 				<div class="content">
 					The tool bar contains buttons that allow quick navigation to, and control of, various features of
 					RyLogViewer. In order from left to right, these are:
-					<table class="option_function_list">
+					<table class="minor_list">
 						<tbody>
 							<tr>
 								<th>Button</th>
@@ -253,23 +253,78 @@
 					located within the log file as a whole. Secondarily, it is used to quickly navigate to another location
 					within the file.<br/>
 					<br/>
-					The different colours within the file scroll indicator show:
-					<ul class="option_function_list">
+					The different colours within the file scroll indicator convey the following information. The associated
+					colours are set in the <a href="options_appearance.htm#appearance_cached_colour">options dialog</a>.
+					<ul class="minor_list">
 						<li>the portion of the file that is cached in memory,</li>
 						<li>the portion of the file that is currently being displayed,</li>
 						<li>the selected rows,</li>
 						<li>the bookmark locations.</li>
 					</ul>
-					Left clicking within the file scroll indicator sets a new centre for the region of log file data that
-					is cached.
+					Left clicking within the file scroll indicator selects the line at the corresponding position in the
+					log file.
 				</div>
 			</div>
 
-			<div id="encoding" class="section_title">Text Encoding</div>
+			<div id="encoding">
+				<div class="section_title">Text Encoding</div>
+				<div class="content">
+					RyLogViewer supports four common text encodings; ASCII, UTF-8, UCS-2 little-endian, and UCS-2 big-endian.
+					The text encoding to use can be set under the <i>Encoding</i> menu. However, RyLogViewer also supports
+					automatic detection of the file text encoding, so it is usually not necessary to set the text encoding
+					explicitly.
+				</div>
+			</div>
 
-			<div id="line_ending" class="section_title">Line Endings</div>
+			<div id="line_ending">
+				<div class="section_title">Line Endings</div>
+				<div class="content">
+					There are three line ending conventions in common use today:
+					<ul class="minor_list">
+						<li>Windows/DOS - carriage return, line feed character pairs,</li>
+						<li>Unix - single line feed character,</li>
+						<li>Macintosh - single carriage return character,</li>
+					</ul>
+					RyLogViewer supports all three conventions and is able to automatically detect the line ending style
+					in most cases. There is also support for custom line ending sequences that allow arbitrary combinations
+					of characters to be interpreted as a line ending. A custom line ending can be set in the
+					<a href="options_general.htm#general_line_ending">options dialog</a> which can be accessed quickly by
+					selecting the <i>Custom</i> option under the <i>Line Ending</i> menu.
+				</div>
+			</div>
 
-			<div id="search" class="section_title">Find Dialog</div>
+			<div id="search">
+				<div class="section_title">Find Dialog / Searching</div>
+				<div class="content">
+					The ability to search for specific text within a log file is a vitally important feature. RyLogViewer
+					is designed to make searching fast and simple, with convenient keyboard shortcuts that eliminate
+					unnecessary swapping between the mouse and keyboard.
+					<ul class="minor_list">
+						<li>Access the find dialog using the 'Ctrl-F' key combination.</li>
+						<li>On opening, the search pattern text field has input focus so a pattern can be entered immediately.</li>
+						<li>The search pattern is initialised from the currently selected row.</li>
+						<li>Use the down arrow key to show and select previous search patterns.</li>
+						<li>
+							The Enter key searches forward from the currently selected line, Control + Enter searches forward
+							from the beginning of the log file.
+						</li>
+						<li>
+							Shift + Enter searches backward from the currently selected line, Control + Shift + Enter searches
+							backward from the end of the log file.
+						</li>
+						<li>Close the find dialog with the escape key.</li>
+					</ul>
+					In the main log view, the following keyboard shortcuts are also available:
+					<ul class="minor_list">
+						<li>F3 - Search forward from the currently selected line using the last search pattern</li>
+						<li>Shift+F3 - Search backward from the currently selected line using the last search pattern</li>
+						<li>Control+F3 - </li>
+					</ul>
+					F3,
+					Control+F3
+					Control+Shift+F3
+				</div>
+			</div>
 
 			<div id="bookmarks" class="section_title">Bookmarks</div>
 

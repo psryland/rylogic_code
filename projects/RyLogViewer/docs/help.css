@@ -42,8 +42,8 @@ img.centred
 	display: block;
 	margin-left: auto;
 	margin-right: auto;
-	margin-top:20px;
-	margin-bottom:20px;
+	margin-top: 20px;
+	margin-bottom: 20px;
 }
 
 img.right_inset
@@ -51,10 +51,10 @@ img.right_inset
 	display: block;
 	margin-left: auto;
 	margin-right: auto;
-	margin-top:20px;
-	margin-bottom:20px;
-	padding:10px;
-	float:right;
+	margin-top: 20px;
+	margin-bottom: 20px;
+	padding: 10px;
+	float: right;
 }
 
 #main_help
@@ -84,15 +84,15 @@ img.right_inset
 
 #index_panel
 {
-	float:left;
-	border:solid 1px black;
+	float: left;
+	border: solid 1px black;
 	vertical-align: top;
 	padding: 10px;
 }
 
 #content_panel
 {
-	float:left;
+	float: left;
 	vertical-align: top;
 	padding: 10px;
 	width: 600px;
@@ -158,15 +158,14 @@ img.right_inset
 	margin: 0px;
 	margin-top: 10px;
 	margin-bottom: 10px;
-	list-style-type: disc;
 }
+
 .child_list_elem_hl
 {
 	margin: 0px;
 	margin-top: 10px;
 	margin-bottom: 10px;
-	list-style-type: disc;
-	background-color: #E0FFE0
+	background-color: #E0FFE0;
 }
 
 .code
@@ -184,12 +183,12 @@ img.right_inset
 
 .links
 {
-	margin-top:10px;
-	margin-left:30px;
-	margin-bottom:10px;
+	margin-top: 10px;
+	margin-left: 30px;
+	margin-bottom: 10px;
 }
 
-.option_function_list
+.minor_list
 {
 	font-size: 90%;
 	margin-left: auto;
@@ -197,25 +196,32 @@ img.right_inset
 	margin-top: 10px;
 	margin-bottom: 20px;
 }
-.option_function_list th
-{
-	border: 1px dotted;
-	border-collapse: collapse;
-	font-weight: bold;
-	font-style: italic;
-	padding: 3px;
-	min-width: 100px;
-	max-width: 400px;
-	word-wrap: break-word;
-}
-.option_function_list td
-{
-	border: 1px dotted;
-	border-collapse: collapse;
-	text-align: left;
-	margin: 5px;
-	padding: 3px;
-	min-width: 100px;
-	max-width: 400px;
-	word-wrap: break-word;
-}
+
+	.minor_list th
+	{
+		border: 1px dotted;
+		border-collapse: collapse;
+		font-weight: bold;
+		font-style: italic;
+		padding: 3px;
+		min-width: 100px;
+		max-width: 400px;
+		word-wrap: break-word;
+	}
+
+	.minor_list td
+	{
+		border: 1px dotted;
+		border-collapse: collapse;
+		text-align: left;
+		margin: 5px;
+		padding: 3px;
+		min-width: 100px;
+		max-width: 400px;
+		word-wrap: break-word;
+	}
+
+	.minor_list li
+	{
+		margin: 5px;
+	}

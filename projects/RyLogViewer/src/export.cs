@@ -134,7 +134,7 @@ namespace RyLogViewer
 					int last_progress = -1;
 					ProgressFunc report_progress = (scanned, length) =>
 						{
-							int progress = (int)(100 * Maths.Frac(0, scanned, length));
+							int progress = (int)(100 * Maths.Frac(0, scanned, length!=0?length:1));
 							if (progress != last_progress)
 							{
 								cb(new ProgressForm.UserState { FractionComplete = progress * 0.01f });

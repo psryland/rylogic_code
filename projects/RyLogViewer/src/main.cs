@@ -130,8 +130,8 @@ namespace RyLogViewer
 			m_menu_edit_selectall.Click                += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
 			m_menu_edit_copy.Click                     += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
 			m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
-			m_menu_edit_find_next.Click                += (s,a) => FindNext();
-			m_menu_edit_find_prev.Click                += (s,a) => FindPrev();
+			m_menu_edit_find_next.Click                += (s,a) => FindNext(false);
+			m_menu_edit_find_prev.Click                += (s,a) => FindPrev(false);
 			m_menu_edit_toggle_bookmark.Click          += (s,a) => ToggleBookmark(SelectedRowIndex);
 			m_menu_edit_next_bookmark.Click            += (s,a) => NextBookmark();
 			m_menu_edit_prev_bookmark.Click            += (s,a) => PrevBookmark();
@@ -786,8 +786,8 @@ namespace RyLogViewer
 			if (args.ClickedItem == m_cmenu_action_row   ) { ShowOptions(SettingsUI.ETab.Actions   ); return; }
 
 			// Find operations
-			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(); return; }
-			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(); return; }
+			if (args.ClickedItem == m_cmenu_find_next) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindNext(false); return; }
+			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(false); return; }
 
 			// Bookmarks
 			if (args.ClickedItem == m_cmenu_toggle_bookmark) { ToggleBookmark(hit.RowIndex); }
@@ -866,9 +866,9 @@ namespace RyLogViewer
 			case Keys.Escape:                     CancelBuildLineIndex();             return true;
 			case Keys.F2:                         NextBookmark();                     return true;
 			case Keys.F2|Keys.Shift:              PrevBookmark();                     return true;
-			case Keys.F2|Keys.Control:            ToggleBookmark(SelectedRowIndex);        return true;
-			case Keys.F3:                         FindNext();                         return true;
-			case Keys.F3|Keys.Shift:              FindPrev();                         return true;
+			case Keys.F2|Keys.Control:            ToggleBookmark(SelectedRowIndex);   return true;
+			case Keys.F3:                         FindNext(false);                    return true;
+			case Keys.F3|Keys.Shift:              FindPrev(false);                    return true;
 			case Keys.F3|Keys.Control:            SetFindPattern(SelectedRowIndex, true);  return true;
 			case Keys.F3|Keys.Shift|Keys.Control: SetFindPattern(SelectedRowIndex, false); return true;
 			case Keys.F5:                         BuildLineIndex(m_filepos, true);    return true;
@@ -1673,7 +1673,7 @@ namespace RyLogViewer
 		/// <summary>Update the status bar progress bar</summary>
 		private void UpdateStatusProgress(long current, long total)
 		{
-			if (current == total)
+			if (current == total || total == 0)
 			{
 				m_status_progress.Visible = false;
 				m_status_progress.Value = m_status_progress.Maximum;

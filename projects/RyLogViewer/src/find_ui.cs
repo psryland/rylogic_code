@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using RyLogViewer.Properties;
 using pr.extn;
 using pr.gui;
 
@@ -10,6 +12,7 @@ namespace RyLogViewer
 	{
 		private readonly BindingSource m_history;
 		private readonly ToolTip m_tt;
+		private HelpUI m_dlg_help;
 		private Pattern m_pattern;
 		private Button m_btn_find_next;
 		private Button m_btn_find_prev;
@@ -23,6 +26,7 @@ namespace RyLogViewer
 		private Panel m_panel_top;
 		private DataGridView m_grid;
 		private Label m_lbl_prev_find_patterns;
+		private Button m_btn_regex_help;
 		private RadioButton m_radio_substring;
 
 		/// <summary>The current find pattern</summary>
@@ -33,17 +37,19 @@ namespace RyLogViewer
 		}
 
 		/// <summary>An event called whenever the dialog gets a FindNext command</summary>
-		public event Action FindNext;
-		public void RaiseFindNext()
+		public event Action<bool> FindNext;
+		public void RaiseFindNext(bool from_start)
 		{
-			if (FindNext != null) FindNext();
+			if (FindNext == null) return;
+			FindNext(from_start);
 		}
 
 		/// <summary>An event called whenever the dialog gets a FindPrev command</summary>
-		public event Action FindPrev;
-		public void RaiseFindPrev()
+		public event Action<bool> FindPrev;
+		public void RaiseFindPrev(bool from_end)
 		{
-			if (FindPrev != null) FindPrev();
+			if (FindPrev == null) return;
+			FindPrev(from_end);
 		}
 
 		public FindUI(Form owner, BindingSource history)
@@ -59,6 +65,7 @@ namespace RyLogViewer
 			m_combo_pattern.DropDownClosed += (s,a)=>
 				{
 					var p = m_combo_pattern.SelectedItem;
+					if (p == null) return;
 					m_history.Remove(p);
 					m_history.Insert(0, p);
 					m_history.Position = 0;
@@ -68,20 +75,32 @@ namespace RyLogViewer
 				{
 					Pattern.Expr = m_combo_pattern.Text;
 				};
+			m_combo_pattern.KeyDown += (s,a) =>
+				{
+					if (a.KeyCode == Keys.Down && !m_combo_pattern.DroppedDown)
+						m_combo_pattern.DroppedDown = true;
+				};
 			m_history.CurrentItemChanged += (s,a)=>
 				{
 					var pattern = m_history.Current as Pattern;
 					if (pattern == null) return;
 					Pattern = new Pattern(pattern);
 				};
-			
+
+			// Regex help
+			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");
+			m_btn_regex_help.Click += (s,a)=>
+				{
+					RegexHelpUI.Display();
+				};
+
 			// Search buttons
 			m_btn_find_prev.ToolTip(m_tt, "Search backward through the log.\r\nKeyboard shortcut: <Shift>+<Enter>");
-			m_btn_find_prev.Click += (s,a) => RaiseFindPrev();
-			
+			m_btn_find_prev.Click += (s,a) => RaiseFindPrev(false);
+
 			m_btn_find_next.ToolTip(m_tt, "Search forward through the log.\r\nKeyboard shortcut: <Enter>");
-			m_btn_find_next.Click += (s,a) => RaiseFindNext();
-			
+			m_btn_find_next.Click += (s,a) => RaiseFindNext(false);
+
 			// Pattern type
 			m_radio_substring.Checked = Pattern.PatnType == EPattern.Substring;
 			m_radio_substring.Click += (s,a)=>
@@ -147,9 +166,30 @@ namespace RyLogViewer
 				var main = Owner as Main;
 				if (main != null && main.HandleKeyDown(this, key_data)) return true;
 				return base.ProcessCmdKey(ref msg, key_data);
-			case Keys.Escape:           Close();         return true;
-			case Keys.Enter:            RaiseFindNext(); return true;
-			case Keys.Shift|Keys.Enter: RaiseFindPrev(); return true;
+
+			case Keys.Escape:
+				Close();
+				return true;
+
+			case Keys.Enter:
+				m_combo_pattern.DroppedDown = false;
+				RaiseFindNext(false);
+				return true;
+
+			case Keys.Shift|Keys.Enter:
+				m_combo_pattern.DroppedDown = false;
+				RaiseFindPrev(false);
+				return true;
+
+			case Keys.Control|Keys.Enter:
+				m_combo_pattern.DroppedDown = false;
+				RaiseFindNext(true);
+				return true;
+
+			case Keys.Shift|Keys.Control|Keys.Enter:
+				m_combo_pattern.DroppedDown = false;
+				RaiseFindPrev(true);
+				return true;
 			}
 		}
 
@@ -170,6 +210,16 @@ namespace RyLogViewer
 			finally { m_in_update_ui = false; }
 		}
 		private bool m_in_update_ui;
+
+		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
+		private HelpUI RegexHelpUI
+		{
+			get
+			{
+				Debug.Assert(Owner != null);
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(Owner, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Size(1,1) ,new Size(640,480) ,EPin.TopRight));
+			}
+		}
 
 		#region Windows Form Designer generated code
 
@@ -209,8 +259,9 @@ namespace RyLogViewer
 			this.m_radio_substring = new System.Windows.Forms.RadioButton();
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
 			this.m_panel_top = new System.Windows.Forms.Panel();
-			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_lbl_prev_find_patterns = new System.Windows.Forms.Label();
+			this.m_grid = new System.Windows.Forms.DataGridView();
 			this.m_table.SuspendLayout();
 			this.m_panel_top.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
@@ -219,20 +270,20 @@ namespace RyLogViewer
 			// m_btn_find_next
 			// 
 			this.m_btn_find_next.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_find_next.Location = new System.Drawing.Point(162, 75);
+			this.m_btn_find_next.Location = new System.Drawing.Point(157, 75);
 			this.m_btn_find_next.Name = "m_btn_find_next";
-			this.m_btn_find_next.Size = new System.Drawing.Size(89, 23);
-			this.m_btn_find_next.TabIndex = 7;
+			this.m_btn_find_next.Size = new System.Drawing.Size(94, 23);
+			this.m_btn_find_next.TabIndex = 8;
 			this.m_btn_find_next.Text = "Find &Next";
 			this.m_btn_find_next.UseVisualStyleBackColor = true;
 			// 
 			// m_btn_find_prev
 			// 
 			this.m_btn_find_prev.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_find_prev.Location = new System.Drawing.Point(162, 46);
+			this.m_btn_find_prev.Location = new System.Drawing.Point(157, 46);
 			this.m_btn_find_prev.Name = "m_btn_find_prev";
-			this.m_btn_find_prev.Size = new System.Drawing.Size(89, 23);
-			this.m_btn_find_prev.TabIndex = 6;
+			this.m_btn_find_prev.Size = new System.Drawing.Size(94, 23);
+			this.m_btn_find_prev.TabIndex = 7;
 			this.m_btn_find_prev.Text = "Find &Previous";
 			this.m_btn_find_prev.UseVisualStyleBackColor = true;
 			// 
@@ -258,7 +309,7 @@ namespace RyLogViewer
 			// m_check_ignore_case
 			// 
 			this.m_check_ignore_case.AutoSize = true;
-			this.m_check_ignore_case.Location = new System.Drawing.Point(81, 48);
+			this.m_check_ignore_case.Location = new System.Drawing.Point(78, 48);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
 			this.m_check_ignore_case.TabIndex = 4;
@@ -268,7 +319,7 @@ namespace RyLogViewer
 			// m_check_invert
 			// 
 			this.m_check_invert.AutoSize = true;
-			this.m_check_invert.Location = new System.Drawing.Point(81, 64);
+			this.m_check_invert.Location = new System.Drawing.Point(78, 64);
 			this.m_check_invert.Name = "m_check_invert";
 			this.m_check_invert.Size = new System.Drawing.Size(86, 17);
 			this.m_check_invert.TabIndex = 5;
@@ -278,7 +329,7 @@ namespace RyLogViewer
 			// m_radio_regex
 			// 
 			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(8, 79);
+			this.m_radio_regex.Location = new System.Drawing.Point(8, 82);
 			this.m_radio_regex.Name = "m_radio_regex";
 			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
 			this.m_radio_regex.TabIndex = 3;
@@ -288,7 +339,7 @@ namespace RyLogViewer
 			// m_radio_wildcard
 			// 
 			this.m_radio_wildcard.AutoSize = true;
-			this.m_radio_wildcard.Location = new System.Drawing.Point(8, 63);
+			this.m_radio_wildcard.Location = new System.Drawing.Point(8, 64);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 2;
@@ -326,6 +377,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_top.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_panel_top.Controls.Add(this.m_btn_regex_help);
 			this.m_panel_top.Controls.Add(this.m_lbl_prev_find_patterns);
 			this.m_panel_top.Controls.Add(this.m_combo_pattern);
 			this.m_panel_top.Controls.Add(this.m_lbl_find_what);
@@ -341,6 +393,24 @@ namespace RyLogViewer
 			this.m_panel_top.Name = "m_panel_top";
 			this.m_panel_top.Size = new System.Drawing.Size(261, 121);
 			this.m_panel_top.TabIndex = 0;
+			// 
+			// m_btn_regex_help
+			// 
+			this.m_btn_regex_help.Location = new System.Drawing.Point(120, 80);
+			this.m_btn_regex_help.Name = "m_btn_regex_help";
+			this.m_btn_regex_help.Size = new System.Drawing.Size(21, 21);
+			this.m_btn_regex_help.TabIndex = 6;
+			this.m_btn_regex_help.Text = "?";
+			this.m_btn_regex_help.UseVisualStyleBackColor = true;
+			// 
+			// m_lbl_prev_find_patterns
+			// 
+			this.m_lbl_prev_find_patterns.AutoSize = true;
+			this.m_lbl_prev_find_patterns.Location = new System.Drawing.Point(1, 101);
+			this.m_lbl_prev_find_patterns.Name = "m_lbl_prev_find_patterns";
+			this.m_lbl_prev_find_patterns.Size = new System.Drawing.Size(130, 13);
+			this.m_lbl_prev_find_patterns.TabIndex = 29;
+			this.m_lbl_prev_find_patterns.Text = "Previous Search Patterns:";
 			// 
 			// m_grid
 			// 
@@ -365,17 +435,9 @@ namespace RyLogViewer
 			this.m_grid.Size = new System.Drawing.Size(261, 184);
 			this.m_grid.TabIndex = 0;
 			// 
-			// m_lbl_prev_find_patterns
-			// 
-			this.m_lbl_prev_find_patterns.AutoSize = true;
-			this.m_lbl_prev_find_patterns.Location = new System.Drawing.Point(1, 101);
-			this.m_lbl_prev_find_patterns.Name = "m_lbl_prev_find_patterns";
-			this.m_lbl_prev_find_patterns.Size = new System.Drawing.Size(130, 13);
-			this.m_lbl_prev_find_patterns.TabIndex = 29;
-			this.m_lbl_prev_find_patterns.Text = "Previous Search Patterns:";
-			// 
 			// FindUI
 			// 
+			this.AcceptButton = this.m_btn_find_next;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.AutoSize = true;
