@@ -1,0 +1,25 @@
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<#@include file="head.t4html"#>
+	<body id="main_help">
+		<#@include file="title_panel.t4html"#>
+		<#@include file="index_panel.t4html"#>
+		<div id="content_panel">
+			<div class="title">Installation</div>
+			<div>
+				<div id="status" class="section_title">System Requirements</div>
+				<div class="content">
+					XP or later
+					Windows
+					.NET Framework 4.0
+				</div>
+				<div id="status" class="section_title">Run from USB drive</div>
+				<div class="content">
+					
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

@@ -46,6 +46,17 @@ img.centred
 	margin-bottom:20px;
 }
 
+img.right_inset
+{
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top:20px;
+	margin-bottom:20px;
+	padding:10px;
+	float:right;
+}
+
 #main_help
 {
 	background: url(background.png) no-repeat;
@@ -138,6 +149,8 @@ img.centred
 	text-align: justify;
 	margin-top: 5px;
 	margin-bottom: 15px;
+	margin-left: 10px;
+	margin-right: 10px;
 }
 
 .child_list_elem
@@ -174,4 +187,35 @@ img.centred
 	margin-top:10px;
 	margin-left:30px;
 	margin-bottom:10px;
+}
+
+.option_function_list
+{
+	font-size: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 10px;
+	margin-bottom: 20px;
+}
+.option_function_list th
+{
+	border: 1px dotted;
+	border-collapse: collapse;
+	font-weight: bold;
+	font-style: italic;
+	padding: 3px;
+	min-width: 100px;
+	max-width: 400px;
+	word-wrap: break-word;
+}
+.option_function_list td
+{
+	border: 1px dotted;
+	border-collapse: collapse;
+	text-align: left;
+	margin: 5px;
+	padding: 3px;
+	min-width: 100px;
+	max-width: 400px;
+	word-wrap: break-word;
 }

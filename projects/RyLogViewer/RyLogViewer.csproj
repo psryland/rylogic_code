@@ -234,6 +234,10 @@
       <SubType>UserControl</SubType>
     </Compile>
     <None Include="build_docs.cmd" />
+    <None Include="docs\installation.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>installation.htm</LastGenOutput>
+    </None>
     <None Include="docs\main_window.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>main_window.htm</LastGenOutput>
@@ -275,6 +279,15 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>filtering.htm</LastGenOutput>
     </None>
+    <Content Include="docs\installation.htm">
+      <DependentUpon>installation.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\main_view_context.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\main_window.htm">
       <DependentUpon>main_window.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
