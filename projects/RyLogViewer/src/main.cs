@@ -203,15 +203,7 @@ namespace RyLogViewer
 			// Scrollbar
 			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file\r\nClicking within here moves the cached position within the log file");
 			m_scroll_file.MinThumbSize = 1;
-			m_scroll_file.ScrollEnd += (s,a)=>
-				{
-					// Update on ScrollEnd not value changed, since
-					// UpdateUI() sets Value when the build is complete.
-					var range = m_scroll_file.ThumbRange;
-					long pos = (range.Begin == 0) ? 0 : (range.End == m_fileend) ? m_fileend : range.Mid;
-					Log.Info(this, "file scroll to {0}".Fmt(pos));
-					BuildLineIndex(pos, false);
-				};
+			m_scroll_file.ScrollEnd += OnScrollFileScrollEnd;
 
 			// Status
 			m_status.Location             = Point.Empty;
@@ -831,6 +823,23 @@ namespace RyLogViewer
 				m_grid.InvalidateRow(r.Index);
 		}
 
+		/// <summary>Called on the ScrollEnd event for the file scroll indicator</summary>
+		private void OnScrollFileScrollEnd(object sender, EventArgs args)
+		{
+			// Update on ScrollEnd not value changed, since
+			// UpdateUI() sets Value when the build is complete.
+
+			// Find the new centre position of the thumb
+			var range = m_scroll_file.ThumbRange;
+			long pos = (range.Begin == 0) ? 0 : (range.End == m_fileend) ? m_fileend : range.Mid;
+			Log.Info(this, "file scroll to {0}".Fmt(pos));
+
+			// Set the new selected row from the mouse up position
+			var pt = m_scroll_file.PointToClient(MousePosition);
+			var sel_pos = (long)(Maths.Frac(1, pt.Y, m_scroll_file.Height - 1) * FileByteRange.Count);
+			BuildLineIndex(pos, false, () => { SelectRowByAddr(sel_pos); });
+		}
+
 		/// <summary>Tests whether the currently selected row is near the start or end of the line range and causes a reload if it is</summary>
 		private void LoadNearBoundary()
 		{
@@ -1392,8 +1401,9 @@ namespace RyLogViewer
 				// Record data so that we can preserve the selected rows and first visible rows
 				int first_vis = m_grid.FirstDisplayedScrollingRowIndex;
 				var selected = SelectedRowIndex;
-				var selected_rows = m_grid.SelectedRows.Cast<DataGridViewRow>().Select(x => x.Index + row_delta).OrderBy(x => x).ToList();
+				var selected_rows = m_grid.SelectedRows.Cast<DataGridViewRow>().Select(x => x.Index).OrderBy(x => x).ToList();
 				SelectedRowIndex = -1;
+				m_grid.ClearSelection();
 				
 				Log.Info(this, "RowCount changed. Row delta {0}.".Fmt(row_delta));
 				m_grid.RowCount = 0;
@@ -1404,14 +1414,21 @@ namespace RyLogViewer
 				{
 					// Restore the selected rows, and the first visible row
 					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
-					if (auto_scroll_tail) SelectedRowIndex = m_grid.RowCount - 1;//m_grid.SelectRow(m_grid.RowCount - 1);
+					if (auto_scroll_tail) SelectedRowIndex = m_grid.RowCount - 1;
 					else if (selected != -1)
 					{
 						m_grid.SelectRow(selected + row_delta);
 
-						int i = selected_rows.BinarySearch(x => x.CompareTo(0));
+						// Select the rows that were previously selected.
+						// Find the index of the first selected row that is within the new range
+						int rd = row_delta; // modified closure...
+						int i = selected_rows.BinarySearch(x => x.CompareTo(-rd));
 						for (i = (i >= 0) ? i : ~i; i != selected_rows.Count; ++i)
-							m_grid.Rows[i].Selected = true;
+						{
+							var s = selected_rows[i] + row_delta;
+							if (s >= count) break; // can stop at the first selected row outside the new range
+							m_grid.Rows[s].Selected = true;
+						}
 					}
 				}
 			}
