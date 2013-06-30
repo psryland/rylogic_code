@@ -129,8 +129,7 @@ namespace RyLogViewer
 					// we're in a modal dialog.
 					if (at != -1 && !s.CancelPending)
 					{
-						Action select = ()=>SelectRowByAddr(at);
-						Invoke(select);
+						this.BeginInvoke(() => SelectRowByAddr(at));
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
 			
