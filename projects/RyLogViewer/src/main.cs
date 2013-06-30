@@ -1010,14 +1010,16 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Enable/Disable ghost mode</summary>
-		private void EnableGhostMode(bool enabled)
+		private void EnableGhostMode(bool enable)
 		{
-			if (enabled)
+			if (enable)
 			{
-				var dg = new GhostModeUI(this);
+				var dg = new GhostModeUI(this) {AlwaysOnTop = m_settings.AlwaysOnTop};
 				if (dg.ShowDialog(this) != DialogResult.OK) return;
 				m_menu_tools_ghost_mode.Checked = true;
-				
+				SetAlwaysOnTop(dg.AlwaysOnTop);
+				ShowWindowFrame = false;
+
 				Opacity = dg.Alpha;
 				if (dg.ClickThru)
 				{
@@ -1025,10 +1027,10 @@ namespace RyLogViewer
 					style = Bit.SetBits(style, Win32.WS_EX_LAYERED | Win32.WS_EX_TRANSPARENT, true);
 					Win32.SetWindowLong(Handle, Win32.GWL_EXSTYLE, style);
 				}
-				
+
 				// Self removing icon clicked delegate
 				EventHandler icon_clicked = null;
-				icon_clicked = (s,a)=>
+				icon_clicked = (s, a) =>
 					{
 						// ReSharper disable AccessToModifiedClosure
 						m_notify_icon.Visible = false;
@@ -1036,7 +1038,7 @@ namespace RyLogViewer
 						EnableGhostMode(false);
 						// ReSharper restore AccessToModifiedClosure
 					};
-				
+
 				m_notify_icon.Click += icon_clicked;
 				m_notify_icon.ShowBalloonTip(1000, "Ghost Mode", "Click here to cancel ghost mode", ToolTipIcon.Info);
 				m_notify_icon.Text = "Click to disable ghost mode";
@@ -1045,10 +1047,45 @@ namespace RyLogViewer
 			else
 			{
 				m_menu_tools_ghost_mode.Checked = false;
+				ShowWindowFrame = true;
 				Opacity = 1f;
-				uint style = Win32.GetWindowLong(Handle, Win32.GWL_EXSTYLE);
-				style = Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false);
-				Win32.SetWindowLong(Handle, Win32.GWL_EXSTYLE, style);
+				{
+					uint style = Win32.GetWindowLong(Handle, Win32.GWL_EXSTYLE);
+					style = Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false);
+					Win32.SetWindowLong(Handle, Win32.GWL_EXSTYLE, style);
+				}
+
+			}
+		}
+
+		/// <summary>Show or hide the window frame</summary>
+		private bool ShowWindowFrame
+		{
+			set
+			{
+				if (value)
+				{
+					m_grid.ScrollBars = ScrollBars.Both;
+					m_grid.Margin = new Padding(3);
+					m_table.Margin = new Padding(3);
+					m_status.Visible = true;
+					m_toolstrip.Visible = true;
+					m_menu.Visible = true;
+					m_scroll_file.Visible = true;
+					FormBorderStyle = FormBorderStyle.Sizable;
+				}
+				else
+				{
+					// Order is important here, it affects the position of tool bars
+					FormBorderStyle = FormBorderStyle.None;
+					m_scroll_file.Visible = false;
+					m_menu.Visible = false;
+					m_toolstrip.Visible = false;
+					m_status.Visible = false;
+					m_table.Margin = new Padding(0);
+					m_grid.Margin = new Padding(0);
+					m_grid.ScrollBars = ScrollBars.None;
+				}
 			}
 		}
 
@@ -1321,8 +1358,7 @@ namespace RyLogViewer
 			{
 				SelectedRowIndex = LineIndex(m_line_index, addr);
 			}
-			// Otherwise, load the range around 'addr', then select the row
-			else
+			else // Otherwise, load the range around 'addr', then select the row
 			{
 				BuildLineIndex(addr, false, ()=> SelectedRowIndex = LineIndex(m_line_index, addr));
 			}
@@ -1466,7 +1502,7 @@ namespace RyLogViewer
 		private void ApplySettings()
 		{
 			Log.Info(this, "Applying settings");
-			
+
 			// Cached settings for performance, don't overwrite auto detected cached values though
 			m_encoding                 = GetEncoding(m_settings.Encoding);
 			m_row_delim                = GetRowDelim(m_settings.RowDelimiter);
@@ -1477,30 +1513,30 @@ namespace RyLogViewer
 			m_alternating_line_colours = m_settings.AlternateLineColours;
 			m_tail_enabled             = m_settings.TailEnabled;
 			m_quick_filter_enabled     = m_settings.QuickFilterEnabled;
-			
+
 			// Tail
 			m_watch_timer.Enabled = FileOpen && m_settings.WatchEnabled;
-			
+
 			// Highlights;
 			m_highlights.Clear();
 			if (m_settings.HighlightsEnabled)
 				m_highlights.AddRange(Highlight.Import(m_settings.HighlightPatterns).Where(x => x.Active));
-			
+
 			// Filters
 			m_filters.Clear();
 			if (m_settings.FiltersEnabled)
 				m_filters.AddRange(Filter.Import(m_settings.FilterPatterns).Where(x => x.Active));
-			
+
 			// Transforms
 			m_transforms.Clear();
 			if (m_settings.TransformsEnabled)
 				m_transforms.AddRange(Transform.Import(m_settings.TransformPatterns).Where(x => x.Active));
-			
+
 			// Click Actions
 			m_clkactions.Clear();
 			if (m_settings.ActionsEnabled)
 				m_clkactions.AddRange(ClkAction.Import(m_settings.ActionPatterns).Where(x => x.Active));
-			
+
 			// Grid
 			int col_count = m_settings.ColDelimiter.Length != 0 ? Maths.Clamp(m_settings.ColumnCount, 1, 255) : 1;
 			m_grid.ColumnHeadersVisible = col_count > 1;
@@ -1603,7 +1639,8 @@ namespace RyLogViewer
 				m_menu_line_ending_crlf          .Checked = row_delim == "<CR><LF>";
 				m_menu_line_ending_lf            .Checked = row_delim == "<LF>";
 				m_menu_line_ending_custom        .Checked = row_delim.Length != 0 && row_delim != "<CR>" && row_delim != "<CR><LF>" && row_delim != "<LF>";
-				m_menu_tools_clear_log_file.Enabled = FileOpen;
+				m_menu_tools_clear_log_file.Enabled = file_open;
+				m_menu_tools_alwaysontop.Checked = m_settings.AlwaysOnTop;
 
 				var lic = new Licence(m_startup_options.AppDataDir);
 				m_menu_evaluation_version.Visible = !lic.Valid;
@@ -1692,7 +1729,6 @@ namespace RyLogViewer
 			if (!range.Equals(m_scroll_file.ThumbRange))
 				Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Begin, range.End, FileByteRange.Begin, FileByteRange.End));
 
-			m_scroll_file.Visible    = true;
 			m_scroll_file.TotalRange = FileByteRange;
 			m_scroll_file.ThumbRange = range;
 			m_scroll_file.Width      = m_settings.FileScrollWidth;
