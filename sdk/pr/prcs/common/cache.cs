@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using pr.extn;
 
 namespace pr.common
 {
@@ -36,7 +37,7 @@ namespace pr.common
 	}
 
 	/// <summary>Generic, count limited, cache implementation</summary>
-	public class Cache<TKey,TItem> :ICache<TKey,TItem>
+	public class Cache<TKey,TItem> :ICache<TKey,TItem> ,IDisposable
 	{
 		private class Entry
 		{
@@ -49,6 +50,21 @@ namespace pr.common
 
 		/// <summary>A lookup table from 'key' to node in 'm_cache'</summary>
 		private readonly Dictionary<TKey,LinkedListNode<Entry>> m_lookup = new Dictionary<TKey,LinkedListNode<Entry>>();
+
+		/// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+		public void Dispose()
+		{
+			if (typeof(TItem).Inherits(typeof(IDisposable)))
+			{
+				foreach (var e in m_cache)
+				{
+					var doomed = e.Item as IDisposable;
+					if (doomed != null) doomed.Dispose();
+				}
+			}
+			m_cache.Clear();
+			m_lookup.Clear();
+		}
 
 		/// <summary>The number of items in the cache</summary>
 		public int Count { get { return m_cache.Count; } }

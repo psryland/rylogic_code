@@ -33,6 +33,12 @@ namespace pr.extn
 		{
 			return Assembly.GetAssembly(type).GetTypes().Where(t => t != type && type.IsAssignableFrom(t)).ToList();
 		}
+
+		/// <summary>Returns true if 'type' is or inherits 'baseOrInterface'</summary>
+		public static bool Inherits(this Type type, Type baseOrInterface)
+		{
+			return baseOrInterface.IsAssignableFrom(type);
+		}
 	}
 }
 #if PR_UNITTESTS
