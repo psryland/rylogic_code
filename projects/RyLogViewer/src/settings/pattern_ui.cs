@@ -129,6 +129,7 @@ namespace RyLogViewer
 			m_grid_grps.AutoGenerateColumns = false;
 			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Tag"   ,HeaderText="Tag"   ,FillWeight=1 ,DataPropertyName = "Key"  , ToolTipText = "The names of the capture groups identified in the match pattern"});
 			m_grid_grps.Columns.Add(new DataGridViewTextBoxColumn{Name="Value" ,HeaderText="Value" ,FillWeight=2 ,DataPropertyName = "Value", ToolTipText = "The values of the capture groups based on the test text and the match pattern"});
+			m_grid_grps.DataError += (s,a) => Debug.Assert(false, "Data error in groups grid: {0}".Fmt(a.Exception.MessageFull()));
 		}
 
 		/// <summary>Access to the test text field</summary>

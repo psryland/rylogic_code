@@ -44,7 +44,7 @@ namespace RyLogViewer
 				// Give some UI feedback when the process ends
 				buffered_process.ConnectionDropped += (s,a)=>
 					{
-						this.BeginInvoke(() => SetStaticStatusMessage(string.Format("'{0}' exited", Path.GetFileName(conn.Executable)), Color.Black, Color.LightSalmon));
+						this.BeginInvoke(() => SetStaticStatusMessage(string.Format("{0} exited", Path.GetFileName(conn.Executable)), Color.Black, Color.LightSalmon));
 					};
 			
 				// Open the capture file created by buffered_process

@@ -259,6 +259,7 @@
     <Compile Include="stream\aggregate_file_stream.cs" />
     <Compile Include="stream\link_stream.cs" />
     <Compile Include="common\base64.cs" />
+    <Compile Include="undo\text_undo.cs" />
     <Compile Include="util\clrdump.cs" />
     <Compile Include="util\crc16.cs" />
     <Compile Include="util\crc32.cs" />

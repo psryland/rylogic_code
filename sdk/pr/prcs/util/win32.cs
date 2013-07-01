@@ -228,7 +228,7 @@ namespace pr.util
 		public const uint WM_PENWINLAST                   = 0x038F;
 		public const uint WM_APP                          = 0x8000;
 		public const uint WM_USER                         = 0x0400;
-		
+        
 		// WM_SYSCOMMAND values
 		public const uint SC_WPARAM_MASK                  = 0xFFF0; // In C# you need to mask the wparam with this as the lower bits contain magic stuff
 		public const uint SC_SIZE                         = 0xF000; // Sizes the window.
@@ -251,9 +251,9 @@ namespace pr.util
 		public const uint SC_MONITORPOWER                 = 0xF170; // Sets the state of the display. This command supports devices that have power-saving features, such as a battery-powered personal computer.
 		public const uint SC_CONTEXTHELP                  = 0xF180; // Changes the cursor to a question mark with a pointer. If the user then clicks a control in the dialog box, the control receives a WM_HELP message.
 		public const uint SC_SEPARATOR                    = 0xF00F; //
-		
+        
 		// WM_ACTIVATE state values
- 		public const uint WA_INACTIVE                     = 0;
+		public const uint WA_INACTIVE                     = 0;
 		public const uint WA_ACTIVE                       = 1;
 		public const uint WA_CLICKACTIVE                  = 2;
 
@@ -289,6 +289,61 @@ namespace pr.util
 		public const int  GWL_STYLE                       = -16;
 		public const int  GWL_EXSTYLE                     = -20;
 		public const int  GWL_USERDATA                    = -21;
+
+		public const int TM_PLAINTEXT                     = 1;
+		public const int TM_RICHTEXT                      = 2; // default behaviour
+		public const int TM_SINGLELEVELUNDO               = 4;
+		public const int TM_MULTILEVELUNDO                = 8; // default behaviour
+		public const int TM_SINGLECODEPAGE                = 16;
+		public const int TM_MULTICODEPAGE                 = 32; // default behaviour
+
+		// RichEdit messages 
+		public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
+		public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
+		public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
+		public const uint EM_SCROLLCARET                  = (WM_USER + 49);
+		public const uint EM_CANPASTE                     = (WM_USER + 50);
+		public const uint EM_DISPLAYBAND                  = (WM_USER + 51);
+		public const uint EM_EXGETSEL                     = (WM_USER + 52);
+		public const uint EM_EXLIMITTEXT                  = (WM_USER + 53);
+		public const uint EM_EXLINEFROMCHAR               = (WM_USER + 54);
+		public const uint EM_EXSETSEL                     = (WM_USER + 55);
+		public const uint EM_FINDTEXT                     = (WM_USER + 56);
+		public const uint EM_FORMATRANGE                  = (WM_USER + 57);
+		public const uint EM_GETCHARFORMAT                = (WM_USER + 58);
+		public const uint EM_GETEVENTMASK                 = (WM_USER + 59);
+		public const uint EM_GETOLEINTERFACE              = (WM_USER + 60);
+		public const uint EM_GETPARAFORMAT                = (WM_USER + 61);
+		public const uint EM_GETSELTEXT                   = (WM_USER + 62);
+		public const uint EM_HIDESELECTION                = (WM_USER + 63);
+		public const uint EM_PASTESPECIAL                 = (WM_USER + 64);
+		public const uint EM_REQUESTRESIZE                = (WM_USER + 65);
+		public const uint EM_SELECTIONTYPE                = (WM_USER + 66);
+		public const uint EM_SETBKGNDCOLOR                = (WM_USER + 67);
+		public const uint EM_SETCHARFORMAT                = (WM_USER + 68);
+		public const uint EM_SETEVENTMASK                 = (WM_USER + 69);
+		public const uint EM_SETOLECALLBACK               = (WM_USER + 70);
+		public const uint EM_SETPARAFORMAT                = (WM_USER + 71);
+		public const uint EM_SETTARGETDEVICE              = (WM_USER + 72);
+		public const uint EM_STREAMIN                     = (WM_USER + 73);
+		public const uint EM_STREAMOUT                    = (WM_USER + 74);
+		public const uint EM_GETTEXTRANGE                 = (WM_USER + 75);
+		public const uint EM_FINDWORDBREAK                = (WM_USER + 76);
+		public const uint EM_SETOPTIONS                   = (WM_USER + 77);
+		public const uint EM_GETOPTIONS                   = (WM_USER + 78);
+		public const uint EM_FINDTEXTEX                   = (WM_USER + 79);
+		public const uint EM_GETWORDBREAKPROCEX           = (WM_USER + 80);
+		public const uint EM_SETWORDBREAKPROCEX           = (WM_USER + 81);
+        
+		// RichEdit 2.0 messages 
+		public const uint EM_SETUNDOLIMIT                 = (WM_USER + 82);
+		public const uint EM_REDO                         = (WM_USER + 84);
+		public const uint EM_CANREDO                      = (WM_USER + 85);
+		public const uint EM_GETUNDONAME                  = (WM_USER + 86);
+		public const uint EM_GETREDONAME                  = (WM_USER + 87);
+		public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
+		public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
+		public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
 
 		public const int WS_BORDER                        = unchecked(0x00800000); // The window has a thin-line border.
 		public const int WS_CAPTION                       = unchecked(0x00C00000); // The window has a title bar (includes the WS_BORDER style).

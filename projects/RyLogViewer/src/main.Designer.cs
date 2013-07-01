@@ -97,7 +97,7 @@
 			this.m_menu_line_ending_custom = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_alwaysontop = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tools_ghost_mode = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_monitor_mode = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep4 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_tools_clear_log_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_sep5 = new System.Windows.Forms.ToolStripSeparator();
@@ -143,8 +143,8 @@
 			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.m_grid = new RyLogViewer.DGV();
+			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -687,7 +687,7 @@
 			// 
 			this.m_menu_tools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_tools_alwaysontop,
-            this.m_menu_tools_ghost_mode,
+            this.m_menu_tools_monitor_mode,
             this.m_sep4,
             this.m_menu_tools_clear_log_file,
             this.m_sep5,
@@ -707,11 +707,11 @@
 			this.m_menu_tools_alwaysontop.Size = new System.Drawing.Size(154, 22);
 			this.m_menu_tools_alwaysontop.Text = "Always On &Top";
 			// 
-			// m_menu_tools_ghost_mode
+			// m_menu_tools_monitor_mode
 			// 
-			this.m_menu_tools_ghost_mode.Name = "m_menu_tools_ghost_mode";
-			this.m_menu_tools_ghost_mode.Size = new System.Drawing.Size(154, 22);
-			this.m_menu_tools_ghost_mode.Text = "&Ghost Mode";
+			this.m_menu_tools_monitor_mode.Name = "m_menu_tools_monitor_mode";
+			this.m_menu_tools_monitor_mode.Size = new System.Drawing.Size(154, 22);
+			this.m_menu_tools_monitor_mode.Text = "&Monitor Mode";
 			// 
 			// m_sep4
 			// 
@@ -892,7 +892,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(552, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(221, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -1069,22 +1069,6 @@
 			this.m_cmenu_toggle_bookmark.Size = new System.Drawing.Size(168, 22);
 			this.m_cmenu_toggle_bookmark.Text = "Toggle &Bookmark";
 			// 
-			// m_scroll_file
-			// 
-			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_scroll_file.LargeChange = ((long)(1));
-			this.m_scroll_file.Location = new System.Drawing.Point(814, 3);
-			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
-			this.m_scroll_file.MinThumbSize = 20;
-			this.m_scroll_file.Name = "m_scroll_file";
-			this.m_scroll_file.Overlay = null;
-			this.m_scroll_file.OverlayAttributes = null;
-			this.m_scroll_file.Size = new System.Drawing.Size(18, 407);
-			this.m_scroll_file.SmallChange = ((long)(1));
-			this.m_scroll_file.TabIndex = 4;
-			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
-			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
-			// 
 			// m_grid
 			// 
 			this.m_grid.AllowUserToAddRows = false;
@@ -1110,6 +1094,22 @@
 			this.m_grid.Size = new System.Drawing.Size(805, 407);
 			this.m_grid.TabIndex = 3;
 			this.m_grid.VirtualMode = true;
+			// 
+			// m_scroll_file
+			// 
+			this.m_scroll_file.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_scroll_file.LargeChange = ((long)(1));
+			this.m_scroll_file.Location = new System.Drawing.Point(814, 3);
+			this.m_scroll_file.MinimumSize = new System.Drawing.Size(10, 10);
+			this.m_scroll_file.MinThumbSize = 20;
+			this.m_scroll_file.Name = "m_scroll_file";
+			this.m_scroll_file.Overlay = null;
+			this.m_scroll_file.OverlayAttributes = null;
+			this.m_scroll_file.Size = new System.Drawing.Size(18, 407);
+			this.m_scroll_file.SmallChange = ((long)(1));
+			this.m_scroll_file.TabIndex = 4;
+			this.m_scroll_file.ThumbColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(128)))), ((int)(((byte)(0)))));
+			this.m_scroll_file.TrackColor = System.Drawing.SystemColors.ControlLight;
 			// 
 			// Main
 			// 
@@ -1217,7 +1217,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_crlf;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_lf;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_line_ending_custom;
-		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_ghost_mode;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_monitor_mode;
 		private System.Windows.Forms.ToolStripButton m_btn_jump_to_start;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_check_for_updates;

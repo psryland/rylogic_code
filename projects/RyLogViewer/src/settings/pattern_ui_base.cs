@@ -14,7 +14,7 @@ namespace RyLogViewer
 		{
 			m_tt = new ToolTip();
 			m_original = null;
-			m_pattern = null;
+			m_pattern = new TPattern();
 
 			VisibleChanged += (s,a)=>
 				{

@@ -141,6 +141,7 @@ namespace RyLogViewer
 			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Value ,HeaderText = "Value"     ,FillWeight = 37.6f ,ReadOnly = true});
 			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type  ,HeaderText = "Transform" ,FillWeight = 25.8f ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
 			m_grid_subs.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Cfg   ,HeaderText = string.Empty,FillWeight =  5.0f ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_subs.DataError += (s,a) => Debug.Assert(false, "Data error in subs grid: {0}".Fmt(a.Exception.MessageFull()));
 			m_grid_subs.CurrentCellDirtyStateChanged += (s,a) => m_grid_subs.CommitEdit(DataGridViewDataErrorContexts.Commit);
 			m_grid_subs.CellValueNeeded  += CellValueNeeded;
 			m_grid_subs.CellValuePushed  += CellValuePushed;

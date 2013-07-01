@@ -5,7 +5,7 @@ using pr.maths;
 
 namespace RyLogViewer
 {
-	public partial class GhostModeUI :Form
+	public partial class MonitorModeUI :Form
 	{
 		private readonly Main m_main;
 		private readonly ToolTip m_tt;
@@ -39,7 +39,7 @@ namespace RyLogViewer
 			}
 		}
 
-		public GhostModeUI(Main main)
+		public MonitorModeUI(Main main)
 		{
 			InitializeComponent();
 			m_main = main;

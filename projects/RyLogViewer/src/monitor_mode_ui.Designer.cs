@@ -1,6 +1,6 @@
 ﻿namespace RyLogViewer
 {
-	partial class GhostModeUI
+	partial class MonitorModeUI
 	{
 		/// <summary>
 		/// Required designer variable.
@@ -28,7 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GhostModeUI));
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MonitorModeUI));
 			this.m_track_opacity = new System.Windows.Forms.TrackBar();
 			this.m_btn_enable = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
@@ -97,7 +97,7 @@
 			this.label1.Name = "label1";
 			this.label1.Size = new System.Drawing.Size(180, 26);
 			this.label1.TabIndex = 5;
-			this.label1.Text = "Exit \'ghost mode\' by clicking on the\r\n RyLogViewer icon in the system tray";
+			this.label1.Text = "Exit \'monitor mode\' by clicking on the\r\n RyLogViewer icon in the system tray";
 			// 
 			// m_check_always_on_top
 			// 
@@ -109,7 +109,7 @@
 			this.m_check_always_on_top.Text = "Always on top";
 			this.m_check_always_on_top.UseVisualStyleBackColor = true;
 			// 
-			// GhostModeUI
+			// MonitorModeUI
 			// 
 			this.AcceptButton = this.m_btn_enable;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -125,9 +125,9 @@
 			this.Controls.Add(this.m_track_opacity);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-			this.Name = "GhostModeUI";
+			this.Name = "MonitorModeUI";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			this.Text = "Ghost Mode";
+			this.Text = "Monitor Mode";
 			((System.ComponentModel.ISupportInitialize)(this.m_track_opacity)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();

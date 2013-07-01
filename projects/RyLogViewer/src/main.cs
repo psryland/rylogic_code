@@ -148,7 +148,7 @@ namespace RyLogViewer
 			m_menu_line_ending_lf.Click                += (s,a) => SetLineEnding(ELineEnding.LF    );
 			m_menu_line_ending_custom.Click            += (s,a) => SetLineEnding(ELineEnding.Custom);
 			m_menu_tools_alwaysontop.Click             += (s,a) => SetAlwaysOnTop(!m_settings.AlwaysOnTop);
-			m_menu_tools_ghost_mode.Click              += (s,a) => EnableGhostMode(!m_menu_tools_ghost_mode.Checked);
+			m_menu_tools_monitor_mode.Click            += (s,a) => EnableMonitorMode(!m_menu_tools_monitor_mode.Checked);
 			m_menu_tools_clear_log_file.Click          += (s,a) => ClearLogFile();
 			m_menu_tools_highlights.Click              += (s,a) => ShowOptions(SettingsUI.ETab.Highlights);
 			m_menu_tools_filters.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Filters   );
@@ -1009,14 +1009,14 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Enable/Disable ghost mode</summary>
-		private void EnableGhostMode(bool enable)
+		/// <summary>Enable/Disable monitor mode</summary>
+		private void EnableMonitorMode(bool enable)
 		{
 			if (enable)
 			{
-				var dg = new GhostModeUI(this) {AlwaysOnTop = m_settings.AlwaysOnTop};
+				var dg = new MonitorModeUI(this) {AlwaysOnTop = m_settings.AlwaysOnTop};
 				if (dg.ShowDialog(this) != DialogResult.OK) return;
-				m_menu_tools_ghost_mode.Checked = true;
+				m_menu_tools_monitor_mode.Checked = true;
 				SetAlwaysOnTop(dg.AlwaysOnTop);
 				ShowWindowFrame = false;
 
@@ -1035,18 +1035,18 @@ namespace RyLogViewer
 						// ReSharper disable AccessToModifiedClosure
 						m_notify_icon.Visible = false;
 						m_notify_icon.Click -= icon_clicked;
-						EnableGhostMode(false);
+						EnableMonitorMode(false);
 						// ReSharper restore AccessToModifiedClosure
 					};
 
 				m_notify_icon.Click += icon_clicked;
-				m_notify_icon.ShowBalloonTip(1000, "Ghost Mode", "Click here to cancel ghost mode", ToolTipIcon.Info);
-				m_notify_icon.Text = "Click to disable ghost mode";
+				m_notify_icon.ShowBalloonTip(1000, "Monitor Mode", "Click here to cancel monitor mode", ToolTipIcon.Info);
+				m_notify_icon.Text = "Click to disable monitor mode";
 				m_notify_icon.Visible = true;
 			}
 			else
 			{
-				m_menu_tools_ghost_mode.Checked = false;
+				m_menu_tools_monitor_mode.Checked = false;
 				ShowWindowFrame = true;
 				Opacity = 1f;
 				{

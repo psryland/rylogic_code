@@ -102,37 +102,37 @@ namespace pr.undo
 
 	// Double buffered instance of 'T'
 	public sealed class DblBuffer<T> :Change
-    {
-        public  T Current;
-        private T Other;
+	{
+		public  T Current;
+		private T Other;
 
-        public DblBuffer(T current, T backup)
-        {
-            Current = current;
-            Other = backup;
-        }
-        public override Change Reverse()
-        {
-            Swap(ref Current, ref Other);
+		public DblBuffer(T current, T backup)
+		{
+			Current = current;
+			Other = backup;
+		}
+		public override Change Reverse()
+		{
+			Swap(ref Current, ref Other);
 			return this;
-        }
-    }
+		}
+	}
 
-    /// <summary>
-    /// A method that sets a property on an instance to a value. 
-    /// </summary>
-    /// <typeparam name="Owner">Type that has the property to set.</typeparam>
-    /// <typeparam name="Type">Type to set</typeparam>
-    /// <param name="instance">Instance to set property on.</param>
-    /// <param name="value">Value to set property to.</param>
-    public delegate void PropertySetter<Owner, Type>(Owner instance, Type value) where Owner : class;
-    
-    /// <summary>
-    /// Represents a instance method that sets a given instance property to a given value. 
-    /// </summary>
-    /// <typeparam name="Type">Type of property to set</typeparam>
-    /// <param name="value">Value to set property to.</param>
-    public delegate void InstancePropertySetter<Type>(Type value);
+	/// <summary>
+	/// A method that sets a property on an instance to a value. 
+	/// </summary>
+	/// <typeparam name="Owner">Type that has the property to set.</typeparam>
+	/// <typeparam name="Type">Type to set</typeparam>
+	/// <param name="instance">Instance to set property on.</param>
+	/// <param name="value">Value to set property to.</param>
+	public delegate void PropertySetter<Owner, Type>(Owner instance, Type value) where Owner : class;
+
+	/// <summary>
+	/// Represents a instance method that sets a given instance property to a given value. 
+	/// </summary>
+	/// <typeparam name="Type">Type of property to set</typeparam>
+	/// <param name="value">Value to set property to.</param>
+	public delegate void InstancePropertySetter<Type>(Type value);
 
 	// Wrapper object for setting a property on an object
 	// Use:
@@ -144,41 +144,41 @@ namespace pr.undo
 		private Type m_old_value;
 		private Type m_new_value;
 
-        public PropertyChange(PropertySetter<Owner, Type> setter, Owner instance, Type old_value, Type new_value)
-        {
-            m_setter = setter;
-            m_instance = instance;
-            m_old_value = old_value;
-            m_new_value = new_value;
-        }
+		public PropertyChange(PropertySetter<Owner, Type> setter, Owner instance, Type old_value, Type new_value)
+		{
+			m_setter = setter;
+			m_instance = instance;
+			m_old_value = old_value;
+			m_new_value = new_value;
+		}
 		public override Change Reverse()
 		{
-            m_setter(m_instance, m_old_value);
-            Swap(ref m_old_value, ref m_new_value);
-            return this;
-        }
-    }
+			m_setter(m_instance, m_old_value);
+			Swap(ref m_old_value, ref m_new_value);
+			return this;
+		}
+	}
 	
 	// Use:
 	// Transaction.Current.Add(new InstancePropertyChange(delegate(int v) { Value = v }, old_value, new_value));
 	public class InstancePropertyChange<Type> :Change
 	{
-	    private readonly InstancePropertySetter<Type> m_setter;
-	    private Type m_old_value;
-	    private Type m_new_value;
+		private readonly InstancePropertySetter<Type> m_setter;
+		private Type m_old_value;
+		private Type m_new_value;
 
-	    public InstancePropertyChange(InstancePropertySetter<Type> setter, Type old_value, Type new_value)
-	    {
-	        m_setter = setter;
-	        m_old_value = old_value;
-	        m_new_value = new_value;
-	    }
-	    public override Change Reverse()
-	    {
-	        m_setter(m_old_value);
-	        Swap(ref m_old_value, ref m_new_value);
-	        return this;
-	    }
+		public InstancePropertyChange(InstancePropertySetter<Type> setter, Type old_value, Type new_value)
+		{
+			m_setter = setter;
+			m_old_value = old_value;
+			m_new_value = new_value;
+		}
+		public override Change Reverse()
+		{
+			m_setter(m_old_value);
+			Swap(ref m_old_value, ref m_new_value);
+			return this;
+		}
 	}
 	
 
