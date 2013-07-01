@@ -9,6 +9,10 @@
 		<div id="content_panel">
 			<div class="title">Overview and Features</div>
 			<div class="content">
+				
+				<ul>
+					<li class="child_list_elem">Loads files of unlimited size (limited only by the operating system)</li>
+				</ul>
 			</div>
 		</div>
 	</body>

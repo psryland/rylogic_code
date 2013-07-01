@@ -298,37 +298,90 @@
 				<div class="content">
 					The ability to search for specific text within a log file is a vitally important feature. RyLogViewer
 					is designed to make searching fast and simple, with convenient keyboard shortcuts that eliminate
-					unnecessary swapping between the mouse and keyboard.
+					unnecessary switching between the mouse and keyboard. The following list details the shortcuts available:
 					<ul class="minor_list">
-						<li>Access the find dialog using the 'Ctrl-F' key combination.</li>
-						<li>On opening, the search pattern text field has input focus so a pattern can be entered immediately.</li>
-						<li>The search pattern is initialised from the currently selected row.</li>
+						<li>Access the find dialog using the <span class="mono">Control+F</span> key combination.</li>
+						<li>On opening, the search pattern combo box is selected so that a pattern can be entered immediately.</li>
+						<li>The search pattern is initialised from the currently selected row in the log file.</li>
 						<li>Use the down arrow key to show and select previous search patterns.</li>
 						<li>
-							The Enter key searches forward from the currently selected line, Control + Enter searches forward
-							from the beginning of the log file.
+							Hit <span class="mono">Enter</span> to search forward from the currently selected line,<br />
+							<span class="mono">Control+Enter</span> searches forward from the beginning of the log file.
 						</li>
 						<li>
-							Shift + Enter searches backward from the currently selected line, Control + Shift + Enter searches
-							backward from the end of the log file.
+							Hit <span class="mono">Shift+Enter</span> to search backward from the currently selected line,<br />
+							<span class="mono">Control+Shift+Enter</span> searches backward from the end of the log file.
 						</li>
-						<li>Close the find dialog with the escape key.</li>
+						<li>Close the find dialog with the <span class="mono">Escape</span> key.</li>
 					</ul>
 					In the main log view, the following keyboard shortcuts are also available:
 					<ul class="minor_list">
-						<li>F3 - Search forward from the currently selected line using the last search pattern</li>
-						<li>Shift+F3 - Search backward from the currently selected line using the last search pattern</li>
-						<li>Control+F3 - </li>
+						<li><span class="mono">F3</span> - Search forward from the currently selected line using the last search pattern,</li>
+						<li><span class="mono">Shift+F3</span> - Search backward from the currently selected line using the last search pattern,</li>
+						<li>
+							<span class="mono">Control+F3</span> - Set the search pattern to the contents of the currently selected line,
+							and then search forward for the next occurrence.
+						</li>
+						<li>
+							<span class="mono">Control+Shift+F3</span> - Set the search pattern to the contents of the currently selected line,
+							and then search backward for the previous occurrence.
+						</li>
 					</ul>
-					F3,
-					Control+F3
-					Control+Shift+F3
+					<img class="right_inset" src="find.png" alt="find dialog" />
+					The find feature is based on the same algorithms as the other pattern matching features in RyLogViewer
+					(<a href="options_highlighting.htm">highlighting</a>, <a href="options_filtering.htm">filtering</a>, etc).
+					The function of most of the controls is the same as is described in the <a href="pattern_editor.htm">pattern editor</a>
+					section, otherwise:
+					<ol class="minor_list">
+						<li>Drop down list of previous search patterns</li>
+						<li>A list of previous search patterns (for convenience when using a mouse)</li>
+						<li>Find Next button - searches forward from the currently selected line</li>
+						<li>Find Previous button - searches backward from the currently selected line</li>
+					</ol>
+					When a search reaches the start or end of the log file, a message is displayed in the
+					<a href="main_window.htm#status">Status bar</a> that indicates that the <i>Start of File</i>,
+					or <i>End of File</i> has been reached.
 				</div>
 			</div>
 
-			<div id="bookmarks" class="section_title">Bookmarks</div>
+			<div id="bookmarks">
+				<div class="section_title">Bookmarks</div>
+				<div class="content">
+					Bookmarks provide a means of saving and returning to particular locations in the log file. Like the Find
+					feature, convenient keyboard shortcuts are available to eliminate unnecessary switching between the mouse
+					and keyboard. 
+					<ul class="minor_list">
+						<li><span class="mono">Control+F2</span> - Creates or clears a bookmark from the currently selected line.</li>
+						<li>
+							<span class="mono">F2</span> - Jumps forward through the file to the next bookmark, looping around to the
+							beginning of the file when the end of the file is reached.
+						</li>
+						<li>
+							<span class="mono">Shift+F2</span> - Jumps backward through the file to the previous bookmark, looping
+							around to the end of the file when the start of the file is reached.
+						</li>
+						<li>Access the bookmarks dialog using the <span class="mono">Control+B</span> key combination.</li>
+					</ul>
+					The bookmarks dialog is simply a list of saved bookmark positions. Selecting a bookmark in the list cause
+					the main view to jump to the bookmarked position.
+				</div>
+			</div>
 
-			<div id="status" class="section_title">Status</div>
+			<div id="status">
+				<div class="section_title">Status</div>
+				<div class="content">
+					The status bar displays information about the currently loaded log file, as well as transient informational
+					messages. From left to right, the status bar shows:
+					<ul class="minor_list">
+						<li>The byte offset of the currently selected line into the log file,</li>
+						<li>The line ending mode being used to parse lines in the log file,</li>
+						<li>The text encoding being used to read text from the log file,</li>
+						<li>The file loading progress bar,</li>
+						<li>A transient message describing the result of a recent operation.</li>
+						<li>A static message describing the state of a running operation.</li>
+					</ul>
+				</div>
+			</div>
 
 			<div id="miscellaneous">
 				<div class="section_title">Other Menu Options</div>
@@ -340,6 +393,20 @@
 					<a href="data_sources.htm#program_output">Log Program Output</a> feature is used, the program whose
 					output is being logged may be holding the file lock. When file locks permit this operation however,
 					it can be a handy feature.
+				</div>
+				<div class="tag_label">Always On Top</div>
+				<div class="content">
+					This option is located under the <i>Tools</i> menu. When enabled, it causes the RyLogViewer window
+					to stay above other currently open windows. This mode is helpful when monitoring log output while
+					working with other programs.
+				</div>
+				<div class="tag_label">Monitor Mode</div>
+				<div class="content">
+					As an extension of the <i>Always On Top</i> option, <i>Monitor Mode</i> allows RyLogViewer to be put
+					into a state where the main window frame, menu, tool bar, and file scroll indicator are all hidden,
+					maximising the are of the main log view. The window can also optionally be made semi-transparent, and
+					set to 'click-through' mode where keyboard and mouse events are ignored allowing them to pass through
+					to any windows below. To exit <i>Monitor Mode</i> click on the RyLogViewer icon in the system tray.
 				</div>
 			</div>
 		</div>

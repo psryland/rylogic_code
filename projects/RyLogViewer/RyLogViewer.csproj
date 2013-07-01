@@ -142,11 +142,11 @@
     <Compile Include="src\find_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\ghost_mode_ui.cs">
+    <Compile Include="src\monitor_mode_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\ghost_mode_ui.Designer.cs">
-      <DependentUpon>ghost_mode_ui.cs</DependentUpon>
+    <Compile Include="src\monitor_mode_ui.Designer.cs">
+      <DependentUpon>monitor_mode_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="src\settings\highlight.cs" />
     <Compile Include="src\line_cache.cs">
@@ -279,6 +279,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>filtering.htm</LastGenOutput>
     </None>
+    <Content Include="docs\find.png" />
     <Content Include="docs\installation.htm">
       <DependentUpon>installation.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -376,8 +377,8 @@
     <EmbeddedResource Include="src\find_ui.resx">
       <DependentUpon>find_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\ghost_mode_ui.resx">
-      <DependentUpon>ghost_mode_ui.cs</DependentUpon>
+    <EmbeddedResource Include="src\monitor_mode_ui.resx">
+      <DependentUpon>monitor_mode_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\inputs\aggregate_files_ui.resx">
       <DependentUpon>aggregate_files_ui.cs</DependentUpon>
