@@ -14,17 +14,23 @@ namespace pr.maths
 	public static class Maths
 	{
 		public const float Tiny      = 1.000000e-4F; // Can't go lower than this cos DX uses less precision
-		public const float Tau       = 6.283185e+0F; // circle constant
-		public const float TauBy360  = 1.745329e-2F;
-		public const float _360ByTau = 5.729578e+1F;
+		public const float Tau       = 6.283185307179586476925286766559e+0F; // circle constant
+		public const float TauBy360  = 0.01745329251994329576923690768489e+0F;
+		public const float _360ByTau = 57.295779513082320876798154814105e+0F;
 		public const float Phi       = 1.618034e+0F; // "Golden Ratio"
-		public const float InvTau    = 1.591549e-1F;
-		public const float TauBy2    = 3.141593e+0F;
-		public const float TauBy4    = 1.570796e+0F;
-		public const float TauBy8    = 7.853982e-1F;
-		public const float TauBy16   = 3.926991e-1F;
-		public const float Root2     = 1.414213e+0F;
-		public const float Root3     = 1.732051e+0F;
+		public const float InvTau    = 0.15915494309189533576888376337251e+0F;
+		public const float TauBy2    = 3.1415926535897932384626433832795e+0F;
+		public const float TauBy3    = 2.0943951023931954923084289221863e+0F;
+		public const float TauBy4    = 1.5707963267948966192313216916398e+0F;
+		public const float TauBy5    = 1.2566370614359172953850573533118e+0F;
+		public const float TauBy6    = 1.047198551196597746154214461093e+0F;
+		public const float TauBy7    = 0.897597901025655210989326680937e+0F;
+		public const float TauBy8    = 0.78539816339744830961566084581988e+0F;
+		public const float TauBy10   = 0.6283185307179586476925286766559e+0F;
+		public const float TauBy16   = 0.39269908169872415480783042290994e+0F;
+		public const float TauBy32   = 0.19634954084936207740391521145497e+0F;
+		public const float Root2     = 1.4142135623730950488016887242097e+0F;
+		public const float Root3     = 1.7320508075688772935274463415059e+0F;
 
 		public static float     TinyF                                           { get { return Tiny; } }
 		public static double    TinyD                                           { get { return Tiny; } }

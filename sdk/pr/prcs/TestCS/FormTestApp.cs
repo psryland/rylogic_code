@@ -28,6 +28,11 @@ namespace TestCS
 					m_form_view3d.Closed += (ss,aa) => m_form_view3d = null;
 					m_form_view3d.Show(this);
 				};
+
+			m_menu_test_colour_wheel.Click += (s,a) =>
+				{
+					new FormColourWheel().Show(this);
+				};
 		}
 	}
 }

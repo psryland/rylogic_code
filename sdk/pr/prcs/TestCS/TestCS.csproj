@@ -45,6 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FormColourWheel.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="FormTestApp.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -59,6 +62,9 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="FormColourWheel.resx">
+      <DependentUpon>FormColourWheel.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="FormTestApp.resx">
       <DependentUpon>FormTestApp.cs</DependentUpon>
     </EmbeddedResource>

@@ -181,6 +181,7 @@
     <Compile Include="extn\list_extensions.cs" />
     <Compile Include="extn\object_extensions.cs" />
     <Compile Include="extn\path_extensions.cs" />
+    <Compile Include="extn\pointf_extensions.cs" />
     <Compile Include="extn\random_extensions.cs" />
     <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
@@ -189,8 +190,12 @@
     <Compile Include="extn\xml_extensions.cs" />
     <Compile Include="gfx\colour128.cs" />
     <Compile Include="gfx\colour32.cs" />
+    <Compile Include="gfx\hsv.cs" />
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
+    <Compile Include="gui\colour_wheel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="gui\dock_container.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -322,6 +327,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="gui\colour_wheel.resx">
+      <DependentUpon>colour_wheel.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\help_ui.resx">
       <DependentUpon>help_ui.cs</DependentUpon>
     </EmbeddedResource>
