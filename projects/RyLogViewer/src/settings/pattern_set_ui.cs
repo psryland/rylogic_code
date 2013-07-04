@@ -72,6 +72,9 @@ namespace RyLogViewer
 			m_btn_save.Click += (s,a)=> SavePatternSet();
 		}
 
+		/// <summary>Gets the version of the pattern set</summary>
+		protected abstract string Version { get; }
+
 		/// <summary>Return the pattern set filter</summary>
 		protected abstract string PatternSetFilter { get; }
 
@@ -137,10 +140,17 @@ namespace RyLogViewer
 		/// <summary>Add the patterns in 'set' to the current list</summary>
 		private void AddPatternSet(Set set)
 		{
+			// ReSharper disable PossibleNullReferenceException
 			try
 			{
 				XDocument doc = XDocument.Load(set.Filepath);
 				if (doc.Root == null) throw new InvalidDataException("root xml node not found");
+				if (doc.Root.Element(XmlTag.Version) == null)
+					doc.Root.Add(new XElement(XmlTag.Version, string.Empty));
+
+				// Migrate old versions
+				for (string version; (version = doc.Root.Element(XmlTag.Version).Value) != Version;)
+					Upgrade(doc.Root, version);
 
 				// Merge the patterns with the existing ones
 				MergePatterns(doc.Root);
@@ -149,6 +159,7 @@ namespace RyLogViewer
 			{
 				Misc.ShowErrorMessage(this, ex, string.Format("Could not load pattern set {0}.", set.Filepath), Resources.LoadPatternSetFailed);
 			}
+			// ReSharper restore PossibleNullReferenceException
 		}
 
 		/// <summary>Remove a pattern set from the list</summary>
@@ -206,7 +217,13 @@ namespace RyLogViewer
 		protected abstract void ClearPatterns();
 
 		/// <summary>Add the patterns in 'node' to the current list</summary>
-		protected abstract void MergePatterns(XElement node); 
+		protected abstract void MergePatterns(XElement node);
+
+		/// <summary>Called when loading a pattern set from an earlier version</summary>
+		protected virtual void Upgrade(XElement root, string from_version)
+		{
+			throw new NotSupportedException("File version is {0}. Latest version is {1}. Upgrading from this version is not supported".Fmt(from_version, Version));
+		}
 	}
 
 	
@@ -218,7 +235,7 @@ namespace RyLogViewer
 		
 		/// <summary>A reference to the current set of highlight patterns</summary>
 		public List<Highlight> CurrentSet { get; private set; }
-		
+
 		/// <summary>Initialise the control</summary>
 		internal void Init(Settings settings, List<Highlight> highlights)
 		{
@@ -228,6 +245,9 @@ namespace RyLogViewer
 			CurrentSet = highlights;
 			UpdateUI();
 		}
+
+		/// <summary>Gets the version of the pattern set</summary>
+		protected override string Version { get { return "v1.0"; } }
 
 		/// <summary>Return the pattern set filter</summary>
 		protected override string PatternSetFilter
@@ -241,7 +261,7 @@ namespace RyLogViewer
 			foreach (var p in CurrentSet)
 				parent.Add(p.ToXml(new XElement(XmlTag.Highlight)));
 		}
-		
+
 		/// <summary>Clear the current set of patterns</summary>
 		protected override void ClearPatterns()
 		{
@@ -249,7 +269,7 @@ namespace RyLogViewer
 			CurrentSet.Clear();
 			RaiseCurrentSetChanged();
 		}
-		
+
 		/// <summary>Add the patterns in 'node' to the current list</summary>
 		protected override void MergePatterns(XElement node)
 		{
@@ -257,6 +277,26 @@ namespace RyLogViewer
 			foreach (XElement n in node.Elements(XmlTag.Highlight))
 				try { some_added |= CurrentSet.AddIfUnique(new Highlight(n)); } catch {} // Ignore those that fail
 			if (some_added) RaiseCurrentSetChanged();
+		}
+
+		/// <summary>Called when loading a pattern set from an earlier version</summary>
+		protected override void Upgrade(XElement root, string from_version)
+		{
+			// ReSharper disable PossibleNullReferenceException
+			switch (from_version)
+			{
+			default:
+				base.Upgrade(root, from_version);
+				break;
+			case "":
+				// Added version and 'whole file'
+				foreach (var p in root.Elements(XmlTag.Highlight))
+					p.Add(new XElement(XmlTag.WholeLine, false));
+
+				root.Element(XmlTag.Version).Value = Version;
+				break;
+			}
+			// ReSharper restore PossibleNullReferenceException
 		}
 	}
 	
@@ -279,6 +319,9 @@ namespace RyLogViewer
 			CurrentSet = filters;
 			UpdateUI();
 		}
+
+		/// <summary>Gets the version of the pattern set</summary>
+		protected override string Version { get { return "v1.0"; } }
 
 		/// <summary>Return the pattern set filter</summary>
 		protected override string PatternSetFilter
@@ -309,6 +352,26 @@ namespace RyLogViewer
 				try { some_added |= CurrentSet.AddIfUnique(new Filter(n)); } catch {} // Ignore those that fail
 			if (some_added) RaiseCurrentSetChanged();
 		}
+
+		/// <summary>Called when loading a pattern set from an earlier version</summary>
+		protected override void Upgrade(XElement root, string from_version)
+		{
+			// ReSharper disable PossibleNullReferenceException
+			switch (from_version)
+			{
+			default:
+				base.Upgrade(root, from_version);
+				break;
+			case "":
+				// Added version and 'whole file'
+				foreach (var p in root.Elements(XmlTag.Filter))
+					p.Add(new XElement(XmlTag.WholeLine, false));
+
+				root.Element(XmlTag.Version).Value = Version;
+				break;
+			}
+			// ReSharper restore PossibleNullReferenceException
+		}
 	}
 
 	/// <summary>Transform specific instance of the pattern set control</summary>
@@ -329,6 +392,9 @@ namespace RyLogViewer
 			CurrentSet = transforms;
 			UpdateUI();
 		}
+
+		/// <summary>Gets the version of the pattern set</summary>
+		protected override string Version { get { return "v1.0"; } }
 
 		/// <summary>Return the pattern set filter</summary>
 		protected override string PatternSetFilter
@@ -359,6 +425,26 @@ namespace RyLogViewer
 				try { some_added |= CurrentSet.AddIfUnique(new Transform(n)); } catch {} // Ignore those that fail
 			if (some_added) RaiseCurrentSetChanged();
 		}
+
+		/// <summary>Called when loading a pattern set from an earlier version</summary>
+		protected override void Upgrade(XElement root, string from_version)
+		{
+			// ReSharper disable PossibleNullReferenceException
+			switch (from_version)
+			{
+			default:
+				base.Upgrade(root, from_version);
+				break;
+			case "":
+				// Added version and 'whole file'
+				foreach (var p in root.Elements(XmlTag.Transform))
+					p.Add(new XElement(XmlTag.WholeLine, false));
+
+				root.Element(XmlTag.Version).Value = Version;
+				break;
+			}
+			// ReSharper restore PossibleNullReferenceException
+		}
 	}
 
 	/// <summary>Click Action specific instance of the pattern set control</summary>
@@ -379,6 +465,9 @@ namespace RyLogViewer
 			CurrentSet = actions;
 			UpdateUI();
 		}
+
+		/// <summary>Gets the version of the pattern set</summary>
+		protected override string Version { get { return "v1.0"; } }
 
 		/// <summary>Return the pattern set filter</summary>
 		protected override string PatternSetFilter
@@ -408,6 +497,26 @@ namespace RyLogViewer
 			foreach (XElement n in node.Elements(XmlTag.ClkAction))
 				try { some_added |= CurrentSet.AddIfUnique(new ClkAction(n)); } catch {} // Ignore those that fail
 			if (some_added) RaiseCurrentSetChanged();
+		}
+
+		/// <summary>Called when loading a pattern set from an earlier version</summary>
+		protected override void Upgrade(XElement root, string from_version)
+		{
+			// ReSharper disable PossibleNullReferenceException
+			switch (from_version)
+			{
+			default:
+				base.Upgrade(root, from_version);
+				break;
+			case "":
+				// Added version and 'whole file'
+				foreach (var p in root.Elements(XmlTag.ClkAction))
+					p.Add(new XElement(XmlTag.WholeLine, false));
+
+				root.Element(XmlTag.Version).Value = Version;
+				break;
+			}
+			// ReSharper restore PossibleNullReferenceException
 		}
 	}
 }

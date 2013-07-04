@@ -104,6 +104,7 @@ namespace RyLogViewer
 
 	public static class XmlTag
 	{
+		public const string Version        = "version";
 		public const string Name           = "name";
 		public const string LicenceHolder  = "licence_holder";
 		public const string Company        = "company";

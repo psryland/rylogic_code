@@ -148,7 +148,6 @@ namespace RyLogViewer
 		/// If 'reload' is true a full rescan of the file is done</summary>
 		private void BuildLineIndex(long filepos, bool reload, Action on_success = null)
 		{
-			Exception err;
 			try
 			{
 				// No file open, nothing to do
