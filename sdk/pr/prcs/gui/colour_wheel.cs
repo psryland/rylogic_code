@@ -50,7 +50,7 @@ namespace pr.gui
 		public Color Colour
 		{
 			get { return HSVColour.ToColor(); }
-			set { HSVColour = HSV.FromColor(value); }
+			set { HSVColour = HSV.FromColor(value, HSVColour.H, HSVColour.S); }
 		}
 
 		/// <summary>The currently selected colour (hsv)</summary>
@@ -68,6 +68,7 @@ namespace pr.gui
 		private HSV m_hsv_colour;
 
 		/// <summary>The parts of the control to draw</summary>
+		[Editor(typeof(FlagEnumUIEditor), typeof(System.Drawing.Design.UITypeEditor))]
 		public EParts Parts
 		{
 			get { return m_parts; }
@@ -122,6 +123,16 @@ namespace pr.gui
 		{
 			if (ColourChanged == null) return;
 			ColourChanged(this, EventArgs.Empty);
+		}
+
+		/// <summary>
+		/// An event raised whenever the act of selecting a colour begins or ends.
+		/// Use the button state to tell. Occurs before the first colour change, or after the last colour change</summary>
+		public event MouseEventHandler ColourSelection;
+		private void RaiseColourSelection(MouseEventArgs args)
+		{
+			if (ColourSelection == null) return;
+			ColourSelection(this, args);
 		}
 
 		public ColourWheel()
@@ -305,50 +316,39 @@ namespace pr.gui
 		private EParts m_selected_part;
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
-			m_selected_part = PartHitTest(e.X, e.Y);
-			switch (m_selected_part)
-			{
-			default:
-				base.OnMouseDown(e);
-				break;
-			case EParts.Wheel:
-				SelectHueAndSaturation(e.X, e.Y);
-				Capture = true;
-				break;
-			case EParts.VSlider:
-				SelectBrightness(e.X, e.Y);
-				Capture = true;
-				break;
-			case EParts.ASlider:
-				SelectAlpha(e.X, e.Y);
-				Capture = true;
-				break;
-			}
-		}
-		protected override void OnMouseMove(MouseEventArgs e)
-		{
-			base.OnMouseMove(e);
-			if (Capture)
-			{
-				switch (m_selected_part)
-				{
-				case EParts.Wheel:   SelectHueAndSaturation(e.X, e.Y); break;
-				case EParts.VSlider: SelectBrightness(e.X, e.Y); break;
-				case EParts.ASlider: SelectAlpha(e.X, e.Y); break;
-				}
-			}
-		}
-		protected override void OnMouseUp(MouseEventArgs e)
-		{
-			base.OnMouseUp(e);
+			base.OnMouseDown(e);
+			if ((m_selected_part = PartHitTest(e.X, e.Y)) == EParts.None) return;
+			RaiseColourSelection(e);
 			switch (m_selected_part)
 			{
 			case EParts.Wheel:   SelectHueAndSaturation(e.X, e.Y); break;
 			case EParts.VSlider: SelectBrightness(e.X, e.Y); break;
 			case EParts.ASlider: SelectAlpha(e.X, e.Y); break;
 			}
-			m_selected_part = EParts.None;
+			Capture = true;
+		}
+		protected override void OnMouseMove(MouseEventArgs e)
+		{
+			base.OnMouseMove(e);
+			switch (m_selected_part)
+			{
+			case EParts.Wheel:   SelectHueAndSaturation(e.X, e.Y); break;
+			case EParts.VSlider: SelectBrightness(e.X, e.Y); break;
+			case EParts.ASlider: SelectAlpha(e.X, e.Y); break;
+			}
+		}
+		protected override void OnMouseUp(MouseEventArgs e)
+		{
+			base.OnMouseUp(e);
 			Capture = false;
+			switch (m_selected_part)
+			{
+			case EParts.Wheel:   SelectHueAndSaturation(e.X, e.Y); break;
+			case EParts.VSlider: SelectBrightness(e.X, e.Y); break;
+			case EParts.ASlider: SelectAlpha(e.X, e.Y); break;
+			}
+			RaiseColourSelection(e);
+			m_selected_part = EParts.None;
 		}
 		protected override void OnResize(EventArgs e)
 		{

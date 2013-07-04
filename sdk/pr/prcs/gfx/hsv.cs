@@ -27,6 +27,7 @@ namespace pr.gfx
 
 		public HSV(float a, float h, float s, float v) { A = a; H = h; S = s; V = v; }
 		public Color ToColor() { return ToColor(this); }
+		public override string ToString() { return string.Format("a={0} h={1} s={2} v={3}", A, H, S, V); }
 
 		/// <summary>Create an HSV from components</summary>
 		public static HSV FromAHSV(float a, float h, float s, float v)
@@ -89,8 +90,11 @@ namespace pr.gfx
 			return ToColor(hsv.A, hsv.H, hsv.S, hsv.V);
 		}
 
-		/// <summary>Return an HSV colour from a standard ARGB colour</summary>
-		public static HSV FromColor(Color rgb)
+		/// <summary>
+		/// Return an HSV colour from a standard ARGB colour.
+		/// 'undef_h' and 'undef_s' are the values to use for h and s when they would otherwise be undefined.
+		/// Use previous values in order to preserve them through the singular points.</summary>
+		public static HSV FromColor(Color rgb, float undef_h = 0f, float undef_s = 0f)
 		{
 			var a = rgb.A / 255f;
 			var r = rgb.R / 255f;
@@ -103,7 +107,7 @@ namespace pr.gfx
 
 			// If r = g = b, => S = 0, H is technically undefined, V == r,g,b
 			if (Math.Abs(delta - 0) < float.Epsilon)
-				return new HSV(a, 0, 0, max);
+				return new HSV(a, undef_h, undef_s, max);
 
 			HSV hsv;
 			hsv.A = a;

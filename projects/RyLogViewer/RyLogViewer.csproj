@@ -94,7 +94,10 @@
     <Compile Include="src\bookmarks_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\dgv.cs">
+    <Compile Include="src\colour_picker_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\control_subclasses.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="src\export.cs">
@@ -370,6 +373,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\bookmarks_ui.resx">
       <DependentUpon>bookmarks_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\colour_picker_ui.resx">
+      <DependentUpon>colour_picker_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\export_ui.resx">
       <DependentUpon>export_ui.cs</DependentUpon>
