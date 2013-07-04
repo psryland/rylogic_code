@@ -195,7 +195,7 @@ namespace RyLogViewer
 		private void InitializeComponent()
 		{
 			this.m_btn_ok = new System.Windows.Forms.Button();
-			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_grid = new DataGridView();
 			this.m_btn_import = new System.Windows.Forms.Button();
 			this.m_btn_export = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();

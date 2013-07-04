@@ -30,25 +30,25 @@
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SerialConnectionUI));
 			this.m_lbl_commport = new System.Windows.Forms.Label();
-			this.m_combo_commport = new System.Windows.Forms.ComboBox();
+			this.m_combo_commport = new ComboBox();
 			this.m_lbl_baudrate = new System.Windows.Forms.Label();
 			this.m_lbl_databits = new System.Windows.Forms.Label();
-			this.m_combo_databits = new System.Windows.Forms.ComboBox();
+			this.m_combo_databits = new ComboBox();
 			this.m_lbl_output_file = new System.Windows.Forms.Label();
 			this.m_btn_browse_output = new System.Windows.Forms.Button();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_lbl_parity = new System.Windows.Forms.Label();
-			this.m_combo_parity = new System.Windows.Forms.ComboBox();
+			this.m_combo_parity = new ComboBox();
 			this.m_lbl_stopbits = new System.Windows.Forms.Label();
-			this.m_combo_stopbits = new System.Windows.Forms.ComboBox();
+			this.m_combo_stopbits = new ComboBox();
 			this.m_lbl_flow_control = new System.Windows.Forms.Label();
-			this.m_combo_flow_control = new System.Windows.Forms.ComboBox();
-			this.m_combo_baudrate = new System.Windows.Forms.ComboBox();
+			this.m_combo_flow_control = new ComboBox();
+			this.m_combo_baudrate = new ComboBox();
 			this.m_check_dtr_enable = new System.Windows.Forms.CheckBox();
 			this.m_check_rts_enable = new System.Windows.Forms.CheckBox();
-			this.m_combo_output_filepath = new System.Windows.Forms.ComboBox();
+			this.m_combo_output_filepath = new ComboBox();
 			this.SuspendLayout();
 			// 
 			// m_lbl_commport
@@ -276,24 +276,24 @@
 		#endregion
 
 		private System.Windows.Forms.Label m_lbl_commport;
-		private System.Windows.Forms.ComboBox m_combo_commport;
+		private ComboBox m_combo_commport;
 		private System.Windows.Forms.Label m_lbl_baudrate;
 		private System.Windows.Forms.Label m_lbl_databits;
-		private System.Windows.Forms.ComboBox m_combo_databits;
+		private ComboBox m_combo_databits;
 		private System.Windows.Forms.Label m_lbl_output_file;
 		private System.Windows.Forms.Button m_btn_browse_output;
 		private System.Windows.Forms.CheckBox m_check_append;
 		private System.Windows.Forms.Button m_btn_ok;
 		private System.Windows.Forms.Button m_btn_cancel;
 		private System.Windows.Forms.Label m_lbl_parity;
-		private System.Windows.Forms.ComboBox m_combo_parity;
+		private ComboBox m_combo_parity;
 		private System.Windows.Forms.Label m_lbl_stopbits;
-		private System.Windows.Forms.ComboBox m_combo_stopbits;
+		private ComboBox m_combo_stopbits;
 		private System.Windows.Forms.Label m_lbl_flow_control;
-		private System.Windows.Forms.ComboBox m_combo_flow_control;
-		private System.Windows.Forms.ComboBox m_combo_baudrate;
+		private ComboBox m_combo_flow_control;
+		private ComboBox m_combo_baudrate;
 		private System.Windows.Forms.CheckBox m_check_dtr_enable;
 		private System.Windows.Forms.CheckBox m_check_rts_enable;
-		private System.Windows.Forms.ComboBox m_combo_output_filepath;
+		private ComboBox m_combo_output_filepath;
 	}
 }

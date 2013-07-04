@@ -73,7 +73,7 @@ namespace RyLogViewer
 		{
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BookmarksUI));
-			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_grid = new DataGridView();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
 			// 

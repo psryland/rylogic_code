@@ -34,7 +34,7 @@
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_check_capture_stdout = new System.Windows.Forms.CheckBox();
 			this.m_check_capture_stderr = new System.Windows.Forms.CheckBox();
-			this.m_combo_launch_cmdline = new System.Windows.Forms.ComboBox();
+			this.m_combo_launch_cmdline = new ComboBox();
 			this.m_lbl_cmdline = new System.Windows.Forms.Label();
 			this.m_lbl_output_file = new System.Windows.Forms.Label();
 			this.m_btn_browse_output = new System.Windows.Forms.Button();
@@ -44,7 +44,7 @@
 			this.m_edit_working_dir = new System.Windows.Forms.TextBox();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
 			this.m_check_show_window = new System.Windows.Forms.CheckBox();
-			this.m_combo_output_filepath = new System.Windows.Forms.ComboBox();
+			this.m_combo_output_filepath = new ComboBox();
 			this.SuspendLayout();
 			// 
 			// m_btn_browse_exec
@@ -244,7 +244,7 @@
 		private System.Windows.Forms.Button m_btn_cancel;
 		private System.Windows.Forms.CheckBox m_check_capture_stdout;
 		private System.Windows.Forms.CheckBox m_check_capture_stderr;
-		private System.Windows.Forms.ComboBox m_combo_launch_cmdline;
+		private ComboBox m_combo_launch_cmdline;
 		private System.Windows.Forms.Label m_lbl_cmdline;
 		private System.Windows.Forms.Label m_lbl_output_file;
 		private System.Windows.Forms.Button m_btn_browse_output;
@@ -254,6 +254,6 @@
 		private System.Windows.Forms.TextBox m_edit_working_dir;
 		private System.Windows.Forms.CheckBox m_check_append;
 		private System.Windows.Forms.CheckBox m_check_show_window;
-		private System.Windows.Forms.ComboBox m_combo_output_filepath;
+		private ComboBox m_combo_output_filepath;
 	}
 }

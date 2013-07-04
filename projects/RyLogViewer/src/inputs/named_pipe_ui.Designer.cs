@@ -29,14 +29,14 @@
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NamedPipeUI));
-			this.m_combo_output_filepath = new System.Windows.Forms.ComboBox();
+			this.m_combo_output_filepath = new ComboBox();
 			this.m_lbl_output_file = new System.Windows.Forms.Label();
 			this.m_btn_browse_output = new System.Windows.Forms.Button();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_lbl_pipe_name = new System.Windows.Forms.Label();
-			this.m_combo_pipe_name = new System.Windows.Forms.ComboBox();
+			this.m_combo_pipe_name = new ComboBox();
 			this.SuspendLayout();
 			// 
 			// m_combo_output_filepath
@@ -147,13 +147,13 @@
 
 		#endregion
 
-		private System.Windows.Forms.ComboBox m_combo_output_filepath;
+		private ComboBox m_combo_output_filepath;
 		private System.Windows.Forms.Label m_lbl_output_file;
 		private System.Windows.Forms.Button m_btn_browse_output;
 		private System.Windows.Forms.CheckBox m_check_append;
 		private System.Windows.Forms.Button m_btn_ok;
 		private System.Windows.Forms.Button m_btn_cancel;
 		private System.Windows.Forms.Label m_lbl_pipe_name;
-		private System.Windows.Forms.ComboBox m_combo_pipe_name;
+		private ComboBox m_combo_pipe_name;
 	}
 }

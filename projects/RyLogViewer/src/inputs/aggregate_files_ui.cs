@@ -105,7 +105,7 @@ namespace RyLogViewer
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AggregateFilesUI));
-			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_grid = new DataGridView();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_lbl_instructions = new System.Windows.Forms.Label();

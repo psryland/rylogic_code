@@ -90,14 +90,14 @@ namespace RyLogViewer
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AndroidConnectDeviceUI));
-			this.m_combo_connection_type = new System.Windows.Forms.ComboBox();
+			this.m_combo_connection_type = new ComboBox();
 			this.m_lbl_connection_type = new System.Windows.Forms.Label();
 			this.m_edit_port = new System.Windows.Forms.TextBox();
 			this.m_lbl_ipaddress = new System.Windows.Forms.Label();
 			this.m_lbl_port = new System.Windows.Forms.Label();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
-			this.m_combo_ip_address = new System.Windows.Forms.ComboBox();
+			this.m_combo_ip_address = new ComboBox();
 			this.SuspendLayout();
 			// 
 			// m_combo_connection_type

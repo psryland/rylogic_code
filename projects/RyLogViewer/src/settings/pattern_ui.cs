@@ -252,7 +252,7 @@ namespace RyLogViewer
 			this.m_group_patntype = new System.Windows.Forms.Panel();
 			this.m_lbl_match_type = new System.Windows.Forms.Label();
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_grid_grps = new System.Windows.Forms.DataGridView();
+			this.m_grid_grps = new DataGridView();
 			this.m_lbl_groups = new System.Windows.Forms.Label();
 			this.m_group_patntype.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();

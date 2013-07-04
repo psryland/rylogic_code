@@ -567,7 +567,7 @@ namespace pr.util
 				}
 
 				// Can't find 'src_filepath'
-				Log.Info(null, "LibCopy: Not copying {0}, file not found".Fmt(src_filepath, dst_filepath));
+				Log.Info(null, "LibCopy: Not copying {0}, file not found".Fmt(src_filepath));
 				return ELibCopyResult.SrcNotFound;
 			}
 

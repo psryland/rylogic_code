@@ -251,7 +251,7 @@ namespace RyLogViewer
 			this.m_btn_find_next = new System.Windows.Forms.Button();
 			this.m_btn_find_prev = new System.Windows.Forms.Button();
 			this.m_lbl_find_what = new System.Windows.Forms.Label();
-			this.m_combo_pattern = new System.Windows.Forms.ComboBox();
+			this.m_combo_pattern = new ComboBox();
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();
 			this.m_check_invert = new System.Windows.Forms.CheckBox();
 			this.m_radio_regex = new System.Windows.Forms.RadioButton();
@@ -261,7 +261,7 @@ namespace RyLogViewer
 			this.m_panel_top = new System.Windows.Forms.Panel();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_lbl_prev_find_patterns = new System.Windows.Forms.Label();
-			this.m_grid = new System.Windows.Forms.DataGridView();
+			this.m_grid = new DataGridView();
 			this.m_table.SuspendLayout();
 			this.m_panel_top.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();

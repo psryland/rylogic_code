@@ -143,7 +143,7 @@
 			this.m_cmenu_find_prev = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_grid = new RyLogViewer.DGV();
+			this.m_grid = new RyLogViewer.DataGridView();
 			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
@@ -1158,7 +1158,7 @@
 		private System.Windows.Forms.ToolStripSeparator m_sep2;
 		private System.Windows.Forms.ToolStripButton m_btn_jump_to_end;
 		private System.Windows.Forms.ToolStripContainer m_toolstrip_cont;
-		private DGV m_grid;
+		private DataGridView m_grid;
 		private System.Windows.Forms.ToolStripSeparator m_sep;
 		private System.Windows.Forms.ToolStripButton m_btn_highlights;
 		private System.Windows.Forms.ToolStripButton m_btn_filters;

@@ -41,11 +41,11 @@
 			this.m_group = new System.Windows.Forms.GroupBox();
 			this.m_btn_connect = new System.Windows.Forms.Button();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
-			this.m_combo_output_file = new System.Windows.Forms.ComboBox();
+			this.m_combo_output_file = new ComboBox();
 			this.m_lbl_log_format = new System.Windows.Forms.Label();
-			this.m_combo_log_format = new System.Windows.Forms.ComboBox();
+			this.m_combo_log_format = new ComboBox();
 			this.m_lbl_filterspec = new System.Windows.Forms.Label();
-			this.m_grid_filterspec = new System.Windows.Forms.DataGridView();
+			this.m_grid_filterspec = new DataGridView();
 			this.m_listbox_log_buffers = new System.Windows.Forms.ListBox();
 			this.m_lbl_log_buffers = new System.Windows.Forms.Label();
 			this.m_btn_browse_output_file = new System.Windows.Forms.Button();
@@ -367,10 +367,10 @@
 		private System.Windows.Forms.Label m_lbl_log_buffers;
 		private System.Windows.Forms.ListBox m_listbox_log_buffers;
 		private System.Windows.Forms.Label m_lbl_filterspec;
-		private System.Windows.Forms.DataGridView m_grid_filterspec;
+		private DataGridView m_grid_filterspec;
 		private System.Windows.Forms.Label m_lbl_log_format;
-		private System.Windows.Forms.ComboBox m_combo_log_format;
-		private System.Windows.Forms.ComboBox m_combo_output_file;
+		private ComboBox m_combo_log_format;
+		private ComboBox m_combo_output_file;
 		private System.Windows.Forms.CheckBox m_check_append;
 		private System.Windows.Forms.Button m_btn_connect;
 		private System.Windows.Forms.Button m_btn_resetadb;

@@ -31,7 +31,7 @@
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternSetUi));
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
-			this.m_combo_sets = new System.Windows.Forms.ComboBox();
+			this.m_combo_sets = new ComboBox();
 			this.m_btn_save = new System.Windows.Forms.Button();
 			this.m_btn_load = new System.Windows.Forms.Button();
 			this.SuspendLayout();
@@ -96,7 +96,7 @@
 		#endregion
 
 		private System.Windows.Forms.ImageList m_image_list;
-		private System.Windows.Forms.ComboBox m_combo_sets;
+		private ComboBox m_combo_sets;
 		private System.Windows.Forms.Button m_btn_save;
 		private System.Windows.Forms.Button m_btn_load;
 	}
