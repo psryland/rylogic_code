@@ -16,8 +16,16 @@ namespace RyLogViewer
 		private bool     m_ignore_case;
 		private bool     m_active;
 		private bool     m_invert;
+		private bool     m_whole_line;
 		private bool     m_binary_match;
 		private Regex    m_compiled_patn;
+
+		/// <summary>True if the pattern is active</summary>
+		public bool Active
+		{
+			get { return m_active; }
+			set { m_active = value; RaisePatternChanged(); }
+		}
 
 		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
 		public EPattern PatnType
@@ -40,18 +48,18 @@ namespace RyLogViewer
 			set { m_ignore_case = value; m_compiled_patn = null; RaisePatternChanged(); }
 		}
 
-		/// <summary>True if the pattern is active</summary>
-		public bool Active
-		{
-			get { return m_active; }
-			set { m_active = value; RaisePatternChanged(); }
-		}
-
-		/// <summary>Invert the results of a match</summary>
+		/// <summary>True if the match result should be inverted</summary>
 		public bool Invert
 		{
 			get { return m_invert; }
 			set { m_invert = value; RaisePatternChanged(); }
+		}
+
+		/// <summary>Only match if the whole line matches</summary>
+		public bool WholeLine
+		{
+			get { return m_whole_line; }
+			set { m_whole_line = value; RaisePatternChanged(); }
 		}
 
 		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
@@ -151,7 +159,7 @@ namespace RyLogViewer
 					// Replace all escaped whitespace with '\s+'
 					expr = expr.Replace(@"\ ", @"\s+");
 
-					// Allow expressions the end with whitespace to also match the eol char
+					// Allow expressions that end with whitespace to also match the eol char
 					if (expr.EndsWith(@"\s+"))
 					{
 						expr = expr.Remove(expr.Length - 3, 3);
@@ -221,8 +229,9 @@ namespace RyLogViewer
 		public bool IsMatch(string text)
 		{
 			if (!Active || !IsValid) return false;
-			bool match = Expr.Length != 0 && Regex.IsMatch(text);
-			return Invert ? !match : match;
+			Match match;
+			bool is_match = Expr.Length != 0 && (match = Regex.Match(text)).Success && (!WholeLine || match.Value == text);
+			return Invert ? !is_match : is_match;
 		}
 
 		/// <summary>Return the range of 'text' that matches this pattern</summary>
@@ -235,11 +244,15 @@ namespace RyLogViewer
 			if (Invert) x.Add(0);
 			try
 			{
-				var grps = Regex.Match(text).Groups;
-				for (int i = 0; i != grps.Count; ++i)
+				var match = Regex.Match(text);
+				if (!WholeLine || match.Value == text)
 				{
-					x.Add(grps[i].Index);
-					x.Add(grps[i].Index + grps[i].Length);
+					var grps = match.Groups;
+					for (int i = 0; i != grps.Count; ++i)
+					{
+						x.Add(grps[i].Index);
+						x.Add(grps[i].Index + grps[i].Length);
+					}
 				}
 			}
 			catch (ArgumentException) {}
@@ -307,7 +320,8 @@ namespace pr
 			}
 			private static void Check(Pattern pat, string test, string[] grp_names, string[] captures)
 			{
-				Assert.IsTrue(pat.IsMatch(test));
+				Assert.AreEqual(pat.IsMatch(test), grp_names.Length != 0);
+
 				var caps = pat.CaptureGroups(test).ToArray();
 
 				Assert.AreEqual(grp_names.Length, caps.Length);
@@ -319,75 +333,102 @@ namespace pr
 					Assert.AreEqual(captures[i], caps[i].Value);
 				}
 			}
-			[Test] public static void SubStringMatches()
+			[Test] public static void SubStringMatches0()
 			{
-				Check(new Pattern(EPattern.Substring, "test"),
-					"A test string",
+				var p = new Pattern(EPattern.Substring, "test");
+				Check(p, "A test string",
 					new[]{"0"},
 					new[]{"test"});
 			}
+			[Test] public static void SubStringMatches1()
+			{
+				var p = new Pattern(EPattern.Substring, "test"){WholeLine = true};
+				Check(p, "A test string",
+					new string[0],
+					new string[0]);
+			}
 			[Test] public static void WildcardMatches0()
 			{
-				Check(new Pattern(EPattern.Wildcard, "test"),
-					"A test string",
+				var p = new Pattern(EPattern.Wildcard, "test");
+				Check(p, "A test string",
 					new[]{"0"},
 					new[]{"test"});
 			}
 			[Test] public static void WildcardMatches1()
 			{
-				Check(new Pattern(EPattern.Wildcard, "*test"),
-					"A test string",
+				var p = new Pattern(EPattern.Wildcard, "*test");
+				Check(p, "A test string",
 					new[]{"0"},
 					new[]{"A test"});
 			}
 			[Test] public static void WildcardMatches2()
 			{
-				Check(new Pattern(EPattern.Wildcard, "test*"),
-					"A test string",
+				var p = new Pattern(EPattern.Wildcard, "test*");
+				Check(p, "A test string",
 					new[]{"0"},
 					new[]{"test string"});
 			}
 			[Test] public static void WildcardMatches3()
 			{
-				Check(new Pattern(EPattern.Wildcard, "A * string"),
-					"A test string",
+				var p = new Pattern(EPattern.Wildcard, "A * string");
+				Check(p, "A test string",
 					new[]{"0"},
 					new[]{"A test string"});
 			}
 			[Test] public static void WildcardMatches4()
 			{
-				Check(new Pattern(EPattern.Wildcard, "b*e?g"),
-					"abcdefgh",
+				var p = new Pattern(EPattern.Wildcard, "b*e?g");
+				Check(p, "abcdefgh",
 					new[]{"0"},
 					new[]{"bcdefg"});
 			}
 			[Test] public static void WildcardMatches5()
 			{
-				Check(new Pattern(EPattern.Wildcard, "b*e?g"),
-					"1b2345e6g7",
+				var p = new Pattern(EPattern.Wildcard, "b*e?g");
+				Check(p, "1b2345e6g7",
+					new[]{"0"},
+					new[]{"b2345e6g"});
+			}
+			[Test] public static void WildcardMatches6()
+			{
+				var p = new Pattern(EPattern.Wildcard, "b*e?g"){WholeLine = true};
+				Check(p, "1b2345e6g7",
+					new string[0],
+					new string[0]);
+				Check(p, "b2345e6g",
 					new[]{"0"},
 					new[]{"b2345e6g"});
 			}
 			[Test] public static void RegexMatches0()
 			{
-				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
-					"ab",
+				var p = new Pattern(EPattern.RegularExpression, "ax*b");
+				Check(p, "ab",
 					new[]{"0"},
 					new[]{"ab"});
 			}
 			[Test] public static void RegexMatches1()
 			{
-				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
-					"axb",
+				var p = new Pattern(EPattern.RegularExpression, "ax*b");
+				Check(p, "axb",
 					new[]{"0"},
 					new[]{"axb"});
 			}
 			[Test] public static void RegexMatches2()
 			{
-				Check(new Pattern(EPattern.RegularExpression, "ax*b"),
-					"axxxxb",
+				var p = new Pattern(EPattern.RegularExpression, "ax*b");
+				Check(p, "axxxxb",
 					new[]{"0"},
 					new[]{"axxxxb"});
+			}
+			[Test] public static void RegexMatches3()
+			{
+				var p = new Pattern(EPattern.RegularExpression, "a.b"){WholeLine = true};
+				Check(p, "eaxbe",
+					new string[0],
+					new string[0]);
+				Check(p, "axb",
+					new[]{"0"},
+					new[]{"axb"});
 			}
 		}
 	}

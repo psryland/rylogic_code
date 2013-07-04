@@ -27,6 +27,7 @@ namespace RyLogViewer
 		private DataGridView m_grid;
 		private Label m_lbl_prev_find_patterns;
 		private Button m_btn_regex_help;
+		private CheckBox m_check_whole_line;
 		private RadioButton m_radio_substring;
 
 		/// <summary>The current find pattern</summary>
@@ -124,7 +125,14 @@ namespace RyLogViewer
 				{
 					Pattern.IgnoreCase = m_check_ignore_case.Checked;
 				};
-			
+
+			// Whole line
+			m_check_whole_line.ToolTip(m_tt, "Check to have searches match entire lines only");
+			m_check_whole_line.CheckedChanged += (s,a) =>
+				{
+					Pattern.WholeLine = m_check_whole_line.Checked;
+				};
+
 			// Invert
 			m_check_invert.ToolTip(m_tt, "Check to find instances that do not match the search pattern");
 			m_check_invert.CheckedChanged += (s,a)=>
@@ -251,7 +259,6 @@ namespace RyLogViewer
 			this.m_btn_find_next = new System.Windows.Forms.Button();
 			this.m_btn_find_prev = new System.Windows.Forms.Button();
 			this.m_lbl_find_what = new System.Windows.Forms.Label();
-			this.m_combo_pattern = new ComboBox();
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();
 			this.m_check_invert = new System.Windows.Forms.CheckBox();
 			this.m_radio_regex = new System.Windows.Forms.RadioButton();
@@ -261,7 +268,9 @@ namespace RyLogViewer
 			this.m_panel_top = new System.Windows.Forms.Panel();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_lbl_prev_find_patterns = new System.Windows.Forms.Label();
-			this.m_grid = new DataGridView();
+			this.m_check_whole_line = new System.Windows.Forms.CheckBox();
+			this.m_combo_pattern = new RyLogViewer.ComboBox();
+			this.m_grid = new RyLogViewer.DataGridView();
 			this.m_table.SuspendLayout();
 			this.m_panel_top.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
@@ -270,7 +279,7 @@ namespace RyLogViewer
 			// m_btn_find_next
 			// 
 			this.m_btn_find_next.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_find_next.Location = new System.Drawing.Point(157, 75);
+			this.m_btn_find_next.Location = new System.Drawing.Point(157, 91);
 			this.m_btn_find_next.Name = "m_btn_find_next";
 			this.m_btn_find_next.Size = new System.Drawing.Size(94, 23);
 			this.m_btn_find_next.TabIndex = 8;
@@ -280,7 +289,7 @@ namespace RyLogViewer
 			// m_btn_find_prev
 			// 
 			this.m_btn_find_prev.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_find_prev.Location = new System.Drawing.Point(157, 46);
+			this.m_btn_find_prev.Location = new System.Drawing.Point(157, 66);
 			this.m_btn_find_prev.Name = "m_btn_find_prev";
 			this.m_btn_find_prev.Size = new System.Drawing.Size(94, 23);
 			this.m_btn_find_prev.TabIndex = 7;
@@ -296,20 +305,10 @@ namespace RyLogViewer
 			this.m_lbl_find_what.TabIndex = 4;
 			this.m_lbl_find_what.Text = "Find what:";
 			// 
-			// m_combo_pattern
-			// 
-			this.m_combo_pattern.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_combo_pattern.FormattingEnabled = true;
-			this.m_combo_pattern.Location = new System.Drawing.Point(4, 20);
-			this.m_combo_pattern.Name = "m_combo_pattern";
-			this.m_combo_pattern.Size = new System.Drawing.Size(247, 21);
-			this.m_combo_pattern.TabIndex = 0;
-			// 
 			// m_check_ignore_case
 			// 
 			this.m_check_ignore_case.AutoSize = true;
-			this.m_check_ignore_case.Location = new System.Drawing.Point(78, 48);
+			this.m_check_ignore_case.Location = new System.Drawing.Point(10, 65);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
 			this.m_check_ignore_case.TabIndex = 4;
@@ -319,27 +318,27 @@ namespace RyLogViewer
 			// m_check_invert
 			// 
 			this.m_check_invert.AutoSize = true;
-			this.m_check_invert.Location = new System.Drawing.Point(78, 64);
+			this.m_check_invert.Location = new System.Drawing.Point(95, 65);
 			this.m_check_invert.Name = "m_check_invert";
-			this.m_check_invert.Size = new System.Drawing.Size(86, 17);
+			this.m_check_invert.Size = new System.Drawing.Size(56, 30);
 			this.m_check_invert.TabIndex = 5;
-			this.m_check_invert.Text = "&Invert Match";
+			this.m_check_invert.Text = "&Invert \r\nMatch";
 			this.m_check_invert.UseVisualStyleBackColor = true;
 			// 
 			// m_radio_regex
 			// 
 			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(8, 82);
+			this.m_radio_regex.Location = new System.Drawing.Point(149, 45);
 			this.m_radio_regex.Name = "m_radio_regex";
-			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
+			this.m_radio_regex.Size = new System.Drawing.Size(75, 17);
 			this.m_radio_regex.TabIndex = 3;
-			this.m_radio_regex.Text = "Regular Expression";
+			this.m_radio_regex.Text = "Reg. Expr.";
 			this.m_radio_regex.UseVisualStyleBackColor = true;
 			// 
 			// m_radio_wildcard
 			// 
 			this.m_radio_wildcard.AutoSize = true;
-			this.m_radio_wildcard.Location = new System.Drawing.Point(8, 64);
+			this.m_radio_wildcard.Location = new System.Drawing.Point(76, 45);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 2;
@@ -349,7 +348,7 @@ namespace RyLogViewer
 			// m_radio_substring
 			// 
 			this.m_radio_substring.AutoSize = true;
-			this.m_radio_substring.Location = new System.Drawing.Point(8, 47);
+			this.m_radio_substring.Location = new System.Drawing.Point(4, 45);
 			this.m_radio_substring.Name = "m_radio_substring";
 			this.m_radio_substring.Size = new System.Drawing.Size(69, 17);
 			this.m_radio_substring.TabIndex = 1;
@@ -377,6 +376,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_top.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_panel_top.Controls.Add(this.m_check_whole_line);
 			this.m_panel_top.Controls.Add(this.m_btn_regex_help);
 			this.m_panel_top.Controls.Add(this.m_lbl_prev_find_patterns);
 			this.m_panel_top.Controls.Add(this.m_combo_pattern);
@@ -396,7 +396,7 @@ namespace RyLogViewer
 			// 
 			// m_btn_regex_help
 			// 
-			this.m_btn_regex_help.Location = new System.Drawing.Point(120, 80);
+			this.m_btn_regex_help.Location = new System.Drawing.Point(230, 43);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(21, 21);
 			this.m_btn_regex_help.TabIndex = 6;
@@ -411,6 +411,26 @@ namespace RyLogViewer
 			this.m_lbl_prev_find_patterns.Size = new System.Drawing.Size(130, 13);
 			this.m_lbl_prev_find_patterns.TabIndex = 29;
 			this.m_lbl_prev_find_patterns.Text = "Previous Search Patterns:";
+			// 
+			// m_check_whole_line
+			// 
+			this.m_check_whole_line.AutoSize = true;
+			this.m_check_whole_line.Location = new System.Drawing.Point(10, 81);
+			this.m_check_whole_line.Name = "m_check_whole_line";
+			this.m_check_whole_line.Size = new System.Drawing.Size(80, 17);
+			this.m_check_whole_line.TabIndex = 30;
+			this.m_check_whole_line.Text = "&Whole Line";
+			this.m_check_whole_line.UseVisualStyleBackColor = true;
+			// 
+			// m_combo_pattern
+			// 
+			this.m_combo_pattern.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_combo_pattern.FormattingEnabled = true;
+			this.m_combo_pattern.Location = new System.Drawing.Point(4, 20);
+			this.m_combo_pattern.Name = "m_combo_pattern";
+			this.m_combo_pattern.Size = new System.Drawing.Size(247, 21);
+			this.m_combo_pattern.TabIndex = 0;
 			// 
 			// m_grid
 			// 
