@@ -85,6 +85,7 @@ namespace RyLogViewer
 			IgnoreCase  = false;
 			Active      = true;
 			Invert      = false;
+			WholeLine   = false;
 			BinaryMatch = true;
 		}
 		public Pattern(Pattern rhs)
@@ -94,6 +95,7 @@ namespace RyLogViewer
 			PatnType    = rhs.PatnType;
 			IgnoreCase  = rhs.IgnoreCase;
 			Invert      = rhs.Invert;
+			WholeLine   = rhs.WholeLine;
 			BinaryMatch = rhs.BinaryMatch;
 		}
 		public Pattern(XElement node)
@@ -104,6 +106,7 @@ namespace RyLogViewer
 			Active      = bool.Parse(node.Element(XmlTag.Active    ).Value);
 			IgnoreCase  = bool.Parse(node.Element(XmlTag.IgnoreCase).Value);
 			Invert      = bool.Parse(node.Element(XmlTag.Invert    ).Value);
+			WholeLine   = bool.Parse(node.Element(XmlTag.WholeLine ).Value);
 			BinaryMatch = bool.Parse(node.Element(XmlTag.Binary    ).Value);
 			// ReSharper restore PossibleNullReferenceException
 		}
@@ -118,6 +121,7 @@ namespace RyLogViewer
 				new XElement(XmlTag.PatnType   ,PatnType   ),
 				new XElement(XmlTag.IgnoreCase ,IgnoreCase ),
 				new XElement(XmlTag.Invert     ,Invert     ),
+				new XElement(XmlTag.WholeLine  ,WholeLine  ),
 				new XElement(XmlTag.Binary     ,BinaryMatch)
 			);
 			return node;
@@ -278,6 +282,7 @@ namespace RyLogViewer
 				&& rhs.m_ignore_case   == m_ignore_case
 				&& rhs.m_active        == m_active
 				&& rhs.m_invert        == m_invert
+				&& rhs.m_whole_line    == m_whole_line
 				&& rhs.m_binary_match  == m_binary_match;
 		}
 
@@ -291,6 +296,7 @@ namespace RyLogViewer
 				m_ignore_case .GetHashCode()^
 				m_active      .GetHashCode()^
 				m_invert      .GetHashCode()^
+				m_whole_line  .GetHashCode()^
 				m_binary_match.GetHashCode();
 			// ReSharper restore NonReadonlyFieldInGetHashCode
 		}

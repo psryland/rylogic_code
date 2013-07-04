@@ -266,9 +266,9 @@ namespace RyLogViewer
 			this.m_radio_substring = new System.Windows.Forms.RadioButton();
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
 			this.m_panel_top = new System.Windows.Forms.Panel();
+			this.m_check_whole_line = new System.Windows.Forms.CheckBox();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_lbl_prev_find_patterns = new System.Windows.Forms.Label();
-			this.m_check_whole_line = new System.Windows.Forms.CheckBox();
 			this.m_combo_pattern = new RyLogViewer.ComboBox();
 			this.m_grid = new RyLogViewer.DataGridView();
 			this.m_table.SuspendLayout();
@@ -332,7 +332,7 @@ namespace RyLogViewer
 			this.m_radio_regex.Name = "m_radio_regex";
 			this.m_radio_regex.Size = new System.Drawing.Size(75, 17);
 			this.m_radio_regex.TabIndex = 3;
-			this.m_radio_regex.Text = "Reg. Expr.";
+			this.m_radio_regex.Text = "&Reg. Expr.";
 			this.m_radio_regex.UseVisualStyleBackColor = true;
 			// 
 			// m_radio_wildcard
@@ -342,7 +342,7 @@ namespace RyLogViewer
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 2;
-			this.m_radio_wildcard.Text = "Wildcard";
+			this.m_radio_wildcard.Text = "Wil&dcard";
 			this.m_radio_wildcard.UseVisualStyleBackColor = true;
 			// 
 			// m_radio_substring
@@ -352,7 +352,7 @@ namespace RyLogViewer
 			this.m_radio_substring.Name = "m_radio_substring";
 			this.m_radio_substring.Size = new System.Drawing.Size(69, 17);
 			this.m_radio_substring.TabIndex = 1;
-			this.m_radio_substring.Text = "Substring";
+			this.m_radio_substring.Text = "&Substring";
 			this.m_radio_substring.UseVisualStyleBackColor = true;
 			// 
 			// m_table
@@ -394,6 +394,16 @@ namespace RyLogViewer
 			this.m_panel_top.Size = new System.Drawing.Size(261, 121);
 			this.m_panel_top.TabIndex = 0;
 			// 
+			// m_check_whole_line
+			// 
+			this.m_check_whole_line.AutoSize = true;
+			this.m_check_whole_line.Location = new System.Drawing.Point(10, 81);
+			this.m_check_whole_line.Name = "m_check_whole_line";
+			this.m_check_whole_line.Size = new System.Drawing.Size(80, 17);
+			this.m_check_whole_line.TabIndex = 30;
+			this.m_check_whole_line.Text = "&Whole Line";
+			this.m_check_whole_line.UseVisualStyleBackColor = true;
+			// 
 			// m_btn_regex_help
 			// 
 			this.m_btn_regex_help.Location = new System.Drawing.Point(230, 43);
@@ -411,16 +421,6 @@ namespace RyLogViewer
 			this.m_lbl_prev_find_patterns.Size = new System.Drawing.Size(130, 13);
 			this.m_lbl_prev_find_patterns.TabIndex = 29;
 			this.m_lbl_prev_find_patterns.Text = "Previous Search Patterns:";
-			// 
-			// m_check_whole_line
-			// 
-			this.m_check_whole_line.AutoSize = true;
-			this.m_check_whole_line.Location = new System.Drawing.Point(10, 81);
-			this.m_check_whole_line.Name = "m_check_whole_line";
-			this.m_check_whole_line.Size = new System.Drawing.Size(80, 17);
-			this.m_check_whole_line.TabIndex = 30;
-			this.m_check_whole_line.Text = "&Whole Line";
-			this.m_check_whole_line.UseVisualStyleBackColor = true;
 			// 
 			// m_combo_pattern
 			// 

@@ -116,6 +116,7 @@ namespace RyLogViewer
 		public const string PatnType       = "patntype";
 		public const string IgnoreCase     = "ignorecase";
 		public const string Invert         = "invert";
+		public const string WholeLine      = "wholeline";
 		public const string Binary         = "binary";
 		public const string Highlight      = "highlight";
 		public const string ForeColour     = "forecolour";

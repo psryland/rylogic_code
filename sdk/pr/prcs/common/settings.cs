@@ -52,10 +52,10 @@ namespace pr.common
 			public override string ToString() { return Key + "  " + Value; }
 		}
 		
-		private const string version_key = "__SettingsVersion";
+		protected const string VersionKey = "__SettingsVersion";
 		protected List<Pair> Data = new List<Pair>();
 		private string m_filepath = "";
-		private bool m_saving;
+		private bool m_block_saving;
 		private bool m_auto_save;
 
 		/// <summary>The default values for the settings</summary>
@@ -118,9 +118,9 @@ namespace pr.common
 			if (Equals(old_value, value)) return; // If the values are the same, don't raise 'changing' events
 				
 			var args = new SettingsChangingEventArgs(key, old_value, value, false);
-			if (SettingChanging != null && key != version_key) SettingChanging(this, args);
+			if (SettingChanging != null && key != VersionKey) SettingChanging(this, args);
 			if (!args.Cancel) Data[idx].Value = value;
-			if (SettingChanged != null && key != version_key) SettingChanged(this, new SettingChangedEventArgs(key, old_value, value));
+			if (SettingChanged != null && key != VersionKey) SettingChanged(this, new SettingChangedEventArgs(key, old_value, value));
 		}
 
 		/// <summary>Return the index of 'key' in the data. Returned value is negative if not found</summary>
@@ -241,37 +241,43 @@ namespace pr.common
 		/// <summary>Refreshes the settings from persistent storage</summary>
 		public void Load(string filepath)
 		{
-			Filepath = filepath;
-			if (!File.Exists(filepath))
+			try
 			{
-				Log.Info(this, "Settings file {0} not found, using defaults".Fmt(filepath));
-				Reset();
-				return; // Reset will recursively call Load again
+				// Block saving during load/upgrade
+				m_block_saving = true;
+
+				Filepath = filepath;
+				if (!File.Exists(filepath))
+				{
+					Log.Info(this, "Settings file {0} not found, using defaults".Fmt(filepath));
+					Reset();
+					return; // Reset will recursively call Load again
+				}
+
+				Log.Debug(this, "Loading settings file {0}".Fmt(filepath));
+
+				DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
+				using (FileStream fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read))
+				{
+					Data = (List<Pair>)ser.ReadObject(fs);
+					Data.Sort((lhs,rhs) => string.CompareOrdinal(lhs.Key, rhs.Key));
+				}
+
+				// Add any default options that aren't in the settings file
+				foreach (var i in Default.Data)
+				{
+					if (has(i.Key)) continue;
+					set(i.Key, i.Value);
+				}
+
+				// Migrate old settings
+				for (string version; (version = get<string>(VersionKey)) != Version;)
+					Upgrade(version);
 			}
+			finally { m_block_saving = false; }
 
-			Log.Debug(this, "Loading settings file {0}".Fmt(filepath));
-
-			DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
-			using (FileStream fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read))
-			{
-				Data = (List<Pair>)ser.ReadObject(fs);
-				Data.Sort((lhs,rhs) => string.CompareOrdinal(lhs.Key, rhs.Key));
-			}
-
-			// Add any default options that aren't in the settings file
-			foreach (var i in Default.Data)
-			{
-				if (has(i.Key)) continue;
-				set(i.Key, i.Value);
-			}
-
-			// Check the version of the settings
-			string version = get<string>(version_key);
-			if (version != Version)
-				Upgrade();
-			
 			Validate();
-			
+
 			// Notify of settings loaded
 			if (SettingsLoaded != null)
 				SettingsLoaded(this, new SettingsLoadedEventArgs(filepath));
@@ -280,10 +286,11 @@ namespace pr.common
 		/// <summary>Persist current settings to storage</summary>
 		public void Save(string filepath)
 		{
-			if (m_saving) return;
+			if (m_block_saving)
+				return;
 			try
 			{
-				m_saving = true;
+				m_block_saving = true;
 				if (string.IsNullOrEmpty(filepath))
 					throw new ArgumentNullException("filepath", "No settings filepath set");
 				
@@ -297,7 +304,7 @@ namespace pr.common
 				if (path != null && !Directory.Exists(path)) Directory.CreateDirectory(path);
 				
 				// Save the settings version
-				set(version_key, Version);
+				set(VersionKey, Version);
 
 				Log.Debug(this, "Saving settings to file {0}".Fmt(filepath));
 
@@ -306,7 +313,7 @@ namespace pr.common
 				using (XmlWriter fs = XmlWriter.Create(filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
 					ser.WriteObject(fs, Data);
 			}
-			finally { m_saving = false; }
+			finally { m_block_saving = false; }
 		}
 		
 		/// <summary>Save using the last filepath</summary>
@@ -323,7 +330,10 @@ namespace pr.common
 		}
 
 		/// <summary>Called when loading settings from an earlier version</summary>
-		public virtual void Upgrade() {}
+		public virtual void Upgrade(string from_version)
+		{
+			throw new NotSupportedException("Settings file version is {0}. Latest version is {1}. Upgrading from this version is not supported".Fmt(from_version, Version));
+		}
 
 		/// <summary>Perform validation on the loaded settings</summary>
 		public virtual void Validate() {}

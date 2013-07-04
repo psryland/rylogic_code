@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Net.Sockets;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using pr.common;
 using pr.util;
 
@@ -317,6 +318,9 @@ namespace RyLogViewer
 			set { set(Reflect<Settings>.MemberName(x => x.LogFilePath), value); }
 		}
 
+		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
+		protected override string Version { get { return "v1.1"; } }
+
 		// Default construct settings
 		public Settings()
 		{
@@ -385,7 +389,7 @@ namespace RyLogViewer
 		public Settings(string filepath)
 		:base(filepath)
 		{}
-		
+
 		/// <summary>Perform validation on the loaded settings</summary>
 		public override void Validate()
 		{
@@ -438,7 +442,7 @@ namespace RyLogViewer
 					c.ProtocolType = ProtocolType.Tcp;
 			}
 		}
-		
+
 		/// <summary>Types the serialiser needs to know about</summary>
 		protected override IEnumerable<Type> KnownTypes
 		{
@@ -461,5 +465,61 @@ namespace RyLogViewer
 				};
 			}
 		}
+
+		/// <summary>Called when loading settings from an earlier version</summary>
+		public override void Upgrade(string from_version)
+		{
+			switch (from_version)
+			{
+			default:
+				base.Upgrade(from_version);
+				break;
+			case "v1.0":
+				Upgrade_v10_to_v11();
+				break;
+			}
+		}
+
+		// ReSharper disable PossibleNullReferenceException
+
+		/// <summary>Upgrade from v1.0 to v1.1</summary>
+		private void Upgrade_v10_to_v11()
+		{
+			// Changed:
+			//  Added 'whole line' to patterns
+
+			// Helper function for converting XElement
+			Action<XElement> Convert = pat =>
+				{
+					pat.Add(new XElement(XmlTag.WholeLine, "false"));
+				};
+
+			// Settings patterns
+			{
+				var doc = XDocument.Parse(HighlightPatterns);
+				foreach (var p in doc.Root.Elements(XmlTag.Highlight)) Convert(p);
+				HighlightPatterns = doc.ToString(SaveOptions.None);
+			}
+			{
+				var doc = XDocument.Parse(FilterPatterns);
+				foreach (var p in doc.Root.Elements(XmlTag.Filter)) Convert(p);
+				FilterPatterns = doc.ToString(SaveOptions.None);
+			}
+			{
+				var doc = XDocument.Parse(TransformPatterns);
+				foreach (var p in doc.Root.Elements(XmlTag.Transform)) Convert(p);
+				TransformPatterns = doc.ToString(SaveOptions.None);
+			}
+			{
+				var doc = XDocument.Parse(ActionPatterns);
+				foreach (var p in doc.Root.Elements(XmlTag.ClkAction)) Convert(p);
+				ActionPatterns = doc.ToString(SaveOptions.None);
+			}
+
+			// Done, set the version
+			set(VersionKey, "v1.1");
+		}
+
+		// ReSharper restore PossibleNullReferenceException
 	}
 }
