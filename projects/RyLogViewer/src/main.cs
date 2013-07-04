@@ -98,7 +98,7 @@ namespace RyLogViewer
 			m_bs_bookmarks        = new BindingSource{DataSource = m_bookmarks};
 			m_bookmarks_ui        = new BookmarksUI(this, m_bs_bookmarks){Visible = false};
 			m_tt                  = new ToolTip();
-			m_balloon             = new ToolTip{IsBalloon = true};
+			m_balloon             = new ToolTip{IsBalloon = true,UseFading = true,ReshowDelay = 0};
 			m_tab_cycle           = new Form[]{this, m_find_ui, m_bookmarks_ui};
 			m_notify_icon         = new NotifyIcon{Icon = Icon};
 			m_suspend_grid_events = new RefCount();
@@ -189,9 +189,9 @@ namespace RyLogViewer
 			m_btn_bookmarks.ToolTipText     = Resources.ShowBookmarksDialog;
 			m_btn_bookmarks.Click          += (s,a) => ShowBookmarksDialog();
 			m_btn_jump_to_start.ToolTipText = "Selected the first row in the log file";
-			m_btn_jump_to_start.Click      += (s,a) => BuildLineIndex(0, false, () => SelectedRowIndex = 0);
+			m_btn_jump_to_start.Click      += (s,a) => JumpToStart();
 			m_btn_jump_to_end.ToolTipText   = "Selected the last row in the log file";
-			m_btn_jump_to_end.Click        += (s,a) => BuildLineIndex(m_fileend, false, () => SelectedRowIndex = m_grid.RowCount - 1);
+			m_btn_jump_to_end.Click        += (s,a) => JumpToEnd();
 			m_btn_tail.ToolTipText          = Resources.WatchTail;
 			m_btn_tail.Click               += (s,a) => EnableTail(m_btn_tail.Checked);
 			m_btn_watch.ToolTipText         = Resources.WatchForUpdates;
@@ -199,7 +199,7 @@ namespace RyLogViewer
 			m_btn_additive.ToolTipText      = Resources.AdditiveMode;
 			m_btn_additive.Click           += (s,a) => EnableAdditive(m_btn_additive.Checked);
 			ToolStripManager.Renderer       = new CheckedButtonRenderer();
-			
+
 			// Scrollbar
 			m_scroll_file.ToolTip(m_tt, "Indicates the currently cached position in the log file\r\nClicking within here moves the cached position within the log file");
 			m_scroll_file.MinThumbSize = 1;
@@ -718,7 +718,8 @@ namespace RyLogViewer
 		private void GridSelectionChanged(object sender, EventArgs e)
 		{
 			if (GridEventsBlocked) return;
-			EnableTail(SelectedRowIndex == m_grid.RowCount - 1);
+			if (m_tail_enabled && SelectedRowIndex != m_grid.RowCount - 1)
+				EnableTail(false);
 			UpdateStatus();
 		}
 
@@ -959,6 +960,28 @@ namespace RyLogViewer
 			ApplySettings();
 		}
 
+		/// <summary>Handler for the Jump to Start button</summary>
+		private void JumpToStart()
+		{
+			EnableTail(false);
+			BuildLineIndex(0, false, () =>
+				{
+					SelectedRowIndex = 0;
+					ShowFirstRow();
+				});
+		}
+
+		/// <summary>Handler for the Jump to End button</summary>
+		private void JumpToEnd()
+		{
+			EnableTail(false);
+			BuildLineIndex(m_fileend, false, () =>
+				{
+					SelectedRowIndex = m_grid.RowCount - 1;
+					ShowLastRow();
+				});
+		}
+
 		/// <summary>Turn on/off tail mode</summary>
 		private void EnableTail(bool enabled)
 		{
@@ -972,7 +995,8 @@ namespace RyLogViewer
 		{
 			m_settings.WatchEnabled = enable;
 			ApplySettings();
-			if (enable) BuildLineIndex(m_filepos, m_settings.FileChangesAdditive);
+			if (enable)
+				BuildLineIndex(m_filepos, m_settings.FileChangesAdditive);
 		}
 
 		/// <summary>Turn on/off additive only mode</summary>
@@ -980,7 +1004,8 @@ namespace RyLogViewer
 		{
 			m_settings.FileChangesAdditive = enable;
 			ApplySettings();
-			if (!enable) BuildLineIndex(m_filepos, true);
+			if (!enable)
+				BuildLineIndex(m_filepos, true);
 		}
 
 		/// <summary>Try to remove data from the log file</summary>
@@ -1412,6 +1437,14 @@ namespace RyLogViewer
 			get { return m_tail_enabled; }
 		}
 
+		/// <summary>Scroll the grid to make the first row visible</summary>
+		private void ShowFirstRow()
+		{
+			if (m_grid.RowCount == 0) return;
+			m_grid.FirstDisplayedScrollingRowIndex = 0;
+			Log.Info(this, "Showing first row.");
+		}
+
 		/// <summary>Scroll the grid to make the last row visible</summary>
 		private void ShowLastRow()
 		{
@@ -1652,7 +1685,7 @@ namespace RyLogViewer
 				m_btn_transforms.Checked   = m_settings.TransformsEnabled;
 				m_btn_actions.Checked      = m_settings.ActionsEnabled;
 				m_btn_tail.Checked         = m_settings.TailEnabled;
-				m_btn_watch.Checked        = m_watch_timer.Enabled;
+				m_btn_watch.Checked        = m_settings.WatchEnabled;
 				m_btn_additive.Checked     = m_settings.FileChangesAdditive;
 			
 				// Status and title

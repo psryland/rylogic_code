@@ -441,7 +441,7 @@ namespace RyLogViewer
 			this.m_split_test = new System.Windows.Forms.SplitContainer();
 			this.m_lbl_match = new System.Windows.Forms.Label();
 			this.m_edit_match = new System.Windows.Forms.TextBox();
-			this.m_grid_subs = new System.Windows.Forms.DataGridView();
+			this.m_grid_subs = new DataGridView();
 			this.m_split_subs = new System.Windows.Forms.SplitContainer();
 			this.m_radio_regex = new System.Windows.Forms.RadioButton();
 			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();

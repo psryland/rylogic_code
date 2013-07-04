@@ -382,7 +382,7 @@ namespace RyLogViewer
 						catch (Exception ex)
 						{
 							Log.Exception(this, ex, "Exception ended BuildLineIndex() call");
-							this.BeginInvoke(() => Misc.ShowErrorMessage(this, ex, "Scanning the log file ended with an error.", "Scanning file terminated"));
+							this.BeginInvoke(() => BuildLineIndexScanTerminated(ex));
 						}
 						finally
 						{
@@ -393,10 +393,23 @@ namespace RyLogViewer
 								});
 						}
 					}, m_build_issue);
-				return;
 			}
-			catch (Exception ex) { err = ex; }
-			ReloadInProgress = false;
+			catch (Exception ex)
+			{
+				BuildLineIndexScanTerminated(ex);
+				ReloadInProgress = false;
+			}
+		}
+
+		/// <summary>Called when scanning ends with an error. Shows an error dialog and turns off file watching</summary>
+		private void BuildLineIndexScanTerminated(Exception err)
+		{
+			// Disable watched files, so we don't get an endless blizzard of error messages
+			if (m_settings.WatchEnabled)
+			{
+				EnableWatch(false);
+				m_btn_watch.ShowHintBalloon(m_balloon, "File watching disabled due to error. ");
+			}
 			Log.Exception(this, err, "Failed to build index list for {0}".Fmt(m_file.Name));
 			Misc.ShowErrorMessage(this, err, "Scanning the log file ended with an error.", "Scanning file terminated");
 		}
@@ -406,16 +419,18 @@ namespace RyLogViewer
 		/// backward from the current position before reading and then seeked backward again
 		/// after reading so that conceptually the file position moves in the direction of
 		/// the read. Returns the number of bytes buffered in 'buf'</summary>
-		private static int Buffer(IFileSource file, int count, long fileend, Encoding encoding, bool backward, byte[] buf, out bool eof)
+		private static int Buffer(IFileSource file, long count, long fileend, Encoding encoding, bool backward, byte[] buf, out bool eof)
 		{
+			Debug.Assert(count >= 0);
 			long pos = file.Stream.Position;
 			eof = backward ? pos == 0 : pos == fileend;
 
 			// The number of bytes to buffer
 			count = Math.Min(count, buf.Length);
-			count = Math.Min(count, (int)(backward ? file.Stream.Position : fileend - file.Stream.Position));
+			count = Math.Min(count, backward ? file.Stream.Position : fileend - file.Stream.Position);
 			if (count == 0) return 0;
-
+			Debug.Assert(count > 0);
+			
 			// Set the file position to the location to read from
 			if (backward) file.Stream.Seek(-count, SeekOrigin.Current);
 			pos = file.Stream.Position;
@@ -463,8 +478,9 @@ namespace RyLogViewer
 			}
 
 			// Buffer file data
-			count -= (int)(file.Stream.Position - pos);
-			int read = file.Stream.Read(buf, 0, count);
+			Debug.Assert(count >= file.Stream.Position - pos);
+			count -= file.Stream.Position - pos;
+			int read = file.Stream.Read(buf, 0, (int)Math.Min(count, buf.Length));
 			if (read != count) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(pos, pos + count, count, read));
 			if (backward) file.Stream.Seek(-read, SeekOrigin.Current);
 			return read;
@@ -548,7 +564,7 @@ namespace RyLogViewer
 				file.Stream.Seek(read_addr, SeekOrigin.Begin);
 
 				// Buffer the contents of the file in 'buf'.
-				int remaining = (int)(length - scanned); bool eof;
+				long remaining = length - scanned; bool eof;
 				int read = Buffer(file, remaining, fileend, encoding, backward, buf, out eof);
 				if (read == 0) break;
 
