@@ -3,7 +3,9 @@
 //  Copyright © Rylogic Ltd 2010
 //***************************************************
 
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
@@ -13,6 +15,12 @@ namespace pr.extn
 {
 	public static class ControlExtensions
 	{
+		/// <summary>Return 'Tag' for this control as type 'T'. Creates a new T if Tag is currently null</summary>
+		public static T TagAs<T>(this Control ctrl) where T:new()
+		{
+			return (T)(ctrl.Tag ?? (ctrl.Tag = new T()));
+		}
+
 		private struct TTAssociation { public ToolTip tt; public string msg; }
 		private static readonly Dictionary<Control,TTAssociation> m_tt_texts = new Dictionary<Control, TTAssociation>();
 
@@ -62,15 +70,49 @@ namespace pr.extn
 				tta.tt.Hide(ctrl);
 		}
 
-		/// <summary>Display a hint balloon</summary>
+		/// <summary>Display a hint balloon.</summary>
 		public static void ShowHintBalloon(this Control ctrl, ToolTip tt, string msg, int duration = 5000)
 		{
 			var parent = ctrl.FindForm();
 			if (parent == null) return;
 			var pt = ctrl.ClientRectangle.Centre();
+
 			tt.SetToolTip(ctrl, msg);
 			tt.Show(msg, ctrl, pt, duration);
-			tt.Popup += (s,a) => tt.SetToolTip(ctrl,null);
+			tt.BeginInvokeDelayed(duration, () => tt.SetToolTip(ctrl, null));
+			//tt.Popup += (s,a) => tt.SetToolTip(ctrl,null);
+		}
+
+		/// <summary>Display the hint balloon.</summary>
+		public static void ShowHintBalloon(this ToolStripItem item, ToolTip tt, string msg, int duration = 5000)
+		{
+			var parent = item.GetCurrentParent();
+			if (parent == null) return;
+			var pt = item.Bounds.Centre();
+
+			tt.SetToolTip(parent, msg);
+			tt.Show(msg, parent, pt, duration);
+			tt.BeginInvokeDelayed(duration, () => tt.SetToolTip(parent, null));
+			
+			//// Set an issue number on the tool
+			//int issue = ++((int[])(tt.Tag ?? (tt.Tag = new int[1])))[0]; // awesome...
+			//tt.BeginInvokeDelayed(duration, () =>
+			//	{
+			//		if (((int[])tt.Tag)[0] == issue)
+			//			tt.SetToolTip(parent, null);
+			//	});
+		}
+
+		/// <summary>BeginInvoke a action after 'delay' milliseconds (roughly)</summary>
+		public static void BeginInvokeDelayed(this IComponent ctrl, int delay, Action action)
+		{
+			new Timer{Enabled = true, Interval = delay}.Tick += (s,a) =>
+			{
+				var timer = (Timer)s;
+				action();
+				timer.Enabled = false;
+				timer.Dispose();
+			};
 		}
 
 		/// <summary>Enable double buffering for the control. Note, it's probably better to subclass the control to turn this on</summary>

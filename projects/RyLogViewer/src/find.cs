@@ -105,10 +105,18 @@ namespace RyLogViewer
 		/// is returned 'found' contains the file byte offset of the first match</returns>
 		private bool Find(Pattern pat, long start, bool backward, out long found)
 		{
+			var body = backward
+				? (start == FileByteRange.Begin
+					? "Searching forward from the start of the file..."
+					: "Searching forward from the current selection position...")
+				: (start == FileByteRange.End
+					? "Searching backward from the end of the file..."
+					: "Searching backward from the current selection position...");
+
 			// Although this search runs in a background thread, it's wrapped in a modal
 			// dialog box, so it should be ok to use class members directly
 			long at = -1;
-			var search = new ProgressForm("Searching...", "", null, ProgressBarStyle.Marquee, (s,a,cb)=>
+			var search = new ProgressForm("Searching...", body, null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
 					int last_progress = 0;
 					ProgressFunc report_progress = (scanned, length) =>
