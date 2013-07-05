@@ -227,7 +227,7 @@
   </setting>
   <setting>
     <key>LicenceHolder</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">Evaluation Licence</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">Free Edition Licence</value>
   </setting>
   <setting>
     <key>LineBackColour1</key>

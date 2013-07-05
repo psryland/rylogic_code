@@ -16,6 +16,7 @@ syntax: glob
 *.suo
 *.user
 *.orig
+*.htm
 *.userprefs
 *.vssettings
 *ReSharper*
