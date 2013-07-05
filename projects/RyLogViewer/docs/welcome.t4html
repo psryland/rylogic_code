@@ -9,6 +9,7 @@
 		<div id="content_panel">
 			<div class="title">Welcome to RyLogViewer</div>
 			<div class="fine_print">Copyright © 2007-2013 Rylogic Limited</div>
+			<div class="section_title"><br/></div>
 			<div class="content">
 				RyLogViewer is designed to make the viewing of log files or streaming
 				log data easier through the use of highlighting, filtering, and text
@@ -20,6 +21,6 @@
 				RyLogViewer is a .NET Framework 4.0 application designed to run on Microsoft 
 				Windows versions XP and later, both 32 and 64bit.
 			</div>
-		</div>
+		
 	</body>
 </html>

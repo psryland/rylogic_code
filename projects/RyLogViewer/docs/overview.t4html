@@ -9,9 +9,15 @@
 		<div id="content_panel">
 			<div class="title">Overview and Features</div>
 			<div class="content">
-				
 				<ul>
-					<li class="child_list_elem">Loads files of unlimited size (limited only by the operating system)</li>
+					<li class="child_list_elem">
+						<div class="tag_label">Unlimited File Sizes</div>
+						<div class="content">
+							There is no upper limit on the size of displayed log files
+							 Loads files
+							(operating system limitations still. of unlimited size (limited only by the operating system)
+						</div>
+					</li>
 				</ul>
 			</div>
 		</div>
