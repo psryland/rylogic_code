@@ -81,7 +81,7 @@ namespace pr.stream
 		}
 		
 		/// <summary>Get a recycled block</summary>
-		private Block Recycle() // don't make into a property, debugger evaluation will cause blocks to be used
+		private Block Recycle() // don't make into a property as watching in the debugger causes blocks to be used
 		{
 			Block b;
 			lock (m_avail) b = m_avail.Count != 0 ? m_avail.Dequeue() : null;
@@ -273,7 +273,8 @@ namespace pr
 		[Test] public static void TestLinkStream()
 		{
 			const string src = "This is a longest message to test blocking and asynchronous communication using the link stream";
-			
+			string msg = string.Empty;
+
 			EventWaitHandle wait = new EventWaitHandle(false, EventResetMode.ManualReset);
 			Exception write_ex = null, read_ex = null;
 			
@@ -291,11 +292,10 @@ namespace pr
 				{
 					try
 					{
-						string msg;
+						
 						using (var sr = new StreamReader(link.IStream))
 							msg = sr.ReadToEnd();
 						
-						Assert.AreEqual(src, msg);
 						wait.Set();
 					}
 					catch (Exception ex) { read_ex = ex; wait.Set(); }
@@ -304,6 +304,7 @@ namespace pr
 			wait.WaitOne();
 			Assert.IsNull(write_ex);
 			Assert.IsNull(read_ex);
+			Assert.AreEqual(src, msg);
 		}
 	}
 }

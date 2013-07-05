@@ -24,7 +24,7 @@ namespace RyLogViewer
 		/// <summary>The selected filepaths</summary>
 		public IEnumerable<string> Filepaths { get { return m_filepaths.Select(x => x.FullName); } }
 
-		public AggregateFilesUI()
+		public AggregateFilesUI(Main main)
 		{
 			InitializeComponent();
 			m_filepaths = new BindingList<FileInfo>();
@@ -60,6 +60,9 @@ namespace RyLogViewer
 				{
 					m_btn_ok.Enabled = m_bs_filepaths.Count != 0;
 				};
+
+			Shown  += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new FeatureController(main,this));
+			Closed += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new FeatureController(main,null));
 		}
 
 		/// <summary>Drop file paths into the grid</summary>
@@ -76,6 +79,44 @@ namespace RyLogViewer
 			var filepaths = (string[])args.Data.GetData(DataFormats.FileDrop);
 			m_filepaths.AddRange(filepaths.Select(x => new FileInfo(x)));
 			return true;
+		}
+
+		/// <summary>Controller for restricting aggregate file use</summary>
+		private class FeatureController :ILicensedFeature
+		{
+			private readonly Main m_main;
+			private readonly AggregateFilesUI m_ui;
+			public FeatureController(Main main, AggregateFilesUI ui)
+			{
+				m_main = main;
+				m_ui = ui;
+			}
+
+			/// <summary>An html description of the licensed feature</summary>
+			public string FeatureDescription
+			{
+				get { return Resources.cripple_aggregate_files; }
+			}
+
+			/// <summary>True if the licensed feature is still currently in use</summary>
+			public bool FeatureInUse
+			{
+				get
+				{
+					return
+						m_main != null && m_main.FileSource is AggregateFile ||
+						m_ui != null && m_ui.Visible;
+				}
+			}
+
+			/// <summary>Called to stop the use of the feature</summary>
+			public void CloseFeature(Main main)
+			{
+				if (m_main != null && m_main.FileSource is AggregateFile)
+					m_main.CloseLogFile();
+				if (m_ui != null && m_ui.Visible)
+					m_ui.Close();
+			}
 		}
 
 		#region Windows Form Designer generated code
@@ -158,8 +199,7 @@ namespace RyLogViewer
 			this.m_lbl_instructions.Name = "m_lbl_instructions";
 			this.m_lbl_instructions.Size = new System.Drawing.Size(306, 26);
 			this.m_lbl_instructions.TabIndex = 3;
-			this.m_lbl_instructions.Text = "Add files by dragging and dropping, or via the \'Add Files\' button.\r\nDrag files wi" +
-    "thin the table below to change the order.";
+			this.m_lbl_instructions.Text = "Add files by dragging and dropping, or via the \'Add Files\' button.\r\nDrag files within the table below to change the order.";
 			// 
 			// m_btn_add_files
 			// 

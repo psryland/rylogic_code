@@ -117,7 +117,7 @@
 			this.m_menu_help_check_for_updates = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_about = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_evaluation_version = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_free_version = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_status = new System.Windows.Forms.StatusStrip();
 			this.m_status_filesize = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_status_line_end = new System.Windows.Forms.ToolStripStatusLabel();
@@ -354,7 +354,7 @@
             this.m_menu_line_ending,
             this.m_menu_tools,
             this.m_menu_help,
-            this.m_menu_evaluation_version});
+            this.m_menu_free_version});
 			this.m_menu.Location = new System.Drawing.Point(0, 0);
 			this.m_menu.Name = "m_menu";
 			this.m_menu.Size = new System.Drawing.Size(835, 24);
@@ -832,14 +832,14 @@
 			this.m_menu_help_about.Size = new System.Drawing.Size(173, 22);
 			this.m_menu_help_about.Text = "&About";
 			// 
-			// m_menu_evaluation_version
+			// m_menu_free_version
 			// 
-			this.m_menu_evaluation_version.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-			this.m_menu_evaluation_version.ForeColor = System.Drawing.Color.Red;
-			this.m_menu_evaluation_version.Name = "m_menu_evaluation_version";
-			this.m_menu_evaluation_version.Padding = new System.Windows.Forms.Padding(40, 0, 40, 0);
-			this.m_menu_evaluation_version.Size = new System.Drawing.Size(224, 20);
-			this.m_menu_evaluation_version.Text = "*** Evaluation Version ***";
+			this.m_menu_free_version.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+			this.m_menu_free_version.ForeColor = System.Drawing.Color.Red;
+			this.m_menu_free_version.Name = "m_menu_free_version";
+			this.m_menu_free_version.Padding = new System.Windows.Forms.Padding(40, 0, 40, 0);
+			this.m_menu_free_version.Size = new System.Drawing.Size(244, 20);
+			this.m_menu_free_version.Text = "RyLogViewer - Free Edition ...";
 			// 
 			// m_status
 			// 
@@ -892,7 +892,7 @@
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Right) 
             | System.Windows.Forms.ToolStripStatusLabelBorderSides.Bottom)));
 			this.m_status_spring.Name = "m_status_spring";
-			this.m_status_spring.Size = new System.Drawing.Size(221, 19);
+			this.m_status_spring.Size = new System.Drawing.Size(552, 19);
 			this.m_status_spring.Spring = true;
 			this.m_status_spring.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -1258,7 +1258,7 @@
 		private System.Windows.Forms.ToolStripButton m_btn_quick_filter;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_message_fixed;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_wizards_aggregatelogfile;
-		private System.Windows.Forms.ToolStripMenuItem m_menu_evaluation_version;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_free_version;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_view_help;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator12;
 	}

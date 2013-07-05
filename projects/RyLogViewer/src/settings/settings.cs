@@ -324,7 +324,7 @@ namespace RyLogViewer
 		// Default construct settings
 		public Settings()
 		{
-			LicenceHolder                   = Constants.EvalLicence;
+			LicenceHolder                   = Constants.FreeLicence;
 			Company                         = string.Empty;
 			RecentFiles                     = string.Empty;
 			Font                            = new Font("Consolas", 8.25f, GraphicsUnit.Point);

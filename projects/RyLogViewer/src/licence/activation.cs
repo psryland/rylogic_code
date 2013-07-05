@@ -74,7 +74,7 @@ namespace RyLogViewer
 			bool valid            = valid_crc && m_licence.Valid;
 			
 			m_lbl_valid.Text =
-				!valid_characters || !valid_length ? "Evaluation Licence" :
+				!valid_characters || !valid_length ? "Free Licence" :
 				!valid_crc ? "Code Invalid" :
 				!valid ? "Licence Rejected" : "Licence Accepted";
 			

@@ -16,6 +16,7 @@ using System.Windows.Forms.VisualStyles;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gfx;
 using pr.gui;
 using pr.inet;
 using pr.maths;
@@ -47,6 +48,7 @@ namespace RyLogViewer
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
 		private Encoding m_encoding;                          // The file encoding
 		private IFileSource m_file;                           // A file stream source
+		private Licence m_license;                            // License data
 		private byte[] m_row_delim;                           // The row delimiter converted from a string to a byte[] using the current encoding
 		private byte[] m_col_delim;                           // The column delimiter, cached to prevent m_settings access in CellNeeded
 		private int m_row_height;                             // The row height, cached to prevent settings lookups in CellNeeded
@@ -63,6 +65,7 @@ namespace RyLogViewer
 		{
 			m_startup_options = startup_options;
 			m_settings = new Settings(m_startup_options.SettingsPath);
+			m_license = new Licence(m_startup_options.AppDataDir);
 
 			Log.Register(m_settings.LogFilePath, false);
 			Log.Info(this, "App Startup: {0}".Fmt(DateTime.Now));
@@ -161,7 +164,7 @@ namespace RyLogViewer
 			m_menu_help_register.Click                 += (s,a) => ShowActivation();
 			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
 			m_menu_help_about.Click                    += (s,a) => ShowAbout();
-			m_menu_evaluation_version.Click            += (s,a) => ShowAbout();
+			m_menu_free_version.Click                  += (s,a) => ShowFreeVersionInfo();
 			m_recent.Import(m_settings.RecentFiles);
 			
 			// Toolbar
@@ -272,6 +275,9 @@ namespace RyLogViewer
 			ApplySettings();
 		}
 
+		/// <summary>The currently loaded file source</summary>
+		public IFileSource FileSource { get { return m_file; } }
+
 		/// <summary>Apply the startup options</summary>
 		private void ApplyStartupOptions()
 		{
@@ -356,13 +362,13 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Returns true if there is a log file currently open</summary>
-		private bool FileOpen
+		public bool FileOpen
 		{
 			get { return m_file != null; }
 		}
 		
 		/// <summary>Close the current log file</summary>
-		private void CloseLogFile()
+		public void CloseLogFile()
 		{
 			using (m_suspend_grid_events.Refer)
 			{
@@ -512,7 +518,7 @@ namespace RyLogViewer
 		/// <summary>Show the aggregate log file wizard</summary>
 		private void AggregateFileWizard()
 		{
-			var dg = new AggregateFilesUI();
+			var dg = new AggregateFilesUI(this);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			
 			var filepaths = dg.Filepaths.ToList();
@@ -721,6 +727,7 @@ namespace RyLogViewer
 			if (m_tail_enabled && SelectedRowIndex != m_grid.RowCount - 1)
 				EnableTail(false);
 			UpdateStatus();
+			CycleColours();
 		}
 
 		/// <summary>Handler for cell double clicks</summary>
@@ -1346,6 +1353,14 @@ namespace RyLogViewer
 			new About(m_startup_options).ShowDialog(this);
 		}
 
+		/// <summary>Display info about the app being a free version</summary>
+		private void ShowFreeVersionInfo()
+		{
+			var dlg = HelpUI.FromHtml(ParentForm, Resources.free_version, "RyLogViewer Free Edition", Size.Empty, new Size(480,640), ToolForm.EPin.Centre);
+			dlg.FormBorderStyle = FormBorderStyle.Sizable;
+			dlg.ShowDialog(this);
+		}
+
 		/// <summary>Convert an encoding name to encoding object</summary>
 		private Encoding GetEncoding(string enc_name)
 		{
@@ -1675,8 +1690,9 @@ namespace RyLogViewer
 				m_menu_tools_clear_log_file.Enabled = file_open;
 				m_menu_tools_alwaysontop.Checked = m_settings.AlwaysOnTop;
 
-				var lic = new Licence(m_startup_options.AppDataDir);
-				m_menu_evaluation_version.Visible = !lic.Valid;
+				// Reread the licence
+				m_license = new Licence(m_startup_options.AppDataDir);
+				m_menu_free_version.Visible = !m_license.Valid;
 
 				// Toolbar
 				m_btn_quick_filter.Checked = m_settings.QuickFilterEnabled;
@@ -1838,6 +1854,16 @@ namespace RyLogViewer
 			pt.Offset(-2,-32);
 			m_balloon.Show(msg, parent, pt, 2000);
 		}
+
+		/// <summary>Cycles colours for the 'free edition' menu item</summary>
+		private void CycleColours()
+		{
+			if (!m_menu_free_version.Visible) return;
+			m_free_version_menu_colour.H += 0.01f;
+			if (m_free_version_menu_colour.H > 1f) m_free_version_menu_colour.H = 0f;
+			m_menu_free_version.ForeColor = m_free_version_menu_colour.ToColor();
+		}
+		private HSV m_free_version_menu_colour = HSV.FromColor(Color.Red);
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
 		private class CheckedButtonRenderer :ToolStripProfessionalRenderer

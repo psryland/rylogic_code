@@ -19,7 +19,7 @@ namespace RyLogViewer
 	public static class Constants
 	{
 		public const string SupportEmail            = "support@rylogic.co.nz";
-		public const string EvalLicence             = "Evaluation Licence";
+		public const string FreeLicence             = "Free Edition Licence";
 		public const string AppIdentifier           = "rylogviewer";
 		public const int MaxHistoryDefault          = 10;
 		public const int PortNumberMin              = 0;
@@ -58,6 +58,20 @@ namespace RyLogViewer
 				Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
 				Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
 			};
+	}
+
+	public static class FreeEditionLimits
+	{
+		public const int MaxHighlights = 5;
+		public const int MaxFilters    = 5;
+		public const int MaxTransforms = 5;
+		public const int MaxActions    = 5;
+		public const int FeatureEnableTimeInMinutes = 15;
+	}
+
+	public static class FeatureName
+	{
+		public const string AggregateFiles = "AggregateFiles";
 	}
 
 	public enum EPattern

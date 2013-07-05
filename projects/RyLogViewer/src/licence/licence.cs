@@ -105,26 +105,27 @@ namespace RyLogViewer
 			try
 			{
 				var lic = Path.Combine(dir, "licence.xml");
-				if (!File.Exists(lic)) throw new FileNotFoundException("Licence file not found");
-				
-				// Load the licence file
-				var doc = XDocument.Load(lic, LoadOptions.None);
-				if (doc.Root == null) throw new InvalidDataException("licence file invalid");
-				
-				// ReSharper disable PossibleNullReferenceException
-				LicenceHolder  = doc.Root.Element(XmlTag.LicenceHolder).Value;
-				Company        = doc.Root.Element(XmlTag.Company).Value;
-				SoftwareKey    = doc.Root.Element(XmlTag.SoftwareKey).Value;
-				// ReSharper restore PossibleNullReferenceException
-				
-				return;
+				if (File.Exists(lic))
+				{
+					// Load the licence file
+					var doc = XDocument.Load(lic, LoadOptions.None);
+					if (doc.Root == null) throw new InvalidDataException("licence file invalid");
+
+					// ReSharper disable PossibleNullReferenceException
+					LicenceHolder  = doc.Root.Element(XmlTag.LicenceHolder).Value;
+					Company        = doc.Root.Element(XmlTag.Company).Value;
+					SoftwareKey    = doc.Root.Element(XmlTag.SoftwareKey).Value;
+					// ReSharper restore PossibleNullReferenceException
+
+					return;
+				}
 			}
 			catch (FileNotFoundException) { Log.Info(this, "Licence file not found"); }
 			catch (Exception ex) { Log.Exception(this, ex, "Licence file invalid"); }
 			
-			// No valid licence file found. Create a default evaluation licence
-			LicenceHolder  = Constants.EvalLicence;
-			Company        = Constants.EvalLicence;
+			// No valid licence file found. Create a default free licence
+			LicenceHolder  = Constants.FreeLicence;
+			Company        = Constants.FreeLicence;
 			ActivationCode = "<paste your activation licence here>";
 		}
 
@@ -158,10 +159,11 @@ namespace RyLogViewer
 			if (!Valid)
 			{
 				rtf.Append(new Rtf.TextStyle{FontSize = 10, FontStyle = Rtf.EFontStyle.Bold, ForeColourIndex = rtf.ColourIndex(Color.DarkRed)});
-				rtf.AppendLine("EVALUATION LICENCE");
+				rtf.AppendLine("Free Edition Licence");
 				rtf.Append(new Rtf.TextStyle{FontSize = 8, FontStyle = Rtf.EFontStyle.Regular});
-				rtf.AppendLine("This copy of RyLogViewer is for evaluation purposes only.");
-				rtf.AppendLine("If you find it useful, please consider purchasing a license.");
+				rtf.AppendLine("This copy of RyLogViewer is using the free edition licence.");
+				rtf.AppendLine("All features are available, however limits are in place.");
+				rtf.AppendLine("If you find RyLogViewer useful, please consider purchasing a license.");
 			}
 			else
 			{
@@ -266,7 +268,7 @@ namespace RyLogViewer
 	{
 		// have a timed "uncripple"... whenever a cripple limit is reached
 		// show a dialog saying:
-		// "This feature has been limited in the evaluation version."
+		// "This feature has been limited in the free version."
 		// "You can remove these limits for 5 minutes, after which time "
 		// "the limits will be automatically reapplied."
 		// "Please consider purchasing an activation code."

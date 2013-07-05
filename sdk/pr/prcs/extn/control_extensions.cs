@@ -109,9 +109,9 @@ namespace pr.extn
 			new Timer{Enabled = true, Interval = delay}.Tick += (s,a) =>
 			{
 				var timer = (Timer)s;
-				action();
 				timer.Enabled = false;
 				timer.Dispose();
+				action();
 			};
 		}
 

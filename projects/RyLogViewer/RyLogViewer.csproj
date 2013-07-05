@@ -100,6 +100,9 @@
     <Compile Include="src\control_subclasses.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="src\cripple_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\export.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -125,6 +128,9 @@
     <Compile Include="src\licence\licence.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\licensed_features.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\settings\clkaction.cs" />
     <Compile Include="src\settings\clkaction_ui.cs">
       <SubType>Form</SubType>
@@ -134,6 +140,7 @@
     <Compile Include="src\settings\pattern_ui_base.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="src\settings\pattern_unittests.cs" />
     <Compile Include="src\startup_options.cs" />
     <Compile Include="src\export_ui.cs">
       <SubType>Form</SubType>
@@ -236,6 +243,27 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Content Include="Resources\cripple.css" />
+    <Content Include="Resources\cripple_aggregate_files.htm">
+      <DependentUpon>cripple_aggregate_files.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="Resources\swizzle_quick_ref.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>swizzle_quick_ref.t4html</DependentUpon>
+    </Content>
+    <Content Include="Resources\transform_quick_ref.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>transform_quick_ref.t4html</DependentUpon>
+    </Content>
+    <Content Include="Resources\version_history.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>version_history.t4html</DependentUpon>
+    </Content>
     <None Include="build_docs.cmd" />
     <None Include="docs\installation.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -273,8 +301,6 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="docs\title_panel.t4html" />
-    <None Include="Resources\swizzle_quick_ref.html" />
-    <None Include="Resources\command_line_ref.html" />
     <Content Include="docs\book.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -365,9 +391,56 @@
     <Content Include="docs\totd7.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\transform_quick_ref.html" />
-    <None Include="Resources\regex_quick_ref.html" />
-    <None Include="Resources\version_history.html" />
+    <Content Include="Resources\command_line_ref.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>command_line_ref.t4html</DependentUpon>
+    </Content>
+    <Content Include="Resources\free_edition.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>free_edition.t4html</DependentUpon>
+    </Content>
+    <Content Include="Resources\quick_ref.css" />
+    <Content Include="Resources\regex_quick_ref.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>regex_quick_ref.t4html</DependentUpon>
+    </Content>
+    <None Include="Resources\auto_refresh.t4html">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Resources\cripple_aggregate_files.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>cripple_aggregate_files.htm</LastGenOutput>
+    </None>
+    <None Include="Resources\free_edition.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>free_edition.htm</LastGenOutput>
+    </None>
+    <None Include="Resources\cripple_footer.t4html">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Resources\swizzle_quick_ref.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>swizzle_quick_ref.htm</LastGenOutput>
+    </None>
+    <None Include="Resources\command_line_ref.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>command_line_ref.htm</LastGenOutput>
+    </None>
+    <None Include="Resources\transform_quick_ref.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>transform_quick_ref.htm</LastGenOutput>
+    </None>
+    <None Include="Resources\regex_quick_ref.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>regex_quick_ref.htm</LastGenOutput>
+    </None>
+    <None Include="Resources\version_history.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>version_history.htm</LastGenOutput>
+    </None>
     <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
     </EmbeddedResource>
@@ -376,6 +449,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\colour_picker_ui.resx">
       <DependentUpon>colour_picker_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\cripple_ui.resx">
+      <DependentUpon>cripple_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\export_ui.resx">
       <DependentUpon>export_ui.cs</DependentUpon>
@@ -523,7 +599,6 @@
     <Content Include="docs\totd.css">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\background.png" />
     <Content Include="Resources\book.png" />
     <None Include="Resources\quick_filter.png" />
     <None Include="Resources\pencil.png" />
@@ -533,7 +608,6 @@
     <None Include="Resources\bottom.png" />
     <None Include="Resources\bookmark.png" />
     <None Include="Resources\find_search.png" />
-    <Content Include="Resources\evaluation_version.html" />
     <Content Include="docs\example_logfile.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
