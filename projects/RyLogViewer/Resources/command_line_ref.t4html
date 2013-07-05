@@ -1,19 +1,11 @@
-﻿<html xmlns="http://www.w3.org/1999/xhtml">
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <title>Command Line Syntax</title>
         <style type="text/css">
-            table { border:1px solid black; border-collapse:collapse; width:70%; }
-            th { border:1px solid black; border-collapse:collapse; }
-            td { border:1px solid black; border-collapse:collapse; }
-            .mono { font-family:monospace; font-size:0.8em; }
-            .mono_indent { font-family:monospace; font-size:0.8em; padding-left:20px; }
-            .option_column
-            {
-                font-family: monospace;
-                font-size: 0.8em;
-                width: 240px;
-            }
-            
+			<#@include file="quick_ref.css"#>
         </style>
     </head>
     <body>

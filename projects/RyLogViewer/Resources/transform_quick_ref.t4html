@@ -1,21 +1,14 @@
-﻿<html xmlns="http://www.w3.org/1999/xhtml">
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<title>Transforms - Quick Reference</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta http-equiv="refresh" content="3" /><!--hack-->
 		<style type="text/css">
-			* { font-family: sans-serif; }
-			table { border: 1px solid #006000; border-collapse: collapse; width: 100%; margin-left: auto; margin-right: auto; margin-bottom: 20px; }
-			th { border: 1px solid #006000; border-collapse: collapse; font-style: italic; padding: 3px; min-width: 100px; max-width: 400px; word-wrap: break-word; }
-			td { border: 1px solid #006000; border-collapse: collapse; margin: 5px; padding: 3px; min-width: 100px; max-width: 400px; word-wrap: break-word; }
-			pre { margin:0px; }
-			#title { text-align: center; font-weight: bolder; font-size: 150%; margin: 20px; color: #000060; }
-			.heading { font-weight: bold; line-height: 150%; color: #000060; }
-			.content { text-align: justify; margin-top: 5px; margin-bottom: 15px; }
-			.mono { font-family: monospace; }
-			.match { font-family: monospace; color: #007000; background-color: #B0F0B0; }
-			.nomatch { font-family: monospace; color: #C00000; }
+			<#@include file="quick_ref.css"#>
 		</style>
-		<meta http-equiv="refresh" content="3">
 	</head>
 	<body>
 		<div id="title">Text Transforms - Quick Reference</div>
@@ -37,7 +30,7 @@
 			
 			The match pattern is a ... todo
 		</div>
-		
+
 		<div class="heading">Regular Expression Substitutions</div>
 		<div class="content">
 			Substitutions are regular expression language elements that are supported in replacement patterns. The metacharacters listed in the following table are atomic zero-width assertions.

@@ -1,0 +1,27 @@
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<title>Regular Expressions - Quick Reference</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<#@include file="auto_refresh.t4html"#>
+		<style type="text/css">
+			<#@include file="cripple.css"#>
+		</style>
+	</head>
+	<body>
+		<div id="title">Aggregate Files</div>
+		<div class="content">
+			The aggregate files feature allows multiple files to be viewed as though they are a
+			single file. All features (including highlighting, searching, filtering, etc) operate
+			on the aggregate file in the same manor as they do for a single file.<br/>
+			<br/>
+			In addition, the <i>Export</i> function can by used to create a single amalgamated file
+			that is the result of all of the files concatenated together after filtering and/or text
+			transformations have been applied.<br/>
+			<br/>
+		</div>
+		<#@include file="cripple_footer.t4html"#>
+	</body>
+</html>

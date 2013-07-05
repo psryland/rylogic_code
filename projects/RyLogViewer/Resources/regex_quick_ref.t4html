@@ -1,28 +1,20 @@
-﻿<html xmlns="http://www.w3.org/1999/xhtml">
+﻿<#@template language="C#"#>
+<#@output extension="htm"#>
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<title>Regular Expressions - Quick Reference</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<meta http-equiv="refresh" content="3" /><!--hack-->
 		<style type="text/css">
-			* { font-family: sans-serif; }
-			table { border: 1px solid #006000; border-collapse: collapse; width: 100%; margin-left: auto; margin-right: auto; margin-bottom: 20px; }
-			th { border: 1px solid #006000; border-collapse: collapse; font-style: italic; padding: 3px; min-width: 100px; max-width: 400px; word-wrap: break-word; }
-			td { border: 1px solid #006000; border-collapse: collapse; margin: 5px; padding: 3px; min-width: 100px; max-width: 400px; word-wrap: break-word; }
-			pre { margin:0px; }
-			#title { text-align: center; font-weight: bolder; font-size: 150%; margin: 20px; color: #000060; }
-			.heading { font-weight: bold; line-height: 150%; color: #000060; }
-			.content { text-align: justify; margin-top: 5px; margin-bottom: 15px; }
-			.mono { font-family: monospace; }
-			.match { font-family: monospace; color: #007000; background-color: #B0F0B0; }
-			.nomatch { font-family: monospace; color: #C00000; }
+			<#@include file="quick_ref.css"#>
 		</style>
-		<meta http-equiv="refresh" content="3">
-		<!--hack-->
 	</head>
 	<body>
 		<div id="title">Regular Expressions - Quick Reference</div>
 		<div class="content">
 			RyLogViewer uses the .NET Framework 4.0 regular expression engine. For more details on regular
-			expression support see <a href="http://msdn.microsoft.com/en-us/library/hs600312.aspx">microsoft's documentation.</a>
+			expression support see <a href="http://msdn.microsoft.com/en-us/library/hs600312.aspx">Microsoft's documentation.</a>
 		</div>
 
 		<div class="heading">Character Classes</div>
@@ -47,11 +39,11 @@
 						Any single character except \n (the new line character). To match a literal period character 
 						(. or \u002E), precede it with an <a href="#escape_character">escape character</a>
 					</td>
-					<td class="mono">f.llst.p\.</td>
+					<td class="mono">f.ll st.p\.</td>
 					<td>
-						<div><span class="nomatch">fullstop</span></div>
-						<div><span class="match">fullstop.</span></div>
-						<div><span class="match">fallstep.</span></div>
+						<div><span class="nomatch">full stop</span></div>
+						<div><span class="match">full stop.</span></div>
+						<div><span class="match">fall step.</span></div>
 					</td>
 				</tr>
 				<tr>
