@@ -255,11 +255,12 @@ namespace RyLogViewer
 		/// <summary>Launch a browser to the online store</summary>
 		private void VisitStore()
 		{
-			Process p = new Process();
-			p.StartInfo.Arguments = "url.dll,FileProtocolHandler " + "http://store.kagi.com/cgi-bin/store.cgi?storeID=6FFFY_LIVE";
-			p.StartInfo.FileName = "rundll32";
-			p.StartInfo.UseShellExecute = false;
-			p.Start();
+			Process.Start(Constants.StoreLink);
+			//Process p = new Process();
+			//p.StartInfo.Arguments = "url.dll,FileProtocolHandler " + "http://store.kagi.com/cgi-bin/store.cgi?storeID=6FFFY_LIVE";
+			//p.StartInfo.FileName = "rundll32";
+			//p.StartInfo.UseShellExecute = false;
+			//p.Start();
 		}
 	}
 

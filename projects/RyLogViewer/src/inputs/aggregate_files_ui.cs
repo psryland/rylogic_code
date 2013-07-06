@@ -61,8 +61,8 @@ namespace RyLogViewer
 					m_btn_ok.Enabled = m_bs_filepaths.Count != 0;
 				};
 
-			Shown  += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new FeatureController(main,this));
-			Closed += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new FeatureController(main,null));
+			Shown  += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new AggregateFileLimiter(main,this));
+			Closed += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new AggregateFileLimiter(main,null));
 		}
 
 		/// <summary>Drop file paths into the grid</summary>
@@ -79,44 +79,6 @@ namespace RyLogViewer
 			var filepaths = (string[])args.Data.GetData(DataFormats.FileDrop);
 			m_filepaths.AddRange(filepaths.Select(x => new FileInfo(x)));
 			return true;
-		}
-
-		/// <summary>Controller for restricting aggregate file use</summary>
-		private class FeatureController :ILicensedFeature
-		{
-			private readonly Main m_main;
-			private readonly AggregateFilesUI m_ui;
-			public FeatureController(Main main, AggregateFilesUI ui)
-			{
-				m_main = main;
-				m_ui = ui;
-			}
-
-			/// <summary>An html description of the licensed feature</summary>
-			public string FeatureDescription
-			{
-				get { return Resources.cripple_aggregate_files; }
-			}
-
-			/// <summary>True if the licensed feature is still currently in use</summary>
-			public bool FeatureInUse
-			{
-				get
-				{
-					return
-						m_main != null && m_main.FileSource is AggregateFile ||
-						m_ui != null && m_ui.Visible;
-				}
-			}
-
-			/// <summary>Called to stop the use of the feature</summary>
-			public void CloseFeature(Main main)
-			{
-				if (m_main != null && m_main.FileSource is AggregateFile)
-					m_main.CloseLogFile();
-				if (m_ui != null && m_ui.Visible)
-					m_ui.Close();
-			}
 		}
 
 		#region Windows Form Designer generated code

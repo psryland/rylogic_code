@@ -21,6 +21,8 @@ namespace RyLogViewer
 		public const string SupportEmail            = "support@rylogic.co.nz";
 		public const string FreeLicence             = "Free Edition Licence";
 		public const string AppIdentifier           = "rylogviewer";
+		public const string Purchase                = "purchase";
+		public const string StoreLink               = "http://store.kagi.com/cgi-bin/store.cgi?storeID=6FFFY_LIVE";
 		public const int MaxHistoryDefault          = 10;
 		public const int PortNumberMin              = 0;
 		public const int PortNumberWebProxyDefault  = 8080;
@@ -72,6 +74,7 @@ namespace RyLogViewer
 	public static class FeatureName
 	{
 		public const string AggregateFiles = "AggregateFiles";
+		public const string Highlighting   = "Highlighting";
 	}
 
 	public enum EPattern

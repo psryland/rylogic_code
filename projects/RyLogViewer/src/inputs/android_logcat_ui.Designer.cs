@@ -32,7 +32,7 @@
 			this.m_edit_adb_fullpath = new System.Windows.Forms.TextBox();
 			this.label1 = new System.Windows.Forms.Label();
 			this.m_btn_browse_adb = new System.Windows.Forms.Button();
-			this.m_listbox_devices = new System.Windows.Forms.ListBox();
+			this.m_listbox_devices = new ListBox();
 			this.label2 = new System.Windows.Forms.Label();
 			this.m_edit_adb_command = new System.Windows.Forms.TextBox();
 			this.m_lbl_logcat_command = new System.Windows.Forms.Label();
@@ -46,7 +46,7 @@
 			this.m_combo_log_format = new ComboBox();
 			this.m_lbl_filterspec = new System.Windows.Forms.Label();
 			this.m_grid_filterspec = new DataGridView();
-			this.m_listbox_log_buffers = new System.Windows.Forms.ListBox();
+			this.m_listbox_log_buffers = new ListBox();
 			this.m_lbl_log_buffers = new System.Windows.Forms.Label();
 			this.m_btn_browse_output_file = new System.Windows.Forms.Button();
 			this.m_check_capture_to_log = new System.Windows.Forms.CheckBox();
@@ -353,7 +353,7 @@
 		private System.Windows.Forms.TextBox m_edit_adb_fullpath;
 		private System.Windows.Forms.Label label1;
 		private System.Windows.Forms.Button m_btn_browse_adb;
-		private System.Windows.Forms.ListBox m_listbox_devices;
+		private ListBox m_listbox_devices;
 		private System.Windows.Forms.Label label2;
 		private System.Windows.Forms.TextBox m_edit_adb_command;
 		private System.Windows.Forms.Label m_lbl_logcat_command;
@@ -365,7 +365,7 @@
 		private System.Windows.Forms.CheckBox m_check_capture_to_log;
 		private System.Windows.Forms.Button m_btn_browse_output_file;
 		private System.Windows.Forms.Label m_lbl_log_buffers;
-		private System.Windows.Forms.ListBox m_listbox_log_buffers;
+		private ListBox m_listbox_log_buffers;
 		private System.Windows.Forms.Label m_lbl_filterspec;
 		private DataGridView m_grid_filterspec;
 		private System.Windows.Forms.Label m_lbl_log_format;

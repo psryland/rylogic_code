@@ -15,10 +15,11 @@ namespace RyLogViewer
 {
 	public partial class SettingsUI :Form
 	{
+		private readonly Main        m_main;         // The main app
 		private readonly Settings    m_settings;     // The app settings changed by this UI
 		private readonly ToolTip     m_tt;           // Tooltips
 		private readonly ToolTip     m_balloon;      // Balloon hits
-		private readonly HoverScroll m_hover_scroll; // Hoverscroll for the pattern grid
+		private readonly HoverScroll m_hover_scroll; // Hover scroll for the pattern grid
 		private List<Highlight>      m_highlights;   // The highlight patterns currently in the grid
 		private List<Filter>         m_filters;      // The filter patterns currently in the grid
 		private List<Transform>      m_transforms;   // The transforms currently in the grid
@@ -71,10 +72,11 @@ namespace RyLogViewer
 		public PatternUI ActionUI { get { return m_pattern_ac; } }
 		public bool ActionsChanged { get; set; }
 
-		public SettingsUI(Settings settings, ETab tab, ESpecial special = ESpecial.None)
+		public SettingsUI(Main main, Settings settings, ETab tab, ESpecial special = ESpecial.None)
 		{
 			InitializeComponent();
 			KeyPreview     = true;
+			m_main         = main;
 			m_settings     = settings;
 			m_special      = special;
 			m_tt           = new ToolTip();
@@ -124,6 +126,8 @@ namespace RyLogViewer
 					m_settings.FilterPatterns    = Filter   .Export(m_filters);
 					m_settings.TransformPatterns = Transform.Export(m_transforms);
 					m_settings.ActionPatterns    = ClkAction.Export(m_actions);
+
+					m_main.UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(m_main, m_settings));
 				};
 			
 			UpdateUI();
@@ -890,7 +894,6 @@ namespace RyLogViewer
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			T pat = patterns[e.RowIndex];
-			Point pt = MousePosition;
 			Highlight hl = pat as Highlight;
 			Filter    ft = pat as Filter;
 			ClkAction ac = pat as ClkAction;
@@ -968,15 +971,6 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Helper for creating a text colour picker menu</summary>
-		private static void PickColours(Control ctrl, int x, int y, EventHandler pick_fore, EventHandler pick_back)
-		{
-			var menu = new ContextMenuStrip();
-			menu.Items.Add(new ToolStripMenuItem(Resources.ChangeForeColour, null, pick_fore));
-			menu.Items.Add(new ToolStripMenuItem(Resources.ChangeBackColour, null, pick_back));
-			menu.Show(ctrl, x, y);
-		}
-
 		/// <summary>Colour picker helper</summary>
 		private Color PickColour(Color current)
 		{
@@ -1034,10 +1028,37 @@ namespace RyLogViewer
 				m_grid_action.SelectRow(selected);
 				
 				m_text_settings.Text = m_settings.Filepath;
+
+				m_main.UseLicensedFeature(FeatureName.Highlighting, new SettingsHighlightingCountLimiter(m_main, m_settings, this));
 			}
 			finally
 			{
 				ResumeLayout();
+			}
+		}
+
+		/// <summary>A highlighting count limiter for when the settings dialog is displayed</summary>
+		private class SettingsHighlightingCountLimiter :HighlightingCountLimiter
+		{
+			private readonly SettingsUI m_ui; 
+			public SettingsHighlightingCountLimiter(Main main, Settings settings, SettingsUI ui)
+				:base(main, settings)
+			{
+				m_ui = ui;
+			}
+
+			/// <summary>True if the licensed feature is still currently in use</summary>
+			public override bool FeatureInUse
+			{
+				get { return m_ui.m_highlights.Count > FreeEditionLimits.MaxHighlights || base.FeatureInUse; }
+			}
+
+			/// <summary>Called to stop the use of the feature</summary>
+			public override void CloseFeature(Main main)
+			{
+				m_ui.m_highlights.RemoveToEnd(FreeEditionLimits.MaxHighlights);
+				m_ui.UpdateUI();
+				base.CloseFeature(main);
 			}
 		}
 	}

@@ -1,0 +1,146 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Windows.Forms;
+using RyLogViewer.Properties;
+using pr.extn;
+
+namespace RyLogViewer
+{
+	/// <summary>Interface for controlling time limited features</summary>
+	public interface ILicensedFeature
+	{
+		/// <summary>An html description of the licensed feature</summary>
+		string FeatureDescription { get; }
+
+		/// <summary>True if the licensed feature is still currently in use</summary>
+		bool FeatureInUse { get; }
+
+		/// <summary>Called to stop the use of the feature</summary>
+		void CloseFeature(Main main);
+	}
+
+	public sealed partial class Main
+	{
+		/// <summary>The collection of licensed features in use</summary>
+		private readonly Dictionary<string, ILicensedFeature> m_licensed_features = new Dictionary<string, ILicensedFeature>();
+
+		/// <summary>Call to begin or update a time limited feature</summary>
+		public void UseLicensedFeature(string key, ILicensedFeature use)
+		{
+			if (m_license.Valid)
+				return;
+
+			// See if the feature is already monitored, if so, just update the interface
+			if (m_licensed_features.ContainsKey(key))
+			{
+				m_licensed_features[key] = use;
+				return;
+			}
+
+			// If the feature isn't in use, ignore the request (this method is called recursively)
+			if (!use.FeatureInUse)
+				return;
+
+			// Otherwise, prompt about the feature
+			var dlg = new CrippleUI(use.FeatureDescription);
+			if (dlg.ShowDialog(this) != DialogResult.OK)
+			{
+				// Not interested, close and go home
+				use.CloseFeature(this);
+				return;
+			}
+
+			// Otherwise, the user wants to use the feature
+			m_licensed_features[key] = use;
+			this.BeginInvokeDelayed(
+				//hack(int)TimeSpan.FromMinutes(FreeEditionLimits.FeatureEnableTimeInMinutes).TotalMilliseconds,
+				(int)TimeSpan.FromSeconds(5).TotalMilliseconds,
+				() =>
+				{
+					ILicensedFeature feat;
+					if (!m_licensed_features.TryGetValue(key, out feat)) return;
+					m_licensed_features.Remove(key);
+					UseLicensedFeature(key, feat);
+				});
+		}
+	}
+
+	/// <summary>Limits the number of highlighting patterns in use</summary>
+	public class HighlightingCountLimiter :ILicensedFeature
+	{
+		private readonly Main m_main;
+		private readonly Settings m_settings;
+		public HighlightingCountLimiter(Main main, Settings settings)
+		{
+			m_main = main;
+			m_settings = settings;
+		}
+
+		/// <summary>An html description of the licensed feature</summary>
+		public string FeatureDescription
+		{
+			get { return Resources.cripple_highlighting; }
+		}
+
+		/// <summary>True if the licensed feature is still currently in use</summary>
+		public virtual bool FeatureInUse
+		{
+			get
+			{
+				// Read the patterns from the settings to see if more than the max allowed are in use
+				var pats = Highlight.Import(m_settings.HighlightPatterns);
+				return pats.Count > FreeEditionLimits.MaxHighlights;
+			}
+		}
+
+		/// <summary>Called to stop the use of the feature</summary>
+		public virtual void CloseFeature(Main main)
+		{
+			// Read the patterns from the settings to see if more than the max allowed are in use
+			var pats = Highlight.Import(m_settings.HighlightPatterns);
+			pats.RemoveToEnd(FreeEditionLimits.MaxHighlights);
+			m_settings.HighlightPatterns = Highlight.Export(pats);
+			m_main.ApplySettings();
+		}
+	}
+
+	/// <summary>Limits the use of aggregate files</summary>
+	public class AggregateFileLimiter :ILicensedFeature
+	{
+		private readonly Main m_main;
+		private readonly AggregateFilesUI m_ui;
+		public AggregateFileLimiter(Main main, AggregateFilesUI ui)
+		{
+			m_main = main;
+			m_ui = ui;
+		}
+
+		/// <summary>An html description of the licensed feature</summary>
+		public string FeatureDescription
+		{
+			get { return Resources.cripple_aggregate_files; }
+		}
+
+		/// <summary>True if the licensed feature is still currently in use</summary>
+		public bool FeatureInUse
+		{
+			get
+			{
+				return
+					m_main != null && m_main.FileSource is AggregateFile ||
+					m_ui != null && m_ui.Visible;
+			}
+		}
+
+		/// <summary>Called to stop the use of the feature</summary>
+		public void CloseFeature(Main main)
+		{
+			if (m_main != null && m_main.FileSource is AggregateFile)
+				m_main.CloseLogFile();
+			if (m_ui != null && m_ui.Visible)
+				m_ui.Close();
+		}
+	}
+
+}

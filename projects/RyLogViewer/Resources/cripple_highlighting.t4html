@@ -11,9 +11,10 @@
 		</style>
 	</head>
 	<body>
-		<div id="title"><a href="docs/options_highlighting.htm">Highlighting Patterns</a></div>
+		<div id="title">Highlighting Patterns</div>
 		<div class="content">
-			
+			<a href="docs/options_highlighting.htm">Highlighting patterns</a> are limited to a maximum
+			of 5 patterns in the free edition. In the licensed edition, there is no limit.
 		</div>
 		<#@include file="cripple_footer.t4html_inc"#>
 	</body>

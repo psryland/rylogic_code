@@ -99,6 +99,8 @@ namespace RyLogViewer
 				// Export the current patterns as xml
 				XDocument doc = new XDocument(new XElement(XmlTag.Root));
 				if (doc.Root == null) throw new ApplicationException("failed to add root xml element");
+				doc.Root.Add(new XElement(XmlTag.Version, Version));
+
 				CurrentSetToXml(doc.Root);
 
 				// Write the current set to a file in the app path

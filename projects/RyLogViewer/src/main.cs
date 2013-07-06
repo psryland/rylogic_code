@@ -1178,7 +1178,7 @@ namespace RyLogViewer
 
 			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
-			var ui = new SettingsUI(m_settings, tab, special);
+			var ui = new SettingsUI(this, m_settings, tab, special);
 			switch (tab)
 			{
 			default: throw new ArgumentOutOfRangeException("tab");
@@ -1547,7 +1547,7 @@ namespace RyLogViewer
 		/// after the settings dialog has been shown and closed. It needs to
 		/// update anything that is only changed in the settings.
 		/// Note: it doesn't trigger a file reload.</summary>
-		private void ApplySettings()
+		public void ApplySettings()
 		{
 			Log.Info(this, "Applying settings");
 
@@ -1568,7 +1568,10 @@ namespace RyLogViewer
 			// Highlights;
 			m_highlights.Clear();
 			if (m_settings.HighlightsEnabled)
+			{
 				m_highlights.AddRange(Highlight.Import(m_settings.HighlightPatterns).Where(x => x.Active));
+				UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(this, m_settings));
+			}
 
 			// Filters
 			m_filters.Clear();

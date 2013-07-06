@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Xml.Linq;
@@ -64,7 +63,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Serialise the highlight patterns to xml</summary>
-		public static string Export(List<Highlight> highlights)
+		public static string Export(IEnumerable<Highlight> highlights)
 		{
 			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";

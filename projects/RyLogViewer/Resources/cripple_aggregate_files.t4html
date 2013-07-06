@@ -11,11 +11,9 @@
 		</style>
 	</head>
 	<body>
-		<div id="title"><a href="docs/aggregate_files.htm">Aggregate Files</a></div>
+		<div id="title">Aggregate Files</div>
 		<div class="content">
-			The aggregate files feature allows multiple files to be viewed as though they are a
-			single file. All functions (including highlighting, searching, filtering, etc) operate
-			on the aggregate file in the same manor as they do for a single file.
+			The <a href="docs/aggregate_files.htm">aggregate files</a> feature is available in the licensed edition only.
 		</div>
 		<#@include file="cripple_footer.t4html_inc"#>
 	</body>
