@@ -1,5 +1,4 @@
-﻿<#@template language="C#"#>
-<#@output extension="htm"#>
+﻿<#@ include file="cripple_meta.t4html_inc" #>
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
@@ -14,7 +13,7 @@
 		<div id="title">Highlighting Patterns</div>
 		<div class="content">
 			<a href="docs/options_highlighting.htm">Highlighting patterns</a> are limited to a maximum
-			of 5 patterns in the free edition. In the licensed edition, there is no limit.
+			of <#= max_highlights #> patterns in the free edition. In the licensed edition, there is no limit.
 		</div>
 		<#@include file="cripple_footer.t4html_inc"#>
 	</body>

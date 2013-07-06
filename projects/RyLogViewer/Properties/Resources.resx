@@ -409,6 +409,9 @@ Right click to show the actions dialog</value>
 	<data name="cripple_highlighting" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\Resources\cripple_highlighting.htm;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
 	</data>
+	<data name="cripple_filtering" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\Resources\cripple_filtering.htm;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	</data>
 	<data name="cripple_aggregate_files" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\Resources\cripple_aggregate_files.htm;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
 	</data>

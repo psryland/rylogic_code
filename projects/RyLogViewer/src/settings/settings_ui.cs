@@ -128,6 +128,7 @@ namespace RyLogViewer
 					m_settings.ActionPatterns    = ClkAction.Export(m_actions);
 
 					m_main.UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(m_main, m_settings));
+					m_main.UseLicensedFeature(FeatureName.Filtering   , new FilteringCountLimiter(m_main, m_settings));
 				};
 			
 			UpdateUI();
@@ -1030,6 +1031,7 @@ namespace RyLogViewer
 				m_text_settings.Text = m_settings.Filepath;
 
 				m_main.UseLicensedFeature(FeatureName.Highlighting, new SettingsHighlightingCountLimiter(m_main, m_settings, this));
+				m_main.UseLicensedFeature(FeatureName.Filtering,    new SettingsFilteringCountLimiter(m_main, m_settings, this));
 			}
 			finally
 			{
@@ -1054,11 +1056,36 @@ namespace RyLogViewer
 			}
 
 			/// <summary>Called to stop the use of the feature</summary>
-			public override void CloseFeature(Main main)
+			public override void CloseFeature()
 			{
 				m_ui.m_highlights.RemoveToEnd(FreeEditionLimits.MaxHighlights);
 				m_ui.UpdateUI();
-				base.CloseFeature(main);
+				base.CloseFeature();
+			}
+		}
+
+		/// <summary>A filtering count limiter for when the settings dialog is displayed</summary>
+		private class SettingsFilteringCountLimiter :HighlightingCountLimiter
+		{
+			private readonly SettingsUI m_ui; 
+			public SettingsFilteringCountLimiter(Main main, Settings settings, SettingsUI ui)
+				:base(main, settings)
+			{
+				m_ui = ui;
+			}
+
+			/// <summary>True if the licensed feature is still currently in use</summary>
+			public override bool FeatureInUse
+			{
+				get { return m_ui.m_filters.Count > FreeEditionLimits.MaxFilters || base.FeatureInUse; }
+			}
+
+			/// <summary>Called to stop the use of the feature</summary>
+			public override void CloseFeature()
+			{
+				m_ui.m_filters.RemoveToEnd(FreeEditionLimits.MaxFilters);
+				m_ui.UpdateUI();
+				base.CloseFeature();
 			}
 		}
 	}

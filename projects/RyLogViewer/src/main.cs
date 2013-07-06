@@ -1576,7 +1576,10 @@ namespace RyLogViewer
 			// Filters
 			m_filters.Clear();
 			if (m_settings.FiltersEnabled)
+			{
 				m_filters.AddRange(Filter.Import(m_settings.FilterPatterns).Where(x => x.Active));
+				UseLicensedFeature(FeatureName.Filtering, new FilteringCountLimiter(this, m_settings));
+			}
 
 			// Transforms
 			m_transforms.Clear();

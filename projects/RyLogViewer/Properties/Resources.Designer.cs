@@ -220,11 +220,12 @@ namespace RyLogViewer.Properties {
         ///			*
         ///{
         ///	font-family: sans-serif;
+        ///	font-size:12pt;
         ///}
         ///
         ///body
         ///{
-        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZNze4N3eecPn1nIPv06VPv1KlTxfv37zeLxeLImTNniv1+f+zBgwcTt2/fHj9/ [rest of string was truncated]&quot;;.
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZNze4N3eecPn1nIPv06VPv1KlTxfv37zeLxeLImTNniv [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string command_line_ref {
             get {
@@ -301,7 +302,7 @@ namespace RyLogViewer.Properties {
         ///			*
         ///{
         ///	font-family: sans-serif;
-        ///	font-size:10pt;
+        ///	font-size:11pt;
         ///}
         ///
         ///body
@@ -311,6 +312,15 @@ namespace RyLogViewer.Properties {
         internal static string cripple_aggregate_files {
             get {
                 return ResourceManager.GetString("cripple_aggregate_files", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to ErrorGeneratingOutput.
+        /// </summary>
+        internal static string cripple_filtering {
+            get {
+                return ResourceManager.GetString("cripple_filtering", resourceCulture);
             }
         }
         
@@ -327,7 +337,7 @@ namespace RyLogViewer.Properties {
         ///			*
         ///{
         ///	font-family: sans-serif;
-        ///	font-size:10pt;
+        ///	font-size:11pt;
         ///}
         ///
         ///body
@@ -838,7 +848,7 @@ namespace RyLogViewer.Properties {
         ///			*
         ///{
         ///	font-family: sans-serif;
-        ///	font-size:11pt;
+        ///	font-size:12pt;
         ///}
         ///
         ///body
@@ -935,7 +945,7 @@ namespace RyLogViewer.Properties {
         ///			*
         ///{
         ///	font-family: sans-serif;
-        ///	font-size:14pt;
+        ///	font-size:12pt;
         ///}
         ///
         ///body
@@ -990,11 +1000,12 @@ namespace RyLogViewer.Properties {
         ///			*
         ///{
         ///	font-family: sans-serif;
+        ///	font-size:12pt;
         ///}
         ///
         ///body
         ///{
-        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZNze4N3eecPn1nIPv06VPv1KlTxfv37zeLxeLImTNniv1+f+zBgwcTt2/fHj9//nwpG35+/fo1mJ6eLnS [rest of string was truncated]&quot;;.
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZNze4N3eecPn1nIPv06VPv1KlTxfv37zeLxeLImTNniv1+f+zBgwcTt2/fHj9// [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string version_history {
             get {

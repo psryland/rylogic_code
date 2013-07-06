@@ -75,6 +75,7 @@ namespace RyLogViewer
 	{
 		public const string AggregateFiles = "AggregateFiles";
 		public const string Highlighting   = "Highlighting";
+		public const string Filtering      = "Filtering";
 	}
 
 	public enum EPattern

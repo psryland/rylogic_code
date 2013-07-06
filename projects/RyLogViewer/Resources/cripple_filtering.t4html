@@ -2,7 +2,7 @@
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
-		<title>Aggregate Files Licensed Feature</title>
+		<title>Filtering Patterns Licensed Feature</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 		<#@include file="..\docs\auto_refresh.t4html_inc"#>
 		<style type="text/css">
@@ -10,9 +10,10 @@
 		</style>
 	</head>
 	<body>
-		<div id="title">Aggregate Files</div>
+		<div id="title">Filtering Patterns</div>
 		<div class="content">
-			The <a href="docs/aggregate_files.htm">aggregate files</a> feature is available in the licensed edition only.
+			<a href="docs/options_filtering.htm">Filtering patterns</a> are limited to a maximum
+			of <#= max_filters #> patterns in the free edition. In the licensed edition, there is no limit.
 		</div>
 		<#@include file="cripple_footer.t4html_inc"#>
 	</body>

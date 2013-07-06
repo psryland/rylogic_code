@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
@@ -17,7 +16,7 @@ namespace RyLogViewer
 		bool FeatureInUse { get; }
 
 		/// <summary>Called to stop the use of the feature</summary>
-		void CloseFeature(Main main);
+		void CloseFeature();
 	}
 
 	public sealed partial class Main
@@ -47,7 +46,7 @@ namespace RyLogViewer
 			if (dlg.ShowDialog(this) != DialogResult.OK)
 			{
 				// Not interested, close and go home
-				use.CloseFeature(this);
+				use.CloseFeature();
 				return;
 			}
 
@@ -95,12 +94,51 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Called to stop the use of the feature</summary>
-		public virtual void CloseFeature(Main main)
+		public virtual void CloseFeature()
 		{
 			// Read the patterns from the settings to see if more than the max allowed are in use
 			var pats = Highlight.Import(m_settings.HighlightPatterns);
 			pats.RemoveToEnd(FreeEditionLimits.MaxHighlights);
 			m_settings.HighlightPatterns = Highlight.Export(pats);
+			m_main.ApplySettings();
+		}
+	}
+
+	/// <summary>Limits the number of highlighting patterns in use</summary>
+	public class FilteringCountLimiter :ILicensedFeature
+	{
+		private readonly Main m_main;
+		private readonly Settings m_settings;
+		public FilteringCountLimiter(Main main, Settings settings)
+		{
+			m_main = main;
+			m_settings = settings;
+		}
+
+		/// <summary>An html description of the licensed feature</summary>
+		public string FeatureDescription
+		{
+			get { return Resources.cripple_filtering; }
+		}
+
+		/// <summary>True if the licensed feature is still currently in use</summary>
+		public virtual bool FeatureInUse
+		{
+			get
+			{
+				// Read the patterns from the settings to see if more than the max allowed are in use
+				var pats = Filter.Import(m_settings.FilterPatterns);
+				return pats.Count > FreeEditionLimits.MaxFilters;
+			}
+		}
+
+		/// <summary>Called to stop the use of the feature</summary>
+		public virtual void CloseFeature()
+		{
+			// Read the patterns from the settings to see if more than the max allowed are in use
+			var pats = Filter.Import(m_settings.FilterPatterns);
+			pats.RemoveToEnd(FreeEditionLimits.MaxFilters);
+			m_settings.FilterPatterns = Filter.Export(pats);
 			m_main.ApplySettings();
 		}
 	}
@@ -134,7 +172,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Called to stop the use of the feature</summary>
-		public void CloseFeature(Main main)
+		public void CloseFeature()
 		{
 			if (m_main != null && m_main.FileSource is AggregateFile)
 				m_main.CloseLogFile();

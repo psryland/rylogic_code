@@ -244,8 +244,8 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Content Include="Resources\cripple_highlighting.htm">
-      <DependentUpon>cripple_highlighting.t4html</DependentUpon>
+    <Content Include="Resources\cripple_filtering.htm">
+      <DependentUpon>cripple_filtering.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
     </Content>
@@ -254,6 +254,11 @@
       <DependentUpon>cripple_aggregate_files.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="Resources\cripple_highlighting.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>cripple_highlighting.t4html</DependentUpon>
     </Content>
     <Content Include="Resources\swizzle_quick_ref.htm">
       <AutoGen>True</AutoGen>
@@ -416,6 +421,10 @@
     <None Include="docs\auto_refresh.t4html_inc">
       <SubType>Designer</SubType>
     </None>
+    <None Include="Resources\cripple_filtering.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>cripple_filtering.htm</LastGenOutput>
+    </None>
     <None Include="Resources\cripple_highlighting.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>cripple_highlighting.htm</LastGenOutput>
@@ -424,6 +433,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>cripple_aggregate_files.htm</LastGenOutput>
     </None>
+    <None Include="Resources\cripple_meta.t4html_inc" />
     <None Include="Resources\free_edition.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>free_edition.htm</LastGenOutput>
