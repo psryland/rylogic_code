@@ -9,11 +9,21 @@
 		}
 	}
 
-	/// <summary>Workaround for first chance exception in stand combo box</summary>
 	public sealed class ComboBox :System.Windows.Forms.ComboBox
 	{
 		public override int SelectedIndex
 		{
+			// Workaround for first chance exception in SelectedIndex
+			get { return Items.Count != 0 ? base.SelectedIndex : -1; }
+			set { if (Items.Count != 0) base.SelectedIndex = value; }
+		}
+	}
+
+	public sealed class ListBox :System.Windows.Forms.ListBox
+	{
+		public override int SelectedIndex
+		{
+			// Workaround for first chance exception in SelectedIndex
 			get { return Items.Count != 0 ? base.SelectedIndex : -1; }
 			set { if (Items.Count != 0) base.SelectedIndex = value; }
 		}

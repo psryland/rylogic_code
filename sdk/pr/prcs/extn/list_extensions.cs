@@ -170,6 +170,14 @@ namespace pr.extn
 			return count;
 		}
 
+		/// <summary>Remove the range of elements from [startIndex, list.Count)</summary>
+		public static void RemoveToEnd<T>(this List<T> list, int startIndex)
+		{
+			var diff = list.Count - startIndex;
+			if (diff > 0)
+				list.RemoveRange(startIndex, diff);
+		}
+
 		/// <summary>Binary search using for an element using only a predicate function.
 		/// Returns the index of the element if found or the 2s-complement of the first
 		/// element larger than the one searched for.

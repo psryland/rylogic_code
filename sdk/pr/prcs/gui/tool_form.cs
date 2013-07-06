@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -7,7 +8,7 @@ namespace pr.gui
 	/// <summary>A base class for (typically non-modal) tool-windows that move with their parent</summary>
 	public class ToolForm :Form
 	{
-		public enum EPin { TopLeft, TopRight, BottomLeft, BottomRight };
+		public enum EPin { TopLeft, TopRight, BottomLeft, BottomRight, Centre };
 		private Size m_ofs;
 		private EPin m_pin;
 		
@@ -101,10 +102,12 @@ namespace pr.gui
 			if (Owner == null) return;
 			switch (Pin)
 			{
+			default: Debug.Assert(false, "Unknown pin type"); break;
 			case EPin.TopLeft:     m_ofs = new Size(Location.X - Owner.Left , Location.Y - Owner.Top   ); break;
 			case EPin.TopRight:    m_ofs = new Size(Location.X - Owner.Right, Location.Y - Owner.Top   ); break;
 			case EPin.BottomLeft:  m_ofs = new Size(Location.X - Owner.Left , Location.Y - Owner.Bottom); break;
 			case EPin.BottomRight: m_ofs = new Size(Location.X - Owner.Right, Location.Y - Owner.Bottom); break;
+			case EPin.Centre:      m_ofs = new Size(Location.X - (Owner.Left+Owner.Right)/2, Location.Y - (Owner.Top+Owner.Bottom)/2); break;
 			}
 		}
 
@@ -115,10 +118,12 @@ namespace pr.gui
 			if (Owner == null) return;
 			switch (Pin)
 			{
+			default: Debug.Assert(false, "Unknown pin type"); break;
 			case EPin.TopLeft:     Location = new Point(Owner.Left , Owner.Top   ) + m_ofs; break;
 			case EPin.TopRight:    Location = new Point(Owner.Right, Owner.Top   ) + m_ofs; break;
 			case EPin.BottomLeft:  Location = new Point(Owner.Left , Owner.Bottom) + m_ofs; break;
 			case EPin.BottomRight: Location = new Point(Owner.Right, Owner.Bottom) + m_ofs; break;
+			case EPin.Centre:      Location = new Point((Owner.Left+Owner.Right)/2, (Owner.Top+Owner.Bottom)/2) + m_ofs; break;
 			}
 		}
 	}

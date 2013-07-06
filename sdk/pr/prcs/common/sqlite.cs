@@ -1126,10 +1126,17 @@ namespace pr.common
 				QueryCache.Flush();
 			}
 
-			/// <summary>Flush the query cache</summary>
+			/// <summary>Flush the object cache for a specific type</summary>
 			public void FlushObjectCache(Type type)
 			{
 				ObjectCache(type).Flush();
+			}
+
+			/// <summary>Flush all object caches</summary>
+			public void FlushObjectCaches()
+			{
+				foreach (var c in m_caches)
+					c.Value.Flush();
 			}
 
 			/// <summary>Returns the object cache for a specific table</summary>
@@ -1437,6 +1444,12 @@ namespace pr.common
 			/// <summary>Handler for the data changed event to invalidate cached objects</summary>
 			private void InvalidateCachesOnDataChanged(object sender, DataChangedArgs args)
 			{
+				if (string.IsNullOrEmpty(args.TableName))
+                {
+					FlushObjectCaches();
+					return;
+                }
+
 				ICache<object,object> cache;
 				if (m_caches.TryGetValue(args.TableName, out cache))
 				{

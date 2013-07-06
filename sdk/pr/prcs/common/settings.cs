@@ -185,11 +185,11 @@ namespace pr.common
 			public SettingsSavingEventArgs() :this(false) {}
 			public SettingsSavingEventArgs(bool cancel) :base(cancel) {}
 		}
-		
+
 		/// <summary>Default settings instance</summary>
 		protected SettingsBase()
 		{}
-		
+
 		/// <summary>Initialise the settings object</summary>
 		protected SettingsBase(string filepath)
 		{
@@ -210,7 +210,7 @@ namespace pr.common
 			}
 			AutoSaveOnChanges = true;
 		}
-		
+
 		/// <summary>Get/Set whether to automatically save whenever a setting is changed</summary>
 		public bool AutoSaveOnChanges
 		{
@@ -237,7 +237,7 @@ namespace pr.common
 		{
 			Load(Filepath);
 		}
-		
+
 		/// <summary>Refreshes the settings from persistent storage</summary>
 		public void Load(string filepath)
 		{
@@ -309,8 +309,8 @@ namespace pr.common
 				Log.Debug(this, "Saving settings to file {0}".Fmt(filepath));
 
 				// Perform the save
-				DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
-				using (XmlWriter fs = XmlWriter.Create(filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
+				var ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
+				using (var fs = XmlWriter.Create(filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
 					ser.WriteObject(fs, Data);
 			}
 			finally { m_block_saving = false; }
