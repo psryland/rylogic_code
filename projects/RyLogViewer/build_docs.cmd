@@ -19,6 +19,7 @@ set PATH=%qdrive%\sdk\pr\cmd\;%PATH%
 ::Careful! these can overwrite MSBuild variables if you choose the same names (i.e. outdir is already used!)
 set proj=%qdrive%\projects\RyLogViewer
 set docsdir=%proj%\docs
+set resdir=%proj%\Resources
 
 echo *************************************************************************
 echo  RyLogViewer Documentation
@@ -28,6 +29,11 @@ pause
 
 echo.
 for %%f in (%docsdir%\*.t4html) do (
+	echo %%f ...
+	"%ttbuild%" "%%f"
+	if errorlevel 1 goto :error
+)
+for %%f in (%resdir%\*.t4html) do (
 	echo %%f ...
 	"%ttbuild%" "%%f"
 	if errorlevel 1 goto :error

@@ -2,27 +2,11 @@
 <#@output extension="htm"#>
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<head>
-		<#@include file="head.t4html"#>
-	</head>
+	<#@include file="help_head.t4html_inc"#>
 	<body id="main_help">
-		<#@include file="title_panel.t4html"#>
+		<#@include file="help_title_panel.t4html_inc"#>
+		<#@include file="help_index_panel.t4html_inc"#>
 		<div>
-			<table id="main_table">
-				<tr>
-					<td class="left_panel">
-						<#@include file="index_panel.t4html"#>
-					</td>
-					<td class="right_panel">
-						<div id="details">
-							<div class="title">Filtering</div>
-							<div class="content">
-								Filtering...
-							</div>
-						</div>
-					</td>
-				</tr>
-			</table>
 		</div>
 	</body>
 </html>

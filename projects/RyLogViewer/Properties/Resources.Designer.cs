@@ -212,16 +212,19 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///    &lt;head&gt;
         ///        &lt;title&gt;Command Line Syntax&lt;/title&gt;
         ///        &lt;style type=&quot;text/css&quot;&gt;
-        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
-        ///            th { border:1px solid black; border-collapse:collapse; }
-        ///            td { border:1px solid black; border-collapse:collapse; }
-        ///            .mono { font-family:monospace; font-size:0.8em; }
-        ///            .mono_indent { font-family:monospace; font-size:0.8em; padding-left:20px; }
-        ///   [rest of string was truncated]&quot;;.
+        ///			*
+        ///{
+        ///	font-family: sans-serif;
+        ///}
+        ///
+        ///body
+        ///{
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZNze4N3eecPn1nIPv06VPv1KlTxfv37zeLxeLImTNniv1+f+zBgwcTt2/fHj9/ [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string command_line_ref {
             get {
@@ -282,6 +285,58 @@ namespace RyLogViewer.Properties {
         internal static string CreatePatternSetFailedMsg {
             get {
                 return ResourceManager.GetString("CreatePatternSetFailedMsg", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///	&lt;head&gt;
+        ///		&lt;title&gt;Aggregate Files Licensed Feature&lt;/title&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		&lt;!--hack--&gt;
+        ///&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot; /&gt;
+        ///
+        ///		&lt;style type=&quot;text/css&quot;&gt;
+        ///			*
+        ///{
+        ///	font-family: sans-serif;
+        ///	font-size:10pt;
+        ///}
+        ///
+        ///body
+        ///{
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQ [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string cripple_aggregate_files {
+            get {
+                return ResourceManager.GetString("cripple_aggregate_files", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///	&lt;head&gt;
+        ///		&lt;title&gt;Highlighting Patterns Licensed Feature&lt;/title&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		&lt;!--hack--&gt;
+        ///&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot; /&gt;
+        ///
+        ///		&lt;style type=&quot;text/css&quot;&gt;
+        ///			*
+        ///{
+        ///	font-family: sans-serif;
+        ///	font-size:10pt;
+        ///}
+        ///
+        ///body
+        ///{
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAU [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string cripple_highlighting {
+            get {
+                return ResourceManager.GetString("cripple_highlighting", resourceCulture);
             }
         }
         
@@ -480,6 +535,29 @@ namespace RyLogViewer.Properties {
             get {
                 object obj = ResourceManager.GetObject("folder_with_file", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///	&lt;head&gt;
+        ///		&lt;title&gt;Free Version&lt;/title&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot; /&gt;&lt;!--hack--&gt;
+        ///		&lt;style type=&quot;text/css&quot;&gt;
+        ///			*
+        ///			{
+        ///				font-family: sans-serif;
+        ///				font-size:12pt;
+        ///			}
+        ///			body
+        ///			{
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVU [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string free_version {
+            get {
+                return ResourceManager.GetString("free_version", resourceCulture);
             }
         }
         
@@ -750,18 +828,22 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
-        ///    &lt;head&gt;
-        ///        &lt;title&gt;Regular Expressions - Quick Reference&lt;/title&gt;
-        ///        &lt;style type=&quot;text/css&quot;&gt;
-        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
-        ///            th { border:1px solid black; border-collapse:collapse; }
-        ///            td { border:1px solid black; border-collapse:collapse; }
-        ///            .mono { font-family:monospace; font-size:0.8em; }
-        ///        &lt;/style&gt;
-        ///    &lt;/head&gt;
-        ///    &lt;body&gt;
-        ///        &lt;h2 style=&quot;text-align: [rest of string was truncated]&quot;;.
+        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///	&lt;head&gt;
+        ///		&lt;title&gt;Regular Expressions - Quick Reference&lt;/title&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot; /&gt;&lt;!--hack--&gt;
+        ///		&lt;style type=&quot;text/css&quot;&gt;
+        ///			*
+        ///{
+        ///	font-family: sans-serif;
+        ///	font-size:11pt;
+        ///}
+        ///
+        ///body
+        ///{
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbn [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string regex_quick_ref {
             get {
@@ -847,18 +929,18 @@ namespace RyLogViewer.Properties {
         
         /// <summary>
         ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
-        ///    &lt;head&gt;
-        ///        &lt;title&gt;Swizzle - Quick Reference&lt;/title&gt;
-        ///        &lt;style type=&quot;text/css&quot;&gt;
-        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
-        ///            th { border:1px solid black; border-collapse:collapse; }
-        ///            td { border:1px solid black; border-collapse:collapse; }
-        ///            .mono { font-family:monospace; font-size:0.8em; }
-        ///            .mono { }
-        ///        &lt;/style&gt;
-        ///    &lt;/head&gt;
-        ///    &lt;body&gt;
-        ///        &lt;div&gt;&lt;h2 st [rest of string was truncated]&quot;;.
+        ///	&lt;head&gt;
+        ///		&lt;title&gt;Swizzle - Quick Reference&lt;/title&gt;
+        ///		&lt;style type=&quot;text/css&quot;&gt;
+        ///			*
+        ///{
+        ///	font-family: sans-serif;
+        ///	font-size:14pt;
+        ///}
+        ///
+        ///body
+        ///{
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZNze4N3eecPn1nIPv06VPv1KlTxfv37zeLxeLImTNniv1+f+zBgwcTt2/fHj9//nwpG35+ [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string swizzle_quick_ref {
             get {
@@ -867,18 +949,22 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
-        ///    &lt;head&gt;
-        ///        &lt;title&gt;Match Pattern - Quick Reference&lt;/title&gt;
-        ///        &lt;style type=&quot;text/css&quot;&gt;
-        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
-        ///            th { border:1px solid black; border-collapse:collapse; }
-        ///            td { border:1px solid black; border-collapse:collapse; }
-        ///        &lt;/style&gt;
-        ///    &lt;/head&gt;
-        ///    &lt;body&gt;
-        ///        &lt;h2 style=&quot;text-align:center&quot;&gt;Match Pattern - Quick Reference&lt;/h2&gt;
-        ///        &lt;p&gt;The match pa [rest of string was truncated]&quot;;.
+        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///	&lt;head&gt;
+        ///		&lt;title&gt;Transforms - Quick Reference&lt;/title&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot; /&gt;&lt;!--hack--&gt;
+        ///		&lt;style type=&quot;text/css&quot;&gt;
+        ///			*
+        ///{
+        ///	font-family: sans-serif;
+        ///	font-size:12pt;
+        ///}
+        ///
+        ///body
+        ///{
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHY [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string transform_quick_ref {
             get {
@@ -896,18 +982,19 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
-        ///    &lt;head&gt;
-        ///        &lt;title&gt;Version History&lt;/title&gt;
-        ///        &lt;style type=&quot;text/css&quot;&gt;
-        ///            table { border:1px solid black; border-collapse:collapse; width:70%; }
-        ///            th { border:1px solid black; border-collapse:collapse; }
-        ///            td { border:1px solid black; border-collapse:collapse; }
-        ///            .version_label { font-size:1.2em; font-weight:bolder; font-style:italic; }
-        ///            .date_label {}
-        ///        &lt;/style&gt;
-        ///    &lt;/head&gt;
-        ///    &lt;body&gt;        /// [rest of string was truncated]&quot;;.
+        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///	&lt;head&gt;
+        ///		&lt;title&gt;Version History&lt;/title&gt;
+        ///		&lt;style type=&quot;text/css&quot;&gt;
+        ///			*
+        ///{
+        ///	font-family: sans-serif;
+        ///}
+        ///
+        ///body
+        ///{
+        ///	background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZNze4N3eecPn1nIPv06VPv1KlTxfv37zeLxeLImTNniv1+f+zBgwcTt2/fHj9//nwpG35+/fo1mJ6eLnS [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string version_history {
             get {

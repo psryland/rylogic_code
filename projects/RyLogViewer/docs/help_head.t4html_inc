@@ -3,7 +3,7 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<link rel='stylesheet' type='text/css' href='help.css' />
 	<base target="_parent" />
-	<#@include file="..\Resources\auto_refresh.t4html"#>
+	<#@include file="auto_refresh.t4html_inc"#>
 	<script>
 		function HighlightListItem(item_id)
 		{

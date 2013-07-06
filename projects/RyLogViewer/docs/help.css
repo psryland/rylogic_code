@@ -225,3 +225,15 @@ img.right_inset
 	{
 		margin: 5px;
 	}
+
+.free_feature
+{
+	color: #009000;
+	font-size: 80%;
+}
+
+.licensed_feature
+{
+	color: #0000C0;
+	font-size: 80%;
+}

@@ -2,20 +2,34 @@
 <#@output extension="htm"#>
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<#@include file="head.t4html"#>
+	<#@include file="help_head.t4html_inc"#>
 	<body id="main_help">
-		<#@include file="title_panel.t4html"#>
-		<#@include file="index_panel.t4html"#>
+		<#@include file="help_title_panel.t4html_inc"#>
+		<#@include file="help_index_panel.t4html_inc"#>
 		<div id="content_panel">
 			<div class="title">Overview and Features</div>
 			<div class="content">
 				<ul>
 					<li class="child_list_elem">
 						<div class="tag_label">Unlimited File Sizes</div>
+						<div class="free_feature">Available in Free Edition</div>
 						<div class="content">
 							There is no upper limit on the size of displayed log files
-							 Loads files
+							Loads files
 							(operating system limitations still. of unlimited size (limited only by the operating system)
+						</div>
+					</li>
+					<li class="child_list_elem">
+						<div class="tag_label">Aggregate Files</div>
+						<div class="licensed_feature">Licensed feature</div>
+						<div class="content">
+							The aggregate files feature allows multiple files to be viewed as though they are a
+							single file. All features (including highlighting, searching, filtering, etc) operate
+							on the aggregate file in the same manor as they do for a single file.<br />
+							<br />
+							In addition, the <i>Export</i> function can by used to create a single amalgamated file
+							that is the result of all of the files concatenated together after filtering and/or text
+							transformations have been applied.<br />
 						</div>
 					</li>
 				</ul>

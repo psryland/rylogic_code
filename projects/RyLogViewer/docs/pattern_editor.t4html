@@ -2,10 +2,10 @@
 <#@output extension="htm"#>
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<#@include file="head.t4html"#>
+	<#@include file="help_head.t4html_inc"#>
 	<body id="main_help">
-		<#@include file="title_panel.t4html"#>
-		<#@include file="index_panel.t4html"#>
+		<#@include file="help_title_panel.t4html_inc"#>
+		<#@include file="help_index_panel.t4html_inc"#>
 		<div id="content_panel">
 			<div class="title">Pattern Editor</div>
 			<div class="content">

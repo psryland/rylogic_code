@@ -50,6 +50,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <UseVSHostingProcess>false</UseVSHostingProcess>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
@@ -243,6 +244,11 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Content Include="Resources\cripple_highlighting.htm">
+      <DependentUpon>cripple_highlighting.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Content>
     <Content Include="Resources\cripple.css" />
     <Content Include="Resources\cripple_aggregate_files.htm">
       <DependentUpon>cripple_aggregate_files.t4html</DependentUpon>
@@ -277,7 +283,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>options_appearance.htm</LastGenOutput>
     </None>
-    <None Include="docs\options_dialog.t4html" />
+    <None Include="docs\options_dialog.t4html_inc" />
     <None Include="docs\options_general.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>options_general.htm</LastGenOutput>
@@ -294,13 +300,13 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>welcome.htm</LastGenOutput>
     </None>
-    <None Include="docs\head.t4html">
+    <None Include="docs\help_head.t4html_inc">
       <SubType>Designer</SubType>
     </None>
-    <None Include="docs\index_panel.t4html">
+    <None Include="docs\help_index_panel.t4html_inc">
       <SubType>Designer</SubType>
     </None>
-    <None Include="docs\title_panel.t4html" />
+    <None Include="docs\help_title_panel.t4html_inc" />
     <Content Include="docs\book.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -407,8 +413,12 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>regex_quick_ref.t4html</DependentUpon>
     </Content>
-    <None Include="Resources\auto_refresh.t4html">
+    <None Include="docs\auto_refresh.t4html_inc">
       <SubType>Designer</SubType>
+    </None>
+    <None Include="Resources\cripple_highlighting.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>cripple_highlighting.htm</LastGenOutput>
     </None>
     <None Include="Resources\cripple_aggregate_files.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -418,7 +428,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>free_edition.htm</LastGenOutput>
     </None>
-    <None Include="Resources\cripple_footer.t4html">
+    <None Include="Resources\cripple_footer.t4html_inc">
       <SubType>Designer</SubType>
     </None>
     <None Include="Resources\swizzle_quick_ref.t4html">
