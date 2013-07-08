@@ -11,9 +11,9 @@
 			<div class="fine_print">Copyright © 2007-2013 Rylogic Limited</div>
 			<div class="section_title"><br/></div>
 			<div class="content">
-				RyLogViewer is designed to make the viewing of log files or streaming
-				log data easier through the use of highlighting, filtering, and text
-				transformations. RyLogViewer can display log files of unlimited size
+				RyLogViewer is an application designed to make the viewing of log files or
+				streaming log data easier through the use of highlighting, filtering, and
+				text transformations. RyLogViewer can display log files of unlimited size
 				(limited only by the operating system), as well as files that are being
 				changed in real-time (much like the unix 'tail' command).
 			</div>

@@ -244,6 +244,12 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Content Include="docs\data_sources.htm">
+      <DependentUpon>data_sources.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
     <Content Include="Resources\cripple_filtering.htm">
       <DependentUpon>cripple_filtering.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -276,6 +282,10 @@
       <DependentUpon>version_history.t4html</DependentUpon>
     </Content>
     <None Include="build_docs.cmd" />
+    <None Include="docs\data_sources.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>data_sources.htm</LastGenOutput>
+    </None>
     <None Include="docs\installation.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>installation.htm</LastGenOutput>

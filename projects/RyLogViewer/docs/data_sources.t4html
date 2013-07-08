@@ -7,10 +7,30 @@
 		<#@include file="help_title_panel.t4html_inc"#>
 		<#@include file="help_index_panel.t4html_inc"#>
 		<div id="content_panel">
-			<div class="title">Main Window</div>
+			<div class="title">Data Sources</div>
 			<div class="content">
-				
+				RyLogViewer can display log data from a wide variety of sources, ranging from log
+				files on the local hard drive, to data streamed over a named pipe. A description of
+				each of the fundamental data sources is described below.
 			</div>
+
+			<div id="single_file">
+				<div class="section_title">Single Log File</div>
+				<div class="content">
+					The simplest of all data sources is an existing log file loaded from a local
+					hard drive. There is not a lot to say about this data source, except that the
+					file does not have to be static. RyLogViewer is able to display the file while
+					another program is modifying it so long as that program does not hold an
+					exclusive read blocking lock on the file. Also, files available via shared
+					network drives can be loaded with exactly the same support for real-time
+					display of file modifications.
+				</div>
+			</div>
+			
+			<div id="program_output">
+				<div class="section_title">Program Output</div>
+			</div>
+			<!--
 			<div>
 				<img class="centred" src="main_view.png" alt="main view" usemap="#main_view_map" />
 				<map id="main_view_map" name="main_view_map">
@@ -333,6 +353,7 @@
 					To exit <i>Monitor Mode</i> click on the RyLogViewer icon in the system tray.
 				</div>
 			</div>
+			-->
 		</div>
 	</body>
 </html>

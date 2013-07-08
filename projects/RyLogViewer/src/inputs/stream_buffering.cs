@@ -379,16 +379,16 @@ namespace RyLogViewer
 		public void Start()
 		{
 			m_process.Start();
-			Log.Info(this, "Process {0} started".Fmt(m_process.ProcessName));
+			Log.Info(this, "Process {0} started".Fmt(m_process.StartInfo.FileName));
 
 			// Attach to the window console so we can forward received data to it
 			if (m_launch.ShowWindow)
 				Win32.AttachConsole(m_process.Id);
-			
+
 			// Capture stdout
 			if (m_launch.CaptureStdout)
 				m_process.StandardOutput.BaseStream.BeginRead(m_outbuf, 0, m_outbuf.Length, DataRecv, new AsyncData(m_process.StandardOutput.BaseStream, m_outbuf));
-			
+
 			// Capture stderr
 			if (m_launch.CaptureStderr)
 				m_process.StandardError.BaseStream.BeginRead(m_errbuf, 0, m_errbuf.Length, DataRecv, new AsyncData(m_process.StandardError.BaseStream, m_errbuf));
@@ -406,7 +406,7 @@ namespace RyLogViewer
 			base.DataRecv(ar);
 			if (!m_launch.ShowWindow) return;
 			
-			// If we're "showing the window" forward recieved data to the window
+			// If we're "showing the window" forward received data to the window
 			AsyncData data = (AsyncData)ar.AsyncState;
 			lock (m_lock)
 			{
@@ -424,7 +424,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing process {0}".Fmt(m_process.ProcessName));
+					Log.Info(this, "Disposing process {0}".Fmt(m_process.StartInfo.FileName));
 					if (!m_process.HasExited)
 						if (!m_process.CloseMainWindow())
 							m_process.Kill();

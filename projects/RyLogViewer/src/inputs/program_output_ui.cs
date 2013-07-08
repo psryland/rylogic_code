@@ -89,14 +89,16 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			
-			// Show window
-			m_check_show_window.ToolTip(m_tt, "If checked, the window for the application is shown.\r\n If not, then it is hidden");
-			m_check_show_window.Checked = Launch.ShowWindow;
-			m_check_show_window.Click += (s,a)=>
-				{
-					Launch.ShowWindow = m_check_show_window.Checked;
-					UpdateUI();
-				};
+			// Todo, show window doesn't really work, remove it
+			Launch.ShowWindow = false;
+			//// Show window
+			//m_check_show_window.ToolTip(m_tt, "If checked, the window for the application is shown.\r\n If not, then it is hidden");
+			//m_check_show_window.Checked = Launch.ShowWindow;
+			//m_check_show_window.Click += (s,a)=>
+			//	{
+			//		Launch.ShowWindow = m_check_show_window.Checked;
+			//		UpdateUI();
+			//	};
 
 			// Append to existing
 			m_check_append.ToolTip(m_tt, "If checked, captured output is appended to the capture file.\r\nIf not, then the capture file is overwritten");

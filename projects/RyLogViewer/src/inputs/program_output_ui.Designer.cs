@@ -34,7 +34,6 @@
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_check_capture_stdout = new System.Windows.Forms.CheckBox();
 			this.m_check_capture_stderr = new System.Windows.Forms.CheckBox();
-			this.m_combo_launch_cmdline = new ComboBox();
 			this.m_lbl_cmdline = new System.Windows.Forms.Label();
 			this.m_lbl_output_file = new System.Windows.Forms.Label();
 			this.m_btn_browse_output = new System.Windows.Forms.Button();
@@ -44,7 +43,8 @@
 			this.m_edit_working_dir = new System.Windows.Forms.TextBox();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
 			this.m_check_show_window = new System.Windows.Forms.CheckBox();
-			this.m_combo_output_filepath = new ComboBox();
+			this.m_combo_output_filepath = new RyLogViewer.ComboBox();
+			this.m_combo_launch_cmdline = new RyLogViewer.ComboBox();
 			this.SuspendLayout();
 			// 
 			// m_btn_browse_exec
@@ -98,16 +98,6 @@
 			this.m_check_capture_stderr.TabIndex = 7;
 			this.m_check_capture_stderr.Text = "Log standard error";
 			this.m_check_capture_stderr.UseVisualStyleBackColor = true;
-			// 
-			// m_combo_launch_cmdline
-			// 
-			this.m_combo_launch_cmdline.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_combo_launch_cmdline.FormattingEnabled = true;
-			this.m_combo_launch_cmdline.Location = new System.Drawing.Point(32, 33);
-			this.m_combo_launch_cmdline.Name = "m_combo_launch_cmdline";
-			this.m_combo_launch_cmdline.Size = new System.Drawing.Size(196, 21);
-			this.m_combo_launch_cmdline.TabIndex = 0;
 			// 
 			// m_lbl_cmdline
 			// 
@@ -192,6 +182,7 @@
 			this.m_check_show_window.TabIndex = 9;
 			this.m_check_show_window.Text = "Show window";
 			this.m_check_show_window.UseVisualStyleBackColor = true;
+			this.m_check_show_window.Visible = false;
 			// 
 			// m_combo_output_filepath
 			// 
@@ -202,6 +193,16 @@
 			this.m_combo_output_filepath.Name = "m_combo_output_filepath";
 			this.m_combo_output_filepath.Size = new System.Drawing.Size(196, 21);
 			this.m_combo_output_filepath.TabIndex = 4;
+			// 
+			// m_combo_launch_cmdline
+			// 
+			this.m_combo_launch_cmdline.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_combo_launch_cmdline.FormattingEnabled = true;
+			this.m_combo_launch_cmdline.Location = new System.Drawing.Point(32, 33);
+			this.m_combo_launch_cmdline.Name = "m_combo_launch_cmdline";
+			this.m_combo_launch_cmdline.Size = new System.Drawing.Size(196, 21);
+			this.m_combo_launch_cmdline.TabIndex = 0;
 			// 
 			// ProgramOutputUI
 			// 

@@ -360,11 +360,12 @@ namespace RyLogViewer
 									// Ensure the grid is updated
 									UpdateUI(row_delta);
 
+									if (on_success != null) on_success();
+									UpdateStatusProgress(1, 1);
+									ReloadInProgress = false;
+
 									// On completion, check if the file has changed again and rerun if it has
 									m_watch.CheckForChangedFiles();
-
-									if (on_success != null) on_success();
-									ReloadInProgress = false;
 
 									// Trigger a collect to free up memory, this also has the 
 									// side effect of triggering a signing test of the exe because
@@ -373,22 +374,23 @@ namespace RyLogViewer
 								});
 							}
 						}
-						catch (OperationCanceledException) { }
-						catch (FileNotFoundException)
-						{
-							this.BeginInvoke(() => SetStaticStatusMessage("Error reading {0}".Fmt(Path.GetFileName(m_file.Name)), Color.White, Color.DarkRed));
-						}
 						catch (Exception ex)
-						{
-							Log.Exception(this, ex, "Exception ended BuildLineIndex() call");
-							this.BeginInvoke(() => BuildLineIndexScanTerminated(ex));
-						}
-						finally
 						{
 							this.BeginInvoke(() =>
 								{
 									UpdateStatusProgress(1, 1);
 									ReloadInProgress = false;
+									if (ex is OperationCanceledException)
+									{}
+									else if (ex is FileNotFoundException)
+									{
+										SetStaticStatusMessage("Error reading {0}".Fmt(Path.GetFileName(m_file.Name)), Color.White, Color.DarkRed);
+									}
+									else
+									{
+										Log.Exception(this, ex, "Exception ended BuildLineIndex() call");
+										BuildLineIndexScanTerminated(ex);
+									}
 								});
 						}
 					}, m_build_issue);
