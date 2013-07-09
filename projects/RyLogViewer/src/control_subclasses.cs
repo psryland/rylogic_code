@@ -1,4 +1,9 @@
-﻿namespace RyLogViewer
+﻿using System.Linq;
+using System.Windows.Forms;
+using pr.extn;
+using pr.util;
+
+namespace RyLogViewer
 {
 	/// <summary>Subclass the DataGridView to add missing features</summary>
 	public sealed class DataGridView :System.Windows.Forms.DataGridView

@@ -161,7 +161,7 @@ namespace RyLogViewer
 				// Cause any existing builds to stop by changing the issue number
 				Interlocked.Increment(ref m_build_issue);
 				ReloadInProgress = reload;
-				Log.Info(this, "build start request (id {0})".Fmt(m_build_issue));
+				Log.Info(this, "build start request (id {0}, reload: {1})".Fmt(m_build_issue, reload));
 				//Log.Info(this, "build start request (id {0})\n{1}", m_build_issue, Util.StackTrace(0,9));
 
 				// Find the byte range of the file currently loaded
@@ -216,7 +216,7 @@ namespace RyLogViewer
 						int build_issue = (int)bi;
 						try
 						{
-							Log.Info(this, "build started. (id {0})".Fmt(build_issue));
+							Log.Info(this, "build started. (id {0}, reload {1})".Fmt(build_issue, reload));
 							if (BuildCancelled(build_issue)) return;
 							using (file.Open())
 							{
@@ -242,7 +242,11 @@ namespace RyLogViewer
 								int fwd_lines = line_cache_count / 2;
 
 								// Incremental loading
-								reload |= filepos == last_filepos;
+								if (!reload && filepos == last_filepos)
+								{
+									Log.Info(this, "reload set to true because scanning from the last scan file position");
+									reload = true;
+								}
 								if (!reload)
 								{
 									// True if 'filepos' has moved toward the start of the file

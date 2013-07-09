@@ -4,60 +4,34 @@
 //***************************************************
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
+using pr.extn;
 
 namespace pr.util
 {
+	public enum ELogLevel { Debug, Info, Warn, Error, Exception, Silent }
 
-	public interface ILog
+	public interface ILogWriter
 	{
 		/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
 		void Register(string filepath, bool reset);
 
-		/// <summary>Write debug trace statements into the log</summary>
-		void Debug(object sender, string str);
-
-		/// <summary>Write info to the current log</summary>
-		void Info(object sender, string str);
-
-		/// <summary>Write info to the current log</summary>
-		void Warn(object sender, string str);
-
-		/// <summary>Write info to the current log</summary>
-		void Error(object sender, string str);
-
-		/// <summary>Write info to the current log</summary>
-		void Exception(object sender, Exception ex, string str);
+		/// <summary>Write a message to the log. Filtering already applied</summary>
+		void Write(ELogLevel level, string tag, string str);
 	}
 
 	public static class Log
 	{
-		public enum ELogLevel { Debug, Info, Warn, Error, Exception, Silent }
-
-		public class NullLogger :ILog
+		public class NullLogger :ILogWriter
 		{
-			/// <summary>Set the log level</summary>
-			public ELogLevel Level { get; set; }
-
 			/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
 			public void Register(string filepath, bool reset){}
 
 			/// <summary>Write debug trace statements into the log</summary>
-			public void Debug(object sender, string str){}
-
-			/// <summary>Write info to the current log</summary>
-			public void Info(object sender, string str){}
-
-			/// <summary>Write info to the current log</summary>
-			public void Warn(object sender, string str){}
-
-			/// <summary>Write info to the current log</summary>
-			public void Error(object sender, string str){}
-
-			/// <summary>Write info to the current log</summary>
-			public void Exception(object sender, Exception ex, string str){}
+			public void Write(ELogLevel level, string tag , string str){}
 		}
 
-		public class Logger :ILog
+		public class Logger :ILogWriter
 		{
 			private class LogFile
 			{
@@ -81,9 +55,6 @@ namespace pr.util
 
 			/// <summary>The log file representation</summary>
 			private static LogFile m_log = new LogFile(null, false);
-
-			/// <summary>Set the log level</summary>
-			public ELogLevel Level { get; set; }
 
 			/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
 			public void Register(string filepath, bool reset)
@@ -114,60 +85,24 @@ namespace pr.util
 			}
 		
 			/// <summary>Add a string to the log</summary>
-			private void Write(string str)
+			public void Write(ELogLevel level, string tag, string str)
 			{
-				lock (m_lock) m_log.WriteLog(str);
-			}
-
-			/// <summary>Creates a tag based on the namespace and type of the sender</summary>
-			private string GetTag(object sender)
-			{
-				if (sender == null) return "static";
-				Type sender_type = sender.GetType();
-				return string.Format("{0}.{1}", sender_type.Namespace, sender_type.Name);
-			}
-
-			/// <summary>Write debug trace statements into the log</summary>
-			public void Debug(object sender, string str)
-			{
-				Write(string.Format("[debug][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
-			}
-
-			/// <summary>Write info to the current log</summary>
-			public void Info(object sender, string str)
-			{
-				Write(string.Format("[info][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
-			}
-
-			/// <summary>Write info to the current log</summary>
-			public void Warn(object sender, string str)
-			{
-				Write(string.Format("[warn][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
-			}
-
-			/// <summary>Write info to the current log</summary>
-			public void Error(object sender, string str)
-			{
-				Write(string.Format("[error][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
-			}
-
-			/// <summary>Write info to the current log</summary>
-			public void Exception(object sender, Exception ex, string str)
-			{
-				Write(string.Format("[exception][{0}] {1}"+Environment.NewLine, GetTag(sender), str));
-				Write(string.Format("[exception] {0}"+Environment.NewLine, ex));
+				lock (m_lock) m_log.WriteLog(string.Format("[{0}][{1}] {2}"+Environment.NewLine, level, tag, str));
 			}
 		}
 
-		// Clients should set this to NullLogger to turn off logging
-		public static ILog Implementation { get; set; }
+		/// <summary>Where log output is sent</summary>
+		public static ILogWriter Writer { get; set; }
 
 		/// <summary>Set the log level</summary>
 		public static ELogLevel Level { get; set; }
 
+		/// <summary>Regex filter pattern</summary>
+		public static string FilterPattern { get; set; }
+
 		static Log()
 		{
-			Implementation = new Logger();
+			Writer = new Logger();
 			#if DEBUG
 			Level = ELogLevel.Debug;
 			#else
@@ -175,45 +110,51 @@ namespace pr.util
 			#endif
 		}
 
-		/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
-		public static void Register(string filepath, bool reset)
+		/// <summary>Single method for filtering and formatting log messages</summary>
+		private static void Write(ELogLevel level, object sender, string str, Exception ex = null)
 		{
-			Implementation.Register(filepath, reset);
+			if (level < Level)
+				return;
+
+			string tag;
+			if (sender == null)
+			{
+				tag = "";
+			}
+			else if (sender is string)
+			{
+				tag = (string)sender;
+			}
+			else
+			{
+				Type sender_type = sender.GetType();
+				tag = string.Format("{0}.{1}", sender_type.Namespace, sender_type.Name);
+			}
+
+			if (FilterPattern != null && !Regex.IsMatch(tag, FilterPattern))
+				return;
+
+			var msg = str;
+			if (ex != null) msg += Environment.NewLine + ex.MessageFull();
+			Writer.Write(level, tag, msg);
 		}
+
+		/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
+		public static void Register(string filepath, bool reset) { Writer.Register(filepath, reset); }
 
 		/// <summary>Write debug trace statements into the log</summary>
-		public static void Debug(object sender, string str)
-		{
-			if (Level > ELogLevel.Debug) return;
-			Implementation.Debug(sender, str);
-		}
+		public static void Debug(object sender, string str) { Write(ELogLevel.Debug, sender, str); }
 
 		/// <summary>Write info to the current log</summary>
-		public static void Info(object sender, string str)
-		{
-			if (Level > ELogLevel.Info) return;
-			Implementation.Info(sender, str);
-		}
+		public static void Info(object sender, string str) { Write(ELogLevel.Info, sender, str); }
 
 		/// <summary>Write info to the current log</summary>
-		public static void Warn(object sender, string str)
-		{
-			if (Level > ELogLevel.Warn) return;
-			Implementation.Warn(sender, str);
-		}
+		public static void Warn(object sender, string str) { Write(ELogLevel.Warn, sender, str); }
 
 		/// <summary>Write info to the current log</summary>
-		public static void Error(object sender, string str)
-		{
-			if (Level > ELogLevel.Error) return;
-			Implementation.Error(sender, str);
-		}
+		public static void Error(object sender, string str) { Write(ELogLevel.Error, sender, str); }
 
 		/// <summary>Write info to the current log</summary>
-		public static void Exception(object sender, Exception ex, string str)
-		{
-			if (Level > ELogLevel.Exception) return;
-			Implementation.Exception(sender, ex, str);
-		}
+		public static void Exception(object sender, Exception ex, string str) { Write(ELogLevel.Exception, sender, str, ex); }
 	}
 }

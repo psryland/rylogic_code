@@ -370,7 +370,7 @@ namespace RyLogViewer
 		/// <summary>Close the current log file</summary>
 		public void CloseLogFile()
 		{
-			using (m_suspend_grid_events.Refer)
+			using (m_suspend_grid_events.Reference)
 			{
 				CancelBuildLineIndex();
 				m_line_index.Clear();
@@ -981,7 +981,7 @@ namespace RyLogViewer
 		/// <summary>Handler for the Jump to End button</summary>
 		private void JumpToEnd()
 		{
-			EnableTail(false);
+			//EnableTail(false);
 			BuildLineIndex(m_fileend, false, () =>
 				{
 					SelectedRowIndex = m_grid.RowCount - 1;
@@ -1418,7 +1418,7 @@ namespace RyLogViewer
 			}
 			set
 			{
-				using (m_suspend_grid_events.Refer)
+				using (m_suspend_grid_events.Reference)
 				{
 					value = m_grid.SelectRow(value);
 					Log.Info(this, "Row {0} selected".Fmt(value));
@@ -1488,11 +1488,11 @@ namespace RyLogViewer
 				var selected_rows = m_grid.SelectedRows.Cast<DataGridViewRow>().Select(x => x.Index).OrderBy(x => x).ToList();
 				SelectedRowIndex = -1;
 				m_grid.ClearSelection();
-				
+
 				Log.Info(this, "RowCount changed. Row delta {0}.".Fmt(row_delta));
 				m_grid.RowCount = 0;
 				m_grid.RowCount = count;
-				
+
 				// Restore the selected row, and the first visible row
 				if (count != 0)
 				{
@@ -1647,12 +1647,8 @@ namespace RyLogViewer
 					// Configure the grid
 					if (m_line_index.Count != 0)
 					{
-						// Give the illusion that the alternating row colour is moving with the overall file
-						if ((Math.Abs(row_delta) & 1) == 1)
-							m_first_row_is_odd = !m_first_row_is_odd;
-						
 						// Ensure the grid has the correct number of rows
-						using (m_suspend_grid_events.Refer)
+						using (m_suspend_grid_events.Reference)
 							SetGridRowCount(m_line_index.Count, row_delta);
 					
 						SetGridColumnSizes();
@@ -1661,11 +1657,15 @@ namespace RyLogViewer
 					{
 						m_grid.ColumnHeadersVisible = false;
 						m_grid.ColumnCount = 1;
-						using (m_suspend_grid_events.Refer)
+						using (m_suspend_grid_events.Reference)
 							SetGridRowCount(0, 0);
 					}
 				}
 				m_grid.Refresh();
+
+				// Give the illusion that the alternating row colour is moving with the overall file
+				if ((Math.Abs(row_delta) & 1) == 1)
+					m_first_row_is_odd = !m_first_row_is_odd;
 
 				// Configure menus
 				bool file_open                            = FileOpen;

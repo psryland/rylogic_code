@@ -34,7 +34,7 @@ namespace pr.common
 		public event Action ZeroCount;
 
 		/// <summary>Returns a disposable object that increases the reference count and decreases it on disposing. Use in a using block</summary>
-		public Scope Refer { get { return Scope.Create(() => ++Count, () => --Count); } }
+		public Scope Reference { get { return Scope.Create(() => ++Count, () => --Count); } }
 
 		public RefCount() :this(0) {}
 		public RefCount(int initial_count)
