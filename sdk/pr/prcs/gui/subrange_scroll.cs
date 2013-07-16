@@ -19,14 +19,18 @@ namespace RyLogViewer
 		private const float m_corner_radius = 4f;
 		private bool m_dragging = false;
 
-		public class SubRange
+		public interface ISubRange
 		{
-			internal Rectangle m_rect;
+			Range Range { get; }
+			Color Color { get; }
+		}
+		private class SubRange :ISubRange
+		{
+			public Rectangle m_rect;
 
 			public Range Range { get; set; }
 			public Color Color { get; set; }
 
-			public SubRange() {}
 			public SubRange(Range range, Color color) { Range = range; Color = color; }
 		}
 
@@ -41,7 +45,7 @@ namespace RyLogViewer
 				if (value.Count <= 0) value.End = value.Begin + 1;
 				m_total_range = value;
 				m_thumb_range = Range.Constrain(m_thumb_range, m_total_range);
-				foreach (var r in m_ranges) r.Range = Range.Constrain(r.Range, m_total_range);
+				foreach (var r in m_indicator_ranges) r.Range = Range.Constrain(r.Range, m_total_range);
 				Invalidate();
 			}
 		}
@@ -95,11 +99,12 @@ namespace RyLogViewer
 
 		/// <summary>The ranges to draw on the scroll bar</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The indicator ranges to draw on the scroll bar")]
-		public List<SubRange> Ranges
+		public IEnumerable<ISubRange> IndicatorRanges
 		{
-			get { return m_ranges; }
+			// Not exposing the list as the ranges need to clamped within TotalRange
+			get { return m_indicator_ranges; }
 		}
-		private readonly List<SubRange> m_ranges = new List<SubRange>();
+		private readonly List<SubRange> m_indicator_ranges = new List<SubRange>();
 
 		/// <summary>Raised whenever the scroll box is moved by either a mouse or keyboard action immediately after the value is updated</summary>
 		public event EventHandler Scroll;
@@ -118,7 +123,7 @@ namespace RyLogViewer
 		}
 
 		// This is used to represent an overview of the range represented.
-		// To use transparency, 
+		// To use transparency, ...
 		/// <summary>An overlay to draw in the background of the scrollbar</summary>
 		public Image Overlay { get; set; }
 		public ImageAttributes OverlayAttributes { get; set; }
@@ -190,7 +195,7 @@ namespace RyLogViewer
 			Point pt1 = new Point(bounds.Right, 0);
 
 			// Create rectangles for the highlight ranges
-			foreach (var r in Ranges)
+			foreach (var r in m_indicator_ranges)
 			{
 				int sy = (int)(Maths.Frac(total.Begin, r.Range.Begin, total.End) * bounds.Height);
 				int ey = (int)(Maths.Frac(total.Begin, r.Range.End  , total.End) * bounds.Height);
@@ -215,7 +220,7 @@ namespace RyLogViewer
 			}
 
 			// Indicator ranges
-			foreach (var r in Ranges)
+			foreach (var r in m_indicator_ranges)
 			{
 				c0 = r.Color;
 				c1 = Gfx.Blend(c0, Color.FromArgb(c0.A, Color.White), 0.2f);
@@ -245,6 +250,20 @@ namespace RyLogViewer
 			//using (var pen = new Pen(Color.FromArgb(255, SelectedRangeColor)))
 			//    gfx.DrawRectangle(pen, sel_rect);
 			//gfx.DrawRectangleRounded(SystemPens.ControlDarkDark, thumb_rect, m_corner_radius);
+		}
+
+		/// <summary>Reset the collection of indicator ranges</summary>
+		public void ClearIndicatorRanges()
+		{
+			m_indicator_ranges.Clear();
+		}
+
+		/// <summary>Add an indicator range</summary>
+		public void AddIndicatorRange(Range range, Color colour)
+		{
+			System.Diagnostics.Debug.Assert(m_total_range.Contains(range), "Indicator range outside total range");
+			range = Range.Constrain(range, m_total_range);
+			m_indicator_ranges.Add(new SubRange(range, colour));
 		}
 
 		/// <summary>Set the thumb position given a control space Y value</summary>

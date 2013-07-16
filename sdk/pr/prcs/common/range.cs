@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using pr.common;
 using pr.maths;
 
@@ -55,11 +56,20 @@ namespace pr.common
 		/// <summary>Enumerator for iterating over the range</summary>
 		public IEnumerable<long> Enumerate { get { for (long i = Begin; i != End; ++i) yield return i; } }
 
-		/// <summary>Returns true if 'index' is within this range</summary>
-		public bool Contains(long index)   { return Begin <= index && index < End; }
+		/// <summary>Returns true if 'index' is within the range [Begin,End) (i.e. end exclusive)</summary>
+		[Pure] public bool Contains(long index)
+		{
+			return Begin <= index && index < End;
+		}
+
+		/// <summary>Returns true if 'index' is within the range [Begin,End] (i.e. inclusive)</summary>
+		[Pure] public bool ContainsInclusive(long index)
+		{
+			return Begin <= index && index <= End;
+		}
 
 		/// <summary>Returns true if 'rng' is entirely within this range</summary>
-		public bool Contains(Range rng) 
+		[Pure] public bool Contains(Range rng) 
 		{
 			Debug.Assert(Count >= 0, "this range is inside out");
 			Debug.Assert(rng.Count >= 0, "'rng' is inside out");

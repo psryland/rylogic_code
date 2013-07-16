@@ -58,7 +58,6 @@ namespace pr.util
 				m_size1    = m_size0;
 				m_exists0  = m_info.Exists;
 				m_exists1  = m_exists0;
-	
 			}
 		}
 		private readonly List<WatchedFile> m_files = new List<WatchedFile>();

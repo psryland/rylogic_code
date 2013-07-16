@@ -221,7 +221,7 @@ namespace RyLogViewer
 			m_grid.AutoGenerateColumns  = false;
 			m_grid.KeyDown             += DataGridView_Extensions.SelectAll;
 			m_grid.KeyDown             += DataGridView_Extensions.Copy;
-			m_grid.KeyUp               += (s,a) => LoadNearBoundary();
+			m_grid.KeyDown             += GridKeyDown;
 			m_grid.MouseUp             += (s,a) => GridMouseButton(a, false);
 			m_grid.MouseDown           += (s,a) => GridMouseButton(a, true);
 			m_grid.CellValueNeeded     += CellValueNeeded;
@@ -230,7 +230,7 @@ namespace RyLogViewer
 			m_grid.RowPostPaint        += RowPostPaint;
 			m_grid.SelectionChanged    += GridSelectionChanged;
 			m_grid.CellDoubleClick     += CellDoubleClick;
-			m_grid.RowHeightInfoNeeded += (s,a) => { a.Height = m_row_height; };
+			m_grid.RowHeightInfoNeeded += (s,a) => a.Height = m_row_height;
 			m_grid.DataError           += (s,a) => Debug.Assert(false);
 			m_grid.Scroll              += (s,a) => GridScroll();
 
@@ -370,6 +370,8 @@ namespace RyLogViewer
 		/// <summary>Close the current log file</summary>
 		public void CloseLogFile()
 		{
+			m_bookmarks.Clear();
+
 			using (m_suspend_grid_events.Reference)
 			{
 				CancelBuildLineIndex();
@@ -443,7 +445,7 @@ namespace RyLogViewer
 			BuildLineIndex(m_filepos, true, ()=>
 				{
 					SelectedRowIndex = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
-						
+
 					// Show a hint if filters are active, the file isn't empty, but there are no visible rows
 					if (m_grid.RowCount == 0 && m_fileend != 0)
 					{
@@ -751,6 +753,14 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Handle key presses on the grid</summary>
+		private void GridKeyDown(object s, KeyEventArgs e)
+		{
+			if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down)
+				LoadNearBoundary();
+		}
+
+
 		/// <summary>Handler for mouse down/up events on the grid</summary>
 		private void GridMouseButton(MouseEventArgs args, bool button_down)
 		{
@@ -851,11 +861,17 @@ namespace RyLogViewer
 		/// <summary>Tests whether the currently selected row is near the start or end of the line range and causes a reload if it is</summary>
 		private void LoadNearBoundary()
 		{
-			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit) return;
+			if (m_grid.RowCount < Constants.AutoScrollAtBoundaryLimit)
+				return;
+			if (SelectedRowIndex < 0 || SelectedRowIndex >= m_grid.RowCount)
+				return;
+
 			const float Limit = 1f / Constants.AutoScrollAtBoundaryLimit;
 			float ratio = Maths.Frac(0, SelectedRowIndex, m_grid.RowCount - 1);
-			if (ratio < 0f + Limit) BuildLineIndex(LineStartIndexRange.Begin, false);
-			if (ratio > 1f - Limit) BuildLineIndex(LineStartIndexRange.End  , false);
+			if (ratio < 0f + Limit && LineIndexRange.Begin != 0)
+				BuildLineIndex(LineStartIndexRange.Begin, false);
+			if (ratio > 1f - Limit && LineIndexRange.End < m_fileend - m_row_delim.Length)
+				BuildLineIndex(LineStartIndexRange.End  , false);
 		}
 
 		/// <summary>Handle global command keys</summary>
@@ -1497,8 +1513,10 @@ namespace RyLogViewer
 				if (count != 0)
 				{
 					// Restore the selected rows, and the first visible row
-					if (first_vis != -1) m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
-					if (auto_scroll_tail) SelectedRowIndex = m_grid.RowCount - 1;
+					if (auto_scroll_tail)
+					{
+						SelectedRowIndex = m_grid.RowCount - 1;
+					}
 					else if (selected != -1)
 					{
 						m_grid.SelectRow(selected + row_delta);
@@ -1513,6 +1531,11 @@ namespace RyLogViewer
 							if (s >= count) break; // can stop at the first selected row outside the new range
 							m_grid.Rows[s].Selected = true;
 						}
+
+						// Restore the first visible row after setting the current selected row, because
+						// changing the 'CurrentCell' also changes the scroll position
+						if (first_vis != -1)
+							m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
 					}
 				}
 			}
@@ -1788,15 +1811,15 @@ namespace RyLogViewer
 			m_scroll_file.ThumbRange = range;
 			m_scroll_file.Width      = m_settings.FileScrollWidth;
 
-			m_scroll_file.Ranges.Clear();
-			m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(DisplayedRowsRange, m_settings.ScrollBarDisplayRangeColour));
+			m_scroll_file.ClearIndicatorRanges();
+			m_scroll_file.AddIndicatorRange(DisplayedRowsRange, m_settings.ScrollBarDisplayRangeColour);
 			foreach (var sel_range in SelectedRowRanges)
-				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(sel_range, m_settings.LineSelectBackColour));
+				m_scroll_file.AddIndicatorRange(sel_range, m_settings.LineSelectBackColour);
 
 			// Add marks for the bookmarked positions
 			var bkmark_colour = m_settings.BookmarkColour;
 			foreach (var bk in m_bookmarks)
-				m_scroll_file.Ranges.Add(new SubRangeScroll.SubRange(bk.Range, bkmark_colour));
+				m_scroll_file.AddIndicatorRange(bk.Range, bkmark_colour);
 
 			m_scroll_file.Refresh();
 		}
@@ -1864,6 +1887,7 @@ namespace RyLogViewer
 		/// <summary>Cycles colours for the 'free edition' menu item</summary>
 		private void CycleColours()
 		{
+			return; //hack
 			if (!m_menu_free_version.Visible) return;
 			m_free_version_menu_colour.H += 0.01f;
 			if (m_free_version_menu_colour.H > 1f) m_free_version_menu_colour.H = 0f;

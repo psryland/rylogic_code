@@ -100,21 +100,54 @@ namespace pr.gui
 			if (m_menu == null || m_on_click == null) return;
 			m_menu.DropDownItems.Clear();
 			foreach (string f in m_files)
-				m_menu.DropDownItems.Add(new ToolStripMenuItem(f, null, (s,a) =>
+			{
+				var item = new ToolStripMenuItem(f, null, (s,a) =>
 					{
-						ToolStripMenuItem menu = (ToolStripMenuItem)s;
+						var menu = (ToolStripMenuItem)s;
 						Add(menu.Text, false);
 						m_on_click(menu.Text);
-					}));
+					});
+				item.MouseDown += (s,a) =>
+					{
+						var menu = (ToolStripMenuItem)s;
+						if (a.Button != MouseButtons.Right) return;
+						var dd = (ToolStripDropDown)menu.GetCurrentParent();
+						dd.AutoClose = false;
+						ShowMenuItemContextMenu(item, a.X, a.Y, () => { dd.AutoClose = true; dd.Close(); });
+					};
+				m_menu.DropDownItems.Add(item);
+			}
 			
 			// Add a menu item for clearing the recent files list
 			m_menu.DropDownItems.Add(new ToolStripSeparator());
 			m_menu.DropDownItems.Add(new ToolStripMenuItem(ResetListText, null, (s,a) =>
 				{
+					var menu = (ToolStripMenuItem)s;
+					((ToolStripDropDown)menu.GetCurrentParent()).Close();
 					var args = new CancelEventArgs();
 					if (ClearRecentFilesListEvent != null) ClearRecentFilesListEvent(this, args);
 					if (!args.Cancel) Clear();
 				}));
+		}
+
+		/// <summary>Show a context menu with more options for individual menu items</summary>
+		private void ShowMenuItemContextMenu(ToolStripMenuItem menu_item, int x, int y, Action on_close)
+		{
+			var menu = new ContextMenuStrip();
+			menu.Closed += (s,a) => on_close();
+			{
+				// Remove
+				var item = new ToolStripMenuItem {Text = "Remove"};
+				item.Click += (s, e) => Remove(menu_item.Text, true);
+				menu.Items.Add(item);
+			}
+			{
+				// Copy to clipboard
+				var item = new ToolStripMenuItem {Text = "Copy to Clipboard"};
+				item.Click += (s, e) => Clipboard.SetText(menu_item.Text);
+				menu.Items.Add(item);
+			}
+			menu.Show(menu_item.GetCurrentParent(), menu_item.Bounds.X + x, menu_item.Bounds.Y + y);
 		}
 
 		/// <summary>Export recent files to a single string</summary>
