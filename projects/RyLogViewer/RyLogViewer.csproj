@@ -250,6 +250,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <DesignTime>True</DesignTime>
     </Content>
+    <Content Include="docs\aggregate_files.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\android_logcat.htm">
       <DependentUpon>android_logcat.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -262,6 +265,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <DesignTime>True</DesignTime>
     </Content>
+    <Content Include="docs\network_output.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\options_highlighting.htm">
       <DependentUpon>options_highlighting.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -273,6 +279,15 @@
       <AutoGen>True</AutoGen>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\pipe_output.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\program_output.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\serial_port_output.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\cripple_filtering.htm">
       <DependentUpon>cripple_filtering.t4html</DependentUpon>
@@ -369,7 +384,9 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>filtering.htm</LastGenOutput>
     </None>
-    <Content Include="docs\find.png" />
+    <Content Include="docs\find.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\installation.htm">
       <DependentUpon>installation.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -412,7 +429,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <DesignTime>True</DesignTime>
     </Content>
-    <Content Include="docs\pattern_editor.png" />
+    <Content Include="docs\pattern_editor.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="docs\settings_appearance.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

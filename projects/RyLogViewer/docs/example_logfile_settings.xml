@@ -12,6 +12,7 @@
     &lt;patntype&gt;Wildcard&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;executable&gt;C:\windows\notepad.exe&lt;/executable&gt;
     &lt;arguments&gt;{[FileDir]}\{1}&lt;/arguments&gt;
@@ -25,7 +26,7 @@
   </setting>
   <setting>
     <key>AlternateLineColours</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
   </setting>
   <setting>
     <key>AlwaysOnTop</key>
@@ -114,6 +115,7 @@
     &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;ifmatch&gt;Keep&lt;/ifmatch&gt;
   &lt;/filter&gt;
@@ -123,6 +125,7 @@
     &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;ifmatch&gt;Reject&lt;/ifmatch&gt;
   &lt;/filter&gt;
@@ -132,6 +135,7 @@
     &lt;patntype&gt;Substring&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;ifmatch&gt;Reject&lt;/ifmatch&gt;
   &lt;/filter&gt;
@@ -156,6 +160,9 @@
   &lt;patternset&gt;
     &lt;filepath&gt;I:\MagicBullet\src\MagicBullet\MobileBullet\tools\RylogViewer\vlm_highlights.rylog_highlights&lt;/filepath&gt;
   &lt;/patternset&gt;
+  &lt;patternset&gt;
+    &lt;filepath&gt;D:\deleteme\VisionsLiveBB.rylog_highlights&lt;/filepath&gt;
+  &lt;/patternset&gt;
 &lt;/root&gt;</value>
   </setting>
   <setting>
@@ -167,6 +174,7 @@
     &lt;patntype&gt;Substring&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;forecolour&gt;FFFFFFFF&lt;/forecolour&gt;
     &lt;backcolour&gt;FF8B0000&lt;/backcolour&gt;
@@ -177,6 +185,7 @@
     &lt;patntype&gt;Substring&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
     &lt;backcolour&gt;FFFFFF00&lt;/backcolour&gt;
@@ -187,6 +196,7 @@
     &lt;patntype&gt;Substring&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
     &lt;backcolour&gt;FF80FFFF&lt;/backcolour&gt;
@@ -197,6 +207,7 @@
     &lt;patntype&gt;Substring&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;forecolour&gt;FF808080&lt;/forecolour&gt;
     &lt;backcolour&gt;FFC0C0C0&lt;/backcolour&gt;
@@ -207,6 +218,7 @@
     &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
     &lt;backcolour&gt;FF808080&lt;/backcolour&gt;
@@ -402,6 +414,7 @@
     &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;replace&gt;{1}&lt;/replace&gt;
     &lt;subs&gt;
@@ -448,6 +461,6 @@
   </setting>
   <setting>
     <key>__SettingsVersion</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">v1.0</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">v1.1</value>
   </setting>
 </ArrayOfsetting>

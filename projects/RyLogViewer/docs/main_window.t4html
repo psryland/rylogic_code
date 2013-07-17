@@ -12,10 +12,14 @@
 			<div>
 				<img class="centred" src="main_view.png" alt="main view" usemap="#main_view_map" />
 				<map id="main_view_map" name="main_view_map">
-					<area shape="rect" coords="7,75,27,95" href="#log_view" alt="" title="" onclick="HighlightListItem('log_view')"/>
-					<area shape="rect" coords="11,42,31,62" href="#tool_bar" alt="" title="" onclick="HighlightListItem('tool_bar')"/>
-					<area shape="rect" coords="638,76,658,96" href="#file_scroll" alt="" title="" onclick="HighlightListItem('file_scroll')"/>
-					<area shape="rect" coords="8,506,28,526" href="#status_bar" alt="" title="" onclick="HighlightListItem('status_bar')"/>
+					<area shape="rect" coords="5,82,25,102" href="#log_view" alt="" title="" onclick="HighlightListItem('log_view')" />
+					<area shape="rect" coords="3,54,23,74" href="#tool_bar" alt="" title="" onclick="HighlightListItem('tool_bar')" />
+					<area shape="rect" coords="555,71,575,91" href="#file_scroll" alt="" title="" onclick="HighlightListItem('file_scroll')" />
+					<area shape="rect" coords="92,18,112,38" href="#encoding" alt="" title="" onclick="HighlightListItem('encoding')" />
+					<area shape="rect" coords="161,18,181,38" href="#line_ending" alt="" title="" onclick="HighlightListItem('line_ending')" />
+					<area shape="rect" coords="219,43,239,63" href="#search" alt="" title="" onclick="HighlightListItem('search')" />
+					<area shape="rect" coords="251,43,271,63" href="#bookmarks" alt="" title="" onclick="HighlightListItem('bookmarks')" />
+					<area shape="rect" coords="5,514,25,534" href="#status" alt="" title="" onclick="HighlightListItem('status')" />
 				</map>
 			</div>
 			<ol>

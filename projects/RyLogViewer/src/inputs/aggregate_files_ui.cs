@@ -108,7 +108,7 @@ namespace RyLogViewer
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AggregateFilesUI));
-			this.m_grid = new DataGridView();
+			this.m_grid = new RyLogViewer.DataGridView();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_lbl_instructions = new System.Windows.Forms.Label();
@@ -129,14 +129,14 @@ namespace RyLogViewer
 			this.m_grid.RowHeadersWidth = 28;
 			this.m_grid.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(423, 328);
+			this.m_grid.Size = new System.Drawing.Size(350, 245);
 			this.m_grid.TabIndex = 0;
 			// 
 			// m_btn_ok
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(269, 372);
+			this.m_btn_ok.Location = new System.Drawing.Point(196, 289);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 1;
@@ -147,7 +147,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(350, 372);
+			this.m_btn_cancel.Location = new System.Drawing.Point(277, 289);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_cancel.TabIndex = 2;
@@ -161,12 +161,13 @@ namespace RyLogViewer
 			this.m_lbl_instructions.Name = "m_lbl_instructions";
 			this.m_lbl_instructions.Size = new System.Drawing.Size(306, 26);
 			this.m_lbl_instructions.TabIndex = 3;
-			this.m_lbl_instructions.Text = "Add files by dragging and dropping, or via the \'Add Files\' button.\r\nDrag files within the table below to change the order.";
+			this.m_lbl_instructions.Text = "Add files by dragging and dropping, or via the \'Add Files\' button.\r\nDrag files wi" +
+    "thin the table below to change the order.";
 			// 
 			// m_btn_add_files
 			// 
-			this.m_btn_add_files.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_add_files.Location = new System.Drawing.Point(7, 372);
+			this.m_btn_add_files.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_btn_add_files.Location = new System.Drawing.Point(7, 289);
 			this.m_btn_add_files.Name = "m_btn_add_files";
 			this.m_btn_add_files.Size = new System.Drawing.Size(93, 23);
 			this.m_btn_add_files.TabIndex = 4;
@@ -179,13 +180,14 @@ namespace RyLogViewer
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(437, 406);
+			this.ClientSize = new System.Drawing.Size(364, 323);
 			this.Controls.Add(this.m_btn_add_files);
 			this.Controls.Add(this.m_lbl_instructions);
 			this.Controls.Add(this.m_btn_cancel);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_grid);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.MinimumSize = new System.Drawing.Size(329, 138);
 			this.Name = "AggregateFilesUI";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "Aggregate Log Files";

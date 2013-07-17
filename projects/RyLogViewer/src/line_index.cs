@@ -194,12 +194,8 @@ namespace RyLogViewer
 
 			public BLIData(Main main, long filepos_, bool reload_, int build_issue_)
 			{
-				file               = main.m_file.NewInstance();
-				max_line_length    = main.m_settings.MaxLineLength;
-				file_buffer_size   = main.m_bufsize;
-				line_cache_count   = main.m_line_cache_count;
-				line_index_count   = main.m_line_index.Count;
-				ignore_blanks      = main.m_settings.IgnoreBlankLines;
+				reload             = reload_;
+				build_issue        = build_issue_;
 
 				// Use a fixed file end so that additions to the file don't muck this
 				// build up. Reducing the file size during this will probably cause an
@@ -207,7 +203,14 @@ namespace RyLogViewer
 				fileend = main.m_file.Stream.Length;
 				filepos = Maths.Clamp(filepos_, 0, fileend);
 				filepos_line_index = LineIndex(main.m_line_index, filepos);
-				
+
+				file               = main.m_file.NewInstance();
+				max_line_length    = main.m_settings.MaxLineLength;
+				file_buffer_size   = main.m_bufsize;
+				line_cache_count   = main.m_line_cache_count;
+				line_index_count   = main.m_line_index.Count;
+				ignore_blanks      = main.m_settings.IgnoreBlankLines;
+
 				// Find the byte range of the file currently loaded
 				cached_whole_line_range = main.LineStartIndexRange;
 
@@ -224,26 +227,25 @@ namespace RyLogViewer
 
 				Debug.Assert(main.m_encoding != null);
 				Debug.Assert(main.m_row_delim != null);
-				bool certain;
+				bool certain, autodetect;
 
 				// If the settings say auto detect encoding, and this is a reload
 				// then detect the encoding, otherwise use what it is currently set to
 				certain = false;
-				encoding = !reload || main.m_settings.Encoding.Length != 0
-					? (Encoding)main.m_encoding.Clone()
-					: GuessEncoding(main.m_file, out certain);
+				autodetect = main.m_settings.Encoding.Length == 0;
+				encoding = reload_ && autodetect
+					? GuessEncoding(main.m_file, out certain)
+					: (Encoding)main.m_encoding.Clone();
 				if (certain) main.m_encoding = (Encoding)encoding.Clone();
 
 				// If the settings say auto detect the row delimiters, and this is a reload
 				// then detect them, otherwise use what is currently set
 				certain = false;
-				row_delim = !reload || main.m_settings.RowDelimiter.Length != 0
-					? (byte[])main.m_row_delim.Clone()
-					: GuessRowDelimiter(main.m_file, encoding, main.m_settings.MaxLineLength, out certain);
+				autodetect = main.m_settings.RowDelimiter.Length == 0;
+				row_delim = reload_ && autodetect
+					? GuessRowDelimiter(main.m_file, encoding, main.m_settings.MaxLineLength, out certain)
+					: (byte[])main.m_row_delim.Clone();
 				if (certain) main.m_row_delim = (byte[])row_delim.Clone();
-
-				reload      = reload_;
-				build_issue = build_issue_;
 			}
 		}
 

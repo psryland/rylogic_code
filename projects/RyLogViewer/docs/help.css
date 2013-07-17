@@ -51,8 +51,6 @@ img.right_inset
 	display: block;
 	margin-left: auto;
 	margin-right: auto;
-	margin-top: 20px;
-	margin-bottom: 20px;
 	padding: 10px;
 	float: right;
 }
@@ -164,14 +162,6 @@ img.right_inset
 	margin-top: 10px;
 	margin-bottom: 10px;
 }
-
-/*.child_list_elem.highlight
-{
-	margin: 0px;
-	margin-top: 10px;
-	margin-bottom: 10px;
-	background-color: #E0FFE0;
-}*/
 
 .code
 {
