@@ -760,7 +760,6 @@ namespace RyLogViewer
 				LoadNearBoundary();
 		}
 
-
 		/// <summary>Handler for mouse down/up events on the grid</summary>
 		private void GridMouseButton(MouseEventArgs args, bool button_down)
 		{
@@ -1242,10 +1241,11 @@ namespace RyLogViewer
 		/// <summary>Launch a web browser in order to view the html documentation</summary>
 		private void ShowHelp()
 		{
+			const string HelpStartPage = @"docs\welcome.htm";
 			try
 			{
 				var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
-				var start_page = Path.Combine(dir, @"docs\help.html");
+				var start_page = Path.Combine(dir, HelpStartPage);
 				Process.Start(start_page);
 			}
 			catch (Exception ex)
@@ -1254,7 +1254,7 @@ namespace RyLogViewer
 					"Unable to display the help documentation do to an error.\r\n" +
 					"Error Message: {0}\r\n".Fmt(ex.Message) +
 					"\r\n" +
-					"The expected location of the main documentation file is <install directory>\\docs\\help.html",
+					"The expected location of the main documentation file is <install directory>\\"+HelpStartPage,
 					"Missing help files", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
@@ -1888,10 +1888,10 @@ namespace RyLogViewer
 		private void CycleColours()
 		{
 			return; //hack
-			if (!m_menu_free_version.Visible) return;
-			m_free_version_menu_colour.H += 0.01f;
-			if (m_free_version_menu_colour.H > 1f) m_free_version_menu_colour.H = 0f;
-			m_menu_free_version.ForeColor = m_free_version_menu_colour.ToColor();
+			//if (!m_menu_free_version.Visible) return;
+			//m_free_version_menu_colour.H += 0.01f;
+			//if (m_free_version_menu_colour.H > 1f) m_free_version_menu_colour.H = 0f;
+			//m_menu_free_version.ForeColor = m_free_version_menu_colour.ToColor();
 		}
 		private HSV m_free_version_menu_colour = HSV.FromColor(Color.Red);
 
