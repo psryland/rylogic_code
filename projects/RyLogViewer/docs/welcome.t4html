@@ -13,13 +13,21 @@
 			<div class="content">
 				RyLogViewer is an application designed to make the viewing of log files or
 				streaming log data easier through the use of highlighting, filtering, and
-				text transformations. RyLogViewer can display log files of unlimited size
-				(limited only by the operating system), as well as files that are being
-				changed in real-time (much like the unix 'tail' command).
+				text transformations. RyLogViewer can display log files of unlimited
+				size<sup class="reference">[1]</sup>, as well as files that are being
+				changed in real-time, much like the Unix 'tail' command.
 			</div>
 			<div class="content">
-				RyLogViewer is a .NET Framework 4.0 application designed to run on Microsoft 
-				Windows versions XP and later, both 32 and 64bit.
+				RyLogViewer can also receive and display log data from a wide variety of sources
+				including program standard output, serial port connections, data streamed over a network,
+				and named pipes.
+			</div>
+			<div class="content">
+				RyLogViewer is a .NET Framework 4.0 Client Profile application designed to run
+				on Microsoft Windows versions XP and later, both 32 and 64bit.
+			</div>
+			<div class="fine_print">
+				<sup class="reference">[1]</sup> limited only by the operating system.
 			</div>
 		</div>
 	</body>

@@ -9,17 +9,17 @@
 		{
 			if (item_id == null)
 			{
-				if (window.location.hash == null) return;
+				if (window.location.hash == null || window.location.hash == "") return;
 				item_id = window.location.hash.substr(1);
 			}
 
-			var elems = document.getElementsByTagName('li');
-			for (var i = 0; i != elems.length; ++i)
+			var divs = document.getElementsByTagName('div');
+			for (var i = 0; i != divs.length; ++i)
 			{
-				if (elems[i].id == item_id)
-					elems[i].className = 'child_list_elem_hl';
+				if (divs[i].id == item_id)
+					divs[i].className = divs[i].className + ' highlight';
 				else
-					elems[i].className = 'child_list_elem';
+					divs[i].className = divs[i].className.replace(' highlight','');
 			}
 		}
 	</script>

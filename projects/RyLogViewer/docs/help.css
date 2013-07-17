@@ -126,7 +126,7 @@ img.right_inset
 
 .fine_print
 {
-	font-size: 60%;
+	font-size: 8pt;
 }
 
 .section_title
@@ -153,6 +153,11 @@ img.right_inset
 	margin-right: 10px;
 }
 
+.highlight
+{
+	background-color: #E0FFE0;
+}
+
 .child_list_elem
 {
 	margin: 0px;
@@ -160,13 +165,13 @@ img.right_inset
 	margin-bottom: 10px;
 }
 
-.child_list_elem_hl
+/*.child_list_elem.highlight
 {
 	margin: 0px;
 	margin-top: 10px;
 	margin-bottom: 10px;
 	background-color: #E0FFE0;
-}
+}*/
 
 .code
 {
@@ -232,8 +237,19 @@ img.right_inset
 	font-size: 80%;
 }
 
+.limited_feature
+{
+	color: #0080C0;
+	font-size: 80%;
+}
+
 .licensed_feature
 {
 	color: #0000C0;
 	font-size: 80%;
+}
+
+.reference
+{
+	font-size:70%;
 }

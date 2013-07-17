@@ -244,6 +244,30 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Content Include="docs\aggregate_files.htm">
+      <DependentUpon>aggregate_files.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\android_logcat.htm">
+      <DependentUpon>android_logcat.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\command_line.htm">
+      <DependentUpon>command_line.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
+    <Content Include="docs\options_highlighting.htm">
+      <DependentUpon>options_highlighting.t4html</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+    </Content>
     <Content Include="docs\data_sources.htm">
       <DependentUpon>data_sources.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -282,6 +306,22 @@
       <DependentUpon>version_history.t4html</DependentUpon>
     </Content>
     <None Include="build_docs.cmd" />
+    <None Include="docs\aggregate_files.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>aggregate_files.htm</LastGenOutput>
+    </None>
+    <None Include="docs\android_logcat.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>android_logcat.htm</LastGenOutput>
+    </None>
+    <None Include="docs\command_line.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>command_line.htm</LastGenOutput>
+    </None>
+    <None Include="docs\options_highlighting.t4html">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>options_highlighting.htm</LastGenOutput>
+    </None>
     <None Include="docs\data_sources.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>data_sources.htm</LastGenOutput>

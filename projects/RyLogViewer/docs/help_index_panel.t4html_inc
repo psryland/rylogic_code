@@ -1,7 +1,9 @@
 ﻿<div id="index_panel">
 	<a href="welcome.htm" class="menu1">Welcome</a><br />
 	<a href="overview.htm" class="menu1">Overview / Features</a><br />
+
 	<a href="installation.htm" class="menu1">Installation</a><br />
+	<a href="installation.htm#portable_mode" class="menu2">Portable Mode</a><br />
 
 	<a href="main_window.htm" class="menu1">Main Window</a><br />
 	<a href="main_window.htm#tool_bar" class="menu2">Tool Bar</a><br />
@@ -42,6 +44,8 @@
 
 	<a href="pattern_sets.htm" class="menu1">Pattern Sets</a><br />
 
+	<a href="command_line.htm" class="menu1">Command Line</a><br />
+	
 	<a href="support.htm" class="menu1">Support</a><br />
 	<a href="support.htm#updates" class="menu2">Version Updates</a><br />
 	<a href="licence.htm" class="menu2">Licence</a><br />
