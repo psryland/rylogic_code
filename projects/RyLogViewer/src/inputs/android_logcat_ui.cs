@@ -151,7 +151,8 @@ namespace RyLogViewer
 			m_btn_resetadb.Enabled = false; // unless there is an adb path
 			m_btn_resetadb.Click += (s,a) =>
 				{
-					Adb("kill-server");
+					var adbs = Process.GetProcessesByName("adb");
+					foreach (var adb in adbs) adb.Kill();
 					Adb("start-server");
 					PopulateUsingAdb();
 				};
