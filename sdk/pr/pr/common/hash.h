@@ -17,9 +17,9 @@ namespace pr
 		// with enum values don't generate signed/unsigned warnings
 		typedef int HashValue;
 		typedef long long HashValue64;
-		typedef unsigned char uint8;
-		typedef unsigned int  uint;
-		typedef unsigned long long uint64;
+		typedef unsigned char uint8_t;
+		typedef unsigned int  uint_t;
+		typedef unsigned long long uint64_t;
 
 		// CRC32 table - the polynomial '0x1EDC6F41' is chosen because that's what the intrinsics are based on
 		// Hopefully, one day I can optionally compile in the intrinsic versions without changing the generated hashes
@@ -28,7 +28,7 @@ namespace pr
 			Uint m_data[256];
 			CRCTable()
 			{
-				for (uint i = 0; i != 256; ++i)
+				for (uint_t i = 0; i != 256; ++i)
 				{
 					Uint part = i;
 					for (int j = 0; j != 8; ++j) part = (part >> 1) ^ ((part & 1) ? Poly : 0);
@@ -37,15 +37,15 @@ namespace pr
 			}
 			static Uint const* Data() { static CRCTable table; return table.m_data; }
 		};
-		typedef CRCTable<uint   , 0x1EDC6F41U>   CRCTable32;
-		typedef CRCTable<uint64 , 0x1EDC6F41ULL> CRCTable64;
+		typedef CRCTable<uint_t  , 0x1EDC6F41U>   CRCTable32;
+		typedef CRCTable<uint64_t, 0x1EDC6F41ULL> CRCTable64;
 
 		// Convert a contiguous block of bytes to a hash
 		inline HashValue HashData(void const* data, size_t size, HashValue hash = -1)
 		{
-			uint const*  table = CRCTable32::Data();
-			uint8 const* src   = static_cast<uint8 const*>(data);
-			uint&        h     = reinterpret_cast<uint&>  (hash);
+			uint_t const*  table = CRCTable32::Data();
+			uint8_t const* src   = static_cast<uint8_t const*>(data);
+			uint_t&        h     = reinterpret_cast<uint_t&>  (hash);
 			for (; size--; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
 			return hash;
 		}
@@ -57,9 +57,9 @@ namespace pr
 		// Convert a contiguous block of bytes into a 64bit hash
 		inline HashValue64 HashData64(void const* data, size_t size, HashValue64 hash = -1LL)
 		{
-			uint64 const* table = CRCTable64::Data();
-			uint8 const*  src   = static_cast<uint8 const*>(data);
-			uint64&       h     = reinterpret_cast<uint64&>(hash);
+			uint64_t const* table = CRCTable64::Data();
+			uint8_t const*  src   = static_cast<uint8_t const*>(data);
+			uint64_t&       h     = reinterpret_cast<uint64_t&>(hash);
 			for (; size--; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
 			return hash;
 		}
@@ -68,13 +68,13 @@ namespace pr
 		// Note *src is assumed to be an arbitrary sized contiguous object
 		template <typename Iter> inline HashValue Hash(Iter& first, Iter last, HashValue hash = -1)
 		{
-			uint const* table = CRCTable32::Data();
-			uint&       h     = reinterpret_cast<uint&>(hash);
+			uint_t const* table = CRCTable32::Data();
+			uint_t&       h     = reinterpret_cast<uint_t&>(hash);
 			for (; first != last; ++first)
 			{
 				// hash over the range of bytes pointed to by *src
-				uint8 const* s = reinterpret_cast<uint8 const*>(first);
-				uint8 const* s_end = s + sizeof(uint8);
+				uint8_t const* s = reinterpret_cast<uint8_t const*>(first);
+				uint8_t const* s_end = s + sizeof(uint8_t);
 				for (; s != s_end; ++s)
 					h = table[(h ^ *s) & 0xff] ^ (h >> 8);
 			}
@@ -92,14 +92,14 @@ namespace pr
 		// Note *src is assumed to be an arbitrary sized contiguous object
 		template <typename Iter, typename Term> inline HashValue Hash(Iter& src, Term term, HashValue hash = -1)
 		{
-			uint const* table = CRCTable32::Data();
-			uint&       h     = reinterpret_cast<uint&>(hash);
+			uint_t const* table = CRCTable32::Data();
+			uint_t&       h     = reinterpret_cast<uint_t&>(hash);
 			for (; *src != term; ++src)
 			{
 				// hash over the range of bytes pointed to by *src
 				Term const& elem = *src;
-				uint8 const* s = reinterpret_cast<uint8 const*>(&elem);
-				uint8 const* s_end = s + sizeof(uint8);
+				uint8_t const* s = reinterpret_cast<uint8_t const*>(&elem);
+				uint8_t const* s_end = s + sizeof(uint8_t);
 				for (; s != s_end; ++s)
 					h = table[(h ^ *s) & 0xff] ^ (h >> 8);
 			}
@@ -116,8 +116,8 @@ namespace pr
 		// Hash a char string
 		inline HashValue Hash(char const*& src, char term, HashValue hash)
 		{
-			uint const* table = CRCTable32::Data();
-			uint&       h     = reinterpret_cast<uint&>(hash);
+			uint_t const* table = CRCTable32::Data();
+			uint_t&       h     = reinterpret_cast<uint_t&>(hash);
 			for (; *src != term; ++src) { h = table[(h ^ *src) & 0xff] ^ (h >> 8); }
 			return hash;
 		}
@@ -132,11 +132,11 @@ namespace pr
 		// Hash a wchar_t string
 		inline HashValue Hash(wchar_t const*& src, wchar_t term, HashValue hash)
 		{
-			uint const* table = CRCTable32::Data();
-			uint&       h     = reinterpret_cast<uint&>(hash);
+			uint_t const* table = CRCTable32::Data();
+			uint_t&       h     = reinterpret_cast<uint_t&>(hash);
 			for (; *src != term; ++src)
 			{
-				uint8 const* s = reinterpret_cast<uint8 const*>(src);
+				uint8_t const* s = reinterpret_cast<uint8_t const*>(src);
 				h = table[(h ^ *s++) & 0xff] ^ (h >> 8);
 				h = table[(h ^ *s++) & 0xff] ^ (h >> 8);
 			}
@@ -169,22 +169,22 @@ namespace pr
 		inline HashValue FastHash(void const* data, size_t len, HashValue hash)
 		{
 			// Local function for reading 16bit chunks of 'data'
-			struct This { static unsigned short Read16bits(uint8 const* d)
+			struct This { static unsigned short Read16bits(uint8_t const* d)
 			{
 				#if (defined(__GNUC__) && defined(__i386__)) || defined(__WATCOMC__) || defined(_MSC_VER) || defined (__BORLANDC__) || defined (__TURBOC__)
 				return *reinterpret_cast<unsigned short const*>(d);
 				#else
-				return (static_cast<uint>(reinterpret_cast<uint8 const*>(d)[1]) << 8) +
-						static_cast<uint>(reinterpret_cast<uint8 const*>(d)[0]);
+				return (static_cast<uint_t>(reinterpret_cast<uint8_t const*>(d)[1]) << 8) +
+						static_cast<uint_t>(reinterpret_cast<uint8_t const*>(d)[0]);
 				#endif
 			}};
 
 			if (len == 0 || data == 0)
 				return 0;
 
-			uint8 const* ptr = static_cast<uint8 const*>(data);
-			uint tmp;
-			uint rem = len & 3;
+			uint8_t const* ptr = static_cast<uint8_t const*>(data);
+			uint_t tmp;
+			uint_t rem = len & 3;
 			len >>= 2;
 
 			// Main loop
@@ -226,6 +226,104 @@ namespace pr
 			return hash;
 		}
 		inline HashValue FastHash(void const* data, size_t len) { return FastHash(data, len, -1); }
+
+		//-----------------------------------------------------------------------------
+		// MurmurHash2, by Austin Appleby
+		// Note - This code makes a few assumptions about how your machine behaves -
+		// 1. We can read a 4-byte value from any address without crashing
+		// 2. sizeof(int) == 4
+		// And it has a few limitations -
+		// 1. It will not work incrementally.
+		// 2. It will not produce the same results on little-endian and big-endian machines.
+		inline unsigned int MurmurHash2_32(void const* key, int len, unsigned int seed)
+		{
+			// 'm' and 'r' are mixing constants generated offline.
+			// They're not really 'magic', they just happen to work well.
+			const unsigned int m = 0x5bd1e995;
+			const int r = 24;
+
+			// Initialize the hash to a 'random' value
+			unsigned int h = seed ^ len;
+
+			// Mix 4 bytes at a time into the hash
+			const unsigned char * data = (const unsigned char *)key;
+			while (len >= 4)
+			{
+				unsigned int k = *(unsigned int *)data;
+
+				k *= m;
+				k ^= k >> r;
+				k *= m;
+
+				h *= m;
+				h ^= k;
+
+				data += 4;
+				len -= 4;
+			}
+
+			// Handle the last few bytes of the input array
+			switch(len)
+			{
+			case 3: h ^= data[2] << 16;
+			case 2: h ^= data[1] << 8;
+			case 1: h ^= data[0];
+					h *= m;
+			};
+
+			// Do a few final mixes of the hash to ensure the last few bytes are well-incorporated.
+			h ^= h >> 13;
+			h *= m;
+			h ^= h >> 15;
+
+			return h;
+		}
+
+		//-----------------------------------------------------------------------------
+		// MurmurHash2, 64-bit versions, by Austin Appleby
+		// The same caveats as 32-bit MurmurHash2 apply here - beware of alignment 
+		// and endian-ness issues if used across multiple platforms.
+		// 64-bit hash for 64-bit platforms
+		inline uint64_t MurmurHash2_64(void const* key, int len, unsigned int seed)
+		{
+			uint64_t const m = 0xc6a4a7935bd1e995UL;
+			int const r = 47;
+
+			uint64_t h = seed ^ (len * m);
+			uint64_t const* data = (uint64_t const*)key;
+			uint64_t const* end = data + (len/8);
+
+			while (data != end)
+			{
+				uint64_t k = *data++;
+
+				k *= m;
+				k ^= k >> r;
+				k *= m;
+
+				h ^= k;
+				h *= m;
+			}
+
+			unsigned char const* data2 = (unsigned char const*)data;
+			switch(len & 7)
+			{
+			case 7: h ^= uint64_t(data2[6]) << 48;
+			case 6: h ^= uint64_t(data2[5]) << 40;
+			case 5: h ^= uint64_t(data2[4]) << 32;
+			case 4: h ^= uint64_t(data2[3]) << 24;
+			case 3: h ^= uint64_t(data2[2]) << 16;
+			case 2: h ^= uint64_t(data2[1]) << 8;
+			case 1: h ^= uint64_t(data2[0]);
+					h *= m;
+			};
+ 
+			h ^= h >> r;
+			h *= m;
+			h ^= h >> r;
+
+			return h;
+		}
 	}
 }
 
