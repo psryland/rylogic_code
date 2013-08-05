@@ -5,7 +5,7 @@
 	<head>
 		<title>Regular Expressions - Quick Reference</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-		<meta http-equiv="refresh" content="3" /><!--hack-->
+		<#@include file="..\docs\auto_refresh.t4html_inc"#>
 		<style type="text/css">
 			<#@include file="quick_ref.css"#>
 		</style>
@@ -37,7 +37,7 @@
 					<td class="mono">.</td>
 					<td>
 						Any single character except \n (the new line character). To match a literal period character 
-						(. or \u002E), precede it with an <a href="#escape_character">escape character</a>
+						(. or \u002E), precede it with an <a href="#escape_characters">escape character</a>
 					</td>
 					<td class="mono">f.ll st.p\.</td>
 					<td>
@@ -311,7 +311,7 @@
 			</tbody>
 		</table>
 
-		<div class="heading">Escaped Characters</div>
+		<div class="heading" id="escape_characters">Escaped Characters</div>
 		<div class="content">
 			The backslash character (\) in a regular expression indicates that the character following it
 			is either a special character, or should be interpreted literally.
@@ -329,7 +329,7 @@
 					</th>
 				</tr>
 				<tr>
-					<td class="mono"><a id="escape_character" />\</td>
+					<td class="mono">\</td>
 					<td>
 						<div>The escape character for escaping special characters.</div>
 						<div>When followed by a character that is not recognized as a special sequence, matches that character.</div>
@@ -702,7 +702,7 @@
 				</tr>
 			</tbody>
 		</table>
-
+		<!--
 		<div class="heading">Useful Examples:</div>
 		<table>
 			<tbody>
@@ -716,6 +716,7 @@
 				</tr>
 			</tbody>
 		</table>
+		-->
 		<h3>External Links:</h3>
 		<ul>
 			<li>

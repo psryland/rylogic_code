@@ -53,8 +53,7 @@ namespace RyLogViewer
 			// Otherwise, the user wants to use the feature
 			m_licensed_features[key] = use;
 			this.BeginInvokeDelayed(
-				//hack(int)TimeSpan.FromMinutes(FreeEditionLimits.FeatureEnableTimeInMinutes).TotalMilliseconds,
-				(int)TimeSpan.FromSeconds(5).TotalMilliseconds,
+				(int)TimeSpan.FromMinutes(FreeEditionLimits.FeatureEnableTimeInMinutes).TotalMilliseconds,
 				() =>
 				{
 					ILicensedFeature feat;
@@ -180,5 +179,4 @@ namespace RyLogViewer
 				m_ui.Close();
 		}
 	}
-
 }

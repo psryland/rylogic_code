@@ -101,7 +101,7 @@ namespace RyLogViewer
 		}
 		
 		/// <summary>Serialise the ClkAction patterns to xml</summary>
-		public static string Export(List<ClkAction> ClkActions)
+		public static string Export(IEnumerable<ClkAction> ClkActions)
 		{
 			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";

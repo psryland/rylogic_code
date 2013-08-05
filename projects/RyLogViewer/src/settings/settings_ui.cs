@@ -1065,7 +1065,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>A filtering count limiter for when the settings dialog is displayed</summary>
-		private class SettingsFilteringCountLimiter :HighlightingCountLimiter
+		private class SettingsFilteringCountLimiter :FilteringCountLimiter
 		{
 			private readonly SettingsUI m_ui; 
 			public SettingsFilteringCountLimiter(Main main, Settings settings, SettingsUI ui)

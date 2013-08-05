@@ -1505,7 +1505,8 @@ namespace RyLogViewer
 				SelectedRowIndex = -1;
 				m_grid.ClearSelection();
 
-				Log.Info(this, "RowCount changed. Row delta {0}.".Fmt(row_delta));
+				if (m_grid.RowCount != count) Log.Info(this, "RowCount changed.");
+				Log.Info(this, "Row delta {0}.".Fmt(row_delta));
 				m_grid.RowCount = 0;
 				m_grid.RowCount = count;
 

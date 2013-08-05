@@ -221,7 +221,12 @@ namespace RyLogViewer
 			get
 			{
 				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Size(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight));
+				if (m_dlg_help == null)
+					m_dlg_help = HelpUI.FromHtml(ParentForm, string.Empty, "Regular Expressions Quick Reference", new Size(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight);
+				
+				m_dlg_help.Html = Resources.regex_quick_ref;
+				m_dlg_help.ResetView();
+				return m_dlg_help;
 			}
 		}
 

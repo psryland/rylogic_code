@@ -42,7 +42,7 @@ namespace RyLogViewer
 			UpdateUI();
 		}
 
-		/// <summary>Select a pattern into the UI for editting</summary>
+		/// <summary>Select a pattern into the UI for editing</summary>
 		public void EditPattern(IPattern pattern)
 		{
 			m_original = (TPattern)pattern;

@@ -366,10 +366,10 @@ namespace RyLogViewer
 			FileBufSize                     = Constants.FileBufSizeDefault;
 			MaxLineLength                   = Constants.MaxLineLengthDefault;
 			LineCacheCount                  = Constants.LineCacheCountDefault;
-			HighlightPatterns               = "<root/>";
+			HighlightPatterns               = Highlight.Export(DefaultHighlightingPatterns());
 			FilterPatterns                  = "<root/>";
 			TransformPatterns               = "<root/>";
-			ActionPatterns                  = "<root/>";
+			ActionPatterns                  = ClkAction.Export(DefaultClickActions());
 			HighlightPatternSets            = "<root/>";
 			FilterPatternSets               = "<root/>";
 			TransformPatternSets            = "<root/>";
@@ -389,6 +389,77 @@ namespace RyLogViewer
 		public Settings(string filepath)
 		:base(filepath)
 		{}
+
+		/// <summary>Return the highlighting patterns for a default instance of the settings</summary>
+		private IEnumerable<Highlight> DefaultHighlightingPatterns()
+		{
+			yield return new Highlight
+				{
+					Expr        = @"(Error:)|(E/)",
+					PatnType    = EPattern.RegularExpression,
+					ForeColour  = Color.FromArgb(0xff,0xff,0xff,0xff),
+					BackColour  = Color.FromArgb(0xff,0x8b,0x00,0x00),
+					IgnoreCase  = false,
+					Invert      = false,
+					WholeLine   = false,
+					BinaryMatch = true,
+					Active      = true,
+				};
+			yield return new Highlight
+				{
+					Expr        = @"(Warn:)|(W/)",
+					PatnType    = EPattern.RegularExpression,
+					ForeColour  = Color.FromArgb(0xff,0x00,0x00,0x00),
+					BackColour  = Color.FromArgb(0xff,0xff,0xff,0x00),
+					IgnoreCase  = false,
+					Invert      = false,
+					WholeLine   = false,
+					BinaryMatch = true,
+					Active      = true,
+				};
+			yield return new Highlight
+				{
+					Expr        = @"(Info:)|(I/)",
+					PatnType    = EPattern.RegularExpression,
+					ForeColour  = Color.FromArgb(0xff,0x00,0x00,0x00),
+					BackColour  = Color.FromArgb(0xff,0xc4,0xff,0xff),
+					IgnoreCase  = false,
+					Invert      = false,
+					WholeLine   = false,
+					BinaryMatch = true,
+					Active      = true,
+				};
+			yield return new Highlight
+				{
+					Expr        = @"(Debug:)|(D/)",
+					PatnType    = EPattern.RegularExpression,
+					ForeColour  = Color.FromArgb(0xff,0x50,0x50,0x50),
+					BackColour  = Color.FromArgb(0xff,0xff,0xff,0xff),
+					IgnoreCase  = false,
+					Invert      = false,
+					WholeLine   = false,
+					BinaryMatch = true,
+					Active      = true,
+				};
+		}
+
+		/// <summary>Return the click action patterns for a default instance of the settings</summary>
+		private IEnumerable<ClkAction> DefaultClickActions()
+		{
+			yield return new ClkAction
+				{
+					Expr = @"*.txt",
+					Active = true,
+					PatnType = EPattern.Wildcard,
+					IgnoreCase = false,
+					Invert = false,
+					WholeLine = false,
+					BinaryMatch = true,
+					Executable = @"C:\windows\notepad.exe",
+					Arguments = @"{[FileDir]}\{1}",
+					WorkingDirectory = string.Empty
+				};
+		}
 
 		/// <summary>Perform validation on the loaded settings</summary>
 		public override void Validate()

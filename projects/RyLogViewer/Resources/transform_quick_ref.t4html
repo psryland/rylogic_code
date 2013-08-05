@@ -5,7 +5,7 @@
 	<head>
 		<title>Transforms - Quick Reference</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-		<meta http-equiv="refresh" content="3" /><!--hack-->
+		<#@include file="..\docs\auto_refresh.t4html_inc"#>
 		<style type="text/css">
 			<#@include file="quick_ref.css"#>
 		</style>

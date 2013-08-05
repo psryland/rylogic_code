@@ -3,6 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
 		<title>Swizzle - Quick Reference</title>
+		<#@include file="..\docs\auto_refresh.t4html_inc"#>
 		<style type="text/css">
 			<#@include file="quick_ref.css"#>
 		</style>
