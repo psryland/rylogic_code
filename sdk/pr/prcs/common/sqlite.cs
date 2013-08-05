@@ -1,4 +1,4 @@
-﻿
+﻿//#define SQLITE_TRACE
 #if !MONOTOUCH
 #define COMPILED_LAMBDAS
 #endif
@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
@@ -52,17 +53,18 @@ using System.Threading;
 //  For custom types use the BindFunction/ReadFunction map to convert your
 //  custom type to one of the supported sqlite data types.
 
+// ReSharper disable AccessToStaticMemberViaDerivedType
 namespace pr.common
 {
-	#if WP8_SQLITE
-	using Dll = Sqlite.Wp8Binding;
-	#else
-	using Dll = Sqlite.NativeBinding;
-	#endif
-
 	/// <summary>A simple sqlite .net ORM</summary>
 	public static class Sqlite
 	{
+		#if WP8_SQLITE
+		public class Dll :Wp8Binding {}
+		#else
+		public class Dll :NativeBinding {}
+		#endif
+
 		#region Constants
 
 		/// <summary>
@@ -380,8 +382,39 @@ namespace pr.common
 		/// <summary>Compiles an sql string into an sqlite3 statement</summary>
 		private static sqlite3_stmt Compile(Database db, string sql_string)
 		{
-			Trace.WriteLine(string.Format("Compiling sql string '{0}'", sql_string));
+			Trace.WriteLine(ETrace.Query, string.Format("Compiling sql string '{0}'", sql_string));
 			return Dll.Prepare(db.Handle, sql_string);
+		}
+
+		#endregion
+
+		#region Logging
+
+		/// <summary>Log receiver interface</summary>
+		public interface ILog
+		{
+			/// <summary>Log an exception with the specified sender, message and exception details.</summary>
+			void Exception(object sender, System.Exception e, string message);
+
+			/// <summary>Log an info message with the specified sender and formatted message</summary>
+			void Info(object sender, string message);
+
+			/// <summary>Log a debug message with the specified sender and formatted message</summary>
+			void Debug(object sender, string message);
+		}
+
+		/// <summary>The logger that this orm writes to</summary>
+		public static ILog Log
+		{
+			get { return m_log ?? (m_log = new NullLog()); }
+			set { m_log = value; }
+		}
+		private static ILog m_log;
+		private class NullLog :ILog
+		{
+			public void Exception(object sender, System.Exception e, string message) {}
+			public void Info(object sender, string message) {}
+			public void Debug(object sender, string message) {}
 		}
 
 		#endregion
@@ -914,12 +947,14 @@ namespace pr.common
 				var obj = m_cache.Get(row_id,
 					k =>
 						{
+							Trace.WriteLine(ETrace.ObjectCache, string.Format("Object Cache Miss: key={0}", key.ToString()));
 							var item = on_miss(key);
-							System.Diagnostics.Debug.Assert(item == null || item.GetType() == m_meta.Type, "Wrong object type for this cache");
+							Debug.Assert(item == null || item.GetType() == m_meta.Type, "Wrong object type for this cache");
 							return item;
 						},
 					(k,v) =>
 						{
+							Trace.WriteLine(ETrace.ObjectCache, string.Format("Object Cache Hit: key={0}, value={1}", k.ToString(CultureInfo.InvariantCulture), v.ToString()));
 							if (on_hit != null)
 								on_hit(key, v);
 						});
@@ -971,6 +1006,8 @@ namespace pr.common
 			/// <summary>Helper method for creating new queries when a query is not in the cache</summary>
 			private Query OnMiss(string key, Func<Query> new_query)
 			{
+				Trace.WriteLine(ETrace.QueryCache, string.Format("Query Cache Miss: {0}", key));
+
 				// Create a new compiled query.
 				var query = new_query();
 				query.Closing += (s,a) =>
@@ -986,6 +1023,8 @@ namespace pr.common
 			/// <summary>Helper method for creating new queries when a query is not in the cache</summary>
 			private void OnHit(Query query, IEnumerable<object> parms = null, int first_idx = 1)
 			{
+				Trace.WriteLine(ETrace.QueryCache, string.Format("Query Cache Hit: {0}", query));
+
 				// Before returning the cached query, reset it
 				query.Reset();
 				if (parms != null)
@@ -1044,10 +1083,14 @@ namespace pr.common
 			private readonly QueryCache m_query_cache;
 			
 			private readonly int m_creation_thread;
-			[System.Diagnostics.Conditional("DEBUG")] public void AssertCorrectThread()
+			[Conditional("DEBUG")] public void AssertCorrectThread()
 			{
 				if (m_creation_thread != Thread.CurrentThread.ManagedThreadId)
-					throw Exception.New(Result.Misuse, "Cross-thread use of Sqlite ORM");
+				{
+					var ex = Exception.New(Result.Misuse, string.Format("Cross-thread use of Sqlite ORM.\n{0}", new StackTrace()));
+					Log.Exception(this, ex, "Cross-thread use of Sqlite ORM");
+					throw ex;
+				}
 			}
 
 			/// <summary>The filepath of the database file opened</summary>
@@ -1069,7 +1112,7 @@ namespace pr.common
 				
 				// Open the database file
 				m_db = Dll.Open(filepath, flags);
-				Trace.WriteLine(string.Format("Database connection opened for '{0}'", filepath));
+				Trace.WriteLine(ETrace.Handles, string.Format("Database connection opened for '{0}'", filepath));
 				
 				// Initialise the per-table object caches
 				m_caches = new Dictionary<string, ICache<object,object>>();
@@ -1094,7 +1137,7 @@ namespace pr.common
 				get
 				{
 					AssertCorrectThread();
-					System.Diagnostics.Debug.Assert(!m_db.IsInvalid, "Invalid database handle");
+					Debug.Assert(!m_db.IsInvalid, "Invalid database handle");
 					return m_db;
 				}
 			}
@@ -1167,7 +1210,7 @@ namespace pr.common
 			public void Close()
 			{
 				AssertCorrectThread();
-				Trace.WriteLine(string.Format("Closing database connection{0}", m_db.IsClosed ? " (already closed)" : ""));
+				Trace.WriteLine(ETrace.Handles, string.Format("Closing database connection{0}", m_db.IsClosed ? " (already closed)" : ""));
 				if (m_db.IsClosed) return;
 				
 				// Release cached objects
@@ -1192,6 +1235,7 @@ namespace pr.common
 			/// Returns the number of rows affected by the operation</summary>
 			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
+				AssertCorrectThread();
 				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
 					return query.Run();
 			}
@@ -1199,6 +1243,7 @@ namespace pr.common
 			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
 			public int ExecuteScalar(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
+				AssertCorrectThread();
 				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
 				{
 					if (!query.Step()) throw Exception.New(Result.Error, "Scalar query returned no results");
@@ -1211,6 +1256,7 @@ namespace pr.common
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
 			public IEnumerable EnumRows(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
+				AssertCorrectThread();
 				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
 					foreach (var r in query.Rows(type))
 						yield return r; // Can't just return query.Rows(type) because Dispose() is called on query
@@ -1227,6 +1273,7 @@ namespace pr.common
 			}
 			public void DropTable(Type type, bool if_exists = true)
 			{
+				Trace.WriteLine(ETrace.Tables, string.Format("Drop table for type {0}", type.Name));
 				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				var opts = if_exists ? "if exists " : "";
 				Execute(Sql("drop table ",opts,meta.Name));
@@ -1259,9 +1306,10 @@ namespace pr.common
 			}
 			public void CreateTable(Type type, Func<object> factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
 			{
+				Trace.WriteLine(ETrace.Tables, string.Format("Create table for type {0}", type.Name));
 				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				if (factory != null) meta.Factory = factory;
-				
+
 				if (on_constraint == OnCreateConstraint.AlterTable && TableExists(type))
 					AlterTable(type);
 				else
@@ -1278,6 +1326,8 @@ namespace pr.common
 			}
 			public void AlterTable(Type type)
 			{
+				Trace.WriteLine(ETrace.Tables, string.Format("Alter table for type {0}", type.Name));
+
 				// Read the columns that we want the table to have
 				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				var cols0 = meta.Columns.Select(x => x.Name).ToList();
@@ -1322,6 +1372,7 @@ namespace pr.common
 			}
 			public void RenameTable(Type type, string new_name, bool update_meta_data = true)
 			{
+				Trace.WriteLine(ETrace.Tables, string.Format("Rename table for type {0}", type.Name));
 				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				var sql = Sql("alter table ",meta.Name," rename to ",new_name);
 				Execute(sql);
@@ -1330,7 +1381,7 @@ namespace pr.common
 			}
 
 			/// <summary>Return an existing table for type 'T'</summary>
-			[System.Diagnostics.DebuggerStepThrough] public Table<T> Table<T>()
+			[DebuggerStepThrough] public Table<T> Table<T>()
 			{
 				return new Table<T>(this);
 			}
@@ -1338,7 +1389,7 @@ namespace pr.common
 			/// <summary>
 			/// Return an existing table for runtime type 'type'.
 			/// 'factory' is a factory method for creating instances of type 'type'. It null, then Activator.CreateInstance is used.</summary>
-			[System.Diagnostics.DebuggerStepThrough] public Table Table(Type type)
+			[DebuggerStepThrough] public Table Table(Type type)
 			{
 				return new Table(type, this);
 			}
@@ -1444,11 +1495,15 @@ namespace pr.common
 			/// <summary>Handler for the data changed event to invalidate cached objects</summary>
 			private void InvalidateCachesOnDataChanged(object sender, DataChangedArgs args)
 			{
+				// If no table name is provided, flush all objects caches,
+				// since we don't know which one contained this changed.
+				// This shouldn't happen, except it does and I don't know why yet.
 				if (string.IsNullOrEmpty(args.TableName))
-                {
+				{
+					Trace.WriteLine(ETrace.ObjectCache, "Sqlite update callback called with no table name. All object caches flushed");
 					FlushObjectCaches();
 					return;
-                }
+				}
 
 				ICache<object,object> cache;
 				if (m_caches.TryGetValue(args.TableName, out cache))
@@ -1467,6 +1522,10 @@ namespace pr.common
 						cache.Flush();
 						break;
 					}
+				}
+				else
+				{
+					Trace.WriteLine(ETrace.ObjectCache, string.Format("Table {0} has no cache", args.TableName));
 				}
 			}
 
@@ -1675,7 +1734,7 @@ namespace pr.common
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(params object[] keys)
 			{
-				Trace.WriteLine(string.Format("Deleting {0} (key: {1})", m_meta.Name, string.Join(",",keys)));
+				Trace.WriteLine(ETrace.Query, string.Format("Deleting {0} (key: {1})", m_meta.Name, string.Join(",",keys)));
 				using (var query = m_db.QueryCache.GetQuery(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, keys);
@@ -1687,7 +1746,7 @@ namespace pr.common
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(object key1, object key2) // overload for performance
 			{
-				Trace.WriteLine(string.Format("Deleting {0} (key: {1},{2})", m_meta.Name, key1, key2));
+				Trace.WriteLine(ETrace.Query, string.Format("Deleting {0} (key: {1},{2})", m_meta.Name, key1, key2));
 				using (var query = m_db.QueryCache.GetQuery(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, key1, key2);
@@ -1699,7 +1758,7 @@ namespace pr.common
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(object key1) // overload for performance
 			{
-				Trace.WriteLine(string.Format("Deleting {0} (key: {1})", m_meta.Name, key1));
+				Trace.WriteLine(ETrace.Query, string.Format("Deleting {0} (key: {1})", m_meta.Name, key1));
 				using (var query = m_db.QueryCache.GetQuery(SqlDeleteCmd(m_meta.Type)))
 				{
 					query.BindParms(1, key1);
@@ -1711,7 +1770,7 @@ namespace pr.common
 			/// <summary>Update a single column for a single row in the table</summary>
 			public int Update<TValueType>(string column_name, TValueType value, params object[] keys)
 			{
-				Trace.WriteLine(string.Format("Updating column {0} in table {1} (key: {2})", column_name, m_meta.Name, string.Join(",",keys)));
+				Trace.WriteLine(ETrace.Query, string.Format("Updating column {0} in table {1} (key: {2})", column_name, m_meta.Name, string.Join(",",keys)));
 				var column_meta = m_meta.Column(column_name);
 				if (m_meta.Pks.Length == 0) throw Exception.New(Result.Misuse, "Cannot update an item with no primary keys since it cannot be identified");
 				var sql = Sql("update ",m_meta.Name," set ",column_meta.Name," = ? where ",m_meta.PkConstraints());
@@ -1727,7 +1786,7 @@ namespace pr.common
 			/// <summary>Update the value of a column for all rows in a table</summary>
 			public int UpdateAll<TValueType>(string column_name, TValueType value)
 			{
-				Trace.WriteLine(string.Format("Updating column {0} in table {1} (all rows)", column_name, m_meta.Name));
+				Trace.WriteLine(ETrace.Query, string.Format("Updating column {0} in table {1} (all rows)", column_name, m_meta.Name));
 				var column_meta = m_meta.Column(column_name);
 				var sql = Sql("update ",m_meta.Name," set ",column_name," = ?");
 				using (var query = m_db.QueryCache.GetQuery(sql))
@@ -1995,7 +2054,7 @@ namespace pr.common
 					
 					SqlString = cmd.Text.ToString();
 					Arguments = cmd.Args;
-					Trace.WriteLine("Sql expression generated: " + ToString());
+					Trace.WriteLine(ETrace.Query, "Sql expression generated: " + ToString());
 				}
 
 				/// <summary>The result of a call to 'Translate'</summary>
@@ -2386,7 +2445,7 @@ namespace pr.common
 				m_db = db;
 				m_stmt = stmt;
 				Trace.QueryCreated(this);
-				Trace.WriteLine(string.Format("Query created '{0}'", SqlString));
+				Trace.WriteLine(ETrace.Query, string.Format("Query created '{0}'", SqlString));
 			}
 			public Query(Database db, string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
 			:this(db, Compile(db, sql_string))
@@ -2410,14 +2469,14 @@ namespace pr.common
 			/// <summary>Returns the m_stmt field after asserting it's validity</summary>
 			public sqlite3_stmt Stmt
 			{
-				get { System.Diagnostics.Debug.Assert(!m_stmt.IsInvalid, "Invalid query object"); return m_stmt; }
+				get { Debug.Assert(!m_stmt.IsInvalid, "Invalid query object"); return m_stmt; }
 			}
 
 			/// <summary>Call when done with this query</summary>
 			public void Close()
 			{
 				if (m_stmt.IsClosed) return;
-				Trace.WriteLine(string.Format("Query closed '{0}'", SqlString));
+				Trace.WriteLine(ETrace.Handles, string.Format("Query closed '{0}'", SqlString));
 
 				// Call the event to see if we cancel closing the query
 				var cancel = new QueryClosingEventArgs();
@@ -2547,6 +2606,7 @@ namespace pr.common
 			/// <summary>Iterate to the next row in the result. Returns true if there are more rows available</summary>
 			public bool Step()
 			{
+				m_db.AssertCorrectThread();
 				var res = Dll.Step(Stmt);
 				switch (res)
 				{
@@ -2563,7 +2623,6 @@ namespace pr.common
 				while (Step()) rows_changed += RowsChanged;
 				return rows_changed + RowsChanged;
 			}
-
 
 			/// <summary>Returns the number of rows changed as a result of the last 'step()'</summary>
 			public int RowsChanged
@@ -2643,7 +2702,7 @@ namespace pr.common
 			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
 			public override int Run()
 			{
-				Trace.WriteLine(string.Format("Inserting {0}", MetaData.Name));
+				Trace.WriteLine(ETrace.Query, string.Format("Inserting {0}", MetaData.Name));
 				Step();
 				return RowsChanged;
 			}
@@ -2673,7 +2732,7 @@ namespace pr.common
 			/// <summary>Run the insert command. Call 'Reset()' before running the command again</summary>
 			public override int Run()
 			{
-				Trace.WriteLine(string.Format("Updating {0}", MetaData.Name));
+				Trace.WriteLine(ETrace.Query, string.Format("Updating {0}", MetaData.Name));
 				Step();
 				return RowsChanged;
 			}
@@ -2809,7 +2868,7 @@ namespace pr.common
 			/// This is slow however so use a static delegate if possible</summary>
 			public TableMetaData(Type type)
 			{
-				Trace.WriteLine(string.Format("Creating table meta data for '{0}'", type.Name));
+				Trace.WriteLine(ETrace.Tables, string.Format("Creating table meta data for '{0}'", type.Name));
 				
 				// Get the table attribute
 				var attrs = type.GetCustomAttributes(typeof(TableAttribute), true);
@@ -3066,7 +3125,7 @@ namespace pr.common
 			/// <summary>Returns a shallow copy of 'obj' as a new instance</summary>
 			public object Clone(object item)
 			{
-				System.Diagnostics.Debug.Assert(item.GetType() == Type, "'item' is not the correct type for this table");
+				Debug.Assert(item.GetType() == Type, "'item' is not the correct type for this table");
 				#if COMPILED_LAMBDAS
 				return m_method_clone.Invoke(null, new[]{item});
 				#else
@@ -3078,8 +3137,8 @@ namespace pr.common
 			/// <summary>Returns true of 'lhs' and 'rhs' are equal instances of this table type</summary>
 			public bool Equal(object lhs, object rhs)
 			{
-				System.Diagnostics.Debug.Assert(lhs.GetType() == Type, "'lhs' is not the correct type for this table");
-				System.Diagnostics.Debug.Assert(rhs.GetType() == Type, "'rhs' is not the correct type for this table");
+				Debug.Assert(lhs.GetType() == Type, "'lhs' is not the correct type for this table");
+				Debug.Assert(rhs.GetType() == Type, "'rhs' is not the correct type for this table");
 				#if COMPILED_LAMBDAS
 				return (bool)m_method_equal.Invoke(null, new[]{lhs, rhs});
 				#else
@@ -3261,7 +3320,7 @@ namespace pr.common
 				// Setup the bind and read methods
 				BindFn = Bind.FuncFor(type);
 				ReadFn = Read.FuncFor(type);
-				Trace.WriteLine(string.Format("   Column: '{0}'", Name));
+				Trace.WriteLine(ETrace.Tables, string.Format("   Column: '{0}'", Name));
 			}
 
 			/// <summary>Returns the column definition for this column</summary>
@@ -3724,7 +3783,7 @@ namespace pr.common
 			}
 		}
 		#else
-		public static class NativeBinding
+		public class NativeBinding
 		{
 			/// <summary>Based class for wrappers of native sqlite handles</summary>
 			private abstract class SQLiteHandle :SafeHandle
@@ -3759,7 +3818,7 @@ namespace pr.common
 				/// <summary>Frees the handle.</summary>
 				protected override bool ReleaseHandle()
 				{
-					Trace.WriteLine(string.Format("Releasing sqlite3 handle ({0})", handle));
+					Trace.WriteLine(ETrace.Handles, string.Format("Releasing sqlite3 handle ({0})", handle));
 					CloseResult = sqlite3_close(handle);
 					handle = IntPtr.Zero;
 					return true;
@@ -3775,7 +3834,7 @@ namespace pr.common
 				/// <summary>Frees the handle.</summary>
 				protected override bool ReleaseHandle()
 				{
-					Trace.WriteLine(string.Format("Releasing sqlite3_stmt handle ({0})", handle));
+					Trace.WriteLine(ETrace.Handles, string.Format("Releasing sqlite3_stmt handle ({0})", handle));
 					CloseResult = sqlite3_finalize(handle);
 					handle = IntPtr.Zero;
 					return true;
@@ -3783,24 +3842,50 @@ namespace pr.common
 			}
 
 			/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string into a .NET string</summary>
-			private static string UTF8toStr(IntPtr utf8ptr)
+			public static string UTF8toStr(IntPtr utf8ptr)
 			{
-				if (utf8ptr == IntPtr.Zero) return null;
-				var str = Marshal.PtrToStringAnsi(utf8ptr);
-				if (str == null) return null;
-				var bytes = new byte[str.Length];
-				Marshal.Copy(utf8ptr, bytes, 0, bytes.Length);
+				if (utf8ptr == IntPtr.Zero)
+					return null;
+
+				// There is no Marshal.PtrToStringUtf8 unfortunately, so we have to do it manually
+				// Read up to (but not including) the null terminator
+				byte b; var buf = new List<byte>(256);
+				for (int i = 0; (b = Marshal.ReadByte(utf8ptr, i)) != 0; ++i)
+					buf.Add(b);
+
+				var bytes = buf.ToArray();
 				return Encoding.UTF8.GetString(bytes, 0, bytes.Length);
 			}
 
 			/// <summary>Converts a C# string (in UTF-16) to a byte array in UTF-8</summary>
-			private static byte[] StrToUTF8(string str)
+			public static byte[] StrToUTF8(string str)
 			{
 				return Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(str));
 			}
 
 			private static readonly IntPtr TransientData = new IntPtr(-1);
 			private delegate void sqlite3_destructor_type(IntPtr ptr);
+
+			public static string LibVersion()
+			{
+				return Marshal.PtrToStringAnsi(sqlite3_libversion());
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_libversion", CallingConvention = CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_libversion();
+
+			public static string SourceId()
+			{
+				return Marshal.PtrToStringAnsi(sqlite3_sourceid());
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_sourceid", CallingConvention = CallingConvention.Cdecl)]
+			private static extern IntPtr sqlite3_sourceid();
+
+			public static int LibVersionNumber()
+			{
+				return sqlite3_libversion_number();
+			}
+			[DllImport("sqlite3", EntryPoint = "sqlite3_libversion_number", CallingConvention = CallingConvention.Cdecl)]
+			private static extern int sqlite3_libversion_number();
 
 			[DllImport("sqlite3", EntryPoint = "sqlite3_close", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_close(IntPtr db);
@@ -4074,7 +4159,7 @@ namespace pr.common
 			{
 				sqlite3_update_hook((NativeSqlite3Handle)db, cb, ctx);
 			}
-			[DllImport("sqlite3", EntryPoint = "sqlite3_update_hook", CallingConvention=CallingConvention.Cdecl)]
+			[DllImport("sqlite3", EntryPoint = "sqlite3_update_hook", CallingConvention=CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
 			private static extern IntPtr sqlite3_update_hook(NativeSqlite3Handle db, UpdateHookCB cb, IntPtr ctx);
 		}
 		#endif
@@ -4083,45 +4168,63 @@ namespace pr.common
 		#endregion
 
 		#region SQLITE_TRACE
+		[Flags] private enum ETrace
+		{
+			None        = 0,
+			Handles     = 1 << 0,
+			Tables      = 1 << 1,
+			Query       = 1 << 3,
+			ObjectCache = 1 << 4,
+			QueryCache  = 1 << 5,
+		}
 		private static class Trace
 		{
+			/// <summary>Used to filter out specific trace messages</summary>
+			private const ETrace TraceFilter = ETrace.None
+				|ETrace.Handles
+				|ETrace.Tables
+				|ETrace.Query
+				//|ETrace.ObjectCache
+				//|ETrace.QueryCache
+				;
+
 			private class Info
 			{
 				public string CallStack { get; private set; }
 				public bool InUse { get; set; }
-				public Info() { CallStack = new System.Diagnostics.StackTrace().ToString(); }
+				public Info() { CallStack = new StackTrace().ToString(); }
 			}
 			private static readonly Dictionary<Query, Info> m_trace = new Dictionary<Query,Info>();
 
 			/// <summary>Records the creation of a new Query object</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryCreated(Query query)
+			[Conditional("SQLITE_TRACE")] public static void QueryCreated(Query query)
 			{
 				m_trace.Add(query, new Info());
 			}
 
 			/// <summary>Records the destruction of a Query object</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryClosed(Query query)
+			[Conditional("SQLITE_TRACE")] public static void QueryClosed(Query query)
 			{
 				m_trace.Remove(query);
 			}
 
 			/// <summary>Records the destruction of a Query object</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void QueryInUse(Query query, bool in_use)
+			[Conditional("SQLITE_TRACE")] public static void QueryInUse(Query query, bool in_use)
 			{
 				m_trace[query].InUse = in_use;
 			}
 
 			/// <summary>Dumps the existing Query objects to standard error</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void Dump(bool in_use_only)
+			[Conditional("SQLITE_TRACE")] public static void Dump(bool in_use_only)
 			{
 				if (m_trace.Count == 0) return;
 				var sb = new StringBuilder();
 				Dump(sb, in_use_only);
-				System.Diagnostics.Debug.WriteLine(sb.ToString());
+				Debug.WriteLine(sb.ToString());
 			}
 
 			/// <summary>Dumps the existing Query objects to 'sb'</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void Dump(StringBuilder sb, bool in_use_only)
+			[Conditional("SQLITE_TRACE")] public static void Dump(StringBuilder sb, bool in_use_only)
 			{
 				if (m_trace.Count == 0) return;
 				foreach (var t in m_trace)
@@ -4132,14 +4235,16 @@ namespace pr.common
 			}
 
 			/// <summary>Write trace information to the debug output window</summary>
-			[System.Diagnostics.Conditional("SQLITE_TRACE")] public static void WriteLine(string str)
+			[Conditional("SQLITE_TRACE")] public static void WriteLine(ETrace trace, string str)
 			{
-				System.Diagnostics.Debug.WriteLine("[SQLite]:"+str);
+				if ((trace & TraceFilter) != 0)
+					Log.Debug(null, string.Format("[SQLite]: {0}", str));
 			}
 		}
 		#endregion
 	}
 }
+// ReSharper restore AccessToStaticMemberViaDerivedType
 
 #if PR_UNITTESTS
 namespace pr

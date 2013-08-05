@@ -1475,7 +1475,7 @@ namespace pr.gui
 				PointF pt = PointToGraph(e.Location);
 				string old_str = m_tooltip.GetToolTip(this);
 				string new_str = pt.ToString();
-				if (old_str != new_str) // Hack-fix a flickering problem for non-moving mouse
+				if (old_str != new_str) // Fix a flickering problem for non-moving mouse
 					m_tooltip.Show(new_str, this, e.Location + new Size(20, 0));
 			}
 			else

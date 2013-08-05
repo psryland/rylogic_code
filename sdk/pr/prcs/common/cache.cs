@@ -54,7 +54,7 @@ namespace pr.common
 		/// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
 		public void Dispose()
 		{
-			if (typeof(TItem).Inherits(typeof(IDisposable)))
+			if (typeof(IDisposable).IsAssignableFrom(typeof(TItem)))
 			{
 				foreach (var e in m_cache)
 				{
