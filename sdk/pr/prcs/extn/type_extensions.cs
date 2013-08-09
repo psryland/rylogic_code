@@ -28,6 +28,13 @@ namespace pr.extn
 			return AllFields(type.BaseType, flags).Concat(type.GetFields(flags|BindingFlags.DeclaredOnly));
 		}
 
+		/// <summary>Returns all inherited events for a type</summary>
+		public static IEnumerable<EventInfo> AllEvents(this Type type, BindingFlags flags)
+		{
+			if (type == null || type == typeof(object)) return Enumerable.Empty<EventInfo>();
+			return AllEvents(type.BaseType, flags).Concat(type.GetEvents(flags|BindingFlags.DeclaredOnly));
+		}
+
 		/// <summary>Find all types derived from this type</summary>
 		public static List<Type> DerivedTypes(this Type type)
 		{
