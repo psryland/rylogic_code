@@ -338,16 +338,17 @@ namespace pr.gui
 		/// Parses the input for vt100 control sequences.</summary>
 		public void Output(string text)
 		{
-			this.SuspendRedraw();
-			CursorLocation = OutputCursorLocation;
-			
-			if (m_settings.HexOutput)
-				OutputHex(text);
-			else
-				ParseOutput(text);
-		
-			OutputCursorLocation = CursorLocation;
-			this.ResumeRedraw(true);
+			using (this.SuspendRedraw(true))
+			{
+				CursorLocation = OutputCursorLocation;
+
+				if (m_settings.HexOutput)
+					OutputHex(text);
+				else
+					ParseOutput(text);
+
+				OutputCursorLocation = CursorLocation;
+			}
 			ClearUndo();
 		}
 

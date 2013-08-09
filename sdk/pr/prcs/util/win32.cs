@@ -479,7 +479,7 @@ namespace pr.util
 		/// <summary>Unpack a Point from an LPARAM</summary>
 		public static Point LParamToPoint(IntPtr lparam)
 		{
-			return new Point(lparam.ToInt32() & 0xffff, lparam.ToInt32() >> 16);;
+			return new Point(lparam.ToInt32() & 0xffff, lparam.ToInt32() >> 16);
 		}
 
 		public static HWND WindowFromPoint(Point pt)
@@ -502,17 +502,15 @@ namespace pr.util
 			SetScrollInfo(hWnd, nBar, ref info, bRedraw);
 		}
 
-		/// <summary>Suspending painting of a control</summary>
-		public static void SuspendRedraw(this Control parent)
+		public static Scope SuspendRedraw(this Control ctrl, bool refresh_on_resume)
 		{
-			SendMessage(parent.Handle, WM_SETREDRAW, 0, 0);
-		}
-
-		/// <summary>Resume painting of a control</summary>
-		public static void ResumeRedraw(this Control parent, bool refresh)
-		{
-			SendMessage(parent.Handle, WM_SETREDRAW, 1, 0);
-			if (refresh) parent.Refresh();
+			return Scope.Create(
+				() => SendMessage(ctrl.Handle, WM_SETREDRAW, 0, 0),
+				() =>
+					{
+						SendMessage(ctrl.Handle, WM_SETREDRAW, 1, 0);
+						if (refresh_on_resume) ctrl.Refresh();
+					});
 		}
 
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);
