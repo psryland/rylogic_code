@@ -270,7 +270,7 @@ namespace RyLogViewer
 				Interlocked.Increment(ref m_build_issue);
 				ReloadInProgress = reload;
 				//Log.Info(this, "build start request (id {0}, reload: {1})".Fmt(m_build_issue, reload));
-				Log.Info(this, "build start request (id {0}, reload: {1})\n{2}".Fmt(m_build_issue, reload, new StackTrace(0,true)));
+				Log.Info(this, "build start request (id {0}, reload: {1})\n{2}".Fmt(m_build_issue, reload, string.Empty));//new StackTrace(0,true)));
 
 				// Make copies of variables for thread safety
 				var bli_data = new BLIData(this, filepos, reload, m_build_issue);
@@ -1035,7 +1035,7 @@ namespace RyLogViewer
 					row_delta = new_idx - old_idx;
 				}
 
-				Log.Info(this, "Replacing results. {0} lines about filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
+				Log.Info(this, "Replacing results. Results contain {0} lines about filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
 				m_line_index = line_index;
 
 				// Invalidate the cache since the cached data may now be different
@@ -1048,7 +1048,7 @@ namespace RyLogViewer
 				// Append to the front and trim the end
 				if (scan_range.End < old_rng.End)
 				{
-					Log.Info(this, "Merging results front. {0} lines added. filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
+					Log.Info(this, "Merging results front. Results contain {0} lines. filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
 
 					// Make sure there's no overlap of rows between 'scan_range' and m_line_index
 					while (m_line_index.Count != 0 && scan_range.Contains(m_line_index.First().Begin))
@@ -1074,7 +1074,7 @@ namespace RyLogViewer
 				// Or append to the back and trim the start
 				else if (scan_range.Begin > old_rng.Begin)
 				{
-					Log.Info(this, "Merging results tail. {0} lines added. filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
+					Log.Info(this, "Merging results tail. Results contain {0} lines. filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
 
 					// Make sure there's no overlap of rows between 'scan_range' and 'm_line_index'
 					while (m_line_index.Count != 0 && scan_range.Contains(m_line_index.Last().Begin))

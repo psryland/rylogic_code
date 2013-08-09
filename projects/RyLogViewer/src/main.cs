@@ -1505,10 +1505,29 @@ namespace RyLogViewer
 				SelectedRowIndex = -1;
 				m_grid.ClearSelection();
 
-				if (m_grid.RowCount != count) Log.Info(this, "RowCount changed.");
+				var row_diff = count - m_grid.RowCount;
+				if (row_diff < 0)
+				{
+					Log.Info(this, "RowCount changed {0} -> {1}.".Fmt(m_grid.RowCount, count));
+					m_grid.RowCount = 0;
+					m_grid.RowCount = count;
+				}
+				else if (row_diff > 0)
+				{
+					Log.Info(this, "RowCount changed {0} -> {1}.".Fmt(m_grid.RowCount, count));
+					m_grid.RowCount = count;
+				}
+
+				// If the number of rows added to the grid is not equal to the row delta
+				// then the oddness of grid row zero depends on the difference
+				if (row_diff != -row_delta)
+				{
+					// Give the illusion that the alternating row colour is moving with the overall file
+					var row_zero_shift = Math.Max(-row_delta - row_diff, 0);
+					if ((row_zero_shift & 1) == 1)
+						m_first_row_is_odd = !m_first_row_is_odd;
+				}
 				Log.Info(this, "Row delta {0}.".Fmt(row_delta));
-				m_grid.RowCount = 0;
-				m_grid.RowCount = count;
 
 				// Restore the selected row, and the first visible row
 				if (count != 0)
@@ -1537,6 +1556,7 @@ namespace RyLogViewer
 						// changing the 'CurrentCell' also changes the scroll position
 						if (first_vis != -1)
 							m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
+						
 					}
 				}
 			}
@@ -1665,8 +1685,7 @@ namespace RyLogViewer
 				m_in_update_ui = true;
 				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
 
-				// Don't suspend events by removing/adding handlers because that pattern doesn't nest
-				using (m_grid.SuspendLayout(true))
+				using (m_grid.SuspendRedraw(true))
 				{
 					// Configure the grid
 					if (m_line_index.Count != 0)
@@ -1674,7 +1693,7 @@ namespace RyLogViewer
 						// Ensure the grid has the correct number of rows
 						using (m_suspend_grid_events.Reference)
 							SetGridRowCount(m_line_index.Count, row_delta);
-					
+
 						SetGridColumnSizes();
 					}
 					else
@@ -1684,12 +1703,8 @@ namespace RyLogViewer
 						using (m_suspend_grid_events.Reference)
 							SetGridRowCount(0, 0);
 					}
+					m_grid.Refresh();
 				}
-				m_grid.Refresh();
-
-				// Give the illusion that the alternating row colour is moving with the overall file
-				if ((Math.Abs(row_delta) & 1) == 1)
-					m_first_row_is_odd = !m_first_row_is_odd;
 
 				// Configure menus
 				bool file_open                            = FileOpen;
