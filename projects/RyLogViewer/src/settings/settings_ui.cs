@@ -995,56 +995,54 @@ namespace RyLogViewer
 		/// <summary>Update the UI state based on current settings</summary>
 		private void UpdateUI()
 		{
-			using (this.SuspendRedraw(true))
-			{
-				bool use_web_proxy = m_settings.UseWebProxy;
-				m_lbl_web_proxy_host.Enabled = use_web_proxy;
-				m_lbl_web_proxy_port.Enabled = use_web_proxy;
-				m_edit_web_proxy_host.Enabled = use_web_proxy;
-				m_spinner_web_proxy_port.Enabled = use_web_proxy;
-				m_spinner_column_count.Enabled = m_settings.ColDelimiter.Length != 0;
-			
-				m_check_alternate_line_colour.Checked = m_settings.AlternateLineColours;
-				m_lbl_selection_example.BackColor = m_settings.LineSelectBackColour;
-				m_lbl_selection_example.ForeColor = m_settings.LineSelectForeColour;
-				m_lbl_line1_example.BackColor = m_settings.LineBackColour1;
-				m_lbl_line1_example.ForeColor = m_settings.LineForeColour1;
-				m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
-				m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
-				m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
-				
-				m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
-				
-				int selected = m_grid_highlight.FirstSelectedRowIndex();
-				m_grid_highlight.CurrentCell = null;
-				m_grid_highlight.RowCount = 0;
-				m_grid_highlight.RowCount = m_highlights.Count;
-				m_grid_highlight.SelectRow(selected);
-				
-				selected = m_grid_filter.FirstSelectedRowIndex();
-				m_grid_filter.CurrentCell = null;
-				m_grid_filter.RowCount = 0;
-				m_grid_filter.RowCount = m_filters.Count;
-				m_grid_filter.SelectRow(selected);
-				
-				selected = m_grid_transform.FirstSelectedRowIndex();
-				m_grid_transform.CurrentCell = null;
-				m_grid_transform.RowCount = 0;
-				m_grid_transform.RowCount = m_transforms.Count;
-				m_grid_transform.SelectRow(selected);
-				
-				selected = m_grid_action.FirstSelectedRowIndex();
-				m_grid_action.CurrentCell = null;
-				m_grid_action.RowCount = 0;
-				m_grid_action.RowCount = m_actions.Count;
-				m_grid_action.SelectRow(selected);
-				
-				m_text_settings.Text = m_settings.Filepath;
+			bool use_web_proxy = m_settings.UseWebProxy;
+			m_lbl_web_proxy_host.Enabled = use_web_proxy;
+			m_lbl_web_proxy_port.Enabled = use_web_proxy;
+			m_edit_web_proxy_host.Enabled = use_web_proxy;
+			m_spinner_web_proxy_port.Enabled = use_web_proxy;
+			m_spinner_column_count.Enabled = m_settings.ColDelimiter.Length != 0;
 
-				m_main.UseLicensedFeature(FeatureName.Highlighting, new SettingsHighlightingCountLimiter(m_main, m_settings, this));
-				m_main.UseLicensedFeature(FeatureName.Filtering,    new SettingsFilteringCountLimiter(m_main, m_settings, this));
-			}
+			m_check_alternate_line_colour.Checked = m_settings.AlternateLineColours;
+			m_lbl_selection_example.BackColor = m_settings.LineSelectBackColour;
+			m_lbl_selection_example.ForeColor = m_settings.LineSelectForeColour;
+			m_lbl_line1_example.BackColor = m_settings.LineBackColour1;
+			m_lbl_line1_example.ForeColor = m_settings.LineForeColour1;
+			m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
+			m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
+			m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
+
+			m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
+
+			int selected = m_grid_highlight.FirstSelectedRowIndex();
+			m_grid_highlight.CurrentCell = null;
+			m_grid_highlight.RowCount = 0;
+			m_grid_highlight.RowCount = m_highlights.Count;
+			m_grid_highlight.SelectRow(selected);
+
+			selected = m_grid_filter.FirstSelectedRowIndex();
+			m_grid_filter.CurrentCell = null;
+			m_grid_filter.RowCount = 0;
+			m_grid_filter.RowCount = m_filters.Count;
+			m_grid_filter.SelectRow(selected);
+
+			selected = m_grid_transform.FirstSelectedRowIndex();
+			m_grid_transform.CurrentCell = null;
+			m_grid_transform.RowCount = 0;
+			m_grid_transform.RowCount = m_transforms.Count;
+			m_grid_transform.SelectRow(selected);
+
+			selected = m_grid_action.FirstSelectedRowIndex();
+			m_grid_action.CurrentCell = null;
+			m_grid_action.RowCount = 0;
+			m_grid_action.RowCount = m_actions.Count;
+			m_grid_action.SelectRow(selected);
+
+			m_text_settings.Text = m_settings.Filepath;
+
+			m_main.UseLicensedFeature(FeatureName.Highlighting, new SettingsHighlightingCountLimiter(m_main, m_settings, this));
+			m_main.UseLicensedFeature(FeatureName.Filtering, new SettingsFilteringCountLimiter(m_main, m_settings, this));
 		}
+
 		private void UpdateUI(object sender, EventArgs args)
 		{
 			UpdateUI();
