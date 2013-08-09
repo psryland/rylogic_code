@@ -4,7 +4,6 @@
 //***************************************************
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
@@ -21,53 +20,10 @@ namespace pr.extn
 			return (T)(ctrl.Tag ?? (ctrl.Tag = new T()));
 		}
 
-		private struct TTAssociation { public ToolTip tt; public string msg; }
-		private static readonly Dictionary<Control,TTAssociation> m_tt_texts = new Dictionary<Control, TTAssociation>();
-
 		/// <summary>Set the tooltip for this control</summary>
 		public static void ToolTip(this Control ctrl, ToolTip tt, string caption)
 		{
-			m_tt_texts[ctrl] = new TTAssociation{tt = tt, msg = caption};
 			tt.SetToolTip(ctrl, caption);
-		}
-
-		/// <summary>Returns the tool tip text last set on this control, or null if none</summary>
-		public static string ToolTipText(this Control ctrl)
-		{
-			TTAssociation tta;
-			return m_tt_texts.TryGetValue(ctrl, out tta) ? tta.msg : null;
-		}
-
-		/// <summary>Display the tool tip for this control using the capture last set on it</summary>
-		public static void ShowToolTip(this Control ctrl)
-		{
-			TTAssociation tta;
-			if (m_tt_texts.TryGetValue(ctrl, out tta))
-				tta.tt.Show(tta.msg, ctrl);
-		}
-
-		/// <summary>Display the tool tip for this control using the capture last set on it</summary>
-		public static void ShowToolTip(this Control ctrl, int duration)
-		{
-			TTAssociation tta;
-			if (m_tt_texts.TryGetValue(ctrl, out tta))
-				tta.tt.Show(tta.msg, ctrl, duration);
-		}
-
-		/// <summary>Display the tool tip for this control using the capture last set on it</summary>
-		public static void ShowToolTip(this Control ctrl, int x, int y, int duration)
-		{
-			TTAssociation tta;
-			if (m_tt_texts.TryGetValue(ctrl, out tta))
-				tta.tt.Show(tta.msg, ctrl, x, y, duration);
-		}
-
-		/// <summary>Hide the tool tip for this control</summary>
-		public static void HideToolTip(this Control ctrl)
-		{
-			TTAssociation tta;
-			if (m_tt_texts.TryGetValue(ctrl, out tta))
-				tta.tt.Hide(ctrl);
 		}
 
 		/// <summary>Display a hint balloon.</summary>
@@ -93,14 +49,6 @@ namespace pr.extn
 			tt.SetToolTip(parent, msg);
 			tt.Show(msg, parent, pt, duration);
 			tt.BeginInvokeDelayed(duration, () => tt.SetToolTip(parent, null));
-			
-			//// Set an issue number on the tool
-			//int issue = ++((int[])(tt.Tag ?? (tt.Tag = new int[1])))[0]; // awesome...
-			//tt.BeginInvokeDelayed(duration, () =>
-			//	{
-			//		if (((int[])tt.Tag)[0] == issue)
-			//			tt.SetToolTip(parent, null);
-			//	});
 		}
 
 		/// <summary>BeginInvoke a action after 'delay' milliseconds (roughly)</summary>
