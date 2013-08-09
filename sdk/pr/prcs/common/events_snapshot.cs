@@ -26,32 +26,38 @@ namespace pr.common
 		public class EventsState<T> :IDisposable
 		{
 			private readonly Dictionary<FieldInfo,Delegate[]> m_events = new Dictionary<FieldInfo,Delegate[]>();
+			private readonly BindingFlags m_binding_flags;
 			private readonly Restore m_restore;
 			private readonly T m_obj;
 
 			/// <summary>
-			/// Reflects on all public events of 'obj' and records the states of their invocation lists.
+			/// Reflects on all events of 'obj' and records the states of their invocation lists.
 			/// When disposed, the EventsSnapshot restores the invocation list to what it was at the time of capture.
 			/// Warning: the order of event handlers is not preserved.</summary>
-			public EventsState(T obj, Restore restore = Restore.Both)
+			public EventsState(T obj, Restore restore = Restore.Both, BindingFlags binding_flags = BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)
 			{
 				m_obj = obj;
 				m_restore = restore;
+				m_binding_flags = binding_flags;
 				var type = m_obj.GetType();
-
-				// Events are field members of 'thing'
-				var fields = type.AllFields(BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
-				foreach (var field in fields.Where(x => x.FieldType.BaseType == typeof(MulticastDelegate)))
+				
+				var fields = type.AllFields(m_binding_flags).ToDictionary(x => x.Name);
+				var events = type.AllEvents(m_binding_flags).ToList();
+				foreach (var evt in events)
 				{
+					FieldInfo field;
+					if (!fields.TryGetValue(evt.Name, out field))
+						continue;
+
 					// Get the instance of the multicast delegate from 'obj' and save the invocation list
-					var multicast_delegate = field.GetValue(obj) as MulticastDelegate;
-					if (multicast_delegate == null)
+					var mcd = field.GetValue(obj) as MulticastDelegate;
+					if (mcd == null)
 					{
 						m_events.Add(field, new Delegate[0]);
 					}
 					else
 					{
-						var delegates = multicast_delegate.GetInvocationList();
+						var delegates = mcd.GetInvocationList();
 						m_events.Add(field, delegates);
 					}
 				}
@@ -71,7 +77,7 @@ namespace pr.common
 					var old_delegates = evt.Value;
 					var new_delegates = mcd != null ? mcd.GetInvocationList() : new Delegate[0];
 
-					var event_info = type.GetEvent(field.Name, BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+					var event_info = type.GetEvent(field.Name, m_binding_flags);
 					Debug.Assert(event_info != null);
 
 					if ((m_restore & Restore.RemoveAdded) == Restore.RemoveAdded)
@@ -114,16 +120,33 @@ namespace pr
 	{
 		internal static class TestEventSnapshot
 		{
-			private class Test
+			private class TestBase
+			{
+				protected event EventHandler<Args> Event2;
+				public class Args :EventArgs {};
+
+				public int Event2HandlerCount { get { return Event2 != null ? Event2.GetInvocationList().Length : 0; } }
+
+				public virtual void ResetHandlers()
+				{
+					Event2 = null;
+				}
+				public virtual void RaiseEvents()
+				{
+					if (Event2 != null) Event2(this, new Args());
+				}
+			}
+			private sealed class Test :TestBase
 			{
 				public static string Result = string.Empty;
 
+				#pragma warning disable 169
+				public Action Ignored;
 				public event EventHandler Event1;
-				private event EventHandler Event2;
 				public static event EventHandler Event3;
+				#pragma warning restore 169
 
 				public int Event1HandlerCount { get { return Event1 != null ? Event1.GetInvocationList().Length : 0; } }
-				public int Event2HandlerCount { get { return Event2 != null ? Event2.GetInvocationList().Length : 0; } }
 				public int Event3HandlerCount { get { return Event3 != null ? Event3.GetInvocationList().Length : 0; } }
 
 				public Test()
@@ -131,17 +154,17 @@ namespace pr
 					Result = string.Empty;
 					ResetHandlers();
 				}
-				public void ResetHandlers()
+				public override void ResetHandlers()
 				{
 					Event1 = null;
-					Event2 = null;
+					base.ResetHandlers();
 					Event3 = null;
 				}
-				public void RaiseEvents()
+				public override void RaiseEvents()
 				{
 					if (Event1 != null) Event1(this, EventArgs.Empty);
 					Result += "-";
-					if (Event2 != null) Event2(this, EventArgs.Empty);
+					base.RaiseEvents();
 					Result += "-";
 					if (Event3 != null) Event3(this, EventArgs.Empty);
 				}
