@@ -247,7 +247,7 @@ namespace RyLogViewer
 		internal void Init(Settings settings, List<Highlight> highlights)
 		{
 			m_settings = settings;
-			m_settings.SettingsSaving += (s,a)=>{ m_settings.HighlightPatternSets = Export(); };
+			m_settings.SettingsSaving += (s,a) => m_settings.HighlightPatternSets = Export();
 			Import(settings.HighlightPatternSets);
 			CurrentSet = highlights;
 			UpdateUI();
@@ -321,7 +321,7 @@ namespace RyLogViewer
 		internal void Init(Settings settings, List<Filter> filters)
 		{
 			m_settings = settings;
-			m_settings.SettingsSaving += (s,a)=>{ m_settings.FilterPatternSets = Export(); };
+			m_settings.SettingsSaving += (s,a)=> m_settings.FilterPatternSets = Export();
 			Import(settings.FilterPatternSets);
 			CurrentSet = filters;
 			UpdateUI();
@@ -394,7 +394,7 @@ namespace RyLogViewer
 		internal void Init(Settings settings, List<Transform> transforms)
 		{
 			m_settings = settings;
-			m_settings.SettingsSaving += (s,a)=>{ m_settings.TransformPatternSets = Export(); };
+			m_settings.SettingsSaving += (s,a) => m_settings.TransformPatternSets = Export();
 			Import(settings.TransformPatternSets);
 			CurrentSet = transforms;
 			UpdateUI();
@@ -467,7 +467,7 @@ namespace RyLogViewer
 		internal void Init(Settings settings, List<ClkAction> actions)
 		{
 			m_settings = settings;
-			m_settings.SettingsSaving += (s,a)=>{ m_settings.ActionPatternSets = Export(); };
+			m_settings.SettingsSaving += (s,a) => m_settings.ActionPatternSets = Export();
 			Import(settings.ActionPatternSets);
 			CurrentSet = actions;
 			UpdateUI();

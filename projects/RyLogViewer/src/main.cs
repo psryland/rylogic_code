@@ -1196,50 +1196,52 @@ namespace RyLogViewer
 			if (init_row != -1)
 				row_text = test_text = ReadLine(init_row).RowText.Trim();
 
-			// Save current settings so the settingsUI starts with the most up to date
 			// Show the settings dialog, then reload the settings
-			var ui = new SettingsUI(this, m_settings, tab, special);
-			switch (tab)
+			using (EventsSnapshot.Capture(m_settings)) // Prevent 'm_settings' holding references to 'ui'
+			using (var ui = new SettingsUI(this, m_settings, tab, special))
 			{
-			default: throw new ArgumentOutOfRangeException("tab");
-			case SettingsUI.ETab.General: break;
-			case SettingsUI.ETab.LogView: break;
-			case SettingsUI.ETab.Highlights:
-				ui.HighlightUI.Pattern.Expr = row_text;
-				ui.HighlightUI.TestText = test_text;
-				break;
-			case SettingsUI.ETab.Filters:
-				ui.FilterUI.Pattern.Expr = row_text;
-				ui.FilterUI.TestText = test_text;
-				break;
-			case SettingsUI.ETab.Transforms:
-				ui.TransformUI.Pattern.Expr = row_text;
-				ui.TransformUI.Pattern.Replace = row_text;
-				ui.TransformUI.TestText = test_text;
-				break;
-			case SettingsUI.ETab.Actions:
-				ui.ActionUI.Pattern.Expr = row_text;
-				ui.ActionUI.TestText = test_text;
-				break;
-			}
-			ui.ShowDialog(this);
-			ApplySettings();
+				switch (tab)
+				{
+				default: throw new ArgumentOutOfRangeException("tab");
+				case SettingsUI.ETab.General: break;
+				case SettingsUI.ETab.LogView: break;
+				case SettingsUI.ETab.Highlights:
+					ui.HighlightUI.Pattern.Expr = row_text;
+					ui.HighlightUI.TestText = test_text;
+					break;
+				case SettingsUI.ETab.Filters:
+					ui.FilterUI.Pattern.Expr = row_text;
+					ui.FilterUI.TestText = test_text;
+					break;
+				case SettingsUI.ETab.Transforms:
+					ui.TransformUI.Pattern.Expr = row_text;
+					ui.TransformUI.Pattern.Replace = row_text;
+					ui.TransformUI.TestText = test_text;
+					break;
+				case SettingsUI.ETab.Actions:
+					ui.ActionUI.Pattern.Expr = row_text;
+					ui.ActionUI.TestText = test_text;
+					break;
+				}
+				ui.ShowDialog(this);
+				ApplySettings();
 			
-			// Show hints if patterns where added but there will be no visible
-			// change on the main view because that behaviour is disabled
-			if      (ui.HighlightsChanged && !m_settings.HighlightsEnabled) ShowHintBalloon("Highlights are currently disabled", m_btn_highlights);
-			else if (ui.FiltersChanged    && !m_settings.FiltersEnabled   ) ShowHintBalloon("Filters are currently disabled"   , m_btn_filters);
-			else if (ui.TransformsChanged && !m_settings.TransformsEnabled) ShowHintBalloon("Transforms are currently disabled", m_btn_transforms);
-			else if (ui.ActionsChanged    && !m_settings.ActionsEnabled   ) ShowHintBalloon("Actions are currently disabled"   , m_btn_actions);
+				// Show hints if patterns where added but there will be no visible
+				// change on the main view because that behaviour is disabled
+				if      (ui.HighlightsChanged && !m_settings.HighlightsEnabled) ShowHintBalloon("Highlights are currently disabled", m_btn_highlights);
+				else if (ui.FiltersChanged    && !m_settings.FiltersEnabled   ) ShowHintBalloon("Filters are currently disabled"   , m_btn_filters);
+				else if (ui.TransformsChanged && !m_settings.TransformsEnabled) ShowHintBalloon("Transforms are currently disabled", m_btn_transforms);
+				else if (ui.ActionsChanged    && !m_settings.ActionsEnabled   ) ShowHintBalloon("Actions are currently disabled"   , m_btn_actions);
 			
-			if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
-			{
-				BuildLineIndex(m_filepos, true);
-			}
-			else if ((ui.WhatsChanged & EWhatsChanged.Rendering) != 0)
-			{
-				InvalidateCache();
-				UpdateUI();
+				if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
+				{
+					BuildLineIndex(m_filepos, true);
+				}
+				else if ((ui.WhatsChanged & EWhatsChanged.Rendering) != 0)
+				{
+					InvalidateCache();
+					UpdateUI();
+				}
 			}
 		}
 
@@ -1267,7 +1269,9 @@ namespace RyLogViewer
 		/// <summary>Show the TotD dialog</summary>
 		private void ShowTotD()
 		{
-			new TipOfTheDay(m_settings).ShowDialog(this);
+			using (EventsSnapshot.Capture(m_settings))
+			using (var totd = new TipOfTheDay(m_settings))
+				totd.ShowDialog(this);
 		}
 
 		/// <summary>Returns the web proxy to use, if specified in the settings</summary>

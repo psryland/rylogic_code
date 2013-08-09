@@ -82,15 +82,16 @@ namespace RyLogViewer
 			m_tt           = new ToolTip();
 			m_balloon      = new ToolTip{IsBalloon = true,UseFading = true,ReshowDelay = 0};
 			m_hover_scroll = new HoverScroll();
+
 			ReadSettings();
+			m_settings.SettingChanged += UpdateUI;
 
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
 			m_pattern_ft.NewPattern(new Filter()   );
 			m_pattern_tx.NewPattern(new Transform());
 			m_pattern_ac.NewPattern(new ClkAction());
-			
-			m_settings.SettingChanged += (s,a) => UpdateUI();
+
 			m_tabctrl.Deselecting += (s,a) => TabChanging(a);
 			m_tabctrl.SelectedIndexChanged += (s,a) =>
 				{
@@ -994,10 +995,8 @@ namespace RyLogViewer
 		/// <summary>Update the UI state based on current settings</summary>
 		private void UpdateUI()
 		{
-			try
+			using (this.SuspendRedraw(true))
 			{
-				SuspendLayout();
-			
 				bool use_web_proxy = m_settings.UseWebProxy;
 				m_lbl_web_proxy_host.Enabled = use_web_proxy;
 				m_lbl_web_proxy_port.Enabled = use_web_proxy;
@@ -1045,10 +1044,10 @@ namespace RyLogViewer
 				m_main.UseLicensedFeature(FeatureName.Highlighting, new SettingsHighlightingCountLimiter(m_main, m_settings, this));
 				m_main.UseLicensedFeature(FeatureName.Filtering,    new SettingsFilteringCountLimiter(m_main, m_settings, this));
 			}
-			finally
-			{
-				ResumeLayout();
-			}
+		}
+		private void UpdateUI(object sender, EventArgs args)
+		{
+			UpdateUI();
 		}
 
 		/// <summary>A highlighting count limiter for when the settings dialog is displayed</summary>

@@ -103,6 +103,7 @@
     <Compile Include="common\cmdline.cs" />
     <Compile Include="common\console_indent.cs" />
     <Compile Include="common\enum_ex.cs" />
+    <Compile Include="common\events_snapshot.cs" />
     <Compile Include="common\hglobal.cs" />
     <Compile Include="common\mime.cs" />
     <Compile Include="common\ref_count.cs" />
