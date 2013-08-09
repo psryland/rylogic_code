@@ -205,6 +205,11 @@ namespace RyLogViewer
 						}
 					}
 				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		/// <summary>Clear or set the adb version info</summary>

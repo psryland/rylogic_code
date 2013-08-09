@@ -171,6 +171,11 @@ namespace RyLogViewer
 						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}
 				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		/// <summary>Enable/Disable bits of the UI based on current settings</summary>

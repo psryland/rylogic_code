@@ -21,6 +21,11 @@ namespace RyLogViewer
 					if (!Visible) return;
 					UpdateUI();
 				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		/// <summary>The pattern being edited by this UI</summary>

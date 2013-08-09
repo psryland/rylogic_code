@@ -70,6 +70,10 @@ namespace pr.gui
 					a.Handled = !valid;
 					if (!valid) m_tt.Show("Invalid character. Expecting "+InputType.ToString()+" characters", this);
 				};
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		private TextBox m_edit;

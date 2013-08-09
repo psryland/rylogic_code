@@ -155,6 +155,12 @@ namespace RyLogViewer
 						a.Cancel = res != DialogResult.Yes;
 					}
 				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
+
 			UpdateUI();
 		}
 

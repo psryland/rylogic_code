@@ -271,6 +271,11 @@ namespace RyLogViewer
 			// Shutdown
 			FormClosing += (s,a) => Shutdown();
 
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
+
 			InitCache();
 			ApplySettings();
 		}

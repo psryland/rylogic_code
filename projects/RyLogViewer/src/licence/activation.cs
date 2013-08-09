@@ -60,7 +60,12 @@ namespace RyLogViewer
 					m_licence.ActivationCode = m_edit_activation_code.Text;
 					UpdateUI();
 				};
-			
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
+
 			UpdateUI();
 		}
 

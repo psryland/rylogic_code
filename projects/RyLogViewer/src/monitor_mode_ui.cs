@@ -73,6 +73,10 @@ namespace RyLogViewer
 				{
 					m_main.Opacity = 1f;
 				};
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 	}
 }

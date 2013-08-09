@@ -70,6 +70,11 @@ namespace RyLogViewer
 			// Save the current list of patterns as a pattern set
 			m_btn_save.ToolTip(m_tt, "Save the current list of patterns as a pattern set");
 			m_btn_save.Click += (s,a)=> SavePatternSet();
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		/// <summary>Gets the version of the pattern set</summary>
@@ -77,7 +82,7 @@ namespace RyLogViewer
 
 		/// <summary>Return the pattern set filter</summary>
 		protected abstract string PatternSetFilter { get; }
-
+		
 		/// <summary>Load a pattern set from file and add it to the set list</summary>
 		private void LoadPatternSet()
 		{

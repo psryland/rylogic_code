@@ -65,6 +65,11 @@ namespace RyLogViewer
 						Misc.AddToHistoryList(ref settings.IPAddressHistory, m_combo_ip_address.Text, false, Constants.MaxHistoryDefault);
 					}
 				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		#region Windows Form Designer generated code

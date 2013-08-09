@@ -50,6 +50,10 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 			Shown += (s,a)=> UpdateUI();
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		private bool m_in_update_ui;

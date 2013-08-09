@@ -90,6 +90,11 @@ namespace RyLogViewer
 					menu.Items.Add("Current file directory", null, (ss,aa) => m_edit_args.SelectedText = SpecialTags.FileDir);
 					menu.Show(m_btn_capture_groups, m_btn_capture_groups.Width, 0);
 				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		#region Windows Form Designer generated code

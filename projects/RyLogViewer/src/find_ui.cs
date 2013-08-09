@@ -139,14 +139,13 @@ namespace RyLogViewer
 				{
 					Pattern.Invert = m_check_invert.Checked;
 				};
-			
+
 			// Quick find grid
 			m_grid.AutoGenerateColumns = false;
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn{DataPropertyName = "Expr"});
 			m_grid.DataSource = m_history;
-			
-			// Shown
-			VisibleChanged += (s,a)=>
+
+			VisibleChanged += (s,a) =>
 				{
 					if (Visible)
 					{
@@ -156,12 +155,18 @@ namespace RyLogViewer
 						
 					}
 				};
-			FormClosing += (s,a)=>
+
+			FormClosing += (s,a) =>
 				{
 					if (a.CloseReason != CloseReason.UserClosing) return;
 					Hide();
 					a.Cancel = true;
 					Owner.Focus();
+				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
 				};
 		}
 

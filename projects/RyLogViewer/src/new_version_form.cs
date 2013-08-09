@@ -52,6 +52,10 @@ namespace RyLogViewer
 					m_link_website.ToolTip(m_tt, WebsiteUrl);
 					m_link_download.ToolTip(m_tt, DownloadUrl);
 				};
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		/// <summary>Download and install the new version</summary>

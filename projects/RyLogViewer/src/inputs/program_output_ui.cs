@@ -142,6 +142,12 @@ namespace RyLogViewer
 						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}
 				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
+
 			UpdateUI();
 		}
 

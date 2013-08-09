@@ -63,6 +63,11 @@ namespace RyLogViewer
 
 			Shown  += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new AggregateFileLimiter(main,this));
 			Closed += (s,a) => main.UseLicensedFeature(FeatureName.AggregateFiles, new AggregateFileLimiter(main,null));
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 
 		/// <summary>Drop file paths into the grid</summary>

@@ -47,6 +47,11 @@ namespace RyLogViewer
 			// Import
 			m_btn_import.ToolTip(m_tt, "Import code/value pairs from file");
 			m_btn_import.Click += (s,a) => ImportCodeLookupList();
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
 		}
 		
 		/// <summary>Export the current code lookup list to a file</summary>

@@ -130,10 +130,22 @@ namespace RyLogViewer
 					m_main.UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(m_main, m_settings));
 					m_main.UseLicensedFeature(FeatureName.Filtering   , new FilteringCountLimiter(m_main, m_settings));
 				};
-			
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+					m_balloon.Dispose();
+					m_hover_scroll.Dispose();
+				};
+
 			UpdateUI();
 			WhatsChanged = EWhatsChanged.Nothing;
 		}
+		~SettingsUI()
+		{
+			Log.Debug(this, "SettingsUI collected");
+		}
+
 
 		/// <summary>Populate the internal lists from the settings data</summary>
 		private void ReadSettings()
