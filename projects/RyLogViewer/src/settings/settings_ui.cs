@@ -794,22 +794,6 @@ namespace RyLogViewer
 				e.Handled = true;
 				Close();
 				break;
-			case Keys.F1:
-				{
-					e.Handled = true;
-					var ctrl = this.GetChildAtScreenPointRec(MousePosition);
-					if (ctrl != null)
-					{
-						var msg = ctrl.ToolTipText();
-						if (msg != null)
-						{
-							m_tt.Hide(ctrl);
-							m_balloon.Hide(ctrl);
-							ctrl.ShowHintBalloon(m_balloon, msg);
-						}
-					}
-				}
-				break;
 			}
 			base.OnKeyDown(e);
 		}
