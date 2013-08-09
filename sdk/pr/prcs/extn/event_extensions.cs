@@ -294,6 +294,42 @@ namespace pr.extn
 		}
 	
 		// Extension methods *********************************************
+		/// <summary>
+		/// Usage:
+		///   Attach a weak action/event handler to an event
+		///     provider.MyEvent += new EventHandler&lt;EventArgs&gt;(MyWeakEventHandler).MakeWeak(eh => provider.MyEvent -= eh);
+		///     ...
+		///     // Must be a real method, not a lambda
+		///     void MyWeakEventHandler(object sender, EventArgs e){}
+		///
+		/// Usage:
+		///   Make all attached event handlers weak
+		///   public class EventProvider
+		///   {
+		///      private EventHandler&lt;EventArgs&gt; m_MyEvent;
+		///      public event EventHandler&lt;EventArgs&gt; MyEvent
+		///      {
+		///          add { m_Event += value.MakeWeak(eh => m_Event -= eh); }
+		///          remove {}
+		///      }
+		///    }
+		/// Behaviour:
+		///   Gun gun = new Gun();
+		///   Target bob = new Target("Bob");
+		///   Target fred = new Target("Fred");
+		///   gun.Bang += new EventHandler&lt;EventArgs&gt;(bob.OnHit).MakeWeak(h => gun.Bang -= h);
+		///   gun.Bang += fred.OnHit;
+		///   gun.Bang += new EventHandler&lt;EventArgs&gt;((s,e)=>{MessageBox.Show("Don't do this")}).MakeWeak((h)=>gun.Bang -= h); // see WARNING
+		///   gun.Shoot();
+		///   bob = null;
+		///   fred = null;
+		///   GC.Collect();
+		///   Thread.Sleep(100); // bob collected here, but not fred
+		///   gun.Shoot(); // fred still shot here
+		///
+		/// WARNING:
+		///  Don't attach anonymous delegates as weak delegates. When the delegate goes out of
+		///  scope it will be collected and silently remove itself from the event</summary>
 		public static EventHandler<E> MakeWeak<E>(this EventHandler<E> event_handler, UnregisterEventHandler<E> unregister) where E: EventArgs
 		{
 			if (event_handler == null) throw new ArgumentNullException("event_handler");
