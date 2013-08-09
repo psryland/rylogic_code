@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
@@ -118,8 +117,9 @@ namespace RyLogViewer
 			long at = -1;
 			var search = new ProgressForm("Searching...", body, null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
+					var d = new BLIData(this, m_file);
 					int last_progress = 0;
-					ProgressFunc report_progress = (scanned, length) =>
+					d.progress = (scanned, length) =>
 						{
 							int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
 							if (progress != last_progress)
@@ -131,7 +131,7 @@ namespace RyLogViewer
 						};
 
 					// Searching....
-					at = DoFind(pat, start, backward, report_progress);
+					at = DoFind(pat, start, backward, d);
 
 					// We can call BuildLineIndex in this thread context because we know
 					// we're in a modal dialog.
@@ -152,22 +152,20 @@ namespace RyLogViewer
 		/// <summary>
 		/// Does the donkey work of searching for a pattern.
 		/// Returns the byte address of the first match.</summary>
-		private long DoFind(Pattern pat, long start, bool backward, ProgressFunc report_progress)
+		private static long DoFind(Pattern pat, long start, bool backward, BLIData d)
 		{
 			long at = -1;
-			using (var file = m_file.NewInstance().Open())
+			using (d.file)
 			{
-				bool ignore_blanks    = m_settings.IgnoreBlankLines;
-				List<Filter> filters  = m_filters;
-				AddLineFunc test_line = (line, baddr, fend, bf, enc) =>
+				AddLineFunc test_line = (line, baddr, fend, buf, enc) =>
 					{
 						// Ignore blanks?
-						if (line.Empty && ignore_blanks)
+						if (line.Empty && d.ignore_blanks)
 							return true;
 						
 						// Keep searching while the text is filtered out or doesn't match the pattern
-						string text = m_encoding.GetString(bf, (int)line.Begin, (int)line.Count);
-						if (!PassesFilters(text, filters) || !pat.IsMatch(text))
+						string text = d.encoding.GetString(buf, (int)line.Begin, (int)line.Count);
+						if (!PassesFilters(text, d.filters) || !pat.IsMatch(text))
 							return true;
 						
 						// Found a match
@@ -176,9 +174,9 @@ namespace RyLogViewer
 					};
 				
 				// Search for files
-				byte[] buf = new byte[m_settings.MaxLineLength];
-				long count = backward ? start - 0 : m_fileend - start;
-				FindLines(file, start, m_fileend, backward, count, test_line, m_encoding, m_row_delim, buf, report_progress);
+				var line_buf = new byte[d.max_line_length];
+				long count = backward ? start - 0 : d.fileend - start;
+				FindLines(d.file, start, d.fileend, backward, count, test_line, d.encoding, d.row_delim, line_buf, d.progress);
 				return at;
 			}
 		}

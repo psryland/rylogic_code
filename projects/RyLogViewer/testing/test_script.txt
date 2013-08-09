@@ -24,4 +24,10 @@
   load program output for loop.cmd
    => view updates as the output file is changed, 50 lines max cached.
   
-  
+4. Find + filtering
+  Load a file,
+  Test find next/prev
+  Set a filter
+  Check find only finds visible lines
+  Turn on quick filter
+  Check find only finds visible lines

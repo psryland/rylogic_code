@@ -180,6 +180,9 @@ namespace RyLogViewer
 			/// <summary>The row delimiter</summary>
 			public readonly byte[] row_delim;
 
+			/// <summary>The column delimiter</summary>
+			public readonly byte[] col_delim;
+
 			/// <summary>Text encoding format of the source data</summary>
 			public readonly Encoding encoding;
 
@@ -189,10 +192,14 @@ namespace RyLogViewer
 			/// <summary>Line filters</summary>
 			public readonly List<IFilter> filters;
 
+			/// <summary>Row transforms</summary>
+			public readonly List<Transform> transforms;
+ 
 			/// <summary>The progress callback to use (note: called in worker thread context)</summary>
 			public ProgressFunc progress;
 
-			public BLIData(Main main, long filepos_, bool reload_, int build_issue_)
+			// 'file_source' should be an open new instance of the file source
+			public BLIData(Main main, IFileSource file_source, long filepos_ = 0, bool reload_ = false, int build_issue_ = 0)
 			{
 				reload             = reload_;
 				build_issue        = build_issue_;
@@ -200,11 +207,11 @@ namespace RyLogViewer
 				// Use a fixed file end so that additions to the file don't muck this
 				// build up. Reducing the file size during this will probably cause an
 				// exception but oh well...
-				fileend = main.m_file.Stream.Length;
-				filepos = Maths.Clamp(filepos_, 0, fileend);
+				file               = file_source.NewInstance().Open();
+				fileend            = file.Stream.Length;
+				filepos            = Maths.Clamp(filepos_, 0, fileend);
 				filepos_line_index = LineIndex(main.m_line_index, filepos);
 
-				file               = main.m_file.NewInstance();
 				max_line_length    = main.m_settings.MaxLineLength;
 				file_buffer_size   = main.m_bufsize;
 				line_cache_count   = main.m_line_cache_count;
@@ -215,15 +222,19 @@ namespace RyLogViewer
 				cached_whole_line_range = main.LineStartIndexRange;
 
 				// Get a copy of the filters to apply
+				filters = new List<IFilter>();
 				if (main.m_quick_filter_enabled)
 				{
-					filters = main.m_highlights.ToList<IFilter>();
+					filters.AddRange(main.m_highlights.ToList<IFilter>());
+				}
+				filters.AddRange(main.m_filters);
+				if (main.m_quick_filter_enabled)
+				{
 					filters.Add(Filter.RejectAll); // Add a RejectAll so that non-highlighted means discard
 				}
-				else
-				{
-					filters = main.m_filters.ToList<IFilter>();
-				}
+				
+				// Get a copy of the transforms
+				transforms = main.m_transforms.ToList();
 
 				Debug.Assert(main.m_encoding != null);
 				Debug.Assert(main.m_row_delim != null);
@@ -234,7 +245,7 @@ namespace RyLogViewer
 				certain = false;
 				autodetect = main.m_settings.Encoding.Length == 0;
 				encoding = reload_ && autodetect
-					? GuessEncoding(main.m_file, out certain)
+					? GuessEncoding(file_source, out certain)
 					: (Encoding)main.m_encoding.Clone();
 				if (certain) main.m_encoding = (Encoding)encoding.Clone();
 
@@ -243,9 +254,11 @@ namespace RyLogViewer
 				certain = false;
 				autodetect = main.m_settings.RowDelimiter.Length == 0;
 				row_delim = reload_ && autodetect
-					? GuessRowDelimiter(main.m_file, encoding, main.m_settings.MaxLineLength, out certain)
+					? GuessRowDelimiter(file_source, encoding, main.m_settings.MaxLineLength, out certain)
 					: (byte[])main.m_row_delim.Clone();
 				if (certain) main.m_row_delim = (byte[])row_delim.Clone();
+
+				col_delim = (byte[])main.m_col_delim.Clone();
 			}
 		}
 
@@ -273,7 +286,7 @@ namespace RyLogViewer
 				Log.Info(this, "build start request (id {0}, reload: {1})\n{2}".Fmt(m_build_issue, reload, string.Empty));//new StackTrace(0,true)));
 
 				// Make copies of variables for thread safety
-				var bli_data = new BLIData(this, filepos, reload, m_build_issue);
+				var bli_data = new BLIData(this, m_file, filepos, reload, m_build_issue);
 
 				// Set up callbacks that marshal to the main thread
 				bli_data.progress = (scanned,length) =>
