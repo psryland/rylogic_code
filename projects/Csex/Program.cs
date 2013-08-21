@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Windows.Forms;
 using pr.common;
 using pr.crypt;
+using pr.extn;
 
 namespace Csex
 {
@@ -86,15 +87,25 @@ namespace Csex
 				? base.CmdLineData(args, ref arg)
 				: m_cmd.CmdLineData(args, ref arg);
 		}
+
+		/// <summary>Return true if all required options have been given</summary>
+		public override bool OptionsValid()
+		{
+			return true;
+		}
 	}
+
 	#region Cmd base class
-	public abstract class Cmd :CmdLine.Receiver
+	public abstract class Cmd :CmdLine.IReceiver
 	{
 		/// <summary>Run the command</summary>
 		public abstract void Run();
 
+		/// <summary>Display help information in the case of an invalid command line</summary>
+		public abstract void ShowHelp();
+
 		/// <summary>Handle a command line option.</summary>
-		public override bool CmdLineOption(string option, string[] args, ref int arg)
+		public virtual bool CmdLineOption(string option, string[] args, ref int arg)
 		{
 			switch (option)
 			{
@@ -108,6 +119,12 @@ namespace Csex
 			Console.WriteLine("Error: Unknown option '"+option+"'\n");
 			return false;
 		}
+
+		/// <summary>Handle anything not preceded by '-'. Return true to continue parsing, false to stop</summary>
+		public virtual bool CmdLineData(string[] args, ref int arg) { return true; }
+
+		/// <summary>Return true if all required options have been given</summary>
+		public abstract bool OptionsValid();
 	}
 	#endregion
 
@@ -137,21 +154,19 @@ namespace Csex
 			}
 		}
 
+		/// <summary>Return true if all required options have been given</summary>
+		public override bool OptionsValid()
+		{
+			return m_pk.HasValue();
+		}
+
 		/// <summary>Run the command</summary>
 		public override void Run()
 		{
-			try
-			{
-				if (m_pk == null) throw new ArgumentException("No private key xml file given");
-				var priv = File.ReadAllText(m_pk);
-				var code = ActivationCode.Generate(priv);
-				Clipboard.SetText(code);
-				Console.WriteLine("Code Generated:\n"+code+"\n\nCode has been copied to the clipboard");
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("Code generation failed: "+ex.Message);
-			}
+			var priv = File.ReadAllText(m_pk);
+			var code = ActivationCode.Generate(priv);
+			Clipboard.SetText(code);
+			Console.WriteLine("Code Generated:\n"+code+"\n\nCode has been copied to the clipboard");
 		}
 	}
 	#endregion
@@ -185,21 +200,18 @@ namespace Csex
 			}
 		}
 
+		/// <summary>Return true if all required options have been given</summary>
+		public override bool OptionsValid()
+		{
+			return m_file.HasValue() && m_pk.HasValue();
+		}
+
 		/// <summary>Run the command</summary>
 		public override void Run()
 		{
-			try
-			{
-				if (m_file == null) throw new ArgumentException("No file to sign");
-				if (m_pk == null) throw new ArgumentException("No private key xml file given");
-				var priv = File.ReadAllText(m_pk);
-				Crypt.SignFile(m_file, priv);
-				Console.WriteLine("'"+m_file+"' signed.");
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("Signing failed: "+ex.Message);
-			}
+			var priv = File.ReadAllText(m_pk);
+			Crypt.SignFile(m_file, priv);
+			Console.WriteLine("'"+m_file+"' signed.");
 		}
 	}
 	#endregion
@@ -233,6 +245,12 @@ namespace Csex
 			case "-find_assembly_conflicts": return true;
 			case "-p": m_dir = args[arg++]; return true;
 			}
+		}
+
+		/// <summary>Return true if all required options have been given</summary>
+		public override bool OptionsValid()
+		{
+			return true;
 		}
 
 		/// <summary>Run the command</summary>
@@ -315,6 +333,12 @@ namespace Csex
 			default: return base.CmdLineOption(option, args, ref arg);
 			case "-NEW_COMMAND": return true;
 			}
+		}
+
+		/// <summary>Return true if all required options have been given</summary>
+		public override bool OptionsValid()
+		{
+			throw new NotImplementedException();
 		}
 
 		public override void Run()
