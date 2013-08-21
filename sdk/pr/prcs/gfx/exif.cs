@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using pr.common;
 using pr.extn;
 using pr.stream;
 
@@ -807,7 +808,7 @@ namespace pr.gfx
 		/// <summary>Returns true if the file at 'filepath' contains the markers of a jpg file</summary>
 		public static bool IsJpgFile(string filepath)
 		{
-			if (!File.Exists(filepath)) return false;
+			if (!PathEx.FileExists(filepath)) return false;
 			using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read))
 			{
 				if (fs.Length < 4) return false;

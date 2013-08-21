@@ -344,7 +344,7 @@ namespace RyLogViewer
 			{
 				OpenSingleLogFile(su.FileToLoad, true);
 			}
-			else if (m_settings.LoadLastFile && File.Exists(m_settings.LastLoadedFile))
+			else if (m_settings.LoadLastFile && PathEx.FileExists(m_settings.LastLoadedFile))
 			{
 				OpenSingleLogFile(m_settings.LastLoadedFile, true);
 			}

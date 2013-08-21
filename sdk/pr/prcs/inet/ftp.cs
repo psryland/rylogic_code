@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.IO;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using pr.common;
 using pr.inet;
 using pr.stream;
 using pr.util;
@@ -456,7 +457,7 @@ namespace pr.inet
 			Reply reply;
 			
 			// Check the local filepath exists first
-			if (!File.Exists(local_filepath))
+			if (!PathEx.FileExists(local_filepath))
 				throw new FileNotFoundException("Upload failed", local_filepath);
 			
 			// Upload the file

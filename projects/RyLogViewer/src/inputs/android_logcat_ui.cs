@@ -232,7 +232,7 @@ namespace RyLogViewer
 		/// <summary>True if the adb path appears valid</summary>
 		private bool ValidAdbPath
 		{
-			get { return m_edit_adb_fullpath.Text != null && File.Exists(m_edit_adb_fullpath.Text); }
+			get { return m_edit_adb_fullpath.Text != null && PathEx.FileExists(m_edit_adb_fullpath.Text); }
 		}
 
 		/// <summary>Search for the full path of adb.exe</summary>

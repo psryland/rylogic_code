@@ -149,7 +149,7 @@ namespace RyLogViewer
 					}
 					
 					// Prompt if overwriting a file
-					if (File.Exists(OutputFilepath))
+					if (PathEx.FileExists(OutputFilepath))
 					{
 						DialogResult res = MessageBox.Show(this, string.Format("{0} already exists. Overwrite it?", OutputFilepath), Resources.ConfirmOverwrite, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 						a.Cancel = res != DialogResult.Yes;

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.common;
+using pr.extn;
 using pr.gui;
 using pr.maths;
 using pr.util;
@@ -20,7 +21,7 @@ namespace RyLogViewer
 			try
 			{
 				// Copy the settings to a tmp file so that we don't trash the normal settings
-				if (File.Exists(startup_options.SettingsPath))
+				if (PathEx.FileExists(startup_options.SettingsPath))
 					File.Copy(startup_options.SettingsPath, tmp_settings_path);
 				else
 					new Settings().Save(tmp_settings_path);
@@ -74,7 +75,7 @@ namespace RyLogViewer
 			}
 			finally
 			{
-				if (File.Exists(tmp_settings_path))
+				if (PathEx.FileExists(tmp_settings_path))
 					File.Delete(tmp_settings_path);
 			}
 		}

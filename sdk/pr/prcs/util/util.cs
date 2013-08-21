@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
+using pr.common;
 using pr.maths;
 using pr.extn;
 
@@ -538,7 +539,7 @@ namespace pr.util
 
 			// Check if 'dst_filepath' already exists
 			dst_filepath = Path.GetFullPath(dst_filepath);
-			if (!overwrite && File.Exists(dst_filepath))
+			if (!overwrite && PathEx.FileExists(dst_filepath))
 			{
 				Log.Info(null, "LibCopy: Not copying {0} as {1} already exists".Fmt(src_filepath, dst_filepath));
 				return ELibCopyResult.DestExists;

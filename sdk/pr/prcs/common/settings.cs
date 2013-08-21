@@ -247,7 +247,7 @@ namespace pr.common
 				m_block_saving = true;
 
 				Filepath = filepath;
-				if (!File.Exists(filepath))
+				if (!PathEx.FileExists(filepath))
 				{
 					Log.Info(this, "Settings file {0} not found, using defaults".Fmt(filepath));
 					Reset();
@@ -325,7 +325,7 @@ namespace pr.common
 		/// <summary>Remove the settings file from persistent storage</summary>
 		public void Delete()
 		{
-			if (File.Exists(Filepath))
+			if (PathEx.FileExists(Filepath))
 				File.Delete(Filepath);
 		}
 

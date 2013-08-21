@@ -105,7 +105,7 @@ namespace RyLogViewer
 			try
 			{
 				var lic = Path.Combine(dir, "licence.xml");
-				if (File.Exists(lic))
+				if (PathEx.FileExists(lic))
 				{
 					// Load the licence file
 					var doc = XDocument.Load(lic, LoadOptions.None);

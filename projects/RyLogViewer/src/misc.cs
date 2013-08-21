@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Net.Sockets;
@@ -10,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using pr.common;
 using pr.gui;
 using pr.inet;
 using pr.extn;
@@ -444,12 +444,12 @@ namespace RyLogViewer
 			Array.Copy(list.ToArray(), arr, arr.Length);
 		}
 
-		/// <summary>Checks for the existance of a file without blocking the UI</summary>
+		/// <summary>Checks for the existence of a file without blocking the UI</summary>
 		public static bool FileExists(Form parent, string filepath)
 		{
 			// Check that the file exists, this can take ages if 'filepath' is a network file
 			bool file_exists = false;
-			var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = File.Exists(filepath));
+			var dlg = new ProgressForm("Open File", "Opening file...", null, ProgressBarStyle.Marquee, (s,a,cb) => file_exists = PathEx.FileExists(filepath));
 			dlg.ShowDialog(parent, 500);
 			return file_exists;
 		}

@@ -6,6 +6,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.common;
 using pr.extn;
 using pr.gui;
 using pr.inet;
@@ -96,7 +97,7 @@ namespace RyLogViewer
 				if (dg.ShowDialog() == DialogResult.OK)
 				{
 					string settings = "Settings filepath unknown";
-					if (StartupOptions != null && StartupOptions.SettingsPath.HasValue() && File.Exists(StartupOptions.SettingsPath))
+					if (StartupOptions != null && PathEx.FileExists(StartupOptions.SettingsPath))
 						settings = File.ReadAllText(StartupOptions.SettingsPath);
 
 					var sb = new StringBuilder()
