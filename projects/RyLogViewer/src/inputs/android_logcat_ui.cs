@@ -79,7 +79,7 @@ namespace RyLogViewer
 				};
 
 			// Connect button
-			m_btn_connect.ToolTip(m_tt, "Connect to an android device via USB or TCP/IP");
+			m_btn_connect.ToolTip(m_tt, "Add an android device not currently shown in the 'Connected Devices' list");
 			m_btn_connect.Click += (s,a) => ConnectDevice();
 			m_btn_connect.Enabled = false; // Until a valid adb path is set
 
@@ -197,7 +197,7 @@ namespace RyLogViewer
 							Launch.Executable       = exe;
 							Launch.Arguments        = args;
 							Launch.WorkingDirectory = Path.GetDirectoryName(Launch.Executable) ?? string.Empty;
-							Launch.OutputFilepath   = m_combo_output_file.Text;
+							Launch.OutputFilepath   = m_settings.CaptureOutputToFile ? m_combo_output_file.Text : string.Empty;
 							Launch.ShowWindow       = false;
 							Launch.AppendOutputFile = m_check_append.Checked;
 							Launch.Streams          = StandardStreams.Stdout|StandardStreams.Stderr;

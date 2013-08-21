@@ -32,7 +32,7 @@
 			this.m_edit_adb_fullpath = new System.Windows.Forms.TextBox();
 			this.label1 = new System.Windows.Forms.Label();
 			this.m_btn_browse_adb = new System.Windows.Forms.Button();
-			this.m_listbox_devices = new ListBox();
+			this.m_listbox_devices = new RyLogViewer.ListBox();
 			this.label2 = new System.Windows.Forms.Label();
 			this.m_edit_adb_command = new System.Windows.Forms.TextBox();
 			this.m_lbl_logcat_command = new System.Windows.Forms.Label();
@@ -41,12 +41,12 @@
 			this.m_group = new System.Windows.Forms.GroupBox();
 			this.m_btn_connect = new System.Windows.Forms.Button();
 			this.m_check_append = new System.Windows.Forms.CheckBox();
-			this.m_combo_output_file = new ComboBox();
+			this.m_combo_output_file = new RyLogViewer.ComboBox();
 			this.m_lbl_log_format = new System.Windows.Forms.Label();
-			this.m_combo_log_format = new ComboBox();
+			this.m_combo_log_format = new RyLogViewer.ComboBox();
 			this.m_lbl_filterspec = new System.Windows.Forms.Label();
-			this.m_grid_filterspec = new DataGridView();
-			this.m_listbox_log_buffers = new ListBox();
+			this.m_grid_filterspec = new RyLogViewer.DataGridView();
+			this.m_listbox_log_buffers = new RyLogViewer.ListBox();
 			this.m_lbl_log_buffers = new System.Windows.Forms.Label();
 			this.m_btn_browse_output_file = new System.Windows.Forms.Button();
 			this.m_check_capture_to_log = new System.Windows.Forms.CheckBox();
@@ -178,7 +178,7 @@
 			this.m_btn_connect.Name = "m_btn_connect";
 			this.m_btn_connect.Size = new System.Drawing.Size(125, 23);
 			this.m_btn_connect.TabIndex = 22;
-			this.m_btn_connect.Text = "Connect...";
+			this.m_btn_connect.Text = "Add Device...";
 			this.m_btn_connect.UseVisualStyleBackColor = true;
 			// 
 			// m_check_append
