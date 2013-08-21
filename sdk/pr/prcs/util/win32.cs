@@ -5,6 +5,7 @@
 
 using System;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -447,7 +448,7 @@ namespace pr.util
 			public static SCROLLINFO Default                     { get {return new SCROLLINFO{cbSize = (uint)Marshal.SizeOf(typeof(SCROLLINFO))};} }
 		}
 
-		// Struct pointed to by WM_GETMINMAXINFO lParam
+		// Structure pointed to by WM_GETMINMAXINFO lParam
 		[StructLayout(LayoutKind.Sequential)]
 		public struct MINMAXINFO
 		{
@@ -456,6 +457,56 @@ namespace pr.util
 			public POINT ptMaxPosition;
 			public POINT ptMinTrackSize;
 			public POINT ptMaxTrackSize;
+		}
+
+		// Used by the FindFirstFile or FindNextFile functions.
+		[Serializable, StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto), BestFitMapping(false)]
+		public class WIN32_FIND_DATA
+		{
+			public FileAttributes dwFileAttributes;
+			public uint ftCreationTime_dwLowDateTime;
+			public uint ftCreationTime_dwHighDateTime;
+			public uint ftLastAccessTime_dwLowDateTime;
+			public uint ftLastAccessTime_dwHighDateTime;
+			public uint ftLastWriteTime_dwLowDateTime;
+			public uint ftLastWriteTime_dwHighDateTime;
+			public uint nFileSizeHigh;
+			public uint nFileSizeLow;
+			public int dwReserved0;
+			public int dwReserved1;
+			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string cFileName;
+			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)] public string cAlternateFileName;
+
+			/// <summary>The filename.extn of the file</summary>
+			public string FileName { get { return cFileName; } }
+
+			/// <summary>Attributes of the file.</summary>
+			public FileAttributes Attributes { get { return dwFileAttributes; } }
+
+			/// <summary>The file size</summary>
+			public long FileSize { get { return ToLong(nFileSizeHigh, nFileSizeLow); } }
+
+			/// <summary>File creation time in local time</summary>
+			public DateTime CreationTime { get { return CreationTimeUtc.ToLocalTime(); } }
+
+			/// <summary>File creation time in UTC</summary>
+			public DateTime CreationTimeUtc { get { return ToDateTime(ftCreationTime_dwHighDateTime, ftCreationTime_dwLowDateTime); } }
+
+			/// <summary>Gets the last access time in local time.</summary>
+			public DateTime LastAccessTime { get { return LastAccessTimeUtc.ToLocalTime(); } }
+
+			/// <summary>File last access time in UTC</summary>
+			public DateTime LastAccessTimeUtc { get { return ToDateTime(ftLastAccessTime_dwHighDateTime, ftLastAccessTime_dwLowDateTime); } }
+
+			/// <summary>Gets the last access time in local time.</summary>
+			public DateTime LastWriteTime { get { return LastWriteTimeUtc.ToLocalTime(); } }
+
+			/// <summary>File last write time in UTC</summary>
+			public DateTime LastWriteTimeUtc { get { return ToDateTime(ftLastWriteTime_dwHighDateTime, ftLastWriteTime_dwLowDateTime); } }
+
+			public override string ToString()                       { return cFileName; }
+			private static DateTime ToDateTime(uint high, uint low) { return DateTime.FromFileTimeUtc(ToLong(high,low)); }
+			private static long ToLong(uint high, uint low)         { return ((long)high << 0x20) | low; }
 		}
 
 		public static bool KeyDown(Keys vkey)
