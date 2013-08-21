@@ -316,7 +316,7 @@ namespace RyLogViewer
 			{
 				Log.Info("BLIAsync", "build started. (id {0}, reload {1})".Fmt(d.build_issue, d.reload));
 				if (BuildCancelled(d.build_issue)) return;
-				using (d.file.Open())
+				using (d.file)
 				{
 					// A temporary buffer for reading sections of the file
 					byte[] buf = new byte[d.max_line_length];

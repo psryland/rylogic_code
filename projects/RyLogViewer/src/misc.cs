@@ -116,6 +116,9 @@ namespace RyLogViewer
 		/// <summary>An option that changes how the log view is rendered</summary>
 		Rendering = 1 << 2,
 		
+		/// <summary>An option that changes how the window is positioned/displayed</summary>
+		WindowDisplay = 1 << 3,
+		
 		/// <summary>who knows...</summary>
 		Everything = ~0,
 	}
@@ -357,7 +360,7 @@ namespace RyLogViewer
 		[DataMember] public string          SelectedDevice        = string.Empty;
 		[DataMember] public bool            CaptureOutputToFile   = false;
 		[DataMember] public bool            AppendOutputFile      = true;
-		[DataMember] public ELogBuffer[]    LogBuffers            = new []{ELogBuffer.Main, ELogBuffer.System};
+		[DataMember] public ELogBuffer[]    LogBuffers            = new []{ELogBuffer.Main};
 		[DataMember] public FilterSpec[]    FilterSpecs           = new []{new FilterSpec("*", EFilterPriority.Verbose)};
 		[DataMember] public ELogFormat      LogFormat             = ELogFormat.Time;
 		[DataMember] public EConnectionType ConnectionType        = EConnectionType.Usb;

@@ -456,6 +456,14 @@ namespace RyLogViewer
 					m_settings.Font = dg.Font;
 				};
 
+			// Full file path
+			m_check_full_filepath_in_title.ToolTip(m_tt, "Check to show the full file path of the open log file in the window title bar");
+			m_check_full_filepath_in_title.CheckedChanged += (s,a)=>
+				{
+					m_settings.FullPathInTitle = m_check_full_filepath_in_title.Checked;
+					WhatsChanged |= EWhatsChanged.WindowDisplay;
+				};
+
 			// File scroll width
 			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
 			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
@@ -499,7 +507,6 @@ namespace RyLogViewer
 					m_lbl_fs_edit_bookmark_colour.BackColor = m_settings.BookmarkColour;
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
-			
 		}
 
 		/// <summary>Hook up events for the highlights tab</summary>
@@ -994,6 +1001,7 @@ namespace RyLogViewer
 			m_lbl_line2_example.BackColor = m_settings.LineBackColour2;
 			m_lbl_line2_example.ForeColor = m_settings.LineForeColour2;
 			m_lbl_line2_example.Enabled = m_settings.AlternateLineColours;
+			m_check_full_filepath_in_title.Checked = m_settings.FullPathInTitle;
 
 			m_check_reject_all_by_default.Checked = m_filters.Contains(Filter.RejectAll);
 

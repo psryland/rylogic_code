@@ -31,3 +31,5 @@
   Check find only finds visible lines
   Turn on quick filter
   Check find only finds visible lines
+  
+5. USB debugging + Visual Studio adb

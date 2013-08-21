@@ -140,18 +140,17 @@ namespace pr
 			{
 				public static string Result = string.Empty;
 
-				#pragma warning disable 169
 				public Action Ignored;
 				public event EventHandler Event1;
 				public static event EventHandler Event3;
-				#pragma warning restore 169
-
+				
 				public int Event1HandlerCount { get { return Event1 != null ? Event1.GetInvocationList().Length : 0; } }
 				public int Event3HandlerCount { get { return Event3 != null ? Event3.GetInvocationList().Length : 0; } }
 
 				public Test()
 				{
 					Result = string.Empty;
+					Ignored += () => { throw new Exception(); };
 					ResetHandlers();
 				}
 				public override void ResetHandlers()

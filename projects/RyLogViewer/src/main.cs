@@ -940,35 +940,51 @@ namespace RyLogViewer
 		/// <summary>Turn on/off quick filter mode</summary>
 		private void EnableQuickFilter(bool enable)
 		{
-			int row_index = SelectedRowIndex;
-			var current = row_index != -1 ? m_line_index[row_index].Begin : -1;
+			var has_selection = SelectedRowIndex != -1;
+			var ofs = has_selection ? SelectedRowByteRange.Begin : -1;
+			
 			m_settings.QuickFilterEnabled = enable;
 			ApplySettings();
 			BuildLineIndex(m_filepos, true, ()=>
 				{
-					SelectedRowIndex = LineIndex(m_line_index, current);
+					if (has_selection)
+						SelectRowByAddr(ofs);
 				});
 		}
 
 		/// <summary>Turn on/off highlights</summary>
 		private void EnableHighlights(bool enable)
 		{
+			var has_selection = SelectedRowIndex != -1;
+			var bli_needed = m_settings.QuickFilterEnabled;
+			var ofs = has_selection && bli_needed ? SelectedRowByteRange.Begin : -1;
+
 			m_settings.HighlightsEnabled = enable;
 			ApplySettings();
 			InvalidateCache();
 			m_grid.Refresh();
+			if (bli_needed)
+			{
+				BuildLineIndex(m_filepos, true, () =>
+					{
+						if (has_selection)
+							SelectRowByAddr(ofs);
+					});
+			}
 		}
 
 		/// <summary>Turn on/off filters</summary>
 		private void EnableFilters(bool enable)
 		{
-			int row_index = SelectedRowIndex;
-			var current = row_index != -1 ? m_line_index[row_index].Begin : -1;
+			var has_selection = SelectedRowIndex != -1;
+			var ofs = has_selection ? SelectedRowByteRange.Begin : -1;
+
 			m_settings.FiltersEnabled = enable;
 			ApplySettings();
 			BuildLineIndex(m_filepos, true, ()=>
 				{
-					SelectedRowIndex = LineIndex(m_line_index, current);
+					if (has_selection)
+						SelectRowByAddr(ofs);
 				});
 		}
 
@@ -1689,9 +1705,8 @@ namespace RyLogViewer
 		private void UpdateUI(int row_delta = 0)
 		{
 			if (m_in_update_ui) return;
-			try
+			using (Scope.Create(() => m_in_update_ui = true, () => m_in_update_ui = false))
 			{
-				m_in_update_ui = true;
 				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
 
 				using (m_grid.SuspendRedraw(true))
@@ -1761,10 +1776,6 @@ namespace RyLogViewer
 				// Status and title
 				UpdateStatus();
 			}
-			finally
-			{
-				m_in_update_ui = false;
-			}
 		}
 		private bool m_in_update_ui;
 		
@@ -1782,7 +1793,7 @@ namespace RyLogViewer
 			}
 			else
 			{
-				Text = "{0} - {1}".Fmt(m_file.Name,Resources.AppTitle);
+				Text = "{0} - {1}".Fmt(m_settings.FullPathInTitle ? m_file.PsuedoFilepath : m_file.Name, Resources.AppTitle);
 				m_status_spring.Text = "";
 				
 				// Add comma's to a large number
@@ -1797,7 +1808,7 @@ namespace RyLogViewer
 				int r = SelectedRowIndex;
 				long p = (r != -1) ? m_line_index[r].Begin : 0;
 				StringBuilder pos = pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
-				StringBuilder len = pretty(new StringBuilder(m_file.Stream.Length.ToString(CultureInfo.InvariantCulture)));
+				StringBuilder len = pretty(new StringBuilder(FileByteRange.End.ToString(CultureInfo.InvariantCulture)));
 				
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
