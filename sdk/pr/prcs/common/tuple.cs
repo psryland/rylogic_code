@@ -7,6 +7,7 @@ using System.Collections;
 
 namespace pr.common
 {
+	/* Use System.Tuple
 	public struct Tuple<P0> :IEnumerable
 	{
 		public P0 p0;
@@ -62,4 +63,5 @@ namespace pr.common
 		public override int GetHashCode()       { return p0.GetHashCode() ^ p1.GetHashCode() ^ p2.GetHashCode() ^ p3.GetHashCode() ^ p4.GetHashCode(); }
 		public IEnumerator GetEnumerator()      { yield return p0; yield return p1; yield return p2; yield return p3; yield return p4; }
 	}
+	 */
 }

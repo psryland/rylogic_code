@@ -181,7 +181,7 @@
     <Compile Include="extn\exception_extensions.cs" />
     <Compile Include="extn\list_extensions.cs" />
     <Compile Include="extn\object_extensions.cs" />
-    <Compile Include="extn\path_extensions.cs" />
+    <Compile Include="common\path_ex.cs" />
     <Compile Include="extn\pointf_extensions.cs" />
     <Compile Include="extn\random_extensions.cs" />
     <Compile Include="extn\stream_extensions.cs" />
