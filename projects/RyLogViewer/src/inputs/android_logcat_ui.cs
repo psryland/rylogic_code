@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.gui;
 using pr.util;
@@ -63,7 +64,7 @@ namespace RyLogViewer
 			m_btn_browse_adb.ToolTip(m_tt, "Browse the file system for the android debug bridge executable ('adb.exe')");
 			m_btn_browse_adb.Click += (s,a) =>
 				{
-					var dlg = new OpenFileDialog{Filter = "adb.exe"};
+					var dlg = new OpenFileDialog{Filter = "Programs (*.exe)|*.exe", FileName =  "adb.exe"};
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					SetAdbPath(dlg.FileName);
 				};
@@ -187,8 +188,8 @@ namespace RyLogViewer
 						settings.OutputFilepathHistory = output_filepaths;
 						settings.RowDelimiter = "<CR><CR><LF>";
 
-						// Use cancelled if no device was selected
-						if (m_listbox_devices.SelectedItem != null)
+						// Use cancelled if no device was selected or no valid adb path found
+						if (ValidAdbPath && m_listbox_devices.SelectedItem != null)
 						{
 							string exe, args;
 							GenerateAdbCommand(out exe, out args);
@@ -196,13 +197,21 @@ namespace RyLogViewer
 							// Update the launch options
 							Launch.Executable       = exe;
 							Launch.Arguments        = args;
-							Launch.WorkingDirectory = Path.GetDirectoryName(Launch.Executable) ?? string.Empty;
+							Launch.WorkingDirectory = Path.GetDirectoryName(exe) ?? string.Empty;
 							Launch.OutputFilepath   = m_settings.CaptureOutputToFile ? m_combo_output_file.Text : string.Empty;
 							Launch.ShowWindow       = false;
 							Launch.AppendOutputFile = m_check_append.Checked;
 							Launch.Streams          = StandardStreams.Stdout|StandardStreams.Stderr;
 							DialogResult = DialogResult.OK;
 						}
+					}
+
+					// If the adb full path has changed, update the settings even if DialogResult == cancel
+					else if (ValidAdbPath && settings.AndroidLogcat.AdbFullPath != m_edit_adb_fullpath.Text)
+					{
+						var save = new AndroidLogcat(settings.AndroidLogcat);
+						save.AdbFullPath = m_edit_adb_fullpath.Text;
+						settings.AndroidLogcat = save;
 					}
 				};
 
@@ -232,41 +241,77 @@ namespace RyLogViewer
 		/// <summary>True if the adb path appears valid</summary>
 		private bool ValidAdbPath
 		{
-			get { return m_edit_adb_fullpath.Text != null && PathEx.FileExists(m_edit_adb_fullpath.Text); }
+			get { return PathEx.FileExists(m_edit_adb_fullpath.Text); }
 		}
 
 		/// <summary>Search for the full path of adb.exe</summary>
 		private void AutoDetectAdbPath()
 		{
-			// If the full path is saved in the settings, use that
-			if (m_settings.AdbFullPath.HasValue())
+			// If the full path is saved in the settings, use that (if it's valid)
+			if (PathEx.FileExists(m_settings.AdbFullPath))
 			{
 				SetAdbPath(m_settings.AdbFullPath);
 				return;
 			}
-			
-			// Look in likely spots
-			foreach (var path in new[]
+
+			const string msg =
+				"Searching for the Android Debugging Bridge application...\r\n"+
+				"\r\n"+
+				"Path: {0}\r\n"+
+				"\r\n"+
+				"Click cancel to locate it manually.";
+
+			// Search for 'adb.exe'
+			var adb_path = string.Empty;
+			var find_adb = new ProgressForm("Locating 'adb.exe'...", msg.Fmt(string.Empty), Icon, ProgressBarStyle.Continuous, (s,a,cb) =>
 				{
-					Environment.GetEnvironmentVariable("ANDROID_HOME"),
-					Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-					Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+					foreach (var path in new[] {
+						Environment.GetEnvironmentVariable("ANDROID_HOME"),
+						Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+						Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+						Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+						@"C:\"})
+					{
+						if (s.CancelPending || adb_path.HasValue())
+							break;
+
+						if (path == null || !Directory.Exists(path))
+							continue;
+
+						cb(new ProgressForm.UserState{Description = msg.Fmt(path), ForceLayout = false});
+						Func<string,bool> progress = dir =>
+							{
+								cb(ProgressForm.UserState.Empty);
+								return !s.CancelPending;
+							};
+
+						foreach (var fi in PathEx.EnumerateFiles(path, @"adb\.exe", SearchOption.AllDirectories, progress:progress))
+						{
+							adb_path = fi.FullPath;
+							break;
+						}
+					}
 				})
-			{
-				if (string.IsNullOrEmpty(path)) continue;
-				var dir  = new DirectoryInfo(path);
-				var file = dir.EnumerateFiles("adb.exe", SearchOption.AllDirectories).FirstOrDefault();
-				if (file == null) continue;
-				SetAdbPath(file.FullName);
-				break;
-			}
+				{
+					StartPosition = FormStartPosition.CenterParent,
+					ClientSize = new Size(640, 280),
+				};
+
+			var res = DialogResult.Cancel;
+			try { res = find_adb.ShowDialog(this); }
+			catch (OperationCanceledException) {}
+			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "An error occurred while searching for 'adb.exe'", "Locating 'adb.exe' failed"); }
+			if (res != DialogResult.OK)
+				return;
+
+			SetAdbPath(adb_path);
 		}
 
 		/// <summary>Sets and saves the adb file path</summary>
 		private void SetAdbPath(string path)
 		{
 			// Reject invalid paths
-			if (!File.Exists(path))
+			if (!PathEx.FileExists(path))
 				return;
 
 			// If hint text is shown, clear it first

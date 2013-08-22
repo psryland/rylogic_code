@@ -11,6 +11,8 @@ namespace pr.gui
 	{
 		public class UserState
 		{
+			public static UserState Empty = new UserState();
+
 			/// <summary>Progress completeness [0f,1f]. Null means unknown</summary>
 			public float? FractionComplete { get; set; }
 
@@ -26,8 +28,11 @@ namespace pr.gui
 			/// <summary>Dialog title. Null means don't change</summary>
 			public string Title { get; set; }
 
-			/// <summary>Change the description. Null means don't changee</summary>
+			/// <summary>Change the description and re-layout (if ForceLayout is null). Null means don't change</summary>
 			public string Description { get; set; }
+
+			/// <summary>Force recalculation of the form layout (or not). Null means layout if needed</summary>
+			public bool? ForceLayout { get; set; }
 
 			/// <summary>Duplicate this object</summary>
 			public UserState Clone() { return (UserState)MemberwiseClone(); }
@@ -128,7 +133,8 @@ namespace pr.gui
 			if (us.Description != null)
 			{
 				m_description.Text = us.Description;
-				DoLayout();
+				if (us.ForceLayout == null)
+					DoLayout();
 			}
 
 			if (us.Icon != null)
@@ -139,6 +145,9 @@ namespace pr.gui
 
 			if (us.ProgressBarStyle != null)
 				m_progress.Style = us.ProgressBarStyle.Value;
+
+			if (us.ForceLayout != null && us.ForceLayout.Value)
+				DoLayout();
 		}
 
 		/// <summary>Layout the form</summary>

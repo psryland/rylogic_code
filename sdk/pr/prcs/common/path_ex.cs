@@ -148,48 +148,40 @@ namespace pr.common
 		/// to check each file in a directory to see if it was modified after a specific date).
 		/// </remarks>
 
-		/// <summary>Gets FileData for all files in a directory.</summary>
-		public static IEnumerable<FileData> EnumerateFiles(string path) { return EnumerateFiles(path, "*"); }
-
-		/// <summary>Gets FileData for all files in a directory that match a specific filter.</summary>
-		public static IEnumerable<FileData> EnumerateFiles(string path, string filter) { return EnumerateFiles(path, filter, SearchOption.TopDirectoryOnly); }
-
 		/// <summary>Gets FileDatafor all files in a directory that  match a specific filter including all sub directories.</summary>
 		[SuppressUnmanagedCodeSecurity]
-		public static IEnumerable<FileData> EnumerateFiles(string path, string filter, SearchOption flags)
+		public static IEnumerable<FileData> EnumerateFiles(string path, string regex_filter = ".*", SearchOption flags = SearchOption.TopDirectoryOnly, RegexOptions regex_options = RegexOptions.None, Func<string,bool> progress = null)
 		{
 			var stack = new Stack<string>(20);
 			stack.Push(path);
 
+			// Default progress callback
+			if (progress == null)
+				progress = s => true;
+
 			while (stack.Count != 0)
 			{
 				var dir = stack.Pop();
+				if (!progress(dir))
+					break;
+
 				try { new FileIOPermission(FileIOPermissionAccess.PathDiscovery, dir).Demand(); }
 				catch { continue; } // skip paths we don't have access to
 
-				// Find files matching the filter
+				var filter = new Regex(regex_filter, regex_options);
+				var pattern = Path.Combine(dir, "*");
+				var find_data = new Win32.WIN32_FIND_DATA();
+				var handle = FindFirstFile(pattern, find_data);
+				for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, find_data))
 				{
-					var pattern = Path.Combine(dir, filter);
-					var find_data = new Win32.WIN32_FIND_DATA();
-					var handle = FindFirstFile(pattern, find_data);
-					for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, find_data))
+					// Yield return files only
+					if ((find_data.Attributes & FileAttributes.Directory) != FileAttributes.Directory)
 					{
-						// Yield return files only
-						if ((find_data.Attributes & FileAttributes.Directory) != FileAttributes.Directory)
+						if (filter.IsMatch(find_data.FileName))
 							yield return new FileData(dir, find_data);
 					}
-					handle.Close();
-				}
-
-				// If recursion is wanted, add all subdirectories to the stack
-				if (flags == SearchOption.AllDirectories)
-				{
-					var pattern = Path.Combine(dir, "*");
-					var find_data = new Win32.WIN32_FIND_DATA();
-					var handle = FindFirstFile(pattern, find_data);
-					for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, find_data))
+					else if (flags == SearchOption.AllDirectories)
 					{
-						// Push directories onto the stack
 						if ((find_data.Attributes & FileAttributes.Directory) != FileAttributes.Directory)
 							continue;
 
@@ -198,8 +190,8 @@ namespace pr.common
 						
 						stack.Push(Path.Combine(dir, find_data.FileName));
 					}
-					handle.Close();
 				}
+				handle.Close();
 			}
 		}
 
@@ -258,7 +250,7 @@ namespace pr
 			[Test] public static void TestEnumerateFiles()
 			{
 				var path = Environment.CurrentDirectory;
-				var files = PathEx.EnumerateFiles(path, "*.dll", SearchOption.AllDirectories);
+				var files = PathEx.EnumerateFiles(path, @".*\.dll", SearchOption.AllDirectories);
 				var dlls = files.ToList();
 				Assert.IsTrue(dlls.Count != 0);
 			}

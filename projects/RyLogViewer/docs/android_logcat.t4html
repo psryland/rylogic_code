@@ -9,6 +9,7 @@
 		<div id="content_panel">
 			<div class="title">Android Logcat</div>
 			<div class="content">
+				Watch out for multiple instances of adb.exe. Different versions cause the adb service to be restarted which can disconnect debugging sessions
 			</div>
 		</div>
 	</body>

@@ -461,21 +461,33 @@ namespace RyLogViewer
 			if (items.Count != 0) combo.SelectedIndex = 0;
 		}
 
+		/// <summary>A wrapper around showing message boxes for info</summary>
+		public static void ShowInfoMessage(IWin32Window owner, string msg, string title, MessageBoxIcon icon = MessageBoxIcon.Information)
+		{
+			// Only show one dialog at a time
+			if (m_dialog_visible)
+				return;
+			
+			m_dialog_visible = true;
+			MessageBox.Show(owner, msg, title, MessageBoxButtons.OK, icon);
+			m_dialog_visible = false;
+		}
+
 		/// <summary>A wrapper around showing message boxes for exceptions</summary>
 		public static void ShowErrorMessage(IWin32Window owner, Exception exception, string caption, string title)
 		{
 			// Only show one error dialog at a time
-			if (m_error_dialog_visible)
+			if (m_dialog_visible)
 				return;
 			
-			m_error_dialog_visible = true;
+			m_dialog_visible = true;
 			string msg = exception.Message;
 			for (var ex = exception.InnerException; ex != null; ex = ex.InnerException) msg += Environment.NewLine + ex.Message;
 			string error_message = "{0}\r\nError Details:\r\n{1}".Fmt(caption, msg);
 			MessageBox.Show(owner, error_message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
-			m_error_dialog_visible = false;
+			m_dialog_visible = false;
 		}
-		private static bool m_error_dialog_visible;
+		private static bool m_dialog_visible;
 
 		/// <summary>Helper for passing an action directly to BeginInvoke</summary>
 		public static void BeginInvoke<TForm>(this TForm form, Action action) where TForm:Form
