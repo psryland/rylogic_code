@@ -1,0 +1,133 @@
+﻿<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<!--#include file=".\help_head.html"-->
+	<body id="main_help">
+		<!--#include file=".\help_title_panel.html"-->
+		<!--#include file=".\help_index_panel.html"-->
+		<div id="content_panel">
+			<div class="title">Overview and Features</div>
+			<div class="content">
+				<div class="content">
+					Many computer systems output log data in various forms. From servers logging connection events, to embedded
+					systems streaming real-time state information, log output often contains vital diagnostic information.
+					Frequently this vital information is hidden within large volumes of general output making finding, analysing,
+					and diagnosing issues in the computer system a difficult and time consuming task. RyLogViewer was written to
+					make working with high-volume log data easier.<br/>
+					<br/>
+					The simplest but probably most useful feature of RyLogViewer, is the ability to highlight lines in the log
+					data based on some pattern, the canonical example being to have lines containing the word <i>error</i>
+					appear with a red background.<br/>
+					<br/>
+					Patterns can be as simple as <i>"any line that contains the word 'error' "</i> to complex regular expressions.
+					Once familiar with the pattern system, the same knowledge can be applied to search for specific text in the
+					log data, create filters to strip out unwanted noise, transform and rearrange text into more meaningful/human-
+					readable forms, and even setup actions to perform when double clicking on lines in the log data. (Check out
+					the <a href="ideas.htm">ideas section</a> for inspiration on ways in which RyLogViewer can be used).<br/>
+					<br/>
+					RylogViewer is a shareware application, meaning there are limitations applied to the free version of the
+					application that are removed in the licensed version. The primary aim of RyLogViewer however is to create
+					an application that others might find useful, so for that reason, all features available in the licensed
+					version are also available, indefinitely, in the free version. The only difference being that when a limit
+					of the free version is exceeded a dialog is displayed explaining the limitation.<br/>
+					<br/>
+					<b style="color:#080">
+						The free version of RyLogViewer can be used indefinitely and includes full support for
+						all features available in the licensed version.<br/>
+					</b>
+					<br/>
+					The bullet points below give a summary of the main features and functionality of RyLogViewer, including
+					links to further information in the remainder of the documentation.
+				</div>
+				<ul>
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Unlimited File Sizes</div>
+							<div class="free_feature">Available in Free Edition</div>
+							<div class="content">
+								There is no upper limit on the size of displayed log files. RyLogViewer has been designed to
+								intelligently spool and cache data dynamically, meaning that it runs as smoothly on a 200Gb
+								file as it does on a 2Kb file.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Data Sources</div>
+							<div class="free_feature">Available in Free Edition</div>
+							<div class="content">
+								In addition to displaying files from the local hard drive, RyLogViewer can receive
+								and display real-time log output from a
+								<a href="data_sources.htm#program_output">program's standard output</a>, from a
+								<a href="data_sources.htm#serial_port">serial port connection</a>, via a
+								<a href="data_sources.htm#tcpip">TCP/UDP network connection</a>, or from a
+								<a href="data_sources.htm#named_pipe">named pipe</a>. Data received
+								using these methods can be captured to a local file and saved for later viewing.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Highlighting</div>
+							<div class="limited_feature">Limited in Free Edition</div>
+							<div class="content">
+								Important data in a log file can be made to stand out by creating a
+								<a href="pattern_editor.htm">pattern</a> in the
+								<a href="options_highlighting.htm">highlighting</a> options window. Highlighting can be
+								quickly enabled or disabled via the <a href="main_window.htm#tool_bar">tool bar</a>. In the free
+								version, highlighting is limited to
+								<!--#value file="..\src\misc.cs" field="const int MaxHighlights\s+=\s+(?<field>\d+);"-->
+								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
+								Limited Feature dialog.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Aggregate Files</div>
+							<div class="licensed_feature">Licensed feature</div>
+							<div class="content">
+								The aggregate files feature allows multiple files to be viewed as though they are a
+								single file. All features (including highlighting, searching, filtering, etc) operate
+								on the aggregate file in the same manor as they do for a single file.<br/>
+								<br/>
+								In addition, the <i>Export</i> function can by used to create a single amalgamated file
+								that is the result of all of the files concatenated together after filtering and/or text
+								transformations have been applied.<br/>
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Android Logcat Viewer</div>
+							<div class="free_feature">Available in Free Edition</div>
+							<div class="content">
+								One of the targeted uses for RyLogViewer is to aid Android application development. The
+								Android operating system has a system wide logging feature that gives great insight into
+								applications running on the device. The <a href="android_logcat.htm">Android Logcat Wizard</a>
+								simplifies the process of connecting to this output log data
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Serial Port Logging</div>
+							<div class="free_feature">Available in Free Edition</div>
+							<div class="content">
+								Embedded systems frequently use RS232 serial comms as a simple means of transmitting internal
+								state to the outside world. RyLogViewer's serial port logging is ideally suited to this scenario
+								as it can receive data directly from a serial port and capture it into a file. The highlighting
+								feature can be used to make errors stand out, or state machine states/transitions obvious.
+								The transforms feature can be used to replace error codes with meaningful error messages
+							</div>
+						</div>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</body>
+</html>

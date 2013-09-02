@@ -1,23 +1,19 @@
-﻿<#@template language="C#"#>
-<#@output extension="htm"#>
-<!DOCTYPE HTML>
+﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<#@include file="help_head.t4html_inc"#>
+	<!--#include file=".\help_head.html"-->
 	<body id="main_help" onload="HighlightListItem(null)">
-		<#@include file="help_title_panel.t4html_inc"#>
-		<#@include file="help_index_panel.t4html_inc"#>
+		<!--#include file=".\help_title_panel.html"-->
+		<!--#include file=".\help_index_panel.html"-->
 		<div id="content_panel">
-			<#@include file="options_dialog.t4html_inc"#>
-
+			<!--#include file=".\options_dialog.html"-->
 			<div>
-				<span class="section_title">Highlighting Tab</span>
-			<!--
+				<span class="section_title">Appearance Tab</span>
 				<div class="content">
 					Under the appearance tab you will find controls that affect how log data is displayed.
 					Click on the yellow boxes in the image below to jump to a description of each control.
 				</div>
 				<div>
-					<img class="centred" src="settings_appearance.png" alt="settings appearance tab" usemap="#settings_appearance_map" />
+					<img class="centred" src="settings_appearance.png" alt="settings appearance tab" usemap="#settings_appearance_map"/>
 					<map id="settings_appearance_map" name="settings_appearance_map">
 						<area shape="rect" coords="100,63,120,83" href="#appearance_selection_colour" alt="" title="" onclick="HighlightListItem('appearance_selection_colour')"/>
 						<area shape="rect" coords="100,92,120,112" href="#appearance_log_text_colour" alt="" title="" onclick="HighlightListItem('appearance_log_text_colour')"/>
@@ -96,7 +92,6 @@
 					</li>
 				</ol>
 			</div>
-				-->
 		</div>
 	</body>
 </html>

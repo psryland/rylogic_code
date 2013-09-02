@@ -1,25 +1,23 @@
-﻿<#@template language="C#"#>
-<#@output extension="htm"#>
-<!DOCTYPE HTML>
+﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<#@include file="help_head.t4html_inc"#>
+	<!--#include file=".\help_head.html"-->
 	<body id="main_help" onload="HighlightListItem(null)" onclick="HighlightListItem(null)">
-		<#@include file="help_title_panel.t4html_inc"#>
-		<#@include file="help_index_panel.t4html_inc"#>
+		<!--#include file=".\help_title_panel.html"-->
+		<!--#include file=".\help_index_panel.html"-->
 		<div id="content_panel">
 			<div class="title">Main Window</div>
 
 			<div>
-				<img class="centred" src="main_view.png" alt="main view" usemap="#main_view_map" />
+				<img class="centred" src="main_view.png" alt="main view" usemap="#main_view_map"/>
 				<map id="main_view_map" name="main_view_map">
-					<area shape="rect" coords="5,82,25,102" href="#log_view" alt="" title="" onclick="HighlightListItem('log_view')" />
-					<area shape="rect" coords="3,54,23,74" href="#tool_bar" alt="" title="" onclick="HighlightListItem('tool_bar')" />
-					<area shape="rect" coords="555,71,575,91" href="#file_scroll" alt="" title="" onclick="HighlightListItem('file_scroll')" />
-					<area shape="rect" coords="92,18,112,38" href="#encoding" alt="" title="" onclick="HighlightListItem('encoding')" />
-					<area shape="rect" coords="161,18,181,38" href="#line_ending" alt="" title="" onclick="HighlightListItem('line_ending')" />
-					<area shape="rect" coords="219,43,239,63" href="#search" alt="" title="" onclick="HighlightListItem('search')" />
-					<area shape="rect" coords="251,43,271,63" href="#bookmarks" alt="" title="" onclick="HighlightListItem('bookmarks')" />
-					<area shape="rect" coords="5,514,25,534" href="#status" alt="" title="" onclick="HighlightListItem('status')" />
+					<area shape="rect" coords="5,82,25,102" href="#log_view" alt="" title="" onclick="HighlightListItem('log_view')"/>
+					<area shape="rect" coords="3,54,23,74" href="#tool_bar" alt="" title="" onclick="HighlightListItem('tool_bar')"/>
+					<area shape="rect" coords="555,71,575,91" href="#file_scroll" alt="" title="" onclick="HighlightListItem('file_scroll')"/>
+					<area shape="rect" coords="92,18,112,38" href="#encoding" alt="" title="" onclick="HighlightListItem('encoding')"/>
+					<area shape="rect" coords="161,18,181,38" href="#line_ending" alt="" title="" onclick="HighlightListItem('line_ending')"/>
+					<area shape="rect" coords="219,43,239,63" href="#search" alt="" title="" onclick="HighlightListItem('search')"/>
+					<area shape="rect" coords="251,43,271,63" href="#bookmarks" alt="" title="" onclick="HighlightListItem('bookmarks')"/>
+					<area shape="rect" coords="5,514,25,534" href="#status" alt="" title="" onclick="HighlightListItem('status')"/>
 				</map>
 			</div>
 			<ol>
@@ -87,7 +85,7 @@
 				<li>
 					<div id="tool_bar">
 						<div class="section_title">Tool Bar</div>
-						<img class="centred" src="tool_bar.png" alt="tool bar" />
+						<img class="centred" src="tool_bar.png" alt="tool bar"/>
 						<div class="content">
 							The tool bar contains buttons that allow quick navigation to, and control of, various features of
 							RyLogViewer. In order from left to right, these are:
@@ -243,11 +241,11 @@
 								<li>The search pattern is initialised from the currently selected row in the log file.</li>
 								<li>Use the down arrow key to show and select previous search patterns.</li>
 								<li>
-									Hit <span class="mono">Enter</span> to search forward from the currently selected line,<br />
+									Hit <span class="mono">Enter</span> to search forward from the currently selected line,<br/>
 									<span class="mono">Control+Enter</span> searches forward from the beginning of the log file.
 								</li>
 								<li>
-									Hit <span class="mono">Shift+Enter</span> to search backward from the currently selected line,<br />
+									Hit <span class="mono">Shift+Enter</span> to search backward from the currently selected line,<br/>
 									<span class="mono">Control+Shift+Enter</span> searches backward from the end of the log file.
 								</li>
 								<li>Close the find dialog with the <span class="mono">Escape</span> key.</li>
@@ -265,7 +263,7 @@
 									and then search backward for the previous occurrence.
 								</li>
 							</ul>
-							<img class="right_inset" src="find.png" alt="find dialog" />
+							<img class="right_inset" src="find.png" alt="find dialog"/>
 							The find feature is based on the same algorithms as the other pattern matching features in RyLogViewer
 							(<a href="options_highlighting.htm">highlighting</a>, <a href="options_filtering.htm">filtering</a>, etc).
 							The function of most of the controls is the same as is described in the <a href="pattern_editor.htm">pattern editor</a>
@@ -289,7 +287,7 @@
 						<div class="content">
 							Bookmarks provide a means of saving and returning to particular locations in the log file. Like the Find
 							feature, convenient keyboard shortcuts are available to eliminate unnecessary switching between the mouse
-							and keyboard. 
+							and keyboard.
 							<ul class="minor_list">
 								<li><span class="mono">Control+F2</span> - Creates or clears a bookmark from the currently selected line.</li>
 								<li>
