@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.CustomTool.HtmlExpander", "Rylogic.CustomTool.HtmlExpander.csproj", "{9FEBE611-72AD-4871-B927-5379C477BA53}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prcs_vs2012", "..\..\sdk\pr\prcs\prcs_vs2012.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
