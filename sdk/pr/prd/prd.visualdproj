@@ -383,6 +383,9 @@ call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuild
   <Folder name="db">
    <File path="db\sqlite.d" />
   </Folder>
+  <Folder name="common">
+   <File path="common\cmdline.d" />
+  </Folder>
   <Folder name="gui" />
   <Folder name="maths">
    <File path="maths\maths.d" />

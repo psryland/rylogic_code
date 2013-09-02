@@ -640,7 +640,7 @@ abstract class Control: Handle!(HWND), IDisposable
 		catch (Exception)
 		{
 			assert(false, "msgRouter failed");
-			return E_FAIL;
+			//return E_FAIL;
 		}
 	}
 
