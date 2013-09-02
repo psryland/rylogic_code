@@ -44,6 +44,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cmd\Cmd.cs" />
+    <Compile Include="Cmd\FindAssemblyConflicts.cs" />
+    <Compile Include="Cmd\GenActivationCode.cs" />
+    <Compile Include="Cmd\MarkupExpand.cs" />
+    <Compile Include="Cmd\NewCommand.cs" />
+    <Compile Include="Cmd\SignFile.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
