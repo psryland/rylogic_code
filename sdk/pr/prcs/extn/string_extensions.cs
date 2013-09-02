@@ -4,6 +4,8 @@
 //***************************************************
 
 using System;
+using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace pr.extn
@@ -22,6 +24,12 @@ namespace pr.extn
 		public static bool HasValue(this string str)
 		{
 			return !string.IsNullOrEmpty(str);
+		}
+
+		/// <summary>Returns a string containing this str repeated 'count' times</summary>
+		public static string Repeat(this string str, int count)
+		{
+			return string.Join("", Enumerable.Repeat(str, count));
 		}
 
 		/// <summary>Word wraps the given text to fit within the specified width.</summary>
@@ -74,6 +82,20 @@ namespace pr.extn
 		public static string LineList(this string text, string line)
 		{
 			return new StringBuilder(text).AppendLineList(line).ToString();
+		}
+
+		/// <summary>Return the string as a byte buffer</summary>
+		public static byte[] ToBytes(this string str)
+		{
+			var raw = new byte[str.Length * sizeof(char)];
+			Buffer.BlockCopy(str.ToCharArray(), 0, raw, 0, raw.Length);
+			return raw;
+		}
+
+		/// <summary>Return the string as a stream</summary>
+		public static Stream ToStream(this string str)
+		{
+			return new MemoryStream(str.ToBytes(), false);
 		}
 
 		//public static string HaackFormat(this string format, object source)

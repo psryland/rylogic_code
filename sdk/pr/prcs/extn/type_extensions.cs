@@ -46,6 +46,20 @@ namespace pr.extn
 		{
 			return baseOrInterface.IsAssignableFrom(type);
 		}
+
+		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
+		public static Attribute GetAttribute(this Type type, Type attribute_type, bool inherit = true)
+		{
+			object[] attributes = type.GetCustomAttributes(attribute_type, inherit:inherit);
+			if (attributes.Length == 0) throw new Exception("Class '{0}' does not provide a '{1}' attribute.".Fmt(type.FullName, attribute_type.FullName));
+			return (Attribute)attributes[0];
+		}
+
+		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
+		public static T GetAttribute<T>(this Type type, bool inherit = true) where T:Attribute
+		{
+			return (T)type.GetAttribute(typeof(T), inherit);
+		}
 	}
 }
 #if PR_UNITTESTS
