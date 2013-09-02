@@ -1,5 +1,5 @@
 //**********************************
-// Script charactor source
+// Script character source
 //  Copyright © Rylogic Ltd 2007
 //**********************************
 #pragma once

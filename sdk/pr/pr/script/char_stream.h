@@ -55,7 +55,7 @@ namespace pr
 			// 'seek()' tests the character at the current position, and if not a valid character to
 			//  return from this source, advances the internal position to the next valid character.
 			//  Conceptually, 'seek()' should be called before every 'peek()' call since sources that
-			//  wrap other sources have no way of knowning if the wrapped source has changed. The
+			//  wrap other sources have no way of knowing if the wrapped source has changed. The
 			//  operator *() overcomes this however, so that seek is only called when necessary.
 			virtual char peek() const = 0;
 			virtual void next() = 0;
@@ -105,7 +105,7 @@ namespace pr
 			void seek()       { while (*m_ptr == '\\' && *(m_ptr+1) == '\n') {next(); next();} }
 		};
 		
-		// A range of chars not necessarity terminated by a null
+		// A range of chars not necessarily terminated by a null
 		struct RangeSrc :Src ,SeekSrc
 		{
 		private:
