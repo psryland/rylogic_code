@@ -20,6 +20,7 @@ set PATH=%qdrive%\sdk\pr\cmd\;%PATH%
 set proj=%qdrive%\projects\RyLogViewer
 set docsdir=%proj%\docs
 set resdir=%proj%\Resources
+set csex=%qdrive%\bin\csex\csex.exe
 
 echo *************************************************************************
 echo  RyLogViewer Documentation
@@ -28,17 +29,17 @@ echo *************************************************************************
 pause
 
 echo.
-for %%f in (%docsdir%\*.t4html) do (
+for %%f in (%docsdir%\*.html) do (
 	echo %%f ...
-	"%ttbuild%" "%%f"
+	"%csex%" -expand_template -f "%%f" -o "%%~dpnf.htm"
 	if errorlevel 1 goto :error
 )
 for %%f in (%resdir%\*.t4html) do (
 	echo %%f ...
-	"%ttbuild%" "%%f"
+	echo "%csex%" -expand_template -f "%%f" -o "%%~dpnf.htm"
 	if errorlevel 1 goto :error
 )
-
+pause
 echo.
 echo     Success.
 echo.

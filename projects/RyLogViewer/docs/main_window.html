@@ -1,9 +1,9 @@
 ﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<!--#include file=".\help_head.html"-->
+	<!--#include file=".\help_head.html_inc"-->
 	<body id="main_help" onload="HighlightListItem(null)" onclick="HighlightListItem(null)">
-		<!--#include file=".\help_title_panel.html"-->
-		<!--#include file=".\help_index_panel.html"-->
+		<!--#include file=".\help_title_panel.html_inc"-->
+		<!--#include file=".\help_index_panel.html_inc"-->
 		<div id="content_panel">
 			<div class="title">Main Window</div>
 
@@ -25,10 +25,12 @@
 					<div id="log_view">
 						<div class="section_title">Log View</div>
 						<div class="content">
-							This region displays the contents of the loaded or streamed log file data. Scroll
+							This region displays the contents of the loaded or streamed log data. Scroll
 							this view using the mouse wheel, page up/down keys, or up/down arrow keys. Select
 							rows by holding down the left mouse button and dragging, or hold down the Shift or
-							Control key while selecting.
+							Control key while selecting. (Note: due to the way RyLogViewer spools data it is
+							not possible to select and copy the entire contents of very large files. Only the
+							portion of the file currently loaded is selected and copied.)
 						</div>
 						<img class="right_inset" src="main_view_context.png" alt="main view context menu"/>
 						<div class="content">
@@ -45,7 +47,7 @@
 									</tr>
 									<tr>
 										<td>Copy</td>
-										<td>Copy the selected rows to the clip board.</td>
+										<td>Copy the selected rows to the system clip board.</td>
 									</tr>
 									<tr>
 										<td><a href="#clear_log_file">Clear Log</a></td>
@@ -53,10 +55,10 @@
 									</tr>
 									<tr>
 										<td>
-											<a href="options_highlighting.htm">Highlight Row...</a><br/>
-											<a href="options_filtering.htm">Filter Row...</a><br/>
-											<a href="options_transforms.htm">Transform Row...</a><br/>
-											<a href="options_actions.htm">Action Row...</a><br/>
+											<a href="options_highlighting.htm">Highlight Row</a><br/>
+											<a href="options_filtering.htm">Filter Row</a><br/>
+											<a href="options_transforms.htm">Transform Row</a><br/>
+											<a href="options_actions.htm">Action Row</a><br/>
 										</td>
 										<td>
 											Opens the highlighting, filtering, text transforms, or click actions pattern editor,
@@ -166,7 +168,8 @@
 										<td><a href="options_general.htm#additive_changes_only">Assume Additive</a></td>
 										<td>
 											Enables or disables the assumption that all file changes are additive only. If enabled,
-											RyLogViewer will only read new data added to the file when it detects that it has changed.
+											RyLogViewer will only read new data appended to the end of the file when it detects that
+											the file has changed. Otherwise, all data around the current selection position is reloaded.
 										</td>
 									</tr>
 								</tbody>

@@ -19,13 +19,8 @@ namespace Csex
 			// Check the name of the exe and do behaviour based on that.
 			//Path.GetFileNameWithoutExtension(ExecutablePath);
 
-			try { CmdLine.Parse(this, m_args); }
-			catch (Exception ex)
-			{
-				Console.WriteLine("Error: {0}",ex.Message);
-				ShowHelp();
+			if (CmdLine.Parse(this, m_args) != CmdLine.Result.Success)
 				return;
-			}
 
 			if (m_cmd == null) { ShowHelp(); return; }
 			try { m_cmd.Run(); }
@@ -38,18 +33,30 @@ namespace Csex
 		/// <summary>Display help information in the case of an invalid command line</summary>
 		public override void ShowHelp()
 		{
-			Console.WriteLine(
+			if (m_cmd != null)
+				m_cmd.ShowHelp();
+			else
+				Console.WriteLine(
 				"\n"+
 				"***********************************************************\n"+
 				" --- Commandline Extensions - Copyright © Rylogic 2012 --- \n"+
 				"***********************************************************\n"+
-				" Version: "+VersionString+"\n"+
+				"                                         Version: "+VersionString+"\n"+
 				"  Syntax: Csex -command [parameters]\n"+
-				"    -gencode : Generates an activation code\n"+
-				"    -signfile : Sign a file using RSA\n"+
-				"    -find_assembly_conflicts : Recursively checks assemblies\n" +
-				"      for version conflicts in their dependent assemblies" +
-				"    -expand_template : Expand server side include comments in an html file\n" +
+				"\n"+
+				"  Commands:\n"+
+				"    -gencode\n" +
+				"        Generates an activation code\n" +
+				"\n"+
+				"    -signfile\n" +
+				"        Sign a file using RSA\n" +
+				"\n"+
+				"    -find_assembly_conflicts\n" +
+				"        Recursively checks assemblies for version conflicts in their dependent assemblies\n" +
+				"\n" +
+				"    -expand_template\n" +
+				"       Expand specific comments in a markup language (xml,html) file\n" +
+				"\n" +
 				// NEW_COMMAND - add a help string
 				"\n"+
 				"  Type Cex -command -help for help on a particular command\n"+

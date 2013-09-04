@@ -34,22 +34,21 @@
 	<a href="options_actions.htm" class="menu2">Click Actions</a><br/>
 
 	<a href="pattern_editor.htm" class="menu1">Pattern Editor</a><br/>
+	<a href="pattern_list.htm" class="menu2">Pattern List</a><br/>
+	<a href="pattern_sets.htm" class="menu2">Pattern Sets</a><br/>
 
 	<a href="transform.htm" class="menu1">Transform Editor</a><br/>
 	<a href="transform.htm#operations" class="menu2">Operations</a><br/>
 	<a href="transform.htm#code_lookup" class="menu2">Code Lookup</a><br/>
 	<a href="transform.htm#swizzle" class="menu2">Swizzle</a><br/>
 
-	<a href="pattern_list.htm" class="menu1">Pattern List</a><br/>
-
-	<a href="pattern_sets.htm" class="menu1">Pattern Sets</a><br/>
-
+	<a href="export.htm" class="menu1">Export</a><br/>
 	<a href="command_line.htm" class="menu1">Command Line</a><br/>
 
 	<a href="ideas.htm" class="menu1">Tips and Tricks</a><br/>
 
 	<a href="support.htm" class="menu1">Support</a><br/>
-	<a href="faq.htm" class="menu2">F.A.Q.</a><br/>
 	<a href="support.htm#updates" class="menu2">Version Updates</a><br/>
+	<a href="faq.htm" class="menu2">F.A.Q.</a><br/>
 	<a href="licence.htm" class="menu2">Licence</a><br/>
 </div>

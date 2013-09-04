@@ -3,7 +3,7 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 	<link rel='stylesheet' type='text/css' href='help.css'/>
 	<base target="_parent"/>
-	<!--#include file="./auto_refresh.html"-->
+	<!--#include file="./auto_refresh.html_inc"-->
 	<script>
 		function HighlightListItem(item_id)
 		{

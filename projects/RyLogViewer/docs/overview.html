@@ -1,9 +1,9 @@
 ﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<!--#include file=".\help_head.html"-->
+	<!--#include file=".\help_head.html_inc"-->
 	<body id="main_help">
-		<!--#include file=".\help_title_panel.html"-->
-		<!--#include file=".\help_index_panel.html"-->
+		<!--#include file=".\help_title_panel.html_inc"-->
+		<!--#include file=".\help_index_panel.html_inc"-->
 		<div id="content_panel">
 			<div class="title">Overview and Features</div>
 			<div class="content">
@@ -24,16 +24,13 @@
 					readable forms, and even setup actions to perform when double clicking on lines in the log data. (Check out
 					the <a href="ideas.htm">ideas section</a> for inspiration on ways in which RyLogViewer can be used).<br/>
 					<br/>
-					RylogViewer is a shareware application, meaning there are limitations applied to the free version of the
-					application that are removed in the licensed version. The primary aim of RyLogViewer however is to create
-					an application that others might find useful, so for that reason, all features available in the licensed
-					version are also available, indefinitely, in the free version. The only difference being that when a limit
-					of the free version is exceeded a dialog is displayed explaining the limitation.<br/>
-					<br/>
-					<b style="color:#080">
-						The free version of RyLogViewer can be used indefinitely and includes full support for
-						all features available in the licensed version.<br/>
-					</b>
+					RylogViewer is a shareware application, meaning there are limits applied to the free version of the
+					application that are removed in the licensed version. However, these limits do not restrict or disable any
+					of the functionally of the application. The free version merely prompts the user when a limit is exceeded
+					giving the user the option to enable the licensed feature. After
+					<!--#value file="..\src\misc.cs" field="const int FeatureEnableTimeInMinutes\s+=\s+(?<field>\d+);"-->
+					minutes, the prompt will reappear.
+					<b style="font-size:15px; color: #080">There is no time restriction or limit on the number of times licensed features can be enabled.</b><br/>
 					<br/>
 					The bullet points below give a summary of the main features and functionality of RyLogViewer, including
 					links to further information in the remainder of the documentation.
@@ -42,27 +39,10 @@
 					<li class="child_list_elem">
 						<div>
 							<div class="tag_label">Unlimited File Sizes</div>
-							<div class="free_feature">Available in Free Edition</div>
 							<div class="content">
 								There is no upper limit on the size of displayed log files. RyLogViewer has been designed to
 								intelligently spool and cache data dynamically, meaning that it runs as smoothly on a 200Gb
 								file as it does on a 2Kb file.
-							</div>
-						</div>
-					</li>
-
-					<li class="child_list_elem">
-						<div>
-							<div class="tag_label">Data Sources</div>
-							<div class="free_feature">Available in Free Edition</div>
-							<div class="content">
-								In addition to displaying files from the local hard drive, RyLogViewer can receive
-								and display real-time log output from a
-								<a href="data_sources.htm#program_output">program's standard output</a>, from a
-								<a href="data_sources.htm#serial_port">serial port connection</a>, via a
-								<a href="data_sources.htm#tcpip">TCP/UDP network connection</a>, or from a
-								<a href="data_sources.htm#named_pipe">named pipe</a>. Data received
-								using these methods can be captured to a local file and saved for later viewing.
 							</div>
 						</div>
 					</li>
@@ -86,29 +66,102 @@
 
 					<li class="child_list_elem">
 						<div>
-							<div class="tag_label">Aggregate Files</div>
-							<div class="licensed_feature">Licensed feature</div>
+							<div class="tag_label">Filtering</div>
+							<div class="limited_feature">Limited in Free Edition</div>
 							<div class="content">
-								The aggregate files feature allows multiple files to be viewed as though they are a
-								single file. All features (including highlighting, searching, filtering, etc) operate
-								on the aggregate file in the same manor as they do for a single file.<br/>
-								<br/>
-								In addition, the <i>Export</i> function can by used to create a single amalgamated file
-								that is the result of all of the files concatenated together after filtering and/or text
-								transformations have been applied.<br/>
+								<a href="pattern_editor.htm">Patterns</a> can be created in the
+								<a href="options_filtering.htm">filtering</a> options window to strip unwanted data from the log.
+								Filtering can be quickly enabled or disabled via the <a href="main_window.htm#tool_bar">tool bar</a>.
+								In the free version, filtering is limited to
+								<!--#value file="..\src\misc.cs" field="const int MaxFilters\s+=\s+(?<field>\d+);"-->
+								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
+								Limited Feature dialog.
 							</div>
 						</div>
 					</li>
 
 					<li class="child_list_elem">
 						<div>
-							<div class="tag_label">Android Logcat Viewer</div>
-							<div class="free_feature">Available in Free Edition</div>
+							<div class="tag_label">Transformations</div>
+							<div class="limited_feature">Limited in Free Edition</div>
+							<div class="content">
+								<a href="options_transforms.htm">Transformations</a> are used to reformat the text that is
+								displayed in the log. A <a href="pattern_editor.htm">pattern</a> is used to match lines in the
+								log that are then substituted with the <i>Replace</i> template. Transforms are very flexible
+								allowing reordering of text, changes in case, "swizzling" of characters, and error code lookup
+								and substitution. Transforms can be quickly enabled or disabled via
+								<a href="main_window.htm#tool_bar">tool bar</a>. In the free version, transforms are limited to
+								<!--#value file="..\src\misc.cs" field="const int MaxTransforms\s+=\s+(?<field>\d+);"-->
+								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
+								Limited Feature dialog.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Actions</div>
+							<div class="limited_feature">Limited in Free Edition</div>
+							<div class="content">
+								<a href="options_actions.htm">Actions</a> allow custom behaviour to be executed when a particular
+								line in the log file is double clicked. For example, a <a href="pattern_editor.htm">pattern</a>
+								that matches a file path and line number can be associated with an action that opens the file at
+								the given line number in a text editor, a useful feature when viewing application debug output.
+								In the free version, actions are limited to
+								<!--#value file="..\src\misc.cs" field="const int MaxActions\s+=\s+(?<field>\d+);"-->
+								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
+								Limited Feature dialog.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Scratch Pad for Pattern Testing</div>
+							<div class="content">
+								The patterns that are at the core of many of the features in RyLogViewer can become very complex.
+								To aid in ensuring a pattern behaves correctly, the <a href="pattern_editor.htm">pattern editor</a>
+								features a <a href="pattern_editor.htm#test_area">test area</a> that allows the behaviour of a
+								pattern to be previewed. This test area is a useful tool for learning regular expression syntax.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Aggregate Files</div>
+							<div class="licensed_feature">Licensed feature</div>
+							<div class="content">
+								The <a href="aggregate_files.htm">aggregate files</a> feature allows multiple files to be
+								viewed as though they are a single file. All features (including highlighting, searching,
+								filtering, etc) operate on the aggregate file in the same manor as they do for a single file.
+								This is particularly useful for systems that produce sequentially numbered log files.<br/>
+								<br/>
+								In addition, the <a href="export.htm">Export</a> function can by used to create a single
+								amalgamated file that is the result of all of the files concatenated together after filtering
+								and/or text transformations have been applied.<br/>
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Android Logcat output</div>
 							<div class="content">
 								One of the targeted uses for RyLogViewer is to aid Android application development. The
-								Android operating system has a system wide logging feature that gives great insight into
+								Android operating system has a system wide logging feature that gives great insight into the
 								applications running on the device. The <a href="android_logcat.htm">Android Logcat Wizard</a>
-								simplifies the process of connecting to this output log data
+								simplifies the process of connecting and capturing this logcat data.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Program Output Logging</div>
+							<div class="content">
+								The <a href="data_sources.htm#program_output">Log Program Output</a> dialog can be used to
+								launch another application and capture its standard output or standard error.
 							</div>
 						</div>
 					</li>
@@ -116,13 +169,49 @@
 					<li class="child_list_elem">
 						<div>
 							<div class="tag_label">Serial Port Logging</div>
-							<div class="free_feature">Available in Free Edition</div>
 							<div class="content">
 								Embedded systems frequently use RS232 serial comms as a simple means of transmitting internal
-								state to the outside world. RyLogViewer's serial port logging is ideally suited to this scenario
-								as it can receive data directly from a serial port and capture it into a file. The highlighting
-								feature can be used to make errors stand out, or state machine states/transitions obvious.
-								The transforms feature can be used to replace error codes with meaningful error messages
+								state to the outside world. RyLogViewer's
+								<a href="data_sources.htm#serial_port">serial port logging</a> is ideally suited to this scenario
+								as it can receive data directly from a serial port and capture it into a file. Highlighting
+								can then be used to make errors stand out, or state machine states/transitions obvious.
+								The transforms feature can be used to replace error codes with meaningful error messages.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">TCP/UDP Network Connection Logging</div>
+							<div class="content">
+								The <a href="data_sources.htm#tcpip">Log Network Connection</a> dialog allows the capture
+								of log data streamed over a network using either TCP or UDP protocols. The connection can be
+								direct or via a proxy server.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Named Pipe Logging</div>
+							<div class="content">
+								Named pipes are a common form of inter-process communication. Writing log output to a named
+								pipe is another method of getting log data out of an application or server. The
+								<a href="data_sources.htm#named_pipe">Log Pipe Connection</a> dialog allows RyLogViewer to
+								connect directly to the named pipe and capture any output received.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Export</div>
+							<div class="content">
+								The <a href="export.htm">Export</a> option, under the file menu, writes the current log data
+								to a file applying all enabled filters and transforms. Exporting is therefore a flexible way
+								to transform a file and save the result. Exporting can also be performed by running RyLogViewer
+								from the <a href="command_line.htm">command line</a> which allows RyLogViewer to be useful in
+								batch scripts.
 							</div>
 						</div>
 					</li>

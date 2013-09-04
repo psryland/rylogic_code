@@ -242,12 +242,104 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Content Include="docs\aggregate_files.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>aggregate_files.html</DependentUpon>
+    </Content>
+    <Content Include="docs\aggregate_files.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>aggregate_files.htm</LastGenOutput>
+    </Content>
     <Content Include="docs\aggregate_files.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="docs\auto_refresh.html" />
+    <Content Include="docs\android_logcat.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>android_logcat.html</DependentUpon>
+    </Content>
+    <Content Include="docs\android_logcat.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>android_logcat.htm</LastGenOutput>
+    </Content>
+    <None Include="docs\auto_refresh.html_inc" />
+    <Content Include="docs\command_line.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>command_line.html</DependentUpon>
+    </Content>
+    <Content Include="docs\command_line.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>command_line.htm</LastGenOutput>
+    </Content>
+    <Content Include="docs\data_sources.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>data_sources.html</DependentUpon>
+    </Content>
+    <Content Include="docs\data_sources.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>data_sources.htm</LastGenOutput>
+    </Content>
+    <Content Include="docs\faq.html" />
+    <Content Include="docs\installation.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>installation.html</DependentUpon>
+    </Content>
+    <Content Include="docs\installation.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>installation.htm</LastGenOutput>
+    </Content>
+    <Content Include="docs\main_window.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>main_window.html</DependentUpon>
+    </Content>
+    <Content Include="docs\main_window.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>main_window.htm</LastGenOutput>
+    </Content>
     <Content Include="docs\network_output.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\options_appearance.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>options_appearance.html</DependentUpon>
+    </Content>
+    <Content Include="docs\options_appearance.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>options_appearance.htm</LastGenOutput>
+    </Content>
+    <None Include="docs\options_dialog.html_inc" />
+    <Content Include="docs\options_filtering.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>options_filtering.html</DependentUpon>
+    </Content>
+    <Content Include="docs\options_filtering.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>options_filtering.htm</LastGenOutput>
+    </Content>
+    <Content Include="docs\options_general.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>options_general.html</DependentUpon>
+    </Content>
+    <Content Include="docs\options_general.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>options_general.htm</LastGenOutput>
+    </Content>
+    <Content Include="docs\options_highlighting.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>options_highlighting.html</DependentUpon>
+    </Content>
+    <Content Include="docs\options_highlighting.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>options_highlighting.htm</LastGenOutput>
     </Content>
     <Content Include="docs\overview.htm">
       <AutoGen>True</AutoGen>
@@ -257,6 +349,15 @@
     <Content Include="docs\overview.html">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>overview.htm</LastGenOutput>
+    </Content>
+    <Content Include="docs\pattern_editor.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>pattern_editor.html</DependentUpon>
+    </Content>
+    <Content Include="docs\pattern_editor.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>pattern_editor.htm</LastGenOutput>
     </Content>
     <Content Include="docs\pipe_output.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -308,13 +409,13 @@
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>welcome.htm</LastGenOutput>
     </Content>
-    <Content Include="docs\help_title_panel.html" />
-    <Content Include="docs\help_index_panel.html">
+    <None Include="docs\help_title_panel.html_inc" />
+    <None Include="docs\help_index_panel.html_inc">
       <SubType>Designer</SubType>
-    </Content>
-    <Content Include="docs\help_head.html">
+    </None>
+    <None Include="docs\help_head.html_inc">
       <SubType>Designer</SubType>
-    </Content>
+    </None>
     <Content Include="docs\book.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -351,10 +452,10 @@
     <Content Include="docs\totd7.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\command_line_ref.htm">
+    <Content Include="Resources\command_line_ref1.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>command_line_ref.t4html</DependentUpon>
+      <DependentUpon>command_line_ref.html</DependentUpon>
     </Content>
     <Content Include="Resources\free_edition.htm">
       <AutoGen>True</AutoGen>
@@ -391,10 +492,10 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>swizzle_quick_ref.htm</LastGenOutput>
     </None>
-    <None Include="Resources\command_line_ref.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>command_line_ref.htm</LastGenOutput>
-    </None>
+    <Content Include="Resources\command_line_ref.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>command_line_ref1.htm</LastGenOutput>
+    </Content>
     <None Include="Resources\transform_quick_ref.t4html">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>transform_quick_ref.htm</LastGenOutput>
