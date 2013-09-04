@@ -18,11 +18,14 @@ namespace pr.script
 		/// <summary>Expands template mark-up files</summary>
 		public static string Markup(Src src, string current_dir)
 		{
-			// General form: <!--#command key="value" key="value"... -->
+			// General form: [optional leading whitespace]<!--#command key="value" key="value"... -->
 			// <!--#include file=".\help_index_panel.html"-->
 			// <!--#value file="..\src\misc.cs" field="const int MaxHighlights\s+=\s+(?<field>\d+);"-->
-			var result = TemplateReplacer.Process(src, @"<!--#(?<cmd>\w+)\s+(?<kv>.*?)-->", (tr, match) =>
+			// The pattern matches leading white space which is then inserted before every line in the substituted result.
+			// This means includes on lines of the own are correctly tabbed, and <!--inline--> substitutions are also correct
+			var result = TemplateReplacer.Process(src, @"(?<indent>[ \t]*)<!--#(?<cmd>\w+)\s+(?<kv>.*?)-->", (tr, match) =>
 				{
+					var indent = match.Result("${indent}");
 					var cmd = match.Result("${cmd}");
 					var kv  = match.Result("${kv}");  // list of key="value" pairs
 					switch (cmd)
@@ -42,17 +45,7 @@ namespace pr.script
 							var filepath = Path.Combine(current_dir, file);
 							if (!PathEx.FileExists(filepath)) throw new FileNotFoundException("Failed to include file", filepath);
 
-							// Look for an optional 'indent="N"' kv pair
-							m = Regex.Match(kv, @".*indent=""(?<indent>\d+?)"".*");
-							if (m.Success)
-							{
-								var indent = int.Parse(m.Result("${indent}"));
-								tr.PushSource(new IndentSrc(new FileSrc(filepath), "\t".Repeat(indent), false));
-								return string.Empty;
-							}
-
-							// Otherwise, just include the file directly
-							tr.PushSource(new FileSrc(filepath));
+							tr.PushSource(new IndentSrc(new FileSrc(filepath), indent, true));
 							return string.Empty;
 						}
 					case "value":
@@ -75,7 +68,7 @@ namespace pr.script
 							m = Regex.Match(File.ReadAllText(filepath), pat);
 							if (!m.Success) throw new Exception("Pattern {0} did not match anything content within file {1}".Fmt(pat, filepath));
 							var field = m.Result("${field}");
-							return field;
+							return indent + field;
 						}
 					}
 				});
@@ -98,7 +91,7 @@ namespace pr
 			private const string IncludeFile = "TestExpandHtml_include.txt";
 			[SetUp] public static void Setup()
 			{
-				File.WriteAllText(IncludeFile, "include file\r\n text data");
+				File.WriteAllText(IncludeFile, "include file\r\ntext data");
 			}
 			[TearDown] public static void TearDown()
 			{
@@ -107,15 +100,16 @@ namespace pr
 			[Test] public static void TestExpandHtml()
 			{
 				var template =
-					"<root>" +
-					"<!--#include file=\"{0}\" indent=\"2\"-->".Fmt(IncludeFile) +
-					"<!--#value file=\"{0}\" field=\"text\\s+(?<field>\\w+)\"-->".Fmt(IncludeFile) +
-					"</root>";
+					"<root>\r\n" +
+					"\t\t <!--#include file=\"{0}\"-->\r\n".Fmt(IncludeFile) +
+					"  <!--#value file=\"{0}\" field=\"text\\s+(?<field>\\w+)\"-->\r\n".Fmt(IncludeFile) +
+					"</root>\r\n";
 				const string result =
-					"<root>" +
-					"include file\r\n\t\t text data" +
-					"data" +
-					"</root>";
+					"<root>\r\n" +
+					"\t\t include file\r\n" +
+					"\t\t text data\r\n" +
+					"  data\r\n" +
+					"</root>\r\n";
 				var r = Expand.Html(new StringSrc(template), Environment.CurrentDirectory);
 				Assert.AreEqual(result, r);
 			}

@@ -22,7 +22,7 @@ if errorlevel 1 goto :eof
 set regasm=C:\Windows\Microsoft.NET\Framework\v4.0.30319\regasm.exe
 set srcdir=%qdrive%\projects\Rylogic.CustomTool.HtmlExpander
 set dstdir=%qdrive%\bin\custom_tools
-set config=debug
+set /p config=Configuration ^(debug,release^): 
 set binname=Rylogic.CustomTool.HtmlExpander.dll
 set proj=%srcdir%\Rylogic.CustomTool.HtmlExpander.sln
 set symdir=%qdrive%\local\symbols
