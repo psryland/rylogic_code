@@ -10,23 +10,33 @@ namespace Csex
 		private Cmd m_cmd;
 
 		[STAThread]
-		static void Main(string[] args) { new Program(args).Run(); }
-		public Program(string[] args)   { m_args = args; }
+		static int Main(string[] args) { return new Program(args).Run(); }
+		public Program(string[] args)  { m_args = args; }
 
 		/// <summary>Main run</summary>
-		public override void Run()
+		public override int Run()
 		{
 			// Check the name of the exe and do behaviour based on that.
 			//Path.GetFileNameWithoutExtension(ExecutablePath);
 
+			// Invalid arguments, error exit
 			if (CmdLine.Parse(this, m_args) != CmdLine.Result.Success)
-				return;
+				return 1;
 
-			if (m_cmd == null) { ShowHelp(); return; }
-			try { m_cmd.Run(); }
+			try
+			{
+				// Execute the command
+				if (m_cmd != null)
+					return m_cmd.Run();
+
+				// No command, show help and clean exit
+				ShowHelp();
+				return 0;
+			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Error: {0}",ex.Message);
+				return 1;
 			}
 		}
 

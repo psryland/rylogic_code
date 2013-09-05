@@ -29,9 +29,9 @@ namespace Csex
 			throw new NotImplementedException();
 		}
 
-		public override void Run()
+		public override int Run()
 		{
-			throw new NotImplementedException();
+			return 0;
 		}
 	}
 }

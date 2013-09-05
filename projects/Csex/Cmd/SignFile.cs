@@ -40,11 +40,12 @@ namespace Csex
 		}
 
 		/// <summary>Run the command</summary>
-		public override void Run()
+		public override int Run()
 		{
 			var priv = File.ReadAllText(m_pk);
 			Crypt.SignFile(m_file, priv);
 			Console.WriteLine("'"+m_file+"' signed.");
+			return 0;
 		}
 	}
 }

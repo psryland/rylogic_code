@@ -6,7 +6,7 @@ namespace Csex
 	public abstract class Cmd :CmdLine.IReceiver
 	{
 		/// <summary>Run the command</summary>
-		public abstract void Run();
+		public abstract int Run();
 
 		/// <summary>Display help information in the case of an invalid command line</summary>
 		public abstract void ShowHelp();

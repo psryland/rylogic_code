@@ -40,11 +40,12 @@ namespace Csex
 		}
 
 		/// <summary>Run the command</summary>
-		public override void Run()
+		public override int Run()
 		{
 			var current_dir = Path.GetDirectoryName(m_infile) ?? string.Empty;
 			var result = Expand.Markup(new FileSrc(m_infile), current_dir);
 			File.WriteAllText(m_outfile, result);
+			return 0;
 		}
 	}
 }

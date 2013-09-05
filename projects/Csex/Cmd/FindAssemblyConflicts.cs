@@ -43,11 +43,11 @@ namespace Csex
 		}
 
 		/// <summary>Run the command</summary>
-		public override void Run()
+		public override int Run()
 		{
 			if (string.IsNullOrEmpty(m_dir))
 				m_dir = Environment.CurrentDirectory;
-			
+
 			var assemblies = GetAllAssemblies(m_dir);
 			var references = GetReferencesFromAllAssemblies(assemblies);
 			var groupsOfConflicts = FindReferencesWithTheSameShortNameButDiffererntFullNames(references);
@@ -58,6 +58,7 @@ namespace Csex
 				foreach (var reference in group)
 					Console.Out.WriteLine("{0,-30} references {1}" ,reference.Assembly.Name ,reference.ReferencedAssembly.FullName);
 			}
+			return 0;
 		}
 		private IEnumerable<IGrouping<string, Reference>> FindReferencesWithTheSameShortNameButDiffererntFullNames(IEnumerable<Reference> references)
 		{

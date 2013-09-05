@@ -9,7 +9,7 @@ namespace Csex
 	public class GenActivationCode :Cmd
 	{
 		private string m_pk;
-		
+
 		/// <summary>Display help information in the case of an invalid command line</summary>
 		public override void ShowHelp()
 		{
@@ -38,12 +38,13 @@ namespace Csex
 		}
 
 		/// <summary>Run the command</summary>
-		public override void Run()
+		public override int Run()
 		{
 			var priv = File.ReadAllText(m_pk);
 			var code = ActivationCode.Generate(priv);
 			Clipboard.SetText(code);
 			Console.WriteLine("Code Generated:\n"+code+"\n\nCode has been copied to the clipboard");
+			return 0;
 		}
 	}
 }
