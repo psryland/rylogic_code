@@ -1,10 +1,15 @@
 ﻿<!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml">
-	<!--#include file=".\help_head.html_inc"-->
+	<!--#include file=".\help_head.include.html"-->
 	<body id="main_help">
-		<!--#include file=".\help_title_panel.html_inc"-->
-		<!--#include file=".\help_index_panel.html_inc"-->
+		<!--#include file=".\help_title_panel.include.html"-->
+		<!--#include file=".\help_index_panel.include.html"-->
 		<div id="content_panel">
+			<!--#var name="FeatureEnableTime" file="..\src\misc.cs" value="const int FeatureEnableTimeInMinutes\s+= (?<value>\d+);"-->
+			<!--#var name="MaxHighlights"     file="..\src\misc.cs" value="const int MaxHighlights\s+= (?<value>\d+);"-->
+			<!--#var name="MaxFilters"        file="..\src\misc.cs" value="const int MaxFilters\s+= (?<value>\d+);"-->
+			<!--#var name="MaxTransforms"     file="..\src\misc.cs" value="const int MaxTransforms\s+= (?<value>\d+);"-->
+			<!--#var name="MaxActions"        file="..\src\misc.cs" value="const int MaxActions\s+= (?<value>\d+);"-->
 			<div class="title">Overview and Features</div>
 			<div class="content">
 				<div class="content">
@@ -27,8 +32,7 @@
 					RylogViewer is a shareware application, meaning there are limits applied to the free version of the
 					application that are removed in the licensed version. However, these limits do not restrict or disable any
 					of the functionally of the application. The free version merely prompts the user when a limit is exceeded
-					giving the user the option to enable the licensed feature. After
-					<!--#value file="..\src\misc.cs" field="const int FeatureEnableTimeInMinutes\s+=\s+(?<field>\d+);"-->
+					giving the user the option to enable the licensed feature. After <!--#value name="FeatureEnableTime"-->
 					minutes, the prompt will reappear.
 					<b style="font-size:15px; color: #080">There is no time restriction or limit on the number of times licensed features can be enabled.</b><br/>
 					<br/>
@@ -56,8 +60,7 @@
 								<a href="pattern_editor.htm">pattern</a> in the
 								<a href="options_highlighting.htm">highlighting</a> options window. Highlighting can be
 								quickly enabled or disabled via the <a href="main_window.htm#tool_bar">tool bar</a>. In the free
-								version, highlighting is limited to
-								<!--#value file="..\src\misc.cs" field="const int MaxHighlights\s+=\s+(?<field>\d+);"-->
+								version, highlighting is limited to <!--#value name="MaxHighlights"-->
 								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
 								Limited Feature dialog.
 							</div>
@@ -72,8 +75,7 @@
 								<a href="pattern_editor.htm">Patterns</a> can be created in the
 								<a href="options_filtering.htm">filtering</a> options window to strip unwanted data from the log.
 								Filtering can be quickly enabled or disabled via the <a href="main_window.htm#tool_bar">tool bar</a>.
-								In the free version, filtering is limited to
-								<!--#value file="..\src\misc.cs" field="const int MaxFilters\s+=\s+(?<field>\d+);"-->
+								In the free version, filtering is limited to <!--#value name="MaxFilters"-->
 								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
 								Limited Feature dialog.
 							</div>
@@ -91,9 +93,8 @@
 								allowing reordering of text, changes in case, "swizzling" of characters, and error code lookup
 								and substitution. Transforms can be quickly enabled or disabled via
 								<a href="main_window.htm#tool_bar">tool bar</a>. In the free version, transforms are limited to
-								<!--#value file="..\src\misc.cs" field="const int MaxTransforms\s+=\s+(?<field>\d+);"-->
-								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
-								Limited Feature dialog.
+								<!--#value name="MaxTransforms"--> patterns, however more patterns can be used by selecting
+								<i>enable</i> in the Free Edition Limited Feature dialog.
 							</div>
 						</div>
 					</li>
@@ -107,8 +108,7 @@
 								line in the log file is double clicked. For example, a <a href="pattern_editor.htm">pattern</a>
 								that matches a file path and line number can be associated with an action that opens the file at
 								the given line number in a text editor, a useful feature when viewing application debug output.
-								In the free version, actions are limited to
-								<!--#value file="..\src\misc.cs" field="const int MaxActions\s+=\s+(?<field>\d+);"-->
+								In the free version, actions are limited to <!--#value name="MaxActions"-->
 								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
 								Limited Feature dialog.
 							</div>
