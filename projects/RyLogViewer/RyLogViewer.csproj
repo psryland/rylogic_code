@@ -242,6 +242,8 @@
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Content Include="build_docs.py" />
+    <Content Include="deploy.py" />
     <Content Include="docs\aggregate_files.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -263,7 +265,7 @@
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>android_logcat.htm</LastGenOutput>
     </Content>
-    <None Include="docs\auto_refresh.html_inc" />
+    <Content Include="docs\auto_refresh.include.html" />
     <Content Include="docs\command_line.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -282,7 +284,15 @@
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>data_sources.htm</LastGenOutput>
     </Content>
-    <Content Include="docs\faq.html" />
+    <Content Include="docs\faq.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>faq.html</DependentUpon>
+    </Content>
+    <Content Include="docs\faq.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>faq.htm</LastGenOutput>
+    </Content>
     <Content Include="docs\installation.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -313,7 +323,7 @@
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>options_appearance.htm</LastGenOutput>
     </Content>
-    <None Include="docs\options_dialog.html_inc" />
+    <Content Include="docs\options_dialog.include.html" />
     <Content Include="docs\options_filtering.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -341,7 +351,15 @@
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>options_highlighting.htm</LastGenOutput>
     </Content>
-    <Content Include="docs\options_transforms.html" />
+    <Content Include="docs\options_transforms.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>options_transforms.html</DependentUpon>
+    </Content>
+    <Content Include="docs\options_transforms.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>options_transforms.htm</LastGenOutput>
+    </Content>
     <Content Include="docs\overview.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -369,54 +387,80 @@
     <Content Include="docs\serial_port_output.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="docs\totd0.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>totd0.html</DependentUpon>
+    </Content>
+    <Content Include="docs\totd1.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>totd1.html</DependentUpon>
+    </Content>
+    <Content Include="docs\totd2.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>totd2.html</DependentUpon>
+    </Content>
+    <Content Include="docs\totd3.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>totd3.html</DependentUpon>
+    </Content>
+    <Content Include="docs\totd7.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>totd7.html</DependentUpon>
+    </Content>
     <Content Include="docs\welcome.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>welcome.html</DependentUpon>
     </Content>
-    <Content Include="Resources\cripple_filtering.htm">
-      <DependentUpon>cripple_filtering.t4html</DependentUpon>
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-    </Content>
-    <Content Include="Resources\cripple.css" />
+    <Content Include="gen_licence.py" />
+    <Content Include="Resources\auto_refresh.include.html" />
     <Content Include="Resources\cripple_aggregate_files.htm">
-      <DependentUpon>cripple_aggregate_files.t4html</DependentUpon>
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
+      <DependentUpon>cripple_aggregate_files.html</DependentUpon>
+    </Content>
+    <Content Include="Resources\cripple_css.include.html" />
+    <Content Include="Resources\cripple_filtering.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>cripple_filtering.html</DependentUpon>
     </Content>
     <Content Include="Resources\cripple_highlighting.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>cripple_highlighting.t4html</DependentUpon>
+      <DependentUpon>cripple_highlighting.html</DependentUpon>
     </Content>
-    <Content Include="Resources\swizzle_quick_ref.htm">
+    <Content Include="Resources\free_edition.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>swizzle_quick_ref.t4html</DependentUpon>
+      <DependentUpon>free_edition.html</DependentUpon>
     </Content>
-    <Content Include="Resources\transform_quick_ref.htm">
+    <Content Include="Resources\swizzle_quick_ref1.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>transform_quick_ref.t4html</DependentUpon>
+      <DependentUpon>swizzle_quick_ref.html</DependentUpon>
     </Content>
-    <Content Include="Resources\version_history.htm">
+    <Content Include="Resources\transform_quick_ref1.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>version_history.t4html</DependentUpon>
+      <DependentUpon>transform_quick_ref.html</DependentUpon>
     </Content>
-    <None Include="build_docs.cmd" />
     <Content Include="docs\welcome.html">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>welcome.htm</LastGenOutput>
     </Content>
-    <None Include="docs\help_title_panel.html_inc" />
-    <None Include="docs\help_index_panel.html_inc">
+    <Content Include="docs\help_title_panel.include.html" />
+    <Content Include="docs\help_index_panel.include.html">
       <SubType>Designer</SubType>
-    </None>
-    <None Include="docs\help_head.html_inc">
+    </Content>
+    <Content Include="docs\help_head.include.html">
       <SubType>Designer</SubType>
-    </None>
+    </Content>
     <Content Include="docs\book.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -449,63 +493,65 @@
     </Content>
     <Content Include="docs\totd7.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>totd7.htm</LastGenOutput>
     </Content>
     <Content Include="Resources\command_line_ref1.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>command_line_ref.html</DependentUpon>
     </Content>
-    <Content Include="Resources\free_edition.htm">
+    <Content Include="Resources\quick_ref_css.include.html" />
+    <Content Include="Resources\regex_quick_ref1.htm">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>free_edition.t4html</DependentUpon>
+      <DependentUpon>regex_quick_ref.html</DependentUpon>
     </Content>
-    <None Include="Resources\quick_ref_css.html_inc" />
-    <Content Include="Resources\regex_quick_ref.htm">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>regex_quick_ref.t4html</DependentUpon>
-    </Content>
-    <None Include="Resources\cripple_filtering.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
+    <Content Include="Resources\cripple_filtering.html">
+      <Generator>HtmlExpander</Generator>
       <LastGenOutput>cripple_filtering.htm</LastGenOutput>
-    </None>
-    <None Include="Resources\cripple_highlighting.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
+    </Content>
+    <Content Include="Resources\cripple_highlighting.html">
+      <Generator>HtmlExpander</Generator>
       <LastGenOutput>cripple_highlighting.htm</LastGenOutput>
-    </None>
-    <None Include="Resources\cripple_aggregate_files.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
+    </Content>
+    <Content Include="Resources\cripple_aggregate_files.html">
+      <Generator>HtmlExpander</Generator>
       <LastGenOutput>cripple_aggregate_files.htm</LastGenOutput>
-    </None>
-    <None Include="Resources\cripple_meta.t4html_inc" />
-    <None Include="Resources\free_edition.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
+    </Content>
+    <Content Include="Resources\cripple_meta.include.html" />
+    <Content Include="Resources\free_edition.html">
+      <Generator>HtmlExpander</Generator>
       <LastGenOutput>free_edition.htm</LastGenOutput>
-    </None>
-    <None Include="Resources\cripple_footer.t4html_inc">
+    </Content>
+    <Content Include="Resources\cripple_footer.include.html">
       <SubType>Designer</SubType>
-    </None>
-    <None Include="Resources\swizzle_quick_ref.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>swizzle_quick_ref.htm</LastGenOutput>
-    </None>
+    </Content>
+    <Content Include="Resources\swizzle_quick_ref.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>swizzle_quick_ref1.htm</LastGenOutput>
+    </Content>
     <Content Include="Resources\command_line_ref.html">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>command_line_ref1.htm</LastGenOutput>
     </Content>
-    <None Include="Resources\transform_quick_ref.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>transform_quick_ref.htm</LastGenOutput>
-    </None>
-    <None Include="Resources\regex_quick_ref.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>regex_quick_ref.htm</LastGenOutput>
-    </None>
-    <None Include="Resources\version_history.t4html">
-      <Generator>TextTemplatingFileGenerator</Generator>
+    <Content Include="Resources\transform_quick_ref.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>transform_quick_ref1.htm</LastGenOutput>
+    </Content>
+    <Content Include="Resources\regex_quick_ref.html">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>regex_quick_ref1.htm</LastGenOutput>
+    </Content>
+    <Content Include="Resources\version_history.htm">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>version_history.html</DependentUpon>
+    </Content>
+    <Content Include="Resources\version_history.html">
+      <Generator>HtmlExpander</Generator>
       <LastGenOutput>version_history.htm</LastGenOutput>
-    </None>
+    </Content>
     <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
     </EmbeddedResource>
@@ -593,8 +639,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <None Include="gen_licence.cmd" />
-    <None Include="deploy.cmd" />
     <None Include="Resources\executable.png" />
     <None Include="Resources\edit_add.png" />
     <None Include="Resources\edit_save.png" />
@@ -635,6 +679,8 @@
   <ItemGroup>
     <Content Include="docs\totd3.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>totd3.htm</LastGenOutput>
     </Content>
     <Content Include="docs\background.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -643,16 +689,22 @@
   <ItemGroup>
     <Content Include="docs\totd0.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>totd0.htm</LastGenOutput>
     </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="docs\totd1.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>totd1.htm</LastGenOutput>
     </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="docs\totd2.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>totd2.htm</LastGenOutput>
     </Content>
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
