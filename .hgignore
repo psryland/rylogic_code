@@ -19,6 +19,7 @@ syntax: glob
 *.htm
 *.userprefs
 *.vssettings
+*.pyc
 *ReSharper*
 dlang/dmd.*.zip
 dlang/2.05x
