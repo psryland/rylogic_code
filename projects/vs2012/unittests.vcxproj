@@ -369,7 +369,6 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -387,7 +386,6 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>

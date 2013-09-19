@@ -1,5 +1,5 @@
 //******************************************
-// Event sending/receiving 
+// Event sending/receiving
 //  Copyright © Oct 2003 Paul Ryland
 //******************************************
 
@@ -197,7 +197,7 @@ namespace pr
 				return flags;
 			}
 		};
- 
+
 		// Send an event to all receivers of 'EventType'
 		// - Sending events is synchronous for each event type
 		// - OnEvent handlers will be called in *this* thread context which may
@@ -207,7 +207,7 @@ namespace pr
 		{
 			// Prevent any re-entrancy or modification to the EventType receivers chain
 			std::lock_guard<std::recursive_mutex> lock(IRecv<EventType>::Mutex());
-				
+
 			// Scope object for restoring chain flags
 			struct ChainLocker
 			{
@@ -293,8 +293,8 @@ namespace pr
 			{
 				int m_count;
 				Once() :pr::events::IRecv<Evt>() ,m_count(0) {}
-				void OnEvent(Evt const&) { subscribe<Evt>(false); ++m_count; }
-				void SignUp()            { subscribe<Evt>(true); }
+				void OnEvent(Evt const&) { subscribe(false); ++m_count; }
+				void SignUp()            { subscribe(true); }
 			};
 
 			// Tests changing the event chain during a Send() call
@@ -306,16 +306,16 @@ namespace pr
 				Swapper()
 					:pr::events::IRecv<Evt>(1) // in between thing0 and thing1
 				{
-					m_thing0.subscribe<Evt>(true);
-					m_thing1.subscribe<Evt>(false);
+					m_thing0.subscribe(true);
+					m_thing1.subscribe(false);
 					m_subbed = 0;
 				}
 				void OnEvent(Evt const&)
 				{
 					// Swap subscribed objects on the event
 					m_subbed = m_subbed == 0;
-					m_thing0.subscribe<Evt>(m_subbed == 0);
-					m_thing1.subscribe<Evt>(m_subbed == 1);
+					m_thing0.subscribe(m_subbed == 0);
+					m_thing1.subscribe(m_subbed == 1);
 				}
 			};
 		}
@@ -382,5 +382,3 @@ namespace pr
 #pragma warning (pop)
 
 #endif
-
-

@@ -36,6 +36,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <OpenMPSupport>true</OpenMPSupport>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
