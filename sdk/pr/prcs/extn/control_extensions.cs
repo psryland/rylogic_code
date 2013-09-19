@@ -51,6 +51,47 @@ namespace pr.extn
 			tt.BeginInvokeDelayed(duration, () => tt.SetToolTip(parent, null));
 		}
 
+		/// <summary>Returns the location of this item in screen space</summary>
+		public static Point ScreenLocation(this Control item)
+		{
+			var parent = item.Parent;
+			if (parent == null) return item.Bounds.Location;
+			return parent.PointToScreen(item.Bounds.Location);
+		}
+
+		/// <summary>Returns the location of this item in screen space</summary>
+		public static Point ScreenLocation(this ToolStripItem item)
+		{
+			var parent = item.GetCurrentParent();
+			if (parent == null) return item.Bounds.Location;
+			return parent.PointToScreen(item.Bounds.Location);
+		}
+
+		/// <summary>Returns the bounds of this item in form space</summary>
+		public static Rectangle ClientRectangle(this ToolStripItem item)
+		{
+			var parent = item.GetCurrentParent();
+			var top = parent != null ? parent.TopLevelControl : null;
+			if (top == null) return Rectangle.Empty;
+			return top.RectangleToClient(parent.RectangleToClient(item.Bounds));
+		}
+
+		/// <summary>Returns the bounds of this item in screen space</summary>
+		public static Rectangle ScreenRectangle(this Control item)
+		{
+			var parent = item.Parent;
+			if (parent == null) return item.Bounds;
+			return parent.RectangleToScreen(item.Bounds);
+		}
+
+		/// <summary>Returns the bounds of this item in screen space</summary>
+		public static Rectangle ScreenRectangle(this ToolStripItem item)
+		{
+			var parent = item.GetCurrentParent();
+			if (parent == null) return item.Bounds;
+			return parent.RectangleToScreen(item.Bounds);
+		}
+
 		/// <summary>BeginInvoke a action after 'delay' milliseconds (roughly)</summary>
 		public static void BeginInvokeDelayed(this IComponent ctrl, int delay, Action action)
 		{
@@ -104,6 +145,14 @@ namespace pr.extn
 				{
 					edit.Select(start, length);
 				});
+		}
+
+		/// <summary>Returns the coordinates of the control's form-relative location.</summary>
+		public static Rectangle FormRelativeCoordinates(this Control control)
+		{
+			var form = (Form)control.TopLevelControl;
+			if (form == null) throw new NullReferenceException("Control does not have a top level control (Form)");
+			return control == form ? form.ClientRectangle : form.RectangleToClient(control.Parent.RectangleToScreen(control.Bounds));
 		}
 	}
 }

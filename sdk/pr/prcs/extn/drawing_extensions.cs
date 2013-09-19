@@ -4,6 +4,7 @@
 //***************************************************
 
 using System.Drawing;
+using pr.maths;
 
 namespace pr.extn
 {
@@ -67,10 +68,26 @@ namespace pr.extn
 			return new Point(r.Left + r.Width/2, r.Bottom);
 		}
 
-			/// <summary>Returns the bottom right point of the rectangle</summary>
+		/// <summary>Returns the bottom right point of the rectangle</summary>
 		public static Point BottomRight(this Rectangle r)
 		{
 			return new Point(r.Right, r.Bottom);
+		}
+
+		/// <summary>Returns a point shifted by dx,dy</summary>
+		public static Point Shifted(this Point pt, int dx, int dy)
+		{
+			return new Point(pt.X + dx, pt.Y + dy);
+		}
+
+		/// <summary>Linearly interpolate from this colour to 'dst' by 'frac'</summary>
+		public static Color Lerp(this Color src, Color dst, float frac)
+		{
+			return Color.FromArgb(
+				(int)Maths.Clamp(src.A * (1f - frac) + dst.A * frac, 0f, 255f),
+				(int)Maths.Clamp(src.R * (1f - frac) + dst.R * frac, 0f, 255f),
+				(int)Maths.Clamp(src.G * (1f - frac) + dst.G * frac, 0f, 255f),
+				(int)Maths.Clamp(src.B * (1f - frac) + dst.B * frac, 0f, 255f));
 		}
 	}
 }

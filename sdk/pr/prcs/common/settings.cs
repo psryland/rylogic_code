@@ -17,10 +17,10 @@ using pr.extn;
 // {
 //     public static readonly Settings Default = new Settings(0);
 //     protected override SettingsBase DefaultData { get { return Default; } }
-// 
+//
 //     public string Str { get { return get<string>("Str"); } set { set("Str", value); } }
 //     public int    Int { get { return get<int   >("Int"); } set { set("Int", value); } }
-// 
+//
 //     public Settings(ELoadOptions opts = ELoadOptions.Normal)
 //     {
 //         // Try to load from file, if that fails, fall through an load defaults
@@ -51,7 +51,7 @@ namespace pr.common
 			[DataMember(Name="value")] public object Value {get;set;}
 			public override string ToString() { return Key + "  " + Value; }
 		}
-		
+
 		protected const string VersionKey = "__SettingsVersion";
 		protected List<Pair> Data = new List<Pair>();
 		private string m_filepath = "";
@@ -73,7 +73,7 @@ namespace pr.common
 				return Path.Combine(Path.Combine(app_data, company), app_name);
 			}
 		}
-		
+
 		/// <summary>Returns the directory in which to store app settings</summary>
 		public static string DefaultFilepath
 		{
@@ -82,18 +82,19 @@ namespace pr.common
 
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
 		protected virtual string Version { get { return "v1.0"; } }
-		
+
 		/// <summary>Override this method to return addition known types</summary>
 		protected virtual IEnumerable<Type> KnownTypes { get { return Enumerable.Empty<Type>(); } }
 
-		/// <summary>
-		/// Returns the filepath for the persisted settings file.
-		/// Settings cannot be saved until this property has a valid filepath</summary>
+		/// <summary>Returns the filepath for the persisted settings file. Settings cannot be saved until this property has a valid filepath</summary>
 		public string Filepath
 		{
 			get { return m_filepath; }
-			set { m_filepath = value ?? ""; }
+			set { m_filepath = value ?? string.Empty; }
 		}
+
+		/// <summary>True to block all writes to the settings</summary>
+		public bool ReadOnly { get; set; }
 
 		/// <summary>Read a settings value</summary>
 		protected Value get<Value>(string key)
@@ -110,13 +111,16 @@ namespace pr.common
 		/// <summary>Write a settings value</summary>
 		protected void set<Value>(string key, Value value)
 		{
+			if (ReadOnly)
+				return;
+
 			// Key not in the data yet? Must be initial value from startup
 			int idx = index(key);
 			if (idx < 0) { Data.Insert(~idx, new Pair{Key = key, Value = value}); return; }
-				
+
 			object old_value = Data[idx].Value;
 			if (Equals(old_value, value)) return; // If the values are the same, don't raise 'changing' events
-				
+
 			var args = new SettingsChangingEventArgs(key, old_value, value, false);
 			if (SettingChanging != null && key != VersionKey) SettingChanging(this, args);
 			if (!args.Cancel) Data[idx].Value = value;
@@ -153,7 +157,7 @@ namespace pr.common
 			:this(key, old_value, new_value, false)
 			{}
 		}
-		
+
 		/// <summary>An event raised after a setting has been changed</summary>
 		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 		public class SettingChangedEventArgs :EventArgs
@@ -168,7 +172,7 @@ namespace pr.common
 				NewValue = new_value;
 			}
 		}
-		
+
 		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
 		public event EventHandler<SettingsLoadedEventArgs> SettingsLoaded;
 		public class SettingsLoadedEventArgs :EventArgs
@@ -191,16 +195,16 @@ namespace pr.common
 		{}
 
 		/// <summary>Initialise the settings object</summary>
-		protected SettingsBase(string filepath)
+		protected SettingsBase(string filepath, bool read_only = false)
 		{
 			Debug.Assert(!string.IsNullOrEmpty(filepath));
-			
+
 			Filepath = filepath;
 			Data = new List<Pair>(Default.Data);
-			
+
 			try
 			{
-				Load(Filepath);
+				Load(Filepath, read_only);
 			}
 			catch (Exception ex)
 			{
@@ -239,14 +243,13 @@ namespace pr.common
 		}
 
 		/// <summary>Refreshes the settings from persistent storage</summary>
-		public void Load(string filepath)
+		public void Load(string filepath, bool read_only = false)
 		{
 			try
 			{
 				// Block saving during load/upgrade
 				m_block_saving = true;
 
-				Filepath = filepath;
 				if (!PathEx.FileExists(filepath))
 				{
 					Log.Info(this, "Settings file {0} not found, using defaults".Fmt(filepath));
@@ -256,8 +259,8 @@ namespace pr.common
 
 				Log.Debug(this, "Loading settings file {0}".Fmt(filepath));
 
-				DataContractSerializer ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
-				using (FileStream fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read))
+				var ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
+				using (var fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read, FileShare.Read))
 				{
 					Data = (List<Pair>)ser.ReadObject(fs);
 					Data.Sort((lhs,rhs) => string.CompareOrdinal(lhs.Key, rhs.Key));
@@ -274,7 +277,12 @@ namespace pr.common
 				for (string version; (version = get<string>(VersionKey)) != Version;)
 					Upgrade(version);
 			}
-			finally { m_block_saving = false; }
+			finally
+			{
+				Filepath = filepath;
+				ReadOnly = read_only;
+				m_block_saving = false;
+			}
 
 			Validate();
 
@@ -293,16 +301,16 @@ namespace pr.common
 				m_block_saving = true;
 				if (string.IsNullOrEmpty(filepath))
 					throw new ArgumentNullException("filepath", "No settings filepath set");
-				
+
 				// Notify of a save about to happen
-				SettingsSavingEventArgs args = new SettingsSavingEventArgs(false);
+				var args = new SettingsSavingEventArgs(false);
 				if (SettingsSaving != null) SettingsSaving(this, args);
 				if (args.Cancel) return;
-				
+
 				// Ensure the save directory exists
 				string path = Path.GetDirectoryName(filepath);
 				if (path != null && !Directory.Exists(path)) Directory.CreateDirectory(path);
-				
+
 				// Save the settings version
 				set(VersionKey, Version);
 
@@ -315,13 +323,13 @@ namespace pr.common
 			}
 			finally { m_block_saving = false; }
 		}
-		
+
 		/// <summary>Save using the last filepath</summary>
 		public void Save()
 		{
 			Save(Filepath);
 		}
-		
+
 		/// <summary>Remove the settings file from persistent storage</summary>
 		public void Delete()
 		{
@@ -341,24 +349,25 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		private sealed class Settings :SettingsBase<Settings>
 		{
 			public string   Str { get { return get<string  >("Str"); } private set { set("Str", value); } }
 			public int      Int { get { return get<int     >("Int"); } private set { set("Int", value); } }
-			
+
 			public Settings()
 			{
 				Str = "default";
 				Int = 4;
 			}
 		}
-		
+
 		[Test] public static void TestSettings()
 		{
 			Settings s = new Settings();
@@ -368,4 +377,5 @@ namespace pr
 		}
 	}
 }
+
 #endif

@@ -203,6 +203,9 @@
     <Compile Include="gui\list_form.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="gui\overlay.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="gui\subrange_scroll.cs">
       <SubType>Component</SubType>
     </Compile>
