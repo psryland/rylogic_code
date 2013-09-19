@@ -69,7 +69,7 @@ namespace RyLogViewer
 					SetAdbPath(dlg.FileName);
 				};
 			m_btn_browse_adb.Focus();
-			
+
 			// Devices list
 			m_listbox_devices.ToolTip(m_tt, "The android devices current connected to adb. Hit 'Refresh' to repopulate this list");
 			m_listbox_devices.DataSource = m_bs_device_list;
@@ -89,7 +89,7 @@ namespace RyLogViewer
 			m_listbox_log_buffers.DataSource = Enum.GetNames(typeof(AndroidLogcat.ELogBuffer)).Select(x => x.ToLowerInvariant()).ToArray();
 			foreach (var x in m_settings.LogBuffers) m_listbox_log_buffers.SetSelected((int)x,true);
 			m_listbox_log_buffers.SelectedIndexChanged += (s,a) => UpdateAdbCommand();
-			
+
 			// Filter specs
 			m_grid_filterspec.ToolTip(m_tt, "Configure filters to apply to the logcat output. Tag = '*' applies the filter to all log entries");
 			m_grid_filterspec.AutoGenerateColumns = false;
@@ -105,13 +105,13 @@ namespace RyLogViewer
 			});
 			m_grid_filterspec.DataSource = m_filterspecs;
 			m_filterspecs.ListChanged += (s,a) => UpdateAdbCommand();
-			
+
 			// Log format
 			m_combo_log_format.ToolTip(m_tt, "Select the format of the log output");
 			m_combo_log_format.DataSource = Enum.GetNames(typeof(AndroidLogcat.ELogFormat)).Select(x => x.ToLowerInvariant()).ToArray();
 			m_combo_log_format.SelectedIndex = (int)m_settings.LogFormat;
 			m_combo_log_format.SelectedIndexChanged += (s,a) => UpdateAdbCommand();
-			
+
 			// Capture log output
 			m_check_capture_to_log.ToolTip(m_tt, "Enable capturing the logcat output to a file");
 			m_check_capture_to_log.Checked = m_settings.CaptureOutputToFile;
@@ -121,7 +121,7 @@ namespace RyLogViewer
 					m_btn_browse_output_file.Enabled = m_check_capture_to_log.Checked;
 					m_check_append.Enabled           = m_check_capture_to_log.Checked;
 				};
-			
+
 			// Log out capture file
 			m_combo_output_file.ToolTip(m_tt, "The file path to save captured logcat output to");
 			m_combo_output_file.Load(output_filepaths);
@@ -137,7 +137,7 @@ namespace RyLogViewer
 					m_combo_output_file.Items.Insert(0, dlg.FileName);
 					m_combo_output_file.SelectedIndex = 0;
 				};
-			
+
 			// Append to existing
 			m_check_append.ToolTip(m_tt, "If checked, captured output is appended to the capture file.\r\nIf not, then the capture file is overwritten");
 			m_check_append.Checked = Launch.AppendOutputFile;
@@ -254,6 +254,15 @@ namespace RyLogViewer
 				return;
 			}
 
+			// Quick check the most likely spot
+			var likely_path = Path.Combine(Environment.GetEnvironmentVariable("ANDROID_HOME") ?? string.Empty, @"platform-tools\adb.exe");
+			if (PathEx.FileExists(likely_path))
+			{
+				SetAdbPath(likely_path);
+				return;
+			}
+
+			// Not found? longer search...
 			const string msg =
 				"Searching for the Android Debugging Bridge application...\r\n"+
 				"\r\n"+
@@ -261,16 +270,20 @@ namespace RyLogViewer
 				"\r\n"+
 				"Click cancel to locate it manually.";
 
-			// Search for 'adb.exe'
 			var adb_path = string.Empty;
-			var find_adb = new ProgressForm("Locating 'adb.exe'...", msg.Fmt(string.Empty), Icon, ProgressBarStyle.Continuous, (s,a,cb) =>
+			var search_paths = new[]
+			{
+				Environment.GetEnvironmentVariable("ANDROID_HOME"),
+				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+				@"C:\"
+			};
+
+			// Search for 'adb.exe'
+			var find_adb = new ProgressForm("Locating 'adb.exe'...", msg.Fmt(string.Empty), Icon, ProgressBarStyle.Marquee, (s,a,cb) =>
 				{
-					foreach (var path in new[] {
-						Environment.GetEnvironmentVariable("ANDROID_HOME"),
-						Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-						Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-						Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-						@"C:\"})
+					foreach (var path in search_paths)
 					{
 						if (s.CancelPending || adb_path.HasValue())
 							break;
@@ -287,8 +300,9 @@ namespace RyLogViewer
 
 						foreach (var fi in PathEx.EnumerateFiles(path, @"adb\.exe", SearchOption.AllDirectories, progress:progress))
 						{
+							// Found one!
 							adb_path = fi.FullPath;
-							break;
+							return;
 						}
 					}
 				})
@@ -478,7 +492,9 @@ namespace RyLogViewer
 				? Adb("connect " + m_settings.IPAddressHistory[0])
 				: Adb("usb");
 
-			MessageBox.Show(this, result, "Adb Connect Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			if (!string.IsNullOrWhiteSpace(result))
+				MessageBox.Show(this, result, "Adb Connect Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
 			this.BeginInvoke(PopulateUsingAdb);
 		}
 	}

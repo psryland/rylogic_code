@@ -143,7 +143,7 @@ namespace pr.common
 		/// A fast enumerator of files in a directory.
 		/// Use this if you need to get attributes for all files in a directory.
 		/// This enumerator is substantially faster than using <see cref="Directory.GetFiles(string)"/>
-		/// and then creating a new FileInfo object for each path.  Use this version when you 
+		/// and then creating a new FileInfo object for each path.  Use this version when you
 		/// will need to look at the attributes of each file returned (for example, you need
 		/// to check each file in a directory to see if it was modified after a specific date).
 		/// </remarks>
@@ -174,20 +174,19 @@ namespace pr.common
 				var handle = FindFirstFile(pattern, find_data);
 				for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, find_data))
 				{
-					// Yield return files only
+					// If the found object is not a directory, assume it's a file
 					if ((find_data.Attributes & FileAttributes.Directory) != FileAttributes.Directory)
 					{
+						// Yield return files only
 						if (filter.IsMatch(find_data.FileName))
 							yield return new FileData(dir, find_data);
 					}
+					// Otherwise, it's a directory, see if we should be recursing
 					else if (flags == SearchOption.AllDirectories)
 					{
-						if ((find_data.Attributes & FileAttributes.Directory) != FileAttributes.Directory)
-							continue;
-
 						if (find_data.FileName == "." || find_data.FileName == "..")
 							continue;
-						
+
 						stack.Push(Path.Combine(dir, find_data.FileName));
 					}
 				}
@@ -217,12 +216,13 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 	using System.Linq;
 	using common;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static partial class TestPathEx
@@ -257,4 +257,5 @@ namespace pr
 		}
 	}
 }
+
 #endif
