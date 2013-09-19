@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using pr.common;
 using pr.extn;
 using pr.util;
 using RyLogViewer.Properties;
@@ -35,7 +36,11 @@ namespace RyLogViewer
 		private readonly Set m_dummy = new Set(@"x:\(Select Pattern Set).tmp");
 		protected readonly List<Set> m_sets;
 		private readonly ToolTip m_tt;
-		protected Settings m_settings;
+		private Settings m_settings;
+		private ImageList m_image_list;
+		private ComboBox m_combo_sets;
+		private Button m_btn_save;
+		private Button m_btn_load;
 
 		/// <summary>Raised when the list of current patterns is changed</summary>
 		public event EventHandler CurrentSetChanged;
@@ -44,7 +49,7 @@ namespace RyLogViewer
 			if (CurrentSetChanged != null)
 				CurrentSetChanged(this, EventArgs.Empty);
 		}
-		
+
 		protected PatternSetUi()
 		{
 			InitializeComponent();
@@ -62,7 +67,7 @@ namespace RyLogViewer
 					if (m_combo_sets.Tag is IgnoreIndexChange) { m_combo_sets.Tag = null; return; }
 					PatternSetSelected((Set)m_combo_sets.SelectedItem);
 				};
-			
+
 			// Load a pattern set from file
 			m_btn_load.ToolTip(m_tt, "Load a pattern set from file");
 			m_btn_load.Click += (s,a)=> LoadPatternSet();
@@ -70,19 +75,33 @@ namespace RyLogViewer
 			// Save the current list of patterns as a pattern set
 			m_btn_save.ToolTip(m_tt, "Save the current list of patterns as a pattern set");
 			m_btn_save.Click += (s,a)=> SavePatternSet();
-
-			Disposed += (s,a) =>
-				{
-					m_tt.Dispose();
-				};
 		}
+
+		protected void Init(Settings settings)
+		{
+			m_settings = settings;
+			m_settings.SettingsSaving += OnSettingsSaving;
+		}
+		protected override void Dispose(bool disposing)
+		{
+			m_settings.SettingsSaving -= OnSettingsSaving;
+			m_tt.Dispose();
+
+			if (disposing && (components != null))
+				components.Dispose();
+
+			base.Dispose(disposing);
+		}
+
+		/// <summary>Called when settings are being saved, to save this pattern set</summary>
+		protected abstract void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args);
 
 		/// <summary>Gets the version of the pattern set</summary>
 		protected abstract string Version { get; }
 
 		/// <summary>Return the pattern set filter</summary>
 		protected abstract string PatternSetFilter { get; }
-		
+
 		/// <summary>Load a pattern set from file and add it to the set list</summary>
 		private void LoadPatternSet()
 		{
@@ -204,16 +223,16 @@ namespace RyLogViewer
 					try { m_sets.Add(new Set(set)); } catch {} // Ignore those that fail
 			}
 		}
-		
+
 		/// <summary>Serialise the pattern sets to xml</summary>
 		protected string Export()
 		{
 			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
-			
+
 			foreach (var set in m_sets)
 				doc.Root.Add(set.ToXml(new XElement(PatternSetXmlTag)));
-			
+
 			return doc.ToString(SaveOptions.None);
 		}
 
@@ -231,30 +250,112 @@ namespace RyLogViewer
 		{
 			throw new NotSupportedException("File version is {0}. Latest version is {1}. Upgrading from this version is not supported".Fmt(from_version, Version));
 		}
+
+		#region Component Designer generated code
+
+		/// <summary>Required designer variable.</summary>
+		private System.ComponentModel.IContainer components = null;
+
+		/// <summary>Required method for Designer support - do not modify the contents of this method with the code editor.</summary>
+		private void InitializeComponent()
+		{
+			this.components = new System.ComponentModel.Container();
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternSetUi));
+			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
+			this.m_combo_sets = new ComboBox();
+			this.m_btn_save = new System.Windows.Forms.Button();
+			this.m_btn_load = new System.Windows.Forms.Button();
+			this.SuspendLayout();
+			//
+			// m_image_list
+			//
+			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
+			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
+			this.m_image_list.Images.SetKeyName(0, "edit_save.png");
+			this.m_image_list.Images.SetKeyName(1, "folder_with_file.png");
+			//
+			// m_combo_sets
+			//
+			this.m_combo_sets.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_combo_sets.FormattingEnabled = true;
+			this.m_combo_sets.Location = new System.Drawing.Point(3, 9);
+			this.m_combo_sets.Name = "m_combo_sets";
+			this.m_combo_sets.Size = new System.Drawing.Size(250, 21);
+			this.m_combo_sets.TabIndex = 1;
+			//
+			// m_btn_save
+			//
+			this.m_btn_save.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_save.AutoSize = true;
+			this.m_btn_save.ImageIndex = 0;
+			this.m_btn_save.ImageList = this.m_image_list;
+			this.m_btn_save.Location = new System.Drawing.Point(304, 5);
+			this.m_btn_save.Name = "m_btn_save";
+			this.m_btn_save.Size = new System.Drawing.Size(39, 28);
+			this.m_btn_save.TabIndex = 2;
+			this.m_btn_save.UseVisualStyleBackColor = true;
+			//
+			// m_btn_load
+			//
+			this.m_btn_load.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_load.AutoSize = true;
+			this.m_btn_load.ImageIndex = 1;
+			this.m_btn_load.ImageList = this.m_image_list;
+			this.m_btn_load.Location = new System.Drawing.Point(259, 5);
+			this.m_btn_load.Name = "m_btn_load";
+			this.m_btn_load.Size = new System.Drawing.Size(39, 28);
+			this.m_btn_load.TabIndex = 3;
+			this.m_btn_load.UseVisualStyleBackColor = true;
+			//
+			// PatternSetUi
+			//
+			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.Controls.Add(this.m_btn_load);
+			this.Controls.Add(this.m_btn_save);
+			this.Controls.Add(this.m_combo_sets);
+			this.MinimumSize = new System.Drawing.Size(274, 38);
+			this.Name = "PatternSetUi";
+			this.Size = new System.Drawing.Size(346, 40);
+			this.ResumeLayout(false);
+			this.PerformLayout();
+		}
+
+		#endregion
 	}
 
-	
 	/// <summary>Highlight specific instance of the pattern set control</summary>
 	internal class PatternSetHL :PatternSetUi
 	{
 		private const string HLPatternSetExtn   = @"rylog_highlights";
 		private const string HLPatternSetFilter = @"Highlight Pattern Set Files (*."+HLPatternSetExtn+")|*."+HLPatternSetExtn+"|All files (*.*)|*.*";
-		
+
 		/// <summary>A reference to the current set of highlight patterns</summary>
 		public List<Highlight> CurrentSet { get; private set; }
 
 		/// <summary>Initialise the control</summary>
 		internal void Init(Settings settings, List<Highlight> highlights)
 		{
-			m_settings = settings;
-			m_settings.SettingsSaving += (s,a) => m_settings.HighlightPatternSets = Export();
+			Init(settings);
 			Import(settings.HighlightPatternSets);
 			CurrentSet = highlights;
 			UpdateUI();
 		}
 
 		/// <summary>Gets the version of the pattern set</summary>
-		protected override string Version { get { return "v1.0"; } }
+		protected override string Version
+		{
+			get { return "v1.0"; }
+		}
+
+		/// <summary>Called when settings are being saved, to save this pattern set</summary>
+		protected override void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args)
+		{
+			var settings = (Settings)sender;
+			settings.HighlightPatternSets = Export();
+		}
 
 		/// <summary>Return the pattern set filter</summary>
 		protected override string PatternSetFilter
@@ -306,22 +407,20 @@ namespace RyLogViewer
 			// ReSharper restore PossibleNullReferenceException
 		}
 	}
-	
-	
+
 	/// <summary>Filter specific instance of the pattern set control</summary>
 	internal class PatternSetFT :PatternSetUi
 	{
 		protected const string FTPatternSetExtn   = @"rylog_filters";
 		protected const string FTPatternSetFilter = @"Filter Pattern Set Files (*."+FTPatternSetExtn+")|*."+FTPatternSetExtn+"|All files (*.*)|*.*";
-		
+
 		/// <summary>A reference to the current set of filter patterns</summary>
 		public List<Filter> CurrentSet { get; private set; }
 
 		/// <summary>Initialise the control</summary>
 		internal void Init(Settings settings, List<Filter> filters)
 		{
-			m_settings = settings;
-			m_settings.SettingsSaving += (s,a)=> m_settings.FilterPatternSets = Export();
+			Init(settings);
 			Import(settings.FilterPatternSets);
 			CurrentSet = filters;
 			UpdateUI();
@@ -329,6 +428,13 @@ namespace RyLogViewer
 
 		/// <summary>Gets the version of the pattern set</summary>
 		protected override string Version { get { return "v1.0"; } }
+
+		/// <summary>Called when settings are being saved, to save this pattern set</summary>
+		protected override void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args)
+		{
+			var settings = (Settings)sender;
+			settings.FilterPatternSets = Export();
+		}
 
 		/// <summary>Return the pattern set filter</summary>
 		protected override string PatternSetFilter
@@ -342,7 +448,7 @@ namespace RyLogViewer
 			foreach (var p in CurrentSet)
 				parent.Add(p.ToXml(new XElement(XmlTag.Filter)));
 		}
-		
+
 		/// <summary>Clear the current set of patterns</summary>
 		protected override void ClearPatterns()
 		{
@@ -350,7 +456,7 @@ namespace RyLogViewer
 			CurrentSet.Clear();
 			RaiseCurrentSetChanged();
 		}
-		
+
 		/// <summary>Add the patterns in 'node' to the current list</summary>
 		protected override void MergePatterns(XElement node)
 		{
@@ -386,22 +492,31 @@ namespace RyLogViewer
 	{
 		protected const string TXPatternSetExtn   = @"rylog_transforms";
 		protected const string TXPatternSetFilter = @"Transform Set Files (*."+TXPatternSetExtn+")|*."+TXPatternSetExtn+"|All files (*.*)|*.*";
-		
+
 		/// <summary>A reference to the current set of transforms</summary>
 		public List<Transform> CurrentSet { get; private set; }
 
 		/// <summary>Initialise the control</summary>
 		internal void Init(Settings settings, List<Transform> transforms)
 		{
-			m_settings = settings;
-			m_settings.SettingsSaving += (s,a) => m_settings.TransformPatternSets = Export();
+			Init(settings);
 			Import(settings.TransformPatternSets);
 			CurrentSet = transforms;
 			UpdateUI();
 		}
 
 		/// <summary>Gets the version of the pattern set</summary>
-		protected override string Version { get { return "v1.0"; } }
+		protected override string Version
+		{
+			get { return "v1.0"; }
+		}
+
+		/// <summary>Called when settings are being saved, to save this pattern set</summary>
+		protected override void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args)
+		{
+			var settings = (Settings)sender;
+			settings.TransformPatternSets = Export();
+		}
 
 		/// <summary>Return the pattern set filter</summary>
 		protected override string PatternSetFilter
@@ -415,7 +530,7 @@ namespace RyLogViewer
 			foreach (var p in CurrentSet)
 				parent.Add(p.ToXml(new XElement(XmlTag.Transform)));
 		}
-		
+
 		/// <summary>Clear the current set of patterns</summary>
 		protected override void ClearPatterns()
 		{
@@ -423,7 +538,7 @@ namespace RyLogViewer
 			CurrentSet.Clear();
 			RaiseCurrentSetChanged();
 		}
-		
+
 		/// <summary>Add the patterns in 'node' to the current list</summary>
 		protected override void MergePatterns(XElement node)
 		{
@@ -459,22 +574,31 @@ namespace RyLogViewer
 	{
 		protected const string ACPatternSetExtn   = @"rylog_actions";
 		protected const string ACPatternSetFilter = @"Action Set Files (*."+ACPatternSetExtn+")|*."+ACPatternSetExtn+"|All files (*.*)|*.*";
-		
+
 		/// <summary>A reference to the current set of actions</summary>
 		public List<ClkAction> CurrentSet { get; private set; }
 
 		/// <summary>Initialise the control</summary>
 		internal void Init(Settings settings, List<ClkAction> actions)
 		{
-			m_settings = settings;
-			m_settings.SettingsSaving += (s,a) => m_settings.ActionPatternSets = Export();
+			Init(settings);
 			Import(settings.ActionPatternSets);
 			CurrentSet = actions;
 			UpdateUI();
 		}
 
 		/// <summary>Gets the version of the pattern set</summary>
-		protected override string Version { get { return "v1.0"; } }
+		protected override string Version
+		{
+			get { return "v1.0"; }
+		}
+
+		/// <summary>Called when settings are being saved, to save this pattern set</summary>
+		protected override void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args)
+		{
+			var settings = (Settings)sender;
+			settings.ActionPatternSets = Export();
+		}
 
 		/// <summary>Return the pattern set filter</summary>
 		protected override string PatternSetFilter
@@ -488,7 +612,7 @@ namespace RyLogViewer
 			foreach (var p in CurrentSet)
 				parent.Add(p.ToXml(new XElement(XmlTag.ClkAction)));
 		}
-		
+
 		/// <summary>Clear the current set of patterns</summary>
 		protected override void ClearPatterns()
 		{
@@ -496,7 +620,7 @@ namespace RyLogViewer
 			CurrentSet.Clear();
 			RaiseCurrentSetChanged();
 		}
-		
+
 		/// <summary>Add the patterns in 'node' to the current list</summary>
 		protected override void MergePatterns(XElement node)
 		{

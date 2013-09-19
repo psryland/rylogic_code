@@ -11,9 +11,10 @@ namespace pr.common
 	{
 		[Flags] public enum Restore
 		{
-			RemoveAdded = 1,
-			AddRemoved  = 2,
-			Both        = RemoveAdded|AddRemoved
+			RemoveAdded    = 1,
+			AddRemoved     = 2,
+			Both           = RemoveAdded|AddRemoved,
+			AssertNoChange = 4 | Both
 		}
 
 		/// <summary>Capture the state of the events on 'obj'</summary>
@@ -40,7 +41,7 @@ namespace pr.common
 				m_restore = restore;
 				m_binding_flags = binding_flags;
 				var type = m_obj.GetType();
-				
+
 				var fields = type.AllFields(m_binding_flags).ToDictionary(x => x.Name);
 				var events = type.AllEvents(m_binding_flags).ToList();
 				foreach (var evt in events)
@@ -87,10 +88,19 @@ namespace pr.common
 						foreach (var d in old_delegates)
 							added.Remove(d);
 
-						// Remove any that were added
-						var remove = event_info.GetRemoveMethod(true); Debug.Assert(remove != null);
-						foreach (var d in added)
-							remove.Invoke(m_obj, new object[]{d});
+						if ((m_restore & Restore.AssertNoChange) == Restore.AssertNoChange)
+						{
+							// Report delegates that have been added
+							if (added.Count != 0)
+								throw new Exception("Event {0} has had handlers added:\n{1}".Fmt(type.Name + "." + evt.Key.Name, string.Join("\n", added.Select(x => x.Target.ToString() + "." + x.Method.Name))));
+						}
+						else
+						{
+							// Remove any that were added
+							var remove = event_info.GetRemoveMethod(true); Debug.Assert(remove != null);
+							foreach (var d in added)
+								remove.Invoke(m_obj, new object[]{d});
+						}
 					}
 					if ((m_restore & Restore.AddRemoved) == Restore.AddRemoved)
 					{
@@ -99,10 +109,19 @@ namespace pr.common
 						foreach (var d in new_delegates)
 							removed.Remove(d);
 
-						// Add any that were removed
-						var add = event_info.GetAddMethod(true); Debug.Assert(add != null);
-						foreach (var d in removed)
-							add.Invoke(m_obj, new object[]{d});
+						if ((m_restore & Restore.AssertNoChange) == Restore.AssertNoChange)
+						{
+							// Report delegates that have been removed
+							if (removed.Count != 0)
+								throw new Exception("Event {0} has had handlers removed:\n{1}".Fmt(type.Name + "." + evt.Key.Name, string.Join("\n", removed.Select(x => x.Target.ToString() + "." + x.Method.Name))));
+						}
+						else
+						{
+							// Add any that were removed
+							var add = event_info.GetAddMethod(true); Debug.Assert(add != null);
+							foreach (var d in removed)
+								add.Invoke(m_obj, new object[]{d});
+						}
 					}
 				}
 			}
@@ -111,6 +130,7 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
@@ -143,7 +163,7 @@ namespace pr
 				public Action Ignored;
 				public event EventHandler Event1;
 				public static event EventHandler Event3;
-				
+
 				public int Event1HandlerCount { get { return Event1 != null ? Event1.GetInvocationList().Length : 0; } }
 				public int Event3HandlerCount { get { return Event3 != null ? Event3.GetInvocationList().Length : 0; } }
 
@@ -322,4 +342,5 @@ namespace pr
 		}
 	}
 }
+
 #endif

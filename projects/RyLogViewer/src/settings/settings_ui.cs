@@ -55,7 +55,7 @@ namespace RyLogViewer
 
 		/// <summary>Returns a bit mask of the settings data that's changed</summary>
 		public EWhatsChanged WhatsChanged { get; private set; }
-		
+
 		/// <summary>Access to the highlight pattern ui</summary>
 		public PatternUI HighlightUI { get { return m_pattern_hl; } }
 		public bool HighlightsChanged { get; set; }
@@ -67,7 +67,7 @@ namespace RyLogViewer
 		/// <summary>Access to the transform pattern ui</summary>
 		public TransformUI TransformUI { get { return m_pattern_tx; } }
 		public bool TransformsChanged { get; set; }
-		
+
 		/// <summary>Access to the action pattern ui</summary>
 		public PatternUI ActionUI { get { return m_pattern_ac; } }
 		public bool ActionsChanged { get; set; }
@@ -106,6 +106,12 @@ namespace RyLogViewer
 			SetupTransformTab();
 			SetupActionTab();
 
+			Load += (s,a) =>
+				{
+					if (StartPosition == FormStartPosition.CenterParent)
+						CenterToParent();
+				};
+
 			Shown += (s,a) =>
 				{
 					FocusInput();
@@ -127,6 +133,7 @@ namespace RyLogViewer
 					m_settings.FilterPatterns    = Filter   .Export(m_filters);
 					m_settings.TransformPatterns = Transform.Export(m_transforms);
 					m_settings.ActionPatterns    = ClkAction.Export(m_actions);
+					m_settings.SettingChanged   -= UpdateUI;
 
 					m_main.UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(m_main, m_settings));
 					m_main.UseLicensedFeature(FeatureName.Filtering   , new FilteringCountLimiter(m_main, m_settings));
@@ -146,7 +153,6 @@ namespace RyLogViewer
 		{
 			Log.Debug(this, "SettingsUI collected");
 		}
-
 
 		/// <summary>Populate the internal lists from the settings data</summary>
 		private void ReadSettings()
@@ -170,7 +176,7 @@ namespace RyLogViewer
 					m_settings.LoadLastFile = m_check_load_last_file.Checked;
 					WhatsChanged |= EWhatsChanged.StartupOptions;
 				};
-			
+
 			// Restore window position on startup
 			m_check_save_screen_loc.ToolTip(m_tt, "Restore the window to its last position on startup");
 			m_check_save_screen_loc.Checked = m_settings.RestoreScreenLoc;
@@ -179,7 +185,7 @@ namespace RyLogViewer
 					m_settings.RestoreScreenLoc = m_check_save_screen_loc.Checked;
 					WhatsChanged |= EWhatsChanged.StartupOptions;
 				};
-			
+
 			// Show tip of the day on startup
 			m_check_show_totd.ToolTip(m_tt, "Show the 'Tip of the Day' dialog on startup");
 			m_check_show_totd.Checked = m_settings.ShowTOTD;
@@ -243,7 +249,7 @@ namespace RyLogViewer
 				m_settings.RowDelimiter = m_edit_line_ends.Text;
 				WhatsChanged |= EWhatsChanged.FileParsing;
 			};
-			
+
 			// Column delimiters
 			tt = "Set the characters that separate columns in the log data.\r\nUse '<TAB>' for a tab character.\r\nLeave blank for no column delimiter";
 			m_lbl_col_delims.ToolTip(m_tt, tt);
@@ -255,7 +261,7 @@ namespace RyLogViewer
 					m_settings.ColDelimiter = m_edit_col_delims.Text;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
-			
+
 			// Column Count
 			tt = "The number of columns to display in the grid.\r\nUsed when the column delimiter is not blank";
 			m_lbl_column_count.ToolTip(m_tt, tt);
@@ -277,7 +283,7 @@ namespace RyLogViewer
 					m_settings.IgnoreBlankLines = m_check_ignore_blank_lines.Checked;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
-			
+
 			// Lines cached
 			m_spinner_line_cache_count.ToolTip(m_tt, "The number of lines to scan into memory around the currently selected line");
 			m_spinner_line_cache_count.Minimum = Constants.LineCacheCountMin;
@@ -288,7 +294,7 @@ namespace RyLogViewer
 					m_settings.LineCacheCount = (int)m_spinner_line_cache_count.Value;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
-			
+
 			// Max memory range
 			tt = "The maximum number of bytes to scan when finding lines around the currently selected row (in MB).";
 			m_lbl_max_scan_size0.ToolTip(m_tt, tt);
@@ -301,7 +307,7 @@ namespace RyLogViewer
 					m_settings.FileBufSize = (int)m_spinner_max_mem_range.Value * Constants.OneMB;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
-			
+
 			// Max line length
 			tt = "The maximum length of a line in the log file.\r\nIf the log contains lines longer than this an error will be reported when loading the file";
 			m_lbl_max_line_len_kb.ToolTip(m_tt, tt);
@@ -315,7 +321,7 @@ namespace RyLogViewer
 					m_settings.MaxLineLength = (int)m_spinner_max_line_length.Value * Constants.OneKB;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
-			
+
 			// Open at end
 			m_check_open_at_end.ToolTip(m_tt, "If checked, opens files showing the end of the file.\r\nIf unchecked opens files at the beginning");
 			m_check_open_at_end.Checked = m_settings.OpenAtEnd;
@@ -324,7 +330,7 @@ namespace RyLogViewer
 					m_settings.OpenAtEnd = m_check_open_at_end.Checked;
 					WhatsChanged |= EWhatsChanged.FileOpenOptions;
 				};
-			
+
 			// File changes additive
 			m_check_file_changes_additive.ToolTip(m_tt, "Assume all changes to the watched file are additive only\r\nIf checked, reloading of changed files will not invalidate existing cached data");
 			m_check_file_changes_additive.Checked = m_settings.FileChangesAdditive;
@@ -333,7 +339,7 @@ namespace RyLogViewer
 					m_settings.FileChangesAdditive = m_check_file_changes_additive.Checked;
 					WhatsChanged |= EWhatsChanged.FileParsing;
 				};
-			
+
 			// Settings reset
 			m_btn_settings_reset.ToolTip(m_tt, "Reset settings to their default values.");
 			m_btn_settings_reset.Click += (s,a)=>
@@ -342,10 +348,10 @@ namespace RyLogViewer
 					UpdateUI();
 					WhatsChanged |= EWhatsChanged.Everything;
 				};
-			
+
 			// Settings filepath
 			m_text_settings.ToolTip(m_tt, "The path to the current settings file");
-			
+
 			// Settings load
 			m_btn_settings_load.ToolTip(m_tt, "Load settings from file");
 			m_btn_settings_load.Click += (s,a)=>
@@ -364,7 +370,7 @@ namespace RyLogViewer
 					UpdateUI();
 					WhatsChanged |= EWhatsChanged.Everything;
 				};
-			
+
 			// Settings save
 			m_btn_settings_save.ToolTip(m_tt, "Save current settings to a file");
 			m_btn_settings_save.Click += (s,a)=>
@@ -399,7 +405,7 @@ namespace RyLogViewer
 					m_settings.LineSelectBackColour = dlg.BkgdColor;
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
-			
+
 			// Log text colour
 			m_lbl_line1_example.ToolTip(m_tt, "Set the foreground and background colours in the log view\r\nClick here to modify the colours");
 			m_lbl_line1_example.MouseClick += (s,a)=>
@@ -410,7 +416,7 @@ namespace RyLogViewer
 					m_settings.LineBackColour1 = dlg.BkgdColor;
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
-			
+
 			// Alt log text colour
 			m_lbl_line2_example.ToolTip(m_tt, "Set the foreground and background colours for odd numbered rows in the log view\r\nClick here to modify the colours");
 			m_lbl_line2_example.MouseClick += (s,a)=>
@@ -421,7 +427,7 @@ namespace RyLogViewer
 					m_settings.LineBackColour2 = dlg.BkgdColor;
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
-			
+
 			// Enable alt line colours
 			m_check_alternate_line_colour.ToolTip(m_tt, "Enable alternating colours in the log view");
 			m_check_alternate_line_colour.CheckedChanged += (s,a)=>
@@ -429,7 +435,7 @@ namespace RyLogViewer
 					m_settings.AlternateLineColours = m_check_alternate_line_colour.Checked;
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
-			
+
 			// Row height
 			m_spinner_row_height.ToolTip(m_tt, "The height of each row in the log view");
 			m_spinner_row_height.Minimum = Constants.RowHeightMinHeight;
@@ -441,11 +447,11 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.Rendering;
 				};
 
-			// Font 
+			// Font
 			m_text_font.ToolTip(m_tt, "The font used to display the log file data");
 			m_text_font.Text = string.Format("{0}, {1}pt" ,m_settings.Font.Name ,m_settings.Font.Size);
 			m_text_font.Font = m_settings.Font;
-			
+
 			// Font button
 			m_btn_change_font.ToolTip(m_tt, "Change the log view font");
 			m_btn_change_font.Click += (s,a)=>
@@ -592,11 +598,11 @@ namespace RyLogViewer
 					m_filters.Remove(Filter.RejectAll);
 					if (m_check_reject_all_by_default.Checked)
 						m_filters.Add(Filter.RejectAll);
-					
+
 					FlagAsChanged(m_grid_filter);
 					UpdateUI();
 				};
-			
+
 			// Filter pattern
 			m_pattern_ft.Commit += (s,a)=>
 				{
@@ -605,7 +611,7 @@ namespace RyLogViewer
 					FiltersChanged = true;
 					UpdateUI();
 				};
-			
+
 			// Filter pattern sets
 			m_pattern_set_ft.Init(m_settings, m_filters);
 			m_pattern_set_ft.CurrentSetChanged += (s,a)=>
@@ -646,7 +652,7 @@ namespace RyLogViewer
 					TransformsChanged = true;
 					UpdateUI();
 				};
-			
+
 			// Transform sets
 			m_pattern_set_tx.Init(m_settings, m_transforms);
 			m_pattern_set_tx.CurrentSetChanged += (s,a)=>
@@ -690,7 +696,7 @@ namespace RyLogViewer
 					ActionsChanged = true;
 					UpdateUI();
 				};
-			
+
 			// Action pattern sets
 			m_pattern_set_ac.Init(m_settings, m_actions);
 			m_pattern_set_ac.CurrentSetChanged += (s,a)=>
@@ -742,7 +748,7 @@ namespace RyLogViewer
 			// Confirm first...
 			DialogResult res = MessageBox.Show(this, "This will reset all current settings to their default values\r\n\r\nContinue?", "Confirm Reset Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 			if (res != DialogResult.Yes) return;
-			
+
 			// Flatten the settings
 			try { m_settings.Reset(); Close(); }
 			catch (Exception ex)
@@ -864,7 +870,7 @@ namespace RyLogViewer
 			Highlight hl = pat as Highlight;
 			Filter    ft = pat as Filter;
 			ClkAction ac = pat as ClkAction;
-			
+
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: e.Value = string.Empty; break;
@@ -902,7 +908,7 @@ namespace RyLogViewer
 			Highlight hl = pat as Highlight;
 			Filter    ft = pat as Filter;
 			ClkAction ac = pat as ClkAction;
-			
+
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
@@ -951,11 +957,11 @@ namespace RyLogViewer
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			T pat = patterns[e.RowIndex];
-			
+
 			ctrl.EditPattern(pat);
 			FlagAsChanged(grid);
 		}
-		
+
 		/// <summary>Cell formatting...</summary>
 		private static void OnCellFormatting<T>(DataGridView grid, List<T> patterns, DataGridViewCellFormattingEventArgs e) where T:IPattern
 		{
@@ -963,7 +969,7 @@ namespace RyLogViewer
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			T pat = patterns[e.RowIndex];
-			
+
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
@@ -1043,7 +1049,7 @@ namespace RyLogViewer
 		/// <summary>A highlighting count limiter for when the settings dialog is displayed</summary>
 		private class SettingsHighlightingCountLimiter :HighlightingCountLimiter
 		{
-			private readonly SettingsUI m_ui; 
+			private readonly SettingsUI m_ui;
 			public SettingsHighlightingCountLimiter(Main main, Settings settings, SettingsUI ui)
 				:base(main, settings)
 			{
@@ -1068,7 +1074,7 @@ namespace RyLogViewer
 		/// <summary>A filtering count limiter for when the settings dialog is displayed</summary>
 		private class SettingsFilteringCountLimiter :FilteringCountLimiter
 		{
-			private readonly SettingsUI m_ui; 
+			private readonly SettingsUI m_ui;
 			public SettingsFilteringCountLimiter(Main main, Settings settings, SettingsUI ui)
 				:base(main, settings)
 			{
