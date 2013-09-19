@@ -9,19 +9,19 @@ RylogicEnv.CheckVersion(1)
 confirm = input(
 	"Is there an 'Upgrade Path' in the setup project and have you changed the Product GUID and version?\n"
 	"This is needed so that the new installer will replace the existing installation if there.\n"
-	"(y/n):"
+	"(y/n):")
 if confirm != "y":
 	RylogicEnv.OnError()
 
 config = input("Configuration (debug, release):")
 
-srcdir = RylogicEnv.qdrive + r"\projects\rylogviewer"
-dstdir = RylogicEnv.qdrive + r"\bin"
-symdir = RylogicEnv.qdrive + r"\local\symbols"
-proj   = srcdir + r"\RylogViewer.sln"
-dst    = dstdir + "\rylogviewer"
-sym    = symdir + "\rylogviewer"
-bindir = srcdir + r"\bin\" + config
+srcdir = RylogicEnv.qdrive + "\\projects\\rylogviewer"
+dstdir = RylogicEnv.qdrive + "\\bin"
+symdir = RylogicEnv.qdrive + "\\local\\symbols"
+proj   = srcdir + "\\RylogViewer.sln"
+dst    = dstdir + "\\rylogviewer"
+sym    = symdir + "\\rylogviewer"
+bindir = srcdir + "\\bin\\" + config
 
 print(
 	"*************************************************************************\n"
@@ -47,15 +47,15 @@ try:
 
 	#Copy build products to dst
 	print("Copying files to " + dst)
-	RylogicEnv.Copy(bindir + r"\rylogviewer.exe", dst + r"\rylogviewer.exe")
-	RylogicEnv.Copy(bindir + r"\rylogviewer.pdb", sym + r"\rylogviewer.pdb")
-	RylogicEnv.Copy(bindir + r"\pr.dll"         , dst + r"\pr.dll"  )
-	RylogicEnv.Copy(bindir + r"\pr.pdb"         , sym + r"\pr.pdb"  )
+	RylogicEnv.Copy(bindir + "\\rylogviewer.exe", dst + "\\rylogviewer.exe")
+	RylogicEnv.Copy(bindir + "\\rylogviewer.pdb", sym + "\\rylogviewer.pdb")
+	RylogicEnv.Copy(bindir + "\\pr.dll"         , dst + "\\pr.dll"  )
+	RylogicEnv.Copy(bindir + "\\pr.pdb"         , sym + "\\pr.pdb"  )
 
 	#Create a zip of the dstdir
 	print("Creating zip file..." + dstdir + r".zip")
 	if os.path.exists(dstdir + r".zip"): os.unlink(dstdir + r".zip")
-	RylogicEnv.Run(RylogicEnv.zip,'a "'+dstdir.zip+'" "'+dstdir+'"')
+	RylogicEnv.Run(RylogicEnv.zip,'a "'+dstdir+'.zip" "'+dstdir+'"')
 
 	#Copy the installer to the web site
 	if os.path.exists(srcdir + r"\setup\setup\express\singleimage\diskimages\disk1\setup.exe"):
