@@ -27,7 +27,7 @@ namespace RyLogViewer
 			Conn       = m_history.Count != 0 ? new NetConn(m_history[0]) : new NetConn();
 			m_tt       = new ToolTip();
 			string tt;
-			
+
 			// Protocol type
 			m_combo_protocol_type.ToolTip(m_tt, "The connection type");
 			var allowed = new[]{ProtocolType.Tcp, ProtocolType.Udp};
@@ -38,7 +38,17 @@ namespace RyLogViewer
 					Conn.ProtocolType = (ProtocolType)m_combo_protocol_type.SelectedItem;
 					UpdateUI();
 				};
-			
+
+			// Listen
+			tt = "When checked will act as a server listening for incoming connections.\r\nWhen not checked, will act as a client and attempt to connect to the remote system";
+			m_check_listener.ToolTip(m_tt, tt);
+			m_check_listener.Checked = Conn.Listener;
+			m_check_listener.Click += (s,a)=>
+				{
+					Conn.Listener = m_check_listener.Checked;
+					UpdateUI();
+				};
+
 			// Hostname
 			tt = "The remote host to connect to and receive data from";
 			m_lbl_hostname.ToolTip(m_tt, tt);
@@ -55,7 +65,7 @@ namespace RyLogViewer
 					Conn = new NetConn((NetConn)m_combo_hostname.SelectedItem);
 					UpdateUI();
 				};
-			
+
 			// Port
 			tt = "The remote port to connect to and receive data from";
 			m_lbl_port.ToolTip(m_tt, tt);
@@ -66,7 +76,7 @@ namespace RyLogViewer
 					Conn.Port = (ushort)m_spinner_port.Value;
 					UpdateUI();
 				};
-			
+
 			// Use proxy
 			m_combo_proxy_type.ToolTip(m_tt, "Select if using a proxy server");
 			m_combo_proxy_type.DataSource = Enum.GetValues(typeof(Proxy.EType));
@@ -77,7 +87,7 @@ namespace RyLogViewer
 					Conn.ProxyPort = Proxy.PortDefault(Conn.ProxyType);
 					UpdateUI();
 				};
-			
+
 			// Proxy host
 			tt = "The hostname of the proxy server";
 			m_lbl_proxy_hostname.ToolTip(m_tt, tt);
@@ -143,7 +153,7 @@ namespace RyLogViewer
 					Conn.OutputFilepath = dg.FileName;
 					UpdateUI();
 				};
-			
+
 			// Append to existing
 			m_check_append.ToolTip(m_tt, "If checked, captured data is appended to the capture file.\r\nIf not, then the capture file is overwritten");
 			m_check_append.Checked = Conn.AppendOutputFile;
@@ -152,12 +162,12 @@ namespace RyLogViewer
 					Conn.AppendOutputFile = m_check_append.Checked;
 					UpdateUI();
 				};
-			
+
 			Shown += (s,a)=>
 				{
 					UpdateUI();
 				};
-			
+
 			// Save settings on close
 			FormClosing += (s,a)=>
 				{
@@ -186,39 +196,46 @@ namespace RyLogViewer
 			m_combo_protocol_type.SelectedItem  = Conn.ProtocolType;
 			if (Conn.ProtocolType == ProtocolType.Tcp)
 			{
+				// Udp is listener by definition
+				m_check_listener.Enabled = true;
+
 				tt = "The remote host to connect to and receive data from";
 				m_lbl_hostname.ToolTip(m_tt, tt);
 				m_lbl_hostname.Text = "Remote Host:";
 				m_combo_hostname.ToolTip(m_tt, tt);
-				
+				m_combo_hostname.Enabled = !m_check_listener.Checked;
+
 				tt = "The remote port to connect to and receive data from";
 				m_lbl_port.ToolTip(m_tt, tt);
 				m_lbl_port.Text = "Remote Port:";
 				m_spinner_port.ToolTip(m_tt, tt);
-				
+
 				// Allow proxy server description
-				m_combo_proxy_type.Enabled    = true;
-				m_lbl_proxy_hostname.Enabled  = Conn.ProxyType != Proxy.EType.None;
-				m_lbl_proxy_port.Enabled      = Conn.ProxyType != Proxy.EType.None;
-				m_lbl_proxy_username.Enabled  = Conn.ProxyType != Proxy.EType.None;
-				m_lbl_proxy_password.Enabled  = Conn.ProxyType != Proxy.EType.None;
-				m_edit_proxy_hostname.Enabled = Conn.ProxyType != Proxy.EType.None;
-				m_spinner_proxy_port.Enabled  = Conn.ProxyType != Proxy.EType.None;
-				m_edit_proxy_username.Enabled = Conn.ProxyType != Proxy.EType.None;
-				m_edit_proxy_password.Enabled = Conn.ProxyType != Proxy.EType.None;
+				m_combo_proxy_type.Enabled    = !m_check_listener.Checked;
+				m_lbl_proxy_hostname.Enabled  = !m_check_listener.Checked && Conn.ProxyType != Proxy.EType.None;
+				m_lbl_proxy_port.Enabled      = !m_check_listener.Checked && Conn.ProxyType != Proxy.EType.None;
+				m_lbl_proxy_username.Enabled  = !m_check_listener.Checked && Conn.ProxyType != Proxy.EType.None;
+				m_lbl_proxy_password.Enabled  = !m_check_listener.Checked && Conn.ProxyType != Proxy.EType.None;
+				m_edit_proxy_hostname.Enabled = !m_check_listener.Checked && Conn.ProxyType != Proxy.EType.None;
+				m_spinner_proxy_port.Enabled  = !m_check_listener.Checked && Conn.ProxyType != Proxy.EType.None;
+				m_edit_proxy_username.Enabled = !m_check_listener.Checked && Conn.ProxyType != Proxy.EType.None;
+				m_edit_proxy_password.Enabled = !m_check_listener.Checked && Conn.ProxyType != Proxy.EType.None;
 			}
 			else if (Conn.ProtocolType == ProtocolType.Udp)
 			{
+				// Udp is listener by definition
+				m_check_listener.Enabled = false;
+
 				tt = "An optional hostname to expect data from. Leave blank for multiple udp data sources";
 				m_lbl_hostname.ToolTip(m_tt, tt);
 				m_lbl_hostname.Text = "Sending Host:";
 				m_combo_hostname.ToolTip(m_tt, tt);
-				
+
 				tt = "The local port that remote clients will connect to";
 				m_lbl_port.ToolTip(m_tt, tt);
 				m_lbl_port.Text = "Local Port:";
 				m_spinner_port.ToolTip(m_tt, tt);
-				
+
 				// Proxy doesn't make sense for UDP connections
 				m_combo_proxy_type.Enabled    = false;
 				m_lbl_proxy_hostname.Enabled  = false;
@@ -230,7 +247,7 @@ namespace RyLogViewer
 				m_edit_proxy_username.Enabled = false;
 				m_edit_proxy_password.Enabled = false;
 			}
-			
+
 			m_combo_hostname.Text               = Conn.Hostname;
 			m_spinner_port.Value                = Conn.Port;
 			m_combo_proxy_type.SelectedIndex    = (int)Conn.ProxyType;

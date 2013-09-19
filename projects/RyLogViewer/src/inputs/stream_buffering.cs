@@ -37,16 +37,16 @@ namespace RyLogViewer
 				// however if the user reopens the same process the existing process will hold
 				// a lock to the capture file preventing the new process being created.
 				CloseLogFile();
-				
+
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_process = new BufferedProcess(conn);
-				
+
 				// Give some UI feedback when the process ends
 				buffered_process.ConnectionDropped += (s,a)=>
 					{
 						this.BeginInvoke(() => SetStaticStatusMessage(string.Format("{0} exited", Path.GetFileName(conn.Executable)), Color.Black, Color.LightSalmon));
 					};
-			
+
 				// Open the capture file created by buffered_process
 				OpenSingleLogFile(buffered_process.Filepath, !buffered_process.TmpFile);
 				buffered_process.Start();
@@ -61,13 +61,13 @@ namespace RyLogViewer
 				Log.Exception(this, ex, "Failed to launch child process {0} {1} -> {2}".Fmt(conn.Executable, conn.Arguments, conn.OutputFilepath));
 				Misc.ShowErrorMessage(this, ex, string.Format("Failed to launch child process {0}.",conn.Executable),Resources.FailedToLaunchProcess);
 			}
-			finally 
+			finally
 			{
 				if (buffered_process != null)
 					buffered_process.Dispose();
 			}
 		}
-		
+
 		/// <summary>Open a tcp network connection and log anything read</summary>
 		private void LogTcpNetConnection(NetConn conn)
 		{
@@ -104,13 +104,13 @@ namespace RyLogViewer
 				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}".Fmt(conn.Hostname, conn.Port, conn.OutputFilepath));
 				Misc.ShowErrorMessage(this, ex, "Failed to connect to {0}:{1}.".Fmt(conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
 			}
-			finally 
+			finally
 			{
 				if (buffered_tcp_netconn != null)
 					buffered_tcp_netconn.Dispose();
 			}
 		}
-		
+
 		/// <summary>Open a network connection and log anything read</summary>
 		private void LogUdpNetConnection(NetConn conn)
 		{
@@ -147,13 +147,13 @@ namespace RyLogViewer
 				Log.Exception(this, ex, "Failed to open connection {0}:{1} -> {2}".Fmt(conn.Hostname, conn.Port, conn.OutputFilepath));
 				Misc.ShowErrorMessage(this, ex, "Failed to open connected to {0}:{1}.".Fmt(conn.Hostname,conn.Port),Resources.FailedToLaunchProcess);
 			}
-			finally 
+			finally
 			{
 				if (buffered_udp_netconn != null)
 					buffered_udp_netconn.Dispose();
 			}
 		}
-		
+
 		/// <summary>Open a serial port connection and log anything read</summary>
 		private void LogSerialConnection(SerialConn conn)
 		{
@@ -239,7 +239,7 @@ namespace RyLogViewer
 			}
 		}
 	}
-	
+
 	/// <summary>
 	/// Base class for buffering a non-seekable stream into a temporary file.
 	/// The data source starts from the construction of this class. Captured output
@@ -257,7 +257,7 @@ namespace RyLogViewer
 		protected const int BufBlockSize = 4096;
 		protected readonly object m_lock;   // Sync writes to the file
 		protected FileStream m_outp;        // The file that captured output is written to
-		
+
 		/// <summary>The filepath of the file that contains the redirected output</summary>
 		public readonly string Filepath;
 
@@ -275,12 +275,12 @@ namespace RyLogViewer
 		protected BufferedStream(string output_filepath, bool append)
 		{
 			m_lock = new object();
-			
+
 			// File open options
 			FileMode mode = append ? FileMode.Append : FileMode.Create;
 			FileOptions opts = FileOptions.Asynchronous|FileOptions.RandomAccess;
 			TmpFile = false;
-			
+
 			// Get a file to capture the process output in
 			Filepath = output_filepath;
 			if (string.IsNullOrEmpty(Filepath))
@@ -290,7 +290,7 @@ namespace RyLogViewer
 				opts |= FileOptions.DeleteOnClose;
 				TmpFile = true;
 			}
-			
+
 			// Open the file that will receive the captured output
 			m_outp = new FileStream(Filepath, mode, FileAccess.Write, FileShare.Read, BufBlockSize, opts);
 		}
@@ -308,7 +308,7 @@ namespace RyLogViewer
 				{
 					if (m_outp == null)
 						return;
-					
+
 					data.Read = data.Stream.EndRead(ar);
 					if (data.Read != 0 || IsConnected)
 					{
@@ -356,7 +356,7 @@ namespace RyLogViewer
 			m_launch = launch;
 			m_outbuf = new byte[BufBlockSize];
 			m_errbuf = new byte[BufBlockSize];
-			
+
 			// Create the process
 			ProcessStartInfo info = new ProcessStartInfo
 			{
@@ -375,7 +375,7 @@ namespace RyLogViewer
 				RaiseConnectionDropped();
 			};
 		}
-		
+
 		public void Start()
 		{
 			m_process.Start();
@@ -405,7 +405,7 @@ namespace RyLogViewer
 		{
 			base.DataRecv(ar);
 			if (!m_launch.ShowWindow) return;
-			
+
 			// If we're "showing the window" forward received data to the window
 			AsyncData data = (AsyncData)ar.AsyncState;
 			lock (m_lock)
@@ -415,7 +415,7 @@ namespace RyLogViewer
 				Console.Write(msg);
 			}
 		}
-		
+
 		/// <summary>Cleanup</summary>
 		public override void Dispose()
 		{
@@ -428,7 +428,7 @@ namespace RyLogViewer
 					if (!m_process.HasExited)
 						if (!m_process.CloseMainWindow())
 							m_process.Kill();
-					
+
 					m_process.Dispose();
 					m_process = null;
 				}
@@ -441,8 +441,8 @@ namespace RyLogViewer
 	{
 		private readonly NetConn m_conn;
 		private readonly byte[] m_buf;
-		private TcpClient m_tcp;
-		
+		private TcpClient m_client;
+
 		public BufferedTcpNetConn(NetConn conn)
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
 		{
@@ -453,37 +453,83 @@ namespace RyLogViewer
 		/// <summary>Start asynchronously reading from the tcp client</summary>
 		public void Start(Main parent)
 		{
+			if (m_conn.Listener)
+				StartListener(parent);
+			else
+				StartClient(parent);
+		}
+
+		/// <summary>Start a tcp client that connects to a server that is producing log data</summary>
+		private void StartClient(Main parent)
+		{
 			var connect = new ProgressForm("Connecting..."
 				,string.Format("Connecting to remote host: {0}:{1}", m_conn.Hostname, m_conn.Port)
 				,null
 				,ProgressBarStyle.Marquee
-				, (s,a,cb)=>
+				,(s,a,cb)=>
 				{
 					cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
 
-					m_tcp = new TcpClient();
-					Proxy proxy = m_conn.ProxyType != Proxy.EType.None
-						? Proxy.Create(m_conn.ProxyType, m_conn.ProxyHostname, m_conn.ProxyPort, m_conn.ProxyUserName, m_conn.ProxyPassword)
-						: null;
+					m_client = new TcpClient();
+					var proxy = m_conn.ProxyType == Proxy.EType.None ? null
+						: Proxy.Create(m_conn.ProxyType, m_conn.ProxyHostname, m_conn.ProxyPort, m_conn.ProxyUserName, m_conn.ProxyPassword);
 
 					// Connect async
-					var ar = (proxy != null)
+					var ar = proxy != null
 						? proxy.BeginConnect(m_conn.Hostname, m_conn.Port)
-						: m_tcp.BeginConnect(m_conn.Hostname, m_conn.Port, null, null);
+						: m_client.BeginConnect(m_conn.Hostname, m_conn.Port, null, null);
 
 					for (;!s.CancelPending && !ar.AsyncWaitHandle.WaitOne(500);){}
 					if (!s.CancelPending)
 					{
 						if (proxy != null)
-							m_tcp = proxy.EndConnect(ar);
+							m_client = proxy.EndConnect(ar);
 						else
-							m_tcp.EndConnect(ar);
+							m_client.EndConnect(ar);
 
-						NetworkStream stream = m_tcp.GetStream();
+						NetworkStream stream = m_client.GetStream();
 						stream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(stream, m_buf));
 					}
 				});
-			
+
+			if (connect.ShowDialog(parent) != DialogResult.OK)
+				throw new OperationCanceledException("Connecting cancelled");
+		}
+
+		/// <summary>Start a tcp server that listens for incoming connections from clients</summary>
+		private void StartListener(Main parent)
+		{
+			var connect = new ProgressForm("Listening..."
+				,string.Format("Waiting for connections on port: {0}", m_conn.Port)
+				,null
+				,ProgressBarStyle.Marquee
+				,(s,a,cb)=>
+				{
+					cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
+
+					var listener = new TcpListener(IPAddress.Any, m_conn.Port);
+					listener.Start();
+
+					try
+					{
+						// Listen async
+						var ar = listener.BeginAcceptTcpClient(r => {}, null);
+						for (;!s.CancelPending && !ar.AsyncWaitHandle.WaitOne(500);){}
+						if (!s.CancelPending)
+						{
+							m_client = listener.EndAcceptTcpClient(ar);
+							listener.Stop();
+
+							NetworkStream stream = m_client.GetStream();
+							stream.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(stream, m_buf));
+						}
+					}
+					finally
+					{
+						listener.Stop();
+					}
+				});
+
 			if (connect.ShowDialog(parent) != DialogResult.OK)
 				throw new OperationCanceledException("Connecting cancelled");
 		}
@@ -491,20 +537,20 @@ namespace RyLogViewer
 		/// <summary>Returns true if the tcp client is connected</summary>
 		protected override bool IsConnected
 		{
-			get { return m_tcp != null && m_tcp.Connected; }
+			get { return m_client != null && m_client.Connected; }
 		}
 
 		/// <summary>Cleanup</summary>
 		public override void Dispose()
 		{
 			base.Dispose();
-			if (m_tcp != null)
+			if (m_client != null)
 			{
 				lock (m_lock)
 				{
 					Log.Info(this, "Disposing tcp client {0}".Fmt(m_conn.Hostname));
-					m_tcp.Close();
-					m_tcp = null;
+					m_client.Close();
+					m_client = null;
 				}
 			}
 		}
@@ -517,7 +563,7 @@ namespace RyLogViewer
 		private readonly byte[] m_buf;
 		private readonly bool m_specific_host;
 		private UdpClient m_udp;
-		
+
 		public BufferedUdpNetConn(NetConn conn)
 		:base(conn.OutputFilepath, conn.AppendOutputFile)
 		{
@@ -566,7 +612,7 @@ namespace RyLogViewer
 				{
 					if (m_udp == null)
 						return;
-					
+
 					int read = EndRecv(ar);
 					if (m_outp == null) return;
 					m_outp.Write(m_buf, 0, read);
@@ -596,7 +642,7 @@ namespace RyLogViewer
 			}
 		}
 	}
-	
+
 	/// <summary>Manages a serial port connection and reading its incoming data</summary>
 	public class BufferedSerialConn :BufferedStream
 	{

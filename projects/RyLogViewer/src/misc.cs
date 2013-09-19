@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Net.Sockets;
@@ -103,22 +104,22 @@ namespace RyLogViewer
 	[Flags] public enum EWhatsChanged
 	{
 		Nothing = 0,
-		
+
 		/// <summary>Options that only effect the program on startup</summary>
 		StartupOptions = 1 << 0,
-		
+
 		/// <summary>Options that affect files as they are opened</summary>
 		FileOpenOptions = 1 << 1,
-		
+
 		/// <summary>An option that affects how a file is parsed</summary>
 		FileParsing = 1 << 1,
-		
+
 		/// <summary>An option that changes how the log view is rendered</summary>
 		Rendering = 1 << 2,
-		
+
 		/// <summary>An option that changes how the window is positioned/displayed</summary>
 		WindowDisplay = 1 << 3,
-		
+
 		/// <summary>who knows...</summary>
 		Everything = ~0,
 	}
@@ -193,7 +194,7 @@ namespace RyLogViewer
 		[DataMember] public bool        ShowWindow       = false;
 		[DataMember] public bool        AppendOutputFile = true;
 		[DataMember] public StandardStreams Streams = StandardStreams.Stdout|StandardStreams.Stderr;
-		
+
 		public bool CaptureStdout { get { return (Streams & StandardStreams.Stdout) != 0; } }
 		public bool CaptureStderr { get { return (Streams & StandardStreams.Stderr) != 0; } }
 
@@ -221,9 +222,10 @@ namespace RyLogViewer
 	[DataContract]
 	public class NetConn :ICloneable
 	{
+		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
+		[DataMember] public bool         Listener         = true;
 		[DataMember] public string       Hostname         = string.Empty;
 		[DataMember] public ushort       Port             = 5555;
-		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
 		[DataMember] public Proxy.EType  ProxyType        = Proxy.EType.None;
 		[DataMember] public string       ProxyHostname    = string.Empty;
 		[DataMember] public ushort       ProxyPort        = 5555;
@@ -235,9 +237,10 @@ namespace RyLogViewer
 		public NetConn() {}
 		public NetConn(NetConn rhs)
 		{
+			ProtocolType     = rhs.ProtocolType     ;
+			Listener         = rhs.Listener         ;
 			Hostname         = rhs.Hostname         ;
 			Port             = rhs.Port             ;
-			ProtocolType     = rhs.ProtocolType     ;
 			ProxyType        = rhs.ProxyType        ;
 			ProxyHostname    = rhs.ProxyHostname    ;
 			ProxyPort        = rhs.ProxyPort        ;
@@ -273,7 +276,7 @@ namespace RyLogViewer
 		[DataMember] public bool         RtsEnable        = true;
 		[DataMember] public string       OutputFilepath   = string.Empty;
 		[DataMember] public bool         AppendOutputFile = true;
-		
+
 		public SerialConn() {}
 		public SerialConn(SerialConn rhs)
 		{
@@ -309,7 +312,7 @@ namespace RyLogViewer
 		[DataMember] public string       PipeName         = string.Empty;
 		[DataMember] public string       OutputFilepath   = string.Empty;
 		[DataMember] public bool         AppendOutputFile = true;
-		
+
 		public string PipeAddr
 		{
 			get { return string.Format(@"\\{0}\pipe\{1}",ServerName,PipeName); }
@@ -366,7 +369,7 @@ namespace RyLogViewer
 		[DataMember] public EConnectionType ConnectionType        = EConnectionType.Usb;
 		[DataMember] public string[]        IPAddressHistory      = new string[0];
 		[DataMember] public int             ConnectionPort        = 5555;
-		
+
 		public AndroidLogcat() {}
 		public AndroidLogcat(AndroidLogcat rhs)
 		{
@@ -396,7 +399,7 @@ namespace RyLogViewer
 		/// <summary>Returns true if this is the main thread</summary>
 		public static bool IsMainThread { get { return Thread.CurrentThread.ManagedThreadId == m_main_thread_id; } }
 		private static readonly int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
-		
+
 		/// <summary>Return a background colour appropriate for a validity state</summary>
 		public static Color FieldBkColor(bool is_valid) { return is_valid ? FieldValid : FieldInvalid; }
 		public static Color FieldValid   = Color.LightGreen;
@@ -430,7 +433,7 @@ namespace RyLogViewer
 			StringComparison cmp = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 			list.RemoveIf(i => String.Compare(i.ToString(), item_name, cmp) == 0);
 			list.Insert(0, item);
-			
+
 			while (list.Count > max_history_length)
 				list.RemoveAt(list.Count - 1);
 		}
@@ -467,7 +470,7 @@ namespace RyLogViewer
 			// Only show one dialog at a time
 			if (m_dialog_visible)
 				return;
-			
+
 			m_dialog_visible = true;
 			MessageBox.Show(owner, msg, title, MessageBoxButtons.OK, icon);
 			m_dialog_visible = false;
@@ -479,7 +482,7 @@ namespace RyLogViewer
 			// Only show one error dialog at a time
 			if (m_dialog_visible)
 				return;
-			
+
 			m_dialog_visible = true;
 			string msg = exception.Message;
 			for (var ex = exception.InnerException; ex != null; ex = ex.InnerException) msg += Environment.NewLine + ex.Message;
@@ -493,6 +496,14 @@ namespace RyLogViewer
 		public static void BeginInvoke<TForm>(this TForm form, Action action) where TForm:Form
 		{
 			form.BeginInvoke(action);
+		}
+
+		/// <summary>Returns the full path to a file relative to the app executable</summary>
+		public static string ResolveAppFile(string relative_path)
+		{
+			var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
+			var path = Path.Combine(dir, relative_path);
+			return path;
 		}
 	}
 }

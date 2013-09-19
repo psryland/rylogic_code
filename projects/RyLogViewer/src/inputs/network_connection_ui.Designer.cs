@@ -48,27 +48,28 @@
 			this.m_lbl_proxy_username = new System.Windows.Forms.Label();
 			this.m_lbl_proxy_password = new System.Windows.Forms.Label();
 			this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-			this.panel1 = new System.Windows.Forms.Panel();
-			this.panel2 = new System.Windows.Forms.Panel();
-			this.panel3 = new System.Windows.Forms.Panel();
-			this.panel4 = new System.Windows.Forms.Panel();
-			this.panel5 = new System.Windows.Forms.Panel();
-			this.panel6 = new System.Windows.Forms.Panel();
 			this.panel7 = new System.Windows.Forms.Panel();
 			this.m_combo_output_filepath = new RyLogViewer.ComboBox();
+			this.panel6 = new System.Windows.Forms.Panel();
+			this.panel5 = new System.Windows.Forms.Panel();
+			this.panel4 = new System.Windows.Forms.Panel();
+			this.panel3 = new System.Windows.Forms.Panel();
 			this.m_combo_proxy_type = new RyLogViewer.ComboBox();
+			this.panel1 = new System.Windows.Forms.Panel();
 			this.m_combo_protocol_type = new RyLogViewer.ComboBox();
+			this.panel2 = new System.Windows.Forms.Panel();
 			this.m_combo_hostname = new RyLogViewer.ComboBox();
+			this.m_check_listener = new System.Windows.Forms.CheckBox();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_port)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_proxy_port)).BeginInit();
 			this.tableLayoutPanel1.SuspendLayout();
+			this.panel7.SuspendLayout();
+			this.panel6.SuspendLayout();
+			this.panel5.SuspendLayout();
+			this.panel4.SuspendLayout();
+			this.panel3.SuspendLayout();
 			this.panel1.SuspendLayout();
 			this.panel2.SuspendLayout();
-			this.panel3.SuspendLayout();
-			this.panel4.SuspendLayout();
-			this.panel5.SuspendLayout();
-			this.panel6.SuspendLayout();
-			this.panel7.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_check_append
@@ -287,74 +288,6 @@
 			this.tableLayoutPanel1.Size = new System.Drawing.Size(245, 288);
 			this.tableLayoutPanel1.TabIndex = 47;
 			// 
-			// panel1
-			// 
-			this.tableLayoutPanel1.SetColumnSpan(this.panel1, 2);
-			this.panel1.Controls.Add(this.m_combo_protocol_type);
-			this.panel1.Controls.Add(this.m_lbl_protocol_type);
-			this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel1.Location = new System.Drawing.Point(3, 3);
-			this.panel1.Name = "panel1";
-			this.panel1.Size = new System.Drawing.Size(239, 27);
-			this.panel1.TabIndex = 48;
-			// 
-			// panel2
-			// 
-			this.tableLayoutPanel1.SetColumnSpan(this.panel2, 2);
-			this.panel2.Controls.Add(this.m_lbl_hostname);
-			this.panel2.Controls.Add(this.m_lbl_port);
-			this.panel2.Controls.Add(this.m_combo_hostname);
-			this.panel2.Controls.Add(this.m_spinner_port);
-			this.panel2.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel2.Location = new System.Drawing.Point(3, 36);
-			this.panel2.Name = "panel2";
-			this.panel2.Size = new System.Drawing.Size(239, 43);
-			this.panel2.TabIndex = 48;
-			// 
-			// panel3
-			// 
-			this.tableLayoutPanel1.SetColumnSpan(this.panel3, 2);
-			this.panel3.Controls.Add(this.m_combo_proxy_type);
-			this.panel3.Controls.Add(this.m_lbl_proxy_type);
-			this.panel3.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel3.Location = new System.Drawing.Point(3, 85);
-			this.panel3.Name = "panel3";
-			this.panel3.Size = new System.Drawing.Size(239, 27);
-			this.panel3.TabIndex = 48;
-			// 
-			// panel4
-			// 
-			this.tableLayoutPanel1.SetColumnSpan(this.panel4, 2);
-			this.panel4.Controls.Add(this.m_lbl_proxy_hostname);
-			this.panel4.Controls.Add(this.m_edit_proxy_hostname);
-			this.panel4.Controls.Add(this.m_lbl_proxy_port);
-			this.panel4.Controls.Add(this.m_spinner_proxy_port);
-			this.panel4.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel4.Location = new System.Drawing.Point(3, 118);
-			this.panel4.Name = "panel4";
-			this.panel4.Size = new System.Drawing.Size(239, 42);
-			this.panel4.TabIndex = 48;
-			// 
-			// panel5
-			// 
-			this.panel5.Controls.Add(this.m_lbl_proxy_username);
-			this.panel5.Controls.Add(this.m_edit_proxy_username);
-			this.panel5.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel5.Location = new System.Drawing.Point(3, 166);
-			this.panel5.Name = "panel5";
-			this.panel5.Size = new System.Drawing.Size(116, 43);
-			this.panel5.TabIndex = 48;
-			// 
-			// panel6
-			// 
-			this.panel6.Controls.Add(this.m_lbl_proxy_password);
-			this.panel6.Controls.Add(this.m_edit_proxy_password);
-			this.panel6.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel6.Location = new System.Drawing.Point(125, 166);
-			this.panel6.Name = "panel6";
-			this.panel6.Size = new System.Drawing.Size(117, 43);
-			this.panel6.TabIndex = 48;
-			// 
 			// panel7
 			// 
 			this.tableLayoutPanel1.SetColumnSpan(this.panel7, 2);
@@ -378,6 +311,50 @@
 			this.m_combo_output_filepath.Size = new System.Drawing.Size(173, 21);
 			this.m_combo_output_filepath.TabIndex = 6;
 			// 
+			// panel6
+			// 
+			this.panel6.Controls.Add(this.m_lbl_proxy_password);
+			this.panel6.Controls.Add(this.m_edit_proxy_password);
+			this.panel6.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel6.Location = new System.Drawing.Point(125, 166);
+			this.panel6.Name = "panel6";
+			this.panel6.Size = new System.Drawing.Size(117, 43);
+			this.panel6.TabIndex = 48;
+			// 
+			// panel5
+			// 
+			this.panel5.Controls.Add(this.m_lbl_proxy_username);
+			this.panel5.Controls.Add(this.m_edit_proxy_username);
+			this.panel5.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel5.Location = new System.Drawing.Point(3, 166);
+			this.panel5.Name = "panel5";
+			this.panel5.Size = new System.Drawing.Size(116, 43);
+			this.panel5.TabIndex = 48;
+			// 
+			// panel4
+			// 
+			this.tableLayoutPanel1.SetColumnSpan(this.panel4, 2);
+			this.panel4.Controls.Add(this.m_lbl_proxy_hostname);
+			this.panel4.Controls.Add(this.m_edit_proxy_hostname);
+			this.panel4.Controls.Add(this.m_lbl_proxy_port);
+			this.panel4.Controls.Add(this.m_spinner_proxy_port);
+			this.panel4.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel4.Location = new System.Drawing.Point(3, 118);
+			this.panel4.Name = "panel4";
+			this.panel4.Size = new System.Drawing.Size(239, 42);
+			this.panel4.TabIndex = 48;
+			// 
+			// panel3
+			// 
+			this.tableLayoutPanel1.SetColumnSpan(this.panel3, 2);
+			this.panel3.Controls.Add(this.m_combo_proxy_type);
+			this.panel3.Controls.Add(this.m_lbl_proxy_type);
+			this.panel3.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel3.Location = new System.Drawing.Point(3, 85);
+			this.panel3.Name = "panel3";
+			this.panel3.Size = new System.Drawing.Size(239, 27);
+			this.panel3.TabIndex = 48;
+			// 
 			// m_combo_proxy_type
 			// 
 			this.m_combo_proxy_type.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
@@ -386,6 +363,18 @@
 			this.m_combo_proxy_type.Name = "m_combo_proxy_type";
 			this.m_combo_proxy_type.Size = new System.Drawing.Size(105, 21);
 			this.m_combo_proxy_type.TabIndex = 42;
+			// 
+			// panel1
+			// 
+			this.tableLayoutPanel1.SetColumnSpan(this.panel1, 2);
+			this.panel1.Controls.Add(this.m_check_listener);
+			this.panel1.Controls.Add(this.m_combo_protocol_type);
+			this.panel1.Controls.Add(this.m_lbl_protocol_type);
+			this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel1.Location = new System.Drawing.Point(3, 3);
+			this.panel1.Name = "panel1";
+			this.panel1.Size = new System.Drawing.Size(239, 27);
+			this.panel1.TabIndex = 48;
 			// 
 			// m_combo_protocol_type
 			// 
@@ -396,6 +385,19 @@
 			this.m_combo_protocol_type.Size = new System.Drawing.Size(93, 21);
 			this.m_combo_protocol_type.TabIndex = 2;
 			// 
+			// panel2
+			// 
+			this.tableLayoutPanel1.SetColumnSpan(this.panel2, 2);
+			this.panel2.Controls.Add(this.m_lbl_hostname);
+			this.panel2.Controls.Add(this.m_lbl_port);
+			this.panel2.Controls.Add(this.m_combo_hostname);
+			this.panel2.Controls.Add(this.m_spinner_port);
+			this.panel2.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.panel2.Location = new System.Drawing.Point(3, 36);
+			this.panel2.Name = "panel2";
+			this.panel2.Size = new System.Drawing.Size(239, 43);
+			this.panel2.TabIndex = 48;
+			// 
 			// m_combo_hostname
 			// 
 			this.m_combo_hostname.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -405,6 +407,17 @@
 			this.m_combo_hostname.Name = "m_combo_hostname";
 			this.m_combo_hostname.Size = new System.Drawing.Size(156, 21);
 			this.m_combo_hostname.TabIndex = 0;
+			// 
+			// m_check_listener
+			// 
+			this.m_check_listener.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_check_listener.AutoSize = true;
+			this.m_check_listener.Location = new System.Drawing.Point(182, 5);
+			this.m_check_listener.Name = "m_check_listener";
+			this.m_check_listener.Size = new System.Drawing.Size(54, 17);
+			this.m_check_listener.TabIndex = 41;
+			this.m_check_listener.Text = "Listen";
+			this.m_check_listener.UseVisualStyleBackColor = true;
 			// 
 			// NetworkConnectionUI
 			// 
@@ -425,20 +438,20 @@
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_port)).EndInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_proxy_port)).EndInit();
 			this.tableLayoutPanel1.ResumeLayout(false);
+			this.panel7.ResumeLayout(false);
+			this.panel7.PerformLayout();
+			this.panel6.ResumeLayout(false);
+			this.panel6.PerformLayout();
+			this.panel5.ResumeLayout(false);
+			this.panel5.PerformLayout();
+			this.panel4.ResumeLayout(false);
+			this.panel4.PerformLayout();
+			this.panel3.ResumeLayout(false);
+			this.panel3.PerformLayout();
 			this.panel1.ResumeLayout(false);
 			this.panel1.PerformLayout();
 			this.panel2.ResumeLayout(false);
 			this.panel2.PerformLayout();
-			this.panel3.ResumeLayout(false);
-			this.panel3.PerformLayout();
-			this.panel4.ResumeLayout(false);
-			this.panel4.PerformLayout();
-			this.panel5.ResumeLayout(false);
-			this.panel5.PerformLayout();
-			this.panel6.ResumeLayout(false);
-			this.panel6.PerformLayout();
-			this.panel7.ResumeLayout(false);
-			this.panel7.PerformLayout();
 			this.ResumeLayout(false);
 
 		}
@@ -475,5 +488,6 @@
 		private System.Windows.Forms.Panel panel3;
 		private System.Windows.Forms.Panel panel1;
 		private System.Windows.Forms.Panel panel2;
+		private System.Windows.Forms.CheckBox m_check_listener;
 	}
 }
