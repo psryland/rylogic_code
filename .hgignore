@@ -16,7 +16,6 @@ syntax: glob
 *.suo
 *.user
 *.orig
-*.htm
 *.userprefs
 *.vssettings
 *.pyc
@@ -54,3 +53,5 @@ miscellaneous/VisualStudio Mods/VS2008_Settings.vssettings
 tools/ResEdit/ResEdit.xml
 projects/vs2012/pr_applog.log
 sdk/pr/prcs/unittest_resources/exif_image_out.jpg
+projects/RyLogViewer/Resources/*.html
+projects/RyLogViewer/docs/*.html

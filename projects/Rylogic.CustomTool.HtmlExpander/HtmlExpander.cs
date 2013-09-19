@@ -19,7 +19,7 @@ namespace Rylogic.CustomTool
 		/// <summary>Gets the default extension for this generator</summary>
 		public override string GetDefaultExtension()
 		{
-			return ".htm";
+			return ".html";
 		}
 
 		/// <summary>Generate the code-behind</summary>

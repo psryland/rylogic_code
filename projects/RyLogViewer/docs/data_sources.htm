@@ -1,0 +1,102 @@
+﻿<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<!--#include file=".\help_head.include.htm"-->
+	<body id="main_help">
+		<!--#include file=".\help_title_panel.include.htm"-->
+		<!--#include file=".\help_index_panel.include.htm"-->
+		<div id="content_panel">
+			<div class="title">Data Sources</div>
+			<div class="content">
+				RyLogViewer can display log data from a wide variety of sources, ranging from log
+				files on the local hard drive, to data streamed over a named pipe. Each data source
+				is described below along with typical use scenarios.
+			</div>
+
+			<div id="single_file">
+				<div class="section_title">Single Log File</div>
+				<div class="content">
+					The simplest of all data sources is an existing log file loaded from a local
+					hard drive. There is not a lot to say about this data source, except that the
+					file does not have to be static. RyLogViewer is able to display the file while
+					another program is modifying it so long as that program does not hold an
+					exclusive read blocking lock on the file. Also, files available via shared
+					network drives can be loaded with exactly the same support for real-time
+					display of file modifications.
+				</div>
+			</div>
+
+			<div id="program_output">
+				<div class="section_title">Program Output</div>
+				<img class="right_inset" src="program_output.png" alt="log program output"/>
+				<div class="content">
+					Many applications output log information to the standard streams; standard output (stdout),
+					and standard error (stderr). Using the <i>Log Program Output</i> option under the file menu,
+					RyLogViewer can launch an application and display any text data it writes to these streams.
+					<ol class="minor_list">
+						<li>The command line for the application to launch.</li>
+						<li>Any additional command line arguments for the application.</li>
+						<li>The working directory in which to run the application (some applications require running from a specific directory).</li>
+						<li>An optional file path to save any captured program output to.</li>
+						<li>Check this option to capture text written to the standard output stream.</li>
+						<li>Check this option to capture text written to the standard error stream.</li>
+						<li>Append captured output to the optional captured output file. This option is only available when an output file path is given.</li>
+					</ol>
+				</div>
+			</div>
+
+			<div id="serial_port">
+				<div class="section_title">Serial Port Connection</div>
+				<div class="content">
+					<img class="right_inset" src="serial_port_output.png" alt="log serial port"/>
+					A common scenario in embedded software development is for log data to be streamed over
+					a serial port connection. RyLogViewer can capture and display this output directly via the
+					<i>Log Serial Port</i> option under the file menu. The standard options for connecting to
+					a serial port are provided.
+					<ol class="minor_list">
+						<li>The serial communications port to connect to.</li>
+						<li>The baud rate of the connection.</li>
+						<li>The number of data bits per character.</li>
+						<li>The number of stop bits per character.</li>
+						<li>The parity checking protocol to use.</li>
+						<li>The handshaking protocol used.</li>
+						<li>Sets the Data Terminal Ready bit for the connection.</li>
+						<li>Sets the Request to Send bit for the connection.</li>
+						<li>An optional file path to save any captured program output to.</li>
+						<li>Append captured output to the optional captured output file. This option is only available when an output file path is given.</li>
+					</ol>
+				</div>
+			</div>
+
+			<div id="tcpip">
+				<div class="section_title">TCP/UDP Network Connection</div>
+				<div class="content">
+					<img class="right_inset" src="network_output.png" alt="log network connection"/>
+					<ol>
+						<li>The network protocol to use.</li>
+						<li>The host name or IP address of the computer to receive data from.</li>
+						<li>The port number to use for the connection.</li>
+						<li>The type of optional proxy server to use.</li>
+						<li>The host name or IP address of the proxy server to use.</li>
+						<li>The port number to use for the proxy server connection.</li>
+						<li>User name used to connect to the proxy server.</li>
+						<li>User password used to connect to the proxy server.</li>
+						<li>An optional file path to save any captured program output to.</li>
+						<li>Append captured output to the optional captured output file. This option is only available when an output file path is given.</li>
+					</ol>
+				</div>
+			</div>
+
+			<div id="named_pipe">
+				<div class="section_title">Named Pipe</div>
+				<div class="content">
+					<img class="right_inset" src="pipe_output.png" alt="log named pipe"/>
+					<ol>
+						<li>The name of the named pipe to receive data from.</li>
+						<li>An optional file path to save any captured program output to.</li>
+						<li>Append captured output to the optional captured output file. This option is only available when an output file path is given.</li>
+					</ol>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

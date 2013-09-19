@@ -17,14 +17,14 @@ print(
 	"\n"
 	"   Directory: " + docsdir + "\n"
 	"*************************************************************************")
-input()
+input("Press enter to continue")
 
 def ExportDirectory(dir):
 	for file in os.listdir(dir):
 		filepath = dir + "\\" + file
-		if re.match(r".*(?<!include)\.html",filepath, flags=re.IGNORECASE):
+		if re.match(r".*(?<!include)\.htm$",filepath, flags=re.IGNORECASE):
 			print(filepath)
-			outfile = re.sub(r"\.html", r".htm", filepath)
+			outfile = re.sub(r"\.htm", r".html", filepath)
 			RylogicEnv.Run(RylogicEnv.csex, '-expand_template -f "'+filepath+'" -o "'+outfile+'"')
 
 try:
