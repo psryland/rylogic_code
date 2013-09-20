@@ -147,6 +147,11 @@ namespace RyLogViewer
 			get { return get<bool>(Reflect<Settings>.MemberName(x => x.AlwaysOnTop)); }
 			set { set(Reflect<Settings>.MemberName(x => x.AlwaysOnTop), value); }
 		}
+		public bool   FirstRun
+		{
+			get { return get<bool>(Reflect<Settings>.MemberName(x => x.FirstRun)); }
+			set { set(Reflect<Settings>.MemberName(x => x.FirstRun), value); }
+		}
 		public bool   ShowTOTD
 		{
 			get { return get<bool>(Reflect<Settings>.MemberName(x => x.ShowTOTD)); }
@@ -333,8 +338,8 @@ namespace RyLogViewer
 			Company                         = string.Empty;
 			RecentFiles                     = string.Empty;
 			Font                            = new Font("Consolas", 8.25f, GraphicsUnit.Point);
-			RestoreScreenLoc                = true;
-			ScreenPosition                  = new Point(50, 50);
+			RestoreScreenLoc                = false; // False so that first runs start in the default window position
+			ScreenPosition                  = new Point(100, 100);
 			WindowSize                      = new Size(640, 480);
 			AlternateLineColours            = true;
 			LineSelectBackColour            = Color.DarkGreen;
@@ -356,6 +361,7 @@ namespace RyLogViewer
 			FileChangesAdditive             = true;
 			IgnoreBlankLines                = false;
 			AlwaysOnTop                     = false;
+			FirstRun                        = true;
 			ShowTOTD                        = true;
 			CheckForUpdates                 = true;
 			CheckForUpdatesServer           = "http://www.rylogic.co.nz:80/";
@@ -497,7 +503,7 @@ namespace RyLogViewer
 			int file_buf_size = FileBufSize;
 			if (file_buf_size < Constants.FileBufSizeMin || file_buf_size > Constants.FileBufSizeMax)
 				FileBufSize = Constants.FileBufSizeDefault;
-			
+
 			// Max line length
 			int max_line_length = MaxLineLength;
 			if (max_line_length < Constants.MaxLineLengthMin || max_line_length > Constants.MaxLineLengthMax)
@@ -511,7 +517,7 @@ namespace RyLogViewer
 			int column_count = ColumnCount;
 			if (column_count < Constants.ColumnCountMin || column_count > Constants.ColumnCountMax)
 				ColumnCount = Constants.ColumnCountDefault;
-			
+
 			// Network connection settings
 			foreach (var c in NetworkConnectionHistory)
 			{

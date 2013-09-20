@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
+using pr.gui;
 
 namespace RyLogViewer
 {
@@ -13,10 +14,10 @@ namespace RyLogViewer
 		private readonly List<string> m_outp_history;
 		private readonly ToolTip m_tt;
 		private string m_pipeaddr;
-			
+
 		/// <summary>The serial port connection properties selected</summary>
 		public PipeConn Conn { get; set; }
-		
+
 		public NamedPipeUI(Settings settings)
 		{
 			InitializeComponent();
@@ -26,7 +27,7 @@ namespace RyLogViewer
 			Conn       = m_history.Count != 0 ? new PipeConn(m_history[0]) : new PipeConn();
 			m_tt       = new ToolTip();
 			m_pipeaddr = Conn.PipeAddr;
-			
+
 			// Pipe name
 			m_combo_pipe_name.ToolTip(m_tt, "The pipe name in the form \\\\<server>\\pipe\\<pipename>\r\nPipes on the local machine use '.' for <server>");
 			foreach (var i in m_history) m_combo_pipe_name.Items.Add(i);
@@ -36,7 +37,7 @@ namespace RyLogViewer
 					m_pipeaddr = m_combo_pipe_name.Text;
 					UpdateUI();
 				};
-		
+
 			// Output file
 			m_combo_output_filepath.ToolTip(m_tt, "The file to save captured program output in.\r\nLeave blank to not save captured output");
 			foreach (var i in m_outp_history) m_combo_output_filepath.Items.Add(i);
@@ -55,7 +56,7 @@ namespace RyLogViewer
 					Conn.OutputFilepath = dg.FileName;
 					UpdateUI();
 				};
-			
+
 			// Save settings on close
 			FormClosing += (s,a)=>
 				{
@@ -66,14 +67,14 @@ namespace RyLogViewer
 						try { Conn.PipeAddr = m_pipeaddr; }
 						catch (ArgumentException)
 						{
-							MessageBox.Show(this, "The pipe name field is invalid.\r\n\r\nIt must have the form: \\\\<server>\\pipe\\<pipename>\r\ne.g. \\\\.\\pipe\\MyLocalPipe", "Pipe Name Invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
+							MsgBox.Show(this, "The pipe name field is invalid.\r\n\r\nIt must have the form: \\\\<server>\\pipe\\<pipename>\r\ne.g. \\\\.\\pipe\\MyLocalPipe", "Pipe Name Invalid", MessageBoxButtons.OK, MessageBoxIcon.Error);
 							a.Cancel = true;
 							return;
 						}
 
 						Misc.AddToHistoryList(m_history, Conn, true, Constants.MaxSerialConnHistoryLength);
 						m_settings.PipeConnectionHistory = m_history.ToArray();
-						
+
 						Misc.AddToHistoryList(m_outp_history, Conn.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
 						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}

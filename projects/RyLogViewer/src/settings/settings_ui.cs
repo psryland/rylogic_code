@@ -719,7 +719,7 @@ namespace RyLogViewer
 		{
 			if (pattern_ui.HasUnsavedChanges)
 			{
-				var res = MessageBox.Show(this, "{0} pattern contains unsaved changes.\r\n\r\nSave changes?".Fmt(text),"Unsaved Changes",MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+				var res = MsgBox.Show(this, "{0} pattern contains unsaved changes.\r\n\r\nSave changes?".Fmt(text),"Unsaved Changes",MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 				if (res == DialogResult.Cancel) { args.Cancel = true; return; }
 				if (res == DialogResult.No)     { pattern_ui.NewPattern(new TPattern()); return; }
 				if (!pattern_ui.CommitEnabled)  { args.Cancel = true; return; }
@@ -746,7 +746,7 @@ namespace RyLogViewer
 		private void ResetSettingsToDefaults()
 		{
 			// Confirm first...
-			DialogResult res = MessageBox.Show(this, "This will reset all current settings to their default values\r\n\r\nContinue?", "Confirm Reset Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+			var res = MsgBox.Show(this, "This will reset all current settings to their default values\r\n\r\nContinue?", "Confirm Reset Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 			if (res != DialogResult.Yes) return;
 
 			// Flatten the settings

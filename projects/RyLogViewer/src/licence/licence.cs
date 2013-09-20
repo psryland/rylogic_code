@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using RyLogViewer.Properties;
 using pr.common;
 using pr.extn;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
@@ -122,7 +123,7 @@ namespace RyLogViewer
 			}
 			catch (FileNotFoundException) { Log.Info(this, "Licence file not found"); }
 			catch (Exception ex) { Log.Exception(this, ex, "Licence file invalid"); }
-			
+
 			// No valid licence file found. Create a default free licence
 			LicenceHolder  = Constants.FreeLicence;
 			Company        = Constants.FreeLicence;
@@ -141,12 +142,12 @@ namespace RyLogViewer
 			// Create the licence xml document
 			var doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) throw new Exception("Failed to create licence.xml root node");
-			
+
 			// Save the elements
 			doc.Root.Add(new XElement(XmlTag.LicenceHolder, LicenceHolder));
 			doc.Root.Add(new XElement(XmlTag.Company, Company));
 			doc.Root.Add(new XElement(XmlTag.SoftwareKey, SoftwareKey));
-			
+
 			// Save the licence file
 			var lic = Path.Combine(dir, "licence.xml");
 			doc.Save(lic);
@@ -187,16 +188,16 @@ namespace RyLogViewer
 					// Only test for a signed exe once / 5mins
 					if (Environment.TickCount - m_signing_last_tested < RetestPeriodMS)
 						return;
-					
+
 					// Perform the signing test
 					m_signing_last_tested = Environment.TickCount;
 					if (pr.crypt.Crypt.Validate(Application.ExecutablePath, Resources.public_key, false))
 						return;
-					
+
 					// Notify if it fails
 					Action failed_notification = () =>
 						{
-							MessageBox.Show(null,
+							MsgBox.Show(null,
 								"WARNING! This executable has been tampered with!\r\n" +
 								"Using this program may compromise your computer.\r\n" +
 								"\r\n" +
@@ -207,7 +208,7 @@ namespace RyLogViewer
 								,MessageBoxIcon.Exclamation);
 							Application.Exit();
 						};
-					
+
 					var form = ActiveForm;
 					if (form != null) form.BeginInvoke(failed_notification);
 				});
@@ -221,11 +222,11 @@ namespace RyLogViewer
 			// Load the licence file
 			var licence = new Licence(m_startup_options.AppDataDir);
 			bool initially_valid = licence.Valid;
-			
+
 			// Display the UI for entering licence info
 			var dg = new Activation(licence);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			
+
 			// Write the updated licence file (if changed)
 			if (!licence.Valid) return;
 			if (!licence.Changed) return;
@@ -234,7 +235,7 @@ namespace RyLogViewer
 				licence.WriteFile(m_startup_options.AppDataDir);
 				if (!initially_valid)
 				{
-					MessageBox.Show(this,
+					MsgBox.Show(this,
 						"Thank you for activating "+Application.ProductName+".\r\n" +
 						"Your support is greatly appreciated."
 						,"Activation Successful"

@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.common;
 using pr.extn;
+using pr.gui;
 
 namespace RyLogViewer
 {
@@ -144,14 +145,14 @@ namespace RyLogViewer
 					// Don't allow the export button without a valid filepath
 					if (string.IsNullOrEmpty(OutputFilepath))
 					{
-						MessageBox.Show(this, Resources.OutputFileMissingMsg, Resources.OutputFileMissing, MessageBoxButtons.OK, MessageBoxIcon.Hand);
+						MsgBox.Show(this, Resources.OutputFileMissingMsg, Resources.OutputFileMissing, MessageBoxButtons.OK, MessageBoxIcon.Hand);
 						a.Cancel = true;
 					}
 					
 					// Prompt if overwriting a file
 					if (PathEx.FileExists(OutputFilepath))
 					{
-						DialogResult res = MessageBox.Show(this, string.Format("{0} already exists. Overwrite it?", OutputFilepath), Resources.ConfirmOverwrite, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+						var res = MsgBox.Show(this, string.Format("{0} already exists. Overwrite it?", OutputFilepath), Resources.ConfirmOverwrite, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 						a.Cancel = res != DialogResult.Yes;
 					}
 				};

@@ -24,7 +24,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Display a modal message box</summary>
-		public static DialogResult Show(Form owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
+		public static DialogResult Show(Control owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
 		{
 			return new MsgBox(owner, message,title, btns, icon, dflt_btn).ShowDialog(owner);
 		}
@@ -33,17 +33,21 @@ namespace pr.gui
 		public MsgBox(string message, string title)                                              :this(null, message, title, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
 		public MsgBox(string message, string title, MessageBoxButtons btns)                      :this(null, message, title, btns, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
 		public MsgBox(string message, string title, MessageBoxButtons btns, MessageBoxIcon icon) :this(null, message, title, btns, icon, MessageBoxDefaultButton.Button1) {}
-		public MsgBox(Form owner, string message, string title)                                              :this(owner, message, title, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
-		public MsgBox(Form owner, string message, string title, MessageBoxButtons btns)                      :this(owner, message, title, btns, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
-		public MsgBox(Form owner, string message, string title, MessageBoxButtons btns, MessageBoxIcon icon) :this(owner, message, title, btns, icon, MessageBoxDefaultButton.Button1) {}
-		public MsgBox(Form owner, string message, string title, MessageBoxButtons btns, MessageBoxIcon icon, MessageBoxDefaultButton dflt_btn)
+		public MsgBox(Control owner, string message, string title)                                              :this(owner, message, title, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
+		public MsgBox(Control owner, string message, string title, MessageBoxButtons btns)                      :this(owner, message, title, btns, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
+		public MsgBox(Control owner, string message, string title, MessageBoxButtons btns, MessageBoxIcon icon) :this(owner, message, title, btns, icon, MessageBoxDefaultButton.Button1) {}
+		public MsgBox(Control owner, string message, string title, MessageBoxButtons btns, MessageBoxIcon icon, MessageBoxDefaultButton dflt_btn)
 		{
 			InitializeComponent();
 			StartPosition = FormStartPosition.CenterParent;
-			Owner = owner;
+			FormBorderStyle = FormBorderStyle.FixedSingle; // Default to fixed, can be Sizeable if needed tho
 			Title = title;
 			Message = message;
 			Reflow = true;
+			
+			Owner = owner as Form;
+			ShowIcon = Owner != null && Owner.Icon != null;
+			if (Owner != null) Icon = Owner.Icon;
 
 			AcceptButton = null;
 			CancelButton = null;
@@ -172,7 +176,7 @@ namespace pr.gui
 			const int text_margin = 27;
 			const int button_margin_h = 10;
 			const int button_margin_v = 12;
-			const float reflow_aspect = 2.5f;
+			const float reflow_aspect = 3.5f;
 			var btn_size = m_btn_positive.Size;
 			var btns = new[]{m_btn_negative, m_btn_neutral, m_btn_positive};
 			var num_btns = btns.Count(b => b.Text != string.Empty);

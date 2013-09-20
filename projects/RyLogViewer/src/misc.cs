@@ -477,7 +477,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>A wrapper around showing message boxes for exceptions</summary>
-		public static void ShowErrorMessage(IWin32Window owner, Exception exception, string caption, string title)
+		public static void ShowErrorMessage(Control owner, Exception exception, string caption, string title)
 		{
 			// Only show one error dialog at a time
 			if (m_dialog_visible)
@@ -487,7 +487,7 @@ namespace RyLogViewer
 			string msg = exception.Message;
 			for (var ex = exception.InnerException; ex != null; ex = ex.InnerException) msg += Environment.NewLine + ex.Message;
 			string error_message = "{0}\r\nError Details:\r\n{1}".Fmt(caption, msg);
-			MessageBox.Show(owner, error_message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			MsgBox.Show(owner, error_message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			m_dialog_visible = false;
 		}
 		private static bool m_dialog_visible;

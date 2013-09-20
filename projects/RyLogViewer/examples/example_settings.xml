@@ -73,7 +73,7 @@
     <key>BookmarkColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>162</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -262,7 +262,7 @@
     <key>LineBackColour1</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>165</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -271,7 +271,7 @@
     <key>LineBackColour2</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>164</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -284,7 +284,7 @@
     <key>LineForeColour1</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>35</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -293,7 +293,7 @@
     <key>LineForeColour2</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>35</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -302,7 +302,7 @@
     <key>LineSelectBackColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>53</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -311,7 +311,7 @@
     <key>LineSelectForeColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>164</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -326,7 +326,7 @@
   </setting>
   <setting>
     <key>LogProgramOutputHistory</key>
-    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfLaunchApp" />
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfLaunchApp"/>
   </setting>
   <setting>
     <key>MaxLineLength</key>
@@ -334,7 +334,7 @@
   </setting>
   <setting>
     <key>NetworkConnectionHistory</key>
-    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfNetConn" />
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfNetConn"/>
   </setting>
   <setting>
     <key>OpenAtEnd</key>
@@ -342,15 +342,11 @@
   </setting>
   <setting>
     <key>OutputFilepathHistory</key>
-    <value xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" i:type="d3p1:ArrayOfstring">
-      <d3p1:string>D:\deleteme\logcat_192_168_100_162.txt</d3p1:string>
-      <d3p1:string>D:\deleteme\logcat_192_168_100_159.txt</d3p1:string>
-      <d3p1:string></d3p1:string>
-    </value>
+    <value xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" i:type="d3p1:ArrayOfstring"/>
   </setting>
   <setting>
     <key>PipeConnectionHistory</key>
-    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfPipeConn" />
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfPipeConn"/>
   </setting>
   <setting>
     <key>QuickFilterEnabled</key>
@@ -383,7 +379,7 @@
     <key>ScrollBarCachedRangeColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>0</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>2</d3p1:state>
       <d3p1:value>1085135078</d3p1:value>
     </value>
@@ -392,7 +388,7 @@
     <key>ScrollBarDisplayRangeColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>0</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>2</d3p1:state>
       <d3p1:value>2152104628</d3p1:value>
     </value>
@@ -401,14 +397,14 @@
     <key>ScrollBarFileRangeColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>0</d3p1:knownColor>
-      <d3p1:name i:nil="true" />
+      <d3p1:name i:nil="true"/>
       <d3p1:state>2</d3p1:state>
       <d3p1:value>2164260863</d3p1:value>
     </value>
   </setting>
   <setting>
     <key>SerialConnectionHistory</key>
-    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfSerialConn" />
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfSerialConn"/>
   </setting>
   <setting>
     <key>ShowTOTD</key>

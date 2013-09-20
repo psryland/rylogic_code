@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using pr.maths;
-using pr.util;
+using pr.common;
 
 namespace RyLogViewer
 {
 	public class TipOfTheDay :Form
 	{
+		private readonly Main m_main;
 		private readonly List<FileInfo> m_totd;
 		private Panel m_panel;
 		private WebBrowser m_html;
@@ -28,14 +25,17 @@ namespace RyLogViewer
 		}
 		private int m_tip_index;
 
-		public TipOfTheDay(Settings settings)
+		public TipOfTheDay(Main main, Settings settings)
 		{
 			InitializeComponent();
+			m_main = main;
 			m_tip_index = 0;
 			m_totd = new List<FileInfo>(ScanFiles());
 			if (m_totd.Count == 0) return;
 
 			m_html.Url = new Uri(m_totd[TipIndex].FullName);
+			m_html.Navigating += OnNavigating;
+
 			m_check_show_on_startup.Checked = settings.ShowTOTD;
 			m_check_show_on_startup.CheckedChanged += (s,a)=>
 				{
@@ -53,14 +53,34 @@ namespace RyLogViewer
 				};
 		}
 
+		/// <summary>Handle special navigation urls in totd's</summary>
+		private void OnNavigating(object sender, WebBrowserNavigatingEventArgs args)
+		{
+			if (args.Url.Scheme == "cmd")
+			{
+				args.Cancel = true;
+				switch (args.Url.Host)
+				{
+				case "open_example_logfile":
+					m_main.OpenSingleLogFile(Misc.ResolveAppFile(@"examples\example logfile.txt"), false);
+					Close();
+					break;
+				}
+			}
+		}
+
 		/// <summary>Search for tip of the day files</summary>
 		private IEnumerable<FileInfo> ScanFiles()
 		{
-			return new DirectoryInfo(@".\docs").GetFiles("totd*.html");
+			foreach (var fd in PathEx.EnumerateFiles(Misc.ResolveAppFile(@"docs"), @"totd\d+.html", SearchOption.TopDirectoryOnly))
+			{
+				if (!PathEx.FileExists(fd.FullPath)) continue;
+				yield return new FileInfo(fd.FullPath);
+			}
 		}
 
 		#region Windows Form Designer generated code
-		
+
 		/// <summary>
 		/// Required designer variable.
 		/// </summary>
@@ -94,9 +114,9 @@ namespace RyLogViewer
 			this.m_btn_prev = new System.Windows.Forms.Button();
 			this.m_panel.SuspendLayout();
 			this.SuspendLayout();
-			// 
+			//
 			// m_btn_next
-			// 
+			//
 			this.m_btn_next.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_next.Location = new System.Drawing.Point(185, 244);
 			this.m_btn_next.Name = "m_btn_next";
@@ -104,9 +124,9 @@ namespace RyLogViewer
 			this.m_btn_next.TabIndex = 0;
 			this.m_btn_next.Text = "Next";
 			this.m_btn_next.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_check_show_on_startup
-			// 
+			//
 			this.m_check_show_on_startup.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_check_show_on_startup.AutoSize = true;
 			this.m_check_show_on_startup.Location = new System.Drawing.Point(12, 248);
@@ -116,9 +136,9 @@ namespace RyLogViewer
 			this.m_check_show_on_startup.TabIndex = 1;
 			this.m_check_show_on_startup.Text = "Show on startup";
 			this.m_check_show_on_startup.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_html
-			// 
+			//
 			this.m_html.AllowWebBrowserDrop = false;
 			this.m_html.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_html.IsWebBrowserContextMenuEnabled = false;
@@ -128,9 +148,9 @@ namespace RyLogViewer
 			this.m_html.ScriptErrorsSuppressed = true;
 			this.m_html.Size = new System.Drawing.Size(321, 233);
 			this.m_html.TabIndex = 2;
-			// 
+			//
 			// m_btn_ok
-			// 
+			//
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.m_btn_ok.Location = new System.Drawing.Point(254, 244);
@@ -139,11 +159,11 @@ namespace RyLogViewer
 			this.m_btn_ok.TabIndex = 3;
 			this.m_btn_ok.Text = "Close";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_panel
-			// 
-			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_panel.Controls.Add(this.m_html);
@@ -151,9 +171,9 @@ namespace RyLogViewer
 			this.m_panel.Name = "m_panel";
 			this.m_panel.Size = new System.Drawing.Size(323, 235);
 			this.m_panel.TabIndex = 5;
-			// 
+			//
 			// m_btn_prev
-			// 
+			//
 			this.m_btn_prev.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_prev.Location = new System.Drawing.Point(116, 244);
 			this.m_btn_prev.Name = "m_btn_prev";
@@ -161,9 +181,9 @@ namespace RyLogViewer
 			this.m_btn_prev.TabIndex = 6;
 			this.m_btn_prev.Text = "Previous";
 			this.m_btn_prev.UseVisualStyleBackColor = true;
-			// 
+			//
 			// TipOfTheDay
-			// 
+			//
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -183,7 +203,6 @@ namespace RyLogViewer
 			this.m_panel.ResumeLayout(false);
 			this.ResumeLayout(false);
 			this.PerformLayout();
-
 		}
 
 		#endregion

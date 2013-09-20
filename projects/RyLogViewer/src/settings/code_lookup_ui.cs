@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using RyLogViewer.Properties;
 using pr.extn;
+using pr.gui;
 using pr.util;
 
 namespace RyLogViewer
@@ -108,7 +109,7 @@ namespace RyLogViewer
 			// If there's an existing list, ask before clearing it
 			if (Values.Count != 0)
 			{
-				var res = MessageBox.Show(this, "Replace the current list with code/value pairs loaded from file?", "Confirm Replace Codes", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+				var res = MsgBox.Show(this, "Replace the current list with code/value pairs loaded from file?", "Confirm Replace Codes", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
 				if (res != DialogResult.OK) return;
 			}
 			
@@ -157,7 +158,7 @@ namespace RyLogViewer
 				// If errors where found during the import, ask the user if they still want to continue
 				if (partial_import)
 				{
-					var res = MessageBox.Show(this, "Some imported data was ignored because it was invalid.\r\nContinue with import?", "Partial Import", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+					var res = MsgBox.Show(this, "Some imported data was ignored because it was invalid.\r\nContinue with import?", "Partial Import", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
 					if (res != DialogResult.OK) return;
 				}
 				

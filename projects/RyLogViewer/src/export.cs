@@ -110,12 +110,12 @@ namespace RyLogViewer
 				{
 					var d = new BLIData(this, m_file);
 					if (DoExportWithProgress(d, rng, row_delimiter, col_delimiter, outp))
-						MessageBox.Show(this, Resources.ExportCompletedSuccessfully, Resources.ExportComplete, MessageBoxButtons.OK);
+						MsgBox.Show(this, Resources.ExportCompletedSuccessfully, Resources.ExportComplete, MessageBoxButtons.OK);
 				}
 				catch (Exception ex)
 				{
 					Log.Exception(this, ex, "Export failed");
-					MessageBox.Show(this, string.Format("Export failed.\r\nError: {0}", ex.Message), Resources.ExportFailed, MessageBoxButtons.OK);
+					MsgBox.Show(this, string.Format("Export failed.\r\nError: {0}", ex.Message), Resources.ExportFailed, MessageBoxButtons.OK);
 				}
 			}
 		}

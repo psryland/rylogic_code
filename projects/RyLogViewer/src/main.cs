@@ -79,15 +79,15 @@ namespace RyLogViewer
 				Location = m_settings.ScreenPosition;
 				Size = m_settings.WindowSize;
 			}
-			
+
 			// Recent files menu
 			m_recent = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true));
 			m_recent.ClearRecentFilesListEvent += (s,a) =>
 				{
-					var res = MessageBox.Show(this, "Do you want to clear the recent files list?", "Clear Recent Files", MessageBoxButtons.OKCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
+					var res = MsgBox.Show(this, "Do you want to clear the recent files list?", "Clear Recent Files", MessageBoxButtons.OKCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
 					a.Cancel = res == DialogResult.Cancel;
 				};
-			
+
 			m_watch               = new FileWatch();
 			m_watch_timer         = new Timer{Interval = Constants.FilePollingRate};
 			m_batch_set_col_size  = new EventBatcher(100, this);
@@ -159,6 +159,7 @@ namespace RyLogViewer
 			m_menu_tools_actions.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
 			m_menu_tools_options.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.General   );
 			m_menu_help_view_help.Click                += (s,a) => ShowHelp();
+			m_menu_help_firstruntutorial.Click         += (s,a) => ShowFirstRunTutorial(false);
 			m_menu_help_totd.Click                     += (s,a) => ShowTotD();
 			m_menu_help_visit_store.Click              += (s,a) => VisitStore();
 			m_menu_help_register.Click                 += (s,a) => ShowActivation();
@@ -166,7 +167,7 @@ namespace RyLogViewer
 			m_menu_help_about.Click                    += (s,a) => ShowAbout();
 			m_menu_free_version.Click                  += (s,a) => ShowFreeVersionInfo();
 			m_recent.Import(m_settings.RecentFiles);
-			
+
 			// Toolbar
 			m_toolstrip.Location            = new Point(0,30);
 			m_btn_open_log.ToolTipText      = Resources.OpenLogFile;
@@ -246,25 +247,25 @@ namespace RyLogViewer
 					try { m_watch.CheckForChangedFiles(); }
 					catch (Exception ex) { Log.Exception(this, ex, "CheckForChangedFiles failed"); }
 				};
-			
+
 			// Column size event batcher
 			m_batch_set_col_size.Action += SetGridColumnSizesImpl;
-			
+
 			// Find
 			InitFind();
-			
+
 			// Bookmarks
 			m_bs_bookmarks.PositionChanged += (s,a) => SelectBookmark(m_bs_bookmarks.Position);
 			m_bookmarks_ui.NextBookmark    += NextBookmark;
 			m_bookmarks_ui.PrevBookmark    += PrevBookmark;
-			
+
 			// Startup
 			Shown += (s,a)=> Startup();
-			
+
 			// File Drop
 			DragEnter += (s,a) => FileDrop(a, true);
 			DragDrop  += (s,a) => FileDrop(a, false);
-			
+
 			// Resize
 			SizeChanged += (s,a)=> UpdateUI();
 
@@ -287,7 +288,7 @@ namespace RyLogViewer
 		private void ApplyStartupOptions()
 		{
 			StartupOptions su = m_startup_options;
-			
+
 			// If a pattern set file path is given, replace the patterns in 'm_settings'
 			// with the contents of the file
 			if (su.HighlightSetPath != null)
@@ -338,7 +339,7 @@ namespace RyLogViewer
 		private void Startup()
 		{
 			StartupOptions su = m_startup_options;
-			
+
 			// Parse command line
 			if (su.FileToLoad != null)
 			{
@@ -348,14 +349,20 @@ namespace RyLogViewer
 			{
 				OpenSingleLogFile(m_settings.LastLoadedFile, true);
 			}
-			
+
+			// Show the first run tutorial
+			if (m_settings.FirstRun)
+				ShowFirstRunTutorial(true);
+
 			// Show the TotD
-			if (m_settings.ShowTOTD)
+			else if (m_settings.ShowTOTD)
 				ShowTotD();
-			
+
 			// Check for updates
 			if (m_settings.CheckForUpdates)
 				CheckForUpdates(false);
+
+			m_settings.FirstRun = false;
 		}
 
 		/// <summary>Calls as the main form is closing</summary>
@@ -365,13 +372,13 @@ namespace RyLogViewer
 			m_settings.WindowSize = Size;
 			m_settings.RecentFiles = m_recent.Export();
 		}
-		
+
 		/// <summary>Returns true if there is a log file currently open</summary>
 		public bool FileOpen
 		{
 			get { return m_file != null; }
 		}
-		
+
 		/// <summary>Close the current log file</summary>
 		public void CloseLogFile()
 		{
@@ -381,6 +388,7 @@ namespace RyLogViewer
 			{
 				CancelBuildLineIndex();
 				m_line_index.Clear();
+				m_grid.RowCount = 0;
 				if (FileOpen) m_watch.Remove(m_file.Filepaths);
 				if (m_buffered_process    != null) m_buffered_process.Dispose();
 				if (m_buffered_tcp_netconn != null) m_buffered_tcp_netconn.Dispose();
@@ -412,7 +420,7 @@ namespace RyLogViewer
 				// Reject invalid file paths
 				if (!file.HasValue())
 				{
-					MessageBox.Show(this, "File path is invalid", Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+					MsgBox.Show(this, "File path is invalid", Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
 					return false;
 				}
 
@@ -421,13 +429,13 @@ namespace RyLogViewer
 				{
 					if (m_recent.IsInRecents(file))
 					{
-						var res = MessageBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
+						var res = MsgBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
 						if (res == DialogResult.Yes)
 							m_recent.Remove(file, true);
 					}
 					else
 					{
-						MessageBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
+						MsgBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(file), Resources.InvalidFilePath, MessageBoxButtons.OK,MessageBoxIcon.Error);
 					}
 					return false;
 				}
@@ -461,7 +469,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Open a single log file, prompting if 'filepath' is null</summary>
-		private void OpenSingleLogFile(string filepath, bool add_to_recent)
+		public void OpenSingleLogFile(string filepath, bool add_to_recent)
 		{
 			try
 			{
@@ -483,7 +491,7 @@ namespace RyLogViewer
 					m_settings.RecentFiles = m_recent.Export();
 					m_settings.LastLoadedFile = filepath;
 				}
-				
+
 				// Switch files - open the file to make sure it's accessible (and to hold a lock)
 				NewFileSource(new SingleFile(filepath));
 			}
@@ -495,7 +503,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Open multiple log files in aggregate</summary>
-		private void OpenAggregateLogFile(List<string> filepaths)
+		public void OpenAggregateLogFile(List<string> filepaths)
 		{
 			try
 			{
@@ -527,7 +535,7 @@ namespace RyLogViewer
 		{
 			var dg = new AggregateFilesUI(this);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			
+
 			var filepaths = dg.Filepaths.ToList();
 			if (filepaths.Count == 0) return;
 			if (filepaths.Count == 1)
@@ -557,7 +565,7 @@ namespace RyLogViewer
 		{
 			var dg = new NetworkConnectionUI(m_settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			
+
 			if (dg.Conn.ProtocolType == ProtocolType.Tcp)
 				LogTcpNetConnection(dg.Conn);
 			else if (dg.Conn.ProtocolType == ProtocolType.Udp)
@@ -915,24 +923,24 @@ namespace RyLogViewer
 				}
 			}
 		}
-		
+
 		/// <summary>Handle file drop</summary>
 		private void FileDrop(DragEventArgs args, bool test_can_drop)
 		{
 			args.Effect = DragDropEffects.None;
-			
+
 			// File drop only
 			if (!args.Data.GetDataPresent(DataFormats.FileDrop))
 				return;
-			
+
 			// Single file drop only
 			string[] files = (string[])args.Data.GetData(DataFormats.FileDrop);
 			if (files.Length != 1)
 				return;
-			
+
 			args.Effect = DragDropEffects.All;
 			if (test_can_drop) return;
-			
+
 			// Open the dropped file
 			OpenSingleLogFile(files[0], true);
 		}
@@ -942,7 +950,7 @@ namespace RyLogViewer
 		{
 			var has_selection = SelectedRowIndex != -1;
 			var ofs = has_selection ? SelectedRowByteRange.Begin : -1;
-			
+
 			m_settings.QuickFilterEnabled = enable;
 			ApplySettings();
 			BuildLineIndex(m_filepos, true, ()=>
@@ -1061,7 +1069,7 @@ namespace RyLogViewer
 			}
 			else
 			{
-				MessageBox.Show(this, string.Format(
+				MsgBox.Show(this, string.Format(
 					"Clearing file {0} failed.\r\n" +
 					"Reason: {1}\r\n" +
 					"\r\n" +
@@ -1122,7 +1130,6 @@ namespace RyLogViewer
 					style = Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false);
 					Win32.SetWindowLong(Handle, Win32.GWL_EXSTYLE, style);
 				}
-
 			}
 		}
 
@@ -1162,7 +1169,7 @@ namespace RyLogViewer
 		{
 			string enc_name = encoding == null ? string.Empty : encoding.EncodingName;
 			if (enc_name == m_settings.Encoding) return; // not changed.
-			
+
 			// If a specific encoding is given, use it.
 			// Otherwise leave it as whatever it is now, but reloading
 			// the file will cause it to be auto detected.
@@ -1173,7 +1180,7 @@ namespace RyLogViewer
 			ApplySettings();
 			BuildLineIndex(m_filepos, true);
 		}
-		
+
 		/// <summary>Set the line ending to use with loaded files</summary>
 		private void SetLineEnding(ELineEnding ending)
 		{
@@ -1202,7 +1209,7 @@ namespace RyLogViewer
 			m_settings.AlwaysOnTop = onatop;
 			TopMost = onatop;
 		}
-		
+
 		/// <summary>Display the options dialog</summary>
 		private void ShowOptions(SettingsUI.ETab tab, SettingsUI.ESpecial special = SettingsUI.ESpecial.None)
 		{
@@ -1213,7 +1220,7 @@ namespace RyLogViewer
 				row_text = test_text = ReadLine(init_row).RowText.Trim();
 
 			// Show the settings dialog, then reload the settings
-			using (EventsSnapshot.Capture(m_settings)) // Prevent 'm_settings' holding references to 'ui'
+			//using (EventsSnapshot.Capture(m_settings, EventsSnapshot.Restore.AssertNoChange)) // Prevent 'm_settings' holding references to 'ui'
 			using (var ui = new SettingsUI(this, m_settings, tab, special))
 			{
 				switch (tab)
@@ -1241,14 +1248,14 @@ namespace RyLogViewer
 				}
 				ui.ShowDialog(this);
 				ApplySettings();
-			
+
 				// Show hints if patterns where added but there will be no visible
 				// change on the main view because that behaviour is disabled
 				if      (ui.HighlightsChanged && !m_settings.HighlightsEnabled) ShowHintBalloon("Highlights are currently disabled", m_btn_highlights);
 				else if (ui.FiltersChanged    && !m_settings.FiltersEnabled   ) ShowHintBalloon("Filters are currently disabled"   , m_btn_filters);
 				else if (ui.TransformsChanged && !m_settings.TransformsEnabled) ShowHintBalloon("Transforms are currently disabled", m_btn_transforms);
 				else if (ui.ActionsChanged    && !m_settings.ActionsEnabled   ) ShowHintBalloon("Actions are currently disabled"   , m_btn_actions);
-			
+
 				if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
 				{
 					BuildLineIndex(m_filepos, true);
@@ -1264,16 +1271,15 @@ namespace RyLogViewer
 		/// <summary>Launch a web browser in order to view the html documentation</summary>
 		private void ShowHelp()
 		{
-			const string HelpStartPage = @"docs\welcome.htm";
+			const string HelpStartPage = @"docs\welcome.html";
 			try
 			{
-				var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
-				var start_page = Path.Combine(dir, HelpStartPage);
-				Process.Start(start_page);
+				var path = Misc.ResolveAppFile(HelpStartPage);
+				Process.Start(path);
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this,
+				MsgBox.Show(this,
 					"Unable to display the help documentation do to an error.\r\n" +
 					"Error Message: {0}\r\n".Fmt(ex.Message) +
 					"\r\n" +
@@ -1282,11 +1288,36 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Show the first run tutorial</summary>
+		private void ShowFirstRunTutorial(bool prompt_first)
+		{
+			// Ask first
+			if (prompt_first)
+			{
+				const string msg =
+					"This appears to be the first time you've run RyLogViewer.\r\n" +
+					"Would you like a quick tour?";
+				if (MsgBox.Show(this, msg, "First Run", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+					return;
+			}
+
+			try
+			{
+				using (var first_run_tutorial = new FirstRunTutorial(this, m_settings))
+					first_run_tutorial.ShowDialog(this);
+			}
+			catch (Exception ex)
+			{
+				Log.Exception(this, ex, "First run tutorial failed");
+				Misc.ShowErrorMessage(this, ex, "An error occurred when trying to display the first run tutorial", "First Run Tutorial Failed");
+			}
+		}
+
 		/// <summary>Show the TotD dialog</summary>
 		private void ShowTotD()
 		{
-			using (EventsSnapshot.Capture(m_settings))
-			using (var totd = new TipOfTheDay(m_settings))
+			//using (EventsSnapshot.Capture(m_settings, EventsSnapshot.Restore.AssertNoChange))
+			using (var totd = new TipOfTheDay(this, m_settings))
 				totd.ShowDialog(this);
 		}
 
@@ -1363,18 +1394,18 @@ namespace RyLogViewer
 				catch (Exception)
 				{
 					SetTransientStatusMessage("Version Information Unavailable");
-					if (show_dialog) MessageBox.Show(this, "The server was contacted but version information was not available", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					if (show_dialog) MsgBox.Show(this, "The server was contacted but version information was not available", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
 					return;
 				}
 				if (this_version.CompareTo(othr_version) >  0)
 				{
 					SetTransientStatusMessage("Development version running");
-					if (show_dialog) MessageBox.Show(this, "This version is newer than the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					if (show_dialog) MsgBox.Show(this, "This version is newer than the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
 				}
 				else if (this_version.CompareTo(othr_version) == 0)
 				{
 					SetTransientStatusMessage("Latest version running");
-					if (show_dialog) MessageBox.Show(this, "This is the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					if (show_dialog) MsgBox.Show(this, "This is the latest version", "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
 				}
 				else
 				{
@@ -1581,7 +1612,6 @@ namespace RyLogViewer
 						// changing the 'CurrentCell' also changes the scroll position
 						if (first_vis != -1)
 							m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
-						
 					}
 				}
 			}
@@ -1597,13 +1627,13 @@ namespace RyLogViewer
 		private void SetGridColumnSizesImpl()
 		{
 			int grid_width = m_grid.DisplayRectangle.Width - 2;
-			
+
 			// Measure each column's preferred width
 			int[] col_widths = new int[m_grid.ColumnCount];
 			int total_width = 0;
 			foreach (DataGridViewColumn col in m_grid.Columns)
 				total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
-			
+
 			// Resize columns. If the total width is less than the control width use the control width instead
 			float scale = Maths.Max((float)grid_width / total_width, 1f);
 			foreach (DataGridViewColumn col in m_grid.Columns)
@@ -1772,13 +1802,13 @@ namespace RyLogViewer
 				m_btn_tail.Checked         = m_settings.TailEnabled;
 				m_btn_watch.Checked        = m_settings.WatchEnabled;
 				m_btn_additive.Checked     = m_settings.FileChangesAdditive;
-			
+
 				// Status and title
 				UpdateStatus();
 			}
 		}
 		private bool m_in_update_ui;
-		
+
 		/// <summary>Update the status bar</summary>
 		private void UpdateStatus()
 		{
@@ -1795,7 +1825,7 @@ namespace RyLogViewer
 			{
 				Text = "{0} - {1}".Fmt(m_settings.FullPathInTitle ? m_file.PsuedoFilepath : m_file.Name, Resources.AppTitle);
 				m_status_spring.Text = "";
-				
+
 				// Add comma's to a large number
 				Func<StringBuilder,StringBuilder> pretty = sb=>
 					{
@@ -1809,7 +1839,7 @@ namespace RyLogViewer
 				long p = (r != -1) ? m_line_index[r].Begin : 0;
 				StringBuilder pos = pretty(new StringBuilder(p.ToString(CultureInfo.InvariantCulture)));
 				StringBuilder len = pretty(new StringBuilder(FileByteRange.End.ToString(CultureInfo.InvariantCulture)));
-				
+
 				m_status_filesize.Text = string.Format(Resources.PositionXofYBytes, pos, len);
 				m_status_filesize.Visible = true;
 				m_status_line_end.Text = string.Format(Resources.LineEndingX, m_row_delim == null ? "unknown" : Misc.Humanise(m_encoding.GetString(m_row_delim)));
@@ -1817,10 +1847,10 @@ namespace RyLogViewer
 				m_status_encoding.Text = string.Format(Resources.EncodingX, m_encoding.EncodingName);
 				m_status_encoding.Visible = true;
 			}
-			
+
 			UpdateFileScroll();
 		}
-		
+
 		/// <summary>Update the status bar progress bar</summary>
 		private void UpdateStatusProgress(long current, long total)
 		{
@@ -1939,11 +1969,11 @@ namespace RyLogViewer
 				ToolStripButton btn = e.Item as ToolStripButton;
 				if (btn == null || !btn.Checked) { base.OnRenderButtonBackground(e); return; }
 				Rectangle r = Rectangle.Inflate(e.Item.ContentRectangle, 2, 2);
-				
+
 				VisualStyleRenderer style = btn.Selected
 					? new VisualStyleRenderer(VisualStyleElement.Button.PushButton.Hot)
 					: new VisualStyleRenderer(VisualStyleElement.Button.PushButton.Pressed);
-				
+
 				style.DrawBackground(e.Graphics, r);
 				style.DrawEdge(e.Graphics, r, Edges.Left|Edges.Top|Edges.Right|Edges.Bottom ,EdgeStyle.Etched, EdgeEffects.Mono);
 			}

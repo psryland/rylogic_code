@@ -402,7 +402,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, "Adb returned an error.\r\n{0}".Fmt(ex.InnerException.MessageFull()), "Adb Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, "Adb returned an error.\r\n{0}".Fmt(ex.InnerException.MessageFull()), "Adb Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				return string.Empty;
 			}
 		}
@@ -493,7 +493,7 @@ namespace RyLogViewer
 				: Adb("usb");
 
 			if (!string.IsNullOrWhiteSpace(result))
-				MessageBox.Show(this, result, "Adb Connect Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				MsgBox.Show(this, result, "Adb Connect Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
 			this.BeginInvoke(PopulateUsingAdb);
 		}

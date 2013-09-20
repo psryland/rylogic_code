@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gui;
 using pr.util;
 using RyLogViewer.Properties;
 
@@ -135,7 +136,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, string.Format(Resources.CreatePatternSetFailedMsg, ex.Message), Resources.CreatePatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, string.Format(Resources.CreatePatternSetFailedMsg, ex.Message), Resources.CreatePatternSetFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
