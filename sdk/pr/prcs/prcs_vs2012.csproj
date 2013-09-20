@@ -184,6 +184,7 @@
     <Compile Include="common\path_ex.cs" />
     <Compile Include="extn\pointf_extensions.cs" />
     <Compile Include="extn\random_extensions.cs" />
+    <Compile Include="extn\size_extensions.cs" />
     <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
@@ -201,6 +202,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="gui\list_form.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="gui\message_box.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="gui\overlay.cs">
@@ -359,6 +363,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="gui\list_form.resx">
       <DependentUpon>list_form.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="gui\message_box.resx">
+      <DependentUpon>message_box.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="gui\prompt_form.resx">
       <DependentUpon>prompt_form.cs</DependentUpon>
