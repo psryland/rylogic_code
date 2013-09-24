@@ -399,7 +399,7 @@ namespace RyLogViewer
 			m_lbl_selection_example.ToolTip(m_tt, "Set the selection foreground and back colours in the log view\r\nClick here to modify the colours");
 			m_lbl_selection_example.MouseClick += (s,a)=>
 				{
-					var dlg = new ColourPickerUI {FontColor = m_settings.LineSelectForeColour, BkgdColor = m_settings.LineSelectBackColour};
+					var dlg = new ColourPickerUI(m_settings.LineSelectForeColour, m_settings.LineSelectBackColour);
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					m_settings.LineSelectForeColour = dlg.FontColor;
 					m_settings.LineSelectBackColour = dlg.BkgdColor;
@@ -410,7 +410,7 @@ namespace RyLogViewer
 			m_lbl_line1_example.ToolTip(m_tt, "Set the foreground and background colours in the log view\r\nClick here to modify the colours");
 			m_lbl_line1_example.MouseClick += (s,a)=>
 				{
-					var dlg = new ColourPickerUI {FontColor = m_settings.LineForeColour1, BkgdColor = m_settings.LineBackColour1};
+					var dlg = new ColourPickerUI(m_settings.LineForeColour1, m_settings.LineBackColour1);
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					m_settings.LineForeColour1 = dlg.FontColor;
 					m_settings.LineBackColour1 = dlg.BkgdColor;
@@ -421,7 +421,7 @@ namespace RyLogViewer
 			m_lbl_line2_example.ToolTip(m_tt, "Set the foreground and background colours for odd numbered rows in the log view\r\nClick here to modify the colours");
 			m_lbl_line2_example.MouseClick += (s,a)=>
 				{
-					var dlg = new ColourPickerUI {FontColor = m_settings.LineForeColour2, BkgdColor = m_settings.LineBackColour2};
+					var dlg = new ColourPickerUI(m_settings.LineForeColour2, m_settings.LineBackColour2);
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					m_settings.LineForeColour2 = dlg.FontColor;
 					m_settings.LineBackColour2 = dlg.BkgdColor;
@@ -919,7 +919,7 @@ namespace RyLogViewer
 			case ColumnNames.Highlighting:
 				if (hl != null)
 				{
-					var dlg = new ColourPickerUI {FontColor = hl.ForeColour, BkgdColor = hl.BackColour};
+					var dlg = new ColourPickerUI(hl.ForeColour, hl.BackColour);
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					hl.ForeColour = dlg.FontColor;
 					hl.BackColour = dlg.BkgdColor;
@@ -935,9 +935,11 @@ namespace RyLogViewer
 			case ColumnNames.ClickAction:
 				if (ac != null)
 				{
-					var dg = new ClkActionUI(ac);
+					var dg = new ClkActionUI(new ClkAction(ac));
 					if (dg.ShowDialog(this) != DialogResult.OK) break;
-					patterns[e.RowIndex] = dg.Action as T;
+					ac.Executable       = dg.Action.Executable;
+					ac.Arguments        = dg.Action.Arguments;
+					ac.WorkingDirectory = dg.Action.WorkingDirectory;
 				}
 				break;
 			}
