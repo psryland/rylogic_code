@@ -754,7 +754,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Resetting settings to defaults");
-				Misc.ShowErrorMessage(this, ex, "Failed to reset settings to their default values.", "Reset Settings Failed");
+				Misc.ShowErrorMessage(this, ex, "Failed to reset settings to their default values.", "Reset Settings Failed", MessageBoxIcon.Error);
 			}
 		}
 

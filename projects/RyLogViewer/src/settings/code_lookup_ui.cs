@@ -20,31 +20,31 @@ namespace RyLogViewer
 			public Pair() {}
 			public Pair(string key, string value) { Key = key; Value = value; }
 		}
-		
+
 		private readonly BindingSource m_src;
 		private readonly ToolTip       m_tt;
-		
+
 		/// <summary>The code lookup table</summary>
 		public List<Pair> Values { get; private set; }
-		
+
 		public CodeLookupUI(Dictionary<string, string> values)
 		{
 			InitializeComponent();
 			Values = values.Select(x => new Pair(x.Key, x.Value)).ToList();
 			m_src  = new BindingSource{DataSource = Values, AllowNew = true, Sort = "Key"};
 			m_tt   = new ToolTip();
-			
+
 			// Lookup table
 			m_grid.AutoGenerateColumns = false;
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn {Name = "Code"  ,HeaderText = "Code"  ,DataPropertyName = "Key"   ,FillWeight = 1});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn {Name = "Value" ,HeaderText = "Value" ,DataPropertyName = "Value" ,FillWeight = 2});
 			m_grid.DataError += (s,a) => a.Cancel = true;
 			m_grid.DataSource = m_src;
-			
+
 			// Export
 			m_btn_export.ToolTip(m_tt, "Export the code/value list to file");
 			m_btn_export.Click += (s,a) => ExportCodeLookupList();
-			
+
 			// Import
 			m_btn_import.ToolTip(m_tt, "Import code/value pairs from file");
 			m_btn_import.Click += (s,a) => ImportCodeLookupList();
@@ -54,19 +54,19 @@ namespace RyLogViewer
 					m_tt.Dispose();
 				};
 		}
-		
+
 		/// <summary>Export the current code lookup list to a file</summary>
 		private void ExportCodeLookupList()
 		{
 			// Prompt for the file to save
 			var dg = new SaveFileDialog {Title = "Export code lookup list", Filter = Resources.XmlOrCsvFileFilter};
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			
+
 			try
 			{
 				string extn = Path.GetExtension(dg.FileName);
 				extn = extn != null ? extn.Trim(new[]{'.'}) : "";
-				
+
 				// If a csv file is being saved, write out csv
 				if (string.CompareOrdinal(extn, "csv") == 0)
 				{
@@ -99,7 +99,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, "Export failed.", "Export Failed");
+				Misc.ShowErrorMessage(this, ex, "Export failed.", "Export Failed", MessageBoxIcon.Error);
 			}
 		}
 
@@ -112,20 +112,20 @@ namespace RyLogViewer
 				var res = MsgBox.Show(this, "Replace the current list with code/value pairs loaded from file?", "Confirm Replace Codes", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
 				if (res != DialogResult.OK) return;
 			}
-			
+
 			// Prompt for the file to load
 			var dg = new OpenFileDialog {Title = "Import code lookup list", Filter = Resources.XmlOrCsvFileFilter};
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			
+
 			try
 			{
 				string extn = Path.GetExtension(dg.FileName);
 				extn = extn != null ? extn.Trim(new[]{'.'}) : "";
-				
+
 				// Load into a temp list
 				var values = new List<Pair>();
 				bool partial_import = false;
-					
+
 				// Load from csv
 				if (string.CompareOrdinal(extn, "csv") == 0)
 				{
@@ -154,14 +154,14 @@ namespace RyLogViewer
 							partial_import = true;
 					}
 				}
-				
+
 				// If errors where found during the import, ask the user if they still want to continue
 				if (partial_import)
 				{
 					var res = MsgBox.Show(this, "Some imported data was ignored because it was invalid.\r\nContinue with import?", "Partial Import", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
 					if (res != DialogResult.OK) return;
 				}
-				
+
 				// If successful, replace the existing list
 				Values.Clear();
 				Values.AddRange(values);
@@ -169,11 +169,10 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, "Import failed.", "Import Failed");
+				Misc.ShowErrorMessage(this, ex, "Import failed.", "Import Failed", MessageBoxIcon.Error);
 			}
 		}
-		
-		
+
 		#region Windows Form Designer generated code
 
 		/// <summary>
@@ -207,9 +206,9 @@ namespace RyLogViewer
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
-			// 
+			//
 			// m_btn_ok
-			// 
+			//
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_ok.Location = new System.Drawing.Point(257, 167);
@@ -218,12 +217,12 @@ namespace RyLogViewer
 			this.m_btn_ok.TabIndex = 22;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_grid
-			// 
+			//
 			this.m_grid.AllowUserToResizeRows = false;
-			this.m_grid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+			this.m_grid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -234,9 +233,9 @@ namespace RyLogViewer
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid.Size = new System.Drawing.Size(335, 153);
 			this.m_grid.TabIndex = 24;
-			// 
+			//
 			// m_btn_import
-			// 
+			//
 			this.m_btn_import.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_btn_import.Location = new System.Drawing.Point(93, 167);
 			this.m_btn_import.Name = "m_btn_import";
@@ -244,9 +243,9 @@ namespace RyLogViewer
 			this.m_btn_import.TabIndex = 25;
 			this.m_btn_import.Text = "&Import";
 			this.m_btn_import.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_btn_export
-			// 
+			//
 			this.m_btn_export.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_btn_export.Location = new System.Drawing.Point(12, 167);
 			this.m_btn_export.Name = "m_btn_export";
@@ -254,9 +253,9 @@ namespace RyLogViewer
 			this.m_btn_export.TabIndex = 26;
 			this.m_btn_export.Text = "&Export";
 			this.m_btn_export.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_btn_cancel
-			// 
+			//
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.m_btn_cancel.Location = new System.Drawing.Point(176, 167);
@@ -265,9 +264,9 @@ namespace RyLogViewer
 			this.m_btn_cancel.TabIndex = 29;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
-			// 
+			//
 			// CodeLookupUI
-			// 
+			//
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -287,7 +286,6 @@ namespace RyLogViewer
 			this.Text = "Configure Code Lookup";
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.ResumeLayout(false);
-
 		}
 
 		#endregion

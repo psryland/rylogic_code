@@ -51,22 +51,22 @@ namespace RyLogViewer
 			// If there's nothing in the grid, don't do a find
 			if (m_grid.RowCount == 0)
 				return false;
-			
+
 			// Check if m_find_ui has a valid find pattern
 			if (m_find_ui.Pattern.Expr.Length == 0 || !m_find_ui.Pattern.IsValid)
 				return false;
-			
+
 			var pattern = new Pattern(m_find_ui.Pattern);
-			
+
 			// Remove any patterns with the same expr as 'pattern'
 			m_find_history.RemoveIf<Pattern>(x => string.CompareOrdinal(x.Expr, pattern.Expr) == 0);
 			m_find_history.Insert(0, pattern);
 			m_find_history.Position = 0;
-			
+
 			// Cap the length of the find history
 			while (m_find_history.Count > Constants.MaxFindHistory)
 				m_find_history.RemoveAt(m_find_history.Count - 1);
-			
+
 			// Continue with the find
 			return true;
 		}
@@ -140,11 +140,11 @@ namespace RyLogViewer
 						this.BeginInvoke(() => SelectRowByAddr(at));
 					}
 				}){StartPosition = FormStartPosition.CenterParent};
-			
+
 			DialogResult res = DialogResult.Cancel;
 			try { res = search.ShowDialog(this, 500); }
 			catch (OperationCanceledException) {}
-			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Find terminated by an error.", "Find error"); }
+			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Find terminated by an error.", "Find error", MessageBoxIcon.Error); }
 			found = at;
 			return res == DialogResult.OK;
 		}
@@ -162,17 +162,17 @@ namespace RyLogViewer
 						// Ignore blanks?
 						if (line.Empty && d.ignore_blanks)
 							return true;
-						
+
 						// Keep searching while the text is filtered out or doesn't match the pattern
 						string text = d.encoding.GetString(buf, (int)line.Begin, (int)line.Count);
 						if (!PassesFilters(text, d.filters) || !pat.IsMatch(text))
 							return true;
-						
+
 						// Found a match
 						at = baddr + line.Begin;
 						return false; // Stop searching
 					};
-				
+
 				// Search for files
 				var line_buf = new byte[d.max_line_length];
 				long count = backward ? start - 0 : d.fileend - start;

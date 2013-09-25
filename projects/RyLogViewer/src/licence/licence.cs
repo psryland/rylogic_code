@@ -249,7 +249,8 @@ namespace RyLogViewer
 				Misc.ShowErrorMessage(this, ex,
 					"An error occurred while creating the licence file.\r\n" +
 					"Please contact "+Constants.SupportEmail+" with details of this error."
-					,"Activation Error");
+					,"Activation Error"
+					,MessageBoxIcon.Error);
 			}
 		}
 

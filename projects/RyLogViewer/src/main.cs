@@ -302,7 +302,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					Misc.ShowErrorMessage(this, ex, string.Format("Could not load highlight pattern set {0}.", su.HighlightSetPath), Resources.LoadPatternSetFailed);
+					Misc.ShowErrorMessage(this, ex, string.Format("Could not load highlight pattern set {0}.", su.HighlightSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error);
 				}
 			}
 			if (su.FilterSetPath != null)
@@ -316,7 +316,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					Misc.ShowErrorMessage(this, ex, string.Format("Could not load filter pattern set {0}.", su.FilterSetPath), Resources.LoadPatternSetFailed);
+					Misc.ShowErrorMessage(this, ex, string.Format("Could not load filter pattern set {0}.", su.FilterSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error);
 				}
 			}
 			if (su.TransformSetPath != null)
@@ -330,7 +330,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					Misc.ShowErrorMessage(this, ex, string.Format("Could not load transform pattern set {0}.", su.TransformSetPath), Resources.LoadPatternSetFailed);
+					Misc.ShowErrorMessage(this, ex, string.Format("Could not load transform pattern set {0}.", su.TransformSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error);
 				}
 			}
 		}
@@ -497,7 +497,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, "Failed to open file {0} due to an error.".Fmt(filepath), Resources.FailedToLoadFile);
+				Misc.ShowErrorMessage(this, ex, "Failed to open file {0} due to an error.".Fmt(filepath), Resources.FailedToLoadFile, MessageBoxIcon.Error);
 				CloseLogFile();
 			}
 		}
@@ -516,7 +516,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, "Failed to open aggregate log files due to an error.", Resources.FailedToLoadFile);
+				Misc.ShowErrorMessage(this, ex, "Failed to open aggregate log files due to an error.", Resources.FailedToLoadFile, MessageBoxIcon.Error);
 				CloseLogFile();
 			}
 		}
@@ -1309,7 +1309,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "First run tutorial failed");
-				Misc.ShowErrorMessage(this, ex, "An error occurred when trying to display the first run tutorial", "First Run Tutorial Failed");
+				Misc.ShowErrorMessage(this, ex, "An error occurred when trying to display the first run tutorial", "First Run Tutorial Failed", MessageBoxIcon.Error);
 			}
 		}
 
@@ -1381,7 +1381,7 @@ namespace RyLogViewer
 			if (error != null)
 			{
 				SetTransientStatusMessage("Check for updates error", Color.Red, SystemColors.Control);
-				if (show_dialog) Misc.ShowErrorMessage(this, error, "Check for updates failed", "Check for Updates");
+				if (show_dialog) Misc.ShowErrorMessage(this, error, "Check for updates failed", "Check for Updates", MessageBoxIcon.Error);
 			}
 			else
 			{

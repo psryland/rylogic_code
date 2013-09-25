@@ -154,7 +154,7 @@ namespace RyLogViewer
 			DialogResult res = DialogResult.Cancel;
 			try { res = export.ShowDialog(this); }
 			catch (OperationCanceledException) { }
-			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Exporting terminated due to an error.", "Export error"); }
+			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Exporting terminated due to an error.", "Export error", MessageBoxIcon.Error); }
 			return res == DialogResult.OK;
 		}
 

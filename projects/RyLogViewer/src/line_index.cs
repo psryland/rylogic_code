@@ -194,7 +194,7 @@ namespace RyLogViewer
 
 			/// <summary>Row transforms</summary>
 			public readonly List<Transform> transforms;
- 
+
 			/// <summary>The progress callback to use (note: called in worker thread context)</summary>
 			public ProgressFunc progress;
 
@@ -232,7 +232,7 @@ namespace RyLogViewer
 				{
 					filters.Add(Filter.RejectAll); // Add a RejectAll so that non-highlighted means discard
 				}
-				
+
 				// Get a copy of the transforms
 				transforms = main.m_transforms.ToList();
 
@@ -391,7 +391,7 @@ namespace RyLogViewer
 						// Scanning backward adds lines to the line index in reverse order,
 						// we need to flip the buffer over the range that was added.
 						bwd_line_buf.Reverse();
-						
+
 						line_index.Capacity = bwd_line_buf.Count + fwd_line_buf.Count;
 						line_index.AddRange(bwd_line_buf);
 						line_index.AddRange(fwd_line_buf);
@@ -450,7 +450,7 @@ namespace RyLogViewer
 				// On completion, check if the file has changed again and rerun if it has
 				m_watch.CheckForChangedFiles();
 
-				// Trigger a collect to free up memory, this also has the 
+				// Trigger a collect to free up memory, this also has the
 				// side effect of triggering a signing test of the exe because
 				// that test is done in a destructor
 				GC.Collect();
@@ -467,7 +467,7 @@ namespace RyLogViewer
 				m_btn_watch.ShowHintBalloon(m_balloon, "File watching disabled due to error. ");
 			}
 			Log.Exception(this, err, "Failed to build index list for {0}".Fmt(m_file.Name));
-			Misc.ShowErrorMessage(this, err, "Scanning the log file ended with an error.", "Scanning file terminated");
+			Misc.ShowErrorMessage(this, err, "Scanning the log file ended with an error.", "Scanning file terminated", MessageBoxIcon.Error);
 		}
 
 		/// <summary>Determine the data range to load to incrementally adjust the line cache</summary>
@@ -548,7 +548,7 @@ namespace RyLogViewer
 			count = Math.Min(count, backward ? file.Stream.Position : fileend - file.Stream.Position);
 			if (count == 0) return 0;
 			Debug.Assert(count > 0);
-			
+
 			// Set the file position to the location to read from
 			if (backward) file.Stream.Seek(-count, SeekOrigin.Current);
 			pos = file.Stream.Position;
@@ -769,7 +769,7 @@ namespace RyLogViewer
 			// Replace the cached line index with 'line_index'
 			if (replace || scan_range.Contains(old_rng))
 			{
-				// Use any range overlap to work out the row delta. 
+				// Use any range overlap to work out the row delta.
 				Range intersect = old_rng.Intersect(new_rng);
 
 				// If the ranges overlap, we can search for the begin address of the intersect in both ranges to
