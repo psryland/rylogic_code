@@ -1,8 +1,8 @@
 ﻿//#define SQLITE_TRACE
+//#define WP8_SQLITE
 #if !MONOTOUCH
 #define COMPILED_LAMBDAS
 #endif
-//#define WP8_SQLITE
 
 using System;
 using System.Collections;
@@ -15,11 +15,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-
-#if WP8_SQLITE
-//using Sqlite.Sqlite3;
-#else
-#endif
 
 // Usage:
 // - Your domain objects must be classes with a default constructor.
@@ -101,59 +96,59 @@ namespace pr.common
 			IOError    = 10,  // Some kind of disk I/O error occurred
 			Corrupt    = 11,  // The database disk image is malformed
 			NotFound   = 12,  // Unknown opcode in sqlite3_file_control()
-			Full       = 13,  // Insertion failed because database is full 
-			CantOpen   = 14,  // Unable to open the database file 
-			Protocol   = 15,  // Database lock protocol error 
-			Empty      = 16,  // Database is empty 
-			Schema     = 17,  // The database schema changed 
+			Full       = 13,  // Insertion failed because database is full
+			CantOpen   = 14,  // Unable to open the database file
+			Protocol   = 15,  // Database lock protocol error
+			Empty      = 16,  // Database is empty
+			Schema     = 17,  // The database schema changed
 			TooBig     = 18,  // String or BLOB exceeds size limit
 			Constraint = 19,  // Abort due to constraint violation
-			Mismatch   = 20,  // Data type mismatch 
-			Misuse     = 21,  // Library used incorrectly 
-			NoLfs      = 22,  // Uses OS features not supported on host 
-			Auth       = 23,  // Authorization denied 
-			Format     = 24,  // Auxiliary database format error 
-			Range      = 25,  // 2nd parameter to sqlite3_bind out of range 
-			NotADB     = 26,  // File opened that is not a database file 
+			Mismatch   = 20,  // Data type mismatch
+			Misuse     = 21,  // Library used incorrectly
+			NoLfs      = 22,  // Uses OS features not supported on host
+			Auth       = 23,  // Authorization denied
+			Format     = 24,  // Auxiliary database format error
+			Range      = 25,  // 2nd parameter to sqlite3_bind out of range
+			NotADB     = 26,  // File opened that is not a database file
 			Row        = 100, // sqlite3_step() has another row ready
 			Done       = 101  // sqlite3_step() has finished executing
 		}
 
 		public enum AuthorizerActionCode
 		{                               //   3rd             4th parameter
-			CREATE_INDEX        =  1,   // Index Name      Table Name      
-			CREATE_TABLE        =  2,   // Table Name      NULL            
-			CREATE_TEMP_INDEX   =  3,   // Index Name      Table Name      
-			CREATE_TEMP_TABLE   =  4,   // Table Name      NULL            
-			CREATE_TEMP_TRIGGER =  5,   // Trigger Name    Table Name      
-			CREATE_TEMP_VIEW    =  6,   // View Name       NULL            
-			CREATE_TRIGGER      =  7,   // Trigger Name    Table Name      
-			CREATE_VIEW         =  8,   // View Name       NULL            
-			DELETE              =  9,   // Table Name      NULL            
-			DROP_INDEX          = 10,   // Index Name      Table Name      
-			DROP_TABLE          = 11,   // Table Name      NULL            
-			DROP_TEMP_INDEX     = 12,   // Index Name      Table Name      
-			DROP_TEMP_TABLE     = 13,   // Table Name      NULL            
-			DROP_TEMP_TRIGGER   = 14,   // Trigger Name    Table Name      
-			DROP_TEMP_VIEW      = 15,   // View Name       NULL            
-			DROP_TRIGGER        = 16,   // Trigger Name    Table Name      
-			DROP_VIEW           = 17,   // View Name       NULL            
-			INSERT              = 18,   // Table Name      NULL            
-			PRAGMA              = 19,   // Pragma Name     1st arg or NULL 
-			READ                = 20,   // Table Name      Column Name     
-			SELECT              = 21,   // NULL            NULL            
-			TRANSACTION         = 22,   // Operation       NULL            
-			UPDATE              = 23,   // Table Name      Column Name     
-			ATTACH              = 24,   // Filename        NULL            
-			DETACH              = 25,   // Database Name   NULL            
-			ALTER_TABLE         = 26,   // Database Name   Table Name      
-			REINDEX             = 27,   // Index Name      NULL            
-			ANALYZE             = 28,   // Table Name      NULL            
-			CREATE_VTABLE       = 29,   // Table Name      Module Name     
-			DROP_VTABLE         = 30,   // Table Name      Module Name     
-			FUNCTION            = 31,   // NULL            Function Name   
-			SAVEPOINT           = 32,   // Operation       Savepoint Name  
-			COPY                =  0,   // No longer used                  
+			CREATE_INDEX        =  1,   // Index Name      Table Name
+			CREATE_TABLE        =  2,   // Table Name      NULL
+			CREATE_TEMP_INDEX   =  3,   // Index Name      Table Name
+			CREATE_TEMP_TABLE   =  4,   // Table Name      NULL
+			CREATE_TEMP_TRIGGER =  5,   // Trigger Name    Table Name
+			CREATE_TEMP_VIEW    =  6,   // View Name       NULL
+			CREATE_TRIGGER      =  7,   // Trigger Name    Table Name
+			CREATE_VIEW         =  8,   // View Name       NULL
+			DELETE              =  9,   // Table Name      NULL
+			DROP_INDEX          = 10,   // Index Name      Table Name
+			DROP_TABLE          = 11,   // Table Name      NULL
+			DROP_TEMP_INDEX     = 12,   // Index Name      Table Name
+			DROP_TEMP_TABLE     = 13,   // Table Name      NULL
+			DROP_TEMP_TRIGGER   = 14,   // Trigger Name    Table Name
+			DROP_TEMP_VIEW      = 15,   // View Name       NULL
+			DROP_TRIGGER        = 16,   // Trigger Name    Table Name
+			DROP_VIEW           = 17,   // View Name       NULL
+			INSERT              = 18,   // Table Name      NULL
+			PRAGMA              = 19,   // Pragma Name     1st arg or NULL
+			READ                = 20,   // Table Name      Column Name
+			SELECT              = 21,   // NULL            NULL
+			TRANSACTION         = 22,   // Operation       NULL
+			UPDATE              = 23,   // Table Name      Column Name
+			ATTACH              = 24,   // Filename        NULL
+			DETACH              = 25,   // Database Name   NULL
+			ALTER_TABLE         = 26,   // Database Name   Table Name
+			REINDEX             = 27,   // Index Name      NULL
+			ANALYZE             = 28,   // Table Name      NULL
+			CREATE_VTABLE       = 29,   // Table Name      Module Name
+			DROP_VTABLE         = 30,   // Table Name      Module Name
+			FUNCTION            = 31,   // NULL            Function Name
+			SAVEPOINT           = 32,   // Operation       Savepoint Name
+			COPY                =  0,   // No longer used
 		}
 
 		/// <summary>Flags passed to the sqlite3_open_v2 function</summary>
@@ -312,7 +307,7 @@ namespace pr.common
 		private static readonly StringBuilder m_sql_cached_sb = new StringBuilder();
 
 		/// <summary>
-		/// Returns the primary key values read from 'item'. 
+		/// Returns the primary key values read from 'item'.
 		/// The returned array can be pass to methods that take 'params object[]' arguments</summary>
 		public static object[] PrimaryKeys(object item)
 		{
@@ -1296,15 +1291,17 @@ namespace pr.common
 			///  http://www.sqlite.org/syntaxdiagrams.html#table-constraint <para/>
 			/// Notes: <para/>
 			///  auto increment must follow primary key without anything in between<para/></summary>
-			public void CreateTable<T>(OnCreateConstraint on_constraint = OnCreateConstraint.Reject) where T:new()
+			public Table<T> CreateTable<T>(OnCreateConstraint on_constraint = OnCreateConstraint.Reject) where T:new()
 			{
 				CreateTable(typeof(T), ()=>new T(), on_constraint);
+				return Table<T>();
 			}
-			public void CreateTable<T>(Func<object> factory, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
+			public Table<T> CreateTable<T>(Func<object> factory, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
 			{
 				CreateTable(typeof(T), factory, on_constraint);
+				return Table<T>();
 			}
-			public void CreateTable(Type type, Func<object> factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
+			public Table CreateTable(Type type, Func<object> factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
 			{
 				Trace.WriteLine(ETrace.Tables, string.Format("Create table for type {0}", type.Name));
 				var meta = Sqlite.TableMetaData.GetMetaData(type);
@@ -1317,6 +1314,7 @@ namespace pr.common
 					Execute(Sql(CreateTableString(type, on_constraint)));
 					RaiseDataChangedEvent(ChangeType.CreateTable, meta.Name, 0);
 				}
+				return Table(type);
 			}
 			
 			/// <summary>Alters an existing table to match the columns for 'type'</summary>
@@ -2565,7 +2563,7 @@ namespace pr.common
 			}
 
 			/// <summary>
-			/// Bind primary keys to this query starting at parameter index 
+			/// Bind primary keys to this query starting at parameter index
 			/// 'first_idx' (remember parameter indices start at 1)
 			/// This is functionally the same as BindParms but it validates
 			/// the types of the primary keys against the table meta data.</summary>
@@ -2576,7 +2574,7 @@ namespace pr.common
 			}
 
 			/// <summary>
-			/// Bind primary keys to this query starting at parameter index 
+			/// Bind primary keys to this query starting at parameter index
 			/// 'first_idx' (remember parameter indices start at 1)
 			/// This is functionally the same as BindParms but it validates
 			/// the types of the primary keys against the table meta data.</summary>
@@ -2587,7 +2585,7 @@ namespace pr.common
 			}
 
 			/// <summary>
-			/// Bind primary keys to this query starting at parameter index 
+			/// Bind primary keys to this query starting at parameter index
 			/// 'first_idx' (remember parameter indices start at 1)
 			/// This is functionally the same as BindParms but it validates
 			/// the types of the primary keys against the table meta data.</summary>
@@ -3443,7 +3441,7 @@ namespace pr.common
 			public int Order { get; set; }
 			
 			/// <summary>
-			/// The sqlite data type used to represent this column. 
+			/// The sqlite data type used to represent this column.
 			/// If set to DataType.Null, then the default mapping from .NET data type to sqlite type is used.
 			/// Default value is DataType.Null</summary>
 			public DataType SqlDataType { get; set; }
@@ -3572,94 +3570,125 @@ namespace pr.common
 		// ReSharper disable InconsistentNaming,UnusedMember.Local
 
 		#if WP8_SQLITE
-		public static class Wp8Binding
+		public class Wp8Binding
 		{
 			private class Wp8Sqlite3Handle :sqlite3
 			{
-				//private ::Sqlite.Database m_db;
+				public SqliteWp8.Database m_handle;
 
 				/// <summary>The result from closing this handle</summary>
 				public Result CloseResult { get; private set; }
 
 				/// <summary>True if the handle is invalid</summary>
-				public bool IsInvalid { get; private set; }
+				public bool IsInvalid { get { return !m_handle.IsValid; } }
 
 				/// <summary>True if the handle has been closed</summary>
-				public bool IsClosed { get; private set; }
+				public bool IsClosed { get { return !m_handle.IsValid; } }
 
 				/// <summary>Close the handle</summary>
-				public void Close() { throw new NotImplementedException(); }
+				public void Close()
+				{
+					Trace.WriteLine("Releasing sqlite3 handle");
+					CloseResult = (Result)SqliteWp8.Sqlite3.sqlite3_close(m_handle);
+				}
 			}
 
 			private class Wp8Sqlite3StmtHandle :sqlite3_stmt
 			{
-				//private ::Sqlite.Statement m_db;
+				public SqliteWp8.Statement m_handle;
 
 				/// <summary>The result from closing this handle</summary>
 				public Result CloseResult { get; private set; }
 
 				/// <summary>True if the handle is invalid</summary>
-				public bool IsInvalid { get; private set; }
+				public bool IsInvalid { get { return !m_handle.IsValid; } }
 
 				/// <summary>True if the handle has been closed</summary>
-				public bool IsClosed { get; private set; }
+				public bool IsClosed { get { return !m_handle.IsValid; } }
 
 				/// <summary>Close the handle</summary>
-				public void Close() { throw new NotImplementedException(); }
+				public void Close()
+				{
+					Trace.WriteLine("Releasing sqlite3_stmt handle");
+					CloseResult = (Result)SqliteWp8.Sqlite3.sqlite3_finalize(m_handle);
+				}
+			}
+
+			/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string into a .NET string</summary>
+			private static string UTF8toStr(IntPtr utf8ptr)
+			{
+				if (utf8ptr == IntPtr.Zero) return null;
+				var str = Marshal.PtrToStringAnsi(utf8ptr);
+				if (str == null) return null;
+				var bytes = new byte[str.Length];
+				Marshal.Copy(utf8ptr, bytes, 0, bytes.Length);
+				return Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+			}
+
+			/// <summary>Converts a C# string (in UTF-16) to a byte array in UTF-8</summary>
+			private static byte[] StrToUTF8(string str)
+			{
+				return Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(str));
 			}
 			
 			/// <summary>Set a configuration setting for the database</summary>
 			public static Result Config(ConfigOption option)
 			{
-				throw new NotImplementedException();
+				return (Result)SqliteWp8.Sqlite3.sqlite3_config((int)option);
 			}
 
 			/// <summary>Open a database file</summary>
 			public static sqlite3 Open(string filepath, OpenFlags flags)
 			{
-				throw new NotImplementedException();
+				var db = new Wp8Sqlite3Handle();
+				var res = (Result)SqliteWp8.Sqlite3.sqlite3_open_v2(filepath, out db.m_handle, (int)flags, String.Empty);
+				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
+				return db;
 			}
 
 			/// <summary>Set the busy wait timeout on the db</summary>
 			public static void BusyTimeout(sqlite3 db, int milliseconds)
 			{
-				throw new NotImplementedException();
+				SqliteWp8.Sqlite3.sqlite3_busy_timeout(((Wp8Sqlite3Handle)db).m_handle, milliseconds);
 			}
 
 			/// <summary>Creates a prepared statement from an sql string</summary>
 			public static sqlite3_stmt Prepare(sqlite3 db, string sql_string)
 			{
-				throw new NotImplementedException();
+				var stmt = new Wp8Sqlite3StmtHandle();
+				var res = (Result)SqliteWp8.Sqlite3.sqlite3_prepare_v2(((Wp8Sqlite3Handle)db).m_handle, sql_string, out stmt.m_handle);
+				if (res != Result.OK) throw Exception.New(res, string.Format("Error compiling sql string '{0}' "+Environment.NewLine+"Sqlite Error: {1}",sql_string, ErrorMsg(db)));
+				return stmt;
 			}
 
 			/// <summary>Returns the number of rows changed by the last operation</summary>
 			public static int Changes(sqlite3 db)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_changes(((Wp8Sqlite3Handle)db).m_handle);
 			}
 
 			/// <summary>Returns the RowId for the last inserted row</summary>
 			public static long LastInsertRowId(sqlite3 db)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_last_insert_rowid(((Wp8Sqlite3Handle)db).m_handle);
 			}
 
 			/// <summary>Returns the error message for the last error returned from sqlite</summary>
 			public static string ErrorMsg(sqlite3 db)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_errmsg(((Wp8Sqlite3Handle)db).m_handle);
 			}
 
 			/// <summary>Reset a prepared statement</summary>
 			public static void Reset(sqlite3_stmt stmt)
 			{
-				throw new NotImplementedException();
+				SqliteWp8.Sqlite3.sqlite3_reset(((Wp8Sqlite3StmtHandle)stmt).m_handle);
 			}
 
 			/// <summary>Step a prepared statement</summary>
 			public static Result Step(sqlite3_stmt stmt)
 			{
-				throw new NotImplementedException();
+				return (Result)SqliteWp8.Sqlite3.sqlite3_step(((Wp8Sqlite3StmtHandle)stmt).m_handle);
 			}
 
 			/// <summary>Returns the string used to create a prepared statement</summary>
@@ -3671,43 +3700,44 @@ namespace pr.common
 			/// <summary>Returns the name of the column with 0-based index 'index'</summary>
 			public static string ColumnName(sqlite3_stmt stmt, int index)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_column_name(((Wp8Sqlite3StmtHandle)stmt).m_handle, index);
 			}
 
 			/// <summary>Returns the number of columns in the result of a prepared statement</summary>
 			public static int ColumnCount(sqlite3_stmt stmt)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_column_count(((Wp8Sqlite3StmtHandle)stmt).m_handle);
 			}
 
 			/// <summary>Returns the internal data type for the column with 0-based index 'index'</summary>
 			public static DataType ColumnType(sqlite3_stmt stmt, int index)
 			{
-				throw new NotImplementedException();
+				return (DataType)SqliteWp8.Sqlite3.sqlite3_column_type(((Wp8Sqlite3StmtHandle)stmt).m_handle, index);
 			}
 
 			/// <summary>Returns the value from the column with 0-based index 'index' as an int</summary>
 			public static Int32 ColumnInt(sqlite3_stmt stmt, int index)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_column_int(((Wp8Sqlite3StmtHandle)stmt).m_handle, index);
 			}
 
 			/// <summary>Returns the value from the column with 0-based index 'index' as an int64</summary>
 			public static Int64 ColumnInt64(sqlite3_stmt stmt, int index)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_column_int64(((Wp8Sqlite3StmtHandle)stmt).m_handle, index);
 			}
 
 			/// <summary>Returns the value from the column with 0-based index 'index' as a double</summary>
 			public static Double ColumnDouble(sqlite3_stmt stmt, int index)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_column_double(((Wp8Sqlite3StmtHandle)stmt).m_handle, index);
 			}
 
 			/// <summary>Returns the value from the column with 0-based index 'index' as a string</summary>
 			public static String ColumnString(sqlite3_stmt stmt, int index)
 			{
-				throw new NotImplementedException();
+				var ptr = SqliteWp8.Sqlite3.sqlite3_column_text(((Wp8Sqlite3StmtHandle)stmt).m_handle, index);
+				return ptr;
 			}
 
 			/// <summary>Returns the value from the column with 0-based index 'index' as an IntPtr</summary>
@@ -3719,7 +3749,7 @@ namespace pr.common
 			/// <summary>Returns the size of the data in the column with 0-based index 'index'</summary>
 			public static int ColumnBytes(sqlite3_stmt stmt, int index)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_column_bytes(((Wp8Sqlite3StmtHandle)stmt).m_handle, index);
 			}
 
 			/// <summary>Return the number of parameters in a prepared statement</summary>
@@ -3731,7 +3761,7 @@ namespace pr.common
 			/// <summary>Return the index for the parameter named 'name'</summary>
 			public static int BindParameterIndex(sqlite3_stmt stmt, string name)
 			{
-				throw new NotImplementedException();
+				return SqliteWp8.Sqlite3.sqlite3_bind_parameter_index(((Wp8Sqlite3StmtHandle)stmt).m_handle, name);
 			}
 
 			/// <summary>Return the name of a parameter from its index</summary>
@@ -3743,44 +3773,54 @@ namespace pr.common
 			/// <summary>Bind null to 1-based parameter index 'index'</summary>
 			public static void BindNull(sqlite3_stmt stmt, int index)
 			{
-				throw new NotImplementedException();
+				SqliteWp8.Sqlite3.sqlite3_bind_null(((Wp8Sqlite3StmtHandle)stmt).m_handle, index);
 			}
 
 			/// <summary>Bind an integer value to 1-based parameter index 'index'</summary>
 			public static void BindInt(sqlite3_stmt stmt, int index, int val)
 			{
-				throw new NotImplementedException();
+				SqliteWp8.Sqlite3.sqlite3_bind_int(((Wp8Sqlite3StmtHandle)stmt).m_handle, index, val);
 			}
 
 			/// <summary>Bind an integer64 value to 1-based parameter index 'index'</summary>
 			public static void BindInt64(sqlite3_stmt stmt, int index, long val)
 			{
-				throw new NotImplementedException();
+				SqliteWp8.Sqlite3.sqlite3_bind_int64(((Wp8Sqlite3StmtHandle)stmt).m_handle, index, val);
 			}
 
 			/// <summary>Bind a double value to 1-based parameter index 'index'</summary>
 			public static void BindDouble(sqlite3_stmt stmt, int index, double val)
 			{
-				throw new NotImplementedException();
+				SqliteWp8.Sqlite3.sqlite3_bind_double(((Wp8Sqlite3StmtHandle)stmt).m_handle, index, val);
 			}
 
 			/// <summary>Bind a string to 1-based parameter index 'index'</summary>
 			public static void BindText(sqlite3_stmt stmt, int index, string val)
 			{
-				throw new NotImplementedException();
+				SqliteWp8.Sqlite3.sqlite3_bind_text(((Wp8Sqlite3StmtHandle)stmt).m_handle, index, val, -1);
 			}
 
 			/// <summary>Bind a byte array to 1-based parameter index 'index'</summary>
 			public static void BindBlob(sqlite3_stmt stmt, int index, byte[] val, int length)
 			{
-				throw new NotImplementedException();
+				var r = (Result)SqliteWp8.Sqlite3.sqlite3_bind_blob(((Wp8Sqlite3StmtHandle)stmt).m_handle, index, val, length);
+				if (r != Result.OK) throw Exception.New(r, "Bind blob failed");
 			}
 
 			/// <summary>Set the update hook callback function</summary>
 			public static void UpdateHook(sqlite3 db, UpdateHookCB cb, IntPtr ctx)
 			{
-				throw new NotImplementedException();
+				m_wp8_callback = (context, chg_type, db_name, table_name, row_id) => cb(context, chg_type, db_name, table_name, row_id);
+				try
+				{
+					SqliteWp8.Sqlite3.sqlite3_update_hook(((Wp8Sqlite3Handle)db).m_handle, m_wp8_callback, ctx);
+				}
+				catch (MarshalDirectiveException e)
+				{
+					Log.Exception(null, "Exception thrown when call sqlite3_update_hook", e);
+				}
 			}
+			private static SqliteWp8.UpdateHookCB m_wp8_callback;
 		}
 		#else
 		public class NativeBinding
@@ -3936,7 +3976,13 @@ namespace pr.common
 				NativeSqlite3StmtHandle stmt;
 				var buf_utf8 = StrToUTF8(sql_string);
 				var res = sqlite3_prepare_v2((NativeSqlite3Handle)db, buf_utf8, buf_utf8.Length, out stmt, IntPtr.Zero);
-				if (res != Result.OK) throw Exception.New(res, string.Format("Error compiling sql string '{0}' "+Environment.NewLine+"Sqlite Error: {1}",sql_string, ErrorMsg(db)));
+				if (res != Result.OK)
+				{
+					var err = ErrorMsg(db);
+					var msg = string.Format("Error compiling sql string '{0}' "+Environment.NewLine+"Sqlite Error: {1}" ,sql_string, err);
+					Log.Debug(null, msg);
+					throw Exception.New(res, msg);
+				}
 				return stmt;
 			}
 			[DllImport("sqlite3", EntryPoint = "sqlite3_prepare_v2", CallingConvention=CallingConvention.Cdecl)]
@@ -4243,7 +4289,25 @@ namespace pr.common
 		}
 		#endregion
 	}
+
+	#region SqliteLogger
+
+	/// <summary>Map the framework logger to the Sqlite.ILog</summary>
+	public class SqliteLogger :Sqlite.ILog
+	{
+		/// <summary>Log an exception with the specified sender, message and exception details.</summary>
+		void Sqlite.ILog.Exception(object sender, Exception e, string message) { Sqlite.Log.Exception(sender, e, message); }
+
+		/// <summary>Log an info message with the specified sender and formatted message</summary>
+		void Sqlite.ILog.Info(object sender, string message) { Sqlite.Log.Info(sender, message); }
+
+		/// <summary>Log a debug message with the specified sender and formatted message</summary>
+		void Sqlite.ILog.Debug(object sender, string message) { Sqlite.Log.Debug(sender, message); }
+	}
+
+	#endregion
 }
+
 // ReSharper restore AccessToStaticMemberViaDerivedType
 
 #if PR_UNITTESTS
