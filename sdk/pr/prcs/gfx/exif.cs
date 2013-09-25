@@ -367,33 +367,32 @@ namespace pr.gfx
 				{
 					int b0;
 					if ((b0 = src.ReadByte()) == -1) break; // end of file
-					if (b0 != JpgMarker.Start)
-					{
-						// Not a section start, must be the scan data
-						// Length of the scan data isn't defined, seek to the end
-						// and search backwards for the end of image (EOI) marker
-						long s = section_start, e = src.Length;
-						for (;e > s;)
-						{
-							src.Position = --e;
-							if (src.ReadByte() != JpgMarker.EOI) continue;
-							src.Position = --e;
-							if (src.ReadByte() != JpgMarker.Start) continue;
-							break;
-						}
-						index.Add(new JpgSection(JpgMarker.ScanData, s, e - s));
-						break; // Ignore anything after the EOI marker
-					}
-					else
+					if (b0 == JpgMarker.Start)
 					{
 						int b1;
 						if ((b1 = src.ReadByte()) == -1) break; // end of file
-						src.Read(buf,0,2);
+						src.Read(buf, 0, 2);
 						if (BitConverter.IsLittleEndian) Array.Reverse(buf);
-						var section_size = BitConverter.ToUInt16(buf,0) + 2; // +2 to include the section marker
+						var section_size = BitConverter.ToUInt16(buf, 0) + 2; // +2 to include the section marker
 						index.Add(new JpgSection((byte)b1, section_start, section_size));
 						src.Position = section_start + section_size;
+						continue;
 					}
+
+					// Not a section start, must be the scan data
+					// Length of the scan data isn't defined, seek to the end
+					// and search backwards for the end of image (EOI) marker
+					long s = section_start, e = src.Length;
+					for (; e > s;)
+					{
+						src.Position = --e;
+						if (src.ReadByte() != JpgMarker.EOI) continue;
+						src.Position = --e;
+						if (src.ReadByte() != JpgMarker.Start) continue;
+						break;
+					}
+					index.Add(new JpgSection(JpgMarker.ScanData, s, e - s));
+					break; // Ignore anything after the EOI marker
 				}
 				return index;
 			}
