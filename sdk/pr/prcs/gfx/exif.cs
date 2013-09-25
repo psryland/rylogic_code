@@ -17,7 +17,7 @@ namespace pr.gfx
 		{
 			// All markers are 2 bytes, beginning with 'Start' followed by one of these below
 			public const byte Start  = 0xFF;
-			
+
 			// The following order is a typical layout of sections within a jpg file
 			public const byte SOI    = 0xD8;  // Start of Image
 			public const byte APP0   = 0xE0;  // Application marker segment 0
@@ -65,7 +65,7 @@ namespace pr.gfx
 		//   Fields[Count]
 		//   ByteOffsetToNextIFD (typically = 0 meaning no more)
 		//   OversizedData
-		
+
 		/// <summary>Names for the various ifd tables within a jpg file</summary>
 		public enum IFDTable
 		{
@@ -79,7 +79,7 @@ namespace pr.gfx
 		public enum Tag :ushort
 		{
 			Invalid = 0,
-			
+
 			// IFD0 items
 			ImageWidth                  = 0x100,
 			ImageLength                 = 0x101,
@@ -110,11 +110,11 @@ namespace pr.gfx
 			YCbCrSubSampling            = 0x212,
 			YCbCrPositioning            = 0x213,
 			ReferenceBlackWhite         = 0x214,
-			
+
 			Copyright                   = 0x8298,
 			SubIFDOffset                = 0x8769,
 			GPSIFDOffset                = 0x8825,
-			
+
 			// SubIFD items
 			ExposureTime             = 0x829A,
 			FNumber                  = 0x829D,
@@ -326,7 +326,7 @@ namespace pr.gfx
 			case TiffDataType.SLong:
 			case TiffDataType.Single:
 				return 4;
-			
+
 			case TiffDataType.URational:
 			case TiffDataType.SRational:
 			case TiffDataType.Double:
@@ -340,15 +340,15 @@ namespace pr.gfx
 			// IFD0 items
 			if (tag >= Tag.ImageWidth && tag <= Tag.ReferenceBlackWhite) return IFDTable.IFD0;
 			if (tag == Tag.Copyright || tag == Tag.SubIFDOffset || tag == Tag.GPSIFDOffset) return IFDTable.IFD0;
-			
+
 			// SubIFD items
 			if (tag >= Tag.ExposureTime && tag <= Tag.ImageUniqueID)
 				return IFDTable.SubIFD;
-			
+
 			// GPS subifd items
 			if (tag >= Tag.GPSVersionID && tag <= Tag.GPSDifferential)
 				return IFDTable.GpsIFD;
-			
+
 			// Dunno
 			return IFDTable.IFD0;
 		}
@@ -360,19 +360,29 @@ namespace pr.gfx
 			try
 			{
 				var index = new List<JpgSection>();
-				
+
 				var buf = new byte[2];
 				src.Position = 2; // skip the SOI mark
 				for (var section_start = src.Position; src.Position != src.Length; section_start = src.Position)
 				{
 					int b0;
-					
 					if ((b0 = src.ReadByte()) == -1) break; // end of file
 					if (b0 != JpgMarker.Start)
 					{
 						// Not a section start, must be the scan data
-						index.Add(new JpgSection(JpgMarker.ScanData, section_start, src.Length - section_start - 2));
-						src.Position = src.Length - 2;
+						// Length of the scan data isn't defined, seek to the end
+						// and search backwards for the end of image (EOI) marker
+						long s = section_start, e = src.Length;
+						for (;e > s;)
+						{
+							src.Position = --e;
+							if (src.ReadByte() != JpgMarker.EOI) continue;
+							src.Position = --e;
+							if (src.ReadByte() != JpgMarker.Start) continue;
+							break;
+						}
+						index.Add(new JpgSection(JpgMarker.ScanData, s, e - s));
+						break; // Ignore anything after the EOI marker
 					}
 					else
 					{
@@ -667,7 +677,7 @@ namespace pr.gfx
 
 			/// <summary>Return the fields contained in this ifd table. (Not recursive)</summary>
 			public IEnumerable<Field> Fields { get { foreach (var k  in m_ifd.Keys) yield return Field(k,false); } }
- 
+
 			/// <summary>Return the field associated with 'tag'</summary>
 			public abstract Field Field(Tag tag, bool recursive);
 
@@ -736,7 +746,7 @@ namespace pr.gfx
 			private long m_tiff_header_start;
 			private long m_thumbnail_offset;
 			private int m_thumbnail_length;
-			
+
 			public Index(Stream stream) { m_br = new BinaryReaderEx(stream); }
 			public void Dispose() { m_br.Dispose(); }
 
@@ -857,51 +867,51 @@ namespace pr.gfx
 		{
 			if (src == null) throw new ArgumentNullException("src", "Null Jpg stream");
 			if (!src.CanSeek) throw new Exception("Loading Exif data requires a seek-able stream");
-			
+
 			// Check that 'src' is a Jpg file
 			if (src.ReadByte() != JpgMarker.Start || src.ReadByte() != JpgMarker.SOI)
 				throw new Exception("Source is not a Jpg data");
-			
+
 			// Find the exif data section
 			var index = IndexJpg(src);
 			var exif_section = index.FirstOrDefault(x => x.Marker == JpgMarker.APP1);
 			if (exif_section == null)
 				return data; // no exif data, return an empty object
-			
+
 			// Populate the Exif.Data
 			src.Position = exif_section.Offset + 2; // +2 to skip the marker
 			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
 			{
 				// Jpg's use big endian (i.e. Motorola).
 				br.LittleEndian = false;
-				
+
 				// The next 2 bytes are the size of the Exif data.
 				var exif_data_size = br.ReadUShort();
 				if (exif_data_size == 0) return data;
-				
+
 				// Next is the Exif data itself. It starts with the ASCII string "Exif\0\0".
 				if (!ExifIdentifier.SequenceEqual(br.ReadBytes(6)))
 					throw new Exception("Malformed Exif data");
-				
+
 				// We're now into the TIFF format
 				// Here the byte alignment may be different. II for Intel, MM for Motorola
 				var tiff_hdr_start = br.BaseStream.Position;
 				br.LittleEndian = IntelIdentifier.SequenceEqual(br.ReadBytes(2));
-				
+
 				// Next 2 bytes are always the same.
 				if (br.ReadUShort() != TiffDataIdentifier)
 					throw new Exception("Error in TIFF data");
-				
+
 				// Jump to the main IFD (image file directory)
 				br.BaseStream.Position = tiff_hdr_start + br.ReadUInt(); // Note that this offset is from the first byte of the TIFF header.
-				
+
 				// Parse the IFD tables
 				ParseExifTable(br, data, tiff_hdr_start);
-				
+
 				if (load_thumbnail)
 					ParseJpgThumbnail(br, data, data.NextIfd);
 			}
-			
+
 			return data;
 		}
 
@@ -911,11 +921,11 @@ namespace pr.gfx
 			if (src == null) throw new Exception("Exif data must be an instance returned from this library");
 			if (!src.CanSeek) throw new Exception("Loading Exif data requires a seek-able stream");
 			if (ReferenceEquals(src,dst)) throw new Exception("Cannot read from and write to the same stream");
-			
+
 			// Check that 'src' is a Jpg file
 			if (src.ReadByte() != JpgMarker.Start || src.ReadByte() != JpgMarker.SOI)
 				throw new Exception("Source is not a Jpg data");
-			
+
 			// Index the src jpg to figure out where the exif data should be inserted
 			// If the file contains an APP0 section, put the exif data (APP1) after it.
 			// If the file contains an APP2 section, put the exif data (APP1) before it.
@@ -925,7 +935,7 @@ namespace pr.gfx
 			long insert_exif_offset = 2;
 			if ((jpg_section = index.FirstOrDefault(x =>x.Marker == JpgMarker.APP0)) != null) { insert_exif_offset = jpg_section.Offset + jpg_section.Size; }
 			if ((jpg_section = index.FirstOrDefault(x =>x.Marker == JpgMarker.APP2)) != null) { insert_exif_offset = jpg_section.Offset; }
-			
+
 			using (var br = new BinaryReaderEx(new UncloseableStream(src)))
 			using (var bw = new BinaryWriterEx(new UncloseableStream(dst)))
 			{
@@ -933,11 +943,11 @@ namespace pr.gfx
 				// The TIFF encoding found later in the document will specify
 				// the byte aligns used for the rest of the document.
 				bw.LittleEndian = false;
-				
+
 				// Write the Jpg start of image marker
 				bw.Write(JpgMarker.Start);
 				bw.Write(JpgMarker.SOI);
-				
+
 				// Copy the sections of the source jpg, excluding the exif data section.
 				// When we encounter an unmarked section, that should be the scan data.
 				for (long section_start = br.BaseStream.Position; !br.EndOfStream; section_start = br.BaseStream.Position)
@@ -949,11 +959,11 @@ namespace pr.gfx
 						insert_exif_offset = -1;
 						continue;
 					}
-					
+
 					var b0 = br.ReadByte();
 					var b1 = br.ReadByte();
 					var section_size = br.ReadUShort() + 2; // +2 to include the section marker
-					
+
 					// Not a section, must be up to the scan data
 					if (b0 != JpgMarker.Start)
 					{
@@ -965,20 +975,20 @@ namespace pr.gfx
 						}
 						break;
 					}
-					
+
 					// If this is the Exif data section, skip it
 					if (b1 == JpgMarker.APP1)
 					{
 						br.BaseStream.Position = section_start + section_size;
 						continue;
 					}
-					
+
 					// Otherwise, copy the section to the 'dst' stream
 					br.BaseStream.Position = section_start;
 					var copied = br.BaseStream.CopyTo(section_size, bw.BaseStream);
 					if (copied != section_size) throw new IOException("Error while writing to output stream");
 				}
-				
+
 				// Write the Jpg end of image marker
 				bw.Write(JpgMarker.Start);
 				bw.Write(JpgMarker.EOI);
@@ -989,38 +999,38 @@ namespace pr.gfx
 		private static void WriteExif(BinaryWriterEx bw, IExifDataInternal exif_data)
 		{
 			var section_start = bw.BaseStream.Position;
-			
+
 			// Write the exif data marker
 			bw.Write(JpgMarker.Start);
 			bw.Write(JpgMarker.APP1);
-			
+
 			// Write the section size
 			var section_size_offset = bw.BaseStream.Position;
 			bw.Write((ushort)0); // Will update this at the end
-			
+
 			// Write the Exif identifier tag
 			bw.Write(ExifIdentifier);
 			var tiff_header_start = bw.BaseStream.Position;
 			bw.LittleEndian = true; // Intel is little endian
-			
+
 			// Use Intel endian-ness
 			bw.Write(IntelIdentifier);
-			
+
 			// Write the TIFF data id
 			bw.Write(TiffDataIdentifier);
-			
+
 			// Write the offset to the main IFD table
 			bw.Write((uint)(bw.BaseStream.Position + sizeof(uint) - tiff_header_start));
-			
+
 			// Write the ifd tables
 			WriteExifTable(bw, exif_data, tiff_header_start);
 			bw.LittleEndian = false; // Back to Motorola endian
-			
+
 			// Write the thumbnail image
 			var thumb = exif_data.Thumbnail;
 			if (thumb != null)
 				bw.Write(thumb);
-			
+
 			// Update the section size
 			bw.Write(section_size_offset, (ushort)(bw.BaseStream.Position - section_start - 2)); // section size doesn't include the marker
 		}
@@ -1031,10 +1041,10 @@ namespace pr.gfx
 			// First 2 bytes is the number of entries in this IFD
 			for (ushort i = 0, iend = br.ReadUShort(); i != iend; i++)
 				exif_data.ReadField(br, tiff_header_start);
-			
+
 			// Save the offset to the next ifd table in the linked list
 			var next_idf_offset = br.ReadUInt();
-			
+
 			// Check for a sub IFD table
 			var sub = exif_data.Field(Tag.SubIFDOffset, false);
 			if (sub != Field.Null)
@@ -1042,7 +1052,7 @@ namespace pr.gfx
 				br.BaseStream.Position = tiff_header_start + sub.AsUInt;
 				ParseExifTable(br, exif_data.SubIfd, tiff_header_start);
 			}
-			
+
 			// Check for an optional GPS ifd table
 			var gps = exif_data.Field(Tag.GPSIFDOffset, false);
 			if (gps != Field.Null)
@@ -1050,7 +1060,7 @@ namespace pr.gfx
 				br.BaseStream.Position = tiff_header_start + gps.AsUInt;
 				ParseExifTable(br, exif_data.GpsIfd, tiff_header_start);
 			}
-			
+
 			// Move to the next table
 			if (next_idf_offset != 0)
 			{
@@ -1065,13 +1075,13 @@ namespace pr.gfx
 			// Write the number of fields in the table
 			var count_offset = bw.BaseStream.Position; // Save the position to write the table field count
 			bw.Write((ushort)0); // Will update this after writing the table data
-			
+
 			// The offset to the start of the oversized data for the table
 			var oversized_data_offset = bw.BaseStream.Position + exif_data.FieldCount * Field.SizeInBytes + sizeof(uint);
-			
+
 			long subifd_offset = 0; // Saves the location of where to write the offset to the subifd table
 			long gpsifd_offset = 0; // Saves the location of where to write the offset to the gpsifd table
-			
+
 			// Write each field
 			int count = 0;
 			foreach (var f in exif_data.Fields)
@@ -1101,31 +1111,31 @@ namespace pr.gfx
 				}
 				++count;
 			}
-			
+
 			// Write the field count
 			bw.Write(count_offset, (ushort)count);
-			
+
 			// Write the offset to the next ifd table
 			var nextifd_offset = bw.BaseStream.Position;
 			bw.Write((uint)0); // Will update this if we write a next ifd table
-			
+
 			// Move the stream position past the oversized data
 			bw.BaseStream.Position = oversized_data_offset;
-			
+
 			// Write the sub ifd (if there is one)
 			if (subifd_offset != 0)
 			{
 				bw.Write(subifd_offset, (ushort)(bw.BaseStream.Position - tiff_header_start));
 				WriteExifTable(bw, exif_data.SubIfd, tiff_header_start);
 			}
-			
+
 			// Write the gps ifd (if there is one)
 			if (gpsifd_offset != 0)
 			{
 				bw.Write(gpsifd_offset, (ushort)(bw.BaseStream.Position - tiff_header_start));
 				WriteExifTable(bw, exif_data.GpsIfd, tiff_header_start);
 			}
-			
+
 			// Write the next next ifd (if there is one)
 			if (exif_data.NextIfd.Count != 0)
 			{
@@ -1145,7 +1155,7 @@ namespace pr.gfx
 			field.Tag      = (Tag)br.ReadUShort();
 			field.DataType = (TiffDataType)br.ReadUShort();
 			field.Count    = br.ReadUInt();
-			
+
 			// If the total space taken up by the field is longer than the
 			// FieldSizeInBytes bytes afforded by the tag data, the tag data
 			// will contain an offset to the actual data.
@@ -1160,7 +1170,7 @@ namespace pr.gfx
 			{
 				field.Data  = br.ReadBytes(Field.FieldDataSizeInBytes);
 			}
-			
+
 			// If the contained data is not bytes, endian swap each element
 			if (br.LittleEndian != BitConverter.IsLittleEndian)
 			{
@@ -1176,7 +1186,7 @@ namespace pr.gfx
 					for (uint i = 0, iend = field.Count; i != iend; ++i)
 						Array.Reverse(field.Data, (int)i * elem_size, elem_size);
 					break;
-				
+
 				case TiffDataType.SRational:
 				case TiffDataType.URational:
 					int sz = elem_size / 2;
@@ -1191,7 +1201,7 @@ namespace pr.gfx
 		/// <summary>
 		/// Retrieves a JPEG thumbnail from the image if one is present. Note that this method cannot retrieve thumbnails encoded in other formats,
 		/// but since the DCF specification specifies that thumbnails must be JPEG, this method will be sufficient for most purposes
-		/// See http://gvsoft.homedns.org/exif/exif-explanation.html#TIFFThumbs or http://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf for 
+		/// See http://gvsoft.homedns.org/exif/exif-explanation.html#TIFFThumbs or http://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf for
 		/// details on the encoding of TIFF thumbnails</summary>
 		private static void ParseJpgThumbnail(BinaryReaderEx br, IExifDataInternal exif_data, IExifDataInternal tags)
 		{
@@ -1199,32 +1209,32 @@ namespace pr.gfx
 				!tags.HasTag(Tag.JPEGInterchangeFormat) ||
 				!tags.HasTag(Tag.JPEGInterchangeFormatLength))
 				return;
-			
+
 			// Get the thumbnail encoding. This method only handles JPEG thumbnails (compression type 6)
 			var compression = (CompressiongType)tags[Tag.Compression].AsInt;
 			if (compression != CompressiongType.JPEG_Old)
 				return;
-			
+
 			// Get the location of the thumbnail
 			var offset = tags[Tag.JPEGInterchangeFormat      ].AsInt;
 			var length = tags[Tag.JPEGInterchangeFormatLength].AsInt;
 			if (length < 2) return;
-			
+
 			// Seek to the thumbnail data
 			br.BaseStream.Seek(offset, SeekOrigin.Begin);
-			
+
 			// The thumbnail may be padded, so we scan forward until we reach the JPEG header (0xFFD8) or the end of the file
 			byte b0 = br.ReadByte(), b1 = br.ReadByte();
 			for (;!br.EndOfStream && !(b0 == JpgMarker.Start && b1 == JpgMarker.SOI); b0 = b1, b1 = br.ReadByte()) {}
 			if (br.EndOfStream) return;
-			
+
 			// Validate that it is a valid jpg thumbnail
 			br.BaseStream.Position -= 2; // step back to point at b0
 			br.BaseStream.Position += length - 2; // jump to the end of the thumbnail minus 2 bytes
 			if (br.ReadByte() != JpgMarker.Start || // A valid JPEG stream ends with 0xFFD9
 				br.ReadByte() != JpgMarker.EOI)
 				return;
-			
+
 			// Read the jpg thumbnail data
 			br.BaseStream.Position -= length;
 			exif_data.ReadThumbnail(br, length);
@@ -1358,12 +1368,13 @@ namespace pr.gfx
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 	using System.Drawing;
 	using gfx;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static class TestExif
@@ -1371,7 +1382,7 @@ namespace pr
 			private const string SrcImageWith    = @"Q:\sdk\pr\prcs\unittest_resources\exif_image_with.jpg";
 			private const string SrcImageWithout = @"Q:\sdk\pr\prcs\unittest_resources\exif_image_without.jpg";
 			private const string DstImage        = @"Q:\sdk\pr\prcs\unittest_resources\exif_image_out.jpg";
-		
+
 			[Test] public static void LoadExifToMemory()
 			{
 				{
@@ -1401,7 +1412,7 @@ namespace pr
 				var exif_in = Exif.Load(SrcImageWith);
 				Exif.Save(SrcImageWith, exif_in, DstImage);
 				var exif_out = Exif.Load(DstImage);
-			
+
 				Assert.DoesNotThrow(() => new Bitmap(DstImage), "Output jpg image is invalid");
 				Assert.AreEqual(exif_in.Count, exif_out.Count);
 				Assert.AreEqual(exif_in[Exif.Tag.FocalLength ].AsReal, exif_out[Exif.Tag.FocalLength ].AsReal);
@@ -1410,29 +1421,29 @@ namespace pr
 			[Test] public static void AddRemoveFields()
 			{
 				var exif = Exif.Load(SrcImageWith);
-			
+
 				// Update the field
 				exif.Set(Exif.Tag.Orientation, (ushort)3);
 				Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
-			
+
 				// Save to the file
 				Exif.Save(SrcImageWith, exif, DstImage);
 				exif = Exif.Load(DstImage);
 				Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
-			
+
 				// Remove the field
 				exif.Delete(Exif.Tag.Orientation);
 				Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
-			
+
 				// Save to file
 				Exif.Save(SrcImageWith, exif, DstImage);
 				exif = Exif.Load(DstImage);
 				Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
-			
+
 				// Restore the field
 				exif.Set(Exif.Tag.Orientation, (ushort)1);
 				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
-			
+
 				// Save to file
 				Exif.Save(SrcImageWith, exif, DstImage);
 				exif = Exif.Load(DstImage);
@@ -1443,17 +1454,22 @@ namespace pr
 				// Check the file has none to start with
 				var exif = Exif.Load(SrcImageWithout);
 				Assert.AreEqual(0, exif.Count);
-			
+
 				// Create a new instance of exif data and add a field
 				exif = Exif.Create();
 				exif.Set(Exif.Tag.Orientation, 1);
 				Exif.Save(SrcImageWithout, exif, DstImage);
-			
+
 				// Read the saved file and check the tag is there
 				exif = Exif.Load(DstImage);
 				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
 			}
+			[Test] public static void TestCase()
+			{
+				//var exif = Exif.Load(@"c:\users\paul\downloads\1380087187400.jpg");
+			}
 		}
 	}
 }
+
 #endif
