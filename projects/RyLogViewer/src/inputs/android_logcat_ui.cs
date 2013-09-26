@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
@@ -15,6 +16,8 @@ namespace RyLogViewer
 {
 	public partial class AndroidLogcatUI :Form
 	{
+		private const string UsbDevice = "usb";
+
 		private readonly ToolTip m_tt;
 		private readonly AndroidLogcat m_settings;
 		private readonly BindingList<string> m_device_list;
@@ -32,8 +35,10 @@ namespace RyLogViewer
 			m_device_list = new BindingList<string>();
 			m_bs_device_list = new BindingSource{DataSource = m_device_list};
 			m_filterspecs = new BindingList<AndroidLogcat.FilterSpec>(m_settings.FilterSpecs.ToList());
+
 			var output_filepaths = settings.OutputFilepathHistory;
 			Launch = new LaunchApp();
+			PreferredDevice = m_settings.SelectedDevice;
 
 			const string prompt_text = "<Please set the path to adb.exe>";
 			m_edit_adb_fullpath.ToolTip(m_tt, "The full path to the android debug bridge executable ('adb.exe')");
@@ -76,6 +81,7 @@ namespace RyLogViewer
 			m_bs_device_list.CurrentChanged += (s,a) =>
 				{
 					UpdateAdbCommand();
+					SelectPreferredOutputFile();
 					m_btn_ok.Enabled = m_bs_device_list.CurrentOrDefault() != null;
 				};
 
@@ -182,6 +188,7 @@ namespace RyLogViewer
 						m_settings.LogBuffers          = m_listbox_log_buffers.SelectedIndices.Cast<AndroidLogcat.ELogBuffer>().ToArray();
 						m_settings.FilterSpecs         = m_filterspecs.ToArray();
 						m_settings.LogFormat           = (AndroidLogcat.ELogFormat)m_combo_log_format.SelectedIndex;
+						m_settings.SelectedDevice      = m_listbox_devices.SelectedItem.ToString();
 						settings.AndroidLogcat = m_settings;
 
 						Misc.AddToHistoryList(ref output_filepaths, m_combo_output_file.Text, true, Constants.MaxOutputFileHistoryLength);
@@ -220,6 +227,9 @@ namespace RyLogViewer
 					m_tt.Dispose();
 				};
 		}
+
+		/// <summary>The device to connect to if available</summary>
+		private string PreferredDevice { get; set; }
 
 		/// <summary>Clear or set the adb version info</summary>
 		private void UpdateAdbVersionInfo(bool read)
@@ -433,6 +443,16 @@ namespace RyLogViewer
 					m_device_list.Add(device[0].Trim());
 				}
 
+				// Select the preferred device
+				if (PreferredDevice.HasValue())
+				{
+					int idx = PreferredDevice == UsbDevice
+						? m_device_list.IndexOf(x => !x.Contains(".")) // Select the one that doesn't look like an ip address
+						: m_device_list.IndexOf(x => x.Contains(PreferredDevice));
+					if (idx != -1)
+						m_bs_device_list.CurrencyManager.Position = idx;
+				}
+
 				// Enable the connect button
 				m_btn_connect.Enabled = true;
 				m_btn_resetadb.Enabled = true;
@@ -482,6 +502,20 @@ namespace RyLogViewer
 			args = sb.ToString();
 		}
 
+		/// <summary>If capture output is checked, see if there's an output file in the combo box that might be preferred.</summary>
+		private void SelectPreferredOutputFile()
+		{
+			// If capture output is checked, see if there's an output file in the combo box that might be preferred
+			if (!m_check_capture_to_log.Checked)
+				return;
+
+			// Use the IP address as a regex expression, allowing any character to delim the numbers
+			var pattern = m_bs_device_list.Current.ToString().Substring(null, ":");
+			var idx = m_combo_output_file.Items.IndexOf<string>(x => Regex.IsMatch(x, pattern));
+			if (idx != -1)
+				m_combo_output_file.SelectedIndex = idx;
+		}
+
 		/// <summary>Show the connect to device dialog</summary>
 		private void ConnectDevice()
 		{
@@ -494,6 +528,10 @@ namespace RyLogViewer
 
 			if (!string.IsNullOrWhiteSpace(result))
 				MsgBox.Show(this, result, "Adb Connect Result", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+			// Record the preferred device
+			PreferredDevice = (m_settings.ConnectionType == AndroidLogcat.EConnectionType.Tcpip)
+				? m_settings.IPAddressHistory[0] : UsbDevice;
 
 			this.BeginInvoke(PopulateUsingAdb);
 		}

@@ -14,7 +14,7 @@ namespace RyLogViewer
 		// ReSharper disable UnassignedField.Global,FieldCanBeMadeReadOnly.Global
 		[ImportMany(typeof(ITxfmSub))] public List<ITxfmSub> TxfmSubs; // populated by 'ComposeParts'
 		// ReSharper restore UnassignedField.Global,FieldCanBeMadeReadOnly.Global
-		
+
 		/// <summary>Find all type derived from ITxfmSub</summary>
 		public TxfmSubLoader()
 		{

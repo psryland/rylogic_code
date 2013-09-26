@@ -25,6 +25,14 @@ namespace RyLogViewer
 		private BufferedSerialConn m_buffered_serialconn;
 		private BufferedPipeConn   m_buffered_pipeconn;
 
+		/// <summary>Setup the UI to receive streamed log data</summary>
+		private void PrepareForStreamedData()
+		{
+			EnableTail(true);
+			EnableWatch(true);
+			EnableAdditive(true);
+		}
+
 		/// <summary>Launch a process, piping its output into a temporary file</summary>
 		private void LaunchProcess(LaunchApp conn)
 		{
@@ -37,6 +45,9 @@ namespace RyLogViewer
 				// however if the user reopens the same process the existing process will hold
 				// a lock to the capture file preventing the new process being created.
 				CloseLogFile();
+
+				// Set options so that data always shows
+				PrepareForStreamedData();
 
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_process = new BufferedProcess(conn);
@@ -79,6 +90,9 @@ namespace RyLogViewer
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
 				CloseLogFile();
+
+				// Set options so that data always shows
+				PrepareForStreamedData();
 
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_tcp_netconn = new BufferedTcpNetConn(conn);
@@ -123,6 +137,9 @@ namespace RyLogViewer
 				// hold a lock on the capture file preventing the new connection being created.
 				CloseLogFile();
 
+				// Set options so that data always shows
+				PrepareForStreamedData();
+
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_udp_netconn = new BufferedUdpNetConn(conn);
 
@@ -166,6 +183,9 @@ namespace RyLogViewer
 				// hold a lock on the capture file preventing the new connection being created.
 				CloseLogFile();
 
+				// Set options so that data always shows
+				PrepareForStreamedData();
+
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_serialconn = new BufferedSerialConn(conn);
 
@@ -207,6 +227,9 @@ namespace RyLogViewer
 				// however if the user reopens the same connection the existing connection will
 				// hold a lock on the capture file preventing the new connection being created.
 				CloseLogFile();
+
+				// Set options so that data always shows
+				PrepareForStreamedData();
 
 				// Create the buffered pipe connection
 				buffered_pipeconn = new BufferedPipeConn(conn);
