@@ -44,7 +44,7 @@ namespace pr.gui
 			Title = title;
 			Message = message;
 			Reflow = true;
-			
+
 			Owner = owner as Form;
 			ShowIcon = Owner != null && Owner.Icon != null;
 			if (Owner != null) Icon = Owner.Icon;
@@ -385,7 +385,8 @@ namespace pr.gui
 namespace pr
 {
 	using NUnit.Framework;
-	using gui;
+
+	//using gui;
 
 	[TestFixture] internal static partial class UnitTests
 	{
@@ -393,11 +394,11 @@ namespace pr
 		{
 			[Test] public static void Test()
 			{
-				var btns = MessageBoxButtons.OKCancel;
-				var icon = MessageBoxIcon.Question;
-				var line = string.Join(" "  , Enumerable.Range(0, 30).Select(x => "123456789"));
-				var msg = string.Join("\r\n", Enumerable.Range(0, 30).Select(x => line));
-				new MsgBox(msg, "Paul's", btns, icon).ShowDialog();
+				//var btns = MessageBoxButtons.OKCancel;
+				//var icon = MessageBoxIcon.Question;
+				//var line = string.Join(" "  , Enumerable.Range(0, 30).Select(x => "123456789"));
+				//var msg = string.Join("\r\n", Enumerable.Range(0, 30).Select(x => line));
+				//new MsgBox(msg, "Paul's", btns, icon).ShowDialog();
 			}
 		}
 	}
