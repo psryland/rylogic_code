@@ -9,13 +9,13 @@ namespace pr.common
 		{
 			/// <summary>Display help information in the case of an invalid command line</summary>
 			void ShowHelp();
-		
+
 			/// <summary>
 			/// Handle a command line option. Return true to continue parsing, false to stop.
 			/// 'arg' is the index of the argument immediately after 'option'. If this argument
 			/// is used, implementers should increment 'arg' for each arg used.</summary>
 			bool CmdLineOption(string option, string[] args, ref int arg);
-			
+
 			/// <summary>
 			/// Handle anything not preceded by '-'. Return true to continue parsing, false to stop.
 			/// Implementers should increment 'arg' for each arg read.</summary>
@@ -78,11 +78,12 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 	using common;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static class TestCmdLine
@@ -103,20 +104,25 @@ namespace pr
 				/// <summary>Display help information in the case of an invalid command line</summary>
 				public void ShowHelp() { ++HelpShownCount; }
 
-				/// <summary>Handle a command line option. Return true to continue parsing, false to stop</summary>
+				/// <summary>
+				/// Handle a command line option. Return true to continue parsing, false to stop.
+				/// 'arg' is the index of the argument immediately after 'option'. If this argument
+				/// is used, implementers should increment 'arg' for each arg used.</summary>
 				public bool CmdLineOption(string option, string[] args, ref int arg)
 				{
 					Option = option;
-					OptionArg1 = args[  arg];
-					OptionArg2 = args[++arg];
+					OptionArg1 = args[arg++];
+					OptionArg2 = args[arg++];
 					return CmdLineOptionResult;
 				}
 
-				/// <summary>Handle anything not preceded by '-'. Return true to continue parsing, false to stop</summary>
+				/// <summary>
+				/// Handle anything not preceded by '-'. Return true to continue parsing, false to stop.
+				/// Implementers should increment 'arg' for each arg read.</summary>
 				public bool CmdLineData(string[] args, ref int arg)
 				{
-					Data1 = args[  arg];
-					Data2 = args[++arg];
+					Data1 = args[arg++];
+					Data2 = args[arg++];
 					return CmdLineDataResult;
 				}
 
@@ -130,7 +136,7 @@ namespace pr
 			[Test] public static void TestParse0()
 			{
 				var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
-				var r  = CmdLine.Parse(t, new[]{"Exe","-A","B", "C", "D", "E"});
+				var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
 				Assert.IsTrue(r == CmdLine.Result.Success);
 				Assert.AreEqual(0, t.HelpShownCount);
 				Assert.AreEqual(1, t.ValidateCount);
@@ -143,7 +149,7 @@ namespace pr
 			[Test] public static void TestParse1()
 			{
 				var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = false};
-				var r  = CmdLine.Parse(t, new[]{"Exe","-A","B", "C", "D", "E"});
+				var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
 				Assert.IsTrue(r == CmdLine.Result.Interrupted);
 				Assert.AreEqual(0, t.HelpShownCount);
 				Assert.AreEqual(1, t.ValidateCount);
@@ -156,7 +162,7 @@ namespace pr
 			[Test] public static void TestParse2()
 			{
 				var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
-				var r  = CmdLine.Parse(t, new[]{"Exe","-A","B", "C", "D"});
+				var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D"});
 				Assert.IsTrue(r == CmdLine.Result.Failed);
 				Assert.AreEqual(1, t.HelpShownCount);
 				Assert.AreEqual(0, t.ValidateCount);
@@ -169,7 +175,7 @@ namespace pr
 			[Test] public static void TestParse3()
 			{
 				var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
-				var r  = CmdLine.Parse(t, new[]{"Exe","-A","X", "C", "D", "E"});
+				var r  = CmdLine.Parse(t, new[]{"-A","X", "C", "D", "E"});
 				Assert.IsTrue(r == CmdLine.Result.Failed);
 				Assert.AreEqual(1, t.HelpShownCount);
 				Assert.AreEqual(1, t.ValidateCount);
@@ -182,4 +188,5 @@ namespace pr
 		}
 	}
 }
+
 #endif
