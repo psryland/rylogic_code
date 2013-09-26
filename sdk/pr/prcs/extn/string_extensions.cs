@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace pr.extn
 {
@@ -26,6 +27,40 @@ namespace pr.extn
 			return !string.IsNullOrEmpty(str);
 		}
 
+		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>
+		public static string Substring(this string str, string start_pattern, string end_pattern, StringComparison cmp_type = StringComparison.InvariantCulture)
+		{
+			var sidx = start_pattern != null ? str.IndexOf(start_pattern, 0, cmp_type) : 0;
+			if (sidx == -1) return string.Empty;
+			if (start_pattern != null) sidx += start_pattern.Length;
+			var eidx = end_pattern != null ? str.IndexOf(end_pattern, sidx, cmp_type) : str.Length;
+			return str.Substring(sidx, eidx - sidx);
+		}
+
+		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>
+		public static string SubstringRegex(this string str, string start_pattern, string end_pattern, RegexOptions options = RegexOptions.None)
+		{
+			var sidx = 0;
+			if (start_pattern != null)
+			{
+				var m = Regex.Match(str, start_pattern, options);
+				if (!m.Success) return string.Empty;
+				sidx = m.Index + m.Length;
+			}
+
+			var sub = str.Substring(sidx);
+
+			var eidx = sub.Length;
+			if (end_pattern != null)
+			{
+				var m = Regex.Match(sub, end_pattern, options);
+				if (!m.Success) return sub;
+				eidx = m.Index;
+			}
+
+			return sub.Substring(0, eidx);
+		}
+
 		/// <summary>Returns a string containing this str repeated 'count' times</summary>
 		public static string Repeat(this string str, int count)
 		{
@@ -39,7 +74,7 @@ namespace pr.extn
 		public static string WordWrap(this string text, int width)
 		{
 			if (width < 1) throw new ArgumentException("Word wrap must have a width >= 1");
-			
+
 			text = text.Replace("\r\n","\n");
 			text = text.Replace("\n"," ");
 
@@ -154,7 +189,6 @@ namespace pr.extn
 		//    while (expStartIndex > -1);
 		//}
 
-
   //static int IndexOfExpressionEnd(this string format, int startIndex)
   //{
   //  int endBraceIndex = format.IndexOf('}', startIndex);
@@ -178,16 +212,11 @@ namespace pr.extn
 
   //  return endBraceIndex;
   //}
-	
 	}
 
 	/*
 	 * public static class HaackFormatter
 {
-  
-
-
-
 }
 And the code for the supporting classes
 public class FormatExpression : ITextExpression
@@ -213,9 +242,9 @@ public class FormatExpression : ITextExpression
     }
   }
 
-  public string Expression { 
-    get; 
-    private set; 
+  public string Expression {
+    get;
+    private set;
   }
 
   public string Format
@@ -234,7 +263,7 @@ public class FormatExpression : ITextExpression
       {
         return (DataBinder.Eval(o, Expression) ?? string.Empty).ToString();
       }
-      return (DataBinder.Eval(o, Expression, "{0:" + Format + "}") ?? 
+      return (DataBinder.Eval(o, Expression, "{0:" + Format + "}") ??
         string.Empty).ToString();
     }
     catch (ArgumentException) {
@@ -252,9 +281,9 @@ public class LiteralFormat : ITextExpression
     LiteralText = literalText;
   }
 
-  public string LiteralText { 
-    get; 
-    private set; 
+  public string LiteralText {
+    get;
+    private set;
   }
 
   public string Eval(object o) {
@@ -264,9 +293,9 @@ public class LiteralFormat : ITextExpression
     return literalText;
   }
 }
-	 * 
-	 * 
-	 * 
+	 *
+	 *
+	 *
 	 * static string Format( this string str
 , params Expression<Func<string,object>[] args)
 { var parameters=args.ToDictionary
@@ -274,21 +303,22 @@ public class LiteralFormat : ITextExpression
 ,e=>e.Compile()(e.Parameters[0].Name));
 
 var sb = new StringBuilder(str);
-foreach(var kv in parameters) 
+foreach(var kv in parameters)
 { sb.Replace( kv.Key
-,kv.Value != null ? kv.Value.ToString() : ""); 
-} 
+,kv.Value != null ? kv.Value.ToString() : "");
+}
 return sb.ToString();
 }
 	 */
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 	using extn;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static partial class TestExtensions
@@ -310,14 +340,29 @@ namespace pr
 				var str = s.LineList(s,s);
 				Assert.AreEqual("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
 			}
+			[Test] public static void Substring()
+			{
+				const string s1 = "aa {one} bb {two}";
+				const string s2 = "aa {} bb {two}";
+				const string s3 = "Begin dasd End";
+				const string s4 = "first:second";
+				const string s5 = "<32> regex </32>";
+
+				Assert.AreEqual("one", s1.Substring("{","}"));
+				Assert.AreEqual("", s2.Substring("{","}"));
+				Assert.AreEqual("dasd", s3.Substring("Begin "," End"));
+				Assert.AreEqual("first", s4.Substring(null,":"));
+				Assert.AreEqual("second", s4.Substring(":", null));
+				Assert.AreEqual("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
+				Assert.AreEqual("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
+				Assert.AreEqual("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
+			}
 		}
 	}
 }
+
 #endif
 
-
-	
-	
 	//    /// <summary>Scanf style string parsing</summary>
 	//    public static int Scanf(this string str, string format, params object[] args)
 	//    {
@@ -355,7 +400,7 @@ namespace pr
 	//        catch (Exception) {}
 	//        return count;
 	//    }
-	
+
 	//    /// <summary>
 	//    /// This method is the inverse of <see cref="String.Format"/>.
 	//    /// </summary>
@@ -367,19 +412,19 @@ namespace pr
 	//        Regex match_double = new Regex(@"(\{\d+\}\{\d+\})");
 	//        if (match_double.IsMatch(format))
 	//            throw new ArgumentException("Invalid format string. You must put at least one character between all parse tokens.");
-	
+
 	//        Regex empty_braces = new Regex(@"(\{\})");
 	//        if (empty_braces.IsMatch(format))
 	//            throw new ArgumentException("Do not include {} in your format string.");
-	
+
 	//        Regex expression = new Regex(@"(\{\d+\})+");
 	//        foreach (Match match in expression.Matches(format))
 	//        {
 	//            match.Index
-	
+
 	//        }
 	//        //string[] boundaries = format.Split(matches).ToArray();
-	
+
 	//        //int startPosition = 0;
 	//        //for (int i = 0; i < matches.Count; ++i)
 	//        //{
