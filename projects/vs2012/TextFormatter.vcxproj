@@ -84,10 +84,7 @@
       <TargetMachine>MachineX86</TargetMachine>
       <SubSystem>Console</SubSystem>
     </Link>
-    <PostBuildEvent>
-      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
-      <Message>Publishing binary...</Message>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -104,10 +101,7 @@
       </DataExecutionPrevention>
       <SubSystem>Console</SubSystem>
     </Link>
-    <PostBuildEvent>
-      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
-      <Message>Publishing binary...</Message>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -130,10 +124,7 @@
       <SubSystem>Console</SubSystem>
     </Link>
     <PostBuildEvent />
-    <PostBuildEvent>
-      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
-      <Message>Publishing binary...</Message>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -155,10 +146,7 @@
       <SubSystem>Console</SubSystem>
     </Link>
     <PostBuildEvent />
-    <PostBuildEvent>
-      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
-      <Message>Publishing binary...</Message>
-    </PostBuildEvent>
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\textformatter\main.cpp" />

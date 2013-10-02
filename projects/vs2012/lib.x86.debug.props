@@ -13,13 +13,13 @@
   <PropertyGroup />
   <PropertyGroup>
     <TargetExt>.lib</TargetExt>
+    <TargetName>$(ProjectName).$(PlatformTarget).$(Configuration)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link />
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include;..\..\sdk\lua\lua\src;..\..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
-      <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <OmitFramePointers>false</OmitFramePointers>
@@ -31,9 +31,10 @@
       <OpenMPSupport>true</OpenMPSupport>
       <MinimalRebuild>true</MinimalRebuild>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
+      <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <PostBuildEvent>
-      <Command>q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>q:\tools\_publish_lib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
       <Message>Publishing library</Message>
     </PostBuildEvent>
     <Lib>

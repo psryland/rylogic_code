@@ -69,12 +69,14 @@
     </Link>
     <PostBuildEvent />
     <PostBuildEvent />
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />
     <Link>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent />
     <PostBuildEvent />
   </ItemDefinitionGroup>
@@ -88,6 +90,7 @@
     <PostBuildEvent />
     <PostBuildEvent />
     <ClCompile />
+    <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
@@ -96,6 +99,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent />
     <PostBuildEvent />
   </ItemDefinitionGroup>

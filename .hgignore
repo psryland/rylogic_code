@@ -39,6 +39,7 @@ obj2012/
 bin/
 bin_stable/
 */Setup/Express/*
+*/__pycache__/*
 .svn/
 .metadata/
 .nuget/
@@ -48,6 +49,7 @@ media/
 ideas/
 thirdparty/
 tools/Compressonator/
+sdk/pr/python/pr/UserVars.py
 miscellaneous/VisualStudio Mods/VS2010_Settings.vssettings
 miscellaneous/VisualStudio Mods/VS2008_Settings.vssettings
 tools/ResEdit/ResEdit.xml

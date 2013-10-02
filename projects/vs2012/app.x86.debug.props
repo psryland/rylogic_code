@@ -47,7 +47,7 @@
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>q:\tools\_publish_bin.cmd $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>q:\tools\_publish_bin.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
       <Message>Publishing binary...</Message>
     </PostBuildEvent>
     <ProjectReference>

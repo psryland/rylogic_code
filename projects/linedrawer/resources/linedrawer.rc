@@ -8,13 +8,11 @@
 //  resource error.
 //  Handle this by not having icons in the static lib resource files. Assess the icons by
 //  string name in the library gui code. Add all icons to the main project.rc file
-#include <windows.h>
+//#include <windows.h>
 #include <commctrl.h>
-#include <richedit.h>
+//#include <richedit.h>
 #include <atlres.h>
 #include "linedrawer.resources.h"
-
-
 
 //
 // Menu resources
@@ -122,8 +120,6 @@ IDR_MENU_MAIN MENU
     }
 }
 
-
-
 //
 // Dialog resources
 //
@@ -138,8 +134,6 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     EDITTEXT        IDC_EDIT_ABOUT, 30, 7, 150, 35, ES_AUTOHSCROLL | ES_MULTILINE | ES_READONLY
 }
 
-
-
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_DIALOG_MAIN DIALOGEX 0, 0, 529, 346
 STYLE DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_GROUP | WS_MAXIMIZEBOX | WS_THICKFRAME | WS_SYSMENU
@@ -149,8 +143,6 @@ MENU IDR_MENU_MAIN
 FONT 8, "MS Shell Dlg", 400, 0, 1
 {
 }
-
-
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_DIALOG_OPTIONS DIALOGEX 0, 0, 227, 185
@@ -162,8 +154,6 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     PUSHBUTTON      "Cancel", IDCANCEL, 170, 164, 50, 14
     CONTROL         "", IDC_TAB_MAIN, WC_TABCONTROL, TCS_HOTTRACK | TCS_VERTICAL | TCS_MULTILINE, 7, 7, 213, 152
 }
-
-
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_DIALOG_PLUGINS DIALOGEX 0, 0, 317, 213
@@ -182,8 +172,6 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     LTEXT           "Arguments:", IDC_LBL_PLUGIN_ARGS, 9, 176, 38, 8, SS_LEFT
 }
 
-
-
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_DIALOG_TEXT_ENTRY DIALOGEX 0, 0, 132, 46
 STYLE DS_SHELLFONT | WS_CAPTION | WS_VISIBLE | WS_POPUP | WS_THICKFRAME | WS_SYSMENU
@@ -194,8 +182,6 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     PUSHBUTTON      "Cancel", IDCANCEL, 25, 25, 50, 14
     EDITTEXT        IDC_EDIT_TEXT_ENTRY, 6, 7, 119, 15, ES_AUTOHSCROLL | ES_MULTILINE | ES_WANTRETURN
 }
-
-
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_TAB_GENERAL DIALOGEX 0, 0, 203, 164
@@ -213,8 +199,6 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     GROUPBOX        "Preferences", IDC_STATIC, 7, 23, 188, 37
 }
 
-
-
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_TAB_NAVIGATION DIALOGEX 0, 0, 200, 129
 STYLE DS_CONTROL | DS_SHELLFONT | WS_VISIBLE | WS_CHILDWINDOW
@@ -224,8 +208,6 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     CONTROL         "", IDC_SLIDER_CAM_ORBIT_SPEED, TRACKBAR_CLASS, WS_TABSTOP | TBS_BOTH | TBS_NOTICKS, 74, 7, 119, 15
     LTEXT           "Camera Orbit Speed:", IDC_STATIC_CAM_ORBIT_SPEED, 5, 10, 68, 8, SS_LEFT
 }
-
-
 
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 IDD_TAB_RENDERING DIALOGEX 0, 0, 200, 129
@@ -240,8 +222,6 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     COMBOBOX        IDC_COMBO_SHADER_VERSION, 73, 7, 48, 30, WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN
     COMBOBOX        IDC_COMBO_TEXTURE_QUALITY, 73, 37, 48, 30, WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN
 }
-
-
 
 //
 // Accelerator resources
@@ -260,8 +240,6 @@ IDR_ACCELERATOR2 ACCELERATORS
     "Z",            ID_ACCELERATOR_UNDO, VIRTKEY, CONTROL
     "Y",            ID_ACCELERATOR_REDO, VIRTKEY, CONTROL
 }
-
-
 
 //
 // Icon resources

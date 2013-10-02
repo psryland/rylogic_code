@@ -17,7 +17,7 @@
 #include "pr/common/byte_ptr_cast.h"
 #include "pr/common/fmt.h"
 #include "pr/common/chain.h"
-#include "pr/common/triangulartable.h"
+#include "pr/common/tri_table.h"
 #include "pr/common/array.h"
 #include "pr/common/scoped.h"
 #include "pr/common/stack.h"

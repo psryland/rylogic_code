@@ -13,7 +13,7 @@
 
 namespace ldr
 {
-	char const AppName[]   = "Alzatool";
+	char const AppName[]   = "Linedrawer";
 	char const Version[]   = "4.00.00";
 	char const Copyright[] = "Copyright © Rylogic Limited 2002";
 	pr::ldr::ContextId LdrContext = 0xFFFFFFFF;
@@ -72,7 +72,6 @@ LineDrawer::LineDrawer(LineDrawerGUI& ui, char const* cmdline)
 
 	// Parse the command line
 	pr::EnumCommandLine(cmdline, *this);
-
 }
 
 // Main app destructor

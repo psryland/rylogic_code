@@ -70,16 +70,16 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>Alzatool</TargetName>
+    <TargetName>Linedrawer</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <TargetName>Alzatool</TargetName>
+    <TargetName>Linedrawer</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>Alzatool</TargetName>
+    <TargetName>Linedrawer</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>Alzatool</TargetName>
+    <TargetName>Linedrawer</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -102,9 +102,7 @@
       </DataExecutionPrevention>
       <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <ResourceCompile>
-      <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ResourceCompile>
+    <ResourceCompile />
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
     </ProjectReference>
@@ -127,9 +125,8 @@
       </DataExecutionPrevention>
       <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <ResourceCompile>
-      <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ResourceCompile>
+    <ResourceCompile />
+    <ProjectReference />
     <ProjectReference />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -151,12 +148,9 @@
       </DataExecutionPrevention>
       <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <ResourceCompile>
-      <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ResourceCompile>
-    <ProjectReference>
-      <LinkLibraryDependencies>false</LinkLibraryDependencies>
-    </ProjectReference>
+    <ResourceCompile />
+    <ProjectReference />
+    <ProjectReference />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -176,12 +170,10 @@
       </DataExecutionPrevention>
       <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <ResourceCompile>
-      <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ResourceCompile>
-    <ProjectReference>
-      <LinkLibraryDependencies>false</LinkLibraryDependencies>
-    </ProjectReference>
+    <ResourceCompile />
+    <ProjectReference />
+    <ResourceCompile />
+    <ProjectReference />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.cpp">

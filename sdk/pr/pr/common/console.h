@@ -120,7 +120,6 @@ namespace pr
 			Coord(int x, int y) { X = short(x); Y = short(y); }
 		};
 
-
 		// Helper for combining fore and back colours
 		struct Colours
 		{
@@ -208,9 +207,9 @@ namespace pr
 				static void read(KEY_EVENT_RECORD evt, wchar_t& ch) { ch = evt.uChar.UnicodeChar; }
 				static void write(HANDLE out, char    const* str, size_t ofs, size_t count) { DWORD chars_written; WriteConsoleA(out, str + ofs, DWORD(count), &chars_written, 0); }
 				static void write(HANDLE out, wchar_t const* str, size_t ofs, size_t count) { DWORD chars_written; WriteConsoleW(out, str + ofs, DWORD(count), &chars_written, 0); }
-				static void fill(HANDLE out, char    ch, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputCharacterA(out, ch, count, loc, &chars_written); }
-				static void fill(HANDLE out, wchar_t ch, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputCharacterW(out, ch, count, loc, &chars_written); }
-				static void fill(HANDLE out, WORD   col, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputAttribute(out, col, count, loc, &chars_written); }
+				static void fill(HANDLE out, char    ch, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputCharacterA(out, ch, DWORD(count), loc, &chars_written); }
+				static void fill(HANDLE out, wchar_t ch, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputCharacterW(out, ch, DWORD(count), loc, &chars_written); }
+				static void fill(HANDLE out, WORD   col, size_t count, COORD loc)           { DWORD chars_written; FillConsoleOutputAttribute(out, col, DWORD(count), loc, &chars_written); }
 				static void fill(HANDLE out, char    ch, WORD col, size_t count, COORD loc) { fill(out, ch, count, loc); fill(out, col, count, loc); }
 				static void fill(HANDLE out, wchar_t ch, WORD col, size_t count, COORD loc) { fill(out, ch, count, loc); fill(out, col, count, loc); }
 			};
@@ -225,7 +224,7 @@ namespace pr
 				size_t m_caret;                  // The cursor position with 'm_text'
 				Console& m_cons;                 // The console to echo the line input to
 				bool m_echo;                     // True if we should echo to the output buffer
-				
+
 				LineInput(Console& cons)
 					:m_text()
 					,m_caret()
@@ -255,36 +254,36 @@ namespace pr
 				void left(bool word_skip)
 				{
 					if (m_caret == 0) return;
-					size_t caret = m_caret - 1;
-					if (word_skip) caret = word_boundary(caret, false);
-					if (m_echo) m_cons.Cursor(m_cons.Cursor(), caret - m_caret, 0);
+					int caret = int(m_caret) - 1;
+					if (word_skip) caret = int(word_boundary(caret, false));
+					if (m_echo) m_cons.Cursor(m_cons.Cursor(), caret - int(m_caret), 0);
 					m_caret = caret;
 				}
 				void right(bool word_skip)
 				{
 					if (m_caret == m_text.size()) return;
-					size_t caret = m_caret + 1;
-					if (word_skip) caret = word_boundary(caret, true);
-					if (m_echo) m_cons.Cursor(m_cons.Cursor(), caret - m_caret, 0);
+					int caret = int(m_caret + 1);
+					if (word_skip) caret = int(word_boundary(caret, true));
+					if (m_echo) m_cons.Cursor(m_cons.Cursor(), caret - int(m_caret), 0);
 					m_caret = caret;
 				}
 				void home()
 				{
 					if (m_caret == 0) return;
-					if (m_echo) m_cons.Cursor(m_cons.Cursor(), 0 - m_caret, 0);
+					if (m_echo) m_cons.Cursor(m_cons.Cursor(), 0 - int(m_caret), 0);
 					m_caret = 0;
 				}
 				void end()
 				{
 					if (m_caret == m_text.size()) return;
-					if (m_echo) m_cons.Cursor(m_cons.Cursor(), m_text.size() - m_caret, 0);
+					if (m_echo) m_cons.Cursor(m_cons.Cursor(), int(m_text.size()) - int(m_caret), 0);
 					m_caret = m_text.size();
 				}
 				void reset()
 				{
 					if (m_echo)
 					{
-						m_cons.Cursor(m_cons.Cursor(), 0 - m_caret, 0);
+						m_cons.Cursor(m_cons.Cursor(), 0 - int(m_caret), 0);
 						m_cons.Fill(' ', m_text.size());
 					}
 					m_text.resize(0);
@@ -313,11 +312,11 @@ namespace pr
 				void delback(bool whole_word)
 				{
 					if (m_caret == 0) return;
-					size_t caret = m_caret - 1;
-					if (whole_word) caret = word_boundary(caret, false);
+					int caret = int(m_caret) - 1;
+					if (whole_word) caret = int(word_boundary(caret, false));
 					if (m_echo)
 					{
-						int dx = caret - m_caret;
+						int dx = caret - int(m_caret);
 						auto cur = m_cons.Cursor();
 						m_cons.Cursor(cur, dx, 0);
 						m_cons.Write(m_text.c_str(), m_caret, m_text.size() - m_caret);
@@ -330,11 +329,11 @@ namespace pr
 				void delfwd(bool whole_word)
 				{
 					if (m_caret == m_text.size()) return;
-					size_t caret = m_caret + 1;
-					if (whole_word) caret = word_boundary(caret, true);
+					int caret = int(m_caret) + 1;
+					if (whole_word) caret = int(word_boundary(caret, true));
 					if (m_echo)
 					{
-						int dx = caret - m_caret;
+						int dx = caret - int(m_caret);
 						auto cur = m_cons.Cursor();
 						m_cons.Write(m_text.c_str(), m_caret + dx, m_text.size() - caret);
 						m_cons.Write(std::string(size_t(dx), ' '));
@@ -372,7 +371,7 @@ namespace pr
 
 				// Retrieve the system error message for the last-error code
 				char lpMsgBuf[1024];
-				DWORD dw = GetLastError(); 
+				DWORD dw = GetLastError();
 				FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, dw, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), lpMsgBuf, sizeof(lpMsgBuf), NULL);
 				std::string err; err.append(msg).append("\n").append(lpMsgBuf).append("\n");
 				LocalFree(lpMsgBuf);
@@ -1113,7 +1112,7 @@ namespace pr
 			,private pr::events::IRecv<Evt_FocusChanged>
 		{
 			enum EItem { Unknown, NewLine, CurrentInput, AString, WString, SetColours, SetCursor };
-		
+
 		private:
 			struct Item
 			{
@@ -1126,7 +1125,7 @@ namespace pr
 					Colours* m_colour;
 					Coord* m_cursor;
 				};
-				
+
 				Item(EItem what)        :m_what(what)        ,m_ptr(0) {}
 				Item(std::string line)  :m_what(AString)     ,m_linea(new std::string(line)) {}
 				Item(std::wstring line) :m_what(WString)     ,m_linew(new std::wstring(line)) {}
@@ -1212,17 +1211,17 @@ namespace pr
 
 			// Raised when a key down event occurs while this pad has focus
 			pr::Event<void(Pad&,Evt_KeyDown const&)> OnKeyDown;
-			
+
 			// Raised when a line of user input has been entered while this pad has focus
 			pr::Event<void(Pad&,Evt_Line<char> const&)> OnLineA;
 			pr::Event<void(Pad&,Evt_Line<wchar_t> const&)> OnLineW;
 
 			// Raised when the escape key is pressed while this pad has focus
 			pr::Event<void(Pad&,Evt_Escape const&)> OnEscape;
-			
+
 			// Raised when the tab key is pressed while this pad has focus
 			pr::Event<void(Pad&,Evt_Tab const&)> OnTab;
-			
+
 			// Raised when a function key is pressed while this pad has focus
 			pr::Event<void(Pad&,Evt_FunctionKey const&)> OnFunctionKey;
 
@@ -1317,13 +1316,13 @@ namespace pr
 				RECT wr;
 				wr.left   = loc.X;
 				wr.top    = loc.Y;
-				wr.right  = loc.X + WindowWidth();
-				wr.bottom = loc.Y + WindowHeight();
+				wr.right  = LONG(loc.X + WindowWidth() );
+				wr.bottom = LONG(loc.Y + WindowHeight());
 				return wr;
 			}
 			RECT WindowRect(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
 			{
-				return WindowRect(cons.CursorLocation(anchor, WindowWidth(), WindowHeight(), dx, dy));
+				return WindowRect(cons.CursorLocation(anchor, int(WindowWidth()), int(WindowHeight()), dx, dy));
 			}
 
 			// Returns the bounds of the content of the pad in screen space
@@ -1345,7 +1344,7 @@ namespace pr
 			}
 			RECT ClientRect(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
 			{
-				return ClientRect(cons.CursorLocation(anchor, WindowWidth(), WindowHeight(), dx, dy));
+				return ClientRect(cons.CursorLocation(anchor, int(WindowWidth()), int(WindowHeight()), dx, dy));
 			}
 
 			// Get/Set the client area width/height
@@ -1378,7 +1377,7 @@ namespace pr
 			void Selected(int s) { m_selected = std::max(std::min(s, int(m_line_count)), -1); }
 
 			// Get the number of lines contained in the pad
-			int LineCount() const { return m_line_count; }
+			int LineCount() const { return int(m_line_count); }
 
 			// Stream anything to the pad
 			template <typename T> Pad& operator << (T t)
@@ -1473,8 +1472,8 @@ namespace pr
 			// 'loc' is the pad-space location of the current cursor position
 			template <typename Char> void DrawLine(Console& cons, std::basic_string<Char> const& line, Coord loc) const
 			{
-				int s = std::min<int>(std::max(m_display_offset.X - loc.X, 0), line.size());
-				int c = std::min<int>(line.size() - s, m_width);
+				int s = std::min(std::max(int(m_display_offset.X) - int(loc.X), 0), int(line.size()));
+				int c = std::min(int(line.size()) - s, int(m_width));
 				cons.Write(line.c_str(), size_t(s), size_t(c));
 			}
 
@@ -1501,7 +1500,7 @@ namespace pr
 					// Skip lines that are outside the bounds of the pad
 					if (loc.Y < m_display_offset.Y || loc.Y >= int(m_display_offset.Y + m_height))
 						continue;
-					
+
 					if (line_index == m_selected || line_index == m_selected + 1) set_col = true;
 					if (set_cur && (set_cur = false) == false) cons.Cursor(cr.left + cur.X + ofs.X - m_display_offset.X, cr.top + cur.Y + ofs.Y - m_display_offset.Y);
 					if (set_col && (set_col = false) == false) cons.Colour(line_index == m_selected ? pad_colour.Merge(m_selection_colour) : col);
@@ -1542,7 +1541,7 @@ namespace pr
 			}
 			void Draw(Console& cons, EAnchor anchor, int dx = 0, int dy = 0) const
 			{
-				Draw(cons, cons.CursorLocation(anchor, WindowWidth(), WindowHeight(), dx, dy));
+				Draw(cons, cons.CursorLocation(anchor, int(WindowWidth()), int(WindowHeight()), dx, dy));
 			}
 
 			// Returns the size the pad should have to display all content
