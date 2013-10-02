@@ -105,7 +105,7 @@ namespace pr.gui
 			// Capture the form into the bitmap
 			m_attachee.DrawToBitmap(m_bm, rect);
 			RaiseSnapShotCaptured();
-			m_bm.Save(@"D:\deleteme\form.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+			//m_bm.Save(@"D:\deleteme\form.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
 
 			Visible = true;
 		}

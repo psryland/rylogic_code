@@ -312,6 +312,7 @@ namespace RyLogViewer
 				m_main.EnableFilters(false);
 				m_main.EnableTransforms(false);
 				m_main.EnableActions(false);
+				m_main.m_grid.TryScrollToRowIndex(0);
 				m_overlay.Attachee = m_main;
 
 				var path = Misc.ResolveAppFile(@"examples\example logfile.txt");
@@ -348,6 +349,7 @@ namespace RyLogViewer
 				m_main.EnableFilters(false);
 				m_main.EnableTransforms(false);
 				m_main.EnableActions(false);
+				m_main.m_grid.TryScrollToRowIndex(7);
 				m_overlay.Attachee = m_main;
 			}
 			public override void Exit(bool forward)
@@ -382,6 +384,7 @@ namespace RyLogViewer
 				m_main.EnableFilters(true);
 				m_main.EnableTransforms(false);
 				m_main.EnableActions(false);
+				m_main.m_grid.TryScrollToRowIndex(14);
 				m_overlay.Attachee = m_main;
 			}
 			public override void Exit(bool forward)
@@ -416,6 +419,7 @@ namespace RyLogViewer
 				m_main.EnableFilters(true);
 				m_main.EnableTransforms(true);
 				m_main.EnableActions(false);
+				m_main.m_grid.FirstDisplayedScrollingRowIndex = 23;
 				m_overlay.Attachee = m_main;
 			}
 			public override void Exit(bool forward)
@@ -451,6 +455,7 @@ namespace RyLogViewer
 				m_main.EnableFilters(true);
 				m_main.EnableTransforms(true);
 				m_main.EnableActions(true);
+				m_main.m_grid.TryScrollToRowIndex(36);
 				m_overlay.Attachee = m_main;
 			}
 			public override void Exit(bool forward)

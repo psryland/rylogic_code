@@ -34,7 +34,7 @@ namespace pr.extn
 			SelectAll(dgv);
 			e.Handled = true;
 		}
-		
+
 		/// <summary>Grid copy implementation. Returns true if something was added to the clip board</summary>
 		public static bool Copy(DataGridView grid)
 		{
@@ -59,11 +59,11 @@ namespace pr.extn
 			DataObject d = grid.GetClipboardContent();
 			if (d == null) return false;
 			Clipboard.SetDataObject(d);
-			
+
 			// Set the selected cells to defaults
-			foreach (DataGridViewCell c in grid.SelectedCells) 
+			foreach (DataGridViewCell c in grid.SelectedCells)
 				if (!c.ReadOnly) c.Value = c.DefaultNewRowValue;
-			
+
 			return true;
 		}
 
@@ -101,7 +101,7 @@ namespace pr.extn
 
 			int row = grid.CurrentCell.RowIndex;
 			int col = grid.CurrentCell.ColumnIndex;
-	
+
 			for (int j = 0; j != lines.Length && row != grid.RowCount; ++j, ++row)
 			{
 				// Skip blank lines
@@ -186,7 +186,7 @@ namespace pr.extn
 		public static bool PasteGrow(DataGridView grid)
 		{
 			if (grid.SelectedCells.Count > 1) return false;
-			
+
 			int row = grid.CurrentCell.RowIndex;
 			int col = grid.CurrentCell.ColumnIndex;
 
@@ -196,14 +196,14 @@ namespace pr.extn
 			// Grow the dgv if necessary
 			if (row + lines.Length > grid.RowCount)
 				grid.RowCount = row + lines.Length;
-			
+
 			for (int j = 0; j != lines.Length; ++j)
 			{
 				// Skip blank lines
 				if (lines[j].Length == 0) continue;
 
 				string[] cells = lines[j].Split('\t', ',', ';');
-				
+
 				// Grow the grid if necessary
 				if (col + cells.Length > grid.ColumnCount)
 					grid.ColumnCount = col + cells.Length;
@@ -219,7 +219,7 @@ namespace pr.extn
 			}
 			return true;
 		}
-		
+
 		/// <summary>Paste from the first selected cell over anything in the way. Grow the grid if necessary</summary>
 		public static void PasteGrow(object sender, KeyEventArgs e)
 		{
@@ -238,7 +238,7 @@ namespace pr.extn
 			PasteReplace         (sender, e); if (e.Handled) return;
 			PasteReplaceSelected (sender, e);//if (e.Handled) return;
 		}
-	
+
 		/// <summary>Return a collection of the fill weights</summary>
 		public static float[] FillWeights(this DataGridView grid)
 		{
@@ -253,6 +253,13 @@ namespace pr.extn
 			int i = grid.Rows.GetFirstRow(DataGridViewElementStates.Selected);
 			return i != -1 ? grid.Rows[i] : null;
 			//return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
+		}
+
+		/// <summary>Attempts to scroll the grid to 'first_row_index' clamped by the number of rows in the grid</summary>
+		public static void TryScrollToRowIndex(this DataGridView grid, int first_row_index)
+		{
+			if (grid.RowCount == 0) return;
+			grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_row_index, 0, grid.RowCount - 1);
 		}
 
 		/// <summary>Returns an enumerator for accessing rows with the given property</summary>
@@ -304,7 +311,7 @@ namespace pr.extn
 		/// <summary>A drag drop function for move a row in a grid to a new position</summary>
 		public static bool DragDrop_DoDropMoveRow(object sender, DragEventArgs args, DragDrop.EDrop mode)
 		{
-			// This method could be hooked up to a pr.util.DragDrop so the 
+			// This method could be hooked up to a pr.util.DragDrop so the
 			// events could come from anything. Only accept dgvs
 			var grid = sender as DataGridView;
 			if (grid == null)
@@ -470,7 +477,7 @@ namespace pr.extn
 			gfx.FillRectangle(m_gray1, track_rect);
 			track_rect.Inflate(-1,-1);
 			gfx.FillRectangle(m_gray0, track_rect);
-			
+
 			// Draw the thumb
 			RectangleF thumb_rect = cell_bounds;
 			thumb_rect.Width = m_btn_width; thumb_rect.Height -= 4;
@@ -480,11 +487,6 @@ namespace pr.extn
 			gfx.FillRectangle(m_gray2, thumb_rect);
 		}
 	}
-
-
-
-
-
 
 	///// <summary>A cell editing control for colour cells</summary>
 	//public class DataGridViewColorPicker :DataGridViewCellEditBase
@@ -580,4 +582,3 @@ namespace pr.extn
 	//    }
 	//};
 }
-
