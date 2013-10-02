@@ -73,7 +73,7 @@
     <key>BookmarkColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>162</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -122,27 +122,7 @@
     <key>FilterPatterns</key>
     <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
   &lt;filter&gt;
-    &lt;expr&gt;^\tFilter[0-9]{2}[5]&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;ifmatch&gt;Keep&lt;/ifmatch&gt;
-  &lt;/filter&gt;
-  &lt;filter&gt;
-    &lt;expr&gt;^\tFilter[0-9]{2}[1,3,5,7,9]&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;ifmatch&gt;Reject&lt;/ifmatch&gt;
-  &lt;/filter&gt;
-  &lt;filter&gt;
-    &lt;expr&gt;^\tFilter[0-9]{3}&lt;/expr&gt;
+    &lt;expr&gt;##&lt;/expr&gt;
     &lt;active&gt;true&lt;/active&gt;
     &lt;patntype&gt;Substring&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
@@ -155,7 +135,7 @@
   </setting>
   <setting>
     <key>FiltersEnabled</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
   </setting>
   <setting>
     <key>FirstRun</key>
@@ -186,9 +166,20 @@
     <key>HighlightPatterns</key>
     <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
   &lt;highlight&gt;
-    &lt;expr&gt;([a-zA-Z]{1}:)(\\[^\\/&amp;lt;&amp;gt;:\|\*\?\"]+)+\.[^\\/&amp;lt;&amp;gt;:\|\*\?\s]*&lt;/expr&gt;
+    &lt;expr&gt;#&lt;/expr&gt;
     &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
+    &lt;patntype&gt;Substring&lt;/patntype&gt;
+    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+    &lt;invert&gt;false&lt;/invert&gt;
+    &lt;wholeline&gt;false&lt;/wholeline&gt;
+    &lt;binary&gt;true&lt;/binary&gt;
+    &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
+    &lt;backcolour&gt;FF98FF91&lt;/backcolour&gt;
+  &lt;/highlight&gt;
+  &lt;highlight&gt;
+    &lt;expr&gt;*.txt&lt;/expr&gt;
+    &lt;active&gt;true&lt;/active&gt;
+    &lt;patntype&gt;Wildcard&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
     &lt;wholeline&gt;false&lt;/wholeline&gt;
@@ -229,22 +220,11 @@
     &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
     &lt;backcolour&gt;FFC4FFFF&lt;/backcolour&gt;
   &lt;/highlight&gt;
-  &lt;highlight&gt;
-    &lt;expr&gt;(Debug:)|(D/)&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;forecolour&gt;FF505050&lt;/forecolour&gt;
-    &lt;backcolour&gt;FFFFFFFF&lt;/backcolour&gt;
-  &lt;/highlight&gt;
 &lt;/root&gt;</value>
   </setting>
   <setting>
     <key>HighlightsEnabled</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
   </setting>
   <setting>
     <key>IgnoreBlankLines</key>
@@ -252,7 +232,7 @@
   </setting>
   <setting>
     <key>LastLoadedFile</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">C:\Users\Paul\Desktop\monodroid.log</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">Q:\projects\RyLogViewer\examples\example logfile.txt</value>
   </setting>
   <setting>
     <key>LicenceHolder</key>
@@ -262,7 +242,7 @@
     <key>LineBackColour1</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>165</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -271,7 +251,7 @@
     <key>LineBackColour2</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>164</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -284,7 +264,7 @@
     <key>LineForeColour1</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>35</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -293,7 +273,7 @@
     <key>LineForeColour2</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>35</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -302,7 +282,7 @@
     <key>LineSelectBackColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>53</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -311,7 +291,7 @@
     <key>LineSelectForeColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>164</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>1</d3p1:state>
       <d3p1:value>0</d3p1:value>
     </value>
@@ -326,7 +306,7 @@
   </setting>
   <setting>
     <key>LogProgramOutputHistory</key>
-    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfLaunchApp"/>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfLaunchApp" />
   </setting>
   <setting>
     <key>MaxLineLength</key>
@@ -334,7 +314,7 @@
   </setting>
   <setting>
     <key>NetworkConnectionHistory</key>
-    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfNetConn"/>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfNetConn" />
   </setting>
   <setting>
     <key>OpenAtEnd</key>
@@ -342,11 +322,11 @@
   </setting>
   <setting>
     <key>OutputFilepathHistory</key>
-    <value xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" i:type="d3p1:ArrayOfstring"/>
+    <value xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" i:type="d3p1:ArrayOfstring" />
   </setting>
   <setting>
     <key>PipeConnectionHistory</key>
-    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfPipeConn"/>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfPipeConn" />
   </setting>
   <setting>
     <key>QuickFilterEnabled</key>
@@ -371,15 +351,15 @@
   <setting>
     <key>ScreenPosition</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Point">
-      <d3p1:x>806</d3p1:x>
-      <d3p1:y>92</d3p1:y>
+      <d3p1:x>534</d3p1:x>
+      <d3p1:y>275</d3p1:y>
     </value>
   </setting>
   <setting>
     <key>ScrollBarCachedRangeColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>0</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>2</d3p1:state>
       <d3p1:value>1085135078</d3p1:value>
     </value>
@@ -388,7 +368,7 @@
     <key>ScrollBarDisplayRangeColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>0</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>2</d3p1:state>
       <d3p1:value>2152104628</d3p1:value>
     </value>
@@ -397,14 +377,14 @@
     <key>ScrollBarFileRangeColour</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Color">
       <d3p1:knownColor>0</d3p1:knownColor>
-      <d3p1:name i:nil="true"/>
+      <d3p1:name i:nil="true" />
       <d3p1:state>2</d3p1:state>
       <d3p1:value>2164260863</d3p1:value>
     </value>
   </setting>
   <setting>
     <key>SerialConnectionHistory</key>
-    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfSerialConn"/>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfSerialConn" />
   </setting>
   <setting>
     <key>ShowTOTD</key>
@@ -442,12 +422,82 @@
         &lt;subdata /&gt;
       &lt;/sub&gt;
     &lt;/subs&gt;
-  &lt;/transform&gt;
+          &lt;/transform&gt;
+          &lt;transform&gt;
+            &lt;match&gt;
+              &lt;expr&gt;An error of type {code} occurred&lt;/expr&gt;
+              &lt;active&gt;true&lt;/active&gt;
+              &lt;patntype&gt;Substring&lt;/patntype&gt;
+              &lt;ignorecase&gt;false&lt;/ignorecase&gt;
+              &lt;invert&gt;false&lt;/invert&gt;
+              &lt;binary&gt;true&lt;/binary&gt;
+            &lt;/match&gt;
+            &lt;replace&gt;Windows result code: {code}&lt;/replace&gt;
+            &lt;subs&gt;
+              &lt;sub&gt;
+                &lt;name&gt;No Change&lt;/name&gt;
+                &lt;id&gt;0&lt;/id&gt;
+                &lt;subdata /&gt;
+              &lt;/sub&gt;
+              &lt;sub&gt;
+                &lt;name&gt;Code Lookup&lt;/name&gt;
+                &lt;id&gt;code&lt;/id&gt;
+                &lt;subdata&gt;
+                  &lt;codevalues&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;0&lt;/c&gt;
+                      &lt;v&gt;ERROR_SUCCESS - The operation completed successfully&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;1&lt;/c&gt;
+                      &lt;v&gt;ERROR_INVALID_FUNCTION - Incorrect function&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;2&lt;/c&gt;
+                      &lt;v&gt;ERROR_FILE_NOT_FOUND - The system cannot find the file specified&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;3&lt;/c&gt;
+                      &lt;v&gt;ERROR_PATH_NOT_FOUND - The system cannot find the path specified&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;4&lt;/c&gt;
+                      &lt;v&gt;ERROR_TOO_MANY_OPEN_FILES - The system cannot open the file&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;5&lt;/c&gt;
+                      &lt;v&gt;ERROR_ACCESS_DENIED - Access is denied&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;6&lt;/c&gt;
+                      &lt;v&gt;ERROR_INVALID_HANDLE - The handle is invalid&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;7&lt;/c&gt;
+                      &lt;v&gt;ERROR_ARENA_THRASHED - The storage control blocks were destroyed&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;8&lt;/c&gt;
+                      &lt;v&gt;ERROR_NOT_ENOUGH_MEMORY - Not enough storage is available to process this command&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;9&lt;/c&gt;
+                      &lt;v&gt;ERROR_INVALID_BLOCK - The storage control block address is invalid&lt;/v&gt;
+                    &lt;/cv&gt;
+                    &lt;cv&gt;
+                      &lt;c&gt;10&lt;/c&gt;
+                      &lt;v&gt;ERROR_BAD_ENVIRONMENT - The environment is incorrect&lt;/v&gt;
+                    &lt;/cv&gt;
+                  &lt;/codevalues&gt;
+                &lt;/subdata&gt;
+              &lt;/sub&gt;
+            &lt;/subs&gt
+    &lt;/transform&gt;
 &lt;/root&gt;</value>
   </setting>
   <setting>
     <key>TransformsEnabled</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
   </setting>
   <setting>
     <key>UseWebProxy</key>
@@ -468,8 +518,8 @@
   <setting>
     <key>WindowSize</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Size">
-      <d3p1:height>818</d3p1:height>
-      <d3p1:width>944</d3p1:width>
+      <d3p1:height>530</d3p1:height>
+      <d3p1:width>851</d3p1:width>
     </value>
   </setting>
   <setting>
