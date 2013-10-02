@@ -174,7 +174,7 @@
     &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
-    &lt;backcolour&gt;FF98FF91&lt;/backcolour&gt;
+    &lt;backcolour&gt;FF6AD76F&lt;/backcolour&gt;
   &lt;/highlight&gt;
   &lt;highlight&gt;
     &lt;expr&gt;*.txt&lt;/expr&gt;
@@ -351,8 +351,8 @@
   <setting>
     <key>ScreenPosition</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Point">
-      <d3p1:x>534</d3p1:x>
-      <d3p1:y>275</d3p1:y>
+      <d3p1:x>2507</d3p1:x>
+      <d3p1:y>215</d3p1:y>
     </value>
   </setting>
   <setting>
@@ -417,33 +417,10 @@
         &lt;subdata /&gt;
       &lt;/sub&gt;
       &lt;sub&gt;
-        &lt;name&gt;Upper Case&lt;/name&gt;
+        &lt;name&gt;Code Lookup&lt;/name&gt;
         &lt;id&gt;1&lt;/id&gt;
-        &lt;subdata /&gt;
-      &lt;/sub&gt;
-    &lt;/subs&gt;
-          &lt;/transform&gt;
-          &lt;transform&gt;
-            &lt;match&gt;
-              &lt;expr&gt;An error of type {code} occurred&lt;/expr&gt;
-              &lt;active&gt;true&lt;/active&gt;
-              &lt;patntype&gt;Substring&lt;/patntype&gt;
-              &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-              &lt;invert&gt;false&lt;/invert&gt;
-              &lt;binary&gt;true&lt;/binary&gt;
-            &lt;/match&gt;
-            &lt;replace&gt;Windows result code: {code}&lt;/replace&gt;
-            &lt;subs&gt;
-              &lt;sub&gt;
-                &lt;name&gt;No Change&lt;/name&gt;
-                &lt;id&gt;0&lt;/id&gt;
-                &lt;subdata /&gt;
-              &lt;/sub&gt;
-              &lt;sub&gt;
-                &lt;name&gt;Code Lookup&lt;/name&gt;
-                &lt;id&gt;code&lt;/id&gt;
-                &lt;subdata&gt;
-                  &lt;codevalues&gt;
+        &lt;subdata&gt;
+          		&lt;codevalues&gt;
                     &lt;cv&gt;
                       &lt;c&gt;0&lt;/c&gt;
                       &lt;v&gt;ERROR_SUCCESS - The operation completed successfully&lt;/v&gt;
@@ -488,11 +465,11 @@
                       &lt;c&gt;10&lt;/c&gt;
                       &lt;v&gt;ERROR_BAD_ENVIRONMENT - The environment is incorrect&lt;/v&gt;
                     &lt;/cv&gt;
-                  &lt;/codevalues&gt;
-                &lt;/subdata&gt;
-              &lt;/sub&gt;
-            &lt;/subs&gt
-    &lt;/transform&gt;
+           &lt;/codevalues&gt;
+        &lt;/subdata&gt;
+      &lt;/sub&gt;
+    &lt;/subs&gt;
+  &lt;/transform&gt;
 &lt;/root&gt;</value>
   </setting>
   <setting>
