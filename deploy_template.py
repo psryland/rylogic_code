@@ -1,35 +1,39 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
-import os, sys, subprocess, shutil
+import sys, os, shutil
 
 sys.path.append("Q:/sdk/pr/python")
 from pr import RylogicEnv
-RylogicEnv.CheckVersion(1)
-
-#srcdir = RylogicEnv.qdrive + r"\projects\Csex"
-#dstdir = RylogicEnv.qdrive + r"\bin"
-#symdir = RylogicEnv.qdrive + r"\local\symbols"
-#proj   = srcdir + r"\Csex_vs2012.csproj"
-#config = "release"
-#dst    = dstdir + r"\csex"
-#sym    = symdir + r"\csex"
-#bindir = srcdir + r"\bin\" + config
+from pr import UserVars
 
 print(
 	"*************************************************************************\n"
 	"  Whatever Deploy\n"
 	"    Copyright © Rylogic Limited 2013\n"
-	"\n"
+	"*************************************************************************")
+
+RylogicEnv.CheckVersion(1)
+
+#srcdir = RylogicEnv.pr_root + r"\projects\Csex"
+#dstdir = RylogicEnv.pr_root + r"\bin"
+#symdir = RylogicEnv.pr_root + r"\local\symbols"
+#proj   = srcdir + r"\Csex_vs2012.csproj"
+#config = input("Configuration (debug, release)? ")
+#dst    = dstdir + r"\csex"
+#sym    = symdir + r"\csex"
+#bindir = srcdir + r"\bin\" + config
+
+input(
+	"Deploy settings:\n"
 	"         Source: " + bindir + "\n"
 	"    Destination: " + dst + "\n"
 	"  Configuration: " + config + "\n"
-	"*************************************************************************")
-input()
+	"Press enter to continue")
 
 try:
 	#Invoke MSBuild
 	print("Building the exe...")
-	RylogicEnv.Run(RylogicEnv.msbuild,'"'+proj+'" /p:Configuration='+config+';Platform=AnyCPU')
+	RylogicEnv.Exec([UserVars.msbuild, proj, "/p:Configuration="+config+";Platform=AnyCPU"])
 
 	#Ensure directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)
@@ -47,6 +51,4 @@ try:
 	RylogicEnv.OnSuccess()
 
 except Exception as ex:
-	print("Error: " + ex)
-	RylogicEnv.OnError()
-
+	RylogicEnv.OnError("Error: " + str(ex))

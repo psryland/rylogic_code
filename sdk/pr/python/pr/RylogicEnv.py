@@ -1,49 +1,64 @@
-import sys, time, shutil, subprocess
-
-version           = 1
-user              = r"Paul"
-machine           = r"Rylogic3"
-qdrive            = r"Q:"
-zdrive            = r"Z:"
-csex              = qdrive + r"\bin\csex\csex.exe"
-zip               = qdrive + r"\tools\7za.exe"
-arch              = r"x64"
-vs_dir            = r"D:\Program Files (x86)\Microsoft Visual Studio 11.0"
-vc_env            = vs_dir + r"\VC\vcvarsall.bat"
-devenv            = vs_dir + r"\Common7\ide\devenv.exe"
-dxsdk             = r"D:\Program Files (x86)\Microsoft DirectX SDK (June 2010)"
-fxc               = dxsdk + r"\Utilities\bin\x64\fxc.exe"
-texconv           = dxsdk + r"\Utilities\bin\x64\texconv.exe"
-textedit          = r"C:\Program Files (x86)\Notepad++\notepad++.exe"
-mergetool         = r"D:\Program Files (x86)\Araxis\Araxis Merge\Merge.exe"
-msbuild           = r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe"
-ttbuild           = r"C:\Program Files (x86)\Common Files\Microsoft Shared\TextTemplating\10.0\TextTransform.exe"
-silverlight_root  = r"C:\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0"
-java_sdkdir       = r"C:\Program Files\Java\jdk1.6.0_38"
-android_sdkdir    = r"D:\Program Files (x86)\Android\android-sdk"
-adb               = android_sdkdir + r"\platform-tools\adb.exe"
-dmdroot           = r"Q:\dlang\dmd2"
-dmd               = dmdroot + "\windows\bin\dmd.exe"
-wwwroot           = r"Z:\www\rylogic.co.nz"
-
+import os, sys, time, shutil, subprocess
+from pr import UserVars
 
 def CheckVersion(check_version):
-	if check_version > version:
+	if check_version > UserVars.version:
 		OnError("RylogicEnv.py is out of date")
 
-def Run(exe, args):
-	subprocess.check_call('"'+exe+'" '+args)
-	
-def Copy(src, dst):
-	print(src.ljust(40) + " --> " + dst)
-	shutil.copy(src, dst)
-	
-def OnError():
-	print("\n   Failed\n\n")
-	input()
+def OnError(msg):
+	print(msg + "\n\n   Failed\n\n")
+	input("Press enter to close")
 	sys.exit(1)
 
 def OnSuccess():
 	print("\n   Success\n\n")
 	time.sleep(5)
 	sys.exit(0)
+
+# Compares the timestamps of two files and returns true if they are different
+def Diff(src,dst):
+	sfound = os.path.exists(src)
+	dfound = os.path.exists(dst)
+	return not sfound or not dfound or os.stat(src).st_mtime != os.stat(dst).st_mtime
+
+# Compares the content of two files and returns true if they are different.
+# Ignores file timestamps
+def DiffContent(src,dst):
+	sfound = os.path.exists(src)
+	dfound = os.path.exists(dst)
+	if not sfound or not dfound or os.path.getsize(src) != os.path.getsize(dst):
+		return True
+	with open(src) as s:
+		with open(dst) as d:
+			return s.read() != d.read()
+
+# Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
+def Copy(src, dst, only_if_modified=True):
+	if only_if_modified and not Diff(src,dst):
+		print(src + " --> unchanged")
+	else:
+		print(src + " --> " + dst)
+		dirname = os.path.dirname(dst)
+		if not os.path.exists(dirname): os.makedirs(dirname)
+		shutil.copy2(src, dst)
+
+# Executes a program and returns it's stdout/stderr as a string
+def Run(args, expected_return_code=0):
+	try:
+		return subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT)
+	except subprocess.CalledProcessError as e:
+		if e.returncode == expected_return_code: return e.output
+		OnError("ERROR: " + e.output)
+	except Exception as e:
+		OnError("ERROR: " + str(e))
+
+# Executes a program echoing its output to stdout
+def Exec(args, expected_return_code=0):
+	try:
+		subprocess.check_call(args)
+	except subprocess.CalledProcessError as e:
+		if e.returncode == expected_return_code: return
+		OnError("ERROR: " + e.output)
+	except Exception as e:
+		OnError("ERROR: " + str(e))
+
