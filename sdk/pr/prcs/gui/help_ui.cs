@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using pr.extn;
-using pr.inet;
 using pr.util;
 
 namespace pr.gui
@@ -19,55 +17,55 @@ namespace pr.gui
 		private Button m_btn_forward;
 		private Label m_lbl_status;
 		private Button     m_btn_ok;
-		
+
 		// Create modal instances
 		public static DialogResult ShowText(Form owner, string text, string title)
 		{
-			return ShowHtml(owner, inet.Html.FromText(text), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return ShowHtml(owner, inet.Html.FromText(text), title, Point.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static DialogResult ShowText(Form owner, string text, string title, Size ofs, Size size, EPin pin)
+		public static DialogResult ShowText(Form owner, string text, string title, Point ofs, Size size, EPin pin)
 		{
 			return ShowHtml(owner, inet.Html.FromText(text), title, ofs, size, pin);
 		}
 		public static DialogResult ShowResource(Form owner, string resource_name, Assembly ass, string title)
 		{
-			return ShowHtml(owner, Util.TextResource(resource_name, ass), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return ShowHtml(owner, Util.TextResource(resource_name, ass), title, Point.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static DialogResult ShowResource(Form owner, string resource_name, Assembly ass, string title, Size ofs, Size size, EPin pin)
+		public static DialogResult ShowResource(Form owner, string resource_name, Assembly ass, string title, Point ofs, Size size, EPin pin)
 		{
 			return ShowHtml(owner, Util.TextResource(resource_name, ass), title, ofs, size, pin);
 		}
 		public static DialogResult ShowHtml(Form owner, string html, string title)
 		{
-			return ShowHtml(owner, html, title, Size.Empty, Size.Empty, EPin.TopRight);
+			return ShowHtml(owner, html, title, Point.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static DialogResult ShowHtml(Form owner, string html, string title, Size ofs, Size size, EPin pin)
+		public static DialogResult ShowHtml(Form owner, string html, string title, Point ofs, Size size, EPin pin)
 		{
 			return new HelpUI(owner, html, title, ofs, size, pin, true).ShowDialog(owner);
 		}
-		
+
 		// Create non-modal instances
 		public static HelpUI FromText(Form parent, string text, string title)
 		{
-			return FromHtml(parent, inet.Html.FromText(text), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return FromHtml(parent, inet.Html.FromText(text), title, Point.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static HelpUI FromText(Form parent, string text, string title, Size ofs, Size size, EPin pin)
+		public static HelpUI FromText(Form parent, string text, string title, Point ofs, Size size, EPin pin)
 		{
 			return FromHtml(parent, inet.Html.FromText(text), title, ofs, size, pin);
 		}
 		public static HelpUI FromResource(Form parent, string resource_name, Assembly ass, string title)
 		{
-			return FromHtml(parent, Util.TextResource(resource_name, ass), title, Size.Empty, Size.Empty, EPin.TopRight);
+			return FromHtml(parent, Util.TextResource(resource_name, ass), title, Point.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static HelpUI FromResource(Form parent, string resource_name, Assembly ass, string title, Size ofs, Size size, EPin pin)
+		public static HelpUI FromResource(Form parent, string resource_name, Assembly ass, string title, Point ofs, Size size, EPin pin)
 		{
 			return FromHtml(parent, Util.TextResource(resource_name, ass), title, ofs, size, pin);
 		}
 		public static HelpUI FromHtml(Form parent, string html, string title)
 		{
-			return FromHtml(parent, html, title, Size.Empty, Size.Empty, EPin.TopRight);
+			return FromHtml(parent, html, title, Point.Empty, Size.Empty, EPin.TopRight);
 		}
-		public static HelpUI FromHtml(Form parent, string html, string title, Size ofs, Size size, EPin pin)
+		public static HelpUI FromHtml(Form parent, string html, string title, Point ofs, Size size, EPin pin)
 		{
 			return new HelpUI(parent, html, title, ofs, size, pin, false);
 		}
@@ -76,8 +74,8 @@ namespace pr.gui
 		private readonly Uri m_about_blank = new Uri("about:blank");
 
 		/// <summary>Construct from html. Private constructor so we can create overloads for resources, plain text, and html</summary>
-		private HelpUI(Form owner, string html, string title, Size ofs, Size size, EPin pin, bool modal)
-		:base(owner, ofs, size, pin, modal)
+		private HelpUI(Form owner, string html, string title, Point ofs, Size size, EPin pin, bool modal)
+		:base(owner, pin, ofs, size, modal)
 		{
 			InitializeComponent();
 			Text = title;
@@ -90,7 +88,7 @@ namespace pr.gui
 			m_html.CanGoBackChanged    += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
 			m_html.Navigated           += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
 			m_html.Navigating          += (s,a) => m_url = a.Url;
-			
+
 			m_lbl_status.Visible = false;
 			m_lbl_status.Text = m_html.StatusText;
 
@@ -164,11 +162,11 @@ namespace pr.gui
 			this.m_btn_forward = new System.Windows.Forms.Button();
 			this.m_panel.SuspendLayout();
 			this.SuspendLayout();
-			// 
+			//
 			// m_panel
-			// 
-			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_panel.Controls.Add(this.m_lbl_status);
@@ -177,9 +175,9 @@ namespace pr.gui
 			this.m_panel.Name = "m_panel";
 			this.m_panel.Size = new System.Drawing.Size(624, 411);
 			this.m_panel.TabIndex = 6;
-			// 
+			//
 			// m_lbl_status
-			// 
+			//
 			this.m_lbl_status.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_lbl_status.AutoSize = true;
 			this.m_lbl_status.BackColor = System.Drawing.Color.LemonChiffon;
@@ -188,9 +186,9 @@ namespace pr.gui
 			this.m_lbl_status.Size = new System.Drawing.Size(24, 13);
 			this.m_lbl_status.TabIndex = 3;
 			this.m_lbl_status.Text = "Idle";
-			// 
+			//
 			// m_html
-			// 
+			//
 			this.m_html.AllowWebBrowserDrop = false;
 			this.m_html.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_html.IsWebBrowserContextMenuEnabled = false;
@@ -200,9 +198,9 @@ namespace pr.gui
 			this.m_html.ScriptErrorsSuppressed = true;
 			this.m_html.Size = new System.Drawing.Size(622, 409);
 			this.m_html.TabIndex = 2;
-			// 
+			//
 			// m_btn_ok
-			// 
+			//
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_ok.Location = new System.Drawing.Point(528, 416);
@@ -211,9 +209,9 @@ namespace pr.gui
 			this.m_btn_ok.TabIndex = 7;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_btn_back
-			// 
+			//
 			this.m_btn_back.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_btn_back.Font = new System.Drawing.Font("Segoe UI Symbol", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.m_btn_back.Location = new System.Drawing.Point(12, 416);
@@ -222,9 +220,9 @@ namespace pr.gui
 			this.m_btn_back.TabIndex = 8;
 			this.m_btn_back.Text = "◀ Back\r\n";
 			this.m_btn_back.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_btn_forward
-			// 
+			//
 			this.m_btn_forward.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_btn_forward.Font = new System.Drawing.Font("Segoe UI Symbol", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.m_btn_forward.Location = new System.Drawing.Point(93, 416);
@@ -233,9 +231,9 @@ namespace pr.gui
 			this.m_btn_forward.TabIndex = 9;
 			this.m_btn_forward.Text = "Forward ▶\r\n";
 			this.m_btn_forward.UseVisualStyleBackColor = true;
-			// 
+			//
 			// HelpUI
-			// 
+			//
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -250,7 +248,6 @@ namespace pr.gui
 			this.m_panel.ResumeLayout(false);
 			this.m_panel.PerformLayout();
 			this.ResumeLayout(false);
-
 		}
 
 		#endregion

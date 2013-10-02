@@ -229,7 +229,7 @@ namespace pr.util
 		public const uint WM_PENWINLAST                   = 0x038F;
 		public const uint WM_APP                          = 0x8000;
 		public const uint WM_USER                         = 0x0400;
-        
+
 		// WM_SYSCOMMAND values
 		public const uint SC_WPARAM_MASK                  = 0xFFF0; // In C# you need to mask the wparam with this as the lower bits contain magic stuff
 		public const uint SC_SIZE                         = 0xF000; // Sizes the window.
@@ -243,7 +243,7 @@ namespace pr.util
 		public const uint SC_HSCROLL                      = 0xF080; // Scrolls horizontally.
 		public const uint SC_MOUSEMENU                    = 0xF090; // Retrieves the window menu as a result of a mouse click.
 		public const uint SC_KEYMENU                      = 0xF100; // Retrieves the window menu as a result of a keystroke. For more information, see the Remarks section.
-		public const uint SC_ARRANGE                      = 0xF110; // 
+		public const uint SC_ARRANGE                      = 0xF110; //
 		public const uint SC_RESTORE                      = 0xF120; // Restores the window to its normal position and size.
 		public const uint SC_TASKLIST                     = 0xF130; // Activates the Start menu.
 		public const uint SC_SCREENSAVE                   = 0xF140; // Executes the screen saver application specified in the [boot] section of the System.ini file.
@@ -252,7 +252,7 @@ namespace pr.util
 		public const uint SC_MONITORPOWER                 = 0xF170; // Sets the state of the display. This command supports devices that have power-saving features, such as a battery-powered personal computer.
 		public const uint SC_CONTEXTHELP                  = 0xF180; // Changes the cursor to a question mark with a pointer. If the user then clicks a control in the dialog box, the control receives a WM_HELP message.
 		public const uint SC_SEPARATOR                    = 0xF00F; //
-        
+
 		// WM_ACTIVATE state values
 		public const uint WA_INACTIVE                     = 0;
 		public const uint WA_ACTIVE                       = 1;
@@ -298,7 +298,7 @@ namespace pr.util
 		public const int TM_SINGLECODEPAGE                = 16;
 		public const int TM_MULTICODEPAGE                 = 32; // default behaviour
 
-		// RichEdit messages 
+		// RichEdit messages
 		public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
 		public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
 		public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
@@ -335,8 +335,8 @@ namespace pr.util
 		public const uint EM_FINDTEXTEX                   = (WM_USER + 79);
 		public const uint EM_GETWORDBREAKPROCEX           = (WM_USER + 80);
 		public const uint EM_SETWORDBREAKPROCEX           = (WM_USER + 81);
-        
-		// RichEdit 2.0 messages 
+
+		// RichEdit 2.0 messages
 		public const uint EM_SETUNDOLIMIT                 = (WM_USER + 82);
 		public const uint EM_REDO                         = (WM_USER + 84);
 		public const uint EM_CANREDO                      = (WM_USER + 85);
@@ -390,7 +390,21 @@ namespace pr.util
 		public const int CS_PARENTDC                      = 0x00000080;
 		public const int CS_SAVEBITS                      = 0x00000800;
 		public const int CS_VREDRAW                       = 0x00000001;
-		#endregion 
+
+		// Graphics modes
+		public const int GM_COMPATIBLE                    = 1;
+		public const int GM_ADVANCED                      = 2;
+
+		// Mapping Modes
+		public const int MM_TEXT                          = 1;
+		public const int MM_LOMETRIC                      = 2;
+		public const int MM_HIMETRIC                      = 3;
+		public const int MM_LOENGLISH                     = 4;
+		public const int MM_HIENGLISH                     = 5;
+		public const int MM_TWIPS                         = 6;
+		public const int MM_ISOTROPIC                     = 7;
+		public const int MM_ANISOTROPIC                   = 8;
+		#endregion
 
 		public enum ScrollBarDirection
 		{
@@ -457,6 +471,17 @@ namespace pr.util
 			public POINT ptMaxPosition;
 			public POINT ptMinTrackSize;
 			public POINT ptMaxTrackSize;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct  XFORM
+		{
+			public float eM11;
+			public float eM12;
+			public float eM21;
+			public float eM22;
+			public float eDx;
+			public float eDy;
 		}
 
 		// Used by the FindFirstFile or FindNextFile functions.
@@ -553,17 +578,6 @@ namespace pr.util
 			SetScrollInfo(hWnd, nBar, ref info, bRedraw);
 		}
 
-		public static Scope SuspendRedraw(this Control ctrl, bool refresh_on_resume)
-		{
-			return Scope.Create(
-				() => SendMessage(ctrl.Handle, WM_SETREDRAW, 0, 0),
-				() =>
-					{
-						SendMessage(ctrl.Handle, WM_SETREDRAW, 1, 0);
-						if (refresh_on_resume) ctrl.Refresh();
-					});
-		}
-
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);
 
 		[System.Security.SuppressUnmanagedCodeSecurity] // We won't use this maliciously
@@ -595,14 +609,17 @@ namespace pr.util
 		[DllImport("user32.dll")]                                 public static extern int    SetScrollInfo(HWND hwnd, int fnBar, ref SCROLLINFO lpsi, bool fRedraw);
 		[DllImport("user32.dll")]                                 public static extern int    GetScrollPos(HWND hWnd, int nBar);
 		[DllImport("user32.dll")]                                 public static extern int    SetScrollPos(HWND hWnd, int nBar, int nPos, bool bRedraw);
-		[DllImport("user32.dll")]                                 public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent); 
-		[DllImport("user32.dll")]                                 public static extern int    SetWindowLong(HWND hWnd, int nIndex, uint dwNewLong); 
+		[DllImport("user32.dll")]                                 public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent);
+		[DllImport("user32.dll")]                                 public static extern int    SetWindowLong(HWND hWnd, int nIndex, uint dwNewLong);
 		[DllImport("user32.dll", SetLastError=true)]              public static extern uint   GetWindowLong(HWND hWnd, int nIndex);
 		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   AllocConsole();
 		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   FreeConsole();
 		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   AttachConsole(int dwProcessId);
 		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   WriteConsole(IntPtr hConsoleOutput, string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
 		[DllImport("ole32.dll")]                                  public static extern void   CoTaskMemFree(IntPtr ptr);
+		[DllImport("gdi32.dll")]                                  public static extern int    SetGraphicsMode(IntPtr hdc, int iGraphicsMode);
+		[DllImport("gdi32.dll")]                                  public static extern int    SetMapMode(IntPtr hdc, int fnMapMode);
+		[DllImport("gdi32.dll")]                                  public static extern bool   SetWorldTransform(IntPtr hdc, ref XFORM lpXform);
 		[DllImport("gdi32.dll", EntryPoint="DeleteObject")]       public static extern bool   DeleteObject(IntPtr hObject);
 	}
 }

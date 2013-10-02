@@ -122,7 +122,7 @@ namespace RyLogViewer
 			this.m_btn_next.Name = "m_btn_next";
 			this.m_btn_next.Size = new System.Drawing.Size(63, 23);
 			this.m_btn_next.TabIndex = 0;
-			this.m_btn_next.Text = "Next";
+			this.m_btn_next.Text = "&Next";
 			this.m_btn_next.UseVisualStyleBackColor = true;
 			//
 			// m_check_show_on_startup
@@ -157,7 +157,7 @@ namespace RyLogViewer
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(63, 23);
 			this.m_btn_ok.TabIndex = 3;
-			this.m_btn_ok.Text = "Close";
+			this.m_btn_ok.Text = "&Close";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
 			//
 			// m_panel
@@ -179,7 +179,7 @@ namespace RyLogViewer
 			this.m_btn_prev.Name = "m_btn_prev";
 			this.m_btn_prev.Size = new System.Drawing.Size(63, 23);
 			this.m_btn_prev.TabIndex = 6;
-			this.m_btn_prev.Text = "Previous";
+			this.m_btn_prev.Text = "&Previous";
 			this.m_btn_prev.UseVisualStyleBackColor = true;
 			//
 			// TipOfTheDay

@@ -209,7 +209,7 @@ namespace RyLogViewer
 				if (sub != null)
 				{
 					e.Value = sub.Name;
-					grid[e.ColumnIndex,e.RowIndex].ToolTipText = sub.ConfigSummary; 
+					grid[e.ColumnIndex,e.RowIndex].ToolTipText = sub.ConfigSummary;
 				}
 				break;
 			case ColumnNames.Cfg:
@@ -239,7 +239,7 @@ namespace RyLogViewer
 			}
 			UpdateUI();
 		}
-		
+
 		/// <summary>Paint the backgrounds to show capture groups</summary>
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
 		{
@@ -397,18 +397,18 @@ namespace RyLogViewer
 			get
 			{
 				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.transform_quick_ref, "Transform Help", new Size(1,1), new Size(640,480), ToolForm.EPin.TopRight));
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.transform_quick_ref, "Transform Help", new Point(1,1), new Size(640,480), ToolForm.EPin.TopRight));
 			}
 		}
 
 		#region Component Designer generated code
 
-		/// <summary> 
+		/// <summary>
 		/// Required designer variable.
 		/// </summary>
 		private System.ComponentModel.IContainer components = null;
 
-		/// <summary> 
+		/// <summary>
 		/// Clean up any resources being used.
 		/// </summary>
 		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
@@ -420,9 +420,9 @@ namespace RyLogViewer
 			}
 			base.Dispose(disposing);
 		}
-		
-		/// <summary> 
-		/// Required method for Designer support - do not modify 
+
+		/// <summary>
+		/// Required method for Designer support - do not modify
 		/// the contents of this method with the code editor.
 		/// </summary>
 		private void InitializeComponent()
@@ -472,18 +472,18 @@ namespace RyLogViewer
 			this.m_panel_replace.SuspendLayout();
 			this.m_panel_eqv_regex.SuspendLayout();
 			this.SuspendLayout();
-			// 
+			//
 			// m_btn_regex_help
-			// 
+			//
 			this.m_btn_regex_help.Location = new System.Drawing.Point(3, 3);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
 			this.m_btn_regex_help.TabIndex = 3;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_btn_add
-			// 
+			//
 			this.m_btn_add.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
 			this.m_btn_add.ImageIndex = 0;
 			this.m_btn_add.ImageList = this.m_image_list;
@@ -492,16 +492,16 @@ namespace RyLogViewer
 			this.m_btn_add.Size = new System.Drawing.Size(46, 46);
 			this.m_btn_add.TabIndex = 5;
 			this.m_btn_add.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_image_list
-			// 
+			//
 			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
 			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
 			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
 			this.m_image_list.Images.SetKeyName(1, "edit_save.png");
-			// 
+			//
 			// m_edit_test
-			// 
+			//
 			this.m_edit_test.BorderStyle = System.Windows.Forms.BorderStyle.None;
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
@@ -509,9 +509,9 @@ namespace RyLogViewer
 			this.m_edit_test.Size = new System.Drawing.Size(202, 55);
 			this.m_edit_test.TabIndex = 2;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
-			// 
+			//
 			// m_edit_result
-			// 
+			//
 			this.m_edit_result.BorderStyle = System.Windows.Forms.BorderStyle.None;
 			this.m_edit_result.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_result.Location = new System.Drawing.Point(0, 0);
@@ -520,27 +520,27 @@ namespace RyLogViewer
 			this.m_edit_result.Size = new System.Drawing.Size(202, 75);
 			this.m_edit_result.TabIndex = 0;
 			this.m_edit_result.Text = "This is the resulting text after replacement";
-			// 
+			//
 			// m_lbl_replace
-			// 
+			//
 			this.m_lbl_replace.Location = new System.Drawing.Point(3, 1);
 			this.m_lbl_replace.Name = "m_lbl_replace";
 			this.m_lbl_replace.Size = new System.Drawing.Size(70, 17);
 			this.m_lbl_replace.TabIndex = 29;
 			this.m_lbl_replace.Text = "Replace:";
 			this.m_lbl_replace.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
+			//
 			// m_edit_replace
-			// 
-			this.m_edit_replace.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_edit_replace.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_replace.Location = new System.Drawing.Point(76, 0);
 			this.m_edit_replace.Name = "m_edit_replace";
 			this.m_edit_replace.Size = new System.Drawing.Size(340, 20);
 			this.m_edit_replace.TabIndex = 1;
-			// 
+			//
 			// m_check_ignore_case
-			// 
+			//
 			this.m_check_ignore_case.AutoSize = true;
 			this.m_check_ignore_case.Location = new System.Drawing.Point(333, 2);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
@@ -548,47 +548,47 @@ namespace RyLogViewer
 			this.m_check_ignore_case.TabIndex = 3;
 			this.m_check_ignore_case.Text = "Ignore Case";
 			this.m_check_ignore_case.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_split_test
-			// 
+			//
 			this.m_split_test.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_split_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_split_test.Location = new System.Drawing.Point(0, 0);
 			this.m_split_test.Margin = new System.Windows.Forms.Padding(0);
 			this.m_split_test.Name = "m_split_test";
 			this.m_split_test.Orientation = System.Windows.Forms.Orientation.Horizontal;
-			// 
+			//
 			// m_split_test.Panel1
-			// 
+			//
 			this.m_split_test.Panel1.Controls.Add(this.m_edit_test);
-			// 
+			//
 			// m_split_test.Panel2
-			// 
+			//
 			this.m_split_test.Panel2.Controls.Add(this.m_edit_result);
 			this.m_split_test.Size = new System.Drawing.Size(204, 138);
 			this.m_split_test.SplitterDistance = 57;
 			this.m_split_test.TabIndex = 0;
-			// 
+			//
 			// m_lbl_match
-			// 
+			//
 			this.m_lbl_match.Location = new System.Drawing.Point(3, 3);
 			this.m_lbl_match.Name = "m_lbl_match";
 			this.m_lbl_match.Size = new System.Drawing.Size(70, 17);
 			this.m_lbl_match.TabIndex = 39;
 			this.m_lbl_match.Text = "Pattern:";
 			this.m_lbl_match.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
+			//
 			// m_edit_match
-			// 
-			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_match.Location = new System.Drawing.Point(76, 2);
 			this.m_edit_match.Name = "m_edit_match";
 			this.m_edit_match.Size = new System.Drawing.Size(340, 20);
 			this.m_edit_match.TabIndex = 0;
-			// 
+			//
 			// m_grid_subs
-			// 
+			//
 			this.m_grid_subs.AllowUserToAddRows = false;
 			this.m_grid_subs.AllowUserToDeleteRows = false;
 			this.m_grid_subs.AllowUserToResizeRows = false;
@@ -614,29 +614,29 @@ namespace RyLogViewer
 			this.m_grid_subs.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid_subs.Size = new System.Drawing.Size(284, 138);
 			this.m_grid_subs.TabIndex = 0;
-			// 
+			//
 			// m_split_subs
-			// 
-			this.m_split_subs.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_split_subs.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_split_subs.Location = new System.Drawing.Point(3, 99);
 			this.m_split_subs.Margin = new System.Windows.Forms.Padding(0);
 			this.m_split_subs.Name = "m_split_subs";
-			// 
+			//
 			// m_split_subs.Panel1
-			// 
+			//
 			this.m_split_subs.Panel1.Controls.Add(this.m_split_test);
-			// 
+			//
 			// m_split_subs.Panel2
-			// 
+			//
 			this.m_split_subs.Panel2.Controls.Add(this.m_grid_subs);
 			this.m_split_subs.Size = new System.Drawing.Size(492, 138);
 			this.m_split_subs.SplitterDistance = 204;
 			this.m_split_subs.TabIndex = 49;
-			// 
+			//
 			// m_radio_regex
-			// 
+			//
 			this.m_radio_regex.AutoSize = true;
 			this.m_radio_regex.Location = new System.Drawing.Point(218, 1);
 			this.m_radio_regex.Name = "m_radio_regex";
@@ -645,9 +645,9 @@ namespace RyLogViewer
 			this.m_radio_regex.TabStop = true;
 			this.m_radio_regex.Text = "Regular Expression";
 			this.m_radio_regex.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_radio_wildcard
-			// 
+			//
 			this.m_radio_wildcard.AutoSize = true;
 			this.m_radio_wildcard.Location = new System.Drawing.Point(151, 1);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
@@ -656,9 +656,9 @@ namespace RyLogViewer
 			this.m_radio_wildcard.TabStop = true;
 			this.m_radio_wildcard.Text = "Wildcard";
 			this.m_radio_wildcard.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_radio_substring
-			// 
+			//
 			this.m_radio_substring.AutoSize = true;
 			this.m_radio_substring.Location = new System.Drawing.Point(80, 1);
 			this.m_radio_substring.Name = "m_radio_substring";
@@ -667,37 +667,37 @@ namespace RyLogViewer
 			this.m_radio_substring.TabStop = true;
 			this.m_radio_substring.Text = "Substring";
 			this.m_radio_substring.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_edit_eqv_regex
-			// 
-			this.m_edit_eqv_regex.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_edit_eqv_regex.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_eqv_regex.Location = new System.Drawing.Point(76, 0);
 			this.m_edit_eqv_regex.Name = "m_edit_eqv_regex";
 			this.m_edit_eqv_regex.ReadOnly = true;
 			this.m_edit_eqv_regex.Size = new System.Drawing.Size(340, 20);
 			this.m_edit_eqv_regex.TabIndex = 51;
-			// 
+			//
 			// m_lbl_matchtype
-			// 
+			//
 			this.m_lbl_matchtype.Location = new System.Drawing.Point(3, 0);
 			this.m_lbl_matchtype.Name = "m_lbl_matchtype";
 			this.m_lbl_matchtype.Size = new System.Drawing.Size(71, 18);
 			this.m_lbl_matchtype.TabIndex = 53;
 			this.m_lbl_matchtype.Text = "Pattern Type:";
 			this.m_lbl_matchtype.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
+			//
 			// m_btn_show_eqv_regex
-			// 
+			//
 			this.m_btn_show_eqv_regex.Location = new System.Drawing.Point(3, 27);
 			this.m_btn_show_eqv_regex.Name = "m_btn_show_eqv_regex";
 			this.m_btn_show_eqv_regex.Size = new System.Drawing.Size(22, 21);
 			this.m_btn_show_eqv_regex.TabIndex = 4;
 			this.m_btn_show_eqv_regex.Text = "V";
 			this.m_btn_show_eqv_regex.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_lbl_eqv_regex
-			// 
+			//
 			this.m_lbl_eqv_regex.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
 			this.m_lbl_eqv_regex.Location = new System.Drawing.Point(3, 1);
 			this.m_lbl_eqv_regex.Name = "m_lbl_eqv_regex";
@@ -705,9 +705,9 @@ namespace RyLogViewer
 			this.m_lbl_eqv_regex.TabIndex = 56;
 			this.m_lbl_eqv_regex.Text = "Eqv. Regex:";
 			this.m_lbl_eqv_regex.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
+			//
 			// m_panel_btns
-			// 
+			//
 			this.m_panel_btns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_btns.Controls.Add(this.m_btn_add);
 			this.m_panel_btns.Controls.Add(this.m_btn_show_eqv_regex);
@@ -717,10 +717,10 @@ namespace RyLogViewer
 			this.m_panel_btns.Name = "m_panel_btns";
 			this.m_panel_btns.Size = new System.Drawing.Size(76, 52);
 			this.m_panel_btns.TabIndex = 63;
-			// 
+			//
 			// m_panel_match_type
-			// 
-			this.m_panel_match_type.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_panel_match_type.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_match_type.AutoSize = true;
 			this.m_panel_match_type.Controls.Add(this.m_check_ignore_case);
@@ -733,10 +733,10 @@ namespace RyLogViewer
 			this.m_panel_match_type.Name = "m_panel_match_type";
 			this.m_panel_match_type.Size = new System.Drawing.Size(419, 22);
 			this.m_panel_match_type.TabIndex = 5;
-			// 
+			//
 			// m_panel_match
-			// 
-			this.m_panel_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_panel_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_match.AutoSize = true;
 			this.m_panel_match.Controls.Add(this.m_edit_match);
@@ -746,10 +746,10 @@ namespace RyLogViewer
 			this.m_panel_match.Name = "m_panel_match";
 			this.m_panel_match.Size = new System.Drawing.Size(419, 25);
 			this.m_panel_match.TabIndex = 66;
-			// 
+			//
 			// m_table
-			// 
-			this.m_table.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_table.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_table.AutoSize = true;
 			this.m_table.ColumnCount = 1;
@@ -767,10 +767,10 @@ namespace RyLogViewer
 			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table.Size = new System.Drawing.Size(419, 93);
 			this.m_table.TabIndex = 66;
-			// 
+			//
 			// m_panel_replace
-			// 
-			this.m_panel_replace.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_panel_replace.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_replace.AutoSize = true;
 			this.m_panel_replace.Controls.Add(this.m_edit_replace);
@@ -780,10 +780,10 @@ namespace RyLogViewer
 			this.m_panel_replace.Name = "m_panel_replace";
 			this.m_panel_replace.Size = new System.Drawing.Size(419, 23);
 			this.m_panel_replace.TabIndex = 67;
-			// 
+			//
 			// m_panel_eqv_regex
-			// 
-			this.m_panel_eqv_regex.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_panel_eqv_regex.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_eqv_regex.AutoSize = true;
 			this.m_panel_eqv_regex.Controls.Add(this.m_edit_eqv_regex);
@@ -794,9 +794,9 @@ namespace RyLogViewer
 			this.m_panel_eqv_regex.Size = new System.Drawing.Size(419, 23);
 			this.m_panel_eqv_regex.TabIndex = 67;
 			this.m_panel_eqv_regex.Visible = false;
-			// 
+			//
 			// TransformUI
-			// 
+			//
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.Controls.Add(this.m_table);
@@ -829,7 +829,6 @@ namespace RyLogViewer
 			this.m_panel_eqv_regex.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
-
 		}
 
 		#endregion

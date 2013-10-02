@@ -20,6 +20,24 @@ namespace pr.extn
 		//    r.Height = Math.Max(r.Bottom - r.Y, rect.Bottom - r.Y);
 		//}
 
+		/// <summary>Convert this point into a size</summary>
+		public static Size ToSize(this Point p)
+		{
+			return new Size(p);
+		}
+
+		/// <summary>Convert this size into a point</summary>
+		public static Point ToPoint(this Size s)
+		{
+			return new Point(s);
+		}
+
+		/// <summary>Convert this size into a rectangle</summary>
+		public static Rectangle ToRect(this Size s)
+		{
+			return new Rectangle(0, 0, s.Width, s.Height);
+		}
+
 		/// <summary>Returns the top left point of the rectangle</summary>
 		public static Point TopLeft(this Rectangle r)
 		{
@@ -78,6 +96,12 @@ namespace pr.extn
 		public static Point Shifted(this Point pt, int dx, int dy)
 		{
 			return new Point(pt.X + dx, pt.Y + dy);
+		}
+
+		/// <summary>Returns a rectangle shifted by dx,dy</summary>
+		public static Rectangle Shifted(this Rectangle r, int dx, int dy)
+		{
+			return new Rectangle(r.X + dx, r.Y + dy, r.Width, r.Height);
 		}
 
 		/// <summary>Linearly interpolate from this colour to 'dst' by 'frac'</summary>

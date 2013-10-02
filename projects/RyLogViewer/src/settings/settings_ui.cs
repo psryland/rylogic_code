@@ -935,7 +935,7 @@ namespace RyLogViewer
 			case ColumnNames.ClickAction:
 				if (ac != null)
 				{
-					var dg = new ClkActionUI(new ClkAction(ac));
+					var dg = new ClkActionUI(ac);
 					if (dg.ShowDialog(this) != DialogResult.OK) break;
 					ac.Executable       = dg.Action.Executable;
 					ac.Arguments        = dg.Action.Arguments;

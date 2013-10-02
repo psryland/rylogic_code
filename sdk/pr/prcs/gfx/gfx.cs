@@ -75,5 +75,17 @@ namespace pr.gfx
 		{
 			gfx.FillPath(brush, RoundedRectanglePath(rect, radius));
 		}
+
+			/// <summary>Helper for making radial gradient brushes</summary>
+		public static PathGradientBrush CreateRadialGradientBrush(Point centre, float radiusX, float radiusY, Color centre_color, Color boundary_color)
+		{
+			var path = new GraphicsPath();
+			path.AddEllipse(new RectangleF(centre.X - radiusX, centre.Y - radiusY, 2*radiusX, 2*radiusY));
+			var brush = new PathGradientBrush(path);
+			brush.CenterColor = centre_color;
+			brush.CenterPoint = centre;
+			brush.SurroundColors = new[]{boundary_color};
+			return brush;
+		}
 	}
 }

@@ -54,13 +54,13 @@ namespace RyLogViewer
 		}
 
 		public FindUI(Form owner, BindingSource history)
-		:base(owner, new Size(-270, +28), Size.Empty, EPin.TopRight, false)
+		:base(owner, EPin.TopRight, new Point(-270, +28), Size.Empty, false)
 		{
 			InitializeComponent();
 			m_history = history;
 			Pattern = new Pattern();
 			m_tt = new ToolTip();
-			
+
 			// Find combo
 			m_combo_pattern.DataSource = history;
 			m_combo_pattern.DropDownClosed += (s,a)=>
@@ -118,7 +118,7 @@ namespace RyLogViewer
 				{
 					if (m_radio_regex.Checked) Pattern.PatnType = EPattern.RegularExpression;
 				};
-			
+
 			// Ignore case
 			m_check_ignore_case.ToolTip(m_tt, "Check to make searches ignore differences in case");
 			m_check_ignore_case.CheckedChanged += (s,a)=>
@@ -152,7 +152,6 @@ namespace RyLogViewer
 						m_combo_pattern.Focus();
 						m_combo_pattern.Text = Pattern.Expr;
 						m_combo_pattern.SelectAll();
-						
 					}
 				};
 
@@ -230,7 +229,7 @@ namespace RyLogViewer
 			get
 			{
 				Debug.Assert(Owner != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(Owner, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Size(1,1) ,new Size(640,480) ,EPin.TopRight));
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(Owner, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Point(1,1) ,new Size(640,480) ,EPin.TopRight));
 			}
 		}
 
@@ -280,9 +279,9 @@ namespace RyLogViewer
 			this.m_panel_top.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
-			// 
+			//
 			// m_btn_find_next
-			// 
+			//
 			this.m_btn_find_next.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_find_next.Location = new System.Drawing.Point(157, 91);
 			this.m_btn_find_next.Name = "m_btn_find_next";
@@ -290,9 +289,9 @@ namespace RyLogViewer
 			this.m_btn_find_next.TabIndex = 8;
 			this.m_btn_find_next.Text = "Find &Next";
 			this.m_btn_find_next.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_btn_find_prev
-			// 
+			//
 			this.m_btn_find_prev.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_find_prev.Location = new System.Drawing.Point(157, 66);
 			this.m_btn_find_prev.Name = "m_btn_find_prev";
@@ -300,18 +299,18 @@ namespace RyLogViewer
 			this.m_btn_find_prev.TabIndex = 7;
 			this.m_btn_find_prev.Text = "Find &Previous";
 			this.m_btn_find_prev.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_lbl_find_what
-			// 
+			//
 			this.m_lbl_find_what.AutoSize = true;
 			this.m_lbl_find_what.Location = new System.Drawing.Point(1, 4);
 			this.m_lbl_find_what.Name = "m_lbl_find_what";
 			this.m_lbl_find_what.Size = new System.Drawing.Size(56, 13);
 			this.m_lbl_find_what.TabIndex = 4;
 			this.m_lbl_find_what.Text = "Find what:";
-			// 
+			//
 			// m_check_ignore_case
-			// 
+			//
 			this.m_check_ignore_case.AutoSize = true;
 			this.m_check_ignore_case.Location = new System.Drawing.Point(10, 65);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
@@ -319,9 +318,9 @@ namespace RyLogViewer
 			this.m_check_ignore_case.TabIndex = 4;
 			this.m_check_ignore_case.Text = "Ignore &Case";
 			this.m_check_ignore_case.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_check_invert
-			// 
+			//
 			this.m_check_invert.AutoSize = true;
 			this.m_check_invert.Location = new System.Drawing.Point(95, 65);
 			this.m_check_invert.Name = "m_check_invert";
@@ -329,9 +328,9 @@ namespace RyLogViewer
 			this.m_check_invert.TabIndex = 5;
 			this.m_check_invert.Text = "&Invert \r\nMatch";
 			this.m_check_invert.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_radio_regex
-			// 
+			//
 			this.m_radio_regex.AutoSize = true;
 			this.m_radio_regex.Location = new System.Drawing.Point(149, 45);
 			this.m_radio_regex.Name = "m_radio_regex";
@@ -339,9 +338,9 @@ namespace RyLogViewer
 			this.m_radio_regex.TabIndex = 3;
 			this.m_radio_regex.Text = "&Reg. Expr.";
 			this.m_radio_regex.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_radio_wildcard
-			// 
+			//
 			this.m_radio_wildcard.AutoSize = true;
 			this.m_radio_wildcard.Location = new System.Drawing.Point(76, 45);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
@@ -349,9 +348,9 @@ namespace RyLogViewer
 			this.m_radio_wildcard.TabIndex = 2;
 			this.m_radio_wildcard.Text = "Wil&dcard";
 			this.m_radio_wildcard.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_radio_substring
-			// 
+			//
 			this.m_radio_substring.AutoSize = true;
 			this.m_radio_substring.Location = new System.Drawing.Point(4, 45);
 			this.m_radio_substring.Name = "m_radio_substring";
@@ -359,9 +358,9 @@ namespace RyLogViewer
 			this.m_radio_substring.TabIndex = 1;
 			this.m_radio_substring.Text = "&Substring";
 			this.m_radio_substring.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_table
-			// 
+			//
 			this.m_table.ColumnCount = 1;
 			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table.Controls.Add(this.m_panel_top, 0, 0);
@@ -374,11 +373,11 @@ namespace RyLogViewer
 			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle());
 			this.m_table.Size = new System.Drawing.Size(261, 305);
 			this.m_table.TabIndex = 29;
-			// 
+			//
 			// m_panel_top
-			// 
-			this.m_panel_top.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_panel_top.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_top.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_panel_top.Controls.Add(this.m_check_whole_line);
@@ -398,9 +397,9 @@ namespace RyLogViewer
 			this.m_panel_top.Name = "m_panel_top";
 			this.m_panel_top.Size = new System.Drawing.Size(261, 121);
 			this.m_panel_top.TabIndex = 0;
-			// 
+			//
 			// m_check_whole_line
-			// 
+			//
 			this.m_check_whole_line.AutoSize = true;
 			this.m_check_whole_line.Location = new System.Drawing.Point(10, 81);
 			this.m_check_whole_line.Name = "m_check_whole_line";
@@ -408,42 +407,42 @@ namespace RyLogViewer
 			this.m_check_whole_line.TabIndex = 30;
 			this.m_check_whole_line.Text = "&Whole Line";
 			this.m_check_whole_line.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_btn_regex_help
-			// 
+			//
 			this.m_btn_regex_help.Location = new System.Drawing.Point(230, 43);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(21, 21);
 			this.m_btn_regex_help.TabIndex = 6;
 			this.m_btn_regex_help.Text = "?";
 			this.m_btn_regex_help.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_lbl_prev_find_patterns
-			// 
+			//
 			this.m_lbl_prev_find_patterns.AutoSize = true;
 			this.m_lbl_prev_find_patterns.Location = new System.Drawing.Point(1, 101);
 			this.m_lbl_prev_find_patterns.Name = "m_lbl_prev_find_patterns";
 			this.m_lbl_prev_find_patterns.Size = new System.Drawing.Size(130, 13);
 			this.m_lbl_prev_find_patterns.TabIndex = 29;
 			this.m_lbl_prev_find_patterns.Text = "Previous Search Patterns:";
-			// 
+			//
 			// m_combo_pattern
-			// 
-			this.m_combo_pattern.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+			//
+			this.m_combo_pattern.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_combo_pattern.FormattingEnabled = true;
 			this.m_combo_pattern.Location = new System.Drawing.Point(4, 20);
 			this.m_combo_pattern.Name = "m_combo_pattern";
 			this.m_combo_pattern.Size = new System.Drawing.Size(247, 21);
 			this.m_combo_pattern.TabIndex = 0;
-			// 
+			//
 			// m_grid
-			// 
+			//
 			this.m_grid.AllowUserToAddRows = false;
 			this.m_grid.AllowUserToResizeColumns = false;
 			this.m_grid.AllowUserToResizeRows = false;
-			this.m_grid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+			this.m_grid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid.BackgroundColor = System.Drawing.SystemColors.Control;
@@ -459,9 +458,9 @@ namespace RyLogViewer
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid.Size = new System.Drawing.Size(261, 184);
 			this.m_grid.TabIndex = 0;
-			// 
+			//
 			// FindUI
-			// 
+			//
 			this.AcceptButton = this.m_btn_find_next;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -478,7 +477,6 @@ namespace RyLogViewer
 			this.m_panel_top.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.ResumeLayout(false);
-
 		}
 
 		#endregion

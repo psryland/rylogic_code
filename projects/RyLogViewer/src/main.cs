@@ -1303,8 +1303,16 @@ namespace RyLogViewer
 
 			try
 			{
-				using (var first_run_tutorial = new FirstRunTutorial(this, m_settings))
-					first_run_tutorial.ShowDialog(this);
+				if (m_first_run_tutorial == null)
+				{
+					m_first_run_tutorial = new FirstRunTutorial(this, m_settings);
+					m_first_run_tutorial.FormClosed += (s,a) =>
+						{
+							m_first_run_tutorial.Dispose();
+							m_first_run_tutorial = null;
+						};
+				}
+				m_first_run_tutorial.Display();
 			}
 			catch (Exception ex)
 			{
@@ -1312,6 +1320,7 @@ namespace RyLogViewer
 				Misc.ShowErrorMessage(this, ex, "An error occurred when trying to display the first run tutorial", "First Run Tutorial Failed", MessageBoxIcon.Error);
 			}
 		}
+		private FirstRunTutorial m_first_run_tutorial;
 
 		/// <summary>Show the TotD dialog</summary>
 		private void ShowTotD()
@@ -1428,7 +1437,7 @@ namespace RyLogViewer
 		/// <summary>Display info about the app being a free version</summary>
 		private void ShowFreeVersionInfo()
 		{
-			var dlg = HelpUI.FromHtml(ParentForm, Resources.free_version, "RyLogViewer Free Edition", Size.Empty, new Size(480,640), ToolForm.EPin.Centre);
+			var dlg = HelpUI.FromHtml(ParentForm, Resources.free_version, "RyLogViewer Free Edition", Point.Empty, new Size(480,640), ToolForm.EPin.Centre);
 			dlg.FormBorderStyle = FormBorderStyle.Sizable;
 			dlg.ShowDialog(this);
 		}

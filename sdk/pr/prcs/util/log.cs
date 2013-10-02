@@ -144,15 +144,19 @@ namespace pr.util
 
 		/// <summary>Write debug trace statements into the log</summary>
 		public static void Debug(object sender, string str) { Write(ELogLevel.Debug, sender, str); }
+		public static void Debug(object sender, Exception ex, string str) { Write(ELogLevel.Debug, sender, str, ex); }
 
 		/// <summary>Write info to the current log</summary>
 		public static void Info(object sender, string str) { Write(ELogLevel.Info, sender, str); }
+		public static void Info(object sender, Exception ex, string str) { Write(ELogLevel.Info, sender, str, ex); }
 
 		/// <summary>Write info to the current log</summary>
 		public static void Warn(object sender, string str) { Write(ELogLevel.Warn, sender, str); }
+		public static void Warn(object sender, Exception ex, string str) { Write(ELogLevel.Warn, sender, str, ex); }
 
 		/// <summary>Write info to the current log</summary>
 		public static void Error(object sender, string str) { Write(ELogLevel.Error, sender, str); }
+		public static void Error(object sender, Exception ex, string str) { Write(ELogLevel.Error, sender, str, ex); }
 
 		/// <summary>Write info to the current log</summary>
 		public static void Exception(object sender, Exception ex, string str) { Write(ELogLevel.Exception, sender, str, ex); }

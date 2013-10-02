@@ -8,12 +8,20 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
+using pr.maths;
 using pr.util;
 
 namespace pr.extn
 {
 	public static class ControlExtensions
 	{
+		/// <summary>Wrapper of begin invoke that takes a lambda</summary>
+		public static IAsyncResult BeginInvoke(this Form form, Action action)
+		{
+			// Has to be form or the overload isn't found
+			return form.BeginInvoke(action);
+		}
+
 		/// <summary>Return 'Tag' for this control as type 'T'. Creates a new T if Tag is currently null</summary>
 		public static T TagAs<T>(this Control ctrl) where T:new()
 		{
@@ -68,12 +76,21 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the bounds of this item in form space</summary>
-		public static Rectangle ClientRectangle(this ToolStripItem item)
+		public static Rectangle ParentFormRectangle(this Control item)
+		{
+			var parent = item.Parent;
+			var top    = item.TopLevelControl;
+			var srect  = parent == null ? item.Bounds : parent.RectangleToScreen(item.Bounds);
+			return top != null ? top.RectangleToClient(srect) : srect;
+		}
+
+		/// <summary>Returns the bounds of this item in form space</summary>
+		public static Rectangle ParentFormRectangle(this ToolStripItem item)
 		{
 			var parent = item.GetCurrentParent();
-			var top = parent != null ? parent.TopLevelControl : null;
-			if (top == null) return Rectangle.Empty;
-			return top.RectangleToClient(parent.RectangleToClient(item.Bounds));
+			var top    = parent != null ? parent.TopLevelControl : null;
+			var srect  = parent == null ? item.Bounds : parent.RectangleToScreen(item.Bounds);
+			return top != null ? top.RectangleToClient(srect) : srect;
 		}
 
 		/// <summary>Returns the bounds of this item in screen space</summary>
@@ -111,6 +128,24 @@ namespace pr.extn
 			pi.SetValue(ctrl, state, null);
 			MethodInfo mi = ctrl.GetType().GetMethod("SetStyle", BindingFlags.Instance|BindingFlags.NonPublic);
 			mi.Invoke(ctrl, new object[]{ControlStyles.DoubleBuffer|ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint, state});
+		}
+
+		/// <summary>Returns an RAII scope for suspending layout</summary>
+		public static Scope SuspendLayout(this Control ctrl, bool layout_on_resume)
+		{
+			return Scope.Create(ctrl.SuspendLayout, () => ctrl.ResumeLayout(layout_on_resume));
+		}
+
+		/// <summary>Block redrawing of the control</summary>
+		public static Scope SuspendRedraw(this Control ctrl, bool refresh_on_resume)
+		{
+			return Scope.Create(
+				() => Win32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 0, 0),
+				() =>
+					{
+						Win32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 1, 0);
+						if (refresh_on_resume) ctrl.Refresh();
+					});
 		}
 
 		/// <summary>Recursively calls 'GetChildAtPoint' until the control with no children at that point is found</summary>
@@ -153,6 +188,24 @@ namespace pr.extn
 			var form = (Form)control.TopLevelControl;
 			if (form == null) throw new NullReferenceException("Control does not have a top level control (Form)");
 			return control == form ? form.ClientRectangle : form.RectangleToClient(control.Parent.RectangleToScreen(control.Bounds));
+		}
+
+		/// <summary>Set click through mode for this window</summary>
+		public static void ClickThruEnable(this Control control, bool enabled)
+		{
+			uint style = Win32.GetWindowLong(control.Handle, Win32.GWL_EXSTYLE);
+			style = enabled
+				? Bit.SetBits(style, Win32.WS_EX_LAYERED | Win32.WS_EX_TRANSPARENT, true)
+				: Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false);
+			Win32.SetWindowLong(control.Handle, Win32.GWL_EXSTYLE, style);
+		}
+
+		/// <summary>Return a bitmap of this control</summary>
+		public static Bitmap ToBitmap(this Control control)
+		{
+			var bm = new Bitmap(control.Width, control.Height);
+			control.DrawToBitmap(bm, bm.Size.ToRect());
+			return bm;
 		}
 	}
 }

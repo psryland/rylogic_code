@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.extn;
 
 namespace pr.gui
 {
@@ -9,64 +10,108 @@ namespace pr.gui
 	public class ToolForm :Form
 	{
 		public enum EPin { TopLeft, TopRight, BottomLeft, BottomRight, Centre };
-		private Size m_ofs;
-		private EPin m_pin;
-		
+
 		/// <summary>How this tool window is pinned to the owner</summary>
-		public EPin Pin { get { return m_pin; } set { m_pin = value; RecordOffset(); } }
-		
+		public EPin Pin
+		{
+			get { return m_pin; }
+			set { m_pin = value; RecordOffset(); }
+		}
+		private EPin m_pin;
+
+		/// <summary>The offset of this form from the pin location</summary>
+		public Point PinOffset
+		{
+			get { return m_ofs; }
+			set { m_ofs = value; UpdateLocation(); }
+		}
+		private Point m_ofs;
+
 		/// <summary>Default constructor for the designer</summary>
 		public ToolForm()
-		:this(null, Size.Empty, Size.Empty, EPin.TopLeft, false)
+		:this(null, EPin.TopLeft, Point.Empty, Size.Empty, false)
 		{}
 		public ToolForm(Form owner)
-		:this(owner, Size.Empty, Size.Empty, EPin.TopLeft, false)
+		:this(owner, EPin.TopLeft, Point.Empty, Size.Empty, false)
 		{}
-		public ToolForm(Form owner, Size ofs, Size size)
-		:this(owner, ofs, size, EPin.TopLeft, false)
+		public ToolForm(Form owner, EPin pin)
+		:this(owner, pin, Point.Empty, Size.Empty, false)
 		{}
-		
-		/// <summary>Create an position the tool form.
+		public ToolForm(Form owner, EPin pin, Point ofs)
+		:this(owner, pin, ofs, Size.Empty, false)
+		{}
+		public ToolForm(Form owner, Point ofs, Size size)
+		:this(owner, EPin.TopLeft, ofs, size, false)
+		{}
+
+		/// <summary>
+		/// Create and position the tool form.
 		/// Remember, for positioning to work you need to ensure it's not overwritten
 		/// in the call to InitiailizeComponent(). Leaving the StartPosition property
 		/// as WindowDefaultPosition should prevent the designer adding an explicit set
 		/// of the StartPosition property.</summary>
-		public ToolForm(Form owner, Size ofs, Size size, EPin pin, bool modal)
+		public ToolForm(Form owner, EPin pin, Point ofs, Size size, bool modal)
 		{
-			m_ofs = Size.Empty;
+			m_ofs = Point.Empty;
 			m_pin = pin;
 			Owner = owner;
 			ShowInTaskbar = false;
 			FormBorderStyle = FormBorderStyle.SizableToolWindow;
 			StartPosition = FormStartPosition.CenterParent;
-			if (ofs  != Size.Empty) { m_ofs = ofs; StartPosition = FormStartPosition.Manual; }
+			HideOnClose = !modal;
+			if (ofs  != Point.Empty) { m_ofs = ofs; StartPosition = FormStartPosition.Manual; }
 			if (size != Size.Empty) Size = size;
-			
+
 			// Whenever this window moves, save it's offset from the owner
 			Move += RecordOffset;
-			
-			// Whenever the owner moves, move this form as well
-			if (Owner != null)
-				Owner.Move += UpdateLocation;
-			
+			LocationChanged += RecordOffset;
+
 			// On closing, if non-modal just hide, otherwise remove the Move handler from the owner
 			FormClosing += (s,a)=>
 				{
-					if (!modal && a.CloseReason == CloseReason.UserClosing)
+					if (HideOnClose && a.CloseReason == CloseReason.UserClosing)
 					{
 						Hide();
 						a.Cancel = true;
 						if (Owner != null)
 							Owner.Focus();
 					}
-					else
-					{
-						if (Owner != null)
-							Owner.Move -= UpdateLocation;
-					}
 				};
-			
+			FormClosed += (s,a) =>
+				{
+					Owner = null;
+				};
+
 			UpdateLocation();
+		}
+
+		/// <summary>Controls whether the form closes or just hides</summary>
+		protected bool HideOnClose { get; set; }
+
+		/// <summary>Hide </summary>
+		public new Form Owner
+		{
+			get { return base.Owner; }
+			set
+			{
+				if (value != Owner)
+				{
+					if (base.Owner != null)
+					{
+						base.Owner.Move   -= UpdateLocation;
+						base.Owner.Resize -= UpdateLocation;
+						base.Owner         = null;
+					}
+					if (value != null)
+					{
+						// Whenever the owner moves, move this form as well
+						base.Owner         = value;
+						base.Owner.Move   += UpdateLocation;
+						base.Owner.Resize += UpdateLocation;
+					}
+				}
+				UpdateLocation();
+			}
 		}
 
 		/// <summary>Display the UI</summary>
@@ -76,7 +121,7 @@ namespace pr.gui
 			if (!Visible) Show(Owner);
 			else          Focus();
 		}
-		
+
 		/// <summary>Handle key presses</summary>
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
@@ -103,11 +148,11 @@ namespace pr.gui
 			switch (Pin)
 			{
 			default: Debug.Assert(false, "Unknown pin type"); break;
-			case EPin.TopLeft:     m_ofs = new Size(Location.X - Owner.Left , Location.Y - Owner.Top   ); break;
-			case EPin.TopRight:    m_ofs = new Size(Location.X - Owner.Right, Location.Y - Owner.Top   ); break;
-			case EPin.BottomLeft:  m_ofs = new Size(Location.X - Owner.Left , Location.Y - Owner.Bottom); break;
-			case EPin.BottomRight: m_ofs = new Size(Location.X - Owner.Right, Location.Y - Owner.Bottom); break;
-			case EPin.Centre:      m_ofs = new Size(Location.X - (Owner.Left+Owner.Right)/2, Location.Y - (Owner.Top+Owner.Bottom)/2); break;
+			case EPin.TopLeft:     m_ofs = new Point(Location.X - Owner.Left , Location.Y - Owner.Top   ); break;
+			case EPin.TopRight:    m_ofs = new Point(Location.X - Owner.Right, Location.Y - Owner.Top   ); break;
+			case EPin.BottomLeft:  m_ofs = new Point(Location.X - Owner.Left , Location.Y - Owner.Bottom); break;
+			case EPin.BottomRight: m_ofs = new Point(Location.X - Owner.Right, Location.Y - Owner.Bottom); break;
+			case EPin.Centre:      m_ofs = new Point(Location.X - (Owner.Left+Owner.Right)/2, Location.Y - (Owner.Top+Owner.Bottom)/2); break;
 			}
 		}
 
@@ -119,11 +164,11 @@ namespace pr.gui
 			switch (Pin)
 			{
 			default: Debug.Assert(false, "Unknown pin type"); break;
-			case EPin.TopLeft:     Location = new Point(Owner.Left , Owner.Top   ) + m_ofs; break;
-			case EPin.TopRight:    Location = new Point(Owner.Right, Owner.Top   ) + m_ofs; break;
-			case EPin.BottomLeft:  Location = new Point(Owner.Left , Owner.Bottom) + m_ofs; break;
-			case EPin.BottomRight: Location = new Point(Owner.Right, Owner.Bottom) + m_ofs; break;
-			case EPin.Centre:      Location = new Point((Owner.Left+Owner.Right)/2, (Owner.Top+Owner.Bottom)/2) + m_ofs; break;
+			case EPin.TopLeft:     Location = new Point(Owner.Left , Owner.Top   ) + m_ofs.ToSize(); break;
+			case EPin.TopRight:    Location = new Point(Owner.Right, Owner.Top   ) + m_ofs.ToSize(); break;
+			case EPin.BottomLeft:  Location = new Point(Owner.Left , Owner.Bottom) + m_ofs.ToSize(); break;
+			case EPin.BottomRight: Location = new Point(Owner.Right, Owner.Bottom) + m_ofs.ToSize(); break;
+			case EPin.Centre:      Location = new Point((Owner.Left+Owner.Right)/2, (Owner.Top+Owner.Bottom)/2) + m_ofs.ToSize(); break;
 			}
 		}
 	}

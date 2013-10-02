@@ -19,7 +19,7 @@ namespace RyLogViewer
 		public void RaisePrevBookmark() { if (PrevBookmark != null) PrevBookmark(); }
 
 		public BookmarksUI(Form owner, BindingSource marks)
-		:base(owner, new Size(-200, +28), new Size(200,320), EPin.TopRight, false)
+		:base(owner, EPin.TopRight, new Point(-200, +28), new Size(200,320), false)
 		{
 			InitializeComponent();
 			m_marks = marks;
@@ -46,7 +46,7 @@ namespace RyLogViewer
 		}
 
 		#region Windows Form Designer generated code
-		
+
 		/// <summary>
 		/// Required designer variable.
 		/// </summary>
@@ -76,9 +76,9 @@ namespace RyLogViewer
 			this.m_grid = new DataGridView();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
-			// 
+			//
 			// m_grid
-			// 
+			//
 			this.m_grid.AllowUserToAddRows = false;
 			this.m_grid.AllowUserToResizeRows = false;
 			dataGridViewCellStyle1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(240)))), ((int)(((byte)(240)))));
@@ -95,9 +95,9 @@ namespace RyLogViewer
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid.Size = new System.Drawing.Size(284, 262);
 			this.m_grid.TabIndex = 0;
-			// 
+			//
 			// BookmarksUI
-			// 
+			//
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(284, 262);
@@ -108,7 +108,6 @@ namespace RyLogViewer
 			this.Text = "Bookmarks";
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).EndInit();
 			this.ResumeLayout(false);
-
 		}
 
 		#endregion

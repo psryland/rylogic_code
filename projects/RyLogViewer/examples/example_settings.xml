@@ -7,18 +7,6 @@
     <key>ActionPatterns</key>
     <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
   &lt;clkaction&gt;
-    &lt;expr&gt;([a-zA-Z]{1}:)(\\[^\\/&amp;lt;&amp;gt;:\|\*\?\"]+)+\.[^\\/&amp;lt;&amp;gt;:\|\*\?\s]*&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;executable&gt;&lt;/executable&gt;
-    &lt;arguments&gt;&lt;/arguments&gt;
-    &lt;working_dir&gt;&lt;/working_dir&gt;
-  &lt;/clkaction&gt;
-  &lt;clkaction&gt;
     &lt;expr&gt;*.txt&lt;/expr&gt;
     &lt;active&gt;true&lt;/active&gt;
     &lt;patntype&gt;Wildcard&lt;/patntype&gt;
@@ -27,14 +15,14 @@
     &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;executable&gt;C:\windows\notepad.exe&lt;/executable&gt;
-    &lt;arguments&gt;{[FileDir]}\{1}&lt;/arguments&gt;
+    &lt;arguments&gt;{FilePath}&lt;/arguments&gt;
     &lt;working_dir&gt;&lt;/working_dir&gt;
   &lt;/clkaction&gt;
 &lt;/root&gt;</value>
   </setting>
   <setting>
     <key>ActionsEnabled</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
   </setting>
   <setting>
     <key>AlternateLineColours</key>
@@ -174,7 +162,7 @@
     &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
     &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
-    &lt;backcolour&gt;FF6AD76F&lt;/backcolour&gt;
+    &lt;backcolour&gt;FFC4FFC7&lt;/backcolour&gt;
   &lt;/highlight&gt;
   &lt;highlight&gt;
     &lt;expr&gt;*.txt&lt;/expr&gt;
@@ -402,14 +390,14 @@
     <key>TransformPatterns</key>
     <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
   &lt;transform&gt;
-    &lt;expr&gt;&amp;lt;(.*)&amp;gt;&lt;/expr&gt;
+    &lt;expr&gt;An error of type (\d+) occurred&lt;/expr&gt;
     &lt;active&gt;true&lt;/active&gt;
     &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
     &lt;ignorecase&gt;false&lt;/ignorecase&gt;
     &lt;invert&gt;false&lt;/invert&gt;
     &lt;wholeline&gt;false&lt;/wholeline&gt;
     &lt;binary&gt;true&lt;/binary&gt;
-    &lt;replace&gt;{1}&lt;/replace&gt;
+    &lt;replace&gt;{0} ==&amp;gt; {1}&lt;/replace&gt;
     &lt;subs&gt;
       &lt;sub&gt;
         &lt;name&gt;No Change&lt;/name&gt;
@@ -420,52 +408,52 @@
         &lt;name&gt;Code Lookup&lt;/name&gt;
         &lt;id&gt;1&lt;/id&gt;
         &lt;subdata&gt;
-          		&lt;codevalues&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;0&lt;/c&gt;
-                      &lt;v&gt;ERROR_SUCCESS - The operation completed successfully&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;1&lt;/c&gt;
-                      &lt;v&gt;ERROR_INVALID_FUNCTION - Incorrect function&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;2&lt;/c&gt;
-                      &lt;v&gt;ERROR_FILE_NOT_FOUND - The system cannot find the file specified&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;3&lt;/c&gt;
-                      &lt;v&gt;ERROR_PATH_NOT_FOUND - The system cannot find the path specified&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;4&lt;/c&gt;
-                      &lt;v&gt;ERROR_TOO_MANY_OPEN_FILES - The system cannot open the file&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;5&lt;/c&gt;
-                      &lt;v&gt;ERROR_ACCESS_DENIED - Access is denied&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;6&lt;/c&gt;
-                      &lt;v&gt;ERROR_INVALID_HANDLE - The handle is invalid&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;7&lt;/c&gt;
-                      &lt;v&gt;ERROR_ARENA_THRASHED - The storage control blocks were destroyed&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;8&lt;/c&gt;
-                      &lt;v&gt;ERROR_NOT_ENOUGH_MEMORY - Not enough storage is available to process this command&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;9&lt;/c&gt;
-                      &lt;v&gt;ERROR_INVALID_BLOCK - The storage control block address is invalid&lt;/v&gt;
-                    &lt;/cv&gt;
-                    &lt;cv&gt;
-                      &lt;c&gt;10&lt;/c&gt;
-                      &lt;v&gt;ERROR_BAD_ENVIRONMENT - The environment is incorrect&lt;/v&gt;
-                    &lt;/cv&gt;
-           &lt;/codevalues&gt;
+          &lt;codevalues&gt;
+            &lt;cv&gt;
+              &lt;c&gt;0&lt;/c&gt;
+              &lt;v&gt;ERROR_SUCCESS - The operation completed successfully&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;1&lt;/c&gt;
+              &lt;v&gt;ERROR_INVALID_FUNCTION - Incorrect function&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;2&lt;/c&gt;
+              &lt;v&gt;ERROR_FILE_NOT_FOUND - The system cannot find the file specified&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;3&lt;/c&gt;
+              &lt;v&gt;ERROR_PATH_NOT_FOUND - The system cannot find the path specified&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;4&lt;/c&gt;
+              &lt;v&gt;ERROR_TOO_MANY_OPEN_FILES - The system cannot open the file&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;5&lt;/c&gt;
+              &lt;v&gt;ERROR_ACCESS_DENIED - Access is denied&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;6&lt;/c&gt;
+              &lt;v&gt;ERROR_INVALID_HANDLE - The handle is invalid&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;7&lt;/c&gt;
+              &lt;v&gt;ERROR_ARENA_THRASHED - The storage control blocks were destroyed&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;8&lt;/c&gt;
+              &lt;v&gt;ERROR_NOT_ENOUGH_MEMORY - Not enough storage is available to process this command&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;9&lt;/c&gt;
+              &lt;v&gt;ERROR_INVALID_BLOCK - The storage control block address is invalid&lt;/v&gt;
+            &lt;/cv&gt;
+            &lt;cv&gt;
+              &lt;c&gt;10&lt;/c&gt;
+              &lt;v&gt;ERROR_BAD_ENVIRONMENT - The environment is incorrect&lt;/v&gt;
+            &lt;/cv&gt;
+          &lt;/codevalues&gt;
         &lt;/subdata&gt;
       &lt;/sub&gt;
     &lt;/subs&gt;

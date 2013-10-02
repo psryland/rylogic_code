@@ -12,27 +12,27 @@ namespace RyLogViewer
 	{
 		private readonly ToolTip m_tt;
 		private HelpUI           m_dlg_help;
-		
+
 		/// <summary>The source mapping</summary>
 		public string Src { get { return m_edit_source.Text; } set { m_edit_source.Text = value; } }
-		
+
 		/// <summary>The destination mapping</summary>
 		public string Dst { get { return m_edit_output.Text; } set { m_edit_output.Text = value; } }
-		
+
 		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
 		private HelpUI SwizzleHelpUI
 		{
 			get
 			{
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(this, Resources.swizzle_quick_ref, "Swizzle Help", new Size(1,1), new Size(640,480), ToolForm.EPin.TopRight));
+				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(this, Resources.swizzle_quick_ref, "Swizzle Help", new Point(1,1), new Size(640,480), ToolForm.EPin.TopRight));
 			}
 		}
-		
+
 		public SwizzleUI()
 		{
 			InitializeComponent();
 			m_tt = new ToolTip();
-			
+
 			m_btn_help.Click += (s,a)=>
 				{
 					SwizzleHelpUI.Display();
@@ -85,6 +85,5 @@ namespace RyLogViewer
 				m_in_update_ui = false;
 			}
 		}
-
 	}
 }
