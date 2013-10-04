@@ -57,10 +57,10 @@ try:
 	RylogicEnv.Copy(bindir + "\\pr.pdb"         , sym + "\\pr.pdb"  )
 
 	#Create a zip of the dstdir
-	dstzip = dstdir + ".zip"
+	dstzip = dst + ".zip"
 	print("Creating zip file..." + dstzip)
 	if os.path.exists(dstzip): os.unlink(dstzip)
-	RylogicEnv.Exec([UserVars.ziptool, "a", dstzip, dstdir])
+	RylogicEnv.Exec([UserVars.ziptool, "a", dstzip, dst])
 
 	#Copy the installer to the web site
 	installer = srcdir + r"\setup\setup\express\singleimage\diskimages\disk1\setup.exe"
