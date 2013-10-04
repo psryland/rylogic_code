@@ -172,10 +172,10 @@ namespace pr.common
 		{
 			/// <summary>The create operation will produce an error</summary>
 			Reject,
-			
+
 			/// <summary>The create operation will ignore the create command if a table with the same name already exists</summary>
 			IfNotExists,
-			
+
 			/// <summary>If a table with the same name already exists, it will be altered to match the new schema</summary>
 			AlterTable,
 		}
@@ -185,10 +185,10 @@ namespace pr.common
 		{
 			/// <summary>The insert operation will produce an error</summary>
 			Reject,
-			
+
 			/// <summary>The insert operation will be ignored</summary>
 			Ignore,
-			
+
 			/// <summary>The insert operation will replace the existing item</summary>
 			Replace,
 		}
@@ -278,7 +278,7 @@ namespace pr.common
 			if (type == typeof(byte[])         ||
 				type == typeof(int[]))
 				return DataType.Blob;
-			
+
 			throw new NotSupportedException(
 				"No default type mapping for type "+type.Name+"\n" +
 				"Custom data types should specify a value for the " +
@@ -326,7 +326,7 @@ namespace pr.common
 			case OnInsertConstraint.Ignore:  cons = "or ignore"; break;
 			case OnInsertConstraint.Replace: cons = "or replace"; break;
 			}
-			
+
 			var meta = TableMetaData.GetMetaData(type);
 			if (meta.NonAutoIncs.Length == 0) throw Exception.New(Result.Misuse, "Cannot insert an item no fields (or with auto increment fields only)");
 			return Sql(
@@ -512,7 +512,7 @@ namespace pr.common
 					Long(stmt, idx, dto.Ticks);
 				}
 			}
-			
+
 			public delegate void Func(sqlite3_stmt stmt, int index, object obj);
 			public class Map :Dictionary<Type, Func>
 			{
@@ -538,7 +538,7 @@ namespace pr.common
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
 				}
 			}
-			
+
 			/// <summary>
 			/// A lookup table from ClrType to binding function.
 			/// Users can add custom types and binding functions to this map if needed</summary>
@@ -574,7 +574,7 @@ namespace pr.common
 					"BindFunction/ReadFunction map before being used");
 			}
 		}
-		
+
 		#endregion
 
 		#region Reading - Reading columns from a query result into a Clr Object
@@ -655,7 +655,7 @@ namespace pr.common
 				Dll.ColumnBlob(stmt, idx, out ptr, out len);
 				if ((len % sizeof(int)) != 0)
 					throw Exception.New(Result.Corrupt, "Blob data is not an even multiple of Int32s");
-				
+
 				// Copy the blob out of the db
 				int[] blob = new int[len / sizeof(int)];
 				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
@@ -671,7 +671,7 @@ namespace pr.common
 				long ticks = (long)Long(stmt, idx);
 				return new DateTimeOffset(ticks, TimeSpan.Zero);
 			}
-			
+
 			public delegate object Func(sqlite3_stmt stmt, int index);
 			public class Map :Dictionary<Type, Func>
 			{
@@ -833,7 +833,7 @@ namespace pr.common
 			{
 				return Long(((DateTimeOffset)value).Ticks);
 			}
-			
+
 			public delegate object Func(string value);
 			public class Map :Dictionary<Type, Func>
 			{
@@ -953,7 +953,7 @@ namespace pr.common
 							if (on_hit != null)
 								on_hit(key, v);
 						});
-				
+
 				#if CACHE_RETURNS_CLONES
 				return m_meta.Clone(obj);
 				#else
@@ -1024,7 +1024,7 @@ namespace pr.common
 				query.Reset();
 				if (parms != null)
 					query.BindParms(first_idx, parms);
-				
+
 				Trace.QueryInUse(query, true);
 			}
 
@@ -1076,7 +1076,8 @@ namespace pr.common
 			private readonly sqlite3 m_db;
 			private readonly Dictionary<string, ICache<object,object>> m_caches;
 			private readonly QueryCache m_query_cache;
-			
+			private GCHandle m_update_cb;
+
 			private readonly int m_creation_thread;
 			[Conditional("DEBUG")] public void AssertCorrectThread()
 			{
@@ -1098,24 +1099,19 @@ namespace pr.common
 				ReadItemHook = x => x;
 				WriteItemHook = x => x;
 				m_creation_thread = Thread.CurrentThread.ManagedThreadId;
-				#if MONOTOUCH
-				m_db_singleton = this;
-				m_update_cb = UpdateCBStatic; // To prevent GC'ing
-				#else
-				m_update_cb = UpdateCB; // To prevent GC'ing
-				#endif
-				
+				m_update_cb = GCHandle.Alloc(this);
+
 				// Open the database file
 				m_db = Dll.Open(filepath, flags);
 				Trace.WriteLine(ETrace.Handles, string.Format("Database connection opened for '{0}'", filepath));
-				
+
 				// Initialise the per-table object caches
 				m_caches = new Dictionary<string, ICache<object,object>>();
 				DataChanged += InvalidateCachesOnDataChanged;
-				
+
 				// Initialise the query cache
 				m_query_cache = new QueryCache(this){Capacity = 50};
-				
+
 				// Default to no busy timeout
 				BusyTimeout = 0;
 			}
@@ -1124,6 +1120,7 @@ namespace pr.common
 			public void Dispose()
 			{
 				Close();
+				m_update_cb.Free();
 			}
 
 			/// <summary>Returns the db handle after asserting it's validity</summary>
@@ -1207,11 +1204,11 @@ namespace pr.common
 				AssertCorrectThread();
 				Trace.WriteLine(ETrace.Handles, string.Format("Closing database connection{0}", m_db.IsClosed ? " (already closed)" : ""));
 				if (m_db.IsClosed) return;
-				
+
 				// Release cached objects
 				foreach (var x in m_caches) x.Value.Capacity = 0;
 				m_query_cache.Capacity = 0;
-				
+
 				// Release the db handle
 				m_db.Close();
 				if (m_db.CloseResult == Result.Busy)
@@ -1316,7 +1313,7 @@ namespace pr.common
 				}
 				return Table(type);
 			}
-			
+
 			/// <summary>Alters an existing table to match the columns for 'type'</summary>
 			public void AlterTable<T>()
 			{
@@ -1329,11 +1326,11 @@ namespace pr.common
 				// Read the columns that we want the table to have
 				var meta = Sqlite.TableMetaData.GetMetaData(type);
 				var cols0 = meta.Columns.Select(x => x.Name).ToList();
-				
+
 				// Read the existing columns that the table has
 				var sql = Sql("pragma table_info(",meta.Name,")");
 				var cols1 = EnumRows<TableInfo>(sql).Select(x => x.name).ToList();
-				
+
 				// Sqlite does not support the drop column syntax
 				// // For each column in cols1, that isn't in cols0, drop it
 				// foreach (var c in cols1)
@@ -1341,7 +1338,7 @@ namespace pr.common
 				//     if (cols0.Contains(c)) continue;
 				//     Execute(Sql("alter table ",meta.Name," drop column ",c));
 				// }
-					
+
 				// For each column in cols0, that isn't in cols1, add it
 				for (int i = 0, iend = cols0.Count; i != iend; ++i)
 				{
@@ -1403,13 +1400,13 @@ namespace pr.common
 			{
 				return Table(type).Query(sql, parms, first_idx);
 			}
-			
+
 			/// <summary>General sql query on table(T)</summary>
 			public Query Query<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
 			{
 				return Query(typeof(T), sql, parms, first_idx);
 			}
-			
+
 			/// <summary>Find a row in a table of type 'T'</summary>
 			public object Find(Type type, params object[] keys)     { return Table(type).Find(keys); }
 			public object Find(Type type, object key1, object key2) { return Table(type).Find(key1, key2); }
@@ -1466,7 +1463,7 @@ namespace pr.common
 			{
 				add
 				{
-					if (m_RowChangedInternal == null) Dll.UpdateHook(m_db, m_update_cb, IntPtr.Zero);
+					if (m_RowChangedInternal == null) Dll.UpdateHook(m_db, UpdateCB, GCHandle.ToIntPtr(m_update_cb));
 					m_RowChangedInternal += value;
 				}
 				remove
@@ -1481,13 +1478,14 @@ namespace pr.common
 				if (m_RowChangedInternal == null) return;
 				m_RowChangedInternal(this, new DataChangedArgs(change_type, table_name, row_id));
 			}
-			private readonly UpdateHookCB m_update_cb;
 
 			/// <summary>Callback passed to the sqlite dll when DataChanged is subscribed to</summary>
-			private void UpdateCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id)
+			private static void UpdateCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id)
 			{
 				// 'db_name' is always "main". sqlite doesn't allow renaming of the db
-				RaiseDataChangedEvent((ChangeType)change_type, table_name, row_id);
+				var h = GCHandle.FromIntPtr(ctx);
+				var db = (Database)h.Target;
+				db.RaiseDataChangedEvent((ChangeType)change_type, table_name, row_id);
 			}
 
 			/// <summary>Handler for the data changed event to invalidate cached objects</summary>
@@ -1526,15 +1524,6 @@ namespace pr.common
 					Trace.WriteLine(ETrace.ObjectCache, string.Format("Table {0} has no cache", args.TableName));
 				}
 			}
-
-			#if MONOTOUCH
-			private static Database m_db_singleton;
-			[MonoTouch.MonoPInvokeCallbackAttribute(typeof(UpdateHookCB))]
-			private static void UpdateCBStatic(IntPtr ctx, int change_type, string db_name, string table_name, long row_id)
-			{
-				m_db_singleton.UpdateCB(ctx, change_type, db_name, table_name, row_id);
-			}
-			#endif
 		}
 		// ReSharper restore MemberHidesStaticFromOuterClass
 		#endregion
@@ -1989,11 +1978,11 @@ namespace pr.common
 					Ungenerate();
 					var lambda = expr as LambdaExpression;
 					if (lambda != null) expr = lambda.Body;
-					
+
 					var clause = Translate(expr);
 					if (clause.Args.Count != 0)
 						throw new NotSupportedException("OrderBy expressions do not support parameters");
-					
+
 					if (m_order == null) m_order = ""; else m_order += ",";
 					m_order += clause.Text;
 					if (!ascending) m_order += " desc";
@@ -2019,7 +2008,7 @@ namespace pr.common
 					var meta = TableMetaData.GetMetaData(type);
 					var cmd = new TranslateResult();
 					select = select ?? "select";
-					
+
 					cmd.Text.Append(select);
 					if (select == "select")
 					{
@@ -2049,7 +2038,7 @@ namespace pr.common
 						if (!m_take.HasValue) cmd.Text.Append(" limit -1 ");
 						cmd.Text.Append(" offset ").Append(m_skip.Value);
 					}
-					
+
 					SqlString = cmd.Text.ToString();
 					Arguments = cmd.Args;
 					Trace.WriteLine(ETrace.Query, "Sql expression generated: " + ToString());
@@ -2069,14 +2058,14 @@ namespace pr.common
 				{
 					if (result == null)
 						result = new TranslateResult();
-					
+
 					var binary_expr = expr as BinaryExpression;
 					if (binary_expr != null)
 					{
 						result.Text.Append("(");
 						Translate(binary_expr.Left ,result);
 					}
-					
+
 					// Helper for testing if an expression is a null constant
 					Func<Expression, bool> IsNullConstant = exp =>
 						{
@@ -2088,7 +2077,7 @@ namespace pr.common
 							}
 							return false;
 						};
-					
+
 					switch (expr.NodeType)
 					{
 					default: throw new NotSupportedException();
@@ -2113,10 +2102,10 @@ namespace pr.common
 								result.Text.Append(me.Member.Name);
 								return result;
 							}
-							
+
 							// Try to evaluate the expression
 							var res = Translate(me.Expression);
-							
+
 							// If a value cannot be determined from the expression, write the parameter name instead
 							if (res.Args.Count == 0)
 							{
@@ -2146,7 +2135,7 @@ namespace pr.common
 							}
 							if (res.Args.Count != 1 || res.Args[0] == null)
 								throw new NotSupportedException("Could not find the object instance for MemberExpression: " + me);
-							
+
 							// Get the member value
 							object ob;
 							switch (me.Member.MemberType)
@@ -2155,7 +2144,7 @@ namespace pr.common
 							case MemberTypes.Property: ob = ((PropertyInfo)me.Member).GetValue(res.Args[0], null); break;
 							case MemberTypes.Field:    ob = (   (FieldInfo)me.Member).GetValue(res.Args[0]); break;
 							}
-							
+
 							// Handle IEnumerable
 							if (ob is IEnumerable && !(ob is string))
 							{
@@ -2294,13 +2283,13 @@ namespace pr.common
 					case ExpressionType.GreaterThan:        result.Text.Append( ">"); break;
 					case ExpressionType.GreaterThanOrEqual: result.Text.Append(">="); break;
 					}
-					
+
 					if (binary_expr != null)
 					{
 						Translate(binary_expr.Right ,result);
 						result.Text.Append(")");
 					}
-					
+
 					return result;
 				}
 			}
@@ -2436,7 +2425,7 @@ namespace pr.common
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
 
 			public override string ToString()  { return SqlString; }
-			
+
 			public Query(Database db, sqlite3_stmt stmt)
 			{
 				if (stmt.IsInvalid) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
@@ -2480,16 +2469,16 @@ namespace pr.common
 				var cancel = new QueryClosingEventArgs();
 				if (Closing != null) Closing(this, cancel);
 				if (cancel.Cancel) return;
-				
+
 				// After 'sqlite3_finalize()', it is illegal to use m_stmt. So save 'db' here first
 				Reset(); // Call reset to clear any error code from failed queries.
 				m_stmt.Close();
 				if (m_stmt.CloseResult != Result.OK)
 					throw Exception.New(m_stmt.CloseResult, Dll.ErrorMsg(m_db.Handle));
-				
+
 				Trace.QueryClosed(this);
 			}
-			
+
 			/// <summary>An event raised when this query is closing</summary>
 			public event EventHandler<QueryClosingEventArgs> Closing;
 			public class QueryClosingEventArgs :EventArgs
@@ -2783,7 +2772,7 @@ namespace pr.common
 				RowId        = row_id;
 			}
 		}
-		
+
 		#endregion
 
 		#region Table Meta Data
@@ -2794,7 +2783,7 @@ namespace pr.common
 			public static TableMetaData GetMetaData(Type type)
 			{
 				if (type == typeof(object)) throw new ArgumentException("Type 'object' cannot have TableMetaData", "type");
-				
+
 				TableMetaData meta;
 				if (!Meta.TryGetValue(type, out meta))
 					Meta.Add(type, meta = new TableMetaData(type));
@@ -2867,33 +2856,33 @@ namespace pr.common
 			public TableMetaData(Type type)
 			{
 				Trace.WriteLine(ETrace.Tables, string.Format("Creating table meta data for '{0}'", type.Name));
-				
+
 				// Get the table attribute
 				var attrs = type.GetCustomAttributes(typeof(TableAttribute), true);
 				var attr = attrs.Length != 0 ? (TableAttribute)attrs[0] : new TableAttribute();
-				
+
 				Type = type;
 				Name = type.Name;
 				Constraints = attr.Constraints ?? "";
 				Factory = () => Activator.CreateInstance(Type);
 				TableKind = Kind.Unknown;
-				
+
 				// Build a collection of columns to ignore
 				var ignored = new List<string>();
 				foreach (var ign in type.GetCustomAttributes(typeof(IgnoreColumnsAttribute), true).Cast<IgnoreColumnsAttribute>())
 					ignored.AddRange(ign.Ignore.Split(',').Select(x => x.Trim()));
-				
+
 				// Tests if a member should be included as a column in the table
 				Func<MemberInfo, List<string>, bool> inc_member = (mi,marked) =>
 					!mi.GetCustomAttributes(typeof(IgnoreAttribute), false).Any() &&  // doesn't have the ignore attribute and,
 					!ignored.Contains(mi.Name) &&                                     // isn't in the ignore list and,
 					(mi.GetCustomAttributes(typeof(ColumnAttribute), false).Any() ||  // has the column attribute or,
 					(attr.AllByDefault && marked.Contains(mi.Name)));                 // all in by default and 'mi' is in the collection of found columns
-				
+
 				const BindingFlags binding_flags = BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;
 				var pflags = attr.PropertyBindingFlags != BindingFlags.Default ? attr.PropertyBindingFlags |BindingFlags.Instance : BindingFlags.Default;
 				var fflags = attr.FieldBindingFlags    != BindingFlags.Default ? attr.FieldBindingFlags    |BindingFlags.Instance : BindingFlags.Default;
-				
+
 				// Create a collection of the columns of this table
 				var cols = new List<ColumnMetaData>();
 				{
@@ -2901,16 +2890,16 @@ namespace pr.common
 					var mark = !attr.AllByDefault ? null :
 						type.GetProperties(pflags).Where(x => x.CanRead && x.CanWrite).Select(x => x.Name).Concat(
 						type.GetFields    (fflags).Select(x => x.Name)).ToList();
-					
+
 					// Check all public/non-public properties/fields
 					cols.AddRange(AllProps (type, binding_flags).Where(pi => inc_member(pi,mark)).Select(pi => new ColumnMetaData(pi)));
 					cols.AddRange(AllFields(type, binding_flags).Where(fi => inc_member(fi,mark)).Select(fi => new ColumnMetaData(fi)));
-					
+
 					// If we found read/write properties or fields then this is a normal db table type
 					if (cols.Count != 0)
 						TableKind = Kind.Table;
 				}
-				
+
 				// If no read/write columns were found, look for readonly columns
 				if (TableKind == Kind.Unknown)
 				{
@@ -2918,21 +2907,21 @@ namespace pr.common
 					var mark = !attr.AllByDefault ? null :
 						type.GetProperties(pflags).Where(x => x.CanRead).Select(x => x.Name).Concat(
 						type.GetFields    (fflags).Select(x => x.Name)).ToList();
-					
+
 					// If we find public readonly properties or fields
 					cols.AddRange(AllProps(type, binding_flags).Where(pi => inc_member(pi,mark)).Select(x => new ColumnMetaData(x)));
 					cols.AddRange(AllProps(type, binding_flags).Where(fi => inc_member(fi,mark)).Select(x => new ColumnMetaData(x)));
 					if (cols.Count != 0)
 						TableKind = Kind.AnonType;
 				}
-				
+
 				// If still not columns found, check whether 'type' is a primitive type
 				if (TableKind == Kind.Unknown)
 				{
 					cols.Add(new ColumnMetaData(type));
 					TableKind = Kind.PrimitiveType;
 				}
-				
+
 				// If a primary key is named in the class level attribute, mark it
 				if (attr.PrimaryKey != null)
 				{
@@ -2942,7 +2931,7 @@ namespace pr.common
 					col.IsAutoInc = attr.PKAutoInc;
 					col.Order = 0;
 				}
-				
+
 				// Check the table constraints for primary key definitions
 				const string primary_key = "primary key";
 				var pk_ofs = Constraints.IndexOf(primary_key, StringComparison.OrdinalIgnoreCase);
@@ -2951,7 +2940,7 @@ namespace pr.common
 					var s = Constraints.IndexOf('(', pk_ofs + primary_key.Length);
 					var e = Constraints.IndexOf(')', s + 1);
 					if (s == -1 || e == -1) throw new ArgumentException("Table constraints '"+Constraints+"' are invalid");
-					
+
 					// Check that every named primary key is actually a column
 					// and also ensure primary keys are ordered as given.
 					int order = 0;
@@ -2963,18 +2952,18 @@ namespace pr.common
 						col.Order = order++;
 					}
 				}
-				
+
 				// Sort the columns by the given order
 				var cmp = Comparer<int>.Default;
 				cols.Sort((lhs,rhs) => cmp.Compare(lhs.Order, rhs.Order));
-				
+
 				// Create the column arrays
 				m_column    = cols.ToArray();
 				Pks         = m_column.Where(x => x.IsPk).ToArray();
 				NonPks      = m_column.Where(x => !x.IsPk).ToArray();
 				NonAutoIncs = m_column.Where(x => !x.IsAutoInc).ToArray();
 				m_single_pk = Pks.Count() == 1 ? Pks.First() : null;
-				
+
 				#if COMPILED_LAMBDAS
 				// Initialise the generated methods for this type
 				m_method_equal = typeof(MethodGenerator<>).MakeGenericType(Type).GetMethod("Equal", BindingFlags.Static|BindingFlags.Public);
@@ -3008,7 +2997,7 @@ namespace pr.common
 				foreach (var c in m_column)
 					if (string.CompareOrdinal(c.Name, column_name) == 0)
 						return c;
-				
+
 				return null;
 			}
 
@@ -3020,7 +3009,7 @@ namespace pr.common
 				if (first_idx < 1) throw new ArgumentException("Parameter binding indices start at 1 so 'first_idx' must be >= 1");
 				if (Pks.Length != keys.Length) throw new ArgumentException("Incorrect number of primary keys passed for type "+Name);
 				if (Pks.Length == 0) throw new ArgumentException("Attempting to bind primary keys for a type without primary keys");
-				
+
 				int idx = 0;
 				foreach (var c in Pks)
 				{
@@ -3062,7 +3051,7 @@ namespace pr.common
 			{
 				if (first_idx < 1) throw new ArgumentException("parameter binding indices start at 1 so 'first_idx' must be >= 1");
 				if (item.GetType() != Type) throw new ArgumentException("'item' is not the correct type for this table");
-				
+
 				int idx = 0; // binding parameters are indexed from 1
 				foreach (var c in columns)
 				{
@@ -3077,7 +3066,7 @@ namespace pr.common
 				var column_count = Dll.ColumnCount(stmt);
 				if (column_count == 0)
 					return null;
-				
+
 				object obj;
 				if (TableKind == Kind.Table)
 				{
@@ -3086,12 +3075,12 @@ namespace pr.common
 					{
 						var cname = Dll.ColumnName(stmt, i);
 						var col = Column(cname);
-					
+
 						// Since sqlite does not support dropping columns in a table, it's likely,
 						// for backwards compatibility, that a table will contain columns that don't
 						// correspond to a property or field in 'item'. These columns are silently ignored.
 						if (col == null) continue;
-					
+
 						col.Set(obj, col.ReadFn(stmt, i));
 					}
 				}
@@ -3103,7 +3092,7 @@ namespace pr.common
 						var cname = Dll.ColumnName(stmt, i);
 						var col = Column(cname);
 						if (col == null) continue;
-						
+
 						args.Add(col.ReadFn(stmt,i));
 					}
 					obj = Activator.CreateInstance(Type, args.ToArray(), null);
@@ -3304,7 +3293,7 @@ namespace pr.common
 				if (mi != null) attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault();
 				if (attr == null) attr = new ColumnAttribute();
 				var is_nullable = Nullable.GetUnderlyingType(type) != null;
-				
+
 				MemberInfo      = mi;
 				SqlDataType     = attr.SqlDataType != DataType.Null ? attr.SqlDataType : SqlType(type);
 				Constraints     = attr.Constraints ?? "";
@@ -3314,7 +3303,7 @@ namespace pr.common
 				IsCollate       = false;
 				Order           = OrderBaseValue + attr.Order;
 				ClrType         = type;
-				
+
 				// Setup the bind and read methods
 				BindFn = Bind.FuncFor(type);
 				ReadFn = Read.FuncFor(type);
@@ -3356,21 +3345,21 @@ namespace pr.common
 			/// If false, only properties/fields marked with the Sqlite.ColumnAttribute will be included.<para/>
 			/// Default value is true.</summary>
 			public bool AllByDefault { get; set; }
-			
+
 			/// <summary>
 			/// Binding flags used to reflect on properties in the type.<para/>
 			/// Only used if 'AllByDefault' is true. BindingFlag.Instance is added automatically.
 			/// Use BindingFlags.Default for none.<para/>
 			/// Default value is BindingFlags.Public</summary>
 			public BindingFlags PropertyBindingFlags { get; set; }
-			
+
 			/// <summary>
 			/// Binding flags used to reflect on fields in the type.<para/>
 			/// Only used if 'AllByDefault' is true. BindingFlag.Instance is added automatically.
 			/// Use BindingFlags.Default for none.<para/>
 			/// Default value is BindingFlags.Default</summary>
 			public BindingFlags FieldBindingFlags { get; set; }
-			
+
 			/// <summary>
 			/// Defines any table constraints to use when creating the table.<para/>
 			/// This can be used to specify multiple primary keys for the table.<para/>
@@ -3380,7 +3369,7 @@ namespace pr.common
 			///  Column 'C1' is unique, columns C2 and C3 are the primary keys (in that order)<para/>
 			/// Default value is null.</summary>
 			public string Constraints { get; set; }
-			
+
 			/// <summary>
 			/// The name of the property or field to use as the primary key for a table.
 			/// This property can be used to specify the primary key at a class level which
@@ -3390,12 +3379,12 @@ namespace pr.common
 			/// value will be set to 0 for that column.<para/>
 			/// Default is value is null.</summary>
 			public string PrimaryKey { get; set; }
-			
+
 			/// <summary>
 			/// Set to true if the column given by 'PrimaryKey' is also an auto increment
 			/// column. Not used if PrimaryKey is not specified. Default is false.</summary>
 			public bool PKAutoInc { get; set; }
-			
+
 			public TableAttribute()
 			{
 				AllByDefault         = true;
@@ -3416,7 +3405,7 @@ namespace pr.common
 		{
 			/// <summary>A comma separated list of properties/fields to ignore</summary>
 			public string Ignore { get; private set; }
-			
+
 			public IgnoreColumnsAttribute(string column_names)
 			{
 				Ignore = column_names;
@@ -3433,22 +3422,22 @@ namespace pr.common
 			/// property is used so that the order of primary keys is defined.
 			/// Default value is false.</summary>
 			public bool PrimaryKey { get; set; }
-			
+
 			/// <summary>True if this column should auto increment. Default is false</summary>
 			public bool AutoInc { get; set; }
-			
+
 			/// <summary>Defines the relative order of columns in the table. Default is '0'</summary>
 			public int Order { get; set; }
-			
+
 			/// <summary>
 			/// The sqlite data type used to represent this column.
 			/// If set to DataType.Null, then the default mapping from .NET data type to sqlite type is used.
 			/// Default value is DataType.Null</summary>
 			public DataType SqlDataType { get; set; }
-			
+
 			/// <summary>Custom constraints to add to this column. Default is null</summary>
 			public string Constraints { get; set; }
-			
+
 			public ColumnAttribute()
 			{
 				PrimaryKey  = false;
@@ -3492,7 +3481,7 @@ namespace pr.common
 			private static bool m_transaction_in_progress;
 			private readonly Database m_db;
 			private bool m_completed;
-			
+
 			public Transaction(Database db)
 			{
 				m_db = db;
@@ -3554,10 +3543,10 @@ namespace pr.common
 
 				return new Exception(message){Result = res};
 			}
-			
+
 			/// <summary>The result code associated with this exception</summary>
 			public Result Result { get; private set; }
-			
+
 			public Exception() {}
 			public Exception(string message):base(message) {}
 			public Exception(string message, System.Exception inner_exception):base(message, inner_exception) {}
@@ -3630,7 +3619,7 @@ namespace pr.common
 			{
 				return Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(str));
 			}
-			
+
 			/// <summary>Set a configuration setting for the database</summary>
 			public static Result Config(ConfigOption option)
 			{
@@ -3848,7 +3837,7 @@ namespace pr.common
 					get { return handle == IntPtr.Zero; }
 				}
 			}
-		
+
 			/// <summary>A wrapper for unmanaged sqlite database connection handles</summary>
 			private class NativeSqlite3Handle :SQLiteHandle ,sqlite3
 			{
@@ -3864,13 +3853,13 @@ namespace pr.common
 					return true;
 				}
 			}
-		
+
 			/// <summary>A wrapper for unmanaged sqlite prepared statement handles</summary>
 			private class NativeSqlite3StmtHandle :SQLiteHandle, sqlite3_stmt
 			{
 				public NativeSqlite3StmtHandle() {}
 				public NativeSqlite3StmtHandle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {}
-			
+
 				/// <summary>Frees the handle.</summary>
 				protected override bool ReleaseHandle()
 				{
@@ -4105,7 +4094,7 @@ namespace pr.common
 				// Read the blob size limit
 				var db = sqlite3_db_handle((NativeSqlite3StmtHandle)stmt);
 				var max_size = sqlite3_limit(db, Limit.Length, -1);
-				
+
 				// sqlite returns null if this column is null
 				ptr = sqlite3_column_blob((NativeSqlite3StmtHandle)stmt, index); // have to call this first
 				len = sqlite3_column_bytes((NativeSqlite3StmtHandle)stmt, index);
@@ -4311,6 +4300,7 @@ namespace pr.common
 // ReSharper restore AccessToStaticMemberViaDerivedType
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
@@ -4341,7 +4331,7 @@ namespace pr
 					if (ReferenceEquals(this, other)) return true;
 					return other.Str == Str;
 				}
-			
+
 				/// <summary>Binds this type to a parameter in a prepared statement</summary>
 				public static void SqliteBind(Sqlite.sqlite3_stmt stmt, int idx, object obj)
 				{
@@ -4413,11 +4403,11 @@ namespace pr
 				[Sqlite.Column(Order=22, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
 				[Sqlite.Column(Order=23)] public int?           m_nullint;
 				[Sqlite.Column(Order=24)] public long?          m_nulllong;
-			
+
 				// ReSharper disable UnusedAutoPropertyAccessor.Local
 				public int Ignored { get; set; }
 				// ReSharper restore UnusedAutoPropertyAccessor.Local
-			
+
 				public DomType1() {}
 				public DomType1(int val)
 				{
@@ -4494,7 +4484,7 @@ namespace pr
 			{
 				public string UniStr; // Should be a column, because of the FieldBindingFlags
 				private bool Ign_PrivateField; // Should not be a column because private
-			
+
 				public DomType2() {}
 				public DomType2(string key, string str)
 				{
@@ -4514,7 +4504,7 @@ namespace pr
 			private class DomType2Base
 			{
 				[Sqlite.Column] private int Inc_Explicit; // Should be a column, because explicitly named
-			
+
 				// Notice the DOMType2 class indicates this is the primary key from a separate class.
 				public string PK { get; protected set; }
 
@@ -4641,7 +4631,7 @@ namespace pr
 					db.DropTable<DomType0>();
 					db.CreateTable<DomType0>();
 					Assert.IsTrue(db.TableExists<DomType0>());
-				
+
 					// Check the table
 					var table = db.Table<DomType0>();
 					Assert.AreEqual(3, table.ColumnCount);
@@ -4653,19 +4643,19 @@ namespace pr
 						Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
 						Assert.IsTrue(column_names.Contains(q.ColumnName(2)));
 					}
-				
+
 					// Create some objects to stick in the table
 					int key = 0;
 					var obj1 = new DomType0(ref key, 5);
 					var obj2 = new DomType0(ref key, 6);
 					var obj3 = new DomType0(ref key, 7);
-				
+
 					// Insert stuff
 					Assert.AreEqual(1, table.Insert(obj1));
 					Assert.AreEqual(1, table.Insert(obj2));
 					Assert.AreEqual(1, table.Insert(obj3));
 					Assert.AreEqual(3, table.RowCount);
-				
+
 					string sql_count = "select count(*) from "+table.Name;
 					using (var q = table.Query(sql_count))
 						Assert.AreEqual(sql_count, q.SqlString);
@@ -4680,7 +4670,7 @@ namespace pr
 					db.DropTable<DomType1>();
 					db.CreateTable<DomType1>();
 					Assert.IsTrue(db.TableExists<DomType1>());
-				
+
 					// Check the table
 					var table = db.Table<DomType1>();
 					Assert.AreEqual(25, table.ColumnCount);
@@ -4713,25 +4703,25 @@ namespace pr
 						Assert.AreEqual("m_nullint"   ,q.ColumnName(23));
 						Assert.AreEqual("m_nulllong"  ,q.ColumnName(24));
 					}
-				
+
 					// Create some objects to stick in the table
 					var obj1 = new DomType1(5);
 					var obj2 = new DomType1(6);
 					var obj3 = new DomType1(7);
 					obj2.m_dt_offset = DateTimeOffset.UtcNow;
-				
+
 					// Insert stuff
 					Assert.AreEqual(1, table.Insert(obj1));
 					Assert.AreEqual(1, table.Insert(obj2));
 					Assert.AreEqual(1, table.Insert(obj3));
 					Assert.AreEqual(3, table.RowCount);
-				
+
 					// Check Get() throws and Find() returns null if not found
 					Assert.IsNull(table.Find(0));
 					Sqlite.Exception err = null;
 					try { table.Get(4); } catch (Sqlite.Exception ex) { err = ex; }
 					Assert.IsTrue(err != null && err.Result == Sqlite.Result.NotFound);
-				
+
 					// Get stuff and check it's the same
 					var OBJ1 = table.Get(obj1.m_key);
 					var OBJ2 = table.Get(obj2.m_key);
@@ -4739,7 +4729,7 @@ namespace pr
 					Assert.IsTrue(obj1.Equals(OBJ1));
 					Assert.IsTrue(obj2.Equals(OBJ2));
 					Assert.IsTrue(obj3.Equals(OBJ3));
-				
+
 					// Check parameter binding
 					using (var q = table.Query(Sqlite.Sql("select m_string,m_int from ",table.Name," where m_string = @p1 and m_int = @p2")))
 					{
@@ -4750,10 +4740,10 @@ namespace pr
 						Assert.AreEqual(2, q.ParmIndex("@p2"));
 						q.BindParm(1, "string");
 						q.BindParm(2, 12345678);
-					
+
 						// Run the query
 						Assert.IsTrue(q.Step());
-					
+
 						// Read the results
 						Assert.AreEqual(2, q.ColumnCount);
 						Assert.AreEqual(Sqlite.DataType.Text    ,q.ColumnType(0));
@@ -4762,55 +4752,55 @@ namespace pr
 						Assert.AreEqual("m_int"                 ,q.ColumnName(1));
 						Assert.AreEqual("string"                ,q.ReadColumn<string>(0));
 						Assert.AreEqual(12345678                ,q.ReadColumn<int>(1));
-					
+
 						// There should be 3 rows
 						Assert.IsTrue(q.Step());
 						Assert.IsTrue(q.Step());
 						Assert.IsFalse(q.Step());
 					}
-				
+
 					// Update stuff
 					obj2.m_string = "I've been modified";
 					Assert.AreEqual(1, table.Update(obj2));
-				
+
 					// Get the updated stuff and check it's been updated
 					OBJ2 = table.Find(obj2.m_key);
 					Assert.IsNotNull(OBJ2);
 					Assert.IsTrue(obj2.Equals(OBJ2));
-				
+
 					// Delete something and check it's gone
 					Assert.AreEqual(1, table.Delete(obj3));
 					OBJ3 = table.Find(obj3.m_key);
 					Assert.IsNull(OBJ3);
-				
+
 					// Update a single column and check it
 					obj1.m_byte = 55;
 					Assert.AreEqual(1, table.Update("m_byte", obj1.m_byte, 1));
 					OBJ1 = table.Get(obj1.m_key);
 					Assert.IsNotNull(OBJ1);
 					Assert.IsTrue(obj1.Equals(OBJ1));
-				
+
 					// Read a single column
 					var val = table.ColumnValue<ushort>("m_ushort", 2);
 					Assert.AreEqual(obj2.m_ushort, val);
-				
+
 					// Add something back
 					Assert.AreEqual(1, table.Insert(obj3));
 					OBJ3 = table.Get(obj3.m_key);
 					Assert.IsNotNull(OBJ3);
 					Assert.IsTrue(obj3.Equals(OBJ3));
-				
+
 					// Update the column value for all rows
 					obj1.m_byte = obj2.m_byte = obj3.m_byte = 0xAB;
 					Assert.AreEqual(3, table.UpdateAll("m_byte", (byte)0xAB));
-				
+
 					// Enumerate objects
 					var objs = table.Select(x => x).ToArray();
 					Assert.AreEqual(3, objs.Length);
 					Assert.IsTrue(obj1.Equals(objs[0]));
 					Assert.IsTrue(obj2.Equals(objs[1]));
 					Assert.IsTrue(obj3.Equals(objs[2]));
-				
+
 					// Linq expressions
 					objs = (from a in table where a.m_string == "I've been modified" select a).ToArray();
 					Assert.AreEqual(1, objs.Length);
@@ -4826,7 +4816,7 @@ namespace pr
 					db.DropTable<DomType3>();
 					db.CreateTable<DomType3>();
 					Assert.IsTrue(db.TableExists<DomType3>());
-				
+
 					// Check the table
 					var table = db.Table<DomType3>();
 					Assert.AreEqual(9, table.ColumnCount);
@@ -4844,22 +4834,22 @@ namespace pr
 						Assert.IsTrue(cols.Contains("PropB"));
 						Assert.IsTrue(cols.Contains("Parent1"));
 					}
-				
+
 					// Create some stuff
 					var obj1 = new DomType3(1, false, "first");
 					var obj2 = new DomType3(1, true , "first");
 					var obj3 = new DomType3(2, false, "first");
 					var obj4 = new DomType3(2, true , "first");
-				
+
 					// Insert it an check they're there
 					Assert.AreEqual(1, table.Insert(obj1));
 					Assert.AreEqual(1, table.Insert(obj2));
 					Assert.AreEqual(1, table.Insert(obj3));
 					Assert.AreEqual(1, table.Insert(obj4));
 					Assert.AreEqual(4, table.RowCount);
-				
+
 					Assert.Throws<ArgumentException>(()=>table.Get(obj1.Key1, obj1.Key2));
-				
+
 					var OBJ1 = table.Get(obj1.Key1, obj1.Key2, obj1.Key3);
 					var OBJ2 = table.Get(obj2.Key1, obj2.Key2, obj2.Key3);
 					var OBJ3 = table.Get(obj3.Key1, obj3.Key2, obj3.Key3);
@@ -4868,7 +4858,7 @@ namespace pr
 					Assert.IsTrue(obj2.Equals(OBJ2));
 					Assert.IsTrue(obj3.Equals(OBJ3));
 					Assert.IsTrue(obj4.Equals(OBJ4));
-				
+
 					// Check insert collisions
 					obj1.Prop1 = "I've been modified";
 					{
@@ -4895,14 +4885,14 @@ namespace pr
 						Assert.IsNotNull(OBJ1);
 						Assert.IsTrue(obj1.Equals(OBJ1));
 					}
-				
+
 					// Update in a multiple pk table
 					obj2.PropA = "I've also been modified";
 					Assert.AreEqual(1, table.Update(obj2));
 					OBJ2 = table.Get(obj2.Key1, obj2.Key2, obj2.Key3);
 					Assert.IsNotNull(OBJ2);
 					Assert.IsTrue(obj2.Equals(OBJ2));
-				
+
 					// Delete in a multiple pk table
 					var keys = Sqlite.PrimaryKeys(obj3);
 					Assert.AreEqual(1, table.DeleteByKey(keys));
@@ -4919,7 +4909,7 @@ namespace pr
 					db.DropTable<DomType2>();
 					db.CreateTable<DomType2>();
 					Assert.IsTrue(db.TableExists<DomType2>());
-				
+
 					// Check the table
 					var table = db.Table<DomType2>();
 					Assert.AreEqual(3, table.ColumnCount);
@@ -4931,7 +4921,7 @@ namespace pr
 						Assert.IsTrue(column_names.Contains(q.ColumnName(0)));
 						Assert.IsTrue(column_names.Contains(q.ColumnName(1)));
 					}
-				
+
 					// Insert some stuff and check it stores/reads back ok
 					var obj1 = new DomType2("123", "€€€€");
 					var obj2 = new DomType2("abc", "⽄畂卧湥敳慈摮敬⡲㐲ㄴ⤷›慃獵摥戠㩹樠癡⹡慬杮吮牨睯扡敬›潣⹭湩牴湡汥洮扯汩扥汵敬⹴牃獡剨灥牯楴杮匫獥楳湯瑓牡䕴捸灥楴湯›敓獳潩⁮瑓牡整㩤眠楚塄婐桹㐰慳扲汬穷䌰㡶啩扁搶睄畎䐱䭡䝭牌夳䉡獁െ");
@@ -4942,7 +4932,7 @@ namespace pr
 					var OBJ2 = table.Get(obj2.PK);
 					Assert.IsTrue(obj1.Equals(OBJ1));
 					Assert.IsTrue(obj2.Equals(OBJ2));
-				
+
 					// Update Unicode stuff
 					obj2.UniStr = "獁㩹獁";
 					Assert.AreEqual(1, table.Update(obj2));
@@ -4959,7 +4949,7 @@ namespace pr
 					db.DropTable<DomType0>();
 					db.CreateTable<DomType0>();
 					Assert.IsTrue(db.TableExists<DomType0>());
-					
+
 					// Create and insert some objects
 					int key = 0;
 					var objs = Enumerable.Range(0,10).Select(i => new DomType0(ref key, i)).ToList();
@@ -5011,15 +5001,15 @@ namespace pr
 					db.CreateTable<DomType1>();
 					Assert.IsTrue(db.TableExists<DomType1>());
 					var table = db.Table(typeof(DomType1));
-				
+
 					// Create objects
 					var objs = Enumerable.Range(0,10).Select(i => new DomType1(i)).ToList();
 					foreach (var x in objs)
 						Assert.AreEqual(1, table.Insert(x)); // insert without compile-time type info
-				
+
 					objs[5].m_string = "I am number 5";
 					Assert.AreEqual(1, table.Update(objs[5]));
-				
+
 					var OBJS = table.Cast<DomType1>().Select(x => x).ToList();
 					for (int i = 0, iend = objs.Count; i != iend; ++i)
 						Assert.IsTrue(objs[i].Equals(OBJS[i]));
@@ -5034,7 +5024,7 @@ namespace pr
 					db.DropTable<DomType3>();
 					db.CreateTable<DomType3>();
 					Assert.IsTrue(db.TableExists<DomType3>());
-				
+
 					// Check the table
 					var table3 = db.Table<DomType3>();
 					Assert.AreEqual(9, table3.ColumnCount);
@@ -5053,28 +5043,28 @@ namespace pr
 						Assert.IsTrue(cols.Contains("PropB"));
 						Assert.IsTrue(cols.Contains("Parent1"));
 					}
-				
+
 					// Create some stuff
 					var obj1 = new DomType3(1, false, "first");
 					var obj2 = new DomType3(1, true , "first");
 					var obj3 = new DomType3(2, false, "first");
 					var obj4 = new DomType3(2, true , "first");
-				
+
 					// Insert it an check they're there
 					Assert.AreEqual(1, table3.Insert(obj1));
 					Assert.AreEqual(1, table3.Insert(obj2));
 					Assert.AreEqual(1, table3.Insert(obj3));
 					Assert.AreEqual(1, table3.Insert(obj4));
 					Assert.AreEqual(4, table3.RowCount);
-				
+
 					// Rename the table
 					db.DropTable<DomType4>();
 					db.RenameTable<DomType3>("DomType4", false);
-				
+
 					// Alter the table to DOMType4
 					db.AlterTable<DomType4>();
 					Assert.IsTrue(db.TableExists<DomType4>());
-				
+
 					// Check the table
 					var table4 = db.Table<DomType4>();
 					Assert.AreEqual(6, table4.ColumnCount);
@@ -5106,18 +5096,18 @@ namespace pr
 					db.CreateTable<DomType0>();
 					Assert.IsTrue(db.TableExists<DomType0>());
 					var table = db.Table<DomType0>();
-				
+
 					// Insert stuff
 					int key = 0;
 					var values = new[]{4,1,0,5,7,9,6,3,8,2};
 					foreach (var v in values)
 						Assert.AreEqual(1, table.Insert(new DomType0(ref key, v)));
 					Assert.AreEqual(10, table.RowCount);
-				
+
 					string sql_count = "select count(*) from "+table.Name;
 					using (var q = table.Query(sql_count))
 						Assert.AreEqual(sql_count, q.SqlString);
-				
+
 					// Do some expression tree queries
 					{// Count clause
 						var q = table.Count(x => (x.Inc_Key % 3) == 0);
@@ -5287,36 +5277,36 @@ namespace pr
 					#pragma warning disable 168
 					{// Check sql strings are correct
 						string sql;
-						
+
 						var a = table.Where(x => x.Inc_Key == 3).Select(x => x.Inc_Enum).ToList();
 						sql = table.SqlString;
 						Assert.AreEqual("select Inc_Enum from DomType0 where (Inc_Key==?)", sql);
-						
+
 						var b = table.Where(x => x.Inc_Key == 3).Select(x => new{x.Inc_Value,x.Inc_Enum}).ToList();
 						sql = table.SqlString;
 						Assert.AreEqual("select Inc_Value,Inc_Enum from DomType0 where (Inc_Key==?)", sql);
-						
+
 						sql = table.Where(x => (x.Inc_Key & 0x3) == 0x1).GenerateExpression().ResetExpression().SqlString;
 						Assert.AreEqual("select * from DomType0 where ((Inc_Key&?)==?)", sql);
-						
+
 						sql = table.Where(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
-					
+
 						sql = table.Where(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
-					
+
 						var t = table.FirstOrDefault(x => x.Inc_Key == 4);
 						sql = table.SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
-					
+
 						var l = table.Where(x => x.Inc_Key == 4).Take(4).Skip(2).ToList();
 						sql = table.SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
-					
+
 						var q = (from x in table where x.Inc_Key == 3 select new {x.Inc_Key, x.Inc_Value}).ToList();
 						sql = table.SqlString;
 						Assert.AreEqual("select Inc_Key,Inc_Value from DomType0 where (Inc_Key==?)", sql);
-					
+
 						var w = table.Delete(x => x.Inc_Key == 2);
 						sql = table.SqlString;
 						Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
@@ -5334,18 +5324,18 @@ namespace pr
 					db.CreateTable<DomType0>();
 					Assert.IsTrue(db.TableExists<DomType0>());
 					var table = db.Table(typeof(DomType0));
-				
+
 					// Insert stuff
 					int key = 0;
 					var values = new[]{4,1,0,5,7,9,6,3,8,2};
 					foreach (var v in values)
 						Assert.AreEqual(1, table.Insert(new DomType0(ref key, v)));
 					Assert.AreEqual(10, table.RowCount);
-				
+
 					string sql_count = "select count(*) from "+table.Name;
 					using (var q = table.Query(sql_count))
 						Assert.AreEqual(sql_count, q.SqlString);
-				
+
 					// Do some expression tree queries
 					{// Count clause
 						var q = table.Count<DomType0>(x => (x.Inc_Key % 3) == 0);
@@ -5484,21 +5474,21 @@ namespace pr
 					#pragma warning disable 168
 					{// Check sql strings are correct
 						string sql;
-					
+
 						sql = table.Where<DomType0>(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?)", sql);
-					
+
 						sql = table.Where<DomType0>(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
-					
+
 						var t = table.FirstOrDefault<DomType0>(x => x.Inc_Key == 4);
 						sql = table.SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 1", sql);
-					
+
 						var l = table.Where<DomType0>(x => x.Inc_Key == 4).Take(4).Skip(2).Cast<DomType0>().ToList();
 						sql = table.SqlString;
 						Assert.AreEqual("select * from DomType0 where (Inc_Key==?) limit 4 offset 2", sql);
-					
+
 						var w = table.Delete<DomType0>(x => x.Inc_Key == 2);
 						sql = table.SqlString;
 						Assert.AreEqual("delete from DomType0 where (Inc_Key==?)", sql);
@@ -5516,20 +5506,20 @@ namespace pr
 					db.CreateTable<DomType1>();
 					Assert.IsTrue(db.TableExists<DomType1>());
 					var table = db.Table<DomType1>();
-				
+
 					// Create some objects to stick in the table
 					var obj1 = new DomType1(1){m_nullint = 1, m_int = 4};
 					var obj2 = new DomType1(2){m_nulllong = null};
 					var obj3 = new DomType1(3){m_nullint = null};
 					var obj4 = new DomType1(4){m_nulllong = 2};
-				
+
 					// Insert stuff
 					Assert.AreEqual(1, table.Insert(obj1));
 					Assert.AreEqual(1, table.Insert(obj2));
 					Assert.AreEqual(1, table.Insert(obj3));
 					Assert.AreEqual(1, table.Insert(obj4));
 					Assert.AreEqual(4, table.RowCount);
-				
+
 					{// non-null nullable
 						int? nullable = 1;
 						var q = table.Where(x => x.m_nullint == nullable);
@@ -5610,20 +5600,20 @@ namespace pr
 					db.CreateTable<DomType5>();
 					Assert.IsTrue(db.TableExists<DomType5>());
 					var table = db.Table<DomType5>();
-				
+
 					var meta = db.TableMetaData<DomType5>();
 					Assert.AreEqual(2, meta.ColumnCount);
 					Assert.AreEqual(1, meta.Pks.Length);
 					Assert.AreEqual("PK", meta.Pks[0].Name);
 					Assert.AreEqual(1, meta.NonPks.Length);
 					Assert.AreEqual("Data", meta.NonPks[0].Name);
-				
+
 					// Create some objects to stick in the table
 					var obj1 = new DomType5{Data = "1"};
 					var obj2 = new DomType5{Data = "2"};
 					var obj3 = new DomType5{Data = "3"};
 					var obj4 = new DomType5{Data = "4"};
-				
+
 					// Insert stuff
 					Assert.AreEqual(1, table.Insert(obj1));
 					Assert.AreEqual(1, table.Insert(obj2));
@@ -5640,34 +5630,34 @@ namespace pr
 					// Sign up a handler for row changed
 					Sqlite.DataChangedArgs args = null;
 					db.DataChanged += (s,a) => args = a;
-					
+
 					// Create a simple table
 					db.DropTable<DomType5>();
 					db.CreateTable<DomType5>();
 					Assert.IsTrue(db.TableExists<DomType5>());
 					var table = db.Table<DomType5>();
-					
+
 					// Create some objects to stick in the table
 					var obj1 = new DomType5("One");
 					var obj2 = new DomType5("Two");
-				
+
 					// Insert stuff and check the event fires
 					table.Insert(obj1);
 					Assert.AreEqual(Sqlite.ChangeType.Insert ,args.ChangeType);
 					Assert.AreEqual("DomType5"               ,args.TableName);
 					Assert.AreEqual(1                        ,args.RowId);
-				
+
 					db.Insert(obj2);
 					Assert.AreEqual(Sqlite.ChangeType.Insert ,args.ChangeType);
 					Assert.AreEqual("DomType5"               ,args.TableName);
 					Assert.AreEqual(2                        ,args.RowId);
-				
+
 					obj1.Data = "Updated";
 					table.Update(obj1);
 					Assert.AreEqual(Sqlite.ChangeType.Update ,args.ChangeType);
 					Assert.AreEqual("DomType5"               ,args.TableName);
 					Assert.AreEqual(1                        ,args.RowId);
-				
+
 					db.Delete(obj2);
 					Assert.AreEqual(Sqlite.ChangeType.Delete ,args.ChangeType);
 					Assert.AreEqual("DomType5"               ,args.TableName);
@@ -5684,48 +5674,48 @@ namespace pr
 					db.CreateTable<DomType5>();
 					Assert.IsTrue(db.TableExists<DomType5>());
 					var table = db.Table<DomType5>();
-					
+
 					var obj1 = new DomType5("One");
 					var obj2 = new DomType5("Two");
 					var obj3 = new DomType5("Fre");
-					
+
 					// Insert some stuff
 					table.Insert(obj1);
 					table.Insert(obj2);
 					table.Insert(obj3);
-					
+
 					// Check the cache
 					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
 					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
 					Assert.IsFalse(table.Cache.IsCached(obj3.PK));
-					
+
 					table.Get<DomType5>(1);
 					table.Get<DomType5>(2);
 					table.Get<DomType5>(3);
 					Assert.IsTrue(table.Cache.IsCached(obj1.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
-					
+
 					table.Cache.Capacity = 2;
 					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
-					
+
 					table.Cache.Capacity = 1;
 					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
 					Assert.IsFalse(table.Cache.IsCached(obj2.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj3.PK));
-					
+
 					var o2_a = table.Get<DomType5>(2);
 					Assert.IsFalse(table.Cache.IsCached(obj1.PK));
 					Assert.IsTrue(table.Cache.IsCached(obj2.PK));
 					Assert.IsFalse(table.Cache.IsCached(obj3.PK));
-					
+
 					var o2_b = table.Get<DomType5>(2);
 					Assert.IsTrue(o2_a != null);
 					Assert.IsTrue(o2_b != null);
 					Assert.IsTrue(ReferenceEquals(o2_a,o2_b));
-					
+
 					o2_b.Tmp = 5;
 					var o2_c = table.MetaData.Clone(o2_b);
 					Assert.IsTrue(!ReferenceEquals(o2_b, o2_c));
@@ -5756,4 +5746,5 @@ namespace pr
 		}
 	}
 }
+
 #endif
