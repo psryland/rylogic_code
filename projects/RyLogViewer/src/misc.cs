@@ -464,33 +464,51 @@ namespace RyLogViewer
 			if (items.Count != 0) combo.SelectedIndex = 0;
 		}
 
-		/// <summary>A wrapper around showing message boxes for info</summary>
-		public static void ShowInfoMessage(IWin32Window owner, string msg, string title, MessageBoxIcon icon = MessageBoxIcon.Information)
-		{
-			// Only show one dialog at a time
-			if (m_dialog_visible)
-				return;
-
-			m_dialog_visible = true;
-			MessageBox.Show(owner, msg, title, MessageBoxButtons.OK, icon);
-			m_dialog_visible = false;
-		}
-
 		/// <summary>A wrapper around showing message boxes for exceptions</summary>
-		public static void ShowErrorMessage(Control owner, Exception exception, string caption, string title, MessageBoxIcon icon)
+		public static void ShowMessage(Control owner, string caption, string title, MessageBoxIcon icon, Exception exception = null)
 		{
 			// Only show one error dialog at a time
-			if (m_dialog_visible)
+			if (Interlocked.CompareExchange(ref m_dialog_visible, 1, 0) != 0)
 				return;
 
-			m_dialog_visible = true;
-			string msg = exception.Message;
-			for (var ex = exception.InnerException; ex != null; ex = ex.InnerException) msg += Environment.NewLine + ex.Message;
-			string error_message = "{0}\r\nError Details:\r\n{1}".Fmt(caption, msg);
-			MsgBox.Show(owner, error_message, title, MessageBoxButtons.OK, icon);
-			m_dialog_visible = false;
+			var msg = new StringBuilder(caption);
+			if (exception != null)
+			{
+				msg.AppendLine();
+				msg.AppendLine("Details:");
+				msg.AppendLine(exception.Message);
+				for (var ex = exception.InnerException; ex != null; ex = ex.InnerException)
+					msg.AppendLine(ex.Message);
+			}
+
+			MsgBox.Show(owner, msg.ToString(), title, MessageBoxButtons.OK, icon);
+
+			Interlocked.Exchange(ref m_dialog_visible, 0);
 		}
-		private static bool m_dialog_visible;
+		private static int m_dialog_visible = 0;
+
+		/// <summary>A wrapper around showing a hint balloon</summary>
+		public static void ShowHint(Control owner, string caption, Point offset, int duration = -1)
+		{
+			m_balloon.Show(owner, offset, caption, duration);
+		}
+		public static void ShowHint(Control owner, string caption, int duration = -1)
+		{
+			m_balloon.Show(owner, owner != null ? owner.ClientRectangle.Centre() : Point.Empty, caption, duration);
+		}
+		public static void ShowHint(ToolStripItem item, string caption, Point offset, int duration = -1)
+		{
+			var parent = item.GetCurrentParent();
+			if (parent == null) return;
+			ShowHint(parent, caption, offset, duration);
+		}
+		public static void ShowHint(ToolStripItem item, string caption, int duration = -1)
+		{
+			var parent = item.GetCurrentParent();
+			if (parent == null) return;
+			ShowHint(parent, caption, item.Bounds.Centre(), duration);
+		}
+		private static readonly HintBalloon m_balloon = new HintBalloon();
 
 		/// <summary>Helper for passing an action directly to BeginInvoke</summary>
 		public static void BeginInvoke<TForm>(this TForm form, Action action) where TForm:Form

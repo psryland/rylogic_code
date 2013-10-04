@@ -42,7 +42,6 @@ namespace RyLogViewer
 		private readonly BookmarksUI m_bookmarks_ui;          // The bookmarks dialog
 		private readonly NotifyIcon m_notify_icon;            // A system tray icon
 		private readonly ToolTip m_tt;                        // Tooltips
-		private readonly ToolTip m_balloon;                   // A hint balloon tooltip
 		private readonly Form[] m_tab_cycle;                  // The forms that Ctrl+Tab cycles through
 		private readonly RefCount m_suspend_grid_events;      // A ref count of nested calls that tell event handlers to ignore grid events
 		private List<Range> m_line_index;                     // Byte offsets (from file begin) to the byte range of a line
@@ -101,7 +100,6 @@ namespace RyLogViewer
 			m_bs_bookmarks        = new BindingSource{DataSource = m_bookmarks};
 			m_bookmarks_ui        = new BookmarksUI(this, m_bs_bookmarks){Visible = false};
 			m_tt                  = new ToolTip();
-			m_balloon             = new ToolTip{IsBalloon = true,UseFading = true,ReshowDelay = 0};
 			m_tab_cycle           = new Form[]{this, m_find_ui, m_bookmarks_ui};
 			m_notify_icon         = new NotifyIcon{Icon = Icon};
 			m_suspend_grid_events = new RefCount();
@@ -302,7 +300,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					Misc.ShowErrorMessage(this, ex, string.Format("Could not load highlight pattern set {0}.", su.HighlightSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error);
+					Misc.ShowMessage(this, string.Format("Could not load highlight pattern set {0}.", su.HighlightSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
 				}
 			}
 			if (su.FilterSetPath != null)
@@ -316,7 +314,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					Misc.ShowErrorMessage(this, ex, string.Format("Could not load filter pattern set {0}.", su.FilterSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error);
+					Misc.ShowMessage(this, string.Format("Could not load filter pattern set {0}.", su.FilterSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
 				}
 			}
 			if (su.TransformSetPath != null)
@@ -330,7 +328,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					Misc.ShowErrorMessage(this, ex, string.Format("Could not load transform pattern set {0}.", su.TransformSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error);
+					Misc.ShowMessage(this, string.Format("Could not load transform pattern set {0}.", su.TransformSetPath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
 				}
 			}
 		}
@@ -389,6 +387,7 @@ namespace RyLogViewer
 				CancelBuildLineIndex();
 				m_line_index.Clear();
 				m_grid.RowCount = 0;
+				m_last_hint = EHeuristicHint.None;
 				if (FileOpen) m_watch.Remove(m_file.Filepaths);
 				if (m_buffered_process    != null) m_buffered_process.Dispose();
 				if (m_buffered_tcp_netconn != null) m_buffered_tcp_netconn.Dispose();
@@ -458,13 +457,6 @@ namespace RyLogViewer
 			BuildLineIndex(m_filepos, true, ()=>
 				{
 					SelectedRowIndex = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
-
-					// Show a hint if filters are active, the file isn't empty, but there are no visible rows
-					if (m_grid.RowCount == 0 && m_fileend != 0)
-					{
-						if (m_filters.Count != 0)        ShowHintBalloon("Filters are currently active", m_btn_filters);
-						else if (m_quick_filter_enabled) ShowHintBalloon("Filters are currently active", m_btn_quick_filter);
-					}
 				});
 		}
 
@@ -497,7 +489,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, "Failed to open file {0} due to an error.".Fmt(filepath), Resources.FailedToLoadFile, MessageBoxIcon.Error);
+				Misc.ShowMessage(this, "Failed to open file {0} due to an error.".Fmt(filepath), Resources.FailedToLoadFile, MessageBoxIcon.Error, ex);
 				CloseLogFile();
 			}
 		}
@@ -516,7 +508,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, "Failed to open aggregate log files due to an error.", Resources.FailedToLoadFile, MessageBoxIcon.Error);
+				Misc.ShowMessage(this, "Failed to open aggregate log files due to an error.", Resources.FailedToLoadFile, MessageBoxIcon.Error, ex);
 				CloseLogFile();
 			}
 		}
@@ -946,7 +938,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off quick filter mode</summary>
-		private void EnableQuickFilter(bool enable)
+		public void EnableQuickFilter(bool enable)
 		{
 			var has_selection = SelectedRowIndex != -1;
 			var ofs = has_selection ? SelectedRowByteRange.Begin : -1;
@@ -961,7 +953,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off highlights</summary>
-		private void EnableHighlights(bool enable)
+		public void EnableHighlights(bool enable)
 		{
 			var has_selection = SelectedRowIndex != -1;
 			var bli_needed = m_settings.QuickFilterEnabled;
@@ -982,7 +974,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off filters</summary>
-		private void EnableFilters(bool enable)
+		public void EnableFilters(bool enable)
 		{
 			var has_selection = SelectedRowIndex != -1;
 			var ofs = has_selection ? SelectedRowByteRange.Begin : -1;
@@ -997,7 +989,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off transforms</summary>
-		private void EnableTransforms(bool enable)
+		public void EnableTransforms(bool enable)
 		{
 			m_settings.TransformsEnabled = enable;
 			ApplySettings();
@@ -1005,7 +997,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off actions</summary>
-		private void EnableActions(bool enabled)
+		public void EnableActions(bool enabled)
 		{
 			m_settings.ActionsEnabled = enabled;
 			ApplySettings();
@@ -1165,7 +1157,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Set the encoding to use with loaded files. 'null' means auto detect</summary>
-		private void SetEncoding(Encoding encoding)
+		public void SetEncoding(Encoding encoding)
 		{
 			string enc_name = encoding == null ? string.Empty : encoding.EncodingName;
 			if (enc_name == m_settings.Encoding) return; // not changed.
@@ -1182,7 +1174,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Set the line ending to use with loaded files</summary>
-		private void SetLineEnding(ELineEnding ending)
+		public void SetLineEnding(ELineEnding ending)
 		{
 			string row_delim;
 			switch (ending)
@@ -1251,10 +1243,10 @@ namespace RyLogViewer
 
 				// Show hints if patterns where added but there will be no visible
 				// change on the main view because that behaviour is disabled
-				if      (ui.HighlightsChanged && !m_settings.HighlightsEnabled) ShowHintBalloon("Highlights are currently disabled", m_btn_highlights);
-				else if (ui.FiltersChanged    && !m_settings.FiltersEnabled   ) ShowHintBalloon("Filters are currently disabled"   , m_btn_filters);
-				else if (ui.TransformsChanged && !m_settings.TransformsEnabled) ShowHintBalloon("Transforms are currently disabled", m_btn_transforms);
-				else if (ui.ActionsChanged    && !m_settings.ActionsEnabled   ) ShowHintBalloon("Actions are currently disabled"   , m_btn_actions);
+				if      (ui.HighlightsChanged && !m_settings.HighlightsEnabled) Misc.ShowHint(m_btn_highlights ,"Highlights are currently disabled");
+				else if (ui.FiltersChanged    && !m_settings.FiltersEnabled   ) Misc.ShowHint(m_btn_filters    ,"Filters are currently disabled"   );
+				else if (ui.TransformsChanged && !m_settings.TransformsEnabled) Misc.ShowHint(m_btn_transforms ,"Transforms are currently disabled");
+				else if (ui.ActionsChanged    && !m_settings.ActionsEnabled   ) Misc.ShowHint(m_btn_actions    ,"Actions are currently disabled"   );
 
 				if ((ui.WhatsChanged & EWhatsChanged.FileParsing) != 0)
 				{
@@ -1317,7 +1309,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "First run tutorial failed");
-				Misc.ShowErrorMessage(this, ex, "An error occurred when trying to display the first run tutorial", "First Run Tutorial Failed", MessageBoxIcon.Error);
+				Misc.ShowMessage(this, "An error occurred when trying to display the first run tutorial", "First Run Tutorial Failed", MessageBoxIcon.Error, ex);
 			}
 		}
 		private FirstRunTutorial m_first_run_tutorial;
@@ -1390,7 +1382,7 @@ namespace RyLogViewer
 			if (error != null)
 			{
 				SetTransientStatusMessage("Check for updates error", Color.Red, SystemColors.Control);
-				if (show_dialog) Misc.ShowErrorMessage(this, error, "Check for updates failed", "Check for Updates", MessageBoxIcon.Error);
+				if (show_dialog) Misc.ShowMessage(this, "Check for updates failed", "Check for Updates", MessageBoxIcon.Error, error);
 			}
 			else
 			{
@@ -1636,12 +1628,22 @@ namespace RyLogViewer
 		private void SetGridColumnSizesImpl()
 		{
 			int grid_width = m_grid.DisplayRectangle.Width - 2;
+			int row_count = m_grid.RowCount;
+			int col_count = m_grid.ColumnCount;
 
 			// Measure each column's preferred width
-			int[] col_widths = new int[m_grid.ColumnCount];
+			int[] col_widths = new int[col_count];
 			int total_width = 0;
 			foreach (DataGridViewColumn col in m_grid.Columns)
-				total_width += col_widths[col.Index] = col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true);
+			{
+				var width = row_count != 0
+					? col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true)
+					: grid_width / col_count;
+
+				width = Maths.Clamp(width, 30, 64000); // DGV throws if width is greater than 65535
+				col_widths[col.Index] = width;
+				total_width += col_widths[col.Index];
+			}
 
 			// Resize columns. If the total width is less than the control width use the control width instead
 			float scale = Maths.Max((float)grid_width / total_width, 1f);
@@ -1756,8 +1758,6 @@ namespace RyLogViewer
 						// Ensure the grid has the correct number of rows
 						using (m_suspend_grid_events.Reference)
 							SetGridRowCount(m_line_index.Count, row_delta);
-
-						SetGridColumnSizes();
 					}
 					else
 					{
@@ -1766,6 +1766,7 @@ namespace RyLogViewer
 						using (m_suspend_grid_events.Reference)
 							SetGridRowCount(0, 0);
 					}
+					SetGridColumnSizes();
 					m_grid.Refresh();
 				}
 
@@ -1814,6 +1815,9 @@ namespace RyLogViewer
 
 				// Status and title
 				UpdateStatus();
+
+				// Make suggestions for typically confusing situations
+				HeuristicHints();
 			}
 		}
 		private bool m_in_update_ui;
@@ -1899,6 +1903,45 @@ namespace RyLogViewer
 			m_scroll_file.Refresh();
 		}
 
+		/// <summary>Show a hint balloon for situations that users might find confusing but are still valid</summary>
+		private void HeuristicHints()
+		{
+			int row_count = m_grid.RowCount;
+
+			// Show a hint if filters are active, the file isn't empty, but there are no visible rows
+			if (m_last_hint != EHeuristicHint.FiltersActive &&
+				row_count == 0 &&
+				m_fileend != 0)
+			{
+				if (m_filters.Count != 0)        Misc.ShowHint(m_btn_filters     , "No visible data due to currently active filters");
+				else if (m_quick_filter_enabled) Misc.ShowHint(m_btn_quick_filter, "No visible data due to currently active filters");
+				m_last_hint = EHeuristicHint.FiltersActive;
+			}
+
+			// If there is one row, and that row contains more than one '\n' or '\r', and the line endings are not set
+			// to detect, then suggest that maybe the line endings need changing
+			if (m_last_hint != EHeuristicHint.LineEndings &&
+				row_count == 1 &&
+				m_settings.RowDelimiter != string.Empty &&
+				ReadLine(0).RowText.Count(c => c == '\n' || c == '\r') > 2)
+			{
+				Misc.ShowHint(m_menu_line_ending, "Only one line detected, check line ending");
+				m_last_hint = EHeuristicHint.LineEndings;
+			}
+
+			// If there is one row, and it's fairly long, and the encoding is not set to detect
+			if (m_last_hint != EHeuristicHint.Encoding &&
+				row_count == 1 &&
+				m_settings.Encoding != string.Empty &&
+				m_line_index[0].Count > 1024)
+			{
+				Misc.ShowHint(m_menu_encoding, "Only one line detected, check text encoding");
+				m_last_hint = EHeuristicHint.Encoding;
+			}
+		}
+		private enum EHeuristicHint { None, FiltersActive, LineEndings, Encoding }
+		private EHeuristicHint m_last_hint;
+
 		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
 		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, TimeSpan display_time_ms)
 		{
@@ -1947,16 +1990,6 @@ namespace RyLogViewer
 		private void SetStaticStatusMessage(string text)
 		{
 			SetStaticStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
-		}
-
-		/// <summary>Display the hint balloon</summary>
-		private void ShowHintBalloon(string msg, ToolStripItem item)
-		{
-			var parent = item.GetCurrentParent();
-			if (parent == null) return;
-			var pt = item.Bounds.Location;
-			pt.Offset(-2,-32);
-			m_balloon.Show(msg, parent, pt, 2000);
 		}
 
 		/// <summary>Cycles colours for the 'free edition' menu item</summary>

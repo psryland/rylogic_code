@@ -184,7 +184,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, string.Format("Could not load pattern set {0}.", set.Filepath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error);
+				Misc.ShowMessage(this, string.Format("Could not load pattern set {0}.", set.Filepath), Resources.LoadPatternSetFailed, MessageBoxIcon.Error, ex);
 			}
 			// ReSharper restore PossibleNullReferenceException
 		}

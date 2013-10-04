@@ -324,7 +324,7 @@ namespace RyLogViewer
 			var res = DialogResult.Cancel;
 			try { res = find_adb.ShowDialog(this); }
 			catch (OperationCanceledException) {}
-			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "An error occurred while searching for 'adb.exe'", "Locating 'adb.exe' failed", MessageBoxIcon.Error); }
+			catch (Exception ex) { Misc.ShowMessage(this, "An error occurred while searching for 'adb.exe'", "Locating 'adb.exe' failed", MessageBoxIcon.Error, ex); }
 			if (res != DialogResult.OK)
 				return;
 

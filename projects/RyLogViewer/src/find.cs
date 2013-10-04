@@ -144,7 +144,7 @@ namespace RyLogViewer
 			DialogResult res = DialogResult.Cancel;
 			try { res = search.ShowDialog(this, 500); }
 			catch (OperationCanceledException) {}
-			catch (Exception ex) { Misc.ShowErrorMessage(this, ex, "Find terminated by an error.", "Find error", MessageBoxIcon.Error); }
+			catch (Exception ex) { Misc.ShowMessage(this, "Find terminated by an error.", "Find error", MessageBoxIcon.Error, ex); }
 			found = at;
 			return res == DialogResult.OK;
 		}

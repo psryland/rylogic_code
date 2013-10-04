@@ -20,18 +20,17 @@ namespace pr.gui
 
 		public HintBalloon()
 		{
-			m_lock              = new object();
-			m_corner            = -1;
-			m_issue             = 0;
-			ShowDelay           = 500;
-			Duration            = 2000;
-			FadeDuration        = 500;
-			CornerRadius        = 10;
-			TipBaseWidth        = 20;
-			TipLength           = 20;
-			PreferredTipCorner  = ETipCorner.TopLeft;
-			Visible             = false;
-			TopMost             = true;
+			m_lock             = new object();
+			m_corner           = -1;
+			m_issue            = 0;
+			ShowDelay          = 500;
+			Duration           = 2000;
+			FadeDuration       = 500;
+			CornerRadius       = 10;
+			TipBaseWidth       = 20;
+			TipLength          = 20;
+			PreferredTipCorner = ETipCorner.TopLeft;
+			Visible            = false;
 
 			InitializeComponent();
 
@@ -93,17 +92,32 @@ namespace pr.gui
 		[Flags] public enum ETipCorner { TopLeft = 0, TopRight = 1, BottomLeft = 2, BottomRight = 3 }
 
 		/// <summary>Display the hint balloon</summary>
-		public void Show(Control parent, Point offset, string msg, int duration = -1)
+		public new void Show()
+		{
+			Show(null, Target);
+		}
+		public void Show(Control pin_to, Point target)
+		{
+			Show(pin_to, target, Text);
+		}
+		public void Show(Control pin_to, Point target, string msg)
+		{
+			Show(pin_to, target, msg, Duration);
+		}
+		public void Show(Control pin_to, Point target, string msg, int duration)
 		{
 			lock (m_lock)
 			{
 				var issue = ++m_issue;
-				this.BeginInvokeDelayed(ShowDelay, () => ShowHintInternal(issue, parent, offset, msg, duration));
+				Target = target;
+				Text = msg;
+				Duration = duration;
+				this.BeginInvokeDelayed(ShowDelay, () => ShowHintInternal(issue, pin_to));
 			}
 		}
 
 		/// <summary>Make the hint balloon visible</summary>
-		private void ShowHintInternal(int issue, Control pin_to, Point offset, string msg, int duration)
+		private void ShowHintInternal(int issue, Control pin_to)
 		{
 			lock (m_lock)
 			{
@@ -125,10 +139,7 @@ namespace pr.gui
 
 				Opacity  = 1.0;
 				Owner    = pin_to != null ? pin_to.TopLevelControl as Form : null;
-				Duration = duration != -1 ? duration : Duration;
 				PinTo    = pin_to;
-				Target   = offset;
-				Text     = msg;
 
 				if (PinTo != null)
 				{
@@ -142,14 +153,19 @@ namespace pr.gui
 					Owner.FormClosed += DetachFromOwner;
 				}
 
-				// Determine the size of the balloon
-				var size = new Size(600,800);
-				for (var w = 60; w < 800; w = w*3/2)
+				// Determine the best size for the balloon
+				var size = new Size(640,480);
+				double best_aspect_diff = double.MaxValue;
+				for (var w = 60; w < 640; w += 40)
 				{
 					var sz = m_msg.GetPreferredSize(new Size(w, 0));
-					if (sz.Height > 0.6 * sz.Width) continue;
-					size = sz;
-					break;
+					var aspect = sz.Height != 0 ? (double)sz.Width / sz.Height : double.MaxValue;
+					var aspect_diff = Math.Abs(3.0 - aspect);
+					if (aspect_diff < best_aspect_diff)
+					{
+						best_aspect_diff = aspect_diff;
+						size = sz;
+					}
 				}
 				var margin = TipLength + CornerRadius;
 				m_msg.Bounds = new Rectangle(margin, margin, size.Width, size.Height);
@@ -228,8 +244,8 @@ namespace pr.gui
 		{
 			var width  = Width  + (region_border ? 1 : 0);
 			var height = Height + (region_border ? 1 : 0);
-			var tip_width = Maths.Clamp(width - CornerRadius * 2, 1, TipBaseWidth);
 			var tip_length = TipLength;
+			var tip_width = Maths.Clamp(width - 2 * (tip_length + CornerRadius), 5, TipBaseWidth);
 
 			var path = new GraphicsPath();
 
@@ -312,6 +328,10 @@ namespace pr.gui
 				cp.ClassStyle = Win32.CS_DROPSHADOW;
 				return cp;
 			}
+		}
+		protected override bool ShowWithoutActivation
+		{
+			get { return true; }
 		}
 		protected override void OnPaint(PaintEventArgs e)
 		{

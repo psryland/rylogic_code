@@ -28,9 +28,15 @@ namespace RyLogViewer
 					return string.Format(
 						"No lines detected within a {0} byte block.\r\n" +
 						"\r\n" +
-						"This might be due to one or more lines in the log file being larger than {0} bytes, or that the line endings are not being detected correctly.\r\n" +
-						"If lines longer than {0} bytes are expected, increase the 'Maximum Line Length' option under settings.\r\n" +
-						"Otherwise, check the settings under the 'Line Ending' menu and the 'Encoding' menu. You may have to specify these values explicitly rather than using automatic detection."
+						"There are several possible causes for this:\r\n" +
+						" - The log file may contain one or more lines that are longer than {0} bytes,\r\n" +
+						" - The line ending setting may be incorrect causing new lines not to be detected correctly,\r\n" +
+						" - The text encoding setting may be incorrect causing the log data to not be read correctly,\r\n" +
+						"\r\n" +
+						"If lines longer than {0} bytes are expected, increase the 'Maximum Line Length'\r\n" +
+						"option under settings. Otherwise, check the settings under the 'Line Ending' and\r\n" +
+						"'Encoding' menus. You may have to specify these values explicitly rather than\r\n" +
+						"using automatic detection."
 						, m_buf_size);
 				}
 			}
@@ -464,10 +470,17 @@ namespace RyLogViewer
 			if (m_settings.WatchEnabled)
 			{
 				EnableWatch(false);
-				m_btn_watch.ShowHintBalloon(m_balloon, "File watching disabled due to error. ");
+				Misc.ShowHint(m_btn_watch, "File watching disabled due to error.");
 			}
 			Log.Exception(this, err, "Failed to build index list for {0}".Fmt(m_file.Name));
-			Misc.ShowErrorMessage(this, err, "Scanning the log file ended with an error.", "Scanning file terminated", MessageBoxIcon.Error);
+			if (err is NoLinesException)
+			{
+				Misc.ShowMessage(this, err.Message, "Scanning file terminated", MessageBoxIcon.Information);
+			}
+			else
+			{
+				Misc.ShowMessage(this, "Scanning the log file ended with an error.", "Scanning file terminated", MessageBoxIcon.Error, err);
+			}
 		}
 
 		/// <summary>Determine the data range to load to incrementally adjust the line cache</summary>

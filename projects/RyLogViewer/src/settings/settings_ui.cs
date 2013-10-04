@@ -754,7 +754,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Resetting settings to defaults");
-				Misc.ShowErrorMessage(this, ex, "Failed to reset settings to their default values.", "Reset Settings Failed", MessageBoxIcon.Error);
+				Misc.ShowMessage(this, "Failed to reset settings to their default values.", "Reset Settings Failed", MessageBoxIcon.Error, ex);
 			}
 		}
 
@@ -779,7 +779,11 @@ namespace RyLogViewer
 			case ESpecial.None: break;
 			case ESpecial.ShowLineEndingTip:
 				{
-					m_edit_line_ends.ShowHintBalloon(m_balloon, "Set the line ending characters to expect in the log data.\r\nUse '<CR>' for carriage return, '<LF>' for line feed.\r\nLeave blank to auto detect");
+					Misc.ShowHint(m_edit_line_ends,
+						"Set the line ending characters to expect in the log data.\r\n" +
+						"Use '<CR>' for carriage return, '<LF>' for line feed.\r\n" +
+						"Leave blank to auto detect", 7000);
+					//m_edit_line_ends.ShowHintBalloon(m_balloon, "Set the line ending characters to expect in the log data.\r\nUse '<CR>' for carriage return, '<LF>' for line feed.\r\nLeave blank to auto detect");
 					m_special = ESpecial.None;
 					break;
 				}

@@ -37,7 +37,7 @@ namespace TestCS
 
 			m_menu_hint_balloon.Click += (s,a) =>
 				{
-					TestHintBalloon();
+					new FormHintBalloon().Show(this);
 				};
 		}
 	}

@@ -246,11 +246,11 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Failed to write licence file in directory "+m_startup_options.AppDataDir);
-				Misc.ShowErrorMessage(this, ex,
+				Misc.ShowMessage(this,
 					"An error occurred while creating the licence file.\r\n" +
 					"Please contact "+Constants.SupportEmail+" with details of this error."
 					,"Activation Error"
-					,MessageBoxIcon.Error);
+					,MessageBoxIcon.Error, ex);
 			}
 		}
 

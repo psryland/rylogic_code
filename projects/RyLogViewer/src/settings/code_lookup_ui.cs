@@ -99,7 +99,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, "Export failed.", "Export Failed", MessageBoxIcon.Error);
+				Misc.ShowMessage(this, "Export failed.", "Export Failed", MessageBoxIcon.Error, ex);
 			}
 		}
 
@@ -169,7 +169,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowErrorMessage(this, ex, "Import failed.", "Import Failed", MessageBoxIcon.Error);
+				Misc.ShowMessage(this, "Import failed.", "Import Failed", MessageBoxIcon.Error, ex);
 			}
 		}
 
