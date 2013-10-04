@@ -109,7 +109,7 @@ namespace pr.extn
 			return parent.RectangleToScreen(item.Bounds);
 		}
 
-		/// <summary>BeginInvoke a action after 'delay' milliseconds (roughly)</summary>
+		/// <summary>BeginInvoke an action after 'delay' milliseconds (roughly)</summary>
 		public static void BeginInvokeDelayed(this IComponent ctrl, int delay, Action action)
 		{
 			new Timer{Enabled = true, Interval = delay}.Tick += (s,a) =>

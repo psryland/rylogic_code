@@ -488,21 +488,21 @@ namespace RyLogViewer
 		private static int m_dialog_visible = 0;
 
 		/// <summary>A wrapper around showing a hint balloon</summary>
-		public static void ShowHint(Control owner, string caption, Point offset, int duration = -1)
+		public static void ShowHint(Control owner, string caption, Point offset, int duration = 5000)
 		{
 			m_balloon.Show(owner, offset, caption, duration);
 		}
-		public static void ShowHint(Control owner, string caption, int duration = -1)
+		public static void ShowHint(Control owner, string caption, int duration = 5000)
 		{
 			m_balloon.Show(owner, owner != null ? owner.ClientRectangle.Centre() : Point.Empty, caption, duration);
 		}
-		public static void ShowHint(ToolStripItem item, string caption, Point offset, int duration = -1)
+		public static void ShowHint(ToolStripItem item, string caption, Point offset, int duration = 5000)
 		{
 			var parent = item.GetCurrentParent();
 			if (parent == null) return;
 			ShowHint(parent, caption, offset, duration);
 		}
-		public static void ShowHint(ToolStripItem item, string caption, int duration = -1)
+		public static void ShowHint(ToolStripItem item, string caption, int duration = 5000)
 		{
 			var parent = item.GetCurrentParent();
 			if (parent == null) return;

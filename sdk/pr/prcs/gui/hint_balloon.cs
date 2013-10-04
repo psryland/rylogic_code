@@ -108,6 +108,7 @@ namespace pr.gui
 		{
 			lock (m_lock)
 			{
+				Debug.Assert(msg != null && duration >= 0);
 				var issue = ++m_issue;
 				Target = target;
 				Text = msg;
@@ -174,7 +175,8 @@ namespace pr.gui
 				// Generate the boundary of the hint balloon and set its screen position
 				m_corner = -1;
 				UpdateBalloonLocation();
-				Visible = true;
+				Win32.ShowWindow(Handle, Win32.SW_SHOWNOACTIVATE);
+				Win32.SetWindowPos(Handle, Win32.HWND_TOP, 0, 0, 0, 0, Win32.SWP_NOACTIVATE|Win32.SWP_NOMOVE|Win32.SWP_NOSIZE);
 
 				this.BeginInvokeDelayed(Duration, () => HideHintInternal(issue));
 			}
