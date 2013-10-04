@@ -157,7 +157,7 @@ namespace RyLogViewer
 			m_menu_tools_actions.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.Actions   );
 			m_menu_tools_options.Click                 += (s,a) => ShowOptions(SettingsUI.ETab.General   );
 			m_menu_help_view_help.Click                += (s,a) => ShowHelp();
-			m_menu_help_firstruntutorial.Click         += (s,a) => ShowFirstRunTutorial(false);
+			m_menu_help_firstruntutorial.Click         += (s,a) => ShowFirstRunTutorial();
 			m_menu_help_totd.Click                     += (s,a) => ShowTotD();
 			m_menu_help_visit_store.Click              += (s,a) => VisitStore();
 			m_menu_help_register.Click                 += (s,a) => ShowActivation();
@@ -350,9 +350,15 @@ namespace RyLogViewer
 
 			// Show the first run tutorial
 			if (m_settings.FirstRun)
-				ShowFirstRunTutorial(true);
+			{
+				const string msg = "This appears to be the first time you've run RyLogViewer.\r\nWould you like a quick tour?";
+				if (MsgBox.Show(this, msg, "First Run", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+					ShowFirstRunTutorial();
+				else
+					ShowTotD();
+			}
 
-			// Show the TotD
+			// Show the TotD if enabled
 			else if (m_settings.ShowTOTD)
 				ShowTotD();
 
@@ -1281,18 +1287,8 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Show the first run tutorial</summary>
-		private void ShowFirstRunTutorial(bool prompt_first)
+		private void ShowFirstRunTutorial()
 		{
-			// Ask first
-			if (prompt_first)
-			{
-				const string msg =
-					"This appears to be the first time you've run RyLogViewer.\r\n" +
-					"Would you like a quick tour?";
-				if (MsgBox.Show(this, msg, "First Run", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-					return;
-			}
-
 			try
 			{
 				if (m_first_run_tutorial == null)

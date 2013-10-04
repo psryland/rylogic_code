@@ -1,15 +1,67 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
+using System.Linq;
 using System.Windows.Forms;
-using pr.common;
+using RyLogViewer.Properties;
+using pr.extn;
+using pr.script;
 
 namespace RyLogViewer
 {
 	public class TipOfTheDay :Form
 	{
+		#region Tip Html
+		private struct Tip { public string Title; public string Body; }
+		private static readonly Tip[] m_tips = new[]
+			{
+				new Tip
+				{
+					Title = "Welcome!",
+					Body  = "RyLogViewer is an application designed to make the viewing of log files or streaming " +
+							"log data easier through the use of highlighting, filtering, and text transformations. " +
+							"However, that is just the beginning of what it can do!<br/><br/>" +
+							"Click next to explore some of the features of RyLogViewer"
+				}
+				,new Tip
+				{
+					Title = "Getting Started",
+					Body  = "To begin experimenting with some of the features of RyLogViewer, load the " +
+							"<a href='cmd://open_example_logfile'><i>example logfile.txt</i></a> from the " +
+							"examples directory.<br/>"
+				}
+				,new Tip
+				{
+					Title = "Pattern Sets",
+					Body  = "RyLogViewer allows highlighting and filtering patterns that you use frequently " +
+					        "to be saved as 'Pattern Sets'. Once saved these can be selected quickly from " +
+							"a drop-down list.<br/><br/>" +
+							"Highlighting and filtering patterns are configured under the Options menu.",
+				}
+				,new Tip
+				{
+					Title = "Tool Tips",
+					Body  = "Almost every UI element in RyLogViewer has a popup tool tip. If you're unsure about " +
+							"any part of the application, hover your mouse over it to read a quick description. " +
+							"If you would like more information, the main application documentation is found under " +
+							"the help menu."
+				}
+				,new Tip
+				{
+					Title = "Export",
+					Body  = "The export feature allows loaded data to be exported to a new file. Transforms and " +
+					        "filtering are applied during the export process, which means RyLogViewer can be used " +
+					        "as a powerful text data transformation tool. There is also command line support for " +
+					        "exporting allowing RyLogViewer to be used in batch files or scripting tasks."
+				}
+			};
+				//<p>if you need more than one column delimiter, use a string transform to turn the column delimiters into one common column delimiter, then set that to the column delimiter</p>
+				//<p>command line interface</p>-->
+		#endregion
+
 		private readonly Main m_main;
-		private readonly List<FileInfo> m_totd;
+		private readonly Random m_rng;
+		private readonly List<int> m_order;
 		private Panel m_panel;
 		private WebBrowser m_html;
 		private Button m_btn_ok;
@@ -17,24 +69,16 @@ namespace RyLogViewer
 		private Button m_btn_prev;
 		private CheckBox m_check_show_on_startup;
 
-		/// <summary>Get/Set the currently displayed tip. If the index supplied doesn't exist, the TotD0 is displayed</summary>
-		public int TipIndex
-		{
-			get { return m_tip_index; }
-			set { m_tip_index = value % m_totd.Count; }
-		}
-		private int m_tip_index;
-
 		public TipOfTheDay(Main main, Settings settings)
 		{
 			InitializeComponent();
-			m_main = main;
+			m_main      = main;
+			m_rng       = new Random();
+			m_order     = SetOrder(settings.FirstRun);
 			m_tip_index = 0;
-			m_totd = new List<FileInfo>(ScanFiles());
-			if (m_totd.Count == 0) return;
 
-			m_html.Url = new Uri(m_totd[TipIndex].FullName);
 			m_html.Navigating += OnNavigating;
+			m_html.Navigate("about:blank");
 
 			m_check_show_on_startup.Checked = settings.ShowTOTD;
 			m_check_show_on_startup.CheckedChanged += (s,a)=>
@@ -44,13 +88,69 @@ namespace RyLogViewer
 			m_btn_next.Click += (s,a)=>
 				{
 					TipIndex++;
-					m_html.Url = new Uri(m_totd[TipIndex].FullName);
+					ShowTip();
 				};
 			m_btn_prev.Click += (s,a) =>
 				{
-					TipIndex += m_totd.Count - 1;
-					m_html.Url = new Uri(m_totd[TipIndex].FullName);
+					TipIndex += m_order.Count - 1;
+					ShowTip();
 				};
+			Shown += (s,a) =>
+				{
+					ShowTip();
+				};
+		}
+
+		/// <summary>Get/Set the currently displayed tip. If the index supplied doesn't exist, the TotD0 is displayed</summary>
+		public int TipIndex
+		{
+			get { return m_tip_index; }
+			set { m_tip_index = value % m_order.Count; }
+		}
+		private int m_tip_index;
+
+		/// <summary>Set the content of the dialog</summary>
+		public string Html
+		{
+			set
+			{
+				Debug.Assert(m_html.Document != null);
+				m_html.Document.OpenNew(true);
+				m_html.Document.Write(value ?? string.Empty);
+				m_html.Refresh();
+			}
+		}
+
+		/// <summary>Show the totd for the current index</summary>
+		private void ShowTip()
+		{
+			var tip = m_tips[m_order[TipIndex]];
+			using (var tr = new TemplateReplacer(new StringSrc(Resources.totd), @"\[(\w+)\]", (x,match) =>
+				{
+					switch (match.Value)
+					{
+					default: throw new Exception("Unknown template field");
+					case "[Title]":   return tip.Title;
+					case "[Content]": return tip.Body;
+					}
+				}))
+				Html = tr.ReadToEnd();
+		}
+
+		/// <summary>Choose an order for the tips of the day</summary>
+		private List<int> SetOrder(bool first_run)
+		{
+			// On the first run, play the tips of the day in order
+			// On subsequent runs, shuffle them
+			var order = new List<int>(Enumerable.Range(0, m_tips.Length));
+			if (!first_run)
+			{
+				order.RemoveAt(0);
+				var count = order.Count;
+				for (int i = 0; i != 2 * count; ++i)
+					order.Swap(m_rng.Next(count), m_rng.Next(count));
+			}
+			return order;
 		}
 
 		/// <summary>Handle special navigation urls in totd's</summary>
@@ -62,20 +162,12 @@ namespace RyLogViewer
 				switch (args.Url.Host)
 				{
 				case "open_example_logfile":
+					m_main.SetLineEnding(ELineEnding.Detect);
+					m_main.SetEncoding(null);
 					m_main.OpenSingleLogFile(Misc.ResolveAppFile(@"examples\example logfile.txt"), false);
 					Close();
 					break;
 				}
-			}
-		}
-
-		/// <summary>Search for tip of the day files</summary>
-		private IEnumerable<FileInfo> ScanFiles()
-		{
-			foreach (var fd in PathEx.EnumerateFiles(Misc.ResolveAppFile(@"docs"), @"totd\d+.html", SearchOption.TopDirectoryOnly))
-			{
-				if (!PathEx.FileExists(fd.FullPath)) continue;
-				yield return new FileInfo(fd.FullPath);
 			}
 		}
 

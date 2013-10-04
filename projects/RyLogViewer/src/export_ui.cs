@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Windows.Forms;
+﻿using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.common;
 using pr.extn;
@@ -10,7 +9,7 @@ namespace RyLogViewer
 	public partial class ExportUI :Form
 	{
 		private readonly ToolTip m_tt;
-		
+
 		/// <summary></summary>
 		public enum ERangeToExport
 		{
@@ -18,19 +17,19 @@ namespace RyLogViewer
 			Selection,
 			ByteRange
 		}
-		
+
 		/// <summary>The file to create</summary>
 		public string OutputFilepath;
-		
+
 		/// <summary>What to export</summary>
 		public ERangeToExport RangeToExport;
-		
+
 		/// <summary>The row delimiter string</summary>
 		public string RowDelim;
-		
+
 		/// <summary>The column delimiter string</summary>
 		public string ColDelim;
-		
+
 		/// <summary>If RangeToExport is byte range, export this range</summary>
 		public Range ByteRange;
 
@@ -44,7 +43,7 @@ namespace RyLogViewer
 			ColDelim       = col_delim;
 			ByteRange      = byte_range;
 			string tt;
-			
+
 			// Output file
 			tt = "The path of the file to export to";
 			m_lbl_output_file.ToolTip(m_tt, tt);
@@ -55,7 +54,7 @@ namespace RyLogViewer
 					if (!((TextBox)s).Modified) return;
 					OutputFilepath = m_edit_output_filepath.Text;
 				};
-			
+
 			// Browse button
 			m_btn_browse.ToolTip(m_tt, "Browse to the location of where to save the file");
 			m_btn_browse.Click += (s,a)=>
@@ -64,7 +63,7 @@ namespace RyLogViewer
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_edit_output_filepath.Text = dg.FileName;
 				};
-			
+
 			// Radio buttons
 			m_radio_whole_file.ToolTip(m_tt, "Export the entire file contents");
 			m_radio_whole_file.Checked = RangeToExport == ERangeToExport.WholeFile;
@@ -87,7 +86,7 @@ namespace RyLogViewer
 					RangeToExport = ERangeToExport.ByteRange;
 					UpdateUI();
 				};
-			
+
 			// Line ending
 			tt = "The characters to end each line in the exported file.\r\nUse '<CR>', '<LF>', or '<TAB>' for carriage return, line feed, or tab respectively";
 			m_lbl_line_ending.ToolTip(m_tt, tt);
@@ -98,7 +97,7 @@ namespace RyLogViewer
 					if (!((TextBox)s).Modified) return;
 					RowDelim = m_edit_line_ending.Text;
 				};
-			
+
 			// Column delimiter
 			tt = "The characters to use to separate columns in the exported file.\r\nUse '<CR>', '<LF>', or '<TAB>' for carriage return, line feed, or tab respectively";
 			m_lbl_col_delim.ToolTip(m_tt, tt);
@@ -109,7 +108,7 @@ namespace RyLogViewer
 					if (!((TextBox)s).Modified) return;
 					ColDelim = m_edit_col_delim.Text;
 				};
-			
+
 			// Byte Range
 			m_btn_range_to_start.Click += (s,a)=>
 				{
@@ -135,7 +134,7 @@ namespace RyLogViewer
 				{
 					ByteRange.End = (long)m_spinner_range_max.Value;
 				};
-			
+
 			// Validate on shutdown
 			FormClosing += (s,a)=>
 				{
@@ -148,7 +147,7 @@ namespace RyLogViewer
 						MsgBox.Show(this, Resources.OutputFileMissingMsg, Resources.OutputFileMissing, MessageBoxButtons.OK, MessageBoxIcon.Hand);
 						a.Cancel = true;
 					}
-					
+
 					// Prompt if overwriting a file
 					if (PathEx.FileExists(OutputFilepath))
 					{

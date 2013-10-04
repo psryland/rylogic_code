@@ -401,36 +401,6 @@
     <Content Include="docs\serial_port_output.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="docs\totd0.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>totd0.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\totd1.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>totd1.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\totd2.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>totd2.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\totd3.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>totd3.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\totd7.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>totd7.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="docs\welcome.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -467,7 +437,6 @@
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>firstrun.html</LastGenOutput>
     </None>
-    <None Include="Resources\firstrun_css.include.htm" />
     <Content Include="Resources\free_edition.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -482,6 +451,11 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>swizzle_quick_ref.htm</DependentUpon>
+    </Content>
+    <Content Include="Resources\totd.html">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>totd.htm</DependentUpon>
     </Content>
     <Content Include="Resources\transform_quick_ref.html">
       <AutoGen>True</AutoGen>
@@ -529,10 +503,6 @@
     <Content Include="docs\pattern_wildcard.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="docs\totd7.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>totd7.html</LastGenOutput>
-    </None>
     <Content Include="Resources\command_line_ref.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -566,6 +536,10 @@
     <None Include="Resources\command_line_ref.htm">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>command_line_ref.html</LastGenOutput>
+    </None>
+    <None Include="Resources\totd.htm">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>totd.html</LastGenOutput>
     </None>
     <None Include="Resources\transform_quick_ref.htm">
       <Generator>HtmlExpander</Generator>
@@ -709,37 +683,14 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="docs\totd3.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>totd3.html</LastGenOutput>
-    </None>
     <Content Include="docs\background.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <None Include="docs\totd0.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>totd0.html</LastGenOutput>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="docs\totd1.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>totd1.html</LastGenOutput>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="docs\totd2.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>totd2.html</LastGenOutput>
-    </None>
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="docs\totd.css">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="Resources\book.png" />
     <None Include="Resources\quick_filter.png" />
     <None Include="Resources\pencil.png" />

@@ -247,8 +247,7 @@ namespace RyLogViewer
 
 		/// <summary>State exit</summary>
 		public virtual void Exit(bool forward)
-		{
-		}
+		{}
 
 		/// <summary>Paints the overlay</summary>
 		protected void PaintHighlight(Graphics gfx, Rectangle win_rect, Rectangle highlight_rect)
@@ -326,7 +325,6 @@ namespace RyLogViewer
 				if (!forward)
 					m_main.CloseLogFile();
 			}
-
 			protected override string HtmlContent
 			{
 				get { return "To get started, open a log file, or capture streaming log data using one of the data source dialogs."; }
@@ -536,6 +534,31 @@ namespace RyLogViewer
 				get { return new Point(-350,130); }
 			}
 		}
+		public sealed class TutHelpMenu :PageBase
+		{
+			public TutHelpMenu(FirstRunTutorial tut, Main main) :base(tut, main)
+			{
+				m_overlay.SnapShotCaptured += (s,a) =>
+					{
+						PaintHighlight(a.Gfx, a.ClientRectangle, m_main.m_menu_help.ParentFormRectangle());
+					};
+			}
+			public override void Enter()
+			{
+				base.Enter();
+				m_tut.Owner = m_main;
+				m_overlay.Attachee = m_main;
+			}
+			public override void Exit(bool forward)
+			{
+				base.Exit(forward);
+				m_main.Enabled = true;
+			}
+			protected override string HtmlContent
+			{
+				get { return "This covers the basics of RyLogViewer. More detailed information can be found in the main documentation found here."; }
+			}
+		}
 	}
 	public partial class SettingsUI
 	{
@@ -654,34 +677,6 @@ namespace RyLogViewer
 			protected override Point Offset
 			{
 				get { return new Point(0,0); }
-			}
-		}
-	}
-	public partial class Main
-	{
-		public sealed class TutHelpMenu :PageBase
-		{
-			public TutHelpMenu(FirstRunTutorial tut, Main main) :base(tut, main)
-			{
-				m_overlay.SnapShotCaptured += (s,a) =>
-					{
-						PaintHighlight(a.Gfx, a.ClientRectangle, m_main.m_menu_help.ParentFormRectangle());
-					};
-			}
-			public override void Enter()
-			{
-				base.Enter();
-				m_tut.Owner = m_main;
-				m_overlay.Attachee = m_main;
-			}
-			public override void Exit(bool forward)
-			{
-				base.Exit(forward);
-				m_main.Enabled = true;
-			}
-			protected override string HtmlContent
-			{
-				get { return "This covers the basics of RyLogViewer. More detailed information can be found in the main documentation found here."; }
 			}
 		}
 	}
