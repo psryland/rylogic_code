@@ -34,6 +34,7 @@
 			this.testsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_test_colour_wheel = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_hint_balloon = new System.Windows.Forms.ToolStripMenuItem();
 			this.menuStrip1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -66,7 +67,8 @@
 			// 
 			this.testsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_tests_view3d,
-            this.m_menu_test_colour_wheel});
+            this.m_menu_test_colour_wheel,
+            this.m_menu_hint_balloon});
 			this.testsToolStripMenuItem.Name = "testsToolStripMenuItem";
 			this.testsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
 			this.testsToolStripMenuItem.Text = "&Tests";
@@ -82,6 +84,12 @@
 			this.m_menu_test_colour_wheel.Name = "m_menu_test_colour_wheel";
 			this.m_menu_test_colour_wheel.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_test_colour_wheel.Text = "&ColourWheel";
+			// 
+			// m_menu_hint_balloon
+			// 
+			this.m_menu_hint_balloon.Name = "m_menu_hint_balloon";
+			this.m_menu_hint_balloon.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_hint_balloon.Text = "HintBalloon";
 			// 
 			// FormTestApp
 			// 
@@ -107,6 +115,7 @@
 		private System.Windows.Forms.ToolStripMenuItem testsToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tests_view3d;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_test_colour_wheel;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_hint_balloon;
 	}
 }
 

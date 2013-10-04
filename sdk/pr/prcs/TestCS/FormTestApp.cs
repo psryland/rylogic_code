@@ -12,6 +12,7 @@ namespace TestCS
 {
 	public partial class FormTestApp : Form
 	{
+		private readonly Random m_rng = new Random(0);
 		private FormView3d m_form_view3d;
 		public FormTestApp()
 		{
@@ -32,6 +33,11 @@ namespace TestCS
 			m_menu_test_colour_wheel.Click += (s,a) =>
 				{
 					new FormColourWheel().Show(this);
+				};
+
+			m_menu_hint_balloon.Click += (s,a) =>
+				{
+					TestHintBalloon();
 				};
 		}
 	}

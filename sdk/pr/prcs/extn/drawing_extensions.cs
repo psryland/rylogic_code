@@ -104,6 +104,12 @@ namespace pr.extn
 			return new Rectangle(r.X + dx, r.Y + dy, r.Width, r.Height);
 		}
 
+		/// <summary>Returns a rectangle inflated by dx,dy</summary>
+		public static Rectangle Inflated(this Rectangle r, int dx, int dy)
+		{
+			return new Rectangle(r.X - dx, r.Y - dy, r.Width + 2 * dx, r.Height + 2 * dy);
+		}
+
 		/// <summary>Linearly interpolate from this colour to 'dst' by 'frac'</summary>
 		public static Color Lerp(this Color src, Color dst, float frac)
 		{

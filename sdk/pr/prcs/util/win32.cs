@@ -609,6 +609,7 @@ namespace pr.util
 		[DllImport("user32.dll")]                                 public static extern int    SetScrollInfo(HWND hwnd, int fnBar, ref SCROLLINFO lpsi, bool fRedraw);
 		[DllImport("user32.dll")]                                 public static extern int    GetScrollPos(HWND hWnd, int nBar);
 		[DllImport("user32.dll")]                                 public static extern int    SetScrollPos(HWND hWnd, int nBar, int nPos, bool bRedraw);
+		[DllImport("user32.dll")]                                 public static extern int    HideCaret(IntPtr hwnd);
 		[DllImport("user32.dll")]                                 public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent);
 		[DllImport("user32.dll")]                                 public static extern int    SetWindowLong(HWND hWnd, int nIndex, uint dwNewLong);
 		[DllImport("user32.dll", SetLastError=true)]              public static extern uint   GetWindowLong(HWND hWnd, int nIndex);

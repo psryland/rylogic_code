@@ -231,6 +231,9 @@
     <Compile Include="gui\recent_files.cs" />
     <Compile Include="gfx\video.cs">
     </Compile>
+    <Compile Include="gui\hint_balloon.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="gui\tool_form.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -369,6 +372,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="gui\prompt_form.resx">
       <DependentUpon>prompt_form.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="gui\hint_balloon.resx">
+      <DependentUpon>hint_balloon.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="gui\view_video_control.resx">
       <DependentUpon>view_video_control.cs</DependentUpon>

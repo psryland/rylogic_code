@@ -41,16 +41,6 @@ namespace pr.gfx
 			get { return new ColorMatrix{Matrix00=1, Matrix11=1, Matrix22=1, Matrix33=1, Matrix44=1}; }
 		}
 
-		/// <summary>Useful overloads for DrawImage</summary>
-		public static void DrawImage(this Graphics gfx, Image image, Rectangle dst_rect, Rectangle src_rect, GraphicsUnit unit, ImageAttributes attr)
-		{
-			gfx.DrawImage(image, dst_rect, src_rect.X, src_rect.Y, src_rect.Width, src_rect.Height, unit, attr);
-		}
-		public static void DrawImage(this Graphics gfx, Image image, int X, int Y, Rectangle src_rect, GraphicsUnit unit, ImageAttributes attr)
-		{
-			gfx.DrawImage(image, new Rectangle(X, Y, src_rect.Width, src_rect.Height), src_rect, unit, attr);
-		}
-		
 		/// <summary>Create a rounded rectangle path that can be filled or drawn</summary>
 		public static GraphicsPath RoundedRectanglePath(Rectangle rect, float radius)
 		{
@@ -62,18 +52,6 @@ namespace pr.gfx
 			gp.AddArc (rect.X                  ,rect.Y + rect.Height - d ,d      ,           d,  90 ,90);
 			gp.AddLine(rect.X                  ,rect.Y + rect.Height - d ,rect.X ,rect.Y + d/2);
 			return gp;
-		}
-		
-		/// <summary>Draws a rectangle with rounded corners</summary>
-		public static void DrawRectangleRounded(this Graphics gfx, Pen pen, Rectangle rect, float radius)
-		{
-			gfx.DrawPath(pen, RoundedRectanglePath(rect, radius));
-		}
-		
-		/// <summary>Fill a rectangle with rounded corners</summary>
-		public static void FillRectangleRounded(this Graphics gfx, Brush brush, Rectangle rect, float radius)
-		{
-			gfx.FillPath(brush, RoundedRectanglePath(rect, radius));
 		}
 
 			/// <summary>Helper for making radial gradient brushes</summary>
