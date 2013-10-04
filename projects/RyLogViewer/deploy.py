@@ -20,7 +20,8 @@ symdir = UserVars.pr_root + "\\local\\symbols"
 proj   = srcdir + "\\RylogViewer.sln"
 dst    = dstdir + "\\rylogviewer"
 sym    = symdir + "\\rylogviewer"
-config = input("Configuration (debug, release)? ")
+config = input("Configuration (debug, release(default))? ")
+if config == "": config = "release"
 bindir = srcdir + "\\bin\\" + config
 
 input(

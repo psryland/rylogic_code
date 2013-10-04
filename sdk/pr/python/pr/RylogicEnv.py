@@ -34,31 +34,33 @@ def DiffContent(src,dst):
 
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
 def Copy(src, dst, only_if_modified=True):
-	if only_if_modified and not Diff(src,dst):
-		print(src + " --> unchanged")
-	else:
+	if not only_if_modified or Diff(src,dst):
 		print(src + " --> " + dst)
 		dirname = os.path.dirname(dst)
 		if not os.path.exists(dirname): os.makedirs(dirname)
 		shutil.copy2(src, dst)
+#	else:
+#		print(src + " --> unchanged")
 
 # Executes a program and returns it's stdout/stderr as a string
 def Run(args, expected_return_code=0):
 	try:
+		#print(args)
 		return subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return e.output
-		OnError("ERROR: " + e.output)
+		OnError("ERROR: " + str(e.output))
 	except Exception as e:
 		OnError("ERROR: " + str(e))
 
 # Executes a program echoing its output to stdout
 def Exec(args, expected_return_code=0):
 	try:
+		#print(args)
 		subprocess.check_call(args)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return
-		OnError("ERROR: " + e.output)
+		OnError("ERROR: " + str(e.output))
 	except Exception as e:
 		OnError("ERROR: " + str(e))
 
