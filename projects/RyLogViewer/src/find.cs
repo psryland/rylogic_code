@@ -157,19 +157,22 @@ namespace RyLogViewer
 			long at = -1;
 			using (d.file)
 			{
-				AddLineFunc test_line = (line, baddr, fend, buf, enc) =>
+				var line = new Line();
+				AddLineFunc test_line = (line_rng, baddr, fend, bf, enc) =>
 					{
 						// Ignore blanks?
-						if (line.Empty && d.ignore_blanks)
+						if (line_rng.Empty && d.ignore_blanks)
 							return true;
 
+						// Parse the line from the buffer
+						line.Read(baddr + line_rng.Begin, bf, (int)line_rng.Begin, (int)line_rng.Count, d.encoding, d.col_delim, null, d.transforms);
+
 						// Keep searching while the text is filtered out or doesn't match the pattern
-						string text = d.encoding.GetString(buf, (int)line.Begin, (int)line.Count);
-						if (!PassesFilters(text, d.filters) || !pat.IsMatch(text))
+						if (!PassesFilters(line.RowText, d.filters) || !pat.IsMatch(line.RowText))
 							return true;
 
 						// Found a match
-						at = baddr + line.Begin;
+						at = baddr + line_rng.Begin;
 						return false; // Stop searching
 					};
 
