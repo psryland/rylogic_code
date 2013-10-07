@@ -32,7 +32,8 @@ namespace RyLogViewer
 
 			// Start the main app
 			Exception err = null;
-			try { StartupOptions = new StartupOptions(args); } catch (Exception ex) { err = ex; }
+			try { StartupOptions = new StartupOptions(args); }
+			catch (Exception ex) { err = ex; }
 
 			// If there was an error display the error message
 			if (err != null)

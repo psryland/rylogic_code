@@ -173,6 +173,7 @@ namespace RyLogViewer
 	public static class CmdLineOption
 	{
 		public const string ShowHelp     = "-h";
+		public const string ShowHelp2    = "/?";
 		public const string SettingsPath = "-s";
 		public const string Portable     = "-p";
 		public const string HighlightSet = "-hl";
