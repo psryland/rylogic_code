@@ -76,6 +76,8 @@
 			this.m_menu_edit_find_next = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_find_prev = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator13 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_edit_jumpto = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator17 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_edit_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_next_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_edit_prev_bookmark = new System.Windows.Forms.ToolStripMenuItem();
@@ -497,6 +499,8 @@
             this.m_menu_edit_find_next,
             this.m_menu_edit_find_prev,
             this.toolStripSeparator13,
+            this.m_menu_edit_jumpto,
+            this.toolStripSeparator17,
             this.m_menu_edit_toggle_bookmark,
             this.m_menu_edit_next_bookmark,
             this.m_menu_edit_prev_bookmark,
@@ -551,6 +555,18 @@
 			// 
 			this.toolStripSeparator13.Name = "toolStripSeparator13";
 			this.toolStripSeparator13.Size = new System.Drawing.Size(255, 6);
+			// 
+			// m_menu_edit_jumpto
+			// 
+			this.m_menu_edit_jumpto.Name = "m_menu_edit_jumpto";
+			this.m_menu_edit_jumpto.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.G)));
+			this.m_menu_edit_jumpto.Size = new System.Drawing.Size(258, 22);
+			this.m_menu_edit_jumpto.Text = "Jump to...";
+			// 
+			// toolStripSeparator17
+			// 
+			this.toolStripSeparator17.Name = "toolStripSeparator17";
+			this.toolStripSeparator17.Size = new System.Drawing.Size(255, 6);
 			// 
 			// m_menu_edit_toggle_bookmark
 			// 
@@ -1271,6 +1287,8 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_network;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_file_open_named_pipe;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator19;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_edit_jumpto;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator17;
 	}
 }
 

@@ -130,6 +130,7 @@ namespace RyLogViewer
 			m_menu_file_exit.Click                     += (s,a) => Close();
 			m_menu_edit_selectall.Click                += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
 			m_menu_edit_copy.Click                     += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
+			m_menu_edit_jumpto.Click                   += (s,a) => JumpTo();
 			m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
 			m_menu_edit_find_next.Click                += (s,a) => FindNext(false);
 			m_menu_edit_find_prev.Click                += (s,a) => FindPrev(false);
@@ -1009,6 +1010,14 @@ namespace RyLogViewer
 			ApplySettings();
 		}
 
+		/// <summary>Jumps to a specific byte offset into the file</summary>
+		private void JumpTo()
+		{
+			var dlg = new JumpToUi(this, FileByteRange.Begin, FileByteRange.End);
+			if (dlg.ShowDialog(this) != DialogResult.OK) return;
+			SelectRowByAddr(dlg.Address);
+		}
+
 		/// <summary>Handler for the Jump to Start button</summary>
 		private void JumpToStart()
 		{
@@ -1774,6 +1783,7 @@ namespace RyLogViewer
 				m_menu_file_close.Enabled                 = file_open;
 				m_menu_edit_selectall.Enabled             = file_open;
 				m_menu_edit_copy.Enabled                  = file_open;
+				m_menu_edit_jumpto.Enabled                = file_open;
 				m_menu_edit_find.Enabled                  = file_open;
 				m_menu_edit_find_next.Enabled             = file_open;
 				m_menu_edit_find_prev.Enabled             = file_open;

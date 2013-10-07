@@ -124,6 +124,9 @@
     <Compile Include="src\inputs\android_connect_device_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\jumpto_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\licence\activation.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -578,6 +581,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\first_run_tutorial.resx">
       <DependentUpon>first_run_tutorial.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\jumpto_ui.resx">
+      <DependentUpon>jumpto_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\monitor_mode_ui.resx">
       <DependentUpon>monitor_mode_ui.cs</DependentUpon>
