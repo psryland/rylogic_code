@@ -176,6 +176,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="extn\drawing_extensions.cs" />
+    <Compile Include="extn\enumerable_extensions.cs" />
     <Compile Include="extn\enum_extensions.cs" />
     <Compile Include="extn\event_extensions.cs" />
     <Compile Include="extn\exception_extensions.cs" />

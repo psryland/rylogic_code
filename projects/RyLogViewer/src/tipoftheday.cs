@@ -54,9 +54,40 @@ namespace RyLogViewer
 					        "as a powerful text data transformation tool. There is also command line support for " +
 					        "exporting allowing RyLogViewer to be used in batch files or scripting tasks."
 				}
+				,new Tip
+				{
+					Title = "Command Line",
+					Body  = "RyLogViewer has a command line interface. The main purpose of this is to allow the " +
+					        "export functionality to be used in scripts or batch files. For more information about " +
+					        "the command line options type <span style='font-family:monospace'>rylogviewer -h</span> " +
+					        "at a command prompt."
+				}
+				,new Tip
+				{
+					Title = "Top Most & Monitor Mode",
+					Body  = "Under the tools menu there are the <i>Always On Top</i> and <i>Monitor Mode</i> options. " +
+					        "These options can be used to put RyLogViewer in a non-interactive, semi transparent, screen " +
+					        "overlay mode, handy if you want to have RyLogViewer visible and monitoring a data source as " +
+					        "you work with other applications."
+				}
+				,new Tip
+				{
+					Title = "Multi-Column Data",
+					Body  = "RyLogViewer can display multi-column data such as comma separated values (CSV) data. " +
+					        "On the general tab of the options dialog, specify the column delimiter and the number of " +
+					        "columns to display. If you need more than one column delimiter, you can always use text " +
+					        "transforms to convert the column delimiters into a single unique character sequence, and " +
+					        "then use that as the column delimiter."
+				}
+				,new Tip
+				{
+					Title = "Recent Files",
+					Body  = "Under the file menu is the Recent Files sub menu that lists log files recently opened. " +
+					        "Right clicking on a file path within this menu brings up two useful options. The first is " +
+					        "<i>Remove</i> which allows the selected file to be removed from the recent files list. The " +
+					        "second is <i>Copy to Clipboard</i> which copies the file path to the system clipboard."
+				}
 			};
-				//<p>if you need more than one column delimiter, use a string transform to turn the column delimiters into one common column delimiter, then set that to the column delimiter</p>
-				//<p>command line interface</p>-->
 		#endregion
 
 		private readonly Main m_main;

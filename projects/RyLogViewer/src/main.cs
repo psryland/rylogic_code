@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,7 +17,6 @@ using System.Windows.Forms.VisualStyles;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.inet;
 using pr.maths;
@@ -59,6 +59,7 @@ namespace RyLogViewer
 		private bool m_tail_enabled;                          // Cache whether tail mode is enabled
 		private bool m_quick_filter_enabled;                  // True if only rows with highlights should be displayed
 		private bool m_first_row_is_odd;                      // Tracks whether the first row is odd or even for alternating row colours (not 100% accurate)
+		private StringFormat m_strfmt;                        // Caches the tab stop sizes for rendering
 
 		public Main(StartupOptions startup_options)
 		{
@@ -217,22 +218,21 @@ namespace RyLogViewer
 			m_status_progress.Text        = "Test";
 
 			// Setup the grid
-			m_grid.RowCount             = 0;
-			m_grid.AutoGenerateColumns  = false;
-			m_grid.KeyDown             += DataGridView_Extensions.SelectAll;
-			m_grid.KeyDown             += DataGridView_Extensions.Copy;
-			m_grid.KeyDown             += GridKeyDown;
-			m_grid.MouseUp             += (s,a) => GridMouseButton(a, false);
-			m_grid.MouseDown           += (s,a) => GridMouseButton(a, true);
-			m_grid.CellValueNeeded     += CellValueNeeded;
-			m_grid.RowPrePaint         += RowPrePaint;
-			m_grid.CellPainting        += CellPainting;
-			m_grid.RowPostPaint        += RowPostPaint;
-			m_grid.SelectionChanged    += GridSelectionChanged;
-			m_grid.CellDoubleClick     += CellDoubleClick;
-			m_grid.RowHeightInfoNeeded += (s,a) => a.Height = m_row_height;
-			m_grid.DataError           += (s,a) => Debug.Assert(false);
-			m_grid.Scroll              += (s,a) => GridScroll();
+			m_grid.RowCount                  = 0;
+			m_grid.AutoGenerateColumns       = false;
+			m_grid.KeyDown                  += DataGridView_Extensions.SelectAll;
+			m_grid.KeyDown                  += DataGridView_Extensions.Copy;
+			m_grid.KeyDown                  += GridKeyDown;
+			m_grid.MouseUp                  += (s,a) => GridMouseButton(a, false);
+			m_grid.MouseDown                += (s,a) => GridMouseButton(a, true);
+			m_grid.CellValueNeeded          += CellValueNeeded;
+			m_grid.RowPrePaint              += RowPrePaint;
+			m_grid.SelectionChanged         += GridSelectionChanged;
+			m_grid.CellDoubleClick          += CellDoubleClick;
+			m_grid.ColumnDividerDoubleClick += (s,a) => { SetGridColumnSizesImpl(); a.Handled = true; };
+			m_grid.RowHeightInfoNeeded      += (s,a) => a.Height = m_row_height;
+			m_grid.DataError                += (s,a) => Debug.Assert(false);
+			m_grid.Scroll                   += (s,a) => GridScroll();
 
 			// Grid context menu
 			m_cmenu_grid.ItemClicked    += GridContextMenu;
@@ -601,12 +601,196 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Returns the cell style to use for a given row index</summary>
+		private DataGridViewCellStyle RowCellStyle(int row_index)
+		{
+			if (!m_alternating_line_colours)
+				return m_grid.RowsDefaultCellStyle;
+
+			// Give the illusion that the alternating row colour is moving with the overall file
+			return ((row_index & 1) == 1) == m_first_row_is_odd
+				? m_grid.RowsDefaultCellStyle
+				: m_grid.AlternatingRowsDefaultCellStyle;
+		}
+
+		/// <summary>Paint the background for a row</summary>
+		private void PaintRowBackground(Graphics gfx, int row_index, Line line, Rectangle row_bounds, bool selected)
+		{
+			var cs = RowCellStyle(row_index);
+
+			// If the line is bookmarked, use the bookmark colour
+			if (m_bookmarks.Count != 0 && m_bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
+			{
+				using (var b = new SolidBrush(m_settings.BookmarkColour))
+					gfx.FillRectangle(b, row_bounds);
+			}
+			else
+			{
+				// Paint the whole row background
+				using (var b = new SolidBrush(cs.BackColor))
+					gfx.FillRectangle(b, row_bounds);
+
+				// Paint each cell
+				var cellbounds = row_bounds.Shifted(-m_grid.HorizontalScrollingOffset, 0);
+				for (int i = 0, iend = line.Column.Count; i != iend; ++i, cellbounds.X += cellbounds.Width)
+				{
+					cellbounds.Width = m_grid[i,row_index].Size.Width;
+
+					var col = line.Column[i];
+
+					if (col.HL.Count == 0)
+						continue;
+
+					// Paint the highlighting backgrounds
+					foreach (var hl in col.HL)
+					{
+						// Binary match patterns highlight the whole cell
+						if (hl.BinaryMatch)
+						{
+							using (var b = new SolidBrush(hl.BackColour))
+								gfx.FillRectangle(b, cellbounds);
+						}
+							// Otherwise, highlight only the matching parts of the line
+						else
+						{
+							using (gfx.SaveState())
+							{
+								// Create a clip region for the highlighted parts of the line
+								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
+								var fmt = new StringFormat(m_strfmt);
+								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begin, x.Count)).ToArray());
+								foreach (var r in gfx.MeasureCharacterRanges(col.Text, cs.Font, cellbounds, fmt))
+								{
+									var bnd = r.GetBounds(gfx);
+									gfx.SetClip(new RectangleF(bnd.X - 1f, cellbounds.Y, bnd.Width + 1f, cellbounds.Height) , CombineMode.Union);
+								}
+
+								// Paint the highlighted parts of the cell
+								using (var b = new SolidBrush(hl.BackColour))
+									gfx.FillRectangle(b, cellbounds);
+
+								//gfx.SetClip(cellbounds, CombineMode.Xor);
+
+								//// Paint the cell with the background colour
+								//using (var b = new SolidBrush(cs.BackColor))
+								//	gfx.FillRectangle(b, cellbounds);
+							}
+						}
+					}
+				}
+			}
+
+			// If the row is selected, alpha blend the selection colour
+			if (selected)
+			{
+				// Fill the selected area in semi-transparent
+				using (var b = new SolidBrush(Color.FromArgb(128, cs.SelectionBackColor)))
+					gfx.FillRectangle(b, row_bounds);
+			}
+		}
+
+		/// <summary>Paint the contents of a row</summary>
+		private void PaintRowContent(Graphics gfx, int row_index, Line line, Rectangle row_bounds, bool selected)
+		{
+			var cs = RowCellStyle(row_index);
+
+			var cellbounds = row_bounds.Shifted(-m_grid.HorizontalScrollingOffset, 0);
+			for (int i = 0, iend = line.Column.Count; i != iend; ++i, cellbounds.X += cellbounds.Width)
+			{
+				cellbounds.Width = m_grid[i,row_index].Size.Width;
+
+				var col = line.Column[i];
+				var sz = gfx.MeasureString(col.Text, cs.Font);
+				var textbounds = new RectangleF(cellbounds.X, cellbounds.Y + (cellbounds.Height - sz.Height)/2, cellbounds.Width, sz.Height);
+
+				// If selected, use the selection colour
+				if (selected)
+				{
+					using (var b = new SolidBrush(cs.SelectionForeColor))
+						gfx.DrawString(col.Text, cs.Font, b, textbounds, m_strfmt);
+				}
+				// If no highlights use the default row colour
+				else if (col.HL.Count == 0)
+				{
+					using (var b = new SolidBrush(cs.ForeColor))
+						gfx.DrawString(col.Text, cs.Font, b, textbounds, m_strfmt);
+				}
+				// Paint the highlighted content
+				else
+				{
+					// Only paint the cell content once, using the last highlight
+					// This is because overdrawing the text looks shit
+					var hl = col.HL.Last();
+					{
+						// Binary match patterns highlight the whole cell
+						if (hl.BinaryMatch)
+						{
+							using (var b = new SolidBrush(hl.ForeColour))
+								gfx.DrawString(col.Text, cs.Font, b, textbounds, m_strfmt);
+						}
+						// Otherwise, highlight only the matching parts of the line
+						else
+						{
+							using (gfx.SaveState())
+							{
+								// Create a clip region for the highlighted parts of the line
+								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
+								var fmt = new StringFormat(m_strfmt);
+								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begin, x.Count)).ToArray());
+								foreach (var r in gfx.MeasureCharacterRanges(col.Text, cs.Font, textbounds, fmt))
+									gfx.SetClip(r.GetBounds(gfx), CombineMode.Union);
+
+								// Paint the highlighted parts of the cell
+								using (var b = new SolidBrush(hl.ForeColour))
+									gfx.DrawString(col.Text, cs.Font, b, textbounds, m_strfmt);
+
+								gfx.SetClip(cellbounds, CombineMode.Xor);
+
+								// Paint the cell content with the default colour
+								using (var b = new SolidBrush(cs.ForeColor))
+									gfx.DrawString(col.Text, cs.Font, b, textbounds, m_strfmt);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>Paint row overlays, such as the selection box</summary>
+		private void PaintRowOverlay(Graphics gfx, int row_index, Rectangle row_bounds, bool selected)
+		{
+			var cs = RowCellStyle(row_index);
+
+			// Draw a box around the selection
+			if (selected)
+			{
+				const float pen_width = 3f, pen_hwidth = pen_width*0.5f;
+				var fbounds = new RectangleF(row_bounds.Left + pen_hwidth, row_bounds.Top + pen_hwidth, row_bounds.Width - pen_width, row_bounds.Height - pen_width);
+
+				// Draw a border around the selection
+				using (var p = new Pen(cs.SelectionBackColor, pen_width){StartCap = LineCap.Square, EndCap = LineCap.Square})
+				{
+					gfx.DrawLine(p, fbounds.Left , fbounds.Top, fbounds.Left , fbounds.Bottom);
+					gfx.DrawLine(p, fbounds.Right, fbounds.Top, fbounds.Right, fbounds.Bottom);
+					if (row_index == 0 || !m_grid.Rows[row_index - 1].Selected)
+					{
+						gfx.DrawLine(p, fbounds.Left, fbounds.Top, fbounds.Right, fbounds.Top);
+					}
+					if (row_index == m_grid.RowCount - 1 || !m_grid.Rows[row_index + 1].Selected)
+					{
+						gfx.DrawLine(p, fbounds.Left, fbounds.Bottom, fbounds.Right, fbounds.Bottom);
+					}
+				}
+			}
+		}
+
 		/// <summary>Called before drawing the row background</summary>
 		private void RowPrePaint(object sender, DataGridViewRowPrePaintEventArgs e)
 		{
 			e.Handled = false;
 			var grid = (DataGridView)sender;
-			if (e.RowIndex < 0 || e.RowIndex >= grid.RowCount) return;
+			if (e.RowIndex < 0 || e.RowIndex >= grid.RowCount)
+				return;
 
 			// Leave rendering to the grid while events are suspended
 			if (GridEventsBlocked || !FileOpen)
@@ -615,123 +799,15 @@ namespace RyLogViewer
 			// Read the line from the cache
 			var line = ReadLine(e.RowIndex);
 			var bounds = e.RowBounds;
-			Highlight hl;
+			var selected = (e.State & DataGridViewElementStates.Selected) != 0;
 
-			e.PaintParts &= ~DataGridViewPaintParts.ContentBackground;
-			e.PaintParts &= ~DataGridViewPaintParts.Border;
+			e.Graphics.CompositingQuality = CompositingQuality.GammaCorrected;
+			e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-			// Give the illusion that the alternating row colour is moving with the overall file
-			Color bkcolour = m_grid.RowsDefaultCellStyle.BackColor;
-			if (m_alternating_line_colours)
-			{
-				var cs = ((e.RowIndex & 1) == 1) == m_first_row_is_odd
-					? m_grid.RowsDefaultCellStyle
-					: m_grid.AlternatingRowsDefaultCellStyle;
-
-				bkcolour = cs.BackColor;
-			}
-
-			// If the line is bookmarked, use the bookmark colour
-			if (m_bookmarks.Count != 0 && m_bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
-				bkcolour = m_settings.BookmarkColour;
-
-			// If the whole row is highlighted, do it
-			else if (line.Column.Count == 1 && (hl = line[0].HL) != null)
-				bkcolour = hl.BackColour; // Assuming hl.BinaryMatch here... todo support partial row highlighting...
-
-			// Paint the background
-			using (var b = new SolidBrush(bkcolour))
-				e.Graphics.FillRectangle(b, bounds);
-
-			// If the row is selected, use the selection colour
-			if ((e.State & DataGridViewElementStates.Selected) != 0)
-			{
-				// Fill the selected area in semi-transparent
-				using (var b = new SolidBrush(Color.FromArgb(128, m_grid.DefaultCellStyle.SelectionBackColor)))
-					e.Graphics.FillRectangle(b, bounds);
-			}
-
-			// Only using RowPrePaint to draw row backgrounds, therefore
-			// e.Handled is false to cause the CellPainting and RowPostPaint
-			// methods to be called
-		}
-
-		/// <summary>Draw the cell appropriate to any highlighting</summary>
-		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
-		{
-			e.Handled = false;
-			var grid = (DataGridView)sender;
-			if (e.RowIndex < 0 || e.RowIndex >= grid.RowCount) return;
-
-			// Leave rendering to the grid while events are suspended
-			if (GridEventsBlocked || !FileOpen)
-				return;
-
+			PaintRowBackground(e.Graphics, e.RowIndex, line, bounds, selected);
+			PaintRowContent(e.Graphics, e.RowIndex, line, bounds, selected);
+			PaintRowOverlay(e.Graphics, e.RowIndex, bounds, selected);
 			e.Handled = true;
-
-			// Read the line from the cache
-			var line = ReadLine(e.RowIndex);
-			Highlight hl;
-
-			// If the line is bookmarked, use the bookmark colour
-			if (m_bookmarks.Count != 0 && m_bookmarks.BinarySearch(x => x.Position.CompareTo(line.LineStartAddr)) >= 0)
-			{
-				e.PaintContent(e.ClipBounds);
-			}
-
-			// Check if the cell value has a highlight pattern it matches
-			else if ((hl = line[e.ColumnIndex].HL) != null)
-			{
-				if (hl.BinaryMatch)
-				{
-					e.CellStyle.BackColor = hl.BackColour;
-					e.CellStyle.ForeColor = hl.ForeColour;
-					e.PaintContent(e.ClipBounds);
-				}
-				else
-				{
-					e.PaintContent(e.ClipBounds);
-				}
-			}
-			else
-			{
-				e.PaintContent(e.ClipBounds);
-			}
-		}
-
-		/// <summary>Called after the cells have been drawn</summary>
-		private void RowPostPaint(object sender, DataGridViewRowPostPaintEventArgs e)
-		{
-			var grid = (DataGridView)sender;
-			if (e.RowIndex < 0 || e.RowIndex >= grid.RowCount) return;
-
-			// Leave rendering to the grid while events are suspended
-			if (GridEventsBlocked || !FileOpen)
-				return;
-
-			var bounds = e.RowBounds;
-
-			// Draw a box around the selection
-			if ((e.State & DataGridViewElementStates.Selected) != 0)
-			{
-				const float pen_width = 3f, pen_hwidth = pen_width*0.5f;
-				var fbounds = new RectangleF(bounds.Left + pen_hwidth, bounds.Top + pen_hwidth, bounds.Width - pen_width, bounds.Height - pen_width);
-
-				// Draw a border around the selection
-				using (var p = new Pen(m_grid.DefaultCellStyle.SelectionBackColor, pen_width){StartCap = LineCap.Square, EndCap = LineCap.Square})
-				{
-					e.Graphics.DrawLine(p, fbounds.Left , fbounds.Top, fbounds.Left , fbounds.Bottom);
-					e.Graphics.DrawLine(p, fbounds.Right, fbounds.Top, fbounds.Right, fbounds.Bottom);
-					if (e.RowIndex == 0 || !grid.Rows[e.RowIndex - 1].Selected)
-					{
-						e.Graphics.DrawLine(p, fbounds.Left, fbounds.Top, fbounds.Right, fbounds.Top);
-					}
-					if (e.RowIndex == grid.RowCount - 1 || !grid.Rows[e.RowIndex + 1].Selected)
-					{
-						e.Graphics.DrawLine(p, fbounds.Left, fbounds.Bottom, fbounds.Right, fbounds.Bottom);
-					}
-				}
-			}
 		}
 
 		/// <summary>Handler for selections made in the grid</summary>
@@ -740,6 +816,16 @@ namespace RyLogViewer
 			if (GridEventsBlocked) return;
 			if (m_tail_enabled && SelectedRowIndex != m_grid.RowCount - 1)
 				EnableTail(false);
+
+			// We need to invalidate the selected rows because of the selection border.
+			// Without this bits of the selection border get left behind because the rendering
+			// process goes:
+			// Select row 2 (say) -> draws top and bottom border because row 1 and 3 aren't selected
+			// Select row 3 -> draws row 3 but not row 2 because it hasn't changed (except it needs to
+			// because row 3 is now selected so the bottom border should not be draw for row 2).
+			foreach (var r in m_grid.GetRowsWithState(DataGridViewElementStates.Displayed|DataGridViewElementStates.Selected))
+				m_grid.InvalidateRow(r.Index);
+
 			UpdateStatus();
 			CycleColours();
 		}
@@ -879,7 +965,7 @@ namespace RyLogViewer
 
 			const float Limit = 1f / Constants.AutoScrollAtBoundaryLimit;
 			float ratio = Maths.Frac(0, SelectedRowIndex, m_grid.RowCount - 1);
-			if (ratio < 0f + Limit && LineIndexRange.Begin != 0)
+			if (ratio < 0f + Limit && LineIndexRange.Begin > m_encoding.GetPreamble().Length)
 				BuildLineIndex(LineStartIndexRange.Begin, false);
 			if (ratio > 1f - Limit && LineIndexRange.End < m_fileend - m_row_delim.Length)
 				BuildLineIndex(LineStartIndexRange.End  , false);
@@ -1639,8 +1725,8 @@ namespace RyLogViewer
 			m_grid.ColumnHeadersVisible = col_count > 1;
 
 			// Measure each column's preferred width
-			var col_widths = new[]{30f,30f,30f};
-			using (var gfx = Graphics.FromHwnd(m_grid.Handle))
+			var col_widths = Enumerable.Repeat(30f, col_count).ToArray();
+			using (var gfx = m_grid.CreateGraphics())
 			{
 				foreach (var row in m_grid.GetRowsWithState(DataGridViewElementStates.Displayed))
 				{
@@ -1742,6 +1828,14 @@ namespace RyLogViewer
 			}
 			m_grid.DefaultCellStyle.SelectionBackColor = m_settings.LineSelectBackColour;
 			m_grid.DefaultCellStyle.SelectionForeColor = m_settings.LineSelectForeColour;
+
+			// Set the string format
+			using (var gfx = CreateGraphics())
+			{
+				var sz = gfx.MeasureString(" ", m_grid.Font);
+				m_strfmt = new StringFormat(StringFormatFlags.NoWrap|StringFormatFlags.MeasureTrailingSpaces);
+				m_strfmt.SetTabStops(0, Enumerable.Repeat(sz.Width * m_settings.TabSizeInSpaces, 50).ToArray());
+			}
 
 			// File scroll
 			m_scroll_file.TrackColor = m_settings.ScrollBarFileRangeColour;

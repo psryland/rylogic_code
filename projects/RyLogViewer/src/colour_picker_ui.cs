@@ -129,12 +129,14 @@ namespace RyLogViewer
 			// m_colour_back
 			//
 			this.m_colour_back.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
-			this.m_colour_back.Location = new System.Drawing.Point(166, 33);
+			this.m_colour_back.Location = new System.Drawing.Point(138, 33);
 			this.m_colour_back.Name = "m_colour_back";
-			this.m_colour_back.Parts = ((pr.gui.ColourWheel.EParts)((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider)
+			this.m_colour_back.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider)
+            | pr.gui.ColourWheel.EParts.ASlider)
             | pr.gui.ColourWheel.EParts.ColourSelection)
-            | pr.gui.ColourWheel.EParts.VSelection)));
-			this.m_colour_back.Size = new System.Drawing.Size(128, 94);
+            | pr.gui.ColourWheel.EParts.VSelection)
+            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_back.Size = new System.Drawing.Size(156, 94);
 			this.m_colour_back.SliderWidth = 20;
 			this.m_colour_back.TabIndex = 4;
 			this.m_colour_back.VerticalLayout = false;

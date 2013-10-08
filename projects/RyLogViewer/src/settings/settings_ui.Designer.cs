@@ -97,6 +97,8 @@
 			this.m_btn_change_font = new System.Windows.Forms.Button();
 			this.m_text_font = new System.Windows.Forms.TextBox();
 			this.m_group_misc = new System.Windows.Forms.GroupBox();
+			this.m_lbl_tabsize = new System.Windows.Forms.Label();
+			this.m_spinner_tabsize = new System.Windows.Forms.NumericUpDown();
 			this.m_check_full_filepath_in_title = new System.Windows.Forms.CheckBox();
 			this.m_table_appearance2 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_group_file_scroll = new System.Windows.Forms.GroupBox();
@@ -161,6 +163,7 @@
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_row_height)).BeginInit();
 			this.m_group_font.SuspendLayout();
 			this.m_group_misc.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_tabsize)).BeginInit();
 			this.m_table_appearance2.SuspendLayout();
 			this.m_group_file_scroll.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_file_scroll_width)).BeginInit();
@@ -988,14 +991,32 @@
 			// 
 			// m_group_misc
 			// 
+			this.m_group_misc.Controls.Add(this.m_lbl_tabsize);
+			this.m_group_misc.Controls.Add(this.m_spinner_tabsize);
 			this.m_group_misc.Controls.Add(this.m_check_full_filepath_in_title);
 			this.m_group_misc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_group_misc.Location = new System.Drawing.Point(3, 203);
 			this.m_group_misc.Name = "m_group_misc";
-			this.m_group_misc.Size = new System.Drawing.Size(321, 43);
+			this.m_group_misc.Size = new System.Drawing.Size(321, 69);
 			this.m_group_misc.TabIndex = 6;
 			this.m_group_misc.TabStop = false;
 			this.m_group_misc.Text = "Miscellaneous";
+			// 
+			// m_lbl_tabsize
+			// 
+			this.m_lbl_tabsize.AutoSize = true;
+			this.m_lbl_tabsize.Location = new System.Drawing.Point(7, 43);
+			this.m_lbl_tabsize.Name = "m_lbl_tabsize";
+			this.m_lbl_tabsize.Size = new System.Drawing.Size(98, 13);
+			this.m_lbl_tabsize.TabIndex = 2;
+			this.m_lbl_tabsize.Text = "Tab size in spaces:";
+			// 
+			// m_spinner_tabsize
+			// 
+			this.m_spinner_tabsize.Location = new System.Drawing.Point(111, 41);
+			this.m_spinner_tabsize.Name = "m_spinner_tabsize";
+			this.m_spinner_tabsize.Size = new System.Drawing.Size(56, 20);
+			this.m_spinner_tabsize.TabIndex = 1;
 			// 
 			// m_check_full_filepath_in_title
 			// 
@@ -1587,6 +1608,7 @@
 			this.m_group_font.PerformLayout();
 			this.m_group_misc.ResumeLayout(false);
 			this.m_group_misc.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_spinner_tabsize)).EndInit();
 			this.m_table_appearance2.ResumeLayout(false);
 			this.m_group_file_scroll.ResumeLayout(false);
 			this.m_group_file_scroll.PerformLayout();
@@ -1737,5 +1759,7 @@
 		private System.Windows.Forms.GroupBox m_group_misc;
 		private System.Windows.Forms.CheckBox m_check_full_filepath_in_title;
 		private System.Windows.Forms.TableLayoutPanel m_table_appearance2;
+		private System.Windows.Forms.Label m_lbl_tabsize;
+		private System.Windows.Forms.NumericUpDown m_spinner_tabsize;
 	}
 }

@@ -132,6 +132,11 @@ namespace RyLogViewer
 			get { return get<bool>(Reflect<Settings>.MemberName(x => x.FullPathInTitle)); }
 			set { set(Reflect<Settings>.MemberName(x => x.FullPathInTitle), value); }
 		}
+		public int    TabSizeInSpaces
+		{
+			get { return get<int>(Reflect<Settings>.MemberName(x => x.TabSizeInSpaces)); }
+			set { set(Reflect<Settings>.MemberName(x => x.TabSizeInSpaces), value); }
+		}
 		public bool   FileChangesAdditive
 		{
 			get { return get<bool>(Reflect<Settings>.MemberName(x => x.FileChangesAdditive)); }
@@ -358,6 +363,7 @@ namespace RyLogViewer
 			LastLoadedFile                  = string.Empty;
 			OpenAtEnd                       = true;
 			FullPathInTitle                 = true;
+			TabSizeInSpaces                 = 4;
 			FileChangesAdditive             = true;
 			IgnoreBlankLines                = false;
 			AlwaysOnTop                     = false;

@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using pr.extn;
+using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
@@ -471,6 +472,17 @@ namespace RyLogViewer
 					WhatsChanged |= EWhatsChanged.WindowDisplay;
 				};
 
+			// Tab size in spaces
+			m_spinner_tabsize.ToolTip(m_tt, "The width to display tab characters measured in spaces");
+			m_spinner_tabsize.Minimum = 0;
+			m_spinner_tabsize.Maximum = 100;
+			m_spinner_tabsize.Value = Maths.Clamp(m_settings.TabSizeInSpaces, (int)m_spinner_tabsize.Minimum, (int)m_spinner_tabsize.Maximum);
+			m_spinner_tabsize.ValueChanged += (s,a) =>
+				{
+					m_settings.TabSizeInSpaces = (int)m_spinner_tabsize.Value;
+					WhatsChanged |= EWhatsChanged.Rendering;
+				};
+
 			// File scroll width
 			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
 			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
@@ -888,7 +900,7 @@ namespace RyLogViewer
 				break;
 			case ColumnNames.Highlighting:
 				e.Value = Resources.ClickToModifyHighlight;
-				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? hl.BackColour : Color.White;
+				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? Gfx.Blend(Color.FromArgb(255, hl.BackColour), Color.White, 1f - hl.BackColour.A/255f) : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
 				break;
 			case ColumnNames.Behaviour:
