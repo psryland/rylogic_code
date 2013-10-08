@@ -10,3 +10,4 @@
 using namespace pr;
 using namespace pr::ph;
 
+int constraint_dummy;

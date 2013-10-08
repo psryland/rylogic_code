@@ -10,6 +10,7 @@
 using namespace pr;
 using namespace pr::ph;
 
+int contact_dummy;
 //// Determine extra information needed to do collision resolution for this
 //// contact, i.e. the relative velocity, contact tangent, etc.
 //void Contact::CalculateExtraContactInfo(Rigidbody const& objA, Rigidbody const& objB)
@@ -26,7 +27,7 @@ using namespace pr::ph;
 //
 //	// If the relative velocity is not into the collision
 //	float rel_norm_velocity = Dot3(m_normal, m_relative_velocity);
-//	
+//
 //	// Tangent to the collision normal
 //	m_tangent = m_relative_velocity - rel_norm_velocity * m_normal;
 //

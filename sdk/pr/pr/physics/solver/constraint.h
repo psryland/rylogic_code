@@ -41,11 +41,11 @@ namespace pr
 			// Joint: The main axis of the joint (to be sorted out.. should be prismatic joint direction, or rotation axis... depends if I want to represent all joints using 6 DoF mask or something)
 			v4 m_normal;
 
-			// The desired final relative velocity of points A and B for this constaint
+			// The desired final relative velocity of points A and B for this constraint
 			// if it is considered in isolation with friction and elasticity considerations included.
 			v4 m_desired_final_rel_velocity;
-				
-			// The impulse calculated per iteration due to this contraint
+
+			// The impulse calculated per iteration due to this constraint
 			v4 m_impulse;
 
 			//// The depth of penetration. +ve means penetration, -ve means out of penetration
@@ -75,8 +75,8 @@ namespace pr
 			Rigidbody* m_objB;
 
 			// Some information about gravity in the local area of the constraint.
-			//float m_grav_accel;		// Used to determine resting contact speeds and penentration correction
-			float m_grav_potential;	// Used to set the order in which constraints are processed
+			//float m_grav_accel;   // Used to determine resting contact speeds and penetration correction
+			float m_grav_potential; // Used to set the order in which constraints are processed
 
 			// This is the velocity an object would have after one frame of acceleration
 			// under gravity alone.
@@ -93,7 +93,7 @@ namespace pr
 			Constraint* m_constraints;
 
 			// Return access to the constraints in this block
-			Constraint& operator [](uint i)	{ return reinterpret_cast<Constraint*>(this + 1)[i]; }
+			Constraint& operator [](uint i) { return reinterpret_cast<Constraint*>(this + 1)[i]; }
 		};
 	}
 }
