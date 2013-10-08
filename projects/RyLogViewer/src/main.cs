@@ -464,6 +464,7 @@ namespace RyLogViewer
 			BuildLineIndex(m_filepos, true, ()=>
 				{
 					SelectedRowIndex = m_settings.OpenAtEnd ? m_grid.RowCount - 1 : 0;
+					SetGridColumnSizes(true);
 				});
 		}
 
@@ -689,7 +690,6 @@ namespace RyLogViewer
 				}
 				else
 				{
-					//todo
 					e.PaintContent(e.ClipBounds);
 				}
 			}
@@ -845,7 +845,7 @@ namespace RyLogViewer
 		{
 			if (GridEventsBlocked) return;
 			UpdateFileScroll();
-			SetGridColumnSizes();
+			SetGridColumnSizes(false);
 
 			// Selected rows use transparency so we need to invalidate the entire row
 			foreach (var r in m_grid.GetRowsWithState(DataGridViewElementStates.Displayed|DataGridViewElementStates.Selected))
@@ -1625,33 +1625,39 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Helper for setting the grid column size based on currently displayed content</summary>
-		private void SetGridColumnSizes()
+		private void SetGridColumnSizes(bool force)
 		{
 			if (m_grid.ColumnCount == 0) return;
+			if (!force && m_grid.ColumnHeadersVisible) return;
 			m_batch_set_col_size.Signal();
 		}
 		private void SetGridColumnSizesImpl()
 		{
 			int grid_width = m_grid.DisplayRectangle.Width - 2;
-			int row_count = m_grid.RowCount;
 			int col_count = m_grid.ColumnCount;
 
-			// Measure each column's preferred width
-			int[] col_widths = new int[col_count];
-			int total_width = 0;
-			foreach (DataGridViewColumn col in m_grid.Columns)
-			{
-				var width = row_count != 0
-					? col.GetPreferredWidth(DataGridViewAutoSizeColumnMode.DisplayedCells, true)
-					: grid_width / col_count;
+			m_grid.ColumnHeadersVisible = col_count > 1;
 
-				width = Maths.Clamp(width, 30, 64000); // DGV throws if width is greater than 65535
-				col_widths[col.Index] = width;
-				total_width += col_widths[col.Index];
+			// Measure each column's preferred width
+			var col_widths = new[]{30f,30f,30f};
+			using (var gfx = Graphics.FromHwnd(m_grid.Handle))
+			{
+				foreach (var row in m_grid.GetRowsWithState(DataGridViewElementStates.Displayed))
+				{
+					for (int i = 0, iend = Math.Min(col_count, row.Cells.Count); i != iend; ++i)
+					{
+						// For some reason, cell.GetPreferredSize or col.GetPreferredWidth don't return correct values
+						var cell = row.Cells[i];
+						var sz = gfx.MeasureString((string)cell.Value, cell.InheritedStyle.Font);
+						var w = Maths.Clamp(sz.Width + 10, 30, 64000); // DGV throws if width is greater than 65535
+						col_widths[i] = Math.Max(col_widths[i], w);
+					}
+				}
 			}
+			var total_width = Math.Max(col_widths.Sum(), 1);
 
 			// Resize columns. If the total width is less than the control width use the control width instead
-			float scale = Maths.Max((float)grid_width / total_width, 1f);
+			var scale = Maths.Max(grid_width / total_width, 1f);
 			foreach (DataGridViewColumn col in m_grid.Columns)
 				col.Width = (int)(col_widths[col.Index] * scale);
 		}
@@ -1708,6 +1714,7 @@ namespace RyLogViewer
 
 			// Grid
 			int col_count = m_settings.ColDelimiter.Length != 0 ? Maths.Clamp(m_settings.ColumnCount, 1, 255) : 1;
+			m_grid.Font = m_settings.Font;
 			m_grid.ColumnHeadersVisible = col_count > 1;
 			m_grid.ColumnCount = col_count;
 			m_grid.RowsDefaultCellStyle = new DataGridViewCellStyle
@@ -1723,6 +1730,7 @@ namespace RyLogViewer
 				m_grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
 				{
 					Font = m_settings.Font,
+					ForeColor = m_settings.LineForeColour2,
 					BackColor = m_settings.LineBackColour2,
 					SelectionBackColor = m_settings.LineSelectBackColour,
 					SelectionForeColor = m_settings.LineSelectForeColour,
@@ -1767,11 +1775,10 @@ namespace RyLogViewer
 					else
 					{
 						m_grid.ColumnHeadersVisible = false;
-						m_grid.ColumnCount = 1;
 						using (m_suspend_grid_events.Reference)
 							SetGridRowCount(0, 0);
 					}
-					SetGridColumnSizes();
+					SetGridColumnSizes(false);
 					m_grid.Refresh();
 				}
 
@@ -2001,13 +2008,13 @@ namespace RyLogViewer
 		/// <summary>Cycles colours for the 'free edition' menu item</summary>
 		private void CycleColours()
 		{
-			return; //hack
+			//return; //hack
 			//if (!m_menu_free_version.Visible) return;
 			//m_free_version_menu_colour.H += 0.01f;
 			//if (m_free_version_menu_colour.H > 1f) m_free_version_menu_colour.H = 0f;
 			//m_menu_free_version.ForeColor = m_free_version_menu_colour.ToColor();
 		}
-		private HSV m_free_version_menu_colour = HSV.FromColor(Color.Red);
+		//private HSV m_free_version_menu_colour = HSV.FromColor(Color.Red);
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
 		private class CheckedButtonRenderer :ToolStripProfessionalRenderer

@@ -449,7 +449,7 @@ namespace RyLogViewer
 
 			// Font
 			m_text_font.ToolTip(m_tt, "The font used to display the log file data");
-			m_text_font.Text = string.Format("{0}, {1}pt" ,m_settings.Font.Name ,m_settings.Font.Size);
+			m_text_font.Text = "{0}, {1}pt".Fmt(m_settings.Font.Name ,m_settings.Font.Size);
 			m_text_font.Font = m_settings.Font;
 
 			// Font button
@@ -459,6 +459,7 @@ namespace RyLogViewer
 					var dg = new FontDialog{Font = m_settings.Font};
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_text_font.Font = dg.Font;
+					m_text_font.Text = "{0}, {1}pt".Fmt(dg.Font.Name ,dg.Font.Size);
 					m_settings.Font = dg.Font;
 				};
 
