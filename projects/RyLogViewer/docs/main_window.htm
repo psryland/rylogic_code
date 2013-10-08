@@ -195,7 +195,12 @@
 								<li>the bookmark locations.</li>
 							</ul>
 							Left clicking within the file scroll indicator selects the line at the corresponding position in the
-							log file.
+							log file.<br/>
+							<br/>
+							Side Note: When a small log file is loaded you may wonder why the selection indication on the file scroll
+							indicator changes size as different lines are selected. This is because the indicator represents the byte
+							range of the selected line within the file, longer lines correspond to larger byte ranges and therefore
+							a larger selection indicator.
 						</div>
 					</div>
 				</li>
@@ -303,7 +308,7 @@
 								</li>
 								<li>Access the bookmarks dialog using the <span class="mono">Control+B</span> key combination.</li>
 							</ul>
-							The bookmarks dialog is simply a list of saved bookmark positions. Selecting a bookmark in the list cause
+							The bookmarks dialog is simply a list of saved bookmark positions. Selecting a bookmark in the list causes
 							the main view to jump to the bookmarked position.
 						</div>
 					</div>

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
-import os, sys, subprocess
-
+import sys, os
 sys.path.append("Q:/sdk/pr/python")
 from pr import RylogicEnv
+from pr import UserVars
+
 RylogicEnv.CheckVersion(1)
 
 print(
@@ -12,5 +13,5 @@ print(
 	"=============================\n")
 
 pk = ".\src\licence\private_key.xml"
-RylogicEnv.Run(RylogicEnv.csex, '-gencode -pk "'+pk+'"')
+RylogicEnv.Exec([UserVars.csex, "-gencode", "-pk", pk])
 RylogicEnv.OnSuccess()

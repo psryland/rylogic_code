@@ -19,15 +19,13 @@
 					and diagnosing issues in the computer system a difficult and time consuming task. RyLogViewer was written to
 					make working with high-volume log data easier.<br/>
 					<br/>
-					The simplest but probably most useful feature of RyLogViewer, is the ability to highlight lines in the log
-					data based on some pattern, the canonical example being to have lines containing the word <i>error</i>
-					appear with a red background.<br/>
-					<br/>
-					Patterns can be as simple as <i>"any line that contains the word 'error' "</i> to complex regular expressions.
-					Once familiar with the pattern system, the same knowledge can be applied to search for specific text in the
-					log data, create filters to strip out unwanted noise, transform and rearrange text into more meaningful/human-
-					readable forms, and even setup actions to perform when double clicking on lines in the log data. (Check out
-					the <a href="ideas.html">ideas section</a> for inspiration on ways in which RyLogViewer can be used).<br/>
+					The simplest, yet probably most useful, feature of RyLogViewer is the ability to highlight lines in the log
+					data based on a pattern. Patterns can be as simple as <i>"any line that contains the word 'error' "</i>
+					to complex regular expressions. Once familiar with the pattern system, the same knowledge can be applied to
+					search for specific text in the log data, create filters to strip out unwanted noise, transform and rearrange
+					text into more meaningful/human-readable forms, and even setup actions to perform when double clicking on lines
+					in the log data. (Check out the <a href="ideas.html">ideas section</a> for inspiration on ways in which RyLogViewer
+					 can be used).<br/>
 					<br/>
 					RylogViewer is a shareware application, meaning there are limits applied to the free version of the
 					application that are removed in the licensed version. However, these limits do not restrict or disable any
@@ -44,9 +42,9 @@
 						<div>
 							<div class="tag_label">Unlimited File Sizes</div>
 							<div class="content">
-								There is no upper limit on the size of displayed log files. RyLogViewer has been designed to
-								intelligently spool and cache data dynamically, meaning that it runs as smoothly on a 200Gb
-								file as it does on a 2Kb file.
+								RyLogViewer has been designed to intelligently spool and cache data dynamically, meaning that
+								it runs as smoothly on a 200Gb file as it does on a 2Kb file. There is no upper limit on the
+								size of displayed log files.
 							</div>
 						</div>
 					</li>
@@ -89,7 +87,7 @@
 							<div class="content">
 								<a href="options_transforms.html">Transformations</a> are used to reformat the text that is
 								displayed in the log. A <a href="pattern_editor.html">pattern</a> is used to match lines in the
-								log that are then substituted with the <i>Replace</i> template. Transforms are very flexible
+								log that are then substituted with the replacement pattern. Transforms are very flexible
 								allowing reordering of text, changes in case, "swizzling" of characters, and error code lookup
 								and substitution. Transforms can be quickly enabled or disabled via
 								<a href="main_window.html#tool_bar">tool bar</a>. In the free version, transforms are limited to
@@ -119,7 +117,7 @@
 						<div>
 							<div class="tag_label">Scratch Pad for Pattern Testing</div>
 							<div class="content">
-								The patterns that are at the core of many of the features in RyLogViewer can become very complex.
+								The patterns that are at the core of many of the features in RyLogViewer can become quite complex.
 								To aid in ensuring a pattern behaves correctly, the <a href="pattern_editor.html">pattern editor</a>
 								features a <a href="pattern_editor.html#test_area">test area</a> that allows the behaviour of a
 								pattern to be previewed. This test area is a useful tool for learning regular expression syntax.
@@ -135,7 +133,8 @@
 								The <a href="aggregate_files.html">aggregate files</a> feature allows multiple files to be
 								viewed as though they are a single file. All features (including highlighting, searching,
 								filtering, etc) operate on the aggregate file in the same manor as they do for a single file.
-								This is particularly useful for systems that produce sequentially numbered log files.<br/>
+								This is particularly useful for systems that produce sequentially numbered log files, common
+								in long running systems.<br/>
 								<br/>
 								In addition, the <a href="export.html">Export</a> function can by used to create a single
 								amalgamated file that is the result of all of the files concatenated together after filtering
