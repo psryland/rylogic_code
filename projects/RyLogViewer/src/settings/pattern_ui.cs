@@ -16,8 +16,9 @@ namespace RyLogViewer
 		private HelpUI           m_dlg_help;
 		private ImageList        m_image_list;
 		private Button           m_btn_regex_help;
-		private CheckBox         m_check_invert;
 		private CheckBox         m_check_ignore_case;
+		private CheckBox         m_check_whole_line;
+		private CheckBox         m_check_invert;
 		private Button           m_btn_add;
 		private Label            m_lbl_match;
 		private TextBox          m_edit_match;
@@ -29,7 +30,6 @@ namespace RyLogViewer
 		private SplitContainer   m_split;
 		private DataGridView     m_grid_grps;
 		private Label            m_lbl_groups;
-		private CheckBox m_check_whole_line;
 		private RichTextBox      m_edit_test;
 
 		public PatternUI()
@@ -342,7 +342,7 @@ namespace RyLogViewer
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(245, 91);
+			this.m_edit_test.Size = new System.Drawing.Size(245, 82);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			//
@@ -426,7 +426,7 @@ namespace RyLogViewer
 			// m_split.Panel2
 			//
 			this.m_split.Panel2.Controls.Add(this.m_grid_grps);
-			this.m_split.Size = new System.Drawing.Size(402, 93);
+			this.m_split.Size = new System.Drawing.Size(402, 84);
 			this.m_split.SplitterDistance = 247;
 			this.m_split.TabIndex = 1;
 			//
@@ -458,7 +458,7 @@ namespace RyLogViewer
 			this.m_grid_grps.RowHeadersVisible = false;
 			this.m_grid_grps.RowTemplate.Height = 18;
 			this.m_grid_grps.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_grps.Size = new System.Drawing.Size(149, 91);
+			this.m_grid_grps.Size = new System.Drawing.Size(149, 82);
 			this.m_grid_grps.TabIndex = 0;
 			this.m_grid_grps.TabStop = false;
 			//
@@ -501,7 +501,7 @@ namespace RyLogViewer
 			this.Margin = new System.Windows.Forms.Padding(0);
 			this.MinimumSize = new System.Drawing.Size(408, 104);
 			this.Name = "PatternUI";
-			this.Size = new System.Drawing.Size(408, 171);
+			this.Size = new System.Drawing.Size(408, 162);
 			this.m_group_patntype.ResumeLayout(false);
 			this.m_group_patntype.PerformLayout();
 			this.m_split.Panel1.ResumeLayout(false);

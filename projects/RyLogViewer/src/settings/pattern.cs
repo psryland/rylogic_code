@@ -16,7 +16,6 @@ namespace RyLogViewer
 		private bool     m_active;
 		private bool     m_invert;
 		private bool     m_whole_line;
-		private bool     m_binary_match;
 		private Regex    m_compiled_patn;
 
 		/// <summary>True if the pattern is active</summary>
@@ -61,13 +60,6 @@ namespace RyLogViewer
 			set { m_whole_line = value; RaisePatternChanged(); }
 		}
 
-		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
-		public bool BinaryMatch
-		{
-			get { return m_binary_match; }
-			set { m_binary_match = value; RaisePatternChanged(); }
-		}
-
 		/// <summary>Raised whenever data on this pattern changes</summary>
 		public event EventHandler PatternChanged;
 		private void RaisePatternChanged()
@@ -85,7 +77,6 @@ namespace RyLogViewer
 			Active      = true;
 			Invert      = false;
 			WholeLine   = false;
-			BinaryMatch = true;
 		}
 		public Pattern(Pattern rhs)
 		{
@@ -95,7 +86,6 @@ namespace RyLogViewer
 			IgnoreCase  = rhs.IgnoreCase;
 			Invert      = rhs.Invert;
 			WholeLine   = rhs.WholeLine;
-			BinaryMatch = rhs.BinaryMatch;
 		}
 		public Pattern(XElement node)
 		{
@@ -106,7 +96,6 @@ namespace RyLogViewer
 			IgnoreCase  = bool.Parse(node.Element(XmlTag.IgnoreCase).Value);
 			Invert      = bool.Parse(node.Element(XmlTag.Invert    ).Value);
 			WholeLine   = bool.Parse(node.Element(XmlTag.WholeLine ).Value);
-			BinaryMatch = bool.Parse(node.Element(XmlTag.Binary    ).Value);
 			// ReSharper restore PossibleNullReferenceException
 		}
 
@@ -120,8 +109,7 @@ namespace RyLogViewer
 				new XElement(XmlTag.PatnType   ,PatnType   ),
 				new XElement(XmlTag.IgnoreCase ,IgnoreCase ),
 				new XElement(XmlTag.Invert     ,Invert     ),
-				new XElement(XmlTag.WholeLine  ,WholeLine  ),
-				new XElement(XmlTag.Binary     ,BinaryMatch)
+				new XElement(XmlTag.WholeLine  ,WholeLine  )
 			);
 			return node;
 		}
@@ -194,7 +182,7 @@ namespace RyLogViewer
 				// Compiling the Regex will throw if there's something wrong with it. It will never be null
 				if (Regex == null)
 					return new ArgumentException("The regular expression is null");
-				
+
 				// No prob, bob!
 				return null;
 			}
@@ -281,8 +269,7 @@ namespace RyLogViewer
 				&& rhs.m_ignore_case   == m_ignore_case
 				&& rhs.m_active        == m_active
 				&& rhs.m_invert        == m_invert
-				&& rhs.m_whole_line    == m_whole_line
-				&& rhs.m_binary_match  == m_binary_match;
+				&& rhs.m_whole_line    == m_whole_line;
 		}
 
 		/// <summary>Value hash code</summary>
@@ -295,8 +282,7 @@ namespace RyLogViewer
 				m_ignore_case .GetHashCode()^
 				m_active      .GetHashCode()^
 				m_invert      .GetHashCode()^
-				m_whole_line  .GetHashCode()^
-				m_binary_match.GetHashCode();
+				m_whole_line  .GetHashCode();
 			// ReSharper restore NonReadonlyFieldInGetHashCode
 		}
 

@@ -16,23 +16,27 @@ namespace RyLogViewer
 		/// <summary>Background colour of highlight</summary>
 		public Color BackColour { get; set; }
 
+		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
+		public bool BinaryMatch { get; set; }
+
 		public Highlight()
 		{
-			ForeColour = Color.White;
-			BackColour = Color.DarkRed;
+			ForeColour  = Color.White;
+			BackColour  = Color.DarkRed;
+			BinaryMatch = true;
 		}
 		public Highlight(Highlight rhs) :base(rhs)
 		{
-			ForeColour = rhs.ForeColour;
-			BackColour = rhs.BackColour;
+			ForeColour  = rhs.ForeColour;
+			BackColour  = rhs.BackColour;
+			BinaryMatch = rhs.BinaryMatch;
 		}
-
-		/// <summary>Construct from xml description</summary>
 		public Highlight(XElement node) :base(node)
 		{
 			// ReSharper disable PossibleNullReferenceException
-			ForeColour = Color.FromArgb(int.Parse(node.Element(XmlTag.ForeColour).Value, NumberStyles.HexNumber));
-			BackColour = Color.FromArgb(int.Parse(node.Element(XmlTag.BackColour).Value, NumberStyles.HexNumber));
+			ForeColour  = Color.FromArgb(int.Parse(node.Element(XmlTag.ForeColour).Value, NumberStyles.HexNumber));
+			BackColour  = Color.FromArgb(int.Parse(node.Element(XmlTag.BackColour).Value, NumberStyles.HexNumber));
+			BinaryMatch = bool.Parse(node.Element(XmlTag.Binary).Value);
 			// ReSharper restore PossibleNullReferenceException
 		}
 
@@ -43,7 +47,8 @@ namespace RyLogViewer
 			node.Add
 			(
 				new XElement(XmlTag.ForeColour ,ForeColour.ToArgb().ToString("X")),
-				new XElement(XmlTag.BackColour ,BackColour.ToArgb().ToString("X"))
+				new XElement(XmlTag.BackColour ,BackColour.ToArgb().ToString("X")),
+				new XElement(XmlTag.Binary     ,BinaryMatch)
 			);
 			return node;
 		}
@@ -52,13 +57,13 @@ namespace RyLogViewer
 		public static List<Highlight> Import(string highlights)
 		{
 			var list = new List<Highlight>();
-			
+
 			XDocument doc;
 			try { doc = XDocument.Parse(highlights); } catch { return list; }
 			if (doc.Root == null) return list;
 			foreach (XElement n in doc.Root.Elements(XmlTag.Highlight))
 				try { list.Add(new Highlight(n)); } catch {} // Ignore those that fail
-			
+
 			return list;
 		}
 
@@ -67,10 +72,10 @@ namespace RyLogViewer
 		{
 			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
-			
+
 			foreach (var hl in highlights)
 				doc.Root.Add(hl.ToXml(new XElement(XmlTag.Highlight)));
-			
+
 			return doc.ToString(SaveOptions.None);
 		}
 
@@ -86,8 +91,9 @@ namespace RyLogViewer
 			var rhs = obj as Highlight;
 			return rhs != null
 				&& base.Equals(obj)
-				&& ForeColour.Equals(rhs.ForeColour)
-				&& BackColour.Equals(rhs.BackColour);
+				&& Equals(ForeColour, rhs.ForeColour)
+			    && Equals(BackColour, rhs.BackColour)
+			    && Equals(BinaryMatch, rhs.BinaryMatch);
 		}
 
 		/// <summary>Value hash code</summary>
@@ -96,7 +102,8 @@ namespace RyLogViewer
 			return
 				base.GetHashCode()^
 				ForeColour.GetHashCode()^
-				BackColour.GetHashCode();
+				BackColour.GetHashCode()^
+				BinaryMatch.GetHashCode();
 		}
 	}
 }

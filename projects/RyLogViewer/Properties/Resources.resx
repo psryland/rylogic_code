@@ -159,16 +159,18 @@
     <value>Delete Failed</value>
   </data>
   <data name="ClickToModifyHighlight" xml:space="preserve">
-    <value>Click here to modify highlight</value>
+    <value>Click to change colours</value>
   </data>
   <data name="folder_with_file" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\folder_with_file.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="Pattern" xml:space="preserve">
     <value>Pattern</value>
-    <comment>Pattern column header</comment>
   </data>
-  <data name="ReadingXLineFromY" xml:space="preserve">
+	<data name="RowHighlight" xml:space="preserve">
+    <value>Highlight</value>
+  </data>
+	<data name="ReadingXLineFromY" xml:space="preserve">
     <value>Reading the last {0} lines from {1}</value>
   </data>
   <data name="InvalidFilePath" xml:space="preserve">
@@ -253,11 +255,8 @@ Error: {0}</value>
   <data name="bottom" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\bottom.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="Highlighting" xml:space="preserve">
-    <value>Highlighting</value>
-    <comment>
-			Highlighting column header
-		</comment>
+  <data name="Colours" xml:space="preserve">
+    <value>Colours</value>
   </data>
   <data name="AdditiveMode" xml:space="preserve">
     <value>Assume log file changes are additive only. If enabled, only additions to the

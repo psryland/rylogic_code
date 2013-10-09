@@ -472,7 +472,6 @@ namespace RyLogViewer
 					IgnoreCase = false,
 					Invert = false,
 					WholeLine = false,
-					BinaryMatch = true,
 					Executable = @"C:\windows\notepad.exe",
 					Arguments = @"{[FileDir]}\{1}",
 					WorkingDirectory = string.Empty

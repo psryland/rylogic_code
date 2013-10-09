@@ -203,7 +203,7 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Click here to modify highlight.
+        ///   Looks up a localized string similar to Click to change colours.
         /// </summary>
         internal static string ClickToModifyHighlight {
             get {
@@ -212,10 +212,22 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Colours.
+        /// </summary>
+        internal static string Colours {
+            get {
+                return ResourceManager.GetString("Colours", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Command Line Syntax&lt;/title&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
+        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
         ///				font-family: sans-serif;
@@ -223,7 +235,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///		
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZNze4N3eecPn1nIPv06VPv1KlTxfv37zeLxeLImTNni [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVU [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string command_line_ref {
             get {
@@ -560,9 +572,9 @@ namespace RyLogViewer.Properties {
         ///				font-family: sans-serif;
         ///				font-size: 10pt;
         ///			}
-        ///		
+        ///
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAB5XElEQVR4Xu292XYjSbamxzu9g56k19L76Ervo0v1ZS/dSuo+fU6fqj5VWVmZlZVDZMzB4ExinmeQjDDt38wNMGz8Dt/gEBlk2L/yywABh0 [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAB5XElEQVR4Xu292XYjSbamxzu9g56k19L76Ervo0v1ZS/dSuo+fU6fqj5VWVmZlZVDZMzB4ExinmeQjDDt38wNMGz8Dt/gEBlk2L/yywABh09w [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string firstrun {
             get {
@@ -630,15 +642,6 @@ namespace RyLogViewer.Properties {
             get {
                 object obj = ResourceManager.GetObject("highlight", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Highlighting.
-        /// </summary>
-        internal static string Highlighting {
-            get {
-                return ResourceManager.GetString("Highlighting", resourceCulture);
             }
         }
         
@@ -902,6 +905,15 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Highlight.
+        /// </summary>
+        internal static string RowHighlight {
+            get {
+                return ResourceManager.GetString("RowHighlight", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Settings Files (*.xml)|*.xml|All files (*.*)|*.*.
         /// </summary>
         internal static string SettingsFileFilter {
@@ -996,31 +1008,12 @@ namespace RyLogViewer.Properties {
         ///		&lt;title&gt;First Run Tutorial&lt;/title&gt;
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
+        ///				font-family: sans-serif;
+        ///				font-size: 10pt;
         ///			}
         ///
         ///			body {
-        ///				background: url(&apos;background.png&apos;) no-repeat;
-        ///			}
-        ///
-        ///			h3 {
-        ///				font-family: arial;
-        ///			}
-        ///
-        ///			table {
-        ///				border: 1px solid black;
-        ///				border-collapse: collapse;
-        ///				width: 70%;
-        ///			}
-        ///
-        ///			th {
-        ///				border: 1px solid black;
-        ///				border-collapse: collapse;
-        ///			}
-        ///
-        ///			td {
-        ///				border: 1px solid black;
-        ///				border-collapse: collapse;
-        ///	 [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAB5XElEQVR4Xu292XYjSbamxzu9g56k19L76Ervo0v1ZS/dSuo+fU6fqj5VWVmZlZVDZMzB4ExinmeQjDDt38wNMGz8Dt/gEBlk2L/yywABh09w [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string totd {
             get {

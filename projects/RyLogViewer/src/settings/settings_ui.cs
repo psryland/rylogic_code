@@ -19,7 +19,6 @@ namespace RyLogViewer
 		private readonly Main        m_main;         // The main app
 		private readonly Settings    m_settings;     // The app settings changed by this UI
 		private readonly ToolTip     m_tt;           // Tooltips
-		private readonly ToolTip     m_balloon;      // Balloon hits
 		private readonly HoverScroll m_hover_scroll; // Hover scroll for the pattern grid
 		private List<Highlight>      m_highlights;   // The highlight patterns currently in the grid
 		private List<Filter>         m_filters;      // The filter patterns currently in the grid
@@ -39,10 +38,21 @@ namespace RyLogViewer
 		{
 			public const string Active       = "Active";
 			public const string Pattern      = "Pattern";
-			public const string Modify       = "Modify";
-			public const string Highlighting = "Highlighting";
+			public const string Edit         = "Edit";
+			public const string Colours      = "Colours";
+			public const string Highlight    = "Highlight";
 			public const string Behaviour    = "IfMatch";
 			public const string ClickAction  = "ClickAction";
+		}
+		private static class ColumnTT
+		{
+			public const string Active      = "Enable or disable the pattern";
+			public const string Pattern     = "The pattern used to match lines in the log data";
+			public const string Edit        = "Click to edit the pattern in the editor";
+			public const string Colours     = "The colours to use when highlighting lines for the highlight pattern";
+			public const string Highlight   = "Highlight the full row, or just the parts that match the highlight pattern";
+			public const string Behaviour   = "Whether to keep or remove the lines that match this filter pattern";
+			public const string ClickAction = "The command line executed when a row matching the pattern is double clicked";
 		}
 
 		public enum ESpecial
@@ -81,7 +91,6 @@ namespace RyLogViewer
 			m_settings     = settings;
 			m_special      = special;
 			m_tt           = new ToolTip();
-			m_balloon      = new ToolTip{IsBalloon = true,UseFading = true,ReshowDelay = 0};
 			m_hover_scroll = new HoverScroll();
 
 			ReadSettings();
@@ -143,7 +152,6 @@ namespace RyLogViewer
 			Disposed += (s,a) =>
 				{
 					m_tt.Dispose();
-					m_balloon.Dispose();
 					m_hover_scroll.Dispose();
 				};
 
@@ -543,10 +551,11 @@ namespace RyLogViewer
 			m_grid_highlight.VirtualMode         = true;
 			m_grid_highlight.AutoGenerateColumns = false;
 			m_grid_highlight.ColumnCount         = m_grid_highlight.RowCount = 0;
-			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active       ,HeaderText = Resources.Active       ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern      ,HeaderText = Resources.Pattern      ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Highlighting ,HeaderText = Resources.Highlighting ,FillWeight = 100 ,ReadOnly = true ,DefaultCellStyle = hl_style});
-			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Modify       ,HeaderText = Resources.Edit         ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = Resources.Active       ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
+			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = Resources.Pattern      ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
+			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Highlight ,HeaderText = Resources.RowHighlight ,FillWeight = 30  ,ReadOnly = true ,ToolTipText = ColumnTT.Highlight});
+			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Colours   ,HeaderText = Resources.Colours      ,FillWeight = 100 ,ReadOnly = true ,DefaultCellStyle = hl_style ,ToolTipText = ColumnTT.Colours});
+			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = Resources.Edit         ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_highlight.KeyDown          += DataGridView_Extensions.SelectAll;
@@ -586,10 +595,10 @@ namespace RyLogViewer
 			m_grid_filter.VirtualMode         = true;
 			m_grid_filter.AutoGenerateColumns = false;
 			m_grid_filter.ColumnCount         = m_grid_filter.RowCount = 0;
-			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = Resources.Active  ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Behaviour ,HeaderText = Resources.IfMatch ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader});
-			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Modify    ,HeaderText = Resources.Edit    ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active    ,HeaderText = Resources.Active  ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
+			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Behaviour ,HeaderText = Resources.IfMatch ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ToolTipText = ColumnTT.Behaviour});
+			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
+			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = Resources.Edit    ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
@@ -640,9 +649,9 @@ namespace RyLogViewer
 			m_grid_transform.VirtualMode         = true;
 			m_grid_transform.AutoGenerateColumns = false;
 			m_grid_transform.ColumnCount         = m_grid_transform.RowCount = 0;
-			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Modify  ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Active  ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
+			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
+			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Edit    ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_transform.KeyDown            += DataGridView_Extensions.Copy;
 			m_grid_transform.KeyDown            += DataGridView_Extensions.SelectAll;
@@ -682,10 +691,10 @@ namespace RyLogViewer
 			m_grid_action.VirtualMode         = true;
 			m_grid_action.AutoGenerateColumns = false;
 			m_grid_action.ColumnCount         = m_grid_action.RowCount = 0;
-			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active       ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern      ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.ClickAction  ,HeaderText = Resources.Action  ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Modify       ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Active      ,HeaderText = Resources.Active  ,FillWeight = 25  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Active});
+			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern     ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
+			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.ClickAction ,HeaderText = Resources.Action  ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.ClickAction});
+			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit        ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_action.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
 			m_grid_action.KeyDown          += DataGridView_Extensions.Copy;
 			m_grid_action.KeyDown          += DataGridView_Extensions.SelectAll;
@@ -796,7 +805,6 @@ namespace RyLogViewer
 						"Set the line ending characters to expect in the log data.\r\n" +
 						"Use '<CR>' for carriage return, '<LF>' for line feed.\r\n" +
 						"Leave blank to auto detect", 7000);
-					//m_edit_line_ends.ShowHintBalloon(m_balloon, "Set the line ending characters to expect in the log data.\r\nUse '<CR>' for carriage return, '<LF>' for line feed.\r\nLeave blank to auto detect");
 					m_special = ESpecial.None;
 					break;
 				}
@@ -867,6 +875,45 @@ namespace RyLogViewer
 			FlagAsChanged(grid);
 		}
 
+		///// <summary>Handle the mouse hovering over the grid</summary>
+		//private void OnMouseHover(DataGridView grid)
+		//{
+		//	var pt = grid.PointToClient(MousePosition);
+		//	var hit = grid.HitTest(pt.X, pt.Y);
+		//	if (hit.Type != DataGridViewHitTestType.ColumnHeader) return;
+		//	var col = grid.Columns[hit.ColumnIndex];
+		//	var tip_pt = new Point(hit.ColumnX + col.Width/2, hit.RowY + 3);
+
+		//	switch (col.Name)
+		//	{
+		//	default:
+		//		Debug.Assert(false, "Column header hint needed");
+		//		break;
+		//	case ColumnNames.Active:
+		//		col.ToolTipText = "Enable or disable the pattern";
+		//		, tip_pt);
+		//		break;
+		//	case ColumnNames.Pattern:
+		//		Misc.ShowHint(grid, "The pattern used to match lines in the log data", tip_pt);
+		//		break;
+		//	case ColumnNames.Edit:
+		//		Misc.ShowHint(grid, "Click to edit this pattern in the editor", tip_pt);
+		//		break;
+		//	case ColumnNames.Colours:
+		//		Misc.ShowHint(grid, "The colours to use when highlighting lines for the highlight pattern", tip_pt);
+		//		break;
+		//	case ColumnNames.Highlight:
+		//		Misc.ShowHint(grid, "Highlight the full row, or just the parts that match the highlight pattern", tip_pt);
+		//		break;
+		//	case ColumnNames.Behaviour:
+		//		Misc.ShowHint(grid, "Whether to keep or remove the lines that match this filter pattern", tip_pt);
+		//		break;
+		//	case ColumnNames.ClickAction:
+		//		Misc.ShowHint(grid, "The command line executed when a row matching the pattern is double clicked", tip_pt);
+		//		break;
+		//	}
+		//}
+
 		/// <summary>Handle mouse down on the patterns grid</summary>
 		private static void OnMouseDown<T>(DataGridView grid, List<T> patterns, MouseEventArgs e)
 		{
@@ -882,11 +929,11 @@ namespace RyLogViewer
 		{
 			if (e.RowIndex < 0 || e.RowIndex >= patterns.Count) { e.Value = ""; return; }
 			var cell = grid[e.ColumnIndex, e.RowIndex];
-			T pat = patterns[e.RowIndex];
-			Pattern   pt = pat as Pattern;
-			Highlight hl = pat as Highlight;
-			Filter    ft = pat as Filter;
-			ClkAction ac = pat as ClkAction;
+			var pat = patterns[e.RowIndex];
+			var pt = pat as Pattern;
+			var hl = pat as Highlight;
+			var ft = pat as Filter;
+			var ac = pat as ClkAction;
 
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
@@ -898,7 +945,7 @@ namespace RyLogViewer
 				if (pt != null && pt.Invert) val = "not "+val;
 				e.Value = val;
 				break;
-			case ColumnNames.Highlighting:
+			case ColumnNames.Colours:
 				e.Value = Resources.ClickToModifyHighlight;
 				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? Gfx.Blend(Color.FromArgb(255, hl.BackColour), Color.White, 1f - hl.BackColour.A/255f) : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
@@ -907,6 +954,12 @@ namespace RyLogViewer
 				if (ft != null) switch (ft.IfMatch) {
 				case EIfMatch.Keep:   e.Value = "Keep"; break;
 				case EIfMatch.Reject: e.Value = "Reject"; break;
+				}
+				break;
+			case ColumnNames.Highlight:
+				if (hl != null) {
+				if (hl.BinaryMatch) e.Value = "Full";
+				else                e.Value = "Partial";
 				}
 				break;
 			case ColumnNames.ClickAction:
@@ -922,18 +975,26 @@ namespace RyLogViewer
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			T pat = patterns[e.RowIndex];
-			Highlight hl = pat as Highlight;
-			Filter    ft = pat as Filter;
-			ClkAction ac = pat as ClkAction;
+			var hl = pat as Highlight;
+			var ft = pat as Filter;
+			var ac = pat as ClkAction;
 
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
-			case ColumnNames.Active: pat.Active = !pat.Active; break;
-			case ColumnNames.Modify:
+			case ColumnNames.Active:
+				pat.Active = !pat.Active;
+				break;
+			case ColumnNames.Edit:
 				ctrl.EditPattern(patterns[e.RowIndex]);
 				break;
-			case ColumnNames.Highlighting:
+			case ColumnNames.Highlight:
+				if (hl != null)
+				{
+					hl.BinaryMatch = !hl.BinaryMatch;
+				}
+				break;
+			case ColumnNames.Colours:
 				if (hl != null)
 				{
 					var dlg = new ColourPickerUI(hl.ForeColour, hl.BackColour);
@@ -975,7 +1036,7 @@ namespace RyLogViewer
 			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			T pat = patterns[e.RowIndex];
+			var pat = patterns[e.RowIndex];
 
 			ctrl.EditPattern(pat);
 			FlagAsChanged(grid);
@@ -987,7 +1048,7 @@ namespace RyLogViewer
 			if (e.RowIndex    < 0 || e.RowIndex    >= patterns.Count  ) return;
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			T pat = patterns[e.RowIndex];
+			var pat = patterns[e.RowIndex];
 
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
@@ -995,7 +1056,7 @@ namespace RyLogViewer
 			case ColumnNames.Active:
 				e.Value = pat.Active ? Resources.pattern_active : Resources.pattern_inactive;
 				break;
-			case ColumnNames.Modify:
+			case ColumnNames.Edit:
 				e.Value = Resources.pencil;
 				break;
 			}
