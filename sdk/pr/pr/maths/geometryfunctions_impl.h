@@ -24,7 +24,7 @@ namespace pr
 		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f, "");
 		return Dot4(plane, point);
 	}
-	
+
 	// Return the distance that 'point' is from the infinite line: 'line'
 	inline float Distance_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& end)
 	{
@@ -33,7 +33,7 @@ namespace pr
 		float p_dot_l = Dot3(to_point, line);
 		return Sqrt(Length3Sq(to_point) - Sqr(p_dot_l) / Length3Sq(line));
 	}
-	
+
 	// Return the minimum distance between two infinite lines
 	inline float Distance_InfiniteLineToInfiniteLine(v4 const& s0, v4 const& line0, v4 const& s1, v4 const& line1)
 	{
@@ -45,19 +45,19 @@ namespace pr
 		if (FEqlZero3(b))	return Sqrt(a_len_sq - Sqr(Dot3(a, line0)) / Length3Sq(line0));
 		else				return Dot3(a, b) / Length3Sq(b);
 	}
-	
+
 	// Returns the squared distance from 'point' to 'line'
 	inline float DistanceSq_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& line)
 	{
 		v4 sp = point - start;
 		return Length3Sq(sp) - Sqr(Dot3(sp, line)) / Length3Sq(line);
 	}
-	
+
 	// Returns the squared distance from 'point' to 'line'
 	inline float DistanceSq_PointToLineSegment(v4 const& point, const Line3& line)
 	{
 		v4 point_to_line = point - line.start();
-		
+
 		float p_dot_l = Dot3(point_to_line, line.m_line);
 		if (p_dot_l <= 0.0f) return Length3Sq(point_to_line);
 
@@ -66,7 +66,7 @@ namespace pr
 
 		return Length3Sq(point_to_line) - p_dot_l * p_dot_l / l_dot_l;
 	}
-	
+
 	// Returns the squared distance from 'point' to 'bbox'
 	inline float DistanceSq_PointToBoundingBox(v4 const& point, BoundingBox const& bbox)
 	{
@@ -81,28 +81,28 @@ namespace pr
 		else if (point.z > upper.z) dist_sq += Sqr(point.z - upper.z);
 		return dist_sq;
 	}
-	
+
 	// Return the 2D volume (i.e. area) of the triangle
 	inline float Volume_Triangle(v4 const& a, v4 const& b, v4 const& c)
 	{
 		PR_ASSERT(PR_DBG_MATHS, a.w == 1.0f && b.w == 1.0f && c.w == 1.0f, "");
 		return Length3(Cross3(b-a, c-a)) / 2.0f;
 	}
-	
+
 	// Return the volume of a tetrahedron
 	inline float Volume_Tetrahedron(v4 const& a, v4 const& b, v4 const& c, v4 const& d)
 	{
 		PR_ASSERT(PR_DBG_MATHS, a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && d.w == 1.0f, "");
 		return Triple3(b-a, c-a, d-a) / 6.0f;
 	}
-	
-	// Returns true if 'point' lies infront of the plane described by abc (Cross3(b-a, c-a))
+
+	// Returns true if 'point' lies in front of the plane described by abc (Cross3(b-a, c-a))
 	inline bool PointInFrontOfPlane(v4 const& point, v4 const& a, v4 const& b, v4 const& c)
 	{
 		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f, "");
 		return Triple3(point - a, b - a, c - a) >= 0.0f;
 	}
-	
+
 	// Returns the point closest to 'point' on 'plane'
 	inline v4 ClosestPoint_PointToPlane(v4 const& point, Plane const& plane)
 	{
@@ -112,7 +112,7 @@ namespace pr
 	{
 		return ClosestPoint_PointToPlane(point, plane::make(a, b, c));
 	}
-	
+
 	// Returns the parametric value of the closest point on 'line'
 	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& end, float& t)
 	{
@@ -125,7 +125,7 @@ namespace pr
 	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& end)	{ float t; return ClosestPoint_PointToInfiniteLine(point, start, end, t); }
 	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, const Line3& line, float& t)	{		   return ClosestPoint_PointToInfiniteLine(point, line.m_point, line.m_point + line.m_line, t); }
 	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, const Line3& line)				{ float t; return ClosestPoint_PointToInfiniteLine(point, line.m_point, line.m_point + line.m_line, t); }
-	
+
 	// Returns the parametric value of the closest point on 'line'
 	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, v4 const& start, v4 const& end, float& t)
 	{
@@ -145,7 +145,7 @@ namespace pr
 	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, v4 const& start, v4 const& end)	{ float t; return ClosestPoint_PointToLineSegment(point, start, end, t); }
 	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, const Line3& line, float& t)		{          return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t); }
 	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, const Line3& line)				{ float t; return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t); }
-	
+
 	// Returns the point on an AABB that is closest to 'point'
 	inline v4 ClosestPoint_PointToBoundingBox(v4 const& point, BoundingBox const& bbox)
 	{
@@ -158,7 +158,7 @@ namespace pr
 		result.w = 1.0f;
 		return result;
 	}
-	
+
 	// Returns the closest point on an ellipse to 'x','y'.
 	// 'x','y' are a point in ellipse space
 	// 'major' is the size of the major radius of the ellipse (along the x axis)
@@ -168,7 +168,7 @@ namespace pr
 	inline v2 ClosestPoint_PointToEllipse(float x, float y, float major, float minor)
 	{
 		PR_ASSERT(PR_DBG_MATHS, major >= 0.0f && minor >= 0.0f && major >= minor, "");
-		
+
 		// Special case minor axis lengths of zero
 		if( minor < maths::tiny )
 			return v2::make(Clamp(x, -major, major), 0.0f);
@@ -192,7 +192,7 @@ namespace pr
 		while( !FEql(bounds[0], bounds[1]) );
 		return nearest;
 	}
-	
+
 	// Returns the closest point on a triangle to 'point'. From "Real time collision detection" by Christer Ericson
 	namespace impl
 	{
@@ -238,7 +238,7 @@ namespace pr
 				barycentric.set(1.0f - w, 0.0f, w, 0.0f);
 				return a + w * ac;						// Barycentric coordinates (1-w, 0, w)
 			}
-			
+
 			// Check if P in edge region of BC, if so return projection of P onto BC
 			float va = d3*d6 - d5*d4;
 			if( va <= 0.0f && d4 - d3 >= 0.0f && d5 - d6 >= 0.0f )
@@ -260,7 +260,7 @@ namespace pr
 	inline v4 ClosestPoint_PointToTriangle(v4 const& point, v4 const& a, v4 const& b, v4 const& c)					{ v4 barycentric; return impl::ClosestPoint_PointToTriangle<void>(point, a, b, c, barycentric); }
 	inline v4 ClosestPoint_PointToTriangle(v4 const& point, const v4* tri, v4& barycentric)							{ return impl::ClosestPoint_PointToTriangle<void>(point, tri[0], tri[1], tri[2], barycentric); }
 	inline v4 ClosestPoint_PointToTriangle(v4 const& point, const v4* tri)											{ v4 barycentric; return impl::ClosestPoint_PointToTriangle<void>(point, tri[0], tri[1], tri[2], barycentric); }
-	
+
 	namespace impl
 	{
 		// Returns the closest point on a tetrahedron to 'point'. From "Real time collision detection" by Christer Ericson
@@ -314,7 +314,7 @@ namespace pr
 	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4 const& d)					{ v4 barycentric; return impl::ClosestPoint_PointToTetrahedron<void>(point, a, b, c, d, barycentric); }
 	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, const v4* tetra, v4& barycentric)									{ return impl::ClosestPoint_PointToTetrahedron<void>(point, tetra[0], tetra[1], tetra[2], tetra[3], barycentric); }
 	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, const v4* tetra)														{ v4 barycentric; return impl::ClosestPoint_PointToTetrahedron<void>(point, tetra[0], tetra[1], tetra[2], tetra[3], barycentric); }
-	
+
 	// TODO: These should really do the minimal work in the impl:: versions and the extra work in the inline versions
 	// Make distanceSq a parameter to impl::XXX
 	namespace impl
@@ -334,7 +334,7 @@ namespace pr
 			float c					= Dot3(line0, separation);
 			float line0_length_sq	= Length3Sq(line0);
 			float line1_length_sq	= Length3Sq(line1);
-			
+
 			#pragma warning(disable: 4127)// conditional expression is constant
 			if( test_degenerates )
 			#pragma warning(default: 4127)
@@ -397,7 +397,7 @@ namespace pr
 		v4 pt1 = (1.0f - t1) * s1 + t1 * e1;
 		dist_sq = Length3Sq(pt1 - pt0);
 	}
-	
+
 	namespace impl
 	{
 		// Finds the closest point on a line segment to an infinite line.
@@ -449,7 +449,7 @@ namespace pr
 		v4 pt1 = s1 + t1 * line1;
 		dist_sq = Length3Sq(pt0 - pt1);
 	}
-	
+
 	namespace impl
 	{
 		// Returns the parametric values of the closest points on two infinite lines
@@ -457,7 +457,7 @@ namespace pr
 		void ClosestPoint_InfiniteLineToInfiniteLine(v4 const& s0, v4 const& line0, v4 const& s1, v4 const& line1, float& t0, float& t1)
 		{
 			// Degenerate lines should not be passed to this function
-			PR_ASSERT(PR_DBG_MATHS, !IsZero3(line0) && !IsZero3(line1), ""); 
+			PR_ASSERT(PR_DBG_MATHS, !IsZero3(line0) && !IsZero3(line1), "");
 			PR_ASSERT(PR_DBG_MATHS, s0.w == 1.0f && line0.w == 0.0f && s1.w == 1.0f && line1.w == 0.0f, "");
 
 			v4 r    = s0 - s1;
@@ -468,7 +468,7 @@ namespace pr
 			if (d == 0.0f) { t0 = 0.0f; t1 = -Dot3(r, line0)/a; return; } // The lines are parallel, return the start of line0 as the nearest point
 			float c = Dot3(line0, r);
 			float f = Dot3(line1, r);
-			
+
 			t0 = (b*f - c*e) / d;
 			t1 = (a*f - b*c) / d;
 		}
@@ -477,13 +477,13 @@ namespace pr
 	{
 		impl::ClosestPoint_InfiniteLineToInfiniteLine<void>(s0, line0, s1, line1, t0, t1);
 	}
-	
+
 	// Return a point that is the weighted result of verts 'a','b','c' and 'bary'
 	inline v4 BaryPoint(v4 const& a, v4 const& b, v4 const& c, v4 const& bary)
 	{
 		return bary.x * a + bary.y * b + bary.z * c;
 	}
-	
+
 	// Return the bary centric coordinates for 'point' with respect to triangle a,b,c
 	inline v4 BaryCentric(v4 const& point, v4 const& a, v4 const& b, v4 const& c)
 	{
@@ -503,7 +503,7 @@ namespace pr
 		bary.w = 0.0f;
 		return bary;
 	}
-	
+
 	// Returns true if a point projects within a triangle using the triangle normal
 	inline bool PointWithinTriangle(v4 const& point, v4 const& a, v4 const& b, v4 const& c, float tol)
 	{
@@ -512,7 +512,7 @@ namespace pr
 				bary.y >= -tol && bary.y <= 1.0f + tol &&
 				bary.z >= -tol && bary.z <= 1.0f + tol;
 	}
-	
+
 	// Returns true if a point projects within a triangle using the triangle normal
 	inline bool PointWithinTriangle2(v4 const& point, v4 const& a, v4 const& b, v4 const& c, float tol)
 	{
@@ -521,7 +521,7 @@ namespace pr
 		v4 c2 = Cross3(point - c, a - c);
 		return Dot3(c0, c1) >= -tol && Dot3(c0, c2) >= -tol;
 	}
-	
+
 	// Returns true if a point projects within a triangle using the triangle normal. Also returns the point
 	inline bool PointWithinTriangle(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4& pt)
 	{
@@ -531,7 +531,7 @@ namespace pr
 				bary.y >= 0.0f && bary.y <= 1.0f &&
 				bary.z >= 0.0f && bary.z <= 1.0f;
 	}
-	
+
 	// Returns true if 'point' lies on or within the tetrahedron described by abcd (i.e. behind all of it's planes)
 	inline bool PointWithinTetrahedron(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4 const& d)
 	{
@@ -540,7 +540,7 @@ namespace pr
 				!PointInFrontOfPlane(point, a, d, b) &&
 				!PointInFrontOfPlane(point, d, c, b);
 	}
-	
+
 	// Given a 2D line that passes through 'a' and 'b' and another that passes through 'c' and 'd'
 	// returns true if the lines intersect, false if they don't. Returns the point of intersect
 	inline bool Intersect2D_InfiniteLineToInfiniteLine(v2 const& b, v2 const& a, v2 const& d, v2 const& c, v2& intersect)
@@ -555,7 +555,7 @@ namespace pr
 		intersect.y = (cd.y * e - ab.y * f) / denom;
 		return true;
 	}
-	
+
 	// Given a line that passes through 's' and 'e' and triangle 'abc'
 	// Return true if the line intersects the triangle and if so, also
 	// return the barycentric coordinates 'u,v,w' and parametric value 't'
@@ -598,7 +598,7 @@ namespace pr
 		if (f2b)  { *f2b = sign; }
 		return true;
 	}
-	
+
 	// Given a line passing through 's' and 'e' and a ccw triangle 'a', 'b', 'c',
 	// Returns true if the line pierces triangle.
 	// Returns the barycentric coordinates (u,v,w) of the intersection point.
@@ -613,7 +613,7 @@ namespace pr
 		v4 sa   = a - s;
 		v4 sb   = b - s;
 		v4 sc   = c - s;
-		
+
 		// Test if 'line' is on or inside the edges ab, bc, and ca. Done by testing
 		// that the signed tetrahedral volumes are all positive
 		bary.x = Triple3(line, sc, sb);
@@ -634,7 +634,7 @@ namespace pr
 		front_to_back = (denom > 0.0f) * 2.0f - 1.0f;
 		return bary.x > -maths::tiny && bary.y > -maths::tiny && bary.z > -maths::tiny;
 	}
-	
+
 	// Test if a line segment specified by points 'lineS' and 'lineE' intersects AABB b
 	inline bool Intersect_LineSegmentToBoundingBox(v4 const& lineS, v4 const& lineE, BoundingBox const& bbox)
 	{
@@ -661,7 +661,7 @@ namespace pr
 		// No separating axis found; segment must be overlapping AABB
 		return true;
 	}
-	
+
 	// Returns true if the infinite line that passes through 's' and 'e' passes
 	// through the infinite plane 'plane' (i.e. returns false if the line and plane are
 	// parallel but not coinsident). Also returns the parametric value of the intercept 't'.
@@ -681,12 +681,12 @@ namespace pr
 		if (t) {*t = T;}
 		return T >= tmin && T < tmax;
 	}
-	
+
 	// Clip the line segment starting at 'lineS' and ending at 'lineE' with initial
 	// parametric values 't0' and 't1' to the infinite plane described by 'plane'.
 	// The portion of the line on the  positive side of the plane remains, described
 	// by updated 't0' and 't1' values. 'plane' can be a normalised or unnormalised plane.
-	// Returns true if the line is not wholely clipped away. 
+	// Returns true if the line is not wholely clipped away.
 	inline bool Clip_LineSegmentToPlane(Plane const& plane, v4 const& lineS, v4 const& lineE, float& t0, float& t1)
 	{
 		// Find the distances to the plane for the start and end of the line
@@ -701,7 +701,7 @@ namespace pr
 		if( d0 > 0.0f && t < t1 ) 	{ t1 = t; } // Move the end point onto the plane
 		return t0 < t1;
 	}
-	
+
 	// Clip 'line' to the infinite plane 'plane'. Returns true if the line is not wholely clipped away
 	inline bool Clip_LineSegmentToPlane(Plane const& plane, v4& lineS, v4& lineE)
 	{
@@ -716,7 +716,7 @@ namespace pr
 		if( d0 > 0.0f ) { lineE = lineS + intersept; } // Move the end point onto the plane
 		return true;
 	}
-	
+
 	// Clip the line segment against a bounding box.
 	// Remember to initialise t0, t1.
 	// e.g. float t0 = -maths::float_max, t1 = maths::float_max;
@@ -753,11 +753,11 @@ namespace pr
 					return false;
 			}
 		}
-		
+
 		// Ray intersects all 3 slabs
 		return true;
 	}
-	
+
 	// Clip 'line' to the infinite plane 'plane'. Returns true if the line is not wholely clipped away
 	inline bool Clip(Plane const& plane, Line3& line)
 	{
@@ -779,7 +779,7 @@ namespace pr
 		}
 		return true;
 	}
-	
+
 	// Clip 'line' to the bounding box 'bbox'. Returns true if the line is not wholy clipped away
 	// Note: 'line' and 'bbox' must be in the same space
 	inline bool Clip(BoundingBox const& bbox, Line3& line)
@@ -792,7 +792,7 @@ namespace pr
 		line.m_line  *= (t1 - t0);
 		return true;
 	}
-	
+
 	// Clip a line segment to between two parallel planes.
 	// 'dist1' is the near plane distance, 'dist2' is the far plane distance
 	// Returns true if any part of the line segment is within the slab
@@ -800,7 +800,7 @@ namespace pr
 	{
 		PR_ASSERT(PR_DBG_MATHS, dist1 <= dist2, "");
 		Plane plane; plane::set(plane, norm, dist1);
-		
+
 		float slab_width = dist2 - dist1;
 		float d1 = Distance_PointToPlane(s ,plane);
 		float d2 = Distance_PointToPlane(e ,plane);
@@ -816,7 +816,7 @@ namespace pr
 		else if( d2 > slab_width )	{ float p = (d1 - slab_width) / dsum; e = start + line * p; } // Intercept with the far plane
 		return true;
 	}
-	
+
 	// Return the circum radius of three points
 	// 'centre' is only defined if the returned radius is less than float max
 	inline float CircumRadius(v4 const& a, v4 const& b, v4 const& c, v4& centre)
@@ -829,7 +829,7 @@ namespace pr
 		float e = abab * acac;
 		float d = 2.0f * (e - abac * abac);
 		if( Abs(d) <= maths::tiny ) return maths::float_max;
-		
+
 		float s = (e - acac * abac) / d;
 		float t = (e - abab * abac) / d;
 
@@ -947,7 +947,6 @@ namespace pr
 //        q += (dist / maxdist) * ac;
 //}
 //
-
 
 //
 //
@@ -1187,7 +1186,7 @@ namespace pr
 //    Plane m; m.n = n; m.d = -Dot(n, p.v[0]);
 //    // No intersection if sphere not intersecting plane of polygon
 //    if (!TestSpherePlane(s, m)) return 0;
-//    // Test to see if any one of the polygon edges pierces the sphere   
+//    // Test to see if any one of the polygon edges pierces the sphere
 //    for (int k = p.numVerts, i = 0, j = k - 1; i < k; j = i, i++) {
 //        float t;
 //        Point q;
@@ -1345,7 +1344,7 @@ namespace pr
 //            if (tmin > tmax) return 0;
 //        }
 //    }
-//    // Ray intersects all 3 slabs. Return point (q) and intersection t value (tmin) 
+//    // Ray intersects all 3 slabs. Return point (q) and intersection t value (tmin)
 //    q = p + d * tmin;
 //    return 1;
 //}
@@ -1556,7 +1555,7 @@ namespace pr
 //    // set to +FLT_MAX. For a line, additionally tfirst should be set to –FLT_MAX
 //    tfirst = 0.0f;
 //    tlast = 1.0f;
-//    // Intersect segment against each plane 
+//    // Intersect segment against each plane
 //    for (int i = 0; i < n; i++) {
 //        float denom = Dot(p[i].n, d);
 //        float dist = p[i].d - Dot(p[i].n, a);
@@ -2028,4 +2027,3 @@ namespace pr
 //    return 1;
 //}
 //
-
