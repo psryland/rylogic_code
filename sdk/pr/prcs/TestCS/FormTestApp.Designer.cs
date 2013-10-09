@@ -60,7 +60,7 @@
 			// m_menu_file_exit
 			// 
 			this.m_menu_file_exit.Name = "m_menu_file_exit";
-			this.m_menu_file_exit.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_file_exit.Size = new System.Drawing.Size(92, 22);
 			this.m_menu_file_exit.Text = "E&xit";
 			// 
 			// testsToolStripMenuItem

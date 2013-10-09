@@ -66,14 +66,9 @@
       <HintPath>I:\MagicBullet\src\MagicBullet\MobileBullet\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -146,6 +141,16 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\settings\pattern_unittests.cs" />
+    <Compile Include="src\settings\swizzle.cs" />
+    <Compile Include="src\settings\swizzle_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\settings\swizzle_ui.Designer.cs">
+      <DependentUpon>swizzle_ui.cs</DependentUpon>
+    </Compile>
+    <Compile Include="src\settings\transform_subs.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\startup_options.cs" />
     <Compile Include="src\export_ui.cs">
       <SubType>Form</SubType>
@@ -230,18 +235,10 @@
     <Compile Include="src\settings\code_lookup_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings\swizzle.cs" />
-    <Compile Include="src\settings\swizzle_ui.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="src\settings\swizzle_ui.Designer.cs">
-      <DependentUpon>swizzle_ui.cs</DependentUpon>
-    </Compile>
     <Compile Include="src\tipoftheday.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\settings\transform.cs" />
-    <Compile Include="src\settings\transform_subs.cs" />
     <Compile Include="src\settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -415,6 +412,7 @@
     </Content>
     <Content Include="gen_licence.py" />
     <None Include="Resources\auto_refresh.include.htm" />
+    <Content Include="plugins\Readme.txt" />
     <Content Include="Resources\cripple_aggregate_files.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -715,6 +713,10 @@
     <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>prcs_vs2012</Name>
+    </ProjectReference>
+    <ProjectReference Include="ExtensionApi\RyLogViewerExtensions.csproj">
+      <Project>{8aa5340a-5c36-4c9d-a6a4-b035aabd3547}</Project>
+      <Name>RyLogViewerExtensions</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

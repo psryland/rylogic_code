@@ -29,9 +29,9 @@ namespace pr.util
 			T t = new T();
 			foreach (var prop in typeof(T).GetProperties())
 			{
-				object value = values[prop.Name];
+				var value = values[prop.Name];
 				if (value != null) prop.SetValue(t, value, null);
-				}
+			}
 			return t;
 		}
 	}

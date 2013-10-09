@@ -106,6 +106,7 @@
     <Compile Include="common\events_snapshot.cs" />
     <Compile Include="common\hglobal.cs" />
     <Compile Include="common\mime.cs" />
+    <Compile Include="common\plugin_loader.cs" />
     <Compile Include="common\ref_count.cs" />
     <Compile Include="common\rtf.cs" />
     <Compile Include="common\cache.cs" />

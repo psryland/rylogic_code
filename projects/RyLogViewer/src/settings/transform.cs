@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -45,10 +48,10 @@ namespace RyLogViewer
 		{
 			/// <summary>The id if the substitution to use on this tag</summary>
 			public readonly string Id;
-			
+
 			/// <summary>The range of characters covered by this tag</summary>
 			public Span Span;
-			
+
 			public Tag(string id, Span span)
 			{
 				Id = id;
@@ -60,20 +63,38 @@ namespace RyLogViewer
 			}
 		}
 
-		public static TxfmSubLoader SubLoader { get { return m_subs_loader; } }
-		private static readonly TxfmSubLoader m_subs_loader = new TxfmSubLoader();
+		internal static readonly Dictionary<string, ITransformSubstitution> Substitutors = GetSubstitutors();
+		private static Dictionary<string, ITransformSubstitution> GetSubstitutors()
+		{
+			var subs = new Dictionary<string, ITransformSubstitution>();
+
+			// Add built in substitutions (before the plugins so that built in subs can be replaced)
+			{ var s = new SubNoChange();   subs.Add(s.Name, s); }
+			{ var s = new SubToLower();    subs.Add(s.Name, s); }
+			{ var s = new SubToUpper();    subs.Add(s.Name, s); }
+			{ var s = new SubSwizzle();    subs.Add(s.Name, s); }
+			{ var s = new SubCodeLookup(); subs.Add(s.Name, s); }
+
+			// Loads dlls from the plugins directory looking for transform substitutions
+			var plugins = new PluginLoader<TransformSubstitutionAttribute, ITransformSubstitution>(
+				Path.Combine(Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty, "plugins"), true);
+			foreach (var sub in plugins.Plugins)
+				subs.Add(sub.Name, sub);
+
+			return subs;
+		}
 
 		public Transform() :this(EPattern.Substring, string.Empty, string.Empty) {}
 		public Transform(EPattern patn_type, string expr, string replace) :base(patn_type, expr)
 		{
-			Subs = new Dictionary<string, ITxfmSub>();
+			Subs = new Dictionary<string, ITransformSubstitution>();
 			Replace = replace;
 			PatternChanged += HandlePatternChanged;
 			UpdateSubs();
 		}
 		private Transform(Transform rhs) :base(rhs)
 		{
-			Subs = new Dictionary<string, ITxfmSub>(rhs.Subs);
+			Subs = new Dictionary<string, ITransformSubstitution>(rhs.Subs);
 			Replace = rhs.Replace;
 			PatternChanged += HandlePatternChanged;
 			UpdateSubs();
@@ -83,16 +104,25 @@ namespace RyLogViewer
 			// ReSharper disable PossibleNullReferenceException
 			Replace = node.Element(XmlTag.Replace).Value;
 
-			Subs = new Dictionary<string, ITxfmSub>();
+			Subs = new Dictionary<string, ITransformSubstitution>();
 			var subs = node.Element(XmlTag.Subs);
 			foreach (var s in subs.Elements(XmlTag.Sub))
 			{
-				string id   = s.Element(XmlTag.Id  ).Value;
-				string name = s.Element(XmlTag.Name).Value;
-				ITxfmSub sub;
-				try   { sub = SubLoader.Create(id, name); sub.FromXml(s.Element(XmlTag.SubData)); }
-				catch { sub = new SubNoChange{Id = id}; }
-				Subs.Add(sub.Id, sub);
+				var tag  = s.Element(XmlTag.Tag).Value;   // The capture tag that has an associated substitution
+				var name = s.Element(XmlTag.Name).Value;  // The name (and unique id) of the substitutor
+				try
+				{
+					// Create a new instance of the appropriate substitutor
+					// and populate it with instance specific data
+					var sub = Substitutors[name].Clone();
+					sub.FromXml(s.Element(XmlTag.SubData));
+					Subs.Add(tag, sub);
+				}
+				catch (Exception ex)
+				{
+					Log.Warn(this, ex, "Substitutor '{0}' was not found".Fmt(name));
+					Subs.Add(tag, new SubNoChange());
+				}
 			}
 
 			PatternChanged += HandlePatternChanged;
@@ -103,26 +133,25 @@ namespace RyLogViewer
 		/// <summary>Export this type to an xml node</summary>
 		public override XElement ToXml(XElement node)
 		{
+			// Add the base pattern properties
+			base.ToXml(node);
+			node.Add(new XElement(XmlTag.Replace ,Replace));
+
 			// Prepare the subs node
 			var subs = new XElement(XmlTag.Subs);
 			foreach (var s in Subs)
 				subs.Add(new XElement(XmlTag.Sub,
-					new XElement(XmlTag.Name ,s.Value.Name),
-					new XElement(XmlTag.Id   ,s.Value.Id  ),
-					s.Value.ToXml(new XElement(XmlTag.SubData))
+					new XElement(XmlTag.Tag  ,s.Key),          // The capture tag that the sub applies to
+					new XElement(XmlTag.Name ,s.Value.Name),   // The human readable name of the substitutor
+					s.Value.ToXml(new XElement(XmlTag.SubData))// Instance specific data for the substitutor
 					));
+			node.Add(subs);
 
-			base.ToXml(node);
-			node.Add
-			(
-				new XElement(XmlTag.Replace ,Replace),
-				subs
-			);
 			return node;
 		}
 
-		/// <summary>A map of substitutions to apply for each capture tag</summary>
-		public Dictionary<string, ITxfmSub> Subs { get; private set; }
+		/// <summary>A map from capture tag to the substitutions to apply</summary>
+		public Dictionary<string, ITransformSubstitution> Subs { get; private set; }
 
 		/// <summary>The template string used to create the transformed row</summary>
 		public string Replace { get; set; }
@@ -154,7 +183,7 @@ namespace RyLogViewer
 				// All tags in 'Replace' must exist in the match expression
 				if (!GetTags(Replace).All(t => Subs.ContainsKey(t.Id)))
 					return new ArgumentException("The replace pattern contains unknown tags");
-				
+
 				// No prob, bob!
 				return null;
 			}
@@ -165,16 +194,16 @@ namespace RyLogViewer
 		public string Txfm(string text, out List<Capture> src_caps, out List<Capture> dst_caps)
 		{
 			Debug.Assert(IsValid, "Shouldn't be calling this unless the transform is valid");
-			
+
 			src_caps  = new List<Capture>();
 			dst_caps  = new List<Capture>();
-			
+
 			// If 'text' doesn't match the 'Match' expression, return an empty map
 			Match match = Regex.Match(text);
 			if (!match.Success) return text;
-			
+
 			var caps = new Dictionary<string,Capture>();
-			
+
 			// Get the map of capture ids to captured values from 'text'
 			var ids  = CaptureGroupNames;  // The collection of tags in the match template
 			var grps = match.Groups;       // The captures from 'text' (starting at index 1, elem zero is always the whole match)
@@ -185,14 +214,14 @@ namespace RyLogViewer
 				caps.Add(cap.Id, cap);
 				src_caps.Add(cap);
 			}
-			
+
 			string result = text;
 			result = result.Remove(grps[0].Index, grps[0].Length);
 			result = result.Insert(grps[0].Index, Replace);
-			
+
 			// Build a list of the tags to be replaced in the result string
 			List<Tag> rtags = GetTags(result).ToList();
-			
+
 			// Perform the substitutions
 			int ofs = 0;
 			foreach (Tag t in rtags)
@@ -203,14 +232,14 @@ namespace RyLogViewer
 				dst_caps.Add(new Capture(t.Id, sub, new Span(t.Span.Index + ofs, sub.Length)));
 				ofs += sub.Length - t.Span.Count;
 			}
-			
+
 			// Sort 'dst_caps' so that it's in the same order as 'src_caps'
 			for (int i = 0, j = 0; i != src_caps.Count && j != dst_caps.Count; ++i)
 			{
 				// Find src_caps[i].Id in dst_caps
 				string id = src_caps[i].Id;
 				int idx = dst_caps.IndexOf(c => c.Id == id);
-				
+
 				// If found move it to position j
 				if (idx != -1) dst_caps.Swap(idx, j++);
 			}
@@ -268,12 +297,12 @@ namespace RyLogViewer
 		{
 			// Preserve the old subs map so we can merge it back in
 			var subs = Subs;
-			
+
 			// Build a new map of capture ids to default substitution objects
-			Subs = new Dictionary<string,ITxfmSub>();
+			Subs = new Dictionary<string, ITransformSubstitution>();
 			foreach (var id in CaptureGroupNames)
-				Subs.Add(id, new SubNoChange{Id = id});
-			
+				Subs.Add(id, new SubNoChange());
+
 			// Merge the old list of subs back into the Subs map
 			foreach (var s in subs)
 			{
@@ -286,13 +315,13 @@ namespace RyLogViewer
 		public static List<Transform> Import(string filters)
 		{
 			var list = new List<Transform>();
-			
+
 			XDocument doc;
 			try { doc = XDocument.Parse(filters); } catch { return list; }
 			if (doc.Root == null) return list;
 			foreach (XElement n in doc.Root.Elements(XmlTag.Transform))
 				try { list.Add(new Transform(n)); } catch {} // Ignore those that fail
-			
+
 			return list;
 		}
 
@@ -301,10 +330,10 @@ namespace RyLogViewer
 		{
 			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
-			
+
 			foreach (var tx in txfms)
 				doc.Root.Add(tx.ToXml(new XElement(XmlTag.Transform)));
-			
+
 			return doc.ToString(SaveOptions.None);
 		}
 
@@ -341,6 +370,7 @@ namespace RyLogViewer
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
@@ -374,7 +404,7 @@ namespace pr
 			}
 			[Test] public static void SubStringMatches0()
 			{
-				Check(new Transform(EPattern.Substring, "test", string.Empty), 
+				Check(new Transform(EPattern.Substring, "test", string.Empty),
 					"A test string",
 					"A  string",
 					new[]{"0"},
@@ -382,7 +412,7 @@ namespace pr
 			}
 			[Test] public static void SubStringMatches1()
 			{
-				Check(new Transform(EPattern.Substring, "test {a}", string.Empty), 
+				Check(new Transform(EPattern.Substring, "test {a}", string.Empty),
 					"A test string",
 					"A ",
 					new[]{"0","a"},
@@ -390,7 +420,7 @@ namespace pr
 			}
 			[Test] public static void SubStringMatches2()
 			{
-				Check(new Transform(EPattern.Substring, "test {a}", "{a} {0}"), 
+				Check(new Transform(EPattern.Substring, "test {a}", "{a} {0}"),
 					"A test string",
 					"A string test string",
 					new[]{"0","a"},
@@ -398,7 +428,7 @@ namespace pr
 			}
 			[Test] public static void WildcardMatches()
 			{
-				Check(new Transform(EPattern.Wildcard, "* {a}ing", "{a} {0}"), 
+				Check(new Transform(EPattern.Wildcard, "* {a}ing", "{a} {0}"),
 					"A test string",
 					"str A test string",
 					new[]{"0","a"},
@@ -406,7 +436,7 @@ namespace pr
 			}
 			[Test] public static void RegexMatches0()
 			{
-				Check(new Transform(EPattern.RegularExpression, "^(.*?) (.*?) (.*?)$", "{2} {1} {3}"), 
+				Check(new Transform(EPattern.RegularExpression, "^(.*?) (.*?) (.*?)$", "{2} {1} {3}"),
 					"A test string",
 					"test A string",
 					new[]{"0","1","2","3"},
@@ -414,7 +444,7 @@ namespace pr
 			}
 			[Test] public static void RegexMatches1()
 			{
-				Check(new Transform(EPattern.RegularExpression, "^(?<a>.*?) (?<b>.*?) (?<c>.*?)$", "{b} {a} {c}"), 
+				Check(new Transform(EPattern.RegularExpression, "^(?<a>.*?) (?<b>.*?) (?<c>.*?)$", "{b} {a} {c}"),
 					"A test string",
 					"test A string",
 					new[]{"0","a","b","c"},
@@ -423,4 +453,5 @@ namespace pr
 		}
 	}
 }
+
 #endif

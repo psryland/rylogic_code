@@ -139,7 +139,7 @@ namespace RyLogViewer
 			m_grid_subs.AutoGenerateColumns = false;
 			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Tag   ,HeaderText = "Tag"       ,FillWeight = 11.5f ,ReadOnly = true});
 			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Value ,HeaderText = "Value"     ,FillWeight = 37.6f ,ReadOnly = true});
-			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type  ,HeaderText = "Transform" ,FillWeight = 25.8f ,DataSource = Transform.SubLoader.TxfmSubs, DisplayMember = "Name", FlatStyle=FlatStyle.Flat});
+			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type  ,HeaderText = "Transform" ,FillWeight = 25.8f ,DataSource = Transform.Substitutors.Values.ToList() ,DisplayMember = "Name" ,FlatStyle=FlatStyle.Flat});
 			m_grid_subs.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Cfg   ,HeaderText = string.Empty,FillWeight =  5.0f ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 			m_grid_subs.DataError += (s,a) => Debug.Assert(false, "Data error in subs grid: {0}".Fmt(a.Exception.MessageFull()));
 			m_grid_subs.CurrentCellDirtyStateChanged += (s,a) => m_grid_subs.CommitEdit(DataGridViewDataErrorContexts.Commit);
@@ -193,7 +193,7 @@ namespace RyLogViewer
 			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
 			var cap = m_caps[e.RowIndex];
 
-			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
+			ITransformSubstitution sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default:
@@ -225,14 +225,14 @@ namespace RyLogViewer
 			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
 			var cap = m_caps[e.RowIndex];
 
-			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
+			ITransformSubstitution sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			case ColumnNames.Type:
 				if (sub != null && !e.Value.Equals(sub.Name))
 				{
-					var new_sub = Transform.SubLoader.Create(sub.Id, (string)e.Value);
-					Pattern.Subs[cap.Key] = new_sub;
+					var sub_name = (string)e.Value;
+					Pattern.Subs[cap.Key] = Transform.Substitutors[sub_name].Clone();
 					grid.Invalidate();
 				}
 				break;
@@ -263,7 +263,7 @@ namespace RyLogViewer
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			var cap = m_caps[e.RowIndex];
 
-			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
+			ITransformSubstitution sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
@@ -282,13 +282,13 @@ namespace RyLogViewer
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			var cap = m_caps[e.RowIndex];
 
-			ITxfmSub sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
+			ITransformSubstitution sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
 			default: return;
 			case ColumnNames.Tag:
 				if (sub != null)
-					m_edit_replace.SelectedText = "{"+sub.Id+"}";
+					m_edit_replace.SelectedText = "{"+cap.Key+"}";
 				break;
 			}
 		}

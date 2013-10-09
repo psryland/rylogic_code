@@ -1,21 +1,16 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
 namespace RyLogViewer
 {
 	/// <summary>A substitution that swaps code values for text values</summary>
-	[Export(typeof(ITxfmSub))]
-	public class CodeLookup :TxfmSubBase
+	public class SubCodeLookup :TransformSubstitutionBase
 	{
-		private readonly Dictionary<string, string> m_values;  // The code lookup table
-		
-		protected CodeLookup()
-		:base("Code Lookup")
-		{
-			m_values = new Dictionary<string, string>();
-		}
+		private readonly Dictionary<string, string> m_values = new Dictionary<string, string>(); // The code lookup table
+
+		/// <summary>The name of the substitution (must be unique)</summary>
+		public override string Name { get { return "Code Lookup"; } }
 
 		/// <summary>True if this substitution can be configured</summary>
 		public override bool Configurable { get { return true; } }
@@ -25,13 +20,13 @@ namespace RyLogViewer
 		{
 			get { return m_values.Count == 0 ? "<click here to configure>" : string.Format("{0} lookup codes", m_values.Count); }
 		}
-		
+
 		/// <summary>A method to setup the transform substitution's specific data</summary>
 		public override void Config(IWin32Window owner)
 		{
 			var dg = new CodeLookupUI(m_values);
 			if (dg.ShowDialog(owner) != DialogResult.OK) return;
-			
+
 			m_values.Clear();
 			foreach (var v in dg.Values)
 				m_values.Add(v.Key, v.Value);
@@ -43,7 +38,7 @@ namespace RyLogViewer
 			string result;
 			return m_values.TryGetValue(elem, out result) ? result : elem;
 		}
-		
+
 		/// <summary>Serialise data for the substitution to an xml node</summary>
 		public override XElement ToXml(XElement node)
 		{
