@@ -297,7 +297,7 @@ namespace RyLogViewer
 					XDocument doc = XDocument.Load(su.HighlightSetPath);
 					if (doc.Root == null) throw new InvalidDataException("Invalid highlight set, root xml node not found");
 					if (doc.Root.Element(XmlTag.Highlight) == null) throw new InvalidDataException("Highlight set file does not contain any highlight descriptions");
-					m_settings.HighlightPatterns = doc.ToString(SaveOptions.None);
+					m_settings.HighlightPatterns = Highlight.Import(doc.ToString(SaveOptions.None)).ToArray();
 				}
 				catch (Exception ex)
 				{
@@ -311,7 +311,7 @@ namespace RyLogViewer
 					XDocument doc = XDocument.Load(su.FilterSetPath);
 					if (doc.Root == null) throw new InvalidDataException("Invalid filter set, root xml node not found");
 					if (doc.Root.Element(XmlTag.Filter) == null) throw new InvalidDataException("Filter set file does not contain any filter descriptions");
-					m_settings.FilterPatterns = doc.ToString(SaveOptions.None);
+					m_settings.FilterPatterns = Filter.Import(doc.ToString(SaveOptions.None)).ToArray();
 				}
 				catch (Exception ex)
 				{
@@ -325,7 +325,7 @@ namespace RyLogViewer
 					XDocument doc = XDocument.Load(su.TransformSetPath);
 					if (doc.Root == null) throw new InvalidDataException("Invalid transform set, root xml node not found");
 					if (doc.Root.Element(XmlTag.Transform) == null) throw new InvalidDataException("Transform set file does not contain any transform descriptions");
-					m_settings.TransformPatterns = doc.ToString(SaveOptions.None);
+					m_settings.TransformPatterns = Transform.Import(doc.ToString(SaveOptions.None)).ToArray();
 				}
 				catch (Exception ex)
 				{
@@ -1370,7 +1370,7 @@ namespace RyLogViewer
 			const string HelpStartPage = @"docs\welcome.html";
 			try
 			{
-				var path = Misc.ResolveAppFile(HelpStartPage);
+				var path = Misc.ResolveAppPath(HelpStartPage);
 				Process.Start(path);
 			}
 			catch (Exception ex)
@@ -1779,7 +1779,7 @@ namespace RyLogViewer
 			m_highlights.Clear();
 			if (m_settings.HighlightsEnabled)
 			{
-				m_highlights.AddRange(Highlight.Import(m_settings.HighlightPatterns).Where(x => x.Active));
+				m_highlights.AddRange(m_settings.HighlightPatterns.Where(x => x.Active));
 				UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(this, m_settings));
 			}
 
@@ -1787,19 +1787,19 @@ namespace RyLogViewer
 			m_filters.Clear();
 			if (m_settings.FiltersEnabled)
 			{
-				m_filters.AddRange(Filter.Import(m_settings.FilterPatterns).Where(x => x.Active));
+				m_filters.AddRange(m_settings.FilterPatterns.Where(x => x.Active));
 				UseLicensedFeature(FeatureName.Filtering, new FilteringCountLimiter(this, m_settings));
 			}
 
 			// Transforms
 			m_transforms.Clear();
 			if (m_settings.TransformsEnabled)
-				m_transforms.AddRange(Transform.Import(m_settings.TransformPatterns).Where(x => x.Active));
+				m_transforms.AddRange(m_settings.TransformPatterns.Where(x => x.Active));
 
 			// Click Actions
 			m_clkactions.Clear();
 			if (m_settings.ActionsEnabled)
-				m_clkactions.AddRange(ClkAction.Import(m_settings.ActionPatterns).Where(x => x.Active));
+				m_clkactions.AddRange(m_settings.ActionPatterns.Where(x => x.Active));
 
 			// Grid
 			int col_count = m_settings.ColDelimiter.Length != 0 ? Maths.Clamp(m_settings.ColumnCount, 1, 255) : 1;

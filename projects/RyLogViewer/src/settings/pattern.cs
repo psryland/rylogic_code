@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.common;
@@ -8,15 +9,16 @@ using pr.util;
 
 namespace RyLogViewer
 {
+	[DataContract]
 	public class Pattern :IPattern
 	{
-		private EPattern m_patn_type;
-		private string   m_expr;
-		private bool     m_ignore_case;
-		private bool     m_active;
-		private bool     m_invert;
-		private bool     m_whole_line;
-		private Regex    m_compiled_patn;
+		[DataMember] private EPattern m_patn_type;
+		[DataMember] private string   m_expr;
+		[DataMember] private bool     m_ignore_case;
+		[DataMember] private bool     m_active;
+		[DataMember] private bool     m_invert;
+		[DataMember] private bool     m_whole_line;
+		private Regex                 m_compiled_patn;
 
 		/// <summary>True if the pattern is active</summary>
 		public bool Active

@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gfx;
@@ -139,10 +140,10 @@ namespace RyLogViewer
 			Closed += (s,a) =>
 				{
 					Focus(); // grab focus to ensure all controls persist their state
-					m_settings.HighlightPatterns = Highlight.Export(m_highlights);
-					m_settings.FilterPatterns    = Filter   .Export(m_filters);
-					m_settings.TransformPatterns = Transform.Export(m_transforms);
-					m_settings.ActionPatterns    = ClkAction.Export(m_actions);
+					m_settings.HighlightPatterns = m_highlights.ToArray();
+					m_settings.FilterPatterns    = m_filters.ToArray();
+					m_settings.TransformPatterns = m_transforms.ToArray();
+					m_settings.ActionPatterns    = m_actions.ToArray();
 					m_settings.SettingChanged   -= UpdateUI;
 
 					m_main.UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(m_main, m_settings));
@@ -166,10 +167,10 @@ namespace RyLogViewer
 		/// <summary>Populate the internal lists from the settings data</summary>
 		private void ReadSettings()
 		{
-			m_highlights = Highlight.Import(m_settings.HighlightPatterns);
-			m_filters    = Filter   .Import(m_settings.FilterPatterns   );
-			m_transforms = Transform.Import(m_settings.TransformPatterns);
-			m_actions    = ClkAction.Import(m_settings.ActionPatterns   );
+			m_highlights = m_settings.HighlightPatterns.ToList();
+			m_filters    = m_settings.FilterPatterns   .ToList();
+			m_transforms = m_settings.TransformPatterns.ToList();
+			m_actions    = m_settings.ActionPatterns   .ToList();
 		}
 
 		/// <summary>Hook up events for the general tab</summary>

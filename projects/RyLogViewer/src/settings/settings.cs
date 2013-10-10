@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Net.Sockets;
 using System.Windows.Forms;
-using System.Xml.Linq;
 using pr.common;
 using pr.util;
 
@@ -237,24 +237,24 @@ namespace RyLogViewer
 			get { return get<int>(Reflect<Settings>.MemberName(x => x.LineCacheCount)); }
 			set { set(Reflect<Settings>.MemberName(x => x.LineCacheCount), value); }
 		}
-		public string HighlightPatterns
+		public Highlight[] HighlightPatterns
 		{
-			get { return get<string>(Reflect<Settings>.MemberName(x => x.HighlightPatterns)); }
+			get { return get<Highlight[]>(Reflect<Settings>.MemberName(x => x.HighlightPatterns)); }
 			set { set(Reflect<Settings>.MemberName(x => x.HighlightPatterns), value); }
 		}
-		public string FilterPatterns
+		public Filter[] FilterPatterns
 		{
-			get { return get<string>(Reflect<Settings>.MemberName(x => x.FilterPatterns)); }
+			get { return get<Filter[]>(Reflect<Settings>.MemberName(x => x.FilterPatterns)); }
 			set { set(Reflect<Settings>.MemberName(x => x.FilterPatterns), value); }
 		}
-		public string TransformPatterns
+		public Transform[] TransformPatterns
 		{
-			get { return get<string>(Reflect<Settings>.MemberName(x => x.TransformPatterns)); }
+			get { return get<Transform[]>(Reflect<Settings>.MemberName(x => x.TransformPatterns)); }
 			set { set(Reflect<Settings>.MemberName(x => x.TransformPatterns), value); }
 		}
-		public string ActionPatterns
+		public ClkAction[] ActionPatterns
 		{
-			get { return get<string>(Reflect<Settings>.MemberName(x => x.ActionPatterns)); }
+			get { return get<ClkAction[]>(Reflect<Settings>.MemberName(x => x.ActionPatterns)); }
 			set { set(Reflect<Settings>.MemberName(x => x.ActionPatterns), value); }
 		}
 		public string HighlightPatternSets
@@ -334,7 +334,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		protected override string Version { get { return "v1.1"; } }
+		protected override string Version { get { return "v1.3"; } }
 
 		// Default construct settings
 		public Settings()
@@ -384,10 +384,10 @@ namespace RyLogViewer
 			FileBufSize                     = Constants.FileBufSizeDefault;
 			MaxLineLength                   = Constants.MaxLineLengthDefault;
 			LineCacheCount                  = Constants.LineCacheCountDefault;
-			HighlightPatterns               = Highlight.Export(DefaultHighlightingPatterns());
-			FilterPatterns                  = "<root/>";
-			TransformPatterns               = "<root/>";
-			ActionPatterns                  = ClkAction.Export(DefaultClickActions());
+			HighlightPatterns               = DefaultHighlightingPatterns().ToArray();
+			FilterPatterns                  = DefaultFilters().ToArray();
+			TransformPatterns               = DefaultTransforms().ToArray();
+			ActionPatterns                  = DefaultClickActions().ToArray();
 			HighlightPatternSets            = "<root/>";
 			FilterPatternSets               = "<root/>";
 			TransformPatternSets            = "<root/>";
@@ -449,16 +449,49 @@ namespace RyLogViewer
 				};
 			yield return new Highlight
 				{
-					Expr        = @"(Debug:)|(D/)",
-					PatnType    = EPattern.RegularExpression,
-					ForeColour  = Color.FromArgb(0xff,0x50,0x50,0x50),
-					BackColour  = Color.FromArgb(0xff,0xff,0xff,0xff),
+					Expr        = @"#",
+					PatnType    = EPattern.Substring,
+					ForeColour  = Color.FromArgb(0xff,0x00,0x00,0x00),
+					BackColour  = Color.FromArgb(0xff,0xc4,0xff,0xc7),
 					IgnoreCase  = false,
 					Invert      = false,
 					WholeLine   = false,
 					BinaryMatch = true,
 					Active      = true,
 				};
+			yield return new Highlight
+				{
+					Expr = @"\w+\.txt",
+					Active = true,
+					PatnType = EPattern.RegularExpression,
+					IgnoreCase = false,
+					Invert = false,
+					WholeLine = false,
+					ForeColour = Color.FromArgb(0xFF,0x2A,0x00,0xFF),
+					BackColour = Color.FromArgb(0xFF,0xB3,0xCD,0xF2),
+					BinaryMatch = false,
+				};
+		}
+
+		/// <summary>Return the filter patterns for a default instance of the settings</summary>
+		private IEnumerable<Filter> DefaultFilters()
+		{
+			yield return new Filter
+				{
+					Expr = @"##",
+					Active = true,
+					PatnType = EPattern.Substring,
+					IgnoreCase = false,
+					Invert = false,
+					WholeLine = false,
+					IfMatch = EIfMatch.Reject
+				};
+		}
+
+		/// <summary>Return the transforms for a default instance of the settings</summary>
+		private IEnumerable<Transform> DefaultTransforms()
+		{
+			yield break;
 		}
 
 		/// <summary>Return the click action patterns for a default instance of the settings</summary>
@@ -466,14 +499,14 @@ namespace RyLogViewer
 		{
 			yield return new ClkAction
 				{
-					Expr = @"*.txt",
+					Expr = @"\w+\.txt",
 					Active = true,
-					PatnType = EPattern.Wildcard,
+					PatnType = EPattern.RegularExpression,
 					IgnoreCase = false,
 					Invert = false,
 					WholeLine = false,
 					Executable = @"C:\windows\notepad.exe",
-					Arguments = @"{[FileDir]}\{1}",
+					Arguments = @"{FilePath}",
 					WorkingDirectory = string.Empty
 				};
 		}
@@ -549,7 +582,15 @@ namespace RyLogViewer
 					typeof(PipeConn),
 					typeof(PipeConn[]),
 					typeof(AndroidLogcat),
-					typeof(AndroidLogcat.FilterSpec)
+					typeof(AndroidLogcat.FilterSpec),
+					typeof(Highlight),
+					typeof(Highlight[]),
+					typeof(Filter),
+					typeof(Filter[]),
+					typeof(Transform),
+					typeof(Transform[]),
+					typeof(ClkAction),
+					typeof(ClkAction[])
 				};
 			}
 		}
@@ -562,52 +603,23 @@ namespace RyLogViewer
 			default:
 				base.Upgrade(from_version);
 				break;
-			case "v1.0":
-				Upgrade_v10_to_v11();
+			case "vX.X": // example
+				Upgrade_vXX_to_vYY();
 				break;
 			}
 		}
 
 		// ReSharper disable PossibleNullReferenceException
 
-		/// <summary>Upgrade from v1.0 to v1.1</summary>
-		private void Upgrade_v10_to_v11()
+		/// <summary>Example upgrade method</summary>
+		private void Upgrade_vXX_to_vYY()
 		{
-			// Changed:
-			//  Added 'whole line' to patterns
-
-			// Helper function for converting XElement
-			Action<XElement> Convert = pat =>
-				{
-					pat.Add(new XElement(XmlTag.WholeLine, "false"));
-				};
-
-			// Settings patterns
-			{
-				var doc = XDocument.Parse(HighlightPatterns);
-				foreach (var p in doc.Root.Elements(XmlTag.Highlight)) Convert(p);
-				HighlightPatterns = doc.ToString(SaveOptions.None);
-			}
-			{
-				var doc = XDocument.Parse(FilterPatterns);
-				foreach (var p in doc.Root.Elements(XmlTag.Filter)) Convert(p);
-				FilterPatterns = doc.ToString(SaveOptions.None);
-			}
-			{
-				var doc = XDocument.Parse(TransformPatterns);
-				foreach (var p in doc.Root.Elements(XmlTag.Transform)) Convert(p);
-				TransformPatterns = doc.ToString(SaveOptions.None);
-			}
-			{
-				var doc = XDocument.Parse(ActionPatterns);
-				foreach (var p in doc.Root.Elements(XmlTag.ClkAction)) Convert(p);
-				ActionPatterns = doc.ToString(SaveOptions.None);
-			}
+			// Modify the contents of the 'Data' property
+			// Do not use any types that might change over time
 
 			// Done, set the version
-			set(VersionKey, "v1.1");
+			set(VersionKey, "vY.Y");
 		}
-
 		// ReSharper restore PossibleNullReferenceException
 	}
 }

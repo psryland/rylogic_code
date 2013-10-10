@@ -266,16 +266,19 @@ namespace pr.common
 					Data.Sort((lhs,rhs) => string.CompareOrdinal(lhs.Key, rhs.Key));
 				}
 
+				// Migrate old settings
+				// This is limited because we can only modify the already loaded
+				// pairs. (Modifying the xml directly isn't feasible because of
+				// all of the namespaces and type information added by the DCS
+				for (string version; (version = get<string>(VersionKey)) != Version;)
+					Upgrade(version);
+
 				// Add any default options that aren't in the settings file
 				foreach (var i in Default.Data)
 				{
 					if (has(i.Key)) continue;
 					set(i.Key, i.Value);
 				}
-
-				// Migrate old settings
-				for (string version; (version = get<string>(VersionKey)) != Version;)
-					Upgrade(version);
 			}
 			finally
 			{

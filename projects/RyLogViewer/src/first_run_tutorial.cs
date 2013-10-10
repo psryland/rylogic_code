@@ -47,7 +47,7 @@ namespace RyLogViewer
 			Icon = main.Icon;
 			HideOnClose = false;
 
-			var settings_path = Misc.ResolveAppFile(@"examples\example_settings.xml");
+			var settings_path = Misc.ResolveAppPath(@"examples\example_settings.xml");
 
 			m_main = main;
 			m_main.CloseLogFile();
@@ -314,7 +314,7 @@ namespace RyLogViewer
 				m_main.m_grid.TryScrollToRowIndex(0);
 				m_overlay.Attachee = m_main;
 
-				var path = Misc.ResolveAppFile(@"examples\example logfile.txt");
+				var path = Misc.ResolveAppPath(@"examples\example logfile.txt");
 				m_main.SetLineEnding(ELineEnding.Detect);
 				m_main.SetEncoding(null);
 				m_main.OpenSingleLogFile(path, false);

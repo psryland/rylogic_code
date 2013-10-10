@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
@@ -84,21 +85,16 @@ namespace RyLogViewer
 		/// <summary>True if the licensed feature is still currently in use</summary>
 		public virtual bool FeatureInUse
 		{
-			get
-			{
-				// Read the patterns from the settings to see if more than the max allowed are in use
-				var pats = Highlight.Import(m_settings.HighlightPatterns);
-				return pats.Count > FreeEditionLimits.MaxHighlights;
-			}
+			get { return m_settings.HighlightPatterns.Length > FreeEditionLimits.MaxHighlights; }
 		}
 
 		/// <summary>Called to stop the use of the feature</summary>
 		public virtual void CloseFeature()
 		{
 			// Read the patterns from the settings to see if more than the max allowed are in use
-			var pats = Highlight.Import(m_settings.HighlightPatterns);
+			var pats = m_settings.HighlightPatterns.ToList();
 			pats.RemoveToEnd(FreeEditionLimits.MaxHighlights);
-			m_settings.HighlightPatterns = Highlight.Export(pats);
+			m_settings.HighlightPatterns = pats.ToArray();
 			m_main.ApplySettings();
 		}
 	}
@@ -123,21 +119,16 @@ namespace RyLogViewer
 		/// <summary>True if the licensed feature is still currently in use</summary>
 		public virtual bool FeatureInUse
 		{
-			get
-			{
-				// Read the patterns from the settings to see if more than the max allowed are in use
-				var pats = Filter.Import(m_settings.FilterPatterns);
-				return pats.Count > FreeEditionLimits.MaxFilters;
-			}
+			get { return m_settings.FilterPatterns.Length> FreeEditionLimits.MaxFilters; }
 		}
 
 		/// <summary>Called to stop the use of the feature</summary>
 		public virtual void CloseFeature()
 		{
 			// Read the patterns from the settings to see if more than the max allowed are in use
-			var pats = Filter.Import(m_settings.FilterPatterns);
+			var pats = m_settings.FilterPatterns.ToList();
 			pats.RemoveToEnd(FreeEditionLimits.MaxFilters);
-			m_settings.FilterPatterns = Filter.Export(pats);
+			m_settings.FilterPatterns = pats.ToArray();
 			m_main.ApplySettings();
 		}
 	}
