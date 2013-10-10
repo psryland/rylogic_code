@@ -46,7 +46,7 @@ namespace RyLogViewer
 		/// <summary>Load and parse the startup options</summary>
 		public StartupOptions(string[] args)
 		{
-			var exe_dir = Path.GetDirectoryName(Application.ExecutablePath) ?? @".\";
+			var exe_dir = Misc.ResolveAppPath();
 			if (!Directory.Exists(exe_dir))
 				throw new ArgumentException("Cannot determine the current executable directory");
 

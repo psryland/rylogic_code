@@ -195,7 +195,7 @@ namespace RyLogViewer
 				case "open_example_logfile":
 					m_main.SetLineEnding(ELineEnding.Detect);
 					m_main.SetEncoding(null);
-					m_main.OpenSingleLogFile(Misc.ResolveAppFile(@"examples\example logfile.txt"), false);
+					m_main.OpenSingleLogFile(Misc.ResolveAppPath(@"examples\example logfile.txt"), false);
 					Close();
 					break;
 				}
