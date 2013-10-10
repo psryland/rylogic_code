@@ -339,6 +339,9 @@ namespace RyLogViewer
 		{
 			StartupOptions su = m_startup_options;
 
+			// Look for plugin data sources, called here so the UI is displayed over the main window
+			InitCustomDataSources();
+
 			// Parse command line
 			if (su.FileToLoad != null)
 			{

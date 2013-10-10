@@ -119,6 +119,21 @@
     <Compile Include="src\inputs\android_connect_device_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\inputs\log_data_source.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\inputs\named_pipe.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\inputs\network_connection.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\inputs\program_output.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\inputs\serial_connection.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\jumpto_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -222,9 +237,7 @@
     <Compile Include="src\settings\settings_ui.Designer.cs">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\inputs\stream_buffering.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="src\inputs\stream_buffering.cs" />
     <Compile Include="src\inputs\network_connection_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -412,7 +425,9 @@
     </Content>
     <Content Include="gen_licence.py" />
     <None Include="Resources\auto_refresh.include.htm" />
-    <Content Include="plugins\Readme.txt" />
+    <Content Include="plugins\plugins.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\cripple_aggregate_files.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
