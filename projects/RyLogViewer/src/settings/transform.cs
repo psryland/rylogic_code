@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
@@ -63,26 +61,30 @@ namespace RyLogViewer
 			}
 		}
 
-		internal static readonly Dictionary<string, ITransformSubstitution> Substitutors = GetSubstitutors();
-		private static Dictionary<string, ITransformSubstitution> GetSubstitutors()
+		internal static Dictionary<string, ITransformSubstitution> Substitutors
 		{
-			var subs = new Dictionary<string, ITransformSubstitution>();
+			get
+			{
+				if (m_substitutors == null)
+				{
+					m_substitutors = new Dictionary<string, ITransformSubstitution>();
 
-			// Add built in substitutions (before the plugins so that built in subs can be replaced)
-			{ var s = new SubNoChange();   subs.Add(s.Name, s); }
-			{ var s = new SubToLower();    subs.Add(s.Name, s); }
-			{ var s = new SubToUpper();    subs.Add(s.Name, s); }
-			{ var s = new SubSwizzle();    subs.Add(s.Name, s); }
-			{ var s = new SubCodeLookup(); subs.Add(s.Name, s); }
+					// Add built in substitutions (before the plugins so that built in subs can be replaced)
+					{ var s = new SubNoChange();   m_substitutors.Add(s.Name, s); }
+					{ var s = new SubToLower();    m_substitutors.Add(s.Name, s); }
+					{ var s = new SubToUpper();    m_substitutors.Add(s.Name, s); }
+					{ var s = new SubSwizzle();    m_substitutors.Add(s.Name, s); }
+					{ var s = new SubCodeLookup(); m_substitutors.Add(s.Name, s); }
 
-			// Loads dlls from the plugins directory looking for transform substitutions
-			var plugins = new PluginLoader<TransformSubstitutionAttribute, ITransformSubstitution>(
-				Path.Combine(Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty, "plugins"), true);
-			foreach (var sub in plugins.Plugins)
-				subs.Add(sub.Name, sub);
-
-			return subs;
+					// Loads dlls from the plugins directory looking for transform substitutions
+					var plugins = PluginLoader<TransformSubstitutionAttribute, ITransformSubstitution>.LoadWithUI(null, Misc.ResolveAppPath("plugins"), true);
+					foreach (var sub in plugins.Plugins)
+						m_substitutors.Add(sub.Name, sub);
+				}
+				return m_substitutors;
+			}
 		}
+		private static Dictionary<string, ITransformSubstitution> m_substitutors;
 
 		public Transform() :this(EPattern.Substring, string.Empty, string.Empty) {}
 		public Transform(EPattern patn_type, string expr, string replace) :base(patn_type, expr)
