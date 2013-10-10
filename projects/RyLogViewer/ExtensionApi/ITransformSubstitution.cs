@@ -7,11 +7,14 @@ namespace RyLogViewer
 	/// <summary>Interface to a transform substitution plugin</summary>
 	public interface ITransformSubstitution
 	{
-		// The name of the substitutor is used as the unique identifier
-		// since the user will not be able to distinguish between them
-		// if two had the same name. Also, there's a bug in DGVComboBoxColumn
-		// that means the combo can't be bound to have 'Value' as a complex object.
-		// This means the string in the combo box needs to uniquely identify the substitutor
+		// Notes:
+		// - The name of the substitutor is used as the unique identifier
+		//    since the user will not be able to distinguish between them
+		//    if two had the same name. Also, there's a bug in DGVComboBoxColumn
+		//    that means the combo can't be bound to have 'Value' as a complex object.
+		//    This means the string in the combo box needs to uniquely identify the substitutor
+		// - Plugin classes that implement this interface can get constructed
+		//    in a background thread.
 
 		/// <summary>The name of the substitution (must be unique)</summary>
 		string Name { get; }
@@ -63,7 +66,7 @@ namespace RyLogViewer
 		public virtual void FromXml(XElement node) { }
 
 		/// <summary>Create a copy of this instance</summary>
-		public ITransformSubstitution Clone() { return (ITransformSubstitution)MemberwiseClone(); }
+		public virtual ITransformSubstitution Clone() { return (ITransformSubstitution)MemberwiseClone(); }
 
 		public override string ToString() { return string.Format("{0}",Name); }
 	}
