@@ -13,6 +13,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Win32.SafeHandles;
+using pr.extn;
 using pr.util;
 
 namespace pr.common
@@ -23,7 +24,7 @@ namespace pr.common
 		public static bool FileExists(string filepath)
 		{
 			// Using 'FileInfo' because it checks security permissions as well
-			try { return filepath != null && new FileInfo(filepath).Exists; }
+			try { return filepath.HasValue() && new FileInfo(filepath).Exists; }
 			catch { return false; }
 		}
 
@@ -31,7 +32,7 @@ namespace pr.common
 		public static bool DirExists(string directory)
 		{
 			// Using 'DirectoryInfo' because it checks security permissions as well
-			try { return directory != null && new DirectoryInfo(directory).Exists; }
+			try { return directory.HasValue() && new DirectoryInfo(directory).Exists; }
 			catch { return false; }
 		}
 
