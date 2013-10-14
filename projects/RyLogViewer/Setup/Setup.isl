@@ -2789,10 +2789,10 @@
 		<col def="I2">Encoded</col>
 		<col def="S0">Comment</col>
 		<col def="I4">TimeStamp</col>
-		<row><td>COMPANY_NAME</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>-1692323040</td></row>
+		<row><td>COMPANY_NAME</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>1965097357</td></row>
 		<row><td>DN_AlwaysInstall</td><td>1033</td><td>Always Install</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>IDPROP_EXPRESS_LAUNCH_CONDITION_COLOR</td><td>1033</td><td>The color settings of your system are not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
-		<row><td>IDPROP_EXPRESS_LAUNCH_CONDITION_DOTNETVERSION40CLIENT</td><td>1033</td><td>Microsoft .NET Framework 4.0 Client Package or greater needs to be installed for this installation to continue.</td><td>0</td><td/><td>-1960741515</td></row>
+		<row><td>IDPROP_EXPRESS_LAUNCH_CONDITION_DOTNETVERSION40CLIENT</td><td>1033</td><td>Microsoft .NET Framework 4.0 Client Package or greater needs to be installed for this installation to continue.</td><td>0</td><td/><td>1965119917</td></row>
 		<row><td>IDPROP_EXPRESS_LAUNCH_CONDITION_OS</td><td>1033</td><td>The operating system is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>IDPROP_EXPRESS_LAUNCH_CONDITION_PROCESSOR</td><td>1033</td><td>The processor is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>IDPROP_EXPRESS_LAUNCH_CONDITION_RAM</td><td>1033</td><td>The amount of RAM is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
@@ -3890,8 +3890,8 @@
 		<row><td>IDS__TargetReq_DESC_RAM</td><td>1033</td><td>The amount of RAM is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>IDS__TargetReq_DESC_RESOLUTION</td><td>1033</td><td>The screen resolution is not adequate for running [ProductName].</td><td>0</td><td/><td>-1960714796</td></row>
 		<row><td>ID_STRING1</td><td>1033</td><td/><td>0</td><td/><td>-1960710700</td></row>
-		<row><td>ID_STRING2</td><td>1033</td><td>http://www.rylogic.co.nz/</td><td>0</td><td/><td>-1692283819</td></row>
-		<row><td>ID_STRING3</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>-1692323040</td></row>
+		<row><td>ID_STRING2</td><td>1033</td><td>http://www.rylogic.co.nz</td><td>0</td><td/><td>1965123632</td></row>
+		<row><td>ID_STRING3</td><td>1033</td><td>Rylogic Limited</td><td>0</td><td/><td>1965097357</td></row>
 		<row><td>ID_STRING4</td><td>1033</td><td>RYLOGV~1|RylogViewer</td><td>0</td><td/><td>-1826535571</td></row>
 		<row><td>ID_STRING5</td><td>1033</td><td>RYLOGV~1|RylogViewer</td><td>0</td><td/><td>-1826510995</td></row>
 		<row><td>ID_STRING6</td><td>1033</td><td>UNINST~1|Uninstall RylogViewer</td><td>0</td><td/><td>-1826496659</td></row>
@@ -4540,7 +4540,7 @@ UwBpAG4AZwBsAGUASQBtAGEAZwBlAAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>SERIALNUMBER</td><td/><td/></row>
 		<row><td>SERIALNUMVALSUCCESSRETVAL</td><td>1</td><td/></row>
 		<row><td>SHOWLAUNCHPROGRAM</td><td>-1</td><td/></row>
-		<row><td>SecureCustomProperties</td><td>ISFOUNDNEWERPRODUCTVERSION;USERNAME;COMPANYNAME;ISX_SERIALNUM;SUPPORTDIR;DOTNETVERSION40CLIENT;ISACTIONPROP2</td><td/></row>
+		<row><td>SecureCustomProperties</td><td>ISFOUNDNEWERPRODUCTVERSION;USERNAME;COMPANYNAME;ISX_SERIALNUM;SUPPORTDIR;ISACTIONPROP2;DOTNETVERSION40CLIENT</td><td/></row>
 		<row><td>SelectedSetupType</td><td>##IDS__DisplayName_Typical##</td><td/></row>
 		<row><td>SetupType</td><td>Typical</td><td/></row>
 		<row><td>UpgradeCode</td><td>{9895513E-D38A-499A-BF79-D14255254D8A}</td><td/></row>
