@@ -229,13 +229,10 @@ namespace RyLogViewer
 
 				// Get a copy of the filters to apply
 				filters = new List<IFilter>();
-				if (main.m_quick_filter_enabled)
-				{
-					filters.AddRange(main.m_highlights.ToList<IFilter>());
-				}
 				filters.AddRange(main.m_filters);
 				if (main.m_quick_filter_enabled)
 				{
+					filters.AddRange(main.m_highlights.ToList<IFilter>());
 					filters.Add(Filter.RejectAll); // Add a RejectAll so that non-highlighted means discard
 				}
 
