@@ -129,7 +129,7 @@ namespace RyLogViewer
 			int last_selected_line = -1;
 			m_edit_test.SelectionChanged += (s,a) =>
 				{
-					if (MouseButtons != MouseButtons.None || ModifierKeys != Keys.None) return;
+					if (m_edit_test.SelectionLength != 0) return;
 					var idx = m_edit_test.GetLineFromCharIndex(m_edit_test.SelectionStart);
 					if (last_selected_line != idx) last_selected_line = idx; else return;
 					UpdateUI();
