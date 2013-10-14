@@ -5,20 +5,19 @@
   </setting>
   <setting>
     <key>ActionPatterns</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
-  &lt;clkaction&gt;
-    &lt;expr&gt;*.txt&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;Wildcard&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;executable&gt;C:\windows\notepad.exe&lt;/executable&gt;
-    &lt;arguments&gt;{FilePath}&lt;/arguments&gt;
-    &lt;working_dir&gt;&lt;/working_dir&gt;
-  &lt;/clkaction&gt;
-&lt;/root&gt;</value>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfClkAction">
+      <d3p1:ClkAction>
+        <d3p1:m_active>true</d3p1:m_active>
+        <d3p1:m_expr>\w+.*\.(txt|xml)</d3p1:m_expr>
+        <d3p1:m_ignore_case>false</d3p1:m_ignore_case>
+        <d3p1:m_invert>false</d3p1:m_invert>
+        <d3p1:m_patn_type>RegularExpression</d3p1:m_patn_type>
+        <d3p1:m_whole_line>false</d3p1:m_whole_line>
+        <d3p1:Arguments>{FileDir}\{0}</d3p1:Arguments>
+        <d3p1:Executable>C:\windows\notepad.exe</d3p1:Executable>
+        <d3p1:WorkingDirectory></d3p1:WorkingDirectory>
+      </d3p1:ClkAction>
+    </value>
   </setting>
   <setting>
     <key>ActionsEnabled</key>
@@ -26,7 +25,7 @@
   </setting>
   <setting>
     <key>AlternateLineColours</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
   </setting>
   <setting>
     <key>AlwaysOnTop</key>
@@ -47,14 +46,13 @@
         </d3p1:AndroidLogcat.FilterSpec>
       </d3p1:FilterSpecs>
       <d3p1:IPAddressHistory xmlns:d4p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
-        <d4p1:string>192.168.100.159</d4p1:string>
         <d4p1:string>192.168.100.162</d4p1:string>
       </d3p1:IPAddressHistory>
       <d3p1:LogBuffers>
         <d3p1:AndroidLogcat.ELogBuffer>Main</d3p1:AndroidLogcat.ELogBuffer>
       </d3p1:LogBuffers>
       <d3p1:LogFormat>Time</d3p1:LogFormat>
-      <d3p1:SelectedDevice></d3p1:SelectedDevice>
+      <d3p1:SelectedDevice>192.168.100.162:5555</d3p1:SelectedDevice>
     </value>
   </setting>
   <setting>
@@ -68,7 +66,7 @@
   </setting>
   <setting>
     <key>CheckForUpdates</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
   </setting>
   <setting>
     <key>CheckForUpdatesServer</key>
@@ -96,7 +94,7 @@
   </setting>
   <setting>
     <key>FileChangesAdditive</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
   </setting>
   <setting>
     <key>FileScrollWidth</key>
@@ -108,18 +106,17 @@
   </setting>
   <setting>
     <key>FilterPatterns</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
-  &lt;filter&gt;
-    &lt;expr&gt;##&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;Substring&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;ifmatch&gt;Reject&lt;/ifmatch&gt;
-  &lt;/filter&gt;
-&lt;/root&gt;</value>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfFilter">
+      <d3p1:Filter>
+        <d3p1:m_active>true</d3p1:m_active>
+        <d3p1:m_expr>##</d3p1:m_expr>
+        <d3p1:m_ignore_case>false</d3p1:m_ignore_case>
+        <d3p1:m_invert>false</d3p1:m_invert>
+        <d3p1:m_patn_type>Substring</d3p1:m_patn_type>
+        <d3p1:m_whole_line>false</d3p1:m_whole_line>
+        <d3p1:IfMatch>Reject</d3p1:IfMatch>
+      </d3p1:Filter>
+    </value>
   </setting>
   <setting>
     <key>FiltersEnabled</key>
@@ -127,7 +124,7 @@
   </setting>
   <setting>
     <key>FirstRun</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
   </setting>
   <setting>
     <key>Font</key>
@@ -146,69 +143,119 @@
     <key>HighlightPatternSets</key>
     <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
   &lt;patternset&gt;
-    &lt;filepath&gt;I:\MagicBullet\src\MagicBullet\MobileBullet\tools\RylogViewer\vlm_highlights.rylog_highlights&lt;/filepath&gt;
+    &lt;filepath&gt;Q:\projects\RyLogViewer\examples\example_highlights_pattern_set.rylog_highlights&lt;/filepath&gt;
   &lt;/patternset&gt;
 &lt;/root&gt;</value>
   </setting>
   <setting>
     <key>HighlightPatterns</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
-  &lt;highlight&gt;
-    &lt;expr&gt;#&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;Substring&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
-    &lt;backcolour&gt;FFC4FFC7&lt;/backcolour&gt;
-  &lt;/highlight&gt;
-  &lt;highlight&gt;
-    &lt;expr&gt;*.txt&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;Wildcard&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;forecolour&gt;FF2A00FF&lt;/forecolour&gt;
-    &lt;backcolour&gt;FFEFEDF2&lt;/backcolour&gt;
-  &lt;/highlight&gt;
-  &lt;highlight&gt;
-    &lt;expr&gt;(Error:)|(E/)&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;forecolour&gt;FFFFFFFF&lt;/forecolour&gt;
-    &lt;backcolour&gt;FF8B0000&lt;/backcolour&gt;
-  &lt;/highlight&gt;
-  &lt;highlight&gt;
-    &lt;expr&gt;(Warn:)|(W/)&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
-    &lt;backcolour&gt;FFFFFF00&lt;/backcolour&gt;
-  &lt;/highlight&gt;
-  &lt;highlight&gt;
-    &lt;expr&gt;(Info:)|(I/)&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;forecolour&gt;FF000000&lt;/forecolour&gt;
-    &lt;backcolour&gt;FFC4FFFF&lt;/backcolour&gt;
-  &lt;/highlight&gt;
-&lt;/root&gt;</value>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfHighlight">
+      <d3p1:Highlight>
+        <d3p1:m_active>true</d3p1:m_active>
+        <d3p1:m_expr>\w+.*\.(txt|xml)</d3p1:m_expr>
+        <d3p1:m_ignore_case>false</d3p1:m_ignore_case>
+        <d3p1:m_invert>false</d3p1:m_invert>
+        <d3p1:m_patn_type>RegularExpression</d3p1:m_patn_type>
+        <d3p1:m_whole_line>false</d3p1:m_whole_line>
+        <d3p1:BackColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4288467937</d5p1:value>
+        </d3p1:BackColour>
+        <d3p1:BinaryMatch>false</d3p1:BinaryMatch>
+        <d3p1:ForeColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4280025343</d5p1:value>
+        </d3p1:ForeColour>
+      </d3p1:Highlight>
+      <d3p1:Highlight>
+        <d3p1:m_active>true</d3p1:m_active>
+        <d3p1:m_expr>#</d3p1:m_expr>
+        <d3p1:m_ignore_case>false</d3p1:m_ignore_case>
+        <d3p1:m_invert>false</d3p1:m_invert>
+        <d3p1:m_patn_type>Substring</d3p1:m_patn_type>
+        <d3p1:m_whole_line>false</d3p1:m_whole_line>
+        <d3p1:BackColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4284733291</d5p1:value>
+        </d3p1:BackColour>
+        <d3p1:BinaryMatch>true</d3p1:BinaryMatch>
+        <d3p1:ForeColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4278190080</d5p1:value>
+        </d3p1:ForeColour>
+      </d3p1:Highlight>
+      <d3p1:Highlight>
+        <d3p1:m_active>true</d3p1:m_active>
+        <d3p1:m_expr>(Error:)|(E/)</d3p1:m_expr>
+        <d3p1:m_ignore_case>false</d3p1:m_ignore_case>
+        <d3p1:m_invert>false</d3p1:m_invert>
+        <d3p1:m_patn_type>RegularExpression</d3p1:m_patn_type>
+        <d3p1:m_whole_line>false</d3p1:m_whole_line>
+        <d3p1:BackColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4287299584</d5p1:value>
+        </d3p1:BackColour>
+        <d3p1:BinaryMatch>true</d3p1:BinaryMatch>
+        <d3p1:ForeColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4294967295</d5p1:value>
+        </d3p1:ForeColour>
+      </d3p1:Highlight>
+      <d3p1:Highlight>
+        <d3p1:m_active>true</d3p1:m_active>
+        <d3p1:m_expr>(Warn:)|(W/)</d3p1:m_expr>
+        <d3p1:m_ignore_case>false</d3p1:m_ignore_case>
+        <d3p1:m_invert>false</d3p1:m_invert>
+        <d3p1:m_patn_type>RegularExpression</d3p1:m_patn_type>
+        <d3p1:m_whole_line>false</d3p1:m_whole_line>
+        <d3p1:BackColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4294967040</d5p1:value>
+        </d3p1:BackColour>
+        <d3p1:BinaryMatch>true</d3p1:BinaryMatch>
+        <d3p1:ForeColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4278190080</d5p1:value>
+        </d3p1:ForeColour>
+      </d3p1:Highlight>
+      <d3p1:Highlight>
+        <d3p1:m_active>true</d3p1:m_active>
+        <d3p1:m_expr>(Info:)|(I/)</d3p1:m_expr>
+        <d3p1:m_ignore_case>false</d3p1:m_ignore_case>
+        <d3p1:m_invert>false</d3p1:m_invert>
+        <d3p1:m_patn_type>RegularExpression</d3p1:m_patn_type>
+        <d3p1:m_whole_line>false</d3p1:m_whole_line>
+        <d3p1:BackColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4291100671</d5p1:value>
+        </d3p1:BackColour>
+        <d3p1:BinaryMatch>true</d3p1:BinaryMatch>
+        <d3p1:ForeColour xmlns:d5p1="http://schemas.datacontract.org/2004/07/System.Drawing">
+          <d5p1:knownColor>0</d5p1:knownColor>
+          <d5p1:name i:nil="true" />
+          <d5p1:state>2</d5p1:state>
+          <d5p1:value>4278190080</d5p1:value>
+        </d3p1:ForeColour>
+      </d3p1:Highlight>
+    </value>
   </setting>
   <setting>
     <key>HighlightsEnabled</key>
@@ -306,11 +353,13 @@
   </setting>
   <setting>
     <key>OpenAtEnd</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
   </setting>
   <setting>
     <key>OutputFilepathHistory</key>
-    <value xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" i:type="d3p1:ArrayOfstring" />
+    <value xmlns:d3p1="http://schemas.microsoft.com/2003/10/Serialization/Arrays" i:type="d3p1:ArrayOfstring">
+      <d3p1:string>D:\deleteme\logcat_192_168_100_162.txt</d3p1:string>
+    </value>
   </setting>
   <setting>
     <key>PipeConnectionHistory</key>
@@ -339,8 +388,8 @@
   <setting>
     <key>ScreenPosition</key>
     <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/System.Drawing" i:type="d3p1:Point">
-      <d3p1:x>2507</d3p1:x>
-      <d3p1:y>215</d3p1:y>
+      <d3p1:x>2218</d3p1:x>
+      <d3p1:y>313</d3p1:y>
     </value>
   </setting>
   <setting>
@@ -376,7 +425,11 @@
   </setting>
   <setting>
     <key>ShowTOTD</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">true</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:boolean">false</value>
+  </setting>
+  <setting>
+    <key>TabSizeInSpaces</key>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:int">4</value>
   </setting>
   <setting>
     <key>TailEnabled</key>
@@ -388,77 +441,7 @@
   </setting>
   <setting>
     <key>TransformPatterns</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">&lt;root&gt;
-  &lt;transform&gt;
-    &lt;expr&gt;An error of type (\d+) occurred&lt;/expr&gt;
-    &lt;active&gt;true&lt;/active&gt;
-    &lt;patntype&gt;RegularExpression&lt;/patntype&gt;
-    &lt;ignorecase&gt;false&lt;/ignorecase&gt;
-    &lt;invert&gt;false&lt;/invert&gt;
-    &lt;wholeline&gt;false&lt;/wholeline&gt;
-    &lt;binary&gt;true&lt;/binary&gt;
-    &lt;replace&gt;{0} ==&amp;gt; {1}&lt;/replace&gt;
-    &lt;subs&gt;
-      &lt;sub&gt;
-        &lt;name&gt;No Change&lt;/name&gt;
-        &lt;id&gt;0&lt;/id&gt;
-        &lt;subdata /&gt;
-      &lt;/sub&gt;
-      &lt;sub&gt;
-        &lt;name&gt;Code Lookup&lt;/name&gt;
-        &lt;id&gt;1&lt;/id&gt;
-        &lt;subdata&gt;
-          &lt;codevalues&gt;
-            &lt;cv&gt;
-              &lt;c&gt;0&lt;/c&gt;
-              &lt;v&gt;ERROR_SUCCESS - The operation completed successfully&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;1&lt;/c&gt;
-              &lt;v&gt;ERROR_INVALID_FUNCTION - Incorrect function&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;2&lt;/c&gt;
-              &lt;v&gt;ERROR_FILE_NOT_FOUND - The system cannot find the file specified&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;3&lt;/c&gt;
-              &lt;v&gt;ERROR_PATH_NOT_FOUND - The system cannot find the path specified&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;4&lt;/c&gt;
-              &lt;v&gt;ERROR_TOO_MANY_OPEN_FILES - The system cannot open the file&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;5&lt;/c&gt;
-              &lt;v&gt;ERROR_ACCESS_DENIED - Access is denied&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;6&lt;/c&gt;
-              &lt;v&gt;ERROR_INVALID_HANDLE - The handle is invalid&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;7&lt;/c&gt;
-              &lt;v&gt;ERROR_ARENA_THRASHED - The storage control blocks were destroyed&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;8&lt;/c&gt;
-              &lt;v&gt;ERROR_NOT_ENOUGH_MEMORY - Not enough storage is available to process this command&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;9&lt;/c&gt;
-              &lt;v&gt;ERROR_INVALID_BLOCK - The storage control block address is invalid&lt;/v&gt;
-            &lt;/cv&gt;
-            &lt;cv&gt;
-              &lt;c&gt;10&lt;/c&gt;
-              &lt;v&gt;ERROR_BAD_ENVIRONMENT - The environment is incorrect&lt;/v&gt;
-            &lt;/cv&gt;
-          &lt;/codevalues&gt;
-        &lt;/subdata&gt;
-      &lt;/sub&gt;
-    &lt;/subs&gt;
-  &lt;/transform&gt;
-&lt;/root&gt;</value>
+    <value xmlns:d3p1="http://schemas.datacontract.org/2004/07/RyLogViewer" i:type="d3p1:ArrayOfTransform" />
   </setting>
   <setting>
     <key>TransformsEnabled</key>
@@ -489,6 +472,6 @@
   </setting>
   <setting>
     <key>__SettingsVersion</key>
-    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">v1.1</value>
+    <value xmlns:d3p1="http://www.w3.org/2001/XMLSchema" i:type="d3p1:string">v1.3</value>
   </setting>
 </ArrayOfsetting>

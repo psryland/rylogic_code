@@ -36,6 +36,7 @@ equivalents:
 
 # ACTIONS
 Actions allow a program or batch file to be started by double clicking on a line
-in the log file. For example, double clicking on the following line should launch
-notepad with this file:
-  example_logfile.txt
+in the log file. For example, double clicking on the following lines should launch
+notepad with these files:
+  example logfile.txt
+  example_settings.xml
