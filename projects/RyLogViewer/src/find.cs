@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.gui;
 using pr.maths;
@@ -18,6 +19,7 @@ namespace RyLogViewer
 			// When the find events are fired on m_find_ui, trigger find next/prev
 			m_find_ui.FindNext += FindNext;
 			m_find_ui.FindPrev += FindPrev;
+			m_find_ui.BookmarkAll += FindBookmarkAll;
 		}
 
 		/// <summary>Show the find dialog</summary>
@@ -62,6 +64,7 @@ namespace RyLogViewer
 			m_find_history.RemoveIf<Pattern>(x => string.CompareOrdinal(x.Expr, pattern.Expr) == 0);
 			m_find_history.Insert(0, pattern);
 			m_find_history.Position = 0;
+			m_find_history.ResetBindings(false);
 
 			// Cap the length of the find history
 			while (m_find_history.Count > Constants.MaxFindHistory)
@@ -105,12 +108,12 @@ namespace RyLogViewer
 		private bool Find(Pattern pat, long start, bool backward, out long found)
 		{
 			var body = backward
-				? (start == FileByteRange.Begin
-					? "Searching forward from the start of the file..."
-					: "Searching forward from the current selection position...")
-				: (start == FileByteRange.End
+				? (start == FileByteRange.End
 					? "Searching backward from the end of the file..."
-					: "Searching backward from the current selection position...");
+					: "Searching backward from the current selection position...")
+				: (start == FileByteRange.Begin
+					? "Searching forward from the start of the file..."
+					: "Searching forward from the current selection position...");
 
 			// Although this search runs in a background thread, it's wrapped in a modal
 			// dialog box, so it should be ok to use class members directly
@@ -131,7 +134,11 @@ namespace RyLogViewer
 						};
 
 					// Searching....
-					at = DoFind(pat, start, backward, d);
+					DoFind(pat, start, backward, d, rng =>
+						{
+							at = rng.Begin;
+							return false;
+						});
 
 					// We can call BuildLineIndex in this thread context because we know
 					// we're in a modal dialog.
@@ -149,12 +156,58 @@ namespace RyLogViewer
 			return res == DialogResult.OK;
 		}
 
-		/// <summary>
-		/// Does the donkey work of searching for a pattern.
-		/// Returns the byte address of the first match.</summary>
-		private static long DoFind(Pattern pat, long start, bool backward, BLIData d)
+		/// <summary>Searches the entire file and bookmarks all locations that match the find pattern</summary>
+		private void FindBookmarkAll()
 		{
-			long at = -1;
+			if (!PreFind())
+				return;
+
+			try
+			{
+				Log.Info(this, "FindBookmarkAll");
+
+				var pat = m_find_ui.Pattern;
+				const string body = "Bookmarking all found instances...";
+
+				// Although this search runs in a background thread, it's wrapped in a modal
+				// dialog box, so it should be ok to use class members directly
+				var search = new ProgressForm("Searching...", body, null, ProgressBarStyle.Marquee, (s,a,cb)=>
+					{
+						var d = new BLIData(this, m_file);
+
+						int last_progress = 0;
+						d.progress = (scanned, length) =>
+							{
+								int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
+								if (progress != last_progress)
+								{
+									cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});
+									last_progress = progress;
+								}
+								return !s.CancelPending;
+							};
+
+						// Searching....
+						DoFind(pat, 0, false, d, rng =>
+							{
+								this.BeginInvoke(() => SetBookmark(rng, Bit.EState.Set));
+								return true;
+							});
+					}){StartPosition = FormStartPosition.CenterParent};
+
+				search.ShowDialog(this, 500);
+			}
+			catch (OperationCanceledException) {}
+			catch (Exception ex)
+			{
+				Misc.ShowMessage(this, "Find terminated by an error.", "Find error", MessageBoxIcon.Error, ex);
+			}
+		}
+
+		/// <summary>Does the donkey work of searching for a pattern.
+		/// Returns the byte address of the first match.</summary>
+		private static void DoFind(Pattern pat, long start, bool backward, BLIData d, Func<Range, bool> on_found)
+		{
 			using (d.file)
 			{
 				var line = new Line();
@@ -172,15 +225,13 @@ namespace RyLogViewer
 							return true;
 
 						// Found a match
-						at = baddr + line_rng.Begin;
-						return false; // Stop searching
+						return on_found(new Range(baddr + line_rng.Begin, baddr + line_rng.End));
 					};
 
 				// Search for files
 				var line_buf = new byte[d.max_line_length];
 				long count = backward ? start - 0 : d.fileend - start;
 				FindLines(d.file, start, d.fileend, backward, count, test_line, d.encoding, d.row_delim, line_buf, d.progress);
-				return at;
 			}
 		}
 	}

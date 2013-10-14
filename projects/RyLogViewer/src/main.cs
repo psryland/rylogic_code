@@ -99,6 +99,7 @@ namespace RyLogViewer
 			m_find_ui             = new FindUI(this, m_find_history){Visible = false};
 			m_bookmarks           = new BindingList<Bookmark>();
 			m_bs_bookmarks        = new BindingSource{DataSource = m_bookmarks};
+			m_batch_refresh_bkmks = new EventBatcher(100, this);
 			m_bookmarks_ui        = new BookmarksUI(this, m_bs_bookmarks){Visible = false};
 			m_tt                  = new ToolTip();
 			m_tab_cycle           = new Form[]{this, m_find_ui, m_bookmarks_ui};
@@ -135,10 +136,10 @@ namespace RyLogViewer
 			m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
 			m_menu_edit_find_next.Click                += (s,a) => FindNext(false);
 			m_menu_edit_find_prev.Click                += (s,a) => FindPrev(false);
-			m_menu_edit_toggle_bookmark.Click          += (s,a) => ToggleBookmark(SelectedRowIndex);
+			m_menu_edit_toggle_bookmark.Click          += (s,a) => SetBookmark(SelectedRowIndex, Bit.EState.Toggle);
 			m_menu_edit_next_bookmark.Click            += (s,a) => NextBookmark();
 			m_menu_edit_prev_bookmark.Click            += (s,a) => PrevBookmark();
-			m_menu_edit_clearall_bookmarks.Click       += (s,a) => m_bookmarks.Clear();
+			m_menu_edit_clearall_bookmarks.Click       += (s,a) => ClearAllBookmarks();
 			m_menu_edit_bookmarks.Click                += (s,a) => ShowBookmarksDialog();
 			m_menu_encoding_detect.Click               += (s,a) => SetEncoding(null);
 			m_menu_encoding_ascii.Click                += (s,a) => SetEncoding(Encoding.ASCII           );
@@ -257,6 +258,7 @@ namespace RyLogViewer
 			m_bs_bookmarks.PositionChanged += (s,a) => SelectBookmark(m_bs_bookmarks.Position);
 			m_bookmarks_ui.NextBookmark    += NextBookmark;
 			m_bookmarks_ui.PrevBookmark    += PrevBookmark;
+			m_batch_refresh_bkmks.Action   += RefreshBookmarks;
 
 			// Startup
 			Shown += (s,a)=> Startup();
@@ -908,7 +910,7 @@ namespace RyLogViewer
 			if (args.ClickedItem == m_cmenu_find_prev) { m_find_ui.Pattern.Expr = ReadLine(hit.RowIndex).RowText; m_find_ui.RaiseFindPrev(false); return; }
 
 			// Bookmarks
-			if (args.ClickedItem == m_cmenu_toggle_bookmark) { ToggleBookmark(hit.RowIndex); }
+			if (args.ClickedItem == m_cmenu_toggle_bookmark) { SetBookmark(hit.RowIndex, Bit.EState.Toggle); }
 		}
 
 		/// <summary>Set the visibility of context menu options</summary>
@@ -990,7 +992,7 @@ namespace RyLogViewer
 			case Keys.Escape:                     CancelBuildLineIndex();             return true;
 			case Keys.F2:                         NextBookmark();                     return true;
 			case Keys.F2|Keys.Shift:              PrevBookmark();                     return true;
-			case Keys.F2|Keys.Control:            ToggleBookmark(SelectedRowIndex);   return true;
+			case Keys.F2|Keys.Control:            SetBookmark(SelectedRowIndex, Bit.EState.Toggle); return true;
 			case Keys.F3:                         FindNext(false);                    return true;
 			case Keys.F3|Keys.Shift:              FindPrev(false);                    return true;
 			case Keys.F3|Keys.Control:            SetFindPattern(SelectedRowIndex, true);  return true;

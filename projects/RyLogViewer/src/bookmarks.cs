@@ -3,16 +3,23 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.maths;
+using pr.util;
 
 namespace RyLogViewer
 {
 	/// <summary>A saved location within the file</summary>
 	public class Bookmark
 	{
-		public Range  Range    { get; set; }
-		public string Text     { get; set; }
-		public long   Position { get { return Range.Begin; } }
-		
+		/// <summary>The byte range of the bookmarked line</summary>
+		public Range Range { get; set; }
+
+		/// <summary>The text of the bookmarked line (used by reflection in the bookmarks ui)</summary>
+		public string Text { get; set; }
+
+		/// <summary>The begin address of the bookmarked line</summary>
+		public long Position { get { return Range.Begin; } }
+
 		public Bookmark(Range range, string text)
 		{
 			Range = range;
@@ -24,7 +31,8 @@ namespace RyLogViewer
 	{
 		private readonly BindingList<Bookmark> m_bookmarks;
 		private readonly BindingSource         m_bs_bookmarks;
-		
+		private readonly EventBatcher          m_batch_refresh_bkmks;
+
 		/// <summary>Show the bookmarks dialog</summary>
 		private void ShowBookmarksDialog()
 		{
@@ -33,28 +41,40 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Add or remove a bookmark at 'row_index'</summary>
-		private void ToggleBookmark(int row_index)
+		private void SetBookmark(int row_index, Bit.EState bookmarked)
 		{
 			if (row_index < 0 || row_index >= m_line_index.Count) return;
 			var line = m_line_index[row_index];
 
-			// Look for the bookmark
-			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Begin));
-			if (idx >= 0) // Bookmark was found, remove it
-				m_bookmarks.RemoveAt(idx);
-			else // Bookmark not found, insert it
-				m_bookmarks.Insert(~idx, new Bookmark(line, ReadLine(row_index).RowText));
-			m_bs_bookmarks.ResetBindings(false);
+			SetBookmark(line, bookmarked);
 
 			// Restore the selected row
 			SelectedRowIndex = row_index;
+		}
+
+		/// <summary>Sets or clears the bookmark at file address 'addr'</summary>
+		private void SetBookmark(Range line, Bit.EState bookmarked)
+		{
+			// Look for the bookmark
+			var idx = m_bookmarks.BinarySearch(b => b.Position.CompareTo(line.Begin));
+			if (idx >= 0 && bookmarked != Bit.EState.Set)
+			{
+				// Bookmark was found, remove it
+				m_bookmarks.RemoveAt(idx);
+			}
+			else if (idx < 0 && bookmarked != Bit.EState.Clear)
+			{
+				// Bookmark not found, insert it
+				m_bookmarks.Insert(~idx, new Bookmark(line, ReadLine(line).RowText));
+			}
+			m_batch_refresh_bkmks.Signal();
 		}
 
 		/// <summary>Scroll to the next bookmark after the current selected row</summary>
 		private void NextBookmark()
 		{
 			if (m_bookmarks.Count == 0) return;
-			
+
 			var row_index = SelectedRowIndex;
 			var line = row_index >= 0 && row_index < m_line_index.Count ? m_line_index[row_index] : Range.Zero;
 
@@ -86,6 +106,20 @@ namespace RyLogViewer
 			if (idx < 0 || idx >= m_bookmarks.Count) return;
 			SelectRowByAddr(m_bookmarks[idx].Position);
 			m_bs_bookmarks.Position = idx;
+		}
+
+		/// <summary>Removes all bookmarks and updates the UI</summary>
+		private void ClearAllBookmarks()
+		{
+			m_bookmarks.Clear();
+			m_batch_refresh_bkmks.Signal();
+		}
+
+		/// <summary>Updates the UI after the bookmarks have changed</summary>
+		private void RefreshBookmarks()
+		{
+			m_bs_bookmarks.ResetBindings(false);
+			UpdateUI();
 		}
 	}
 }

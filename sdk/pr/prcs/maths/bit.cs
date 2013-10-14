@@ -13,12 +13,14 @@ namespace pr.maths
 	/// <summary> Bit manipulation functions</summary>
 	public static class Bit
 	{
+		public enum EState { Clear = 0, Set = 1, Toggle = 2 }
+
 		/// <summary>Create a 32-bit bit mask from 1 &lt;&lt; n</summary>
 		public static UInt32 Bit32(int n) { return 1U << n; }
 
 		/// <summary>Create a 64-bit bit mask from 1 &lt;&lt; n</summary>
 		public static UInt64 Bit64(int n) { return 1UL << n; }
-	
+
 		/// <summary>Set/Clear bits in 'value'</summary>
 		public static uint SetBits(uint value, uint mask, bool state)
 		{
@@ -80,7 +82,7 @@ namespace pr.maths
 		{
 			value = ((value >> 1) & 0x55555555) | ((value & 0x55555555) << 1);	// swap odd and even bits
 			value = ((value >> 2) & 0x33333333) | ((value & 0x33333333) << 2);	// swap consecutive pairs
-			value = ((value >> 4) & 0x0F0F0F0F) | ((value & 0x0F0F0F0F) << 4);	// swap nibbles ... 
+			value = ((value >> 4) & 0x0F0F0F0F) | ((value & 0x0F0F0F0F) << 4);	// swap nibbles ...
 			value = ((value >> 8) & 0x00FF00FF) | ((value & 0x00FF00FF) << 8);	// swap bytes
 			value = ( value >> 16             ) | ( value               << 16);	// swap 2-byte long pairs
 			return value;
@@ -113,7 +115,7 @@ namespace pr.maths
 			shift = ((value &        0x2) != 0 ? 1 << 0 : 0); value >>= shift; pos |= shift;
 			return pos;
 		}
-	
+
 		/// <summary>Returns the bit position of the lowest bit</summary>
 		public static int LowBitIndex(uint n)
 		{
@@ -166,10 +168,10 @@ namespace pr.maths
 
 		//// http://infolab.stanford.edu/~manku/bitcount/bitcount.html
 		//// Constant time bit count works for 32-bit numbers only.
-		//// Fix last line for 64-bit numbers    
+		//// Fix last line for 64-bit numbers
 		//public uint CountBits(uint n)
 		//{
-		//    uint tmp;    
+		//    uint tmp;
 		//    tmp = n - ((n >> 1) & 033333333333)
 		//            - ((n >> 2) & 011111111111);
 		//    return ((tmp + (tmp >> 3)) & 030707070707) % 63;
@@ -242,10 +244,11 @@ namespace pr.maths
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static class TestBit
@@ -256,12 +259,12 @@ namespace pr
 				const string bitstr1 = "011011101011001101001";
 				uint bits0 = Bit.Parse(bitstr0);
 				uint bits1 = Bit.Parse(bitstr1);
-			
+
 				Assert.AreEqual(bitstr0 ,Bit.ToString(bits0));
 				Assert.AreEqual(bitstr1 ,Bit.ToString(bits1, bitstr1.Length));
 
 				Assert.False(Bit.AnySet(bits0,bits1));
-		
+
 				Assert.AreEqual(8  ,Bit.BitIndex(bits0, 4));
 				Assert.AreEqual(13 ,Bit.BitIndex(bits0, 6));
 				Assert.AreEqual(-1 ,Bit.BitIndex(bits0, 11));
@@ -269,7 +272,7 @@ namespace pr
 				List<uint> bitidx = new List<uint>(Bit.EnumBits(bits0));
 				Assert.AreEqual(bitidx.ToArray(), new[]{1,2,4,7,8,11,13,17,20});
 			}
-		
+
 			public enum NonFlags
 			{
 				One = 1,
@@ -288,7 +291,7 @@ namespace pr
 			{
 				NonFlags nf = NonFlags.One;
 				Flags f = Flags.One;
-			
+
 				Assert.Throws(typeof(ArgumentException), () => Assert.True(f.HasFlag(nf)));
 				Assert.IsTrue(f.HasFlag(Flags.One));
 				Assert.IsFalse(f.HasFlag(Flags.One|Flags.Two));
@@ -296,4 +299,5 @@ namespace pr
 		}
 	}
 }
+
 #endif

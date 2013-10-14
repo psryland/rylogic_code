@@ -660,7 +660,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Callback function called by FindLines that is called with each line found</summary>
-		/// <param name="rng">The byte range of the line within 'buf', not including row delimiter</param>
+		/// <param name="rng">The byte range of the line within 'buf' not including the row delimiter</param>
 		/// <param name="base_addr">The base address in the file that buf is relative to</param>
 		/// <param name="fileend">The current known end position of the file</param>
 		/// <param name="buf">Buffer containing the buffered file data</param>

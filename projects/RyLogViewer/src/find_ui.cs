@@ -28,30 +28,8 @@ namespace RyLogViewer
 		private Label m_lbl_prev_find_patterns;
 		private Button m_btn_regex_help;
 		private CheckBox m_check_whole_line;
+		private Button m_btn_bookmarkall;
 		private RadioButton m_radio_substring;
-
-		/// <summary>The current find pattern</summary>
-		public Pattern Pattern
-		{
-			get { return m_pattern; }
-			set { m_pattern = value; UpdateUI(); }
-		}
-
-		/// <summary>An event called whenever the dialog gets a FindNext command</summary>
-		public event Action<bool> FindNext;
-		public void RaiseFindNext(bool from_start)
-		{
-			if (FindNext == null) return;
-			FindNext(from_start);
-		}
-
-		/// <summary>An event called whenever the dialog gets a FindPrev command</summary>
-		public event Action<bool> FindPrev;
-		public void RaiseFindPrev(bool from_end)
-		{
-			if (FindPrev == null) return;
-			FindPrev(from_end);
-		}
 
 		public FindUI(Form owner, BindingSource history)
 		:base(owner, EPin.TopRight, new Point(-270, +28), Size.Empty, false)
@@ -101,6 +79,9 @@ namespace RyLogViewer
 
 			m_btn_find_next.ToolTip(m_tt, "Search forward through the log.\r\nKeyboard shortcut: <Enter>");
 			m_btn_find_next.Click += (s,a) => RaiseFindNext(false);
+
+			m_btn_bookmarkall.ToolTip(m_tt, "Set a bookmark for all found instances of the search pattern");
+			m_btn_bookmarkall.Click += (s,a) => BookmarkAll();
 
 			// Pattern type
 			m_radio_substring.Checked = Pattern.PatnType == EPattern.Substring;
@@ -167,6 +148,37 @@ namespace RyLogViewer
 				{
 					m_tt.Dispose();
 				};
+		}
+
+		/// <summary>The current find pattern</summary>
+		public Pattern Pattern
+		{
+			get { return m_pattern; }
+			set { m_pattern = value; UpdateUI(); }
+		}
+
+		/// <summary>An event called whenever the dialog gets a FindNext command</summary>
+		public event Action<bool> FindNext;
+		public void RaiseFindNext(bool from_start)
+		{
+			if (FindNext == null) return;
+			FindNext(from_start);
+		}
+
+		/// <summary>An event called whenever the dialog gets a FindPrev command</summary>
+		public event Action<bool> FindPrev;
+		public void RaiseFindPrev(bool from_end)
+		{
+			if (FindPrev == null) return;
+			FindPrev(from_end);
+		}
+
+		/// <summary>An event called when all matches should be bookmarked</summary>
+		public event Action BookmarkAll;
+		public void BookmarkAllResults()
+		{
+			if (BookmarkAll == null) return;
+			BookmarkAll();
 		}
 
 		/// <summary>Handle global command keys</summary>
@@ -275,6 +287,7 @@ namespace RyLogViewer
 			this.m_lbl_prev_find_patterns = new System.Windows.Forms.Label();
 			this.m_combo_pattern = new RyLogViewer.ComboBox();
 			this.m_grid = new RyLogViewer.DataGridView();
+			this.m_btn_bookmarkall = new System.Windows.Forms.Button();
 			this.m_table.SuspendLayout();
 			this.m_panel_top.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
@@ -283,7 +296,7 @@ namespace RyLogViewer
 			// m_btn_find_next
 			//
 			this.m_btn_find_next.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_find_next.Location = new System.Drawing.Point(157, 91);
+			this.m_btn_find_next.Location = new System.Drawing.Point(157, 102);
 			this.m_btn_find_next.Name = "m_btn_find_next";
 			this.m_btn_find_next.Size = new System.Drawing.Size(94, 23);
 			this.m_btn_find_next.TabIndex = 8;
@@ -293,7 +306,7 @@ namespace RyLogViewer
 			// m_btn_find_prev
 			//
 			this.m_btn_find_prev.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_find_prev.Location = new System.Drawing.Point(157, 66);
+			this.m_btn_find_prev.Location = new System.Drawing.Point(157, 73);
 			this.m_btn_find_prev.Name = "m_btn_find_prev";
 			this.m_btn_find_prev.Size = new System.Drawing.Size(94, 23);
 			this.m_btn_find_prev.TabIndex = 7;
@@ -380,6 +393,7 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_top.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.m_panel_top.Controls.Add(this.m_btn_bookmarkall);
 			this.m_panel_top.Controls.Add(this.m_check_whole_line);
 			this.m_panel_top.Controls.Add(this.m_btn_regex_help);
 			this.m_panel_top.Controls.Add(this.m_lbl_prev_find_patterns);
@@ -395,7 +409,7 @@ namespace RyLogViewer
 			this.m_panel_top.Location = new System.Drawing.Point(0, 0);
 			this.m_panel_top.Margin = new System.Windows.Forms.Padding(0);
 			this.m_panel_top.Name = "m_panel_top";
-			this.m_panel_top.Size = new System.Drawing.Size(261, 121);
+			this.m_panel_top.Size = new System.Drawing.Size(261, 140);
 			this.m_panel_top.TabIndex = 0;
 			//
 			// m_check_whole_line
@@ -420,7 +434,7 @@ namespace RyLogViewer
 			// m_lbl_prev_find_patterns
 			//
 			this.m_lbl_prev_find_patterns.AutoSize = true;
-			this.m_lbl_prev_find_patterns.Location = new System.Drawing.Point(1, 101);
+			this.m_lbl_prev_find_patterns.Location = new System.Drawing.Point(1, 125);
 			this.m_lbl_prev_find_patterns.Name = "m_lbl_prev_find_patterns";
 			this.m_lbl_prev_find_patterns.Size = new System.Drawing.Size(130, 13);
 			this.m_lbl_prev_find_patterns.TabIndex = 29;
@@ -448,7 +462,7 @@ namespace RyLogViewer
 			this.m_grid.BackgroundColor = System.Drawing.SystemColors.Control;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.m_grid.ColumnHeadersVisible = false;
-			this.m_grid.Location = new System.Drawing.Point(0, 121);
+			this.m_grid.Location = new System.Drawing.Point(0, 140);
 			this.m_grid.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid.MultiSelect = false;
 			this.m_grid.Name = "m_grid";
@@ -456,8 +470,18 @@ namespace RyLogViewer
 			this.m_grid.RowHeadersVisible = false;
 			this.m_grid.RowTemplate.Height = 18;
 			this.m_grid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid.Size = new System.Drawing.Size(261, 184);
+			this.m_grid.Size = new System.Drawing.Size(261, 165);
 			this.m_grid.TabIndex = 0;
+			//
+			// m_btn_bookmarkall
+			//
+			this.m_btn_bookmarkall.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_bookmarkall.Location = new System.Drawing.Point(28, 99);
+			this.m_btn_bookmarkall.Name = "m_btn_bookmarkall";
+			this.m_btn_bookmarkall.Size = new System.Drawing.Size(94, 23);
+			this.m_btn_bookmarkall.TabIndex = 31;
+			this.m_btn_bookmarkall.Text = "&Bookmark All";
+			this.m_btn_bookmarkall.UseVisualStyleBackColor = true;
 			//
 			// FindUI
 			//
