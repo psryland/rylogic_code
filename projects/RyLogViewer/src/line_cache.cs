@@ -27,8 +27,11 @@ namespace RyLogViewer
 				public Col(string text, IEnumerable<Highlight> hl)
 				{
 					Text = text;
-					HL = hl != null ? hl.ToList() : new List<Highlight>();
+					HL = hl != null
+						? hl.Reversed().Where(h => h.IsMatch(text)).ToList()
+						: new List<Highlight>();
 				}
+
 				public override string ToString()
 				{
 					return Text;
@@ -73,7 +76,7 @@ namespace RyLogViewer
 				// Split the line into columns
 				if (col_delim.Length == 0) // Single column
 				{
-					Column.Add(new Col(RowText, highlights.Reversed().Where(h => h.IsMatch(RowText))));
+					Column.Add(new Col(RowText, highlights));
 				}
 				else // Multiple columns
 				{
@@ -82,7 +85,7 @@ namespace RyLogViewer
 					{
 						e = FindNextDelim(buf, s, length, col_delim, false); // Returns one passed the delimiter
 						var col_text = encoding.GetString(buf, s, e - s - (e!=length?col_delim.Length:0));
-						Column.Add(new Col(col_text, highlights.Reversed().Where(h => h.IsMatch(col_text))));
+						Column.Add(new Col(col_text, highlights));
 						s = e;
 					}
 					while (e != length);
