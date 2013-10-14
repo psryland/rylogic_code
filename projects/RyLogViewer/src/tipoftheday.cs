@@ -27,16 +27,16 @@ namespace RyLogViewer
 				{
 					Title = "Getting Started",
 					Body  = "To begin experimenting with some of the features of RyLogViewer, load the " +
-							"<a href='cmd://open_example_logfile'><i>example logfile.txt</i></a> from the " +
+							"<a href='"+Cmd.open_example_logfile+"'><i>example logfile.txt</i></a> from the " +
 							"examples directory.<br/>"
 				}
 				,new Tip
 				{
 					Title = "Pattern Sets",
-					Body  = "RyLogViewer allows highlighting and filtering patterns that you use frequently " +
-					        "to be saved as 'Pattern Sets'. Once saved these can be selected quickly from " +
-							"a drop-down list.<br/><br/>" +
-							"Highlighting and filtering patterns are configured under the Options menu.",
+					Body  = "RyLogViewer allows the highlighting and filtering patterns that you use frequently " +
+							"to be saved as <a href='"+Cmd.show_pattern_sets+"'><i>Pattern Sets</i></a>. " +
+					        "Once saved these sets can be selected quickly from a drop-down list.<br/><br/>" +
+							"Highlighting and filtering patterns and pattern sets are configured under the Options menu.",
 				}
 				,new Tip
 				{
@@ -74,7 +74,7 @@ namespace RyLogViewer
 				{
 					Title = "Multi-Column Data",
 					Body  = "RyLogViewer can display multi-column data such as comma separated values (CSV) data. " +
-					        "On the general tab of the options dialog, specify the column delimiter and the number of " +
+					        "On the general tab of the options dialog, <a href='"+Cmd.show_column_delimiter_options+"'>specify the column delimiter</a> and the number of " +
 					        "columns to display. If you need more than one column delimiter, you can always use text " +
 					        "transforms to convert the column delimiters into a single unique character sequence, and " +
 					        "then use that as the column delimiter."
@@ -88,6 +88,12 @@ namespace RyLogViewer
 					        "second is <i>Copy to Clipboard</i> which copies the file path to the system clipboard."
 				}
 			};
+		private static class Cmd
+		{
+			public const string open_example_logfile          = "cmd://open_example_logfile/";
+			public const string show_pattern_sets             = "cmd://show_pattern_sets/";
+			public const string show_column_delimiter_options = "cmd://show_column_delimiter_options/";
+		}
 		#endregion
 
 		private readonly Main m_main;
@@ -190,13 +196,19 @@ namespace RyLogViewer
 			if (args.Url.Scheme == "cmd")
 			{
 				args.Cancel = true;
-				switch (args.Url.Host)
+				switch (args.Url.ToString())
 				{
-				case "open_example_logfile":
+				case Cmd.open_example_logfile:
 					m_main.SetLineEnding(ELineEnding.Detect);
 					m_main.SetEncoding(null);
 					m_main.OpenSingleLogFile(Misc.ResolveAppPath(@"examples\example logfile.txt"), false);
 					Close();
+					break;
+				case Cmd.show_pattern_sets:
+					m_main.ShowOptions(SettingsUI.ETab.Highlights, SettingsUI.ESpecial.ShowPatternSetsTip);
+					break;
+				case Cmd.show_column_delimiter_options:
+					m_main.ShowOptions(SettingsUI.ETab.General, SettingsUI.ESpecial.ShowColumnDelimiterTip);
 					break;
 				}
 			}

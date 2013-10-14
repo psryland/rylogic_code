@@ -1309,7 +1309,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Display the options dialog</summary>
-		private void ShowOptions(SettingsUI.ETab tab, SettingsUI.ESpecial special = SettingsUI.ESpecial.None)
+		public void ShowOptions(SettingsUI.ETab tab, SettingsUI.ESpecial special = SettingsUI.ESpecial.None)
 		{
 			string row_text = "";
 			string test_text = PatternUI.DefaultTestText;

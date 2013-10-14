@@ -469,9 +469,9 @@
       <DependentUpon>swizzle_quick_ref.htm</DependentUpon>
     </Content>
     <Content Include="Resources\totd.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
       <DependentUpon>totd.htm</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
     </Content>
     <Content Include="Resources\transform_quick_ref.html">
       <AutoGen>True</AutoGen>

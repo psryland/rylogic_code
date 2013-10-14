@@ -59,9 +59,9 @@ namespace RyLogViewer
 		public enum ESpecial
 		{
 			None,
-
-			// Show a tip balloon over the line ending field
-			ShowLineEndingTip,
+			ShowLineEndingTip,      // Show a tip balloon over the line ending field
+			ShowPatternSetsTip,     // Show a tip balloon over the pattern sets area
+			ShowColumnDelimiterTip, // Show a tip balloon over the column delimiter UI
 		}
 		private ESpecial m_special;
 
@@ -806,10 +806,20 @@ namespace RyLogViewer
 						"Set the line ending characters to expect in the log data.\r\n" +
 						"Use '<CR>' for carriage return, '<LF>' for line feed.\r\n" +
 						"Leave blank to auto detect", 7000);
-					m_special = ESpecial.None;
+					break;
+				}
+			case ESpecial.ShowPatternSetsTip:
+				{
+					Misc.ShowHint(m_pattern_set_hl, "Pattern sets are loaded, saved, and selected here");
+					break;
+				}
+			case ESpecial.ShowColumnDelimiterTip:
+				{
+					Misc.ShowHint(m_edit_col_delims, "Multi-column mode is enabled when a column delimiter is given here");
 					break;
 				}
 			}
+			m_special = ESpecial.None;
 		}
 
 		/// <summary>Set appropriate changed flags when a grid is changed</summary>
@@ -875,45 +885,6 @@ namespace RyLogViewer
 
 			FlagAsChanged(grid);
 		}
-
-		///// <summary>Handle the mouse hovering over the grid</summary>
-		//private void OnMouseHover(DataGridView grid)
-		//{
-		//	var pt = grid.PointToClient(MousePosition);
-		//	var hit = grid.HitTest(pt.X, pt.Y);
-		//	if (hit.Type != DataGridViewHitTestType.ColumnHeader) return;
-		//	var col = grid.Columns[hit.ColumnIndex];
-		//	var tip_pt = new Point(hit.ColumnX + col.Width/2, hit.RowY + 3);
-
-		//	switch (col.Name)
-		//	{
-		//	default:
-		//		Debug.Assert(false, "Column header hint needed");
-		//		break;
-		//	case ColumnNames.Active:
-		//		col.ToolTipText = "Enable or disable the pattern";
-		//		, tip_pt);
-		//		break;
-		//	case ColumnNames.Pattern:
-		//		Misc.ShowHint(grid, "The pattern used to match lines in the log data", tip_pt);
-		//		break;
-		//	case ColumnNames.Edit:
-		//		Misc.ShowHint(grid, "Click to edit this pattern in the editor", tip_pt);
-		//		break;
-		//	case ColumnNames.Colours:
-		//		Misc.ShowHint(grid, "The colours to use when highlighting lines for the highlight pattern", tip_pt);
-		//		break;
-		//	case ColumnNames.Highlight:
-		//		Misc.ShowHint(grid, "Highlight the full row, or just the parts that match the highlight pattern", tip_pt);
-		//		break;
-		//	case ColumnNames.Behaviour:
-		//		Misc.ShowHint(grid, "Whether to keep or remove the lines that match this filter pattern", tip_pt);
-		//		break;
-		//	case ColumnNames.ClickAction:
-		//		Misc.ShowHint(grid, "The command line executed when a row matching the pattern is double clicked", tip_pt);
-		//		break;
-		//	}
-		//}
 
 		/// <summary>Handle mouse down on the patterns grid</summary>
 		private static void OnMouseDown<T>(DataGridView grid, List<T> patterns, MouseEventArgs e)
