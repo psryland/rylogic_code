@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using RyLogViewer;
+using pr.gui;
 
 namespace ExamplePlugin
 {
@@ -56,14 +57,18 @@ namespace ExamplePlugin
 		public string ShortName { get { return "Example Source"; } }
 
 		/// <summary>The string to display in the Data Sources menu</summary>
-		public string MenuText { get { return "Plugin-ExampleDataSource"; } }
+		public string MenuText { get { return "File to Hex - Demo Plugin"; } }
 
 		/// <summary>
 		/// Displays a modal dialog that allows configuration of the data source.
 		/// Return true if the user wants to continue on and view the custom data source</summary>
 		public LogDataSourceRunData ShowConfigUI(LogDataSourceConfig config)
 		{
-			MessageBox.Show(config.MainWindow, "This example plugin streams data from an arbitrary file as formatted hexadecimal");
+			const string msg =
+				"This plugin is a demonstration of a custom data source.\r\n" +
+				"It reads an arbitrary file and outputs hexadecimal text data which " +
+				"is then displayed by RyLogViewer";
+			MsgBox.Show(config.MainWindow, msg, "Custom Data Source Plugin Example");
 			var dlg = new OpenFileDialog{Title = "Choose a file"};
 			if (dlg.ShowDialog(config.MainWindow) != DialogResult.OK)
 				return new LogDataSourceRunData(false);
