@@ -104,9 +104,11 @@ namespace RyLogViewer
 				lock (m_lock)
 				{
 					Log.Info(this, "Disposing process {0}".Fmt(m_process.StartInfo.FileName));
-					if (!m_process.HasExited)
-						if (!m_process.CloseMainWindow())
-							m_process.Kill();
+					
+					// HasExited can throw, Dispose() should be all that's needed anyway
+					//if (!m_process.HasExited)
+					//	if (!m_process.CloseMainWindow())
+					//		m_process.Kill();
 
 					m_process.Dispose();
 					m_process = null;
