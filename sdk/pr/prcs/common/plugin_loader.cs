@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
@@ -77,8 +78,16 @@ namespace pr.common
 			// Report any plugins that failed to load
 			if (loader.Failures.Count != 0)
 			{
-				var msg = "The following plugins failed to load:\r\n{0}".Fmt(string.Join("\r\n", loader.Failures));
-				MsgBox.Show(parent, msg, "Plugin Load Failures", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				var msg = new StringBuilder("The following plugins failed to load:\r\n");
+				foreach (var x in loader.Failures)
+				{
+					msg.AppendLine("{0}".Fmt(x.Item1));
+					msg.AppendLine("Reason:");
+					msg.AppendLine("   {0}".Fmt(x.Item2.Message));
+					msg.AppendLine();
+				}
+
+				MsgBox.Show(parent, msg.ToString(), "Plugin Load Failures", MessageBoxButtons.OK, MessageBoxIcon.Information);
 			}
 
 			return loader;
