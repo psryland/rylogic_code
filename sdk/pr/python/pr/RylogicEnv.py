@@ -34,7 +34,10 @@ def DiffContent(src,dst):
 
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
 def Copy(src, dst, only_if_modified=True):
-	if not only_if_modified or Diff(src,dst):
+	if os.path.isdir(src):
+		for file in os.listdir(src):
+			Copy(src + "\\" + file, dst + "\\" + file, only_if_modified)
+	elif not only_if_modified or Diff(src,dst):
 		print(src + " --> " + dst)
 		dirname = os.path.dirname(dst)
 		if not os.path.exists(dirname): os.makedirs(dirname)
@@ -54,10 +57,10 @@ def Run(args, expected_return_code=0):
 		OnError("ERROR: " + str(e))
 
 # Executes a program echoing its output to stdout
-def Exec(args, expected_return_code=0):
+def Exec(args, expected_return_code=0, working_dir=".\\"):
 	try:
 		#print(args)
-		subprocess.check_call(args)
+		subprocess.check_call(args, cwd=working_dir)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return
 		OnError("ERROR: " + str(e.output))

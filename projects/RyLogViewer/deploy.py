@@ -1,6 +1,6 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
-import sys, os, shutil
+import sys, os, shutil, re
 
 sys.path.append("Q:/sdk/pr/python")
 from pr import RylogicEnv
@@ -39,6 +39,17 @@ try:
 	if confirm != "y":
 		RylogicEnv.OnError()
 
+	#Build the docs
+	def ExportDirectory(dir):
+		for file in os.listdir(dir):
+			filepath = dir + "\\" + file
+			if re.match(r".*(?<!include)\.htm$",filepath, flags=re.IGNORECASE):
+				print(filepath)
+				outfile = re.sub(r"\.htm", r".html", filepath)
+				RylogicEnv.Exec([UserVars.csex, "-expand_template", "-f", filepath, "-o", outfile])
+	ExportDirectory(srcdir + r"\docs")
+	ExportDirectory(srcdir + r"\Resources")
+
 	#Invoke MSBuild
 	print("Building the exe...")
 	RylogicEnv.Exec([UserVars.msbuild, proj, "/p:Configuration=" + config, "/t:Build"])
@@ -55,6 +66,9 @@ try:
 	RylogicEnv.Copy(bindir + "\\rylogviewer.pdb", sym + "\\rylogviewer.pdb")
 	RylogicEnv.Copy(bindir + "\\pr.dll"         , dst + "\\pr.dll"  )
 	RylogicEnv.Copy(bindir + "\\pr.pdb"         , sym + "\\pr.pdb"  )
+	RylogicEnv.Copy(bindir + "\\docs"           , dst + "\\docs")
+	RylogicEnv.Copy(bindir + "\\examples"       , dst + "\\examples")
+	RylogicEnv.Copy(bindir + "\\plugins"        , dst + "\\plugins")
 
 	#Create a zip of the dstdir
 	dstzip = dst + ".zip"

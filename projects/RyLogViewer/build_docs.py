@@ -1,6 +1,6 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
-import os, sys, imp, re, subprocess
+import os, sys, imp, re
 
 sys.path.append("Q:/sdk/pr/python")
 from pr import RylogicEnv
