@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using RyLogViewer;
-using pr.gui;
 
 namespace ExamplePlugin
 {
@@ -66,9 +65,9 @@ namespace ExamplePlugin
 		{
 			const string msg =
 				"This plugin is a demonstration of a custom data source.\r\n" +
-				"It reads an arbitrary file and outputs hexadecimal text data which " +
-				"is then displayed by RyLogViewer";
-			MsgBox.Show(config.MainWindow, msg, "Custom Data Source Plugin Example");
+				"It reads an arbitrary file and outputs hexadecimal text\r\n" +
+				"data which is then displayed by RyLogViewer";
+			MessageBox.Show(config.MainWindow, msg, "Custom Data Source Plugin Example");
 			var dlg = new OpenFileDialog{Title = "Choose a file"};
 			if (dlg.ShowDialog(config.MainWindow) != DialogResult.OK)
 				return new LogDataSourceRunData(false);

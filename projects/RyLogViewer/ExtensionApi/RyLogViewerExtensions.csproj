@@ -44,8 +44,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ILogDataSource.cs" />
-    <Compile Include="ITransformSubstitution.cs" />
+    <Compile Include="..\plugins\ILogDataSource.cs">
+      <Link>ILogDataSource.cs</Link>
+    </Compile>
+    <Compile Include="..\plugins\ITransformSubstitution.cs">
+      <Link>ITransformSubstitution.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

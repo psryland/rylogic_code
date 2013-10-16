@@ -31,6 +31,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="RyLogViewerExtensions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d58190847d96b83d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Q:\projects\RyLogViewer\bin\Release\RyLogViewerExtensions.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
@@ -44,18 +48,12 @@
     <Compile Include="ExampleSubstitution.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\sdk\pr\prcs\prcs_vs2012.csproj">
-      <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
-      <Name>prcs_vs2012</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\ExtensionApi\RyLogViewerExtensions.csproj">
-      <Project>{8aa5340a-5c36-4c9d-a6a4-b035aabd3547}</Project>
-      <Name>RyLogViewerExtensions</Name>
-    </ProjectReference>
+    <Content Include="readme.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy $(TargetPath) $(SolutionDir)\bin\$(ConfigurationName)\plugins\</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

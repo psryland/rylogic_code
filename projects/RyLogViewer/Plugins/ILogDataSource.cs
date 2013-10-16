@@ -8,14 +8,20 @@ namespace RyLogViewer
 	/// <summary>Interface for asynchronous access to a log data source</summary>
 	public interface ILogDataSource
 	{
+		// Notes:
+		//  These methods provide an interface the same as the BeginRead/EndRead
+		//  methods on System.IO.Stream and should be implemented with a behaviour
+		//  that mirrors that of System.IO.Stream.
+
 		/// <summary>
 		/// Begin an asynchronous read of the log data.
 		/// Buffer should be filled with the byte representation of the text from the
-		/// data source. (Using byte[] to be encoding independent)
-		/// 'buffer' is where read log data should be stored, beginning at 'offset',
+		/// data source. (A byte[] is used since the text data can be of any of the
+		/// supported text encoding formats)
+		/// 'buffer' is where log data should be stored, beginning at 'offset',
 		/// and containing no more than 'count' bytes.
 		/// 'callback' should be called once the read is complete (unless EndRead is called first)
-		/// 'state' is a context object to pass through the async operation</summary>
+		/// 'state' is a context object that is passed to the callback</summary>
 		IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state);
 
 		/// <summary>Completes an asynchronous read returning the number of bytes read</summary>
@@ -26,23 +32,38 @@ namespace RyLogViewer
 	public interface ICustomLogDataSource :ILogDataSource ,IDisposable
 	{
 		// Notes:
-		//  Plugin classes that implement this interface can get constructed
-		//  in a background thread. Start, BeginRead, EndRead, Dispose should
-		//  all be called from the same thread however.
+		// -This interface represents the contract for a complete custom
+		//  data source, including any UI interaction needed for configuration.
+		//  To create a custom data source, create a class that implements this
+		//  interface and mark it with the CustomDataSourceAttribute.
+		// -RyLogViewer loads plugins using a background thread, however, Start(),
+		//  BeginRead(), EndRead(), and Dispose() are all called from the main thread.
 
-		/// <summary>A succinct name for the data source</summary>
+		/// <summary>
+		/// A succinct name for the data source, used in the status bar and as the
+		/// name for the plugin in message box messages.</summary>
 		string ShortName { get; }
 
-		/// <summary>The string to display in the Data Sources menu</summary>
+		/// <summary>The string to display in the Data Sources menu.</summary>
 		string MenuText { get; }
 
-		/// <summary>Displays a modal dialog that allows configuration of the data source</summary>
+		/// <summary>
+		/// Displays a modal dialog that allows configuration of the data source.
+		/// Use this method to display a modal dialog that collects any data needed
+		/// by the custom data source (files to load, formats, etc).
+		/// Asynchronous data collection should not be started in this method however,
+		/// the 'Start()' method is used for this.</summary>
 		LogDataSourceRunData ShowConfigUI(LogDataSourceConfig config);
 
-		/// <summary>Begins the asynchronous process of collecting log data</summary>
+		/// <summary>
+		/// Begin the asynchronous process of collecting log data.
+		/// Start() will always be called before the first call to BeginRead().</summary>
 		void Start();
 
-		/// <summary>Should return true to continue reading data</summary>
+		/// <summary>
+		/// Used by RyLogViewer to poll the status of the custom data source.
+		/// Return true to indicate that log data is still available.
+		/// Return false to indicate that the custom data source is exhausted.</summary>
 		bool IsConnected { get; }
 	}
 
@@ -68,7 +89,7 @@ namespace RyLogViewer
 		/// <summary>Continue and launch the custom data source</summary>
 		public bool DoLaunch { get; set; }
 
-		/// <summary>The file to capture log data into (use null/empty to have a temp file used)</summary>
+		/// <summary>The file to capture log data into (use null or empty to have a temp file used)</summary>
 		public string OutputFilepath { get; set; }
 
 		/// <summary>True if data should be appended to 'OutputFilepath'</summary>
@@ -85,23 +106,18 @@ namespace RyLogViewer
 	/// <summary>Wrapper for Stream to implement the ILogDataSource interface</summary>
 	public class StreamSource :ILogDataSource
 	{
+		// This is a helper class that wraps a stream and implements
+		// the ILogDataSource interface. Note, this object does not
+		// own the stream and therefore is not IDisposable.
 		private readonly Stream m_stream;
-		public StreamSource(Stream stream) { m_stream = stream; }
-
-		/// <summary>
-		/// Begin an asynchronous read of the log data.
-		/// Buffer should be filled with the byte representation of the text from the
-		/// data source. (Using byte[] to be encoding independent)
-		/// 'buffer' is where read log data should be stored, beginning at 'offset',
-		/// and containing no more than 'count' bytes.
-		/// 'callback' should be called once the read is complete (unless EndRead is called first)
-		/// 'state' is a context object to pass through the async operation</summary>
+		public StreamSource(Stream stream)
+		{
+			m_stream = stream;
+		}
 		public IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
 		{
 			return m_stream.BeginRead(buffer, offset, count, callback, state);
 		}
-
-		/// <summary>Completes an asynchronous read returning the number of bytes read</summary>
 		public int EndRead(IAsyncResult async_result)
 		{
 			return m_stream.EndRead(async_result);
