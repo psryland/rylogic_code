@@ -420,10 +420,16 @@
       <DependentUpon>welcome.htm</DependentUpon>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="examples\example_code_lookup.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="examples\example_settings.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="gen_licence.py" />
+    <Content Include="examples\example_highlights_pattern_set.rylog_highlights">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="Resources\auto_refresh.include.htm" />
     <Content Include="plugins\plugins.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
