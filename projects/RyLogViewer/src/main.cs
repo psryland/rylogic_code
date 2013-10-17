@@ -637,7 +637,7 @@ namespace RyLogViewer
 
 				// Paint each cell
 				var cellbounds = row_bounds.Shifted(-m_grid.HorizontalScrollingOffset, 0);
-				for (int i = 0, iend = line.Column.Count; i != iend; ++i, cellbounds.X += cellbounds.Width)
+				for (int i = 0, iend = Math.Min(line.Column.Count,m_grid.ColumnCount); i != iend; ++i, cellbounds.X += cellbounds.Width)
 				{
 					cellbounds.Width = m_grid[i,row_index].Size.Width;
 
@@ -689,7 +689,7 @@ namespace RyLogViewer
 			if (selected)
 			{
 				// Fill the selected area in semi-transparent
-				using (var b = new SolidBrush(Color.FromArgb(128, cs.SelectionBackColor)))
+				using (var b = new SolidBrush(Color.FromArgb(0xC0, cs.SelectionBackColor)))
 					gfx.FillRectangle(b, row_bounds);
 			}
 		}
@@ -700,7 +700,7 @@ namespace RyLogViewer
 			var cs = RowCellStyle(row_index);
 
 			var cellbounds = row_bounds.Shifted(-m_grid.HorizontalScrollingOffset, 0);
-			for (int i = 0, iend = line.Column.Count; i != iend; ++i, cellbounds.X += cellbounds.Width)
+			for (int i = 0, iend = Math.Min(line.Column.Count, m_grid.ColumnCount); i != iend; ++i, cellbounds.X += cellbounds.Width)
 			{
 				cellbounds.Width = m_grid[i,row_index].Size.Width;
 
