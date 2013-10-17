@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
@@ -61,30 +62,31 @@ namespace RyLogViewer
 			}
 		}
 
-		internal static Dictionary<string, ITransformSubstitution> Substitutors
+		/// <summary>The collection of available text transformation implementations</summary>
+		internal static List<ITransformSubstitution> Substitutors
 		{
 			get
 			{
 				if (m_substitutors == null)
 				{
-					m_substitutors = new Dictionary<string, ITransformSubstitution>();
+					m_substitutors = new List<ITransformSubstitution>();
 
 					// Add built in substitutions (before the plugins so that built in subs can be replaced)
-					{ var s = new SubNoChange();   m_substitutors.Add(s.Name, s); }
-					{ var s = new SubToLower();    m_substitutors.Add(s.Name, s); }
-					{ var s = new SubToUpper();    m_substitutors.Add(s.Name, s); }
-					{ var s = new SubSwizzle();    m_substitutors.Add(s.Name, s); }
-					{ var s = new SubCodeLookup(); m_substitutors.Add(s.Name, s); }
+					{ var s = new SubNoChange();   m_substitutors.Add(s); }
+					{ var s = new SubToLower();    m_substitutors.Add(s); }
+					{ var s = new SubToUpper();    m_substitutors.Add(s); }
+					{ var s = new SubSwizzle();    m_substitutors.Add(s); }
+					{ var s = new SubCodeLookup(); m_substitutors.Add(s); }
 
 					// Loads dlls from the plugins directory looking for transform substitutions
 					var plugins = PluginLoader<TransformSubstitutionAttribute, ITransformSubstitution>.LoadWithUI(null, Misc.ResolveAppPath("plugins"), true);
 					foreach (var sub in plugins.Plugins)
-						m_substitutors.Add(sub.Name, sub);
+						m_substitutors.Add(sub);
 				}
 				return m_substitutors;
 			}
 		}
-		private static Dictionary<string, ITransformSubstitution> m_substitutors;
+		private static List<ITransformSubstitution> m_substitutors;
 
 		public Transform() :this(EPattern.Substring, string.Empty, string.Empty) {}
 		public Transform(EPattern patn_type, string expr, string replace) :base(patn_type, expr)
@@ -111,18 +113,24 @@ namespace RyLogViewer
 			foreach (var s in subs.Elements(XmlTag.Sub))
 			{
 				var tag  = s.Element(XmlTag.Tag).Value;   // The capture tag that has an associated substitution
-				var name = s.Element(XmlTag.Name).Value;  // The name (and unique id) of the substitutor
+				var guid = s.Element(XmlTag.Id).Value;    // The unique id of the text transform
+				var name = s.Element(XmlTag.Name).Value;  // The friendly name of the transform
 				try
 				{
-					// Create a new instance of the appropriate substitutor
-					// and populate it with instance specific data
-					var sub = Substitutors[name].Clone();
+					// Create a new instance of the appropriate transform and populate it with instance specific data
+					var sub = Substitutors.FirstOrDefault(x => string.Compare(x.Guid.ToString(), guid, StringComparison.OrdinalIgnoreCase) == 0);
+					if (sub == null) throw new Exception("Text transform '{0}' (unique id: {1}) was not found\r\nThis text transform will not behaviour correctly".Fmt(name, guid));
+					sub = (ITransformSubstitution)Activator.CreateInstance(sub.GetType());
 					sub.FromXml(s.Element(XmlTag.SubData));
 					Subs.Add(tag, sub);
 				}
 				catch (Exception ex)
 				{
-					Log.Warn(this, ex, "Substitutor '{0}' was not found".Fmt(name));
+					Log.Warn(this, ex, "Text transform '{0}' ({1}) failed to load".Fmt(name, guid));
+					Misc.ShowMessage(null,
+						"Text transform '{0}' ({1}) failed to load\r\n".Fmt(name, guid) +
+						"Reason:\r\n" + ex.Message,
+						"Text Transform Load Failure", MessageBoxIcon.Information);
 					Subs.Add(tag, new SubNoChange());
 				}
 			}
@@ -135,18 +143,26 @@ namespace RyLogViewer
 		/// <summary>Export this type to an xml node</summary>
 		public override XElement ToXml(XElement node)
 		{
-			// Add the base pattern properties
+			// Add the base pattern properties and the replace template string
 			base.ToXml(node);
 			node.Add(new XElement(XmlTag.Replace ,Replace));
 
-			// Prepare the subs node
+			// Add sub nodes for each transform instance
 			var subs = new XElement(XmlTag.Subs);
 			foreach (var s in Subs)
-				subs.Add(new XElement(XmlTag.Sub,
-					new XElement(XmlTag.Tag  ,s.Key),          // The capture tag that the sub applies to
-					new XElement(XmlTag.Name ,s.Value.Name),   // The human readable name of the substitutor
-					s.Value.ToXml(new XElement(XmlTag.SubData))// Instance specific data for the substitutor
-					));
+			{
+				var data = new XElement(XmlTag.SubData);
+				s.Value.ToXml(data);
+
+				var sub = new XElement(XmlTag.Sub,
+					new XElement(XmlTag.Tag  ,s.Key),                  // The capture tag that the sub applies to
+					new XElement(XmlTag.Id   ,s.Value.Guid.ToString()),// The unique id of the text transform type
+					new XElement(XmlTag.Name ,s.Value.DropDownName),   // The human readable name of the transform
+					data                                               // Instance specific data for the transform
+					);
+
+				subs.Add(sub);
+			}
 			node.Add(subs);
 
 			return node;

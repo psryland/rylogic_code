@@ -106,46 +106,66 @@ namespace RyLogViewer
 			return sb.ToString();
 		}
 
-		/// <summary>The name of the substitution (must be unique)</summary>
-		public override string Name { get { return "Swizzle"; } }
+		/// <summary>
+		/// A unique id for this text transform, used to associate
+		/// saved configuration data with this transformation.</summary>
+		public override Guid Guid { get { return new Guid("2F45569D-EFAF-4B0F-B41B-6756D4E9C56D"); } }
+
+		/// <summary>
+		/// The name that appears in the transform column dropdown
+		/// for this text transformation.</summary>
+		public override string DropDownName { get { return "Swizzle"; } }
 
 		/// <summary>True if this substitution can be configured</summary>
 		public override bool Configurable { get { return true; } }
 
-		/// <summary>A summary of the configuration for this transform substitution</summary>
-		public override string ConfigSummary
-		{
-			get { return m_map == null ? "<click here to configure>" : m_src + " -> " + m_dst; }
-		}
+		/// <summary>
+		/// Returns a summary of the configuration for this transform in a form suitable
+		/// for the tooltip that is displayed when the user hovers their mouse over the
+		/// selected transform. Return null to not display a tooltip</summary>
+		public override string ConfigSummary { get { return m_map != null ? m_src + " -> " + m_dst : null; } }
 
-		/// <summary>A method to setup the transform substitution's specific data</summary>
-		public override void Config(IWin32Window owner)
+		/// <summary>
+		/// Called when a user selects to edit the configuration for this transform.
+		/// Implementers should display a modal dialog that collects any necessary data
+		/// for the text transform.</summary>
+		public override void ShowConfigUI(Form main_window)
 		{
 			var dg = new SwizzleUI{Src = m_src, Dst = m_dst};
-			if (dg.ShowDialog(owner) != DialogResult.OK) return;
+			if (dg.ShowDialog(main_window) != DialogResult.OK)
+				return;
+
 			m_src = dg.Src;
 			m_dst = dg.Dst;
 			m_map = CreateMapping(m_src, m_dst);
 		}
 
-		/// <summary>Returns 'elem' transformed</summary>
+		/// <summary>
+		/// Returns the result of applying this text transform to 'captured_text'.
+		/// This method provides the functionality of the text transform and should
+		/// be efficiently implemented.</summary>
 		public override string Result(string elem)
 		{
-			return m_map == null ? elem : Apply(elem, m_map);
+			return m_map != null ? Apply(elem, m_map) : elem;
 		}
 
-		/// <summary>Serialise data for the substitution to an xml node</summary>
-		public override XElement ToXml(XElement node)
+		/// <summary>
+		/// Save data for the transform to the provided xml node.
+		/// This is used to persist per-instance settings for this text
+		/// transform within the main RyLogViewer settings xml file.
+		/// Implementers should add xml nodes to 'data_root'</summary>
+		public override void ToXml(XElement node)
 		{
 			node.Add
 			(
 				new XElement(XmlTag.Src, m_src),
 				new XElement(XmlTag.Dst, m_dst)
 			);
-			return node;
 		}
 
-		/// <summary>Deserialise data for the substitution from an xml node</summary>
+		/// <summary>
+		/// Load instance data for this transform from 'data_root'.
+		/// This method should be the symmetric opposite of 'ToXml()'</summary>
 		public override void FromXml(XElement node)
 		{
 			// ReSharper disable PossibleNullReferenceException

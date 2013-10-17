@@ -134,14 +134,16 @@ namespace RyLogViewer
 					UpdateUI();
 				};
 
+			var subs = new BindingSource{DataSource = Transform.Substitutors.Select(x => new TransSubWrapper(x)), AllowNew = false};
+
 			// Substitutions
 			m_grid_subs.VirtualMode = true;
 			m_grid_subs.AutoGenerateColumns = false;
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Tag   ,HeaderText = "Tag"       ,FillWeight = 11.5f ,ReadOnly = true});
-			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Value ,HeaderText = "Value"     ,FillWeight = 37.6f ,ReadOnly = true});
-			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type  ,HeaderText = "Transform" ,FillWeight = 25.8f ,DataSource = Transform.Substitutors.Values.ToList() ,DisplayMember = "Name" ,FlatStyle=FlatStyle.Flat});
-			m_grid_subs.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Cfg   ,HeaderText = string.Empty,FillWeight =  5.0f ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			m_grid_subs.DataError += (s,a) => Debug.Assert(false, "Data error in subs grid: {0}".Fmt(a.Exception.MessageFull()));
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Tag   ,HeaderText = "Tag"       ,FillWeight = 11.5f ,ReadOnly = true ,ToolTipText = "The identifier of the capture group"});
+			m_grid_subs.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Value ,HeaderText = "Value"     ,FillWeight = 37.6f ,ReadOnly = true ,ToolTipText = "The value of the capture group when applied to the current line of text in the text area"});
+			m_grid_subs.Columns.Add(new DataGridViewComboBoxColumn{Name = ColumnNames.Type  ,HeaderText = "Transform" ,FillWeight = 25.8f ,DataSource = subs ,FlatStyle=FlatStyle.Flat, ToolTipText = "The type of text transform to apply to this capture group"});
+			m_grid_subs.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Cfg   ,HeaderText = ""          ,FillWeight =  5.0f ,ImageLayout = DataGridViewImageCellLayout.Zoom, ToolTipText = "Displays a pencil icon if the text transform can be configured.\r\nClicking will display the configuration dialog"});
+			m_grid_subs.DataError += (s,a) => {};//Debug.Assert(false, "Data error in subs grid: {0}".Fmt(a.Exception.MessageFull()));
 			m_grid_subs.CurrentCellDirtyStateChanged += (s,a) => m_grid_subs.CommitEdit(DataGridViewDataErrorContexts.Commit);
 			m_grid_subs.CellValueNeeded  += CellValueNeeded;
 			m_grid_subs.CellValuePushed  += CellValuePushed;
@@ -191,10 +193,11 @@ namespace RyLogViewer
 			e.Value = string.Empty;
 			DataGridView grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
+			var col = grid.Columns[e.ColumnIndex];
 			var cap = m_caps[e.RowIndex];
 
 			ITransformSubstitution sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
-			switch (grid.Columns[e.ColumnIndex].Name)
+			switch (col.Name)
 			{
 			default:
 				Debug.Assert(false, "Unknown column name");
@@ -208,8 +211,14 @@ namespace RyLogViewer
 			case ColumnNames.Type:
 				if (sub != null)
 				{
-					e.Value = sub.Name;
+					var subs = ((BindingSource)((DataGridViewComboBoxColumn)col).DataSource).List.Cast<TransSubWrapper>();
+					e.Value = subs.FirstOrDefault(x => x.Sub.Guid == sub.Guid);
 					grid[e.ColumnIndex,e.RowIndex].ToolTipText = sub.ConfigSummary;
+				}
+				else
+				{
+					e.Value = null;
+					grid[e.ColumnIndex,e.RowIndex].ToolTipText = null;
 				}
 				break;
 			case ColumnNames.Cfg:
@@ -223,17 +232,21 @@ namespace RyLogViewer
 		{
 			DataGridView grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
+			var col = grid.Columns[e.ColumnIndex];
 			var cap = m_caps[e.RowIndex];
 
-			ITransformSubstitution sub = Pattern.Subs.TryGetValue(cap.Key, out sub) ? sub : null;
-			switch (grid.Columns[e.ColumnIndex].Name)
+			ITransformSubstitution sub_cur = Pattern.Subs.TryGetValue(cap.Key, out sub_cur) ? sub_cur : null;
+			switch (col.Name)
 			{
 			case ColumnNames.Type:
-				if (sub != null && !e.Value.Equals(sub.Name))
 				{
-					var sub_name = (string)e.Value;
-					Pattern.Subs[cap.Key] = Transform.Substitutors[sub_name].Clone();
-					grid.Invalidate();
+					var cur = (TransSubWrapper)((BindingSource)((DataGridViewComboBoxColumn)col).DataSource).Current;
+					var sub_new = cur != null ? cur.Sub : null;
+					if (sub_new != null && (sub_cur == null || !sub_new.Guid.Equals(sub_cur.Guid)))
+					{
+						Pattern.Subs[cap.Key] = (ITransformSubstitution)Activator.CreateInstance(sub_new.GetType());
+						grid.Invalidate();
+					}
 				}
 				break;
 			}
@@ -268,7 +281,7 @@ namespace RyLogViewer
 			{
 			default: return;
 			case ColumnNames.Cfg:
-				if (sub != null) sub.Config(this);
+				if (sub != null) sub.ShowConfigUI(ParentForm);
 				UpdateUI();
 				break;
 			}
@@ -293,7 +306,7 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Prevents reentrant calls to UpdateUI. Yes this is the best way to do it /cry</summary>
+		/// <summary>Prevents re-entrant calls to UpdateUI. Yes this is the best way to do it /cry</summary>
 		protected override void UpdateUIInternal()
 		{
 			m_edit_match.Text           = Pattern.Expr;
@@ -845,5 +858,13 @@ namespace RyLogViewer
 
 		/// <summary>Update the UI elements based on the current pattern</summary>
 		protected override void UpdateUIInternal() {}
+	}
+
+	/// <summary>Wrapper so that ITransformSubstitution can be displayed in a DGV combo box</summary>
+	public class TransSubWrapper
+	{
+		public ITransformSubstitution Sub { get; private set; }
+		public override string ToString() { return Sub.DropDownName; }
+		public TransSubWrapper(ITransformSubstitution sub) { Sub = sub; }
 	}
 }
