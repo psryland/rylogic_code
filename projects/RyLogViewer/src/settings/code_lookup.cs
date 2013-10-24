@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.extn;
@@ -7,9 +8,10 @@ using pr.extn;
 namespace RyLogViewer
 {
 	/// <summary>A substitution that swaps code values for text values</summary>
+	[DataContract] 
 	public class SubCodeLookup :TransformSubstitutionBase
 	{
-		private readonly Dictionary<string, string> m_values = new Dictionary<string, string>(); // The code lookup table
+		[DataMember] private readonly Dictionary<string, string> m_values = new Dictionary<string, string>(); // The code lookup table
 
 		/// <summary>
 		/// A unique id for this text transform, used to associate

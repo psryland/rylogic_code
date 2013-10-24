@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
@@ -11,7 +12,47 @@ using pr.util;
 
 namespace RyLogViewer
 {
-		/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
+	[DataContract]
+	public class NetConn :ICloneable
+	{
+		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
+		[DataMember] public bool         Listener         = true;
+		[DataMember] public string       Hostname         = string.Empty;
+		[DataMember] public ushort       Port             = 5555;
+		[DataMember] public Proxy.EType  ProxyType        = Proxy.EType.None;
+		[DataMember] public string       ProxyHostname    = string.Empty;
+		[DataMember] public ushort       ProxyPort        = 5555;
+		[DataMember] public string       ProxyUserName    = string.Empty;
+		             public string       ProxyPassword    = string.Empty; // don't store passwords
+		[DataMember] public string       OutputFilepath   = string.Empty;
+		[DataMember] public bool         AppendOutputFile = true;
+
+		public NetConn() {}
+		public NetConn(NetConn rhs)
+		{
+			ProtocolType     = rhs.ProtocolType     ;
+			Listener         = rhs.Listener         ;
+			Hostname         = rhs.Hostname         ;
+			Port             = rhs.Port             ;
+			ProxyType        = rhs.ProxyType        ;
+			ProxyHostname    = rhs.ProxyHostname    ;
+			ProxyPort        = rhs.ProxyPort        ;
+			ProxyUserName    = rhs.ProxyUserName    ;
+			ProxyPassword    = rhs.ProxyPassword    ;
+			OutputFilepath   = rhs.OutputFilepath   ;
+			AppendOutputFile = rhs.AppendOutputFile ;
+		}
+		public override string ToString()
+		{
+			return Hostname;
+		}
+		public object Clone()
+		{
+			return new NetConn(this);
+		}
+	}
+
+	/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
 	public partial class Main :Form
 	{
 		private BufferedTcpNetConn m_buffered_tcp_netconn;
@@ -30,7 +71,7 @@ namespace RyLogViewer
 				CloseLogFile();
 
 				// Set options so that data always shows
-				PrepareForStreamedData();
+				PrepareForStreamedData(conn.OutputFilepath);
 
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_tcp_netconn = new BufferedTcpNetConn(conn);
@@ -77,7 +118,7 @@ namespace RyLogViewer
 				CloseLogFile();
 
 				// Set options so that data always shows
-				PrepareForStreamedData();
+				PrepareForStreamedData(conn.OutputFilepath);
 
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_udp_netconn = new BufferedUdpNetConn(conn);

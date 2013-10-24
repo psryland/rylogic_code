@@ -74,9 +74,6 @@ namespace RyLogViewer
 
 						Misc.AddToHistoryList(m_history, Conn, true, Constants.MaxSerialConnHistoryLength);
 						m_settings.PipeConnectionHistory = m_history.ToArray();
-
-						Misc.AddToHistoryList(m_outp_history, Conn.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
-						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}
 				};
 

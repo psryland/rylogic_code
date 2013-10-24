@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Xml.Linq;
 
@@ -20,16 +21,16 @@ namespace RyLogViewer
 	}
 
 	/// <summary>An action that occurs in response to a click on a row that matches a pattern</summary>
-	public class ClkAction :Pattern
+	[DataContract] public class ClkAction :Pattern
 	{
 		/// <summary>The program to launch when activated</summary>
-		public string Executable { get; set; }
+		[DataMember] public string Executable { get; set; }
 
 		/// <summary>Arguments passed to the program to launch</summary>
-		public string Arguments { get; set; }
+		[DataMember] public string Arguments { get; set; }
 
 		/// <summary>The working directory of the launched program</summary>
-		public string WorkingDirectory { get; set; }
+		[DataMember] public string WorkingDirectory { get; set; }
 
 		/// <summary>Return a string description of the action</summary>
 		public string ActionString { get { return Executable + " " + Arguments; } }

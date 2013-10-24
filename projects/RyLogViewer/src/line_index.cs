@@ -614,31 +614,6 @@ namespace RyLogViewer
 			return read;
 		}
 
-		/// <summary>
-		/// Returns the index in 'buf' of one past the next delimiter, starting from 'start'.
-		/// If not found, returns -1 when searching backwards, or length when searching forwards</summary>
-		private static int FindNextDelim(byte[] buf, int start, int length, byte[] delim, bool backward)
-		{
-			Debug.Assert(start >= -1 && start <= length);
-			int i = start, di = backward ? -1 : 1;
-			for (; i >= 0 && i < length; i += di)
-			{
-				// Quick test using the first byte of the delimiter
-				if (buf[i] != delim[0]) continue;
-
-				// Test the remaining bytes of the delimiter
-				bool is_match = (i + delim.Length) <= length;
-				for (int j = 1; is_match && j != delim.Length; ++j) is_match = buf[i + j] == delim[j];
-				if (!is_match) continue;
-
-				// 'i' now points to the start of the delimiter,
-				// shift it forward to one past the delimiter.
-				i += delim.Length;
-				break;
-			}
-			return i;
-		}
-
 		/// <summary>Seek to the first line that starts immediately before filepos</summary>
 		private static long FindLineStart(IFileSource file, long filepos, long fileend, byte[] row_delim, Encoding encoding, byte[] buf)
 		{
@@ -650,7 +625,7 @@ namespace RyLogViewer
 			if (read == 0) return 0; // assume the first character in the file is the start of a line
 
 			// Scan for a line start
-			int idx = FindNextDelim(buf, read - 1, read, row_delim, true);
+			int idx = Misc.FindNextDelim(buf, read - 1, read, row_delim, true);
 			if (idx != -1) return file.Stream.Position + idx; // found
 			if (filepos == read) return 0; // assume the first character in the file is the start of a line
 			throw new NoLinesException(read);
@@ -715,7 +690,7 @@ namespace RyLogViewer
 					i -= row_delim.Length;
 
 				// Scan the buffer for lines
-				for (i = FindNextDelim(buf, i, read, row_delim, backward); i != iend; i = FindNextDelim(buf, i, read, row_delim, backward))
+				for (i = Misc.FindNextDelim(buf, i, read, row_delim, backward); i != iend; i = Misc.FindNextDelim(buf, i, read, row_delim, backward))
 				{
 					// 'i' points to the start of a line,
 					// 'lasti' points to the start of the last line we found

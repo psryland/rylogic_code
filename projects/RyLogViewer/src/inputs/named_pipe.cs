@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.IO.Pipes;
+using System.Runtime.Serialization;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
@@ -9,7 +10,49 @@ using pr.util;
 
 namespace RyLogViewer
 {
-		/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
+	[DataContract]
+	public class PipeConn :ICloneable
+	{
+		// Notes: It is usually recommended to set DTR and RTS true.
+		// If the connected device uses these signals, it will not transmit before
+		// the signals are set
+
+		[DataMember] public string       ServerName       = string.Empty;
+		[DataMember] public string       PipeName         = string.Empty;
+		[DataMember] public string       OutputFilepath   = string.Empty;
+		[DataMember] public bool         AppendOutputFile = true;
+
+		public string PipeAddr
+		{
+			get { return string.Format(@"\\{0}\pipe\{1}",ServerName,PipeName); }
+			set
+			{
+				var parts = value.Replace(@"\\", string.Empty).Split('\\');
+				if (parts.Length != 3 || parts[1] != "pipe") throw new ArgumentException("Invalid pipe name");
+				ServerName = parts[0];
+				PipeName = parts[2];
+			}
+		}
+
+		public PipeConn() {}
+		public PipeConn(PipeConn rhs)
+		{
+			ServerName       = rhs.ServerName;
+			PipeName         = rhs.PipeName;
+			OutputFilepath   = rhs.OutputFilepath;
+			AppendOutputFile = rhs.AppendOutputFile;
+		}
+		public override string ToString()
+		{
+			return PipeAddr;
+		}
+		public object Clone()
+		{
+			return new PipeConn(this);
+		}
+	}
+
+	/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
 	public partial class Main :Form
 	{
 		private BufferedPipeConn m_buffered_pipeconn;
@@ -27,7 +70,7 @@ namespace RyLogViewer
 				CloseLogFile();
 
 				// Set options so that data always shows
-				PrepareForStreamedData();
+				PrepareForStreamedData(conn.OutputFilepath);
 
 				// Create the buffered pipe connection
 				buffered_pipeconn = new BufferedPipeConn(conn);

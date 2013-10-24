@@ -4,14 +4,13 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}</ProjectGuid>
+    <ProjectGuid>{CBD67D23-EA42-41C5-870B-EAA7293EA0CE}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RyLogViewerExtensions</RootNamespace>
-    <AssemblyName>RyLogViewerExtensions</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <RootNamespace>RexBionics</RootNamespace>
+    <AssemblyName>RexBionics</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -30,35 +29,31 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>Rylogic Limited Key File.pfx</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
   <ItemGroup>
+    <Reference Include="pr">
+      <HintPath>..\..\bin\Release\pr.dll</HintPath>
+    </Reference>
+    <Reference Include="RyLogViewer">
+      <HintPath>..\..\bin\Release\RyLogViewer.exe</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\plugins\ILogDataSource.cs">
-      <Link>ILogDataSource.cs</Link>
-    </Compile>
-    <Compile Include="..\plugins\IMainUI.cs">
-      <Link>IMainUI.cs</Link>
-    </Compile>
-    <Compile Include="..\plugins\ITransformSubstitution.cs">
-      <Link>ITransformSubstitution.cs</Link>
-    </Compile>
+    <Compile Include="RexLog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RexLogUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Rylogic Limited Key File.pfx" />
+    <EmbeddedResource Include="RexLogUI.resx">
+      <DependentUpon>RexLogUI.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

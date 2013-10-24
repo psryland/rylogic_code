@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.IO.Ports;
+using System.Runtime.Serialization;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
@@ -8,6 +9,48 @@ using pr.util;
 
 namespace RyLogViewer
 {
+	[DataContract]
+	public class SerialConn :ICloneable
+	{
+		// Notes: It is usually recommended to set DTR and RTS true.
+		// If the connected device uses these signals, it will not transmit before
+		// the signals are set
+
+		[DataMember] public string       CommPort         = string.Empty;
+		[DataMember] public int          BaudRate         = 9600;
+		[DataMember] public int          DataBits         = 8;
+		[DataMember] public Parity       Parity           = Parity.None;
+		[DataMember] public StopBits     StopBits         = StopBits.One;
+		[DataMember] public Handshake    FlowControl      = Handshake.None;
+		[DataMember] public bool         DtrEnable        = true;
+		[DataMember] public bool         RtsEnable        = true;
+		[DataMember] public string       OutputFilepath   = string.Empty;
+		[DataMember] public bool         AppendOutputFile = true;
+
+		public SerialConn() {}
+		public SerialConn(SerialConn rhs)
+		{
+			CommPort         = rhs.CommPort;
+			BaudRate         = rhs.BaudRate;
+			DataBits         = rhs.DataBits;
+			Parity           = rhs.Parity;
+			StopBits         = rhs.StopBits;
+			FlowControl      = rhs.FlowControl;
+			DtrEnable        = rhs.DtrEnable;
+			RtsEnable        = rhs.RtsEnable;
+			OutputFilepath   = rhs.OutputFilepath;
+			AppendOutputFile = rhs.AppendOutputFile;
+		}
+		public override string ToString()
+		{
+			return CommPort;
+		}
+		public object Clone()
+		{
+			return new SerialConn(this);
+		}
+	}
+
 	/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
 	public partial class Main :Form
 	{
@@ -26,7 +69,7 @@ namespace RyLogViewer
 				CloseLogFile();
 
 				// Set options so that data always shows
-				PrepareForStreamedData();
+				PrepareForStreamedData(conn.OutputFilepath);
 
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_serialconn = new BufferedSerialConn(conn);

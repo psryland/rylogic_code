@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Net.Sockets;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
@@ -49,17 +50,66 @@ namespace RyLogViewer
 						var config = new LogDataSourceConfig(this, m_settings.OutputFilepathHistory);
 						var launch = inst.ShowConfigUI(config);
 						if (!launch.DoLaunch) return;
+						launch.OutputFilepath = launch.OutputFilepath ?? string.Empty;
 						LogCustomDataSource(inst, launch);
 					});
 			}
 		}
 
 		/// <summary>Setup the UI to receive streamed log data</summary>
-		private void PrepareForStreamedData()
+		private void PrepareForStreamedData(string output_filepath)
 		{
+			System.Diagnostics.Debug.Assert(output_filepath != null);
+			m_settings.OutputFilepathHistory = Misc.AddToHistoryList(m_settings.OutputFilepathHistory, output_filepath, true, Constants.MaxOutputFileHistoryLength);
+			ApplySettings();
+
 			EnableTail(true);
 			EnableWatch(true);
 			EnableAdditive(true);
+		}
+
+		/// <summary>Open a standard out connection</summary>
+		private void LogProgramOutput()
+		{
+			var dg = new ProgramOutputUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LaunchProcess(dg.Launch);
+		}
+
+		/// <summary>Open a serial port connection and log the received data</summary>
+		private void LogSerialPort()
+		{
+			var dg = new SerialConnectionUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LogSerialConnection(dg.Conn);
+		}
+
+		/// <summary>Open a network connection and log the received data</summary>
+		private void LogNetworkOutput()
+		{
+			var dg = new NetworkConnectionUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+
+			if (dg.Conn.ProtocolType == ProtocolType.Tcp)
+				LogTcpNetConnection(dg.Conn);
+			else if (dg.Conn.ProtocolType == ProtocolType.Udp)
+				LogUdpNetConnection(dg.Conn);
+		}
+
+		/// <summary>Open a named pipe and log the received data</summary>
+		private void LogNamedPipeOutput()
+		{
+			var dg = new NamedPipeUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LogNamedPipeConnection(dg.Conn);
+		}
+
+		/// <summary>Show the android device log wizard</summary>
+		private void AndroidLogcatWizard()
+		{
+			var dg = new AndroidLogcatUI(m_settings);
+			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			LaunchProcess(dg.Launch);
 		}
 
 		/// <summary>Launch the custom data source</summary>
@@ -75,7 +125,7 @@ namespace RyLogViewer
 				CloseLogFile();
 
 				// Set options so that data always shows
-				PrepareForStreamedData();
+				PrepareForStreamedData(launch.OutputFilepath);
 
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_src = new BufferedCustomDataSource(src, launch);
@@ -85,6 +135,10 @@ namespace RyLogViewer
 					{
 						this.BeginInvoke(() => SetStaticStatusMessage(string.Format("{0} stopped", src.ShortName), Color.Black, Color.LightSalmon));
 					};
+
+				// Attach the optional selection changed handler
+				if (launch.HandleSelectionChanged != null)
+					SelectionChanged += (s,a) => launch.HandleSelectionChanged(a.Rows);
 
 				// Open the capture file created by buffered_src
 				OpenSingleLogFile(buffered_src.Filepath, !buffered_src.TmpFile);

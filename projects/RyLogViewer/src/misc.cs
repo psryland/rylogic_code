@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.IO.Ports;
 using System.Linq;
-using System.Net.Sockets;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using pr.common;
 using pr.gui;
-using pr.inet;
 using pr.extn;
 
 namespace RyLogViewer
@@ -186,216 +183,6 @@ namespace RyLogViewer
 		public const string NoGUI        = "-nogui";
 	}
 
-	[DataContract]
-	public class LaunchApp :ICloneable
-	{
-		[DataMember] public string      Executable       = string.Empty;
-		[DataMember] public string      Arguments        = string.Empty;
-		[DataMember] public string      WorkingDirectory = string.Empty;
-		[DataMember] public string      OutputFilepath   = string.Empty;
-		[DataMember] public bool        ShowWindow       = false;
-		[DataMember] public bool        AppendOutputFile = true;
-		[DataMember] public StandardStreams Streams = StandardStreams.Stdout|StandardStreams.Stderr;
-
-		public bool CaptureStdout { get { return (Streams & StandardStreams.Stdout) != 0; } }
-		public bool CaptureStderr { get { return (Streams & StandardStreams.Stderr) != 0; } }
-
-		public LaunchApp() {}
-		public LaunchApp(LaunchApp rhs)
-		{
-			Executable       = rhs.Executable;
-			Arguments        = rhs.Arguments;
-			WorkingDirectory = rhs.WorkingDirectory;
-			OutputFilepath   = rhs.OutputFilepath;
-			ShowWindow       = rhs.ShowWindow;
-			AppendOutputFile = rhs.AppendOutputFile;
-			Streams          = rhs.Streams;
-		}
-		public override string ToString()
-		{
-			return Executable;
-		}
-		public object Clone()
-		{
-			return new LaunchApp(this);
-		}
-	}
-
-	[DataContract]
-	public class NetConn :ICloneable
-	{
-		[DataMember] public ProtocolType ProtocolType     = ProtocolType.Tcp;
-		[DataMember] public bool         Listener         = true;
-		[DataMember] public string       Hostname         = string.Empty;
-		[DataMember] public ushort       Port             = 5555;
-		[DataMember] public Proxy.EType  ProxyType        = Proxy.EType.None;
-		[DataMember] public string       ProxyHostname    = string.Empty;
-		[DataMember] public ushort       ProxyPort        = 5555;
-		[DataMember] public string       ProxyUserName    = string.Empty;
-		             public string       ProxyPassword    = string.Empty; // don't store passwords
-		[DataMember] public string       OutputFilepath   = string.Empty;
-		[DataMember] public bool         AppendOutputFile = true;
-
-		public NetConn() {}
-		public NetConn(NetConn rhs)
-		{
-			ProtocolType     = rhs.ProtocolType     ;
-			Listener         = rhs.Listener         ;
-			Hostname         = rhs.Hostname         ;
-			Port             = rhs.Port             ;
-			ProxyType        = rhs.ProxyType        ;
-			ProxyHostname    = rhs.ProxyHostname    ;
-			ProxyPort        = rhs.ProxyPort        ;
-			ProxyUserName    = rhs.ProxyUserName    ;
-			ProxyPassword    = rhs.ProxyPassword    ;
-			OutputFilepath   = rhs.OutputFilepath   ;
-			AppendOutputFile = rhs.AppendOutputFile ;
-		}
-		public override string ToString()
-		{
-			return Hostname;
-		}
-		public object Clone()
-		{
-			return new NetConn(this);
-		}
-	}
-
-	[DataContract]
-	public class SerialConn :ICloneable
-	{
-		// Notes: It is usually recommended to set DTR and RTS true.
-		// If the connected device uses these signals, it will not transmit before
-		// the signals are set
-
-		[DataMember] public string       CommPort         = string.Empty;
-		[DataMember] public int          BaudRate         = 9600;
-		[DataMember] public int          DataBits         = 8;
-		[DataMember] public Parity       Parity           = Parity.None;
-		[DataMember] public StopBits     StopBits         = StopBits.One;
-		[DataMember] public Handshake    FlowControl      = Handshake.None;
-		[DataMember] public bool         DtrEnable        = true;
-		[DataMember] public bool         RtsEnable        = true;
-		[DataMember] public string       OutputFilepath   = string.Empty;
-		[DataMember] public bool         AppendOutputFile = true;
-
-		public SerialConn() {}
-		public SerialConn(SerialConn rhs)
-		{
-			CommPort         = rhs.CommPort;
-			BaudRate         = rhs.BaudRate;
-			DataBits         = rhs.DataBits;
-			Parity           = rhs.Parity;
-			StopBits         = rhs.StopBits;
-			FlowControl      = rhs.FlowControl;
-			DtrEnable        = rhs.DtrEnable;
-			RtsEnable        = rhs.RtsEnable;
-			OutputFilepath   = rhs.OutputFilepath;
-			AppendOutputFile = rhs.AppendOutputFile;
-		}
-		public override string ToString()
-		{
-			return CommPort;
-		}
-		public object Clone()
-		{
-			return new SerialConn(this);
-		}
-	}
-
-	[DataContract]
-	public class PipeConn :ICloneable
-	{
-		// Notes: It is usually recommended to set DTR and RTS true.
-		// If the connected device uses these signals, it will not transmit before
-		// the signals are set
-
-		[DataMember] public string       ServerName       = string.Empty;
-		[DataMember] public string       PipeName         = string.Empty;
-		[DataMember] public string       OutputFilepath   = string.Empty;
-		[DataMember] public bool         AppendOutputFile = true;
-
-		public string PipeAddr
-		{
-			get { return string.Format(@"\\{0}\pipe\{1}",ServerName,PipeName); }
-			set
-			{
-				var parts = value.Replace(@"\\", string.Empty).Split('\\');
-				if (parts.Length != 3 || parts[1] != "pipe") throw new ArgumentException("Invalid pipe name");
-				ServerName = parts[0];
-				PipeName = parts[2];
-			}
-		}
-
-		public PipeConn() {}
-		public PipeConn(PipeConn rhs)
-		{
-			ServerName       = rhs.ServerName;
-			PipeName         = rhs.PipeName;
-			OutputFilepath   = rhs.OutputFilepath;
-			AppendOutputFile = rhs.AppendOutputFile;
-		}
-		public override string ToString()
-		{
-			return PipeAddr;
-		}
-		public object Clone()
-		{
-			return new PipeConn(this);
-		}
-	}
-
-	[DataContract]
-	public class AndroidLogcat :ICloneable
-	{
-		public enum ELogBuffer { Main, System, Radio, Events }
-		public enum ELogFormat { Brief, Process, Tag, Thread, Raw, Time, ThreadTime, Long }
-		public enum EFilterPriority { Verbose, Debug, Info, Warn, Error, Fatal, Silent}
-		public enum EConnectionType { Usb, Tcpip }
-		[DataContract] public class FilterSpec
-		{
-			// no private setters, they are used to make the grid cells editable
-			[DataMember] public string Tag { get; set; }
-			[DataMember] public EFilterPriority Priority { get; set; }
-			public FilterSpec() { Tag = "*"; Priority = EFilterPriority.Verbose; }
-			public FilterSpec(string tag, EFilterPriority priority) { Tag = tag; Priority = priority; }
-		}
-
-		[DataMember] public string          AdbFullPath           = string.Empty;
-		[DataMember] public string          SelectedDevice        = string.Empty;
-		[DataMember] public bool            CaptureOutputToFile   = false;
-		[DataMember] public bool            AppendOutputFile      = true;
-		[DataMember] public ELogBuffer[]    LogBuffers            = new []{ELogBuffer.Main};
-		[DataMember] public FilterSpec[]    FilterSpecs           = new []{new FilterSpec("*", EFilterPriority.Verbose)};
-		[DataMember] public ELogFormat      LogFormat             = ELogFormat.Time;
-		[DataMember] public EConnectionType ConnectionType        = EConnectionType.Usb;
-		[DataMember] public string[]        IPAddressHistory      = new string[0];
-		[DataMember] public int             ConnectionPort        = 5555;
-
-		public AndroidLogcat() {}
-		public AndroidLogcat(AndroidLogcat rhs)
-		{
-			AdbFullPath           = rhs.AdbFullPath;
-			SelectedDevice        = rhs.SelectedDevice;
-			CaptureOutputToFile   = rhs.CaptureOutputToFile;
-			AppendOutputFile      = rhs.AppendOutputFile;
-			LogBuffers            = rhs.LogBuffers.Dup();
-			FilterSpecs           = rhs.FilterSpecs.Dup();
-			LogFormat             = rhs.LogFormat;
-			ConnectionType        = rhs.ConnectionType;
-			IPAddressHistory      = rhs.IPAddressHistory.Dup();
-			ConnectionPort        = rhs.ConnectionPort;
-		}
-		public override string ToString()
-		{
-			return AdbFullPath;
-		}
-		public object Clone()
-		{
-			return new AndroidLogcat(this);
-		}
-	}
-
 	public static class Misc
 	{
 		/// <summary>Returns true if this is the main thread</summary>
@@ -429,24 +216,18 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>
-		public static void AddToHistoryList<T>(IList<T> list, T item, bool ignore_case, int max_history_length)
+		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, bool ignore_case, int max_history_length)
 		{
-			string item_name = item.ToString();
-			StringComparison cmp = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-			list.RemoveIf(i => String.Compare(i.ToString(), item_name, cmp) == 0);
+			var item_name = item.ToString();
+			var cmp = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+			var list = history.ToList();
+			list.RemoveIf(i => string.Compare(i.ToString(), item_name, cmp) == 0);
 			list.Insert(0, item);
 
 			while (list.Count > max_history_length)
 				list.RemoveAt(list.Count - 1);
-		}
 
-		/// <summary>Add 'item' to a history list of items.</summary>
-		public static void AddToHistoryList<T>(ref T[] arr, T item, bool ignore_case, int max_history_length)
-		{
-			var list = arr.ToList();
-			AddToHistoryList(list, item, ignore_case, max_history_length);
-			Array.Resize(ref arr, list.Count);
-			Array.Copy(list.ToArray(), arr, arr.Length);
+			return list.ToArray();
 		}
 
 		/// <summary>Checks for the existence of a file without blocking the UI</summary>
@@ -524,6 +305,31 @@ namespace RyLogViewer
 			var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
 			var path = Path.Combine(dir, relative_path);
 			return path;
+		}
+
+		/// <summary>
+		/// Returns the index in 'buf' of one past the next delimiter, starting from 'start'.
+		/// If not found, returns -1 when searching backwards, or length when searching forwards</summary>
+		public static int FindNextDelim(byte[] buf, int start, int length, byte[] delim, bool backward)
+		{
+			Debug.Assert(start >= -1 && start <= length);
+			int i = start, di = backward ? -1 : 1;
+			for (; i >= 0 && i < length; i += di)
+			{
+				// Quick test using the first byte of the delimiter
+				if (buf[i] != delim[0]) continue;
+
+				// Test the remaining bytes of the delimiter
+				bool is_match = (i + delim.Length) <= length;
+				for (int j = 1; is_match && j != delim.Length; ++j) is_match = buf[i + j] == delim[j];
+				if (!is_match) continue;
+
+				// 'i' now points to the start of the delimiter,
+				// shift it forward to one past the delimiter.
+				i += delim.Length;
+				break;
+			}
+			return i;
 		}
 	}
 }

@@ -25,7 +25,7 @@ namespace RyLogViewer
 			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
 			Launch         = m_history.Count != 0 ? new LaunchApp(m_history[0]) : new LaunchApp();
 			m_tt           = new ToolTip();
-			
+
 			// Command line
 			m_combo_launch_cmdline.ToolTip(m_tt, "Command line for the application to launch");
 			m_combo_launch_cmdline.Load(m_history);
@@ -39,7 +39,7 @@ namespace RyLogViewer
 					Launch = new LaunchApp((LaunchApp)m_combo_launch_cmdline.SelectedItem);
 					UpdateUI();
 				};
-			
+
 			// Arguments
 			m_edit_arguments.ToolTip(m_tt, "Command line arguments for the executable");
 			m_edit_arguments.Text = Launch.Arguments;
@@ -79,7 +79,7 @@ namespace RyLogViewer
 					Launch.WorkingDirectory = Path.GetDirectoryName(dg.FileName);
 					UpdateUI();
 				};
-			
+
 			// Browse output file
 			m_btn_browse_output.Click += (s,a)=>
 				{
@@ -88,7 +88,7 @@ namespace RyLogViewer
 					Launch.OutputFilepath = dg.FileName;
 					UpdateUI();
 				};
-			
+
 			// Todo, show window doesn't really work, remove it
 			Launch.ShowWindow = false;
 			//// Show window
@@ -118,7 +118,7 @@ namespace RyLogViewer
 						(int)StandardStreams.Stdout,
 						m_check_capture_stdout.Checked);
 				};
-			
+
 			// Capture Stderr
 			m_check_capture_stderr.ToolTip(m_tt, "Check to log standard error (STDERR)");
 			m_check_capture_stderr.Click += (s,a)=>
@@ -137,9 +137,6 @@ namespace RyLogViewer
 					{
 						Misc.AddToHistoryList(m_history, Launch, true, Constants.MaxProgramHistoryLength);
 						m_settings.LogProgramOutputHistory = m_history.ToArray();
-						
-						Misc.AddToHistoryList(m_outp_history, Launch.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
-						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}
 				};
 

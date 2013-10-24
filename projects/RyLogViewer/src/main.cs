@@ -9,7 +9,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
@@ -26,7 +25,7 @@ using Timer = System.Windows.Forms.Timer;
 
 namespace RyLogViewer
 {
-	public sealed partial class Main :Form
+	public sealed partial class Main :Form ,IMainUI
 	{
 		private readonly StartupOptions m_startup_options;    // The options provided at startup
 		private readonly Settings m_settings;                 // App settings
@@ -282,6 +281,9 @@ namespace RyLogViewer
 			ApplySettings();
 		}
 
+		/// <summary>The main UI as a form for use as the parent of child dialogs</summary>
+		public Form MainWindow { get { return this; } }
+
 		/// <summary>The currently loaded file source</summary>
 		public IFileSource FileSource { get { return m_file; } }
 
@@ -397,6 +399,7 @@ namespace RyLogViewer
 			using (m_suspend_grid_events.Reference)
 			{
 				CancelBuildLineIndex();
+				SelectionChanged = null;
 				m_line_index.Clear();
 				m_grid.RowCount = 0;
 				m_last_hint = EHeuristicHint.None;
@@ -526,15 +529,6 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Show the android device log wizard</summary>
-		private void AndroidLogcatWizard()
-		{
-			var dg = new AndroidLogcatUI(m_settings);
-			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			ApplySettings();
-			LaunchProcess(dg.Launch);
-		}
-
 		/// <summary>Show the aggregate log file wizard</summary>
 		private void AggregateFileWizard()
 		{
@@ -547,42 +541,6 @@ namespace RyLogViewer
 				OpenSingleLogFile(filepaths[0], true);
 			else
 				OpenAggregateLogFile(filepaths);
-		}
-
-		/// <summary>Open a standard out connection</summary>
-		private void LogProgramOutput()
-		{
-			var dg = new ProgramOutputUI(m_settings);
-			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			LaunchProcess(dg.Launch);
-		}
-
-		/// <summary>Open a serial port connection and log the received data</summary>
-		private void LogSerialPort()
-		{
-			var dg = new SerialConnectionUI(m_settings);
-			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			LogSerialConnection(dg.Conn);
-		}
-
-		/// <summary>Open a network connection and log the received data</summary>
-		private void LogNetworkOutput()
-		{
-			var dg = new NetworkConnectionUI(m_settings);
-			if (dg.ShowDialog(this) != DialogResult.OK) return;
-
-			if (dg.Conn.ProtocolType == ProtocolType.Tcp)
-				LogTcpNetConnection(dg.Conn);
-			else if (dg.Conn.ProtocolType == ProtocolType.Udp)
-				LogUdpNetConnection(dg.Conn);
-		}
-
-		/// <summary>Open a named pipe and log the received data</summary>
-		private void LogNamedPipeOutput()
-		{
-			var dg = new NamedPipeUI(m_settings);
-			if (dg.ShowDialog(this) != DialogResult.OK) return;
-			LogNamedPipeConnection(dg.Conn);
 		}
 
 		/// <summary>Called when the log file is noticed to have changed</summary>
@@ -833,6 +791,9 @@ namespace RyLogViewer
 
 			UpdateStatus();
 			CycleColours();
+
+			// Raise an event whenever the selection changes
+			RaiseSelectionChanged();
 		}
 
 		/// <summary>Handler for cell double clicks</summary>
@@ -1132,7 +1093,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
-		private void EnableTail(bool enabled)
+		public void EnableTail(bool enabled)
 		{
 			if (enabled == m_tail_enabled) return;
 			m_settings.TailEnabled = m_tail_enabled = enabled;
@@ -1140,7 +1101,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off tail mode</summary>
-		private void EnableWatch(bool enable)
+		public void EnableWatch(bool enable)
 		{
 			m_settings.WatchEnabled = enable;
 			ApplySettings();
@@ -1149,7 +1110,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Turn on/off additive only mode</summary>
-		private void EnableAdditive(bool enable)
+		public void EnableAdditive(bool enable)
 		{
 			m_settings.FileChangesAdditive = enable;
 			ApplySettings();
@@ -1184,7 +1145,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Enable/Disable monitor mode</summary>
-		private void EnableMonitorMode(bool enable)
+		public void EnableMonitorMode(bool enable)
 		{
 			if (enable)
 			{
@@ -1557,62 +1518,6 @@ namespace RyLogViewer
 		{
 			// If 'col_delim' is empty, then there is no column delimiter.
 			return m_encoding.GetBytes(Misc.Robitise(col_delim));
-		}
-
-		/// <summary>Select the row in the file that contains the byte offset 'addr'</summary>
-		private void SelectRowByAddr(long addr)
-		{
-			// If 'addr' is within the currently loaded range, select the row now
-			if (LineIndexRange.Contains(addr))
-			{
-				SelectedRowIndex = LineIndex(m_line_index, addr);
-			}
-			else // Otherwise, load the range around 'addr', then select the row
-			{
-				BuildLineIndex(addr, false, ()=> SelectedRowIndex = LineIndex(m_line_index, addr));
-			}
-		}
-
-		/// <summary>
-		/// Get/Set the currently selected grid row. Get returns -1 if there are no rows in the grid.
-		/// Setting the selected row clamps to the range [0,RowCount) and makes it visible in the grid (if possible)</summary>
-		private int SelectedRowIndex
-		{
-			get
-			{
-				// If the current row is selected, return that
-				var row = m_grid.CurrentRow;
-				if (row != null && row.Selected) return row.Index;
-				return -1;
-			}
-			set
-			{
-				using (m_suspend_grid_events.Reference)
-				{
-					value = m_grid.SelectRow(value);
-					Log.Info(this, "Row {0} selected".Fmt(value));
-					if (m_grid.RowCount != 0 && value != -1)
-						UpdateStatus();
-				}
-			}
-		}
-
-		/// <summary>Returns the number of selected rows</summary>
-		private int SelectedRowCount
-		{
-			get { return m_grid.Rows.GetRowCount(DataGridViewElementStates.Selected); }
-		}
-
-		/// <summary>Returns the byte offset of the selected row, or 0 if there is no selection</summary>
-		private Range SelectedRowByteRange
-		{
-			get
-			{
-				var idx = SelectedRowIndex;
-				if (idx == -1) idx = 0;
-				Debug.Assert(idx >= 0 && idx < m_line_index.Count, "SelectedRowByteOffset should not be called when there are no lines");
-				return m_line_index[idx];
-			}
 		}
 
 		/// <summary>Return true if we should auto scroll</summary>
@@ -2055,7 +1960,7 @@ namespace RyLogViewer
 		private EHeuristicHint m_last_hint;
 
 		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
-		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol, TimeSpan display_time_ms)
+		public void SetTransientStatusMessage(string text, Color frcol, Color bkcol, TimeSpan display_time_ms)
 		{
 			m_status_message_trans.Text = text ?? string.Empty;
 			m_status_message_trans.Visible = text.HasValue();
@@ -2082,24 +1987,24 @@ namespace RyLogViewer
 					};
 			}
 		}
-		private void SetTransientStatusMessage(string text, Color frcol, Color bkcol)
+		public void SetTransientStatusMessage(string text, Color frcol, Color bkcol)
 		{
 			SetTransientStatusMessage(text, frcol, bkcol, TimeSpan.FromSeconds(2));
 		}
-		private void SetTransientStatusMessage(string text)
+		public void SetTransientStatusMessage(string text)
 		{
 			SetTransientStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
 		}
 
 		/// <summary>Create a status message that displays until cleared. Use null or "" to hide the status</summary>
-		private void SetStaticStatusMessage(string text, Color frcol, Color bkcol)
+		public void SetStaticStatusMessage(string text, Color frcol, Color bkcol)
 		{
 			m_status_message_fixed.Text = text ?? string.Empty;
 			m_status_message_fixed.Visible = text.HasValue();
 			m_status_message_fixed.ForeColor = frcol;
 			m_status_message_fixed.BackColor = bkcol;
 		}
-		private void SetStaticStatusMessage(string text)
+		public void SetStaticStatusMessage(string text)
 		{
 			SetStaticStatusMessage(text, SystemColors.ControlText, SystemColors.Control);
 		}

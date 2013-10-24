@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
@@ -10,7 +11,42 @@ using pr.util;
 
 namespace RyLogViewer
 {
-		/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
+	[DataContract]
+	public class LaunchApp :ICloneable
+	{
+		[DataMember] public string      Executable       = string.Empty;
+		[DataMember] public string      Arguments        = string.Empty;
+		[DataMember] public string      WorkingDirectory = string.Empty;
+		[DataMember] public string      OutputFilepath   = string.Empty;
+		[DataMember] public bool        ShowWindow       = false;
+		[DataMember] public bool        AppendOutputFile = true;
+		[DataMember] public StandardStreams Streams = StandardStreams.Stdout|StandardStreams.Stderr;
+
+		public bool CaptureStdout { get { return (Streams & StandardStreams.Stdout) != 0; } }
+		public bool CaptureStderr { get { return (Streams & StandardStreams.Stderr) != 0; } }
+
+		public LaunchApp() {}
+		public LaunchApp(LaunchApp rhs)
+		{
+			Executable       = rhs.Executable;
+			Arguments        = rhs.Arguments;
+			WorkingDirectory = rhs.WorkingDirectory;
+			OutputFilepath   = rhs.OutputFilepath;
+			ShowWindow       = rhs.ShowWindow;
+			AppendOutputFile = rhs.AppendOutputFile;
+			Streams          = rhs.Streams;
+		}
+		public override string ToString()
+		{
+			return Executable;
+		}
+		public object Clone()
+		{
+			return new LaunchApp(this);
+		}
+	}
+
+	/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
 	public partial class Main :Form
 	{
 		private BufferedProcess m_buffered_process;
@@ -29,7 +65,7 @@ namespace RyLogViewer
 				CloseLogFile();
 
 				// Set options so that data always shows
-				PrepareForStreamedData();
+				PrepareForStreamedData(conn.OutputFilepath);
 
 				// Launch the process with standard output/error redirected to the temporary file
 				buffered_process = new BufferedProcess(conn);
@@ -104,7 +140,7 @@ namespace RyLogViewer
 				lock (m_lock)
 				{
 					Log.Info(this, "Disposing process {0}".Fmt(m_process.StartInfo.FileName));
-					
+
 					// HasExited can throw, Dispose() should be all that's needed anyway
 					//if (!m_process.HasExited)
 					//	if (!m_process.CloseMainWindow())

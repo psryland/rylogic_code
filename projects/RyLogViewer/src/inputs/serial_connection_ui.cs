@@ -26,7 +26,7 @@ namespace RyLogViewer
 			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
 			Conn       = m_history.Count != 0 ? new SerialConn(m_history[0]) : new SerialConn();
 			m_tt       = new ToolTip();
-			
+
 			// Comm Port
 			string[] portnames = SerialPort.GetPortNames();
 			m_combo_commport.ToolTip(m_tt, "The serial communications port to connect to");
@@ -140,7 +140,7 @@ namespace RyLogViewer
 					Conn.OutputFilepath = dg.FileName;
 					UpdateUI();
 				};
-			
+
 			// Save settings on close
 			FormClosing += (s,a)=>
 				{
@@ -149,9 +149,6 @@ namespace RyLogViewer
 					{
 						Misc.AddToHistoryList(m_history, Conn, true, Constants.MaxSerialConnHistoryLength);
 						m_settings.SerialConnectionHistory = m_history.ToArray();
-						
-						Misc.AddToHistoryList(m_outp_history, Conn.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
-						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}
 				};
 

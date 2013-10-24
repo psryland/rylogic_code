@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows.Forms;
 
 namespace RyLogViewer
 {
@@ -67,19 +66,39 @@ namespace RyLogViewer
 		bool IsConnected { get; }
 	}
 
+	/// <summary>Interface for a line of log data</summary>
+	public interface ILogDataRow
+	{
+		/// <summary>The string for the whole row</summary>
+		string RowText { get; }
+
+		/// <summary>The file offset for the start of this data row</summary>
+		long LineStartAddr { get; }
+
+		/// <summary>The columns for this row of log data</summary>
+		IEnumerable<ILogDataElement> Columns { get; }
+	}
+
+	/// <summary>Interface for a single column within a row of log data</summary>
+	public interface ILogDataElement
+	{
+		/// <summary>The text of the data element</summary>
+		string Text { get; }
+	}
+
 	/// <summary>Data provided when configuring a custom log data source</summary>
 	public class LogDataSourceConfig
 	{
 		/// <summary>The form for the main window (to use as the parent for any dialogs)</summary>
-		public Form MainWindow { get; private set; }
+		public IMainUI MainUI { get; private set; }
 
 		/// <summary>The history of filepaths used as output files</summary>
-		public List<string> OutputFilepathHistory { get; private set; }
+		public IEnumerable<string> OutputFilepathHistory { get; private set; }
 
-		public LogDataSourceConfig(Form main, IEnumerable<string> output_filepath_history)
+		public LogDataSourceConfig(IMainUI main_ui, IEnumerable<string> output_filepath_history)
 		{
-			MainWindow = main;
-			OutputFilepathHistory = new List<string>(output_filepath_history);
+			MainUI = main_ui;
+			OutputFilepathHistory = output_filepath_history;
 		}
 	}
 
@@ -95,11 +114,17 @@ namespace RyLogViewer
 		/// <summary>True if data should be appended to 'OutputFilepath'</summary>
 		public bool AppendOutputFile { get; set; }
 
-		public LogDataSourceRunData(bool do_launch = false, string output_filepath = null, bool append = false)
+		/// <summary>
+		/// An optional handler that is called whenever the selected lines in the grid are changed.
+		/// The provided enumerable is the set of selected rows, lazily evaluated.</summary>
+		public Action<IEnumerable<ILogDataRow>> HandleSelectionChanged;
+
+		public LogDataSourceRunData(bool do_launch = false, string output_filepath = null, bool append = false, Action<IEnumerable<ILogDataRow>> selection_changed_handler = null)
 		{
-			DoLaunch         = do_launch;
-			OutputFilepath   = output_filepath;
-			AppendOutputFile = append;
+			DoLaunch               = do_launch;
+			OutputFilepath         = output_filepath;
+			AppendOutputFile       = append;
+			HandleSelectionChanged = selection_changed_handler;
 		}
 	}
 

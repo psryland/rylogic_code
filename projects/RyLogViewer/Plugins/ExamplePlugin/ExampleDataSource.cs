@@ -67,9 +67,9 @@ namespace ExamplePlugin
 				"This plugin is a demonstration of a custom data source.\r\n" +
 				"It reads an arbitrary file and outputs hexadecimal text\r\n" +
 				"data which is then displayed by RyLogViewer";
-			MessageBox.Show(config.MainWindow, msg, "Custom Data Source Plugin Example");
+			MessageBox.Show(config.MainUI.MainWindow, msg, "Custom Data Source Plugin Example");
 			var dlg = new OpenFileDialog{Title = "Choose a file"};
-			if (dlg.ShowDialog(config.MainWindow) != DialogResult.OK)
+			if (dlg.ShowDialog(config.MainUI.MainWindow) != DialogResult.OK)
 				return new LogDataSourceRunData(false);
 
 			m_source_filepath = dlg.FileName;

@@ -176,9 +176,6 @@ namespace RyLogViewer
 					{
 						Misc.AddToHistoryList(m_history, Conn, true, Constants.MaxNetConnHistoryLength);
 						m_settings.NetworkConnectionHistory = m_history.ToArray();
-
-						Misc.AddToHistoryList(m_outp_history, Conn.OutputFilepath, true, Constants.MaxOutputFileHistoryLength);
-						m_settings.OutputFilepathHistory = m_outp_history.ToArray();
 					}
 				};
 

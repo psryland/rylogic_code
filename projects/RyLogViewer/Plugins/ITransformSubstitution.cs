@@ -107,12 +107,12 @@ namespace RyLogViewer
 		/// This is used to persist per-instance settings for this text
 		/// transform within the main RyLogViewer settings xml file.
 		/// Implementers should add xml nodes to 'data_root'</summary>
-		public virtual void ToXml(XElement node) {} // No persisted per-instance data
+		public virtual void ToXml(XElement data_root) {} // No persisted per-instance data
 
 		/// <summary>
 		/// Load instance data for this transform from 'data_root'.
 		/// This method should be the symmetric opposite of 'ToXml()'</summary>
-		public virtual void FromXml(XElement node) {} // No persisted per-instance data
+		public virtual void FromXml(XElement data_root) {} // No persisted per-instance data
 
 		public override string ToString() { return DropDownName; }
 	}

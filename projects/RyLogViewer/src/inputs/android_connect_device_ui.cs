@@ -62,7 +62,7 @@ namespace RyLogViewer
 				{
 					if (DialogResult == DialogResult.OK)
 					{
-						Misc.AddToHistoryList(ref settings.IPAddressHistory, m_combo_ip_address.Text, false, Constants.MaxHistoryDefault);
+						settings.IPAddressHistory = Misc.AddToHistoryList(settings.IPAddressHistory, m_combo_ip_address.Text, false, Constants.MaxHistoryDefault);
 					}
 				};
 
@@ -104,51 +104,51 @@ namespace RyLogViewer
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_combo_ip_address = new ComboBox();
 			this.SuspendLayout();
-			// 
+			//
 			// m_combo_connection_type
-			// 
+			//
 			this.m_combo_connection_type.FormattingEnabled = true;
 			this.m_combo_connection_type.Location = new System.Drawing.Point(106, 12);
 			this.m_combo_connection_type.Name = "m_combo_connection_type";
 			this.m_combo_connection_type.Size = new System.Drawing.Size(134, 21);
 			this.m_combo_connection_type.TabIndex = 0;
-			// 
+			//
 			// m_lbl_connection_type
-			// 
+			//
 			this.m_lbl_connection_type.AutoSize = true;
 			this.m_lbl_connection_type.Location = new System.Drawing.Point(12, 15);
 			this.m_lbl_connection_type.Name = "m_lbl_connection_type";
 			this.m_lbl_connection_type.Size = new System.Drawing.Size(91, 13);
 			this.m_lbl_connection_type.TabIndex = 1;
 			this.m_lbl_connection_type.Text = "Connection Type:";
-			// 
+			//
 			// m_edit_port
-			// 
+			//
 			this.m_edit_port.Location = new System.Drawing.Point(106, 65);
 			this.m_edit_port.Name = "m_edit_port";
 			this.m_edit_port.Size = new System.Drawing.Size(60, 20);
 			this.m_edit_port.TabIndex = 3;
-			// 
+			//
 			// m_lbl_ipaddress
-			// 
+			//
 			this.m_lbl_ipaddress.AutoSize = true;
 			this.m_lbl_ipaddress.Location = new System.Drawing.Point(39, 42);
 			this.m_lbl_ipaddress.Name = "m_lbl_ipaddress";
 			this.m_lbl_ipaddress.Size = new System.Drawing.Size(61, 13);
 			this.m_lbl_ipaddress.TabIndex = 4;
 			this.m_lbl_ipaddress.Text = "IP Address:";
-			// 
+			//
 			// m_lbl_port
-			// 
+			//
 			this.m_lbl_port.AutoSize = true;
 			this.m_lbl_port.Location = new System.Drawing.Point(71, 68);
 			this.m_lbl_port.Name = "m_lbl_port";
 			this.m_lbl_port.Size = new System.Drawing.Size(29, 13);
 			this.m_lbl_port.TabIndex = 5;
 			this.m_lbl_port.Text = "Port:";
-			// 
+			//
 			// m_btn_ok
-			// 
+			//
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
 			this.m_btn_ok.Location = new System.Drawing.Point(84, 94);
 			this.m_btn_ok.Name = "m_btn_ok";
@@ -156,9 +156,9 @@ namespace RyLogViewer
 			this.m_btn_ok.TabIndex = 6;
 			this.m_btn_ok.Text = "OK";
 			this.m_btn_ok.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_btn_cancel
-			// 
+			//
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 			this.m_btn_cancel.Location = new System.Drawing.Point(165, 94);
 			this.m_btn_cancel.Name = "m_btn_cancel";
@@ -166,17 +166,17 @@ namespace RyLogViewer
 			this.m_btn_cancel.TabIndex = 7;
 			this.m_btn_cancel.Text = "Cancel";
 			this.m_btn_cancel.UseVisualStyleBackColor = true;
-			// 
+			//
 			// m_combo_ip_address
-			// 
+			//
 			this.m_combo_ip_address.FormattingEnabled = true;
 			this.m_combo_ip_address.Location = new System.Drawing.Point(106, 39);
 			this.m_combo_ip_address.Name = "m_combo_ip_address";
 			this.m_combo_ip_address.Size = new System.Drawing.Size(134, 21);
 			this.m_combo_ip_address.TabIndex = 8;
-			// 
+			//
 			// AndroidConnectDeviceUI
-			// 
+			//
 			this.AcceptButton = this.m_btn_ok;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -197,7 +197,6 @@ namespace RyLogViewer
 			this.Text = "Connect Device";
 			this.ResumeLayout(false);
 			this.PerformLayout();
-
 		}
 
 		#endregion

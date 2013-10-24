@@ -31,9 +31,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="RyLogViewerExtensions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d58190847d96b83d, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Q:\projects\RyLogViewer\bin\Release\RyLogViewerExtensions.dll</HintPath>
+    <Reference Include="RyLogViewer">
+      <HintPath>..\..\bin\Release\RyLogViewer.exe</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

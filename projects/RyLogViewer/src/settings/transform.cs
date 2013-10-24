@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -11,6 +12,7 @@ using pr.util;
 
 namespace RyLogViewer
 {
+	[DataContract]
 	public class Transform :Pattern ,IPattern
 	{
 		/// <summary>Represents a captured element with a source string</summary>
@@ -169,10 +171,10 @@ namespace RyLogViewer
 		}
 
 		/// <summary>A map from capture tag to the substitutions to apply</summary>
-		public Dictionary<string, ITransformSubstitution> Subs { get; private set; }
+		[DataMember] public Dictionary<string, ITransformSubstitution> Subs { get; private set; }
 
 		/// <summary>The template string used to create the transformed row</summary>
-		public string Replace { get; set; }
+		[DataMember] public string Replace { get; set; }
 
 		/// <summary>Handles 'm_match' being changed</summary>
 		private void HandlePatternChanged(object sender, EventArgs args)

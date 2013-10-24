@@ -1,23 +1,25 @@
 ﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.Runtime.Serialization;
 using System.Xml.Linq;
 
 namespace RyLogViewer
 {
+	[DataContract]
 	public class Highlight :Pattern, IFilter
 	{
 		/// <summary>Defines what a match with this filter means</summary>
 		public EIfMatch IfMatch { get { return EIfMatch.Keep; } }
 
 		/// <summary>Foreground colour of highlight</summary>
-		public Color ForeColour { get; set; }
+		[DataMember] public Color ForeColour { get; set; }
 
 		/// <summary>Background colour of highlight</summary>
-		public Color BackColour { get; set; }
+		[DataMember] public Color BackColour { get; set; }
 
 		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
-		public bool BinaryMatch { get; set; }
+		[DataMember] public bool BinaryMatch { get; set; }
 
 		public Highlight()
 		{

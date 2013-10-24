@@ -74,6 +74,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="plugins\ILogDataSource.cs" />
+    <Compile Include="plugins\IMainUI.cs" />
+    <Compile Include="plugins\ITransformSubstitution.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -90,6 +93,9 @@
     </Compile>
     <Compile Include="src\colour_picker_ui.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\controls\output_filepath_ui.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\control_subclasses.cs">
       <SubType>Component</SubType>
@@ -144,6 +150,10 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\licensed_features.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\line.cs" />
+    <Compile Include="src\selection.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\settings\clkaction.cs" />
@@ -589,6 +599,9 @@
     <EmbeddedResource Include="src\colour_picker_ui.resx">
       <DependentUpon>colour_picker_ui.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="src\controls\output_filepath_ui.resx">
+      <DependentUpon>output_filepath_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\cripple_ui.resx">
       <DependentUpon>cripple_ui.cs</DependentUpon>
     </EmbeddedResource>
@@ -734,10 +747,6 @@
     <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>prcs_vs2012</Name>
-    </ProjectReference>
-    <ProjectReference Include="ExtensionApi\RyLogViewerExtensions.csproj">
-      <Project>{8aa5340a-5c36-4c9d-a6a4-b035aabd3547}</Project>
-      <Name>RyLogViewerExtensions</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

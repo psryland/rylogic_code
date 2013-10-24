@@ -1,4 +1,5 @@
-﻿using RyLogViewer;
+﻿using System;
+using RyLogViewer;
 
 namespace ExamplePlugin
 {
@@ -6,13 +7,20 @@ namespace ExamplePlugin
 	[TransformSubstitution]
 	public class ExampleSubstitution :TransformSubstitutionBase
 	{
+		/// <summary>
+		/// A unique id for this text transform, used to associate
+		/// saved configuration data with this transformation.</summary>
+		public override Guid Guid { get { return new Guid("4E00B263-3F7B-4F65-84D5-5FE6BCE20045"); } }
+
 		/// <summary>The name of the substitution (must be unique)</summary>
-		public override string Name { get { return "Plugin-ExampleSubstitution"; } }
+		public override string DropDownName { get { return "Reverse"; } }
 
 		/// <summary>Returns 'elem' transformed</summary>
 		public override string Result(string elem)
 		{
-			return "To create plugins that provide substitutions, see help";
+			var arr = elem.ToCharArray();
+			Array.Reverse(arr);
+			return new string(arr);
 		}
 	}
 }
