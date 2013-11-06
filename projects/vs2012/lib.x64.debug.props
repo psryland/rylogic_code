@@ -30,7 +30,7 @@
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <PostBuildEvent>
-      <Command>q:\tools\_publish_lib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>q:\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
       <Message>Publishing library</Message>
     </PostBuildEvent>
     <Lib>

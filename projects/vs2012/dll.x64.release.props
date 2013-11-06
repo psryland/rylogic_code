@@ -11,6 +11,7 @@
     <IntDir>$(OutDir)</IntDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <TargetExt>.dll</TargetExt>
+    <TargetName>$(ProjectName).$(PlatformTarget).$(Configuration)</TargetName>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">
@@ -60,7 +61,7 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
-      <Command>q:\tools\_publish_lib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>q:\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
       <Message>Publishing library</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>

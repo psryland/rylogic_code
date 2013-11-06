@@ -4,13 +4,13 @@
 
 	<!-- RefPtr -->
 	<Type Name="pr::RefPtr&lt;*&gt;">
-		<DisplayString>{*m_ptr}</DisplayString>
+		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
 		<Expand>
 			<ExpandedItem>m_ptr</ExpandedItem> 
 		</Expand>
 	</Type>
 	<Type Name="D3DPtr&lt;*&gt;">
-		<DisplayString>{*m_ptr}</DisplayString>
+		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
 		<Expand>
 			<ExpandedItem>m_ptr</ExpandedItem> 
 		</Expand>

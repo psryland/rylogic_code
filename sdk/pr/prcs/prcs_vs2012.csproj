@@ -54,12 +54,13 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
     <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
-    <UseVSHostingProcess>true</UseVSHostingProcess>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <Optimize>true</Optimize>
     <NoWarn>1607</NoWarn>
     <DebugType>pdbonly</DebugType>
@@ -79,6 +80,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>D:\Program Files (x86)\JetBrains\ReSharper\v7.0\Bin\JetBrains.Annotations.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationFramework">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
@@ -402,6 +404,6 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>q:\tools\_publish_lib.py $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
+    <PostBuildEvent>q:\script\deploylib.py $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
   </PropertyGroup>
 </Project>

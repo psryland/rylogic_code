@@ -1,10 +1,9 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 import sys, os, shutil, re
-
-sys.path.append("Q:/sdk/pr/python")
-from pr import RylogicEnv
-from pr import UserVars
+sys.path.append("../../script")
+import Rylogic as Tools
+import UserVars
 
 print(
 	"*************************************************************************\n"
@@ -12,7 +11,7 @@ print(
 	"Copyright © Rylogic Limited 2013\n"
 	"*************************************************************************")
 
-RylogicEnv.CheckVersion(1)
+Tools.CheckVersion(1)
 
 srcdir = UserVars.pr_root + "\\projects\\rylogviewer"
 dstdir = UserVars.pr_root + "\\bin"
@@ -46,13 +45,13 @@ try:
 			if re.match(r".*(?<!include)\.htm$",filepath, flags=re.IGNORECASE):
 				print(filepath)
 				outfile = re.sub(r"\.htm", r".html", filepath)
-				RylogicEnv.Exec([UserVars.csex, "-expand_template", "-f", filepath, "-o", outfile])
+				Tools.Exec([UserVars.csex, "-expand_template", "-f", filepath, "-o", outfile])
 	ExportDirectory(srcdir + r"\docs")
 	ExportDirectory(srcdir + r"\Resources")
 
 	#Invoke MSBuild
 	print("Building the exe...")
-	RylogicEnv.Exec([UserVars.msbuild, proj, "/p:Configuration=" + config, "/t:Build"])
+	Tools.Exec([UserVars.msbuild, proj, "/p:Configuration=" + config, "/t:Build"])
 
 	#Ensure directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)
@@ -62,27 +61,27 @@ try:
 
 	#Copy build products to dst
 	print("Copying files to " + dst)
-	RylogicEnv.Copy(bindir + "\\rylogviewer.exe", dst + "\\rylogviewer.exe")
-	RylogicEnv.Copy(bindir + "\\rylogviewer.pdb", sym + "\\rylogviewer.pdb")
-	RylogicEnv.Copy(bindir + "\\pr.dll"         , dst + "\\pr.dll"  )
-	RylogicEnv.Copy(bindir + "\\pr.pdb"         , sym + "\\pr.pdb"  )
-	RylogicEnv.Copy(bindir + "\\docs"           , dst + "\\docs")
-	RylogicEnv.Copy(bindir + "\\examples"       , dst + "\\examples")
-	RylogicEnv.Copy(bindir + "\\plugins"        , dst + "\\plugins")
+	Tools.Copy(bindir + "\\rylogviewer.exe", dst + "\\rylogviewer.exe")
+	Tools.Copy(bindir + "\\rylogviewer.pdb", sym + "\\rylogviewer.pdb")
+	Tools.Copy(bindir + "\\pr.dll"         , dst + "\\pr.dll"  )
+	Tools.Copy(bindir + "\\pr.pdb"         , sym + "\\pr.pdb"  )
+	Tools.Copy(bindir + "\\docs"           , dst + "\\docs")
+	Tools.Copy(bindir + "\\examples"       , dst + "\\examples")
+	Tools.Copy(bindir + "\\plugins"        , dst + "\\plugins")
 
 	#Create a zip of the dstdir
 	dstzip = dst + ".zip"
 	print("Creating zip file..." + dstzip)
 	if os.path.exists(dstzip): os.unlink(dstzip)
-	RylogicEnv.Exec([UserVars.ziptool, "a", dstzip, dst])
+	Tools.Exec([UserVars.ziptool, "a", dstzip, dst])
 
 	#Copy the installer to the web site
 	installer = srcdir + r"\setup\setup\express\singleimage\diskimages\disk1\setup.exe"
 	if os.path.exists(installer):
 		print("Copying RylogViewerSetup.exe to www...")
-		RylogicEnv.Copy(installer, UserVars.wwwroot + r"\data\RylogViewerSetup.exe")
+		Tools.Copy(installer, UserVars.wwwroot + r"\data\RylogViewerSetup.exe")
 
-	RylogicEnv.OnSuccess()
+	Tools.OnSuccess()
 
 except Exception as ex:
-	RylogicEnv.OnError("Error: " + str(ex))
+	Tools.OnError("Error: " + str(ex))

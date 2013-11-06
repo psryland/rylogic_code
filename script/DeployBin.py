@@ -3,13 +3,12 @@
 #
 # Post Build Event for exporting binary files
 # Use:
-#   _publish_bin $(TargetPath) $(PlatformTarget) $(ConfigurationName) [dstsubdir]
+#   _publish_bin $(TargetPath) $(Platform) $(Configuration) [dstsubdir]
 import sys, os
+import Rylogic as Tools
+import UserVars
 
-sys.path.append("Q:/sdk/pr/python")
-from pr import RylogicEnv
-from pr import UserVars
-RylogicEnv.CheckVersion(1)
+Tools.CheckVersion(1)
 
 if len(sys.argv) > 1: targetpath = sys.argv[1]
 else:                 targetpath = input("TargetPath? ")
@@ -42,9 +41,9 @@ if not os.path.exists(dstdir): os.makedirs(dstdir)
 # Only publish release builds
 if config == "release":
 	# Copy the binary to the bin folder
-	RylogicEnv.Copy(targetpath, dstdir + "\\" + file)
+	Tools.Copy(targetpath, dstdir + "\\" + file)
 
 	# If the system architecture matches this release, copy to the root dstdir
 	if platform == UserVars.arch:
-		RylogicEnv.Copy(dstdir + "\\" + file, dstdirroot + "\\" + file)
+		Tools.Copy(dstdir + "\\" + file, dstdirroot + "\\" + file)
 

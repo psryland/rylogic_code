@@ -1,4 +1,4 @@
-#
+# Expands a template file
 import sys, re
 
 # Template expander

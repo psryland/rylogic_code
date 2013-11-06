@@ -1,22 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
-#
+
 # Post Build Event for exporting library files to a directory
 # Use:
-#   _publish_lib $(TargetPath) $(PlatformName) $(ConfigurationName) [dstdir]
+#   DeployLib $(TargetPath) $(Platform) $(Configuration) [dstdir]
 # 
-# This will copy mylib.dll to "%dstdir%\mylib.platform.config.dll and optionally the pdb if it exists
-# 'dstdir' is optional, if not given it will default to "%qdrive%\sdk\pr\lib"
+# This will copy mylib.platform.config.dll to "%dstdir%\mylib.platform.config.dll and
+# optionally the pdb if it exists.
+# 'dstdir' is optional, if not given it will default to pr_root+"\sdk\pr\lib"
 # Note: the targetpath produced by visual studio needs to already be named in the form
 #  name.platform.config.extn because the pdb filename associated with it is embedded in
 #  the file, renaming the lib and pdb doesn't work because the lib still looks of the old
 #  pdb name
 import sys, os
+import Rylogic as Tools
+import UserVars
 
-sys.path.append("Q:/sdk/pr/python")
-from pr import RylogicEnv
-from pr import UserVars
-RylogicEnv.CheckVersion(1)
+Tools.CheckVersion(1)
 
 if len(sys.argv) > 1: targetpath = sys.argv[1]
 else:                 targetpath = input("TargetPath? ")
@@ -44,16 +44,16 @@ srcfname = srcdir + "\\" + fname
 dstfname = dstdir + "\\" + fname
 
 #Copy the library file to the lib folder
-RylogicEnv.Copy(targetpath, dstfname + extn)
+Tools.Copy(targetpath, dstfname + extn)
 
 #If there's an associated pdb file copy that too
 if os.path.exists(srcfname + ".pdb"):
-	RylogicEnv.Copy(srcfname + ".pdb", dstfname + ".pdb")
+	Tools.Copy(srcfname + ".pdb", dstfname + ".pdb")
 
 #If the lib is a dll, look for an import library and copy that too, if it exists
 if extn == ".dll":
 	if os.path.exists(srcfname + ".lib"):
-		RylogicEnv.Copy(srcfname + ".lib", dstfname + ".lib")
+		Tools.Copy(srcfname + ".lib", dstfname + ".lib")
 
 #Produce a OMF version of the lib
 #wordsize = 64 if platform == "x64" else 32
