@@ -82,7 +82,7 @@ void pr::rdr::Model::DeleteNuggets()
 		m_model_buffer->m_mdl_mgr->Delete(&m_nuggets.front());
 }
 
-// Refcounting cleanup function
+// Ref-counting cleanup function
 void pr::rdr::Model::RefCountZero(pr::RefCount<Model>* doomed)
 {
 	pr::rdr::Model* mdl = static_cast<pr::rdr::Model*>(doomed);

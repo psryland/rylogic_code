@@ -437,7 +437,6 @@ bool ParseTexture(ParseParams& p, pr::rdr::Texture2DPtr& tex)
 		{
 			p.m_reader.ReportError(pr::script::EResult::ValueNotFound, pr::FmtS("failed to create texture %s\nReason: %s" ,tex_filepath.c_str() ,e.what()));
 		}
-
 	}
 	p.m_reader.SectionEnd();
 	return true;
@@ -452,7 +451,7 @@ bool ParseVideo(ParseParams& p, pr::rdr::Texture2DPtr& vid)
 	if (!filepath.empty())
 	{
 		(void)vid;
-		//todo 
+		//todo
 		//// Load the video texture
 		//try
 		//{
@@ -951,7 +950,7 @@ template <pr::ldr::ELdrObject::Enum_ SphereType> void ParseSphere(ParseParams& p
 			}break;
 		case pr::ldr::ELdrObject::SphereRxyz:
 			{
-				create |= 
+				create |=
 					p.m_reader.ExtractReal(radius.x) &&
 					p.m_reader.ExtractReal(radius.y) &&
 					p.m_reader.ExtractReal(radius.z);
@@ -1555,19 +1554,32 @@ pr::ldr::LdrObjectPtr pr::ldr::Add(
 }
 
 // Add a custom object via callback
+// Objects created by this method will have dynamic usage and are suitable for updating every frame
+// They are intended to be used with the 'Edit' function.
 pr::ldr::LdrObjectPtr pr::ldr::Add(pr::Renderer& rdr, pr::ldr::ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, pr::ldr::ContextId context_id)
 {
 	pr::ldr::LdrObjectPtr obj(new pr::ldr::LdrObject(attr, 0, context_id));
 
-	pr::rdr::MdlSettings settings(
-		pr::rdr::VBufferDesc::Of<pr::rdr::VertPCNT>(vcount),
-		pr::rdr::IBufferDesc::Of<pr::uint16>(icount));
+	// Create buffers for a dynamic model
+	pr::rdr::VBufferDesc vbs(vcount, sizeof(pr::rdr::VertPCNT), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	pr::rdr::IBufferDesc ibs(icount, sizeof(pr::uint16), pr::rdr::DxFormat<pr::uint16>::value, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+	pr::rdr::MdlSettings settings(vbs, ibs);
 
+	// Create the model
 	obj->m_model = rdr.m_mdl_mgr.CreateModel(settings);
 	obj->m_model->m_name = obj->TypeAndName();
+
+	// Initialise it via the callback
 	edit_cb(obj->m_model, ctx, rdr);
 	pr::events::Send(pr::ldr::Evt_LdrObjectAdd(obj));
 	return obj;
+}
+
+// Modify the geometry of an LdrObject
+void pr::ldr::Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx)
+{
+	edit_cb(object->m_model, ctx, rdr);
+	pr::events::Send(pr::ldr::Evt_LdrObjectChg(object));
 }
 
 // Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
@@ -1594,13 +1606,6 @@ void pr::ldr::Remove(pr::ldr::ObjectCont& objects, pr::ldr::LdrObjectPtr obj)
 		objects.erase(i);
 		break;
 	}
-}
-
-// Modify the geometry of an LdrObject
-void pr::ldr::Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx)
-{
-	edit_cb(object->m_model, ctx, rdr);
-	pr::events::Send(pr::ldr::Evt_LdrObjectChg(object));
 }
 
 // Parse the source data in 'reader' using the same syntax

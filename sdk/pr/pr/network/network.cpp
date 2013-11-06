@@ -26,7 +26,7 @@ using namespace pr::network;
 // Result testing
 void pr::Verify(pr::network::EResult::Type result)
 {
-	sizeof(result);
+	(void)result;
 	PR_ASSERT(PR_DBG_NETWORK, Succeeded(result), "network verify failure");
 }
 char const* pr::GetErrorString(pr::network::EResult::Type result)
@@ -62,7 +62,7 @@ inline timeval TimeVal(uint timeout_ms)
 	tv.tv_sec	= timeout_ms/1000;
 	tv.tv_usec	= (timeout_ms - tv.tv_sec*1000)*1000;
 	return tv;
-} 
+}
 
 inline sockaddr_in GetAddress(char const* ip, uint16 port)
 {
@@ -106,7 +106,7 @@ bool Send(SOCKET socket, void const* data, size_t size, size_t max_packet_size, 
 		FD_SET(socket, &set);
 		int result = select(0, 0, &set, 0, timeout_ms == INFINITE ? 0 : &timeout);
 		if (result != 1) return false; // no space to send data (timeout) or error
-	
+
 		// Send data
 		int sent = send(socket, (char const*)data, int(size <= max_packet_size ? size : max_packet_size), 0);
 		if (sent == SOCKET_ERROR) return false;
@@ -136,7 +136,7 @@ bool SendTo(SOCKET socket, char const* host_ip, uint16 host_port, void const* da
 		FD_SET(socket, &set);
 		int result = select(0, 0, &set, 0, timeout_ms == INFINITE ? 0 : &timeout);
 		if (result != 1) return false; // no space to send data (timeout) or error
-	
+
 		// Send data
 		int sent = sendto(socket, (char const*)data, int(size <= max_packet_size ? size : max_packet_size), 0, (sockaddr const*)&addr, sizeof(addr));
 		if (sent == SOCKET_ERROR) return false;
@@ -147,7 +147,6 @@ bool SendTo(SOCKET socket, char const* host_ip, uint16 host_port, void const* da
 	while (size != 0);
 	return true;
 }
-
 
 // Receive data on 'socket'
 // Returns true if data was received, false on timeout
@@ -244,7 +243,7 @@ void Server::AllowConnections(uint16 listen_port, int protocol, int max_connecti
 	m_protocol = protocol;
 	m_max_connections = max_connections;
 	m_connection_cb = connection_cb;
-	
+
 	// Create the socket
 	switch (m_protocol)
 	{
@@ -289,7 +288,7 @@ void Server::AllowConnections(uint16 listen_port, int protocol, int max_connecti
 void Server::StopConnections()
 {
 	if (m_socket == INVALID_SOCKET) return;
-	
+
 	// Stop the incoming connections thread
 	Thread<Server>::Stop();
 
@@ -426,7 +425,6 @@ bool Server::Recv(void* data, size_t size, size_t& bytes_read, uint timeout_ms, 
 	return false;
 }
 
-
 // Client ************************************************
 
 Client::Client(Winsock const& winsock)
@@ -473,7 +471,7 @@ EResult::Type Client::Connect(int protocol, char const* host_ip, uint16 host_por
 	//	PR_INFO(PR_DBG_NETWORK, Fmt("Network: Failed to bind socket. WSAerr: %d\n", WSAGetLastError()).c_str());
 	//	throw EResult::BindSocketFailed;
 	//}
-	
+
 	// For message-oriented sockets (i.e UDP) we must not exceed
 	// the max packet size of the underlying provider.
 	if (m_protocol == IPPROTO_UDP)

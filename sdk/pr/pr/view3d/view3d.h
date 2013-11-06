@@ -34,6 +34,17 @@ namespace EView3DFillMode
 		SolidWire,
 	};
 }
+namespace EView3DGeom
+{
+	enum Type // pr::rdr::EGeom
+	{
+		Unknown = 0,
+		Vert    = 1 << 0, // Object space 3D position
+		Colr    = 1 << 1, // Diffuse base colour
+		Norm    = 1 << 2, // Object space 3D normal
+		Tex0    = 1 << 3, // Diffuse texture
+	};
+}
 namespace EView3DPrim
 {
 	enum Type
@@ -59,7 +70,7 @@ namespace EView3DLight
 namespace pr
 {
 	namespace ldr { struct LdrObject; }
-	namespace rdr { struct Texture; }
+	namespace rdr { struct Texture2D; }
 }
 namespace view3d
 {
@@ -70,14 +81,15 @@ namespace view3d
 typedef view3d::Drawset* View3DDrawset;
 typedef view3d::Object*  View3DObject;
 typedef view3d::Texture* View3DTexture;
-	
+
 struct View3DVertex
 {
 	pr::v4 pos;
 	pr::v4 norm;
-	pr::uint col;
 	pr::v2 tex;
-	void set(pr::v4 const& p, pr::v4 const& n, pr::uint c, pr::v2 const& t) { pos = p; norm = n; col = c; tex = t; }
+	pr::uint col;
+	pr::uint pad;
+	void set(pr::v4 const& p, pr::uint c, pr::v4 const& n, pr::v2 const& t) { pos = p; col = c; norm = n; tex = t; }
 };
 struct View3DImageInfo
 {
@@ -109,20 +121,21 @@ struct View3DMaterial
 	View3DTexture      m_diff_tex;
 	View3DTexture      m_env_map;
 };
-	
+
 typedef void (__stdcall *View3D_SettingsChanged)();
 typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg);
 typedef void (__stdcall *View3D_EditObjectCB)(
-	std::size_t vcount,
-	std::size_t icount,
-	View3DVertex* verts,
-	pr::uint16* indices,
-	std::size_t& new_vcount,
-	std::size_t& new_icount,
-	EView3DPrim::Type& model_type,
-	View3DMaterial& mat,
-	void* ctx);
-	
+	std::size_t vcount,            // The maximum size of 'verts'
+	std::size_t icount,            // The maximum size of 'indices'
+	View3DVertex* verts,           // The vert buffer to be filled
+	pr::uint16* indices,           // The index buffer to be filled
+	std::size_t& new_vcount,       // The number of verts in the updated model
+	std::size_t& new_icount,       // The number indices in the updated model
+	EView3DPrim::Type& model_type, // The primitive type of the updated model
+	EView3DGeom::Type& geom_type,  // The geometry type of the updated model (used to determine the appropriate shader)
+	View3DMaterial& mat,           // The material to use for the updated model
+	void* ctx);                    // User context data
+
 extern "C"
 {
 	// Initialise/shutdown the dll
@@ -169,7 +182,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_SetLightProperties       (View3DDrawset drawset, View3DLight const& light);
 	VIEW3D_API void                    __stdcall View3D_LightSource              (View3DDrawset drawset, pr::v4 const& position, pr::v4 const& direction, BOOL camera_relative);
 	VIEW3D_API void                    __stdcall View3D_ShowLightingDlg          (View3DDrawset drawset, HWND parent);
-	
+
 	// Objects
 	VIEW3D_API EView3DResult::Type     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, int context_id, BOOL async);
 	VIEW3D_API EView3DResult::Type     __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, int context_id, View3DObject& object, BOOL async);
@@ -190,7 +203,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_TextureDelete            (View3DTexture tex);
 	VIEW3D_API void                    __stdcall View3D_TextureGetInfo           (View3DTexture tex, View3DImageInfo& info);
 	VIEW3D_API EView3DResult::Type     __stdcall View3D_TextureGetInfoFromFile   (char const* tex_filepath, View3DImageInfo& info);
-	
+
 	// Rendering
 	VIEW3D_API void                    __stdcall View3D_Refresh                  ();
 	VIEW3D_API void                    __stdcall View3D_Resize                   (int width, int height);

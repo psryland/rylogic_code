@@ -70,7 +70,7 @@ bool pr::rdr::ModelBuffer::MapVerts(pr::rdr::Lock& lock, D3D11_MAP map_type, UIN
 	if (vrange == RangeZero) vrange = m_vb.m_used;
 
 	D3DPtr<ID3D11DeviceContext> dc = ImmediateDC(m_mdl_mgr->m_device);
-	D3DPtr<ID3D11Resource> res = m_vb.m_ptr;
+	D3DPtr<ID3D11Resource> res = m_vb;
 	return lock.Map(dc, res, 0, map_type, flags, m_vb.m_stride, vrange);
 }
 bool pr::rdr::ModelBuffer::MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type, UINT flags, Range irange)
@@ -82,7 +82,7 @@ bool pr::rdr::ModelBuffer::MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type, U
 	if (irange == RangeZero) irange = m_ib.m_used;
 
 	D3DPtr<ID3D11DeviceContext> dc = ImmediateDC(m_mdl_mgr->m_device);
-	D3DPtr<ID3D11Resource> res = m_ib.m_ptr;
+	D3DPtr<ID3D11Resource> res = m_ib;
 	return lock.Map(dc, res, 0, map_type, flags, BytesPerPixel(m_ib.m_format), irange);
 }
 

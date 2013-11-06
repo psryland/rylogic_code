@@ -89,7 +89,7 @@ namespace pr
 		};
 	}
 	
-	// Element accessors
+	// Element access
 	inline float GetX(v4 const& v) { return v.x; }
 	inline float GetY(v4 const& v) { return v.y; }
 	inline float GetZ(v4 const& v) { return v.z; }

@@ -460,60 +460,67 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 	PR_ASSERT(PR_DBG, model != 0, "");
 	ObjectEditCBData& cbdata = *static_cast<ObjectEditCBData*>(ctx);
 
-	// If the model already has nuggets grab some defaults from it
-	pr::rdr::DrawMethod mat;
-	if (!model->m_nuggets.empty())
-		mat = model->m_nuggets.front().m_draw;
-	else
-		mat.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPCNT>();
-
-	pr::rdr::MLock mlock(model);
-
 	// Create buffers to be filled by the user callback
-	std::size_t vcount = mlock.m_vlock.m_range.size();
-	std::size_t icount = mlock.m_ilock.m_range.size();
-	pr::Array<View3DVertex> verts   (vcount);
-	pr::Array<pr::uint16>   indices (icount);
-	EView3DPrim::Type model_type = EView3DPrim::Invalid;
+	auto vrange = model->m_vrange;
+	auto irange = model->m_irange;
+	pr::Array<View3DVertex> verts   (vrange.size());
+	pr::Array<pr::uint16>   indices (irange.size());
 
-	// Create a material for the user to modify
-	View3DMaterial v3dmat;
-	v3dmat.m_diff_tex  = mat.m_tex_diffuse.m_ptr;
-	v3dmat.m_env_map   = mat.m_tex_env_map.m_ptr;
+	// Get default values for the topo, geom, and material
+	auto model_type = EView3DPrim::Invalid;
+	auto geom_type  = EView3DGeom::Vert;
+	View3DMaterial v3dmat = {0,0};
+
+	// If the model already has nuggets grab some defaults from it
+	if (!model->m_nuggets.empty())
+	{
+		auto nug = model->m_nuggets.front();
+		auto mat = nug.m_draw;
+		model_type = static_cast<EView3DPrim::Type>(nug.m_prim_topo.value);
+		geom_type  = static_cast<EView3DGeom::Type>(mat.m_shader->m_geom_mask.value);
+		v3dmat.m_diff_tex = mat.m_tex_diffuse.m_ptr;
+		v3dmat.m_env_map  = mat.m_tex_env_map.m_ptr;
+	}
 
 	// Get the user to generate the model
-	cbdata.edit_cb(vcount, icount, &verts[0], &indices[0], vcount, icount, model_type, v3dmat, cbdata.ctx);
-
-	PR_ASSERT(PR_DBG, vcount <= mlock.m_vlock.m_range.size(), "");
-	PR_ASSERT(PR_DBG, icount <= mlock.m_ilock.m_range.size(), "");
+	size_t new_vcount, new_icount;
+	cbdata.edit_cb(vrange.size(), irange.size(), &verts[0], &indices[0], new_vcount, new_icount, model_type, geom_type, v3dmat, cbdata.ctx);
+	PR_ASSERT(PR_DBG, new_vcount <= vrange.size(), "");
+	PR_ASSERT(PR_DBG, new_icount <= irange.size(), "");
 	PR_ASSERT(PR_DBG, model_type != EView3DPrim::Invalid, "");
-
-	model->m_bbox.reset();
-
-	// Copy the model data into the model
-	auto vin = verts.begin();
-	auto vout = mlock.m_vlock.ptr<pr::rdr::VertPCNT>();
-	for (std::size_t i = 0; i != vcount; ++i, ++vin, ++vout)
-	{
-		SetPCNT(*vout++, vin->pos, pr::Colour32::make(vin->col), vin->norm, vin->tex);
-		pr::Encompase(model->m_bbox, vin->pos);
-	}
-	auto iin = indices.begin();
-	auto iout = mlock.m_ilock.ptr<pr::uint16>();
-	for (std::size_t i = 0; i != icount; ++i, ++iin, ++iout)
-	{
-		*iout = *iin;
-	}
+	PR_ASSERT(PR_DBG, geom_type != EView3DGeom::Unknown, "");
 
 	// Update the material
+	pr::rdr::DrawMethod mat;
+	mat.m_shader = rdr.m_shdr_mgr.FindShaderFor(static_cast<pr::rdr::EGeom>(geom_type));
 	mat.m_tex_diffuse = v3dmat.m_diff_tex;
 	mat.m_tex_env_map = v3dmat.m_env_map;
 
+	{// Lock and update the model
+		pr::rdr::MLock mlock(model, D3D11_MAP_WRITE_DISCARD);
+		model->m_bbox.reset();
+
+		// Copy the model data into the model
+		auto vin = begin(verts);
+		auto vout = mlock.m_vlock.ptr<pr::rdr::VertPCNT>();
+		for (size_t i = 0; i != new_vcount; ++i, ++vin, ++vout)
+		{
+			SetPCNT(*vout++, vin->pos, pr::Colour32::make(vin->col), vin->norm, vin->tex);
+			pr::Encompase(model->m_bbox, vin->pos);
+		}
+		auto iin = begin(indices);
+		auto iout = mlock.m_ilock.ptr<pr::uint16>();
+		for (size_t i = 0; i != new_icount; ++i, ++iin, ++iout)
+		{
+			*iout = *iin;
+		}
+	}
+
 	// Re-create the render nuggets
-	mlock.m_vlock.m_range.resize(vcount);
-	mlock.m_ilock.m_range.resize(icount);
+	vrange.resize(new_vcount);
+	irange.resize(new_icount);
 	model->DeleteNuggets();
-	model->CreateNugget(mat, static_cast<pr::rdr::EPrim>(model_type), &mlock.m_vlock.m_range, &mlock.m_ilock.m_range);
+	model->CreateNugget(mat, static_cast<pr::rdr::EPrim>(model_type), &vrange, &irange);
 }
 
 // Create an object via callback
@@ -604,7 +611,7 @@ VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreate(size_t width, size
 		pr::rdr::Image src = pr::rdr::Image::make(width, height, data, format);
 		if (src.m_pitch.x * src.m_pitch.y != data_size)
 			throw std::exception("Incorrect data size provided");
-		
+
 		pr::rdr::TextureDesc tdesc(src, mips);
 		pr::rdr::SamplerDesc sdesc;
 		pr::rdr::Texture2DPtr t = Rdr().m_renderer.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, src, tdesc, sdesc);
@@ -955,4 +962,3 @@ VIEW3D_API pr::m4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 		return pr::m4x4Identity;
 	}
 }
-

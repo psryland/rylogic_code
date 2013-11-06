@@ -30,7 +30,7 @@ namespace pr
 		{\
 			namespace impl\
 			{\
-				template<> struct size_to_type<N>
+				template<> struct size_to_type<N>\
 				{\
 					typedef T type;\
 				};\

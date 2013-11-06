@@ -15,6 +15,19 @@ namespace pr
 {
 	namespace rdr
 	{
+		// Notes on buffer usage:
+		//  Here are some ways to initialize a vertex buffer that changes over time:
+		//   1) Create a default usage buffer. Create a 2nd buffer with D3D10_USAGE_STAGING;
+		//      fill the second buffer using ID3D11DeviceContext::Map, ID3D11DeviceContext::Unmap;
+		//      use ID3D11DeviceContext::CopyResource to copy from the staging buffer to the default buffer.
+		//   2) Use ID3D11DeviceContext::UpdateSubresource to copy data from memory.
+		//   3) Create a buffer with D3D11_USAGE_DYNAMIC, and fill it with ID3D11DeviceContext::Map,
+		//      ID3D11DeviceContext::Unmap (using the Discard and NoOverwrite flags appropriately).
+		// #1 and #2 are useful for content that changes less than once per frame. In general, GPU
+		//  reads will be fast and CPU updates will be slower.
+		// #3 is useful for content that changes more than once per frame. In general, GPU reads will
+		//  be slower, but CPU updates will be faster.
+
 		// Standard buffer description
 		struct BufferDesc :D3D11_BUFFER_DESC
 		{
@@ -65,19 +78,24 @@ namespace pr
 		// Vertex buffer flavour of a buffer description
 		struct VBufferDesc :BufferDesc
 		{
+			// Want a dynamic buffer? read the notes above
+
 			VBufferDesc()
 				:BufferDesc()
 			{}
-			VBufferDesc(size_t count, size_t element_size_in_bytes, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_VERTEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(count, element_size_in_bytes, usage, bind_flags, cpu_access, res_flag)
+			VBufferDesc(size_t count, size_t element_size_in_bytes, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(count, element_size_in_bytes, usage, D3D11_BIND_VERTEX_BUFFER, cpu_access, res_flag)
 			{}
-			template <typename Elem> VBufferDesc(size_t count, Elem const* data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_VERTEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(count, data, usage, bind_flags, cpu_access, res_flag)
+			template <typename Elem> VBufferDesc(size_t count, Elem const* data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(count, data, usage, D3D11_BIND_VERTEX_BUFFER, cpu_access, res_flag)
 			{}
-			template <typename Elem, size_t Sz> VBufferDesc(Elem const (&data)[Sz], D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_VERTEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(Sz, data, usage, bind_flags, cpu_access, res_flag)
+			template <typename Elem, size_t Sz> VBufferDesc(Elem const (&data)[Sz], D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(Sz, data, usage, D3D11_BIND_VERTEX_BUFFER, cpu_access, res_flag)
 			{}
-			template <typename Elem> static VBufferDesc Of(size_t count) { return VBufferDesc(count, static_cast<Elem const*>(0)); }
+			template <typename Elem> static VBufferDesc Of(size_t count)
+			{
+				return VBufferDesc(count, static_cast<Elem const*>(0));
+			}
 		};
 
 		// Index buffer flavour of a buffer description
@@ -89,19 +107,22 @@ namespace pr
 				:BufferDesc()
 				,Format(DXGI_FORMAT_UNKNOWN)
 			{}
-			IBufferDesc(size_t count, size_t element_size_in_bytes, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_INDEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(count, element_size_in_bytes, usage, bind_flags, cpu_access, res_flag)
+			IBufferDesc(size_t count, size_t element_size_in_bytes, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(count, element_size_in_bytes, usage, D3D11_BIND_INDEX_BUFFER, cpu_access, res_flag)
 				,Format(format)
 			{}
-			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_INDEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(count, data, usage, bind_flags, cpu_access, res_flag)
+			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(count, data, usage, D3D11_BIND_INDEX_BUFFER, cpu_access, res_flag)
 				,Format(format)
 			{}
-			template <typename Elem, size_t Sz> IBufferDesc(Elem const (&data)[Sz], DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_INDEX_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(Sz, data, usage, bind_flags, cpu_access, res_flag)
+			template <typename Elem, size_t Sz> IBufferDesc(Elem const (&data)[Sz], DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(Sz, data, usage, D3D11_BIND_INDEX_BUFFER, cpu_access, res_flag)
 				,Format(format)
 			{}
-			template <typename Elem> static IBufferDesc Of(size_t count) { return IBufferDesc(count, static_cast<Elem const*>(0)); }
+			template <typename Elem> static IBufferDesc Of(size_t count)
+			{
+				return IBufferDesc(count, static_cast<Elem const*>(0));
+			}
 		};
 
 		// Constants buffer flavour of a buffer description
@@ -110,8 +131,8 @@ namespace pr
 			CBufferDesc()
 				:BufferDesc()
 			{}
-			CBufferDesc(size_t size, D3D11_USAGE usage = D3D11_USAGE_DYNAMIC, D3D11_BIND_FLAG bind_flags = D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE, D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(size, (byte*)0, usage, bind_flags, cpu_access, res_flag)
+			CBufferDesc(size_t size, D3D11_USAGE usage = D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE, D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
+				:BufferDesc(size, (byte*)0, usage, D3D11_BIND_CONSTANT_BUFFER, cpu_access, res_flag)
 			{}
 		};
 

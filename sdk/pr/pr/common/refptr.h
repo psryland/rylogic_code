@@ -8,21 +8,22 @@
 // Use the following registry key to prevent the debugger stepping into this type:
 //  [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\9.0\NativeDE\StepOver]
 //  "pr::RefPtr"="pr\\:\\:RefPtr.*\\:\\:.*=NoStepInto"
-// Inheriters use the IncRef/DecRef methods, so that stack tracing works
+// Inheritors use the IncRef/DecRef methods, so that stack tracing works
 
 #pragma once
 #ifndef PR_COMMON_REFPTR_H
 #define PR_COMMON_REFPTR_H
 
+#define PR_REFPTR_TRACE 0
+#if PR_REFPTR_TRACE == 1
+#include "pr/common/assert.h"
+#include "pr/common/stackdump.h"
+#endif
+
 //"pr/common/assert.h" should be included prior to this for pr asserts
 #ifndef PR_ASSERT
 #   define PR_ASSERT_DEFINED
 #   define PR_ASSERT(grp, exp, str)
-#endif
-
-#define PR_REFPTR_TRACE 0
-#if PR_REFPTR_TRACE == 1
-#include "pr/common/stackdump.h"
 #endif
 
 namespace pr
@@ -50,46 +51,46 @@ namespace pr
 	template <typename T> struct RefPtr
 	{
 		mutable T* m_ptr;
-		
+
 		struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
-		
+
 		RefPtr()
 		:m_ptr(0)
 		{}
-		
+
 		RefPtr(T* t)
 		:m_ptr(t)
 		{
 			if (m_ptr)
 				IncRef(m_ptr);
 		}
-		
+
 		RefPtr(int nul)
 		:m_ptr(0)
 		{
 			PR_ASSERT(PR_DBG, nul == 0, ""); (void)nul;
 		}
-		
+
 		RefPtr(RefPtr const& rhs)
 		:m_ptr(rhs.m_ptr)
 		{
 			if (m_ptr)
 				IncRef(m_ptr);
 		}
-		
+
 		template <typename U> RefPtr(RefPtr<U> const& rhs)
 		:m_ptr(static_cast<T*>(rhs.m_ptr))
 		{
 			if (m_ptr)
 				IncRef(m_ptr);
 		}
-		
+
 		~RefPtr()
 		{
 			if (m_ptr)
 				DecRef(m_ptr);
 		}
-		
+
 		// Assignment
 		RefPtr& operator = (int nul)
 		{
@@ -120,23 +121,23 @@ namespace pr
 			}
 			return *this;
 		}
-		
+
 		// Implicit conversion to bool
 		operator bool_type() const
 		{
 			return m_ptr != 0 ? &bool_tester::x : static_cast<bool_type>(0);
 		}
-		
+
 		// Implicit conversion to base class
 		template <typename U> operator RefPtr<U>() const
 		{
 			return RefPtr<U>(static_cast<U*>(m_ptr));
 		}
-		
-		// Pointer deref
+
+		// Pointer de-ref
 		T* operator -> ()       { return m_ptr; }
 		T* operator -> () const { return m_ptr; }
-		
+
 		// The current reference count
 		long RefCount() const
 		{
@@ -145,7 +146,7 @@ namespace pr
 			m_ptr->Release();
 			return count;
 		}
-		
+
 	protected:
 		long IncRef(T* ptr) const
 		{
@@ -159,7 +160,7 @@ namespace pr
 			#if PR_REFPTR_TRACE == 1
 			RefPtrTrace(false, ptr);
 			#endif
-			
+
 			// Before releasing the reference, check that there is at least one reference to release
 			// This test will probably crash rather than assert, but hey, good enough.
 			// If this fails, check that two or more D3DPtrs haven't been created from the same raw pointer.
@@ -173,7 +174,7 @@ namespace pr
 			ptr->Release();
 		}
 	};
-	
+
 	template <typename T> inline bool operator == (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr == rhs.m_ptr; }
 	template <typename T> inline bool operator != (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr != rhs.m_ptr; }
 	template <typename T> inline bool operator <  (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr <  rhs.m_ptr; }
@@ -204,4 +205,3 @@ namespace pr
 #endif
 
 #endif
-

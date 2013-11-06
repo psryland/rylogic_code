@@ -396,7 +396,9 @@ namespace pr
 
 		// LdrObject Creation functions *********************************************
 
-		// Callback function for editing an existing model
+		// Callback function for editing a dynamic model
+		// This callback is intentionally low level, providing the whole model for editing.
+		// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
 		typedef void (__stdcall *EditObjectCB)(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rdr);
 
 		// Add the ldr objects described in 'reader' to 'objects'
@@ -443,7 +445,12 @@ namespace pr
 			pr::ldr::ContextId context_id = DefaultContext);
 
 		// Add a custom object via callback
+		// Objects created by this method will have dynamic usage and are suitable for updating every frame
+		// They are intended to be used with the 'Edit' function.
 		pr::ldr::LdrObjectPtr Add(pr::Renderer& rdr, pr::ldr::ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, pr::ldr::ContextId context_id = DefaultContext);
+
+		// Modify the geometry of an LdrObject
+		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx);
 
 		// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
 		// If 'doomed' is 0, all are assumed doomed. If 'excluded' is 0, none are assumed excluded
@@ -452,9 +459,6 @@ namespace pr
 
 		// Remove 'obj' from 'objects'
 		void Remove(pr::ldr::ObjectCont& objects, pr::ldr::LdrObjectPtr obj);
-
-		// Modify the geometry of an LdrObject
-		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx);
 
 		// Parse the source data in 'reader' using the same syntax
 		// as we use for ldr object '*o2w' transform descriptions.
@@ -465,7 +469,6 @@ namespace pr
 		std::string CreateDemoScene();
 	}
 }
-
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
