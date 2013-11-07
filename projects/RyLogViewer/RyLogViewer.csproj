@@ -116,6 +116,7 @@
     <Compile Include="src\inputs\aggregate_files_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\inputs\android_logcat.cs" />
     <Compile Include="src\inputs\android_logcat_ui.cs">
       <SubType>Form</SubType>
     </Compile>
