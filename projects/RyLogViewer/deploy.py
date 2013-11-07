@@ -51,7 +51,7 @@ try:
 
 	#Invoke MSBuild
 	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, proj, "/p:Configuration=" + config, "/t:Build"])
+	Tools.Exec([UserVars.msbuild, proj, "/t:RyLogViewer:Rebuild", "/p:Configuration="+config])
 
 	#Ensure directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)
@@ -84,4 +84,4 @@ try:
 	Tools.OnSuccess()
 
 except Exception as ex:
-	Tools.OnError("Error: " + str(ex))
+	Tools.OnError("ERROR: " + str(ex))
