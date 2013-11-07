@@ -18,13 +18,25 @@ namespace pr
 {
 	namespace geometry
 	{
+		// EGeom
+		#define PR_ENUM(x) /*
+			*/x(Unknown ,= 0     ) /*
+			*/x(Vert    ,= 1 << 0) /* Object space 3D position
+			*/x(Colr    ,= 1 << 1) /* Diffuse base colour
+			*/x(Norm    ,= 1 << 2) /* Object space 3D normal
+			*/x(Tex0    ,= 1 << 3) // Diffuse texture
+		PR_DEFINE_ENUM2_FLAGS(EGeom, PR_ENUM);
+		#undef PR_ENUM
+
 		struct Props
 		{
 			pr::BoundingBox m_bbox; // Bounding box in model space of the generated model
+			EGeom m_geom;           // The components of the generated geometry
 			bool m_has_alpha;       // True if the model contains any alpha
-			
+
 			Props()
 			:m_bbox(pr::BBoxReset)
+			,m_geom(EGeom::Vert)
 			,m_has_alpha(false)
 			{}
 		};
@@ -77,7 +89,6 @@ namespace pr
 			// meta code helper
 			template <typename T> T remove_ref(T&);
 		}
-
 	}
 }
 

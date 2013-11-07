@@ -62,6 +62,7 @@ namespace pr
 			for (std::size_t i = 0; i != num_indices; ++i)
 				*i_out++ = *indices++;
 
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | (normals != 0 ? EGeom::Norm : 0) | (tex_coords != 0 ? EGeom::Tex0 : 0);
 			props.m_has_alpha = col.m_alpha;
 			return props;
 		}

@@ -55,6 +55,7 @@ namespace pr
 				pr::Encompase(props.m_bbox, v0);
 				pr::Encompase(props.m_bbox, v1);
 			}
+			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
 			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
@@ -79,7 +80,6 @@ namespace pr
 		{
 			return LinesD(num_lines ,points ,directions ,1 ,&colour ,out_verts ,out_indices);
 		}
-
 	}
 }
 

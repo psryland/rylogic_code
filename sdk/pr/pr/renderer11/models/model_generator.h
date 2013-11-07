@@ -56,12 +56,12 @@ namespace pr
 				else
 				{
 					// Create a material to use and a render nugget for the whole model
-					DrawMethod lmat(rdr.m_shdr_mgr.FindShaderFor(Cont::GeomMask));
-					if (Cont::GeomMask & EGeom::Tex0)
+					DrawMethod lmat(rdr.m_shdr_mgr.FindShaderFor(props.m_geom));
+					if (props.m_geom & EGeom::Tex0)
 						lmat.m_tex_diffuse = rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::White);
 					if (props.m_has_alpha)
 						pr::rdr::SetAlphaBlending(lmat, true);
-					
+
 					model->CreateNugget(lmat, topo);
 				}
 				return model;

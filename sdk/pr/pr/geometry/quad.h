@@ -115,6 +115,7 @@ namespace pr
 				*i_out++ = value_cast<VIdx>(ibase + 1);
 				*i_out++ = value_cast<VIdx>(ibase + 3);
 			}
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
 			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
@@ -176,7 +177,7 @@ namespace pr
 					*i_out++ = value_cast<VIdx>(col);
 					*i_out++ = value_cast<VIdx>(col + verts_per_row);
 					*i_out++ = value_cast<VIdx>(col + 1);
-					
+
 					*i_out++ = value_cast<VIdx>(col + 1);
 					*i_out++ = value_cast<VIdx>(col + verts_per_row);
 					*i_out++ = value_cast<VIdx>(col + verts_per_row + 1);

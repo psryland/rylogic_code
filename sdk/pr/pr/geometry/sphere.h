@@ -146,7 +146,7 @@ namespace pr
 				float const dAng = maths::tau / 5.0f;
 				float const ua[] = {0.0f,0.2f,0.4f,0.6f,0.8f,1.0f,1.2f};
 				float const ub[] = {0.1f,0.3f,0.5f,0.7f,0.9f,1.1f,1.3f};
-				
+
 				// Add the vertices
 				float ang1 = 0.0f, ang2 = dAng * 0.5f;
 				for (uint w = 0; w != 6; ++w, ang1 += dAng, ang2 += dAng)
@@ -206,6 +206,7 @@ namespace pr
 
 			Props props;
 			props.m_bbox = BoundingBox::make(pr::v4Origin, radius);
+			props.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0;
 			props.m_has_alpha = colour.a() != 0xFF;
 			return props;
 		}
@@ -266,7 +267,6 @@ namespace pr
 				++ilayer;
 				for (std::size_t l = 1; l != layers - 1; ++l)
 				{
-					
 					*out_indices++ = value_cast<VIdx>(ilayer + 0);
 					*out_indices++ = value_cast<VIdx>(ilayer + 1);
 					*out_indices++ = value_cast<VIdx>(ilayer + 0 + verts_per_wedge);

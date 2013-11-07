@@ -44,7 +44,7 @@ namespace pr
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Boxes(std::size_t num_boxes, TVertCIter points, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			int const vidx[] = 
+			int const vidx[] =
 			{
 				7,5,1,3, // +X
 				2,0,4,6, // -X
@@ -120,6 +120,7 @@ namespace pr
 					*i_out++ = value_cast<VIdx>(ibase + *ii++);
 				}
 			}
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
 			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
@@ -142,7 +143,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Box(v4 const& rad, m4x4 const& o2w, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
-			v4 const pt[8] = 
+			v4 const pt[8] =
 				{
 					{-rad.x, -rad.y, -rad.z, 1.0f},
 					{+rad.x, -rad.y, -rad.z, 1.0f},
