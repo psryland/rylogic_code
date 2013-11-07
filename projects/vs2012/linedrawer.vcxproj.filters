@@ -201,6 +201,6 @@
     <None Include="..\linedrawer\resources\linedrawer.ico">
       <Filter>resources</Filter>
     </None>
-    <None Include="..\linedrawer\release.cmd" />
+    <None Include="..\linedrawer\deploy.py" />
   </ItemGroup>
 </Project>

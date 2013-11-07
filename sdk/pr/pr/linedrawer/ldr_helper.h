@@ -6,6 +6,7 @@
 #define PR_LINE_DRAWER_HELPER_H
 
 #include <string>
+#include <algorithm>
 #include <windows.h>
 #include "pr/common/fmt.h"
 #include "pr/common/assert.h"
@@ -100,9 +101,9 @@ namespace pr
 							"%f %f %f  %f %f %f  %f %f %f  %f %f %f "
 						"}\n"
 						,name ,colour
-						,TL.x ,TL.y ,TL.z 
-						,BL.x ,BL.y ,BL.z 
-						,BR.x ,BR.y ,BR.z 
+						,TL.x ,TL.y ,TL.z
+						,BL.x ,BL.y ,BL.z
+						,BR.x ,BR.y ,BR.z
 						,TR.x ,TR.y ,TR.z
 						);
 		}
@@ -395,20 +396,40 @@ namespace pr
 		//	Txfm(obox.Getm4x4(), str)
 		//	str += "}\n";
 		//}
-		template <typename TStr, typename VCont, typename ICont> inline TStr& Mesh(char const* name, unsigned int colour, VCont const& verts, ICont const& faces, pr::m4x4 const& o2w, TStr& str)
+
+		template <typename TStr, typename VCont, typename ICont> inline TStr& Mesh(char const* name, unsigned int colour, VCont const& verts, ICont const& indices, int indices_per_prim, pr::m4x4 const& o2w, TStr& str)
+		{
+			auto v = std::begin(verts);
+			auto vend = std::end(verts);
+			auto i = std::begin(indices);
+			auto iend = std::end(indices);
+			return MeshFn(name, colour,
+				[&](){ return v != vend ? &*v++ : nullptr },
+				[&](){ return i != iend ? &*i++ : nullptr },
+				indices_per_prim, o2w, str);
+		}
+		template <typename TStr, typename VFunc, typename IFunc> inline TStr& MeshFn(char const* name, unsigned int colour, VFunc verts, IFunc indices, int indices_per_prim, pr::m4x4 const& o2w, TStr& str)
 		{
 			str += FmtS( "*Mesh %s %08X {\n" ,name ,colour);
 			if (o2w != pr::m4x4Identity) Transform(o2w, str);
 				str +=      "\t*Verts {";
-			for (VCont::const_iterator v = verts.begin(), vend = verts.end(); v != vend; ++v)
-				str += FmtS( "%3.3f %3.3f %3.3f  " ,v->x ,v->y ,v->z);
-				str +=      "}\n\t*Faces {";
-			for (ICont::const_iterator f = faces.begin(), fend = faces.end(); f != fend; f += 3)
-				str += FmtS( "%d %d %d  " ,*(f+0) ,*(f+1) ,*(f+2));
-				str +=      "}\n\t*GenerateNormals\n"
-						"}\n";
+			for (auto v = verts(); v != nullptr; v = verts())
+				str += FmtS("%3.3f %3.3f %3.3f  ",v->x ,v->y ,v->z);
+			switch (indices_per_prim) {
+			default: throw std::exception("unsupported primitive type");
+			case 4: str += "}\n\t*Tetra {"; break;
+			case 3: str += "}\n\t*Faces {"; break;
+			case 2: str += "}\n\t*Lines {"; break;
+			}
+			for (auto i = indices(); i != nullptr; i = indices())
+				str += FmtS("%d ",*i);
+			str += "}\n";
+			if (indices_per_prim >= 3)
+				str += "\t*GenerateNormals\n";
+			str += "}\n";
 			return str;
 		}
+
 		//template <typename TStr> inline void Mesh(char const* name, unsigned int colour, pr::Mesh const& mesh, TStr& str)
 		//{
 		//	if (mesh.m_vertex.empty() || mesh.m_face.empty()) return;

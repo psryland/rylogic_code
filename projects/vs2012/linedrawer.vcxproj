@@ -278,8 +278,8 @@
     <ResourceCompile Include="..\linedrawer\resources\linedrawer.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\linedrawer\deploy.py" />
     <None Include="..\linedrawer\resources\linedrawer.ico" />
-    <None Include="..\linedrawer\release.cmd" />
     <None Include="..\linedrawer\ThingsToGetRight.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

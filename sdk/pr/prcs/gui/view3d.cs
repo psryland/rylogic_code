@@ -9,6 +9,7 @@ using pr.maths;
 using pr.extn;
 
 using HWND = System.IntPtr;
+
 using HDrawset = System.IntPtr;
 using HObject = System.IntPtr;
 using HTexture = System.IntPtr;
@@ -184,16 +185,17 @@ namespace pr.gui
 		}
 		#endregion
 
-		[StructLayout(LayoutKind.Sequential)]
-		public struct VertPCNT
+		[StructLayout(LayoutKind.Sequential, Pack = 1)]
+		public struct Vertex
 		{
 			public v4   m_pos;
-			public uint m_col;
 			public v4   m_norm;
 			public v2   m_uv;
-			public VertPCNT(v4 vert)                            { m_pos = vert; m_col = 0;   m_norm = v4.Zero; m_uv = v2.Zero; }
-			public VertPCNT(v4 vert, uint col)                  { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; }
-			public VertPCNT(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm;    m_uv = tex;     }
+			public uint m_col;
+			public uint pad;
+			public Vertex(v4 vert)                            { m_pos = vert; m_col = 0;   m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
+			public Vertex(v4 vert, uint col)                  { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
+			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm;    m_uv = tex;     pad = 0; }
 			public override string ToString()                   { return "V:<{0}> C:<{1}>".Fmt(m_pos, m_col.ToString("X8")); }
 		}
 
@@ -210,9 +212,8 @@ namespace pr.gui
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct DrawMethod
+		public struct Material
 		{
-			public EGeom m_geom;
 			public IntPtr m_diff_tex;
 			public IntPtr m_env_map;
 		}
@@ -233,12 +234,13 @@ namespace pr.gui
 		public delegate void EditObjectCB(
 			int vcount,
 			int icount,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] VertPCNT[] verts,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
-			ref int new_vcount,
-			ref int new_icount,
-			ref EPrim prim_type,
-			ref DrawMethod mat,
+			out int new_vcount,
+			out int new_icount,
+			out EPrim prim_type,
+			out EGeom geom_type,
+			ref Material mat,
 			IntPtr ctx);
 
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
@@ -275,7 +277,7 @@ namespace pr.gui
 			m_error_cb = ErrorCB;
 			m_settings_changed_cb = SettingsChgCB;
 			if (error_cb != null) OnError += error_cb;
-			
+
 			// Initialise the renderer
 			IntPtr hwnd = Handle;
 			EResult res = View3D_Initialise(hwnd, m_error_cb, m_settings_changed_cb);
@@ -359,7 +361,7 @@ namespace pr.gui
 			MouseMove -= OnMouseMove;
 			Capture = false;
 			Navigate(e.Location, 0, true);
-			
+
 			// Short clicks bring up the context menu
 			if (e.Button == MouseButtons.Right && Environment.TickCount - m_mouse_down_at < ClickTimeMS)
 				ShowContextMenu();
@@ -489,7 +491,7 @@ namespace pr.gui
 			if (m_drawset == drawset) Drawset = HDrawset.Zero;
 			View3D_DrawsetDelete(drawset);
 		}
-		
+
 		/// <summary>Add multiple objects by context id</summary>
 		public void DrawsetAddObjects(int context_id)
 		{
@@ -501,7 +503,7 @@ namespace pr.gui
 		{
 			View3D_DrawsetRemoveObjectsById(m_drawset, context_id);
 		}
-	
+
 		/// <summary>Add an object to the drawset</summary>
 		public void DrawsetAddObject(Object obj)
 		{
@@ -756,7 +758,7 @@ namespace pr.gui
 			//    {
 			//        0, 1, 2
 			//    };
-			
+
 			//    HModel model = CreateModel(vert.Length, face.Length, vert, face, EPrimType.D3DPT_TRIANGLELIST);
 			//    HInstance instance = CreateInstance(model, m4x4.Identity);
 			//    AddInstance(drawset, instance);
@@ -856,11 +858,11 @@ namespace pr.gui
 						align_options.Items.Add("X");
 						align_options.Items.Add("Y");
 						align_options.Items.Add("Z");
-						
+
 						v4 axis;
 						View3D_CameraAlignAxis(m_drawset, out axis);
 						if      (v4.FEql3(axis, v4.XAxis))	{ align_options.SelectedIndex = 1; }
-						else if (v4.FEql3(axis, v4.YAxis))	{ align_options.SelectedIndex = 2; }	
+						else if (v4.FEql3(axis, v4.YAxis))	{ align_options.SelectedIndex = 2; }
 						else if (v4.FEql3(axis, v4.ZAxis))	{ align_options.SelectedIndex = 3; }
 						else								{ align_options.SelectedIndex = 0; }
 						align_options.SelectedIndexChanged += delegate
@@ -931,7 +933,7 @@ namespace pr.gui
 					}
 				}
 			}
-			
+
 			// Allow users to add custom menu options to the context menu
 			if (CustomiseContextMenu != null)
 				CustomiseContextMenu(context_menu);
@@ -964,7 +966,7 @@ namespace pr.gui
 			if (m_drawset == HDrawset.Zero) base.OnPaint(e);
 			else View3D_Render(m_drawset);
 		}
-	
+
 		/// <summary>Clean up any resources being used.</summary>
 		protected override void Dispose(bool disposing)
 		{
@@ -1021,7 +1023,7 @@ namespace pr.gui
 			:this(ldr_script, DefaultContextId, false)
 			{
 			}
-			
+
 			/// <summary>Create an object via callback</summary>
 			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, int context_id)
 			{
@@ -1081,7 +1083,7 @@ namespace pr.gui
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
-			
+
 			/// <summary>Construct a texture from a file</summary>
 			public Texture(string tex_filepath)
 			{
@@ -1185,7 +1187,7 @@ namespace pr.gui
 		[DllImport(View3Ddll, CallingConvention = CallingConvention.StdCall)] private static extern int               View3D_Initialise2();
 		[DllImport(View3Ddll)] private static extern EResult           View3D_Initialise(HWND hwnd, ReportErrorCB error_cb, SettingsChangedCB settings_changed_cb);
 		[DllImport(View3Ddll)] private static extern void              View3D_Shutdown();
-		
+
 		// Draw sets
 		[DllImport(View3Ddll)] private static extern IntPtr            View3D_GetSettings              (HDrawset drawset);
 		[DllImport(View3Ddll)] private static extern void              View3D_SetSettings              (HDrawset drawset, string settings);
@@ -1225,7 +1227,7 @@ namespace pr.gui
 		[DllImport(View3Ddll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref View3DLight light);
 		[DllImport(View3Ddll)] private static extern void              View3D_LightSource              (HDrawset drawset, ref v4 position, ref v4 direction, bool camera_relative);
 		[DllImport(View3Ddll)] private static extern void              View3D_ShowLightingDlg          (HDrawset drawset, HWND parent);
-	
+
 		// Objects
 		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
 		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);

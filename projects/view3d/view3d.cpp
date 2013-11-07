@@ -503,16 +503,16 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 		// Copy the model data into the model
 		auto vin = begin(verts);
 		auto vout = mlock.m_vlock.ptr<pr::rdr::VertPCNT>();
-		for (size_t i = 0; i != new_vcount; ++i, ++vin, ++vout)
+		for (size_t i = 0; i != new_vcount; ++i, ++vin)
 		{
 			SetPCNT(*vout++, vin->pos, pr::Colour32::make(vin->col), vin->norm, vin->tex);
 			pr::Encompase(model->m_bbox, vin->pos);
 		}
 		auto iin = begin(indices);
 		auto iout = mlock.m_ilock.ptr<pr::uint16>();
-		for (size_t i = 0; i != new_icount; ++i, ++iin, ++iout)
+		for (size_t i = 0; i != new_icount; ++i, ++iin)
 		{
-			*iout = *iin;
+			*iout++ = *iin;
 		}
 	}
 
