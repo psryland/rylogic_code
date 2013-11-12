@@ -8,13 +8,13 @@
 #include "linedrawer/utility/debug.h"
 
 NavManager::NavManager(pr::Camera& camera, pr::IRect client_area, pr::v4 const& reset_up)
-:m_camera(camera)
-,m_ctrl_mode(ENavMode::Navigation)
-,m_client_area(pr::IRectUnit)
-,m_reset_up(pr::Length3Sq(reset_up) > pr::maths::tiny ? reset_up : pr::v4YAxis)
-,m_reset_forward(pr::Parallel(m_reset_up, pr::v4ZAxis) ? pr::v4XAxis : pr::v4ZAxis)
-,m_orbit_timer(GetTickCount())
-,m_views()
+	:m_camera(camera)
+	,m_ctrl_mode(ENavMode::Navigation)
+	,m_client_area(pr::IRectUnit)
+	,m_reset_up(pr::Length3Sq(reset_up) > pr::maths::tiny ? reset_up : pr::v4YAxis)
+	,m_reset_forward(pr::Parallel(m_reset_up, pr::v4ZAxis) ? -pr::v4XAxis : -pr::v4ZAxis)
+	,m_orbit_timer(GetTickCount())
+	,m_views()
 {
 	// Set an initial camera position
 	SetViewArea(client_area);
@@ -34,19 +34,19 @@ void NavManager::SetResetOrientation(pr::v4 const& forward, pr::v4 const& up)
 	m_reset_forward = forward;
 	m_reset_up = up;
 }
-	
+
 // Set/Get the camera up align vector
 void NavManager::CameraAlign(pr::v4 const& up)
 {
 	m_camera.SetAlign(up);
 	if (m_camera.IsAligned()) m_reset_up = m_camera.m_align;
-	m_reset_forward = pr::Parallel(m_reset_up, pr::v4XAxis) ? pr::v4ZAxis : pr::Normalise3(pr::Cross3(pr::v4XAxis, m_reset_up));
+	m_reset_forward = pr::Parallel(m_reset_up, pr::v4ZAxis) ? -pr::v4XAxis : -pr::Normalise3(pr::Cross3(pr::v4XAxis, m_reset_up));
 }
 pr::v4 NavManager::CameraAlign() const
 {
 	return m_camera.m_align;
 }
-	
+
 // Set/Get perspective or orthographic projection
 void NavManager::Render2D(bool yes)
 {
@@ -56,7 +56,7 @@ bool NavManager::Render2D() const
 {
 	return m_camera.m_orthographic;
 }
-	
+
 // Reset the camera to view a bbox
 void NavManager::ResetView(pr::BoundingBox const& view_bbox)
 {
@@ -129,7 +129,7 @@ bool NavManager::MouseDblClick(pr::v2 const&, int button_state)
 	}
 	return false;
 }
-	
+
 // Return a point in world space corresponding to a screen space point.
 // The x,y components of 'screen' should be in client area space
 // The z component should be the world space distance from the camera
@@ -142,7 +142,7 @@ pr::v4 NavManager::WSPointFromScreenPoint(pr::v4 const& screen) const
 	y = pr::Clamp(y, -1.0f, 1.0f);
 	return m_camera.WSPointFromScreenPoint(pr::v4::make(x, y, m_camera.FocusDist(), 0.0f));
 }
-	
+
 // Orbit the camera about the current focus point
 void NavManager::OrbitCamera(float orbit_speed_rad_p_s)
 {
@@ -168,4 +168,3 @@ void NavManager::RestoreView(SavedViewID id)
 	PR_ASSERT(PR_DBG_LDR, id < (SavedViewID)m_views.size(), "Invalid saved view id");
 	m_camera = m_views[id];
 }
-

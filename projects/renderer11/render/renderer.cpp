@@ -14,19 +14,19 @@ using namespace pr::rdr;
 
 // Initialise the renderer state variables and creates the d3d device and swap chain.
 pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
-:m_settings(settings)
-,m_device()
-,m_swap_chain()
-,m_immediate()
-,m_main_rtv()
-,m_main_dsv()
-,m_feature_level()
-,m_bbdesc()
-,m_idle(false)
+	:m_settings(settings)
+	,m_device()
+	,m_swap_chain()
+	,m_immediate()
+	,m_main_rtv()
+	,m_main_dsv()
+	,m_feature_level()
+	,m_bbdesc()
+	,m_idle(false)
 {
 	// Check dlls,dx features,etc required to run the renderer are available
 	//CheckDependencies();
-	
+
 	// Create the d3d device and swap chain
 	// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
 	//  render using GDI on a swap chain or a surface. This will allow the application
@@ -62,7 +62,7 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 	D3DPtr<IDXGIFactory> factory;
 	pr::Throw(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)&factory.m_ptr));
 	pr::Throw(factory->MakeWindowAssociation(m_settings.m_hwnd, 0));
-	
+
 	// Setup the main render target
 	InitMainRT();
 }
@@ -104,7 +104,7 @@ void pr::rdr::RdrState::InitMainRT()
 
 	// Bind the render target and depth stencil to the immediate device context
 	m_immediate->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
-	
+
 	// Set the default viewport to all of the render target
 	Viewport vp(m_bbdesc.Width, m_bbdesc.Height);
 	m_immediate->RSSetViewports(1, &vp);
@@ -112,13 +112,13 @@ void pr::rdr::RdrState::InitMainRT()
 
 // Construct the renderer
 pr::Renderer::Renderer(pr::rdr::RdrSettings const& settings)
-:RdrState(settings)
-,m_mdl_mgr(m_settings.m_mem, m_device)
-,m_shdr_mgr(m_settings.m_mem, m_device)
-,m_tex_mgr(m_settings.m_mem, m_device)
-,m_bs_mgr(m_settings.m_mem, m_device)
-,m_ds_mgr(m_settings.m_mem, m_device)
-,m_rs_mgr(m_settings.m_mem, m_device)
+	:RdrState(settings)
+	,m_mdl_mgr(m_settings.m_mem, m_device)
+	,m_shdr_mgr(m_settings.m_mem, m_device)
+	,m_tex_mgr(m_settings.m_mem, m_device)
+	,m_bs_mgr(m_settings.m_mem, m_device)
+	,m_ds_mgr(m_settings.m_mem, m_device)
+	,m_rs_mgr(m_settings.m_mem, m_device)
 {}
 pr::Renderer::~Renderer()
 {
@@ -128,7 +128,7 @@ pr::Renderer::~Renderer()
 	m_immediate = 0;
 	m_main_rtv = 0;
 	m_main_dsv = 0;
-	
+
 	// Destroying a Swap Chain:
 	// You may not release a swap chain in full-screen mode because doing so may create thread contention
 	// (which will cause DXGI to raise a non-continuable exception). Before releasing a swap chain, first
@@ -136,7 +136,7 @@ pr::Renderer::~Renderer()
 	PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
 	m_swap_chain->SetFullscreenState(FALSE, 0);
 	m_swap_chain = 0;
-	
+
 	// Can't assert this as the managers still contain references to the device (and possibly the client)
 	//PR_ASSERT(PR_DBG_RDR, (rcnt = m_device.RefCount()) == 1, "Outstanding references to the d3d device");
 	m_device = 0;
@@ -170,7 +170,7 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 	// which may be less efficient. Even if a stretch is not required, presentation may not be optimal because the back
 	// buffers might not be directly interchangeable with the front buffer. Thus, a call to ResizeBuffers on WM_SIZE is
 	// always recommended, since WM_SIZE is always sent during a fullscreen transition.
-	
+
 	// While you don't have to write any more code than has been described, a few simple steps can make your application
 	// more responsive. The most important consideration is the resizing of the swap chain's buffers in response to the
 	// resizing of the output window. Naturally, the application's best route is to respond to WM_SIZE, and call
@@ -183,16 +183,16 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 	// Failure to call IDXGISwapChain::ResizeBuffers in response to switching to full-screen mode (most naturally, in response
 	// to WM_SIZE), can preclude the optimization of flipping, wherein DXGI can simply swap which buffer is being displayed,
 	// rather than copying a full screen's worth of data around.
-	
+
 	// Ignore resizes that aren't changes in size
 	auto area = DisplayArea();
 	if (size == area)
 		return;
-	
+
 	// Ignore resizes to <= 0. Could report an error here, but what's the point? We handle it.
 	if (size.x <= 0 || size.y <= 0)
 		return;
-	
+
 	// Notify that a resize of the swap chain is about to happen.
 	// Receivers need to ensure they don't have any outstanding references to the swap chain resources
 	pr::events::Send(Evt_Resize(false, area));
@@ -201,13 +201,13 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 	m_immediate->OMSetRenderTargets(0, 0, 0);
 	m_main_rtv = 0;
 	m_main_dsv = 0;
-	
+
 	// Get the swap chain to resize itself
 	pr::Throw(m_swap_chain->ResizeBuffers(0, size.x, size.y, DXGI_FORMAT_UNKNOWN, m_settings.m_swap_chain_flags));
-	
+
 	// Setup the render targets again
 	InitMainRT();
-	
+
 	// Notify that the resize is done
 	area = DisplayArea();
 	pr::events::Send(Evt_Resize(true, area));
@@ -223,7 +223,7 @@ void pr::Renderer::Present()
 	// and either of these methods call ::SendMessage(). In this scenario, if the message-pump
 	// thread has a critical section guarding it or if the render thread is blocked, then the
 	// two threads will deadlock.
-	
+
 	// IDXGISwapChain1::Present1 will inform you if your output window is entirely occluded via DXGI_STATUS_OCCLUDED.
 	// When this occurs, we recommended that your application go into standby mode (by calling IDXGISwapChain1::Present1
 	// with DXGI_PRESENT_TEST) since resources used to render the frame are wasted. Using DXGI_PRESENT_TEST will prevent
@@ -232,26 +232,26 @@ void pr::Renderer::Present()
 	// the swap chain unable to relinquish full-screen mode.
 	// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
 	// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
-	
+
 	HRESULT res = m_swap_chain->Present(m_settings.m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
 	switch (res)
 	{
 	case S_OK:
 		m_idle = false;
 		break;
-	
-	// This happens when the window is not visible onscreen, the app should go into idle mode
+
+		// This happens when the window is not visible onscreen, the app should go into idle mode
 	case DXGI_STATUS_OCCLUDED:
 		m_idle = true;
 		break;
-	
-	// The device failed due to a badly formed command. This is a run-time issue;
-	// The application should destroy and recreate the device.
+
+		// The device failed due to a badly formed command. This is a run-time issue;
+		// The application should destroy and recreate the device.
 	case DXGI_ERROR_DEVICE_RESET:
 		throw pr::Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
-	
-	// This happens in situations like, laptop undocked, or remote desktop connect etc.
-	// We'll just through so the app can shutdown/reset/whatever
+
+		// This happens in situations like, laptop undocked, or remote desktop connect etc.
+		// We'll just through so the app can shutdown/reset/whatever
 	case DXGI_ERROR_DEVICE_REMOVED:
 		throw pr::Exception<HRESULT>(m_device->GetDeviceRemovedReason(), "Graphics adapter no longer available");
 	}
