@@ -14,7 +14,6 @@
   <PropertyGroup>
     <IncludePath>..\..\sdk\stlport;$(IncludePath)</IncludePath>
     <TargetExt>.lib</TargetExt>
-    <TargetName>$(ProjectName).$(PlatformTarget).$(Configuration)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link />
@@ -35,6 +34,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <PostBuildEvent>
       <Command>q:\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>

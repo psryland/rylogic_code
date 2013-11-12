@@ -89,7 +89,7 @@
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalManifestDependencies>%(AdditionalManifestDependencies)</AdditionalManifestDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -116,7 +116,7 @@
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalManifestDependencies>%(AdditionalManifestDependencies)</AdditionalManifestDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -146,7 +146,7 @@
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalManifestDependencies>%(AdditionalManifestDependencies)</AdditionalManifestDependencies>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -177,7 +177,7 @@
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalManifestDependencies>%(AdditionalManifestDependencies)</AdditionalManifestDependencies>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>

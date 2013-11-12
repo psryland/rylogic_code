@@ -11,7 +11,7 @@ def OnSuccess():
 def OnError(msg):
 	print(msg + "\n\n   Failed\n\n")
 	input("Press enter to close")
-	sys.exit(1)
+	sys.exit(-1)
 
 # Check that the UserVars file is the correct version
 def CheckVersion(check_version):
@@ -36,21 +36,36 @@ def DiffContent(src,dst):
 
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
 def Copy(src, dst, only_if_modified=True, show_unchanged=False):
+	# If the 'src' is a directory, copy each file to 'dst' (which must also be a directory)
 	if os.path.isdir(src):
+		# if 'dst' doesn't exist, create it as a directory or if it does
+		# exist, check that it is actually a directory
+		if not os.path.exists(dst): os.makedirs(dst)
+		elif not os.path.isdir(dst): OnError("ERROR: "+dst+" is not a valid directory")
+		# Copy each file in 'src' to 'dst'
 		for file in os.listdir(src):
 			Copy(src + "\\" + file, dst + "\\" + file, only_if_modified)
-	elif not only_if_modified or Diff(src,dst):
+		return
+	
+	# If 'dst' is a directory, use the same filename from 'src'
+	if os.path.isdir(dst):
+		srcdir,srcfile = os.path.split(src)
+		dst = dst.rstrip("/\\") + "\\" + srcfile
+	
+	# Copy the file to 'dst'
+	if not only_if_modified or Diff(src,dst):
+		dstdir = os.path.dirname(dst)
+		if not os.path.exists(dstdir): os.makedirs(dstdir)
 		print(src + " --> " + dst)
-		dirname = os.path.dirname(dst)
-		if not os.path.exists(dirname): os.makedirs(dirname)
 		shutil.copy2(src, dst)
+		
 	elif show_unchanged:
 		print(src + " --> unchanged")
 
 # Executes a program and returns it's stdout/stderr as a string
-def Run(args, expected_return_code=0):
+def Run(args, expected_return_code=0,show_arguments=False):
 	try:
-		#print(args)
+		if show_arguments: print(args)
 		return subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return e.output

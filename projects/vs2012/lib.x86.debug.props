@@ -13,7 +13,6 @@
   <PropertyGroup />
   <PropertyGroup>
     <TargetExt>.lib</TargetExt>
-    <TargetName>$(ProjectName).$(PlatformTarget).$(Configuration)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link />
@@ -29,9 +28,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <OpenMPSupport>true</OpenMPSupport>
-      <MinimalRebuild>true</MinimalRebuild>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <PostBuildEvent>
       <Command>q:\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>

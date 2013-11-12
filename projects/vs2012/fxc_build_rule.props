@@ -7,11 +7,11 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CustomBuild>
-      <Command>call "Q:\tools\_build_shader.cmd" %(FullPath)</Command>
+      <Command>Q:\script\BuildShader.py %(FullPath)</Command>
       <Message>
       </Message>
       <Outputs>%(RelativeDir)%(Filename).h;%(Outputs)</Outputs>
-      <AdditionalInputs>Q:\tools\_build_shader.cmd</AdditionalInputs>
+      <AdditionalInputs>Q:\tools\_build_shader.py</AdditionalInputs>
     </CustomBuild>
     <BatchFileBuild>
       <BatchFileToRun>Q:\bin\_build_shader.cmd</BatchFileToRun>

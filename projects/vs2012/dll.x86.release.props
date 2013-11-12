@@ -9,7 +9,6 @@
     <IntDir>$(OutDir)</IntDir>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <TargetExt>.dll</TargetExt>
-    <TargetName>$(ProjectName).$(PlatformTarget).$(Configuration)</TargetName>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">
@@ -40,7 +39,7 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
     <Link>
-      <AdditionalLibraryDirectories>..\..\sdk\pr\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\sdk\pr\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>

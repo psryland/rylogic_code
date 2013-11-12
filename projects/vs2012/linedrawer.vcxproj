@@ -91,7 +91,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -100,7 +100,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile />
     <ProjectReference>
@@ -123,7 +123,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile />
     <ProjectReference />
@@ -135,7 +135,7 @@
       <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4351</DisableSpecificWarnings>
-      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;WIN32_LEAN_AND_MEAN</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=0;NDEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;WIN32_LEAN_AND_MEAN</PreprocessorDefinitions>
       <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -146,7 +146,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile />
     <ProjectReference />
@@ -168,7 +168,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
-      <AdditionalDependencies>renderer11.$(PlatformTarget).$(Configuration).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile />
     <ProjectReference />

@@ -1,10 +1,9 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 import os, sys, imp, re
-
-sys.path.append("Q:/sdk/pr/python")
-from pr import RylogicEnv
-from pr import UserVars
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + r"\..\..\script")
+import Rylogic as Tools
+import UserVars
 
 print(
 	"*************************************************************************\n"
@@ -12,7 +11,7 @@ print(
 	"   Copyright © Rylogic Limited 2012\n"
 	"*************************************************************************")
 
-RylogicEnv.CheckVersion(1)
+Tools.CheckVersion(1)
 
 proj    = UserVars.pr_root + r"\projects\RyLogViewer"
 docsdir = proj + r"\docs"
@@ -29,14 +28,14 @@ def ExportDirectory(dir):
 		if re.match(r".*(?<!include)\.htm$",filepath, flags=re.IGNORECASE):
 			print(filepath)
 			outfile = re.sub(r"\.htm", r".html", filepath)
-			RylogicEnv.Exec([UserVars.csex, "-expand_template", "-f", filepath, "-o", outfile])
+			Tools.Exec([UserVars.csex, "-expand_template", "-f", filepath, "-o", outfile])
 
 try:
 	#Process all non-include html template files in each directory
 	ExportDirectory(docsdir)
 	ExportDirectory(resdir)
 
-	RylogicEnv.OnSuccess()
+	Tools.OnSuccess()
 
 except Exception as ex:
-	RylogicEnv.OnError("Error: " + str(ex))
+	Tools.OnError("ERROR: " + str(ex))

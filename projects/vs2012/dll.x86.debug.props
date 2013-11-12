@@ -9,7 +9,6 @@
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <TargetExt>.dll</TargetExt>
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>$(ProjectName).$(PlatformTarget).$(Configuration)</TargetName>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">
@@ -32,13 +31,12 @@
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <OpenMPSupport>true</OpenMPSupport>
-      <MinimalRebuild>true</MinimalRebuild>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
     <Link>
-      <AdditionalLibraryDirectories>..\..\sdk\pr\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\sdk\pr\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
