@@ -67,10 +67,12 @@ namespace pr
 				for (int i = 0; i != N; ++i)
 				{
 					if (rhs.m_mask[i] == 0) continue;
-					if (m_mask[i] == 0) { Desc() = rhs.Desc(); continue; }
-					merge(rhs, m_mask[i], i);
+					if (m_mask[i] == 0)
+						Desc() = rhs.Desc();
+					else
+						merge(rhs, m_mask[i], i);
+					m_crc = 0;
 				}
-				m_crc ^= rhs.Hash();
 			}
 		};
 

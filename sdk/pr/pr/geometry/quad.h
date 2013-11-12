@@ -95,10 +95,10 @@ namespace pr
 				Colour32 c3 = *col++;
 
 				// Set verts
-				SetPCNT(*v_out++, v0, c0, norm(v2,v0,v1), t01);
-				SetPCNT(*v_out++, v1, c1, norm(v0,v1,v3), t11);
-				SetPCNT(*v_out++, v2, c2, norm(v1,v3,v2), t10);
-				SetPCNT(*v_out++, v3, c3, norm(v3,v2,v0), t00);
+				SetPCNT(*v_out++, v0, c0, norm(v3,v0,v1), t01);
+				SetPCNT(*v_out++, v1, c1, norm(v0,v1,v2), t11);
+				SetPCNT(*v_out++, v2, c2, norm(v1,v2,v3), t10);
+				SetPCNT(*v_out++, v3, c3, norm(v2,v3,v0), t00);
 
 				pr::Encompase(props.m_bbox, v0);
 				pr::Encompase(props.m_bbox, v1);
@@ -112,8 +112,8 @@ namespace pr
 				*i_out++ = value_cast<VIdx>(ibase + 1);
 				*i_out++ = value_cast<VIdx>(ibase + 2);
 				*i_out++ = value_cast<VIdx>(ibase + 2);
-				*i_out++ = value_cast<VIdx>(ibase + 1);
 				*i_out++ = value_cast<VIdx>(ibase + 3);
+				*i_out++ = value_cast<VIdx>(ibase);
 			}
 			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
 			props.m_has_alpha = col.m_alpha;

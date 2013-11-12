@@ -404,8 +404,8 @@ namespace pr
 			auto i = std::begin(indices);
 			auto iend = std::end(indices);
 			return MeshFn(name, colour,
-				[&](){ return v != vend ? &*v++ : nullptr },
-				[&](){ return i != iend ? &*i++ : nullptr },
+				[&](){ return v != vend ? &*v++ : nullptr; },
+				[&](){ return i != iend ? &*i++ : nullptr; },
 				indices_per_prim, o2w, str);
 		}
 		template <typename TStr, typename VFunc, typename IFunc> inline TStr& MeshFn(char const* name, unsigned int colour, VFunc verts, IFunc indices, int indices_per_prim, pr::m4x4 const& o2w, TStr& str)

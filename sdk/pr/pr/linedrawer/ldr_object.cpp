@@ -1846,7 +1846,7 @@ std::string pr::ldr::CreateDemoScene()
 		"	{\n"
 		"		\"#checker\"                     // texture filepath, stock texture name (e.g. #white, #black, #checker), or texture id (e.g. #1, #3)\n"
 		"		*Addr {Clamp Clamp}            // Optional addressing mode for the texture; U, V. Options: Wrap, Mirror, Clamp, Border, MirrorOnce\n"
-		"		*Filter {Linear Linear Linear} // Optional filtering of the texture; mip, min, mag. Options: None, Point, Linear, Anisotropic, PyramidalQuad, GaussianQuad\n"
+		"		*Filter {Linear}               // Optional filtering of the texture. Options: Point, Linear, Anisotropic\n"
 		"		*o2w { *scale{100 100 1} *euler{0 0 90} } // Optional 3d texture coord transform\n"
 		"	}\n"
 		"}\n"

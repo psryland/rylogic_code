@@ -27,7 +27,7 @@ namespace pr
 		// 'radius1' is the radius of the top face (i.e. +z axis face) of the cylinder
 		// 'height' is the length of the cylinder along the z axis
 		// 'o2w' an object to world transform to apply to the verts of the cylinder
-		// 'xscale'/'yscale' are scaling factors that can be used to make the cylinder elipsoidal
+		// 'xscale'/'yscale' are scaling factors that can be used to make the cylinder ellipsoidal
 		// 'wedges' is the number of divisions around the z axis
 		// 'layers' is the number of sections along the zaxis, must be >= 1
 		// 'num_colours' should be either, 0, 1, num_boxes, num_boxes*8 representing; no colour, 1 colour for all, 1 colour per box, or 1 colour per box vertex
@@ -68,9 +68,9 @@ namespace pr
 				uv = v2::make(cos(a) * 0.5f + 0.5f, sin(a) * 0.5f + 0.5f);
 				SetPCNT(*v_out++, pt, *col++, nm, uv);
 			}
-			for (std::size_t l = 0; l <= layers; ++l, z += dz) // The walls
+			for (std::size_t l = 0; l <= layers; ++l) // The walls
 			{
-				float r  = ((layers - l)*radius0 + l*radius1) / layers;
+				float r  = Lerp(radius0, radius1, l/(float)layers);
 				float nz = radius0 - radius1;
 				for (std::size_t w = 0; w <= wedges; ++w)
 				{
@@ -80,6 +80,7 @@ namespace pr
 					uv = v2::make(a / maths::tau, 1.0f - (z + height*0.5f) / height);
 					SetPCNT(*v_out++, pt, *col++, nm, uv);
 				}
+				if (l != layers) z += dz;
 			}
 			nm = o2w * v4ZAxis;
 			for (std::size_t w = 0; w <= wedges; ++w) // Top face
@@ -98,21 +99,22 @@ namespace pr
 			for (std::size_t w = 0; w != wedges; ++w) // Bottom face
 			{
 				*i_out++ = value_cast<VIdx>(0);
-				*i_out++ = value_cast<VIdx>(ibase + w);
 				*i_out++ = value_cast<VIdx>(ibase + w + 1);
+				*i_out++ = value_cast<VIdx>(ibase + w);
 			}
+			ibase += verts_per_layer;
 			for (std::size_t l = 0; l != layers; ++l) // The walls
 			{
-				ibase += verts_per_layer;
 				for (std::size_t w = 0; w != wedges; ++w)
 				{
 					*i_out++ = value_cast<VIdx>(ibase + w);
-					*i_out++ = value_cast<VIdx>(ibase + w + verts_per_layer);
-					*i_out++ = value_cast<VIdx>(ibase + w + 1);
 					*i_out++ = value_cast<VIdx>(ibase + w + 1);
 					*i_out++ = value_cast<VIdx>(ibase + w + verts_per_layer);
+					*i_out++ = value_cast<VIdx>(ibase + w + verts_per_layer);
+					*i_out++ = value_cast<VIdx>(ibase + w + 1);
 					*i_out++ = value_cast<VIdx>(ibase + w + verts_per_layer + 1);
 				}
+				ibase += verts_per_layer;
 			}
 			ibase += verts_per_layer;
 			for (std::size_t w = 0; w != wedges; ++w) // Top face

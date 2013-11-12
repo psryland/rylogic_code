@@ -50,7 +50,7 @@ namespace pr
 	{
 		PR_ASSERT(PR_DBG_MATHS, IsNormal3(axis), "'axis' should be normalised");
 #if PR_MATHS_USE_DIRECTMATH
-		dxm4(*this) = DirectX::XMMatrixRotationAxis(axis.vec, angle);
+		dxm4(*this) = DirectX::XMMatrixRotationNormal(axis.vec, angle);
 #else
 		cast_m3x3(*this).set(axis, angle);
 #endif
