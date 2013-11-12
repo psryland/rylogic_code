@@ -404,6 +404,6 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>q:\script\deploylib.py $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
+    <PostBuildEvent>$(ProjectDir)..\..\..\script\deploylib.py $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
   </PropertyGroup>
 </Project>
