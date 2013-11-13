@@ -4,12 +4,11 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using pr.extn;
 using pr.gfx;
 using pr.maths;
-using pr.extn;
 
 using HWND = System.IntPtr;
-
 using HDrawset = System.IntPtr;
 using HObject = System.IntPtr;
 using HTexture = System.IntPtr;
@@ -37,12 +36,12 @@ namespace pr.gui
 		}
 		public enum EPrim :uint
 		{
-			D3D_PRIMITIVE_TOPOLOGY_UNDEFINED    = 0,
-			D3D_PRIMITIVE_TOPOLOGY_POINTLIST    = 1,
-			D3D_PRIMITIVE_TOPOLOGY_LINELIST     = 2,
-			D3D_PRIMITIVE_TOPOLOGY_LINESTRIP    = 3,
-			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST = 4,
-			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP= 5,
+			D3D_PRIMITIVE_TOPOLOGY_UNDEFINED     = 0,
+			D3D_PRIMITIVE_TOPOLOGY_POINTLIST     = 1,
+			D3D_PRIMITIVE_TOPOLOGY_LINELIST      = 2,
+			D3D_PRIMITIVE_TOPOLOGY_LINESTRIP     = 3,
+			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST  = 4,
+			D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP = 5,
 		}
 		public enum EFormat :uint
 		{
@@ -196,7 +195,7 @@ namespace pr.gui
 			public Vertex(v4 vert)                            { m_pos = vert; m_col = 0;   m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, uint col)                  { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm;    m_uv = tex;     pad = 0; }
-			public override string ToString()                   { return "V:<{0}> C:<{1}>".Fmt(m_pos, m_col.ToString("X8")); }
+			public override string ToString()                 { return "V:<{0}> C:<{1}>".Fmt(m_pos, m_col.ToString("X8")); }
 		}
 
 		[StructLayout(LayoutKind.Sequential)]

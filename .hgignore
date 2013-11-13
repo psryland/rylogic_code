@@ -18,6 +18,7 @@ syntax: glob
 *.orig
 *.userprefs
 *.vssettings
+*.DotSettings
 *.pyc
 *ReSharper*
 dlang/dmd.*.zip
