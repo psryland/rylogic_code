@@ -55,7 +55,7 @@ namespace pr.extn
 			list.Add(item);
 			return true;
 		}
-		
+
 		/// <summary>
 		/// Add 'item' to the list if it's not already there.
 		/// Uses 'list[i].Equals((item)' to test for uniqueness.
@@ -97,32 +97,32 @@ namespace pr.extn
 			int i; for (i = start_index; i != count && !pred((T)list[i]); ++i) {}
 			return i != count ? i : -1;
 		}
-		
+
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
 		public static int IndexOf<T>(this System.Collections.IList list, Func<T,bool> pred)
 		{
 			return list.IndexOf(pred, 0, list.Count);
 		}
-		
+
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index, int count)
 		{
 			int i; for (i = start_index; i != count && !pred(list[i]); ++i) {}
 			return i != count ? i : -1;
 		}
-		
+
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index)
 		{
 			return list.IndexOf(pred, start_index, list.Count);
 		}
-		
+
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred)
 		{
 			return list.IndexOf(pred, 0, list.Count);
 		}
-		
+
 		/// <summary>
 		/// Remove items from a list by predicate.
 		/// Returns the number of elements removed.</summary>
@@ -131,7 +131,7 @@ namespace pr.extn
 			// If stable remove is needed, use the IList version
 			if (stable)
 				return ((IList<T>)list).RemoveIf(pred);
-			
+
 			int end = list.Count;
 			for (int i = list.Count; i-- != 0;)
 			{
@@ -142,7 +142,7 @@ namespace pr.extn
 			list.RemoveRange(end, count);
 			return count;
 		}
-		
+
 		/// <summary>
 		/// Remove items from a list by predicate.
 		/// Note generic list has an unstable faster version of this.
@@ -178,7 +178,8 @@ namespace pr.extn
 				list.RemoveRange(startIndex, diff);
 		}
 
-		/// <summary>Binary search using for an element using only a predicate function.
+		/// <summary>
+		/// Binary search using for an element using only a predicate function.
 		/// Returns the index of the element if found or the 2s-complement of the first
 		/// element larger than the one searched for.
 		/// 'cmp' should return -1 if T is less than the target, +1 if greater, or 0 if equal</summary>
@@ -193,6 +194,13 @@ namespace pr.extn
 				if (c <  0) { if (m == b){return ~e;} b = m; continue; }
 				if (c >  0) { if (m == b){return ~b;} e = m; }
 			}
+		}
+
+		/// <summary>Binary search for an element in 'list'. Returns the element if found, or default(T) if not.</summary>
+		public static T BinarySearchFind<T>(this IList<T> list, Func<T,int> cmp)
+		{
+			var idx = list.BinarySearch(cmp);
+			return idx >= 0 ? list[idx] : default(T);
 		}
 
 		/// <summary>Sub range sort using a delegate</summary>
@@ -225,7 +233,7 @@ namespace pr.extn
 			// Copy any remaining elements
 			for (; r != list.Count; ++r)
 				list[++w] = list[r];
-			
+
 			// Resize the container
 			for (++w; w != list.Count;)
 				list.RemoveAt(list.Count - 1);
@@ -289,7 +297,7 @@ namespace pr.extn
 		{
 			return list.Partition((x, y) => x.CompareTo(y));
 		}
-		
+
 		/// <summary>Sort the list using the quick sort algorithm</summary>
 		public static void QuickSort<T>(this IList<T> list, Comparison<T> comparison, int left, int right)
 		{
@@ -302,7 +310,7 @@ namespace pr.extn
 			// if right index is greated than pivot, sort right side
 			if (right > pivot) list.QuickSort(comparison, pivot + 1, right);
 		}
-	
+
 		/// <summary>Return the k'th element in the list as if the list was sorted</summary>
 		public static T QuickSelect<T>(this IList<T> list, int k, Comparison<T> comparison, int left, int right)
 		{
@@ -334,6 +342,7 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
@@ -350,7 +359,7 @@ namespace pr
 
 				for (int i = 0; i != 100; ++i)
 					list.Add(rng.Next(10));
-			
+
 				list.Sort(0, list.Count, Maths.Compare);
 
 				int last = list.Unique(0, 50);
@@ -366,4 +375,5 @@ namespace pr
 		}
 	}
 }
+
 #endif
