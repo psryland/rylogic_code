@@ -162,11 +162,13 @@ namespace pr.gui
 		/// <summary>Import recent files from a single string</summary>
 		public void Import(string str)
 		{
-			foreach (string s in str.Split(','))
-				if (!string.IsNullOrEmpty(s))
-					Add(s, false);
-			
-			m_files.Reverse();
+			if (!string.IsNullOrEmpty(str))
+			{
+				foreach (string s in str.Split(','))
+					if (!string.IsNullOrEmpty(s))
+						Add(s, false);
+				m_files.Reverse();
+			}
 			UpdateMenu();
 		}
 	}
