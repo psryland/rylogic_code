@@ -908,7 +908,7 @@ namespace pr.common
 		internal class ObjectCache :ICache<object,object>
 		{
 			private readonly Cache<long,object> m_cache = new Cache<long, object>();
- 			private readonly TableMetaData m_meta;
+			private readonly TableMetaData m_meta;
 
 			public ObjectCache(Type type)
 			{
@@ -1076,7 +1076,8 @@ namespace pr.common
 			private readonly sqlite3 m_db;
 			private readonly Dictionary<string, ICache<object,object>> m_caches;
 			private readonly QueryCache m_query_cache;
-			private GCHandle m_update_cb;
+			private readonly UpdateHookCB m_update_cb_handle;
+			private GCHandle m_this_handle;
 
 			private readonly int m_creation_thread;
 			[Conditional("DEBUG")] public void AssertCorrectThread()
@@ -1099,7 +1100,8 @@ namespace pr.common
 				ReadItemHook = x => x;
 				WriteItemHook = x => x;
 				m_creation_thread = Thread.CurrentThread.ManagedThreadId;
-				m_update_cb = GCHandle.Alloc(this);
+				m_this_handle = GCHandle.Alloc(this);
+				m_update_cb_handle = UpdateCB;
 
 				// Open the database file
 				m_db = Dll.Open(filepath, flags);
@@ -1120,7 +1122,7 @@ namespace pr.common
 			public void Dispose()
 			{
 				Close();
-				m_update_cb.Free();
+				m_this_handle.Free();
 			}
 
 			/// <summary>Returns the db handle after asserting it's validity</summary>
@@ -1463,7 +1465,7 @@ namespace pr.common
 			{
 				add
 				{
-					if (m_RowChangedInternal == null) Dll.UpdateHook(m_db, UpdateCB, GCHandle.ToIntPtr(m_update_cb));
+					if (m_RowChangedInternal == null) Dll.UpdateHook(m_db, m_update_cb_handle, GCHandle.ToIntPtr(m_this_handle));
 					m_RowChangedInternal += value;
 				}
 				remove
