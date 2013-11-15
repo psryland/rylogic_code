@@ -230,7 +230,7 @@ namespace RyLogViewer
 			m_grid.SelectionChanged         += GridSelectionChanged;
 			m_grid.CellDoubleClick          += CellDoubleClick;
 			m_grid.ColumnDividerDoubleClick += (s,a) => { SetGridColumnSizesImpl(); a.Handled = true; };
-			m_grid.RowHeightInfoNeeded      += (s,a) => a.Height = m_row_height;
+			m_grid.RowHeightInfoNeeded      += RowHeightNeeded;
 			m_grid.DataError                += (s,a) => Debug.Assert(false);
 			m_grid.Scroll                   += (s,a) => GridScroll();
 
@@ -564,6 +564,18 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>Supply the height needed for the given row</summary>
+		private void RowHeightNeeded(object s, DataGridViewRowHeightInfoNeededEventArgs a)
+		{
+			var cs = RowCellStyle(a.RowIndex);
+			var line = ReadLine(a.RowIndex);
+			using (var gfx = CreateGraphics())
+			{
+				var sz = gfx.MeasureString(line.RowText, cs.Font);
+				a.Height = Math.Max(m_row_height, (int)(sz.Height + 0.5f));
+			}
+		}
+
 		/// <summary>Returns the cell style to use for a given row index</summary>
 		private DataGridViewCellStyle RowCellStyle(int row_index)
 		{
@@ -664,7 +676,7 @@ namespace RyLogViewer
 
 				var col = line.Column[i];
 				var sz = gfx.MeasureString(col.Text, cs.Font);
-				var textbounds = new RectangleF(cellbounds.X, cellbounds.Y + (cellbounds.Height - sz.Height)/2, cellbounds.Width, sz.Height);
+				var textbounds = new RectangleF(cellbounds.X, cellbounds.Y + Math.Max(0, (cellbounds.Height - sz.Height)/2), cellbounds.Width, sz.Height);
 
 				// If selected, use the selection colour
 				if (selected)
@@ -1783,8 +1795,10 @@ namespace RyLogViewer
 							SetGridRowCount(0, 0);
 					}
 					SetGridColumnSizes(false);
-					m_grid.Refresh();
 				}
+				// Hack to fix ArgumentOutOfRangeException in DGV
+				m_grid.Invalidate();
+				m_grid.Refresh();
 
 				// Configure menus
 				bool file_open                            = FileOpen;
