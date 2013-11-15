@@ -273,7 +273,7 @@ namespace RyLogViewer
 			const string msg =
 				"Searching for the Android Debugging Bridge application...\r\n"+
 				"\r\n"+
-				"Path: {0}\r\n"+
+				"Trying Path: {0}...\r\n"+
 				"\r\n"+
 				"Click cancel to locate it manually.";
 
@@ -281,9 +281,16 @@ namespace RyLogViewer
 			var search_paths = new[]
 			{
 				Environment.GetEnvironmentVariable("ANDROID_HOME"),
-				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\Android\android-sdk\platform-tools",
+				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) + @"\Android\android-sdk\platform-tools",
+				@"D:\Program Files (x86)\Android\android-sdk\platform-tools",
+				@"D:\Program Files\Android\android-sdk\platform-tools",
+				@"E:\Program Files (x86)\Android\android-sdk\platform-tools",
+				@"E:\Program Files\Android\android-sdk\platform-tools",
 				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+				Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
 				@"C:\"
 			};
 
