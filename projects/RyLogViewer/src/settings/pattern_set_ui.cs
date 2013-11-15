@@ -11,9 +11,9 @@ using RyLogViewer.Properties;
 
 namespace RyLogViewer
 {
-	internal abstract partial class PatternSetUi :UserControl
+	internal abstract class PatternSetUi :UserControl
 	{
-		[Serializable] protected class Set
+		protected class Set
 		{
 			public string Filepath      { get; set; }
 			public string Name          { get { return Path.GetFileNameWithoutExtension(Filepath); } }
@@ -107,7 +107,7 @@ namespace RyLogViewer
 		private void LoadPatternSet()
 		{
 			// Ask for the file location
-			OpenFileDialog fd = new OpenFileDialog{Filter = PatternSetFilter, CheckFileExists = true};
+			var fd = new OpenFileDialog{Filter = PatternSetFilter, CheckFileExists = true};
 			if (fd.ShowDialog(this) != DialogResult.OK) return;
 			AddToPatternSetList(new Set(fd.FileName), true);
 		}
@@ -116,13 +116,13 @@ namespace RyLogViewer
 		private void SavePatternSet()
 		{
 			// Ask for a name for the set
-			SaveFileDialog fd = new SaveFileDialog{Filter = PatternSetFilter, CreatePrompt = false, OverwritePrompt = true};
+			var fd = new SaveFileDialog{Filter = PatternSetFilter, CreatePrompt = false, OverwritePrompt = true};
 			if (fd.ShowDialog(this) != DialogResult.OK) return;
 
 			try
 			{
 				// Export the current patterns as xml
-				XDocument doc = new XDocument(new XElement(XmlTag.Root));
+				var doc = new XDocument(new XElement(XmlTag.Root));
 				if (doc.Root == null) throw new ApplicationException("failed to add root xml element");
 				doc.Root.Add(new XElement(XmlTag.Version, Version));
 
@@ -156,7 +156,7 @@ namespace RyLogViewer
 		private void PatternSetSelected(Set set)
 		{
 			// Pop up a menu with options to merge/replace
-			ContextMenuStrip menu = new ContextMenuStrip();
+			var menu = new ContextMenuStrip();
 			menu.Items.Add("Replace existing patterns"  , null, (ss,aa) => { ClearPatterns(); AddPatternSet(set); });
 			menu.Items.Add("Merge with existing patterns", null, (ss,aa) => AddPatternSet(set));
 			menu.Items.Add(new ToolStripSeparator());
@@ -217,7 +217,7 @@ namespace RyLogViewer
 		protected void Import(string pattern_sets)
 		{
 			m_sets.Clear();
-			XDocument doc = XDocument.Parse(pattern_sets);
+			var doc = XDocument.Parse(pattern_sets);
 			if (doc.Root != null)
 			{
 				foreach (var set in doc.Root.Elements(PatternSetXmlTag))
@@ -228,7 +228,7 @@ namespace RyLogViewer
 		/// <summary>Serialise the pattern sets to xml</summary>
 		protected string Export()
 		{
-			XDocument doc = new XDocument(new XElement(XmlTag.Root));
+			var doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
 
 			foreach (var set in m_sets)
@@ -278,8 +278,8 @@ namespace RyLogViewer
 			// m_combo_sets
 			//
 			this.m_combo_sets.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_combo_sets.FormattingEnabled = true;
 			this.m_combo_sets.Location = new System.Drawing.Point(3, 9);
 			this.m_combo_sets.Name = "m_combo_sets";
@@ -383,7 +383,7 @@ namespace RyLogViewer
 		protected override void MergePatterns(XElement node)
 		{
 			bool some_added = false;
-			foreach (XElement n in node.Elements(XmlTag.Highlight))
+			foreach (var n in node.Elements(XmlTag.Highlight))
 				try { some_added |= CurrentSet.AddIfUnique(new Highlight(n)); } catch {} // Ignore those that fail
 			if (some_added) RaiseCurrentSetChanged();
 		}
@@ -462,7 +462,7 @@ namespace RyLogViewer
 		protected override void MergePatterns(XElement node)
 		{
 			bool some_added = false;
-			foreach (XElement n in node.Elements(XmlTag.Filter))
+			foreach (var n in node.Elements(XmlTag.Filter))
 				try { some_added |= CurrentSet.AddIfUnique(new Filter(n)); } catch {} // Ignore those that fail
 			if (some_added) RaiseCurrentSetChanged();
 		}
@@ -544,7 +544,7 @@ namespace RyLogViewer
 		protected override void MergePatterns(XElement node)
 		{
 			bool some_added = false;
-			foreach (XElement n in node.Elements(XmlTag.Transform))
+			foreach (var n in node.Elements(XmlTag.Transform))
 				try { some_added |= CurrentSet.AddIfUnique(new Transform(n)); } catch {} // Ignore those that fail
 			if (some_added) RaiseCurrentSetChanged();
 		}

@@ -166,6 +166,17 @@ namespace RyLogViewer
 		public const string Executable     = "executable";
 		public const string Arguments      = "arguments";
 		public const string WorkingDir     = "working_dir";
+		public const string ADBPath        = "adb_path";
+		public const string Device         = "device";
+		public const string CaptureOutput  = "capture";
+		public const string AppendOutput   = "append";
+		public const string LogBuffers     = "log_buffers";
+		public const string FilterSpecs    = "filter_specs";
+		public const string LogFormat      = "log_format";
+		public const string ConnType       = "conn_type";
+		public const string IPAddrHistory  = "ip_history";
+		public const string Port           = "port";
+		public const string Priority       = "priority";
 	}
 
 	public static class CmdLineOption

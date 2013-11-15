@@ -7,6 +7,18 @@ namespace pr.extn
 {
 	public static class TypeExtensions
 	{
+		/// <summary>Resolve a type name to a type</summary>
+		public static Type Resolve(string name, bool throw_on_error = true)
+		{
+			return Type.GetType(name, null
+				,(assembly,type_name,ignore_case) =>
+					{
+						var assems = assembly != null ? new[]{assembly} : AppDomain.CurrentDomain.GetAssemblies();
+						return assems.Select(ass => ass.GetType(type_name,false,ignore_case)).FirstOrDefault(t => t != null);
+					}
+				,throw_on_error);
+		}
+
 		/// <summary>Returns all inherited members for a type (including private members)</summary>
 		public static IEnumerable<MemberInfo> AllMembers(this Type type, BindingFlags flags)
 		{
@@ -63,11 +75,12 @@ namespace pr.extn
 	}
 }
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 	using extn;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static class TestTypeExtensions
@@ -147,6 +160,17 @@ namespace pr
 
 				props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public).ToList();
 				Assert.AreEqual(2, props.Count);
+			}
+			[Test] public static void Resolve()
+			{
+				var ty0 = TypeExtensions.Resolve("System.String");
+				Assert.AreEqual(typeof(string), ty0);
+
+				var ty1 = TypeExtensions.Resolve("pr.util.CRC32");
+				Assert.AreEqual(typeof(pr.util.CRC32), ty1);
+
+				var ty2 = TypeExtensions.Resolve("NUnit.Framework.CultureAttribute[]");
+				Assert.AreEqual(typeof(NUnit.Framework.CultureAttribute[]), ty2);
 			}
 		}
 	}

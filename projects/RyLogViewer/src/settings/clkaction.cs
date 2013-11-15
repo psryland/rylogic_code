@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Xml.Linq;
+using pr.extn;
 
 namespace RyLogViewer
 {
@@ -21,16 +21,16 @@ namespace RyLogViewer
 	}
 
 	/// <summary>An action that occurs in response to a click on a row that matches a pattern</summary>
-	[DataContract] public class ClkAction :Pattern
+	public class ClkAction :Pattern
 	{
 		/// <summary>The program to launch when activated</summary>
-		[DataMember] public string Executable { get; set; }
+		public string Executable { get; set; }
 
 		/// <summary>Arguments passed to the program to launch</summary>
-		[DataMember] public string Arguments { get; set; }
+		public string Arguments { get; set; }
 
 		/// <summary>The working directory of the launched program</summary>
-		[DataMember] public string WorkingDirectory { get; set; }
+		public string WorkingDirectory { get; set; }
 
 		/// <summary>Return a string description of the action</summary>
 		public string ActionString { get { return Executable + " " + Arguments; } }
@@ -49,11 +49,22 @@ namespace RyLogViewer
 		}
 		public ClkAction(XElement node) :base(node)
 		{
-			// ReSharper disable PossibleNullReferenceException
-			Executable       = node.Element(XmlTag.Executable).Value;
-			Arguments        = node.Element(XmlTag.Arguments ).Value;
-			WorkingDirectory = node.Element(XmlTag.WorkingDir).Value;
-			// ReSharper restore PossibleNullReferenceException
+			Executable       = node.Element(XmlTag.Executable).As<string>();
+			Arguments        = node.Element(XmlTag.Arguments ).As<string>();
+			WorkingDirectory = node.Element(XmlTag.WorkingDir).As<string>();
+		}
+
+		/// <summary>Export this ClkAction as xml</summary>
+		public override XElement ToXml(XElement node)
+		{
+			base.ToXml(node);
+			node.Add
+			(
+				Executable      .ToXml(XmlTag.Executable, false),
+				Arguments       .ToXml(XmlTag.Arguments , false),
+				WorkingDirectory.ToXml(XmlTag.WorkingDir, false)
+			);
+			return node;
 		}
 
 		/// <summary>The expanded command line</summary>
@@ -66,7 +77,7 @@ namespace RyLogViewer
 		public void Execute(string text, string filepath)
 		{
 			// Create the process
-			ProcessStartInfo info = new ProcessStartInfo
+			var info = new ProcessStartInfo
 			{
 				UseShellExecute        = false,
 				FileName               = Expand(Executable, text, filepath),
@@ -129,19 +140,6 @@ namespace RyLogViewer
 			return sb.ToString();
 		}
 
-		/// <summary>Export this ClkAction as xml</summary>
-		public override XElement ToXml(XElement node)
-		{
-			base.ToXml(node);
-			node.Add
-			(
-				new XElement(XmlTag.Executable, Executable),
-				new XElement(XmlTag.Arguments , Arguments ),
-				new XElement(XmlTag.WorkingDir, WorkingDirectory)
-			);
-			return node;
-		}
-
 		/// <summary>Reads an xml description of the ClkAction expressions</summary>
 		public static List<ClkAction> Import(string actions)
 		{
@@ -159,7 +157,7 @@ namespace RyLogViewer
 		/// <summary>Serialise the ClkAction patterns to xml</summary>
 		public static string Export(IEnumerable<ClkAction> ClkActions)
 		{
-			XDocument doc = new XDocument(new XElement(XmlTag.Root));
+			var doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
 
 			foreach (var ac in ClkActions)

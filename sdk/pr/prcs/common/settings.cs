@@ -4,10 +4,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
-using System.Xml;
+using System.Xml.Linq;
 using pr.common;
 using pr.util;
 using pr.extn;
@@ -18,8 +18,8 @@ using pr.extn;
 //     public static readonly Settings Default = new Settings(0);
 //     protected override SettingsBase DefaultData { get { return Default; } }
 //
-//     public string Str { get { return get<string>("Str"); } set { set("Str", value); } }
-//     public int    Int { get { return get<int   >("Int"); } set { set("Int", value); } }
+//     public string Str { get { return get(x => x.Str); } set { set(x => x.Str, value); } }
+//     public int    Int { get { return get(x => x.Int); } set { set(x => x.Int, value); } }
 //
 //     public Settings(ELoadOptions opts = ELoadOptions.Normal)
 //     {
@@ -32,28 +32,18 @@ using pr.extn;
 
 namespace pr.common
 {
+	[DataContract(Name="setting")] public class SettingsPair
+	{
+		[DataMember(Name="key"  )] public string Key   { get; set; }
+		[DataMember(Name="value")] public object Value { get; set; }
+		public override string ToString() { return Key + "  " + Value; }
+	}
+
 	/// <summary>A base class for simple settings</summary>
-	[KnownType("KnownTypes")]
 	public abstract class SettingsBase<T> where T:SettingsBase<T>, new()
 	{
-		// Using a List<> instead of a Dictionary as Dictionary isn't serialiseable
-		[KnownType(typeof(Point))] // Add more of these as needed
-		[KnownType(typeof(Color))]
-		[KnownType(typeof(Size))]
-		[KnownType(typeof(DateTime))]
-		[KnownType(typeof(Font))]
-		[KnownType(typeof(FontStyle))]
-		[KnownType(typeof(GraphicsUnit))]
-		[DataContract(Name="setting")]
-		protected class Pair
-		{
-			[DataMember(Name="key"  )] public string Key   {get;set;}
-			[DataMember(Name="value")] public object Value {get;set;}
-			public override string ToString() { return Key + "  " + Value; }
-		}
-
 		protected const string VersionKey = "__SettingsVersion";
-		protected List<Pair> Data = new List<Pair>();
+		protected readonly List<SettingsPair> Data = new List<SettingsPair>();
 		private string m_filepath = "";
 		private bool m_block_saving;
 		private bool m_auto_save;
@@ -83,9 +73,6 @@ namespace pr.common
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
 		protected virtual string Version { get { return "v1.0"; } }
 
-		/// <summary>Override this method to return addition known types</summary>
-		protected virtual IEnumerable<Type> KnownTypes { get { return Enumerable.Empty<Type>(); } }
-
 		/// <summary>Returns the filepath for the persisted settings file. Settings cannot be saved until this property has a valid filepath</summary>
 		public string Filepath
 		{
@@ -108,6 +95,12 @@ namespace pr.common
 				"in the constructor of the derived settings class");
 		}
 
+		/// <summary>Read a settings value</summary>
+		protected Value get<Value>(Expression<Func<T,Value>> expression)
+		{
+			return get<Value>(Reflect<T>.MemberName(expression));
+		}
+
 		/// <summary>Write a settings value</summary>
 		protected void set<Value>(string key, Value value)
 		{
@@ -116,7 +109,7 @@ namespace pr.common
 
 			// Key not in the data yet? Must be initial value from startup
 			int idx = index(key);
-			if (idx < 0) { Data.Insert(~idx, new Pair{Key = key, Value = value}); return; }
+			if (idx < 0) { Data.Insert(~idx, new SettingsPair{Key = key, Value = value}); return; }
 
 			object old_value = Data[idx].Value;
 			if (Equals(old_value, value)) return; // If the values are the same, don't raise 'changing' events
@@ -125,6 +118,12 @@ namespace pr.common
 			if (SettingChanging != null && key != VersionKey) SettingChanging(this, args);
 			if (!args.Cancel) Data[idx].Value = value;
 			if (SettingChanged != null && key != VersionKey) SettingChanged(this, new SettingChangedEventArgs(key, old_value, value));
+		}
+
+		/// <summary>Write a settings value</summary>
+		protected void set<Value>(Expression<Func<T,Value>> expression, Value value)
+		{
+			set(Reflect<T>.MemberName(expression), value);
 		}
 
 		/// <summary>Return the index of 'key' in the data. Returned value is negative if not found</summary>
@@ -198,19 +197,17 @@ namespace pr.common
 		protected SettingsBase(string filepath, bool read_only = false)
 		{
 			Debug.Assert(!string.IsNullOrEmpty(filepath));
-
 			Filepath = filepath;
-			Data = new List<Pair>(Default.Data);
-
 			try
 			{
+				Data = new List<SettingsPair>();
 				Load(Filepath, read_only);
 			}
 			catch (Exception ex)
 			{
 				// If anything goes wrong, use the defaults
 				Log.Exception(this, ex, "Failed to load settings from {0}".Fmt(filepath));
-				Data = new List<Pair>(Default.Data);
+				Data = new List<SettingsPair>(Default.Data);
 			}
 			AutoSaveOnChanges = true;
 		}
@@ -242,66 +239,52 @@ namespace pr.common
 			Load(Filepath);
 		}
 
-		/// <summary>Refreshes the settings from persistent storage</summary>
+		/// <summary>
+		/// Refreshes the settings from persistent storage.
+		/// Starts with a copy of the Default.Data, then overwrites settings with those described in 'filepath'
+		/// After load, the settings is the union of Default.Data and those in the given file.</summary>
 		public void Load(string filepath, bool read_only = false)
 		{
-			try
+			// Block saving during load/upgrade
+			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
 			{
-				// Block saving during load/upgrade
-				m_block_saving = true;
-
 				if (!PathEx.FileExists(filepath))
 				{
-					Log.Info(this, "Settings file {0} not found, using defaults".Fmt(filepath));
+					Log.Info(this,"Settings file {0} not found, using defaults".Fmt(filepath));
 					Reset();
 					return; // Reset will recursively call Load again
 				}
 
-				Log.Debug(this, "Loading settings file {0}".Fmt(filepath));
+				Log.Debug(this,"Loading settings file {0}".Fmt(filepath));
 
-				var ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
-				using (var fs = new FileStream(Filepath, FileMode.Open, FileAccess.Read, FileShare.Read))
-				{
-					Data = (List<Pair>)ser.ReadObject(fs);
-					Data.Sort((lhs,rhs) => string.CompareOrdinal(lhs.Key, rhs.Key));
-				}
+				var settings = XDocument.Load(filepath).Root;
+				if (settings == null) throw new Exception("Invalidate settings file ({0})".Fmt(filepath));
 
-				// Migrate old settings
-				// This is limited because we can only modify the already loaded
-				// pairs. (Modifying the xml directly isn't feasible because of
-				// all of the namespaces and type information added by the DCS
-				for (string version; (version = get<string>(VersionKey)) != Version;)
-					Upgrade(version);
+				// Upgrade old settings
+				XElement vers = settings.Element(VersionKey) ?? new XElement(VersionKey);
+				vers.Remove();
+				if (vers.Value != Version)
+					Upgrade(settings, vers.Value);
 
-				// Add any default options that aren't in the settings file
-				foreach (var i in Default.Data)
-				{
-					if (has(i.Key)) continue;
-					set(i.Key, i.Value);
-				}
-			}
-			finally
-			{
+				// Load the settings from xml
+				FromXml(settings);
 				Filepath = filepath;
 				ReadOnly = read_only;
-				m_block_saving = false;
 			}
 
 			Validate();
 
 			// Notify of settings loaded
 			if (SettingsLoaded != null)
-				SettingsLoaded(this, new SettingsLoadedEventArgs(filepath));
+				SettingsLoaded(this,new SettingsLoadedEventArgs(filepath));
 		}
 
 		/// <summary>Persist current settings to storage</summary>
 		public void Save(string filepath)
 		{
-			if (m_block_saving)
-				return;
-			try
+			if (m_block_saving) return;
+			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
 			{
-				m_block_saving = true;
 				if (string.IsNullOrEmpty(filepath))
 					throw new ArgumentNullException("filepath", "No settings filepath set");
 
@@ -311,20 +294,16 @@ namespace pr.common
 				if (args.Cancel) return;
 
 				// Ensure the save directory exists
-				string path = Path.GetDirectoryName(filepath);
-				if (path != null && !Directory.Exists(path)) Directory.CreateDirectory(path);
-
-				// Save the settings version
-				set(VersionKey, Version);
+				var path = Path.GetDirectoryName(filepath);
+				if (path != null && !Directory.Exists(path))
+					Directory.CreateDirectory(path);
 
 				Log.Debug(this, "Saving settings to file {0}".Fmt(filepath));
 
 				// Perform the save
-				var ser = new DataContractSerializer(typeof(List<Pair>), KnownTypes);
-				using (var fs = XmlWriter.Create(filepath, new XmlWriterSettings{Indent = true, ConformanceLevel = ConformanceLevel.Fragment}))
-					ser.WriteObject(fs, Data);
+				var settings = ToXml();
+				settings.Save(filepath, SaveOptions.None);
 			}
-			finally { m_block_saving = false; }
 		}
 
 		/// <summary>Save using the last filepath</summary>
@@ -341,13 +320,45 @@ namespace pr.common
 		}
 
 		/// <summary>Called when loading settings from an earlier version</summary>
-		public virtual void Upgrade(string from_version)
+		public virtual void Upgrade(XElement old_settings, string from_version)
 		{
 			throw new NotSupportedException("Settings file version is {0}. Latest version is {1}. Upgrading from this version is not supported".Fmt(from_version, Version));
 		}
 
 		/// <summary>Perform validation on the loaded settings</summary>
 		public virtual void Validate() {}
+
+		/// <summary>Return the settings as an xml node tree</summary>
+		private XElement ToXml()
+		{
+			var settings = new XElement("settings");
+			settings.Add2(VersionKey, Version);
+			foreach (var d in Data) settings.Add2("setting", d);
+			return settings;
+		}
+
+		/// <summary>Populate the settings from an xml node</summary>
+		private void FromXml(XElement root)
+		{
+			// Load data from settings
+			Data.Clear();
+			foreach (var setting in root.Elements())
+			{
+				var pair = setting.As<SettingsPair>();
+				Debug.Assert(pair != null, "Failed to read setting " + setting.Name);
+				Data.Add(pair);
+			}
+
+			// Sort for binary search
+			Data.Sort((l,r) => string.CompareOrdinal(l.Key, r.Key));
+
+			// Add any default options that aren't in the settings file
+			foreach (var i in Default.Data)
+			{
+				if (has(i.Key)) continue;
+				set(i.Key, i.Value);
+			}
+		}
 	}
 }
 
@@ -361,22 +372,48 @@ namespace pr
 	{
 		private sealed class Settings :SettingsBase<Settings>
 		{
-			public string   Str { get { return get<string  >("Str"); } private set { set("Str", value); } }
-			public int      Int { get { return get<int     >("Int"); } private set { set("Int", value); } }
-
+			public string         Str  { get { return get(x => x.Str ); } set { set(x => x.Str,  value); } }
+			public int            Int  { get { return get(x => x.Int ); } set { set(x => x.Int,  value); } }
+			public DateTimeOffset DTO  { get { return get(x => x.DTO ); } set { set(x => x.DTO,  value); } }
+			public Font           Font { get { return get(x => x.Font); } set { set(x => x.Font, value); } }
 			public Settings()
 			{
 				Str = "default";
 				Int = 4;
+				DTO = DateTimeOffset.Parse("2013-01-02 12:34:56");
+				Font = SystemFonts.StatusFont;
 			}
+			public Settings(string filepath) :base(filepath) {}
 		}
 
-		[Test] public static void TestSettings()
+		[Test] public static void TestSettings1()
 		{
-			Settings s = new Settings();
+			var s = new Settings();
 			Assert.AreEqual(Settings.Default.Str, s.Str);
 			Assert.AreEqual(Settings.Default.Int, s.Int);
+			Assert.AreEqual(Settings.Default.DTO, s.DTO);
+			Assert.AreEqual(Settings.Default.Font, s.Font);
 			Assert.Throws(typeof(ArgumentNullException), s.Save); // no filepath set
+		}
+		[Test] public static void TestSettings2()
+		{
+			var file = Path.GetTempFileName();
+
+			var s = new Settings
+				{
+					Str = "Changed",
+					Int = 42,
+					DTO = DateTimeOffset.UtcNow,
+					Font = SystemFonts.DialogFont
+				};
+			s.Save(file);
+
+			var S = new Settings(file);
+
+			Assert.AreEqual(s.Str  , S.Str);
+			Assert.AreEqual(s.Int  , S.Int);
+			Assert.AreEqual(s.DTO  , S.DTO);
+			Assert.AreEqual(s.Font , S.Font);
 		}
 	}
 }

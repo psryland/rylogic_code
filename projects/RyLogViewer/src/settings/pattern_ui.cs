@@ -330,7 +330,7 @@ namespace RyLogViewer
 			// m_edit_match
 			//
 			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_match.Location = new System.Drawing.Point(75, 29);
 			this.m_edit_match.Name = "m_edit_match";
 			this.m_edit_match.Size = new System.Drawing.Size(252, 20);
@@ -413,8 +413,8 @@ namespace RyLogViewer
 			// m_split
 			//
 			this.m_split.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_split.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_split.Location = new System.Drawing.Point(3, 75);
 			this.m_split.Name = "m_split";

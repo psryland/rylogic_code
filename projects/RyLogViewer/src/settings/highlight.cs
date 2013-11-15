@@ -1,25 +1,23 @@
 ﻿using System.Collections.Generic;
 using System.Drawing;
-using System.Globalization;
-using System.Runtime.Serialization;
 using System.Xml.Linq;
+using pr.extn;
 
 namespace RyLogViewer
 {
-	[DataContract]
 	public class Highlight :Pattern, IFilter
 	{
 		/// <summary>Defines what a match with this filter means</summary>
 		public EIfMatch IfMatch { get { return EIfMatch.Keep; } }
 
 		/// <summary>Foreground colour of highlight</summary>
-		[DataMember] public Color ForeColour { get; set; }
+		public Color ForeColour { get; set; }
 
 		/// <summary>Background colour of highlight</summary>
-		[DataMember] public Color BackColour { get; set; }
+		public Color BackColour { get; set; }
 
 		/// <summary>True if a match anywhere on the row is considered a match for the full row</summary>
-		[DataMember] public bool BinaryMatch { get; set; }
+		public bool BinaryMatch { get; set; }
 
 		public Highlight()
 		{
@@ -35,11 +33,9 @@ namespace RyLogViewer
 		}
 		public Highlight(XElement node) :base(node)
 		{
-			// ReSharper disable PossibleNullReferenceException
-			ForeColour  = Color.FromArgb(int.Parse(node.Element(XmlTag.ForeColour).Value, NumberStyles.HexNumber));
-			BackColour  = Color.FromArgb(int.Parse(node.Element(XmlTag.BackColour).Value, NumberStyles.HexNumber));
-			BinaryMatch = bool.Parse(node.Element(XmlTag.Binary).Value);
-			// ReSharper restore PossibleNullReferenceException
+			ForeColour  = node.Element(XmlTag.ForeColour).As<Color>();
+			BackColour  = node.Element(XmlTag.BackColour).As<Color>();
+			BinaryMatch = node.Element(XmlTag.Binary).As<bool>();
 		}
 
 		/// <summary>Export this highlight as xml</summary>
@@ -48,9 +44,9 @@ namespace RyLogViewer
 			base.ToXml(node);
 			node.Add
 			(
-				new XElement(XmlTag.ForeColour ,ForeColour.ToArgb().ToString("X")),
-				new XElement(XmlTag.BackColour ,BackColour.ToArgb().ToString("X")),
-				new XElement(XmlTag.Binary     ,BinaryMatch)
+				ForeColour .ToXml(XmlTag.ForeColour, false),
+				BackColour .ToXml(XmlTag.BackColour, false),
+				BinaryMatch.ToXml(XmlTag.Binary    , false)
 			);
 			return node;
 		}
@@ -63,7 +59,7 @@ namespace RyLogViewer
 			XDocument doc;
 			try { doc = XDocument.Parse(highlights); } catch { return list; }
 			if (doc.Root == null) return list;
-			foreach (XElement n in doc.Root.Elements(XmlTag.Highlight))
+			foreach (var n in doc.Root.Elements(XmlTag.Highlight))
 				try { list.Add(new Highlight(n)); } catch {} // Ignore those that fail
 
 			return list;
@@ -72,7 +68,7 @@ namespace RyLogViewer
 		/// <summary>Serialise the highlight patterns to xml</summary>
 		public static string Export(IEnumerable<Highlight> highlights)
 		{
-			XDocument doc = new XDocument(new XElement(XmlTag.Root));
+			var doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
 
 			foreach (var hl in highlights)

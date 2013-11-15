@@ -8,10 +8,9 @@ using pr.extn;
 namespace RyLogViewer
 {
 	/// <summary>A substitution that swaps code values for text values</summary>
-	[DataContract] 
 	public class SubCodeLookup :TransformSubstitutionBase
 	{
-		[DataMember] private readonly Dictionary<string, string> m_values = new Dictionary<string, string>(); // The code lookup table
+		private readonly Dictionary<string, string> m_values = new Dictionary<string, string>(); // The code lookup table
 
 		/// <summary>
 		/// A unique id for this text transform, used to associate
@@ -59,18 +58,18 @@ namespace RyLogViewer
 		/// This is used to persist per-instance settings for this text
 		/// transform within the main RyLogViewer settings xml file.
 		/// Implementers should add xml nodes to 'data_root'</summary>
-		public override void ToXml(XElement node)
+		public override XElement ToXml(XElement node)
 		{
 			var codes = new XElement(XmlTag.CodeValues);
 			foreach (var v in m_values)
 			{
-				var value = new XElement(XmlTag.CodeValue,
-					new XElement(XmlTag.Code , v.Key),
-					new XElement(XmlTag.Value, v.Value)
-					);
-				codes.Add(value);
+				codes.Add(new XElement(XmlTag.CodeValue,
+					v.Key   .ToXml(XmlTag.Code , false),
+					v.Value .ToXml(XmlTag.Value, false)
+					));
 			}
 			node.Add(codes);
+			return node;
 		}
 
 		/// <summary>
@@ -84,8 +83,8 @@ namespace RyLogViewer
 			m_values.Clear();
 			foreach (var code in codes.Elements(XmlTag.CodeValue))
 			{
-				string c = code.Element(XmlTag.Code ).Value;
-				string v = code.Element(XmlTag.Value).Value;
+				var c = code.Element(XmlTag.Code ).As<string>();
+				var v = code.Element(XmlTag.Value).As<string>();
 				m_values.Add(c, v);
 			}
 			// ReSharper restore PossibleNullReferenceException

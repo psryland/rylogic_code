@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Xml.Linq;
+using pr.extn;
 using pr.util;
 
 namespace RyLogViewer
@@ -42,48 +44,43 @@ namespace RyLogViewer
 		/// <summary>Construct from xml description</summary>
 		public Filter(XElement node) :base(node)
 		{
-			// ReSharper disable PossibleNullReferenceException
-			IfMatch = Enum<EIfMatch>.Parse(node.Element(XmlTag.IfMatch).Value);
-			// ReSharper restore PossibleNullReferenceException
+			IfMatch = node.Element(XmlTag.IfMatch).As<EIfMatch>();
 		}
 
 		/// <summary>Export this highlight as xml</summary>
 		public override XElement ToXml(XElement node)
 		{
 			base.ToXml(node);
-			node.Add
-			(
-				new XElement(XmlTag.IfMatch ,IfMatch)
-			);
+			node.Add(IfMatch.ToXml(XmlTag.IfMatch ,false));
 			return node;
 		}
-		
+
 		/// <summary>Reads an xml description of the highlight expressions</summary>
 		public static List<Filter> Import(string filters)
 		{
 			var list = new List<Filter>();
-			
+
 			XDocument doc;
 			try { doc = XDocument.Parse(filters); } catch { return list; }
 			if (doc.Root == null) return list;
 			foreach (XElement n in doc.Root.Elements(XmlTag.Filter))
 				try { list.Add(new Filter(n)); } catch {} // Ignore those that fail
-			
+
 			return list;
 		}
-		
+
 		/// <summary>Serialise the highlight patterns to xml</summary>
 		public static string Export(IEnumerable<Filter> filters)
 		{
 			XDocument doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
-			
+
 			foreach (var hl in filters)
 				doc.Root.Add(hl.ToXml(new XElement(XmlTag.Filter)));
-			
+
 			return doc.ToString(SaveOptions.None);
 		}
-		
+
 		/// <summary>Creates a new object that is a copy of the current instance.</summary>
 		public override object Clone()
 		{
@@ -98,7 +95,7 @@ namespace RyLogViewer
 				&& base.Equals(obj)
 				&& IfMatch.Equals(rhs.IfMatch);
 		}
-		
+
 		/// <summary>Value hash code</summary>
 		public override int GetHashCode()
 		{

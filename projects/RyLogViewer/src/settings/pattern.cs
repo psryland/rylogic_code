@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.common;
@@ -9,16 +8,15 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	[DataContract]
 	public class Pattern :IPattern
 	{
-		[DataMember] private EPattern m_patn_type;
-		[DataMember] private string   m_expr;
-		[DataMember] private bool     m_ignore_case;
-		[DataMember] private bool     m_active;
-		[DataMember] private bool     m_invert;
-		[DataMember] private bool     m_whole_line;
-		private Regex                 m_compiled_patn;
+		private EPattern m_patn_type;
+		private string   m_expr;
+		private bool     m_ignore_case;
+		private bool     m_active;
+		private bool     m_invert;
+		private bool     m_whole_line;
+		private Regex    m_compiled_patn;
 
 		/// <summary>True if the pattern is active</summary>
 		public bool Active
@@ -91,14 +89,12 @@ namespace RyLogViewer
 		}
 		public Pattern(XElement node)
 		{
-			// ReSharper disable PossibleNullReferenceException
-			Expr        = node.Element(XmlTag.Expr      ).Value;
-			PatnType    = Enum<EPattern>.Parse(node.Element(XmlTag.PatnType).Value);
-			Active      = bool.Parse(node.Element(XmlTag.Active    ).Value);
-			IgnoreCase  = bool.Parse(node.Element(XmlTag.IgnoreCase).Value);
-			Invert      = bool.Parse(node.Element(XmlTag.Invert    ).Value);
-			WholeLine   = bool.Parse(node.Element(XmlTag.WholeLine ).Value);
-			// ReSharper restore PossibleNullReferenceException
+			Expr        = node.Element(XmlTag.Expr      ).As<string>();
+			PatnType    = node.Element(XmlTag.PatnType  ).As<EPattern>();
+			Active      = node.Element(XmlTag.Active    ).As<bool>();
+			IgnoreCase  = node.Element(XmlTag.IgnoreCase).As<bool>();
+			Invert      = node.Element(XmlTag.Invert    ).As<bool>();
+			WholeLine   = node.Element(XmlTag.WholeLine ).As<bool>();
 		}
 
 		/// <summary>Export this pattern as xml</summary>
@@ -106,12 +102,12 @@ namespace RyLogViewer
 		{
 			node.Add
 			(
-				new XElement(XmlTag.Expr       ,Expr       ),
-				new XElement(XmlTag.Active     ,Active     ),
-				new XElement(XmlTag.PatnType   ,PatnType   ),
-				new XElement(XmlTag.IgnoreCase ,IgnoreCase ),
-				new XElement(XmlTag.Invert     ,Invert     ),
-				new XElement(XmlTag.WholeLine  ,WholeLine  )
+				Expr       .ToXml(XmlTag.Expr       , false),
+				Active     .ToXml(XmlTag.Active     , false),
+				PatnType   .ToXml(XmlTag.PatnType   , false),
+				IgnoreCase .ToXml(XmlTag.IgnoreCase , false),
+				Invert     .ToXml(XmlTag.Invert     , false),
+				WholeLine  .ToXml(XmlTag.WholeLine  , false)
 			);
 			return node;
 		}

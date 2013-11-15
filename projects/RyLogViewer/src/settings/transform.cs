@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -12,8 +11,7 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	[DataContract]
-	public class Transform :Pattern ,IPattern
+	public class Transform :Pattern
 	{
 		/// <summary>Represents a captured element with a source string</summary>
 		public class Capture
@@ -114,13 +112,13 @@ namespace RyLogViewer
 			var subs = node.Element(XmlTag.Subs);
 			foreach (var s in subs.Elements(XmlTag.Sub))
 			{
-				var tag  = s.Element(XmlTag.Tag).Value;   // The capture tag that has an associated substitution
-				var guid = s.Element(XmlTag.Id).Value;    // The unique id of the text transform
-				var name = s.Element(XmlTag.Name).Value;  // The friendly name of the transform
+				var tag  = s.Element(XmlTag.Tag ).As<string>();   // The capture tag that has an associated substitution
+				var guid = s.Element(XmlTag.Id  ).As<Guid>();    // The unique id of the text transform
+				var name = s.Element(XmlTag.Name).As<string>();  // The friendly name of the transform
 				try
 				{
 					// Create a new instance of the appropriate transform and populate it with instance specific data
-					var sub = Substitutors.FirstOrDefault(x => string.Compare(x.Guid.ToString(), guid, StringComparison.OrdinalIgnoreCase) == 0);
+					var sub = Substitutors.FirstOrDefault(x => string.Compare(x.Guid.ToString(), guid.ToString(), StringComparison.OrdinalIgnoreCase) == 0);
 					if (sub == null) throw new Exception("Text transform '{0}' (unique id: {1}) was not found\r\nThis text transform will not behaviour correctly".Fmt(name, guid));
 					sub = (ITransformSubstitution)Activator.CreateInstance(sub.GetType());
 					sub.FromXml(s.Element(XmlTag.SubData));
@@ -147,34 +145,28 @@ namespace RyLogViewer
 		{
 			// Add the base pattern properties and the replace template string
 			base.ToXml(node);
-			node.Add(new XElement(XmlTag.Replace ,Replace));
+			node.Add(Replace.ToXml(XmlTag.Replace ,false));
 
 			// Add sub nodes for each transform instance
 			var subs = new XElement(XmlTag.Subs);
 			foreach (var s in Subs)
 			{
-				var data = new XElement(XmlTag.SubData);
-				s.Value.ToXml(data);
-
-				var sub = new XElement(XmlTag.Sub,
-					new XElement(XmlTag.Tag  ,s.Key),                  // The capture tag that the sub applies to
-					new XElement(XmlTag.Id   ,s.Value.Guid.ToString()),// The unique id of the text transform type
-					new XElement(XmlTag.Name ,s.Value.DropDownName),   // The human readable name of the transform
-					data                                               // Instance specific data for the transform
-					);
-
-				subs.Add(sub);
+				subs.Add(new XElement(XmlTag.Sub,
+					s.Key               .ToXml(XmlTag.Tag     , false), // The capture tag that the sub applies to
+					s.Value.Guid        .ToXml(XmlTag.Id      , false), // The unique id of the text transform type
+					s.Value.DropDownName.ToXml(XmlTag.Name    , false), // The human readable name of the transform
+					s.Value             .ToXml(XmlTag.SubData , false)  // Instance specific data for the transform
+					));
 			}
 			node.Add(subs);
-
 			return node;
 		}
 
 		/// <summary>A map from capture tag to the substitutions to apply</summary>
-		[DataMember] public Dictionary<string, ITransformSubstitution> Subs { get; private set; }
+		public Dictionary<string, ITransformSubstitution> Subs { get; private set; }
 
 		/// <summary>The template string used to create the transformed row</summary>
-		[DataMember] public string Replace { get; set; }
+		public string Replace { get; set; }
 
 		/// <summary>Handles 'm_match' being changed</summary>
 		private void HandlePatternChanged(object sender, EventArgs args)
@@ -348,7 +340,7 @@ namespace RyLogViewer
 		/// <summary>Serialise the highlight patterns to xml</summary>
 		public static string Export(IEnumerable<Transform> txfms)
 		{
-			XDocument doc = new XDocument(new XElement(XmlTag.Root));
+			var doc = new XDocument(new XElement(XmlTag.Root));
 			if (doc.Root == null) return "";
 
 			foreach (var tx in txfms)

@@ -57,7 +57,7 @@ namespace RyLogViewer
 		/// This is used to persist per-instance settings for this text
 		/// transform within the main RyLogViewer settings xml file.
 		/// Implementers should add xml nodes to 'data_root'</summary>
-		void ToXml(XElement data_root);
+		XElement ToXml(XElement data_root);
 
 		/// <summary>
 		/// Load instance data for this transform from 'data_root'.
@@ -107,7 +107,7 @@ namespace RyLogViewer
 		/// This is used to persist per-instance settings for this text
 		/// transform within the main RyLogViewer settings xml file.
 		/// Implementers should add xml nodes to 'data_root'</summary>
-		public virtual void ToXml(XElement data_root) {} // No persisted per-instance data
+		public virtual XElement ToXml(XElement data_root) { return data_root; } // No persisted per-instance data
 
 		/// <summary>
 		/// Load instance data for this transform from 'data_root'.

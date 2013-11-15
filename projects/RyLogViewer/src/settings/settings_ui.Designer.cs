@@ -71,16 +71,6 @@
 			this.m_lbl_col_delims = new System.Windows.Forms.Label();
 			this.m_edit_line_ends = new System.Windows.Forms.TextBox();
 			this.m_lbl_line_ends = new System.Windows.Forms.Label();
-			this.groupBox1 = new System.Windows.Forms.GroupBox();
-			this.label3 = new System.Windows.Forms.Label();
-			this.label6 = new System.Windows.Forms.Label();
-			this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
-			this.textBox1 = new System.Windows.Forms.TextBox();
-			this.checkBox1 = new System.Windows.Forms.CheckBox();
-			this.checkBox2 = new System.Windows.Forms.CheckBox();
-			this.checkBox3 = new System.Windows.Forms.CheckBox();
-			this.checkBox4 = new System.Windows.Forms.CheckBox();
-			this.checkBox5 = new System.Windows.Forms.CheckBox();
 			this.m_tab_logview = new System.Windows.Forms.TabPage();
 			this.m_table_appearance0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_table_appearance1 = new System.Windows.Forms.TableLayoutPanel();
@@ -154,8 +144,6 @@
 			this.m_table_general2.SuspendLayout();
 			this.m_group_line_ends.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_column_count)).BeginInit();
-			this.groupBox1.SuspendLayout();
-			((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
 			this.m_tab_logview.SuspendLayout();
 			this.m_table_appearance0.SuspendLayout();
 			this.m_table_appearance1.SuspendLayout();
@@ -605,7 +593,6 @@
 			this.m_table_general2.ColumnCount = 1;
 			this.m_table_general2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
 			this.m_table_general2.Controls.Add(this.m_group_line_ends, 0, 0);
-			this.m_table_general2.Controls.Add(this.groupBox1, 0, 1);
 			this.m_table_general2.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_table_general2.Location = new System.Drawing.Point(246, 77);
 			this.m_table_general2.Margin = new System.Windows.Forms.Padding(0);
@@ -711,110 +698,6 @@
 			this.m_lbl_line_ends.TabIndex = 1;
 			this.m_lbl_line_ends.Text = "Line Ending:";
 			// 
-			// groupBox1
-			// 
-			this.groupBox1.Controls.Add(this.label3);
-			this.groupBox1.Controls.Add(this.label6);
-			this.groupBox1.Controls.Add(this.numericUpDown1);
-			this.groupBox1.Controls.Add(this.textBox1);
-			this.groupBox1.Controls.Add(this.checkBox1);
-			this.groupBox1.Controls.Add(this.checkBox2);
-			this.groupBox1.Controls.Add(this.checkBox3);
-			this.groupBox1.Controls.Add(this.checkBox4);
-			this.groupBox1.Controls.Add(this.checkBox5);
-			this.groupBox1.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.groupBox1.Location = new System.Drawing.Point(3, 137);
-			this.groupBox1.MinimumSize = new System.Drawing.Size(205, 179);
-			this.groupBox1.Name = "groupBox1";
-			this.groupBox1.Size = new System.Drawing.Size(246, 211);
-			this.groupBox1.TabIndex = 4;
-			this.groupBox1.TabStop = false;
-			this.groupBox1.Text = "Startup";
-			// 
-			// label3
-			// 
-			this.label3.AutoSize = true;
-			this.label3.Location = new System.Drawing.Point(140, 134);
-			this.label3.Name = "label3";
-			this.label3.Size = new System.Drawing.Size(29, 13);
-			this.label3.TabIndex = 8;
-			this.label3.Text = "Port:";
-			this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
-			// label6
-			// 
-			this.label6.AutoSize = true;
-			this.label6.Location = new System.Drawing.Point(11, 133);
-			this.label6.Name = "label6";
-			this.label6.Size = new System.Drawing.Size(32, 13);
-			this.label6.TabIndex = 7;
-			this.label6.Text = "Host:";
-			this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
-			// numericUpDown1
-			// 
-			this.numericUpDown1.Location = new System.Drawing.Point(143, 149);
-			this.numericUpDown1.Name = "numericUpDown1";
-			this.numericUpDown1.Size = new System.Drawing.Size(56, 20);
-			this.numericUpDown1.TabIndex = 6;
-			// 
-			// textBox1
-			// 
-			this.textBox1.Location = new System.Drawing.Point(13, 149);
-			this.textBox1.Name = "textBox1";
-			this.textBox1.Size = new System.Drawing.Size(125, 20);
-			this.textBox1.TabIndex = 5;
-			// 
-			// checkBox1
-			// 
-			this.checkBox1.AutoSize = true;
-			this.checkBox1.Location = new System.Drawing.Point(14, 111);
-			this.checkBox1.Name = "checkBox1";
-			this.checkBox1.Size = new System.Drawing.Size(96, 17);
-			this.checkBox1.TabIndex = 4;
-			this.checkBox1.Text = "Use web proxy";
-			this.checkBox1.UseVisualStyleBackColor = true;
-			// 
-			// checkBox2
-			// 
-			this.checkBox2.AutoSize = true;
-			this.checkBox2.Location = new System.Drawing.Point(14, 88);
-			this.checkBox2.Name = "checkBox2";
-			this.checkBox2.Size = new System.Drawing.Size(115, 17);
-			this.checkBox2.TabIndex = 3;
-			this.checkBox2.Text = "Check for Updates";
-			this.checkBox2.UseVisualStyleBackColor = true;
-			// 
-			// checkBox3
-			// 
-			this.checkBox3.AutoSize = true;
-			this.checkBox3.Location = new System.Drawing.Point(14, 65);
-			this.checkBox3.Name = "checkBox3";
-			this.checkBox3.Size = new System.Drawing.Size(127, 17);
-			this.checkBox3.TabIndex = 2;
-			this.checkBox3.Text = "Show \'Tip of the Day\'";
-			this.checkBox3.UseVisualStyleBackColor = true;
-			// 
-			// checkBox4
-			// 
-			this.checkBox4.AutoSize = true;
-			this.checkBox4.Location = new System.Drawing.Point(14, 42);
-			this.checkBox4.Name = "checkBox4";
-			this.checkBox4.Size = new System.Drawing.Size(180, 17);
-			this.checkBox4.TabIndex = 1;
-			this.checkBox4.Text = "Restore previous screen position";
-			this.checkBox4.UseVisualStyleBackColor = true;
-			// 
-			// checkBox5
-			// 
-			this.checkBox5.AutoSize = true;
-			this.checkBox5.Location = new System.Drawing.Point(14, 19);
-			this.checkBox5.Name = "checkBox5";
-			this.checkBox5.Size = new System.Drawing.Size(85, 17);
-			this.checkBox5.TabIndex = 0;
-			this.checkBox5.Text = "Load last file";
-			this.checkBox5.UseVisualStyleBackColor = true;
-			// 
 			// m_tab_logview
 			// 
 			this.m_tab_logview.Controls.Add(this.m_table_appearance0);
@@ -887,7 +770,7 @@
 			this.m_lbl_line2_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_line2_example.Location = new System.Drawing.Point(148, 75);
 			this.m_lbl_line2_example.Name = "m_lbl_line2_example";
-			this.m_lbl_line2_example.Size = new System.Drawing.Size(165, 21);
+			this.m_lbl_line2_example.Size = new System.Drawing.Size(308, 21);
 			this.m_lbl_line2_example.TabIndex = 3;
 			this.m_lbl_line2_example.Text = "Click here to modify colours";
 			this.m_lbl_line2_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -899,7 +782,7 @@
 			this.m_lbl_line1_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_line1_example.Location = new System.Drawing.Point(98, 45);
 			this.m_lbl_line1_example.Name = "m_lbl_line1_example";
-			this.m_lbl_line1_example.Size = new System.Drawing.Size(215, 21);
+			this.m_lbl_line1_example.Size = new System.Drawing.Size(308, 21);
 			this.m_lbl_line1_example.TabIndex = 1;
 			this.m_lbl_line1_example.Text = "Click here to modify colours";
 			this.m_lbl_line1_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -927,7 +810,7 @@
 			this.m_lbl_selection_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_selection_example.Location = new System.Drawing.Point(98, 16);
 			this.m_lbl_selection_example.Name = "m_lbl_selection_example";
-			this.m_lbl_selection_example.Size = new System.Drawing.Size(215, 21);
+			this.m_lbl_selection_example.Size = new System.Drawing.Size(308, 21);
 			this.m_lbl_selection_example.TabIndex = 0;
 			this.m_lbl_selection_example.Text = "Click here to modify colours";
 			this.m_lbl_selection_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -1595,9 +1478,6 @@
 			this.m_group_line_ends.ResumeLayout(false);
 			this.m_group_line_ends.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_column_count)).EndInit();
-			this.groupBox1.ResumeLayout(false);
-			this.groupBox1.PerformLayout();
-			((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).EndInit();
 			this.m_tab_logview.ResumeLayout(false);
 			this.m_table_appearance0.ResumeLayout(false);
 			this.m_table_appearance1.ResumeLayout(false);
@@ -1741,16 +1621,6 @@
 		private System.Windows.Forms.Label m_lbl_fs_edit_visible_colour;
 		private System.Windows.Forms.Label m_lbl_fs_cached_colour;
 		private System.Windows.Forms.Label m_lbl_fs_edit_cached_colour;
-		private System.Windows.Forms.GroupBox groupBox1;
-		private System.Windows.Forms.Label label3;
-		private System.Windows.Forms.Label label6;
-		private System.Windows.Forms.NumericUpDown numericUpDown1;
-		private System.Windows.Forms.TextBox textBox1;
-		private System.Windows.Forms.CheckBox checkBox1;
-		private System.Windows.Forms.CheckBox checkBox2;
-		private System.Windows.Forms.CheckBox checkBox3;
-		private System.Windows.Forms.CheckBox checkBox4;
-		private System.Windows.Forms.CheckBox checkBox5;
 		private System.Windows.Forms.TableLayoutPanel m_table_general0;
 		private System.Windows.Forms.TableLayoutPanel m_table_general1;
 		private System.Windows.Forms.TableLayoutPanel m_table_general2;

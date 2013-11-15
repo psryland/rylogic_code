@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
+using pr.extn;
 
 namespace RyLogViewer
 {
@@ -88,7 +89,7 @@ namespace RyLogViewer
 		public static string Apply(string text, IEnumerable<Map> mapping)
 		{
 			var sb = new StringBuilder();
-			foreach (Map m in mapping)
+			foreach (var m in mapping)
 			{
 				if (m.Src.Index >= text.Length) continue;
 				for (int i = 0, iend = Math.Min(m.Dst.Count, text.Length - m.Src.Index); i != iend; ++i)
@@ -154,13 +155,14 @@ namespace RyLogViewer
 		/// This is used to persist per-instance settings for this text
 		/// transform within the main RyLogViewer settings xml file.
 		/// Implementers should add xml nodes to 'data_root'</summary>
-		public override void ToXml(XElement node)
+		public override XElement ToXml(XElement node)
 		{
 			node.Add
 			(
-				new XElement(XmlTag.Src, m_src),
-				new XElement(XmlTag.Dst, m_dst)
+				m_src.ToXml(XmlTag.Src, false),
+				m_dst.ToXml(XmlTag.Dst, false)
 			);
+			return node;
 		}
 
 		/// <summary>
@@ -168,12 +170,10 @@ namespace RyLogViewer
 		/// This method should be the symmetric opposite of 'ToXml()'</summary>
 		public override void FromXml(XElement node)
 		{
-			// ReSharper disable PossibleNullReferenceException
 			base.FromXml(node);
-			m_src = node.Element(XmlTag.Src).Value;
-			m_dst = node.Element(XmlTag.Dst).Value;
+			m_src = node.Element(XmlTag.Src).As<string>();
+			m_dst = node.Element(XmlTag.Dst).As<string>();
 			m_map = CreateMapping(m_src, m_dst);
-			// ReSharper restore PossibleNullReferenceException
 		}
 	}
 }
