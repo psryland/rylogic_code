@@ -53,7 +53,7 @@ namespace RyLogViewer
 	}
 
 	/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
-	public partial class Main :Form
+	public partial class Main
 	{
 		private BufferedTcpNetConn m_buffered_tcp_netconn;
 		private BufferedUdpNetConn m_buffered_udp_netconn;

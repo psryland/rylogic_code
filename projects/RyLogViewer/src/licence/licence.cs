@@ -177,7 +177,7 @@ namespace RyLogViewer
 		}
 	}
 
-	public partial class Main :Form
+	public partial class Main
 	{
 		/// <summary>Check that the app has a correct signature</summary>
 		public static void PerformSigningVerification()

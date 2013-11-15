@@ -12,7 +12,7 @@ namespace pr.inet
 		{
 			/// <summary>The version number of the latest version according to the remote data</summary>
 			public string Version;
-			
+
 			/// <summary>The location to download the latest version from</summary>
 			public string DownloadURL;
 
@@ -26,7 +26,7 @@ namespace pr.inet
 			private readonly CheckForUpdateResult m_result = new CheckForUpdateResult();
 			private ManualResetEvent m_wait;
 			private int m_cancel;
-			
+
 			/// <summary>Gets a <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.</summary>
 			public WaitHandle AsyncWaitHandle
 			{
@@ -50,7 +50,7 @@ namespace pr.inet
 			{
 				get { return false; }
 			}
-			
+
 			/// <summary>Signals cancel to the check for updates</summary>
 			internal bool CancelPending
 			{
@@ -72,8 +72,8 @@ namespace pr.inet
 		/// <param name="proxy">A optional proxy server</param>
 		public static IAsyncResult BeginCheckForUpdate(string identifier, string url, Action<IAsyncResult> callback, IWebProxy proxy)
 		{
-			CheckForUpdateAsyncData async = new CheckForUpdateAsyncData();
-			
+			var async = new CheckForUpdateAsyncData();
+
 			// Do the version check as a background task
 			WaitCallback version_check = x =>
 			{
@@ -115,11 +115,11 @@ namespace pr.inet
 						if (error != null)
 							throw new Exception("Failed to read latest version info", error);
 					}
-					
+
 					// Check for a non-empty result
 					if (string.IsNullOrEmpty(latest_version_xml))
 						throw new Exception("No update information returned from server");
-					
+
 					// Load the version info string
 					XElement root = XDocument.Parse(latest_version_xml).Root;
 					XElement info = root != null ? root.Element(identifier) : null;
@@ -144,11 +144,11 @@ namespace pr.inet
 		{
 			return BeginCheckForUpdate(identifier, url, callback, WebRequest.DefaultWebProxy);
 		}
-		
+
 		/// <summary>Signal to the async check for updates that is should cancel</summary>
 		public static IAsyncResult CancelCheckForUpdate(IAsyncResult ar)
 		{
-			CheckForUpdateAsyncData async = (CheckForUpdateAsyncData)ar;
+			var async = (CheckForUpdateAsyncData)ar;
 			async.CancelPending = true;
 			return async;
 		}
@@ -156,7 +156,7 @@ namespace pr.inet
 		/// <summary>Complete an async check for updates call</summary>
 		public static CheckForUpdateResult EndCheckForUpdate(IAsyncResult ar)
 		{
-			CheckForUpdateAsyncData async = (CheckForUpdateAsyncData)ar;
+			var async = (CheckForUpdateAsyncData)ar;
 			try
 			{
 				ar.AsyncWaitHandle.WaitOne();

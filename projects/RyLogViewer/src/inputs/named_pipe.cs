@@ -53,7 +53,7 @@ namespace RyLogViewer
 	}
 
 	/// <summary>Parts of the Main form related to buffering non-file streams into an output file</summary>
-	public partial class Main :Form
+	public partial class Main
 	{
 		private BufferedPipeConn m_buffered_pipeconn;
 
