@@ -1482,6 +1482,9 @@ namespace pr.common
 			}
 
 			/// <summary>Callback passed to the sqlite dll when DataChanged is subscribed to</summary>
+			#if MONOTOUCH
+			[MonoTouch.MonoPInvokeCallbackAttribute(typeof(UpdateHookCB))]
+			#endif
 			private static void UpdateCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id)
 			{
 				// 'db_name' is always "main". sqlite doesn't allow renaming of the db
