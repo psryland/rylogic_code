@@ -106,7 +106,7 @@
     <Compile Include="common\console_indent.cs" />
     <Compile Include="common\enum_ex.cs" />
     <Compile Include="common\events_snapshot.cs" />
-    <Compile Include="common\hglobal.cs" />
+    <Compile Include="common\marshal_ex.cs" />
     <Compile Include="common\mime.cs" />
     <Compile Include="common\plugin_loader.cs" />
     <Compile Include="common\ref_count.cs" />
@@ -174,6 +174,7 @@
     <Compile Include="extn\binding_source_extensions.cs" />
     <Compile Include="extn\byte_array_extensions.cs" />
     <Compile Include="extn\control_extensions.cs" />
+    <Compile Include="extn\datatable_externsions.cs" />
     <Compile Include="extn\dict_extensions.cs" />
     <Compile Include="extn\datagridview_extensions.cs">
       <SubType>Component</SubType>

@@ -24,10 +24,12 @@ namespace pr.util
 	}
 
 	/// <summary>An RAII scope with state</summary>
-	public class Scope<TState> :IDisposable where TState :class
+	public class Scope<TState> :IDisposable
 	{
-		private readonly TState m_state;
 		private readonly Action<TState> m_on_exit;
+
+		/// <summary>The state object created on construction</summary>
+		public TState State { get; private set; }
 
 		public static Scope<TState> Create(Func<TState> set, Action<TState> restore)
 		{
@@ -37,12 +39,12 @@ namespace pr.util
 		{
 			m_on_exit = on_exit;
 			if (on_enter != null)
-				m_state = on_enter();
+				State = on_enter();
 		}
 		public void Dispose()
 		{
 			if (m_on_exit != null)
-				m_on_exit(m_state);
+				m_on_exit(State);
 		}
 	}
 }

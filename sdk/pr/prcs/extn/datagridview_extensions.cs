@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using pr.maths;
 using pr.util;
@@ -17,8 +18,8 @@ namespace pr.extn
 	/// Use: add for each function you want supported
 	///   e.g.
 	///   m_grid.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-	///   m_grid.KeyDown += DataGridView_Extensions.Cut;</summary>
-	public static class DataGridView_Extensions
+	///   m_grid.KeyDown += DataGridViewExtensions.Cut;</summary>
+	public static class DataGridViewExtensions
 	{
 		/// <summary>Grid select all implementation. (for consistency)</summary>
 		public static void SelectAll(DataGridView grid)
@@ -29,7 +30,7 @@ namespace pr.extn
 		/// <summary>Select all rows</summary>
 		public static void SelectAll(object sender, KeyEventArgs e)
 		{
-			DataGridView dgv = (DataGridView)sender;
+			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.A) return;
 			SelectAll(dgv);
 			e.Handled = true;
@@ -38,7 +39,7 @@ namespace pr.extn
 		/// <summary>Grid copy implementation. Returns true if something was added to the clip board</summary>
 		public static bool Copy(DataGridView grid)
 		{
-			DataObject d = grid.GetClipboardContent();
+			var d = grid.GetClipboardContent();
 			if (d == null) return false;
 			Clipboard.SetDataObject(d);
 			return true;
@@ -47,7 +48,7 @@ namespace pr.extn
 		/// <summary>KeyDown handler for copying selected cells to the clipboard</summary>
 		public static void Copy(object sender, KeyEventArgs e)
 		{
-			DataGridView dgv = (DataGridView)sender;
+			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.C) return;
 			if (!Copy(dgv)) return;
 			e.Handled = true;
@@ -70,7 +71,7 @@ namespace pr.extn
 		/// <summary>Cut the selected cells to the clipboard. Cut cells replaced with default values</summary>
 		public static void Cut(object sender, KeyEventArgs e)
 		{
-			DataGridView dgv = (DataGridView)sender;
+			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.X) return;
 			if (!Cut(dgv)) return;
 			e.Handled = true;
@@ -86,7 +87,7 @@ namespace pr.extn
 		/// <summary>Delete the contents of the selected cells</summary>
 		public static void Delete(object sender, KeyEventArgs e)
 		{
-			DataGridView dgv = (DataGridView)sender;
+			var dgv = (DataGridView)sender;
 			if (e.KeyCode != Keys.Delete) return;
 			Delete(dgv);
 		}
@@ -97,20 +98,20 @@ namespace pr.extn
 			if (grid.SelectedCells.Count != 1) return false;
 
 			// Read the lines from the clipboard
-			string[] lines = Clipboard.GetText().Split('\n');
+			var lines = Clipboard.GetText().Split('\n');
 
-			int row = grid.CurrentCell.RowIndex;
-			int col = grid.CurrentCell.ColumnIndex;
+			var row = grid.CurrentCell.RowIndex;
+			var col = grid.CurrentCell.ColumnIndex;
 
-			for (int j = 0; j != lines.Length && row != grid.RowCount; ++j, ++row)
+			for (var j = 0; j != lines.Length && row != grid.RowCount; ++j, ++row)
 			{
 				// Skip blank lines
 				if (lines[j].Length == 0) continue;
 
-				string[] cells = lines[j].Split('\t',',',';');
-				for (int i = 0; i != cells.Length && col != grid.ColumnCount; ++i, ++col)
+				var cells = lines[j].Split('\t',',',';');
+				for (var i = 0; i != cells.Length && col != grid.ColumnCount; ++i, ++col)
 				{
-					DataGridViewCell cell = grid[col,row];
+					var cell = grid[col,row];
 					if (cell.ReadOnly) continue;
 					if (cells[i].Length == 0) continue;
 					try { cell.Value = Convert.ChangeType(cells[i], cell.ValueType); }
@@ -123,7 +124,7 @@ namespace pr.extn
 		/// <summary>Paste over existing cells within the current size limits of the grid. Must be 1 cell selected only</summary>
 		public static void PasteReplace(object sender, KeyEventArgs e)
 		{
-			DataGridView dgv = (DataGridView)sender;
+			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.V) return;
 			if (!PasteReplace(dgv)) return;
 			e.Handled = true;
@@ -138,8 +139,8 @@ namespace pr.extn
 			var selected_cells = grid.SelectedCells;
 
 			// Find the bounds of the selected cells
-			Point min = new Point(selected_cells[0].ColumnIndex, selected_cells[0].RowIndex);
-			Point max = min;
+			var min = new Point(selected_cells[0].ColumnIndex, selected_cells[0].RowIndex);
+			var max = min;
 			foreach (DataGridViewCell item in selected_cells)
 			{
 				min.X = Math.Min(min.X, item.ColumnIndex);
@@ -149,18 +150,18 @@ namespace pr.extn
 			}
 
 			// Read the lines from the clipboard
-			string[] lines = Clipboard.GetText().Split('\n');
-			string[][] cells = new string[lines.Length][]; // cache split rows from the clipboard data
+			var lines = Clipboard.GetText().Split('\n');
+			var cells = new string[lines.Length][]; // cache split rows from the clipboard data
 
 			foreach (DataGridViewCell cell in selected_cells)
 			{
 				if (cell.ReadOnly) continue;
 
-				int j = cell.RowIndex - min.Y;
+				var j = cell.RowIndex - min.Y;
 				if (j >= lines.Length) continue;
 				if (cells[j] == null) cells[j] = lines[j].Split('\t',',',';');
 
-				int i = cell.ColumnIndex - min.X;
+				var i = cell.ColumnIndex - min.X;
 				if (i >= cells[j].Length) continue;
 
 				try
@@ -176,7 +177,7 @@ namespace pr.extn
 		/// <summary>Paste over selected cells. Only replaces those selected. Must be >= 2 cells selected</summary>
 		public static void PasteReplaceSelected(object sender, KeyEventArgs e)
 		{
-			DataGridView dgv = (DataGridView)sender;
+			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.V) return;
 			if (!PasteReplaceSelected(dgv)) return;
 			e.Handled = true;
@@ -187,30 +188,30 @@ namespace pr.extn
 		{
 			if (grid.SelectedCells.Count > 1) return false;
 
-			int row = grid.CurrentCell.RowIndex;
-			int col = grid.CurrentCell.ColumnIndex;
+			var row = grid.CurrentCell.RowIndex;
+			var col = grid.CurrentCell.ColumnIndex;
 
 			// Read the lines from the clipboard
-			string[] lines = Clipboard.GetText().Split('\n');
+			var lines = Clipboard.GetText().Split('\n');
 
 			// Grow the dgv if necessary
 			if (row + lines.Length > grid.RowCount)
 				grid.RowCount = row + lines.Length;
 
-			for (int j = 0; j != lines.Length; ++j)
+			for (var j = 0; j != lines.Length; ++j)
 			{
 				// Skip blank lines
 				if (lines[j].Length == 0) continue;
 
-				string[] cells = lines[j].Split('\t', ',', ';');
+				var cells = lines[j].Split('\t', ',', ';');
 
 				// Grow the grid if necessary
 				if (col + cells.Length > grid.ColumnCount)
 					grid.ColumnCount = col + cells.Length;
 
-				for (int i = 0; i != cells.Length; ++i)
+				for (var i = 0; i != cells.Length; ++i)
 				{
-					DataGridViewCell cell = grid[i+col,j+row];
+					var cell = grid[i+col,j+row];
 					if (cell.ReadOnly) continue;
 					if (cells[i].Length == 0) continue;
 					try { cell.Value = Convert.ChangeType(cells[i], cell.ValueType); }
@@ -223,7 +224,7 @@ namespace pr.extn
 		/// <summary>Paste from the first selected cell over anything in the way. Grow the grid if necessary</summary>
 		public static void PasteGrow(object sender, KeyEventArgs e)
 		{
-			DataGridView dgv = (DataGridView)sender;
+			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.V) return;
 			if (!PasteGrow(dgv)) return;
 			e.Handled = true;
@@ -239,18 +240,43 @@ namespace pr.extn
 			PasteReplaceSelected (sender, e);//if (e.Handled) return;
 		}
 
+		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
+		public static void ColumnVisibilityContextMenu(this DataGridView grid, Point location, Action<DataGridViewColumn> on_vis_changed = null)
+		{
+			var menu = new ContextMenuStrip();
+			foreach (var col in grid.Columns.Cast<DataGridViewColumn>())
+			{
+				var item = new ToolStripMenuItem
+				{
+					Text = col.HeaderText,
+					Checked = col.Visible,
+					CheckOnClick = true,
+					Tag = col
+				};
+				item.Click += (s,a)=>
+				{
+					var c = (DataGridViewColumn)item.Tag;
+					c.Visible = item.Checked;
+					if (on_vis_changed != null)
+						on_vis_changed(c);
+				};
+				menu.Items.Add(item);
+			}
+			menu.Show(grid, location);
+		}
+
 		/// <summary>Return a collection of the fill weights</summary>
 		public static float[] FillWeights(this DataGridView grid)
 		{
-			float[] w = new float[grid.Columns.Count];
-			for (int i = 0; i != w.Length; ++i) w[i] = grid.Columns[i].FillWeight;
+			var w = new float[grid.Columns.Count];
+			for (var i = 0; i != w.Length; ++i) w[i] = grid.Columns[i].FillWeight;
 			return w;
 		}
 
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
 		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
 		{
-			int i = grid.Rows.GetFirstRow(DataGridViewElementStates.Selected);
+			var i = grid.Rows.GetFirstRow(DataGridViewElementStates.Selected);
 			return i != -1 ? grid.Rows[i] : null;
 			//return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
 		}
@@ -265,7 +291,7 @@ namespace pr.extn
 		/// <summary>Returns an enumerator for accessing rows with the given property</summary>
 		public static IEnumerable<DataGridViewRow> GetRowsWithState(this DataGridView grid, DataGridViewElementStates state)
 		{
-			for (int i = grid.Rows.GetFirstRow(state); i != -1; i = grid.Rows.GetNextRow(i, state))
+			for (var i = grid.Rows.GetFirstRow(state); i != -1; i = grid.Rows.GetNextRow(i, state))
 				yield return grid.Rows[i];
 		}
 
@@ -349,6 +375,33 @@ namespace pr.extn
 			grid.InvalidateRow(idx2);
 			return true;
 		}
+
+		/// <summary>
+		/// Attaches 'source' as the data provider for this grid.
+		/// Source is connected with weak references so an external reference to 'source' must be held</summary>
+		public static void SetVirtualDataSource(this DataGridView grid, IDGVVirtualDataSource source)
+		{
+			if (source == null)
+				throw new ArgumentNullException("source","Source cannot be null");
+
+			var w = new WeakReference(source);
+			DataGridViewCellValueEventHandler handler = null;
+			handler = (sender,args) =>
+				{
+					var src = w.Target as IDGVVirtualDataSource;
+					if (src == null) grid.CellValueNeeded -= handler;
+					else src.DGVCellValueNeeded(sender, args);
+				};
+
+			grid.VirtualMode = true;
+			grid.CellValueNeeded += handler;
+		}
+	}
+
+	/// <summary>An interface for a type that provides data for a grid</summary>
+	public interface IDGVVirtualDataSource
+	{
+		void DGVCellValueNeeded(object sender, DataGridViewCellValueEventArgs args);
 	}
 
 	/// <summary>A base class with default implementations for a cell edit control.

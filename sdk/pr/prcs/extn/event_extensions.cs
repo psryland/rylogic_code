@@ -21,7 +21,7 @@ namespace pr.extn
 			public bool m_raised = false; // true if the event has been raised while suspended
 			public int  m_nest   = 1;     // nested suspend count
 		}
-		
+
 		/// <summary>A collection of suspended events and whether notify has been called on this suspended event</summary>
 		private static readonly Dictionary<object,SuspendData> m_suspended = new Dictionary<object,SuspendData>();
 
@@ -67,9 +67,19 @@ namespace pr.extn
 			if (evt == null) return;
 			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(sender, args);
 		}
+		public static void Raise(this EventHandler evt, object sender, EventArgs args)
+		{
+			if (evt == null) return;
+			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(sender, args);
+		}
 
 		/// <summary>Block this event from firing when Raise() is called, until Resume() is called</summary>
 		public static void Suspend<TEventArgs>(this EventHandler<TEventArgs> evt) where TEventArgs :EventArgs
+		{
+			if (evt == null) return;
+			SuspendImpl(evt);
+		}
+		public static void Suspend(this EventHandler evt)
 		{
 			if (evt == null) return;
 			SuspendImpl(evt);
@@ -83,6 +93,11 @@ namespace pr.extn
 			if (evt == null) return false;
 			return ResumeImpl(evt);
 		}
+		public static bool Resume(this EventHandler evt)
+		{
+			if (evt == null) return false;
+			return ResumeImpl(evt);
+		}
 
 		/// <summary>Resume firing this event when Raise() is called.
 		/// if the event was signalled while suspended, will call Raise()</summary>
@@ -91,9 +106,18 @@ namespace pr.extn
 			if (evt == null) return;
 			if (ResumeImpl(evt)) evt(sender, args);
 		}
+		public static void Resume(this EventHandler evt, object sender, EventArgs args)
+		{
+			if (evt == null) return;
+			if (ResumeImpl(evt)) evt(sender, args);
+		}
 
-		/// <summary>Returns true if this event is currently suppended</summary>
+		/// <summary>Returns true if this event is currently suspended</summary>
 		public static bool IsSuspended<TEventArgs>(this EventHandler<TEventArgs> evt) where TEventArgs :EventArgs
+		{
+			return evt != null && IsSuspendedImpl(evt);
+		}
+		public static bool IsSuspended(this EventHandler evt)
 		{
 			return evt != null && IsSuspendedImpl(evt);
 		}
@@ -292,7 +316,7 @@ namespace pr.extn
 		{
 			return evt != null && IsSuspendedImpl(evt);
 		}
-	
+
 		// Extension methods *********************************************
 		/// <summary>
 		/// Usage:
@@ -330,14 +354,24 @@ namespace pr.extn
 		/// WARNING:
 		///  Don't attach anonymous delegates as weak delegates. When the delegate goes out of
 		///  scope it will be collected and silently remove itself from the event</summary>
+		public static EventHandler MakeWeak(this EventHandler handler, UnregisterEventHandler unregister)
+		{
+			if (handler == null) throw new ArgumentNullException("handler");
+			if (handler.Method.IsStatic || handler.Target == null) throw new ArgumentException("Only instance methods are supported.", "handler");
+
+			var weh_type = typeof(WeakEventHandler<>).MakeGenericType(handler.Method.DeclaringType);
+			var weh_constructor = weh_type.GetConstructor(new[] {typeof(EventHandler), typeof(UnregisterEventHandler)});
+			var weh = (IWeakEventHandler)weh_constructor.Invoke(new object[] {handler, unregister});
+			return weh.Handler;
+		}
 		public static EventHandler<E> MakeWeak<E>(this EventHandler<E> event_handler, UnregisterEventHandler<E> unregister) where E: EventArgs
 		{
 			if (event_handler == null) throw new ArgumentNullException("event_handler");
 			if (event_handler.Method.IsStatic || event_handler.Target == null) throw new ArgumentException("Only instance methods are supported.", "event_handler");
 
-			Type weh_type = typeof(WeakEventHandler<,>).MakeGenericType(event_handler.Method.DeclaringType, typeof(E));
-			ConstructorInfo weh_constructor = weh_type.GetConstructor(new[] {typeof(EventHandler<E>), typeof(UnregisterEventHandler<E>)});
-			IWeakEventHandler<E> weh = (IWeakEventHandler<E>)weh_constructor.Invoke(new object[] {event_handler, unregister});
+			var weh_type = typeof(WeakEventHandler<,>).MakeGenericType(event_handler.Method.DeclaringType, typeof(E));
+			var weh_constructor = weh_type.GetConstructor(new[] {typeof(EventHandler<E>), typeof(UnregisterEventHandler<E>)});
+			var weh = (IWeakEventHandler<E>)weh_constructor.Invoke(new object[] {event_handler, unregister});
 			return weh.Handler;
 		}
 		public static Action MakeWeak(this Action action, UnregisterAction unregister)
@@ -394,34 +428,47 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using System.Threading;
 	using NUnit.Framework;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
-		internal static partial class TestExtensions
+		internal static class TestEventExtensions
 		{
 			private static event Action<int> BooEvent;
-		
+
 			private static readonly List<string> collected = new List<string>();
 			private static readonly List<string> hit       = new List<string>();
 			private class Gun
 			{
+				public event EventHandler Firing;
 				public event Action<Gun> Bang;
+				public event EventHandler<FiredArgs> Fired;
+				public class FiredArgs :EventArgs { public string Noise { get; set; } }
+
 				~Gun()              { collected.Add("gun"); }
-				public void Shoot() { Bang.Raise(this); }
+				public void Shoot()
+				{
+					Firing.Raise(this, EventArgs.Empty);
+					Bang.Raise(this);
+					Fired.Raise(this, new FiredArgs{Noise = "Bang!"});
+				}
 			}
 			private class Target
 			{
 				private readonly string m_name;
-				public Target(string name) { m_name = name; }
-				~Target()                  { collected.Add(m_name); }
-				public void OnHit(Gun gun) { hit.Add(m_name); }
+				public Target(string name)                     { m_name = name; }
+				~Target()                                      { collected.Add(m_name); }
+				public void OnHit(Gun gun)                     { hit.Add(m_name); }
+				public void OnFiring(object s, EventArgs a)    { hit.Add("Dont Shoot"); }
+				public void OnFired(object s, Gun.FiredArgs a) { hit.Add(a.Noise); }
 			}
-		
-			[Test] public static void EventExtns()
+
+			// ReSharper disable RedundantAssignment
+			[Test] public static void SuspendResume()
 			{
 				// Test event suspend/resume
 				int boo_raised = 0;
@@ -433,29 +480,51 @@ namespace pr
 				BooEvent.Raise(3);
 				Assert.IsTrue(BooEvent.Resume());
 				Assert.AreEqual(0, boo_raised);
-			
-				// ReSharper disable RedundantAssignment
+			}
+			[Test] public static void WeakActions()
+			{
 				// Test weak event handlers
-				Gun gun = new Gun();
-				Target bob = new Target("bob");
-				Target fred = new Target("fred");
-				gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak((h)=>gun.Bang -= h);
+				var gun = new Gun();
+				var bob = new Target("bob");
+				var fred = new Target("fred");
+				gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak(h => gun.Bang -= h);
 				gun.Bang += fred.OnHit;
 				gun.Shoot();
-				Assert.Contains("bob", hit);
-				Assert.Contains("fred", hit);
-			
+				Assert.IsTrue(hit.Contains("bob"));
+				Assert.IsTrue(hit.Contains("fred"));
+
 				hit.Clear();
 				bob = null;
 				fred = null;
-				GC.Collect(); Thread.Sleep(100); // bob collected here, but not fred
+				GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
+				Thread.Sleep(100); // bob collected here, but not fred
 				Assert.IsTrue(collected.Contains("bob"));
 				Assert.IsFalse(collected.Contains("fred"));
 				gun.Shoot(); // fred still shot here
 				Assert.IsFalse(hit.Contains("bob"));
 				Assert.IsTrue(hit.Contains("fred"));
-				// ReSharper restore RedundantAssignment
 			}
+			[Test] public static void WeakEventHandlers()
+			{
+				var gun = new Gun();
+				var bob = new Target("bob");
+				gun.Firing += new EventHandler(bob.OnFiring).MakeWeak(eh => gun.Firing -= eh);
+				gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak(eh => gun.Bang -= eh);
+				gun.Fired += new EventHandler<Gun.FiredArgs>(bob.OnFired).MakeWeak(eh => gun.Fired -= eh);
+				gun.Shoot();
+				Assert.IsTrue(hit.Contains("Dont Shoot"));
+				Assert.IsTrue(hit.Contains("bob"));
+				Assert.IsTrue(hit.Contains("Bang!"));
+
+				hit.Clear();
+				bob = null;
+				GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
+				Thread.Sleep(100); // bob collected here, but not fred
+				Assert.IsTrue(collected.Contains("bob"));
+				gun.Shoot();
+				Assert.IsTrue(hit.Count == 0);
+			}
+			// ReSharper restore RedundantAssignment
 		}
 	}
 }

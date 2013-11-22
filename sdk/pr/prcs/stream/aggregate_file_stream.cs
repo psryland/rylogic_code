@@ -1,6 +1,6 @@
 ﻿//***************************************************
-// Uncloseable Stream
-//  Copyright © Rylogic Ltd 2009
+// AggregateFileStream Stream
+//  Copyright © Rylogic Ltd 2013
 //***************************************************
 
 using System;
@@ -17,11 +17,11 @@ namespace pr.stream
 		/// <summary>Info about the referenced files</summary>
 		private readonly List<FileInfo> m_files;
 
-		/// <summary>The combined length of all files</summary>
-		private readonly long m_total_length;
-
 		/// <summary>The byte offset boundaries between each file</summary>
 		private readonly List<long> m_boundary;
+
+		/// <summary>The combined length of all files</summary>
+		private long m_total_length;
 
 		/// <summary>The current aggregated file position</summary>
 		private long m_position;
@@ -46,13 +46,25 @@ namespace pr.stream
 			FileShare      = file_share;
 			FileBufferSize = buffer_size;
 			FileOptions    = file_options;
-			m_files = new List<FileInfo>();
+			m_files        = new List<FileInfo>();
+			m_boundary     = new List<long>();
+
+			SetFiles(filepaths);
+		}
+
+		/// <summary>Get the files that make up this aggregate file stream</summary>
+		public List<FileInfo> Files { get { return m_files; } }
+
+		/// <summary>Updates the collection of files</summary>
+		public void SetFiles(IEnumerable<string> filepaths)
+		{
+			m_files.Clear();
 			foreach (var f in filepaths)
 				m_files.Add(new FileInfo(f));
 
 			// Determine the combined file length
 			m_total_length = 0;
-			m_boundary = new List<long>();
+			m_boundary.Clear();
 			foreach (var f in m_files)
 			{
 				m_total_length += f.Length;
@@ -60,15 +72,13 @@ namespace pr.stream
 			}
 			m_boundary.Add(m_total_length); // Add an extra one to avoid extra ifs
 
+			// Reset the file position
 			m_position = 0;
 			m_fs = null;
 			m_fs_index = -1;
 			if (FileStream == null) {} // Force 'FileStream' to be created so that a lock is held from construction
 		}
 
-		/// <summary>Get the files that make up this aggregate file stream</summary>
-		public List<FileInfo> Files { get { return m_files; } }
- 
 		/// <summary>Returns the file stream appropriate for the current 'Position' value</summary>
 		public FileStream FileStream
 		{
@@ -219,6 +229,7 @@ namespace pr.stream
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;

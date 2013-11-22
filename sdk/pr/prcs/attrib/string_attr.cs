@@ -4,9 +4,13 @@
 //***************************************************
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
+using pr.common;
+using pr.util;
+using pr.extn;
 
 namespace pr.attrib
 {
@@ -18,105 +22,157 @@ namespace pr.attrib
 	{
 		private readonly string m_str;
 		public StringAttribute(string str) { m_str = str; }
-		public string Str                  { get {return m_str;} }
+		public string Str                  { get { return m_str; } }
 	}
 
 	/// <summary>String Attribute access class</summary>
 	public static class StringAttr
 	{
-		/// <summary>Return the associated string attribute for an enum value</summary>
-		public static string StrAttr(this Enum e)
+		// Reflecting on attributes is slow => caching
+		private static readonly Cache<string,object> m_str_cache  = new Cache<string,object>();
+		private static readonly Cache<string,object> m_desc_cache = new Cache<string,object>();
+
+		/// <summary>A cache key for an enum value</summary>
+		private static string Key(Enum enum_)
 		{
-			FieldInfo fi = e.GetType().GetField(e.ToString());
-			if (fi != null)
-			{
-				StringAttribute attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
-				return attr != null ? attr.Str : "";
-			}
-			return "";
+			return enum_.GetType().Name + "." + enum_;
+		}
+
+		/// <summary>A cache key for member of an object</summary>
+		private static string Key(object obj, string member_name)
+		{
+			return obj.GetType().Name + "." + member_name;
+		}
+
+		/// <summary>A cache key for a type</summary>
+		private static string Key(Type ty)
+		{
+			return ty.Name;
+		}
+
+		#region String Attribute
+
+		/// <summary>Return the associated string attribute for an enum value</summary>
+		public static string StrAttr(this Enum enum_)
+		{
+			return (string)m_str_cache.Get(Key(enum_), e =>
+				{
+					var fi = enum_.GetType().GetField(enum_.ToString());
+					if (fi == null) return string.Empty;
+					var attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
+					return attr != null ? attr.Str : string.Empty;
+				});
 		}
 
 		/// <summary>Return the associated string attribute for a property or field</summary>
-		public static string StrAttr(this object t, string name)
+		public static string StrAttr(object obj, string member_name)
 		{
-			Type type = t.GetType();
-			PropertyInfo pi = type.GetProperty(name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
-			if (pi != null)
-			{
-				StringAttribute attr = Attribute.GetCustomAttribute(pi, typeof(StringAttribute), false) as StringAttribute;
-				return attr != null ? attr.Str : "";
-			}
-			FieldInfo fi = type.GetField(name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
-			if (fi != null)
-			{
-				StringAttribute attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
-				return attr != null ? attr.Str : "";
-			}
-			return "";
+			return (string)m_str_cache.Get(Key(obj,member_name), k =>
+				{
+					var type = obj.GetType();
+					var pi = type.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+					if (pi != null)
+					{
+						var attr = Attribute.GetCustomAttribute(pi, typeof(StringAttribute), false) as StringAttribute;
+						return attr != null ? attr.Str : string.Empty;
+					}
+					var fi = type.GetField(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+					if (fi != null)
+					{
+						var attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
+						return attr != null ? attr.Str : string.Empty;
+					}
+					return string.Empty;
+				});
 		}
-		
-		/// <summary>Return the Description attribute string for a member of an enum</summary>
-		public static string DescAttr(this Enum e)
+
+		/// <summary>The string attribute associated with a property or field</summary>
+		public static string StrAttr<T,Ret>(this T obj, Expression<Func<T,Ret>> expression)
 		{
-			FieldInfo fi = e.GetType().GetField(e.ToString());
-			if (fi != null)
-			{
-				DescriptionAttribute da = Attribute.GetCustomAttribute(fi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
-				return da != null ? da.Description : "";
-			}
-			return "";
+			return StrAttr(obj, Reflect<T>.MemberName(expression));
 		}
-		
-		/// <summary>Return the Description attribute string for a property of a type</summary>
-		public static string DescAttr(this object t, string name)
-		{
-			Type type = t.GetType();
-			PropertyInfo pi = type.GetProperty(name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
-			if (pi != null)
-			{
-				DescriptionAttribute attr = Attribute.GetCustomAttribute(pi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
-				return attr != null ? attr.Description : "";
-			}
-			FieldInfo fi = type.GetField(name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
-			if (fi != null)
-			{
-				DescriptionAttribute attr = Attribute.GetCustomAttribute(fi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
-				return attr != null ? attr.Description : "";
-			}
-			return "";
-		}
-		
+
 		/// <summary>Return an array of the strings associated with an enum type</summary>
-		public static string[] StringArray(Type type, bool include_empty_strings)
+		public static string[] AllStrAttr(this Type type)
 		{
-			List<string> arr = new List<string>();
-			foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic))
-			{
-				StringAttribute attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
-				if (attr != null && !string.IsNullOrEmpty(attr.Str)) arr.Add(attr.Str);
-				else if (include_empty_strings) arr.Add("");
-			}
-			return arr.ToArray();
+			return (string[])m_str_cache.Get(Key(type), k =>
+				{
+					if (type.IsEnum)
+						return Enum.GetValues(type).Cast<Enum>().Select(e => e.StrAttr()).Where(s => s.HasValue()).ToArray();
+
+					return type.AllMembers(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+						.Select(mi => mi.GetCustomAttributes(typeof(StringAttribute),false).FirstOrDefault() as StringAttribute)
+						.Where(attr => attr != null && attr.Str.HasValue())
+						.Select(attr => attr.Str)
+						.ToArray();
+				});
 		}
-	
-		/// <summary>Enumerate the strings associated with an enum type</summary>
-		public static IEnumerable<string> GetStrings(Type type, bool include_empty_strings)
+
+		///// <summary>Enumerate the strings associated with an enum type</summary>
+		//public static IEnumerable<string> GetStrings(Type type, bool include_empty_strings)
+		//{
+		//	foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic))
+		//	{
+		//		StringAttribute attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
+		//		if (attr != null && !string.IsNullOrEmpty(attr.Str)) yield return attr.Str;
+		//		else if (include_empty_strings) yield return "";
+		//	}
+		//}
+		//public static IEnumerable<string> GetStrings(Type type)
+		//{
+		//	return GetStrings(type, false);
+		//}
+
+		#endregion
+
+		#region Description Attribute
+
+		/// <summary>Return the description attribute string for a member of an enum</summary>
+		public static string DescAttr(this Enum enum_)
 		{
-			foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic))
-			{
-				StringAttribute attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
-				if (attr != null && !string.IsNullOrEmpty(attr.Str)) yield return attr.Str;
-				else if (include_empty_strings) yield return "";
-			}
+			return (string)m_desc_cache.Get(Key(enum_), k =>
+				{
+					var fi = enum_.GetType().GetField(enum_.ToString());
+					if (fi == null) return string.Empty;
+					var attr = Attribute.GetCustomAttribute(fi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
+					return attr != null ? attr.Description : string.Empty;
+				});
 		}
-		public static IEnumerable<string> GetStrings(Type type)
+
+		/// <summary>Return the description attribute string for a property of a type</summary>
+		public static string DescAttr(this object obj, string member_name)
 		{
-			return GetStrings(type, false);
+			return (string)m_desc_cache.Get(Key(obj, member_name), k =>
+				{
+					var type = obj.GetType();
+					var pi = type.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+					if (pi != null)
+					{
+						var attr = Attribute.GetCustomAttribute(pi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
+						return attr != null ? attr.Description : string.Empty;
+					}
+					var fi = type.GetField(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+					if (fi != null)
+					{
+						var attr = Attribute.GetCustomAttribute(fi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
+						return attr != null ? attr.Description : string.Empty;
+					}
+					return string.Empty;
+				});
 		}
+
+		/// <summary>The description attribute associated with a property or field</summary>
+		public static string DescAttr<T,Ret>(this T obj, Expression<Func<T,Ret>> expression)
+		{
+			return DescAttr(obj, Reflect<T>.MemberName(expression));
+		}
+
+		#endregion
 	}
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
@@ -124,6 +180,7 @@ namespace pr
 
 	[TestFixture] internal static partial class UnitTests
 	{
+		// ReSharper disable UnusedMember.Local
 		internal static class TestStringAttr
 		{
 			private enum EType
@@ -135,33 +192,65 @@ namespace pr
 				[String("Value 1")]
 				[System.ComponentModel.DescriptionAttribute("The first value")]
 				Value1,
+
+				// no attributes
+				Value2,
 			}
 			private class C
 			{
-				[String("C Field")]    private readonly int m_field;
-				[String("C Property")] private int Prop {get;set;}
-				public C() { Prop = 1; m_field = 2; Prop = m_field; m_field = Prop; }
+				[String("Field Str")]
+				[System.ComponentModel.DescriptionAttribute("Field Desc")]
+				public readonly int m_field;
+
+				[String("Prop Str")]
+				[System.ComponentModel.DescriptionAttribute("Prop Desc")]
+				public int Prop { get; private set; }
+
+				public string NoAttr { get; private set; }
+				public C()
+				{
+					Prop    = 1;
+					m_field = 2;
+					NoAttr  = "Blah";
+				}
 			}
-			[Test] public static void TestStrAttr()
+			[Test] public static void StrAttr1()
 			{
 				const EType e = EType.Value0;
-				Assert.AreEqual("Value 0", e.StrAttr());
-				Assert.AreEqual("Value 1", EType.Value1.StrAttr());
-				Assert.AreEqual("The zeroth value", e.DescAttr());
-				Assert.AreEqual("The first value", EType.Value1.DescAttr());
-				Assert.AreEqual("", ((EType)100).StrAttr());
-				Assert.AreEqual("", ((EType)100).DescAttr());
-
-				C c = new C();
-				Assert.AreEqual("C Property" ,c.StrAttr("Prop"));
-				Assert.AreEqual("C Field"    ,c.StrAttr("m_field"));
-				Assert.AreEqual(""           ,c.StrAttr("NotThere"));
-
-				string[] strs = StringAttr.StringArray(typeof(EType), false);
-				Assert.AreEqual("Value 0", strs[0]);
-				Assert.AreEqual("Value 1", strs[1]);
+				Assert.AreEqual("Value 0"          ,e.StrAttr());
+				Assert.AreEqual("Value 1"          ,EType.Value1.StrAttr());
+				Assert.AreEqual("The zeroth value" ,e.DescAttr());
+				Assert.AreEqual("The first value"  ,EType.Value1.DescAttr());
+				Assert.AreEqual(string.Empty       ,((EType)100).StrAttr());
+				Assert.AreEqual(string.Empty       ,((EType)100).DescAttr());
+			}
+			[Test] public static void StrAttr2()
+			{
+				var c = new C();
+				Assert.AreEqual("Field Str"  ,c.StrAttr(x => x.m_field));
+				Assert.AreEqual("Prop Str"   ,c.StrAttr(x => x.Prop));
+				Assert.AreEqual(string.Empty ,c.StrAttr(x => x.NoAttr));
+				Assert.AreEqual("Field Desc" ,c.DescAttr(x => x.m_field));
+				Assert.AreEqual("Prop Desc"  ,c.DescAttr(x => x.Prop));
+				Assert.AreEqual(string.Empty ,c.DescAttr(x => x.NoAttr));
+				Assert.AreEqual(string.Empty ,StringAttr.StrAttr(c, "NotThere"));
+			}
+			[Test] public static void StrAttr3()
+			{
+				var strs = typeof(EType).AllStrAttr();
+				Assert.AreEqual(2, strs.Length);
+				Assert.Contains("Value 0", strs);
+				Assert.Contains("Value 1", strs);
+			}
+			[Test] public static void StrAttr4()
+			{
+				var strs = typeof(C).AllStrAttr();
+				Assert.AreEqual(2, strs.Length);
+				Assert.Contains("Field Str", strs);
+				Assert.Contains("Prop Str", strs);
 			}
 		}
+		// ReSharper restore UnusedMember.Local
 	}
 }
 #endif

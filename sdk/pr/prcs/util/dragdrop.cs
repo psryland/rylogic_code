@@ -11,6 +11,14 @@ using System.Windows.Forms;
 
 namespace pr.util
 {
+	// A DragDrop proxy object.
+	// Allows the same drag drop handlers to be attached to multiple drop targets
+	// e.g.
+	//   Drop Receiver <--- DragDrop <-+- OnDragEnter
+	//   Drop Receiver <--+            +- OnDragExit
+	//   Drop Receiver <--+
+	// Also unifies the dragdrop handler into a single function for all dd events
+
 	/// <summary>Handles multiple drag/drop handlers for a single drop target</summary>
 	public class DragDrop
 	{

@@ -19,7 +19,26 @@ namespace pr.extn
 		public static IAsyncResult BeginInvoke(this Form form, Action action)
 		{
 			// Has to be form or the overload isn't found
+			// Note, the params overload isn't needed because 'action' is a lambda
 			return form.BeginInvoke(action);
+		}
+		public static IAsyncResult BeginInvoke(this Control ctrl, Action action)
+		{
+			// Note, the params overload isn't needed because 'action' is a lambda
+			return ctrl.BeginInvoke(action);
+		}
+
+		/// <summary>Invoke that takes a lambda</summary>
+		public static object Invoke(this Form form, Action action)
+		{
+			// Has to be form or the overload isn't found
+			// Note, the params overload isn't needed because 'action' is a lambda
+			return form.Invoke(action);
+		}
+		public static object Invoke(this Control ctrl, Action action)
+		{
+			// Note, the params overload isn't needed because 'action' is a lambda
+			return ctrl.Invoke(action);
 		}
 
 		/// <summary>Return 'Tag' for this control as type 'T'. Creates a new T if Tag is currently null</summary>
@@ -32,6 +51,13 @@ namespace pr.extn
 		public static void ToolTip(this Control ctrl, ToolTip tt, string caption)
 		{
 			tt.SetToolTip(ctrl, caption);
+		}
+
+		/// <summary>Set the tooltip for this tool strip item</summary>
+		public static void ToolTip(this ToolStripItem ctrl, ToolTip tt, string caption)
+		{
+			// Don't need 'tt', this method is just for consistency with the other overload
+			ctrl.ToolTipText = caption;
 		}
 
 		/// <summary>Display a hint balloon.</summary>
@@ -206,6 +232,42 @@ namespace pr.extn
 			var bm = new Bitmap(control.Width, control.Height);
 			control.DrawToBitmap(bm, bm.Size.ToRect());
 			return bm;
+		}
+
+		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
+		public static void SetStatusMessage(this ToolStripStatusLabel status, string text, string idle = null, bool bold = false, Color? frcol = null, Color? bkcol = null, TimeSpan? display_time_ms = null)
+		{
+			status.Text = text ?? string.Empty;
+			status.Visible = text.HasValue();
+			status.ForeColor = frcol ?? SystemColors.ControlText;
+			status.BackColor = bkcol ?? SystemColors.Control;
+			if (status.Font.Bold != bold)
+				status.Font = new Font(status.Font, bold ? FontStyle.Bold : FontStyle.Regular);
+
+			// If the status message has a timer already, dispose it
+			var timer = status.Tag as Timer;
+			if (timer != null)
+			{
+				timer.Dispose();
+				status.Tag = null;
+			}
+
+			if (!text.HasValue() || display_time_ms == null)
+				return;
+
+			// Attach a new timer to the status message
+			status.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.Value.TotalMilliseconds};
+			timer.Tick += (s,a)=>
+				{
+					// When the timer fires, if we're still associated with
+					// the status message, null out the text and remove our self
+					if (s != status.Tag) return;
+					SetStatusMessage(status, idle);
+				};
+		}
+		public static void SetStatusMessage(this ToolStripStatusLabel status, string text, bool bold, Color frcol, Color bkcol)
+		{
+			status.SetStatusMessage(text, null, bold, frcol, bkcol, TimeSpan.FromSeconds(2));
 		}
 	}
 }

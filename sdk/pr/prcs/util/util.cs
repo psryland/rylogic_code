@@ -38,6 +38,12 @@ namespace pr.util
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
+		/// <summary>RAII scope for a allocated GC handle</summary>
+		public static Scope<GCHandle> AllocGCHandle(object obj, GCHandleType type)
+		{
+			return Scope<GCHandle>.Create(() => GCHandle.Alloc(obj,type), h => h.Free());
+		}
+
 		/// <summary>Compare two ranges within a byte array</summary>
 		public static int Compare(byte[] lhs, int lstart, int llength, byte[] rhs, int rstart, int rlength)
 		{
@@ -81,30 +87,31 @@ namespace pr.util
 		public static int Count(Type enum_type)
 		{
 			Debug.Assert(enum_type.IsEnum);
-			return Enum.GetValues(enum_type).Length;
+			return Enum.GetNames(enum_type).Length;
 		}
 
 		/// <summary>Return the next value in an enum, rolling over at the last value. Must be used only on Enums with range [0, count)</summary>
 		public static int Next<T>(T zoom_type)
 		{
-			int v = Convert.ToInt32(zoom_type);
+			var v = Convert.ToInt32(zoom_type);
 			return (v + 1) % Count(typeof(T));
 		}
 
 		/// <summary>Convert a structure into an array of bytes. Remember to use the MarshalAs attribute for structure fields that need it</summary>
 		public static byte[] ToBytes(object structure)
 		{
-			int size = Marshal.SizeOf(structure);
-			byte[] arr = new byte[size];
-			IntPtr ptr = Marshal.AllocHGlobal(size);
-			Marshal.StructureToPtr(structure, ptr, true);
-			Marshal.Copy(ptr, arr, 0, size);
-			Marshal.FreeHGlobal(ptr);
-			return arr;
+			var size = Marshal.SizeOf(structure);
+			var arr = new byte[size];
+			using (var ptr = MarshalEx.AllocHGlobal(size))
+			{
+				Marshal.StructureToPtr(structure, ptr.State, true);
+				Marshal.Copy(ptr.State, arr, 0, size);
+				return arr;
+			}
 		}
 
 		/// <summary>Create an array of bytes with the same size as 'T'</summary>
-		public static byte[] ToBytes<T>()
+		public static byte[] CreateByteArrayOfSize<T>()
 		{
 			return new byte[Marshal.SizeOf(typeof(T))];
 		}
@@ -113,18 +120,20 @@ namespace pr.util
 		public static T FromBytes<T>(byte[] arr, int offset)
 		{
 			Debug.Assert(arr.Length - offset >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
-			int sz = Marshal.SizeOf(typeof(T));
-			IntPtr ptr = Marshal.AllocHGlobal(sz);
-			Marshal.Copy(arr, offset, ptr, sz);
-			T structure = (T)Marshal.PtrToStructure(ptr, typeof(T));
-			Marshal.FreeHGlobal(ptr);
-			return structure;
+			var sz = Marshal.SizeOf(typeof(T));
+			using (var ptr = MarshalEx.AllocHGlobal(sz))
+			{
+				Marshal.Copy(arr, offset, ptr.State, sz);
+				return (T)Marshal.PtrToStructure(ptr.State, typeof(T));
+			}
 		}
 
 		/// <summary>Convert an array of bytes to a structure</summary>
 		public static T FromBytes<T>(byte[] arr)
 		{
-			return FromBytes<T>(arr, 0);
+			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
+			using (var handle = AllocGCHandle(arr, GCHandleType.Pinned))
+				return (T)Marshal.PtrToStructure(handle.State.AddrOfPinnedObject(), typeof(T));
 		}
 
 		/// <summary>Return the distance between to points</summary>
@@ -134,7 +143,7 @@ namespace pr.util
 			int dy = lhs.Y - rhs.Y;
 			return Math.Sqrt(dx*dx + dy*dy);
 		}
-	
+
 		/// <summary>Return an assembly attribute</summary>
 		public static T GetAssemblyAttribute<T>(Assembly ass)
 		{
@@ -154,7 +163,7 @@ namespace pr.util
 			return ass.GetName().Version;
 		}
 		public static Version AssemblyVersion() { return AssemblyVersion(null); }
-		
+
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
 		public static DateTime AssemblyTimestamp(Assembly ass)
 		{
@@ -228,13 +237,13 @@ namespace pr.util
 		{
 			return Moved(point, ref_point, SystemInformation.DragSize.Width, SystemInformation.DragSize.Height);
 		}
-		
+
 		/// <summary>Returns true if 'point' is more than than 'dx' or 'dy' from 'ref_point'</summary>
 		public static bool Moved(Point point, Point ref_point, int dx, int dy)
 		{
 			return Math.Abs(point.X - ref_point.X) > dx || Math.Abs(point.Y - ref_point.Y) > dy;
 		}
-		
+
 		/// <summary>A try-lock that remembers to call Monitor.Exit()</summary>
 		public static bool TryLock(object obj, int millisecondsTimeout, Action action)
 		{
@@ -579,7 +588,7 @@ namespace pr.util
 		}
 		public enum ELibCopyResult { Success, DestExists, SrcNotFound }
 	}
-	
+
 	/// <summary>Type specific utility methods</summary>
 	public static class Util<T>
 	{
@@ -629,7 +638,7 @@ namespace pr.util
 			}
 		}
 	}
-	
+
 	/// <summary>Enum parse helper</summary>
 	public static class Enum<T>
 	{
@@ -637,7 +646,7 @@ namespace pr.util
 		{
 			return (T)Enum.Parse(typeof(T), value);
 		}
-		
+
 		/// <summary>Returns the next enum value after 'value'. Note: this is really enum abuse. Use sparingly</summary>
 		public static T Cycle(T src)
 		{
@@ -655,6 +664,7 @@ namespace pr.util
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
@@ -664,7 +674,20 @@ namespace pr
 	{
 		internal static class TestUtils
 		{
-			[DataContract] [Serializable] public class SerialisableType
+			[StructLayout(LayoutKind.Sequential, Pack = 1)]
+			public struct Struct
+			{
+				public int m_int;
+				public byte m_byte;
+				public ushort m_ushort;
+
+				public override bool Equals(object obj) { return base.Equals(obj); }
+				public bool Equals(Struct other)        { return m_int == other.m_int && m_byte == other.m_byte && m_ushort == other.m_ushort; }
+				public override int GetHashCode()       { unchecked { int hashCode = m_int; hashCode = (hashCode*397) ^ m_byte.GetHashCode(); hashCode = (hashCode*397) ^ m_ushort.GetHashCode(); return hashCode; } }
+			}
+
+			[DataContract] [Serializable]
+			public class SerialisableType
 			{
 				public enum SomeEnum
 				{
@@ -697,12 +720,23 @@ namespace pr
 			for (int i = 0; i != src.Length; ++i) Assert.AreEqual(dst[i], 2*src[i]);
 		}
 			[Test] public static void ToFromByteArray()
-		{
-			const ulong num = 12345678910111213;
-			byte[] bytes = Util.ToBytes(num);
-			Assert.AreEqual(8, bytes.Length);
-			Util.FromBytes<ulong>(bytes);
-		}
+			{
+				const ulong num = 12345678910111213;
+				var bytes = Util.ToBytes(num);
+				Assert.AreEqual(8, bytes.Length);
+				var NUM = Util.FromBytes<ulong>(bytes);
+				Assert.AreEqual(num, NUM);
+
+				var s = new Struct{m_int = 42, m_byte = 0xab, m_ushort = 0xfedc};
+				bytes = Util.ToBytes(s);
+				Assert.AreEqual(7, bytes.Length);
+
+				var S = Util.FromBytes<Struct>(bytes);
+				Assert.AreEqual(s,S);
+
+				var b = Util.FromBytes<byte>(bytes, 4);
+				Assert.AreEqual(s.m_byte, b);
+			}
 			[Test] public static void ToFromXml()
 			{
 				var x1 = new SerialisableType{Int = 1, String = "2", Point = new Point(3,4), EEnum = SerialisableType.SomeEnum.Two, Data = new[]{1,2,3,4}};

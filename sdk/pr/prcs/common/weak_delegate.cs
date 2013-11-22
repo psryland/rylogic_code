@@ -10,6 +10,7 @@ using System;
 namespace pr.common
 {
 	public delegate void UnregisterEventHandler<E>    (EventHandler<E> event_handler) where E: EventArgs;
+	public delegate void UnregisterEventHandler       (EventHandler event_handler);
 	public delegate void UnregisterAction             (Action action);
 	public delegate void UnregisterAction<T1>         (Action<T1> action);
 	public delegate void UnregisterAction<T1,T2>      (Action<T1,T2> action);
@@ -17,6 +18,7 @@ namespace pr.common
 	public delegate void UnregisterAction<T1,T2,T3,T4>(Action<T1,T2,T3,T4> action);
 
 	public interface IWeakEventHandler<E> where E: EventArgs { EventHandler<E> Handler {get;} }
+	public interface IWeakEventHandler       { EventHandler       Handler {get;} }
 	public interface IWeakAction             { Action             Handler {get;} }
 	public interface IWeakAction<T1>         { Action<T1>         Handler {get;} }
 	public interface IWeakAction<T1,T2>      { Action<T1,T2>      Handler {get;} }
@@ -25,45 +27,36 @@ namespace pr.common
 
 	// Event Handler *****************************************************
 
-	/// <summary>
-	/// Usage: Attach a weak action/event handler to an event
-	///	public class EventSubscriber
-	///	{
-	///		public EventSubscriber(EventProvider provider)
-	///		{
-	///			provider.MyEvent += new EventHandler&lt;EventArgs&gt;(MyWeakEventHandler).MakeWeak(eh => provider.MyEvent -= eh);
-	///		}
-	///		private void MyWeakEventHandler(object sender, EventArgs e)
-	///		{
-	///		}
-	///	}
-	/// Usage: Make all attached event handlers weak
-	///	public class EventProvider
-	///	{
-	///		private EventHandler&lt;EventArgs&gt; m_MyEvent;
-	///		public event EventHandler&lt;EventArgs&gt; MyEvent
-	///		{
-	///			add { m_Event += value.MakeWeak(eh => m_Event -= eh); }
-	///			remove {}
-	///		}
-	///	}
-	/// Behaviour:
-	///	Gun gun = new Gun();
-	///	Target bob = new Target("Bob");
-	///	Target fred = new Target("Fred");
-	///	gun.Bang += new EventHandler&lt;EventArgs&gt;(bob.OnHit).MakeWeak((h)=>gun.Bang -= h);
-	///	gun.Bang += fred.OnHit;
-	///	gun.Bang += new EventHandler&lt;EventArgs&gt;((s,e)=>{MessageBox.Show("Don't do this")}).MakeWeak((h)=>gun.Bang -= h); // see WARNING
-	///	gun.Shoot();
-	///	bob = null;
-	///	fred = null;
-	///	GC.Collect(); Thread.Sleep(100); // bob collected here, but not fred
-	///	gun.Shoot(); // fred still shot here
-	///
-	/// WARNING:
-	///  Don't attach anonymous delegates as weak delegates. When the delegate goes out of
-	///  scope it will be collected and silently remove itself from the event
-	/// </summary>
+	public class WeakEventHandler<T> :IWeakEventHandler where T: class
+	{
+		private delegate void OpenEventHandler(T @this, object sender, EventArgs args);
+		private readonly WeakReference    m_target_ref;
+		private readonly OpenEventHandler m_open_handler;
+		private readonly EventHandler     m_handler;
+		private UnregisterEventHandler    m_unregister;
+
+		public WeakEventHandler(EventHandler event_handler, UnregisterEventHandler unregister)
+		{
+			m_target_ref = new WeakReference(event_handler.Target);
+			m_open_handler = (OpenEventHandler)Delegate.CreateDelegate(typeof(OpenEventHandler), null, event_handler.Method);
+			m_handler = Invoke;
+			m_unregister = unregister;
+		}
+		public void Invoke(object sender, EventArgs args)
+		{
+			var target = (T)m_target_ref.Target;
+			if      (target != null)       { m_open_handler.Invoke(target, sender, args); }
+			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
+		}
+		public EventHandler Handler
+		{
+			get { return m_handler; }
+		}
+		public static implicit operator EventHandler(WeakEventHandler<T> weh)
+		{
+			return weh.m_handler;
+		}
+	}
 	public class WeakEventHandler<T, E> :IWeakEventHandler<E> where T: class where E: EventArgs
 	{
 		private delegate void OpenEventHandler(T @this, object sender, E e);

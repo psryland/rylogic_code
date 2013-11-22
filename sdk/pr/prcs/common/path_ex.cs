@@ -36,16 +36,27 @@ namespace pr.common
 			catch { return false; }
 		}
 
+		/// <summary>True if 'path' is a file</summary>
+		public static bool IsFile(string path)
+		{
+			return FileExists(path) && (File.GetAttributes(path) & FileAttributes.Directory) == 0;
+		}
+
+		/// <summary>True if 'path' is a directory</summary>
+		public static bool IsDirectory(string path)
+		{
+			return DirExists(path) && (File.GetAttributes(path) & FileAttributes.Directory) != 0;
+		}
+
 		///<summary>Returns 'full_file_path' relative to 'rel_path'</summary>
 		public static string MakeRelativePath(string full_file_path, string rel_path)
 		{
 			const int FILE_ATTRIBUTE_DIRECTORY = 0x10;
 			const int FILE_ATTRIBUTE_NORMAL = 0x80;
-			StringBuilder path_builder = new StringBuilder(260); // MAX_PATH
+			var path_builder = new StringBuilder(260); // MAX_PATH
 			PathRelativePathTo(path_builder, rel_path, FILE_ATTRIBUTE_DIRECTORY, full_file_path, FILE_ATTRIBUTE_NORMAL);
-			string path = path_builder.ToString();
-			if (path.Length == 0) return full_file_path;
-			return path;
+			var path = path_builder.ToString();
+			return path.Length == 0 ? full_file_path : path;
 		}
 		[DllImport("shlwapi.dll")] private static extern int PathRelativePathTo(StringBuilder pszPath, string pszFrom, int dwAttrFrom, string pszTo, int dwAttrTo);
 

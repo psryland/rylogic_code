@@ -93,3 +93,14 @@ def Extract(filepath, regex):
 			m = pat.search(line)
 			if m: return m
 		return None
+
+	import os
+
+# Enumerate recursively through a directory
+def EnumFiles(root):
+	for dirname, dirnames, filenames in os.walk(root):
+		# Return the files
+		for filename in filenames:
+			yield os.path.join(dirname, filename)
+		# We could remove entries from 'dirnames' to
+		# prevent recursion into those folders...
