@@ -4614,8 +4614,8 @@ namespace pr
 			{
 				// Copy sqlite3.dll to test folder
 				var src_file = Environment.Is64BitProcess
-					? @"Q:\sdk\sqlite\lib\sqlite3.x64.debug.dll"
-					: @"Q:\sdk\sqlite\lib\sqlite3.x86.debug.dll";
+					? @"Q:\sdk\sqlite\lib\x64\debug\sqlite3.dll"
+					: @"Q:\sdk\sqlite\lib\x86\debug\sqlite3.dll";
 				File.Copy(src_file, Path.Combine(Environment.CurrentDirectory, "sqlite3.dll"), true);
 
 				// Register custom type bind/read methods

@@ -33,9 +33,9 @@ namespace pr.attrib
 		private static readonly Cache<string,object> m_desc_cache = new Cache<string,object>();
 
 		/// <summary>A cache key for an enum value</summary>
-		private static string Key(Enum enum_)
+		private static string Key<TEnum>(TEnum enum_) where TEnum :struct ,IConvertible
 		{
-			return enum_.GetType().Name + "." + enum_;
+			return enum_.GetType().Name + "." + enum_.ToStringFast();
 		}
 
 		/// <summary>A cache key for member of an object</summary>
@@ -53,11 +53,11 @@ namespace pr.attrib
 		#region String Attribute
 
 		/// <summary>Return the associated string attribute for an enum value</summary>
-		public static string StrAttr(this Enum enum_)
+		public static string StrAttr<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
 		{
 			return (string)m_str_cache.Get(Key(enum_), e =>
 				{
-					var fi = enum_.GetType().GetField(enum_.ToString());
+					var fi = enum_.GetType().GetField(enum_.ToStringFast());
 					if (fi == null) return string.Empty;
 					var attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
 					return attr != null ? attr.Str : string.Empty;
@@ -93,13 +93,19 @@ namespace pr.attrib
 		}
 
 		/// <summary>Return an array of the strings associated with an enum type</summary>
+		public static string[] AllStrAttr<TEnum>(this TEnum type) where TEnum :struct ,IConvertible
+		{
+			return (string[])m_str_cache.Get(Key(type), k =>
+				{
+					return Enum<TEnum>.Values.Select(e => e.StrAttr()).Where(s => s.HasValue()).ToArray();
+				});
+		}
+
+		/// <summary>Return an array of the strings associated with an enum type</summary>
 		public static string[] AllStrAttr(this Type type)
 		{
 			return (string[])m_str_cache.Get(Key(type), k =>
 				{
-					if (type.IsEnum)
-						return Enum.GetValues(type).Cast<Enum>().Select(e => e.StrAttr()).Where(s => s.HasValue()).ToArray();
-
 					return type.AllMembers(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
 						.Select(mi => mi.GetCustomAttributes(typeof(StringAttribute),false).FirstOrDefault() as StringAttribute)
 						.Where(attr => attr != null && attr.Str.HasValue())
@@ -108,31 +114,16 @@ namespace pr.attrib
 				});
 		}
 
-		///// <summary>Enumerate the strings associated with an enum type</summary>
-		//public static IEnumerable<string> GetStrings(Type type, bool include_empty_strings)
-		//{
-		//	foreach (FieldInfo fi in type.GetFields(BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic))
-		//	{
-		//		StringAttribute attr = Attribute.GetCustomAttribute(fi, typeof(StringAttribute), false) as StringAttribute;
-		//		if (attr != null && !string.IsNullOrEmpty(attr.Str)) yield return attr.Str;
-		//		else if (include_empty_strings) yield return "";
-		//	}
-		//}
-		//public static IEnumerable<string> GetStrings(Type type)
-		//{
-		//	return GetStrings(type, false);
-		//}
-
 		#endregion
 
 		#region Description Attribute
 
 		/// <summary>Return the description attribute string for a member of an enum</summary>
-		public static string DescAttr(this Enum enum_)
+		public static string DescAttr<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
 		{
 			return (string)m_desc_cache.Get(Key(enum_), k =>
 				{
-					var fi = enum_.GetType().GetField(enum_.ToString());
+					var fi = enum_.GetType().GetField(enum_.ToStringFast());
 					if (fi == null) return string.Empty;
 					var attr = Attribute.GetCustomAttribute(fi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
 					return attr != null ? attr.Description : string.Empty;

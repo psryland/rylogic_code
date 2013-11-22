@@ -106,6 +106,7 @@
     <Compile Include="common\console_indent.cs" />
     <Compile Include="common\enum_ex.cs" />
     <Compile Include="common\events_snapshot.cs" />
+    <Compile Include="common\gchandle_ex.cs" />
     <Compile Include="common\marshal_ex.cs" />
     <Compile Include="common\mime.cs" />
     <Compile Include="common\plugin_loader.cs" />

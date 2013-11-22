@@ -38,12 +38,6 @@ namespace pr.util
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
-		/// <summary>RAII scope for a allocated GC handle</summary>
-		public static Scope<GCHandle> AllocGCHandle(object obj, GCHandleType type)
-		{
-			return Scope<GCHandle>.Create(() => GCHandle.Alloc(obj,type), h => h.Free());
-		}
-
 		/// <summary>Compare two ranges within a byte array</summary>
 		public static int Compare(byte[] lhs, int lstart, int llength, byte[] rhs, int rstart, int rlength)
 		{
@@ -132,7 +126,7 @@ namespace pr.util
 		public static T FromBytes<T>(byte[] arr)
 		{
 			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
-			using (var handle = AllocGCHandle(arr, GCHandleType.Pinned))
+			using (var handle = GCHandleEx.Alloc(arr, GCHandleType.Pinned))
 				return (T)Marshal.PtrToStructure(handle.State.AddrOfPinnedObject(), typeof(T));
 		}
 
@@ -636,29 +630,6 @@ namespace pr.util
 				var s = new DataContractSerializer(typeof(T));
 				return (T)s.ReadObject(r);
 			}
-		}
-	}
-
-	/// <summary>Enum parse helper</summary>
-	public static class Enum<T>
-	{
-		public static T Parse(string value)
-		{
-			return (T)Enum.Parse(typeof(T), value);
-		}
-
-		/// <summary>Returns the next enum value after 'value'. Note: this is really enum abuse. Use sparingly</summary>
-		public static T Cycle(T src)
-		{
-			T[] arr = (T[])Enum.GetValues(typeof(T));
-			int i = Array.IndexOf(arr, src) + 1;
-			return (i >= 0 && i < arr.Length) ? arr[i] : arr[0];
-		}
-
-		/// <summary>Returns all values of the enum as a collection</summary>
-		public static IEnumerable<T> Values
-		{
-			get { return Enum.GetValues(typeof(T)).Cast<T>(); }
 		}
 	}
 }

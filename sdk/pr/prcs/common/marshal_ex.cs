@@ -8,20 +8,15 @@ namespace pr.common
 	public static class MarshalEx
 	{
 		/// <summary>RAII scope for allocated global memory</summary>
-		public static Scope<IntPtr> AllocHGlobal(int size)
+		public static Scope<IntPtr> AllocHGlobal(int size_in_bytes)
 		{
-			return Scope<IntPtr>.Create(() => Marshal.AllocHGlobal(size), Marshal.FreeHGlobal);
+			return Scope<IntPtr>.Create(() => Marshal.AllocHGlobal(size_in_bytes), Marshal.FreeHGlobal);
+		}
+
+		/// <summary>RAII scope for allocated global memory</summary>
+		public static Scope<IntPtr> AllocHGlobal(Type type, int count)
+		{
+			return Scope<IntPtr>.Create(() => Marshal.AllocHGlobal(Marshal.SizeOf(type) * count), Marshal.FreeHGlobal);
 		}
 	}
-
-	//	/// <summary>RAII wrapper for unmanaged memory allocations</summary>
-	//public class HGlobalBuffer :IDisposable
-	//{
-	//	public static HGlobalBuffer New(int size_in_bytes) { return new HGlobalBuffer(size_in_bytes); }
-	//	public static HGlobalBuffer New<T>(int count)      { return new HGlobalBuffer(Marshal.SizeOf(typeof(T)) * count); }
-
-	//	public IntPtr Ptr                        { get; private set; }
-	//	private HGlobalBuffer(int size_in_bytes) { Ptr = Marshal.AllocHGlobal(size_in_bytes); }
-	//	public void Dispose()                    { Marshal.FreeHGlobal(Ptr); }
-	//}
 }
