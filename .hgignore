@@ -30,7 +30,7 @@ dlang/dmd2/
 renderer11/shaders/compiled/*
 RylogicEnv.cmd
 ResEdit.layout
-W.TOOLS HAS THE ARAXIS COMPARES FOR SDK
+dump/
 obj/
 Debug/
 Release/
@@ -58,4 +58,5 @@ projects/vs2012/pr_applog.log
 sdk/pr/prcs/unittest_resources/exif_image_out.jpg
 projects/RyLogViewer/Resources/*.html
 projects/RyLogViewer/docs/*.html
+sdk/pr/prcs/resources/*.html
 symbol_cache/*
