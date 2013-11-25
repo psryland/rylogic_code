@@ -67,6 +67,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Drawing" />
@@ -161,12 +162,6 @@
     <Compile Include="src\settings\clkaction_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings\ipattern.cs" />
-    <Compile Include="src\settings\ipattern_ui.cs" />
-    <Compile Include="src\settings\pattern_ui_base.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="src\settings\pattern_unittests.cs" />
     <Compile Include="src\settings\swizzle.cs" />
     <Compile Include="src\settings\swizzle_ui.cs">
       <SubType>Form</SubType>
@@ -214,7 +209,6 @@
     <Compile Include="src\new_version_form.Designer.cs">
       <DependentUpon>new_version_form.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\settings\pattern.cs" />
     <Compile Include="src\main.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -222,9 +216,6 @@
       <DependentUpon>main.cs</DependentUpon>
     </Compile>
     <Compile Include="src\settings\pattern_set_ui.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="src\settings\pattern_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\program.cs" />
@@ -475,11 +466,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>free_edition.htm</DependentUpon>
     </Content>
-    <Content Include="Resources\regex_quick_ref.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>regex_quick_ref.htm</DependentUpon>
-    </Content>
     <Content Include="Resources\swizzle_quick_ref.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -578,10 +564,6 @@
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>transform_quick_ref.html</LastGenOutput>
     </None>
-    <None Include="Resources\regex_quick_ref.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>regex_quick_ref.html</LastGenOutput>
-    </None>
     <Content Include="Resources\version_history.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -648,9 +630,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\settings\pattern_set_ui.resx">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="src\settings\pattern_ui.resx">
-      <DependentUpon>pattern_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\inputs\program_output_ui.resx">
       <DependentUpon>program_output_ui.cs</DependentUpon>
@@ -745,9 +724,9 @@
     <Content Include="Resources\green_tick.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
+    <ProjectReference Include="..\..\sdk\pr\prcs\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
-      <Name>prcs_vs2012</Name>
+      <Name>Rylogic</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

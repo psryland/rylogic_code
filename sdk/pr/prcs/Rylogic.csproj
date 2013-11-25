@@ -8,8 +8,8 @@
     <ProjectGuid>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>pr</RootNamespace>
-    <AssemblyName>pr</AssemblyName>
+    <RootNamespace>Rylogic</RootNamespace>
+    <AssemblyName>Rylogic</AssemblyName>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <OldToolsVersion>3.5</OldToolsVersion>
@@ -109,6 +109,7 @@
     <Compile Include="common\gchandle_ex.cs" />
     <Compile Include="common\marshal_ex.cs" />
     <Compile Include="common\mime.cs" />
+    <Compile Include="common\pattern.cs" />
     <Compile Include="common\plugin_loader.cs" />
     <Compile Include="common\ref_count.cs" />
     <Compile Include="common\rtf.cs" />
@@ -216,6 +217,9 @@
     </Compile>
     <Compile Include="gui\overlay.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\pattern_ui.cs">
+      <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="gui\subrange_scroll.cs">
       <SubType>Component</SubType>
@@ -376,6 +380,9 @@
     <EmbeddedResource Include="gui\message_box.resx">
       <DependentUpon>message_box.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="gui\pattern_ui.resx">
+      <DependentUpon>pattern_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\prompt_form.resx">
       <DependentUpon>prompt_form.cs</DependentUpon>
     </EmbeddedResource>
@@ -394,6 +401,20 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="Rylogic Limited Key File.pfx" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\regex_quick_ref.htm">
+      <Generator>HtmlExpander</Generator>
+      <LastGenOutput>regex_quick_ref.html</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\quick_ref_css.include.htm" />
+    <EmbeddedResource Include="resources\regex_quick_ref.html">
+      <DependentUpon>regex_quick_ref.htm</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

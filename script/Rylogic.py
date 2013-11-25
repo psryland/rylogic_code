@@ -1,4 +1,5 @@
 import sys, os, time, shutil, subprocess, re
+#import win32com.shell.shell as shell
 import UserVars
 
 # Terminate the script indicating success
@@ -74,9 +75,9 @@ def Run(args, expected_return_code=0,show_arguments=False):
 		OnError("ERROR: " + str(e))
 
 # Executes a program echoing its output to stdout
-def Exec(args, expected_return_code=0, working_dir=".\\"):
+def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
 	try:
-		#print(args)
+		if show_arguments: print(args)
 		subprocess.check_call(args, cwd=working_dir)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return
@@ -104,3 +105,13 @@ def EnumFiles(root):
 			yield os.path.join(dirname, filename)
 		# We could remove entries from 'dirnames' to
 		# prevent recursion into those folders...
+
+# Tests if this script is being run with admin rights, if not restarts the script elevated
+def RunAsAdmin(script, args=[]):
+	try:
+		subprocess.check_output(["net", "session"])
+		print("Admin rights available")
+	except Exception as ex:
+		print("Running script under Administrator account...")
+		Exec([UserVars.elevate, sys.executable, script] + args)
+		sys.exit(0)

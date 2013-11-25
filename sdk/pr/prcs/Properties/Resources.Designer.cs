@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace pr.Properties {
+namespace Rylogic.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace pr.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("pr.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Rylogic.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -57,6 +57,27 @@ namespace pr.Properties {
             }
             set {
                 resourceCulture = value;
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
+        ///	&lt;head&gt;
+        ///		&lt;title&gt;Regular Expressions - Quick Reference&lt;/title&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
+        ///		&lt;style type=&quot;text/css&quot;&gt;
+        ///			* {
+        ///				font-family: sans-serif;
+        ///				font-size: 12pt;
+        ///			}
+        ///
+        ///			body {
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUX [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string regex_quick_ref {
+            get {
+                return ResourceManager.GetString("regex_quick_ref", resourceCulture);
             }
         }
     }

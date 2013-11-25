@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
+using pr.common;
 using pr.extn;
 using pr.gui;
 
@@ -238,11 +237,8 @@ namespace RyLogViewer
 		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
 		private HelpUI RegexHelpUI
 		{
-			get
-			{
-				Debug.Assert(Owner != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(Owner, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Point(1,1) ,new Size(640,480) ,EPin.TopRight));
-			}
+			get { return m_dlg_help ?? (m_dlg_help = PatternUI.CreateRegexHelpUI(Owner)); }
+			//HelpUI.FromHtml(Owner, Resources.regex_quick_ref, "Regular Expressions Quick Reference", new Point(1,1) ,new Size(640,480) ,EPin.TopRight))
 		}
 
 		#region Windows Form Designer generated code
@@ -390,8 +386,8 @@ namespace RyLogViewer
 			// m_panel_top
 			//
 			this.m_panel_top.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_top.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_panel_top.Controls.Add(this.m_btn_bookmarkall);
 			this.m_panel_top.Controls.Add(this.m_check_whole_line);
@@ -443,7 +439,7 @@ namespace RyLogViewer
 			// m_combo_pattern
 			//
 			this.m_combo_pattern.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_combo_pattern.FormattingEnabled = true;
 			this.m_combo_pattern.Location = new System.Drawing.Point(4, 20);
 			this.m_combo_pattern.Name = "m_combo_pattern";
@@ -456,8 +452,8 @@ namespace RyLogViewer
 			this.m_grid.AllowUserToResizeColumns = false;
 			this.m_grid.AllowUserToResizeRows = false;
 			this.m_grid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid.BackgroundColor = System.Drawing.SystemColors.Control;
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;

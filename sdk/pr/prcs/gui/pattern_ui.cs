@@ -1,17 +1,27 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
+using Rylogic.Properties;
+using pr.common;
 using pr.extn;
-using pr.gui;
 
-namespace RyLogViewer
+namespace pr.gui
 {
+	/// <summary>A user control for editing 'Patterns'</summary>
 	public class PatternUI :PatternUIImpl, IPatternUI
 	{
 		public const string DefaultTestText = "Enter text here to test your pattern";
+		private static readonly Color FieldValid   = Color.LightGreen;
+		private static readonly Color FieldInvalid = Color.Salmon;
+		private static readonly Color[] BkColors = new[]
+		{
+			Color.LightGreen, Color.LightBlue, Color.LightCoral, Color.LightSalmon, Color.Violet, Color.LightSkyBlue,
+			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
+		};
 
 		private HelpUI           m_dlg_help;
 		private ImageList        m_image_list;
@@ -172,17 +182,17 @@ namespace RyLogViewer
 
 			// Highlight the expression background to show valid regex
 			var ex = Pattern.ValidateExpr();
-			string tt = ex == null
+			var tt = ex == null
 				? "The pattern used to match rows in the log file."
 				: "Invalid match pattern - " + ex.Message;
 			m_lbl_match.ToolTip(m_tt, tt);
 			m_edit_match.ToolTip(m_tt, tt);
-			m_edit_match.BackColor = Misc.FieldBkColor(Pattern.IsValid);
+			m_edit_match.BackColor = Pattern.IsValid ? FieldValid : FieldInvalid;
 
 			// Update the highlighting of the test text if valid
 			if (Pattern.IsValid)
 			{
-				string[] lines = m_edit_test.Lines;
+				var lines = m_edit_test.Lines;
 
 				// Preserve the current caret position
 				using (m_edit_test.SelectionScope())
@@ -200,7 +210,7 @@ namespace RyLogViewer
 
 							// Highlight the capture groups in the test text
 							m_edit_test.Select(starti + r.Index, r.Count);
-							m_edit_test.SelectionBackColor = Constants.BkColors[j++ % Constants.BkColors.Length];
+							m_edit_test.SelectionBackColor = BkColors[j++ % BkColors.Length];
 						}
 					}
 				}
@@ -216,18 +226,19 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Return the Form for displaying the regex quick help (lazy loaded)</summary>
+		public static HelpUI CreateRegexHelpUI(Form parent)
+		{
+			Debug.Assert(parent != null);
+			var ui = HelpUI.FromHtml(parent, string.Empty, "Regular Expressions Quick Reference", new Point(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight);
+			ui.Html = Resources.regex_quick_ref;
+			ui.ResetView();
+			return ui;
+		}
+
+		/// <summary>Lazy create RegexHelpUI</summary>
 		private HelpUI RegexHelpUI
 		{
-			get
-			{
-				Debug.Assert(ParentForm != null);
-				if (m_dlg_help == null)
-					m_dlg_help = HelpUI.FromHtml(ParentForm, string.Empty, "Regular Expressions Quick Reference", new Point(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight);
-
-				m_dlg_help.Html = Resources.regex_quick_ref;
-				m_dlg_help.ResetView();
-				return m_dlg_help;
-			}
+			get { return m_dlg_help ?? (m_dlg_help = CreateRegexHelpUI(ParentForm)); }
 		}
 
 		#region Component Designer generated code
@@ -267,7 +278,7 @@ namespace RyLogViewer
 			this.m_group_patntype = new System.Windows.Forms.Panel();
 			this.m_lbl_match_type = new System.Windows.Forms.Label();
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_grid_grps = new RyLogViewer.DataGridView();
+			this.m_grid_grps = new System.Windows.Forms.DataGridView();
 			this.m_lbl_groups = new System.Windows.Forms.Label();
 			this.m_check_whole_line = new System.Windows.Forms.CheckBox();
 			this.m_group_patntype.SuspendLayout();
@@ -515,6 +526,45 @@ namespace RyLogViewer
 		#endregion
 	}
 
+	public enum EBtnImageIdx
+	{
+		AddNew = 0,
+		Save = 1
+	}
+
+	public interface IPatternUI
+	{
+		/// <summary>Return the original before any edits were made</summary>
+		IPattern Original { get; }
+
+		/// <summary>Return the pattern currently being edited</summary>
+		IPattern Pattern { get; }
+
+		/// <summary>True if the pattern currently contained is a new instance, vs editing an existing pattern</summary>
+		bool IsNew { get; }
+
+		/// <summary>Set a new pattern for the UI</summary>
+		void NewPattern(IPattern pat);
+
+		/// <summary>Select a pattern into the UI for editing</summary>
+		void EditPattern(IPattern pat);
+
+		/// <summary>True if the contained pattern is different to the original</summary>
+		bool HasUnsavedChanges { get; }
+
+		/// <summary>True if the contained pattern is valid and therefore can be saved</summary>
+		bool CommitEnabled { get; }
+
+		/// <summary>Raised when the 'Commit' button is hit and the pattern field contains a valid pattern</summary>
+		event EventHandler Commit;
+
+		/// <summary>Access to the test text field</summary>
+		string TestText { get; set; }
+
+		/// <summary>Set focus to the primary input field</summary>
+		void FocusInput();
+	}
+
 	/// <summary>Workaround for the retarded VS designer</summary>
 	public class PatternUIImpl :PatternUIBase<Pattern>
 	{
@@ -526,5 +576,112 @@ namespace RyLogViewer
 
 		/// <summary>Update the UI elements based on the current pattern</summary>
 		protected override void UpdateUIInternal() {}
+	}
+
+	public abstract class PatternUIBase<TPattern> :UserControl ,IPatternUI where TPattern:class, IPattern, new()
+	{
+		protected readonly ToolTip m_tt;
+		protected TPattern m_original;
+		protected TPattern m_pattern;
+
+		protected PatternUIBase()
+		{
+			m_tt = new ToolTip();
+			m_original = null;
+			m_pattern = new TPattern();
+
+			VisibleChanged += (s,a)=>
+				{
+					if (!Visible) return;
+					UpdateUI();
+				};
+
+			Disposed += (s,a) =>
+				{
+					m_tt.Dispose();
+				};
+		}
+
+		/// <summary>The pattern being edited by this UI</summary>
+		[Browsable(false)] public TPattern Pattern { get { return m_pattern; } }
+		IPattern IPatternUI.Pattern { get { return Pattern; } }
+
+		/// <summary>The original pattern provided to the ui for editing</summary>
+		[Browsable(false)] public TPattern Original { get { return m_original; } }
+		IPattern IPatternUI.Original { get { return Original; } }
+
+		/// <summary>True if the pattern currently contained is a new instance, vs editing an existing pattern</summary>
+		public bool IsNew { get { return ReferenceEquals(m_original,null); } }
+
+		/// <summary>Set a new pattern for the UI</summary>
+		public void NewPattern(IPattern pattern)
+		{
+			m_original = null;
+			m_pattern = (TPattern)pattern;
+			UpdateUI();
+		}
+
+		/// <summary>Select a pattern into the UI for editing</summary>
+		public void EditPattern(IPattern pattern)
+		{
+			m_original = (TPattern)pattern;
+			m_pattern  = (TPattern)m_original.Clone();
+			UpdateUI();
+		}
+
+		/// <summary>True when user activity has changed something in the ui</summary>
+		public bool Touched { get; set; }
+
+		/// <summary>True if the pattern contains unsaved changes</summary>
+		public bool HasUnsavedChanges
+		{
+			get
+			{
+				return (IsNew && m_pattern.Expr.Length != 0 && Touched)
+					|| (!IsNew && !Equals(m_original, m_pattern));
+			}
+		}
+
+		/// <summary>True if the contained pattern is valid and therefore can be saved</summary>
+		public bool CommitEnabled
+		{
+			get { return m_pattern != null && m_pattern.IsValid; }
+		}
+
+		/// <summary>Raised when the 'Commit' button is hit and the pattern field contains a valid pattern</summary>
+		public event EventHandler Commit;
+		protected void RaiseCommitEvent()
+		{
+			if (Commit == null) return;
+			Commit(this, EventArgs.Empty);
+		}
+
+		/// <summary>Access to the test text field</summary>
+		public abstract string TestText { get; set ;}
+
+		/// <summary>Set focus to the primary input field</summary>
+		public abstract void FocusInput();
+
+		/// <summary>Prevents reentrant calls to UpdateUI. Yes this is the best way to do it /cry</summary>
+		protected bool m_in_update_ui;
+		protected void UpdateUI()
+		{
+			if (m_in_update_ui) return;
+			try
+			{
+				m_in_update_ui = true;
+				SuspendLayout();
+
+				UpdateUIInternal();
+			}
+			finally
+			{
+				m_in_update_ui = false;
+				ResumeLayout();
+			}
+		}
+
+		/// <summary>Update the UI elements based on the current pattern</summary>
+		protected abstract void UpdateUIInternal();
 	}
 }

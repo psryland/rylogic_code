@@ -126,7 +126,7 @@ namespace RyLogViewer
 			// m_combo_filepaths
 			//
 			this.m_combo_filepaths.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_combo_filepaths.FormattingEnabled = true;
 			this.m_combo_filepaths.Location = new System.Drawing.Point(16, 16);
 			this.m_combo_filepaths.Name = "m_combo_filepaths";

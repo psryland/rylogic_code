@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
+using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
@@ -191,7 +192,7 @@ namespace RyLogViewer
 		private void CellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
 		{
 			e.Value = string.Empty;
-			DataGridView grid = (DataGridView)sender;
+			var grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
 			var col = grid.Columns[e.ColumnIndex];
 			var cap = m_caps[e.RowIndex];
@@ -230,7 +231,7 @@ namespace RyLogViewer
 		/// <summary>Handle cell values changed</summary>
 		private void CellValuePushed(object sender, DataGridViewCellValueEventArgs e)
 		{
-			DataGridView grid = (DataGridView)sender;
+			var grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= m_caps.Count) return;
 			var col = grid.Columns[e.ColumnIndex];
 			var cap = m_caps[e.RowIndex];
@@ -257,7 +258,7 @@ namespace RyLogViewer
 		private void CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
 		{
 			e.Handled = false;
-			DataGridView grid = (DataGridView)sender;
+			var grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			switch (grid.Columns[e.ColumnIndex].Name)
 			{
@@ -271,7 +272,7 @@ namespace RyLogViewer
 		/// <summary>Handle clicks on cells</summary>
 		private void CellClick(object sender, DataGridViewCellEventArgs e)
 		{
-			DataGridView grid = (DataGridView)sender;
+			var grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			var cap = m_caps[e.RowIndex];
@@ -290,7 +291,7 @@ namespace RyLogViewer
 		/// <summary>Handle double clicks on cells</summary>
 		private void CellDoubleClick(object sender, DataGridViewCellEventArgs e)
 		{
-			DataGridView grid = (DataGridView)sender;
+			var grid = (DataGridView)sender;
 			if (e.RowIndex < 0 || e.RowIndex >= Pattern.Subs.Count) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 			var cap = m_caps[e.RowIndex];
@@ -546,7 +547,7 @@ namespace RyLogViewer
 			// m_edit_replace
 			//
 			this.m_edit_replace.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_replace.Location = new System.Drawing.Point(76, 0);
 			this.m_edit_replace.Name = "m_edit_replace";
 			this.m_edit_replace.Size = new System.Drawing.Size(340, 20);
@@ -594,7 +595,7 @@ namespace RyLogViewer
 			// m_edit_match
 			//
 			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_match.Location = new System.Drawing.Point(76, 2);
 			this.m_edit_match.Name = "m_edit_match";
 			this.m_edit_match.Size = new System.Drawing.Size(340, 20);
@@ -631,8 +632,8 @@ namespace RyLogViewer
 			// m_split_subs
 			//
 			this.m_split_subs.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Left)
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_split_subs.Location = new System.Drawing.Point(3, 99);
 			this.m_split_subs.Margin = new System.Windows.Forms.Padding(0);
 			this.m_split_subs.Name = "m_split_subs";
@@ -684,7 +685,7 @@ namespace RyLogViewer
 			// m_edit_eqv_regex
 			//
 			this.m_edit_eqv_regex.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_eqv_regex.Location = new System.Drawing.Point(76, 0);
 			this.m_edit_eqv_regex.Name = "m_edit_eqv_regex";
 			this.m_edit_eqv_regex.ReadOnly = true;
@@ -734,7 +735,7 @@ namespace RyLogViewer
 			// m_panel_match_type
 			//
 			this.m_panel_match_type.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_match_type.AutoSize = true;
 			this.m_panel_match_type.Controls.Add(this.m_check_ignore_case);
 			this.m_panel_match_type.Controls.Add(this.m_radio_regex);
@@ -750,7 +751,7 @@ namespace RyLogViewer
 			// m_panel_match
 			//
 			this.m_panel_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_match.AutoSize = true;
 			this.m_panel_match.Controls.Add(this.m_edit_match);
 			this.m_panel_match.Controls.Add(this.m_lbl_match);
@@ -763,7 +764,7 @@ namespace RyLogViewer
 			// m_table
 			//
 			this.m_table.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_table.AutoSize = true;
 			this.m_table.ColumnCount = 1;
 			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
@@ -784,7 +785,7 @@ namespace RyLogViewer
 			// m_panel_replace
 			//
 			this.m_panel_replace.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_replace.AutoSize = true;
 			this.m_panel_replace.Controls.Add(this.m_edit_replace);
 			this.m_panel_replace.Controls.Add(this.m_lbl_replace);
@@ -797,7 +798,7 @@ namespace RyLogViewer
 			// m_panel_eqv_regex
 			//
 			this.m_panel_eqv_regex.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel_eqv_regex.AutoSize = true;
 			this.m_panel_eqv_regex.Controls.Add(this.m_edit_eqv_regex);
 			this.m_panel_eqv_regex.Controls.Add(this.m_lbl_eqv_regex);

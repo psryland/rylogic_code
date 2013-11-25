@@ -76,13 +76,6 @@ namespace RyLogViewer
 		public const string Filtering      = "Filtering";
 	}
 
-	public enum EPattern
-	{
-		Substring,
-		Wildcard,
-		RegularExpression
-	}
-
 	public enum ELineEnding
 	{
 		Detect,
