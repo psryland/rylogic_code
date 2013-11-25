@@ -54,7 +54,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="deploy.cmd" />
     <None Include="registry_entry.reg" />
     <None Include="Rylogic Limited Key File.pfx" />
   </ItemGroup>
