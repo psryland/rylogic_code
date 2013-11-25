@@ -54,9 +54,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
+    <ProjectReference Include="..\..\sdk\pr\prcs\Rylogic.csproj">
       <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>prcs_vs2012</Name>
+      <Name>Rylogic</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -17,7 +17,11 @@ namespace Csex
 		public override int Run()
 		{
 			// Check the name of the exe and do behaviour based on that.
-			//Path.GetFileNameWithoutExtension(ExecutablePath);
+			//var name = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+			//switch (name.ToLowerInvariant())
+			//{
+			//default: break;
+			//}
 
 			// Invalid arguments, error exit
 			if (CmdLine.Parse(this, m_args) != CmdLine.Result.Success)
