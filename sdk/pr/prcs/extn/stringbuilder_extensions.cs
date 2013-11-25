@@ -60,13 +60,25 @@ namespace pr.extn
 			return sb.TrimEnd('\n','\r').AppendLine().AppendLine(line.ToString());
 		}
 
+		/// <summary>Reverse the characters in the string</summary>
+		public static StringBuilder Reverse(this StringBuilder sb)
+		{
+			var end = sb.Length - 1;
+			for (int i = 0, iend = sb.Length / 2; i < iend; ++i)
+			{
+				var tmp = sb[i];
+				sb[i] = sb[end - i];
+				sb[end - i] = tmp;
+			}
+			return sb;
+		}
 
 		///// <summary>Return a substring of the internal string</summary>
 		//public static string Substring(this StringBuilder sb, int startIndex, int length)
 		//{
 		//    return sb.ToString(startIndex, length);
 		//}
-		
+
 		///// <summary>Remove all occurances of 'ch' from the internal string</summary>
 		//public static StringBuilder Remove(this StringBuilder sb, char ch)
 		//{
@@ -79,13 +91,13 @@ namespace pr.extn
 		//    }
 		//    return sb;
 		//}
-		
+
 		///// <summary>Truncate the string by 'num' characters</summary>
 		//public static StringBuilder RemoveFromEnd(this StringBuilder sb, int num)
 		//{
 		//    return sb.Remove(sb.Length - num, num);
 		//}
-		
+
 		///// <summary>Trim left spaces of string</summary>
 		//public static StringBuilder LTrim(this StringBuilder sb)
 		//{
@@ -104,7 +116,7 @@ namespace pr.extn
 		//    }
 		//    return sb;
 		//}
- 
+
 		///// <summary>rim right spaces of string</summary>
 		//public static StringBuilder RTrim(this StringBuilder sb)
 		//{
@@ -123,9 +135,7 @@ namespace pr.extn
 		//    }
 		//    return sb;
 		//}
-		
 
-		
 		///// <summary>
 		///// Get index of a char
 		///// </summary>
@@ -136,7 +146,7 @@ namespace pr.extn
 		//{
 		//    return IndexOf(sb, value, 0);
 		//}
- 
+
 		///// <summary>
 		///// Get index of a char starting from a given index
 		///// </summary>
@@ -155,7 +165,7 @@ namespace pr.extn
 		//    }
 		//    return -1;
 		//}
- 
+
 		///// <summary>
 		///// Get index of a string
 		///// </summary>
@@ -166,7 +176,7 @@ namespace pr.extn
 		//{
 		//    return IndexOf(sb, value, 0, false);
 		//}
- 
+
 		///// <summary>
 		///// Get index of a string from a given index
 		///// </summary>
@@ -178,7 +188,7 @@ namespace pr.extn
 		//{
 		//    return IndexOf(sb, value, startIndex, false);
 		//}
- 
+
 		///// <summary>
 		///// Get index of a string with case option
 		///// </summary>
@@ -190,7 +200,7 @@ namespace pr.extn
 		//{
 		//    return IndexOf(sb, value, 0, ignoreCase);
 		//}
- 
+
 		///// <summary>
 		///// Get index of a string from a given index with case option
 		///// </summary>
@@ -242,7 +252,7 @@ namespace pr.extn
 		//    }
 		//    return -1;
 		//}
- 
+
 		///// <summary>
 		///// Determine whether a string starts with a given text
 		///// </summary>
@@ -253,7 +263,7 @@ namespace pr.extn
 		//{
 		//    return StartsWith(sb, value, 0, false);
 		//}
- 
+
 		///// <summary>
 		///// Determine whether a string starts with a given text (with case option)
 		///// </summary>
@@ -265,7 +275,7 @@ namespace pr.extn
 		//{
 		//    return StartsWith(sb, value, 0, ignoreCase);
 		//}
- 
+
 		///// <summary>
 		///// Determine whether a string is begin with a given text
 		///// </summary>
@@ -304,10 +314,11 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestStringBuilderExtensions()

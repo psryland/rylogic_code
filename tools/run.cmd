@@ -1,2 +1,2 @@
 @echo off
-cmd /C %1
+cmd /C %*

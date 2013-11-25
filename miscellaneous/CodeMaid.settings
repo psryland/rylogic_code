@@ -19,7 +19,7 @@
                 <value>True</value>
             </setting>
             <setting name="Cleaning_RunVisualStudioSortUsingStatements" serializeAs="String">
-                <value>True</value>
+                <value>False</value>
             </setting>
             <setting name="Reorganizing_SortOrderTypeStructs" serializeAs="String">
                 <value>11</value>
@@ -109,7 +109,7 @@
                 <value>False</value>
             </setting>
             <setting name="Cleaning_AutoSaveAndCloseIfOpenedByCleanup" serializeAs="String">
-                <value>True</value>
+                <value>False</value>
             </setting>
             <setting name="Cleaning_InsertExplicitAccessModifiersOnStructs"
                 serializeAs="String">
@@ -174,7 +174,7 @@
             </setting>
             <setting name="Cleaning_RunVisualStudioRemoveUnusedUsingStatements"
                 serializeAs="String">
-                <value>True</value>
+                <value>False</value>
             </setting>
             <setting name="Cleaning_SkipRemoveUnusedUsingStatementsDuringAutoCleanupOnSave"
                 serializeAs="String">
@@ -244,7 +244,7 @@
             </setting>
             <setting name="Cleaning_RunVisualStudioFormatDocumentCommand"
                 serializeAs="String">
-                <value>True</value>
+                <value>False</value>
             </setting>
             <setting name="Cleaning_SkipSortUsingStatementsDuringAutoCleanupOnSave"
                 serializeAs="String">
@@ -274,7 +274,7 @@
                 <value>summary||remarks||example</value>
             </setting>
             <setting name="Cleaning_AutoCleanupOnFileSave" serializeAs="String">
-                <value>True</value>
+                <value>False</value>
             </setting>
             <setting name="Cleaning_InsertExplicitAccessModifiersOnFields"
                 serializeAs="String">

@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
@@ -558,8 +559,8 @@ namespace RyLogViewer
 			m_grid_highlight.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Colours   ,HeaderText = Resources.Colours      ,FillWeight = 100 ,ReadOnly = true ,DefaultCellStyle = hl_style ,ToolTipText = ColumnTT.Colours});
 			m_grid_highlight.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = Resources.Edit         ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_highlight.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			m_grid_highlight.KeyDown          += DataGridView_Extensions.Copy;
-			m_grid_highlight.KeyDown          += DataGridView_Extensions.SelectAll;
+			m_grid_highlight.KeyDown          += DataGridViewExtensions.Copy;
+			m_grid_highlight.KeyDown          += DataGridViewExtensions.SelectAll;
 			m_grid_highlight.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_highlight, m_highlights, m_pattern_hl, a.Row.Index);
 			m_grid_highlight.MouseDown        += (s,a)=> OnMouseDown      (m_grid_highlight, m_highlights, a);
 			m_grid_highlight.DragOver         += (s,a)=> DoDragDrop       (m_grid_highlight, m_highlights, a, false);
@@ -601,8 +602,8 @@ namespace RyLogViewer
 			m_grid_filter.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.Pattern   ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
 			m_grid_filter.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit      ,HeaderText = Resources.Edit    ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_filter.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			m_grid_filter.KeyDown            += DataGridView_Extensions.Copy;
-			m_grid_filter.KeyDown            += DataGridView_Extensions.SelectAll;
+			m_grid_filter.KeyDown            += DataGridViewExtensions.Copy;
+			m_grid_filter.KeyDown            += DataGridViewExtensions.SelectAll;
 			m_grid_filter.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_filter, m_filters, m_pattern_ft, a.Row.Index);
 			m_grid_filter.MouseDown          += (s,a)=> OnMouseDown      (m_grid_filter, m_filters, a);
 			m_grid_filter.DragOver           += (s,a)=> DoDragDrop       (m_grid_filter, m_filters, a, false);
@@ -654,8 +655,8 @@ namespace RyLogViewer
 			m_grid_transform.Columns.Add(new DataGridViewTextBoxColumn{Name = ColumnNames.Pattern ,HeaderText = Resources.Pattern ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.Pattern});
 			m_grid_transform.Columns.Add(new DataGridViewImageColumn  {Name = ColumnNames.Edit    ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_transform.ClipboardCopyMode   = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			m_grid_transform.KeyDown            += DataGridView_Extensions.Copy;
-			m_grid_transform.KeyDown            += DataGridView_Extensions.SelectAll;
+			m_grid_transform.KeyDown            += DataGridViewExtensions.Copy;
+			m_grid_transform.KeyDown            += DataGridViewExtensions.SelectAll;
 			m_grid_transform.UserDeletingRow    += (s,a)=> OnDeletingRow    (m_grid_transform, m_transforms, m_pattern_tx, a.Row.Index);
 			m_grid_transform.MouseDown          += (s,a)=> OnMouseDown      (m_grid_transform, m_transforms, a);
 			m_grid_transform.DragOver           += (s,a)=> DoDragDrop       (m_grid_transform, m_transforms, a, false);
@@ -697,8 +698,8 @@ namespace RyLogViewer
 			m_grid_action.Columns.Add(new DataGridViewTextBoxColumn {Name = ColumnNames.ClickAction ,HeaderText = Resources.Action  ,FillWeight = 100 ,ReadOnly = true ,ToolTipText = ColumnTT.ClickAction});
 			m_grid_action.Columns.Add(new DataGridViewImageColumn   {Name = ColumnNames.Edit        ,HeaderText = Resources.Edit    ,FillWeight = 15  ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom ,ToolTipText = ColumnTT.Edit});
 			m_grid_action.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-			m_grid_action.KeyDown          += DataGridView_Extensions.Copy;
-			m_grid_action.KeyDown          += DataGridView_Extensions.SelectAll;
+			m_grid_action.KeyDown          += DataGridViewExtensions.Copy;
+			m_grid_action.KeyDown          += DataGridViewExtensions.SelectAll;
 			m_grid_action.UserDeletingRow  += (s,a)=> OnDeletingRow    (m_grid_action, m_actions, m_pattern_ac, a.Row.Index);
 			m_grid_action.MouseDown        += (s,a)=> OnMouseDown      (m_grid_action, m_actions, a);
 			m_grid_action.DragOver         += (s,a)=> DoDragDrop       (m_grid_action, m_actions, a, false);
@@ -869,16 +870,16 @@ namespace RyLogViewer
 		{
 			args.Effect = DragDropEffects.None;
 			if (!args.Data.GetDataPresent(typeof(T))) return;
-			Point pt = grid.PointToClient(new Point(args.X, args.Y));
+			var pt = grid.PointToClient(new Point(args.X, args.Y));
 			var hit = grid.HitTest(pt.X, pt.Y);
 			if (hit.Type != DataGridViewHitTestType.RowHeader || hit.RowIndex < 0 || hit.RowIndex >= patterns.Count) return;
 			args.Effect = args.AllowedEffect;
 			if (test_can_drop) return;
 
 			// Swap the rows
-			T pat = (T)args.Data.GetData(typeof(T));
-			int idx1 = patterns.IndexOf(pat);
-			int idx2 = hit.RowIndex;
+			var pat = (T)args.Data.GetData(typeof(T));
+			var idx1 = patterns.IndexOf(pat);
+			var idx2 = hit.RowIndex;
 			patterns.Swap(idx1, idx2);
 			grid.InvalidateRow(idx1);
 			grid.InvalidateRow(idx2);
@@ -930,8 +931,7 @@ namespace RyLogViewer
 				break;
 			case ColumnNames.Highlight:
 				if (hl != null) {
-				if (hl.BinaryMatch) e.Value = "Full";
-				else                e.Value = "Partial";
+				e.Value = hl.BinaryMatch ? "Full" : "Partial";
 				}
 				break;
 			case ColumnNames.ClickAction:

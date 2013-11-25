@@ -873,29 +873,6 @@ namespace RyLogViewer.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
-        ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
-        ///	&lt;head&gt;
-        ///		&lt;title&gt;Regular Expressions - Quick Reference&lt;/title&gt;
-        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
-        ///
-        ///		&lt;style type=&quot;text/css&quot;&gt;
-        ///			* {
-        ///				font-family: sans-serif;
-        ///				font-size: 12pt;
-        ///			}
-        ///		
-        ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdH [rest of string was truncated]&quot;;.
-        /// </summary>
-        internal static string regex_quick_ref {
-            get {
-                return ResourceManager.GetString("regex_quick_ref", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Reload the current log file.
         /// </summary>
         internal static string ReloadLogFile {

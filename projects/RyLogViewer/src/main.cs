@@ -83,7 +83,7 @@ namespace RyLogViewer
 			m_recent = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true));
 			m_recent.ClearRecentFilesListEvent += (s,a) =>
 				{
-					var res = MsgBox.Show(this, "Do you want to clear the recent files list?", "Clear Recent Files", MessageBoxButtons.OKCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
+					var res = MsgBox.Show(this, "Do you want to clear the recent files list?", "Clear Recent Files", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
 					a.Cancel = res == DialogResult.Cancel;
 				};
 
@@ -129,8 +129,8 @@ namespace RyLogViewer
 			m_menu_file_close.Click                    += (s,a) => CloseLogFile();
 			m_menu_file_export.Click                   += (s,a) => ShowExportDialog();
 			m_menu_file_exit.Click                     += (s,a) => Close();
-			m_menu_edit_selectall.Click                += (s,a) => DataGridView_Extensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
-			m_menu_edit_copy.Click                     += (s,a) => DataGridView_Extensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
+			m_menu_edit_selectall.Click                += (s,a) => DataGridViewExtensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
+			m_menu_edit_copy.Click                     += (s,a) => DataGridViewExtensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
 			m_menu_edit_jumpto.Click                   += (s,a) => JumpTo();
 			m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
 			m_menu_edit_find_next.Click                += (s,a) => FindNext(false);
@@ -220,8 +220,8 @@ namespace RyLogViewer
 			// Setup the grid
 			m_grid.RowCount                  = 0;
 			m_grid.AutoGenerateColumns       = false;
-			m_grid.KeyDown                  += DataGridView_Extensions.SelectAll;
-			m_grid.KeyDown                  += DataGridView_Extensions.Copy;
+			m_grid.KeyDown                  += DataGridViewExtensions.SelectAll;
+			m_grid.KeyDown                  += DataGridViewExtensions.Copy;
 			m_grid.KeyDown                  += GridKeyDown;
 			m_grid.MouseUp                  += (s,a) => GridMouseButton(a, false);
 			m_grid.MouseDown                += (s,a) => GridMouseButton(a, true);
@@ -568,11 +568,18 @@ namespace RyLogViewer
 		private void RowHeightNeeded(object s, DataGridViewRowHeightInfoNeededEventArgs a)
 		{
 			var cs = RowCellStyle(a.RowIndex);
-			var line = ReadLine(a.RowIndex);
 			using (var gfx = CreateGraphics())
 			{
-				var sz = gfx.MeasureString(line.RowText, cs.Font);
-				a.Height = Math.Max(m_row_height, (int)(sz.Height + 0.5f));
+				if (a.RowIndex >= 0 && a.RowIndex < m_line_index.Count)
+				{
+					var line = ReadLine(a.RowIndex);
+					var sz = gfx.MeasureString(line.RowText, cs.Font);
+					a.Height = Math.Max(m_row_height, (int)(sz.Height + 0.5f));
+				}
+				else
+				{
+					a.Height = m_row_height;
+				}
 			}
 		}
 
@@ -869,8 +876,8 @@ namespace RyLogViewer
 				return;
 
 			// Clipboard operations
-			if (args.ClickedItem == m_cmenu_copy      ) { DataGridView_Extensions.Copy(m_grid);      return; }
-			if (args.ClickedItem == m_cmenu_select_all) { DataGridView_Extensions.SelectAll(m_grid); return; }
+			if (args.ClickedItem == m_cmenu_copy      ) { DataGridViewExtensions.Copy(m_grid);      return; }
+			if (args.ClickedItem == m_cmenu_select_all) { DataGridViewExtensions.SelectAll(m_grid); return; }
 			if (args.ClickedItem == m_cmenu_clear_log ) { ClearLogFile(); return; }
 
 			if (args.ClickedItem == m_cmenu_highlight_row) { ShowOptions(SettingsUI.ETab.Highlights); return; }
@@ -997,7 +1004,7 @@ namespace RyLogViewer
 				return;
 
 			// Single file drop only
-			string[] files = (string[])args.Data.GetData(DataFormats.FileDrop);
+			var files = (string[])args.Data.GetData(DataFormats.FileDrop);
 			if (files.Length != 1)
 				return;
 
@@ -1976,30 +1983,31 @@ namespace RyLogViewer
 		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
 		public void SetTransientStatusMessage(string text, Color frcol, Color bkcol, TimeSpan display_time_ms)
 		{
-			m_status_message_trans.Text = text ?? string.Empty;
-			m_status_message_trans.Visible = text.HasValue();
-			m_status_message_trans.ForeColor = frcol;
-			m_status_message_trans.BackColor = bkcol;
+			m_status_message_trans.SetStatusMessage(text, null, false, frcol, bkcol, display_time_ms);
+			//m_status_message_trans.Text = text ?? string.Empty;
+			//m_status_message_trans.Visible = text.HasValue();
+			//m_status_message_trans.ForeColor = frcol;
+			//m_status_message_trans.BackColor = bkcol;
 
-			// If the status message has a timer already, dispose it
-			Timer timer = m_status_message_trans.Tag as Timer;
-			if (timer != null) timer.Dispose();
+			//// If the status message has a timer already, dispose it
+			//Timer timer = m_status_message_trans.Tag as Timer;
+			//if (timer != null) timer.Dispose();
 
-			// Attach a new timer to the status message
-			if (text.HasValue() && display_time_ms != TimeSpan.MaxValue)
-			{
-				m_status_message_trans.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.TotalMilliseconds};
-				timer.Tick += (s,a)=>
-					{
-						// When the timer fires, if we're still associated with
-						// the status message, null out the text and remove our self
-						if (s != m_status_message_trans.Tag) return;
-						m_status_message_trans.Text = Resources.Idle;
-						m_status_message_trans.Visible = false;
-						m_status_message_trans.Tag = null;
-						((Timer)s).Dispose();
-					};
-			}
+			//// Attach a new timer to the status message
+			//if (text.HasValue() && display_time_ms != TimeSpan.MaxValue)
+			//{
+			//	m_status_message_trans.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.TotalMilliseconds};
+			//	timer.Tick += (s,a)=>
+			//		{
+			//			// When the timer fires, if we're still associated with
+			//			// the status message, null out the text and remove our self
+			//			if (s != m_status_message_trans.Tag) return;
+			//			m_status_message_trans.Text = Resources.Idle;
+			//			m_status_message_trans.Visible = false;
+			//			m_status_message_trans.Tag = null;
+			//			((Timer)s).Dispose();
+			//		};
+			//}
 		}
 		public void SetTransientStatusMessage(string text, Color frcol, Color bkcol)
 		{
@@ -2013,10 +2021,11 @@ namespace RyLogViewer
 		/// <summary>Create a status message that displays until cleared. Use null or "" to hide the status</summary>
 		public void SetStaticStatusMessage(string text, Color frcol, Color bkcol)
 		{
-			m_status_message_fixed.Text = text ?? string.Empty;
-			m_status_message_fixed.Visible = text.HasValue();
-			m_status_message_fixed.ForeColor = frcol;
-			m_status_message_fixed.BackColor = bkcol;
+			m_status_message_fixed.SetStatusMessage(text, Resources.Idle, false, frcol, bkcol);
+			//m_status_message_fixed.Text = text ?? string.Empty;
+			//m_status_message_fixed.Visible = text.HasValue();
+			//m_status_message_fixed.ForeColor = frcol;
+			//m_status_message_fixed.BackColor = bkcol;
 		}
 		public void SetStaticStatusMessage(string text)
 		{
@@ -2039,7 +2048,7 @@ namespace RyLogViewer
 		{
 			protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
 			{
-				ToolStripButton btn = e.Item as ToolStripButton;
+				var btn = e.Item as ToolStripButton;
 				if (btn == null || !btn.Checked) { base.OnRenderButtonBackground(e); return; }
 				Rectangle r = Rectangle.Inflate(e.Item.ContentRectangle, 2, 2);
 

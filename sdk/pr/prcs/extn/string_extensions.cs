@@ -67,6 +67,12 @@ namespace pr.extn
 			return string.Join("", Enumerable.Repeat(str, count));
 		}
 
+		/// <summary>Return a string with the characters in reverse order</summary>
+		public static string Reverse(this string str)
+		{
+			return new string(str.ToCharArray().Reverse().ToArray());
+		}
+
 		/// <summary>Word wraps the given text to fit within the specified width.</summary>
 		/// <param name="text">Text to be word wrapped</param>
 		/// <param name="width">Width, in characters, to which the text should be word wrapped</param>
@@ -224,73 +230,73 @@ public class FormatExpression : ITextExpression
   bool _invalidExpression = false;
 
   public FormatExpression(string expression) {
-    if (!expression.StartsWith("{") || !expression.EndsWith("}")) {
-      _invalidExpression = true;
-      Expression = expression;
-      return;
-    }
+	if (!expression.StartsWith("{") || !expression.EndsWith("}")) {
+	  _invalidExpression = true;
+	  Expression = expression;
+	  return;
+	}
 
-    string expressionWithoutBraces = expression.Substring(1
-        , expression.Length - 2);
-    int colonIndex = expressionWithoutBraces.IndexOf(':');
-    if (colonIndex < 0) {
-      Expression = expressionWithoutBraces;
-    }
-    else {
-      Expression = expressionWithoutBraces.Substring(0, colonIndex);
-      Format = expressionWithoutBraces.Substring(colonIndex + 1);
-    }
+	string expressionWithoutBraces = expression.Substring(1
+		, expression.Length - 2);
+	int colonIndex = expressionWithoutBraces.IndexOf(':');
+	if (colonIndex < 0) {
+	  Expression = expressionWithoutBraces;
+	}
+	else {
+	  Expression = expressionWithoutBraces.Substring(0, colonIndex);
+	  Format = expressionWithoutBraces.Substring(colonIndex + 1);
+	}
   }
 
   public string Expression {
-    get;
-    private set;
+	get;
+	private set;
   }
 
   public string Format
   {
-    get;
-    private set;
+	get;
+	private set;
   }
 
   public string Eval(object o) {
-    if (_invalidExpression) {
-      throw new FormatException("Invalid expression");
-    }
-    try
-    {
-      if (String.IsNullOrEmpty(Format))
-      {
-        return (DataBinder.Eval(o, Expression) ?? string.Empty).ToString();
-      }
-      return (DataBinder.Eval(o, Expression, "{0:" + Format + "}") ??
-        string.Empty).ToString();
-    }
-    catch (ArgumentException) {
-      throw new FormatException();
-    }
-    catch (HttpException) {
-      throw new FormatException();
-    }
+	if (_invalidExpression) {
+	  throw new FormatException("Invalid expression");
+	}
+	try
+	{
+	  if (String.IsNullOrEmpty(Format))
+	  {
+		return (DataBinder.Eval(o, Expression) ?? string.Empty).ToString();
+	  }
+	  return (DataBinder.Eval(o, Expression, "{0:" + Format + "}") ??
+		string.Empty).ToString();
+	}
+	catch (ArgumentException) {
+	  throw new FormatException();
+	}
+	catch (HttpException) {
+	  throw new FormatException();
+	}
   }
 }
 
 public class LiteralFormat : ITextExpression
 {
   public LiteralFormat(string literalText) {
-    LiteralText = literalText;
+	LiteralText = literalText;
   }
 
   public string LiteralText {
-    get;
-    private set;
+	get;
+	private set;
   }
 
   public string Eval(object o) {
-    string literalText = LiteralText
-        .Replace("{{", "{")
-        .Replace("}}", "}");
-    return literalText;
+	string literalText = LiteralText
+		.Replace("{{", "{")
+		.Replace("}}", "}");
+	return literalText;
   }
 }
 	 *
@@ -328,9 +334,9 @@ namespace pr
 				//                    "123456789ABCDE"
 				const string text   = "   A long string that\nis\r\nto be word wrapped";
 				const string result = "   A long\n"+
-				                      "string that\n"+
-				                      "is to be word\n"+
-				                      "wrapped";
+									  "string that\n"+
+									  "is to be word\n"+
+									  "wrapped";
 				string r = text.WordWrap(14);
 				Assert.AreEqual(result, r);
 			}

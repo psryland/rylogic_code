@@ -24,6 +24,7 @@ namespace RyLogViewer
 		/// <summary>Returns the line data for the line in the m_line_index at position 'row'</summary>
 		private Line ReadLine(int row)
 		{
+			if (row < 0 || row >= m_line_index.Count) throw new Exception("Row index {0} is not within the line index range [0,{1})".Fmt(row, m_line_index.Count));
 			return ReadLine(m_line_index[row]);
 		}
 
