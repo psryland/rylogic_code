@@ -37,7 +37,7 @@
          must be a menu. -->
     <Groups>
 
-      <Group guid="guidRylogic_VSExtensionCmdSet" id="MyMenuGroup" priority="0x0600">
+      <Group guid="guidRylogic_VSExtensionCmdSet" id="RylogicMenuGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
       </Group>
     </Groups>
@@ -55,7 +55,7 @@
           If you do not want an image next to your command, remove the Icon node /> -->
 
       <Button guid="guidRylogic_VSExtensionCmdSet" id="cmdidAlign" priority="0x0100" type="Button">
-        <Parent guid="guidRylogic_VSExtensionCmdSet" id="MyMenuGroup"/>
+        <Parent guid="guidRylogic_VSExtensionCmdSet" id="RylogicMenuGroup"/>
         <Icon guid="guidImages" id="bmpPicArrows"/>
         <Strings>
           <ButtonText>Align</ButtonText>
@@ -81,7 +81,7 @@
     <!-- This is the guid used to group the menu commands together -->
     <GuidSymbol name="guidRylogic_VSExtensionCmdSet" value="{7154f9e3-6324-4957-8da6-2dfa88ccf58a}">
 
-      <IDSymbol name="MyMenuGroup" value="0x1020"/>
+      <IDSymbol name="RylogicMenuGroup" value="0x1020"/>
       <IDSymbol name="cmdidAlign" value="0x0100"/>
     </GuidSymbol>
 
