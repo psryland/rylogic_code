@@ -5,6 +5,7 @@
 
 using System;
 using System.IO;
+using pr.util;
 
 namespace pr.extn
 {
@@ -26,15 +27,42 @@ namespace pr.extn
 				dst.Write(buffer, 0, n);
 			return copied;
 		}
+
+		/// <summary>Fill 'buffer' from the stream, throwing if not enough data is available</summary>
+		public static byte[] Read(this Stream src, byte[] buffer)
+		{
+			var read = src.Read(buffer, 0, buffer.Length);
+			if (read == buffer.Length) return buffer;
+			var msg = src.CanSeek
+				? "Incomplete read. Expected {0} bytes at stream position {1} (of {2})".Fmt(buffer.Length, src.Position - read, src.Length)
+				: "Incomplete read. Expected {0} bytes from stream".Fmt(buffer.Length);
+			throw new Exception(msg);
+		}
+
+		/// <summary>Read a structure from the stream</summary>
+		public static T Read<T>(this Stream src) where T:struct
+		{
+			try
+			{
+				var buffer = Util.CreateByteArrayOfSize<T>();
+				src.Read(buffer);
+				return Util.FromBytes<T>(buffer);
+			}
+			catch (Exception ex)
+			{
+				throw new Exception("Failed to read type {0}.\r\n{1}".Fmt(typeof(T).Name, ex.Message));
+			}
+		}
 	}
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 	using extn;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		[Test] public static void TestStreamExtn_CopyNTo()
@@ -45,7 +73,7 @@ namespace pr
 				ms0.CopyTo(5, ms1);
 				Assert.AreEqual(8, ms0.Length);
 				Assert.AreEqual(5, ms1.Length);
-				
+
 				var b0 = ms0.ToArray();
 				var b1 = ms1.ToArray();
 				for (int i = 0; i != ms1.Length; ++i)

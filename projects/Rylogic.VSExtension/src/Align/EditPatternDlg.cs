@@ -4,7 +4,7 @@ using pr.extn;
 
 namespace Rylogic.VSExtension
 {
-	public partial class EditPatternDlg :Form
+	internal partial class EditPatternDlg :Form
 	{
 		/// <summary>The pattern being edited</summary>
 		public AlignPattern Pattern { get { return (AlignPattern)m_pattern_ui.Original; } }

@@ -136,19 +136,23 @@ namespace Rylogic.VSExtension
 		}
 
 		/// <summary>Returns the column index that tokens should be aligned to</summary>
-		private int FindAlignColumn(IEnumerable<Token> toks)
+		private dynamic FindAlignColumn(IEnumerable<Token> toks)
 		{
 			var offset = Range.Invalid;
+			var min_width = 0;
 			var column = 0;
+			var leading_ws = false;
 			foreach (var tok in toks)
 			{
 				offset.Begin = Math.Min(offset.Begin, tok.Patn.Offset);
 				offset.End   = Math.Max(offset.End,   tok.Patn.Offset);
+				min_width    = Math.Max(min_width, tok.Patn.MinWidth);
 				column       = Math.Max(column, tok.MinColumnIndex);
+				leading_ws  |= tok.Grp.LeadingSpace;
 			}
-			if (column != 0) column++; // Add a single whitespace, unless at column 0
+			if (column != 0 && leading_ws) column++; // Add a leading whitespace, unless at column 0
 			column += (int)offset.Count;
-			return column;
+			return new {Column = column, MinWidth = min_width, MinOffset = offset.Begin};
 		}
 
 		/// <summary>Return a list of alignment patterns in priority order.</summary>
@@ -167,7 +171,7 @@ namespace Rylogic.VSExtension
 					var s = selection.Start.Position - start_line.Start.Position;
 					var e = selection.End.Position   - start_line.Start.Position;
 					var expr = start_line.GetText().Substring(s, e - s);
-					return new[]{new AlignGroup("Selection", new AlignPattern(EPattern.Substring, expr))}.ToList();
+					return new[]{new AlignGroup("Selection", false, new AlignPattern(EPattern.Substring, expr))}.ToList();
 				}
 			}
 
@@ -280,8 +284,8 @@ namespace Rylogic.VSExtension
 
 				// If there are edits but they are all already aligned at the
 				// correct column, then move on to the next candidate.
-				var column = FindAlignColumn(edits);
-				if (edits.All(x => x.CurrentColumnIndex == column))
+				var pos = FindAlignColumn(edits);
+				if (edits.All(x => x.CurrentColumnIndex - x.Patn.Offset == pos.Column))
 				{
 					edits.Clear();
 					continue;
@@ -330,90 +334,34 @@ namespace Rylogic.VSExtension
 				return;
 
 			// Create an undo scope
-			using (var text = m_snapshot.TextBuffer.CreateEdit())
+			using (ITextEdit text = m_snapshot.TextBuffer.CreateEdit())
 			{
+				// Sort in descending line order
+				edits.Sort((l,r) => r.LineNumber.CompareTo(l.LineNumber));
+
 				// Find the column to align to
-				var column = FindAlignColumn(edits);
+				var pos = FindAlignColumn(edits);
 
 				foreach (var edit in edits)
 				{
+					var ws_head = pos.Column + edit.Patn.Offset - edit.MinColumnIndex;
+					var ws_tail = pos.MinWidth - (edit.Span.Count + edit.Patn.Offset - pos.MinOffset);
+
+					// Careful with order, we need to apply the edits assuming 'line' isn't changed with each one
+
+					// Insert whitespace after the pattern if needed
+					if (ws_tail > 0)
+						text.Insert(edit.Line.Start.Position + edit.Span.End, new string(' ', ws_tail));
+
 					// Delete all preceding whitespace
 					text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.Span.Begin - edit.MinCharIndex);
 
 					// Insert whitespace to align
-					var ws = column - edit.MinColumnIndex;
-					Debug.Assert(ws > 0);
-					text.Insert(edit.Line.Start.Position + edit.MinCharIndex, new string(' ', ws));
+					if (ws_head > 0)
+						text.Insert(edit.Line.Start.Position + edit.MinCharIndex, new string(' ', ws_head));
 				}
 				text.Apply();
 			}
 		}
 	}
 }
-
-		///// <summary>Find the algin boundaries for lines on, above, and below line_number</summary>
-		//private Dictionary<int, List<Token>> FindPivots(int line_number, List<Pattern> patns)
-		//{
-		//	var tokens = new Dictionary<int, List<Token>>();
-
-		//	// find highest priority aligner
-		//	// align on that
-
-		//	// Check the current line, line above, and line below
-		//	var above = FindAlignBoundariesOnLine(line_number - 1, patns);
-		//	var curr  = FindAlignBoundariesOnLine(line_number    , patns);
-		//	var below = FindAlignBoundariesOnLine(line_number + 1, patns);
-
-		//	// Reduce these lists to a single list
-		//	if curr[0] == above[0] || curr[0] == below[0] => keep
-		//	else chuck curr[0]
-		//	tokens.Add(line_number, root);
-
-		//	var allow = root;
-
-		//	// Search lines above
-		//	for (var i = line_number - 1; i >= 0; --i)
-		//	{
-		//		var avail = FindAlignBoundariesOnLine(i, patns);
-		//		avail.RemoveIf(p => !allow.Contains(p), true);
-		//		if (avail.Count == 0) break;
-		//		pivots.Add(i, avail);
-		//		allow = avail;
-		//	}
-
-		//	allow = root;
-
-		//	// Search lines below
-		//	for (var i = line_number + 1; i < m_snapshot.LineCount; ++i)
-		//	{
-		//		var avail = FindAlignBoundariesOnLine(i, patns);
-		//		avail.RemoveIf(p => !allow.Contains(p), true);
-		//		if (avail.Count == 0) break;
-		//		pivots.Add(i, avail);
-		//		allow = avail;
-		//	}
-
-		//	return pivots;
-		//}
-
-		///// <summary>Return the first pivot that could potentially be aligned</summary>
-		//private Token Reduce(Dictionary<int, List<Token>> pivots, int line_number)
-		//{
-		//	// Criteria:
-		//	//  pivot not in pivots_above or pivots_below? reject
-		//	//  pivot found in above or below but are already aligned
-		//	return pivots[line_number].FirstOrDefault();
-		//}
-
-		//private Token Reduce(List<Token> pivots, List<Token> pivots_above, List<Token> pivots_below)
-		//{
-		//	for (int i = 0, iend = pivots.Count; i != iend; ++i)
-		//	{
-		//		var pivot = pivots[i];
-		//	}
-		//	foreach (var pivot in pivots)
-		//	{
-		//		//
-		//	}
-		//	return null;
-		//}

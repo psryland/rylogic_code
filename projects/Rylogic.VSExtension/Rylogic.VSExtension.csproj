@@ -187,9 +187,13 @@
     <None Include="Resources\Images.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\red_x.png" />
     <Resource Include="Resources\pencil.png" />
     <Resource Include="Resources\gray_cross.png" />
     <Resource Include="Resources\green_tick.png" />
+    <None Include="Resources\edit_add.png" />
+    <None Include="Resources\green_down.png" />
+    <None Include="Resources\green_up.png" />
     <Content Include="Resources\Package.ico" />
   </ItemGroup>
   <ItemGroup>

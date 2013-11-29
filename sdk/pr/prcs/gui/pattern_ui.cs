@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using Rylogic.Properties;
+using pr.Properties;
 using pr.common;
 using pr.extn;
 
@@ -35,11 +35,12 @@ namespace pr.gui
 		private RadioButton      m_radio_substring;
 		private RadioButton      m_radio_wildcard;
 		private RadioButton      m_radio_regex;
-		private Panel            m_group_patntype;
+		private Panel            m_panel_patntype;
 		private Label            m_lbl_match_type;
 		private SplitContainer   m_split;
 		private DataGridView     m_grid_grps;
 		private Label            m_lbl_groups;
+		private Panel m_panel_flags;
 		private RichTextBox      m_edit_test;
 
 		public PatternUI()
@@ -275,24 +276,26 @@ namespace pr.gui
 			this.m_radio_substring = new System.Windows.Forms.RadioButton();
 			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();
 			this.m_radio_regex = new System.Windows.Forms.RadioButton();
-			this.m_group_patntype = new System.Windows.Forms.Panel();
+			this.m_panel_patntype = new System.Windows.Forms.Panel();
 			this.m_lbl_match_type = new System.Windows.Forms.Label();
 			this.m_split = new System.Windows.Forms.SplitContainer();
 			this.m_grid_grps = new System.Windows.Forms.DataGridView();
 			this.m_lbl_groups = new System.Windows.Forms.Label();
 			this.m_check_whole_line = new System.Windows.Forms.CheckBox();
-			this.m_group_patntype.SuspendLayout();
+			this.m_panel_flags = new System.Windows.Forms.Panel();
+			this.m_panel_patntype.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();
 			this.m_split.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_grps)).BeginInit();
+			this.m_panel_flags.SuspendLayout();
 			this.SuspendLayout();
 			//
 			// m_check_invert
 			//
 			this.m_check_invert.AutoSize = true;
-			this.m_check_invert.Location = new System.Drawing.Point(236, 52);
+			this.m_check_invert.Location = new System.Drawing.Point(166, 3);
 			this.m_check_invert.Name = "m_check_invert";
 			this.m_check_invert.Size = new System.Drawing.Size(86, 17);
 			this.m_check_invert.TabIndex = 3;
@@ -302,7 +305,7 @@ namespace pr.gui
 			// m_check_ignore_case
 			//
 			this.m_check_ignore_case.AutoSize = true;
-			this.m_check_ignore_case.Location = new System.Drawing.Point(75, 52);
+			this.m_check_ignore_case.Location = new System.Drawing.Point(3, 3);
 			this.m_check_ignore_case.Name = "m_check_ignore_case";
 			this.m_check_ignore_case.Size = new System.Drawing.Size(83, 17);
 			this.m_check_ignore_case.TabIndex = 2;
@@ -315,7 +318,7 @@ namespace pr.gui
 			this.m_btn_add.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
 			this.m_btn_add.ImageIndex = 0;
 			this.m_btn_add.ImageList = this.m_image_list;
-			this.m_btn_add.Location = new System.Drawing.Point(356, 3);
+			this.m_btn_add.Location = new System.Drawing.Point(335, 3);
 			this.m_btn_add.Name = "m_btn_add";
 			this.m_btn_add.Size = new System.Drawing.Size(46, 46);
 			this.m_btn_add.TabIndex = 4;
@@ -342,9 +345,9 @@ namespace pr.gui
 			//
 			this.m_edit_match.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
 			| System.Windows.Forms.AnchorStyles.Right)));
-			this.m_edit_match.Location = new System.Drawing.Point(75, 29);
+			this.m_edit_match.Location = new System.Drawing.Point(73, 29);
 			this.m_edit_match.Name = "m_edit_match";
-			this.m_edit_match.Size = new System.Drawing.Size(252, 20);
+			this.m_edit_match.Size = new System.Drawing.Size(235, 20);
 			this.m_edit_match.TabIndex = 0;
 			//
 			// m_edit_test
@@ -353,14 +356,14 @@ namespace pr.gui
 			this.m_edit_test.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_edit_test.Location = new System.Drawing.Point(0, 0);
 			this.m_edit_test.Name = "m_edit_test";
-			this.m_edit_test.Size = new System.Drawing.Size(245, 82);
+			this.m_edit_test.Size = new System.Drawing.Size(224, 110);
 			this.m_edit_test.TabIndex = 0;
 			this.m_edit_test.Text = "Enter text here to test your pattern";
 			//
 			// m_btn_regex_help
 			//
 			this.m_btn_regex_help.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_regex_help.Location = new System.Drawing.Point(333, 3);
+			this.m_btn_regex_help.Location = new System.Drawing.Point(311, 29);
 			this.m_btn_regex_help.Name = "m_btn_regex_help";
 			this.m_btn_regex_help.Size = new System.Drawing.Size(22, 21);
 			this.m_btn_regex_help.TabIndex = 6;
@@ -382,7 +385,7 @@ namespace pr.gui
 			// m_radio_wildcard
 			//
 			this.m_radio_wildcard.AutoSize = true;
-			this.m_radio_wildcard.Location = new System.Drawing.Point(73, 3);
+			this.m_radio_wildcard.Location = new System.Drawing.Point(72, 3);
 			this.m_radio_wildcard.Name = "m_radio_wildcard";
 			this.m_radio_wildcard.Size = new System.Drawing.Size(67, 17);
 			this.m_radio_wildcard.TabIndex = 1;
@@ -393,23 +396,24 @@ namespace pr.gui
 			// m_radio_regex
 			//
 			this.m_radio_regex.AutoSize = true;
-			this.m_radio_regex.Location = new System.Drawing.Point(141, 3);
+			this.m_radio_regex.Location = new System.Drawing.Point(139, 3);
+			this.m_radio_regex.Margin = new System.Windows.Forms.Padding(0);
 			this.m_radio_regex.Name = "m_radio_regex";
-			this.m_radio_regex.Size = new System.Drawing.Size(116, 17);
+			this.m_radio_regex.Size = new System.Drawing.Size(102, 17);
 			this.m_radio_regex.TabIndex = 2;
 			this.m_radio_regex.TabStop = true;
-			this.m_radio_regex.Text = "&Regular Expression";
+			this.m_radio_regex.Text = "&Reg. Expression";
 			this.m_radio_regex.UseVisualStyleBackColor = true;
 			//
-			// m_group_patntype
+			// m_panel_patntype
 			//
-			this.m_group_patntype.Controls.Add(this.m_radio_substring);
-			this.m_group_patntype.Controls.Add(this.m_radio_wildcard);
-			this.m_group_patntype.Controls.Add(this.m_radio_regex);
-			this.m_group_patntype.Location = new System.Drawing.Point(75, 3);
-			this.m_group_patntype.Name = "m_group_patntype";
-			this.m_group_patntype.Size = new System.Drawing.Size(258, 23);
-			this.m_group_patntype.TabIndex = 5;
+			this.m_panel_patntype.Controls.Add(this.m_radio_substring);
+			this.m_panel_patntype.Controls.Add(this.m_radio_wildcard);
+			this.m_panel_patntype.Controls.Add(this.m_radio_regex);
+			this.m_panel_patntype.Location = new System.Drawing.Point(70, 3);
+			this.m_panel_patntype.Name = "m_panel_patntype";
+			this.m_panel_patntype.Size = new System.Drawing.Size(239, 23);
+			this.m_panel_patntype.TabIndex = 5;
 			//
 			// m_lbl_match_type
 			//
@@ -437,8 +441,8 @@ namespace pr.gui
 			// m_split.Panel2
 			//
 			this.m_split.Panel2.Controls.Add(this.m_grid_grps);
-			this.m_split.Size = new System.Drawing.Size(402, 84);
-			this.m_split.SplitterDistance = 247;
+			this.m_split.Size = new System.Drawing.Size(376, 112);
+			this.m_split.SplitterDistance = 226;
 			this.m_split.TabIndex = 1;
 			//
 			// m_grid_grps
@@ -469,7 +473,7 @@ namespace pr.gui
 			this.m_grid_grps.RowHeadersVisible = false;
 			this.m_grid_grps.RowTemplate.Height = 18;
 			this.m_grid_grps.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_grps.Size = new System.Drawing.Size(149, 82);
+			this.m_grid_grps.Size = new System.Drawing.Size(144, 110);
 			this.m_grid_grps.TabIndex = 0;
 			this.m_grid_grps.TabStop = false;
 			//
@@ -477,7 +481,7 @@ namespace pr.gui
 			//
 			this.m_lbl_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_groups.AutoSize = true;
-			this.m_lbl_groups.Location = new System.Drawing.Point(324, 60);
+			this.m_lbl_groups.Location = new System.Drawing.Point(298, 60);
 			this.m_lbl_groups.Name = "m_lbl_groups";
 			this.m_lbl_groups.Size = new System.Drawing.Size(81, 13);
 			this.m_lbl_groups.TabIndex = 17;
@@ -487,39 +491,49 @@ namespace pr.gui
 			// m_check_whole_line
 			//
 			this.m_check_whole_line.AutoSize = true;
-			this.m_check_whole_line.Location = new System.Drawing.Point(156, 52);
+			this.m_check_whole_line.Location = new System.Drawing.Point(86, 3);
 			this.m_check_whole_line.Name = "m_check_whole_line";
 			this.m_check_whole_line.Size = new System.Drawing.Size(80, 17);
 			this.m_check_whole_line.TabIndex = 18;
 			this.m_check_whole_line.Text = "&Whole Line";
 			this.m_check_whole_line.UseVisualStyleBackColor = true;
 			//
+			// m_panel_flags
+			//
+			this.m_panel_flags.Controls.Add(this.m_check_ignore_case);
+			this.m_panel_flags.Controls.Add(this.m_check_whole_line);
+			this.m_panel_flags.Controls.Add(this.m_check_invert);
+			this.m_panel_flags.Location = new System.Drawing.Point(15, 52);
+			this.m_panel_flags.Name = "m_panel_flags";
+			this.m_panel_flags.Size = new System.Drawing.Size(256, 21);
+			this.m_panel_flags.TabIndex = 19;
+			//
 			// PatternUI
 			//
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.Controls.Add(this.m_check_whole_line);
+			this.Controls.Add(this.m_panel_flags);
 			this.Controls.Add(this.m_lbl_groups);
 			this.Controls.Add(this.m_split);
 			this.Controls.Add(this.m_lbl_match_type);
 			this.Controls.Add(this.m_btn_regex_help);
 			this.Controls.Add(this.m_lbl_match);
 			this.Controls.Add(this.m_edit_match);
-			this.Controls.Add(this.m_check_invert);
-			this.Controls.Add(this.m_check_ignore_case);
 			this.Controls.Add(this.m_btn_add);
-			this.Controls.Add(this.m_group_patntype);
+			this.Controls.Add(this.m_panel_patntype);
 			this.Margin = new System.Windows.Forms.Padding(0);
-			this.MinimumSize = new System.Drawing.Size(408, 104);
+			this.MinimumSize = new System.Drawing.Size(354, 117);
 			this.Name = "PatternUI";
-			this.Size = new System.Drawing.Size(408, 162);
-			this.m_group_patntype.ResumeLayout(false);
-			this.m_group_patntype.PerformLayout();
+			this.Size = new System.Drawing.Size(382, 190);
+			this.m_panel_patntype.ResumeLayout(false);
+			this.m_panel_patntype.PerformLayout();
 			this.m_split.Panel1.ResumeLayout(false);
 			this.m_split.Panel2.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).EndInit();
 			this.m_split.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_grps)).EndInit();
+			this.m_panel_flags.ResumeLayout(false);
+			this.m_panel_flags.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 		}

@@ -63,8 +63,8 @@ namespace pr.extn
 		/// <summary>Display a hint balloon.</summary>
 		public static void ShowHintBalloon(this Control ctrl, ToolTip tt, string msg, int duration = 5000)
 		{
-			var parent = ctrl.FindForm();
-			if (parent == null) return;
+			//var parent = ctrl.FindForm();
+			//if (parent == null) return;
 			var pt = ctrl.ClientRectangle.Centre();
 
 			tt.SetToolTip(ctrl, msg);
@@ -138,7 +138,7 @@ namespace pr.extn
 		/// <summary>BeginInvoke an action after 'delay' milliseconds (roughly)</summary>
 		public static void BeginInvokeDelayed(this IComponent ctrl, int delay, Action action)
 		{
-			new Timer{Enabled = true, Interval = delay}.Tick += (s,a) =>
+			new Timer{Enabled = true, Interval = Math.Max(delay,1)}.Tick += (s,a) =>
 			{
 				var timer = (Timer)s;
 				timer.Enabled = false;

@@ -16,13 +16,15 @@ namespace pr.common
 	// It is valid for a range to be inside out (i.e. as the initial state when
 	// finding a bounding range). However some methods assume that this range has
 	// a count >= 0. These functions should contain appropriate asserts.
-	
+
+	// Note, there is no Range<T> because T cannot be constrained to value types with simple maths operators :-/
+
 	/// <summary>A range over [m_begin,m_end)</summary>
 	public struct Range
 	{
 		/// <summary>The index of the first element in the range</summary>
 		public long Begin;
-		
+
 		/// <summary>The index of one past the last element in the range</summary>
 		public long End;
 
@@ -34,7 +36,7 @@ namespace pr.common
 
 		/// <summary>Construct from an index range</summary>
 		public Range(long begin, long end) { Begin = begin; End = end; }
-		
+
 		/// <summary>True if the range spans zero elements</summary>
 		public bool Empty                  { get { return End == Begin; } }
 
@@ -69,7 +71,7 @@ namespace pr.common
 		}
 
 		/// <summary>Returns true if 'rng' is entirely within this range</summary>
-		[Pure] public bool Contains(Range rng) 
+		[Pure] public bool Contains(Range rng)
 		{
 			Debug.Assert(Count >= 0, "this range is inside out");
 			Debug.Assert(rng.Count >= 0, "'rng' is inside out");
@@ -113,7 +115,7 @@ namespace pr.common
 			if (rng.Begin >= End) return new Range(End, End);
 			return new Range(Math.Max(Begin, rng.Begin), Math.Min(End, rng.End));
 		}
-		
+
 		/// <summary>Move the range by an offset</summary>
 		public Range Shift(long ofs)
 		{
@@ -160,6 +162,7 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
@@ -172,7 +175,7 @@ namespace pr
 			Range b = new Range(-1,  3);
 			Range c = new Range( 0,  5);
 			Range d = new Range( 7, 12);
-			
+
 			// Intersect
 			Assert.AreEqual(a               , a.Intersect(a));
 			Assert.AreEqual(new Range(-1,-1), a.Intersect(b));

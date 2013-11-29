@@ -273,6 +273,46 @@ namespace pr.extn
 			return w;
 		}
 
+		/// <summary>Resize the columns intelligently based on currently displayed content</summary>
+		public static void SetGridColumnSizes(this DataGridView grid, bool auto_hide_single_column_headers = false)
+		{
+			if (grid.ColumnCount == 0)
+				return;
+
+			var grid_width = grid.DisplayRectangle.Width - 2;
+			var col_count  = grid.ColumnCount;
+
+			if (auto_hide_single_column_headers)
+				grid.ColumnHeadersVisible = col_count > 1;
+
+			// Measure each column's preferred width
+			var col_widths = Enumerable.Repeat(30f, col_count).ToArray();
+			using (var gfx = grid.CreateGraphics())
+			{
+				foreach (var row in grid.GetRowsWithState(DataGridViewElementStates.Displayed))
+				{
+					for (int i = 0, iend = Math.Min(col_count, row.Cells.Count); i != iend; ++i)
+					{
+						// For some reason, cell.GetPreferredSize or col.GetPreferredWidth don't return correct values
+						var cell = row.Cells[i];
+						SizeF sz;
+						if      (cell.Value is string) sz = gfx.MeasureString((string)cell.Value, cell.InheritedStyle.Font);
+						else if (cell.Value is Image ) sz = ((Image)cell.Value).Size;
+						else sz = SizeF.Empty;
+
+						var w = Maths.Clamp(sz.Width + 10, 30, 64000); // DGV throws if width is greater than 65535
+						col_widths[i] = Math.Max(col_widths[i], w);
+					}
+				}
+			}
+			var total_width = Math.Max(col_widths.Sum(), 1);
+
+			// Resize columns. If the total width is less than the control width use the control width instead
+			var scale = Maths.Max(grid_width / total_width, 1f);
+			foreach (DataGridViewColumn col in grid.Columns)
+				col.Width = (int)(col_widths[col.Index] * scale);
+		}
+
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
 		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
 		{

@@ -90,7 +90,7 @@ namespace Rylogic.VSExtension
 		}
 
 		/// <summary>The align patterns</summary>
-		public IEnumerable<AlignGroup> Groups
+		internal IEnumerable<AlignGroup> Groups
 		{
 			get
 			{

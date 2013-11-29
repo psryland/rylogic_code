@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using pr.extn;
@@ -251,10 +252,13 @@ namespace pr.common
 		{
 			if (!IsMatch(text) || !IsValid) yield break;
 			var match = Regex.Match(text);
-			var names = Regex.GetGroupNames();
-			var grps = match.Groups;
-			for (int i = 0; i != grps.Count; ++i)
-				yield return new KeyValuePair<string, string>(names[i], grps[i].Value);
+			if (match.Success)
+			{
+				var names = Regex.GetGroupNames();
+				var grps = match.Groups;
+				for (int i = 0; i != grps.Count; ++i)
+					yield return new KeyValuePair<string, string>(names[i], grps[i].Value);
+			}
 		}
 
 		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
@@ -266,8 +270,16 @@ namespace pr.common
 			return Invert ? !is_match : is_match;
 		}
 
-		/// <summary>Return the ranges of 'text' that matches this pattern</summary>
-		public IEnumerable<Span> Match(string text)
+		/// <summary>
+		/// Return the first range of 'text' that matches this pattern.
+		/// Note, the first returned span will be the string that matches the entire pattern.
+		/// Any subsequent strings will be the capture groups from within the regex pattern.
+		/// i.e.<para/>
+		///  if your expression is @"x" you get one group when matched on "xox" equal to [0,1]<para/>
+		///  if your expression is @"(x)" you get two groups, [0,1] for the whole expression,
+		///  then [0,1] for the sub-expression<para/>
+		/// Note, only the first match is returned, [2,1] is not returned by this method.</summary>
+		public IEnumerable<Span> Match(string text, int start = 0, int length = -1)
 		{
 			if (!Active || text == null) yield break;
 
@@ -276,9 +288,18 @@ namespace pr.common
 			if (Invert) x.Add(0);
 			try
 			{
-				var match = Regex.Match(text);
-				if (!WholeLine || match.Value == text)
+				var match = Regex.Match(text, start, length == -1 ? text.Length - start : length);
+				if (match.Success && (!WholeLine || match.Value == text))
 				{
+					// The GroupCollection object returned by the Match.Groups property always has at least one member.
+					// If the regular expression engine cannot find any matches in a particular input string, the
+					// Group.Success property of the single Group object in the collection is set to false and the Group
+					// object's Value property is set to String.Empty. If the regular expression engine can find a match,
+					// the first element of the GroupCollection object returned by the Groups property contains a string
+					// that matches the entire regular expression pattern. Each subsequent element represents a captured
+					// group, if the regular expression includes capturing groups. For more information, see the
+					// "Grouping Constructs and Regular Expression Objects" section of the Grouping Constructs in Regular
+					// Expressions article.
 					var grps = match.Groups;
 					for (int i = 0; i != grps.Count; ++i)
 					{
@@ -292,6 +313,22 @@ namespace pr.common
 
 			for (int i = 0; i != x.Count; i += 2)
 				yield return new Span(x[i], x[i+1] - x[i]);
+		}
+
+		/// <summary>
+		/// Returns all occurrences of matches within 'text'.
+		/// i.e.<para/>
+		///   AllMatches(@"(x)", "xoxox") returns [0,1], [2,1], [4,1]<para/>
+		/// Note, this method doesn't return capture groups, only whole expression matches.</summary>
+		public IEnumerable<Span> AllMatches(string text)
+		{
+			for (var i = 0;;)
+			{
+				var span = Match(text,i).FirstOrDefault();
+				if (span.Count == 0) yield break;
+				yield return span;
+				i = span.End;
+			}
 		}
 
 		/// <summary>Creates a new object that is a copy of the current instance.</summary>
@@ -352,6 +389,8 @@ namespace pr
 			[TestFixtureTearDown] public static void CleanUp()
 			{
 			}
+
+			/// <summary>Matches 'pat' to 'test' and checks the results agree with 'grp_names' and 'captures'</summary>
 			private static void Check(Pattern pat, string test, string[] grp_names, string[] captures)
 			{
 				if (grp_names == null || captures == null)
@@ -550,6 +589,19 @@ namespace pr
 				Check(p, "@#!$%^-",
 					new[]{"0"},
 					new[]{"@"});
+			}
+			[Test] public static void RegexMatches10()
+			{
+				const string s = "xoxox";
+				var p = new Pattern(EPattern.RegularExpression, @"(x)");
+
+				// Match returns the whole expr match, then the capture group
+				var r1 = p.Match(s).ToList();
+				Assert.True(r1.SequenceEqual(new[]{ new Span(0,1), new Span(0,1) }));
+
+				// AllMatches returns only whole expr matches but all occurrences in the string
+				var r2 = p.AllMatches(s).ToList();
+				Assert.True(r2.SequenceEqual(new[]{ new Span(0,1), new Span(2,1), new Span(4,1) }));
 			}
 		}
 	}

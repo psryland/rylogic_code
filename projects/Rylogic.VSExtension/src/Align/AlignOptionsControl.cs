@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
@@ -20,6 +21,7 @@ namespace Rylogic.VSExtension
 			Active,
 			Pattern,
 			Offset,
+			MinWidth,
 			Edit
 		}
 
@@ -27,15 +29,20 @@ namespace Rylogic.VSExtension
 		private readonly BindingSource m_bs_groups;
 		private readonly BindingSource m_bs_patterns;
 		private readonly Dictionary<AlignPattern, EditPatternDlg> m_edit_windows;
-		private readonly HoverScroll m_hover_scroll;
 		private readonly HintBalloon m_hint_balloon;
-		private readonly DragDrop m_dd;
+		private readonly ToolTip m_tt;
 		private SplitContainer m_split;
 		private DataGridView m_grid_groups;
 		private Label m_lbl_alignment_group;
 		private Label m_lbl_alignment_patterns;
 		private Button m_btn_help_groups;
+		private Button m_btn_new;
+		private Button m_btn_move_down;
+		private ImageList m_image_list;
+		private Button m_btn_move_up;
+		private Button m_btn_del;
 		private Button m_btn_help_patterns;
+		private Button m_btn_reset;
 		private DataGridView m_grid_patterns;
 
 		public AlignOptionsControl(AlignOptions options)
@@ -44,27 +51,19 @@ namespace Rylogic.VSExtension
 			m_bs_groups = new BindingSource{DataSource = m_options.Groups};
 			m_bs_patterns = new BindingSource{DataSource = null};
 			m_edit_windows = new Dictionary<AlignPattern,EditPatternDlg>();
-			m_hover_scroll = new HoverScroll();
-			m_hint_balloon = new HintBalloon{PreferredTipCorner = HintBalloon.ETipCorner.BottomRight, ShowDelay = 0};
-			m_dd = new DragDrop();
+			m_hint_balloon = new HintBalloon{ShowDelay = 0, PreferredTipCorner = HintBalloon.ETipCorner.BottomLeft};
+			m_tt = new ToolTip();
 
 			InitializeComponent();
 
 			SetupGroupsGrid();
 			SetupPatternsGrid();
 			SetPatternsDataSource();
-
-			Load += (s,a) =>
-				{
-					if (ParentForm != null)
-						m_hover_scroll.WindowHandles.Add(ParentForm.Handle);
-				};
 		}
 		protected override void Dispose(bool disposing)
 		{
 			m_bs_groups.Dispose();
 			m_bs_patterns.Dispose();
-			m_hover_scroll.Dispose();
 			m_hint_balloon.Dispose();
 
 			if (disposing && (components != null))
@@ -81,37 +80,79 @@ namespace Rylogic.VSExtension
 			m_grid_groups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = EGroupColumns.Name.ToStringFast(), DataPropertyName = Reflect<AlignGroup>.MemberName(x => x.Name)});
 			m_grid_groups.DataSource = m_bs_groups;
 
-			// Setup drag/drop to reorder the groups list
-			m_dd.DoDrop += DataGridViewExtensions.DragDrop_DoDropMoveRow;
-			m_dd.Attach(m_grid_groups);
+			// When the selected item in the groups grid changes, update the data source of the pattern grid
+			m_bs_groups.PositionChanged += (s,a) =>
+				{
+					SetPatternsDataSource();
+					var pos = m_bs_groups.Position;
+					m_btn_move_up.Enabled   = pos > 0;
+					m_btn_move_down.Enabled = pos < m_bs_groups.Count - 1;
+					m_btn_del.Enabled = m_bs_groups.CurrentOrDefault() != null;
+				};
 
-			m_bs_groups.CurrentItemChanged += (s,a) => SetPatternsDataSource();
+			// Setup add/remove/order buttons
+			m_btn_new.ToolTip(m_tt, "Add a new alignment group");
+			m_btn_new.Click += (s,a) =>
+				{
+					m_bs_groups.AddNew();
+				};
+			m_btn_del.ToolTip(m_tt, "Delete the selected alignment group");
+			m_btn_del.Click += (s,a) =>
+				{
+					m_bs_groups.RemoveCurrent();
+				};
+			m_btn_move_up.ToolTip(m_tt, "Move the selected alignment group up in the priority order");
+			m_btn_move_up.Click += (s,a) =>
+				{
+					var x = m_bs_groups.Position;
+					if (x <= 0) return;
+					m_bs_groups.List.Swap(x, x-1);
+				};
+			m_btn_move_down.ToolTip(m_tt, "Move the selected alignment group down in the priority order");
+			m_btn_move_down.Click += (s,a) =>
+				{
+					var x = m_bs_groups.Position;
+					if (x >= m_bs_groups.Count - 1) return;
+					m_bs_groups.List.Swap(x, x+1);
+				};
 
+			// Setup the help button for groups
 			m_btn_help_groups.Click += (s,a) =>
 				{
-					const string tt =
+					const string tt1 =
 						"Each group contains patterns that are all considered equivalent. " +
 						"Select a group to show its patterns in the table below. " +
 						"The order of groups defines the preferred order when looking for " +
 						"potential alignment candidates. Change the order by clicking and " +
 						"dragging the row header.";
-					m_hint_balloon.Show(m_grid_groups, m_grid_groups.ClientRectangle.TopLeft().Shifted(10,10), tt, 10000);
+					m_hint_balloon.Show(m_grid_groups, m_grid_groups.ClientRectangle.TopLeft().Shifted(10,10), tt1, 10000);
 				};
 
-			m_hover_scroll.WindowHandles.Add(m_grid_groups.Handle);
+			// Setup reset button
+			m_btn_reset.ToolTip(m_tt, "Resets the alignment groups to the defaults");
+			m_btn_reset.Click += (s,a) =>
+				{
+					var r = MsgBox.Show(this, "Reset all alignment groups/patterns to defaults?", "Reset to Default", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+					if (r != DialogResult.OK) return;
+					m_options.ResetSettings();
+					m_options.SaveSettingsToStorage();
+					m_bs_groups.ResetBindings(false);
+					m_bs_patterns.ResetBindings(false);
+				};
 		}
 
 		/// <summary>Setup the grid of patterns</summary>
 		private void SetupPatternsGrid()
 		{
+			// The patterns grid is virtual mode so that we can draw images and handle edits
 			m_grid_patterns.AllowDrop = true;
 			m_grid_patterns.VirtualMode = true;
 			m_grid_patterns.AutoGenerateColumns = false;
-			m_grid_patterns.AllowUserToAddRows = false;
-			m_grid_patterns.Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Active  ,HeaderText = EPatternColumns.Active .ToStringFast() ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			m_grid_patterns.Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.Pattern ,HeaderText = EPatternColumns.Pattern.ToStringFast() ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_patterns.Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.Offset  ,HeaderText = EPatternColumns.Offset .ToStringFast() ,FillWeight = 20 });
-			m_grid_patterns.Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Edit    ,HeaderText = EPatternColumns.Edit   .ToStringFast() ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_patterns.Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Active   ,HeaderText = EPatternColumns.Active   .ToStringFast() ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			m_grid_patterns.Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.Pattern  ,HeaderText = EPatternColumns.Pattern  .ToStringFast() ,FillWeight = 100 ,ReadOnly = true });
+			m_grid_patterns.Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.Offset   ,HeaderText = EPatternColumns.Offset   .ToStringFast() ,FillWeight = 30 });
+			m_grid_patterns.Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.MinWidth ,HeaderText = EPatternColumns.MinWidth .ToStringFast() ,FillWeight = 30 });
+			m_grid_patterns.Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Edit     ,HeaderText = EPatternColumns.Edit     .ToStringFast() ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
 
 			m_grid_patterns.KeyDown               += DataGridViewExtensions.Copy;
 			m_grid_patterns.KeyDown               += DataGridViewExtensions.SelectAll;
@@ -124,8 +165,7 @@ namespace Rylogic.VSExtension
 			m_grid_patterns.CellDoubleClick       += OnCellDoubleClick;
 			m_grid_patterns.MouseDown             += OnMouseDown;
 			m_grid_patterns.UserDeletingRow       += OnDeletingRow;
-			m_grid_patterns.RowCount               = m_bs_patterns.Count;
-			m_grid_patterns.AllowUserToAddRows     = true;
+			m_grid_patterns.RowCount               = m_bs_patterns.Count + (m_grid_patterns.AllowUserToAddRows ? 1 : 0);
 
 			// Clear the 'X' null image
 			foreach (var col in m_grid_patterns.Columns.OfType<DataGridViewImageColumn>())
@@ -134,31 +174,34 @@ namespace Rylogic.VSExtension
 			// Changes in the patterns data source updates the grid
 			m_bs_patterns.ListChanged += (s,a) =>
 				{
-					//m_options.SaveSettingsToStorage();
 					m_grid_patterns.RowCount = m_bs_patterns.Count + (m_grid_patterns.AllowUserToAddRows ? 1 : 0);
 					m_grid_patterns.Refresh();
 				};
 
+			// Setup the help button for patterns
 			m_btn_help_patterns.Click += (s,a) =>
 				{
-					const string tt =
+					const string tt2 =
 						"A pattern can be a simple substring or a regular expression. " +
 						"The 'Offset' column controls the relative position of matching text " +
-						"to the other patterns in the group.";
-					m_hint_balloon.Show(m_grid_patterns, m_grid_patterns.ClientRectangle.TopLeft().Shifted(10,10), tt, 10000);
+						"to the other patterns in the group. The 'MinWidth' column controls " +
+						"how much extra padding is added after the matching text.";
+					m_hint_balloon.Show(m_grid_patterns, m_grid_patterns.ClientRectangle.TopLeft().Shifted(10,10), tt2, 10000);
 				};
-
-			m_hover_scroll.WindowHandles.Add(m_grid_patterns.Handle);
 		}
 
 		/// <summary>Update the data source for the patterns grid to be the current group patterns</summary>
 		private void SetPatternsDataSource()
 		{
-			var grp = (AlignGroup)m_bs_groups.CurrentOrDefault();
+			m_grid_patterns.RowCount = 0 + (m_grid_patterns.AllowUserToAddRows ? 1 : 0);
 			m_bs_patterns.DataSource = null;
+
+			var grp = (AlignGroup)m_bs_groups.CurrentOrDefault();
 			if (grp != null)
 			{
 				m_bs_patterns.DataSource = grp.Patterns;
+				m_grid_patterns.RowCount = m_bs_patterns.Count + (m_grid_patterns.AllowUserToAddRows ? 1 : 0);
+				m_grid_patterns.Refresh();
 			}
 		}
 
@@ -174,22 +217,31 @@ namespace Rylogic.VSExtension
 				return;
 			}
 
+			if (pat == null)
+			{
+				pat = new AlignPattern();
+				m_bs_patterns.Add(pat);
+			}
+
 			dlg = new EditPatternDlg(pat);
+			dlg.Shown += (s,a) =>
+				{
+					m_edit_windows.Add(pat, dlg);
+				};
 			dlg.Closed += (s,a) =>
 				{
-					m_edit_windows.Remove(dlg.Pattern);
+					m_edit_windows.Remove(pat);
+					SetPatternsDataSource();
 				};
 			dlg.Commit += (s,a) =>
 				{
 					var ui = (PatternUI)s;
+					Debug.Assert(!ui.IsNew);
 					var list = (BindingList<AlignPattern>)m_bs_patterns.DataSource;
-					if (ui.IsNew) list.Insert(0, (AlignPattern)ui.Pattern);
-					else          list.Replace((AlignPattern)ui.Original, (AlignPattern)ui.Pattern);
-					m_edit_windows.Remove((AlignPattern)ui.Original);
+					list.Replace((AlignPattern)ui.Original, (AlignPattern)ui.Pattern);
 					dlg.Close();
 				};
 			dlg.Show(this);
-			m_edit_windows.Add(pat, dlg);
 		}
 
 		/// <summary>Supplies cell values for the pattern grid</summary>
@@ -216,6 +268,9 @@ namespace Rylogic.VSExtension
 			case EPatternColumns.Offset:
 				e.Value = pat.Offset;
 				break;
+			case EPatternColumns.MinWidth:
+				e.Value = pat.MinWidth;
+				break;
 			}
 		}
 
@@ -229,12 +284,23 @@ namespace Rylogic.VSExtension
 
 			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
 			{
+			default:
+				grid.Rows[e.RowIndex].ErrorText = string.Empty;
+				break;
 			case EPatternColumns.Offset:
 				int ofs;
 				if (!int.TryParse(e.FormattedValue.ToString(), out ofs))
 				{
 					e.Cancel = true;
 					grid.Rows[e.RowIndex].ErrorText = "Offset must be a positive or negative integer";
+				}
+				break;
+			case EPatternColumns.MinWidth:
+				int width;
+				if (!int.TryParse(e.FormattedValue.ToString(), out width) || width < 0)
+				{
+					e.Cancel = true;
+					grid.Rows[e.RowIndex].ErrorText = "Min Width must be a positive integer";
 				}
 				break;
 			}
@@ -248,22 +314,25 @@ namespace Rylogic.VSExtension
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 
 			var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-
 			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
 			{
 			case EPatternColumns.Offset:
-				pat.Offset = int.Parse(e.Value.ToString()); break;
+				pat.Offset = int.Parse(e.Value.ToString());
+				break;
+			case EPatternColumns.MinWidth:
+				pat.MinWidth = int.Parse(e.Value.ToString());
+				break;
 			}
 		}
 
-		/// <summary>Cell formatting...</summary>
+		/// <summary>Cell formatting</summary>
 		private void OnCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
 		{
 			var grid = (DataGridView)sender;
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 
-			if (e.RowIndex == m_bs_patterns.Count)
+			if (e.RowIndex >= m_bs_patterns.Count)
 			{
 				e.Value = null;
 			}
@@ -291,7 +360,6 @@ namespace Rylogic.VSExtension
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 
 			var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-
 			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
 			{
 			default: return;
@@ -310,7 +378,6 @@ namespace Rylogic.VSExtension
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 
 			var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-
 			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
 			{
 			default: return;
@@ -330,10 +397,19 @@ namespace Rylogic.VSExtension
 			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
 
-			if ((EPatternColumns)e.ColumnIndex == EPatternColumns.Pattern)
+			if (e.RowIndex >= m_bs_patterns.Count)
 			{
-				var pat = e.RowIndex < m_bs_patterns.Count ? (AlignPattern)m_bs_patterns[e.RowIndex] : null;
-				ShowEditPatternDlg(pat);
+				ShowEditPatternDlg(null);
+			}
+			else
+			{
+				var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
+				switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
+				{
+				case EPatternColumns.Pattern:
+					ShowEditPatternDlg(pat);
+					break;
+				}
 			}
 		}
 
@@ -349,25 +425,13 @@ namespace Rylogic.VSExtension
 			{
 				grid.DoDragDrop(grid.Rows[hit.RowIndex], DragDropEffects.Move);
 			}
-			if (e.Button == MouseButtons.Right && hit.Type == DataGridViewHitTestType.Cell)
-			{
-				var pat = (AlignPattern)m_bs_patterns[hit.RowIndex];
-				var menu = new ContextMenuStrip();
-				{
-					var opt = new ToolStripLabel("Set Comment", null, false, (s,a) =>
-						{
-							var dlg = new PromptForm{Title = "Set Comment", Value = pat.Comment};
-							if (dlg.ShowDialog(this) != DialogResult.OK) return;
-							pat.Comment = dlg.Value;
-						});
-					menu.Items.Add(opt);
-				}
-			}
 		}
 
 		/// <summary>Delete a pattern</summary>
 		private void OnDeletingRow(object sender, DataGridViewRowCancelEventArgs e)
 		{
+			if (e.Row.Index < 0 || e.Row.Index >= m_bs_patterns.Count) return;
+
 			// Note, don't update the grid here or it causes an ArgumentOutOfRange exception.
 			// Other stuff must be using the grid row that will be deleted.
 			var pat = (AlignPattern)m_bs_patterns[e.Row.Index];
@@ -378,6 +442,7 @@ namespace Rylogic.VSExtension
 				dlg.Close();
 
 			m_bs_patterns.RemoveAt(e.Row.Index);
+			SetPatternsDataSource();
 		}
 
 		#region Component Designer generated code
@@ -391,7 +456,15 @@ namespace Rylogic.VSExtension
 		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AlignOptionsControl));
 			this.m_split = new System.Windows.Forms.SplitContainer();
+			this.m_btn_reset = new System.Windows.Forms.Button();
+			this.m_btn_move_down = new System.Windows.Forms.Button();
+			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
+			this.m_btn_move_up = new System.Windows.Forms.Button();
+			this.m_btn_del = new System.Windows.Forms.Button();
+			this.m_btn_new = new System.Windows.Forms.Button();
 			this.m_btn_help_groups = new System.Windows.Forms.Button();
 			this.m_lbl_alignment_group = new System.Windows.Forms.Label();
 			this.m_grid_groups = new System.Windows.Forms.DataGridView();
@@ -416,6 +489,11 @@ namespace Rylogic.VSExtension
 			// m_split.Panel1
 			//
 			this.m_split.Panel1.AutoScroll = true;
+			this.m_split.Panel1.Controls.Add(this.m_btn_reset);
+			this.m_split.Panel1.Controls.Add(this.m_btn_move_down);
+			this.m_split.Panel1.Controls.Add(this.m_btn_move_up);
+			this.m_split.Panel1.Controls.Add(this.m_btn_del);
+			this.m_split.Panel1.Controls.Add(this.m_btn_new);
 			this.m_split.Panel1.Controls.Add(this.m_btn_help_groups);
 			this.m_split.Panel1.Controls.Add(this.m_lbl_alignment_group);
 			this.m_split.Panel1.Controls.Add(this.m_grid_groups);
@@ -425,14 +503,80 @@ namespace Rylogic.VSExtension
 			this.m_split.Panel2.Controls.Add(this.m_btn_help_patterns);
 			this.m_split.Panel2.Controls.Add(this.m_lbl_alignment_patterns);
 			this.m_split.Panel2.Controls.Add(this.m_grid_patterns);
-			this.m_split.Size = new System.Drawing.Size(369, 387);
-			this.m_split.SplitterDistance = 192;
+			this.m_split.Size = new System.Drawing.Size(445, 288);
+			this.m_split.SplitterDistance = 142;
 			this.m_split.TabIndex = 1;
+			//
+			// m_btn_reset
+			//
+			this.m_btn_reset.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_reset.Location = new System.Drawing.Point(312, -1);
+			this.m_btn_reset.Name = "m_btn_reset";
+			this.m_btn_reset.Size = new System.Drawing.Size(104, 20);
+			this.m_btn_reset.TabIndex = 10;
+			this.m_btn_reset.Text = "Reset to Defaults";
+			this.m_btn_reset.UseVisualStyleBackColor = true;
+			//
+			// m_btn_move_down
+			//
+			this.m_btn_move_down.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_move_down.ImageKey = "green_down.png";
+			this.m_btn_move_down.ImageList = this.m_image_list;
+			this.m_btn_move_down.Location = new System.Drawing.Point(419, 98);
+			this.m_btn_move_down.Name = "m_btn_move_down";
+			this.m_btn_move_down.Size = new System.Drawing.Size(26, 26);
+			this.m_btn_move_down.TabIndex = 9;
+			this.m_btn_move_down.UseVisualStyleBackColor = true;
+			//
+			// m_image_list
+			//
+			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
+			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
+			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
+			this.m_image_list.Images.SetKeyName(1, "red_x.png");
+			this.m_image_list.Images.SetKeyName(2, "green_up.png");
+			this.m_image_list.Images.SetKeyName(3, "green_down.png");
+			this.m_image_list.Images.SetKeyName(4, "green_tick.png");
+			this.m_image_list.Images.SetKeyName(5, "gray_cross.png");
+			this.m_image_list.Images.SetKeyName(6, "pencil.png");
+			//
+			// m_btn_move_up
+			//
+			this.m_btn_move_up.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_move_up.ImageKey = "green_up.png";
+			this.m_btn_move_up.ImageList = this.m_image_list;
+			this.m_btn_move_up.Location = new System.Drawing.Point(419, 72);
+			this.m_btn_move_up.Name = "m_btn_move_up";
+			this.m_btn_move_up.Size = new System.Drawing.Size(26, 26);
+			this.m_btn_move_up.TabIndex = 8;
+			this.m_btn_move_up.UseVisualStyleBackColor = true;
+			//
+			// m_btn_del
+			//
+			this.m_btn_del.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_del.ImageKey = "red_x.png";
+			this.m_btn_del.ImageList = this.m_image_list;
+			this.m_btn_del.Location = new System.Drawing.Point(419, 46);
+			this.m_btn_del.Name = "m_btn_del";
+			this.m_btn_del.Size = new System.Drawing.Size(26, 26);
+			this.m_btn_del.TabIndex = 7;
+			this.m_btn_del.UseVisualStyleBackColor = true;
+			//
+			// m_btn_new
+			//
+			this.m_btn_new.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_new.ImageKey = "edit_add.png";
+			this.m_btn_new.ImageList = this.m_image_list;
+			this.m_btn_new.Location = new System.Drawing.Point(419, 20);
+			this.m_btn_new.Name = "m_btn_new";
+			this.m_btn_new.Size = new System.Drawing.Size(26, 26);
+			this.m_btn_new.TabIndex = 6;
+			this.m_btn_new.UseVisualStyleBackColor = true;
 			//
 			// m_btn_help_groups
 			//
 			this.m_btn_help_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_help_groups.Location = new System.Drawing.Point(350, 0);
+			this.m_btn_help_groups.Location = new System.Drawing.Point(425, -1);
 			this.m_btn_help_groups.Name = "m_btn_help_groups";
 			this.m_btn_help_groups.Size = new System.Drawing.Size(20, 20);
 			this.m_btn_help_groups.TabIndex = 5;
@@ -450,6 +594,8 @@ namespace Rylogic.VSExtension
 			//
 			// m_grid_groups
 			//
+			this.m_grid_groups.AllowUserToAddRows = false;
+			this.m_grid_groups.AllowUserToResizeRows = false;
 			this.m_grid_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
@@ -457,16 +603,17 @@ namespace Rylogic.VSExtension
 			this.m_grid_groups.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.m_grid_groups.Location = new System.Drawing.Point(0, 20);
 			this.m_grid_groups.Margin = new System.Windows.Forms.Padding(0);
+			this.m_grid_groups.MultiSelect = false;
 			this.m_grid_groups.Name = "m_grid_groups";
 			this.m_grid_groups.RowHeadersWidth = 24;
 			this.m_grid_groups.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_groups.Size = new System.Drawing.Size(369, 172);
+			this.m_grid_groups.Size = new System.Drawing.Size(416, 122);
 			this.m_grid_groups.TabIndex = 0;
 			//
 			// m_btn_help_patterns
 			//
 			this.m_btn_help_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_help_patterns.Location = new System.Drawing.Point(350, 0);
+			this.m_btn_help_patterns.Location = new System.Drawing.Point(425, -1);
 			this.m_btn_help_patterns.Name = "m_btn_help_patterns";
 			this.m_btn_help_patterns.Size = new System.Drawing.Size(20, 20);
 			this.m_btn_help_patterns.TabIndex = 6;
@@ -484,6 +631,7 @@ namespace Rylogic.VSExtension
 			//
 			// m_grid_patterns
 			//
+			this.m_grid_patterns.AllowUserToResizeRows = false;
 			this.m_grid_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
@@ -491,10 +639,11 @@ namespace Rylogic.VSExtension
 			this.m_grid_patterns.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.m_grid_patterns.Location = new System.Drawing.Point(0, 20);
 			this.m_grid_patterns.Margin = new System.Windows.Forms.Padding(0);
+			this.m_grid_patterns.MultiSelect = false;
 			this.m_grid_patterns.Name = "m_grid_patterns";
 			this.m_grid_patterns.RowHeadersWidth = 24;
 			this.m_grid_patterns.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_patterns.Size = new System.Drawing.Size(369, 171);
+			this.m_grid_patterns.Size = new System.Drawing.Size(445, 122);
 			this.m_grid_patterns.TabIndex = 0;
 			//
 			// AlignOptionsControl
@@ -504,7 +653,7 @@ namespace Rylogic.VSExtension
 			this.AutoSize = true;
 			this.Controls.Add(this.m_split);
 			this.Name = "AlignOptionsControl";
-			this.Size = new System.Drawing.Size(369, 387);
+			this.Size = new System.Drawing.Size(445, 288);
 			this.m_split.Panel1.ResumeLayout(false);
 			this.m_split.Panel1.PerformLayout();
 			this.m_split.Panel2.ResumeLayout(false);

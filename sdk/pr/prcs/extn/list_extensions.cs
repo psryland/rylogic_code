@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using pr.util;
@@ -75,31 +76,39 @@ namespace pr.extn
 		}
 
 		/// <summary>Swap elements in the list</summary>
-		public static void Swap<T>(this IList<T> list, int index0, int index1)
+		public static void Swap(this IList list, int index0, int index1)
 		{
 			if (index0 == index1) return;
-			T tmp = list[index0];
+			var tmp = list[index0];
 			list[index0] = list[index1];
 			list[index1] = tmp;
 		}
 
 		/// <summary>Replaces 'replacee' with 'replacer' in this list. Throws if 'replacee' can't be found.</summary>
-		public static void Replace<T>(this IList<T> list, T replacee, T replacer)
+		public static void Replace<T>(this IList list, T replacee, T replacer)
 		{
 			if (ReferenceEquals(replacee, replacer)) return;
 			var idx = list.IndexOf(replacee);
 			list[idx] = replacer;
 		}
 
+		///// <summary>Replaces 'replacee' with 'replacer' in this list. Throws if 'replacee' can't be found.</summary>
+		//public static void Replace<T>(this IList<T> list, T replacee, T replacer)
+		//{
+		//	if (ReferenceEquals(replacee, replacer)) return;
+		//	var idx = list.IndexOf(replacee);
+		//	list[idx] = replacer;
+		//}
+
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
-		public static int IndexOf<T>(this System.Collections.IList list, Func<T,bool> pred, int start_index, int count)
+		public static int IndexOf<T>(this IList list, Func<T,bool> pred, int start_index, int count)
 		{
 			int i; for (i = start_index; i != count && !pred((T)list[i]); ++i) {}
 			return i != count ? i : -1;
 		}
 
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
-		public static int IndexOf<T>(this System.Collections.IList list, Func<T,bool> pred)
+		public static int IndexOf<T>(this IList list, Func<T,bool> pred)
 		{
 			return list.IndexOf(pred, 0, list.Count);
 		}
@@ -158,7 +167,7 @@ namespace pr.extn
 			}
 			return count;
 		}
-		public static int RemoveIf<T>(this System.Collections.IList list, Func<T,bool> pred)
+		public static int RemoveIf<T>(this IList list, Func<T,bool> pred)
 		{
 			int count = 0;
 			for (int i = list.Count; i-- != 0;)
