@@ -43,5 +43,5 @@ int wmain(int argc, wchar_t* argv[])
 	}
 
 	// We succeeded.
-	return 0;
+	return exit_code;
 }
