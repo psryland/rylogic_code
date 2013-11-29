@@ -8,7 +8,7 @@
     <ProjectGuid>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rylogic</RootNamespace>
+    <RootNamespace>pr</RootNamespace>
     <AssemblyName>Rylogic</AssemblyName>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -176,7 +176,9 @@
     <Compile Include="extn\binding_source_extensions.cs" />
     <Compile Include="extn\byte_array_extensions.cs" />
     <Compile Include="extn\control_extensions.cs" />
-    <Compile Include="extn\datatable_externsions.cs" />
+    <Compile Include="extn\datatable_externsions.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="extn\dict_extensions.cs" />
     <Compile Include="extn\datagridview_extensions.cs">
       <SubType>Component</SubType>
@@ -188,6 +190,7 @@
     <Compile Include="extn\exception_extensions.cs" />
     <Compile Include="extn\gfx_extensions.cs" />
     <Compile Include="extn\list_extensions.cs" />
+    <Compile Include="extn\memberinfo_extensions.cs" />
     <Compile Include="extn\object_extensions.cs" />
     <Compile Include="common\path_ex.cs" />
     <Compile Include="extn\pointf_extensions.cs" />

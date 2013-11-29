@@ -34,6 +34,10 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="rylogic, Version=1.0.5078.1206, Culture=neutral, PublicKeyToken=d58190847d96b83d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\sdk\pr\lib\anycpu\release\rylogic.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
@@ -52,12 +56,6 @@
     <Compile Include="Cmd\SignFile.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\Rylogic.csproj">
-      <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>Rylogic</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="deploy.py" />
