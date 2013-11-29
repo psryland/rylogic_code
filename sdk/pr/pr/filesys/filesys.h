@@ -526,6 +526,14 @@ namespace pr
 			if (_stat64(filepath.c_str(), &info) != 0) return 0;
 			return info.st_size;
 		}
+		template <typename TElem, typename Traits> inline __int64 FileLength(std::basic_fstream<TElem, Traits> const& fs)
+		{
+			auto addr = fs.tellg();
+			fs.seekg(0, std::ios::end);
+			auto size = fs.tellg();
+			fs.seekg(addr, std::ios::begin);
+			return size;
+		}
 
 		// Return the amount of free disk space. 'drive' = 'A', 'B', 'C', etc
 		inline unsigned __int64 GetDiskFree(char drive)

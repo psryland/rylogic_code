@@ -724,15 +724,14 @@
     <Content Include="Resources\green_tick.png" />
   </ItemGroup>
   <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\sdk\pr\prcs\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>Rylogic</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
-  </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>Q:\bin\csex\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>
