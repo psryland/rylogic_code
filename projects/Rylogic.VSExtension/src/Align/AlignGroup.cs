@@ -10,13 +10,13 @@ namespace Rylogic.VSExtension
 		public string Name { get; set; }
 
 		/// <summary>True if the aligned group should have a leading whitespace</summary>
-		public bool LeadingSpace { get; set; }
+		public int LeadingSpace { get; set; }
 
 		/// <summary>The patterns belonging to the group</summary>
 		public BindingList<AlignPattern> Patterns { get; set; }
 
-		public AlignGroup() :this(string.Empty, true) {}
-		public AlignGroup(string name, bool leading_space, params AlignPattern[] patterns)
+		public AlignGroup() :this(string.Empty, 1) {}
+		public AlignGroup(string name, int leading_space, params AlignPattern[] patterns)
 		{
 			Name = name;
 			LeadingSpace = leading_space;

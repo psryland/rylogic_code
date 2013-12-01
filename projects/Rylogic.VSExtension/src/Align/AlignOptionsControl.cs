@@ -1,30 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
-using pr.util;
-using Rylogic.VSExtension.Properties;
 
 namespace Rylogic.VSExtension
 {
 	internal class AlignOptionsControl :UserControl
 	{
-		private enum EGroupColumns
-		{
-			Name,
-		}
-		private enum EPatternColumns
-		{
-			Active,
-			Pattern,
-			Offset,
-			MinWidth,
-			Edit
-		}
-
 		private readonly AlignOptions m_options;
 		private readonly BindingSource m_bs_groups;
 		private readonly BindingSource m_bs_patterns;
@@ -32,7 +16,7 @@ namespace Rylogic.VSExtension
 		private readonly HintBalloon m_hint_balloon;
 		private readonly ToolTip m_tt;
 		private SplitContainer m_split;
-		private DataGridView m_grid_groups;
+		private GroupGrid m_grid_groups;
 		private Label m_lbl_alignment_group;
 		private Label m_lbl_alignment_patterns;
 		private Button m_btn_help_groups;
@@ -43,10 +27,12 @@ namespace Rylogic.VSExtension
 		private Button m_btn_del;
 		private Button m_btn_help_patterns;
 		private Button m_btn_reset;
-		private DataGridView m_grid_patterns;
+		private PatternGrid m_grid_patterns;
 
 		public AlignOptionsControl(AlignOptions options)
 		{
+			InitializeComponent();
+
 			m_options = options;
 			m_bs_groups = new BindingSource{DataSource = m_options.Groups};
 			m_bs_patterns = new BindingSource{DataSource = null};
@@ -54,7 +40,17 @@ namespace Rylogic.VSExtension
 			m_hint_balloon = new HintBalloon{ShowDelay = 0, PreferredTipCorner = HintBalloon.ETipCorner.BottomLeft};
 			m_tt = new ToolTip();
 
-			InitializeComponent();
+			options.Deactivating += (s,a) =>
+				{
+					if (m_grid_groups.IsCurrentCellInEditMode  ) { m_grid_groups  .EndEdit(); a.Cancel = true; }
+					if (m_grid_patterns.IsCurrentCellInEditMode) { m_grid_patterns.EndEdit(); a.Cancel = true; }
+				};
+
+			options.Saving += (s,a) =>
+				{
+					// Grab focus to take grids out of edit mode
+					Focus();
+				};
 
 			SetupGroupsGrid();
 			SetupPatternsGrid();
@@ -76,18 +72,14 @@ namespace Rylogic.VSExtension
 		/// <summary>Setup the grid of alignment groups</summary>
 		private void SetupGroupsGrid()
 		{
-			m_grid_groups.AutoGenerateColumns = false;
-			m_grid_groups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = EGroupColumns.Name.ToStringFast(), DataPropertyName = Reflect<AlignGroup>.MemberName(x => x.Name)});
-			m_grid_groups.DataSource = m_bs_groups;
+			m_grid_groups.Init();
+			m_grid_groups.Data = m_bs_groups;
 
 			// When the selected item in the groups grid changes, update the data source of the pattern grid
 			m_bs_groups.PositionChanged += (s,a) =>
 				{
 					SetPatternsDataSource();
-					var pos = m_bs_groups.Position;
-					m_btn_move_up.Enabled   = pos > 0;
-					m_btn_move_down.Enabled = pos < m_bs_groups.Count - 1;
-					m_btn_del.Enabled = m_bs_groups.CurrentOrDefault() != null;
+					UpdateButtonStates();
 				};
 
 			// Setup add/remove/order buttons
@@ -107,6 +99,7 @@ namespace Rylogic.VSExtension
 					var x = m_bs_groups.Position;
 					if (x <= 0) return;
 					m_bs_groups.List.Swap(x, x-1);
+					m_grid_groups.SelectRow(x - 1);
 				};
 			m_btn_move_down.ToolTip(m_tt, "Move the selected alignment group down in the priority order");
 			m_btn_move_down.Click += (s,a) =>
@@ -114,6 +107,7 @@ namespace Rylogic.VSExtension
 					var x = m_bs_groups.Position;
 					if (x >= m_bs_groups.Count - 1) return;
 					m_bs_groups.List.Swap(x, x+1);
+					m_grid_groups.SelectRow(x + 1);
 				};
 
 			// Setup the help button for groups
@@ -124,7 +118,8 @@ namespace Rylogic.VSExtension
 						"Select a group to show its patterns in the table below. " +
 						"The order of groups defines the preferred order when looking for " +
 						"potential alignment candidates. Change the order by clicking and " +
-						"dragging the row header.";
+						"dragging the row header. 'LeadingSpace' is the number of white space " +
+						"characters added in front of the aligned text.";
 					m_hint_balloon.Show(m_grid_groups, m_grid_groups.ClientRectangle.TopLeft().Shifted(10,10), tt1, 10000);
 				};
 
@@ -139,44 +134,17 @@ namespace Rylogic.VSExtension
 					m_bs_groups.ResetBindings(false);
 					m_bs_patterns.ResetBindings(false);
 				};
+
+			UpdateButtonStates();
 		}
 
 		/// <summary>Setup the grid of patterns</summary>
 		private void SetupPatternsGrid()
 		{
-			// The patterns grid is virtual mode so that we can draw images and handle edits
-			m_grid_patterns.AllowDrop = true;
-			m_grid_patterns.VirtualMode = true;
-			m_grid_patterns.AutoGenerateColumns = false;
-			m_grid_patterns.Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Active   ,HeaderText = EPatternColumns.Active   .ToStringFast() ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			m_grid_patterns.Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.Pattern  ,HeaderText = EPatternColumns.Pattern  .ToStringFast() ,FillWeight = 100 ,ReadOnly = true });
-			m_grid_patterns.Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.Offset   ,HeaderText = EPatternColumns.Offset   .ToStringFast() ,FillWeight = 30 });
-			m_grid_patterns.Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.MinWidth ,HeaderText = EPatternColumns.MinWidth .ToStringFast() ,FillWeight = 30 });
-			m_grid_patterns.Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Edit     ,HeaderText = EPatternColumns.Edit     .ToStringFast() ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-
-			m_grid_patterns.KeyDown               += DataGridViewExtensions.Copy;
-			m_grid_patterns.KeyDown               += DataGridViewExtensions.SelectAll;
-			m_grid_patterns.CellValueNeeded       += OnCellValueNeeded;
-			m_grid_patterns.CellValidating        += OnCellValidating;
-			m_grid_patterns.CellValuePushed       += OnCellValuePushed;
-			m_grid_patterns.CellFormatting        += OnCellFormatting;
-			m_grid_patterns.CellToolTipTextNeeded += OnCellToolTipNeeded;
-			m_grid_patterns.CellClick             += OnCellClick;
-			m_grid_patterns.CellDoubleClick       += OnCellDoubleClick;
-			m_grid_patterns.MouseDown             += OnMouseDown;
-			m_grid_patterns.UserDeletingRow       += OnDeletingRow;
-			m_grid_patterns.RowCount               = m_bs_patterns.Count + (m_grid_patterns.AllowUserToAddRows ? 1 : 0);
-
-			// Clear the 'X' null image
-			foreach (var col in m_grid_patterns.Columns.OfType<DataGridViewImageColumn>())
-				col.DefaultCellStyle.NullValue = null;
-
-			// Changes in the patterns data source updates the grid
-			m_bs_patterns.ListChanged += (s,a) =>
-				{
-					m_grid_patterns.RowCount = m_bs_patterns.Count + (m_grid_patterns.AllowUserToAddRows ? 1 : 0);
-					m_grid_patterns.Refresh();
-				};
+			m_grid_patterns.Init();
+			m_grid_patterns.Data                = m_bs_patterns;
+			m_grid_patterns.ShowEditPatternDlg  = ShowEditPatternDlg;
+			m_grid_patterns.CloseEditPatternDlg = CloseEditPatternDlg;
 
 			// Setup the help button for patterns
 			m_btn_help_patterns.Click += (s,a) =>
@@ -190,19 +158,25 @@ namespace Rylogic.VSExtension
 				};
 		}
 
+		/// <summary>Update the enabled states of the group buttons</summary>
+		private void UpdateButtonStates()
+		{
+			var pos = m_bs_groups.Position;
+			m_btn_move_up   .Enabled = pos > 0;
+			m_btn_move_down .Enabled = pos < m_bs_groups.Count - 1;
+			m_btn_del       .Enabled = m_bs_groups.CurrentOrDefault() != null;
+		}
+
 		/// <summary>Update the data source for the patterns grid to be the current group patterns</summary>
 		private void SetPatternsDataSource()
 		{
-			m_grid_patterns.RowCount = 0 + (m_grid_patterns.AllowUserToAddRows ? 1 : 0);
 			m_bs_patterns.DataSource = null;
 
 			var grp = (AlignGroup)m_bs_groups.CurrentOrDefault();
 			if (grp != null)
-			{
 				m_bs_patterns.DataSource = grp.Patterns;
-				m_grid_patterns.RowCount = m_bs_patterns.Count + (m_grid_patterns.AllowUserToAddRows ? 1 : 0);
-				m_grid_patterns.Refresh();
-			}
+
+			m_grid_patterns.Refresh();
 		}
 
 		/// <summary>Display an instance of the edit pattern dialog</summary>
@@ -244,205 +218,13 @@ namespace Rylogic.VSExtension
 			dlg.Show(this);
 		}
 
-		/// <summary>Supplies cell values for the pattern grid</summary>
-		private void OnCellValueNeeded(object sender, DataGridViewCellValueEventArgs e)
+		/// <summary>Close any edit pattern dialogs that reference 'pat'</summary>
+		private void CloseEditPatternDlg(AlignPattern pat)
 		{
-			var grid = (DataGridView)sender;
-			if (e.RowIndex    < 0 || e.RowIndex    >= m_bs_patterns.Count) return;
-			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-			// Note m_bs_patterns.Count != grid.RowCount, because of the 'insert new row' row
-
-			var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
-			{
-			default:
-				e.Value = string.Empty;
-				break;
-			case EPatternColumns.Pattern:
-				var val = pat.ToString();
-				if (string.IsNullOrEmpty(val)) val = "<blank>";
-				if (string.IsNullOrWhiteSpace(val)) val = "'"+val+"'";
-				if (pat.Invert) val = "not " + val;
-				e.Value = val;
-				break;
-			case EPatternColumns.Offset:
-				e.Value = pat.Offset;
-				break;
-			case EPatternColumns.MinWidth:
-				e.Value = pat.MinWidth;
-				break;
-			}
-		}
-
-		/// <summary>Validates cell data before it is pushed</summary>
-		private void OnCellValidating(object sender, DataGridViewCellValidatingEventArgs e)
-		{
-			var grid = (DataGridView)sender;
-			if (e.RowIndex    < 0 || e.RowIndex    >= m_bs_patterns.Count) return;
-			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount) return;
-			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-
-			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
-			{
-			default:
-				grid.Rows[e.RowIndex].ErrorText = string.Empty;
-				break;
-			case EPatternColumns.Offset:
-				int ofs;
-				if (!int.TryParse(e.FormattedValue.ToString(), out ofs))
-				{
-					e.Cancel = true;
-					grid.Rows[e.RowIndex].ErrorText = "Offset must be a positive or negative integer";
-				}
-				break;
-			case EPatternColumns.MinWidth:
-				int width;
-				if (!int.TryParse(e.FormattedValue.ToString(), out width) || width < 0)
-				{
-					e.Cancel = true;
-					grid.Rows[e.RowIndex].ErrorText = "Min Width must be a positive integer";
-				}
-				break;
-			}
-		}
-
-		/// <summary>Update a cell value after editing</summary>
-		private void OnCellValuePushed(object sender, DataGridViewCellValueEventArgs e)
-		{
-			var grid = (DataGridView)sender;
-			if (e.RowIndex    < 0 || e.RowIndex    >= m_bs_patterns.Count) return;
-			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-
-			var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
-			{
-			case EPatternColumns.Offset:
-				pat.Offset = int.Parse(e.Value.ToString());
-				break;
-			case EPatternColumns.MinWidth:
-				pat.MinWidth = int.Parse(e.Value.ToString());
-				break;
-			}
-		}
-
-		/// <summary>Cell formatting</summary>
-		private void OnCellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
-		{
-			var grid = (DataGridView)sender;
-			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount) return;
-			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-
-			if (e.RowIndex >= m_bs_patterns.Count)
-			{
-				e.Value = null;
-			}
-			else
-			{
-				var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-				switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
-				{
-				default: return;
-				case EPatternColumns.Active:
-					e.Value = pat.Active ? Resources.green_tick : Resources.gray_cross;
-					break;
-				case EPatternColumns.Edit:
-					e.Value = Resources.pencil;
-					break;
-				}
-			}
-		}
-
-		/// <summary>Cell tool tips</summary>
-		private void OnCellToolTipNeeded(object sender, DataGridViewCellToolTipTextNeededEventArgs e)
-		{
-			var grid = (DataGridView)sender;
-			if (e.RowIndex    < 0 || e.RowIndex    >= m_bs_patterns.Count) return;
-			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-
-			var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
-			{
-			default: return;
-			case EPatternColumns.Pattern:
-				e.ToolTipText= pat.Comment;
-				break;
-			}
-		}
-
-		/// <summary>Handle cell clicks</summary>
-		private void OnCellClick(object sender, DataGridViewCellEventArgs e)
-		{
-			var grid = (DataGridView)sender;
-			if (e.RowIndex    < 0 || e.RowIndex    >= m_bs_patterns.Count) return;
-			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
-			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-
-			var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-			switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
-			{
-			default: return;
-			case EPatternColumns.Active:
-				pat.Active = !pat.Active;
-				break;
-			case EPatternColumns.Edit:
-				ShowEditPatternDlg(pat);
-				break;
-			}
-		}
-
-		/// <summary>Double click edits the pattern</summary>
-		private void OnCellDoubleClick(object sender, DataGridViewCellEventArgs e)
-		{
-			var grid = (DataGridView)sender;
-			if (e.RowIndex    < 0 || e.RowIndex    >= grid.RowCount   ) return;
-			if (e.ColumnIndex < 0 || e.ColumnIndex >= grid.ColumnCount) return;
-
-			if (e.RowIndex >= m_bs_patterns.Count)
-			{
-				ShowEditPatternDlg(null);
-			}
-			else
-			{
-				var pat = (AlignPattern)m_bs_patterns[e.RowIndex];
-				switch ((EPatternColumns)grid.Columns[e.ColumnIndex].Tag)
-				{
-				case EPatternColumns.Pattern:
-					ShowEditPatternDlg(pat);
-					break;
-				}
-			}
-		}
-
-		/// <summary>Handle mouse down on the patterns grid</summary>
-		private void OnMouseDown(object sender, MouseEventArgs e)
-		{
-			var grid = (DataGridView)sender;
-			var hit = grid.HitTest(e.X, e.Y);
-			if (hit.RowIndex    < 0 || hit.RowIndex    >= m_bs_patterns.Count) return;
-			if (hit.RowIndex    < 0 || hit.RowIndex    >= grid.RowCount) return;
-
-			if (e.Button == MouseButtons.Left && hit.Type == DataGridViewHitTestType.RowHeader)
-			{
-				grid.DoDragDrop(grid.Rows[hit.RowIndex], DragDropEffects.Move);
-			}
-		}
-
-		/// <summary>Delete a pattern</summary>
-		private void OnDeletingRow(object sender, DataGridViewRowCancelEventArgs e)
-		{
-			if (e.Row.Index < 0 || e.Row.Index >= m_bs_patterns.Count) return;
-
-			// Note, don't update the grid here or it causes an ArgumentOutOfRange exception.
-			// Other stuff must be using the grid row that will be deleted.
-			var pat = (AlignPattern)m_bs_patterns[e.Row.Index];
-
 			// If the deleted row is currently being edited, close the editor first
 			EditPatternDlg dlg;
 			if (m_edit_windows.TryGetValue(pat, out dlg))
 				dlg.Close();
-
-			m_bs_patterns.RemoveAt(e.Row.Index);
-			SetPatternsDataSource();
 		}
 
 		#region Component Designer generated code
@@ -467,10 +249,10 @@ namespace Rylogic.VSExtension
 			this.m_btn_new = new System.Windows.Forms.Button();
 			this.m_btn_help_groups = new System.Windows.Forms.Button();
 			this.m_lbl_alignment_group = new System.Windows.Forms.Label();
-			this.m_grid_groups = new System.Windows.Forms.DataGridView();
 			this.m_btn_help_patterns = new System.Windows.Forms.Button();
 			this.m_lbl_alignment_patterns = new System.Windows.Forms.Label();
-			this.m_grid_patterns = new System.Windows.Forms.DataGridView();
+			this.m_grid_groups = new Rylogic.VSExtension.GroupGrid();
+			this.m_grid_patterns = new Rylogic.VSExtension.PatternGrid();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();
@@ -592,24 +374,6 @@ namespace Rylogic.VSExtension
 			this.m_lbl_alignment_group.TabIndex = 2;
 			this.m_lbl_alignment_group.Text = "Alignment Groups:";
 			//
-			// m_grid_groups
-			//
-			this.m_grid_groups.AllowUserToAddRows = false;
-			this.m_grid_groups.AllowUserToResizeRows = false;
-			this.m_grid_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_grid_groups.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-			this.m_grid_groups.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_groups.Location = new System.Drawing.Point(0, 20);
-			this.m_grid_groups.Margin = new System.Windows.Forms.Padding(0);
-			this.m_grid_groups.MultiSelect = false;
-			this.m_grid_groups.Name = "m_grid_groups";
-			this.m_grid_groups.RowHeadersWidth = 24;
-			this.m_grid_groups.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_groups.Size = new System.Drawing.Size(416, 122);
-			this.m_grid_groups.TabIndex = 0;
-			//
 			// m_btn_help_patterns
 			//
 			this.m_btn_help_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -629,8 +393,28 @@ namespace Rylogic.VSExtension
 			this.m_lbl_alignment_patterns.TabIndex = 3;
 			this.m_lbl_alignment_patterns.Text = "Alignment Patterns:";
 			//
+			// m_grid_groups
+			//
+			this.m_grid_groups.AllowUserToAddRows = false;
+			this.m_grid_groups.AllowUserToResizeRows = false;
+			this.m_grid_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_grid_groups.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid_groups.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid_groups.Location = new System.Drawing.Point(0, 22);
+			this.m_grid_groups.Margin = new System.Windows.Forms.Padding(0);
+			this.m_grid_groups.MultiSelect = false;
+			this.m_grid_groups.Name = "m_grid_groups";
+			this.m_grid_groups.RowHeadersWidth = 24;
+			this.m_grid_groups.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid_groups.Size = new System.Drawing.Size(416, 120);
+			this.m_grid_groups.TabIndex = 0;
+			this.m_grid_groups.VirtualMode = true;
+			//
 			// m_grid_patterns
 			//
+			this.m_grid_patterns.AllowUserToAddRows = false;
 			this.m_grid_patterns.AllowUserToResizeRows = false;
 			this.m_grid_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)
@@ -645,6 +429,7 @@ namespace Rylogic.VSExtension
 			this.m_grid_patterns.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.m_grid_patterns.Size = new System.Drawing.Size(445, 122);
 			this.m_grid_patterns.TabIndex = 0;
+			this.m_grid_patterns.VirtualMode = true;
 			//
 			// AlignOptionsControl
 			//

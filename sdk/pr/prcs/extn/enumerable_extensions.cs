@@ -19,13 +19,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the indices of 'element' within this collection</summary>
-		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element)
-		{
-			return source.IndicesOf(element, null);
-		}
-
-		/// <summary>Returns the indices of 'element' within this collection</summary>
-		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, IEqualityComparer<TSource> comparer)
+		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, IEqualityComparer<TSource> comparer = null)
 		{
 			comparer = comparer ?? EqualityComparer<TSource>.Default;
 			var i = 0;
@@ -45,6 +39,16 @@ namespace pr.extn
 				if (selector(s)) yield return i;
 				++i;
 			}
+		}
+
+		/// <summary>Returns true if all elements this collection result in the same result from 'selector'</summary>
+		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, IEqualityComparer<TRet> comparer = null)
+		{
+			comparer = comparer ?? EqualityComparer<TRet>.Default;
+
+			if (!source.Any()) return true;
+			var first = selector(source.First());
+			return source.Skip(1).All(x => comparer.Equals(first, selector(x)));
 		}
 	}
 }

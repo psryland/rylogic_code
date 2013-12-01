@@ -141,16 +141,16 @@ namespace Rylogic.VSExtension
 			var offset = Range.Invalid;
 			var min_width = 0;
 			var column = 0;
-			var leading_ws = false;
+			var leading_ws = 0;
 			foreach (var tok in toks)
 			{
 				offset.Begin = Math.Min(offset.Begin, tok.Patn.Offset);
 				offset.End   = Math.Max(offset.End,   tok.Patn.Offset);
 				min_width    = Math.Max(min_width, tok.Patn.MinWidth);
 				column       = Math.Max(column, tok.MinColumnIndex);
-				leading_ws  |= tok.Grp.LeadingSpace;
+				leading_ws  |= Math.Max(leading_ws, tok.Grp.LeadingSpace);
 			}
-			if (column != 0 && leading_ws) column++; // Add a leading whitespace, unless at column 0
+			if (column != 0) column += leading_ws; // Add leading whitespace, unless at column 0
 			column += (int)offset.Count;
 			return new {Column = column, MinWidth = min_width, MinOffset = offset.Begin};
 		}
@@ -168,10 +168,12 @@ namespace Rylogic.VSExtension
 				if (start_line_number == line_number && end_line_number == line_number)
 				{
 					var start_line = selection.Start.Position.GetContainingLine();
+					var start_line_text = start_line.GetText();
 					var s = selection.Start.Position - start_line.Start.Position;
 					var e = selection.End.Position   - start_line.Start.Position;
-					var expr = start_line.GetText().Substring(s, e - s);
-					return new[]{new AlignGroup("Selection", false, new AlignPattern(EPattern.Substring, expr))}.ToList();
+					var expr = start_line_text.Substring(s, e - s);
+					var ws = s > 0 && char.IsWhiteSpace(start_line_text[s - 1]) ? 1 : 0;
+					return new[]{new AlignGroup("Selection", ws, new AlignPattern(EPattern.Substring, expr))}.ToList();
 				}
 			}
 
@@ -284,8 +286,7 @@ namespace Rylogic.VSExtension
 
 				// If there are edits but they are all already aligned at the
 				// correct column, then move on to the next candidate.
-				var pos = FindAlignColumn(edits);
-				if (edits.All(x => x.CurrentColumnIndex - x.Patn.Offset == pos.Column))
+				if (edits.AllSame(x => x.CurrentColumnIndex - x.Patn.Offset))
 				{
 					edits.Clear();
 					continue;
@@ -344,8 +345,8 @@ namespace Rylogic.VSExtension
 
 				foreach (var edit in edits)
 				{
-					var ws_head = pos.Column + edit.Patn.Offset - edit.MinColumnIndex;
-					var ws_tail = pos.MinWidth - (edit.Span.Count + edit.Patn.Offset - pos.MinOffset);
+					var ws_head = (int)(pos.Column + edit.Patn.Offset - edit.MinColumnIndex);
+					var ws_tail = (int)(pos.MinWidth - (edit.Span.Count + edit.Patn.Offset - pos.MinOffset));
 
 					// Careful with order, we need to apply the edits assuming 'line' isn't changed with each one
 
