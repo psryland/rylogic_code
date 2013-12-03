@@ -286,7 +286,7 @@ namespace pr.extn
 				grid.ColumnHeadersVisible = col_count > 1;
 
 			// Measure each column's preferred width
-			var col_widths = Enumerable.Repeat(30f, col_count).ToArray();
+			var col_widths = grid.Columns.Cast<DataGridViewColumn>().Select(x => x.FillWeight).ToArray();//Enumerable.Repeat(30f, col_count).ToArray();
 			using (var gfx = grid.CreateGraphics())
 			{
 				foreach (var row in grid.GetRowsWithState(DataGridViewElementStates.Displayed))
@@ -308,9 +308,14 @@ namespace pr.extn
 			var total_width = Math.Max(col_widths.Sum(), 1);
 
 			// Resize columns. If the total width is less than the control width use the control width instead
+			var remainder = 0f;
 			var scale = Maths.Max(grid_width / total_width, 1f);
 			foreach (DataGridViewColumn col in grid.Columns)
-				col.Width = (int)(col_widths[col.Index] * scale);
+			{
+				var width = (int)(col_widths[col.Index] * scale + remainder);
+				remainder = col_widths[col.Index] * scale - (float)width;
+				col.Width = width;
+			}
 		}
 
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>

@@ -8,6 +8,12 @@ namespace pr.extn
 {
 	public static class ObjectExtensions
 	{
+		/// <summary>Static cast this object to type 'T'</summary>
+		public static T As<T>(this object obj)
+		{
+			return (T)obj;
+		}
+
 		/// <summary>Returns a string containing a description of this object and its member values</summary>
 		public static string Dump(this object obj)
 		{
@@ -142,11 +148,12 @@ namespace pr.extn
 	}
 }
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 	using extn;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static partial class TestExtensions
@@ -160,7 +167,7 @@ namespace pr
 				public Cloner m_child;
 				public List<DateTime> m_list;
 				public Dictionary<string, object> m_dict;
-				
+
 				protected Cloner() :this(0) {}
 				public Cloner(int level)
 				{
@@ -203,6 +210,11 @@ namespace pr
 					if (d == null || d.m_derived_field != m_derived_field) return false;
 					return base.Equal(rhs);
 				}
+			}
+			[Test] public static void Casts()
+			{
+				var i = 2;
+				var s = i.As<short>();
 			}
 			[Test] public static void ShallowCopy()
 			{

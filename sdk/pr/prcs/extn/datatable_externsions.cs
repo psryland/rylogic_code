@@ -4,7 +4,6 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using pr.common;
 using pr.util;
 
 namespace pr.extn
@@ -23,6 +22,7 @@ namespace pr.extn
 			return Scope.Create(dt.BeginLoadData, dt.EndLoadData);
 		}
 
+		// While these are awesome, they're really slow :(
 		/// <summary>Helper for reading fields in this table</summary>
 		public static TReturn get<TRowType, TReturn>(this TRowType row, Expression<Func<TRowType,TReturn>> expression) where TRowType :DataRow
 		{
@@ -46,17 +46,40 @@ namespace pr.extn
 			if (generate_columns)
 				AutoGenerateColumns();
 		}
+
+		/// <summary>The row constructor for 'TRowType'</summary>
+		private ConstructorInfo Constructor
+		{
+			get
+			{
+				if (m_constructor == null)
+				{
+					m_constructor = typeof(TRowType).GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(DataRowBuilder)}, null);
+					if (m_constructor == null)
+						throw new MissingMethodException("No constructor that takes 'DataRowBuilder'");
+				}
+				return m_constructor;
+			}
+		}
+		private ConstructorInfo m_constructor;
+
 		protected override Type GetRowType()
 		{
 			return typeof(TRowType);
 		}
 		protected override DataRow NewRowFromBuilder(DataRowBuilder builder)
 		{
-			 return base.NewRow();
+			return (TRowType)Constructor.Invoke(new object[]{builder});
 		}
 		public new TRowType NewRow()
 		{
 			return (TRowType)base.NewRow();
+		}
+
+		/// <summary>Add a row to the table. To use this, call 'NewRow' first, fill in the fields, then call AddRow.</summary>
+		public void AddRow(TRowType sess)
+		{
+			Rows.Add(sess);
 		}
 
 		/// <summary>Constructs a custom DataTable using attributed properties on the row type.</summary>

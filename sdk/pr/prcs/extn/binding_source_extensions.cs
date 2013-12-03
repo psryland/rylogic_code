@@ -3,6 +3,7 @@
 //  Copyright © Rylogic Ltd 2010
 //***************************************************
 
+using System.ComponentModel;
 using System.Windows.Forms;
 using pr.util;
 
@@ -20,10 +21,22 @@ namespace pr.extn
 		{
 			return Scope.Create(() => bs.RaiseListChangedEvents = false, () => bs.RaiseListChangedEvents = true);
 		}
+
+		/// <summary>True if the list changed event is probably something you care about</summary>
+		public static bool WorthWorryingAbout(this ListChangedType lct)
+		{
+			return
+				lct == ListChangedType.ItemAdded   ||
+				lct == ListChangedType.ItemChanged ||
+				lct == ListChangedType.ItemMoved   ||
+				lct == ListChangedType.ItemDeleted ||
+				lct == ListChangedType.Reset;
+		}
 	}
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;

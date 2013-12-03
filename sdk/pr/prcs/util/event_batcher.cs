@@ -38,7 +38,14 @@ namespace pr.util
 
 					if (synchronising_object == null || !synchronising_object.InvokeRequired)
 					{
-						Action();
+						try
+						{
+							Action();
+						}
+						catch (Exception ex)
+						{
+							Debug.Assert(false, "Batched action throw an unhandled exception: "+ex.Message);
+						}
 					}
 					else
 					{
@@ -59,7 +66,7 @@ namespace pr.util
 		/// <summary>Signal the event. Signal can be called multiple times during the processing of a windows message.
 		/// The event will be delayed to a later windows message and will only be called once.
 		/// Note: this can be called from any thread, the resulting event will be marshalled to the synchronising object's
-		/// thread, or run on the threadpool if no synchronising object is given</summary>
+		/// thread, or run on the thread pool if no synchronising object is given</summary>
 		public void Signal()
 		{
 			lock (m_timer) { m_signalled = true; m_timer.Enabled = m_allow_enable && m_signalled; }

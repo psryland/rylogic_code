@@ -10,7 +10,7 @@ using pr.extn;
 using pr.gfx;
 using pr.maths;
 
-namespace RyLogViewer
+namespace pr.gui
 {
 	/// <summary>
 	/// A vertical scroll bar replacement that shows a subrange within a larger range.
@@ -168,7 +168,6 @@ namespace RyLogViewer
 		{
 			base.OnMouseMove(e);
 			if (m_dragging) ScrollThumbPos(e.Y);
-			
 		}
 		protected override void OnMouseUp(MouseEventArgs e)
 		{
@@ -300,7 +299,6 @@ namespace RyLogViewer
 	}
 }
 
-
 		///// <summary>Return the current centre position of the slider relative to TotalRange.</summary>
 		//public long RangeCentrePos
 		//{
@@ -326,11 +324,9 @@ namespace RyLogViewer
 		//    get { return m_frac; }
 		//    set { m_frac = Maths.Clamp(value, 0.0, 1.0); RaiseValueChanged(); Invalidate(); }
 		//}
-		
+
 		//var thumb_rect = new Rectangle(bounds.X, bounds.Y + thm_centre - thm_hheight, bounds.Width, 2 * thm_hheight); thumb_rect.Inflate(-2,0);
 
-
-		
 		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("Minimum")]
 		//public int Minimum
 		//{
@@ -351,5 +347,3 @@ namespace RyLogViewer
 		//    get { return (int)Maths.Lerp(Minimum, Maximum, (float)Fraction); }
 		//    set { Fraction = Maths.Ratio(Minimum, value, Maximum); RaiseValueChanged(); Invalidate(); }
 		//}
-
-			

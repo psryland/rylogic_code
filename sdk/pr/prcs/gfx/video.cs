@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Threading;
-using DirectShowLib;
+using pr.directshow;
 using Microsoft.Win32.SafeHandles;
 
 namespace pr.gfx
@@ -64,19 +64,19 @@ namespace pr.gfx
 			try
 			{
 				if (m_filter_graph != null) throw new Exception("Reusing this Video object is not allowed");
-				
+
 				m_file = file;
 				m_filter_graph = new FilterGraph() as IFilterGraph2;
 				if (m_filter_graph == null) throw new Exception("failed to create direct show filter graph");
-				
+
 				// Have the filter graph construct the appropriate graph automatically
 				DsError.ThrowExceptionForHR(m_filter_graph.RenderFile(file, null));
-				
+
 				#if DEBUG
 				// Allows you to view the graph with GraphEdit File/Connect
 				m_ds_rot = new DsROTEntry(m_filter_graph);
 				#endif
-				
+
 				// Grab some other interfaces
 				m_media_event    = m_filter_graph as IMediaEvent;
 				m_media_ctrl     = m_filter_graph as IMediaControl;
@@ -84,35 +84,35 @@ namespace pr.gfx
 				if (m_media_event    == null) throw new Exception("failed to obtain a direct show IMediaEvent interface");
 				if (m_media_ctrl     == null) throw new Exception("failed to obtain a direct show IMediaControl interface");
 				if (m_media_position == null) throw new Exception("failed to obtain a direct show IMediaPosition interface");
-				
+
 				// Grab optional interfaces
 				m_video_window   = m_filter_graph as IVideoWindow;
 				m_basic_video    = m_filter_graph as IBasicVideo;
 				m_basic_audio    = m_filter_graph as IBasicAudio;
-				
+
 				// If this is an audio-only clip, get_Visible() won't work. Also, if this
 				// video is encoded with an unsupported codec, we won't see any video,
 				// although the audio will work if it is of a supported format.
 				if (m_video_window != null)
 				{
 					const int E_NOINTERFACE = unchecked((int)0x80004002);
-					
+
 					// Use put Visible since we want to hide the video window
 					// till we're ready to show it anyway
 					int hr = m_video_window.put_Visible(OABool.False);
 					if (hr == E_NOINTERFACE) m_video_window = null;
 					else DsError.ThrowExceptionForHR(hr);
 				}
-				
+
 				// Get the event handle the graph will use to signal when events occur, wrap it in a ManualResetEvent
 				IntPtr media_event;
 				DsError.ThrowExceptionForHR(m_media_event.GetEventHandle(out media_event));
 				m_event = new ManualResetEvent(false){SafeWaitHandle = new SafeWaitHandle(media_event, false)};
-				
+
 				// Create a new thread to wait for events
 				m_media_event_thread = new Thread(MediaEventWait){Name = "Media Event Thread"};
 				m_media_event_thread.Start();
-				
+
 				if (FileLoaded != null) FileLoaded(this, file);
 			}
 			catch { Dispose(); throw; }
@@ -136,7 +136,7 @@ namespace pr.gfx
 			for (;;)
 			{
 				lock (m_shutdown_lock) if (m_shutdown) break; // shutdown the thread when flagged
-				
+
 				IntPtr p1, p2; EventCode ec;
 				int hr = m_media_event.GetEvent(out ec, out p1, out p2, 0);
 				if (hr == E_ABORT) { m_event.WaitOne(-1, true); continue; }// Wait for an event
@@ -152,7 +152,7 @@ namespace pr.gfx
 				DsError.ThrowExceptionForHR(m_media_event.FreeEventParams(ec, p1, p2));
 			}
 		}
-		
+
 		/// <summary>Attach this video to a window</summary>
 		public void AttachToWindow(IntPtr handle)
 		{
@@ -172,7 +172,7 @@ namespace pr.gfx
 				DsError.ThrowExceptionForHR(m_video_window.put_Owner(handle));         // Unparent it
 			}
 		}
-		
+
 		/// <summary>Returns true if this an audio-only file (no video component)
 		/// Audio-only files have no video interfaces.  This might also be a file
 		/// whose video component uses an unknown video codec.</summary>
@@ -180,7 +180,7 @@ namespace pr.gfx
 		{
 			get { return m_video_window == null; }
 		}
-	
+
 		/// <summary>Gets the native window size of the loaded video, or 0,0</summary>
 		public Size NativeSize
 		{
@@ -210,7 +210,7 @@ namespace pr.gfx
 				}
 			}
 		}
-		
+
 		/// <summary>Get/Set full screen mode</summary>
 		public bool FullScreen
 		{
@@ -335,7 +335,7 @@ namespace pr.gfx
 				}
 			}
 		}
-	
+
 		/// <summary>Get/Set the volume for the audio [0,100]</summary>
 		public int Volume
 		{
@@ -380,7 +380,7 @@ namespace pr.gfx
 
 				// Configure the sample grabber
 				DsError.ThrowExceptionForHR(m_samp_grabber.SetBufferSamples(true));
-				
+
 				// Add the sample graber to the filter graph
 				IBaseFilter grab_filter = (IBaseFilter)m_samp_grabber;
 				DsError.ThrowExceptionForHR(m_filter_graph.AddFilter(grab_filter, "DS.NET Grabber"));
@@ -400,17 +400,17 @@ namespace pr.gfx
 				// Read the buffer size
 				int bufsize = 0;
 				DsError.ThrowExceptionForHR(m_samp_grabber.GetCurrentBuffer(ref bufsize, IntPtr.Zero));
-				
+
 				// Allocate the buffer and read it
 				ip = Marshal.AllocCoTaskMem(bufsize);
 				DsError.ThrowExceptionForHR(m_samp_grabber.GetCurrentBuffer(ref bufsize, ip));
-				
+
 				// We know the Bits Per Pixel is 24 (3 bytes) because
 				// we forced it to be with sampGrabber.SetMediaType()
 				Size native_size = NativeSize;
 				int stride = bufsize / native_size.Height;
 				Debug.Assert((bufsize % native_size.Height) == 0);
-				
+
 				return new Bitmap(
 					native_size.Width,
 					native_size.Height,
@@ -435,25 +435,25 @@ namespace pr.gfx
 			// Wait for the thread to end
 			if (m_media_event_thread != null) m_media_event_thread.Join();
 			m_media_event_thread = null;
-		
+
 			if (m_samp_grabber != null)
 				Marshal.ReleaseComObject(m_samp_grabber);
-				
+
 			m_media_ctrl = null;
 			m_media_position = null;
 			m_samp_grabber = null;
 			m_video_window = null;
 			m_basic_video = null;
 			m_basic_audio = null;
-				
+
 			#if DEBUG
 			if (m_ds_rot != null) m_ds_rot.Dispose();
 			m_ds_rot = null;
 			#endif
-				
+
 			if (m_filter_graph != null) Marshal.ReleaseComObject(m_filter_graph);
 			m_filter_graph = null;
-		
+
 			GC.Collect();
 			GC.WaitForPendingFinalizers();
 		}

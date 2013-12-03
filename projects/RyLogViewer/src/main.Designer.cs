@@ -147,7 +147,7 @@
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_grid = new RyLogViewer.DataGridView();
-			this.m_scroll_file = new RyLogViewer.SubRangeScroll();
+			this.m_scroll_file = new pr.gui.SubRangeScroll();
 			this.m_toolstrip.SuspendLayout();
 			this.m_menu.SuspendLayout();
 			this.m_status.SuspendLayout();
@@ -1220,7 +1220,7 @@
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
-		private RyLogViewer.SubRangeScroll m_scroll_file;
+		private pr.gui.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
 		private System.Windows.Forms.ToolStripButton m_btn_watch;
 		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;

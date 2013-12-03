@@ -269,5 +269,29 @@ namespace pr.extn
 		{
 			status.SetStatusMessage(text, null, bold, frcol, bkcol, TimeSpan.FromSeconds(2));
 		}
+
+		/// <summary>A smarter set text that does sensible things with the caret position</summary>
+		public static void SetText(this TextBoxBase tb, string text)
+		{
+			var idx = tb.SelectionStart;
+			tb.SelectedText = text;
+			tb.SelectionStart = idx + text.Length;
+		}
+
+		/// <summary>A smarter set text that does sensible things with the caret position</summary>
+		public static void SetText(this ComboBox cb, string text)
+		{
+			var idx = cb.SelectionStart;
+			cb.SelectedText = text;
+			cb.SelectionStart = idx + text.Length;
+		}
+
+		/// <summary>A smarter set text that does sensible things with the caret position</summary>
+		public static void SetText(this ToolStripComboBox cb, string text)
+		{
+			var idx = cb.SelectionStart;
+			cb.SelectedText = text;
+			cb.SelectionStart = idx + text.Length;
+		}
 	}
 }

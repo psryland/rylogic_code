@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace VisionsLiveBB
+namespace pr.common
 {
 	///<remarks>
 	/// Usage:
@@ -18,16 +18,16 @@ namespace VisionsLiveBB
 	{
 		private TextWriter m_OldConsole;
 		private bool m_DoIndent;
-		
+
 		/// <summary>The string inserted as an indent</summary>
 		public string IndentString { get; set; }
-		
+
 		/// <summary>The current indent level</summary>
 		public int Indent { get; set; }
-		
+
 		/// <summary>The length of the indent string inserted on each new line</summary>
 		public int IndentStringLength { get { return IndentString.Length * Indent; } }
-		
+
 		public ConsoleIndent()
 		{
 			m_OldConsole = Console.Out;
