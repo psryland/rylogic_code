@@ -86,16 +86,34 @@ def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
 		OnError("ERROR: " + str(e))
 
 # Extract data from a text file using a regex
+# Capture groups are defined like: (?P<name>.*)
+# and accessed like: m.group("name")
 # Returns the regex match object or null
 def Extract(filepath, regex):
+	pat = re.compile(regex)
 	with open(filepath) as f:
-		pat = re.compile(regex)
 		for line in f:
 			m = pat.search(line)
 			if m: return m
 		return None
 
-	import os
+# Modify a file using regex
+# Capture groups are defined like: (?P<name>.*)
+# and accessed like: m.group("name")
+def UpdateFile(filepath, regex, repl, all=False):
+	pat = re.compile(regex)
+	with open(filepath+".tmp", mode='w') as outf:
+		with open(filepath, mode='r') as inf:
+			for line in inf:
+				m = pat.search(line)
+				if not m: outf.write(line)
+				else:
+					outf.write(pat.sub(repl, line))
+					if not all: break;
+			for line in inf:
+				outf.write(line)
+	os.unlink(filepath)
+	os.rename(filepath+".tmp", filepath)
 
 # Enumerate recursively through a directory
 def EnumFiles(root):

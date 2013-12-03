@@ -345,8 +345,9 @@ namespace Rylogic.VSExtension
 
 				foreach (var edit in edits)
 				{
-					var ws_head = (int)(pos.Column + edit.Patn.Offset - edit.MinColumnIndex);
-					var ws_tail = (int)(pos.MinWidth - (edit.Span.Count + edit.Patn.Offset - pos.MinOffset));
+					var ofs     = Math.Abs(pos.MinOffset - edit.Patn.Offset);
+					var ws_head = (int)(pos.Column - edit.MinColumnIndex + ofs);
+					var ws_tail = (int)(pos.MinWidth - (edit.Span.Count + ofs));
 
 					// Careful with order, we need to apply the edits assuming 'line' isn't changed with each one
 

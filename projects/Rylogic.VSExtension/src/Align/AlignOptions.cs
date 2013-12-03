@@ -50,6 +50,10 @@ namespace Rylogic.VSExtension
 				new AlignPattern(EPattern.Substring, @">" , 0, 1),
 				new AlignPattern(EPattern.Substring, @"<" , 0, 1)));
 
+			Groups.Add(new AlignGroup("Plus / Minus", 1,
+				new AlignPattern(EPattern.Substring, @"+"),
+				new AlignPattern(EPattern.Substring, @"-")));
+
 			Groups.Add(new AlignGroup("Comma delimiter", 1,
 				new AlignPattern(EPattern.Substring, @",")));
 
@@ -62,9 +66,9 @@ namespace Rylogic.VSExtension
 			Groups.Add(new AlignGroup("Line comments", 0,
 				new AlignPattern(EPattern.RegularExpression, @"/{2,}", 0, 0, "Two or more '/' characters")));
 
-			Groups.Add(new AlignGroup("Member variables", 1,
-				new AlignPattern(EPattern.RegularExpression, @"\bm_\w*", 0, 0, "Variable names prefixed with 'm_'"),
-				new AlignPattern(EPattern.RegularExpression, @"\b_\w*" , 0, 0, "Variable names prefixed with '_'")));
+			//Groups.Add(new AlignGroup("Member variables", 1,
+			//	new AlignPattern(EPattern.RegularExpression, @"\bm_\w*", 0, 0, "Variable names prefixed with 'm_'"),
+			//	new AlignPattern(EPattern.RegularExpression, @"\b_\w*" , 0, 0, "Variable names prefixed with '_'")));
 
 			Groups.Add(new AlignGroup("Open brackets", 0,
 				new AlignPattern(EPattern.Substring, @"(")));
@@ -76,108 +80,116 @@ namespace Rylogic.VSExtension
 		/// <summary>Save the patterns to the registry</summary>
 		public override void SaveSettingsToStorage()
 		{
-			var package = (Package)GetService(typeof(Package));
-			if (package == null)
-				return;
-
-			Saving.Raise(this, EventArgs.Empty);
-
-			// Get the root reg key
-			using (var registry_root = package.UserRegistryRoot)
+			try
 			{
-				var root_path = SettingsRegistryPath;
+				var package = (Package)GetService(typeof(Package));
+				if (package == null)
+					return;
 
-				// Delete all groups and recreate the sub key for the extension
-				registry_root.DeleteSubKeyTree(root_path);
-				var root_regkey = registry_root.CreateSubKey(root_path);
-				if (root_regkey == null) return;
+				Saving.Raise(this, EventArgs.Empty);
 
-				using (root_regkey)
+				// Get the root reg key
+				using (var registry_root = package.UserRegistryRoot)
 				{
-					var grp_index = -1;
-					foreach (var grp in Groups)
-					{
-						// Create a (uniquely named) sub key for the group
-						var path = root_path + "\\AlignGroup " + (++grp_index).ToString("000");
-						var regkey = registry_root.CreateSubKey(path);
-						if (regkey == null) continue;
+					var root_path = SettingsRegistryPath;
 
-						using (regkey)
+					// Delete all groups and recreate the sub key for the extension
+					registry_root.DeleteSubKeyTree(root_path, false);
+					var root_regkey = registry_root.CreateSubKey(root_path);
+					if (root_regkey == null) return;
+
+					using (root_regkey)
+					{
+						var grp_index = -1;
+						foreach (var grp in Groups)
 						{
-							regkey.SetValue("name"          , grp.Name         , RegistryValueKind.String);
-							regkey.SetValue("leading_space" , grp.LeadingSpace , RegistryValueKind.DWord);
-							try
+							// Create a (uniquely named) sub key for the group
+							var path = root_path + "\\AlignGroup " + (++grp_index).ToString("000");
+							var regkey = registry_root.CreateSubKey(path);
+							if (regkey == null) continue;
+
+							using (regkey)
 							{
-								// Add each pattern a values containing xml
-								var patn_index = -1; foreach (var patn in grp.Patterns)
+								regkey.SetValue("name"          , grp.Name         , RegistryValueKind.String);
+								regkey.SetValue("leading_space" , grp.LeadingSpace , RegistryValueKind.DWord);
+								try
 								{
-									var elem = patn.ToXml("align_pattern", false);
-									var key = "AlignPattern " + (++patn_index).ToString("000");
-									regkey.SetValue(key, elem.ToString(), RegistryValueKind.String);
+									// Add each pattern a values containing xml
+									var patn_index = -1; foreach (var patn in grp.Patterns)
+									{
+										var elem = patn.ToXml("align_pattern", false);
+										var key = "AlignPattern " + (++patn_index).ToString("000");
+										regkey.SetValue(key, elem.ToString(), RegistryValueKind.String);
+									}
 								}
+								catch (Exception) {} // Ignore patterns that fail to write
 							}
-							catch (Exception) {} // Ignore patterns that fail to write
 						}
 					}
 				}
 			}
+			catch {} // Throw allow anything to throw from here, otherwise VS locks up... :-/
 		}
 
 		/// <summary>Restore the patterns from the registry</summary>
 		public override void LoadSettingsFromStorage()
 		{
-			var package = (Package)GetService(typeof(Package));
-			if (package == null)
-				return;
-
-			// Block events on the group collection while loading
-			using (Scope.Create(() => Groups.RaiseListChangedEvents = false, () => Groups.RaiseListChangedEvents = true))
-			using (var registry_root = package.UserRegistryRoot)
+			try
 			{
-				// Open the sub key for the extension
-				var root_path   = SettingsRegistryPath;
-				var root_regkey = registry_root.OpenSubKey(root_path, false);
-				if (root_regkey == null) return;
+				var package = (Package)GetService(typeof(Package));
+				if (package == null)
+					return;
 
-				using (root_regkey)
+				// Block events on the group collection while loading
+				using (Scope.Create(() => Groups.RaiseListChangedEvents = false, () => Groups.RaiseListChangedEvents = true))
+				using (var registry_root = package.UserRegistryRoot)
 				{
-					Groups.Clear();
-					foreach (var grp_key in root_regkey.GetSubKeyNames())
+					// Open the sub key for the extension
+					var root_path   = SettingsRegistryPath;
+					var root_regkey = registry_root.OpenSubKey(root_path, false);
+					if (root_regkey == null) return;
+
+					using (root_regkey)
 					{
-						// Open each group key
-						if (!grp_key.StartsWith("AlignGroup")) continue;
-						var path   = root_path + "\\" + grp_key;
-						var regkey = registry_root.OpenSubKey(path, false);
-						if (regkey == null) continue;
-
-						using (regkey)
+						Groups.Clear();
+						foreach (var grp_key in root_regkey.GetSubKeyNames())
 						{
-							try
-							{
-								// Read the group
-								var name = (string)regkey.GetValue("name", "AlignGroup");
-								var ls   = (int)regkey.GetValue("leading_space", 0);
-								var grp  = new AlignGroup(name, ls);
+							// Open each group key
+							if (!grp_key.StartsWith("AlignGroup")) continue;
+							var path   = root_path + "\\" + grp_key;
+							var regkey = registry_root.OpenSubKey(path, false);
+							if (regkey == null) continue;
 
-								// Read each pattern within the group
-								foreach (var patn_key in regkey.GetValueNames())
+							using (regkey)
+							{
+								try
 								{
-									// Pattern use indices at the value name, anything else is a group property
-									if (!patn_key.StartsWith("AlignPattern")) continue;
-									var xml = XElement.Parse((string)regkey.GetValue(patn_key));
-									var patn = new AlignPattern(xml);
-									grp.Patterns.Add(patn);
+									// Read the group
+									var name = (string)regkey.GetValue("name", "AlignGroup");
+									var ls   = (int)regkey.GetValue("leading_space", 0);
+									var grp  = new AlignGroup(name, ls);
+
+									// Read each pattern within the group
+									foreach (var patn_key in regkey.GetValueNames())
+									{
+										// Pattern use indices at the value name, anything else is a group property
+										if (!patn_key.StartsWith("AlignPattern")) continue;
+										var xml = XElement.Parse((string)regkey.GetValue(patn_key));
+										var patn = new AlignPattern(xml);
+										grp.Patterns.Add(patn);
+									}
+									Groups.Add(grp);
 								}
-								Groups.Add(grp);
+								catch (Exception) {} // Ignore invalid groups/patterns
 							}
-							catch (Exception) {} // Ignore invalid groups/patterns
 						}
 					}
 				}
-			}
 
-			if (Groups.Count == 0)
-				ResetSettings();
+				if (Groups.Count == 0)
+					ResetSettings();
+			}
+			catch {} // Throw allow anything to throw from here, otherwise VS locks up... :-/
 		}
 
 		internal event EventHandler<CancelEventArgs> Deactivating;
