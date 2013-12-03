@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -24,10 +24,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 using System;
 using System.Runtime.InteropServices;
-using DirectShowLib;
+using pr.directshow;
 using System.Text;
 
-namespace DirectShowLib.DES
+namespace pr.directshow.DES
 {
     #region Utility Classes
 
@@ -45,7 +45,6 @@ namespace DirectShowLib.DES
         public const int E_NoTimeline = unchecked((int)0x80040404);
         public const int S_WarnOutputReset = unchecked((int)40404);
     }
-
 
     sealed public class DESError
     {
@@ -113,7 +112,6 @@ namespace DirectShowLib.DES
             }
         }
     }
-
 
     #endregion
 
@@ -279,7 +277,6 @@ namespace DirectShowLib.DES
     {
     }
 
-
     #endregion
 
     #region Declarations
@@ -298,7 +295,6 @@ namespace DirectShowLib.DES
         Hue
     }
 
-
 #endif
 
     /// <summary>
@@ -316,7 +312,6 @@ namespace DirectShowLib.DES
         Transition = 8
     }
 
-
     /// <summary>
     /// From unnamed enum
     /// </summary>
@@ -325,7 +320,6 @@ namespace DirectShowLib.DES
         Insert = 1,
         Overlay = 2
     }
-
 
     /// <summary>
     /// From unnamed enum
@@ -344,7 +338,6 @@ namespace DirectShowLib.DES
         End
     }
 
-
     /// <summary>
     /// From SCompFmt0
     /// </summary>
@@ -354,7 +347,6 @@ namespace DirectShowLib.DES
         public int nFormatId;
         public AMMediaType MediaType;
     }
-
 
     /// <summary>
     /// From unnamed enum
@@ -367,7 +359,6 @@ namespace DirectShowLib.DES
         PreserveAspectRatioNoLetterBox
     }
 
-
     /// <summary>
     /// From DEXTERF_TRACK_SEARCH_FLAGS
     /// </summary>
@@ -377,7 +368,6 @@ namespace DirectShowLib.DES
         ExactlyAt = 0,
         Forwards = 1
     }
-
 
     /// <summary>
     /// From DEXTER_PARAM
@@ -390,7 +380,6 @@ namespace DirectShowLib.DES
         public int nValues;
     }
 
-
     /// <summary>
     /// From unnamed enum
     /// </summary>
@@ -400,7 +389,6 @@ namespace DirectShowLib.DES
         Sources = 0x00000001,
         Effects = 0x00000002
     }
-
 
     /// <summary>
     /// From DEXTER_VALUE
@@ -413,7 +401,6 @@ namespace DirectShowLib.DES
         public Dexterf dwInterp;
     }
 
-
     /// <summary>
     /// From DEXTERF
     /// </summary>
@@ -422,7 +409,6 @@ namespace DirectShowLib.DES
         Jump,
         Interpolate
     }
-
 
     /// <summary>
     /// From DEX_IDS_* defines
@@ -456,7 +442,6 @@ namespace DirectShowLib.DES
         GridError = 1428,
         InterfaceError = 1429
     }
-
 
     #endregion
 

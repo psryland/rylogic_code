@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib.BDA
+namespace pr.directshow.BDA
 {
     #region COM Class Objects
 
@@ -126,7 +126,7 @@ namespace DirectShowLib.BDA
     public class BadSampleInfo
     {
         public int hrReason;
-    } 
+    }
 
     /// <summary>
     /// From COPPEventBlockReason
@@ -353,7 +353,6 @@ namespace DirectShowLib.BDA
         int GetOverlay(
             out int pdwOverlayCause
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -534,7 +533,6 @@ namespace DirectShowLib.BDA
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IDTFilter2 : IDTFilter
     {
-
         #region IDTFilter methods
 
         [PreserveSig]
@@ -598,7 +596,6 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetLastErrorCode();
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -633,7 +630,6 @@ namespace DirectShowLib.BDA
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IDTFilter3 : IDTFilter2
     {
-
         #region IDTFilter methods
 
         [PreserveSig]
@@ -719,5 +715,4 @@ namespace DirectShowLib.BDA
     }
 
     #endregion
-
 }

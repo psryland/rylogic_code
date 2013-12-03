@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -27,9 +27,10 @@ using System.Runtime.InteropServices;
 
 #if !USING_NET11
 using System.Runtime.InteropServices.ComTypes;
+
 #endif
 
-namespace DirectShowLib.BDA
+namespace pr.directshow.BDA
 {
     #region Declarations
 

@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib.BDA
+namespace pr.directshow.BDA
 {
     #region Declarations
 
@@ -138,7 +138,6 @@ namespace DirectShowLib.BDA
         CAF_IsBlocked = BfEnTvRat_GenericAttributes.BfIsBlocked,
         CAF_ValidAttrSubmask = 1
     }
-
 
     [ComImport, Guid("C5C5C5F0-3ABC-11D6-B25B-00C04FA0C026")]
     public class XDSToRat

@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -26,7 +26,7 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region Declarations
 
@@ -73,7 +73,6 @@ namespace DirectShowLib
         Saturation = 0x00000008,
         Mask = 0x0000000F
     }
-
 
     /// <summary>
     /// From VMR9MixerPrefs
@@ -389,7 +388,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int PresentImage([In] IntPtr dwUserID, [In] ref VMR9PresentationInfo lpPresInfo);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,

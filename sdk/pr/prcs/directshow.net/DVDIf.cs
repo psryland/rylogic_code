@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -26,7 +26,7 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib.Dvd
+namespace pr.directshow.Dvd
 {
     #region Declarations
 
@@ -519,7 +519,6 @@ namespace DirectShowLib.Dvd
         DestChange = 0x00000004
     }
 
-
     /// <summary>
     /// From GPRMARRAY
     /// </summary>
@@ -935,7 +934,6 @@ namespace DirectShowLib.Dvd
         [PreserveSig]
         int GetCurrentSubpictureAttributes([Out] out DvdSubpictureATR pATR);
 
-
         [PreserveSig]
         int GetCurrentVolumeInfo(
             [Out] out int pulNumOfVol,
@@ -943,7 +941,6 @@ namespace DirectShowLib.Dvd
             [Out] DvdDiscSide pSide,
             [Out] out int pulNumOfTitles
             );
-
 
         [PreserveSig]
         int GetDVDTextInfo(

@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -27,7 +27,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Security;
 
-namespace DirectShowLib.DMO
+namespace pr.directshow.DMO
 {
     #region Declarations
 
@@ -156,7 +156,6 @@ namespace DirectShowLib.DMO
         AcceptData = 0x1
     }
 
-
     /// <summary>
     /// From DMO_VIDEO_OUTPUT_STREAM_FLAGS
     /// </summary>
@@ -189,7 +188,6 @@ namespace DirectShowLib.DMO
         public long rtTimestamp;
         public long rtTimelength;
     }
-
 
     #endregion
 
@@ -243,7 +241,7 @@ namespace DirectShowLib.DMO
 
         [DllImport("msdmo.dll", ExactSpelling = true), SuppressUnmanagedCodeSecurity]
         public static extern int MoInitMediaType(
-            [Out] DirectShowLib.AMMediaType pmt,
+            [Out] pr.directshow.AMMediaType pmt,
             int i
             );
 
@@ -378,7 +376,6 @@ namespace DirectShowLib.DMO
             }
         }
     }
-
 
     #endregion
 

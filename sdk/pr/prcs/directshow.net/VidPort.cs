@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -26,12 +26,12 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region Declarations
 
 #if ALLOW_UNTESTED_INTERFACES
-    
+
     /// <summary>
     /// From AMVPSIZE
     /// </summary>
@@ -354,7 +354,6 @@ namespace DirectShowLib
             );
 
         #endregion
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -368,7 +367,6 @@ namespace DirectShowLib
         new int RenegotiateVPParameters();
 
         #endregion
-
     }
 
 #endif
@@ -438,7 +436,6 @@ namespace DirectShowLib
         int GetVPSyncMaster(
             [MarshalAs(UnmanagedType.Bool)] out bool pbVPSyncMaster
             );
-
     }
 
     #endregion

@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib.BDA
+namespace pr.directshow.BDA
 {
     #region Declarations
 
@@ -138,18 +138,17 @@ namespace DirectShowLib.BDA
         #endregion
 
         [PreserveSig]
-        int Initialize( 
+        int Initialize(
             IntPtr pbDesc,
             short wCount
             );
 
         [PreserveSig]
-        int  GetLength( 
+        int  GetLength(
             out short pwVal
             );
-        
     };
-    
+
 #endif
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -367,5 +366,4 @@ namespace DirectShowLib.BDA
     }
 
     #endregion
-
 }

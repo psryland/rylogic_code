@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib.BDA
+namespace pr.directshow.BDA
 {
     #region Declarations
 
@@ -118,8 +118,8 @@ namespace DirectShowLib.BDA
         H264_YCgCo = 8
     }
 
-    /// <summary> 
-    /// UDCR_TAG 
+    /// <summary>
+    /// UDCR_TAG
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class UDCR_TAG
@@ -160,7 +160,7 @@ namespace DirectShowLib.BDA
         public int PID;
         public long PCR;
         public long Value;
-    } 
+    }
 
     /// <summary>
     /// From PBDA_TAG_ATTRIBUTE
@@ -173,7 +173,7 @@ namespace DirectShowLib.BDA
         public short VersionNo;
         public int TableDataSize;
         public byte TableData; // Array of bytes
-    } 
+    }
 
     /// <summary>
     /// From CAPTURE_STREAMTIME
@@ -255,5 +255,4 @@ namespace DirectShowLib.BDA
 #endif
 
     #endregion
-
 }

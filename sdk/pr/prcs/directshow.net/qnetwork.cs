@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region Declarations
 
@@ -121,7 +121,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int put_EnableHTTP([MarshalAs(UnmanagedType.VariantBool)] bool EnableHTTP);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -146,7 +145,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_ContactEmail([MarshalAs(UnmanagedType.BStr)] out string pbstrContactEmail);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -174,7 +172,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_BufferingProgress(out int pBufferingProgress);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -208,7 +205,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_SourceLink([MarshalAs(UnmanagedType.BStr)] out string pbstrSourceLink);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -224,7 +220,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_ErrorCode(out int pErrorCode);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -237,7 +232,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_Preroll([MarshalAs(UnmanagedType.VariantBool)] out bool pfPreroll);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -250,7 +244,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_UserAgent([MarshalAs(UnmanagedType.BStr)] out string pUserAgent);
-
     }
 
 #endif
@@ -298,7 +291,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_MoreInfoText([MarshalAs(UnmanagedType.BStr)] out string pbstrMoreInfoText);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -329,7 +321,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_PlaybackSpeed(out double pSpeed);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -345,7 +336,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_PlaylistCount(out int pNumberEntries);
-
     }
 
     #endregion

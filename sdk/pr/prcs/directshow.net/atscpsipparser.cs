@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib.BDA
+namespace pr.directshow.BDA
 {
     #region Declarations
 
@@ -693,37 +693,35 @@ namespace DirectShowLib.BDA
     public interface IServiceLocationDescriptor
     {
         [PreserveSig]
-        int GetPCR_PID( 
+        int GetPCR_PID(
             out short pwVal
             );
-        
+
         [PreserveSig]
-        int GetNumberOfElements( 
+        int GetNumberOfElements(
             out byte pbVal
             );
-        
+
         [PreserveSig]
-        int  GetElementStreamType( 
+        int  GetElementStreamType(
             byte bIndex,
             out byte pbVal
             );
-        
+
         [PreserveSig]
-        int  GetElementPID( 
+        int  GetElementPID(
             byte bIndex,
             out short pwVal
             );
-        
+
         [PreserveSig]
-        int  GetElementLanguageCode( 
+        int  GetElementLanguageCode(
             byte bIndex,
             [MarshalAs(UnmanagedType.LPArray, SizeConst=3)] out byte[] LangCode
             );
-        
     };
-    
+
 #endif
 
     #endregion
-
 }

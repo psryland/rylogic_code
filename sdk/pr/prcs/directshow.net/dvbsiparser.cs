@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib.BDA
+namespace pr.directshow.BDA
 {
     #region Declarations
 
@@ -43,7 +43,6 @@ namespace DirectShowLib.BDA
     }
 
 #endif
-
 
     /// <summary>
     /// Define possible values for a running_status field according to ETSI EN 300 468
@@ -221,7 +220,6 @@ namespace DirectShowLib.BDA
         [PreserveSig]
         int GetUTCTime([Out] out MpegDateAndTime pmdtVal);
     }
-
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
     Guid("91BFFDF9-9432-410f-86EF-1C228ED0AD70"),
@@ -477,10 +475,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTextW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrText
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -505,18 +502,17 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordContentNibbles(
-            [In] byte bRecordIndex, 
-            out byte pbValLevel1, 
+            [In] byte bRecordIndex,
+            out byte pbValLevel1,
             out byte pbValLevel2
             );
 
         [PreserveSig]
         int GetRecordUserNibbles(
-            [In] byte bRecordIndex, 
-            out byte pbVal1, 
+            [In] byte bRecordIndex,
+            out byte pbVal1,
             out byte pbVal2
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -541,13 +537,12 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordCrid(
-            [In] byte bRecordIndex, 
-            out byte pbType, 
-            out byte pbLocation, 
-            out byte pbLength, 
+            [In] byte bRecordIndex,
+            out byte pbType,
+            out byte pbLocation,
+            out byte pbLength,
             [Out] IntPtr ppbBytes
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -582,7 +577,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetSelectorBytes(
-            [In, Out] ref byte pbLen, 
+            [In, Out] ref byte pbLen,
             out byte pbVal
             );
 
@@ -598,14 +593,13 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetText(
-            [In, Out] ref byte pbLen, 
+            [In, Out] ref byte pbLen,
             out byte pbVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    InterfaceType(ComInterfaceType.InterfaceIsIUnknown), 
+    InterfaceType(ComInterfaceType.InterfaceIsIUnknown),
     Guid("5F26F518-65C8-4048-91F2-9290F59F7B90")]
     public interface IDvbDataBroadcastIDDescriptor
     {
@@ -626,14 +620,13 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetIDSelectorBytes(
-            [In, Out] ref byte pbLen, 
+            [In, Out] ref byte pbLen,
             out byte pbVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    InterfaceType(ComInterfaceType.InterfaceIsIUnknown), 
+    InterfaceType(ComInterfaceType.InterfaceIsIUnknown),
     Guid("05EC24D1-3A31-44E7-B408-67C60A352276")]
     public interface IDvbDefaultAuthorityDescriptor
     {
@@ -649,10 +642,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetDefaultAuthority(
-            out byte pbLength, 
+            out byte pbLength,
             [Out] IntPtr ppbBytes
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -692,40 +684,39 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordItemW(
-            [In] byte bRecordIndex, 
-            [In] DVB_STRCONV_MODE convMode, 
-            [MarshalAs(UnmanagedType.BStr)] out string pbstrDesc, 
+            [In] byte bRecordIndex,
+            [In] DVB_STRCONV_MODE convMode,
+            [MarshalAs(UnmanagedType.BStr)] out string pbstrDesc,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrItem
             );
 
         [PreserveSig]
         int GetConcatenatedItemW(
-            [In, MarshalAs(UnmanagedType.Interface)] IDvbExtendedEventDescriptor pFollowingDescriptor, 
-            [In] DVB_STRCONV_MODE convMode, 
-            [MarshalAs(UnmanagedType.BStr)] out string pbstrDesc, 
+            [In, MarshalAs(UnmanagedType.Interface)] IDvbExtendedEventDescriptor pFollowingDescriptor,
+            [In] DVB_STRCONV_MODE convMode,
+            [MarshalAs(UnmanagedType.BStr)] out string pbstrDesc,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrItem
             );
 
         [PreserveSig]
         int GetTextW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrText
             );
 
         [PreserveSig]
         int GetConcatenatedTextW(
-            [In, MarshalAs(UnmanagedType.Interface)] IDvbExtendedEventDescriptor FollowingDescriptor, 
-            [In] DVB_STRCONV_MODE convMode, 
+            [In, MarshalAs(UnmanagedType.Interface)] IDvbExtendedEventDescriptor FollowingDescriptor,
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrText
             );
 
         [PreserveSig]
         int GetRecordItemRawBytes(
-            [In] byte bRecordIndex, 
-            [Out] IntPtr ppbRawItem, 
+            [In] byte bRecordIndex,
+            [Out] IntPtr ppbRawItem,
             out byte pbItemLength
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -765,7 +756,7 @@ namespace DirectShowLib.BDA
         #endregion
 
         [PreserveSig]
-        int GetRecordLogicalChannelAndVisibility( 
+        int GetRecordLogicalChannelAndVisibility(
             byte bRecordIndex,
             out short pwVal);
     }
@@ -814,7 +805,6 @@ namespace DirectShowLib.BDA
             out short pwVal);
 
         #endregion
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -859,10 +849,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetPrivateData(
-            [In, Out] ref byte pbLen, 
+            [In, Out] ref byte pbLen,
             out byte pbData
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -917,50 +906,49 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetListId(
-            [In] byte bListIndex, 
+            [In] byte bListIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetListNameW(
-            [In] byte bListIndex, 
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] byte bListIndex,
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
 
         [PreserveSig]
         int GetListCountryCode(
-            [In] byte bListIndex, 
+            [In] byte bListIndex,
             out byte pszCode
             );
 
         [PreserveSig]
         int GetListCountOfRecords(
-            [In] byte bChannelListIndex, 
+            [In] byte bChannelListIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetListRecordServiceId(
-            [In] byte bListIndex, 
-            [In] byte bRecordIndex, 
+            [In] byte bListIndex,
+            [In] byte bRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetListRecordLogicalChannelNumber(
-            [In] byte bListIndex, 
-            [In] byte bRecordIndex, 
+            [In] byte bListIndex,
+            [In] byte bRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetListRecordLogicalChannelAndVisibility(
-            [In] byte bListIndex, 
-            [In] byte bRecordIndex, 
+            [In] byte bListIndex,
+            [In] byte bRecordIndex,
             out short pwVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -990,18 +978,17 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordServiceProviderNameW(
-            [In] byte bRecordIndex, 
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] byte bRecordIndex,
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
 
         [PreserveSig]
         int GetRecordServiceNameW(
-            [In] byte bRecordIndex, 
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] byte bRecordIndex,
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1026,14 +1013,13 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetNetworkNameW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    InterfaceType(ComInterfaceType.InterfaceIsIUnknown), 
+    InterfaceType(ComInterfaceType.InterfaceIsIUnknown),
     Guid("3AD9DDE1-FB1B-4186-937F-22E6B5A72A10")]
     public interface IDvbParentalRatingDescriptor
     {
@@ -1054,11 +1040,10 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordRating(
-            [In] byte bRecordIndex, 
-            out byte pszCountryCode, 
+            [In] byte bRecordIndex,
+            out byte pszCountryCode,
             out byte pbVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1080,7 +1065,6 @@ namespace DirectShowLib.BDA
         int GetPrivateDataSpecifier(
             out int pdwVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1105,22 +1089,21 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordServiceId(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetRecordNumericSelectionFlag(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out int pfVal
             );
 
         [PreserveSig]
         int GetRecordVisibleServiceFlag(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out int pfVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1174,16 +1157,15 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetServiceProviderNameW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
 
         [PreserveSig]
         int GetServiceNameW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1208,16 +1190,15 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordServiceId(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetRecordServiceType(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1242,16 +1223,15 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetEventNameW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
 
         [PreserveSig]
         int GetTextW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrText
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1355,12 +1335,11 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetEIT2(
-            [In] byte TableId, 
-            [In] ref short pwServiceId, 
-            [In] ref byte pbSegment, 
+            [In] byte TableId,
+            [In] ref short pwServiceId,
+            [In] ref byte pbSegment,
             [MarshalAs(UnmanagedType.Interface)] out IDVB_EIT2 ppEIT
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1385,28 +1364,27 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordLangId(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out int pulVal
             );
 
         [PreserveSig]
         int GetRecordSubtitlingType(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordCompositionPageID(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetRecordAncillaryPageID(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out short pwVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1431,28 +1409,27 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordLangId(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out int pulVal
             );
 
         [PreserveSig]
         int GetRecordTeletextType(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordMagazineNumber(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordPageNumber(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1462,7 +1439,7 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int Initialize(
-            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList, 
+            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList,
             [In, MarshalAs(UnmanagedType.Interface)] IMpeg2Data pMPEGData
             );
 
@@ -1488,14 +1465,14 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTableDescriptorByIndex(
-            [In] int dwIndex, 
+            [In] int dwIndex,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
         [PreserveSig]
         int GetTableDescriptorByTag(
-            [In] byte bTag, 
-            [In, Out] ref int pdwCookie, 
+            [In] byte bTag,
+            [In, Out] ref int pdwCookie,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
@@ -1516,16 +1493,16 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordDescriptorByIndex(
-            [In] int dwRecordIndex, 
-            [In] int dwIndex, 
+            [In] int dwRecordIndex,
+            [In] int dwIndex,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
         [PreserveSig]
         int GetRecordDescriptorByTag(
-            [In] int dwRecordIndex, 
-            [In] byte bTag, 
-            [In, Out] ref int pdwCookie, 
+            [In] int dwRecordIndex,
+            [In] byte bTag,
+            [In, Out] ref int pdwCookie,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
@@ -1533,7 +1510,6 @@ namespace DirectShowLib.BDA
         int GetVersionHash(
             out int pdwVersionHash
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1543,8 +1519,8 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int Initialize(
-            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList, 
-            [In, MarshalAs(UnmanagedType.Interface)] IMpeg2Data pMPEGData, 
+            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList,
+            [In, MarshalAs(UnmanagedType.Interface)] IMpeg2Data pMPEGData,
             [In] byte bSectionNumber
             );
 
@@ -1580,14 +1556,14 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTableDescriptorByIndex(
-            [In] int dwIndex, 
+            [In] int dwIndex,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
         [PreserveSig]
         int GetTableDescriptorByTag(
-            [In] byte bTag, 
-            [In, Out] ref int pdwCookie, 
+            [In] byte bTag,
+            [In, Out] ref int pdwCookie,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
@@ -1605,17 +1581,16 @@ namespace DirectShowLib.BDA
         int GetVersionHash(
             out int pdwVersionHash
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("0EDB556D-43AD-4938-9668-321B2FFECFD3"), 
+    Guid("0EDB556D-43AD-4938-9668-321B2FFECFD3"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IISDB_EMM
     {
         [PreserveSig]
         int Initialize(
-            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList, 
+            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList,
             [In, MarshalAs(UnmanagedType.Interface)] IMpeg2Data pMPEGData
             );
 
@@ -1631,7 +1606,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetDataBytes(
-            [In, Out] ref short pwBufferLength, 
+            [In, Out] ref short pwBufferLength,
             out byte pbBuffer
             );
 
@@ -1642,8 +1617,8 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetIndividualEmmMessage(
-            [MarshalAs(UnmanagedType.IUnknown)] object pUnknown, 
-            ref short pwLength, 
+            [MarshalAs(UnmanagedType.IUnknown)] object pUnknown,
+            ref short pwLength,
             IntPtr ppbMessage
             );
 
@@ -1651,7 +1626,6 @@ namespace DirectShowLib.BDA
         int GetVersionHash(
             out int pdwVersionHash
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1661,7 +1635,7 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int Initialize(
-            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList, 
+            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList,
             [In, MarshalAs(UnmanagedType.Interface)] IMpeg2Data pMPEGData
             );
 
@@ -1692,28 +1666,28 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordDescriptionId(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetRecordCountOfDescriptors(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out int pdwVal
             );
 
         [PreserveSig]
         int GetRecordDescriptorByIndex(
-            [In] int dwRecordIndex, 
-            [In] int dwIndex, 
+            [In] int dwRecordIndex,
+            [In] int dwIndex,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
         [PreserveSig]
         int GetRecordDescriptorByTag(
-            [In] int dwRecordIndex, 
-            [In] byte bTag, 
-            [In, Out] ref int pdwCookie, 
+            [In] int dwRecordIndex,
+            [In] byte bTag,
+            [In, Out] ref int pdwCookie,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
@@ -1721,17 +1695,16 @@ namespace DirectShowLib.BDA
         int GetVersionHash(
             out int pdwVersionHash
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("1B1863EF-08F1-40B7-A559-3B1EFF8CAFA6"), 
+    Guid("1B1863EF-08F1-40B7-A559-3B1EFF8CAFA6"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IISDB_NBIT
     {
         [PreserveSig]
         int Initialize(
-            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList, 
+            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList,
             [In, MarshalAs(UnmanagedType.Interface)] IMpeg2Data pMPEGData
             );
 
@@ -1752,64 +1725,64 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordInformationId(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetRecordInformationType(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordDescriptionBodyLocation(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordMessageSectionNumber(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordUserDefined(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordNumberOfKeys(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordKeys(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             [Out] IntPtr pbKeys
             );
 
         [PreserveSig]
         int GetRecordCountOfDescriptors(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out int pdwVal
             );
 
         [PreserveSig]
         int GetRecordDescriptorByIndex(
-            [In] int dwRecordIndex, 
-            [In] int dwIndex, 
+            [In] int dwRecordIndex,
+            [In] int dwIndex,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
         [PreserveSig]
         int GetRecordDescriptorByTag(
-            [In] int dwRecordIndex, 
-            [In] byte bTag, 
-            [In, Out] ref int pdwCookie, 
+            [In] int dwRecordIndex,
+            [In] byte bTag,
+            [In, Out] ref int pdwCookie,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
@@ -1817,7 +1790,6 @@ namespace DirectShowLib.BDA
         int GetVersionHash(
             out int pdwVersionHash
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1915,20 +1887,19 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordEITUserDefinedFlags(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("EE60EF2D-813A-4DC7-BF92-EA13DAC85313"), 
+    Guid("EE60EF2D-813A-4DC7-BF92-EA13DAC85313"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IISDB_SDTT
     {
         [PreserveSig]
         int Initialize(
-            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList, 
+            [In, MarshalAs(UnmanagedType.Interface)] ISectionList pSectionList,
             [In, MarshalAs(UnmanagedType.Interface)] IMpeg2Data pMPEGData
             );
 
@@ -1964,78 +1935,78 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordGroup(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordTargetVersion(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetRecordNewVersion(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetRecordDownloadLevel(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordVersionIndicator(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordScheduleTimeShiftInformation(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordCountOfSchedules(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out int pdwVal
             );
 
         [PreserveSig]
         int GetRecordStartTimeByIndex(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             [In] int dwIndex,
             out MpegDateAndTime pmdtVal
             );
 
         [PreserveSig]
         int GetRecordDurationByIndex(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             [In] int dwIndex,
             out MpegDuration pmdVal
             );
 
         [PreserveSig]
         int GetRecordCountOfDescriptors(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out int pdwVal
             );
 
         [PreserveSig]
         int GetRecordDescriptorByIndex(
-            [In] int dwRecordIndex, 
-            [In] int dwIndex, 
+            [In] int dwRecordIndex,
+            [In] int dwIndex,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
         [PreserveSig]
         int GetRecordDescriptorByTag(
-            [In] int dwRecordIndex, 
-            [In] byte bTag, 
-            [In, Out] ref int pdwCookie, 
+            [In] int dwRecordIndex,
+            [In] byte bTag,
+            [In, Out] ref int pdwCookie,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
@@ -2043,7 +2014,6 @@ namespace DirectShowLib.BDA
         int GetVersionHash(
             out int pdwVersionHash
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2118,10 +2088,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTextW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrText
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2156,7 +2125,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordComponentTag(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
@@ -2167,16 +2136,15 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetContractVerificationInfo(
-            [In] byte bBufLength, 
+            [In] byte bBufLength,
             out byte pbBuf
             );
 
         [PreserveSig]
         int GetFeeNameW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2211,10 +2179,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetPrivateDataBytes(
-            [In, Out] ref byte pbBufferLength, 
+            [In, Out] ref byte pbBufferLength,
             out byte pbBuffer
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2249,14 +2216,13 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetServiceIds(
-            [In, Out] ref byte pbNumServiceIds, 
+            [In, Out] ref byte pbNumServiceIds,
             out short pwServiceIds
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("A494F17F-C592-47D8-8943-64C9A34BE7B9"), 
+    Guid("A494F17F-C592-47D8-8943-64C9A34BE7B9"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IIsdbComponentGroupDescriptor
     {
@@ -2282,51 +2248,50 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordGroupId(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordNumberOfCAUnit(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordCAUnitCAUnitId(
-            [In] byte bRecordIndex, 
-            [In] byte bCAUnitIndex, 
+            [In] byte bRecordIndex,
+            [In] byte bCAUnitIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordCAUnitNumberOfComponents(
             [In] byte bRecordIndex, [
-            In] byte bCAUnitIndex, 
+            In] byte bCAUnitIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordCAUnitComponentTag(
-            [In] byte bRecordIndex, 
-            [In] byte bCAUnitIndex, 
-            [In] byte bComponentIndex, 
+            [In] byte bRecordIndex,
+            [In] byte bCAUnitIndex,
+            [In] byte bComponentIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordTotalBitRate(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordTextW(
-            [In] byte bRecordIndex, 
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] byte bRecordIndex,
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrText
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2361,7 +2326,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetSelectorBytes(
-            [In] byte bBufLength, 
+            [In] byte bBufLength,
             out byte pbBuf
             );
 
@@ -2372,7 +2337,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordComponentRef(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
@@ -2383,10 +2348,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTextW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrText
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2406,9 +2370,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetCopyControl(
-            out byte pbDigitalRecordingControlData, 
-            out byte pbCopyControlType, 
-            out byte pbAPSControlData, 
+            out byte pbDigitalRecordingControlData,
+            out byte pbCopyControlType,
+            out byte pbAPSControlData,
             out byte pbMaximumBitrate
             );
 
@@ -2419,18 +2383,17 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordCopyControl(
-            [In] byte bRecordIndex, 
-            out byte pbComponentTag, 
-            out byte pbDigitalRecordingControlData, 
-            out byte pbCopyControlType, 
-            out byte pbAPSControlData, 
+            [In] byte bRecordIndex,
+            out byte pbComponentTag,
+            out byte pbDigitalRecordingControlData,
+            out byte pbCopyControlType,
+            out byte pbAPSControlData,
             out byte pbMaximumBitrate
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("5298661E-CB88-4F5F-A1DE-5F440C185B92"), 
+    Guid("5298661E-CB88-4F5F-A1DE-5F440C185B92"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IIsdbDownloadContentDescriptor
     {
@@ -2446,10 +2409,10 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetFlags(
-            out int pfReboot, 
-            out int pfAddOn, 
-            out int pfCompatibility, 
-            out int pfModuleInfo, 
+            out int pfReboot,
+            out int pfAddOn,
+            out int pfCompatibility,
+            out int pfModuleInfo,
             out int pfTextInfo
             );
 
@@ -2495,25 +2458,25 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordModuleId(
-            [In] short wRecordIndex, 
+            [In] short wRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetRecordModuleSize(
-            [In] short wRecordIndex, 
+            [In] short wRecordIndex,
             out int pdwVal
             );
 
         [PreserveSig]
         int GetRecordModuleInfoLength(
-            [In] short wRecordIndex, 
+            [In] short wRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordModuleInfo(
-            [In] short wRecordIndex, 
+            [In] short wRecordIndex,
             [Out] IntPtr ppbData
             );
 
@@ -2524,14 +2487,13 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTextW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("BA6FA681-B973-4DA1-9207-AC3E7F0341EB"), 
+    Guid("BA6FA681-B973-4DA1-9207-AC3E7F0341EB"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IIsdbEmergencyInformationDescriptor
     {
@@ -2552,29 +2514,28 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetServiceId(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out short pwVal
             );
 
         [PreserveSig]
         int GetStartEndFlag(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pVal
             );
 
         [PreserveSig]
         int GetSignalLevel(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetAreaCode(
-            [In] byte bRecordIndex, 
-            [Out] IntPtr ppwVal, 
+            [In] byte bRecordIndex,
+            [Out] IntPtr ppwVal,
             out byte pbNumAreaCodes
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2604,8 +2565,8 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordEvent(
-            [In] byte bRecordIndex, 
-            out short pwServiceId, 
+            [In] byte bRecordIndex,
+            out short pwServiceId,
             out short pwEventId
             );
 
@@ -2616,13 +2577,12 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRefRecordEvent(
-            [In] byte bRecordIndex, 
-            out short pwOriginalNetworkId, 
-            out short pwTransportStreamId, 
-            out short pwServiceId, 
+            [In] byte bRecordIndex,
+            out short pwOriginalNetworkId,
+            out short pwTransportStreamId,
+            out short pwServiceId,
             out short pwEventId
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2659,7 +2619,6 @@ namespace DirectShowLib.BDA
         int GetReferencePid(
             out short pwVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2699,10 +2658,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetLogoCharW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrChar
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2753,10 +2711,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetSeriesNameW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -2791,27 +2748,26 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTableId(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetTableDescriptionLength(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetTableDescriptionBytes(
-            [In] byte bRecordIndex, 
-            [In, Out] ref byte pbBufferLength, 
+            [In] byte bRecordIndex,
+            [In, Out] ref byte pbBufferLength,
             out byte pbBuffer
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("900E4BB7-18CD-453F-98BE-3BE6AA211772"), 
+    Guid("900E4BB7-18CD-453F-98BE-3BE6AA211772"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IIsdbSiParser2 : IDvbSiParser2
     {
@@ -2923,58 +2879,57 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetSDT(
-            [In] byte TableId, 
-            [In] ref short pwTransportStreamId, 
+            [In] byte TableId,
+            [In] ref short pwTransportStreamId,
             [MarshalAs(UnmanagedType.Interface)] out IISDB_SDT ppSDT
             );
 
         [PreserveSig]
         int GetBIT(
-            [In] byte TableId, 
-            [In] ref short pwOriginalNetworkId, 
+            [In] byte TableId,
+            [In] ref short pwOriginalNetworkId,
             [MarshalAs(UnmanagedType.Interface)] out IISDB_BIT ppBIT
             );
 
         [PreserveSig]
         int GetNBIT(
-            [In] byte TableId, 
-            [In] ref short pwOriginalNetworkId, 
+            [In] byte TableId,
+            [In] ref short pwOriginalNetworkId,
             [MarshalAs(UnmanagedType.Interface)] out IISDB_NBIT ppNBIT
             );
 
         [PreserveSig]
         int GetLDT(
-            [In] byte TableId, 
-            [In] ref short pwOriginalServiceId, 
+            [In] byte TableId,
+            [In] ref short pwOriginalServiceId,
             [MarshalAs(UnmanagedType.Interface)] out IISDB_LDT ppLDT
             );
 
         [PreserveSig]
         int GetSDTT(
-            [In] byte TableId, 
-            [In] ref short pwTableIdExt, 
+            [In] byte TableId,
+            [In] ref short pwTableIdExt,
             [MarshalAs(UnmanagedType.Interface)] out IISDB_SDTT ppSDTT
             );
 
         [PreserveSig]
         int GetCDT(
-            [In] byte TableId, 
-            [In] byte bSectionNumber, 
-            [In] ref short pwDownloadDataId, 
+            [In] byte TableId,
+            [In] byte bSectionNumber,
+            [In] ref short pwDownloadDataId,
             [MarshalAs(UnmanagedType.Interface)] out IISDB_CDT ppCDT
             );
 
         [PreserveSig]
         int GetEMM(
-            [In] short Pid, 
-            [In] short wTableIdExt, 
+            [In] short Pid,
+            [In] short wTableIdExt,
             [MarshalAs(UnmanagedType.Interface)] out IISDB_EMM ppEMM
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("39FAE0A6-D151-44DD-A28A-765DE5991670"), 
+    Guid("39FAE0A6-D151-44DD-A28A-765DE5991670"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IIsdbTerrestrialDeliverySystemDescriptor
     {
@@ -3010,14 +2965,13 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordFrequency(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out int pdwVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("D7AD183E-38F5-4210-B55F-EC8D601BBD47"), 
+    Guid("D7AD183E-38F5-4210-B55F-EC8D601BBD47"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IIsdbTSInformationDescriptor
     {
@@ -3038,7 +2992,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTSNameW(
-            [In] DVB_STRCONV_MODE convMode, 
+            [In] DVB_STRCONV_MODE convMode,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
 
@@ -3049,23 +3003,22 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordTransmissionTypeInfo(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordNumberOfServices(
-            [In] byte bRecordIndex, 
+            [In] byte bRecordIndex,
             out byte pbVal
             );
 
         [PreserveSig]
         int GetRecordServiceIdByIndex(
-            [In] byte bRecordIndex, 
-            [In] byte bServiceIndex, 
+            [In] byte bRecordIndex,
+            [In] byte bServiceIndex,
             out short pdwVal
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -3075,7 +3028,7 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int Initialize(
-            [In] int size, 
+            [In] int size,
             [In] ref byte pBuffer
             );
 
@@ -3101,7 +3054,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordEventId(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out long plwVal
             );
 
@@ -3119,35 +3072,34 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordCountOfDescriptors(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out int pdwVal
             );
 
         [PreserveSig]
         int GetRecordDescriptorByIndex(
-            [In] int dwRecordIndex, 
-            [In] int dwIndex, 
+            [In] int dwRecordIndex,
+            [In] int dwIndex,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
 
         [PreserveSig]
         int GetRecordDescriptorByTag(
-            [In] int dwRecordIndex, 
-            [In] byte bTag, 
-            [In, Out] ref int pdwCookie, 
+            [In] int dwRecordIndex,
+            [In] byte bTag,
+            [In, Out] ref int pdwCookie,
             [MarshalAs(UnmanagedType.Interface)] out IGenericDescriptor ppDescriptor
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("944EAB37-EED4-4850-AFD2-77E7EFEB4427"), 
+    Guid("944EAB37-EED4-4850-AFD2-77E7EFEB4427"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IPBDA_Services
     {
         [PreserveSig]
         int Initialize(
-            [In] int size, 
+            [In] int size,
             [In] ref byte pBuffer
             );
 
@@ -3158,14 +3110,13 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetRecordByIndex(
-            [In] int dwRecordIndex, 
+            [In] int dwRecordIndex,
             out long pul64ServiceIdx
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
-    Guid("313B3620-3263-45A6-9533-968BEFBEAC03"), 
+    Guid("313B3620-3263-45A6-9533-968BEFBEAC03"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IPBDAAttributesDescriptor
     {
@@ -3181,10 +3132,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetAttributePayload(
-            [Out] IntPtr ppbAttributeBuffer, 
+            [Out] IntPtr ppbAttributeBuffer,
             out int pdwAttributeLength
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -3204,10 +3154,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetToken(
-            [Out] IntPtr ppbTokenBuffer, 
+            [Out] IntPtr ppbTokenBuffer,
             out int pdwTokenLength
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -3222,18 +3171,17 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetEIT(
-            [In] int dwSize, 
-            [In] ref byte pBuffer, 
+            [In] int dwSize,
+            [In] ref byte pBuffer,
             [MarshalAs(UnmanagedType.Interface)] out IPBDA_EIT ppEIT
             );
 
         [PreserveSig]
         int GetServices(
-            [In] int dwSize, 
-            [In] ref byte pBuffer, 
+            [In] int dwSize,
+            [In] ref byte pBuffer,
             [MarshalAs(UnmanagedType.Interface)] out IPBDA_Services ppServices
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -3279,7 +3227,6 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTFSFlag([Out] byte pbVal);
-
     };
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -3385,19 +3332,18 @@ namespace DirectShowLib.BDA
         #endregion
 
         [PreserveSig]
-        int GetSegmentInfo( 
+        int GetSegmentInfo(
             out byte pbTid,
             out byte pbSegment
             );
-        
+
         [PreserveSig]
-        int GetRecordSection( 
+        int GetRecordSection(
             int dwRecordIndex,
             out byte pbVal
             );
-        
     };
-    
+
 #endif
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -3825,7 +3771,6 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetVersionHash([Out] out int pdwVersionHash);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -3883,7 +3828,5 @@ namespace DirectShowLib.BDA
           );
     }
 
-
     #endregion
-
 }

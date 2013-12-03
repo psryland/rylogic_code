@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -29,9 +29,10 @@ using System.Text;
 
 #if !USING_NET11
 using System.Runtime.InteropServices.ComTypes;
+
 #endif
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region Declarations
 
@@ -1852,7 +1853,6 @@ namespace DirectShowLib
         [PreserveSig]
         int get_CopyProtection([Out] out VideoCopyProtectionType lVideoCopyProtection);
 
-
         [PreserveSig]
         int put_CCEnable([In] int lCCEnable);
 
@@ -1925,7 +1925,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int SetTimecode([In] TimeCodeSample pTimecodeSample);
-
 
         [PreserveSig]
         int GetTimecode([Out] TimeCodeSample pTimecodeSample);
@@ -4240,7 +4239,6 @@ namespace DirectShowLib
             IReferenceClock pClockForFilter,
             IBaseFilter pFilter
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,

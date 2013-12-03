@@ -2,7 +2,7 @@
 
 /************************************************************************
 
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -32,13 +32,14 @@ using System.Text;
 using System.Reflection;
 using System.Security;
 
-using DirectShowLib.Dvd;
+using pr.directshow.Dvd;
 
 #if !USING_NET11
 using System.Runtime.InteropServices.ComTypes;
+
 #endif
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region Declarations
 
@@ -139,7 +140,7 @@ namespace DirectShowLib
     }
 
     /// <summary>
-    /// DirectShowLib.DsLong is a wrapper class around a <see cref="System.Int64"/> value type.
+    /// pr.directshow.DsLong is a wrapper class around a <see cref="System.Int64"/> value type.
     /// </summary>
     /// <remarks>
     /// This class is necessary to enable null paramters passing.
@@ -151,7 +152,7 @@ namespace DirectShowLib
 
         /// <summary>
         /// Constructor
-        /// Initialize a new instance of DirectShowLib.DsLong with the Value parameter
+        /// Initialize a new instance of pr.directshow.DsLong with the Value parameter
         /// </summary>
         /// <param name="Value">Value to assign to this new instance</param>
         public DsLong(long Value)
@@ -160,7 +161,7 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a string representation of this DirectShowLib.DsLong Instance.
+        /// Get a string representation of this pr.directshow.DsLong Instance.
         /// </summary>
         /// <returns>A string representing this instance</returns>
         public override string ToString()
@@ -174,8 +175,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between DirectShowLib.DsLong and System.Int64 for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsLong.ToInt64"/> for similar functionality.
+        /// Define implicit cast between pr.directshow.DsLong and System.Int64 for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsLong.ToInt64"/> for similar functionality.
         /// <code>
         ///   // Define a new DsLong instance
         ///   DsLong dsL = new DsLong(9876543210);
@@ -185,7 +186,7 @@ namespace DirectShowLib
         ///   Console.WriteLine(l.ToString());
         /// </code>
         /// </summary>
-        /// <param name="g">DirectShowLib.DsLong to be cast</param>
+        /// <param name="g">pr.directshow.DsLong to be cast</param>
         /// <returns>A casted System.Int64</returns>
         public static implicit operator long(DsLong l)
         {
@@ -193,8 +194,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between System.Int64 and DirectShowLib.DsLong for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsGuid.FromInt64"/> for similar functionality.
+        /// Define implicit cast between System.Int64 and pr.directshow.DsLong for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsGuid.FromInt64"/> for similar functionality.
         /// <code>
         ///   // Define a new Int64 instance
         ///   long l = 9876543210;
@@ -205,14 +206,14 @@ namespace DirectShowLib
         /// </code>
         /// </summary>
         /// <param name="g">System.Int64 to be cast</param>
-        /// <returns>A casted DirectShowLib.DsLong</returns>
+        /// <returns>A casted pr.directshow.DsLong</returns>
         public static implicit operator DsLong(long l)
         {
             return new DsLong(l);
         }
 
         /// <summary>
-        /// Get the System.Int64 equivalent to this DirectShowLib.DsLong instance.
+        /// Get the System.Int64 equivalent to this pr.directshow.DsLong instance.
         /// </summary>
         /// <returns>A System.Int64</returns>
         public long ToInt64()
@@ -221,10 +222,10 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a new DirectShowLib.DsLong instance for a given System.Int64
+        /// Get a new pr.directshow.DsLong instance for a given System.Int64
         /// </summary>
-        /// <param name="g">The System.Int64 to wrap into a DirectShowLib.DsLong</param>
-        /// <returns>A new instance of DirectShowLib.DsLong</returns>
+        /// <param name="g">The System.Int64 to wrap into a pr.directshow.DsLong</param>
+        /// <returns>A new instance of pr.directshow.DsLong</returns>
         public static DsLong FromInt64(long l)
         {
             return new DsLong(l);
@@ -232,7 +233,7 @@ namespace DirectShowLib
     }
 
     /// <summary>
-    /// DirectShowLib.DsGuid is a wrapper class around a System.Guid value type.
+    /// pr.directshow.DsGuid is a wrapper class around a System.Guid value type.
     /// </summary>
     /// <remarks>
     /// This class is necessary to enable null paramters passing.
@@ -246,7 +247,7 @@ namespace DirectShowLib
         public static readonly DsGuid Empty = Guid.Empty;
 
         /// <summary>
-        /// Empty constructor. 
+        /// Empty constructor.
         /// Initialize it with System.Guid.Empty
         /// </summary>
         public DsGuid()
@@ -275,7 +276,7 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a string representation of this DirectShowLib.DsGuid Instance.
+        /// Get a string representation of this pr.directshow.DsGuid Instance.
         /// </summary>
         /// <returns>A string representing this instance</returns>
         public override string ToString()
@@ -284,7 +285,7 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a string representation of this DirectShowLib.DsGuid Instance with a specific format.
+        /// Get a string representation of this pr.directshow.DsGuid Instance with a specific format.
         /// </summary>
         /// <param name="format"><see cref="System.Guid.ToString"/> for a description of the format parameter.</param>
         /// <returns>A string representing this instance according to the format parameter</returns>
@@ -299,8 +300,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between DirectShowLib.DsGuid and System.Guid for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsGuid.ToGuid"/> for similar functionality.
+        /// Define implicit cast between pr.directshow.DsGuid and System.Guid for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsGuid.ToGuid"/> for similar functionality.
         /// <code>
         ///   // Define a new DsGuid instance
         ///   DsGuid dsG = new DsGuid("{33D57EBF-7C9D-435e-A15E-D300B52FBD91}");
@@ -310,7 +311,7 @@ namespace DirectShowLib
         ///   Console.WriteLine(g.ToString());
         /// </code>
         /// </summary>
-        /// <param name="g">DirectShowLib.DsGuid to be cast</param>
+        /// <param name="g">pr.directshow.DsGuid to be cast</param>
         /// <returns>A casted System.Guid</returns>
         public static implicit operator Guid(DsGuid g)
         {
@@ -318,8 +319,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between System.Guid and DirectShowLib.DsGuid for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsGuid.FromGuid"/> for similar functionality.
+        /// Define implicit cast between System.Guid and pr.directshow.DsGuid for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsGuid.FromGuid"/> for similar functionality.
         /// <code>
         ///   // Define a new Guid instance
         ///   Guid g = new Guid("{B9364217-366E-45f8-AA2D-B0ED9E7D932D}");
@@ -330,14 +331,14 @@ namespace DirectShowLib
         /// </code>
         /// </summary>
         /// <param name="g">System.Guid to be cast</param>
-        /// <returns>A casted DirectShowLib.DsGuid</returns>
+        /// <returns>A casted pr.directshow.DsGuid</returns>
         public static implicit operator DsGuid(Guid g)
         {
             return new DsGuid(g);
         }
 
         /// <summary>
-        /// Get the System.Guid equivalent to this DirectShowLib.DsGuid instance.
+        /// Get the System.Guid equivalent to this pr.directshow.DsGuid instance.
         /// </summary>
         /// <returns>A System.Guid</returns>
         public Guid ToGuid()
@@ -346,10 +347,10 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a new DirectShowLib.DsGuid instance for a given System.Guid
+        /// Get a new pr.directshow.DsGuid instance for a given System.Guid
         /// </summary>
-        /// <param name="g">The System.Guid to wrap into a DirectShowLib.DsGuid</param>
-        /// <returns>A new instance of DirectShowLib.DsGuid</returns>
+        /// <param name="g">The System.Guid to wrap into a pr.directshow.DsGuid</param>
+        /// <returns>A new instance of pr.directshow.DsGuid</returns>
         public static DsGuid FromGuid(Guid g)
         {
             return new DsGuid(g);
@@ -357,7 +358,7 @@ namespace DirectShowLib
     }
 
     /// <summary>
-    /// DirectShowLib.DsInt is a wrapper class around a <see cref="System.Int32"/> value type.
+    /// pr.directshow.DsInt is a wrapper class around a <see cref="System.Int32"/> value type.
     /// </summary>
     /// <remarks>
     /// This class is necessary to enable null paramters passing.
@@ -369,7 +370,7 @@ namespace DirectShowLib
 
         /// <summary>
         /// Constructor
-        /// Initialize a new instance of DirectShowLib.DsInt with the Value parameter
+        /// Initialize a new instance of pr.directshow.DsInt with the Value parameter
         /// </summary>
         /// <param name="Value">Value to assign to this new instance</param>
         public DsInt(int Value)
@@ -378,7 +379,7 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a string representation of this DirectShowLib.DsInt Instance.
+        /// Get a string representation of this pr.directshow.DsInt Instance.
         /// </summary>
         /// <returns>A string representing this instance</returns>
         public override string ToString()
@@ -392,8 +393,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between DirectShowLib.DsInt and System.Int64 for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsInt.ToInt64"/> for similar functionality.
+        /// Define implicit cast between pr.directshow.DsInt and System.Int64 for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsInt.ToInt64"/> for similar functionality.
         /// <code>
         ///   // Define a new DsInt instance
         ///   DsInt dsI = new DsInt(0x12345678);
@@ -403,7 +404,7 @@ namespace DirectShowLib
         ///   Console.WriteLine(i.ToString());
         /// </code>
         /// </summary>
-        /// <param name="g">DirectShowLib.DsInt to be cast</param>
+        /// <param name="g">pr.directshow.DsInt to be cast</param>
         /// <returns>A casted System.Int32</returns>
         public static implicit operator int(DsInt l)
         {
@@ -411,8 +412,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between System.Int32 and DirectShowLib.DsInt for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsGuid.FromInt32"/> for similar functionality.
+        /// Define implicit cast between System.Int32 and pr.directshow.DsInt for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsGuid.FromInt32"/> for similar functionality.
         /// <code>
         ///   // Define a new Int32 instance
         ///   int i = 0x12345678;
@@ -423,14 +424,14 @@ namespace DirectShowLib
         /// </code>
         /// </summary>
         /// <param name="g">System.Int32 to be cast</param>
-        /// <returns>A casted DirectShowLib.DsInt</returns>
+        /// <returns>A casted pr.directshow.DsInt</returns>
         public static implicit operator DsInt(int l)
         {
             return new DsInt(l);
         }
 
         /// <summary>
-        /// Get the System.Int32 equivalent to this DirectShowLib.DsInt instance.
+        /// Get the System.Int32 equivalent to this pr.directshow.DsInt instance.
         /// </summary>
         /// <returns>A System.Int32</returns>
         public int ToInt32()
@@ -439,10 +440,10 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a new DirectShowLib.DsInt instance for a given System.Int32
+        /// Get a new pr.directshow.DsInt instance for a given System.Int32
         /// </summary>
-        /// <param name="g">The System.Int32 to wrap into a DirectShowLib.DsInt</param>
-        /// <returns>A new instance of DirectShowLib.DsInt</returns>
+        /// <param name="g">The System.Int32 to wrap into a pr.directshow.DsInt</param>
+        /// <returns>A new instance of pr.directshow.DsInt</returns>
         public static DsInt FromInt32(int l)
         {
             return new DsInt(l);
@@ -450,7 +451,7 @@ namespace DirectShowLib
     }
 
     /// <summary>
-    /// DirectShowLib.DsShort is a wrapper class around a <see cref="System.Int16"/> value type.
+    /// pr.directshow.DsShort is a wrapper class around a <see cref="System.Int16"/> value type.
     /// </summary>
     /// <remarks>
     /// This class is necessary to enable null paramters passing.
@@ -462,7 +463,7 @@ namespace DirectShowLib
 
         /// <summary>
         /// Constructor
-        /// Initialize a new instance of DirectShowLib.DsShort with the Value parameter
+        /// Initialize a new instance of pr.directshow.DsShort with the Value parameter
         /// </summary>
         /// <param name="Value">Value to assign to this new instance</param>
         public DsShort(short Value)
@@ -471,7 +472,7 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a string representation of this DirectShowLib.DsShort Instance.
+        /// Get a string representation of this pr.directshow.DsShort Instance.
         /// </summary>
         /// <returns>A string representing this instance</returns>
         public override string ToString()
@@ -485,8 +486,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between DirectShowLib.DsShort and System.Int16 for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsShort.ToInt64"/> for similar functionality.
+        /// Define implicit cast between pr.directshow.DsShort and System.Int16 for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsShort.ToInt64"/> for similar functionality.
         /// <code>
         ///   // Define a new DsShort instance
         ///   DsShort dsS = new DsShort(0x1234);
@@ -496,7 +497,7 @@ namespace DirectShowLib
         ///   Console.WriteLine(s.ToString());
         /// </code>
         /// </summary>
-        /// <param name="g">DirectShowLib.DsShort to be cast</param>
+        /// <param name="g">pr.directshow.DsShort to be cast</param>
         /// <returns>A casted System.Int16</returns>
         public static implicit operator short(DsShort l)
         {
@@ -504,8 +505,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between System.Int16 and DirectShowLib.DsShort for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsGuid.FromInt16"/> for similar functionality.
+        /// Define implicit cast between System.Int16 and pr.directshow.DsShort for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsGuid.FromInt16"/> for similar functionality.
         /// <code>
         ///   // Define a new Int16 instance
         ///   short s = 0x1234;
@@ -516,14 +517,14 @@ namespace DirectShowLib
         /// </code>
         /// </summary>
         /// <param name="g">System.Int16 to be cast</param>
-        /// <returns>A casted DirectShowLib.DsShort</returns>
+        /// <returns>A casted pr.directshow.DsShort</returns>
         public static implicit operator DsShort(short l)
         {
             return new DsShort(l);
         }
 
         /// <summary>
-        /// Get the System.Int16 equivalent to this DirectShowLib.DsShort instance.
+        /// Get the System.Int16 equivalent to this pr.directshow.DsShort instance.
         /// </summary>
         /// <returns>A System.Int16</returns>
         public short ToInt16()
@@ -532,10 +533,10 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a new DirectShowLib.DsShort instance for a given System.Int64
+        /// Get a new pr.directshow.DsShort instance for a given System.Int64
         /// </summary>
-        /// <param name="g">The System.Int16 to wrap into a DirectShowLib.DsShort</param>
-        /// <returns>A new instance of DirectShowLib.DsShort</returns>
+        /// <param name="g">The System.Int16 to wrap into a pr.directshow.DsShort</param>
+        /// <returns>A new instance of pr.directshow.DsShort</returns>
         public static DsShort FromInt16(short l)
         {
             return new DsShort(l);
@@ -543,7 +544,7 @@ namespace DirectShowLib
     }
 
     /// <summary>
-    /// DirectShowLib.DsRect is a managed representation of the Win32 RECT structure.
+    /// pr.directshow.DsRect is a managed representation of the Win32 RECT structure.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class DsRect
@@ -631,8 +632,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between DirectShowLib.DsRect and System.Drawing.Rectangle for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsRect.ToRectangle"/> for similar functionality.
+        /// Define implicit cast between pr.directshow.DsRect and System.Drawing.Rectangle for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsRect.ToRectangle"/> for similar functionality.
         /// <code>
         ///   // Define a new Rectangle instance
         ///   Rectangle r = new Rectangle(0, 0, 100, 100);
@@ -650,8 +651,8 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Define implicit cast between System.Drawing.Rectangle and DirectShowLib.DsRect for languages supporting this feature.
-        /// VB.Net doesn't support implicit cast. <see cref="DirectShowLib.DsRect.FromRectangle"/> for similar functionality.
+        /// Define implicit cast between System.Drawing.Rectangle and pr.directshow.DsRect for languages supporting this feature.
+        /// VB.Net doesn't support implicit cast. <see cref="pr.directshow.DsRect.FromRectangle"/> for similar functionality.
         /// <code>
         ///   // Define a new DsRect instance
         ///   DsRect dsR = new DsRect(0, 0, 100, 100);
@@ -669,7 +670,7 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get the System.Drawing.Rectangle equivalent to this DirectShowLib.DsRect instance.
+        /// Get the System.Drawing.Rectangle equivalent to this pr.directshow.DsRect instance.
         /// </summary>
         /// <returns>A System.Drawing.Rectangle</returns>
         public Rectangle ToRectangle()
@@ -678,10 +679,10 @@ namespace DirectShowLib
         }
 
         /// <summary>
-        /// Get a new DirectShowLib.DsRect instance for a given <see cref="System.Drawing.Rectangle"/>
+        /// Get a new pr.directshow.DsRect instance for a given <see cref="System.Drawing.Rectangle"/>
         /// </summary>
-        /// <param name="r">The <see cref="System.Drawing.Rectangle"/> used to initialize this new DirectShowLib.DsGuid</param>
-        /// <returns>A new instance of DirectShowLib.DsGuid</returns>
+        /// <param name="r">The <see cref="System.Drawing.Rectangle"/> used to initialize this new pr.directshow.DsGuid</param>
+        /// <returns>A new instance of pr.directshow.DsGuid</returns>
         public static DsRect FromRectangle(Rectangle r)
         {
             return new DsRect(r);
@@ -753,7 +754,6 @@ namespace DirectShowLib
             NormalizedRect other = (NormalizedRect)obj;
             return (this == other);
         }
-
 
         public RectangleF ToRectangleF()
         {
@@ -917,7 +917,6 @@ namespace DirectShowLib
         public const int E_NoCOPPHW = unchecked((int)0x8004029B);
     }
 
-
     static public class DsError
     {
         [DllImport("quartz.dll", CharSet = CharSet.Unicode, ExactSpelling = true, EntryPoint = "AMGetErrorTextW"),
@@ -973,7 +972,6 @@ namespace DirectShowLib
             return null;
         }
     }
-
 
     static public class DsUtils
     {
@@ -1051,9 +1049,7 @@ namespace DirectShowLib
                 pinInfo.filter = null;
             }
         }
-
     }
-
 
     public class DsROTEntry : IDisposable
     {
@@ -1175,7 +1171,6 @@ namespace DirectShowLib
         }
     }
 
-
     public class DsDevice : IDisposable
     {
 #if USING_NET11
@@ -1254,7 +1249,6 @@ namespace DirectShowLib
                 return g;
             }
         }
-
 
         /// <summary>
         /// Returns an array of DsDevices of type devcat.
@@ -1388,7 +1382,6 @@ namespace DirectShowLib
             m_Name = null;
         }
     }
-
 
     static public class DsFindPin
     {
@@ -1614,7 +1607,6 @@ namespace DirectShowLib
         }
     }
 
-
     static public class DsToString
     {
         /// <summary>
@@ -1676,7 +1668,6 @@ namespace DirectShowLib
         {
             // Walk the FormatType class looking for a match
             return WalkClass(typeof(FormatType), guid);
-
         }
 
         /// <summary>
@@ -1708,7 +1699,6 @@ namespace DirectShowLib
             return guid.ToString();
         }
     }
-
 
     // This abstract class contains definitions for use in implementing a custom marshaler.
     //

@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -26,7 +26,7 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region Declarations
 
@@ -469,7 +469,6 @@ namespace DirectShowLib
         [PreserveSig]
         int GetDirectDraw(
             [MarshalAs(UnmanagedType.IUnknown)] out object ppDirectDraw); // IDirectDraw
-
     }
 
 #endif
@@ -759,7 +758,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int ResetMultiPassState();
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,

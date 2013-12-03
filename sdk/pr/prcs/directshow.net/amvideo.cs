@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -26,7 +26,7 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region Declarations
 
@@ -216,7 +216,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int SetDefault();
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -290,7 +289,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int IsKeepPixelAspectRatio(out int pKeepAspect);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -344,7 +342,6 @@ namespace DirectShowLib
 
         [PreserveSig]
         int get_DevSyncOffset(out int piDev);
-
     }
 
     #endregion

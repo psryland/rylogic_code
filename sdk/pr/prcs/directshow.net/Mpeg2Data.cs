@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region Declarations
 
@@ -232,41 +232,40 @@ namespace DirectShowLib
     public interface IMpeg2TableFilter
     {
         [PreserveSig]
-        int AddPID( 
+        int AddPID(
             short pid
             );
-        
+
         [PreserveSig]
         int AddTable(
             short pid,
             byte tid
             );
-        
+
         [PreserveSig]
         int AddExtension(
             short pid,
             byte tid,
             short eid
             );
-        
+
         [PreserveSig]
         int RemovePID(
             short pid
             );
-        
+
         [PreserveSig]
         int RemoveTable(
             short pid,
             byte tid
             );
-        
+
         [PreserveSig]
-        int RemoveExtension( 
+        int RemoveExtension(
             short pid,
             byte tid,
             short eid
             );
-        
     }
 
 #endif

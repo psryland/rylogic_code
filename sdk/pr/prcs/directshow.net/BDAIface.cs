@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib.BDA
+namespace pr.directshow.BDA
 {
     #region Declarations
 
@@ -251,17 +251,17 @@ namespace DirectShowLib.BDA
     public enum CCSubstreamService
     {
         None = 0,
-        CC1 = 0x0001, //CC1 (caption channel) 
-        CC2 = 0x0002, //CC2 (caption channel) 
-        T1 = 0x0004, // T1 (text channel) 
-        T2 = 0x0008, // T2 (text channel) 
-        CC3 = 0x0100, // CC3 (caption channel) 
-        CC4 = 0x0200, // CC4 (caption channel) 
-        T3 = 0x0400, // T3 (text channel) 
-        T4 = 0x0800, // T4 (text channel) 
-        XDS = 0x1000, // Extended Data Services (XDS) 
-        Field1 = 0x000F, // Bitmask to filter field 1 substreams. 
-        Field2 = 0x1F00 //Bitmask to filter field 2 substreams 
+        CC1 = 0x0001, //CC1 (caption channel)
+        CC2 = 0x0002, //CC2 (caption channel)
+        T1 = 0x0004, // T1 (text channel)
+        T2 = 0x0008, // T2 (text channel)
+        CC3 = 0x0100, // CC3 (caption channel)
+        CC4 = 0x0200, // CC4 (caption channel)
+        T3 = 0x0400, // T3 (text channel)
+        T4 = 0x0800, // T4 (text channel)
+        XDS = 0x1000, // Extended Data Services (XDS)
+        Field1 = 0x000F, // Bitmask to filter field 1 substreams.
+        Field2 = 0x1F00 //Bitmask to filter field 2 substreams
     }
 
     #endregion
@@ -510,11 +510,11 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int EnumCapability(
-            [In] int dwIndex, 
-            out int dwInputID, 
-            out Guid pConnectorType, 
-            out int ConnTypeNum, 
-            out int NumVideoStds, 
+            [In] int dwIndex,
+            out int dwInputID,
+            out Guid pConnectorType,
+            out int ConnTypeNum,
+            out int NumVideoStds,
             out long AnalogStds
             );
     }
@@ -526,33 +526,33 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int CheckEntitlementToken(
-            [In] int ulDialogRequest, 
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage, 
-            [In] BDA_CONDITIONALACCESS_REQUESTTYPE RequestType, 
-            [In] int ulcbEntitlementTokenLen, 
-            [In] ref byte pbEntitlementToken, 
+            [In] int ulDialogRequest,
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage,
+            [In] BDA_CONDITIONALACCESS_REQUESTTYPE RequestType,
+            [In] int ulcbEntitlementTokenLen,
+            [In] ref byte pbEntitlementToken,
             out int pulDescrambleStatus
             );
 
         [PreserveSig]
         int SetCaptureToken(
-            [In] int ulcbCaptureTokenLen, 
+            [In] int ulcbCaptureTokenLen,
             [In] ref byte pbCaptureToken
             );
 
         [PreserveSig]
         int OpenBroadcastMmi(
-            [In] int ulDialogRequest, 
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage, 
+            [In] int ulDialogRequest,
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage,
             [In] int EventId
             );
 
         [PreserveSig]
         int CloseMmiDialog(
-            [In] int ulDialogRequest, 
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage, 
-            [In] int ulDialogNumber, 
-            [In] BDA_CONDITIONALACCESS_MMICLOSEREASON ReasonCode, 
+            [In] int ulDialogRequest,
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage,
+            [In] int ulDialogNumber,
+            [In] BDA_CONDITIONALACCESS_MMICLOSEREASON ReasonCode,
             out int pulSessionResult
             );
 
@@ -709,15 +709,15 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int put_DiseqSendCommand(
-            [In] int ulRequestId, 
-            [In] int ulcbCommandLen, 
+            [In] int ulRequestId,
+            [In] int ulcbCommandLen,
             [In] ref byte pbCommand
             );
 
         [PreserveSig]
         int get_DiseqResponse(
-            [In] int ulRequestId, 
-            [In, Out] ref int pulcbResponseLen, 
+            [In] int ulRequestId,
+            [In, Out] ref int pulcbResponseLen,
             [In, Out] ref byte pbResponse
             );
     }
@@ -734,7 +734,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetDRMStatus(
-            [MarshalAs(UnmanagedType.BStr)] out string pbstrDrmUuidList, 
+            [MarshalAs(UnmanagedType.BStr)] out string pbstrDrmUuidList,
             out Guid DrmUuid
             );
 
@@ -756,31 +756,31 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int ProcessLicenseChallenge(
-            [In] int dwcbLicenseMessage, 
-            [In] ref byte pbLicenseMessage, 
-            [In, Out] ref int pdwcbLicenseResponse, 
+            [In] int dwcbLicenseMessage,
+            [In] ref byte pbLicenseMessage,
+            [In, Out] ref int pdwcbLicenseResponse,
             [In, Out] IntPtr ppbLicenseResponse
             );
 
         [PreserveSig]
         int ProcessRegistrationChallenge(
-            [In] int dwcbRegistrationMessage, 
-            [In] ref byte pbRegistrationMessage, 
-            [In, Out] ref int pdwcbRegistrationResponse, 
+            [In] int dwcbRegistrationMessage,
+            [In] ref byte pbRegistrationMessage,
+            [In, Out] ref int pdwcbRegistrationResponse,
             [In, Out] IntPtr ppbRegistrationResponse
             );
 
         [PreserveSig]
         int SetRevInfo(
-            [In] int dwRevInfoLen, 
-            [In] ref byte pbRevInfo, 
+            [In] int dwRevInfoLen,
+            [In] ref byte pbRevInfo,
             [In, Out] ref int pdwResponse
             );
 
         [PreserveSig]
         int SetCrl(
-            [In] int dwCrlLen, 
-            [In] ref byte pbCrlLen, 
+            [In] int dwCrlLen,
+            [In] ref byte pbCrlLen,
             [In, Out] ref int pdwResponse
             );
 
@@ -805,7 +805,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetDRMStatus(
-            [MarshalAs(UnmanagedType.BStr)] out string pbstrDrmUuidList, 
+            [MarshalAs(UnmanagedType.BStr)] out string pbstrDrmUuidList,
             out Guid DrmUuid
             );
     }
@@ -817,63 +817,63 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int QueryCapabilities(
-            out int NumAudioFmts, 
+            out int NumAudioFmts,
             out int NumVideoFmts
             );
 
         [PreserveSig]
         int EnumAudioCapability(
-            [In] int FmtIndex, 
-            out int MethodID, 
-            out int AlgorithmType, 
-            out int SamplingRate, 
-            out int BitDepth, 
+            [In] int FmtIndex,
+            out int MethodID,
+            out int AlgorithmType,
+            out int SamplingRate,
+            out int BitDepth,
             out int NumChannels
             );
 
         [PreserveSig]
         int EnumVideoCapability(
-            [In] int FmtIndex, 
-            out int MethodID, 
-            out int AlgorithmType, 
-            out int VerticalSize, 
-            out int HorizontalSize, 
-            out int AspectRatio, 
-            out int FrameRateCode, 
+            [In] int FmtIndex,
+            out int MethodID,
+            out int AlgorithmType,
+            out int VerticalSize,
+            out int HorizontalSize,
+            out int AspectRatio,
+            out int FrameRateCode,
             out int ProgressiveSequence
             );
 
         [PreserveSig]
         int SetParameters(
-            [In] int AudioBitrateMode, 
-            [In] int AudioBitrate, 
-            [In] int AudioMethodID, 
-            [In] int AudioProgram, 
-            [In] int VideoBitrateMode, 
-            [In] int VideoBitrate, 
+            [In] int AudioBitrateMode,
+            [In] int AudioBitrate,
+            [In] int AudioMethodID,
+            [In] int AudioProgram,
+            [In] int VideoBitrateMode,
+            [In] int VideoBitrate,
             [In] int VideoMethodID
             );
 
         [PreserveSig]
         int GetState(
-            out int AudioBitrateMax, 
-            out int AudioBitrateMin, 
-            out int AudioBitrateMode, 
-            out int AudioBitrateStepping, 
-            out int AudioBitrate, 
-            out int AudioMethodID, 
-            out int AvailableAudioPrograms, 
-            out int AudioProgram, 
-            out int VideoBitrateMax, 
-            out int VideoBitrateMin, 
-            out int VideoBitrateMode, 
-            out int VideoBitrate, 
-            out int VideoBitrateStepping, 
-            out int VideoMethodID, 
-            out int SignalSourceID, 
-            out long SignalFormat, 
-            out int SignalLock, 
-            out int SignalLevel, 
+            out int AudioBitrateMax,
+            out int AudioBitrateMin,
+            out int AudioBitrateMode,
+            out int AudioBitrateStepping,
+            out int AudioBitrate,
+            out int AudioMethodID,
+            out int AvailableAudioPrograms,
+            out int AudioProgram,
+            out int VideoBitrateMax,
+            out int VideoBitrateMin,
+            out int VideoBitrateMode,
+            out int VideoBitrate,
+            out int VideoBitrateStepping,
+            out int VideoMethodID,
+            out int SignalSourceID,
+            out long SignalFormat,
+            out int SignalLock,
+            out int SignalLevel,
             out int SignalToNoiseRatio
             );
     }
@@ -885,7 +885,7 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int CompleteEvent(
-            [In] int ulEventID, 
+            [In] int ulEventID,
             [In] int ulEventResult
             );
     }
@@ -897,12 +897,12 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int GetStatus(
-            out int CurrentBitrate, 
-            out int CarrierLock, 
-            out int CurrentFrequency, 
-            out int CurrentSpectrumInversion, 
-            [MarshalAs(UnmanagedType.BStr)] out string CurrentPIDList, 
-            [MarshalAs(UnmanagedType.BStr)] out string CurrentTIDList, 
+            out int CurrentBitrate,
+            out int CarrierLock,
+            out int CurrentFrequency,
+            out int CurrentSpectrumInversion,
+            [MarshalAs(UnmanagedType.BStr)] out string CurrentPIDList,
+            [MarshalAs(UnmanagedType.BStr)] out string CurrentTIDList,
             out int Overflow
             );
 
@@ -913,7 +913,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int AddPid(
-            [In, MarshalAs(UnmanagedType.BStr)] string PidsToAdd, 
+            [In, MarshalAs(UnmanagedType.BStr)] string PidsToAdd,
             out int RemainingFilterEntries
             );
 
@@ -924,7 +924,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int AddTid(
-            [In, MarshalAs(UnmanagedType.BStr)] string TidsToAdd, 
+            [In, MarshalAs(UnmanagedType.BStr)] string TidsToAdd,
             [MarshalAs(UnmanagedType.BStr)] out string CurrentTIDList
             );
 
@@ -935,9 +935,9 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTableSection(
-            out int Pid, 
-            [In] int MaxBufferSize, 
-            out int ActualSize, 
+            out int Pid,
+            [In] int MaxBufferSize,
+            out int ActualSize,
             out byte SecBuffer
             );
     }
@@ -954,8 +954,8 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetGuideData(
-            [In, Out] ref int pulcbBufferLen, 
-            out byte pbBuffer, 
+            [In, Out] ref int pulcbBufferLen,
+            out byte pbBuffer,
             out int pulGuideDataPercentageProgress
             );
 
@@ -964,7 +964,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTuneXmlFromServiceIdx(
-            [In] long ul64ServiceIdx, 
+            [In] long ul64ServiceIdx,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrTuneXml
             );
 
@@ -975,7 +975,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetServiceInfoFromTuneXml(
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrTuneXml, 
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrTuneXml,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrServiceDescription
             );
     }
@@ -987,8 +987,8 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int SetIsdbCasRequest(
-            [In] int ulRequestId, 
-            [In] int ulcbRequestBufferLen, 
+            [In] int ulRequestId,
+            [In] int ulcbRequestBufferLen,
             [In] ref byte pbRequestBuffer
             );
     }
@@ -1000,13 +1000,13 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int SetPidList(
-            [In] int ulPidListCount, 
+            [In] int ulPidListCount,
             [In] ref BDA_MUX_PIDLISTITEM pbPidListBuffer
             );
 
         [PreserveSig]
         int GetPidList(
-            [In, Out] ref int pulPidListCount, 
+            [In, Out] ref int pulPidListCount,
             [In, Out] ref BDA_MUX_PIDLISTITEM pbPidListBuffer
             );
     }
@@ -1018,23 +1018,23 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int GetValueNameByIndex(
-            [In] int ulIndex, 
+            [In] int ulIndex,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrName
             );
 
         [PreserveSig]
         int GetValue(
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrName, 
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage, 
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrName,
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage,
             [MarshalAs(UnmanagedType.BStr)] out string pbstrValue
             );
 
         [PreserveSig]
         int SetValue(
-            [In] int ulDialogRequest, 
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage, 
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrName, 
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrValue, 
+            [In] int ulDialogRequest,
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage,
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrName,
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrValue,
             [In] int ulReserved
             );
     }
@@ -1051,7 +1051,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetTSInformation(
-            [In, Out] ref int pulTSInformationBufferLen, 
+            [In, Out] ref int pulTSInformationBufferLen,
             out byte pbTSInformationBuffer
             );
     }
@@ -1082,41 +1082,41 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int GetStatus(
-            out int MaxCaptureToken, 
-            out int MaxStreamingPid, 
-            out int MaxLicense, 
-            out int MinSecurityLevel, 
-            out int RevInfoSequenceNumber, 
-            out long RevInfoIssuedTime, 
-            out int RevInfoTTL, 
-            out int RevListVersion, 
+            out int MaxCaptureToken,
+            out int MaxStreamingPid,
+            out int MaxLicense,
+            out int MinSecurityLevel,
+            out int RevInfoSequenceNumber,
+            out long RevInfoIssuedTime,
+            out int RevInfoTTL,
+            out int RevListVersion,
             out int ulState
             );
 
         [PreserveSig]
         int SetRevInfo(
-            [In] int ulRevInfoLen, 
+            [In] int ulRevInfoLen,
             [In] ref byte pbRevInfo
             );
 
         [PreserveSig]
         int SetCrl(
-            [In] int ulCrlLen, 
+            [In] int ulCrlLen,
             [In] ref byte pbCrlLen
             );
 
         [PreserveSig]
         int TransactMessage(
-            [In] int ulcbRequest, 
-            [In] ref byte pbRequest, 
-            [In, Out] ref int pulcbResponse, 
+            [In] int ulcbRequest,
+            [In] ref byte pbRequest,
+            [In, Out] ref int pulcbResponse,
             [In, Out] ref byte pbResponse
             );
 
         [PreserveSig]
         int GetLicense(
-            [In] ref Guid uuidKey, 
-            [In, Out] ref int pulPackageLen, 
+            [In] ref Guid uuidKey,
+            [In, Out] ref int pulPackageLen,
             [In, Out] ref byte pbPackage
             );
 
@@ -1127,18 +1127,18 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int RenewLicense(
-            [In] int ulInXmrLicenseLen, 
-            [In] ref byte pbInXmrLicense, 
-            [In] int ulEntitlementTokenLen, 
-            [In] ref byte pbEntitlementToken, 
-            out int pulDescrambleStatus, 
-            [In, Out] ref int pulOutXmrLicenseLen, 
+            [In] int ulInXmrLicenseLen,
+            [In] ref byte pbInXmrLicense,
+            [In] int ulEntitlementTokenLen,
+            [In] ref byte pbEntitlementToken,
+            out int pulDescrambleStatus,
+            [In, Out] ref int pulOutXmrLicenseLen,
             [In, Out] ref byte pbOutXmrLicense
             );
 
         [PreserveSig]
         int GetKeyInfo(
-            [In, Out] ref int pulKeyInfoLen, 
+            [In, Out] ref int pulKeyInfoLen,
             [In, Out] ref byte pbKeyInfo
             );
     }
@@ -1150,30 +1150,30 @@ namespace DirectShowLib.BDA
     {
         [PreserveSig]
         int PurchaseEntitlement(
-            [In] int ulDialogRequest, 
-            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage, 
-            [In] int ulPurchaseTokenLen, 
-            [In] ref byte pbPurchaseToken, 
-            out int pulDescrambleStatus, 
-            [In, Out] ref int pulCaptureTokenLen, 
+            [In] int ulDialogRequest,
+            [In, MarshalAs(UnmanagedType.BStr)] string bstrLanguage,
+            [In] int ulPurchaseTokenLen,
+            [In] ref byte pbPurchaseToken,
+            out int pulDescrambleStatus,
+            [In, Out] ref int pulCaptureTokenLen,
             [In, Out] ref byte pbCaptureToken
             );
 
         [PreserveSig]
         int CancelCaptureToken(
-            [In] int ulCaptureTokenLen, 
+            [In] int ulCaptureTokenLen,
             [In] ref byte pbCaptureToken
             );
 
         [PreserveSig]
         int SetPidProtection(
-            [In] int ulPid, 
+            [In] int ulPid,
             [In] ref Guid uuidKey
             );
 
         [PreserveSig]
         int GetPidProtection(
-            [In] int pulPid, 
+            [In] int pulPid,
             out Guid uuidKey
             );
 
@@ -1184,7 +1184,7 @@ namespace DirectShowLib.BDA
 
         [PreserveSig]
         int GetStartCodeProfile(
-            [In, Out] ref int pulStartCodeProfileLen, 
+            [In, Out] ref int pulStartCodeProfileLen,
             [In, Out] ref byte pbStartCodeProfile
             );
     }
@@ -1446,7 +1446,6 @@ namespace DirectShowLib.BDA
             [In] int ulNodeType,
             [Out, MarshalAs(UnmanagedType.IUnknown)] out object ppControlNode // IUnknown
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1484,7 +1483,6 @@ namespace DirectShowLib.BDA
             [Out] out int pulCount,
             [Out] out IntPtr ppulList
             );
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1588,7 +1586,6 @@ namespace DirectShowLib.BDA
         [PreserveSig]
         int GetMulticastMode(
             out MulticastMode pulModeMask);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1695,7 +1692,6 @@ namespace DirectShowLib.BDA
         [PreserveSig]
         int GetMulticastMode(
             out MulticastMode pulModeMask);
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
@@ -1711,12 +1707,10 @@ namespace DirectShowLib.BDA
         int PutMulticastList(
             int ulcbAddresses,
             IntPtr pAddressList);  // BYTE []
-
         [PreserveSig]
         int GetMulticastList(
             ref int pulcbAddresses,
             IntPtr pAddressList);  // BYTE []
-
         [PreserveSig]
         int PutMulticastMode(
             MulticastMode ulModeMask);
@@ -1775,7 +1769,6 @@ namespace DirectShowLib.BDA
 #else
         int EnumPIDMap([Out] out object pIEnumPIDMap);
 #endif
-
     }
 
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,

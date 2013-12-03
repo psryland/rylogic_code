@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 using System;
 using System.Runtime.InteropServices;
 
-namespace DirectShowLib
+namespace pr.directshow
 {
     #region COM Class Objects
 
@@ -70,14 +70,13 @@ namespace DirectShowLib
     }
 
     /// <summary>
-    /// CLSID_FGControl 
+    /// CLSID_FGControl
     /// </summary>
     [ComImport, Guid("e436ebb4-524f-11ce-9f53-0020af0ba770")]
     public class FGControl
     {
     }
 
-  
     /// <summary>
     /// CLSID_FileSource
     /// </summary>
@@ -174,7 +173,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_DtvCcFilter
     /// </summary>
@@ -182,7 +180,6 @@ namespace DirectShowLib
     public class DtvCcFilter
     {
     }
-
 
     /// <summary>
     /// CLSID_MSTVCaptionFilter
@@ -192,7 +189,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_SystemDeviceEnum
     /// </summary>
@@ -200,7 +196,6 @@ namespace DirectShowLib
     public class CreateDevEnum
     {
     }
-
 
     /// <summary>
     /// CLSID_FilterGraph
@@ -210,7 +205,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_FilterGraphNoThread
     /// </summary>
@@ -218,7 +212,6 @@ namespace DirectShowLib
     public class FilterGraphNoThread
     {
     }
-
 
     /// <summary>
     /// CLSID_CaptureGraphBuilder2
@@ -228,7 +221,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_DvdGraphBuilder
     /// </summary>
@@ -236,7 +228,6 @@ namespace DirectShowLib
     public class DvdGraphBuilder
     {
     }
-
 
     /// <summary>
     /// CLSID_CaptureGraphBuilder
@@ -246,7 +237,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_StreamBufferConfig
     /// </summary>
@@ -254,7 +244,6 @@ namespace DirectShowLib
     public class StreamBufferConfig
     {
     }
-
 
     /// <summary>
     /// CLSID_StreamBufferComposeRecording
@@ -264,7 +253,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_SeekingPassThru
     /// </summary>
@@ -272,7 +260,6 @@ namespace DirectShowLib
     public class SeekingPassThru
     {
     }
-
 
     /// <summary>
     /// CLSID_FilterMapper2
@@ -282,7 +269,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_MemoryAllocator
     /// </summary>
@@ -291,7 +277,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_MediaPropertyBag
     /// </summary>
@@ -299,7 +284,6 @@ namespace DirectShowLib
     public class MediaPropertyBag
     {
     }
-
 
     /// <summary>
     /// CLSID_DVDState
@@ -385,7 +369,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_StreamBufferSink
     /// </summary>
@@ -393,7 +376,6 @@ namespace DirectShowLib
     public class StreamBufferSink
     {
     }
-
 
     /// <summary>
     /// CLSID_SampleGrabber
@@ -403,7 +385,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_StreamBufferSource
     /// </summary>
@@ -411,7 +392,6 @@ namespace DirectShowLib
     public class StreamBufferSource
     {
     }
-
 
     /// <summary>
     /// CLSID_VideoMixingRenderer
@@ -421,7 +401,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_VideoMixingRenderer9
     /// </summary>
@@ -429,7 +408,6 @@ namespace DirectShowLib
     public class VideoMixingRenderer9
     {
     }
-
 
     /// <summary>
     /// CLSID_VideoRendererDefault
@@ -439,7 +417,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_AviSplitter
     /// </summary>
@@ -447,7 +424,6 @@ namespace DirectShowLib
     public class AviSplitter
     {
     }
-
 
     /// <summary>
     /// CLSID_SmartTee
@@ -457,7 +433,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_NullRenderer
     /// </summary>
@@ -465,7 +440,6 @@ namespace DirectShowLib
     public class NullRenderer
     {
     }
-
 
     /// <summary>
     /// CLSID_ACMWrapper
@@ -475,7 +449,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_AudioRender
     /// </summary>
@@ -483,7 +456,6 @@ namespace DirectShowLib
     public class AudioRender
     {
     }
-
 
     /// <summary>
     /// CLSID_AVIDec
@@ -493,7 +465,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_AVIDraw
     /// </summary>
@@ -501,7 +472,6 @@ namespace DirectShowLib
     public class AVIDraw
     {
     }
-
 
     /// <summary>
     /// CLSID_AviDest
@@ -511,7 +481,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_ATSCNetworkProvider
     /// </summary>
@@ -519,7 +488,6 @@ namespace DirectShowLib
     public class ATSCNetworkProvider
     {
     }
-
 
     /// <summary>
     /// CLSID_DVBCNetworkProvider
@@ -529,7 +497,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_DVBSNetworkProvider
     /// </summary>
@@ -537,7 +504,6 @@ namespace DirectShowLib
     public class DVBSNetworkProvider
     {
     }
-
 
     /// <summary>
     /// CLSID_DVBTNetworkProvider
@@ -563,7 +529,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_DSoundRender
     /// </summary>
@@ -571,7 +536,6 @@ namespace DirectShowLib
     public class DSoundRender
     {
     }
-
 
     /// <summary>
     /// CLSID_DVMux
@@ -581,7 +545,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_DVSplitter
     /// </summary>
@@ -589,7 +552,6 @@ namespace DirectShowLib
     public class DVSplitter
     {
     }
-
 
     /// <summary>
     /// CLSID_DVVideoCodec
@@ -599,7 +561,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_DVVideoEnc
     /// </summary>
@@ -607,7 +568,6 @@ namespace DirectShowLib
     public class DVVideoEnc
     {
     }
-
 
     /// <summary>
     /// CLSID_DVDNavigator
@@ -617,7 +577,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_AsyncReader
     /// </summary>
@@ -625,7 +584,6 @@ namespace DirectShowLib
     public class AsyncReader
     {
     }
-
 
     /// <summary>
     /// CLSID_URLReader
@@ -635,7 +593,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_FileWriter
     /// </summary>
@@ -643,7 +600,6 @@ namespace DirectShowLib
     public class FileWriter
     {
     }
-
 
     /// <summary>
     /// CLSID_ModexRenderer
@@ -653,7 +609,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_InfTee
     /// </summary>
@@ -661,7 +616,6 @@ namespace DirectShowLib
     public class InfTee
     {
     }
-
 
     /// <summary>
     /// CLSID_Line21Decoder
@@ -671,7 +625,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_Line21Decoder2
     /// </summary>
@@ -679,7 +632,6 @@ namespace DirectShowLib
     public class Line21Decoder2
     {
     }
-
 
     /// <summary>
     /// CLSID_AVIMIDIRender
@@ -689,7 +641,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_MJPGEnc
     /// </summary>
@@ -697,7 +648,6 @@ namespace DirectShowLib
     public class MJPGEnc
     {
     }
-
 
     /// <summary>
     /// CLSID_MjpegDec
@@ -707,7 +657,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_CMpegAudioCodec
     /// </summary>
@@ -715,7 +664,6 @@ namespace DirectShowLib
     public class CMpegAudioCodec
     {
     }
-
 
     /// <summary>
     /// CLSID_MPEG1Splitter
@@ -725,7 +673,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_CMpegVideoCodec
     /// </summary>
@@ -733,7 +680,6 @@ namespace DirectShowLib
     public class CMpegVideoCodec
     {
     }
-
 
     /// <summary>
     /// CLSID_MPEG2Demultiplexer
@@ -743,7 +689,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_MMSPLITTER
     /// </summary>
@@ -751,7 +696,6 @@ namespace DirectShowLib
     public class MMSPLITTER
     {
     }
-
 
     /// <summary>
     /// CLSID_OverlayMixer
@@ -769,7 +713,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_QTDec
     /// </summary>
@@ -777,7 +720,6 @@ namespace DirectShowLib
     public class QTDec
     {
     }
-
 
     /// <summary>
     /// CLSID_QuickTimeParser
@@ -787,7 +729,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_VBISurfaces
     /// </summary>
@@ -795,7 +736,6 @@ namespace DirectShowLib
     public class VBISurfaces
     {
     }
-
 
     /// <summary>
     /// CLSID_VfwCapture
@@ -805,7 +745,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_Dither
     /// </summary>
@@ -813,7 +752,6 @@ namespace DirectShowLib
     public class Dither
     {
     }
-
 
     /// <summary>
     /// CLSID_VideoPortManager
@@ -823,7 +761,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_VideoRenderer
     /// </summary>
@@ -831,7 +768,6 @@ namespace DirectShowLib
     public class VideoRenderer
     {
     }
-
 
     /// <summary>
     /// CLSID_WMAsfReader
@@ -841,7 +777,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_SystemClock
     /// </summary>
@@ -849,7 +784,6 @@ namespace DirectShowLib
     public class SystemClock
     {
     }
-
 
     /// <summary>
     /// CLSID_WMAsfWriter
@@ -859,7 +793,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_WSTDecoder
     /// </summary>
@@ -868,7 +801,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_Mpeg2VideoStreamAnalyzer
     /// </summary>
@@ -876,7 +808,6 @@ namespace DirectShowLib
     public class Mpeg2VideoStreamAnalyzer
     {
     }
-
 
     /// <summary>
     /// CLSID_PTFilter
@@ -894,7 +825,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_SBE2Sink
     /// </summary>
@@ -902,7 +832,6 @@ namespace DirectShowLib
     public class SBE2Sink
     {
     }
-
 
     /// <summary>
     /// CLSID_StreamBufferPropertyHandler
@@ -912,7 +841,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_StreamBufferThumbnailHandler
     /// </summary>
@@ -920,7 +848,6 @@ namespace DirectShowLib
     public class StreamBufferThumbnailHandler
     {
     }
-
 
     /// <summary>
     /// CLSID_SBE2File
@@ -930,7 +857,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_CCAFilter
     /// </summary>
@@ -938,7 +864,6 @@ namespace DirectShowLib
     public class CCAFilter
     {
     }
-
 
     /// <summary>
     /// CLSID_CaptionsFilter
@@ -948,7 +873,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_SubtitlesFilter
     /// </summary>
@@ -956,7 +880,6 @@ namespace DirectShowLib
     public class SubtitlesFilter
     {
     }
-
 
     /// <summary>
     /// CLSID_DirectShowPluginControl
@@ -966,7 +889,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_SBE2MediaTypeProfile
     /// </summary>
@@ -975,7 +897,6 @@ namespace DirectShowLib
     {
     }
 
-
     /// <summary>
     /// CLSID_SBE2FileScan
     /// </summary>
@@ -983,7 +904,6 @@ namespace DirectShowLib
     public class SBE2FileScan
     {
     }
-
 
     #endregion
 
@@ -1217,7 +1137,6 @@ namespace DirectShowLib
 
         /// <summary> MEDIATYPE_CC_CONTAINER </summary>
         public static readonly Guid CC_Container = new Guid(0xaeb312e9, 0x3357, 0x43ca, 0xb7, 0x1, 0x97, 0xec, 0x19, 0x8e, 0x2b, 0x62);
-
     }
 
     static public class MediaSubType
@@ -1661,7 +1580,6 @@ namespace DirectShowLib
 
         /// <summary> MEDIASUBTYPE_CPFilters_Processed </summary>
         public static readonly Guid CPFilters_Processed = new Guid(0x46adbd28, 0x6fd0, 0x4796, 0x93, 0xb2, 0x15, 0x5c, 0x51, 0xdc, 0x4, 0x8d);
-
     }
 
     static public class FormatType
@@ -1745,7 +1663,6 @@ namespace DirectShowLib
 
         /// <summary> DSATTRIB_BadSampleInfo </summary>
         public static readonly Guid BadSampleInfo = new Guid(0xe4846dda, 0x5838, 0x42b4, 0xb8, 0x97, 0x6f, 0x7e, 0x5f, 0xaa, 0x2f, 0x2f);
-
     }
 
     static public class PropSetID
@@ -1791,7 +1708,6 @@ namespace DirectShowLib
 
         /// <summary> STATIC_CODECAPI_CURRENTCHANGELIST </summary>
         public static readonly Guid CODECAPI_CurrentChangeList = new Guid(0x1cb14e83, 0x7d72, 0x4657, 0x83, 0xfd, 0x47, 0xa2, 0xc5, 0xb9, 0xd1, 0x3d);
-
     }
 
     static public class PinCategory
@@ -1831,7 +1747,6 @@ namespace DirectShowLib
 
         /// <summary> PIN_CATEGORY_VIDEOPORT_VBI </summary>
         public static readonly Guid VideoPortVBI = new Guid(0xfb6c428c, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba);
-
     }
 
     static public class FindDirection
@@ -1952,7 +1867,6 @@ namespace DirectShowLib
 
         /// <summary> KSNODE_BDA_IP_SINK </summary>
         public static readonly Guid IPSink = new Guid(0x71985f4e, 0x1ca1, 0x11d3, 0x9c, 0xc8, 0x00, 0xc0, 0x4f, 0x79, 0x71, 0xe0);
-
     }
 
     static public class TAGTables

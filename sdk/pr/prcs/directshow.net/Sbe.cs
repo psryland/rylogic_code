@@ -1,7 +1,7 @@
 #region license
 
 /*
-DirectShowLib - Provide access to DirectShow interfaces via .NET
+pr.directshow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -26,7 +26,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace DirectShowLib.SBE
+namespace pr.directshow.SBE
 {
     #region Declarations
 
@@ -983,7 +983,7 @@ namespace DirectShowLib.SBE
             int Index
             );
     }
-    
+
     [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
     Guid("3E2BF5A5-4F96-4899-A1A3-75E8BE9A5AC0"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -1063,6 +1063,4 @@ namespace DirectShowLib.SBE
             return new SDMarshaler();
         }
     }
-
-
 }
