@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using pr.util;
 
 namespace pr.extn
 {
@@ -310,6 +311,12 @@ namespace pr.extn
 
 	public static class EnumExtensions
 	{
+		/// <summary>Convert the enum value to a string containing spaces</summary>
+		public static string ToPrettyString<TEnum>(this TEnum e) where TEnum :struct ,IConvertible
+		{
+			return StrTxfm.Apply(e.ToStringFast(), StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate.Add, " ");
+		}
+
 		/// <summary>A faster overload of ToString</summary>
 		public static string ToStringFast<TEnum>(this TEnum e) where TEnum :struct ,IConvertible
 		{
@@ -360,6 +367,11 @@ namespace pr
 				B = 1 << 1,
 				C = 1 << 2
 			}
+			public enum Tags
+			{
+				SomeCompoundName,
+				ABBRValue01
+			}
 
 			[Test] public static void TestToString()
 			{
@@ -379,6 +391,9 @@ namespace pr
 				Assert.AreEqual(f.ToString(), f.ToStringFast());
 				f = FlagsEnum.A|FlagsEnum.B|FlagsEnum.C;
 				Assert.AreEqual(f.ToString(), f.ToStringFast());
+
+				Assert.AreEqual("Some Compound Name", Tags.SomeCompoundName.ToPrettyString());
+				Assert.AreEqual("ABBR Value 01", Tags.ABBRValue01.ToPrettyString());
 			}
 		}
 	}

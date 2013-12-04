@@ -643,7 +643,7 @@ namespace pr
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		internal static class TestUtils
+		internal static partial class TestUtils
 		{
 			[StructLayout(LayoutKind.Sequential, Pack = 1)]
 			public struct Struct

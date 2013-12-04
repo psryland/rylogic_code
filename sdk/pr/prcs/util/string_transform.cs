@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using pr.util;
 
@@ -27,26 +28,30 @@ namespace pr.util
 		}
 
 		/// <summary>Transforms a string by the given casing rules</summary>
-		public static string Apply(string str, ECapitalise word_start, ECapitalise word_case, ESeparate word_sep, string sep, string delims)
+		public static string Apply(string str, ECapitalise word_start, ECapitalise word_case, ESeparate word_sep, string sep, string delims = null)
 		{
-			if (string.IsNullOrEmpty(str)) return str;
-			StringBuilder sb = new StringBuilder(str.Length);
-			if (delims == null) delims = "";
+			if (string.IsNullOrEmpty(str))
+				return str;
 
-			for (int i = 0; i != str.Length; ++i)
+			delims = delims ?? string.Empty;
+
+			var sb = new StringBuilder(str.Length);
+			for (var i = 0; i != str.Length; ++i)
 			{
 				// Skip over multiple delimiters
 				for (; delims.IndexOf(str[i]) != -1; ++i)
 				{
-					if (word_sep == ESeparate.DontChange) sb.Append(str[i]);
+					if (word_sep == ESeparate.DontChange)
+						sb.Append(str[i]);
 				}
 
 				// Detect word boundaries
-				bool boundary = i == 0 ||                                             // first letter in the string
-								delims.IndexOf(str[i-1]) != -1 ||                     // previous char is a delimiter
-								(char.IsLower (str[i-1]) && char.IsUpper (str[i])) || // lower to upper case letters
-								(char.IsLetter(str[i-1]) && char.IsDigit (str[i])) || // letter to digit
-								(char.IsDigit (str[i-1]) && char.IsLetter(str[i]));   // digit to letter
+				var boundary = i == 0 ||                                  // first letter in the string
+					delims.IndexOf(str[i-1]) != -1 ||                     // previous char is a delimiter
+					(char.IsLower (str[i-1]) && char.IsUpper (str[i])) || // lower to upper case letters
+					(char.IsLetter(str[i-1]) && char.IsDigit (str[i])) || // letter to digit
+					(char.IsDigit (str[i-1]) && char.IsLetter(str[i])) || // digit to letter
+					(i < str.Length - 1 && char.IsUpper(str[i-1]) && char.IsUpper(str[i]) && char.IsLower(str[i+1]));
 				if (boundary)
 				{
 					if (i != 0 && word_sep == ESeparate.Add && sep != null)
@@ -77,25 +82,32 @@ namespace pr.util
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 
 	[TestFixture] internal static partial class UnitTests
 	{
-		[Test] public static void TestStringTransform()
+		internal static partial class TestUtils
 		{
-			const string str0 = "SOME_stringWith_weird_Casing_Number03";
-			string str;
+			[Test] public static void TestStringTransform()
+			{
+				const string str0 = "SOME_stringWith_weird_Casing_Number03";
+				string str;
 
-			str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.LowerCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, "_", "_");
-			Assert.AreEqual("some_string_with_weird_casing_number_03", str);
+				str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.LowerCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, "_", "_");
+				Assert.AreEqual("some_string_with_weird_casing_number_03", str);
 
-			str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Remove, null, "_");
-			Assert.AreEqual("SomeStringWithWeirdCasingNumber03", str);
+				str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Remove, null, "_");
+				Assert.AreEqual("SomeStringWithWeirdCasingNumber03", str);
 
-			str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.UpperCase, StrTxfm.ESeparate.Add, "^ ^", "_");
-			Assert.AreEqual("SOME^ ^STRING^ ^WITH^ ^WEIRD^ ^CASING^ ^NUMBER^ ^03", str);
+				str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.UpperCase, StrTxfm.ESeparate.Add, "^ ^", "_");
+				Assert.AreEqual("SOME^ ^STRING^ ^WITH^ ^WEIRD^ ^CASING^ ^NUMBER^ ^03", str);
+
+				str = StrTxfm.Apply("FieldCAPSBlah", StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate.Add, " ");
+				Assert.AreEqual("Field CAPS Blah", str);
+			}
 		}
 	}
 }
