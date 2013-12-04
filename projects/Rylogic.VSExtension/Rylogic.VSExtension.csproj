@@ -131,6 +131,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="src\Align\AlignMenuCommand.cs" />
     <Compile Include="src\Align\EditPatternDlg.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -205,6 +206,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <None Include="Resources\exchange.png" />
     <Content Include="Resources\Package.ico" />
   </ItemGroup>
   <ItemGroup>

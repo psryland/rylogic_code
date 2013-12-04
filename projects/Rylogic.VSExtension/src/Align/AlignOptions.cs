@@ -63,7 +63,7 @@ namespace Rylogic.VSExtension
 			Groups.Add(new AlignGroup("Scope end", 1,
 				new AlignPattern(EPattern.Substring, @"}")));
 
-			Groups.Add(new AlignGroup("Line comments", 0,
+			Groups.Add(new AlignGroup("Line comments", 1,
 				new AlignPattern(EPattern.RegularExpression, @"/{2,}", 0, 0, "Two or more '/' characters")));
 
 			//Groups.Add(new AlignGroup("Member variables", 1,

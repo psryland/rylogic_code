@@ -286,7 +286,8 @@ namespace Rylogic.VSExtension
 
 				// If there are edits but they are all already aligned at the
 				// correct column, then move on to the next candidate.
-				if (edits.AllSame(x => x.CurrentColumnIndex - x.Patn.Offset))
+				var column_index = FindAlignColumn(edits).Column;
+				if (edits.All(x => x.CurrentColumnIndex - x.Patn.Offset == column_index))
 				{
 					edits.Clear();
 					continue;
@@ -313,6 +314,7 @@ namespace Rylogic.VSExtension
 				foreach (var b in boundaries)
 				{
 					if (b.GrpIndex != align.GrpIndex) continue;
+					if ((b.MinCharIndex == 0) != (align.MinCharIndex == 0)) continue; // Don't align things on their own line, with things that aren't on their own line
 					if (++idx != token_index) continue;
 					match = b;
 					break;
