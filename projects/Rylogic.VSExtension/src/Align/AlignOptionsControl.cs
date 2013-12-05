@@ -72,7 +72,6 @@ namespace Rylogic.VSExtension
 		/// <summary>Setup the grid of alignment groups</summary>
 		private void SetupGroupsGrid()
 		{
-			m_grid_groups.Init();
 			m_grid_groups.Data = m_bs_groups;
 
 			// When the selected item in the groups grid changes, update the data source of the pattern grid
@@ -141,7 +140,6 @@ namespace Rylogic.VSExtension
 		/// <summary>Setup the grid of patterns</summary>
 		private void SetupPatternsGrid()
 		{
-			m_grid_patterns.Init();
 			m_grid_patterns.Data                = m_bs_patterns;
 			m_grid_patterns.ShowEditPatternDlg  = ShowEditPatternDlg;
 			m_grid_patterns.CloseEditPatternDlg = CloseEditPatternDlg;

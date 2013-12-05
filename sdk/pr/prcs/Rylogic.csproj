@@ -176,7 +176,7 @@
     <Compile Include="extn\binding_source_extensions.cs" />
     <Compile Include="extn\byte_array_extensions.cs" />
     <Compile Include="extn\control_extensions.cs" />
-    <Compile Include="extn\datatable_externsions.cs">
+    <Compile Include="extn\datatable_extensions.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="extn\dict_extensions.cs" />

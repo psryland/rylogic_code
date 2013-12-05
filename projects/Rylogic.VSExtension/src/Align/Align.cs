@@ -6,7 +6,6 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using pr.common;
 using pr.extn;
-using Span = pr.common.Span;
 
 namespace Rylogic.VSExtension
 {
@@ -14,35 +13,26 @@ namespace Rylogic.VSExtension
 	{
 		private class Token
 		{
-			/// <summary>The line number that the token is on</summary>
-			public int LineNumber { get; private set; }
-
-			/// <summary>The line that this token is on</summary>
-			public ITextSnapshotLine Line { get; private set; }
-
-			/// <summary>The line of text that this token is on</summary>
-			public string LineText { get; private set; }
+			/// <summary>The align group corresponding to GrpIndex</summary>
+			public AlignGroup Grp { get; private set; }
 
 			/// <summary>The index position of the pattern in the priority list</summary>
 			public int GrpIndex { get; private set; }
 
-			/// <summary>The align group corresponding to GrpIndex</summary>
-			public AlignGroup Grp { get; private set; }
-
-			/// <summary>The index of the matching pattern within 'Grp'</summary>
-			public int PatnIndex { get; private set; }
-
 			/// <summary>The pattern that this token matches</summary>
 			public AlignPattern Patn { get; private set; }
 
+			/// <summary>The line that this token is on</summary>
+			public ITextSnapshotLine Line { get; private set; }
+
+			/// <summary>The line number that the token is on</summary>
+			public int LineNumber { get; private set; }
+
 			/// <summary>The character range of the matched pattern on the line</summary>
-			public Span Span { get; private set; }
+			public Range Span { get; private set; }
 
 			/// <summary>The minimum distance of this token from 'caret_pos'</summary>
-			public int Distance(int caret_pos)
-			{
-				return Span.Contains(caret_pos) ? 0 : Math.Min(Math.Abs(Span.Begin - caret_pos), Math.Abs(Span.End - caret_pos));
-			}
+			public int Distance(int caret_pos) { return (int)(Span.Contains(caret_pos) ? 0 : Math.Min(Math.Abs(Span.Begin - caret_pos), Math.Abs(Span.End - caret_pos))); }
 
 			/// <summary>The minimum character index that this token can be left shifted to</summary>
 			public int MinCharIndex { get; private set; }
@@ -53,23 +43,21 @@ namespace Rylogic.VSExtension
 			/// <summary>The current column index of the token</summary>
 			public int CurrentColumnIndex { get; private set; }
 
-			public Token(Align align, int line_number, int grp_index, int patn_index, Span span)
+			public Token(AlignGroup grp, int grp_index, int patn_index, ITextSnapshotLine line, int line_number, Range span, int tab_size)
 			{
-				LineNumber = line_number;
+				Grp        = grp;
 				GrpIndex   = grp_index;
-				Grp        = align.m_groups[grp_index];
-				PatnIndex  = patn_index;
-				Patn       = Grp.Patterns[patn_index];
+				Patn       = grp.Patterns[patn_index];
 				Span       = span;
-				Line       = align.m_snapshot.GetLineFromLineNumber(line_number);
-				LineText   = Line.GetText();
+				Line       = line;
+				LineNumber = line_number;
 
-				int i; for (i = Span.Begin - 1; i >= 0 && char.IsWhiteSpace(LineText[i]); --i) {} ++i;
-				var tab_size = align.m_view.Options.GetOptionValue(DefaultOptions.TabSizeOptionId);
+				var line_text  = Line.GetText();
+				int i; for (i = (int)(Span.Begin - 1); i >= 0 && char.IsWhiteSpace(line_text[i]); --i) {} ++i;
 
 				MinCharIndex       = i;
-				MinColumnIndex     = CharIndexToColumnIndex(LineText, MinCharIndex, tab_size);
-				CurrentColumnIndex = CharIndexToColumnIndex(LineText, Span.Begin  , tab_size);
+				MinColumnIndex     = CharIndexToColumnIndex(line_text, MinCharIndex, tab_size);
+				CurrentColumnIndex = CharIndexToColumnIndex(line_text, (int)Span.Begin, tab_size);
 			}
 
 			/// <summary>Converts a char index into a column index for the given line</summary>
@@ -120,7 +108,7 @@ namespace Rylogic.VSExtension
 		}
 
 		/// <summary>Return the maximum range of lines to apply aligning to</summary>
-		private Span FindLineRange()
+		private Range FindLineRange()
 		{
 			// If there is a selection that spans multiple lines, limit the aligning to those lines
 			var selection = m_view.Selection;
@@ -130,29 +118,36 @@ namespace Rylogic.VSExtension
 				var end_line_number   = m_snapshot.GetLineNumberFromPosition(selection.End.Position);
 				Debug.Assert(start_line_number <= end_line_number);
 				if (start_line_number != end_line_number)
-					return new Span(start_line_number, end_line_number - start_line_number);
+					return new Range(start_line_number, end_line_number);
 			}
-			return new Span(0, m_snapshot.LineCount);
+			return new Range(0, m_snapshot.LineCount);
 		}
 
-		/// <summary>Returns the column index that tokens should be aligned to</summary>
-		private dynamic FindAlignColumn(IEnumerable<Token> toks)
+		private struct AlignPos
 		{
-			var offset = Range.Invalid;
-			var min_width = 0;
-			var column = 0;
+			///<summary>The column index to align to</summary>
+			public readonly int Column;
+
+			/// <summary>The range of characters around the align column</summary>
+			public readonly Range Span;
+
+			public AlignPos(int column, Range span) { Column = column; Span = span; }
+		}
+
+		/// <summary>Returns the column index and range for aligning</summary>
+		private AlignPos FindAlignColumn(IEnumerable<Token> toks)
+		{
+			var min_column = 0;
 			var leading_ws = 0;
+			var span = Range.Zero; // include 0 in the range
 			foreach (var tok in toks)
 			{
-				offset.Begin = Math.Min(offset.Begin, tok.Patn.Offset);
-				offset.End   = Math.Max(offset.End,   tok.Patn.Offset);
-				min_width    = Math.Max(min_width, tok.Patn.MinWidth);
-				column       = Math.Max(column, tok.MinColumnIndex);
-				leading_ws  |= Math.Max(leading_ws, tok.Grp.LeadingSpace);
+				span.Encompase(tok.Patn.Position);
+				min_column  = Math.Max(min_column, tok.MinColumnIndex);
+				leading_ws |= Math.Max(leading_ws, tok.Grp.LeadingSpace);
 			}
-			if (column != 0) column += leading_ws; // Add leading whitespace, unless at column 0
-			column += (int)offset.Count;
-			return new {Column = column, MinWidth = min_width, MinOffset = offset.Begin};
+			if (min_column != 0) min_column += leading_ws; // Add leading whitespace, unless at column 0
+			return new AlignPos(min_column, span);
 		}
 
 		/// <summary>Return a list of alignment patterns in priority order.</summary>
@@ -172,8 +167,9 @@ namespace Rylogic.VSExtension
 					var s = selection.Start.Position - start_line.Start.Position;
 					var e = selection.End.Position   - start_line.Start.Position;
 					var expr = start_line_text.Substring(s, e - s);
-					var ws = s > 0 && char.IsWhiteSpace(start_line_text[s - 1]) ? 1 : 0;
-					return new[]{new AlignGroup("Selection", ws, new AlignPattern(EPattern.Substring, expr))}.ToList();
+					var ofs = expr.TakeWhile(char.IsWhiteSpace).Count(); // Count leading whitespace
+					expr = expr.Substring(ofs);                          // Strip leading whitespace
+					return new[]{new AlignGroup("Selection", 0, new AlignPattern(EPattern.Substring, expr, ofs))}.ToList();
 				}
 			}
 
@@ -200,11 +196,11 @@ namespace Rylogic.VSExtension
 						spanning = grp;
 
 					// Matches to the right separated only by whitespace are the next highest priority
-					if (match.Begin >= column && string.IsNullOrWhiteSpace(line_text.Substring(column, match.Begin - column)))
+					if (match.Begin >= column && string.IsNullOrWhiteSpace(line_text.Substring(column, match.Begini - column)))
 						rightof = grp;
 
 					// Matches to the left separated only by whitespace are next
-					if (match.End <= column && string.IsNullOrWhiteSpace(line_text.Substring(match.End, column - match.End)))
+					if (match.End <= column && string.IsNullOrWhiteSpace(line_text.Substring(match.Endi, column - match.Endi)))
 						leftof = grp;
 				}
 			}
@@ -221,6 +217,7 @@ namespace Rylogic.VSExtension
 		private List<Token> FindAlignBoundariesOnLine(int line_number, IEnumerable<AlignGroup> grps)
 		{
 			var tokens = new List<Token>();
+			var tab_size = m_view.Options.GetOptionValue(DefaultOptions.TabSizeOptionId);
 
 			if (line_number < 0 || line_number >= m_snapshot.LineCount)
 				return tokens;
@@ -237,7 +234,7 @@ namespace Rylogic.VSExtension
 				{
 					++patn_index;
 					foreach (var match in patn.AllMatches(line_text))
-						tokens.Add(new Token(this, line_number, grp_index, patn_index, match));
+						tokens.Add(new Token(grp, grp_index, patn_index, line, line_number, match, tab_size));
 				}
 			}
 
@@ -246,7 +243,7 @@ namespace Rylogic.VSExtension
 		}
 
 		/// <summary>Returns a collection of the edits to make to do the aligning</summary>
-		private List<Token> FindAlignments(int line_number, List<AlignGroup> grps, Span line_range)
+		private List<Token> FindAlignments(int line_number, List<AlignGroup> grps, Range line_range)
 		{
 			var line  = m_snapshot.GetLineFromLineNumber(line_number);
 			var caret = m_caret.Position.BufferPosition - line.Start.Position;
@@ -301,7 +298,7 @@ namespace Rylogic.VSExtension
 		/// <summary>
 		/// Searches above (dir == -1) or below (dir == +1) for alignment tokens that occur
 		/// with the same token index as 'align'. Returns all found.</summary>
-		private IEnumerable<Token> FindAlignmentEdits(Token align, int token_index, List<AlignGroup> grps, int dir, Span line_range)
+		private IEnumerable<Token> FindAlignmentEdits(Token align, int token_index, List<AlignGroup> grps, int dir, Range line_range)
 		{
 			for (var i = align.LineNumber + dir; line_range.Contains(i); i += dir)
 			{
@@ -344,21 +341,22 @@ namespace Rylogic.VSExtension
 
 				// Find the column to align to
 				var pos = FindAlignColumn(edits);
+				var col = pos.Column - pos.Span.Begini;
+				Debug.Assert(pos.Span.Begini <= 0, "0 should be included in the span");
 
 				foreach (var edit in edits)
 				{
-					var ofs     = Math.Abs(pos.MinOffset - edit.Patn.Offset);
-					var ws_head = (int)(pos.Column - edit.MinColumnIndex + ofs);
-					var ws_tail = (int)(pos.MinWidth - (edit.Span.Count + ofs));
+					var ws_head = col - edit.MinColumnIndex + edit.Patn.Position.Begini;
+					var ws_tail = pos.Span.Endi - edit.Patn.Position.Endi;
 
 					// Careful with order, we need to apply the edits assuming 'line' isn't changed with each one
 
 					// Insert whitespace after the pattern if needed
 					if (ws_tail > 0)
-						text.Insert(edit.Line.Start.Position + edit.Span.End, new string(' ', ws_tail));
+						text.Insert(edit.Line.Start.Position + edit.Span.Endi, new string(' ', ws_tail));
 
 					// Delete all preceding whitespace
-					text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.Span.Begin - edit.MinCharIndex);
+					text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.Span.Begini - edit.MinCharIndex);
 
 					// Insert whitespace to align
 					if (ws_head > 0)

@@ -60,11 +60,23 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
+		public static Attribute FindAttribute(this Type type, Type attribute_type, bool inherit = true)
+		{
+			return type.GetCustomAttributes(attribute_type, inherit).Cast<Attribute>().FirstOrDefault();
+		}
+
+		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
+		public static T FindAttribute<T>(this Type type, bool inherit = true) where T:Attribute
+		{
+			return (T)type.FindAttribute(typeof(T), inherit);
+		}
+
+		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
 		public static Attribute GetAttribute(this Type type, Type attribute_type, bool inherit = true)
 		{
-			object[] attributes = type.GetCustomAttributes(attribute_type, inherit:inherit);
-			if (attributes.Length == 0) throw new Exception("Class '{0}' does not provide a '{1}' attribute.".Fmt(type.FullName, attribute_type.FullName));
-			return (Attribute)attributes[0];
+			var attr = FindAttribute(type, attribute_type, inherit);
+			if (attr == null) throw new Exception("Class '{0}' does not provide a '{1}' attribute.".Fmt(type.FullName, attribute_type.FullName));
+			return attr;
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
@@ -167,10 +179,10 @@ namespace pr
 				Assert.AreEqual(typeof(string), ty0);
 
 				var ty1 = TypeExtensions.Resolve("pr.util.CRC32");
-				Assert.AreEqual(typeof(pr.util.CRC32), ty1);
+				Assert.AreEqual(typeof(util.CRC32), ty1);
 
 				var ty2 = TypeExtensions.Resolve("NUnit.Framework.CultureAttribute[]");
-				Assert.AreEqual(typeof(NUnit.Framework.CultureAttribute[]), ty2);
+				Assert.AreEqual(typeof(CultureAttribute[]), ty2);
 			}
 		}
 	}

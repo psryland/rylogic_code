@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -38,6 +39,12 @@ namespace pr.util
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
+		/// <summary>True when running in the context of the designer</summary>
+		public static bool DesignTime
+		{
+			get { return LicenseManager.UsageMode == LicenseUsageMode.Designtime; }
+		}
+
 		/// <summary>Compare two ranges within a byte array</summary>
 		public static int Compare(byte[] lhs, int lstart, int llength, byte[] rhs, int rstart, int rlength)
 		{

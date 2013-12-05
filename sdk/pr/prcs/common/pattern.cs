@@ -165,7 +165,7 @@ namespace pr.common
 					return m_compiled_patn;
 
 				// Notes:
-				//  If an expression can't be represented in substr,wildcard form, harden up and use a regex
+				//  If an expression can't be represented in substr, wildcard form, harden up and use a regex
 
 				// Convert the match string into a regular expression string and
 				// replace the capture group tags with regex capture groups
@@ -176,7 +176,8 @@ namespace pr.common
 				if (PatnType != EPattern.RegularExpression)
 				{
 					// Collapse all whitespace to a single space character
-					expr = Regex.Replace(expr, @"\s+", " ");
+					if (!PreserveWhitespace)
+						expr = Regex.Replace(expr, @"\s+", " ");
 
 					// Escape the regex special chars
 					expr = Regex.Escape(expr);
@@ -189,14 +190,26 @@ namespace pr.common
 					// groups with named regular expression capture groups
 					expr = Regex.Replace(expr, @"\\{(\w+)}", @"(?<$1>.*)");
 
-					// Replace all escaped whitespace with '\s+'
-					expr = expr.Replace(@"\ ", @"\s+");
-
 					// Allow expressions that end with whitespace to also match the eol char
-					if (expr.EndsWith(@"\s+"))
+					if (PreserveWhitespace)
 					{
-						expr = expr.Remove(expr.Length - 3, 3);
-						expr = expr + @"(?:$|\s)";
+						if (expr.EndsWith(@"\ "))
+						{
+							expr = expr.Remove(expr.Length - 2, 2);
+							expr = expr + @"(?:$|\s)";
+						}
+					}
+					else
+					{
+						// Replace all escaped whitespace with '\s+'
+						expr = expr.Replace(@"\ ", @"\s+");
+
+						// Allow expressions that end with whitespace to also match the eol char
+						if (expr.EndsWith(@"\s+"))
+						{
+							expr = expr.Remove(expr.Length - 3, 3);
+							expr = expr + @"(?:$|\s)";
+						}
 					}
 				}
 
@@ -204,6 +217,12 @@ namespace pr.common
 				var opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
 				return m_compiled_patn = new Regex(expr, opts);
 			}
+		}
+
+		/// <summary>Allows derived patterns to optionally keep whitespace in Substring/wildcard patterns</summary>
+		protected virtual bool PreserveWhitespace
+		{
+			get { return false; }
 		}
 
 		/// <summary>Return the compiled regex string for reference</summary>
@@ -279,7 +298,7 @@ namespace pr.common
 		///  if your expression is @"(x)" you get two groups, [0,1] for the whole expression,
 		///  then [0,1] for the sub-expression<para/>
 		/// Note, only the first match is returned, [2,1] is not returned by this method.</summary>
-		public IEnumerable<Span> Match(string text, int start = 0, int length = -1)
+		public IEnumerable<Range> Match(string text, int start = 0, int length = -1)
 		{
 			if (!Active || text == null) yield break;
 
@@ -312,7 +331,7 @@ namespace pr.common
 			if (Invert) x.Add(text.Length);
 
 			for (int i = 0; i != x.Count; i += 2)
-				yield return new Span(x[i], x[i+1] - x[i]);
+				yield return new Range(x[i], x[i+1]);
 		}
 
 		/// <summary>
@@ -320,14 +339,14 @@ namespace pr.common
 		/// i.e.<para/>
 		///   AllMatches(@"(x)", "xoxox") returns [0,1], [2,1], [4,1]<para/>
 		/// Note, this method doesn't return capture groups, only whole expression matches.</summary>
-		public IEnumerable<Span> AllMatches(string text)
+		public IEnumerable<Range> AllMatches(string text)
 		{
 			for (var i = 0;;)
 			{
 				var span = Match(text,i).FirstOrDefault();
 				if (span.Count == 0) yield break;
 				yield return span;
-				i = span.End;
+				i = (int)span.End;
 			}
 		}
 
@@ -425,6 +444,20 @@ namespace pr
 				Check(p, "A test string",
 					null,
 					null);
+			}
+			[Test] public static void SubStringMatches2()
+			{
+				var p = new Pattern(EPattern.Substring, "test ");
+				Check(p, "A test string",
+					new[]{"0"},
+					new[]{"test "});
+			}
+			[Test] public static void SubStringMatches3()
+			{
+				var p = new Pattern(EPattern.Substring, "string ");
+				Check(p, "A test string",
+					new[]{"0"},
+					new[]{"string"});
 			}
 			[Test] public static void WildcardMatches0()
 			{
@@ -597,11 +630,11 @@ namespace pr
 
 				// Match returns the whole expr match, then the capture group
 				var r1 = p.Match(s).ToList();
-				Assert.True(r1.SequenceEqual(new[]{ new Span(0,1), new Span(0,1) }));
+				Assert.True(r1.SequenceEqual(new[]{ new Range(0,1), new Range(0,1) }));
 
 				// AllMatches returns only whole expr matches but all occurrences in the string
 				var r2 = p.AllMatches(s).ToList();
-				Assert.True(r2.SequenceEqual(new[]{ new Span(0,1), new Span(2,1), new Span(4,1) }));
+				Assert.True(r2.SequenceEqual(new[]{ new Range(0,1), new Range(2,3), new Range(4,5) }));
 			}
 		}
 	}

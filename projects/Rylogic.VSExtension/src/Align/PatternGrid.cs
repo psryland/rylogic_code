@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Rylogic.VSExtension.Properties;
 using pr.extn;
 using pr.maths;
+using pr.util;
 
 namespace Rylogic.VSExtension
 {
@@ -23,8 +24,10 @@ namespace Rylogic.VSExtension
 		}
 
 		/// <summary>Can't do this in the constructor because the designer screws it up</summary>
-		public void Init()
+		public PatternGrid()
 		{
+			if (Util.DesignTime) return;
+
 			// The patterns grid is virtual mode so that we can draw images and handle edits
 			VirtualMode = true;
 			AutoGenerateColumns = false;

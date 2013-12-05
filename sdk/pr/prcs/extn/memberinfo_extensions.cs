@@ -7,7 +7,7 @@ namespace pr.extn
 	public static class MemberInfoExtensions
 	{
 		/// <summary>Returns an attribute associated with a member or null</summary>
-		public static T GetAttribute<T>(this MemberInfo mi, bool inherit = true) where T:Attribute
+		public static T FindAttribute<T>(this MemberInfo mi, bool inherit = true) where T:Attribute
 		{
 			return (T)mi.GetCustomAttributes(typeof(T), inherit).FirstOrDefault();
 		}

@@ -16,6 +16,9 @@ namespace Rylogic.VSExtension
 		/// <summary>A comment to go with the pattern to remember what it is</summary>
 		public string Comment { get; set; }
 
+		/// <summary>Returns the range of characters this pattern should occupy, relative to the aligning column</summary>
+		public Range Position { get { return new Range(Offset, Offset + MinWidth); } }
+
 		public AlignPattern() :this(EPattern.Substring, string.Empty)
 		{
 		}

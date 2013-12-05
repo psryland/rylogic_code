@@ -55,6 +55,14 @@ namespace pr.common
 		/// <summary>Empty the range and reset to the zero'th index</summary>
 		public void Clear()                { Begin = End = 0; }
 
+		// Casting helpers
+		public int Begini                  { get { return (int)Begin; } }
+		public int Endi                    { get { return (int)End;   } }
+		public int Counti                  { get { return (int)Count; } }
+		public int Firsti                  { get { return (int)First; } }
+		public int Lasti                   { get { return (int)Last;  } }
+		public int Midi                    { get { return (int)Mid;   } }
+
 		/// <summary>Enumerator for iterating over the range</summary>
 		public IEnumerable<long> Enumerate { get { for (long i = Begin; i != End; ++i) yield return i; } }
 
@@ -76,6 +84,13 @@ namespace pr.common
 			Debug.Assert(Count >= 0, "this range is inside out");
 			Debug.Assert(rng.Count >= 0, "'rng' is inside out");
 			return Begin <= rng.Begin && rng.End <= End;
+		}
+
+		/// <summary>Grow the bounds of this range to include 'x'</summary>
+		public void Encompase(long x)
+		{
+			Begin = Math.Min(Begin , x);
+			End   = Math.Max(End   , x);
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>

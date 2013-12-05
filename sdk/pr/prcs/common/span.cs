@@ -1,6 +1,10 @@
-﻿namespace pr.common
+﻿using System;
+
+namespace pr.common
 {
-	public struct Span
+	// Prefer to use Range...
+
+	[Obsolete] public struct Span
 	{
 		/// <summary>The first index of a span</summary>
 		public int Index;
@@ -23,11 +27,26 @@
 		/// <summary>True if 'i' is within this span</summary>
 		public bool Contains(int i) { return i >= Index && i < Index + Count; }
 
+		/// <summary>Increase the span to include 'i'</summary>
+		public void Encompase(int i)
+		{
+			if (i < Begin) { Count += Begin - i; Index = i; }
+			if (i > End-1) { Count += i - (End-1); }
+		}
+
+		/// <summary>Increase the span to include 'span'</summary>
+		public void Encompase(Span span)
+		{
+			if (span.Begin < Begin) { Count += Begin - span.Begin; Index = span.Begin; }
+			if (span.End   > End-1) { Count += span.End - (End-1); }
+		}
+
 		public Span(int index, int count)
 		{
 			Index = index;
 			Count = count;
 		}
+
 		public override string ToString()       { return string.Format("[{0},{1})",Index,Index+Count); }
 		public override bool Equals(object obj) { return obj is Span && Equals((Span)obj); }
 		public bool Equals(Span other)          { return Index == other.Index && Count == other.Count; }
