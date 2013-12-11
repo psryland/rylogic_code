@@ -116,9 +116,9 @@ namespace Rylogic.VSExtension
 						"Each group contains patterns that are all considered equivalent. " +
 						"Select a group to show its patterns in the table below. " +
 						"The order of groups defines the preferred order when looking for " +
-						"potential alignment candidates. Change the order by clicking and " +
-						"dragging the row header. 'LeadingSpace' is the number of white space " +
-						"characters added in front of the aligned text.";
+						"potential alignment candidates. Change the order by selecting a group " +
+						"and clicking the up/down arrows. 'LeadingSpace' is the number of white " +
+						"space characters added in front of the aligned text.";
 					m_hint_balloon.Show(m_grid_groups, m_grid_groups.ClientRectangle.TopLeft().Shifted(10,10), tt1, 10000);
 				};
 

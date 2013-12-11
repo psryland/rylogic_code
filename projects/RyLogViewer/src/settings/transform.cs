@@ -23,14 +23,14 @@ namespace RyLogViewer
 			public readonly string Elem;
 
 			/// <summary>The character range for the capture in the source string</summary>
-			public readonly Span Span;
+			public readonly Range Span;
 
 			public Capture(string id, string elem)
 			{
 				Id   = id;
 				Elem = elem;
 			}
-			public Capture(string id, string elem, Span span)
+			public Capture(string id, string elem, Range span)
 			{
 				Id   = id;
 				Elem = elem;
@@ -49,9 +49,9 @@ namespace RyLogViewer
 			public readonly string Id;
 
 			/// <summary>The range of characters covered by this tag</summary>
-			public Span Span;
+			public Range Span;
 
-			public Tag(string id, Span span)
+			public Tag(string id, Range span)
 			{
 				Id = id;
 				Span = span;
@@ -178,7 +178,7 @@ namespace RyLogViewer
 		private static IEnumerable<Tag> GetTags(string str)
 		{
 			return Regex.Matches(str, @"\{\w+}").Cast<Match>().Select(
-				m => new Tag(m.Value.TrimStart('{').TrimEnd('}'), new Span(m.Index, m.Length)));
+				m => new Tag(m.Value.TrimStart('{').TrimEnd('}'), new Range(m.Index, m.Index + m.Length)));
 		}
 
 		/// <summary>Returns true if the match expression is valid</summary>
@@ -211,7 +211,7 @@ namespace RyLogViewer
 			dst_caps  = new List<Capture>();
 
 			// If 'text' doesn't match the 'Match' expression, return an empty map
-			Match match = Regex.Match(text);
+			var match = Regex.Match(text);
 			if (!match.Success) return text;
 
 			var caps = new Dictionary<string,Capture>();
@@ -220,37 +220,37 @@ namespace RyLogViewer
 			var ids  = CaptureGroupNames;  // The collection of tags in the match template
 			var grps = match.Groups;       // The captures from 'text' (starting at index 1, elem zero is always the whole match)
 			Debug.Assert(ids.Length == grps.Count, "Expected the number of capture ids and number of regex capture groups to be the same");
-			for (int i = 0; i != ids.Length; ++i)
+			for (var i = 0; i != ids.Length; ++i)
 			{
-				Capture cap = new Capture(ids[i], grps[i].Value, new Span(grps[i].Index, grps[i].Length));
+				var cap = new Capture(ids[i], grps[i].Value, new Range(grps[i].Index, grps[i].Index + grps[i].Length));
 				caps.Add(cap.Id, cap);
 				src_caps.Add(cap);
 			}
 
-			string result = text;
+			var result = text;
 			result = result.Remove(grps[0].Index, grps[0].Length);
 			result = result.Insert(grps[0].Index, Replace);
 
 			// Build a list of the tags to be replaced in the result string
-			List<Tag> rtags = GetTags(result).ToList();
+			var rtags = GetTags(result).ToList();
 
 			// Perform the substitutions
-			int ofs = 0;
-			foreach (Tag t in rtags)
+			var ofs = 0;
+			foreach (var t in rtags)
 			{
-				string sub = Subs[t.Id].Result(caps[t.Id].Elem);
-				result = result.Remove(t.Span.Index + ofs, t.Span.Count);
-				result = result.Insert(t.Span.Index + ofs, sub);
-				dst_caps.Add(new Capture(t.Id, sub, new Span(t.Span.Index + ofs, sub.Length)));
-				ofs += sub.Length - t.Span.Count;
+				var sub = Subs[t.Id].Result(caps[t.Id].Elem);
+				result = result.Remove(t.Span.Begini + ofs, t.Span.Counti);
+				result = result.Insert(t.Span.Begini + ofs, sub);
+				dst_caps.Add(new Capture(t.Id, sub, new Range(t.Span.Begin + ofs, t.Span.Begin + ofs + sub.Length)));
+				ofs += sub.Length - t.Span.Counti;
 			}
 
 			// Sort 'dst_caps' so that it's in the same order as 'src_caps'
 			for (int i = 0, j = 0; i != src_caps.Count && j != dst_caps.Count; ++i)
 			{
 				// Find src_caps[i].Id in dst_caps
-				string id = src_caps[i].Id;
-				int idx = dst_caps.IndexOf(c => c.Id == id);
+				var id = src_caps[i].Id;
+				var idx = dst_caps.IndexOf(c => c.Id == id);
 
 				// If found move it to position j
 				if (idx != -1) dst_caps.Swap(idx, j++);
@@ -267,7 +267,7 @@ namespace RyLogViewer
 			Debug.Assert(IsValid, "Shouldn't be calling this unless the transform is valid");
 
 			// If 'text' doesn't match the 'Match' expression, return the string unchanged
-			Match match = Regex.Match(text);
+			var match = Regex.Match(text);
 			if (!match.Success) return text;
 
 			var caps = new Dictionary<string,Capture>();
@@ -276,16 +276,16 @@ namespace RyLogViewer
 			var ids  = CaptureGroupNames; // The collection of tags in the match template
 			var grps = match.Groups;      // The captures from 'text' (starting at index 1, elem zero is always the whole match)
 			Debug.Assert(ids.Length == grps.Count, "Expected the number of capture ids and number of regex capture groups to be the same");
-			for (int i = 0; i != ids.Length; ++i)
+			for (var i = 0; i != ids.Length; ++i)
 			{
-				Capture cap = new Capture(ids[i], grps[i].Value);
+				var cap = new Capture(ids[i], grps[i].Value);
 				caps.Add(cap.Id, cap);
 			}
 
 			// Transform works by only replacing the portion of 'text' that matches the
 			// pattern. If users want to replace the entire line they need to setup the
 			// pattern so that it matches the entire line.
-			string result = text;
+			var result = text;
 			result = result.Remove(grps[0].Index, grps[0].Length);
 			result = result.Insert(grps[0].Index, Replace);
 
@@ -297,9 +297,9 @@ namespace RyLogViewer
 			foreach (Tag t in rtags)
 			{
 				string sub = Subs[t.Id].Result(caps[t.Id].Elem);
-				result = result.Remove(t.Span.Index + ofs, t.Span.Count);
-				result = result.Insert(t.Span.Index + ofs, sub);
-				ofs += sub.Length - t.Span.Count;
+				result = result.Remove(t.Span.Begini + ofs, t.Span.Counti);
+				result = result.Insert(t.Span.Begini + ofs, sub);
+				ofs += sub.Length - t.Span.Counti;
 			}
 			return result;
 		}
@@ -331,7 +331,7 @@ namespace RyLogViewer
 			XDocument doc;
 			try { doc = XDocument.Parse(filters); } catch { return list; }
 			if (doc.Root == null) return list;
-			foreach (XElement n in doc.Root.Elements(XmlTag.Transform))
+			foreach (var n in doc.Root.Elements(XmlTag.Transform))
 				try { list.Add(new Transform(n)); } catch {} // Ignore those that fail
 
 			return list;
@@ -388,7 +388,7 @@ namespace pr
 	using NUnit.Framework;
 	using RyLogViewer;
 
-	[TestFixture] internal static partial class RyLogViewerUnitTests
+	[TestFixture] internal static class RyLogViewerUnitTests
 	{
 		internal static class TestTransform
 		{

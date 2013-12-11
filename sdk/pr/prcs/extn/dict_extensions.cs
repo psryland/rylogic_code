@@ -5,6 +5,15 @@ namespace pr.extn
 {
 	public static class DictExtensions
 	{
+		/// <summary>Merge 'rhs' into this dictionary, key duplicates in 'rhs' replace items in this dictionary</summary>
+		public static IDictionary<K,V> Merge<TDict,K,V>(this TDict dic, params IDictionary<K,V>[] rhs) where TDict :IDictionary<K,V>, new()
+		{
+			foreach (var src in rhs)
+				foreach (var pair in src)
+					dic[pair.Key] = pair.Value;
+			return dic;
+		}
+
 		/// <summary>Value compare of a dictionary without regard to order</summary>
 		public static bool EqualUnordered<TKey, TValue>(this IDictionary<TKey, TValue> lhs, IDictionary<TKey, TValue> rhs)
 		{
@@ -38,3 +47,46 @@ namespace pr.extn
 		}
 	}
 }
+
+#if PR_UNITTESTS
+
+namespace pr
+{
+	using NUnit.Framework;
+	using System.Linq;
+	using extn;
+
+	[TestFixture] internal static partial class UnitTests
+	{
+		internal static class TestDictExtensions
+		{
+			[Test] public static void Merge()
+			{
+				var d0 = new Dictionary<int,string>();
+				var d1 = new Dictionary<int,string>();
+				var d2 = new Dictionary<int,string>();
+				d1.Add(1,"one");
+				d1.Add(2,"two");
+				d2.Add(2,"too");
+				d2.Add(3,"free");
+				d0.Merge(d1,d2);
+
+				Assert.AreEqual("one"  , d0[1]);
+				Assert.AreEqual("too"  , d0[2]);
+				Assert.AreEqual("free" , d0[3]);
+			}
+			[Test] public static void UnorderedEqual()
+			{
+				var d1 = new[]{1,2,3,4}.ToDictionary(k=>k,v=>v);
+				var d2 = new[]{4,3,2,1}.ToDictionary(k=>k,v=>v);
+				var d3 = new[]{4,2}.ToDictionary(k=>k,v=>v);
+
+				Assert.True(d1.EqualUnordered(d2));
+				Assert.True(d2.EqualUnordered(d1));
+				Assert.False(d1.EqualUnordered(d3));
+				Assert.False(d3.EqualUnordered(d1));
+			}
+		}
+	}
+}
+#endif

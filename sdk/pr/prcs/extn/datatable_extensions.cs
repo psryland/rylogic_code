@@ -23,6 +23,33 @@ namespace pr.extn
 			return Scope.Create(dt.BeginLoadData, dt.EndLoadData);
 		}
 
+		/// <summary>An RAII scope for BeginInit/EndInit</summary>
+		public static Scope BeginInitScope(this DataView dv)
+		{
+			return Scope.Create(dv.BeginInit, dv.EndInit);
+		}
+
+		/// <summary>An RAII scope for temporarily suspending constraint checking</summary>
+		public static Scope SuspendConstraints(this DataSet ds)
+		{
+			var constraints = ds.EnforceConstraints;
+			return Scope.Create(
+				() => ds.EnforceConstraints = false,
+				() => ds.EnforceConstraints = constraints);
+		}
+
+		/// <summary>
+		/// An RAII scope for temporarily removing constraints from this table.
+		/// It seems this isn't generally a performance improvement because adding the constraints
+		/// back causes all rows to be tested against the constraints.</summary>
+		public static Scope SuspendConstraints<TDataTable>(this TDataTable dt) where TDataTable :DataTable
+		{
+			var cons = dt.Constraints.Cast<Constraint>().Select(x => x).ToArray();
+			return Scope.Create(
+				() => dt.Constraints.Clear(),
+				() => dt.Constraints.AddRange(cons));
+		}
+
 		// While these are awesome, they're really slow :(
 		/// <summary>Helper for reading fields in this table</summary>
 		public static TReturn get<TRowType, TReturn>(this TRowType row, Expression<Func<TRowType,TReturn>> expression) where TRowType :DataRow
@@ -102,9 +129,9 @@ namespace pr.extn
 		}
 
 		/// <summary>Add a row to the table. To use this, call 'NewRow' first, fill in the fields, then call AddRow.</summary>
-		public void AddRow(TRowType sess)
+		public void AddRow(TRowType row)
 		{
-			Rows.Add(sess);
+			Rows.Add(row);
 		}
 
 		/// <summary>The row constructor for 'TRowType'</summary>

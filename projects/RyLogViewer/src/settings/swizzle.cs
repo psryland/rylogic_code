@@ -27,10 +27,10 @@ namespace RyLogViewer
 			public ECase[] Case;
 
 			/// <summary>The start and length of the source characters</summary>
-			public Span Src;
+			public Range Src;
 
 			/// <summary>The start and length of where to write the characters</summary>
-			public Span Dst;
+			public Range Dst;
 		}
 
 		/// <summary>Construct a mapping from 'src' to 'dst'</summary>
@@ -53,14 +53,14 @@ namespace RyLogViewer
 				map.Char = ch;
 
 				// Read the span of chars from 'dst'
-				map.Dst = new Span(i,0);
+				map.Dst = new Range(i,i);
 				for (; i != dst.Length && char.ToLowerInvariant(dst[i]) == ch; ++map.Dst.Count, ++i) {}
 
 				// Find the corresponding span in 'src'
 				int j; for (j = 0; j != src.Length && char.ToLowerInvariant(src[j]) != ch; ++j) {}
 
 				// Read the span of chars from 'src'
-				map.Src = new Span(j,0);
+				map.Src = new Range(j,j);
 				for (; j != src.Length && char.ToLowerInvariant(src[j]) == ch; ++map.Src.Count, ++j) {}
 
 				// Check that there are no other 'ch' blocks in 'src'
@@ -72,8 +72,8 @@ namespace RyLogViewer
 				cas.Clear();
 				for (int k = 0; k != map.Dst.Count; ++k)
 				{
-					int s = map.Src.Index + (k%map.Src.Count);
-					int d = map.Dst.Index + k;
+					int s = map.Src.Begini + (k%map.Src.Counti);
+					int d = map.Dst.Begini + k;
 					cas.Add(
 						src[s] == dst[d]
 						? Map.ECase.NoChange : src[s] == char.ToLowerInvariant(src[s])
@@ -91,16 +91,16 @@ namespace RyLogViewer
 			var sb = new StringBuilder();
 			foreach (var m in mapping)
 			{
-				if (m.Src.Index >= text.Length) continue;
-				for (int i = 0, iend = Math.Min(m.Dst.Count, text.Length - m.Src.Index); i != iend; ++i)
+				if (m.Src.Begini >= text.Length) continue;
+				for (int i = 0, iend = Math.Min(m.Dst.Counti, text.Length - m.Src.Begini); i != iend; ++i)
 				{
-					char ch = text[m.Src.Index + (i % m.Src.Count)];
+					char ch = text[m.Src.Begini + (i % m.Src.Counti)];
 					switch (m.Case[i])
 					{
 					case Map.ECase.ToUpper: ch = char.ToUpperInvariant(ch); break;
 					case Map.ECase.ToLower: ch = char.ToLowerInvariant(ch); break;
 					}
-					while (sb.Length < m.Dst.Index) sb.Append(' ');
+					while (sb.Length < m.Dst.Begini) sb.Append(' ');
 					sb.Append(ch);
 				}
 			}

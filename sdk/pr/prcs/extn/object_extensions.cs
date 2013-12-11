@@ -11,6 +11,9 @@ namespace pr.extn
 		/// <summary>Static cast this object to type 'T'</summary>
 		public static T As<T>(this object obj)
 		{
+			// Don't use 'To' because that implies conversion.
+			// Can't use 'Cast' because clashes with IEnumerable extensions
+			// 'As' sounds like 'as' but it's safer than 'as' so doesn't matter
 			return (T)obj;
 		}
 

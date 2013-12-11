@@ -24,11 +24,17 @@ namespace pr.gui
 		private readonly TreeGridNode  m_root;           // The root of the tree
 		private bool                   m_show_lines;     // Display the tree lines
 
-		/// <summary>Tree expanding/collapsing events</summary>
-		public event ExpandingEventHandler  NodeExpanding;
-		public event ExpandedEventHandler   NodeExpanded;
-		public event CollapsingEventHandler NodeCollapsing;
-		public event CollapsedEventHandler  NodeCollapsed;
+		/// <summary>Called just before a node is expanded</summary>
+		public event EventHandler<ExpandingEventArgs> NodeExpanding;
+
+		/// <summary>Called after a node is expanded</summary>
+		public event EventHandler<ExpandedEventArgs>  NodeExpanded;
+
+		/// <summary>Called just before a node is collapsed</summary>
+		public event EventHandler<CollapsingEventArgs> NodeCollapsing;
+
+		/// <summary>Called after a node is collapsed</summary>
+		public event EventHandler<CollapsedEventArgs>  NodeCollapsed;
 
 		public TreeGridView()
 		{
@@ -101,7 +107,7 @@ namespace pr.gui
 		internal bool BeginCollapseNode(TreeGridNode node)
 		{
 			// Raise the collapsing event
-			CollapsingEventArgs exp = new CollapsingEventArgs(node);
+			var  exp = new CollapsingEventArgs(node);
 			if (NodeCollapsing != null) NodeCollapsing(this, exp);
 			if (exp.Cancel) return false;
 			SuspendLayout();
@@ -118,8 +124,8 @@ namespace pr.gui
 		/// <summary>Prepare the grid for a node expansion</summary>
 		internal bool BeginExpandNode(TreeGridNode node)
 		{
-			ExpandingEventArgs exp = new ExpandingEventArgs(node);
-			if (NodeExpanding != null) NodeExpanding(this, exp);
+			var exp = new ExpandingEventArgs(node);
+			OnNodeExpanding(exp);
 			if (exp.Cancel) return false;
 			SuspendLayout();
 			return true;
@@ -128,8 +134,8 @@ namespace pr.gui
 		/// <summary>Compete changes to the grid after a node expand</summary>
 		internal void EndExpandNode(TreeGridNode node)
 		{
+			OnNodeExpanded(new ExpandedEventArgs(node));
 			ResumeLayout(true);
-			if (NodeExpanded != null) NodeExpanded(this, new ExpandedEventArgs(node));
 		}
 
 		/// <summary>Sort the columns of the grid</summary>
@@ -137,12 +143,12 @@ namespace pr.gui
 		{
 			EndEdit();
 			SuspendLayout();
-			List<TreeGridNode> rows = new List<TreeGridNode>();
+			var rows = new List<TreeGridNode>();
 			int col_idx = col.Index;
 			int sign = col.HeaderCell.SortGlyphDirection == SortOrder.Ascending ? -1 : 1;
 			foreach (DataGridViewColumn c in Columns) c.HeaderCell.SortGlyphDirection = SortOrder.None;
 			col.HeaderCell.SortGlyphDirection = sign > 0 ? SortOrder.Ascending : SortOrder.Descending;
-			
+
 			// ReSharper disable PossibleNullReferenceException
 			// ReSharper disable AccessToModifiedClosure
 			Action<TreeGridNode> sort = null;
@@ -151,7 +157,7 @@ namespace pr.gui
 				foreach (TreeGridNode n in node.Nodes)
 					if (n.Nodes.Count >= 2)
 						sort(n);
-				
+
 				rows.Clear();
 				rows.AddRange(node.Nodes);
 				rows.Sort((lhs,rhs)=>
@@ -195,7 +201,7 @@ namespace pr.gui
 				return;
 			}
 
-			// Cause edit mode to begin since edit mode is disabled to support expanding/collapsing 
+			// Cause edit mode to begin since edit mode is disabled to support expanding/collapsing
 			if (e.KeyCode == Keys.F2 && CurrentCellAddress.X > -1 && CurrentCellAddress.Y > -1)
 			{
 				if (!CurrentCell.Displayed) FirstDisplayedScrollingRowIndex = CurrentCellAddress.Y;
@@ -203,9 +209,9 @@ namespace pr.gui
 				base.OnKeyDown(e);
 				return;
 			}
-			
+
 			// Handle special keys for tree cells
-			TreeGridCell tcell = CurrentCell as TreeGridCell;
+			var tcell = CurrentCell as TreeGridCell;
 			if (tcell != null)
 			{
 				TreeGridNode node = tcell.OwningNode;
@@ -253,7 +259,7 @@ namespace pr.gui
 			HitTestInfo info = HitTest(e.X, e.Y);
 			if (info.Type == DataGridViewHitTestType.Cell)
 			{
-				TreeGridCell tcell = this[info.ColumnIndex, info.RowIndex] as TreeGridCell;
+				var tcell = this[info.ColumnIndex, info.RowIndex] as TreeGridCell;
 				if (tcell != null && tcell.GlyphClick(e.X - info.ColumnX, e.Y - info.RowY))
 				{
 					TreeGridNode node = tcell.OwningNode;
@@ -266,6 +272,34 @@ namespace pr.gui
 				}
 			}
 			base.OnMouseDown(e);
+		}
+
+		/// <summary>Raises the NodeExpanding event</summary>
+		protected virtual void OnNodeExpanding(ExpandingEventArgs e)
+		{
+			if (NodeExpanding == null) return;
+			NodeExpanding(this, e);
+		}
+
+		/// <summary>Raises the NodeExpanded event</summary>
+		protected virtual void OnNodeExpanded(ExpandedEventArgs e)
+		{
+			if (NodeExpanded == null) return;
+			NodeExpanded(this, e);
+		}
+
+		/// <summary>Raises the node collapsing event</summary>
+		protected virtual void OnNodeCollapsing(CollapsingEventArgs e)
+		{
+			if (NodeCollapsing == null) return;
+			NodeCollapsing(this, e);
+		}
+
+		/// <summary>Raises the node collapsed event</summary>
+		protected virtual void OnNodeCollapsed(CollapsedEventArgs e)
+		{
+			if (NodeCollapsed == null) return;
+			NodeCollapsed(this, e);
 		}
 
 		/// <summary>No support for databinding</summary>
@@ -346,11 +380,11 @@ namespace pr.gui
 			m_is_expanded = displayed_in_grid;
 			m_virtual_nodes = false;
 		}
-		
+
 		/// <summary>A clone method must be provided for types derived from DataGridViewRow</summary>
 		public override object Clone()
 		{
-			TreeGridNode r = (TreeGridNode)base.Clone();
+			var r = (TreeGridNode)base.Clone();
 			if (r != null)
 			{
 				r.m_grid         = m_grid;
@@ -385,34 +419,34 @@ namespace pr.gui
 			{
 				if (m_parent == value) return;
 				if (value != null && m_grid != value.m_grid) throw new InvalidOperationException("Assigned parent must be within the same grid");
-				
+
 				// Check for circular connections
 				for (TreeGridNode p = value; p != null; p = p.Parent)
 					if (p == this) throw new InvalidOperationException("Assigned parent is a child of this node");
-				
+
 				// Remove the rows of this node from the grid
 				RemoveRowsFromGrid();
-				
+
 				// Remove this node from its current parent
 				if (m_parent != null)
 				{
 					m_parent.Nodes.RemoveInternal(this);
-					
+
 					// Refresh the glyph next to the parent node
 					if (m_parent.IsDisplayedInGrid && m_parent.Nodes.Count == 0 && !m_parent.IsRoot)
 						Grid.InvalidateRow(m_parent.RowIndex);
 				}
-				
+
 				// Assign the new parent
 				m_parent = value;
-				
+
 				if (m_parent != null)
 				{
 					int row_index = m_parent.NextRowIndex;
 
 					// Add to the parents node collection
 					m_parent.Nodes.AddInternal(this);
-					
+
 					// Refresh the glyph next to the parent node
 					if (m_parent.IsDisplayedInGrid && m_parent.Nodes.Count == 1 && !m_parent.IsRoot)
 						Grid.InvalidateRow(m_parent.RowIndex);
@@ -487,7 +521,7 @@ namespace pr.gui
 		}
 		private new int Index // hide the Index property of the row
 		{
-			get { return IsDisplayedInGrid ? base.Index : -1; } 
+			get { return IsDisplayedInGrid ? base.Index : -1; }
 		}
 
 		/// <summary>Gets the index of the row after this node and its children (if visible in the grid).
@@ -573,7 +607,7 @@ namespace pr.gui
 			int row_index = RowIndex + 1;
 			foreach (TreeGridNode child in Nodes)
 				child.DisplayRowsInGrid(ref row_index);
-			
+
 			m_is_expanded = true;
 			grid.EndExpandNode(this);
 			return true;
@@ -584,11 +618,11 @@ namespace pr.gui
 		{
 			if (Grid == null) return;
 			if (!IsDisplayedInGrid) return;
-			
+
 			// Remove all children from the grid
 			foreach (TreeGridNode child in Nodes)
 				child.RemoveRowsFromGrid();
-			
+
 			// Remove this node from the grid
 			Grid.Rows.Remove(this);
 			m_is_displayed_in_grid = false;
@@ -599,12 +633,12 @@ namespace pr.gui
 		{
 			if (Grid == null) return;
 			if (IsDisplayedInGrid) return;
-			
+
 			// Insert this node as a row in the grid
 			Grid.Rows.Insert(row_index++, this);
 			m_is_displayed_in_grid = true;
 			TreeCell.Dirty = true;
-			
+
 			// If this node is expanded add all of it's children
 			if (m_is_expanded)
 				foreach (TreeGridNode child in Nodes)
@@ -637,19 +671,19 @@ namespace pr.gui
 		/// <summary>A useful string version of this node</summary>
 		public override string ToString()
 		{
-			StringBuilder sb = new StringBuilder(36);
+			var sb = new StringBuilder(36);
 			sb.Append("[").Append(Level).Append(",").Append(NodeIndex).Append("] ");
 			if (TreeCell != null) sb.Append(TreeCell.Text);
 			return sb.ToString();
 		}
-	
+
 		/// <summary>Debugging helper for visualising the node tree</summary>
 		public void DumpTreeC() { Console.Write(DumpTree()); }
-		public string DumpTree() { StringBuilder sb = new StringBuilder(); DumpTree(this, sb); return sb.ToString(); }
+		public string DumpTree() { var sb = new StringBuilder(); DumpTree(this, sb); return sb.ToString(); }
 		private static void DumpTree(TreeGridNode node, StringBuilder sb)
 		{
 			for (int i = node.Level; i-- != 0;) sb.Append(' ');
-			sb.Append(node.ToString()).Append('\n');
+			sb.Append(node).Append('\n');
 			foreach (var n in node.Nodes) DumpTree(n, sb);
 		}
 	}
@@ -724,7 +758,7 @@ namespace pr.gui
 			Debug.Assert(node.Parent == m_owner);
 			m_list.Remove(node);
 		}
-		
+
 		/// <summary>Remove 'node' from this collection</summary>
 		public bool Remove(TreeGridNode node)
 		{
@@ -751,7 +785,7 @@ namespace pr.gui
 		{
 			return m_list.IndexOf(node);
 		}
-		
+
 		/// <summary>The number of items in the collection</summary>
 		public int Count
 		{
@@ -787,7 +821,7 @@ namespace pr.gui
 
 		// IList interface
 		void IList.Remove(object value)                               { Remove(value as TreeGridNode); }
-		int  IList.Add(object value)                                  { TreeGridNode item = (TreeGridNode)value; Add(item); return item.NodeIndex; }
+		int  IList.Add(object value)                                  { var item = (TreeGridNode)value; Add(item); return item.NodeIndex; }
 		void IList.Insert(int index, object node)                     { Insert(index, (TreeGridNode )node); }
 		void IList.RemoveAt(int index)                                { RemoveAt(index); }
 		void IList.Clear()                                            { Clear(); }
@@ -796,11 +830,11 @@ namespace pr.gui
 		int  IList.IndexOf(object item)                               { return IndexOf(item as TreeGridNode); }
 		bool IList.Contains(object value)                             { return Contains(value as TreeGridNode); }
 		object IList.this[int index]                                  { get {return this[index];} set {this[index] = value as TreeGridNode;} }
-		
+
 		// Enumerator/Enumerable methods
 		public IEnumerator<TreeGridNode> GetEnumerator() { return m_list.GetEnumerator(); }
 		IEnumerator IEnumerable.GetEnumerator()          { return GetEnumerator(); }
-		
+
 		// ICollection Members
 		void ICollection<TreeGridNode>.Add(TreeGridNode node) { Add(node); }
 		int  ICollection.Count                                { get {return Count;} }
@@ -808,7 +842,7 @@ namespace pr.gui
 		bool ICollection.IsSynchronized                       { get {throw new Exception("The method or operation is not implemented.");} }
 		object ICollection.SyncRoot                           { get {throw new Exception("The method or operation is not implemented.");} }
 	}
-	
+
 	/// <summary>A cell within the tree column of a TreeGridView</summary>
 	public class TreeGridCell :DataGridViewTextBoxCell
 	{
@@ -834,7 +868,7 @@ namespace pr.gui
 		}
 		public static Indenting DefaultIndenting = new Indenting();
 		// ReSharper restore FieldCanBeMadeReadOnly.Global
-		
+
 		private Indenting m_indent = DefaultIndenting; // Indenting parameters
 		private bool m_calc_padding;                   // Dirty flag for when the cell padding needs calculating
 
@@ -846,7 +880,7 @@ namespace pr.gui
 		/// <summary>Duplicate this cell</summary>
 		public override object Clone()
 		{
-			TreeGridCell c = (TreeGridCell)base.Clone();
+			var c = (TreeGridCell)base.Clone();
 			c.m_indent = DefaultIndenting;
 			c.m_calc_padding = true;
 			return c;
@@ -921,12 +955,12 @@ namespace pr.gui
 			base.Paint(graphics, clipBounds, cellBounds, rowIndex, cellState, value, formattedValue, errorText, cellStyle, advancedBorderStyle, paintParts);
 
 			// A helper rectangle in which the lines, glyphs, and images are drawn
-			Rectangle rect = new Rectangle(cellBounds.X + m_indent.m_margin + Level * m_indent.m_width, cellBounds.Y, m_indent.m_glyph_width, cellBounds.Height - 1);
+			var rect = new Rectangle(cellBounds.X + m_indent.m_margin + Level * m_indent.m_width, cellBounds.Y, m_indent.m_glyph_width, cellBounds.Height - 1);
 
 			// Paint the associated image
 			if (node.Image != null)
 			{
-				Point pt = new Point(rect.X + m_indent.m_glyph_width, 2 + cellBounds.Y + (cellBounds.Height - node.Image.Height)/2);
+				var pt = new Point(rect.X + m_indent.m_glyph_width, 2 + cellBounds.Y + (cellBounds.Height - node.Image.Height)/2);
 				GraphicsContainer gc = graphics.BeginContainer();
 				graphics.SetClip(cellBounds);
 				graphics.DrawImageUnscaled(node.Image, pt);
@@ -936,7 +970,7 @@ namespace pr.gui
 			// Paint tree lines
 			if (node.Grid.ShowLines)
 			{
-				using (Pen line_pen = new Pen(SystemBrushes.ControlDark, 1.0f))
+				using (var line_pen = new Pen(SystemBrushes.ControlDark, 1.0f))
 				{
 					line_pen.DashStyle = DashStyle.Dot;
 					bool is_last_sibling  = node.IsLastSibling;
@@ -947,11 +981,11 @@ namespace pr.gui
 					int top = cellBounds.Top    + (is_first_sibling && Level == 0 ? cellBounds.Height/2 : 0);
 					int bot = cellBounds.Bottom - (is_last_sibling  ? cellBounds.Height/2 : 0);
 					graphics.DrawLine(line_pen, rect.X + ghw, top, rect.X + ghw, bot);
-					
+
 					// Horizontal line
 					top = cellBounds.Top + cellBounds.Height/2;
 					graphics.DrawLine(line_pen, rect.X + ghw, top, rect.Right, top);
-					
+
 					// Paint lines of previous levels to the root
 					int x = (rect.X + ghw) - m_indent.m_width;
 					for (TreeGridNode p = node.Parent; !p.IsRoot; p = p.Parent, x -= m_indent.m_width)
@@ -965,7 +999,7 @@ namespace pr.gui
 			// Paint node glyphs
 			if (node.HasChildren || node.VirtualNodes)
 			{
-				Rectangle glyph = new Rectangle(rect.X, rect.Y + (rect.Height / 2) - 4, 10, 10);
+				var glyph = new Rectangle(rect.X, rect.Y + (rect.Height / 2) - 4, 10, 10);
 				int midx = glyph.Left + glyph.Width / 2, midy = glyph.Top + glyph.Height / 2;
 				graphics.FillRectangle(SystemBrushes.ControlLight, glyph);
 				graphics.DrawRectangle(SystemPens.ControlDarkDark, glyph);
@@ -980,7 +1014,7 @@ namespace pr.gui
 	public sealed class TreeGridColumn : DataGridViewTextBoxColumn
 	{
 		private Image m_default_node_image;
-		
+
 		public TreeGridColumn()
 		{
 			CellTemplate = new TreeGridCell();
@@ -992,7 +1026,7 @@ namespace pr.gui
 		}
 		public override object Clone() // Need to override Clone for design-time support.
 		{
-			TreeGridColumn c = (TreeGridColumn)base.Clone();
+			var c = (TreeGridColumn)base.Clone();
 			if (c != null) { c.m_default_node_image = m_default_node_image; }
 			return c;
 		}
@@ -1007,7 +1041,7 @@ namespace pr.gui
 	}
 
 	/// <summary>Arguments for node collapsed events</summary>
-	public class CollapsedEventArgs
+	public class CollapsedEventArgs :EventArgs
 	{
 		private readonly TreeGridNode m_node;
 		public CollapsedEventArgs(TreeGridNode node) { m_node = node; }
@@ -1023,38 +1057,33 @@ namespace pr.gui
 	}
 
 	/// <summary>Arguments for node expanded events</summary>
-	public class ExpandedEventArgs
+	public class ExpandedEventArgs :EventArgs
 	{
 		private readonly TreeGridNode m_node;
 		public ExpandedEventArgs(TreeGridNode node) { m_node = node; }
 		public TreeGridNode Node                    { get {return m_node;} }
 	}
-
-	public delegate void ExpandingEventHandler(object sender, ExpandingEventArgs e);
-	public delegate void ExpandedEventHandler (object sender, ExpandedEventArgs  e);
-
-	public delegate void CollapsingEventHandler(object sender, CollapsingEventArgs e);
-	public delegate void CollapsedEventHandler (object sender, CollapsedEventArgs  e);
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
 	using gui;
-	
+
 	[TestFixture] internal static partial class UnitTests
 	{
 		internal static class TestTreeGridView
 		{
 			[Test] public static void TestTGV1()
 			{
-				TreeGridView grid0 = new TreeGridView();
+				var grid0 = new TreeGridView();
 				grid0.Columns.Add(new TreeGridColumn{HeaderText="col0"});
 				grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col1"});
 				grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col2"});
-		
-				TreeGridNode a0 = grid0.Nodes.Add("a0");
+
+				var a0 = grid0.Nodes.Add("a0");
 				TreeGridNode a0_0 = a0.Nodes.Add("a0_0");
 				TreeGridNode a0_1 = a0.Nodes.Add("a0_1");
 				TreeGridNode a0_0_0 = a0_0.Nodes.Add("a0_0_0");
@@ -1089,20 +1118,20 @@ namespace pr
 
 			[Test] public static void TestTGV2()
 			{
-				TreeGridView grid0 = new TreeGridView();
+				var grid0 = new TreeGridView();
 				grid0.Columns.Add(new TreeGridColumn{HeaderText="col0"});
 				grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col1"});
 				grid0.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="col2"});
-				TreeGridView grid1 = new TreeGridView();
+				var grid1 = new TreeGridView();
 				grid1.Columns.Add(new TreeGridColumn{HeaderText="col0"});
-			
+
 				TreeGridNode a0 = grid0.Nodes.Add("a0", 0, 0);
 				a0.Nodes.Add("a0_0", 0, 0);
 				a0.Nodes.Add("a0_1", 0, 0);
 
 				// Can't move nodes between grids
 				Assert.Throws(typeof(InvalidOperationException), ()=>{grid1.Nodes.Add(a0);});
-			
+
 			//    grid0.Nodes.Add(a0);
 			//    grid0.Nodes.Insert(1, b0);
 

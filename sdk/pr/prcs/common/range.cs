@@ -40,7 +40,7 @@ namespace pr.common
 		/// <summary>True if the range spans zero elements</summary>
 		public bool Empty                  { get { return End == Begin; } }
 
-		/// <summary>Get/Set the number of elements in the range</summary>
+		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
 		public long Count                  { get { return End - Begin; } set { End = Begin + value; } }
 
 		/// <summary>Gets the first index in the range, or moves the range so that 'Begin' is at a given index.<para/>Note, moves 'End' so that 'Count' is unchanged</summary>

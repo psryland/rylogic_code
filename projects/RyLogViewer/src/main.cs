@@ -89,7 +89,7 @@ namespace RyLogViewer
 
 			m_watch               = new FileWatch();
 			m_watch_timer         = new Timer{Interval = Constants.FilePollingRate};
-			m_batch_set_col_size  = new EventBatcher(100, this);
+			m_batch_set_col_size  = new EventBatcher(100);
 			m_highlights          = new List<Highlight>();
 			m_filters             = new List<Filter>();
 			m_transforms          = new List<Transform>();
@@ -98,7 +98,7 @@ namespace RyLogViewer
 			m_find_ui             = new FindUI(this, m_find_history){Visible = false};
 			m_bookmarks           = new BindingList<Bookmark>();
 			m_bs_bookmarks        = new BindingSource{DataSource = m_bookmarks};
-			m_batch_refresh_bkmks = new EventBatcher(100, this);
+			m_batch_refresh_bkmks = new EventBatcher(100);
 			m_bookmarks_ui        = new BookmarksUI(this, m_bs_bookmarks){Visible = false};
 			m_tt                  = new ToolTip();
 			m_tab_cycle           = new Form[]{this, m_find_ui, m_bookmarks_ui};
@@ -640,7 +640,7 @@ namespace RyLogViewer
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
 								var fmt = new StringFormat(m_strfmt);
-								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begin, x.Count)).ToArray());
+								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begini, x.Counti)).ToArray());
 								foreach (var r in gfx.MeasureCharacterRanges(col.Text, cs.Font, cellbounds, fmt))
 								{
 									var bnd = r.GetBounds(gfx);
@@ -718,7 +718,7 @@ namespace RyLogViewer
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
 								var fmt = new StringFormat(m_strfmt);
-								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begin, x.Count)).ToArray());
+								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begini, x.Counti)).ToArray());
 								foreach (var r in gfx.MeasureCharacterRanges(col.Text, cs.Font, textbounds, fmt))
 									gfx.SetClip(r.GetBounds(gfx), CombineMode.Union);
 

@@ -17,15 +17,11 @@ import UserVars
 
 Tools.CheckVersion(1)
 
-if len(sys.argv) > 1: targetpath = sys.argv[1]
-else:                 targetpath = input("TargetPath? ")
-if len(sys.argv) > 2: platform   = sys.argv[2]
-else:                 platform   = input("Platform (x86,x64)? ")
-if platform.lower() == "win32":	platform = "x86"
-if len(sys.argv) > 3: config     = sys.argv[3]
-else:                 config     = input("Configuration (debug,release)? ")
-if len(sys.argv) > 4: dstdir     = sys.argv[4]
-else:                 dstdir     = UserVars.pr_root+r"\sdk\pr\lib"
+targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
+platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
+config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")
+dstdir     = sys.argv[4] if len(sys.argv) > 4 else UserVars.pr_root+r"\sdk\pr\lib"
+if platform.lower() == "win32": platform = "x86"
 
 trace = False
 targetpath  = targetpath.lower();

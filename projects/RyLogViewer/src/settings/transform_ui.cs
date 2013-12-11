@@ -380,12 +380,12 @@ namespace RyLogViewer
 							// Highlight the capture groups in the test text and the result
 							int j = 0; foreach (var s in src_caps)
 							{
-								m_edit_test.Select(starti + s.Span.Index, s.Span.Count);
+								m_edit_test.Select(starti + s.Span.Begini, s.Span.Counti);
 								m_edit_test.SelectionBackColor = Constants.BkColors[j++ % Constants.BkColors.Length];
 							}
 							j = 0; foreach (var s in dst_caps)
 							{
-								m_edit_result.Select(startj + s.Span.Index, s.Span.Count);
+								m_edit_result.Select(startj + s.Span.Begini, s.Span.Counti);
 								m_edit_result.SelectionBackColor = Constants.BkColors[j++ % Constants.BkColors.Length];
 							}
 						}

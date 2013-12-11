@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using pr.common;
 using pr.extn;
+using pr.script;
 
 namespace Rylogic.VSExtension
 {
@@ -271,6 +272,9 @@ namespace Rylogic.VSExtension
 					if (b.GrpIndex == align.GrpIndex) ++token_index;
 				}
 
+				// Record whether this aligner is within a string or not
+//todo...maybe				var within_string = CodeUtil.IsWithinString(line.GetText(), align.Span.Begini);
+
 				// For each successive adjacent row, look for an alignment boundary at the same index
 				edits.AddRange(FindAlignmentEdits(align, token_index, grps, -1, line_range));
 				edits.AddRange(FindAlignmentEdits(align, token_index, grps, +1, line_range));
@@ -298,7 +302,7 @@ namespace Rylogic.VSExtension
 		/// <summary>
 		/// Searches above (dir == -1) or below (dir == +1) for alignment tokens that occur
 		/// with the same token index as 'align'. Returns all found.</summary>
-		private IEnumerable<Token> FindAlignmentEdits(Token align, int token_index, List<AlignGroup> grps, int dir, Range line_range)
+		private IEnumerable<Token> FindAlignmentEdits(Token align,int token_index,List<AlignGroup> grps,int dir,Range line_range)
 		{
 			for (var i = align.LineNumber + dir; line_range.Contains(i); i += dir)
 			{
@@ -313,6 +317,7 @@ namespace Rylogic.VSExtension
 					if (b.GrpIndex != align.GrpIndex) continue;
 					if ((b.MinCharIndex == 0) != (align.MinCharIndex == 0)) continue; // Don't align things on their own line, with things that aren't on their own line
 					if (++idx != token_index) continue;
+//todo...maybe		if (CodeUtil.IsWithinString(b.Line.GetText(), b.Span.Begini) != within_string) break;
 					match = b;
 					break;
 				}

@@ -4,27 +4,30 @@
 //***************************************************
 
 using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
+using pr.common;
 
 namespace pr.extn
 {
 	public static class ByteArrayExtensions
 	{
-		public static byte   AsUInt8        (this byte[] arr) { return arr[0]; }
-		public static ushort AsUInt16       (this byte[] arr) { return BitConverter.ToUInt16(arr, 0); }
-		public static uint   AsUInt32       (this byte[] arr) { return BitConverter.ToUInt32(arr, 0); }
-		public static ulong  AsUInt64       (this byte[] arr) { return BitConverter.ToUInt64(arr, 0); }
-		public static sbyte  AsInt8         (this byte[] arr) { return (sbyte)arr[0]; }
-		public static short  AsInt16        (this byte[] arr) { return BitConverter.ToInt16(arr, 0); }
-		public static int    AsInt32        (this byte[] arr) { return BitConverter.ToInt32(arr, 0); }
-		public static long   AsInt64        (this byte[] arr) { return BitConverter.ToInt64(arr, 0); }
-		public static float  AsFloat        (this byte[] arr) { return BitConverter.ToSingle(arr, 0); }
-		public static double AsDouble       (this byte[] arr) { return BitConverter.ToDouble(arr, 0); }
-		public static bool   AsBool         (this byte[] arr) { return BitConverter.ToBoolean(arr, 0); }
-		public static char   AsChar         (this byte[] arr) { return BitConverter.ToChar(arr, 0); }
-		public static string AsUTF8String   (this byte[] arr) { return Encoding.UTF8.GetString(arr); }
-		public static string AsUnicodeString(this byte[] arr) { return Encoding.Unicode.GetString(arr); }
-		
+		public static sbyte  AsInt8         (this byte[] arr, int start_index = 0) { return (sbyte)arr[start_index]; }
+		public static byte   AsUInt8        (this byte[] arr, int start_index = 0) { return arr[start_index]; }
+		public static ushort AsUInt16       (this byte[] arr, int start_index = 0) { return BitConverter.ToUInt16     (arr, start_index); }
+		public static uint   AsUInt32       (this byte[] arr, int start_index = 0) { return BitConverter.ToUInt32     (arr, start_index); }
+		public static ulong  AsUInt64       (this byte[] arr, int start_index = 0) { return BitConverter.ToUInt64     (arr, start_index); }
+		public static short  AsInt16        (this byte[] arr, int start_index = 0) { return BitConverter.ToInt16      (arr, start_index); }
+		public static int    AsInt32        (this byte[] arr, int start_index = 0) { return BitConverter.ToInt32      (arr, start_index); }
+		public static long   AsInt64        (this byte[] arr, int start_index = 0) { return BitConverter.ToInt64      (arr, start_index); }
+		public static float  AsFloat        (this byte[] arr, int start_index = 0) { return BitConverter.ToSingle     (arr, start_index); }
+		public static double AsDouble       (this byte[] arr, int start_index = 0) { return BitConverter.ToDouble     (arr, start_index); }
+		public static bool   AsBool         (this byte[] arr, int start_index = 0) { return BitConverter.ToBoolean    (arr, start_index); }
+		public static char   AsChar         (this byte[] arr, int start_index = 0) { return BitConverter.ToChar       (arr, start_index); }
+		public static string AsUTF8String   (this byte[] arr, int start_index = 0) { return Encoding.UTF8.GetString   (arr, start_index, arr.Length - start_index); }
+		public static string AsUnicodeString(this byte[] arr, int start_index = 0) { return Encoding.Unicode.GetString(arr, start_index, arr.Length - start_index); }
+
 		public static T As<T>(this byte[] arr) where T:struct
 		{
 			if (typeof(T) == typeof(byte  )) return (T)(object)AsUInt8 (arr);
@@ -39,12 +42,16 @@ namespace pr.extn
 			if (typeof(T) == typeof(double)) return (T)(object)AsDouble(arr);
 			if (typeof(T) == typeof(bool  )) return (T)(object)AsBool  (arr);
 			if (typeof(T) == typeof(char  )) return (T)(object)AsChar  (arr);
-			throw new NotSupportedException("Type " + typeof(T).Name + " not supported in As<T>");
+
+			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "As<T>: Insufficient data. Expected {0}, got {1}".Fmt(Marshal.SizeOf(typeof(T)), arr.Length));
+			using (var handle = GCHandleEx.Alloc(arr, GCHandleType.Pinned))
+				return (T)Marshal.PtrToStructure(handle.State.AddrOfPinnedObject(), typeof(T));
 		}
 	}
 }
 
 #if PR_UNITTESTS
+
 namespace pr
 {
 	using NUnit.Framework;
@@ -54,6 +61,13 @@ namespace pr
 	{
 		internal static partial class TestExtensions
 		{
+			[StructLayout(LayoutKind.Sequential,Pack = 1,CharSet = CharSet.Ansi)]
+			internal struct Thing
+			{
+				public int m_int;
+				public char m_char;
+				public byte m_byte;
+			}
 			[Test] public static void ByteArrayAs()
 			{
 				var b0 = new byte[]{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
@@ -71,6 +85,15 @@ namespace pr
 				Assert.AreEqual(1.0                   ,b2.AsDouble());
 				Assert.AreEqual(true                  ,b0.AsBool  ());
 				Assert.AreEqual((char)0x0201          ,b0.AsChar  ());
+			}
+			[Test] public static void ByteArrayAsStruct()
+			{
+				var b0 = new byte[]{0x01,0x02,0x03,0x04,0x41,0xAB};
+				var thing = b0.As<Thing>();
+
+				Assert.AreEqual(0x04030201 , thing.m_int );
+				Assert.AreEqual('A'        , thing.m_char);
+				Assert.AreEqual(0xab       , thing.m_byte);
 			}
 		}
 	}

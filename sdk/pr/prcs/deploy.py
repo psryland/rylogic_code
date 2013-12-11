@@ -15,21 +15,24 @@ Tools.CheckVersion(1)
 
 srcdir = UserVars.pr_root + "\\sdk\\pr\\prcs"
 proj   = srcdir + "\\Rylogic.csproj"
-config = input("Configuration (debug, release(default))? ")
-if config == "": config = "release"
-bindir = srcdir + "\\bin\\" + config
+config = "both" #input("Configuration (debug, release, both(default))? ")
+if config == "": config = "both"
 
 input(
 	" Deploy Settings:\n"
-	"         Source: " + bindir + "\n"
-	#"    Destination: " + dst + "\n"
+	"         Source: " + srcdir + "\n"
 	"  Configuration: " + config + "\n"
 	"Press enter to continue")
 
 try:
 	#Invoke MSBuild
 	print("Building...")
-	Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration="+config])
+
+	if config == "debug" or config == "both":
+		Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration=Debug"])
+
+	if config == "release" or config == "both":
+		Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration=Release"])
 
 	Tools.OnSuccess()
 

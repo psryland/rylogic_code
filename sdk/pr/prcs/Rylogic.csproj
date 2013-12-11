@@ -294,6 +294,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="script\buffer.cs" />
+    <Compile Include="script\CodeUtil.cs" />
     <Compile Include="script\comment_strip.cs" />
     <Compile Include="script\html_expander.cs" />
     <Compile Include="script\loc.cs" />
@@ -312,7 +313,7 @@
     <Compile Include="util\csv_data.cs" />
     <Compile Include="util\dragdrop.cs" />
     <Compile Include="util\eql.cs" />
-    <Compile Include="util\event_batcher.cs" />
+    <Compile Include="common\event_batcher.cs" />
     <Compile Include="gui\flag_checked_listbox.cs">
       <SubType>Component</SubType>
     </Compile>

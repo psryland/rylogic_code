@@ -86,6 +86,7 @@ namespace pr.extn
 		}
 	}
 }
+
 #if PR_UNITTESTS
 
 namespace pr

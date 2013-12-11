@@ -17,9 +17,19 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns an RAII object that suspends raising event</summary>
-		public static Scope BlockEvents(this BindingSource bs)
+		public static Scope BlockEvents(this BindingSource bs, bool refresh_on_resume)
 		{
-			return Scope.Create(() => bs.RaiseListChangedEvents = false, () => bs.RaiseListChangedEvents = true);
+			return Scope.Create(
+				() =>
+					{
+						bs.RaiseListChangedEvents = false;
+					},
+				() =>
+					{
+						bs.RaiseListChangedEvents = true;
+						if (refresh_on_resume)
+							bs.ResetBindings(false);
+					});
 		}
 
 		/// <summary>True if the list changed event is probably something you care about</summary>
