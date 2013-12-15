@@ -4,57 +4,47 @@
 //***************************************************
 
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Windows.Threading;
-using Timer = System.Timers.Timer;
+using pr.extn;
 
 namespace pr.common
 {
 	public class EventBatcher
 	{
-		private readonly Timer m_timer;
-
-		/// <summary>True when the event batcher has been signalled</summary>
-		public bool Signalled { get { return Interlocked.CompareExchange(ref m_signal, 1, 1) == 1; } }
-		private int m_signal;
+		private readonly Dispatcher m_dispatcher;
+		private readonly TimeSpan m_delay;
+		private int m_issue;
 
 		/// <summary>The callback called when this event has been signalled</summary>
 		public event Action Action;
 
-		public EventBatcher() :this(100) {}
-		public EventBatcher(int delay_ms) :this(delay_ms, Dispatcher.CurrentDispatcher) {}
-		public EventBatcher(int delay_ms, Dispatcher dispatcher)
+		public EventBatcher() :this(TimeSpan.FromMilliseconds(100)) {}
+		public EventBatcher(TimeSpan delay) :this(delay, Dispatcher.CurrentDispatcher) {}
+		public EventBatcher(TimeSpan delay, Dispatcher dispatcher)
 		{
-			if (dispatcher == null) throw new ArgumentNullException("dispatcher","dispatcher can't be null");
-			m_signal = 0;
-			m_timer = new Timer{AutoReset = false, Enabled = false, Interval = delay_ms};
-			m_timer.Elapsed += (s,e)=>
-				{
-					try
-					{
-						if (Action == null) return;
-						dispatcher.BeginInvoke(Action, null);
-					}
-					catch (InvalidOperationException)
-					{
-						Debug.Assert(false, "Don't signal the event batch before the synchronizing object has a handle (if it's a control or form)");
-					}
-					finally
-					{
-						Interlocked.Exchange(ref m_signal, 0);
-					}
-				};
+			if (dispatcher == null)
+				throw new ArgumentNullException("dispatcher","dispatcher can't be null");
+
+			m_dispatcher = dispatcher;
+			m_delay = delay;
+			m_issue = 0;
 		}
 
-		/// <summary>Signal the event. Signal can be called multiple times during the processing of a windows message.
+		/// <summary>
+		/// Signal the event. Signal can be called multiple times during the processing of a windows message.
 		/// The event will be delayed to a later windows message and will only be called once.
-		/// Note: this can be called from any thread, the resulting event will be marshalled to the synchronising object's
-		/// thread, or run on the thread pool if no synchronising object is given</summary>
+		/// Note: this can be called from any thread, the resulting event will be marshalled to the Dispatcher
+		/// provided in the constructor of the event batcher</summary>
 		public void Signal()
 		{
-			if (Interlocked.CompareExchange(ref m_signal, 1, 0) == 0)
-				m_timer.Enabled = true;
+			var issue = Interlocked.Increment(ref m_issue);
+			m_dispatcher.BeginInvokeDelayed(() =>
+				{
+					if (Interlocked.CompareExchange(ref m_issue, issue, issue) != issue) return;
+					if (Action == null) return;
+					Action();
+				}, m_delay);
 		}
 	}
 }
@@ -75,14 +65,14 @@ namespace pr
 				var count = new int[1];
 				var thread_id = Thread.CurrentThread.ManagedThreadId;
 
-				var eb1 = new EventBatcher(100);
+				var eb1 = new EventBatcher();
 				eb1.Action += () =>
 					{
 						Assert.AreEqual(thread_id, Thread.CurrentThread.ManagedThreadId);
 						Assert.AreEqual(1, count[0]);
 					};
 
-				var eb2 = new EventBatcher(100);
+				var eb2 = new EventBatcher();
 				eb2.Action += () =>
 					{
 						Assert.AreEqual(thread_id, Thread.CurrentThread.ManagedThreadId);

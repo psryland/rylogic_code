@@ -40,7 +40,7 @@ namespace pr
 		//       int         m_key;
 		//       std::string m_string;
 		//       float       m_float;
-		//       
+		//
 		//       PR_SQLITE_TABLE(Record,"")
 		//       PR_SQLITE_COLUMN(Key    ,m_key    ,integer ,"primary key autoincrement not null")
 		//       PR_SQLITE_COLUMN(String ,m_string ,text    ,"")
@@ -71,12 +71,11 @@ namespace pr
 			struct MetaData :TableMetaData<type_name>\
 			{\
 				MetaData()\
-					:TableMetaData<TableType>(#type_name, table_constraints)\
+				:TableMetaData<TableType>("[" ## #type_name ## "]", table_constraints)\
 				{
-
 		// Columns that perform type converting on read/write to the record type
 		#define PR_SQLITE_COL_AS_CUST(column_name, adapter, datatype, constraints)\
-		AddColumn<adapter>(#column_name, #datatype, constraints);
+		AddColumn<adapter>("[" ## #column_name ## "]", #datatype, constraints);
 
 		// Default implementation of a converting column
 		#define PR_SQLITE_COL_AS(column_name, member, as_type, datatype, constraints)\
@@ -114,7 +113,7 @@ namespace pr
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		// Repeater macros
-		#define PR_SQLITE_REP0(m,s) 
+		#define PR_SQLITE_REP0(m,s)
 		#define PR_SQLITE_REP1(m,s) m(1)
 		#define PR_SQLITE_REP2(m,s) PR_SQLITE_REP1(m,s)##s##m(2)
 		#define PR_SQLITE_REP3(m,s) PR_SQLITE_REP2(m,s)##s##m(3)
@@ -167,7 +166,7 @@ namespace pr
 			enum Type
 			{
 				SingleThreaded  = SQLITE_CONFIG_SINGLETHREAD,        // Disable all mutexing
-				MultiThreaded   = SQLITE_CONFIG_MULTITHREAD,         // Disable mutexing of database connections, Enable mutexing of core data structures      
+				MultiThreaded   = SQLITE_CONFIG_MULTITHREAD,         // Disable mutexing of database connections, Enable mutexing of core data structures
 				Serialised      = SQLITE_CONFIG_SERIALIZED,          // Enable all mutexing
 				Mutex           = SQLITE_CONFIG_MUTEX,               // Specify an alternative mutex implementation
 				GetMutex        = SQLITE_CONFIG_GETMUTEX,            // Retrieve the current mutex implementation
@@ -567,7 +566,6 @@ namespace pr
 				static void const* text(sqlite3_stmt* stmt, int col, wchar_t) { return sqlite3_column_text16(stmt, col); }
 				static size_t len(sqlite3_stmt* stmt, int col, char   )       { return sqlite3_column_bytes(stmt, col); }
 				static size_t len(sqlite3_stmt* stmt, int col, wchar_t)       { return sqlite3_column_bytes16(stmt, col); }
-			
 			};
 
 			// Sqlite returns null if this column is null
@@ -581,7 +579,7 @@ namespace pr
 		template <typename CharType> inline               CharType* read_text(sqlite3_stmt* stmt, int col, size_t max_length, CharType* value, size_t& length)
 		{
 			PR_ASSERT(PR_SQL_ASSERTS, max_length > 0 && value != 0, "Zero-length buffers not allowed");
-			
+
 			std::basic_string<CharType> buf;
 			read_text(stmt, col, buf);
 			if (buf.size() > max_length) throw Exception(SQLITE_MISMATCH, "Column data exceeds provided buffer size", false);
@@ -2151,7 +2149,7 @@ namespace pr
 				{//for (pr::sqlite::EnumRows<Record> row(cached_query); !row.end(); row.next()) {}
 					pr::sqlite::Query q(db, "select * from Record where String = ?");
 					q.Bind(1,"r1");
-					
+
 					PR_CHECK(q.Step(), true); r = q.Read<Record>(); PR_CHECK(r.m_string, "r1");
 					PR_CHECK(q.Step(), false);
 
@@ -2172,4 +2170,3 @@ namespace pr
 #endif
 
 #endif
-

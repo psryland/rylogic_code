@@ -9,11 +9,13 @@ namespace pr.extn
 	public static class ObjectExtensions
 	{
 		/// <summary>Static cast this object to type 'T'</summary>
-		public static T As<T>(this object obj)
+		public static T As<T>(this object obj) where T : class
 		{
 			// Don't use 'To' because that implies conversion.
 			// Can't use 'Cast' because clashes with IEnumerable extensions
 			// 'As' sounds like 'as' but it's safer than 'as' so doesn't matter
+			// 'T' must be a reference type, because casting between boxed value types doesn't work
+			// i.e.   3.As<short>() fails
 			return (T)obj;
 		}
 
@@ -216,8 +218,8 @@ namespace pr
 			}
 			[Test] public static void Casts()
 			{
-				var i = 2;
-				var s = i.As<short>();
+				object i = new NotSupportedException();
+				var s = i.As<Exception>();
 			}
 			[Test] public static void ShallowCopy()
 			{

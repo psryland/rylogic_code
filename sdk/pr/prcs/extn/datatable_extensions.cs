@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using JetBrains.Annotations;
 using pr.util;
 
@@ -66,14 +67,14 @@ namespace pr.extn
 	}
 
 	/// <summary>Helper base class for creating typed DataTables using an enum to define the column names</summary>
+	[Serializable]
 	public abstract class TypedDataTable<TRowType, TColumnEnum> :DataTable
 		where TRowType :DataRow
 		where TColumnEnum :struct, IConvertible
 	{
-		protected TypedDataTable(BindingFlags flags = BindingFlags.Public|BindingFlags.Instance|BindingFlags.DeclaredOnly)
+		protected TypedDataTable(string name, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance|BindingFlags.DeclaredOnly)
 		{
 			// Get the table description attribute (throws if not found => ensures IsEnum)
-			var desc = typeof(TColumnEnum).GetAttribute<DataTableDescAttribute>();
 			var pks = new List<DataColumn>();
 
 			// Create the columns
@@ -81,12 +82,12 @@ namespace pr.extn
 			foreach (var col_desc in Enum.GetValues(typeof(TColumnEnum)).Cast<TColumnEnum>())
 			{
 				// Find the property with this name
-				var name = col_desc.ToStringFast();
-				var pi = props.FirstOrDefault(x => x.Name == name);
+				var col_name = col_desc.ToStringFast();
+				var pi = props.FirstOrDefault(x => x.Name == col_name);
 				if (pi == null)
-					throw new Exception("Row type {0} does not have a property named {1}".Fmt(typeof(TRowType).Name, name));
+					throw new Exception("Row type {0} does not have a property named {1}".Fmt(typeof(TRowType).Name, col_name));
 
-				var attr = typeof(TColumnEnum).GetField(name).FindAttribute<DataTableColumnAttribute>() ?? new DataTableColumnAttribute();
+				var attr = typeof(TColumnEnum).GetField(col_name).FindAttribute<DataTableColumnAttribute>() ?? new DataTableColumnAttribute();
 				var col = new DataColumn(pi.Name, pi.PropertyType)
 					{
 						AutoIncrement = attr.AutoInc,
@@ -100,9 +101,10 @@ namespace pr.extn
 				Columns.Add(col);
 			}
 
-			TableName  = desc.Name;
+			TableName  = name;
 			PrimaryKey = pks.ToArray();
 		}
+		protected TypedDataTable(SerializationInfo info, StreamingContext ctx) : base(info, ctx) {}
 
 		/// <summary>Access a column by enum id</summary>
 		public DataColumn Column(TColumnEnum col)
@@ -149,19 +151,6 @@ namespace pr.extn
 			}
 		}
 		private ConstructorInfo m_constructor;
-	}
-
-	/// <summary>Marks an enum as a description of a data table</summary>
-	[AttributeUsage(AttributeTargets.Enum, AllowMultiple = false, Inherited = true)]
-	public class DataTableDescAttribute :Attribute
-	{
-		/// <summary>The name of the table</summary>
-		public string Name { get; set; }
-
-		public DataTableDescAttribute(string name)
-		{
-			Name = name;
-		}
 	}
 
 	/// <summary>Marks a property as a column in a DataTable</summary>
@@ -211,7 +200,6 @@ namespace pr
 		{
 			public class Record :DataRow
 			{
-				[DataTableDesc("RecordTable")]
 				public enum Columns
 				{
 					[DataTableColumn(PrimaryKey = true, AutoInc = true)] Id,
@@ -225,11 +213,13 @@ namespace pr
 				public long Size { get; set; }
 			}
 			public class Table :TypedDataTable<Record, Record.Columns>
-			{}
+			{
+				public Table(string name) :base(name) {}
+			}
 
 			[Test] public static void DataTable()
 			{
-				var tbl = new Table();
+				var tbl = new Table("Record");
 				var row = tbl.NewRow();
 				row.Name = "First";
 				row.Size = 10;

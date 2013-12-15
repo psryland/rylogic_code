@@ -915,6 +915,9 @@ namespace pr.common
 				m_meta = TableMetaData.GetMetaData(type);
 			}
 
+			/// <summary>Get/Set whether the cache should use thread locking</summary>
+			public bool ThreadSafe { get { return m_cache.ThreadSafe; } set { m_cache.ThreadSafe = value; } }
+
 			/// <summary>The number of items in the cache</summary>
 			public int Count { get { return m_cache.Count; } }
 
@@ -979,6 +982,9 @@ namespace pr.common
 			private readonly Database m_db;
 
 			public QueryCache(Database db) { m_db = db; }
+
+			/// <summary>Get/Set whether the cache should use thread locking</summary>
+			public bool ThreadSafe { get { return m_cache.ThreadSafe; } set { m_cache.ThreadSafe = value; } }
 
 			/// <summary>The number of items in the cache</summary>
 			public int Count { get { return m_cache.Count; } }

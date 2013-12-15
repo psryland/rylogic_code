@@ -183,6 +183,7 @@
     <Compile Include="extn\datagridview_extensions.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="extn\dispatcher_extensions.cs" />
     <Compile Include="extn\drawing_extensions.cs" />
     <Compile Include="extn\enumerable_extensions.cs" />
     <Compile Include="extn\enum_extensions.cs" />

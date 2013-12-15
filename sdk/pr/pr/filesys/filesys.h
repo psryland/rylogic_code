@@ -106,6 +106,10 @@ namespace pr
 
 		namespace impl
 		{
+			inline char    const* c_str(char    const* s) { return s; }
+			inline wchar_t const* c_str(wchar_t const* s) { return s; }
+			template <typename String> inline typename String::const_pointer c_str(String const& s) { return s.c_str(); }
+
 			// Unicode handling
 			inline int access(char    const* filename, int access_mode) { return ::_access (filename, access_mode); }
 			inline int access(wchar_t const* filename, int access_mode) { return ::_waccess(filename, access_mode); }
@@ -523,16 +527,8 @@ namespace pr
 		template <typename String> inline __int64 FileLength(String const& filepath)
 		{
 			struct __stat64 info;
-			if (_stat64(filepath.c_str(), &info) != 0) return 0;
+			if (impl::stat64(impl::c_str(filepath), &info) != 0) return 0;
 			return info.st_size;
-		}
-		template <typename TElem, typename Traits> inline __int64 FileLength(std::basic_fstream<TElem, Traits> const& fs)
-		{
-			auto addr = fs.tellg();
-			fs.seekg(0, std::ios::end);
-			auto size = fs.tellg();
-			fs.seekg(addr, std::ios::begin);
-			return size;
 		}
 
 		// Return the amount of free disk space. 'drive' = 'A', 'B', 'C', etc
@@ -565,17 +561,18 @@ namespace pr
 		template <typename String> inline unsigned int GetAttribs(String const& str)
 		{
 			struct __stat64 info;
-			if (_stat64(str.c_str(), &info) != 0) return 0;
+			if (impl::stat64(impl::c_str(str), &info) != 0)
+				return 0;
 
 			// Interpret the stats
 			unsigned int attribs = 0;
-			if ((info.st_mode & _S_IFREG ) != 0 && (info.st_mode & _S_IFCHR) != 0 )	attribs |= EAttrib::Device;
-			if ((info.st_mode & _S_IFREG ) != 0 && (info.st_mode & _S_IFCHR) == 0 )	attribs |= EAttrib::File;
-			if ( info.st_mode & _S_IFDIR )	attribs |= EAttrib::Directory;
-			if ( info.st_mode & _S_IFIFO )	attribs |= EAttrib::Pipe;
-			if ( info.st_mode & _S_IREAD )	attribs |= EAttrib::ReadAccess;
-			if ( info.st_mode & _S_IWRITE)	attribs |= EAttrib::WriteAccess;
-			if ( info.st_mode & _S_IEXEC )	attribs |= EAttrib::ExecAccess;
+			if ((info.st_mode & _S_IFREG ) != 0 && (info.st_mode & _S_IFCHR) != 0 ) attribs |= EAttrib::Device;
+			if ((info.st_mode & _S_IFREG ) != 0 && (info.st_mode & _S_IFCHR) == 0 ) attribs |= EAttrib::File;
+			if ( info.st_mode & _S_IFDIR ) attribs |= EAttrib::Directory;
+			if ( info.st_mode & _S_IFIFO ) attribs |= EAttrib::Pipe;
+			if ( info.st_mode & _S_IREAD ) attribs |= EAttrib::ReadAccess;
+			if ( info.st_mode & _S_IWRITE) attribs |= EAttrib::WriteAccess;
+			if ( info.st_mode & _S_IEXEC ) attribs |= EAttrib::ExecAccess;
 			return attribs;
 		}
 

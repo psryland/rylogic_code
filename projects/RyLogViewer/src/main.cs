@@ -89,7 +89,7 @@ namespace RyLogViewer
 
 			m_watch               = new FileWatch();
 			m_watch_timer         = new Timer{Interval = Constants.FilePollingRate};
-			m_batch_set_col_size  = new EventBatcher(100);
+			m_batch_set_col_size  = new EventBatcher(TimeSpan.FromMilliseconds(100));
 			m_highlights          = new List<Highlight>();
 			m_filters             = new List<Filter>();
 			m_transforms          = new List<Transform>();
@@ -98,7 +98,7 @@ namespace RyLogViewer
 			m_find_ui             = new FindUI(this, m_find_history){Visible = false};
 			m_bookmarks           = new BindingList<Bookmark>();
 			m_bs_bookmarks        = new BindingSource{DataSource = m_bookmarks};
-			m_batch_refresh_bkmks = new EventBatcher(100);
+			m_batch_refresh_bkmks = new EventBatcher(TimeSpan.FromMilliseconds(100));
 			m_bookmarks_ui        = new BookmarksUI(this, m_bs_bookmarks){Visible = false};
 			m_tt                  = new ToolTip();
 			m_tab_cycle           = new Form[]{this, m_find_ui, m_bookmarks_ui};

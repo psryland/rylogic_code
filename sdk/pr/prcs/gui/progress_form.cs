@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
@@ -34,6 +35,9 @@ namespace pr.gui
 			/// <summary>Force recalculation of the form layout (or not). Null means layout if needed</summary>
 			public bool? ForceLayout { get; set; }
 
+			/// <summary>Set to true to have the dialog close (used by ProgressForm once the task is complete)</summary>
+			public bool CloseDialog { get; set; }
+
 			/// <summary>Duplicate this object</summary>
 			public UserState Clone() { return (UserState)MemberwiseClone(); }
 		}
@@ -46,12 +50,16 @@ namespace pr.gui
 		/// <summary>An event raised when the task is complete</summary>
 		public ManualResetEvent Done { get; private set; }
 
+		/// <summary>Allow/Disallow cancel</summary>
+		public bool AllowCancel
+		{
+			get { return m_button.Visible; }
+			set { m_button.Visible = false; }
+		}
+
 		/// <summary>An event used to signal the other thread to cancel</summary>
 		public ManualResetEvent CancelSignal { get; private set; }
 		public bool CancelPending { get { return CancelSignal.WaitOne(0); } }
-
-		/// <summary>The result returned from the function</summary>
-		public Exception Result { get; private set; }
 
 		/// <summary>Progress callback function, called from 'func' to update the progress bar</summary>
 		public delegate void Progress(UserState us);
@@ -60,8 +68,8 @@ namespace pr.gui
 		{
 			m_progress = new ProgressBar{Style = style, Anchor = AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top};
 			m_description = new Label{Text = desc ?? string.Empty, AutoSize = false, Anchor = AnchorStyles.Top|AnchorStyles.Left};
-			m_button = new Button{Text = "Cancel", DialogResult = DialogResult.Cancel, UseVisualStyleBackColor = true, TabIndex = 1, Anchor = AnchorStyles.Bottom|AnchorStyles.Right};
-			m_button.Click += (s,a) => CancelSignal.Set();
+			m_button = new Button{Text = "Cancel", UseVisualStyleBackColor = true, TabIndex = 1, Anchor = AnchorStyles.Bottom|AnchorStyles.Right};
+			m_button.Click += (s,a) => { CancelSignal.Set(); m_button.Text = "Cancelling..."; m_button.Enabled = false; };
 
 			Done         = new ManualResetEvent(false);
 			CancelSignal = new ManualResetEvent(false);
@@ -75,12 +83,21 @@ namespace pr.gui
 						func(this, x, us => dispatcher.BeginInvoke(new Progress(UpdateProgress), us.Clone()));
 						dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
 					}
+					catch (OperationCanceledException)
+					{
+						CancelSignal.Set();
+					}
+					catch (AggregateException ex)
+					{
+						m_error = ex.InnerExceptions.FirstOrDefault(e => !(e is OperationCanceledException));
+						if (m_error == null) CancelSignal.Set();
+					}
 					catch (Exception ex)
 					{
 						m_error = ex;
 					}
 					Done.Set();
-					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
+					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{CloseDialog = true});
 				}, arg);
 
 			Text = title ?? string.Empty;
@@ -90,7 +107,6 @@ namespace pr.gui
 			FormBorderStyle     = FormBorderStyle.FixedDialog;
 			AutoScaleDimensions = new SizeF(6F, 13F);
 			AutoScaleMode       = AutoScaleMode.Font;
-			CancelButton        = m_button;
 			Controls.Add(m_description);
 			Controls.Add(m_progress);
 			Controls.Add(m_button);
@@ -101,7 +117,7 @@ namespace pr.gui
 				{
 					if (Done.WaitOne(0) && m_error != null)
 						throw m_error;
-					
+
 					DialogResult = CancelSignal.WaitOne(0)
 						? DialogResult.Cancel
 						: DialogResult.OK;
@@ -121,11 +137,7 @@ namespace pr.gui
 		private void UpdateProgress(UserState us)
 		{
 			if (us.FractionComplete != null)
-			{
 				m_progress.Value = (int)Maths.Lerp(m_progress.Minimum, m_progress.Maximum, Maths.Clamp(us.FractionComplete.Value,0f,1f));
-				if (us.FractionComplete == 1f)
-					Close();
-			}
 
 			if (us.Title != null)
 				Text = us.Title;
@@ -148,6 +160,9 @@ namespace pr.gui
 
 			if (us.ForceLayout != null && us.ForceLayout.Value)
 				DoLayout();
+
+			if (us.CloseDialog)
+				Close();
 		}
 
 		/// <summary>Layout the form</summary>

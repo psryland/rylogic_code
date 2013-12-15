@@ -16,6 +16,13 @@ namespace pr.extn
 			return bs.Position >= 0 && bs.Position < bs.Count ? bs.Current : null;
 		}
 
+		/// <summary>Temporarily detaches the DataSource from this binding source</summary>
+		public static Scope PauseBinding(this BindingSource bs)
+		{
+			var sess_src = bs.DataSource;
+			return Scope.Create(() => bs.DataSource = null, () => bs.DataSource = sess_src);
+		}
+
 		/// <summary>Returns an RAII object that suspends raising event</summary>
 		public static Scope BlockEvents(this BindingSource bs, bool refresh_on_resume)
 		{

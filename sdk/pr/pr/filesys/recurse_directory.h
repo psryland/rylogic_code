@@ -37,10 +37,9 @@ namespace pr
 {
 	namespace filesys
 	{
-		typedef bool (*PathCB)(const char* pathname, void* context);
-
 		// Recursively enumerate directories below and including 'path'
-		template <typename String> inline bool RecurseDirectory(String const& path, PathCB EnumDirectories, void* context)
+		// PathCB should have a signature: bool (*EnumDirectories)(String pathname, void* context)
+		template <typename String, typename PathCB> inline bool RecurseDirectory(String path, PathCB EnumDirectories, void* context)
 		{
 			// Enum this directory
 			if (!EnumDirectories(path, context)) { return false; }
@@ -66,7 +65,8 @@ namespace pr
 		
 		// Recursively enumerate files within and below 'path'
 		// 'file_masks' is a semicolon separated, null terminated, list of file masks
-		template <typename String> inline bool RecurseFiles(String const& path, PathCB EnumFiles, const char* file_masks, void* context, PathCB SkipDir = 0)
+		// PathCB should have a signature: bool (*EnumFiles)(String pathname, void* context)
+		template <typename String, typename PathCB> inline bool RecurseFiles(String const& path, PathCB EnumFiles, const char* file_masks, void* context, bool (*SkipDir)(String pathname, void* context) = 0)
 		{
 			// Find the files in this directory
 			for (FindFiles<String> ff(path, file_masks); !ff.done(); ff.next())
