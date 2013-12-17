@@ -16,6 +16,9 @@ namespace Rylogic.VSExtension
 		/// <summary>A comment to go with the pattern to remember what it is</summary>
 		public string Comment { get; set; }
 
+		/// <summary>Allows derived patterns to optionally keep whitespace in Substring/wildcard patterns</summary>
+		protected override bool PreserveWhitespace { get { return true; } }
+
 		/// <summary>Returns the range of characters this pattern should occupy, relative to the aligning column</summary>
 		public Range Position { get { return new Range(Offset, Offset + MinWidth); } }
 

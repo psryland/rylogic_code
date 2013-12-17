@@ -50,12 +50,18 @@ namespace Rylogic.VSExtension
 				new AlignPattern(EPattern.Substring, @">" , 0, 1),
 				new AlignPattern(EPattern.Substring, @"<" , 0, 1)));
 
-			Groups.Add(new AlignGroup("Plus / Minus", 1,
-				new AlignPattern(EPattern.Substring, @"+"),
-				new AlignPattern(EPattern.Substring, @"-")));
+			Groups.Add(new AlignGroup("Boolean operators", 1,
+				new AlignPattern(EPattern.Substring, @"&&"),
+				new AlignPattern(EPattern.Substring, @"||")));
 
-			Groups.Add(new AlignGroup("Comma delimiter", 1,
-				new AlignPattern(EPattern.Substring, @",")));
+			Groups.Add(new AlignGroup("Line comments", 1,
+				new AlignPattern(EPattern.RegularExpression, @"/{2,}", 0, 0, "Two or more '/' characters")));
+
+			Groups.Add(new AlignGroup("Open brackets", 0,
+				new AlignPattern(EPattern.Substring, @"(")));
+
+			Groups.Add(new AlignGroup("Close brackets", 0,
+				new AlignPattern(EPattern.Substring, @")")));
 
 			Groups.Add(new AlignGroup("Scope start", 0,
 				new AlignPattern(EPattern.Substring, @"{")));
@@ -63,18 +69,16 @@ namespace Rylogic.VSExtension
 			Groups.Add(new AlignGroup("Scope end", 1,
 				new AlignPattern(EPattern.Substring, @"}")));
 
-			Groups.Add(new AlignGroup("Line comments", 1,
-				new AlignPattern(EPattern.RegularExpression, @"/{2,}", 0, 0, "Two or more '/' characters")));
+			Groups.Add(new AlignGroup("Increment / Decrement", 1,
+				new AlignPattern(EPattern.Substring, @"++"),
+				new AlignPattern(EPattern.Substring, @"--")));
 
-			//Groups.Add(new AlignGroup("Member variables", 1,
-			//	new AlignPattern(EPattern.RegularExpression, @"\bm_\w*", 0, 0, "Variable names prefixed with 'm_'"),
-			//	new AlignPattern(EPattern.RegularExpression, @"\b_\w*" , 0, 0, "Variable names prefixed with '_'")));
+			Groups.Add(new AlignGroup("Plus / Minus", 1,
+				new AlignPattern(EPattern.RegularExpression, @"(?<!\+)\+(?!\+)", 0, 1, "Matches '+' but not '++'"),
+				new AlignPattern(EPattern.RegularExpression, @"(?<!\-)\-(?!\-)", 0, 1, "Matches '-' but not '--'")));
 
-			Groups.Add(new AlignGroup("Open brackets", 0,
-				new AlignPattern(EPattern.Substring, @"(")));
-
-			Groups.Add(new AlignGroup("Close brackets", 0,
-				new AlignPattern(EPattern.Substring, @")")));
+			Groups.Add(new AlignGroup("Comma delimiter", 1,
+				new AlignPattern(EPattern.Substring, @",")));
 		}
 
 		/// <summary>Save the patterns to the registry</summary>

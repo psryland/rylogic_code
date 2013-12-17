@@ -247,9 +247,9 @@ namespace Rylogic.VSExtension
 			this.m_btn_new = new System.Windows.Forms.Button();
 			this.m_btn_help_groups = new System.Windows.Forms.Button();
 			this.m_lbl_alignment_group = new System.Windows.Forms.Label();
+			this.m_grid_groups = new Rylogic.VSExtension.GroupGrid();
 			this.m_btn_help_patterns = new System.Windows.Forms.Button();
 			this.m_lbl_alignment_patterns = new System.Windows.Forms.Label();
-			this.m_grid_groups = new Rylogic.VSExtension.GroupGrid();
 			this.m_grid_patterns = new Rylogic.VSExtension.PatternGrid();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
@@ -372,25 +372,6 @@ namespace Rylogic.VSExtension
 			this.m_lbl_alignment_group.TabIndex = 2;
 			this.m_lbl_alignment_group.Text = "Alignment Groups:";
 			//
-			// m_btn_help_patterns
-			//
-			this.m_btn_help_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_help_patterns.Location = new System.Drawing.Point(425, -1);
-			this.m_btn_help_patterns.Name = "m_btn_help_patterns";
-			this.m_btn_help_patterns.Size = new System.Drawing.Size(20, 20);
-			this.m_btn_help_patterns.TabIndex = 6;
-			this.m_btn_help_patterns.Text = "?";
-			this.m_btn_help_patterns.UseVisualStyleBackColor = true;
-			//
-			// m_lbl_alignment_patterns
-			//
-			this.m_lbl_alignment_patterns.AutoSize = true;
-			this.m_lbl_alignment_patterns.Location = new System.Drawing.Point(0, 3);
-			this.m_lbl_alignment_patterns.Name = "m_lbl_alignment_patterns";
-			this.m_lbl_alignment_patterns.Size = new System.Drawing.Size(98, 13);
-			this.m_lbl_alignment_patterns.TabIndex = 3;
-			this.m_lbl_alignment_patterns.Text = "Alignment Patterns:";
-			//
 			// m_grid_groups
 			//
 			this.m_grid_groups.AllowUserToAddRows = false;
@@ -410,9 +391,27 @@ namespace Rylogic.VSExtension
 			this.m_grid_groups.TabIndex = 0;
 			this.m_grid_groups.VirtualMode = true;
 			//
+			// m_btn_help_patterns
+			//
+			this.m_btn_help_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_help_patterns.Location = new System.Drawing.Point(425, -1);
+			this.m_btn_help_patterns.Name = "m_btn_help_patterns";
+			this.m_btn_help_patterns.Size = new System.Drawing.Size(20, 20);
+			this.m_btn_help_patterns.TabIndex = 6;
+			this.m_btn_help_patterns.Text = "?";
+			this.m_btn_help_patterns.UseVisualStyleBackColor = true;
+			//
+			// m_lbl_alignment_patterns
+			//
+			this.m_lbl_alignment_patterns.AutoSize = true;
+			this.m_lbl_alignment_patterns.Location = new System.Drawing.Point(0, 3);
+			this.m_lbl_alignment_patterns.Name = "m_lbl_alignment_patterns";
+			this.m_lbl_alignment_patterns.Size = new System.Drawing.Size(98, 13);
+			this.m_lbl_alignment_patterns.TabIndex = 3;
+			this.m_lbl_alignment_patterns.Text = "Alignment Patterns:";
+			//
 			// m_grid_patterns
 			//
-			this.m_grid_patterns.AllowUserToAddRows = false;
 			this.m_grid_patterns.AllowUserToResizeRows = false;
 			this.m_grid_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)

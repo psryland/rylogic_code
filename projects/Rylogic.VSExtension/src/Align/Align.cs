@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using pr.common;
 using pr.extn;
-using pr.script;
+using pr.maths;
 
 namespace Rylogic.VSExtension
 {
@@ -82,57 +82,76 @@ namespace Rylogic.VSExtension
 			}
 		}
 
+		private struct Selection
+		{
+			public readonly Range Pos;               // The buffer position range of the first to last (inclusive) selected characters
+			public readonly Range Lines;             // The first and last (inclusive) lines contained in the selection
+			public readonly ITextSnapshotLine SLine; // The line containing the first selected character
+			public readonly ITextSnapshotLine ELine; // The line containing the last selected character
+			public readonly int CaretPos;            // The buffer position of the caret
+			public readonly int CaretLineNumber;     // The line that the caret is on
+			public bool IsEmpty      { get { return Pos.Empty; } }
+			public bool IsSingleLine { get { return Lines.Empty; } }
+			public bool IsWholeLines { get { return Pos.Begini == SLine.Start.Position && Pos.Endi >= ELine.End.Position; } } // >= because ELine.End.Position doesn't include the newline
+
+			// >= because End.Position doesn't include an optional newline character
+			public Selection(IWpfTextView view)
+			{
+				var snapshot  = view.TextSnapshot;
+				var selection = view.Selection;
+				var caret     = view.Caret;
+
+				CaretPos = caret.Position.BufferPosition;
+				Pos = new Range(CaretPos, CaretPos);
+				if (!selection.IsEmpty)
+				{
+					Pos      = new Range(selection.Start.Position, selection.End.Position - 1);
+					CaretPos = Maths.Clamp(CaretPos, Pos.Begini, Pos.Endi);
+				}
+				Lines = new Range(
+					snapshot.GetLineNumberFromPosition(Pos.Begini),
+					snapshot.GetLineNumberFromPosition(Pos.Endi));
+				CaretLineNumber = Maths.Clamp(
+					snapshot.GetLineNumberFromPosition(CaretPos),
+					Lines.Begini, Lines.Endi);
+
+				SLine = snapshot.GetLineFromLineNumber(Lines.Begini);
+				ELine = snapshot.GetLineFromLineNumber(Lines.Endi);
+
+				Debug.Assert(Pos.Count >= 0);
+				Debug.Assert(Lines.Count >= 0);
+			}
+		}
+
+		private struct AlignPos
+		{
+			public readonly int Column; // The column index to align to
+			public readonly Range Span; // The range of characters around the align column
+			public AlignPos(int column, Range span) { Column = column; Span = span; }
+			public override string ToString() { return "Col {0} {1}".Fmt(Column, Span); }
+		}
+
 		private readonly List<AlignGroup> m_groups;
 		private readonly IWpfTextView m_view;
 		private readonly ITextSnapshot m_snapshot;
-		private readonly ITextCaret m_caret;
 
 		public Align(IEnumerable<AlignGroup> groups, IWpfTextView view)
 		{
 			m_groups   = groups.ToList();
 			m_view     = view;
 			m_snapshot = m_view.TextSnapshot;
-			m_caret    = m_view.Caret;
 
-			// Get the current line number, line, and line position
-			var line_number = m_snapshot.GetLineNumberFromPosition(m_caret.Position.BufferPosition);
-			var line_range = FindLineRange();
+			// Get the current line number, line, line position, and selection
+			var selection = new Selection(m_view);
 
 			// Get the pattern groups to align on
-			var grps = ChoosePatterns(line_number);
+			var grps = ChoosePatterns(selection);
 
 			// Find the edits to make
-			var edits = FindAlignments(line_number, grps, line_range);
+			var edits = FindAlignments(selection, grps);
 
 			// Make the alignment edits in an undo scope
 			DoAligning(edits);
-		}
-
-		/// <summary>Return the maximum range of lines to apply aligning to</summary>
-		private Range FindLineRange()
-		{
-			// If there is a selection that spans multiple lines, limit the aligning to those lines
-			var selection = m_view.Selection;
-			if (!selection.IsEmpty)
-			{
-				var start_line_number = m_snapshot.GetLineNumberFromPosition(selection.Start.Position);
-				var end_line_number   = m_snapshot.GetLineNumberFromPosition(selection.End.Position);
-				Debug.Assert(start_line_number <= end_line_number);
-				if (start_line_number != end_line_number)
-					return new Range(start_line_number, end_line_number);
-			}
-			return new Range(0, m_snapshot.LineCount);
-		}
-
-		private struct AlignPos
-		{
-			///<summary>The column index to align to</summary>
-			public readonly int Column;
-
-			/// <summary>The range of characters around the align column</summary>
-			public readonly Range Span;
-
-			public AlignPos(int column, Range span) { Column = column; Span = span; }
 		}
 
 		/// <summary>Returns the column index and range for aligning</summary>
@@ -152,64 +171,63 @@ namespace Rylogic.VSExtension
 		}
 
 		/// <summary>Return a list of alignment patterns in priority order.</summary>
-		private List<AlignGroup> ChoosePatterns(int line_number)
+		private List<AlignGroup> ChoosePatterns(Selection selection)
 		{
 			// If there is a selection, see if we should use the selected text at the align pattern
-			var selection = m_view.Selection;
-			if (!selection.IsEmpty)
+			// Only use single line, non-whole-line selections on the same line as the caret
+			var pattern_selection = !selection.IsEmpty && selection.IsSingleLine && !selection.IsWholeLines;
+			if (pattern_selection)
 			{
-				// Only use single line selections on the same line as the caret
-				var start_line_number = m_snapshot.GetLineNumberFromPosition(selection.Start.Position);
-				var end_line_number   = m_snapshot.GetLineNumberFromPosition(selection.End.Position);
-				if (start_line_number == line_number && end_line_number == line_number)
-				{
-					var start_line = selection.Start.Position.GetContainingLine();
-					var start_line_text = start_line.GetText();
-					var s = selection.Start.Position - start_line.Start.Position;
-					var e = selection.End.Position   - start_line.Start.Position;
-					var expr = start_line_text.Substring(s, e - s);
-					var ofs = expr.TakeWhile(char.IsWhiteSpace).Count(); // Count leading whitespace
-					expr = expr.Substring(ofs);                          // Strip leading whitespace
-					return new[]{new AlignGroup("Selection", 0, new AlignPattern(EPattern.Substring, expr, ofs))}.ToList();
-				}
+				var s = selection.Pos.Begini - selection.SLine.Start.Position;
+				var e = selection.Pos.Endi   - selection.SLine.Start.Position;
+				var text = selection.SLine.GetText();
+				var expr = text.Substring(s, Math.Min(e - s, text.Length - s));
+				var ofs = expr.TakeWhile(char.IsWhiteSpace).Count(); // Count leading whitespace
+				expr = expr.Substring(ofs);                          // Strip leading whitespace
+				return new[]{new AlignGroup("Selection", 0, new AlignPattern(EPattern.Substring, expr, ofs))}.ToList();
 			}
 
 			// Make a copy of the groups
 			var groups = m_groups.ToList();
 
 			// If the cursor is next to an alignment pattern, move that pattern to the front of the priority list
-			var line = m_snapshot.GetLineFromLineNumber(line_number);
-			var line_text = line.GetText();
-			var column = m_caret.Position.BufferPosition - line.Start.Position;
-
-			// Find matches that span, are immediately to the right, or immediately to the left (priority order)
-			AlignGroup spanning = null;
-			AlignGroup rightof = null;
-			AlignGroup leftof  = null;
-			for (var i = 0; i != groups.Count; ++i)
+			// Only do this when there isn't a multi line selection as the 'near-pattern' behaviour is confusing
+			if (selection.IsEmpty)
 			{
-				var grp = groups[i];
-				foreach (var pat in grp.Patterns)
-				foreach (var match in pat.AllMatches(line_text))
+				var line = selection.SLine;
+				var line_text = line.GetText();
+				var column = selection.Pos.Begini - line.Start.Position;
+				Debug.Assert(column >= 0 && column <= (line.End.Position - line.Start.Position));
+
+				// Find matches that span, are immediately to the right, or immediately to the left (priority order)
+				AlignGroup spanning = null;
+				AlignGroup rightof = null;
+				AlignGroup leftof  = null;
+				for (var i = 0; i != groups.Count; ++i)
 				{
-					// Spanning matches have the highest priority
-					if (match.Begin < column && match.End > column)
-						spanning = grp;
+					var grp = groups[i];
+					foreach (var pat in grp.Patterns)
+					foreach (var match in pat.AllMatches(line_text))
+					{
+						// Spanning matches have the highest priority
+						if (match.Begin < column && match.End > column)
+							spanning = grp;
 
-					// Matches to the right separated only by whitespace are the next highest priority
-					if (match.Begin >= column && string.IsNullOrWhiteSpace(line_text.Substring(column, match.Begini - column)))
-						rightof = grp;
+						// Matches to the right separated only by whitespace are the next highest priority
+						if (match.Begin >= column && string.IsNullOrWhiteSpace(line_text.Substring(column, match.Begini - column)))
+							rightof = grp;
 
-					// Matches to the left separated only by whitespace are next
-					if (match.End <= column && string.IsNullOrWhiteSpace(line_text.Substring(match.Endi, column - match.Endi)))
-						leftof = grp;
+						// Matches to the left separated only by whitespace are next
+						if (match.End <= column && string.IsNullOrWhiteSpace(line_text.Substring(match.Endi, column - match.Endi)))
+							leftof = grp;
+					}
 				}
-			}
 
-			// Move the 'near' patterns to the front of the priority list
-			if (leftof   != null) { m_groups.Remove(leftof); m_groups.Insert(0, leftof); }
-			if (rightof  != null) { m_groups.Remove(rightof); m_groups.Insert(0, rightof); }
-			if (spanning != null) { m_groups.Remove(spanning); m_groups.Insert(0, spanning); }
+				// Move the 'near' patterns to the front of the priority list
+				if (leftof   != null) { m_groups.Remove(leftof); m_groups.Insert(0, leftof); }
+				if (rightof  != null) { m_groups.Remove(rightof); m_groups.Insert(0, rightof); }
+				if (spanning != null) { m_groups.Remove(spanning); m_groups.Insert(0, spanning); }
+			}
 
 			return m_groups;
 		}
@@ -244,13 +262,21 @@ namespace Rylogic.VSExtension
 		}
 
 		/// <summary>Returns a collection of the edits to make to do the aligning</summary>
-		private List<Token> FindAlignments(int line_number, List<AlignGroup> grps, Range line_range)
+		private List<Token> FindAlignments(Selection selection, List<AlignGroup> grps)
 		{
-			var line  = m_snapshot.GetLineFromLineNumber(line_number);
-			var caret = m_caret.Position.BufferPosition - line.Start.Position;
+			var line  = m_snapshot.GetLineFromLineNumber(selection.CaretLineNumber);
+			var caret = selection.CaretPos - line.Start.Position;
+
+			// If the selection spans multiple lines, limit the aligning to those lines.
+			// If a whole single line is selected, treat that like multiple selected lines.
+			// It means aligning won't do anything, but I think that's what a user would expect,
+			// consistent with selecting more than 1 line.
+			var line_range = selection.IsSingleLine && !selection.IsWholeLines
+				? new Range(0, m_snapshot.LineCount - 1)
+				: selection.Lines;
 
 			// Get the align boundaries on the current line
-			var boundaries = FindAlignBoundariesOnLine(line_number, grps);
+			var boundaries = FindAlignBoundariesOnLine(selection.CaretLineNumber, grps);
 
 			// Sort the boundaries by pattern priority, then by distance from the caret
 			var ordered = boundaries.OrderBy(x => x.GrpIndex).ThenBy(x => x.Distance(caret));
@@ -272,9 +298,6 @@ namespace Rylogic.VSExtension
 					if (b.GrpIndex == align.GrpIndex) ++token_index;
 				}
 
-				// Record whether this aligner is within a string or not
-//todo...maybe				var within_string = CodeUtil.IsWithinString(line.GetText(), align.Span.Begini);
-
 				// For each successive adjacent row, look for an alignment boundary at the same index
 				edits.AddRange(FindAlignmentEdits(align, token_index, grps, -1, line_range));
 				edits.AddRange(FindAlignmentEdits(align, token_index, grps, +1, line_range));
@@ -287,8 +310,9 @@ namespace Rylogic.VSExtension
 
 				// If there are edits but they are all already aligned at the
 				// correct column, then move on to the next candidate.
-				var column_index = FindAlignColumn(edits).Column;
-				if (edits.All(x => x.CurrentColumnIndex - x.Patn.Offset == column_index))
+				var pos = FindAlignColumn(edits);
+				var col = pos.Column - pos.Span.Begini;
+				if (edits.All(x => x.CurrentColumnIndex - x.Patn.Offset == col))
 				{
 					edits.Clear();
 					continue;
@@ -302,9 +326,9 @@ namespace Rylogic.VSExtension
 		/// <summary>
 		/// Searches above (dir == -1) or below (dir == +1) for alignment tokens that occur
 		/// with the same token index as 'align'. Returns all found.</summary>
-		private IEnumerable<Token> FindAlignmentEdits(Token align,int token_index,List<AlignGroup> grps,int dir,Range line_range)
+		private IEnumerable<Token> FindAlignmentEdits(Token align, int token_index, List<AlignGroup> grps, int dir, Range line_range)
 		{
-			for (var i = align.LineNumber + dir; line_range.Contains(i); i += dir)
+			for (var i = align.LineNumber + dir; line_range.ContainsInclusive(i); i += dir)
 			{
 				// Get the alignment boundaries on this line
 				var boundaries = FindAlignBoundariesOnLine(i, grps);
@@ -315,9 +339,8 @@ namespace Rylogic.VSExtension
 				foreach (var b in boundaries)
 				{
 					if (b.GrpIndex != align.GrpIndex) continue;
-					if ((b.MinCharIndex == 0) != (align.MinCharIndex == 0)) continue; // Don't align things on their own line, with things that aren't on their own line
 					if (++idx != token_index) continue;
-//todo...maybe		if (CodeUtil.IsWithinString(b.Line.GetText(), b.Span.Begini) != within_string) break;
+					if ((b.MinCharIndex == 0) != (align.MinCharIndex == 0)) break; // Don't align things on their own line, with things that aren't on their own line
 					match = b;
 					break;
 				}
@@ -351,12 +374,10 @@ namespace Rylogic.VSExtension
 
 				foreach (var edit in edits)
 				{
-					var ws_head = col - edit.MinColumnIndex + edit.Patn.Position.Begini;
-					var ws_tail = pos.Span.Endi - edit.Patn.Position.Endi;
-
 					// Careful with order, we need to apply the edits assuming 'line' isn't changed with each one
 
 					// Insert whitespace after the pattern if needed
+					var ws_tail = Math.Max(0, pos.Span.Endi - (edit.Patn.Offset + edit.Span.Counti));
 					if (ws_tail > 0)
 						text.Insert(edit.Line.Start.Position + edit.Span.Endi, new string(' ', ws_tail));
 
@@ -364,6 +385,7 @@ namespace Rylogic.VSExtension
 					text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.Span.Begini - edit.MinCharIndex);
 
 					// Insert whitespace to align
+					var ws_head = col - edit.MinColumnIndex + edit.Patn.Offset;
 					if (ws_head > 0)
 						text.Insert(edit.Line.Start.Position + edit.MinCharIndex, new string(' ', ws_head));
 				}
