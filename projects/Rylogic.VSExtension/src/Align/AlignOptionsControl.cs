@@ -86,6 +86,9 @@ namespace Rylogic.VSExtension
 			m_btn_new.Click += (s,a) =>
 				{
 					m_bs_groups.AddNew();
+					m_grid_groups.FirstDisplayedScrollingRowIndex = m_grid_groups.RowCount - m_grid_groups.DisplayedRowCount(false);
+					m_grid_groups.SelectRow(m_grid_groups.RowCount - 1);
+					m_grid_groups.BeginEdit(true);
 				};
 			m_btn_del.ToolTip(m_tt, "Delete the selected alignment group");
 			m_btn_del.Click += (s,a) =>

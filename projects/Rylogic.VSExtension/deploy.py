@@ -26,7 +26,7 @@ if match_version == None: Tools.OnError("ERROR: failed to extract version number
 version = input("Current version is: " + match_version.group("vers") + "\r\nEnter version number (default is unchanged): ")
 if version == "": version = match_version.group("vers")
 vers_sub  = r'Id="1d697591-233a-4a5b-bf85-2fccc769dfe3" Version="'+version+'"'
-min_released_version = "0.99"
+min_released_version = "1.00"
 if version <= min_released_version: Tools.OnError("ERROR: Can't use that version number, it's less than what's already been released");
 
 input(

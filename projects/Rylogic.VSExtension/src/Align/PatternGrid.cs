@@ -23,13 +23,11 @@ namespace Rylogic.VSExtension
 			Edit
 		}
 
-		/// <summary>Can't do this in the constructor because the designer screws it up</summary>
 		public PatternGrid()
 		{
 			if (Util.DesignTime) return;
 
 			// The patterns grid is virtual mode so that we can draw images and handle edits
-			VirtualMode = true;
 			AutoGenerateColumns = false;
 			AllowUserToAddRows = true;
 			Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Active   ,HeaderText = EPatternColumns.Active   .ToStringFast() ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
@@ -61,24 +59,8 @@ namespace Rylogic.VSExtension
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public BindingSource Data
 		{
-			get { return m_data; }
-			set
-			{
-				if (ReferenceEquals(m_data, value)) return;
-				ListChangedEventHandler OnDataChanged = (s,a) => Refresh();
-				m_data.ListChanged -= OnDataChanged;
-				m_data = value ?? new BindingSource();
-				m_data.ListChanged += OnDataChanged;
-				Refresh();
-			}
-		}
-		private BindingSource m_data = new BindingSource();
-
-		/// <summary>Forces the control to invalidate its client area and immediately redraw itself and any child controls.</summary>
-		public override void Refresh()
-		{
-			RowCount = Data.Count + (AllowUserToAddRows ? 1 : 0);
-			base.Refresh();
+			get { return (BindingSource)DataSource; }
+			set { DataSource = value; }
 		}
 
 		/// <summary>Called when the current cell is changed</summary>
@@ -267,12 +249,13 @@ namespace Rylogic.VSExtension
 			if (e.Row.Index < 0 || e.Row.Index >= Data.Count)
 				return;
 
+			// Record the row index because it becomes -1 when 'e.Row' is deleted
+			var row_index = e.Row.Index;
+
 			// Note, don't update the grid here or it causes an ArgumentOutOfRange exception.
 			// Other stuff must be using the grid row that will be deleted.
-			var pat = (AlignPattern)Data[e.Row.Index];
+			var pat = (AlignPattern)Data[row_index];
 			CloseEditPatternDlg(pat);
-
-			Data.RemoveAt(e.Row.Index);
 		}
 	}
 }
