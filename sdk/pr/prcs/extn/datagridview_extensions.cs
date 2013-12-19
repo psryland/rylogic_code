@@ -421,6 +421,13 @@ namespace pr.extn
 			return true;
 		}
 
+		/// <summary>Temporarily remove the data source from this grid</summary>
+		public static Scope PauseBinding(this DataGridView grid)
+		{
+			var ds = grid.DataSource;
+			return Scope.Create(() => grid.DataSource = null, () => grid.DataSource = ds);
+		}
+
 		/// <summary>
 		/// Attaches 'source' as the data provider for this grid.
 		/// Source is connected with weak references so an external reference to 'source' must be held</summary>

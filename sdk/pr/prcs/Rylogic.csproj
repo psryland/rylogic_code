@@ -179,6 +179,7 @@
     <Compile Include="extn\datatable_extensions.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="extn\datetime_extensions.cs" />
     <Compile Include="extn\dict_extensions.cs" />
     <Compile Include="extn\datagridview_extensions.cs">
       <SubType>Component</SubType>
@@ -200,6 +201,7 @@
     <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
+    <Compile Include="extn\toolstrip_extensions.cs" />
     <Compile Include="extn\type_extensions.cs" />
     <Compile Include="extn\xml_extensions.cs" />
     <Compile Include="gfx\colour128.cs" />

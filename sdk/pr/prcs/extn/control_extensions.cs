@@ -4,10 +4,14 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using pr.common;
 using pr.maths;
 using pr.util;
@@ -54,13 +58,6 @@ namespace pr.extn
 			tt.SetToolTip(ctrl, caption);
 		}
 
-		/// <summary>Set the tooltip for this tool strip item</summary>
-		public static void ToolTip(this ToolStripItem ctrl, ToolTip tt, string caption)
-		{
-			// Don't need 'tt', this method is just for consistency with the other overload
-			ctrl.ToolTipText = caption;
-		}
-
 		/// <summary>Display a hint balloon.</summary>
 		public static void ShowHintBalloon(this Control ctrl, ToolTip tt, string msg, int duration = 5000)
 		{
@@ -74,30 +71,10 @@ namespace pr.extn
 			//tt.Popup += (s,a) => tt.SetToolTip(ctrl,null);
 		}
 
-		/// <summary>Display the hint balloon.</summary>
-		public static void ShowHintBalloon(this ToolStripItem item, ToolTip tt, string msg, int duration = 5000)
-		{
-			var parent = item.GetCurrentParent();
-			if (parent == null) return;
-			var pt = item.Bounds.Centre();
-
-			tt.SetToolTip(parent, msg);
-			tt.Show(msg, parent, pt, duration);
-			tt.BeginInvokeDelayed(duration, () => tt.SetToolTip(parent, null));
-		}
-
 		/// <summary>Returns the location of this item in screen space</summary>
 		public static Point ScreenLocation(this Control item)
 		{
 			var parent = item.Parent;
-			if (parent == null) return item.Bounds.Location;
-			return parent.PointToScreen(item.Bounds.Location);
-		}
-
-		/// <summary>Returns the location of this item in screen space</summary>
-		public static Point ScreenLocation(this ToolStripItem item)
-		{
-			var parent = item.GetCurrentParent();
 			if (parent == null) return item.Bounds.Location;
 			return parent.PointToScreen(item.Bounds.Location);
 		}
@@ -111,27 +88,10 @@ namespace pr.extn
 			return top != null ? top.RectangleToClient(srect) : srect;
 		}
 
-		/// <summary>Returns the bounds of this item in form space</summary>
-		public static Rectangle ParentFormRectangle(this ToolStripItem item)
-		{
-			var parent = item.GetCurrentParent();
-			var top    = parent != null ? parent.TopLevelControl : null;
-			var srect  = parent == null ? item.Bounds : parent.RectangleToScreen(item.Bounds);
-			return top != null ? top.RectangleToClient(srect) : srect;
-		}
-
 		/// <summary>Returns the bounds of this item in screen space</summary>
 		public static Rectangle ScreenRectangle(this Control item)
 		{
 			var parent = item.Parent;
-			if (parent == null) return item.Bounds;
-			return parent.RectangleToScreen(item.Bounds);
-		}
-
-		/// <summary>Returns the bounds of this item in screen space</summary>
-		public static Rectangle ScreenRectangle(this ToolStripItem item)
-		{
-			var parent = item.GetCurrentParent();
 			if (parent == null) return item.Bounds;
 			return parent.RectangleToScreen(item.Bounds);
 		}
@@ -235,42 +195,6 @@ namespace pr.extn
 			return bm;
 		}
 
-		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
-		public static void SetStatusMessage(this ToolStripStatusLabel status, string text, string idle = null, bool bold = false, Color? frcol = null, Color? bkcol = null, TimeSpan? display_time_ms = null)
-		{
-			status.Text = text ?? string.Empty;
-			status.Visible = text.HasValue();
-			status.ForeColor = frcol ?? SystemColors.ControlText;
-			status.BackColor = bkcol ?? SystemColors.Control;
-			if (status.Font.Bold != bold)
-				status.Font = new Font(status.Font, bold ? FontStyle.Bold : FontStyle.Regular);
-
-			// If the status message has a timer already, dispose it
-			var timer = status.Tag as Timer;
-			if (timer != null)
-			{
-				timer.Dispose();
-				status.Tag = null;
-			}
-
-			if (!text.HasValue() || display_time_ms == null)
-				return;
-
-			// Attach a new timer to the status message
-			status.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.Value.TotalMilliseconds};
-			timer.Tick += (s,a)=>
-				{
-					// When the timer fires, if we're still associated with
-					// the status message, null out the text and remove our self
-					if (s != status.Tag) return;
-					SetStatusMessage(status, idle);
-				};
-		}
-		public static void SetStatusMessage(this ToolStripStatusLabel status, string text, bool bold, Color frcol, Color bkcol)
-		{
-			status.SetStatusMessage(text, null, bold, frcol, bkcol, TimeSpan.FromSeconds(2));
-		}
-
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
 		public static void SetText(this TextBoxBase tb, string text)
 		{
@@ -281,14 +205,6 @@ namespace pr.extn
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
 		public static void SetText(this ComboBox cb, string text)
-		{
-			var idx = cb.SelectionStart;
-			cb.SelectedText = text;
-			cb.SelectionStart = idx + text.Length;
-		}
-
-		/// <summary>A smarter set text that does sensible things with the caret position</summary>
-		public static void SetText(this ToolStripComboBox cb, string text)
 		{
 			var idx = cb.SelectionStart;
 			cb.SelectedText = text;
@@ -311,6 +227,114 @@ namespace pr.extn
 
 			cb.SelectedIndex = 0;
 			cb.Select(selection.Begini, selection.Counti);
+		}
+
+		/// <summary>Exports location data for this control</summary>
+		public static ControlLocations SaveLocations(this Control cont)
+		{
+			return new ControlLocations(cont);
+		}
+
+		/// <summary>Imports location data for this control</summary>
+		public static void LoadLocations(this Control cont, ControlLocations data)
+		{
+			data.Apply(cont);
+		}
+	}
+
+	/// <summary>Used to persist control locations and sizes in xml</summary>
+	public class ControlLocations
+	{
+		private static class Tag
+		{
+			public const string Ctrl     = "ctrl";
+			public const string Name     = "name";
+			public const string Loc      = "loc";
+			public const string Size     = "size";
+			public const string Children = "children";
+		}
+		// Produces this:
+		//  <ctrl>
+		//    <name/>
+		//    <location/>
+		//    <size/>
+		//    <children>
+		//      <ctrl/>
+		//      <ctrl/>
+		//      ...
+		//    </children>
+		//  </ctrl>
+		private string m_name;
+		private Point m_location;
+		private Size m_size;
+		private Dictionary<string, ControlLocations> m_children;
+
+		public ControlLocations()
+		{
+			m_name     = string.Empty;
+			m_location = Point.Empty;
+			m_size     = Size.Empty;
+			m_children = new Dictionary<string,ControlLocations>();
+		}
+		public ControlLocations(Control ctrl)
+		{
+			Read(ctrl);
+		}
+
+		/// <summary>Import from xml</summary>
+		public ControlLocations(XElement node)
+		{
+			m_name     = node.Element(Tag.Name).As<string>();
+			m_location = node.Element(Tag.Loc ).As<Point>();
+			m_size     = node.Element(Tag.Size).As<Size>();
+
+			var children = node.Element(Tag.Children);
+			m_children = children != null
+				? children.Elements(Tag.Ctrl).Select(s => new ControlLocations(s)).ToDictionary(s => s.m_name, s => s)
+				: new Dictionary<string, ControlLocations>();
+		}
+
+		/// <summary>Export the location data as xml</summary>
+		public XElement ToXml(XElement node)
+		{
+			node.Add(m_name    .ToXml(Tag.Name ,false));
+			node.Add(m_location.ToXml(Tag.Loc  ,false));
+			node.Add(m_size    .ToXml(Tag.Size ,false));
+
+			if (m_children.Count != 0)
+			{
+				var children = node.Add2(new XElement(Tag.Children));
+				foreach (var ch in m_children.Values)
+					children.Add(ch.ToXml(Tag.Ctrl));
+			}
+
+			return node;
+		}
+
+		/// <summary>Populate these settings from a control</summary>
+		public void Read(Control ctrl)
+		{
+			m_name     = ctrl.Name;
+			m_location = ctrl.Location;
+			m_size     = ctrl.Size;
+			m_children = ctrl.Controls.Cast<Control>().Select(x => new ControlLocations(x)).ToDictionary(s => s.m_name, s => s);
+		}
+
+		/// <summary>Apply the stored position data to 'ctrl'</summary>
+		public void Apply(Control ctrl, bool layout_on_resume = true)
+		{
+			if (m_name != ctrl.Name) return;
+			using (ctrl.SuspendLayout(layout_on_resume))
+			{
+				ctrl.Location = m_location;
+				ctrl.Size     = m_size;
+				foreach (var child in ctrl.Controls.Cast<Control>())
+				{
+					ControlLocations s;
+					if (m_children.TryGetValue(child.Name, out s))
+						s.Apply(child, false);
+				}
+			}
 		}
 	}
 }

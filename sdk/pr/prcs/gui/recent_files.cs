@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
+using pr.extn;
 
 namespace pr.gui
 {
@@ -34,6 +35,9 @@ namespace pr.gui
 		private ToolStripMenuItem m_menu = null;
 		private OnClickHandler m_on_click = null;
 
+		/// <summary>Raised whenever a file is added to the recent files list</summary>
+		public event EventHandler FileAdded;
+
 		/// <summary>
 		/// An event raised when the 'clear recent files' option is selected.
 		/// This event gives the caller the opportunity to cancel the clear</summary>
@@ -44,7 +48,7 @@ namespace pr.gui
 
 		public RecentFiles() { MaxCount = 10; ResetListText = "<Clear Recent Files>"; }
 		public RecentFiles(ToolStripMenuItem menu, OnClickHandler on_click) :this() { SetTargetMenu(menu, on_click); }
-		
+
 		/// <summary>Get/Set the limit for how many files appear in the recent files list</summary>
 		public int MaxCount {get;set;}
 
@@ -88,6 +92,7 @@ namespace pr.gui
 			m_files.Insert(0, file);
 			if (m_files.Count > MaxCount) m_files.RemoveAt(m_files.Count - 1);
 			if (update_menu) UpdateMenu();
+			FileAdded.Raise(this, EventArgs.Empty);
 		}
 		public void Add(string file)
 		{
@@ -117,7 +122,7 @@ namespace pr.gui
 					};
 				m_menu.DropDownItems.Add(item);
 			}
-			
+
 			// Add a menu item for clearing the recent files list
 			m_menu.DropDownItems.Add(new ToolStripSeparator());
 			m_menu.DropDownItems.Add(new ToolStripMenuItem(ResetListText, null, (s,a) =>
@@ -125,7 +130,7 @@ namespace pr.gui
 					var menu = (ToolStripMenuItem)s;
 					((ToolStripDropDown)menu.GetCurrentParent()).Close();
 					var args = new CancelEventArgs();
-					if (ClearRecentFilesListEvent != null) ClearRecentFilesListEvent(this, args);
+					ClearRecentFilesListEvent.Raise(this, args);
 					if (!args.Cancel) Clear();
 				}));
 		}
@@ -153,7 +158,7 @@ namespace pr.gui
 		/// <summary>Export recent files to a single string</summary>
 		public string Export()
 		{
-			StringBuilder str = new StringBuilder();
+			var str = new StringBuilder();
 			foreach (string s in m_files) str.Append(s).Append(",");
 			if (str.Length != 0) str.Remove(str.Length - 1, 1);
 			return str.ToString();

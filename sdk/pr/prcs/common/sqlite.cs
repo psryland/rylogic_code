@@ -3832,7 +3832,7 @@ namespace pr.common
 			private static IntPtr m_module;
 
 			/// <summary>Call this method to load a specific version of the sqlite dll. Call this before any DllImport'd functions</summary>
-			public static void SelectSqliteDll(string dllpath)
+			public static void SelectDll(string dllpath)
 			{
 				m_module = LoadLibrary(dllpath);
 				if (m_module == IntPtr.Zero)
@@ -4633,7 +4633,7 @@ namespace pr
 
 			[TestFixtureSetUp] public static void Setup()
 			{
-				Sqlite.Dll.SelectSqliteDll(Environment.Is64BitProcess
+				Sqlite.Dll.SelectDll(Environment.Is64BitProcess
 					? @"Q:\sdk\sqlite\lib\x64\debug\sqlite3.dll"
 					: @"Q:\sdk\sqlite\lib\x86\debug\sqlite3.dll");
 

@@ -958,70 +958,35 @@ namespace pr.gui
 			HexOutput = false;
 		}
 
-		/// <summary>Get/Set the settings as an xml string</summary>
-		[Browsable(false)] public string XML
+		public XElement ToXml(XElement node)
 		{
-			get
+			node.Add
+			(
+				LocalEcho     .ToXml("local_echo"    , false),
+				TabSize       .ToXml("tab_size"      , false),
+				TerminalWidth .ToXml("terminal_width", false),
+				NewlineRecv   .ToXml("newline_recv"  , false),
+				NewlineSend   .ToXml("newline_send"  , false),
+				BackColour    .ToXml("back_colour"   , false),
+				ForeColour    .ToXml("fore_colour"   , false)
+			);
+			return node;
+		}
+		public void FromXml(XElement node)
+		{
+			foreach (var n in node.Elements())
 			{
-				XDocument xml = new XDocument(
-					new XElement("vt100_settings",
-						new XElement("local_echo"     ,LocalEcho.ToString()           ),
-						new XElement("tab_size"       ,TabSize.ToString()             ),
-						new XElement("terminal_width" ,TerminalWidth.ToString()       ),
-						new XElement("newline_recv"   ,NewlineRecv.ToString()         ),
-						new XElement("newline_send"   ,NewlineSend.ToString()         ),
-						new XElement("back_colour"    ,BackColour.ToArgb().ToString() ),
-						new XElement("fore_colour"    ,ForeColour.ToArgb().ToString() )
-						)
-					);
-				return xml.ToString();
-				//XmlDataDocument xml = new XmlDataDocument();
-				//XmlNode node = xml.AppendChild(xml.CreateElement("vt100_settings"));
-				//node.AppendChild(Xml.Write(xml ,"local_echo"     ,LocalEcho.ToString()));
-				//node.AppendChild(Xml.Write(xml ,"tab_size"       ,TabSize.ToString()));
-				//node.AppendChild(Xml.Write(xml ,"terminal_width" ,TerminalWidth.ToString()));
-				//node.AppendChild(Xml.Write(xml ,"newline_recv"   ,NewlineRecv.ToString()));
-				//node.AppendChild(Xml.Write(xml ,"newline_send"   ,NewlineSend.ToString()));
-				//node.AppendChild(Xml.Write(xml ,"back_colour"    ,BackColour.ToArgb().ToString()));
-				//node.AppendChild(Xml.Write(xml ,"fore_colour"    ,ForeColour.ToArgb().ToString()));
-				//return xml.OuterXml;
-			}
-			set
-			{
-				if (string.IsNullOrEmpty(value)) return;
-				XDocument xml = XDocument.Parse(value);
-				XElement node = xml.Element("vt100_settings"); if (node == null) return;
-				foreach (XElement n in node.Descendants())
+				switch (n.Name.LocalName)
 				{
-					switch (n.Name.LocalName)
-					{
-					default: break;
-					case "local_echo":     LocalEcho     = bool.Parse(n.Value); break;
-					case "tab_size":       TabSize       = int.Parse(n.Value); break;
-					case "terminal_width": TerminalWidth = int.Parse(n.Value); break;
-					case "newline_recv":   NewlineRecv   = (ENewLineMode)Enum.Parse(typeof(ENewLineMode), n.Value); break;
-					case "newline_send":   NewlineSend   = (ENewLineMode)Enum.Parse(typeof(ENewLineMode), n.Value); break;
-					case "back_colour":    BackColour    = Color.FromArgb(int.Parse(n.Value)); break;
-					case "fore_colour":    ForeColour    = Color.FromArgb(int.Parse(n.Value)); break;
-					}
+				default: break;
+				case "local_echo":     LocalEcho     = n.As<bool>(); break;
+				case "tab_size":       TabSize       = n.As<int>(); break;
+				case "terminal_width": TerminalWidth = n.As<int>(); break;
+				case "newline_recv":   NewlineRecv   = n.As<ENewLineMode>(); break;
+				case "newline_send":   NewlineSend   = n.As<ENewLineMode>(); break;
+				case "back_colour":    BackColour    = n.As<Color>(); break;
+				case "fore_colour":    ForeColour    = n.As<Color>(); break;
 				}
-
-				//XmlDataDocument xml = new XmlDataDocument(); xml.LoadXml(value);
-				//XmlElement node = xml["vt100_settings"]; if (node == null) return;
-				//foreach (XmlNode n in node.ChildNodes)
-				//{
-				//    switch (n.Name)
-				//    {
-				//    default: break;
-				//    case "local_echo":     LocalEcho     = bool.Parse(n.InnerText); break;
-				//    case "tab_size":       TabSize       = int.Parse(n.InnerText); break;
-				//    case "terminal_width": TerminalWidth = int.Parse(n.InnerText); break;
-				//    case "newline_recv":   NewlineRecv   = (ENewLineMode)Enum.Parse(typeof(ENewLineMode), n.InnerText); break;
-				//    case "newline_send":   NewlineSend   = (ENewLineMode)Enum.Parse(typeof(ENewLineMode), n.InnerText); break;
-				//    case "back_colour":    BackColour    = Color.FromArgb(int.Parse(n.InnerText)); break;
-				//    case "fore_colour":    ForeColour    = Color.FromArgb(int.Parse(n.InnerText)); break;
-				//    }
-				//}
 			}
 		}
 	}

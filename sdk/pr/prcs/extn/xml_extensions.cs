@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
@@ -58,35 +59,65 @@ namespace pr.extn
 				this[typeof(Size)] = (obj, node) =>
 					{
 						var sz = (Size)obj;
-						node.Add
-						(
+						node.Add(
 							sz.Width .ToXml(Reflect<Size>.MemberName(x => x.Width ), false),
-							sz.Height.ToXml(Reflect<Size>.MemberName(x => x.Height), false)
-						);
+							sz.Height.ToXml(Reflect<Size>.MemberName(x => x.Height), false));
+						return node;
+					};
+				this[typeof(SizeF)] = (obj, node) =>
+					{
+						var sz = (SizeF)obj;
+						node.Add(
+							sz.Width .ToXml(Reflect<SizeF>.MemberName(x => x.Width ), false),
+							sz.Height.ToXml(Reflect<SizeF>.MemberName(x => x.Height), false));
 						return node;
 					};
 				this[typeof(Point)] = (obj, node) =>
 					{
 						var pt = (Point)obj;
-						node.Add
-						(
+						node.Add(
 							pt.X .ToXml(Reflect<Point>.MemberName(x => x.X), false),
-							pt.Y .ToXml(Reflect<Point>.MemberName(x => x.Y), false)
-						);
+							pt.Y .ToXml(Reflect<Point>.MemberName(x => x.Y), false));
+						return node;
+					};
+				this[typeof(PointF)] = (obj, node) =>
+					{
+						var pt = (PointF)obj;
+						node.Add(
+							pt.X .ToXml(Reflect<PointF>.MemberName(x => x.X), false),
+							pt.Y .ToXml(Reflect<PointF>.MemberName(x => x.Y), false));
+						return node;
+					};
+				this[typeof(Rectangle)] = (obj, node) =>
+					{
+						var rc = (Rectangle)obj;
+						node.Add(
+							rc.X     .ToXml(Reflect<Rectangle>.MemberName(x => x.X     ), false),
+							rc.Y     .ToXml(Reflect<Rectangle>.MemberName(x => x.Y     ), false),
+							rc.Width .ToXml(Reflect<Rectangle>.MemberName(x => x.Width ), false),
+							rc.Height.ToXml(Reflect<Rectangle>.MemberName(x => x.Height), false));
+						return node;
+					};
+				this[typeof(RectangleF)] = (obj, node) =>
+					{
+						var rc = (RectangleF)obj;
+						node.Add(
+							rc.X     .ToXml(Reflect<RectangleF>.MemberName(x => x.X     ), false),
+							rc.Y     .ToXml(Reflect<RectangleF>.MemberName(x => x.Y     ), false),
+							rc.Width .ToXml(Reflect<RectangleF>.MemberName(x => x.Width ), false),
+							rc.Height.ToXml(Reflect<RectangleF>.MemberName(x => x.Height), false));
 						return node;
 					};
 				this[typeof(Font)] = (obj, node) =>
 					{
 						var font = (Font)obj;
-						node.Add
-						(
+						node.Add(
 							font.FontFamily.Name.ToXml(Reflect<Font>.MemberName(x => x.FontFamily     ), false),
 							font.Size           .ToXml(Reflect<Font>.MemberName(x => x.Size           ), false),
 							font.Style          .ToXml(Reflect<Font>.MemberName(x => x.Style          ), false),
 							font.Unit           .ToXml(Reflect<Font>.MemberName(x => x.Unit           ), false),
 							font.GdiCharSet     .ToXml(Reflect<Font>.MemberName(x => x.GdiCharSet     ), false),
-							font.GdiVerticalFont.ToXml(Reflect<Font>.MemberName(x => x.GdiVerticalFont), false)
-						);
+							font.GdiVerticalFont.ToXml(Reflect<Font>.MemberName(x => x.GdiVerticalFont), false));
 						return node;
 					};
 			}
@@ -252,11 +283,39 @@ namespace pr.extn
 						var H = elem.Element(Reflect<Size>.MemberName(x => x.Height)).As<int>();
 						return new Size(W,H);
 					};
+				this[typeof(SizeF)] = (elem, type, ctor) =>
+					{
+						var W = elem.Element(Reflect<SizeF>.MemberName(x => x.Width)).As<int>();
+						var H = elem.Element(Reflect<SizeF>.MemberName(x => x.Height)).As<int>();
+						return new SizeF(W,H);
+					};
 				this[typeof(Point)] = (elem, type, ctor) =>
 					{
 						var X = elem.Element(Reflect<Point>.MemberName(x => x.X)).As<int>();
 						var Y = elem.Element(Reflect<Point>.MemberName(x => x.Y)).As<int>();
 						return new Point(X,Y);
+					};
+				this[typeof(PointF)] = (elem, type, ctor) =>
+					{
+						var X = elem.Element(Reflect<PointF>.MemberName(x => x.X)).As<int>();
+						var Y = elem.Element(Reflect<PointF>.MemberName(x => x.Y)).As<int>();
+						return new PointF(X,Y);
+					};
+				this[typeof(Rectangle)] = (elem, type, ctor) =>
+					{
+						var X = elem.Element(Reflect<Rectangle>.MemberName(x => x.X     )).As<int>();
+						var Y = elem.Element(Reflect<Rectangle>.MemberName(x => x.Y     )).As<int>();
+						var W = elem.Element(Reflect<Rectangle>.MemberName(x => x.Width )).As<int>();
+						var H = elem.Element(Reflect<Rectangle>.MemberName(x => x.Height)).As<int>();
+						return new Rectangle(X,Y,W,H);
+					};
+				this[typeof(RectangleF)] = (elem, type, ctor) =>
+					{
+						var X = elem.Element(Reflect<RectangleF>.MemberName(x => x.X     )).As<int>();
+						var Y = elem.Element(Reflect<RectangleF>.MemberName(x => x.Y     )).As<int>();
+						var W = elem.Element(Reflect<RectangleF>.MemberName(x => x.Width )).As<int>();
+						var H = elem.Element(Reflect<RectangleF>.MemberName(x => x.Height)).As<int>();
+						return new RectangleF(X,Y,W,H);
 					};
 				this[typeof(Font)] = (elem, type, instance) =>
 					{
@@ -338,16 +397,22 @@ namespace pr.extn
 
 				// Find the function that converts the string to 'type'
 				func = TryGetValue(type, out func) ? func : null;
-				for (;func == null;)
+				for (;func == null;) // There is no 'As' binding for this type, try a few possibilities
 				{
-					// There is no 'As' binding for this type, try a few possibilities
-					var ctor = type.GetConstructor(new[]{typeof(XElement)});
+					// Try a constructor that takes a single XElement parameter
+					var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
 					if (ctor != null) { func = this[type] = AsCtor; break; }
+
+					// Try a method called 'FromXml' that takes a single XElement parameter
+					var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
+					if (method != null) { func = this[type] = AsFromXmlMethod; break; }
 
 					// Try DataContract binding
 					var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
 					if (dca != null) { func = this[type] = AsDataContract; break; }
 
+					// Note, the constructor can be private, but not inherited
+					Debug.Assert(false, "{0} does not have a constructor taking an XElement parameter or is not a data contract class".Fmt(type.Name));
 					throw new NotSupportedException("No binding for converting XElement to type {0}".Fmt(type.Name));
 				}
 				return func(elem, type, factory);
@@ -363,11 +428,27 @@ namespace pr.extn
 		/// <summary>An 'As' method that expects 'type' to have a constructor taking a single XElement argument</summary>
 		public static object AsCtor(XElement elem, Type type, Func<Type,object> factory)
 		{
-			var ctor = type.GetConstructor(new[]{typeof(XElement)});
+			var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
 			if (ctor == null) throw new NotSupportedException("{0} does not have a constructor taking a single XElement argument".Fmt(type.Name));
 
 			// Replace the mapping with a call that doesn't need to search for the constructor
 			AsMap[type] = (e,t,i) => ctor.Invoke(new object[]{e});
+			return AsMap[type](elem, type, factory);
+		}
+
+		/// <summary>An 'As' method that expects 'type' to have a method called 'FromXml' taking a single XElement argument</summary>
+		public static object AsFromXmlMethod(XElement elem, Type type, Func<Type,object> factory)
+		{
+			var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
+			if (method == null) throw new NotSupportedException("{0} does not have a method called 'FromXml(XElement)'".Fmt(type.Name));
+
+			// Replace the mapping with a call that doesn't need to search for the constructor
+			AsMap[type] = (e,t,i) =>
+				{
+					var obj = factory(type);
+					method.Invoke(obj, new object[]{e});
+					return obj;
+				};
 			return AsMap[type](elem, type, factory);
 		}
 
@@ -419,6 +500,7 @@ namespace pr.extn
 
 		/// <summary>
 		/// Return this element as an instance of 'T'.
+		/// Use 'ToObject' if the type should be inferred from the node attributes
 		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor</summary>
 		public static T As<T>(this XElement elem, Func<Type,object> factory = null)
 		{
@@ -454,9 +536,9 @@ namespace pr.extn
 		}
 
 		/// <summary>Add 'child' to this element and return child. Useful for the syntax: "var element = root.Add2("name", child);"</summary>
-		public static XElement Add2(this XContainer parent, string name, object child)
+		public static XElement Add2(this XContainer parent, string name, object child, bool type_attr = true)
 		{
-			var elem = child.ToXml(name);
+			var elem = child.ToXml(name, type_attr);
 			return parent.Add2(elem);
 		}
 
@@ -545,6 +627,13 @@ namespace pr
 					return Equals((Elem3)obj);
 				}
 			}
+
+			private class Elem4
+			{
+				public int m_int;
+				public XElement ToXml(XElement node) { node.SetValue("elem_"+m_int); return node; }
+				public void FromXml(XElement node) { m_int = int.Parse(node.Value.Substring(5)); }
+			}
 			// ReSharper restore UnusedMember.Local
 
 			[Test] public static void TestToXml1()
@@ -566,6 +655,13 @@ namespace pr
 				var pt = new Point(1,2);
 				var node = pt.ToXml("pt");
 				var PT = node.As<Point>();
+				Assert.IsTrue(pt.Equals(PT));
+			}
+			[Test] public static void TestToXml3a()
+			{
+				var pt = new PointF(1f,2f);
+				var node = pt.ToXml("pt");
+				var PT = node.As<PointF>();
 				Assert.IsTrue(pt.Equals(PT));
 			}
 			[Test] public static void TestToXml4()
@@ -663,6 +759,27 @@ namespace pr
 			}
 			[Test] public static void TestToXml16()
 			{
+			}
+			[Test] public static void TestToXml17()
+			{
+				var e4 = new Elem4{m_int = 3};
+				var node = e4.ToXml("e4");
+				var E4 = node.As<Elem4>();
+				Assert.AreEqual(e4.m_int, E4.m_int);
+			}
+			[Test] public static void TestToXml18()
+			{
+				var rc = new Rectangle(1,2,3,4);
+				var node = rc.ToXml("rect");
+				var RC = node.As<Rectangle>();
+				Assert.IsTrue(Equals(rc, RC));
+			}
+			[Test] public static void TestToXml19()
+			{
+				var rc = new RectangleF(1f,2f,3f,4f);
+				var node = rc.ToXml("rect");
+				var RC = node.As<RectangleF>();
+				Assert.IsTrue(Equals(rc, RC));
 			}
 			[Test] public static void TestXmlAs()
 			{

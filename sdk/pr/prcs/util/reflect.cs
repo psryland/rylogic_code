@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq.Expressions;
@@ -11,6 +12,7 @@ namespace pr.util
 		/// <summary>
 		/// Derives the name of a property from the given lambda expression and returns it as string.
 		/// Example: Reflect&lt;DateTime&gt;.MemberName(s => s.Ticks) returns "Ticks" </summary>
+		[DebuggerStepThrough]
 		public static string MemberName<Ret>(Expression<Func<T,Ret>> expression)
 		{
 			var ue = expression.Body as UnaryExpression;
@@ -31,6 +33,7 @@ namespace pr.util
 		/// <summary>
 		/// Derives the name of a property or method from the given lambda expression and returns it as string.
 		/// Example: Reflect&lt;DateTime&gt;.MemberName(s => s.Ticks) returns "Ticks" </summary>
+		[DebuggerStepThrough]
 		public static string MemberName(Expression<Action<T>> expression)
 		{
 			var ue = expression.Body as UnaryExpression;

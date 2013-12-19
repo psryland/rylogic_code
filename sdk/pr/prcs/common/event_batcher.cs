@@ -20,6 +20,9 @@ namespace pr.common
 		public event Action Action;
 
 		public EventBatcher() :this(TimeSpan.FromMilliseconds(100)) {}
+		public EventBatcher(Action action) :this() { Action += action; }
+		public EventBatcher(Action action, TimeSpan delay) :this(delay) { Action += action; }
+		public EventBatcher(Action action, TimeSpan delay, Dispatcher dispatcher) :this(delay, dispatcher) { Action += action; }
 		public EventBatcher(TimeSpan delay) :this(delay, Dispatcher.CurrentDispatcher) {}
 		public EventBatcher(TimeSpan delay, Dispatcher dispatcher)
 		{

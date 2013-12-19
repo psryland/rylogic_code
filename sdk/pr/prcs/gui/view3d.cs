@@ -9,6 +9,7 @@ using pr.gfx;
 using pr.maths;
 
 using HWND = System.IntPtr;
+
 using HDrawset = System.IntPtr;
 using HObject = System.IntPtr;
 using HTexture = System.IntPtr;
@@ -1181,98 +1182,109 @@ namespace pr.gui
 		}
 
 		#region DLL extern functions
-		// Initialise/shutdown the dll
-		private const string View3Ddll = "view3d.dll";
-		[DllImport(View3Ddll, CallingConvention = CallingConvention.StdCall)] private static extern int               View3D_Initialise2();
-		[DllImport(View3Ddll)] private static extern EResult           View3D_Initialise(HWND hwnd, ReportErrorCB error_cb, SettingsChangedCB settings_changed_cb);
-		[DllImport(View3Ddll)] private static extern void              View3D_Shutdown();
+
+		private const string Dll = "view3d";
+		private static IntPtr m_module;
+
+		/// <summary>Call this method to load a specific version of the view3d.dll. Call this before any DllImport'd functions</summary>
+		public static void SelectDll(string dllpath)
+		{
+			m_module = LoadLibrary(dllpath);
+			if (m_module == IntPtr.Zero)
+				throw new System.Exception(string.Format("Failed to load dll {0}", dllpath));
+		}
+		[DllImport("Kernel32.dll")] private static extern IntPtr LoadLibrary(string path);
+
+		// Initialise / shutdown the dll
+		[DllImport(Dll)] private static extern EResult           View3D_Initialise(HWND hwnd, ReportErrorCB error_cb, SettingsChangedCB settings_changed_cb);
+		[DllImport(Dll)] private static extern void              View3D_Shutdown();
 
 		// Draw sets
-		[DllImport(View3Ddll)] private static extern IntPtr            View3D_GetSettings              (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetSettings              (HDrawset drawset, string settings);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetAddObjectsById    (HDrawset drawset, int context_id);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveObjectsById (HDrawset drawset, int context_id);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_DrawsetCreate            (out HDrawset handle);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetDelete            (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetAddObject         (HDrawset drawset, HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveObject      (HDrawset drawset, HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_DrawsetRemoveAllObjects  (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern int               View3D_DrawsetObjectCount       (HDrawset drawset);
+		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings              (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetSettings              (HDrawset drawset, string settings);
+		[DllImport(Dll)] private static extern void              View3D_DrawsetAddObjectsById    (HDrawset drawset, int context_id);
+		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveObjectsById (HDrawset drawset, int context_id);
+		[DllImport(Dll)] private static extern EResult           View3D_DrawsetCreate            (out HDrawset handle);
+		[DllImport(Dll)] private static extern void              View3D_DrawsetDelete            (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_DrawsetAddObject         (HDrawset drawset, HObject obj);
+		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveObject      (HDrawset drawset, HObject obj);
+		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveAllObjects  (HDrawset drawset);
+		[DllImport(Dll)] private static extern int               View3D_DrawsetObjectCount       (HDrawset drawset);
 
 		// Camera
-		[DllImport(View3Ddll)] private static extern void              View3D_CameraToWorld            (HDrawset drawset, out m4x4 c2w);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraToWorld         (HDrawset drawset, ref m4x4 c2w);
-		[DllImport(View3Ddll)] private static extern void              View3D_PositionCamera           (HDrawset drawset, ref v4 position, ref v4 lookat, ref v4 up);
-		[DllImport(View3Ddll)] private static extern float             View3D_FocusDistance            (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusDistance         (HDrawset drawset, float dist);
-		[DllImport(View3Ddll)] private static extern float             View3D_CameraAspect             (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraAspect          (HDrawset drawset, float aspect);
-		[DllImport(View3Ddll)] private static extern float             View3D_CameraFovX               (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraFovX            (HDrawset drawset, float fovX);
-		[DllImport(View3Ddll)] private static extern float             View3D_CameraFovY               (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetCameraFovY            (HDrawset drawset, float fovY);
-		[DllImport(View3Ddll)] private static extern void              View3D_Navigate                 (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
-		[DllImport(View3Ddll)] private static extern void              View3D_NavigateZ                (HDrawset drawset, float delta);
-		[DllImport(View3Ddll)] private static extern void              View3D_ResetZoom                (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_CameraAlignAxis          (HDrawset drawset, out v4 axis);
-		[DllImport(View3Ddll)] private static extern void              View3D_AlignCamera              (HDrawset drawset, ref v4 axis);
-		[DllImport(View3Ddll)] private static extern void              View3D_ResetView                (HDrawset drawset, ref v4 forward, ref v4 up);
-		[DllImport(View3Ddll)] private static extern void              View3D_GetFocusPoint            (HDrawset drawset, out v4 position);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusPoint            (HDrawset drawset, ref v4 position);
-		[DllImport(View3Ddll)] private static extern void              View3D_WSRayFromScreenPoint     (HDrawset drawset, ref v2 screen, out v4 ws_point, out v4 ws_direction);
+		[DllImport(Dll)] private static extern void              View3D_CameraToWorld            (HDrawset drawset, out m4x4 c2w);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld         (HDrawset drawset, ref m4x4 c2w);
+		[DllImport(Dll)] private static extern void              View3D_PositionCamera           (HDrawset drawset, ref v4 position, ref v4 lookat, ref v4 up);
+		[DllImport(Dll)] private static extern float             View3D_FocusDistance            (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetFocusDistance         (HDrawset drawset, float dist);
+		[DllImport(Dll)] private static extern float             View3D_CameraAspect             (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraAspect          (HDrawset drawset, float aspect);
+		[DllImport(Dll)] private static extern float             View3D_CameraFovX               (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraFovX            (HDrawset drawset, float fovX);
+		[DllImport(Dll)] private static extern float             View3D_CameraFovY               (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraFovY            (HDrawset drawset, float fovY);
+		[DllImport(Dll)] private static extern void              View3D_Navigate                 (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
+		[DllImport(Dll)] private static extern void              View3D_NavigateZ                (HDrawset drawset, float delta);
+		[DllImport(Dll)] private static extern void              View3D_ResetZoom                (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis          (HDrawset drawset, out v4 axis);
+		[DllImport(Dll)] private static extern void              View3D_AlignCamera              (HDrawset drawset, ref v4 axis);
+		[DllImport(Dll)] private static extern void              View3D_ResetView                (HDrawset drawset, ref v4 forward, ref v4 up);
+		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint            (HDrawset drawset, out v4 position);
+		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint            (HDrawset drawset, ref v4 position);
+		[DllImport(Dll)] private static extern void              View3D_WSRayFromScreenPoint     (HDrawset drawset, ref v2 screen, out v4 ws_point, out v4 ws_direction);
 
 		// Lights
-		[DllImport(View3Ddll)] private static extern View3DLight       View3D_LightProperties          (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref View3DLight light);
-		[DllImport(View3Ddll)] private static extern void              View3D_LightSource              (HDrawset drawset, ref v4 position, ref v4 direction, bool camera_relative);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowLightingDlg          (HDrawset drawset, HWND parent);
+		[DllImport(Dll)] private static extern View3DLight       View3D_LightProperties          (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref View3DLight light);
+		[DllImport(Dll)] private static extern void              View3D_LightSource              (HDrawset drawset, ref v4 position, ref v4 direction, bool camera_relative);
+		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HDrawset drawset, HWND parent);
 
 		// Objects
-		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id, out HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectDelete             (HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
-		[DllImport(View3Ddll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
-		[DllImport(View3Ddll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex);
-		[DllImport(View3Ddll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
+		[DllImport(Dll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
+		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);
+		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id, out HObject obj);
+		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
+		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
+		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex);
+		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
 
 		// Materials
-		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureCreate            (IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format, out HTexture tex);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureCreateFromFile    (string tex_filepath, uint width, uint height, uint mips, uint filter, uint mip_filter, uint colour_key, out HTexture tex);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureLoadSurface       (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, uint filter, uint colour_key);
-		[DllImport(View3Ddll)] private static extern void              View3D_TextureDelete            (HTexture tex);
-		[DllImport(View3Ddll)] private static extern void              View3D_TextureGetInfo           (HTexture tex, out ImageInfo info);
-		[DllImport(View3Ddll)] private static extern EResult           View3D_TextureGetInfoFromFile   (string tex_filepath, out ImageInfo info);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureCreate            (IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format, out HTexture tex);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateFromFile    (string tex_filepath, uint width, uint height, uint mips, uint filter, uint mip_filter, uint colour_key, out HTexture tex);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureLoadSurface       (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, uint filter, uint colour_key);
+		[DllImport(Dll)] private static extern void              View3D_TextureDelete            (HTexture tex);
+		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo           (HTexture tex, out ImageInfo info);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile   (string tex_filepath, out ImageInfo info);
 
 		// Rendering
-		[DllImport(View3Ddll)] private static extern void              View3D_Resize                   (int width, int height);
-		[DllImport(View3Ddll)] private static extern void              View3D_Render                   (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern EFillMode         View3D_FillMode                 (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetOrthographic          (HDrawset drawset, bool render2d);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
-		[DllImport(View3Ddll)] private static extern int               View3D_BackGroundColour         (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetBackgroundColour      (HDrawset drawset, int aarrggbb);
+		[DllImport(Dll)] private static extern void              View3D_Resize                   (int width, int height);
+		[DllImport(Dll)] private static extern void              View3D_Render                   (HDrawset drawset);
+		[DllImport(Dll)] private static extern EFillMode         View3D_FillMode                 (HDrawset drawset);
+		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetOrthographic          (HDrawset drawset, bool render2d);
+		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
+		[DllImport(Dll)] private static extern int               View3D_BackGroundColour         (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetBackgroundColour      (HDrawset drawset, int aarrggbb);
 
 		// Tools
-		[DllImport(View3Ddll)] private static extern bool              View3D_MeasureToolVisible       ();
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowMeasureTool          (HDrawset drawset, bool show);
-		[DllImport(View3Ddll)] private static extern bool              View3D_AngleToolVisible         ();
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowAngleTool            (HDrawset drawset, bool show);
+		[DllImport(Dll)] private static extern bool              View3D_MeasureToolVisible       ();
+		[DllImport(Dll)] private static extern void              View3D_ShowMeasureTool          (HDrawset drawset, bool show);
+		[DllImport(Dll)] private static extern bool              View3D_AngleToolVisible         ();
+		[DllImport(Dll)] private static extern void              View3D_ShowAngleTool            (HDrawset drawset, bool show);
 
 		// Miscellaneous
-		[DllImport(View3Ddll)] private static extern void              View3D_CreateDemoScene          (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowDemoScript           ();
-		[DllImport(View3Ddll)] private static extern bool              View3D_FocusPointVisible        (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowFocusPoint           (HDrawset drawset, bool show);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetFocusPointSize        (HDrawset drawset, float size);
-		[DllImport(View3Ddll)] private static extern bool              View3D_OriginVisible            (HDrawset drawset);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowOrigin               (HDrawset drawset, bool show);
-		[DllImport(View3Ddll)] private static extern void              View3D_SetOriginSize            (HDrawset drawset, float size);
-		[DllImport(View3Ddll)] private static extern void              View3D_ShowObjectManager        (bool show);
+		[DllImport(Dll)] private static extern void              View3D_CreateDemoScene          (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           ();
+		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisible        (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_ShowFocusPoint           (HDrawset drawset, bool show);
+		[DllImport(Dll)] private static extern void              View3D_SetFocusPointSize        (HDrawset drawset, float size);
+		[DllImport(Dll)] private static extern bool              View3D_OriginVisible            (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_ShowOrigin               (HDrawset drawset, bool show);
+		[DllImport(Dll)] private static extern void              View3D_SetOriginSize            (HDrawset drawset, float size);
+		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (bool show);
 		#endregion
 	}
 }
