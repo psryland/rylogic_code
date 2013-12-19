@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -42,13 +41,16 @@ namespace Rylogic.VSExtension
 				new AlignPattern(EPattern.RegularExpression, @"(?<![&|])[+\-*/%^~&|]={1}"      , -1, 2, "Assignment preceded by: +,-,*,/,%,^,~,&,| but not preceded by &&,||"),
 				new AlignPattern(EPattern.RegularExpression, @"&&=|\|\|="                      , -2, 3, "Assignments &&= and ||=")));
 
+			Groups.Add(new AlignGroup("Lambda", 1,
+				new AlignPattern(EPattern.Substring, @"=>")));
+
 			Groups.Add(new AlignGroup("Comparisons", 1,
 				new AlignPattern(EPattern.Substring, @"==", 0, 2),
 				new AlignPattern(EPattern.Substring, @"!=", 0, 2),
 				new AlignPattern(EPattern.Substring, @"<=", 0, 2),
 				new AlignPattern(EPattern.Substring, @">=", 0, 2),
-				new AlignPattern(EPattern.Substring, @">" , 0, 1),
-				new AlignPattern(EPattern.Substring, @"<" , 0, 1)));
+				new AlignPattern(EPattern.RegularExpression, @"(?<!=)>(?!=)" , 0, 1, "> not preceded or followed by ="),
+				new AlignPattern(EPattern.RegularExpression, @"(?<!=)<(?!=)" , 0, 1, "< not preceded or followed by =")));
 
 			Groups.Add(new AlignGroup("Boolean operators", 1,
 				new AlignPattern(EPattern.Substring, @"&&"),

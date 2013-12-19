@@ -84,8 +84,8 @@ namespace Rylogic.VSExtension
 
 		private struct Selection
 		{
-			public readonly Range Pos;               // The buffer position range of the first to last (inclusive) selected characters
-			public readonly Range Lines;             // The first and last (inclusive) lines contained in the selection
+			public readonly Range Pos;               // The buffer position range of the selected characters [First,Last)
+			public readonly Range Lines;             // The lines contained in the selection [First,Last)
 			public readonly ITextSnapshotLine SLine; // The line containing the first selected character
 			public readonly ITextSnapshotLine ELine; // The line containing the last selected character
 			public readonly int CaretPos;            // The buffer position of the caret
@@ -94,29 +94,22 @@ namespace Rylogic.VSExtension
 			public bool IsSingleLine { get { return Lines.Empty; } }
 			public bool IsWholeLines { get { return Pos.Begini == SLine.Start.Position && Pos.Endi >= ELine.End.Position; } } // >= because ELine.End.Position doesn't include the newline
 
-			// >= because End.Position doesn't include an optional newline character
 			public Selection(IWpfTextView view)
 			{
 				var snapshot  = view.TextSnapshot;
 				var selection = view.Selection;
 				var caret     = view.Caret;
 
-				CaretPos = caret.Position.BufferPosition;
-				Pos = new Range(CaretPos, CaretPos);
-				if (!selection.IsEmpty)
-				{
-					Pos      = new Range(selection.Start.Position, selection.End.Position - 1);
-					CaretPos = Maths.Clamp(CaretPos, Pos.Begini, Pos.Endi);
-				}
+				Pos   = new Range(selection.Start.Position, selection.End.Position);
 				Lines = new Range(
 					snapshot.GetLineNumberFromPosition(Pos.Begini),
-					snapshot.GetLineNumberFromPosition(Pos.Endi));
-				CaretLineNumber = Maths.Clamp(
-					snapshot.GetLineNumberFromPosition(CaretPos),
-					Lines.Begini, Lines.Endi);
+					snapshot.GetLineNumberFromPosition(Pos.Empty ? Pos.Begini : Pos.Endi - 1));
 
 				SLine = snapshot.GetLineFromLineNumber(Lines.Begini);
 				ELine = snapshot.GetLineFromLineNumber(Lines.Endi);
+
+				CaretPos = Maths.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
+				CaretLineNumber = snapshot.GetLineNumberFromPosition(CaretPos);
 
 				Debug.Assert(Pos.Count >= 0);
 				Debug.Assert(Lines.Count >= 0);
