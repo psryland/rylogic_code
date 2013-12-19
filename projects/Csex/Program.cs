@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Forms;
 using pr.common;
 
 namespace Csex
@@ -10,8 +11,17 @@ namespace Csex
 		private Cmd m_cmd;
 
 		[STAThread]
-		static int Main(string[] args) { return new Program(args).Run(); }
-		public Program(string[] args)  { m_args = args; }
+		static int Main(string[] args)
+		{
+			Application.EnableVisualStyles();
+			Application.SetCompatibleTextRenderingDefault(false);
+			return new Program(args).Run();
+		}
+
+		public Program(string[] args)
+		{
+			m_args = args;
+		}
 
 		/// <summary>Main run</summary>
 		public override int Run()
@@ -71,6 +81,9 @@ namespace Csex
 				"    -expand_template\n" +
 				"       Expand specific comments in a markup language (xml,html) file\n" +
 				"\n" +
+				"    -PatternUI\n" +
+				"       Show the Regex pattern testing ui\n" +
+				"\n" +
 				// NEW_COMMAND - add a help string
 				"\n"+
 				"  Type Cex -command -help for help on a particular command\n"+
@@ -82,12 +95,13 @@ namespace Csex
 		{
 			if (m_cmd == null)
 			{
-				switch (option)
+				switch (option.ToLowerInvariant())
 				{
 				case "-gencode":  m_cmd = new GenActivationCode(); break;
 				case "-signfile": m_cmd = new SignFile(); break;
 				case "-find_assembly_conflicts": m_cmd = new FindAssemblyConflicts(); break;
 				case "-expand_template": m_cmd = new MarkupExpand(); break;
+				case "-patternui": m_cmd = new PatternUI(); break;
 					// NEW_COMMAND - handle the command
 				}
 			}

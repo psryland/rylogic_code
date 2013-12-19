@@ -41,11 +41,9 @@ try:
 
 	#Copy build products to dst
 	print("Copying files to " + dst)
-	Tools.Copy(bindir + r"\csex.exe", dst + r"\csex.exe")
-	Tools.Copy(bindir + r"\csex.pdb", sym + r"\csex.pdb")
-	Tools.Copy(bindir + r"\pr.dll"  , dst + r"\pr.dll"  )
-	Tools.Copy(bindir + r"\pr.pdb"  , sym + r"\pr.pdb"  )
-
+	Tools.Copy(bindir + r"\csex.exe"    , dst)
+	Tools.Copy(bindir + r"\rylogic.dll" , dst)
+	
 	Tools.OnSuccess()
 
 except Exception as ex:
