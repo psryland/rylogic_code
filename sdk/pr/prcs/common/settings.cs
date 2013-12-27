@@ -70,6 +70,12 @@ namespace pr.common
 	{
 		protected readonly List<SettingsPair> Data = new List<SettingsPair>();
 
+		/// <summary>An event raised when a settings is about to change value</summary>
+		public event EventHandler<SettingChangingEventArgs> SettingChanging;
+
+		/// <summary>An event raised after a setting has been changed</summary>
+		public event EventHandler<SettingChangedEventArgs> SettingChanged;
+
 		/// <summary>The default values for the settings</summary>
 		public static T Default { get { return m_default ?? (m_default = new T()); } }
 		private static T m_default;
@@ -190,6 +196,7 @@ namespace pr.common
 		/// <summary>Called just before a setting changes</summary>
 		public virtual void OnSettingChanging(SettingChangingEventArgs args)
 		{
+			SettingChanging.Raise(this, args);
 			if (Parent == null) return;
 			Parent.OnSettingChanging(args);
 		}
@@ -197,6 +204,7 @@ namespace pr.common
 		/// <summary>Called just after a setting changes</summary>
 		public virtual void OnSettingChanged(SettingChangedEventArgs args)
 		{
+			SettingChanged.Raise(this, args);
 			var me = (ISettingsSet)this;
 			if (me.Parent == null) return;
 			me.Parent.OnSettingChanged(args);
@@ -245,12 +253,6 @@ namespace pr.common
 			get { return m_filepath; }
 			set { m_filepath = value ?? string.Empty; }
 		}
-
-		/// <summary>An event raised when a settings is about to change value</summary>
-		public event EventHandler<SettingChangingEventArgs> SettingChanging;
-
-		/// <summary>An event raised after a setting has been changed</summary>
-		public event EventHandler<SettingChangedEventArgs> SettingChanged;
 
 		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
 		public event EventHandler<SettingsLoadedEventArgs> SettingsLoaded;
@@ -399,20 +401,6 @@ namespace pr.common
 
 		/// <summary>Perform validation on the loaded settings</summary>
 		public virtual void Validate() {}
-
-		/// <summary>Called just before a setting changes</summary>
-		public override void OnSettingChanging(SettingChangingEventArgs args)
-		{
-			base.OnSettingChanging(args);
-			SettingChanging.Raise(this, args);
-		}
-
-		/// <summary>Called just after a setting changes</summary>
-		public override void OnSettingChanged(SettingChangedEventArgs args)
-		{
-			base.OnSettingChanged(args);
-			SettingChanged.Raise(this, args);
-		}
 	}
 
 	#region Settings Event args
