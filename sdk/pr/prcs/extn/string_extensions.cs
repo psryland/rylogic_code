@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -25,6 +26,13 @@ namespace pr.extn
 		public static bool HasValue(this string str)
 		{
 			return !string.IsNullOrEmpty(str);
+		}
+
+		/// <summary>Return "this string" or "this str..."</summary>
+		public static string Summary(this string str, int max_length)
+		{
+			Debug.Assert(max_length >= 3);
+			return str.Length < max_length ? str : str.Substring(0, max_length - 3) + "...";
 		}
 
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>

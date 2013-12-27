@@ -342,8 +342,9 @@ namespace pr.extn
 
 		/// <summary>
 		/// Sets the selection to row 'index'. If the grid has rows, clamps 'index' to [-1,RowCount).
-		/// If index == -1, the selection is cleared. Returns the row actually selected.</summary>
-		public static int SelectRow(this DataGridView grid, int index)
+		/// If index == -1, the selection is cleared. Returns the row actually selected.
+		/// If 'make_displayed' is true, scrolls the grid to make 'index' displayed</summary>
+		public static int SelectRow(this DataGridView grid, int index, bool make_displayed = false)
 		{
 			grid.ClearSelection();
 			if (grid.RowCount == 0 || index == -1)
@@ -354,8 +355,11 @@ namespace pr.extn
 			else
 			{
 				index = Maths.Clamp(index, 0, grid.RowCount - 1);
-				grid.Rows[index].Selected = true;
-				grid.CurrentCell = grid.Rows[index].Cells[0];
+				var row = grid.Rows[index];
+				row.Selected = true;
+				grid.CurrentCell = row.Cells[0];
+				if (make_displayed && !row.Displayed)
+					grid.FirstDisplayedScrollingRowIndex = index;
 			}
 			return index;
 		}

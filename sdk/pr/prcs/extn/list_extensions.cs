@@ -46,6 +46,13 @@ namespace pr.extn
 			else if (list.Count < newsize) for (int i = list.Count; i != newsize; ++i) list.Add(factory());
 		}
 
+		/// <summary>Add and return the item added to this list</summary>
+		public static U Add2<T,U>(this IList<T> list, U item) where U:T
+		{
+			list.Add(item);
+			return item;
+		}
+
 		/// <summary>
 		/// Add 'item' to the list if it's not already there.
 		/// Uses 'are_equal(list[i],item)' to test for uniqueness.
@@ -100,33 +107,33 @@ namespace pr.extn
 		//	list[idx] = replacer;
 		//}
 
-		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
 		public static int IndexOf<T>(this IList list, Func<T,bool> pred, int start_index, int count)
 		{
 			int i; for (i = start_index; i != count && !pred((T)list[i]); ++i) {}
 			return i != count ? i : -1;
 		}
 
-		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
 		public static int IndexOf<T>(this IList list, Func<T,bool> pred)
 		{
 			return list.IndexOf(pred, 0, list.Count);
 		}
 
-		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index, int count)
 		{
 			int i; for (i = start_index; i != count && !pred(list[i]); ++i) {}
 			return i != count ? i : -1;
 		}
 
-		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index)
 		{
 			return list.IndexOf(pred, start_index, list.Count);
 		}
 
-		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true</summary>
+		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred)
 		{
 			return list.IndexOf(pred, 0, list.Count);
@@ -363,23 +370,25 @@ namespace pr
 		{
 			[Test] public static void ListExtensions()
 			{
-				Random rng = new Random();
-				List<int> list = new List<int>(100);
+				var rng = new Random();
+				var list = new List<int>(100);
 
-				for (int i = 0; i != 100; ++i)
+				for (var i = 0; i != 100; ++i)
 					list.Add(rng.Next(10));
 
 				list.Sort(0, list.Count, Maths.Compare);
 
 				int last = list.Unique(0, 50);
-				for (int i = 0; i < last; ++i)
-				for (int j = i+1; j < last; ++j)
+				for (var i = 0; i < last; ++i)
+				for (var j = i+1; j < last; ++j)
 					Assert.AreNotEqual(list[i], list[j]);
 
 				list.Unique();
-				for (int i = 0; i < list.Count; ++i)
-				for (int j = i+1; j < list.Count; ++j)
+				for (var i = 0; i < list.Count; ++i)
+				for (var j = i+1; j < list.Count; ++j)
 					Assert.AreNotEqual(list[i], list[j]);
+
+				Assert.AreEqual(5, list.Add2(5));
 			}
 		}
 	}

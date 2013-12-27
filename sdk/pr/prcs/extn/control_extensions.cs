@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
@@ -240,6 +239,15 @@ namespace pr.extn
 		{
 			data.Apply(cont);
 		}
+
+		/// <summary>Temporarily change the cursor while over this control</summary>
+		public static Scope ChangeCursor(this Control ctrl, Cursor new_cursor)
+		{
+			var old_cursor = ctrl.Cursor;
+			return Scope.Create(
+				() => ctrl.Cursor = new_cursor,
+				() => ctrl.Cursor = old_cursor);
+		}
 	}
 
 	/// <summary>Used to persist control locations and sizes in xml</summary>
@@ -276,9 +284,11 @@ namespace pr.extn
 			m_size     = Size.Empty;
 			m_children = new Dictionary<string,ControlLocations>();
 		}
-		public ControlLocations(Control ctrl)
+		public ControlLocations(Control ctrl) :this(ctrl, 0, 0)
+		{}
+		private ControlLocations(Control ctrl, int level, int index)
 		{
-			Read(ctrl);
+			ReadInternal(ctrl, level, index);
 		}
 
 		/// <summary>Import from xml</summary>
@@ -314,27 +324,53 @@ namespace pr.extn
 		/// <summary>Populate these settings from a control</summary>
 		public void Read(Control ctrl)
 		{
-			m_name     = ctrl.Name;
+			ReadInternal(ctrl, 0, 0);
+		}
+		private void ReadInternal(Control ctrl, int level, int index)
+		{
+			m_name     = UniqueName(ctrl, level, index);
 			m_location = ctrl.Location;
 			m_size     = ctrl.Size;
-			m_children = ctrl.Controls.Cast<Control>().Select(x => new ControlLocations(x)).ToDictionary(s => s.m_name, s => s);
+			m_children = new Dictionary<string,ControlLocations>();
+			for (var i = 0; i != ctrl.Controls.Count; ++i)
+			{
+				var s = new ControlLocations(ctrl.Controls[i], level + 1, i);
+				try { m_children.Add(s.m_name, s); }
+				catch (ArgumentException ex) { throw new Exception("A sibling control with this name already exists. All controls must have a unique name in order to save position data", ex); }
+			}
 		}
 
 		/// <summary>Apply the stored position data to 'ctrl'</summary>
 		public void Apply(Control ctrl, bool layout_on_resume = true)
 		{
-			if (m_name != ctrl.Name) return;
+			var name = UniqueName(ctrl, 0, 0);
+			if (m_name != name) return;
+
 			using (ctrl.SuspendLayout(layout_on_resume))
+				ApplyInternal(ctrl, 0, 0);
+		}
+		private void ApplyInternal(Control ctrl, int level, int index)
+		{
+			ctrl.Location = m_location;
+			ctrl.Size     = m_size;
+			for (var i = 0; i != ctrl.Controls.Count; ++i)
 			{
-				ctrl.Location = m_location;
-				ctrl.Size     = m_size;
-				foreach (var child in ctrl.Controls.Cast<Control>())
-				{
-					ControlLocations s;
-					if (m_children.TryGetValue(child.Name, out s))
-						s.Apply(child, false);
-				}
+				ControlLocations s;
+				var child = ctrl.Controls[i];
+				if (m_children.TryGetValue(UniqueName(child, level + 1, i), out s))
+					s.ApplyInternal(child, level + 1, i);
 			}
+		}
+
+		/// <summary>Tries to generate a unique name for unnamed controls</summary>
+		private string UniqueName(Control ctrl, int level, int index)
+		{
+			return ctrl.Name.HasValue() ? ctrl.Name : "{0}_{1}_{2}".Fmt(ctrl.GetType().Name, level, index);
+		}
+
+		public override string ToString()
+		{
+			return "{0} ({1} children)".Fmt(m_name, m_children.Count);
 		}
 	}
 }

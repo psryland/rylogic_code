@@ -24,9 +24,9 @@ namespace pr.extn
 		#region EnumConverter
 		private abstract class EnumConverter
 		{
-			public abstract string ToStringInternal(int value);
-			public abstract int    ParseInternal(string value, bool ignoreCase, bool parseNumber);
-			public abstract bool   TryParseInternal(string value, bool ignore_case, bool parse_number, out int result);
+			public abstract string ToStringInternal(long value);
+			public abstract long   ParseInternal(string value, bool ignoreCase, bool parseNumber);
+			public abstract bool   TryParseInternal(string value, bool ignore_case, bool parse_number, out long result);
 		}
 		#endregion
 
@@ -39,11 +39,11 @@ namespace pr.extn
 			{
 				m_names = names;
 			}
-			public override string ToStringInternal(int value)
+			public override string ToStringInternal(long value)
 			{
 				return value >= 0 && value < m_names.Length ? m_names[value] : value.ToString(CultureInfo.InvariantCulture);
 			}
-			public override int ParseInternal(string value, bool ignoreCase, bool parseNumber)
+			public override long ParseInternal(string value, bool ignoreCase, bool parseNumber)
 			{
 				if (value == null) throw new ArgumentNullException("value");
 				if (value.Length == 0) throw new ArgumentException("Value is empty", "value");
@@ -59,7 +59,7 @@ namespace pr.extn
 
 				throw new ArgumentException("Enum value wasn't found", "value");
 			}
-			public override bool TryParseInternal(string value, bool ignore_case, bool parse_number, out int result)
+			public override bool TryParseInternal(string value, bool ignore_case, bool parse_number, out long result)
 			{
 				result = 0;
 				if (string.IsNullOrEmpty(value))
@@ -91,22 +91,20 @@ namespace pr.extn
 		#region DictionaryEnumCovnerter
 		private class DictionaryEnumConverter : EnumConverter
 		{
-			protected readonly Dictionary<int, string> m_dic;
+			protected readonly Dictionary<long, string> m_dic;
 
 			public DictionaryEnumConverter(string[] names, T[] values)
 			{
-				m_dic = new Dictionary<int, string>(names.Length);
+				m_dic = new Dictionary<long, string>(names.Length);
 				for (var j = 0; j < names.Length; j++)
-					m_dic.Add(Convert.ToInt32(values[j], null), names[j]);
+					m_dic.Add(Convert.ToInt64(values[j], null), names[j]);
 			}
-
-			public override string ToStringInternal(int value)
+			public override string ToStringInternal(long value)
 			{
 				string n;
 				return m_dic.TryGetValue(value, out n) ? n : value.ToString(CultureInfo.InvariantCulture);
 			}
-
-			public override int ParseInternal(string value, bool ignoreCase, bool parseNumber)
+			public override long ParseInternal(string value, bool ignoreCase, bool parseNumber)
 			{
 				if (value == null) throw new ArgumentNullException("value");
 				if (value.Length == 0) throw new ArgumentException("Value is empty", "value");
@@ -123,8 +121,7 @@ namespace pr.extn
 				}
 				throw new ArgumentException("Enum value wasn't found", "value");
 			}
-
-			public override bool TryParseInternal(string value, bool ignore_case, bool parse_number, out int result)
+			public override bool TryParseInternal(string value, bool ignore_case, bool parse_number, out long result)
 			{
 				result = 0;
 				if (string.IsNullOrEmpty(value))
@@ -156,47 +153,35 @@ namespace pr.extn
 		#region FlagsEnumConverter
 		private class FlagsEnumConverter : DictionaryEnumConverter
 		{
-			private static readonly string[] Seps = new[] { "|" };
-			private readonly uint[] m_values;
+			private readonly long[] m_values;
 
-			public FlagsEnumConverter(string[] names, T[] values)
-				:base(names, values)
+			public FlagsEnumConverter(string[] names, T[] values) :base(names, values)
 			{
-				m_values = new uint[values.Length];
+				m_values = new long[values.Length];
 				for (var i = 0; i < values.Length; i++)
-					m_values[i] = values[i].ToUInt32(null);
+					m_values[i] = values[i].ToInt64(null);
 			}
-
-			public override string ToStringInternal(int value)
+			public override string ToStringInternal(long value)
 			{
 				string n;
 				if (m_dic.TryGetValue(value, out n)) return n;
 				var sb = new StringBuilder();
 				const string sep = ", ";
-				uint uval;
-				unchecked
+				for (var i = m_values.Length - 1; i >= 0; i--)
 				{
-					uval = (uint)value;
-
-					for (int i = m_values.Length - 1; i >= 0; i--)
-					{
-						uint v = m_values[i];
-						if (v == 0) continue;
-						if ((v & uval) == v)
-						{
-							uval &= ~v;
-							sb.Insert(0, sep).Insert(0, m_dic[(int)v]);
-						}
-					}
+					var v = m_values[i];
+					if (v == 0) continue;
+					if ((v & value) != v) continue;
+					value &= ~v;
+					sb.Insert(0, sep).Insert(0, m_dic[(int)v]);
 				}
-				return uval == 0 && sb.Length > sep.Length ? sb.ToString(0, sb.Length - sep.Length) : value.ToString(CultureInfo.InvariantCulture);
+				return value == 0 && sb.Length > sep.Length ? sb.ToString(0, sb.Length - sep.Length) : value.ToString(CultureInfo.InvariantCulture);
 			}
-
-			public override int ParseInternal(string value, bool ignoreCase, bool parseNumber)
+			public override long ParseInternal(string value, bool ignoreCase, bool parseNumber)
 			{
-				var parts = value.Split(Seps, StringSplitOptions.RemoveEmptyEntries);
+				var parts = value.Split(new[]{"|"}, StringSplitOptions.RemoveEmptyEntries);
 				if (parts.Length == 1) return base.ParseInternal(value, ignoreCase, parseNumber);
-				var val = 0;
+				var val = 0L;
 				foreach (var part in parts)
 				{
 					var t = base.ParseInternal(part.Trim(), ignoreCase, parseNumber);
@@ -204,16 +189,14 @@ namespace pr.extn
 				}
 				return val;
 			}
-
-			public override bool TryParseInternal(string value, bool ignore_case, bool parse_number, out int result)
+			public override bool TryParseInternal(string value, bool ignore_case, bool parse_number, out long result)
 			{
-				string[] parts = value.Split(Seps, StringSplitOptions.RemoveEmptyEntries);
+				var parts = value.Split(new[]{"|"}, StringSplitOptions.RemoveEmptyEntries);
 				if (parts.Length == 1) return base.TryParseInternal(value, ignore_case, parse_number, out result);
-				int val = 0;
-				for (int i = 0; i < parts.Length; i++)
+				var val = 0L;
+				foreach (var part in parts)
 				{
-					string part = parts[i];
-					int t;
+					long t;
 					if (!base.TryParseInternal(part.Trim(), ignore_case, parse_number, out t))
 					{
 						result = 0;
@@ -232,7 +215,7 @@ namespace pr.extn
 		/// <summary>Converts enum value to string</summary>
 		/// <returns>If <paramref name="value"/> is defined, the enum member name; otherwise the string representation of the <paramref name="value"/>.
 		/// If <see cref="FlagsAttribute"/> is applied, can return a delimited list of values</returns>
-		public static string ToString(int value)
+		public static string ToString(long value)
 		{
 			return Converter.ToStringInternal(value);
 		}
@@ -242,7 +225,7 @@ namespace pr.extn
 		/// If <see cref="FlagsAttribute"/> is applied, can return comma-separated list of values</returns>
 		public static string ToString(T value)
 		{
-			return Converter.ToStringInternal(value.ToInt32(null));
+			return Converter.ToStringInternal(value.ToInt64(null));
 		}
 
 		public static T Parse(string value, bool ignore_case = false, bool parse_numeric = true)
@@ -252,7 +235,7 @@ namespace pr.extn
 
 		public static bool TryParse(string value, bool ignoreCase, bool parseNumeric, out T result)
 		{
-			int ir;
+			long ir;
 			var b = Converter.TryParseInternal(value, ignoreCase, parseNumeric, out ir);
 			result = (T) Enum.ToObject(typeof(T), ir);
 			return b;
@@ -260,7 +243,7 @@ namespace pr.extn
 
 		public static bool TryParse(string value, bool ignoreCase, out T result)
 		{
-			int ir;
+			long ir;
 			var b = Converter.TryParseInternal(value, ignoreCase, true, out ir);
 			result = (T)Enum.ToObject(typeof(T), ir);
 			return b;
@@ -268,18 +251,30 @@ namespace pr.extn
 
 		public static bool TryParse(string value, out T result)
 		{
-			int ir;
+			long ir;
 			bool b = Converter.TryParseInternal(value, false, true, out ir);
 			result = (T)Enum.ToObject(typeof(T), ir);
 			return b;
 		}
 
+		/// <summary>Returns an indication whether a constant with a specified value exists in a specified enumeration.</summary>
+		public static bool IsDefined(object value)
+		{
+			return Enum.IsDefined(typeof(T), value);
+		}
+
 		/// <summary>Returns the next enum value after 'value'. Note: this is really enum abuse. Use sparingly</summary>
 		public static T Cycle(T src)
 		{
-			T[] arr = (T[])Enum.GetValues(typeof(T));
+			var arr = (T[])Enum.GetValues(typeof(T));
 			int i = Array.IndexOf(arr, src) + 1;
 			return (i >= 0 && i < arr.Length) ? arr[i] : arr[0];
+		}
+
+		/// <summary>Returns all enum field names as a collection</summary>
+		public static IEnumerable<string> Names
+		{
+			get { return Enum.GetNames(typeof(T)); }
 		}
 
 		/// <summary>Returns all values of the enum as a collection</summary>
@@ -372,17 +367,27 @@ namespace pr
 				SomeCompoundName,
 				ABBRValue01
 			}
+			[Flags] public enum BigFlags :uint
+			{
+				A = 0x80000000,
+				B = 0xC0000000,
+				C = 0xE0000000,
+			}
 
-			[Test] public static void TestToString()
+			[Test] public static void TestToString1()
 			{
 				Assert.AreEqual(ArrayEnum.One   .ToString(), ArrayEnum.One   .ToStringFast());
 				Assert.AreEqual(ArrayEnum.Two   .ToString(), ArrayEnum.Two   .ToStringFast());
 				Assert.AreEqual(ArrayEnum.Three .ToString(), ArrayEnum.Three .ToStringFast());
-
+			}
+			[Test] public static void TestToString2()
+			{
 				Assert.AreEqual(SparceEnum.One  .ToString(), SparceEnum.One  .ToStringFast());
 				Assert.AreEqual(SparceEnum.Four .ToString(), SparceEnum.Four .ToStringFast());
 				Assert.AreEqual(SparceEnum.Ten  .ToString(), SparceEnum.Ten  .ToStringFast());
-
+			}
+			[Test] public static void TestToString3()
+			{
 				var f = FlagsEnum.A;
 				Assert.AreEqual(f.ToString(), f.ToStringFast());
 				f = FlagsEnum.A|FlagsEnum.B;
@@ -391,9 +396,17 @@ namespace pr
 				Assert.AreEqual(f.ToString(), f.ToStringFast());
 				f = FlagsEnum.A|FlagsEnum.B|FlagsEnum.C;
 				Assert.AreEqual(f.ToString(), f.ToStringFast());
-
+			}
+			[Test] public static void TestToString4()
+			{
 				Assert.AreEqual("Some Compound Name", Tags.SomeCompoundName.ToPrettyString());
 				Assert.AreEqual("ABBR Value 01", Tags.ABBRValue01.ToPrettyString());
+			}
+			[Test] public static void TestToString5()
+			{
+				Assert.AreEqual(BigFlags.A.ToString(), BigFlags.A.ToStringFast());
+				Assert.AreEqual(BigFlags.B.ToString(), BigFlags.B.ToStringFast());
+				Assert.AreEqual(BigFlags.C.ToString(), BigFlags.C.ToStringFast());
 			}
 		}
 	}

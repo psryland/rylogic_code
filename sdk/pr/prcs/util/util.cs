@@ -137,6 +137,26 @@ namespace pr.util
 				return (T)Marshal.PtrToStructure(handle.State.AddrOfPinnedObject(), typeof(T));
 		}
 
+		/// <summary>Add 'item' to a history list of items.</summary>
+		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, int max_history_length, Func<T,T,bool> cmp = null)
+		{
+			cmp = cmp ?? ((l,r) => Equals(l,r));
+
+			var list = history.ToList();
+			list.RemoveIf(i => cmp(i,item));
+			list.Insert(0, item);
+			list.RemoveToEnd(max_history_length);
+			return list.ToArray();
+		}
+
+		/// <summary>Add 'item' to a history list of items.</summary>
+		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, bool ignore_case, int max_history_length)
+		{
+			return ignore_case
+				? AddToHistoryList(history, item, max_history_length, (l,r) => string.Compare(l.ToString(), r.ToString(), StringComparison.OrdinalIgnoreCase) == 0)
+				: AddToHistoryList(history, item, max_history_length, (l,r) => string.Compare(l.ToString(), r.ToString(), StringComparison.Ordinal) == 0);
+		}
+
 		/// <summary>Return the distance between to points</summary>
 		public static double Distance(Point lhs, Point rhs)
 		{

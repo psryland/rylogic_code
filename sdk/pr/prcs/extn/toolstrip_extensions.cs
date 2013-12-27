@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
@@ -17,6 +19,31 @@ namespace pr.extn
 		public static void LoadLocations(this ToolStripContainer cont, ToolStripLocations data)
 		{
 			data.Apply(cont);
+		}
+
+		/// <summary>Returns the Top,Left,Right,Bottom panels</summary>
+		public static IEnumerable<ToolStripPanel> Panels(this ToolStripContainer cont)
+		{
+			yield return cont.TopToolStripPanel;
+			yield return cont.LeftToolStripPanel;
+			yield return cont.RightToolStripPanel;
+			yield return cont.BottomToolStripPanel;
+		}
+
+		/// <summary>Returns all contained ToolStrips within the Top,Left,Right,Bottom panels</summary>
+		public static IEnumerable<ToolStrip> ToolStrips(this ToolStripContainer cont)
+		{
+			foreach (var panel in cont.Panels())
+			foreach (var ts in panel.Controls.Cast<ToolStrip>())
+				yield return ts;
+		}
+
+		/// <summary>Returns all contained toolbar items within the Top,Left,Right,Bottom panels</summary>
+		public static IEnumerable<ToolStripItem> ToolStripItems(this ToolStripContainer cont)
+		{
+			foreach (var ts in cont.ToolStrips())
+			foreach (var item in ts.Items.Cast<ToolStripItem>())
+				yield return item;
 		}
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>

@@ -4,6 +4,7 @@
 //***************************************************
 
 using System.Drawing;
+using pr.gfx;
 using pr.maths;
 
 namespace pr.extn
@@ -118,6 +119,12 @@ namespace pr.extn
 				(int)Maths.Clamp(src.R * (1f - frac) + dst.R * frac, 0f, 255f),
 				(int)Maths.Clamp(src.G * (1f - frac) + dst.G * frac, 0f, 255f),
 				(int)Maths.Clamp(src.B * (1f - frac) + dst.B * frac, 0f, 255f));
+		}
+
+		/// <summary>Convert this colour to HSV</summary>
+		public static HSV ToHSV(this Color src)
+		{
+			return HSV.FromColor(src);
 		}
 	}
 }

@@ -4,6 +4,14 @@ namespace pr.extn
 {
 	public static class DateTimeExtensions
 	{
+		/// <summary>Returns a DateTimeOffset from a DateTime. If DateTime.Kind is Unspecified then UTC is assumed</summary>
+		public static DateTimeOffset AsUTCDateTimeOffset(this DateTime dt)
+		{
+			if (dt.Kind == DateTimeKind.Unspecified)
+				dt = new DateTime(dt.Ticks, DateTimeKind.Utc);
+			return new DateTimeOffset(dt);
+		}
+
 		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
 		public static DateTime Clamp(this DateTime time, DateTime min, DateTime max)
 		{
