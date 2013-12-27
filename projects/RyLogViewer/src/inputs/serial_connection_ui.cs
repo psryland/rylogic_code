@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO.Ports;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
@@ -11,7 +12,6 @@ namespace RyLogViewer
 	public partial class SerialConnectionUI :Form
 	{
 		private readonly Settings m_settings;
-		private readonly List<SerialConn> m_history;
 		private readonly List<string> m_outp_history;
 		private readonly ToolTip m_tt;
 
@@ -22,9 +22,8 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_settings = settings;
-			m_history  = new List<SerialConn>(m_settings.SerialConnectionHistory);
 			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
-			Conn       = m_history.Count != 0 ? new SerialConn(m_history[0]) : new SerialConn();
+			Conn       = m_settings.SerialConnectionHistory.Length != 0 ? new SerialConn(m_settings.SerialConnectionHistory[0]) : new SerialConn();
 			m_tt       = new ToolTip();
 
 			// Comm Port
@@ -43,7 +42,7 @@ namespace RyLogViewer
 				};
 
 			// Baud rate
-			int[] baudrates = new[]{110,300,600,1200,2400,4800,9600,14400,19200,38400,57600,115200,230400,460800,921600,1843200};
+			var baudrates = new[]{110,300,600,1200,2400,4800,9600,14400,19200,38400,57600,115200,230400,460800,921600,1843200};
 			m_combo_baudrate.ToolTip(m_tt, "The baud rate for the connection");
 			foreach (var i in baudrates) m_combo_baudrate.Items.Add(i);
 			m_combo_baudrate.KeyPress += (s,a) => a.Handled = !char.IsDigit(a.KeyChar);
@@ -59,7 +58,7 @@ namespace RyLogViewer
 				};
 
 			// Data bits
-			int[] databits = new[]{7,8};
+			var databits = new[]{7,8};
 			m_combo_databits.ToolTip(m_tt, "The number of data bits");
 			foreach (var i in databits) m_combo_databits.Items.Add(i);
 			m_combo_databits.KeyPress += (s,a) => a.Handled = !char.IsDigit(a.KeyChar);
@@ -147,8 +146,7 @@ namespace RyLogViewer
 					// If launch is selected, add the launch command line to the history
 					if (DialogResult == DialogResult.OK && Conn.CommPort.Length != 0)
 					{
-						Misc.AddToHistoryList(m_history, Conn, true, Constants.MaxSerialConnHistoryLength);
-						m_settings.SerialConnectionHistory = m_history.ToArray();
+						m_settings.SerialConnectionHistory = Util.AddToHistoryList(m_settings.SerialConnectionHistory, Conn, true, Constants.MaxSerialConnHistoryLength);
 					}
 				};
 
@@ -164,8 +162,8 @@ namespace RyLogViewer
 		private void UpdateUI()
 		{
 			m_combo_commport.Text             = Conn.CommPort;
-			m_combo_baudrate.Text             = Conn.BaudRate.ToString();
-			m_combo_databits.Text             = Conn.DataBits.ToString();
+			m_combo_baudrate.Text             = Conn.BaudRate.ToString(CultureInfo.InvariantCulture);
+			m_combo_databits.Text             = Conn.DataBits.ToString(CultureInfo.InvariantCulture);
 			m_combo_parity.SelectedItem       = Conn.Parity;
 			m_combo_stopbits.SelectedItem     = Conn.StopBits;
 			m_combo_flow_control.SelectedItem = Conn.FlowControl;

@@ -9,7 +9,7 @@ using pr.extn;
 namespace RyLogViewer
 {
 	/// <summary>A substitution that rearranges text</summary>
-	[TransformSubstitution]
+	[Plugin(typeof(ITransformSubstitution))]
 	public class SubSwizzle :TransformSubstitutionBase
 	{
 		private string m_src;

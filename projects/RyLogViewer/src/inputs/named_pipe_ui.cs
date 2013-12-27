@@ -4,13 +4,13 @@ using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
 using pr.gui;
+using pr.util;
 
 namespace RyLogViewer
 {
 	public partial class NamedPipeUI :Form
 	{
 		private readonly Settings m_settings;
-		private readonly List<PipeConn> m_history;
 		private readonly List<string> m_outp_history;
 		private readonly ToolTip m_tt;
 		private string m_pipeaddr;
@@ -22,16 +22,15 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_settings = settings;
-			m_history  = new List<PipeConn>(m_settings.PipeConnectionHistory);
 			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
-			Conn       = m_history.Count != 0 ? new PipeConn(m_history[0]) : new PipeConn();
+			Conn       = m_settings.PipeConnectionHistory.Length != 0 ? new PipeConn(m_settings.PipeConnectionHistory[0]) : new PipeConn();
 			m_tt       = new ToolTip();
 			m_pipeaddr = Conn.PipeAddr;
 
 			// Pipe name
 			m_combo_pipe_name.ToolTip(m_tt, "The pipe name in the form \\\\<server>\\pipe\\<pipename>\r\nPipes on the local machine use '.' for <server>");
-			foreach (var i in m_history) m_combo_pipe_name.Items.Add(i);
-			if (m_history.Count != 0) m_combo_pipe_name.SelectedIndex = 0;
+			foreach (var i in m_settings.PipeConnectionHistory) m_combo_pipe_name.Items.Add(i);
+			if (m_settings.PipeConnectionHistory.Length != 0) m_combo_pipe_name.SelectedIndex = 0;
 			m_combo_pipe_name.TextChanged += (s,a)=>
 				{
 					m_pipeaddr = m_combo_pipe_name.Text;
@@ -72,8 +71,7 @@ namespace RyLogViewer
 							return;
 						}
 
-						Misc.AddToHistoryList(m_history, Conn, true, Constants.MaxSerialConnHistoryLength);
-						m_settings.PipeConnectionHistory = m_history.ToArray();
+						m_settings.PipeConnectionHistory = Util.AddToHistoryList(m_settings.PipeConnectionHistory, Conn, true, Constants.MaxSerialConnHistoryLength);
 					}
 				};
 

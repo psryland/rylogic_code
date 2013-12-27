@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
 using pr.extn;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -62,7 +63,7 @@ namespace RyLogViewer
 				{
 					if (DialogResult == DialogResult.OK)
 					{
-						settings.IPAddressHistory = Misc.AddToHistoryList(settings.IPAddressHistory, m_combo_ip_address.Text, false, Constants.MaxHistoryDefault);
+						settings.IPAddressHistory = Util.AddToHistoryList(settings.IPAddressHistory, m_combo_ip_address.Text, false, Constants.MaxHistoryDefault);
 					}
 				};
 

@@ -117,11 +117,6 @@ namespace RyLogViewer
 		public override string ToString() { return DropDownName; }
 	}
 
-	/// <summary>An attribute for marking classes intended as ITransformSubstitution implementations</summary>
-	[AttributeUsage(AttributeTargets.Class)]
-	public sealed class TransformSubstitutionAttribute :Attribute
-	{}
-
 	// Type converter so that ITransformSubstitution can be displayed in a DGV combo box
 	public class TransformSubstitutionTypeConverter :TypeConverter
 	{

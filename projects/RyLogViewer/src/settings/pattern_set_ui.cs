@@ -95,7 +95,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Called when settings are being saved, to save this pattern set</summary>
-		protected abstract void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args);
+		protected abstract void OnSettingsSaving(object sender, SettingsSavingEventArgs args);
 
 		/// <summary>Gets the version of the pattern set</summary>
 		protected abstract string Version { get; }
@@ -352,7 +352,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Called when settings are being saved, to save this pattern set</summary>
-		protected override void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args)
+		protected override void OnSettingsSaving(object sender, SettingsSavingEventArgs args)
 		{
 			var settings = (Settings)sender;
 			settings.HighlightPatternSets = Export();
@@ -431,7 +431,7 @@ namespace RyLogViewer
 		protected override string Version { get { return "v1.0"; } }
 
 		/// <summary>Called when settings are being saved, to save this pattern set</summary>
-		protected override void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args)
+		protected override void OnSettingsSaving(object sender, SettingsSavingEventArgs args)
 		{
 			var settings = (Settings)sender;
 			settings.FilterPatternSets = Export();
@@ -513,7 +513,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Called when settings are being saved, to save this pattern set</summary>
-		protected override void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args)
+		protected override void OnSettingsSaving(object sender, SettingsSavingEventArgs args)
 		{
 			var settings = (Settings)sender;
 			settings.TransformPatternSets = Export();
@@ -595,7 +595,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Called when settings are being saved, to save this pattern set</summary>
-		protected override void OnSettingsSaving(object sender, SettingsBase<Settings>.SettingsSavingEventArgs args)
+		protected override void OnSettingsSaving(object sender, SettingsSavingEventArgs args)
 		{
 			var settings = (Settings)sender;
 			settings.ActionPatternSets = Export();

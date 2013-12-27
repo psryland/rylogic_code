@@ -4,13 +4,13 @@ using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
 using pr.maths;
+using pr.util;
 
 namespace RyLogViewer
 {
 	public partial class ProgramOutputUI :Form
 	{
 		private readonly Settings m_settings;
-		private readonly List<LaunchApp> m_history;
 		private readonly List<string> m_outp_history;
 		private readonly ToolTip  m_tt;
 
@@ -21,14 +21,13 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_settings     = settings;
-			m_history      = new List<LaunchApp>(m_settings.LogProgramOutputHistory);
 			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
-			Launch         = m_history.Count != 0 ? new LaunchApp(m_history[0]) : new LaunchApp();
+			Launch         = m_settings.LogProgramOutputHistory.Length != 0 ? new LaunchApp(m_settings.LogProgramOutputHistory[0]) : new LaunchApp();
 			m_tt           = new ToolTip();
 
 			// Command line
 			m_combo_launch_cmdline.ToolTip(m_tt, "Command line for the application to launch");
-			m_combo_launch_cmdline.Load(m_history);
+			m_combo_launch_cmdline.Load(m_settings.LogProgramOutputHistory);
 			m_combo_launch_cmdline.TextChanged += (s,a)=>
 				{
 					Launch.Executable = m_combo_launch_cmdline.Text;
@@ -135,8 +134,7 @@ namespace RyLogViewer
 					// If launch is selected, add the launch command line to the history
 					if (DialogResult == DialogResult.OK && Launch.Executable.Length != 0)
 					{
-						Misc.AddToHistoryList(m_history, Launch, true, Constants.MaxProgramHistoryLength);
-						m_settings.LogProgramOutputHistory = m_history.ToArray();
+						m_settings.LogProgramOutputHistory = Util.AddToHistoryList(m_settings.LogProgramOutputHistory, Launch, true, Constants.MaxProgramHistoryLength);
 					}
 				};
 

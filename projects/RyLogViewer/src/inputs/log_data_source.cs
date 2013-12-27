@@ -25,7 +25,7 @@ namespace RyLogViewer
 					m_custom_data_sources = new List<ICustomLogDataSource>();
 
 					// Loads dlls from the plugins directory looking for transform substitutions
-					var loader = PluginLoader<CustomDataSourceAttribute, ICustomLogDataSource>.LoadWithUI(this, Misc.ResolveAppPath("plugins"), true);
+					var loader = PluginLoader<ICustomLogDataSource>.LoadWithUI(this, Misc.ResolveAppPath("plugins"), null, true);
 					foreach (var sub in loader.Plugins)
 						m_custom_data_sources.Add(sub);
 				}
@@ -60,7 +60,7 @@ namespace RyLogViewer
 		private void PrepareForStreamedData(string output_filepath)
 		{
 			System.Diagnostics.Debug.Assert(output_filepath != null);
-			m_settings.OutputFilepathHistory = Misc.AddToHistoryList(m_settings.OutputFilepathHistory, output_filepath, true, Constants.MaxOutputFileHistoryLength);
+			m_settings.OutputFilepathHistory = Util.AddToHistoryList(m_settings.OutputFilepathHistory, output_filepath, true, Constants.MaxOutputFileHistoryLength);
 			ApplySettings();
 
 			EnableTail(true);

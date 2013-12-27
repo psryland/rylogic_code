@@ -219,21 +219,6 @@ namespace RyLogViewer
 			return str;
 		}
 
-		/// <summary>Add 'item' to a history list of items.</summary>
-		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, bool ignore_case, int max_history_length)
-		{
-			var item_name = item.ToString();
-			var cmp = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-			var list = history.ToList();
-			list.RemoveIf(i => string.Compare(i.ToString(), item_name, cmp) == 0);
-			list.Insert(0, item);
-
-			while (list.Count > max_history_length)
-				list.RemoveAt(list.Count - 1);
-
-			return list.ToArray();
-		}
-
 		/// <summary>Checks for the existence of a file without blocking the UI</summary>
 		public static bool FileExists(Form parent, string filepath)
 		{

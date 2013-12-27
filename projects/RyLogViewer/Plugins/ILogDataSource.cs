@@ -148,9 +148,4 @@ namespace RyLogViewer
 			return m_stream.EndRead(async_result);
 		}
 	}
-
-	/// <summary>An attribute for marking classes intended as ILogDataSource implementations</summary>
-	[AttributeUsage(AttributeTargets.Class)]
-	public sealed class CustomDataSourceAttribute :Attribute
-	{}
 }

@@ -5,13 +5,13 @@ using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
 using pr.inet;
+using pr.util;
 
 namespace RyLogViewer
 {
 	public partial class NetworkConnectionUI :Form
 	{
 		private readonly Settings m_settings;
-		private readonly List<NetConn> m_history;
 		private readonly List<string> m_outp_history;
 		private readonly ToolTip m_tt;
 
@@ -22,9 +22,8 @@ namespace RyLogViewer
 		{
 			InitializeComponent();
 			m_settings = settings;
-			m_history  = new List<NetConn>(m_settings.NetworkConnectionHistory);
 			m_outp_history = new List<string>(m_settings.OutputFilepathHistory);
-			Conn       = m_history.Count != 0 ? new NetConn(m_history[0]) : new NetConn();
+			Conn       = m_settings.NetworkConnectionHistory.Length != 0 ? new NetConn(m_settings.NetworkConnectionHistory[0]) : new NetConn();
 			m_tt       = new ToolTip();
 			string tt;
 
@@ -53,8 +52,8 @@ namespace RyLogViewer
 			tt = "The remote host to connect to and receive data from";
 			m_lbl_hostname.ToolTip(m_tt, tt);
 			m_combo_hostname.ToolTip(m_tt, tt);
-			foreach (var i in m_history) m_combo_hostname.Items.Add(i);
-			if (m_history.Count != 0) m_combo_hostname.SelectedIndex = 0;
+			foreach (var i in m_settings.NetworkConnectionHistory) m_combo_hostname.Items.Add(i);
+			if (m_settings.NetworkConnectionHistory.Length != 0) m_combo_hostname.SelectedIndex = 0;
 			m_combo_hostname.TextChanged += (s,a)=>
 				{
 					Conn.Hostname = m_combo_hostname.Text;
@@ -174,8 +173,7 @@ namespace RyLogViewer
 					// If launch is selected, add the launch command line to the history
 					if (DialogResult == DialogResult.OK && Conn.Hostname.Length != 0)
 					{
-						Misc.AddToHistoryList(m_history, Conn, true, Constants.MaxNetConnHistoryLength);
-						m_settings.NetworkConnectionHistory = m_history.ToArray();
+						m_settings.NetworkConnectionHistory = Util.AddToHistoryList(m_settings.NetworkConnectionHistory, Conn, true, Constants.MaxNetConnHistoryLength);
 					}
 				};
 
