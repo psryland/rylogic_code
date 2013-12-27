@@ -43,7 +43,7 @@ namespace pr
 		{
 			// Enum this directory
 			if (!EnumDirectories(path, context)) { return false; }
-			
+
 			// Recurse the directories in this directory
 			// Append a mask to the dir path
 			for (FindFiles<String> ff(path, "*"); !ff.done(); ff.next())
@@ -51,18 +51,18 @@ namespace pr
 				// Only consider directories
 				if ((ff.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)
 					continue;
-				
+
 				// Ignore the special directories
 				if (strcmp(ff.cFileName, ".") == 0 || strcmp(ff.cFileName, "..") == 0)
 					continue;
-				
+
 				// Recurse into subdirectories
 				if (!RecurseDirectory(ff.fullpath2(), EnumDirectories, context))
 					return false;
 			}
 			return true;
 		}
-		
+
 		// Recursively enumerate files within and below 'path'
 		// 'file_masks' is a semicolon separated, null terminated, list of file masks
 		// PathCB should have a signature: bool (*EnumFiles)(String pathname, void* context)
@@ -74,23 +74,23 @@ namespace pr
 				if (!EnumFiles(ff.fullpath(), context))
 					return false;
 			}
-			
+
 			// Recurse into the directories with 'path'
 			for (FindFiles<String> ff(path, "*"); !ff.done(); ff.next())
 			{
 				// Ignore non directories
 				if ((ff.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY)
 					continue;
-				
+
 				// Ignore special directories
 				if (strcmp(ff.cFileName, ".") == 0 || strcmp(ff.cFileName, "..") == 0)
 					continue;
-				
+
 				// Allow callers to exclude specific directories
 				// Directories will not have trailing '\' characters
 				if (SkipDir != 0 && SkipDir(ff.fullpath(), context))
 					continue;
-				
+
 				// Enumerate the files in this directory
 				if (!RecurseFiles(ff.fullpath2(), EnumFiles, file_masks, context, SkipDir))
 					return false;
@@ -111,8 +111,8 @@ namespace pr
 		{
 			struct CB
 			{
-				static bool SkipDir  (const char*, void*) { return false; }
-				static bool EnumFiles(const char* pathname, void* context)
+				static bool SkipDir  (std::string, void*) { return false; }
+				static bool EnumFiles(std::string pathname, void* context)
 				{
 					int* found = static_cast<int*>(context);
 					std::string extn = pr::filesys::GetExtension<std::string>(pathname);
@@ -123,7 +123,7 @@ namespace pr
 					return true;
 				}
 			};
-		
+
 			int found[4] = {}; // 0-*.cpp, 1-*.c, 2-*.h, 3-other
 			std::string root = "Q:\\projects\\unittests";
 			PR_CHECK(pr::filesys::RecurseFiles(root, CB::EnumFiles, "*.cpp;*.c", found, CB::SkipDir), true);
