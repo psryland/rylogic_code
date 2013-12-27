@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using pr.maths;
 
@@ -57,18 +58,32 @@ namespace pr.maths
 			return (value & mask) == mask;
 		}
 
-		/// <summary>Iterator over the set bits in a bit field</summary>
-		public static IEnumerable<int> EnumBits(int value)
+		/// <summary>Iterator over the index positions of bits in a bit field</summary>
+		public static IEnumerable<int> EnumBitIndices(int value)
 		{
-			for (int i = 0; value != 0; ++i, value >>= 1)
+			for (var i = 0; value != 0; ++i, value >>= 1)
+				if ((value&1) != 0) yield return i;
+		}
+
+		/// <summary>Iterator over the index positions of bits in a bit field</summary>
+		public static IEnumerable<int> EnumBitIndices(uint value)
+		{
+			for (var i = 0; value != 0; ++i, value >>= 1)
 				if ((value&1) != 0) yield return i;
 		}
 
 		/// <summary>Iterator over the set bits in a bit field</summary>
-		public static IEnumerable<uint> EnumBits(uint value)
+		public static IEnumerable<int> EnumBitMasks(int value)
 		{
-			for (uint i = 0; value != 0; ++i, value >>= 1)
-				if ((value&1) != 0) yield return i;
+			for (int mask; value != 0; value -= mask)
+				yield return mask = value & (value ^ (value - 1));
+		}
+
+		/// <summary>Iterator over the set bits in a bit field</summary>
+		public static IEnumerable<uint> EnumBitMasks(uint value)
+		{
+			for (uint mask; value != 0; value -= mask)
+				yield return mask = value & (value ^ (value - 1));
 		}
 
 		/// <summary>Returns a value containing the reverse of the bits in 'value'</summary>
@@ -103,16 +118,16 @@ namespace pr.maths
 
 		/// <summary>
 		/// Returns the bit position of the highest bit
-		/// Also, is the floor of the log base 2 for a 32 bit integer
-		/// </summary>
+		/// Also, is the floor of the log base 2 for a 32 bit integer</summary>
 		public static int HighBitIndex(uint value)
 		{
-			int shift, pos = 0;
+			var pos = 0;
+			var
 			shift = ((value & 0xFFFF0000) != 0 ? 1 << 4 : 0); value >>= shift; pos |= shift;
 			shift = ((value &     0xFF00) != 0 ? 1 << 3 : 0); value >>= shift; pos |= shift;
 			shift = ((value &       0xF0) != 0 ? 1 << 2 : 0); value >>= shift; pos |= shift;
 			shift = ((value &        0xC) != 0 ? 1 << 1 : 0); value >>= shift; pos |= shift;
-			shift = ((value &        0x2) != 0 ? 1 << 0 : 0); value >>= shift; pos |= shift;
+			shift = ((value &        0x2) != 0 ? 1 << 0 : 0);                  pos |= shift;
 			return pos;
 		}
 
@@ -184,8 +199,8 @@ namespace pr.maths
 		/// </summary>
 		public static uint InterleaveBits(uint x, uint y)
 		{
-			uint[] B = new uint[]{0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF};
-			int[]  S = new []{1, 2, 4, 8};
+			var B = new uint[]{0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF};
+			var S = new []{1, 2, 4, 8};
 			x = (x | (x << S[3])) & B[3];
 			x = (x | (x << S[2])) & B[2];
 			x = (x | (x << S[1])) & B[1];
@@ -228,8 +243,8 @@ namespace pr.maths
 		/// <summary>Convert the bitfield 'bits' into a string with at least 'min_digits' characters</summary>
 		public static string ToString(uint bits, int min_digits)
 		{
-			int i = 0;
-			StringBuilder str = new StringBuilder(32);
+			var i = 0;
+			var str = new StringBuilder(32);
 			for (; i != 32 && min_digits != 32 && (bits & 0x80000000) == 0; ++i, ++min_digits, bits <<= 1) {}
 			for (; i != 32; ++i, bits <<= 1) { str.Append((bits & 0x80000000) != 0 ? '1' : '0'); }
 			return str.ToString();
@@ -253,26 +268,6 @@ namespace pr
 	{
 		internal static class TestBit
 		{
-			[Test] public static void BitFunctions()
-			{
-				const string bitstr0 = "100100010100110010110";
-				const string bitstr1 = "011011101011001101001";
-				uint bits0 = Bit.Parse(bitstr0);
-				uint bits1 = Bit.Parse(bitstr1);
-
-				Assert.AreEqual(bitstr0 ,Bit.ToString(bits0));
-				Assert.AreEqual(bitstr1 ,Bit.ToString(bits1, bitstr1.Length));
-
-				Assert.False(Bit.AnySet(bits0,bits1));
-
-				Assert.AreEqual(8  ,Bit.BitIndex(bits0, 4));
-				Assert.AreEqual(13 ,Bit.BitIndex(bits0, 6));
-				Assert.AreEqual(-1 ,Bit.BitIndex(bits0, 11));
-
-				List<uint> bitidx = new List<uint>(Bit.EnumBits(bits0));
-				Assert.AreEqual(bitidx.ToArray(), new[]{1,2,4,7,8,11,13,17,20});
-			}
-
 			public enum NonFlags
 			{
 				One = 1,
@@ -287,14 +282,67 @@ namespace pr
 				Five  = 1 << 4,
 			}
 
-			[Test] public static void EnumBits()
+			[Test] public static void HasFlag()
 			{
-				NonFlags nf = NonFlags.One;
-				Flags f = Flags.One;
+				const NonFlags nf = NonFlags.One;
+				const Flags f     = Flags.One;
 
 				Assert.Throws(typeof(ArgumentException), () => Assert.True(f.HasFlag(nf)));
 				Assert.IsTrue(f.HasFlag(Flags.One));
 				Assert.IsFalse(f.HasFlag(Flags.One|Flags.Two));
+			}
+			[Test] public static void BitParse()
+			{
+				const string bitstr0 = "100100010100110010110";
+				const string bitstr1 = "011011101011001101001";
+
+				var bits0 = Bit.Parse(bitstr0);
+				var bits1 = Bit.Parse(bitstr1);
+				Assert.AreEqual(bitstr0 ,Bit.ToString(bits0));
+				Assert.AreEqual(bitstr1 ,Bit.ToString(bits1, bitstr1.Length));
+			}
+			[Test] public static void BitAnySet()
+			{
+				const string bitstr0 = "100100010100110010110";
+				const string bitstr1 = "011011101011001101001";
+				var bits0 = Bit.Parse(bitstr0);
+				var bits1 = Bit.Parse(bitstr1);
+				Assert.False(Bit.AnySet(bits0,bits1));
+			}
+			[Test] public static void BitIndex()
+			{
+				const string bitstr0 = "100100010100110010110";
+				var bits0 = Bit.Parse(bitstr0);
+				Assert.AreEqual(8  ,Bit.BitIndex(bits0, 4));
+				Assert.AreEqual(13 ,Bit.BitIndex(bits0, 6));
+				Assert.AreEqual(-1 ,Bit.BitIndex(bits0, 11));
+			}
+			[Test] public static void EnumBitIndices()
+			{
+				const string bitstr0 = "100100010100110010110";
+				var bits0 = Bit.Parse(bitstr0);
+				var bitidxs = new[]{1,2,4,7,8,11,13,17,20};
+				var idxs = Bit.EnumBitIndices(bits0).ToArray();
+				Assert.IsTrue(bitidxs.SequenceEqual(idxs));
+			}
+			[Test] public static void EnumBitMasks()
+			{
+				const string bitstr0 = "100100010100110010110";
+				var bits0 = Bit.Parse(bitstr0);
+				var bitmasks = new[]
+				{
+					Bit.Parse("000000000000000000010"),
+					Bit.Parse("000000000000000000100"),
+					Bit.Parse("000000000000000010000"),
+					Bit.Parse("000000000000010000000"),
+					Bit.Parse("000000000000100000000"),
+					Bit.Parse("000000000100000000000"),
+					Bit.Parse("000000010000000000000"),
+					Bit.Parse("000100000000000000000"),
+					Bit.Parse("100000000000000000000")
+				};
+				var masks = Bit.EnumBitMasks(bits0).ToArray();
+				Assert.IsTrue(bitmasks.SequenceEqual(masks));
 			}
 		}
 	}
