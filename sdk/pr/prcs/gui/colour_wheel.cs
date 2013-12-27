@@ -50,7 +50,7 @@ namespace pr.gui
 		public Color Colour
 		{
 			get { return HSVColour.ToColor(); }
-			set { HSVColour = HSV.FromColor(value, HSVColour.H, HSVColour.S); }
+			set { HSVColour = HSV.FromColor(value, HSVColour.H); }
 		}
 
 		/// <summary>The currently selected colour (hsv)</summary>
@@ -59,7 +59,7 @@ namespace pr.gui
 			get { return m_hsv_colour; }
 			set
 			{
-				if (Equals(m_hsv_colour, value)) return;
+				if (Equals(m_hsv_colour,value)) return;
 				m_hsv_colour = value;
 				Invalidate();
 				RaiseColourChanged();

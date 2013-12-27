@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Windows.Forms;
+using pr.gui;
 
 namespace TestCS
 {
@@ -15,9 +8,15 @@ namespace TestCS
 		public FormColourWheel()
 		{
 			InitializeComponent();
+
+			m_btn_dlg.Click += (s,a) =>
+				{
+					new ColourUI().ShowDialog();
+				};
 		}
 
-		private pr.gui.ColourWheel colourWheel1;
+		private ColourWheel m_wheel;
+		private Button m_btn_dlg;
 
 		#region Windows Form Designer generated code
 
@@ -45,31 +44,42 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.colourWheel1 = new pr.gui.ColourWheel();
+			this.m_wheel = new pr.gui.ColourWheel();
+			this.m_btn_dlg = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
-			// colourWheel1
+			// m_wheel
 			// 
-			this.colourWheel1.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
-			this.colourWheel1.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.colourWheel1.Location = new System.Drawing.Point(0, 0);
-			this.colourWheel1.Name = "colourWheel1";
-			this.colourWheel1.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
+			this.m_wheel.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
+			this.m_wheel.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_wheel.Location = new System.Drawing.Point(0, 0);
+			this.m_wheel.Name = "m_wheel";
+			this.m_wheel.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
             | pr.gui.ColourWheel.EParts.ASlider) 
             | pr.gui.ColourWheel.EParts.ColourSelection) 
             | pr.gui.ColourWheel.EParts.VSelection) 
             | pr.gui.ColourWheel.EParts.ASelection)));
-			this.colourWheel1.Size = new System.Drawing.Size(182, 112);
-			this.colourWheel1.SliderWidth = 20;
-			this.colourWheel1.TabIndex = 0;
-			this.colourWheel1.VerticalLayout = false;
+			this.m_wheel.Size = new System.Drawing.Size(182, 188);
+			this.m_wheel.SliderWidth = 20;
+			this.m_wheel.TabIndex = 0;
+			this.m_wheel.VerticalLayout = false;
+			// 
+			// m_btn_dlg
+			// 
+			this.m_btn_dlg.Location = new System.Drawing.Point(25, 153);
+			this.m_btn_dlg.Name = "m_btn_dlg";
+			this.m_btn_dlg.Size = new System.Drawing.Size(127, 23);
+			this.m_btn_dlg.TabIndex = 1;
+			this.m_btn_dlg.Text = "Colour Picker Dialog";
+			this.m_btn_dlg.UseVisualStyleBackColor = true;
 			// 
 			// FormColourWheel
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(182, 112);
-			this.Controls.Add(this.colourWheel1);
+			this.ClientSize = new System.Drawing.Size(182, 188);
+			this.Controls.Add(this.m_btn_dlg);
+			this.Controls.Add(this.m_wheel);
 			this.Name = "FormColourWheel";
 			this.Text = "FormColourWheel";
 			this.ResumeLayout(false);

@@ -48,14 +48,14 @@
     <Compile Include="FormColourWheel.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="FormGraphControl.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="HintBalloon.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="FormTestApp.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="FormTestApp.Designer.cs">
-      <DependentUpon>FormTestApp.cs</DependentUpon>
     </Compile>
     <Compile Include="FormView3d.cs">
       <SubType>Form</SubType>
@@ -67,6 +67,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="FormTestApp.resx">
       <DependentUpon>FormTestApp.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormGraphControl.resx">
+      <DependentUpon>FormGraphControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="HintBalloon.resx">
       <DependentUpon>HintBalloon.cs</DependentUpon>

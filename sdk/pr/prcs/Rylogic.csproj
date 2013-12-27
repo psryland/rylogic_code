@@ -209,6 +209,9 @@
     <Compile Include="gfx\hsv.cs" />
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
+    <Compile Include="gui\colour_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="gui\colour_wheel.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -249,6 +252,12 @@
     </Compile>
     <Compile Include="gui\hint_balloon.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="gui\toolstrip_datetimepicker.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\toolstrip_tablelayoutextender.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\tool_form.cs">
       <SubType>Form</SubType>
@@ -375,6 +384,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="gui\colour_ui.resx">
+      <DependentUpon>colour_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\colour_wheel.resx">
       <DependentUpon>colour_wheel.cs</DependentUpon>
     </EmbeddedResource>

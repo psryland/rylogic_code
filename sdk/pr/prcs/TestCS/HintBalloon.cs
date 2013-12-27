@@ -5,7 +5,7 @@ using pr.gui;
 
 namespace TestCS
 {
-	public partial class FormHintBalloon :Form
+	public class FormHintBalloon :Form
 	{
 		private readonly Random m_rng = new Random(0);
 		private readonly HintBalloon m_hint_balloon = new HintBalloon

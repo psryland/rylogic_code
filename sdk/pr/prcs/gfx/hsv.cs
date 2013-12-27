@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using pr.maths;
@@ -25,9 +26,54 @@ namespace pr.gfx
 		public float S; // saturation  [0,1] S = 0 is all white, S = 1 is pure colour
 		public float V; // value       [0,1] aka brightness, 0 = black
 
-		public HSV(float a, float h, float s, float v) { A = a; H = h; S = s; V = v; }
-		public Color ToColor() { return ToColor(this); }
+		public HSV(float a, float h, float s, float v)
+		{
+			Debug.Assert(
+				a >= 0f && a <= 1f &&
+				h >= 0f && h <= 1f &&
+				s >= 0f && s <= 1f &&
+				v >= 0f && v <= 1f
+				,"Expected component colour values in the range [0,1]");
+			A = a;
+			H = h;
+			S = s;
+			V = v;
+		}
+
+		/// <summary>ToString</summary>
 		public override string ToString() { return string.Format("a={0} h={1} s={2} v={3}", A, H, S, V); }
+
+		/// <summary>Indicates whether this instance and a specified object are equal.</summary>
+		public override bool Equals(object obj)
+		{
+			return obj is HSV && Equals((HSV)obj);
+		}
+		public bool Equals(HSV other)
+		{
+			// If saturation is 0 for both, then H doesn't matter
+			return !S.Equals(0)
+				? A.Equals(other.A) && H.Equals(other.H) && S.Equals(other.S) && V.Equals(other.V)
+				: A.Equals(other.A) && V.Equals(other.V) && other.S.Equals(0);
+		}
+
+		/// <summary>Returns the hash code for this instance.</summary>
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hash_code = A.GetHashCode();
+				hash_code = (hash_code*397) ^ H.GetHashCode();
+				hash_code = (hash_code*397) ^ S.GetHashCode();
+				hash_code = (hash_code*397) ^ V.GetHashCode();
+				return hash_code;
+			}
+		}
+
+		/// <summary>Convert this HSV to RGB</summary>
+		public Color ToColor()
+		{
+			return ToColor(this);
+		}
 
 		/// <summary>Create an HSV from components</summary>
 		public static HSV FromAHSV(float a, float h, float s, float v)
@@ -56,11 +102,25 @@ namespace pr.gfx
 		}
 
 		/// <summary>Return the HSV colour as a standard ARGB colour</summary>
-		public static Color ToColor(float a, float h, float s, float v) 
+		public static Color ToColor(float a, float h, float s, float v)
 		{
+			Debug.Assert(
+				a >= 0f && a <= 1f &&
+				h >= 0f && h <= 1f &&
+				s >= 0f && s <= 1f &&
+				v >= 0f && v <= 1f
+				,"Expected component colour values in the range [0,1]");
+
+			// Saturation == 0f means 'sec' is undefined
+			if (Math.Abs(s) < float.Epsilon)
+			{
+				var i = (int)Maths.Clamp(v * 255, 0, 255);
+				return Color.FromArgb(i,i,i);
+			}
+
 			// Hue is divided into 6 sectors: red -> magenta -> blue -> cyan -> green -> yellow -> red
 			// Find the sector, and the fraction position within the sector
-			var f = Maths.Clamp(h * 6f, 0f, 6f);
+			var f = Maths.Clamp(h * 6f, 0f, 5.99999f);
 			var sec = (int)Math.Floor(f);
 			f -= sec;
 
@@ -92,9 +152,9 @@ namespace pr.gfx
 
 		/// <summary>
 		/// Return an HSV colour from a standard ARGB colour.
-		/// 'undef_h' and 'undef_s' are the values to use for h and s when they would otherwise be undefined.
-		/// Use previous values in order to preserve them through the singular points.</summary>
-		public static HSV FromColor(Color rgb, float undef_h = 0f, float undef_s = 0f)
+		/// 'undef_h' is the value to use for h when it would otherwise be undefined.
+		/// Use previous value in order to preserve it through the singular points.</summary>
+		public static HSV FromColor(Color rgb, float undef_h = 0f)
 		{
 			var a = rgb.A / 255f;
 			var r = rgb.R / 255f;
@@ -106,8 +166,8 @@ namespace pr.gfx
 			var delta = max - min;
 
 			// If r = g = b, => S = 0, H is technically undefined, V == r,g,b
-			if (Math.Abs(delta - 0) < float.Epsilon)
-				return new HSV(a, undef_h, undef_s, max);
+			if (Math.Abs(delta) < float.Epsilon)
+				return new HSV(a, undef_h, 0f, max);
 
 			HSV hsv;
 			hsv.A = a;
@@ -122,3 +182,37 @@ namespace pr.gfx
 		}
 	}
 }
+
+#if PR_UNITTESTS
+
+namespace pr
+{
+	using NUnit.Framework;
+	using extn;
+
+	[TestFixture] internal static partial class UnitTests
+	{
+		internal static class TestHSV
+		{
+			private static bool Equal(Color lhs, Color rhs)
+			{
+				return
+					lhs.A == rhs.A &&
+					lhs.R == rhs.R &&
+					lhs.G == rhs.G &&
+					lhs.B == rhs.B;
+			}
+
+			[Test] public static void Rgb2Hsv2Rgb()
+			{
+				Assert.IsTrue(Equal(Color.White, Color.White.ToHSV().ToColor()));
+				Assert.IsTrue(Equal(Color.Black, Color.Black.ToHSV().ToColor()));
+				Assert.IsTrue(Equal(Color.Red  , Color.Red  .ToHSV().ToColor()));
+				Assert.IsTrue(Equal(Color.Green, Color.Green.ToHSV().ToColor()));
+				Assert.IsTrue(Equal(Color.Blue , Color.Blue .ToHSV().ToColor()));
+			}
+		}
+	}
+}
+
+#endif
