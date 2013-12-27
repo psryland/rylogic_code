@@ -66,7 +66,15 @@ namespace pr.util
 		{
 			try
 			{
-				var events = target.GetType().GetEvents(BindingFlags.Instance|BindingFlags.Public);
+				var type = target.GetType();
+
+				var AllowDrop = type.GetProperty("AllowDrop", BindingFlags.Public|BindingFlags.Instance);
+				if (AllowDrop != null)
+					AllowDrop.GetSetMethod().Invoke(target, new object[]{true});
+				else
+					throw new ArgumentException(string.Format("Target type {0} does not have an 'AllowDrop' property",type.Name), "target");
+
+				var events = type.GetEvents(BindingFlags.Instance|BindingFlags.Public);
 
 				var DragEnter = events.FirstOrDefault(x => x.Name == "DragEnter");
 				if (DragEnter != null)
