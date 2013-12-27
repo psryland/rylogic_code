@@ -71,7 +71,7 @@ namespace pr
 			struct MetaData :TableMetaData<type_name>\
 			{\
 				MetaData()\
-				:TableMetaData<TableType>("[" ## #type_name ## "]", table_constraints)\
+				:TableMetaData<TableType>(#type_name, table_constraints)\
 				{
 		// Columns that perform type converting on read/write to the record type
 		#define PR_SQLITE_COL_AS_CUST(column_name, adapter, datatype, constraints)\
@@ -102,6 +102,7 @@ namespace pr
 		PR_SQLITE_COL_AS_CUST(column_name, column_name##Adapter, datatype, constraints)
 
 		#define PR_SQLITE_TABLE_END()\
+					Validate();\
 				}\
 			};\
 			static MetaData meta;\
@@ -732,13 +733,14 @@ namespace pr
 		// http://www.sqlite.org/syntaxdiagrams.html#column-constraint
 		template <typename RecordType> struct ColumnMetaData
 		{
-			char const* Name;
-			char const* DataType;
-			char const* Constraints;
-			bool        IsNotNull;
-			bool        IsPK;
-			bool        IsAutoInc;
-			bool        IsCollate;
+			char const* Name;        // The column name (Will be bracketted, i.e. [Item])
+			char const* DataType;    //
+			char const* Constraints; //
+			bool        IsNotNull;   //
+			bool        IsPK;        //
+			bool        IsAutoInc;   //
+			bool        IsCollate;   //
+			size_t      NameLen;     // The length of the column name string
 
 			ColumnMetaData(char const* name, char const* datatype, char const* column_constraints)
 				:Name        (name)
@@ -748,7 +750,9 @@ namespace pr
 				,IsPK        (StrHelper::Contains(column_constraints, "primary key"))
 				,IsAutoInc   (StrHelper::Contains(column_constraints, "autoincrement"))
 				,IsCollate   (StrHelper::Contains(column_constraints, "collate"))
+				,NameLen     (strlen(name))
 			{
+				PR_ASSERT(PR_SQL_ASSERTS, Name[0] == '[' && Name[NameLen-1] == ']', "Column names should be bracketted");
 				if (IsAutoInc && !IsPK)
 					throw Exception(SQLITE_MISUSE, "Only a primary key column can have the auto increment constraint", false);
 			}
@@ -926,7 +930,7 @@ namespace pr
 				,m_autoinc(0)
 				,m_pk_col_names(0)
 			{
-				// Look for a primary key constraint in the table constraints
+				// Look for a 'primary key' constraint in the table constraints
 				// and store a pointer to it so that we can mark columns as primary
 				// keys in 'AddColumn'
 				if (m_table_constraints != 0 && *m_table_constraints != 0)
@@ -953,10 +957,25 @@ namespace pr
 			ColMetaData const* AutoInc() const    { return m_autoinc; }
 
 			// Return the column matching 'column_name'
+			// 'column_name' should be in [] but without is accepted (just not as efficient)
 			ColMetaData const* Column(char const* column_name) const
 			{
-				for (auto i = begin(m_col), iend = end(m_col); i != iend; ++i)
-					if (strcmp((*i)->Name, column_name) == 0) return *i;
+				PR_ASSERT(PR_SQL_ASSERTS, column_name != nullptr, "");
+
+				if (column_name[0] == '[')
+				{
+					for (auto& col : m_col)
+						if (strcmp(col->Name, column_name) == 0)
+							return col;
+				}
+				else
+				{
+					for (auto& col : m_col)
+						if (strncmp(col->Name + 1, column_name, col->NameLen - 2) == 0)
+							return col;
+				}
+
+				PR_ASSERT(PR_SQL_ASSERTS, false, pr::FmtS("No column with name %s found", column_name));
 				return 0;
 			}
 
@@ -990,6 +1009,13 @@ namespace pr
 			std::string PKConstraints() const
 			{
 				return StrHelper::List(m_pks, " and ", [](ColMetaData const* c){return std::string(c->Name).append(" = ?");});
+			}
+
+			// Performances sanity checking immediately after all columns have been added (by the macros)
+			void Validate() const
+			{
+				// Check the primary key constraint uses bracketed column names
+				PR_ASSERT(PR_SQL_ASSERTS, m_pk_col_names == nullptr || !m_pks.empty(), "Primary key constraint was given, but no primary key columns found.");
 			}
 
 		private:
@@ -1642,8 +1668,9 @@ namespace pr
 						PR_SQLITE_COLUMN(String     ,m_string     ,text    , "")
 						PR_SQLITE_COLUMN(Buf        ,m_buf        ,blobcont, "")
 						PR_SQLITE_COLUMN(EmptyBuf   ,m_empty_buf  ,blobcont, "")
-						PR_SQLITE_TABLE_END()
-						Record()
+					PR_SQLITE_TABLE_END()
+
+					Record()
 						:m_key()
 						,m_bool()
 						,m_char()
@@ -1788,7 +1815,7 @@ namespace pr
 				Record r = table.Get(PKs(2));
 				PR_CHECK(r.m_string.c_str(), "Elem2");
 
-				PR_CHECK(table.Update("String", std::string("Modified"), PKs(r.m_key)), 1);
+				PR_CHECK(table.Update("[String]", std::string("Modified"), PKs(r.m_key)), 1);
 
 				Record r2 = table.Get(PKs(r.m_key));
 				PR_CHECK(r2.m_string.c_str(), "Modified");
@@ -1801,13 +1828,13 @@ namespace pr
 					std::string  m_string;
 
 					// Create sqlite table mapping meta data
-					PR_SQLITE_TABLE(Record, "unique (String), primary key (Key, Bool)") // whitespace shouldn't affect constraints
+					PR_SQLITE_TABLE(Record, "unique ([String]), primary key ([Key], [Bool])") // whitespace shouldn't affect constraints
 						PR_SQLITE_COLUMN(Key    ,m_key    ,integer , "not null")
 						PR_SQLITE_COLUMN(Bool   ,m_bool   ,integer , "not null")
 						PR_SQLITE_COLUMN(String ,m_string ,text    , "")
-						PR_SQLITE_TABLE_END()
+					PR_SQLITE_TABLE_END()
 
-						Record()
+					Record()
 						:m_key()
 						,m_bool()
 						,m_string()
