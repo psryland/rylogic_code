@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using pr.util;
 using pr.extn;
@@ -90,6 +91,31 @@ namespace pr.extn
 			list[index0] = list[index1];
 			list[index1] = tmp;
 		}
+
+		/// <summary>Reverse the order of all elements in this list</summary>
+		public static void Reverse(this IList list)
+		{
+			list.Reverse(0, list.Count);
+		}
+		public static void Reverse<T>(this BindingList<T> list) { ((IList)list).Reverse(); }
+
+		/// <summary>Reverses the order of the elements in the specified range.</summary>
+		public static void Reverse(this IList list, int index, int count)
+		{
+			if (index < 0) throw new ArgumentOutOfRangeException("index", "index must be >= 0");
+			if (count < 0) throw new ArgumentOutOfRangeException("count", "count must be >= 0");
+			if (list.Count - index < count) throw new ArgumentException("count exceeds the size of the list");
+
+			var index1 = index;
+			var index2 = index + count - 1;
+			for (; index1 < index2; ++index1, --index2)
+			{
+				var tmp = list[index1];
+				list[index1] = list[index2];
+				list[index2] = tmp;
+			}
+		}
+		public static void Reverse<T>(this BindingList<T> list, int index, int count) { ((IList)list).Reverse(index, count); }
 
 		/// <summary>Replaces 'replacee' with 'replacer' in this list. Throws if 'replacee' can't be found.</summary>
 		public static void Replace<T>(this IList list, T replacee, T replacer)

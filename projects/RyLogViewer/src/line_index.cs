@@ -108,7 +108,7 @@ namespace RyLogViewer
 						if (row_index != -1) yield return rng;
 						rng = Range.Invalid;
 					}
-					rng.Encompase(m_line_index[r.Index]);
+					rng.Encompass(m_line_index[r.Index]);
 					row_index = r.Index;
 				}
 				if (!rng.Equals(Range.Invalid)) yield return rng;
@@ -358,7 +358,7 @@ namespace RyLogViewer
 								// Test 'text' against each filter to see if it's included
 								// Note: not caching this string because we want to read immediate data
 								// from the file to pick up file changes.
-								string text = d.encoding.GetString(buf, (int)line.Begin, (int)line.Count);
+								string text = d.encoding.GetString(buf, (int)line.Begin, (int)line.Size);
 								if (!PassesFilters(text, d.filters))
 									return true;
 
@@ -491,10 +491,10 @@ namespace RyLogViewer
 			// Find the available scan range on both sides of the currently cached range
 			var Lrange = new Range(scan_range.Begin, d.cached_whole_line_range.Begin);
 			var Rrange = new Range(d.cached_whole_line_range.End, scan_range.End);
-			if (Lrange.Count <= 0 && Rrange.Count <= 0)
+			if (Lrange.Size <= 0 && Rrange.Size <= 0)
 			{
 				// This means the scanned range is within the currently cached range
-				scan_range.Count = 0;
+				scan_range.Size = 0;
 				bwd_lines = 0;
 				fwd_lines = 0;
 				return;
@@ -502,9 +502,9 @@ namespace RyLogViewer
 
 			// Decide which side is preferred based on where the filepos is relative to the cache centre
 			// and which range contains an valid area to be scanned.
-			var scan_front = Lrange.Count > 0 && Rrange.Count > 0
+			var scan_front = Lrange.Size > 0 && Rrange.Size > 0
 				? d.filepos_line_index < d.line_cache_count / 2
-				: Lrange.Count > 0;
+				: Lrange.Size > 0;
 
 			// If the new filepos is within the range already cached, then we'll have one
 			// half of the lines already cached, and the other half partially cached. Limit
@@ -539,7 +539,7 @@ namespace RyLogViewer
 			// This happens when the scan range is larger than the cached_whole_line_range and the portion to scan
 			// is on the far side of the cache centre (relative to filepos_line_index)
 			if (bwd_lines == 0 && fwd_lines == 0)
-				scan_range.Count = 0;
+				scan_range.Size = 0;
 		}
 
 		/// <summary>Buffer a maximum of 'count' bytes from 'stream' into 'buf' (note,

@@ -45,34 +45,37 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FormColourWheel.cs">
+    <Compile Include="colour_wheel_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="FormGraphControl.cs">
+    <Compile Include="graph_control_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="HintBalloon.cs">
+    <Compile Include="hint_balloon_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="FormTestApp.cs">
+    <Compile Include="test_app_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="FormView3d.cs">
+    <Compile Include="view3d_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Program.cs" />
+    <Compile Include="program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="FormColourWheel.resx">
-      <DependentUpon>FormColourWheel.cs</DependentUpon>
+    <Compile Include="toolform_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <EmbeddedResource Include="colour_wheel_ui.resx">
+      <DependentUpon>colour_wheel_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="FormTestApp.resx">
-      <DependentUpon>FormTestApp.cs</DependentUpon>
+    <EmbeddedResource Include="test_app_ui.resx">
+      <DependentUpon>test_app_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="FormGraphControl.resx">
-      <DependentUpon>FormGraphControl.cs</DependentUpon>
+    <EmbeddedResource Include="graph_control_ui.resx">
+      <DependentUpon>graph_control_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="HintBalloon.resx">
-      <DependentUpon>HintBalloon.cs</DependentUpon>
+    <EmbeddedResource Include="hint_balloon_ui.resx">
+      <DependentUpon>hint_balloon_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

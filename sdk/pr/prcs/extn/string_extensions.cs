@@ -78,7 +78,7 @@ namespace pr.extn
 		/// <summary>Return a string with the characters in reverse order</summary>
 		public static string Reverse(this string str)
 		{
-			return new string(str.ToCharArray().Reverse().ToArray());
+			return new string(str.ToCharArray().Reversed().ToArray());
 		}
 
 		/// <summary>Word wraps the given text to fit within the specified width.</summary>
@@ -92,8 +92,8 @@ namespace pr.extn
 			text = text.Replace("\r\n","\n");
 			text = text.Replace("\n"," ");
 
-			int remaining = width;
-			StringBuilder sb = new StringBuilder();
+			var remaining = width;
+			var sb = new StringBuilder();
 			for (int pos = 0; pos != text.Length;)
 			{
 				int i,j;

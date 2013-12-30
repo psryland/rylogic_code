@@ -16,6 +16,8 @@ namespace pr.util
 	/// <summary>Win32 wrapper</summary>
 	public static class Win32
 	{
+		#region Windows header constants
+
 		#region Windows Messages
 		public const uint WM_NULL                         = 0x0000;
 		public const uint WM_CREATE                       = 0x0001;
@@ -229,8 +231,9 @@ namespace pr.util
 		public const uint WM_PENWINLAST                   = 0x038F;
 		public const uint WM_APP                          = 0x8000;
 		public const uint WM_USER                         = 0x0400;
+		#endregion
 
-		// WM_SYSCOMMAND values
+		#region WM_SYSCOMMAND values
 		public const uint SC_WPARAM_MASK                  = 0xFFF0; // In C# you need to mask the wparam with this as the lower bits contain magic stuff
 		public const uint SC_SIZE                         = 0xF000; // Sizes the window.
 		public const uint SC_MOVE                         = 0xF010; // Moves the window.
@@ -252,12 +255,15 @@ namespace pr.util
 		public const uint SC_MONITORPOWER                 = 0xF170; // Sets the state of the display. This command supports devices that have power-saving features, such as a battery-powered personal computer.
 		public const uint SC_CONTEXTHELP                  = 0xF180; // Changes the cursor to a question mark with a pointer. If the user then clicks a control in the dialog box, the control receives a WM_HELP message.
 		public const uint SC_SEPARATOR                    = 0xF00F; //
+		#endregion
 
-		// WM_ACTIVATE state values
+		#region WM_ACTIVATE state values WA_
 		public const uint WA_INACTIVE                     = 0;
 		public const uint WA_ACTIVE                       = 1;
 		public const uint WA_CLICKACTIVE                  = 2;
+		#endregion
 
+		#region Mouse key MK_
 		// Key State Masks for Mouse Messages
 		public const int MK_LBUTTON                       = 0x0001;
 		public const int MK_RBUTTON                       = 0x0002;
@@ -266,8 +272,9 @@ namespace pr.util
 		public const int MK_MBUTTON                       = 0x0010;
 		public const int MK_XBUTTON1                      = 0x0020;
 		public const int MK_XBUTTON2                      = 0x0040;
+		#endregion
 
-		// ShowWindow
+		#region Show Window SW_
 		public const int SW_HIDE                          = 0;
 		public const int SW_SHOWNORMAL                    = 1;
 		public const int SW_NORMAL                        = 1;
@@ -283,8 +290,9 @@ namespace pr.util
 		public const int SW_SHOWDEFAULT                   = 10;
 		public const int SW_FORCEMINIMIZE                 = 11;
 		public const int SW_MAX                           = 11;
+		#endregion
 
-		// SetWindowPos
+		#region Set Window Position SWP_
 		public const int SWP_NOSIZE                       = 0x0001;
 		public const int SWP_NOMOVE                       = 0x0002;
 		public const int SWP_NOZORDER                     = 0x0004;
@@ -298,44 +306,56 @@ namespace pr.util
 		public const int SWP_NOSENDCHANGING               = 0x0400;
 		public const int SWP_DRAWFRAME                    = SWP_FRAMECHANGED;
 		public const int SWP_NOREPOSITION                 = SWP_NOOWNERZORDER;
-
 		public const int SWP_DEFERERASE                   = 0x2000;
 		public const int SWP_ASYNCWINDOWPOS               = 0x4000;
+		#endregion
 
+		#region HWND constants HWND_
 		public static readonly HWND HWND_TOP              = new HWND( 0);
 		public static readonly HWND HWND_BOTTOM           = new HWND( 1);
 		public static readonly HWND HWND_TOPMOST          = new HWND(-1);
 		public static readonly HWND HWND_NOTOPMOST        = new HWND(-2);
+		#endregion
 
+		#region NF_,NFR_
 		public const int NFR_ANSI                         = 1;
 		public const int NFR_UNICODE                      = 2;
 		public const int NF_QUERY                         = 3;
 		public const int NF_REQUERY                       = 4;
+		#endregion
 
+		#region windows message high WH_
 		public const int WH_MOUSE_LL                      = 14;
 		public const int WH_KEYBOARD_LL                   = 13;
 		public const int WH_MOUSE                         = 7;
 		public const int WH_KEYBOARD                      = 2;
+		#endregion
 
+		#region Virtual key VK_
 		public const byte VK_SHIFT                        = 0x10;
 		public const byte VK_CAPITAL                      = 0x14;
 		public const byte VK_NUMLOCK                      = 0x90;
+		#endregion
 
+		#region GWL_
 		public const int  GWL_WNDPROC                     = -4;
 		public const int  GWL_HINSTANCE                   = -6;
 		public const int  GWL_ID                          = -12;
 		public const int  GWL_STYLE                       = -16;
 		public const int  GWL_EXSTYLE                     = -20;
 		public const int  GWL_USERDATA                    = -21;
+		#endregion
 
+		#region TM_
 		public const int TM_PLAINTEXT                     = 1;
 		public const int TM_RICHTEXT                      = 2; // default behaviour
 		public const int TM_SINGLELEVELUNDO               = 4;
 		public const int TM_MULTILEVELUNDO                = 8; // default behaviour
 		public const int TM_SINGLECODEPAGE                = 16;
 		public const int TM_MULTICODEPAGE                 = 32; // default behaviour
+		#endregion
 
-		// RichEdit messages
+		#region RichEdit messages EM_
 		public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
 		public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
 		public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
@@ -382,7 +402,9 @@ namespace pr.util
 		public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
 		public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
 		public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
+		#endregion
 
+		#region Window Styles WS_
 		public const int WS_BORDER                        = unchecked(0x00800000); // The window has a thin-line border.
 		public const int WS_CAPTION                       = unchecked(0x00C00000); // The window has a title bar (includes the WS_BORDER style).
 		public const int WS_CHILD                         = unchecked(0x40000000); // The window is a child window. A window with this style cannot have a menu bar. This style cannot be used with the WS_POPUP style.
@@ -410,7 +432,9 @@ namespace pr.util
 		public const int WS_TILEDWINDOW                   = (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // The window is an overlapped window. Same as the WS_OVERLAPPEDWINDOW style.
 		public const int WS_VISIBLE                       = unchecked(0x10000000); // The window is initially visible. This style can be turned on and off by using the ShowWindow or SetWindowPos function.
 		public const int WS_VSCROLL                       = unchecked(0x00200000); // The window has a vertical scroll bar.
+		#endregion
 
+		#region Extended window styles WS_EX_
 		public const int WS_EX_DLGMODALFRAME              = 0x00000001;
 		public const int WS_EX_NOPARENTNOTIFY             = 0x00000004;
 		public const int WS_EX_TOPMOST                    = 0x00000008;
@@ -438,8 +462,9 @@ namespace pr.util
 		public const int WS_EX_COMPOSITED                 = 0x02000000;
 		public const int WS_EX_LAYOUTRTL                  = 0x00400000;
 		public const int WS_EX_NOACTIVATE                 = 0x08000000;
+		#endregion
 
-		// Class styles
+		#region Class styles CS_
 		public const int CS_BYTEALIGNCLIENT               = 0x00001000;
 		public const int CS_BYTEALIGNWINDOW               = 0x00002000;
 		public const int CS_CLASSDC                       = 0x00000040;
@@ -452,12 +477,14 @@ namespace pr.util
 		public const int CS_PARENTDC                      = 0x00000080;
 		public const int CS_SAVEBITS                      = 0x00000800;
 		public const int CS_VREDRAW                       = 0x00000001;
+		#endregion
 
-		// Graphics modes
+		#region Graphics modes GM_
 		public const int GM_COMPATIBLE                    = 1;
 		public const int GM_ADVANCED                      = 2;
+		#endregion
 
-		// Mapping Modes
+		#region Mapping Modes MM_
 		public const int MM_TEXT                          = 1;
 		public const int MM_LOMETRIC                      = 2;
 		public const int MM_HIMETRIC                      = 3;
@@ -468,6 +495,57 @@ namespace pr.util
 		public const int MM_ANISOTROPIC                   = 8;
 		#endregion
 
+		#region Menu Flags MF_, MFT_, MFS_
+		public const int MF_INSERT           = 0x00000000;
+		public const int MF_CHANGE           = 0x00000080;
+		public const int MF_APPEND           = 0x00000100;
+		public const int MF_DELETE           = 0x00000200;
+		public const int MF_REMOVE           = 0x00001000;
+		public const int MF_BYCOMMAND        = 0x00000000;
+		public const int MF_BYPOSITION       = 0x00000400;
+		public const int MF_SEPARATOR        = 0x00000800;
+		public const int MF_ENABLED          = 0x00000000;
+		public const int MF_GRAYED           = 0x00000001;
+		public const int MF_DISABLED         = 0x00000002;
+		public const int MF_UNCHECKED        = 0x00000000;
+		public const int MF_CHECKED          = 0x00000008;
+		public const int MF_USECHECKBITMAPS  = 0x00000200;
+		public const int MF_STRING           = 0x00000000;
+		public const int MF_BITMAP           = 0x00000004;
+		public const int MF_OWNERDRAW        = 0x00000100;
+		public const int MF_POPUP            = 0x00000010;
+		public const int MF_MENUBARBREAK     = 0x00000020;
+		public const int MF_MENUBREAK        = 0x00000040;
+		public const int MF_UNHILITE         = 0x00000000;
+		public const int MF_HILITE           = 0x00000080;
+		public const int MF_DEFAULT          = 0x00001000;
+		public const int MF_SYSMENU          = 0x00002000;
+		public const int MF_HELP             = 0x00004000;
+		public const int MF_RIGHTJUSTIFY     = 0x00004000;
+		public const int MF_MOUSESELECT      = 0x00008000;
+		public const int MF_END              = 0x00000080;  /* Obsolete -- only used by old RES files */
+
+		public const int MFT_STRING          = MF_STRING;
+		public const int MFT_BITMAP          = MF_BITMAP;
+		public const int MFT_MENUBARBREAK    = MF_MENUBARBREAK;
+		public const int MFT_MENUBREAK       = MF_MENUBREAK;
+		public const int MFT_OWNERDRAW       = MF_OWNERDRAW;
+		public const int MFT_RADIOCHECK      = 0x00000200;
+		public const int MFT_SEPARATOR       = MF_SEPARATOR;
+		public const int MFT_RIGHTORDER      = 0x00002000;
+		public const int MFT_RIGHTJUSTIFY    = MF_RIGHTJUSTIFY;
+
+		public const int MFS_GRAYED          = 0x00000003;
+		public const int MFS_DISABLED        = MFS_GRAYED;
+		public const int MFS_CHECKED         = MF_CHECKED;
+		public const int MFS_HILITE          = MF_HILITE;
+		public const int MFS_ENABLED         = MF_ENABLED;
+		public const int MFS_UNCHECKED       = MF_UNCHECKED;
+		public const int MFS_UNHILITE        = MF_UNHILITE;
+		public const int MFS_DEFAULT         = MF_DEFAULT;
+		#endregion
+
+		#region Scroll bar direction SB_
 		public enum ScrollBarDirection
 		{
 			SB_HORZ = 0,
@@ -475,7 +553,9 @@ namespace pr.util
 			SB_CTL = 2,
 			SB_BOTH = 3
 		}
+		#endregion
 
+		#region Scroll info flags SIF_
 		public enum ScrollInfoMask :uint
 		{
 			SIF_RANGE = 0x1,
@@ -485,6 +565,9 @@ namespace pr.util
 			SIF_TRACKPOS = 0x10,
 			SIF_ALL = SIF_RANGE + SIF_PAGE + SIF_POS + SIF_TRACKPOS
 		}
+		#endregion
+
+		#endregion
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct RECT
@@ -643,48 +726,55 @@ namespace pr.util
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);
 
 		[System.Security.SuppressUnmanagedCodeSecurity] // We won't use this maliciously
-		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)] public static extern bool PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
-		[DllImport("user32.dll", EntryPoint="SendMessage")]       public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
-		[DllImport("user32.dll", EntryPoint="PostThreadMessage")] public static extern int    PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
-		[DllImport("user32.dll")]                                 public static extern int    CallNextHookEx(int idHook, int nCode, int wParam, IntPtr lParam);
-		[DllImport("user32.dll")]                                 public static extern int    SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, int dwThreadId);
-		[DllImport("user32.dll")]                                 public static extern int    UnhookWindowsHookEx(int idHook);
-		[DllImport("user32.dll")]                                 public static extern int    GetDoubleClickTime();
-		[DllImport("user32.dll")]                                 public static extern int    ToAscii(int uVirtKey, int uScanCode, byte[] lpbKeyState, byte[] lpwTransKey, int fuState);
-		[DllImport("user32.dll")]                                 public static extern int    GetKeyboardState(byte[] pbKeyState);
-		[DllImport("user32.dll")]                                 public static extern short  GetKeyState(int vKey);
-		[DllImport("user32.dll")]                                 public static extern short  GetAsyncKeyState(Keys vKey);
-		[DllImport("user32.dll")]                                 public static extern bool   SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-		[DllImport("user32.dll")]                                 public static extern bool   ShowWindow(IntPtr hWnd, int nCmdShow);
-		[DllImport("user32.dll")]                                 public static extern bool   ShowWindowAsync(HWND hwnd, int nCmdShow);
-		[DllImport("user32.dll")]                                 public static extern bool   SetForegroundWindow(HWND hwnd);
-		[DllImport("user32.dll")]                                 public static extern bool   IsIconic(HWND hwnd);
-		[DllImport("user32.dll")]                                 public static extern bool   IsZoomed(HWND hwnd);
-		[DllImport("user32.dll")]                                 public static extern bool   IsWindow(HWND hwnd);
-		[DllImport("user32.dll")]                                 public static extern bool   IsWindowVisible(HWND hwnd);
-		[DllImport("user32.dll")]                                 public static extern HWND   GetForegroundWindow();
-		[DllImport("user32.dll")]                                 public static extern bool   GetClientRect(HWND hwnd, out RECT rect);
-		[DllImport("user32.dll")]                                 public static extern bool   GetWindowRect(HWND hwnd, out RECT rect);
-		[DllImport("user32.dll"  , SetLastError = true)]          public static extern IntPtr GetWindowThreadProcessId(HWND hWnd, ref IntPtr lpdwProcessId);
-		[DllImport("user32.dll")]                                 public static extern IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
-		[DllImport("user32.dll")]                                 public static extern HWND   WindowFromPoint(POINT Point);
-		[DllImport("user32.dll")]                                 public static extern bool   LockWindowUpdate(HWND hWndLock);
-		[DllImport("user32.dll")]                                 public static extern bool   GetScrollInfo(HWND hwnd, int BarType, ref SCROLLINFO lpsi);
-		[DllImport("user32.dll")]                                 public static extern int    SetScrollInfo(HWND hwnd, int fnBar, ref SCROLLINFO lpsi, bool fRedraw);
-		[DllImport("user32.dll")]                                 public static extern int    GetScrollPos(HWND hWnd, int nBar);
-		[DllImport("user32.dll")]                                 public static extern int    SetScrollPos(HWND hWnd, int nBar, int nPos, bool bRedraw);
-		[DllImport("user32.dll")]                                 public static extern int    HideCaret(IntPtr hwnd);
-		[DllImport("user32.dll")]                                 public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent);
-		[DllImport("user32.dll")]                                 public static extern int    SetWindowLong(HWND hWnd, int nIndex, uint dwNewLong);
-		[DllImport("user32.dll", SetLastError=true)]              public static extern uint   GetWindowLong(HWND hWnd, int nIndex);
-		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   AllocConsole();
-		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   FreeConsole();
-		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   AttachConsole(int dwProcessId);
-		[DllImport("kernel32.dll", SetLastError = true)]          public static extern bool   WriteConsole(IntPtr hConsoleOutput, string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
-		[DllImport("ole32.dll")]                                  public static extern void   CoTaskMemFree(IntPtr ptr);
-		[DllImport("gdi32.dll")]                                  public static extern int    SetGraphicsMode(IntPtr hdc, int iGraphicsMode);
-		[DllImport("gdi32.dll")]                                  public static extern int    SetMapMode(IntPtr hdc, int fnMapMode);
-		[DllImport("gdi32.dll")]                                  public static extern bool   SetWorldTransform(IntPtr hdc, ref XFORM lpXform);
-		[DllImport("gdi32.dll", EntryPoint="DeleteObject")]       public static extern bool   DeleteObject(IntPtr hObject);
+		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)]    public static extern bool PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
+		[DllImport("user32.dll", EntryPoint="SendMessage")]                          public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
+		[DllImport("user32.dll", EntryPoint="PostThreadMessage")]                    public static extern int    PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
+		[DllImport("user32.dll")]                                                    public static extern int    CallNextHookEx(int idHook, int nCode, int wParam, IntPtr lParam);
+		[DllImport("user32.dll")]                                                    public static extern int    SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, int dwThreadId);
+		[DllImport("user32.dll")]                                                    public static extern int    UnhookWindowsHookEx(int idHook);
+		[DllImport("user32.dll")]                                                    public static extern int    GetDoubleClickTime();
+		[DllImport("user32.dll")]                                                    public static extern int    ToAscii(int uVirtKey, int uScanCode, byte[] lpbKeyState, byte[] lpwTransKey, int fuState);
+		[DllImport("user32.dll")]                                                    public static extern int    GetKeyboardState(byte[] pbKeyState);
+		[DllImport("user32.dll")]                                                    public static extern short  GetKeyState(int vKey);
+		[DllImport("user32.dll")]                                                    public static extern short  GetAsyncKeyState(Keys vKey);
+		[DllImport("user32.dll")]                                                    public static extern bool   SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+		[DllImport("user32.dll")]                                                    public static extern bool   ShowWindow(IntPtr hWnd, int nCmdShow);
+		[DllImport("user32.dll")]                                                    public static extern bool   ShowWindowAsync(HWND hwnd, int nCmdShow);
+		[DllImport("user32.dll")]                                                    public static extern bool   SetForegroundWindow(HWND hwnd);
+		[DllImport("user32.dll")]                                                    public static extern bool   IsIconic(HWND hwnd);
+		[DllImport("user32.dll")]                                                    public static extern bool   IsZoomed(HWND hwnd);
+		[DllImport("user32.dll")]                                                    public static extern bool   IsWindow(HWND hwnd);
+		[DllImport("user32.dll")]                                                    public static extern bool   IsWindowVisible(HWND hwnd);
+		[DllImport("user32.dll")]                                                    public static extern HWND   GetForegroundWindow();
+		[DllImport("user32.dll")]                                                    public static extern bool   GetClientRect(HWND hwnd, out RECT rect);
+		[DllImport("user32.dll")]                                                    public static extern bool   GetWindowRect(HWND hwnd, out RECT rect);
+		[DllImport("user32.dll"  , SetLastError = true)]                             public static extern IntPtr GetWindowThreadProcessId(HWND hWnd, ref IntPtr lpdwProcessId);
+		[DllImport("user32.dll")]                                                    public static extern IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
+		[DllImport("user32.dll")]                                                    public static extern HWND   WindowFromPoint(POINT Point);
+		[DllImport("user32.dll")]                                                    public static extern bool   LockWindowUpdate(HWND hWndLock);
+		[DllImport("user32.dll")]                                                    public static extern bool   GetScrollInfo(HWND hwnd, int BarType, ref SCROLLINFO lpsi);
+		[DllImport("user32.dll")]                                                    public static extern int    SetScrollInfo(HWND hwnd, int fnBar, ref SCROLLINFO lpsi, bool fRedraw);
+		[DllImport("user32.dll")]                                                    public static extern int    GetScrollPos(HWND hWnd, int nBar);
+		[DllImport("user32.dll")]                                                    public static extern int    SetScrollPos(HWND hWnd, int nBar, int nPos, bool bRedraw);
+		[DllImport("user32.dll")]                                                    public static extern int    HideCaret(IntPtr hwnd);
+		[DllImport("user32.dll")]                                                    public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent);
+		[DllImport("user32.dll")]                                                    public static extern int    SetWindowLong(HWND hWnd, int nIndex, uint dwNewLong);
+		[DllImport("user32.dll", SetLastError=true)]                                 public static extern uint   GetWindowLong(HWND hWnd, int nIndex);
+		[DllImport("kernel32.dll", SetLastError = true)]                             public static extern bool   AllocConsole();
+		[DllImport("kernel32.dll", SetLastError = true)]                             public static extern bool   FreeConsole();
+		[DllImport("kernel32.dll", SetLastError = true)]                             public static extern bool   AttachConsole(int dwProcessId);
+		[DllImport("kernel32.dll", SetLastError = true)]                             public static extern bool   WriteConsole(IntPtr hConsoleOutput, string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
+		[DllImport("ole32.dll")]                                                     public static extern void   CoTaskMemFree(IntPtr ptr);
+		[DllImport("gdi32.dll")]                                                     public static extern int    SetGraphicsMode(IntPtr hdc, int iGraphicsMode);
+		[DllImport("gdi32.dll")]                                                     public static extern int    SetMapMode(IntPtr hdc, int fnMapMode);
+		[DllImport("gdi32.dll")]                                                     public static extern bool   SetWorldTransform(IntPtr hdc, ref XFORM lpXform);
+		[DllImport("gdi32.dll", EntryPoint="DeleteObject")]                          public static extern bool   DeleteObject(IntPtr hObject);
+		[DllImport("user32.dll")]                                                    public static extern IntPtr GetSystemMenu(HWND hwnd, bool bRevert);
+		[DllImport("user32.dll")]                                                    public static extern IntPtr CreatePopupMenu();
+		[DllImport("user32.dll", EntryPoint="AppendMenuW", CharSet=CharSet.Unicode)] public static extern bool   AppendMenu(IntPtr hMenu, uint uFlags, int uIDNewItem, string lpNewItem);
+		[DllImport("user32.dll", EntryPoint="AppendMenuW", CharSet=CharSet.Unicode)] public static extern bool   AppendMenu(IntPtr hMenu, uint uFlags, IntPtr uIDNewItem, string lpNewItem);
+		[DllImport("user32.dll", EntryPoint="InsertMenu", CharSet=CharSet.Unicode)]  public static extern bool   InsertMenu(IntPtr hMenu, int wPosition, int wFlags, int wIDNewItem, string lpNewItem);
+		[DllImport("user32.dll", EntryPoint="InsertMenu", CharSet=CharSet.Unicode)]  public static extern bool   InsertMenu(IntPtr hMenu, int wPosition, int wFlags, IntPtr wIDNewItem, string lpNewItem);
+		[DllImport("user32.dll", EntryPoint="CheckMenuItem")]                        public static extern int    CheckMenuItem(IntPtr hMenu,int uIDCheckItem, int uCheck);
 	}
 }

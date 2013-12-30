@@ -11,6 +11,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_view3d;
 		private ToolStripMenuItem m_menu_test_colour_wheel;
 		private ToolStripMenuItem m_menu_hint_balloon;
+		private ToolStripMenuItem m_menu_tool_form;
 		private ToolStripMenuItem m_menu_graph_control;
 
 		public FormTestApp()
@@ -39,7 +40,12 @@ namespace TestCS
 
 			m_menu_graph_control.Click += (s,a) =>
 				{
-					new FormGraphControl().Show(this);
+					new GraphControlUI().Show(this);
+				};
+
+			m_menu_tool_form.Click += (s,a) =>
+				{
+					new ToolFormUI(this).Show(this);
 				};
 		}
 
@@ -77,6 +83,7 @@ namespace TestCS
 			this.m_menu_test_colour_wheel = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_hint_balloon = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_graph_control = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tool_form = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			//
@@ -111,7 +118,8 @@ namespace TestCS
             this.m_menu_tests_view3d,
             this.m_menu_test_colour_wheel,
             this.m_menu_hint_balloon,
-            this.m_menu_graph_control});
+            this.m_menu_graph_control,
+            this.m_menu_tool_form});
 			this.m_menu_tests.Name = "m_menu_tests";
 			this.m_menu_tests.Size = new System.Drawing.Size(46, 20);
 			this.m_menu_tests.Text = "&Tests";
@@ -119,26 +127,32 @@ namespace TestCS
 			// m_menu_tests_view3d
 			//
 			this.m_menu_tests_view3d.Name = "m_menu_tests_view3d";
-			this.m_menu_tests_view3d.Size = new System.Drawing.Size(146, 22);
+			this.m_menu_tests_view3d.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_tests_view3d.Text = "&View3d";
 			//
 			// m_menu_test_colour_wheel
 			//
 			this.m_menu_test_colour_wheel.Name = "m_menu_test_colour_wheel";
-			this.m_menu_test_colour_wheel.Size = new System.Drawing.Size(146, 22);
+			this.m_menu_test_colour_wheel.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_test_colour_wheel.Text = "&ColourWheel";
 			//
 			// m_menu_hint_balloon
 			//
 			this.m_menu_hint_balloon.Name = "m_menu_hint_balloon";
-			this.m_menu_hint_balloon.Size = new System.Drawing.Size(146, 22);
+			this.m_menu_hint_balloon.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_hint_balloon.Text = "HintBalloon";
 			//
 			// m_menu_graph_control
 			//
 			this.m_menu_graph_control.Name = "m_menu_graph_control";
-			this.m_menu_graph_control.Size = new System.Drawing.Size(146, 22);
+			this.m_menu_graph_control.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_graph_control.Text = "&GraphControl";
+			//
+			// m_menu_tool_form
+			//
+			this.m_menu_tool_form.Name = "m_menu_tool_form";
+			this.m_menu_tool_form.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tool_form.Text = "&Tool Form";
 			//
 			// FormTestApp
 			//

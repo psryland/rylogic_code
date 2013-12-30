@@ -29,7 +29,7 @@ namespace pr.common
 			Super     = 1 << 4,
 			Sub       = 1 << 5,
 		}
-		
+
 		/// <summary>Text alignment</summary>
 		public enum EAlign
 		{
@@ -233,7 +233,7 @@ namespace pr.common
 			public int Top;
 			public int Right;
 			public int Bottom;
-			
+
 			public Rect() {}
 			public Rect(int l, int t, int r, int b) { Left = l; Top = t; Right = r; Bottom = b; }
 			public Rect(Rect rhs)                   { Left = rhs.Left; Top = rhs.Top; Right = rhs.Right; Bottom = rhs.Bottom; }
@@ -256,7 +256,7 @@ namespace pr.common
 
 			/// <summary>The font style for bold, italics, underlining, or strike through</summary>
 			public EFontStyle FontStyle { get; set; }
-			
+
 			/// <summary>The background colour. Use rtf.ColourIndex(Color.Black) to get the colour index</summary>
 			public int BackColourIndex { get; set; }
 
@@ -299,10 +299,10 @@ namespace pr.common
 						if ((diff & EFontStyle.Sub      ) != 0) sb.Append(StrBuild.EType.Control, (next.FontStyle & EFontStyle.Sub      ) != 0 ? @"\sub"    : @"\nosupersub" );
 					}
 				}
-				
+
 				if (next.ForeColourIndex != prev.ForeColourIndex) sb.AppendFormat(StrBuild.EType.Control, @"\cf{0}" ,next.ForeColourIndex);
 				if (next.BackColourIndex != prev.BackColourIndex) sb.AppendFormat(StrBuild.EType.Control, @"\highlight{0}" ,next.BackColourIndex); // \cbN doesn't work, MS didn't implement it...fail
-				
+
 				if (next.FontIndex != prev.FontIndex) sb.AppendFormat(StrBuild.EType.Control, @"\f{0}"  ,next.FontIndex);
 				if (next.FontSize  != prev.FontSize ) sb.AppendFormat(StrBuild.EType.Control, @"\fs{0}" ,next.FontSize * 2); // \fs is in 'half-points'
 			}
@@ -357,7 +357,7 @@ namespace pr.common
 				public const string Emboss               = @"\brdremboss"; // Emboss border.
 				public const string Engrave              = @"\brdrengrave"; // Engrave border.
 				public const string Frame                = @"\brdrframe"; // Border resembles a "Frame."
-				
+
 				private string m_value;
 				public override string ToString()                   { return m_value; }
 				public static implicit operator BType(string value) { return new BType{m_value = value}; }
@@ -463,14 +463,14 @@ namespace pr.common
 				sb.Append(StrBuild.EType.Control, @"\pard");
 				if (in_table) sb.Append(StrBuild.EType.Control,@"\intbl");
 				StrBuild.RtfAlignment(sb, Alignment, StrBuild.EFor.Paragraph);
-				
+
 				if (FirstIndent     != 0) sb.AppendFormat(StrBuild.EType.Control, @"\fi{0}" ,FirstIndent);
 				if (LineIndent      != 0) sb.AppendFormat(StrBuild.EType.Control, @"\li{0}" ,LineIndent );
 				if (LineIndentRight != 0) sb.AppendFormat(StrBuild.EType.Control, @"\ri{0}" ,LineIndentRight);
 				if (LineSpacing     != 0) sb.AppendFormat(StrBuild.EType.Control, @"\sl{0}\slmult1" ,LineSpacing * 2); // \sl is in half units
 				if (ParaSpacing     != 0) sb.AppendFormat(StrBuild.EType.Control, @"\sa{0}" ,ParaSpacing * 2); // \sa is in half units
 				if (Hyphenation) sb.Append(StrBuild.EType.Control, @"\hyphpar");
-				
+
 				foreach (var b in Border)
 					b.ToRtf(sb, StrBuild.EFor.Paragraph);
 			}
@@ -490,7 +490,7 @@ namespace pr.common
 				m_colour_table   = new ColourTable();
 				DefaultParaStyle = ParagraphStyle.Default;
 				TextStyle        = TextStyle.Default;
-				
+
 				m_root.Content.Add(m_font_table);
 				m_root.Content.Add(m_colour_table);
 				m_font_table.Add(new Font());
@@ -528,7 +528,7 @@ namespace pr.common
 			public Builder Append(BulletList blist)   { m_root.Content.Add(blist); return this; }
 			public Builder Append(Table table)        { m_root.Content.Add(table); return this; }
 			public Builder Append(EmbeddedImage img)  { m_root.Content.Add(img); return this; }
-			
+
 			// Special handling for text.. auto concatenate
 			public Builder Append(TextStyle style)    { TextStyle = style; return this; }
 			public Builder Append(string str)         { Append(new TextSpan(str, TextStyle)); return this; }
@@ -538,7 +538,7 @@ namespace pr.common
 				Paragraph para = null;
 				bool merge = m_root.Content.Count != 0 && (para = m_root.Content.Last() as Paragraph) != null && ReferenceEquals(para.ParaStyle, DefaultParaStyle);
 				if (!merge) para = new Paragraph(DefaultParaStyle, TextStyle);
-				
+
 				// Concatenate the text
 				para.Append(text);
 				if (!merge) Append(para);
@@ -677,7 +677,7 @@ namespace pr.common
 
 			/// <summary>The font description string</summary>
 			public string Desc { get; private set; }
-			
+
 			public Font() :this(FontDesc.Arial) {}
 			public Font(string desc) { Index = -1; Desc  = desc; }
 
@@ -732,7 +732,7 @@ namespace pr.common
 				// Try to merge the content to the last one added
 				if (m_spans.Count != 0 && m_spans.Last().Merge(text))
 					return this;
-				
+
 				m_spans.Add(text);
 				return this;
 			}
@@ -790,7 +790,7 @@ namespace pr.common
 				var para = parent as Paragraph;
 				var parent_style = para != null ? para.Style : TextStyle.Default;
 				var text = Text;
-				
+
 				TextStyle.Write(sb, Style, parent_style);
 				int s,e; for (s = 0; (e = text.IndexOf('\n', s)) != -1; s = e+1)
 				{
@@ -819,19 +819,19 @@ namespace pr.common
 				for (int i = 0, iend = value.Length; i != iend; ++i)
 				{
 					char ch = value[i];
-					
+
 					// Standardise newlines to a single '\n' character
 					if      (ch == '\r') { TmpSB.Append('\n'); if (i+1 != iend && value[i+1] == '\n') ++i; }
 					else if (ch == '\n') { TmpSB.Append('\n'); }
-					
+
 					// If this is a unicode character > 255, replace with it's \u1234 code
 					else if (ch > 255)   { TmpSB.Append(@"\u").Append((int)ch).Append("?"); }
-					
+
 					// Escape '{', '}', and '\' characters
 					else if (ch == '\\') { TmpSB.Append(@"\\"); }
 					else if (ch == '{')  { TmpSB.Append(@"\{"); }
 					else if (ch == '}')  { TmpSB.Append(@"\}"); }
-					
+
 					else TmpSB.Append(ch);
 				}
 				return TmpSB.ToString();
@@ -887,14 +887,14 @@ namespace pr.common
 				ParaStyle.ToRtf(sb, false);
 				TextStyle.Write(sb, TextStyle, TextStyle.Default);
 				if (!sb.LineStart) sb.AppendLine(StrBuild.EType.Control);
-				
+
 				// Output basic text for the bullet point
 				bool first_time = true; int i = 1;
 				foreach (var p in m_points)
 				{
 					if (Numbered) sb.AppendFormat(StrBuild.EType.Control, @"{{\pntext\f{0} {1}.\tab}}" ,TextStyle.FontIndex ,i++);
 					else          sb.AppendFormat(StrBuild.EType.Control, @"{{\pntext\'{0:X}\tab}}", BulletCharacter);
-					
+
 					// Output a bulleted paragraph control word for rtf readers that understand it.
 					// Note: have to pass '{' and '}' as format parameters to solve a quirk of the
 					// string escaping algorithm. '{{' and '}}' are replace by '{' and '}' before
@@ -905,7 +905,7 @@ namespace pr.common
 						else          sb.AppendFormat(StrBuild.EType.Control, @"{{\*\pn\pnlvlblt\pnf{0}\pnindent0{{\pntxtb\'{1:X}{2}" ,TextStyle.FontIndex, (int)BulletCharacter, "}}");
 						first_time = false;
 					}
-					
+
 					// Write the bullet point text
 					sb.Append(StrBuild.EType.Content, p.Text).AppendLine(StrBuild.EType.Control,@"\par");
 				}
@@ -921,7 +921,7 @@ namespace pr.common
 		/// \intbl control word specified or inherited from the previous paragraph. A cell may have more
 		/// than one paragraph in it; the cell is terminated by a cell mark (the \cell control word), and
 		/// the row is terminated by a row mark (the \row control word). Table rows can also be positioned.
-		/// In this case, every paragraph in a table row must have the same positioning controls (see the apoctl 
+		/// In this case, every paragraph in a table row must have the same positioning controls (see the apoctl
 		/// controls in the Positioned Objects and Frames sub-section of this RTF Specification). Table properties
 		/// may be inherited from the previous row; therefore, a series of table rows may be introduced by a single tbldef.<para/>
 		/// Note: the RichTextBox control seems to have very limited support for tables</summary>
@@ -975,14 +975,14 @@ namespace pr.common
 						sb.AppendFormat(StrBuild.EType.Control, @"\trgaph{0}" ,LeftOffset);
 						sb.AppendFormat(StrBuild.EType.Control, @"\trleft{0}" ,Padding.Left - LeftOffset);
 					}
-					
+
 					// Row alignment
 					StrBuild.RtfAlignment(sb, Alignment, StrBuild.EFor.Row);
-					
+
 					// Row height
 					if (RowHeight != 0)
 						sb.AppendFormat(StrBuild.EType.Control, @"\trrh{0}" ,RowHeight);
-					
+
 					// Margin
 					if (!Margin.AllZero)
 					{
@@ -994,7 +994,7 @@ namespace pr.common
 							@"\trspdfb3\trspdb{3}"+"\n"
 							,Margin.Left ,Margin.Top ,Margin.Right ,Margin.Bottom);
 					}
-					
+
 					// Padding
 					if (!Padding.AllZero)
 					{
@@ -1050,7 +1050,7 @@ namespace pr.common
 					public const string Left2Right_Bottom2Top         = @"\cltxbtlr";  // Text in a cell flows left to right and bottom to top.
 					public const string Left2Right_Top2BottomVertical = @"\cltxlrtbv"; // Text in a cell flows left to right and top to bottom, vertical.
 					public const string Right2Left_Top2BottomVertical = @"\cltxtbrlv"; // Text in a cell flows top to bottom and right to left, vertical.
-				
+
 					private string m_value;
 					public override string ToString()                       { return m_value; }
 					public static implicit operator ETextFlow(string value) { return new ETextFlow{m_value = value}; }
@@ -1079,7 +1079,7 @@ namespace pr.common
 				{
 					if (!sb.LineStart)
 						sb.AppendLine(StrBuild.EType.Control);
-					
+
 					// Vertical alignment
 					if (VerticalAlignment != EVerticalAlign.Default)
 						sb.Append(StrBuild.EType.Control, VerticalAlignment);
@@ -1104,7 +1104,7 @@ namespace pr.common
 					sb.AppendFormat(StrBuild.EType.Control, @"\cellx{0}" ,row_size);
 				}
 			}
-			
+
 			/// <summary>A row in the table</summary>
 			public class Row
 			{
@@ -1122,10 +1122,10 @@ namespace pr.common
 
 				/// <summary>The cells within the row</summary>
 				public Cell[] Cells { get; private set; }
-				
+
 				/// <summary>Cell indexer</summary>
 				public Cell this[int cell] { get { return Cells[cell]; } }
-				
+
 				/// <summary>Writes rtf for this row into 'sb'</summary>
 				public void ToRtf(StrBuild sb, Content parent)
 				{
@@ -1163,7 +1163,7 @@ namespace pr.common
 				}
 				public Cell Append(TextSpan text)  { return Append(new Paragraph(text)); }
 				public Cell Append(string str)     { return Append(new TextSpan(str)); }
-				
+
 				/// <summary>Writes rtf for this cell into 'sb'</summary>
 				public void ToRtf(StrBuild sb, Content parent)
 				{
@@ -1237,7 +1237,7 @@ namespace pr.common
 		{
 			private static readonly string[] Hex = Enumerable.Range(0, 256).Select(x => x.ToString("X2")).ToArray();
 			private readonly StringBuilder m_sb;
-			
+
 			// ReSharper disable UnusedMember.Local
 			[Flags] private enum EmfToWmfFlags
 			{
@@ -1283,7 +1283,7 @@ namespace pr.common
 				m_sb = new StringBuilder();
 				ParaStyle = ParagraphStyle.Default;
 			}
-			
+
 			/// <summary>Paragraph style properties for the embedded image</summary>
 			public ParagraphStyle ParaStyle { get; set; }
 
@@ -1318,7 +1318,7 @@ namespace pr.common
 				// 1 Inch = 2.54 cm
 				// 1 Inch = 25.4 mm
 				// 1 Inch = 2540 (0.01)mm
-				
+
 				// Creates the RTF control string that describes the image being embedded.
 				// This description specifies that the image is an MM_ANISOTROPIC metafile,
 				// meaning that both X and Y axes can be scaled independently. The control
@@ -1362,7 +1362,7 @@ namespace pr.common
 					// Wraps the image in an emf by drawing the image onto the graphics context,
 					// then converts the emf to a wmf, and finally appends the bits of the wmf
 					// in hex to the string buffer
-					
+
 					// Draw the image into the emf
 					using (var hdc = new HDCHandle(gfx))
 					using (var meta_file = new Metafile(stream, hdc.Handle))
@@ -1374,7 +1374,7 @@ namespace pr.common
 						// Get the handle of the Enhanced Metafile
 						// We don't need to free this handle, because the metafile owns it
 						var emf = meta_file.GetHenhmetafile();
-						
+
 						// Calling with null for the buffer returns the required buffer size
 						var buf_size = GdipEmfToWmfBits(emf, 0, null, (int)MapMode.MM_ANISOTROPIC, EmfToWmfFlags.Default);
 						var buffer = new byte[buf_size];
@@ -1389,7 +1389,6 @@ namespace pr.common
 						{
 							if (i-- == 0) { m_sb.Append('\n'); i = 31; }
 							m_sb.Append(Hex[b]);
-							
 						}
 						m_sb.Append(@"}");
 					}
@@ -1431,11 +1430,11 @@ namespace pr.common
 				// If this is content being added, and previously control words were added, add a delimiter
 				if (type != EType.Control && DelimNeeded && !LineStart)
 					m_sb.Append(' ');
-				
+
 				// Add the string
 				m_sb.Append(str, start, length);
 				if (newline) m_sb.Append('\n');
-				
+
 				// A delimiter will be needed if this was a control word that didn't end with a '}'
 				DelimNeeded = type == EType.Control && LastChar != '}';
 				LineStart = LastChar == '\n';
@@ -1521,7 +1520,7 @@ namespace pr.common
 			}
 		}
 	}
-	
+
 	/// <summary>Append mix in functionality for Rtf Content types can concatenate strings</summary>
 	public static class RtfBuilderAppendMixin
 	{
@@ -1569,7 +1568,7 @@ namespace pr
 			{
 				var rtf = new Rtf.Builder();
 				rtf.Append("A basic string\n");
-			
+
 				rtf.TextStyle = new Rtf.TextStyle
 				{
 					FontIndex = rtf.FontIndex(Rtf.FontDesc.CourierNew),
@@ -1578,10 +1577,10 @@ namespace pr
 					BackColourIndex = rtf.ColourIndex(Color.Green)
 				};
 				rtf.Append("Text in CourierNew font in Red/Green plus italic and underlined\n");
-			
+
 				rtf.TextStyle = Rtf.TextStyle.Default;
 				rtf.AppendLine("A normal string with a new line");
-			
+
 				rtf.TextStyle = new Rtf.TextStyle
 				{
 					FontIndex = rtf.FontIndex(Rtf.FontDesc.MSSansSerif),
@@ -1590,7 +1589,7 @@ namespace pr
 					ForeColourIndex = rtf.ColourIndex(Color.Blue),
 				};
 				rtf.Append("Bold big blue values of other types:\n");
-			
+
 				rtf.DefaultParaStyle = new Rtf.ParagraphStyle{LineIndent = 400};
 				rtf.TextStyle = new Rtf.TextStyle
 				{
@@ -1611,11 +1610,11 @@ namespace pr
 				rtf.Append("float.MinValue    : ").Append(float.MinValue    ).AppendLine();
 				rtf.Append("double.MaxValue   : ").Append(double.MaxValue   ).AppendLine();
 				rtf.Append("decimal.MaxValue  : ").Append(decimal.MaxValue  ).AppendLine();
-			
+
 				rtf.DefaultParaStyle = new Rtf.ParagraphStyle{Alignment = Rtf.EAlign.Right};
 				rtf.TextStyle = new Rtf.TextStyle{ForeColourIndex = rtf.ColourIndex(Color.DarkMagenta)};
 				rtf.AppendLine("I'm right aligned");
-			
+
 				rtf.DefaultParaStyle = Rtf.ParagraphStyle.Default;
 				rtf .Append(new Rtf.TextStyle{FontStyle = Rtf.EFontStyle.Super})
 					.Append("Superscript")
@@ -1629,9 +1628,9 @@ namespace pr
 					.Append("I'm some more words in the middle of the paragraph. These words make the paragraph fairly long which is good for testing. ")
 					.Append("I'm the end of the paragraph.");
 				rtf.Append(para);
-			
+
 				rtf.Append(new Rtf.PageBreak());
-			
+
 				para = new Rtf.Paragraph(para.ParaStyle);
 				para.Append("I'm a new short paragraph.");
 				rtf.Append(para);
@@ -1646,7 +1645,7 @@ namespace pr
 				numberedlist.Add("Second");
 				rtf.Append(numberedlist);
 
-				using (var bm = Image.FromFile(@"z:\pictures\gekko\Smiling gekko 150x121.jpg"))
+				using (var bm = Image.FromFile(@"q:\sdk\pr\prcs\resources\smiling gekko 150x121.jpg"))
 				{
 					var img = new Rtf.EmbeddedImage(bm);
 					rtf.Append(img);
@@ -1675,8 +1674,6 @@ namespace pr
 }
 
 #endif
-
-
 
 #if SHIT_VERSION
 	// ----------------------------------------------------------------------------------------
@@ -1773,7 +1770,7 @@ namespace pr
 			m_font_table  = new List<EFont>();
 			m_color_table = new List<Color>();
 			m_sb          = new StringBuilder();
-				
+
 			DefaultFont       = default_font;
 			DefaultFontSize   = default_font_size;
 			DefaultFontStyle  = FontStyle.Regular;
@@ -1791,15 +1788,15 @@ namespace pr
 			Font         = DefaultFont;
 			FontSize     = DefaultFontSize;
 			FontStyle    = DefaultFontStyle;
-				
+
 			m_color_table.Add(DefaultForeColour);
 			m_color_table.Add(DefaultBackColour);
 			BackColour = DefaultBackColour;
 			ForeColour = DefaultForeColour;
-				
+
 			LineIndentFirst = 0;
 			LineIndent = 0;
-				
+
 			m_sf = (StringFormat)StringFormat.GenericDefault.Clone();
 			m_sf.FormatFlags = StringFormatFlags.NoWrap;
 			m_sf.Trimming    = StringTrimming.Word;
@@ -1822,10 +1819,10 @@ namespace pr
 		public override string ToString()
 		{
 			TmpSB.Clear();
-				
+
 			// Add the rtf header
 			TmpSB.Append("{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang3081");
-				
+
 			// Add the font table
 			TmpSB.Append("{\\fonttbl");
 			for (int i = 0; i < m_font_table.Count; i++)
@@ -1878,7 +1875,7 @@ namespace pr
 		public int             LineIndent      { get; set; }
 		public int             LineIndentFirst { get; set; }
 		public StringAlignment Alignment       { get { return m_sf.Alignment; } set { m_sf.Alignment = value; } }
-			
+
 		/// <summary>Append a normal (non-rtf) string</summary>
 		public Builder Append(string value)
 		{
@@ -2213,11 +2210,11 @@ namespace pr
 		{
 			if (string.IsNullOrEmpty(value))
 				return value;
-				
+
 			// Escape any characters that need escaping
 			if (value.IndexOfAny(CharsNeedingEscaping) >= 0)
 				value = value.Replace("\\", "\\\\").Replace("{", "\\{").Replace("}", "\\}");
-				
+
 			// Replace any Unicode characters with their \u1234 value
 			if (value.Any(x => x > 255))
 			{
@@ -2355,7 +2352,7 @@ namespace pr
 				Dispose(true);
 			}
 		}
-			
+
 		/// <summary>Exposes an underlying Builder</summary>
 		public interface IBuilderContent :IDisposable
 		{
@@ -2531,12 +2528,12 @@ namespace pr
 			{
 				get { return m_cell_def; }
 			}
-				
+
 			private string BorderDef()
 			{
 				var sb = new StringBuilder();
 				sb.Append((m_cell_def.BorderSide & ECellBorderSide.DoubleThickness) == ECellBorderSide.DoubleThickness ? "\\brdrth" : "\\brdrs");
-					
+
 				if ((m_cell_def.BorderSide & ECellBorderSide.DoubleBorder) == ECellBorderSide.DoubleBorder)
 				{
 					sb.Append("\\brdrdb");
@@ -2622,7 +2619,7 @@ namespace pr
 		public class EmbedImage
 		{
 			// ReSharper disable UnusedMember.Local
-				
+
 			// Not used in this application.  Descriptions can be found with documentation
 			// of Windows GDI function SetMapMode
 			private const string FF_UNKNOWN = "UNKNOWN";
@@ -3081,7 +3078,7 @@ namespace pr
 		public int        BorderWidth  { get; private set; }
 		public Color      BorderColour { get; private set; }
 		public int        RowWidth     { get; set; }
-			
+
 		public RowDefinition(int row_width, ECellAlignment alignment, ECellBorderSide border_side, int border_width, Color border_colour, Padding padding)
 		{
 			Padding      = padding;
@@ -3202,39 +3199,39 @@ namespace pr
 		rtf.AppendLine("Inserting Image");
 		//rtf.InsertImage(Resources.Complications);
 		rtf.AppendLine("Inserted Image");
-			
+
 		rtf.AppendLine("Creating Table");
 		rtf.AppendPage();
 		rtf.AppendPara();
 		rtf.Reset();
-			
+
 		AddRow1(rtf, "Row 1 Cell 1", "Row 1 Cell 2", "Row 1 Cell 3");
 		AddRow1(rtf, "Row 2 Cell 1", "Row 2 Cell 2", "Row 2 Cell 3");
 		AddRow1(rtf, "Row 3 Cell 1", "Row 3 Cell 2", "Row 3 Cell 3");
 		AddRow1(rtf, "Row 4 Cell 1", "Row 4 Cell 2", "Row 4 Cell 3");
 		AddRow1(rtf, "Row 5 Cell 1", "Row 5 Cell 2", "Row 5 Cell 3");
-			
+
 		rtf.AppendLine("Inserting cell images");
 		rtf.AppendPara();
 		rtf.Reset();
 		rtf.AppendPara();
 		rtf.Reset();
-			
+
 		AddRow2(rtf, "Row 5 Cell 1", "Row 5 Cell 2", "Row 5 Cell 3");
-			
+
 		rtf.AppendPara();
 		rtf.AppendLine("Inserting MultiLine Cells --> Fails to display correctly in RichTextBox");
 		rtf.Reset();
 		rtf.AppendPara();
-			
+
 		AddRow1(rtf, "Row 5\r\n Cell 1", "Row 5 \r\n Cell 2", "Row 5 \r\n Cell 3");
 		rtf.Reset();
 		rtf.AppendPara();
-			
+
 		var str = rtf.ToString();
 		File.WriteAllText("tmp.rtf", str);
 	}
-		
+
 	private static void AddRow1(Rtf.Builder rtf, params string[] cellContents)
 	{
 		Padding p = new Padding { All = 50 };
@@ -3267,7 +3264,7 @@ namespace pr
 		}
 		int pos = 0;
 		// enumerate over cells
-		// each cell 
+		// each cell
 		foreach (var item in rtf.EnumerateCells(rd, cds))
 		{
 		    //item.InsertImage(Resources.Complications);

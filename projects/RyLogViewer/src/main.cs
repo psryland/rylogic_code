@@ -640,7 +640,7 @@ namespace RyLogViewer
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
 								var fmt = new StringFormat(m_strfmt);
-								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begini, x.Counti)).ToArray());
+								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begini, x.Sizei)).ToArray());
 								foreach (var r in gfx.MeasureCharacterRanges(col.Text, cs.Font, cellbounds, fmt))
 								{
 									var bnd = r.GetBounds(gfx);
@@ -718,7 +718,7 @@ namespace RyLogViewer
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
 								var fmt = new StringFormat(m_strfmt);
-								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begini, x.Counti)).ToArray());
+								fmt.SetMeasurableCharacterRanges(hl.Match(col.Text).Select(x => new CharacterRange(x.Begini, x.Sizei)).ToArray());
 								foreach (var r in gfx.MeasureCharacterRanges(col.Text, cs.Font, textbounds, fmt))
 									gfx.SetClip(r.GetBounds(gfx), CombineMode.Union);
 
@@ -936,7 +936,7 @@ namespace RyLogViewer
 
 			// Set the new selected row from the mouse up position
 			var pt = m_scroll_file.PointToClient(MousePosition);
-			var sel_pos = (long)(Maths.Frac(1, pt.Y, m_scroll_file.Height - 1) * FileByteRange.Count);
+			var sel_pos = (long)(Maths.Frac(1, pt.Y, m_scroll_file.Height - 1) * FileByteRange.Size);
 			BuildLineIndex(pos, false, () => { SelectRowByAddr(sel_pos); });
 		}
 
@@ -1971,7 +1971,7 @@ namespace RyLogViewer
 			if (m_last_hint != EHeuristicHint.Encoding &&
 				row_count == 1 &&
 				m_settings.Encoding != string.Empty &&
-				m_line_index[0].Count > 1024)
+				m_line_index[0].Size > 1024)
 			{
 				Misc.ShowHint(m_menu_encoding, "Only one line detected, check text encoding");
 				m_last_hint = EHeuristicHint.Encoding;

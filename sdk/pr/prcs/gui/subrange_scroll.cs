@@ -43,7 +43,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_total_range, value)) return;
-				if (value.Count <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Begin + 1;
 				m_total_range = value;
 				m_thumb_range = Range.Constrain(m_thumb_range, m_total_range);
 				foreach (var r in m_indicator_ranges) r.Range = Range.Constrain(r.Range, m_total_range);
@@ -60,7 +60,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_thumb_range, value)) return;
-				if (value.Count <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Begin + 1;
 				m_thumb_range = Range.Constrain(value, m_total_range);
 				RaiseScrollEvent();
 				Invalidate();
@@ -85,7 +85,7 @@ namespace pr.gui
 		public long LargeChange
 		{
 			get { return m_large_change; }
-			set { m_large_change = Maths.Clamp(value, 1, TotalRange.Count); Invalidate(); }
+			set { m_large_change = Maths.Clamp(value, 1, TotalRange.Size); Invalidate(); }
 		}
 		private long m_large_change;
 
@@ -94,7 +94,7 @@ namespace pr.gui
 		public long SmallChange
 		{
 			get { return m_small_change; }
-			set { m_small_change = Maths.Clamp(value, 1, TotalRange.Count); Invalidate(); }
+			set { m_small_change = Maths.Clamp(value, 1, TotalRange.Size); Invalidate(); }
 		}
 		private long m_small_change;
 
@@ -270,7 +270,7 @@ namespace pr.gui
 		private void ScrollThumbPos(int y)
 		{
 			Range thm = ThumbRange;
-			thm.Mid = TotalRange.Begin + (long)(Maths.Frac(0, y, Height) * TotalRange.Count);
+			thm.Mid = TotalRange.Begin + (long)(Maths.Frac(0, y, Height) * TotalRange.Size);
 			ThumbRange = thm;
 		}
 

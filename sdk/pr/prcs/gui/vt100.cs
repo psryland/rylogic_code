@@ -223,7 +223,7 @@ namespace pr.gui
 		/// <summary>Return the length of a line in the control</summary>
 		public int LineLength(int line, bool include_newline)
 		{
-			return (int)IndexRangeFromLine(line, include_newline).Count;
+			return (int)IndexRangeFromLine(line, include_newline).Size;
 		}
 
 		/// <summary>Get/Set the line that SelectionStart is on</summary>
@@ -607,13 +607,13 @@ namespace pr.gui
 					Range rg = IndexRangeFromLine(CurrentLine, false);
 					rg.End = SelectionStart;
 					SelectionStart = (int)rg.Begin;
-					SelectionLength = (int)rg.Count;
+					SelectionLength = (int)rg.Size;
 					SelectedText = "";
 					}break;
 				case "\u001b[2K":{//Esc[2K Clear entire line EL2
 					Range rg = IndexRangeFromLine(CurrentLine, false);
 					SelectionStart = (int)rg.Begin;
-					SelectionLength = (int)rg.Count;
+					SelectionLength = (int)rg.Size;
 					SelectedText = "";
 					}break;
 				}break;
@@ -813,9 +813,9 @@ namespace pr.gui
 			
 			// Make sure the line 'loc.Y' is at least 'loc.X' wide
 			Range range = IndexRangeFromLine(loc.Y, false);
-			if (range.Count < loc.X)
+			if (range.Size < loc.X)
 			{
-				int pad_count = loc.X - (int)range.Count;
+				int pad_count = loc.X - (int)range.Size;
 				int restore = SelectionStart;
 				if (restore > range.End) restore += pad_count;
 				SelectionStart = (int)range.End;

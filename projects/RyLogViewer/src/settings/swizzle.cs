@@ -54,14 +54,14 @@ namespace RyLogViewer
 
 				// Read the span of chars from 'dst'
 				map.Dst = new Range(i,i);
-				for (; i != dst.Length && char.ToLowerInvariant(dst[i]) == ch; ++map.Dst.Count, ++i) {}
+				for (; i != dst.Length && char.ToLowerInvariant(dst[i]) == ch; ++map.Dst.Size, ++i) {}
 
 				// Find the corresponding span in 'src'
 				int j; for (j = 0; j != src.Length && char.ToLowerInvariant(src[j]) != ch; ++j) {}
 
 				// Read the span of chars from 'src'
 				map.Src = new Range(j,j);
-				for (; j != src.Length && char.ToLowerInvariant(src[j]) == ch; ++map.Src.Count, ++j) {}
+				for (; j != src.Length && char.ToLowerInvariant(src[j]) == ch; ++map.Src.Size, ++j) {}
 
 				// Check that there are no other 'ch' blocks in 'src'
 				for (; j != src.Length && char.ToLowerInvariant(src[j]) != ch; ++j) {}
@@ -70,9 +70,9 @@ namespace RyLogViewer
 
 				// Read the case changes
 				cas.Clear();
-				for (int k = 0; k != map.Dst.Count; ++k)
+				for (int k = 0; k != map.Dst.Size; ++k)
 				{
-					int s = map.Src.Begini + (k%map.Src.Counti);
+					int s = map.Src.Begini + (k%map.Src.Sizei);
 					int d = map.Dst.Begini + k;
 					cas.Add(
 						src[s] == dst[d]
@@ -92,9 +92,9 @@ namespace RyLogViewer
 			foreach (var m in mapping)
 			{
 				if (m.Src.Begini >= text.Length) continue;
-				for (int i = 0, iend = Math.Min(m.Dst.Counti, text.Length - m.Src.Begini); i != iend; ++i)
+				for (int i = 0, iend = Math.Min(m.Dst.Sizei, text.Length - m.Src.Begini); i != iend; ++i)
 				{
-					char ch = text[m.Src.Begini + (i % m.Src.Counti)];
+					char ch = text[m.Src.Begini + (i % m.Src.Sizei)];
 					switch (m.Case[i])
 					{
 					case Map.ECase.ToUpper: ch = char.ToUpperInvariant(ch); break;

@@ -344,7 +344,7 @@ namespace pr.common
 			for (var i = 0;;)
 			{
 				var span = Match(text,i).FirstOrDefault();
-				if (span.Count == 0) yield break;
+				if (span.Size == 0) yield break;
 				yield return span;
 				i = (int)span.End;
 			}

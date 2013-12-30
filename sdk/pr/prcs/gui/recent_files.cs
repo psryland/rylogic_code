@@ -4,7 +4,6 @@
 //***************************************************
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
@@ -31,7 +30,7 @@ namespace pr.gui
 	//	m_app_settings.Save();
 	public class RecentFiles
 	{
-		private readonly List<string> m_files = new List<string>();
+		private readonly BindingList<string> m_files = new BindingList<string>();
 		private ToolStripMenuItem m_menu = null;
 		private OnClickHandler m_on_click = null;
 
@@ -56,7 +55,7 @@ namespace pr.gui
 		public string ResetListText { get; set; }
 
 		/// <summary>Access to the list of recent files</summary>
-		public List<string> Files { get { return m_files; } }
+		public BindingList<string> Files { get { return m_files; } }
 
 		/// <summary>Set the menu we're populating with the recent files</summary>
 		public void SetTargetMenu(ToolStripMenuItem menu, OnClickHandler on_click)
@@ -68,7 +67,7 @@ namespace pr.gui
 		/// <summary>Returns true if the given filepath is in the recents list</summary>
 		public bool IsInRecents(string file)
 		{
-			return Files.FindIndex(f => String.Compare(f, file, StringComparison.OrdinalIgnoreCase) == 0) != -1;
+			return Files.IndexOf(f => String.Compare(f, file, StringComparison.OrdinalIgnoreCase) == 0) != -1;
 		}
 
 		/// <summary>Reset the recent files list</summary>
@@ -81,7 +80,7 @@ namespace pr.gui
 		/// <summary>Remove a filepath from the recents list</summary>
 		public void Remove(string file, bool update_menu)
 		{
-			m_files.RemoveAll(f => String.Compare(f, file, StringComparison.OrdinalIgnoreCase) == 0);
+			m_files.RemoveIf(f => String.Compare(f, file, StringComparison.OrdinalIgnoreCase) == 0);
 			if (update_menu) UpdateMenu();
 		}
 
@@ -159,7 +158,7 @@ namespace pr.gui
 		public string Export()
 		{
 			var str = new StringBuilder();
-			foreach (string s in m_files) str.Append(s).Append(",");
+			foreach (var s in m_files) str.Append(s).Append(",");
 			if (str.Length != 0) str.Remove(str.Length - 1, 1);
 			return str.ToString();
 		}
@@ -169,9 +168,8 @@ namespace pr.gui
 		{
 			if (!string.IsNullOrEmpty(str))
 			{
-				foreach (string s in str.Split(','))
-					if (!string.IsNullOrEmpty(s))
-						Add(s, false);
+				foreach (var s in str.Split(new []{","}, StringSplitOptions.RemoveEmptyEntries))
+					Add(s, false);
 				m_files.Reverse();
 			}
 			UpdateMenu();

@@ -12,7 +12,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using System.Windows.Forms.VisualStyles;
 using pr.extn;
 
 namespace pr.gui
@@ -169,17 +168,19 @@ namespace pr.gui
 				Min += delta;
 				Max += delta;
 			}
-			public void SetSuitableStepSize(float max_ticks)
+
+			/// <summary>Returns a suitable step size for the given range of values</summary>
+			public static double SetSuitableStepSize(float max_ticks, double span)
 			{
-				float[] scale = {50f, 20f, 10f, 5f, 4f, 2f, 1f, 0.5f, 0.25f, 0.2f, 0.1f, 0.05f};
-				var range = Span > 0f ? Span : 1f;
-				Step = (float)Math.Pow(10, (int)Math.Log10(range));
-				foreach (var s in scale)
+				var range = span > 0.0 ? span : 1.0;
+				var step = Math.Pow(10, (int)Math.Log10(range));
+				foreach (var s in new []{50.0, 20.0, 10.0, 5.0, 4.0, 2.0, 1.0, 0.5, 0.25, 0.2, 0.1, 0.05})
 				{
-					if (range * s / Step > max_ticks) continue;
-					Step /= s;
-					return;
+					if (range * s / step > max_ticks) continue;
+					step /= s;
+					return step;
 				}
+				return step;
 			}
 		}
 
@@ -223,8 +224,8 @@ namespace pr.gui
 		// Members
 		private Bitmap                    m_bm;             // The bitmap containing the graph image. This should only be modified in the main UI thread
 		private string                    m_title;          // The graph title
-		private readonly Axis.Range       m_base_xrange;    // Initial values for the x axis
-		private readonly Axis.Range       m_base_yrange;    // Initial values for the y axis
+		private Axis.Range                m_base_xrange;    // Initial values for the x axis
+		private Axis.Range                m_base_yrange;    // Initial values for the y axis
 		private readonly RdrOptions       m_rdr_options;    // Rendering options
 		private readonly List<Series>     m_data;           // The source data for the graph
 		private readonly Axis             m_xaxis;          // Details of the x axis
@@ -242,10 +243,17 @@ namespace pr.gui
 		// e.g. gfx.DrawLine(Pens.Black, sender.XAxis.Min*scale_x, sender.YAxis.Min*scale_y, sender.XAxis.Max*scale_x, sender.YAxis.Max*scale_y);
 		public delegate void AddOverlaysEventHandler(GraphControl sender, Graphics gfx, float scale_x, float scale_y);
 
-		/// <summary>Called during rendering of the graph to allow clients to add graphics to the cached bitmap.</summary>
+		/// <summary>
+		/// Called during rendering of the graph to allow clients to add graphics to the cached bitmap.<para/>
+		/// Handlers should draw in graph space using the scale values<para/>
+		/// e.g. gfx.DrawLine(Pens.Black, sender.XAxis.Min*scale_x, sender.YAxis.Min*scale_y, sender.XAxis.Max*scale_x, sender.YAxis.Max*scale_y);<para/></summary>
 		public event AddOverlaysEventHandler AddOverlaysOnRender;
 
-		/// <summary>Called each time the bitmap is drawn to the control to allow clients to add graphics. The overlays can change without affecting cached graph bitmap</summary>
+		/// <summary>
+		/// Called each time the bitmap is drawn to the control to allow clients to add graphics.
+		/// The overlays can change without affecting cached graph bitmap.<para/>
+		/// Handlers should draw in graph space using the scale values<para/>
+		/// e.g. gfx.DrawLine(Pens.Black, sender.XAxis.Min*scale_x, sender.YAxis.Min*scale_y, sender.XAxis.Max*scale_x, sender.YAxis.Max*scale_y);<para/></summary>
 		public event AddOverlaysEventHandler AddOverlaysOnPaint;
 
 		/// <summary>Event allowing callers to add options to the context menu</summary>
@@ -527,25 +535,40 @@ namespace pr.gui
 		/// Call ResetToDefaultRange() to zoom the graph to this range</summary>
 		public void FindDefaultRange()
 		{
-			m_base_xrange.m_min =  float.MaxValue;
-			m_base_xrange.m_max = -float.MaxValue;
-			m_base_yrange.m_min =  float.MaxValue;
-			m_base_yrange.m_max = -float.MaxValue;
+			var xrange = new Axis.Range(double.MaxValue, -double.MaxValue, 1.0);
+			var yrange = new Axis.Range(double.MaxValue, -double.MaxValue, 1.0);
 			foreach (var series in m_data)
 			{
 				if (!series.RenderOptions.m_visible) continue;
 				foreach (var gv in series.Values)
 				{
-					m_base_xrange.m_min = Math.Min(m_base_xrange.m_min, gv.m_valueX);
-					m_base_xrange.m_max = Math.Max(m_base_xrange.m_max, gv.m_valueX);
-					m_base_yrange.m_min = Math.Min(m_base_yrange.m_min, gv.m_valueY);
-					m_base_yrange.m_max = Math.Max(m_base_yrange.m_max, gv.m_valueY);
+					// note: series.Sorted doesn't help because we
+					// still need to scan all the Y values.
+					xrange.m_min = Math.Min(xrange.m_min, gv.m_valueX);
+					xrange.m_max = Math.Max(xrange.m_max, gv.m_valueX);
+					yrange.m_min = Math.Min(yrange.m_min, gv.m_valueY);
+					yrange.m_max = Math.Max(yrange.m_max, gv.m_valueY);
 				}
 			}
-			if (m_base_xrange.m_span <= 0.0f) { m_base_xrange.m_span = 1f; }
-			if (m_base_yrange.m_span <= 0.0f) { m_base_yrange.m_span = 1f; }
-			{ var extra = m_base_xrange.m_span * 0.05f; m_base_xrange.m_min -= extra; m_base_xrange.m_max += extra; }
-			{ var extra = m_base_yrange.m_span * 0.05f; m_base_yrange.m_min -= extra; m_base_yrange.m_max += extra; }
+
+			// Use defaults if the range is invalid
+			if (xrange.m_min >= xrange.m_max) xrange = new Axis.Range();
+			if (yrange.m_min >= yrange.m_max) yrange = new Axis.Range();
+
+			// Add a 5% margin around the range
+			{
+				var extra = xrange.m_span * 0.05f;
+				xrange.m_min -= extra;
+				xrange.m_max += extra;
+			}
+			{
+				var extra = yrange.m_span * 0.05f;
+				yrange.m_min -= extra;
+				yrange.m_max += extra;
+			}
+
+			m_base_xrange = xrange;
+			m_base_yrange = yrange;
 			SetSuitableStepSizes(ClientSize);
 		}
 
@@ -565,8 +588,8 @@ namespace pr.gui
 			const float pixels_per_tick_y = 24f;
 
 			var region = GraphRegion(size);
-			m_xaxis.SetSuitableStepSize(region.Width  / pixels_per_tick_x);
-			m_yaxis.SetSuitableStepSize(region.Height / pixels_per_tick_y);
+			m_xaxis.Step = Axis.SetSuitableStepSize(region.Width  / pixels_per_tick_x, m_xaxis.Span);
+			m_yaxis.Step = Axis.SetSuitableStepSize(region.Height / pixels_per_tick_y, m_yaxis.Span);
 		}
 
 		/// <summary>Returns the 'Y' value for a given 'X' value in a series in the graph</summary>
@@ -697,7 +720,7 @@ namespace pr.gui
 			var region = GraphRegion(bm.Size);
 
 			// Get transforms that we can use to draw in unscaled graph space. Can't use a scale transform here
-			// though because the lines and points will also be scaled, into elipses or caligraphy etc
+			// though because the lines and points will also be scaled, into ellipses or calligraphy etc.
 			var scale_x = (float)(region.Width  / m_xaxis.Span);
 			var scale_y = (float)(region.Height / m_yaxis.Span);
 			if (float.IsInfinity(scale_x)) { scale_x = scale_x >= 0 ? float.MaxValue : float.MinValue; }
@@ -1839,7 +1862,7 @@ namespace pr.gui
 				if (m_snap.m_bm != null)
 				{
 					var src_rect = new Rectangle(Point.Empty, m_snap.m_bm.Size);
-					var dst_rect = GraphRegion(ClientSize); dst_rect.Inflate(-1,-1); dst_rect.Offset(1,1);
+					var dst_rect = GraphRegion(ClientSize).Inflated(-1,-1).Shifted(1,1);
 					e.Graphics.SetClip(dst_rect);
 					dst_rect.Location = GraphToPoint(new PointF((float)m_snap.m_xrange.m_min, (float)m_snap.m_yrange.m_max));
 					dst_rect.Width    = (int)(dst_rect.Width  * m_snap.m_xrange.m_span / m_xaxis.Rng.m_span);
@@ -1852,10 +1875,15 @@ namespace pr.gui
 				// Allow clients to draw in graph space
 				if (AddOverlaysOnPaint != null)
 				{
+					// Get a transform that can be used to draw in unscaled graph space. Can't use a scale transform here
+					// though because the lines and points will also be scaled, into ellipses or calligraphy etc.
 					var region = GraphRegion(ClientSize);
+					e.Graphics.SetClip(region);
+
 					var scale_x = (float)(region.Width  / m_xaxis.Span);
 					var scale_y = (float)(region.Height / m_yaxis.Span);
-					e.Graphics.SetClip(region);
+					if (float.IsInfinity(scale_x)) { scale_x = scale_x >= 0 ? float.MaxValue : float.MinValue; }
+					if (float.IsInfinity(scale_y)) { scale_y = scale_y >= 0 ? float.MaxValue : float.MinValue; }
 
 					// Can't use inverted y scale here because the text comes out upside down
 					e.Graphics.Transform = new Matrix(1f, 0f, 0f, 1f, (float)(region.Left - m_xaxis.Min * scale_x), (float)(region.Bottom + m_yaxis.Min * scale_y));
@@ -1963,8 +1991,8 @@ namespace pr.gui
 				{
 					Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
 					DialogResult = DialogResult.OK,
-					Location = new Point(164,151),
 					Name = "m_btn_ok",
+					Location = new Point(83,151),
 					Size = new Size(75,23),
 					TabIndex = 7,
 					Text = "OK",
@@ -1976,8 +2004,8 @@ namespace pr.gui
 				{
 					Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
 					DialogResult = DialogResult.Cancel,
-					Location = new Point(83,151),
 					Name = "m_btn_cancel",
+					Location = new Point(164,151),
 					Size = new Size(75,23),
 					TabIndex = 8,
 					Text = "Cancel",

@@ -225,7 +225,7 @@ namespace pr.extn
 				cb.Items.RemoveAt(cb.Items.Count - 1);
 
 			cb.SelectedIndex = 0;
-			cb.Select(selection.Begini, selection.Counti);
+			cb.Select(selection.Begini, selection.Sizei);
 		}
 
 		/// <summary>Exports location data for this control</summary>
@@ -347,9 +347,9 @@ namespace pr.extn
 			if (m_name != name) return;
 
 			using (ctrl.SuspendLayout(layout_on_resume))
-				ApplyInternal(ctrl, 0, 0);
+				ApplyInternal(ctrl, 0);
 		}
-		private void ApplyInternal(Control ctrl, int level, int index)
+		private void ApplyInternal(Control ctrl, int level)
 		{
 			ctrl.Location = m_location;
 			ctrl.Size     = m_size;
@@ -358,7 +358,7 @@ namespace pr.extn
 				ControlLocations s;
 				var child = ctrl.Controls[i];
 				if (m_children.TryGetValue(UniqueName(child, level + 1, i), out s))
-					s.ApplyInternal(child, level + 1, i);
+					s.ApplyInternal(child, level + 1);
 			}
 		}
 

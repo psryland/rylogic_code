@@ -111,8 +111,8 @@ namespace Rylogic.VSExtension
 				CaretPos = Maths.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
 				CaretLineNumber = snapshot.GetLineNumberFromPosition(CaretPos);
 
-				Debug.Assert(Pos.Count >= 0);
-				Debug.Assert(Lines.Count >= 0);
+				Debug.Assert(Pos.Size >= 0);
+				Debug.Assert(Lines.Size >= 0);
 			}
 		}
 
@@ -155,7 +155,7 @@ namespace Rylogic.VSExtension
 			var span = Range.Zero; // include 0 in the range
 			foreach (var tok in toks)
 			{
-				span.Encompase(tok.Patn.Position);
+				span.Encompass(tok.Patn.Position);
 				min_column  = Math.Max(min_column, tok.MinColumnIndex);
 				leading_ws |= Math.Max(leading_ws, tok.Grp.LeadingSpace);
 			}
@@ -370,7 +370,7 @@ namespace Rylogic.VSExtension
 					// Careful with order, we need to apply the edits assuming 'line' isn't changed with each one
 
 					// Insert whitespace after the pattern if needed
-					var ws_tail = Math.Max(0, pos.Span.Endi - (edit.Patn.Offset + edit.Span.Counti));
+					var ws_tail = Math.Max(0, pos.Span.Endi - (edit.Patn.Offset + edit.Span.Sizei));
 					if (ws_tail > 0)
 						text.Insert(edit.Line.Start.Position + edit.Span.Endi, new string(' ', ws_tail));
 

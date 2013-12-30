@@ -6,16 +6,16 @@ using pr.maths;
 
 namespace TestCS
 {
-	public class FormGraphControl :Form
+	public class GraphControlUI :Form
 	{
 		private GraphControl m_graph;
 
-		public FormGraphControl()
+		public GraphControlUI()
 		{
 			InitializeComponent();
 
 			m_graph.SetLabels("Test Graph", "X Axis", "Y Axis");
-			Add("Sine Wave", 1000
+/*			Add("Sine Wave", 1000
 				,i =>
 					{
 						var x = i * Maths.Tau / 1000.0;
@@ -57,7 +57,13 @@ namespace TestCS
 					});
 
 			m_graph.FindDefaultRange();
-			m_graph.ResetToDefaultRange();
+			m_graph.ResetToDefaultRange();*/
+			m_graph.AddOverlaysOnPaint += DrawOverlays;
+		}
+
+		private void DrawOverlays(GraphControl sender,Graphics gfx,float scale_x,float scale_y)
+		{
+			gfx.DrawEllipse(Pens.Red,0.25f*scale_x,0.25f*scale_y,0.5f*scale_x,0.5f*scale_y);
 		}
 
 		/// <summary>Add a function as a series</summary>
@@ -97,7 +103,7 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormGraphControl));
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GraphControlUI));
 			this.m_graph = new pr.gui.GraphControl();
 			((System.ComponentModel.ISupportInitialize)(this.m_graph)).BeginInit();
 			this.SuspendLayout();

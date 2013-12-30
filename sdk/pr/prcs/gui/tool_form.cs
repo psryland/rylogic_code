@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
+using pr.util;
 
 namespace pr.gui
 {
@@ -19,6 +20,19 @@ namespace pr.gui
 		}
 		private EPin m_pin;
 
+		/// <summary>True if the 'Pin' state should be used</summary>
+		public bool PinWindow
+		{
+			get { return m_pin_window; }
+			set
+			{
+				m_pin_window = value;
+				RecordOffset();
+				Win32.CheckMenuItem(m_sys_menu_handle, m_menucmd_pin_window, Win32.MF_BYCOMMAND|(m_pin_window ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
+			}
+		}
+		private bool m_pin_window;
+
 		/// <summary>The offset of this form from the pin location</summary>
 		public Point PinOffset
 		{
@@ -26,6 +40,10 @@ namespace pr.gui
 			set { m_ofs = value; UpdateLocation(); }
 		}
 		private Point m_ofs;
+
+		/// <summary>Handle for the pin popup menu</summary>
+		private readonly IntPtr m_sys_menu_handle;
+		private const int m_menucmd_pin_window = 1000;
 
 		/// <summary>Default constructor for the designer</summary>
 		public ToolForm()
@@ -62,6 +80,13 @@ namespace pr.gui
 			if (ofs  != Point.Empty) { m_ofs = ofs; StartPosition = FormStartPosition.Manual; }
 			if (size != Size.Empty) Size = size;
 
+			// Make CentreParent actually work...
+			Load += (s,a) =>
+				{
+					if (StartPosition == FormStartPosition.CenterParent)
+						CenterToParent();
+				};
+
 			// Whenever this window moves, save it's offset from the owner
 			Move += RecordOffset;
 			LocationChanged += RecordOffset;
@@ -82,7 +107,13 @@ namespace pr.gui
 					Owner = null;
 				};
 
+			// Setup the pin menu
+			m_sys_menu_handle = Win32.GetSystemMenu(Handle, false);
+			Win32.InsertMenu(m_sys_menu_handle, 5, Win32.MF_BYPOSITION|Win32.MF_SEPARATOR, 0, string.Empty);
+			Win32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
+
 			UpdateLocation();
+			PinWindow = true;
 		}
 
 		/// <summary>Controls whether the form closes or just hides</summary>
@@ -144,7 +175,7 @@ namespace pr.gui
 		protected void RecordOffset() { RecordOffset(null, null); }
 		protected void RecordOffset(object sender, EventArgs args)
 		{
-			if (Owner == null) return;
+			if (Owner == null || !PinWindow) return;
 			switch (Pin)
 			{
 			default: Debug.Assert(false, "Unknown pin type"); break;
@@ -160,7 +191,7 @@ namespace pr.gui
 		protected void UpdateLocation() { UpdateLocation(null, null); }
 		protected void UpdateLocation(object sender, EventArgs args)
 		{
-			if (Owner == null) return;
+			if (Owner == null || !PinWindow) return;
 			switch (Pin)
 			{
 			default: Debug.Assert(false, "Unknown pin type"); break;
@@ -170,6 +201,19 @@ namespace pr.gui
 			case EPin.BottomRight: Location = new Point(Owner.Right, Owner.Bottom) + m_ofs.ToSize(); break;
 			case EPin.Centre:      Location = new Point((Owner.Left+Owner.Right)/2, (Owner.Top+Owner.Bottom)/2) + m_ofs.ToSize(); break;
 			}
+		}
+
+		/// <summary>Handle the system menu options</summary>
+		protected override void WndProc(ref Message m)
+		{
+			if (m.Msg == Win32.WM_SYSCOMMAND)
+			{
+				switch (m.WParam.ToInt32())
+				{
+				case m_menucmd_pin_window: PinWindow = !PinWindow; return;
+				}
+			}
+			base.WndProc(ref m);
 		}
 	}
 }

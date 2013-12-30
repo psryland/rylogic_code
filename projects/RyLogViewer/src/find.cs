@@ -218,7 +218,7 @@ namespace RyLogViewer
 							return true;
 
 						// Parse the line from the buffer
-						line.Read(baddr + line_rng.Begin, bf, (int)line_rng.Begin, (int)line_rng.Count, d.encoding, d.col_delim, null, d.transforms);
+						line.Read(baddr + line_rng.Begin, bf, (int)line_rng.Begin, (int)line_rng.Size, d.encoding, d.col_delim, null, d.transforms);
 
 						// Keep searching while the text is filtered out or doesn't match the pattern
 						if (!PassesFilters(line.RowText, d.filters) || !pat.IsMatch(line.RowText))

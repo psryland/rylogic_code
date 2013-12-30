@@ -28,7 +28,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_total_range, value)) return;
-				if (value.Count <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Begin + 1;
 				m_total_range   = value;
 				m_zoomed_range  = value;
 				m_visible_range = Range.Constrain(m_visible_range, m_total_range);
@@ -45,7 +45,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_zoomed_range, value)) return;
-				if (value.Count <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Begin + 1;
 				m_zoomed_range  = Range.Constrain(value, m_total_range);
 				m_visible_range = Range.Constrain(m_visible_range, m_zoomed_range);
 				Invalidate();
@@ -61,7 +61,7 @@ namespace pr.gui
 			set
 			{
 				if (Equals(m_visible_range, value)) return;
-				if (value.Count <= 0) value.End = value.Begin + 1;
+				if (value.Size <= 0) value.End = value.Begin + 1;
 				m_visible_range = Range.Constrain(value, m_zoomed_range);
 				RaiseScrollEvent();
 				Invalidate();
@@ -69,8 +69,8 @@ namespace pr.gui
 		}
 		private Range m_visible_range;
 
-		/// <summary>Effectively the maximum zoom allowed = TotalRange.Count / MinimumVisibleRangeSize</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("Effectively the maximum zoom allowed = TotalRange.Count / MinimumVisibleRangeSize")]
+		/// <summary>Effectively the maximum zoom allowed = TotalRange.Size / MinimumVisibleRangeSize</summary>
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("Effectively the maximum zoom allowed = TotalRange.Size / MinimumVisibleRangeSize")]
 		public int MinimumVisibleRangeSize { get; set; }
 
 		/// <summary>The number of steps to move on page down/up</summary>
@@ -78,7 +78,7 @@ namespace pr.gui
 		public long LargeChange
 		{
 			get { return m_large_change; }
-			set { m_large_change = Maths.Clamp(value, 1, TotalRange.Count); Invalidate(); }
+			set { m_large_change = Maths.Clamp(value, 1, TotalRange.Size); Invalidate(); }
 		}
 		private long m_large_change;
 
@@ -87,7 +87,7 @@ namespace pr.gui
 		public long SmallChange
 		{
 			get { return m_small_change; }
-			set { m_small_change = Maths.Clamp(value, 1, TotalRange.Count); Invalidate(); }
+			set { m_small_change = Maths.Clamp(value, 1, TotalRange.Size); Invalidate(); }
 		}
 		private long m_small_change;
 
@@ -105,12 +105,12 @@ namespace pr.gui
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The zoom factor")]
 		public float Zoom
 		{
-			get { return m_total_range.Count / (float)m_zoomed_range.Count; }
+			get { return m_total_range.Size / (float)m_zoomed_range.Size; }
 			set
 			{
 				if (Math.Abs(value - Zoom) < float.Epsilon) return;
 				value = Maths.Clamp(value, 1.0f, 1000000.0f);
-				var sz = Math.Max((int)(m_total_range.Count / value), MinimumVisibleRangeSize);
+				var sz = Math.Max((int)(m_total_range.Size / value), MinimumVisibleRangeSize);
 				var r = new Range(0, sz){Mid = ZoomedRange.Mid};
 				if (r.Begin > VisibleRange.Begin) r = r.Shift(VisibleRange.Begin - r.Begin);
 				if (r.End   < VisibleRange.End  ) r = r.Shift(VisibleRange.End - r.End);
@@ -265,7 +265,7 @@ namespace pr.gui
 		private void CentreVisible(int y)
 		{
 			var vis = VisibleRange;
-			vis.Mid = ZoomedRange.Begin + (long)(Maths.Frac(0, y, Height) * ZoomedRange.Count);
+			vis.Mid = ZoomedRange.Begin + (long)(Maths.Frac(0, y, Height) * ZoomedRange.Size);
 			VisibleRange = vis;
 		}
 	}

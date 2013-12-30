@@ -239,10 +239,10 @@ namespace RyLogViewer
 			foreach (var t in rtags)
 			{
 				var sub = Subs[t.Id].Result(caps[t.Id].Elem);
-				result = result.Remove(t.Span.Begini + ofs, t.Span.Counti);
+				result = result.Remove(t.Span.Begini + ofs, t.Span.Sizei);
 				result = result.Insert(t.Span.Begini + ofs, sub);
 				dst_caps.Add(new Capture(t.Id, sub, new Range(t.Span.Begin + ofs, t.Span.Begin + ofs + sub.Length)));
-				ofs += sub.Length - t.Span.Counti;
+				ofs += sub.Length - t.Span.Sizei;
 			}
 
 			// Sort 'dst_caps' so that it's in the same order as 'src_caps'
@@ -297,9 +297,9 @@ namespace RyLogViewer
 			foreach (Tag t in rtags)
 			{
 				string sub = Subs[t.Id].Result(caps[t.Id].Elem);
-				result = result.Remove(t.Span.Begini + ofs, t.Span.Counti);
+				result = result.Remove(t.Span.Begini + ofs, t.Span.Sizei);
 				result = result.Insert(t.Span.Begini + ofs, sub);
-				ofs += sub.Length - t.Span.Counti;
+				ofs += sub.Length - t.Span.Sizei;
 			}
 			return result;
 		}
