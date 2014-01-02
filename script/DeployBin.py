@@ -16,10 +16,10 @@ config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,r
 dstsubdir  = sys.argv[4] if len(sys.argv) > 4 else ""
 if platform.lower() == "win32": platform = "x86"
 
-targetpath  = targetpath.lower();
-platform    = platform.lower();
-config      = config.lower();
-dstsubdir   = dstsubdir.lower();
+targetpath  = targetpath.lower()
+platform    = platform.lower()
+config      = config.lower()
+dstsubdir   = dstsubdir.lower()
 srcdir,file = os.path.split(targetpath)
 fname,extn  = os.path.splitext(file)
 
@@ -28,7 +28,7 @@ if dstsubdir == "":
 	dstsubdir = fname
 
 # Set the output directory and ensure it exists
-dstdirroot = UserVars.pr_root + r"\bin"
+dstdirroot = UserVars.root + r"\bin"
 dstdir = dstdirroot + "\\" + dstsubdir + "\\" + platform
 if not os.path.exists(dstdir): os.makedirs(dstdir)
 
@@ -36,7 +36,7 @@ if not os.path.exists(dstdir): os.makedirs(dstdir)
 if config == "release":
 	# Copy the binary to the bin folder
 	Tools.Copy(targetpath, dstdir + "\\" + file)
-
+	
 	# If the system architecture matches this release, copy to the root dstdir
 	if platform == UserVars.arch:
 		Tools.Copy(dstdir + "\\" + file, dstdirroot + "\\" + file)

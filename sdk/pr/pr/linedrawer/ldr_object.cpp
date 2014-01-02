@@ -1302,13 +1302,13 @@ void ParseGroup(ParseParams& p)
 	obj->m_colour_mask = 0xFFFFFFFF; // The group colour tints all children
 	if (obj->m_wireframe)
 	{
-		for (pr::ldr::ObjectCont::iterator i = obj->m_child.begin(), iend = obj->m_child.end(); i != iend; ++i)
-			(*i)->Wireframe(true, true);
+		for (auto child : obj->m_child)
+			child->Wireframe(true, true);
 	}
 	if (!obj->m_visible)
 	{
-		for (pr::ldr::ObjectCont::iterator i = obj->m_child.begin(), iend = obj->m_child.end(); i != iend; ++i)
-			(*i)->Visible(false, true);
+		for (auto child : obj->m_child)
+			child->Visible(false, true);
 	}
 
 	// Add the model and instance to the containers
@@ -1471,9 +1471,10 @@ void pr::ldr::Add(pr::Renderer& rdr, pr::script::Reader& reader, pr::ldr::Object
 							ParseParams pp(*m_rdr, *m_reader, *m_objects, m_models, m_context_id, kw, 0, m_total, now);
 							if (ParseLdrObject(pp)) continue;
 							m_reader->ReportError(pr::script::EResult::UnknownToken);
-						}break;
+							break;
+						}
 
-						// Application commands
+					// Application commands
 					case pr::ldr::EKeyword::Clear: break; // use event
 					case pr::ldr::EKeyword::Wireframe: break;
 					case pr::ldr::EKeyword::Camera: break;

@@ -45,7 +45,7 @@ namespace pr.maths
 			}
 			return bb;
 		}
-		
+
 		// Equality operators
 		public static bool operator == (BBox lhs, BBox rhs) { return lhs.m_centre == rhs.m_centre; }
 		public static bool operator != (BBox lhs, BBox rhs) { return !(lhs == rhs); }
@@ -113,13 +113,13 @@ namespace pr.maths
 			get { return m_radius; }
 			set { m_radius = value; }
 		}
-		
+
 		/// <summary>Gets the squared length of the diagonal of the bounding box</summary>
 		public float DiametreSq
 		{
 			get { return 4.0f * m_radius.Length3Sq; }
 		}
-		
+
 		/// <summary>Gets the length of the diagonal of the bounding box</summary>
 		public float Diametre
 		{
@@ -131,7 +131,7 @@ namespace pr.maths
 		{
 			get { return SizeX * SizeY * SizeZ; }
 		}
-		
+
 		/// <summary>Returns a corner of the bounding box. 'corner'</summary>
 		public v4 GetCorner(uint corner)
 		{
@@ -143,7 +143,7 @@ namespace pr.maths
 		}
 
 		/// <summary>Expands the bounding box to include 'point'</summary>
-		public void Encompase(v4 point)
+		public void Encompass(v4 point)
 		{
 			for (int i = 0; i != 3; ++i)
 			{
@@ -167,11 +167,11 @@ namespace pr.maths
 		}
 
 		/// <summary>Expands the bounding box to include 'rhs'</summary>
-		public void Encompase(BBox rhs)
+		public void Encompass(BBox rhs)
 		{
 			Debug.Assert(rhs.IsValid, "Encompasing an invalid bounding box");
-			Encompase(rhs.m_centre + rhs.m_radius);
-			Encompase(rhs.m_centre - rhs.m_radius);
+			Encompass(rhs.m_centre + rhs.m_radius);
+			Encompass(rhs.m_centre - rhs.m_radius);
 		}
 
 		/// <summary>Returns true if 'point' is within this bounding box (within 'tol'erance)</summary>

@@ -52,8 +52,8 @@ namespace pr
 				*i_out++ = value_cast<VIdx>(2*i + 1);
 
 				// Grow the bounding box
-				pr::Encompase(props.m_bbox, v0);
-				pr::Encompase(props.m_bbox, v1);
+				pr::Encompass(props.m_bbox, v0);
+				pr::Encompass(props.m_bbox, v1);
 			}
 			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
 			props.m_has_alpha = col.m_alpha;

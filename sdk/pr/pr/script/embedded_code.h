@@ -18,7 +18,7 @@ namespace pr
 		struct IEmbeddedCode
 		{
 			virtual ~IEmbeddedCode() {}
-			
+
 			// A handler function for executing embedded code
 			// 'code_id' is a string identifying the language of the embedded code.
 			// 'code' is the code source
@@ -27,6 +27,16 @@ namespace pr
 			// Return true, if the code was executed successfully, false if not handled.
 			// If the code can be handled but has errors, throw 'Exception's.
 			virtual bool IEmbeddedCode_Execute(char const* code_id, pr::script::string const& code, pr::script::Loc const& loc, pr::script::string& result) = 0;
+		};
+
+		// An embedded code handler that silently ignores everything between #embedded(lang)..#end
+		struct IgnoreEmbeddedCode :IEmbeddedCode
+		{
+			bool IEmbeddedCode_Execute(char const*, pr::script::string const&, pr::script::Loc const&, pr::script::string& result)
+			{
+				result.clear();
+				return true;
+			}
 		};
 	}
 }

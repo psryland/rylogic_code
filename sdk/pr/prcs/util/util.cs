@@ -587,10 +587,7 @@ namespace pr.util
 				}
 
 				// Get the pr libs directory
-				var pr_root = Environment.GetEnvironmentVariable("pr_root");
-				if (!pr_root.HasValue()) pr_root = @"q:";
-
-				full = Path.Combine(pr_root+@"\sdk\pr\lib", src_filepath);
+				full = Path.Combine(@"q:\sdk\pr\lib", src_filepath);
 				if (File.Exists(full))
 				{
 					src_filepath = full;

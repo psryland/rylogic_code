@@ -27,7 +27,7 @@ namespace pr
 					uint num_vertices = static_cast<uint>(mesh.m_vertex.size());
 					pr::Vert* vb = &mesh.m_vertex[0];
 					for (uint v = 0; v < num_vertices; ++v)
-					{ 
+					{
 						Zero(vb->m_normal);
 						++vb;
 					}
@@ -54,7 +54,7 @@ namespace pr
 					// Normalise all of the vertex normals
 					vb = &mesh.m_vertex[0];
 					for (uint v = 0; v < num_vertices; ++v)
-					{ 
+					{
 						vb->m_normal = Normalise3IfNonZero(vb->m_normal);
 						++vb;
 					}
@@ -66,7 +66,7 @@ namespace pr
 					// Enclose all of the vertices
 					pr::BoundingBox bbox = pr::BBoxReset;
 					for (pr::TVertCont::const_iterator v = mesh.m_vertex.begin(), v_end = mesh.m_vertex.end(); v != v_end; ++v)
-						pr::Encompase(bbox, v->m_vertex);
+						pr::Encompass(bbox, v->m_vertex);
 					return bbox;
 				}
 
@@ -110,7 +110,7 @@ namespace pr
 					reduce_mesh::TIdx  remap;	remap.reserve(num_vertices);
 					reduce_mesh::TIdx  lookup;	lookup.reserve(num_vertices);
 					reduce_mesh::Dict dict(&verts, &remap, &lookup);
-					
+
 					// Quantise the verts and add them to the dictionary
 					for( uint i = 0; i != num_vertices; ++i )
 						dict.Add(mesh.m_vertex[i].m_vertex);
@@ -120,7 +120,7 @@ namespace pr
 					pr::Vert vert; vert.set(v4Zero, v4Zero, Colour32White, v2Zero);
 					for( reduce_mesh::TVert::const_iterator v = verts.begin(), v_end = verts.end(); v != v_end; ++v )
 					{
-						vert.m_vertex = *v;	
+						vert.m_vertex = *v;
 						mesh.m_vertex.push_back(vert);
 					}
 
@@ -140,7 +140,7 @@ namespace pr
 
 		// Calculate the bounding box for a mesh
 		inline pr::BoundingBox GetBoundingBox(pr::Mesh const& mesh) { return impl::mesh_tools::GetBoundingBox(mesh); }
-		
+
 		// Modify a mesh to be just verts and faces, i.e remove redundant verts when texture coords are not needed
 		inline void ReduceMesh(pr::Mesh& mesh) { return impl::mesh_tools::ReduceMesh<void>(mesh); }
 	}
@@ -164,7 +164,7 @@ void pr::rdr::model::GenerateNormals(MLock& mlock, Range const* v_range, Range c
 	vf::iterator vb = mlock.m_vlock.m_ptr + v_range->m_begin;
 	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
 		Zero(vb->normal());
-	
+
 	Index* ib = mlock.m_ilock.m_ptr + i_range->m_begin;
 	for (std::size_t f = 0, f_end = f + i_range->size()/3; f != f_end; ++f, ib += 3)
 	{
@@ -195,7 +195,7 @@ void pr::rdr::model::GenerateNormals(ModelPtr& model, Range const* v_range, Rang
 	MLock mlock(model);
 	GenerateNormals(mlock, v_range, i_range);
 }
-	
+
 // Set the vertex colours in a model
 void pr::rdr::model::SetVertexColours(MLock& mlock, Colour32 colour, Range const* v_range)
 {
@@ -207,6 +207,5 @@ void pr::rdr::model::SetVertexColours(MLock& mlock, Colour32 colour, Range const
 	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
 		vb->colour() = colour;
 }
-	
 
 */

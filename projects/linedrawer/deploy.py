@@ -22,9 +22,9 @@ else: Tools.OnError("Unknown platform")
 config = input("Configuration (debug, release(default))? ")
 if config == "": config = "release"
 
-proj   = UserVars.pr_root + "\\projects\\vs2012\\linedrawer.sln"
-srcdir = UserVars.pr_root + "\\obj2012\\linedrawer\\" + platform + "\\" + config
-dstdir = UserVars.pr_root + "\\bin\\linedrawer\\" + platform
+proj   = UserVars.root + "\\projects\\vs2012\\linedrawer.sln"
+srcdir = UserVars.root + "\\obj2012\\linedrawer\\" + platform + "\\" + config
+dstdir = UserVars.root + "\\bin\\linedrawer\\" + platform
 
 input(
     " Deploy Settings:\n"

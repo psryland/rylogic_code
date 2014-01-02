@@ -55,7 +55,7 @@ namespace pr
 				v4 pt = *verts++;
 				v4 nm = *norm++;
 				SetPCNT(*v_out++, pt, *col++, nm, *uv++);
-				pr::Encompase(props.m_bbox, pt);
+				pr::Encompass(props.m_bbox, pt);
 			}
 
 			// Faces or edges or whatever

@@ -109,7 +109,7 @@ namespace pr.common
 
 		/// <summary>
 		/// Returns a range that is the union of this range with 'rng'
-		/// (basically the same as 'Encompase' except this range isn't modified.</summary>
+		/// (basically the same as 'Encompass' except this range isn't modified.</summary>
 		public Range Union(Range rng)
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");

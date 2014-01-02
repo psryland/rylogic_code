@@ -7,7 +7,6 @@
 #ifndef PR_MATHS_FRECT_IMPL_H
 #define PR_MATHS_FRECT_IMPL_H
 
-
 #include "pr/maths/frect.h"
 
 namespace pr
@@ -23,7 +22,7 @@ namespace pr
 		case +1: m_min.x += sz; break;
 		}
 	}
-	
+
 	// Set the y dimension of the rect
 	// 'anchor' : -1 = anchor the left, 0 = anchor centre, 1 = anchor right
 	inline void FRect::SizeY(float sz, int anchor)
@@ -35,7 +34,7 @@ namespace pr
 		case +1: m_min.y += sz; break;
 		}
 	}
-	
+
 	inline FRect& FRect::operator = (IRect const& rhs)
 	{
 		m_min = rhs.m_min;
@@ -76,9 +75,9 @@ namespace pr
 	{
 		return Scale(rect, by, by);
 	}
-	
-	// Encompase 'point' in 'frect'
-	inline FRect& Encompase(FRect& rect, v2 const& point)
+
+	// Encompass 'point' in 'frect'
+	inline FRect& Encompass(FRect& rect, v2 const& point)
 	{
 		if (point.x < rect.m_min.x) rect.m_min.x = point.x;
 		if (point.y < rect.m_min.y) rect.m_min.y = point.y;
@@ -86,14 +85,14 @@ namespace pr
 		if (point.y > rect.m_max.y) rect.m_max.y = point.y;
 		return rect;
 	}
-	inline FRect Encompase(FRect const& rect, v2 const& point)
+	inline FRect Encompass(FRect const& rect, v2 const& point)
 	{
 		FRect r = rect;
-		return Encompase(r, point);
+		return Encompass(r, point);
 	}
-	
-	// Encompase 'rhs' in 'lhs'
-	inline FRect& Encompase(FRect& lhs, FRect const& rhs)
+
+	// Encompass 'rhs' in 'lhs'
+	inline FRect& Encompass(FRect& lhs, FRect const& rhs)
 	{
 		if (rhs.m_min.x < lhs.m_min.x) lhs.m_min.x = rhs.m_min.x;
 		if (rhs.m_min.y < lhs.m_min.y) lhs.m_min.y = rhs.m_min.y;
@@ -101,26 +100,25 @@ namespace pr
 		if (rhs.m_max.y > lhs.m_max.y) lhs.m_max.y = rhs.m_max.y;
 		return lhs;
 	}
-	inline FRect Encompase(FRect const& lhs, FRect const& rhs)
+	inline FRect Encompass(FRect const& lhs, FRect const& rhs)
 	{
 		FRect r = lhs;
-		return Encompase(r, rhs);
+		return Encompass(r, rhs);
 	}
-	
+
 	// Returns true if 'point' is within the bounding volume
 	inline bool IsWithin(FRect const& rect, v2 const& point)
 	{
 		return  point.x >= rect.m_min.x && point.x < rect.m_max.x &&
 				point.y >= rect.m_min.y && point.y < rect.m_max.y;
 	}
-	
+
 	// Returns true if 'lhs' and 'rhs' intersect
 	inline bool IsIntersection(FRect const& lhs, FRect const& rhs)
 	{
 		return !(lhs.m_max.x < rhs.m_min.x || lhs.m_min.x > rhs.m_max.x ||
 				 lhs.m_max.y < rhs.m_min.y || lhs.m_min.y > rhs.m_max.y);
 	}
-	
 }
 
 #endif

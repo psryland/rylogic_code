@@ -17,8 +17,8 @@ print(
 Tools.CheckVersion(1)
 
 binname = "Rylogic.CustomTool.HtmlExpander.dll"
-srcdir = UserVars.pr_root + r"\projects\Rylogic.CustomTool.HtmlExpander"
-dstdir = UserVars.pr_root + r"\bin\custom_tools"
+srcdir = UserVars.root + r"\projects\Rylogic.CustomTool.HtmlExpander"
+dstdir = UserVars.root + r"\bin\custom_tools"
 config = input("Configuration (debug, release(default))? ")
 if config == "": config = "release"
 

@@ -79,10 +79,7 @@
       </Command>
     </PreBuildEvent>
     <ClCompile>
-      <Optimization>Disabled</Optimization>
-      <MinimalRebuild>true</MinimalRebuild>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
@@ -90,10 +87,6 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>renderer11.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalManifestDependencies>%(AdditionalManifestDependencies)</AdditionalManifestDependencies>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Console</SubSystem>
-      <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <Manifest>
       <AssemblyIdentity>
@@ -107,9 +100,7 @@
       </Command>
     </PreBuildEvent>
     <ClCompile>
-      <Optimization>Disabled</Optimization>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
@@ -117,9 +108,6 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>renderer11.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalManifestDependencies>%(AdditionalManifestDependencies)</AdditionalManifestDependencies>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Console</SubSystem>
     </Link>
     <Manifest>
       <AssemblyIdentity>
@@ -133,13 +121,7 @@
       </Command>
     </PreBuildEvent>
     <ClCompile>
-      <Optimization>Full</Optimization>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <MinimalRebuild>true</MinimalRebuild>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
@@ -147,11 +129,6 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>renderer11.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalManifestDependencies>%(AdditionalManifestDependencies)</AdditionalManifestDependencies>
-      <SubSystem>Windows</SubSystem>
-      <OptimizeReferences>true</OptimizeReferences>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <Manifest>
       <AssemblyIdentity>
@@ -165,12 +142,7 @@
       </Command>
     </PreBuildEvent>
     <ClCompile>
-      <Optimization>Full</Optimization>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
@@ -178,10 +150,6 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>renderer11.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalManifestDependencies>%(AdditionalManifestDependencies)</AdditionalManifestDependencies>
-      <SubSystem>Windows</SubSystem>
-      <OptimizeReferences>true</OptimizeReferences>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <Manifest>
       <AssemblyIdentity>
@@ -197,6 +165,22 @@
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_object.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.h" />
     <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\char_stream.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\comment_strip.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\embedded_code.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\embedded_lua.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\keywords.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_includes.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro_db.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\preprocessor.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\reader.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\script.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\script_core.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\script_forward.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\stream_stack.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\token.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\tokeniser.h" />
     <ClInclude Include="..\View3D\renderer_instance.h" />
     <ClInclude Include="..\View3D\stdafx.h" />
     <ClInclude Include="..\..\sdk\pr\pr\view3d\view3d.h" />

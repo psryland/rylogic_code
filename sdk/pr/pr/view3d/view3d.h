@@ -212,7 +212,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_SetFillMode              (View3DDrawset drawset, EView3DFillMode::Type mode);
 	VIEW3D_API BOOL                    __stdcall View3D_Orthographic             (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_SetOrthographic          (View3DDrawset drawset, BOOL render2d);
-	VIEW3D_API int                     __stdcall View3D_BackGroundColour         (View3DDrawset drawset);
+	VIEW3D_API int                     __stdcall View3D_BackgroundColour         (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_SetBackgroundColour      (View3DDrawset drawset, int aarrggbb);
 
 	// Tools

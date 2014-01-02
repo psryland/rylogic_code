@@ -20,29 +20,33 @@ Tools.CheckVersion(1)
 targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
 platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
 config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")
-dstdir     = sys.argv[4] if len(sys.argv) > 4 else UserVars.pr_root+r"\sdk\pr\lib"
+dstdir     = sys.argv[4] if len(sys.argv) > 4 else UserVars.root + "\\sdk\\pr\\lib"
 if platform.lower() == "win32": platform = "x86"
 
 trace = False
-targetpath  = targetpath.lower();
-platform    = platform.lower();
-config      = config.lower();
-dstdir      = dstdir.lower().rstrip("/\\") + "\\" + platform + "\\" + config;
+targetpath  = targetpath.lower()
+platform    = platform.lower()
+config      = config.lower()
+dstdir      = dstdir.lower().rstrip("/\\") + "\\" + platform + "\\" + config
+symdir      = UserVars.pr_root + "\\local\\symbols\\" + platform + "\\" + config
 srcdir,file = os.path.split(targetpath)
 fname,extn  = os.path.splitext(file)
 
-srcfname = srcdir+"\\"+fname
-dstfname = dstdir+"\\"+fname
+srcfname = srcdir + "\\" + fname
+dstfname = dstdir + "\\" + fname
 if trace:
 	print("SrcFName: " + srcfname)
 	print("DstFName: " + dstfname)
-	
+
 #Copy the library file to the lib folder
 Tools.Copy(targetpath, dstfname + extn)
 
 #If there's an associated pdb file copy that too
+#Also, copy it to the symbols folder
 if os.path.exists(srcfname + ".pdb"):
 	Tools.Copy(srcfname + ".pdb", dstfname + ".pdb")
+	if not os.path.exists(symdir): os.makedirs(symdir)
+	Tools.Copy(srcfname + ".pdb", symdir)
 
 #If the lib is a dll, look for an import library and copy that too, if it exists
 if extn == ".dll":

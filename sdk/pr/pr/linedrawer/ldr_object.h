@@ -302,7 +302,7 @@ namespace pr
 				if (m_model && pred(*this)) // Get the bbox from the graphics model
 				{
 					pr::BoundingBox const& bb = m_model->m_bbox;
-					if (bb.IsValid()) pr::Encompase(bbox, bb);
+					if (bb.IsValid()) pr::Encompass(bbox, bb);
 				}
 				if (include_children) // Add the bounding boxes of the children
 				{
@@ -310,15 +310,14 @@ namespace pr
 					{
 						LdrObjectPtr const& child = *i;
 						pr::BoundingBox child_bbox = child->BBoxMS(include_children, pred);
-						if (child_bbox.IsValid()) pr::Encompase(bbox, child->m_o2p * child_bbox);
+						if (child_bbox.IsValid()) pr::Encompass(bbox, child->m_o2p * child_bbox);
 					}
 				}
 				return bbox;
 			}
 			pr::BoundingBox BBoxMS(bool include_children) const
 			{
-				struct All { bool operator()(LdrObject const&) const {return true;} };
-				return BBoxMS(include_children, All());
+				return BBoxMS(include_children, [](LdrObject const&){ return true; });
 			}
 
 			// Return the bounding box for this object in world space.
@@ -326,7 +325,7 @@ namespace pr
 			// If not then, then the returned bbox will be transformed to the top level object space
 			template <typename Pred> pr::BoundingBox BBoxWS(bool include_children, Pred pred) const
 			{
-				pr::BoundingBox bbox = BBoxMS(include_children, pred);
+				auto bbox = BBoxMS(include_children, pred);
 				if (bbox.IsValid())
 				{
 					bbox = m_o2p * bbox;
@@ -337,8 +336,7 @@ namespace pr
 			}
 			pr::BoundingBox BBoxWS(bool include_children) const
 			{
-				struct All { bool operator()(LdrObject const&) const {return true;} };
-				return BBoxWS(include_children, All());
+				return BBoxWS(include_children, [](LdrObject const&){ return true; });
 			}
 
 			// Called when there are no more references to this object

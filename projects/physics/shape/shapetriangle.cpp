@@ -29,9 +29,9 @@ ShapeTriangle& ShapeTriangle::set(v4 const& a, v4 const& b, v4 const& c, const m
 BoundingBox& pr::ph::CalcBBox(ShapeTriangle const& shape, BoundingBox& bbox)
 {
 	bbox.reset();
-	Encompase(bbox, shape.m_v.x);
-	Encompase(bbox, shape.m_v.y);
-	Encompase(bbox, shape.m_v.z);
+	Encompass(bbox, shape.m_v.x);
+	Encompass(bbox, shape.m_v.y);
+	Encompass(bbox, shape.m_v.z);
 	return bbox;
 }
 

@@ -13,8 +13,8 @@ print(
 
 Tools.CheckVersion(1)
 
-dstdir = UserVars.pr_root + "\\bin"
-srcdir = UserVars.pr_root + "\\projects\\Rylogic.VSExtension"
+dstdir = UserVars.root + "\\bin"
+srcdir = UserVars.root + "\\projects\\Rylogic.VSExtension"
 manifest = srcdir + "\\source.extension.vsixmanifest"
 proj   = srcdir + "\\Rylogic.VSExtension.sln"
 config = "release"

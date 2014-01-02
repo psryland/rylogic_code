@@ -18,7 +18,7 @@ namespace pr
 	{
 		v2 m_min;
 		v2 m_max;
-		
+
 		FRect&  set(float xmin, float ymin, float xmax, float ymax)   { m_min.set(xmin, ymin); m_max.set(xmax, ymax); return *this; }
 		FRect&  set(v2 const& min, v2 const& max)                     { m_min = min; m_max = max; return *this; }
 		FRect&  shift(float xofs, float yofs)                         { m_min.x += xofs; m_max.x += xofs; m_min.y += yofs; m_max.y += yofs; return *this; }
@@ -40,7 +40,7 @@ namespace pr
 		void    SizeX(float sz, int anchor);
 		void    SizeY(float sz, int anchor);
 		FRect&  operator = (IRect const& rhs);
-		
+
 		static FRect make(float xmin, float ymin, float xmax, float ymax) { FRect rect; return rect.set(xmin, ymin, xmax, ymax); }
 		static FRect make(v2 const& min, v2 const& max)                   { FRect rect; return rect.set(min, max); }
 		static FRect make(IRect const& rect)                              { FRect frect; return frect = rect; }
@@ -67,7 +67,7 @@ namespace pr
 	inline bool operator >  (FRect const& lhs, FRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (FRect const& lhs, FRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (FRect const& lhs, FRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	
+
 	FRect& Zero(FRect& rect);
 	bool   IsZero(FRect const& rect);
 	FRect  Inflate(FRect const& rect, float xmin, float ymin, float xmax, float ymax);
@@ -76,10 +76,10 @@ namespace pr
 	FRect  Scale(FRect const& rect, float xmin, float ymin, float xmax, float ymax);
 	FRect  Scale(FRect const& rect, float byX, float byY);
 	FRect  Scale(FRect const& rect, float by);
-	FRect& Encompase(FRect& rect, v2 const& point);
-	FRect  Encompase(FRect const& rect, v2 const& point);
-	FRect& Encompase(FRect& lhs, FRect const& rhs);
-	FRect  Encompase(FRect const& lhs, FRect const& rhs);
+	FRect& Encompass(FRect& rect, v2 const& point);
+	FRect  Encompass(FRect const& rect, v2 const& point);
+	FRect& Encompass(FRect& lhs, FRect const& rhs);
+	FRect  Encompass(FRect const& lhs, FRect const& rhs);
 	bool   IsWithin(FRect const& rect, v2 const& point);
 	bool   IsIntersection(FRect const& lhs, FRect const& rhs);
 }

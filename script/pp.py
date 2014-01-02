@@ -41,12 +41,12 @@ try:
 	#/GS /analyze- /W3 /wd"4351" /Gy /Zc:wchar_t /ZI /Gm /Od /Ob0 /GF /WX- /Zc:forScope /RTC1 /Gd /Oy- /MTd /openmp /fp:precise /errorReport:prompt /EHsc 
 
 	includes=[
-		'/I"'+UserVars.pr_root+'\\projects"',
-		'/I"'+UserVars.pr_root+'\\sdk\\pr"',
-		'/I"'+UserVars.pr_root+'\\sdk\\wtl\\v8.1\\include"',
-		'/I"'+UserVars.pr_root+'\\sdk\\lua\\lua\\src"',
-		'/I"'+UserVars.pr_root+'\\sdk\\lua"',
-		'/I"'+UserVars.pr_root+'\\sdk\\sqlite"'
+		'/I"'+UserVars.root+'\\projects"',
+		'/I"'+UserVars.root+'\\sdk\\pr"',
+		'/I"'+UserVars.root+'\\sdk\\wtl\\v8.1\\include"',
+		'/I"'+UserVars.root+'\\sdk\\lua\\lua\\src"',
+		'/I"'+UserVars.root+'\\sdk\\lua"',
+		'/I"'+UserVars.root+'\\sdk\\sqlite"'
 		]
 
 	defines=[

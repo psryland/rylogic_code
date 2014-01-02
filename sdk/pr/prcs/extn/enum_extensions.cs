@@ -283,6 +283,12 @@ namespace pr.extn
 			get { return Enum.GetValues(typeof(T)).Cast<T>(); }
 		}
 
+		/// <summary>Returns the number of names or values in the enumeration</summary>
+		public static int Count
+		{
+			get { return Enum.GetValues(typeof(T)).Length; }
+		}
+
 		static Enum()
 		{
 			var type = typeof(T);

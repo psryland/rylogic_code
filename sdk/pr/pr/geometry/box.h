@@ -89,7 +89,7 @@ namespace pr
 				{
 					vert[j].pt = *v_in; ++v_in;
 					vert[j].cl = *col;  ++col;
-					pr::Encompase(props.m_bbox, vert[j].pt);
+					pr::Encompass(props.m_bbox, vert[j].pt);
 				}
 
 				// Set the verts

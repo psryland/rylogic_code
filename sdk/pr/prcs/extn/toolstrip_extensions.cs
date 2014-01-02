@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using pr.util;
 
 namespace pr.extn
 {
@@ -12,13 +13,15 @@ namespace pr.extn
 		/// <summary>Exports location data for this tool strip container</summary>
 		public static ToolStripLocations SaveLocations(this ToolStripContainer cont)
 		{
-			return new ToolStripLocations(cont);
+			using (cont.MarkAsSaving())
+				return new ToolStripLocations(cont);
 		}
 
 		/// <summary>Imports location data for this tool strip container</summary>
 		public static void LoadLocations(this ToolStripContainer cont, ToolStripLocations data)
 		{
-			data.Apply(cont);
+			using (cont.MarkAsLoading())
+				data.Apply(cont);
 		}
 
 		/// <summary>Returns the Top,Left,Right,Bottom panels</summary>
@@ -145,20 +148,12 @@ namespace pr.extn
 			public const string Left     = "left";
 			public const string Right    = "right";
 			public const string Bottom   = "bottom";
-			public const string TopVis   = "top_visible";
-			public const string LeftVis  = "left_visible";
-			public const string RightVis = "right_visible";
-			public const string BotVis   = "bottom_visible";
 		}
 		private string m_name;
 		private ControlLocations m_top;
 		private ControlLocations m_left;
 		private ControlLocations m_right;
 		private ControlLocations m_bottom;
-		private bool m_top_vis;
-		private bool m_left_vis;
-		private bool m_right_vis;
-		private bool m_bot_vis;
 
 		public ToolStripLocations()
 		{
@@ -167,10 +162,6 @@ namespace pr.extn
 			m_left      = new ControlLocations();
 			m_right     = new ControlLocations();
 			m_bottom    = new ControlLocations();
-			m_top_vis   = true;
-			m_left_vis  = true;
-			m_right_vis = true;
-			m_bot_vis   = true;
 		}
 		public ToolStripLocations(ToolStripContainer cont)
 		{
@@ -183,23 +174,17 @@ namespace pr.extn
 			m_left      = node.Element(Tag.Left    ).As<ControlLocations>();
 			m_right     = node.Element(Tag.Right   ).As<ControlLocations>();
 			m_bottom    = node.Element(Tag.Bottom  ).As<ControlLocations>();
-			m_top_vis   = node.Element(Tag.TopVis  ).As<bool>();
-			m_left_vis  = node.Element(Tag.LeftVis ).As<bool>();
-			m_right_vis = node.Element(Tag.RightVis).As<bool>();
-			m_bot_vis   = node.Element(Tag.BotVis  ).As<bool>();
 		}
 		public XElement ToXml(XElement node)
 		{
-			node.Add(
+			node.Add
+			(
 				m_name .    ToXml(Tag.Name    ,false),
 				m_top      .ToXml(Tag.Top     ,false),
 				m_left     .ToXml(Tag.Left    ,false),
 				m_right    .ToXml(Tag.Right   ,false),
-				m_bottom   .ToXml(Tag.Bottom  ,false),
-				m_top_vis  .ToXml(Tag.TopVis  ,false),
-				m_left_vis .ToXml(Tag.LeftVis ,false),
-				m_right_vis.ToXml(Tag.RightVis,false),
-				m_bot_vis  .ToXml(Tag.BotVis  ,false));
+				m_bottom   .ToXml(Tag.Bottom  ,false)
+			);
 			return node;
 		}
 		public void Read(ToolStripContainer cont)
@@ -209,22 +194,29 @@ namespace pr.extn
 			m_left      = new ControlLocations(cont.LeftToolStripPanel  );
 			m_right     = new ControlLocations(cont.RightToolStripPanel );
 			m_bottom    = new ControlLocations(cont.BottomToolStripPanel);
-			m_top_vis   = cont.TopToolStripPanelVisible;
-			m_left_vis  = cont.LeftToolStripPanelVisible;
-			m_right_vis = cont.RightToolStripPanelVisible;
-			m_bot_vis   = cont.BottomToolStripPanelVisible;
 		}
-		public void Apply(ToolStripContainer cont)
+		public void Apply(ToolStripContainer cont, bool layout_on_resume = true)
 		{
 			if (m_name != cont.Name) return;
-			cont.TopToolStripPanelVisible    = m_top_vis;
-			cont.LeftToolStripPanelVisible   = m_left_vis;
-			cont.RightToolStripPanelVisible  = m_right_vis;
-			cont.BottomToolStripPanelVisible = m_bot_vis;
-			m_top   .Apply(cont.TopToolStripPanel   );
-			m_left  .Apply(cont.LeftToolStripPanel  );
-			m_right .Apply(cont.RightToolStripPanel );
-			m_bottom.Apply(cont.BottomToolStripPanel);
+
+			// Helper for temporarily removing the parent of a tool strip panel
+			Func<ToolStripPanel,Scope> invis = panel =>
+				{
+					var vis = panel.Visible;
+					return Scope.Create(() => panel.Visible = false, () => panel.Visible = vis);
+				};
+
+			using (cont.SuspendLayout(layout_on_resume))
+			using (invis(cont.TopToolStripPanel   ))
+			using (invis(cont.LeftToolStripPanel  ))
+			using (invis(cont.RightToolStripPanel ))
+			using (invis(cont.BottomToolStripPanel))
+			{
+				m_top   .Apply(cont.TopToolStripPanel   );
+				m_left  .Apply(cont.LeftToolStripPanel  );
+				m_right .Apply(cont.RightToolStripPanel );
+				m_bottom.Apply(cont.BottomToolStripPanel);
+			}
 		}
 	}
 }

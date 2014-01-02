@@ -100,10 +100,10 @@ namespace pr
 				SetPCNT(*v_out++, v2, c2, norm(v1,v2,v3), t10);
 				SetPCNT(*v_out++, v3, c3, norm(v2,v3,v0), t00);
 
-				pr::Encompase(props.m_bbox, v0);
-				pr::Encompase(props.m_bbox, v1);
-				pr::Encompase(props.m_bbox, v2);
-				pr::Encompase(props.m_bbox, v3);
+				pr::Encompass(props.m_bbox, v0);
+				pr::Encompass(props.m_bbox, v1);
+				pr::Encompass(props.m_bbox, v2);
+				pr::Encompass(props.m_bbox, v3);
 
 				// Set faces
 				std::size_t ibase = i * 6;
@@ -185,8 +185,8 @@ namespace pr
 			}
 
 			BoundingBox bbox = BBoxReset;
-			pr::Encompase(bbox, origin);
-			pr::Encompase(bbox, origin + quad_x + quad_z);
+			pr::Encompass(bbox, origin);
+			pr::Encompass(bbox, origin + quad_x + quad_z);
 
 			Props props;
 			props.m_bbox = bbox;

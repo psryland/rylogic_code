@@ -13,9 +13,9 @@ print(
 
 Tools.CheckVersion(1)
 
-srcdir = UserVars.pr_root + "\\projects\\rylogviewer"
-dstdir = UserVars.pr_root + "\\bin"
-symdir = UserVars.pr_root + "\\local\\symbols"
+srcdir = UserVars.root + "\\projects\\rylogviewer"
+dstdir = UserVars.root + "\\bin"
+symdir = UserVars.root + "\\local\\symbols"
 proj   = srcdir + "\\RylogViewer.sln"
 dst    = dstdir + "\\rylogviewer"
 sym    = symdir + "\\rylogviewer"

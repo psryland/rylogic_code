@@ -26,7 +26,7 @@ BoundingBox& pr::ph::CalcBBox(ShapeArray const& shape, BoundingBox& bbox)
 	bbox.reset();
 	for( Shape const* i = shape.begin(), *i_end = shape.end(); i != i_end; i = pr::ph::Inc(i) )
 	{
-		Encompase(bbox, i->m_shape_to_model * i->m_bbox);
+		Encompass(bbox, i->m_shape_to_model * i->m_bbox);
 	}
 	return bbox;
 }

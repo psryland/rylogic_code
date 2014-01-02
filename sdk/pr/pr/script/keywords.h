@@ -13,7 +13,7 @@ namespace pr
 {
 	namespace script
 	{
-		// enum EResult 
+		// enum EResult
 		// Script exception values/return codes
 		#define PR_ENUM(x)\
 			x(Success                         ,= 0)\
@@ -33,6 +33,7 @@ namespace pr
 			x(PreprocessError                 ,)\
 			x(SyntaxError                     ,)\
 			x(ExpressionSyntaxError           ,)\
+			x(EmbeddedCodeNotSupported        ,)\
 			x(EmbeddedCodeSyntaxError         ,)\
 			x(TokenNotFound                   ,)\
 			x(UnknownKeyword                  ,)\

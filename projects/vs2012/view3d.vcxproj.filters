@@ -16,6 +16,9 @@
     <Filter Include="sdk\lua">
       <UniqueIdentifier>{289d033a-d7cd-42ce-8422-6ed91b5659b7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk\script">
+      <UniqueIdentifier>{f6a00def-486d-441f-a6c6-4d47ca0a53d5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\sdk\pr\pr\camera\trackball_3d.h">
@@ -41,6 +44,54 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper.h">
       <Filter>linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\char_stream.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\comment_strip.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\embedded_code.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\embedded_lua.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\keywords.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_includes.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro_db.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\preprocessor.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\reader.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\script.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\script_core.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\script_forward.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\stream_stack.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\token.h">
+      <Filter>sdk\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\tokeniser.h">
+      <Filter>sdk\script</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

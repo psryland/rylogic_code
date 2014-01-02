@@ -13,7 +13,7 @@ print(
 
 Tools.CheckVersion(1)
 
-srcdir = UserVars.pr_root + "\\sdk\\pr\\prcs"
+srcdir = UserVars.root + "\\sdk\\pr\\prcs"
 proj   = srcdir + "\\Rylogic.csproj"
 config = "both" #input("Configuration (debug, release, both(default))? ")
 if config == "": config = "both"

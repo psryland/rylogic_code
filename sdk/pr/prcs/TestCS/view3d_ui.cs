@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 using System.Windows.Forms;
 using pr.gui;
 using pr.maths;
@@ -15,20 +14,16 @@ namespace TestCS
 		public FormView3d()
 		{
 			InitializeComponent();
-			m_view3d = new View3D();
-			m_view3d.Anchor = AnchorStyles.Top|AnchorStyles.Bottom|AnchorStyles.Left|AnchorStyles.Right;
-			m_view3d.BorderStyle = BorderStyle.FixedSingle;
-			m_view3d.ClickTimeMS = 180;
-			m_view3d.Dock = DockStyle.Fill;
-			m_view3d.Location = new Point(3, 3);
-			m_view3d.Name = "m_view3d";
-			m_view3d.FillMode = View3D.EFillMode.Solid;
-			m_view3d.Size = new Size(324, 251);
-			m_view3d.TabIndex = 2;
+			m_view3d = new View3D
+			{
+				Name        = "m_view3d",
+				BorderStyle = BorderStyle.FixedSingle,
+				Dock        = DockStyle.Fill
+			};
 			Controls.Add(m_view3d);
 
 			m_obj0 = new View3D.Object("*Box test FF00FF00 {1 2 3}");
-			m_view3d.DrawsetAddObject(m_obj0);
+			m_view3d.Drawset.AddObject(m_obj0);
 
 			m_obj1 = new View3D.Object("net", 0xFF0000FF, 20, 20,
 				(int vcount, int icount, View3D.Vertex[] verts, ushort[] indices, out int new_vcount, out int new_icount, out View3D.EPrim prim_type, out View3D.EGeom geom_type, ref View3D.Material mat, IntPtr ctx) =>
@@ -45,13 +40,18 @@ namespace TestCS
 					prim_type = View3D.EPrim.D3D_PRIMITIVE_TOPOLOGY_LINELIST;
 					geom_type = View3D.EGeom.Vert;
 				});
-			m_view3d.DrawsetAddObject(m_obj1);
+			m_view3d.Drawset.AddObject(m_obj1);
+
+			m_view3d.CreateDemoScene();
+			m_view3d.Drawset.Camera.ResetView();
+
+			m_view3d.Drawset.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
 		}
 		protected override void Dispose(bool disposing)
 		{
-			m_obj0.Dispose();
-			m_obj1.Dispose();
-			m_view3d.Dispose();
+			if (m_obj0 != null) m_obj0.Dispose();
+			if (m_obj1 != null) m_obj1.Dispose();
+			if (m_view3d != null) m_view3d.Dispose();
 			if (disposing && (components != null))
 			{
 				components.Dispose();

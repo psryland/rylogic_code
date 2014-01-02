@@ -62,7 +62,7 @@ v4 pr::ph::CalcCentreOfMass(ShapePolytope const& shape)
 		PR_INFO_EXP(PR_DBG_PHYSICS, volume > 0.0f, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
 		volume = Abs(volume + maths::tiny);
 	}
-	centre_of_mass /= volume * 4.0f; 
+	centre_of_mass /= volume * 4.0f;
 	centre_of_mass.w = 0.0f;	// 'centre_of_mass' is an offset from the current model origin
 	return centre_of_mass;
 }
@@ -83,7 +83,7 @@ BoundingBox& pr::ph::CalcBBox(ShapePolytope const& shape, BoundingBox& bbox)
 {
 	bbox.reset();
 	for( v4 const *v = shape.vert_begin(), *v_end = shape.vert_end(); v != v_end; ++v )
-	    Encompase(bbox, *v);
+	    Encompass(bbox, *v);
 	return bbox;
 }
 
@@ -110,7 +110,7 @@ m3x3 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 			diagonal_integrals[i] += (
 				a[i] * b[i] +
 				b[i] * c[i] +
-				c[i] * a[i] + 
+				c[i] * a[i] +
 				a[i] * a[i] +
 				b[i] * b[i] +
 				c[i] * c[i]
@@ -247,7 +247,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint_vert_id, std::size_t& vert_id0, std::size_t& vert_id1, bool major)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, hint_vert_id < shape.m_vert_count, "");
-	
+
 	float eps = major ? maths::tiny : -maths::tiny;
 	vert_id0 = hint_vert_id;
 	v4 const* V1 = &shape.vertex(vert_id0);
@@ -279,7 +279,7 @@ void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint
 	vert_id1 = *shape.nbr(vert_id0).begin();
 }
 
-// Return the number of vertices in a polytope 
+// Return the number of vertices in a polytope
 uint pr::ph::VertCount(ShapePolytope const& shape)
 {
 	return shape.m_vert_count;
@@ -316,7 +316,7 @@ void pr::ph::GenerateVerts(ShapePolytope const& shape, v4* verts, v4* verts_end)
 void pr::ph::GenerateEdges(ShapePolytope const& shape, v4* edges, v4* edges_end)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, uint(edges_end - edges) >= 2 * EdgeCount(shape), "Edge buffer too small");
-	
+
 	uint vert_index = 0;
 	uint nbr_index = 1;
 
@@ -325,7 +325,7 @@ void pr::ph::GenerateEdges(ShapePolytope const& shape, v4* edges, v4* edges_end)
 	{
 		*edges++ = shape.vertex(vert_index);
 		*edges++ = shape.vertex(nbrs->begin()[nbr_index]);
-		
+
 		// Increment 'vert_index' and 'nbr_index' to refer
 		// to the next edge. Only consider edges for which
 		// the neighbouring vertex has a higher value. This
@@ -410,7 +410,7 @@ void pr::ph::GenerateFaces(ShapePolytope const& shape, uint* faces, uint* faces_
 				{
 					// Look for this edge in the stack
 					Edge* e = edges.begin();
-					for( ; e != edges.end() && !(*e == ed); ++e ) {}				
+					for( ; e != edges.end() && !(*e == ed); ++e ) {}
 					if( e == edges.end() )	edges.push(ed);		// Add the unique edge
 					else					*e = edges.pop();	// Erase the duplicate
 					if( edges.size() == edge_stack_size )
@@ -472,7 +472,7 @@ bool pr::ph::Validate(ShapePolytope const& shape, bool check_com)
 	{
 		// Check the neighbours of each vertex.
 		ShapePolyNbrs const& nbrs = shape.nbr(i);
-		
+
 		// All polytope verts should have an artifical neighbour plus >0 real neighbours
 		PR_ASSERT(PR_DBG_PHYSICS, nbrs.m_count > 1, "");
 
@@ -487,7 +487,7 @@ bool pr::ph::Validate(ShapePolytope const& shape, bool check_com)
 
 			// Check that the neighbour refers to a different vert in the polytope
 			PR_ASSERT(PR_DBG_PHYSICS, *j != i, "");
-		
+
 			// Check that there is a neighbour in both directions between 'i' and 'j'
 			ShapePolyNbrs const& nbr_nbrs = shape.nbr(*j);
 			bool found = j == nbrs.begin();// artificial neighbours don't point back

@@ -13,7 +13,7 @@ print(
 
 Tools.CheckVersion(1)
 
-proj    = UserVars.pr_root + r"\projects\RyLogViewer"
+proj    = UserVars.root + r"\projects\RyLogViewer"
 docsdir = proj + r"\docs"
 resdir  = proj + r"\Resources"
 

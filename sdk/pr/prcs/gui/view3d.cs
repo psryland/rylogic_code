@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gfx;
 using pr.maths;
-
+using pr.util;
 using HWND = System.IntPtr;
 
 using HDrawset = System.IntPtr;
@@ -18,6 +19,17 @@ namespace pr.gui
 {
 	public class View3D :UserControl
 	{
+		// Notes:
+		//  Keyboard events:
+		//  Users should hook up to the KeyDown event with the handlers they want.
+		//  The View3D class has public methods for some common behaviours
+		//  E.g. "Refresh"
+		//   view3d.KeyDown += (s,a) =>
+		//       {
+		//           if (e.KeyCode == Keys.F5)
+		//               ReloadScene();
+		//       };
+
 		public const int DefaultContextId = 0;
 
 		#region Enumerations
@@ -164,6 +176,30 @@ namespace pr.gui
 			DXGI_FORMAT_B4G4R4A4_UNORM              = 115,
 			DXGI_FORMAT_FORCE_UINT                  = 0xffffffff
 		}
+
+		/// <summary>Texture filtering flags</summary>
+		[Flags] public enum EFilter :uint
+		{
+			D3DX_DEFAULT                 = 0xFFFFFFFF,
+			D3DX_FILTER_NONE             = (1 << 0),
+			D3DX_FILTER_POINT            = (2 << 0),
+			D3DX_FILTER_LINEAR           = (3 << 0),
+			D3DX_FILTER_TRIANGLE         = (4 << 0),
+			D3DX_FILTER_BOX              = (5 << 0),
+
+			D3DX_FILTER_MIRROR_U         = (1 << 16),
+			D3DX_FILTER_MIRROR_V         = (2 << 16),
+			D3DX_FILTER_MIRROR_W         = (4 << 16),
+			D3DX_FILTER_MIRROR           = (7 << 16),
+
+			D3DX_FILTER_DITHER           = (1 << 19),
+			D3DX_FILTER_DITHER_DIFFUSION = (2 << 19),
+
+			D3DX_FILTER_SRGB_IN          = (1 << 21),
+			D3DX_FILTER_SRGB_OUT         = (2 << 21),
+			D3DX_FILTER_SRGB             = (3 << 21),
+		}
+
 		public enum ELight
 		{
 			Ambient,
@@ -184,6 +220,8 @@ namespace pr.gui
 			Middle = 1 << 2
 		}
 		#endregion
+
+		#region Structs
 
 		[StructLayout(LayoutKind.Sequential, Pack = 1)]
 		public struct Vertex
@@ -218,6 +256,44 @@ namespace pr.gui
 			public IntPtr m_env_map;
 		}
 
+		/// <summary>Light source properties</summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct View3DLight
+		{
+			public ELight       m_type;
+			public bool         m_on;
+			public v4           m_position;
+			public v4           m_direction;
+			public Colour32     m_ambient;
+			public Colour32     m_diffuse;
+			public Colour32     m_specular;
+			public float        m_specular_power;
+			public float        m_inner_cos_angle;
+			public float        m_outer_cos_angle;
+			public float        m_range;
+			public float        m_falloff;
+			public bool         m_cast_shadows;
+
+			/// <summary>Return properties for a directional light source</summary>
+			public static View3DLight Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
+			{
+				return new View3DLight
+				{
+					m_type           = ELight.Directional,
+					m_on             = true,
+					m_position       = v4.Origin,
+					m_direction      = direction,
+					m_ambient        = ambient,
+					m_diffuse        = diffuse,
+					m_specular       = specular,
+					m_specular_power = spec_power,
+					m_cast_shadows   = cast_shadows,
+				};
+			}
+		}
+
+		#endregion
+
 		public class Exception : System.Exception
 		{
 			public EResult m_code = EResult.Success;
@@ -226,10 +302,6 @@ namespace pr.gui
 			public Exception(string message) :this(message, EResult.Success) {}
 			public Exception(string message, EResult code) :base(message) { m_code = code; }
 		}
-
-		public delegate void ReportErrorCB(string msg);
-		public delegate void SettingsChangedCB();
-		public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
 
 		public delegate void EditObjectCB(
 			int vcount,
@@ -245,60 +317,68 @@ namespace pr.gui
 
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
 		public event ReportErrorCB OnError;
+		public delegate void ReportErrorCB(string msg);
 
 		/// <summary>Event notifying whenever rendering settings have changed</summary>
 		public event SettingsChangedCB OnSettingsChanged;
+		public delegate void SettingsChangedCB();
+
+		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
 
 		private IContainer components;                            // Required designer variable.
-		private HDrawset m_drawset = HDrawset.Zero;               // The currently selected drawset
 		private readonly ReportErrorCB m_error_cb;                // A local reference to prevent the callback being garbage collected
 		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
-		private readonly bool m_dll_found;
+		private readonly List<DrawsetInterface> m_drawsets;
 		private bool m_mouse_navigation;
-		private int m_click_time_ms = 180;
 		private int m_mouse_down_at;
 
-		// Note about keyboard events:
-		//	Users should hook up to the KeyDown event with the handler they want.
-		// E.g. "Refresh"
-		//	view3d.KeyDown += delegate (object sender, KeyEventArgs e)
-		//	{
-		//		if (e.KeyCode == Keys.F5)
-		//			ReloadScene();
-		//	};
-
 		public View3D() :this(null) {}
+
+		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
 		public View3D(ReportErrorCB error_cb)
 		{
+			if (Util.DesignTime) return;
+
 			InitializeComponent();
-			if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
-				return;
 
 			m_error_cb = ErrorCB;
 			m_settings_changed_cb = SettingsChgCB;
+			m_drawsets = new List<DrawsetInterface>();
 			if (error_cb != null) OnError += error_cb;
 
 			// Initialise the renderer
-			IntPtr hwnd = Handle;
-			EResult res = View3D_Initialise(hwnd, m_error_cb, m_settings_changed_cb);
+			var res = View3D_Initialise(Handle, m_error_cb, m_settings_changed_cb);
 			if (res != EResult.Success) throw new Exception(res);
-			m_dll_found = true;
 
+			ClickTimeMS = 180;
 			MouseNavigation = true;
 			DefaultKeyboardShortcuts = true;
 
 			// Update the size of the control whenever we're added to a new parent
-			ParentChanged += delegate { View3D_Resize(Width-2, Height-2); };
+			ParentChanged += (s,a) => View3D_Resize(Width-2, Height-2);
 
 			// Create a default drawset
-			DrawsetCreate();
+			Drawset = DrawsetCreate();
 		}
 
-		/// <summary>Set the background colour of the control</summary>
-		public override Color BackColor
+		/// <summary>Clean up any resources being used.</summary>
+		protected override void Dispose(bool disposing)
 		{
-			get { return base.BackColor; }
-			set { base.BackColor = value; if (m_dll_found) View3D_SetBackgroundColour(m_drawset, value.ToArgb()); }
+			if (disposing) Close();
+			if (disposing && (components != null))
+			{
+				components.Dispose();
+			}
+			base.Dispose(disposing);
+		}
+
+		/// <summary>Shutdown the renderer</summary>
+		public void Close()
+		{
+			while (m_drawsets.Count != 0)
+				m_drawsets[0].Dispose();
+
+			View3D_Shutdown();
 		}
 
 		/// <summary>Callback function from the Dll when an error occurs</summary>
@@ -314,6 +394,55 @@ namespace pr.gui
 			// Forward changed settings notification to anyone that cares
 			if (OnSettingsChanged != null) OnSettingsChanged();
 		}
+
+		/// <summary>Get/Set the currently active drawset</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public DrawsetInterface Drawset
+		{
+			get { return m_current_drawset; }
+			set
+			{
+				MouseNavigation = false;
+
+				m_current_drawset = value;
+				if (value == null) return;
+
+				MouseNavigation = true;
+			}
+		}
+		private DrawsetInterface m_current_drawset;
+
+		/// <summary>Set the background colour of the control</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public override Color BackColor
+		{
+			get { return base.BackColor; }
+			set
+			{
+				base.BackColor = value;
+				foreach (var ds in m_drawsets)
+					ds.BackgroundColour = value;
+			}
+		}
+
+		/// <summary>Enable/Disable default keyboard shortcuts</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public bool DefaultKeyboardShortcuts
+		{
+			set
+			{
+				KeyDown -= TranslateKey;
+				if (value) KeyDown += TranslateKey;
+			}
+		}
+
+		/// <summary>The time between mouse down->up that is considered a mouse click</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public int ClickTimeMS { get; set; }
 
 		/// <summary>Hook up mouse navigation</summary>
 		[Browsable(false)]
@@ -341,11 +470,6 @@ namespace pr.gui
 		}
 
 		/// <summary>Mouse navigation - public to allow users to forward mouse calls to us.</summary>
-		public int ClickTimeMS
-		{
-			get { return m_click_time_ms; }
-			set { m_click_time_ms = value; }
-		}
 		public void OnMouseDown(object sender, MouseEventArgs e)
 		{
 			Cursor = Cursors.SizeAll;
@@ -368,326 +492,78 @@ namespace pr.gui
 		}
 		public void OnMouseMove(object sender, MouseEventArgs e)
 		{
+			if (Drawset == null) return;
 			Navigate(e.Location, e.Button, false);
-			View3D_Render(m_drawset);
+			Drawset.Render();
 		}
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
+			if (Drawset == null) return;
 			NavigateZ(e.Delta / 120f);
-			View3D_Render(m_drawset);
+			Drawset.Render();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)
 		{
-			int btn_state = ButtonState(e.Button);
+			if (Drawset == null) return;
+			var btn_state = ButtonState(e.Button);
 			if (Bit.AllSet(btn_state, (int)ENavBtn.Middle) || Bit.AllSet(btn_state, (int)(ENavBtn.Left|ENavBtn.Right)))
-				View3D_ResetZoom(m_drawset);
-			View3D_Render(m_drawset);
+				Drawset.ResetZoom();
+			Drawset.Render();
 		}
 
 		/// <summary>Direct X/Y navigation. 'point' is a point in client rect space.</summary>
 		public void Navigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
 		{
-			View3D_Navigate(m_drawset, NormalisePoint(point), ButtonState(mouse_btns), nav_start_or_end);
+			if (Drawset == null) return;
+			View3D_Navigate(Drawset.Handle, NormalisePoint(point), ButtonState(mouse_btns), nav_start_or_end);
 		}
 
-		// Direct Z navigation
+		/// <summary>Direct Z navigation</summary>
 		public void NavigateZ(float delta)
 		{
-			View3D_NavigateZ(m_drawset, delta);
-		}
-
-		/// <summary>Enable/Disable default keyboard shortcuts</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool DefaultKeyboardShortcuts
-		{
-			set
-			{
-				KeyDown -= TranslateKey;
-				if (value) KeyDown += TranslateKey;
-			}
+			if (Drawset == null) return;
+			View3D_NavigateZ(Drawset.Handle, delta);
 		}
 
 		/// <summary>Standard keyboard shortcuts</summary>
 		public void TranslateKey(object sender, KeyEventArgs e)
 		{
+			if (Drawset == null) return;
 			switch (e.KeyCode)
 			{
-			default:break;
 			case Keys.F7:
-				ResetView();
-				View3D_Render(m_drawset);
-				break;
-			case Keys.Space:
-				ShowObjectManager(true);
-				break;
-			case Keys.W:
-				if ((e.Modifiers & Keys.Control) != 0)
 				{
-					int mode = (int)View3D_FillMode(Drawset) + 1;
-					int modes = Enum.GetValues(typeof(EFillMode)).Length;
-					FillMode = (EFillMode)(mode % modes);
-					View3D_Render(m_drawset);
-				}break;
-			}
-		}
-
-		/// <summary>Shutdown the renderer</summary>
-		public void Close()
-		{
-			DrawsetDelete(Drawset);
-			if (m_dll_found) View3D_Shutdown();
-		}
-
-		/// <summary>Import/Export a settings string for view3d</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public string Settings
-		{
-			get { return m_dll_found ? Marshal.PtrToStringAnsi(View3D_GetSettings(Drawset)) : ""; }
-			set { if (m_dll_found) View3D_SetSettings(Drawset, value); }
-		}
-
-		/// <summary>Set the currently active drawset</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public HDrawset Drawset
-		{
-			get { return m_drawset; }
-			set
-			{
-				MouseNavigation = false;
-
-				m_drawset = value;
-				if (m_drawset == HDrawset.Zero) return;
-
-				MouseNavigation = true;
+					Drawset.Camera.ResetView();
+					Drawset.Render();
+					break;
+				}
+			case Keys.Space:
+				{
+					ShowObjectManager(true);
+					break;
+				}
+			case Keys.W:
+				{
+					if ((e.Modifiers & Keys.Control) != 0)
+					{
+						Drawset.FillMode = Enum<EFillMode>.Cycle(Drawset.FillMode);
+						Drawset.Render();
+					}
+					break;
+				}
 			}
 		}
 
 		/// <summary>Create a drawset. Sets the current drawset to the one created</summary>
-		public HDrawset DrawsetCreate()
+		public DrawsetInterface DrawsetCreate()
 		{
-			// Create a drawset
-			HDrawset drawset;
-			EResult res = View3D_DrawsetCreate(out drawset);
-			if (res != EResult.Success) throw new Exception(res);
-			if (Drawset != IntPtr.Zero) DrawsetDelete(Drawset);
-			Drawset = drawset;
-
-			// Display the focus point
-			FocusPointVisible = true;
-
-			// Create a light source
-			SetLightSource(v4.Origin, -v4.ZAxis, true);
-
-			// Position the camera
-			PositionCamera(new v4(0f, 0f, -2f, 1f), v4.Origin, v4.YAxis);
-
-			return m_drawset;
-		}
-		public void DrawsetDelete(HDrawset drawset)
-		{
-			if (m_drawset == drawset) Drawset = HDrawset.Zero;
-			View3D_DrawsetDelete(drawset);
-		}
-
-		/// <summary>Add multiple objects by context id</summary>
-		public void DrawsetAddObjects(int context_id)
-		{
-			View3D_DrawsetAddObjectsById(m_drawset, context_id);
-		}
-
-		/// <summary>Remove multiple objects by context id</summary>
-		public void DrawsetRemoveObjects(int context_id)
-		{
-			View3D_DrawsetRemoveObjectsById(m_drawset, context_id);
-		}
-
-		/// <summary>Add an object to the drawset</summary>
-		public void DrawsetAddObject(Object obj)
-		{
-			View3D_DrawsetAddObject(m_drawset, obj.m_handle);
-		}
-
-		/// <summary>Add a collection of objects to the drawset</summary>
-		public void DrawsetAddObjects(IEnumerable<Object> objects)
-		{
-			foreach (Object obj in objects)
-				View3D_DrawsetAddObject(m_drawset, obj.m_handle);
-		}
-
-		/// <summary>Remove an object from the drawset</summary>
-		public void DrawsetRemoveObject(Object obj)
-		{
-			View3D_DrawsetRemoveObject(m_drawset, obj.m_handle);
-		}
-
-		/// <summary>Remove a collection of objects from the drawset</summary>
-		public void DrawsetRemoveObjects(IEnumerable<Object> objects)
-		{
-			foreach (Object obj in objects)
-				View3D_DrawsetRemoveObject(m_drawset, obj.m_handle);
-		}
-
-		/// <summary>Remove all instances from the drawset</summary>
-		public void DrawsetRemoveAllObjects()
-		{
-			View3D_DrawsetRemoveAllObjects(m_drawset);
-		}
-
-		/// <summary>Return the number of objects in a drawset</summary>
-		public int DrawsetObjectCount()
-		{
-			return View3D_DrawsetObjectCount(m_drawset);
-		}
-
-		/// <summary>Get/Set the position of the camera focus point</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public v4 FocusPoint
-		{
-			get { v4 pos = v4.Origin; if (m_dll_found) View3D_GetFocusPoint(m_drawset, out pos); return pos; }
-			set { if (m_dll_found) View3D_SetFocusPoint(m_drawset, ref value); }
-		}
-
-		/// <summary>Get/Set the camera position. Note: use LookAt to set the focus distance at the same time</summary>
-		[Browsable(false)]
-		public m4x4 CameraToWorld
-		{
-			get { m4x4 c2w = m4x4.Identity; if (m_dll_found) View3D_CameraToWorld(m_drawset, out c2w); return c2w; }
-			set { if (m_dll_found) View3D_SetCameraToWorld(m_drawset, ref value); }
-		}
-		public void PositionCamera(v4 position, v4 lookat, v4 up)
-		{
-			View3D_PositionCamera(m_drawset, ref position, ref lookat, ref up);
-		}
-		public void ResetView(v4 forward, v4 up)
-		{
-			View3D_ResetView(m_drawset, ref forward, ref up);
-		}
-		public void ResetView(v4 forward)
-		{
-			v4 up; View3D_CameraAlignAxis(m_drawset, out up);
-			if (up.Length3Sq == 0f) up = v4.YAxis;
-			if (v4.Parallel(up, forward)) up = v4.Perpendicular(forward);
-			ResetView(forward, up);
-		}
-		public void ResetView()
-		{
-			v4 up; View3D_CameraAlignAxis(m_drawset, out up);
-			if (up.Length3Sq == 0f) up = v4.YAxis;
-			v4 forward = up.z > up.y ? v4.YAxis : v4.ZAxis;
-			ResetView(forward, up);
-		}
-		public void Align(v4 axis)
-		{
-			View3D_AlignCamera(m_drawset, ref axis);
-		}
-
-		/// <summary>Get/Set the distance to the camera focus point</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public float CameraFocusDist
-		{
-			get { return m_dll_found ? View3D_FocusDistance(m_drawset) : 1f; }
-			set { if (m_dll_found) View3D_SetFocusDistance(m_drawset, value); }
-		}
-
-		/// <summary>Get/Set the camera view aspect ratio = Width/Height</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public float CameraAspect
-		{
-			get { return m_dll_found ? View3D_CameraAspect(m_drawset) : 1f; }
-			set { if (m_dll_found) View3D_SetCameraAspect(m_drawset, value); }
-		}
-
-		/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public float CameraFovX
-		{
-			get { return m_dll_found ? View3D_CameraFovX(m_drawset) : 1f; }
-			set { if (m_dll_found) View3D_SetCameraFovX(m_drawset, value); }
-		}
-
-		/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public float CameraFovY
-		{
-			get { return m_dll_found ? View3D_CameraFovY(m_drawset) : 1f; }
-			set { if (m_dll_found) View3D_SetCameraFovY(m_drawset, value); }
-		}
-
-		/// <summary>Convert a screen space point into a position and direction in world space 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)</summary>
-		public void WSRayFromScreenPoint(HDrawset drawset, v2 screen, out v4 ws_point, out v4 ws_direction)
-		{
-			View3D_WSRayFromScreenPoint(drawset, ref screen, out ws_point, out ws_direction);
-		}
-
-		/// <summary>Show/Hide the focus point</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool FocusPointVisible
-		{
-			get { return m_dll_found ? View3D_FocusPointVisible(m_drawset) : false; }
-			set { if (m_dll_found) View3D_ShowFocusPoint(m_drawset, value); }
-		}
-
-		/// <summary>Set the size of the focus point graphic</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public float FocusPointSize
-		{
-			set { View3D_SetFocusPointSize(Drawset, value); }
-		}
-
-		/// <summary>Show/Hide the origin point</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool OriginVisible
-		{
-			get { return m_dll_found ? View3D_OriginVisible(m_drawset) : false; }
-			set { if (m_dll_found) View3D_ShowOrigin(m_drawset, value); }
-		}
-
-		/// <summary>Set the size of the origin graphic</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public float OriginSize
-		{
-			set { View3D_SetOriginSize(Drawset, value); }
-		}
-
-		/// <summary>Get/Set the render mode</summary>
-		[Browsable(false)]
-		public EFillMode FillMode
-		{
-			get { return m_dll_found ? View3D_FillMode(Drawset) : EFillMode.Solid; }
-			set { if (m_dll_found) View3D_SetFillMode(Drawset, value); }
+			return new DrawsetInterface(this);
 		}
 
 		/// <summary>Show/Hide the object manager UI</summary>
 		public void ShowObjectManager(bool show)
 		{
-			if (m_dll_found) View3D_ShowObjectManager(show);
-		}
-
-		/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public View3DLight LightProperties
-		{
-			get { return m_dll_found ? View3D_LightProperties(m_drawset) : new View3DLight(); }
-			set { if (m_dll_found) View3D_SetLightProperties(m_drawset, ref value); }
-		}
-
-		/// <summary>Set the single light source</summary>
-		public void SetLightSource(v4 position, v4 direction, bool camera_relative)
-		{
-			if (m_dll_found) View3D_LightSource(m_drawset, ref position, ref direction, camera_relative);
+			View3D_ShowObjectManager(show);
 		}
 
 		/// <summary>Create multiple objects from a source file and associate them with 'context_id'</summary>
@@ -706,24 +582,6 @@ namespace pr.gui
 			View3D_ObjectsDeleteById(context_id);
 		}
 
-		/// <summary>Show/Hide the measuring tool</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool ShowMeasureTool
-		{
-			get { return m_dll_found ? View3D_MeasureToolVisible() : false; }
-			set { if (m_dll_found) View3D_ShowMeasureTool(m_drawset, value); }
-		}
-
-		/// <summary>Show/Hide the angle tool</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool ShowAngleTool
-		{
-			get { return m_dll_found ? View3D_AngleToolVisible() : false; }
-			set { if (m_dll_found) View3D_ShowAngleTool(m_drawset, value); }
-		}
-
 		/// <summary>Show a window containing and example ldr script file</summary>
 		public void ShowExampleScript()
 		{
@@ -733,7 +591,8 @@ namespace pr.gui
 		/// <summary>Example for creating objects</summary>
 		public void CreateDemoScene()
 		{
-			View3D_CreateDemoScene(m_drawset);
+			if (Drawset == null) return;
+			View3D_CreateDemoScene(Drawset.Handle);
 
 			//{// Create an object using ldr script
 			//    HObject obj = ObjectCreate("*Box ldr_box FFFF00FF {1 2 3}");
@@ -784,28 +643,29 @@ namespace pr.gui
 		/// <summary>Show the view3D context menu</summary>
 		public void ShowContextMenu()
 		{
-			ContextMenuStrip context_menu = new ContextMenuStrip();
-			context_menu.Closed += delegate { Refresh(); };
+			if (Drawset == null) return;
+			var context_menu = new ContextMenuStrip();
+			context_menu.Closed += (s,a) => Refresh();
 
 			{// View
-				ToolStripMenuItem view_menu = new ToolStripMenuItem("View");
+				var view_menu = new ToolStripMenuItem("View");
 				context_menu.Items.Add(view_menu);
 				{// Show focus
-					ToolStripMenuItem show_focus_menu = new ToolStripMenuItem("Show Focus");
+					var show_focus_menu = new ToolStripMenuItem("Show Focus");
 					view_menu.DropDownItems.Add(show_focus_menu);
-					show_focus_menu.Checked = FocusPointVisible;
-					show_focus_menu.Click += delegate { FocusPointVisible = !FocusPointVisible; Refresh(); };
+					show_focus_menu.Checked = Drawset.FocusPointVisible;
+					show_focus_menu.Click += (s,a) => { Drawset.FocusPointVisible = !Drawset.FocusPointVisible; Refresh(); };
 				}
 				{// Show Origin
-					ToolStripMenuItem show_origin_menu = new ToolStripMenuItem("Show Origin");
+					var show_origin_menu = new ToolStripMenuItem("Show Origin");
 					view_menu.DropDownItems.Add(show_origin_menu);
-					show_origin_menu.Checked = OriginVisible;
-					show_origin_menu.Click += delegate { OriginVisible = !OriginVisible; Refresh(); };
+					show_origin_menu.Checked = Drawset.OriginVisible;
+					show_origin_menu.Click += (s,a) => { Drawset.OriginVisible = !Drawset.OriginVisible; Refresh(); };
 				}
 				{// Show coords
 				}
 				{// Axis Views
-					ToolStripComboBox view_options = new ToolStripComboBox("Views");
+					var view_options = new ToolStripComboBox("Views");
 					view_menu.DropDownItems.Add(view_options);
 					view_options.Items.Add("Views");
 					view_options.Items.Add("Axis +X");
@@ -818,61 +678,59 @@ namespace pr.gui
 					view_options.SelectedIndex = 0;
 					view_options.SelectedIndexChanged += delegate
 					{
-						v4 pos = FocusPoint;
+						var pos = Drawset.Camera.FocusPoint;
 						switch (view_options.SelectedIndex)
 						{
-						default: break;
-						case 1: ResetView( v4.XAxis); break;
-						case 2: ResetView(-v4.XAxis); break;
-						case 3: ResetView( v4.YAxis); break;
-						case 4: ResetView(-v4.YAxis); break;
-						case 5: ResetView( v4.ZAxis); break;
-						case 6: ResetView(-v4.ZAxis); break;
-						case 7: ResetView(-v4.XAxis-v4.YAxis-v4.ZAxis); break;
+						case 1: Drawset.Camera.ResetView( v4.XAxis); break;
+						case 2: Drawset.Camera.ResetView(-v4.XAxis); break;
+						case 3: Drawset.Camera.ResetView( v4.YAxis); break;
+						case 4: Drawset.Camera.ResetView(-v4.YAxis); break;
+						case 5: Drawset.Camera.ResetView( v4.ZAxis); break;
+						case 6: Drawset.Camera.ResetView(-v4.ZAxis); break;
+						case 7: Drawset.Camera.ResetView(-v4.XAxis-v4.YAxis-v4.ZAxis); break;
 						}
-						FocusPoint = pos;
+						Drawset.Camera.FocusPoint = pos;
 						Refresh();
 					};
 				}
 				{// Object Manager UI
-					ToolStripMenuItem obj_mgr_ui = new ToolStripMenuItem("Object Manager");
+					var obj_mgr_ui = new ToolStripMenuItem("Object Manager");
 					view_menu.DropDownItems.Add(obj_mgr_ui);
 					obj_mgr_ui.Click += delegate { ShowObjectManager(true); };
 				}
 			}
 			{// Navigation
-				ToolStripMenuItem rdr_menu = new ToolStripMenuItem("Navigation");
+				var rdr_menu = new ToolStripMenuItem("Navigation");
 				context_menu.Items.Add(rdr_menu);
 				{// Reset View
-					ToolStripMenuItem reset_menu = new ToolStripMenuItem("Reset View");
+					var reset_menu = new ToolStripMenuItem("Reset View");
 					rdr_menu.DropDownItems.Add(reset_menu);
-					reset_menu.Click += delegate { ResetView(); Refresh(); };
+					reset_menu.Click += delegate { Drawset.Camera.ResetView(); Refresh(); };
 				}
 				{// Align to
-					ToolStripMenuItem align_menu = new ToolStripMenuItem("Align");
+					var align_menu = new ToolStripMenuItem("Align");
 					rdr_menu.DropDownItems.Add(align_menu);
 					{
-						ToolStripComboBox align_options = new ToolStripComboBox("Aligns");
+						var align_options = new ToolStripComboBox("Aligns");
 						align_menu.DropDownItems.Add(align_options);
 						align_options.Items.Add("None");
 						align_options.Items.Add("X");
 						align_options.Items.Add("Y");
 						align_options.Items.Add("Z");
 
-						v4 axis;
-						View3D_CameraAlignAxis(m_drawset, out axis);
-						if      (v4.FEql3(axis, v4.XAxis))	{ align_options.SelectedIndex = 1; }
-						else if (v4.FEql3(axis, v4.YAxis))	{ align_options.SelectedIndex = 2; }
-						else if (v4.FEql3(axis, v4.ZAxis))	{ align_options.SelectedIndex = 3; }
-						else								{ align_options.SelectedIndex = 0; }
+						var axis = Drawset.Camera.AlignAxis;
+						if      (v4.FEql3(axis, v4.XAxis)) align_options.SelectedIndex = 1;
+						else if (v4.FEql3(axis, v4.YAxis)) align_options.SelectedIndex = 2;
+						else if (v4.FEql3(axis, v4.ZAxis)) align_options.SelectedIndex = 3;
+						else                               align_options.SelectedIndex = 0;
 						align_options.SelectedIndexChanged += delegate
 						{
 							switch (align_options.SelectedIndex)
 							{
-							default: Align(v4.Zero);  break;
-							case 1:  Align(v4.XAxis); break;
-							case 2:  Align(v4.YAxis); break;
-							case 3:  Align(v4.ZAxis); break;
+							default: Drawset.Camera.AlignAxis = v4.Zero;  break;
+							case 1:  Drawset.Camera.AlignAxis = v4.XAxis; break;
+							case 2:  Drawset.Camera.AlignAxis = v4.YAxis; break;
+							case 3:  Drawset.Camera.AlignAxis = v4.ZAxis; break;
 							}
 							Refresh();
 						};
@@ -881,55 +739,55 @@ namespace pr.gui
 				{// Motion lock
 				}
 				{// Orbit
-					ToolStripMenuItem orbit_menu = new ToolStripMenuItem("Orbit");
+					var orbit_menu = new ToolStripMenuItem("Orbit");
 					rdr_menu.DropDownItems.Add(orbit_menu);
 					orbit_menu.Click += delegate {};
 				}
 			}
 			{// Tools
-				ToolStripMenuItem tools_menu = new ToolStripMenuItem("Tools");
+				var tools_menu = new ToolStripMenuItem("Tools");
 				context_menu.Items.Add(tools_menu);
 				{// Measure
-					ToolStripMenuItem option = new ToolStripMenuItem{Text = "Measure..."};
+					var option = new ToolStripMenuItem{Text = "Measure..."};
 					tools_menu.DropDownItems.Add(option);
-					option.Click += delegate { View3D_ShowMeasureTool(m_drawset, true); };
+					option.Click += delegate { Drawset.ShowMeasureTool = true; };
 				}
 				{// Angle
-					ToolStripMenuItem option = new ToolStripMenuItem{Text = "Angle..."};
+					var option = new ToolStripMenuItem{Text = "Angle..."};
 					tools_menu.DropDownItems.Add(option);
-					option.Click += delegate { View3D_ShowAngleTool(m_drawset, true); };
+					option.Click += delegate { Drawset.ShowAngleTool = true; };
 				}
 			}
 			{// Rendering
-				ToolStripMenuItem rdr_menu = new ToolStripMenuItem("Rendering");
+				var rdr_menu = new ToolStripMenuItem("Rendering");
 				context_menu.Items.Add(rdr_menu);
 				{// Solid/Wireframe/Solid+Wire
-					ToolStripComboBox option = new ToolStripComboBox();
+					var option = new ToolStripComboBox();
 					rdr_menu.DropDownItems.Add(option);
-					option.Items.AddRange(Enum.GetNames(typeof(EFillMode)));
-					option.SelectedIndex = (int)View3D_FillMode(m_drawset);
-					option.SelectedIndexChanged += delegate { View3D_SetFillMode(m_drawset, (EFillMode)option.SelectedIndex); Refresh(); };
+					option.Items.AddRange(Enum<EFillMode>.Names.Cast<object>().ToArray());
+					option.SelectedIndex = (int)Drawset.FillMode;
+					option.SelectedIndexChanged += delegate { Drawset.FillMode = (EFillMode)option.SelectedIndex; Refresh(); };
 				}
 				{// Render2D
-					ToolStripMenuItem option = new ToolStripMenuItem{Text = View3D_Orthographic(m_drawset) ? "Perspective" : "Orthographic"};
+					var option = new ToolStripMenuItem{Text = Drawset.Orthographic ? "Perspective" : "Orthographic"};
 					rdr_menu.DropDownItems.Add(option);
-					option.Click += delegate { bool _2d = View3D_Orthographic(m_drawset); View3D_SetOrthographic(m_drawset, !_2d); option.Text = _2d ? "Perspective" : "Orthographic"; Refresh(); };
+					option.Click += delegate { var _2d = Drawset.Orthographic; Drawset.Orthographic = !_2d; option.Text = _2d ? "Perspective" : "Orthographic"; Refresh(); };
 				}
 				{// Lighting...
-					ToolStripMenuItem lighting_menu = new ToolStripMenuItem("Lighting...");
+					var lighting_menu = new ToolStripMenuItem("Lighting...");
 					rdr_menu.DropDownItems.Add(lighting_menu);
-					lighting_menu.Click += delegate { View3D_ShowLightingDlg(m_drawset, ParentForm != null ? ParentForm.Handle : IntPtr.Zero); };
+					lighting_menu.Click += delegate { Drawset.ShowLightingDlg(ParentForm); };
 				}
 				{// Background colour
-					ToolStripMenuItem bk_colour_menu = new ToolStripMenuItem("Background Colour");
+					var bk_colour_menu = new ToolStripMenuItem("Background Colour");
 					rdr_menu.DropDownItems.Add(bk_colour_menu);
 					{
-						ToolStripButton option = new ToolStripButton(" ");
+						var option = new ToolStripButton(" ");
 						bk_colour_menu.DropDownItems.Add(option);
 						option.AutoToolTip = false;
-						option.BackColor = Color.FromArgb(View3D_BackGroundColour(m_drawset));
-						option.Click += delegate { ColorDialog cd = new ColorDialog(); if (cd.ShowDialog() == DialogResult.OK) option.BackColor = cd.Color; };
-						option.BackColorChanged += delegate { View3D_SetBackgroundColour(m_drawset, option.BackColor.ToArgb()); Refresh(); };
+						option.BackColor = Drawset.BackgroundColour;
+						option.Click += delegate { var cd = new ColourUI(); if (cd.ShowDialog() == DialogResult.OK) option.BackColor = cd.Colour; };
+						option.BackColorChanged += delegate { Drawset.BackgroundColour = option.BackColor; Refresh(); };
 					}
 				}
 			}
@@ -948,7 +806,6 @@ namespace pr.gui
 		protected override void OnResize(EventArgs e)
 		{
 			base.OnResize(e);
-			if (m_drawset == HDrawset.Zero) return;
 			View3D_Resize(Width-2, Height-2);
 			Refresh();
 		}
@@ -956,26 +813,15 @@ namespace pr.gui
 		/// <summary>Absorb PaintBackground events</summary>
 		protected override void OnPaintBackground(PaintEventArgs e)
 		{
-			if (m_drawset == HDrawset.Zero) base.OnPaintBackground(e);
+			if (Drawset == null) base.OnPaintBackground(e);
 		}
 
 		/// <summary>Paint the control</summary>
 		protected override void OnPaint(PaintEventArgs e)
 		{
 			// Render the control
-			if (m_drawset == HDrawset.Zero) base.OnPaint(e);
-			else View3D_Render(m_drawset);
-		}
-
-		/// <summary>Clean up any resources being used.</summary>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing) Close();
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
+			if (Drawset == null) base.OnPaint(e);
+			else Drawset.Render();
 		}
 
 		/// <summary>Required method for Designer support - do not modify the contents of this method with the code editor.</summary>
@@ -984,27 +830,284 @@ namespace pr.gui
 			components = new Container();
 		}
 
-		/// <summary>Texture filtering flags</summary>
-		[Flags] public enum EFilter :uint
+		/// <summary>Namespace for the camera controls</summary>
+		public class CameraControls
 		{
-			D3DX_DEFAULT                 = 0xFFFFFFFF,
-			D3DX_FILTER_NONE             = (1 << 0),
-			D3DX_FILTER_POINT            = (2 << 0),
-			D3DX_FILTER_LINEAR           = (3 << 0),
-			D3DX_FILTER_TRIANGLE         = (4 << 0),
-			D3DX_FILTER_BOX              = (5 << 0),
+			private readonly DrawsetInterface m_ds;
+			public CameraControls(DrawsetInterface ds)
+			{
+				m_ds = ds;
+			}
 
-			D3DX_FILTER_MIRROR_U         = (1 << 16),
-			D3DX_FILTER_MIRROR_V         = (2 << 16),
-			D3DX_FILTER_MIRROR_W         = (4 << 16),
-			D3DX_FILTER_MIRROR           = (7 << 16),
+			/// <summary>Get/Set the camera align axis (camera up axis). Zero vector means no align axis is set</summary>
+			public v4 AlignAxis
+			{
+				get { v4 up; View3D_CameraAlignAxis(m_ds.Handle, out up); return up; }
+				set { View3D_AlignCamera(m_ds.Handle, ref value); }
+			}
 
-			D3DX_FILTER_DITHER           = (1 << 19),
-			D3DX_FILTER_DITHER_DIFFUSION = (2 << 19),
+			/// <summary>Get/Set the camera view aspect ratio = Width/Height</summary>
+			public float Aspect
+			{
+				get { return View3D_CameraAspect(m_ds.Handle); }
+				set { View3D_SetCameraAspect(m_ds.Handle, value); }
+			}
 
-			D3DX_FILTER_SRGB_IN          = (1 << 21),
-			D3DX_FILTER_SRGB_OUT         = (2 << 21),
-			D3DX_FILTER_SRGB             = (3 << 21),
+			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
+			public float FovX
+			{
+				get { return View3D_CameraFovX(m_ds.Handle); }
+				set { View3D_SetCameraFovX(m_ds.Handle, value); }
+			}
+
+			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
+			public float FovY
+			{
+				get { return View3D_CameraFovY(m_ds.Handle); }
+				set { View3D_SetCameraFovY(m_ds.Handle, value); }
+			}
+
+			/// <summary>Get/Set the position of the camera focus point</summary>
+			public v4 FocusPoint
+			{
+				get { v4 pos; View3D_GetFocusPoint(m_ds.Handle, out pos); return pos; }
+				set { View3D_SetFocusPoint(m_ds.Handle, ref value); }
+			}
+
+			/// <summary>Get/Set the distance to the camera focus point</summary>
+			public float FocusDist
+			{
+				get { return View3D_FocusDistance(m_ds.Handle); }
+				set { View3D_SetFocusDistance(m_ds.Handle, value); }
+			}
+
+			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>
+			public m4x4 O2W
+			{
+				get { m4x4 c2w; View3D_CameraToWorld(m_ds.Handle, out c2w); return c2w; }
+				set { View3D_SetCameraToWorld(m_ds.Handle, ref value); }
+			}
+
+			/// <summary>Set the camera to world transform and focus distance.</summary>
+			public void SetPosition(v4 position, v4 lookat, v4 up)
+			{
+				View3D_PositionCamera(m_ds.Handle, ref position, ref lookat, ref up);
+			}
+
+			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
+			public void ResetView(v4 forward, v4 up)
+			{
+				View3D_ResetView(m_ds.Handle, ref forward, ref up);
+			}
+
+			/// <summary>Move the camera to a position that can see the whole scene given camera direction 'forward'</summary>
+			public void ResetView(v4 forward)
+			{
+				var up = AlignAxis;
+				if (up.Length3Sq == 0f) up = v4.YAxis;
+				if (v4.Parallel(up, forward)) up = v4.Perpendicular(forward);
+				ResetView(forward, up);
+			}
+
+			/// <summary>Move the camera to a position that can see the whole scene</summary>
+			public void ResetView()
+			{
+				var up = AlignAxis;
+				if (up.Length3Sq == 0f) up = v4.YAxis;
+				var forward = up.z > up.y ? v4.YAxis : v4.ZAxis;
+				ResetView(forward, up);
+			}
+		}
+
+		/// <summary>Methods for adding/removing objects from a drawset</summary>
+		public class DrawsetInterface :IDisposable
+		{
+			private readonly View3D m_view;
+			private readonly HDrawset m_ds;
+			public DrawsetInterface(View3D view)
+			{
+				m_view = view;
+				var res = View3D_DrawsetCreate(out m_ds);
+				if (res != EResult.Success) throw new Exception(res);
+				m_view.m_drawsets.Add(this);
+
+				// Create a light source
+				SetLightSource(v4.Origin, -v4.ZAxis, true);
+
+				// Display the focus point
+				FocusPointVisible = true;
+
+				// Position the camera
+				Camera = new CameraControls(this);
+				Camera.SetPosition(new v4(0f, 0f, -2f, 1f), v4.Origin, v4.YAxis);
+			}
+			public void Dispose()
+			{
+				m_view.m_drawsets.Remove(this);
+				if (m_view.Drawset == this) m_view.Drawset = null;
+				View3D_DrawsetDelete(m_ds);
+			}
+
+			/// <summary>Get the native view3d handle for the drawset</summary>
+			public IntPtr Handle { get { return m_ds; } }
+
+			/// <summary>Import/Export a settings string for view3d</summary>
+			public string Settings
+			{
+				get { return Marshal.PtrToStringAnsi(View3D_GetSettings(m_ds)); }
+				set { View3D_SetSettings(m_ds, value); }
+			}
+
+			/// <summary>Camera controls</summary>
+			public readonly CameraControls Camera;
+
+			/// <summary>Add an object to the drawset</summary>
+			public void AddObject(Object obj)
+			{
+				View3D_DrawsetAddObject(m_ds, obj.m_handle);
+			}
+
+			/// <summary>Add multiple objects by context id</summary>
+			public void AddObjects(int context_id)
+			{
+				View3D_DrawsetAddObjectsById(m_ds, context_id);
+			}
+
+			/// <summary>Add a collection of objects to the drawset</summary>
+			public void AddObjects(IEnumerable<Object> objects)
+			{
+				foreach (var obj in objects)
+					View3D_DrawsetAddObject(m_ds, obj.m_handle);
+			}
+
+			/// <summary>Remove an object from the drawset</summary>
+			public void RemoveObject(Object obj)
+			{
+				View3D_DrawsetRemoveObject(m_ds, obj.m_handle);
+			}
+
+			/// <summary>Remove multiple objects by context id</summary>
+			public void RemoveObjects(int context_id)
+			{
+				View3D_DrawsetRemoveObjectsById(m_ds, context_id);
+			}
+
+			/// <summary>Remove a collection of objects from the drawset</summary>
+			public void RemoveObjects(IEnumerable<Object> objects)
+			{
+				foreach (var obj in objects)
+					View3D_DrawsetRemoveObject(m_ds, obj.m_handle);
+			}
+
+			/// <summary>Remove all instances from the drawset</summary>
+			public void RemoveAllObjects()
+			{
+				View3D_DrawsetRemoveAllObjects(m_ds);
+			}
+
+			/// <summary>Return the number of objects in a drawset</summary>
+			public int ObjectCount
+			{
+				get { return View3D_DrawsetObjectCount(m_ds); }
+			}
+
+			/// <summary>Show/Hide the focus point</summary>
+			public bool FocusPointVisible
+			{
+				get { return View3D_FocusPointVisible(m_ds); }
+				set { View3D_ShowFocusPoint(m_ds, value); }
+			}
+
+			/// <summary>Set the size of the focus point graphic</summary>
+			public float FocusPointSize
+			{
+				set { View3D_SetFocusPointSize(m_ds, value); }
+			}
+
+			/// <summary>Show/Hide the origin point</summary>
+			public bool OriginVisible
+			{
+				get { return View3D_OriginVisible(m_ds); }
+				set { View3D_ShowOrigin(m_ds, value); }
+			}
+
+			/// <summary>Set the size of the origin graphic</summary>
+			public float OriginSize
+			{
+				set { View3D_SetOriginSize(m_ds, value); }
+			}
+
+			/// <summary>Get/Set the render mode</summary>
+			public EFillMode FillMode
+			{
+				get { return View3D_FillMode(m_ds); }
+				set { View3D_SetFillMode(m_ds, value); }
+			}
+
+			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
+			public View3DLight LightProperties
+			{
+				get { return View3D_LightProperties(m_ds); }
+				set { View3D_SetLightProperties(m_ds, ref value); }
+			}
+
+			/// <summary>Show the lighting dialog</summary>
+			public void ShowLightingDlg(Form parent)
+			{
+				View3D_ShowLightingDlg(m_ds, parent != null ? parent.Handle : IntPtr.Zero);
+			}
+
+			/// <summary>Set the single light source</summary>
+			public void SetLightSource(v4 position, v4 direction, bool camera_relative)
+			{
+				View3D_LightSource(m_ds, ref position, ref direction, camera_relative);
+			}
+
+			/// <summary>Show/Hide the measuring tool</summary>
+			public bool ShowMeasureTool
+			{
+				get { return View3D_MeasureToolVisible(); }
+				set { View3D_ShowMeasureTool(m_ds, value); }
+			}
+
+			/// <summary>Show/Hide the angle tool</summary>
+			public bool ShowAngleTool
+			{
+				get { return View3D_AngleToolVisible(); }
+				set { View3D_ShowAngleTool(m_ds, value); }
+			}
+
+			/// <summary>Convert a screen space point into a position and direction in world space 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)</summary>
+			public void WSRayFromScreenPoint(v2 screen, out v4 ws_point, out v4 ws_direction)
+			{
+				View3D_WSRayFromScreenPoint(m_ds, ref screen, out ws_point, out ws_direction);
+			}
+
+			/// <summary>Get/Set orthographic rendering mode</summary>
+			public bool Orthographic
+			{
+				get { return View3D_Orthographic(m_ds); }
+				set { View3D_SetOrthographic(m_ds, value); }
+			}
+
+			/// <summary>The background colour for the drawset</summary>
+			public Color BackgroundColour
+			{
+				get { return Color.FromArgb(View3D_BackgroundColour(m_ds)); }
+				set { View3D_SetBackgroundColour(m_ds, value.ToArgb()); }
+			}
+
+			/// <summary>Reset the zoom factor to 1f</summary>
+			public void ResetZoom()
+			{
+				View3D_ResetZoom(m_ds);
+			}
+
+			/// <summary>Cause the drawset to be rendered</summary>
+			public void Render()
+			{
+				View3D_Render(m_ds);
+			}
 		}
 
 		/// <summary>Object resource wrapper</summary>
@@ -1119,7 +1222,7 @@ namespace pr.gui
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, Rectangle src_rect, Rectangle dst_rect, EFilter filter, uint colour_key)
 			{
-				EResult res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, new Rectangle[]{dst_rect}, new Rectangle[]{src_rect}, (uint)filter, colour_key);
+				var res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, (uint)filter, colour_key);
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
@@ -1145,46 +1248,19 @@ namespace pr.gui
 			public override int GetHashCode()       { return m_handle.GetHashCode(); }
 		}
 
-		/// <summary>Light source properties</summary>
-		[StructLayout(LayoutKind.Sequential)]
-		public struct View3DLight
-		{
-			public ELight       m_type;
-			public bool         m_on;
-			public v4           m_position;
-			public v4           m_direction;
-			public Colour32     m_ambient;
-			public Colour32     m_diffuse;
-			public Colour32     m_specular;
-			public float        m_specular_power;
-			public float        m_inner_cos_angle;
-			public float        m_outer_cos_angle;
-			public float        m_range;
-			public float        m_falloff;
-			public bool         m_cast_shadows;
-
-			/// <summary>Return properties for a directional light source</summary>
-			public static View3DLight Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
-			{
-				return new View3DLight
-				{
-					m_type           = ELight.Directional,
-					m_on             = true,
-					m_position       = v4.Origin,
-					m_direction      = direction,
-					m_ambient        = ambient,
-					m_diffuse        = diffuse,
-					m_specular       = specular,
-					m_specular_power = spec_power,
-					m_cast_shadows   = cast_shadows,
-				};
-			}
-		}
-
 		#region DLL extern functions
 
 		private const string Dll = "view3d";
 		private static IntPtr m_module;
+
+		// A good idea is to add a static method in the class that is using this control
+		// e.g.
+		//  static MyThing()
+		//  {
+		//      View3D.SelectDll(System.Environment.Is64BitProcess
+		//          ? @".\libs\x64\view3d.dll"
+		//          : @".\libs\x86\view3d.dll");
+		//  }
 
 		/// <summary>Call this method to load a specific version of the view3d.dll. Call this before any DllImport'd functions</summary>
 		public static void SelectDll(string dllpath)
@@ -1266,7 +1342,7 @@ namespace pr.gui
 		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetOrthographic          (HDrawset drawset, bool render2d);
 		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
-		[DllImport(Dll)] private static extern int               View3D_BackGroundColour         (HDrawset drawset);
+		[DllImport(Dll)] private static extern int               View3D_BackgroundColour         (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetBackgroundColour      (HDrawset drawset, int aarrggbb);
 
 		// Tools

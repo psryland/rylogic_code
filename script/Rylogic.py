@@ -1,5 +1,4 @@
 import sys, os, time, shutil, subprocess, re
-#import win32com.shell.shell as shell
 import UserVars
 
 # Terminate the script indicating success

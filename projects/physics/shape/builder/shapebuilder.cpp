@@ -36,7 +36,7 @@ ph::Shape* ShapeBuilder::BuildShape(ByteCont& model_data, MassProperties& mp, v4
 	MoveToCentreOfMassFrame(model_to_CoMframe);
 	CalculateBoundingBox();
 	CalculateInertiaTensor();
-	
+
 	// Save the mass properties we've figured out
 	mp = m_model.m_mp;
 
@@ -91,11 +91,11 @@ void ShapeBuilder::MoveToCentreOfMassFrame(v4& model_to_CoMframe)
 {
 	// Save the shift from model space to centre of mass space
 	model_to_CoMframe = m_model.m_mp.m_centre_of_mass;
-	
+
 	// Now move all of the models so that they are centred around the centre of mass
 	for( TPrimList::iterator p = m_model.m_prim_list.begin(), p_end = m_model.m_prim_list.end(); p != p_end; ++p )
 		(*p)->GetShape().m_shape_to_model.pos -= m_model.m_mp.m_centre_of_mass;
-	
+
 	// The offset to the centre of mass is now zero
 	m_model.m_mp.m_centre_of_mass = pr::v4Zero;
 }
@@ -107,7 +107,7 @@ void ShapeBuilder::CalculateBoundingBox()
 	for( TPrimList::const_iterator p = m_model.m_prim_list.begin(), p_end = m_model.m_prim_list.end(); p != p_end; ++p )
 	{
 		Prim const& prim = *(*p).m_ptr;
-		Encompase(m_model.m_bbox, prim.GetShape().m_shape_to_model * prim.m_bbox);
+		Encompass(m_model.m_bbox, prim.GetShape().m_shape_to_model * prim.m_bbox);
 	}
 }
 

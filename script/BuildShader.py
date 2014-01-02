@@ -93,7 +93,7 @@ try:
 	# Generate preprocessed output
 	if pp:
 		Tools.Exec([UserVars.fxc, fullpath, "/P"+pp_filepath] + includes + defines + options)
-		Tools.Exec([UserVars.pr_root + r"\bin\textformatter.exe", "-f", pp_filepath, "-newlines", "0", "1"])
+		Tools.Exec([UserVars.root + r"\bin\textformatter.exe", "-f", pp_filepath, "-newlines", "0", "1"])
 		Tools.Exec([UserVars.textedit, pp_filepath])
 
 	if trace:

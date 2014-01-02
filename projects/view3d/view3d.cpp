@@ -10,6 +10,7 @@
 #include "pr/common/array.h"
 #include "pr/filesys/fileex.h"
 #include "pr/script/reader.h"
+#include "pr/script/embedded_lua.h"
 #include "pr/view3d/view3d.h"
 #include "pr/renderer11/renderer.h"
 
@@ -329,9 +330,9 @@ VIEW3D_API void __stdcall View3D_ResetView(View3DDrawset drawset, pr::v4 const& 
 	PR_ASSERT(PR_DBG, drawset != 0, "");
 
 	// The bounding box for the scene
-	pr::BoundingBox bbox = pr::BBoxReset;
-	for (ObjectCont::const_iterator i = drawset->m_objects.begin(), iend = drawset->m_objects.end(); i != iend; ++i)
-		pr::Encompase(bbox, (*i)->BBoxWS(true));
+	auto bbox = pr::BBoxReset;
+	for (auto obj : drawset->m_objects)
+		pr::Encompass(bbox, obj->BBoxWS(true));
 	if (bbox == pr::BBoxReset) bbox = pr::BBoxUnit;
 	drawset->m_camera.View(bbox, forward, up, true);
 }
@@ -506,7 +507,7 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 		for (size_t i = 0; i != new_vcount; ++i, ++vin)
 		{
 			SetPCNT(*vout++, vin->pos, pr::Colour32::make(vin->col), vin->norm, vin->tex);
-			pr::Encompase(model->m_bbox, vin->pos);
+			pr::Encompass(model->m_bbox, vin->pos);
 		}
 		auto iin = begin(indices);
 		auto iout = mlock.m_ilock.ptr<pr::uint16>();
@@ -843,7 +844,7 @@ VIEW3D_API void __stdcall View3D_SetOrthographic(View3DDrawset drawset, BOOL ren
 }
 
 // Get/Set the background colour for a drawset
-VIEW3D_API int __stdcall View3D_BackGroundColour(View3DDrawset drawset)
+VIEW3D_API int __stdcall View3D_BackgroundColour(View3DDrawset drawset)
 {
 	PR_ASSERT(PR_DBG, drawset != 0, "");
 	return drawset->m_background_colour;
@@ -884,7 +885,7 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DDrawset drawset)
 	PR_ASSERT(PR_DBG, drawset != 0, "");
 
 	size_t initial = Rdr().m_obj_cont.size();
-	pr::ldr::AddString(Rdr().m_renderer, pr::ldr::CreateDemoScene().c_str(), Rdr().m_obj_cont);
+	pr::ldr::AddString(Rdr().m_renderer, pr::ldr::CreateDemoScene().c_str(), Rdr().m_obj_cont, pr::ldr::DefaultContext, true, 0, &Rdr().m_lua);
 	size_t final = Rdr().m_obj_cont.size();
 	for (size_t i = initial; i != final; ++i)
 	{

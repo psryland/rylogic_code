@@ -125,8 +125,8 @@ namespace pr
 			}
 
 			float max_radius = std::max(radius0, radius1);
-			pr::Encompase(props.m_bbox, o2w * v4::make(-max_radius * xscale, -max_radius * yscale, -height * 0.5f, 1.0f));
-			pr::Encompase(props.m_bbox, o2w * v4::make(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
+			pr::Encompass(props.m_bbox, o2w * v4::make(-max_radius * xscale, -max_radius * yscale, -height * 0.5f, 1.0f));
+			pr::Encompass(props.m_bbox, o2w * v4::make(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
 
 			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
 			props.m_has_alpha = col.m_alpha;

@@ -13,9 +13,9 @@ print(
 
 Tools.CheckVersion(1)
 
-dstdir = UserVars.pr_root + "\\bin"
-srcdir = UserVars.pr_root + "\\projects\\Csex"
-symdir = UserVars.pr_root + "\\local\\symbols"
+dstdir = UserVars.root + "\\bin"
+srcdir = UserVars.root + "\\projects\\Csex"
+symdir = UserVars.root + "\\local\\symbols"
 proj   = srcdir + "\\Csex_vs2012.csproj"
 config = "release"
 dst    = dstdir + "\\csex"

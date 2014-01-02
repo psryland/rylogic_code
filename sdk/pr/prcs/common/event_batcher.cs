@@ -39,7 +39,7 @@ namespace pr.common
 		/// The event will be delayed to a later windows message and will only be called once.
 		/// Note: this can be called from any thread, the resulting event will be marshalled to the Dispatcher
 		/// provided in the constructor of the event batcher</summary>
-		public void Signal()
+		public void Signal(object sender = null, EventArgs args = null)
 		{
 			var issue = Interlocked.Increment(ref m_issue);
 			m_dispatcher.BeginInvokeDelayed(() =>

@@ -28,7 +28,7 @@ namespace pr
 	inline v4 const&    BoundingBox::Radius() const                           { return m_radius; }
 	inline float        BoundingBox::DiametreSq() const                       { return 4.0f * Length3Sq(m_radius); }
 	inline float        BoundingBox::Diametre() const                         { return Sqrt(DiametreSq()); }
-	
+
 	// Assignment operators
 	inline BoundingBox& operator += (BoundingBox& lhs, v4 const& offset)      { lhs.m_centre += offset; return lhs; }
 	inline BoundingBox& operator -= (BoundingBox& lhs, v4 const& offset)      { lhs.m_centre -= offset; return lhs; }
@@ -50,7 +50,7 @@ namespace pr
 		}
 		return bb;
 	}
-	
+
 	// Equality operators
 	inline bool	operator == (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool	operator != (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
@@ -58,13 +58,13 @@ namespace pr
 	inline bool operator >  (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	
+
 	// Functions
 	inline float Volume(BoundingBox const& bbox)
 	{
 		return bbox.SizeX() * bbox.SizeY() * bbox.SizeZ();
 	}
-	
+
 	// Return a plane corresponding to a side of the bounding box
 	// Returns inward facing planes
 	inline Plane GetPlane(BoundingBox const& bbox, EBBoxPlane side)
@@ -81,7 +81,7 @@ namespace pr
 		case EBBoxPlane_Uz: return plane::make( 0.0f,  0.0f, -1.0f, bbox.m_centre.z + bbox.m_radius.z);
 		}
 	}
-	
+
 	// Return a corner of the bounding box
 	inline v4 GetCorner(BoundingBox const& bbox, uint corner)
 	{
@@ -91,15 +91,15 @@ namespace pr
 		int z = ((corner >> 2) & 0x1) * 2 - 1;
 		return v4::make(bbox.m_centre.x + x*bbox.m_radius.x, bbox.m_centre.y + y*bbox.m_radius.y, bbox.m_centre.z + z*bbox.m_radius.z, 1.0f);
 	}
-	
+
 	// Return a bounding sphere that bounds the bounding box
 	inline BoundingSphere GetBoundingSphere(BoundingBox const& bbox)
 	{
 		return BoundingSphere::make(bbox.m_centre, Length3(bbox.m_radius));
 	}
-	
-	// Encompase 'point' within 'bbox'.
-	inline BoundingBox&	Encompase(BoundingBox& bbox, v4 const& point)
+
+	// Encompass 'point' within 'bbox'.
+	inline BoundingBox&	Encompass(BoundingBox& bbox, v4 const& point)
 	{
 		for (int i = 0; i != 3; ++i)
 		{
@@ -122,40 +122,42 @@ namespace pr
 		}
 		return bbox;
 	}
-	
-	// Encompase 'point' within 'bbox'.
-	inline BoundingBox Encompase(BoundingBox const& bbox, v4 const& point)
+
+	// Encompass 'point' within 'bbox'.
+	inline BoundingBox Encompass(BoundingBox const& bbox, v4 const& point)
 	{
 		BoundingBox bb = bbox;
-		return Encompase(bb, point);
+		return Encompass(bb, point);
 	}
-	
-	// Encompase 'rhs' in 'lhs'
-	inline BoundingBox& Encompase(BoundingBox& lhs, BoundingBox const& rhs)
+
+	// Encompass 'rhs' in 'lhs'
+	inline BoundingBox& Encompass(BoundingBox& lhs, BoundingBox const& rhs)
 	{
-		PR_ASSERT(PR_DBG_MATHS, rhs.IsValid(), "Encompasing an invalid bounding box");
-		Encompase(lhs, rhs.m_centre + rhs.m_radius);
-		Encompase(lhs, rhs.m_centre - rhs.m_radius);
+		// Don't treat rhs.IsValid() as an error, it's the only way to Encompass a empty bbox
+		if (!rhs.IsValid()) return lhs;
+		Encompass(lhs, rhs.m_centre + rhs.m_radius);
+		Encompass(lhs, rhs.m_centre - rhs.m_radius);
 		return lhs;
 	}
-	
-	// Encompase 'rhs' in 'lhs'
-	inline BoundingBox&	Encompase(BoundingBox& lhs, BoundingSphere const& rhs)
+
+	// Encompass 'rhs' in 'lhs'
+	inline BoundingBox&	Encompass(BoundingBox& lhs, BoundingSphere const& rhs)
 	{
-		PR_ASSERT(PR_DBG_MATHS, rhs.IsValid(), "Encompasing an invalid bounding sphere");
+		// Don't treat rhs.IsValid() as an error, it's the only way to Encompass a empty bsphere
+		if (!rhs.IsValid()) return lhs;
 		pr::v4 radius = pr::v4::make(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
-		Encompase(lhs, rhs.Centre() + radius);
-		Encompase(lhs, rhs.Centre() - radius);
+		Encompass(lhs, rhs.Centre() + radius);
+		Encompass(lhs, rhs.Centre() - radius);
 		return lhs;
 	}
-	
-	// Encompase 'rhs' in 'lhs'
-	inline BoundingBox Encompase(BoundingBox const& lhs, BoundingBox const& rhs)
+
+	// Encompass 'rhs' in 'lhs'
+	inline BoundingBox Encompass(BoundingBox const& lhs, BoundingBox const& rhs)
 	{
 		BoundingBox bb = lhs;
-		return Encompase(bb, rhs);
+		return Encompass(bb, rhs);
 	}
-	
+
 	// Returns true if 'point' is within the bounding volume
 	inline bool IsWithin(BoundingBox const& bbox, v4 const& point, float tol)
 	{
@@ -208,7 +210,6 @@ namespace pr
 	{
 		PRUnitTest(pr_maths_boundingbox)
 		{
-		
 		}
 	}
 }

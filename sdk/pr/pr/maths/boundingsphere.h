@@ -17,7 +17,7 @@ namespace pr
 	struct BoundingSphere
 	{
 		v4 m_ctr_rad; // x,y,z = position, 'w' = radius
-		
+
 		static BoundingSphere make(v4 const& centre, float radius);
 		BoundingSphere&       set(v4 const& centre, float radius);
 		BoundingSphere&       zero();
@@ -30,7 +30,7 @@ namespace pr
 		float                 Diametre() const;
 		float                 DiametreSq() const;
 	};
-	
+
 	BoundingSphere const BSphereZero  = {v4Zero};
 	BoundingSphere const BSphereUnit  = {v4Origin};
 	BoundingSphere const BSphereReset = {-v4Origin};
@@ -58,14 +58,14 @@ namespace pr
 
 	// Functions
 	float           Volume(BoundingSphere const& bsph);
-	BoundingSphere& Encompase(BoundingSphere& bsphere, v4 const& point);
-	BoundingSphere  Encompase(BoundingSphere const& bsphere, v4 const& point);
-	BoundingSphere& Encompase(BoundingSphere& lhs, BoundingSphere const& rhs);
-	BoundingSphere  Encompase(BoundingSphere const& lhs, BoundingSphere const& rhs);
-	BoundingSphere& EncompaseLoose(BoundingSphere& bsphere, v4 const& point);
-	BoundingSphere  EncompaseLoose(BoundingSphere const& bsphere, v4 const& point);
-	BoundingSphere& EncompaseLoose(BoundingSphere& lhs, BoundingSphere const& rhs);
-	BoundingSphere  EncompaseLoose(BoundingSphere const& lhs, BoundingSphere const& rhs);
+	BoundingSphere& Encompass(BoundingSphere& bsphere, v4 const& point);
+	BoundingSphere  Encompass(BoundingSphere const& bsphere, v4 const& point);
+	BoundingSphere& Encompass(BoundingSphere& lhs, BoundingSphere const& rhs);
+	BoundingSphere  Encompass(BoundingSphere const& lhs, BoundingSphere const& rhs);
+	BoundingSphere& EncompassLoose(BoundingSphere& bsphere, v4 const& point);
+	BoundingSphere  EncompassLoose(BoundingSphere const& bsphere, v4 const& point);
+	BoundingSphere& EncompassLoose(BoundingSphere& lhs, BoundingSphere const& rhs);
+	BoundingSphere  EncompassLoose(BoundingSphere const& lhs, BoundingSphere const& rhs);
 	bool            IsWithin(BoundingSphere const& bsphere, v4 const& point);
 	bool            IsWithin(BoundingSphere const& bsphere, BoundingSphere const& test);
 	bool            IsIntersection(BoundingSphere const& lhs, BoundingSphere const& rhs);

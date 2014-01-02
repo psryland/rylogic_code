@@ -79,10 +79,10 @@ namespace pr
 	Plane			GetPlane(BoundingBox const& bbox, EBBoxPlane side);
 	v4				GetCorner(BoundingBox const& bbox, uint corner);
 	BoundingSphere	GetBoundingSphere(BoundingBox const& bbox);
-	BoundingBox&	Encompase(BoundingBox& bbox, v4 const& point);
-	BoundingBox		Encompase(BoundingBox const& bbox, v4 const& point);
-	BoundingBox&	Encompase(BoundingBox& lhs, BoundingBox const& rhs);
-	BoundingBox		Encompase(BoundingBox const& lhs, BoundingBox const& rhs);
+	BoundingBox&	Encompass(BoundingBox& bbox, v4 const& point);
+	BoundingBox		Encompass(BoundingBox const& bbox, v4 const& point);
+	BoundingBox&	Encompass(BoundingBox& lhs, BoundingBox const& rhs);
+	BoundingBox		Encompass(BoundingBox const& lhs, BoundingBox const& rhs);
 	bool			IsWithin(BoundingBox const& bbox, v4 const& point, float tol);
 	bool			IsWithin(BoundingBox const& bbox, BoundingBox const& test);
 	bool			IsIntersection(BoundingBox const& bbox, Line3 const& line);

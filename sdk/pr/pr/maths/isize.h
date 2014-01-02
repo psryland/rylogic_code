@@ -48,10 +48,10 @@ namespace pr
 	//IRect   Scale(IRect const& rect, int xmin, int ymin, int xmax, int ymax);
 	//IRect   Scale(IRect const& rect, int byX, int byY);
 	//IRect   Scale(IRect const& rect, int by);
-	//IRect&  Encompase(IRect& rect, iv2 const& point);
-	//IRect   Encompase(IRect const& rect, iv2 const& point);
-	//IRect&  Encompase(IRect& lhs, IRect const& rhs);
-	//FRect   Encompase(FRect const& lhs, FRect const& rhs);
+	//IRect&  Encompass(IRect& rect, iv2 const& point);
+	//IRect   Encompass(IRect const& rect, iv2 const& point);
+	//IRect&  Encompass(IRect& lhs, IRect const& rhs);
+	//FRect   Encompass(FRect const& lhs, FRect const& rhs);
 	//bool    IsWithin(IRect const& rect, iv2 const& point);
 	//bool    IsIntersection(IRect const& lhs, IRect const& rhs);
 	//pr::v2  NormalisePoint(IRect const& rect, pr::v2 const& point, float ysign);

@@ -5,16 +5,16 @@
 // Access data embedded in an exe file
 //
 // To add resources to an exe, add a '.rc' file to the project (create a text file with
-//	.rc extn, and 'Add existing'. Or use the File->New->Resource->Resource File to have
-//	IDE resource editor work)
+//  .rc extn, and 'Add existing'. Or use the File->New->Resource->Resource File to have
+//  IDE resource editor work)
 //
 // Add entries in the resource file like this:
-//  // name         type       legacy-dontcare   filename
+//  // name         type       legacy-ignored    filename
 //  IDR_EXAMPLE0    TEXT       DISCARDABLE       "test.cpp"
 //  IDR_EXAMPLE1    BINARY     DISCARDABLE       "test.cpp"
 //
 // Call this helper function like this:
-//  pr::Resource<char> res = pr::resource::Read<char>("IDR_EXAMPLE0", "TEXT");
+//  pr::Resource<char> res = pr::resource::Read<char>(L"IDR_EXAMPLE0", L"TEXT");
 //  res.m_data;
 //  res.m_size;
 //
@@ -23,6 +23,7 @@
 //     pr::resource::Read<char>(MAKEINTRESOURCE(IDR_EXAMPLE0), "TEXT");
 //
 
+#pragma once
 #ifndef PR_RESOURCE_H
 #define PR_RESOURCE_H
 
@@ -52,7 +53,7 @@ namespace pr
 				DWORD last_error = GetLastError();
 				throw std::exception("resource not found",last_error);
 			}
-			
+
 			res.m_size = SizeofResource(module, handle);
 			HGLOBAL mem = LoadResource(module, handle);
 			if (!mem)
@@ -60,7 +61,7 @@ namespace pr
 				DWORD last_error = GetLastError();
 				throw std::exception("failed to load resource",last_error);
 			}
-			
+
 			// Object a pointer to the resouce.
 			// Valid until the module is unloaded therefore don't need to worry about unlocking (according to MSDN)
 			res.m_data = static_cast<Type const*>(LockResource(mem));
@@ -70,4 +71,3 @@ namespace pr
 }
 
 #endif
-
