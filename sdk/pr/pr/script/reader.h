@@ -7,7 +7,7 @@
 //   Implement using the IPPMacroDB interface. The default implementation
 //   'PPMacroDB' has a 'm_resolver' pointer setup for this already.
 // - Embedded Lua Code:
-//   Use an 'EmbeddedLua' char stream 
+//   Use an 'EmbeddedLua' char stream
 
 #pragma once
 #ifndef PR_SCRIPT_READER_H
@@ -111,11 +111,17 @@ namespace pr
 				m_case_sensitive_keywords = case_sensitive;
 			}
 
+			// Return the hash of a keyword
+			static pr::hash::HashValue HashKeyword(char const* keyword, bool case_sensitive_keywords)
+			{
+				pr::hash::HashValue kw = case_sensitive_keywords ? pr::hash::HashC(keyword) : pr::hash::HashLwr(keyword);
+				return (kw & 0x7fffffff); // mask off msb so that enum's show up in the debugger
+			}
+
 			// Return the hash of a keyword using the current reader settings
 			pr::hash::HashValue HashKeyword(char const* keyword) const
 			{
-				pr::hash::HashValue kw = m_case_sensitive_keywords ? pr::hash::HashC(keyword) : pr::hash::HashLwr(keyword);
-				return (kw & 0x7fffffff); // mask off msb so that enum's show up in the debugger
+				return HashKeyword(keyword, m_case_sensitive_keywords);
 			}
 
 			// Return true if the end of the source has been reached
@@ -520,7 +526,7 @@ namespace pr
 	{
 		PRUnitTest(pr_script_reader)
 		{
-			char const* src = 
+			char const* src =
 				"#define NUM 23\n"
 				"*Identifier ident\n"
 				"*String \"simple string\"\n"
@@ -617,7 +623,7 @@ namespace pr
 				PR_CHECK(reader.IsSourceEnd()             , true);
 			}
 			{
-				char const* src = 
+				char const* src =
 					"A.B\n"
 					"a.b.c\n"
 					"A.B.C.D\n"
