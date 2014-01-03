@@ -345,7 +345,11 @@ namespace pr
 					// See if this is a macro identifier
 					size_t begin = src.m_idx;
 					pr::str::ExtractIdentifier(id, buf);
-					PPMacro const* macro = m_macros ? m_macros->Find(Hash::String(id)) : 0; if (!macro) continue;
+					PPMacro const* macro = m_macros ? m_macros->Find(Hash::String(id)) : 0;
+					if (!macro) continue;
+					
+					// Check the correct parameters have been given
+					params.clear();
 					if (!macro->ReadParams<false>(buf, params, loc)) continue;
 
 					// Check whether this macro is an ancestor
