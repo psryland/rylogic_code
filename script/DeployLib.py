@@ -28,7 +28,7 @@ targetpath  = targetpath.lower()
 platform    = platform.lower()
 config      = config.lower()
 dstdir      = dstdir.lower().rstrip("/\\") + "\\" + platform + "\\" + config
-symdir      = UserVars.pr_root + "\\local\\symbols\\" + platform + "\\" + config
+symdir      = UserVars.root + "\\local\\symbols\\" + platform + "\\" + config
 srcdir,file = os.path.split(targetpath)
 fname,extn  = os.path.splitext(file)
 
