@@ -364,7 +364,7 @@ namespace pr
 			}
 
 			// Move in a fraction of the focus distance
-			float movez = m_base_focus_dist * delta * 0.1f;
+			float movez = -m_base_focus_dist * delta * 0.1f;
 			if (!KeyDown(m_key[camera::ENavKey::TranslateZ])) m_focus_dist = m_base_focus_dist + movez;
 			Translate(0.0f, 0.0f, movez, update_base);
 		}
