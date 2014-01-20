@@ -135,7 +135,7 @@ void pr::ldr::LdrObject::SetColour(pr::Colour32 colour, pr::uint mask, bool incl
 
 	bool has_alpha = m_colour.a() != 0xFF;
 	m_sko.Alpha(has_alpha);
-	pr::rdr::SetAlphaBlending(m_bsb, m_dsb, m_rsb, 1, has_alpha);
+	pr::rdr::SetAlphaBlending(m_bsb, m_dsb, m_rsb, has_alpha);
 
 	if (!include_children) return;
 	for (ObjectCont::iterator i = m_child.begin(), iend = m_child.end(); i != iend; ++i)
@@ -1397,10 +1397,9 @@ bool ParseLdrObject(ParseParams& p)
 		++p.m_obj_count;
 
 		// Set colour on 'obj' (so that render states are set correctly)
-		// 'm_base_colour' only applies to the top level object. Consider
-		// a *Box with a nested *Line, if the colour applied to all children
-		// and the *Box was FFFF0000, then *Line could only ever be red as well.
-		obj->SetColour(obj->m_base_colour, 0xFFFFFFFF, false);
+		// Note that the colour is 'blended' with 'm_base_colour' so
+		// m_base_colour * White = m_base_colour.
+		obj->SetColour(pr::Colour32White, 0xFFFFFFFF, false);
 
 		// Apply the colour of 'obj' to all children using a mask
 		if (obj->m_colour_mask != 0)

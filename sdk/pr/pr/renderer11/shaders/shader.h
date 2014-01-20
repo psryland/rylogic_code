@@ -9,6 +9,7 @@
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/render/blend_state.h"
 #include "pr/renderer11/render/raster_state.h"
+#include "pr/renderer11/render/depth_state.h"
 #include "pr/renderer11/util/wrappers.h"
 
 namespace pr
@@ -17,26 +18,26 @@ namespace pr
 	{
 		// User provided callback function for binding a shader to the device context
 		typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)> ShaderSetupFunc;
-		
+
 		// Initialisation data for a shader
 		struct ShaderDesc
 		{
 			void const* m_data; // The compiled shader data
 			size_t      m_size; // The compiled shader data size
-			
+
 			ShaderDesc(void const* data, size_t size)
 			:m_data(data)
 			,m_size(size)
 			{}
 		};
-		
+
 		// Vertex shader flavour
 		struct VShaderDesc :ShaderDesc
 		{
 			D3D11_INPUT_ELEMENT_DESC const* m_iplayout; // The input layout description
 			size_t m_iplayout_count;    // The number of elements in the input layout
 			pr::rdr::EGeom m_geom_mask; // The minimum requirements of the vertex format
-			
+
 			// Initialise the shader description.
 			// 'Vert' should be a vertex type containing the minimum required fields for the VS
 			template <class Vert> VShaderDesc(Vert const&, void const* data, size_t size)
@@ -52,7 +53,7 @@ namespace pr
 			,m_geom_mask(Vert::GeomMask)
 			{}
 		};
-		
+
 		// Pixel shader flavour
 		struct PShaderDesc :ShaderDesc
 		{
@@ -63,7 +64,7 @@ namespace pr
 			:ShaderDesc(data, Sz)
 			{}
 		};
-		
+
 		// The base class of a custom shader.
 		// All shaders must inherit this class.
 		// This is kind of like an old school effect
@@ -83,6 +84,7 @@ namespace pr
 			ShaderSetupFunc                 m_setup_func;      // User provided callback for binding this shader to a device context
 			BSBlock                         m_bsb;             // The blend state for the shader
 			RSBlock                         m_rsb;             // The rasterizer state for the shader
+			DSBlock                         m_dsb;             // The depth buffering state for the shader
 			time_t                          m_last_modified;   // Support for dynamically loading shaders at runtime (unused when PR_RDR_RUNTIME_SHADERS is not defined)
 			string32                        m_name;            // Human readable id for the texture
 
@@ -122,15 +124,15 @@ namespace pr
 		//	ShaderManager*                  m_mgr;             // The shader manager that created this shader
 		//	string32                        m_name;            // Human readable id for the texture
 		//	SortKeyId                       m_sort_id;
-		//	
+		//
 		//	Shader();
-		//	
+		//
 		//	// User provided callback for binding this shader to the device context
 		//	BindShaderFunc Setup;
-		//	
+		//
 		//	// Set the shaders of the dc for the non-null shader pointers
 		//	void Bind(D3DPtr<ID3D11DeviceContext>& dc) const;
-		//	
+		//
 		//	// Refcounting cleanup function
 		//	static void RefCountZero(pr::RefCount<Shader>* doomed);
 		//};

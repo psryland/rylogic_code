@@ -97,16 +97,16 @@ namespace pr
 			{
 				Merge(rhs, [this](BlendStateDesc const& r, EBS mask, int i)
 					{
-						if (mask & EBS::AlphaToCoverageEnable ) Set(EBS::AlphaToCoverageEnable  ,r.AlphaToCoverageEnable                );
-						if (mask & EBS::IndependentBlendEnable) Set(EBS::IndependentBlendEnable ,r.IndependentBlendEnable               );
-						if (mask & EBS::BlendEnable           ) Set(EBS::BlendEnable            ,r.RenderTarget[i].BlendEnable          );
-						if (mask & EBS::SrcBlend              ) Set(EBS::SrcBlend               ,r.RenderTarget[i].SrcBlend             );
-						if (mask & EBS::DestBlend             ) Set(EBS::DestBlend              ,r.RenderTarget[i].DestBlend            );
-						if (mask & EBS::BlendOp               ) Set(EBS::BlendOp                ,r.RenderTarget[i].BlendOp              );
-						if (mask & EBS::SrcBlendAlpha         ) Set(EBS::SrcBlendAlpha          ,r.RenderTarget[i].SrcBlendAlpha        );
-						if (mask & EBS::DestBlendAlpha        ) Set(EBS::DestBlendAlpha         ,r.RenderTarget[i].DestBlendAlpha       );
-						if (mask & EBS::BlendOpAlpha          ) Set(EBS::BlendOpAlpha           ,r.RenderTarget[i].BlendOpAlpha         );
-						if (mask & EBS::RenderTargetWriteMask ) Set(EBS::RenderTargetWriteMask  ,r.RenderTarget[i].RenderTargetWriteMask);
+						if (mask & EBS::AlphaToCoverageEnable ) Set(EBS::AlphaToCoverageEnable  ,r.AlphaToCoverageEnable                   );
+						if (mask & EBS::IndependentBlendEnable) Set(EBS::IndependentBlendEnable ,r.IndependentBlendEnable                  );
+						if (mask & EBS::BlendEnable           ) Set(EBS::BlendEnable            ,r.RenderTarget[i].BlendEnable          , i);
+						if (mask & EBS::SrcBlend              ) Set(EBS::SrcBlend               ,r.RenderTarget[i].SrcBlend             , i);
+						if (mask & EBS::DestBlend             ) Set(EBS::DestBlend              ,r.RenderTarget[i].DestBlend            , i);
+						if (mask & EBS::BlendOp               ) Set(EBS::BlendOp                ,r.RenderTarget[i].BlendOp              , i);
+						if (mask & EBS::SrcBlendAlpha         ) Set(EBS::SrcBlendAlpha          ,r.RenderTarget[i].SrcBlendAlpha        , i);
+						if (mask & EBS::DestBlendAlpha        ) Set(EBS::DestBlendAlpha         ,r.RenderTarget[i].DestBlendAlpha       , i);
+						if (mask & EBS::BlendOpAlpha          ) Set(EBS::BlendOpAlpha           ,r.RenderTarget[i].BlendOpAlpha         , i);
+						if (mask & EBS::RenderTargetWriteMask ) Set(EBS::RenderTargetWriteMask  ,r.RenderTarget[i].RenderTargetWriteMask, i);
 					});
 				return *this;
 			}

@@ -37,6 +37,7 @@ namespace pr
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
 			BSBlock              m_bsb;               // Blend states for the scene
 			RSBlock              m_rsb;               // Raster states for the scene
+			DSBlock              m_dsb;               // Depth buffer states for the scene
 			std::shared_ptr<Stereo> m_stereo;         // Helper used when renderering in stereoscopic mode
 
 			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());

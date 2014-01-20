@@ -740,83 +740,78 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 	PR_ASSERT(PR_DBG, drawset != 0, "");
 	Rdr().m_last_drawset = drawset;
 
+	auto& scene = Rdr().m_scene;
+
 	// Reset the drawlist
-	Rdr().m_scene.ClearDrawlist();
+	scene.ClearDrawlist();
 
 	// Add objects from the drawset to the viewport
 	for (auto i = begin(drawset->m_objects), iend = end(drawset->m_objects); i != iend; ++i)
-		(*i)->AddToScene(Rdr().m_scene);
+		(*i)->AddToScene(scene);
 
 	// Add the measure tool objects if the window is visible
 	if (Rdr().m_measure_tool_ui.IsWindowVisible() && Rdr().m_measure_tool_ui.Gfx())
-		Rdr().m_measure_tool_ui.Gfx()->AddToScene(Rdr().m_scene);;
+		Rdr().m_measure_tool_ui.Gfx()->AddToScene(scene);;
 
 	// Add the angle tool objects if the window is visible
 	if (Rdr().m_angle_tool_ui.IsWindowVisible() && Rdr().m_angle_tool_ui.Gfx())
-		Rdr().m_angle_tool_ui.Gfx()->AddToScene(Rdr().m_scene);;
+		Rdr().m_angle_tool_ui.Gfx()->AddToScene(scene);;
 
 	// Position the focus point
 	if (drawset->m_focus_point_visible)
 	{
 		float scale = drawset->m_focus_point_size * drawset->m_camera.FocusDist();
 		pr::Scale4x4(Rdr().m_focus_point.m_i2w, scale, drawset->m_camera.FocusPoint());
-		Rdr().m_scene.AddInstance(Rdr().m_focus_point);
+		scene.AddInstance(Rdr().m_focus_point);
 	}
 	// Scale the origin point
 	if (drawset->m_origin_point_visible)
 	{
 		float scale = drawset->m_origin_point_size * pr::Length3(drawset->m_camera.CameraToWorld().pos);
 		pr::Scale4x4(Rdr().m_origin_point.m_i2w, scale, pr::v4Origin);
-		Rdr().m_scene.AddInstance(Rdr().m_origin_point);
+		scene.AddInstance(Rdr().m_origin_point);
 	}
 
 	{// Set the view and projection matrices
 		pr::Camera& cam = drawset->m_camera;
-		Rdr().m_scene.SetView(cam);
+		scene.SetView(cam);
 	}
 
 	// Set the light source
-	Rdr().m_scene.m_global_light = drawset->m_light;
+	scene.m_global_light = drawset->m_light;
 	if (drawset->m_light_is_camera_relative)
 	{
-		pr::rdr::Light& light = Rdr().m_scene.m_global_light;
+		pr::rdr::Light& light = scene.m_global_light;
 		light.m_direction = drawset->m_camera.CameraToWorld() * drawset->m_light.m_direction;
 		light.m_position  = drawset->m_camera.CameraToWorld() * drawset->m_light.m_position;
 	}
 
 	// Set the background colour
-	Rdr().m_scene.m_background_colour = drawset->m_background_colour;
+	scene.m_background_colour = drawset->m_background_colour;
+
+	// Set the global fill mode
+	switch (drawset->m_fill_mode) {
+	case EView3DFillMode::Solid:     scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
+	case EView3DFillMode::Wireframe: scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+	case EView3DFillMode::SolidWire: scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
+	}
 
 	// Render the scene
-	Rdr().m_scene.Render();
+	scene.Render();
+
+	// Render wire frame over solid for 'SolidWire' mode
+	if (drawset->m_fill_mode == EView3DFillMode::SolidWire)
+	{
+		scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
+		scene.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
+
+		scene.Render(false);
+
+		scene.m_rsb.Clear(pr::rdr::ERS::FillMode);
+		scene.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
+	}
+
 	Rdr().m_renderer.Present();
-	//if (pr::Succeeded(Rdr().m_renderer.RenderStart()))
-	//{
-	//	// Set the global wireframe mode
-	//	switch (drawset->m_render_mode)
-	//	{
-	//	default:break;
-	//	case EView3DFillMode::Solid:    Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_SOLID); break;
-	//	case EView3DFillMode::Wireframe:Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME); break;
-	//	case EView3DFillMode::SolidWire:Rdr().m_viewport.RenderState(D3DRS_FILLMODE, D3DFILL_SOLID); break;
-	//	}
-
-	//	// Render the viewport
-	//	Rdr().m_viewport.Render();
-
-	//	// Render wireframe over the top of the solid
-	//	if (drawset->m_render_mode == EView3DFillMode::SolidWire)
-	//	{
-	//		pr::rdr::rs::Block rsb_override;
-	//		rsb_override.SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-	//		rsb_override.SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
-	//		Rdr().m_viewport.Render(false, rsb_override);
-	//	}
-
-	//	// Present
-	//	Rdr().m_renderer.RenderEnd();
-	//	Rdr().m_renderer.Present();
-	//}
 }
 
 // Get/Set the fill mode for a drawset

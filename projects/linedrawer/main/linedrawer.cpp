@@ -227,13 +227,13 @@ void LineDrawer::Render()
 	// Render the scene
 	m_scene.Render();
 
-	// Render the wireframe over the top of the solid
+	// Render wire frame over solid
 	if (m_user_settings.m_GlobalRenderMode == EGlobalRenderMode::SolidAndWire)
 	{
 		m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
 		m_scene.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
 
-		m_scene.Render();
+		m_scene.Render(false);
 
 		m_scene.m_rsb.Clear(pr::rdr::ERS::FillMode);
 		m_scene.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);

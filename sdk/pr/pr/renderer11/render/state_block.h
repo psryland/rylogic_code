@@ -39,24 +39,24 @@ namespace pr
 			// Clear a field in the state description
 			void Clear(TFieldEnum field)
 			{
-				pr::SetBits(m_mask[0], field, false);
+				m_mask[0] = pr::SetBits(m_mask[0], field, false);
 				m_crc = 0;
 			}
 			void Clear(TFieldEnum field, int n)
 			{
-				pr::SetBits(m_mask[n], field, false);
+				m_mask[n] = pr::SetBits(m_mask[n], field, false);
 				m_crc = 0;
 			}
 
 			// Set the value of a field in the state description
 			void Set(TFieldEnum field)
 			{
-				pr::SetBits(m_mask[0], field, true);
+				m_mask[0] = pr::SetBits(m_mask[0], field, true);
 				m_crc = 0;
 			}
 			void Set(TFieldEnum field, int n)
 			{
-				pr::SetBits(m_mask[n], field, true);
+				m_mask[n] = pr::SetBits(m_mask[n], field, true);
 				m_crc = 0;
 			}
 

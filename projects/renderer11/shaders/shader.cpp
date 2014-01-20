@@ -8,7 +8,6 @@
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/models/model_buffer.h"
 #include "pr/renderer11/instances/instance.h"
-#include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
 
@@ -28,6 +27,7 @@ pr::rdr::BaseShader::BaseShader(ShaderManager* mgr)
 ,m_sort_id()
 ,m_bsb()
 ,m_rsb()
+,m_dsb()
 ,m_last_modified()
 ,m_name()
 {}
@@ -54,8 +54,24 @@ void SetupIA(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget)
 	dc->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)nugget.m_prim_topo.value);
 }
 
+// Set the depth buffering states
+void SetupDS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
+{
+	auto& ds_mgr = scene.m_rdr->m_ds_mgr;
+	auto& draw = nugget.m_draw;
+	auto inst_dsb = inst.find<DSBlock>(EInstComp::DSBlock);
+
+	DSBlock dsb = scene.m_dsb;      // scene is the lowest priority
+	dsb |= draw.m_shader->m_dsb;    // shader next
+	dsb |= draw.m_dsb;              // draw method overridden states
+	if (inst_dsb) dsb |= *inst_dsb; // instance states
+
+	auto ptr = ds_mgr.State(dsb);
+	dc->OMSetDepthStencilState(ptr.m_ptr, 0);
+}
+
 // Set the rasterizer states
-void SetupRS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene) 
+void SetupRS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 {
 	auto& rs_mgr = scene.m_rdr->m_rs_mgr;
 	auto& draw = nugget.m_draw;
@@ -71,12 +87,12 @@ void SetupRS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance
 	dc->RSSetState(ptr.m_ptr);
 }
 
-// Set the output merger state
-void SetupOM(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
+// Set the blend states
+void SetupBS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 {
 	auto& bs_mgr = scene.m_rdr->m_bs_mgr;
 	auto& draw = nugget.m_draw;
-	BSBlock const* inst_bsb = inst.find<BSBlock>(EInstComp::BSBlock);
+	auto inst_bsb = inst.find<BSBlock>(EInstComp::BSBlock);
 
 	BSBlock bsb = scene.m_bsb;      // scene is the lowest priority
 	bsb |= draw.m_shader->m_bsb;    // shader next
@@ -97,11 +113,14 @@ void pr::rdr::BaseShader::Bind(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nu
 	dc->IASetInputLayout(m_iplayout.m_ptr);
 	SetupIA(dc, nugget);
 
-	// Set the raster state
+	// Set the depth buffering states
+	SetupDS(dc, nugget, inst, scene);
+
+	// Set the raster states
 	SetupRS(dc, nugget, inst, scene);
 
-	// Set the output merger
-	SetupOM(dc, nugget, inst, scene);
+	// Set the blend states
+	SetupBS(dc, nugget, inst, scene);
 
 	// Bind the shaders (passing null disables the shader)
 	dc->VSSetShader(m_vs.m_ptr, 0, 0);
@@ -117,4 +136,3 @@ void pr::rdr::BaseShader::RefCountZero(pr::RefCount<BaseShader>* doomed)
 	pr::rdr::BaseShader* shdr = static_cast<pr::rdr::BaseShader*>(doomed);
 	shdr->m_mgr->Delete(shdr);
 }
-

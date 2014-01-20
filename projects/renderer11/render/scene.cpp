@@ -23,6 +23,7 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 	,m_cbuf_frame()
 	,m_bsb()
 	,m_rsb(RSBlock::SolidCullBack())
+	,m_dsb()
 	,m_stereo()
 {
 	CBufFrame scene_constants = {};
