@@ -61,10 +61,11 @@ void SetupDS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance
 	auto& draw = nugget.m_draw;
 	auto inst_dsb = inst.find<DSBlock>(EInstComp::DSBlock);
 
-	DSBlock dsb = scene.m_dsb;      // scene is the lowest priority
-	dsb |= draw.m_shader->m_dsb;    // shader next
-	dsb |= draw.m_dsb;              // draw method overridden states
-	if (inst_dsb) dsb |= *inst_dsb; // instance states
+	// Combine states in priority order
+	DSBlock dsb = draw.m_shader->m_dsb;
+	dsb |= draw.m_dsb;
+	if (inst_dsb) dsb |= *inst_dsb;
+	dsb |= scene.m_dsb;
 
 	auto ptr = ds_mgr.State(dsb);
 	dc->OMSetDepthStencilState(ptr.m_ptr, 0);
@@ -75,13 +76,13 @@ void SetupRS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance
 {
 	auto& rs_mgr = scene.m_rdr->m_rs_mgr;
 	auto& draw = nugget.m_draw;
-	RSBlock const* inst_rsb = inst.find<RSBlock>(EInstComp::RSBlock);
+	auto inst_rsb = inst.find<RSBlock>(EInstComp::RSBlock);
 
-	// Combine the rasterizer state
-	RSBlock rsb = scene.m_rsb;      // scene is the lowest priority
-	rsb |= draw.m_shader->m_rsb;    // shader next
-	rsb |= draw.m_rsb;              // draw method overridden states
-	if (inst_rsb) rsb |= *inst_rsb; // instance states
+	// Combine states in priority order
+	RSBlock rsb = draw.m_shader->m_rsb;
+	rsb |= draw.m_rsb;
+	if (inst_rsb) rsb |= *inst_rsb;
+	rsb |= scene.m_rsb;
 
 	auto ptr = rs_mgr.State(rsb);
 	dc->RSSetState(ptr.m_ptr);
@@ -94,10 +95,11 @@ void SetupBS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance
 	auto& draw = nugget.m_draw;
 	auto inst_bsb = inst.find<BSBlock>(EInstComp::BSBlock);
 
-	BSBlock bsb = scene.m_bsb;      // scene is the lowest priority
-	bsb |= draw.m_shader->m_bsb;    // shader next
-	bsb |= draw.m_bsb;              // draw method overridden states
-	if (inst_bsb) bsb |= *inst_bsb; // instance states
+	// Combine states in priority order
+	BSBlock bsb = draw.m_shader->m_bsb;
+	bsb |= draw.m_bsb;
+	if (inst_bsb) bsb |= *inst_bsb;
+	bsb |= scene.m_bsb;
 
 	auto ptr = bs_mgr.State(bsb);
 	dc->OMSetBlendState(ptr.m_ptr, 0, 0xFFFFFFFF); // todo, the BlendFactor and SampleMask should really be part of the BSBlock

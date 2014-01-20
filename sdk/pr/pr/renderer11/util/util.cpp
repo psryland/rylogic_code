@@ -104,7 +104,7 @@ void pr::rdr::GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num
 	UINT num_bytes_ = 0; if (num_bytes == 0) num_bytes = &num_bytes_;
 	UINT row_bytes_ = 0; if (row_bytes == 0) row_bytes = &row_bytes_;
 	UINT num_rows_  = 0; if (num_rows  == 0) num_rows  = &num_rows_;
-	
+
 	int bc_num_bytes_per_block;
 	switch (fmt)
 	{
@@ -137,7 +137,7 @@ void pr::rdr::GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num
 		bc_num_bytes_per_block = 16;
 		break;
 	}
-	
+
 	if (bc_num_bytes_per_block)
 	{
 		int num_blocks_wide = width  > 0 ? std::max(1U, width  / 4) : 0;
@@ -160,12 +160,12 @@ void pr::rdr::SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, bool on
 	if (on)
 	{
 		// ZWrites need to be disabled too
-		bsb.Set(EBS::BlendEnable ,TRUE      ,render_target);
-		bsb.Set(EBS::BlendOp     ,blend_op  ,render_target);
-		bsb.Set(EBS::SrcBlend    ,src_blend ,render_target);
-		bsb.Set(EBS::DestBlend   ,dst_blend ,render_target);
-		dsb.Set(EDS::DepthEnable ,FALSE);
-		rsb.Set(ERS::CullMode    ,D3D11_CULL_NONE);
+		bsb.Set(EBS::BlendEnable    ,TRUE      ,render_target);
+		bsb.Set(EBS::BlendOp        ,blend_op  ,render_target);
+		bsb.Set(EBS::SrcBlend       ,src_blend ,render_target);
+		bsb.Set(EBS::DestBlend      ,dst_blend ,render_target);
+		dsb.Set(EDS::DepthWriteMask ,D3D11_DEPTH_WRITE_MASK_ZERO);
+		rsb.Set(ERS::CullMode       ,D3D11_CULL_NONE);
 	}
 	else
 	{
@@ -173,7 +173,7 @@ void pr::rdr::SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, bool on
 		bsb.Clear(EBS::BlendOp     ,render_target);
 		bsb.Clear(EBS::SrcBlend    ,render_target);
 		bsb.Clear(EBS::DestBlend   ,render_target);
-		dsb.Clear(EDS::DepthEnable);
+		dsb.Clear(EDS::DepthWriteMask);
 		rsb.Clear(ERS::CullMode);
 	}
 }
