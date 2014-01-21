@@ -28,25 +28,27 @@ namespace pr
 			HWND                         m_hwnd;               // The associated window
 			BOOL                         m_windowed;           // Windowed mode or full screen
 			DisplayMode                  m_mode;               // Display mode to use (note: must be valid for the adapter, use FindClosestMatchingMode if needed)
-			MultiSamp                    m_multisamp;          // AA/Multisampling
+			MultiSamp                    m_multisamp;          // Number of samples per pixel (AA/Multisampling)
 			UINT                         m_buffer_count;       // Number of buffers in the chain, 1 = front only, 2 = front and back, 3 = triple buffering, etc
 			DXGI_SWAP_EFFECT             m_swap_effect;        // How to swap the back buffer to the front buffer
 			UINT                         m_swap_chain_flags;   // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
+			DXGI_FORMAT                  m_depth_format;       // Depth buffer format
 			D3DPtr<IDXGIAdapter>         m_adapter;            // The adapter to use. 0 means use the default
 			D3D_DRIVER_TYPE              m_driver_type;        // HAL, REF, etc
 			UINT                         m_device_layers;      // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
 			pr::Array<D3D_FEATURE_LEVEL> m_feature_levels;     // Features to support. Empty implies 9.1 -> 11.0
 			UINT                         m_vsync;              // Present SyncInterval value
-			
+
 			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, pr::iv2 const& client_area = pr::iv2::make(1024,768))
 			:m_mem()
 			,m_hwnd(hwnd)
 			,m_windowed(windowed)
 			,m_mode(client_area)
-			,m_multisamp()
+			,m_multisamp(4, ~0U)
 			,m_buffer_count(2)
 			,m_swap_effect(DXGI_SWAP_EFFECT_SEQUENTIAL)
 			,m_swap_chain_flags(0)
+			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_adapter(0)
 			,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
 			,m_device_layers(0)
@@ -75,13 +77,13 @@ namespace pr
 			pr::rdr::ERenderMethod::Type   m_rdr_method;
 			pr::rdr::TextureDesc           m_bbdesc;  // The texture description of the back buffer
 			bool                           m_idle;    // True while the window is occluded
-		
+
 			RdrState(pr::rdr::RdrSettings const& settings);
 			virtual ~RdrState() {}
 			void InitMainRT();
 		};
 	}
-	
+
 	// The main renderer object
 	class Renderer :rdr::RdrState
 	{
@@ -108,6 +110,9 @@ namespace pr
 
 		// Returns an allocator object suitable for allocating instances of 'T'
 		template <class Type> pr::rdr::Allocator<Type> Allocator() const { return pr::rdr::Allocator<Type>(m_settings.m_mem); }
+
+		// Read access to the initialisation settings
+		pr::rdr::RdrSettings const& Settings() const { return m_settings; }
 
 		// Returns the size of the displayable area as known by the renderer
 		pr::iv2 DisplayArea() const;

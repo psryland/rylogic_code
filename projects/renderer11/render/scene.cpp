@@ -33,6 +33,12 @@ pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 	CBufferDesc cbdesc(sizeof(CBufFrame));
 	pr::Throw(rdr.Device()->CreateBuffer(&cbdesc, &init, &m_cbuf_frame.m_ptr));
 	PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "CBufFrame"));
+
+	// Use line antialiasing if multisampling is enabled
+	if (m_rdr->Settings().m_multisamp.Count != 1)
+	{
+		m_rsb.Set(ERS::MultisampleEnable, TRUE);
+	}
 }
 
 // Set stereoscopic rendering mode

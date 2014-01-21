@@ -12,6 +12,14 @@ using namespace pr::rdr;
 //   http://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx
 //
 
+// Check the given settings are valid for the current adaptor
+void CheckDeviceFeatures(D3DPtr<ID3D11Device>& device, pr::rdr::RdrSettings& settings)
+{
+	// Check multi sampling
+	settings.m_multisamp.Validate(device, settings.m_mode.Format);
+	settings.m_multisamp.Validate(device, settings.m_depth_format);
+}
+
 // Initialise the renderer state variables and creates the d3d device and swap chain.
 pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 	:m_settings(settings)
@@ -24,43 +32,45 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 	,m_bbdesc()
 	,m_idle(false)
 {
-	// Check dlls,dx features,etc required to run the renderer are available
-	//CheckDependencies();
+	D3DPtr<IDXGIFactory> factory;
+	pr::Throw(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)&factory.m_ptr));
 
-	// Create the d3d device and swap chain
-	// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
-	//  render using GDI on a swap chain or a surface. This will allow the application
-	//  to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
-	DXGI_SWAP_CHAIN_DESC sd = {0};
-	sd.BufferCount  = settings.m_buffer_count;
-	sd.BufferDesc   = settings.m_mode;
-	sd.SampleDesc   = settings.m_multisamp;
-	sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.OutputWindow = settings.m_hwnd;
-	sd.Windowed     = settings.m_windowed;
-	sd.SwapEffect   = settings.m_swap_effect;
-	sd.Flags        = settings.m_swap_chain_flags;
-	pr::Throw(D3D11CreateDeviceAndSwapChain(
-		settings.m_adapter.m_ptr,
-		settings.m_driver_type,
+	// Create the device interface
+	pr::Throw(D3D11CreateDevice(
+		m_settings.m_adapter.m_ptr,
+		m_settings.m_driver_type,
 		0,
-		settings.m_device_layers,
-		settings.m_feature_levels.empty() ? 0 : &settings.m_feature_levels[0],
-		static_cast<UINT>(settings.m_feature_levels.size()),
+		m_settings.m_device_layers,
+		m_settings.m_feature_levels.empty() ? nullptr : &m_settings.m_feature_levels[0],
+		static_cast<UINT>(m_settings.m_feature_levels.size()),
 		D3D11_SDK_VERSION,
-		&sd,
-		&m_swap_chain.m_ptr,
 		&m_device.m_ptr,
 		&m_feature_level,
 		&m_immediate.m_ptr
 		));
+
+	// Check dlls,dx features,etc required to run the renderer are available
+	CheckDeviceFeatures(m_device, m_settings);
+
+	// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
+	//  render using GDI on a swap chain or a surface. This will allow the application
+	//  to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
+	DXGI_SWAP_CHAIN_DESC sd = {0};
+	sd.BufferCount  = m_settings.m_buffer_count;
+	sd.BufferDesc   = m_settings.m_mode;
+	sd.SampleDesc   = m_settings.m_multisamp;
+	sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	sd.OutputWindow = m_settings.m_hwnd;
+	sd.Windowed     = m_settings.m_windowed;
+	sd.SwapEffect   = m_settings.m_swap_effect;
+	sd.Flags        = m_settings.m_swap_chain_flags;
+	pr::Throw(factory->CreateSwapChain(m_device.m_ptr, &sd, &m_swap_chain.m_ptr));
+
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_device, pr::FmtS("d3d device")));
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_swap_chain, pr::FmtS("swap chain")));
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_immediate, pr::FmtS("immed dc")));
 
 	// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
-	D3DPtr<IDXGIFactory> factory;
-	pr::Throw(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)&factory.m_ptr));
 	pr::Throw(factory->MakeWindowAssociation(m_settings.m_hwnd, 0));
 
 	// Setup the main render target
@@ -85,8 +95,8 @@ void pr::rdr::RdrState::InitMainRT()
 	desc.Height             = m_bbdesc.Height;
 	desc.MipLevels          = 1;
 	desc.ArraySize          = 1;
-	desc.Format             = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	desc.SampleDesc         = MultiSamp(1,0);
+	desc.Format             = m_settings.m_depth_format;
+	desc.SampleDesc         = m_settings.m_multisamp;
 	desc.Usage              = D3D11_USAGE_DEFAULT;
 	desc.BindFlags          = D3D11_BIND_DEPTH_STENCIL;
 	desc.CPUAccessFlags     = 0;
@@ -97,7 +107,7 @@ void pr::rdr::RdrState::InitMainRT()
 	// Create a depth/stencil view of the texture buffer we just created
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
 	dsv_desc.Format             = desc.Format;
-	dsv_desc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsv_desc.ViewDimension      = m_settings.m_multisamp.Count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS;
 	dsv_desc.Texture2D.MipSlice = 0;
 	pr::Throw(m_device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_main_dsv, pr::FmtS("depth buffer <%dx%d>", desc.Width, desc.Height)));

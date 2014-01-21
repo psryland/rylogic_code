@@ -13,6 +13,14 @@
 
 using namespace pr::rdr;
 
+// The number of supported quality levels for the given format and sample count
+UINT pr::rdr::MultisampleQualityLevels(D3DPtr<ID3D11Device>& device, DXGI_FORMAT format, UINT sample_count)
+{
+	UINT num_quality_levels;
+	pr::Throw(device->CheckMultisampleQualityLevels(format, sample_count, &num_quality_levels));
+	return num_quality_levels;
+}
+
 // Returns the number of primitives implied by an index count and geometry topology
 size_t pr::rdr::PrimCount(size_t icount, EPrim topo)
 {

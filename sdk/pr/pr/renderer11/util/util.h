@@ -51,6 +51,9 @@ namespace pr
 		template <> struct DxFormat<pr::v4>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
 		template <> struct DxFormat<pr::Colour> { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
 
+		// The number of supported quality levels for the given format and sample count
+		UINT MultisampleQualityLevels(D3DPtr<ID3D11Device>& device, DXGI_FORMAT format, UINT sample_count);
+
 		// Returns the number of primitives implied by an index count and geometry topology
 		size_t PrimCount(size_t icount, EPrim topo);
 
