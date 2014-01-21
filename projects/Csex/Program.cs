@@ -84,6 +84,9 @@ namespace Csex
 				"    -PatternUI\n" +
 				"       Show the Regex pattern testing ui\n" +
 				"\n" +
+				"    -find_duplicate_files\n" +
+				"       Find duplicate files within a directory tree\n" +
+				"\n" +
 				// NEW_COMMAND - add a help string
 				"\n"+
 				"  Type Cex -command -help for help on a particular command\n"+
@@ -102,7 +105,8 @@ namespace Csex
 				case "-find_assembly_conflicts": m_cmd = new FindAssemblyConflicts(); break;
 				case "-expand_template": m_cmd = new MarkupExpand(); break;
 				case "-patternui": m_cmd = new PatternUI(); break;
-					// NEW_COMMAND - handle the command
+				case "-find_duplicate_files": m_cmd = new FindDuplicateFiles(); break;
+				// NEW_COMMAND - handle the command
 				}
 			}
 			return m_cmd == null
