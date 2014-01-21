@@ -841,7 +841,10 @@ namespace pr.gfx
 			return Parse(src, new Data(), load_thumbnail);
 		}
 
-		/// <summary>Reads the exif data in a jpg creating an index of the tags and their byte offsets into the file</summary>
+		/// <summary>
+		/// Reads the exif data in a jpg creating an index of the tags and their byte offsets into the file.
+		/// Note, there is no 'filepath' overload of this method because the stream is required to access
+		/// the exif data.</summary>
 		public static IExifData Read(Stream src, bool load_thumbnail = true)
 		{
 			return Parse(src, new Index(src), load_thumbnail);

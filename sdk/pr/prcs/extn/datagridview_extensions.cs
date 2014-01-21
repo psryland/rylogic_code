@@ -501,7 +501,7 @@ namespace pr.extn
 		public DataGridViewTrackBarCell()              { Value = 0; }
 		public override object Clone()
 		{
-			DataGridViewTrackBarCell c = (DataGridViewTrackBarCell)base.Clone();
+			var c = (DataGridViewTrackBarCell)base.Clone();
 			c.MinValue = MinValue;
 			c.MaxValue = MaxValue;
 			c.Value = 0;
@@ -516,7 +516,7 @@ namespace pr.extn
 		public override void InitializeEditingControl(int row_index, object initial_formatted_value, DataGridViewCellStyle data_grid_view_cell_style)
 		{
 			base.InitializeEditingControl(row_index, initial_formatted_value, data_grid_view_cell_style);
-			DataGridViewTrackBarEditCtrl ctrl = DataGridView.EditingControl as DataGridViewTrackBarEditCtrl;
+			var ctrl = DataGridView.EditingControl as DataGridViewTrackBarEditCtrl;
 			if (ctrl != null) ctrl.Value = this;
 		}
 	}

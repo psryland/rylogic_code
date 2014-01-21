@@ -16,7 +16,7 @@ namespace pr.maths
 		[FieldOffset(16)] public v4   y;
 		[FieldOffset(32)] public v4   z;
 		[FieldOffset(48)] public v4   w;
-		
+
 		[FieldOffset( 0)] public m3x3 r;
 		[FieldOffset(48)] public v4   p;
 
@@ -171,7 +171,7 @@ namespace pr.maths
 			ans.w.w = v4.Dot4(lhs.w, rhs.w);
 			return ans;
 		}
-		
+
 		// Permute the rotation vectors in a matrix by 'n'
 		public static m4x4 PermuteRotation(m4x4 mat, int n)
 		{
@@ -196,6 +196,10 @@ namespace pr.maths
 		}
 
 		// Create a translation matrix
+		public static m4x4 Translation(float dx, float dy, float dz)
+		{
+			return Translation(new v4(dx, dy, dz, 1f));
+		}
 		public static m4x4 Translation(v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
