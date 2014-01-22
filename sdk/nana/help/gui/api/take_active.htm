@@ -1,0 +1,71 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+</head>
+<body>
+    <table style="font-family:Trebuchet MS;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana - a C++ framework project &nbsp;<br />
+                </strong></span>
+                <br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+                <strong><span style="font-size: 16pt">nana::gui::API::take_active</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                Sets a window active state, if a window's active state is false, the window will
+                not obtain the focus while a mouse clicks on it.<br />
+                <br />
+                <strong>Prototype</strong><br />
+                <br />
+                <span style="font-size: 11pt; font-family: Courier New">void take_active(nana::gui::window
+                    wnd, bool active, nana::gui::window receiver);</span><br />
+                <br />
+                <strong>Parameters</strong><br />
+                <br />
+                wnd:&nbsp; handle to a window which will be set.<br />
+                active: state.<br />
+                receiver: forwards the focus to the receiver if active is false.<br />
+                <br />
+                <strong>Return Value</strong><br />
+                <br />
+                None.<br />
+                <br />
+                <strong>Remarks</strong><br />
+                <br />
+                If active is false, the window will not obtain the focus anymore. If the receiver
+                is not NULL and active is false, the window will forward the focus to the receiver.
+                For example, a textbox has a scrollbar and the active of scrollbar is false and
+                receiver is textbox, and therefore the focus is always in the textbox and caret
+                is always active while mouse is dragging on or clicking on the scrollbar, the focus
+                does not change to the scrollbar.<br />
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                None.<br />
+                <br />
+                <hr />
+                Move to <a href="./overviews.htm">The Nana Programmer's Guide Application Programming Interface Overviews</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

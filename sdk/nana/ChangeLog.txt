@@ -1,0 +1,107 @@
+Nana C++ Library
+Version: 0.6.1
+==============
+Bugfix:
+	* no effort when a zero-size widget set a font.
+	* a transparent window rendering issue.
+	* some errors in label widget.
+	* the 16bit depth color issue in X.
+
+Feature:
+	* 2 contributions by qPCR4vir.
+
+Version: 0.6
+==============
+Bugfix:
+	* size of icon fitting of treebox node.
+	* fixed a compiling error in VS2013.
+	* setting font is futile when the size of a widget width is zero.
+	* different behaviors of restore_window() between X11 and Windows.
+	* mouse wheel may not respond due to the lower SDK version.
+	* a fix for Unicode BiDi, and it improves the support of bidi languages.
+	* wrong window size when maximizing in secondary monitor.
+	* a bugfix sf#12(substitute for std::mutex in MinGW) provided by Gabor Janak.
+	* the pull requests(some fixs) provided by qPCR4vir.
+	
+Feature:
+	* a new element and facade classes for drawing a widget.
+	* a new compset class for the item renderer of a widget.
+	* a new item proxy.
+	* improved some widgets. treebox, listbox and label.
+	* a improved cloneable method to simplify the use.
+	* introduced a new C++11-like shared_ptr into Nana.C++03.
+	* a new method used for setting the default font.
+
+Version: 0.5.4
+==============
+Bugfix:
+	* fixed an intersection algorithm error.
+	* fixed SF#10(crash in converting of charset by an empty input text).
+	* fixed an issue of typeface_changed() method.
+
+Feature:
+	* Improved the pixel_buffer.
+	* alpha_channel is supported for PNG.
+	
+==============
+Version: 0.5.3
+Bugfix:
+	* menubar.background() does not work.
+	* effect_edge_nimbus may not update the widget.
+
+Feature:
+	* A new background effect
+	* The convenient constructors, a contribution by qPCR4vir.
+	* Platform auto-detective, users have not to configure the Nana for the platform.
+
+==============
+Version: 0.5.2
+Bugfix:
+	* fixed CP#6(a mouse_up appcrash).
+	* A compiling error in PNG for Nana.C++11
+	* fixed 2 bugs in nana::gui::place,
+Feature:
+	* A new sizing event.
+	* A new first_change event for textbox.
+	* A new API::refresh_window_tree for updating the specified window and its chilren windows.
+	* Init file for filebox.
+
+==============
+Version: 0.5.1
+Bugfix:
+	* fixed SF#3(name sort in filebox).
+	* fixed SF#4(Introducing An intuitive show() method)
+	* fixed SF#5(accessing owner of a modal window).
+	* fixed CP#3(caret in textbox floats)
+	* fixed CP#5(menu in two-display laptop)
+	* fixed returning empty string by combox::caption().
+	* fixed returning without last character by form::caption().
+	* fixed a bug that drawing::draw(const draw_fn_t&) does not work in Nana.C++03.
+	* fixed the textbox that does not display texts when its height is less than the font.
+	* fixed a crash combox editing.
+	* A compiling error under Linux.
+	* class animation does not destroy the associated resource after closing the window.
+	* fixed a crash in x64 caused by std::size_t-to-unsigned conversion issue.
+Feature:
+	* A new move event.
+	* Added show() method for filebox and msgbox, it is an alternative to operator().
+	* A Ctrl-X support for textbox and combox.
+	* Improved class place for new features.
+
+==============
+Version: 0.5
+Bugfix:
+	* can't change the background color of button.
+	* fixed a crash when throwing an exception in an event callback.
+	* fixed the behavior of categorize's drop-down listbox in Nana.C++03.
+	* fixed CP#2 issue.
+	* fixed the API::window_caption() can't return the text of textbox.
+	* fixed a bug of pixel_buffer.
+Feature:
+	* Changed the license to the Boost Software License.
+	* refactored code for the sort compare of listbox in favor of "strick" ordering.
+	* introduced a new class place for automatic layout.
+	* introduced a new animation framework.
+	* text alignment is supported by label.
+	* the class auto_buf is deprecated in Nana.C++11.
+	* improved rendering algorithm of transparent window.

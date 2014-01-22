@@ -1,0 +1,193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide. Hellow, world!</title>
+    <style type="text/css">
+        .auto-style1 {
+            font-family: "Courier New";
+            font-size: small;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Trebuchet MS;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana - a C++ framework project&nbsp;
+                    <br />
+                </strong></span>
+                <br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr style="font-size: 12pt">
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr style="font-size: 10pt; font-family: Consolas;font-size: 11pt">
+            <td style="height: 21px">
+                &nbsp;This lesson is indented to get you started programming with Nana.GUI. Let's
+                read the simple HelloWorld code.
+                <br />
+                <br />
+                <span style="font-family: Courier New"><span style="font-size: 10pt"><span style="color: blue">#include</span> 
+                </span><span style="font-size: 10pt"><span
+                    style="color: firebrick">&lt;nana/gui/wvl.hpp&gt;<br />
+                </span><span style="color: blue">#include</span> </span><span style="color: firebrick; font-size: 10pt;">&lt;nana/gui/widgets/button.hpp&gt;<br />
+                </span>
+                    <br />
+                    <span style="font-size: 10pt"><strong>int</strong> main()<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; <strong>using</strong> <strong>namespace</strong> nana::gui;<br />
+                <br />
+                        &nbsp; &nbsp;
+                form fm;<br />
+                        &nbsp; &nbsp; fm.caption(STR(<span style="color: red">"Hello World"</span>));<br />
+                        &nbsp; &nbsp; button btn(fm, nana::rectangle(<span style="color: navy">20</span>,
+                        <span style="color: navy">20</span>, <span style="color: navy">150</span>, <span
+                            style="color: navy">30</span>));<br />
+                        &nbsp; &nbsp; btn.caption(STR(<span style="color: red">"Quit"</span>));<br />
+                        &nbsp; &nbsp;
+                btn.make_event&lt;events::click&gt;(API::exit);<br />
+                        &nbsp; &nbsp; fm.show();<br />
+                        &nbsp; &nbsp;
+                exec();<br />
+                } </span>
+                    <br />
+                </span>
+                <br />
+                <strong>Screenshot<br />
+                </strong>
+                <br />
+                <img src="./pics/helloworld.jpg" /><br />
+                <br />
+                <strong>Walkthrough Line-by-line<br />
+                </strong>
+                <br />
+                <span style="font-family: Courier New"><span style="font-size: 10pt"><span style="color: blue">
+                    <span style="color: #000000">&nbsp; &nbsp; </span>#include</span> </span></span>
+                <span style="font-size: 10pt; color: firebrick; font-family: Courier New">&lt;nana/gui/wvl.hpp&gt;<br />
+                </span>
+                <br />
+                This line includes the Nana.GUI class definition.&nbsp;<br />
+                <br />
+                <span style="font-family: Courier New"><span style="font-size: 10pt"><span style="color: blue">
+                    <span style="color: #000000">&nbsp; &nbsp; </span>#include</span> </span></span>
+                <span style="font-size: 10pt; color: firebrick; font-family: Courier New">&lt;nana/gui/widgets/button.hpp&gt;<br />
+                </span>
+                <br />
+                This line includes the Nana.GUI.button class definition.&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; <strong>int</strong>
+                    main()<br />
+                    &nbsp; &nbsp; {<br />
+                </span>
+                <br />
+                The main()
+                function is the entry point to the program. Almost always when using Nana.GUI,
+                main() only needs to perform some kind of initialization before passing the control
+                to the Nana.GUI library, which then tells the program about the user's
+                actions
+                via events.<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style1"><strong>using</strong> <strong>namespace</strong> nana::gui;</span><br />
+                <br />
+                Specify the nominated namespace nana::gui can be used in main function block scope. In this example, these names form, button, events, API and exec are defined in the namespace nana::gui. With this using-directive, we could use these names directly in the main function scope.<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; form fm;<br />
+                </span>
+                <br />
+                This is the first piece of window-system code.
+                A form is creating while the variable fm is defined. The form is a window with
+                title bar and a sizable border frame, it's fundamental that you can put some widgets
+                above it.&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; fm.caption(STR(<span
+                    style="color: red">"Hello World"</span>));<br />
+                </span>
+                <br />
+                Set the form to display the text "Hello World" in its title bar.&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; button
+                    btn(fm, nana::rectangle(<span style="color: navy">20</span>, <span style="color: navy">20</span>,
+                    <span style="color: navy">150</span>, <span style="color: navy">30</span>));<br />
+                </span>
+                <br />
+                After the
+                form, comes a button we created. In its constructor arg-list, the first argument
+                tells the btn who the parent window is, and the following arguments describe position
+                and size of btn.&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; btn.caption(STR(<span
+                    style="color: red">"Quit"</span>));<br />
+                </span>
+                <br />
+                Set the btn to display the text "Quit".&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; btn.make_event&lt;events::click&gt;(API::exit);<br />
+                </span>
+                <br />
+                make_event()
+                is a method that every Nana.GUI widgets provide, you can register an event callback
+                by using it. We want to exit the program while a mouse clicks on the btn. Now, register
+                a callback function on click event.&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; fm.show();<br />
+                </span>
+                <br />
+                A form widget is never visible
+                when you create it. You must call show() to make it visible.&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; exec();<br />
+                </span>
+                <br />
+                This is where the main() passes the control to Nana.GUI, and exec() will return
+                when the application exists. In exec(), Nana.GUI processes the message loop and
+                passes every event on to the appropriate widgets.&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; }<br />
+                </span>
+                <br />
+                You should now save and compile
+                the program.<br />
+                <br />
+                <strong>Further<br />
+                </strong>
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; STR(<span style="color: red">"Hello
+                    World"</span>)<br />
+                </span>
+                <br />
+                What is STR? STR is a macro that transforms
+                a multi-byte string into wide-byte string if NANA_UNICODE is defined in config.hpp.
+                With STR you can easier switch your program between multi-byte and wide-byte.&nbsp;<br />
+                <br />
+                <span style="font-size: 10pt; font-family: Courier New">&nbsp; &nbsp; btn.make_event&lt;events::click&gt;(API::exit);<br />
+                </span>
+                <br />
+                What is nana::gui::API::exit? This is an API provided by Nana.GUI, its prototype
+                is void exit(), if exit() is called, Nana.GUI may destroy all the windows you've
+                created and the exec() will return. Member make_event() has a template argument,
+                the argument can be a function or a functor with const nana::gui::eventinfo&amp;
+                parameter or not.&nbsp;<br />
+                <br />
+                &nbsp; &nbsp; Is it right that invoking exit() in an event callback? 
+                <br />
+                <br />
+                It is right
+                that Nana.GUI guarantees a program correct if it accesses an invalid GUI objects
+                handle.
+                <br />
+                <br />
+                <a href="../index.htm">Return</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

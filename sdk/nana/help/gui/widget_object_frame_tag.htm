@@ -1,0 +1,317 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+</head>
+<body>
+    <table style="font-family:Consolas;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana C++ Library &nbsp;<br />
+                </strong></span><br />
+                <strong>An open-source C++ framework project</strong><br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+                <strong><span style="font-size: 14pt"><span style="font-size: 16pt">widget_object&lt;frame_tag&gt;</span><br />
+                </span>
+                </strong>
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                a widget_object&lt;frame_tag&gt; is a base
+                class of all the classes defined as a
+                frame window.<br />
+                <br />
+                <strong>Model
+                of<br />
+                </strong>
+                <br />
+                <a href="./frame_window.htm">Frame Window</a>&nbsp;<br />
+                <br />
+                <strong>Public base classes<br />
+                </strong>
+                <br />
+                widget<br />
+                <br />
+                <strong>Members</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void background(colour_t)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the color of background.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            colour_t background() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the color of background.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            nana::string caption() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the caption.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void caption(const nana::string&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the caption.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void cursor(nana::gui::cursor);</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets a system predefined cursor.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            nana::gui::cursor cursor() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Retrieves the shape of cursor.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void close() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Closes the window.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool create(window parent, bool visible)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates the frame widget.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool create(window parent, const nana::rectangle &amp; = nana::rectangle(), bool visible = true)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates the frame widget.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool empty() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Determines whether the manipulator is handling a window.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool enabled() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Determines whether the window is enabled for mouse and keyboard input.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void enabled(bool)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the window whether enabled for mouse and keyboard input.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool focused() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns true if the widget has focused.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void foreground(colour_t)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the color of foreground.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            colour_t foreground() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the color of foreground.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void hide()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the window invisible.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename Event, typename Function&gt;<br />
+                            event_handle make_event(Function)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Register an event callback functor.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename Event, typename Class, typename Concept&gt;<br />
+                            event_handle make_event(Class&amp; object, void (Concept::*)(const eventinfo&amp;))</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Register an event callback functor. The functor is a member function of Concept.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void move(int x, int y)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Moves the window to a new position.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void picture(const nana::char_t* filename)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets a image file as a window background.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void show()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the window visible.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            nana::size size() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the size of window.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void size(unsigned width, unsigned height)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the size of window.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void umake_event(event_handle) const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Deletes an event callback by a handle.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                None.<br />
+                <br />
+                <strong>See also<br />
+                </strong>
+                <br />
+                <a href="./frame.htm">frame</a>
+                <br />
+                <br />
+                <br />
+                <hr />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

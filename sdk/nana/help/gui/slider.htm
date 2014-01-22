@@ -1,0 +1,345 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+    <style type="text/css">
+        .style2
+        {
+            color: #006600;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Trebuchet MS;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana - a C++ framework project &nbsp;<br />
+                </strong></span>
+                <br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="font-family:Consolas; height: 21px">
+                <strong><span style="font-size: 16pt">nana::gui::slider</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                A slider widget user can drag it for tracking.<br />
+                <br />
+                <strong>Model
+                of<br />
+                </strong>
+                <br />
+                <a href="./widget_window.htm">Widget Window</a>&nbsp;<br />
+                <br />
+                <strong>Public base classes<br />
+                </strong>
+                <br />
+                <a href="./widget_object_widget_tag.htm">class widget_object&lt;widget_tag, DrawerTrigger&gt;:
+                    public
+                widget</a><br />
+                <br />
+                <strong>Typedefs</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            renderer</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The interface for user-defined renderer.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            provider</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The interface for user-defined provider.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            seekdir</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Defines the slider seek direction.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>Members</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            slider()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The default constructor</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            slider(window wd, bool visible)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates a slider.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            slider(window wd, const <a href="../basic_class/rectangle.htm" target="_blank">rectangle</a>&amp; r = rectangle(), bool visible = true)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Ditto.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            nana::pat::cloneable&lt;renderer&gt;&amp; ext_renderer()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Refers to the current renderer that slider is useing.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void ext_renderer(const nana::pat::cloneable&lt;renderer&gt;&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Set a new renderer.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void ext_provider(const nana::pat::cloneable&lt;provider&gt;&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Set a new provider.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void move_step(bool forward)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Increase or decrease the value of slider.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void seek(seekdir::type)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Define the direction that user can seek by using mouse.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool transparent() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns true if the widget is transparent.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void transparent(bool)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Enable/disable the transparent of widget.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            unsigned value() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Return the value of slider.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void value(unsigned)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Set the value of slider.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool vertical() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Return true if the slider is vertical.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void vertical(bool)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Set the slider whether is vertical or horizontal.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            unsigned vmax() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Return the max value of slider.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void vmax(unsigned)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Set the max value of slider.</td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                <strong>File</strong><br />
+                <br />
+                nana/gui/widgets/slider.hpp<br />
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                1, Definition of renderer.<br />
+                <br />
+                <span style="font-family: Courier New"><b>class</b> renderer<br />
+                    {<br />
+                    <b>public</b>:<br />
+                    &nbsp; &nbsp; <b>typedef</b> nana::paint::graphics &amp; graph_reference;<br />
+                    <br />
+                    &nbsp; &nbsp; <b>struct</b> bar_t<br />
+                    &nbsp; &nbsp; {<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>bool</b> horizontal;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; nana::rectangle r; <span class="style2">//the rectangle of bar</span><br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>unsigned</b> border_size;
+                <span class="style2">//border size of bar</span><br />
+                    &nbsp; &nbsp; };<br />
+                    <br />
+                    &nbsp; &nbsp; <b>struct</b> slider_t<br />
+                    &nbsp; &nbsp; {<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>bool</b> horizontal;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>int</b> pos;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>unsigned</b> border;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>unsigned</b> scale;<br />
+                    &nbsp; &nbsp; };<br />
+                    <br />
+                    &nbsp; &nbsp; <b>struct</b> adorn_t<br />
+                    &nbsp; &nbsp; {<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>bool</b> horizontal;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; nana::point bound;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>int</b> fixedpos;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>unsigned</b> block;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <b>unsigned</b> vcur_scale; //pixels of vcur scale.<br />
+                    &nbsp; &nbsp; };<br />
+                    <br />
+                    &nbsp; &nbsp; <b>virtual</b> ~renderer() = 0;<br />
+                    &nbsp; &nbsp; <b>virtual</b> <b>void</b> background(nana::gui::window, graph_reference, 
+                <b>bool</b> isglass)
+                    = 0;<br />
+                    &nbsp; &nbsp; <b>virtual</b> <b>void</b> adorn(nana::gui::window, graph_reference, 
+                <b>const</b> adorn_t&amp;)
+                    = 0;<br />
+                    &nbsp; &nbsp; <b>virtual</b> <b>void</b> adorn_textbox(nana::gui::window, graph_reference, 
+                <b>const</b>
+                    nana::string&amp;, <b>const</b> nana::rectangle&amp;) = 0;<br />
+                    &nbsp; &nbsp; <b>virtual</b> <b>void</b> bar(nana::gui::window, graph_reference, 
+                <b>const</b> bar_t&amp;)
+                    = 0;<br />
+                    &nbsp; &nbsp; <b>virtual</b> <b>void</b> slider(nana::gui::window, graph_reference, 
+                <b>const</b> slider_t&amp;)
+                    = 0;<br />
+                    };</span><br />
+                <br />
+                2, Definition of provider, it provides a string that used to display a tip label
+                when user move the mouse in a slider.<br />
+                <br />
+                <span style="font-family: Courier New"><b>class</b> provider<br />
+                    {<br />
+                    <b>public</b>:<br />
+                    &nbsp; &nbsp; <b>virtual</b> ~provider() = 0;<br />
+                    &nbsp; &nbsp; <b>virtual</b> nana::string adorn_trace(<b>unsigned</b> vmax, 
+                <b>unsigned</b> vadorn) <b>const</b>
+                    = 0;<br />
+                    };<br />
+                </span>
+                <br />
+                3, Refer to <a href="http://nanaproject.wordpress.com/2011/03/20/clone_method/">this
+                    artical</a> for understanding how to write a user-defined renderer.<br />
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                None.<br />
+                <br />
+                <hr />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

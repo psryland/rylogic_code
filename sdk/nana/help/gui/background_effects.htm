@@ -1,0 +1,235 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+    <style type="text/css">
+        .auto-style1 {
+            font-family: "Courier New";
+        }
+        .auto-style2 {
+            color: #0000FF;
+        }
+        .auto-style3 {
+            color: #FF0000;
+        }
+        .auto-style4 {
+            color: #006600;
+        }
+        .auto-style5 {
+            color: #006699;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Consolas;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana C++ Library &nbsp;<br />
+                </strong></span><br />
+                <strong>An open-source C++ framework project</strong><br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+                <strong><span style="font-size: 16pt">Background Effects</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                Nana defines a set of API for background effects. With background effects, we can create a good-looking user interface.<br />
+                <br />
+                <strong>Effect Mode</strong><br />
+                <br />
+                There are two kind of effect modes.<br />
+                <br />
+                Basic Mode:<br />
+&nbsp;&nbsp;&nbsp;
+                The basic mode creates a transparent background. Such as the transparent label widget.<br />
+                <br />
+                Blending Mode:<br />
+&nbsp;&nbsp;&nbsp; The blending mode creates a semi-transparent widget. For some widgets, they do not support the transparent background, such as button, because they always draw the background by themselves, and the blending mode is used to make these widgets semi-transparent.<br />
+                <br />
+                <img src="./images/effect_mode.png" alt="Effect Mode"><br />
+                Some of drawers may detect the current effect mode, such as lable and checkbox, when thay are basic mode, these drawers only draw the foreground(such as text and borders), the background is not drawn, and the transparent background will be kept. Other drawers do not detect the current effect mode, and they always draw the background if they are basic mode, and the transparent background will be covered, so the basic mode does not make sense for the widgets which have these drawers.
+                <br />
+                <br />
+                <strong>APIs (in namepsace nana::gui::API)</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void effects_bground(window wd, const effects::bground_factory_interface&amp;, double fade_rate)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets an effect for a specified widget. The fade_rate is in the range [0, 1.0], and if it is zero, the effect mode is basic mode, otherwise the effect mode is blending mode.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void effects_bground_remove(window wd)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Removes the effect of the specified widget.</td>
+                    </tr>
+                    </table>
+                <br />
+                <strong>APIs for C++03</strong><br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bground_mode::t effects_bground_mode(window wd)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The construction.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>APIs for C++11</strong><br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bground_mode effects_bground_mode(window wd)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The construction.</td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                <strong>Effects Factory (in namespace nana::gui::effects)</strong><br />
+                <br />
+                The library defines some effects factories to create effects. The users should not take care about the object of factories.<br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bground_transparent(std::size_t percent)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates a transparent background effect factory. The percent is in the range of [0, 100], it stands for the fade rate of the background color which is blended with the background graphic buffer. </td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bground_blur(std::size_t radius)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates a transparent and blur background effect factory. The radius is used to specify the number of pixels to be blurred.</td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                <strong>Example</strong><br />
+                <br />
+                <span class="auto-style1"><span class="auto-style2">#include</span> <span class="auto-style3">&lt;nana/gui/wvl.hpp&gt;</span><br />
+                <span class="auto-style2">#include</span> <span class="auto-style3">&lt;nana/gui/widgets/button.hpp&gt;</span><br />
+                <span class="auto-style2">#include</span> <span class="auto-style3">&lt;nana/gui/widgets/label.hpp&gt;</span><br />
+                <span class="auto-style2">#include</span> <span class="auto-style3">&lt;nana/gui/place.hpp&gt;</span><br />
+                <br />
+                <strong>int</strong> main()<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; <strong>using namespace</strong> nana::gui;<br />
+                <br />
+&nbsp;&nbsp;&nbsp; form fm;<br />
+                <br />
+&nbsp;&nbsp;&nbsp; button btn(fm, <span class="auto-style3">L&quot;Normal Button&quot;</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; button btn0(fm, <span class="auto-style3">L&quot;Basic Mode&quot;</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style4">//It is basic mode when the third parameter of effects_bground() is specified by zero.</span><br />
+&nbsp;&nbsp;&nbsp; API::effects_bground(btn0, effects::bground_transparent(<span class="auto-style5">0</span>), <span class="auto-style5">0</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; button btn1(fm, <span class="auto-style3">L&quot;Blend Mode: Transparent&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp; API::effects_bground(btn1, effects::bground_transparent(<span class="auto-style5">0</span>), <span class="auto-style5">0.5</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; button btn2(fm, <span class="auto-style3">L&quot;Blend Mode: Blur&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp; API::effects_bground(btn2, effects::bground_blur(<span class="auto-style5">2</span>), <span class="auto-style5">0.5</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; label lb0(fm, <span class="auto-style3">L&quot;Normal Label&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp; lb0.foreground(<span class="auto-style5">0xFFFFFF</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; label lb1(fm, <span class="auto-style3">L&quot;Basic Mode: Transparent&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp; lb1.foreground(<span class="auto-style5">0xFFFFFF</span>);<br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style4">//Equal to lb1.transparent(true);</span><br />
+&nbsp;&nbsp;&nbsp; API::effects_bground(lb1, effects::bground_transparent(<span class="auto-style5">0</span>), <span class="auto-style5">0</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; label lb2(fm, <span class="auto-style3">L&quot;Basic Mode: Transparent and blend with its background color&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp; lb2.foreground(<span class="auto-style5">0xFFFFFF</span>);<br />
+&nbsp;&nbsp;&nbsp; lb2.background(<span class="auto-style5">0xFF0000</span>);<br />
+&nbsp;&nbsp;&nbsp; API::effects_bground(lb2, effects::bground_transparent(<span class="auto-style5">10</span>), <span class="auto-style5">0</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; label lb3(fm, <span class="auto-style3">L&quot;Basic Mode: Blur&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp; lb3.foreground(<span class="auto-style5">0xFFFFFF</span>);<br />
+&nbsp;&nbsp;&nbsp; API::effects_bground(lb3, effects::bground_blur(<span class="auto-style5">2</span>), <span class="auto-style5">0</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; place pl(fm);<br />
+&nbsp;&nbsp;&nbsp; pl.div(<span class="auto-style3">&quot;&lt;&gt;&lt;weight=80% abc vertical&gt;&lt;&gt;&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp; pl.field(<span class="auto-style3">&quot;abc&quot;</span>)&lt;&lt;5&lt;&lt;btn&lt;&lt;5&lt;&lt;btn0&lt;&lt;5&lt;&lt;btn1&lt;&lt;5&lt;&lt;btn2&lt;&lt;5&lt;&lt;lb0&lt;&lt;5&lt;&lt;lb1&lt;&lt;5&lt;&lt;lb2&lt;&lt;5&lt;&lt;lb3&lt;&lt;5;<br />
+&nbsp;&nbsp;&nbsp; pl.collocate();<br />
+                <br />
+&nbsp;&nbsp;&nbsp; fm.show();<br />
+                <br />
+&nbsp;&nbsp;&nbsp; nana::paint::image img(<span class="auto-style3">L&quot;image.bmp&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp; drawing dw(fm);<br />
+&nbsp;&nbsp;&nbsp; dw.draw([&amp;img](nana::paint::graphics &amp; graph)<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; img.paste(graph, <span class="auto-style5">0</span>, <span class="auto-style5">0</span>);<br />
+&nbsp;&nbsp;&nbsp; });<br />
+&nbsp;&nbsp;&nbsp; dw.update();<br />
+                <br />
+&nbsp;&nbsp;&nbsp; exec();<br />
+                </span>}<br />
+                <br />
+                <img src="./images/effects_bground_show.png" alt="Effects Background Show" style="text-align: center"><br />
+                <br />
+                This program shows the behaviors of these effects. 
+                The button does not support the transparent, so the basic mode does not make sense for the button.<br />
+                <br />
+                <br />
+                <strong>File</strong><br />
+                <br />
+                nana/gui/wvl.hpp<br />
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                None.<br />
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                None.<br />
+                <br />
+                <hr />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

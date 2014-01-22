@@ -1,0 +1,389 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+    <style type="text/css">
+        .style1
+        {
+            color: #006600;
+        }
+        .style2
+        {
+            font-family: "Courier New";
+            font-size: 10pt;
+        }
+        .style3
+        {
+            color: #FF0000;
+        }
+        .auto-style1 {
+            color: #009933;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Consolas;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <strong><span style="font-size: 16pt">Nana C++ Library &nbsp;</span><br />
+                An open-source C++ framework project<br />
+                The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+                <strong><span style="font-size: 16pt">nana::gui::categorize</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                A categorize widget is used for representing the architecture of categories and 
+                what category is chosen. The categorize widget can be used for representing a 
+                path of a directory or the order of hierarchy.<br />
+                <br />
+                <strong>Model
+                of<br />
+                </strong>
+                <br />
+                <a href="./widget_window.htm">Widget Window</a>&nbsp;<br />
+                <br />
+                <strong>Public base classes<br />
+                </strong>
+                <br />
+                <a href="./widget_object_widget_tag.htm">class widget_object&lt;widget_tag, DrawerTrigger&gt;:
+                    public
+                widget</a><br />
+                <br />
+                <b>Template Parameter</b><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            T</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The value type of categorize, the type of object that stored in categorize.</td>
+                    </tr>
+                </table>
+                <br />
+                <b>Typedefs</b><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            value_type&nbsp;</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The type of object, T, stored in categorize.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            ext_event_type</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The methods for extra events.(See Note 1)</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            renderer</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The interface for user-defined renderer.</td>
+                    </tr>
+                    </table>
+                <br />
+                <strong>Members</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The default construction.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize(window wd, bool visible)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The constructor for creating a categorize in a specified window.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize(window wd, const nana::string&amp; title, bool visible = true)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Ditto.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize(window wd, const nana::char_t* title, bool visible = true)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Ditto.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize(window wd, const <a href="../basic_types/rectangle.htm" target="_blank">rectangle</a>&amp; r = rectangle(), bool visible = true)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Ditto.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            ext_event_type&amp; ext_event() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Refers to the object of extra events</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize&amp; insert(const nana::string&amp; name, const value_type&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Insert a new category with a specified name and the object of value type. The 
+                            new category would be inserted as a child in current category, and after 
+                            inserting, the new category is replaced of the current category as a new current 
+                            one.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize&amp; childset(const nana::string&amp; name, const value_type&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inserts a child category into current category.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize&amp; childset_erase(const nana::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Erases a child category with a specified name from current category.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            categorize&amp; splitstr(const nana::string&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the splitter string</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            nana::string splitstr() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Retrieves the splitter string.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            value_type&amp; value() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Retrieves the reference of the current category&#39;s value type object. If current 
+                            category is empty, it throws a exception of std::runtime_error.</td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                <b>Demo</b><br />
+                <br />
+                <span class="style2">#include <span class="style3">&lt;iostream&gt;</span><br />
+                #include <span class="style3">&lt;nana/gui/wvl.hpp&gt;</span><br />
+                #include <span class="style3">&lt;nana/gui/widgets/categorize.hpp&gt;</span><br />
+                <br />
+                <strong>void</strong> selected(nana::gui::categorize&lt;int&gt; &amp; categ, int&amp;)<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; nana::gui::msgbox mb(categ, STR(<span class="style3">&quot;categorize&quot;</span>));<br />
+&nbsp;&nbsp;&nbsp; mb.icon(mb.icon_information);<br />
+&nbsp;&nbsp;&nbsp; mb&lt;&lt;STR(<span class="style3">&quot;The value of selected is &quot;</span>)&lt;&lt;categ.value()&lt;&lt;STR(<span class="style3">&quot;, caption is \&quot;&quot;</span>)<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;&lt;categ.caption()&lt;&lt;STR(<span class="style3">&quot;\&quot;&quot;</span>);&nbsp;&nbsp;&nbsp; <span class="auto-style1">//caption() method, see Note 3.</span><br />
+&nbsp;&nbsp;&nbsp; mb();<br />
+                }<br />
+                <br />
+                <b>int</b> main()<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; <b>using namespace</b> nana::gui;<br />
+&nbsp;&nbsp;&nbsp; form fm;<br />
+&nbsp;&nbsp;&nbsp; categorize&lt;<b>int</b>&gt; categ(fm, 10, 10, 200, 24);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; categ.childset(STR(<span class="style3">&quot;Invalid Category&quot;</span>), 0);<br />
+&nbsp;&nbsp;&nbsp; <span class="style1">//Invalid category because of empty current category.</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp; categ.insert(STR(<span class="style3">&quot;First&quot;</span>), 0);<br />
+&nbsp;&nbsp;&nbsp; <span class="style1">//Insert a category and now it is the current category.</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp; categ.insert(STR(<span class="style3">&quot;Second&quot;</span>), 1);<br />
+&nbsp;&nbsp;&nbsp; <span class="style1">//Insert a category as a child of &quot;First&quot; category, and 
+                then</span><br class="style1" />
+                <span class="style1">&nbsp;&nbsp;&nbsp; //the &quot;Second&quot; is the current category.</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp; categ.childset(STR(<span class="style3">&quot;Third&quot;</span>), 2);<br />
+&nbsp;&nbsp;&nbsp; <span class="style1">//Insert a category as a child of &quot;Second&quot;.</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp; categ.childset(STR(<span class="style3">&quot;Another Child&quot;</span>), 2);<br />
+&nbsp;&nbsp;&nbsp; <span class="style1">//childset() always insert categories into current 
+                category, and</span><br class="style1" />
+                <span class="style1">&nbsp;&nbsp;&nbsp; //it does not displace the current 
+                category, and therefore &quot;Another Child&quot;</span><br class="style1" />
+                <span class="style1">&nbsp;&nbsp;&nbsp; //is a child of &quot;Second&quot;.</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp; categ.ext_event().selected = selected;<br />
+&nbsp;&nbsp;&nbsp; <span class="style1">//This may crash in VC2012-RC due to compiler bug.</span><br class="style1" />
+                <span class="style1">&nbsp;&nbsp;&nbsp; //Please refer to <a href="http://nanapro.sf.net/compatibility_issue.htm">compatibility-issue</a> for more details</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp; fm.show();<br />
+&nbsp;&nbsp;&nbsp; exec();<br />
+                </span>}<br />
+                <br />
+                <img alt="Snapshot of categorize"
+                    src="./images/categorize.png" /><br />
+                Screenshot of categorize.<br />
+                <br />
+                <strong>File</strong><br />
+                <br />
+                nana/gui/widgets/categorize.hpp<br />
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                1. The definition of ext_event_type<br />
+                <br />
+                <b>&nbsp;&nbsp;&nbsp; struct</b> ext_event_type<br />
+                &nbsp;&nbsp;&nbsp;
+                {<br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; <b>typedef</b> <i>Implementation-Specified</i> categorize_type;<br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; <b>typedef</b> <b>typename</b> categorize_type::value_type value_type;<br />
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; nana::fn_group&lt;<b>void</b>(categorize_type&amp;, value_type&amp;)&gt; selected; 
+                <span class="style1">//Selects 
+                a category</span><br />
+                &nbsp;&nbsp;&nbsp;
+                };<br />
+                <br />
+                2. Definition of renderer<br />
+                <br />
+                <b>&nbsp;&nbsp;&nbsp; class</b> renderer<br />
+                &nbsp;&nbsp;&nbsp;
+                {<br />
+                <b>&nbsp;&nbsp;&nbsp; public</b>:<br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; <b>typedef</b> nana::paint::graphics &amp; graph_reference;<br />
+                <br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; <b>enum</b> state_t{state_normal, state_over, state_pressed};<br />
+                <br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; <b>struct</b> ui_element<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>enum</b> t<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; none, <span class="style1">//Out of the widget</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; somewhere, item_root, 
+                item_name, item_arrow<br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; };<br />
+                <br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>static const</b> size_t npos = <b>static_cast</b>&lt;size_t&gt;(-1);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp; t what;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; size_t index;<br />
+                <br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ui_element();<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; };<br />
+                <br />
+&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp; <b>virtual</b> ~renderer() = 0;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>virtual void</b> background(graph_reference, window, <b>const</b> nana::rectangle&amp;, 
+                <b>const</b> ui_element&amp;) = 0;<br />
+&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; <b>virtual void</b> root_arrow(graph_reference, <b>const</b> nana::rectangle&amp;, state_t) = 
+                0;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; <b>virtual void</b> item(graph_reference, <b>const</b> nana::rectangle&amp;, size_t index,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                <b>const</b> nana::string&amp; name, <b>unsigned</b> text_height,<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                <b>bool</b> has_child, state_t) = 0;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>virtual void</b> border(graph_reference) = 0;<br />
+                &nbsp;&nbsp;&nbsp;
+                };<br />
+                <br />
+                3. The caption() methods of the categorize widget is used for retrieving and 
+                setting the category.<br />
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                None.<br />
+                <br />
+                <hr />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

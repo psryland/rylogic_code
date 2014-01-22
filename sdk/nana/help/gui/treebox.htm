@@ -1,0 +1,781 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+    <style type="text/css">
+        .style1
+        {
+            color: #0000FF;
+        }
+        .auto-style1 {
+            color: #009933;
+        }
+        .auto-style2 {
+            color: #FF0000;
+        }
+        .auto-style3 {
+            color: #003366;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Consolas;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <strong><span style="font-size: 16pt">Nana C++ Library&nbsp;</span><br />
+                A open-source C++ framework project&nbsp; <br />
+                The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="font-family:Consolas;height: 21px">
+                <strong><span style="font-size: 16pt">nana::gui::treebox</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                a treebox is a widget that displays a hierarchical list of items, such as the files
+                and directories on a disk.<br />
+                <br />
+                <strong>Model
+                of<br />
+                </strong>
+                <br />
+                <a href="./widget_window.htm">Widget Window</a>&nbsp;<br />
+                <br />
+                <strong>Public base classes<br />
+                </strong>
+                <br />
+                <a href="./widget_object_widget_tag.htm">class widget_object&lt;widget_tag, DrawerTrigger&gt;:
+                    public
+                widget</a><br />
+                <br />
+                <strong>Typedefs</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset; font-size: 10pt;">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            <a href="#itemproxy">item_proxy</a></td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            A type refers to the item and also used to iterate through the node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            ext_event_type</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The type of extra event defined by treebox.(See Note 2)</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            node_image_type</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The type of state image.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            renderer_interface</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The interface of treebox item renderer.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            compset_placer_interface</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The interface of treebox compset_placer.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>Members</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset; font-size: 10pt;">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            treebox();</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The default constructor without creating the widget.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            treebox(window wd, bool visible)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates a treebox in a specified window.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            treebox(window wd, const <a href="../basic_class/rectangle.htm" target="_blank">rectangle</a>&amp; r = rectangle(), bool visible = true)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates a treebox with a specified rectangle.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void auto_draw(bool)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Enables/disables the widget that draws automatically when it is operated.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            treebox&amp; checkable(bool enable)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Enables/disables the checkbox for each item of the widgets.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool checkable() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Determine whether the checkbox is enabled.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy erase(item_proxy pos)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Erases the item pointed to by <em>pos</em>.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void erase(const nana::string&amp; keypath)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Erases the item specified by <em>keypath</em>.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            ext_event_type&amp; ext_event() const&nbsp;</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Retrieves the object of extra events.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            treebox&amp; icon(const nana::string&amp; id, const node_image_type&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the state image with a specified id name.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            node_image_type&amp; icon(const nana::string&amp; id) const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Retrieves the object of state image by the specified id name.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void icon_erase(const nana::string&amp; id)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Erases the state image by the specified id name.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy find(const nana::string&amp; keypath)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Find a item though a specified <em>keypath</em>.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy insert(const nana::string&amp; keypath, const nana::string&amp; title);</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inserts a new node to treebox, <em>keypath</em> specifies the node hierarchical, <em>title</em> is
+                            used for displaying. If the <em>keypath</em> is existing, it returns the existing node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy insert(item_proxy pos, const nana::string&amp; key, const nana::string&amp;
+                            title);</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inserts a new node to treebox, <em>pos</em> is the parent, <em>key</em> specifies the new node, title
+                            is used for displaying. If the <em>key</em> is existing, it returns the existing node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            nana::string make_key_path(item_proxy pos, const nana::string&amp; splitter);</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            It returns the key path of item pointed to by <em>pos</em>, the <em>splitter</em> splits the each owner of node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename Placer&gt; treebox&amp; placer(const Placer&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets a new compset placer.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            const nana::pat::cloneable&lt;compset_placer_interface&gt;&amp; placer() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Gets the compset placer.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename ItemRenderer&gt; treebox&amp; renderer(const ItemRenderer&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets a new item renderer.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            const nana::pat::cloneable&lt;renderer_interface&gt; &amp; renderer() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Gets the item renderer.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy selected() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Gets the item that is selected.</td>
+                    </tr>
+                    </table>
+                <br />
+                <a name="itemproxy"><strong>Item Proxy</strong></a> (on the concept of <a href="http://www.sgi.com/tech/stl/InputIterator.html">Input Iterator</a>)<br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset; font-size: 10pt;">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The default constructor creates an end iterator.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy append(const nana::string&amp; key, const nana::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Append a child.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename T&gt;<br />
+                            item_proxy append(const nana::string&amp; key, const nana::string&amp; name, const T&amp; usr_obj)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Append a child with a specified user object.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool empty() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns true if the proxy does not refer to a node, as an end iterator.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            std::size_t level() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the distance between the ROOT node and this node, the return is only available when empty() is false.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool checked() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the check state.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy&amp; check(bool)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the check state, and it returns itself.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool expanded() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns true when the node is expanded.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy&amp; expand(bool)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Expand/Shrink children of the node, and it returns itself.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool selected() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns true when the node is selected.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy&amp; select(bool)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Select the node, and it returns itself.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            const nana::string&amp; icon() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the id of icon.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy&amp; icon(const nana::string&amp; id)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Set the id of icon.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            const nana::string&amp; text() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the text.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy&amp; text(const nana::string&amp;);</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Set a new text.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            const nana::string&amp; key() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the key.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy&amp; key(const nana::string&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Set a new key.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            std::size_t size() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the number of child nodes.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy child() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the first child of the node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy owner() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the owner of the node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy sibling() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the sibling of the node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy begin() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns an proxy pointing to the beginning of node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy end() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns an proxy pointing to the end of node.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool operator==(const nana::string&amp; s) const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Compare the text of node with the <em>s</em>.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool operator==(const char* s) const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Ditto.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool operator==(const wchar_t* s) const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Ditto.</td>
+                    </tr>
+                    </table>
+                <br />
+                <strong>File</strong><br />
+                <br />
+                nana/gui/widgets/treebox.hpp<br />
+                <br />
+                <strong>Tutorial</strong><br />
+                <br />
+                Loading the directories into the treebox.<br />
+                <br />
+                <img alt="treebox" src="./images/treebox.png" style="font-size: 10pt" /><br />
+                <br />
+                <span style="font-family: Consolas"><span style="color: #0000ff">#include</span> <span
+                                style="color: red">&lt;nana/gui/wvl.hpp&gt;</span><br />
+                                <span style="color: blue">#include</span> <span style="color: red">&lt;nana/gui/widgets/treebox.hpp&gt;</span><br />
+                                <span style="color: blue">#include</span> <span style="color: red">&lt;nana/filesystem/file_iterator.hpp&gt;</span><br />
+                                <br />
+                                <br />
+                                <strong>class</strong> folder_tree<br />
+                                &nbsp; &nbsp; : <strong>public</strong> nana::gui::form<br />
+                                {<br />
+                                <strong>public</strong>:<br />
+                                &nbsp;&nbsp;&nbsp; typedef nana::gui::treebox::item_proxy item_proxy;<br />
+                <br />
+                &nbsp; &nbsp; folder_tree()<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; : 
+                nana::gui::form(nana::gui::API::make_center(300, 300),<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                appear::decorate&lt;appear::taskbar&gt;())<br />
+                                &nbsp; &nbsp; {<br />
+                                <br />
+                                &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; tree_.create(*this, <span style="color: navy">0</span>, <span style="color: navy">
+                                    0</span>, <span style="color: navy">300</span>, <span style="color: navy">300</span>);<br />
+                <br />
+                <span class="style1">#if defined(NANA_WINDOWS)</span><br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; item_proxy node = 
+                tree_.insert(STR(<span style="color: red">"C:"</span>),
+                                STR(<span style="color: red">"Local Drive(C:)"</span>));<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; nana::filesystem::file_iterator i(STR(<span style="color: red">"C:\\"</span>)),
+                                end;<br />
+                <span class="style1">#elif defined(NANA_LINUX)</span><br />
+                                <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //Use a whitespace for the root key since the root under linux</span><br class="auto-style1" />
+                <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //is / character.</span><br />
+                                &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; item_proxy node = 
+                tree_.insert(STR(<span style="color: red">&quot;/&quot;</span>),
+                                STR(<span style="color: red">&quot;Root&quot;</span>));<br />
+                                &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; nana::filesystem::file_iterator i(STR(<span style="color: red">&quot;/&quot;</span>)),
+                                end;<br />
+                <span class="style1">#endif</span><br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; <strong>for</strong>(; i != end; ++i)<br />
+                                &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {<br />
+                                &nbsp; &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; <strong>if</strong>(<strong>false</strong> == i-&gt;directory)
+                                <strong>continue</strong>;<br />
+                                <br />
+                                &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; &nbsp; tree_.insert(node, i-&gt;name, i-&gt;name);<br />
+                                &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; &nbsp; <strong>break</strong>;<br />
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; }<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; tree_.ext_event().expand = nana::make_fun(*this, 
+                &amp;folder_tree::_m_expand);<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <b>private</b>:<br />
+                                &nbsp; &nbsp; <strong>void</strong> _m_expand(nana::gui::window, item_proxy node, <strong>bool</strong> exp)<br />
+                                &nbsp; &nbsp; {<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; <strong>if</strong>(!exp) <strong>return</strong>; <span
+                                    style="color: #006633">//If this is contracted.</span><br />
+                                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="auto-style1">//Windows supports the path separator &#39;/&#39;</span><br />
+                &nbsp; &nbsp; &nbsp; &nbsp; nana::string path = tree_.make_key_path(node, STR(<span
+                                    style="color: #ff0000">&quot;/&quot;</span>)) + STR(<span style="color: red">&quot;/&quot;</span>);<br />
+                <span class="auto-style1">
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //Trim the whitespace at head of the path. So the code can be work</span><br class="auto-style1" />
+                <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; //well in both Windows and Linux.</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; nana::string::size_type path_start_pos = path.find_first_not_of(STR(<span class="auto-style2">&quot; &quot;</span>));<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if(path_start_pos != path.npos)<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; path.erase(<span class="auto-style3">0</span>, path_start_pos);<br />
+                <br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; </span><span style="font-family: Consolas"><span style="color: #006633">//Walk in the path directory
+                                    for sub directories.<br />
+                                </span>&nbsp; &nbsp; &nbsp; &nbsp; nana::filesystem::file_iterator i(path), end;<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; <strong>for</strong>(; i != end; ++i)<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; {<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>if</strong>(<strong>false</strong>
+                                == i-&gt;directory) <strong>continue</strong>; <span style="color: #006633">//If it
+                                    is not a directory.</span><br />
+                                <br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; item_proxy child = tree_.insert(node,
+                                i-&gt;name, i-&gt;name);<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>if</strong>(child.empty()) <strong>continue</strong>;<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; </span><span style="font-family: Consolas">
+                            <span style="color: #006633">//Find a directory
+                                    in child directory, if there is a directory,<br />
+                                    &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; //insert
+                                    it into the child, just insert one node to indicate the<br />
+                                    &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; //node has a child
+                                    and an arrow symbol will be&nbsp;displayed in the<br />
+                                    &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; //front of the node.</span><br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; nana::filesystem::file_iterator u(path
+                                + i-&gt;name);<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>for</strong>(; u != end; ++u)<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; {<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>if</strong>(<strong>false</strong>
+                                == u-&gt;directory) <strong>continue</strong>; </span><span style="font-family: Consolas">
+                                    <span style="color: #006633">//If it
+                                    is not a directory.<br />
+                                </span>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; tree_.insert(child,
+                                u-&gt;name, u-&gt;name);<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>break</strong>;<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; }<br />
+                                &nbsp; &nbsp; &nbsp; &nbsp; }<br />
+                                &nbsp; &nbsp; }<br />
+                                <strong>private</strong>:<br />
+                                &nbsp; &nbsp; nana::gui::treebox tree_;<br />
+                                };<br />
+                                <br />
+                                <strong>int</strong> main()<br />
+                                {<br />
+                                &nbsp;&nbsp;&nbsp; folder_tree fdtree;<br />
+                                &nbsp; &nbsp; fdtree.show();<br />
+                                &nbsp; &nbsp; nana::gui::exec();<br />
+                                }</span><br />
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                1. The key string is case sensitive.
+                <br />
+                <br />
+                2. treebox::ext_event_type. Nana.GUI event is a general-purpose, such 
+                as mouse_down, mouse_up, mouse_move event. But some widgets need some events 
+                that satisfies its own specifical demand, so the widget class provides an 
+                ext_event_type for this demand. Its definition is:<br />
+                <span style="font-family: Consolas"><br />
+                    <strong>struct</strong> ext_event_type<br />
+                    {<br />
+                    &nbsp; &nbsp; <strong>typedef</strong> <i>Implementation-Specified</i> item_proxy;<br />
+                    &nbsp; &nbsp; <br />
+                    &nbsp; &nbsp; 
+                nana::fn_group&lt;<strong>void</strong>(nana::gui::window, item_proxy, <strong>bool </strong>exp)&gt; 
+                expand;&nbsp; //Expands or shrinks an item, <em><strong>exp</strong></em> is true if it is expanded.<br />
+&nbsp;&nbsp;&nbsp; nana::fn_group&lt;<strong>void</strong>(nana::gui::window, item_proxy, <strong>bool</strong> set)&gt; checked; //The item is checked, <em><strong>set</strong> </em>is true if it is checked.<br />
+                    &nbsp; &nbsp; nana::fn_group&lt;<strong>void</strong>(nana::gui::window, item_proxy, <strong>bool </strong>set)&gt; 
+                selected; //Selects an item, <em><strong>set</strong></em> is true if it is selected.<br />
+                    };<br />
+                </span>
+                <br />
+                If a node is expanded or 
+                shrinked, the expand method will be called, and the 3rd
+                parameter specifies whether the node is expanded.<br />
+                If a node is selected or unselected, the selected method will be called, and the
+                3rd parameter specifies whether the node is selected.<br />
+                <br />
+                3. The definition of node_image_type<br />
+                <br />
+                struct node_image_type<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; nana::paint::image normal;<br />
+&nbsp;&nbsp;&nbsp; nana::paint::image highlighted;<br />
+&nbsp;&nbsp;&nbsp; nana::paint::image expanded;<br />
+                };<br />
+                <br />
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                None.<br />
+                <br />
+                <hr style="font-size: 10pt" />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr style="font-size: 10pt">
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr style="font-size: 10pt">
+            <td style="height: 21px">
+                &nbsp;</td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

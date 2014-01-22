@@ -1,0 +1,266 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>How to implement a button. The Nana Programmer's Guide</title>
+</head>
+<body>
+    <table style="font-family:Trebuchet MS;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana - a C++ framework project&nbsp;
+                    <br />
+                </strong></span>
+                <br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr style="font-size: 12pt">
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr style="font-size: 10pt">
+            <td style="height: 21px">
+                <strong><span style="font-size: 16pt">How to implement a button</span></strong><br />
+                <br />
+                <strong>1. Introduction<br />
+                </strong>&nbsp; &nbsp; This article is indented to explain how to implement a button
+                widget and some basic knowledge through nana::gui::button. nana::gui::button is
+                a simple widget and it is a good start to learn the implementation of a widget.
+                the implementation of nana::gui::button is defined in "include/nana/gui/widgets/button.hpp"
+                and "source/gui/widgets/button.cpp".<br />
+                &nbsp; &nbsp; Nana.GUI provides a framework for implementing a widget. A graphical
+                user interface widget is made of a window manipulator and a drawer trigger, so implementing
+                a widget is needed to implement this tow parts.&nbsp;<br />
+                <br />
+                <strong>&nbsp; &nbsp; Window Manipulator<br />
+                </strong>&nbsp; &nbsp; It is a class provides some operations, it is a visible for
+                an user, example. nana::gui::button is a manipulator.&nbsp;<br />
+                <br />
+                <strong>&nbsp; &nbsp; Drawer Trigger<br />
+                </strong>&nbsp; &nbsp; A drawing operation is driven by the drawer trigger, it is
+                provied for the internal of a widget, it is invisible for an user.
+                <br />
+                <br />
+                &nbsp; &nbsp; During the life time of a window manipulator and a drawer trigger,
+                Nana.GUI does not involve the creation and destroying of a drawer trigger.<br />
+                <br />
+                <strong>2. Implementation</strong><br />
+                <br />
+                &nbsp; &nbsp; 2.1 Window Manipulator<br />
+                <br />
+                <span style="font-family: Courier New">&nbsp; &nbsp; <strong>template</strong>&lt;<strong>typename</strong>
+                    DrawerTrigger&gt;<br />
+                    &nbsp; &nbsp; <strong>class</strong> basic_button: <strong>public</strong> widget_object&lt;category::widget_tag,
+                    DrawerTrigger&gt;</span><br />
+      <span style="FONT-FAMILY: Courier New">&nbsp;&nbsp;&nbsp; {<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;<strong>public</strong>:<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; basic_button(){}<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      basic_button(nana::gui::widget&amp; widget, <strong>int</strong> x, 
+      <strong>int</strong> y, <strong>unsigned</strong> width, 
+      <strong>unsigned</strong> height)<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      <strong>this</strong>-&gt;create(widget.handle(), x, y, width, height);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br />&nbsp;&nbsp;&nbsp; };<br /></span><br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; These code is 
+      defined&nbsp;the window manipulator of the button.<br /><br /><span 
+      style="FONT-FAMILY: Courier New">&nbsp;&nbsp;&nbsp; 
+      <strong>template</strong>&lt;<strong>typename</strong> 
+      DrawerTrigger&gt;</span><br /><br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The template parameter 
+      DrawerTrigger is used for specifying a drawer trigger.<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;basic_button is 
+      inherited from widget_object&lt;category::widget_tag<span
+                    style="font-family: Courier New">, DrawerTrigger</span>&gt;, the 
+      widget_tag indicates the button is a Widget Window. Although all widgets 
+      are inherited from nana::gui::widget, the widgets just can be inherited 
+      from the template class widget_object&lt;&gt; while 
+      define.<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; The default 
+      constructor does not create the widget unless the create() method is 
+      called. The second constructor will create the widget by calling the 
+      create() method. Nana.GUI guarantees the safety if an operation of a 
+      widget before its creation.<br 
+      /><br />&nbsp;&nbsp;&nbsp; 2.2. Drawer 
+      Trigger<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; A drawer trigger 
+      is more complicated than a window manipulator, it reacts a mouse or a 
+      keyboard event. In this implementation of the button, the code of drawing 
+      the button is written inside the drawer trigger directly. now, let's dip 
+      into the definition of the drawer trigger.<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; A drawer trigger must be 
+      inherited from std::gui::drawer_trigger.<br /><br /><span 
+      style="FONT-FAMILY: Courier New">&nbsp;&nbsp;&nbsp; <strong>class</strong> 
+      button_drawer: <strong>public</strong> nana::gui::drawer_trigger&lt;cagetory::widget_tag&gt;<br 
+      />&nbsp;&nbsp;&nbsp; {<br />&nbsp;&nbsp;&nbsp; <strong>public</strong>:<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; button_trigger();<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>void</strong> bind_window(nana::gui::widget&amp;);<br />&nbsp;&nbsp;&nbsp; 
+      <strong>private</strong>:<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      <strong>void</strong> attached(nana::paint::graphics&amp;);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>void</strong> 
+      detached();<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      <strong>void</strong> normal(paint::graphics&amp;);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>void</strong> 
+      mouse_leave(paint::graphics&amp;, <strong>const</strong> 
+      eventinfo&amp;);<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      <strong>void</strong> mouse_down(paint::graphics&amp;, 
+      <strong>const</strong> eventinfo&amp;);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>void</strong> 
+      mouse_up(paint::graphics&amp;, <strong>const</strong> eventinfo&amp;);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>void</strong> 
+      focus(paint::graphics&amp;, <strong>const</strong> eventinfo&amp;);<br 
+      />&nbsp;&nbsp;&nbsp; <strong>private</strong>:<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>void</strong> 
+      _m_draw_title(paint::graphics&amp;, <strong>bool</strong> is_mouse_down, 
+      <strong>bool</strong> is_focus);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>void</strong> 
+      _m_draw_background(paint::graphics&amp;, <strong>bool</strong> 
+      is_mouse_down);<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      <strong>void</strong> _m_draw_border(paint::graphics&amp;, 
+      <strong>bool</strong> is_mouse_down);<br />&nbsp;&nbsp;&nbsp; 
+      <strong>private</strong>:<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      nana::gui::widget* widget_;<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>bool</strong> 
+      is_ms_down_;<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      <strong>bool</strong> is_focus_;<br />&nbsp;&nbsp;&nbsp; };<br 
+      /></span><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; This 
+      button_drawer makes the constructor and a bind_window() member function as public, 
+      and others are private.&nbsp;<br />
+                <br />
+                <span style="font-family: Courier New">&nbsp; &nbsp; void bind_window(nana::gui::widget&amp;
+                    widget)<br />
+                    &nbsp; &nbsp; {<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; widget_ = &amp;widget;<br />
+                    &nbsp; &nbsp; }</span><br 
+      />
+                <br />
+                &nbsp; &nbsp; &nbsp; &nbsp; Nana.GUI creates a widget and tell the drawer trigger
+                the widget through bind_window().<br />
+                &nbsp;<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; The private member functions 
+      start with non-_m_ are virtual functions that are defined by 
+      nana::gui::drawer_trigger, these virtual functions are invoked inside the 
+      Nana.GUI, some of these virtual functions start with mouse_ are used for 
+      answering a mouse operation. It was needed override these functions you 
+      want some special capacities.<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; The private member functions 
+      start with _m_ are defined by the button drawer trigger, it implements the 
+      drawing of the button. As will be readily seen, when a mouse event raised, 
+      the drawer trigger calls the member functions start with _m_ drawing the 
+      widget.<br /><br /><span 
+      style="FONT-FAMILY: Courier New">&nbsp;&nbsp;&nbsp; nana::gui::widget * 
+      widget_;<br /></span><br />&nbsp;&nbsp;&nbsp; This data member refers to a 
+      window manipulator which is connecting with the drawer trigger.<br /><br 
+      /><span style="FONT-FAMILY: Courier New">&nbsp;&nbsp;&nbsp; bool 
+      is_ms_down_;<br /></span><br />&nbsp;&nbsp;&nbsp; This indicates the 
+      current mouse status if the left button is pressed down.<br /><br 
+      />&nbsp;&nbsp;&nbsp; Now, let's return to the details of member functions 
+      start with _m_.<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br 
+      /><span style="FONT-FAMILY: Courier New">&nbsp;&nbsp;&nbsp; 
+      button_drawer::button_drawer()<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :widget_(0), 
+      is_ms_down_(<strong>false</strong>), is_focus_(<strong>false</strong>)<br 
+      />&nbsp;&nbsp;&nbsp; {}<br /></span><br />
+                &nbsp; &nbsp; The default constructor initializes the data members. is_ms_down_
+                will be modified by mouse_down() and mouse_up(). is_focus_ will be modified by focus().<br />
+                <br />
+                <span style="font-family: Courier New">&nbsp; &nbsp; <strong>void</strong> button_drawer::set(nana::gui::widget&amp;
+                    widget)<br />
+                    &nbsp; &nbsp; {<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <strong>if</strong>(widget_ == 0)<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; widget_ = &amp;widget;<br />
+                    &nbsp; &nbsp; }<br />
+                </span>
+                <br />
+                &nbsp; &nbsp; Sets widget_, this function is invoked by window manipulator's get_drawer_trigger().<br />
+                &nbsp; &nbsp; The following member functions are the essential of the drawer trigger.<br />
+                <br />
+                <span style="font-family: Courier New">&nbsp; &nbsp; <strong>void</strong> button_drawer::attached(nana::paint::graphics&amp;)<br />
+                    &nbsp; &nbsp; {<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; <strong>using</strong> <strong>namespace</strong> nana::gui::API;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; is_ms_down_ = <strong>false</strong>;<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; nana::gui::window window = widget_-&gt;handle();<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; make_drawer_event&lt;events::mouse_leave&gt;</span><span 
+      style="FONT-FAMILY: Courier New">(window);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; make_drawer_event&lt;events::mouse_down&gt;</span><span 
+      style="FONT-FAMILY: Courier New">(window);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; make_drawer_event&lt;events::mouse_up&gt;</span><span 
+      style="FONT-FAMILY: Courier New">(window);<br 
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; make_drawer_event&lt;events::focus&gt;</span><span 
+      style="FONT-FAMILY: Courier New">(window);<br />&nbsp;&nbsp;&nbsp; 
+      }</span><br 
+      /><br />
+                &nbsp; &nbsp; When a widget is creating, Nana.GUI is responsible for attaching
+                the drawer trigger which is returned by the window manipulator to the Window Manager
+                of Nana.GUI, at the same time, Nana.GUI calls the attach() method provided by
+                the drawer trigger, in other words, the attach() method is the first method of a
+                drawer trigger that Nana.GUI calls. When the drawer trigger is attached to the
+                Window Manager, the connection is created between the drawer trigger and window
+                manipulator that the drawer trigger will receive the callback of an event from a
+                widget. In this member function, button_drawer registers the events through the
+                handle of window manipulator. The drawer trigger has a special function for registering
+                an event(it is different with nana::gui::API::register_event and make_event() of
+                a window manipulator). Register an event, and Nana.GUI calls back the corresponding
+                function for answering the event. In button_drawer's attach(), it registers mouse_leave,
+                mouse_down and mouse_up, you can register more events if you want button more specially
+                good effect. The attach() has a parameter, it refers to a nana::paint::graphics
+                object, this object is the off-screen buffer of the widget, any drawing operation
+                on this object, it will be displayed on the monitor. This object is created and
+                destroyed by Nana.GUI. There is not any operation on this object.&nbsp;<br />
+                <br />
+                <span style="font-family: Courier New">&nbsp; &nbsp; <strong>void</strong> button_drawer::detached()<br />
+                    &nbsp; &nbsp; {<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; nana::gui::API::unregister_drawer_event(widget_-&gt;handle());<br />
+                    &nbsp; &nbsp; }</span><br />
+                <br />
+                &nbsp; &nbsp; When a drawer trigger is detached from the Window Manager, Nana.GUI
+                will callback the detach() method. In the button_drawer implementation, we just
+                unregister the events that we registered in attach(). nana::GUI::API::unregister_drawer_event
+                is responsible for destroying the all registered events for the specified window.&nbsp;<br />
+                <br />
+                <span style="font-family: Courier New">&nbsp; &nbsp; <strong>void</strong> button_drawer::normal(paint::graphics&amp; ghc)<br />
+                &nbsp; &nbsp; {<br />
+                &nbsp; &nbsp; &nbsp; &nbsp; _m_draw_background(ghc, is_ms_down_);<br />
+                &nbsp; &nbsp; &nbsp; &nbsp; _m_draw_border(ghc, is_ms_down_);<br />
+                &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; _m_draw_title(ghc, is_ms_down_, is_focus);<br />
+                &nbsp; &nbsp; }<br />
+                </span>
+                <br />
+                &nbsp; &nbsp; The normal() method defined by a drawer trigger will be invoked after
+                a widget is created completely, and nana::gui::API::refresh_window() will also
+                invoke this normal() method. In this implementation, the normal() method calls the
+                member functions start with _m_ for operating the graphics object.<br />
+                <br />
+                <span style="font-family: Courier New">&nbsp; &nbsp; <strong>void</strong> button_drawer::mouse_leave(paint::graphics&amp;
+                    ghc, <strong>const</strong> eventinfo&amp;)<br />
+                    &nbsp; &nbsp; {<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; _m_draw_background(ghc, <strong>false</strong>);<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; _m_draw_border(ghc, <strong>false</strong>);<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; _m_draw_title(ghc, <strong>false</strong>, is_focus_);<br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; nana::gui::API::lazy_refresh();<br />
+                    &nbsp; &nbsp; }<br />
+                </span>
+                <br />
+                &nbsp; &nbsp; When the mouse is leave from the widget, Nana.GUI will call the mouse_leave,
+                the second parameter refers to an eventinfo object which provides some event information,
+                in this implementation we don't take care about this parameter. It's worth noting
+                that a nana::gui::API::lazy_refresh() is invoked at last, the function will let
+                the graphics object display on monitor. lazy_refresh() only works in an event callback,
+                hence we can't find it in normal() method.<br />
+                &nbsp; &nbsp; In a similar way, mouse_down(), mouse_up() and focus() is same as
+                mouse_leave(). Refering to "source/gui/widgets/button.cpp" for the details. Refering
+                to Nana.Paint for the details of nana::paint::graphics.<br />
+                <br />
+                <a href="../index.htm">Return</a>
+            </td>
+        </tr>
+        <tr style="font-size: 10pt">
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

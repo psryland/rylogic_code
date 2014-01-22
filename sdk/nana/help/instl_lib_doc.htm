@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide. Installation Library Documentation</title>
+    <style type="text/css">
+        .style1
+        {
+            font-size: 11pt;
+        }
+        .auto-style1 {
+            color: #006600;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Consolas;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <b><span style="font-size: 16pt">Nana C++ Library&nbsp;</span><br />
+                An open-source C++ framework project&nbsp; <br />
+                The Installation Library 
+                Documentation&nbsp; </b></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px; font-family: Consolas;font-size: 10pt">
+                When you extract the library from its zip files, you have to install the library
+                and configurate it before using.<br />
+                <br />
+                For the Integrated Development Environment(IDE), you can use the general way to install
+                the library.<br />
+                <br />
+                <strong>Step 1:<br />
+                </strong>&nbsp; &nbsp; &nbsp; Start the IDE you use, set C++ include folder and 
+                library folder by the
+                library installation directory(%nana%).<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Include folder: %nana%/include<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Library folder: %nana%/extrlib, %nana%/build/bin/%ide%<br />
+                <br />
+                <strong>Step 2:<br />
+                </strong>&nbsp; &nbsp; &nbsp; Create a static linkage library project and add all the files in 
+                %nana%/source and all sub directorires to the project, and compile
+                it. Then you will get a static linkage library file.<br />
+                <br />
+                <strong>Step 3:<br />
+                </strong>&nbsp; &nbsp; &nbsp; Then you can compile your Nana application projects successfully
+                with the static linkage library file. Be sure the compilation supports the RTTI,
+                multi-threading and exceptions.<br />
+                <br />
+                The compiler environment are:<br />
+                Nana.C++03<br />
+                &nbsp; &nbsp; &nbsp; - Microsoft Visual C++ Toolkit 2003<br />
+                &nbsp; &nbsp; &nbsp; - Microsoft Visual C++ 2005 Express Beta1 with Microsoft SDK<br />
+                &nbsp; &nbsp; &nbsp; - Dev-C++ 4.9.9.2<br />
+                &nbsp; &nbsp; &nbsp; - GCC 3.2 with XLib<br />
+                Nana.C++11<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - Microsoft Visual C++ 2012 RC<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; - GCC 4.7<br />
+                <br />
+                For the specified IDE, you can follow these steps:<br />
+                <br />
+                <strong><span class="style1">Microsoft Visual C++ 2003/2005/2008/2010/2012</span><br />
+                </strong>1. Setting the Nana include path and library path to the IDE:<br />
+&nbsp;&nbsp;&nbsp; <b>Microsoft Visual C++ 2003/2005/2008:</b><br />
+                &nbsp; &nbsp; Click the Tools menu&gt;&gt;Options&gt;&gt;Projects and Solutions&gt;&gt;VC++
+                Directories&gt;&gt;Select include files for "Show directories for". Add the Nana
+                include folder(not the "nana" folder in the "include") and library path("%nana%/build/bin/vc7.1(/vc8/vc9)&quot; 
+                and &quot;%nana%/extrlib&quot;).<br />
+&nbsp;&nbsp;&nbsp; <b>Microsoft Visual C++ 2010/2012:</b><br />
+&nbsp;&nbsp;&nbsp; Open &quot;%UserProfile%/AppData/Local/Microsoft/MSBuild/v4.0&quot;, %UserProfile% is a 
+                system environment variable. You can see the files 
+                &quot;Microsoft.CPP.XXX.user.props&quot;, choose one of them for your target platform, and 
+                open it with a text editor program, such as notepad.<br />
+&nbsp;&nbsp;&nbsp; Insert the &quot;%nana%/include&quot; in its &lt;IncludePath&gt; section.<br />
+&nbsp;&nbsp;&nbsp; Insert the &quot;%nana%/build/bin/vc10&quot; and &quot;%nana%/extrlib&quot; in its &lt;LibraryPath&gt;, 
+                and split them up with a semicolon.<br />
+                <br />
+                2. Compiling the Nana:<br />
+                &nbsp; &nbsp; Open %nana%/build/VC7.1(VC8/VC9/VC10/VC2012)/Nana.sln with MS Visual C++ 
+                2003/2005/2008/2010/2012. Click the Build menu and select Rebuild All. When it&#39;s 
+                finish, a <span
+                    style="color: #006699">nana_debug.lib/nana_release.lib</span> is generated in the "bin/vc7.1(/vc8/vc9/vc10/vc2012)"
+                folder. You can find the "bin" folder in "%nana%/build".<br />
+                <br />
+                3. Programming with the Nana:<br />
+                &nbsp; &nbsp; Create a Win32 Application Project, and make it as an empty project.<br />
+                &nbsp; &nbsp; Change properties of the project. C/C++ &gt;&gt;Code Generation&gt;
+                Runtime Library&gt;&gt;/MDd Link the static linkage file. Click the Linker&gt;&gt;Command&gt;&gt;Addtional Options, input the Nana static linkage
+                file <span style="color: #006699">nana_debug.lib/nana_release.lib</span>.<br />
+                <br />
+                <strong><span class="style1">Code::Blocks</span></strong><br />
+                1. Setting the Nana include path and library path to the IDE:<br />
+&nbsp;&nbsp;&nbsp; Click the menubar &quot;Settings&gt;&gt;Compiler...&quot; to open Global compiler settings dialog. Select the &quot;Search directories&gt;&gt;Compiler&quot;,<br />
+&nbsp;&nbsp;&nbsp; add &quot;%Nana%/include&quot; directory(%Nana% is a directory where Nana is),<br />
+&nbsp;&nbsp;&nbsp; add &quot;/usr/include/freetype2&quot; directory for Linux(the path of freetype2 is depended on your system),<br />
+&nbsp;&nbsp;&nbsp; and then, switch to the &quot;Linker&quot; add %Nana%/build/codeblocks.<br />
+                <br />
+                2. Compiling the Nana:<br />
+&nbsp;
+&nbsp;&nbsp;&nbsp; <strong>MinGW:</strong><br />
+                <table>
+                    <tr>
+                        <td>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;</td>
+                        <td>
+                            Configure the Boost C++ Library for Nana.C++11(Skip this step if it is Nana.C++03)<br />
+                            The Boost C++ Library is required due to &lt;thread&gt;,&lt;mutex&gt; and &lt;condition_variable&gt; being not supported by MinGW.
+                            <br />
+&nbsp;&nbsp;&nbsp; a, Insert the %Boost% include directory to the &quot;Settings&gt;&gt;Compiler...&gt;&gt;Search directories&gt;&gt;Compiler&quot;<br />
+&nbsp;&nbsp;&nbsp; b, Append the MinGW path(e.g &quot;C:\Program Files\CodeBlocks\MinGW\bin&quot;) to the Global Envoriment Variables &quot;Path&quot;.<br />
+&nbsp;&nbsp;&nbsp; c, Open the &quot;%Boost%/boost/thread/detail/config.hpp&quot; file and find the following lines<br />
+                            <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # if defined(BOOST_THREAD_PLATFORM_WIN32)</span><br class="auto-style1" />
+                            <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #&nbsp;&nbsp;&nbsp;&nbsp; if defined(BOOST_MSVC) || defined(BOOST_INTEL_WIN)</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; and modify<br />
+                            <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # if defined(BOOST_THREAD_PLATFORM_WIN32)</span><br class="auto-style1" />
+                            <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; #&nbsp;&nbsp;&nbsp;&nbsp; if defined(BOOST_MSVC) || defined(BOOST_INTEL_WIN) || defined(__MINGW32__) || defined(MINGW32) || defined(BOOST_MINGW32)</span><br />&nbsp;&nbsp;&nbsp; d, Compile the Boost.Thread<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; bjam toolset=gcc --build-type=complete --with-thread<br />
+&nbsp;&nbsp;&nbsp; e, Add the Boost libraries to the Code::Blocks.<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &quot;Settings-&gt;Compiler...-&gt;Linker settings&quot; add libraries as following order.<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; libboost_system-mgwXX-mt-s-XXX.a<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; libboost_thread-mgwXX-mt-s-XXX.a<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; libboost_chrono-mgwXX-mt-s-XXX.a<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Wrong order may cause &quot;undefined reference&quot; linker errors)<br />
+
+                        </td>
+                    </tr>
+                </table>
+                <br />
+&nbsp;&nbsp;&nbsp; Start to compile.<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Open the &quot;%Nana%/build/codeblocks/nana.cbp&quot; and build. Don&#39;t forget &quot;-std=c++0x&quot; or &quot;-std=c++11&quot; when building the Nana.C++11.<br />
+                <br />
+                3, Programming with Nana<br />
+&nbsp;&nbsp;&nbsp; Create a project, then open &quot;Project&gt;&gt;Build options...&gt;&gt;Compiler settings&gt;&gt;Compiler flags&quot; and enable &quot;-std=c++0x&quot; or &quot;-std=c++11&quot; if it is Nana.C++11.<br />
+&nbsp;&nbsp;&nbsp; Switch the tab to &quot;Linker settings&quot; in &quot;Project build options&quot;, and link these static libraries in &quot;Other linker options&quot;.<br />
+&nbsp;&nbsp;&nbsp; <strong>Windows:</strong><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -lnana -lgdi32 -lcomdlg32<br />
+                &nbsp;&nbsp;&nbsp; <strong>Linux:</strong><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -lnana -lX11 -lpthread -lrt -lXft<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -lpng(if the support of PNG is enabled)<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -lasound(if nana::audio::player is called).<br />
+                <a href="./index.htm">Return</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

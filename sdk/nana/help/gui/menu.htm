@@ -1,0 +1,733 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+    <style type="text/css">
+        .auto-style1 {
+            color: #006600;
+        }
+        .auto-style2 {
+            color: #0000CC;
+        }
+        .auto-style3 {
+            color: #FF0000;
+        }
+        .auto-style4 {
+            color: #006600;
+        }
+        .auto-style5 {
+            color: #009933;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Trebuchet MS;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana C++ Library &nbsp;<br />
+                </strong></span>
+                <strong>An open-source C++ framework project</strong><br />
+                <strong>The Nana Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="font-family:Consolas;height: 21px">
+                <strong><span style="font-size: 16pt">nana::gui::menu</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                A menu widget is a list of items that specify options or group of options for an
+                application.<br />
+                <br />
+                <strong>Model
+                of<br />
+                </strong>
+                <br />
+                <a href="./widget_window.htm">Widget Window</a>&nbsp;<br />
+                <br />
+                <strong>Public base classes<br />
+                </strong>
+                <br />
+                <a href="./widget_object_root_tag.htm">class widget_object&lt;root_tag, DrawerTrigger&gt;:
+                    public
+                widget</a><br />
+                <br />
+                <strong>Typedefs<br />
+                </strong>
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            item_proxy</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            It a proxy used for a parameter in a callback.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            event_fn_t&nbsp;</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            A callback function object type, the prototype is<br />
+                            void(item_proxy&amp;);</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            enum
+                            check_t{check_none, check_option, check_highlight}</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            It defines the check styles. CheckNone, CheckOption, CheckHighlight</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            renderer_interface</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The interface of user-defined renderer. (See Note 5)</td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                <strong>Members</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            menu()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The default constructor.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            ~menu()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The destructor.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void answerer(std::size_t n, const event_fn_t&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Modify answerer of the specified item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void append(const nana::string&amp; text, const event_fn_t &amp;answerer = event_fn_t())</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Appends an item to the menu. answerer is a callback functor.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void append_splitter()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Appends a splitter to the menu.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void clear()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Erases all of the items.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void close()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Closes the menu. It does not destroy the menu, just close the window for the menu.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void check_style(std::size_t n, check_t style)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the check style for the n&#39;th item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void checked(std::size_t n, bool check)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the check state of an item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool checked(std::size_t n) const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the check state of an item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            menu *create_sub_menu(std::size_t n)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates a sub menu for the n&#39;th item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: auto; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void enabled(std::size_t n, bool)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: auto; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Enables or disables the mouse or keyboard input for the n&#39;th item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool enabled(std::size_t n) const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns true if the n&#39;th item is enabled.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void erase(std::size_t n)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Removes n&#39;th item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void exit_submenu()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Closes the current window of the sub menu.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: auto; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void gaps(const nana::point &amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: auto; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the gap between a menu and its sub menus. (See Note 4)</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void goto_next(bool forward)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Moves the focus to the next item or previous item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool goto_submenu()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Popup the sub menu of the current item if it has a sub menu. It returns true if
+                            it succeeds.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void image(std::size_t n, const <a href="../paint/image.htm" target="_blank">nana::paint::image</a>&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets a icon image for a specified menu item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            menu &amp; item_pixels(unsigned pixels)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the height in pixel for the items.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            unsigned item_pixels() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns the height in pixels for the itmes.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bool link(std::size_t n, menu&amp; menu)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Link a menu as a sub menu for the n&#39;th item.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            menu* link(std::size_t n)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Retrieves a linked sub menu by the n&#39;th index.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            menu&amp; max_pixels(unsigned px)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets the max pixels of the menu width.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            unsigned max_pixels() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Gets the max pixels of the menu width.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: auto; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void popup(window owner, int x, int y, bool owner_menubar)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: auto; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Popup the menu at the owner window. the last parameter specifies whether it is for
+                            menubar, always be false.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename Renderer&gt;<br />
+                            void renderer(const Renderer&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets a user-defined renderer. (See Note 5)</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void renderer(const nana::pat::cloneable&lt;renderer_interface&gt;&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Ditto.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            const nana::pat::cloneable&lt;renderer_interface&gt;&amp; renderer() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns a user-defined renderer. (See Note 5)</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            int send_shortkey(nana::char_t key)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sents a key to the menu.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            std::size_t size() const</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Return the number of items.</td>
+                    </tr>
+                </table>
+                <br />
+                C++03 Member<br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void destroy_answer(const nana::functor&lt;void()&gt;&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Sets an answerer for the callback while the menu window is closing.</td>
+                    </tr>
+                </table>
+                <br />
+                C++11 Member<br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void destroy_answer(const std::function&lt;void()&gt;&amp;)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 50%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Ditto.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>File</strong><br />
+                <br />
+                nana/gui/widgets/menu.hpp<br />
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                1. The widget sets the shortkey that is a character behind the first of &amp;-character
+                in text for the item. e.g. "File(&amp;F)" or "&amp;File".<br />
+                <br />
+                =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=<br />
+                2. The type <em>item_proxy</em> is used for a callbacking, a programmer should not
+                take care about the object of <em>item_proxy</em>, it is created and destroyed by
+                menu. The definition is<br />
+                <br />
+                <span style="font-family: Consolas"><strong>class</strong> item_proxy: nana::noncopyable<br />
+                    {<br />
+                    <strong>public</strong>:<br />
+&nbsp;&nbsp;&nbsp; <em>implementation-specified constructor</em><br />
+                    &nbsp; &nbsp; <strong>void</strong> enabled(<strong>bool</strong>);&nbsp; <span style="color: #006666">
+                        //Sets the enable state of the item.<br />
+                    </span>&nbsp; &nbsp; <strong>bool</strong> enabled() <strong>const</strong>; <span
+                        style="color: #006666">//Gets the enable state of the item.<br />
+                    </span>&nbsp; &nbsp; std::size_t index() <strong>
+                        const</strong>; <span style="color: #006666">//Gets the index of the item.<br />
+                        </span>private:<br />
+                    &nbsp; &nbsp; <span style="color: #006666">//Private data members...<br />
+                    </span>};<br />
+                <br />
+                <br />
+                =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=<br />
+                3. There is a helper for automatically popuping a menu.<br />
+                <br />
+                <strong>class</strong> menu_popuper<br />
+                {<br />
+                <strong>public</strong>:<br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style5">//C++03</span><br />
+                <em>&nbsp;&nbsp;&nbsp; menu_popuper(menu&amp;, mouse::t = mouse::right_button);<br />
+&nbsp;&nbsp;&nbsp; menu_popuper(menu&amp;, window owner, </em> <strong><em>const</em></strong><em> point&amp; pos, mouse::t = mouse::right_button);</em><br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style1">//C++11</span><br />
+                <em>&nbsp;&nbsp;&nbsp; menu_popuper(menu&amp;, mouse = mouse::right_button);<br />
+&nbsp;&nbsp;&nbsp; menu_popuper(menu&amp;, window owner, </em><strong><em>const</em></strong><em> point&amp; pos, mouse = mouse::right_button);</em><br />
+&nbsp;&nbsp;&nbsp;
+                <br />
+&nbsp;&nbsp;&nbsp; <strong>void</strong> operator()(<strong>const</strong> eventinfo&amp;);<br />
+                <strong>private</strong>:<br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style1">//<em>Implemented-Specified</em> private members</span><br />
+                };<br />
+                <br />
+                Now let&#39;s use it. There is a button, it popups the menu when it is clicked.<br />
+                <br />
+                <span class="auto-style2">#include</span> <span class="auto-style3">&lt;nana/gui/wvl.hpp&gt;</span><br />
+                <span class="auto-style2">#include</span> <span class="auto-style3">&lt;nana/gui/widgets/button.hpp&gt;</span><br />
+                <span class="auto-style2">#include</span> <span class="auto-style3">&lt;nana/gui/widgets/menu.hpp&gt;</span><br />
+                <br />
+                <strong>void</strong> on_menu_item(nana::gui::menu::item_proxy&amp; ip)<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; std::size_t index = ip.index(); <span class="auto-style4">//Get the index of the clicking item.</span><br />
+                }<br />
+                <br />
+                <strong>int</strong> main()<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; <strong>using namespace</strong> nana::gui;<br />
+&nbsp;&nbsp;&nbsp; form fm;<br />
+&nbsp;&nbsp;&nbsp;
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style4">//We need a menu object</span><br />
+&nbsp;&nbsp;&nbsp; menu mobj;<br />
+&nbsp;&nbsp;&nbsp; mobj.append(STR(<span class="auto-style3">&quot;Item 0&quot;</span>), &amp;on_menu_item);<br />
+&nbsp;&nbsp;&nbsp; mobj.append_splitter();<br />
+&nbsp;&nbsp;&nbsp; mobj.append(STR(<span class="auto-style3">&quot;Item 1&quot;</span>), &amp;on_menu_item);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style4">//Now we need a button.</span><br />
+&nbsp;&nbsp;&nbsp; button btn(fm, nana::rectangle(nana::point(10, 10), nana::size(100, 25)));<br />
+&nbsp;&nbsp;&nbsp; btn.caption(STR(<span class="auto-style3">&quot;Popup Menu&quot;</span>));<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style4">//Popup the menu when right clicking the button.</span><br />
+&nbsp;&nbsp;&nbsp; btn.make_event&lt;events::click&gt;(menu_popuper(mobj));<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style4">//Or popuping the menu with a specified coordinate when any mouse button is clicked.</span><br class="auto-style4" />
+                <span class="auto-style4">&nbsp;&nbsp;&nbsp; //btn.make_event&lt;events::click&gt;(menu_popuper(mobj, btn, nana::point(0, 26), mouse::any_button);</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp; fm.show();<br />
+&nbsp;&nbsp;&nbsp; exec();<br />
+                }<br />
+                <br />
+                <br />
+                =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=<br />
+                4. The gap of menu is used to specify the interval pixels between the menu and its sub menus. It affects all sub menus and all sub menus of its sub menus.<br />
+                <br />
+                <img src="./images/gap_of_menu.png" alt="Gap of Menu" /><br />
+                <br />
+                <strong>int</strong> main()<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; using namespace nana::gui;<br />
+                <br />
+&nbsp;&nbsp;&nbsp; menu mobj;<br />
+&nbsp;&nbsp;&nbsp; mobj.append(STR(<span class="auto-style3">&quot;Item 0&quot;</span>));<br />
+&nbsp;&nbsp;&nbsp; mobj.append(STR(<span class="auto-style3">&quot;Item 1&quot;</span>));<br />
+                <br />
+&nbsp;&nbsp;&nbsp; mobj.gaps(nana::point(3, -2)); <span class="auto-style1">//Remove this statement for default gaps.</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp; menu * sub = mobj.create_sub_menu(0);<br />
+&nbsp;&nbsp;&nbsp; sub-&gt;append(STR(<span class="auto-style3">&quot;Item 0&quot;</span>));<br />
+&nbsp;&nbsp;&nbsp; sub-&gt;append(STR(<span class="auto-style3">&quot;Item 1&quot;</span>));<br />
+                <br />
+&nbsp;&nbsp;&nbsp; sub = sub-&gt;create_sub_menu(0);<br />
+&nbsp;&nbsp;&nbsp; sub-&gt;append(STR(<span class="auto-style3">&quot;A sub&#39;s sub menu item&quot;)</span>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; form fm;<br />
+&nbsp;&nbsp;&nbsp; fm.make_event&lt;events::click&gt;(menu_popuper(mobj));<br />
+&nbsp;&nbsp;&nbsp; fm.show();<br />
+&nbsp;&nbsp;&nbsp; exec();<br />
+                }<br />
+                <br />
+                <br />
+                =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=<br />
+                5, When a renderer is set for a menu, it affects all sub menus of the menu and all sub menus of its all sub menus.<br />
+                An example of a user-defined renderer.<br />
+                <br />
+                The definition of class renderer_interface<br />
+                <br />
+                <strong>class</strong> renderer_interface<br />
+                {<br />
+                <strong>public</strong>:<br />
+&nbsp;&nbsp;&nbsp; <strong>typedef</strong> nana::paint::graphics &amp; graph_reference;<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style1">//C++03</span><br />
+                <em>&nbsp;&nbsp;&nbsp; <strong>struct</strong> state<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>enum</strong> t{ normal, active};<br />
+&nbsp;&nbsp;&nbsp; };</em><br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style1">//C++11</span><br />
+                <em>&nbsp;&nbsp;&nbsp; <strong>enum</strong> <strong>class</strong> state<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; normal, active<br />
+&nbsp;&nbsp;&nbsp; };</em><br />
+                <br />
+&nbsp;&nbsp;&nbsp; <strong>struct</strong> attr<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="auto-style1">//C++03</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <em>state::t item_state;</em><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="auto-style1">//C++11</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <em>state item_state;</em><br />
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>bool</strong> enabled;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>bool</strong> checked;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>int</strong> check_style;<br />
+&nbsp;&nbsp;&nbsp; };<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <strong>virtual</strong> ~renderer_interface() = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual void</strong> background(graph_reference, window) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual void</strong> item(graph_reference, <strong>const</strong> nana::rectangle&amp;, <strong>const</strong> attr&amp;) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual void</strong> item_image(graph_reference, <strong>const</strong> nana::point&amp;, <strong>const</strong> nana::paint::image&amp;) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual void</strong> item_text(graph_reference, <strong>const</strong> nana::point&amp;, <strong>const</strong> nana::string&amp;, <strong>unsigned</strong> pixles, <strong>const</strong> attr&amp;) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual void</strong> sub_arrow(graph_reference, <strong>const</strong> nana::point&amp;, <strong>unsigned</strong> pixels, <strong>const</strong> attr&amp;) = 0;<br />
+&nbsp;&nbsp;
+                <br />
+                };<br />
+                <br />
+                <br />
+                The implementation of the user-defined renderer. In this example, the renderer only provides the drawing of background and drawing of item, so that we have to employ the existing renderer of a menu for other drawing methods.<br />
+                <br />
+                <img src="./images/renderer_of_menu.png" alt="Renderer of Menu"/><br />
+                <br />
+                <strong>using</strong> <strong>namespace</strong> nana::gui;<br />
+                <br />
+                <strong>class</strong> renderer: <strong>public</strong> menu::renderer_interface<br />
+                {<br />
+                <strong>public</strong>:<br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style1">//My renderer employs the existing renderer of a menu.</span><br />
+&nbsp;&nbsp;&nbsp; renderer(<strong>const</strong> nana::pat::cloneable_interface&lt;renderer_interface&gt; * rd)<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : rdptr_(rd-&gt;clone())<br />
+&nbsp;&nbsp;&nbsp; {}<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style1">//The renderer is copy-constructable, therefore a deep-copy is required.</span><br />
+&nbsp;&nbsp;&nbsp; renderer(<strong>const</strong> renderer &amp; rd)<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : rdptr_(rd.rdptr_-&gt;clone())<br />
+&nbsp;&nbsp;&nbsp; {}<br />
+                <br />
+&nbsp;&nbsp;&nbsp; ~renderer()<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; rdptr_-&gt;self_delete();<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <strong>private</strong>:<br />
+&nbsp;&nbsp;&nbsp; <strong>void</strong> background(graph_reference graph, window wd)<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; graph.rectangle(0xFFFFFF, <strong>true</strong>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; graph.rectangle(0x5DC1AC, <strong>false</strong>);<br />
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="auto-style1">//Makes the menu transparent, it only works under Windows with #include &lt;windows.h&gt;</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; HWND native = reinterpret_cast<HWND>(API::root(wd));<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; DWORD ex_style = ::GetWindowLong(native, GWL_EXSTYLE);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ::SetWindowLong(native, GWL_EXSTYLE, ex_style | 0x00080000 <span class="auto-style1">/*WS_EX_LAYERED*/</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>typedef</strong> &nbsp; &nbsp; &nbsp; &nbsp; BOOL (WINAPI *slwa_t)(HWND hwnd, COLORREF crKey, BYTE bAlpha, DWORD dwFlags);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; slwa_t slwa = reinterpret_cast<slwa_t>(::GetProcAddress(::GetModuleHandleA(<span class="auto-style3">&quot;User32.DLL&quot;</span>), <span class="auto-style3">&quot;SetLayeredWindowAttributes&quot;</span>));<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>if</strong>&nbsp; &nbsp; &nbsp; &nbsp; (slwa)<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; slwa(native, 0, 220, 0x00000002<span class="auto-style1">/*LWA_ALPHA*/</span>);<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <strong>void</strong> &nbsp; &nbsp; &nbsp; &nbsp; item(graph_reference graph, <strong>const</strong> nana::rectangle&amp; r, <strong>const</strong> attr &amp; atr)<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>if</strong>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+      (state::active == atr.item_state)<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; graph.rectangle(r, 0x9ADCCA, true);<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <strong>void</strong> &nbsp; &nbsp; &nbsp; &nbsp; item_image(graph_reference graph, <strong>const</strong> nana::point&amp; pos, <strong>const</strong> nana::paint::image&amp; img)<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp; &nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; rdptr_-&gt;refer().item_image(graph, pos, img);<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <strong>void</strong> &nbsp; &nbsp; &nbsp; &nbsp; item_text(graph_reference graph, <strong>const</strong> nana::point&amp; pos, <strong>const</strong> nana::string&amp; text, <strong>unsigned</strong> pixels, <strong>const</strong> attr&amp; atr)<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp; &nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; rdptr_-&gt;refer().item_text(graph, pos, text, pixels, atr);<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <strong>void</strong> &nbsp; &nbsp; &nbsp; &nbsp; sub_arrow(graph_reference graph, <strong>const</strong> nana::point&amp; pos, <strong>unsigned</strong> pixels, <strong>const</strong> attr &amp; atr)<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp; &nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; rdptr_-&gt;refer().sub_arrow(graph, pos, pixels, atr);<br />
+&nbsp;&nbsp;&nbsp; }<br />
+&nbsp;&nbsp;&nbsp;
+                <br />
+                <strong>private</strong>:<br />
+&nbsp; &nbsp; &nbsp; &nbsp;
+&nbsp;&nbsp;&nbsp; nana::pat::cloneable_interface&lt;renderer_interface&gt; * rdptr_;<br />
+                };<br />
+                <br />
+                int main()<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; menu mobj;<br />
+&nbsp;&nbsp;&nbsp; mobj.append(STR(<span class="auto-style3">&quot;Item 0&quot;</span>));<br />
+&nbsp;&nbsp;&nbsp; mobj.append(STR(<span class="auto-style3">&quot;Item 1&quot;</span>));<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+&nbsp;&nbsp;&nbsp; mobj.create_sub_menu(1)-&gt;append(STR(<span class="auto-style3">&quot;A sub menu item&quot;</span>));<br />
+                <br />
+&nbsp;&nbsp;&nbsp; mobj.renderer(renderer(mobj.renderer()));<br />
+&nbsp;&nbsp;&nbsp; mobj.item_pixels(20);<br />
+                <br />
+&nbsp;&nbsp;&nbsp; form fm;<br />
+&nbsp;&nbsp;&nbsp; fm.make_event&lt;events::click&gt;(menu_popuper(mobj));<br />
+&nbsp;&nbsp;&nbsp; fm.show();<br />
+&nbsp;&nbsp;&nbsp; exec();<br />
+                }<br />
+                <br />
+                    &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+                </span>
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                <a href="./menubar.htm">menubar</a>.<br />
+                <br />
+                <hr />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+                &nbsp;</td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

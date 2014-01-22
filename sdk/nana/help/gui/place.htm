@@ -1,0 +1,403 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+    <style type="text/css">
+        .auto-style1 {
+            font-family: "Courier New";
+        }
+        .auto-style2 {
+            color: #FF0000;
+        }
+        .auto-style3 {
+            color: #000000;
+        }
+        .auto-style4 {
+            color: #FF7F27;
+        }
+        .auto-style5 {
+            width: 20px;
+            height: 727px;
+        }
+        .auto-style6 {
+            height: 727px;
+        }
+        .auto-style7 {
+            color: #006600;
+        }
+        .auto-style8 {
+            color: #0000FF;
+        }
+        .auto-style9 {
+            width: 20px;
+            height: 1061px;
+        }
+        .auto-style10 {
+            height: 1061px;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Consolas;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana C++ Library &nbsp;<br />
+                </strong></span><br />
+                <strong>An open-source C++ framework project</strong><br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+                <strong><span style="font-size: 16pt">nana::gui::place</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                The class place is used for layout managment. Generally, an object of class place is attached to a widget, and it automatically positions and resizes widgets which are the children of the attached widget.<br />
+                <br />
+                A place divids a widget into fields, and then the children widgets are inserted into a specified field for layouting. The field is a basic concept for place, there are 3 differenct types of field, each type describes how widgets are laied out. These types of field are:<br />
+                <br />
+                Horizontal: Widgets are laied out horizontally, such as the buttons in a toolbox.<br />
+                Vertical:&nbsp;&nbsp; Widgets are laied out vertically, such as the items in a menu.<br />
+                Grid:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Widgets are laied out like a grid, such as keys on the keyboard.<br />
+                <br />
+                <strong>Model
+                of<br />
+                </strong>
+                <br />
+                None<br />
+                <br />
+                <strong>Public base classes<br />
+                </strong>
+                <br />
+                None<br />
+                <br />
+                <strong>Typedefs</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            field_reference</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            A reference of a field manipulator which refers to a field object that created by place. Please refer to Note 1 for details of the field manipulator.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>Members</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            place()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The construction.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            place(window wd)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Attaches to a specified widget.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            ~place()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            The destructor</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void div(const char* divide_text)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Divides the attached widget into fields. 
+                            Please refer to Note 2 for the syntex of divide-text.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            field_t&amp; field(const char* name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Returns a field by the specified name.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void collocate()</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Layouts the widgets.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            static <em>unspecified </em>fixed(window wd, unsigned size)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Generates a fixed object to send it to the field.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            static <em>unspecified</em> percent(window, int per)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Generates a percent object to send it to the field.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 40%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            static <em>unspecified </em>room(window wd, unsigned width, unsigned height)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 60%; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Generates a room object to send it to the field.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>File</strong><br />
+                <br />
+                nana/gui/place.hpp<br />
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                Note 1:<br />
+                <table>
+                    <tr>
+                        <td style="width:20px"></td>
+                        <td>The definition of field manipulator:<br />
+                            <br />
+                            <span class="auto-style1"><strong>class</strong> field_t<br />
+                            {<br />
+                            <strong>public</strong>:<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual</strong> ~field_t() = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual</strong> field_t&amp; operator&lt;&lt;(nana::gui::window) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual</strong> field_t&amp; operator&lt;&lt;(<strong>unsigned</strong> gap) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual</strong> field_t&amp; operator&lt;&lt;(<strong>const</strong> <em>implementation-specified-fixed-type</em>&amp;) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual</strong> field_t&amp; operator&lt;&lt;(<strong>const</strong> <em>implementation-specified-percent-type</em>&amp;) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual</strong> field_t&amp; operator&lt;&lt;(<strong>const</strong> <em>implementation-specified-room-type</em>&amp;) = 0;<br />
+&nbsp;&nbsp;&nbsp; <strong>virtual</strong> field_t&amp; fasten(nana::gui::window) = 0;<br />
+                            };</span><br />
+                        </td>
+                    </tr>
+                </table>
+                <br />
+                Note 2:<br />
+                <table>
+                    <tr>
+                        <td class="auto-style9"></td>
+                        <td class="auto-style10">The syntex of divide-text.<br />
+                            <br />
+                            The divide-text is used to divide a widget into fields to position and resize its children widgets.<br />
+                            <br />
+                            Define a field<br />
+&nbsp;&nbsp;&nbsp; &lt;&gt;<br />
+                            <br />
+                            Fields can be nested.<br />
+&nbsp;&nbsp;&nbsp; &lt;&lt;&gt;&gt;<br />
+                            <br />
+                            Root field<br />
+&nbsp;&nbsp;&nbsp; There is an implicit root field. All the fields that defined by divide-text are children of root field.<br />
+                            <br />
+                            Specify attributes for a field.<br />
+&nbsp;&nbsp;&nbsp; name: Specify an identifier for a name of field.
+                            <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;id_you_specified&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; The field is named id_you_specified, and we can refer to it by using place_obj.field(&quot;id_you_specified&quot;).<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; vertical: Specify a field that all its children fields are laied out vertical. If it is not specified, its children fields are laied out horizontally defaultly. For example.<br />
+&nbsp;&nbsp;&nbsp;
+                            <br />
+                            <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; place plc(fm);<br />
+                            <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; plc.div(<span class="auto-style2">&quot;&lt;abc&gt;&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; plc.field(&quot;abc&quot;)&lt;&lt;btn0&lt;&lt;btn1&lt;&lt;btn2&lt;&lt;btn3;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; plc.collocate();</span><br />
+                            <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            <img src="./images/place_horizontal.png" title="Horizontal"></img><br />
+                            <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If we replace this line<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="auto-style1">plc.div(<span class="auto-style2">&quot;&lt;abc&gt;&quot;</span>);</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; into<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="auto-style1">plc.div(<span class="auto-style2">&quot;&lt;vertical abc&gt;&quot;</span>);</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; adn we will get<br />
+                            <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="./images/place_vertical.png" title="Vertical"></img><br />
+&nbsp;&nbsp;
+                            <br />
+                            &nbsp;&nbsp;&nbsp; weight: It stands for the width or height of a field. It depends on the type of its owner field&#39;s layout.<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Specify the weight in pixel.<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;abc&gt;&lt;weight=200 def&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If the width of form is 1000px, the field abc is 800px and def is 200.<br />
+                            <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;abc&gt;&lt;weight=60% def&gt;&lt;ghi&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; If the width of form is 1000px, the field abc is 200px, def is 600px and ghi is 200px.<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; grid [X, Y]: It specify a field that lays its children widgets out as a grid.<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;grid [3, 2]&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; The field is divided a 3 X 2 grid.<br />
+                            <br />
+                            <span class="auto-style1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; place plc(fm);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; plc.div(<span class="auto-style2">&quot;&lt;grid [3, 2] abc&gt;&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; plc.field(&quot;abc&quot;)&lt;&lt;btn0&lt;&lt;btn1&lt;&lt;btn2&lt;&lt;plc.room(btn3, 3, 1);</span><br />
+                            <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="./images/place_grid.png" title="Place as a grid"></img><br />
+                            <br />
+&nbsp;&nbsp;&nbsp; gap: It specify a gap in pixel between widgets for the grid field.<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;grid [3, 2] gap=5&gt;<br />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:20px">&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="width:20px">&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                <br />
+                Note 3:<br />
+                <table>
+                    <tr>
+                        <td class="auto-style5"></td>
+                        <td class="auto-style6">An illustration for the place.<br />
+                            <br />
+                            Let&#39;s create an user interface for validation. The program looks like.<br />
+                            <br />
+                            <img src="./images/place_illustrate.png" title="An illustrate for place" style="text-align: center">
+                            <br />
+                            <br />
+                            <br />
+                            First of all, we should divide the form into fields. For this result, it may be divided like this<br />
+                            <br />
+                            <img src="./images/place_illustrate_divided.png" title="Dividing into fields">
+                            <br />
+                            <br />
+                            
+                            The divide-text of red rectangle should be:<br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style3">&lt;&gt;</span><span class="auto-style2">&lt;weight=80% vertical <em>children_fields_of_red_rectangle</em>&gt;</span><span class="auto-style3">&lt;&gt;</span><br />
+                            &nbsp;&nbsp;&nbsp; The root field is horizontal defaultly, so these 3 fields are laied out horizontally. The red rectangle in the middle takes 80% spaces, we specify its weight is 80%. As you see, the children of red rectangle are laied out vertically, it should be specified by vertical.<br />
+                            <br />
+                            The divide-text of orange rectangle.<br />
+&nbsp;&nbsp;&nbsp; &lt;&gt;<span class="auto-style4">&lt;weight=70% vertical <em>children_fields_of_orange_rectangle</em>&gt;</span>&lt;&gt;<br />
+&nbsp;&nbsp;&nbsp; The orange rectangle is laied out in the middle about 70% space, it also specified with vertical.<br />
+                            <br />
+                            The divide-text of green rectangle and blue rectangle.<br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style7">&lt;vertical textboxs&gt;</span><span class="auto-style8">&lt;weight=25 buttons&gt;</span><br />
+&nbsp;&nbsp;&nbsp; The widgets in green rectangle are laied out vertically, and widgets in blue rectangle are laied out horizontally, so we only specify the vertical for the green rectangle. And the blue rectangle manages buttons and it is horizontal, in other words, the height of blue rectangle is same as buttons&#39;, so we specify its weight is 25 pixels. These 2 fields we will refer to and then insert widgets into them, so a name is given for each field.<br />
+                            <br />
+                            The combination of these divide-texts.<br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style3">&lt;&gt;</span><span class="auto-style2">&lt;weight=80% vertical </span><span class="auto-style3">&lt;&gt;</span><span class="auto-style2"><span class="auto-style4">&lt;weight=70% vertical <span class="auto-style7">&lt;vertical textboxs&gt;</span><span class="auto-style8">&lt;weight=25 buttons&gt;</span>&gt;</span></span><span class="auto-style3">&lt;&gt;&gt;&lt;&gt;</span><br />
+                            <br />
+                            Let&#39;s start programming.<br />
+                            <br />
+                            <span class="auto-style1">#include <span class="auto-style2">&lt;nana/gui/wvl.hpp&gt;</span><br />
+                            #include <span class="auto-style2">&lt;nana/gui/place.hpp&gt;</span><br />
+                            #include <span class="auto-style2">&lt;nana/gui/widgets/button.hpp&gt;</span><br />
+                            #include <span class="auto-style2">&lt;nana/gui/widgets/textbox.hpp&gt;</span><br />
+                            <br />
+                            <strong>int</strong> main()<br />
+                            {<br />
+&nbsp;&nbsp;&nbsp; <strong>using</strong> <strong>namespace</strong> nana::gui;<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style7">//Define widgets</span><br />
+&nbsp;&nbsp;&nbsp; form fm;<br />
+&nbsp;&nbsp;&nbsp; textbox usr(fm), pswd(fm);<br />
+&nbsp;&nbsp;&nbsp; button login(fm), cancel(fm);<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; usr.tip_string(STR(<span class="auto-style2">&quot;User:&quot;</span>)).multi_lines(false);<br />
+&nbsp;&nbsp;&nbsp; pswd.tip_string(STR(<span class="auto-style2">&quot;Password:&quot;</span>)).multi_lines(false).mask(<span class="auto-style2">&#39;*&#39;</span>);<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; login.caption(STR(<span class="auto-style2">&quot;Login&quot;</span>));<br />
+&nbsp;&nbsp;&nbsp; cancel.caption(STR(<span class="auto-style2">&quot;Cancel&quot;</span>));<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style7">//Define a place for the form.</span><br />
+&nbsp;&nbsp;&nbsp; place plc(fm);<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style7">//Divide the form into fields</span><br />
+&nbsp;&nbsp;&nbsp; plc.div(<span class="auto-style2">&quot;&lt;&gt;&lt;weight=80% vertical&lt;&gt;&lt;weight=70% vertical&lt;vertical textboxs&gt;&lt;weight=25 buttons&gt;&gt;&lt;&gt;&gt;&lt;&gt;&quot;</span>);<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; <span class="auto-style7">//Insert widgets</span><br />
+                            <br />
+                            <span class="auto-style7">&nbsp;&nbsp;&nbsp; //The field textboxs is vertical, it automatically adjusts the widgets&#39; top</span><br class="auto-style7" />
+                            <span class="auto-style7">&nbsp;&nbsp;&nbsp; //and height. The usr and pswd are single-line textboxs, and we should specify</span><br class="auto-style7" />
+                            <span class="auto-style7">&nbsp;&nbsp;&nbsp; //them with a fixed height.</span><br />
+&nbsp;&nbsp;&nbsp; plc.field(<span class="auto-style2">&quot;textboxs&quot;</span>)&lt;&lt;plc.fixed(usr, 25)&lt;&lt;10&lt;&lt;plc.fixed(pswd, 25);<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; plc.field(<span class="auto-style2">&quot;buttons&quot;</span>)&lt;&lt;login&lt;&lt;10&lt;&lt;cancel;<br />
+                            <br />
+                            <span class="auto-style7">&nbsp;&nbsp;&nbsp; //Finially, the widgets should be collocated.</span><br class="auto-style7" />
+                            <span class="auto-style7">&nbsp;&nbsp;&nbsp; //Do not miss this line, otherwise the widgets are not collocated</span><br class="auto-style7" />
+                            <span class="auto-style7">&nbsp;&nbsp;&nbsp; //until the form is resized.</span><br />
+&nbsp;&nbsp;&nbsp; plc.collocate();<br />
+                            <br />
+&nbsp;&nbsp;&nbsp; fm.show();<br />
+&nbsp;&nbsp;&nbsp; exec();<br />
+                            <br />
+                            </span>}<br />
+                            <br />
+                            <br />
+                            <br />
+                        </td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                None.<br />
+                <br />
+                <hr />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

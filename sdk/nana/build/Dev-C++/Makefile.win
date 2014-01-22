@@ -1,0 +1,262 @@
+# Project: libnana
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = 
+OBJ  = ../bin/dev-cpp/exceptions.o ../bin/dev-cpp/traits.o ../bin/dev-cpp/file_iterator.o ../bin/dev-cpp/basis.o ../bin/dev-cpp/drawing.o ../bin/dev-cpp/programming_interface.o ../bin/dev-cpp/timer.o ../bin/dev-cpp/wvl.o ../bin/dev-cpp/drawer.o ../bin/dev-cpp/event_manager.o ../bin/dev-cpp/timer_trigger.o ../bin/dev-cpp/button.o ../bin/dev-cpp/checkbox.o ../bin/dev-cpp/form.o ../bin/dev-cpp/label.o ../bin/dev-cpp/progress.o ../bin/dev-cpp/scroll.o ../bin/dev-cpp/widget.o ../bin/dev-cpp/graphics.o ../bin/dev-cpp/platform.o ../bin/dev-cpp/pool.o ../bin/dev-cpp/thread.o ../bin/dev-cpp/frame.o ../bin/dev-cpp/picture.o ../bin/dev-cpp/shared_wrapper.o ../bin/dev-cpp/image.o ../bin/dev-cpp/basic_types.o ../bin/dev-cpp/timepiece.o ../bin/dev-cpp/listbox.o ../bin/dev-cpp/textbox.o ../bin/dev-cpp/dataexch.o ../bin/dev-cpp/combox.o ../bin/dev-cpp/gadget.o ../bin/dev-cpp/layout.o ../bin/dev-cpp/panel.o ../bin/dev-cpp/any.o ../bin/dev-cpp/menu.o ../bin/dev-cpp/menubar.o ../bin/dev-cpp/treebox.o ../bin/dev-cpp/window_manager.o ../bin/dev-cpp/tooltip.o ../bin/dev-cpp/toolbar.o ../bin/dev-cpp/float_listbox.o ../bin/dev-cpp/datetime.o ../bin/dev-cpp/date_chooser.o ../bin/dev-cpp/tray.o ../bin/dev-cpp/slider.o ../bin/dev-cpp/login.o ../bin/dev-cpp/layout_utility.o ../bin/dev-cpp/native_paint_interface.o ../bin/dev-cpp/fs_utility.o ../bin/dev-cpp/dragger.o ../bin/dev-cpp/native_window_interface.o ../bin/dev-cpp/functional.o ../bin/dev-cpp/categorize.o ../bin/dev-cpp/pixel_buffer.o ../bin/dev-cpp/image_process_provider.o ../bin/dev-cpp/image_process_selector.o ../bin/dev-cpp/msgbox.o ../bin/dev-cpp/text_editor.o ../bin/dev-cpp/unicode_bidi.o ../bin/dev-cpp/text_renderer.o ../bin/dev-cpp/platform_spec.o ../bin/dev-cpp/bedrock.o ../bin/dev-cpp/charset.o ../bin/dev-cpp/deploy.o ../bin/dev-cpp/audio_device.o ../bin/dev-cpp/audio_stream.o ../bin/dev-cpp/buffer_preparation.o ../bin/dev-cpp/player.o ../bin/dev-cpp/condition_variable.o ../bin/dev-cpp/mutex.o ../bin/dev-cpp/place.o ../bin/dev-cpp/animation.o ../bin/dev-cpp/basic_window.o ../bin/dev-cpp/effects.o ../bin/dev-cpp/element.o ../bin/dev-cpp/memory.o $(RES)
+LINKOBJ  = ../bin/dev-cpp/exceptions.o ../bin/dev-cpp/traits.o ../bin/dev-cpp/file_iterator.o ../bin/dev-cpp/basis.o ../bin/dev-cpp/drawing.o ../bin/dev-cpp/programming_interface.o ../bin/dev-cpp/timer.o ../bin/dev-cpp/wvl.o ../bin/dev-cpp/drawer.o ../bin/dev-cpp/event_manager.o ../bin/dev-cpp/timer_trigger.o ../bin/dev-cpp/button.o ../bin/dev-cpp/checkbox.o ../bin/dev-cpp/form.o ../bin/dev-cpp/label.o ../bin/dev-cpp/progress.o ../bin/dev-cpp/scroll.o ../bin/dev-cpp/widget.o ../bin/dev-cpp/graphics.o ../bin/dev-cpp/platform.o ../bin/dev-cpp/pool.o ../bin/dev-cpp/thread.o ../bin/dev-cpp/frame.o ../bin/dev-cpp/picture.o ../bin/dev-cpp/shared_wrapper.o ../bin/dev-cpp/image.o ../bin/dev-cpp/basic_types.o ../bin/dev-cpp/timepiece.o ../bin/dev-cpp/listbox.o ../bin/dev-cpp/textbox.o ../bin/dev-cpp/dataexch.o ../bin/dev-cpp/combox.o ../bin/dev-cpp/gadget.o ../bin/dev-cpp/layout.o ../bin/dev-cpp/panel.o ../bin/dev-cpp/any.o ../bin/dev-cpp/menu.o ../bin/dev-cpp/menubar.o ../bin/dev-cpp/treebox.o ../bin/dev-cpp/window_manager.o ../bin/dev-cpp/tooltip.o ../bin/dev-cpp/toolbar.o ../bin/dev-cpp/float_listbox.o ../bin/dev-cpp/datetime.o ../bin/dev-cpp/date_chooser.o ../bin/dev-cpp/tray.o ../bin/dev-cpp/slider.o ../bin/dev-cpp/login.o ../bin/dev-cpp/layout_utility.o ../bin/dev-cpp/native_paint_interface.o ../bin/dev-cpp/fs_utility.o ../bin/dev-cpp/dragger.o ../bin/dev-cpp/native_window_interface.o ../bin/dev-cpp/functional.o ../bin/dev-cpp/categorize.o ../bin/dev-cpp/pixel_buffer.o ../bin/dev-cpp/image_process_provider.o ../bin/dev-cpp/image_process_selector.o ../bin/dev-cpp/msgbox.o ../bin/dev-cpp/text_editor.o ../bin/dev-cpp/unicode_bidi.o ../bin/dev-cpp/text_renderer.o ../bin/dev-cpp/platform_spec.o ../bin/dev-cpp/bedrock.o ../bin/dev-cpp/charset.o ../bin/dev-cpp/deploy.o ../bin/dev-cpp/audio_device.o ../bin/dev-cpp/audio_stream.o ../bin/dev-cpp/buffer_preparation.o ../bin/dev-cpp/player.o ../bin/dev-cpp/condition_variable.o ../bin/dev-cpp/mutex.o ../bin/dev-cpp/place.o ../bin/dev-cpp/animation.o ../bin/dev-cpp/basic_window.o ../bin/dev-cpp/effects.o ../bin/dev-cpp/element.o ../bin/dev-cpp/memory.o $(RES)
+LIBS =  -L"lib" -lOle32  
+INCS =  -I"include" 
+CXXINCS =  -I"lib/gcc/mingw32/3.4.2/include"  -I"include/c++/3.4.2/backward"  -I"include/c++/3.4.2/mingw32"  -I"include/c++/3.4.2"  -I"include"  -I"D:/Privates/nana/release/Nana.Cpp03/include" 
+BIN  = libnana.a
+CXXFLAGS = $(CXXINCS)  
+CFLAGS = $(INCS)  
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before libnana.a all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(LINKOBJ)
+	ar r $(BIN) $(LINKOBJ)
+	ranlib $(BIN)
+
+../bin/dev-cpp/exceptions.o: ../../source/exceptions.cpp
+	$(CPP) -c ../../source/exceptions.cpp -o ../bin/dev-cpp/exceptions.o $(CXXFLAGS)
+
+../bin/dev-cpp/traits.o: ../../source/traits.cpp
+	$(CPP) -c ../../source/traits.cpp -o ../bin/dev-cpp/traits.o $(CXXFLAGS)
+
+../bin/dev-cpp/file_iterator.o: ../../source/filesystem/file_iterator.cpp
+	$(CPP) -c ../../source/filesystem/file_iterator.cpp -o ../bin/dev-cpp/file_iterator.o $(CXXFLAGS)
+
+../bin/dev-cpp/basis.o: ../../source/gui/basis.cpp
+	$(CPP) -c ../../source/gui/basis.cpp -o ../bin/dev-cpp/basis.o $(CXXFLAGS)
+
+../bin/dev-cpp/drawing.o: ../../source/gui/drawing.cpp
+	$(CPP) -c ../../source/gui/drawing.cpp -o ../bin/dev-cpp/drawing.o $(CXXFLAGS)
+
+../bin/dev-cpp/programming_interface.o: ../../source/gui/programming_interface.cpp
+	$(CPP) -c ../../source/gui/programming_interface.cpp -o ../bin/dev-cpp/programming_interface.o $(CXXFLAGS)
+
+../bin/dev-cpp/timer.o: ../../source/gui/timer.cpp
+	$(CPP) -c ../../source/gui/timer.cpp -o ../bin/dev-cpp/timer.o $(CXXFLAGS)
+
+../bin/dev-cpp/wvl.o: ../../source/gui/wvl.cpp
+	$(CPP) -c ../../source/gui/wvl.cpp -o ../bin/dev-cpp/wvl.o $(CXXFLAGS)
+
+../bin/dev-cpp/drawer.o: ../../source/gui/detail/drawer.cpp
+	$(CPP) -c ../../source/gui/detail/drawer.cpp -o ../bin/dev-cpp/drawer.o $(CXXFLAGS)
+
+../bin/dev-cpp/event_manager.o: ../../source/gui/detail/event_manager.cpp
+	$(CPP) -c ../../source/gui/detail/event_manager.cpp -o ../bin/dev-cpp/event_manager.o $(CXXFLAGS)
+
+../bin/dev-cpp/timer_trigger.o: ../../source/gui/detail/timer_trigger.cpp
+	$(CPP) -c ../../source/gui/detail/timer_trigger.cpp -o ../bin/dev-cpp/timer_trigger.o $(CXXFLAGS)
+
+../bin/dev-cpp/button.o: ../../source/gui/widgets/button.cpp
+	$(CPP) -c ../../source/gui/widgets/button.cpp -o ../bin/dev-cpp/button.o $(CXXFLAGS)
+
+../bin/dev-cpp/checkbox.o: ../../source/gui/widgets/checkbox.cpp
+	$(CPP) -c ../../source/gui/widgets/checkbox.cpp -o ../bin/dev-cpp/checkbox.o $(CXXFLAGS)
+
+../bin/dev-cpp/form.o: ../../source/gui/widgets/form.cpp
+	$(CPP) -c ../../source/gui/widgets/form.cpp -o ../bin/dev-cpp/form.o $(CXXFLAGS)
+
+../bin/dev-cpp/label.o: ../../source/gui/widgets/label.cpp
+	$(CPP) -c ../../source/gui/widgets/label.cpp -o ../bin/dev-cpp/label.o $(CXXFLAGS)
+
+../bin/dev-cpp/progress.o: ../../source/gui/widgets/progress.cpp
+	$(CPP) -c ../../source/gui/widgets/progress.cpp -o ../bin/dev-cpp/progress.o $(CXXFLAGS)
+
+../bin/dev-cpp/scroll.o: ../../source/gui/widgets/scroll.cpp
+	$(CPP) -c ../../source/gui/widgets/scroll.cpp -o ../bin/dev-cpp/scroll.o $(CXXFLAGS)
+
+../bin/dev-cpp/widget.o: ../../source/gui/widgets/widget.cpp
+	$(CPP) -c ../../source/gui/widgets/widget.cpp -o ../bin/dev-cpp/widget.o $(CXXFLAGS)
+
+../bin/dev-cpp/graphics.o: ../../source/paint/graphics.cpp
+	$(CPP) -c ../../source/paint/graphics.cpp -o ../bin/dev-cpp/graphics.o $(CXXFLAGS)
+
+../bin/dev-cpp/platform.o: ../../source/system/platform.cpp
+	$(CPP) -c ../../source/system/platform.cpp -o ../bin/dev-cpp/platform.o $(CXXFLAGS)
+
+../bin/dev-cpp/pool.o: ../../source/threads/pool.cpp
+	$(CPP) -c ../../source/threads/pool.cpp -o ../bin/dev-cpp/pool.o $(CXXFLAGS)
+
+../bin/dev-cpp/thread.o: ../../source/threads/thread.cpp
+	$(CPP) -c ../../source/threads/thread.cpp -o ../bin/dev-cpp/thread.o $(CXXFLAGS)
+
+../bin/dev-cpp/frame.o: ../../source/gui/widgets/frame.cpp
+	$(CPP) -c ../../source/gui/widgets/frame.cpp -o ../bin/dev-cpp/frame.o $(CXXFLAGS)
+
+../bin/dev-cpp/picture.o: ../../source/gui/widgets/picture.cpp
+	$(CPP) -c ../../source/gui/widgets/picture.cpp -o ../bin/dev-cpp/picture.o $(CXXFLAGS)
+
+../bin/dev-cpp/shared_wrapper.o: ../../source/system/shared_wrapper.cpp
+	$(CPP) -c ../../source/system/shared_wrapper.cpp -o ../bin/dev-cpp/shared_wrapper.o $(CXXFLAGS)
+
+../bin/dev-cpp/image.o: ../../source/paint/image.cpp
+	$(CPP) -c ../../source/paint/image.cpp -o ../bin/dev-cpp/image.o $(CXXFLAGS)
+
+../bin/dev-cpp/basic_types.o: ../../source/basic_types.cpp
+	$(CPP) -c ../../source/basic_types.cpp -o ../bin/dev-cpp/basic_types.o $(CXXFLAGS)
+
+../bin/dev-cpp/timepiece.o: ../../source/system/timepiece.cpp
+	$(CPP) -c ../../source/system/timepiece.cpp -o ../bin/dev-cpp/timepiece.o $(CXXFLAGS)
+
+../bin/dev-cpp/listbox.o: ../../source/gui/widgets/listbox.cpp
+	$(CPP) -c ../../source/gui/widgets/listbox.cpp -o ../bin/dev-cpp/listbox.o $(CXXFLAGS)
+
+../bin/dev-cpp/textbox.o: ../../source/gui/widgets/textbox.cpp
+	$(CPP) -c ../../source/gui/widgets/textbox.cpp -o ../bin/dev-cpp/textbox.o $(CXXFLAGS)
+
+../bin/dev-cpp/dataexch.o: ../../source/system/dataexch.cpp
+	$(CPP) -c ../../source/system/dataexch.cpp -o ../bin/dev-cpp/dataexch.o $(CXXFLAGS)
+
+../bin/dev-cpp/combox.o: ../../source/gui/widgets/combox.cpp
+	$(CPP) -c ../../source/gui/widgets/combox.cpp -o ../bin/dev-cpp/combox.o $(CXXFLAGS)
+
+../bin/dev-cpp/gadget.o: ../../source/paint/gadget.cpp
+	$(CPP) -c ../../source/paint/gadget.cpp -o ../bin/dev-cpp/gadget.o $(CXXFLAGS)
+
+../bin/dev-cpp/layout.o: ../../source/gui/layout.cpp
+	$(CPP) -c ../../source/gui/layout.cpp -o ../bin/dev-cpp/layout.o $(CXXFLAGS)
+
+../bin/dev-cpp/panel.o: ../../source/gui/widgets/panel.cpp
+	$(CPP) -c ../../source/gui/widgets/panel.cpp -o ../bin/dev-cpp/panel.o $(CXXFLAGS)
+
+../bin/dev-cpp/any.o: ../../source/any.cpp
+	$(CPP) -c ../../source/any.cpp -o ../bin/dev-cpp/any.o $(CXXFLAGS)
+
+../bin/dev-cpp/menu.o: ../../source/gui/widgets/menu.cpp
+	$(CPP) -c ../../source/gui/widgets/menu.cpp -o ../bin/dev-cpp/menu.o $(CXXFLAGS)
+
+../bin/dev-cpp/menubar.o: ../../source/gui/widgets/menubar.cpp
+	$(CPP) -c ../../source/gui/widgets/menubar.cpp -o ../bin/dev-cpp/menubar.o $(CXXFLAGS)
+
+../bin/dev-cpp/treebox.o: ../../source/gui/widgets/treebox.cpp
+	$(CPP) -c ../../source/gui/widgets/treebox.cpp -o ../bin/dev-cpp/treebox.o $(CXXFLAGS)
+
+../bin/dev-cpp/window_manager.o: ../../source/gui/detail/window_manager.cpp
+	$(CPP) -c ../../source/gui/detail/window_manager.cpp -o ../bin/dev-cpp/window_manager.o $(CXXFLAGS)
+
+../bin/dev-cpp/tooltip.o: ../../source/gui/tooltip.cpp
+	$(CPP) -c ../../source/gui/tooltip.cpp -o ../bin/dev-cpp/tooltip.o $(CXXFLAGS)
+
+../bin/dev-cpp/toolbar.o: ../../source/gui/widgets/toolbar.cpp
+	$(CPP) -c ../../source/gui/widgets/toolbar.cpp -o ../bin/dev-cpp/toolbar.o $(CXXFLAGS)
+
+../bin/dev-cpp/float_listbox.o: ../../source/gui/widgets/float_listbox.cpp
+	$(CPP) -c ../../source/gui/widgets/float_listbox.cpp -o ../bin/dev-cpp/float_listbox.o $(CXXFLAGS)
+
+../bin/dev-cpp/datetime.o: ../../source/datetime.cpp
+	$(CPP) -c ../../source/datetime.cpp -o ../bin/dev-cpp/datetime.o $(CXXFLAGS)
+
+../bin/dev-cpp/date_chooser.o: ../../source/gui/widgets/date_chooser.cpp
+	$(CPP) -c ../../source/gui/widgets/date_chooser.cpp -o ../bin/dev-cpp/date_chooser.o $(CXXFLAGS)
+
+../bin/dev-cpp/tray.o: ../../source/gui/widgets/tray.cpp
+	$(CPP) -c ../../source/gui/widgets/tray.cpp -o ../bin/dev-cpp/tray.o $(CXXFLAGS)
+
+../bin/dev-cpp/slider.o: ../../source/gui/widgets/slider.cpp
+	$(CPP) -c ../../source/gui/widgets/slider.cpp -o ../bin/dev-cpp/slider.o $(CXXFLAGS)
+
+../bin/dev-cpp/login.o: ../../source/gui/widgets/login.cpp
+	$(CPP) -c ../../source/gui/widgets/login.cpp -o ../bin/dev-cpp/login.o $(CXXFLAGS)
+
+../bin/dev-cpp/layout_utility.o: ../../source/gui/layout_utility.cpp
+	$(CPP) -c ../../source/gui/layout_utility.cpp -o ../bin/dev-cpp/layout_utility.o $(CXXFLAGS)
+
+../bin/dev-cpp/native_paint_interface.o: ../../source/paint/detail/native_paint_interface.cpp
+	$(CPP) -c ../../source/paint/detail/native_paint_interface.cpp -o ../bin/dev-cpp/native_paint_interface.o $(CXXFLAGS)
+
+../bin/dev-cpp/fs_utility.o: ../../source/filesystem/fs_utility.cpp
+	$(CPP) -c ../../source/filesystem/fs_utility.cpp -o ../bin/dev-cpp/fs_utility.o $(CXXFLAGS)
+
+../bin/dev-cpp/dragger.o: ../../source/gui/dragger.cpp
+	$(CPP) -c ../../source/gui/dragger.cpp -o ../bin/dev-cpp/dragger.o $(CXXFLAGS)
+
+../bin/dev-cpp/native_window_interface.o: ../../source/gui/detail/native_window_interface.cpp
+	$(CPP) -c ../../source/gui/detail/native_window_interface.cpp -o ../bin/dev-cpp/native_window_interface.o $(CXXFLAGS)
+
+../bin/dev-cpp/functional.o: ../../source/gui/functional.cpp
+	$(CPP) -c ../../source/gui/functional.cpp -o ../bin/dev-cpp/functional.o $(CXXFLAGS)
+
+../bin/dev-cpp/categorize.o: ../../source/gui/widgets/categorize.cpp
+	$(CPP) -c ../../source/gui/widgets/categorize.cpp -o ../bin/dev-cpp/categorize.o $(CXXFLAGS)
+
+../bin/dev-cpp/pixel_buffer.o: ../../source/paint/pixel_buffer.cpp
+	$(CPP) -c ../../source/paint/pixel_buffer.cpp -o ../bin/dev-cpp/pixel_buffer.o $(CXXFLAGS)
+
+../bin/dev-cpp/image_process_provider.o: ../../source/paint/detail/image_process_provider.cpp
+	$(CPP) -c ../../source/paint/detail/image_process_provider.cpp -o ../bin/dev-cpp/image_process_provider.o $(CXXFLAGS)
+
+../bin/dev-cpp/image_process_selector.o: ../../source/paint/image_process_selector.cpp
+	$(CPP) -c ../../source/paint/image_process_selector.cpp -o ../bin/dev-cpp/image_process_selector.o $(CXXFLAGS)
+
+../bin/dev-cpp/msgbox.o: ../../source/gui/msgbox.cpp
+	$(CPP) -c ../../source/gui/msgbox.cpp -o ../bin/dev-cpp/msgbox.o $(CXXFLAGS)
+
+../bin/dev-cpp/text_editor.o: ../../source/gui/widgets/skeletons/text_editor.cpp
+	$(CPP) -c ../../source/gui/widgets/skeletons/text_editor.cpp -o ../bin/dev-cpp/text_editor.o $(CXXFLAGS)
+
+../bin/dev-cpp/unicode_bidi.o: ../../source/unicode_bidi.cpp
+	$(CPP) -c ../../source/unicode_bidi.cpp -o ../bin/dev-cpp/unicode_bidi.o $(CXXFLAGS)
+
+../bin/dev-cpp/text_renderer.o: ../../source/paint/text_renderer.cpp
+	$(CPP) -c ../../source/paint/text_renderer.cpp -o ../bin/dev-cpp/text_renderer.o $(CXXFLAGS)
+
+../bin/dev-cpp/platform_spec.o: ../../source/detail/win32/platform_spec.cpp
+	$(CPP) -c ../../source/detail/win32/platform_spec.cpp -o ../bin/dev-cpp/platform_spec.o $(CXXFLAGS)
+
+../bin/dev-cpp/bedrock.o: ../../source/gui/detail/win32/bedrock.cpp
+	$(CPP) -c ../../source/gui/detail/win32/bedrock.cpp -o ../bin/dev-cpp/bedrock.o $(CXXFLAGS)
+
+../bin/dev-cpp/charset.o: ../../source/charset.cpp
+	$(CPP) -c ../../source/charset.cpp -o ../bin/dev-cpp/charset.o $(CXXFLAGS)
+
+../bin/dev-cpp/deploy.o: ../../source/deploy.cpp
+	$(CPP) -c ../../source/deploy.cpp -o ../bin/dev-cpp/deploy.o $(CXXFLAGS)
+
+../bin/dev-cpp/audio_device.o: ../../source/audio/detail/audio_device.cpp
+	$(CPP) -c ../../source/audio/detail/audio_device.cpp -o ../bin/dev-cpp/audio_device.o $(CXXFLAGS)
+
+../bin/dev-cpp/audio_stream.o: ../../source/audio/detail/audio_stream.cpp
+	$(CPP) -c ../../source/audio/detail/audio_stream.cpp -o ../bin/dev-cpp/audio_stream.o $(CXXFLAGS)
+
+../bin/dev-cpp/buffer_preparation.o: ../../source/audio/detail/buffer_preparation.cpp
+	$(CPP) -c ../../source/audio/detail/buffer_preparation.cpp -o ../bin/dev-cpp/buffer_preparation.o $(CXXFLAGS)
+
+../bin/dev-cpp/player.o: ../../source/audio/player.cpp
+	$(CPP) -c ../../source/audio/player.cpp -o ../bin/dev-cpp/player.o $(CXXFLAGS)
+
+../bin/dev-cpp/condition_variable.o: ../../source/threads/condition_variable.cpp
+	$(CPP) -c ../../source/threads/condition_variable.cpp -o ../bin/dev-cpp/condition_variable.o $(CXXFLAGS)
+
+../bin/dev-cpp/mutex.o: ../../source/threads/mutex.cpp
+	$(CPP) -c ../../source/threads/mutex.cpp -o ../bin/dev-cpp/mutex.o $(CXXFLAGS)
+
+../bin/dev-cpp/place.o: ../../source/gui/place.cpp
+	$(CPP) -c ../../source/gui/place.cpp -o ../bin/dev-cpp/place.o $(CXXFLAGS)
+
+../bin/dev-cpp/animation.o: ../../source/gui/animation.cpp
+	$(CPP) -c ../../source/gui/animation.cpp -o ../bin/dev-cpp/animation.o $(CXXFLAGS)
+
+../bin/dev-cpp/basic_window.o: ../../source/gui/detail/basic_window.cpp
+	$(CPP) -c ../../source/gui/detail/basic_window.cpp -o ../bin/dev-cpp/basic_window.o $(CXXFLAGS)
+
+../bin/dev-cpp/effects.o: ../../source/gui/effects.cpp
+	$(CPP) -c ../../source/gui/effects.cpp -o ../bin/dev-cpp/effects.o $(CXXFLAGS)
+
+../bin/dev-cpp/element.o: ../../source/gui/element.cpp
+	$(CPP) -c ../../source/gui/element.cpp -o ../bin/dev-cpp/element.o $(CXXFLAGS)
+
+../bin/dev-cpp/memory.o: ../../source/memory.cpp
+	$(CPP) -c ../../source/memory.cpp -o ../bin/dev-cpp/memory.o $(CXXFLAGS)

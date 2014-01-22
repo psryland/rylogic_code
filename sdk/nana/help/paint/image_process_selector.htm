@@ -1,0 +1,362 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+    <style type="text/css">
+        .style1
+        {
+            color: #0000FF;
+        }
+        .style2
+        {
+            color: #006600;
+        }
+        .auto-style1 {
+            color: #FF0000;
+        }
+    </style>
+</head>
+<body>
+    <table style="font-family:Consolas;font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana C++ Library &nbsp;<br />
+                </strong></span><br />
+                <strong>An open-source C++ framework project</strong><br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+                <strong><span style="font-size: 16pt">nana::paint::image_process::selector</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                The class selector is used for configuring the algorithms of image processing.<br />
+                <br />
+                <strong>Model
+                of<br />
+                </strong>
+                <br />
+                None<br />
+                <br />
+                <strong>Public base classes<br />
+                </strong>
+                <br />
+                None<br />
+                <br />
+                <strong>Members</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename ImageProcessor&gt;<br />
+                            void add_alpha_blend(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inserts a new user defined image process for alpha blend.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void alpha_blend(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Selects an image process through a specified name.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename ImageProcessor&gt;<br />
+                            void add_blend(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inserts a new user-defined image processor for blend.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void blend(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Selects an image processor through a specified name.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename ImageProcessor&gt;<br />
+                            void add_blur(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inserts a new user-defined image process for blur.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void blur(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Selects an image procssor through a specified name.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename ImageProcessor&gt;<br />
+                            void add_line(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inserts a new user-defined image processor for line.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void line(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Selects an image processor through a specified name.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            template&lt;typename ImageProcessor&gt;<br />
+                            void add_stretch(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inserts a new user-defined image processor for stretch.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            void stretch(const std::string&amp; name)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Selects an image processor through a specified name.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>File</strong><br />
+                <br />
+                nana/paint/image_process_selector.hpp<br />
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                1, If users give a non-existing name for choosing an image processor, the call 
+                succeed, but no image processor would be replaced.<br />
+                <br />
+                2, The image processors that Nana provides are:<br />
+                <br />
+                Stretch algorithms:<br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 250px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bilinear interoplation</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            It produces a reasonably realistic image.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 250px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            proximal interoplation</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            It(also 
+                            known as nearest-neighbor interoplation) is fast, but produces a not realistic image. </td>
+                    </tr>
+                </table>
+                <br />
+                Alpha Blend algorith:<br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 250px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            alpha_blend</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Blends two images with alpha channel that is given by source image.</td>
+                    </tr>
+                </table>
+                <br />
+                Blend algorithm:<br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 250px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            blend&nbsp;</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Blends two images.</td>
+                    </tr>
+                </table>
+                <br />
+                Blur algorithm:<br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 250px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            blur</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Blurs an image.</td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                Line algorithm:<br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 250px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            bresenham_line</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Draws a line.</td>
+                    </tr>
+                </table>
+                <br />
+                <b>Examples</b><br />
+                <br />
+                This is an example which creates a form to display an image, and when the size 
+                of form is changed, it makes the image fit the form.<br />
+                In addtion, the example also shows the way to switch the stretch image processing 
+                algorithm.<br />
+                <br />
+                <span class="style1">#include</span> &lt;nana/gui/wvl.hpp&gt;<br />
+                <span class="style1">#include</span> &lt;nana/gui/drawing.hpp&gt;<br />
+                <span class="style1">#include</span> &lt;nana/paint/image_process_selector.hpp&gt;<br />
+                <br />
+                <strong>using</strong> <strong>namespace</strong> nana::gui;<br />
+                <br />
+                <b>class</b> tsform<br />
+&nbsp;&nbsp;&nbsp; : <b>public</b> form<br />
+                {<br />
+                <b>public</b>:<br />
+&nbsp;&nbsp;&nbsp; tsform()<br />
+&nbsp;&nbsp;&nbsp; {<br />
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; img_.open(STR(<span class="auto-style1">&quot;image01.bmp&quot;</span>));&nbsp;&nbsp;&nbsp;
+                <span class="style2">//Open the image file.</span><br />
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="style2">//Copy the image to the window</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; nana::size sz = size();<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; drawing dw(*<b>this</b>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dw.bitblt(0, 0, sz.width, sz.height, img_, 0, 0);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dw.update();<br />
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="style2">//Register events</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; make_event&lt;events::click&gt;(*<b>this</b>, 
+                &amp;tsform::_m_click);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; make_event&lt;events::size&gt;(*<b>this</b>, 
+                &amp;tsform::_m_size);<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <b>private</b>:<br />
+&nbsp;&nbsp;&nbsp; <span class="style2">//Switchs the algorithm between two algorithms in every 
+                click on the form.</span><br />
+&nbsp;&nbsp;&nbsp; <b>void</b> _m_click()<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>static</b> <b>bool</b> interop;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; nana::paint::image_process::selector sl;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; sl.stretch(interop ? <span class="auto-style1">&quot;bilinear interoplation&quot;</span> : 
+                <span class="auto-style1">&quot;proximal interoplation&quot;</span>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; interop = !interop;<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <br />
+&nbsp;&nbsp;&nbsp; <span class="style2">//When the window size is changed, it stretches the 
+                image to fit the window.</span><br />
+&nbsp;&nbsp;&nbsp; <b>void</b> _m_size()<br />
+&nbsp;&nbsp;&nbsp; {<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; drawing dw(*<b>this</b>);<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dw.clear();&nbsp; <span class="style2">//Before 
+                stretch, it should clear the operations that are generated before.</span><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dw.stretch(size(), img_, 
+                img_.size());<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; dw.update();<br />
+&nbsp;&nbsp;&nbsp; }<br />
+                <b>private</b>:<br />
+&nbsp;&nbsp;&nbsp; nana::paint::image img_;<br />
+                };<br />
+                <br />
+                <b>int</b> main()<br />
+                {<br />
+&nbsp;&nbsp;&nbsp; tsform fm;<br />
+&nbsp;&nbsp;&nbsp; fm.show();<br />
+&nbsp;&nbsp;&nbsp; exec();<br />
+                }<br />
+                <br />
+                Result of application:<br />
+                <img alt="bilinear interoplation" src="./images/fit_window_bilinear_interoplation.png" /><br />
+                Stretch the image through bilinear interoplation<br />
+                <br />
+                <img alt="proximal interoplation" src="./images/fit_window_proximal_interoplation.png" /><br />
+                Stretch the image through proximal interoplation<br />
+                <br />
+                <br />
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                None.<br />
+                <br />
+                <hr />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>

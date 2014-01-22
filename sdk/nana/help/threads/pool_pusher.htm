@@ -1,0 +1,137 @@
+s<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <title>The Nana Programmer's Guide</title>
+</head>
+<body>
+    <table style="font-family:Trebuchet MS; font-size:10pt; width: 100%; position: absolute; left: 0px; border-top-style: none; border-right-style: none; border-left-style: none; top: 0px; border-bottom-style: none;">
+        <tr>
+            <td style="height: 70px; background-color: #ffcc66; text-align: right">
+                <span style="font-size: 16pt"><strong>Nana - a C++ framework project&nbsp;<br />
+                </strong></span>
+                <br />
+                <strong>The Programmer's Guide&nbsp; </strong></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+        <tr>
+            <td style="height: 21px; font-family: Consolas;font-size: 11pt">
+                <strong><span style="font-size: 16pt">nana::threads::pool_pusher&lt;Function&gt;</span></strong><br />
+                <br />
+                <strong>
+                Description<br />
+                </strong>
+                <br />
+                A thread pool manages a group threads for a large number of tasks processing.<br />
+                <br />
+                <strong>Model
+                of<br />
+                </strong>
+                <br />
+                None<br />
+                <br />
+                <strong>Public base classes<br />
+                </strong>
+                <br />
+                None<br />
+                <br />
+                <strong>Template parameter</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            <strong>typename</strong> Function</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            A function object type, prototype of function is <strong>void</strong>()</td>
+                    </tr>
+                </table>
+                <br />
+                Typedefs<br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            value_type</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            A function object type. General speak, value_type is same with Function if Function
+                            is not a function prototype, otherwise value_type is a pointer type of function.</td>
+                    </tr>
+                </table>
+                <br />
+                <br />
+                <strong>Members</strong><br />
+                <br />
+                <table style="border-right: 1px outset; border-top: 1px outset; border-left: 1px outset;
+                    width: 100%; border-bottom: 1px outset">
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            pool_pusher(nana::threads::pool&amp; pool_obj, <strong>const</strong> Function&amp; fn)</td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Creates a pool_pusher that inserts a fn task to the threadpool pool_obj.</td>
+                    </tr>
+                    <tr>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            <strong>void</strong> <strong>operator</strong>()() <strong>const</strong></td>
+                        <td style="border-right: 1px inset; padding-right: 0px; border-top: 1px inset; padding-left: 0px;
+                            padding-bottom: 0px; margin: 0px; border-left: 1px inset; width: 400px; padding-top: 0px;
+                            border-bottom: 1px inset; height: 20px">
+                            Inters the task to the threadpool.</td>
+                    </tr>
+                </table>
+                <br />
+                <strong>File<br />
+                    <br />
+                </strong>nana/threads/pool.hpp<br />
+                <br />
+                <strong>Notes<br />
+                </strong>
+                <br />
+                1, pool_pusher also provides two helper function for easy use.<br /><span style="font-size: 10pt; font-family: Courier New">
+                    <br />
+                    <strong>template</strong>&lt;<strong>typename</strong> Function&gt;<br />
+                pool_pusher&lt;Function&gt; pool_push(nana::threads::pool&amp; pool_obj, <strong>const</strong>
+                    Function&amp; fn);<br />
+                <br />
+                    <strong>template</strong>&lt;<strong>typename</strong> Class, <strong>typename</strong>
+                    Concept&gt;<br />
+                    pool_pusher&lt;nana::functor&lt;<strong>void</strong>()&gt; &gt; pool_push(nana::threads::pool&amp;
+                pool_obj, Class&amp; obj, <strong>void</strong>(Concept::*mf)());<br />
+                </span><br />
+                <br />
+                <strong>See also</strong><br />
+                <br />
+                <a href="./pool.htm">pool</a>, <a href="http://nanaproject.wordpress.com/2011/06/11/a-method-to-prevent-ui-from-blocking-while-busy/">
+                    A Method to prevent UI from blocking while busy</a><br />
+                <br />
+                <hr />
+                Move to <a href="../index.htm">The Nana Programmer's Guide Main Page</a></td>
+        </tr>
+        <tr>
+            <td style="height: 21px">
+            </td>
+        </tr>
+    </table>
+
+    
+    
+
+</body>
+</html>
