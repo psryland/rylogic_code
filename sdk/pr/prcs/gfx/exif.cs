@@ -491,6 +491,27 @@ namespace pr.gfx
 				Count    = count;
 				Data     = data;
 			}
+			public override string ToString()
+			{
+				var s = Tag.ToString() + ": ";
+				switch (DataType)
+				{
+				default: throw new ArgumentOutOfRangeException();
+				case TiffDataType.UByte:        s += AsUInt; break;
+				case TiffDataType.AsciiStrings: s += AsString; break;
+				case TiffDataType.UShort:       s += AsUInt; break;
+				case TiffDataType.ULong:        s += AsUInt; break;
+				case TiffDataType.URational:    s += AsURational; break;
+				case TiffDataType.SByte:        s += AsInt; break;
+				case TiffDataType.Undefined:    s += "undefined"; break;
+				case TiffDataType.SShort:       s += AsInt; break;
+				case TiffDataType.SLong:        s += AsInt; break;
+				case TiffDataType.SRational:    s += AsSRational; break;
+				case TiffDataType.Single:       s += AsReal; break;
+				case TiffDataType.Double:       s += AsReal; break;
+				}
+				return s;
+			}
 		}
 
 		/// <summary>

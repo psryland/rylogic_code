@@ -12,14 +12,15 @@ namespace pr.common
 
 			/// <summary>
 			/// Handle a command line option. Return true to continue parsing, false to stop.
-			/// 'arg' is the index of the argument immediately after 'option'. If this argument
-			/// is used, implementers should increment 'arg' for each arg used.</summary>
+			/// 'arg' is the index of the argument immediately after 'option'. If additional arguments
+			/// are used, implementers should increment 'arg' for each arg used.</summary>
 			bool CmdLineOption(string option, string[] args, ref int arg);
 
 			/// <summary>
 			/// Handle anything not preceded by '-'. Return true to continue parsing, false to stop.
-			/// Implementers should increment 'arg' for each arg read.</summary>
-			bool CmdLineData(string[] args, ref int arg);
+			/// 'arg' is the index of the argument immediately after 'data'. If additional arguments
+			/// are used, implementers should increment 'arg' for each arg used.</summary>
+			bool CmdLineData(string data, string[] args, ref int arg);
 
 			/// <summary>Return true if all required options have been given</summary>
 			bool OptionsValid();
@@ -35,7 +36,7 @@ namespace pr.common
 		/// <summary>Enumerate the provided command line options. Returns true of all command line parameters were parsed</summary>
 		public static Result Parse(IReceiver cr, string[] args)
 		{
-			Result result = Result.Success;
+			var result = Result.Success;
 			try
 			{
 				Func<string,bool> is_option = a => a.Length >= 2 && a[0] == '-';
@@ -53,7 +54,8 @@ namespace pr.common
 					}
 					else
 					{
-						if (!cr.CmdLineData(args, ref i))
+						var data = args[i++];
+						if (!cr.CmdLineData(data, args, ref i))
 						{
 							result = Result.Interrupted;
 							break;
@@ -104,10 +106,6 @@ namespace pr
 				/// <summary>Display help information in the case of an invalid command line</summary>
 				public void ShowHelp() { ++HelpShownCount; }
 
-				/// <summary>
-				/// Handle a command line option. Return true to continue parsing, false to stop.
-				/// 'arg' is the index of the argument immediately after 'option'. If this argument
-				/// is used, implementers should increment 'arg' for each arg used.</summary>
 				public bool CmdLineOption(string option, string[] args, ref int arg)
 				{
 					Option = option;
@@ -116,12 +114,9 @@ namespace pr
 					return CmdLineOptionResult;
 				}
 
-				/// <summary>
-				/// Handle anything not preceded by '-'. Return true to continue parsing, false to stop.
-				/// Implementers should increment 'arg' for each arg read.</summary>
-				public bool CmdLineData(string[] args, ref int arg)
+				public bool CmdLineData(string data, string[] args, ref int arg)
 				{
-					Data1 = args[arg++];
+					Data1 = data;
 					Data2 = args[arg++];
 					return CmdLineDataResult;
 				}

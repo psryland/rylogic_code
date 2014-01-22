@@ -87,6 +87,9 @@ namespace Csex
 				"    -find_duplicate_files\n" +
 				"       Find duplicate files within a directory tree\n" +
 				"\n" +
+				"    -showexif\n" +
+				"       Display Exif info for a jpg file\n" +
+				"\n" +
 				// NEW_COMMAND - add a help string
 				"\n"+
 				"  Type Cex -command -help for help on a particular command\n"+
@@ -106,7 +109,8 @@ namespace Csex
 				case "-expand_template": m_cmd = new MarkupExpand(); break;
 				case "-patternui": m_cmd = new PatternUI(); break;
 				case "-find_duplicate_files": m_cmd = new FindDuplicateFiles(); break;
-				// NEW_COMMAND - handle the command
+				case "-showexif": m_cmd = new ShowExif(); break;
+					// NEW_COMMAND - handle the command
 				}
 			}
 			return m_cmd == null
@@ -115,11 +119,11 @@ namespace Csex
 		}
 
 		/// <summary>Forward arg to the command</summary>
-		public override bool CmdLineData(string[] args, ref int arg)
+		public override bool CmdLineData(string data, string[] args, ref int arg)
 		{
 			return m_cmd == null
-				? base.CmdLineData(args, ref arg)
-				: m_cmd.CmdLineData(args, ref arg);
+				? base.CmdLineData(data, args, ref arg)
+				: m_cmd.CmdLineData(data, args, ref arg);
 		}
 
 		/// <summary>Return true if all required options have been given</summary>

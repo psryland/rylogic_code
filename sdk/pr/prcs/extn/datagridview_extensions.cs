@@ -540,7 +540,7 @@ namespace pr.extn
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
-			DataGridViewTrackBarCell cell = (DataGridViewTrackBarCell)Value;
+			var cell = (DataGridViewTrackBarCell)Value;
 			if (e.KeyCode == Keys.Left ) { cell.Value = Maths.Clamp((int)cell.Value - 1, cell.MinValue, cell.MaxValue); e.Handled = true; Refresh(); }
 			if (e.KeyCode == Keys.Right) { cell.Value = Maths.Clamp((int)cell.Value + 1, cell.MinValue, cell.MaxValue); e.Handled = true; Refresh(); }
 			base.OnKeyDown(e);
@@ -552,13 +552,13 @@ namespace pr.extn
 		}
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			DataGridViewTrackBarCell cell = (DataGridViewTrackBarCell)Value;
+			var cell = (DataGridViewTrackBarCell)Value;
 			e.Graphics.FillRectangle(Brushes.LightBlue, e.ClipRectangle);
 			PaintTrackBar(e.Graphics, e.ClipRectangle, (int)cell.Value, cell.MinValue, cell.MaxValue);
 		}
 		private void ReadValue(int x)
 		{
-			DataGridViewTrackBarCell cell = (DataGridViewTrackBarCell)Value;
+			var cell = (DataGridViewTrackBarCell)Value;
 			int value = Maths.Clamp(cell.MinValue + (cell.MaxValue - cell.MinValue) * (x - Left - m_btn_width/2) / (Width - m_btn_width), cell.MinValue, cell.MaxValue);
 			cell.Value = value;
 		}

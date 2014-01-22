@@ -6,11 +6,8 @@ namespace pr.common
 {
 	///<remarks>
 	/// Usage:
-	/// using (var ci = new ConsoleIndent())
-	/// {
-	///    ci.Indent = 4;
+	/// using (var ci = new ConsoleIndent{Indent = 4})
 	///    Console.WriteLine("Intended text");
-	/// }
 	///</remarks>
 
 	/// <summary>Helper for supporting indenting on the console</summary>

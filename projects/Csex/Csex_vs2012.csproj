@@ -37,10 +37,6 @@
     <ApplicationIcon>Smiling gekko 140x110.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="rylogic, Version=1.0.5078.1206, Culture=neutral, PublicKeyToken=d58190847d96b83d, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\sdk\pr\lib\anycpu\release\rylogic.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -59,6 +55,7 @@
     <Compile Include="Cmd\MarkupExpand.cs" />
     <Compile Include="Cmd\NewCommand.cs" />
     <Compile Include="Cmd\PatternUI.cs" />
+    <Compile Include="Cmd\ShowExif.cs" />
     <Compile Include="Cmd\SignFile.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -68,6 +65,12 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Smiling gekko 140x110.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\sdk\pr\prcs\Rylogic.csproj">
+      <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
+      <Name>Rylogic</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
