@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.maths;
@@ -329,6 +330,7 @@ namespace pr.gui
 		private readonly ReportErrorCB m_error_cb;                // A local reference to prevent the callback being garbage collected
 		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
 		private readonly List<DrawsetInterface> m_drawsets;
+		private readonly EventBatcher m_eb_refresh;
 		private bool m_mouse_navigation;
 		private int m_mouse_down_at;
 
@@ -344,6 +346,7 @@ namespace pr.gui
 			m_error_cb = ErrorCB;
 			m_settings_changed_cb = SettingsChgCB;
 			m_drawsets = new List<DrawsetInterface>();
+			m_eb_refresh = new EventBatcher(Refresh, TimeSpan.Zero);
 			if (error_cb != null) OnError += error_cb;
 
 			// Initialise the renderer
@@ -393,6 +396,12 @@ namespace pr.gui
 		{
 			// Forward changed settings notification to anyone that cares
 			if (OnSettingsChanged != null) OnSettingsChanged();
+		}
+
+		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
+		public void SignalRefresh()
+		{
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Get/Set the currently active drawset</summary>
