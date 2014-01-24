@@ -57,6 +57,9 @@
     <Compile Include="test_app_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="tree_grid_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="view3d_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -86,6 +89,9 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <EmbeddedResource Include="tree_grid_ui.resx">
+      <DependentUpon>tree_grid_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

@@ -12,6 +12,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_test_colour_wheel;
 		private ToolStripMenuItem m_menu_hint_balloon;
 		private ToolStripMenuItem m_menu_tool_form;
+		private ToolStripMenuItem m_menu_tree_grid;
 		private ToolStripMenuItem m_menu_graph_control;
 
 		public FormTestApp()
@@ -46,6 +47,11 @@ namespace TestCS
 			m_menu_tool_form.Click += (s,a) =>
 				{
 					new ToolFormUI(this).Show(this);
+				};
+
+			m_menu_tree_grid.Click += (s,a) =>
+				{
+					new TreeGridUI().Show(this);
 				};
 		}
 
@@ -84,11 +90,12 @@ namespace TestCS
 			this.m_menu_hint_balloon = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_graph_control = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tool_form = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tree_grid = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
-			//
+			// 
 			// m_menu
-			//
+			// 
 			this.m_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file,
             this.m_menu_tests});
@@ -97,65 +104,72 @@ namespace TestCS
 			this.m_menu.Size = new System.Drawing.Size(178, 24);
 			this.m_menu.TabIndex = 0;
 			this.m_menu.Text = "m_menu";
-			//
+			// 
 			// m_menu_file
-			//
+			// 
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file_exit});
 			this.m_menu_file.Name = "m_menu_file";
 			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
 			this.m_menu_file.Text = "&File";
-			//
+			// 
 			// m_menu_file_exit
-			//
+			// 
 			this.m_menu_file_exit.Name = "m_menu_file_exit";
 			this.m_menu_file_exit.Size = new System.Drawing.Size(92, 22);
 			this.m_menu_file_exit.Text = "E&xit";
-			//
+			// 
 			// m_menu_tests
-			//
+			// 
 			this.m_menu_tests.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_tests_view3d,
             this.m_menu_test_colour_wheel,
             this.m_menu_hint_balloon,
             this.m_menu_graph_control,
-            this.m_menu_tool_form});
+            this.m_menu_tool_form,
+            this.m_menu_tree_grid});
 			this.m_menu_tests.Name = "m_menu_tests";
 			this.m_menu_tests.Size = new System.Drawing.Size(46, 20);
 			this.m_menu_tests.Text = "&Tests";
-			//
+			// 
 			// m_menu_tests_view3d
-			//
+			// 
 			this.m_menu_tests_view3d.Name = "m_menu_tests_view3d";
 			this.m_menu_tests_view3d.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_tests_view3d.Text = "&View3d";
-			//
+			// 
 			// m_menu_test_colour_wheel
-			//
+			// 
 			this.m_menu_test_colour_wheel.Name = "m_menu_test_colour_wheel";
 			this.m_menu_test_colour_wheel.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_test_colour_wheel.Text = "&ColourWheel";
-			//
+			// 
 			// m_menu_hint_balloon
-			//
+			// 
 			this.m_menu_hint_balloon.Name = "m_menu_hint_balloon";
 			this.m_menu_hint_balloon.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_hint_balloon.Text = "HintBalloon";
-			//
+			// 
 			// m_menu_graph_control
-			//
+			// 
 			this.m_menu_graph_control.Name = "m_menu_graph_control";
 			this.m_menu_graph_control.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_graph_control.Text = "&GraphControl";
-			//
+			// 
 			// m_menu_tool_form
-			//
+			// 
 			this.m_menu_tool_form.Name = "m_menu_tool_form";
 			this.m_menu_tool_form.Size = new System.Drawing.Size(152, 22);
 			this.m_menu_tool_form.Text = "&Tool Form";
-			//
+			// 
+			// m_menu_tree_grid
+			// 
+			this.m_menu_tree_grid.Name = "m_menu_tree_grid";
+			this.m_menu_tree_grid.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tree_grid.Text = "&Tree Grid";
+			// 
 			// FormTestApp
-			//
+			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(178, 164);
@@ -167,6 +181,7 @@ namespace TestCS
 			this.m_menu.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
+
 		}
 
 		#endregion
