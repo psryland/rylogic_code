@@ -45,7 +45,7 @@ class LineDrawerGUI
 
 	LineDrawer*          m_ldr;             // The main application object
 	WTL::CStatusBarCtrl  m_status;          // The status bar
-	pr::gui::RecentFiles m_recent_files;    // The recent files 
+	pr::gui::RecentFiles m_recent_files;    // The recent files
 	pr::gui::MenuList    m_saved_views;     // A list of camera snapshots
 	bool                 m_sizing;          // True while the window is being resized
 	bool                 m_refresh;         // True when a refresh is pending
@@ -53,15 +53,15 @@ class LineDrawerGUI
 	HACCEL               m_haccel;          // Key accelerators
 	StatusPri            m_status_pri;      // Status priority buffer
 	bool                 m_mouse_status_updates; // Whether to should mouse position in the status bar (todo: more general system for this)
-	
+
 public:
 	LineDrawerGUI();
 	~LineDrawerGUI();
-	
+
 	enum { IDD = IDD_DIALOG_MAIN };
 	BOOL PreTranslateMessage(MSG* pMsg);
 	BOOL OnIdle(int);
-	
+
 	BEGIN_UPDATE_UI_MAP(LineDrawerGUI)
 	END_UPDATE_UI_MAP()
 	BEGIN_DLGRESIZE_MAP(LineDrawerGUI)
@@ -93,7 +93,7 @@ public:
 		CHAIN_MSG_MAP(CDialogResize<LineDrawerGUI>) // note this sets bHandled to true... might be better to use OnSize and DlgResize_UpdateLayout
 		CHAIN_MSG_MAP_MEMBER(m_recent_files)
 		CHAIN_MSG_MAP_MEMBER(m_saved_views)
-		
+
 		COMMAND_ID_HANDLER(ID_ACCELERATOR_FILENEW               ,OnFileNew)
 		COMMAND_ID_HANDLER(ID_ACCELERATOR_FILENEWSCRIPT         ,OnFileNewScript)
 		COMMAND_ID_HANDLER(ID_ACCELERATOR_FILEOPEN              ,OnFileOpen)
@@ -230,9 +230,9 @@ public:
 	// Recent files callbacks
 	void MenuList_OnClick(pr::gui::MenuList* sender, pr::gui::MenuList::Item const& item);
 	void MenuList_ListChanged(pr::gui::MenuList* sender);
-	
+
 	void MouseStatusUpdates(bool enable) { m_mouse_status_updates = enable; }
-	
+
 private:
 	void CloseApp(int exit_code);
 	void Resize();

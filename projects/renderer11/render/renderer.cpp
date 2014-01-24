@@ -71,7 +71,7 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 	PR_EXPAND(PR_DBG_RDR, pr::rdr::NameResource(m_immediate, pr::FmtS("immed dc")));
 
 	// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
-	pr::Throw(factory->MakeWindowAssociation(m_settings.m_hwnd, 0));
+	pr::Throw(factory->MakeWindowAssociation(m_settings.m_hwnd, m_settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
 
 	// Setup the main render target
 	InitMainRT();

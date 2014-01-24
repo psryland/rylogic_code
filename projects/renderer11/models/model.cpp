@@ -56,8 +56,8 @@ void pr::rdr::Model::CreateNugget(pr::rdr::DrawMethod const& meth, EPrim prim_ty
 	// Verify the ranges do not overlap existing nuggets, that's probably an error
 	#if PR_DBG_RDR
 	PR_ASSERT(PR_DBG_RDR, irange.empty() == vrange.empty(), "Illogical combination of Irange and Vrange");
-	for (TNuggetChain::const_iterator i = m_nuggets.begin(), iend = m_nuggets.end(); i != iend; ++i)
-		PR_ASSERT(PR_DBG_RDR, !Intersect(irange, i->m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
+	for (auto i = m_nuggets.begin(), iend = m_nuggets.end(); i != iend; ++i)
+		PR_ASSERT(PR_DBG_RDR, !Intersects(irange, i->m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
 	#endif
 
 	if (!irange.empty())

@@ -107,7 +107,7 @@ BOOL LineDrawerGUI::OnInitDialog(CWindow, LPARAM)
 // Pre translate windows messages
 BOOL LineDrawerGUI::PreTranslateMessage(MSG* pMsg)
 {
-	//pr::DebugMessage(pMsg);
+	//pr::debug_wm::DebugMessage(pMsg,[](int wm){ return wm != WM_TIMER; });
 
 	// Forward messages for the store ui to that dialog
 	if (m_ldr != 0 && m_ldr->m_store_ui.IsChild(pMsg->hwnd))
@@ -117,7 +117,7 @@ BOOL LineDrawerGUI::PreTranslateMessage(MSG* pMsg)
 	if (::TranslateAccelerator(m_hWnd, m_haccel, pMsg) != 0)
 		return TRUE;
 
-	// Intersept key presses
+	// Intercept key presses
 	if (pMsg->message == WM_KEYDOWN)
 	{
 		LRESULT result;

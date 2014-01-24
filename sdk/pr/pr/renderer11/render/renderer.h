@@ -38,6 +38,7 @@ namespace pr
 			UINT                         m_device_layers;      // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
 			pr::Array<D3D_FEATURE_LEVEL> m_feature_levels;     // Features to support. Empty implies 9.1 -> 11.0
 			UINT                         m_vsync;              // Present SyncInterval value
+			bool                         m_allow_alt_enter;    // Allow switching to full screen with alt-enter
 
 			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, pr::iv2 const& client_area = pr::iv2::make(1024,768))
 			:m_mem()
@@ -47,13 +48,14 @@ namespace pr
 			,m_multisamp(4, ~0U)
 			,m_buffer_count(2)
 			,m_swap_effect(DXGI_SWAP_EFFECT_SEQUENTIAL)
-			,m_swap_chain_flags(0)
+			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH)
 			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_adapter(0)
 			,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
 			,m_device_layers(0)
 			,m_feature_levels()
 			,m_vsync(1)
+			,m_allow_alt_enter(true)
 			{
 				// Notes:
 				// - vsync has different meaning for the swap effect modes.

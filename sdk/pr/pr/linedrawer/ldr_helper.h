@@ -70,6 +70,13 @@ namespace pr
 		{
 			return str += "}\n";
 		}
+		template <typename TStr> inline TStr& Nest(TStr const& content, TStr& str)
+		{
+			Nest(str);
+			str += content;
+			UnNest(str);
+			return str;
+		}
 		template <typename TStr> inline TStr& Position(v4 const& position, TStr& str)
 		{
 			str+="*o2w{"; Pos(position, str); str+="}"; return str;
