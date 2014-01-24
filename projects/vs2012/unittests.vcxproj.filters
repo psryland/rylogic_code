@@ -47,6 +47,9 @@
     <Filter Include="sdk\network">
       <UniqueIdentifier>{c6b2ab90-2d54-4ce5-8c83-84b1a254948f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk\gui">
+      <UniqueIdentifier>{51c9bc32-69e7-4267-9ef9-44aaeffcff7e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -767,6 +770,9 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h">
       <Filter>sdk\common</Filter>
+    </ClInclude>
+    <ClInclude Include="Q:\sdk\pr\pr\gui\messagemap_dbg.h">
+      <Filter>sdk\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -249,6 +249,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\threads\thread.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\thread_pool.h" />
     <ClInclude Include="..\unittests\pp_output.h" />
+    <ClInclude Include="Q:\sdk\pr\pr\gui\messagemap_dbg.h" />
     <ClInclude Include="Q:\sdk\pr\pr\lua\lua.h" />
     <ClInclude Include="Q:\sdk\pr\pr\script\char_stream.h" />
     <ClInclude Include="Q:\sdk\pr\pr\script\comment_strip.h" />

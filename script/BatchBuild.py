@@ -17,8 +17,20 @@ sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
 # e.g: "\"folder\proj_name:Rebuild\""
 projects = [
 	"renderer11",
+#	"linedrawer",
+#	"physics",
+#	"unittests",
 	"view3d",
-	"Rylogic"
+#	"sol",
+	"cex",
+#	"fwd",
+#	"TextFormatter",
+#	"prautoexp",
+	"Rylogic",
+#	"Rylogic.VSExtension",
+#	"Csex_vs2012",
+#	"RylogViewer",
+	"TestCS"
 	]
 configs = [
 	"debug",
