@@ -38,33 +38,32 @@ namespace pr.common
 		public Range(long begin, long end) { Begin = begin; End = end; }
 
 		/// <summary>True if the range spans zero elements</summary>
-		public bool Empty                  { get { return End == Begin; } }
+		public bool Empty { get { return End == Begin; } }
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
-		public long Size                   { get { return End - Begin; } set { End = Begin + value; } }
-
-		/// <summary>Gets the start of the range, or moves the range so that 'Begin' is at the given value.<para/>Note, moves 'End' so that 'Size' is unchanged</summary>
-		public long First                  { get { return Begin; } set { var count = Size; Begin = value; End = value + count; } }
-
-		/// <summary>Gets the end of the range, or moves the range so that 'End' is at the given value.<para/>Note, moves 'Begin' so that 'Size' is unchanged</summary>
-		public long Last                   { get { return End; } set { var count = Size; Begin = value - count; End = value; } }
+		public long Size { get { return End - Begin; } set { End = Begin + value; } }
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
-		public long Mid                    { get { return (Begin + End) / 2; } set { var count = Size; Begin = value - count/2; End = value + (count+1)/2; } }
+		public long Mid { get { return (Begin + End) / 2; } set { var count = Size; Begin = value - count/2; End = value + (count+1)/2; } }
 
 		/// <summary>Empty the range and reset to [0,0)</summary>
-		public void Clear()                { Begin = End = 0; }
+		public void Clear() { Begin = End = 0; }
 
 		// Casting helpers
-		public int Begini                  { get { return (int)Begin; } }
-		public int Endi                    { get { return (int)End;   } }
-		public int Sizei                   { get { return (int)Size; } }
-		public int Firsti                  { get { return (int)First; } }
-		public int Lasti                   { get { return (int)Last;  } }
-		public int Midi                    { get { return (int)Mid;   } }
+		public int Begini { get { return (int)Begin; } }
+		public int Endi   { get { return (int)End;   } }
+		public int Sizei  { get { return (int)Size;  } }
+		public int Midi   { get { return (int)Mid;   } }
 
 		/// <summary>Enumerator for iterating over the range</summary>
-		public IEnumerable<long> Enumerate { get { for (long i = Begin; i != End; ++i) yield return i; } }
+		public IEnumerable<long> Enumerate
+		{
+			get
+			{
+				for (var i = Begin; i != End; ++i)
+					yield return i;
+			}
+		}
 
 		/// <summary>Returns true if 'value' is within the range [Begin,End) (i.e. end exclusive)</summary>
 		[Pure] public bool Contains(long value)
@@ -90,7 +89,7 @@ namespace pr.common
 		public void Encompass(long value)
 		{
 			Begin = Math.Min(Begin , value);
-			End   = Math.Max(End   , value);
+			End   = Math.Max(End   , value + 1);
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
@@ -193,30 +192,22 @@ namespace pr.common
 		public RangeF(double begin, double end) { Begin = begin; End = end; }
 
 		/// <summary>True if the range spans zero elements</summary>
-		public bool Empty                  { get { return Equals(Begin,End); } }
+		public bool Empty { get { return Equals(Begin,End); } }
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
-		public double Size                 { get { return End - Begin; } set { End = Begin + value; } }
-
-		/// <summary>Gets the start of the range, or moves the range so that 'Begin' is at the given value.<para/>Note, moves 'End' so that 'Size' is unchanged</summary>
-		public double First                { get { return Begin; } set { var size = Size; Begin = value; End = value + size; } }
-
-		/// <summary>Gets the end of the range, or moves the range so that 'End' is at the given value.<para/>Note, moves 'Begin' so that 'Size' is unchanged</summary>
-		public double Last                 { get { return End; } set { var size = Size; Begin = value - size; End = value; } }
+		public double Size { get { return End - Begin; } set { End = Begin + value; } }
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
-		public double Mid                  { get { return (Begin + End) * 0.5; } set { var hsize = Size*0.5; Begin = value - hsize; End = value + hsize; } }
+		public double Mid { get { return (Begin + End) * 0.5; } set { var hsize = Size*0.5; Begin = value - hsize; End = value + hsize; } }
 
 		/// <summary>Empty the range and reset to [0,0)</summary>
-		public void Clear()                { Begin = End = 0.0; }
+		public void Clear() { Begin = End = 0.0; }
 
 		// Casting helpers
-		public float Beginf                { get { return (float)Begin; } }
-		public float Endf                  { get { return (float)End;   } }
-		public float Sizef                 { get { return (float)Size;  } }
-		public float Firstf                { get { return (float)First; } }
-		public float Lastf                 { get { return (float)Last;  } }
-		public float Midf                  { get { return (float)Mid;   } }
+		public float Beginf { get { return (float)Begin; } }
+		public float Endf   { get { return (float)End;   } }
+		public float Sizef  { get { return (float)Size;  } }
+		public float Midf   { get { return (float)Mid;   } }
 
 		/// <summary>Returns true if 'value' is within the range [Begin,End) (i.e. end exclusive)</summary>
 		[Pure] public bool Contains(double value)
@@ -361,15 +352,20 @@ namespace pr
 				var r = Range.Invalid;
 				r.Encompass(4);
 				Assert.AreEqual(4, r.Begin);
-				Assert.AreEqual(4, r.End);
+				Assert.AreEqual(5, r.End);
+				Assert.IsTrue(r.Contains(4));
 
 				r.Encompass(-2);
 				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 4, r.End);
+				Assert.AreEqual( 5, r.End);
+				Assert.IsTrue(r.Contains(-2));
+				Assert.IsTrue(r.Contains(4));
 
 				r.Encompass(new Range(1,7));
 				Assert.AreEqual(-2, r.Begin);
 				Assert.AreEqual( 7, r.End);
+				Assert.IsTrue(r.Contains(-2));
+				Assert.IsFalse(r.Contains(7));
 
 				var r2 = r.Union(new Range(-3,2));
 				Assert.AreEqual(-2, r.Begin);
