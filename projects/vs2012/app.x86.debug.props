@@ -4,12 +4,7 @@
     <TargetPlatform>x86</TargetPlatform>
   </PropertyGroup>
   <PropertyGroup>
-    <ReferencePath>$(ReferencePath)</ReferencePath>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
-    <SourcePath>$(SourcePath)</SourcePath>
-    <ExcludePath>$(ExcludePath)</ExcludePath>
-    <IncludePath>$(IncludePath)</IncludePath>
-    <OutDir>..\..\obj2012\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)</IntDir>
   </PropertyGroup>
   <ItemGroup>

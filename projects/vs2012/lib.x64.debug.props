@@ -5,11 +5,10 @@
     <TargetPlatform>x64</TargetPlatform>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>..\..\obj2012\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup>
     <IntDir>$(OutDir)</IntDir>
-    <IncludePath>..\..\sdk\stlport;$(IncludePath)</IncludePath>
     <TargetExt>.lib</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup>

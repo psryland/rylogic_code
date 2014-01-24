@@ -5,14 +5,13 @@
     <TargetPlatform>x86</TargetPlatform>
   </PropertyGroup>
   <PropertyGroup>
-    <OutDir>..\..\obj2012\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup>
     <IntDir>$(OutDir)</IntDir>
   </PropertyGroup>
   <PropertyGroup />
   <PropertyGroup>
-    <IncludePath>..\..\sdk\stlport;$(IncludePath)</IncludePath>
     <TargetExt>.lib</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup>
