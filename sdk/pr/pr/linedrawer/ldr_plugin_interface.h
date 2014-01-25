@@ -37,7 +37,7 @@ LDR_API(LDR_EXPORT, void                  ,Error                ,(ldrapi::Plugin
 LDR_API(LDR_EXPORT, void                  ,Status               ,(ldrapi::PluginHandle handle, char const* msg, bool bold, int priority, DWORD min_display_time_ms))
 LDR_API(LDR_EXPORT, void                  ,MouseStatusUpdates   ,(ldrapi::PluginHandle handle, bool enable))
 //Import	bool					ldrSource					(const char* src, std::size_t len, bool clear_data, bool recentre);
-//Import	pr::ldr::ObjectHandle	ldrRegisterCustomObject		(pr::ldr::CustomObjectData const& settings); 
+//Import	pr::ldr::ObjectHandle	ldrRegisterCustomObject		(pr::ldr::CustomObjectData const& settings);
 //Import	unsigned int			ldrGetNumPluginObjects		();
 //Import	void					ldrEditObject				(pr::ldr::ObjectHandle object, pr::ldr::EditObjectFunc func, void* user_data);
 LDR_API(LDR_EXPORT, pr::m4x4              ,ObjectO2W            ,(ldrapi::ObjectHandle object))
@@ -84,34 +84,34 @@ LDR_API(LDR_EXPORT, void                  ,ObjectSetWireframe   ,(ldrapi::Object
 #define LDR_EXPORT extern "C" __declspec(dllimport)
 #define LDR_IMPORT extern "C" __declspec(dllexport)
 #endif
-	
+
 // Forward declarations
-struct Plugin;
+namespace ldr { struct Plugin; }
 namespace pr { namespace ldr { struct LdrObject; } }
-	
+
 namespace ldrapi
 {
 	// A handle for each plugin to identify itself
-	typedef ::Plugin* PluginHandle;
-	
+	typedef ::ldr::Plugin* PluginHandle;
+
 	// A handle to each created ldr object
 	typedef ::pr::ldr::LdrObject* ObjectHandle;
-	
+
 	// Callback function for when a menu item is clicked
 	typedef void (__stdcall *OnMenuClickCB)(void* ctx, int id);
-	
+
 	// Generate function typedefs
 	#define LDR_API(src, rtype, fname, params) typedef rtype (*Plugin_##fname) params;
 	#include "ldr_plugin_interface.h"
-	
+
 	// Generate function pointers to the api functions for plugin projects only
 	// Linedrawer cannot use these function pointers as it loads multiple plugins
 	#if !LDR_EXPORTS
-	
+
 	// Generate function pointers to the api functions
 	#define LDR_API(src, rtype, fname, params) static Plugin_##fname fname;
 	#include "ldr_plugin_interface.h"
-	
+
 	// Setup the function pointers
 	inline void InitAPI()
 	{
@@ -119,12 +119,12 @@ namespace ldrapi
 		#define LDR_API(src, rtype, fname, params) fname = (Plugin_##fname)::GetProcAddress(ldr_exe, "ldr"#fname);
 		#include "ldr_plugin_interface.h"
 	}
-	
+
 	// A helper wrapper around LdrObjects
 	struct Object
 	{
 		ObjectHandle m_obj;
-		
+
 		Object() :m_obj() {}
 		Object(ObjectHandle obj) :m_obj(obj) {}
 		void operator =(ObjectHandle obj)    { m_obj = obj; }
@@ -138,13 +138,11 @@ namespace ldrapi
 	};
 	#endif
 }
-	
+
 // Declare imported/exported functions with "C" linkage
 // These have the form: extern "C" __declspec(dllexport) void ldrFunction(int);
 // Plugins should use functions of the form: ldrapi::Function(int);
 #define LDR_API(src, rtype, fname, params) src rtype ldr##fname params;
 #include "ldr_plugin_interface.h"
-	
+
 #endif
-
-

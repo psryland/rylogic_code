@@ -55,7 +55,7 @@ namespace pr
 			,m_device_layers(0)
 			,m_feature_levels()
 			,m_vsync(1)
-			,m_allow_alt_enter(true)
+			,m_allow_alt_enter(false)
 			{
 				// Notes:
 				// - vsync has different meaning for the swap effect modes.
@@ -115,6 +115,12 @@ namespace pr
 
 		// Read access to the initialisation settings
 		pr::rdr::RdrSettings const& Settings() const { return m_settings; }
+
+		// Get/Set full screen mode
+		// Don't use the automatic alt-enter system, it's too uncontrollable
+		// Handle WM_SYSKEYDOWN for VK_RETURN, then call FullScreenMode
+		bool FullScreenMode() const;
+		void FullScreenMode(bool on, pr::rdr::DisplayMode mode);
 
 		// Returns the size of the displayable area as known by the renderer
 		pr::iv2 DisplayArea() const;

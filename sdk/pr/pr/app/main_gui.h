@@ -61,10 +61,6 @@ namespace pr
 			// Create/Destroy the main window
 			virtual LRESULT OnCreate(LPCREATESTRUCT)
 			{
-				//// Set icons
-				//SetIcon((HICON)::LoadImage(create->hInstance, "MainIcon", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,TRUE);
-				//SetIcon((HICON)::LoadImage(create->hInstance, "MainIcon", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,FALSE);
-
 				// Create the main app logic
 				try { m_main = new Main(static_cast<DerivedGUI&>(*this)); }
 				catch (std::exception const& ex)
@@ -86,6 +82,18 @@ namespace pr
 
 				// Window title
 				SetWindowTextW(m_hWnd, m_main->AppTitle());
+
+				// Example derived class code:
+
+				// Set icons
+				//SetIcon((HICON)::LoadImage(create->hInstance, "MainIcon", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,TRUE);
+				//SetIcon((HICON)::LoadImage(create->hInstance, "MainIcon", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,FALSE);
+
+				// Load menu
+				//SetMenu(LoadMenu(create->hInstance, MAKEINTRESOURCE(IDR_MENU_MAIN)));
+
+				// Load accelerators (m_hAccel is a member of CFrameWindowImpl)
+				//m_hAccel = (HACCEL)::LoadAccelerators(create->hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR2));
 
 				// Note: derived classes may need to set up a method for rendering,
 				// By default, rendering occurs in OnPaint(), however if a SimMsgLoop
@@ -118,30 +126,27 @@ namespace pr
 				return FALSE;
 			}
 
-			// Handle menu commands
-			void OnSysCommand(UINT wparam, WTL::CPoint const&)
+			// Timers
+			virtual void OnTimer(UINT_PTR nIDEvent)
 			{
-				switch (wparam)
-				{
-				default: SetMsgHandled(FALSE); break;
-				case SC_CLOSE: CloseApp(0); break;
-				}
-			}
-			void OnCommand(UINT, INT wID, HWND)
-			{
-				switch (wID)
-				{
-				default: SetMsgHandled(FALSE); break;
-				case IDCLOSE:
-					CloseApp(0);
-					break;
-				}
+				(void)nIDEvent;
 			}
 
 			// Rendering the window
 			virtual LRESULT OnEraseBkGnd(HDC hdc)
 			{
 				(void)hdc;
+				if (m_resizing)
+				{
+					CBrush brush; brush.CreateSolidBrush(0xFF808080);
+					CRect r; GetClientRect(&r);
+					CPoint ctr = r.CenterPoint();
+					CDCHandle dc(hdc);
+					dc.FillRect(&r, brush);
+					dc.SetTextAlign(TA_CENTER|TA_BASELINE);
+					dc.SetBkMode(TRANSPARENT);
+					dc.TextOutA(ctr.x, ctr.y, "...resizing...");
+				}
 				//if (m_sizing)
 				//{
 				//	HBRUSH hbrush = CreateSolidBrush(m_ldr->Settings().m_background_colour.GetColorRef());
@@ -158,7 +163,7 @@ namespace pr
 			}
 			virtual void OnPaint(HDC)
 			{
-				if (m_main/* && !m_resizing*/) m_main->Render();
+				if (m_main/* && !m_resizing*/) m_main->DoRender();
 				SetMsgHandled(FALSE);
 			}
 
@@ -182,7 +187,8 @@ namespace pr
 			virtual void OnSize(UINT type, CSize)
 			{
 				SetMsgHandled(FALSE);
-				if (m_resizing) return;
+				if (m_resizing)
+					return;
 				if (type != SIZE_MINIMIZED)
 				{
 					// Find the new client area
@@ -195,9 +201,25 @@ namespace pr
 					if (m_main)
 					{
 						m_main->Resize(area.Size());
-						m_main->Render();
+						m_main->RenderNeeded();
 					}
 				}
+			}
+
+			// Key down/up
+			virtual void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+			{
+				(void)nChar;
+				(void)nRepCnt;
+				(void)nFlags;
+				SetMsgHandled(FALSE);
+			}
+			virtual void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
+			{
+				(void)nChar;
+				(void)nRepCnt;
+				(void)nFlags;
+				SetMsgHandled(FALSE);
 			}
 
 			// Default mouse navigation behaviour
@@ -222,28 +244,40 @@ namespace pr
 				return FALSE; // ie. we handled this wheel message
 			}
 
+			// Drag-drop
+			virtual void OnDropFiles(HDROP hDropInfo)
+			{
+				(void)hDropInfo;
+			}
+
 			// Message Map
-			enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100 };
-			DECLARE_FRAME_WND_CLASS(_T("PR_APP_MAIN_GUI"), IDR_MAINFRAME);
+			// Derived app should create there own msg map, and use CHAIN_MSG_MAP(base)
 			BEGIN_MSG_MAP(x)
 				MSG_WM_CREATE(OnCreate)
 				MSG_WM_DESTROY(OnDestroy)
-				MSG_WM_SYSCOMMAND(OnSysCommand)
-				MSG_WM_COMMAND(OnCommand)
+				MSG_WM_TIMER(OnTimer)
 				MSG_WM_ERASEBKGND(OnEraseBkGnd)
 				MSG_WM_PAINT(OnPaint)
 				MSG_WM_GETMINMAXINFO(OnGetMinMaxInfo)
 				MSG_WM_SIZING(OnSizing)
 				MSG_WM_EXITSIZEMOVE(OnExitSizeMove)
 				MSG_WM_SIZE(OnSize)
+				MSG_WM_KEYDOWN(OnKeyDown)
+				MSG_WM_KEYUP(OnKeyUp)
 				MSG_WM_LBUTTONDOWN(OnMouseDown)
 				MSG_WM_RBUTTONDOWN(OnMouseDown)
+				MSG_WM_MBUTTONDOWN(OnMouseDown)
 				MSG_WM_LBUTTONUP(OnMouseUp)
 				MSG_WM_RBUTTONUP(OnMouseUp)
+				MSG_WM_MBUTTONUP(OnMouseUp)
 				MSG_WM_MOUSEMOVE(OnMouseMove)
 				MSG_WM_MOUSEWHEEL(OnMouseWheel)
+				MSG_WM_DROPFILES(OnDropFiles)
 				CHAIN_MSG_MAP(CFrameWindowImpl<DerivedGUI>)
 			END_MSG_MAP()
+
+			enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100 };
+			DECLARE_FRAME_WND_CLASS(_T("PR_APP_MAIN_GUI"), IDR_MAINFRAME);
 		};
 	}
 }

@@ -42,6 +42,7 @@
 #include <atlctrls.h>
 #include <atldlgs.h>
 #include <atlcrack.h>
+#include <shellapi.h>
 
 // pr
 #include "pr/macros/enum.h"

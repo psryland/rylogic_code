@@ -6,7 +6,7 @@
 //  If a project contains more than one .rc (such as including the .rc from a static lib)
 //  then only one of the .rc files can contain ICONS otherwise the linker gives a duplicate
 //  resource error.
-//  Handle this by not having icons in the static lib resource files. Assess the icons by
+//  Handle this by not having icons in the static lib resource files. Access the icons by
 //  string name in the library gui code. Add all icons to the main project.rc file
 //#include <windows.h>
 #include <commctrl.h>

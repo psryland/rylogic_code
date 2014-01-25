@@ -52,7 +52,7 @@ LRESULT pr::ldr::MeasureDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	//m_edit_details.SetFont(m_edit_details_font);
 
 	DlgResize_Init();
-	UpdateMeasurementInfo();
+	UpdateMeasurementInfo(false);
 	return S_OK;
 }
 
@@ -125,7 +125,7 @@ void pr::ldr::MeasureDlg::Show(bool show)
 }
 
 // Update the text in the measurement details edit control
-void pr::ldr::MeasureDlg::UpdateMeasurementInfo()
+void pr::ldr::MeasureDlg::UpdateMeasurementInfo(bool raise_event)
 {
 	// Remove any existing graphics
 	m_measurement_gfx = 0;
@@ -177,7 +177,9 @@ void pr::ldr::MeasureDlg::UpdateMeasurementInfo()
 		,dzx > pr::maths::tiny && fabs(dx) > pr::maths::tiny ? pr::RadiansToDegrees(pr::Angle(dzx, fabs(dx), fabs(dz))) : 0.0f
 		,dxy > pr::maths::tiny && fabs(dx) > pr::maths::tiny ? pr::RadiansToDegrees(pr::Angle(dxy, fabs(dx), fabs(dy))) : 0.0f
 		));
-	pr::events::Send(pr::ldr::Evt_LdrMeasureUpdate());
+
+	if (raise_event)
+		pr::events::Send(pr::ldr::Evt_LdrMeasureUpdate());
 }
 
 // Angle *****************************************************************
@@ -224,7 +226,7 @@ LRESULT pr::ldr::AngleDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	//m_edit_details.SetFont(m_edit_details_font);
 
 	DlgResize_Init();
-	UpdateAngleInfo();
+	UpdateAngleInfo(false);
 	return S_OK;
 }
 
@@ -302,7 +304,7 @@ void pr::ldr::AngleDlg::Show(bool show)
 }
 
 // Update the text in the measurement details edit control
-void pr::ldr::AngleDlg::UpdateAngleInfo()
+void pr::ldr::AngleDlg::UpdateAngleInfo(bool raise_event)
 {
 	// Remove any existing graphics
 	m_angle_gfx = 0;
@@ -341,5 +343,7 @@ void pr::ldr::AngleDlg::UpdateAngleInfo()
 		,edge2
 		,ang
 		));
-	pr::events::Send(pr::ldr::Evt_LdrAngleDlgUpdate());
+
+	if (raise_event)
+		pr::events::Send(pr::ldr::Evt_LdrAngleDlgUpdate());
 }

@@ -6,7 +6,7 @@
 #ifndef PR_LDR_TEXT_PANEL_DLG_H
 #define PR_LDR_TEXT_PANEL_DLG_H
 
-#include "linedrawer/types/forward.h"
+#include "linedrawer/main/forward.h"
 #include "linedrawer/resources/linedrawer.resources.h"
 
 class CTextEntryDlg
@@ -49,7 +49,7 @@ public:
 	{
 		m_font.CreatePointFont(80, "courier new");
 	}
-	
+
 	// Handler methods
 	LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	{

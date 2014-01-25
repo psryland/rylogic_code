@@ -6,40 +6,10 @@
 #ifndef LDR_FORWARD_H
 #define LDR_FORWARD_H
 
-// Change these values to use different versions
-#define  WINVER       0x0501//0x0400//0x0600//
-#define _WIN32_WINNT  0x0501//0x0400//0x0600//
-#define _WIN32_IE     0x0501//0x0400//0x0700//
-#define _RICHEDIT_VER 0x0300//0x0200
-
-// Change these values to use different versions
-#define _WTL_NO_CSTRING
-
-#include "pr/common/min_max_fix.h"
-#include <windows.h>
-#include <shellapi.h>
-
-// std
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <list>
-
-// wtl
-#include <atlbase.h>
-#include <atlapp.h>
-#include <atlwin.h>
-#include <atlctrls.h>
-#include <atlcom.h>
-#include <atlmisc.h>
-#include <atlddx.h>
-#include <atlframe.h>
-#include <atlctrls.h>
-//#include <atlctrlx.h>
-#include <atlctrlw.h>
-#include <atldlgs.h>
-#include <atlcrack.h>
+#include "pr/app/forward.h"
+#include "pr/app/main.h"
+#include "pr/app/main_gui.h"
+#include "pr/app/sim_message_loop.h"
 
 // pr
 #include "pr/macros/count_of.h"
@@ -66,9 +36,10 @@
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"
 #include "pr/script/script_forward.h"
-#include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_forward.h"
+#include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
+#include "pr/linedrawer/ldr_tools.h"
 #include "pr/network/web_get.h"
 #include "pr/storage/xml.h"
 
@@ -114,23 +85,30 @@ PR_DEFINE_ENUM1(EScreenView, PR_ENUM);
 
 typedef pr::Exception<ELdrException> LdrException;
 
-// Main app
-class  LineDrawerGUI;
-class  LineDrawer;
-struct UserSettings;
-class  PluginManager;
-struct Plugin;
 typedef std::vector<pr::ldr::ContextId> ContextIdCont;
 
 namespace ldr
 {
-	char const* AppTitle();
+	wchar_t const* AppTitleW();
+	char const* AppTitleA();
 	char const* AppString();
 	char const* AppStringLine();
+
 	typedef pr::string<> string;
 	typedef std::istream istream;
 	typedef std::ostream ostream;
 	typedef std::stringstream sstream;
+
+	struct MainGUI;
+	struct Main;
+	struct UserSettings;
+	class  PluginManager;
+	struct Plugin;
+	struct NavManager;
 }
+
+//hack
+typedef ldr::Main LineDrawer;
+typedef ldr::MainGUI LineDrawerGUI;
 
 #endif

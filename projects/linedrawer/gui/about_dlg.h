@@ -6,7 +6,7 @@
 #ifndef PR_LDR_ABOUTDLG_H
 #define PR_LDR_ABOUTDLG_H
 
-#include "linedrawer/types/forward.h"
+#include "linedrawer/main/forward.h"
 #include "linedrawer/resources/linedrawer.resources.h"
 
 class CAboutLineDrawer :public CDialogImpl<CAboutLineDrawer>
@@ -19,7 +19,7 @@ public:
 		COMMAND_ID_HANDLER(IDOK       ,OnCloseDialog)
 		COMMAND_ID_HANDLER(IDCANCEL   ,OnCloseDialog)
 	END_MSG_MAP()
-	
+
 	// Handler methods
 	LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	{

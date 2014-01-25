@@ -6,12 +6,12 @@
 #include "linedrawer/plugin/plugin_manager_dlg.h"
 #include "linedrawer/plugin/plugin_manager.h"
 #include "linedrawer/plugin/plugin.h"
-#include "linedrawer/types/ldrevent.h"
+#include "linedrawer/main/ldrevent.h"
 #include "pr/gui/misc.h"
 
-namespace
+namespace ldr
 {
-	TCHAR LdrPluginFileFilter[] = TEXT("Ldr Plugin (*.dll)\0*.dll\0\0");
+	TCHAR PluginFileFilter[] = TEXT("Ldr Plugin (*.dll)\0*.dll\0\0");
 	namespace EColumn
 	{
 		enum Type { Name, Filepath, NumberOf };
@@ -25,14 +25,14 @@ namespace
 		}
 	}
 }
-	
-PluginManagerDlg::PluginManagerDlg(PluginManager& plugin_mgr, HWND parent)
+
+ldr::PluginManagerDlg::PluginManagerDlg(PluginManager& plugin_mgr, HWND parent)
 :m_plugin_mgr(plugin_mgr)
 ,m_parent(parent)
 {}
-	
+
 //
-LRESULT PluginManagerDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+LRESULT ldr::PluginManagerDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	CenterWindow(m_parent);
 	m_list_plugins         .Attach(GetDlgItem(IDC_LIST_PLUGINS));
@@ -58,24 +58,24 @@ LRESULT PluginManagerDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	UpdateUI();
 	return S_OK;
 }
-	
-LRESULT PluginManagerDlg::OnCloseDialog(WORD, WORD wID, HWND, BOOL&)
+
+LRESULT ldr::PluginManagerDlg::OnCloseDialog(WORD, WORD wID, HWND, BOOL&)
 {
 	EndDialog(wID);
 	return S_OK;
 }
-	
+
 // Browse for a plugin filepath
-LRESULT PluginManagerDlg::OnBrowsePlugin(WORD, WORD, HWND, BOOL&)
+LRESULT ldr::PluginManagerDlg::OnBrowsePlugin(WORD, WORD, HWND, BOOL&)
 {
-	WTL::CFileDialog fd(TRUE,0,0,0,LdrPluginFileFilter,m_hWnd);
+	WTL::CFileDialog fd(TRUE,0,0,0,ldr::PluginFileFilter,m_hWnd);
 	if (fd.DoModal() != IDOK) return S_OK;
 	m_edit_plugin_filepath.SetWindowTextA(fd.m_szFileName);
 	return S_OK;
 }
-	
+
 // Add a plugin
-LRESULT PluginManagerDlg::OnAddPlugin(WORD, WORD, HWND, BOOL& bHandled)
+LRESULT ldr::PluginManagerDlg::OnAddPlugin(WORD, WORD, HWND, BOOL& bHandled)
 {
 	// Check if a path to the plug in has been given, if not browse for one instead of adding
 	std::string filepath = pr::GetCtrlText(m_edit_plugin_filepath);
@@ -97,9 +97,9 @@ LRESULT PluginManagerDlg::OnAddPlugin(WORD, WORD, HWND, BOOL& bHandled)
 	pr::events::Send(ldr::Event_Refresh());
 	return S_OK;
 }
-	
+
 // Remove selected plugins
-LRESULT PluginManagerDlg::OnRemovePlugin(WORD, WORD, HWND, BOOL&)
+LRESULT ldr::PluginManagerDlg::OnRemovePlugin(WORD, WORD, HWND, BOOL&)
 {
 	// While there is a selected item, remove it
 	for (int i = m_list_plugins.GetNextItem(-1, LVNI_SELECTED); i != -1; i = m_list_plugins.GetNextItem(-1, LVNI_SELECTED))
@@ -111,9 +111,9 @@ LRESULT PluginManagerDlg::OnRemovePlugin(WORD, WORD, HWND, BOOL&)
 	pr::events::Send(ldr::Event_Refresh());
 	return S_OK;
 }
-	
+
 // Handle list items being selected
-LRESULT PluginManagerDlg::OnListItemSelected(WPARAM, LPNMHDR hdr, BOOL& bHandled)
+LRESULT ldr::PluginManagerDlg::OnListItemSelected(WPARAM, LPNMHDR hdr, BOOL& bHandled)
 {
 	if (hdr->code == LVN_ITEMCHANGED)
 	{
@@ -127,26 +127,23 @@ LRESULT PluginManagerDlg::OnListItemSelected(WPARAM, LPNMHDR hdr, BOOL& bHandled
 	bHandled = false;
 	return S_OK;
 }
-	
+
 // Add a plugin to the list in the UI
-void PluginManagerDlg::AddPluginToList(Plugin const* plugin)
+void ldr::PluginManagerDlg::AddPluginToList(Plugin const* plugin)
 {
 	int item = m_list_plugins.InsertItem(m_list_plugins.GetItemCount(), plugin->Name());
 	m_list_plugins.SetItemText(item ,EColumn::Name     ,plugin->Name());
 	m_list_plugins.SetItemText(item ,EColumn::Filepath ,plugin->Filepath());
 	m_list_plugins.SetItemData(item, reinterpret_cast<DWORD_PTR>(plugin));
-	
+
 	// Resize the columns
 	for (int i = 0; i != EColumn::NumberOf; ++i)
 		m_list_plugins.SetColumnWidth(i, LVSCW_AUTOSIZE_USEHEADER);
 }
-	
+
 // Enable/Disable UI elements
-void PluginManagerDlg::UpdateUI()
+void ldr::PluginManagerDlg::UpdateUI()
 {
 	bool plugin_selected = m_list_plugins.GetSelectedCount() != 0;
 	m_btn_remove.EnableWindow(plugin_selected);
-
 }
-
-

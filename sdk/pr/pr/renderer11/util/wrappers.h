@@ -385,8 +385,8 @@ namespace pr
 				Width                   = width;
 				Height                  = height;
 				Format                  = format;
-				RefreshRate.Numerator   = 60;
-				RefreshRate.Denominator = 1;
+				RefreshRate.Numerator   = 0; // let dx choose
+				RefreshRate.Denominator = 0;
 				ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 				Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
 			}
@@ -396,8 +396,8 @@ namespace pr
 				Width                   = area.x;
 				Height                  = area.y;
 				Format                  = format;
-				RefreshRate.Numerator   = 60;
-				RefreshRate.Denominator = 1;
+				RefreshRate.Numerator   = 0; // let dx choose
+				RefreshRate.Denominator = 0;
 				ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 				Scaling                 = DXGI_MODE_SCALING_UNSPECIFIED;
 			}

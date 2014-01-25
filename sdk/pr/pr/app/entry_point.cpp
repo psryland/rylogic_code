@@ -25,13 +25,11 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 		//ICC_BAR_CLASSES|ICC_TAB_CLASSES
 		AtlInitCommonControls(ICC_STANDARD_CLASSES); // add flags to support other controls
-		
+
 		// Initialise the WTL module singleton
 		pr::Throw(pr::app::Module().Init(NULL, hInstance));
 
 		// Create an instance of the main window and start it running
-		// The gui should create it's own message loop and register it
-		// with the app module (and clean it up on destruction)
 		std::shared_ptr<ATL::CWindow> gui = pr::app::CreateGUI(lpstrCmdLine);
 		gui->ShowWindow(nCmdShow);
 		gui->UpdateWindow();

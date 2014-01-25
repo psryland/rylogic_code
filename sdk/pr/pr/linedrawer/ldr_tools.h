@@ -45,10 +45,10 @@ namespace pr
 			pr::v4                m_point0;               // The start of the measurement
 			pr::v4                m_point1;               // The end of the measurement
 			pr::ldr::LdrObjectPtr m_measurement_gfx;      // Graphics created by this Measure tool
-			
+
 			MeasureDlg(MeasureDlg const&);
 			MeasureDlg& operator=(MeasureDlg const&);
-			
+
 		public:
 			enum {IDC_POINT0=1000, IDC_POINT1, IDC_DETAILS};
 			BEGIN_DIALOG_EX(0, 0, 83, 134, 0)
@@ -77,22 +77,22 @@ namespace pr
 				COMMAND_HANDLER(IDC_POINT1 ,BN_CLICKED  ,OnSetPoint)
 				CHAIN_MSG_MAP(CDialogResize<MeasureDlg>)
 			END_MSG_MAP()
-			
+
 			MeasureDlg(ReadPointCB read_point_cb ,void* ctx ,pr::Renderer& rdr ,HWND parent = 0);
 			~MeasureDlg();
-			
+
 			// Handler methods
 			LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 			LRESULT OnDestDialog(UINT, WPARAM, LPARAM, BOOL&);
 			LRESULT OnClose(WORD, WORD, HWND, BOOL&);
 			LRESULT OnSetPoint(WORD, WORD, HWND, BOOL&);
-			
+
 			pr::ldr::LdrObjectPtr Gfx() const { return m_measurement_gfx; }
-			
+
 			void SetReadPointCB(ReadPointCB read_point_cb, void* ctx);
 			void SetReadPointCtx(void* ctx);
 			void Show(bool show);
-			void UpdateMeasurementInfo();
+			void UpdateMeasurementInfo(bool raise_event = true);
 		};
 
 		// Events
@@ -156,22 +156,22 @@ namespace pr
 				COMMAND_HANDLER(IDC_POINT1 ,BN_CLICKED  ,OnSetPoint)
 				CHAIN_MSG_MAP(CDialogResize<AngleDlg>)
 			END_MSG_MAP()
-			
+
 			AngleDlg(ReadPointCB read_point_cb ,void* ctx ,pr::Renderer& rdr ,HWND parent = 0);
 			~AngleDlg();
-			
+
 			// Handler methods
 			LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 			LRESULT OnDestDialog(UINT, WPARAM, LPARAM, BOOL&);
 			LRESULT OnClose(WORD, WORD, HWND, BOOL&);
 			LRESULT OnSetPoint(WORD, WORD, HWND, BOOL&);
-			
+
 			pr::ldr::LdrObjectPtr Gfx() const { return m_angle_gfx; }
-			
+
 			void SetReadPointCB(ReadPointCB read_point_cb, void* ctx);
 			void SetReadPointCtx(void* ctx);
 			void Show(bool show);
-			void UpdateAngleInfo();
+			void UpdateAngleInfo(bool raise_event = true);
 		};
 
 		// Events

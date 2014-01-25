@@ -9,9 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="types">
-      <UniqueIdentifier>{4be72a78-3b1d-4dda-a347-c82369ecc232}</UniqueIdentifier>
-    </Filter>
     <Filter Include="resources">
       <UniqueIdentifier>{4b02dc90-3953-4d85-b474-f5cf33b8949c}</UniqueIdentifier>
     </Filter>
@@ -39,18 +36,21 @@
     <Filter Include="tools">
       <UniqueIdentifier>{a97bcce8-34b3-47d2-9c2a-1113b27b9756}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk">
+      <UniqueIdentifier>{d5e2a138-9399-408f-995d-c7d59ab318df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\pr">
+      <UniqueIdentifier>{31775a2c-98ba-451e-99fd-6fbbc20fd92c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\pr\app">
+      <UniqueIdentifier>{824051ef-3b2a-46ed-b82c-893721fd0f70}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\linedrawer\main\file_sources.cpp">
       <Filter>main</Filter>
     </ClCompile>
-    <ClCompile Include="..\linedrawer\main\linedrawer.cpp">
-      <Filter>main</Filter>
-    </ClCompile>
     <ClCompile Include="..\linedrawer\main\lua_source.cpp">
-      <Filter>main</Filter>
-    </ClCompile>
-    <ClCompile Include="..\linedrawer\main\main.cpp">
       <Filter>main</Filter>
     </ClCompile>
     <ClCompile Include="..\linedrawer\main\navmanager.cpp">
@@ -58,9 +58,6 @@
     </ClCompile>
     <ClCompile Include="..\linedrawer\main\stdafx.cpp">
       <Filter>main</Filter>
-    </ClCompile>
-    <ClCompile Include="..\linedrawer\gui\linedrawergui.cpp">
-      <Filter>gui</Filter>
     </ClCompile>
     <ClCompile Include="..\linedrawer\plugin\plugin_manager_dlg.cpp">
       <Filter>gui</Filter>
@@ -86,12 +83,18 @@
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.cpp">
       <Filter>objects</Filter>
     </ClCompile>
+    <ClCompile Include="..\linedrawer\main\linedrawer.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\linedrawer\gui\linedrawergui.cpp">
+      <Filter>gui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\app\entry_point.cpp">
+      <Filter>sdk\pr\app</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\linedrawer\main\file_sources.h">
-      <Filter>main</Filter>
-    </ClInclude>
-    <ClInclude Include="..\linedrawer\main\linedrawer.h">
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="..\linedrawer\main\lua_source.h">
@@ -104,9 +107,6 @@
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="..\linedrawer\gui\about_dlg.h">
-      <Filter>gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\linedrawer\gui\linedrawergui.h">
       <Filter>gui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\gui\menu_helper.h">
@@ -129,15 +129,6 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\gui\wtl_tab_view_ctrl.h">
       <Filter>gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\linedrawer\types\forward.h">
-      <Filter>types</Filter>
-    </ClInclude>
-    <ClInclude Include="..\linedrawer\types\ldrevent.h">
-      <Filter>types</Filter>
-    </ClInclude>
-    <ClInclude Include="..\linedrawer\types\ldrexception.h">
-      <Filter>types</Filter>
     </ClInclude>
     <ClInclude Include="..\linedrawer\utility\debug.h">
       <Filter>utility</Filter>
@@ -175,9 +166,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h">
       <Filter>objects</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_forward.h">
-      <Filter>types</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h">
       <Filter>utility</Filter>
     </ClInclude>
@@ -188,6 +176,30 @@
       <Filter>camera</Filter>
     </ClInclude>
     <ClInclude Include="..\linedrawer\main\user_settings.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\linedrawer.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\gui\linedrawergui.h">
+      <Filter>gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\forward.h">
+      <Filter>sdk\pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\main.h">
+      <Filter>sdk\pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\main_gui.h">
+      <Filter>sdk\pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\forward.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\ldrevent.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\main\ldrexception.h">
       <Filter>main</Filter>
     </ClInclude>
   </ItemGroup>

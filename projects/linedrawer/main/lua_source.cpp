@@ -10,7 +10,7 @@
 
 namespace
 {
-	LuaSource* m_this = 0;
+	ldr::LuaSource* m_this = 0;
 }
 
 //namespace pr
@@ -24,8 +24,7 @@ namespace
 //	}//namespace lua
 //}//namespace pr
 
-
-LuaSource::LuaSource()
+ldr::LuaSource::LuaSource()
 :m_lua()
 {
 	m_this = this;
@@ -38,51 +37,51 @@ LuaSource::LuaSource()
 	//pr::lua::Register(m_lua, "ldr.GetNumObjects"    ,lua::ldrGetNumObjects);
 }
 
-void LuaSource::Add(char const* filepath)
+void ldr::LuaSource::Add(char const* filepath)
 {
 	filepath;
 	//m_lua.DoFile(filepath);
 }
-	
+
 // Execute a string containing lua code.
 // The code is expected to leave a string on the lua stack
-bool LuaSource::IEmbeddedCode_Execute(char const* code_id, pr::script::string const& code, pr::script::Loc const& loc, pr::script::string& result)
+bool ldr::LuaSource::IEmbeddedCode_Execute(char const* code_id, pr::script::string const& code, pr::script::Loc const& loc, pr::script::string& result)
 {
 	// We only handle lua code
 	if (!pr::str::Equal(code_id, "lua"))
 		return false;
-				
+
 	// Record the number of items on the stack
 	int base = lua_gettop(m_lua);
-			
+
 	// Convert the lua code to a compiled chunk
 	pr::script::string error_msg;
 	if (pr::lua::PushLuaChunk(m_lua, code, error_msg) != pr::lua::EResult::Success)
 		throw pr::script::Exception(pr::script::EResult::EmbeddedCodeSyntaxError, loc, error_msg.c_str());
-				
+
 	// Execute the chunk
 	if (!pr::lua::CallLuaChunk(m_lua, 0, false))
 		return false;
-				
+
 	// If there's something still on the stack, copy it to result
 	if (lua_gettop(m_lua) != base && !lua_isnil(m_lua, -1))
 	{
 		result = lua_tostring(m_lua, -1);
 		lua_pop(m_lua, 1);
 	}
-				
+
 	// Ensure the stack does not grow
 	if (lua_gettop(m_lua) != base)
 	{
 		PR_ASSERT(PR_DBG, false, "lua stack height not constant");
 		lua_settop(m_lua, base);
 	}
-				
+
 	return true;
 }
-	
+
 // Return a string containing demo ldr lua script
-std::string LuaSource::CreateDemoLuaSource() const
+std::string ldr::LuaSource::CreateDemoLuaSource() const
 {
 	std::stringstream out;
 	out <<  "--********************************************\n"
@@ -92,13 +91,13 @@ std::string LuaSource::CreateDemoLuaSource() const
 			"-- Set the rate to call the OnLdrStep() function\n"
 			"LdrStepRate = 50 -- 50fps\n"
 			"\n"
-			"-- Called when the file is loaded by " << ldr::AppTitle() << " \n"
+			"-- Called when the file is loaded by " << ldr::AppTitleA() << " \n"
 			"function LdrLoad()\n"
 			"    -- Create some ldr objects\n"
 			"    ldrCreate('*Box point FF00FF00 {1}')\n"
 			"end\n"
 			"\n"
-			"-- Called repeatedly by " << ldr::AppTitle() << "\n"
+			"-- Called repeatedly by " << ldr::AppTitleA() << "\n"
 			"function LdrStep()\n"
 			"    -- Create some ldr objects\n"
 			"    ldrCreate('*Box point FF00FF00 {1}')\n"
@@ -106,6 +105,4 @@ std::string LuaSource::CreateDemoLuaSource() const
 			"\n"
 			;
 	return out.str();
-
 }
-

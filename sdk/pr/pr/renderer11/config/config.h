@@ -13,8 +13,11 @@ namespace pr
 {
 	namespace rdr
 	{
-		// Create an instance of this object to enumerate the adapters and their
-		// supported modes on the current system
+		// Create an instance of this object to enumerate the adapters
+		// and their outputs on the current system. Note: modes are not
+		// enumerated because they depend on DXGI_FORMAT. Users should
+		// create a SystemConfig, then call 'GetDisplayModes' for the
+		// format needed.
 		struct SystemConfig
 		{
 			typedef pr::Array<DisplayMode> ModeCont;
@@ -24,7 +27,6 @@ namespace pr
 			{
 				D3DPtr<IDXGIOutput> m_output;
 				DXGI_OUTPUT_DESC    m_desc;
-				ModeCont            m_modes;
 				
 				Output(){}
 				Output(D3DPtr<IDXGIOutput>& output);

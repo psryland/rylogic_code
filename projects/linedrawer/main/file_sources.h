@@ -6,47 +6,49 @@
 #ifndef LDR_FILE_SOURCES_H
 #define LDR_FILE_SOURCES_H
 
-#include "linedrawer/types/forward.h"
+#include "linedrawer/main/forward.h"
 #include "pr/filesys/filewatch.h"
 #include "pr/script/script_forward.h"
 #include "linedrawer/main/lua_source.h"
 
-// This class is a collection of the file sources currently loaded in ldrdrawer
-class FileSources
-	:pr::FileWatch::IFileChangedHandler
+namespace ldr
 {
-	typedef std::list<std::string> StrList;
-	StrList              m_files;
-	pr::FileWatch        m_watcher;
-	UserSettings&        m_settings;
-	pr::Renderer&        m_rdr;
-	pr::ldr::ObjectCont& m_store;
-	LuaSource&           m_lua_src;
+	// This class is a collection of the file sources currently loaded in ldrdrawer
+	class FileSources
+		:pr::FileWatch::IFileChangedHandler
+	{
+		typedef std::list<std::string> StrList;
+		StrList              m_files;
+		pr::FileWatch        m_watcher;
+		UserSettings&        m_settings;
+		pr::Renderer&        m_rdr;
+		pr::ldr::ObjectCont& m_store;
+		LuaSource&           m_lua_src;
 
-	// 'filepath' is the name of the changed file
-	// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
-	void FileWatch_OnFileChanged(char const* filepath, void* user_data, bool& handled);
+		// 'filepath' is the name of the changed file
+		// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
+		void FileWatch_OnFileChanged(char const* filepath, void* user_data, bool& handled);
 
-public:
-	FileSources(UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src);
+	public:
+		FileSources(ldr::UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src);
 
-	// Return const access to the source files
-	StrList const& List() const { return m_files; }
+		// Return const access to the source files
+		StrList const& List() const { return m_files; }
 
-	// Remove all file sources
-	void Clear();
+		// Remove all file sources
+		void Clear();
 
-	// Reload all files
-	void Reload();
+		// Reload all files
+		void Reload();
 
-	// Add a file source
-	void Add(char const* filepath);
-	
-	// Remove a file source
-	void Remove(char const* filepath);
+		// Add a file source
+		void Add(char const* filepath);
 
-	// Check all file sources for modifications and reload any that have changed
-	void RefreshChangedFiles();
-};
+		// Remove a file source
+		void Remove(char const* filepath);
 
+		// Check all file sources for modifications and reload any that have changed
+		void RefreshChangedFiles();
+	};
+}
 #endif

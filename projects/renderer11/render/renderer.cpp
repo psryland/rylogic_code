@@ -32,9 +32,6 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 	,m_bbdesc()
 	,m_idle(false)
 {
-	D3DPtr<IDXGIFactory> factory;
-	pr::Throw(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)&factory.m_ptr));
-
 	// Create the device interface
 	pr::Throw(D3D11CreateDevice(
 		m_settings.m_adapter.m_ptr,
@@ -48,6 +45,14 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 		&m_feature_level,
 		&m_immediate.m_ptr
 		));
+
+	// Get the factory that was used to create 'm_device'
+	D3DPtr<IDXGIDevice> dxgi_device;
+	D3DPtr<IDXGIAdapter> adapter;
+	D3DPtr<IDXGIFactory> factory;
+	pr::Throw(m_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+	pr::Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
+	pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
 
 	// Check dlls,dx features,etc required to run the renderer are available
 	CheckDeviceFeatures(m_device, m_settings);
@@ -152,6 +157,81 @@ pr::Renderer::~Renderer()
 	m_device = 0;
 }
 
+// Get/Set full screen mode
+// Don't use the automatic alt-enter system, it's too uncontrollable
+// Handle WM_SYSKEYDOWN for VK_RETURN, then call FullScreenMode
+bool pr::Renderer::FullScreenMode() const
+{
+	BOOL full_screen;
+	D3DPtr<IDXGIOutput> ppTarget;
+	pr::Throw(m_swap_chain->GetFullscreenState(&full_screen, &ppTarget.m_ptr));
+	return full_screen != 0;
+}
+void pr::Renderer::FullScreenMode(bool on, pr::rdr::DisplayMode mode)
+{
+	// For D3D11 you should initially set DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH, as explained above.
+	// There are then two main things you must do.
+	// The first is to call SetFullScreenState on your swapchain object. This will just switch the
+	// display mode to fullscreen, but doesn't change anything else relating to the mode. You've
+	// still got the same height, width, format, etc as before.
+	// The second is to call ResizeTarget and ResizeBuffers (both again on the swapchain) to actually
+	// change the mode.
+	// Here's where things can get a little bit more complex (although it's actually simple if you follow
+	// the logic of the design).
+	// When switching from windowed to fullscreen I've found it best to call ResizeTarget first, then
+	// call SetFullScreenState.
+	// When going the other way (fullscreen to windowed) you call SetFullScreenState first, then call
+	// ResizeTarget.
+	// When just switching modes (but leaving fullscreen state alone) you just need to call ResizeTarget.
+	// These orders may not be 100% necessary (I haven't found anything in the documentation to confirm
+	// or deny) but I've found through trial, error and experimentation that they work and give predictable
+	// behaviour. Otherwise you may get extra mode changes which slow down the process, and may get weird
+	// behaviour.
+	// In all cases, you should ensure that the mode you're switching to has been properly enumerated
+	// (via EnumAdapters/EnumOutputs/GetDisplayModeList) - it's not necessary for switching to a windowed
+	// mode, but is highly recommended for switching to a fullscreen mode, and makes things easier overall.
+	// Following that you need to respond to WM_SIZE in your message loop; when you recieve a WM_SIZE you
+	// just need to call ResizeBuffers in response to it. That bit is optional but if you leave it out you're
+	// keeping the old framebuffer sizes, meaning that D3D11 has to do a stretch operation to the buffers,
+	// which can degrade performance and quality. If you need to destroy any old render targets/depth
+	// stencils/etc and create new ones at the new mode resolution, this is also a good place to do it.
+	//
+	// One thing I've left out until now is that your context will hold references to render targets/etc
+	// so before calling ResizeBuffers you need to call ID3D11DeviceContext::ClearState to release those
+	// references (or you could just call OMSetRenderTargets with NULL parameters - I haven't personally
+	// tested this but logic says that it should work), then release your render target view, otherwise
+	// ResizeBuffers will fail. When done, set everything up again (you don't need to recreate anything
+	// that you don't explicitly destroy yourself though). If you're using a depth buffer also release
+	// and recreate it (both the view and the texture).
+	//
+	// There's a pretty good writeup, with sample code and other useful info, of the process in the SDK
+	// documentation under the heading "DXGI Overview", but unfortunately the help file index seems to be
+	// - shall we say - not quite as good as it once was these days, so you may need to use the Search
+	// function. A search for ResizeBuffers should give you this article as the first hit with the June 2010 SDK.
+
+	BOOL currently_fullscreen;
+	D3DPtr<IDXGIOutput> output;
+	pr::Throw(m_swap_chain->GetFullscreenState(&currently_fullscreen, &output.m_ptr));
+
+	// Windowed -> Full screen
+	if (!currently_fullscreen && on)
+	{
+		pr::Throw(m_swap_chain->ResizeTarget(&mode));
+		pr::Throw(m_swap_chain->SetFullscreenState(TRUE, output.m_ptr));
+	}
+	// Full screen -> windowed
+	else if (currently_fullscreen && !on)
+	{
+		pr::Throw(m_swap_chain->SetFullscreenState(FALSE, nullptr));
+		pr::Throw(m_swap_chain->ResizeTarget(&mode));
+	}
+	// Full screen -> Full screen
+	else if (currently_fullscreen && on)
+	{
+		pr::Throw(m_swap_chain->ResizeTarget(&mode));
+	}
+}
+
 // Returns the size of the displayable area as known by the renderer
 pr::iv2 pr::Renderer::DisplayArea() const
 {
@@ -179,12 +259,12 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 	// transition, but may be forced to use a stretch operation (since the back buffers may not be the correct size),
 	// which may be less efficient. Even if a stretch is not required, presentation may not be optimal because the back
 	// buffers might not be directly interchangeable with the front buffer. Thus, a call to ResizeBuffers on WM_SIZE is
-	// always recommended, since WM_SIZE is always sent during a fullscreen transition.
+	// always recommended, since WM_SIZE is always sent during a full screen transition.
 
 	// While you don't have to write any more code than has been described, a few simple steps can make your application
 	// more responsive. The most important consideration is the resizing of the swap chain's buffers in response to the
 	// resizing of the output window. Naturally, the application's best route is to respond to WM_SIZE, and call
-	// IDXGISwapChain::ResizeBuffers, passing the size contained in the message's parameters. This behavior obviously makes
+	// IDXGISwapChain::ResizeBuffers, passing the size contained in the message's parameters. This behaviour obviously makes
 	// your application respond well to the user when he or she drags the window's borders, but it is also exactly what
 	// enables a smooth full-screen transition. Your window will receive a WM_SIZE message whenever such a transition happens,
 	// and calling IDXGISwapChain::ResizeBuffers is the swap chain's chance to re-allocate the buffers' storage for optimal
@@ -209,11 +289,14 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 
 	// Drop the render targets from the immediate context
 	m_immediate->OMSetRenderTargets(0, 0, 0);
+	m_immediate->ClearState();
+
 	m_main_rtv = 0;
 	m_main_dsv = 0;
 
 	// Get the swap chain to resize itself
-	pr::Throw(m_swap_chain->ResizeBuffers(0, size.x, size.y, DXGI_FORMAT_UNKNOWN, m_settings.m_swap_chain_flags));
+	// Pass 0 for width and height, DirectX gets them from the associated window
+	pr::Throw(m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, m_settings.m_swap_chain_flags));
 
 	// Setup the render targets again
 	InitMainRT();

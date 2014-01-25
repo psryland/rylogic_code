@@ -51,24 +51,30 @@ namespace pr
 		// Custom apps must implement this function.
 		// Note: they can simply call the template version below for default creation
 		std::shared_ptr<ATL::CWindow> CreateGUI(LPTSTR lpstrCmdLine);
-		template <typename WinType> std::shared_ptr<ATL::CWindow> CreateGUI(LPTSTR)
+		template <typename WinType> std::shared_ptr<ATL::CWindow> CreateGUI(LPTSTR cmdline)
 		{
 			WinType* gui;
-			std::shared_ptr<ATL::CWindow> ptr(gui = new WinType());
+			std::shared_ptr<ATL::CWindow> ptr(gui = new WinType(cmdline));
 			if (gui->Create(0) == 0) throw pr::Exception<HRESULT>(E_FAIL, "Main window creation failed");
 			return ptr;
 		}
 
 		// This type is a default and example of a setup object for the app.
-		// It can be subclassed, or used directly
 		struct DefaultSetup
 		{
-			// Returns a type containing information needed to initialise the UserSettings type in Main
-			// Note: in this case the user settings type must have a constructor taking a void* argument
-			virtual void* UserSettings(HWND) { return 0; }
+			// The Main object contains a user defined 'UserSettings' type which may be needed before
+			// configuring the renderer. In order to construct the UserSettings instance a method with
+			// the name 'UserSettings' is called with its return type provided to the user defined type.
+			// The return type can be anything that the user defined settings type will accept.
+			// e.g.
+			//   Return void if the user defined type has a parameterless constructor
+			//   Return an instance of the user defined type, to construct by copy constructor
+			//   Return 'this' and allow the settings object to read members of this type
+			//   Return a filepath that the settings can load from.
+			void UserSettings() {}
 
 			// Return settings to configure the render
-			virtual pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, client_area); }
+			pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, client_area); }
 		};
 
 		// This type contains the main app logic. It's lifetime is controlled by the GUI.
@@ -94,14 +100,17 @@ namespace pr
 			// Construct using a template setup object.
 			template <typename Setup>
 			Main(Setup setup, MainGUI& gui)
-			:m_settings(setup.UserSettings(gui.m_hWnd))
+			:m_settings(setup.UserSettings())
 			,m_rdr(setup.RdrSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd).Size()))
 			,m_scene(m_rdr)
 			,m_cam()
 			,m_gui(gui)
 			,m_rdr_pending(false)
 			{
+				// Setup a simple default scene
+				// Derived apps will override this
 				m_scene.m_background_colour.set(0.5f,0.5f,0.5f,1.0f);
+				m_scene.m_global_light.m_on = true;
 
 				// Position the camera
 				m_cam.Aspect(1.0f);
@@ -111,16 +120,6 @@ namespace pr
 					pr::v4Origin,
 					pr::v4YAxis, true);
 				//m_view0.CameraToWorld(m_cam.CameraToWorld());
-
-				//// Configure a light
-				//pr::rdr::Light& light = m_rdr.m_light_mgr.m_light[0];
-				//light.m_type           = pr::rdr::ELight::Directional;
-				//light.m_direction      = -pr::v4ZAxis;
-				//light.m_ambient        = pr::Colour32Zero;
-				//light.m_diffuse        = pr::Colour32Gray;
-				//light.m_specular       = pr::Colour32Zero;
-				//light.m_specular_power = 0;
-				//light.m_cast_shadows   = false;
 			}
 
 			virtual ~Main()
@@ -131,12 +130,12 @@ namespace pr
 			{
 				if (nav_start_stop) m_cam.MoveRef(pt, btn_state);
 				else                m_cam.Move(pt, btn_state);
-				Render();
+				RenderNeeded();
 			}
 			virtual void NavZ(float delta)
 			{
 				m_cam.MoveZ(delta, true);
-				Render();
+				RenderNeeded();
 			}
 
 			// The size of the window has changed
@@ -148,12 +147,18 @@ namespace pr
 
 			// Request a render.
 			// Note: this can be called many times per frame which minimal cost
-			virtual void Render()
+			virtual void RenderNeeded()
 			{
 				m_rdr_pending = true;
 			}
 
-			// The actual call to d3d present
+			// The actual call to d3d present.
+			// This is left to the derived app to call when appropriate.
+			// For game-style apps that use a pr::SimMsgLoop, DoRender can be called in a step context
+			//  e.g.
+			//   // In Gui::OnCreate()
+			//   m_msg_loop.AddStepContext("render loop", [this](double){ m_main->DoRender(true); }, 60.0f, false);
+			// For general apps, DoRender could be called from a Timer, or on demand
 			virtual void DoRender(bool force = false)
 			{
 				// Only render if asked to
