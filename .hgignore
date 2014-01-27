@@ -61,3 +61,4 @@ projects/RyLogViewer/docs/*.html
 sdk/pr/prcs/resources/*.html
 symbol_cache/*
 script/UserVars.py
+$RECYCLE.BIN*
