@@ -44,7 +44,6 @@ try:
 	#Copy build products to dst
 	print("Copying files to " + dstdir)
 	Tools.Copy(srcdir + "\\bin\\" + config + "\\Rylogic.CustomTool.HtmlExpander.dll", dstdir)
-	Tools.Copy(srcdir + "\\bin\\" + config + "\\rylogic.dll", dstdir)
 	
 	#Register with COM
 	print("Registering with COM")
