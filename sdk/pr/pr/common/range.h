@@ -19,13 +19,11 @@ namespace pr
 	// A range representation  (intended for numeric types only, might partially work for iterators)
 	template <typename T = int> struct Range
 	{
-		template <typename T> struct TraitsIg { enum { is_integral = true  }; };
-		template <typename T> struct TraitsFp { enum { is_integral = false }; };
-
 		// By default assume integral type traits
-		template <typename T> struct traits         :TraitsIg<T> {};
-		template <>           struct traits<double> :TraitsFp<double> {};
-		template <>           struct traits<float>  :TraitsFp<float>  {};
+		template <typename U> struct traits_impl         { enum { is_integral = true }; };
+		template <>           struct traits_impl<double> { enum { is_integral = false }; };
+		template <>           struct traits_impl<float>  { enum { is_integral = false }; };
+		struct traits :traits_impl<T> {};
 
 		T m_begin; // The first in the range
 		T m_end;   // One past the last in the range
@@ -85,15 +83,15 @@ namespace pr
 		T last() const
 		{
 			PR_ASSERT(PR_DBG, size() >= 0, "range is invalid");
-			PR_ASSERT(PR_DBG, !traits<T>::is_integral || !empty(), "range is empty");
-			return static_cast<T>(m_end - traits<T>::is_integral);
+			PR_ASSERT(PR_DBG, !traits::is_integral || !empty(), "range is empty");
+			return static_cast<T>(m_end - traits::is_integral);
 		}
 
 		// True if 'value' is within this range
 		template <typename U> bool contains(U rhs) const
 		{
 			PR_ASSERT(PR_DBG, size() >= 0, "range is invalid");
-			return traits<T>::is_integral
+			return traits::is_integral
 				? rhs >= m_begin && rhs < m_end
 				: rhs >= m_begin && rhs <= m_end;
 		}
@@ -118,7 +116,7 @@ namespace pr
 		template <typename U> Range<T>& encompass(U rhs)
 		{
 			if (rhs < m_begin) { m_begin = static_cast<T>(rhs); }
-			if (rhs >= m_end ) { m_end   = static_cast<T>(rhs + traits<T>::is_integral); }
+			if (rhs >= m_end ) { m_end   = static_cast<T>(rhs + traits::is_integral); }
 			return *this;
 		}
 
