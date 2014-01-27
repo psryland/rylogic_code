@@ -125,7 +125,7 @@ namespace pr
 		PRUnitTest(pr_filesys_findfiles)
 		{
 			bool found_cpp = false, found_h = false;
-			std::string root = "Q:\\projects\\unittests";
+			std::string root = "\\projects\\unittests";
 			for (pr::filesys::FindFiles<> ff(root, "*.cpp;*.h"); !ff.done(); ff.next())
 			{
 				found_cpp |= pr::filesys::GetExtension<std::string>(ff.fullpath()).compare("cpp") == 0;

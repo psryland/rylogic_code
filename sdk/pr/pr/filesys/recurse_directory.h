@@ -125,7 +125,7 @@ namespace pr
 			};
 
 			int found[4] = {}; // 0-*.cpp, 1-*.c, 2-*.h, 3-other
-			std::string root = "Q:\\projects\\unittests";
+			std::string root = "\\projects\\unittests";
 			PR_CHECK(pr::filesys::RecurseFiles(root, CB::EnumFiles, "*.cpp;*.c", found, CB::SkipDir), true);
 			PR_CHECK(pr::filesys::RecurseFiles(root, CB::EnumFiles, "*.h;*.cmd", found, CB::SkipDir), true);
 			PR_CHECK(found[0] == 1, true);

@@ -4634,8 +4634,8 @@ namespace pr
 			[TestFixtureSetUp] public static void Setup()
 			{
 				Sqlite.Dll.SelectDll(Environment.Is64BitProcess
-					? @"Q:\sdk\sqlite\lib\x64\debug\sqlite3.dll"
-					: @"Q:\sdk\sqlite\lib\x86\debug\sqlite3.dll");
+					? @"\sdk\sqlite\lib\x64\debug\sqlite3.dll"
+					: @"\sdk\sqlite\lib\x86\debug\sqlite3.dll");
 
 				// Register custom type bind/read methods
 				Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);

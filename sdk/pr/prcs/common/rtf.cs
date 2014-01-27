@@ -1645,7 +1645,7 @@ namespace pr
 				numberedlist.Add("Second");
 				rtf.Append(numberedlist);
 
-				using (var bm = Image.FromFile(@"q:\sdk\pr\prcs\resources\smiling gekko 150x121.jpg"))
+				using (var bm = Image.FromFile(@"\sdk\pr\prcs\resources\smiling gekko 150x121.jpg"))
 				{
 					var img = new Rtf.EmbeddedImage(bm);
 					rtf.Append(img);
