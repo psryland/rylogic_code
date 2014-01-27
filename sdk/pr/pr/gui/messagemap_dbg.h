@@ -164,7 +164,7 @@ namespace pr
 			case WM_IME_ENDCOMPOSITION: return "WM_IME_ENDCOMPOSITION";
 			case WM_IME_COMPOSITION: return "WM_IME_COMPOSITION";
 			#endif /* WINVER >= 0x0400 */
-		
+
 			case WM_INITDIALOG: return "WM_INITDIALOG";
 			case WM_COMMAND: return "WM_COMMAND";
 			case WM_SYSCOMMAND: return "WM_SYSCOMMAND";
@@ -176,7 +176,7 @@ namespace pr
 			case WM_MENUSELECT: return "WM_MENUSELECT";
 			case WM_MENUCHAR: return "WM_MENUCHAR";
 			case WM_ENTERIDLE: return "WM_ENTERIDLE";
-		
+
 			#if(WINVER >= 0x0500)
 			#ifndef _WIN32_WCE
 			case WM_MENURBUTTONUP: return "WM_MENURBUTTONUP";
@@ -193,7 +193,7 @@ namespace pr
 			#endif
 			#endif
 			#endif /* WINVER >= 0x0500 */
-		
+
 			case WM_CTLCOLORMSGBOX: return "WM_CTLCOLORMSGBOX";
 			case WM_CTLCOLOREDIT: return "WM_CTLCOLOREDIT";
 			case WM_CTLCOLORLISTBOX: return "WM_CTLCOLORLISTBOX";
@@ -213,25 +213,25 @@ namespace pr
 			case WM_MBUTTONDOWN: return "WM_MBUTTONDOWN";
 			case WM_MBUTTONUP: return "WM_MBUTTONUP";
 			case WM_MBUTTONDBLCLK: return "WM_MBUTTONDBLCLK";
-		
+
 			#if (_WIN32_WINNT >= 0x0400) || (_WIN32_WINDOWS > 0x0400)
 			case WM_MOUSEWHEEL: return "WM_MOUSEWHEEL";
 			#endif
-		
+
 			#if (_WIN32_WINNT >= 0x0500)
 			case WM_XBUTTONDOWN: return "WM_XBUTTONDOWN";
 			case WM_XBUTTONUP: return "WM_XBUTTONUP";
 			case WM_XBUTTONDBLCLK: return "WM_XBUTTONDBLCLK";
 			#endif
-		
+
 			#if (_WIN32_WINNT >= 0x0600)
 			case WM_MOUSEHWHEEL: return "WM_MOUSEHWHEEL";
 			#endif
-		
+
 			case WM_PARENTNOTIFY: return "WM_PARENTNOTIFY";
 			case WM_ENTERMENULOOP: return "WM_ENTERMENULOOP";
 			case WM_EXITMENULOOP: return "WM_EXITMENULOOP";
-		
+
 			#if(WINVER >= 0x0400)
 			case WM_NEXTMENU: return "WM_NEXTMENU";
 			case WM_SIZING: return "WM_SIZING";
@@ -275,7 +275,7 @@ namespace pr
 			#if(WINVER >= 0x0500)
 			case WM_IME_REQUEST: return "WM_IME_REQUEST";
 			#endif /* WINVER >= 0x0500 */
-		
+
 			#if(WINVER >= 0x0400)
 			case WM_IME_KEYDOWN: return "WM_IME_KEYDOWN";
 			case WM_IME_KEYUP: return "WM_IME_KEYUP";
@@ -285,7 +285,7 @@ namespace pr
 			case WM_MOUSEHOVER: return "WM_MOUSEHOVER";
 			case WM_MOUSELEAVE: return "WM_MOUSELEAVE";
 			#endif
-		
+
 			#if(WINVER >= 0x0500)
 			case WM_NCMOUSEHOVER: return "WM_NCMOUSEHOVER";
 			case WM_NCMOUSELEAVE: return "WM_NCMOUSELEAVE";
@@ -333,34 +333,34 @@ namespace pr
 			#if(_WIN32_WINNT >= 0x0501)
 			case WM_CLIPBOARDUPDATE: return "WM_CLIPBOARDUPDATE";
 			#endif /* _WIN32_WINNT >= 0x0501 */
-		
+
 			#if(_WIN32_WINNT >= 0x0600)
 			case WM_DWMCOMPOSITIONCHANGED: return "WM_DWMCOMPOSITIONCHANGED";
 			case WM_DWMNCRENDERINGCHANGED: return "WM_DWMNCRENDERINGCHANGED";
 			case WM_DWMCOLORIZATIONCOLORCHANGED: return "WM_DWMCOLORIZATIONCOLORCHANGED";
 			case WM_DWMWINDOWMAXIMIZEDCHANGE: return "WM_DWMWINDOWMAXIMIZEDCHANGE";
 			#endif /* _WIN32_WINNT >= 0x0600 */
-		
+
 			#if(WINVER >= 0x0600)
 			case WM_GETTITLEBARINFOEX: return "WM_GETTITLEBARINFOEX";
 			#endif /* WINVER >= 0x0600 */
-		
+
 			#if(WINVER >= 0x0400)
 			case WM_HANDHELDFIRST: return "WM_HANDHELDFIRST";
 			case WM_HANDHELDLAST: return "WM_HANDHELDLAST";
 			case WM_AFXFIRST: return "WM_AFXFIRST";
 			case WM_AFXLAST: return "WM_AFXLAST";
 			#endif /* WINVER >= 0x0400 */
-		
+
 			case WM_PENWINFIRST: return "WM_PENWINFIRST";
 			case WM_PENWINLAST: return "WM_PENWINLAST";
-		
+
 			#if(WINVER >= 0x0400)
 			case WM_APP: return "WM_APP";
 			#endif /* WINVER >= 0x0400 */
 			}
 			return "";
-		}	
+		}
 
 		// Convert a VK_* define into a string
 		inline char const* VKtoString(int vk)
@@ -651,7 +651,7 @@ namespace pr
 					#if (_WIN32_WINNT >= 0x0600)
 					else if (TRBN_LAST <= nmhdr->code) notify_type = "TRBN";
 					#endif
-				
+
 					// Ignore
 					if (nmhdr->code == LVN_HOTTRACK) break;
 
@@ -670,7 +670,7 @@ namespace pr
 						,nmhdr->code
 						,notify_type
 						));
-					
+
 					break;
 				}
 			case WM_SYSKEYDOWN:
@@ -683,7 +683,7 @@ namespace pr
 						"\tlParam: %d\n"
 						,msg_str ,uMsg
 						,hWnd ,wnd_text
-						,wParam ,VKtoString(wParam)
+						,wParam ,VKtoString((int)wParam)
 						,lParamLo
 						,lParam
 						));
@@ -710,7 +710,6 @@ namespace pr
 		{
 			DebugMessage(msg, [](int){ return true; });
 		}
-		
 	}
 }
 

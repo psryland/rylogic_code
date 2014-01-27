@@ -14,6 +14,9 @@ namespace sol
 	struct MainGUI
 		:pr::app::MainGUI<MainGUI, Main, pr::SimMsgLoop>
 	{
+		explicit MainGUI(LPTSTR)
+		{
+		}
 		virtual LRESULT OnCreate(LPCREATESTRUCT create)
 		{
 			pr::Throw(base::OnCreate(create));

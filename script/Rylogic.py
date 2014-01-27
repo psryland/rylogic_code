@@ -131,6 +131,7 @@ def RunAsAdmin(script, args=[]):
 		subprocess.check_output(["net", "session"])
 		print("Admin rights available")
 	except Exception as ex:
-		print("Running script under Administrator account...")
-		Exec([UserVars.elevate, sys.executable, script] + args)
+		if "elevated" not in args:
+			print("Running script under Administrator account...")
+			Exec([UserVars.elevate, sys.executable, script] + args + ["elevated"])
 		sys.exit(0)

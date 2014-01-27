@@ -60,3 +60,4 @@ projects/RyLogViewer/Resources/*.html
 projects/RyLogViewer/docs/*.html
 sdk/pr/prcs/resources/*.html
 symbol_cache/*
+script/UserVars.py

@@ -67,11 +67,11 @@ namespace pr
 			// the name 'UserSettings' is called with its return type provided to the user defined type.
 			// The return type can be anything that the user defined settings type will accept.
 			// e.g.
-			//   Return void if the user defined type has a parameterless constructor
 			//   Return an instance of the user defined type, to construct by copy constructor
 			//   Return 'this' and allow the settings object to read members of this type
 			//   Return a filepath that the settings can load from.
-			void UserSettings() {}
+			//   Unfortunately it can't return void to pass to a parameterless constructor so use int:-/
+			int UserSettings() { return 0; }
 
 			// Return settings to configure the render
 			pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, client_area); }

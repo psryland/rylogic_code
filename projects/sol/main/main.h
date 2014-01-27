@@ -15,7 +15,7 @@ namespace sol
 	// Dummy settings type
 	struct UserSettings
 	{
-		UserSettings(void*) {}
+		explicit UserSettings(int) {}
 	};
 
 	// Main app logic
