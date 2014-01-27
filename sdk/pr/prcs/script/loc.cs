@@ -1,6 +1,4 @@
-﻿using pr.extn;
-
-namespace pr.script
+﻿namespace pr.script
 {
 	// A location within a script source
 	public class Loc
@@ -35,7 +33,7 @@ namespace pr.script
 			return ch;
 		}
 
-		public override string ToString() { return "File:{0} Line:{1} Col:{2}".Fmt(Filepath, Line, Column); }
+		public override string ToString() { return string.Format("File:{0} Line:{1} Col:{2}", Filepath, Line, Column); }
 	};
 }
 

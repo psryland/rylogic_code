@@ -2,10 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.TextTemplating.VSHost;
-using pr.common;
-using pr.extn;
 using pr.script;
 
 // http://mnaoumov.wordpress.com/2012/09/26/developing-custom-tool-aka-single-file-generators-for-visual-studio-2012/
@@ -33,7 +30,7 @@ namespace Rylogic.CustomTool
 			}
 			catch (Exception ex)
 			{
-				var msg = "HTML Expansion failed" + Environment.NewLine + "Exception:" + Environment.NewLine + ex.MessageFull();
+				var msg = "HTML Expansion failed" + Environment.NewLine + "Exception:" + Environment.NewLine + ex.Message;
 				return Encoding.UTF8.GetBytes(msg);
 			}
 		}

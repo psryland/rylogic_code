@@ -41,16 +41,34 @@
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.TextTemplating.VSHost.11.0, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="rylogic">
-      <HintPath>..\..\sdk\pr\lib\anycpu\release\rylogic.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HtmlExpander.cs" />
+    <Compile Include="..\..\sdk\pr\prcs\script\buffer.cs">
+      <Link>src\buffer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\sdk\pr\prcs\script\html_expander.cs">
+      <Link>src\html_expander.cs</Link>
+    </Compile>
+    <Compile Include="..\..\sdk\pr\prcs\script\loc.cs">
+      <Link>src\loc.cs</Link>
+    </Compile>
+    <Compile Include="..\..\sdk\pr\prcs\script\src.cs">
+      <Link>src\src.cs</Link>
+    </Compile>
+    <Compile Include="..\..\sdk\pr\prcs\script\src_stack.cs">
+      <Link>src\src_stack.cs</Link>
+    </Compile>
+    <Compile Include="..\..\sdk\pr\prcs\script\src_type.cs">
+      <Link>src\src_type.cs</Link>
+    </Compile>
+    <Compile Include="..\..\sdk\pr\prcs\script\template_replacer.cs">
+      <Link>src\template_replacer.cs</Link>
+    </Compile>
+    <Compile Include="src\HtmlExpander.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

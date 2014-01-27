@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using pr.common;
-using pr.extn;
 
 namespace pr.script
 {
@@ -45,7 +43,7 @@ namespace pr.script
 					{
 					default:
 						{
-							throw new Exception("Unknown template command: '{0}' ({1})".Fmt(cmd, match.ToString()));
+							throw new Exception(string.Format("Unknown template command: '{0}' ({1})", cmd, match.ToString()));
 						}
 					case "include":
 						#region include
@@ -54,10 +52,10 @@ namespace pr.script
 
 							// Read the include filepath and check it exists
 							m = Regex.Match(kv, @".*file=""(?<file>.*?)"".*");
-							if (!m.Success) throw new Exception("Invalid include: '{0}'.\nCould not match 'file' field.\nExpected form: {1}".Fmt(match.ToString(), expected_form));
+							if (!m.Success) throw new Exception(string.Format("Invalid include: '{0}'.\nCould not match 'file' field.\nExpected form: {1}",match.ToString(), expected_form));
 							var filepath = m.Result("${file}");
 							filepath = Path.IsPathRooted(filepath) ? filepath : Path.Combine(current_dir, filepath);
-							if (!PathEx.FileExists(filepath)) throw new FileNotFoundException("File reference not found: {0}".Fmt(filepath), filepath);
+							if (!File.Exists(filepath)) throw new FileNotFoundException(string.Format("File reference not found: {0}", filepath), filepath);
 
 							tr.PushSource(new IndentSrc(new FileSrc(filepath), indent, true));
 							return string.Empty;
@@ -70,28 +68,28 @@ namespace pr.script
 
 							// Read the name of the variable
 							m = Regex.Match(kv, @".*name=""(?<name>\w+)"".*");
-							if (!m.Success) throw new Exception("Invalid variable declaration: '{0}'.\nCould not match 'name' field.\nExpected form: {1}".Fmt(match.ToString(), expected_form));
+							if (!m.Success) throw new Exception(string.Format("Invalid variable declaration: '{0}'.\nCould not match 'name' field.\nExpected form: {1}", match.ToString(), expected_form));
 							var name = m.Result("${name}");
 
 							// Read the source filepath
 							m = Regex.Match(kv, @".*file=""(?<file>.*?)"".*");
-							if (!m.Success) throw new Exception("Invalid variable declaration: '{0}'.\nCould not match 'file' field.\nExpected form: {1}".Fmt(match.ToString(), expected_form));
+							if (!m.Success) throw new Exception(string.Format("Invalid variable declaration: '{0}'.\nCould not match 'file' field.\nExpected form: {1}", match.ToString(), expected_form));
 							var filepath = m.Result("${file}");
 							filepath = Path.IsPathRooted(filepath) ? filepath : Path.Combine(current_dir, filepath);
-							if (!PathEx.FileExists(filepath)) throw new FileNotFoundException("File reference not found: {0}".Fmt(filepath), filepath);
+							if (!File.Exists(filepath)) throw new FileNotFoundException(string.Format("File reference not found: {0}", filepath), filepath);
 
 							// Read the regex pattern that defines 'value'
 							m = Regex.Match(kv, @".*value=""(?<pattern>.*?)"".*");
-							if (!m.Success) throw new Exception("Invalid variable declaration: '{0}'.\nCould not match 'value' field.\nExpected form: {1}".Fmt(match.ToString(), expected_form));
+							if (!m.Success) throw new Exception(string.Format("Invalid variable declaration: '{0}'.\nCould not match 'value' field.\nExpected form: {1}", match.ToString(), expected_form));
 							var pat = m.Result("${pattern}");
 							Regex pattern;
 							try { pattern = new Regex(pat, RegexOptions.Compiled); }
-							catch (Exception ex) { throw new Exception("Invalid variable declaration: '{0}'.\n'value' field is not a valid Regex expression.\nExpected form: {1}".Fmt(match.ToString(), expected_form), ex); }
+							catch (Exception ex) { throw new Exception(string.Format("Invalid variable declaration: '{0}'.\n'value' field is not a valid Regex expression.\nExpected form: {1}", match.ToString(), expected_form), ex); }
 
 							// Use the pattern to get the value for the variable
 							using (var sr = new StreamReader(filepath, Encoding.UTF8, true, 65536))
 							for (string line; (line = sr.ReadLine()) != null && !(m = pattern.Match(line)).Success;) {}
-							if (!m.Success) throw new Exception("Invalid variable declaration: '{0}'.\n'value' regex expression did not find a match in {2}.\nExpected form: {1}".Fmt(match.ToString(), expected_form, filepath));
+							if (!m.Success) throw new Exception(string.Format("Invalid variable declaration: '{0}'.\n'value' regex expression did not find a match in {2}.\nExpected form: {1}", match.ToString(), expected_form, filepath));
 							var value = m.Result("${value}");
 
 							// Save the name/value pair
@@ -106,12 +104,12 @@ namespace pr.script
 
 							// Read the name of the variable
 							m = Regex.Match(kv, @".*name=""(?<name>\w+)"".*");
-							if (!m.Success) throw new Exception("Invalid value declaration: '{0}'.\nCould not match 'name' field.\nExpected form: {1}".Fmt(match.ToString(), expected_form));
+							if (!m.Success) throw new Exception(string.Format("Invalid value declaration: '{0}'.\nCould not match 'name' field.\nExpected form: {1}", match.ToString(), expected_form));
 							var name = m.Result("${name}");
 
 							// Lookup the value for the variable
 							string value;
-							if (!variables.TryGetValue(name, out value)) throw new Exception("Invalid value declaration: '{0}'.\nVariable with 'name' {2} is not defined.\nExpected form: {1}".Fmt(match.ToString(), expected_form, name));
+							if (!variables.TryGetValue(name, out value)) throw new Exception(string.Format("Invalid value declaration: '{0}'.\nVariable with 'name' {2} is not defined.\nExpected form: {1}", match.ToString(), expected_form, name));
 							return indent + value;
 						}
 						#endregion
@@ -127,6 +125,7 @@ namespace pr.script
 namespace pr
 {
 	using NUnit.Framework;
+	using extn;	
 	using script;
 
 	[TestFixture] internal static partial class UnitTests

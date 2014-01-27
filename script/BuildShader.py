@@ -31,6 +31,7 @@ try:
 	fname,extn  = os.path.splitext(file)
 	if trace: print("File: " + fname + extn)
 	outdir = srcdir + r"\..\compiled"
+	if not os.path.exists(outdir): os.makedirs(outdir)
 	if trace: print("Output directory: " + outdir)
 
 	# The filepaths
@@ -102,4 +103,4 @@ try:
 		Tools.OnSuccess()
 
 except Exception as ex:
-	Tools.OnError("ERROR: " + str(ex))
+	Tools.OnException(ex)
