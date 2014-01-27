@@ -8,7 +8,7 @@ import UserVars
 print(
 	"*************************************************************************\n"
 	"  Csex Deploy\n"
-	"    Copyright © Rylogic Limited 2013\n"
+	"    Copyright (C) Rylogic Limited 2013\n"
 	"*************************************************************************")
 
 Tools.CheckVersion(1)

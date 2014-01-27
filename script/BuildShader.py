@@ -9,6 +9,8 @@ import sys, os
 import Rylogic as Tools
 import UserVars
 
+Tools.CheckVersion(1)
+
 try:
 	if len(sys.argv) < 2:
 		Tools.OnError("No shader filepath given")
