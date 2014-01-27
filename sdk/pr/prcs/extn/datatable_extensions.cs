@@ -5,7 +5,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
-using JetBrains.Annotations;
 using pr.util;
 
 namespace pr.extn
@@ -207,7 +206,7 @@ namespace pr
 					Size
 				}
 
-				protected internal Record([NotNull] DataRowBuilder builder) :base(builder) {}
+				protected internal Record(DataRowBuilder builder) :base(builder) {}
 				public int Id { get; set; }
 				public string Name { get; set; }
 				public long Size { get; set; }

@@ -16,7 +16,6 @@ namespace pr.extn
 	public static class StringExtensions
 	{
 		/// <summary>Treats this string as a format string</summary>
-		[JetBrains.Annotations.StringFormatMethod("fmt")]
 		public static string Fmt(this string fmt, params object[] args)
 		{
 			return string.Format(fmt, args);
