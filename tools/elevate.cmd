@@ -5,4 +5,4 @@
 :: is still run under the current user account, not under the Administrator
 :: account.
 @echo off
-Q:\bin\fwd.exe %*
+\bin\fwd.exe %*

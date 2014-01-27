@@ -134,10 +134,11 @@ def EnumFiles(root):
 # Tests if this script is being run with admin rights, if not restarts the script elevated
 def RunAsAdmin(script, args=[]):
 	try:
-		subprocess.check_output(["net", "session"])
+		subprocess.check_output(["net", "session"], stderr=subprocess.STDOUT)
 		print("Admin rights available")
 	except Exception as ex:
+		print(script + " " + str(args))
 		if "elevated" not in args:
 			print("Running script under Administrator account...")
-			Exec([UserVars.elevate, sys.executable, script] + args + ["elevated"])
+			Exec(cmd[UserVars.elevate, sys.executable, script] + args + ["elevated"], show_arguments=True)
 		sys.exit(0)

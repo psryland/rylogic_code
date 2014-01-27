@@ -57,7 +57,7 @@ try:
 		winreg.SetValueEx(key, "ThreadingModel", 0, winreg.REG_SZ, "Both")
 		winreg.SetValueEx(key, "Class", 0, winreg.REG_SZ, "Rylogic.CustomTool.HtmlExpander")
 		winreg.SetValueEx(key, "Assembly", 0, winreg.REG_SZ, "Rylogic.CustomTool.HtmlExpander, Version=1.0.0.0, Culture=neutral")
-		winreg.SetValueEx(key, "CodeBase", 0, winreg.REG_SZ, "file:///D:\\Users\\Paul\\Rylogic\\bin\\custom_tools\\Rylogic.CustomTool.HtmlExpander.dll")
+		winreg.SetValueEx(key, "CodeBase", 0, winreg.REG_SZ, "file:///"+UserVars.root+"\\bin\\custom_tools\\Rylogic.CustomTool.HtmlExpander.dll")
 	with winreg.CreateKey(winreg.HKEY_CURRENT_USER, "Software\\Microsoft\\VisualStudio\\11.0_Config\\Generators\\{FAE04EC1-301F-11D3-BF4B-00C04F79EFBC}\\HtmlExpander\\") as key:
 		winreg.SetValueEx(key, "CLSID", 0, winreg.REG_SZ, "{a72434a4-0a4d-4cc2-aba2-42e1fcd61db4}")
 		winreg.SetValueEx(key, "GeneratesDesignTimeSource", 0, winreg.REG_DWORD, 1)
