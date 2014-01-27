@@ -22,9 +22,9 @@
     <ClCompile Include="..\unittests\unittests.cpp">
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
     </ClCompile>
-    <ClCompile Include="Q:\sdk\pr\pr\lua\lua_core.c" />
-    <ClCompile Include="Q:\sdk\pr\pr\lua\lua_lib.c" />
-    <ClCompile Include="Q:\sdk\sqlite\sqlite3.c">
+    <ClCompile Include="..\..\sdk\pr\pr\lua\lua_core.c" />
+    <ClCompile Include="..\..\sdk\pr\pr\lua\lua_lib.c" />
+    <ClCompile Include="..\..\sdk\sqlite\sqlite3.c">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level3</WarningLevel>
@@ -249,25 +249,25 @@
     <ClInclude Include="..\..\sdk\pr\pr\threads\thread.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\thread_pool.h" />
     <ClInclude Include="..\unittests\pp_output.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\gui\messagemap_dbg.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\lua\lua.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\char_stream.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\comment_strip.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\embedded_code.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\embedded_lua.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\keywords.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\pp_includes.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\pp_macro.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\pp_macro_db.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\preprocessor.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\reader.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\script.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\script_core.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\script_forward.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\stream_stack.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\token.h" />
-    <ClInclude Include="Q:\sdk\pr\pr\script\tokeniser.h" />
-    <ClInclude Include="Q:\sdk\sqlite\sqlite3.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\gui\messagemap_dbg.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\char_stream.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\comment_strip.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\embedded_code.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\embedded_lua.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\keywords.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_includes.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro_db.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\preprocessor.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\reader.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\script.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\script_core.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\script_forward.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\stream_stack.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\token.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\tokeniser.h" />
+    <ClInclude Include="..\..\sdk\sqlite\sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\unittests\run_tests.cmd" />

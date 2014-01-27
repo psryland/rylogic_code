@@ -59,7 +59,7 @@
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>q:\script\DeployBin.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>\script\DeployBin.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
       <Message>Publishing binary...</Message>
     </PostBuildEvent>
     <ProjectReference>
