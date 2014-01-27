@@ -13,6 +13,12 @@ def OnError(msg):
 	input("Press enter to close")
 	sys.exit(-1)
 
+# Terminate on exception
+def OnException(ex):
+	print("ERROR: " + str(ex))
+	input("Press enter to close")
+	sys.exit(-1)
+
 # Check that the UserVars file is the correct version
 def CheckVersion(check_version):
 	if check_version > UserVars.version:

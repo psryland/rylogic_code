@@ -69,17 +69,11 @@
     <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
     <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
   </PropertyGroup>
-  <ItemGroup Condition="'$(Configuration)'=='Debug'">
-    <Reference Include="nunit.framework">
-      <HintPath>..\..\..\projects\vs2012\packages\NUnit.2.6.2\lib\nunit.framework.dll</HintPath>
-    </Reference>
-  </ItemGroup>
   <ItemGroup>
-    <Reference Include="JetBrains.Annotations, Version=7.0.1098.2760, Culture=neutral, PublicKeyToken=1010a0d8d6380325, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\JetBrains\ReSharper\v7.0\Bin\JetBrains.Annotations.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="nunit.framework">
+      <HintPath>..\..\nunit\net-2.0\framework\nunit.framework.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationFramework">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
