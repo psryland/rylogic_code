@@ -34,7 +34,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <PostBuildEvent>
-      <Command>q:\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
       <Message>Publishing library</Message>
     </PostBuildEvent>
     <Lib>
