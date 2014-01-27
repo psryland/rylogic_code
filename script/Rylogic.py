@@ -1,4 +1,4 @@
-import sys, os, time, shutil, subprocess, re
+import sys, os, time, shutil, subprocess, re, socket
 import UserVars
 
 # Terminate the script indicating success
@@ -17,6 +17,8 @@ def OnError(msg):
 def CheckVersion(check_version):
 	if check_version > UserVars.version:
 		OnError("User variables are out of date, please update")
+	if UserVars.machine.lower() != socket.gethostname().lower():
+		OnError("Machine name does not match UserVars.machine, Check you UserVars.py file")
 
 # Compare the timestamps of two files and return true if they are different
 def Diff(src,dst):

@@ -1,4 +1,4 @@
-# Rylogic3 UserVars.py
+# Rylogic UserVars.py
 version           = 1
 user              = "Paul"
 machine           = "Rylogic3"
