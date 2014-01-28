@@ -11,6 +11,12 @@ namespace TestCS
 		private readonly View3D.Object m_obj0;
 		private readonly View3D.Object m_obj1;
 
+		static FormView3d()
+		{
+			View3D.SelectDll(Environment.Is64BitProcess
+				? @"\sdk\pr\lib\x64\debug\view3d.dll"
+				: @"\sdk\pr\lib\x86\debug\view3d.dll");
+		}
 		public FormView3d()
 		{
 			InitializeComponent();
