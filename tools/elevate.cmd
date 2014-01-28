@@ -4,5 +4,8 @@
 :: to pop up rather than asking for a password. Plus the executed program
 :: is still run under the current user account, not under the Administrator
 :: account.
+
+:: If fwd.exe isn't working, check the 'Run As Administrator" option under it's properties
 @echo off
-\bin\fwd.exe %*
+set toolsdir=%~dp0
+%toolsdir%fwd.exe %*

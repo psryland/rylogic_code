@@ -132,13 +132,19 @@ def EnumFiles(root):
 		# prevent recursion into those folders...
 
 # Tests if this script is being run with admin rights, if not restarts the script elevated
-def RunAsAdmin(script, args=[]):
+def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 	try:
+		if "elevated" in sys.argv: return;
 		subprocess.check_output(["net", "session"], stderr=subprocess.STDOUT)
 		print("Admin rights available")
+		return
 	except Exception as ex:
-		print(script + " " + str(args))
-		if "elevated" not in args:
-			print("Running script under Administrator account...")
-			Exec(cmd[UserVars.elevate, sys.executable, script] + args + ["elevated"], show_arguments=True)
-		sys.exit(0)
+		print("Running script under Administrator account...")
+	
+	try:
+		args = [UserVars.elevate, sys.executable] + sys.argv + ["elevated"];
+		if show_arguments: print(args)
+		subprocess.check_call(args, cwd=working_dir)
+	except Exception:
+		pass
+	sys.exit(0)

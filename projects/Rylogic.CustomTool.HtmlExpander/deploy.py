@@ -6,7 +6,7 @@ import Rylogic as Tools
 import UserVars
 
 #Requires admin rights
-Tools.RunAsAdmin(os.path.realpath(__file__))
+Tools.RunAsAdmin()
 
 print(
 	"*************************************************************************\n"
