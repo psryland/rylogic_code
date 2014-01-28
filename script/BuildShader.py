@@ -50,9 +50,9 @@ try:
 	if obj: output += " /Fo" + tmp_cso_filepath
 
 	# Choose the compiler profile based on file extension
-	if   shdr == "vs": profile = "/Tvs_5_0"
-	elif shdr == "ps": profile = "/Tps_5_0"
-	elif shdr == "gs": profile = "/Tgs_5_0"
+	if   shdr == "vs": profile = "/Tvs_4_0"
+	elif shdr == "ps": profile = "/Tps_4_0"
+	elif shdr == "gs": profile = "/Tgs_4_0"
 	else: Tools.OnError("ERROR: Unknown shader type: " + shdr)
 	if trace: print("Profile: " + profile)
 	

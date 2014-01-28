@@ -13,8 +13,11 @@ using namespace pr::rdr;
 //
 
 // Check the given settings are valid for the current adaptor
-void CheckDeviceFeatures(D3DPtr<ID3D11Device>& device, pr::rdr::RdrSettings& settings)
+void CheckDeviceFeatures(D3DPtr<ID3D11Device>& device, pr::rdr::RdrSettings& settings, D3D_FEATURE_LEVEL feature_level)
 {
+	if (feature_level < D3D_FEATURE_LEVEL_10_0)
+		throw std::exception("Graphics hardware does not meet the required feature level.\r\nFeature level 10.0 required\r\n\r\n(e.g. Shader Model 4.0, non power-of-two texture sizes)");
+
 	// Check multi sampling
 	settings.m_multisamp.Validate(device, settings.m_mode.Format);
 	settings.m_multisamp.Validate(device, settings.m_depth_format);
@@ -55,7 +58,7 @@ pr::rdr::RdrState::RdrState(pr::rdr::RdrSettings const& settings)
 	pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
 
 	// Check dlls,dx features,etc required to run the renderer are available
-	CheckDeviceFeatures(m_device, m_settings);
+	CheckDeviceFeatures(m_device, m_settings, m_feature_level);
 
 	// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
 	//  render using GDI on a swap chain or a surface. This will allow the application
