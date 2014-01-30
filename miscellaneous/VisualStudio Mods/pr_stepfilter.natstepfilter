@@ -5,4 +5,5 @@
 	<Function><Name>pr::RefPtr&lt;.*</Name><Action>NoStepInto</Action></Function>
 	<Function><Name>std::.*</Name><Action>NoStepInto</Action></Function>
 <!--<Function><Name>std::vector&lt;.*</Name><Action>NoStepInto</Action></Function>-->
+	<Function><Name>operator new(</Name><Action>NoStepInto</Action></Function>
 </StepFilter>
