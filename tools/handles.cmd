@@ -1,6 +1,8 @@
 @echo off
-%~d1
-cd "%~p1"
-@echo on
-\tools\handle.exe "%~n1"
+P:\tools\handle.exe %*
+
+::echo %~d1
+::echo cd "%~p1"
+::@echo on
+::echo P:\tools\handle.exe "%~n1"
 pause
