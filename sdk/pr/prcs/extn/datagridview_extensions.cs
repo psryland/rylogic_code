@@ -484,27 +484,73 @@ namespace pr.extn
 	/// <summary>A column of track bars</summary>
 	public class DataGridViewTrackBarColumn :DataGridViewColumn
 	{
-		public DataGridViewTrackBarColumn() :base(new DataGridViewTrackBarCell{Value=0, MinValue=0, MaxValue=100}) {}
-		public new DataGridViewTrackBarCell CellTemplate { get { return (DataGridViewTrackBarCell)base.CellTemplate; } }
-		public int MinValue { get { return  CellTemplate.MinValue; } set { CellTemplate.MinValue = value; } }
-		public int MaxValue { get { return  CellTemplate.MaxValue; } set { CellTemplate.MaxValue = value; } }
+		public DataGridViewTrackBarColumn()
+			:base(new DataGridViewTrackBarCell{Value=0})
+		{
+			MinValue = 0;
+			MaxValue = 100;
+		}
+		public new DataGridViewTrackBarCell CellTemplate
+		{
+			get { return (DataGridViewTrackBarCell)base.CellTemplate; }
+		}
+		
+		/// <summary>
+		/// The minimum value to use for all values in the column
+		/// Applies only when MinValuePropertyName is null</summary>
+		public int MinValue { get; set; }
+
+		/// <summary>
+		/// The maximum value to use for all values in the column
+		/// Applies only when MaxValuePropertyName is null</summary>
+		public int MaxValue { get; set; }
+
+		/// <summary>The name of the property that provides the minimum allow value</summary>
+		public string MinValuePropertyName { get; set; }
+		
+		/// <summary>The name of the property that provides the minimum allow value</summary>
+		public string MaxValuePropertyName { get; set; }
 	}
 
 	/// <summary>A data grid view cell containing a track bar</summary>
 	public class DataGridViewTrackBarCell :DataGridViewTextBoxCell
 	{
-		public int MinValue                            { get; set; }
-		public int MaxValue                            { get; set; }
 		public override Type ValueType                 { get { return typeof(int); } }
 		public override Type EditType                  { get { return typeof(DataGridViewTrackBarEditCtrl); } }
 		public override object DefaultNewRowValue      { get { return 0; } }
-		public DataGridViewTrackBarCell()              { Value = 0; }
+		
+		public DataGridViewTrackBarCell()
+		{
+			Value = 0;
+		}
+
+		public int MinValue
+		{
+			get
+			{
+				var col = (DataGridViewTrackBarColumn)OwningColumn;
+				if (col.MinValuePropertyName == null) return col.MinValue;
+				var obj = DataGridView.Rows[RowIndex].DataBoundItem;
+				var prop = obj.GetType().GetProperty(col.MinValuePropertyName, typeof(int));
+				return (int)prop.GetGetMethod().Invoke(obj, null);
+			}
+		}
+		public int MaxValue
+		{
+			get
+			{
+				var col = (DataGridViewTrackBarColumn)OwningColumn;
+				if (col.MaxValuePropertyName == null) return col.MaxValue;
+				var obj = DataGridView.Rows[RowIndex].DataBoundItem;
+				var prop = obj.GetType().GetProperty(col.MaxValuePropertyName, typeof(int));
+				return (int)prop.GetGetMethod().Invoke(obj, null);
+			}
+		}
+		
 		public override object Clone()
 		{
 			var c = (DataGridViewTrackBarCell)base.Clone();
-			c.MinValue = MinValue;
-			c.MaxValue = MaxValue;
-			c.Value = 0;
+			c.Value = Value;
 			return c;
 		}
 		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
@@ -559,8 +605,8 @@ namespace pr.extn
 		private void ReadValue(int x)
 		{
 			var cell = (DataGridViewTrackBarCell)Value;
-			int value = Maths.Clamp(cell.MinValue + (cell.MaxValue - cell.MinValue) * (x - Left - m_btn_width/2) / (Width - m_btn_width), cell.MinValue, cell.MaxValue);
-			cell.Value = value;
+			var frac = Maths.Frac(m_btn_width/2, x, Width - m_btn_width/2);
+			cell.Value = Maths.Lerp(cell.MinValue, cell.MaxValue, frac);
 		}
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
@@ -577,7 +623,7 @@ namespace pr.extn
 		/// <summary>Paint the track bar</summary>
 		public static void PaintTrackBar(Graphics gfx, Rectangle cell_bounds, int pos, int min_pos, int max_pos)
 		{
-			float frac = Maths.Clamp((pos - min_pos) / (float)(max_pos - min_pos), 0f, 1f);
+			var frac = Maths.Clamp(Maths.Frac(min_pos, pos, max_pos), 0f, 1f);
 
 			// Draw the track
 			RectangleF track_rect = cell_bounds;
