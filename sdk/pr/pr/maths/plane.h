@@ -57,6 +57,14 @@ namespace pr
 			Plane p;
 			return set(p, begin, end);
 		}
+		
+		// Returns 'v' projected onto 'plane'
+		// So if plane.w == -dist, if v.w == 1 the returned point will lie on the plane at 'dist'
+		// from the origin. if v.w == 0, the returned vector will lie in a plane parallel to 'plane'.
+		inline v4 Project(Plane const& plane, v4 const& v)
+		{
+			return v - pr::Dot4(plane, v) * plane.w0();
+		}
 	}
 }
 
