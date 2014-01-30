@@ -16,11 +16,11 @@ Tools.CheckVersion(1)
 sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
 # e.g: "\"folder\proj_name:Rebuild\""
 projects = [
-	"renderer11",
+	"renderer11:Rebuild",
 #	"linedrawer",
 #	"physics",
 #	"unittests",
-	"view3d",
+	"view3d:Rebuild",
 #	"sol",
 	"cex",
 #	"fwd",

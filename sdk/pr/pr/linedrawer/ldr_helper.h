@@ -20,9 +20,8 @@ namespace pr
 		template <typename TStr> inline void Write(TStr const& str, char const* filepath, bool append = false)
 		{
 			if (str.size() == 0) return;
-			HANDLE h = ::CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_READ, 0, append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			pr::Handle h = ::CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_READ, 0, append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 			DWORD bytes_written; ::WriteFile(h, &str[0], (DWORD)str.size(), &bytes_written, 0);
-			::CloseHandle(h);
 			PR_ASSERT(PR_DBG, bytes_written == str.size(), "Failed to write ldr string");
 		}
 		template <typename TStr> inline TStr& Vec3(v4 const& vec, TStr& str)
