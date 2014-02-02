@@ -84,6 +84,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\min_max_fix.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\msgbox.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\multi_cast.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\new.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\objectpool.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\observe.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\pipe.h" />
