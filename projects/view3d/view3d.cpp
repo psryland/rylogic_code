@@ -746,8 +746,8 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 	scene.ClearDrawlist();
 
 	// Add objects from the drawset to the viewport
-	for (auto i = begin(drawset->m_objects), iend = end(drawset->m_objects); i != iend; ++i)
-		(*i)->AddToScene(scene);
+	for (auto& obj : drawset->m_objects)
+		obj->AddToScene(scene);
 
 	// Add the measure tool objects if the window is visible
 	if (Rdr().m_measure_tool_ui.IsWindowVisible() && Rdr().m_measure_tool_ui.Gfx())

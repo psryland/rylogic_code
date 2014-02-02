@@ -331,6 +331,9 @@
     <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl">
       <Filter>directxtex</Filter>
     </None>
+    <None Include="..\..\script\BuildShader.py">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.ps.hlsl">

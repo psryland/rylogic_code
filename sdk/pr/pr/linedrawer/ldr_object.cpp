@@ -76,9 +76,9 @@ void pr::ldr::LdrObject::AddToScene(pr::rdr::Scene& scene, float time_s, pr::m4x
 	if (m_instanced && m_visible && m_model)
 		scene.AddInstance(*this); // Could add occlusion culling here...
 
-	// Rince and repeat for all children
-	for (ObjectCont::iterator i = m_child.begin(), iend = m_child.end(); i != iend; ++i)
-		(*i)->AddToScene(scene, time_s, &m_i2w);
+	// Rinse and repeat for all children
+	for (auto& child : m_child)//for (ObjectCont::iterator i = m_child.begin(), iend = m_child.end(); i != iend; ++i)
+		child->AddToScene(scene, time_s, &m_i2w);
 }
 
 //// Recursively add this object using 'bbox_model' instead of its

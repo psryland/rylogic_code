@@ -230,6 +230,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\script\BuildShader.py" />
     <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl" />
     <None Include="..\renderer11\shaders\common\cbuffer.hlsl" />
     <None Include="..\renderer11\shaders\common\functions.hlsl" />

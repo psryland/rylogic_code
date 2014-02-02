@@ -71,8 +71,8 @@ namespace pr
 			template <typename Inst> void RemoveInstance(Inst const& inst) { m_drawlist.Remove(inst.m_base); }
 
 			// Render the current drawlist into 'dc'
-			void Render(bool clear_bb = true) const;
-			void Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb = true) const;
+			void Render(bool clear_bb = true);
+			void Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb = true);
 
 		protected:
 			// Resize the viewport on back buffer resize

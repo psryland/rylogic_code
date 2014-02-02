@@ -89,13 +89,17 @@ void BindFrameContants(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Buffer> con
 }
 
 // Render the draw list for this viewport
-void pr::rdr::Scene::Render(bool clear_bb) const
+void pr::rdr::Scene::Render(bool clear_bb)
 {
 	D3DPtr<ID3D11DeviceContext> dc = m_rdr->ImmediateDC();
 	Render(dc, clear_bb);
 }
-void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb) const
+void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb)
 {
+	// Sort the draw list if needed
+	m_drawlist.SortIfNeeded();
+
+	// Push states to the device
 	m_rdr->m_rs_mgr.Flush();
 	m_rdr->m_bs_mgr.Flush();
 
