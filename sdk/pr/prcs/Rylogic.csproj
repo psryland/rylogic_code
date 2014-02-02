@@ -176,9 +176,7 @@
     </Compile>
     <Compile Include="extn\datetime_extensions.cs" />
     <Compile Include="extn\dict_extensions.cs" />
-    <Compile Include="extn\datagridview_extensions.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="extn\datagridview_extensions.cs" />
     <Compile Include="extn\dispatcher_extensions.cs" />
     <Compile Include="extn\drawing_extensions.cs" />
     <Compile Include="extn\enumerable_extensions.cs" />
@@ -209,6 +207,9 @@
     </Compile>
     <Compile Include="gui\colour_wheel.cs">
       <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="gui\dgv_custom_columns.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\dock_container.cs">
       <SubType>Form</SubType>
