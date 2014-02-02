@@ -19,6 +19,7 @@
 // For some reason, defining PR_LOGGING=1 in the property sheets does not work
 // in VS2012. You have to define it in the project settings...
 
+#pragma once
 #ifndef PR_COMMON_LOG_H
 #define PR_COMMON_LOG_H
 
@@ -105,7 +106,7 @@ namespace pr
 			{
 				Lock lock(boundary());
 				if (level < Level()) return;
-				
+
 				auto& out = *Out();
 				out << "(" << Timestamp() << ") [" << Level::ToString(level) << "] " <<  message << "\n";
 				if (e)
@@ -125,10 +126,10 @@ namespace pr
 			{
 				char buffer[200] = {};
 				if (GetTimeFormatA(LOCALE_USER_DEFAULT, 0, 0, "HH':'mm':'ss", buffer, sizeof(buffer)) == 0) return "";
-				
+
 				static DWORD first = GetTickCount();
 				char result[100] = {};
-				std::sprintf(result, "%s.%03ld", buffer, (long)(GetTickCount() - first) % 1000); 
+				std::sprintf(result, "%s.%03ld", buffer, (long)(GetTickCount() - first) % 1000);
 				return result;
 			}
 			#else
