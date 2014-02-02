@@ -15,9 +15,7 @@ def OnError(msg):
 
 # Terminate on exception
 def OnException(ex):
-	print("ERROR: " + str(ex))
-	input("Press enter to close")
-	sys.exit(-1)
+	OnError("ERROR: " + str(ex))
 
 # Check that the UserVars file is the correct version
 def CheckVersion(check_version):
@@ -88,6 +86,28 @@ def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
 		subprocess.check_call(args, cwd=working_dir)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return
+		OnError("ERROR: " + str(e.output))
+	except Exception as e:
+		OnError("ERROR: " + str(e))
+
+# Run a program in a separate console window
+# Returns the process for the caller to call wait() on,
+#  e.g.
+#    proc = Spawn(["cmd", "/C" ,"echo Hello"])
+#    proc.wait()
+def Spawn(args, same_window=False, show_window=True, show_arguments=False):
+	try:
+		if show_arguments: print(args)
+		si = subprocess.STARTUPINFO()
+		if not show_window:
+			si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+			si.wShowWindow = subprocess.SW_HIDE
+		cf = subprocess.CREATE_NEW_CONSOLE
+		if same_window:
+			cf = 0
+		proc = subprocess.Popen(args,creationflags=cf,startupinfo=si)
+		return proc
+	except subprocess.CalledProcessError as e:
 		OnError("ERROR: " + str(e.output))
 	except Exception as e:
 		OnError("ERROR: " + str(e))

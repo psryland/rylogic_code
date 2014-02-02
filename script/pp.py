@@ -60,10 +60,10 @@ try:
 	Tools.Exec(['cl'] + flags + includes + defines + ['/Fi'+outpath, filepath], show_arguments=trace)
 
 	print("Cleaning PP output...")
-	Tools.Exec(['q:\\bin\\textformatter.exe', '-f', outpath, '-newlines', '0', '1'], show_arguments=trace)
+	Tools.Exec([UserVars.root+'\\bin\\textformatter.exe', '-f', outpath, '-newlines', '0', '1'], show_arguments=trace)
 
 	print("AStyling output...")
-	Tools.Exec(['Q:\\tools\\AStyle\\astyle.exe', '--options=Q:\\tools\\astyle\\format_with_newlines.cfg', outpath], show_arguments=trace)
+	Tools.Exec([UserVars.root+'\\tools\\AStyle\\astyle.exe', '--options='+UserVars.root+'\\tools\\astyle\\format_with_newlines.cfg', outpath], show_arguments=trace)
 
 	print("Showing PP output...")
 	Tools.Exec([UserVars.textedit, outpath])

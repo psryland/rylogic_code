@@ -5,7 +5,7 @@
 # Use:
 #  BuildShader.py $(Fullpath) [pp] [obj]
 #  This will compile the shader into a header file in the same directory as $(Fullpath)
-import sys, os
+import sys, os, tempfile
 import Rylogic as Tools
 import UserVars
 
@@ -35,8 +35,8 @@ try:
 	if trace: print("Output directory: " + outdir)
 
 	# The filepaths
-	tmp_h_filepath   = outdir + "\\" + fname + ".h.tmp"
-	tmp_cso_filepath = outdir + "\\" + fname + ".cso.tmp"
+	tmp_h_filepath   = tempfile.mktemp() #outdir + "\\" + fname + ".h.tmp"
+	tmp_cso_filepath = tempfile.mktemp() #outdir + "\\" + fname + ".cso.tmp"
 	h_filepath       = outdir + "\\" + fname + ".h"
 	cso_filepath     = outdir + "\\" + fname + ".cso"
 	pp_filepath      = outdir + "\\" + fname + ".pp"
