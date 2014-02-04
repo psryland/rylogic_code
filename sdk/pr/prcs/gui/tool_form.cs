@@ -75,16 +75,29 @@ namespace pr.gui
 			Owner = owner;
 			ShowInTaskbar = false;
 			FormBorderStyle = FormBorderStyle.SizableToolWindow;
-			StartPosition = FormStartPosition.CenterParent;
+			StartPosition = FormStartPosition.Manual;
 			HideOnClose = !modal;
-			if (ofs  != Point.Empty) { m_ofs = ofs; StartPosition = FormStartPosition.Manual; }
 			if (size != Size.Empty) Size = size;
-
-			// Make CentreParent actually work...
+			
 			Load += (s,a) =>
 				{
-					if (StartPosition == FormStartPosition.CenterParent)
-						CenterToParent();
+					if (ofs != Point.Empty)
+					{
+						m_ofs = ofs;
+					}
+					else
+					{
+						switch (pin)
+						{
+						default: throw new ArgumentOutOfRangeException("pin");
+						case EPin.TopLeft:     m_ofs = Point.Empty; break;
+						case EPin.TopRight:    m_ofs = new Point(-Size.Width, 0); break;
+						case EPin.BottomLeft:  m_ofs = new Point(0,-Size.Height); break;
+						case EPin.BottomRight: m_ofs = new Point(-Size.Width, -Size.Height); break;
+						case EPin.Centre:      CenterToParent(); RecordOffset(); break;
+						}
+					}
+					UpdateLocation();
 				};
 
 			// Whenever this window moves, save it's offset from the owner
@@ -112,7 +125,6 @@ namespace pr.gui
 			Win32.InsertMenu(m_sys_menu_handle, 5, Win32.MF_BYPOSITION|Win32.MF_SEPARATOR, 0, string.Empty);
 			Win32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
 
-			UpdateLocation();
 			PinWindow = true;
 		}
 

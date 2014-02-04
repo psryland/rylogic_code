@@ -9,5 +9,11 @@ namespace pr.common
 		{
 			get { return (T)base.Current; }
 		}
+
+		public new T this[int index]
+		{
+			get { return (T)base[index]; }
+			set { base[index] = value; }
+		}
 	}
 }

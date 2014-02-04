@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using pr.stream;
 
 namespace pr.util
 {
@@ -105,11 +106,10 @@ namespace pr.util
 			}
 		}
 
-		/// <summary>Load and parse a csv file</summary>
-		public static CSVData Load(string filepath)
+		/// <summary>Read csv rows from a stream</summary>
+		public static IEnumerable<Row> Parse(Stream src)
 		{
-			var csv = new CSVData();
-			using (var file = new StreamReader(filepath))
+			using (var file = new StreamReader(src))//new UncloseableStream(src)))
 			{
 				// Fields can optionally be in quotes.
 				// Quotes are escaped using double quotes.
@@ -160,7 +160,7 @@ namespace pr.util
 							if (row.Count != 0 || str.Length != 0)
 								row.Add(str.ToString());
 							str.Length = 0;
-							csv.m_data.Add(row);
+							yield return row;
 							row = new Row();
 							quoted = false;
 							esc = false;
@@ -171,8 +171,22 @@ namespace pr.util
 					str.Append(ch);
 				}
 				if (str.Length != 0) row.Add(str.ToString());
-				if (row.Count != 0) csv.m_data.Add(row);
+				if (row.Count != 0) yield return row;
 			}
+		}
+
+		/// <summary>Stream rows from a csv file</summary>
+		public static IEnumerable<Row> Parse(string filepath)
+		{
+			return Parse(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read));
+		}
+
+		/// <summary>Load and parse a csv file</summary>
+		public static CSVData Load(string filepath)
+		{
+			var csv = new CSVData();
+			foreach (var row in Parse(filepath))
+				csv.Add(row);
 			return csv;
 		}
 

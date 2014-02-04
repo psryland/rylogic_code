@@ -23,12 +23,12 @@ namespace pr
 		BYTE  m_data_bits;  // Valid values are 5,6,7,8 (8 is default)
 		BYTE  m_parity;     // Parity
 		BYTE  m_stop_bits;  // Stop bits
-		
-		CommPortSettings()
-		:m_baud     (CBR_9600)
-		,m_data_bits(8)
-		,m_parity   (NOPARITY)
-		,m_stop_bits(ONESTOPBIT)
+
+		CommPortSettings(DWORD baud = CBR_9600, BYTE data_bits = 8, BYTE parity = NOPARITY, BYTE stop_bits = ONESTOPBIT)
+		:m_baud     (baud)
+		,m_data_bits(data_bits)
+		,m_parity   (parity)
+		,m_stop_bits(stop_bits)
 		{}
 	};
 	

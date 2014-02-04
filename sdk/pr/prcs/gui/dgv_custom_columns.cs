@@ -101,42 +101,46 @@ namespace pr.gui
 				};
 		}
 
-		public int MinValue
+		private int GetMinValueInternal(int row_index)
 		{
-			get
-			{
-				// If no binding property has been given, return the column min value
-				var col = (DataGridViewTrackBarColumn)OwningColumn;
-				if (col.MinValuePropertyName == null) return col.MinValue;
+			// If no binding property has been given, return the column min value
+			var col = (DataGridViewTrackBarColumn)OwningColumn;
+			if (col.MinValuePropertyName == null) return col.MinValue;
 
-				var obj = DataGridView.Rows[RowIndex].DataBoundItem;
-				return GetMinValue(col, obj);
-			}
+			// Invalid row index, return a default
+			if (row_index < 0 || row_index >= DataGridView.RowCount)
+				return 0;
+
+			var obj = DataGridView.Rows[row_index].DataBoundItem;
+			return GetMinValue(col, obj);
 		}
 
-		public int MaxValue
+		private int GetMaxValueInternal(int row_index)
 		{
-			get
-			{
-				var col = (DataGridViewTrackBarColumn)OwningColumn;
-				if (col.MaxValuePropertyName == null) return col.MaxValue;
+			// If no binding property has been given, return the column min value
+			var col = (DataGridViewTrackBarColumn)OwningColumn;
+			if (col.MaxValuePropertyName == null) return col.MaxValue;
 
-				var obj = DataGridView.Rows[RowIndex].DataBoundItem;
-				return GetMaxValue(col,obj);
-			}
+			// Invalid row index, return a default
+			if (row_index < 0 || row_index >= DataGridView.RowCount)
+				return 100;
+
+			var obj = DataGridView.Rows[row_index].DataBoundItem;
+			return GetMaxValue(col, obj);
 		}
 
-		public override object Clone()
-		{
-			var c = (DataGridViewTrackBarCell)base.Clone();
-			c.Value = Value;
-			return c;
-		}
+		public int MinValue { get { return GetMinValueInternal(RowIndex); } }
+		public int MaxValue { get { return GetMaxValueInternal(RowIndex); } }
+
 		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
 		{
 			paint_parts &= ~DataGridViewPaintParts.ContentForeground;
 			base.Paint(gfx, clip_bounds, cell_bounds, row_index, cell_state, value, formatted_value, error_text, cell_style, advanced_border_style, paint_parts);
-			DataGridViewTrackBarEditCtrl.PaintTrackBar(gfx, cell_bounds, (int)value, MinValue, MaxValue);
+			
+			var v = (int)value;
+			var mn = GetMinValueInternal(row_index);
+			var mx = GetMaxValueInternal(row_index);
+			DataGridViewTrackBarEditCtrl.PaintTrackBar(gfx, cell_bounds, v, mn, mx);
 		}
 		public override void InitializeEditingControl(int row_index, object initial_formatted_value, DataGridViewCellStyle data_grid_view_cell_style)
 		{

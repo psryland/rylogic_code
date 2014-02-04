@@ -1280,6 +1280,9 @@ namespace pr.gui
 		}
 		[DllImport("Kernel32.dll")] private static extern IntPtr LoadLibrary(string path);
 
+		/// <summary>True if the view3d dll has been loaded</summary>
+		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
+
 		// Initialise / shutdown the dll
 		[DllImport(Dll)] private static extern EResult           View3D_Initialise(HWND hwnd, ReportErrorCB error_cb, SettingsChangedCB settings_changed_cb);
 		[DllImport(Dll)] private static extern void              View3D_Shutdown();
