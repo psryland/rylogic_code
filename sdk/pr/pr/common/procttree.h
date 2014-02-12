@@ -38,7 +38,7 @@ namespace pr
 		uint	GetCount() const						{ return m_count; }
 		uint	MaxIndexAtLevel(uint level) const		{ return (1 << level); }
 		float	CellSizeAtLevel(uint level) const		{ return m_dim / static_cast<float>(MaxIndexAtLevel(level)); }
-		
+
 		void	Add(const T& object, const v4& position, float radius);
 		void	DeleteAndDestroy();
 		void	Destroy();
@@ -85,7 +85,7 @@ namespace pr
 	{
 		uint level,X,Y,Z;
 		GetCell(position, radius, level, X, Y, Z);
-		
+
 		Node* node = GetOrCreateNode(level, X, Y, Z);
 		node->m_object = &object;
 	}
@@ -107,7 +107,7 @@ namespace pr
 		if( !tree ) return;
 		for( uint i = 0; i < 8; ++i )
 			DeleteAndDestroyRecersive(tree->m_oct[i]);
-		
+
 		delete tree->m_object;
 	}
 
@@ -139,7 +139,7 @@ namespace pr
 	void OctTree<T>::GetCell(const v4& position, float radius, uint& level, uint& X, uint& Y, uint& Z) const
 	{
 		float diameter = 2.0f * radius;
-		PR_ASSERT(PR_DBG, diameter < m_dim);
+		PR_ASSERT(PR_DBG, diameter < m_dim, "");
 		for( level = 1; level < MAX_LEVEL; ++level )
 		{
 			if( diameter > CellSizeAtLevel(level) )
@@ -155,9 +155,9 @@ namespace pr
 		Z = static_cast<uint>(position[2] / cell_size);
 
 		// If these fire then 'position' is outside the boundary of this oct tree
-		PR_ASSERT(PR_DBG, X < MaxIndexAtLevel(level));
-		PR_ASSERT(PR_DBG, Y < MaxIndexAtLevel(level));
-		PR_ASSERT(PR_DBG, Z < MaxIndexAtLevel(level));
+		PR_ASSERT(PR_DBG, X < MaxIndexAtLevel(level), "");
+		PR_ASSERT(PR_DBG, Y < MaxIndexAtLevel(level), "");
+		PR_ASSERT(PR_DBG, Z < MaxIndexAtLevel(level), "");
 	}
 
 	//*****
@@ -167,9 +167,9 @@ namespace pr
 	typename OctTree<T>::Node* OctTree<T>::GetOrCreateNode(uint level, uint X, uint Y, uint Z)
 	{
 		// Make sure X, Y, Z are valid at 'level'
-		PR_ASSERT(PR_DBG, X < MaxXIndexAtLevel(level));
-		PR_ASSERT(PR_DBG, Y < MaxXIndexAtLevel(level));
-		PR_ASSERT(PR_DBG, Z < MaxZIndexAtLevel(level));
+		PR_ASSERT(PR_DBG, X < MaxXIndexAtLevel(level), "");
+		PR_ASSERT(PR_DBG, Y < MaxXIndexAtLevel(level), "");
+		PR_ASSERT(PR_DBG, Z < MaxZIndexAtLevel(level), "");
 
 		// If the oct tree does not yet exist then create the first node
 		if( m_tree == NULL )
@@ -177,7 +177,7 @@ namespace pr
 			m_tree = m_node_pool.Get();
 			m_tree->m_object = NULL;
 			++m_count;
-			PR_ASSERT(PR_DBG, m_count == 1);
+			PR_ASSERT(PR_DBG, m_count == 1, "");
 		}
 
 		// Navigate down the oct tree adding nodes if necessary until we reach 'level'
@@ -196,7 +196,7 @@ namespace pr
 				{
 					if( twoX < L )		oct = 0;
 					else { twoX -= L;	oct = 1; }
-				}				
+				}
 				else
 				{
 					twoY -= L;
@@ -226,7 +226,7 @@ namespace pr
 			{
 				tree->m_oct[oct]	= m_node_pool.Get();
 				Node* child			= tree->m_oct[oct];
-				child->m_object		= NULL;		
+				child->m_object		= NULL;
 				child->m_level		= lvl + 1;
 				child->m_indexX		= X >> (level - child->m_level);
 				child->m_indexX		= X >> (level - child->m_level);
@@ -239,7 +239,6 @@ namespace pr
 
 		return tree;
 	}
-
 }//namespace pr
 
 #endif//PR_OCTTREE_H

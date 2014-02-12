@@ -14,7 +14,7 @@ namespace pr
 {
 	// Another variation on a multicast delegate
 	// Use:
-	//  Note: doesn't have to be an interface necesssarily
+	//  Note: doesn't have to be an interface necessarily
 	//  struct IThing { virtual void Func(int params) = 0; };
 	//  pr::MultiCast<IThing*> OnThingHappens; // clients can +=, -= onto this
 	// To invoke the delegate:

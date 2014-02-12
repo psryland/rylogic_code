@@ -148,7 +148,7 @@ namespace pr
 			return y;
 		}
 		
-		// generates a random number on [0,0x7fffffff]-interval
+		// Generates a random number on [0,0x7fffffff]-interval
 		long i32()
 		{
 			return (long)(u32()>>1);

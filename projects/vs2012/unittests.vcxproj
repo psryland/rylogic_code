@@ -108,12 +108,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\registrykey.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\resource.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\serialportio.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stack.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\testbed3d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\timers.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\to.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\repeater.h" />
@@ -141,8 +139,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\macros\for_each.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\join.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\link.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\macros\no_copying.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\no_copy.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\on_exit.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\macros\remove_parenthesis.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\repeat.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\stringise.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\bitfunctions.h" />
@@ -269,9 +268,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\script\token.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\tokeniser.h" />
     <ClInclude Include="..\..\sdk\sqlite\sqlite3.h" />
+    <ClInclude Include="..\unittests\unittests.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\unittests\run_tests.cmd" />
+    <None Include="..\unittests\pre_build.py" />
+    <None Include="..\unittests\run_tests.py" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
@@ -321,85 +322,93 @@
     <Import Project="app.x64.release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <PostBuildEvent>
-      <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
+    <CustomBuildStep>
+      <Command>$(ProjectDir)..\unittests\run_tests.py $(TargetPath)</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Running unit tests</Message>
+      <Outputs>nofile</Outputs>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-    <PostBuildEvent>
-      <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests</Command>
     </PreBuildEvent>
+    <CustomBuildStep>
+      <Command>$(ProjectDir)..\unittests\run_tests.py $(TargetPath)</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Running unit tests</Message>
+      <Outputs>nofile</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
     </Link>
-    <PostBuildEvent>
-      <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
+    <CustomBuildStep>
+      <Command>$(ProjectDir)..\unittests\run_tests.py $(TargetPath)</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Running unit tests</Message>
+      <Outputs>nofile</Outputs>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
     </Link>
-    <PostBuildEvent>
-      <Command>$(ProjectDir)..\unittests\run_tests $(TargetPath)</Command>
-    </PostBuildEvent>
+    <PostBuildEvent />
+    <CustomBuildStep>
+      <Command>$(ProjectDir)..\unittests\run_tests.py $(TargetPath)</Command>
+    </CustomBuildStep>
+    <CustomBuildStep>
+      <Message>Running unit tests</Message>
+      <Outputs>nofile</Outputs>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

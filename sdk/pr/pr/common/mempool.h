@@ -91,7 +91,7 @@ namespace pr
 			static void Destruct(T*)			{}
 			static void DestructRange(T*, T*)	{}
 		};
-		typedef typename meta::if_< meta::is_pod<T>, POD<T>, NonPOD<T> >::type Constructor;
+		typedef typename meta::if_< meta::is_pod<T>::value, POD<T>, NonPOD<T> >::type Constructor;
 
 		struct Block
 		{
@@ -140,11 +140,11 @@ namespace pr
 	{
 		// Create a semaphore for protecting access to the object and block list
 		MP_THREADSAFE(m_semaphore = CreateSemaphore(0, 1/*initial*/, 1/*max*/, 0);)
-		MP_THREADSAFE(PR_ASSERT(PR_DBG, m_semaphore != 0);)
+		MP_THREADSAFE(PR_ASSERT(PR_DBG, m_semaphore != 0, "");)
 
 		Lock();
 		GetOrCreateNextBlock();
-		Unlock();	
+		Unlock();
 	}
 
 	//*****
@@ -161,7 +161,7 @@ namespace pr
 		PR_ASSERT(PR_DBG, copy.m_allocated_objects == copy.m_free_objects, "You are copying a mempool that has objects allocated from it");
 		Lock();
 		GetOrCreateNextBlock();
-		Unlock();	
+		Unlock();
 	}
 
 	//*****
@@ -172,7 +172,7 @@ namespace pr
 		// Make sure all objects have been returned to the pool
 		// To avoid apparent "Memory leaks" when using a global memory pool
 		// Use ReleaseMemory() before the memory pool is destroyed
-		PR_ASSERT(PR_DBG, AllObjectsReturned());
+		PR_ASSERT(PR_DBG, AllObjectsReturned(), "");
 		ReleaseMemory();
 	}
 
@@ -189,7 +189,7 @@ namespace pr
 		// If an object is available in the list use it first
 		if( m_object_list )
 		{
-			PR_ASSERT(PR_DBG, m_free_objects > 0);
+			PR_ASSERT(PR_DBG, m_free_objects > 0, "");
 			object_to_return = m_object_list;
 			m_object_list = m_object_list->m_next;
 			--m_free_objects;
@@ -203,16 +203,16 @@ namespace pr
 			}
 
 			// Use some more of the current block
-			PR_ASSERT(PR_DBG, m_block_ptr < m_block_list->m_number_of_objects);
+			PR_ASSERT(PR_DBG, m_block_ptr < m_block_list->m_number_of_objects, "");
 			object_to_return = reinterpret_cast<T*>(&m_block_list->m_memory[m_block_ptr * sizeof(T)]);
 			++m_block_ptr;
 			--m_free_objects;
-		}	
+		}
 		Unlock();
 
 		INITIALISE_MEMORY(memset(object_to_return, 0xcd, sizeof(T));)
 		object_to_return->m_next = 0;
-		
+
 		Constructor::Construct(reinterpret_cast<T*>(object_to_return));
 		return object_to_return;
 	}
@@ -223,12 +223,12 @@ namespace pr
 	void MemPool<T>::Return(T* object)
 	{
 		if( object == 0 ) return;
-		
+
 		Constructor::Destruct(object);
 
-		PR_ASSERT(PR_DBG, object->m_next == 0);					// This object has already been deleted
+		PR_ASSERT(PR_DBG, object->m_next == 0, "");					// This object has already been deleted
 		INITIALISE_MEMORY(memset(object, 0xDD, sizeof(T));)
-		PR_ASSERT(PR_DBG, m_free_objects < m_allocated_objects);
+		PR_ASSERT(PR_DBG, m_free_objects < m_allocated_objects, "");
 
 		Lock();
 		object->m_next = m_object_list;
@@ -261,7 +261,7 @@ namespace pr
 			m_block_list = m_block_list->m_prev;
 			m_block_ptr	 = m_block_list->m_number_of_objects;
 		}
-		
+
 		m_free_objects = m_allocated_objects;
 		m_object_list = 0;
 		m_block_ptr = 0;
@@ -274,7 +274,7 @@ namespace pr
 	template <typename T>
 	inline void MemPool<T>::ReleaseMemory()
 	{
-		PR_ASSERT(PR_DBG, AllObjectsReturned());	// This assert indicate leaked objects!
+		PR_ASSERT(PR_DBG, AllObjectsReturned(), "");	// This assert indicate leaked objects!
 		ForceReleaseMemory();
 	}
 
@@ -311,8 +311,8 @@ namespace pr
 	template <typename T>
 	bool MemPool<T>::GetOrCreateNextBlock()
 	{
-		PR_ASSERT(PR_DBG, m_objects_per_block != 0);
-		
+		PR_ASSERT(PR_DBG, m_objects_per_block != 0, "");
+
 		if( m_block_list == 0 )
 		{
 			m_block_list = new Block(m_objects_per_block);
@@ -321,7 +321,7 @@ namespace pr
 		}
 		else if( m_block_list->m_next == 0 )
 		{
-			PR_ASSERT(PR_DBG, m_block_ptr == m_block_list->m_number_of_objects);
+			PR_ASSERT(PR_DBG, m_block_ptr == m_block_list->m_number_of_objects, "");
 			Block* block = new Block(m_objects_per_block);
 			m_allocated_objects += m_objects_per_block;
 			m_free_objects += m_objects_per_block;
@@ -331,14 +331,13 @@ namespace pr
 		}
 		else
 		{
-			PR_ASSERT(PR_DBG, m_block_ptr == m_block_list->m_number_of_objects);
+			PR_ASSERT(PR_DBG, m_block_ptr == m_block_list->m_number_of_objects, "");
 			m_block_list = m_block_list->m_next;
 		}
-		
+
 		m_block_ptr = 0;
 		return true;
 	}
-
 }//namespace pr
 
 #undef MP_THREADSAFE

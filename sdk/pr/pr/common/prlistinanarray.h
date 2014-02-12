@@ -35,9 +35,9 @@ namespace pr
 		T*		HeadP()			const	{ if(m_head)	{return &m_head->m_object;		} else {return 0;} }
 		T*		CurrentP()		const	{ if(m_current) {return &m_current->m_object;	} else {return 0;} }
 		T*		TailP()			const	{ if(m_tail)	{return &m_tail->m_object;		} else {return 0;} }
-		T&		RefHead()		const	{ PR_ASSERT(PR_DBG, m_head);	return m_head->m_object;	}
-		T&		RefCurrent()	const	{ PR_ASSERT(PR_DBG, m_current);	return m_current->m_object;	}
-		T&		RefTail()		const	{ PR_ASSERT(PR_DBG, m_tail);	return m_tail->m_object;	}
+		T&		RefHead()		const	{ PR_ASSERT(PR_DBG, m_head, "");	return m_head->m_object;	}
+		T&		RefCurrent()	const	{ PR_ASSERT(PR_DBG, m_current, "");	return m_current->m_object;	}
+		T&		RefTail()		const	{ PR_ASSERT(PR_DBG, m_tail, "");	return m_tail->m_object;	}
 
 		// Iterator
 		const T First()	const		{ if(_First()) {return m_head->m_object;   } else {return T();} }
@@ -60,10 +60,10 @@ namespace pr
 		T* PrevP()					{ if(_Prev())  {return &m_current->m_object;} else {return 0;} }
 
 		// Relative Iterator
-		uint Next(uint which)	const	{ PR_ASSERT(PR_DBG, which < m_max_size); if(m_array[which].m_next)  {return static_cast<uint>(m_array[which].m_next - m_array);} else {return INVALID_INDEX;} }
-		uint Prev(uint which)	const	{ PR_ASSERT(PR_DBG, which < m_max_size); if(m_array[which].m_prev)  {return static_cast<uint>(m_array[which].m_prev - m_array);} else {return INVALID_INDEX;} }
-		uint Next(uint which)			{ PR_ASSERT(PR_DBG, which < m_max_size); if(m_array[which].m_next)  {return static_cast<uint>(m_array[which].m_next - m_array);} else {return INVALID_INDEX;} }
-		uint Prev(uint which)			{ PR_ASSERT(PR_DBG, which < m_max_size); if(m_array[which].m_prev)  {return static_cast<uint>(m_array[which].m_prev - m_array);} else {return INVALID_INDEX;} }
+		uint Next(uint which)	const	{ PR_ASSERT(PR_DBG, which < m_max_size, ""); if(m_array[which].m_next)  {return static_cast<uint>(m_array[which].m_next - m_array);} else {return INVALID_INDEX;} }
+		uint Prev(uint which)	const	{ PR_ASSERT(PR_DBG, which < m_max_size, ""); if(m_array[which].m_prev)  {return static_cast<uint>(m_array[which].m_prev - m_array);} else {return INVALID_INDEX;} }
+		uint Next(uint which)			{ PR_ASSERT(PR_DBG, which < m_max_size, ""); if(m_array[which].m_next)  {return static_cast<uint>(m_array[which].m_next - m_array);} else {return INVALID_INDEX;} }
+		uint Prev(uint which)			{ PR_ASSERT(PR_DBG, which < m_max_size, ""); if(m_array[which].m_prev)  {return static_cast<uint>(m_array[which].m_prev - m_array);} else {return INVALID_INDEX;} }
 
 		// Add/Insert
 		uint	AddToHead(const T& object);
@@ -86,14 +86,14 @@ namespace pr
 		void	Detach(uint which);
 
 		// Utility
-		void	SetCurrent(uint which)				{ PR_ASSERT(PR_DBG, which < m_max_size); m_current = &m_array[which]; }
+		void	SetCurrent(uint which)				{ PR_ASSERT(PR_DBG, which < m_max_size, ""); m_current = &m_array[which]; }
 		bool	IsEmpty()  const					{ return m_head == 0; }
-		T*		Ptr(uint which)						{ PR_ASSERT(PR_DBG, which == INVALID_INDEX || which < m_max_size); return (which != INVALID_INDEX) ? (&m_array[which].m_object) : (0); }
+		T*		Ptr(uint which)						{ PR_ASSERT(PR_DBG, which == INVALID_INDEX || which < m_max_size, ""); return (which != INVALID_INDEX) ? (&m_array[which].m_object) : (0); }
 		T&		 operator [](uint which)			{ return m_array[which].m_object; }
 		const T& operator [](uint which) const		{ return m_array[which].m_object; }
 		bool	Find(const T& other, bool search_forwards = true) const;
 		void	Destroy();
-		
+
 		// Stack Interface
 		void Push(const T& object)		{ AddToHead(object);	}
 		T	 Pop()						{ return DetachHead();	}
@@ -126,7 +126,7 @@ namespace pr
 			static void DestructRange(Node*, Node*)	{}
 			static void Deallocate(Node* target)	{ operator delete (target); }
 		};
-		typedef typename meta::if_< meta::is_pod<T>, POD, NonPOD >::type Constructor;
+		typedef typename meta::if_< meta::is_pod<T>::value, POD, NonPOD >::type Constructor;
 
 	protected:	// Methods
 		Node*	_First() const		{ if( m_head ) {m_current = m_head;} return m_head; }
@@ -160,7 +160,7 @@ namespace pr
 	,m_current(0)
 	{
 		m_array = Constructor::Allocate(m_max_size);
-		PR_ASSERT(PR_DBG, m_array != 0);
+		PR_ASSERT(PR_DBG, m_array != 0, "");
 		Destroy();
 	}
 
@@ -178,7 +178,7 @@ namespace pr
 	{
 		PR_ASSERT(PR_DBG, copy.m_count == 0, "Don't copy non-zero arrays");
 		m_array = Constructor::Allocate(m_max_size);
-		PR_ASSERT(PR_DBG, m_array != 0);
+		PR_ASSERT(PR_DBG, m_array != 0, "");
 		Destroy();
 	}
 
@@ -209,7 +209,7 @@ namespace pr
 
 		m_head			= node;
 		if( !m_tail )	m_tail = node;
-		
+
 		++m_count;
 		return static_cast<uint>(node - m_array);
 	}
@@ -242,7 +242,7 @@ namespace pr
 	template <typename T>
 	uint ListInAnArray<T>::AddAfterCurrent(const T& object)
 	{
-		PR_ASSERT(PR_DBG, m_current);
+		PR_ASSERT(PR_DBG, m_current, "");
 		if( !m_free ) { PR_ASSERT(PR_DBG, false, "You've over filled this list"); return INVALID_INDEX; }
 
 		Node *node = m_free;
@@ -265,7 +265,7 @@ namespace pr
 	template <typename T>
 	uint ListInAnArray<T>::AddBeforeCurrent(const T& object)
 	{
-		PR_ASSERT(PR_DBG, m_current);
+		PR_ASSERT(PR_DBG, m_current, "");
 		if( !m_free ) { PR_ASSERT(PR_DBG, false, "You've over filled this list"); return INVALID_INDEX; }
 
 		Node *node = m_free;
@@ -278,7 +278,7 @@ namespace pr
 		if( node->m_prev ) node->m_prev->m_next = node;
 		if( m_head == m_current ) m_head = node;
 		++m_count;
-		
+
 		return static_cast<uint>(node - m_array);
 	}
 
@@ -292,7 +292,7 @@ namespace pr
 
 		Node *node = m_free;
 		m_free = m_free->m_next;
-		
+
 		if( !is_pod ) new (&node->m_object) T();
 		node->m_next	= m_head;
 		node->m_prev	= (m_head) ? (m_head->m_prev) : (0);
@@ -415,7 +415,7 @@ namespace pr
 	template <typename T>
 	inline void ListInAnArray<T>::DetachCurrent()
 	{
-		PR_ASSERT(PR_DBG, m_current);
+		PR_ASSERT(PR_DBG, m_current, "");
 		Remove(m_current);
 	}
 
@@ -497,7 +497,7 @@ namespace pr
 	template <typename T>
 	inline typename ListInAnArray<T>::Node* ListInAnArray<T>::_Next() const
 	{
-		PR_ASSERT(PR_DBG, m_current);
+		PR_ASSERT(PR_DBG, m_current, "");
 		if( !m_current->m_next ) return 0;
 		m_current = m_current->m_next;
 		return m_current;
@@ -507,7 +507,7 @@ namespace pr
 	template <typename T>
 	inline typename ListInAnArray<T>::Node* ListInAnArray<T>::_Prev() const
 	{
-		PR_ASSERT(PR_DBG, m_current);
+		PR_ASSERT(PR_DBG, m_current, "");
 		if( !m_current->m_prev ) return 0;
 		m_current = m_current->m_prev;
 		return m_current;
@@ -520,7 +520,7 @@ namespace pr
 	{
 		if( m_head == m_tail )
 		{
-			PR_ASSERT(PR_DBG, node == m_head);
+			PR_ASSERT(PR_DBG, node == m_head, "");
 			m_head = m_tail = m_current = 0;
 		}
 		else
@@ -548,12 +548,12 @@ namespace pr
 				m_current = m_current->m_next;
 			}
 		}
-		PR_ASSERT(PR_DBG, m_count >= 0);
+		PR_ASSERT(PR_DBG, m_count >= 0, "");
 		--m_count;
-		
+
 		node->m_next = m_free;
 		m_free = node;
-	}	
+	}
 
 	//*****
 	// Check the integrity of the list
@@ -562,15 +562,15 @@ namespace pr
 	{
 		if( !m_head || !m_tail )
 		{
-			PR_ASSERT(PR_DBG, !m_head);
-			PR_ASSERT(PR_DBG, !m_tail);
-			PR_ASSERT(PR_DBG, !m_current);
-			PR_ASSERT(PR_DBG, m_count == 0);
+			PR_ASSERT(PR_DBG, !m_head, "");
+			PR_ASSERT(PR_DBG, !m_tail, "");
+			PR_ASSERT(PR_DBG, !m_current, "");
+			PR_ASSERT(PR_DBG, m_count == 0, "");
 			return true;
 		}
-		
-		PR_ASSERT(PR_DBG, m_head->m_prev == 0);
-		PR_ASSERT(PR_DBG, m_tail->m_next == 0);
+
+		PR_ASSERT(PR_DBG, m_head->m_prev == 0, "");
+		PR_ASSERT(PR_DBG, m_tail->m_next == 0, "");
 
 		bool current_is_valid = (m_current) ? (false) : (true);
 		uint count = 0;
@@ -585,17 +585,16 @@ namespace pr
 			node = node->m_next;
 		}
 		while( node );
-		PR_ASSERT(PR_DBG, count == m_count);
-		PR_ASSERT(PR_DBG, current_is_valid);
+		PR_ASSERT(PR_DBG, count == m_count, "");
+		PR_ASSERT(PR_DBG, current_is_valid, "");
 
 		uint num_free = 0;
 		Node* free = m_free;
 		while( free ) { ++num_free; free = free->m_next; }
-		PR_ASSERT(PR_DBG, num_free + m_count == m_max_size);
+		PR_ASSERT(PR_DBG, num_free + m_count == m_max_size, "");
 
 		return true;
 	}
-
 }//namespace PR
 
 #endif//PR_LIST_IN_AN_ARRAY_H

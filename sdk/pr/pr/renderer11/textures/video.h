@@ -21,7 +21,7 @@ namespace pr
 	namespace rdr
 	{
 		// Create a custom allocator/presentor
-		AllocPresPtr CreateAllocPres(D3DPtr<ID3D11Device>& device, D3DPtr<IVMRSurfaceAllocatorNotify9>& surface_alloc_notify);
+		//AllocPresPtr CreateAllocPres(D3DPtr<ID3D11Device>& device, D3DPtr<IVMRSurfaceAllocatorNotify9>& surface_alloc_notify);
 
 		// A video texture.
 		// This object is analogous to the Texture2D class

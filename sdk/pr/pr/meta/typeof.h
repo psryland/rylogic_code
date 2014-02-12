@@ -95,7 +95,7 @@ namespace pr
 			int a = 0;
 			typeof(a) b = 1;
 			double c = 0.0;
-			PR_CHECK(sizeof(typeof(c)) == sizeof(double));
+			PR_CHECK(sizeof(typeof(c)) == sizeof(double), true);
 			c = a = b;
 		}
 	}

@@ -5,11 +5,16 @@
 // Usage:
 //	struct WorkerThread : Thread<WorkerThread>
 //	{
-//		void Main()
+//		typedef Thread<WorkerThread> base;
+//
+//		// base::Start is protected to allow derived types to decide if it should be exposed
+//		using base::Start;
+//
+//		void Main(void*)
 //		{
 //			// Thread terminates when main exits
-//			if (Cancelled()) return; // Poll cancelled event
-//			TestPause();	// Put the thread to sleep until unpaused
+//			while (!Cancelled()) // Poll cancelled event
+//				TestPause();     // Put the thread to sleep until unpaused
 //		}
 //	}
 
@@ -34,15 +39,12 @@ namespace pr
 		template <typename Derived>
 		class Thread
 		{
-		public:
-			typedef Thread<Derived> base;
-
 		private:
-			HANDLE        m_thread_handle; // Worker thread handle
-			HANDLE        m_cancel_event;  // True when cancel has been signalled
-			HANDLE        m_pause_event;   // True when pausing or unpausing
-			HANDLE        m_paused_event;  // True while the worker thread is paused
-			volatile bool m_running;       // True while the worker thread is running
+			HANDLE m_thread_handle;    // Worker thread handle
+			HANDLE m_running;          // Set when the worker thread is running
+			HANDLE m_paused;           // Set while the thread is paused
+			HANDLE m_cancel_signalled; // Set when cancel has been signalled
+			HANDLE m_pause_signalled;  // Set when pause has been signalled
 
 			struct StartData
 			{
@@ -54,10 +56,20 @@ namespace pr
 			static unsigned int __stdcall EntryPoint(void* data)
 			{
 				StartData* ctx = static_cast<StartData*>(data);
-				try { ctx->m_this->Main(ctx->m_ctx); }
+				PR_ASSERT(PR_DBG, ctx->m_this->m_running          ,"invalid thread running event"  );
+				PR_ASSERT(PR_DBG, ctx->m_this->m_paused           ,"invalid thread paused event"   );
+				PR_ASSERT(PR_DBG, ctx->m_this->m_cancel_signalled ,"invalid cancel signalled event");
+				PR_ASSERT(PR_DBG, ctx->m_this->m_pause_signalled  ,"invalid pause signalled event" );
+
+				try
+				{
+					Throw(::SetEvent(ctx->m_this->m_running)); // Set the running flag
+					ctx->m_this->Main(ctx->m_ctx);
+					Throw(::ResetEvent(ctx->m_this->m_running)); // Clear the running flag
+				}
 				catch (std::exception const& e) { PR_ASSERT(PR_DBG, false, "Unhandled exception thrown in worker thread"); (void)e; }
 				catch (...)                     { PR_ASSERT(PR_DBG, false, "Unhandled exception thrown in worker thread"); }
-				ctx->m_this->m_running = false;
+
 				delete ctx;
 				return 0;
 			}
@@ -69,42 +81,59 @@ namespace pr
 		// All of these methods are protected so that the derived type can
 		// choose which interface methods to expose.
 		// Remember to use:
-		//   using Thread<Derived>::IsRunning;
-		//   using Thread<Derived>::Cancel;
-		//   etc
+		//   typedef Thread<Derived> base;
+		//   using base::IsRunning;
+		//   using base::Cancel;
 		protected:
-			void Throw(BOOL res) { if (res == 0) throw std::exception("operation failed"); }
+			static void Throw(BOOL res) { if (res == 0) throw std::exception("operation failed"); }
 
 			Thread()
 			:m_thread_handle(0)
-			,m_cancel_event (::CreateEvent(0, TRUE, FALSE, 0))
-			,m_pause_event  (::CreateEvent(0, FALSE, FALSE, 0))
-			,m_paused_event (::CreateEvent(0, TRUE, FALSE, 0))
-			,m_running      (false)
+			,m_running         (::CreateEvent(0, TRUE, FALSE, 0))
+			,m_paused          (::CreateEvent(0, TRUE, FALSE, 0))
+			,m_cancel_signalled(::CreateEvent(0, TRUE, FALSE, 0))
+			,m_pause_signalled (::CreateEvent(0, FALSE, FALSE, 0))
 			{
-				if (!m_cancel_event) throw std::exception("failed to create cancel thread event");
-				if (!m_pause_event ) throw std::exception("failed to create pause thread event");
-				if (!m_paused_event) throw std::exception("failed to create thread paused event");
+				if (!m_running) throw std::exception("failed to create thread running event");
+				if (!m_paused) throw std::exception("failed to create thread paused event");
+				if (!m_cancel_signalled) throw std::exception("failed to create cancel signalled event");
+				if (!m_pause_signalled) throw std::exception("failed to create pause signalled event");
 			}
 			virtual ~Thread()
 			{
-				if (m_running)       Stop(1000);
-				if (m_thread_handle) CloseHandle(m_thread_handle);
-				if (m_cancel_event ) CloseHandle(m_cancel_event);
-				if (m_pause_event  ) CloseHandle(m_pause_event);
-				if (m_paused_event ) CloseHandle(m_paused_event);
+				if (IsRunning()) Stop(1000);
+				if (m_pause_signalled)  CloseHandle(m_pause_signalled);
+				if (m_cancel_signalled) CloseHandle(m_cancel_signalled);
+				if (m_paused)           CloseHandle(m_paused);
+				if (m_running)          CloseHandle(m_running);
+				if (m_thread_handle)    CloseHandle(m_thread_handle);
 			}
 
 			// Returns true if the worker thread is currently running
-			volatile bool IsRunning() const
+			// Any thread can call this
+			bool IsRunning(DWORD timeout_ms = 0) const
 			{
-				return m_running;
+				DWORD res = WaitForSingleObject(m_running, timeout_ms);
+				PR_ASSERT(PR_DBG, res != WAIT_ABANDONED, "Receiving WAIT_ABANDONED indicates a thread shutdown error");
+				return res == WAIT_OBJECT_0;
 			}
 
-			// Returns true if the worker thread is/was cancelled
-			bool Cancelled(DWORD timeout_ms = 0) const
+			// Returns true if the worker thread has cancel signalled
+			// Any thread can call this
+			bool IsCancelled(DWORD timeout_ms = 0) const
 			{
-				DWORD res = WaitForSingleObject(m_cancel_event, timeout_ms);
+				DWORD res = WaitForSingleObject(m_cancel_signalled, timeout_ms);
+				PR_ASSERT(PR_DBG, res != WAIT_ABANDONED, "Receiving WAIT_ABANDONED indicates a thread shutdown error");
+				return res == WAIT_OBJECT_0;
+			}
+
+			// Returns true if the worker is paused
+			// Waits up to 'timeout_ms' for it to become paused
+			// Note, does not block if already paused
+			// Any thread can call this
+			bool IsPaused(DWORD timeout_ms = 0) const
+			{
+				DWORD res = WaitForSingleObject(m_paused, timeout_ms);
 				PR_ASSERT(PR_DBG, res != WAIT_ABANDONED, "Receiving WAIT_ABANDONED indicates a thread shutdown error");
 				return res == WAIT_OBJECT_0;
 			}
@@ -112,7 +141,7 @@ namespace pr
 			// Signal the worker thread to exit
 			void Cancel()
 			{
-				Throw(::SetEvent(m_cancel_event));
+				Throw(::SetEvent(m_cancel_signalled));
 			}
 
 			// Wait on an object while pumping the message queue
@@ -166,34 +195,48 @@ namespace pr
 				return true;
 			}
 
-			// Returns true if the worker is paused
-			bool Paused()
-			{
-				DWORD res = WaitForSingleObject(m_paused_event, 0);
-				PR_ASSERT(PR_DBG, res != WAIT_ABANDONED, "Receiving WAIT_ABANDONED indicates a thread shutdown error");
-				return res == WAIT_OBJECT_0;
-			}
-
-			// Signal the worker thread to pause and block until it has.
-			// Clients can call 'Pause' to stop the worker thread at a convenient time
-			// The worker thread should call TestPause() periodically.
+			// Signal the worker thread to pause and then block for up to 'block_time' until it has.
+			// Note: 'block_time' only applies to pausing, not un-pausing. However, when this function
+			// returns the worker thread is no longer paused.
+			// This only works if the worker thread calls TestPause() periodically.
+			// 'block_time' is INFINITE by default because calling code typically
+			// wants to use Pause for synchronisation. Calling "Pause(true,0)"
+			// means 'IsPaused()' may return false
 			void Pause(bool pause, DWORD block_time = INFINITE)
 			{
-				if (pause)         { Throw(::SetEvent(m_pause_event)); WaitWithPumping(1, &m_paused_event, FALSE, block_time); }
-				else if (Paused()) { Throw(::SetEvent(m_pause_event)); }
+				// Only un-pause if currently paused
+				if (IsPaused())
+				{
+					// When the worker thread is paused it waits on the
+					// 'm_pause_signalled' event which can only be set here.
+					if (pause == false)
+					{
+						Throw(::SetEvent(m_pause_signalled));
+						for (;IsPaused();Sleep(0)){}// Wait for the thread to say it's not paused
+					}
+				}
+				// Can only pause if not currently paused
+				else if (pause)
+				{
+					Throw(::SetEvent(m_pause_signalled));
+					IsPaused(block_time); // Wait for the thread to say it's paused
+				}
 			}
 
 			// Worker thread can use this to pause at a convenient time
-			// Use: while (TestPause() && !Cancelled()) { ... }
+			// Use: while (TestPause() && !IsCancelled()) { ... }
 			bool TestPause()
 			{
-				DWORD res = WaitForSingleObject(m_pause_event, 0);
+				DWORD res = WaitForSingleObject(m_pause_signalled, 0);
 				PR_ASSERT(PR_DBG, res != WAIT_ABANDONED, "Receiving WAIT_ABANDONED indicates a thread shutdown error");
 				if (res == WAIT_OBJECT_0)
 				{
-					res = SignalObjectAndWait(m_paused_event, m_pause_event, INFINITE, FALSE);
+					// If pause was signalled, signal the 'I am paused' event, then sleep until pause is signalled again.
+					// Note, un-pausing is only possible after 'm_paused' is signalled, so there isn't a race condition
+					// with repeated alternating Pause(true),Pause(false) calls
+					res = SignalObjectAndWait(m_paused, m_pause_signalled, INFINITE, FALSE);
 					PR_ASSERT(PR_DBG, res != WAIT_ABANDONED, "Receiving WAIT_ABANDONED indicates a thread shutdown error");
-					Throw(::ResetEvent(m_paused_event));
+					Throw(::ResetEvent(m_paused)); // No longer paused
 				}
 				return true;
 			}
@@ -240,7 +283,7 @@ namespace pr
 			bool Start(void* ctx = 0, int priority = THREAD_PRIORITY_NORMAL, unsigned int stack_size = 0x2000)
 			{
 				// Can only run one at a time
-				if (m_running) return false;
+				if (IsRunning()) return false;
 				if (m_thread_handle)
 				{
 					Stop();
@@ -248,16 +291,13 @@ namespace pr
 				}
 
 				// Clear flags
-				Throw(::ResetEvent(m_cancel_event));
-				Throw(::ResetEvent(m_pause_event ));
-				Throw(::ResetEvent(m_paused_event));
-				PR_ASSERT(PR_DBG, !Cancelled(), "");
-				PR_ASSERT(PR_DBG, !Paused(), "");
-				m_running = true;
+				Throw(::ResetEvent(m_running));
+				Throw(::ResetEvent(m_paused)); // This does not mean paused can't be signalled however
+				Throw(::ResetEvent(m_cancel_signalled));
 
 				// Create the thread
 				m_thread_handle = reinterpret_cast<HANDLE>(_beginthreadex(0, stack_size, Thread::EntryPoint, new StartData(this, ctx), 0, 0)); // Don't use _beginthread() or CreateThread() because it closes the thread handle on thread exit (Join() won't work)
-				if (!m_thread_handle) { m_running = false; return false; }
+				if (!m_thread_handle) return false;
 
 				// Set the initial thread priority
 				SetThreadPriority(priority);
@@ -265,6 +305,9 @@ namespace pr
 			}
 
 			// Stop the worker thread (synchronous)
+			// This is the same as Cancel() then Join() since an external
+			// thread deciding when to stop the thread implies cancelling.
+			// Not cancelled means the thread exited by itself.
 			bool Stop(unsigned int timeout = INFINITE)
 			{
 				Cancel();
@@ -290,6 +333,129 @@ namespace pr
 		};
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		namespace threads
+		{
+			struct Thing :pr::threads::Thread<Thing>
+			{
+				typedef pr::threads::Thread<Thing> base;
+
+				volatile long m_run_count;
+				bool m_test_cancel;
+				bool m_test_pause;
+
+				Thing(bool test_cancel, bool test_pause)
+					:m_run_count(0)
+					,m_test_cancel(test_cancel)
+					,m_test_pause(test_pause)
+				{}
+
+				using base::Start;
+				using base::Pause;
+				using base::Cancel;
+				using base::Stop;
+				using base::IsRunning;
+				using base::IsCancelled;
+				using base::IsPaused;
+
+				void Main(void*)
+				{
+					for (;;)
+					{
+						if (m_test_pause)
+							TestPause();
+
+						::InterlockedIncrement(&m_run_count);
+
+						if (m_test_cancel && IsCancelled())
+							break;
+
+						if (!m_test_pause && !m_test_cancel)
+							break;
+					}
+				}
+
+				long RunCount() const
+				{
+					// const cast cause we're not really changing it, just reading it
+					return ::InterlockedCompareExchange(const_cast<volatile long*>(&m_run_count), 0L, 0L);
+				}
+			};
+		}
+
+		PRUnitTest(pr_threads_thread)
+		{
+			using namespace pr::unittests::threads;
+
+			{
+				Thing thg(true,true);
+				PR_CHECK(thg.IsRunning(), false);
+				PR_CHECK(thg.IsCancelled(), false);
+				PR_CHECK(thg.IsPaused(), false);
+				PR_CHECK(thg.RunCount(), 0);
+				thg.Pause(true, 0);
+				thg.Start();
+				PR_CHECK(thg.IsRunning(1000), true);
+				PR_CHECK(thg.IsCancelled(), false);
+				PR_CHECK(thg.IsPaused(), true);
+				PR_CHECK(thg.RunCount(), 0);
+				thg.Pause(false);
+				PR_CHECK(thg.IsRunning(), true);
+				PR_CHECK(thg.IsCancelled(), false);
+				PR_CHECK(thg.IsPaused(), false);
+
+				// Can't test RunCount() due to race condition
+				while (thg.RunCount() == 0) Sleep(0);
+
+				// Test for race condition
+				for (int i = 0; i != 1000; ++i)
+				{
+					thg.Pause(true);
+					PR_CHECK(thg.IsPaused(), true);
+					thg.Pause(false);
+					PR_CHECK(thg.IsPaused(), false);
+
+					thg.Pause(false);
+					thg.Pause(true );
+					thg.Pause(false);
+					thg.Pause(true );
+					thg.Pause(false);
+					thg.Pause(true );
+
+					PR_CHECK(thg.IsPaused(), true);
+
+					thg.Pause(true );
+					thg.Pause(false);
+					thg.Pause(true );
+					thg.Pause(false);
+					thg.Pause(true );
+					thg.Pause(false);
+
+					PR_CHECK(thg.IsPaused(), false);
+				}
+
+				thg.Pause(true);
+				PR_CHECK(thg.IsRunning()     , true );
+				PR_CHECK(thg.IsCancelled()   , false);
+				PR_CHECK(thg.IsPaused()      , true );
+				PR_CHECK(thg.RunCount() != 0 , true );
+				thg.Pause(false);
+				thg.Stop();
+				PR_CHECK(thg.IsRunning()     , false);
+				PR_CHECK(thg.IsCancelled()   , true );
+				PR_CHECK(thg.IsPaused()      , false);
+				PR_CHECK(thg.RunCount() != 0 , true );
+			}
+		}
+	}
+}
+#endif
 
 #ifdef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT_STR_DEFINED

@@ -29,7 +29,7 @@ namespace pr
 		class BackgroundTask :private pr::threads::Thread<BackgroundTask>
 		{
 			typedef pr::threads::Thread<BackgroundTask> ThreadBase;
-			
+
 			// Thread entry point
 			void Main(void* ctx)
 			{
@@ -46,18 +46,18 @@ namespace pr
 							(*i)->BGT_TaskComplete(me); // query the task for 'Cancelled()'
 					}
 				} notify_task_complete(this);
-				
+
 				DoWork(ctx);
 			}
-			
+
 			// Derived types implement their task in here
 			// Note: clients should catch any exceptions within this method.
 			// Typically, the derived class would store a copy of any thrown
 			// exception and rethrow it after calling WaitTillComplete().
 			virtual void DoWork(void* ctx) = 0;
-			
+
 		protected:
-			
+
 			// Derived types call this to update their progress
 			virtual void ReportProgress(int count, int total, char const* text = 0)
 			{
@@ -65,7 +65,7 @@ namespace pr
 				for (pr::MultiCast<IEvent*>::iter i = lock.begin(), iend = lock.end(); i != iend; ++i)
 					(*i)->BGT_ReportProgress(this, count, total, text);
 			}
-			
+
 		public:
 			struct IEvent
 			{
@@ -75,7 +75,7 @@ namespace pr
 				virtual ~IEvent() {}
 			};
 			pr::MultiCast<IEvent*> OnEvent;
-			
+
 			// Run the background task
 			// If 'async' is true, this method returns immediately. Call 'Join()' to block until complete
 			bool Run(bool async, void* ctx = 0)
@@ -84,13 +84,13 @@ namespace pr
 				if (!async) Join();
 				return true;
 			}
-			
+
 			// Block until the background task is complete
 			using ThreadBase::Join;
-			
+
 			// Allow the task to be cancelled. Note that it is still up to the
 			// task to check the 'Cancelled()' method in its main loop
-			using ThreadBase::Cancelled;
+			using ThreadBase::IsCancelled;
 			using ThreadBase::Cancel;
 		};
 	}

@@ -17,20 +17,48 @@ namespace pr
 		// 'r' stands for 'range', 'c' stands for 'centred'
 		Rnd() {}
 		explicit Rnd(ulong s) :MersenneTwister(s) {}
-		void   seed(ulong s)              { MersenneTwister::seed(s); }
+		void seed(ulong s) { MersenneTwister::seed(s); }
+		
+		// Generates a random number on [0,0xffffffff]-interval
 		ulong  u32()                      { return MersenneTwister::u32(); }
-		ulong  u32r(ulong mn, ulong mx)   { return mn == mx ? mx : ((u32() % (mx - mn)) + mn); }
-		ulong  u32c(ulong avr, ulong d)   { return d == 0 ? avr : ((u32() % (2*d) - d) + avr); }
+		
+		// Generates a random number on [mn,mx]-interval
+		ulong  u32r(ulong mn, ulong mx)   { return mn == mx ? mx : (u32() % (mx - mn + 1) + mn); }
+		
+		// Generates a random number on [avr-d,avr+d]-interval
+		ulong  u32c(ulong avr, ulong d)   { return u32r(avr-d, avr+d); }
+		
+		// Generates a random number on [0,0x7fffffff]-interval
 		long   i32()                      { return MersenneTwister::i32(); }
-		long   i32r(long mn, long mx)     { return mn == mx ? mx : ((i32() % (mx - mn)) + mn); }
-		long   i32c(long avr, long d)     { return d == 0 ? avr : ((i32() % (2*d) - d) + avr); }
-		uint8  u8()                       { return static_cast<uint8>(u32() >> 24); }
-		uint8  u8(uint8 mn, uint8 mx)     { return mn == mx ? mx : ((u8() % (mx - mn)) + mn); }
+
+		// Generates a random number on [mn,mx]-interval
+		long   i32r(long mn, long mx)     { return mn == mx ? mx : (i32() % (mx - mn + 1) + mn); }
+		
+		// Generates a random number on [avr-d,avr+d]-interval
+		long   i32c(long avr, long d)     { return i32r(avr-d,avr+d); }
+
+		// Generates a random number on [0,0xff]-interval
+		uint8  u8()                       { return static_cast<uint8>(u32() & 0xFF); }
+		
+		// Generates a random number on [mn,mx]-interval
+		uint8  u8(uint8 mn, uint8 mx)     { return mn == mx ? mx : (u8() % (mx - mn + 1) + mn); }
+		
+		// generates a random number on [0,1)-real-interval
 		double dbl()                      { return MersenneTwister::f32(); }
+		
+		// generates a random number on [mn,mx)-real-interval
 		double dblr(double mn, double mx) { return dbl() * (mx - mn) + mn; }
+		
+		// generates a random number on [avr-d,avr+d)-real-interval
 		double dblc(double avr, double d) { return (2.0 * dbl() - 1.0) * d + avr; }
+		
+		// generates a random number on [0,1)-real-interval
 		float  flt()                      { return static_cast<float>(dbl()); }
+		
+		// generates a random number on [mn,mx)-real-interval
 		float  fltr(float mn, float mx)   { return static_cast<float>(dblr(mn, mx)); }
+		
+		// generates a random number on [avr-d,avr+d)-real-interval
 		float  fltc(float avr, float d)   { return static_cast<float>(dblc(avr, d)); }
 	};
 	

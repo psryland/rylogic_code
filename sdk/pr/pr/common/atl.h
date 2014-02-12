@@ -13,6 +13,7 @@
 #include <atlstr.h>
 #include <atlcom.h>
 #include <atlwin.h>
+#include <winspool.h>
 
 // WTL headers
 #include <atlapp.h>

@@ -52,6 +52,12 @@ namespace pr
 			return ticks * 1000.0 / (double)ReadCPUFreq();
 		}
 
+		// Return a number of RTC ticks interpreted as microseconds
+		inline double ToUSec(Ticks ticks)
+		{
+			return ticks * 1000000.0 / (double)ReadCPUFreq();
+		}
+
 		// Return the value of the real time clock in seconds
 		inline double ReadRTC_sec()
 		{

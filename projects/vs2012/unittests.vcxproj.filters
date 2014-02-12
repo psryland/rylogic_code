@@ -474,9 +474,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\serialportio.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -484,9 +481,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\testbed3d.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\timers.h">
@@ -526,9 +520,6 @@
       <Filter>pr\macros</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\macros\link.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\macros\no_copying.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\macros\on_exit.h">
@@ -777,9 +768,21 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\new.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\macros\no_copy.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\macros\remove_parenthesis.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\unittests\unittests.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\unittests\run_tests.cmd">
+    <None Include="..\unittests\run_tests.py">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\unittests\pre_build.py">
       <Filter>src</Filter>
     </None>
   </ItemGroup>

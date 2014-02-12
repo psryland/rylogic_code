@@ -7,7 +7,7 @@
 // Loads a table of filenames and modified times.
 // Each file is either modified, not modified, or unknown. When an unknown
 // file is queried, it's dependent files are checked (recursive). This is
-// used to decide one way or the other whether a file is modified. 
+// used to decide one way or the other whether a file is modified.
 // Note: modified means changed itself or includes a changed file
 
 #ifndef PR_DEPENDENCY_H
@@ -16,16 +16,16 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include "pr/common/StdVector.h"
-#include "pr/common/StdString.h"
-#include "pr/common/StdMap.h"
-#include "pr/common/StdSet.h"
-#include "pr/common/Crc.h"
+#include <vector>
+#include <string>
+#include <map>
+#include <set>
 #include "pr/common/assert.h"
-#include "pr/common/Fmt.h"
-#include "pr/common/PRString.h"
+#include "pr/common/crc.h"
+#include "pr/common/fmt.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
+#include "pr/str/prstring.h"
 
 namespace pr
 {
@@ -193,7 +193,7 @@ namespace pr
 				// <shrug>
 				return false;
 			}
-	
+
 			// Given a set of files, look for any that have been modified.
 			// Returns true when the first modified (or depends on a modified) file is found.
 			bool FilesModified(TPaths const& files)
@@ -221,7 +221,7 @@ namespace pr
 					std::string filename = *p;
 					bool modified = FileModified(filename, dep_files);
 					modified_file_found |= modified;
-					
+
 					if( !out(filename, modified) ) return modified_file_found;
 				}
 				return modified_file_found;
@@ -262,7 +262,7 @@ namespace pr
 				// Resolve the file name using the include paths.
 				// If a file cannot be resolved assume it's been modified.
 				if( !ResolveFilename(filename, filename) ) { return m_flags & EDepChk_TreadMissingAsModified; }
-				PR_ASSERT(PR_DBG, filesys::DoesFileExist(filename));
+				PR_ASSERT(PR_DBG, filesys::DoesFileExist(filename), "");
 
 				// Make a crc for the filename
 				CRC file_crc = pr::Crc(&filename[0], filename.size());
@@ -272,7 +272,7 @@ namespace pr
 				if( dep != m_dep.end() )
 				{
 					Info& info = dep->second;
-					PR_ASSERT(PR_DBG, info.m_filename == filename);
+					PR_ASSERT(PR_DBG, info.m_filename == filename, "");
 					if( info.m_modified != EMod_Unknown ) return info.m_modified == EMod_Yes;
 				}
 				// Otherwise, add the file to the cache. We have to
@@ -302,12 +302,12 @@ namespace pr
 					// If a file cannot be resolved assume it's been modified.
 					std::string dep;
 					if( !ResolveFilename(*p, dep) ) { modified |= (m_flags & EDepChk_TreadMissingAsModified); continue; }
-					
+
 					// Prevent circular dependencies causing infinite loops
 					// by only considering files we haven't seen before.
 					CRC dep_crc = pr::Crc(dep.c_str(), dep.size());
 					if( dep_files.find(dep_crc) != dep_files.end() ) continue;
-					
+
 					modified |= FileModified(dep, dep_files);
 				}
 
@@ -380,7 +380,7 @@ namespace pr
 
 				// Reduce the file to just the 'code'
 				str::StripComments(file);
-				
+
 				// Scan through the file looking for the '#' symbol.
 				// We need to skip over strings when we find them
 				char const *s_start = file.c_str(), *s_end = s_start + file.size(), *s = s_start, *e = s_start;
@@ -398,7 +398,7 @@ namespace pr
 							if( m_flags & EDepChk_IncludesInQuotsOnly ) { if(*s == '"') dependents.push_back(include_file); }
 							else										{				dependents.push_back(include_file); }
 							s = e;
-						}break;					
+						}break;
 					// Skip over strings that may contain '#' charactors
 					case '"':
 					case '\'':
@@ -424,11 +424,10 @@ namespace pr
 			TDepData		m_dep;						// Dependency data
 			TPaths			m_include;					// Include paths for resolving file names to full paths
 			unsigned int	m_flags;					// Combination of EDepChk
-		};	
+		};
 	}//namespace impl
 
 	typedef impl::DependencyChecker<void> DependencyChecker;
-
 }//namespace pr
 
 #endif//PR_DEPENDENCY_H

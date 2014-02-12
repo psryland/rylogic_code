@@ -113,11 +113,11 @@ namespace pr
 
 			std::string root = "\\projects\\unittests";
 			PR_CHECK(pr::filesys::RecurseFiles(root, EnumFiles, "*.cpp;*.c"), true);
-			PR_CHECK(pr::filesys::RecurseFiles(root, EnumFiles, "*.h;*.cmd"), true);
+			PR_CHECK(pr::filesys::RecurseFiles(root, EnumFiles, "*.h;*.py"), true);
 			PR_CHECK(found[0] == 1, true);
 			PR_CHECK(found[1] == 0, true);
-			PR_CHECK(found[2] == 1, true);
-			PR_CHECK(found[3] == 1, true);
+			PR_CHECK(found[2] == 2, true);
+			PR_CHECK(found[3] == 2, true);
 		}
 	}
 }

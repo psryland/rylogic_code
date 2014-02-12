@@ -19,6 +19,7 @@
 #include "pr/common/prtypes.h"
 #include "pr/common/d3dptr.h"
 #include "pr/maths/maths.h"
+#include "pr/str/prstring.h"
 
 #ifndef PR_DBG_DINPUT
 #define PR_DBG_DINPUT PR_DBG
@@ -96,8 +97,8 @@ namespace pr
 				inst.m_device_type   = pr::uint(lpddi->dwDevType);
 				inst.m_instance_guid = lpddi->guidInstance;
 				inst.m_product_guid  = lpddi->guidProduct;
-				inst.m_instance_name = pr::str::ToAString<std::string>(lpddi->tszInstanceName);
-				inst.m_product_name  = pr::str::ToAString<std::string>(lpddi->tszProductName);
+				inst.m_instance_name = pr::To<std::string>(lpddi->tszInstanceName);
+				inst.m_product_name  = pr::To<std::string>(lpddi->tszProductName);
 				me.m_devices.push_back(inst);
 				return (me.m_devices.size() != me.m_devices.capacity()) ? DIENUM_CONTINUE : DIENUM_STOP;
 			}

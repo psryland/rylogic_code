@@ -16,6 +16,7 @@
 #include <string>
 #include <malloc.h>
 
+#ifdef __cplusplus
 namespace pr
 {
 	namespace impl
@@ -52,14 +53,14 @@ namespace pr
 				// NOTE: In C99 you can only use a va_list once so you need to make a new
 				// copy each time. For now, we don't need to
 				int result = Format(buf.m_ptr, buf.m_count, fmt, arg_list);
-				
+
 				// It fits, w00t!
 				if (result >= 0 && result < int(buf.m_count))
 				{
 					dst.append(buf.m_ptr, result);
 					break;
 				}
-				
+
 				// Otherwise, true a larger buffer
 				hint_size *= 2;
 			}
@@ -182,8 +183,28 @@ namespace pr
 		return s;
 	}
 }
+#else
+	static __inline char const* Fmt(char* buffer, int length, char const* format, ...)
+	{
+		va_list arglist;
+		va_start(arglist, format);
+		vsnprintf(buffer, length, format, arglist);
+		buffer[length - 1] = 0;
+		va_end(arglist);
+		return buffer;
+	}
 
-
+	static __inline char const* FmtS(char const* format, ...)
+	{
+		static char buffer[256];
+		va_list arglist;
+		va_start(arglist, format);
+		vsnprintf(buffer, sizeof(buffer), format, arglist);
+		buffer[sizeof(buffer) - 1] = 0;
+		va_end(arglist);
+		return buffer;
+	}
+#endif
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"

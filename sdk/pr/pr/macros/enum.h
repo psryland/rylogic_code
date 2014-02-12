@@ -5,9 +5,9 @@
 // Use:
 ///*
 //  #define PR_ENUM(x) /* the name PR_ENUM is arbitrary, you can use whatever
-//     */x(A, "a", = 0)/* comment 
-//     */x(B, "b", = 1)/* comment 
-//     */x(C, "c", = 2)/* comment 
+//     */x(A, "a", = 0)/* comment
+//     */x(B, "b", = 1)/* comment
+//     */x(C, "c", = 2)/* comment
 //  PR_DEFINE_ENUM3(TestEnum1, PR_ENUM)
 //  #undef PR_ENUM
 //*/
@@ -237,6 +237,11 @@ struct enum_name\
 // Declares a flags enum where the values are assigned explicitly and the string name of each member is explicit. 'enum_vals' should be a macro with three parameters; id, string, and value
 #define PR_DEFINE_ENUM3_FLAGS(enum_name, enum_vals)      PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND)
 
+#ifndef PR_ASSERT
+#   define PR_ASSERT_DEFINED
+#   define PR_ASSERT(grp, exp, str)
+#endif
+
 namespace pr
 {
 	// A type trait for detecting PR_ENUM types
@@ -454,5 +459,9 @@ namespace pr
 }
 #endif
 
+#ifdef PR_ASSERT_DEFINED
+#   undef PR_ASSERT_DEFINED
+#   undef PR_ASSERT
 #endif
 
+#endif

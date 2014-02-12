@@ -27,10 +27,8 @@
 #ifndef __RIJNDAEL_H__
 #define __RIJNDAEL_H__
 
-#include <assert.h>
-#define PR_ASSERT_FUNC(exp, str) assert(exp)
-#include "pr/common/assert.h"
 #include <cstring>
+#include "pr/common/assert.h"
 
 using namespace std;
 

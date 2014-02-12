@@ -23,7 +23,7 @@ namespace pr
 		{
 		public:
 			DiscretePIDController()							{ Reset(); }
-			
+
 			void	Reset();
 			float	GetTargetValue() const					{ return m_set_point; }
 			void	SetTargetValue(float set_point)			{ m_set_point = set_point; }
@@ -32,7 +32,7 @@ namespace pr
 			void	SetIntegral(float time_const)			{ m_inv_time_const = 1.0f / time_const; }
 			void	SetDifferential(float rate)				{ m_rate = rate; }
 
-			float	Step(float current_input_value, float current_output_value float time_delta_s);
+			float	Step(float current_input_value, float current_output_value, float time_delta_s);
 
 		private:
 			float m_set_point;
@@ -59,17 +59,17 @@ namespace pr
 			m_max_acc_error			= 1.0f;
 			m_value_t_minus_1		= 0.0f;
 		}
-			
+
 		//*****
 		// Step the controller
 		template <typename T>
-		float DiscretePIDController<T>::Step(float current_input_value, float current_output_value float time_delta_s)
+		float DiscretePIDController<T>::Step(float current_input_value, float current_output_value, float time_delta_s)
 		{
 			float error_value   = m_set_point - current_output_value;
-			
+
 			// Proportional component
 			float proportional = m_gain * error_value;
-			
+
 			// Integral component
 			m_accumulative_error += error_value * time_delta_s;
 			if( m_accumulative_error >  m_max_acc_error ) m_accumulative_error =  m_max_acc_error;
@@ -85,7 +85,6 @@ namespace pr
 	}//namespace impl
 
 	typedef impl::DiscretePIDController<void> DiscretePIDController;
-
 }//namespace pr
 
 #endif//PR_DISCRETE_PID_CONTROLLER_H

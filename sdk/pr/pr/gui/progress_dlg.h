@@ -47,7 +47,7 @@ namespace pr
 			WTL::CButton                 m_btn;   // The cancel button
 			struct { int m_count, m_total; char const* m_desc; } m_state; // The progress state
 			pr::threads::CritSection     m_cs;
-			
+
 			// BackgroundTask callbacks
 			void BGT_ReportProgress(pr::threads::BackgroundTask*, int count, int total, char const* desc)
 			{
@@ -59,12 +59,12 @@ namespace pr
 			}
 			void BGT_TaskComplete(pr::threads::BackgroundTask* task)
 			{
-				PostMessage(WM_COMMAND, task->Cancelled() ? IDABORT : IDOK, 0);
+				PostMessage(WM_COMMAND, task->IsCancelled() ? IDABORT : IDOK, 0);
 			}
-			
+
 			// Hide the standard 'DoModal()' from the interface
 			INT_PTR DoModal(HWND, LPARAM) {}
-			
+
 		public:
 			// Optional event handler
 			struct IEvents
@@ -73,17 +73,17 @@ namespace pr
 				virtual bool ProgressDlg_OnCancelled() = 0;
 				virtual ~IEvents() {}
 			} *OnEvent;
-			
+
 			// Example Task
 			struct ExampleTask :pr::threads::BackgroundTask
 			{
 				void DoWork()
 				{
-					for (int i = 0; i != 100 && !Cancelled(); ++i,Sleep(100))
+					for (int i = 0; i != 100 && !IsCancelled(); ++i,Sleep(100))
 						ReportProgress(i,100,"example");
 				}
 			};
-			
+
 			ProgressDlg(IEvents* handler = 0)
 			:m_title()
 			,m_task()
@@ -93,7 +93,7 @@ namespace pr
 			,m_cs()
 			,OnEvent(handler)
 			{}
-			
+
 			// Execute a work function in a different thread while displaying the modal dialog
 			// Returns IDOK if the dialog completed, IDCANCEL if the operation was cancelled
 			INT_PTR DoModal(char const* title, pr::threads::BackgroundTask& task, HWND hWndParent = ::GetActiveWindow())
@@ -102,7 +102,7 @@ namespace pr
 				m_task = &task;
 				return DlgBase::DoModal(hWndParent);
 			}
-			
+
 			// Update the progress.
 			// If 'count' is within [0,total] then the progress bar displays as normal
 			// If not, then the progress bar is set to marquee mode
@@ -139,7 +139,7 @@ namespace pr
 					m_bar.SetPos(count);
 				}
 			}
-			
+
 			enum { IDC_TEXT_DESC=1000, IDC_PROGRESS_BAR, WM_PROGRESS_UPDATE=WM_USER+1, DefW=480, DefH=180};
 			BEGIN_DIALOG_EX(0,0,0,0,0)
 				DIALOG_STYLE(WS_POPUP)
@@ -159,7 +159,7 @@ namespace pr
 				COMMAND_ID_HANDLER_EX(IDABORT  ,OnDone)
 				COMMAND_ID_HANDLER_EX(IDOK     ,OnDone)
 			END_MSG_MAP()
-		
+
 		private:
 			// Handlers
 			BOOL OnInitDialog(CWindow, LPARAM)

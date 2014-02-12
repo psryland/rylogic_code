@@ -2,12 +2,12 @@
 // DSound
 //  Copyright © Rylogic Ltd 2007
 //*********************************************
+#pragma once
 #ifndef PR_SOUNDS_SOUND_H
 #define PR_SOUNDS_SOUND_H
-#pragma once
 
-#include <dsound.h>
 #include <mmreg.h>
+#include <dsound.h>
 #include "pr/common/assert.h"
 #include "pr/common/d3dptr.h"
 #include "pr/common/hresult.h"

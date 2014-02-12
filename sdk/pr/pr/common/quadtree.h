@@ -7,10 +7,10 @@
 #ifndef PR_QUAD_TREE_H
 #define PR_QUAD_TREE_H
 
-#include "pr/common/StdVector.h"
-#include "pr/common/StdList.h"
+#include <vector>
+#include <list>
 #include "pr/common/assert.h"
-#include "pr/common/Mempool.h"
+#include "pr/common/mempool.h"
 #include "pr/maths/maths.h"
 
 namespace pr
@@ -22,7 +22,7 @@ namespace pr
 		struct Node
 		{
 			Node() :m_level(0) ,m_indexX(0) ,m_indexZ(0) ,m_parent(0) { memset(m_quad, 0, sizeof(m_quad)); }
-			
+
 			typedef typename std::vector<Type> TInstance;
 			TInstance		m_instance;
 			unsigned int	m_level;
@@ -42,7 +42,7 @@ namespace pr
 		public:
 			typedef typename Node<Type> Node;
 
-			Tree(v4 centre, float region_width, float region_depth, unsigned int max_levels, unsigned int size_estimate = 1);
+			Tree(v4 const& centre, float region_width, float region_depth, unsigned int max_levels, unsigned int size_estimate = 1);
 			~Tree();
 
 			// Return access to the tree structure
@@ -50,18 +50,18 @@ namespace pr
 			v4				GetCentre() const								{ return m_origin + GetDimensions() / 2.0f; }
 			v4				GetDimensions() const							{ return v4::make(m_region_width, 0.0f, m_region_depth, 0.0f); }
 			unsigned int	GetNumInstance() const							{ return m_number_of_instances; }
-			unsigned int	MaxIndexAtLevel(unsigned int level) const		{ PR_ASSERT(PR_DBG, level < m_max_levels); return 1 << level; }
+			unsigned int	MaxIndexAtLevel(unsigned int level) const		{ PR_ASSERT(PR_DBG, level < m_max_levels, ""); return 1 << level; }
 			float			CellWidthAtLevel(unsigned int level) const		{ return m_region_width / static_cast<float>(MaxIndexAtLevel(level)); }
 			float			CellDepthAtLevel(unsigned int level) const		{ return m_region_depth / static_cast<float>(MaxIndexAtLevel(level)); }
-			bool			GetLevelAndIndices(v4 point, float radius, unsigned int& level, unsigned int& indexX, unsigned int& indexZ) const;
+			bool			GetLevelAndIndices(v4 const& point, float radius, unsigned int& level, unsigned int& indexX, unsigned int& indexZ) const;
 			unsigned int	GetLevel(float radius) const;
 
 			// Add an instance to the quad tree
-			bool			Add(Type instance, v4 point, float radius);
+			bool			Add(Type instance, v4 const& point, float radius);
 
 			// Helper methods for searching the quad tree
 			v4				GetRelative(const v4& point) const { return point - m_origin; }
-			bool			PointInQuad(const Node& node, v4 point) const;
+			bool			PointInQuad(const Node& node, v4 const& point) const;
 
 		private:
 			Tree(const Tree&);//no copying
@@ -83,7 +83,7 @@ namespace pr
 
 		//*****
 		template <typename Type>
-		Tree<Type>::Tree(v4 centre, float region_width, float region_depth, unsigned int max_levels, unsigned int size_estimate)
+		Tree<Type>::Tree(v4 const& centre, float region_width, float region_depth, unsigned int max_levels, unsigned int size_estimate)
 		:m_nodes(size_estimate)
 		,m_tree(NewNode())
 		,m_origin(v4::make(centre.x - region_width/2.0f, 0.0f, centre.z - region_depth/2.0f, 1.0f))
@@ -103,7 +103,7 @@ namespace pr
 		//*****
 		// Add an 'instance' to the quad tree. Returns true if the instance was added
 		template <typename Type>
-		bool Tree<Type>::Add(Type instance, v4 point, float radius)
+		bool Tree<Type>::Add(Type instance, v4 const& point, float radius)
 		{
             // Find where 'instance' should go
 			unsigned int level, indexX, indexZ;
@@ -122,7 +122,7 @@ namespace pr
 		// Returns true if 'node' can contain something could reach 'point'. Note 'point'
 		// should already be relative to the quad tree centre
 		template <typename Type>
-		inline bool Tree<Type>::PointInQuad(const typename Tree<Type>::Node& node, v4 point) const
+		inline bool Tree<Type>::PointInQuad(const typename Tree<Type>::Node& node, v4 const& point) const
 		{
 			float quad_width = CellWidthAtLevel(node.m_level);
 			float quad_depth = CellDepthAtLevel(node.m_level);
@@ -134,13 +134,13 @@ namespace pr
 		}
 
 		//*****
-		// Returns 'indexX', 'indexZ', and 'level' for an object with bounding radius 'radius' at 'point'  
+		// Returns 'indexX', 'indexZ', and 'level' for an object with bounding radius 'radius' at 'point'
 		template <typename Type>
-		bool Tree<Type>::GetLevelAndIndices(v4 point, float radius, unsigned int& level, unsigned int& indexX, unsigned int& indexZ) const
-		{	
+		bool Tree<Type>::GetLevelAndIndices(v4 const& point, float radius, unsigned int& level, unsigned int& indexX, unsigned int& indexZ) const
+		{
 			// Convert 'point' to be relative to the origin
 			point = GetRelative(point);
-			
+
 			// Check the position within the area covered by this tree. We don't want models to overhang
 			// the area by more than half the area width
 			if( point[0] - radius < -m_region_width * 0.5f || point[0] + radius > m_region_width * 1.5f ||
@@ -153,7 +153,7 @@ namespace pr
 			unsigned int	max_index	= MaxIndexAtLevel(level);
 			indexX			= static_cast<unsigned int>(point[0] / cell_width);
 			indexZ			= static_cast<unsigned int>(point[2] / cell_depth);
-			
+
 			// If 'point' is outside of the region then we need to keep going up
 			// levels until 'point' + 'radius' is within half the cell width of the closest cell.
 			if( point[0] < 0.0f || point[0] >= m_region_width || point[2] < 0.0f || point[2] >= m_region_depth )
@@ -196,7 +196,7 @@ namespace pr
 			}
 			return i - 1;
 		}
-			
+
 		//*****
 		// Navigate the quad tree adding nodes if necessary.
 		// Return the node at 'level', 'indexX', 'indexZ'
@@ -204,8 +204,8 @@ namespace pr
 		typename Tree<Type>::Node* Tree<Type>::GetOrCreateNode(unsigned int level, unsigned int indexX, unsigned int indexZ)
 		{
 			// Make sure indexX, indexZ are valid at 'level'
-			PR_ASSERT(PR_DBG, indexX >= 0 && indexX < MaxIndexAtLevel(level));
-			PR_ASSERT(PR_DBG, indexZ >= 0 && indexZ < MaxIndexAtLevel(level));
+			PR_ASSERT(PR_DBG, indexX >= 0 && indexX < MaxIndexAtLevel(level), "");
+			PR_ASSERT(PR_DBG, indexZ >= 0 && indexZ < MaxIndexAtLevel(level), "");
 
 			// Navigate down the quad tree adding nodes if necessary until we reach 'level'
 			unsigned int twoX	= indexX * 2;

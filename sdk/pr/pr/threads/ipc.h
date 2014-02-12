@@ -45,7 +45,7 @@
 #include <windows.h>
 #include "pr/common/assert.h"
 #include "pr/common/prtypes.h"
-#include "pr/common/stdstring.h"
+#include "pr/str/prstring.h"
 #include "pr/threads/mutex.h"
 
 namespace pr
@@ -53,17 +53,17 @@ namespace pr
 	namespace ipc
 	{
 		enum EAccess { ReadOnly, WriteOnly, ReadWrite, WriteCopy };
-		enum EFlags 
+		enum EFlags
 		{
 			DontSignal				= 0,
 			Signal					= 1,
-			
+
 			// Send flags
 			NoOverwriteMyData		= 0x01,	// If there's some of my data in there then add to the end of it
 			OverwriteMyData			= 0x02,	// If there's some of my data in there then overwrite it
 			NoOverwriteTheirData	= 0x04,	// If there's someone elses data in there then don't write anything
 			OverwriteTheirData		= 0x08,	// If theer's someone elses data in there overwrite it anyway
-			
+
 			// Receive flags
 			Peek					= 0x01,	// Read data but don't remove it from the buffer
 			LeaveUnreadData			= 0x02,	// If the receive call does not read all of the data, don't change m_bytes_available
@@ -83,7 +83,7 @@ namespace pr
 		{
 			struct IPCHeader
 			{
-				uint m_server_pid;		
+				uint m_server_pid;
 				uint m_client_pid;
 				uint m_bytes_available;	// The size of the data to read from shared_memory
 				uint m_writers_pid;		// The PID of the process that last wrote
@@ -109,12 +109,12 @@ namespace pr
 				// Synchronise the setup process
 				Mutex setup_mutex(FALSE, (m_channel + "_SETUP_MUTEX").c_str());
 				if( !setup_mutex.Acquire(block_time_ms) ) return false;
-				
+
 				uint create_access;
 				uint open_access;
 				switch( m_access )
 				{
-				default:				create_access = PAGE_READONLY;  open_access = FILE_MAP_READ; PR_ASSERT(PR_DBG, false); break;
+				default:				create_access = PAGE_READONLY;  open_access = FILE_MAP_READ; PR_ASSERT(PR_DBG, false, ""); break;
 				case ipc::ReadOnly:		create_access = PAGE_READONLY;  open_access = FILE_MAP_READ;       break;
 				case ipc::WriteOnly:	create_access = PAGE_READWRITE; open_access = FILE_MAP_WRITE;      break;
 				case ipc::ReadWrite:	create_access = PAGE_READWRITE; open_access = FILE_MAP_ALL_ACCESS; break;
@@ -126,7 +126,7 @@ namespace pr
 				if( m_mapped_file == 0 || m_mapped_file == INVALID_HANDLE_VALUE )
 				{	m_mapped_file = INVALID_HANDLE_VALUE; return false; }
 				bool already_exists = ::GetLastError() == ERROR_ALREADY_EXISTS;
-				
+
 				// Now map the file into this process' address space
 				void* memory = MapViewOfFile(m_mapped_file, open_access, 0, 0, m_size_in_bytes + sizeof(IPCHeader));
 				if( !memory ) { Release(); return false; }
@@ -186,7 +186,7 @@ namespace pr
 			// 'access' - Read, Write or both
 			bool Initialise(char const* channel, uint shared_memory_size_in_bytes, uint block_time_ms = INFINITE, ipc::EAccess access = ipc::ReadWrite)
 			{
-				m_channel		= channel; PR_ASSERT(PR_DBG, !m_channel.empty());
+				m_channel		= channel; PR_ASSERT(PR_DBG, !m_channel.empty(), "");
 				m_size_in_bytes	= shared_memory_size_in_bytes;
 				m_access		= access;
 				return Initialise(block_time_ms);
@@ -195,7 +195,7 @@ namespace pr
 			// Release the ipc and all of its resources
 			void Release()
 			{
-				PR_ASSERT(PR_DBG, !m_locked);
+				PR_ASSERT(PR_DBG, !m_locked, "");
 				if( m_locked ) Unlock();
 
 				// Notify the other process
@@ -219,7 +219,7 @@ namespace pr
 					m_mapped_file = INVALID_HANDLE_VALUE;
 				}
 			}
-			
+
 			// Return true if both processes have the mapped file open
 			bool IsConnected() const
 			{
@@ -234,7 +234,7 @@ namespace pr
 
 				return m_server_event && m_client_event;
 			}
-			
+
 			// Connect to another process using this channel
 			bool Connect(uint block_time_ms = INFINITE)
 			{
@@ -267,11 +267,11 @@ namespace pr
 				if( !m_client_event )	{ return false; }
 				return true;
 			}
-		
+
 			// Returns true if an event has been signed to indicate that data is ready for reading
 			bool IsDataAvailable(uint block_time_ms = INFINITE) const
 			{
-				PR_ASSERT(PR_DBG, m_header && IsConnected());
+				PR_ASSERT(PR_DBG, m_header && IsConnected(), "");
 				return WaitForSingleObject(GetClientEventHandle(), block_time_ms) == WAIT_OBJECT_0;
 			}
 
@@ -291,7 +291,7 @@ namespace pr
 			// this. If it's just checking that the bytes have been read then no locking is needed
 			uint GetNumBytesAvailable() const
 			{
-				PR_ASSERT(PR_DBG, m_header && IsConnected());
+				PR_ASSERT(PR_DBG, m_header && IsConnected(), "");
 				return m_header ? m_header->m_bytes_available : 0;
 			}
 
@@ -331,7 +331,7 @@ namespace pr
 			//	Sends are atomic, i.e. only sends if all data can be sent
 			bool Send(const void* data, uint size_in_bytes, uint signal = ipc::Signal, uint block_time_ms = INFINITE, uint flags = ipc::NoOverwriteMyData | ipc::NoOverwriteTheirData)
 			{
-				PR_ASSERT(PR_DBG, m_header && IsConnected());
+				PR_ASSERT(PR_DBG, m_header && IsConnected(), "");
 				if( !m_header ) { PR_INFO(PR_DBG, "IPC: Send attempted while not connected"); return false; }
 
 				bool locked_by_me = false;
@@ -375,7 +375,7 @@ namespace pr
 					if( locked_by_me ) Unlock();
 					return false;
 				}
-				
+
 				// Write to shared memory
 				memcpy(&m_shared_memory[m_header->m_bytes_available], data, size_in_bytes);
 				m_header->m_bytes_available += size_in_bytes;
@@ -402,7 +402,7 @@ namespace pr
 			//	Reads are atomic, i.e. only receive data if the amount of data requested is available
 			bool Receive(void* data, uint size_in_bytes, uint block_time_ms = INFINITE, uint flags = ipc::LeaveUnreadData)
 			{
-				PR_ASSERT(PR_DBG, m_header && IsConnected());
+				PR_ASSERT(PR_DBG, m_header && IsConnected(), "");
 				if( !m_header ) { PR_INFO(PR_DBG, "IPC: Receive attempted while not connected"); return false; }
 
 				// Synchronise data access
@@ -424,7 +424,7 @@ namespace pr
 
 				// Read from mapped memory
 				memcpy(data, m_shared_memory, size_in_bytes);
-				
+
 				// Only remove data from the buffer if we're not peeking at it
 				if( !(flags & ipc::Peek) )
 				{
@@ -465,7 +465,7 @@ namespace pr
 		IPCMessage(char const* channel, uint max_message_size_in_bytes, uint block_time_ms = INFINITE)
 		:m_ipc(channel, max_message_size_in_bytes + sizeof(uint), block_time_ms)
 		{}
-		
+
 		bool Connect(uint block_time_ms = INFINITE)
 		{
 			if( m_ipc.IsConnected() ) return true;

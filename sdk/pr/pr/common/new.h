@@ -22,8 +22,8 @@ namespace pr
 
 	// Overloads taking various numbers of parameters
 	#define PR_TN(n) typename U##n
-	#define PR_PARM1(n) U##n& parm##n
-	#define PR_PARM2(n) parm##n
+	#define PR_PARM1(n) U##n&& parm##n
+	#define PR_PARM2(n) std::forward<U##n>(parm##n)
 	#define PR_FUNC(n)\
 	template <typename T, PR_REPEAT(n,PR_TN,PR_COMMA)> inline std::unique_ptr<T> New(PR_REPEAT(n,PR_PARM1,PR_COMMA))\
 	{\

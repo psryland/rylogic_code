@@ -42,6 +42,8 @@
 #define GS_EX_VGRIDLINES    0x08    // Vertical lines
 #define GS_EX_HGRIDLINES    0x10    // Horizontal lines
 
+#pragma warning(disable:4355) // this used in initialiser list
+
 namespace pr
 {
 	namespace gui
@@ -2192,4 +2194,7 @@ namespace pr
 		};
 	}
 }
+
+#pragma warning(default:4355) // this used in initialiser list
+
 #endif
