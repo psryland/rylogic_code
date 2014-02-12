@@ -2,27 +2,27 @@ import sys, os, time, shutil, subprocess, re, socket
 import UserVars
 
 # Terminate the script indicating success
-def OnSuccess():
+def OnSuccess(pause_time_seconds=5):
 	print("\n   Success\n\n")
-	time.sleep(5)
+	time.sleep(pause_time_seconds)
 	sys.exit(0)
 
 # Terminate the script indicating an error
-def OnError(msg):
+def OnError(msg,enter_to_close=True):
 	print(msg + "\n\n   Failed\n\n")
-	input("Press enter to close")
+	if enter_to_close: input("Press enter to close")
 	sys.exit(-1)
 
 # Terminate on exception
-def OnException(ex):
-	OnError("ERROR: " + str(ex))
+def OnException(ex,enter_to_close=True):
+	OnError("ERROR: " + str(ex),enter_to_close=enter_to_close)
 
 # Check that the UserVars file is the correct version
 def CheckVersion(check_version):
 	if check_version > UserVars.version:
-		OnError("User variables are out of date, please update")
+		raise ValueError("User variables are out of date, please update")
 	if UserVars.machine.lower() != socket.gethostname().lower():
-		OnError("Machine name does not match UserVars.machine, Check you UserVars.py file")
+		raise ValueError("Machine name does not match UserVars.machine, Check you UserVars.py file")
 
 # Compare the timestamps of two files and return true if they are different
 def Diff(src,dst):
@@ -47,7 +47,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False):
 		# if 'dst' doesn't exist, create it as a directory or if it does
 		# exist, check that it is actually a directory
 		if not os.path.exists(dst): os.makedirs(dst)
-		elif not os.path.isdir(dst): OnError("ERROR: "+dst+" is not a valid directory")
+		elif not os.path.isdir(dst): raise FileNotFoundError("ERROR: "+dst+" is not a valid directory")
 		# Copy each file in 'src' to 'dst'
 		for file in os.listdir(src):
 			Copy(src + "\\" + file, dst + "\\" + file, only_if_modified)
@@ -75,9 +75,7 @@ def Run(args, expected_return_code=0,show_arguments=False):
 		return subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return e.output
-		OnError("ERROR: " + str(e.output))
-	except Exception as e:
-		OnError("ERROR: " + str(e))
+		raise
 
 # Executes a program echoing its output to stdout
 def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
@@ -86,16 +84,14 @@ def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
 		subprocess.check_call(args, cwd=working_dir)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return
-		OnError("ERROR: " + str(e.output))
-	except Exception as e:
-		OnError("ERROR: " + str(e))
+		raise
 
 # Run a program in a separate console window
 # Returns the process for the caller to call wait() on,
 #  e.g.
 #    proc = Spawn(["cmd", "/C" ,"echo Hello"])
 #    proc.wait()
-def Spawn(args, same_window=False, show_window=True, show_arguments=False):
+def Spawn(args, expected_return_code=0, same_window=False, show_window=True, show_arguments=False):
 	try:
 		if show_arguments: print(args)
 		si = subprocess.STARTUPINFO()
@@ -108,9 +104,8 @@ def Spawn(args, same_window=False, show_window=True, show_arguments=False):
 		proc = subprocess.Popen(args,creationflags=cf,startupinfo=si)
 		return proc
 	except subprocess.CalledProcessError as e:
-		OnError("ERROR: " + str(e.output))
-	except Exception as e:
-		OnError("ERROR: " + str(e))
+		if e.returncode == expected_return_code: return
+		raise
 
 # Extract data from a text file using a regex
 # Capture groups are defined like: (?P<name>.*)

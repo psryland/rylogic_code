@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 import sys, os
-sys.path.append("Q:/sdk/pr/python")
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + r"\..\..\script")
 from pr import RylogicEnv
 from pr import UserVars
 
