@@ -129,6 +129,7 @@ struct Main :pr::cmdline::IOptionReceiver
 		// Parse the command line
 		if (!pr::EnumCommandLine(args.c_str(), *this)) { return -1; }
 		if (!m_src) { printf("No source file given\n"); return -1; }
+		if (!pr::filesys::FileExists(m_in_file)) { printf("Source file doesn't exist\n"); return -1; }
 
 		bool replace_infile = m_out_file.empty();
 		if (replace_infile) m_out_file = m_in_file + ".tmp";
