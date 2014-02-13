@@ -25,7 +25,9 @@ vs_version = os.environ['VisualStudioVersion']
 filepath = sys.argv[1] if len(sys.argv) > 1 else ""
 outpath  = sys.argv[2] if len(sys.argv) > 2 else ""
 if filepath == "": Tools.OnError("ERROR: no input file provided")
-if outpath == "": outpath = filepath + ".i"
+if outpath == "":
+	file,ext = os.path.splitext(filepath)
+	outpath = file + "_pp" + ext
 
 input(
 	"Preprocessing:\n"
@@ -41,17 +43,28 @@ try:
 		'/P',
 		'/nologo',
 		'/TP',
-		'/EP' #no line numbers
+		'/EP', #no line numbers
 		]
 	#/GS /analyze- /W3 /wd"4351" /Gy /Zc:wchar_t /ZI /Gm /Od /Ob0 /GF /WX- /Zc:forScope /RTC1 /Gd /Oy- /MTd /openmp /fp:precise /errorReport:prompt /EHsc 
 
+	project_dir = 'R:\\localrepo\\PC\\vmaster_controller'
 	includes=[
+		'/I"'+project_dir+'"',
+		'/I"'+project_dir+'\\src\\emulation"',
+		'/I"'+project_dir+'\\..\\stm32_proxy\\products\\master_controller_v2\\source"',
+		'/I"'+project_dir+'\\..\\stm32_proxy"',
+		'/I"'+project_dir+'\\..\\stm32_proxy\\stm32 library\\fwlib\\library\\inc"',
+		'/I"'+project_dir+'\\..\\..\\stm32\\products\\master_controller_v2\\source"',
+		'/I"'+project_dir+'\\..\\..\\stm32"',
+		'/I"'+project_dir+'\\..\\..\\stm32\\stm32 library\\fwlib\\library\\inc"',
+		'/I"R:\\localrepo',
+
 		'/I"'+UserVars.root+'\\projects"',
 		'/I"'+UserVars.root+'\\sdk\\pr"',
 		'/I"'+UserVars.root+'\\sdk\\wtl\\v8.1\\include"',
 		'/I"'+UserVars.root+'\\sdk\\lua\\lua\\src"',
 		'/I"'+UserVars.root+'\\sdk\\lua"',
-		'/I"'+UserVars.root+'\\sdk\\sqlite"'
+		'/I"'+UserVars.root+'\\sdk\\sqlite"',
 		]
 
 	defines=[
@@ -64,17 +77,18 @@ try:
 	print("Preprocessing...")
 	Tools.Exec(['cl'] + flags + includes + defines + ['/Fi'+outpath, filepath], show_arguments=trace)
 
-	print("Cleaning PP output...")
-	Tools.Exec([UserVars.root+'\\bin\\textformatter.exe', '-f', outpath, '-newlines', '0', '1'], show_arguments=trace)
-
 	print("AStyling output...")
 	Tools.Exec([UserVars.root+'\\tools\\AStyle\\astyle.exe', '--options='+UserVars.root+'\\tools\\astyle\\format_with_newlines.cfg', outpath], show_arguments=trace)
 
-	print("Showing PP output...")
-	Tools.Exec([UserVars.textedit, outpath])
+	print("Cleaning output...")
+	Tools.Exec([UserVars.root+'\\bin\\textformatter.exe', '-f', outpath, '-newlines', '0', '1'], show_arguments=trace)
+
+	print("Showing output...")
+	Tools.Exec([UserVars.devenv, "/Edit", outpath], expected_return_code=0xffffffff)
+	#Tools.Exec([UserVars.textedit, outpath])
 
 
 	Tools.OnSuccess()
 
 except Exception as ex:
-	Tools.OnError("ERROR: " + str(ex))
+	Tools.OnException(ex)
