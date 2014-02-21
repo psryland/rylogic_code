@@ -72,6 +72,8 @@ try:
 		'/D_CRT_SECURE_NO_WARNINGS',
 		'/DNOMINMAX',
 		'/DPR_UNITTESTS'
+	#	'/DDEF_STM32_PRODUCT=2',
+	#	'/DPACK=',
 		]
 
 	print("Preprocessing...")

@@ -11,7 +11,7 @@
 #include "pr/maths/rand.h"
 #include "pr/maths/scalar.h"
 
-#ifdef _WINGDI_
+#if defined(_WINGDI_) && !defined(NOGDI)
 #  define PR_SUPPORT_WINGDI(exp) exp
 #else
 #  define PR_SUPPORT_WINGDI(exp)

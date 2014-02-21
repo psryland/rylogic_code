@@ -1,0 +1,25 @@
+The Natvis framework is not used for visualizations when:
+
+ Mixed mode debugging a desktop application (i.e. an app that is not a Windows Store app)
+  and the Managed C++ Compatibility Mode option is checked in the Debugging/General
+  page of the Visual Studio Options dialog box.
+
+ Edit and Continue (Visual C++) is enabled in the Debugging/Edit and Continue page of
+  the Visual Studio Options dialog box.
+
+ The program is built with Edit and Continue enabled
+  i.e. Debug Information Format, use Program Database (/Zi)
+  
+  
+Diagnosing Natvis errors
+  Natvis diagnostics helps you to troubleshoot issues when writing new visualizations.
+  When the Visual Studio debugger encounters errors in a visualization entry, such as
+  xml schema errors, or expressions that fail to parse, it simply ignores the errors
+  and either displays the type in its raw form or picks another suitable visualization.
+  To understand why a certain visualization entry is ignored and to see what the
+  underlying errors are, you can turn on visualization diagnostics by setting the
+  following registry value:
+  [HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\12.0_Config\Debugger]
+  "EnableNatvisDiagnostics"=dword:00000001
+ 
+ 
