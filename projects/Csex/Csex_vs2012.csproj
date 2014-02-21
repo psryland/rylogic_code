@@ -56,6 +56,7 @@
     <Compile Include="Cmd\NewCommand.cs" />
     <Compile Include="Cmd\PatternUI.cs" />
     <Compile Include="Cmd\ShowExif.cs" />
+    <Compile Include="Cmd\ShowTree.cs" />
     <Compile Include="Cmd\SignFile.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

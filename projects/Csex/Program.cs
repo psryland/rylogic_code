@@ -90,6 +90,9 @@ namespace Csex
 				"    -showexif\n" +
 				"       Display Exif info for a jpg file\n" +
 				"\n" +
+				"    -showtree\n" +
+				"       Display a tree grid view of a text file containing whitespace indenting\n" +
+				"\n" +
 				// NEW_COMMAND - add a help string
 				"\n"+
 				"  Type Cex -command -help for help on a particular command\n"+
@@ -110,6 +113,7 @@ namespace Csex
 				case "-patternui": m_cmd = new PatternUI(); break;
 				case "-find_duplicate_files": m_cmd = new FindDuplicateFiles(); break;
 				case "-showexif": m_cmd = new ShowExif(); break;
+				case "-showtree": m_cmd = new ShowTree(); break;
 					// NEW_COMMAND - handle the command
 				}
 			}

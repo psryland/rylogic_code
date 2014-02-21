@@ -351,6 +351,20 @@ namespace pr.gui
 			set { base.RowTemplate = value; }
 		}
 		// ReSharper restore UnusedMember.Local
+		
+		/// <summary>Recursively expand all nodes in the tree</summary>
+		public void ExpandAll()
+		{
+			foreach (var node in Nodes)
+				node.Expand(true);
+		}
+
+		/// <summary>Recursively collapse all nodes in the tree</summary>
+		public void CollapseAll()
+		{
+			foreach (var node in Nodes)
+				node.Collapse(true);
+		}
 	}
 
 	/// <summary>A node/row in the tree grid view control</summary>
@@ -577,17 +591,22 @@ namespace pr.gui
 		}
 
 		/// <summary>Collapse the children of this node</summary>
-		public bool Collapse()
+		public bool Collapse(bool recursive = false)
 		{
 			if (!IsDisplayedInGrid) throw new Exception("Cannot collapse nodes that are not displayed in the grid");
 			if (!m_is_expanded) return true;
-			TreeGridView grid = Grid;
+			
+			var grid = Grid;
 			if (!grid.BeginCollapseNode(this))
 				return false;
 
 			// Remove all of the children from the grid
-			foreach (TreeGridNode child in Nodes)
+			foreach (var child in Nodes)
+			{
+				if (recursive)
+					child.Collapse(recursive);
 				child.RemoveRowsFromGrid();
+			}
 
 			m_is_expanded = false;
 			grid.EndCollapseNode(this);
@@ -595,18 +614,23 @@ namespace pr.gui
 		}
 
 		/// <summary>Expand the children of this node</summary>
-		public bool Expand()
+		public bool Expand(bool recusive = false)
 		{
 			if (!IsDisplayedInGrid) throw new Exception("Cannot expand nodes that are not displayed in the grid");
 			if (m_is_expanded) return true;
-			TreeGridView grid = Grid;
+			
+			var grid = Grid;
 			if (!grid.BeginExpandNode(this))
 				return false;
 
 			// Add all children to the grid
 			int row_index = RowIndex + 1;
-			foreach (TreeGridNode child in Nodes)
+			foreach (var child in Nodes)
+			{
 				child.DisplayRowsInGrid(ref row_index);
+				if (recusive)
+					child.Expand(recusive);
+			}
 
 			m_is_expanded = true;
 			grid.EndExpandNode(this);
