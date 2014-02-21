@@ -41,6 +41,9 @@ namespace Rylogic.VSExtension
 			/// <summary>The minimum column index that this token can be left shifted to</summary>
 			public int MinColumnIndex { get; private set; }
 
+			/// <summary>The current char index of the token</summary>
+			public int CurrentCharIndex { get; private set; }
+
 			/// <summary>The current column index of the token</summary>
 			public int CurrentColumnIndex { get; private set; }
 
@@ -58,7 +61,15 @@ namespace Rylogic.VSExtension
 
 				MinCharIndex       = i;
 				MinColumnIndex     = CharIndexToColumnIndex(line_text, MinCharIndex, tab_size);
+				CurrentCharIndex   = (int)Span.Begin;
 				CurrentColumnIndex = CharIndexToColumnIndex(line_text, (int)Span.Begin, tab_size);
+			}
+
+			/// <summary>Set this edit so that it cannot be moved to the left</summary>
+			public void SetNoLeftShift()
+			{
+				MinCharIndex = CurrentCharIndex;
+				MinColumnIndex = CurrentColumnIndex;
 			}
 
 			/// <summary>Converts a char index into a column index for the given line</summary>
@@ -353,6 +364,12 @@ namespace Rylogic.VSExtension
 			// Nothing to do
 			if (edits.Count == 0)
 				return;
+
+			// The first edit is the line that the aligning is based on, if the
+			// token we're aligning to is the first thing on the line don't align
+			// to column zero, leave the leading whitespace as is
+			if (edits[0].MinColumnIndex == 0)
+				edits[0].SetNoLeftShift();
 
 			// Create an undo scope
 			using (ITextEdit text = m_snapshot.TextBuffer.CreateEdit())
