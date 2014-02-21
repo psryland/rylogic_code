@@ -18,6 +18,9 @@
 #ifndef PR_THREADS_ITEM_QUEUE_H
 #define PR_THREADS_ITEM_QUEUE_H
 
+// DEPRECATED,
+// Use concurrent_queue.h instead
+
 #include <deque>
 #include <windows.h>
 
@@ -39,7 +42,7 @@ namespace pr
 			HANDLE                   m_notify;         // An event that is signalled when consumers need notifying
 			volatile size_t          m_producer_count; // Count of the producers contributing to this queue
 			volatile bool            m_last;           // A flag to signal when no more will be added to the queue
-			
+
 			ItemQueueBase()
 			:m_notify(0)
 			,m_cs()
@@ -64,7 +67,7 @@ namespace pr
 
 			friend int WaitMultiple(int count, ItemQueueBase const* queues[], bool wait_all, unsigned int timeout_ms);
 		};
-		
+
 		// A thread safe producer/consumer queue of 'items'
 		template <typename Item> class ItemQueue :public ItemQueueBase
 		{
@@ -78,7 +81,7 @@ namespace pr
 
 			typedef std::deque<Item> ItemCont;
 			ItemCont m_queue; // The queue of items
-			
+
 			ItemQueue(ItemQueue const&); // no copying
 			ItemQueue& operator=(ItemQueue const&); // no copying
 
@@ -91,11 +94,11 @@ namespace pr
 				ItemQueue& m_queue;
 				Lock(Lock const&); // no copying
 				Lock& operator=(Lock const&); // no copying
-		
+
 			public:
 				explicit Lock(ItemQueue& queue) :m_lock(queue.m_cs) ,m_queue(queue) {}
 				explicit Lock(ItemQueue const& queue) :m_lock(queue.m_cs) ,m_queue(const_cast<ItemQueue&>(queue)) {}
-				
+
 				// Operations that can be performed on the queue while this lock exists
 				size_t      ProducerCount() const              { return m_queue.m_producer_count; }
 				size_t      Count() const                      { return m_queue.m_queue.size(); }
@@ -111,9 +114,9 @@ namespace pr
 				Producer(ItemQueue& queue) :m_queue(&queue) { m_queue->RegisterProducer(); }
 				~Producer()                                 { m_queue->UnregisterProducer(); }
 			};
-			
+
 			ItemQueue() {}
-			
+
 			// Register a producer source
 			void RegisterProducer()
 			{
@@ -121,7 +124,7 @@ namespace pr
 				++m_producer_count;
 				PR_ASSERT(PR_DBG, !m_last, "Cannot add producers once the last item has been added");
 			}
-			
+
 			// Unregister a producer source
 			void UnregisterProducer()
 			{
@@ -129,7 +132,7 @@ namespace pr
 				PR_ASSERT(PR_DBG, m_producer_count > 0, "Producer register/unregister mismatch");
 				if (--m_producer_count == 0) LastAdded();
 			}
-			
+
 			// Indicates whether the last item has been added to the queue.
 			// If ItemsPending returns false, then there are no more items in the queue and no more will be added
 			bool ItemsPending() const
@@ -137,7 +140,7 @@ namespace pr
 				CSLock cs(m_cs);
 				return !m_queue.empty() || !m_last;
 			}
-			
+
 			// Call this method after the last item has been added to
 			// indicate that no more items will be added to the queue
 			void LastAdded()
@@ -146,7 +149,7 @@ namespace pr
 				m_last = true;
 				Signal();
 			}
-			
+
 			// Reset the queue.
 			// 'final' == true signals that no more items will be added
 			void Clear(bool final = false)
@@ -155,7 +158,7 @@ namespace pr
 				m_queue.resize(0);
 				if (final) LastAdded();
 			}
-			
+
 			// Atomic enqueue
 			void Enqueue(Item const& item)
 			{
@@ -164,7 +167,7 @@ namespace pr
 				m_queue.push_back(item);
 				Signal();
 			}
-			
+
 			// Atomic dequeue
 			// Returns true if an item was dequeued
 			bool Dequeue(Item& item)
@@ -175,7 +178,7 @@ namespace pr
 				m_queue.pop_front();
 				return true;
 			}
-			
+
 			// Consumer can call this to wait for an item to be added to the queue
 			// or to be notified when the queue will stop receiving items.
 			bool Wait(unsigned int timeout = INFINITE) const
@@ -186,14 +189,14 @@ namespace pr
 				if (m_last) { Signal(); } // cascade notifies to all other waiting consumers
 				return res == WAIT_OBJECT_0;
 			}
-			
+
 			// Manually trigger the notify event for the queue
 			void Signal() const
 			{
 				::SetEvent(m_notify);
 			}
 		};
-		
+
 		// A consumer can call this to wait on multiple queues.
 		// The each queue must be unique.
 		// The returned value is:
@@ -209,7 +212,7 @@ namespace pr
 				handles[i] = queues[i]->m_notify;
 				PR_ASSERT(PR_DBG, !wait_all || queues[i]->ItemsPending(), "WaitAll on a queue that will not receive any more items is an error");
 			}
-			
+
 			// wait on them
 			DWORD res = WaitForMultipleObjects(count, handles, wait_all, timeout_ms);
 			PR_ASSERT(PR_DBG, !(res >= WAIT_ABANDONED_0 && res < WAIT_ABANDONED_0+count), "Receiving WAIT_ABANDONED indicates a shutdown logic error");
@@ -221,10 +224,10 @@ namespace pr
 		}
 	}
 }
-	
+
 #ifdef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT_STR_DEFINED
 #   undef PR_ASSERT
 #endif
-	
+
 #endif

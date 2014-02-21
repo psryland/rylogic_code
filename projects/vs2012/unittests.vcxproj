@@ -56,7 +56,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\console.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\container_functions.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\crc.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\d3dinstance.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dptr.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\dependency.h" />
@@ -107,6 +106,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\refptr.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\registrykey.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\resource.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\scope.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
@@ -238,6 +238,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\str\tostring.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\atomic.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\background_task.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\concurrent_queue.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\critical_section.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\event.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\ipc.h" />

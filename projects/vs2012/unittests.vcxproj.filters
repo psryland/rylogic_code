@@ -327,9 +327,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\crc.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\d3dinstance.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dptr.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -776,6 +773,12 @@
     </ClInclude>
     <ClInclude Include="..\unittests\unittests.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\threads\concurrent_queue.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\scope.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
