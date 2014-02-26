@@ -68,19 +68,19 @@ namespace pr
 		};
 
 		// A network socket with server behaviour
-		class Server :private pr::threads::Thread<Server>
+		class Server :private pr::threads::Task<Server>
 		{
 			typedef std::vector<SOCKET> TSocks;
-			Winsock const&	m_winsock;			// The winsock instance we're bound to
-			TSocks			m_clients;			// The clients that are connected to the server
-			SOCKET			m_socket;			// The socket we're listen for incoming connections on
-			uint16			m_listen_port;		// The port we're listening on
-			uint			m_max_connections;	// The maximum number of clients we'll accept connections from
-			int				m_protocol;			// TCP or UDP
-			size_t			m_max_packet_size;	// The maximum size of a single packet that the underlying provider supports
-			volatile int	m_client_count;		// The number of connected clients
-			pr::Mutex		m_mutex;			// Synchronise access to the clients list
-			ConnectionCB	m_connection_cb;	// Callback made when a client connects or disconnects
+			Winsock const& m_winsock;         // The winsock instance we're bound to
+			TSocks         m_clients;         // The clients that are connected to the server
+			SOCKET         m_socket;          // The socket we're listen for incoming connections on
+			uint16         m_listen_port;     // The port we're listening on
+			uint           m_max_connections; // The maximum number of clients we'll accept connections from
+			int            m_protocol;        // TCP or UDP
+			size_t         m_max_packet_size; // The maximum size of a single packet that the underlying provider supports
+			volatile int   m_client_count;    // The number of connected clients
+			pr::Mutex      m_mutex;           // Synchronise access to the clients list
+			ConnectionCB   m_connection_cb;   // Callback made when a client connects or disconnects
 
 			Server(Server const&); // no copying
 			Server& operator =(Server const&);
@@ -121,11 +121,11 @@ namespace pr
 		// A network socket with client behaviour
 		class Client
 		{
-			Winsock const&	m_winsock;			// The winsock instance we're bound to
-			SOCKET			m_host;				// The socket we've connected to the host with
-			uint16			m_port;				// The port we're connected to
-			int				m_protocol;			// TCP or UDP
-			size_t			m_max_packet_size;	// The maximum size of a single packet that the underlying provider supports
+			Winsock const& m_winsock;         // The winsock instance we're bound to
+			SOCKET         m_host;            // The socket we've connected to the host with
+			uint16         m_port;            // The port we're connected to
+			int            m_protocol;        // TCP or UDP
+			size_t         m_max_packet_size; // The maximum size of a single packet that the underlying provider supports
 
 			Client(Server const&); // no copying
 			Client& operator =(Client const&);

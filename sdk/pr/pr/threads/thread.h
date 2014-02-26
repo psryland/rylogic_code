@@ -1,7 +1,408 @@
 //*********************************************************************
 // Thread
-//  Copyright © Rylogic Ltd 2009
+//  Copyright © Rylogic Ltd 2014
 //*********************************************************************
+#pragma once
+#ifndef PR_THREADS_THREAD_H
+#define PR_THREADS_THREAD_H
+
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
+#include <cassert>
+
+namespace pr
+{
+	namespace threads
+	{
+		// A worker thread that provides pause/cancel functionality
+		template <class TTask> struct Thread
+		{
+		private:
+			typedef std::unique_lock<std::mutex> Lock;
+			typedef std::chrono::milliseconds milliseconds_t;
+
+			mutable std::mutex              m_mutex;          // Synchronising
+			mutable std::condition_variable m_cv_running;     // Async testing m_stop_signalled
+			mutable std::condition_variable m_cv_pause;       // Async testing m_pause_count
+			bool                            m_running;        // True while the thread is running
+			bool                            m_stop_signalled; // True when 'SignalCancel' is called
+			bool                            m_paused;         // True while the thread is paused
+			int                             m_pause_count;    // A ref count of the number of times pause has been called
+			std::thread                     m_thread;         // The thread doing the running
+
+			Thread(Thread  const&);
+			Thread& operator=(Thread const&);
+			template <typename Derived, bool AllowCancel, bool AllowPause> friend struct Task;
+
+			// The thread entry point
+			template <typename Derived, bool AllowCancel, bool AllowPause>
+			void EntryPoint(Task<Derived,AllowCancel,AllowPause>& task)
+			{
+				struct RunScope
+				{
+					Thread* m_thread;
+					TTask*  m_task;
+					RunScope(Thread* thread, TTask& task) :m_thread(thread), m_task(&task)
+					{
+						try
+						{
+							assert(m_task->m_pr_threads_thread == nullptr && "Task already running in another thread");
+							task.m_pr_threads_thread = thread;
+
+							{// Signal as running
+								Lock lock(m_thread->m_mutex);
+								m_thread->m_running = true;
+								m_thread->m_cv_running.notify_all();
+							}
+
+							// Stop on initial pause
+							if (!m_task->Done())
+								m_task->Main();
+						}
+						catch (std::exception const&) { assert(!"Unhandled std::exception thrown in worker thread"); }
+						catch (...)                   { assert(!"Unhandled exception thrown in worker thread"); }
+					}
+					~RunScope()
+					{
+						{// Signal as not running
+							Lock lock(m_thread->m_mutex);
+							m_thread->m_running = false;
+							m_thread->m_cv_running.notify_all();
+						}
+
+						m_task->m_pr_threads_thread = nullptr;
+					}
+				} run(this, task);
+			}
+
+			// Tests for stop being signalled and also pauses the thread if requested
+			bool Done()
+			{
+				Lock lock(m_mutex);
+
+				if (m_cv_running.wait_for(lock, milliseconds_t::zero(), [&]{ return m_stop_signalled; }))
+					return true;
+
+				// Test whether we should pause
+				// This isn't a race condition because we're locked
+				if (m_pause_count != 0)
+				{
+					// Signal that we're now paused
+					m_paused = true;
+					m_cv_pause.notify_all();
+
+					// Wait until unpaused
+					m_cv_pause.wait(lock, [&]{ return m_pause_count == 0; });
+				}
+
+				// If we're flagged as paused, signal unpaused now
+				if (m_paused)
+				{
+					m_paused = false;
+					m_cv_pause.notify_all();
+				}
+				return false;
+			}
+
+		public:
+			Thread(TTask& task, int pause_count = 0)
+				:m_mutex         ()
+				,m_cv_running    ()
+				,m_cv_pause      ()
+				,m_running       (false)
+				,m_stop_signalled(false)
+				,m_paused        (false)
+				,m_pause_count   (pause_count)
+				,m_thread        ([this]{ EntryPoint(); })
+			{}
+			Thread(Thread&& rhs)
+				:m_mutex         ()
+				,m_cv_running    ()
+				,m_cv_pause      ()
+				,m_running       (rhs.m_running)
+				,m_stop_signalled(rhs.m_stop_signalled)
+				,m_paused        (rhs.m_paused)
+				,m_pause_count   (rhs.m_pause_count)
+				,m_thread        (std::move(rhs.m_thread))
+			{}
+			~Thread()
+			{
+				{
+					Lock lock(m_mutex);
+					m_stop_signalled = true;
+					m_pause_count = 0;
+					m_cv_pause.notify_all();
+					m_cv_running.notify_all();
+				}
+				if (m_thread.joinable())
+					m_thread.join();
+			}
+			Thread& operator=(Thread&& rhs)
+			{
+				m_running        = rhs.m_running;
+				m_stop_signalled = rhs.m_stop_signalled;
+				m_paused         = rhs.m_paused;
+				m_pause_count    = rhs.m_pause_count;
+				m_thread         = std::move(rhs.m_thread);
+				return *this;
+			}
+
+			// True if the thread is running
+			bool IsRunning(size_t timeout = 0U) const
+			{
+				Lock lock(m_mutex);
+				return m_cv_running.wait_for(lock, milliseconds_t(timeout), [&]{ return m_running; });
+			}
+
+			// Block until this thread completes.
+			// Returns true if the thread completed before the timeout
+			bool Join(size_t timeout = ~0U)
+			{
+				Lock lock(m_mutex);
+				return timeout != ~0U
+					? m_cv_running.wait_for(lock, milliseconds_t(timeout), [&]{ return m_running == false; })
+					: (m_cv_running.wait(lock, [&]{ return m_running == false; }), true);
+			}
+
+			// True if the thread has been cancelled
+			typename std::enable_if<TTask::is_cancelable, bool>::type
+			IsCancelled(size_t timeout = 0U) const
+			{
+				Lock lock(m_mutex);
+				return m_cv_running.wait_for(lock, milliseconds_t(timeout), [&]{ return m_stop_signalled; });
+			}
+
+			// Ask the task to abort and then block for up to 'timeout' until it has.
+			// If 'timeout' == max() then Cancel waits indefinitely.
+			// This only works if the worker thread calls Done() periodically.
+			// 'timeout' is infinite by default because calling code typically
+			// wants to use Cancel to terminate the task thread.
+			// Returns true if the cancel took effect within the timeout.
+			typename std::enable_if<TTask::is_cancelable, bool>::type
+			Cancel(size_t timeout = ~0U)
+			{
+				Lock lock(m_mutex);
+				m_stop_signalled = true;
+				m_cv_running.notify_all();
+
+				return timeout != ~0U
+					? m_cv_running.wait_for(lock, milliseconds_t(timeout), [&]{ return m_running == false; })
+					: (m_cv_running.wait(lock, [&]{ return m_running == false; }), true);
+			}
+
+			// True if the thread has been paused
+			typename std::enable_if<TTask::is_pauseable, bool>::type
+			IsPaused(size_t timeout = 0U) const
+			{
+				Lock lock(m_mutex);
+				return m_cv_pause.wait_for(lock, milliseconds_t(timeout), [&]{ return m_pause_count != 0; });
+			}
+
+			// Signal the worker thread to pause or unpause and then block for up to
+			// 'timeout' until it has. If 'timeout' == max() then Pause() waits indefinitely.
+			// This only works if the worker thread calls Done() periodically.
+			// 'timeout' is infinite by default because calling code typically
+			// wants to use Pause for synchronisation. i.e. Calling "Pause(true, msec_t::zero())"
+			// means that 'IsPaused()' may return false after this method returns.
+			// Returns true if the pause or unpause took effect within the timeout.
+			typename std::enable_if<TTask::is_pauseable, bool>::type
+			Pause(bool pause, size_t timeout = ~0U)
+			{
+				Lock lock(m_mutex);
+				m_pause_count += pause ? 1 : -1;
+				assert(m_pause_count >= 0 && "Pause count is less than zero");
+				m_cv_pause.notify_all();
+
+				if (pause)
+				{
+					return timeout != ~0U
+						? m_cv_pause.wait_for(lock, milliseconds_t(timeout), [&]{ return m_paused; })
+						: (m_cv_pause.wait(lock, [&]{ return m_paused; }), true);
+				}
+				else if (m_pause_count == 0)
+				{
+					return timeout != ~0U
+						? m_cv_pause.wait_for(lock, milliseconds_t(timeout), [&]{ return !m_paused; })
+						: (m_cv_pause.wait(lock, [&]{ return !m_paused; }), true);
+				}
+				else
+				{
+					return true;
+				}
+			}
+		};
+
+		// A base class for types that encapsulate a task.
+		template <typename Derived, bool AllowCancel = true, bool AllowPause = true>
+		struct Task
+		{
+		private:
+			// The thread currently running this task.
+			template <typename TTask> friend struct Thread;
+			Thread<Task<Derived,AllowCancel,AllowPause>>* m_pr_threads_thread;
+
+			enum
+			{
+				is_cancelable = AllowCancel,
+				is_pauseable  = AllowPause,
+			};
+
+		protected:
+			Task() :m_pr_threads_thread(nullptr) {}
+			virtual ~Task() {}
+
+			// The task body
+			virtual void Main() = 0;
+
+			// Main should periodically call 'Done' to support pause and cancel
+			bool Done() { return m_pr_threads_thread->Done(); }
+		};
+
+		// Start a thread to run 'task'
+		template <typename TTask> inline Thread<TTask> Start(TTask& task, int pause_count = 0)
+		{
+			return Thread<TTask>(task, pause_count);
+		}
+
+		// Like start except an heap allocated instance of the thread is returned
+		template <typename TTask> inline std::unique_ptr<Thread<TTask>> Create(TTask& task, int pause_count = 0)
+		{
+			return std::unique_ptr<Thread<TTask>>(new Thread<TTask>(task, pause_count));
+		}
+	}
+}
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include <atomic>
+namespace pr
+{
+	namespace unittests
+	{
+		namespace threads
+		{
+			class MyTask :public pr::threads::Task<MyTask>
+			{
+			public:
+				typedef pr::threads::Task<MyTask> base;
+
+				std::atomic_long m_run_count;
+				MyTask() :m_run_count() {}
+				void Main()
+				{
+					for (;!Done();)
+					{
+						m_run_count++;
+					}
+				}
+			};
+		}
+
+		PRUnitTest(pr_threads_thread)
+		{
+			using namespace pr::unittests::threads;
+			using namespace pr::threads;
+
+			{
+				MyTask task;
+				auto job = Start(task, 1);
+
+				PR_CHECK(job.IsRunning(100) , true );
+				PR_CHECK(job.IsCancelled()  , false);
+				PR_CHECK(job.IsPaused()     , true );
+				PR_CHECK(task.m_run_count   , 0    );
+
+				job.Pause(true); // count = 2
+
+				PR_CHECK(job.IsRunning(100) , true );
+				PR_CHECK(job.IsCancelled()  , false);
+				PR_CHECK(job.IsPaused()     , true );
+				PR_CHECK(task.m_run_count   , 0    );
+
+				job.Pause(false); // count = 1
+
+				PR_CHECK(job.IsRunning()   , true );
+				PR_CHECK(job.IsCancelled() , false);
+				PR_CHECK(job.IsPaused()    , true );
+
+				job.Pause(false); // count = 0
+
+				PR_CHECK(job.IsRunning()   , true );
+				PR_CHECK(job.IsCancelled() , false);
+				PR_CHECK(job.IsPaused()    , false);
+
+				while (task.m_run_count < 10)
+					std::this_thread::yield();
+
+				// Test for race condition
+				for (int i = 0; i != 1000; ++i)
+				{
+					job.Pause(true);
+					PR_CHECK(job.IsPaused() , true);
+
+					job.Pause(false);
+					PR_CHECK(job.IsPaused() , false);
+
+					job.Pause(true );
+					job.Pause(false);
+					job.Pause(true );
+					job.Pause(false);
+					job.Pause(true );
+
+					PR_CHECK(job.IsPaused() , true);
+
+					job.Pause(false);
+					job.Pause(true );
+					job.Pause(false);
+					job.Pause(true );
+					job.Pause(false);
+
+					PR_CHECK(job.IsPaused() , false);
+				}
+
+				job.Pause(true);
+
+				PR_CHECK(job.IsRunning()       , true );
+				PR_CHECK(job.IsCancelled()     , false);
+				PR_CHECK(job.IsPaused()        , true );
+				PR_CHECK(task.m_run_count != 0 , true );
+
+				job.Pause(false);
+				job.Cancel();
+
+				PR_CHECK(job.IsRunning()       , false);
+				PR_CHECK(job.IsCancelled()     , true );
+				PR_CHECK(job.IsPaused()        , false);
+				PR_CHECK(task.m_run_count != 0 , true );
+			}
+		}
+	}
+}
+#endif
+
+#ifdef PR_ASSERT_STR_DEFINED
+#   undef PR_ASSERT_STR_DEFINED
+#   undef PR_ASSERT
+#endif
+
+#endif
+
+/*
+
+#if 0
+
+//WARNING: this implementation is broken,
+// The Thread destructor calls Stop() on a thread that is running a
+// derived type, however by the time ~Thread() is called the derived
+// type has already been destructed.
+// A correct implementation should separate the logic to be run from
+// the control of the thread, having a type that runs whatever is derived
+// from it is broken due to construction/destruction order.
+
+// This needs replacing with a std::thread based implementation anyway
+
 // Usage:
 //	struct WorkerThread : Thread<WorkerThread>
 //	{
@@ -17,10 +418,6 @@
 //				TestPause();     // Put the thread to sleep until unpaused
 //		}
 //	}
-
-#pragma once
-#ifndef PR_THREADS_THREAD_H
-#define PR_THREADS_THREAD_H
 
 #include <windows.h>
 #include <process.h>
@@ -333,133 +730,6 @@ namespace pr
 		};
 	}
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr
-{
-	namespace unittests
-	{
-		namespace threads
-		{
-			struct Thing :pr::threads::Thread<Thing>
-			{
-				typedef pr::threads::Thread<Thing> base;
-
-				volatile long m_run_count;
-				bool m_test_cancel;
-				bool m_test_pause;
-
-				Thing(bool test_cancel, bool test_pause)
-					:m_run_count(0)
-					,m_test_cancel(test_cancel)
-					,m_test_pause(test_pause)
-				{}
-
-				using base::Start;
-				using base::Pause;
-				using base::Cancel;
-				using base::Stop;
-				using base::IsRunning;
-				using base::IsCancelled;
-				using base::IsPaused;
-
-				void Main(void*)
-				{
-					for (;;)
-					{
-						if (m_test_pause)
-							TestPause();
-
-						::InterlockedIncrement(&m_run_count);
-
-						if (m_test_cancel && IsCancelled())
-							break;
-
-						if (!m_test_pause && !m_test_cancel)
-							break;
-					}
-				}
-
-				long RunCount() const
-				{
-					// const cast cause we're not really changing it, just reading it
-					return ::InterlockedCompareExchange(const_cast<volatile long*>(&m_run_count), 0L, 0L);
-				}
-			};
-		}
-
-		PRUnitTest(pr_threads_thread)
-		{
-			using namespace pr::unittests::threads;
-
-			{
-				Thing thg(true,true);
-				PR_CHECK(thg.IsRunning(), false);
-				PR_CHECK(thg.IsCancelled(), false);
-				PR_CHECK(thg.IsPaused(), false);
-				PR_CHECK(thg.RunCount(), 0);
-				thg.Pause(true, 0);
-				thg.Start();
-				PR_CHECK(thg.IsRunning(1000), true);
-				PR_CHECK(thg.IsCancelled(), false);
-				PR_CHECK(thg.IsPaused(), true);
-				PR_CHECK(thg.RunCount(), 0);
-				thg.Pause(false);
-				PR_CHECK(thg.IsRunning(), true);
-				PR_CHECK(thg.IsCancelled(), false);
-				PR_CHECK(thg.IsPaused(), false);
-
-				// Can't test RunCount() due to race condition
-				while (thg.RunCount() == 0) Sleep(0);
-
-				// Test for race condition
-				for (int i = 0; i != 1000; ++i)
-				{
-					thg.Pause(true);
-					PR_CHECK(thg.IsPaused(), true);
-					thg.Pause(false);
-					PR_CHECK(thg.IsPaused(), false);
-
-					thg.Pause(false);
-					thg.Pause(true );
-					thg.Pause(false);
-					thg.Pause(true );
-					thg.Pause(false);
-					thg.Pause(true );
-
-					PR_CHECK(thg.IsPaused(), true);
-
-					thg.Pause(true );
-					thg.Pause(false);
-					thg.Pause(true );
-					thg.Pause(false);
-					thg.Pause(true );
-					thg.Pause(false);
-
-					PR_CHECK(thg.IsPaused(), false);
-				}
-
-				thg.Pause(true);
-				PR_CHECK(thg.IsRunning()     , true );
-				PR_CHECK(thg.IsCancelled()   , false);
-				PR_CHECK(thg.IsPaused()      , true );
-				PR_CHECK(thg.RunCount() != 0 , true );
-				thg.Pause(false);
-				thg.Stop();
-				PR_CHECK(thg.IsRunning()     , false);
-				PR_CHECK(thg.IsCancelled()   , true );
-				PR_CHECK(thg.IsPaused()      , false);
-				PR_CHECK(thg.RunCount() != 0 , true );
-			}
-		}
-	}
-}
 #endif
 
-#ifdef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT
-#endif
-
-#endif
+*/

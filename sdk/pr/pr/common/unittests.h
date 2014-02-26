@@ -33,18 +33,31 @@ namespace pr
 #include <memory>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <algorithm>
 #include <functional>
 #include <memory>
 #include <chrono>
 #include <cstdarg>
+#include <locale>
+
+// Cannot include pr lib headers here because they are the headers
+// being unit tested. Also, this should be a standalone header
 
 namespace pr
 {
 	namespace unittests
 	{
 		typedef std::function<void(void)> TestFunc;
+
+		// A pointer to the stream that output is written to
+		inline std::ostream*& outstream()
+		{
+			static std::ostream* s_ostream = &std::cout;
+			return s_ostream;
+		}
+		inline std::ostream& out() { return *outstream(); }
 
 		struct UnitTestItem
 		{
@@ -78,9 +91,10 @@ namespace pr
 		// Run all of the registered unit tests
 		inline int RunAllTests(bool wordy)
 		{
+			using namespace std::chrono;
 			try
 			{
-				auto T0 = std::chrono::high_resolution_clock::now();
+				auto T0 = high_resolution_clock::now();
 				std::sort(std::begin(Tests()), std::end(Tests()));
 
 				int passed = 0;
@@ -91,45 +105,77 @@ namespace pr
 					TestCount() = 0;
 					try
 					{
-						if (wordy) printf("%s%s", test.m_name, std::string(40 - strlen(test.m_name), '.').c_str());
+						if (wordy) out() << test.m_name << std::string(40 - strlen(test.m_name), '.').c_str();
 
-						auto t0 = std::chrono::high_resolution_clock::now();
+						auto t0 = high_resolution_clock::now();
 						test.m_func();
-						auto t1 = std::chrono::high_resolution_clock::now();
+						auto t1 = high_resolution_clock::now();
 
-						if (wordy) printf("success. (%-4d tests in %7.3fms)\n", TestCount(), std::chrono::duration_cast<std::chrono::microseconds>(t1-t0).count());
+						if (wordy) out() << "success. (" << TestCount() << " tests in " << duration_cast<microseconds>(t1-t0).count() << "ms)" << std::endl;
 						++passed;
 					}
 					catch (std::exception const& e)
 					{
-						std::cout << "failed.\n" << e.what() << "\n";
+						out() << "failed." << std::endl << e.what() << std::endl;
 						++failed;
 					}
 				}
 
-				auto T1 = std::chrono::high_resolution_clock::now();
+				auto T1 = high_resolution_clock::now();
 				if (failed == 0)
-					printf(" **** UnitTest results: All %d tests passed. (taking %7.3fms) **** \n", failed+passed, std::chrono::duration_cast<std::chrono::microseconds>(T1-T0).count());
+					out() << " **** UnitTest results: All " << (failed+passed) << " tests passed. (taking " << duration_cast<microseconds>(T1-T0).count() << "ms) ****" << std::endl;
 				else
-					printf(" **** UnitTest results: %d of %d failed. **** \n", failed, failed+passed);
+					out() << " **** UnitTest results: " << failed << " of " << failed+passed << " failed. ****" << std::endl;
 				return failed == 0 ? 0 : -1;
 			}
 			catch (...)
 			{
-				std::cout << "UnitTests could not complete due to an unhandled exception\n";
+				out() << "UnitTests could not complete due to an unhandled exception" << std::endl;
 				return -1;
 			}
 		}
 
-		// Printf helper
-		inline char const* FmtS(char const* format, ...)
+		// helpers
+		namespace impl
 		{
-			static char buf[512] = {};
-			va_list arglist;
-			va_start(arglist, format);
-			_vsprintf_p(buf, 1023, format, arglist);
-			va_end(arglist);
-			return buf;
+			// A static instance of the locale, because this thing takes ages to construct
+			inline std::locale const& locale()
+			{
+				static std::locale s_locale("");
+				return s_locale;
+			}
+
+			// Widen/Narrow strings
+			inline std::string Narrow(char const* from, std::size_t len = 0)
+			{
+				if (len == 0) len = strlen(from);
+				return std::string(from, from+len);
+			}
+			inline std::string Narrow(wchar_t const* from, std::size_t len = 0)
+			{
+				if (len == 0) len = wcslen(from);
+				std::vector<char> buffer(len + 1);
+				std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
+				return std::string(&buffer[0], &buffer[len]);
+			}
+			inline std::wstring Widen(wchar_t const* from, std::size_t len = 0)
+			{
+				if (len == 0) len = wcslen(from);
+				return std::wstring(from, from+len);
+			}
+			inline std::wstring Widen(char const* from, std::size_t len = 0)
+			{
+				if (len == 0) len = strlen(from);
+				std::vector<wchar_t> buffer(len + 1);
+				std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
+				return std::wstring(&buffer[0], &buffer[len]);
+			}
+
+			// Stream wide strings into narrow streams
+			inline std::basic_ostream<char>& operator << (std::basic_ostream<char>& ostrm, std::basic_string<wchar_t> const& str)
+			{
+				return ostrm << impl::Narrow(str.c_str(), str.size());
+			}
 		}
 
 		template <typename T, typename U> inline bool UTEqual(T const& lhs, U const& rhs)
@@ -140,49 +186,43 @@ namespace pr
 		{
 			return Len1 == Len2 && memcmp(lhs, rhs, sizeof(T) * Len1) == 0;
 		}
-		inline bool UTEqual(double lhs, double rhs)
-		{
-			return ::abs(rhs - lhs) < DBL_EPSILON;
-		}
-		inline bool UTEqual(float lhs, float rhs)
-		{
-			return ::fabs(rhs - lhs) < FLT_EPSILON;
-		}
-		inline bool UTEqual(char const* lhs, char const* rhs)
-		{
-			return strcmp(lhs, rhs) == 0;
-		}
-		inline bool UTEqual(char* lhs, char* rhs)
-		{
-			return strcmp(lhs, rhs) == 0;
-		}
+		inline bool UTEqual(double lhs, double rhs)                 { return ::abs(rhs - lhs) < DBL_EPSILON; }
+		inline bool UTEqual(float lhs, float rhs)                   { return ::fabs(rhs - lhs) < FLT_EPSILON; }
+		inline bool UTEqual(char const* lhs, char const* rhs)       { return strcmp(lhs, rhs) == 0; }
+		inline bool UTEqual(char* lhs, char* rhs)                   { return strcmp(lhs, rhs) == 0; }
+		inline bool UTEqual(wchar_t const* lhs, wchar_t const* rhs) { return wcscmp(lhs, rhs) == 0; }
+		inline bool UTEqual(wchar_t* lhs, wchar_t* rhs)             { return wcscmp(lhs, rhs) == 0; }
 
 		// Unit test check functions
 		inline void Fail(char const* msg, char const* file, int line)
 		{
 			++TestCount();
-			throw std::exception(FmtS("%s(%d):%s",file,line,msg));
+			std::stringstream ss; ss << file << "(" << line << "): " << msg;
+			throw std::exception(ss.str().c_str());
 		}
 		template <typename T, typename U> inline void Check(T const& result, U const& expected, char const* expr, char const* file, int line)
 		{
+			using namespace impl;
+
 			++TestCount();
 			if (UTEqual(result, expected)) return;
-			std::string r = pr::To<std::string>(result);
-			std::string e = pr::To<std::string>(expected);
-			throw std::exception(FmtS("%s(%d): '%s' was '%s', expected '%s'",file,line,expr,r.c_str(),e.c_str()));
+			std::stringstream ss; ss << file << "(" << line << "): '" << expr << "' was '" << result << "', expected '" << expected << "'";
+			throw std::exception(ss.str().c_str());
 		}
 		template <typename T> inline void Close(T const& result, T const& expected, T tol, char const* expr, char const* file, int line)
 		{
+			using namespace impl;
+
 			++TestCount();
 			T diff = expected - result;
 			if (-tol < diff && diff < tol) return;
-			std::string r = pr::To<std::string>(result);
-			std::string e = pr::To<std::string>(expected);
-			std::string t = pr::To<std::string>(tol);
-			throw std::exception(FmtS("%s(%d): '%s' was '%s', expected '%s ±%s'",file,line,expr,r.c_str(),e.c_str(),t.c_str()));
+			std::stringstream ss; ss << file << "(" << line << "): '" << expr << "' was '" << result << "', expected '" << expected << " ±" << tol << "'";
+			throw std::exception(ss.str().c_str());
 		}
 		template <typename TExcept, typename Func> inline void Throws(Func func, char const* expr, char const* file, int line)
 		{
+			using namespace impl;
+
 			++TestCount();
 			bool threw = false;
 			bool threw_expected = false;
@@ -190,10 +230,10 @@ namespace pr
 			catch (TExcept) { threw = true; threw_expected = true; }
 			catch (...)     { threw = true; }
 			if (threw_expected) return;
-			char const* e = threw
+			std::stringstream ss; ss << file << "(" << line << "): '" << expr << "' " << (threw
 				? "threw an exception of an unexpected type"
-				: "didn't throw when it was expected to";
-			throw std::exception(FmtS("%s(%d): '%s' %s",file,line,expr,e));
+				: "didn't throw when it was expected to");
+			throw std::exception(ss.str().c_str());
 		}
 	}
 }
@@ -221,4 +261,3 @@ namespace pr
 	pr::unittests::Throws<what>(func, #func, __FILE__, __LINE__)
 
 #endif
-

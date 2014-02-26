@@ -7,6 +7,7 @@
 #define PR_THREADS_BACKGROUND_TASK_H
 #pragma once
 
+#include <memory>
 #include "pr/threads/thread.h"
 #include "pr/common/multi_cast.h"
 
@@ -26,9 +27,9 @@ namespace pr
 		//      }
 		//  };
 		// Use in conjunction with pr::gui::ProgressDlg
-		class BackgroundTask :private pr::threads::Thread<BackgroundTask>
+		class BackgroundTask :public pr::threads::Task<BackgroundTask>
 		{
-			typedef pr::threads::Thread<BackgroundTask> ThreadBase;
+			typedef pr::threads::Task<BackgroundTask> ThreadBase;
 
 			// Thread entry point
 			void Main(void* ctx)
@@ -56,6 +57,9 @@ namespace pr
 			// exception and rethrow it after calling WaitTillComplete().
 			virtual void DoWork(void* ctx) = 0;
 
+			// A handle on the running thread
+			std::unique_ptr<pr::threads::Thread<BackgroundTask>> m_thread;
+
 		protected:
 
 			// Derived types call this to update their progress
@@ -78,20 +82,31 @@ namespace pr
 
 			// Run the background task
 			// If 'async' is true, this method returns immediately. Call 'Join()' to block until complete
-			bool Run(bool async, void* ctx = 0)
+			bool Run(bool async)
 			{
-				if (!ThreadBase::Start(ctx)) return false;
-				if (!async) Join();
+				m_thread = pr::threads::Create(*this);
+				if (!async) m_thread->Join();
 				return true;
 			}
 
-			// Block until the background task is complete
-			using ThreadBase::Join;
+			// Block until complete
+			void Join()
+			{
+				if (m_thread)
+					m_thread->Join();
+			}
 
 			// Allow the task to be cancelled. Note that it is still up to the
 			// task to check the 'Cancelled()' method in its main loop
-			using ThreadBase::IsCancelled;
-			using ThreadBase::Cancel;
+			bool IsCancelled() const
+			{
+				return m_thread && m_thread->IsCancelled();
+			}
+			void Cancel()
+			{
+				if (m_thread)
+					m_thread->Cancel();
+			}
 		};
 	}
 }

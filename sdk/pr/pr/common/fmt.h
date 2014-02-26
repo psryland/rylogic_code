@@ -16,6 +16,10 @@
 #include <string>
 #include <malloc.h>
 
+#ifndef PR_FMT_THREAD_LOCAL
+#define PR_FMT_THREAD_LOCAL __declspec(thread)
+#endif
+
 #ifdef __cplusplus
 namespace pr
 {
@@ -31,7 +35,7 @@ namespace pr
 			return _vswprintf_p(dst, max_count, fmt, arg_list);
 		}
 
-		template <typename TString, typename TChar> inline void Format(TString& dst, size_t hint_size, TChar const* fmt, va_list arg_list)
+		template <typename TString, typename TChar> inline TString& Format(TString& dst, size_t hint_size, TChar const* fmt, va_list arg_list)
 		{
 			struct MallocaScope
 			{
@@ -61,153 +65,122 @@ namespace pr
 					break;
 				}
 
-				// Otherwise, true a larger buffer
+				// Otherwise, try a larger buffer
 				hint_size *= 2;
 			}
+
+			return dst;
 		}
 	}
 
-	// Returns a formated std::string/std::wstring
-	inline std::string Fmt(char const* format, ...)
+	// Returns a formatted TString
+	template <typename TString, typename TChar> inline TString Fmt(TChar const* format, va_list arg_list)
 	{
-		std::string str;
-		va_list arglist;
-		va_start(arglist, format);
-		impl::Format(str, 1024, format, arglist);
-		va_end(arglist);
-		return str.c_str();
+		TString str;
+		return impl::Format(str, 1024, format, arg_list);
 	}
-	inline std::wstring Fmt(wchar_t const* format, ...)
+	template <typename TString, typename TChar> inline TString Fmt(TChar const* format, ...)
 	{
-		std::wstring str;
-		va_list arglist;
-		va_start(arglist, format);
-		impl::Format(str, 1024, format, arglist);
-		va_end(arglist);
-		return str.c_str();
+		TString str;
+		va_list arg_list;
+		va_start(arg_list, format);
+		impl::Format(str, 1024, format, arg_list);
+		va_end(arg_list);
+		return str;
 	}
-	inline std::string Fmt(size_t hint_size, const char* format, ...)
+
+	// Returns a formatted std::string/std::wstring
+	template <typename TChar> inline std::basic_string<TChar> Fmt(TChar const* format, ...)
 	{
-		std::string str;
-		va_list arglist;
-		va_start(arglist, format);
-		impl::Format(str, hint_size, format, arglist);
-		va_end(arglist);
-		return str.c_str();
+		std::basic_string<TChar> str;
+		va_list arg_list;
+		va_start(arg_list, format);
+		impl::Format(str, 1024, format, arg_list);
+		va_end(arg_list);
+		return str;
 	}
-	inline std::wstring Fmt(size_t hint_size, const wchar_t* format, ...)
+	template <typename TChar> inline std::basic_string<TChar> Fmt(size_t hint_size, TChar const* format, ...)
 	{
-		std::wstring str;
-		va_list arglist;
-		va_start(arglist, format);
-		impl::Format(str, hint_size, format, arglist);
-		va_end(arglist);
-		return str.c_str();
+		std::basic_string<TChar> str;
+		va_list arg_list;
+		va_start(arg_list, format);
+		impl::Format(str, hint_size, format, arg_list);
+		va_end(arg_list);
+		return str;
 	}
 
 	// Returns a formatted std::string/std::wstring where 'func' translates the format codes.
 	// Format codes should be '%?' where '?' is up to func to interpret.
 	// 'func' should take a pointer into the format string and return something
 	// that can be appended to a std::string. 'func' is allowed to advance 's'
-	// to the last charactor of the code e.g. "%3.3d foos", 's' = "3.3d...", func can advance 's' to the 'd'
-	template <typename TFunc> inline std::string FmtF(char const* format, TFunc func)
+	// to the last character of the code e.g. "%3.3d foos", 's' = "3.3d...", func can advance 's' to the 'd'
+	template <typename TFunc, typename TChar> inline std::basic_string<TChar> FmtF(TChar const* format, TFunc func)
 	{
-		std::string str;
-		for (char const* s = format; *s; ++s)
+		std::basic_string<TChar> str;
+		TChar const pc('%');
+		for (TChar const* s = format; *s; ++s)
 		{
-			if (*s != '%')     { str.append(1,*s); continue; }
-			if (*(++s) == '%') { str.append(1,'%'); continue; }
-			str.append(func(s));
-		}
-		return str;
-	}
-	template <typename TFunc> inline std::wstring FmtF(wchar_t const * format, TFunc func)
-	{
-		std::wstring str;
-		for (wchar_t const* s = format; *s; ++s)
-		{
-			if (*s != L'%')     { str.append(1,*s); continue; }
-			if (*(++s) == L'%') { str.append(1,L'%'); continue; }
+			if (*s != pc)     { str.append(1,*s); continue; }
+			if (*(++s) == pc) { str.append(1,*s); continue; }
 			str.append(func(s));
 		}
 		return str;
 	}
 
 	// Static, non-thread safe, use with caution, but fast string format
-	template <typename Ctx, size_t Sz> inline const char* FmtX(char const* format, va_list arglist)
+	template <typename TChar, typename Ctx, size_t Sz> inline TChar const* FmtX(TChar const* format, va_list arg_list)
 	{
-		static char buf[Sz];
-		int result = impl::Format(buf, Sz-1, format, arglist);
+		PR_FMT_THREAD_LOCAL static TChar buf[Sz];
+		int result = impl::Format(buf, Sz-1, format, arg_list);
 		assert(result >= 0 && result < Sz-1 && "formatted string truncated");
 		buf[result] = 0;
 		return buf;
 	}
-	template <typename Ctx, size_t Sz> inline const wchar_t* FmtX(wchar_t const* format, va_list arglist)
+	template <typename TChar, typename Ctx, size_t Sz> inline TChar const* FmtX(TChar const* format, ...)
 	{
-		static wchar_t buf[Sz];
-		int result = impl::Format(buf, Sz-1, format, arglist);
-		assert(result >= 0 && result < Sz-1 && "formatted string truncated");
-		buf[result] = 0;
-		return buf;
-	}
-	template <typename Ctx, size_t Sz> inline char const* FmtX(char const* format, ...)
-	{
-		va_list arglist;
-		va_start(arglist, format);
-		char const* s = FmtX<Ctx, Sz>(format, arglist);
-		va_end(arglist);
+		va_list arg_list;
+		va_start(arg_list, format);
+		auto s = FmtX<TChar, Ctx, Sz>(format, arg_list);
+		va_end(arg_list);
 		return s;
 	}
-	template <typename Ctx, size_t Sz> inline wchar_t const* FmtX(wchar_t const* format, ...)
+	template <typename TChar> inline TChar const* FmtS(TChar const* format, ...)
 	{
-		va_list arglist;
-		va_start(arglist, format);
-		wchar_t const* s = FmtX<Ctx,Sz>(format, arglist);
-		va_end(arglist);
-		return s;
-	}
-	inline char const* FmtS(char const* format, ...)
-	{
-		va_list arglist;
-		va_start(arglist, format);
-		char const* s = FmtX<void, 1024>(format, arglist);
-		va_end(arglist);
-		return s;
-	}
-	inline wchar_t const* FmtS(wchar_t const* format, ...)
-	{
-		va_list arglist;
-		va_start(arglist, format);
-		wchar_t const* s = FmtX<void, 1024>(format, arglist);
-		va_end(arglist);
+		struct S;
+		va_list arg_list;
+		va_start(arg_list, format);
+		auto s = FmtX<TChar, S, 1024>(format, arg_list);
+		va_end(arg_list);
 		return s;
 	}
 }
 #else
 	static __inline char const* Fmt(char* buffer, int length, char const* format, ...)
 	{
-		va_list arglist;
-		va_start(arglist, format);
-		vsnprintf(buffer, length, format, arglist);
+		va_list arg_list;
+		va_start(arg_list, format);
+		vsnprintf(buffer, length, format, arg_list);
 		buffer[length - 1] = 0;
-		va_end(arglist);
+		va_end(arg_list);
 		return buffer;
 	}
 
 	static __inline char const* FmtS(char const* format, ...)
 	{
 		static char buffer[256];
-		va_list arglist;
-		va_start(arglist, format);
-		vsnprintf(buffer, sizeof(buffer), format, arglist);
+		va_list arg_list;
+		va_start(arg_list, format);
+		vsnprintf(buffer, sizeof(buffer), format, arg_list);
 		buffer[sizeof(buffer) - 1] = 0;
-		va_end(arglist);
+		va_end(arg_list);
 		return buffer;
 	}
 #endif
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/str/prstring.h"
+
 namespace pr
 {
 	namespace unittests
@@ -216,6 +189,16 @@ namespace pr
 		{
 			char const* s1 = pr::FmtS("String %d",1);
 			PR_CHECK(s1, "String 1");
+
+			auto s2 = pr::FmtS(L"wide string %d", 2);
+			PR_CHECK(s2, L"wide string 2");
+
+			auto s3 = pr::Fmt("std::string %d", 3);
+			PR_CHECK(s3.size(), 13U);
+
+			auto s4 = pr::Fmt<pr::string<>>("pr::string %d",4);
+			PR_CHECK(s4, "pr::string 4");
+			PR_CHECK(s4.size(), 12U);
 		}
 	}
 }

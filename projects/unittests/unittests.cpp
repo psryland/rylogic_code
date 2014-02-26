@@ -23,6 +23,9 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "unittests/unittests.h"
 
+// For faster build times, comment out the 'all headers' include
+// and just include the header you care about
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	bool runtests = argc >= 2 && std::any_of(argv + 1, argv + argc, [](_TCHAR* x){ return _tcscmp(x, _T("runtests")) == 0;} );
