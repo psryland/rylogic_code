@@ -31,9 +31,13 @@
 #   define PR_ASSERT_DEFINED
 #   define PR_ASSERT(grp, exp, str)
 #endif
-#if _MSC_VER <= 1700
+#ifndef PR_NOEXCEPT
 #   define PR_NOEXCEPT_DEFINED
-#   define PR_NOEXCEPT throw()
+#   if _MSC_VER >= 1900
+#      define PR_NOEXCEPT noexcept
+#   else
+#      define PR_NOEXCEPT throw()
+#   endif
 #endif
 
 namespace pr

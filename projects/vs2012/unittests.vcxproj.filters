@@ -50,6 +50,9 @@
     <Filter Include="pr\gui">
       <UniqueIdentifier>{51c9bc32-69e7-4267-9ef9-44aaeffcff7e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\linedrawer">
+      <UniqueIdentifier>{811b143f-5d27-4d0b-941f-6a429943b4eb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -779,6 +782,21 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\scope.h">
       <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\progress_dlg2.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_forward.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\network\tcpip.h">
+      <Filter>pr\network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

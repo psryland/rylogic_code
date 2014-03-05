@@ -7,13 +7,11 @@
 #include <sstream>
 #include <unordered_map>
 #include "pr/linedrawer/ldr_object.h"
-//#include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/common/assert.h"
 #include "pr/common/hash.h"
 #include "pr/common/windows_com.h"
 #include "pr/maths/convexhull.h"
-#include "pr/threads/background_task.h"
-#include "pr/gui/progress_dlg.h"
+#include "pr/gui/progress_dlg2.h"
 #include "pr/renderer11/renderer.h"
 
 #if PR_DBG
@@ -1430,94 +1428,177 @@ bool ParseLdrObject(ParseParams& p)
 // Note: this is done as a background thread while a progrss dialog is displayed
 void pr::ldr::Add(pr::Renderer& rdr, pr::script::Reader& reader, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id, bool async)
 {
-	// Creates a collection of objects in a background thread
-	struct Adder
-		:pr::threads::BackgroundTask
-		,pr::events::IRecv<pr::ldr::Evt_LdrProgress>
-	{
-		pr::Renderer*         m_rdr;
-		pr::script::Reader*   m_reader;
-		pr::ldr::ContextId    m_context_id;
-		pr::ldr::ObjectCont*  m_objects;
-		pr::ldr::ModelCont    m_models;
-		std::size_t           m_total;
-		pr::script::Exception m_exception;
-
-		Adder(pr::Renderer& rdr, pr::script::Reader& reader, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id)
-			:m_rdr(&rdr)
-			,m_reader(&reader)
-			,m_context_id(context_id)
-			,m_objects(&objects)
-			,m_models()
-			,m_total()
-			,m_exception()
-		{}
-		void DoWork(void*)
+	// Does the work of parsing objects and adds them to 'models'
+	// 'total' is the total number of objects added
+	auto ParseObjects = [&](pr::gui::ProgressDlg* dlg)
 		{
 			// CoInitialise
 			pr::InitCom init_com;
 
-			try
+			pr::ldr::ModelCont models;
+			std::size_t total;
+
+			// Helper object for forwarding LdrProgress events to the dialog
+			struct OnLdrProgress :pr::events::IRecv<pr::ldr::Evt_LdrProgress>
 			{
-				DWORD now = GetTickCount();
-				int initial = int(m_objects->size());
-				for (pr::ldr::EKeyword kw; m_reader->NextKeywordH(kw);)
+				pr::gui::ProgressDlg* m_dlg;
+				OnLdrProgress(pr::gui::ProgressDlg* dlg) :m_dlg(dlg) {}
+				void OnEvent(pr::ldr::Evt_LdrProgress const& e)
 				{
-					switch (kw)
-					{
-					default:
-						{
-							ParseParams pp(*m_rdr, *m_reader, *m_objects, m_models, m_context_id, kw, 0, m_total, now);
-							if (ParseLdrObject(pp)) continue;
-							m_reader->ReportError(pr::script::EResult::UnknownToken);
-							break;
-						}
-
-					// Application commands
-					case pr::ldr::EKeyword::Clear: break; // use event
-					case pr::ldr::EKeyword::Wireframe: break;
-					case pr::ldr::EKeyword::Camera: break;
-					case pr::ldr::EKeyword::Lock: break;
-					case pr::ldr::EKeyword::Delimiters: break;
-					}
+					// Adding objects generates progress events.
+					char const* type = e.m_obj ? pr::ldr::ELdrObject::ToString(e.m_obj->m_type) : "";
+					std::string name = e.m_obj ? e.m_obj->m_name : "";
+					m_dlg->Progress(e.m_count / (float)e.m_total, (e.m_total == -1) ?
+						pr::FmtS("%s...\r\nObject count: %d\r\n%s %s" ,e.m_desc ,e.m_count ,type ,name.c_str()) :
+						pr::FmtS("%s...\r\nObject: %d of %d\r\n%s %s" ,e.m_desc ,e.m_count ,e.m_total ,type ,name.c_str()));
 				}
-				int final = int(m_objects->size());
+			} on_ldr_progress(dlg);
 
-				// Notify observers of the objects that have been added
-				pr::events::Send(pr::ldr::Evt_AddBegin());
-				for (int idx = 0, total = final - initial, pc = 0; idx != total; ++idx)
+			DWORD now = GetTickCount();
+
+			int initial = int(objects.size());
+			for (pr::ldr::EKeyword kw; reader.NextKeywordH(kw);)
+			{
+				switch (kw)
 				{
-					if (idx * 100 > pc * total)
+				default:
 					{
-						pc = idx * 100 / total;
-						ReportProgress(idx, total, pr::FmtS("Creating UI entry for object %d...", idx));
+						ParseParams pp(rdr, reader, objects, models, context_id, kw, 0, total, now);
+						if (ParseLdrObject(pp)) continue;
+						reader.ReportError(pr::script::EResult::UnknownToken);
+						break;
 					}
-					pr::events::Send(pr::ldr::Evt_LdrObjectAdd((*m_objects)[idx + initial]));
+
+				// Application commands
+				case pr::ldr::EKeyword::Clear: break; // use event
+				case pr::ldr::EKeyword::Wireframe: break;
+				case pr::ldr::EKeyword::Camera: break;
+				case pr::ldr::EKeyword::Lock: break;
+				case pr::ldr::EKeyword::Delimiters: break;
 				}
-				pr::events::Send(pr::ldr::Evt_AddEnd(initial, final));
 			}
-			catch (pr::script::Exception const& e) { m_exception = e; }
-			catch (...) { m_exception.m_code = pr::script::EResult::Failed; m_exception.m_msg = "Unknown exception occurred"; }
-		}
-		void OnEvent(pr::ldr::Evt_LdrProgress const& e)
+			int final = int(objects.size());
+
+			// Notify observers of the objects that have been added
+			pr::events::Send(pr::ldr::Evt_AddBegin());
+			{
+				for (int idx = 0, total = final - initial; idx != total; ++idx)
+					pr::events::Send(pr::ldr::Evt_LdrObjectAdd(objects[idx + initial]));
+			}
+			pr::events::Send(pr::ldr::Evt_AddEnd(initial, final));
+		};
+
+	try
+	{
+		if (async)
 		{
-			// Adding objects generates progress events.
-			char const* type = e.m_obj ? pr::ldr::ELdrObject::ToString(e.m_obj->m_type) : "";
-			std::string name = e.m_obj ? e.m_obj->m_name : "";
-			ReportProgress(e.m_count, e.m_total, (e.m_total == -1) ?
-				pr::FmtS("%s...\r\nObject count: %d\r\n%s %s" ,e.m_desc ,e.m_count ,type ,name.c_str()) :
-				pr::FmtS("%s...\r\nObject: %d of %d\r\n%s %s" ,e.m_desc ,e.m_count ,e.m_total ,type ,name.c_str()));
+			// Run the adding process as a background task while displaying a progress dialog
+			pr::gui::ProgressDlg dlg("Processing ldr script", "", ParseObjects);
+			dlg.DoModal(100);
 		}
-	};
+		else
+		{
+			ParseObjects(nullptr);
+		}
+	}
+	catch (pr::script::Exception const& e)
+	{
+		// If an exception occurred, relay the message
+		reader.ReportError(e.what());
+	}
+	catch (...)
+	{
+		reader.ReportError(pr::script::EResult::Failed, "Unknown exception occurred");
+	}
 
-	// Run the adding process as a background task while displaying a progress dialog
-	Adder adder(rdr, reader, objects, context_id);
-	if (async) { pr::gui::ProgressDlg dlg; dlg.DoModal("Processing ldr script", adder); }
-	else       { adder.DoWork(0); }
+	//// Creates a collection of objects in a background thread
+	//struct Adder
+	//	:pr::threads::BackgroundTask
+	//	,pr::events::IRecv<pr::ldr::Evt_LdrProgress>
+	//{
+	//	pr::Renderer*         m_rdr;
+	//	pr::script::Reader*   m_reader;
+	//	pr::ldr::ContextId    m_context_id;
+	//	pr::ldr::ObjectCont*  m_objects;
+	//	pr::ldr::ModelCont    m_models;
+	//	std::size_t           m_total;
+	//	pr::script::Exception m_exception;
 
-	// If an exception occurred, relay the message
-	if (adder.m_exception.code() != pr::script::EResult::Success)
-		reader.ReportError(adder.m_exception.what());
+	//	Adder(pr::Renderer& rdr, pr::script::Reader& reader, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id)
+	//		:m_rdr(&rdr)
+	//		,m_reader(&reader)
+	//		,m_context_id(context_id)
+	//		,m_objects(&objects)
+	//		,m_models()
+	//		,m_total()
+	//		,m_exception()
+	//	{}
+	//	void DoWork() override
+	//	{
+	//		// CoInitialise
+	//		pr::InitCom init_com;
+
+	//		try
+	//		{
+	//			DWORD now = GetTickCount();
+	//			int initial = int(m_objects->size());
+	//			for (pr::ldr::EKeyword kw; m_reader->NextKeywordH(kw);)
+	//			{
+	//				switch (kw)
+	//				{
+	//				default:
+	//					{
+	//						ParseParams pp(*m_rdr, *m_reader, *m_objects, m_models, m_context_id, kw, 0, m_total, now);
+	//						if (ParseLdrObject(pp)) continue;
+	//						m_reader->ReportError(pr::script::EResult::UnknownToken);
+	//						break;
+	//					}
+
+	//				// Application commands
+	//				case pr::ldr::EKeyword::Clear: break; // use event
+	//				case pr::ldr::EKeyword::Wireframe: break;
+	//				case pr::ldr::EKeyword::Camera: break;
+	//				case pr::ldr::EKeyword::Lock: break;
+	//				case pr::ldr::EKeyword::Delimiters: break;
+	//				}
+	//			}
+	//			int final = int(m_objects->size());
+
+	//			// Notify observers of the objects that have been added
+	//			pr::events::Send(pr::ldr::Evt_AddBegin());
+	//			for (int idx = 0, total = final - initial, pc = 0; idx != total; ++idx)
+	//			{
+	//				if (idx * 100 > pc * total)
+	//				{
+	//					pc = idx * 100 / total;
+	//					ReportProgress(idx, total, pr::FmtS("Creating UI entry for object %d...", idx));
+	//				}
+	//				pr::events::Send(pr::ldr::Evt_LdrObjectAdd((*m_objects)[idx + initial]));
+	//			}
+	//			pr::events::Send(pr::ldr::Evt_AddEnd(initial, final));
+	//		}
+	//		catch (pr::script::Exception const& e) { m_exception = e; }
+	//		catch (...) { m_exception.m_code = pr::script::EResult::Failed; m_exception.m_msg = "Unknown exception occurred"; }
+	//	}
+	//	void OnEvent(pr::ldr::Evt_LdrProgress const& e)
+	//	{
+	//		// Adding objects generates progress events.
+	//		char const* type = e.m_obj ? pr::ldr::ELdrObject::ToString(e.m_obj->m_type) : "";
+	//		std::string name = e.m_obj ? e.m_obj->m_name : "";
+	//		ReportProgress(e.m_count, e.m_total, (e.m_total == -1) ?
+	//			pr::FmtS("%s...\r\nObject count: %d\r\n%s %s" ,e.m_desc ,e.m_count ,type ,name.c_str()) :
+	//			pr::FmtS("%s...\r\nObject: %d of %d\r\n%s %s" ,e.m_desc ,e.m_count ,e.m_total ,type ,name.c_str()));
+	//	}
+	//};
+
+	//// Run the adding process as a background task while displaying a progress dialog
+	//Adder adder(rdr, reader, objects, context_id);
+	//if (async) { pr::gui::ProgressDlg dlg; dlg.DoModal("Processing ldr script", adder); }
+	//else       { adder.DoWork(); }
+
+	//// If an exception occurred, relay the message
+	//if (adder.m_exception.code() != pr::script::EResult::Success)
+	//	reader.ReportError(adder.m_exception.what());
 }
 
 // Add a custom object

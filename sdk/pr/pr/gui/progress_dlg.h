@@ -7,6 +7,8 @@
 #ifndef PR_GUI_PROGRESS_DLG_H
 #define PR_GUI_PROGRESS_DLG_H
 
+#error "depricated, use progress_dlg2.h"
+
 #if _WIN32_WINNT < 0x0501
 #error "Requires _WIN32_WINNT >= 0x0501"
 #endif

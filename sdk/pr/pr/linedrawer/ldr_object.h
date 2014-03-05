@@ -343,6 +343,10 @@ namespace pr
 			static void RefCountZero(RefCount<LdrObject>* doomed);
 			long AddRef() const;
 			long Release() const;
+		
+			// Overload operator new/delete to ensure LdrObject is 16byte aligned
+			void* __cdecl operator new(size_t count) { return _aligned_malloc(count, pr::meta::alignment_of<pr::m4x4>::value); }
+			void __cdecl operator delete (void* obj) { _aligned_free(obj); }
 		};
 
 		// Events Types *************************************

@@ -32,7 +32,7 @@ namespace pr
 			typedef pr::threads::Task<BackgroundTask> ThreadBase;
 
 			// Thread entry point
-			void Main(void* ctx)
+			void Main() override
 			{
 				// Scoped object for notifying that the task has completed
 				struct TaskCompleteNotify
@@ -48,14 +48,14 @@ namespace pr
 					}
 				} notify_task_complete(this);
 
-				DoWork(ctx);
+				DoWork();
 			}
 
 			// Derived types implement their task in here
 			// Note: clients should catch any exceptions within this method.
 			// Typically, the derived class would store a copy of any thrown
 			// exception and rethrow it after calling WaitTillComplete().
-			virtual void DoWork(void* ctx) = 0;
+			virtual void DoWork() = 0;
 
 			// A handle on the running thread
 			std::unique_ptr<pr::threads::Thread<BackgroundTask>> m_thread;

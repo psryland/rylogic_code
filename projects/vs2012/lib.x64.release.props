@@ -15,7 +15,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v8.1\include;..\..\sdk\lua\lua\src;..\..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\projects;..\..\sdk\pr;..\..\sdk\wtl\v9.0\include;..\..\sdk\lua\lua\src;..\..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Full</Optimization>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>

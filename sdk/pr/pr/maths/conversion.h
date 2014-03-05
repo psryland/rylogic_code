@@ -213,9 +213,13 @@ namespace pr
 	}
 	
 	// Write a vector to a stream
+	template <typename Stream> inline Stream& operator << (Stream& out, pr::v2 const& vec)
+	{
+		return out << vec.x << " " << vec.y;
+	}
 	template <typename Stream> inline Stream& operator << (Stream& out, pr::v4 const& vec)
 	{
-		return out << vec.x << " " << vec.y << " " << vec.z;
+		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
 	}
 }
 

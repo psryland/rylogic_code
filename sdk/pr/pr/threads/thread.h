@@ -6,6 +6,8 @@
 #ifndef PR_THREADS_THREAD_H
 #define PR_THREADS_THREAD_H
 
+#error "depricated"
+
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -16,6 +18,34 @@ namespace pr
 {
 	namespace threads
 	{
+		// A base class for types that encapsulate a task.
+		template <typename Derived, bool AllowCancel = true, bool AllowPause = true>
+		struct Task
+		{
+		private:
+			template <typename TTask> friend struct Thread;
+
+			// The thread currently running this task.
+			typedef Task<Derived, AllowCancel, AllowPause> TaskBase;
+			Thread<TaskBase>* m_pr_threads_thread;
+
+			enum
+			{
+				is_cancelable = AllowCancel,
+				is_pauseable  = AllowPause,
+			};
+
+		protected:
+			Task() :m_pr_threads_thread(nullptr) {}
+			virtual ~Task() {}
+
+			// The task body
+			virtual void Main() = 0;
+
+			// Main should periodically call 'Done' to support pause and cancel
+			bool Done() { return m_pr_threads_thread->Done(); }
+		};
+
 		// A worker thread that provides pause/cancel functionality
 		template <class TTask> struct Thread
 		{
@@ -38,18 +68,19 @@ namespace pr
 
 			// The thread entry point
 			template <typename Derived, bool AllowCancel, bool AllowPause>
-			void EntryPoint(Task<Derived,AllowCancel,AllowPause>& task)
+			void EntryPoint(Task<Derived, AllowCancel, AllowPause>& task)
 			{
+				typedef Task<Derived, AllowCancel, AllowPause> TaskBase;
 				struct RunScope
 				{
 					Thread* m_thread;
-					TTask*  m_task;
-					RunScope(Thread* thread, TTask& task) :m_thread(thread), m_task(&task)
+					TaskBase* m_task;
+					RunScope(Thread* thread, TaskBase& task) :m_thread(thread), m_task(&task)
 					{
 						try
 						{
 							assert(m_task->m_pr_threads_thread == nullptr && "Task already running in another thread");
-							task.m_pr_threads_thread = thread;
+							m_task->m_pr_threads_thread = m_thread;
 
 							{// Signal as running
 								Lock lock(m_thread->m_mutex);
@@ -74,7 +105,9 @@ namespace pr
 
 						m_task->m_pr_threads_thread = nullptr;
 					}
-				} run(this, task);
+				};
+
+				RunScope run(this, task);
 			}
 
 			// Tests for stop being signalled and also pauses the thread if requested
@@ -115,7 +148,7 @@ namespace pr
 				,m_stop_signalled(false)
 				,m_paused        (false)
 				,m_pause_count   (pause_count)
-				,m_thread        ([this]{ EntryPoint(); })
+				,m_thread        ([&]{ EntryPoint(task); })
 			{}
 			Thread(Thread&& rhs)
 				:m_mutex         ()
@@ -232,32 +265,6 @@ namespace pr
 					return true;
 				}
 			}
-		};
-
-		// A base class for types that encapsulate a task.
-		template <typename Derived, bool AllowCancel = true, bool AllowPause = true>
-		struct Task
-		{
-		private:
-			// The thread currently running this task.
-			template <typename TTask> friend struct Thread;
-			Thread<Task<Derived,AllowCancel,AllowPause>>* m_pr_threads_thread;
-
-			enum
-			{
-				is_cancelable = AllowCancel,
-				is_pauseable  = AllowPause,
-			};
-
-		protected:
-			Task() :m_pr_threads_thread(nullptr) {}
-			virtual ~Task() {}
-
-			// The task body
-			virtual void Main() = 0;
-
-			// Main should periodically call 'Done' to support pause and cancel
-			bool Done() { return m_pr_threads_thread->Done(); }
 		};
 
 		// Start a thread to run 'task'

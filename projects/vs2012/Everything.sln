@@ -1,6 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30110.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B66290DE-5FD0-4496-8077-2CDE3AEFB215}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\packages.config = .nuget\packages.config
+	EndProjectSection
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "unittests.vcxproj", "{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "renderer11", "renderer11.vcxproj", "{6EC3B435-2551-48FE-84F4-EDED821A48D0}"
@@ -23,11 +30,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sol", "sol.vcxproj", "{1CBD335B-5C79-4ABB-89E9-CB7ADB06D754}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Csex_vs2012", "..\Csex\Csex_vs2012.csproj", "{7F52A774-6015-43DA-AD5B-A3289EDD6690}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B66290DE-5FD0-4496-8077-2CDE3AEFB215}"
-	ProjectSection(SolutionItems) = preProject
-		.nuget\packages.config = .nuget\packages.config
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCS", "..\..\sdk\pr\prcs\TestCS\TestCS.csproj", "{9B271143-7D07-4E5F-85F7-0F0F1D8F4BF5}"
 	ProjectSection(ProjectDependencies) = postProject
