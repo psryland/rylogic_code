@@ -220,7 +220,6 @@
 #include "pr/meta/squareroot.h"
 #include "pr/meta/typelist.h"
 #include "pr/meta/typeof.h"
-#include "pr/network/network.h"
 #include "pr/network/tcpip.h"
 #include "pr/network/web_get.h"
 #include "pr/renderer11/forward.h"
@@ -301,7 +300,6 @@
 #include "pr/str/prstringutility.h"
 #include "pr/str/tostring.h"
 #include "pr/threads/atomic.h"
-#include "pr/threads/background_task.h"
 #include "pr/threads/concurrent_queue.h"
 #include "pr/threads/critical_section.h"
 #include "pr/threads/event.h"
@@ -311,8 +309,6 @@
 #include "pr/threads/process.h"
 #include "pr/threads/semaphore.h"
 #include "pr/threads/sim_message_pump.h"
-#include "pr/threads/thread.h"
-#include "pr/threads/thread_pool.h"
 #include "pr/view3d/view3d.h"
 
 #endif

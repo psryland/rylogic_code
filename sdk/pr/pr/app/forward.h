@@ -37,6 +37,7 @@
 #include <memory>
 #include <guiddef.h>
 #include <cguid.h>
+#include <thread>
 
 // wtl
 #include <atlbase.h>
@@ -77,8 +78,6 @@
 #include "pr/gui/recent_files.h"
 #include "pr/script/script_forward.h"
 #include "pr/renderer11/renderer.h"
-#include "pr/threads/thread.h"
-#include "pr/threads/thread_pool.h"
 
 namespace pr
 {

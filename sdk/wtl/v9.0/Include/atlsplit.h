@@ -190,6 +190,12 @@ public:
 			UpdateSplitterLayout();
 	}
 
+	// pr: added this	
+	int GetSplitterPosPct() const
+	{
+		return ::MulDiv(m_nProportionalPos, 100, m_nPropMax);
+	}
+
 	int GetSplitterPos() const
 	{
 		return m_xySplitterPos;

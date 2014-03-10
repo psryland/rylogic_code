@@ -51,15 +51,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	if (nRet == -1)
 	{
-		struct ShowMB :pr::threads::Thread<ShowMB>
-		{
-			void Main(void* ctx) { ::MessageBoxA(0, static_cast<char const*>(ctx), "Application Error", MB_OK|MB_ICONERROR); }
-			using base::Start;
-			using base::Join;
-		};
-		ShowMB show_mb;
-		show_mb.Start((void*)err_msg.c_str());
-		show_mb.Join();
+		std::thread([&] { ::MessageBoxA(0, err_msg.c_str(), "Application Error", MB_OK|MB_ICONERROR); }).join();
 	}
 
 	pr::app::Module().Term();

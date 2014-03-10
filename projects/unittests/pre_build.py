@@ -34,7 +34,8 @@ exclude = [
 	"pr/renderer/",
 	"pr/sound/",
 	"pr/storage/xfile",
-	"pr/terrain/"
+	"pr/terrain/",
+	"pr/threads/thread.h",
 	]
 
 try:
