@@ -63,7 +63,6 @@
 #include "pr/common/pollingtoevent.h"
 #include "pr/common/predicate.h"
 #include "pr/common/prlistinanarray.h"
-#include "pr/common/prlog.h"
 #include "pr/common/procttree.h"
 #include "pr/common/profile.h"
 #include "pr/common/profilemanager.h"

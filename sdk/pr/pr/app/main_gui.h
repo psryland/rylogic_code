@@ -30,15 +30,15 @@ namespace pr
 			// so they can call: MyType(...) :base(..) {}
 			typedef MainGUI<DerivedGUI, Main, MessageLoop> base;
 
-			MessageLoop m_msg_loop;      // The message pump
-			Main*       m_main;          // The app logic object
-			DWORD       m_my_thread_id;  // The thread this gui object was created on
-			bool        m_resizing;      // True during a resize of the main window
-			bool        m_nav_enabled;   // True to allow default mouse navigation
+			MessageLoop           m_msg_loop;     // The message pump
+			std::unique_ptr<Main> m_main;         // The app logic object
+			DWORD                 m_my_thread_id; // The thread this gui object was created on
+			bool                  m_resizing;     // True during a resize of the main window
+			bool                  m_nav_enabled;  // True to allow default mouse navigation
 
 			MainGUI()
 				:m_msg_loop()
-				,m_main(0)
+				,m_main(nullptr)
 				,m_my_thread_id(GetCurrentThreadId())
 				,m_resizing(false)
 				,m_nav_enabled(false)
@@ -62,7 +62,7 @@ namespace pr
 			virtual LRESULT OnCreate(LPCREATESTRUCT)
 			{
 				// Create the main app logic
-				try { m_main = new Main(static_cast<DerivedGUI&>(*this)); }
+				try { m_main.reset(new Main(static_cast<DerivedGUI&>(*this))); }
 				catch (std::exception const& ex)
 				{
 					char const* err_msg = pr::FmtS("Failed to create application\nReturned error: %s", ex.what());
@@ -103,7 +103,7 @@ namespace pr
 			}
 			virtual void OnDestroy()
 			{
-				delete m_main; m_main = 0;
+				m_main = nullptr;
 				CMessageLoop* loop = pr::app::Module().GetMessageLoop();
 				loop->RemoveMessageFilter(this);
 				loop->RemoveIdleHandler(this);

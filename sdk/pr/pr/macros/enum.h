@@ -17,6 +17,7 @@
 
 #include <exception>
 #include <functional>
+#include <cassert>
 
 // Macro enum generator functions
 #define PR_ENUM_DEFINE1(id)           id,
@@ -88,7 +89,7 @@ struct enum_name\
 	static char const* ToString(Enum_ e)\
 	{\
 		switch (e) {\
-		default: notflags(PR_ASSERT(PR_DBG, false, "Not a member of enum "#enum_name);) return "";\
+		default: notflags(assert(false && "Not a member of enum "#enum_name);) return "";\
 		enum_vals1(PR_ENUM_TOSTRING1)\
 		enum_vals2(PR_ENUM_TOSTRING2)\
 		enum_vals3(PR_ENUM_TOSTRING3)\
@@ -236,11 +237,6 @@ struct enum_name\
 
 // Declares a flags enum where the values are assigned explicitly and the string name of each member is explicit. 'enum_vals' should be a macro with three parameters; id, string, and value
 #define PR_DEFINE_ENUM3_FLAGS(enum_name, enum_vals)      PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND)
-
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
 
 namespace pr
 {
@@ -429,9 +425,9 @@ namespace pr
 				PR_CHECK(out.value, TestEnum1::A);
 			}
 
-			PR_CHECK(42 == a2, true);                                 // Implicitly convertible from enum to int
-			PR_CHECK(static_cast<TestEnum2>(43).value, TestEnum2::B); // Explicitly convertible from int to enum
-			PR_THROWS([&](){ TestEnum3 c = TestEnum3::From(4); }, std::exception);        // invalid conversion, 4 is not an enum value
+			PR_CHECK(42 == a2, true);                                                    // Implicitly convertible from enum to int
+			PR_CHECK(static_cast<TestEnum2>(43).value, TestEnum2::B);                    // Explicitly convertible from int to enum
+			PR_THROWS([&](){ volatile int i = 4; TestEnum3::From(i); }, std::exception); // invalid conversion, 4 is not an enum value
 
 			TestEnum4 x = (TestEnum4::A | TestEnum4::B) & ~TestEnum4::C; // Flag enums can be combined and assigned
 			PR_CHECK(x == 42U, false); // Implicitly convertible to unsigned int (flags only)
@@ -457,11 +453,6 @@ namespace pr
 		}
 	}
 }
-#endif
-
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
 #endif
 
 #endif

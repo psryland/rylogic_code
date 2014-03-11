@@ -582,7 +582,7 @@ LRESULT ldr::MainGUI::OnShowLightingDlg(WORD, WORD, HWND, BOOL&)
 		}
 	};
 
-	PreviewLighting pv(m_main);
+	PreviewLighting pv(m_main.get());
 	pr::rdr::LightingDlg<PreviewLighting> dlg(pv);
 	dlg.m_light           = m_main->m_settings.m_Light;
 	dlg.m_camera_relative = m_main->m_settings.m_LightIsCameraRelative;

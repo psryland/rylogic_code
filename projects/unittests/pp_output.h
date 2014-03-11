@@ -11,9 +11,19 @@
 #define PR_ENUM_TOSTRING2(id, val)      case id: return #id;
 #define PR_ENUM_TOSTRING3(id, str, val) case id: return str;
 
-#define PR_ENUM_FROMSTR1(id)           if (::strcmp(name, #id) == 0) return id;
-#define PR_ENUM_FROMSTR2(id, val)      if (::strcmp(name, #id) == 0) return id;
-#define PR_ENUM_FROMSTR3(id, str, val) if (::strcmp(name, str) == 0) return id;
+#define PR_ENUM_STRCMP1(id)            if (::strcmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMP2(id, val)       if (::strcmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMP3(id, str, val)  if (::strcmp(name, str) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI1(id)           if (::_stricmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI2(id, val)      if (::_stricmp(name, #id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_STRCMPI3(id, str, val) if (::_stricmp(name, str) == 0) { enum_ = id; return true; }
+
+#define PR_ENUM_WSTRCMP1(id)            if (::wcscmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMP2(id, val)       if (::wcscmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMP3(id, str, val)  if (::wcscmp(name, L##str) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI1(id)           if (::_wcsicmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI2(id, val)      if (::_wcsicmp(name, L#id) == 0) { enum_ = id; return true; }
+#define PR_ENUM_WSTRCMPI3(id, str, val) if (::_wcsicmp(name, L##str) == 0) { enum_ = id; return true; }
 
 #define PR_ENUM_TOTRUE1(id)           case id: return true;
 #define PR_ENUM_TOTRUE2(id, val)      case id: return true;
@@ -30,6 +40,9 @@
 #define PR_DEFINE_ENUM_IMPL(enum_name, enum_vals1, enum_vals2, enum_vals3, notflags, flags)\
 struct enum_name\
 {\
+	/* Type trait tag */\
+	struct is_enum;\
+\
 	/* The name of the enum type */ \
 	static char const* EnumName() { return #enum_name; }\
 \
@@ -39,8 +52,9 @@ struct enum_name\
 		enum_vals2(PR_ENUM_COUNT2)\
 		enum_vals3(PR_ENUM_COUNT3);\
 \
-	/* The members of the enum */ \
-	enum Enum\
+	/* The members of the enum. This can't be called 'Enum' or 'Type' because
+	   it doesn't compile if the enum contains a member with the same name*/ \
+	enum Enum_\
 	{\
 		enum_vals1(PR_ENUM_DEFINE1)\
 		enum_vals2(PR_ENUM_DEFINE2)\
@@ -48,26 +62,68 @@ struct enum_name\
 	};\
 \
 	/* Storage for the enum value */ \
-	Enum value;\
+	Enum_ value;\
 \
 	/* Convert an enum value into its string name */ \
-	static char const* ToString(Enum e)\
+	static char const* ToString(Enum_ e)\
 	{\
 		switch (e) {\
-		default: PR_ASSERT(PR_DBG, false, "Not a member of enum "#enum_name); return "";\
+		default: notflags(assert(false && "Not a member of enum "#enum_name);) return "";\
 		enum_vals1(PR_ENUM_TOSTRING1)\
 		enum_vals2(PR_ENUM_TOSTRING2)\
 		enum_vals3(PR_ENUM_TOSTRING3)\
 		}\
 	}\
 \
-	/* Convert a string name into it's enum value (inverse of ToString)*/ \
-	static Enum Parse(char const* name)\
+	/* Try to convert a string name into it's enum value (inverse of ToString)*/ \
+	static bool TryParse(Enum_& enum_, char const* name, bool match_case = true)\
 	{\
-		enum_vals1(PR_ENUM_FROMSTR1)\
-		enum_vals2(PR_ENUM_FROMSTR2)\
-		enum_vals3(PR_ENUM_FROMSTR3)\
-		PR_ASSERT(PR_DBG, false, "Parse failed, no matching value in enum "#enum_name);\
+		if (match_case)\
+		{\
+			enum_vals1(PR_ENUM_STRCMP1)\
+			enum_vals2(PR_ENUM_STRCMP2)\
+			enum_vals3(PR_ENUM_STRCMP3)\
+		}\
+		else\
+		{\
+			enum_vals1(PR_ENUM_STRCMPI1)\
+			enum_vals2(PR_ENUM_STRCMPI2)\
+			enum_vals3(PR_ENUM_STRCMPI3)\
+		}\
+		return false;\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static bool TryParse(Enum_& enum_, wchar_t const* name, bool match_case = true)\
+	{\
+		if (match_case)\
+		{\
+			enum_vals1(PR_ENUM_WSTRCMP1)\
+			enum_vals2(PR_ENUM_WSTRCMP2)\
+			enum_vals3(PR_ENUM_WSTRCMP3)\
+		}\
+		else\
+		{\
+			enum_vals1(PR_ENUM_WSTRCMPI1)\
+			enum_vals2(PR_ENUM_WSTRCMPI2)\
+			enum_vals3(PR_ENUM_WSTRCMPI3)\
+		}\
+		return false;\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static Enum_ Parse(char const* name, bool match_case = true)\
+	{\
+		Enum_ enum_;\
+		if (TryParse(enum_, name, match_case)) return enum_;\
+		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
+	}\
+\
+	/* Convert a string name into it's enum value (inverse of ToString)*/ \
+	static Enum_ Parse(wchar_t const* name, bool match_case = true)\
+	{\
+		Enum_ enum_;\
+		if (TryParse(enum_, name, match_case)) return enum_;\
 		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
 	}\
 \
@@ -83,10 +139,10 @@ struct enum_name\
 	}\
 \
 	/* Convert an integral type to an enum value, throws if 'val' is not a valid value */ \
-	template <typename T> static Enum From(T val)\
+	template <typename T> static Enum_ From(T val)\
 	{\
 		if (!IsValue(val)) throw std::exception("value is not a valid member of enum "#enum_name);\
-		return static_cast<Enum>(val);\
+		return static_cast<Enum_>(val);\
 	}\
 \
 	/* Returns the name of an enum member by index */ \
@@ -95,10 +151,10 @@ struct enum_name\
 		return ToString(Member(index));\
 	}\
 \
-	/* Returns an enum member by index */ \
-	static Enum Member(int index)\
+	/* Returns an enum member by index. (const& so that address of can be used) */ \
+	static Enum_ const& Member(int index)\
 	{\
-		static Enum const map[] =\
+		static Enum_ const map[] =\
 		{\
 			enum_vals1(PR_ENUM_FIELDS1)\
 			enum_vals2(PR_ENUM_FIELDS2)\
@@ -109,6 +165,18 @@ struct enum_name\
 		return map[index];\
 	}\
 \
+	/* Returns an iterator range for iterating over each element in the enum*/\
+	static pr::EnumMemberEnumerator<enum_name> Members()\
+	{\
+		return pr::EnumMemberEnumerator<enum_name>();\
+	}\
+\
+	/* Returns an iterator range for iterating over each element in the enum*/\
+	static pr::EnumMemberNameEnumerator<enum_name> MemberNames()\
+	{\
+		return pr::EnumMemberNameEnumerator<enum_name>();\
+	}\
+\
 	/* Converts this enum value to a string */ \
 	char const* ToString() const\
 	{\
@@ -116,19 +184,22 @@ struct enum_name\
 	}\
 \
 	enum_name() :value() {}\
-	enum_name(Enum x) :value(x) {}\
-	notflags(explicit) enum_name(int x) :value(static_cast<Enum>(x)) {}\
-	enum_name& operator = (Enum x)                                                        { value = x; return *this; }\
-	flags(enum_name& operator = (int x)                                                   { value = static_cast<Enum>(x); return *this; })\
-	flags(Enum operator | (enum_name rhs) const                                           { return static_cast<Enum>(value | rhs.value); })\
-	flags(Enum operator & (enum_name rhs) const                                           { return static_cast<Enum>(value & rhs.value); })\
-	flags(Enum operator ^ (enum_name rhs) const                                           { return static_cast<Enum>(value ^ rhs.value); })\
-	operator Enum const&() const                                                          { return value; }\
-	operator Enum&()                                                                      { return value; }\
-	friend std::ostream& operator << (std::ostream& stream, enum_name const& enum_)       { return stream << enum_name::ToString(enum_); }\
-	friend std::istream& operator >> (std::istream& stream, enum_name&       enum_)       { std::string s; stream >> s; enum_ = enum_name::Parse(s.c_str()); return stream; }\
-	friend std::ostream& operator << (std::ostream& stream, enum_name::Enum const& enum_) { return stream << enum_name::ToString(enum_); }\
-	friend std::istream& operator >> (std::istream& stream, enum_name::Enum&       enum_) { std::string s; stream >> s; enum_ = enum_name::Parse(s.c_str()); return stream; }\
+	enum_name(Enum_ x) :value(x) {}\
+	notflags(explicit) enum_name(int x) :value(static_cast<Enum_>(x)) {}\
+	enum_name& operator = (Enum_ x)                                                        { value = x; return *this; }\
+	flags(enum_name& operator = (int x)                                                    { value = static_cast<Enum_>(x); return *this; })\
+	flags(enum_name& operator |= (Enum_ rhs)                                               { value = static_cast<Enum_>(value | rhs); return *this; })\
+	flags(enum_name& operator &= (Enum_ rhs)                                               { value = static_cast<Enum_>(value & rhs); return *this; })\
+	flags(enum_name& operator ^= (Enum_ rhs)                                               { value = static_cast<Enum_>(value ^ rhs); return *this; })\
+	flags(Enum_ operator | (Enum_ rhs) const                                               { return static_cast<Enum_>(value | rhs); })\
+	flags(Enum_ operator & (Enum_ rhs) const                                               { return static_cast<Enum_>(value & rhs); })\
+	flags(Enum_ operator ^ (Enum_ rhs) const                                               { return static_cast<Enum_>(value ^ rhs); })\
+	operator Enum_ const&() const                                                          { return value; }\
+	operator Enum_&()                                                                      { return value; }\
+	friend std::ostream& operator << (std::ostream& stream, enum_name const& enum_)        { return stream << enum_name::ToString(enum_); }\
+	friend std::istream& operator >> (std::istream& stream, enum_name&       enum_)        { std::string s; stream >> s; enum_ = enum_name::Parse(s.c_str()); return stream; }\
+	friend std::ostream& operator << (std::ostream& stream, enum_name::Enum_ const& enum_) { return stream << enum_name::ToString(enum_); }\
+	friend std::istream& operator >> (std::istream& stream, enum_name::Enum_&       enum_) { std::string s; stream >> s; enum_ = enum_name::Parse(s.c_str()); return stream; }\
 }
 
 // Declares an enum where values are implicit, 'enum_vals' should be a macro with one parameter; id
@@ -146,40 +217,9 @@ struct enum_name\
 // Declares a flags enum where the values are assigned explicitly and the string name of each member is explicit. 'enum_vals' should be a macro with three parameters; id, string, and value
 #define PR_DEFINE_ENUM3_FLAGS(enum_name, enum_vals)      PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND)
 
-		// C keywords
-		#define PR_ENUM(x)\
-			x(Invalid  ,""         ,= 0xffffffff)\
-			x(Auto     ,"auto"     ,= 0x112746e9)\
-			x(Double   ,"double"   ,= 0x1840d9ce)\
-			x(Int      ,"int"      ,= 0x164a43dd)\
-			x(Struct   ,"struct"   ,= 0x0f408d2a)\
-			x(Break    ,"break"    ,= 0x1ac013ec)\
-			x(Else     ,"else"     ,= 0x1d237859)\
-			x(Long     ,"long"     ,= 0x14ef7164)\
-			x(Switch   ,"switch"   ,= 0x13c0233f)\
-			x(Case     ,"case"     ,= 0x18ea7f00)\
-			x(Enum     ,"enum"     ,= 0x113f6121)\
-			x(Register ,"register" ,= 0x1a14aae9)\
-			x(Typedef  ,"typedef"  ,= 0x1b494818)\
-			x(Char     ,"char"     ,= 0x1e5760f8)\
-			x(Extern   ,"extern"   ,= 0x16497b3b)\
-			x(Return   ,"return"   ,= 0x0a01f36e)\
-			x(Union    ,"union"    ,= 0x1e57f369)\
-			x(Const    ,"const"    ,= 0x036f03e1)\
-			x(Float    ,"float"    ,= 0x176b5be3)\
-			x(Short    ,"short"    ,= 0x1edc8c0f)\
-			x(Unsigned ,"unsigned" ,= 0x186a2b87)\
-			x(Continue ,"continue" ,= 0x1e46a876)\
-			x(For      ,"for"      ,= 0x0e37a24a)\
-			x(Signed   ,"signed"   ,= 0x00bf0c54)\
-			x(Void     ,"void"     ,= 0x1a9b029d)\
-			x(Default  ,"default"  ,= 0x1c8cdd40)\
-			x(Goto     ,"goto"     ,= 0x04d53061)\
-			x(Sizeof   ,"sizeof"   ,= 0x1429164b)\
-			x(Volatile ,"volatile" ,= 0x18afc4c2)\
-			x(Do       ,"do"       ,= 0x1d8b5fef)\
-			x(If       ,"if"       ,= 0x1dfa87fc)\
-			x(Static   ,"static"   ,= 0x16150ce7)\
-			x(While    ,"while"    ,= 0x0b4669dc)
-		PR_DEFINE_ENUM3(EKeyword, PR_ENUM);
+#define PR_ENUM(x) \
+			x(A, "a", = 0x0A)\
+			x(B, "b", = 0x0B)\
+			x(C, "c", = 0x0C)
+		PR_DEFINE_ENUM3(TestEnum3, PR_ENUM);
 		#undef PR_ENUM

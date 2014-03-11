@@ -10,53 +10,33 @@
 
 #include <new>
 #include <memory>
-//#include "pr/macros/repeat.h"
 
 namespace pr
 {
-	template <typename T, template Args...>
-	inline std::unique_ptr<T> New(Args...&& args)
+	template <typename T, typename... Args>
+	inline std::unique_ptr<T> New(Args&&... args)
 	{
-		return std::unique_ptr<T>(new T(std::forward<Args...>(args)));
+		return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 	}
-	//
-	//// New an object into a unique pointer
-	//template <typename T> inline std::unique_ptr<T> New()
-	//{
-	//	return std::unique_ptr<T>(new T());
-	//}
 
-	//// Overloads taking various numbers of parameters
-	//#define PR_TN(n) typename U##n
-	//#define PR_PARM1(n) U##n&& parm##n
-	//#define PR_PARM2(n) std::forward<U##n>(parm##n)
-	//#define PR_FUNC(n)\
-	//template <typename T, PR_REPEAT(n,PR_TN,PR_COMMA)> inline std::unique_ptr<T> New(PR_REPEAT(n,PR_PARM1,PR_COMMA))\
-	//{\
-	//	return std::unique_ptr<T>(new T(PR_REPEAT(n,PR_PARM2,PR_COMMA)));\
-	//}
-
-	//PR_FUNC(1)
-	//PR_FUNC(2)
-	//PR_FUNC(3)
-	//PR_FUNC(4)
-	//PR_FUNC(5)
-	//PR_FUNC(6)
-	//PR_FUNC(7)
-
-	//#undef PR_TN
-	//#undef PR_PARM1
-	//#undef PR_PARM2
-	//#undef PR_FUNC
+	// Use as a mix in base class
+	template <size_t Alignment> struct AlignTo
+	{
+		// Overload operator new/delete to ensure alignment
+		void* __cdecl operator new(size_t count) { return _aligned_malloc(count, Alignment); }
+		void __cdecl operator delete (void* obj) { _aligned_free(obj); }
+	};
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/meta/alignmentof.h"
+
 namespace pr
 {
 	namespace unittests
 	{
-		struct Wotzit
+		struct Wotzit :pr::AlignTo<32>
 		{
 			int m_int;
 			Wotzit() :m_int() {}
@@ -67,9 +47,11 @@ namespace pr
 		{
 			auto p = pr::New<Wotzit>();
 			PR_CHECK(0, p->m_int);
+			PR_CHECK(pr::meta::is_aligned_to<32>(p.get()), true);
 
 			p = pr::New<Wotzit>(1,2,3);
 			PR_CHECK(6, p->m_int);
+			PR_CHECK(pr::meta::is_aligned_to<32>(p.get()), true);
 		}
 	}
 }

@@ -7,6 +7,7 @@
 #define PR_VIEW3D_RENDERER_INSTANCE_H
 
 #include <set>
+#include "pr/common/new.h"
 #include "pr/macros/count_of.h"
 #include "pr/maths/maths.h"
 #include "pr/camera/camera.h"
@@ -28,7 +29,7 @@ namespace view3d
 	PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST)
 	#undef PR_RDR_INST
 
-	struct Drawset
+	struct Drawset :pr::AlignTo<16>
 	{
 		ObjectCont            m_objects;                  // References to objects to draw in this drawset
 		pr::Camera            m_camera;                   // Camera control
@@ -51,6 +52,7 @@ namespace view3d
 		:pr::events::IRecv<pr::ldr::Evt_Refresh>
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
 		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
+		,pr::AlignTo<16>
 	{
 		pr::Renderer               m_renderer;
 		pr::rdr::SceneForward      m_scene;

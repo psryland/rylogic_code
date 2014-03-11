@@ -47,6 +47,12 @@ namespace pr
 		{
 			return ((static_cast<char const*>(ptr) - static_cast<char const*>(0)) % alignment_of<T>::value) == 0;
 		}
+
+		// Return true if 'ptr' is aligned to 'alignment'
+		template <size_t Alignment> inline bool is_aligned_to(void const* ptr)
+		{
+			return ((static_cast<char const*>(ptr) - static_cast<char const*>(0)) % Alignment) == 0;
+		}
 	}
 }
 

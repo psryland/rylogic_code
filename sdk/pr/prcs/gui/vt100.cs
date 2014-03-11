@@ -12,8 +12,15 @@ using pr.util;
 
 namespace pr.gui
 {
-	/// <summary>VT terminal emulation control
-	/// see: http://ascii-table.com/ansi-escape-sequences.php</summary>
+	/// <summary>
+	/// VT terminal emulation control
+	/// see: http://ascii-table.com/ansi-escape-sequences.php
+	/// Usage:
+	///   Add the control to a form.
+	///   Use the 'GetUserInput()' method to retrieve user input (since last called)
+	///   Send the user input to the remote device/system
+	///   Receive data from the remote device/system
+	///   Use 'Output()' to display the terminal output in the control</summary>
 	public class VT100 :RichTextBox ,ISupportInitialize
 	{
 		/// <summary>The state of the terminal</summary>
@@ -37,7 +44,7 @@ namespace pr.gui
 
 		/// <summary>User input buffer</summary>
 		private readonly StringBuilder m_input = new StringBuilder(8192);
-		
+
 		/// <summary>The state of the terminal</summary>
 		private readonly State m_state = new State();
 
@@ -243,7 +250,7 @@ namespace pr.gui
 			if (idx1 > idx0 && !include_newline) --idx1;
 			return new Range(idx0, idx1 >= idx0 ? idx1 : TextLength);
 		}
-		
+
 		/// <summary>The current cursor location</summary>
 		public Point CursorLocation
 		{
@@ -299,7 +306,8 @@ namespace pr.gui
 			base.OnKeyPress(e);
 		}
 
-		/// <summary>Add a string to the user input buffer
+		/// <summary>
+		/// Add a string to the user input buffer
 		/// Returns the number of characters added to the input buffer</summary>
 		public int Input(string text)
 		{
@@ -315,7 +323,7 @@ namespace pr.gui
 			{
 				// Block input when the input buffer is full
 				if (m_input.Length >= m_input.Capacity - 2) return count;
-			
+
 				// Add the user key to the input buffer
 				switch ((Keys)c)
 				{
@@ -334,7 +342,8 @@ namespace pr.gui
 			return count;
 		}
 
-		/// <summary>Writes 'text' into the control at the current position.
+		/// <summary>
+		/// Writes 'text' into the control at the current position.
 		/// Parses the input for vt100 control sequences.</summary>
 		public void Output(string text)
 		{
@@ -359,7 +368,7 @@ namespace pr.gui
 			SelectionLength = Math.Min(str.Length, LineLength(loc.Y, str.EndsWith("\n") || str.EndsWith("\r")) - loc.X);
 			SelectedText = str;
 		}
-	
+
 		/// <summary>Output the string 'text' as hex</summary>
 		private void OutputHex(string text)
 		{
@@ -482,7 +491,7 @@ namespace pr.gui
 			//EscD	Move/scroll window up one line	IND
 			//EscM	Move/scroll window down one line	RI
 			//EscE	Move to next line	NEL
-			
+
 			case '7': //Esc7 Save cursor position and attributes DECSC
 				m_state.m_saved_cursor_location = CursorLocation;
 				m_state.m_saved_font = (Font)SelectionFont.Clone();
@@ -491,26 +500,25 @@ namespace pr.gui
 				CursorLocation = m_state.m_saved_cursor_location;
 				SelectionFont = m_state.m_saved_font;
 				break;
-			 
+
 			//EscH	Set a tab at the current column	HTS
 
 			//Codes for use in VT52 compatibility mode
 			//Esc<	Enter/exit ANSI mode (VT52)	setansi
-			 
+
 			//Esc=	Enter alternate keypad mode	altkeypad
 			//Esc>	Exit alternate keypad mode	numkeypad
-			 
+
 			//EscF	Use special graphics character set	setgr
 			//EscG	Use normal US/UK character set	resetgr
 
-			 
 			//EscH Move cursor to upper left corner	cursorhome
 			//EscLineColumn	Move cursor to v,h location	cursorpos(v,h)
 			//EscI	Generate a reverse line-feed	revindex
-			 
+
 			//EscK	Erase to end of current line	cleareol
 			//EscJ	Erase to end of screen	cleareos
-			 
+
 			//EscZ	Identify what the terminal is	ident
 			//Esc/Z	Correct response to ident	identresp
 			}
@@ -539,7 +547,7 @@ namespace pr.gui
 			case 'D': // Esc[ValueD Move cursor left n lines CUB
 				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CursorLocation = MoveCursor(CursorLocation, -Math.Max(n[0],1),0); }
 				break;
-			
+
 			case 'f':
 				//Esc[f             Move cursor to upper left corner hvhome
 				//Esc[;f            Move cursor to upper left corner hvhome
@@ -559,7 +567,7 @@ namespace pr.gui
 				//Esc[Line;ColumnH Move cursor to screen location v,h CUP
 				{ int[] n = Params(2, m_seq.ToString(2, m_seq.Length-3)); CursorLocation = MoveCursor(n[1], n[0]); }
 				break;
-			
+
 			case 'h':
 				switch (m_seq.ToString()){
 				case "\u001b[20h": // Esc[20h Set new line mode LMN
@@ -574,7 +582,7 @@ namespace pr.gui
 				//Esc[?6h	Set origin to relative	DECOM
 				//Esc[?7h	Set auto-wrap mode	DECAWM
 				//Esc[?8h	Set auto-repeat mode	DECARM
-				//Esc[?9h	Set interlacing mode	DECINLM 
+				//Esc[?9h	Set interlacing mode	DECINLM
 				}break;
 
 			case 'J':
@@ -669,33 +677,32 @@ namespace pr.gui
 				//Esc[7m	Turn reverse video on	SGR7
 				//Esc[8m	Turn invisible text mode on	SGR8
 				}break;
-				
+
 			//Esc[Line;Liner	Set top and bottom lines of a window	DECSTBM
-			 
+
 			//Esc5n	Device status report	DSR
 			//Esc0n	Response: terminal is OK	DSR
 			//Esc3n	Response: terminal is not OK	DSR
-			 
+
 			//Esc6n	Get cursor position	DSR
 			//EscLine;ColumnR	Response: cursor is at v,h	CPR
-			 
+
 			//Esc[c	Identify what terminal type	DA
 			//Esc[0c	Identify what terminal type (another)	DA
 			//Esc[?1;Value0c	Response: terminal type code n	DA
-			 
-			 
+
 			//Esc#8	Screen alignment display	DECALN
 			//Esc[2;1y	Confidence power up test	DECTST
 			//Esc[2;2y	Confidence loopback test	DECTST
 			//Esc[2;9y	Repeat power up test	DECTST
 			//Esc[2;10y	Repeat loopback test	DECTST
-			 
+
 			//Esc[0q	Turn off all four leds	DECLL0
 			//Esc[1q	Turn on LED #1	DECLL1
 			//Esc[2q	Turn on LED #2	DECLL2
 			//Esc[3q	Turn on LED #3	DECLL3
 			//Esc[4q	Turn on LED #4	DECLL4
-			 
+
 			//Printing:
 			//Esc[i	Print Screen	Print the current screen
 			//Esc[1i	Print Line	Print the current line
@@ -810,7 +817,7 @@ namespace pr.gui
 		{
 			if (TextLength == 0) return Point.Empty;
 			Point loc = new Point(Maths.Clamp(x, 0, TerminalWidth - 1), Maths.Clamp(y, 0, LineCount - 1));
-			
+
 			// Make sure the line 'loc.Y' is at least 'loc.X' wide
 			Range range = IndexRangeFromLine(loc.Y, false);
 			if (range.Size < loc.X)
@@ -825,13 +832,13 @@ namespace pr.gui
 			}
 			return loc;
 		}
-		
+
 		/// <summary>Move the cursor by a relative offset</summary>
 		private Point MoveCursor(Point loc, int dx, int dy)
 		{
 			return MoveCursor(loc.X + dx, loc.Y + dy);
 		}
-		
+
 		/// <summary>Converts a string of the form "param1;param2;param3;...;param4" to an array of integers
 		/// Returns at least 'min_param_count' results</summary>
 		private static int[] Params(int min_param_count, string param_string)
@@ -903,8 +910,8 @@ namespace pr.gui
 			base.Dispose(disposing);
 		}
 
-		/// <summary> 
-		/// Required method for Designer support - do not modify 
+		/// <summary>
+		/// Required method for Designer support - do not modify
 		/// the contents of this method with the code editor.</summary>
 		private void InitializeComponent()
 		{
@@ -924,22 +931,22 @@ namespace pr.gui
 
 		/// <summary>True if local characters are written into the control</summary>
 		public bool LocalEcho {get;set;}
-		
+
 		/// <summary>The tab width</summary>
 		public int TabSize {get;set;}
 
 		/// <summary>The width of the terminal in characters</summary>
 		public int TerminalWidth {get;set;}
-		
+
 		/// <summary>Describes the format of received new lines</summary>
 		public ENewLineMode NewlineRecv {get;set;}
 
 		/// <summary>Describes the format of sent new lines</summary>
 		public ENewLineMode NewlineSend {get;set;}
-		
+
 		/// <summary>The back colour for the control</summary>
 		public Color BackColour {get;set;}
-		
+
 		/// <summary>The fore colour for the control</summary>
 		public Color ForeColour {get;set;}
 

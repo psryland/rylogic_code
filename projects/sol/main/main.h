@@ -22,6 +22,7 @@ namespace sol
 	struct Main
 		:pr::app::Main<UserSettings, MainGUI>
 		,pr::events::IRecv<pr::rdr::Evt_SceneRender>
+		,pr::AlignTo<16>
 	{
 		pr::app::Skybox m_skybox;
 		pr::app::Gimble m_gimble;

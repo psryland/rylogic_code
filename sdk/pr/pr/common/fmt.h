@@ -128,7 +128,7 @@ namespace pr
 	}
 
 	// Static, non-thread safe, use with caution, but fast string format
-	template <typename TChar, typename Ctx, size_t Sz> inline TChar const* FmtX(TChar const* format, va_list arg_list)
+	template <typename Ctx, size_t Sz, typename TChar> inline TChar const* FmtX(TChar const* format, va_list arg_list)
 	{
 		PR_FMT_THREAD_LOCAL static TChar buf[Sz];
 		int result = impl::Format(buf, Sz-1, format, arg_list);
@@ -136,11 +136,11 @@ namespace pr
 		buf[result] = 0;
 		return buf;
 	}
-	template <typename TChar, typename Ctx, size_t Sz> inline TChar const* FmtX(TChar const* format, ...)
+	template <typename Ctx, size_t Sz, typename TChar> inline TChar const* FmtX(TChar const* format, ...)
 	{
 		va_list arg_list;
 		va_start(arg_list, format);
-		auto s = FmtX<TChar, Ctx, Sz>(format, arg_list);
+		auto s = FmtX<Ctx, Sz, TChar>(format, arg_list);
 		va_end(arg_list);
 		return s;
 	}
@@ -149,7 +149,7 @@ namespace pr
 		struct S;
 		va_list arg_list;
 		va_start(arg_list, format);
-		auto s = FmtX<TChar, S, 1024>(format, arg_list);
+		auto s = FmtX<S, 1024, TChar>(format, arg_list);
 		va_end(arg_list);
 		return s;
 	}
@@ -199,6 +199,9 @@ namespace pr
 			auto s4 = pr::Fmt<pr::string<>>("pr::string %d",4);
 			PR_CHECK(s4, "pr::string 4");
 			PR_CHECK(s4.size(), 12U);
+
+			auto s5 = pr::FmtX<struct P, 128>("c-string %d", 5);
+			PR_CHECK(s5, "c-string 5");
 		}
 	}
 }

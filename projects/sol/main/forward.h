@@ -6,6 +6,7 @@
 #ifndef PR_SOL_MAIN_FORWARD_H
 #define PR_SOL_MAIN_FORWARD_H
 
+#include "pr/common/new.h"
 #include "pr/macros/enum.h"
 
 #include "pr/app/forward.h"
