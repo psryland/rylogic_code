@@ -210,6 +210,22 @@ namespace pr.extn
 			cb.SelectionStart = idx + text.Length;
 		}
 
+		/// <summary>A smarter set text that does sensible things with the caret position</summary>
+		public static void AddTextPreservingSelection(this TextBoxBase tb, string text)
+		{
+			var carot_at_end = tb.SelectionStart == tb.TextLength && tb.SelectionLength == 0;
+			if (carot_at_end)
+			{
+				tb.SelectedText = text;
+				tb.SelectionStart = tb.TextLength;
+			}
+			else
+			{
+				using (tb.SelectionScope())
+					tb.AppendText(text);
+			}
+		}
+
 		/// <summary>Add the current combo box text to the drop down list</summary>
 		public static void AddTextToDropDownList(this ComboBox cb, int max_history = 10)
 		{

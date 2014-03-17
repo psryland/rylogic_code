@@ -28,7 +28,7 @@ namespace pr
 			std::condition_variable m_cv;
 			bool m_last;
 
-			IConcurrentQueue() {}
+			IConcurrentQueue() :m_mutex() ,m_cv() ,m_last(false) {}
 			IConcurrentQueue(IConcurrentQueue const&);
 			IConcurrentQueue& operator=(IConcurrentQueue const&);
 
@@ -72,13 +72,13 @@ namespace pr
 				Lock& operator=(Lock const&);
 
 			public:
+				std::deque<T>& m_queue;
+
 				explicit Lock(ConcurrentQueue<T>& queue)
 					:m_owner(queue)
 					,m_lock(m_owner.m_mutex)
 					,m_queue(m_owner.m_queue)
 				{}
-
-				std::deque<T>& m_queue;
 			};
 
 			// Call this after the last item has been added to the queue.

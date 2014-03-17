@@ -1,5 +1,5 @@
 //*********************************************************************
-// Chain 
+// Chain
 //  Copyright © Rylogic Ltd 2004
 //*********************************************************************
 // A chain is a way of grouping objects where the containment of the objects
@@ -28,7 +28,7 @@
 
 #include <iterator>
 #include "pr/common/assert.h"
-#include "pr/common/byte_ptr_cast.h"
+#include "pr/common/cast.h"
 
 namespace pr
 {
@@ -89,7 +89,7 @@ namespace pr
 			elem.m_prev->m_next = &elem;
 			return &elem;
 		}
-		
+
 		// Field chain ******************************************
 		// This type expects the owning object to contain one or more instances of 'Link' as members.
 		// Multiple links in an object allow it to belong to multiple chains simultaneously.
@@ -111,7 +111,7 @@ namespace pr
 		{
 			Owner* m_owner;
 			Link *m_next, *m_prev;
-			
+
 			Link(Owner* owner = 0) { init(owner); }
 			~Link()                { Remove(*this); }
 			Link(Link const& rhs)  { init(0); *this = rhs; }
@@ -123,9 +123,9 @@ namespace pr
 				if (!rhs.empty()) Insert(const_cast<Link&>(rhs), *this);
 				return *this;
 			}
-			
+
 			void init(Owner* owner) { m_next = m_prev = this; m_owner = owner; }
-			
+
 			// These methods should only be called on the head link
 			bool        empty() const     { return m_next == this && m_prev == this; }
 			size_t      size() const      { size_t count = 0; for (Link const* i = begin(); i != end(); i = i->m_next, ++count){} return count; }
@@ -148,16 +148,16 @@ namespace pr
 		//    {
 		//       void DoSomething();
 		//    };
-		//    
+		//
 		//    MyClass my_class[10]; // Storage for MyClass objects
 		//    chain::head<MyClass> group1;
 		//    chain::head<MyClass> group2;
-		//    
+		//
 		//    group1.push_back(my_class[0]);
 		//    group1.push_back(my_class[1]);
 		//    group1.push_back(my_class[2]);
 		//    group2.push_back(my_class[1]); // NOTE: 'move' my_class[1] out of 'group1' and into 'group2', not copy.
-		//    
+		//
 		//    for( chain::head<MyClass>::iterator i = group1.begin(), i_end = group1.end(); i != i_end; ++i )
 		//    {
 		//        i->DoSomething();
@@ -201,7 +201,7 @@ namespace pr
 			template <typename Type, typename GroupId> struct citer;
 			template <typename Type, typename GroupId> struct iter;
 		}
-		
+
 		// A node in the chain
 		template <typename Type, typename GroupId = impl::DefaultGroupId> struct link
 		{
@@ -209,20 +209,20 @@ namespace pr
 			mutable link<Type, GroupId>* m_next;
 			mutable link<Type, GroupId>* m_prev;
 			Type* m_obj; // only used for debugging but not conditional due to the one definition rule
-			
+
 			friend struct head<Type, GroupId>;
 			friend struct impl::iter_common<Type ,Type const ,link<Type, GroupId> const>;
 			friend struct impl::iter_common<Type ,Type       ,link<Type, GroupId>      >;
 			friend void   insert<Type, GroupId>(link<Type, GroupId> const& where ,link<Type, GroupId>& what);
 			friend void   unlink<Type, GroupId>(                                  link<Type, GroupId>& what);
-			
+
 		protected:
 			link()                                            { m_next = m_prev = this; m_obj = static_cast<Type*>(this); }
 			link(link<Type, GroupId> const& rhs)              { m_next = m_prev = this; m_obj = static_cast<Type*>(this); insert(rhs, *this); }
 			~link()                                           { unlink(*this); }
 			link& operator = (link<Type, GroupId> const& rhs) { if (this != &rhs) {insert(rhs, *this);} return *this; }
 		};
-		
+
 		// Iterator implementation
 		namespace impl
 		{
@@ -262,7 +262,7 @@ namespace pr
 				operator citer<Type, GroupId>() const { return citer<Type, GroupId>(m_elem); }
 			};
 		}
-		
+
 		// Chain head
 		template <typename Type, typename GroupId = impl::DefaultGroupId> struct head :link<Type, GroupId>
 		{
@@ -282,7 +282,7 @@ namespace pr
 			typedef std::ptrdiff_t             difference_type;
 			typedef std::size_t                size_type;
 			typedef link<Type, GroupId>        link_type;
-			
+
 			const_iterator  begin() const      { return const_iterator(m_next); }
 			iterator        begin()            { return iterator(m_next); }
 			const_iterator  end	 () const      { return const_iterator(this); }
@@ -313,7 +313,7 @@ namespace pr
 				rhs.m_prev           = &rhs;
 			}
 		};
-		
+
 		// Insert 'what' at 'where' in a chain.
 		template <typename Type, typename GroupId> void insert(link<Type, GroupId> const& where, link<Type, GroupId>& what)
 		{
@@ -330,14 +330,14 @@ namespace pr
 			what.m_prev->m_next = &what;
 			what.m_next->m_prev = &what;
 		}
-		
+
 		// Removes 'what' from the chain it's in and put it in it's own chain
 		template <typename Type, typename GroupId> void unlink(link<Type, GroupId>& what)
 		{
 			// Remove 'what' from any existing chain
 			what.m_prev->m_next = what.m_next;
 			what.m_next->m_prev = what.m_prev;
-			
+
 			// Link it to itself
 			what.m_next = &what;
 			what.m_prev = &what;
@@ -379,7 +379,7 @@ namespace pr
 					PR_CHECK(iter->m_i, 2); ++iter;
 					PR_CHECK(iter == 0, true);
 				}
-		
+
 				Member m3(3), m4(4), m5(5);
 				pr::chain::Insert(m5, m4);
 				pr::chain::Insert(m4, m3);
@@ -391,11 +391,11 @@ namespace pr
 					PR_CHECK(iter->m_i, 5); --iter;
 					PR_CHECK(iter == 0, true);
 				}
-		
+
 				pr::chain::Remove(m5);
 				PR_CHECK(pr::chain::Size(m3), 2U);
 				PR_CHECK(pr::chain::Size(m4), 2U);
-		
+
 				pr::chain::Join(m0, m3);
 				{
 					pr::chain::Iter<Member> iter(m0);
@@ -420,7 +420,7 @@ namespace pr
 					PR_CHECK(i->m_owner->m_i, 2); i = i->m_next;
 					PR_CHECK(i == &head, true);
 				}
-		
+
 				Field f3(f2), f4(4); f4 = f3; // copy construct/assignment
 				{
 					pr::chain::Link<Field>* i = head.begin();

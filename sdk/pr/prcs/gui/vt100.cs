@@ -347,6 +347,9 @@ namespace pr.gui
 		/// Parses the input for vt100 control sequences.</summary>
 		public void Output(string text)
 		{
+			if (!IsHandleCreated) return;
+			if (InvokeRequired) { BeginInvoke(new Action<string>(Output), text); return; }
+
 			using (this.SuspendRedraw(true))
 			{
 				CursorLocation = OutputCursorLocation;

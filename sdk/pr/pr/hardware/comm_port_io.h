@@ -5,14 +5,10 @@
 #define PR_HARDWARE_COMM_PORT_IO_H
 #pragma once
 
+#include <cassert>
+#include <exception>
 #include <windows.h>
-#include "pr/common/exception.h"
 #include "pr/common/fmt.h"
-
-#ifndef PR_ASSERT
-#	define PR_ASSERT_DEFINED
-#	define PR_ASSERT(grp, exp, str)
-#endif
 
 namespace pr
 {
@@ -31,7 +27,7 @@ namespace pr
 		,m_stop_bits(stop_bits)
 		{}
 	};
-	
+
 	// RS232 communication interface
 	class CommPortIO
 	{
@@ -39,7 +35,7 @@ namespace pr
 		HANDLE           m_handle;      // File handle
 		HANDLE           m_io_complete; // Manual reset event for overlapped i/o operations
 		mutable DWORD    m_last_error;  // The last error returned from a call to ::GetLastError()
-		
+
 		void ApplyConfig()
 		{
 			// Read the comm state, update the data, then set it again
@@ -56,25 +52,28 @@ namespace pr
 		{
 			return m_last_error = ::GetLastError();
 		}
-		
+
 		// Throws if 'res' is not TRUE
 		void Throw(BOOL res, char const* msg)
 		{
-			if (!res) throw pr::Exception<DWORD>(GetLastError(), msg);
+			if (res) return;
+			GetLastError();
+			throw std::exception(msg);
 		}
+
 	public:
+
 		CommPortIO()
-		:m_settings()
-		,m_handle(INVALID_HANDLE_VALUE)
-		,m_io_complete(0)
-		,m_last_error(0)
+			:m_settings()
+			,m_handle(INVALID_HANDLE_VALUE)
+			,m_io_complete(0)
+			,m_last_error(0)
 		{}
-		
 		~CommPortIO()
 		{
 			Close();
 		}
-		
+
 		// Return the last error received
 		DWORD LastError() const
 		{
@@ -96,15 +95,15 @@ namespace pr
 			s.m_stop_bits = BYTE(stop_bits);
 			Config(s);
 		}
-		
+
 		// Return true if the io connection is currently open
 		bool IsOpen() const { return m_handle != INVALID_HANDLE_VALUE; }
-		
+
 		// Open the serial io connection
 		void Open(int port_number) { Open(port_number, 0, 0); }
 		void Open(int port_number, size_t ibuf_size, size_t obuf_size)
 		{
-			PR_ASSERT(PR_DBG, !IsOpen(), "Serial port already open");
+			assert(!IsOpen() && "Serial port already open");
 			if (!IsOpen()) Close();
 			try
 			{
@@ -113,11 +112,11 @@ namespace pr
 				_itoa_s(port_number, &port_name[7], 5, 10);
 				m_handle = ::CreateFileA(port_name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 				Throw(m_handle != INVALID_HANDLE_VALUE, pr::FmtS("Could not open '%s'", port_name));
-					
+
 				// Create a manual reset event for the overlapped i/o calls
 				m_io_complete = ::CreateEvent(0, TRUE, FALSE, 0);
 				Throw(m_io_complete != 0, "Failed to create async i/o event");
-					
+
 				// Setup buffering
 				if (ibuf_size != 0 || obuf_size != 0)
 				{
@@ -125,10 +124,10 @@ namespace pr
 					if (obuf_size < 16) obuf_size = 16;
 					Throw(::SetupComm(m_handle, DWORD(ibuf_size), DWORD(obuf_size)), "Failed to set comm port i/o buffering");
 				}
-				
+
 				// Set non-blocking reads/writes as default
 				SetBlockingReads(false);
-					
+
 				// Setup the device with default settings
 				COMMCONFIG config = {0};
 				config.dwSize = sizeof(COMMCONFIG);
@@ -142,27 +141,51 @@ namespace pr
 				throw;
 			}
 		}
-		
+
 		// Close the serial io connection
 		void Close()
 		{
 			if (m_io_complete != 0)                    { ::CloseHandle(m_io_complete); m_io_complete = 0; }
 			if (m_handle      != INVALID_HANDLE_VALUE) { ::CloseHandle(m_handle);      m_handle      = INVALID_HANDLE_VALUE; }
 		}
-		
+
+		// Set the mask for comm events to watch for
+		void SetCommMask(DWORD mask = EV_TXEMPTY)
+		{
+			::SetCommMask(m_handle, mask);
+		}
+
+		// Waits for a comm event and returns the mask of the comms events that have occurred
+		bool WaitCommEvent(DWORD timeout, DWORD& mask)
+		{
+			// Write the data and wait for the overlapped operation to complete
+			OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_io_complete;
+			Throw(!::WaitCommEvent(m_handle, &mask, &ovrlap) && GetLastError() != ERROR_IO_PENDING, "");
+
+			DWORD bytes_sent;
+			switch (::WaitForSingleObject(ovrlap.hEvent, timeout))
+			{
+			default:
+			case WAIT_TIMEOUT:
+				return false;
+			case WAIT_OBJECT_0:
+				return ::GetOverlappedResult(m_handle, &ovrlap, &bytes_sent, FALSE) != 0;
+			}
+		}
+
 		// Send data over the i/o connection
 		bool Write(void const* data, size_t size, size_t& bytes_sent, DWORD timeout)
 		{
-			PR_ASSERT(PR_DBG, IsOpen(), "Port not open for writing");
-			
+			assert(IsOpen() && "Port not open for writing");
+
 			bytes_sent = 0;
 			if (!IsOpen()) return false;
-			
+
 			// Write the data and wait for the overlapped operation to complete
 			OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_io_complete;
 			if (!::WriteFile(m_handle, data, DWORD(size), 0, &ovrlap) && GetLastError() != ERROR_IO_PENDING)
 				return false;
-			
+
 			switch (::WaitForSingleObject(ovrlap.hEvent, timeout))
 			{
 			default:
@@ -173,7 +196,7 @@ namespace pr
 				return ::GetOverlappedResult(m_handle, &ovrlap, (DWORD*)&bytes_sent, FALSE) != 0;
 			}
 		}
-		
+
 		// Write all of 'size' to the i/o connection
 		bool Write(void const* data, size_t size, DWORD timeout)
 		{
@@ -185,13 +208,19 @@ namespace pr
 			}
 			return true;
 		}
-		
+
 		// Write an object from the i/o connection
 		template <typename Type> bool Write(Type const& type, DWORD timeout)
 		{
 			return Write(&type, sizeof(type), timeout);
 		}
-		
+
+		// Flush any buffered data
+		void Flush()
+		{
+			Throw(::FlushFileBuffers(m_handle), "Failed to flush write buffer");
+		}
+
 		// Set the read timeout behaviour
 		// If 'blocking' is true, the read functions will block until the requested data is available or a timeout occurs
 		void SetBlockingReads(bool blocking)
@@ -203,7 +232,7 @@ namespace pr
 			cto.ReadTotalTimeoutMultiplier = 0;
 			Throw(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
 		}
-		
+
 		// Read buffered data from the io connection.
 		// 'buffer' is the buffer to copy data into
 		// 'size' is the length of 'buffer'
@@ -212,16 +241,16 @@ namespace pr
 		// Returns true if data was read, false if the timeout was reached
 		bool Read(void* buffer, size_t size, size_t& bytes_read, DWORD timeout)
 		{
-			PR_ASSERT(PR_DBG, IsOpen(), "Port not open for reading");
-			
+			assert(IsOpen() && "Port not open for reading");
+
 			bytes_read = 0;
 			if (!IsOpen()) return false;
-			
+
 			// Block for up to 'timeout' while reading data
 			OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_io_complete;
 			if (!::ReadFile(m_handle, buffer, DWORD(size), 0, &ovrlap) && GetLastError() != ERROR_IO_PENDING)
 				return false;
-			
+
 			switch (::WaitForSingleObject(ovrlap.hEvent, timeout))
 			{
 			default:
@@ -232,7 +261,7 @@ namespace pr
 				return ::GetOverlappedResult(m_handle, &ovrlap, (DWORD*)&bytes_read, FALSE) != 0;
 			}
 		}
-		
+
 		// Read all of 'size' into buffer or timeout
 		// Remember to 'SetBlockingReads' to blocking
 		bool Read(void* buffer, size_t size, DWORD timeout)
@@ -245,29 +274,29 @@ namespace pr
 			}
 			return true;
 		}
-		
+
 		// Read an object from the i/o connection
 		// Remember to 'SetBlockingReads' to blocking
 		template <typename Type> bool Read(Type& type, DWORD timeout)
 		{
 			return Read(&type, sizeof(type), timeout);
 		}
-		
+
 		// Purge the I/O buffers
 		void Purge()
 		{
 			if (!IsOpen()) return;
-			
+
 			DWORD errors; COMSTAT stat;
 			Throw(::PurgeComm(m_handle, PURGE_RXABORT|PURGE_TXABORT|PURGE_RXCLEAR|PURGE_TXCLEAR), "Purge comm port failed");
 			Throw(::ClearCommError(m_handle, &errors, &stat), "Failed to clear comm errors");
 		}
-		
+
 		//// Set the timeouts
 		//bool SetReadTimeout(DWORD timeout)
 		//{
 		//	if (!IsOpen()) return false;
-		//	
+		//
 		//	COMMTIMEOUTS cto;
 		//	if (!::GetCommTimeouts(m_handle, &cto)) return false;
 		//	cto.ReadTotalTimeoutConstant = timeout;
@@ -278,7 +307,7 @@ namespace pr
 		size_t BytesAvailable() const
 		{
 			if (!IsOpen()) return 0;
-			
+
 			DWORD dwErrorFlags;
 			COMSTAT ComStat;
 			ClearCommError(m_handle, &dwErrorFlags, &ComStat);
@@ -286,10 +315,5 @@ namespace pr
 		}
 	};
 }
-	
-#ifdef PR_ASSERT_DEFINED
-#	undef PR_ASSERT_DEFINED
-#	undef PR_ASSERT
-#endif
-	
+
 #endif
