@@ -3,6 +3,7 @@
 // Copyright © Rylogic Ltd 2002
 //***********************************************************
 
+#include <atomic>
 #include <windows.h>
 #include <fstream>
 #include <stdio.h>
@@ -10,11 +11,10 @@
 #include <tchar.h>
 #include <malloc.h>
 #include <string>
-#include "pr/threads/mutex.h"
 #include "pr/common/datetime.h"
 #include "pr/common/fmt.h"
 #include "pr/common/alloca.h"
-#include "pr/common/byte_ptr_cast.h"
+#include "pr/common/cast.h"
 #include "pr/common/imposter.h"
 #include "pr/macros/link.h"
 #include "pr/maths/maths.h"
@@ -31,11 +31,9 @@ using namespace pr;
 struct ReentryGuard
 {
 #ifdef _DEBUG
-	pr::Mutex& guard() { static pr::Mutex mutex(FALSE, "rb_autoexp_mutex"); return mutex; }
-	ReentryGuard()     { if (!guard().Acquire(0)) throw std::exception(); }
-	~ReentryGuard()    { guard().UnAcquire(); }
-#else
-	ReentryGuard()     {}
+	std::atomic_flag& guard() { static std::atomic_flag m_guard; return m_guard; }
+	ReentryGuard()            { if (guard().test_and_set()) throw std::exception(); } // Throws if already set
+	~ReentryGuard()           { guard().clear(); }
 #endif
 };
 
@@ -281,7 +279,7 @@ ADDIN_API HRESULT WINAPI AddIn_stdofstream(DWORD, DbgHelper* pHelper, int, BOOL,
 //{
 //	stdistream* s = reinterpret_cast<stdistream*>(&istrm);
 //	std::istream::_Myios* base_ios = static_cast<std::istream::_Myios*>(s);
-//	
+//
 //	if (FAILED(Read(s->_Chcount, ofs + (pr::byte_ptr_cast(&s->_Chcount) - pr::byte_ptr_cast(s))))) return E_FAIL;
 //	if (FAILED(Read(*base_ios  , ofs + (pr::byte_ptr_cast(base_ios)     - pr::byte_ptr_cast(s))))) return E_FAIL;
 //	base_ios->bad();
@@ -325,7 +323,7 @@ ADDIN_API HRESULT WINAPI AddIn_LargeInt(DWORD, DbgHelper* pHelper, int, BOOL, ch
 	if (FAILED(pHelper->Read(large_int))) return E_FAIL;
 
 	std::string str = pr::ToString(large_int);
-	_snprintf(pResult, max, "%s", str.c_str()); 
+	_snprintf(pResult, max, "%s", str.c_str());
 	return S_OK;
 }
 

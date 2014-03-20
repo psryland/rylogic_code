@@ -6,7 +6,6 @@
 #include <string>
 #include <exception>
 #include <iostream>
-#include "pr/common/autoptr.h"
 #include "pr/common/command_line.h"
 #include "pr/common/prtypes.h"
 #include "pr/maths/maths.h"
@@ -15,7 +14,7 @@
 #include "pr/str/prstring.h"
 #include "pr/script/char_stream.h"
 
-typedef pr::AutoPtr<pr::script::Src> SrcPtr;
+typedef std::unique_ptr<pr::script::Src> SrcPtr;
 
 // Strip/Insert new lines.
 struct Newlines :pr::script::Src
@@ -25,7 +24,7 @@ struct Newlines :pr::script::Src
 	pr::uint m_lines_min;
 	pr::uint m_lines_max;
 
-	Newlines(SrcPtr& src, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
+	Newlines(Src* src, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
 		:m_src(src)
 		,m_buf(*m_src)
 		,m_lines_min(0)
@@ -106,11 +105,11 @@ struct Main :pr::cmdline::IOptionReceiver
 	{
 		try
 		{
-			if (pr::str::EqualI(option, "-f") && arg != arg_end) { m_in_file  = *arg++; m_src = new pr::script::FileSrc(m_in_file.c_str()); return true; }
+			if (pr::str::EqualI(option, "-f") && arg != arg_end) { m_in_file  = *arg++; m_src.reset(new pr::script::FileSrc(m_in_file.c_str())); return true; }
 			if (pr::str::EqualI(option, "-o") && arg != arg_end) { m_out_file = *arg++; return true; }
 			if (pr::str::EqualI(option, "-h")) { ShowHelp(); return false; }
 			if (!m_src) { printf("Error: the -f option must be given before any commands\n"); return false; }
-			if (pr::str::EqualI(option, "-newlines")) { m_src = new Newlines(m_src, arg, arg_end); return true; }
+			if (pr::str::EqualI(option, "-newlines")) { m_src.reset(new Newlines(m_src.release(), arg, arg_end)); return true; }
 			// NEW_COMMAND - add option
 
 			printf("Error: Unknown option '%s'\n", option.c_str());

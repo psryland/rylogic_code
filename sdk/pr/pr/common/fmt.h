@@ -15,9 +15,11 @@
 #include <cassert>
 #include <string>
 #include <malloc.h>
+#include <thread>
 
-#ifndef PR_FMT_THREAD_LOCAL
-#define PR_FMT_THREAD_LOCAL __declspec(thread)
+// C++11's thread_local
+#ifndef thread_local
+#define thread_local __declspec(thread)
 #endif
 
 #ifdef __cplusplus
@@ -130,7 +132,7 @@ namespace pr
 	// Static, non-thread safe, use with caution, but fast string format
 	template <typename Ctx, size_t Sz, typename TChar> inline TChar const* FmtX(TChar const* format, va_list arg_list)
 	{
-		PR_FMT_THREAD_LOCAL static TChar buf[Sz];
+		thread_local static TChar buf[Sz];
 		int result = impl::Format(buf, Sz-1, format, arg_list);
 		assert(result >= 0 && result < Sz-1 && "formatted string truncated");
 		buf[result] = 0;

@@ -6,7 +6,7 @@
 #include "physics/utility/stdafx.h"
 #include "pr/physics/shape/builder/shapepolytopehelper.h"
 #include "pr/physics/shape/shapepolytope.h"
-#include "pr/common/byte_ptr_cast.h"
+#include "pr/common/cast.h"
 #include "pr/common/array.h"
 #include "pr/maths/convexhull.h"
 
@@ -41,7 +41,7 @@ namespace pr
 			a = face.m_index[0];
 			b = face.m_index[1];
 			c = face.m_index[2];
-		}			
+		}
 	}
 }
 
@@ -55,7 +55,7 @@ void GenerateNeighbours(v4 const* verts, std::size_t num_verts, ShapePolyFace co
 		v4 edge0 = verts[f->m_index[1]] - verts[f->m_index[0]];
 		v4 edge1 = verts[f->m_index[2]] - verts[f->m_index[0]];
 		v4 norm  = Normalise3IfNonZero(Cross3(edge0, edge1));
-		
+
 		// For each vertex in each face, add the other face vertices as neighbours
 		for( std::size_t i = 0, j = 1, k = 2; i != 3; ++i, j=(j+1)%3, k=(k+1)%3 )
 		{
@@ -79,12 +79,12 @@ void GenerateArtificialNeighbours(v4 const* verts, std::size_t num_verts, pr::Ar
 	{
 		ShapePolytopeNbrsEx& nbrhdr = neighbours[i];
 		if( nbrhdr.m_nbr.empty() ) continue;
-		
+
 		// Flip the normal so it points inward
 		nbrhdr.m_normal = -nbrhdr.m_normal;
 		nbrhdr.m_normal.w = 0.0f;
 		nbrhdr.m_normal = Normalise3(nbrhdr.m_normal);
-		
+
 		// Find the most extreme vert
 		v4 const* vert = verts;
 		for( v4 const* v = verts + 1, *v_end = verts + num_verts; v < v_end; ++v )
@@ -94,7 +94,7 @@ void GenerateArtificialNeighbours(v4 const* verts, std::size_t num_verts, pr::Ar
 		}
 		PolyIdx idx = static_cast<PolyIdx>(vert - verts);
 		PR_ASSERT(PR_DBG_PHYSICS, idx != i, "A vertex cannot be a neighbour of itself");
-		
+
 		// Add the artificial neighbour
 		if( std::find(nbrhdr.m_nbr.begin(), nbrhdr.m_nbr.end(), idx) == nbrhdr.m_nbr.end() )
 		{
@@ -122,7 +122,7 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 		face_count*sizeof(ShapePolyFace) +
 		vert_count*sizeof(ShapePolyNbrs) +
 		total_nbr_count*sizeof(PolyIdx));
-	
+
 	ShapePolytope& poly = helper.get();
 	poly.set(vert_count, face_count, helper.m_data.size(), shape_to_model, material_id, flags);
 
@@ -130,7 +130,7 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 	uint8* ptr = &helper.m_data[sizeof(ShapePolytope)];
 	memcpy(ptr, verts, vert_count*sizeof(v4));
 	ptr += vert_count*sizeof(v4);
-	
+
 	// Add the faces
 	memcpy(ptr, faces, face_count*sizeof(ShapePolyFace));
 	ptr += face_count*sizeof(ShapePolyFace);
@@ -146,7 +146,7 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 		byte_offset += nbrhdr->m_count*sizeof(PolyIdx);
 		++nbrhdr;
 	}
-	
+
 	// Add the neighbour data
 	for( std::size_t i = 0; i != vert_count; ++i )
 	{
@@ -159,7 +159,7 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 	// This is done when the shape is added to the shape builder
 	//// Shift the polytope vertices to the centre of mass and adjust the shape to model transform
 	//MassProperties mp;
-	//CalcMassProperties(poly, 1.0f, mp); 
+	//CalcMassProperties(poly, 1.0f, mp);
 	//ShiftCentre(poly, mp.m_centre_of_mass - v4Origin);
 
 	#if PH_SHAPE_POLYTOPE_LDR_OUTPUT == 1
@@ -198,7 +198,7 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 {
 	PR_ASSERT(PR_DBG_PHYSICS, num_verts >= 4, "");
 	PR_ASSERT(1, false, "Step through me");
-	
+
 	std::size_t vert_count, face_count;
 
 	// Generate faces by taking the convex hull of the verts
@@ -210,7 +210,7 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 	faces .resize(face_count);
 	PR_ASSERT(PR_DBG_PHYSICS, vert_count <= maths::max<PolyIdx>(), "Polytope contains too many vertices");
 	PR_ASSERT(PR_DBG_PHYSICS, face_count > 0, "Polytope has no faces");
-	
+
 	// Copy the verts
 	pr::Array<v4> verts_copy(vert_count);
 	pr::Array<v4>::iterator v_out = verts_copy.begin();
@@ -218,7 +218,7 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 	{
 		*v_out = verts[*i];
 	}
-	
+
 	// Generate neighbour info
 	pr::Array<ShapePolytopeNbrsEx> neighbours;
 	GenerateNeighbours(&verts_copy[0], vert_count, &faces[0], face_count, neighbours);

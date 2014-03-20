@@ -3,7 +3,7 @@
 #
 # Post Build Event for exporting binary files
 # Use:
-#   _publish_bin $(TargetPath) $(Platform) $(Configuration) [dstsubdir]
+#   $(ProjectDir)..\..\script\DeployBin.py $(TargetPath) $(PlatformTarget) $(Configuration) [dstsubdir]
 import sys, os
 import Rylogic as Tools
 import UserVars

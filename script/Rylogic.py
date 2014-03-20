@@ -163,3 +163,9 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 	except Exception:
 		pass
 	sys.exit(0)
+
+# Touch a file to change it's timestamp
+def TouchFile(fname, times=None):
+	with open(fname, mode='a') as f:
+		os.utime(fname, times=times)
+		

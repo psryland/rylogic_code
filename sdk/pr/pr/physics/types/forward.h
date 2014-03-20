@@ -14,7 +14,7 @@
 #include <vector>
 #include "pr/common/min_max_fix.h"
 #include "pr/common/valuecast.h"
-#include "pr/common/byte_ptr_cast.h"
+#include "pr/common/cast.h"
 #include "pr/common/fmt.h"
 #include "pr/common/chain.h"
 #include "pr/common/tri_table.h"
@@ -44,7 +44,7 @@ namespace pr
 			EShape_Cylinder,
 			EShape_Polytope,
 			EShape_Triangle,
-			
+
 			// Compound shapes
 			EShape_Array,		// An array of child shapes
 			EShape_BVTree,		// A bounding volume tree of shapes
@@ -69,7 +69,7 @@ namespace pr
 			EMotion_Keyframed,
 			EMotion_Dynamic
 		};
-	
+
 		// Engine
 		class Engine;
 
@@ -117,7 +117,7 @@ namespace pr
 		// Material
 		typedef uint MaterialId;
 		struct Material;
-		
+
 		// Terrain
 		struct ITerrain;
 

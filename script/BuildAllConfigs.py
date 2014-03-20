@@ -21,21 +21,21 @@ target = sys.argv[2] if len(sys.argv) > 2 else ""
 # e.g: "\"folder\proj_name:Rebuild\""
 
 configs = [
-	#"debug",
-	#"release",
-	"dev_debug",
-	"dev_release",
+	"debug",
+	"release",
+	#"dev_debug",
+	#"dev_release",
 	]
 platforms = [
-	#"x86",
+	"x86",
 	"x64",
-	"win32",
+	#"win32",
 	]
 
 try:
 	procs = []
 
-	parallel = False
+	parallel = True
 	same_window = False
 
 	#Invoke MSBuild

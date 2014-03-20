@@ -22,13 +22,13 @@ namespace pr
 	{
 		return 1i64 << n;
 	}
-	
+
 	// If 'state' is true, returns 'value | mask'. If false, returns 'value &~ mask'
 	template <typename T, typename U> inline T SetBits(T value, U mask, bool state)
 	{
 		return state ? value | static_cast<T>(mask) : value & ~static_cast<T>(mask);
 	}
-	
+
 	// Sets the masked bits of 'value' to the state 'bitfield'
 	template <typename T, typename U> inline T SetBits(T value, U mask, U bitfield)
 	{
@@ -36,42 +36,42 @@ namespace pr
 		value |=  mask & bitfield; // set bits from bitfield
 		return value;
 	}
-	
+
 	// Returns true if any bits in 'value & mask != 0'
 	template <typename T, typename U> inline bool AnySet(T value, U mask)
 	{
 		return (value & static_cast<T>(mask)) != 0;
 	}
-	
+
 	// Return true if all bits in 'value & mask == mask'
 	template <typename T, typename U> inline bool AllSet(T value, U mask)
 	{
 		return (value & static_cast<T>(mask)) == static_cast<T>(mask);
 	}
-	
+
 	// Reverse the order of bits in 'n'
 	inline uint8 ReverseBits(uint8 n)
 	{
 		return static_cast<uint8>(((n * 0x0802LU & 0x22110LU) | (n * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16);
 	}
-	
+
 	// Reverse the order of bits in 'n'
 	inline uint ReverseBits(uint n)
 	{
 		n = ((n >> 1) & 0x55555555) | ((n & 0x55555555) << 1);	// swap odd and even bits
 		n = ((n >> 2) & 0x33333333) | ((n & 0x33333333) << 2);	// swap consecutive pairs
-		n = ((n >> 4) & 0x0F0F0F0F) | ((n & 0x0F0F0F0F) << 4);	// swap nibbles ... 
+		n = ((n >> 4) & 0x0F0F0F0F) | ((n & 0x0F0F0F0F) << 4);	// swap nibbles ...
 		n = ((n >> 8) & 0x00FF00FF) | ((n & 0x00FF00FF) << 8);	// swap bytes
 		n = ( n >> 16             ) | ( n               << 16);	// swap 2-byte long pairs
 		return n;
 	}
-	
+
 	// Returns a bit mask containing only the lowest bit of 'n'
 	template <typename T> inline T LowBit(T n)
 	{
 		return n - ((n - 1) & n);
 	}
-	
+
 	// Returns the bit position of the highest bit
 	// Also, is the floor of the log base 2 for a 32 bit integer
 	inline uint HighBitIndex(uint n)
@@ -84,26 +84,27 @@ namespace pr
 		shift = ((n &        0x2) != 0) << 0; n >>= shift; pos |= shift;
 		return pos;
 	}
-	
+
 	// Returns the bit position of the lowest bit
 	inline uint LowBitIndex(uint n)
 	{
 		return HighBitIndex(LowBit(n));
 	}
-	
+
 	// Return a bit mask contain only the highest bit of 'n'
 	// Must be a faster way?
 	inline uint HitBit(uint n)
 	{
 		return 1 << HighBitIndex(n);
 	}
-	
+
 	// Returns true if 'n' is a exact power of two
 	template <typename T> inline bool IsPowerOfTwo(T n)
 	{
 		return ((n - 1) & n) == 0;
 	}
-	
+
+	// Returns the number of set bits in 'n'
 	template <typename T> inline uint CountBits(T n)
 	{
 		uint count = 0;
@@ -114,18 +115,18 @@ namespace pr
 		}
 		return count;
 	}
-	
+
 	// http://infolab.stanford.edu/~manku/bitcount/bitcount.html
 	// Constant time bit count works for 32-bit numbers only.
-	// Fix last line for 64-bit numbers    
+	// Fix last line for 64-bit numbers
 	template <> inline uint CountBits(unsigned int n)
 	{
-		unsigned int tmp;    
+		unsigned int tmp;
 		tmp = n - ((n >> 1) & 033333333333)
 				- ((n >> 2) & 011111111111);
 		return ((tmp + (tmp >> 3)) & 030707070707) % 63;
 	}
-	
+
 	// Interleaves the lower 16 bits of x and y, so the bits of x
 	// are in the even positions and bits from y in the odd.
 	// Returns the resulting 32-bit Morton Number.
@@ -143,29 +144,64 @@ namespace pr
 		y = (y | (y << S[0])) & B[0];
 		return x | (y << 1);
 	}
-	
-	inline unsigned int Bits(char const* bits)
+
+	// Convert a string of 1s and 0s into a bitmask
+	template <typename T> inline T Bits(char const* bits)
 	{
-		unsigned int n = 0;
+		T n = 0;
 		for (;*bits != 0; ++bits)
-			n = (n << 1) | int(*bits == '1');
+			n = (n << 1) | T(*bits == '1');
 		return n;
 	}
-	
-	// Convert up to 32bits to a string of 0's and 1's
-	inline char const* Bitstr(unsigned int bits, int count)
+
+	// Convert an integral type into a string of 0s and 1s
+	template <typename T> inline char const* BitStr(T bits, bool leading_zeros = false)
 	{
-		static char str[33];
+		thread_local static char str[sizeof(T) * 8 + 1];
+
+		T const mask = T(1) << (sizeof(T) * 8 - 1);
+		if (!leading_zeros)
+			for (; bits != 0 && (mask & bits) == 0; bits <<= 1) {} // skip leading zeros
+
 		int i;
-		
-		bits <<= (32 - count);
-		for (i = 0; i != count; ++i, bits <<= 1)
-			str[i] = '0' + ((bits & 0x80000000) != 0);
-		str[count] = 0;
+		for (i = 0; bits != 0; ++i, bits <<= 1)
+			str[i] = (mask & bits) != 0 ? '1' : '0';
+		str[i] = 0;
+
 		return str;
 	}
-}
 
+	// Iterator for iterating over a bit mask
+	template <typename T> struct bit_citer
+	{
+		typedef std::forward_iterator_tag iterator_category;
+		typedef T value_type;
+
+		value_type m_bits;
+		bit_citer(value_type bits) :m_bits(bits) {}
+
+		value_type    operator * () const                   { return LowBit(m_bits); }
+		bit_citer<T>& operator ++()                         { m_bits ^= LowBit(m_bits); return *this; }
+		bit_citer<T>  operator ++(int)                      { bit_citer<T> iter(m_bits); ++*this; return iter; }
+		bool          operator == (bit_citer<T> const& rhs) { return m_bits == rhs.m_bits; }
+		bool          operator != (bit_citer<T> const& rhs) { return m_bits != rhs.m_bits; }
+	};
+
+	// An iterator over bits in a bit mask
+	template <typename T> struct BitEnumerator
+	{
+		T m_bits;
+		BitEnumerator(T bits) :m_bits(bits) {}
+		bit_citer<T> begin() const { return bit_citer<T>(m_bits); }
+		bit_citer<T> end() const   { return bit_citer<T>(0); }
+	};
+
+	// Returns an object for enumerating over the set bits in 'bits'
+	template <typename T> BitEnumerator<T> EnumerateBits(T bits)
+	{
+		return BitEnumerator<T>(bits);
+	}
+}
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -175,6 +211,21 @@ namespace pr
 	{
 		PRUnitTest(pr_maths_bitfunctions)
 		{
+			char const* mask_str = "1001010011";
+			auto mask = Bits<long long>(mask_str);
+
+			PR_CHECK(BitStr(mask), mask_str);
+
+			std::vector<long long> bits;
+			for (auto b : pr::EnumerateBits(mask))
+				bits.push_back(b);
+
+			PR_CHECK(bits.size(), 5U);
+			PR_CHECK(bits[0], 1U << 0);
+			PR_CHECK(bits[1], 1U << 1);
+			PR_CHECK(bits[2], 1U << 4);
+			PR_CHECK(bits[3], 1U << 6);
+			PR_CHECK(bits[4], 1U << 9);
 		}
 	}
 }

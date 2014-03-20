@@ -12,26 +12,26 @@
 #include "pr/meta/alignmentof.h"
 #include "pr/meta/alignedstorage.h"
 #include "pr/common/assert.h"
-#include "pr/common/byte_ptr_cast.h"
+#include "pr/common/cast.h"
 
 #ifndef NDEBUG
 #define PR_OP_CHK 1
 #define PR_OP_INITMEM 1
 #endif//NDEBUG
-	
+
 // Define this as 1 if you want checking done on the object pool
-#ifndef PR_OP_CHK 
+#ifndef PR_OP_CHK
 #define PR_OP_CHK 0
 #endif
-	
+
 // Define this as 1 if you're using this in a multi threaded environment
-#ifndef PR_OP_MT 
+#ifndef PR_OP_MT
 #define PR_OP_MT 0
 #endif
 #if PR_OP_MT
 #	include <windows.h>
 #endif
-	
+
 // Define this as 1 if you want objects to be initialised with 0xc0c0c0c0
 // and overwritten with 0xd0d0d0d0 when returned
 #ifndef PR_OP_INITMEM
@@ -63,14 +63,14 @@ namespace pr
 			template <typename P1, typename P2> static void Construct(T*, P1 p1, P2 p2)      { new (target) T(p1); }
 		};
 		typedef typename pr::meta::if_< pr::meta::is_pod<Type>::value, POD<Type>, NonPOD<Type> >::type Constructor;
-	
+
 		// A block contains room for a 'NumPerBlock' array of 'Type'
 		struct Block
 		{
 			enum { SizeInBytes = NumPerBlock * sizeof(Type) };
 			typedef typename pr::meta::aligned_storage<SizeInBytes, pr::meta::alignment_of<Type>::value>::type TBuffer;
 			byte* buffer() { return pr::byte_ptr(&m_block); }
-			
+
 			TBuffer m_block;
 			Block* m_next;
 			Block* m_prev;
@@ -80,7 +80,7 @@ namespace pr
 		{
 			FreeObject* m_next;
 		};
-	
+
 		#if PR_OP_MT
 		struct ScopedLock
 		{
@@ -90,17 +90,17 @@ namespace pr
 		};
 		HANDLE m_semaphore;
 		#endif
-	
+
 		enum { InitByte = 0xc0, DestByte = 0xd0 };
 
 		static_assert(sizeof(Type) >= sizeof(FreeObject), "The pooled type must be large enough to contain a pointer");
-	
+
 		Block*      m_current_block;   // Points into a double linked list of Blocks
 		pr::byte*   m_block_ptr;       // The pointer within the current block (always 'm_current_block')
 		FreeObject* m_free_object;     // A single linked list of returned objects
 		PR_EXPAND(PR_OP_CHK, unsigned int m_num_allocated);
 		PR_EXPAND(PR_OP_CHK, unsigned int m_num_free);
-	
+
 		// Make 'm_current_block' point to an available block (new or otherwise)
 		void GetOrCreateNextBlock()
 		{
@@ -125,7 +125,7 @@ namespace pr
 			// Point to the end of the current block, objects are allocated by decrementing this pointer
 			m_block_ptr = m_current_block->buffer() + Block::SizeInBytes;
 		}
-	
+
 		// Get an object from the object pool. If there are objects available in the free
 		// list then use them. Otherwise use an object from the current block. If the current
 		// block is used up, allocate another block.
@@ -146,7 +146,7 @@ namespace pr
 					// If the block is used up, create a new block
 					if (m_block_ptr == m_current_block->buffer())
 						GetOrCreateNextBlock();
-					
+
 					// If this fires then there isn't enough room for a whole 'Type' left in the current block
 					// Somethings happened to make the block ptr not a multiple of the sizeof Type
 					PR_ASSERT(PR_DBG, m_block_ptr - sizeof(Type) >= m_current_block->buffer(), "");
@@ -161,10 +161,10 @@ namespace pr
 			PR_EXPAND(PR_OP_INITMEM, memset(object_to_return, InitByte, sizeof(Type)));
 			return object_to_return;
 		}
-	
+
 		ObjectPool(ObjectPool const&);
 		ObjectPool& operator = (ObjectPool const&);
-	
+
 	public:
 		ObjectPool()
 		:m_current_block(0)
@@ -180,12 +180,12 @@ namespace pr
 			PR_EXPAND(PR_OP_MT, ScopedLock lock(m_semaphore));
 			GetOrCreateNextBlock();
 		}
-	
+
 		~ObjectPool()
 		{
 			PR_ASSERT(PR_OP_CHK, m_num_allocated == m_num_free, "Some objects not returned to the pool");
 			PR_EXPAND(PR_OP_MT, ScopedLock lock(m_semaphore));
-			
+
 			// Find the end of the block list
 			Block* block = m_current_block;
 			while (block->m_next) block = block->m_next;
@@ -198,7 +198,7 @@ namespace pr
 				delete current;
 			}
 		}
-	
+
 		Type* Get()
 		{
 			Type* object = GetInternal();
@@ -217,7 +217,7 @@ namespace pr
 			Constructor::Construct(object, p1, p2);
 			return object;
 		}
-	
+
 		// Return an object to the pool.
 		void Return(Type* object)
 		{
@@ -233,7 +233,7 @@ namespace pr
 			dead_object.m_next = m_free_object;
 			m_free_object = &dead_object;
 		}
-	
+
 		// Assume all pooled objects are returned to the pool.
 		// This can only be implemented for pod types as there is no way to tell which
 		// objects in which block have already been destructed and are in the free list
@@ -244,7 +244,7 @@ namespace pr
 		{
 			PR_ASSERT(PR_DBG, pr::meta::is_pod<Type>::value, "This method can only be used for POD types");
 			PR_EXPAND(PR_OP_MT, ScopedLock lock(m_semaphore));
-		
+
 			// Move 'm_current_block' to the first in the list
 			PR_EXPAND(PR_OP_INITMEM, memset(m_current_block->buffer(), DestByte, sizeof(m_current_block->buffer())));
 			while (m_current_block->m_prev)

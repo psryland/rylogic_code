@@ -26,12 +26,12 @@ namespace pr
 	// Cast from a void pointer to a pointer of type 'T' (checking alignment)
 	template <typename T> T const* type_ptr(void const* t)
 	{
-		assert(((t - static_cast<T*>(nullptr)) & std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
+		assert(((static_cast<T const*>(t) - static_cast<T const*>(0)) & std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
 		return static_cast<T const*>(t);
 	}
 	template <typename T> T* type_ptr(void* t)
 	{
-		assert(((t - static_cast<T*>(nullptr)) & std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
+		assert(((static_cast<T*>(t) - static_cast<T*>(0)) & std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
 		return static_cast<T*>(t);
 	}
 

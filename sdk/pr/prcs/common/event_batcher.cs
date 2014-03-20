@@ -15,9 +15,15 @@ namespace pr.common
 		private readonly Dispatcher m_dispatcher;
 		private readonly TimeSpan m_delay;
 		private int m_issue;
+		private int m_actioned_issue;
 
 		/// <summary>The callback called when this event has been signalled</summary>
 		public event Action Action;
+
+		/// <summary>
+		/// The maximum number of times Signal can be called before 'Action' is called.
+		/// Used to prevent an endless stream of Signals resulting in Action never being called</summary>
+		public int MaxSignalsBeforeAction { get; set; }
 
 		public EventBatcher() :this(TimeSpan.FromMilliseconds(100)) {}
 		public EventBatcher(Action action) :this() { Action += action; }
@@ -32,6 +38,8 @@ namespace pr.common
 			m_dispatcher = dispatcher;
 			m_delay = delay;
 			m_issue = 0;
+			m_actioned_issue = 0;
+			MaxSignalsBeforeAction = int.MaxValue;
 		}
 
 		/// <summary>
@@ -44,9 +52,12 @@ namespace pr.common
 			var issue = Interlocked.Increment(ref m_issue);
 			m_dispatcher.BeginInvokeDelayed(() =>
 				{
-					if (Interlocked.CompareExchange(ref m_issue, issue, issue) != issue) return;
 					if (Action == null) return;
+					if (unchecked(issue - m_actioned_issue) < MaxSignalsBeforeAction &&
+						Interlocked.CompareExchange(ref m_issue, issue, issue) != issue)
+						return;
 					Action();
+					m_actioned_issue = issue;
 				}, m_delay);
 		}
 	}
@@ -66,31 +77,47 @@ namespace pr
 			[Test] public static void TestEventBatch()
 			{
 				var count = new int[1];
+				var dis = Dispatcher.CurrentDispatcher;
 				var thread_id = Thread.CurrentThread.ManagedThreadId;
+				var mre_eb1 = new ManualResetEvent(false);
+				var mre_eb2 = new ManualResetEvent(false);
 
-				var eb1 = new EventBatcher();
-				eb1.Action += () =>
+				var eb1 = new EventBatcher(() =>
 					{
 						Assert.AreEqual(thread_id, Thread.CurrentThread.ManagedThreadId);
 						Assert.AreEqual(1, count[0]);
-					};
+						mre_eb1.Set();
+					});
 
-				var eb2 = new EventBatcher();
-				eb2.Action += () =>
+				var eb2 = new EventBatcher(() =>
 					{
 						Assert.AreEqual(thread_id, Thread.CurrentThread.ManagedThreadId);
 						count[0]++;
 						eb1.Signal();
-					};
+						mre_eb2.Set();
+					});
 
 				ThreadPool.QueueUserWorkItem(x =>
 					{
 						for (var i = 0; i != 10; ++i)
 							eb2.Signal();
+
+						mre_eb1.WaitOne();
+						mre_eb2.WaitOne();
+						dis.BeginInvokeShutdown(DispatcherPriority.Normal);
 					});
 
-				for (var i = 0; i != 10; ++i)
-					eb2.Signal();
+				// The unit test framework runs the test in a worker thread.
+				// Dispatcher.CurrentDispatcher causes a new dispatcher to be
+				// created but it isn't running. Calling Run starts a message
+				// loop for this thread
+				Dispatcher.Run();
+
+				// Don't Signal() from this thread, as it hides cross-thread behaviour
+
+				Assert.AreEqual(true, mre_eb1.WaitOne(0));
+				Assert.AreEqual(true, mre_eb2.WaitOne(0));
+				Assert.AreEqual(1, count[0]);
 			}
 		}
 	}

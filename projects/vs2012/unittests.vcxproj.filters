@@ -53,6 +53,9 @@
     <Filter Include="pr\linedrawer">
       <UniqueIdentifier>{811b143f-5d27-4d0b-941f-6a429943b4eb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\hardware">
+      <UniqueIdentifier>{884fa0a0-434f-4d8a-981f-74085358d4c0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -294,9 +297,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\atl.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\autoptr.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\base64.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -304,9 +304,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\byte_data.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\byte_ptr_cast.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\chain.h">
@@ -349,9 +346,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\expr_eval.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\fixedpodarray.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\fmt.h">
@@ -421,9 +415,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\prlog.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\procttree.h">
@@ -534,16 +525,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\threads\atomic.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\background_task.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\threads\critical_section.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\threads\event.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\ipc.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\threads\item_queue.h">
@@ -559,12 +544,6 @@
       <Filter>pr\threads</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\threads\sim_message_pump.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\thread.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\thread_pool.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\storage\csv.h">
@@ -797,6 +776,21 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\network\tcpip.h">
       <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\hardware\comm_port_io.h">
+      <Filter>pr\hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\hardware\cpuinfo.h">
+      <Filter>pr\hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\threads\pause_thread.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\threads\name_thread.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\cast.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

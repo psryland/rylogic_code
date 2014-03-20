@@ -13,6 +13,8 @@
 #include <float.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <iterator>
+#include <thread>
 
 #define PR_MATHS_USE_D3DX ERROR_FIX_PLEASE
 #define PR_MATHS_USE_OPEN_MP ERROR_FIX_PLEASE
@@ -29,6 +31,11 @@
 
 #ifndef PR_MATHS_USE_INTRINSICS
 #define PR_MATHS_USE_INTRINSICS 1
+#endif
+
+// C++11's thread_local
+#ifndef thread_local
+#define thread_local __declspec(thread)
 #endif
 
 #if PR_MATHS_USE_DIRECTMATH

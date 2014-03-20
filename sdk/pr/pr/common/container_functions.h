@@ -39,6 +39,21 @@ namespace pr
 		Cont::iterator iter = std::lower_bound(cont.begin(), cont.end(), val);
 		cont.insert(iter, val);
 	}
+	
+	// Erase the first match to pred from 'cont'
+	template <typename TCont, typename Pred> inline void EraseFirst(TCont& cont, Pred pred)
+	{
+		auto iter = std::find_if(std::begin(cont), std::end(cont), pred);
+		if (iter == std::end(cont)) return;
+		cont.erase(iter);
+	}
+
+	// Erase all elements from 'cont' that match 'pred'
+	template <typename TCont, typename Pred> inline void EraseIf(TCont& cont, Pred pred)
+	{
+		auto end = std::remove_if(std::begin(cont), std::end(cont), pred);
+		cont.erase(end, std::end(cont));
+	}
 }
 
 #endif
