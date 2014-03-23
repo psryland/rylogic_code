@@ -84,7 +84,7 @@ namespace pr
 			typename UserSettings,
 			typename MainGUI
 		>
-		struct Main
+		struct Main :pr::AlignTo<16>
 		{
 			// Define this type as base as a helper for derived type constructors
 			// so they can call: MyType(...) :base(..) {}

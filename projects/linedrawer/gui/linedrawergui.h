@@ -32,6 +32,7 @@ namespace ldr
 		,pr::events::IRecv<pr::ldr::Evt_AddBegin>
 		,pr::events::IRecv<pr::ldr::Evt_AddEnd>
 		,pr::events::IRecv<pr::settings::Evt<UserSettings>>
+		,pr::AlignTo<16>
 	{
 		enum
 		{

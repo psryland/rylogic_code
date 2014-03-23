@@ -21,6 +21,7 @@ namespace ldr
 		,pr::events::IRecv<pr::ldr::Evt_SettingsChanged>
 		,pr::events::IRecv<pr::ldr::Evt_LdrObjectSelectionChanged>
 		,pr::events::IRecv<pr::rdr::Evt_SceneRender>
+		,pr::AlignTo<16>
 	{
 		// These types form part of the interface
 		NavManager                  m_nav;              // Controls user input and camera navigation

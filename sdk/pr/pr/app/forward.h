@@ -67,6 +67,7 @@
 #include "pr/common/keystate.h"
 #include "pr/common/colour.h"
 #include "pr/common/log.h"
+#include "pr/common/new.h"
 #include "pr/common/console.h"
 #include "pr/maths/maths.h"
 #include "pr/str/prstring.h"
