@@ -45,6 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="checkedlistbox_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="colour_wheel_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -68,6 +71,9 @@
     <Compile Include="toolform_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <EmbeddedResource Include="checkedlistbox_ui.resx">
+      <DependentUpon>checkedlistbox_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="colour_wheel_ui.resx">
       <DependentUpon>colour_wheel_ui.cs</DependentUpon>
     </EmbeddedResource>

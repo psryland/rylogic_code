@@ -42,6 +42,16 @@ namespace pr.gui
 			UpdateCheckedItems(Items[e.Index] as FlagCheckedListBoxItem, e.NewValue);
 		}
 
+		/// <summary>Owner draw handler for custom drawing of list items</summary>
+		public event DrawItemEventHandler OwnerDraw;
+		protected override void OnDrawItem(DrawItemEventArgs e)
+		{
+			if (OwnerDraw == null)
+				base.OnDrawItem(e);
+			else
+				OwnerDraw(this, e);
+		}
+
 		/// <summary>Checks / Un-checks items depending on the give bit value</summary>
 		protected void UpdateCheckedItems(int value)
 		{
@@ -137,11 +147,10 @@ namespace pr.gui
 
 		private void InitializeComponent()
 		{
-			// 
+			//
 			// FlaggedCheckedListBox
-			// 
+			//
 			this.CheckOnClick = true;
-
 		}
 		#endregion
 	}
