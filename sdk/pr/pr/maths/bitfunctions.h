@@ -193,7 +193,7 @@ namespace pr
 		T m_bits;
 		BitEnumerator(T bits) :m_bits(bits) {}
 		bit_citer<T> begin() const { return bit_citer<T>(m_bits); }
-		bit_citer<T> end() const   { return bit_citer<T>(0); }
+		bit_citer<T> end() const   { return bit_citer<T>(static_cast<T>(0)); }
 	};
 
 	// Returns an object for enumerating over the set bits in 'bits'

@@ -21,8 +21,7 @@ namespace pr
 #include <tchar.h>
 #include <algorithm>
 #include "pr/common/unittests.h"
-//#include "unittests/unittests.h"
-#include "pr/maths/bitfunctions.h"
+#include "unittests/unittests.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about

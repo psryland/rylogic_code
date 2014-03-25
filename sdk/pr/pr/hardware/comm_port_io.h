@@ -150,7 +150,7 @@ namespace pr
 		}
 
 		// Set the mask for comm events to watch for
-		void SetCommMask(DWORD mask = EV_TXEMPTY)
+		void SetCommMask(DWORD mask) // EV_TXEMPTY etc
 		{
 			::SetCommMask(m_handle, mask);
 		}
@@ -160,7 +160,7 @@ namespace pr
 		{
 			// Write the data and wait for the overlapped operation to complete
 			OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_io_complete;
-			Throw(!::WaitCommEvent(m_handle, &mask, &ovrlap) && GetLastError() != ERROR_IO_PENDING, "");
+			Throw(::WaitCommEvent(m_handle, &mask, &ovrlap) || GetLastError() == ERROR_IO_PENDING, "");
 
 			DWORD bytes_sent;
 			switch (::WaitForSingleObject(ovrlap.hEvent, timeout))
@@ -221,6 +221,12 @@ namespace pr
 			Throw(::FlushFileBuffers(m_handle), "Failed to flush write buffer");
 		}
 
+		// Set/Clear the break state
+		void BreakChar(bool set)
+		{
+			set ? SetCommBreak(m_handle) : ClearCommBreak(m_handle);
+		}
+
 		// Set the read timeout behaviour
 		// If 'blocking' is true, the read functions will block until the requested data is available or a timeout occurs
 		void SetBlockingReads(bool blocking)
@@ -230,6 +236,18 @@ namespace pr
 			cto.ReadIntervalTimeout = blocking ? 0 : MAXDWORD;
 			cto.ReadTotalTimeoutConstant = 0;
 			cto.ReadTotalTimeoutMultiplier = 0;
+			Throw(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
+		}
+
+		// Set the read/write timeout values
+		void SetCommTimeouts(DWORD read_timeout, DWORD read_multiplier, DWORD read_constant, DWORD write_multiplier, DWORD write_constant)
+		{
+			COMMTIMEOUTS cto = {};
+			cto.ReadIntervalTimeout         = read_timeout;     // Maximum time between read chars.
+			cto.ReadTotalTimeoutMultiplier  = read_multiplier;  // Multiplier of characters.
+			cto.ReadTotalTimeoutConstant    = read_constant;    // Constant in milliseconds.
+			cto.WriteTotalTimeoutMultiplier = write_multiplier; // Multiplier of characters.
+			cto.WriteTotalTimeoutConstant   = write_constant;   // Constant in milliseconds.
 			Throw(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
 		}
 

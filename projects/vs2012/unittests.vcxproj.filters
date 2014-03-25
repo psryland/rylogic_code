@@ -56,6 +56,9 @@
     <Filter Include="pr\hardware">
       <UniqueIdentifier>{884fa0a0-434f-4d8a-981f-74085358d4c0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\crypt">
+      <UniqueIdentifier>{c50460bd-5fe1-465e-b37f-b74573df250c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -69,6 +72,12 @@
     </ClCompile>
     <ClCompile Include="..\..\sdk\pr\pr\lua\lua_core.c">
       <Filter>pr\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\crypt\crypt.cpp">
+      <Filter>pr\crypt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\crypt\md5.cpp">
+      <Filter>pr\crypt</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -791,6 +800,15 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\cast.h">
       <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\crypt\crypt.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\crypt\md5.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\crypt\rijndael.h">
+      <Filter>pr\crypt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

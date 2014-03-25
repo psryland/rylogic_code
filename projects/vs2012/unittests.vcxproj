@@ -19,6 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\sdk\pr\pr\crypt\crypt.cpp" />
+    <ClCompile Include="..\..\sdk\pr\pr\crypt\md5.cpp" />
     <ClCompile Include="..\unittests\unittests.cpp">
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
     </ClCompile>
@@ -119,6 +121,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\vectormap.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windowfunctions.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windows_com.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\crypt\crypt.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\crypt\md5.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\crypt\rijndael.h" />
     <ClInclude Include="..\..\sdk\pr\pr\filesys\autofile.h" />
     <ClInclude Include="..\..\sdk\pr\pr\filesys\directorytree.h" />
     <ClInclude Include="..\..\sdk\pr\pr\filesys\file.h" />
