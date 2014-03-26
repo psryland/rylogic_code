@@ -51,9 +51,9 @@ namespace pr
 			int t[MAX_BC];
 
 			#pragma region Data Tables
-			static const int sm_alog(int i)
+			static const unsigned char sm_alog(int i)
 			{
-				static const int sm_alog[256] =
+				static const unsigned char sm_alog[256] =
 				{
 					1, 3, 5, 15, 17, 51, 85, 255, 26, 46, 114, 150, 161, 248, 19, 53,
 					95, 225, 56, 72, 216, 115, 149, 164, 247, 2, 6, 10, 30, 34, 102, 170,
@@ -72,11 +72,12 @@ namespace pr
 					18, 54, 90, 238, 41, 123, 141, 140, 143, 138, 133, 148, 167, 242, 13, 23,
 					57, 75, 221, 124, 132, 151, 162, 253, 28, 36, 108, 180, 199, 82, 246, 1
 				};
+				assert(i >= 0 && i < 256);
 				return sm_alog[i];
 			}
-			static const int sm_log(int i)
+			static const unsigned char sm_log(int i)
 			{
-				static const int sm_log[256] =
+				static const unsigned char sm_log[256] =
 				{
 					0, 0, 25, 1, 50, 2, 26, 198, 75, 199, 27, 104, 51, 238, 223, 3,
 					100, 4, 224, 14, 52, 141, 129, 239, 76, 113, 8, 200, 248, 105, 28, 193,
@@ -95,6 +96,7 @@ namespace pr
 					68, 17, 146, 217, 35, 32, 46, 137, 180, 124, 184, 38, 119, 153, 227, 165,
 					103, 74, 237, 222, 197, 49, 254, 24, 13, 99, 140, 128, 192, 247, 112, 7
 				};
+				assert(i >= 0 && i < 256);
 				return sm_log[i];
 			}
 			static const char sm_S(int i)
@@ -118,6 +120,7 @@ namespace pr
 					-31, -8, -104, 17, 105, -39, -114, -108, -101, 30, -121, -23, -50, 85, 40, -33,
 					-116, -95, -119, 13, -65, -26, 66, 104, 65, -103, 45, 15, -80, 84, -69, 22
 				};
+				assert(i >= 0 && i < 256);
 				return sm_S[i];
 			}
 			static const char sm_Si(int i)
@@ -141,6 +144,7 @@ namespace pr
 					-96, -32, 59, 77, -82, 42, -11, -80, -56, -21, -69, 60, -125, 83, -103, 97,
 					23, 43, 4, 126, -70, 119, -42, 38, -31, 105, 20, 99, 85, 33, 12, 125
 				};
+				assert(i >= 0 && i < 256);
 				return sm_Si[i];
 			}
 			static const int  sm_T1(int i)
@@ -212,6 +216,7 @@ namespace pr
 					-2109652541, 697932208, 1512910199, 504303377,
 					2075177163, -1470868228, 1841019862, 739644986
 				};
+				assert(i >= 0 && i < 256);
 				return sm_T1[i];
 			}
 			static const int  sm_T2(int i)
@@ -283,6 +288,7 @@ namespace pr
 					-1014873791, -1339450983, 2002398509, 287182607,
 					-881086288, -56077228, -697451589, 975967766
 				};
+				assert(i >= 0 && i < 256);
 				return sm_T2[i];
 			}
 			static const int  sm_T3(int i)
@@ -354,6 +360,7 @@ namespace pr
 					1103331905, -1716508263, 762796589, 252780047,
 					-1328841808, 1425844308, -1143575109, 372911126
 				};
+				assert(i >= 0 && i < 256);
 				return sm_T3[i];
 			}
 			static const int  sm_T4(int i)
@@ -425,6 +432,7 @@ namespace pr
 					1094828930, -1717981143, 757954394, 252645662,
 					-1330590853, 1414855848, -1145317779, 370555436
 				};
+				assert(i >= 0 && i < 256);
 				return sm_T4[i];
 			}
 			static const int  sm_T5(int i)
@@ -496,6 +504,7 @@ namespace pr
 					967311729, 135050206, -659233636, 1683407248,
 					2076935265, -718096784, 1215061108, -793225406
 				};
+				assert(i >= 0 && i < 256);
 				return sm_T5[i];
 			}
 			static const int  sm_T6(int i)
@@ -567,6 +576,7 @@ namespace pr
 					1899603969, -569897805, -1663519516, -1872472383,
 					1635502980, 1893020342, 1950903388, 1120974935
 				};
+				assert(i >= 0 && i < 256);
 				return sm_T6[i];
 			}
 			static const int  sm_T7(int i)
@@ -638,6 +648,7 @@ namespace pr
 					24197544, -1277294580, -459482956, -1047501738,
 					-2073986101, -1234119374, 1551124588, 1463996600
 				};
+				assert(i >= 0 && i < 256);
 				return sm_T7[i];
 			}
 			static const int  sm_T8(int i)
@@ -709,6 +720,7 @@ namespace pr
 					-1476300487, 213114376, -1260086056, 1455525988,
 					-880516741, 850817237, 1817998408, -1202240816
 				};
+				assert(i >= 0 && i < 256);
 				return sm_T8[i];
 			}
 			static const int  sm_U1(int i)
@@ -780,6 +792,7 @@ namespace pr
 					-1485196142, -1452230247, -1150570876, -1251826801,
 					-1621262146, -1856729675, -2091935064, -1924753501
 				};
+				assert(i >= 0 && i < 256);
 				return sm_U1[i];
 			}
 			static const int  sm_U2(int i)
@@ -851,6 +864,7 @@ namespace pr
 					-1834518092, -1716948807, -2068091986, -1883938141,
 					-1096852096, -1248766835, -1467789414, -1551022441,
 				};
+				assert(i >= 0 && i < 256);
 				return sm_U2[i];
 			}
 			static const int  sm_U3(int i)
@@ -922,6 +936,7 @@ namespace pr
 					-1265457287, -1181111952, -1367032981, -1550863006,
 					-2134991011, -1917480620, -1700232369, -1750889146
 				};
+				assert(i >= 0 && i < 256);
 				return sm_U3[i];
 			}
 			static const int  sm_U4(int i)
@@ -993,6 +1008,7 @@ namespace pr
 					2041877159, 1891211689, 1806599355, 1654886325,
 					1568718495, 1418573201, 1335535747, 1184342925
 				};
+				assert(i >= 0 && i < 256);
 				return sm_U4[i];
 			}
 			static const char sm_rcon(int i)
@@ -1005,6 +1021,7 @@ namespace pr
 					99, -58, -105, 53, 106, -44,
 					-77, 125, -6, -17, -59, -111
 				};
+				assert(i >= 0 && i < 30);
 				return sm_rcon[i];
 			}
 			static const int  sm_shifts(int i, int j, int k)
@@ -1015,6 +1032,9 @@ namespace pr
 					{ {0, 0}, {1, 5}, {2, 4}, {3, 3} },
 					{ {0, 0}, {1, 7}, {3, 5}, {4, 4} }
 				};
+				assert(i >= 0 && i < 3);
+				assert(j >= 0 && j < 4);
+				assert(k >= 0 && k < 2);
 				return sm_shifts[i][j][k];
 			}
 			#pragma endregion
@@ -1022,7 +1042,7 @@ namespace pr
 			// Multiply two elements of GF(2^m)
 			static int Mul(int a, int b)
 			{
-				return (a != 0 && b != 0) ? sm_alog((sm_log(a & 0xFF) + sm_log(b & 0xFF)) % 255) : 0;
+				return (a != 0 && b != 0) ? sm_alog((sm_log(a & 0xFF) + sm_log(b & 0xFF)) % 0xFF) : 0;
 			}
 
 			// Convenience method used in generating Transposition Boxes
