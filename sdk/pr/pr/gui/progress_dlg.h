@@ -1,17 +1,28 @@
 //***************************************************************************************************
 // Progress Dialog
-//  Copyright © Rylogic Ltd 2009
+//  Copyright © Rylogic Ltd 2014
 //***************************************************************************************************
+// Self contained progress dialog and background thread
+// No resource files, etc, needed. See unittests for usage.
 
 #pragma once
 #ifndef PR_GUI_PROGRESS_DLG_H
 #define PR_GUI_PROGRESS_DLG_H
 
-#error "depricated, use progress_dlg2.h"
-
 #if _WIN32_WINNT < 0x0501
 #error "Requires _WIN32_WINNT >= 0x0501"
 #endif
+
+#include <string>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
+#include <cassert>
+#include <algorithm>
+
+using std::max;
+using std::min;
 
 #include <atlbase.h>
 #include <atlapp.h>
@@ -20,54 +31,182 @@
 #include <atlmisc.h>
 #include <atlcrack.h>
 #include <atldlgs.h>
-#include "pr/threads/critical_section.h"
-#include "pr/threads/background_task.h"
 
 namespace pr
 {
 	namespace gui
 	{
-		// Self contained progress dialog and background worker
-		// Not resource files, etc, needed
-		// Use:
-		//  struct Job :pr::threads::BackgroundTask
-		//  {
-		//     void DoWork() { ReportProgress(); }
-		//  } job;
-		//  pr::gui::ProgressDlg prog;
-		//  int res = prog.DoModal("Counting stuff", job, ::GetConsoleWindow());
-		//  printf("job %s\n", res == IDOK ? "completed" : res == IDCANCEL ? "cancelled" : "unknown");
-		class ProgressDlg
-			:public CIndirectDialogImpl<ProgressDlg>
-			,pr::threads::BackgroundTask::IEvent
+		class ProgressDlg :public CIndirectDialogImpl<ProgressDlg>
 		{
 			typedef CIndirectDialogImpl<ProgressDlg> DlgBase;
-			char const*                  m_title; // The title bar text
-			pr::threads::BackgroundTask* m_task;  // The task to run
-			WTL::CStatic                 m_desc;  // The progress description
-			WTL::CProgressBarCtrl        m_bar;   // The progress bar
-			WTL::CButton                 m_btn;   // The cancel button
-			struct { int m_count, m_total; char const* m_desc; } m_state; // The progress state
-			pr::threads::CritSection     m_cs;
+			typedef std::unique_lock<std::mutex> Lock;
+			struct State
+			{
+				std::string  m_title;  // The title bar text
+				std::string  m_desc;   // The description text
+				float        m_pc;     // Percent complete
+				bool         m_has_title;
+				bool         m_has_desc;
 
-			// BackgroundTask callbacks
-			void BGT_ReportProgress(pr::threads::BackgroundTask*, int count, int total, char const* desc)
-			{
-				pr::threads::CSLock lock(m_cs);
-				m_state.m_count = count;
-				m_state.m_total = total;
-				m_state.m_desc  = desc;
-				PostMessage(WM_PROGRESS_UPDATE);
-			}
-			void BGT_TaskComplete(pr::threads::BackgroundTask* task)
-			{
-				PostMessage(WM_COMMAND, task->IsCancelled() ? IDABORT : IDOK, 0);
-			}
+				State(char const* title = nullptr, char const* desc = nullptr, float pc = 0.0f)
+					:m_title(title ? title : "")
+					,m_desc(desc ? desc : "")
+					,m_pc(pc)
+					,m_has_title(title != nullptr)
+					,m_has_desc(desc != nullptr)
+				{}
+				State& operator = (State const& rhs)
+				{
+					if (rhs.m_has_title) m_title = rhs.m_title;
+					if (rhs.m_has_desc ) m_desc  = rhs.m_desc;
+					m_pc = rhs.m_pc;
+					return *this;
+				}
+			};
+			enum { IDC_TEXT_DESC=1000, IDC_PROGRESS_BAR, WM_PROGRESS_UPDATE=WM_USER+1, DefW=480, DefH=180};
+
+			State                    m_state;     // Progress dlg UI state
+			bool                     m_done;      // Task complete flag
+			bool                     m_cancel;    // Cancel signalled flag
+			int                      m_result;    // Dialog result to return
+			std::exception           m_exception; // An exception throw by the task
+			bool                     m_shown;     // True when the dlg is visible
+			WTL::CStatic             m_lbl_desc;  // The progress description
+			WTL::CProgressBarCtrl    m_bar;       // The progress bar
+			WTL::CButton             m_btn;       // The cancel button
+			std::mutex               m_mutex;     // Sync
+			std::condition_variable  m_cv;        // Sync for flags
+			std::thread              m_worker;    // The worker thread
 
 			// Hide the standard 'DoModal()' from the interface
 			INT_PTR DoModal(HWND, LPARAM) {}
 
+			// Handlers
+			BOOL OnInitDialog(CWindow, LPARAM)
+			{
+				SetWindowTextA(m_state.m_title.c_str());
+
+				m_lbl_desc.Attach(GetDlgItem(IDC_TEXT_DESC));
+				m_bar     .Attach(GetDlgItem(IDC_PROGRESS_BAR));
+				m_btn     .Attach(GetDlgItem(IDCANCEL));
+
+				{// Flag as shown
+					Lock lock(m_mutex);
+					m_shown = true;
+					m_cv.notify_all();
+				}
+				return TRUE;
+			}
+
+			// Window destroyed
+			void OnDestroy()
+			{
+				m_worker.join(); // Don't close the window until the task has exited
+			}
+
+			// Resize the dialog
+			void OnSize(UINT nType, CSize)
+			{
+				if (nType == SIZE_MINIMIZED) return;
+
+				const int btn_w = 80, btn_h = 24, prog_h = 18, bp = (btn_h-prog_h)/2, sp = 2, bdr = 5;
+				auto Clamp = [](CRect& rect)
+					{
+						if (rect.right  < rect.left) rect.right  = rect.left;
+						if (rect.bottom < rect.top ) rect.bottom = rect.top;
+						return rect;
+					};
+
+				CRect r, client;
+				GetClientRect(&client);
+				client.DeflateRect(bdr,bdr,bdr,bdr);
+
+				r = client;
+				r.top += bdr;
+				r.left += bdr;
+				r.right -= bdr;
+				r.bottom -= (btn_h + sp);
+				m_lbl_desc.MoveWindow(Clamp(r));
+
+				r = client;
+				r.bottom -= bp;
+				r.top = r.bottom - prog_h;
+				r.right -= btn_w + sp;
+				m_bar.MoveWindow(Clamp(r));
+
+				r = client;
+				r.top = r.bottom - btn_h;
+				r.left = r.right - btn_w;
+				m_btn.MoveWindow(Clamp(r));
+			}
+
+			// Update the UI to the latest state
+			LRESULT OnProgressUpdate(UINT uMsg, WPARAM, LPARAM)
+			{
+				if (uMsg != WM_PROGRESS_UPDATE) { SetMsgHandled(FALSE); return S_OK; }
+				Lock lock(m_mutex);
+
+				// The window is initially created "hidden" (actually zero sized)
+				// On the first call to update, make the window the correct size and style
+				CRect rect;
+				GetWindowRect(&rect);
+				if (rect.Width() * rect.Height() == 0)
+				{
+					SetWindowLongPtrA(GWL_STYLE, WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_SYSMENU|WS_VISIBLE);
+					MoveWindow(rect.left, rect.top, DefW, DefH);
+					CenterWindow(GetParent());
+				}
+
+				// Update the title
+				if (m_state.m_has_title)
+					SetWindowTextA(m_state.m_title.c_str());
+
+				// Update the description text
+				if (m_state.m_has_desc)
+					m_lbl_desc.SetWindowTextA(m_state.m_desc.c_str());
+
+				// Use marquee style if pc is out of range
+				LONG_PTR bar_style = m_bar.GetWindowLongPtrA(GWL_STYLE);
+				if (m_state.m_pc < 0 || m_state.m_pc > 1.0f)
+				{
+					if ((bar_style & PBS_MARQUEE) == 0)
+					{
+						m_bar.SetWindowLongPtrA(GWL_STYLE, bar_style|PBS_MARQUEE);
+						m_bar.SetMarquee(TRUE, 30);
+					}
+				}
+				else
+				{
+					if ((bar_style & PBS_MARQUEE) != 0)
+					{
+						m_bar.SetWindowLongPtrA(GWL_STYLE, bar_style & ~PBS_MARQUEE);
+						m_bar.SetMarquee(FALSE);
+					}
+					m_bar.SetRange32(0, 100);
+					m_bar.SetPos(static_cast<int>(m_state.m_pc * 100));
+				}
+				return S_OK;
+			}
+
+			// Handle cancel butten pressed
+			void OnCancel(UINT, int, CWindow)
+			{
+				Lock lock(m_mutex);
+				m_cancel = true;
+				m_cv.notify_all();
+			}
+
+			// Handle closing the dialog
+			void OnDone()
+			{
+				EndDialog(IDCLOSE);
+			}
+
 		public:
+
+			//// Callback function passed to task function to update progress
+			//typedef bool (__cdecl *UpdateProgressCB)(float pc, char const* desc);
+
 			// Optional event handler
 			struct IEvents
 			{
@@ -76,79 +215,98 @@ namespace pr
 				virtual ~IEvents() {}
 			} *OnEvent;
 
-			// Example Task
-			struct ExampleTask :pr::threads::BackgroundTask
+			template <typename Func, typename... Args>
+			ProgressDlg(char const* title, char const* desc, Func&& func, Args&&... args)
+				:m_state(title, desc, 0.0f)
+				,m_done(false)
+				,m_cancel(false)
+				,m_result(IDOK)
+				,m_exception()
+				,m_lbl_desc()
+				,m_bar()
+				,m_btn()
+				,m_mutex()
+				,m_cv()
+				,m_worker()
+			//	,OnEvent(handler)
 			{
-				void DoWork()
+				// Start the worker
+				m_worker = std::thread([&]
 				{
-					for (int i = 0; i != 100 && !IsCancelled(); ++i,Sleep(100))
-						ReportProgress(i,100,"example");
-				}
-			};
+					try
+					{
+						// Run the task
+						// Pass the dialog to the task function so that it can update progress.
+						// Pased as a pointer so that users have the option of passing nullptr
+						std::bind(std::forward<Func>(func), this, std::forward<Args>(args)...)();
+						//func(this, std::forward(args));
 
-			ProgressDlg(IEvents* handler = 0)
-			:m_title()
-			,m_task()
-			,m_desc()
-			,m_bar()
-			,m_btn()
-			,m_cs()
-			,OnEvent(handler)
-			{}
+						// Notify task complete
+						Lock lock(m_mutex);
+						m_done = true;
+						m_result = m_cancel ? IDCANCEL : IDOK;
+						m_cv.notify_all();
+					}
+					catch (std::exception const& ex)
+					{
+						Lock lock(m_mutex);
+						m_done = true;
+						m_result = IDABORT;
+						m_exception = ex;
+						m_cv.notify_all();
+					}
+					catch (...)
+					{
+						assert(false && "Unhandled exception in task");
+					}
+					Progress(1.0f);
+					PostMessageA(WM_CLOSE);
+				});
+			}
 
 			// Execute a work function in a different thread while displaying the modal dialog
 			// Returns IDOK if the dialog completed, IDCANCEL if the operation was cancelled
-			INT_PTR DoModal(char const* title, pr::threads::BackgroundTask& task, HWND hWndParent = ::GetActiveWindow())
+			INT_PTR DoModal(int delay_ms = 0, HWND hWndParent = ::GetActiveWindow())
 			{
-				m_title = title;
-				m_task = &task;
-				return DlgBase::DoModal(hWndParent);
+				auto done = false;
+
+				{// Wait for up to 'delay_ms' in case no dialog is needed
+					Lock lock(m_mutex);
+					done = m_cv.wait_for(lock, std::chrono::milliseconds(delay_ms), [&]{ return m_done; });
+				}
+
+				// If not done yet, show the dialog
+				if (!done)
+					DlgBase::DoModal(hWndParent);
+
+				// Ensure the thread has ended
+				assert(!m_worker.joinable() && "worker thread still running");
+
+				// Return the result
+				if (m_result == IDABORT)
+					throw m_exception;
+
+				return m_result;
 			}
 
-			// Update the progress.
-			// If 'count' is within [0,total] then the progress bar displays as normal
-			// If not, then the progress bar is set to marquee mode
-			void Update(int count, int total, char const* text)
+			// Called by the worker thread to update the UI
+			bool Progress(float pc = -1.0f, char const* desc = nullptr, char const* title = nullptr)
 			{
-				// The window is initially created "hidden" (actually zero sized)
-				// On the first call to update, make the window the correct size and style
-				CRect rect; GetWindowRect(&rect);
-				if (rect.Width()*rect.Height() == 0)
-				{
-					SetWindowLongPtr(GWL_STYLE, WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_SYSMENU|WS_VISIBLE);
-					MoveWindow(rect.left, rect.top, DefW, DefH);
-					CenterWindow(GetParent());
-				}
-				if (text) m_desc.SetWindowTextA(text);
-				if (total == 0) return; // can use 'total' to set the initial progress text
-				LONG_PTR bar_style = m_bar.GetWindowLongPtr(GWL_STYLE);
-				if (count < 0 || count > total)
-				{
-					if ((bar_style & PBS_MARQUEE) == 0)
-					{
-						m_bar.SetWindowLongPtr(GWL_STYLE, bar_style|PBS_MARQUEE);
-						m_bar.SetMarquee(TRUE, 30);
-					}
-				}
-				else
-				{
-					if ((bar_style & PBS_MARQUEE) != 0)
-					{
-						m_bar.SetWindowLongPtr(GWL_STYLE, bar_style&~PBS_MARQUEE);
-						m_bar.SetMarquee(FALSE);
-					}
-					m_bar.SetRange32(0, total);
-					m_bar.SetPos(count);
-				}
+				Lock lock(m_mutex);
+				m_state = State(title, desc, pc);
+
+				if (IsWindow())
+					PostMessageA(WM_PROGRESS_UPDATE);
+
+				return !m_cancel;
 			}
 
-			enum { IDC_TEXT_DESC=1000, IDC_PROGRESS_BAR, WM_PROGRESS_UPDATE=WM_USER+1, DefW=480, DefH=180};
 			BEGIN_DIALOG_EX(0,0,0,0,0)
 				DIALOG_STYLE(WS_POPUP)
 				DIALOG_FONT(8, TEXT("MS Shell Dlg"))
 			END_DIALOG()
 			BEGIN_CONTROLS_MAP()
-				CONTROL_LTEXT("Processing...", IDC_TEXT_DESC, 0, 0, 0, 0, SS_LEFT, WS_EX_STATICEDGE)
+				CONTROL_LTEXT("Processing...", IDC_TEXT_DESC, 0, 0, 0, 0, SS_LEFT, 0)
 				CONTROL_CONTROL("", IDC_PROGRESS_BAR, PROGRESS_CLASS, 0, 0, 0, 0, 0, 0)
 				CONTROL_DEFPUSHBUTTON("Cancel", IDCANCEL, 0, 0, 0, 0, 0, 0)
 			END_CONTROLS_MAP()
@@ -156,65 +314,10 @@ namespace pr
 				MSG_WM_INITDIALOG(OnInitDialog)
 				MSG_WM_DESTROY(OnDestroy)
 				MSG_WM_SIZE(OnSize)
+				MSG_WM_CLOSE(OnDone)
 				MESSAGE_HANDLER_EX(WM_PROGRESS_UPDATE, OnProgressUpdate)
 				COMMAND_ID_HANDLER_EX(IDCANCEL ,OnCancel)
-				COMMAND_ID_HANDLER_EX(IDABORT  ,OnDone)
-				COMMAND_ID_HANDLER_EX(IDOK     ,OnDone)
 			END_MSG_MAP()
-
-		private:
-			// Handlers
-			BOOL OnInitDialog(CWindow, LPARAM)
-			{
-				SetWindowText(m_title);
-				m_desc.Attach(GetDlgItem(IDC_TEXT_DESC));
-				m_bar .Attach(GetDlgItem(IDC_PROGRESS_BAR));
-				m_btn .Attach(GetDlgItem(IDCANCEL));
-				m_task->OnEvent += this;
-				m_task->Run(true);
-				return TRUE;
-			}
-			void OnDestroy()
-			{
-				m_task->Join(); // Don't close the window until the task has exited
-				m_task->OnEvent -= this;
-			}
-			void OnSize(UINT nType, CSize)
-			{
-				const int btn_w = 80, btn_h = 24, prog_h = 18, bp = (btn_h-prog_h)/2, sp = 2, bdr = 5;
-				struct L {
-					static CRect& Clamp(CRect& rect)
-					{
-						if (rect.right  < rect.left) rect.right  = rect.left;
-						if (rect.bottom < rect.top ) rect.bottom = rect.top;
-						return rect;
-					}};
-				if (nType == SIZE_MINIMIZED) return;
-				CRect r, client; GetClientRect(&client); client.DeflateRect(bdr,bdr,bdr,bdr);
-				r = client; r.bottom -= (btn_h + sp);
-				m_desc.MoveWindow(L::Clamp(r));
-				r = client; r.bottom -= bp; r.top = r.bottom - prog_h; r.right -= btn_w + sp;
-				m_bar.MoveWindow(L::Clamp(r));
-				r = client; r.top = r.bottom - btn_h; r.left = r.right - btn_w;
-				m_btn.MoveWindow(L::Clamp(r));
-			}
-			LRESULT OnProgressUpdate(UINT uMsg, WPARAM, LPARAM)
-			{
-				if (uMsg != WM_PROGRESS_UPDATE) { SetMsgHandled(FALSE); return S_OK; }
-				pr::threads::CSLock lock(m_cs);
-				Update(m_state.m_count, m_state.m_total, m_state.m_desc);
-				return S_OK;
-			}
-			void OnCancel(UINT uNotifyCode, int, CWindow wndCtl)
-			{
-				if (OnEvent && !OnEvent->ProgressDlg_OnCancelled()) return;
-				m_task->Cancel();
-				OnDone(uNotifyCode, IDABORT, wndCtl);
-			}
-			void OnDone(UINT, int nID, CWindow)
-			{
-				EndDialog(nID == IDOK ? IDOK : IDCANCEL);
-			}
 		};
 	}
 }
@@ -228,6 +331,37 @@ namespace pr
   #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #else
   #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/common/fmt.h"
+
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_gui_progress_dlg)
+		{
+			using namespace pr::gui;
+			int arg = 42;
+
+			ProgressDlg dlg("Progressing...", "This is a progress dialog",
+				[](ProgressDlg* dlg, int a)
+				{
+					for (int i = 0; i != a; ++i)
+					{
+						if (!dlg->Progress((i + 1.0f) / (float)a, pr::FmtS("Processing index %d", i), nullptr))
+							return;
+						Sleep(50);
+					}
+				}, arg);
+
+			auto r = dlg.DoModal(0);
+			PR_CHECK(r == IDOK || r == IDCANCEL, true);
+		}
+	}
+}
 #endif
 
 #endif
