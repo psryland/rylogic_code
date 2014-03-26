@@ -2,8 +2,8 @@
  *	Platform Specification Implementation
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0. 
- *	(See accompanying file LICENSE_1_0.txt or copy at 
+ *	Distributed under the Boost Software License, Version 1.0.
+ *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/detail/platform_spec.hpp
@@ -24,9 +24,12 @@
 #include <map>
 #include <memory>
 
+#ifdef WIN32_LEAN_AND_MEAN
+#error "WIN32_LEAN_AND_MEAN must not be defined for this library"
+#endif
+
 namespace nana
 {
-
 namespace detail
 {
 	//struct messages
@@ -174,7 +177,6 @@ namespace detail
 		font_ptr_t	def_font_ptr_;
 		std::map<native_window_type, nana::paint::image> iconbase_;
 	};
-
 }//end namespace detail
 }//end namespace nana
 #endif

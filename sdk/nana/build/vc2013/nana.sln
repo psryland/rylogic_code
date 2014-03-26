@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2013 for Windows Desktop
-VisualStudioVersion = 12.0.21005.1
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nana", "nana.vcxproj", "{25B21068-491B-4A9F-B99F-6C27BF31BAAD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test.vcxproj", "{0A564964-3F75-4AB2-AFF8-39B5398EE852}"
+	ProjectSection(ProjectDependencies) = postProject
+		{25B21068-491B-4A9F-B99F-6C27BF31BAAD} = {25B21068-491B-4A9F-B99F-6C27BF31BAAD}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +20,10 @@ Global
 		{25B21068-491B-4A9F-B99F-6C27BF31BAAD}.Debug|Win32.Build.0 = Debug|Win32
 		{25B21068-491B-4A9F-B99F-6C27BF31BAAD}.Release|Win32.ActiveCfg = Release|Win32
 		{25B21068-491B-4A9F-B99F-6C27BF31BAAD}.Release|Win32.Build.0 = Release|Win32
+		{0A564964-3F75-4AB2-AFF8-39B5398EE852}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0A564964-3F75-4AB2-AFF8-39B5398EE852}.Debug|Win32.Build.0 = Debug|Win32
+		{0A564964-3F75-4AB2-AFF8-39B5398EE852}.Release|Win32.ActiveCfg = Release|Win32
+		{0A564964-3F75-4AB2-AFF8-39B5398EE852}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
