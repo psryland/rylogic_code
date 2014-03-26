@@ -442,21 +442,21 @@
 	<nana/gui/programming_interface.hpp>
 	<map>
 
-1375876051 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\drawer.cpp
+1391064514 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\drawer.cpp
 	<nana/config.hpp>
 	<nana/gui/detail/drawer.hpp>
 	<nana/gui/detail/dynamic_drawing_object.hpp>
 	<nana/gui/detail/effects_renderer.hpp>
 	<nana/detail/linux_X11/platform_spec.hpp>
 
-1369768375 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\event_manager.cpp
+1390988127 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\event_manager.cpp
 	<nana/config.hpp>
 	<nana/gui/detail/event_manager.hpp>
 	<map>
 	<algorithm>
 	<nana/threads/mutex.hpp>
 
-1385543309 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\native_window_interface.cpp
+1391065791 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\native_window_interface.cpp
 	<nana/config.hpp>
 	<nana/gui/detail/native_window_interface.hpp>
 	<nana/paint/detail/image_ico.hpp>
@@ -464,7 +464,7 @@
 	<map>
 	<nana/system/platform.hpp>
 
-1365612964 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\timer_trigger.cpp
+1390987080 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\timer_trigger.cpp
 	<nana/config.hpp>
 	<nana/gui/detail/timer_trigger.hpp>
 	<windows.h>
@@ -479,11 +479,11 @@
 	<windows.h>
 	<nana/system/timepiece.hpp>
 
-1365612964 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\window_manager.cpp
+1390987190 source:d:\privates\nana\release\nana.cpp03\source\gui\detail\window_manager.cpp
 	<nana/gui/detail/window_manager.hpp>
 	<stdexcept>
 
-1369057269 source:d:\privates\nana\release\nana.cpp03\source\gui\dragger.cpp
+1391064730 source:d:\privates\nana\release\nana.cpp03\source\gui\dragger.cpp
 	<nana/gui/dragger.hpp>
 
 1365612961 source:d:\privates\nana\release\nana.cpp03\source\gui\drawing.cpp
@@ -501,7 +501,7 @@
 1382937078 source:d:\privates\nana\release\nana.cpp03\source\gui\layout_utility.cpp
 	<nana/gui/layout_utility.hpp>
 
-1385891251 source:d:\privates\nana\release\nana.cpp03\source\gui\msgbox.cpp
+1387601516 source:d:\privates\nana\release\nana.cpp03\source\gui\msgbox.cpp
 	<nana/gui/msgbox.hpp>
 	<nana/gui/programming_interface.hpp>
 	<windows.h>
@@ -512,18 +512,20 @@
 	<nana/paint/pixel_buffer.hpp>
 	<nana/gui/layout.hpp>
 
-1384626509 source:d:\privates\nana\release\nana.cpp03\source\gui\programming_interface.cpp
+1391070552 source:d:\privates\nana\release\nana.cpp03\source\gui\programming_interface.cpp
 	<nana/gui/programming_interface.hpp>
 	<nana/system/platform.hpp>
 
 1365612966 source:d:\privates\nana\release\nana.cpp03\source\gui\timer.cpp
 	<nana/gui/timer.hpp>
 
-1365612966 source:d:\privates\nana\release\nana.cpp03\source\gui\tooltip.cpp
+1391326991 source:d:\privates\nana\release\nana.cpp03\source\gui\tooltip.cpp
 	<nana/gui/tooltip.hpp>
+	<nana/gui/widgets/label.hpp>
 	<nana/gui/timer.hpp>
+	<nana/memory.hpp>
 
-1373992852 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\button.cpp
+1388570411 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\button.cpp
 	<nana/gui/widgets/button.hpp>
 	<nana/paint/text_renderer.hpp>
 
@@ -558,7 +560,7 @@
 	<nana/system/platform.hpp>
 	<sstream>
 
-1369330093 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\float_listbox.cpp
+1391064666 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\float_listbox.cpp
 	<nana/gui/widgets/float_listbox.hpp>
 	<nana/gui/widgets/scroll.hpp>
 
@@ -568,17 +570,18 @@
 1365612965 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\frame.cpp
 	<nana/gui/widgets/frame.hpp>
 
-1386165461 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\label.cpp
+1391327361 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\label.cpp
 	<nana/gui/widgets/label.hpp>
 	<nana/system/platform.hpp>
 	<nana/unicode_bidi.hpp>
 	<nana/paint/text_renderer.hpp>
 	<nana/gui/widgets/skeletons/text_token_stream.hpp>
+	<nana/system/platform.hpp>
 	<stdexcept>
 	<sstream>
 	<numeric>
 
-1385374504 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\listbox.cpp
+1391538499 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\listbox.cpp
 	<nana/gui/widgets/listbox.hpp>
 	<nana/gui/widgets/scroll.hpp>
 	<nana/gui/element.hpp>
@@ -597,7 +600,7 @@
 	<nana/paint/gadget.hpp>
 	<vector>
 
-1385374518 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\menu.cpp
+1391327485 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\menu.cpp
 	<nana/gui/widgets/menu.hpp>
 	<nana/system/platform.hpp>
 	<nana/paint/gadget.hpp>
@@ -605,7 +608,7 @@
 	<nana/gui/wvl.hpp>
 	<nana/paint/text_renderer.hpp>
 
-1372859015 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\menubar.cpp
+1390756077 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\menubar.cpp
 	<nana/gui/widgets/menubar.hpp>
 	<stdexcept>
 
@@ -630,7 +633,7 @@
 1382974717 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\slider.cpp
 	<nana/gui/widgets/slider.hpp>
 
-1382975296 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\tabbar.cpp
+1390665877 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\tabbar.cpp
 	<nana/gui/widgets/tabbar.hpp>
 	<nana/gui/widgets/menu.hpp>
 	<nana/paint/text_renderer.hpp>
@@ -648,17 +651,19 @@
 	<stdexcept>
 	<nana/gui/tooltip.hpp>
 
-1365612965 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\tray.cpp
+1390988148 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\tray.cpp
 	<nana/gui/widgets/tray.hpp>
 
-1385368087 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\treebox.cpp
+1387009517 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\treebox.cpp
 	<nana/gui/widgets/treebox.hpp>
+	<nana/gui/widgets/scroll.hpp>
 	<nana/gui/element.hpp>
 	<nana/system/platform.hpp>
 	<stdexcept>
 
-1365612965 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\widget.cpp
+1391326864 source:d:\privates\nana\release\nana.cpp03\source\gui\widgets\widget.cpp
 	<nana/gui/widgets/widget.hpp>
+	<nana/gui/tooltip.hpp>
 
 1365612966 source:d:\privates\nana\release\nana.cpp03\source\gui\wvl.cpp
 	<nana/gui/wvl.hpp>
@@ -686,7 +691,7 @@
 	<nana/paint/graphics.hpp>
 	<nana/paint/gadget.hpp>
 
-1383147000 source:d:\privates\nana\release\nana.cpp03\source\paint\graphics.cpp
+1390741359 source:d:\privates\nana\release\nana.cpp03\source\paint\graphics.cpp
 	<nana/config.hpp>
 	<nana/paint/graphics.hpp>
 	<nana/paint/detail/native_paint_interface.hpp>
@@ -713,7 +718,7 @@
 1376323449 source:d:\privates\nana\release\nana.cpp03\source\paint\image_process_selector.cpp
 	<nana/paint/image_process_selector.hpp>
 
-1383378665 source:d:\privates\nana\release\nana.cpp03\source\paint\pixel_buffer.cpp
+1389119734 source:d:\privates\nana\release\nana.cpp03\source\paint\pixel_buffer.cpp
 	<nana/config.hpp>
 	<nana/paint/pixel_buffer.hpp>
 	<nana/gui/layout_utility.hpp>
@@ -734,7 +739,7 @@
 	<windows.h>
 	<nana/config.hpp>
 
-1365612966 source:d:\privates\nana\release\nana.cpp03\source\system\platform.cpp
+1387009324 source:d:\privates\nana\release\nana.cpp03\source\system\platform.cpp
 	<nana/deploy.hpp>
 	<windows.h>
 	<unistd.h>
@@ -834,13 +839,13 @@
 	"win32/platform_spec.cpp"
 	"linux_X11/platform_spec.cpp"
 
-1384960973 d:\privates\nana\release\nana.cpp03\source\detail\win32\platform_spec.cpp
+1391785726 d:\privates\nana\release\nana.cpp03\source\detail\win32\platform_spec.cpp
 	<nana/config.hpp>
 	<nana/gui/detail/eventinfo.hpp>
 	<shellapi.h>
 	<stdexcept>
 
-1384961355 d:\privates\nana\release\nana.cpp03\source\detail\linux_x11\platform_spec.cpp
+1391064259 d:\privates\nana\release\nana.cpp03\source\detail\linux_x11\platform_spec.cpp
 	<nana/config.hpp>
 	<nana/detail/linux_X11/msg_dispatcher.hpp>
 	<X11/Xlocale.h>
@@ -858,7 +863,7 @@
 	"win32/bedrock.cpp"
 	"linux_X11/bedrock.cpp"
 
-1385052808 d:\privates\nana\release\nana.cpp03\source\gui\detail\win32\bedrock.cpp
+1390986564 d:\privates\nana\release\nana.cpp03\source\gui\detail\win32\bedrock.cpp
 	<nana/config.hpp>
 	<nana/gui/detail/eventinfo.hpp>
 	<nana/system/platform.hpp>
@@ -866,7 +871,7 @@
 	<windows.h>
 	<nana/system/timepiece.hpp>
 
-1383491246 d:\privates\nana\release\nana.cpp03\source\gui\detail\linux_x11\bedrock.cpp
+1391065732 d:\privates\nana\release\nana.cpp03\source\gui\detail\linux_x11\bedrock.cpp
 	<nana/config.hpp>
 	<nana/gui/detail/eventinfo.hpp>
 	<nana/system/platform.hpp>

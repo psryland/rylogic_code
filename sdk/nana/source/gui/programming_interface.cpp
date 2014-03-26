@@ -559,6 +559,11 @@ namespace API
 		}
 	}
 
+	void bring_to_top(window wd)
+	{
+		restrict::interface_type::bring_to_top(root(wd));
+	}
+
 	bool set_window_z_order(window wd, window wd_after, z_order_action::t action_if_no_wd_after)
 	{
 		if(wd)
@@ -617,8 +622,7 @@ namespace API
 		if(false == restrict::window_manager.available(iwd))
 			return false;
 		
-		r = iwd->pos_owner;
-		r = iwd->dimension;
+		r = rectangle(iwd->pos_owner, iwd->dimension);
 		return true;
 	}
 
@@ -779,16 +783,6 @@ namespace API
 		restrict::interface_type::notify_icon(wd, icon);
 	}
 
-	bool tray_make_event(native_window_type wd, unsigned identifier, const nana::functor<void(const eventinfo&)> & f)
-	{
-		return restrict::window_manager.tray_make_event(wd, identifier, f);
-	}
-
-	void tray_umake_event(native_window_type wd)
-	{
-		restrict::window_manager.tray_umake_event(wd);
-	}
-
 	bool is_focus_window(window wd)
 	{
 		if(wd)
@@ -799,6 +793,17 @@ namespace API
 				return (iwd->root_widget->other.attribute.root->focus == iwd);
 		}
 		return false;
+	}
+
+	void activate_window(window wd)
+	{
+		restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		internal_scope_guard isg;
+		if(restrict::window_manager.available(iwd))
+		{
+			if(iwd->flags.take_active)
+				restrict::interface_type::activate_window(iwd->root);
+		}
 	}
 
 	window focus_window()

@@ -171,7 +171,7 @@ namespace detail
 		::GetVersionEx(&osvi);
 		if (osvi.dwMajorVersion < 6)
 			metrics.cbSize -= sizeof(metrics.iPaddedBorderWidth);
-#endif 
+#endif
 		::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof metrics, &metrics, 0);
 		def_font_ptr_ = make_native_font(metrics.lfMessageFont.lfFaceName, font_size_to_height(9), 400, false, false, false);
 	}
@@ -245,13 +245,15 @@ namespace detail
 
 	//event_register
 	//@brief: some event is needed to register for system.
-	void platform_spec::event_register_filter(nana::gui::native_window_type wd, unsigned eventid)
+	void platform_spec::event_register_filter(native_window_type wd, event_code::t evtid)
 	{
-		switch(eventid)
+		switch(evtid)
 		{
-		case nana::gui::detail::event_tag::mouse_drop:
+		case event_code::mouse_drop:
 			::DragAcceptFiles(reinterpret_cast<HWND>(wd), true);
 			break;
+        default:
+            break;
 		}
 	}
 

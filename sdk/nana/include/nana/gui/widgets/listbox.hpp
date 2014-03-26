@@ -259,7 +259,8 @@ namespace nana{ namespace gui{
 				item_proxy cbegin() const;
 				item_proxy cend() const;
 
-				item_proxy at(std::size_t pos) const; 
+				item_proxy at(std::size_t pos) const;
+				item_proxy back() const;
 
 				std::size_t size() const;
 

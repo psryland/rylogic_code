@@ -152,88 +152,55 @@ namespace dynamic_drawing
 		bool	vertical_;
 	};
 
+	template<typename ImageGraph>
 	class bitblt
 		:public object
 	{
 	public:
-		bitblt(int x, int y, unsigned width, unsigned height, const nana::paint::graphics& source, int srcx, int srcy)
-			: r_dst_(x, y, width, height), p_src_(srcx, srcy), graph_(source)
-		{
-		}
-
-		void draw(nana::paint::graphics& graph) const
-		{
-			graph.bitblt(r_dst_, graph_, p_src_);
-		}
-	private:
-		nana::rectangle r_dst_;
-		nana::point p_src_;
-		nana::paint::graphics graph_;
-	};
-
-	class bitblt_image
-		: public object
-	{
-	public:
-		bitblt_image(int x, int y, unsigned width, unsigned height, const nana::paint::image& img, int srcx, int srcy)
-			:r_(srcx, srcy, width, height), p_dst_(x, y), img_(img)
+		bitblt(int x, int y, unsigned width, unsigned height, const ImageGraph& source, int srcx, int srcy)
+			:r_dst_(x, y, width, height), p_src_(srcx, srcy), graph_(source)
 		{}
 
 		void draw(nana::paint::graphics& graph) const
 		{
-			img_.paste(r_, graph, p_dst_);
+			_m_bitblt(graph_, graph);
 		}
 	private:
-		nana::rectangle r_;
-		nana::point p_dst_;
-		nana::paint::image img_;
+		void _m_bitblt(const paint::graphics& from, paint::graphics& to) const
+		{
+			to.bitblt(r_dst_, from, p_src_);
+		}
+
+		void _m_bitblt(const paint::image& from, paint::graphics& to) const
+		{
+			from.paste(nana::rectangle(p_src_.x, p_src_.y, r_dst_.width, r_dst_.height), to, nana::point(r_dst_.x, r_dst_.y));
+		}
+	private:
+		nana::rectangle r_dst_;
+		nana::point p_src_;
+		ImageGraph graph_;
 	};
 
+	template<typename ImageGraph>
 	class stretch
 		: public object
 	{
-		enum kind_t {kind_graph, kind_image};
 	public:
-		enum { fixed_buffer_size = sizeof(nana::paint::graphics) < sizeof(nana::paint::image) ? sizeof(nana::paint::image) : sizeof(nana::paint::graphics)};
-
-		stretch(const nana::rectangle& r_dst, const nana::paint::graphics& graph, const nana::rectangle& r_src)
-			: r_dst_(r_dst), r_src_(r_src), kind_(kind_graph)
+		stretch(const nana::rectangle& r_dst, const ImageGraph& graph, const nana::rectangle& r_src)
+			:	r_dst_(r_dst),
+				r_src_(r_src),
+				graph_(graph)
 		{
-			new (buffer) nana::paint::graphics(graph);
-		}
-
-		stretch(const nana::rectangle& r_dst, const nana::paint::image& img, const nana::rectangle& r_src)
-			: r_dst_(r_dst), r_src_(r_src), kind_(kind_image)
-		{
-			new (buffer) nana::paint::image(img);
-		}
-
-		~stretch()
-		{
-			switch(kind_)
-			{
-			case kind_graph:
-				reinterpret_cast<nana::paint::graphics*>(buffer)->~graphics();
-				break;
-			case kind_image:
-				reinterpret_cast<nana::paint::image*>(buffer)->~image();
-				break;
-			}
 		}
 
 		void draw(nana::paint::graphics & graph) const
 		{
-			if(kind_ == kind_graph)
-				reinterpret_cast<const nana::paint::graphics*>(buffer)->stretch(r_src_, graph, r_dst_);
-			else
-				reinterpret_cast<const nana::paint::image*>(buffer)->stretch(r_src_, graph, r_dst_);
+			graph_.stretch(r_src_, graph, r_dst_);
 		}
 	private:
 		nana::rectangle r_dst_;
-		nana::rectangle r_src_;
-		kind_t kind_;
-
-		char buffer[fixed_buffer_size];
+		nana::rectangle	r_src_;
+		ImageGraph graph_;
 	};
 
 }//end namespace dynamic_drawing

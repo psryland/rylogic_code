@@ -805,7 +805,7 @@ namespace nana{ namespace gui{
 
 					nana::rectangle r = toolbox_.area(toolbox_.ButtonList, basis_.graph->height());
 					r.x += _m_toolbox_pos();
-					menulister_.popup(basis_.wd, r.x, (r.y + static_cast<int>(r.height)), false);
+					menulister_.popup(basis_.wd, r.x, (r.y + static_cast<int>(r.height)));
 				}
 
 				void _m_click_menulister(nana::gui::menu::item_proxy& ip)

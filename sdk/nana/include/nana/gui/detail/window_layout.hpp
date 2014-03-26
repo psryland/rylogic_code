@@ -116,8 +116,7 @@ namespace detail
 		{
 			if(false == wd->visible)	return false;
 
-			visual = wd->pos_root;
-			visual = wd->dimension;
+			visual = rectangle(wd->pos_root, wd->dimension);
 
 			if(wd->root_widget != wd)
 			{

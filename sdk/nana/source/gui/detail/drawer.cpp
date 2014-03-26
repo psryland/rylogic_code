@@ -427,66 +427,68 @@ namespace gui
 			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::shadow_rectangle(x, y, width, height, beg, end, vertical));
 		}
 
-		void drawer::bitblt(int x, int y, unsigned width, unsigned height, const nana::paint::graphics& graph, int srcx, int srcy)
+		void drawer::bitblt(int x, int y, unsigned width, unsigned height, const paint::graphics& graph, int srcx, int srcy)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::bitblt(x, y, width, height, graph, srcx, srcy));
+			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::bitblt<paint::graphics>(x, y, width, height, graph, srcx, srcy));
 		}
 
-		void drawer::bitblt(int x, int y, unsigned width, unsigned height, const nana::paint::image& img, int srcx, int srcy)
+		void drawer::bitblt(int x, int y, unsigned width, unsigned height, const paint::image& img, int srcx, int srcy)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::bitblt_image(x, y, width, height, img, srcx, srcy));
+			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::bitblt<paint::image>(x, y, width, height, img, srcx, srcy));
 		}
 
-		void drawer::stretch(const nana::rectangle & r_dst, const nana::paint::graphics& graph, const nana::rectangle& r_src)
+		void drawer::stretch(const nana::rectangle & r_dst, const paint::graphics& graph, const nana::rectangle& r_src)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::stretch(r_dst, graph, r_src));
+			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::stretch<paint::graphics>(r_dst, graph, r_src));
 		}
 
-		void drawer::stretch(const nana::rectangle & r_dst, const nana::paint::image& img, const nana::rectangle& r_src)
+		void drawer::stretch(const nana::rectangle & r_dst, const paint::image& img, const nana::rectangle& r_src)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::stretch(r_dst, img, r_src));
+			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::stretch<paint::image>(r_dst, img, r_src));
 		}
 
-		event_handle drawer::make_event(int evtid, window wd)
+		event_handle drawer::make_event(event_code::t evtid, window wd)
 		{
 			bedrock_type & bedrock = bedrock_type::instance();
 			void (drawer::*answer)(const eventinfo&) = 0;
 			switch(evtid)
 			{
-			case event_tag::click:
+			case event_code::click:
 				answer = &drawer::click;	break;
-			case event_tag::dbl_click:
+			case event_code::dbl_click:
 				answer = &drawer::dbl_click;	break;
-			case event_tag::mouse_enter:
+			case event_code::mouse_enter:
 				answer = &drawer::mouse_enter;	break;
-			case event_tag::mouse_leave:
+			case event_code::mouse_leave:
 				answer = &drawer::mouse_leave;	break;
-			case event_tag::mouse_down:
+			case event_code::mouse_down:
 				answer = &drawer::mouse_down;	break;
-			case event_tag::mouse_up:
+			case event_code::mouse_up:
 				answer = &drawer::mouse_up;	break;
-			case event_tag::mouse_move:
+			case event_code::mouse_move:
 				answer = &drawer::mouse_move;	break;
-			case event_tag::mouse_wheel:
+			case event_code::mouse_wheel:
 				answer = &drawer::mouse_wheel;	break;
-			case event_tag::mouse_drop:
+			case event_code::mouse_drop:
 				answer = &drawer::mouse_drop;	break;
-			case event_tag::sizing:
+			case event_code::sizing:
 				answer = &drawer::resizing;	break;
-			case event_tag::size:
+			case event_code::size:
 				answer = &drawer::resize;	break;
-			case event_tag::move:
+			case event_code::move:
 				answer = &drawer::move;		break;
-			case event_tag::focus:
+			case event_code::focus:
 				answer = &drawer::focus;	break;
-			case event_tag::key_down:
+			case event_code::key_down:
 				answer = &drawer::key_down;	break;
-			case event_tag::key_char:
+			case event_code::key_char:
 				answer = &drawer::key_char;	break;
-			case event_tag::key_up:
+			case event_code::key_up:
 				answer = &drawer::key_up;	break;
-			case event_tag::shortkey:
+			case event_code::shortkey:
 				answer = &drawer::shortkey;	break;
+			default:
+				break;
 			}
 
 			if(answer && (0 == bedrock.evt_manager.the_number_of_handles(wd, evtid, true)))

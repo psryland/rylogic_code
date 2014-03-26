@@ -855,13 +855,14 @@ namespace nana{ namespace gui{
 						{
 							if(good(spos.first))
 							{
-								if(size_item(spos.first) > spos.second)
+								if(size_item(spos.first) > spos.second + 1)
 								{
 									++spos.second;
 								}
-								else if(size_categ() > spos.first)
+								else
 								{
-									++spos.first;
+									if(size_categ() > spos.first + 1)
+										++spos.first;
 									spos.second = 0;
 								}
 							}
@@ -901,7 +902,7 @@ namespace nana{ namespace gui{
 								at(spos.first, spos.second).flags.selected = true;
 								ext_event.selected(item_proxy(ess_, spos.first, absolute(spos.first, spos.second)), true);
 							}
-							else	break;
+							break;
 						}
 						else	break;
 					}
@@ -1355,6 +1356,8 @@ namespace nana{ namespace gui{
 
 				void adjust_scroll_life()
 				{
+					internal_scope_guard lock;
+
 					const nana::size sz = graph->size();
 					unsigned header_s = header.pixels();
 					window wd = lister.wd_ptr()->handle();
@@ -1827,6 +1830,8 @@ namespace nana{ namespace gui{
 				{
 					typedef es_lister::container::value_type::container container;
 
+					internal_scope_guard lock;
+
 					size_type n = essence_->number_of_lister_items(true);
 					if(0 == n)return;
 
@@ -1996,16 +2001,15 @@ namespace nana{ namespace gui{
 					if((item.fgcolor & 0xFF000000) == 0)
 						txtcolor = item.fgcolor;
 
+					nana::paint::graphics * const graph = essence_->graph;
 					if(state == essence_t::state::highlighted)
-					{
-						bkcolor = essence_->graph->mix(bkcolor, 0x99DEFD, 0.8);
-					}
+						bkcolor = graph->mix(bkcolor, 0x99DEFD, 0.8);
 
 					unsigned show_w = width - essence_->scroll.offset_x;
 					if(show_w >= r.width) show_w = r.width;
 
 					//draw the background
-					essence_->graph->rectangle(r.x, y, show_w, essence_->item_size, bkcolor, true);
+					graph->rectangle(r.x, y, show_w, essence_->item_size, bkcolor, true);
 
 					int img_off = (essence_->if_image ? (essence_->item_size - 16) / 2 : 0);
 
@@ -2013,7 +2017,7 @@ namespace nana{ namespace gui{
 					bool first = true;
 					for(std::vector<size_type>::const_iterator i = seqs.begin(); i != seqs.end(); ++i)
 					{
-						size_type index = *i;
+						const size_type index = *i;
 
 						const es_header::item_t & header = essence_->header.get_item(index);
 
@@ -2046,25 +2050,28 @@ namespace nana{ namespace gui{
 								crook_renderer_.check(item.flags.checked ? state::checked : state::unchecked);
 								crook_renderer_.draw(*essence_->graph, bkcolor, txtcolor, chkarea, estate);
 							}
-							nana::size ts = essence_->graph->text_extent_size(item.texts[index]);
+							nana::size ts = graph->text_extent_size(item.texts[index]);
 
 							if((0 == index) && essence_->if_image)
 							{
 								ext_w += 18;
 								if(item.img)
-									item.img.stretch(nana::rectangle(), *essence_->graph, nana::rectangle(item_xpos + 5, y + img_off, 16, 16));
+									item.img.stretch(nana::rectangle(), *graph, nana::rectangle(item_xpos + 5, y + img_off, 16, 16));
 							}
-							essence_->graph->string(item_xpos + 5 + ext_w, y + txtoff, txtcolor, item.texts[index]);
+							graph->string(item_xpos + 5 + ext_w, y + txtoff, txtcolor, item.texts[index]);
 
 							if(ts.width + 5 + ext_w > header.pixels)
-							{//The text is painted over the next subitem
+							{
+								//The text is painted over the next subitem
 								int xpos = item_xpos + header.pixels - essence_->suspension_width;
-								essence_->graph->rectangle(xpos, y + 2, ts.width + 5 + ext_w - header.pixels + essence_->suspension_width, essence_->item_size - 4, bkcolor, true);
-								essence_->graph->string(xpos, y + 2, txtcolor, STR("..."));
+								graph->rectangle(xpos, y + 2, essence_->suspension_width, essence_->item_size - 4, bkcolor, true);
+								graph->string(xpos, y + 2, txtcolor, STR("..."));
+
+								//Erase the part that over the next subitem.
+								graph->rectangle(item_xpos + header.pixels, y + 2, ts.width + 5 + ext_w - header.pixels, essence_->item_size - 4, item.bkcolor, true);
 							}
 						}
-
-						essence_->graph->line(item_xpos - 1, y, item_xpos - 1, y + essence_->item_size - 1, 0xEBF4F9);
+						graph->line(item_xpos - 1, y, item_xpos - 1, y + essence_->item_size - 1, 0xEBF4F9);
 
 						item_xpos += header.pixels;
 						first = false;
@@ -2074,6 +2081,7 @@ namespace nana{ namespace gui{
 					if(item.flags.selected)
 						_m_draw_border(r.x, y, show_w);
 				}
+
 				void _m_draw_border(int x, int y, unsigned width) const
 				{
 					//Draw selecting inner rectangle
@@ -2093,7 +2101,7 @@ namespace nana{ namespace gui{
 
 			//class trigger: public drawer_trigger
 				trigger::trigger()
-					: essence_(new essence_t),
+					:	essence_(new essence_t),
 						drawer_header_(new drawer_header_impl(essence_)),
 						drawer_lister_(new drawer_lister_impl(essence_))
 				{}
@@ -2133,7 +2141,7 @@ namespace nana{ namespace gui{
 				{
 					nana::paint::graphics * graph = essence_->graph;
 					//Draw Border
-					graph->rectangle(0, 0, graph->width(), graph->height(), 0x9CB6C5, false);
+					graph->rectangle(0x9CB6C5, false);
 					graph->line(1, 1, 1, graph->height() - 2, 0xFFFFFF);
 					graph->line(graph->width() - 2, 1, graph->width() - 2, graph->height() - 2, 0xFFFFFF);
 
@@ -2638,6 +2646,7 @@ namespace nana{ namespace gui{
 
 				void cat_proxy::push_back(const nana::string& s)
 				{
+					internal_scope_guard lock;
 					ess_->lister.push_back(pos_, s);
 
 					widget* wd = ess_->lister.wd_ptr();
@@ -2679,6 +2688,15 @@ namespace nana{ namespace gui{
 					if(pos >= size())
 						throw std::out_of_range("listbox.cat_proxy.at() invalid position");
 					return item_proxy(ess_, pos_, pos);
+				}
+
+				item_proxy cat_proxy::back() const
+				{
+					es_lister::size_type n = ess_->lister.size_item(pos_);
+					if (0 == n)
+						throw std::runtime_error("listbox.back() no element in the container.");
+					
+					return item_proxy(ess_, pos_, n - 1);
 				}
 
 				std::size_t cat_proxy::size() const
@@ -2801,6 +2819,8 @@ namespace nana{ namespace gui{
 
 		listbox::cat_proxy listbox::append(const nana::string& text)
 		{
+			internal_scope_guard lock;
+
 			essence_t & ess = get_drawer_trigger().essence();
 			ess.lister.create(text);
 			ess.update();
@@ -2822,6 +2842,7 @@ namespace nana{ namespace gui{
 
 		void listbox::insert(size_type cat, size_type index, const nana::string& text)
 		{
+			internal_scope_guard lock;
 			essence_t & ess = get_drawer_trigger().essence();
 			if(ess.lister.insert(cat, index, text))
 			{

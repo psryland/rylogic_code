@@ -103,12 +103,12 @@ namespace detail
 
 
 	//class tray_event_manager
-		void tray_event_manager::fire(native_window_type wd, unsigned identifier, const eventinfo& ei)
+		void tray_event_manager::fire(native_window_type wd, event_code::t code, const eventinfo& ei)
 		{
 			maptable_type::const_iterator i = maptable_.find(wd);
 			if(i == maptable_.end()) return;
 			
-			event_maptable_type::const_iterator u = i->second.find(identifier);
+			event_maptable_type::const_iterator u = i->second.find(code);
 			if(u == i->second.end()) return;
 			
 			const fvec_t & fvec = u->second;
@@ -116,11 +116,11 @@ namespace detail
 				(*j)(ei);
 		}
 
-		bool tray_event_manager::make(native_window_type wd, unsigned identifier, const nana::functor<void(const eventinfo&)> & f)
+		bool tray_event_manager::make(native_window_type wd, event_code::t code, const nana::functor<void(const eventinfo&)> & f)
 		{
 			if(wd)
 			{
-				maptable_[wd][identifier].push_back(f);
+				maptable_[wd][code].push_back(f);
 				return true;
 			}
 			return false;

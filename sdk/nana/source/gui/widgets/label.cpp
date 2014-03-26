@@ -830,12 +830,13 @@ namespace gui
 			create(wd, r, visible);
 		}
 
-		void label::transparent(bool enabled)
+		label& label::transparent(bool enabled)
 		{
 			if(enabled)
 				API::effects_bground(*this, effects::bground_transparent(0), 0.0);
 			else
 				API::effects_bground_remove(*this);
+			return *this;
 		}
 
 		bool label::transparent() const
@@ -843,7 +844,7 @@ namespace gui
 			return (bground_mode::basic == API::effects_bground_mode(*this));
 		}
 
-		void label::format(bool f)
+		label& label::format(bool f)
 		{
 			drawerbase::label::trigger::impl_t * impl = get_drawer_trigger().impl();
 
@@ -853,11 +854,13 @@ namespace gui
 				impl->renderer.parse(API::dev::window_caption(wd));
 				API::refresh_window(wd);
 			}
+			return *this;
 		}
 
-		void label::add_format_listener(const nana::functor<void(command::t, const nana::string&)> & f)
+		label& label::add_format_listener(const nana::functor<void(command::t, const nana::string&)> & f)
 		{
 			get_drawer_trigger().impl()->add_listener(f);
+			return *this;
 		}
 
 		nana::size label::measure(unsigned limited) const
@@ -877,10 +880,10 @@ namespace gui
 				graph_ptr->make(10, 10);
 			}
 
-			return impl->renderer.measure(*impl->graph, limited, impl->text_align, impl->text_align_v);
+			return impl->renderer.measure(*graph_ptr, limited, impl->text_align, impl->text_align_v);
 		}
 
-		void label::text_align(align::t th, align_v::t tv)
+		label& label::text_align(align::t th, align_v::t tv)
 		{
 			internal_scope_guard isg;
 			drawerbase::label::trigger::impl_t* impl = get_drawer_trigger().impl();
@@ -900,6 +903,8 @@ namespace gui
 
 			if(to_update)
 				API::refresh_window(*this);
+
+			return *this;
 		}
 
 		void label::_m_caption(const nana::string& s)

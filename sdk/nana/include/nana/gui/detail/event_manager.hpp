@@ -26,7 +26,7 @@ namespace detail
 {
 
 	//abstract_handler
-	//@brief: abstract_handler provides a data structure that used in event manager, and it 
+	//abstract_handler provides a data structure that used in event manager, and it 
 	//	provides an interface exec() to fire an event callback. Every event callback
 	//	has to inherit from this abstract and implement the exec().
 	//		This class is implemented inside, hence it's invisible for users.
@@ -35,14 +35,14 @@ namespace detail
 		virtual ~abstract_handler();
 		virtual void exec(const eventinfo&) = 0;
 
-		unsigned						event_identifier;	//What event it is
+		event_code::t					event_identifier;	//What event it is
 		nana::gui::window				window;				//Which window creates this event
 		nana::gui::window				listener;			//Which window listens this event
 		std::vector<abstract_handler*>*	container;			//refer to the container which contains this object's address
 	};
 
 	//struct handler
-	//@brief: an object of this class keeps a functor with a argument (const eventinfo&)
+	//An object of this class keeps a functor with a argument (const eventinfo&)
 	template<typename Functor, bool HasArg>
 	struct handler : public abstract_handler
 	{
@@ -59,7 +59,7 @@ namespace detail
 	};
 
 	//struct handler
-	//@brief: an object of this class keeps a functor without any argument
+	//An object of this class keeps a functor without any argument
 	template<typename Functor>
 	struct handler<Functor, false> : public abstract_handler
 	{
@@ -87,23 +87,23 @@ namespace detail
 		typedef nana::gui::detail::handle_manager<abstract_handler*, nana::null_type> handle_manager_type;
 
 		template<typename Function>
-		event_handle make_for_drawer(unsigned evtid, window wd, unsigned category, Function function)
+		event_handle make_for_drawer(event_code::t evtid, window wd, unsigned category, Function function)
 		{
-			return (event_tag::accept(evtid, category) ?
+			return (check::accept(evtid, category) ?
 				_m_make(evtid, wd, handler_factory<Function>::build(function), true, 0) : 0);
 		}
 
 		template<typename Function>
-		event_handle make(unsigned evtid, window wd, unsigned category, Function function)
+		event_handle make(event_code::t evtid, window wd, unsigned category, Function function)
 		{
-			return  (event_tag::accept(evtid, category) ?
+			return  (check::accept(evtid, category) ?
 				_m_make(evtid, wd, handler_factory<Function>::build(function), false, 0) : 0);
 		}
 
 		template<typename Function>
-		event_handle bind(unsigned evtid, window trig_wnd, window listener, unsigned category, Function function)
+		event_handle bind(event_code::t evtid, window trig_wnd, window listener, unsigned category, Function function)
 		{
-			return (event_tag::accept(evtid, category) ?
+			return (check::accept(evtid, category) ?
 				_m_make(evtid, trig_wnd, handler_factory<Function>::build(function), false, listener) : 0);
 		}
 
@@ -111,13 +111,13 @@ namespace detail
 		void umake(event_handle);
 		//delete user event and drawer event handlers of a specified window.
 		void umake(window, bool only_for_drawer);
-		bool answer(unsigned eventid, window, eventinfo&, event_kind::t);
+		bool answer(event_code::t, window, eventinfo&, event_kind::t);
 		void remove_trash_handle(unsigned tid);
 
 		void write_off_bind(event_handle);
 
 		std::size_t size() const;
-		std::size_t the_number_of_handles(window, unsigned event_id, bool is_for_drawer);
+		std::size_t the_number_of_handles(window, event_code::t, bool is_for_drawer);
 	private:
 		template<typename Functor>
 		class handler_factory
@@ -181,19 +181,17 @@ namespace detail
 			}
 		};
 	private:
-		/*
-		 * _m_make
-		 * @brief: _m_make insert a handler into callback storage through an given event_id and window
-		 * @eventid, the event type identifier
-		 * @wnd, the triggering window
-		 * @abs_handler, the handle of event object handler
-		 * @drawer_handler, whether the event is installing for drawer or user callback
-		 */
-		event_handle _m_make(unsigned event_id, window wnd, abstract_handler* abs_handler, bool drawer_handler, window listener = 0);
+		// _m_make
+		// @brief: _m_make insert a handler into callback storage through an given event_id and window
+		// @event_code, the event type identifier
+		// @window, the triggering window
+		// @abs_handler, the handle of event object handler
+		// @drawer_handler, whether the event is installing for drawer or user callback
+		event_handle _m_make(event_code::t, window, abstract_handler*, bool drawer_handler, window listener = 0);
 	private:
+		mutable nana::threads::recursive_mutex mutex_;
 		handle_manager_type handle_manager_;
 		std::map<window, std::vector<event_handle> >	bind_cont_;
-		static nana::threads::recursive_mutex mutex_;
 	};
 }//end namespace detail
 

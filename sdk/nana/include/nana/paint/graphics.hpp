@@ -124,7 +124,7 @@ namespace nana
 			void paste(native_window_type dst, const nana::rectangle&, int sx, int sy) const;
 			void paste(native_window_type dst, int dx, int dy, unsigned width, unsigned height, int sx, int sy) const;
 			void paste(drawable_type dst, int x, int y) const;
-			void paste(const nana::rectangle& r_src, graphics& dst, int x, int y);
+			void paste(const nana::rectangle& r_src, graphics& dst, int x, int y) const;
 			void rgb_to_wb();
 
 			void stretch(const nana::rectangle& src_r, graphics& dst, const nana::rectangle& r) const;

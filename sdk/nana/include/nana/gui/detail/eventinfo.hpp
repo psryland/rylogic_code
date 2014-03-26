@@ -21,6 +21,38 @@ namespace nana
 {
 namespace gui
 {
+	struct event_code
+	{
+		enum t
+		{
+			click,
+			dbl_click,
+			mouse_enter,
+			mouse_move,
+			mouse_leave,
+			mouse_down,
+			mouse_up,
+			mouse_wheel,
+			mouse_drop,
+			expose,
+			sizing, size,
+			move,
+			unload,
+			destroy,
+			focus,
+			key_down,
+			key_char,
+			key_up,
+			shortkey,
+
+			//Unoperational events
+			elapse,
+
+			//End indicator, it's not an event.
+			end
+		};
+	};//end scoped enum event_code
+
 	namespace detail
 	{
 			struct tag_mouse
@@ -62,8 +94,8 @@ namespace gui
 	//@brief:
 	struct eventinfo
 	{
-		unsigned identifier;	//for identifying what event is
-		gui::window window;		//which window the event triggered on
+		event_code::t	identifier;	//for identifying what event is
+		gui::window		window;		//which window the event triggered on
 
 		union
 		{
@@ -112,77 +144,49 @@ namespace gui
 
 	namespace detail
 	{
-		struct event_tag
+		struct check
 		{
-			enum
+			inline static bool accept(event_code::t evtid, unsigned category)
 			{
-				click,
-				dbl_click,
-				mouse_enter,
-				mouse_move,
-				mouse_leave,
-				mouse_down,
-				mouse_up,
-				mouse_wheel,
-				mouse_drop,
-				expose,
-				sizing, size,
-				move,
-				unload,
-				destroy,
-				focus,
-				key_down,
-				key_char,
-				key_up,
-				shortkey,
-
-				//Unoperational events
-				elapse,
-				count
-			};
-
-			
-			inline static bool accept(unsigned event_id, unsigned category)
-			{
-				return (event_id < event_tag::count) && ((event_category[event_id] & category) == event_category[event_id]);
+				return (evtid < event_code::end) && ((event_category[evtid] & category) == event_category[evtid]);
 			}
 
-			static unsigned event_category[event_tag::count];
+			static unsigned event_category[event_code::end];
 		};
 
 		struct event_type_tag{};
 
-		template<unsigned Event>
-		struct event_template
+		template<event_code::t Code>
+		struct basic_event
 			:public event_type_tag
 		{
-			enum{	identifier = Event};
+			static const event_code::t identifier = Code;
 		};
 	}//end namespace detail
 
 	namespace events
 	{
-		typedef detail::event_template<detail::event_tag::click>		click;
-		typedef detail::event_template<detail::event_tag::dbl_click>	dbl_click;
-		typedef detail::event_template<detail::event_tag::mouse_enter>	mouse_enter;
-		typedef detail::event_template<detail::event_tag::mouse_move>	mouse_move;
-		typedef detail::event_template<detail::event_tag::mouse_leave>	mouse_leave;
-		typedef detail::event_template<detail::event_tag::mouse_down>	mouse_down;
-		typedef detail::event_template<detail::event_tag::mouse_up>		mouse_up;
-		typedef detail::event_template<detail::event_tag::mouse_wheel>	mouse_wheel;
-		typedef detail::event_template<detail::event_tag::mouse_drop>	mouse_drop;
+		typedef detail::basic_event<event_code::click>			click;
+		typedef detail::basic_event<event_code::dbl_click>		dbl_click;
+		typedef detail::basic_event<event_code::mouse_enter>	mouse_enter;
+		typedef detail::basic_event<event_code::mouse_move>		mouse_move;
+		typedef detail::basic_event<event_code::mouse_leave>	mouse_leave;
+		typedef detail::basic_event<event_code::mouse_down>		mouse_down;
+		typedef detail::basic_event<event_code::mouse_up>		mouse_up;
+		typedef detail::basic_event<event_code::mouse_wheel>	mouse_wheel;
+		typedef detail::basic_event<event_code::mouse_drop>		mouse_drop;
 
-		typedef detail::event_template<detail::event_tag::expose>		expose;
-		typedef detail::event_template<detail::event_tag::sizing>		sizing;
-		typedef detail::event_template<detail::event_tag::size>			size;
-		typedef detail::event_template<detail::event_tag::move>			move;
-		typedef detail::event_template<detail::event_tag::unload>		unload;
-		typedef detail::event_template<detail::event_tag::destroy>		destroy;
-		typedef detail::event_template<detail::event_tag::focus>		focus;
-		typedef detail::event_template<detail::event_tag::key_down>		key_down;
-		typedef detail::event_template<detail::event_tag::key_char>		key_char;
-		typedef detail::event_template<detail::event_tag::key_up>		key_up;
-		typedef detail::event_template<detail::event_tag::shortkey>		shortkey;
+		typedef detail::basic_event<event_code::expose>		expose;
+		typedef detail::basic_event<event_code::sizing>		sizing;
+		typedef detail::basic_event<event_code::size>		size;
+		typedef detail::basic_event<event_code::move>		move;
+		typedef detail::basic_event<event_code::unload>		unload;
+		typedef detail::basic_event<event_code::destroy>	destroy;
+		typedef detail::basic_event<event_code::focus>		focus;
+		typedef detail::basic_event<event_code::key_down>	key_down;
+		typedef detail::basic_event<event_code::key_char>	key_char;
+		typedef detail::basic_event<event_code::key_up>		key_up;
+		typedef detail::basic_event<event_code::shortkey>	shortkey;
 	};//end struct events
 }//end namespace gui
 }//end namespace nana

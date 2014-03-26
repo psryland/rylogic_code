@@ -105,9 +105,9 @@ namespace detail
 	//@brief: This is a class defines a data structure about the event callbacks mapping
 	struct callback_storage
 	{
-		typedef std::map<nana::gui::window, std::pair<std::vector<abstract_handler*>, std::vector<abstract_handler*> > > event_table_type;
+		typedef std::map<window, std::pair<std::vector<abstract_handler*>, std::vector<abstract_handler*> > > event_table_type;
 
-		event_table_type table[event_tag::count];
+		event_table_type table[event_code::end];
 	};
 
 	namespace nana_runtime
@@ -117,9 +117,7 @@ namespace detail
 
 	abstract_handler::~abstract_handler(){}
 
-	nana::threads::recursive_mutex event_manager::mutex_;
-
-	unsigned event_tag::event_category[event_tag::count] = {
+	unsigned check::event_category[event_code::end] = {
 		category::flags::widget,	//click
 		category::flags::widget,	//dbl_click
 		category::flags::widget,	//mouse_enter
@@ -163,11 +161,11 @@ namespace detail
 				if(i != v->end())
 				{
 					v->erase(i);
-					if(v->size() == 0)
+					if(v->empty())
 					{
 						callback_storage::event_table_type::iterator i = nana_runtime::callbacks.table[abs_handler->event_identifier].find(abs_handler->window);
 						std::pair<std::vector<abstract_handler*>, std::vector<abstract_handler*> > & handler_pair = i->second;
-						if(handler_pair.first.size() == 0 && handler_pair.second.size() == 0)
+						if(handler_pair.first.empty() && handler_pair.second.empty())
 							nana_runtime::callbacks.table[abs_handler->event_identifier].erase(i);
 					}
 					handle_manager_(abs_handler);
@@ -206,7 +204,7 @@ namespace detail
 			typedef callback_storage::event_table_type table_t;
 
 			table_t::iterator element;
-			table_t *end = nana_runtime::callbacks.table + event_tag::count;
+			table_t *end = nana_runtime::callbacks.table + event_code::end;
 			umake_handle_deleter_wrapper deleter_wrapper(*this, handle_manager_);
 			for(table_t* i = nana_runtime::callbacks.table; i != end; ++i)
 			{
@@ -245,9 +243,9 @@ namespace detail
 			}
 		}
 
-		bool event_manager::answer(unsigned eventid, window wd, eventinfo& ei, event_kind::t evtkind)
+		bool event_manager::answer(event_code::t eventid, window wd, eventinfo& ei, event_kind::t evtkind)
 		{
-			if(eventid >= event_tag::count)	return false;
+			if(eventid >= event_code::end)	return false;
 			
 			inner_event_manager::handler_queue queue;
 			{
@@ -256,7 +254,7 @@ namespace detail
 
 				typedef callback_storage::event_table_type table_t;
 
-				table_t* evtobj = nana_runtime::callbacks.table + eventid;
+				table_t* const evtobj = nana_runtime::callbacks.table + eventid;
 				table_t::iterator element = evtobj->find(wd);
 				
 				if(element != evtobj->end()) //Test if the window installed event_id event
@@ -310,16 +308,17 @@ namespace detail
 			return handle_manager_.size();
 		}
 
-		std::size_t event_manager::the_number_of_handles(window wd, unsigned eventid, bool is_for_drawer)
+		std::size_t event_manager::the_number_of_handles(window wd, event_code::t eventid, bool is_for_drawer)
 		{
-			if(eventid < event_tag::count)
+			if(eventid < event_code::end)
 			{
+				typedef callback_storage::event_table_type table_t;
+
+				table_t* const evtobj = nana_runtime::callbacks.table + eventid;
+
 				//Thread-Safe Required!
 				threads::lock_guard<threads::recursive_mutex> lock(mutex_);
 
-				typedef callback_storage::event_table_type table_t;
-
-				table_t* evtobj = nana_runtime::callbacks.table + eventid;
 				table_t::iterator element = evtobj->find(wd);
 				
 				if(element != evtobj->end()) //Test if the window installed event_id event
@@ -336,7 +335,7 @@ namespace detail
 		//@param:wd, the triggering window
 		//@param:abs_handler, the handle of event object handler
 		//@param:drawer_handler, whether the event is installing for drawer or user callback
-		event_handle event_manager::_m_make(unsigned eventid, window wd, abstract_handler* abs_handler, bool drawer_handler, window listener)
+		event_handle event_manager::_m_make(event_code::t eventid, window wd, abstract_handler* abs_handler, bool drawer_handler, window listener)
 		{
 			if(abs_handler == 0)	return 0;
 

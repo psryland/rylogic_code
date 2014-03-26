@@ -35,18 +35,16 @@ namespace gui
 		template<typename Function>
 		void make_tick(Function f)
 		{
-			nana::gui::API::make_event<detail::event_template<detail::event_tag::elapse> >(reinterpret_cast<nana::gui::window>(this), f);
+			nana::gui::API::make_event<detail::basic_event<event_code::elapse> >(reinterpret_cast<nana::gui::window>(this), f);
 			this->_m_set_timer();
 		}
 
 		void interval(unsigned value);
 		unsigned interval() const;
 	private:
-		/*
-		 * _m_set_timer
-		 * @brief: timer is a special control. this function will set a timer if empty == true
-		 * this function is platform-dependent
-		 */
+		//_m_set_timer
+		//@brief: timer is a special control. this function will set a timer if empty == true
+		//this function is platform-dependent
 		void _m_set_timer();
 		void _m_kill_timer();
 		void _m_umake_event();

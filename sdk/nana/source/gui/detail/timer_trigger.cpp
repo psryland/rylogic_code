@@ -103,7 +103,10 @@ namespace detail
 			eventinfo ei;
 			ei.elapse.timer = object;
 			nana::gui::detail::bedrock& bedrock = nana::gui::detail::bedrock::instance();
-			bedrock.evt_manager.answer(detail::event_tag::elapse, reinterpret_cast<nana::gui::window>(object), ei, event_manager::event_kind::user);
+			bedrock.evt_manager.answer(event_code::elapse,
+				reinterpret_cast<window>(object),
+				ei,
+				event_manager::event_kind::user);
 		}
 
 		timer_trigger::timer_handle* timer_trigger::_m_find_by_timer_object(timer_object t)

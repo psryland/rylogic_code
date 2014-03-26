@@ -10,6 +10,7 @@
  */
 
 #include <nana/gui/widgets/widget.hpp>
+#include <nana/gui/tooltip.hpp>
 
 namespace nana
 {
@@ -71,7 +72,17 @@ namespace gui
 
 		bool widget::empty() const
 		{
-			return (handle() == 0);	
+			return (0 == handle());
+		}
+
+		void widget::focus()
+		{
+			API::focus_window(handle());
+		}
+
+		bool widget::focused() const
+		{
+			return API::is_focus_window(handle());
 		}
 
 		void widget::show()
@@ -114,11 +125,6 @@ namespace gui
 			_m_move(x, y, width, height);
 		}
 
-		bool widget::focused() const
-		{
-			return API::is_focus_window(handle());
-		}
-
 		void widget::foreground(nana::color_t value)
 		{
 			_m_foreground(value);
@@ -142,6 +148,12 @@ namespace gui
 		void widget::umake_event(event_handle eh) const
 		{
 			API::umake_event(eh);
+		}
+
+		widget& widget::tooltip(const nana::string& text)
+		{
+			nana::gui::tooltip::set(*this, text);
+			return *this;
 		}
 
 		widget::operator widget::dummy_bool_type() const

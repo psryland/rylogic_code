@@ -12,6 +12,7 @@
  */
 
 #include <nana/gui/widgets/tray.hpp>
+#include GUI_BEDROCK_HPP
 
 namespace nana{ namespace gui{
 	//class tray
@@ -100,14 +101,13 @@ namespace nana{ namespace gui{
 		void tray::umake_event()
 		{
 			if(impl_->wd)
-				API::tray_umake_event(impl_->wd);
+				detail::bedrock::instance().wd_manager.tray_umake_event(impl_->wd);
 		}
 
-		bool tray::_m_make_event(unsigned identifier, const nana::functor<void(const eventinfo&)>& f) const
+		bool tray::_m_make_event(event_code::t code, const nana::functor<void(const eventinfo&)>& fn) const
 		{
-			if(impl_->wd)
-				return API::tray_make_event(impl_->wd, identifier, f);
-			return false;
+			return (impl_->wd
+				? detail::bedrock::instance().wd_manager.tray_make_event(impl_->wd, code, fn) : false);
 		}
 	//end class tray
 }//end namespace gui

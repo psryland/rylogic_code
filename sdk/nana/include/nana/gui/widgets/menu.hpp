@@ -108,6 +108,9 @@ namespace nana{ namespace gui{
 		: private noncopyable
 	{
 		struct implement;
+
+		//let menubar access the private _m_popup() method.
+		friend class menu_accessor;
 	public:
 		enum check_t{check_none, check_option, check_highlight};
 
@@ -132,7 +135,7 @@ namespace nana{ namespace gui{
 		bool link(std::size_t n, menu& menu_obj);
 		menu * link(std::size_t n);
 		menu *create_sub_menu(std::size_t n);
-		void popup(window, int x, int y, bool owner_menubar);
+		void popup(window, int x, int y);
 		void answerer(std::size_t n, const event_fn_t&);
 		void destroy_answer(const nana::functor<void()>&);
 		void gaps(const nana::point& pos);
@@ -151,6 +154,7 @@ namespace nana{ namespace gui{
 		const pat::cloneable<renderer_interface>& renderer() const;
 	private:
 		void _m_destroy_menu_window();
+		void _m_popup(window, int x, int y, bool called_by_menubar);
 	private:
 		implement * impl_;
 	};

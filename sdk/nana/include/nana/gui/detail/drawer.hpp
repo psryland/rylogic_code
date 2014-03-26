@@ -117,7 +117,7 @@ namespace gui
 			void bitblt(int x, int y, unsigned width, unsigned height, const nana::paint::image& img, int srcx, int srcy);
 			void stretch(const nana::rectangle& r_dst, const nana::paint::graphics& graph, const nana::rectangle& r_src);
 			void stretch(const nana::rectangle& r_dst, const nana::paint::image& img, const nana::rectangle& r_src);
-			event_handle make_event(int evtid, window wd);
+			event_handle make_event(event_code::t, window wd);
 		private:
 			void _m_bground_pre();
 			void _m_bground_end();
@@ -127,7 +127,7 @@ namespace gui
 		private:
 			basic_window*	core_window_;
 			drawer_trigger*	realizer_;
-			std::vector<nana::gui::detail::dynamic_drawing::object*>	dynamic_drawing_objects_;
+			std::vector<dynamic_drawing::object*>	dynamic_drawing_objects_;
 			bool refreshing_;
 		};
 	}//end namespace detail

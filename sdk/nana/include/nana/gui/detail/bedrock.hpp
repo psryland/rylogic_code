@@ -37,9 +37,8 @@ namespace detail
 		bedrock();
 	public:
 		typedef window_manager<native_window_type, bedrock, native_interface > window_manager_t;
-
 		typedef window_manager_t::interface_type	interface_type;
-		typedef window_manager_t::core_window_t core_window_t;
+		typedef window_manager_t::core_window_t		core_window_t;
 
 		struct thread_context;
 
@@ -75,17 +74,17 @@ namespace detail
 		void thread_context_lazy_refresh();
 		void update_cursor(core_window_t *);
 	public:
-		window_manager_t wd_manager;
-		event_manager	evt_manager;
+		window_manager_t	wd_manager;
+		event_manager		evt_manager;
 		runtime_manager<core_window_t*, bedrock>	rt_manager;
-		static bool fire_event_for_drawer(unsigned event_id, core_window_t*, eventinfo&, thread_context*);
-		static bool fire_event(unsigned event_id, core_window_t*, eventinfo&);
+		static bool fire_event_for_drawer(event_code::t, core_window_t*, eventinfo&, thread_context*);
+		static bool fire_event(event_code::t, core_window_t*, eventinfo&);
 
 		//raise_event
 		//@return: Returns true if the window is available, otherwise returns false
-		static bool raise_event(unsigned eventid, core_window_t*, eventinfo&, bool ask_update);
+		static bool raise_event(event_code::t, core_window_t*, eventinfo&, bool ask_update);
 	private:
-		void _m_event_filter(unsigned event_id, core_window_t*, thread_context*);
+		void _m_event_filter(event_code::t, core_window_t*, thread_context*);
 	private:
 		static bedrock bedrock_object;
 

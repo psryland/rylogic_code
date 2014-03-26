@@ -906,16 +906,18 @@ namespace detail
 		}
 	}
 
-	void platform_spec::event_register_filter(native_window_type wd, unsigned eventid)
+	void platform_spec::event_register_filter(native_window_type wd, event_code::t evtid)
 	{
-		switch(eventid)
+		switch(evtid)
 		{
-		case nana::gui::detail::event_tag::mouse_drop:
+		case event_code::mouse_drop:
 			{
 				int dndver = 4;
 				::XChangeProperty(display_, reinterpret_cast<Window>(wd), atombase_.xdnd_aware, XA_ATOM, sizeof(int) * 8,
 									PropModeReplace, reinterpret_cast<unsigned char*>(&dndver), 1);
 			}
+			break;
+		default:
 			break;
 		}
 	}

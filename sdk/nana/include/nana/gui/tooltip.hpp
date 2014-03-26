@@ -15,15 +15,56 @@
 
 namespace nana{ namespace gui{
 
-	class tooltip
+	///tooltip_interface
+	///An interface for user-defined tooltip window.
+	class tooltip_interface
 	{
 	public:
-		tooltip();
-		~tooltip();
+		virtual ~tooltip_interface(){}
 
-		void set(nana::gui::window, const nana::string&);
-		void show(nana::gui::window, int x, int y, const nana::string&);
-		void close();
+		virtual nana::size tooltip_size() const = 0;
+		virtual void tooltip_text(const nana::string&)	= 0;
+		virtual void tooltip_move(const nana::point& screen_pos, bool ignore_pos)	= 0;
+	};
+
+	class tooltip
+	{
+		class factory_interface
+		{
+		public:
+			virtual ~factory_interface(){}
+			virtual tooltip_interface* create() = 0;
+			virtual void destroy(tooltip_interface*) = 0;
+		};
+
+		template<typename TooltipWindow>
+		class factory
+			: public factory_interface
+		{
+			tooltip_interface * create() //override
+			{
+				return new TooltipWindow;
+			}
+
+			void destroy(tooltip_interface* p) //override
+			{
+				delete p;
+			}
+		};
+	public:
+		typedef factory_interface factory_if_type;
+
+		template<typename TooltipWindow>
+		static void make_factory()
+		{
+			_m_hold_factory(new factory<TooltipWindow>);
+		}
+
+		static void set(window, const nana::string&);
+		static void show(window, int x, int y, const nana::string&);
+		static void close();
+	private:
+		static void _m_hold_factory(factory_interface*);
 	};//class tooltip
 
 }//namespace gui

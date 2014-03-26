@@ -46,7 +46,7 @@ namespace nana{ namespace gui{
 		}
 		void umake_event();
 	private:
-		bool _m_make_event(unsigned identifier, const nana::functor<void(const eventinfo&)>&) const;
+		bool _m_make_event(event_code::t, const nana::functor<void(const eventinfo&)>&) const;
 	private:
 		struct tray_impl *impl_;
 	};

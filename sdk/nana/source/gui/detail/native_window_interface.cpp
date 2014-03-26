@@ -521,28 +521,34 @@ namespace nana{
 			return false;
 		}
 
-		void native_interface::active_owner(native_window_type wd)
+		void native_interface::activate_owner(native_window_type wd)
 		{
 #if defined(NANA_WINDOWS)
-			HWND owner = ::GetWindow(reinterpret_cast<HWND>(wd), GW_OWNER);
-			if(owner)
+			activate_window(reinterpret_cast<native_window_type>(
+								::GetWindow(reinterpret_cast<HWND>(wd), GW_OWNER)
+							));
+#endif
+		}
+
+		void native_interface::activate_window(native_window_type wd)
+		{
+#if defined(NANA_WINDOWS)
+			HWND native_wd = reinterpret_cast<HWND>(wd);
+			if (::IsWindow(native_wd))
 			{
-				if(::GetWindowThreadProcessId(owner, 0) == ::GetCurrentThreadId())
+				if (::GetWindowThreadProcessId(native_wd, 0) == ::GetCurrentThreadId())
 				{
-					::EnableWindow(owner, true);
-					::SetActiveWindow(owner);
-					::SetForegroundWindow(owner);
+					::EnableWindow(native_wd, true);
+					::SetActiveWindow(native_wd);
 				}
 				else
-					::PostMessage(owner, nana::detail::messages::async_active_owner, 0, 0);
+					::PostMessage(native_wd, nana::detail::messages::async_activate, 0, 0);
 			}
-#elif defined(NANA_X11)
-
 #endif
 		}
 
 		//close_window
-		//@brief:Destroy a window
+		//Destroy a window
 		void native_interface::close_window(native_window_type wd)
 		{
 #if defined(NANA_WINDOWS)
@@ -905,6 +911,26 @@ namespace nana{
 
 			::XMoveResizeWindow(disp, reinterpret_cast<Window>(wd), x, y, width, height);
 #endif
+		}
+
+		void native_interface::bring_to_top(native_window_type wd)
+		{
+#if defined(NANA_WINDOWS)
+			HWND native_wd = reinterpret_cast<HWND>(wd);
+
+			if (FALSE == ::IsWindow(native_wd))
+				return;
+
+			HWND fg_wd = ::GetForegroundWindow();
+			DWORD fg_tid = ::GetWindowThreadProcessId(fg_wd, 0);
+			::AttachThreadInput(::GetCurrentThreadId(), fg_tid, TRUE);
+			::ShowWindow(native_wd, SW_SHOWNORMAL);
+			::SetWindowPos(native_wd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+			::SetWindowPos(native_wd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+			::AttachThreadInput(::GetCurrentThreadId(), fg_tid, FALSE);
+#else
+			set_window_z_order(wd, 0, z_order_action::top);
+#endif		
 		}
 
 		void native_interface::set_window_z_order(native_window_type wd, native_window_type wd_after, z_order_action::t action_if_no_wd_after)
@@ -1292,10 +1318,9 @@ namespace nana{
 		void native_interface::set_focus(native_window_type wd)
 		{
 #if defined(NANA_WINDOWS)
-			HWND focus = ::GetFocus();
-			if(wd && focus != reinterpret_cast<HWND>(wd))
+			if(wd && (::GetFocus() != reinterpret_cast<HWND>(wd)))
 			{
-				if(::GetWindowThreadProcessId(focus, 0) != ::GetWindowThreadProcessId(reinterpret_cast<HWND>(wd), 0))
+				if(::GetCurrentThreadId() != ::GetWindowThreadProcessId(reinterpret_cast<HWND>(wd), 0))
 					::PostMessage(reinterpret_cast<HWND>(wd), nana::detail::messages::async_set_focus, 0, 0);
 				else
 					::SetFocus(reinterpret_cast<HWND>(wd));

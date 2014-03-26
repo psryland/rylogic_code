@@ -1,4 +1,18 @@
 Nana C++ Library
+Version: 0.6.2
+==============
+Bugfix:
+	* a fix of conflict with std::mutex in MinGW(Smille Purusa).
+	* data alignment issue.
+	* some fixes menubar and menu. 
+	* some fixes for tooltip.
+
+Feature:
+	* a new forward declarations header file.
+	* new bring_to_top() function, new native_handle() member function for root widget.
+	* improved the type-rich event interfaces.
+	* tooltip improvements that based on qPCR4vir's pull request.
+
 Version: 0.6.1
 ==============
 Bugfix:

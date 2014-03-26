@@ -128,6 +128,19 @@ namespace nana
 		{
 			shared_ptr().swap(*this);
 		}
+
+		void reset(element_type * p)
+		{
+			if(p != ptr_)
+				shared_ptr(p).swap(*this);
+		}
+
+		template<typename Deleter>
+		void reset(element_type* p, Deleter d)
+		{
+			if(p != ptr_)
+				shared_ptr(p, d).swap(*this);
+		}
 		
 		element_type * get() const
 		{
