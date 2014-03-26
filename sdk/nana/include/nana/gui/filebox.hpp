@@ -27,7 +27,7 @@ namespace nana{	namespace gui
 
 		nana::string path() const;
 		nana::string file() const;
-		
+
 		/**	@brief	Display the filebox dialog
 		 */
 		bool show() const;

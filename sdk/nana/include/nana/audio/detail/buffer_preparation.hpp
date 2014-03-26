@@ -2,9 +2,16 @@
 #define NANA_AUDIO_DETAIL_BUFFER_PREPARATION_HPP
 #include <nana/deploy.hpp>
 #include <nana/audio/detail/audio_stream.hpp>
-#include <nana/threads/mutex.hpp>
-#include <nana/threads/condition_variable.hpp>
-#include <nana/threads/thread.hpp>
+
+#if defined(NANA_MINGW) && defined(STD_THREAD_NOT_SUPPORTED)
+    #include <nana/std_thread.hpp>
+    #include <nana/std_mutex.hpp>
+    #include <nana/std_condition_variable.hpp>
+#else
+    #include <mutex>
+    #include <condition_variable>
+    #include <thread>
+#endif
 
 #include <sstream>
 #include <vector>
@@ -44,9 +51,9 @@ namespace nana{	namespace audio
 		private:
 			volatile bool running_;
 			volatile bool wait_for_buffer_;
-			nana::threads::thread thr_;
-			mutable threads::mutex mutex_buffer_, mutex_prepared_;
-			mutable threads::condition_variable cond_buffer_, cond_prepared_;
+			std::thread thr_;
+			mutable std::mutex token_buffer_, token_prepared_;
+			mutable std::condition_variable	cond_buffer_, cond_prepared_;
 
 			std::vector<meta*> buffer_, prepared_;
 			std::size_t block_size_;

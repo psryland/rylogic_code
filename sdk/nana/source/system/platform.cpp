@@ -16,9 +16,9 @@
 	#include <windows.h>
 	#include PLATFORM_SPEC_HPP
 #elif defined(NANA_LINUX)
-	#include <unistd.h>
 	#include <time.h>
 	#include <errno.h>
+	#include <unistd.h>
 	#include <sys/time.h>
 	#include <sys/syscall.h>
 #endif
@@ -102,7 +102,11 @@ namespace system
 #if defined(NANA_WINDOWS)
 		if(::ShellExecute(0, STR("open"), url.c_str(), 0, 0, SW_SHOWNORMAL) < reinterpret_cast<HINSTANCE>(32))
 		{
-			nana::detail::platform_spec::co_initializer coinit;
+			//Because ShellExecute can delegate execution to Shell extensions (data sources, context menu handlers,
+			//verb implementations) that are activated using Component Object Model (COM), COM should be initialized
+			//before ShellExecute is called. Some Shell extensions require the COM single-threaded apartment (STA) type.
+			//In that case, COM should be initialized under WinXP.
+			nana::detail::platform_spec::co_initializer co_init;
 			::ShellExecute(0, STR("open"), url.c_str(), 0, 0, SW_SHOWNORMAL);
 		}
 #elif defined(NANA_LINUX)

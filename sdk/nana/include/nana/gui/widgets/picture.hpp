@@ -20,21 +20,20 @@ namespace gui
 {
 	namespace xpicture
 	{
-		class picture_drawer: public nana::gui::drawer_trigger
+		class picture_drawer: public drawer_trigger
 		{
 		public:
 			picture_drawer();
-			void bind_window(nana::gui::widget&);
-			void attached(graph_reference);
+			void attached(widget_reference, graph_reference)	override;
 			void load(const nana::char_t* file);
 			void load(const nana::paint::image&);
 			void set_shadow_background(unsigned begin_color, unsigned end_color, bool horizontal);
 			bool bgstyle(bool is_stretch, nana::arrange, int beg, int end);
 		private:
-			void refresh(graph_reference);
+			void refresh(graph_reference)	override;
 			void _m_draw_background();
 		private:
-			nana::gui::widget* widget_;
+			widget* widget_;
 			nana::paint::graphics* graph_;
 
 			struct	runtime_type
@@ -63,9 +62,8 @@ namespace gui
 	public:
 		picture();
 		picture(window, bool visible);
-		picture(window, const rectangle& = rectangle(), bool visible= true);
+		picture(window, const rectangle& = rectangle(), bool visible = true);
 
-		void load(const nana::char_t* file);
 		void load(const nana::paint::image&);
 		void bgstyle(bool stretchable, nana::arrange arg, int beg, int end);
 		void set_shadow_background(unsigned begin_color, unsigned end_color, bool horizontal);

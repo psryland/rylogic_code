@@ -32,8 +32,8 @@ namespace nana{ namespace gui{
 				};
 
 				std::vector<item_type> items;
-				std::size_t max_items;	//the number of items display.
-				mutable std::size_t index;		//the result of the selection.
+				std::size_t max_items;			// the number of items display.
+				mutable std::size_t index;		// the result of the selection.
 				mutable bool have_selected;
 
 				module_def();
@@ -48,14 +48,14 @@ namespace nana{ namespace gui{
 
 				virtual ~item_renderer() = 0;
 				virtual void image(bool enabled, unsigned pixels) = 0;
-				virtual void render(widget_reference, graph_reference, const nana::rectangle&, const module_def::item_type&, state_t state) = 0;
+				virtual void render(widget_reference, graph_reference, const nana::rectangle&, const module_def::item_type&, state_t) = 0;
 				virtual unsigned item_pixels(graph_reference) const = 0;
 			};
 
 			class drawer_impl;
 
 			class trigger
-				: public nana::gui::drawer_trigger
+				: public drawer_trigger
 			{
 			public:
 				trigger();
@@ -63,12 +63,11 @@ namespace nana{ namespace gui{
 				drawer_impl& get_drawer_impl();
 				const drawer_impl& get_drawer_impl() const;
 			private:
-				void bind_window(widget_reference);
-				void attached(graph_reference graph);
-				void detached();
-				void refresh(graph_reference);
-				void mouse_move(graph_reference, const eventinfo&);
-				void mouse_up(graph_reference, const eventinfo&);
+				void attached(widget_reference, graph_reference graph)	override;
+				void detached()	override;
+				void refresh(graph_reference)	override;
+				void mouse_move(graph_reference, const eventinfo&)	override;
+				void mouse_up(graph_reference, const eventinfo&)	override;
 			private:
 				class drawer_impl *drawer_;
 			};
@@ -89,7 +88,7 @@ namespace nana{ namespace gui{
 		 *	@param is_ignore_first_mouse_up	The flost_listbox will be closed when a mouse_up is emitted, this parameter is specified for ignoring the first mouse_up emitting.
 		 *	@remark	The float_listbox can be popupped in a mouse_down event, the next mouse_up may be ignored, otherwise the float_listbox will be closed when user releases the button.
 		 */
-		float_listbox(window, const rectangle&, bool is_ingore_first_mouse_up);
+		float_listbox(window, const rectangle&, bool is_ignore_first_mouse_up);
 
 		void set_module(const module_type&, unsigned image_pixels);
 		void scroll_items(bool upwards);

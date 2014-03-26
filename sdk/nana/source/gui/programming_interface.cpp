@@ -10,7 +10,11 @@
  */
 
 #include <nana/gui/programming_interface.hpp>
+#include <nana/gui/detail/basic_window.hpp>
 #include <nana/system/platform.hpp>
+#include <nana/gui/detail/native_window_interface.hpp>
+#include <nana/gui/widgets/widget.hpp>
+#include <algorithm>
 
 namespace nana{	namespace gui{
 
@@ -18,11 +22,14 @@ namespace nana{	namespace gui{
 	//		this name is only visible for this compiling-unit
 	namespace restrict
 	{
-		typedef gui::detail::bedrock::core_window_t core_window_t;
-		typedef gui::detail::bedrock::interface_type	interface_type;
+		namespace
+		{
+			typedef gui::detail::bedrock::core_window_t core_window_t;
+			typedef gui::detail::bedrock::interface_type	interface_type;
 
-		gui::detail::bedrock& bedrock = gui::detail::bedrock::instance();
-		gui::detail::bedrock::window_manager_t& window_manager = bedrock.wd_manager;
+			gui::detail::bedrock& bedrock = gui::detail::bedrock::instance();
+			gui::detail::bedrock::window_manager_t& window_manager = bedrock.wd_manager;
+		}
 	}
 
 	namespace effects
@@ -35,41 +42,37 @@ namespace nana{	namespace gui{
 				return factory.create();
 			}
 		};
-	
 	}
 namespace API
 {
-	void effects_edge_nimbus(window wd, effects::edge_nimbus::t en)
+	void effects_edge_nimbus(window wd, effects::edge_nimbus en)
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
-				restrict::core_window_t::edge_nimbus_container & cont = iwd->root_widget->other.attribute.root->effects_edge_nimbus;
-				if(en)
+				auto & cont = iwd->root_widget->other.attribute.root->effects_edge_nimbus;
+				if(effects::edge_nimbus::none != en)
 				{
-					if(iwd->effect.edge_nimbus == effects::edge_nimbus::none)
+					if (iwd->effect.edge_nimbus == effects::edge_nimbus::none)
 					{
-						restrict::core_window_t::edge_nimbus_action act = {iwd};
-						cont.push_back(act);
+						restrict::core_window_t::edge_nimbus_action ena = { iwd };
+						cont.push_back(ena);
 					}
-
-					iwd->effect.edge_nimbus = static_cast<effects::edge_nimbus::t>(iwd->effect.edge_nimbus | en);
+					iwd->effect.edge_nimbus = static_cast<effects::edge_nimbus>(static_cast<unsigned>(en) | static_cast<unsigned>(iwd->effect.edge_nimbus));
 				}
 				else
 				{
-					if(iwd->effect.edge_nimbus)
+					if(effects::edge_nimbus::none != iwd->effect.edge_nimbus)
 					{
-						for(restrict::core_window_t::edge_nimbus_container::iterator i = cont.begin(); i != cont.end(); ++i)
-						{
+						for(auto i = cont.begin(); i != cont.end(); ++i)
 							if(i->window == iwd)
 							{
 								cont.erase(i);
 								break;
 							}
-						}						
 					}
 					iwd->effect.edge_nimbus = effects::edge_nimbus::none;
 				}
@@ -77,11 +80,11 @@ namespace API
 		}
 	}
 
-	effects::edge_nimbus::t effects_edge_nimbus(window wd)
+	effects::edge_nimbus effects_edge_nimbus(window wd)
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 				return iwd->effect.edge_nimbus;
@@ -91,15 +94,15 @@ namespace API
 
 	void effects_bground(window wd, const effects::bground_factory_interface& factory, double fade_rate)
 	{
-		if(0 == wd)
+		if(nullptr == wd)
 			return;
 		
-		restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		internal_scope_guard isg;
 		if(restrict::window_manager.available(iwd))
 		{
-			effects::bground_interface* new_effect_ptr = effects::effects_accessor::create(factory);
-			if(0 == new_effect_ptr)
+			auto new_effect_ptr = effects::effects_accessor::create(factory);
+			if(nullptr == new_effect_ptr)
 				return;
 
 			delete iwd->effect.bground;
@@ -110,11 +113,11 @@ namespace API
 		}
 	}
 
-	bground_mode::t effects_bground_mode(window wd)
+	bground_mode effects_bground_mode(window wd)
 	{
-		if(0 == wd) return bground_mode::none;
+		if(nullptr == wd) return bground_mode::none;
 
-		restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		internal_scope_guard isg;
 		if(restrict::window_manager.available(iwd) && iwd->effect.bground)
 			return (iwd->effect.bground_fade_rate <= 0.009 ? bground_mode::basic : bground_mode::blend);
@@ -124,59 +127,48 @@ namespace API
 
 	void effects_bground_remove(window wd)
 	{
-		if(0 == wd) return;
+		if(nullptr == wd) return;
 
-		restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		const auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		internal_scope_guard isg;
 		if(restrict::window_manager.available(iwd))
 		{
-			delete iwd->effect.bground;
-			iwd->effect.bground = 0;
-			iwd->effect.bground_fade_rate = 0;
-			restrict::window_manager.enable_effects_bground(iwd, false);
-			API::refresh_window(wd);
+			if(restrict::window_manager.enable_effects_bground(iwd, false))
+				API::refresh_window(wd);
 		}
 	}
 
 	namespace dev
 	{
-		void attach_drawer(window wd, drawer_trigger& dr)
+		void attach_drawer(widget& wd, drawer_trigger& dr)
 		{
-			if(wd)
+			const auto iwd = reinterpret_cast<restrict::core_window_t*>(wd.handle());
+			internal_scope_guard isg;
+			if(restrict::window_manager.available(iwd))
 			{
-				restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
-				internal_scope_guard isg;
-				if(restrict::window_manager.available(iwd))
-				{
-					iwd->drawer.graphics.make(iwd->dimension.width, iwd->dimension.height);
-					iwd->drawer.graphics.rectangle(iwd->color.background, true);
-					iwd->drawer.attached(dr);
-					make_drawer_event<events::size>(wd);
-					iwd->drawer.refresh();	//Always redrawe no matter it is visible or invisible. This can make the graphics data correctly.
-				}
+				iwd->drawer.graphics.make(iwd->dimension.width, iwd->dimension.height);
+				iwd->drawer.graphics.rectangle(iwd->color.background, true);
+				iwd->drawer.attached(wd, dr);
+				make_drawer_event<events::size>(wd);
+				iwd->drawer.refresh();	//Always redrawe no matter it is visible or invisible. This can make the graphics data correctly.
 			}
 		}
 
-		void detach_drawer(window wd)
+		event_handle make_drawer_event(event_code code, window wd)
 		{
-			if(wd)
-			{
-				internal_scope_guard isg;
-				if(restrict::window_manager.available(reinterpret_cast<restrict::core_window_t*>(wd)))
-					reinterpret_cast<restrict::core_window_t*>(wd)->drawer.detached();
-			}
-		}
+			using namespace gui::detail;
 
-		void umake_drawer_event(window wd)
-		{
-			restrict::bedrock.evt_manager.umake(wd, true);
+			internal_scope_guard isg;
+			if (bedrock::instance().wd_manager.available(reinterpret_cast<bedrock::core_window_t*>(wd)))
+				return reinterpret_cast<bedrock::core_window_t*>(wd)->drawer.make_event(code, wd);
+			return nullptr;
 		}
 
 		nana::string window_caption(window wd)
 		{
 			if(wd)
 			{
-				restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+				auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 				internal_scope_guard isg;
 
 				if(restrict::window_manager.available(iwd))
@@ -193,7 +185,7 @@ namespace API
 		{
 			if(wd)
 			{
-				restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+				auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 				internal_scope_guard isg;
 
 				if(restrict::window_manager.available(iwd))
@@ -226,7 +218,7 @@ namespace API
 			return reinterpret_cast<window>(restrict::window_manager.create_frame(reinterpret_cast<restrict::core_window_t*>(parent), r));
 		}
 
-		paint::graphics * window_graphics(window wd)
+		paint::graphics* window_graphics(window wd)
 		{
 			if(wd)
 			{
@@ -234,7 +226,7 @@ namespace API
 				if(restrict::window_manager.available(reinterpret_cast<restrict::core_window_t*>(wd)))
 					return &reinterpret_cast<restrict::core_window_t*>(wd)->drawer.graphics;
 			}
-			return 0;		
+			return nullptr;
 		}
 	}//end namespace dev
 
@@ -249,20 +241,20 @@ namespace API
 		if(v.size())
 		{
 			std::vector<native_window_type> roots;
-			native_window_type root = 0;
+			native_window_type root = nullptr;
 			unsigned tid = nana::system::this_thread_id();
-			for(std::vector<restrict::core_window_t*>::iterator i = v.begin(), end = v.end(); i != end; ++i)
+			for(auto wd : v)
 			{
-				restrict::core_window_t * wd = *i;
 				if((wd->thread_id == tid) && (wd->root != root))
 				{
 					root = wd->root;
-					if(roots.end() == std::find(roots.begin(), roots.end(), root))
+					if(roots.cend() == std::find(roots.cbegin(), roots.cend(), root))
 						roots.push_back(root);
 				}
 			}
 
-			std::for_each(roots.begin(), roots.end(), restrict::interface_type::close_window);
+			for(auto i : roots)
+				restrict::interface_type::close_window(i);
 		}
 	}
 
@@ -319,12 +311,12 @@ namespace API
 		return restrict::interface_type::screen_area_from_point(pos);
 	}
 
-	point	cursor_position()
+	nana::point	cursor_position()
 	{
 		return restrict::interface_type::cursor_position();
 	}
 
-	rectangle make_center(unsigned width, unsigned height)
+	nana::rectangle make_center(unsigned width, unsigned height)
 	{
 		nana::size screen = restrict::interface_type::screen_size();
 		nana::rectangle result(
@@ -342,8 +334,7 @@ namespace API
 
 		nana::point pos(r.x, r.y);
 		calc_window_point(wd, pos);
-		r.x = pos.x;
-		r.y = pos.y;
+		r = pos;
 		return r;
 	}
 
@@ -376,7 +367,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -411,18 +402,19 @@ namespace API
 			if(reinterpret_cast<restrict::core_window_t*>(frame)->other.category == category::flags::frame)
 				return reinterpret_cast<restrict::core_window_t*>(frame)->other.attribute.frame->container;
 		}
-		return 0;
+		return nullptr;
 	}
 
 	native_window_type frame_element(window frame, unsigned index)
 	{
 		if(frame)
 		{
+			auto frm = reinterpret_cast<restrict::core_window_t*>(frame);
 			internal_scope_guard isg;
-			if(reinterpret_cast<restrict::core_window_t*>(frame)->other.category == category::flags::frame)
+			if (frm->other.category == category::flags::frame)
 			{
-				if(index < reinterpret_cast<restrict::core_window_t*>(frame)->other.attribute.frame->attach.size())
-					return reinterpret_cast<restrict::core_window_t*>(frame)->other.attribute.frame->attach.at(index);
+				if (index < frm->other.attribute.frame->attach.size())
+					return frm->other.attribute.frame->attach.at(index);
 			}
 		}
 		return 0;
@@ -442,7 +434,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -458,7 +450,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -472,7 +464,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* core_wd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto core_wd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard lock;
 			if(restrict::window_manager.available(core_wd))
 			{
@@ -486,7 +478,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 				return reinterpret_cast<window>(iwd->other.category == category::flags::root ? iwd->owner : iwd->parent);
@@ -498,7 +490,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && (iwd->other.category == category::flags::root))
 			{
@@ -524,7 +516,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -537,7 +529,7 @@ namespace API
 
 	void move_window(window wd, int x, int y)
 	{
-		restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		internal_scope_guard isg;
 		if(restrict::window_manager.move(iwd, x, y, false))
 		{
@@ -549,7 +541,7 @@ namespace API
 
 	void move_window(window wd, int x, int y, unsigned width, unsigned height)
 	{
-		restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		internal_scope_guard isg;
 		if(restrict::window_manager.move(iwd, x, y, width, height))
 		{
@@ -564,31 +556,25 @@ namespace API
 		restrict::interface_type::bring_to_top(root(wd));
 	}
 
-	bool set_window_z_order(window wd, window wd_after, z_order_action::t action_if_no_wd_after)
+	bool set_window_z_order(window wd, window wd_after, z_order_action action_if_no_wd_after)
 	{
-		if(wd)
+		auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		internal_scope_guard isg;
+		if (restrict::window_manager.available(iwd) && (category::flags::root == iwd->other.category))
 		{
-			restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
-			internal_scope_guard isg;
-			if(restrict::window_manager.available(iwd))
+			if(wd_after)
 			{
-				if(category::flags::root == iwd->other.category)
+				auto iwd_after = reinterpret_cast<restrict::core_window_t*>(wd_after);
+				if(restrict::window_manager.available(iwd_after) && (iwd_after->other.category == category::flags::root))
 				{
-					if(wd_after)
-					{
-						restrict::core_window_t * const iwd_after = reinterpret_cast<restrict::core_window_t*>(wd_after);
-						if(restrict::window_manager.available(iwd_after) && (iwd_after->other.category == category::flags::root))
-						{
-							restrict::interface_type::set_window_z_order(iwd->root, iwd_after->root, z_order_action::none);
-							return true;
-						}
-					}
-					else
-					{
-						restrict::interface_type::set_window_z_order(iwd->root, 0, action_if_no_wd_after);
-						return true;
-					}
+					restrict::interface_type::set_window_z_order(iwd->root, iwd_after->root, z_order_action::none);
+					return true;
 				}
+			}
+			else
+			{
+				restrict::interface_type::set_window_z_order(iwd->root, nullptr, action_if_no_wd_after);
+				return true;
 			}
 		}
 		return false;
@@ -603,7 +589,7 @@ namespace API
 
 	void window_size(window wd, unsigned width, unsigned height)
 	{
-		restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		internal_scope_guard isg;
 		if(restrict::window_manager.size(iwd, width, height, false, false))
 		{
@@ -615,22 +601,24 @@ namespace API
 
 	bool window_rectangle(window wd, rectangle& r)
 	{
-		if(0 == wd)	return false;
-		
-		restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
-		internal_scope_guard isg;
-		if(false == restrict::window_manager.available(iwd))
-			return false;
-		
-		r = rectangle(iwd->pos_owner, iwd->dimension);
-		return true;
+		if(wd)
+		{
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			internal_scope_guard isg;
+			if(restrict::window_manager.available(iwd))
+			{
+				r = rectangle(iwd->pos_owner, iwd->dimension);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	bool track_window_size(window wd, const nana::size& sz, bool true_for_max)
 	{
-		if(0 == wd) return false;
+		if(nullptr == wd) return false;
 
-		restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		internal_scope_guard isg;
 		if(restrict::window_manager.available(iwd) == false) return false;
 
@@ -664,7 +652,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && (iwd->flags.enabled != enabled))
 			{
@@ -680,7 +668,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			return (restrict::window_manager.available(iwd) ? iwd->flags.enabled : false);
 		}
@@ -709,16 +697,16 @@ namespace API
 
 	//update_window
 	//@brief: it displays a window immediately without refreshing.
-	void update_window(window wnd)
+	void update_window(window wd)
 	{
-		restrict::window_manager.update(reinterpret_cast<restrict::core_window_t*>(wnd), false, true);
+		restrict::window_manager.update(reinterpret_cast<restrict::core_window_t*>(wd), false, true);
 	}
 
 	void window_caption(window wd, const nana::string& title)
 	{
 		if(wd)
 		{
-			restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 				restrict::window_manager.signal_fire_caption(iwd, title.c_str());
@@ -729,7 +717,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 				return restrict::window_manager.signal_fire_caption(iwd);
@@ -737,11 +725,11 @@ namespace API
 		return nana::string();
 	}
 
-	void window_cursor(window wd, cursor::t cur)
+	void window_cursor(window wd, cursor cur)
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -751,11 +739,11 @@ namespace API
 		}
 	}
 
-	cursor::t window_cursor(window wd)
+	cursor window_cursor(window wd)
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 				return iwd->predef_cursor;
@@ -787,7 +775,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 				return (iwd->root_widget->other.attribute.root->focus == iwd);
@@ -797,9 +785,9 @@ namespace API
 
 	void activate_window(window wd)
 	{
-		restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		internal_scope_guard isg;
-		if(restrict::window_manager.available(iwd))
+		if (restrict::window_manager.available(iwd))
 		{
 			if(iwd->flags.take_active)
 				restrict::interface_type::activate_window(iwd->root);
@@ -839,10 +827,10 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 
-			wd = 0;
+			wd = nullptr;
 			if(restrict::window_manager.available(iwd))
 			{
 				if((iwd->other.category == category::flags::root) && (iwd->flags.modal == false))
@@ -859,7 +847,7 @@ namespace API
 
 		if(wd)
 		{
-			//modal has to guarantee that does not lock the wnd_mgr_lock_ before invokeing the pump_event,
+			//modal has to guarantee that does not lock the mutex of window_manager before invokeing the pump_event,
 			//otherwise, the modal will prevent the other thread access the window.
 			restrict::bedrock.pump_event(wd);
 		}
@@ -880,7 +868,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -911,7 +899,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -935,14 +923,14 @@ namespace API
 			if(restrict::window_manager.available(reinterpret_cast<restrict::core_window_t*>(wd)))
 				return reinterpret_cast<restrict::core_window_t*>(wd)->color.active;
 		}
-		return 0;	
+		return 0;
 	}
 
 	color_t active(window wd, color_t col)
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -962,9 +950,9 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
-			if(restrict::window_manager.available(iwd) && (0 == iwd->together.caret))
+			if(restrict::window_manager.available(iwd) && (nullptr == iwd->together.caret))
 				iwd->together.caret = new detail::caret_descriptor(iwd, width, height);
 		}
 	}
@@ -973,12 +961,12 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
 				detail::caret_descriptor* p = iwd->together.caret;
-				iwd->together.caret = 0;
+				iwd->together.caret = nullptr;
 				delete p;
 			}
 		}
@@ -988,7 +976,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && iwd->together.caret)
 				iwd->together.caret->position(x, y);
@@ -999,7 +987,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && iwd->together.caret)
 				return iwd->together.caret->position();
@@ -1011,7 +999,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && iwd->together.caret)
 				iwd->together.caret->effective_range(rect);
@@ -1022,7 +1010,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && iwd->together.caret)
 				iwd->together.caret->size(sz);
@@ -1033,7 +1021,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && iwd->together.caret)
 				return iwd->together.caret->size();
@@ -1045,7 +1033,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && iwd->together.caret)
 				iwd->together.caret->visible(is_show);
@@ -1056,7 +1044,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) && iwd->together.caret)
 				return iwd->together.caret->visible();
@@ -1075,7 +1063,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -1101,14 +1089,14 @@ namespace API
 		return reinterpret_cast<window>(ts_wd);
 	}
 
-	//glass_window
+	//glass_window deprecated
 	//@brief: Test a window whether it is a glass attribute.
 	bool glass_window(window wd)
 	{
 		return (bground_mode::basic == effects_bground_mode(wd));
 	}
 
-	bool glass_window(window wd, bool isglass)
+	bool glass_window(window wd, bool isglass)	//deprecated
 	{
 		if(isglass)
 			effects_bground(wd, effects::bground_transparent(0), 0);
@@ -1121,8 +1109,8 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
-			restrict::core_window_t * take_if_false = reinterpret_cast<restrict::core_window_t*>(take_if_active_false);
+			auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto take_if_false = reinterpret_cast<restrict::core_window_t*>(take_if_active_false);
 			internal_scope_guard isg;
 
 			if(active || (take_if_false && (restrict::window_manager.available(take_if_false) == false)))
@@ -1144,7 +1132,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
@@ -1164,11 +1152,12 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 			{
 				iwd->drawer.graphics.typeface(font);
+				iwd->drawer.typeface_changed();
 				restrict::window_manager.update(iwd, true, false);
 			}
 		}
@@ -1178,7 +1167,7 @@ namespace API
 	{
 		if(wd)
 		{
-			restrict::core_window_t* iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd))
 				return iwd->drawer.graphics.typeface();
@@ -1217,7 +1206,7 @@ namespace API
 			return reinterpret_cast<window>(
 						restrict::window_manager.find_window(wd, clipos.x, clipos.y));
 		}
-		return 0;
+		return nullptr;
 	}
 
 	void register_menu_window(window wd, bool has_keyboard)
@@ -1234,9 +1223,9 @@ namespace API
 	{
 		if(menubar)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(menubar);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(menubar);
 			internal_scope_guard isg;
-			if(restrict::window_manager.available(iwd) && (0 == iwd->root_widget->other.attribute.root->menubar))
+			if(restrict::window_manager.available(iwd) && (nullptr == iwd->root_widget->other.attribute.root->menubar))
 			{
 				iwd->root_widget->other.attribute.root->menubar = iwd;
 				return true;
@@ -1249,7 +1238,7 @@ namespace API
 	{
 		if(menubar)
 		{
-			restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(menubar);
+			auto iwd = reinterpret_cast<restrict::core_window_t*>(menubar);
 			internal_scope_guard isg;
 			if(restrict::window_manager.available(iwd) == false) return;
 			if(iwd->root_widget->other.attribute.root->menubar == iwd)
@@ -1259,7 +1248,7 @@ namespace API
 
 	void restore_menubar_taken_window()
 	{
-		restrict::core_window_t * wd = restrict::bedrock.get_menubar_taken();
+		auto wd = restrict::bedrock.get_menubar_taken();
 		if(wd)
 		{
 			internal_scope_guard isg;
@@ -1271,25 +1260,25 @@ namespace API
 	bool is_window_zoomed(window wd, bool ask_for_max)
 	{
 		internal_scope_guard isg;
-		restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto const iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		if(restrict::window_manager.available(iwd))
 			return detail::bedrock::interface_type::is_window_zoomed(iwd->root, ask_for_max);
 		return false;
 	}
 
-	gui::mouse_action::t mouse_action(window wd)
+	nana::gui::mouse_action mouse_action(window wd)
 	{
 		internal_scope_guard isg;
-		restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		if(restrict::window_manager.available(iwd))
 			return iwd->flags.action;
-		return nana::gui::mouse_action::normal;
+		return gui::mouse_action::normal;
 	}
-	
-	nana::gui::element_state::t element_state(window wd)
+
+	nana::gui::element_state element_state(window wd)
 	{
 		internal_scope_guard isg;
-		restrict::core_window_t * iwd = reinterpret_cast<restrict::core_window_t*>(wd);
+		auto iwd = reinterpret_cast<restrict::core_window_t*>(wd);
 		if(restrict::window_manager.available(iwd))
 		{
 			const bool is_focused = (iwd->root_widget->other.attribute.root->focus == iwd);

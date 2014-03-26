@@ -12,7 +12,6 @@
 #include <nana/config.hpp>
 #include PLATFORM_SPEC_HPP
 #include <nana/paint/image.hpp>
-#include <nana/auto_buf.hpp>
 #include <algorithm>
 #include <fstream>
 #include <iterator>
@@ -52,7 +51,8 @@ namespace paint
 
 				if(handle)
 				{
-					ptr_ = nana::shared_ptr<HICON>(new HICON(handle));
+					HICON * p = new HICON(handle);
+					ptr_ = std::shared_ptr<HICON>(p, handle_deleter());
 					ICONINFO info;
 					::GetIconInfo(handle, &info);
 					size_.width = (info.xHotspot << 1);
@@ -73,7 +73,7 @@ namespace paint
 
 			bool image_ico::empty() const
 			{
-				return (!ptr_);
+				return (nullptr == ptr_);
 			}
 
 			void image_ico::close()
@@ -113,9 +113,11 @@ namespace paint
 
 #if defined(NANA_WINDOWS)
 			//struct handle_deleter
-				void image_ico::handle_deleter::operator()(HICON handle) const
+				void image_ico::handle_deleter::operator()(HICON* p) const
 				{
-					if(handle)	::DestroyIcon(handle);
+					if(p && *p)
+						::DestroyIcon(*p);
+					delete p;
 				}
 			//end struct handle_deleter
 #endif
@@ -140,7 +142,11 @@ namespace paint
 		{}
 
 		image::image(const image& rhs)
-			:image_ptr_(rhs.image_ptr_)
+			:	image_ptr_(rhs.image_ptr_)
+		{}
+
+		image::image(image&& r)
+			:	image_ptr_(std::move(r.image_ptr_))
 		{}
 
 		image::image(const nana::char_t* file)
@@ -159,23 +165,30 @@ namespace paint
 			close();
 		}
 
-		image & image::operator=(const image& rhs)
+		image& image::operator=(const image& r)
 		{
-			if(this != &rhs)
-				image_ptr_ = rhs.image_ptr_;
+			if(this != &r)
+				image_ptr_ = r.image_ptr_;
 			
 			return * this;
+		}
+
+		image& image::operator=(image&& r)
+		{
+			if(this != &r)
+				image_ptr_ = std::move(r.image_ptr_);
+			return *this;
 		}
 
 		bool image::open(const nana::string& filename)
 		{
 			image_ptr_.reset();
-			image::image_impl_interface * helper = 0;
+			image::image_impl_interface * helper = nullptr;
 
 			if(filename.size())
 			{
 				nana::string fn;
-				std::transform(filename.begin(), filename.end(), std::back_inserter(fn), detail::toupper);
+				std::transform(filename.cbegin(), filename.cend(), std::back_inserter(fn), detail::toupper);
 
 				if(filename.size() >= 4)
 				{
@@ -195,7 +208,7 @@ namespace paint
 				if(0 == helper)
 				{
 #if defined(NANA_UNICODE)
-					std::ifstream ifs(static_cast<std::string>(nana::charset(filename)).c_str(), std::ios::binary);
+					std::ifstream ifs(std::string(nana::charset(filename)).c_str(), std::ios::binary);
 #else
 					std::ifstream ifs(filename.c_str(), std::ios::binary);
 #endif
@@ -212,7 +225,7 @@ namespace paint
 
 				if(helper)
 				{
-					image_ptr_ = nana::shared_ptr<image_impl_interface>(helper);
+					image_ptr_ = std::shared_ptr<image_impl_interface>(helper);
 					return helper->open(filename.data());
 				}
 			}
@@ -221,12 +234,12 @@ namespace paint
 
 		bool image::empty() const
 		{
-			return ((!image_ptr_) || image_ptr_->empty());
+			return ((nullptr == image_ptr_) || image_ptr_->empty());
 		}
 
-		image::operator const void*() const
+		image::operator unspecified_bool_t() const
 		{
-			return (image_ptr_ ? this : 0);
+			return (image_ptr_ ? &image::empty : nullptr);
 		}
 
 		void image::close()
@@ -241,23 +254,20 @@ namespace paint
 
 		void image::paste(graphics& dst, int x, int y) const
 		{
-			image_impl_interface * sp = image_ptr_.get();
-			if(sp)
-				sp->paste(sp->size(), dst, x, y);
+			if(image_ptr_)
+				image_ptr_->paste(image_ptr_->size(), dst, x, y);
 		}
 
 		void image::paste(const nana::rectangle& r_src, graphics & dst, const nana::point& p_dst) const
 		{
-			image_impl_interface * sp = image_ptr_.get();
-			if(sp)
-				sp->paste(r_src, dst, p_dst.x, p_dst.y);	
+			if(image_ptr_)
+				image_ptr_->paste(r_src, dst, p_dst.x, p_dst.y);		
 		}
 
 		void image::stretch(const nana::rectangle& r_src, graphics& dst, const nana::rectangle & r_dst) const
 		{
-			image_impl_interface * sp = image_ptr_.get();
-			if(sp)
-				sp->stretch(r_src, dst, r_dst);			
+			if(image_ptr_)
+				image_ptr_->stretch(r_src, dst, r_dst);			
 		}
 	//end class image
 

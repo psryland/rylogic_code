@@ -2,8 +2,8 @@
  *	Basic Types definition
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0.
- *	(See accompanying file LICENSE_1_0.txt or copy at
+ *	Distributed under the Boost Software License, Version 1.0. 
+ *	(See accompanying file LICENSE_1_0.txt or copy at 
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/basic_types.hpp
@@ -12,12 +12,13 @@
 #ifndef NANA_BASIC_TYPES_HPP
 #define NANA_BASIC_TYPES_HPP
 
-#include "deploy.hpp"
+#include <nana/deploy.hpp>
 
 namespace nana
 {
 	//A constant value for the invalid position.
 	const std::size_t npos = static_cast<std::size_t>(-1);
+
 
 	template<typename CharT>
 	struct casei_char_traits
@@ -25,11 +26,16 @@ namespace nana
 	{
 		typedef CharT char_type;
 
+		
+		//static constexpr bool eq(char_type c1, char_type c2) noexcept
+		//VC2012 does not support constexpr and noexcept keywords
 		static bool eq(char_type c1, char_type c2)
 		{
 			return std::toupper(c1) == std::toupper(c2);
 		}
 
+		//static constexpr bool lt(char_type c1, char_type c2) noexcept
+		//VC2012 does not support constexpr and noexcept keywords
 		static bool lt(char_type c1, char_type c2)
 		{
 			return std::toupper(c1) < std::toupper(c2);
@@ -55,11 +61,12 @@ namespace nana
 			const char_type * end = s + n;
 			while((s != end) && (std::toupper(*s) != ua))
 				++s;
-			return (s == end ? 0 : s);
+			return (s == end ? nullptr : s);
 		}
 	};
 
 	typedef std::basic_string<nana::char_t, casei_char_traits<nana::char_t> > cistring;
+	
 
 	namespace detail
 	{
@@ -73,25 +80,19 @@ namespace nana
 
 	namespace gui
 	{
-		struct mouse_action
+		enum class mouse_action
 		{
-			enum t
-			{
-				begin, normal = begin, over, pressed, end
-			};
+			begin, normal = begin, over, pressed, end
 		};
 
-		struct element_state
+		enum class element_state
 		{
-			enum t
-			{
-				normal,
-				hovered,
-				focus_normal,
-				focus_hovered,
-				pressed,
-				disabled
-			};
+			normal,
+			hovered,
+			focus_normal,
+			focus_hovered,
+			pressed,
+			disabled
 		};
 	}
 
@@ -100,11 +101,7 @@ namespace nana
 	typedef unsigned long	uint32_t;
 	typedef unsigned		uint_t;
 	typedef unsigned		color_t;
-#if defined(NANA_WINDOWS)
-	typedef __int64	long_long_t;
-#elif defined(NANA_LINUX)
 	typedef long long long_long_t;
-#endif
 
 	const color_t null_color = 0xFFFFFFFF;
 
@@ -132,13 +129,13 @@ namespace nana
 		point(int x, int y);
 		point(const rectangle&);
 
+		point& operator=(const rectangle&);
 		bool operator==(const point&) const;
 		bool operator!=(const point&) const;
 		bool operator<(const point&) const;
 		bool operator<=(const point&) const;
 		bool operator>(const point&) const;
 		bool operator>=(const point&) const;
-		point& operator=(const rectangle&);
 
 		int x;
 		int y;
@@ -167,12 +164,10 @@ namespace nana
 		size(unsigned width, unsigned height);
 		size(const rectangle&);
 
+		size& operator=(const rectangle&);
 		bool is_zero() const;
 		bool operator==(const size& rhs) const;
 		bool operator!=(const size& rhs) const;
-
-		size& operator=(const rectangle&);
-
 
 		unsigned width;
 		unsigned height;
@@ -183,14 +178,16 @@ namespace nana
 		rectangle();
 		rectangle(int x, int y, unsigned width, unsigned height);
 		rectangle(const size &);
-		rectangle(const point&, const size&);
+		rectangle(const point&, const size& = size());
 
-		bool operator==(const rectangle&) const;
-		bool operator!=(const rectangle&) const;
+		bool operator==(const rectangle& rhs) const;
+		bool operator!=(const rectangle& rhs) const;
+
 		rectangle & operator=(const point&);
 		rectangle & operator=(const size&);
 
 		rectangle& pare_off(int pixels);
+
 		bool is_hit(int x, int y) const;
 
 		int x;
@@ -199,33 +196,21 @@ namespace nana
 		unsigned height;
 	};
 
-	struct arrange
+	enum class arrange
 	{
-		enum t{unkown, horizontal, vertical, horizontal_vertical};
-		t value;
-
-		arrange();
-		arrange(t);
-		operator t() const;
-		arrange& operator=(t);
-		bool operator==(t) const;
-		bool operator!=(t) const;
+		unknown, horizontal, vertical, horizontal_vertical
 	};
 
 	///The definition of horizontal alignment
-	struct align
+	enum class align
 	{
-		enum t{
-			left, center, right
-		};
+		left, center, right
 	};
 
 	///The definition of vertical alignment
-	struct align_v
+	enum class align_v
 	{
-		enum t{
-			top, center, bottom
-		};		
+		top, center, bottom
 	};
 }//end namespace nana
 

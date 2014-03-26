@@ -23,13 +23,10 @@ namespace nana{namespace gui{
 			{
 			public:
 				trigger();
-				void bind_window(widget_reference);
-				void attached(graph_reference);
-				void detached();
-				void refresh(graph_reference);
-				void resize(graph_reference, const eventinfo&);
+				void attached(widget_reference, graph_reference)	override;
+				void refresh(graph_reference)	override;
+				void resize(graph_reference, const eventinfo&)	override;
 			private:
-				event_handle event_size_;
 				widget*	wd_;
 			};
 		}//end namespace form
@@ -40,7 +37,7 @@ namespace nana{namespace gui{
 	public:
 		typedef nana::gui::appear appear;
 
-		form(const rectangle& = API::make_center(300, 150), const appearance& = appearance());
+		form(const rectangle& = API::make_center(300, 200), const appearance& = appearance());
 		form(window, const appearance& = appearance());
 		form(window, const rectangle&, const appearance& = appearance());
 	};

@@ -1,10 +1,10 @@
 /*
  *	Platform Specification Implementation
- *	Copyright(C) 2003-2012 Jinhao(cnjinhao@hotmail.com)
+ *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Nana Software License, Version 1.0.
+ *	Distributed under the Boost Software License, Version 1.0.
  *	(See accompanying file LICENSE_1_0.txt or copy at
- *	http://stdex.sourceforge.net/LICENSE_1_0.txt)
+ *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/detail/platform_spec.hpp
  *
@@ -15,18 +15,21 @@
 #ifndef NANA_DETAIL_PLATFORM_SPEC_HPP
 #define NANA_DETAIL_PLATFORM_SPEC_HPP
 
+#include <thread>
+#include <mutex>
+#include <memory>
+#include <condition_variable>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <X11/Xos.h>
 #include <nana/gui/basis.hpp>
-#include <nana/threads/thread.hpp>
-#include <nana/threads/mutex.hpp>
-#include <nana/threads/condition_variable.hpp>
 #include <nana/paint/image.hpp>
 #include <nana/paint/graphics.hpp>
 #include <nana/gui/detail/eventinfo.hpp>
+
 #include <vector>
+#include <map>
 #include "msg_packet.hpp"
 #if defined(NANA_UNICODE)
 	#include <X11/Xft/Xft.h>
@@ -56,7 +59,7 @@ namespace detail
 		charset_conv(const char* tocode, const char* fromcode);
 		~charset_conv();
 		std::string charset(const std::string& str) const;
-		std::string charset(const char * buf, size_t len) const;
+		std::string charset(const char * buf, std::size_t len) const;
 	private:
 		iconv_t handle_;
 	};
@@ -79,16 +82,18 @@ namespace detail
 
 	struct drawable_impl_type
 	{
-		typedef nana::shared_ptr<font_tag> font_ptr_t;
+		typedef std::shared_ptr<font_tag> font_ptr_t;
 
 		drawable_impl_type();
 		~drawable_impl_type();
 
-		void fgcolor(nana::color_t);
+		void fgcolor(unsigned color);
 
 		Pixmap	pixmap;
 		GC	context;
 		font_ptr_t font;
+
+		nana::point	line_begin_pos;
 
 		struct string_spec
 		{
@@ -169,8 +174,8 @@ namespace detail
 			nana::gui::native_window_type owner;
 			std::vector<nana::gui::native_window_type> * owned;
 		};
-	public:
-		int error_code;
+    public:
+        int error_code;
 	public:
 		typedef drawable_impl_type::font_ptr_t font_ptr_t;
 		typedef void (*timer_proc_type)(unsigned tid);
@@ -220,7 +225,7 @@ namespace detail
 		static bool caret_reinstate(caret_tag&);
 		void set_error_handler();
 		int rev_error_handler();
-		void event_register_filter(native_window_type, event_code::t);
+		void event_register_filter(native_window_type, event_code);
 		//grab
 		//register a grab window while capturing it if it is unviewable.
 		//when native_interface::show a window that is registered as a grab
@@ -249,15 +254,16 @@ namespace detail
 	private:
 		Display*	display_;
 		Colormap	colormap_;
-		atombase_tag	atombase_;
-		font_ptr_t	def_font_ptr_;
+		atombase_tag atombase_;
+		font_ptr_t def_font_ptr_;
 		XKeyEvent	key_state_;
 		int (*def_X11_error_handler_)(Display*, XErrorEvent*);
 		Window grab_;
-		nana::threads::recursive_mutex mutex_xlib_;
+		std::recursive_mutex xlib_locker_;
 		struct caret_holder_tag
 		{
-			nana::threads::thread thr;
+			volatile bool exit_thread;
+			std::unique_ptr<std::thread> thr;
 			std::map<native_window_type, caret_tag*> carets;
 		}caret_holder_;
 
@@ -267,7 +273,7 @@ namespace detail
 		struct timer_runner_tag
 		{
 			timer_runner * runner;
-			nana::threads::recursive_mutex mutex;
+			std::recursive_mutex mutex;
 			bool delete_declared;
 			timer_runner_tag();
 		}timer_;
@@ -280,8 +286,8 @@ namespace detail
 				Window	requestor;
 				void*	buffer;
 				size_t	bufsize;
-				nana::threads::mutex cond_mutex;
-				nana::threads::condition_variable cond;
+				std::mutex cond_mutex;
+				std::condition_variable cond;
 			};
 
 			std::vector<item_t*> items;

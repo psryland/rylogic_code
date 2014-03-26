@@ -19,7 +19,7 @@ namespace gui
 {
 	void exec()
 	{
-		detail::bedrock::instance().pump_event(0);
+		detail::bedrock::instance().pump_event(nullptr);
 	}
 }//end namespace gui
 }//end namespace nana

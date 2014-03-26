@@ -29,26 +29,26 @@ namespace gui
 	}
 
 	//overlap, compute the overlap area between r1 and r2. the rect is for root
-	bool overlap(const rectangle& r1,
-						const rectangle& r2,
-						rectangle& r)
+	bool overlap(const rectangle& r1, const rectangle& r2, rectangle& r)
 	{
 		if(overlap(r1, r2))
 		{
 			r.x = r1.x < r2.x ? r2.x : r1.x;
 			r.y = r1.y < r2.y ? r2.y : r1.y;
 
-			long_long_t li1 = long_long_t(r1.x) + r1.width;
-			long_long_t li2 = long_long_t(r2.x) + r2.width;
+			long long li1 = static_cast<long long>(r1.x) + r1.width;
+			long long li2 = static_cast<long long>(r2.x) + r2.width;
 			r.width = static_cast<unsigned>(li1 < li2 ? li1 - r.x: li2 - r.x);
 
-			li1 = long_long_t(r1.y) + r1.height;
-			li2 = long_long_t(r2.y) + r2.height;
+			li1 = static_cast<long long>(r1.y) + r1.height;
+			li2 = static_cast<long long>(r2.y) + r2.height;
 			r.height = static_cast<unsigned>(li1 < li2 ? li1 - r.y: li2 - r.y);
+
 			return true;
 		}
 		return false;
 	}
+
 
 	bool overlap(const rectangle& ir, const size& valid_input_area, const rectangle & dr, const size& valid_dst_area, rectangle& op_ir, rectangle& op_dr)
 	{
@@ -278,4 +278,4 @@ namespace gui
 				(r.y <= y) && (y < r.y + static_cast<int>(r.height));
 	}
 }
-};
+}

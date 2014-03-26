@@ -2,8 +2,8 @@
  *	Nana GUI Programming Interface Implementation
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0. 
- *	(See accompanying file LICENSE_1_0.txt or copy at 
+ *	Distributed under the Boost Software License, Version 1.0.
+ *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/gui/programming_interface.hpp
@@ -17,14 +17,16 @@
 #include <nana/paint/image.hpp>
 
 namespace nana{	namespace gui{
+	class drawer_trigger;
+	class widget;
 
 namespace API
 {
-	void effects_edge_nimbus(window, effects::edge_nimbus::t);
-	effects::edge_nimbus::t effects_edge_nimbus(window);
+	void effects_edge_nimbus(window, effects::edge_nimbus);
+	effects::edge_nimbus effects_edge_nimbus(window);
 
 	void effects_bground(window, const effects::bground_factory_interface&, double fade_rate);
-	bground_mode::t effects_bground_mode(window);
+	bground_mode effects_bground_mode(window);
 	void effects_bground_remove(window);
 
 	//namespace dev
@@ -32,36 +34,60 @@ namespace API
 	namespace dev
 	{
 		template<typename Object, typename Concept>
-		bool attach_signal(window wd, Object& object, void (Concept::*f)(int, const gui::detail::signals&))
+		void attach_signal(window wd, Object& object, void (Concept::*f)(detail::signals::code, const gui::detail::signals&))
 		{
 			using namespace gui::detail;
-			return bedrock::instance().wd_manager.attach_signal(reinterpret_cast<bedrock::core_window_t*>(wd), object, f);
+			bedrock::instance().wd_manager.attach_signal(reinterpret_cast<bedrock::core_window_t*>(wd), object, f);
 		}
 
-		template<typename Function>
-		bool attach_signal(window wd, Function f)
-		{
-			using namespace gui::detail;
-			return bedrock::instance().wd_manager.attach_signal(reinterpret_cast<bedrock::core_window_t*>(wd), f);
-		}
+		event_handle make_drawer_event(event_code, window);
 
 		template<typename Event>
 		event_handle make_drawer_event(window wd)
 		{
 			using namespace gui::detail;
-			if(nana::traits::is_derived<Event, nana::gui::detail::event_type_tag>::value)
-			{
-				bedrock::window_manager_t & wd_manager = bedrock::instance().wd_manager;
-				nana::gui::internal_scope_guard isg;
-				if(wd_manager.available(reinterpret_cast<bedrock::core_window_t*>(wd)))
-					return reinterpret_cast<bedrock::core_window_t*>(wd)->drawer.make_event(Event::identifier, wd);
-			}
-			return 0;
-		}
+			typedef typename std::remove_pointer<typename std::remove_reference<Event>::type>::type event_t;
+			if(std::is_base_of<detail::event_type_tag, event_t>::value)
+				return make_drawer_event(event_t::identifier, wd);
 
-		void attach_drawer(window, nana::gui::drawer_trigger&);
-		void detach_drawer(window);
-		void umake_drawer_event(window);
+			return nullptr;
+		}
+#if  defined(_MSC_VER)
+	#if _MSC_VER >= 1800
+		#define NANA_API_MAKE_EVENTS
+	#elif defined(NANA_API_MAKE_EVENTS)
+		#undef NANA_API_MAKE_EVENTS
+	#endif
+#else
+	#define NANA_API_MAKE_EVENTS
+#endif
+
+#ifdef NANA_API_MAKE_EVENTS
+
+		template<typename ...Events>
+		struct make_drawer_events;
+
+		template<typename Event, typename ...Events>
+		struct make_drawer_events<Event, Events...>
+		{
+			static void make(window wd)
+			{
+				make_drawer_event<Event>(wd);
+				make_drawer_events<Events...>::make(wd);
+			}
+		};
+
+		template<typename Event>
+		struct make_drawer_events<Event>
+		{
+			static void make(window wd)
+			{
+				make_drawer_event<Event>(wd);
+			}
+		};
+#endif
+
+		void attach_drawer(widget&, drawer_trigger&);
 		nana::string window_caption(window);
 		void window_caption(window, const nana::string& str);
 
@@ -70,7 +96,7 @@ namespace API
 		window create_lite_widget(window, const rectangle&);
 		window create_frame(window, const rectangle&);
 
-		paint::graphics * window_graphics(window);
+		paint::graphics* window_graphics(window);
 	}//end namespace dev
 
 	void exit();
@@ -80,7 +106,7 @@ namespace API
 	void unregister_shortkey(window);
 
 	nana::size	screen_size();
-	rectangle screen_area_from_point(const point&);
+	rectangle	screen_area_from_point(const point&);
 	nana::point	cursor_position();
 	rectangle make_center(unsigned width, unsigned height);
 	rectangle make_center(window, unsigned width, unsigned height);
@@ -107,36 +133,60 @@ namespace API
 	template<typename Event, typename Function>
 	event_handle make_event(window wd, Function function)
 	{
-		using namespace gui::detail;
-
-		if(nana::traits::is_derived<Event, nana::gui::detail::event_type_tag>::value)
+		typedef typename std::remove_pointer<typename std::remove_reference<Event>::type>::type event_t;
+		if (std::is_base_of<detail::event_type_tag, event_t>::value)
 		{
-			bedrock & b = bedrock::instance();
-			return b.evt_manager.make(Event::identifier, wd, b.category(reinterpret_cast<bedrock::core_window_t*>(wd)), function);
+			gui::detail::bedrock & b = gui::detail::bedrock::instance();
+			return b.evt_manager.make(event_t::identifier, wd, b.category(reinterpret_cast<gui::detail::bedrock::core_window_t*>(wd)), function);
 		}
-		return 0;
+		return nullptr;
 	}
+
+#ifdef NANA_API_MAKE_EVENTS
+	template<typename ...Events>
+	struct make_events;
+
+	template<typename Event, typename ...Events>
+	struct make_events<Event, Events...>
+	{
+		template<typename Function>
+		static void make(window wd, Function fn)
+		{
+			make_event<Event, Function>(wd, fn);
+			make_events<Events...>::template make<Function>(wd, fn);
+		}
+	};
+
+	template<typename Event>
+	struct make_events<Event>
+	{
+		template<typename Function>
+		static void make(window wd, Function fn)
+		{
+			make_event<Event, Function>(wd, fn);
+		}
+	};
+#endif
 
 	template<typename Event>
 	void raise_event(window wd, eventinfo& ei)
 	{
-		using namespace gui::detail;
-
-		if(nana::traits::is_derived<Event, nana::gui::detail::event_type_tag>::value)
-			bedrock::raise_event(Event::identifier, reinterpret_cast<bedrock::core_window_t*>(wd), ei, true);
+		typedef typename std::remove_pointer<typename std::remove_reference<Event>::type>::type event_t;
+		if(std::is_base_of<detail::event_type_tag, event_t>::value)
+			gui::detail::bedrock::raise_event(event_t::identifier, reinterpret_cast<gui::detail::bedrock::core_window_t*>(wd), ei, true);
 	}
+
 
 	template<typename Event, typename Function>
 	event_handle bind_event(window trigger, window listener, Function function)
 	{
-		using namespace gui::detail;
-
-		if(nana::traits::is_derived<Event, nana::gui::detail::event_type_tag>::value)
+		typedef typename std::remove_pointer<typename std::remove_reference<Event>::type>::type event_t;
+		if(std::is_base_of<detail::event_type_tag, event_t>::value)
 		{
-			bedrock & b = bedrock::instance();
-			return b.evt_manager.bind(Event::identifier, trigger, listener, b.category(reinterpret_cast<bedrock::core_window_t*>(trigger)), function);
+			gui::detail::bedrock & b = gui::detail::bedrock::instance();
+			return b.evt_manager.bind(event_t::identifier, trigger, listener, b.category(reinterpret_cast<gui::detail::bedrock::core_window_t*>(trigger)), function);
 		}
-		
+
 		return 0;
 	}
 
@@ -152,7 +202,7 @@ namespace API
 	}
 
 	void bring_to_top(window);
-	bool set_window_z_order(window wd, window wd_after, z_order_action::t action_if_no_wd_after);
+	bool set_window_z_order(window wd, window wd_after, z_order_action action_if_no_wd_after);
 
 	nana::size window_size(window);
 	void window_size(window, unsigned width, unsigned height);
@@ -165,8 +215,8 @@ namespace API
 	 */
 	void lazy_refresh();
 
-	/** @brief	calls refresh() of a widget's drawer. if currently state is lazy_refresh, Nana.GUI may paste the drawing on the window after an event processing.
-	 *	@param	window	specify a window to be refreshed.
+	/**	@brief:	calls refresh() of a widget's drawer. if currently state is lazy_refresh, Nana.GUI may paste the drawing on the window after an event processing.
+	 *	@param window: specify a window to be refreshed.
 	 */
 	void refresh_window(window);
 	void refresh_window_tree(window);
@@ -175,8 +225,8 @@ namespace API
 	void window_caption(window, const nana::string& title);
 	nana::string window_caption(window);
 
-	void window_cursor(window, cursor::t);
-	cursor::t window_cursor(window);
+	void window_cursor(window, cursor);
+	cursor window_cursor(window);
 
 	bool tray_insert(native_window_type, const char_t* tip, const char_t* ico);
 	bool tray_delete(native_window_type);
@@ -213,9 +263,9 @@ namespace API
 	void tabstop(window);
 	void eat_tabstop(window, bool);
 	window move_tabstop(window, bool next);
-	
-	bool glass_window(window);
-	bool glass_window(window, bool);
+
+	bool glass_window(window);			//deprecated
+	bool glass_window(window, bool);	//deprecated
 
 	void take_active(window, bool has_active, window take_if_has_active_false);
 
@@ -238,8 +288,8 @@ namespace API
 
 	bool is_window_zoomed(window, bool ask_for_max);
 
-	nana::gui::mouse_action::t mouse_action(window);
-	nana::gui::element_state::t element_state(window);
+	nana::gui::mouse_action mouse_action(window);
+	nana::gui::element_state element_state(window);
 }//end namespace API
 }//end namespace gui
 }//end namespace nana

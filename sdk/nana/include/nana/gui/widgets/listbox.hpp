@@ -24,6 +24,58 @@ namespace nana{ namespace gui{
 		{
 			typedef std::size_t size_type;
 
+			struct index_pair
+			{
+				size_type cat;	//The pos of category
+				size_type item;	//the pos of item in a category.
+
+				index_pair()
+					:	cat(0), item(0)
+				{}
+
+				index_pair(size_type cat_pos, size_type item_pos)
+					:	cat(cat_pos),
+						item(item_pos)
+				{}
+
+				bool empty() const
+				{
+					return (npos == cat);
+				}
+
+				void set_both(size_type n)
+				{
+					cat = item = n;
+				}
+
+				bool is_category() const
+				{
+					return (npos != cat && npos == item);
+				}
+
+				bool is_item() const
+				{
+					return (npos != cat && npos != item);
+				}
+
+				bool operator==(const index_pair& r) const
+				{
+					return (r.cat == cat && r.item == item);
+				}
+
+				bool operator!=(const index_pair& r) const
+				{
+					return !this->operator==(r);
+				}
+
+				bool operator>(const index_pair& r) const
+				{
+					return (cat > r.cat) || (cat == r.cat && item > r.item);
+				}
+			};
+
+			typedef std::vector<index_pair> selection;
+
 			//struct essence_t
 			//@brief:	this struct gives many data for listbox,
 			//			the state of the struct does not effect on member funcions, therefore all data members are public.
@@ -31,11 +83,9 @@ namespace nana{ namespace gui{
 			class drawer_header_impl;
 			class drawer_lister_impl;
 
-			class trigger: public nana::gui::drawer_trigger
+			class trigger: public drawer_trigger
 			{
 			public:
-				typedef std::size_t size_type;
-
 				trigger();
 				~trigger();
 				essence_t& essence();
@@ -44,20 +94,19 @@ namespace nana{ namespace gui{
 			private:
 				void _m_draw_border();
 			private:
-				void bind_window(widget_reference);
-
-				void attached(graph_reference);
-				void detached();
-				void typeface_changed(graph_reference);
-				void refresh(graph_reference);
-				void mouse_move(graph_reference, const eventinfo&);
-				void mouse_leave(graph_reference, const eventinfo&);
-				void mouse_down(graph_reference, const eventinfo&);
-				void mouse_up(graph_reference, const eventinfo&);
-				void mouse_wheel(graph_reference, const eventinfo&);
-				void dbl_click(graph_reference, const eventinfo&);
-				void resize(graph_reference, const eventinfo&);
-				void key_down(graph_reference, const eventinfo&);
+				void attached(widget_reference, graph_reference)	override;
+				void detached()	override;
+				void typeface_changed(graph_reference)	override;
+				void refresh(graph_reference)	override;
+				void mouse_move(graph_reference, const eventinfo&)	override;
+				void mouse_leave(graph_reference, const eventinfo&)	override;
+				void mouse_down(graph_reference, const eventinfo&)	override;
+				void mouse_up(graph_reference, const eventinfo&)	override;
+				void mouse_wheel(graph_reference, const eventinfo&)	override;
+				void dbl_click(graph_reference, const eventinfo&)	override;
+				void resize(graph_reference, const eventinfo&)		override;
+				void key_down(graph_reference, const eventinfo&)	override;
+				void key_char(graph_reference, const eventinfo&)	override;	//Deal with whitespace
 			private:
 				essence_t * essence_;
 				drawer_header_impl *drawer_header_;
@@ -75,14 +124,14 @@ namespace nana{ namespace gui{
 				/// The destructor
 				virtual ~resolver_interface(){}
 
-				virtual nana::string decode(std::size_t, const target&) const = 0;
-				virtual void encode(target&, std::size_t, const nana::string&) const = 0;
+				virtual nana::string decode(size_type, const target&) const = 0;
+				virtual void encode(target&, size_type, const nana::string&) const = 0;
 			};
 
 			template<typename T>
 			struct resolver_proxy
 			{
-				pat::cloneable<resolver_interface<T> > res;
+				pat::cloneable<resolver_interface<T>> res;
 
 				resolver_proxy()
 				{}
@@ -94,14 +143,15 @@ namespace nana{ namespace gui{
 				~resolver_proxy()
 				{
 				}
-			};	//end class resolver_proxy
+			};
+
 
 			class item_proxy
 				: public std::iterator<std::input_iterator_tag, item_proxy>
 			{
 			public:
 				item_proxy();
-				item_proxy(essence_t* ess, std::size_t cat, std::size_t pos);
+				item_proxy(essence_t*, const index_pair&);
 
 				bool empty() const;
 
@@ -117,23 +167,24 @@ namespace nana{ namespace gui{
 				item_proxy& fgcolor(nana::color_t);
 				nana::color_t fgcolor() const;
 
-				std::size_t columns() const;
-				item_proxy & text(std::size_t pos, const nana::string&);
-				nana::string text(std::size_t pos) const;
+				index_pair pos() const;
 
-				std::pair<std::size_t, std::size_t> pos() const;
+				size_type columns() const;
+				item_proxy & text(size_type col, const nana::string&);
+				item_proxy & text(size_type col, nana::string&&);
+				nana::string text(size_type col) const;
 
 				template<typename T>
 				item_proxy & resolve_from(const T& t)
 				{
-					resolver_proxy<T> * proxy = _m_resolver().template get<resolver_proxy<T> >();
-					if(0 == proxy)
+					auto proxy = _m_resolver().template get<resolver_proxy<T> >();
+					if(nullptr == proxy)
 						throw std::invalid_argument("Nana.Listbox.ItemProxy: the type passed to value() does not match the resolver.");
 					
-					resolver_proxy<T> * res = proxy->res.get();
-					const std::size_t headers = columns();
+					auto * res = proxy->res.get();
+					auto headers = columns();
 
-					for(std::size_t i = 0; i < headers; ++i)
+					for(size_type i = 0; i < headers; ++i)
 						text(i, res->decode(i, t));
 					
 					return *this;
@@ -142,32 +193,32 @@ namespace nana{ namespace gui{
 				template<typename T>
 				void resolve_to(T& t) const
 				{
-					resolver_proxy<T>* proxy = _m_resolver().template get<resolver_proxy<T> >();
-					if(0 == proxy)
+					auto proxy = _m_resolver().template get<resolver_proxy<T> >();
+					if(nullptr == proxy)
 						throw std::invalid_argument("Nana.Listbox.ItemProxy: the type passed to value() does not match the resolver.");
-
-					resolver_interface<T> * res = proxy->res.get();
-					const std::size_t headers = columns();
-					for(std::size_t i = 0; i < headers; ++i)
+					
+					auto * res = proxy->res.get();
+					auto headers = columns();
+					for(size_type i = 0; i < headers; ++i)
 						res->encode(t, i, text(i));
 				}
 
 				template<typename T>
 				T* value_ptr() const
 				{
-					const nana::any * pany = _m_value();
-					return (pany ? pany->template get<T>() : 0);
+					auto * pany = _m_value();
+					return (pany ? pany->template get<T>() : nullptr);
 				}
 
 				template<typename T>
 				T & value() const
 				{
-					const nana::any * pany = _m_value();
-					if(0 == pany)
+					auto * pany = _m_value();
+					if(nullptr == pany)
 						throw std::runtime_error("treebox::item_proxy.value<T>() is empty");
 
 					T * p = pany->template get<T>();
-					if(0 == p)
+					if(nullptr == p)
 						throw std::runtime_error("treebox::item_proxy.value<T>() invalid type of value");
 					return *p;
 				}
@@ -217,11 +268,9 @@ namespace nana{ namespace gui{
 				const nana::any & _m_resolver() const;
 				nana::any * _m_value(bool alloc_if_empty);
 				const nana::any * _m_value() const;
-				
 			private:
 				essence_t * ess_;
-				std::size_t cat_;
-				std::size_t pos_;
+				index_pair	pos_;
 			};
 
 			class cat_proxy
@@ -229,40 +278,42 @@ namespace nana{ namespace gui{
 			{
 			public:
 				cat_proxy();
-				cat_proxy(essence_t * ess, std::size_t pos);
+				cat_proxy(essence_t * ess, size_type pos);
 
 				/// Append an item at end of the category
 				template<typename T>
 				item_proxy append(const T& t)
 				{
-					resolver_proxy<T>* proxy = _m_resolver().template get<resolver_proxy<T> >();
+					auto proxy = _m_resolver().template get<resolver_proxy<T> >();
 					if(proxy)
 					{
-						pat::cloneable<resolver_interface<T> > & res = proxy->res;
-						std::size_t pos = size();
+						auto & res = proxy->res;
 						push_back(res->decode(0, t));
-						item_proxy ip(ess_, pos_, pos);
-						const std::size_t headers = columns();
-						for(std::size_t i = 1; i < headers; ++i)
+
+						item_proxy ip(ess_, index_pair(pos_, size() - 1));
+						auto headers = columns();
+						for(size_type i = 1; i < headers; ++i)
 							ip.text(i, res->decode(i, t));
 						return ip;
 					}
 					return item_proxy();
 				}
 
-				std::size_t columns() const;
+				size_type columns() const;
 
 				/// Behavior of a container
 				void push_back(const nana::string&);
+				void push_back(nana::string&&);
+
 				item_proxy begin() const;
 				item_proxy end() const;
 				item_proxy cbegin() const;
 				item_proxy cend() const;
 
-				item_proxy at(std::size_t pos) const;
+				item_proxy at(size_type pos) const;
 				item_proxy back() const;
 
-				std::size_t size() const;
+				size_type size() const;
 
 				/// Behavior of Iterator
 				cat_proxy& operator=(const cat_proxy&);
@@ -293,8 +344,8 @@ namespace nana{ namespace gui{
 			private:
 				const nana::any & _m_resolver() const;
 			private:
-				essence_t * ess_;
-				std::size_t pos_;
+				essence_t*	ess_;
+				size_type	pos_;
 			};
 
 			struct extra_events
@@ -302,7 +353,7 @@ namespace nana{ namespace gui{
 				nana::fn_group<void(item_proxy, bool)> checked;
 				nana::fn_group<void(item_proxy, bool)> selected;
 			};
-		}//end namespace listbox
+		}
 	}//end namespace drawerbase
 
 	class listbox
@@ -310,12 +361,12 @@ namespace nana{ namespace gui{
 			public concepts::any_objective<drawerbase::listbox::size_type, 2>
 	{
 	public:
-		typedef drawerbase::listbox::size_type size_type;
-		typedef std::pair<size_type, size_type>	index_pair_t;
-		typedef drawerbase::listbox::extra_events ext_event_type;
-		typedef drawerbase::listbox::cat_proxy cat_proxy;
+		typedef drawerbase::listbox::size_type	size_type;
+		typedef drawerbase::listbox::index_pair	index_pair;
+		typedef drawerbase::listbox::extra_events	ext_event_type;
+		typedef drawerbase::listbox::cat_proxy	cat_proxy;
 		typedef drawerbase::listbox::item_proxy	item_proxy;
-		typedef std::vector<index_pair_t> selection;
+		typedef drawerbase::listbox::selection	selection;
 
 		/// An interface that performances a translation between the object of T and an item of listbox.
 		template<typename T>
@@ -324,22 +375,22 @@ namespace nana{ namespace gui{
 		{
 		};
 	public:
-		/// The defaut constructor without creating the widget.
 		listbox();
 		listbox(window, bool visible);
 		listbox(window, const rectangle& = rectangle(), bool visible = true);
 
-		ext_event_type & ext_event() const;
+		ext_event_type& ext_event() const;
 
 		void auto_draw(bool);
-		void append_categ(const nana::string& text);
+
 		void append_header(const nana::string&, unsigned width = 120);
 
 		cat_proxy append(const nana::string& text);
-		cat_proxy at(std::size_t pos) const;
-		item_proxy at(std::size_t pos, std::size_t index) const;
+		cat_proxy at(size_type pos) const;
+		item_proxy at(const index_pair&) const;
 
-		void insert(size_type cat, size_type index, const nana::string&);
+		void insert(const index_pair&, const nana::string&);
+		void insert(const index_pair&, nana::string&&);
 
 		void checkable(bool);
 		selection checked() const;
@@ -358,18 +409,21 @@ namespace nana{ namespace gui{
 			_m_resolver(nana::any(proxy));
 		}
 
-		void set_sort_compare(size_type sub, nana::functor<bool(const nana::string&, nana::any*, const nana::string&, nana::any*, bool reverse)> strick_ordering);
-		void sort_col(std::size_t col, bool reverse = false);
-		std::size_t sort_col() const;
+		void set_sort_compare(size_type col, std::function<bool(const nana::string&, nana::any*,
+															const nana::string&, nana::any*, bool reverse)> strick_ordering);
+
+		void sort_col(size_type col, bool reverse = false);
+		size_type sort_col() const;
 		void unsort();
 		bool freeze_sort(bool freeze);
 
 		selection selected() const;
+
 		void show_header(bool);
 		bool visible_header() const;
 		void move_select(bool upwards);
-		void icon(size_type cat, size_type index, const nana::paint::image&);
-		nana::paint::image icon(size_type cat, size_type index) const;
+		void icon(const index_pair&, const nana::paint::image&);
+		nana::paint::image icon(const index_pair&) const;
 		size_type size_categ() const;
 		size_type size_item() const;
 		size_type size_item(size_type cat) const;

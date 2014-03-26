@@ -22,7 +22,7 @@ namespace nana{	namespace gui { namespace widgets{ namespace detail
 	{
 	public:
 		/// A type of widget-defined components.
-		typedef Component component;
+		typedef Component component_t;
 
 		/// A type of widget-defined item attribute.
 		typedef ItemAttribute item_attribute_t;
@@ -42,7 +42,7 @@ namespace nana{	namespace gui { namespace widgets{ namespace detail
 		virtual const item_attribute_t& item_attribute() const = 0;
 
 		/// Access a specified component of the item.
-		virtual bool comp_attribute(typename component::t, comp_attribute_t &) const = 0;
+		virtual bool comp_attribute(component_t, comp_attribute_t &) const = 0;
 	};
 
 	/// A component set placer used for specifying component position and size.
@@ -52,7 +52,7 @@ namespace nana{	namespace gui { namespace widgets{ namespace detail
 	public:
 		typedef ::nana::paint::graphics & graph_reference;
 		/// A type of widget-defined components.
-		typedef Component component;
+		typedef Component component_t;
 
 		/// A type of widget-defined item attribute.
 		typedef ItemAttribute item_attribute_t;
@@ -61,8 +61,8 @@ namespace nana{	namespace gui { namespace widgets{ namespace detail
 		virtual ~compset_placer(){}
 
 		/// Enable/Disable the specified component.
-		virtual void enable(typename component::t, bool) = 0;
-		virtual bool enabled(typename component::t) const = 0;
+		virtual void enable(component_t, bool) = 0;
+		virtual bool enabled(component_t) const = 0;
 
 		/// Height of an item, in pixels.
 		//	this method is content-indepented, this feature is easy for implementation.
@@ -76,7 +76,7 @@ namespace nana{	namespace gui { namespace widgets{ namespace detail
 		/// @param attr the attribute of the item.
 		/// @param r the pointer refers to a rectangle for receiving the position and size of the component.
 		/// @returns the true when the component is located by the locator.
-		virtual bool locate(typename component::t comp, const item_attribute_t& attr, rectangle * r) const = 0;
+		virtual bool locate(component_t comp, const item_attribute_t& attr, rectangle * r) const = 0;
 	};
 }//end namespace detail
 }//end namespace widgets

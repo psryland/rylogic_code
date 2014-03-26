@@ -30,7 +30,7 @@ namespace filesystem
         }
 #elif defined(NANA_LINUX)
 		fileinfo::fileinfo(const nana::string& name, const struct stat& fst)
-			:name(name), size(fst.st_size), directory(040000 & fst.st_mode)
+			:name(name), size(fst.st_size), directory(0 != S_ISDIR(fst.st_mode))
 		{
         }
 #endif

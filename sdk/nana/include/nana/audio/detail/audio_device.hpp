@@ -34,7 +34,7 @@ namespace nana{	namespace audio
 	
 #if defined(NANA_WINDOWS)
 			HWAVEOUT handle_;
-			nana::threads::recursive_mutex queue_mutex_;
+			std::recursive_mutex queue_lock_;
 			std::vector<buffer_preparation::meta*> done_queue_;
 #elif defined(NANA_LINUX)
 			snd_pcm_t * handle_;

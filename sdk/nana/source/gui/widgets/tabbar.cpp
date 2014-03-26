@@ -30,7 +30,7 @@ namespace nana{ namespace gui{
 				nana::color_t fgcolor;
 
 				item_t()
-					:relative(0), bgcolor(nana::null_color), fgcolor(nana::null_color)
+					:relative(nullptr), bgcolor(nana::null_color), fgcolor(nana::null_color)
 				{}
 			};
 
@@ -101,7 +101,7 @@ namespace nana{ namespace gui{
 				{
 					int x = r.x + (static_cast<int>(r.width) - 14) / 2;
 					int y = r.y + (static_cast<int>(r.height) - 14) / 2;
-					nana::color_t color = 0xF0F0F0;
+					nana::color_t color;
 
 					switch(sta)
 					{
@@ -111,7 +111,8 @@ namespace nana{ namespace gui{
 						color = 0xA0A0A0; break;
 					case item_renderer::disable:
 						color = 0x808080; break;
-					default:	break;
+					default:
+						color = 0xF0F0F0;
 					}
 					graph.rectangle(r, bgcolor_, true);
 					nana::paint::gadget::cross(graph, x, y, 14, 6, color);
@@ -343,7 +344,7 @@ namespace nana{ namespace gui{
 				typedef std::list<item_t>::const_iterator const_iterator;
 
 				layouter()
-					: event_trigger_(0)
+					: event_trigger_(nullptr)
 				{}
 
 
@@ -370,14 +371,9 @@ namespace nana{ namespace gui{
 
 				const nana::any& at_no_bound_check(std::size_t i) const
 				{
-					const_iterator it = list_.begin();
+					const_iterator it = list_.cbegin();
 					std::advance(it, i);
 					return it->value;
-				}
-
-				void bind(nana::gui::window wd)
-				{
-					basis_.wd = wd;
 				}
 
 				toolbox & toolbox_object()
@@ -385,13 +381,14 @@ namespace nana{ namespace gui{
 					return toolbox_;
 				}
 
-				nana::gui::window widget() const
+				window widget_handle() const
 				{
 					return basis_.wd;
 				}
 
-				void attach(nana::paint::graphics& graph)
+				void attach(window wd, nana::paint::graphics& graph)
 				{
+					basis_.wd = wd;
 					basis_.graph = &graph;
 				}
 
@@ -405,9 +402,9 @@ namespace nana{ namespace gui{
 					return basis_.renderer;
 				}
 
-				void ext_renderer(const pat::cloneable<item_renderer>& rd)
+				void ext_renderer(const pat::cloneable<item_renderer>& ir)
 				{
-					basis_.renderer = rd;
+					basis_.renderer = ir;
 				}
 
 				void event_trigger(internal_event_trigger* iet)
@@ -437,7 +434,7 @@ namespace nana{ namespace gui{
 						iterator i = list_.begin();
 						std::advance(i, pos);
 
-						if((event_trigger_ == 0) || event_trigger_->remove(pos))
+						if((nullptr == event_trigger_) || event_trigger_->remove(pos))
 						{
 							list_.erase(i);
 							_m_adjust();
@@ -601,7 +598,7 @@ namespace nana{ namespace gui{
 					return basis_.active;
 				}
 
-				void relate(std::size_t i, nana::gui::window wd)
+				void relate(std::size_t i, window wd)
 				{
 					if(i < list_.size())
 					{
@@ -670,14 +667,14 @@ namespace nana{ namespace gui{
 				{
 					if(i < list_.size())
 					{
-						const_iterator it = list_.begin();
+						const_iterator it = list_.cbegin();
 						std::advance(it, i);
 						return it->text;
 					}
 					return nana::string();
 				}
 
-				bool toolbox_answer(const nana::gui::eventinfo& ei)
+				bool toolbox_answer(const eventinfo& ei)
 				{
 					if(trace_.what == trace_.toolbox)
 					{
@@ -686,26 +683,26 @@ namespace nana{ namespace gui{
 							switch(trace_.u.button)
 							{
 							case toolbox::ButtonAdd:
-								if(ei.identifier == nana::gui::events::mouse_up::identifier)
+								if(ei.identifier == events::mouse_up::identifier)
 									return _m_add_tab(npos);
 								break;
 							case toolbox::ButtonScrollBack:
-								if(ei.identifier == nana::gui::events::mouse_down::identifier)
+								if(ei.identifier == events::mouse_down::identifier)
 									return _m_scroll(true);
 								break;
 							case toolbox::ButtonScrollNext:
-								if(ei.identifier == nana::gui::events::mouse_down::identifier)
+								if(ei.identifier == events::mouse_down::identifier)
 									return _m_scroll(false);
 								break;
 							case toolbox::ButtonList:
-								if(ei.identifier == nana::gui::events::mouse_down::identifier)
+								if(ei.identifier == events::mouse_down::identifier)
 								{
 									_m_open_menulister();
 									return true;
 								}
 								break;
 							case toolbox::ButtonClose:
-								if(ei.identifier == nana::gui::events::mouse_up::identifier)
+								if(ei.identifier == events::mouse_up::identifier)
 								{
 									if(this->erase(basis_.active))
 									{
@@ -714,13 +711,14 @@ namespace nana{ namespace gui{
 									}
 								}
 								break;
-							default:	break;
+							default:
+								break;
 							}
 						}
 					}
 					else if((trace_.what == trace_.item) && (trace_.item_part == trace_.close))
 					{
-						if(ei.identifier == nana::gui::events::mouse_up::identifier)
+						if(ei.identifier == events::mouse_up::identifier)
 						{
 							if(this->erase(trace_.u.index))
 							{
@@ -748,7 +746,7 @@ namespace nana{ namespace gui{
 					}
 					else
 					{
-						iterator it = list_.begin();
+						auto it = list_.begin();
 						std::advance(it, i);
 						list_.insert(it, m);
 					}
@@ -799,19 +797,19 @@ namespace nana{ namespace gui{
 				{
 					menulister_.clear();
 
-					nana::gui::menu::event_fn_t f(*this, &layouter::_m_click_menulister);
-					for(iterator i = list_.begin(); i != list_.end(); ++i)
-						menulister_.append(i->text, f);
+					auto f = std::bind(&layouter::_m_click_menulister, this, std::placeholders::_1);
+					for(auto & m : list_)
+						menulister_.append(m.text, f);
 
 					nana::rectangle r = toolbox_.area(toolbox_.ButtonList, basis_.graph->height());
 					r.x += _m_toolbox_pos();
 					menulister_.popup(basis_.wd, r.x, (r.y + static_cast<int>(r.height)));
 				}
 
-				void _m_click_menulister(nana::gui::menu::item_proxy& ip)
+				void _m_click_menulister(gui::menu::item_proxy& ip)
 				{
 					if(this->active(ip.index()))
-						nana::gui::API::refresh_window(basis_.wd);
+						API::refresh_window(basis_.wd);
 				}
 
 				//the begin pos of toolbox
@@ -858,24 +856,23 @@ namespace nana{ namespace gui{
 					if(x < 0 || x >= end) return npos;
 
 					int left = -static_cast<int>(basis_.scroll_pixels);
-					std::size_t index = 0;
+					std::size_t i = 0, size = list_.size();
 
-					for(const_iterator i = list_.begin(); i != list_.end(); ++i, ++index)
+					for(; i != size; ++i)
 					{
-						if(left < end)
+						if(left >= end)
 						{
-							if(left <= x && x < left + static_cast<int>(basis_.item_pixels))
-								break;
-						}
-						else
-						{
-							index = npos;
+							i = npos;
 							break;
 						}
+
+						if(left <= x && x < left + static_cast<int>(basis_.item_pixels))
+							break;
+
 						left += basis_.item_pixels;
 					}
 
-					if(index < list_.size())
+					if(i < list_.size())
 					{
 						trace_.item_part = trace_.body;
 						if(toolbox_.close_fly())
@@ -884,8 +881,9 @@ namespace nana{ namespace gui{
 							if((r.x <= x && x < r.x + static_cast<int>(r.width)) && (r.y <= y && y < r.y + static_cast<int>(r.height)))
 								trace_.item_part = trace_.close;
 						}
+						return i;
 					}
-					return (index < list_.size() ? index : npos);
+					return npos;
 				}
 
 				nana::rectangle _m_toolbox_area(toolbox::button_t btn) const
@@ -911,7 +909,7 @@ namespace nana{ namespace gui{
 
 				void _m_adjust()
 				{
-					if(basis_.graph == 0 || list_.size() == 0) return;
+					if((nullptr == basis_.graph) || (0 == list_.size())) return;
 
 					//adjust the number of pixels of item.
 					bool scrollable = toolbox_.renderable(toolbox_.ButtonScrollBack);
@@ -982,7 +980,7 @@ namespace nana{ namespace gui{
 					m.r.height = basis_.graph->height();
 
 					basis_.renderer->background(*basis_.graph, m.r, bgcolor);
-					nana::color_t fgcolor = nana::gui::API::foreground(basis_.wd);
+					nana::color_t fgcolor = API::foreground(basis_.wd);
 
 					//the max number of pixels of tabs.
 					int pixels = static_cast<int>(m.r.width - _m_toolbox_pixels());
@@ -996,7 +994,7 @@ namespace nana{ namespace gui{
 
 					item_renderer::item_t active_m;
 
-					for(std::list<item_t>::iterator i = list_.begin(); i != list_.end(); ++i, ++index)
+					for(auto i = list_.cbegin(); i != list_.cend(); ++i, ++index)
 					{
 						if(m.r.x >= pixels) break;
 
@@ -1007,7 +1005,7 @@ namespace nana{ namespace gui{
 							if(index == this->basis_.active)
 								active_m = m;
 
-							item_t & item = *i;
+							const item_t & item = *i;
 							basis_.renderer->item(*basis_.graph, m, (index == basis_.active), _m_state(index));
 							if(is_close_fly)
 							{
@@ -1088,7 +1086,8 @@ namespace nana{ namespace gui{
 						case toolbox::ButtonAdd:
 							basis_.renderer->add(*basis_.graph, r, state);
 							break;
-						default:	break;
+						default:
+							break;
 						}
 					}
 				}
@@ -1096,7 +1095,7 @@ namespace nana{ namespace gui{
 				std::list<item_t> list_;
 				internal_event_trigger	* event_trigger_;
 				toolbox toolbox_;
-				nana::gui::menu menulister_;
+				gui::menu menulister_;
 
 				struct trace_tag
 				{
@@ -1118,7 +1117,7 @@ namespace nana{ namespace gui{
 
 				struct basis_tag
 				{
-					nana::gui::window wd;
+					window wd;
 					nana::paint::graphics * graph;
 					pat::cloneable<item_renderer> renderer;
 					unsigned max_pixels;
@@ -1128,7 +1127,7 @@ namespace nana{ namespace gui{
 					std::size_t active;
 
 					basis_tag()
-						:	wd(0), graph(0),
+						:	wd(nullptr), graph(nullptr),
 							renderer(def_renderer()),
 							max_pixels(250), min_pixels(100), item_pixels(max_pixels), scroll_pixels(0),
 							active(npos)
@@ -1155,7 +1154,7 @@ namespace nana{ namespace gui{
 				void trigger::active(std::size_t i)
 				{
 					if(layouter_->active(i))
-						API::refresh_window(layouter_->widget());
+						API::refresh_window(layouter_->widget_handle());
 				}
 
 				std::size_t trigger::active() const
@@ -1208,7 +1207,7 @@ namespace nana{ namespace gui{
 					return layouter_->toolbox_object().close_fly(fly);
 				}
 
-				void trigger::relate(std::size_t i, nana::gui::window wd)
+				void trigger::relate(std::size_t i, window wd)
 				{
 					layouter_->relate(i, wd);
 				}
@@ -1216,19 +1215,19 @@ namespace nana{ namespace gui{
 				void trigger::tab_color(std::size_t i, bool is_bgcolor, nana::color_t color)
 				{
 					if(layouter_->tab_color(i, is_bgcolor, color))
-						API::refresh_window(layouter_->widget());
+						API::refresh_window(layouter_->widget_handle());
 				}
 
 				void trigger::tab_image(std::size_t i, const nana::paint::image& img)
 				{
 					if(layouter_->tab_image(i, img))
-						API::refresh_window(layouter_->widget());
+						API::refresh_window(layouter_->widget_handle());
 				}
 
 				void trigger::text(std::size_t i, const nana::string& str)
 				{
 					if(layouter_->text(i, str))
-						API::refresh_window(layouter_->widget());
+						API::refresh_window(layouter_->widget_handle());
 				}
 
 				nana::string trigger::text(std::size_t i) const
@@ -1254,16 +1253,11 @@ namespace nana{ namespace gui{
 					}
 					return (tb != toolbox::ButtonSize ? tbobj.enable(tb, enable) : false);
 				}
-			//private:
-				void trigger::bind_window(trigger::widget_reference wd)
-				{
-					layouter_->bind(wd);
-				}
 
-				void trigger::attached(graph_reference graph)
+				void trigger::attached(widget_reference widget, graph_reference graph)
 				{
-					layouter_->attach(graph);
-					window wd = layouter_->widget();
+					layouter_->attach(widget, graph);
+					window wd = layouter_->widget_handle();
 					using namespace API::dev;
 					make_drawer_event<events::mouse_down>(wd);
 					make_drawer_event<events::mouse_up>(wd);
@@ -1274,7 +1268,6 @@ namespace nana{ namespace gui{
 				void trigger::detached()
 				{
 					layouter_->detach();
-					API::dev::umake_drawer_event(layouter_->widget());
 				}
 
 				void trigger::refresh(graph_reference)

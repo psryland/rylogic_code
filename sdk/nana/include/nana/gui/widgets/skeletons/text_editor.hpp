@@ -32,13 +32,13 @@ namespace nana{	namespace gui{	namespace widgets
 
 			struct ext_renderer_tag
 			{
-				nana::functor<void(graph_reference, const nana::rectangle& text_area, nana::color_t)> background;
+				std::function<void(graph_reference, const nana::rectangle& text_area, nana::color_t)> background;
 			};
 
 			text_editor(window, graph_reference);
 			~text_editor();
 
-			void border_renderer(nana::functor<void(nana::paint::graphics&)>);
+			void border_renderer(std::function<void(nana::paint::graphics&)>);
 
 			void load(const char*);
 
@@ -47,7 +47,7 @@ namespace nana{	namespace gui{	namespace widgets
 			bool text_area(const nana::rectangle&);
 			bool tip_string(const nana::string&);
 
-			const attributes& attr() const;
+			const attributes & attr() const;
 			bool multi_lines(bool);
 			void editable(bool);
 			void enable_background(bool);
@@ -57,7 +57,6 @@ namespace nana{	namespace gui{	namespace widgets
 
 			unsigned line_height() const;
 			unsigned screen_lines() const;
-			std::size_t text_lines() const;
 
 			bool getline(std::size_t pos, nana::string&) const;
 			void setline(std::size_t pos, const nana::string&);
@@ -108,7 +107,7 @@ namespace nana{	namespace gui{	namespace widgets
 			const skeletons::textbase<nana::char_t>& textbase() const;
 		private:
 			bool _m_scroll_text(bool vertical);
-			void _m_on_scroll(const nana::gui::eventinfo& ei);
+			void _m_on_scroll(const eventinfo& ei);
 			void _m_scrollbar();
 			nana::size _m_text_area() const;
 			void _m_get_scrollbar_size();
@@ -170,6 +169,7 @@ namespace nana{	namespace gui{	namespace widgets
 			nana::char_t mask_char_;
 
 			mutable ext_renderer_tag ext_renderer_;
+
 			struct attributes
 			{
 				attributes();
@@ -194,7 +194,7 @@ namespace nana{	namespace gui{	namespace widgets
 				unsigned long tab_space;
 				unsigned long vscroll;
 				unsigned long hscroll;
-				nana::functor<void(nana::paint::graphics&)> border_renderer;
+				std::function<void(nana::paint::graphics&)> border_renderer;
 			}text_area_;
 
 			struct selection

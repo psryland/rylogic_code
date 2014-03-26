@@ -13,11 +13,11 @@ namespace nana{	namespace paint
 #if defined(NANA_WINDOWS)
 			struct handle_deleter
 			{
-				void operator()(HICON handle) const;
+				void operator()(HICON* handle) const;
 			};//end struct handle_deleter
-			typedef nana::shared_ptr<HICON> ptr_t;
+			typedef std::shared_ptr<HICON> ptr_t;
 #else
-			typedef nana::shared_ptr<int*> ptr_t;
+			typedef std::shared_ptr<int*> ptr_t;
 #endif
 		public:
 			image_ico(bool is_ico);
@@ -34,7 +34,7 @@ namespace nana{	namespace paint
 		private:
 			const bool	is_ico_;
 			nana::size	size_;
-			ptr_t		ptr_;
+			ptr_t ptr_;
 		};//end class image_ico
 	}
 }//end namespace paint

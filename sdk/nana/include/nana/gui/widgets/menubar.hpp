@@ -32,22 +32,20 @@ namespace gui
 			public:
 				trigger();
 				~trigger();
-				nana::gui::menu* push_back(const nana::string&);
-				nana::gui::menu* at(size_t) const;
+				gui::menu* push_back(const nana::string&);
+				gui::menu* at(size_t) const;
 				std::size_t size() const;
 			private:
-				void bind_window(widget_reference widget);
-				void attached(graph_reference graph);
-				void detached();
-				void refresh(graph_reference);
-				void mouse_move(graph_reference, const nana::gui::eventinfo&);
-				void mouse_leave(graph_reference, const nana::gui::eventinfo&);
-				void mouse_down(graph_reference, const nana::gui::eventinfo&);
-				void mouse_up(graph_reference graph, const nana::gui::eventinfo& ei);
-				void focus(graph_reference, const nana::gui::eventinfo& ei);
-				void key_down(graph_reference, const nana::gui::eventinfo& ei);
-				void key_up(graph_reference, const nana::gui::eventinfo& ei);
-				void shortkey(graph_reference graph, const nana::gui::eventinfo& ei);
+				void attached(widget_reference, graph_reference)	override;
+				void refresh(graph_reference)	override;
+				void mouse_move(graph_reference, const eventinfo&)	override;
+				void mouse_leave(graph_reference, const eventinfo&)	override;
+				void mouse_down(graph_reference, const eventinfo&)	override;
+				void mouse_up(graph_reference, const eventinfo&)	override;
+				void focus(graph_reference, const eventinfo&)		override;
+				void key_down(graph_reference, const eventinfo&)	override;
+				void key_up(graph_reference, const eventinfo&)		override;
+				void shortkey(graph_reference, const eventinfo&)	override;
 			private:
 				void _m_move(bool to_left);
 				bool _m_popup_menu();
@@ -58,7 +56,7 @@ namespace gui
 				bool _m_track_mouse(int x, int y);
 				void _m_draw();
 			private:
-				nana::gui::widget *widget_;
+				widget *widget_;
 				nana::paint::graphics	*graph_;
 				
 				itembase*	items_;
@@ -94,8 +92,8 @@ namespace gui
 		menubar();
 		menubar(window);
 		void create(window);
-		nana::gui::menu& push_back(const nana::string&);
-		nana::gui::menu& at(size_t) const;
+		menu& push_back(const nana::string&);
+		menu& at(size_t) const;
 		std::size_t length() const;
 	};//end class menubar
 }//end namespace gui

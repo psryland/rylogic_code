@@ -14,7 +14,7 @@
 #define NANA_THREADS_POOL_HPP
 
 #include <nana/traits.hpp>
-#include <nana/functor.hpp>
+#include <functional>
 #include <cstddef>
 
 
@@ -61,11 +61,11 @@ namespace threads
 		template<typename Function>
 		void push(const Function& f)
 		{
-			task * taskptr = 0;
+			task * taskptr = nullptr;
 
 			try
 			{
-				taskptr = new task_wrapper<typename nana::metacomp::static_if<typename nana::traits::is_function_type<Function>::value_type, Function*, Function>::value_type>(f);
+				taskptr = new task_wrapper<typename nana::metacomp::static_if<std::is_function<Function>::value, Function*, Function>::value_type>(f);
 				_m_push(taskptr);
 			}
 			catch(std::bad_alloc&)
@@ -88,7 +88,7 @@ namespace threads
 	class pool_pusher
 	{
 	public:
-		typedef typename nana::metacomp::static_if<typename nana::traits::is_function_type<Function>::value_type, Function*, Function>::value_type value_type;
+		typedef typename nana::metacomp::static_if<std::is_function<Function>::value, Function*, Function>::value_type value_type;
 
 		pool_pusher(pool& pobj, value_type fn)
 			:pobj_(pobj), value_(fn)
@@ -110,9 +110,9 @@ namespace threads
 	}
 
 	template<typename Class, typename Concept>
-	pool_pusher<nana::functor<void()> > pool_push(pool& pobj, Class& obj, void(Concept::*mf)())
+	pool_pusher<std::function<void()> > pool_push(pool& pobj, Class& obj, void(Concept::*mf)())
 	{
-		return pool_pusher<nana::functor<void()> >(pobj, make_fun(obj, mf));
+		return pool_pusher<std::function<void()> >(pobj, std::bind(mf, &obj));
 	}
 
 }//end namespace threads

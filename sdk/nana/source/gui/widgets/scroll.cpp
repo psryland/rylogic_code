@@ -34,7 +34,7 @@ namespace nana{ namespace gui{
 				vertical_ = v;
 			}
 
-			buttons::t drawer::what(graph_reference graph, int x, int y)
+			buttons drawer::what(graph_reference graph, int x, int y)
 			{
 				unsigned scale;
 				int pos;
@@ -96,7 +96,7 @@ namespace nana{ namespace gui{
 						pos = static_cast<int>(scroll_area);
 
 					metrics_.scroll_pos = pos;
-					const metrics_type::size_type value_max = metrics_.peak - metrics_.range;
+					auto value_max = metrics_.peak - metrics_.range;
 					metrics_.value = pos * value_max / scroll_area;
 					if(metrics_.value < metrics_.peak - metrics_.range)
 					{
@@ -132,7 +132,7 @@ namespace nana{ namespace gui{
 				}
 			}
 
-			void drawer::draw(graph_reference graph, buttons::t what)
+			void drawer::draw(graph_reference graph, buttons what)
 			{
 				if(false == metrics_.pressed || metrics_.what != buttons::scroll)
 					_m_adjust_scroll(graph);
@@ -210,13 +210,7 @@ namespace nana{ namespace gui{
 						color = 0x3C7FB1; break;
 					}
 					
-					int inner_x = x + width - 2;
-					int inner_y = y + height - 2;
-					
-					graph.line(x + 1, y, inner_x, y, color);
-					graph.line(x + 1, inner_y + 1, inner_x, inner_y + 1, color);
-					graph.line(x, y + 1, x, inner_y, color);
-					graph.line(inner_x + 1, y + 1, inner_x + 1, inner_y, color);
+					graph.rectangle(rectangle(x, y, width, height), color, false);
 
 					unsigned color_x = graph.mix(color, 0xFFFFFF, 0.5);
 
@@ -224,6 +218,7 @@ namespace nana{ namespace gui{
 					y += 2;
 					width -= 4;
 					height -= 4;
+
 					if(vertical_)
 					{
 						unsigned half = width / 2;
@@ -304,7 +299,7 @@ namespace nana{ namespace gui{
 				}
 			}
 
-			void drawer::_m_draw_button(graph_reference graph, int x, int y, unsigned width, unsigned height, buttons::t what, int state)
+			void drawer::_m_draw_button(graph_reference graph, int x, int y, unsigned width, unsigned height, buttons what, int state)
 			{
 				if(_m_check())
 					_m_button_frame(graph, x, y, width, height, state);
@@ -344,3 +339,4 @@ namespace nana{ namespace gui{
 	}//end namespace drawerbase
 }//end namespace gui
 }//end namespace nana
+

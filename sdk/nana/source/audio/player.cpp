@@ -17,10 +17,10 @@ namespace nana{	namespace audio
 			: impl_(new implementation)
 		{}
 
-		player::player(const nana::string& audio_file)
+		player::player(const nana::string& file)
 			: impl_(new implementation)
 		{
-			open(audio_file);
+			open(file);
 		}
 
 		player::~player()
@@ -55,7 +55,6 @@ namespace nana{	namespace audio
 			}
 			impl_->dev.wait_for_drain();
 		}
-
 
 		void player::close()
 		{

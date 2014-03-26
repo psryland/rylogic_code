@@ -14,7 +14,8 @@
 
 #include "../basic_types.hpp"
 #include "../gui/basis.hpp"
-#include <nana/memory.hpp>
+#include "pixel_buffer.hpp"
+#include <memory>
 
 namespace nana
 {
@@ -91,7 +92,6 @@ namespace nana
 
 			bool text_metrics(unsigned & ascent, unsigned& descent, unsigned& internal_leading) const;
 
-
 			unsigned bidi_string(int x, int y, color_t, const nana::char_t *, std::size_t len);
 			void string(int x, int y, color_t, const nana::string&, std::size_t len);
 			void string(int x, int y, color_t, const nana::string&);
@@ -102,16 +102,21 @@ namespace nana
 			void rectangle(int x, int y, unsigned width, unsigned height, color_t, bool solid);
 			void rectangle(color_t, bool solid);
 			void rectangle(const nana::rectangle&, color_t, bool solid);
+			void rectangle_line(const nana::rectangle&, color_t left, color_t top, color_t right, color_t bottom);
 			void round_rectangle(int x, int y, unsigned width, unsigned height, unsigned radius_x, unsigned radius_y, color_t, bool solid, color_t color_if_solid);
 			void round_rectangle(const nana::rectangle&, unsigned radius_x, unsigned radius_y, color_t, bool solid, color_t color_if_solid);
 			void shadow_rectangle(const nana::rectangle&, color_t beg_color, color_t end_color, bool vertical);
 			void shadow_rectangle(int x, int y, unsigned width, unsigned height, color_t beg_color, color_t end_color, bool vertical);
 
-			void line(int x1, int y1, int x2, int y2, color_t color);
-			void line(const point& beg, const point& end, color_t color);
-			void bitblt(const nana::rectangle& r_dst, native_window_type src);
-			void bitblt(const nana::rectangle& r_dst, native_window_type source, const nana::point&);
+			void line(int x1, int y1, int x2, int y2, color_t);
+			void line(const point& beg, const point& end, color_t);
+			void lines(const point* points, std::size_t n_of_points, color_t);
+			void line_begin(int x, int y);
+			void line_to(int x, int y, color_t);
+			
 			void bitblt(int x, int y, const graphics& source);
+			void bitblt(const nana::rectangle& r_dst, native_window_type src);
+			void bitblt(const nana::rectangle& r_dst, native_window_type src, const nana::point& p_src);
 			void bitblt(const nana::rectangle& r_dst, const graphics& src);
 			void bitblt(const nana::rectangle& r_dst, const graphics& src, const nana::point& p_src);
 
@@ -141,11 +146,11 @@ namespace nana
 
 			static color_t mix(color_t colorX, color_t colorY, double persent);
 		private:
-			nana::shared_ptr<nana::detail::drawable_impl_type> dwptr_;
-			font font_shadow_;
-
+			std::shared_ptr<nana::detail::drawable_impl_type> dwptr_;
+			font			font_shadow_;
             drawable_type	handle_;
 			nana::size	size_;
+			nana::paint::pixel_buffer pxbuf_;
 			bool changed_;
 		};
 	}//end namespace paint

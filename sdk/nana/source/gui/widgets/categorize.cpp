@@ -23,7 +23,7 @@ namespace nana{	namespace gui{
 		{
 			struct ext_event_raw_tag
 			{
-				nana::functor<void(nana::any&)> selected;
+				std::function<void(nana::any&)> selected;
 			};
 
 			ext_event_adapter_if::~ext_event_adapter_if()
@@ -62,7 +62,7 @@ namespace nana{	namespace gui{
 					graph.rectangle(r, style_.bgcolor, true);
 				}
 
-				virtual void root_arrow(graph_reference graph, const nana::rectangle& r, mouse_action::t state)
+				virtual void root_arrow(graph_reference graph, const nana::rectangle& r, mouse_action state)
 				{
 					int x = r.x + (r.width - 16) / 2;
 					int y = r.y + (r.height - 16) / 2;
@@ -83,13 +83,13 @@ namespace nana{	namespace gui{
 						style_.fgcolor, 3, nana::paint::gadget::directions::to_west);
 				}
 
-				void item(graph_reference graph, const nana::rectangle& r, std::size_t index, const nana::string& name, unsigned txtheight, bool has_child, mouse_action::t state)
+				void item(graph_reference graph, const nana::rectangle& r, std::size_t index, const nana::string& name, unsigned txtheight, bool has_child, mouse_action state)
 				{
 					nana::point strpos(r.x + 5, r.y + static_cast<int>(r.height - txtheight) / 2);
 
 					if((ui_el_.what == ui_el_.item_arrow || ui_el_.what == ui_el_.item_name) && (ui_el_.index == index))
 					{
-						mouse_action::t state_arrow, state_name;
+						mouse_action state_arrow, state_name;
 						if(mouse_action::pressed != state)
 						{
 							state_arrow = (ui_el_.what == ui_el_.item_arrow ? mouse_action::over : mouse_action::normal);
@@ -128,17 +128,11 @@ namespace nana{	namespace gui{
 				void border(graph_reference graph)
 				{
 					graph.rectangle(0xF0F0F0, false);
-
-					const int left = 1, top = 1;
-					int right = static_cast<int>(graph.width()) - 2, bottom = static_cast<int>(graph.height()) - 2;
-					graph.line(left, top, right, top, 0x484E55);
-					graph.line(left, bottom, right, bottom, 0x9DABB9);
-					graph.line(left, top, left, bottom, 0x9DABB9);
-					graph.line(right, top, right, bottom - 1, 0x484E55);
+					graph.rectangle_line(nana::rectangle(graph.size()).pare_off(1),
+										0x9DABB9, 0x484E55, 0x484E55, 0x9DABB9);
 				}
-
 			private:
-				void _m_item_bground(graph_reference graph, int x, int y, unsigned width, unsigned height, mouse_action::t state)
+				void _m_item_bground(graph_reference graph, int x, int y, unsigned width, unsigned height, mouse_action state)
 				{
 					const unsigned half = (height - 2) / 2;
 					int left = x + 1;
@@ -194,14 +188,12 @@ namespace nana{	namespace gui{
 				typedef container::node_type * node_handle;
 
 				tree_wrapper()
-					:splitstr_(STR("\\")), cur_(0)
+					:splitstr_(STR("\\")), cur_(nullptr)
 				{}
 
 				bool seq(std::size_t index, std::vector<node_handle> & seqv) const
 				{
-					node_handle root = tree_.get_root();
-					for(node_handle i = cur_; i && (i != root); i = i->owner)
-						seqv.insert(seqv.begin(), i);
+					_m_read_node_path(seqv);
 
 					if(index < seqv.size())
 					{
@@ -226,21 +218,19 @@ namespace nana{	namespace gui{
 				nana::string path() const
 				{
 					std::vector<node_handle> v;
-					node_handle root = tree_.get_root();
-					for(node_handle i = cur_; i && (i != root); i = i->owner)
-						v.insert(v.begin(), i);
+					_m_read_node_path(v);
 
 					nana::string str;
 					bool not_head = false;
-					for(std::vector<node_handle>::iterator i = v.begin(); i != v.end(); ++i)
+					for(auto i : v)
 					{
 						if(not_head)
 							str += splitstr_;
 						else
 							not_head = true;
-						str += (*i)->value.first;
+						str += i->value.first;
 					}
-					return str;
+					return std::move(str);
 				}
 
 				void path(const nana::string& key)
@@ -250,12 +240,9 @@ namespace nana{	namespace gui{
 
 				node_handle at(std::size_t index) const
 				{
-					std::vector<node_handle> seqv;
-					node_handle root = tree_.get_root();
-					for(node_handle i = cur_; i && (i != root); i = i->owner)
-						seqv.insert(seqv.begin(), i);
-
-					return (index < seqv.size() ? seqv[index] : 0);
+					std::vector<node_handle> v;
+					_m_read_node_path(v);
+					return (index < v.size() ? v[index] : nullptr);
 				}
 
 				node_handle tail(std::size_t index)
@@ -322,7 +309,7 @@ namespace nana{	namespace gui{
 								return i;
 						}
 					}
-					return 0;
+					return nullptr;
 				}
 
 				bool clear()
@@ -333,6 +320,13 @@ namespace nana{	namespace gui{
 						return true;
 					}
 					return false;
+				}
+			private:
+				void _m_read_node_path(std::vector<node_handle>& v) const
+				{
+					node_handle root = tree_.get_root();
+					for(node_handle i = cur_; i && (i != root); i = i->owner)
+						v.insert(v.begin(), i);
 				}
 			private:
 				container tree_;
@@ -346,34 +340,35 @@ namespace nana{	namespace gui{
 			public:
 				typedef tree_wrapper container;
 				typedef container::node_handle node_handle;
-
 				typedef renderer::ui_element	ui_element;
 
-				enum mode_t
+				enum class mode
 				{
-					mode_normal, mode_floatlist
+					normal, floatlist
 				};
 
 				scheme()
-					: graph_(0)
+					: graph_(nullptr)
 				{
 					proto_.ui_renderer = pat::cloneable<renderer>(interior_renderer());
-					style_.mode = mode_normal;
-					style_.listbox = 0;
+					style_.mode = mode::normal;
+					style_.listbox = nullptr;
 				}
 
-				void attach(nana::paint::graphics* graph)
-				{
-					graph_ = graph;
-				}
-
-				void bind(nana::gui::window wd)
+				void attach(window wd, nana::paint::graphics* graph)
 				{
 					window_ = wd;
 					API::background(wd, 0xFFFFFF);
+					graph_ = graph;
 				}
 
-				nana::gui::window window_handle() const
+				void detach()
+				{
+					window_ = nullptr;
+					graph_ = nullptr;
+				}
+
+				window window_handle() const
 				{
 					return window_;
 				}
@@ -396,7 +391,7 @@ namespace nana{	namespace gui{
 					_m_calc_pixels(r);
 
 					proto_.ui_renderer->background(*graph_, window_, r, ui_el_);
-					if(this->head_)
+					if(head_)
 						proto_.ui_renderer->root_arrow(*graph_, _m_make_root_rectangle(), style_.state);
 					_m_draw_items(r);
 					proto_.ui_renderer->border(*graph_);
@@ -429,9 +424,9 @@ namespace nana{	namespace gui{
 							//Change the meaning of variable r. Now, r indicates the area of a item
 							r.height = item_height_;
 
-							for(std::vector<node_handle>::iterator seqi = seq.begin(); seqi != seq.end(); ++seqi)
+							std::size_t seq_index = 0;
+							for(auto i : seq)
 							{
-								node_handle i = *seqi;
 								r.width = i->value.second.pixels;
 								//If the item is over the right border of widget, the item would be painted at
 								//the begining of the next line.
@@ -441,16 +436,13 @@ namespace nana{	namespace gui{
 									r.y += r.height;
 								}
 
-								if(nana::gui::is_hit_the_rectangle(r, x, y))
+								if(is_hit_the_rectangle(r, x, y))
 								{
 									style_.active_item_rectangle = r;
-									std::size_t index = static_cast<size_t>(std::distance(seq.begin(), seqi)) + head_;
+									std::size_t index = seq_index + head_;
 
-									ui_element::t what;
-									if(i->child && (r.x + static_cast<int>(r.width) - 16 < x))
-										what = ui_el_.item_arrow;
-									else
-										what = ui_el_.item_name;
+									ui_element::t what = ((i->child && (r.x + static_cast<int>(r.width) - 16 < x))
+															? ui_el_.item_arrow : ui_el_.item_name);
 									if(what == ui_el_.what && index == ui_el_.index)
 										return false;
 
@@ -459,6 +451,7 @@ namespace nana{	namespace gui{
 									return true;
 								}
 								r.x += r.width;
+								++seq_index;
 							}
 						}
 					}
@@ -491,15 +484,16 @@ namespace nana{	namespace gui{
 					case ui_element::item_root:
 					case ui_element::item_arrow:
 						_m_show_list();
-						style_.mode = scheme::mode_floatlist;
+						style_.mode = mode::floatlist;
 						break;
-					default:	break;
+					default:	//Don't take care about other elements
+						break;
 					}
 				}
 
 				void mouse_release()
 				{
-					if(style_.mode != scheme::mode_floatlist)
+					if(style_.mode != mode::floatlist)
 					{
 						style_.state = mouse_action::normal;
 						switch(ui_el_.what)
@@ -514,7 +508,7 @@ namespace nana{	namespace gui{
 
 				bool is_list_shown() const
 				{
-					return (style_.listbox != 0);
+					return (nullptr != style_.listbox);
 				}
 
 				ext_event_raw_tag& ext_event() const
@@ -527,7 +521,8 @@ namespace nana{	namespace gui{
 					if(node)
 					{
 						API::dev::window_caption(window_handle(), tree().path());
-						ext_event_.selected(node->value.second.value);
+						if(ext_event_.selected)
+							ext_event_.selected(node->value.second.value);
 					}
 				}
 
@@ -556,15 +551,15 @@ namespace nana{	namespace gui{
 						std::vector<node_handle> v;
 						if(treebase_.seq(0, v))
 						{
-							std::vector<node_handle>::iterator end = v.begin() + head_;
-							for(std::vector<node_handle>::iterator i = v.begin(); i != end; ++i)
+							auto end = v.cbegin() + head_;
+							for(auto i = v.cbegin(); i != end; ++i)
 								style_.module.items.push_back((*i)->value.first);
 						}
 						r = style_.active_item_rectangle;
 					}
 					r.y += r.height;
 					r.width = r.height = 100;
-					style_.listbox = &(form_loader<nana::gui::float_listbox>()(window_, r, true));
+					style_.listbox = &(form_loader<gui::float_listbox>()(window_, r, true));
 					style_.listbox->set_module(style_.module, 16);
 					style_.listbox->show();
 					style_.listbox->make_event<events::destroy>(*this, &scheme::_m_list_closed);
@@ -572,7 +567,7 @@ namespace nana{	namespace gui{
 
 				void _m_list_closed()
 				{
-					style_.mode = scheme::mode_normal;
+					style_.mode = mode::normal;
 					style_.state = mouse_action::normal;
 
 					bool is_draw = false;
@@ -584,7 +579,6 @@ namespace nana{	namespace gui{
 							{
 								treebase_.tail(style_.active);
 								nana::string name = style_.module.items[style_.module.index].text;
-								nana::any value;
 								node_handle node = treebase_.find_child(name);
 								if(node)
 								{
@@ -598,7 +592,8 @@ namespace nana{	namespace gui{
 							_m_selected(treebase_.tail(style_.module.index));
 							is_draw = true;
 							break;
-						default:	break;
+						default:	//Don't take care about other elements
+							break;
 						}
 					}
 					else
@@ -606,10 +601,10 @@ namespace nana{	namespace gui{
 
 					if(is_draw)
 					{
-						this->draw();
+						draw();
 						API::update_window(window_);
 					}
-					style_.listbox = 0;
+					style_.listbox = nullptr;
 				}
 			private:
 				unsigned _m_item_fix_scale() const
@@ -633,16 +628,15 @@ namespace nana{	namespace gui{
 					std::size_t lines = item_lines_;
 					std::vector<node_handle> v;
 					treebase_.seq(0, v);
-					for(std::vector<node_handle>::iterator vi = v.begin(); vi != v.end(); ++vi)
+					for(auto node : v)
 					{
-						node_handle i = *vi;
-						if(i->value.second.scale.width > px)
+						if(node->value.second.scale.width > px)
 						{
 							if(lines > 1)
 							{
 								--lines;
 								px = r.width;
-								if(px < i->value.second.scale.width)
+								if(px < node->value.second.scale.width)
 								{
 									--lines;
 									continue;
@@ -654,7 +648,7 @@ namespace nana{	namespace gui{
 								break;
 							}
 						}
-						px -= i->value.second.scale.width;
+						px -= node->value.second.scale.width;
 					}
 
 					if(false == all)
@@ -671,22 +665,21 @@ namespace nana{	namespace gui{
 					unsigned highest = 0;
 					std::vector<node_handle> v;
 					treebase_.seq(0, v);
-					for(std::vector<node_handle>::iterator vi = v.begin(); vi != v.end(); ++vi)
+					for(auto node : v)
 					{
-						node_handle i = *vi;
-						i->value.second.scale = graph_->text_extent_size(i->value.first);
+						node->value.second.scale = graph_->text_extent_size(node->value.first);
 
-						if(highest < i->value.second.scale.height)
-							highest = i->value.second.scale.height;
+						if(highest < node->value.second.scale.height)
+							highest = node->value.second.scale.height;
 
-						i->value.second.scale.width += (i->child ? 26 : 10);
+						node->value.second.scale.width += (node->child ? 26 : 10);
 					}
 
 					highest += 6; //the default height of item.
 
 					item_lines_ = (graph_->height() - 2) / highest;
-					if(item_lines_ == 0) item_lines_ = 1;
-
+					if(item_lines_ == 0)
+						item_lines_ = 1;
 					item_height_ = (1 != item_lines_ ? highest : _m_item_fix_scale());
 				}
 
@@ -698,7 +691,7 @@ namespace nana{	namespace gui{
 					head_ = 0;
 					std::vector<node_handle> v;
 					treebase_.seq(0, v);
-					for(std::vector<node_handle>::reverse_iterator vi = v.rbegin(); vi != v.rend(); ++vi)
+					for(auto vi = v.rbegin(); vi != v.rend(); ++vi)
 					{
 						item_tag & m = (*vi)->value.second;
 						if(r.width >= px + m.scale.width)
@@ -739,7 +732,7 @@ namespace nana{	namespace gui{
 					const int xend = static_cast<int>(r.width) + r.x;
 					std::vector<node_handle> v;
 					treebase_.seq(0, v);
-					for(std::vector<node_handle>::iterator vi = v.begin() + head_; vi != v.end(); ++vi)
+					for(auto vi = v.begin() + head_; vi != v.end(); ++vi)
 					{
 						node_handle i = (*vi);
 						if(static_cast<int>(i->value.second.pixels) + item_r.x > xend)
@@ -753,12 +746,12 @@ namespace nana{	namespace gui{
 					}
 				}
 			private:
-				nana::gui::window	window_;
+				window	window_;
 				nana::paint::graphics * graph_;
 				nana::string splitstr_;
-				size_t		head_;
+				std::size_t	head_;
 				unsigned	item_height_;
-				size_t		item_lines_;
+				std::size_t	item_lines_;
 				container	treebase_;
 
 				mutable ui_element	ui_el_;
@@ -769,8 +762,8 @@ namespace nana{	namespace gui{
 					mutable nana::rectangle active_item_rectangle;
 					nana::gui::float_listbox::module_type module;
 					nana::gui::float_listbox * listbox;
-					mode_t	mode;
-					mouse_action::t state;	//The state of mouse
+					scheme::mode	mode;
+					mouse_action	state;	//The state of mouse
 				}style_;
 
 				struct proto_tag
@@ -783,7 +776,7 @@ namespace nana{	namespace gui{
 
 			//class trigger
 				trigger::trigger()
-					: ext_event_adapter_(0), scheme_(new scheme)
+					: ext_event_adapter_(nullptr), scheme_(new scheme)
 				{}
 
 				trigger::~trigger()
@@ -851,7 +844,7 @@ namespace nana{	namespace gui{
 
 				nana::any& trigger::value() const
 				{
-					tree_wrapper::node_handle node = scheme_->tree().cur();
+					auto node = scheme_->tree().cur();
 					if(node)
 						return node->value.second.value;
 
@@ -860,24 +853,17 @@ namespace nana{	namespace gui{
 
 				void trigger::_m_attach_adapter_to_drawer() const
 				{
-					if(this->ext_event_adapter_)
+					if(ext_event_adapter_)
 					{
-						drawerbase::categorize::ext_event_raw_tag & ee = scheme_->ext_event();
-						if(ee.selected.empty())
-						{
+						auto & ee = scheme_->ext_event();
+						if(ee.selected == nullptr)
 							ee.selected = nana::make_fun(*ext_event_adapter_, &ext_event_adapter_if::selected);
-						}
 					}
 				}
 
-				void trigger::bind_window(widget_reference wd)
+				void trigger::attached(widget_reference widget, graph_reference graph)
 				{
-					scheme_->bind(wd);
-				}
-
-				void trigger::attached(graph_reference graph)
-				{
-					scheme_->attach(&graph);
+					scheme_->attach(widget, &graph);
 					window wd = scheme_->window_handle();
 					using namespace API::dev;
 					make_drawer_event<events::mouse_down>(wd);
@@ -888,8 +874,7 @@ namespace nana{	namespace gui{
 
 				void trigger::detached()
 				{
-					scheme_->attach(0);
-					API::dev::umake_drawer_event(scheme_->window_handle());
+					scheme_->detach();
 				}
 
 				void trigger::refresh(graph_reference)

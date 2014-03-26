@@ -24,21 +24,11 @@ namespace nana{ namespace gui{
 				virtual void bar(window, graph_reference graph, const bar_t& bi)
 				{
 					//draw border
-					nana::color_t dark = 0x83909F;
-					nana::color_t gray = 0x9DAEC2;
+					const nana::color_t dark = 0x83909F;
+					const nana::color_t gray = 0x9DAEC2;
 
-					int x1 = bi.r.x + 1, x2 = bi.r.x + bi.r.width - 2;
-					int y1 = bi.r.y, y2 = bi.r.y + bi.r.height - 1;
-
-					graph.line(x1, y1, x2, y1, dark);
-					graph.line(x1, y2, x2, y2, gray);
-					x1 = bi.r.x;
-					x2 = bi.r.x + bi.r.width - 1;
-					y1 = bi.r.y + 1;
-					y2 = bi.r.y + bi.r.height - 2;
-
-					graph.line(x1, y1, x1, y2, dark);
-					graph.line(x2, y1, x2, y2, gray);
+					graph.rectangle_line(bi.r, 
+							dark, dark, gray, gray);
 				}
 
 				virtual void adorn(window, graph_reference graph, const adorn_t& ad)
@@ -86,14 +76,14 @@ namespace nana{ namespace gui{
 				enum dir_t{DirHorizontal, DirVertical};
 				enum where_t{WhereNone, WhereBar, WhereSlider};
 				
-				typedef nana::gui::drawer_trigger::graph_reference graph_reference;
+				typedef drawer_trigger::graph_reference graph_reference;
 				mutable extra_events ext_event;
 
 				controller()
 				{
-					other_.wd = 0;
-					other_.widget = 0;
-					other_.graph = 0;
+					other_.wd = nullptr;
+					other_.widget = nullptr;
+					other_.graph = nullptr;
 
 					proto_.renderer = pat::cloneable<renderer>(interior_renderer());
 
@@ -106,15 +96,9 @@ namespace nana{ namespace gui{
 					attr_.is_draw_adorn = false;
 				}
 
-				void seek(seekdir::t sd)
+				void seek(seekdir sd)
 				{
 					attr_.skdir = sd;
-				}
-
-				void bind(nana::gui::slider& wd)
-				{
-					other_.wd = wd.handle();
-					other_.widget = &wd;
 				}
 
 				window handle() const
@@ -122,15 +106,18 @@ namespace nana{ namespace gui{
 					return other_.wd;
 				}
 
-				void attached(graph_reference graph)
+				void attached(nana::gui::slider& wd, graph_reference graph)
 				{
+					other_.wd = wd.handle();
+					other_.widget = &wd;
+
 					other_.graph = &graph;
-					this->_m_mk_slider_pos_by_value();
+					_m_mk_slider_pos_by_value();
 				}
 
 				void detached()
 				{
-					other_.graph = 0;
+					other_.graph = nullptr;
 				}
 
 				pat::cloneable<renderer>& ext_renderer()
@@ -186,6 +173,7 @@ namespace nana{ namespace gui{
 							attr_.vcur = m;
 							ext_event.value_changed(*other_.widget);
 						}
+
 						_m_mk_slider_pos_by_value();
 						draw();
 					}
@@ -204,7 +192,6 @@ namespace nana{ namespace gui{
 					if(attr_.vcur != v)
 					{
 						attr_.vcur = v;
-						ext_event.value_changed(*other_.widget);
 						this->_m_mk_slider_pos_by_value();
 						draw();
 					}
@@ -286,7 +273,7 @@ namespace nana{ namespace gui{
 					if(slider_state_.trace == slider_state_.TraceCapture)
 					{
 						API::capture_window(other_.wd, false);
-						if(other_.wd != nana::gui::API::find_window(nana::gui::API::cursor_position()))
+						if(other_.wd != API::find_window(API::cursor_position()))
 						{
 							slider_state_.trace = slider_state_.TraceNone;
 							attr_.is_draw_adorn = false;
@@ -369,6 +356,7 @@ namespace nana{ namespace gui{
 						this->draw();
 						ext_event.value_changed(*other_.widget);
 					}
+
 					return cmpvalue;
 				}
 
@@ -434,7 +422,8 @@ namespace nana{ namespace gui{
 						if(pos > attr_.pos)
 							pos = attr_.pos;
 						break;
-					default:	break;
+					default:
+						break;
 					}
 					return pos;
 				}
@@ -569,7 +558,7 @@ namespace nana{ namespace gui{
 
 				struct attr_tag
 				{
-					seekdir::t skdir;
+					seekdir skdir;
 					dir_t dir;
 					unsigned border;
 					unsigned vmax;
@@ -607,14 +596,9 @@ namespace nana{ namespace gui{
 					return impl_;
 				}
 
-				void trigger::bind_window(trigger::widget_reference wd)
+				void trigger::attached(widget_reference widget, graph_reference graph)
 				{
-					impl_->bind(static_cast<nana::gui::slider&>(wd));
-				}
-
-				void trigger::attached(graph_reference graph)
-				{
-					impl_->attached(graph);
+					impl_->attached(static_cast<nana::gui::slider&>(widget), graph);
 					window wd = impl_->handle();
 					using namespace API::dev;
 					make_drawer_event<events::mouse_down>(wd);
@@ -626,7 +610,6 @@ namespace nana{ namespace gui{
 
 				void trigger::detached()
 				{
-					API::dev::umake_drawer_event(impl_->handle());
 					impl_->detached();
 				}
 
@@ -720,7 +703,7 @@ namespace nana{ namespace gui{
 			return get_drawer_trigger().ctrl()->ext_event;
 		}
 
-		void slider::seek(slider::seekdir::t sd)
+		void slider::seek(slider::seekdir sd)
 		{
 			get_drawer_trigger().ctrl()->seek(sd);
 		}
@@ -775,18 +758,16 @@ namespace nana{ namespace gui{
 				drawerbase::slider::controller* ctrl = this->get_drawer_trigger().ctrl();
 				unsigned val = ctrl->move_step(forward);
 				if(val != ctrl->vcur())
-				{
 					API::update_window(handle());
-				}
+				return val;
 			}
 			return 0;
 		}
 
 		unsigned slider::adorn() const
 		{
-			if(handle())
-				return get_drawer_trigger().ctrl()->adorn();
-			return 0;
+			if(empty())	return 0;
+			return get_drawer_trigger().ctrl()->adorn();
 		}
 
 		pat::cloneable<slider::renderer>& slider::ext_renderer()

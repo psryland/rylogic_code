@@ -32,7 +32,7 @@ namespace nana{	namespace gui{
 				}
 			}
 
-			caret_descriptor::core_window_t* caret_descriptor::window() const
+			auto caret_descriptor::window() const ->core_window_t*
 			{
 				return wd_;
 			}
@@ -189,8 +189,8 @@ namespace nana{	namespace gui{
 
 		//struct basic_window
 			//struct basic_window::other_tag
-				basic_window::other_tag::other_tag(gui::category::flags::t categ)
-					: category(categ), active_window(0), upd_state(update_state::none)
+				basic_window::other_tag::other_tag(gui::category::flags categ)
+					: category(categ), active_window(nullptr), upd_state(update_state::none)
 				{
 					switch(categ)
 					{
@@ -228,29 +228,29 @@ namespace nana{	namespace gui{
 			//basic_window
 			//@brief: constructor for the root window
 			basic_window::basic_window(basic_window* owner, gui::category::root_tag**)
-				: other(static_cast<category::flags::t>(category::root_tag::value))
+				: other(category::root_tag::value)
 			{
-				drawer.attached(this);
+				drawer.bind(this);
 				_m_init_pos_and_size(0, rectangle());
-
-				this->other.category = static_cast<gui::category::flags::t>(category::root_tag::value);
+				//wait for constexpr
+				this->other.category = category::root_tag::value;
 				this->_m_initialize(owner);
 			}
 
 			basic_window::~basic_window()
 			{
 				delete together.caret;
-				together.caret = 0;
+				together.caret = nullptr;
 
 				delete effect.bground;
-				effect.bground = 0;
+				effect.bground = nullptr;
 			}
 
 			//bind_native_window
 			//@brief: bind a native window and baisc_window
 			void basic_window::bind_native_window(native_window_type wd, unsigned width, unsigned height, unsigned extra_width, unsigned extra_height, nana::paint::graphics& graphics)
 			{
-				if(static_cast<category::flags::t>(category::root_tag::value) == this->other.category)
+				if(category::root_tag::value == this->other.category)
 				{
 					this->root = wd;
 					dimension.width = width;
@@ -264,7 +264,7 @@ namespace nana{	namespace gui{
 
 			void basic_window::frame_window(native_window_type wd)
 			{
-				if(static_cast<category::flags::t>(category::frame_tag::value) == this->other.category)
+				if(category::frame_tag::value == this->other.category)
 					other.attribute.frame->container = wd;
 			}
 
@@ -282,22 +282,22 @@ namespace nana{	namespace gui{
 
 			void basic_window::_m_initialize(basic_window* agrparent)
 			{
-				if(other.category == static_cast<category::flags::t>(category::root_tag::value))
+				if(other.category == category::root_tag::value)
 				{
 					if(agrparent && (nana::system::this_thread_id() != agrparent->thread_id))
-						agrparent = 0;
+						agrparent = nullptr;
 
-					while(agrparent && (agrparent->other.category != static_cast<category::flags::t>(category::root_tag::value)))
+					while(agrparent && (agrparent->other.category != category::root_tag::value))
 						agrparent = agrparent->parent;
 				
 					owner = agrparent;
-					parent = 0;
+					parent = nullptr;
 					index = 0;
 				}
 				else
 				{
 					parent = agrparent;
-					owner = 0;
+					owner = nullptr;
 					root_widget = agrparent->root_widget;
 					root = agrparent->root;
 					root_graph = agrparent->root_graph;
@@ -325,10 +325,10 @@ namespace nana{	namespace gui{
 				color.active = 0x60C8FD;
 
 				effect.edge_nimbus = effects::edge_nimbus::none;
-				effect.bground = 0;
+				effect.bground = nullptr;
 				effect.bground_fade_rate = 0;
 
-				together.caret = 0;
+				together.caret = nullptr;
 
 				extra_width = extra_height = 0;
 

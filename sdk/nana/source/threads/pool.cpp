@@ -12,13 +12,17 @@
 
 #include <nana/threads/pool.hpp>
 #include <nana/system/platform.hpp>
-#include <nana/threads/mutex.hpp>
-#include <nana/threads/condition_variable.hpp>
-
 #include <time.h>
 #include <deque>
 #include <vector>
-#include <stdexcept>
+
+#if defined(STD_THREAD_NOT_SUPPORTED)
+    #include <nana/std_condition_variable.hpp>
+    #include <nana/std_mutex.hpp>
+#else
+    #include <condition_variable>
+    #include <mutex>
+#endif
 
 #if defined(NANA_WINDOWS)
 	#include <windows.h>
@@ -51,10 +55,7 @@ namespace threads
 
 		class pool::impl
 		{
-			struct state
-			{
-				enum t{init, idle, run, finished};
-			};
+			enum class state{init, idle, run, finished};
 
 			struct pool_throbj
 			{
@@ -66,11 +67,11 @@ namespace threads
 				impl * pool_ptr;
 				task * task_ptr;
 				thread_t	handle;
-				volatile state::t	thr_state;
+				volatile state	thr_state;
 				time_t	timestamp;
 #if defined(NANA_LINUX)
-				mutex wait_mutex;
-				condition_variable wait_cond;
+				std::mutex wait_mutex;
+				std::condition_variable wait_cond;
 				volatile bool suspended;
 #endif
 			};
@@ -85,7 +86,7 @@ namespace threads
 					pool_throbj * pto = new pool_throbj;
 					pto->pool_ptr = this;
 					pto->thr_state = state::init;
-					pto->task_ptr = 0;
+					pto->task_ptr = nullptr;
 #if defined(NANA_WINDOWS)
 					pto->handle = (HANDLE)::_beginthreadex(0, 0, reinterpret_cast<unsigned(__stdcall*)(void*)>(&impl::_m_thr_starter), pto, 0, 0);
 #elif defined(NANA_LINUX)
@@ -104,9 +105,9 @@ namespace threads
 				{
 					bool all_finished = true;
 					{
-						for(std::vector<pool_throbj*>::iterator i = container_.threads.begin(); i != container_.threads.end(); ++i)
+						for(auto thr: container_.threads)
 						{
-							if(state::finished != (*i)->thr_state)
+							if(state::finished != thr->thr_state)
 							{
 								all_finished = false;
 								break;
@@ -116,10 +117,10 @@ namespace threads
 
 					if(all_finished)
 						break;
-					
+
 					while(true)
 					{
-						pool_throbj* idle_thr = _m_pick_up_an_idle();
+						auto idle_thr = _m_pick_up_an_idle();
 						if(idle_thr)
 							_m_resume(idle_thr);
 						else
@@ -128,12 +129,10 @@ namespace threads
 					nana::system::sleep(100);
 				}
 
-				std::vector<pool_throbj*> dup;
-				dup.swap(container_.threads);
+				std::vector<pool_throbj*> dup(std::move(container_.threads));
 
-				for(std::vector<pool_throbj*>::iterator i = dup.begin(); i != dup.end(); ++i)
+				for(auto thr: dup)
 				{
-					pool_throbj * thr = *i;
 #if defined(NANA_WINDOWS)
 					::WaitForSingleObject(thr->handle, INFINITE);
 					::CloseHandle(thr->handle);
@@ -143,10 +142,10 @@ namespace threads
 #endif
 				}
 
-				lock_guard<recursive_mutex> lock(mutex_);
-				for(std::deque<task*>::iterator i = container_.tasks.begin(); i != container_.tasks.end(); ++i)
+				std::lock_guard<decltype(mutex_)> lock(mutex_);
+				for(auto task_ptr : container_.tasks)
 				{
-					delete (*i);
+					delete task_ptr;
 				}
 			}
 
@@ -159,7 +158,7 @@ namespace threads
 				}
 
 				pool_throbj * pto = _m_pick_up_an_idle();
-				
+
 				if(pto)
 				{
 					pto->task_ptr = taskptr;
@@ -167,14 +166,14 @@ namespace threads
 				}
 				else
 				{
-					lock_guard<recursive_mutex> lock(mutex_);
+					std::lock_guard<decltype(mutex_)> lock(mutex_);
 					container_.tasks.push_back(taskptr);
 				}
 			}
 
 			void wait_for_signal()
 			{
-				unique_lock<mutex> lock(signal_.mutex);
+				std::unique_lock<std::mutex> lock(signal_.mutex);
 				signal_.cond.wait(lock);
 			}
 
@@ -183,13 +182,13 @@ namespace threads
 				while(true)
 				{
 					{
-						lock_guard<recursive_mutex> lock(mutex_);
+						std::lock_guard<decltype(mutex_)> lock(mutex_);
 						if(container_.tasks.empty())
 						{
 							bool finished = true;
-							for(std::vector<pool_throbj*>::iterator i = container_.threads.begin(); i != container_.threads.end(); ++i)
+							for(auto thr : container_.threads)
 							{
-								if(state::run == (*i)->thr_state)
+								if(state::run == thr->thr_state)
 								{
 									finished = false;
 									break;
@@ -200,25 +199,22 @@ namespace threads
 						}
 					}
 					nana::system::sleep(100);
-				}			
+				}
 			}
 		private:
 			pool_throbj* _m_pick_up_an_idle()
 			{
-				for(std::vector<pool_throbj*>::iterator i = container_.threads.begin(); i != container_.threads.end(); ++i)
-				{
-					pool_throbj* thr = *i;
+				for(auto thr : container_.threads)
 					if(state::idle == thr->thr_state)
 					{
-						lock_guard<recursive_mutex> lock(mutex_);
+						std::lock_guard<decltype(mutex_)> lock(mutex_);
 						if(state::idle == thr->thr_state)
 						{
 							thr->thr_state = state::run;
 							return thr;
 						}
 					}
-				}
-				return 0;
+				return nullptr;
 			}
 
 			void _m_suspend(pool_throbj* pto)
@@ -227,7 +223,7 @@ namespace threads
 #if defined(NANA_WINDOWS)
 				::SuspendThread(pto->handle);
 #elif defined(NANA_LINUX)
-				unique_lock<mutex> lock(pto->wait_mutex);
+				std::unique_lock<std::mutex> lock(pto->wait_mutex);
 				pto->suspended = true;
 				pto->wait_cond.wait(lock);
 				pto->suspended = false;
@@ -246,41 +242,41 @@ namespace threads
 #elif defined(NANA_LINUX)
 				while(false == pto->suspended)
 					;
-				unique_lock<mutex> lock(pto->wait_mutex);
+				std::unique_lock<std::mutex> lock(pto->wait_mutex);
 				pto->wait_cond.notify_one();
 #endif
 			}
 
 			bool _m_read(pool_throbj* pto)
 			{
-				pto->task_ptr = 0;
+				pto->task_ptr = nullptr;
 				if(runflag_)
 				{
-					lock_guard<recursive_mutex> lock(mutex_);
+					std::lock_guard<decltype(mutex_)> lock(mutex_);
 					if(container_.tasks.size())
 					{
 						pto->task_ptr = container_.tasks.front();
-						container_.tasks.erase(container_.tasks.begin());
+						container_.tasks.pop_front();
 					}
 				}
 				else
 					return false;
 
-				if(0 == pto->task_ptr)
+				if(nullptr == pto->task_ptr)
 				{
 					//The task queue is empty, so that
 					//suspend and wait for a task.
 					_m_suspend(pto);
 				}
 
-				return (0 != pto->task_ptr);
+				return (nullptr != pto->task_ptr);
 			}
 
 			void _m_thr_runner(pool_throbj* pto)
 			{
 				while(_m_read(pto))
 				{
-					pto->timestamp = time(0);
+					pto->timestamp = time(nullptr);
 					switch(pto->task_ptr->kind)
 					{
 					case task::general:
@@ -294,10 +290,9 @@ namespace threads
 						{
 							bool finished = true;
 							{
-								lock_guard<recursive_mutex> lock(mutex_);
-								for(std::vector<pool_throbj*>::iterator i = container_.threads.begin(); i != container_.threads.end(); ++i)
+								std::lock_guard<decltype(mutex_)> lock(mutex_);
+								for(auto thr : container_.threads)
 								{
-									pool_throbj * thr = *i;
 									if((thr != pto) && (state::run == thr->thr_state) && (thr->timestamp <= pto->timestamp))
 									{
 										finished = false;
@@ -316,7 +311,7 @@ namespace threads
 						break;
 					}
 					delete pto->task_ptr;
-					pto->task_ptr = 0;
+					pto->task_ptr = nullptr;
 				}
 
 				pto->thr_state = state::finished;
@@ -335,17 +330,17 @@ namespace threads
 			static void * _m_thr_starter(pool_throbj * pto)
 			{
 				pto->pool_ptr->_m_thr_runner(pto);
-				return 0;
+				return nullptr;
 			}
 #endif
 		private:
 			volatile bool runflag_;
-			recursive_mutex mutex_;
+			std::recursive_mutex mutex_;
 
 			struct signal
 			{
-				nana::threads::mutex mutex;
-				nana::threads::condition_variable cond;
+				std::mutex mutex;
+				std::condition_variable cond;
 			}signal_;
 
 			struct container
@@ -372,7 +367,7 @@ namespace threads
 
 		void pool::signal()
 		{
-			task * task_ptr = 0;
+			task * task_ptr = nullptr;
 			try
 			{
 				task_ptr = new task_signal;

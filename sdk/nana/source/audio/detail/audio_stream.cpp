@@ -8,7 +8,7 @@ namespace nana{	namespace audio
 		//class audio_stream
 			bool audio_stream::open(const nana::string& file)
 			{
-				fs_.open(static_cast<std::string>(nana::charset(file)).c_str(), std::ios::binary);
+				fs_.open(static_cast<std::string>(nana::charset(file)), std::ios::binary);
 				if(fs_)
 				{
 					wave_spec::master_riff_chunk riff;
@@ -54,7 +54,7 @@ namespace nana{	namespace audio
 			void audio_stream::locate()
 			{
 				fs_.clear();
-				fs_.seekg(static_cast<std::ifstream::off_type>(pcm_data_pos_), std::ios::beg);
+				fs_.seekg(pcm_data_pos_, std::ios::beg);
 				data_size_ = pcm_data_size_;
 			}
 

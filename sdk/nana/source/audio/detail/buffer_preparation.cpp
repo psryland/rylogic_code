@@ -30,7 +30,7 @@ namespace nana{	namespace audio
 					prepared_.push_back(m);
 				}
 
-				thr_.start(*this, &buffer_preparation::_m_prepare_routine);
+				thr_ = std::move(std::thread([this](){this->_m_prepare_routine();}));
 			}
 
 			buffer_preparation::~buffer_preparation()
@@ -40,18 +40,16 @@ namespace nana{	namespace audio
 				cond_prepared_.notify_one();
 				cond_buffer_.notify_one();
 
-				thr_.close();
+				if(thr_.joinable())
+					thr_.join();
 
-				typedef std::vector<meta*>::iterator iterator;
-				for(iterator i = prepared_.begin(); i != prepared_.end(); ++i)
-				{
-					delete [] reinterpret_cast<char*>(*i);
-				}
+				for(auto metaptr : prepared_)
+					delete [] reinterpret_cast<char*>(metaptr);
 			}
 
 			buffer_preparation::meta * buffer_preparation::read()
 			{
-				threads::unique_lock<threads::mutex> lock(mutex_buffer_);
+				std::unique_lock<decltype(token_buffer_)> lock(token_buffer_);
 
 				//Wait for the buffer
 				if(0 == buffer_.size())
@@ -59,14 +57,14 @@ namespace nana{	namespace audio
 					//Before waiting, checks the thread whether it is finished
 					//it indicates the preparation is finished.
 					if(false == running_)
-						return 0;
+						return nullptr;
 
 					wait_for_buffer_ = true;
 					cond_buffer_.wait(lock);
 
 					//NO more buffers
 					if(0 == buffer_.size())
-						return 0;
+						return nullptr;
 				}
 				meta * m = buffer_.front();
 				buffer_.erase(buffer_.begin());
@@ -76,7 +74,7 @@ namespace nana{	namespace audio
 			//Revert the meta that returned by read()
 			void buffer_preparation::revert(meta * m)
 			{
-				threads::lock_guard<threads::mutex> lock(mutex_prepared_);
+				std::lock_guard<decltype(token_prepared_)> lock(token_prepared_);
 				bool if_signal = prepared_.empty();
 				prepared_.push_back(m);
 				if(if_signal)
@@ -85,7 +83,7 @@ namespace nana{	namespace audio
 
 			bool buffer_preparation::data_finished() const
 			{
-				threads::lock_guard<threads::mutex> lock(mutex_prepared_);
+				std::lock_guard<decltype(token_prepared_)> lock(token_prepared_);
 				return ((prepared_.size() == prepared_.capacity()) && (running_ == false));
 			}
 
@@ -99,11 +97,12 @@ namespace nana{	namespace audio
 				{
 					meta * m = 0;
 					{
-						threads::unique_lock<threads::mutex> lock(mutex_prepared_);
+						std::unique_lock<decltype(token_prepared_)> lock(token_prepared_);
 
 						if(prepared_.size() == 0)
 						{
 							cond_prepared_.wait(lock);
+
 							if(false == running_)
 								return;
 						}
@@ -132,7 +131,7 @@ namespace nana{	namespace audio
 							if(buffered == 0)
 							{
 								//PCM data is drained
-								threads::lock_guard<threads::mutex> lock(mutex_buffer_);
+								std::lock_guard<decltype(token_buffer_)> lock(token_buffer_);
 								cond_buffer_.notify_one();
 								running_ = false;
 								return;
@@ -145,14 +144,13 @@ namespace nana{	namespace audio
 #elif defined(NANA_LINUX)
 					m->bufsize = buffered;
 #endif
-					threads::lock_guard<threads::mutex> lock(mutex_buffer_);
+					std::lock_guard<decltype(token_buffer_)> lock(token_buffer_);
 					buffer_.push_back(m);
 					if(wait_for_buffer_)
 					{
 						cond_buffer_.notify_one();
 						wait_for_buffer_ = false;
 					}
-
 					if(0 == as_.data_length())
 						running_ = false;
 				}

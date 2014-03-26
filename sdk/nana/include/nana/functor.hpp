@@ -2,8 +2,8 @@
  *	A Functor implementation
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0. 
- *	(See accompanying file LICENSE_1_0.txt or copy at 
+ *	Distributed under the Boost Software License, Version 1.0.
+ *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/functor.hpp
@@ -14,106 +14,106 @@
 #ifndef NANA_FUNCTOR_HPP
 #define NANA_FUNCTOR_HPP
 #include "traits.hpp"
-#include "detail/functor_invoker_0.hpp"
-#include "detail/functor_invoker_1.hpp"
-#include "detail/functor_invoker_2.hpp"
-#include "detail/functor_invoker_3.hpp"
-#include "detail/functor_invoker_4.hpp"
-#include "detail/functor_invoker_5.hpp"
 #include <vector>
+#include <functional>
+#include <utility>
 
 namespace nana
 {
-	template<typename T>
-	const T & const_forward(const T& t)
+	namespace detail
 	{
-		return t;
-	}
-
-	template<typename T>
-	volatile T & volatile_forward(volatile T& t)
-	{
-		return t;
-	}
-
-	template<typename T>
-	const volatile T& const_volatile_forward(const volatile T& t)
-	{
-		return t;
-	}
-
-	template<typename Function>
-	class functor
-		:public detail::interface_holder<typename metacomp::static_if<traits::is_function_type<Function>, Function, typename metacomp::rm_a_ptr<Function>::value_type >::value_type>
-	{
-		typedef detail::interface_holder<typename metacomp::static_if<traits::is_function_type<Function>, Function, typename metacomp::rm_a_ptr<Function>::value_type >::value_type> base_type;
-	public:
-		typedef typename metacomp::static_if<traits::is_function_type<Function>, Function, typename metacomp::rm_a_ptr<Function>::value_type>::value_type signature;
-
-		functor(){}
-
-		functor(signature faddr)
+		template<bool ConceptMatched, typename MFPtr, int ArgSize>
+		struct only_bind_this
 		{
-			this->assign(faddr);
-		}
+			typedef typename traits::mfptr_traits<MFPtr>::function function;
 
-		template<typename FO>
-		functor(FO fo)
-		{
-			this->assign(fo);
-		}
+			template<typename T>
+			static std::function<function> act(T & obj, MFPtr mf)
+			{
+				return std::function<function>();
+			}
+		};
 
-		template<typename T>
-		functor(T& obj, typename traits::make_mf<signature, T, typename traits::cv_specifier<T>::value_type>::type mf)
+		template<typename MFPtr, int ArgSize>
+		struct only_bind_this<true, MFPtr, ArgSize>
 		{
-			this->assign(obj, mf);
-		}
+			typedef typename traits::mfptr_traits<MFPtr>::function function;
+			typedef typename traits::mfptr_traits<MFPtr>::concept_type concept_type;
 
-		functor& operator=(const functor& rhs)
-		{
-			base_type::operator=(rhs);
-			return *this;
-		}
+			static std::function<function> act(concept_type & obj, MFPtr mf)
+			{
+				return std::bind(mf, &obj);
+			}
+		};
 
-		template<typename FO>
-		functor& operator=(FO fo)
+		template<typename MFPtr>
+		struct only_bind_this<true, MFPtr, 1>
 		{
-			this->assign(fo);
-			return *this;
-		}
+			typedef typename traits::mfptr_traits<MFPtr>::function function;
+			typedef typename traits::mfptr_traits<MFPtr>::concept_type concept_type;
 
-		operator void*() const
+			static std::function<function> act(concept_type & obj, MFPtr mf)
+			{
+				return std::bind(mf, &obj, std::placeholders::_1);
+			}
+		};
+
+		template<typename MFPtr>
+		struct only_bind_this<true, MFPtr, 2>
 		{
-			return (this->empty() ? 0 : const_cast<functor*>(this));
-		}
-		
-		void assign(signature faddr)
+			typedef typename traits::mfptr_traits<MFPtr>::function function;
+			typedef typename traits::mfptr_traits<MFPtr>::concept_type concept_type;
+
+			static std::function<function> act(concept_type & obj, MFPtr mf)
+			{
+				return std::bind(mf, &obj, std::placeholders::_1, std::placeholders::_2);
+			}
+		};
+
+		template<typename MFPtr>
+		struct only_bind_this<true, MFPtr, 3>
 		{
-			this->assign_invoker(new (std::nothrow) detail::invoker<signature>(faddr));
-		}
-				
-		template<typename T>
-		void assign(T& obj, typename traits::make_mf<signature, T, typename traits::cv_specifier<T>::value_type>::type mf)
+			typedef typename traits::mfptr_traits<MFPtr>::function function;
+			typedef typename traits::mfptr_traits<MFPtr>::concept_type concept_type;
+
+			static std::function<function> act(concept_type & obj, MFPtr mf)
+			{
+				return std::bind(mf, &obj, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+			}
+		};
+
+		template<typename MFPtr>
+		struct only_bind_this<true, MFPtr, 4>
 		{
-			typedef typename traits::make_mf<signature, T, typename traits::cv_specifier<T>::value_type>::type mfptr;
-			this->assign_invoker(new (std::nothrow) detail::invoker<mfptr>(obj, mf));
-		}
-	
-		template<typename FO>
-		void assign(FO fo)
+			typedef typename traits::mfptr_traits<MFPtr>::function function;
+			typedef typename traits::mfptr_traits<MFPtr>::concept_type concept_type;
+
+			static std::function<function> act(concept_type & obj, MFPtr mf)
+			{
+				return std::bind(mf, &obj, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
+			}
+		};
+
+		template<typename MFPtr>
+		struct only_bind_this<true, MFPtr, 5>
 		{
-			this->assign_invoker(new (std::nothrow) detail::fo_invoker<FO, signature>(fo));
-		}
-	};
+			typedef typename traits::mfptr_traits<MFPtr>::function function;
+			typedef typename traits::mfptr_traits<MFPtr>::concept_type concept_type;
+
+			static std::function<function> act(concept_type & obj, MFPtr mf)
+			{
+				return std::bind(mf, &obj, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
+			}
+		};
+	}//end namespace detail
 
 	template<typename T, typename MFPtr>
-	functor<typename traits::mfptr_traits<MFPtr>::function> make_fun(T& obj, MFPtr mfaddr)
+	std::function<typename traits::mfptr_traits<MFPtr>::function> make_fun(T& obj, MFPtr mf)
 	{
 		typedef typename traits::mfptr_traits<MFPtr>::function function;
 		typedef typename traits::mfptr_traits<MFPtr>::concept_type concept_type;
-		if(traits::is_derived<T, concept_type>::value)
-			return functor<function>(static_cast<concept_type&>(obj), mfaddr);
-		return functor<function>();
+
+		return detail::only_bind_this<std::is_base_of<concept_type, typename std::remove_pointer<T>::type>::value, MFPtr, traits::mfptr_traits<MFPtr>::parameter>::act(obj, mf);
 	}
 
 	namespace detail
@@ -124,30 +124,54 @@ namespace nana
 		public:
 			typedef Ft function_type;
 			typedef FnGroup fn_group_type;
-			typedef std::vector<functor<function_type> > container;
+			typedef std::vector<std::function<function_type>> container;
 
-			fn_group_type & operator=(const functor<function_type> & f)
+			fn_group_type & operator=(const std::function<function_type> & f)
 			{
-				this->clear();
-				this->append(f);
+				clear();
+				append(f);
 				return *static_cast<fn_group_type*>(this);
 			}
 
-			fn_group_type & operator+=(const functor<function_type> & f)
+			fn_group_type & operator=(std::function<function_type>&& f)
 			{
-				this->append(f);
+				clear();
+				append(std::move(f));
 				return *static_cast<fn_group_type*>(this);
 			}
 
-			void append(const functor<function_type> & f)
+			fn_group_type & operator+=(const std::function<function_type> & f)
+			{
+				append(f);
+				return *static_cast<fn_group_type*>(this);
+			}
+
+			fn_group_type & operator+=(std::function<function_type> && f)
+			{
+				append(std::move(f));
+				return *static_cast<fn_group_type*>(this);
+			}
+
+			void append(const std::function<function_type> & f)
 			{
 				fobjs_.push_back(f);
 			}
 
-			void assign(const functor<function_type> & f)
+			void append(std::function<function_type> && f)
+			{
+				fobjs_.push_back(std::move(f));
+			}
+
+			void assign(const std::function<function_type> & f)
 			{
 				clear();
 				fobjs_.push_back(f);
+			}
+
+			void assign(std::function<function_type> && f)
+			{
+				clear();
+				fobjs_.push_back(std::move(f));
 			}
 
 			void clear()
@@ -190,16 +214,16 @@ namespace nana
 		template<typename T, typename Concept>
 		void assign(T& obj, R(Concept::*mf)())
 		{
-			this->append(make_fun(obj, mf));
+			append(make_fun(obj, mf));
 		}
 
 		R operator()() const
 		{
-			const container & fobjs = this->_m_cont();
+			auto & fobjs = this->_m_cont();
 			if(fobjs.size())
 			{
-				typename container::const_iterator last = fobjs.end() - 1;
-				for(typename container::const_iterator i = fobjs.begin(); i != last; ++i)
+				auto last = fobjs.cend() - 1;
+				for(auto i = fobjs.cbegin(); i != last; ++i)
 					(*i)();
 				return (*last)();
 			}
@@ -209,7 +233,7 @@ namespace nana
 
 	template<typename R, typename P0>
 	class fn_group<R(P0)>
-		: public detail::functors_holder<R(P0), fn_group<R(P0)> >
+		: public detail::functors_holder<R(P0), fn_group<R(P0)>>
 	{
 	public:
 		typedef R function_type(P0);
@@ -220,16 +244,16 @@ namespace nana
 		template<typename T, typename Concept>
 		void assign(T& obj, R(Concept::*mf)(P0))
 		{
-			this->append(make_fun(obj, mf));
+			append(make_fun(obj, mf));
 		}
 
 		R operator()(P0 p0) const
 		{
-			const container & fobjs = this->_m_cont();
+			auto & fobjs = this->_m_cont();
 			if(fobjs.size())
 			{
-				typename container::const_iterator last = fobjs.end() - 1;
-				for(typename container::const_iterator i = fobjs.begin(); i != last; ++i)
+				auto last = fobjs.cend() - 1;
+				for(auto i = fobjs.cbegin(); i != last; ++i)
 					(*i)(p0);
 				return (*last)(p0);
 			}
@@ -239,7 +263,7 @@ namespace nana
 
 	template<typename R, typename P0, typename P1>
 	class fn_group<R(P0, P1)>
-		: public detail::functors_holder<R(P0, P1), fn_group<R(P0, P1)> >
+		: public detail::functors_holder<R(P0, P1), fn_group<R(P0, P1)>>
 	{
 	public:
 		typedef R function_type(P0, P1);
@@ -250,16 +274,16 @@ namespace nana
 		template<typename T, typename Concept>
 		void assign(T& obj, R(Concept::*mf)(P0, P1))
 		{
-			this->append(make_fun(obj, mf));
+			append(make_fun(obj, mf));
 		}
 
 		R operator()(P0 p0, P1 p1) const
 		{
-			const container & fobjs = this->_m_cont();
+			auto & fobjs = this->_m_cont();
 			if(fobjs.size())
 			{
-				typename container::const_iterator last = fobjs.end() - 1;
-				for(typename container::const_iterator i = fobjs.begin(); i != last; ++i)
+				auto last = fobjs.cend() - 1;
+				for(auto i = fobjs.cbegin(); i != last; ++i)
 					(*i)(p0, p1);
 				return (*last)(p0, p1);
 			}
@@ -269,7 +293,7 @@ namespace nana
 
 	template<typename R, typename P0, typename P1, typename P2>
 	class fn_group<R(P0, P1, P2)>
-		: public detail::functors_holder<R(P0, P1, P2), fn_group<R(P0, P1, P2)> >
+		: public detail::functors_holder<R(P0, P1, P2), fn_group<R(P0, P1, P2)>>
 	{
 	public:
 		typedef R function_type(P0, P1, P2);
@@ -280,16 +304,16 @@ namespace nana
 		template<typename T, typename Concept>
 		void assign(T& obj, R(Concept::*mf)(P0, P1, P2))
 		{
-			this->append(make_fun(obj, mf));
+			append(make_fun(obj, mf));
 		}
 
 		R operator()(P0 p0, P1 p1, P2 p2) const
 		{
-			const container & fobjs = this->_m_cont();
+			auto & fobjs = this->_m_cont();
 			if(fobjs.size())
 			{
-				typename container::const_iterator last = fobjs.end() - 1;
-				for(typename container::const_iterator i = fobjs.begin(); i != last; ++i)
+				auto last = fobjs.cend() - 1;
+				for(auto i = fobjs.cbegin(); i != last; ++i)
 					(*i)(p0, p1, p2);
 				return (*last)(p0, p1, p2);
 			}
@@ -299,7 +323,7 @@ namespace nana
 
 	template<typename R, typename P0, typename P1, typename P2, typename P3>
 	class fn_group<R(P0, P1, P2, P3)>
-		: public detail::functors_holder<R(P0, P1, P2, P3), fn_group<R(P0, P1, P2, P3)> >
+		: public detail::functors_holder<R(P0, P1, P2, P3), fn_group<R(P0, P1, P2, P3)>>
 	{
 	public:
 		typedef R function_type(P0, P1, P2, P3);
@@ -310,16 +334,16 @@ namespace nana
 		template<typename T, typename Concept>
 		void assign(T& obj, R(Concept::*mf)(P0, P1, P2, P3))
 		{
-			this->append(make_fun(obj, mf));
+			append(make_fun(obj, mf));
 		}
 
 		R operator()(P0 p0, P1 p1, P2 p2, P3 p3) const
 		{
-			const container & fobjs = this->_m_cont();
+			auto & fobjs = this->_m_cont();
 			if(fobjs.size())
 			{
-				typename container::const_iterator last = fobjs.end() - 1;
-				for(typename container::const_iterator i = fobjs.begin(); i != last; ++i)
+				auto last = fobjs.cend() - 1;
+				for(auto i = fobjs.cbegin(); i != last; ++i)
 					(*i)(p0, p1, p2, p3);
 				return (*last)(p0, p1, p2, p3);
 			}
@@ -329,7 +353,7 @@ namespace nana
 
 	template<typename R, typename P0, typename P1, typename P2, typename P3, typename P4>
 	class fn_group<R(P0, P1, P2, P3, P4)>
-		: public detail::functors_holder<R(P0, P1, P2, P3, P4), fn_group<R(P0, P1, P2, P3, P4)> >
+		: public detail::functors_holder<R(P0, P1, P2, P3, P4), fn_group<R(P0, P1, P2, P3, P4)>>
 	{
 	public:
 		typedef R function_type(P0, P1, P2, P3, P4);
@@ -340,16 +364,16 @@ namespace nana
 		template<typename T, typename Concept>
 		void assign(T& obj, R(Concept::*mf)(P0, P1, P2, P3, P4))
 		{
-			this->append(make_fun(obj, mf));
+			append(make_fun(obj, mf));
 		}
 
 		R operator()(P0 p0, P1 p1, P2 p2, P3 p3, P4 p4) const
 		{
-			const container & fobjs = this->_m_cont();
+			auto & fobjs = this->_m_cont();
 			if(fobjs.size())
 			{
-				typename container::const_iterator last = fobjs.end() - 1;
-				for(typename container::const_iterator i = fobjs.begin(); i != last; ++i)
+				auto last = fobjs.cend() - 1;
+				for(auto i = fobjs.cbegin(); i != last; ++i)
 					(*i)(p0, p1, p2, p3, p4);
 				return (*last)(p0, p1, p2, p3, p4);
 			}

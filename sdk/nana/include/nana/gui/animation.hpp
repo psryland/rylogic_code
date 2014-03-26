@@ -13,8 +13,9 @@
 #define NANA_GUI_ANIMATION_HPP
 
 #include <nana/paint/image.hpp>
-#include <nana/functor.hpp>
-#include <nana/memory.hpp>
+
+#include <functional>
+#include <memory>
 
 
 namespace nana{	namespace gui
@@ -24,15 +25,18 @@ namespace nana{	namespace gui
 	class frameset
 	{
 		friend class animation;
+	public:
+		typedef std::function<bool(std::size_t pos, paint::graphics&, nana::size&)> framebuilder;
+
 		struct impl;
 	public:
-		typedef nana::functor<bool(std::size_t pos, paint::graphics&, nana::size&)> framebuilder;
-
 		frameset();
 		void push_back(const paint::image&);
+		void push_back(paint::image&&);
 		void push_back(framebuilder& fb, std::size_t length);
+		void push_back(framebuilder&& fb, std::size_t length);
 	private:
-		nana::shared_ptr<impl> impl_;
+		std::shared_ptr<impl> impl_;
 	};
 
 	class animation
@@ -40,7 +44,7 @@ namespace nana{	namespace gui
 		struct branch_t
 		{
 			frameset frames;
-			nana::functor<std::size_t(const std::string&, std::size_t, std::size_t&)> condition;
+			std::function<std::size_t(const std::string&, std::size_t, std::size_t&)> condition;
 		};
 		
 		struct impl;
@@ -70,9 +74,6 @@ namespace nana{	namespace gui
 		void pause();
 
 		void output(window wd, const nana::point& pos);
-	private:
-		//A helper for old version of GCC due to the 'friend' issue
-		static frameset::impl* _m_frameset_impl(frameset & );
 	private:
 		impl * impl_;
 	};

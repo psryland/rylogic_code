@@ -7,7 +7,6 @@
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/gui/layout.hpp
- *	@brief: The edge_keeper automatically controls the position and size of a widget.
  */
 
 #ifndef NANA_GUI_LAYOUT_HPP

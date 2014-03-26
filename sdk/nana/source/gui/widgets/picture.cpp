@@ -21,10 +21,10 @@ namespace gui
 	namespace xpicture
 	{
 
-		//class picture_drawer:: public nana::gui::drawer_trigger
-			picture_drawer::picture_drawer():graph_(0)
+		//class picture_drawer
+			picture_drawer::picture_drawer():graph_(nullptr)
 			{
-				backimg_.arg = nana::arrange::unkown;
+				backimg_.arg = nana::arrange::unknown;
 				backimg_.beg = backimg_.end = 0;
 			}
 
@@ -32,13 +32,9 @@ namespace gui
 				:background_shadow_start(0), background_shadow_end(0), horizontal(true)
 			{}
 
-			void picture_drawer::bind_window(widget_reference widget)
+			void picture_drawer::attached(widget_reference& widget, graph_reference graph)
 			{
 				widget_ = &widget;
-			}
-
-			void picture_drawer::attached(graph_reference graph)
-			{
 				graph_ = &graph;
 			}
 
@@ -63,7 +59,7 @@ namespace gui
 
 			bool picture_drawer::bgstyle(bool is_stretch, nana::arrange arg, int beg, int end)
 			{
-				if(backimg_.image.empty() == false)
+				if(backimg_.image)
 				{
 					backimg_.is_stretch = is_stretch;
 					backimg_.arg = arg;
@@ -92,7 +88,7 @@ namespace gui
 					return true;
 				}
 				
-				backimg_.arg = nana::arrange::unkown;
+				backimg_.arg = nana::arrange::unknown;
 				return false;
 			}
 
@@ -104,11 +100,11 @@ namespace gui
 					if(backimg_.image.empty() == false)
 					{
 						nana::size imgsize = backimg_.image.size();
-						nana::size gsize(graph.width(), graph.height());
+						nana::size gsize = graph.size();
 
 						switch(backimg_.arg)
 						{
-						case nana::arrange::unkown:
+						case nana::arrange::unknown:
 							backimg_.image.paste(graph, 0, 0);
 							break;
 						case nana::arrange::horizontal:
@@ -186,6 +182,8 @@ namespace gui
 										if(false == backimg_.is_stretch)
 										{
 											unsigned imgarea = backimg_.end - backimg_.beg;
+											fixed_size = gsize.height - fixed_size;
+
 											nana::rectangle r(0, backimg_.beg, imgsize.width, imgarea);
 											nana::point pos(0, backimg_.beg);
 
@@ -248,12 +246,10 @@ namespace gui
 			{
 				if(graph_ && (bground_mode::basic != API::effects_bground_mode(*widget_)))
 				{
-					unsigned bkcolor = widget_->background();
-
 					if(runtime_.background_shadow_end == runtime_.background_shadow_start)
-						graph_->rectangle(0, 0, graph_->width(), graph_->height(), (runtime_.background_shadow_end ? runtime_.background_shadow_end : bkcolor), true);
+						graph_->rectangle((runtime_.background_shadow_end ? runtime_.background_shadow_end : widget_->background()), true);
 					else
-						graph_->shadow_rectangle(0, 0, graph_->width(), graph_->height(), runtime_.background_shadow_start, runtime_.background_shadow_end, !runtime_.horizontal);
+						graph_->shadow_rectangle(graph_->size(), runtime_.background_shadow_start, runtime_.background_shadow_end, !runtime_.horizontal);
 				}
 			}
 		//end class picture_drawer
@@ -267,29 +263,21 @@ namespace gui
 			create(wd, rectangle(), visible);
 		}
 
-		picture::picture(window wd, const rectangle& r, bool visible)
+		picture::picture(window wd, const nana::rectangle& r, bool visible)
 		{
 			create(wd, r, visible);
-		}
-
-		void picture::load(const nana::char_t* file)
-		{
-			get_drawer_trigger().load(file);
-			API::refresh_window( this->handle());
 		}
 
 		void picture::load(const nana::paint::image& img)
 		{
 			get_drawer_trigger().load(img);
-			API::refresh_window( this->handle());
+			API::refresh_window(*this);
 		}
 
 		void picture::bgstyle(bool stretchable, nana::arrange arg, int beg, int end)
 		{
 			if(get_drawer_trigger().bgstyle(stretchable, arg, beg, end))
-			{
-				API::refresh_window(this->handle());
-			}
+				API::refresh_window(*this);
 		}
 
 		void picture::set_shadow_background(unsigned begin_color, unsigned end_color, bool horizontal)

@@ -38,8 +38,8 @@ namespace gui
 
 				~itembase()
 				{
-					for(container::iterator i = cont_.begin(); i != cont_.end(); ++i)
-						delete (*i);
+					for(auto i : cont_)
+						delete i;
 				}
 
 				void append(const nana::string& text, unsigned long shortkey)
@@ -50,7 +50,7 @@ namespace gui
 
 				nana::gui::menu* get_menu(std::size_t index) const
 				{
-					return (index < cont_.size() ? &(cont_[index]->menu_obj) : 0);
+					return (index < cont_.size() ? &(cont_[index]->menu_obj) : nullptr);
 				}
 
 				const item_type& at(std::size_t index) const
@@ -64,13 +64,14 @@ namespace gui
 					{
 						if(shortkey < 0x61) shortkey += (0x61 - 0x41);
 
-						for(container::const_iterator i = cont_.begin(); i != cont_.end(); ++i)
+						std::size_t index = 0;
+						for(auto i : cont_)
 						{
-							if((*i)->shortkey == shortkey)
-								return (i - cont_.begin());
+							if(i->shortkey == shortkey)
+								return index;
+							++index;
 						}
 					}
-
 					return npos;
 				}
 
@@ -160,14 +161,17 @@ namespace gui
 					return items_->cont().size();
 				}
 
-				void trigger::bind_window(widget_reference widget)
+				/*
+				void trigger::bind_window(widget_reference widget)	//deperecated
 				{
 					widget_ = &widget;
 				}
+				*/
 
-				void trigger::attached(graph_reference graph)
+				void trigger::attached(widget_reference widget, graph_reference graph)
 				{
 					graph_ = &graph;
+					widget_ = &widget;
 					window wd = widget_->handle();
 					using namespace API::dev;
 					make_drawer_event<events::mouse_move>(wd);
@@ -180,15 +184,10 @@ namespace gui
 					make_drawer_event<events::key_up>(wd);
 				}
 
-				void trigger::detached()
-				{
-					API::dev::umake_drawer_event(widget_->handle());
-				}
-
 				void trigger::refresh(graph_reference)
 				{
 					_m_draw();
-					nana::gui::API::lazy_refresh();
+					API::lazy_refresh();
 				}
 
 				void trigger::mouse_move(graph_reference, const eventinfo& ei)
@@ -213,7 +212,7 @@ namespace gui
 					{
 						_m_popup_menu();
 						_m_draw();
-						nana::gui::API::lazy_refresh();
+						API::lazy_refresh();
 					}
 
 					state_.mouse_pos.x = ei.mouse.x;
@@ -370,19 +369,17 @@ namespace gui
 						}
 
 						state_.menu_active = false;
-
 						_m_draw();
-
 						API::lazy_refresh();
 					}
 				}
 
 				void trigger::shortkey(graph_reference graph, const eventinfo& ei)
 				{
-					nana::gui::API::focus_window(widget_->handle());
+					API::focus_window(widget_->handle());
 
 					std::size_t index = items_->find(ei.keyboard.key);
-					if(index != npos && (index != state_.active || state_.menu == 0))
+					if(index != npos && (index != state_.active || nullptr == state_.menu))
 					{
 						_m_close_menu();
 						state_.menu_active = true;
@@ -393,7 +390,7 @@ namespace gui
 							state_.menu->goto_next(true);
 
 						_m_draw();
-						nana::gui::API::lazy_refresh();
+						API::lazy_refresh();
 						state_.behavior = state_.behavior_menu;
 					}
 				}
@@ -422,7 +419,7 @@ namespace gui
 					{
 						state_.active = index;
 						_m_draw();
-						nana::gui::API::lazy_refresh();
+						API::lazy_refresh();
 
 						if(_m_popup_menu())
 							state_.menu->goto_next(true);
@@ -441,8 +438,7 @@ namespace gui
 						if(state_.menu)
 						{
 							const item_type &m = items_->at(state_.active);
-							state_.menu->destroy_answer(nana::functor<void()>(*this, &trigger::_m_unload_menu_window));
-							//state_.menu->popup(widget_->handle(), m.pos.x, m.pos.y + m.size.height, true);	//deprecated
+							state_.menu->destroy_answer(std::bind(&trigger::_m_unload_menu_window, this));
 							menu_accessor::popup(*state_.menu, widget_->handle(), m.pos.x, m.pos.y + m.size.height);
 							return true;
 						}
@@ -470,8 +466,7 @@ namespace gui
 						state_.passive_close = false;
 						state_.menu->close();
 						state_.passive_close = true;
-
-						state_.menu = 0;
+						state_.menu = nullptr;
 						return true;
 					}
 					return false;
@@ -479,8 +474,7 @@ namespace gui
 
 				void trigger::_m_unload_menu_window()
 				{
-					state_.menu = 0;
-
+					state_.menu = nullptr;
 					if(state_.passive_close)
 					{
 						_m_total_close();
@@ -495,12 +489,13 @@ namespace gui
 					{
 						int item_x = 2;
 						std::size_t index = 0;
-						for(itembase::container::const_iterator i = items_->cont().begin(), end = items_->cont().end(); i != end; ++i, ++index)
+						for(auto i : items_->cont())
 						{
-							if(item_x <= x && x < item_x + static_cast<int>((*i)->size.width))
+							if(item_x <= x && x < item_x + static_cast<int>(i->size.width))
 								return index;
 
-							item_x += (*i)->size.width;
+							item_x += i->size.width;
+							++index;
 						}
 					}
 
@@ -512,7 +507,7 @@ namespace gui
 					if(state_.nullify_mouse == false)
 					{
 						std::size_t which = _m_item_by_pos(x, y);
-						if((which != state_.active) && (which != npos || false == state_.menu_active))
+						if((which != state_.active) && (which != npos || (false == state_.menu_active)))
 						{
 							state_.active = which;
 							return true;
@@ -532,19 +527,19 @@ namespace gui
 					nana::size item_s(0, 23);
 
 					unsigned long index = 0;
-					for(itembase::container::const_iterator it = items_->cont().begin(), end = items_->cont().end(); it != end; ++it, ++index)
+					for(auto i : items_->cont())
 					{
 						//Transform the text if it contains the hotkey character
 						nana::string::value_type hotkey;
 						nana::string::size_type hotkey_pos;
-						nana::string text = nana::gui::API::transform_shortkey_text((*it)->text, hotkey,&hotkey_pos);
+						nana::string text = API::transform_shortkey_text(i->text, hotkey, &hotkey_pos);
 
 						nana::size text_s = graph_->text_extent_size(text);
 
 						item_s.width = text_s.width + 16;
 
-						(*it)->pos = item_pos;
-						(*it)->size = item_s;
+						i->pos = item_pos;
+						i->size = item_s;
 
 						item_renderer::state_t state = (index != state_.active ? ird.state_normal : (state_.menu_active ? ird.state_selected : ird.state_highlight));
 						ird.background(item_pos, item_s, state);
@@ -570,13 +565,14 @@ namespace gui
 							graph_->line(x, y, x + hotkey_size.width - 1, y, 0x0);
 						}
 
-						item_pos.x += (*it)->size.width;
+						item_pos.x += i->size.width;
+						++index;
 					}
 				}
 
 				//struct state_type
 					trigger::state_type::state_type()
-						:active(npos), behavior(behavior_none), menu_active(false), passive_close(true), nullify_mouse(false), menu(0)
+						:active(npos), behavior(behavior_none), menu_active(false), passive_close(true), nullify_mouse(false), menu(nullptr)
 					{}
 				//end struct state_type
 			//end class trigger
@@ -588,25 +584,25 @@ namespace gui
 		menubar::menubar(){}
 		menubar::menubar(window wd)
 		{
-			this->create(wd);
+			create(wd);
 		}
 
 		void menubar::create(window wd)
 		{
-			typedef widget_object<category::widget_tag, drawerbase::menubar::trigger> base;
-			base::create(wd, nana::size(API::window_size(wd).width, 28));
-			API::attach_menubar(this->handle());
+			widget_object<category::widget_tag, drawerbase::menubar::trigger>
+				::create(wd, rectangle(nana::size(API::window_size(wd).width, 28)));
+			API::attach_menubar(handle());
 		}
 
-		nana::gui::menu& menubar::push_back(const nana::string& text)
+		menu& menubar::push_back(const nana::string& text)
 		{
 			return *(get_drawer_trigger().push_back(text));
 		}
 
-		nana::gui::menu& menubar::at(std::size_t index) const
+		menu& menubar::at(std::size_t index) const
 		{
-			nana::gui::menu* p = get_drawer_trigger().at(index);
-			if(0 == p)
+			menu* p = get_drawer_trigger().at(index);
+			if(nullptr == p)
 				throw std::out_of_range("menubar::at, out of range");
 			return *p;
 		}

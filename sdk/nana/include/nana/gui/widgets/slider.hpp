@@ -14,9 +14,9 @@ namespace nana{ namespace gui{
 				nana::fn_group<void(nana::gui::slider&)> value_changed;
 			};
 
-			struct seekdir
+			enum class seekdir
 			{
-				enum t{bilateral, forward, backward};
+				bilateral, forward, backward
 			};
 
 			class provider
@@ -67,7 +67,7 @@ namespace nana{ namespace gui{
 			class controller;
 
 			class trigger
-				: public nana::gui::drawer_trigger
+				: public drawer_trigger
 			{
 			public:
 				typedef controller controller_t;
@@ -76,22 +76,20 @@ namespace nana{ namespace gui{
 				~trigger();
 				controller_t* ctrl() const;
 			private:
-				void bind_window(widget_reference);
-				void attached(graph_reference);
-				void detached();
-				void refresh(graph_reference);
-				void mouse_down(graph_reference, const eventinfo&);
-				void mouse_up(graph_reference, const eventinfo&);
-				void mouse_move(graph_reference, const eventinfo&);
-				void mouse_leave(graph_reference, const eventinfo&);
-				void resize(graph_reference, const eventinfo&);
+				void attached(widget_reference, graph_reference)	override;
+				void detached()	override;
+				void refresh(graph_reference)	override;
+				void mouse_down(graph_reference, const eventinfo&)	override;
+				void mouse_up(graph_reference, const eventinfo&)	override;
+				void mouse_move(graph_reference, const eventinfo&)	override;
+				void mouse_leave(graph_reference, const eventinfo&)	override;
+				void resize(graph_reference, const eventinfo&)		override;
 			private:
 				controller_t * impl_;
 			};
 		}//end namespace slider
 	}//end namespace drawerbase
 
-	/// The slider can be used for dragging for tracking
 	class slider
 		: public widget_object<category::widget_tag, drawerbase::slider::trigger>
 	{
@@ -101,21 +99,11 @@ namespace nana{ namespace gui{
 		typedef drawerbase::slider::seekdir seekdir;
 		typedef drawerbase::slider::extra_events ext_event_type;
 
-		/// The default constructor without creating a widget.
 		slider();
-
-		/// The constructor that creates a widget.
-		/// @param window, a handle to the parent window of the widget being created.
-		/// @param visible, specifying the visible of the widget after creating.
 		slider(window, bool visible);
-
-		/// The constructor that creates a widget.
-		/// @param window, a handle to the parent window of the widget being created.
-		/// @param rectangle, the size and position of the widget in its parent window coordinate.
-		/// @param visible, specifying the visible of the widget after creating.
 		slider(window, const rectangle& = rectangle(), bool visible = true);
 		ext_event_type& ext_event() const;
-		void seek(seekdir::t);
+		void seek(seekdir);
 		void vertical(bool);
 		bool vertical() const;
 		void vmax(unsigned);

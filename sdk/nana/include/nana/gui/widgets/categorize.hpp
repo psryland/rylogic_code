@@ -89,8 +89,8 @@ namespace nana{	namespace gui
 
 				virtual ~renderer() = 0;
 				virtual void background(graph_reference, window wd, const nana::rectangle&, const ui_element&) = 0;
-				virtual void root_arrow(graph_reference, const nana::rectangle&, mouse_action::t) = 0;
-				virtual void item(graph_reference, const nana::rectangle&, std::size_t index, const nana::string& name, unsigned textheight, bool has_child, mouse_action::t) = 0;
+				virtual void root_arrow(graph_reference, const nana::rectangle&, mouse_action) = 0;
+				virtual void item(graph_reference, const nana::rectangle&, std::size_t index, const nana::string& name, unsigned textheight, bool has_child, mouse_action) = 0;
 				virtual void border(graph_reference) = 0;
 			};
 
@@ -109,8 +109,8 @@ namespace nana{	namespace gui
 				bool childset_erase(const nana::string&);
 				bool clear();
 
-				///splitstr
-				///@brief: Sets the splitstr. If the parameter will be ingored if it is an empty string.
+				//splitstr
+				//@brief: Sets the splitstr. If the parameter will be ingored if it is an empty string.
 				void splitstr(const nana::string&);
 				const nana::string& splitstr() const;
 				
@@ -133,14 +133,13 @@ namespace nana{	namespace gui
 			private:
 				void _m_attach_adapter_to_drawer() const;
 			private:
-				void bind_window(widget_reference);
-				void attached(graph_reference);
-				void detached();
-				void refresh(graph_reference);
-				void mouse_down(graph_reference, const eventinfo&);
-				void mouse_up(graph_reference, const eventinfo&);
-				void mouse_move(graph_reference, const eventinfo&);
-				void mouse_leave(graph_reference, const eventinfo&);
+				void attached(widget_reference, graph_reference)	override;
+				void detached()	override;
+				void refresh(graph_reference)	override;
+				void mouse_down(graph_reference, const eventinfo&)	override;
+				void mouse_up(graph_reference, const eventinfo&)	override;
+				void mouse_move(graph_reference, const eventinfo&)	override;
+				void mouse_leave(graph_reference, const eventinfo&)	override;
 			private:
 				mutable ext_event_adapter_if * ext_event_adapter_;
 				scheme * scheme_;
@@ -148,23 +147,15 @@ namespace nana{	namespace gui
 		}//end namespace categorize
 	}//end namespace drawerbase
 
-	///A categorize widget is used for representing the architecture of categories and
-	///which category is chosen.
 	template<typename T>
 	class categorize
 		: public widget_object<category::widget_tag, drawerbase::categorize::trigger>
 	{
 	public:
-		///The value type.
 		typedef T value_type;
-
-		///The methods for extra events.
 		typedef drawerbase::categorize::extra_events<categorize> ext_event_type;
-
-		///The interface for user-defined renderer.
 		typedef drawerbase::categorize::renderer renderer;
 
-		///The default construction without creating it.
 		categorize()
 		{}
 
@@ -175,14 +166,14 @@ namespace nana{	namespace gui
 
 		categorize(window wd, const nana::string& text, bool visible = true)
 		{
-			create(wd, rectangle(), visible);
-			caption(text);
+				create(wd, rectangle(), visible);
+				caption(text);
 		}
 
 		categorize(window wd, const nana::char_t* text, bool visible = true)
 		{
-			create(wd, rectangle(), visible);
-			caption(text);
+				create(wd, rectangle(), visible);
+				caption(text);
 		}
 
 		categorize(window wd, const rectangle& r = rectangle(), bool visible = true)

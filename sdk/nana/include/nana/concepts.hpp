@@ -12,7 +12,6 @@
 #define NANA_CONCEPTS_HPP
 
 #include <nana/any.hpp>
-#include <stdexcept>
 
 namespace nana
 {
@@ -28,16 +27,26 @@ namespace nana
 			void anyobj(const Target& t)
 			{
 				nana::any * p = _m_anyobj(true);
-				if(0 == p)
+				if(nullptr == p)
 					throw std::runtime_error("Nana.any_objective: Object does not exist");
 				*p = t;
+			}
+
+			template<typename Target>
+			void anyobj(Target&& t)
+			{
+				nana::any * p = _m_anyobj(true);
+				if(nullptr == 0)
+					throw std::runtime_error("Nana.any_objective: Object does not exist");
+
+				*p = std::move(t);
 			}
 
 			template<typename Target>
 			Target * anyobj() const
 			{
 				nana::any * p = _m_anyobj(false);
-				return (p ? p->get<Target>() : 0);
+				return (p ? p->get<Target>() : nullptr);
 			}
 		private:
 			virtual nana::any* _m_anyobj(bool allocate_if_empty) const = 0;
@@ -55,16 +64,25 @@ namespace nana
 			void anyobj(anyobj_index_t i, const Target& t)
 			{
 				nana::any * p = _m_anyobj(i, true);
-				if(0 == p)
-					throw std::runtime_error("Nana.any_objective: Object does not exist");
+				if(nullptr == p)
+					throw std::runtime_error("Nana.any_objective: Object does not exist.");
 				*p = t;
+			}
+
+			template<typename Target>
+			void anyobj(anyobj_index_t i, Target&& t)
+			{
+				nana::any * p = _m_anyobj(i, true);
+				if(nullptr == p)
+					throw std::runtime_error("Nana.any_objective: Object does not exist");
+				*p = std::move(t);
 			}
 
 			template<typename Target>
 			Target * anyobj(anyobj_index_t i) const
 			{
 				nana::any * p = _m_anyobj(i, false);
-				return (p ? p->get<Target>() : 0);
+				return (p ? p->get<Target>() : nullptr);
 			}
 		private:
 			virtual nana::any* _m_anyobj(anyobj_index_t i, bool allocate_if_empty) const = 0;
@@ -82,16 +100,26 @@ namespace nana
 			void anyobj(anyobj_index_t i0, anyobj_index_t i1, const Target& t)
 			{
 				nana::any * p = _m_anyobj(i0, i1, true);
-				if(0 == p)
+				if(nullptr == p)
 					throw std::runtime_error("Nana.any_objective: Object does not exist");
+
 				*p = t;
+			}
+
+			template<typename Target>
+			void anyobj(anyobj_index_t i0, anyobj_index_t i1, Target&& t)
+			{
+				nana::any * p = _m_anyobj(i0, i1, true);
+				if(nullptr == p)
+					throw std::runtime_error("Nana.any_objective: Object does not exist");
+				*p = std::move(t);
 			}
 
 			template<typename Target>
 			Target * anyobj(anyobj_index_t i0, anyobj_index_t i1) const
 			{
 				nana::any * p = _m_anyobj(i0, i1, false);
-				return (p ? p->get<Target>() : 0);
+				return (p ? p->get<Target>() : nullptr);
 			}
 		private:
 			virtual nana::any* _m_anyobj(anyobj_index_t i0, anyobj_index_t i1, bool allocate_if_empty) const = 0;

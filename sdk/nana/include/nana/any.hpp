@@ -1,7 +1,7 @@
 #ifndef NANA_ANY_HPP
 #define NANA_ANY_HPP
 #include <typeinfo>
-#include <nana/traits.hpp>
+#include <utility> //C++11 for std::move
 
 namespace nana
 {
@@ -26,6 +26,10 @@ namespace nana
 			object_type(T const & obj)
 				: object(obj)
 			{}
+
+			object_type(T && obj)
+				: object(std::move(obj))
+			{}
 			
 			object_type(const object_type& rhs)
 				:object(rhs.object)
@@ -35,7 +39,7 @@ namespace nana
 			{
 				if(this != &rhs)
 				{
-					const object_type * other = dynamic_cast<const object_type*>(&rhs);
+					auto other = dynamic_cast<const object_type*>(&rhs);
 					if(other)
 						object = other->object;	
 				}
@@ -44,34 +48,41 @@ namespace nana
 			
 			virtual bool same(const super_type& rhs) const
 			{
-				return (dynamic_cast<const object_type*>(&rhs) != 0);
+				return (dynamic_cast<const object_type*>(&rhs) != nullptr);
 			}
 			
 			virtual super_type* clone() const
 			{
-				return new object_type(object);	
+				return new object_type(object);
 			}
 			
 			T object;
 		}; //end struct object_type
 	public:
 		template<typename T>
-		any(T const & obj)
-			: super_(new object_type<T>(obj))
+		any(const T & obj)
+			: super_(new object_type<typename std::remove_reference<T>::type>(obj))
 		{}
-	
+
+		template<typename T>
+		any(T && obj)
+			: super_(new object_type<typename std::remove_reference<T>::type>(std::move(obj)))
+		{}
+
 		any();
-		any(const any& rhs);
+		any(const any&);
+		any(any&&);
 		~any();
 		
-		bool same(const any &rhs) const;
-		any& operator=(const any& rhs);
+		bool same(const any &) const;
+		any& operator=(const any&);
+		any& operator=(any&&);
 		
 		template<typename T>
 		any& operator=(T const &rhs)
 		{
 			T * obj = get<T>();
-			if(obj == 0)
+			if(nullptr == obj)
 			{
 				delete super_;
 				super_ = new object_type<T>(rhs);
@@ -80,34 +91,51 @@ namespace nana
 				*obj = rhs;
 			return *this;
 		}
+
+		template<typename T>
+		any & operator=(T && rhs)
+		{
+			typedef typename std::remove_const<T>::type type;
+			type* obj = get<type>();
+			if(nullptr == obj)
+			{
+				delete super_;
+				super_ = new object_type<type>(std::move(rhs));
+			}
+			else
+				*obj = std::move(rhs);
+			return *this;
+		}
 		
 		template<typename T>
 		T * get() const
 		{
 			if(super_)
 			{
-				typedef typename nana::metacomp::rm_const<T>::value_type type;
+				typedef typename std::remove_const<T>::type type;
 				object_type<type>* obj = dynamic_cast<object_type<type>*>(super_);
 				if(obj) return &(obj->object);
 			}
-			return 0;
+			return nullptr;
 		}
 		
 		template<typename T>
 		operator T&() const
 		{
-			T *obj = get<T>();
-			
-			if(obj == 0)
+			typedef typename std::remove_const<T>::type type;
+			type *obj = get<type>();
+
+			if(nullptr == obj)
 				throw std::bad_cast();
-			
+
 			return *obj;
 		}
-		
+
 		template<typename T>
 		operator T*() const
 		{
-			return get<T>();	
+			typedef typename std::remove_const<T>::type type;
+			return get<type>();
 		}
 	private:
 		super_type * super_;

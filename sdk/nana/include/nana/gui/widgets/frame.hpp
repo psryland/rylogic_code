@@ -26,7 +26,6 @@ namespace gui
 		frame();
 		frame(window, bool visible);
 		frame(window, const rectangle& = rectangle(), bool visible = true);
-
 		bool insert(native_window_type);
 		native_window_type element(unsigned index);
 		native_window_type container() const;

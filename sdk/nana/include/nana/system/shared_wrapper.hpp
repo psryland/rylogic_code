@@ -12,9 +12,9 @@
 #ifndef NANA_SYSTEM_SHARED_WRAPPER_HPP
 #define NANA_SYSTEM_SHARED_WRAPPER_HPP
 
-#include "../deploy.hpp"
-#include "../traits.hpp"
-#include "../exceptions.hpp"
+#include <nana/deploy.hpp>
+#include <nana/traits.hpp>
+#include <nana/exceptions.hpp>
 
 
 namespace nana
@@ -41,9 +41,9 @@ namespace system
 		template<typename Function>
 		struct function_ptr
 		{
-			typedef typename nana::metacomp::static_if<nana::traits::is_function_pointer<Function>,
-										Function,
-										typename nana::metacomp::static_if<nana::traits::is_function_type<Function>, Function*, int>::value_type
+			typedef typename nana::metacomp::static_if<std::is_function<Function>::value,
+										Function*,
+										typename nana::metacomp::static_if<std::is_function<Function>::value && std::is_pointer<Function>::value, Function, int>::value_type
 			>::value_type value_type;
 		};
 

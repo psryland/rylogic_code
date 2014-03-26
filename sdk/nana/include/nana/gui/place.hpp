@@ -49,7 +49,7 @@ namespace gui
 		 *	@param handle	A handle to a window which the place wants to attach.
 		 *	@remark	It will throw an exception if the place has already binded to a window.
 		 */
-		void bind(window);
+		void bind(window handle);
 		void div(const char* s);
 		field_reference field(const char* name);
 		void collocate();

@@ -27,7 +27,7 @@ namespace dynamic_drawing
 {
 
 	class object
-		:nana::noncopyable
+		: nana::noncopyable
 	{
 	public:
 		virtual ~object(){}
@@ -36,30 +36,31 @@ namespace dynamic_drawing
 		{
 			return false;
 		}
-
+		
 		virtual void draw(nana::paint::graphics&) const = 0;
 	};
 
+	//user_draw_function
 	class user_draw_function
 		: public object
 	{
 	public:
-		user_draw_function(const nana::functor<void(nana::paint::graphics&)> & f, bool diehard)
-			: diehard_(diehard), fn_(f)
+		user_draw_function(std::function<void(paint::graphics&)> && f, bool diehard)
+			:	diehard_(diehard), fn_(std::move(f))
 		{}
-
-		bool diehard() const
-		{
-			return diehard_;
-		}
 
 		void draw(paint::graphics& graph) const
 		{
 			fn_(graph);
 		}
+
+		bool diehard() const
+		{
+			return diehard_;
+		}
 	private:
 		bool diehard_;
-		nana::functor<void(nana::paint::graphics&)> fn_;
+		std::function<void(paint::graphics&)> fn_;
 	};
 
 	//string
@@ -68,7 +69,7 @@ namespace dynamic_drawing
 	{
 	public:
 		string(int x, int y, unsigned color, const nana::char_t* text)
-			:x_(x), y_(y), color_(color), text_(0)
+			:x_(x), y_(y), color_(color), text_(nullptr)
 		{
 			if(text)
 			{

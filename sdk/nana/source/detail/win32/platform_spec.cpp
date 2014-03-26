@@ -6,7 +6,7 @@
  *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
- *	@file: nana/detail/win32/platform_spec.cpp
+ *	@file: nana/detail/platform_spec.cpp
  *
  *	This file provides basis class and data structrue that required by nana
  */
@@ -22,19 +22,19 @@ namespace nana
 namespace detail
 {
 	drawable_impl_type::drawable_impl_type()
-		:	pixbuf_ptr(0), bytes_per_line(0),
+		:	pixbuf_ptr(nullptr), bytes_per_line(0),
 			fgcolor_(0xFFFFFFFF)
 	{
-		pen.handle = 0;
+		pen.handle = nullptr;
 		pen.color = nana::null_color;
 		pen.style = -1;
 		pen.width = -1;
 
-		brush.handle = 0;
+		brush.handle = nullptr;
 		brush.style = brush_spec::Solid;
 		brush.color = nana::null_color;
 
-		round_region.handle = 0;
+		round_region.handle = nullptr;
 		round_region.radius_x = round_region.radius_y = 0;
 
 		string.tab_length = 4;
@@ -53,7 +53,7 @@ namespace detail
 
 	void drawable_impl_type::fgcolor(nana::color_t col)
 	{
-		if(fgcolor_ != col)
+		if(this->fgcolor_ != col)
 		{
 			::SetTextColor(context, NANA_RGB(col));
 			fgcolor_ = col;
@@ -93,17 +93,6 @@ namespace detail
 		}
 	}
 
-	void drawable_impl_type::brush_spec::remove()
-	{
-		if(this->handle)
-		{
-			::DeleteObject(this->handle);
-			this->handle = 0;
-			this->style = Solid;
-			this->color = nana::null_color;
-		}
-	}
-
 	void drawable_impl_type::round_region_spec::set(const nana::rectangle& r, unsigned radius_x, unsigned radius_y)
 	{
 		if(this->r != r || this->radius_x != radius_x || this->radius_y != radius_y)
@@ -126,8 +115,9 @@ namespace detail
 	}
 	//end struct font_tag::deleter
 
+	//class platform_spec
 	platform_spec::co_initializer::co_initializer()
-		: ole32_(::LoadLibrary(STR("Ole32.DLL")))
+		: ole32_(::LoadLibrary(STR("OLE32.DLL")))
 	{
 		if(ole32_)
 		{
@@ -157,8 +147,6 @@ namespace detail
 			::FreeLibrary(ole32_);
 		}
 	}
-	//class platform_spec
-
 
 	platform_spec::platform_spec()
 	{
@@ -209,10 +197,7 @@ namespace detail
 		::LOGFONT logfont;
 		memset(&logfont, 0, sizeof logfont);
 
-		if(0 == name || 0 == *name)
-			strcpy(logfont.lfFaceName, default_native_font()->name.c_str());
-		else
-			strcpy(logfont.lfFaceName, name);
+		strcpy(logfont.lfFaceName, (name && *name ? name : def_font_ptr_->name.c_str()));
 
 		logfont.lfCharSet = DEFAULT_CHARSET;
 		HDC hdc = ::GetDC(0);
@@ -238,16 +223,16 @@ namespace detail
 			impl->underline = underline;
 			impl->strikeout = strike_out;
 			impl->handle = result;
-			return nana::shared_ptr<font_tag>(impl, font_tag::deleter());
+			return std::shared_ptr<font_tag>(impl, font_tag::deleter());
 		}
-		return nana::shared_ptr<font_tag>();
+		return nullptr;
 	}
 
 	//event_register
 	//@brief: some event is needed to register for system.
-	void platform_spec::event_register_filter(native_window_type wd, event_code::t evtid)
+	void platform_spec::event_register_filter(native_window_type wd, event_code eventid)
 	{
-		switch(evtid)
+		switch(eventid)
 		{
 		case event_code::mouse_drop:
 			::DragAcceptFiles(reinterpret_cast<HWND>(wd), true);
@@ -263,15 +248,14 @@ namespace detail
 		return object;
 	}
 
-	void platform_spec::keep_window_icon(nana::gui::native_window_type wd, const nana::paint::image& img)
+	void platform_spec::keep_window_icon(gui::native_window_type wd, const paint::image& img)
 	{
 		iconbase_[wd] = img;
 	}
 
-	void platform_spec::release_window_icon(nana::gui::native_window_type wd)
+	void platform_spec::release_window_icon(gui::native_window_type wd)
 	{
 		iconbase_.erase(wd);
 	}
 }//end namespace detail
 }//end namespace nana
-

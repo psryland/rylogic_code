@@ -18,10 +18,8 @@ namespace nana
 namespace gui
 {
 
-	/*
-	 * struct appearance
-	 *		Window appearance structure
-	 */
+	//struct appearance
+	//@brief: Window appearance structure
 		appearance::appearance()
 			:taskbar(true), floating(false), no_activate(false),
 			 minimize(true), maximize(true), sizable(true),

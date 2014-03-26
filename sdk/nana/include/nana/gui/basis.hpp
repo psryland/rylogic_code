@@ -28,65 +28,46 @@ namespace gui
 		struct event_handle_impl{};
 	}
 
-	/// The type defines some states for checkbox, and
-	/// this is a strong-typed enumeration type.
-	struct checkstate
+	enum class checkstate
 	{
-		enum t
-		{
-			unchecked,
-			checked,
-			partial
-		};
+		unchecked, checked, partial
 	};
 
-	/// The type defines the borders for a window, and
-	/// this is a strong-typed enumeration type.
-	struct window_border
+	enum class window_border
 	{
-		enum t
-		{
-			none,
-			left, right, top, bottom,
-			top_left, top_right, bottom_left, bottom_right			
-		};
+		none,
+		left, right, top, bottom,
+		top_left, top_right, bottom_left, bottom_right
 	};
 
-	/// The type defines the modes for bground effect, and
-	/// this is a strong-typed enumeration type.
-	struct bground_mode
+	enum class bground_mode
 	{
-		enum t
-		{
-			none,
-			basic,
-			blend
-		};
+		none,
+		basic,
+		blend
 	};
 
 	namespace category
 	{
-		struct flags
+		enum class flags
 		{
-			enum t
-			{
-				super,
-				widget = 0x1,
-				lite_widget = 0x3,
-				root = 0x5,
-				frame = 0x9
-			};
+			super,
+			widget = 0x1,
+			lite_widget = 0x3,
+			root = 0x5,
+			frame = 0x9
 		};
-
-		struct widget_tag{ enum{value = flags::widget}; };
-		struct lite_widget_tag : widget_tag{ enum{ value = flags::lite_widget};};
-		struct root_tag : widget_tag{ enum { value = flags::root}; };
-		struct frame_tag: widget_tag{ enum { value = flags::frame}; };
+		//wait for constexpr
+		struct widget_tag{ static const flags value = flags::widget; };
+		struct lite_widget_tag : widget_tag{ static const flags value = flags::lite_widget;};
+		struct root_tag : widget_tag{ static const flags value = flags::root; };
+		struct frame_tag: widget_tag{ static const flags value = flags::frame; };
 	}// end namespace category
 
 	typedef detail::native_window_handle_impl * native_window_type;
 	typedef detail::window_handle_impl*	window;
 	typedef detail::event_handle_impl*	event_handle;
+
 
 	struct keyboard
 	{
@@ -108,31 +89,6 @@ namespace gui
 		};
 	};
 
-	struct mouse
-	{
-		enum t
-		{
-			any_button, left_button, middle_button, right_button
-		};
-	};
-
-	struct cursor
-	{
-		enum t
-		{
-			hand	= 60,
-			arrow	= 68,
-			wait	= 150,
-			iterm	= 152, //A text caret
-			size_we	= 108,
-			size_ns	= 116,
-			size_top_left = 134,
-			size_top_right = 136,
-			size_bottom_left = 12,
-			size_bottom_right = 14
-		};
-	};
-
 	namespace color
 	{
 		enum
@@ -143,16 +99,32 @@ namespace gui
 			button_face = 0xD4D0C8,
 			dark_border	= 0x404040,
 			gray_border	= 0x808080,
-			highlight = 0x1CC4F7,
+			highlight = 0x1CC4F7
 		};
 	};
 
-	struct z_order_action
+	enum class cursor
 	{
-		enum t
-		{
-			none, bottom, top, topmost, foreground
-		};
+		hand	= 60,
+		arrow	= 68,
+		wait	= 150,
+		iterm	= 152, //A text caret
+		size_we	= 108,
+		size_ns	= 116,
+		size_top_left = 134,
+		size_top_right = 136,
+		size_bottom_left = 12,
+		size_bottom_right = 14
+	};
+
+	enum class mouse
+	{
+		any_button, left_button, middle_button, right_button
+	};
+
+	enum class z_order_action
+	{
+		none, bottom, top, topmost, foreground
 	};
 
 	//Window appearance structure

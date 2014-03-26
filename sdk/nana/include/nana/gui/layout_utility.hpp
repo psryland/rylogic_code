@@ -20,10 +20,10 @@ namespace nana
 {
 namespace gui
 {
-	/// overlap test if overlaped between r1 and r2
+	//overlap test if overlaped between r1 and r2
 	bool overlap(const rectangle& r1, const rectangle& r2);
 
-	/// overlap, compute the overlap area between r1 and r2. the r is for root
+	// overlap, compute the overlap area between r1 and r2. the r is for root
 	bool overlap(const rectangle& r1, const rectangle& r2, rectangle& r);
 
 	bool overlap(const rectangle& ir, const size& valid_input_area, const rectangle & dr, const size& valid_dst_area, rectangle& output_src_r, rectangle& output_dst_r);
@@ -33,10 +33,12 @@ namespace gui
 	/// Zoom the input_s to fit for ref_s
 	void fit_zoom(const size& input_s, const size& ref_s, size& result_s);
 
-	/// Calculate the scaled rectangle by refer dst rectangle, that scale factor is same as that between scaled and refer.
+	//zoom
+	//@brief:	Calculate the scaled rectangle by refer dst rectangle, that scale factor is same as that between scaled and refer.
 	void zoom(const rectangle& refer, const rectangle& scaled, const rectangle& refer_dst, rectangle& r);
 
-	/// Tests a rectangle whether it is wholly covered by another.
+	//covered
+	//@brief:	Tests a rectangle whether it is wholly covered by another.
 	bool covered(const rectangle& underlying, //Rectangle 1 is must under rectangle 2
 						const rectangle& cover);
 

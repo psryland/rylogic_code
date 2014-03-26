@@ -12,6 +12,7 @@
 
 #include <nana/config.hpp>
 #include PLATFORM_SPEC_HPP
+#include GUI_BEDROCK_HPP
 #include <nana/paint/graphics.hpp>
 #include <nana/paint/detail/native_paint_interface.hpp>
 #include <nana/paint/pixel_buffer.hpp>
@@ -49,14 +50,15 @@ namespace paint
 				}
 #endif
 			}
-		};//end class drawable_deleter
+		};
+		//end struct graphics_handle_deleter
 	}//end namespace detail
 
 	//class font
 		struct font::impl_type
 		{
-			typedef nana::detail::platform_spec::font_ptr_t font_ptr_t;
-			font_ptr_t font_ptr;
+			typedef nana::detail::platform_spec::font_ptr_t ptr_t;
+			ptr_t font_ptr;
 		};
 
 		font::font()
@@ -81,33 +83,33 @@ namespace paint
 		font::font(const nana::char_t* name, unsigned size, bool bold, bool italic, bool underline, bool strike_out)
 			: impl_(new impl_type)
 		{
-			this->make(name, size, bold, italic, underline, strike_out);
+			make(name, size, bold, italic, underline, strike_out);
 		}
 
 		font::~font()
 		{
 			delete impl_;
-			impl_ = 0;
+			impl_ = nullptr;
 		}
 
 		bool font::empty() const
 		{
-			return ((0 == impl_) || (! impl_->font_ptr));
+			return ((nullptr == impl_) || (nullptr == impl_->font_ptr));
 		}
 
 		void font::make(const nana::char_t* name, unsigned size, bool bold, bool italic, bool underline, bool strike_out)
 		{
 			size = nana::detail::platform_spec::instance().font_size_to_height(size);
-			this->make_raw(name, size, bold ? 700 : 400, italic, underline, strike_out);
+			make_raw(name, size, bold ? 700 : 400, italic, underline, strike_out);
 		}
 
 		void font::make_raw(const nana::char_t*name, unsigned height, unsigned weight, bool italic, bool underline, bool strike_out)
 		{
 			if(impl_)
 			{
-				::nana::detail::platform_spec::font_ptr_t p = nana::detail::platform_spec::instance().make_native_font(name, height, weight, italic, underline, strike_out);
-				if(p)
-					impl_->font_ptr = p;
+				auto t = nana::detail::platform_spec::instance().make_native_font(name, height, weight, italic, underline, strike_out);
+				if(t)
+					impl_->font_ptr = t;
 			}
 		}
 
@@ -127,37 +129,37 @@ namespace paint
 
 		unsigned font::size() const
 		{
-			if(this->empty()) return 0;
+			if(empty()) return 0;
 			return nana::detail::platform_spec::instance().font_height_to_size(impl_->font_ptr->height);
 		}
 
 		bool font::bold() const
 		{
-			if(this->empty()) return false;
+			if(empty()) return false;
 			return (impl_->font_ptr->weight >= 700);
 		}
 
 		unsigned font::height() const
 		{
-			if(this->empty()) return false;
+			if(empty()) return false;
 			return (impl_->font_ptr->height);
 		}
 
 		unsigned font::weight() const
 		{
-			if(this->empty()) return false;
+			if(empty()) return false;
 			return (impl_->font_ptr->weight);
 		}
 
 		bool font::italic() const
 		{
-			if(this->empty()) return false;
+			if(empty()) return false;
 			return (impl_->font_ptr->italic);
 		}
 
 		native_font_type font::handle() const
 		{
-			if(this->empty())	return 0;
+			if(empty())	return nullptr;
 			return reinterpret_cast<native_font_type>(impl_->font_ptr->handle);
 		}
 
@@ -170,18 +172,16 @@ namespace paint
 		font & font::operator=(const font& rhs)
 		{
 			if(impl_ && rhs.impl_ && (this != &rhs))
-			{
 				impl_->font_ptr = rhs.impl_->font_ptr;
-			}
+
 			return *this;
 		}
 
 		bool font::operator==(const font& rhs) const
 		{
-			if(this->empty() == rhs.empty())
-			{
-				return (this->empty() || (impl_->font_ptr->handle == rhs.impl_->font_ptr->handle));
-			}
+			if(empty() == rhs.empty())
+				return (empty() || (impl_->font_ptr->handle == rhs.impl_->font_ptr->handle));
+
 			return false;
 		}
 
@@ -196,23 +196,23 @@ namespace paint
 
 	//class graphics
 		graphics::graphics()
-			:handle_(0), changed_(false)
+			:handle_(nullptr), changed_(false)
 		{}
 
 		graphics::graphics(unsigned width, unsigned height)
-			:handle_(0), changed_(true)
+			:handle_(nullptr), changed_(true)
 		{
-			this->make(width, height);
+			make(width, height);
 		}
 
 		graphics::graphics(const nana::size& sz)
-			:handle_(0), changed_(true)
+			:handle_(nullptr), changed_(true)
 		{
 			make(sz.width, sz.height);
 		}
 
 		graphics::graphics(const graphics& rhs)
-			:	dwptr_(rhs.dwptr_), handle_(rhs.handle_), size_(rhs.size_), changed_(true)
+			:dwptr_(rhs.dwptr_), handle_(rhs.handle_), size_(rhs.size_), changed_(true)
 		{}
 
 		graphics& graphics::operator=(const graphics& rhs)
@@ -232,7 +232,7 @@ namespace paint
 			return this->changed_;
 		}
 
-		bool graphics::empty() const { return (handle_ == 0); }
+		bool graphics::empty() const { return (handle_ == nullptr); }
 
 		graphics::operator const void *() const
 		{
@@ -248,17 +248,17 @@ namespace paint
 		{
 			//The reinterpret_cast is used for same platform. Under Windows, the type
 			//of pixmap can be conversed into void* directly, but under X11, the type is not a pointer.
-			return (handle_? reinterpret_cast<void*>(handle_->pixmap) : 0);
+			return (handle_? reinterpret_cast<void*>(handle_->pixmap) : nullptr);
 		}
 
 		const void* graphics::context() const
 		{
-			return (handle_? handle_->context : 0);
+			return (handle_? handle_->context : nullptr);
 		}
 
 		void graphics::make(unsigned width, unsigned height)
 		{
-			if(handle_ == 0 || size_ != nana::size(width, height))
+			if(handle_ == nullptr || size_ != nana::size(width, height))
 			{
 				//The object will be delete while dwptr_ is performing a release.
 				drawable_type dw = new nana::detail::drawable_impl_type;
@@ -301,13 +301,13 @@ namespace paint
 				{
 					::DeleteDC(cdc);
 					delete dw;
-					dw = 0;
-					this->release();
+					dw = nullptr;
+					release();
 				}
 
 				::ReleaseDC(0, hdc);
 #elif defined(NANA_X11)
-				nana::detail::platform_spec & spec = nana::detail::platform_spec::instance();
+				auto & spec = nana::detail::platform_spec::instance();
 				Display* disp = spec.open_display();
 				int screen = DefaultScreen(disp);
 				Window root = ::XRootWindow(disp, screen);
@@ -323,7 +323,7 @@ namespace paint
 #if defined(NANA_WINDOWS)
 					dw->bytes_per_line = width * sizeof(pixel_rgb_t);
 #endif
-					dwptr_ = nana::shared_ptr<nana::detail::drawable_impl_type>(dw, detail::drawable_deleter());
+					dwptr_ = std::shared_ptr<nana::detail::drawable_impl_type>(dw, detail::drawable_deleter());
 					handle_ = dw;
 					size_.width = width;
 					size_.height = height;
@@ -339,8 +339,8 @@ namespace paint
 		void graphics::resize(unsigned width, unsigned height)
 		{
 			graphics duplicate(*this);
-			this->make(width, height);
-			this->bitblt(0, 0, duplicate);
+			make(width, height);
+			bitblt(0, 0, duplicate);
 		}
 
 		void graphics::typeface(const font& f)
@@ -390,7 +390,7 @@ namespace paint
 		nana::size graphics::glyph_extent_size(const nana::char_t * str, std::size_t len, std::size_t begin, std::size_t end) const
 		{
 			if(len < end) end = len;
-			if(0 == handle_ || 0 == str || 0 == len || begin >= end) return nana::size();
+			if(nullptr == handle_ || nullptr == str || 0 == len || begin >= end) return nana::size();
 
 			nana::size sz;
 #if defined(NANA_WINDOWS)
@@ -408,7 +408,7 @@ namespace paint
 			sz.height = extents.cy;
 			delete [] dx;
 #elif defined(NANA_X11)
-			sz = this->text_extent_size(str + begin, end - begin);
+			sz = text_extent_size(str + begin, end - begin);
 #endif
 			return sz;
 		}
@@ -420,7 +420,7 @@ namespace paint
 
 		bool graphics::glyph_pixels(const nana::char_t * str, std::size_t len, unsigned* pxbuf) const
 		{
-			if(handle_ == 0 || handle_->context == 0 || str == 0 || pxbuf == 0) return false;
+			if(nullptr == handle_ || nullptr == handle_->context || nullptr == str || nullptr == pxbuf) return false;
 			if(len == 0) return true;
 
 			unsigned tab_pixels = handle_->string.tab_length * handle_->string.whitespace_pixels;
@@ -465,9 +465,9 @@ namespace paint
 				std::vector<unicode_bidi::entity> reordered;
 				unicode_bidi bidi;
 				bidi.linestr(str.c_str(), str.size(), reordered);
-				for(std::vector<unicode_bidi::entity>::iterator i = reordered.begin(); i != reordered.end(); ++i)
+				for(auto & i: reordered)
 				{
-					nana::size t = this->text_extent_size(i->begin, i->end - i->begin);
+					nana::size t = text_extent_size(i.begin, i.end - i.begin);
 					sz.width += t.width;
 					if(sz.height < t.height)
 						sz.height = t.height;
@@ -492,12 +492,12 @@ namespace paint
 				if(handle_->font)
 				{
 	#if defined(NANA_UNICODE)
-					XftFont * fs = reinterpret_cast<XftFont*>(handle_->font.get()->handle);
+					XftFont * fs = reinterpret_cast<XftFont*>(handle_->font->handle);
 					ascent = fs->ascent;
 					descent = fs->descent;
 					internal_leading = 0;
 	#else
-					XFontSet fs = reinterpret_cast<XFontSet>(handle_->font.handle()->handle);
+					XFontSet fs = reinterpret_cast<XFontSet>(handle_->font->handle);
 					XFontSetExtents * ext = ::XExtentsOfFontSet(fs);
 					XFontStruct ** fontstructs;
 					char ** font_names;
@@ -526,22 +526,22 @@ namespace paint
 			unicode_bidi bidi;
 			std::vector<unicode_bidi::entity> reordered;
 			bidi.linestr(str, len, reordered);
-			for(std::vector<unicode_bidi::entity>::iterator i = reordered.begin(); i != reordered.end(); ++i)
+			for(auto & i : reordered)
 			{
-				this->string(x, y, col, i->begin, i->end - i->begin);
-				x += static_cast<int>(this->text_extent_size(i->begin, i->end - i->begin).width);
+				string(x, y, col, i.begin, i.end - i.begin);
+				x += static_cast<int>(text_extent_size(i.begin, i.end - i.begin).width);
 			}
 			return static_cast<unsigned>(x - origin_x);
 		}
 
 		void graphics::string(int x, int y, color_t color, const nana::string& str, std::size_t len)
 		{
-			this->string(x, y, color, str.c_str(), len);
+			string(x, y, color, str.c_str(), len);
 		}
 
 		void graphics::string(int x, int y, color_t color, const nana::string& str)
 		{
-			this->string(x, y, color, str.c_str(), str.size());
+			string(x, y, color, str.c_str(), str.size());
 		}
 
 		void graphics::string(int x, int y, color_t color, const nana::char_t* str, std::size_t len)
@@ -586,7 +586,7 @@ namespace paint
 
 		void graphics::string(int x, int y, color_t c, const nana::char_t* str)
 		{
-			this->string(x, y, c, str, nana::strlen(str));
+			string(x, y, c, str, nana::strlen(str));
 		}
 
 		void graphics::set_pixel(int x, int y, color_t color)
@@ -609,7 +609,7 @@ namespace paint
 			if((static_cast<int>(width) > -x) && (static_cast<int>(height) > -y) && width && height && handle_)
 			{
 #if defined(NANA_WINDOWS)
-				::RECT r = {x, y, static_cast<int>(x + width), static_cast<int>(y + height)};
+				::RECT r = {x, y, static_cast<long>(x + width), static_cast<long>(y + height)};
 				handle_->brush.set(handle_->context, handle_->brush.Solid, color);
 				(solid ? ::FillRect : ::FrameRect)(handle_->context, &r, handle_->brush.handle);
 #elif defined(NANA_X11)
@@ -626,12 +626,23 @@ namespace paint
 
 		void graphics::rectangle(nana::color_t color, bool solid)
 		{
-			this->rectangle(0, 0, size_.width, size_.height, color, solid);
+			rectangle(0, 0, size_.width, size_.height, color, solid);
 		}
 
 		void graphics::rectangle(const nana::rectangle & r, color_t color, bool solid)
 		{
-			this->rectangle(r.x, r.y, r.width, r.height, color, solid);
+			rectangle(r.x, r.y, r.width, r.height, color, solid);
+		}
+
+		void graphics::rectangle_line(const nana::rectangle& r, color_t color_left, color_t color_top, color_t color_right, color_t color_bottom)
+		{
+			int right = r.x + r.width - 1;
+			int bottom = r.y + r.height -1;
+			line_begin(r.x, r.y);
+			line_to(right, r.y, color_top);
+			line_to(right, bottom, color_right);
+			line_to(r.x, bottom, color_bottom);
+			line_to(r.x, r.y, color_left);
 		}
 
 		void graphics::round_rectangle(int x, int y, unsigned width, unsigned height, unsigned radius_x, unsigned radius_y, color_t color, bool solid, color_t color_if_solid)
@@ -653,7 +664,7 @@ namespace paint
 				}
 				if(changed_ == false) changed_ = true;
 #elif defined(NANA_X11)
-				if(solid && color == color_if_solid)
+				if(solid && (color == color_if_solid))
 				{
 					rectangle(x, y, width, height, color, true);
 				}
@@ -669,75 +680,39 @@ namespace paint
 
 		void graphics::round_rectangle(const nana::rectangle& r, unsigned radius_x, unsigned radius_y, color_t color, bool solid, color_t color_if_solid)
 		{
-			this->round_rectangle(r.x, r.y, r.width, r.height, radius_x, radius_y, color, solid, color_if_solid);
+			round_rectangle(r.x, r.y, r.width, r.height, radius_x, radius_y, color, solid, color_if_solid);
 		}
 
 		void graphics::shadow_rectangle(const nana::rectangle& r, color_t beg_color, color_t end_color, bool vertical)
 		{
+#if defined(NANA_WINDOWS)
+			if(pxbuf_.open(handle_))
+			{
+				pxbuf_.shadow_rectangle(r, beg_color, end_color, 0.0, vertical);
+				pxbuf_.paste(handle_, 0, 0);
+			}
+#elif defined(NANA_X11)
 			shadow_rectangle(r.x, r.y, r.width, r.height, beg_color, end_color, vertical);
+#endif
 		}
 
 		void graphics::shadow_rectangle(int x, int y, unsigned width, unsigned height, color_t color_begin, color_t color_end, bool vertical)
 		{
-			if(handle_ == 0)	return;
+#if defined(NANA_WINDOWS)
+			if(pxbuf_.open(handle_))
+			{
+				pxbuf_.shadow_rectangle(nana::rectangle(x, y, width, height), color_begin, color_end, 0.0, vertical);
+				pxbuf_.paste(handle_, 0, 0);
+			}
+#elif defined(NANA_X11)
+			if(0 == handle_) return;
+
 			int deltapx = int(vertical ? height : width);
 			double r, g, b;
 			const double delta_r = int(((color_end & 0xFF0000) >> 16) - (r = ((color_begin & 0xFF0000) >> 16))) / double(deltapx);
 			const double delta_g = int(((color_end & 0xFF00) >> 8) - (g = ((color_begin & 0xFF00) >> 8))) / double(deltapx);
 			const double delta_b = int((color_end & 0xFF) - (b = (color_begin & 0xFF))) / double(deltapx);
-#if defined(NANA_WINDOWS)
-			HDC hdc = handle_->context;
 
-			unsigned last_color = RGB( int(r), int(g), int(b));
-
-			HPEN hpen = ::CreatePen(PS_SOLID, 1, last_color);
-			HPEN hpen_old = (HPEN)::SelectObject(hdc, hpen);
-
-			if(vertical)
-			{
-				const int lines = deltapx + y;
-				if(lines > 0)
-				{
-					int x1 = x, x2 = x+ width;
-					for(; y< lines; y++)
-					{
-						::MoveToEx(hdc, x1, y, 0);
-						::LineTo(hdc, x2, y);
-						unsigned new_color = RGB( int(r += delta_r), int(g += delta_g), int(b += delta_b));
-						if(last_color != new_color)
-						{
-							HPEN npen = ::CreatePen(PS_SOLID, 1, new_color);
-							HPEN dpen = (HPEN)::SelectObject(hdc, npen);
-							::DeleteObject(dpen);
-							hpen = npen;
-							last_color = new_color;
-						}
-					}
-				}
-			}
-			else
-			{
-				const int lines = deltapx + x;
-				if(lines > 0)
-				{
-					int y1 = y, y2 = y + height;
-					for(; x< lines; x++)
-					{
-						::MoveToEx(hdc, x, y1, 0);
-						::LineTo(hdc, x, y2);
-						unsigned new_color = RGB( int(r += delta_r), int(g += delta_g), int(b += delta_b));
-						if(last_color != new_color)
-						{
-							hpen= ::CreatePen(PS_SOLID, 1, new_color);
-							::DeleteObject((HPEN)::SelectObject(hdc, hpen));
-							last_color = new_color;
-						}
-					}
-				}
-			}
-			::SelectObject(hdc, hpen_old);
-			::DeleteObject(hpen);
-#elif defined(NANA_X11)
 			unsigned last_color =  (int(r) << 16) | (int(g) << 8) | int(b);
 
 			Display * disp = nana::detail::platform_spec::instance().open_display();
@@ -782,18 +757,14 @@ namespace paint
 		{
 			if(!handle_)	return;
 #if defined(NANA_WINDOWS)
-			if(x1 == x2 && y1 == y2)
-			{
-				::SetPixel(handle_->context, x1, y1, NANA_RGB(color));
-			}
-			else
+			if(x1 != x2 || y1 != y2)
 			{
 				handle_->pen.set(handle_->context, PS_SOLID, 1, color);
 
 				::MoveToEx(handle_->context, x1, y1, 0);
 				::LineTo(handle_->context, x2, y2);
-				::SetPixel(handle_->context, x2, y2, NANA_RGB(color));
 			}
+			::SetPixel(handle_->context, x2, y2, NANA_RGB(color));
 #elif defined(NANA_X11)
 			Display* disp = nana::detail::platform_spec::instance().open_display();
 			handle_->fgcolor(color);
@@ -807,34 +778,104 @@ namespace paint
 			line(beg.x, beg.y, end.x, end.y, color);
 		}
 
-		void graphics::bitblt(const nana::rectangle& r_dst, native_window_type wd)
+		void graphics::lines(const point* points, std::size_t n_of_points, color_t color)
+		{
+			if(!handle_ || nullptr == points || 0 == n_of_points)	return;
+#if defined(NANA_WINDOWS)
+
+			handle_->pen.set(handle_->context, PS_SOLID, 1, color);
+
+			::MoveToEx(handle_->context, points->x, points->y, nullptr);
+			const point * end = points + n_of_points;
+			for(const point * i = points + 1; i != end; ++i)
+				::LineTo(handle_->context, i->x, i->y);
+
+			if(*points != *(end - 1))
+				::SetPixel(handle_->context, (end-1)->x, (end-1)->y, NANA_RGB(color));
+#elif defined(NANA_X11)
+			Display* disp = nana::detail::platform_spec::instance().open_display();
+			handle_->fgcolor(color);
+
+			XPoint * const x11points = new XPoint[n_of_points];
+			XPoint * end = x11points + n_of_points;
+			for(XPoint * i = x11points; i != end; ++i)
+			{
+				i->x = points->x;
+				i->y = points->y;
+				++points;
+			}
+			::XDrawLines(disp, handle_->pixmap, handle_->context, x11points, static_cast<int>(n_of_points), CoordModePrevious);
+			delete [] x11points;
+#endif
+			if(changed_ == false) changed_ = true;
+		}
+
+		void graphics::line_begin(int x, int y)
+		{
+			if(!handle_)	return;
+#if defined(NANA_WINDOWS)
+			::MoveToEx(handle_->context, x, y, 0);
+
+#elif defined(NANA_X11)
+			handle_->line_begin_pos.x = x;
+			handle_->line_begin_pos.y = y;
+#endif
+		}
+
+		void graphics::line_to(int x, int y, color_t color)
+		{
+			if(!handle_)	return;
+#if defined(NANA_WINDOWS)
+			handle_->pen.set(handle_->context, PS_SOLID, 1, color);
+			::LineTo(handle_->context, x, y);
+#elif defined(NANA_X11)
+			Display* disp = nana::detail::platform_spec::instance().open_display();
+			handle_->fgcolor(color);
+			::XDrawLine(disp, handle_->pixmap, handle_->context,
+						handle_->line_begin_pos.x, handle_->line_begin_pos.y,
+						x, y);
+			handle_->line_begin_pos.x = x;
+			handle_->line_begin_pos.y = y;
+#endif
+			if(changed_ == false) changed_ = true;
+		}
+
+		void graphics::bitblt(int x, int y, const graphics& src)
+		{
+			nana::rectangle r(src.size());
+			r.x = x;
+			r.y = y;
+			bitblt(r, src);
+		}
+
+		void graphics::bitblt(const nana::rectangle& r_dst, native_window_type src)
 		{
 			if(handle_)
 			{
 #if defined(NANA_WINDOWS)
-				HDC dc = ::GetDC(reinterpret_cast<HWND>(wd));
+				HDC dc = ::GetDC(reinterpret_cast<HWND>(src));
 				::BitBlt(handle_->context, r_dst.x, r_dst.y, r_dst.width, r_dst.height, dc, 0, 0, SRCCOPY);
-				::ReleaseDC(reinterpret_cast<HWND>(wd), dc);
+				::ReleaseDC(reinterpret_cast<HWND>(src), dc);
 #elif defined(NANA_X11)
 				::XCopyArea(nana::detail::platform_spec::instance().open_display(),
-						reinterpret_cast<Window>(wd), handle_->pixmap, handle_->context,
+						reinterpret_cast<Window>(src), handle_->pixmap, handle_->context,
 						0, 0, r_dst.width, r_dst.height, r_dst.x, r_dst.y);
 #endif
 				if(changed_ == false) changed_ = true;
 			}
 		}
 
-		void graphics::bitblt(const nana::rectangle& r_dst, native_window_type wd, const nana::point& p_src)
+		void graphics::bitblt(const nana::rectangle& r_dst, native_window_type src, const nana::point& p_src)
 		{
 			if(handle_)
 			{
 #if defined(NANA_WINDOWS)
-				HDC dc = ::GetDC(reinterpret_cast<HWND>(wd));
+				HDC dc = ::GetDC(reinterpret_cast<HWND>(src));
 				::BitBlt(handle_->context, r_dst.x, r_dst.y, r_dst.width, r_dst.height, dc, p_src.x, p_src.y, SRCCOPY);
-				::ReleaseDC(reinterpret_cast<HWND>(wd), dc);
+				::ReleaseDC(reinterpret_cast<HWND>(src), dc);
 #elif defined(NANA_X11)
 				::XCopyArea(nana::detail::platform_spec::instance().open_display(),
-						reinterpret_cast<Window>(wd), handle_->pixmap, handle_->context,
+						reinterpret_cast<Window>(src), handle_->pixmap, handle_->context,
 						p_src.x, p_src.y, r_dst.width, r_dst.height, r_dst.x, r_dst.y);
 #endif
 				if(changed_ == false) changed_ = true;
@@ -854,14 +895,6 @@ namespace paint
 #endif
 				if(changed_ == false) changed_ = true;
 			}
-		}
-
-		void graphics::bitblt(int x, int y, const graphics& src)
-		{
-			nana::rectangle r(src.size());
-			r.x = x;
-			r.y = y;
-			bitblt(r, src);
 		}
 
 		void graphics::bitblt(const nana::rectangle& r_dst, const graphics& src, const nana::point& p_src)
@@ -1016,7 +1049,7 @@ namespace paint
 			}
 		}
 
-		void graphics::paste(nana::paint::drawable_type dst, int x, int y) const
+		void graphics::paste(drawable_type dst, int x, int y) const
 		{
 			if(handle_ && dst && handle_ != dst)
 			{
@@ -1031,6 +1064,7 @@ namespace paint
 #endif
 			}
 		}
+
 
 		void graphics::paste(const nana::rectangle& r_src, graphics& dst, int x, int y) const
 		{
@@ -1060,8 +1094,7 @@ namespace paint
 
 		void graphics::stretch(graphics& dst, const nana::rectangle & r) const
 		{
-			nana::size sz = size();
-			stretch(nana::rectangle(0, 0, sz.width, sz.height), dst, r);
+			stretch(nana::rectangle(size()), dst, r);
 		}
 
 		void graphics::flush()
@@ -1091,7 +1124,7 @@ namespace paint
 		void graphics::release()
 		{
 			dwptr_.reset();
-			handle_ = 0;
+			handle_ = nullptr;
 			size_.width = size_.height = 0;
 		}
 
@@ -1110,7 +1143,7 @@ namespace paint
 				bmpInfo.bmiHeader.biBitCount = 24;
 
 				HDC hdcMem = ::CreateCompatibleDC(handle_->context);
-				BYTE *pData = 0;
+				BYTE *pData = nullptr;
 				HBITMAP hBmp = CreateDIBSection(hdcMem, &bmpInfo, DIB_RGB_COLORS, reinterpret_cast<void**>(&pData), 0, 0);
 
 				::SelectObject(hdcMem, hBmp);

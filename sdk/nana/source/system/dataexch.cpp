@@ -11,14 +11,13 @@
  */
 
 #include <nana/system/dataexch.hpp>
-#include <nana/auto_buf.hpp>
 #include <nana/traits.hpp>
 #if defined(NANA_WINDOWS)
 	#include <windows.h>
 #elif defined(NANA_X11)
-	#include <nana/config.hpp>
 	#include PLATFORM_SPEC_HPP
 	#include GUI_BEDROCK_HPP
+	#include <nana/gui/detail/basic_window.hpp>
 #endif
 
 namespace nana{ namespace system{
@@ -26,18 +25,18 @@ namespace nana{ namespace system{
 	//class dataexch
 		void dataexch::set(const nana::char_t* text)
 		{
-			_m_set(nana::traits::same_type<char, nana::char_t>::value ? format::text : format::unicode, text, (nana::strlen(text) + 1) * sizeof(nana::char_t));
+			_m_set(std::is_same<char, nana::char_t>::value ? format::text : format::unicode, text, (nana::strlen(text) + 1) * sizeof(nana::char_t));
 		}
 
 		void dataexch::set(const nana::string& text)
 		{
-			_m_set(nana::traits::same_type<char, nana::char_t>::value ? format::text : format::unicode, text.c_str(), (text.length() + 1) * sizeof(nana::char_t));
+			_m_set(std::is_same<char, nana::char_t>::value ? format::text : format::unicode, text.c_str(), (text.length() + 1) * sizeof(nana::char_t));
 		}
 
 		void dataexch::get(nana::string& str)
 		{
 			std::size_t size;
-			void* res = _m_get(nana::traits::same_type<char, nana::char_t>::value ? format::text : format::unicode, size);
+			void* res = _m_get(std::is_same<char, nana::char_t>::value ? format::text : format::unicode, size);
 			if(res)
 			{
 #if defined(NANA_X11) && defined(NANA_UNICODE)
@@ -86,10 +85,10 @@ namespace nana{ namespace system{
 			}
 #elif defined(NANA_X11)
 			nana::detail::platform_spec & spec = nana::detail::platform_spec::instance();
-			nana::gui::native_window_type owner = 0;
+			gui::native_window_type owner = 0;
 			{
-				nana::gui::internal_scope_guard isg;
-				nana::gui::detail::bedrock::core_window_t * wd = nana::gui::detail::bedrock::instance().focus();
+				gui::internal_scope_guard isg;
+				auto wd = gui::detail::bedrock::instance().focus();
 				if(wd)	owner = wd->root;
 			}
 
@@ -98,7 +97,7 @@ namespace nana{ namespace system{
 				Atom atom_type;
 				switch(type)
 				{
-				case format::text:		atom_type = XA_STRING;			break;
+				case format::text:	atom_type = XA_STRING;			break;
 				case format::unicode:	atom_type = spec.atombase().utf8_string;	break;
 				default:
 					return false;
@@ -141,12 +140,12 @@ namespace nana{ namespace system{
 			}
 #elif defined(NANA_X11)
 			nana::detail::platform_spec & spec = nana::detail::platform_spec::instance();
-			nana::gui::native_window_type requester = 0;
+			gui::native_window_type requester = nullptr;
 			spec.lock_xlib();
 			
 			{
-				nana::gui::internal_scope_guard isg;
-				nana::gui::detail::bedrock::core_window_t * wd = nana::gui::detail::bedrock::instance().focus();
+				gui::internal_scope_guard isg;
+				gui::detail::bedrock::core_window_t * wd = gui::detail::bedrock::instance().focus();
 				if(wd)	requester = wd->root;
 			}
 			spec.unlock_xlib();

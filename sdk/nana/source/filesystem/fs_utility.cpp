@@ -15,7 +15,15 @@
 #include <nana/filesystem/file_iterator.hpp>
 #include <vector>
 #if defined(NANA_WINDOWS)
-	#include <windows.h>
+    #include <windows.h>
+
+    #if defined(NANA_MINGW)
+        #ifndef _WIN32_IE
+            #define _WIN32_IE 0x0500
+        #endif
+    #endif
+
+	#include <shlobj.h>
 	#include <nana/datetime.hpp>
 #elif defined(NANA_LINUX)
 	#include <nana/charset.hpp>
@@ -52,8 +60,8 @@ namespace filesystem
 			:text_(nana::charset(text))
 		{
 #endif
-			string_t::size_type pos = text_.find_last_of(splstr);
-			for(; pos != string_t::npos && (pos + 1 == text_.size()); pos = text_.find_last_of(splstr))
+			auto pos = text_.find_last_of(splstr);
+			for(; (pos != string_t::npos) && (pos + 1 == text_.size()); pos = text_.find_last_of(splstr))
 				text_.erase(pos);
 		}
 
@@ -117,7 +125,7 @@ namespace filesystem
 	{
 		//rm_dir_recursive
 		//@brief: remove a directory, if it is not empty, recursively remove it's subfiles and sub directories
-		bool rm_dir_recursive(const nana::char_t* dir)
+		bool rm_dir_recursive(nana::string&& dir)
 		{
 			std::vector<file_iterator::value_type> files;
 			nana::string path = dir;
@@ -125,16 +133,15 @@ namespace filesystem
 
 			std::copy(file_iterator(dir), file_iterator(), std::back_inserter(files));
 
-			std::vector<file_iterator::value_type>::iterator it = files.begin(), end = files.end();
-			for(; it != end; ++it)
+			for(auto & f : files)
 			{
-				if(it->directory)
-					rm_dir_recursive((path + it->name).c_str());
+				if(f.directory)
+					rm_dir_recursive(path + f.name);
 				else
-					rmfile((path + it->name).c_str());
+					rmfile((path + f.name).c_str());
 			}
 
-			return rmdir(dir, true);
+			return rmdir(dir.c_str(), true);
 		}
 
 		bool mkdir_helper(const nana::string& dir, bool & if_exist)
@@ -179,7 +186,6 @@ namespace filesystem
 			}
 		}
 #endif
-
 	}//end namespace detail
 
 	bool file_attrib(const nana::string& file, attribute& attr)
@@ -209,8 +215,7 @@ namespace filesystem
 		return false;
 	}
 
-
-	long_long_t filesize(const nana::char_t* file)
+	long long filesize(const nana::string& file)
 	{
 #if defined(NANA_WINDOWS)
 		//Some compilation environment may fail to link to GetFileSizeEx
@@ -218,7 +223,7 @@ namespace filesystem
 		GetFileSizeEx_fptr_t get_file_size_ex = reinterpret_cast<GetFileSizeEx_fptr_t>(::GetProcAddress(::GetModuleHandleA("Kernel32.DLL"), "GetFileSizeEx"));
 		if(get_file_size_ex)
 		{
-			HANDLE handle = ::CreateFile(file, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+			HANDLE handle = ::CreateFile(file.c_str(), GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 			if(INVALID_HANDLE_VALUE != handle)
 			{
 				LARGE_INTEGER li;
@@ -232,7 +237,7 @@ namespace filesystem
 		return 0;
 #elif defined(NANA_LINUX)
 		FILE * stream = ::fopen(static_cast<std::string>(nana::charset(file)).c_str(), "rb");
-		long_long_t size = 0;
+		long long size = 0;
 		if(stream)
 		{
 			fseeko64(stream, 0, SEEK_END);
@@ -357,7 +362,8 @@ namespace filesystem
 			if(!fails_if_not_empty && (::GetLastError() == ERROR_DIR_NOT_EMPTY))
 				ret = detail::rm_dir_recursive(dir);
 #elif defined(NANA_LINUX)
-			if(::rmdir(static_cast<std::string>(nana::charset(dir)).c_str()))
+			std::string mbstr = nana::charset(dir);
+			if(::rmdir(mbstr.c_str()))
 			{
 				if(!fails_if_not_empty && (errno == EEXIST || errno == ENOTEMPTY))
 					ret = detail::rm_dir_recursive(dir);
@@ -392,32 +398,46 @@ namespace filesystem
 			}
 		}
 
-		return (index ? path.substr(0, index + 1) : nana::string());
+		return index?path.substr(0, index + 1):nana::string();
 	}
 
 	nana::string path_user()
 	{
 #if defined(NANA_WINDOWS)
-		return nana::string();
+		nana::char_t path[MAX_PATH];
+		if(SUCCEEDED(SHGetFolderPath(0, CSIDL_PROFILE, 0, SHGFP_TYPE_CURRENT, path)))
+			return path;
 #elif defined(NANA_LINUX)
 		const char * s = ::getenv("HOME");
 		if(s)
 			return nana::charset(std::string(s, std::strlen(s)), nana::unicode::utf8);
-		return nana::string();
 #endif
+		return nana::string();
 	}
 
 	nana::string path_current()
 	{
 #if defined(NANA_WINDOWS)
-		return nana::string();
+		nana::char_t buf[MAX_PATH];
+		DWORD len = ::GetCurrentDirectory(MAX_PATH, buf);
+		if(len)
+		{
+			if(len > MAX_PATH)
+			{
+				nana::char_t * p = new nana::char_t[len + 1];
+				::GetCurrentDirectory(len + 1, p);
+				nana::string s = p;
+				delete [] p;
+				return s;
+			}
+			return buf;
+		}
 #elif defined(NANA_LINUX)
 		const char * s = ::getenv("PWD");
 		if(s)
 			return nana::charset(std::string(s, std::strlen(s)), nana::unicode::utf8);
-		return nana::string();
 #endif
+		return nana::string();
 	}
-
 }//end namespace filesystem
 }//end namespace nana

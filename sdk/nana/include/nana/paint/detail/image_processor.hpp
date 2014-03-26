@@ -17,7 +17,6 @@
 #include "../image_process_interface.hpp"
 #include <nana/paint/pixel_buffer.hpp>
 #include <nana/paint/detail/native_paint_interface.hpp>
-#include <nana/auto_buf.hpp>
 #include <algorithm>
 
 namespace nana
@@ -28,25 +27,12 @@ namespace detail
 {
 	namespace algorithms
 	{
-		///@brief	Seek a pixel address by using offset bytes
-		///@return	the specified pixel address
-		inline pixel_rgb_t * pixel_at(pixel_rgb_t* ptr, std::size_t bytes)
-		{
-			return reinterpret_cast<pixel_rgb_t*>(reinterpret_cast<char*>(ptr) + bytes);
-		}
-
-		inline const pixel_rgb_t * pixel_at(const pixel_rgb_t* ptr, std::size_t bytes)
-		{
-			return reinterpret_cast<const pixel_rgb_t*>(reinterpret_cast<const char*>(ptr) + bytes);
-		}
-
-
 		class proximal_interoplation
 			: public image_process::stretch_interface
 		{
-			void process(const paint::pixel_buffer& s_pixbuf, const nana::rectangle& r_src, paint::pixel_buffer& pixbuf, const nana::rectangle& r_dst) const
+			void process(const paint::pixel_buffer& s_pixbuf, const nana::rectangle& r_src, paint::pixel_buffer & pixbuf, const nana::rectangle& r_dst) const
 			{
-				const std::size_t bytes_per_line = s_pixbuf.bytes_per_line();
+				const auto bytes_per_line = s_pixbuf.bytes_per_line();
 
 				double rate_x = double(r_src.width) / r_dst.width;
 				double rate_y = double(r_src.height) / r_dst.height;
@@ -105,9 +91,9 @@ namespace detail
 				int iu_minus_coef;
 			};
 
-			void process(const paint::pixel_buffer & s_pixbuf, const nana::rectangle& r_src, paint::pixel_buffer& pixbuf, const nana::rectangle& r_dst) const
+			void process(const paint::pixel_buffer & s_pixbuf, const nana::rectangle& r_src, paint::pixel_buffer & pixbuf, const nana::rectangle& r_dst) const
 			{
-				const std::size_t s_bytes_per_line = s_pixbuf.bytes_per_line();
+				const auto s_bytes_per_line = s_pixbuf.bytes_per_line();
 
 				const int shift_size = 8;
 				const std::size_t coef = 1 << shift_size;
@@ -171,9 +157,9 @@ namespace detail
 					nana::pixel_rgb_t col1;
 					nana::pixel_rgb_t col2;
 					nana::pixel_rgb_t col3;
-
+					
 					pixel_rgb_t * i = pixbuf.raw_ptr(row + r_dst.y) + r_dst.x;
-
+					
 					if(is_alpha_channel)
 					{
 						for(std::size_t x = 0; x < r_dst.width; ++x, ++i)
@@ -226,7 +212,7 @@ namespace detail
 						for(std::size_t x = 0; x < r_dst.width; ++x, ++i)
 						{
 							x_u_table_tag el = x_u_table[x];
-							
+						
 							col0 = s_line[el.x];
 							col1 = next_s_line[el.x];
 
@@ -240,7 +226,7 @@ namespace detail
 								col2 = col0;
 								col3 = col1;
 							}
-							
+						
 							std::size_t coef0 = el.iu_minus_coef * iv_minus_coef;
 							std::size_t coef1 = el.iu_minus_coef * iv;
 							std::size_t coef2 = el.iu * iv_minus_coef;
@@ -331,7 +317,7 @@ namespace detail
 						}
 
 						const pixel_rgb_t * s_end = s_rgb + rest;
-						for(pixel_rgb_t* i = s_rgb; i != s_end; ++i)
+						for(auto i = s_rgb; i != s_end; ++i)
 						{
 							if(i->u.element.alpha_channel)
 							{
@@ -421,7 +407,7 @@ namespace detail
 			virtual void process(paint::pixel_buffer & pixbuf, const nana::point& pos_beg, const nana::point& pos_end, nana::color_t color, double fade_rate) const
 			{
 				const std::size_t bytes_pl = pixbuf.bytes_per_line();
-				unsigned char * fade_table = 0;
+				unsigned char * fade_table = nullptr;
 				nana::pixel_rgb_t rgb_imd;
 				if(fade_rate != 0.0)
 				{
@@ -560,7 +546,8 @@ namespace detail
 				int large_edge = (w > h ? w : h);
 				const int div_256 = div * 256;
 
-				nana::auto_buf<int> all_table((wh << 1) + wh + (large_edge << 1) + div_256);
+				std::unique_ptr<int[]> all_table(new int[(wh << 1) + wh + (large_edge << 1) + div_256]);
+
 
 				int * r = all_table.get();
 				int * g = r + wh;
@@ -582,7 +569,7 @@ namespace detail
 					dv_block += div;
 				}
 
-				nana::pixel_rgb_t* linepix = pixbuf.raw_ptr(area.y) + area.x;
+				auto linepix = pixbuf.raw_ptr(area.y) + area.x;
 
 				int yi = 0;
 				for(int y = 0; y < h; ++y)
@@ -633,6 +620,7 @@ namespace detail
 				}
 
 				const int yp_init = -radius * w;
+
 				const std::size_t bytes_pl = pixbuf.bytes_per_line();
 				for(int x = 0; x < w; ++x)
 				{
@@ -658,6 +646,7 @@ namespace detail
 					}
 
 					linepix = pixbuf.raw_ptr(area.y) + x;
+
 					for(int y = 0; y < h; ++y)
 					{
 						linepix->u.color = 0xFF000000 | (dv[sum_r] << 16) | (dv[sum_g] << 8) | dv[sum_b];

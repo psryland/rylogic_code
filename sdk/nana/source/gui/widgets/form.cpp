@@ -11,29 +11,18 @@
 
 #include <nana/gui/widgets/form.hpp>
 
-namespace nana{ namespace gui
-{
+namespace nana{ namespace gui{
 	namespace drawerbase
 	{
 		namespace form
 		{
 		//class trigger
-			trigger::trigger():wd_(0){}
+			trigger::trigger():wd_(nullptr){}
 
-			void trigger::bind_window(widget_reference wd)
+			void trigger::attached(widget_reference widget, graph_reference graph)
 			{
-				wd_ = &wd;
-			}
-
-			void trigger::attached(graph_reference graph)
-			{
-				event_size_ = API::dev::make_drawer_event<events::size>(*wd_);
-			}
-
-			void trigger::detached()
-			{
-				API::umake_event(event_size_);
-				event_size_ = 0;
+				wd_ = &widget;
+				API::dev::make_drawer_event<events::size>(*wd_);
 			}
 
 			void trigger::refresh(graph_reference graph)
@@ -52,12 +41,13 @@ namespace nana{ namespace gui
 	//class form
 	typedef widget_object<category::root_tag, drawerbase::form::trigger> form_base_t;
 
+
 		form::form(const rectangle& r, const appearance& apr)
 			: form_base_t(0, false, r, apr)
 		{}
 
 		form::form(window owner, const appearance& apr)
-			: form_base_t(owner, false, API::make_center(owner, 300, 200), apr)
+			: form_base_t(owner, false, API::make_center(owner, 300, 150), apr)
 		{}
 
 		form::form(window owner, const rectangle& r, const appearance& apr)

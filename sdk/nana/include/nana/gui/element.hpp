@@ -20,7 +20,7 @@ namespace nana{	namespace gui
 
 				virtual void switch_to(const char*) = 0;
 
-				virtual bool draw(graph_reference, nana::color_t bgcolor, nana::color_t fgcolor, const nana::rectangle&, element_state::t) = 0;
+				virtual bool draw(graph_reference, nana::color_t bgcolor, nana::color_t fgcolor, const nana::rectangle&, element_state) = 0;
 			};
 		}//end namespace detail
 
@@ -32,14 +32,14 @@ namespace nana{	namespace gui
 
 			struct data
 			{
-				state::t	check_state;
+				state	check_state;
 				bool	radio;
 			};
 				
 			virtual ~crook_interface()
 			{}
 
-			virtual bool draw(graph_reference, nana::color_t bgcolor, nana::color_t fgcolor, const nana::rectangle&, element_state::t, const data&) = 0;
+			virtual bool draw(graph_reference, nana::color_t bgcolor, nana::color_t fgcolor, const nana::rectangle&, element_state, const data&) = 0;
 		};
 
 		class provider
@@ -60,18 +60,18 @@ namespace nana{	namespace gui
 			public:
 				typedef factory_interface<ElementInterface> interface_type;
 
-				ElementInterface * create() const
+				ElementInterface * create() const override
 				{
 					return (new Element);
 				}
 
-				void destroy(ElementInterface * p) const
+				void destroy(ElementInterface * p) const override
 				{
 					delete p;
 				}
 			};
 
-			void add_crook(const std::string& name, const pat::cloneable<factory_interface<crook_interface> >&);
+			void add_crook(const std::string& name, const pat::cloneable<factory_interface<crook_interface>>&);
 			crook_interface* const * keeper_crook(const std::string& name);
 		};
 
@@ -105,15 +105,15 @@ namespace nana{	namespace gui
 		facade(const char* name);
 
 		facade & reverse();
-		facade & check(state::t);
-		state::t checked() const;
+		facade & check(state);
+		state checked() const;
 
 		facade& radio(bool);
 		bool radio() const;
 	public:
 		//Implement draw_interface
-		void switch_to(const char*);
-		bool draw(graph_reference, nana::color_t bgcolor, nana::color_t fgcolor, const nana::rectangle& r, element_state::t);
+		void switch_to(const char*) override;
+		bool draw(graph_reference, nana::color_t bgcolor, nana::color_t fgcolor, const nana::rectangle& r, element_state) override;
 	private:
 		element::crook_interface::data data_;
 		element::crook_interface* const * keeper_;

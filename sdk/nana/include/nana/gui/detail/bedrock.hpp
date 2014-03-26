@@ -6,12 +6,11 @@
  *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
- *	@file: nana/gui/detail/win32/bedrock.hpp
+ *	@file: nana/gui/detail/bedrock.hpp
  */
 
 #ifndef NANA_GUI_DETAIL_BEDROCK_HPP
 #define NANA_GUI_DETAIL_BEDROCK_HPP
-#include "native_window_interface.hpp"
 #include "window_manager.hpp"
 #include "event_manager.hpp"
 #include "runtime_manager.hpp"
@@ -29,6 +28,8 @@ namespace gui
 
 namespace detail
 {
+	struct native_interface;
+
 	//class bedrock
 	//@brief:	bedrock is a fundamental core component, it provides a abstract to the OS platform
 	//			and some basic functions.
@@ -36,9 +37,9 @@ namespace detail
 	{
 		bedrock();
 	public:
-		typedef window_manager<native_window_type, bedrock, native_interface > window_manager_t;
-		typedef window_manager_t::interface_type	interface_type;
-		typedef window_manager_t::core_window_t		core_window_t;
+		typedef native_interface	interface_type;
+		typedef window_manager window_manager_t;
+		typedef window_manager_t::core_window_t core_window_t;
 
 		struct thread_context;
 
@@ -51,7 +52,7 @@ namespace detail
 		void remove_thread_context(unsigned tid = 0);
 		static bedrock& instance();
 
-		unsigned category(core_window_t*);
+		nana::gui::category::flags category(core_window_t*);
 		core_window_t* focus();
 		native_window_type root(core_window_t*);
 
@@ -67,6 +68,8 @@ namespace detail
 		void get_key_state(nana::gui::detail::tag_keyboard&);
 		bool set_keyboard_shortkey(bool yes);
 		bool whether_keyboard_shortkey() const;
+
+
 	public:
 		void event_expose(core_window_t *, bool exposed);
 		void event_move(core_window_t*, int x, int y);
@@ -77,14 +80,14 @@ namespace detail
 		window_manager_t	wd_manager;
 		event_manager		evt_manager;
 		runtime_manager<core_window_t*, bedrock>	rt_manager;
-		static bool fire_event_for_drawer(event_code::t, core_window_t*, eventinfo&, thread_context*);
-		static bool fire_event(event_code::t, core_window_t*, eventinfo&);
+		static bool fire_event_for_drawer(event_code, core_window_t*, eventinfo&, thread_context*);
+		static bool fire_event(event_code, core_window_t*, eventinfo&);
 
 		//raise_event
 		//@return: Returns true if the window is available, otherwise returns false
-		static bool raise_event(event_code::t, core_window_t*, eventinfo&, bool ask_update);
+		static bool raise_event(event_code, core_window_t*, eventinfo&, bool ask_update);
 	private:
-		void _m_event_filter(event_code::t, core_window_t*, thread_context*);
+		void _m_event_filter(event_code, core_window_t*, thread_context*);
 	private:
 		static bedrock bedrock_object;
 

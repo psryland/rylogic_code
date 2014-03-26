@@ -21,23 +21,23 @@ namespace nana{	namespace gui
 	{
 		namespace panel
 		{
-			class drawer: public nana::gui::drawer_trigger
+			class drawer: public drawer_trigger
 			{
 			public:
 				drawer();
 			private:
-				void bind_window(widget_reference widget);
-				void refresh(graph_reference graph);
+				void attached(widget_reference, graph_reference)	override;
+				void refresh(graph_reference)	override;
 			private:
 				window window_;
 			};
-		}//end namespace panel
+		}// end namespace panel
 	}//end namespace drawerbase
 
 	template<bool HasBackground>
 	class panel
-		: public widget_object<typename metacomp::static_if<metacomp::bool_type<HasBackground>,
-												 gui::category::widget_tag, gui::category::lite_widget_tag>::value_type, drawerbase::panel::drawer>
+		: public widget_object<typename metacomp::static_if<HasBackground,
+		gui::category::widget_tag, gui::category::lite_widget_tag>::value_type, drawerbase::panel::drawer>
 	{
 	public:
 		panel(){}
@@ -47,7 +47,7 @@ namespace nana{	namespace gui
 			this->create(wd, rectangle(), visible);
 		}
 
-		panel(window wd, const rectangle& r = rectangle(), bool visible = true)
+		panel(window wd, const nana::rectangle& r = rectangle(), bool visible = true)
 		{
 			this->create(wd, r, visible);
 		}

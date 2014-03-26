@@ -14,10 +14,13 @@
 #include <nana/gui/detail/drawer.hpp>
 #include <nana/gui/detail/dynamic_drawing_object.hpp>
 #include <nana/gui/detail/effects_renderer.hpp>
+#include <nana/gui/detail/basic_window.hpp>
 
 #if defined(NANA_X11)
 	#include <nana/detail/linux_X11/platform_spec.hpp>
 #endif
+
+#include <algorithm>
 
 namespace nana
 {
@@ -27,12 +30,11 @@ namespace gui
 
 	//class drawer_trigger
 		drawer_trigger::~drawer_trigger(){}
-		void drawer_trigger::bind_window(widget_reference){}
-		void drawer_trigger::attached(graph_reference){}	//none-const
+		void drawer_trigger::attached(widget_reference, graph_reference){}
 		void drawer_trigger::detached(){}	//none-const
 		void drawer_trigger::typeface_changed(graph_reference){}
 		void drawer_trigger::refresh(graph_reference){}
-
+		
 		void drawer_trigger::resizing(graph_reference, const eventinfo&){}
 		void drawer_trigger::resize(graph_reference graph, const eventinfo&)
 		{
@@ -80,20 +82,19 @@ namespace gui
 
 		//class drawer
 		drawer::drawer()
-			:	core_window_(0), realizer_(0), refreshing_(false)
+			:	core_window_(nullptr), realizer_(nullptr), refreshing_(false)
 		{
 		}
 
 		drawer::~drawer()
 		{
-			std::vector<dynamic_drawing::object*>::iterator i = dynamic_drawing_objects_.begin();
-			for(; i != dynamic_drawing_objects_.end(); ++i)
+			for(auto p : dynamic_drawing_objects_)
 			{
-				delete (*i);
+				delete p;
 			}
 		}
 
-		void drawer::attached(basic_window* cw)
+		void drawer::bind(basic_window* cw)
 		{
 			core_window_ = cw;
 		}
@@ -208,7 +209,7 @@ namespace gui
 			if(realizer_)
 			{
 				_m_bground_pre();
-				realizer_->resizing(graphics, ei);
+				realizer_->resize(graphics, ei);
 				_m_draw_dynamic_drawing_object();
 				_m_bground_end();
 			}
@@ -296,9 +297,10 @@ namespace gui
 			if(wd)
 			{
 				bedrock_type::core_window_t* iwd = reinterpret_cast<bedrock_type::core_window_t*>(wd);
-				bedrock_type::core_window_t* caret_wd = iwd->root_widget->other.attribute.root->focus;
-				bool owns_caret = (caret_wd && caret_wd->together.caret && caret_wd->together.caret->visible());
+				bedrock_type::core_window_t * caret_wd = iwd->root_widget->other.attribute.root->focus;
 
+				bool owns_caret = (caret_wd && (caret_wd->together.caret) && (caret_wd->together.caret->visible()));
+				
 				//The caret in X11 is implemented by Nana, it is different from Windows'
 				//the caret in X11 is asynchronous, it is hard to hide and show the caret
 				//immediately, and therefore the caret always be flickering when the graphics
@@ -311,14 +313,14 @@ namespace gui
 					owns_caret = nana::detail::platform_spec::instance().caret_update(iwd->root, *iwd->root_graph, false);
 #endif
 				}
-
+				
 				if(false == edge_nimbus_renderer_t::instance().render(iwd))
 				{
 					nana::rectangle vr;
 					if(bedrock_type::window_manager_t::wndlayout_type::read_visual_rectangle(iwd, vr))
 						iwd->root_graph->paste(iwd->root, vr, vr.x, vr.y);
 				}
-
+				
 				if(owns_caret)
 				{
 #ifndef NANA_X11
@@ -349,31 +351,29 @@ namespace gui
 			return realizer_;
 		}
 
-		void drawer::attached(drawer_trigger& realizer)
+		void drawer::attached(widget& wd, drawer_trigger& realizer)
 		{
 			realizer_ = &realizer;
-			realizer.attached(graphics);
+			realizer.attached(wd, graphics);
 		}
 
 		drawer_trigger* drawer::detached()
 		{
 			if(realizer_)
 			{
-				drawer_trigger * old = realizer_;
-				realizer_ = 0;
-				old->detached();
-				return old;
+				auto rmp = realizer_;
+				realizer_ = nullptr;
+				rmp->detached();
+				return rmp;
 			}
-			return 0;
+			return nullptr;
 		}
 
 		void drawer::clear()
 		{
 			std::vector<dynamic_drawing::object*> then;
-			std::vector<nana::gui::detail::dynamic_drawing::object*>::iterator i = dynamic_drawing_objects_.begin();
-			for(; i != dynamic_drawing_objects_.end(); ++i)
+			for(auto p : dynamic_drawing_objects_)
 			{
-				dynamic_drawing::object * p = *i;
 				if(p->diehard())
 					then.push_back(p);
 				else
@@ -383,22 +383,22 @@ namespace gui
 			then.swap(dynamic_drawing_objects_);
 		}
 
-		void* drawer::draw(const nana::functor<void(paint::graphics&)> & f, bool diehard)
+		void* drawer::draw(std::function<void(paint::graphics&)> && f, bool diehard)
 		{
-			if(false == f.empty())
+			if(f)
 			{
-				dynamic_drawing::user_draw_function * p = new dynamic_drawing::user_draw_function(f, diehard);
+				auto p = new dynamic_drawing::user_draw_function(std::move(f), diehard);
 				dynamic_drawing_objects_.push_back(p);
-				return (diehard ? p : 0);
+				return (diehard ? p : nullptr);
 			}
-			return 0;
+			return nullptr;
 		}
 
 		void drawer::erase(void * p)
 		{
 			if(p)
 			{
-				std::vector<dynamic_drawing::object*>::iterator i = std::find(dynamic_drawing_objects_.begin(), dynamic_drawing_objects_.end(), p);
+				auto i = std::find(dynamic_drawing_objects_.begin(), dynamic_drawing_objects_.end(), p);
 				if(i != dynamic_drawing_objects_.end())
 					dynamic_drawing_objects_.erase(i);
 			}
@@ -408,49 +408,49 @@ namespace gui
 		{
 			if(text)
 			{
-				dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::string(x, y, color, text));
+				dynamic_drawing_objects_.push_back(new dynamic_drawing::string(x, y, color, text));
 			}
 		}
 
 		void drawer::line(int x, int y, int x2, int y2, unsigned color)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::line(x, y, x2, y2, color));
+			dynamic_drawing_objects_.push_back(new dynamic_drawing::line(x, y, x2, y2, color));
 		}
 
 		void drawer::rectangle(int x, int y, unsigned width, unsigned height, unsigned color, bool issolid)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::rectangle(x, y, width, height, color, issolid));
+			dynamic_drawing_objects_.push_back(new dynamic_drawing::rectangle(x, y, width, height, color, issolid));
 		}
 
 		void drawer::shadow_rectangle(int x, int y, unsigned width, unsigned height, nana::color_t beg, nana::color_t end, bool vertical)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::shadow_rectangle(x, y, width, height, beg, end, vertical));
+			dynamic_drawing_objects_.push_back(new dynamic_drawing::shadow_rectangle(x, y, width, height, beg, end, vertical));
 		}
 
 		void drawer::bitblt(int x, int y, unsigned width, unsigned height, const paint::graphics& graph, int srcx, int srcy)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::bitblt<paint::graphics>(x, y, width, height, graph, srcx, srcy));
+			dynamic_drawing_objects_.push_back(new dynamic_drawing::bitblt<paint::graphics>(x, y, width, height, graph, srcx, srcy));
 		}
 
 		void drawer::bitblt(int x, int y, unsigned width, unsigned height, const paint::image& img, int srcx, int srcy)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::bitblt<paint::image>(x, y, width, height, img, srcx, srcy));
+			dynamic_drawing_objects_.push_back(new dynamic_drawing::bitblt<paint::image>(x, y, width, height, img, srcx, srcy));
 		}
 
 		void drawer::stretch(const nana::rectangle & r_dst, const paint::graphics& graph, const nana::rectangle& r_src)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::stretch<paint::graphics>(r_dst, graph, r_src));
+			dynamic_drawing_objects_.push_back(new dynamic_drawing::stretch<paint::graphics>(r_dst, graph, r_src));
 		}
 
 		void drawer::stretch(const nana::rectangle & r_dst, const paint::image& img, const nana::rectangle& r_src)
 		{
-			dynamic_drawing_objects_.push_back(new detail::dynamic_drawing::stretch<paint::image>(r_dst, img, r_src));
+			dynamic_drawing_objects_.push_back(new dynamic_drawing::stretch<paint::image>(r_dst, img, r_src));
 		}
 
-		event_handle drawer::make_event(event_code::t evtid, window wd)
+		event_handle drawer::make_event(event_code evtid, window trigger)
 		{
 			bedrock_type & bedrock = bedrock_type::instance();
-			void (drawer::*answer)(const eventinfo&) = 0;
+			void (drawer::*answer)(const eventinfo&) = nullptr;
 			switch(evtid)
 			{
 			case event_code::click:
@@ -491,10 +491,10 @@ namespace gui
 				break;
 			}
 
-			if(answer && (0 == bedrock.evt_manager.the_number_of_handles(wd, evtid, true)))
-				return bedrock.evt_manager.make_for_drawer(evtid, wd, bedrock.category(reinterpret_cast<bedrock::core_window_t*>(wd)), drawer_binder(*this, answer));
+			if(answer && (0 == bedrock.evt_manager.the_number_of_handles(trigger, evtid, true)))
+				return bedrock.evt_manager.make_for_drawer(evtid, trigger, bedrock.category(reinterpret_cast<bedrock::core_window_t*>(trigger)), drawer_binder(*this, answer));
 
-			return 0;
+			return nullptr;
 		}
 
 		void drawer::_m_bground_pre()
@@ -511,9 +511,8 @@ namespace gui
 
 		void drawer::_m_draw_dynamic_drawing_object()
 		{
-			std::vector<nana::gui::detail::dynamic_drawing::object*>::iterator it = dynamic_drawing_objects_.begin(), end = dynamic_drawing_objects_.end();
-			for(; it != end; ++it)
-				(*it)->draw(graphics);
+			for(auto * dw : dynamic_drawing_objects_)
+				dw->draw(graphics);
 		}
 	}//end namespace detail
 }//end namespace gui

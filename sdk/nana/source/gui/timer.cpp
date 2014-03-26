@@ -81,7 +81,7 @@ namespace gui
 
 		void timer::_m_umake_event()
 		{
-			nana::gui::API::umake_event(reinterpret_cast<nana::gui::window>(this));
+			API::umake_event(reinterpret_cast<window>(this));
 		}
 	//end class timer
 }//end namespace gui

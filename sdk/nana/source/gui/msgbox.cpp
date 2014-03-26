@@ -9,10 +9,8 @@
  *
  *	@file: nana/gui/msgbox.hpp
  */
-
 #include <nana/gui/msgbox.hpp>
 #include <nana/gui/programming_interface.hpp>
-
 #if defined(NANA_WINDOWS)
 	#include <windows.h>
 #elif defined(NANA_X11)
@@ -23,7 +21,6 @@
 	#include <nana/paint/pixel_buffer.hpp>
 	#include <nana/gui/layout.hpp>
 #endif
-
 
 namespace nana
 {
@@ -46,7 +43,7 @@ namespace nana
 				unsigned height_pixel = 110;
 
 				gird_.bind(*this);
-				gird_.push(0, 0);	//The area is used for placing a content
+				gird_.push(0, 0);	//The area is used for placing content
 				gird * button_gird = gird_.push(10, 25);
 
 				button_gird->add(0, 0);
@@ -275,7 +272,7 @@ namespace nana
 						rawpx = pic_question;
 						break;
 					default:
-						rawpx = 0;
+						rawpx = nullptr;
 					}
 					if(rawpx)
 					{
@@ -318,7 +315,7 @@ namespace nana
 
 		//class msgbox
 		msgbox::msgbox()
-			: wd_(0), button_(ok), icon_(icon_none)
+			: wd_(nullptr), button_(ok), icon_(icon_none)
 		{}
 
 		msgbox::msgbox(const msgbox& rhs)
@@ -341,7 +338,7 @@ namespace nana
 		}
 
 		msgbox::msgbox(const nana::string& title)
-			: wd_(0), title_(title), button_(ok), icon_(icon_none)
+			: wd_(nullptr), title_(title), button_(ok), icon_(icon_none)
 		{}
 
 		msgbox::msgbox(window wd, const nana::string& title)
@@ -377,7 +374,7 @@ namespace nana
 		msgbox & msgbox::operator<<(const nana::char_t* str)
 		{
 #if defined(NANA_UNICODE)
-			sstream_<<static_cast<std::string>(nana::charset(str));
+			sstream_<<static_cast<std::string>(nana::charset(str));;
 #else
 			sstream_<<str;
 #endif
@@ -386,7 +383,8 @@ namespace nana
 
 		msgbox & msgbox::operator<<(const nana::charset& cs)
 		{
-			sstream_ << static_cast<std::string>(cs);
+			std::string str = cs;
+			sstream_ << str;
 			return *this;
 		}
 

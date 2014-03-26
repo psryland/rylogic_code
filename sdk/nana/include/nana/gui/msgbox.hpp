@@ -1,14 +1,14 @@
 /*
- *	A Message Box Class
- *	Nana C++ Library(http://www.nanapro.org)
- *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
- *
- *	Distributed under the Boost Software License, Version 1.0. 
- *	(See accompanying file LICENSE_1_0.txt or copy at 
- *	http://www.boost.org/LICENSE_1_0.txt)
- *
- *	@file: nana/gui/msgbox.hpp
- */
+*	A Message Box Class
+*	Nana C++ Library(http://www.nanapro.org)
+*	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
+*
+*	Distributed under the Boost Software License, Version 1.0.
+*	(See accompanying file LICENSE_1_0.txt or copy at
+*	http://www.boost.org/LICENSE_1_0.txt)
+*
+*	@file: nana/gui/msgbox.hpp
+*/
 
 #ifndef NANA_GUI_MSGBOX_HPP
 #define NANA_GUI_MSGBOX_HPP
@@ -42,13 +42,13 @@ namespace nana{	namespace gui
 		msgbox& operator=(const msgbox&);
 
 		/// Construct that creates a message box with a specified title and default button.
-		msgbox(const nana::string& title);
+		msgbox(const nana::string&);
 
 		/// Construct that creates a message box with an owner window and a specified title.
-		msgbox(window owner, const nana::string& title);
+		msgbox(window, const nana::string&);
 
 		/// Construct that creates a message box with an owner windoow, a specified title and buttons. 
-		msgbox(window owner, const nana::string& title, button_t);
+		msgbox(window, const nana::string&, button_t);
 
 		/// Sets an icon for informing user.
 		msgbox& icon(icon_t);
@@ -65,7 +65,7 @@ namespace nana{	namespace gui
 		/// Writes a string to the buffer.
 		msgbox & operator<<(const nana::charset&);
 
-		/// Calls a manipulator to the stream.
+		// Calls a manipulator to the stream.
 		msgbox & operator<<(std::ostream& (*)(std::ostream&));
 
 		/// Write a streamizable object to the buffer.
@@ -80,7 +80,7 @@ namespace nana{	namespace gui
 		/// @return, the button that user clicked.
 		pick_t show() const;
 
-		//A function object method alternative to show();
+		//A function object method alternative to show()
 		pick_t operator()() const
 		{
 			return show();

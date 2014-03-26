@@ -2,8 +2,8 @@
  *	Event Manager Implementation
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0. 
- *	(See accompanying file LICENSE_1_0.txt or copy at 
+ *	Distributed under the Boost Software License, Version 1.0.
+ *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/gui/detail/event_manager.cpp
@@ -12,10 +12,9 @@
 #include <nana/config.hpp>
 #include PLATFORM_SPEC_HPP
 #include GUI_BEDROCK_HPP
-#include <nana/gui/detail/event_manager.hpp>
 #include <map>
 #include <algorithm>
-#include <nana/threads/mutex.hpp>
+#include <nana/gui/detail/event_manager.hpp>
 
 namespace nana
 {
@@ -23,83 +22,64 @@ namespace gui
 {
 namespace detail
 {
-	namespace inner_event_manager
+	class handle_queue
 	{
-		//struct inner_handler_invoker
-		//@brief: The definition of struct inner_handler_invoker
-		struct inner_handler_invoker
+	public:
+		handle_queue()
+			:queue_(fixed_buffer_), size_(0), capacity_(10)
+		{}
+
+		~handle_queue()
 		{
-		public:
-			inner_handler_invoker(event_manager::handle_manager_type& mgr, const eventinfo& ei)
-				:ei_(ei), mgr_(mgr)
-			{}
+			if(queue_ != fixed_buffer_)
+				delete [] queue_;
+		}
 
-			void operator()(abstract_handler* abs_handler)
-			{
-				if(mgr_.available(abs_handler))
-					abs_handler->exec(ei_);
-			}
-		private:
-			const eventinfo& ei_;
-			event_manager::handle_manager_type& mgr_;
-		};
-
-		struct handler_queue
+		void clear()
 		{
-			handler_queue()
-				:queue_(fixed_buffer_), size_(0), capacity_(10)
-			{}
+			size_ = 0;
+		}
 
-			~handler_queue()
+		template<typename Container>
+		void copy(Container& container)
+		{
+			std::size_t size = container.size();
+
+			//Firstly check whether the capacity is enough for the size
+			if(capacity_ - size_ < size)
 			{
+				capacity_ = size_ + size;
+				abstract_handler* *newbuf = new abstract_handler*[capacity_];
+				memcpy(newbuf, queue_, sizeof(abstract_handler*) * size_);
 				if(queue_ != fixed_buffer_)
 					delete [] queue_;
+				queue_ = newbuf;
 			}
 
-			void clear()
-			{
-				size_ = 0;
-			}
+			auto iter = container.cbegin();
+			abstract_handler * *i = queue_ + size_;
+			abstract_handler * * const end = i + size;
+			while(i < end)
+				*i++ = *iter++;
 
-			template<typename Container>
-			void copy(Container& container)
-			{
-				typename Container::iterator iter = container.begin();
-				std::size_t size = container.size();
-				abstract_handler * *i = queue_ + size_;
-				abstract_handler * * const end = i + size;
-				allocate(size);
-				while(i < end)
-					*i++ = *iter++;
-			}
+			size_ += size;
+		}
 
-			void allocate(std::size_t size)
+		void invoke(event_manager::handle_manager_type& handle_manager, const eventinfo& ei)
+		{
+			for(auto i = queue_, end = queue_ + size_; i != end; ++i)
 			{
-				if(capacity_ - size_ < size)
-				{
-					capacity_ = size_ + size;
-					abstract_handler* *newbuf = new abstract_handler*[capacity_];
-					memcpy(newbuf, queue_, sizeof(abstract_handler*) * size_);
-					if(queue_ != fixed_buffer_)
-						delete [] queue_;
-					queue_ = newbuf;
-				}
-				size_ += size;
+				if(handle_manager.available(*i))
+					(*i)->exec(ei);
 			}
-
-			void invoke(event_manager::handle_manager_type& handle_manager, const eventinfo& ei)
-			{
-				if(size_ != 0)
-					std::for_each(queue_, queue_ + size_, inner_handler_invoker(handle_manager, ei));
-			}
-			std::size_t size() const {return size_;}
-		private:
-			abstract_handler * fixed_buffer_[10];
-			abstract_handler** queue_;
-			std::size_t size_;
-			std::size_t capacity_;
-		};
-	}//end namespace inner_event_manager
+		}
+		std::size_t size() const {return size_;}
+	private:
+		abstract_handler * fixed_buffer_[10];
+		abstract_handler** queue_;
+		std::size_t size_;
+		std::size_t capacity_;
+	};//end class handle_queue
 
 	//callback_storage
 	//@brief: This is a class defines a data structure about the event callbacks mapping
@@ -107,7 +87,7 @@ namespace detail
 	{
 		typedef std::map<window, std::pair<std::vector<abstract_handler*>, std::vector<abstract_handler*> > > event_table_type;
 
-		event_table_type table[event_code::end];
+		event_table_type table[static_cast<int>(event_code::end)];
 	};
 
 	namespace nana_runtime
@@ -117,7 +97,7 @@ namespace detail
 
 	abstract_handler::~abstract_handler(){}
 
-	unsigned check::event_category[event_code::end] = {
+	category::flags check::event_category[static_cast<int>(event_code::end)] = {
 		category::flags::widget,	//click
 		category::flags::widget,	//dbl_click
 		category::flags::widget,	//mouse_enter
@@ -145,81 +125,59 @@ namespace detail
 		//delete a handler
 		void event_manager::umake(event_handle eh)
 		{
-			if(0 == eh) return;
-			
+			if(nullptr == eh) return;
+
 			abstract_handler* abs_handler = reinterpret_cast<abstract_handler*>(eh);
 
 			//Thread-Safe Required!
-			threads::lock_guard<threads::recursive_mutex> lock(mutex_);
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
 
 			if(handle_manager_.available(abs_handler))
 			{
-				this->write_off_bind(eh);
+				write_off_bind(eh);
 
-				std::vector<abstract_handler*>* v = abs_handler->container;
-				std::vector<abstract_handler*>::iterator i = std::find(v->begin(), v->end(), abs_handler);
-				if(i != v->end())
+				auto v = abs_handler->container;
+				auto i = std::find(v->begin(), v->end(), abs_handler);
+				if(i != v->cend())
 				{
 					v->erase(i);
 					if(v->empty())
 					{
-						callback_storage::event_table_type::iterator i = nana_runtime::callbacks.table[abs_handler->event_identifier].find(abs_handler->window);
-						std::pair<std::vector<abstract_handler*>, std::vector<abstract_handler*> > & handler_pair = i->second;
-						if(handler_pair.first.empty() && handler_pair.second.empty())
-							nana_runtime::callbacks.table[abs_handler->event_identifier].erase(i);
+						auto & evt = nana_runtime::callbacks.table[static_cast<int>(abs_handler->event_identifier)];
+						auto i_evt = evt.find(abs_handler->window);
+						auto & pair_v  = i_evt->second;
+						if(pair_v.first.empty() && pair_v.second.empty())
+							evt.erase(i_evt);
 					}
-					handle_manager_(abs_handler);
 				}
+				handle_manager_(abs_handler);
 			}
 		}
-
-		//umake_handle_deleter_wrapper
-		//@brief: a handle_manager overloaded operator() for deleting a handle,
-		//it is a functor for easy-to-use to STL algorithms. but these algorithms
-		//functor is value-copy semantic, but handle_manager could not be copyable,
-		//so, employing umake_handle_deleter_wrapper for change it into refer-copy semantic
-		class umake_handle_deleter_wrapper
-		{
-		public:
-			umake_handle_deleter_wrapper(event_manager& evt_mgr, event_manager::handle_manager_type& mgr)
-				:evt_mgr_(evt_mgr), mgr_(mgr)
-			{}
-
-			template<typename HandleType>
-			void operator()(HandleType h)
-			{
-				evt_mgr_.write_off_bind(reinterpret_cast<nana::gui::event_handle>(h));
-				mgr_(h);
-			}
-		private:
-			event_manager&	evt_mgr_;
-			event_manager::handle_manager_type& mgr_;
-		};
 
 		void event_manager::umake(window wd, bool only_for_drawer)
 		{
 			//Thread-Safe Required!
-			threads::lock_guard<threads::recursive_mutex> lock(mutex_);
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
 
-			typedef callback_storage::event_table_type table_t;
-
-			table_t::iterator element;
-			table_t *end = nana_runtime::callbacks.table + event_code::end;
-			umake_handle_deleter_wrapper deleter_wrapper(*this, handle_manager_);
-			for(table_t* i = nana_runtime::callbacks.table; i != end; ++i)
+			auto deleter_wrapper = [this](abstract_handler * handler)
 			{
-				element = i->find(wd);
+				this->write_off_bind(reinterpret_cast<event_handle>(handler));
+				this->handle_manager_(handler);
+			};
+
+			for (auto i = std::begin(nana_runtime::callbacks.table), end = std::end(nana_runtime::callbacks.table); i != end; ++i)
+			{
+				auto element = i->find(wd);
 				if(element != i->end())
 				{
-					std::pair<std::vector<abstract_handler*>, std::vector<abstract_handler*> > & hdpair = element->second;
+					auto & hdpair = element->second;
 					std::for_each(hdpair.first.rbegin(), hdpair.first.rend(), deleter_wrapper);
 					if(only_for_drawer)
 					{
-						//Check if user event container is empty, then remove the containers.
-						if(0 == hdpair.second.size())
-							i->erase(element);
-						else
+						if(hdpair.second.size())
 							hdpair.first.clear();
+						else
+							i->erase(element);
 					}
 					else
 					{
@@ -232,31 +190,27 @@ namespace detail
 			if(false == only_for_drawer)
 			{
 				//delete the bind handler that the window had created.
-				std::map<window, std::vector<event_handle> >::iterator itbind = bind_cont_.find(wd);
-				if(itbind != bind_cont_.end())
+				auto bi = bind_cont_.find(wd);
+				if(bi != bind_cont_.end())
 				{
-					for(std::vector<event_handle>::iterator i = itbind->second.begin(); i != itbind->second.end(); ++i)
-						handle_manager_(reinterpret_cast<abstract_handler*>(*i));
-
-					bind_cont_.erase(itbind);
+					for(auto handler : bi->second)
+						handle_manager_(reinterpret_cast<abstract_handler*>(handler));
+					bind_cont_.erase(bi);
 				}
 			}
 		}
 
-		bool event_manager::answer(event_code::t eventid, window wd, eventinfo& ei, event_kind::t evtkind)
+		bool event_manager::answer(event_code eventid, window wd, eventinfo& ei, event_kind evtkind)
 		{
 			if(eventid >= event_code::end)	return false;
-			
-			inner_event_manager::handler_queue queue;
+
+			auto * const evtobj = nana_runtime::callbacks.table + static_cast<int>(eventid);
+			handle_queue queue;
 			{
 				//Thread-Safe Required!
-				threads::lock_guard<threads::recursive_mutex> lock(mutex_);
+				std::lock_guard<decltype(mutex_)> lock(mutex_);
 
-				typedef callback_storage::event_table_type table_t;
-
-				table_t* const evtobj = nana_runtime::callbacks.table + eventid;
-				table_t::iterator element = evtobj->find(wd);
-				
+				auto element = evtobj->find(wd);
 				if(element != evtobj->end()) //Test if the window installed event_id event
 				{
 					//copy all the handlers to the queue to avoiding dead-locking from the callback function that deletes the event handler
@@ -278,7 +232,7 @@ namespace detail
 			ei.identifier = eventid;
 			ei.window = wd;
 			queue.invoke(handle_manager_, ei);
-			return (queue.size() != 0);			
+			return (queue.size() != 0);
 		}
 
 		void event_manager::remove_trash_handle(unsigned tid)
@@ -290,16 +244,15 @@ namespace detail
 		{
 			if(eh && reinterpret_cast<abstract_handler*>(eh)->listener)
 			{
-				std::vector<event_handle> & v = bind_cont_[reinterpret_cast<abstract_handler*>(eh)->listener];
-				std::vector<event_handle>::iterator i = std::find(v.begin(), v.end(), eh);
-				
-				if(i != v.end())
+				auto & v = bind_cont_[reinterpret_cast<abstract_handler*>(eh)->listener];
+				auto i = std::find(v.begin(), v.end(), eh);
+				if(i != v.cend())
 				{
 					if(v.size() > 1)
 						v.erase(i);
 					else
 						bind_cont_.erase(reinterpret_cast<abstract_handler*>(eh)->listener);
-				}			
+				}
 			}
 		}
 
@@ -308,25 +261,19 @@ namespace detail
 			return handle_manager_.size();
 		}
 
-		std::size_t event_manager::the_number_of_handles(window wd, event_code::t eventid, bool is_for_drawer)
+		std::size_t event_manager::the_number_of_handles(window wd, event_code eventid, bool is_for_drawer)
 		{
-			if(eventid < event_code::end)
+			if (eventid < event_code::end)
 			{
-				typedef callback_storage::event_table_type table_t;
-
-				table_t* const evtobj = nana_runtime::callbacks.table + eventid;
+				auto* const evtobj = nana_runtime::callbacks.table + static_cast<int>(eventid);
 
 				//Thread-Safe Required!
-				threads::lock_guard<threads::recursive_mutex> lock(mutex_);
-
-				table_t::iterator element = evtobj->find(wd);
-				
+				std::lock_guard<decltype(mutex_)> lock(mutex_);
+				auto element = evtobj->find(wd);
 				if(element != evtobj->end()) //Test if the window installed event_id event
-				{
 					return (is_for_drawer ? element->second.first : element->second.second).size();
-				}
 			}
-			return 0;			
+			return 0;
 		}
 
 		//_m_make
@@ -335,25 +282,25 @@ namespace detail
 		//@param:wd, the triggering window
 		//@param:abs_handler, the handle of event object handler
 		//@param:drawer_handler, whether the event is installing for drawer or user callback
-		event_handle event_manager::_m_make(event_code::t eventid, window wd, abstract_handler* abs_handler, bool drawer_handler, window listener)
+		//@param:listener, a listener for the event, it is ignored when drawer_handler is true
+		event_handle event_manager::_m_make(event_code eventid, window wd, abstract_handler* abs_handler, bool drawer_handler, window listener)
 		{
-			if(abs_handler == 0)	return 0;
+			if(nullptr == abs_handler)	return nullptr;
 
 			//The bind event is only avaiable for non-drawer handler.
 			if(drawer_handler)
-				listener = 0;
+				listener = nullptr;
 
 			abs_handler->window = wd;
 			abs_handler->listener = listener;
 			abs_handler->event_identifier = eventid;
-			
+
 			{
 				//Thread-Safe Required!
-				threads::lock_guard<threads::recursive_mutex> lock(mutex_);
-
+				std::lock_guard<decltype(mutex_)> lock(mutex_);
 				abs_handler->container = (drawer_handler ?
-												&(nana_runtime::callbacks.table[eventid][wd].first) :
-												&(nana_runtime::callbacks.table[eventid][wd].second));
+												&(nana_runtime::callbacks.table[static_cast<int>(eventid)][wd].first) :
+												&(nana_runtime::callbacks.table[static_cast<int>(eventid)][wd].second));
 
 				abs_handler->container->push_back(abs_handler);
 				handle_manager_.insert(abs_handler, 0);
@@ -366,13 +313,10 @@ namespace detail
 				bedrock::instance().wd_manager.event_filter(reinterpret_cast<bedrock::core_window_t*>(wd), true, eventid);
 			//call the event_register
 			nana::detail::platform_spec::instance().event_register_filter(
-					bedrock::instance().root(reinterpret_cast<bedrock::core_window_t*>(wd)),
-					eventid);
-
+					bedrock::instance().root(reinterpret_cast<bedrock::core_window_t*>(wd)), eventid);
 			return reinterpret_cast<event_handle>(abs_handler);
 		}
 	//end class event_manager
-
 }//mespace detail
 }//end namespace gui
 }//end namespace nana

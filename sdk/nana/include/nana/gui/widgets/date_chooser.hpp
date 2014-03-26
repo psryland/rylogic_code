@@ -27,22 +27,9 @@ namespace nana{ namespace gui{
 				static const int topbar_height = 34;
 				static const int border_size = 3;
 
-				struct transform_action
-				{
-					enum t{none, to_left, to_right, to_enter, to_leave};
-				};
-
-				struct where
-				{
-					enum t{none, left_button, right_button, topbar, textarea};
-				};
-
-				struct page
-				{
-					enum t{
-						date, month
-					};
-				};
+				enum class transform_action{none, to_left, to_right, to_enter, to_leave};
+				enum class where{none, left_button, right_button, topbar, textarea};
+				enum class page{date, month};
 
 				struct drawing_basis
 				{
@@ -54,38 +41,36 @@ namespace nana{ namespace gui{
 				trigger();
 				bool chose() const;
 				nana::date read() const;
-				void week_name(unsigned index, const nana::string& str);
-				void month_name(unsigned index, const nana::string& str);
+				void week_name(unsigned index, const nana::string&);
+				void month_name(unsigned index, const nana::string&);
 			private:
 				void _m_init_color();
-				where::t _m_pos_where(graph_reference graph, int x, int y);
-				void _m_draw(graph_reference graph);
-				void _m_draw_topbar(graph_reference graph);
-				void _m_make_drawing_basis(drawing_basis& dbasis, graph_reference graph, const nana::point& refpos);
-				void _m_draw_pos(drawing_basis & dbasis, graph_reference graph, int x, int y, const nana::string& str, bool primary, bool sel);
-				void _m_draw_pos(drawing_basis & dbasis, graph_reference graph, int x, int y, int number, bool primary, bool sel);
-				void _m_draw_ex_days(drawing_basis & dbasis, graph_reference graph, int begx, int begy, bool before);
-				void _m_draw_days(const nana::point& refpos, graph_reference graph);
-				void _m_draw_months(const nana::point& refpos, graph_reference graph);
+				where _m_pos_where(graph_reference, int x, int y);
+				void _m_draw(graph_reference);
+				void _m_draw_topbar(graph_reference);
+				void _m_make_drawing_basis(drawing_basis&, graph_reference, const nana::point& refpos);
+				void _m_draw_pos(drawing_basis &, graph_reference, int x, int y, const nana::string&, bool primary, bool sel);
+				void _m_draw_pos(drawing_basis &, graph_reference, int x, int y, int number, bool primary, bool sel);
+				void _m_draw_ex_days(drawing_basis &, graph_reference, int begx, int begy, bool before);
+				void _m_draw_days(const nana::point& refpos, graph_reference);
+				void _m_draw_months(const nana::point& refpos, graph_reference);
 				bool _m_get_trace(int x, int y, int & res);
-				void _m_perf_transform(transform_action::t tfid, graph_reference, graph_reference dirtybuf, graph_reference newbuf, const nana::point& refpos);
+				void _m_perf_transform(transform_action tfid, graph_reference,  graph_reference dirtybuf, graph_reference newbuf, const nana::point& refpos);
 			private:
 				void refresh(graph_reference);
-				void bind_window(widget_reference);
-				void attached(graph_reference);
-				void detached();
-				void mouse_move(graph_reference, const eventinfo&);
-				void mouse_leave(graph_reference, const eventinfo&);
-				void mouse_up(graph_reference, const eventinfo&);
+				void attached(widget_reference, graph_reference)	override;
+				void mouse_move(graph_reference, const eventinfo&)	override;
+				void mouse_leave(graph_reference, const eventinfo&)	override;
+				void mouse_up(graph_reference, const eventinfo&)	override;
 			private:
 				nana::string weekstr_[7];
 				nana::string monthstr_[12];
 
-				nana::gui::widget * widget_;
+				widget * widget_;
 				
-				bool	chose_;
-				page::t	page_;
-				where::t	pos_;
+				bool chose_;
+				page	page_;
+				where	pos_;
 				nana::point trace_pos_;
 
 				drawing_basis	dbasis_;
@@ -124,7 +109,7 @@ namespace nana{ namespace gui{
 		date_chooser(window, bool visible);
 		date_chooser(window, const nana::string& text, bool visible = true);
 		date_chooser(window, const nana::char_t* text, bool visible = true);
-		date_chooser(window, const rectangle& = rectangle(), bool visible = true);
+		date_chooser(window, const nana::rectangle& r = rectangle(), bool visible = true);
 
 		bool chose() const;
 		nana::date read() const;

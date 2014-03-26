@@ -18,11 +18,11 @@
 
 namespace nana{ namespace gui{
 	class tray
-		: public nana::noncopyable
+		: nana::noncopyable
 	{
 		struct tray_impl;
 	public:
-		typedef functor<void(const eventinfo&)> functor_t;
+		typedef std::function<void(const eventinfo&)> event_fn_t;
 		tray();
 		~tray();
 
@@ -34,7 +34,7 @@ namespace nana{ namespace gui{
 		tray & icon(const char_t * ico);
 
 		template<typename Event>
-		bool make_event(const functor_t & f) const
+		bool make_event(const event_fn_t & f) const
 		{
 			return _m_make_event(Event::identifier, f);
 		}
@@ -46,7 +46,7 @@ namespace nana{ namespace gui{
 		}
 		void umake_event();
 	private:
-		bool _m_make_event(event_code::t, const nana::functor<void(const eventinfo&)>&) const;
+		bool _m_make_event(event_code, const event_fn_t&) const;
 	private:
 		struct tray_impl *impl_;
 	};

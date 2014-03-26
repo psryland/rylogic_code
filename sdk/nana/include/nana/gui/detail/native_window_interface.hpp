@@ -2,8 +2,8 @@
  *	Platform Implementation
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0.
- *	(See accompanying file LICENSE_1_0.txt or copy at
+ *	Distributed under the Boost Software License, Version 1.0. 
+ *	(See accompanying file LICENSE_1_0.txt or copy at 
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/gui/detail/native_window_interface.hpp
@@ -26,7 +26,7 @@ namespace detail
 	{
 		struct window_result
 		{
-			native_window_type handle;
+			nana::gui::native_window_type handle;
 
 			unsigned width;		//client size
 			unsigned height;	//client size
@@ -36,7 +36,7 @@ namespace detail
 		};
 
 		static nana::size	screen_size();
-		static rectangle	screen_area_from_point(const point&);
+		static rectangle screen_area_from_point(const point&);
 		static window_result create_window(native_window_type, bool nested, const rectangle&, const appearance&);
 		static native_window_type create_child_window(native_window_type, const rectangle&);
 
@@ -59,9 +59,8 @@ namespace detail
 		static nana::point	window_position(native_window_type);
 		static void	move_window(native_window_type, int x, int y);
 		static void	move_window(native_window_type, int x, int y, unsigned width, unsigned height);
-
 		static void bring_to_top(native_window_type);
-		static void	set_window_z_order(native_window_type, native_window_type wd_after, z_order_action::t action_if_no_wd_after);
+		static void	set_window_z_order(native_window_type, native_window_type wd_after, z_order_action action_if_no_wd_after);
 
 		static void	window_size(native_window_type, unsigned width, unsigned height);
 		static void	get_window_rect(native_window_type, rectangle&);

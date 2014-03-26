@@ -32,9 +32,8 @@ namespace paint
 			add<paint::detail::algorithms::alpha_blend>(alpha_blend_, "alpha_blend");
 			add<paint::detail::algorithms::blend>(blend_, "blend");
 			add<paint::detail::algorithms::bresenham_line>(line_, "bresenham_line");
-			add<paint::detail::algorithms::superfast_blur>(blur_, "supefast_blur");
+			add<paint::detail::algorithms::superfast_blur>(blur_, "superfast_blur");
 		}
-
 
 		image_process_provider::stretch_tag& image_process_provider::ref_stretch_tag()
 		{
@@ -66,7 +65,7 @@ namespace paint
 		{
 			return _m_read(alpha_blend_, name);
 		}
-
+		
 		//blend
 		image_process_provider::blend_tag& image_process_provider::ref_blend_tag()
 		{

@@ -11,7 +11,6 @@
 
 #include <nana/config.hpp>
 #include PLATFORM_SPEC_HPP
-
 #include <nana/paint/detail/native_paint_interface.hpp>
 #include <nana/paint/pixel_buffer.hpp>
 #include <nana/gui/layout_utility.hpp>
@@ -130,7 +129,7 @@ namespace detail
 		if(fade_rate > 1) fade_rate = 1;
 
 		nana::rectangle r;
-		if(false == nana::gui::overlap(drawable_size(dw), area, r))
+		if(false == gui::overlap(drawable_size(dw), area, r))
 			return;
 
 		unsigned red = static_cast<unsigned>((color & 0xFF0000) * fade_rate);
@@ -157,12 +156,11 @@ namespace detail
 
 	nana::size raw_text_extent_size(drawable_type dw, const nana::char_t* text, std::size_t len)
 	{
-		if(0 == dw || 0 == text || 0 == len) return nana::size(0, 0);
+		if(nullptr == dw || nullptr == text || 0 == len) return nana::size();
 #if defined(NANA_WINDOWS)
 		::SIZE size;
 		if(::GetTextExtentPoint32(dw->context, text, static_cast<int>(len), &size))
 			return nana::size(size.cx, size.cy);
-		return nana::size();
 #elif defined(NANA_X11)
 	#if defined(NANA_UNICODE)
 		std::string utf8str = nana::charset(nana::string(text, len));
@@ -178,6 +176,7 @@ namespace detail
 		return nana::size(logic.width, logic.height);
 	#endif
 #endif
+		return nana::size();
 	}
 
 	nana::size text_extent_size(drawable_type dw, const nana::char_t * text, std::size_t len)
@@ -202,12 +201,7 @@ namespace detail
 		::TextOut(dw->context, x, y, str, static_cast<int>(len));
 #elif defined(NANA_X11)
 	#if defined(NANA_UNICODE)
-		std::string utf8str;
-		nana::string wbstr = str;
-		if(wbstr.size() == len)
-			utf8str = nana::charset(wbstr);
-		else
-			utf8str = nana::charset(wbstr.substr(0, len));
+		std::string utf8str = nana::charset(nana::string(str, len));
 		XftFont * fs = reinterpret_cast<XftFont*>(dw->font->handle);
 		::XftDrawStringUtf8(dw->xftdraw, &(dw->xft_fgcolor), fs, x, y + fs->ascent,
 							reinterpret_cast<XftChar8*>(const_cast<char*>(utf8str.c_str())), utf8str.size());

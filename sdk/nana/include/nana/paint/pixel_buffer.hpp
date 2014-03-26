@@ -13,7 +13,7 @@
 #define NANA_PAINT_PIXEL_BUFFER_HPP
 
 #include <nana/gui/basis.hpp>
-#include <nana/memory.hpp>
+#include <memory>
 
 namespace nana{	namespace paint
 {
@@ -32,8 +32,8 @@ namespace nana{	namespace paint
 	class pixel_buffer
 	{
 		struct pixel_buffer_storage;
+		typedef bool (pixel_buffer:: * unspecified_bool_t)() const;
 	public:
-		
 		pixel_buffer();
 		pixel_buffer(drawable_type, const nana::rectangle& want_rectangle);
 		pixel_buffer(drawable_type, std::size_t top, std::size_t lines);
@@ -54,12 +54,12 @@ namespace nana{	namespace paint
 
 		bool empty() const;
 
-		operator const void*() const;
+		operator unspecified_bool_t() const;
 
 		std::size_t bytes() const;
 		std::size_t bytes_per_line() const;
 		nana::size size() const;
-		
+
 		pixel_rgb_t * raw_ptr(std::size_t row) const;
 		pixel_rgb_t * operator[](std::size_t row) const;
 
@@ -76,7 +76,7 @@ namespace nana{	namespace paint
 
 		void paste(drawable_type, int x, int y) const;
 		void paste(const nana::rectangle& s_r, drawable_type, int x, int y) const;
-		void paste(nana::gui::native_window_type, int x, int y) const;
+		void paste(gui::native_window_type, int x, int y) const;
 		void stretch(const std::string& name);
 		void stretch(const nana::rectangle& s_r, drawable_type, const nana::rectangle& r) const;
 		void blend(const std::string& name);
@@ -84,7 +84,7 @@ namespace nana{	namespace paint
 		void blur(const nana::rectangle& r, std::size_t radius);
 
 	private:
-		nana::shared_ptr<pixel_buffer_storage> storage_;
+		std::shared_ptr<pixel_buffer_storage> storage_;
 	};
 }//end namespace paint
 }//end namespace nana

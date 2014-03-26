@@ -39,7 +39,7 @@ namespace nana
 			{
 			public:
 				virtual ~blend_interface() = 0;
-				virtual void process(const paint::pixel_buffer& s_pixel, const nana::rectangle& s_r, paint::pixel_buffer& d_pixbuf, const nana::point& d_pos, double fade_rate) const = 0;
+				virtual void process(const paint::pixel_buffer& s_pixbuf, const nana::rectangle& s_r, paint::pixel_buffer& d_pixbuf, const nana::point& d_pos, double fade_rate) const = 0;
 			};
 
 			class line_interface

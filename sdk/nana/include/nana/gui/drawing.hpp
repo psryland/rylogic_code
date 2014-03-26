@@ -20,10 +20,9 @@ namespace gui
 	class drawing
 		:private nana::noncopyable
 	{
-		struct diehard_handle;
 	public:
-		typedef diehard_handle* diehard_t;
-		typedef nana::functor<void(paint::graphics&)> draw_fn_t;
+		typedef struct{}* diehard_t;
+		typedef std::function<void(paint::graphics&)> draw_fn_t;
 
 		drawing(window);
 		//Just for polymorphism
@@ -34,9 +33,10 @@ namespace gui
 		void string(int x, int y, unsigned color, const nana::char_t* text);
 		void bitblt(int x, int y, unsigned width, unsigned height, const nana::paint::graphics& source, int srcx, int srcy);
 		void bitblt(int x, int y, unsigned width, unsigned height, const nana::paint::image& source, int srcx, int srcy);
-		
 		void draw(const draw_fn_t&);
+		void draw(draw_fn_t&&);
 		diehard_t draw_diehard(const draw_fn_t&);
+		diehard_t draw_diehard(draw_fn_t&&);
 		void erase(diehard_t);
 
 		void line(int x, int y, int x2, int y2, unsigned color);

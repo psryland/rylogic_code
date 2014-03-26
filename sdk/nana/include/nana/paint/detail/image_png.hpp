@@ -22,7 +22,8 @@ namespace nana
 		{
 		public:
 			image_png()
-			{}
+			{
+			}
 
 			bool open(const nana::char_t* png_file)
 			{
@@ -31,7 +32,7 @@ namespace nana
 #else
 				FILE* fp = ::fopen(png_file, "rb");
 #endif
-				if(0 == fp) return false;
+				if(nullptr == fp) return false;
 
 				bool is_opened = false;
 
@@ -59,9 +60,6 @@ namespace nana
 								const int png_height = ::png_get_image_height(png_ptr, info_ptr);
 								png_byte color_type = ::png_get_color_type(png_ptr, info_ptr);
 
-								//unused
-								//png_byte depth = ::png_get_bit_depth(png_ptr, info_ptr);
-
 								int number_of_passes = ::png_set_interlace_handling(png_ptr);
 								::png_read_update_info(png_ptr, info_ptr);
 
@@ -70,15 +68,28 @@ namespace nana
 								const std::size_t png_rowbytes = ::png_get_rowbytes(png_ptr, info_ptr);
 
 								pixbuf_.open(png_width, png_height);
+
 								const bool is_alpha_enabled = ((PNG_COLOR_MASK_ALPHA & color_type) != 0);
 								pixbuf_.alpha_channel(is_alpha_enabled);
+
 								if(is_alpha_enabled && (png_rowbytes == png_width * sizeof(pixel_rgb_t)))
 								{
 									for(int i = 0; i < png_height; ++i)
 										row_ptrs[i] = reinterpret_cast<png_bytep>(pixbuf_.raw_ptr(i));
 
 									::png_read_image(png_ptr, row_ptrs);
-									::png_destroy_read_struct(&png_ptr, &info_ptr, 0);
+									::png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+
+									for (int i = 0; i < png_height; ++i)
+									{
+										auto p = pixbuf_.raw_ptr(i);
+										for (int u = 0; u < png_width; ++u)
+										{
+											auto t = p[u].u.element.red;
+											p[u].u.element.red = p[u].u.element.blue;
+											p[u].u.element.blue = t;
+										}
+									}
 								}
 								else
 								{
@@ -96,7 +107,9 @@ namespace nana
 									for(int y = 0; y < png_height; ++y)
 									{
 										png_bytep png_ptr = row_ptrs[y];
+
 										pixel_rgb_t * rgb_end = rgb_row_ptr + png_width;
+
 										if(is_alpha_enabled)
 										{
 											for(pixel_rgb_t * i = rgb_row_ptr; i < rgb_end; ++i)
@@ -121,6 +134,7 @@ namespace nana
 										}
 										rgb_row_ptr = rgb_end;
 									}
+
 									delete [] png_pixbuf;
 								}
 								delete [] row_ptrs;
@@ -164,7 +178,8 @@ namespace nana
 				pixbuf_.stretch(src_r, dst.handle(), r);
 			}
 		private:
-			pixel_buffer pixbuf_;
+			nana::paint::pixel_buffer pixbuf_;
+
 		};
 	}//end namespace detail
 	}//end namespace paint

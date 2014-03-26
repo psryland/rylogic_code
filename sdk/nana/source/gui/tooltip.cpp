@@ -12,7 +12,7 @@
 #include <nana/gui/tooltip.hpp>
 #include <nana/gui/widgets/label.hpp>
 #include <nana/gui/timer.hpp>
-#include <nana/memory.hpp>
+#include <memory>
 
 namespace nana{ namespace gui{
 	namespace drawerbase
@@ -20,15 +20,34 @@ namespace nana{ namespace gui{
 		namespace tooltip
 		{
 			class drawer
-				: public nana::gui::drawer_trigger
+				: public drawer_trigger
 			{
 			private:
 				void refresh(graph_reference graph)
 				{
-					graph.rectangle(0, 0, graph.width(), graph.height(), 0x0, false);
+					graph.rectangle(0x0, false);
 					graph.rectangle(1, 1, graph.width() - 2, graph.height() - 2, 0xF0F0F0, true);
 				}
-			};	//end class drawer
+			};
+
+			nana::point pos_by_screen(nana::point pos, const nana::size& sz)
+			{
+				auto scr_area = API::screen_area_from_point(pos);
+				if (pos.x + sz.width > scr_area.x + scr_area.width)
+					pos.x = static_cast<int>(scr_area.x + scr_area.width - sz.width);
+				if (pos.x < scr_area.x)
+					pos.x = scr_area.x;
+
+				if (pos.y + sz.height >= scr_area.y + scr_area.height)
+					pos.y = static_cast<int>(scr_area.y + scr_area.height - sz.height);
+				else
+					pos.y += 20;
+
+				if (pos.y < scr_area.y)
+					pos.y = scr_area.y;
+
+				return pos;
+			}
 
 			class tip_form
 				:	public widget_object<category::root_tag, drawer>,
@@ -37,32 +56,32 @@ namespace nana{ namespace gui{
 				typedef widget_object<category::root_tag, drawer> base_type;
 			public:
 				tip_form()
-					:base_type(rectangle(), appear::bald<appear::floating>())
+					:base_type(nana::rectangle(), appear::bald<appear::floating>())
 				{
-					API::take_active(this->handle(), false, 0);
-
+					API::take_active(this->handle(), false, nullptr);
 					label_.create(*this);
-					label_.format(true).transparent(true);
+					label_.format(true);
+					label_.transparent(true);
 				}
 			private:
 				//tooltip_interface implementation
-				void tooltip_text(const nana::string& text) //override
+				void tooltip_text(const nana::string& text) override
 				{
 					label_.caption(text);
-					nana::size text_s = label_.measure(API::screen_size().width * 2 / 3);
+					auto text_s = label_.measure(API::screen_size().width * 2 / 3);
 					this->size(text_s.width + 10, text_s.height + 10);
 					label_.move(5, 5, text_s.width, text_s.height);
 
 					timer_.interval(500);
-					timer_.make_tick(nana::make_fun(*this, &tip_form::_m_tick));
+					timer_.make_tick(std::bind(&tip_form::_m_tick, this));
 				}
 
-				virtual nana::size tooltip_size() const //override
+				virtual nana::size tooltip_size() const override
 				{
 					return this->size();
 				}
 
-				virtual void tooltip_move(const nana::point& scr_pos, bool ignore_pos) //override
+				virtual void tooltip_move(const nana::point& scr_pos, bool ignore_pos) override
 				{
 					ignore_pos_ = ignore_pos;
 					pos_ = scr_pos;
@@ -70,85 +89,63 @@ namespace nana{ namespace gui{
 			private:
 				void _m_tick()
 				{
+					nana::point pos;
 					if (ignore_pos_)
 					{
-						nana::point pos = API::cursor_position();
-						
+						pos = API::cursor_position();
+
 						//The cursor must be stay here for half second.
 						if (pos != pos_)
 						{
 							pos_ = pos;
 							return;
 						}
-
-						nana::size sz = size();
-						nana::size screen_size = API::screen_size();
-						if (pos.x + sz.width >= screen_size.width)
-							pos.x = static_cast<int>(screen_size.width) - static_cast<int>(sz.width);
-
-						if (pos.y + sz.height >= screen_size.height)
-							pos.y = static_cast<int>(screen_size.height) - static_cast<int>(sz.height);
-						else
-							pos.y += 20;
-
-						if (pos.x < 0) pos.x = 0;
-						if (pos.y < 0) pos.y = 0;
-
-						pos_ = pos;
+						
+						pos = pos_by_screen(pos, size());
 					}
+					else
+						pos = pos_;
 
 					timer_.enable(false);
-					move(pos_.x, pos_.y);
+					move(pos.x, pos.y);
 					show();
 				}
 
 			private:
 				timer timer_;
-				gui::label	label_;
-				nana::point	pos_;
+				gui::label label_;
+				nana::point pos_;
 				bool		ignore_pos_;
 			};//end class tip_form
-
 
 			class controller
 			{
 				typedef std::pair<window, nana::string> pair_t;
 
+				typedef std::function<void(tooltip_interface*)> deleter_type;
+
 				class tip_form_factory
 					: public gui::tooltip::factory_if_type
 				{
-					tooltip_interface * create() //override
+					tooltip_interface * create() override
 					{
 						return new tip_form;
 					}
 
-					void destroy(tooltip_interface* p) //override
+					void destroy(tooltip_interface* p) override
 					{
 						delete p;
 					}
 				};
 
-				class deleter
-				{
-				public:
-					deleter(nana::shared_ptr<gui::tooltip::factory_if_type>& fp)
-						:fp_(fp)
-					{}
-
-					void operator()(tooltip_interface* p)
-					{
-						fp_->destroy(p);
-					}
-				private:
-					nana::shared_ptr<gui::tooltip::factory_if_type> fp_;
-				};
 			public:
-				static nana::shared_ptr<gui::tooltip::factory_if_type>& factory()
+				static std::shared_ptr<gui::tooltip::factory_if_type>& factory()
 				{
-					static nana::shared_ptr<gui::tooltip::factory_if_type> fp;
-					if (!fp)
+					static std::shared_ptr<gui::tooltip::factory_if_type> fp;
+					if (nullptr == fp)
+					{
 						fp.reset(new tip_form_factory());
-
+					}
 					return fp;
 				}
 
@@ -156,12 +153,13 @@ namespace nana{ namespace gui{
 				static controller* instance(bool destroy = false)
 				{
 					static controller* ptr;
+
 					if(destroy)
 					{
 						delete ptr;
-						ptr = 0;
+						ptr = nullptr;
 					}
-					else if(ptr == 0)
+					else if(nullptr == ptr)
 					{
 						ptr = new controller;
 					}
@@ -178,8 +176,15 @@ namespace nana{ namespace gui{
 
 				void show(const nana::string& text)
 				{
-					if (!window_)
-						window_ = nana::shared_ptr<tooltip_interface>(factory()->create(), deleter(factory()));
+					if (nullptr == window_)
+					{
+						auto fp = factory();
+
+						window_ = std::unique_ptr<tooltip_interface, deleter_type>(fp->create(), [fp](tooltip_interface* ti)
+						{
+							fp->destroy(ti);
+						});
+					}
 
 					window_->tooltip_text(text);
 					window_->tooltip_move(API::cursor_position(), true);
@@ -187,21 +192,18 @@ namespace nana{ namespace gui{
 
 				void show(point pos, const nana::string& text)
 				{
-					if (!window_)
-						window_ = nana::shared_ptr<tooltip_interface>(factory()->create(), deleter(factory()));
+					if (nullptr == window_)
+					{
+						auto fp = factory();
+
+						window_ = std::unique_ptr<tooltip_interface, deleter_type>(fp->create(), [fp](tooltip_interface* ti)
+						{
+							fp->destroy(ti);
+						});
+					}
 
 					window_->tooltip_text(text);
-					nana::size sz = window_->tooltip_size();
-					nana::size screen_size = API::screen_size();
-					if(pos.x + sz.width >= screen_size.width)
-						pos.x = static_cast<int>(screen_size.width) - static_cast<int>(sz.width);
-
-					if (pos.y + sz.height >= screen_size.height)
-						pos.y = static_cast<int>(screen_size.height) - static_cast<int>(sz.height);
-
-					if (pos.x < 0) pos.x = 0;
-					if (pos.y < 0) pos.y = 0;
-
+					pos = pos_by_screen(pos, window_->tooltip_size());
 					window_->tooltip_move(pos, false);
 				}
 
@@ -223,7 +225,7 @@ namespace nana{ namespace gui{
 					}
 				}
 
-				void _m_leave(const eventinfo& ei)
+				void _m_leave(const eventinfo&)
 				{
 					close();
 				}
@@ -233,10 +235,9 @@ namespace nana{ namespace gui{
 					_m_untip(ei.window);
 				}
 
-
 				void _m_untip(window wd)
 				{
-					for (std::vector<pair_t>::iterator i = cont_.begin(); i != cont_.end(); ++i)
+					for (auto i = cont_.begin(); i != cont_.end(); ++i)
 					{
 						if (i->first == wd)
 						{
@@ -252,24 +253,25 @@ namespace nana{ namespace gui{
 					}
 				}
 			private:
-				pair_t& _m_get(nana::gui::window wd)
+				pair_t& _m_get(window wd)
 				{
-					for(std::vector<pair_t>::iterator i = cont_.begin(); i != cont_.end(); ++i)
+					for (auto & pr : cont_)
 					{
-						if(i->first == wd)
-							return *i;
+						if (pr.first == wd)
+							return pr;
 					}
 
-					API::make_event<events::mouse_enter>(wd, nana::functor<void(const eventinfo&)>(*this, &controller::_m_enter));
-					API::make_event<events::mouse_leave>(wd, nana::functor<void(const eventinfo&)>(*this, &controller::_m_leave));
-					API::make_event<events::mouse_down>(wd, nana::functor<void(const eventinfo&)>(*this, &controller::_m_leave));
-					API::make_event<events::destroy>(wd, nana::functor<void(const eventinfo&)>(*this, &controller::_m_destroy));
+					API::make_event<events::mouse_enter>(wd, std::bind(&controller::_m_enter, this, std::placeholders::_1));
+					auto leave_fn = std::bind(&controller::_m_leave, this, std::placeholders::_1);
+					API::make_event<events::mouse_leave>(wd, leave_fn);
+					API::make_event<events::mouse_down>(wd, leave_fn);
+					API::make_event<events::destroy>(wd, std::bind(&controller::_m_destroy, this, std::placeholders::_1));
 
-					cont_.push_back(pair_t(wd, nana::string()));
+					cont_.emplace_back(wd, nana::string());
 					return cont_.back();
 				}
 			private:
-				nana::shared_ptr<tooltip_interface> window_;
+				std::unique_ptr<tooltip_interface, deleter_type> window_;
 				std::vector<pair_t> cont_;
 			};
 		}//namespace tooltip
@@ -278,7 +280,7 @@ namespace nana{ namespace gui{
 	//class tooltip
 		typedef drawerbase::tooltip::controller ctrl;
 
-		void tooltip::set(nana::gui::window wd, const nana::string& text)
+		void tooltip::set(window wd, const nana::string& text)
 		{
 			if(false == API::empty_window(wd))
 			{
@@ -309,4 +311,3 @@ namespace nana{ namespace gui{
 
 }//namespace gui
 }//namespace nana
-

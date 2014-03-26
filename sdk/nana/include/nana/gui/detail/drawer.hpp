@@ -16,7 +16,7 @@
 #include "eventinfo.hpp"
 #include <nana/paint/graphics.hpp>
 #include <nana/paint/image.hpp>
-#include <nana/functor.hpp>
+#include <functional>
 
 namespace nana
 {
@@ -25,15 +25,14 @@ namespace gui
 	class widget;
 
 	class drawer_trigger
-		: private nana::noncopyable
+		: nana::noncopyable, nana::nonmovable
 	{
 	public:
 		typedef gui::widget&		widget_reference;
 		typedef paint::graphics&	graph_reference;
 
 		virtual ~drawer_trigger();
-		virtual void bind_window(widget_reference);
-		virtual void attached(graph_reference);	//none-const
+		virtual void attached(widget_reference, graph_reference);	//none-const
 		virtual void detached();	//none-const
 
 		virtual void typeface_changed(graph_reference);
@@ -69,18 +68,17 @@ namespace gui
 			class object;
 		}
 
-		//class drawer
 		//@brief:	Every window has a drawer, the drawer holds a drawer_trigger for
 		//			a widget.
 		class drawer
-			: nana::noncopyable
+			: nana::noncopyable, nana::nonmovable
 		{
 		public:
 
 			drawer();
 			~drawer();
 
-			void attached(basic_window*);
+			void bind(basic_window*);
 
 			void typeface_changed();
 			void click(const eventinfo&);
@@ -103,11 +101,11 @@ namespace gui
 			void map(window);	//Copy the root buffer to screen
 			void refresh();
 			drawer_trigger* realizer() const;
-			void attached(drawer_trigger&);
+			void attached(widget&, drawer_trigger&);
 			drawer_trigger* detached();
 		public:
 			void clear();
-			void* draw(const nana::functor<void(paint::graphics&)> & , bool diehard);
+			void* draw(std::function<void(paint::graphics&)> &&, bool diehard);
 			void erase(void* diehard);
 			void string(int x, int y, unsigned color, const nana::char_t*);
 			void line(int x, int y, int x2, int y2, unsigned color);
@@ -117,7 +115,7 @@ namespace gui
 			void bitblt(int x, int y, unsigned width, unsigned height, const nana::paint::image& img, int srcx, int srcy);
 			void stretch(const nana::rectangle& r_dst, const nana::paint::graphics& graph, const nana::rectangle& r_src);
 			void stretch(const nana::rectangle& r_dst, const nana::paint::image& img, const nana::rectangle& r_src);
-			event_handle make_event(event_code::t, window wd);
+			event_handle make_event(event_code, window trigger);
 		private:
 			void _m_bground_pre();
 			void _m_bground_end();

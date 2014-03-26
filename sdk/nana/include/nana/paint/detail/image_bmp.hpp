@@ -2,6 +2,7 @@
 #define NANA_PAINT_DETAIL_IMAGE_BMP_HPP
 
 #include "image_impl_interface.hpp"
+#include <memory>
 
 namespace nana{	namespace paint
 {
@@ -64,7 +65,7 @@ namespace nana{	namespace paint
 
 			bool open(const nana::char_t* filename)
 			{
-				if(filename == 0) return false;
+				if(nullptr == filename) return false;
 				std::ifstream ifs;
 #if defined(NANA_UNICODE)
 				ifs.open(static_cast<std::string>(nana::charset(filename)).c_str(), std::ios::binary);
@@ -74,11 +75,14 @@ namespace nana{	namespace paint
 				if(ifs)
 				{
 					ifs.seekg(0, std::ios::end);
-					const std::streamsize size = ifs.tellg();
+					auto size = ifs.tellg();
 					ifs.seekg(0, std::ios::beg);
 
-					nana::auto_buf<char> buffer(static_cast<size_t>(size));
+					if(size <= sizeof(bitmap_file_header))
+						return false;
 
+					std::unique_ptr<char[]> buffer(new char[static_cast<int>(size)]);
+					
 					ifs.read(buffer.get(), size);
 					if(size == ifs.gcount())
 					{
@@ -97,6 +101,7 @@ namespace nana{	namespace paint
 								bytes_per_line = info->bmiHeader.biSizeImage / height_pixels;
 
 							pixbuf_.open(info->bmiHeader.biWidth, height_pixels);
+
 							pixel_rgb_t * d = pixbuf_.raw_ptr(0);
 
 							if(16 <= info->bmiHeader.biBitCount)

@@ -66,6 +66,7 @@ namespace nana
 					interface_t * employee;				
 				}blur_;
 			public:
+
 				static image_process_provider & instance();
 
 				stretch_tag & ref_stretch_tag();
@@ -91,7 +92,7 @@ namespace nana
 				template<typename Tag>
 				void set(Tag & tag, const std::string& name)
 				{
-					typename Tag::table_t::iterator i = tag.table.find(name);
+					auto i = tag.table.find(name);
 					if(i != tag.table.end())
 						tag.employee = &(*(i->second));
 				}
@@ -106,9 +107,9 @@ namespace nana
 					if(tag.table.count(name) == 0)
 					{
 						typedef typename Tag::cloneable_t cloneable_t;
-						cloneable_t& obj = tag.table[name];
+						auto & obj = tag.table[name];
 						obj = cloneable_t(ImageProcessor());
-						if(0 == tag.employee)
+						if(nullptr == tag.employee)
 							tag.employee = &(*obj);
 					}
 				}
@@ -116,8 +117,8 @@ namespace nana
 				template<typename Tag>
 				typename Tag::interface_t* _m_read(const Tag& tag, const std::string& name) const
 				{
-					typename Tag::table_t::const_iterator i = tag.table.find(name);
-					return (i != tag.table.end() ? &(*(i->second)) : tag.employee);
+					auto i = tag.table.find(name);
+					return (i != tag.table.end() ? &(*i->second) : tag.employee);
 				}
 			};
 		}

@@ -37,7 +37,6 @@ namespace nana{ namespace gui{
 					if(state == StateHighlighted)
 					{
 						graph.rectangle(r, 0xAFC7E3, false);
-						graph.rectangle(r.x + 1, r.y + 1, r.width - 2, r.height - 2, 0xEBF4FB, false);
 
 						graph.set_pixel(r.x, r.y, 0xFFFFFF);
 						graph.set_pixel(r.x + r.width - 1, r.y, 0xFFFFFF);
@@ -49,7 +48,9 @@ namespace nana{ namespace gui{
 						graph.set_pixel(r.x + 1, r.y + r.height - 2, 0xAFC7E3);
 						graph.set_pixel(r.x + r.width - 2, r.y + r.height - 2, 0xAFC7E3);
 
-						graph.shadow_rectangle(nana::rectangle(r).pare_off(2), 0xDDECFD, 0xC2DCFD, true);
+						nana::rectangle po_r(r);
+						graph.rectangle(po_r.pare_off(1), 0xEBF4FB, false);
+						graph.shadow_rectangle(po_r.pare_off(1), 0xDDECFD, 0xC2DCFD, true);
 					}
 					else
 						graph.rectangle(r, 0xFFFFFF, true);
@@ -97,7 +98,6 @@ namespace nana{ namespace gui{
 						}
 						x += (image_pixels_ + 2);
 					}
-
 					graph.string(x, r.y + 2, 0x0, item.text);
 				}
 
@@ -105,7 +105,7 @@ namespace nana{ namespace gui{
 				{
 					return graph.text_extent_size(STR("jHWn/?\\{[(0569")).height + 4;
 				}
-			};//end class def_item_renderer
+			};//end class item_renderer
 
 			//struct module_def
 				module_def::item_type::item_type(const nana::string& s)
@@ -121,12 +121,12 @@ namespace nana{ namespace gui{
 			class drawer_impl
 			{
 			public:
-				typedef nana::gui::widget& widget_reference;
+				typedef widget& widget_reference;
 				typedef nana::paint::graphics& graph_reference;
 
 				drawer_impl()
-					:	widget_(0), graph_(0), image_pixels_(16),
-						ignore_first_mouseup_(true), module_(0)
+					:	widget_(nullptr), graph_(nullptr), image_pixels_(16),
+						ignore_first_mouseup_(true), module_(nullptr)
 				{}
 
 				void clear_state()
@@ -181,11 +181,11 @@ namespace nana{ namespace gui{
 					{
 						draw();
 						scrollbar_.value(state_.offset_y);
-						API::update_window(widget_->handle());
+						API::update_window(*widget_);
 					}
 				}
 
-				void move_items(bool upwards, bool circle)
+				void move_items(bool upwards, bool recycle)
 				{
 					if(module_ && module_->items.size())
 					{
@@ -200,7 +200,7 @@ namespace nana{ namespace gui{
 							{
 								if(state_.index)
 									--(state_.index);
-								else if(circle)
+								else if(recycle)
 								{
 									state_.index = static_cast<unsigned>(module_->items.size() - 1);
 									state_.offset_y = last_offset_y;
@@ -213,7 +213,7 @@ namespace nana{ namespace gui{
 							{
 								if(state_.index < module_->items.size() - 1)
 									++(state_.index);
-								else if(circle)
+								else if(recycle)
 								{
 									state_.index = 0;
 									state_.offset_y = 0;
@@ -230,7 +230,7 @@ namespace nana{ namespace gui{
 						{
 							draw();
 							scrollbar_.value(state_.offset_y);
-							API::update_window(widget_->handle());
+							API::update_window(*widget_);
 						}
 					}
 				}
@@ -257,7 +257,7 @@ namespace nana{ namespace gui{
 
 				void detach()
 				{
-					graph_ = 0;
+					graph_ = nullptr;
 				}
 
 				void resize()
@@ -276,6 +276,7 @@ namespace nana{ namespace gui{
 					md.have_selected = false;
 					if(md.index >= md.items.size())
 						md.index = npos;
+
 					image_pixels_ = pixels;
 				}
 
@@ -319,11 +320,10 @@ namespace nana{ namespace gui{
 						if(graph_->width() > outter_w && graph_->height() > 4 )
 						{
 							//Draw items
-							std::size_t items = pages ? module_->max_items : module_->items.size();							
+							std::size_t items = (pages ? module_->max_items : module_->items.size());							
 							items += state_.offset_y;
 
 							const unsigned item_pixels = state_.renderer->item_pixels(*graph_);
-
 							nana::rectangle item_r(2, 2, graph_->width() - outter_w, item_pixels);
 
 							state_.renderer->image(_m_image_enabled(), image_pixels_);
@@ -339,9 +339,7 @@ namespace nana{ namespace gui{
 						_m_open_scrollbar(*widget_, pages);
 					}
 					else
-					{
 						graph_->string(4, 4, 0x808080, STR("Empty Listbox, No Module!"));
-					}
 
 					//Draw border
 					graph_->rectangle(0x0, false);
@@ -350,9 +348,9 @@ namespace nana{ namespace gui{
 			private:
 				bool _m_image_enabled() const
 				{
-					for(std::vector<module_def::item_type>::const_iterator i = module_->items.begin(), end = module_->items.end(); i != end; ++i)
+					for(auto & i : module_->items)
 					{
-						if(false == i->img.empty())
+						if(false == i.img.empty())
 							return true;
 					}
 					return false;
@@ -403,7 +401,6 @@ namespace nana{ namespace gui{
 				unsigned image_pixels_;		//Define the width pixels of the image area
 
 				bool ignore_first_mouseup_;
-
 				struct state_type
 				{
 					std::size_t offset_y;
@@ -446,14 +443,9 @@ namespace nana{ namespace gui{
 					return *drawer_;
 				}
 
-				void trigger::bind_window(widget_reference widget)
+				void trigger::attached(widget_reference widget, graph_reference graph)
 				{
-					drawer_->attach(&widget, 0);
-				}
-
-				void trigger::attached(graph_reference graph)
-				{
-					drawer_->attach(0, &graph);
+					drawer_->attach(&widget, &graph);
 					window wd = *drawer_->widget_ptr();
 					API::dev::make_drawer_event<events::mouse_move>(wd);
 					API::dev::make_drawer_event<events::mouse_down>(wd);
@@ -463,7 +455,6 @@ namespace nana{ namespace gui{
 				void trigger::detached()
 				{
 					drawer_->detach();
-					API::dev::umake_drawer_event(*drawer_->widget_ptr());
 				}
 
 				void trigger::refresh(graph_reference)
@@ -480,7 +471,7 @@ namespace nana{ namespace gui{
 					}
 				}
 
-				void trigger::mouse_up(trigger::graph_reference graph, const eventinfo& ei)
+				void trigger::mouse_up(graph_reference graph, const eventinfo& ei)
 				{
 					if(drawer_->right_area(graph, ei.mouse.x, ei.mouse.y))
 					{
@@ -507,7 +498,7 @@ namespace nana{ namespace gui{
 
 		void float_listbox::set_module(const float_listbox::module_type& md, unsigned pixels)
 		{
-			drawerbase::float_listbox::drawer_impl & impl = get_drawer_trigger().get_drawer_impl();
+			auto & impl = get_drawer_trigger().get_drawer_impl();
 			impl.set_module(md, pixels);
 			impl.resize();
 			show();

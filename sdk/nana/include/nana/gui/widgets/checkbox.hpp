@@ -13,28 +13,26 @@
 #define NANA_GUI_WIDGET_CHECKBOX_HPP
 #include "widget.hpp"
 #include <vector>
+#include <memory>
 
-namespace nana{	namespace gui{
+namespace nana { namespace gui
+{
 namespace drawerbase
 {
 	namespace checkbox
 	{
-
 		class drawer
 			: public drawer_trigger
 		{
 			struct implement;
 		public:
 			drawer();
-			~drawer();
-			void bind_window(widget_reference);
-			void attached(graph_reference);
-			void detached();
-			void refresh(graph_reference);
-			void mouse_enter(graph_reference, const eventinfo&);
-			void mouse_leave(graph_reference, const eventinfo&);
-			void mouse_down(graph_reference, const eventinfo&);
-			void mouse_up(graph_reference, const eventinfo&);
+			void attached(widget_reference, graph_reference)	override;
+			void refresh(graph_reference)	override;
+			void mouse_enter(graph_reference, const eventinfo&)	override;
+			void mouse_leave(graph_reference, const eventinfo&)	override;
+			void mouse_down(graph_reference, const eventinfo&)	override;
+			void mouse_up(graph_reference, const eventinfo&)	override;
 		public:
 			implement * impl() const;
 		private:
@@ -46,6 +44,7 @@ namespace drawerbase
 			static const int interval = 4;
 			widget* widget_;
 			unsigned state_;
+			std::shared_ptr<implement> imptr_;
 			implement * impl_;
 		};
 	}//end namespace checkbox

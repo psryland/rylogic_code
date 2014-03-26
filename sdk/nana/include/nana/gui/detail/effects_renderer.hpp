@@ -3,7 +3,8 @@
 #include <nana/gui/effects.hpp>
 #include <nana/paint/graphics.hpp>
 #include <nana/paint/pixel_buffer.hpp>
-#include "window_layout.hpp"
+
+#include <nana/gui/layout_utility.hpp>
 
 namespace nana{	namespace gui{
 	namespace detail
@@ -14,7 +15,7 @@ namespace nana{	namespace gui{
 			edge_nimbus_renderer(){}
 		public:
 			typedef CoreWindow core_window_t;
-			typedef window_layout<core_window_t> window_layer;
+			typedef window_layout window_layer;
 			typedef nana::paint::graphics & graph_reference;
 
 			static edge_nimbus_renderer& instance()
@@ -32,40 +33,39 @@ namespace nana{	namespace gui{
 			{
 				bool rendered = false;
 				core_window_t * root_wd = wd->root_widget;
-				if(root_wd->other.attribute.root->effects_edge_nimbus.size())
+				auto & nimbus = root_wd->other.attribute.root->effects_edge_nimbus;
+
+				if(nimbus.size())
 				{
 					core_window_t * focused = root_wd->other.attribute.root->focus;
 					native_window_type native = root_wd->root;
 					std::size_t pixels = weight();
 
-					nana::paint::graphics * graph = root_wd->root_graph;
+					auto graph = root_wd->root_graph;
 
 					std::vector<core_window_t*> erase;
-					std::vector<nana::rectangle>	r_set;
+					std::vector<rectangle>	r_set;
 					nana::rectangle r;
-					typename core_window_t::edge_nimbus_container & cont = root_wd->other.attribute.root->effects_edge_nimbus;
-					for(typename core_window_t::edge_nimbus_container::iterator i = cont.begin(); i != cont.end(); ++i)
+					for(auto & action : nimbus)
 					{
-						typename core_window_t::edge_nimbus_action & ena = *i;
-						if(_m_edge_nimbus(focused, ena.window) && window_layer::read_visual_rectangle(ena.window, r))
+						if(_m_edge_nimbus(focused, action.window) && window_layer::read_visual_rectangle(action.window, r))
 						{
-							if(ena.window == wd)
+							if(action.window == wd)
 								rendered = true;
 
 							r_set.push_back(r);
-							ena.rendered = true;
+							action.rendered = true;
 						}
-						else if(ena.rendered)
+						else if(action.rendered)
 						{
-							ena.rendered = false;
-							erase.push_back(ena.window);
+							action.rendered = false;
+							erase.push_back(action.window);
 						}
 					}
 
 					//Erase
-					for(typename std::vector<core_window_t*>::iterator i = erase.begin(); i != erase.end(); ++i)
+					for(auto el : erase)
 					{
-						core_window_t * el = *i;
 						if(el == wd)
 							rendered = true;
 
@@ -73,15 +73,16 @@ namespace nana{	namespace gui{
 						r.y = el->pos_root.y - static_cast<int>(pixels);
 						r.width = static_cast<unsigned>(el->dimension.width + (pixels << 1));
 						r.height = static_cast<unsigned>(el->dimension.height + (pixels << 1));
+
 						graph->paste(native, r, r.x, r.y);
 					}
 
-					std::vector<nana::rectangle>::iterator visual_iterator = r_set.begin();
+					auto visual_iterator = r_set.begin();
 					//Render
-					for(typename core_window_t::edge_nimbus_container::iterator i = cont.begin(); i != cont.end(); ++i)
+					for(auto & action : nimbus)
 					{
-						if(i->rendered)
-							_m_render_edge_nimbus(i->window, *(visual_iterator++));
+						if(action.rendered)
+							_m_render_edge_nimbus(action.window, *(visual_iterator++));
 					}
 				}
 				return rendered;
@@ -89,9 +90,9 @@ namespace nana{	namespace gui{
 		private:
 			static bool _m_edge_nimbus(core_window_t * focused_wd, core_window_t * wd)
 			{
-				if((focused_wd == wd) && (wd->effect.edge_nimbus & effects::edge_nimbus::active))
+				if((focused_wd == wd) && (static_cast<unsigned>(wd->effect.edge_nimbus) & static_cast<unsigned>(effects::edge_nimbus::active)))
 					return true;
-				else if((wd->effect.edge_nimbus & effects::edge_nimbus::over) && (wd->flags.action == mouse_action::over))
+				else if((static_cast<unsigned>(wd->effect.edge_nimbus) & static_cast<unsigned>(effects::edge_nimbus::over)) && (wd->flags.action == mouse_action::over))
 					return true;
 				return false;
 			}
@@ -101,12 +102,12 @@ namespace nana{	namespace gui{
 				nana::rectangle r(visual);
 				r.pare_off(-static_cast<int>(weight()));
 				nana::rectangle good_r;
-				if(nana::gui::overlap(r, nana::rectangle(wd->root_graph->size()), good_r))
+				if(overlap(r, nana::rectangle(wd->root_graph->size()), good_r))
 				{
 					if(	(good_r.x < wd->pos_root.x) || (good_r.y < wd->pos_root.y) ||
 						(good_r.x + good_r.width > visual.x + visual.width) || (good_r.y + good_r.height > visual.y + visual.height))
 					{
-						nana::paint::graphics * graph = wd->root_graph;
+						auto graph = wd->root_graph;
 						nana::paint::pixel_buffer pixbuf(graph->handle(), r);
 
 						pixel_rgb_t px0, px1, px2, px3;
@@ -136,12 +137,8 @@ namespace nana{	namespace gui{
 						std::vector<typename window_layer::wd_rectangle> overlaps;
 						if(window_layer::read_overlaps(wd, visual, overlaps))
 						{
-							typename std::vector<typename window_layer::wd_rectangle>::iterator i = overlaps.begin(), end = overlaps.end();
-							for(; i != end; ++i)
-							{
-								const nana::rectangle& r = i->r;
-								graph->paste(wd->root, r, r.x, r.y);
-							}
+							for(auto & wdr : overlaps)
+								graph->paste(wd->root, wdr.r, wdr.r.x, wdr.r.y);
 						}
 					}
 					else

@@ -6,19 +6,17 @@
  *	(See accompanying file LICENSE_1_0.txt or copy at 
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
- *	@file: nana/deploy.hpp
+ *	@file: nana/depoly.cpp
  *
  *	What follow are dependented on what defined in nana/config.hpp
  */
 
 #include <nana/deploy.hpp>
-#include <nana/auto_buf.hpp>
 
 #if defined(NANA_WINDOWS)
 	#include <windows.h>
 #elif defined(NANA_LINUX)
 	#include <string.h>
-	#include <nana/config.hpp>
 	#include PLATFORM_SPEC_HPP
 #endif
 
@@ -33,7 +31,7 @@ namespace nana
 #endif
 	}
 
-	double strtod(const char_t* str, char_t**endptr)
+	double strtod(const char_t* str, char_t** endptr)
 	{
 #if defined(NANA_UNICODE)
 		return ::wcstod(str, endptr);

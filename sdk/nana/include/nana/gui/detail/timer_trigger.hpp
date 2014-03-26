@@ -42,7 +42,7 @@ namespace detail
 		static timer_handle* _m_find_by_timer_object(timer_object t);
 		
 	private:
-		static nana::threads::recursive_mutex mutex_;
+		static std::recursive_mutex mutex_;
 		static holder_timer_type holder_timer_;
 		static holder_handle_type holder_handle_;
 	};//end class timer_trigger

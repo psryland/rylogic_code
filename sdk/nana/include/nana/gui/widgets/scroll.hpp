@@ -26,9 +26,9 @@ namespace nana{ namespace gui{
 				nana::fn_group<void(widget&)> value_changed;
 			};
 
-			struct buttons
+			enum class buttons
 			{
-				enum t{none, forward, backward, scroll, first, second};
+				none, forward, backward, scroll, first, second
 			};
 
 			struct metrics_type
@@ -40,7 +40,7 @@ namespace nana{ namespace gui{
 				size_type step;
 				size_type value;
 
-				buttons::t what;
+				buttons what;
 				bool pressed;
 				size_type	scroll_length;
 				int			scroll_pos;
@@ -62,17 +62,17 @@ namespace nana{ namespace gui{
 
 				drawer(metrics_type& m);
 				void set_vertical(bool);
-				buttons::t what(graph_reference, int x, int y);
+				buttons what(graph_reference, int x, int y);
 				void scroll_delta_pos(graph_reference, int);
 				void auto_scroll();
-				void draw(graph_reference, buttons::t);
+				void draw(graph_reference, buttons);
 			private:
 				bool _m_check() const;
 				void _m_adjust_scroll(graph_reference);
 				void _m_background(graph_reference);
 				void _m_button_frame(graph_reference, int x, int y, unsigned width, unsigned height, int state);
 				void _m_draw_scroll(graph_reference, int state);
-				void _m_draw_button(graph_reference, int x, int y, unsigned width, unsigned height, buttons::t what, int state);
+				void _m_draw_button(graph_reference, int x, int y, unsigned width, unsigned height, buttons what, int state);
 			private:
 				metrics_type &metrics_;
 				bool	vertical_;
@@ -80,14 +80,14 @@ namespace nana{ namespace gui{
 
 			template<bool Vertical>
 			class trigger
-				: public nana::gui::drawer_trigger
+				: public drawer_trigger
 			{
 			public:
 				typedef metrics_type::size_type size_type;
 				mutable extra_events ext_event;
 
 				trigger()
-					: graph_(0), drawer_(metrics_)
+					: graph_(nullptr), drawer_(metrics_)
 				{
 					drawer_.set_vertical(Vertical);
 				}
@@ -169,8 +169,9 @@ namespace nana{ namespace gui{
 					return false;
 				}
 			private:
-				void bind_window(widget_reference widget)
+				void attached(widget_reference widget, graph_reference graph)
 				{
+					graph_ = &graph;
 					widget_ = &widget;
 					widget.caption(STR("Nana Scroll"));
 
@@ -188,15 +189,9 @@ namespace nana{ namespace gui{
 					timer_.enable(false);
 				}
 
-				void attached(graph_reference graph)
-				{
-					graph_ = &graph;
-				}
-
 				void detached()
 				{
-					API::dev::umake_drawer_event(widget_->handle());
-					graph_ = 0;
+					graph_ = nullptr;
 				}
 
 				void refresh(graph_reference graph)
@@ -204,33 +199,33 @@ namespace nana{ namespace gui{
 					drawer_.draw(graph, metrics_.what);
 				}
 
-				void resize(graph_reference graph, const nana::gui::eventinfo& ei)
+				void resize(graph_reference graph, const eventinfo& ei)
 				{
 					drawer_.draw(graph, metrics_.what);
 					API::lazy_refresh();
 				}
 
-				void mouse_enter(graph_reference graph, const nana::gui::eventinfo& ei)
+				void mouse_enter(graph_reference graph, const eventinfo& ei)
 				{
 					metrics_.what = drawer_.what(graph, ei.mouse.x, ei.mouse.y);
 					drawer_.draw(graph, metrics_.what);
 					API::lazy_refresh();
 				}
 
-				void mouse_move(graph_reference graph, const nana::gui::eventinfo& ei)
+				void mouse_move(graph_reference graph, const eventinfo& ei)
 				{
 					bool redraw = false;
 					if(metrics_.pressed && (metrics_.what == buttons::scroll))
 					{
-						redraw = true;
 						size_type cmpvalue = metrics_.value;
 						drawer_.scroll_delta_pos(graph, (Vertical ? ei.mouse.y : ei.mouse.x));
 						if(cmpvalue != metrics_.value)
 							ext_event.value_changed(*widget_);
+						redraw = true;
 					}
 					else
 					{
-						buttons::t what = drawer_.what(graph, ei.mouse.x, ei.mouse.y);
+						buttons what = drawer_.what(graph, ei.mouse.x, ei.mouse.y);
 						if(metrics_.what != what)
 						{
 							redraw = true;
@@ -254,7 +249,7 @@ namespace nana{ namespace gui{
 						{
 						case buttons::first:
 						case buttons::second:
-							this->make_step(metrics_.what == buttons::second, 1);
+							make_step(metrics_.what == buttons::second, 1);
 							timer_.interval(1000);
 							timer_.enable(true);
 							break;
@@ -303,7 +298,7 @@ namespace nana{ namespace gui{
 
 				void mouse_wheel(graph_reference graph, const eventinfo& ei)
 				{
-					if(this->make_step(ei.wheel.upwards == false, 3))
+					if(make_step(ei.wheel.upwards == false, 3))
 					{
 						drawer_.draw(graph, metrics_.what);
 						API::lazy_refresh();
@@ -312,12 +307,12 @@ namespace nana{ namespace gui{
 			private:
 				void _m_tick()
 				{
-					this->make_step(metrics_.what == buttons::second, 1);
+					make_step(metrics_.what == buttons::second, 1);
 					API::refresh_window(widget_->handle());
 					timer_.interval(100);
 				}
 			private:
-				nana::gui::widget * widget_;
+				widget * widget_;
 				nana::paint::graphics * graph_;
 				metrics_type metrics_;
 				drawer	drawer_;
@@ -326,6 +321,9 @@ namespace nana{ namespace gui{
 		}//end namespace scroll
 	}//end namespace drawerbase
 
+	/// A scroll widget
+	/// The template class scroll provides a way that a window can display the data object
+	/// which is larger than the window's client area.
 	template<bool Vertical>
 	class scroll
 		: public widget_object<category::widget_tag, drawerbase::scroll::trigger<Vertical> >
@@ -364,7 +362,7 @@ namespace nana{ namespace gui{
 		/// @param for_less, whether it can be scrolled for a less value.
 		bool scrollable(bool for_less) const
 		{
-			const drawerbase::scroll::metrics_type & m = this->get_drawer_trigger().metrics();
+			auto & m = this->get_drawer_trigger().metrics();
 			return (for_less ? (0 != m.value) : (m.value < m.peak - m.range));
 		}
 
@@ -378,6 +376,7 @@ namespace nana{ namespace gui{
 			return this->get_drawer_trigger().peak(Max);
 		}
 
+		/// Get the range of the widget.
 		size_type range() const
 		{
 			return this->get_drawer_trigger().metrics().range;
@@ -402,6 +401,7 @@ namespace nana{ namespace gui{
 		{
 			return this->get_drawer_trigger().value(s);
 		}
+
 
 		/// Get the step of the sroll widget. The step indicates a variation of the value.
 		/// @return the step.

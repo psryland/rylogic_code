@@ -20,62 +20,73 @@ namespace nana
 			: x(r.x), y(r.y)
 		{}
 
-		bool point::operator==(const point& rhs) const
-		{
-			return ((x == rhs.x) && (y == rhs.y));
-		}
-		bool point::operator!=(const point& rhs) const
-		{
-			return ((x != rhs.x) || (y != rhs.y));
-		}
-		bool point::operator<(const point& rhs) const
-		{
-			return ((y < rhs.y) || (y == rhs.y && x < rhs.x));
-		}
-		bool point::operator<=(const point& rhs) const
-		{
-			return ((y < rhs.y) || (y == rhs.y && x <= rhs.x));
-		}
-		bool point::operator>(const point& rhs) const
-		{
-			return ((y > rhs.y) || (y == rhs.y && x > rhs.x));
-		}
-		bool point::operator>=(const point& rhs) const
-		{
-			return ((y > rhs.y) || (y == rhs.y && x >= rhs.x));
-		}
-
-		point& point::operator=(const nana::rectangle& r)
+		point& point::operator=(const rectangle& r)
 		{
 			x = r.x;
 			y = r.y;
 			return *this;
+		}
+
+		bool point::operator==(const point& rhs) const
+		{
+			return ((x == rhs.x) && (y == rhs.y));
+		}
+
+		bool point::operator!=(const point& rhs) const
+		{
+			return ((x != rhs.x) || (y != rhs.y));
+		}
+
+		bool point::operator<(const point& rhs) const
+		{
+			return ((y < rhs.y) || (y == rhs.y && x < rhs.x));
+		}
+
+		bool point::operator<=(const point& rhs) const
+		{
+			return ((y < rhs.y) || (y == rhs.y && x <= rhs.x));
+		}
+
+		bool point::operator>(const point& rhs) const
+		{
+			return ((y > rhs.y) || (y == rhs.y && x > rhs.x));
+		}
+
+		bool point::operator>=(const point& rhs) const
+		{
+			return ((y > rhs.y) || (y == rhs.y && x >= rhs.x));
 		}
 	//end struct point
 
 	//struct upoint
 		upoint::upoint():x(0), y(0){}
 		upoint::upoint(unsigned x, unsigned y):x(x), y(y){}
+
 		bool upoint::operator==(const upoint& rhs) const
 		{
 			return ((x == rhs.x) && (y == rhs.y));
 		}
+
 		bool upoint::operator!=(const upoint& rhs) const
 		{
 			return ((x != rhs.x) || (y != rhs.y));
 		}
+
 		bool upoint::operator<(const upoint& rhs) const
 		{
 			return ((y < rhs.y) || (y == rhs.y && x < rhs.x));
 		}
+
 		bool upoint::operator<=(const upoint& rhs) const
 		{
 			return ((y < rhs.y) || (y == rhs.y && x <= rhs.x));
 		}
+
 		bool upoint::operator>(const upoint& rhs) const
 		{
 			return ((y > rhs.y) || (y == rhs.y && x > rhs.x));
 		}
+
 		bool upoint::operator>=(const upoint& rhs) const
 		{
 			return ((y > rhs.y) || (y == rhs.y && x >= rhs.x));
@@ -89,10 +100,18 @@ namespace nana
 			: width(r.width), height(r.height)
 		{}
 
+		size& size::operator=(const rectangle& r)
+		{
+			width = r.width;
+			height = r.height;
+			return *this;
+		}
+
 		bool size::is_zero() const
 		{
 			return (width == 0 || height == 0);
 		}
+
 		bool size::operator==(const size& rhs) const
 		{
 			return (width == rhs.width) && (height == rhs.height);
@@ -101,13 +120,6 @@ namespace nana
 		bool size::operator!=(const size& rhs) const
 		{
 			return (width != rhs.width) || (height != rhs.height);
-		}
-
-		size& size::operator=(const nana::rectangle& r)
-		{
-			width = r.width;
-			height = r.height;
-			return *this;
 		}
 	//end struct size
 
@@ -145,7 +157,7 @@ namespace nana
 			return *this;
 		}
 
-		rectangle & rectangle::operator=(const size& sz)
+		rectangle & rectangle::operator=(const size & sz)
 		{
 			width = sz.width;
 			height = sz.height;
@@ -164,38 +176,7 @@ namespace nana
 		bool rectangle::is_hit(int pos_x, int pos_y) const
 		{
 			return	(x <= pos_x && pos_x < x + static_cast<int>(width)) &&
-					(y <= pos_y && pos_y < y + static_cast<int>(height));		
+					(y <= pos_y && pos_y < y + static_cast<int>(height));
 		}
 	//end struct rectangle
-
-	//struct arrange
-		arrange::arrange()
-			: value(horizontal)
-		{}
-
-		arrange::arrange(arrange::t x)
-			: value(x)
-		{}
-
-		arrange::operator arrange::t() const
-		{
-			return value;
-		}
-
-		arrange& arrange::operator=(arrange::t x)
-		{
-			value = x;
-			return *this;
-		}
-
-		bool arrange::operator==(arrange::t x) const
-		{
-			return (value == x);
-		}
-
-		bool arrange::operator!=(arrange::t x) const
-		{
-			return (value != x);
-		}
-	//end struct arrange
 }

@@ -9,21 +9,21 @@ namespace nana
 	public:
 		typedef wchar_t char_type;
 		
-		struct directional_override_status
+		enum class directional_override_status
 		{
-			enum t{neutral, right_to_left, left_to_right};
+			neutral, right_to_left, left_to_right	
 		};
 
-		struct bidi_char
+		enum class bidi_char
 		{
-			enum t{	L, LRE, LRO, R, AL, RLE, RLO,
-				PDF = 0x1000, EN, ES, ET, AN, CS, NSM, BN,
-				B = 0x2000, S, WS, ON};
+			L, LRE, LRO, R, AL, RLE, RLO,
+			PDF = 0x1000, EN, ES, ET, AN, CS, NSM, BN,
+			B = 0x2000, S, WS, ON
 		};
 
-		struct bidi_category
+		enum class bidi_category
 		{
-			enum t{strong, weak = 0x1000, neutral = 0x2000};
+			strong, weak = 0x1000, neutral = 0x2000
 		};
 		
 		const static char_type LRE = 0x202A;
@@ -37,33 +37,32 @@ namespace nana
 		struct remember
 		{
 			unsigned level;
-			directional_override_status::t override;	
+			directional_override_status directional_override;	
 		};
 		
 		struct entity
 		{
 			const wchar_t * begin, * end;
-			bidi_char::t bidi_char_type;
+			bidi_char bidi_char_type;
 			unsigned level;
 		};
 
-		unicode_bidi();
-		void linestr(const char_type* str, std::size_t len, std::vector<entity> & reordered);
+		void linestr(const char_type*, std::size_t len, std::vector<entity> & reordered);
 	private:
 		static unsigned _m_paragraph_level(const char_type * begin, const char_type * end);
 
-		void _m_push_entity(const char_type * begin, const char_type *end, unsigned level, bidi_char::t bidi_char_type);
+		void _m_push_entity(const char_type * begin, const char_type *end, unsigned level, bidi_char);
 
 		std::vector<entity>::iterator _m_search_first_character();
 
-		bidi_char::t _m_eor(std::vector<entity>::iterator i);
+		bidi_char _m_eor(std::vector<entity>::iterator);
 
 		void _m_resolve_weak_types();
 		void _m_resolve_neutral_types();
 		void _m_resolve_implicit_levels();
-		void _m_reordering_resolved_levels(const char_type * str, std::vector<entity> & reordered);
-		static bidi_category::t _m_bidi_category(bidi_char::t bidi_char_type);
-		static bidi_char::t _m_char_dir(char_type ch);
+		void _m_reordering_resolved_levels(const char_type*, std::vector<entity> & reordered);
+		static bidi_category _m_bidi_category(bidi_char);
+		static bidi_char _m_char_dir(char_type);
 	private:
 		void _m_output_levels() const;
 		void _m_output_bidi_char() const;

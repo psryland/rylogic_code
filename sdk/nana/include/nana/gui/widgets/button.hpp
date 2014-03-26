@@ -1,5 +1,6 @@
 /*
  *	A Button Implementation
+ *	Nana C++ Library(http://www.nanapro.org)
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
  *	Distributed under the Boost Software License, Version 1.0. 
@@ -20,14 +21,14 @@ namespace nana{namespace gui{
 		namespace button
 		{
 			//button_drawer
-			//@brief: Draw the button
-			class trigger: public nana::gui::drawer_trigger
+			//@brief:	Draw the button
+			class trigger: public drawer_trigger
 			{
 			public:
 				struct bgimage_tag;
-				struct state
+				enum class state
 				{
-					enum t{normal, focused, highlight, pressed, disabled};
+					normal, focused, highlight, pressed, disabled
 				};
 				
 				trigger();
@@ -41,17 +42,15 @@ namespace nana{namespace gui{
 				void omitted(bool);
 				bool focus_color(bool);
 			private:
-				void bind_window(widget_reference);
-				void attached(graph_reference);
-				void detached();
-				void refresh(graph_reference);
-				void mouse_enter(graph_reference, const eventinfo&);
-				void mouse_leave(graph_reference, const eventinfo&);
-				void mouse_down(graph_reference, const eventinfo&);
-				void mouse_up(graph_reference, const eventinfo&);
-				void key_char(graph_reference, const eventinfo&);
-				void key_down(graph_reference, const eventinfo&);
-				void focus(graph_reference, const eventinfo&);
+				void attached(widget_reference, graph_reference) override;
+				void refresh(graph_reference)	override;
+				void mouse_enter(graph_reference, const eventinfo&)	override;
+				void mouse_leave(graph_reference, const eventinfo&)	override;
+				void mouse_down(graph_reference, const eventinfo&)	override;
+				void mouse_up(graph_reference, const eventinfo&)	override;
+				void key_char(graph_reference, const eventinfo&)	override;
+				void key_down(graph_reference, const eventinfo&)	override;
+				void focus(graph_reference, const eventinfo&)	override;
 			private:
 				void _m_draw(graph_reference);
 				void _m_draw_title(graph_reference, bool enabled);
@@ -68,7 +67,7 @@ namespace nana{namespace gui{
 					bool focused;
 					bool pushed;
 					bool keep_pressed;
-					state::t act_state;
+					state act_state;
 					bool enable_pushed;
 					bool focus_color;
 					paint::image * icon;
@@ -80,11 +79,10 @@ namespace nana{namespace gui{
 	}//end namespace drawerbase
 
 		//button
-		//@brief: defaine a button widget and it provides the interfaces to be operational
+		//@brief: define a button widget and it provides the interfaces to be operational
 		class button
 			: public widget_object<category::widget_tag, drawerbase::button::trigger>
 		{
-			typedef button self_type;
 			typedef widget_object<category::widget_tag, drawerbase::button::trigger> base_type;
 		public:
 			typedef drawerbase::button::trigger::state state;
@@ -93,13 +91,12 @@ namespace nana{namespace gui{
 			button(window, bool visible);
 			button(window, const nana::string& caption, bool visible = true);
 			button(window, const nana::char_t* caption, bool visible = true);
-			button(window, const rectangle& = rectangle(), bool visible = true);
-
+			button(window, const nana::rectangle& = rectangle(), bool visible = true);
 			button& icon(const nana::paint::image&);
 			button& image(const char_t * filename);
 			button& image(const nana::paint::image&);
-			button& image_enable(state::t, bool);
-			button& image_join(state::t target, state::t from);
+			button& image_enable(state, bool);
+			button& image_join(state target, state from);
 			button& image_stretch(nana::arrange, int beg, int end);
 			button& image_valid_area(nana::arrange, const nana::rectangle&);
 			button& enable_pushed(bool);

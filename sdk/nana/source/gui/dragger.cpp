@@ -1,8 +1,9 @@
 
 #include <nana/gui/dragger.hpp>
 
-namespace nana{ namespace gui
-{
+namespace nana{ namespace gui{
+
+
 	class dragger::dragger_impl_t
 	{
 		struct drag_target_t
@@ -40,31 +41,31 @@ namespace nana{ namespace gui
 		{
 			trigger_t tg;
 			tg.wd = wd;
-			nana::functor<void(const eventinfo&)> fn(*this, &dragger_impl_t::_m_trace);
-			tg.press = API::make_event<events::mouse_down>(wd, fn);
-			tg.over = API::make_event<events::mouse_move>(wd, fn);
-			tg.release = API::make_event<events::mouse_up>(wd, fn);
-			tg.destroy = API::make_event<events::destroy>(wd, fn);
+			auto f = std::bind(&dragger_impl_t::_m_trace, this, std::placeholders::_1);
+			tg.press = API::make_event<events::mouse_down>(wd, f);
+			tg.over = API::make_event<events::mouse_move>(wd, f);
+			tg.release = API::make_event<events::mouse_up>(wd, f);
+			tg.destroy = API::make_event<events::destroy>(wd, f);
 
 			triggers_.push_back(tg);
 		}
 	private:
 		void _m_clear_triggers()
 		{
-			for(std::vector<trigger_t>::iterator i = triggers_.begin(); i != triggers_.end(); ++i)
+			for(auto & t : triggers_)
 			{
-				API::umake_event(i->press);
-				API::umake_event(i->over);
-				API::umake_event(i->release);
-				API::umake_event(i->destroy);
-				API::capture_window(i->wd, false);
+				API::umake_event(t.press);
+				API::umake_event(t.over);
+				API::umake_event(t.release);
+				API::umake_event(t.destroy);
+				API::capture_window(t.wd, false);
 			}
 			triggers_.clear();
 		}
 
 		void _m_destroy(const eventinfo& ei)
 		{
-			for(std::vector<trigger_t>::iterator i = triggers_.begin(); i != triggers_.end(); ++i)
+			for(auto i = triggers_.begin(); i != triggers_.end(); ++i)
 			{
 				if(i->wd == ei.window)
 				{
@@ -83,12 +84,12 @@ namespace nana{ namespace gui
 				dragging_ = true;
 				API::capture_window(ei.window, true);
 				origin_ = API::cursor_position();
-				for(std::vector<drag_target_t>::iterator i = targets_.begin(); i != targets_.end(); ++i)
+				for(auto & t : targets_)
 				{
-					i->origin = API::window_position(i->wd);
-					window owner = API::get_owner_window(i->wd);
+					t.origin = API::window_position(t.wd);
+					window owner = API::get_owner_window(t.wd);
 					if(owner)
-						API::calc_screen_point(owner, i->origin);
+						API::calc_screen_point(owner, t.origin);
 				}
 				break;
 			case events::mouse_move::identifier:
@@ -97,21 +98,21 @@ namespace nana{ namespace gui
 					nana::point pos = API::cursor_position();
 					pos.x -= origin_.x;
 					pos.y -= origin_.y;
-					for(std::vector<drag_target_t>::iterator i = targets_.begin(); i != targets_.end(); ++i)
+					for(auto & t : targets_)
 					{
-						if(API::is_window_zoomed(i->wd, true) == false)
+						if(API::is_window_zoomed(t.wd, true) == false)
 						{
-							window owner = API::get_owner_window(i->wd);
+							window owner = API::get_owner_window(t.wd);
 							if(owner)
 							{
-								nana::point t = i->origin;
-								API::calc_window_point(owner, t);
-								t.x += pos.x;
-								t.y += pos.y;
-								API::move_window(i->wd, t.x, t.y);
+								nana::point wdps = t.origin;
+								API::calc_window_point(owner, wdps);
+								wdps.x += pos.x;
+								wdps.y += pos.y;
+								API::move_window(t.wd, wdps.x, wdps.y);
 							}
 							else
-								API::move_window(i->wd, i->origin.x + pos.x, i->origin.y + pos.y);
+								API::move_window(t.wd, t.origin.x + pos.x, t.origin.y + pos.y);
 						}
 					}
 				}
@@ -124,7 +125,7 @@ namespace nana{ namespace gui
 				break;
 			}
 		}
-		
+
 	private:
 		bool dragging_;
 		nana::point origin_;
@@ -135,7 +136,8 @@ namespace nana{ namespace gui
 	//class dragger
 		dragger::dragger()
 			: impl_(new dragger_impl_t)
-		{}
+		{
+		}
 
 		dragger::~dragger()
 		{

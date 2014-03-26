@@ -42,9 +42,9 @@ namespace nana{namespace audio
 		//class audio_device
 			audio_device::audio_device()
 #if defined(NANA_WINDOWS)
-				: handle_(0), buf_prep_(0)
+				: handle_(nullptr), buf_prep_(nullptr)
 #elif defined(NANA_LINUX)
-				: handle_(0), buf_prep_(0)
+				: handle_(nullptr), buf_prep_(nullptr)
 #endif
 			{}
 
@@ -55,7 +55,7 @@ namespace nana{namespace audio
 
 			bool audio_device::empty() const
 			{
-				return (0 == handle_);
+				return (nullptr == handle_);
 			}
 
 			bool audio_device::open(std::size_t channels, std::size_t rate, std::size_t bits_per_sample)
@@ -76,7 +76,7 @@ namespace nana{namespace audio
 				MMRESULT mmr = wave_native_if.out_open(&handle_, WAVE_MAPPER, &wfx, reinterpret_cast<DWORD_PTR>(&audio_device::_m_dev_callback), reinterpret_cast<DWORD_PTR>(this), CALLBACK_FUNCTION);
 				return (mmr == MMSYSERR_NOERROR);
 #elif defined(NANA_LINUX)
-				if(0 == handle_)
+				if(nullptr == handle_)
 				{
 					if(::snd_pcm_open(&handle_, "plughw:0,0", SND_PCM_STREAM_PLAYBACK, 0) < 0)
 						return false;
@@ -120,7 +120,7 @@ namespace nana{namespace audio
 					case 32:
 						format = SND_PCM_FORMAT_S32_LE;	break;
 					}
-					
+
 					if(::snd_pcm_hw_params_set_format(handle_, params, format) < 0)
 					{
 						close();
@@ -167,9 +167,9 @@ namespace nana{namespace audio
 #elif defined(NANA_LINUX)
 					::snd_pcm_close(handle_);
 #endif
-					handle_ = 0;
+					handle_ = nullptr;
 				}
-			}	
+			}
 
 			void audio_device::prepare(buffer_preparation & buf_prep)
 			{
@@ -179,7 +179,7 @@ namespace nana{namespace audio
 			void audio_device::write(buffer_preparation::meta * m)
 			{
 #if defined(NANA_WINDOWS)
-				threads::lock_guard<threads::recursive_mutex> lock(queue_mutex_);
+				std::lock_guard<decltype(queue_lock_)> lock(queue_lock_);
 				done_queue_.push_back(m);
 				if(m->dwFlags & WHDR_PREPARED)
 					wave_native_if.out_unprepare(handle_, m, sizeof(WAVEHDR));
@@ -222,7 +222,7 @@ namespace nana{namespace audio
 				{
 					buffer_preparation::meta * m;
 					{
-						threads::lock_guard<threads::recursive_mutex> lock(self->queue_mutex_);
+						std::lock_guard<decltype(queue_lock_)> lock(self->queue_lock_);
 						m = self->done_queue_.front();
 						self->done_queue_.erase(self->done_queue_.begin());
 					}

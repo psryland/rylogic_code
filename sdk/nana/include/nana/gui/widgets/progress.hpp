@@ -21,12 +21,10 @@ namespace gui
 	{
 		namespace progress
 		{
-			class trigger: public nana::gui::drawer_trigger
+			class trigger: public drawer_trigger
 			{
 			public:
 				trigger();
-				void bind_window(nana::gui::widget&);
-				void attached(graph_reference);
 				unsigned value() const;
 				unsigned value(unsigned);
 				unsigned inc();
@@ -35,7 +33,8 @@ namespace gui
 				void unknown(bool);
 				bool unknown() const;
 			private:
-				void refresh(graph_reference);
+				void attached(widget_reference, graph_reference)	override;
+				void refresh(graph_reference)	override;
 			private:
 				void _m_draw();
 				void _m_draw_box(graph_reference);
@@ -43,7 +42,7 @@ namespace gui
 				bool _m_check_changing(unsigned) const;
 			private:
 				static const unsigned border = 2;
-				nana::gui::widget * widget_;
+				widget * widget_;
 				nana::paint::graphics* graph_;
 				unsigned draw_width_;
 				bool has_value_;

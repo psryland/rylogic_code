@@ -26,21 +26,20 @@
 		typedef char		char_t;
 		typedef std::string string;
 	}
-
-	#define STR(string)	string
+	#define STR(string) string
 #else
 	namespace nana
 	{
 		typedef wchar_t			char_t;
 		typedef std::wstring	string;
 	}
-	#define STR(string)	L##string
+	#define STR(string) L##string
 #endif
 
 namespace nana
 {
 	std::size_t strlen(const char_t* str);
-	double strtod(const char_t* str, char_t**endptr);
+	double strtod(const char_t* str, char_t** endptr);
 	char_t* strcpy(char_t* dest, const char_t* source);
 }
 

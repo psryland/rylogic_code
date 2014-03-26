@@ -1,10 +1,10 @@
 /*
  *	Message Dispatcher Implementation
- *	Copyright(C) 2003-2012 Jinhao(cnjinhao@hotmail.com)
+ *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Nana Software License, Version 1.0. 
+ *	Distributed under the Boost Software License, Version 1.0. 
  *	(See accompanying file LICENSE_1_0.txt or copy at 
- *	http://stdex.sourceforge.net/LICENSE_1_0.txt)
+ *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/detail/msg_dispatcher.hpp
  *
@@ -18,13 +18,14 @@
 #ifndef NANA_DETAIL_MSG_DISPATCHER_HPP
 #define NANA_DETAIL_MSG_DISPATCHER_HPP
 #include "msg_packet.hpp"
-#include <nana/threads/thread.hpp>
-#include <nana/threads/mutex.hpp>
-#include <nana/threads/condition_variable.hpp>
 #include <nana/system/platform.hpp>
 #include <list>
 #include <set>
 #include <map>
+#include <mutex>
+#include <condition_variable>
+#include <memory>
+#include <thread>
 
 namespace nana
 {
@@ -35,9 +36,9 @@ namespace detail
 		struct thread_binder
 		{
 			unsigned tid;
-			nana::threads::mutex			mutex;
-			nana::threads::condition_variable	cond;
-			std::list<msg_packet_tag>		msg_queue;
+			std::mutex	mutex;
+			std::condition_variable	cond;
+			std::list<msg_packet_tag>	msg_queue;
 			std::set<Window> window;
 		};
 
@@ -71,7 +72,7 @@ namespace detail
 			bool start_driver;
 
 			{
-				nana::threads::lock_guard<nana::threads::recursive_mutex> lock(table_.mutex);
+				std::lock_guard<decltype(table_.mutex)> lock(table_.mutex);
 
 				//No thread is running, so msg dispatcher should start the msg driver.
 				start_driver = (0 == table_.thr_table.size());
@@ -96,25 +97,27 @@ namespace detail
 
 			if(start_driver && proc_.event_proc && proc_.timer_proc)
 			{
-				//It should start the msg driver, before starting it, the msg driver must be inactively.
-				is_work_ = false;
-				thrd_.close();
+				//It should start the msg driver, before starting it, the msg driver must be inactive.
+				if(thrd_)
+				{
+					is_work_ = false;
+					thrd_->join();
+				}
 				is_work_ = true;
-				thrd_.start(*this, &msg_dispatcher::_m_msg_driver);
+				thrd_ = std::unique_ptr<std::thread>(new std::thread([this](){ this->_m_msg_driver(); }));
 			}
 		}
 
 		void erase(Window wd)
 		{
-			using namespace nana::threads;
-			lock_guard<recursive_mutex> lock(table_.mutex);
+			std::lock_guard<decltype(table_.mutex)> lock(table_.mutex);
 			
-			std::map<Window, thread_binder*>::iterator i = table_.wnd_table.find(wd);
+			auto i = table_.wnd_table.find(wd);
 			if(i != table_.wnd_table.end())
 			{
 				thread_binder * const thr = i->second;
-				lock_guard<mutex> lock(thr->mutex);
-				for(msg_queue_type::iterator li = thr->msg_queue.begin(); li != thr->msg_queue.end();)
+				std::lock_guard<decltype(thr->mutex)> lock(thr->mutex);
+				for(auto li = thr->msg_queue.begin(); li != thr->msg_queue.end();)
 				{
 					if(wd == _m_window(*li))
 						li = thr->msg_queue.erase(li);
@@ -231,13 +234,13 @@ namespace detail
 
 		void _m_msg_dispatch(const msg_packet_tag &msg)
 		{
-			using namespace nana::threads;
-			lock_guard<recursive_mutex> lock(table_.mutex);
-			std::map<Window, thread_binder*>::iterator i = table_.wnd_table.find(_m_window(msg));
+			std::lock_guard<decltype(table_.mutex)> lock(table_.mutex);
+			auto i = table_.wnd_table.find(_m_window(msg));
 			if(i != table_.wnd_table.end())
 			{
 				thread_binder * const thr = i->second;
-				lock_guard<mutex> lock(thr->mutex);
+				
+				std::lock_guard<decltype(thr->mutex)> lock(thr->mutex);
 				thr->msg_queue.push_back(msg);
 				thr->cond.notify_one();
 			}
@@ -251,9 +254,9 @@ namespace detail
 			bool stop_driver = false;
 
 			{
-				nana::threads::lock_guard<nana::threads::recursive_mutex> lock(table_.mutex);
+				std::lock_guard<decltype(table_.mutex)> lock(table_.mutex);
 				//Find the thread whether it is registered for the window.
-				std::map<unsigned, thread_binder*>::iterator i = table_.thr_table.find(tid);
+				auto i = table_.thr_table.find(tid);
 				if(i != table_.thr_table.end())
 				{
 					if(i->second->window.size())
@@ -284,7 +287,8 @@ namespace detail
 			if(stop_driver)
 			{
 				is_work_ = false;
-				thrd_.close();
+				thrd_->join();
+				thrd_.reset();
 			}
 			return 0;
 		}
@@ -294,11 +298,10 @@ namespace detail
 		//return@ it returns true if the queue is not empty, otherwise the wait is timeout.
 		bool _m_wait_for_queue(unsigned tid)
 		{
-			using namespace nana::threads;
 			thread_binder * thr;
 			{
-				lock_guard<recursive_mutex> lock(table_.mutex);
-				std::map<unsigned, thread_binder*>::iterator i = table_.thr_table.find(tid);
+				std::lock_guard<decltype(table_.mutex)> lock(table_.mutex);
+				auto i = table_.thr_table.find(tid);
 				if(i != table_.thr_table.end())
 				{
 					if(i->second->msg_queue.size())
@@ -306,24 +309,20 @@ namespace detail
 					thr = i->second;
 				}
 			}
-
+			
 			//Waits for notifying the condition variable, it indicates a new msg is pushing into the queue.
-			unique_lock<mutex> lock(thr->mutex);
-#if NANA_USE_BOOST_MUTEX_CONDITION_VARIABLE
-			return (boost::cv_status::timeout != thr->cond.wait_for(lock, boost::chrono::milliseconds(10)));
-#else
-			return (false == thr->cond.wait_for(lock, 10));
-#endif
+			std::unique_lock<decltype(thr->mutex)> lock(thr->mutex);
+			return (thr->cond.wait_for(lock, std::chrono::milliseconds(10)) != std::cv_status::timeout);
 		}
 		
 	private:
 		Display * display_;
 		volatile bool is_work_;
-		nana::threads::thread thrd_;
+		std::unique_ptr<std::thread> thrd_;
 
 		struct table_tag
 		{
-			nana::threads::recursive_mutex mutex;
+			std::recursive_mutex mutex;
 			std::map<unsigned, thread_binder*> thr_table;
 			std::map<Window, thread_binder*> wnd_table;
 		}table_;

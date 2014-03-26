@@ -13,8 +13,9 @@
 #include <nana/paint/gadget.hpp>
 #include <nana/paint/text_renderer.hpp>
 #include <nana/gui/element.hpp>
+#include <algorithm>
 
-namespace nana{	namespace gui{ namespace drawerbase
+namespace nana{ namespace gui{ namespace drawerbase
 {
 namespace checkbox
 {
@@ -26,39 +27,25 @@ namespace checkbox
 		bool radio;
 		facade<element::crook> crook;
 	};
-		//class drawer
+
 			drawer::drawer()
-				:	widget_(0),
-					impl_(new implement)
+				: widget_(nullptr),
+					imptr_(new drawer::implement),
+					impl_(imptr_.get())
 			{
 				impl_->react = true;
 				impl_->radio = false;
 			}
 
-			drawer::~drawer()
+			void drawer::attached(widget_reference widget, graph_reference)
 			{
-				delete impl_;
-			}
-
-			void drawer::bind_window(widget_reference w)
-			{
-				widget_ = &w;
-			}
-
-			void drawer::attached(graph_reference)
-			{
-				window wd = *widget_;
+				widget_ = &widget;
+				window wd = widget;
 				using namespace API::dev;
 				make_drawer_event<events::mouse_down>(wd);
 				make_drawer_event<events::mouse_up>(wd);
-
 				make_drawer_event<events::mouse_enter>(wd);
 				make_drawer_event<events::mouse_leave>(wd);
-			}
-
-			void drawer::detached()
-			{
-				API::dev::umake_drawer_event(*widget_);
 			}
 
 			void drawer::refresh(graph_reference graph)
@@ -74,7 +61,9 @@ namespace checkbox
 			void drawer::mouse_up(graph_reference graph, const eventinfo&)
 			{
 				if(impl_->react)
+				{
 					impl_->crook.reverse();
+				}
 
 				_m_draw(graph);
 			}
@@ -94,7 +83,7 @@ namespace checkbox
 				return impl_;
 			}
 
-			void drawer::_m_draw(drawer::graph_reference graph)
+			void drawer::_m_draw(graph_reference graph)
 			{
 				_m_draw_background(graph);
 				_m_draw_title(graph);
@@ -133,10 +122,11 @@ namespace checkbox
 				}
 			}
 		//end class drawer
-}//end namespace checkbox
+	} //end namespace checkbox
 }//end namespace drawerbase
 
 	//class checkbox
+
 		checkbox::checkbox(){}
 
 		checkbox::checkbox(window wd, bool visible)
@@ -156,7 +146,7 @@ namespace checkbox
 			caption(text);
 		}
 
-		checkbox::checkbox(window wd, const rectangle& r, bool visible)
+		checkbox::checkbox(window wd, const nana::rectangle& r, bool visible)
 		{
 			create(wd, r, visible);
 		}
@@ -205,10 +195,10 @@ namespace checkbox
 	//class radio_group
 		radio_group::~radio_group()
 		{
-			for(std::vector<element_tag>::iterator i = ui_container_.begin(); i != ui_container_.end(); ++i)
+			for(auto & i : ui_container_)
 			{
-				nana::gui::API::umake_event(i->eh_checked);
-				nana::gui::API::umake_event(i->eh_destroy);
+				API::umake_event(i.eh_checked);
+				API::umake_event(i.eh_destroy);
 			}
 		}
 
@@ -223,36 +213,32 @@ namespace checkbox
 			el.uiobj = &uiobj;
 			el.eh_checked = uiobj.make_event<events::click>(*this, &radio_group::_m_checked);
 			el.eh_destroy = uiobj.make_event<events::destroy>(*this, &radio_group::_m_destroy);
-
 			ui_container_.push_back(el);
 		}
 
 		std::size_t radio_group::checked() const
 		{
-			for(std::vector<element_tag>::const_iterator i = ui_container_.begin(); i != ui_container_.end(); ++i)
-			{
-				if(i->uiobj->checked())
-					return static_cast<size_t>(i - ui_container_.begin());
-			}
-			return 0;
-		}
-
-		void radio_group::_m_checked(const nana::gui::eventinfo& ei)
-		{
-			for(std::vector<element_tag>::iterator i = ui_container_.begin(); i != ui_container_.end(); ++i)
-				i->uiobj->check(ei.window == i->uiobj->handle());
-		}
-
-		void radio_group::_m_destroy(const nana::gui::eventinfo& ei)
-		{
-			for(std::vector<element_tag>::iterator i = ui_container_.begin(); i != ui_container_.end(); ++i)
-			{
-				if(ei.window == i->uiobj->handle())
+			auto i = std::find_if(ui_container_.cbegin(), ui_container_.cend(), [](decltype(*ui_container_.cbegin())& x)
 				{
-					ui_container_.erase(i);
-					return;
-				}
-			}
+					return (x.uiobj->checked());
+				});
+			return static_cast<std::size_t>(i - ui_container_.cbegin());
+		}
+
+		void radio_group::_m_checked(const eventinfo& ei)
+		{
+			for(auto & i : ui_container_)
+				i.uiobj->check(ei.window == i.uiobj->handle());
+		}
+
+		void radio_group::_m_destroy(const eventinfo& ei)
+		{
+			auto i = std::find_if(ui_container_.begin(), ui_container_.end(), [&ei](decltype(*ui_container_.begin()) & x)
+					{
+						return (ei.window == x.uiobj->handle());
+					});
+			if(i != ui_container_.end())
+				ui_container_.erase(i);
 		}
 	//end class radio_group
 }//end namespace gui

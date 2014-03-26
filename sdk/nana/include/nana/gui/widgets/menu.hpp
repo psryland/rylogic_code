@@ -2,8 +2,8 @@
  *	A Menu implementation
  *	Copyright(C) 2009 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0. 
- *	(See accompanying file LICENSE_1_0.txt or copy at 
+ *	Distributed under the Boost Software License, Version 1.0.
+ *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/gui/widgets/menu.hpp
@@ -28,10 +28,10 @@ namespace nana{ namespace gui{
 				//class item_proxy
 				//@brief: this class is used as parameter of menu event function.
 				class item_proxy
-					: nana::noncopyable
+					: noncopyable
 				{
 				public:
-					item_proxy(std::size_t, menu_item_type &);
+					item_proxy(std::size_t n, menu_item_type &);
 					void enabled(bool v);
 					bool enabled() const;
 					std::size_t index() const;
@@ -40,7 +40,7 @@ namespace nana{ namespace gui{
 					menu_item_type &item_;
 				};
 
-				typedef nana::functor<void(item_proxy&)> event_fn_t;
+				typedef std::function<void(item_proxy&)> event_fn_t;
 
 				//Default constructor initializes the item as a splitter
 				menu_item_type();
@@ -79,14 +79,14 @@ namespace nana{ namespace gui{
 			public:
 				typedef nana::paint::graphics & graph_reference;
 
-				struct state
+				enum class state
 				{
-					enum t{normal, active};
+					normal, active
 				};
 
 				struct attr
 				{
-					state::t item_state;
+					state item_state;
 					bool enabled;
 					bool checked;
 					int check_style;
@@ -99,7 +99,6 @@ namespace nana{ namespace gui{
 				virtual void item_image(graph_reference, const nana::point&, const paint::image&) = 0;
 				virtual void item_text(graph_reference, const nana::point&, const nana::string&, unsigned text_pixels, const attr&) = 0;
 				virtual void sub_arrow(graph_reference, const nana::point&, unsigned item_pixels, const attr&) = 0;
-
 			};
 		}//end namespace menu
 	}//end namespace drawerbase
@@ -118,7 +117,7 @@ namespace nana{ namespace gui{
 		typedef drawerbase::menu::menu_item_type item_type;
 		typedef item_type::item_proxy item_proxy;
 		typedef item_type::event_fn_t event_fn_t;
-		
+
 		menu();
 		~menu();
 		void append(const nana::string& text, const event_fn_t& = event_fn_t());
@@ -127,9 +126,9 @@ namespace nana{ namespace gui{
 		void close();
 		void image(std::size_t n, const paint::image&);
 		void check_style(std::size_t n, check_t style);
-		void checked(std::size_t n, bool check);
+		void checked(std::size_t n, bool);
 		bool checked(std::size_t n) const;
-		void enabled(std::size_t n, bool enable);
+		void enabled(std::size_t n, bool);
 		bool enabled(std::size_t n) const;
 		void erase(std::size_t n);
 		bool link(std::size_t n, menu& menu_obj);
@@ -137,21 +136,28 @@ namespace nana{ namespace gui{
 		menu *create_sub_menu(std::size_t n);
 		void popup(window, int x, int y);
 		void answerer(std::size_t n, const event_fn_t&);
-		void destroy_answer(const nana::functor<void()>&);
-		void gaps(const nana::point& pos);
+		void destroy_answer(const std::function<void()>&);
+		void gaps(const nana::point&);
 		void goto_next(bool forward);
 		bool goto_submen();
 		bool exit_submenu();
 		std::size_t size() const;
 		int send_shortkey(nana::char_t key);
+
 		menu& max_pixels(unsigned);
 		unsigned max_pixels() const;
 
 		menu& item_pixels(unsigned);
 		unsigned item_pixels() const;
 
+		template<typename Renderer>
+		void renderer(const Renderer& rd)
+		{
+			renderer(rd);
+		}
 		void renderer(const pat::cloneable<renderer_interface>&);
 		const pat::cloneable<renderer_interface>& renderer() const;
+
 	private:
 		void _m_destroy_menu_window();
 		void _m_popup(window, int x, int y, bool called_by_menubar);
@@ -164,21 +170,20 @@ namespace nana{ namespace gui{
 		class popuper
 		{
 		public:
-			popuper(menu&, mouse::t);
-			popuper(menu&, window owner, const point&, mouse::t);
+			popuper(menu&, mouse);
+			popuper(menu&, window owner, const point&, mouse);
 			void operator()(const eventinfo&);
 		private:
 			menu & mobj_;
-			nana::gui::window owner_;
+			window owner_;
 			bool take_mouse_pos_;
 			nana::point pos_;
-			mouse::t mouse_;
+			mouse mouse_;
 		};
 	}
 
-	detail::popuper menu_popuper(menu&, mouse::t = mouse::right_button);
-	detail::popuper menu_popuper(menu&, window owner, const point&, mouse::t = mouse::right_button);
+	detail::popuper menu_popuper(menu&, mouse = mouse::right_button);
+	detail::popuper menu_popuper(menu&, window owner, const point&, mouse = mouse::right_button);
 }//end namespace gui
 }//end namespace nana
 #endif
-

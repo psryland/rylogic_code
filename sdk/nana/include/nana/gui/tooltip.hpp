@@ -2,8 +2,8 @@
  *	A Tooltip Implementation
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0. 
- *	(See accompanying file LICENSE_1_0.txt or copy at 
+ *	Distributed under the Boost Software License, Version 1.0.
+ *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/gui/widgets/tooltip.hpp
@@ -13,8 +13,8 @@
 #define NANA_GUI_WIDGETS_TOOLTIP_HPP
 #include "widgets/widget.hpp"
 
-namespace nana{ namespace gui{
-
+namespace nana{ namespace gui
+{
 	///tooltip_interface
 	///An interface for user-defined tooltip window.
 	class tooltip_interface
@@ -41,12 +41,12 @@ namespace nana{ namespace gui{
 		class factory
 			: public factory_interface
 		{
-			tooltip_interface * create() //override
+			tooltip_interface * create() override
 			{
 				return new TooltipWindow;
 			}
 
-			void destroy(tooltip_interface* p) //override
+			void destroy(tooltip_interface* p) override
 			{
 				delete p;
 			}

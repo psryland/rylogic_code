@@ -12,20 +12,22 @@
  *
  *	http://standards.freedesktop.org/clipboards-spec/clipboards-0.1.txt
  */
-
 #include <nana/config.hpp>
+
 #include PLATFORM_SPEC_HPP
 #include <nana/detail/linux_X11/msg_dispatcher.hpp>
 #include <X11/Xlocale.h>
 #include <locale>
 #include <map>
 #include <set>
+#include <algorithm>
 #include <nana/paint/graphics.hpp>
-#include <nana/system/platform.hpp>
-#include <nana/threads/thread.hpp>
-#include <errno.h>
 #include GUI_BEDROCK_HPP
+#include <nana/gui/detail/basic_window.hpp>
+#include <nana/system/platform.hpp>
+#include <errno.h>
 #include <sstream>
+
 
 namespace nana
 {
@@ -47,7 +49,7 @@ namespace detail
 
 		std::string conf::value(const char* key)
 		{
-			if((0 == key) || !ifs_) return std::string();
+			if((0 == key) || !ifs_) return "";
 			size_t len = ::strlen(key);
 			ifs_.seekg(0, std::ios::beg);
 			ifs_.clear();
@@ -83,7 +85,7 @@ namespace detail
 					}
 				}
 			}
-			return "";
+			return std::string();
 		}
 	//end class conf
 
@@ -101,7 +103,7 @@ namespace detail
 		std::string charset_conv::charset(const std::string& str) const
 		{
 			if(reinterpret_cast<iconv_t>(-1) == handle_)
-				return "";
+				return std::string();
 
 			char * inbuf = const_cast<char*>(str.c_str());
 			std::size_t inleft = str.size();
@@ -131,7 +133,6 @@ namespace detail
 			return rstr;
 		}
 	//end class charset_conv
-
 #endif
 
 	struct caret_tag
@@ -152,8 +153,7 @@ namespace detail
 		long input_context_event_mask;
 
 		caret_tag(native_window_type wd)
-			: window(wd), has_input_method_focus(false), visible(false),
-              input_method(0), input_context(0), input_font(0), input_context_event_mask(0)
+			: window(wd), has_input_method_focus(false), visible(false), input_method(0), input_context(0), input_font(0), input_context_event_mask(0)
 		{}
 	};
 
@@ -163,7 +163,7 @@ namespace detail
 
 		struct timer_tag
 		{
-			int id;
+			std::size_t id;
 			unsigned tid;
 			std::size_t interval;
 			std::size_t timestamp;
@@ -174,7 +174,7 @@ namespace detail
 			: is_proc_handling_(false)
 		{}
 
-		void set(int id, std::size_t interval, timer_proc_t proc)
+		void set(std::size_t id, std::size_t interval, timer_proc_t proc)
 		{
 			unsigned tid = nana::system::this_thread_id();
 			threadmap_[tid].insert(id);
@@ -191,9 +191,9 @@ namespace detail
 			return is_proc_handling_;
 		}
 
-		void kill(int id)
+		void kill(std::size_t id)
 		{
-			std::map<std::size_t, timer_tag>::iterator i = holder_.find(id);
+			auto i = holder_.find(id);
 			if(i != holder_.end())
 			{
 				unsigned tid = i->second.tid;
@@ -215,14 +215,13 @@ namespace detail
 		void timer_proc(unsigned tid)
 		{
 			is_proc_handling_ = true;
-			std::map<unsigned, std::set<std::size_t> >::iterator i = threadmap_.find(tid);
+			auto i = threadmap_.find(tid);
 			if(i != threadmap_.end())
 			{
 				unsigned ticks = nana::system::timestamp();
-				std::set<std::size_t> & set = i->second;
-				for(std::set<std::size_t>::iterator u = set.begin(); u != set.end(); ++u)
+				for(auto timer_id : i->second)
 				{
-					timer_tag & tag = holder_[*u];
+					timer_tag & tag = holder_[timer_id];
 					if(tag.timestamp)
 					{
 						if(ticks >= tag.timestamp + tag.interval)
@@ -242,16 +241,16 @@ namespace detail
 		}
 	private:
 		bool is_proc_handling_;
-		nana::threads::thread thr_;
 		std::map<unsigned, std::set<std::size_t> > threadmap_;
 		std::map<std::size_t, timer_tag> holder_;
 	};
 
 	drawable_impl_type::drawable_impl_type()
-		: fgcolor_(0xFFFFFFFF)
+		:	fgcolor_(0xFFFFFFFF)
 	{
 		string.tab_length = 4;
 		string.tab_pixels = 0;
+		string.whitespace_pixels = 0;
 #if defined(NANA_UNICODE)
 		xftdraw = 0;
 		conv_.handle = ::iconv_open("UTF-8", "UTF-32");
@@ -266,11 +265,11 @@ namespace detail
 #endif
 	}
 
-	void drawable_impl_type::fgcolor(nana::color_t color)
+	void drawable_impl_type::fgcolor(unsigned color)
 	{
 		if(color != fgcolor_)
 		{
-			nana::detail::platform_spec & spec = nana::detail::platform_spec::instance();
+			auto & spec = nana::detail::platform_spec::instance();
 			platform_scope_guard psg;
 
 			fgcolor_ = color;
@@ -282,7 +281,6 @@ namespace detail
 					(color & 0xFF) * 31 / 255;
 				break;
 			}
-
 			::XSetForeground(spec.open_display(), context, color);
 			::XSetBackground(spec.open_display(), context, color);
 #if defined(NANA_UNICODE)
@@ -296,22 +294,22 @@ namespace detail
 
 	class font_deleter
 	{
-	public:
-		void operator()(const font_tag* fp) const
-		{
-			if(fp && fp->handle)
-			{
-				platform_scope_guard psg;
+    public:
+        void operator()(const font_tag* fp) const
+        {
+            if(fp && fp->handle)
+            {
+                platform_scope_guard psg;
 #if defined(NANA_UNICODE)
-				::XftFontClose(nana::detail::platform_spec::instance().open_display(), fp->handle);
+                ::XftFontClose(nana::detail::platform_spec::instance().open_display(), fp->handle);
 #else
-				::XFreeFontSet(nana::detail::platform_spec::instance().open_display(), fp->handle);
+                ::XFreeFontSet(nana::detail::platform_spec::instance().open_display(), fp->handle);
 #endif
-			}
-			delete fp;
-		}
-	}; //end class font_deleter
-	
+            }
+            delete fp;
+        }
+	};//end class font_deleter
+
 	platform_scope_guard::platform_scope_guard()
 	{
 		platform_spec::instance().lock_xlib();
@@ -351,10 +349,10 @@ namespace detail
 		if(langstr)
 		{
 			langstr_dup = langstr;
-			std::string::size_type dotpos = langstr_dup.find(".");
+			auto dotpos = langstr_dup.find(".");
 			if(dotpos != langstr_dup.npos)
 			{
-				std::string::iterator beg = langstr_dup.begin() + dotpos + 1;
+				auto beg = langstr_dup.begin() + dotpos + 1;
 				std::transform(beg, langstr_dup.end(), beg, toupper);
 			}
 		}
@@ -411,7 +409,11 @@ namespace detail
 	platform_spec::~platform_spec()
 	{
 		delete msg_dispatcher_;
+
+		//The font should be destroyed before closing display,
+		//otherwise it crashs
 		def_font_ptr_.reset();
+
 		close_display();
 	}
 
@@ -422,7 +424,7 @@ namespace detail
 	
 	void platform_spec::default_native_font(const font_ptr_t& fp)
 	{
-		def_font_ptr_ = fp;	
+		def_font_ptr_ = fp;
 	}
 
 	unsigned platform_spec::font_size_to_height(unsigned size) const
@@ -437,12 +439,12 @@ namespace detail
 
 	platform_spec::font_ptr_t platform_spec::make_native_font(const nana::char_t* name, unsigned height, unsigned weight, bool italic, bool underline, bool strike_out)
 	{
+		font_ptr_t ref;
 #if defined(NANA_UNICODE)
 		if(0 == name || *name == 0)
 			name = STR("*");
 
 		std::string nmstr = nana::charset(name);
-
 		XftFont* handle = 0;
 		std::stringstream ss;
 		ss<<nmstr<<"-"<<(height ? height : 10);
@@ -497,12 +499,12 @@ namespace detail
 
 	void platform_spec::lock_xlib()
 	{
-		mutex_xlib_.lock();
+		xlib_locker_.lock();
 	}
 
 	void platform_spec::unlock_xlib()
 	{
-		mutex_xlib_.unlock();
+		xlib_locker_.unlock();
 	}
 
 	Window platform_spec::root_window()
@@ -552,41 +554,40 @@ namespace detail
 	native_window_type platform_spec::get_owner(native_window_type wd) const
 	{
 		platform_scope_guard psg;
-		std::map<native_window_type, window_context_t>::const_iterator i = wincontext_.find(wd);
-		return (i != wincontext_.end() ? i->second.owner : 0);
+		auto i = wincontext_.find(wd);
+		return (i != wincontext_.end() ? i->second.owner : nullptr);
 	}
 
 	void platform_spec::remove(native_window_type wd)
 	{
 		msg_dispatcher_->erase(reinterpret_cast<Window>(wd));
 		platform_scope_guard psg;
-		std::map<native_window_type, window_context_t>::iterator i = wincontext_.find(wd);
+		auto i = wincontext_.find(wd);
 		if(i == wincontext_.end()) return;
 
 		if(i->second.owner)
 		{
-			std::map<native_window_type, window_context_t>::iterator u = wincontext_.find(i->second.owner);
+			auto u = wincontext_.find(i->second.owner);
 			if(u != wincontext_.end())
 			{
-				std::vector<native_window_type> * vec = u->second.owned;
+				auto * vec = u->second.owned;
 				if(vec)
 				{
-					std::vector<native_window_type>::iterator j = std::find(vec->begin(), vec->end(), i->first);
+					auto j = std::find(vec->begin(), vec->end(), i->first);
 					if(j != vec->end())
 						vec->erase(j);
 				}
 			}
 		}
 
-		std::vector<native_window_type> * vec = i->second.owned;
+		auto * vec = i->second.owned;
 		if(vec)
 		{
 			set_error_handler();
-			gui::detail::bedrock & bedrock = gui::detail::bedrock::instance();
-			for(std::vector<native_window_type>::reverse_iterator u = vec->rbegin(); u != vec->rend(); ++u)
-			{
-				bedrock.wd_manager.close(bedrock.wd_manager.root(*u));
-			}
+			auto & wd_manager = gui::detail::bedrock::instance().wd_manager;
+			for(auto u = vec->rbegin(); u != vec->rend(); ++u)
+				wd_manager.close(wd_manager.root(*u));
+
 			rev_error_handler();
 		}
 		delete vec;
@@ -608,7 +609,7 @@ namespace detail
 	XIC platform_spec::caret_input_context(native_window_type wd) const
 	{
 		platform_scope_guard psg;
-		std::map<native_window_type, caret_tag*>::const_iterator i = caret_holder_.carets.find(wd);
+		auto i = caret_holder_.carets.find(wd);
 		if(i != caret_holder_.carets.end())
 			return i->second->input_context;
 		return 0;
@@ -627,14 +628,14 @@ namespace detail
 			if(addr->input_method)
 			{
 				XIMStyles* imstyle;
-				::XGetIMValues(addr->input_method, XNQueryInputStyle, &imstyle, 0, (void*)0);	//explicit sentinel
+				::XGetIMValues(addr->input_method, XNQueryInputStyle, &imstyle, nullptr, nullptr);
 				if(imstyle)
 				{
 					if(imstyle->count_styles)
 					{
 						addr->input_font = 0;
-						XVaNestedList preedit_attr = ::XVaCreateNestedList(0, XNSpotLocation, &(addr->input_spot), (void*)0);	//explicit sentinel
-						XVaNestedList status_attr = ::XVaCreateNestedList(0, XNAreaNeeded, &(addr->input_status_area), (void*)0);	//explicit sentinel
+						XVaNestedList preedit_attr = ::XVaCreateNestedList(0, XNSpotLocation, &(addr->input_spot), nullptr);
+						XVaNestedList status_attr = ::XVaCreateNestedList(0, XNAreaNeeded, &(addr->input_status_area), nullptr);
 						XIMStyle * style_end = imstyle->supported_styles + imstyle->count_styles;
 						bool has_status = false;
 						bool has_preedit = false;
@@ -653,7 +654,7 @@ namespace detail
 						{
 							addr->input_context = ::XCreateIC(addr->input_method, XNInputStyle, (XIMPreeditPosition | XIMStatusArea),
 														XNPreeditAttributes, preedit_attr, XNStatusAttributes, status_attr,
-														XNClientWindow, reinterpret_cast<Window>(wd), (void*)0);	//explicit sentinel
+														XNClientWindow, reinterpret_cast<Window>(wd), nullptr);
 						}
 						else
 							addr->input_context = 0;
@@ -661,26 +662,23 @@ namespace detail
 						if((addr->input_context == 0) && has_preedit)
 						{
 							addr->input_context = ::XCreateIC(addr->input_method, XNInputStyle, (XIMPreeditPosition | XIMStatusNothing),
-                                                              XNPreeditAttributes, preedit_attr, XNClientWindow, reinterpret_cast<Window>(wd), (void*)0);	//explicit sentinel
+															XNPreeditAttributes, preedit_attr, XNClientWindow, reinterpret_cast<Window>(wd), nullptr);
 						}
 
 						if(addr->input_context)
 						{
-							XVaNestedList attr = ::XVaCreateNestedList(0, XNAreaNeeded, &(addr->input_status_area),
-                                                                       XNClientWindow, reinterpret_cast<Window>(wd), (void*)0);	//explicit sentinel
-							::XGetICValues(addr->input_context, XNStatusAttributes, attr, (void*)0);	//explicit sentinel
+							XVaNestedList attr = ::XVaCreateNestedList(0, XNAreaNeeded, &(addr->input_status_area), XNClientWindow, reinterpret_cast<Window>(wd), nullptr);
+							::XGetICValues(addr->input_context, XNStatusAttributes, attr, nullptr);
 							::XFree(attr);
 						}
 						else
-						{
 							addr->input_context = ::XCreateIC(addr->input_method, XNInputStyle, (XIMPreeditNothing | XIMStatusNothing),
-                                                              XNClientWindow, reinterpret_cast<Window>(wd), (void*)0);	//explicit sentinel
-						}
+															XNClientWindow, reinterpret_cast<Window>(wd), nullptr);
 
 						if(addr->input_context)
 						{
 							//Make the IM event filter.
-							::XGetICValues(addr->input_context, XNFilterEvents, &(addr->input_context_event_mask), (void*)0);	//explicit sentinel
+							::XGetICValues(addr->input_context, XNFilterEvents, &(addr->input_context_event_mask), nullptr);
 							XWindowAttributes attr;
 							::XGetWindowAttributes(display_, reinterpret_cast<Window>(wd), &attr);
 							XSetWindowAttributes new_attr;
@@ -710,7 +708,11 @@ namespace detail
 		}
 
 		if(is_start_routine)
-			caret_holder_.thr.start(*this, &platform_spec::_m_caret_routine);
+		{
+			caret_holder_.exit_thread = false;
+			auto fn = [this](){ this->_m_caret_routine(); };
+			caret_holder_.thr = std::unique_ptr<std::thread>(new std::thread(fn));
+		}
 	}
 
 	void platform_spec::caret_close(native_window_type wd)
@@ -719,7 +721,7 @@ namespace detail
 		{
 			platform_scope_guard psg;
 
-			std::map<native_window_type, caret_tag*>::iterator i = caret_holder_.carets.find(wd);
+			auto i = caret_holder_.carets.find(wd);
 			if(i != caret_holder_.carets.end())
 			{
 				caret_tag * addr = i->second;
@@ -762,17 +764,21 @@ namespace detail
 			is_end_routine = (caret_holder_.carets.size() == 0);
 		}
 
-		if(is_end_routine)
-			caret_holder_.thr.close();
+		if(is_end_routine && (caret_holder_.thr != nullptr) && (caret_holder_.thr->joinable()))
+		{
+			caret_holder_.exit_thread = true;
+			caret_holder_.thr->join();
+			caret_holder_.thr.reset();
+		}
 	}
 
 	void platform_spec::caret_pos(native_window_type wd, int x, int y)
 	{
 		platform_scope_guard psg;
-		std::map<native_window_type, caret_tag*>::iterator i = caret_holder_.carets.find(wd);
+		auto i = caret_holder_.carets.find(wd);
 		if(i != caret_holder_.carets.end())
 		{
-			caret_tag& crt = *i->second;
+			caret_tag & crt = *i->second;
 			caret_reinstate(crt);
 			crt.pos.x = x;
 			crt.pos.y = y;
@@ -782,10 +788,10 @@ namespace detail
 	void platform_spec::caret_visible(native_window_type wd, bool vis)
 	{
 		platform_scope_guard psg;
-		std::map<native_window_type, caret_tag*>::iterator i = caret_holder_.carets.find(wd);
+		auto i = caret_holder_.carets.find(wd);
 		if(i != caret_holder_.carets.end())
 		{
-			caret_tag & crt = *i->second;
+			caret_tag& crt = *i->second;
 			if(crt.visible != vis)
 			{
 				if(vis == false)
@@ -826,7 +832,7 @@ namespace detail
 	bool platform_spec::caret_update(native_window_type wd, nana::paint::graphics& root_graph, bool is_erase_caret_from_root_graph)
 	{
 		platform_scope_guard psg;
-		std::map<native_window_type, caret_tag*>::iterator i = caret_holder_.carets.find(wd);
+		auto i = caret_holder_.carets.find(wd);
 		if(i != caret_holder_.carets.end())
 		{
 			caret_tag & crt = *i->second;
@@ -855,13 +861,12 @@ namespace detail
 	}
 
 	//Copy the reversed graphics to the window
-	bool platform_spec::caret_reinstate(caret_tag & crt)
+	bool platform_spec::caret_reinstate(caret_tag& crt)
 	{
 		if(crt.rev.width && crt.rev.height)
 		{
 			crt.rev_graph.paste(crt.window, crt.rev, 0, 0);
-
-			//drop the reversed graphics in order to draw the
+			//Drop the reversed graphics in order to draw the
 			//caret in the next flash.
 			crt.rev.width = crt.rev.height = 0;
 			return true;
@@ -889,26 +894,23 @@ namespace detail
 
 	void platform_spec::_m_caret_routine()
 	{
-		while(true)
+		while(false == caret_holder_.exit_thread)
 		{
-			if(mutex_xlib_.try_lock())
+			if(xlib_locker_.try_lock())
 			{
-				for(std::map<native_window_type, caret_tag*>::iterator i = caret_holder_.carets.begin(); i != caret_holder_.carets.end(); ++i)
-					caret_flash(*i->second);
-				
-				mutex_xlib_.unlock();
+				for(auto i : caret_holder_.carets)
+					caret_flash(*(i.second));
+
+				xlib_locker_.unlock();
 			}
-			for(int i = 0; i < 5; ++i)
-			{
+			for(int i = 0; i < 5 && (false == caret_holder_.exit_thread); ++i)
 				nana::system::sleep(100);
-				nana::threads::thread::check_break(0);
-			}
 		}
 	}
 
-	void platform_spec::event_register_filter(native_window_type wd, event_code::t evtid)
+	void platform_spec::event_register_filter(native_window_type wd, event_code eventid)
 	{
-		switch(evtid)
+		switch(eventid)
 		{
 		case event_code::mouse_drop:
 			{
@@ -931,7 +933,7 @@ namespace detail
 
 	void platform_spec::set_timer(std::size_t id, std::size_t interval, void (*timer_proc)(std::size_t))
 	{
-		nana::threads::lock_guard<nana::threads::recursive_mutex> lock(timer_.mutex);
+		std::lock_guard<decltype(timer_.mutex)> lock(timer_.mutex);
 		if(0 == timer_.runner)
 			timer_.runner = new timer_runner;
 		timer_.runner->set(id, interval, timer_proc);
@@ -942,7 +944,7 @@ namespace detail
 	{
 		if(timer_.runner == 0) return;
 
-		nana::threads::lock_guard<nana::threads::recursive_mutex> lock(timer_.mutex);
+		std::lock_guard<decltype(timer_.mutex)> lock(timer_.mutex);
 		timer_.runner->kill(id);
 		if(timer_.runner->empty())
 		{
@@ -958,7 +960,7 @@ namespace detail
 
 	void platform_spec::timer_proc(unsigned tid)
 	{
-		nana::threads::lock_guard<nana::threads::recursive_mutex> lock(timer_.mutex);
+		std::lock_guard<decltype(timer_.mutex)> lock(timer_.mutex);
 		if(timer_.runner)
 		{
 			timer_.runner->timer_proc(tid);
@@ -976,7 +978,7 @@ namespace detail
 		msg_dispatcher_->insert(reinterpret_cast<Window>(wd));
 	}
 
-	void platform_spec::msg_set(platform_spec::timer_proc_type tp, platform_spec::event_proc_type ep)
+	void platform_spec::msg_set(timer_proc_type tp, event_proc_type ep)
 	{
 		msg_dispatcher_->set(tp, ep, &platform_spec::_m_msg_filter);
 	}
@@ -991,23 +993,23 @@ namespace detail
 		if(requestor)
 		{
 			Atom clipboard = atombase_.clipboard;
-			mutex_xlib_.lock();
+			xlib_locker_.lock();
 			Window owner = ::XGetSelectionOwner(display_, clipboard);
 			if(owner)
 			{
 				selection_tag::item_t * selim = new selection_tag::item_t;
 				selim->type = type;
 				selim->requestor = reinterpret_cast<Window>(requestor);
-				selim->buffer = 0;
+				selim->buffer = nullptr;
 				selim->bufsize = 0;
 
 				this->selection_.items.push_back(selim);
 				::XConvertSelection(display_, clipboard, type, clipboard,
 							reinterpret_cast<Window>(requestor), CurrentTime);
 				::XFlush(display_);
-				mutex_xlib_.unlock();
+				xlib_locker_.unlock();
 
-				nana::threads::unique_lock<nana::threads::mutex> lock(selim->cond_mutex);
+				std::unique_lock<decltype(selim->cond_mutex)> lock(selim->cond_mutex);
 				selim->cond.wait(lock);
 
 				size = selim->bufsize;
@@ -1015,9 +1017,10 @@ namespace detail
 				delete selim;
 				return retbuf;
 			}
-			mutex_xlib_.unlock();
+			else
+				xlib_locker_.unlock();
 		}
-		return 0;
+		return nullptr;
 	}
 
 	void platform_spec::write_selection(native_window_type owner, Atom type, const void * buf, size_t bufsize)
@@ -1028,10 +1031,11 @@ namespace detail
 		if(XA_STRING == type || atombase_.utf8_string == type)
 		{
 			std::string * utf8str = selection_.content.utf8_string;
-			if(utf8str == 0)
-				utf8str = new std::string;
-			else
+			if(utf8str)
 				utf8str->clear();
+			else
+				utf8str = new std::string;
+
 			utf8str->append(reinterpret_cast<const char*>(buf), reinterpret_cast<const char*>(buf) + bufsize);
 			selection_.content.utf8_string = utf8str;
 		}
@@ -1048,9 +1052,9 @@ namespace detail
 
 	//_m_msg_filter
 	//@return:	_m_msg_filter returns three states
-	//			0 = msg_dispatcher dispatches the XEvent
-	//			1 = msg_dispatcher dispatches the msg_packet_tag that modified by _m_msg_filter
-	//			2 = msg_dispatcher should ignore the msg, because the XEvent is processed by _m_msg_filter
+	//		0 = msg_dispatcher dispatches the XEvent
+	//		1 = msg_dispatcher dispatches the msg_packet_tag that modified by _m_msg_filter
+	//		2 = msg_dispatcher should ignore the msg, because the XEvent is processed by _m_msg_filter
 	int platform_spec::_m_msg_filter(XEvent& evt, msg_packet_tag& msg)
 	{
 		platform_spec & self = instance();
@@ -1078,19 +1082,21 @@ namespace detail
 						{
 							unsigned long dummy_bytes_left;
 							if(Success == ::XGetWindowProperty(self.display_, evt.xselection.requestor,
-																evt.xselection.property, 0, bytes_left,
-																0, AnyPropertyType, &type, &format, &len,
-																&dummy_bytes_left, &data))
+															evt.xselection.property, 0, bytes_left,
+															0, AnyPropertyType, &type, &format, &len,
+															&dummy_bytes_left, &data))
 							{
 								im->buffer = data;
 								im->bufsize = len;
 							}
 						}
 
+
 						self.selection_.items.erase(self.selection_.items.begin());
 
-						nana::threads::lock_guard<nana::threads::mutex> lock(im->cond_mutex);
+						std::lock_guard<decltype(im->cond_mutex)> lock(im->cond_mutex);
 						im->cond.notify_one();
+
 					}
 				}
 				else if(evt.xselection.property == self.atombase_.xdnd_selection)
@@ -1116,7 +1122,7 @@ namespace detail
 								if(0 == file.find("file://"))
 									file = file.substr(7);
 
-								files->push_back(static_cast<nana::string>(nana::charset(file)));
+								files->push_back(nana::charset(file));
 							}
 							if(files->size())
 							{
@@ -1152,7 +1158,7 @@ namespace detail
 		}
 		else if(SelectionRequest == evt.type)
 		{
-			Display * disp = evt.xselectionrequest.display;
+			auto disp = evt.xselectionrequest.display;
 			XEvent respond;
 
 			respond.xselection.property = evt.xselectionrequest.property;
@@ -1165,8 +1171,9 @@ namespace detail
 					atoms.push_back(XA_STRING);
 				}
 
-				::XChangeProperty(self.display_, evt.xselectionrequest.requestor, evt.xselectionrequest.property, XA_ATOM, sizeof(Atom) * 8, 0,
-									reinterpret_cast<unsigned char*>(atoms.size() ? &atoms[0] : 0), static_cast<int>(atoms.size()));
+				::XChangeProperty(self.display_, evt.xselectionrequest.requestor,
+						evt.xselectionrequest.property, XA_ATOM, sizeof(Atom) * 8, 0,
+						reinterpret_cast<unsigned char*>(atoms.size() ? &atoms[0] : 0), static_cast<int>(atoms.size()));
 			}
 			else if(XA_STRING == evt.xselectionrequest.target || self.atombase_.utf8_string == evt.xselectionrequest.target)
 			{
@@ -1247,16 +1254,14 @@ namespace detail
 				{
 					Window child;
 					::XTranslateCoordinates(self.display_, self.root_window(), evt.xclient.window, x, y, &self.xdnd_.pos.x, &self.xdnd_.pos.y, &child);
-					typedef nana::gui::detail::bedrock bedrock;
+					typedef gui::detail::bedrock bedrock;
 
-					bedrock::core_window_t * wd = bedrock::instance().wd_manager.find_window(reinterpret_cast<native_window_type>(evt.xclient.window),
-																								self.xdnd_.pos.x, self.xdnd_.pos.y);
+					auto wd = bedrock::instance().wd_manager.find_window(reinterpret_cast<native_window_type>(evt.xclient.window),													self.xdnd_.pos.x, self.xdnd_.pos.y);
 					if(wd && wd->flags.dropable)
 					{
 						accepted = true;
 						self.xdnd_.timestamp = evt.xclient.data.l[3];
-						self.xdnd_.pos.x -= wd->pos_root.x;
-						self.xdnd_.pos.y -= wd->pos_root.y;
+						self.xdnd_.pos = wd->pos_root;
 					}
 				}
 
@@ -1293,4 +1298,3 @@ namespace detail
 	}
 }//end namespace detail
 }//end namespace nana
-

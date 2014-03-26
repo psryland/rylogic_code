@@ -11,7 +11,7 @@ namespace nana
 		public:
 			typedef graphics & graph_reference;
 			
-			text_renderer(graph_reference graph, align::t = align::left);
+			text_renderer(graph_reference graph, align = align::left);
 
 			void render(int x, int y, nana::color_t, const nana::char_t*, std::size_t len);
 			void render(int x, int y, nana::color_t, const nana::char_t*, std::size_t len, unsigned restricted_pixels, bool omitted);
@@ -20,7 +20,7 @@ namespace nana
 			nana::size extent_size(int x, int y, const nana::char_t*, std::size_t len, unsigned restricted_pixels) const;
 		private:
 			graph_reference graph_;
-			align::t text_align_;
+			align text_align_;
 		};
 	}
 }

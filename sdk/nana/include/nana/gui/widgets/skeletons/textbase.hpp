@@ -2,20 +2,19 @@
  *	A textbase class implementation
  *	Copyright(C) 2003-2013 Jinhao(cnjinhao@hotmail.com)
  *
- *	Distributed under the Boost Software License, Version 1.0. 
- *	(See accompanying file LICENSE_1_0.txt or copy at 
+ *	Distributed under the Boost Software License, Version 1.0.
+ *	(See accompanying file LICENSE_1_0.txt or copy at
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
  *	@file: nana/gui/widgets/skeletons/textbase.hpp
  *	@description: This class manages the multi-line text and provides some operation on text
  */
- 
+
 #ifndef NANA_GUI_WIDGET_DETAIL_TEXTBASE_HPP
 #define NANA_GUI_WIDGET_DETAIL_TEXTBASE_HPP
 #include <string>
 #include <deque>
-//#include <nana/refer.hpp>
-#include <nana/memory.hpp>
+#include <memory>
 #include <fstream>
 #include <nana/charset.hpp>
 
@@ -39,10 +38,10 @@ namespace skeletons
 		typedef typename string_type::size_type	size_type;
 
 		textbase()
-			: evtbase_(0), changed_(false)
+			: evtbase_(nullptr), changed_(false)
 		{
 			//Insert an empty string for the first line of empty text.
-			text_cont_.push_back(string_type());
+			text_cont_.emplace_back();
 		}
 
 		void bind_ext_evtbase(textbase_extra_evtbase<char_type>& extevt)
@@ -53,7 +52,7 @@ namespace skeletons
 		bool empty() const
 		{
 			return (text_cont_.size() == 0 ||
-					((text_cont_.size() == 1) && (text_cont_.begin()->size() == 0)));
+					((text_cont_.size() == 1) && (text_cont_[0].size() == 0)));
 		}
 
 		void load(const char* tfs)
@@ -164,19 +163,19 @@ namespace skeletons
 				char c = *s;
 				*s = *(s + 3);
 				*(s + 3) = c;
-				
+
 				c = *(s + 1);
 				*(s + 1) = *(s + 2);
 				*(s + 2) = c;
 			}
 		}
 
-		void load(const char * tfs, nana::unicode::t encoding)
+		void load(const char * tfs, nana::unicode encoding)
 		{
 			std::ifstream ifs(tfs);
 			std::string str;
 			bool big_endian = true;
-			
+
 			if(ifs.good())
 			{
 				text_cont_.clear();		//Clear only if the file can be opened.
@@ -224,7 +223,7 @@ namespace skeletons
 					if(nana::unicode::utf16 == encoding)
 						byte_order_translate_2bytes(str);
 					else
-						byte_order_translate_4bytes(str);					
+						byte_order_translate_4bytes(str);
 				}
 
 				text_cont_.push_back(nana::charset(str, encoding));
@@ -244,20 +243,20 @@ namespace skeletons
 			{
 				if(text_cont_.size() > 1)
 				{
-					for(typename std::deque<string_type>::const_iterator i = text_cont_.begin(), end = text_cont_.end() - 1; i != end; ++i)
+					for(auto i = text_cont_.cbegin(), end = text_cont_.cend() - 1; i != end; ++i)
 					{
 						std::string mbs = nana::charset(*i);
-						ofs.write(mbs.c_str(), static_cast<std::streamsize>(mbs.size()));
+						ofs.write(mbs.c_str(), mbs.size());
 						ofs.write("\r\n", 2);
 					}
 				}
 				std::string mbs = nana::charset(text_cont_.back());
-				ofs.write(mbs.c_str(), static_cast<std::streamsize>(mbs.size()));
+				ofs.write(mbs.c_str(), mbs.size());
 				_m_saved(tfs);
 			}
 		}
 
-		void store(const char* tfs, nana::unicode::t encoding) const
+		void store(const char* tfs, nana::unicode encoding) const
 		{
 			std::ofstream ofs(tfs, std::ios::binary);
 			if(ofs && text_cont_.size())
@@ -280,7 +279,7 @@ namespace skeletons
 				if(text_cont_.size() > 1)
 				{
 					std::string mbs;
-					for(typename std::deque<string_type>::const_iterator i = text_cont_.begin(), end = text_cont_.end() - 1; i != end; ++i)
+					for(auto i = text_cont_.cbegin(), end = text_cont_.cend() - 1; i != end; ++i)
 					{
 						mbs = nana::charset(*i).to_bytes(encoding);
 						mbs += "\r\n";
@@ -290,20 +289,21 @@ namespace skeletons
 				std::string mbs = nana::charset(text_cont_.back()).to_bytes(encoding);
 				ofs.write(mbs.c_str(), static_cast<std::streamsize>(mbs.size()));
 				_m_saved(tfs);
-			}		
+			}
 		}
 
 		size_type lines() const
 		{
 			return text_cont_.size();
 		}
-		
+
 		const string_type& getline(size_type pos) const
 		{
 			if(pos < text_cont_.size())
 				return text_cont_[pos];
-			if(! nullstr_)
-				nullstr_ = nana::shared_ptr<string_type>(new string_type);
+
+			if(nullptr == nullstr_)
+				nullstr_ = std::shared_ptr<string_type>(new string_type);
 			return *nullstr_;
 		}
 
@@ -316,7 +316,7 @@ namespace skeletons
 		{
 			if(text_cont_.size() <= pos)
 			{
-				text_cont_.push_back(text);
+				text_cont_.emplace_back(text);
 				pos = text_cont_.size() - 1;
 			}
 			else
@@ -331,7 +331,7 @@ namespace skeletons
 			if(line < text_cont_.size())
 			{
 				string_type& lnstr = text_cont_[line];
-				
+
 				if(pos < lnstr.size())
 					lnstr.insert(pos, str);
 				else
@@ -339,7 +339,7 @@ namespace skeletons
 			}
 			else
 			{
-				text_cont_.push_back(string_type(str));
+				text_cont_.emplace_back(str);
 				line = text_cont_.size() - 1;
 			}
 
@@ -352,7 +352,7 @@ namespace skeletons
 			if(line < text_cont_.size())
 			{
 				string_type& lnstr = text_cont_[line];
-				
+
 				if(pos < lnstr.size())
 					lnstr.insert(pos, 1, ch);
 				else
@@ -360,7 +360,7 @@ namespace skeletons
 			}
 			else
 			{
-				text_cont_.push_back(string_type(1, ch));
+				text_cont_.emplace_back(1, ch);
 				line = text_cont_.size() - 1;
 			}
 
@@ -368,14 +368,14 @@ namespace skeletons
 			_m_edited();
 		}
 
-		void insertln(size_type pos, const string_type& str)
+		void insertln(size_type line, const string_type& str)
 		{
-			if(pos < text_cont_.size())
-				text_cont_.insert(text_cont_.begin() + pos, str);
+			if(line < text_cont_.size())
+				text_cont_.insert(text_cont_.begin() + line, str);
 			else
 				text_cont_.push_back(str);
 
-			_m_make_max(pos);
+			_m_make_max(line);
 			_m_edited();
 		}
 
@@ -395,7 +395,7 @@ namespace skeletons
 				_m_edited();
 			}
 		}
-		
+
 		void erase(size_type pos)
 		{
 			if(pos < text_cont_.size())
@@ -408,23 +408,23 @@ namespace skeletons
 
 			_m_edited();
 		}
-		
+
 		void erase_all()
 		{
 			std::deque<string_type>().swap(text_cont_);
 			attr_max_.reset();
-			_m_edited();
+			_m_saved("");
 		}
-		
+
 		void merge(size_type pos)
 		{
-			if(text_cont_.size() && (0 <= pos) && (pos < text_cont_.size() - 1))
+			if(text_cont_.size() && (pos < text_cont_.size() - 1))
 			{
 				text_cont_[pos] += text_cont_[pos + 1];
-				text_cont_.erase(text_cont_.begin() + pos + 1);
+				text_cont_.erase(text_cont_.begin() + (pos + 1));
 				_m_make_max(pos);
 				if(pos < attr_max_.line)
-					attr_max_.line--;
+					--attr_max_.line;
 
 				_m_edited();
 			}
@@ -463,15 +463,15 @@ namespace skeletons
 		void _m_scan_for_max()
 		{
 			attr_max_.size = 0;
-			typename std::deque<string_type>::iterator it = text_cont_.begin(), end = text_cont_.end();
 			std::size_t n = 0;
-			for(; it != end; ++it, ++n)
+			for(auto & s : text_cont_)
 			{
-				if(it->size() > attr_max_.size)
+				if(s.size() > attr_max_.size)
 				{
-					attr_max_.size = it->size();
+					attr_max_.size = s.size();
 					attr_max_.line = n;
 				}
+				++n;
 			}
 		}
 
@@ -481,11 +481,11 @@ namespace skeletons
 				evtbase_->first_change();
 		}
 
-        void _m_saved(std::string filename) const
+        void _m_saved(std::string && filename) const
         {
             if(filename_ != filename)
             {
-				filename_.swap(filename);
+                filename_ = std::move(filename);
                 changed_ = false;
                 _m_first_change();
             } 
@@ -510,9 +510,9 @@ namespace skeletons
 		std::deque<string_type>	text_cont_;
 		textbase_extra_evtbase<char_type>*	evtbase_;
 
-		mutable bool		changed_;
-		mutable std::string	filename_;	//A string for saved filename
-		mutable nana::shared_ptr<string_type> nullstr_;
+		mutable bool			changed_;
+		mutable std::string		filename_;	//A string for the saved filename.
+		mutable std::shared_ptr<string_type> nullstr_;
 
 		struct attr_max
 		{

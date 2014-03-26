@@ -37,14 +37,14 @@ namespace nana{ namespace gui{
 				unsigned	pixels;
 				nana::size	textsize;
 				bool		enable;
-				nana::gui::window other;
+				window other;
 
 				int type;
-				nana::functor<void(size_type, size_type)> answer;
+				std::function<void(size_type, size_type)> answer;
 				std::vector<listitem> children;
 
 				item_type(const nana::string& text, const nana::paint::image& img, int type)
-					:text(text), image(img), pixels(0), enable(true), other(0), type(type)
+					:text(text), image(img), pixels(0), enable(true), other(nullptr), type(type)
 				{}
 			};
 
@@ -62,8 +62,8 @@ namespace nana{ namespace gui{
 
 				~container()
 				{
-					for(iterator i = cont_.begin(); i != cont_.end(); ++i)
-						delete *i;
+					for(auto ptr : cont_)
+						delete ptr;
 				}
 
 				void insert(size_type pos, const nana::string& text, const nana::paint::image& img, int type)
@@ -89,14 +89,14 @@ namespace nana{ namespace gui{
 				void insert(size_type pos)
 				{
 					if(pos < cont_.size())
-						cont_.insert(cont_.begin() + pos, static_cast<item_type*>(0)); //both works in C++0x and C++2003
+						cont_.insert(cont_.begin() + pos, static_cast<item_type*>(nullptr)); //both works in C++0x and C++2003
 					else
-						cont_.push_back(0);
+						cont_.push_back(nullptr);
 				}
 
 				void push_back()
 				{
-					cont_.push_back(0);
+					cont_.push_back(nullptr);
 				}
 
 				size_type size() const
@@ -124,12 +124,12 @@ namespace nana{ namespace gui{
 
 				const_iterator begin() const
 				{
-					return cont_.begin();
+					return cont_.cbegin();
 				}
 
 				const_iterator end() const
 				{
-					return cont_.end();
+					return cont_.cend();
 				}
 			private:
 				std::vector<item_type*> cont_;
@@ -138,26 +138,26 @@ namespace nana{ namespace gui{
 			class item_renderer
 			{
 			public:
-				enum{StateNormal, StateHighlight, StateSelected};
+				enum class state_t{normal, highlighted, selected};
 				const static unsigned extra_size = 6;
 
 				item_renderer(nana::paint::graphics& graph, bool textout, unsigned scale, nana::color_t color)
 					:graph(graph), textout(textout), scale(scale), color(color)
 				{}
 
-				void operator()(int x, int y, unsigned width, unsigned height, item_type& item, int state)
+				void operator()(int x, int y, unsigned width, unsigned height, item_type& item, state_t state)
 				{
 					//draw background
-					if(state != StateNormal)
+					if(state != state_t::normal)
 						graph.rectangle(x, y, width, height, 0x3399FF, false);
 					switch(state)
 					{
-					case StateHighlight:
+					case state_t::highlighted:
 						graph.shadow_rectangle(x + 1, y + 1, width - 2, height - 2, color, /*graph.mix(color, 0xC0DDFC, 0.5)*/ 0xC0DDFC, true);
 						break;
-					case StateSelected:
+					case state_t::selected:
 						graph.shadow_rectangle(x + 1, y + 1, width - 2, height - 2, color, /*graph.mix(color, 0x99CCFF, 0.5)*/0x99CCFF, true);
-					default: break;
+					default:	break;
 					}
 
 					if(item.image.empty() == false)
@@ -178,10 +178,8 @@ namespace nana{ namespace gui{
 							gh.rgb_to_wb();
 							gh.paste(graph, pos.x, pos.y);
 						}
-						else if(state == StateNormal)
-						{
+						else if(state == state_t::normal)
 							graph.blend(nana::rectangle(pos, size), graph.mix(color, 0xC0DDFC, 0.5), 0.25);
-						}
 
 						x += scale;
 						width -= scale;
@@ -202,17 +200,21 @@ namespace nana{ namespace gui{
 
 			struct drawer::drawer_impl_type
 			{
+				event_handle event_size;
 				unsigned scale;
 				bool textout;
 				size_type which;
-				int state;
+				item_renderer::state_t state;
 
 				container cont;
-				nana::gui::tooltip tooltip;
-
+				gui::tooltip tooltip;
 
 				drawer_impl_type()
-					:scale(16), textout(false), which(npos), state(item_renderer::StateNormal)
+					:	event_size(nullptr),
+						scale(16),
+						textout(false),
+						which(npos),
+						state(item_renderer::state_t::normal)
 				{}
 			};
 
@@ -242,18 +244,18 @@ namespace nana{ namespace gui{
 				{
 					if(impl_->cont.size() > n)
 					{
-						item_type * item = *(impl_->cont.begin() + n);
+						auto item = impl_->cont.at(n);
 						return (item && item->enable);
 					}
 					return false;
 				}
 
-				bool drawer::enable(drawer::size_type n, bool eb)
+				bool drawer::enable(size_type n, bool eb)
 				{
 					if(impl_->cont.size() > n)
 					{
-						item_type * item = *(impl_->cont.begin() + n);
-						if(item && item->enable != eb)
+						item_type * item = impl_->cont.at(n);
+						if(item && (item->enable != eb))
 						{
 							item->enable = eb;
 							return true;
@@ -266,60 +268,57 @@ namespace nana{ namespace gui{
 				{
 					impl_->scale = s;
 
-					for(container::iterator i = impl_->cont.begin(); i != impl_->cont.end(); ++i)
-					{
-						_m_fill_pixels(*i, true);
-					}
+					for(auto m : impl_->cont)
+						_m_fill_pixels(m, true);
 				}
 
-				void drawer::bind_window(drawer::widget_reference widget)
-				{
-					widget_ = & widget;
-					widget.caption(STR("Nana Toolbar"));
-					nana::gui::API::make_event<nana::gui::events::size>(widget.parent(), nana::functor<void(const nana::gui::eventinfo&)>(*this, &drawer::_m_owner_sized));
-				}
-
-				void drawer::refresh(drawer::graph_reference)
+				void drawer::refresh(graph_reference)
 				{
 					_m_draw();
 				}
 
-				void drawer::attached(drawer::graph_reference graph)
+				void drawer::attached(widget_reference widget, graph_reference graph)
 				{
 					graph_ = &graph;
+
+					widget_ = &widget;
+					widget.caption(STR("Nana Toolbar"));
+					impl_->event_size = API::make_event<events::size>(widget.parent(), std::bind(&drawer::_m_owner_sized, this, std::placeholders::_1));
+
 					using namespace API::dev;
-					make_drawer_event<nana::gui::events::mouse_move>(widget_->handle());
-					make_drawer_event<nana::gui::events::mouse_leave>(widget_->handle());
-					make_drawer_event<nana::gui::events::mouse_down>(widget_->handle());
-					make_drawer_event<nana::gui::events::mouse_up>(widget_->handle());
+					auto wd = widget_->handle();
+					make_drawer_event<events::mouse_move>(wd);
+					make_drawer_event<events::mouse_leave>(wd);
+					make_drawer_event<events::mouse_down>(wd);
+					make_drawer_event<events::mouse_up>(wd);
 				}
 
 				void drawer::detached()
 				{
-					API::dev::umake_drawer_event(widget_->handle());
+					API::umake_event(impl_->event_size);
+					impl_->event_size = nullptr;
 				}
 
-				void drawer::mouse_move(drawer::graph_reference graph, const nana::gui::eventinfo& ei)
+				void drawer::mouse_move(graph_reference graph, const eventinfo& ei)
 				{
 					if(ei.mouse.left_button == false)
 					{
 						size_type which = _m_which(ei.mouse.x, ei.mouse.y, true);
 						if(impl_->which != which)
 						{
-							if(impl_->which != npos && (*(impl_->cont.begin() + impl_->which))->enable)
-								ext_event.leave(*static_cast<nana::gui::toolbar*>(widget_), impl_->which);
+							if(impl_->which != npos && impl_->cont.at(impl_->which)->enable)
+								ext_event.leave(*static_cast<gui::toolbar*>(widget_), impl_->which);
 
 							impl_->which = which;
-
-							if(which == npos || (*(impl_->cont.begin() + which))->enable)
+							if(which == npos || impl_->cont.at(which)->enable)
 							{
-								impl_->state = (ei.mouse.left_button ? item_renderer::StateSelected : item_renderer::StateHighlight);
+								impl_->state = (ei.mouse.left_button ? item_renderer::state_t::selected : item_renderer::state_t::highlighted);
 
 								_m_draw();
-								nana::gui::API::lazy_refresh();
+								API::lazy_refresh();
 
-								if(impl_->state == item_renderer::StateHighlight)
-									ext_event.enter(*static_cast<nana::gui::toolbar*>(widget_), which);
+								if(impl_->state == item_renderer::state_t::highlighted)
+									ext_event.enter(*static_cast<gui::toolbar*>(widget_), which);
 							}
 
 							if(which != npos)
@@ -330,7 +329,7 @@ namespace nana{ namespace gui{
 					}
 				}
 
-				void drawer::mouse_leave(drawer::graph_reference, const nana::gui::eventinfo&)
+				void drawer::mouse_leave(graph_reference, const eventinfo&)
 				{
 					if(impl_->which != npos)
 					{
@@ -338,44 +337,43 @@ namespace nana{ namespace gui{
 
 						impl_->which = npos;
 						_m_draw();
-						nana::gui::API::lazy_refresh();
+						API::lazy_refresh();
 
-						if(which != npos && (*(impl_->cont.begin() + which))->enable)
-							ext_event.leave(*static_cast<nana::gui::toolbar*>(widget_), which);
+						if(which != npos && impl_->cont.at(which)->enable)
+							ext_event.leave(*static_cast<gui::toolbar*>(widget_), which);
 					}
 					impl_->tooltip.close();
 				}
 
-				void drawer::mouse_down(drawer::graph_reference, const nana::gui::eventinfo&)
+				void drawer::mouse_down(graph_reference, const eventinfo&)
 				{
 					impl_->tooltip.close();
 					if(impl_->which != npos && (impl_->cont.at(impl_->which)->enable))
 					{
-						impl_->state = item_renderer::StateSelected;
+						impl_->state = item_renderer::state_t::selected;
 						_m_draw();
-						nana::gui::API::lazy_refresh();
+						API::lazy_refresh();
 					}
 				}
 
-				void drawer::mouse_up(drawer::graph_reference, const nana::gui::eventinfo& ei)
+				void drawer::mouse_up(graph_reference, const eventinfo& ei)
 				{
 					if(impl_->which != npos)
 					{
 						size_type which = _m_which(ei.mouse.x, ei.mouse.y, false);
 						if(impl_->which == which)
 						{
-							ext_event.selected(*static_cast<nana::gui::toolbar*>(widget_), which);
-
-							impl_->state = item_renderer::StateHighlight;
+							ext_event.selected(*static_cast<gui::toolbar*>(widget_), which);
+							impl_->state = item_renderer::state_t::highlighted;
 						}
 						else
 						{
 							impl_->which = which;
-							impl_->state = (which == npos ? item_renderer::StateNormal : item_renderer::StateHighlight);
+							impl_->state = (which == npos ? item_renderer::state_t::normal : item_renderer::state_t::highlighted);
 						}
 
 						_m_draw();
-						nana::gui::API::lazy_refresh();
+						API::lazy_refresh();
 					}
 				}
 
@@ -386,41 +384,41 @@ namespace nana{ namespace gui{
 					x -= 2;
 
 					size_type pos = 0;
-					for(container::const_iterator i = impl_->cont.begin(); i != impl_->cont.end(); ++i, ++pos)
+					for(auto m: impl_->cont)
 					{
-						bool compart = (*i == 0);
+						bool compart = (nullptr == m);
 
-						if(x < static_cast<int>(compart ? 3 : (*i)->pixels))
-							return ((compart || ((*i)->enable == false && want_if_disabled == false)) ? npos : pos);
+						if(x < static_cast<int>(compart ? 3 : m->pixels))
+							return ((compart || (m->enable == false && want_if_disabled == false)) ? npos : pos);
 
-						x -= (compart ? 3 : (*i)->pixels);
+						x -= (compart ? 3 : m->pixels);
+
+						++pos;
 					}
 					return npos;
 				}
 
 				void drawer::_m_draw_background(nana::color_t color)
 				{
-					graph_->shadow_rectangle(0, 0, graph_->width(), graph_->height(), graph_->mix(color, 0xFFFFFF, 0.9), graph_->mix(color, 0x0, 0.95), true);
+					graph_->shadow_rectangle(graph_->size(), graph_->mix(color, 0xFFFFFF, 0.9), graph_->mix(color, 0x0, 0.95), true);
 				}
 
 				void drawer::_m_draw()
 				{
 					int x = 2, y = 2;
 
-					unsigned color = nana::gui::API::background(widget_->handle());
+					unsigned color = API::background(widget_->handle());
 					_m_draw_background(color);
 
 					item_renderer ir(*graph_, impl_->textout, impl_->scale, color);
 					size_type index = 0;
-					for(container::iterator i = impl_->cont.begin(); i != impl_->cont.end(); ++i, ++index)
+
+					for(auto item : impl_->cont)
 					{
-						item_type * item = *i;
 						if(item)
 						{
 							_m_fill_pixels(item, false);
-
-							ir(x, y, item->pixels, impl_->scale + ir.extra_size, *item, (index == impl_->which ? impl_->state : item_renderer::StateNormal));
-
+							ir(x, y, item->pixels, impl_->scale + ir.extra_size, *item, (index == impl_->which ? impl_->state : item_renderer::state_t::normal));
 							x += item->pixels;
 						}
 						else
@@ -428,20 +426,21 @@ namespace nana{ namespace gui{
 							graph_->line(x + 2, y + 2, x + 2, y + impl_->scale + ir.extra_size - 4, 0x808080);
 							x += 6;
 						}
+						++index;
 					}
 				}
 
-				void drawer::_m_owner_sized(const nana::gui::eventinfo& ei)
+				void drawer::_m_owner_sized(const eventinfo& ei)
 				{
-					nana::size s = widget_->size();
-					nana::gui::API::window_size(widget_->handle(), ei.size.width, s.height);
+					auto wd = widget_->handle();
+					API::window_size(wd, ei.size.width, widget_->size().height);
 					_m_draw();
-					nana::gui::API::update_window(widget_->handle());
+					API::update_window(wd);
 				}
 
 				void drawer::_m_fill_pixels(item_type* item, bool force)
 				{
-					if(item && (force || 0 == item->pixels))
+					if(item && (force || (0 == item->pixels)))
 					{
 						if(item->text.size())
 							item->textsize = graph_->text_extent_size(item->text);
@@ -459,12 +458,6 @@ namespace nana{ namespace gui{
 	}//end namespace drawerbase
 
 	//class toolbar
-	//	: public nana::gui::widget_object<category::widget_tag, drawerbase::toolbar::drawer>
-	//{
-	//public:
-	//	typedef std::size_t size_type;
-	//	typedef nana::functor<void(size_type)> functor;
-
 		toolbar::toolbar()
 		{}
 
@@ -486,13 +479,13 @@ namespace nana{ namespace gui{
 		void toolbar::append()
 		{
 			get_drawer_trigger().append();
-			API::refresh_window(this->handle());
+			API::refresh_window(handle());
 		}
 
 		void toolbar::append(const nana::string& text, const nana::paint::image& img)
 		{
 			get_drawer_trigger().append(text, img);
-			API::refresh_window(this->handle());
+			API::refresh_window(handle());
 		}
 
 		void toolbar::append(const nana::string& text)
@@ -515,10 +508,8 @@ namespace nana{ namespace gui{
 		void toolbar::scale(unsigned s)
 		{
 			get_drawer_trigger().scale(s);
-			API::refresh_window(this->handle());
+			API::refresh_window(handle());
 		}
 	//}; class toolbar
 }//end namespace gui
 }//end namespace nana
-
-

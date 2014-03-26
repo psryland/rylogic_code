@@ -21,10 +21,10 @@ namespace nana{	namespace gui
 		{
 		//class drawer
 			drawer::drawer()
-				:window_(0)
+				:window_(nullptr)
 			{}
 
-			void drawer::bind_window(widget_reference widget)
+			void drawer::attached(widget_reference widget, graph_reference)
 			{
 				widget.caption(STR("Nana Panel"));
 				window_ = widget.handle();
@@ -35,8 +35,9 @@ namespace nana{	namespace gui
 				if(bground_mode::basic != API::effects_bground_mode(window_))
 					graph.rectangle(API::background(window_), true);
 			}
-		//end class drawer
+			//end class drawer
 		}//end namespace panel
+
 	}//end namespace drawerbase
 }//end namespace gui
 }//end namespace nana

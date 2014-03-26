@@ -14,16 +14,21 @@
 #include <nana/traits.hpp>
 #include "../basis.hpp"
 #include "../programming_interface.hpp"
+#include <nana/gui/detail/drawer.hpp>
+#include <nana/gui/layout_utility.hpp>
 #include <nana/functor.hpp>
+#include <functional>
 
 namespace nana
 {
 namespace gui
 {
+	class drawer_trigger;
+
 	//class widget
 	//@brief: this is a abstract class for defining the capacity interface.
 	class widget
-		: private nana::noncopyable
+		: nana::noncopyable, nana::nonmovable
 	{
 		typedef void(*dummy_bool_type)(widget* (*)(const widget&));
 	public:
@@ -37,8 +42,8 @@ namespace gui
 		nana::string caption() const;
 		void caption(const nana::string& str);
 
-		void cursor(nana::gui::cursor::t);
-		nana::gui::cursor::t cursor() const;
+		void cursor(nana::gui::cursor);
+		nana::gui::cursor cursor() const;
 
 		void typeface(const nana::paint::font& font);
 		nana::paint::font typeface() const;
@@ -68,61 +73,46 @@ namespace gui
 		template<typename Event, typename Function>
 		event_handle make_event(Function function) const
 		{
-			if(traits::is_derived<Event, detail::event_type_tag>::value)
-				return API::make_event<Event, Function>(this->handle(), function);
-			else
-				return 0;
+			return API::make_event<Event, Function>(this->handle(), function);
 		}
 
 		template<typename Event, typename Class, typename Concept>
-		event_handle make_event(Class& object, void (Concept::*memf)(const eventinfo&)) const
+		event_handle make_event(Class& obj, void (Concept::*mf)(const eventinfo&)) const
 		{
-			if(traits::is_derived<Event, detail::event_type_tag>::value)
-				return API::make_event<Event>(this->handle(), functor<void(const eventinfo&)>(object, memf));
-			else
-				return 0;
+			return API::make_event<Event>(this->handle(), std::bind(mf, &obj, std::placeholders::_1));
 		}
 
 		template<typename Event, typename Class, typename Concept>
-		event_handle make_event(Class& object, void (Concept::*memf)()) const
+		event_handle make_event(Class& obj, void (Concept::*mf)()) const
 		{
-			if(traits::is_derived<Event, detail::event_type_tag>::value)
-				return API::make_event<Event>(this->handle(), functor<void()>(object, memf));
-			else
-				return 0;
+			return API::make_event<Event>(this->handle(), std::bind(mf, &obj));
 		}
 
 		template<typename Event, typename Function>
 		event_handle bind_event(widget& wdg, Function function) const
 		{
-			if(traits::is_derived<Event, detail::event_type_tag>::value)
-				return API::bind_event<Event, Function>(wdg.handle(), this->handle(), function);
-			else
-				return 0;
+			return API::bind_event<Event, Function>(wdg.handle(), this->handle(), function);
 		}
 
 		template<typename Event, typename Class, typename Concept>
-		event_handle bind_event(widget& wdg, Class& object, void (Concept::*memf)(const eventinfo&)) const
+		event_handle bind_event(widget& wdg, Class& obj, void (Concept::*mf)(const eventinfo&)) const
 		{
-			if(traits::is_derived<Event, nana::gui::detail::event_type_tag>::value)
-				return API::bind_event<Event>(wdg.handle(), this->handle(), functor<void(const eventinfo&)>(object, memf));
-			else
-				return 0;
+			return API::bind_event<Event>(wdg.handle(), this->handle(), std::bind(mf, &obj, std::placeholders::_1));
 		}
 
 		void umake_event(event_handle eh) const;
-		widget&	tooltip(const nana::string&);
+		widget& tooltip(const nana::string&);
 
 		operator dummy_bool_type() const;
-		operator nana::gui::window() const;
+		operator window() const;
 	protected:
 		//protected members, a derived class must call this implementation if it overrides an implementation
 		virtual void _m_complete_creation();
 
 		virtual nana::string _m_caption() const;
 		virtual void _m_caption(const nana::string&);
-		virtual nana::gui::cursor::t _m_cursor() const;
-		virtual void _m_cursor(nana::gui::cursor::t);
+		virtual nana::gui::cursor _m_cursor() const;
+		virtual void _m_cursor(nana::gui::cursor);
 		virtual void _m_close();
 		virtual bool _m_enabled() const;
 		virtual void _m_enabled(bool);
@@ -150,7 +140,7 @@ namespace gui
 		typedef DrawerTrigger drawer_trigger_t;
 	public:
 		widget_object()
-			:handle_(0)
+			:handle_(nullptr)
 		{}
 
 		~widget_object()
@@ -169,11 +159,8 @@ namespace gui
 			if(wd && this->empty())
 			{
 				handle_ = API::dev::create_widget(wd, r);
-				
 				API::dev::attach_signal(handle_, *this, &widget_object::signal);
-
-				static_cast<drawer_trigger&>(trigger_).bind_window(*this);
-				API::dev::attach_drawer(handle_, trigger_);
+				API::dev::attach_drawer(*this, trigger_);
 				if(visible)
 					API::show_window(handle_, true);
 				
@@ -197,18 +184,22 @@ namespace gui
 			return trigger_;
 		}
 	private:
-		void signal(int message, const detail::signals& sig)
+		void signal(detail::signals::code code, const detail::signals& sig)
 		{
-			switch(message)
+			typedef detail::signals::code codes;
+			switch(code)
 			{
-			case detail::signals::caption:
+			case codes::caption:
 				this->_m_caption(sig.info.caption);
 				break;
-			case detail::signals::read_caption:
+			case codes::read_caption:
 				*sig.info.str = this->_m_caption();
 				break;
-			case detail::signals::destroy:
-				handle_ = 0; break;
+			case codes::destroy:
+				handle_ = nullptr;
+				break;
+			default:
+				break;
 			}
 		}
 	private:
@@ -222,8 +213,9 @@ namespace gui
 	protected:
 		typedef DrawerTrigger drawer_trigger_t;
 	public:
+
 		widget_object()
-			:handle_(0)
+			:handle_(nullptr)
 		{}
 
 		~widget_object()
@@ -254,18 +246,22 @@ namespace gui
 			return handle_;
 		}
 	private:
-		void signal(int message, const detail::signals& sig)
+		void signal(detail::signals::code code, const detail::signals& sig)
 		{
-			switch(message)
+			typedef detail::signals::code codes;
+			switch(code)
 			{
-			case detail::signals::caption:
+			case codes::caption:
 				this->_m_caption(sig.info.caption);
 				break;
-			case detail::signals::read_caption:
+			case codes::read_caption:
 				*sig.info.str = this->_m_caption();
 				break;
-			case detail::signals::destroy:
-				handle_ = 0; break;
+			case codes::destroy:
+				handle_ = nullptr;
+				break;
+			default:
+				break;
 			}
 		}
 	private:
@@ -278,14 +274,15 @@ namespace gui
 	protected:
 		typedef DrawerTrigger drawer_trigger_t;
 	public:
+
 		widget_object()
-			:handle_(API::dev::create_window(0, false, API::make_center(300, 150), appearance()))
+			:handle_(API::dev::create_window(nullptr, false, API::make_center(300, 150), appearance()))
 		{
 			_m_bind_and_attach();
 		}
 
 		widget_object(const rectangle& r, const appearance& apr = appearance())
-			:	handle_(API::dev::create_window(0, false, r, apr))
+			: handle_(API::dev::create_window(nullptr, false, r, apr))
 		{
 			_m_bind_and_attach();
 		}
@@ -357,26 +354,29 @@ namespace gui
 			return trigger_;
 		}
 	private:
-		void signal(int message, const detail::signals& sig)
+		void signal(detail::signals::code code, const detail::signals& sig)
 		{
-			switch(message)
+			typedef detail::signals::code codes;
+			switch(code)
 			{
-			case detail::signals::caption:
+			case codes::caption:
 				this->_m_caption(sig.info.caption);
 				break;
-			case detail::signals::read_caption:
+			case codes::read_caption:
 				*sig.info.str = this->_m_caption();
 				break;
-			case detail::signals::destroy:
-				handle_ = 0; break;
+			case codes::destroy:
+				handle_ = nullptr;
+				break;
+			default:
+				break;
 			}
 		}
 
 		void _m_bind_and_attach()
 		{
 			API::dev::attach_signal(handle_, *this, &widget_object::signal);
-			static_cast<drawer_trigger&>(trigger_).bind_window(*this);
-			API::dev::attach_drawer(handle_, trigger_);	
+			API::dev::attach_drawer(*this, trigger_);
 		}
 	private:
 		window handle_;
@@ -393,7 +393,7 @@ namespace gui
 		typedef int drawer_trigger_t;
 	public:
 		widget_object()
-			:handle_(0)
+			:handle_(nullptr)
 		{}
 
 		~widget_object()
@@ -426,18 +426,25 @@ namespace gui
 	private:
 		virtual drawer_trigger* get_drawer_trigger()
 		{
-			return 0;
+			return nullptr;
 		}
 
-		void signal(int message, const detail::signals& sig)
+		void signal(detail::signals::code code, const detail::signals& sig)
 		{
-			switch(message)
+			typedef detail::signals::code codes;
+			switch(code)
 			{
-			case detail::signals::caption:
+			case codes::caption:
 				this->_m_caption(sig.info.caption);
 				break;
-			case detail::signals::destroy:
-				handle_ = 0; break;
+			case codes::read_caption:
+				*sig.info.str = this->_m_caption();
+				break;
+			case codes::destroy:
+				handle_ = nullptr;
+				break;
+			default:
+				break;
 			}
 		}
 	private:

@@ -13,16 +13,14 @@
 #include <nana/datetime.hpp>
 #if defined(NANA_WINDOWS)
 	#include <windows.h>
-
-#elif defined(NANA_LINUX)
-
 #endif
 
 namespace nana
 {
+	//class date
 		date::date()
 		{
-			time_t t = std::time(0);
+			time_t t = std::time(nullptr);
 			struct tm * tm_addr = std::localtime(&t);
 			value_.year = tm_addr->tm_year + 1900;
 			value_.month = tm_addr->tm_mon + 1;
@@ -261,8 +259,8 @@ namespace nana
 				value_.minute = minute;
 				value_.second = second;
 			}
-			time_t t = std::time(0);
-			struct tm * tm_addr = std::localtime(&t);
+			time_t t = ::time(0);
+			struct tm * tm_addr = ::localtime(&t);
 			value_.hour = tm_addr->tm_hour;
 			value_.minute = tm_addr->tm_min;
 			value_.second = tm_addr->tm_sec;

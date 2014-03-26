@@ -39,9 +39,9 @@ namespace gui
 			return *res;
 		}
 
-		Form& operator()(nana::gui::widget& owner)	const
+		Form& operator()(widget& owner)	const
 		{
-			Form* res = detail::bedrock::instance().rt_manager.create_form<Form, nana::gui::widget&>(owner);
+			Form* res = detail::bedrock::instance().rt_manager.create_form<Form, widget&>(owner);
 			if(res == 0)
 				throw nana::bad_window("form_loader.operator(): failed to create a window");
 			if(IsMakeVisible) res->show();
@@ -49,9 +49,9 @@ namespace gui
 			return *res;
 		}
 
-		Form& operator()(nana::gui::window owner) const
+		Form& operator()(window owner) const
 		{
-			Form* res = detail::bedrock::instance().rt_manager.create_form<Form, nana::gui::window>(owner);
+			Form* res = detail::bedrock::instance().rt_manager.create_form<Form, window>(owner);
 			if(res == 0)
 				throw nana::bad_window("form_loader.operator(): failed to create a window");
 			if(IsMakeVisible) res->show();

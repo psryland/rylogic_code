@@ -10,7 +10,7 @@ namespace nana
 
 		static unsigned char charmap_0x0000_0x00C0[192] = {
 			BN, BN, BN, BN, BN, BN, BN, BN, BN, S,  B,  S,  WS, B, BN, BN,
-			BN, BN, BN, BN, BN, BN, BN, BN, BN, BN, BN, BN, B,  B,  B,  S,
+			BN, BN, BN, BN, BN, BN, BN, BN, BN, BN, BN, BN, B,  B,  B,  S, 
 			WS, ON, ON, ET, ET, ET, ON, ON, ON, ON, ON, ES, CS, ES, CS, CS,
 			EN, EN, EN, EN, EN, EN, EN, EN, EN, EN, CS, ON, ON, ON, ON, ON,
 			ON, L,  L,  L,  L,  L,  L,  L,  L,  L,  L,  L,  L,  L,  L,  L,
@@ -620,22 +620,18 @@ namespace nana
 	}
 
 	//class unicode_bidi
-		unicode_bidi::unicode_bidi()
-		{
-		}
-
 		void unicode_bidi::linestr(const char_type* str, std::size_t len, std::vector<entity> & reordered)
 		{
 			levels_.clear();
 			const char_type * end = str + len;
 
 			std::vector<remember> stack;
-
+			
 			remember cur = {0, directional_override_status::neutral};
 			cur.level = _m_paragraph_level(str, end);
 
 			//First character type
-			bidi_char::t begin_char_type;
+			bidi_char begin_char_type;
 			const char_type * begin_character = 0;
 
 			for(const char_type * c = str; c < end; ++c)
@@ -650,13 +646,13 @@ namespace nana
 						begin_character = 0;
 					}
 
-					cur.override = directional_override_status::neutral;
+					cur.directional_override = directional_override_status::neutral;
 					if(cur.level & 1)
 						++cur.level;
 					else
 						cur.level += 2;
 					continue;
-				case RLE:	//X2
+				case RLE:
 					stack.push_back(cur);
 					if(begin_character)
 					{
@@ -664,7 +660,7 @@ namespace nana
 						begin_character = 0;
 					}
 
-					cur.override = directional_override_status::neutral;
+					cur.directional_override = directional_override_status::neutral;
 					if(cur.level & 1)
 						cur.level += 2;
 					else
@@ -689,7 +685,7 @@ namespace nana
 						_m_push_entity(begin_character, c, cur.level, begin_char_type);
 						begin_character = 0;
 					}
-					cur.override = directional_override_status::left_to_right;
+					cur.directional_override = directional_override_status::left_to_right;
 					if(cur.level & 1)
 						++cur.level;
 					else
@@ -702,15 +698,12 @@ namespace nana
 						_m_push_entity(begin_character, c, cur.level, begin_char_type);
 						begin_character = 0;
 					}
-					cur.override = directional_override_status::right_to_left;
-					if(cur.level & 1)
-						cur.level += 2;
-					else
-						++cur.level;
+					cur.directional_override = directional_override_status::right_to_left;
+					cur.level = (cur.level & 1) + 1;
 					continue;
 				}
 
-				bidi_char::t type = _m_char_dir(*c);
+				bidi_char type = _m_char_dir(*c);
 				if(0 == begin_character)
 				{
 					begin_character = c;
@@ -743,13 +736,14 @@ namespace nana
 					return 1;
 				case bidi_char::L:
 					return 0;
-                default:    break;
+				default:
+					break;
 				}
 			}
 			return 0;
 		}
 
-		void unicode_bidi::_m_push_entity(const char_type * begin, const char_type *end, unsigned level, bidi_char::t bidi_char_type)
+		void unicode_bidi::_m_push_entity(const char_type * begin, const char_type *end, unsigned level, bidi_char bidi_char_type)
 		{
 			entity e;
 			e.begin = begin;
@@ -764,30 +758,31 @@ namespace nana
 			return levels_.begin();
 		}
 
-		unicode_bidi::bidi_char::t unicode_bidi::_m_eor(std::vector<entity>::iterator i)
+		auto unicode_bidi::_m_eor(std::vector<entity>::iterator i) ->bidi_char
 		{
+			const auto end = levels_.end();
 			unsigned level = i->level;
-			for(; i != levels_.end(); ++i)
+			for(; i != end; ++i)
 			{
 				if(i->level != level)
 					return i->bidi_char_type;
 			}
 
 			i = _m_search_first_character();
-			if(i != levels_.end())
+			if(i != end)
 				return (i->level & 1 ? bidi_char::R : bidi_char::L);
 			return bidi_char::L;
 		}
 
 		void unicode_bidi::_m_resolve_weak_types()
 		{
-			const std::vector<entity>::iterator end = levels_.end();
-			std::vector<entity>::iterator begin_character = _m_search_first_character();
+			const auto end = levels_.end();
+			auto begin_character = _m_search_first_character();
 			if(begin_character == end)
 				return;
 
 			unsigned level_of_run = begin_character->level;
-			const std::vector<entity>::iterator last = end - 1;
+			const auto last = end - 1;
 
 			//W1. Examine each nonspacing mark, and change the type of the NSM to the type of the previous
 			//character.
@@ -797,10 +792,10 @@ namespace nana
 
 			//The three phases could be combined as one process. Because these phases are standalone.
 			//Generally, the directional char type of sor is taken on current level.
-			bidi_char::t prev = (level_of_run & 1 ? bidi_char::R : bidi_char::L); //sor is either L or R
+			bidi_char prev = (level_of_run & 1 ? bidi_char::R : bidi_char::L); //sor is either L or R
 			bool change_european_number = false;
 
-			for(std::vector<entity>::iterator i = begin_character; i != end; ++i)
+			for(auto i = begin_character; i != end; ++i)
 			{
 				if(level_of_run != i->level)
 				{
@@ -838,9 +833,9 @@ namespace nana
 			//
 			//W5. A sequence of European terminators adjacent to European numbers changes to all European numbers.
 			//W6. Otherwise, separators and terminators change to Other Neutral.
-			std::vector<entity>::iterator etpos = levels_.end(); //Indicates the head of the sequence of European Terminators
+			auto etpos = end; //Indicates the head of the sequence of European Terminators
 			bool head = true;
-			for(std::vector<entity>::iterator i = begin_character; i != end; ++i)
+			for(auto i = begin_character; i != end; ++i)
 			{
 				switch(i->bidi_char_type)
 				{
@@ -891,17 +886,17 @@ namespace nana
 					}
 					else
 					{
-						if(etpos == levels_.end())
+						if(etpos == end)
 							etpos = i;
 					}
 					break;
 				case bidi_char::EN:
-					if(levels_.end() != etpos)
+					if(end != etpos)
 					{
 						for(; etpos != i; ++etpos)
 							etpos->bidi_char_type = bidi_char::EN;
 
-						etpos = levels_.end();
+						etpos = end;
 					}
 					break;
 				default:
@@ -909,25 +904,25 @@ namespace nana
 				}
 
 				//W6.
-				if((levels_.end() != etpos) && (bidi_char::ET != i->bidi_char_type))
+				if((end != etpos) && (bidi_char::ET != i->bidi_char_type))
 				{
 					for(; etpos != i; ++etpos)
 						etpos->bidi_char_type = bidi_char::ON;
-					etpos = levels_.end();
+					etpos = end;
 				}
 			}
 
 			//The final check etpos out
-			for(; etpos != levels_.end(); ++etpos)
+			for(; etpos != end; ++etpos)
 				etpos->bidi_char_type = bidi_char::ON;
-
+			
 			//W7. Search backward from each instance of a European number until the first strong type (R, L, or sor) is found.
 			//If an L is found, then change the type of the European number to L.
 
 			level_of_run = begin_character->level;
-			bidi_char::t sor = (level_of_run & 1 ? bidi_char::R : bidi_char::L);
+			bidi_char sor = (level_of_run & 1 ? bidi_char::R : bidi_char::L);
 			change_european_number = (sor == bidi_char::L);
-			for(std::vector<entity>::iterator i = begin_character; i != levels_.end(); ++i)
+			for(auto i = begin_character; i != end; ++i)
 			{
 				if(level_of_run != i->level)
 				{
@@ -956,21 +951,21 @@ namespace nana
 
 		void unicode_bidi::_m_resolve_neutral_types()
 		{
-			std::vector<entity>::iterator end = levels_.end();
-			std::vector<entity>::iterator begin_character = _m_search_first_character();
+			const auto end = levels_.end();
+			auto begin_character = _m_search_first_character();
 			if(begin_character == end)
 				return;
 
 			unsigned level_of_run = begin_character->level;
 			bool head_of_run = true;
 			std::vector<entity>::iterator last = end - 1;
-			std::vector<entity>::iterator begin_neutral = levels_.end();
+			std::vector<entity>::iterator begin_neutral = end;
 
 			//N1. A sequence of neutrals takes the direction of the surrounding strong text if the text on both sides has the same direction.
 			//European and Arabic numbers act as if they were R in terms of their influence on neutrals.
 			//Start-of-level-run (sor) and end-of-level-run (eor) are used at level run boundaries.
-			bidi_char::t left;
-			for(std::vector<entity>::iterator i = begin_character; i != levels_.end(); ++i)
+			bidi_char left;
+			for(auto i = begin_character; i != end; ++i)
 			{
 				if(level_of_run != i->level)
 				{
@@ -980,7 +975,7 @@ namespace nana
 
 				if(_m_bidi_category(i->bidi_char_type) == bidi_category::neutral)
 				{
-					if(begin_neutral == levels_.end())
+					if(begin_neutral == end)
 					{
 						begin_neutral = i;
 						left = (head_of_run ? (level_of_run & 1 ? bidi_char::R : bidi_char::L) : (i-1)->bidi_char_type);	//Head ? sor : prev_char
@@ -988,9 +983,9 @@ namespace nana
 							left = bidi_char::R;
 					}
 				}
-				else if(begin_neutral != levels_.end())	//This element is not a neutral
+				else if(begin_neutral != end)	//This element is not a neutral
 				{
-					bidi_char::t right;
+					bidi_char right;
 					//Check if i is the end of the level run.
 
 					if(i->level != begin_neutral->level)
@@ -1001,22 +996,22 @@ namespace nana
 					if(bidi_char::EN == right || bidi_char::AN == right)
 						right = bidi_char::R;
 
-					bidi_char::t target = (left == right ? left : (begin_neutral->level & 1 ? bidi_char::R : bidi_char::L));
+					bidi_char target = (left == right ? left : (begin_neutral->level & 1 ? bidi_char::R : bidi_char::L));
 
-					for(std::vector<entity>::iterator n = begin_neutral; n != i; ++n)
+					for(auto n = begin_neutral; n != i; ++n)
 						n->bidi_char_type = target;
 
-					begin_neutral = levels_.end();
+					begin_neutral = end;
 				}
 
 				head_of_run = false;
 			}
 
-			if(begin_neutral != levels_.end())
+			if(begin_neutral != end)
 			{
-				bidi_char::t eor = begin_character->level & 1 ? bidi_char::R : bidi_char::L;
-				bidi_char::t target = (left == eor ? left : (begin_neutral->level & 1 ? bidi_char::R : bidi_char::L));
-				for(std::vector<entity>::iterator i = begin_neutral; i != levels_.end(); ++i)
+				bidi_char eor = begin_character->level & 1 ? bidi_char::R : bidi_char::L;
+				bidi_char target = (left == eor ? left : (begin_neutral->level & 1 ? bidi_char::R : bidi_char::L));
+				for(auto i = begin_neutral; i != end; ++i)
 					i->bidi_char_type = target;
 			}
 		}
@@ -1025,24 +1020,24 @@ namespace nana
 		{
 			//I1. For all characters with an even (left-to-right) embedding direction, those of type R go up one level and those of type AN or EN go up two levels.
 			//I2. For all characters with an odd (right-to-left) embedding direction, those of type L, EN or AN go up one level.
-			for(std::vector<entity>::iterator i = levels_.begin(); i != levels_.end(); ++i)
+			for(auto & i : levels_)
 			{
-				switch(i->bidi_char_type)
+				switch(i.bidi_char_type)
 				{
 				case bidi_char::L:
-					if(i->level & 1)
-						++(i->level);
+					if(i.level & 1)
+						++(i.level);
 					break;
 				case bidi_char::R:
-					if(0 == (i->level & 1))
-						++(i->level);
+					if(0 == (i.level & 1))
+						++(i.level);
 					break;
 				case bidi_char::EN:
 				case bidi_char::AN:
-					if(i->level & 1)
-						++(i->level);
+					if(i.level & 1)
+						++(i.level);
 					else
-						i->level += 2;
+						i.level += 2;
 					break;
 				default:
 					break;
@@ -1056,20 +1051,19 @@ namespace nana
 
 			//First find the highest_level for resolution, because the resolution is from highest level.
 			unsigned highest_level = 0;
-			for(std::vector<entity>::iterator i = levels_.begin(); i != levels_.end(); ++i)
+			for(auto & i : levels_)
 			{
-				if(i->level > highest_level)
-					highest_level = i->level;
+				if(i.level > highest_level)
+					highest_level = i.level;
 			}
 
 			for(unsigned level = highest_level; level >= 1; --level)
 			{
-				for(std::vector<entity>::iterator i = levels_.begin(); i != levels_.end(); ++i)
+				for(auto i = levels_.begin(); i != levels_.end(); ++i)
 				{
 					if(i->level >= level)
 					{
-						std::vector<entity>::iterator beg = i;
-						std::vector<entity>::iterator end = i + 1;
+						auto beg = i, end = i + 1;
 						while(end != levels_.end() && (end->level >= level))
 							++end;
 
@@ -1077,31 +1071,28 @@ namespace nana
 						std::size_t p = beg - levels_.begin();
 						std::size_t plast = (end - levels_.begin() - 1);
 						for(; p < plast; ++p, --plast)
-						{
-							entity tmp = reordered[p];
-							reordered[p] = reordered[plast];
-							reordered[plast]= tmp;
-						}
+							std::swap(reordered[p], reordered[plast]);
+
 						i = end - 1;
 					}
 				}
 			}
 		}
 
-		unicode_bidi::bidi_category::t unicode_bidi::_m_bidi_category(bidi_char::t type)
+		unicode_bidi::bidi_category unicode_bidi::_m_bidi_category(bidi_char bidi_char_type)
 		{
-			return static_cast<unicode_bidi::bidi_category::t>(static_cast<int>(type) & 0xF000);
+			return static_cast<unicode_bidi::bidi_category>(static_cast<int>(bidi_char_type) & 0xF000);
 		}
-
-		unicode_bidi::bidi_char::t unicode_bidi::_m_char_dir(char_type ch)
+		
+		unicode_bidi::bidi_char unicode_bidi::_m_char_dir(char_type ch)
 		{
 			bidi_charmap::t type = bidi_charmap::bidi_char_type(ch);
-			if(type < bidi_charmap::PDF)
-				return static_cast<bidi_char::t>(type);
-			if(type < bidi_charmap::B)
-				return static_cast<bidi_char::t>(static_cast<int>(type - bidi_charmap::PDF) + 0x1000);
+			if (type < bidi_charmap::PDF)
+				return static_cast<bidi_char>(type);
+			if (type < bidi_charmap::B)
+				return static_cast<bidi_char>(static_cast<int>(type - bidi_charmap::PDF) + 0x1000);
 
-			return static_cast<bidi_char::t>(static_cast<int>(type - bidi_charmap::B) + 0x2000);
+			return static_cast<bidi_char>(static_cast<int>(type - bidi_charmap::B) + 0x2000);
 		}
 	//end class unicode_bidi
 }//end namespace nana

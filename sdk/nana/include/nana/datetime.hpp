@@ -26,7 +26,7 @@ namespace nana
 		};
 
 		date();
-		date(const std::tm &);
+		date(const std::tm&);
 		date(int year, int month, int day);
 
 		date operator - (int off) const;
@@ -50,8 +50,7 @@ namespace nana
 		date _m_sub(unsigned x) const;
 	private:
 		value	value_;
-	}; //end namespace date
-
+	}; //end class date
 
 	class time
 	{
@@ -69,7 +68,7 @@ namespace nana
 		const value& read() const;
 	private:
 		value	value_;
-	};
+	};//end class time
 }//end namespace nana
 
 #endif

@@ -37,7 +37,7 @@ namespace gui
 				}
 
 				delete holder;
-				return 0;
+				return nullptr;
 			}
 
 			template<typename Form, typename Param>
@@ -51,7 +51,7 @@ namespace gui
 				}
 
 				delete holder;
-				return 0;
+				return nullptr;
 			}
 
 			template<typename Form, typename Param1, typename Param2>
@@ -65,7 +65,7 @@ namespace gui
 				}
 
 				delete holder;
-				return 0;
+				return nullptr;
 			}
 
 			template<typename Form, typename Param1, typename Param2, typename Param3>
@@ -79,7 +79,7 @@ namespace gui
 				}
 
 				delete holder;
-				return 0;
+				return nullptr;
 			}
 
 			template<typename Form, typename Param1, typename Param2, typename Param3, typename Param4>
@@ -93,7 +93,7 @@ namespace gui
 				}
 
 				delete holder;
-				return 0;
+				return nullptr;
 			}
 
 			template<typename Form, typename Param1, typename Param2, typename Param3, typename Param4, typename Param5>
@@ -107,13 +107,13 @@ namespace gui
 				}
 
 				delete holder;
-				return 0;
+				return nullptr;
 			}
 
 			void remove_if_exists(window_handle wd)
 			{
-				typename std::map<window_handle, widget_holder*>::iterator i = holder_.find(wd);
-				if(i != holder_.end())
+				auto i = holder_.find(wd);
+				if(i != holder_.cend())
 				{
 					delete i->second;
 					holder_.erase(i);
@@ -132,7 +132,7 @@ namespace gui
 			{
 			public:
 				widget_placer()
-					:	form_(0)
+					:	form_(nullptr)
 				{}
 
 				~widget_placer()
@@ -142,7 +142,7 @@ namespace gui
 
 				bool create()
 				{
-					if (0 == form_)
+					if (nullptr == form_)
 						form_ = new Form;
 
 					return (form_ && !form_->empty());
@@ -151,7 +151,7 @@ namespace gui
 				template<typename Param>
 				bool create(Param param)
 				{
-					if (0 == form_)
+					if (nullptr == form_)
 						form_ = new Form(param);
 
 					return (form_ && !form_->empty());
@@ -160,7 +160,7 @@ namespace gui
 				template<typename Param1, typename Param2>
 				bool create(Param1 p1, Param2 p2)
 				{
-					if (0 == form_)
+					if (nullptr == form_)
 						form_ = new Form(p1, p2);
 
 					return (form_ && !form_->empty());
@@ -169,7 +169,7 @@ namespace gui
 				template<typename Param1, typename Param2, typename Param3>
 				bool create(Param1 p1, Param2 p2, Param3 p3)
 				{
-					if (0 == form_)
+					if (nullptr == form_)
 						form_ = new Form(p1, p2, p3);
 
 					return (form_ && !form_->empty());
@@ -178,7 +178,7 @@ namespace gui
 				template<typename Param1, typename Param2, typename Param3, typename Param4>
 				bool create(Param1 p1, Param2 p2, Param3 p3, Param4 p4)
 				{
-					if (0 == form_)
+					if (nullptr == form_)
 						form_ = new Form(p1, p2, p3, p4);
 
 					return (form_ && !form_->empty());
@@ -187,7 +187,7 @@ namespace gui
 				template<typename Param1, typename Param2, typename Param3, typename Param4, typename Param5>
 				bool create(Param1 p1, Param2 p2, Param3 p3, Param4 p4, Param5 p5)
 				{
-					if (0 == form_)
+					if (nullptr == form_)
 						form_ = new Form(p1, p2, p3, p4, p5);
 
 					return (form_ && !form_->empty());
@@ -198,9 +198,9 @@ namespace gui
 					return form_;
 				}
 
-				window_handle get_handle() const
+				window_handle get_handle() const override
 				{
-					return reinterpret_cast<window_handle>(form_ ? form_->handle() : 0);
+					return reinterpret_cast<window_handle>(form_ ? form_->handle() : nullptr);
 				}
 			private:
 				Form * form_;

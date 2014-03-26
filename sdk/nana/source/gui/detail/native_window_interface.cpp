@@ -13,9 +13,13 @@
 #include PLATFORM_SPEC_HPP
 #include <nana/gui/detail/native_window_interface.hpp>
 #if defined(NANA_WINDOWS)
-	#include <nana/paint/detail/image_ico.hpp>
-	#include <nana/threads/mutex.hpp>
+	#if defined(NANA_MINGW) && defined(STD_THREAD_NOT_SUPPORTED)
+        #include <nana/std_mutex.hpp>
+    #else
+        #include <mutex>
+	#endif
 	#include <map>
+	#include <nana/paint/detail/image_ico.hpp>
 #elif defined(NANA_X11)
 	#include <nana/system/platform.hpp>
 	#include GUI_BEDROCK_HPP
@@ -31,9 +35,8 @@ namespace nana{
 			static HICON icon(const nana::paint::image& img)
 			{
 				paint::detail::image_ico * ico = dynamic_cast<paint::detail::image_ico*>(img.image_ptr_.get());
-				if(ico && (ico->ptr()))
-					return *(ico->ptr());
-
+				if(ico && ico->ptr())
+						return *(ico->ptr());
 				return 0;
 			}
 #endif
@@ -69,10 +72,10 @@ namespace nana{
 
 		bool remove(native_window_type wd, extra_t & ext)
 		{
-			threads::lock_guard<threads::recursive_mutex> lock(mutex_);
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
 
-			map_t::iterator i = map_.find(wd);
-			if(i != map_.end())
+			auto i = const_cast<const map_t&>(map_).find(wd);
+			if(i != map_.cend())
 			{
 				ext = i->second;
 				map_.erase(i);
@@ -83,9 +86,9 @@ namespace nana{
 
 		HICON set_icon(native_window_type wd, HICON ico)
 		{
-			threads::lock_guard<threads::recursive_mutex> lock(mutex_);
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
 
-			map_t::iterator i = map_.find(wd);
+			auto i = map_.find(wd);
 			if(i != map_.end())
 			{
 				HICON ret = i->second.ico;
@@ -97,9 +100,10 @@ namespace nana{
 			return 0;
 		}
 	private:
-		threads::recursive_mutex mutex_;
+		std::recursive_mutex mutex_;
 		map_t map_;
 	};
+
 
 	//This function is a proxy for ShowWindow/ShowWindowAsync
 	//It determines which API should be called.
@@ -107,10 +111,10 @@ namespace nana{
 	{
 		bool async = true;
 		const DWORD tid = ::GetCurrentThreadId();
-		if(tid == ::GetWindowThreadProcessId(wd, 0))
+		if(tid == ::GetWindowThreadProcessId(wd, nullptr))
 		{
 			HWND owner = ::GetWindow(wd, GW_OWNER);
-			if ((0 == owner) || (tid == ::GetWindowThreadProcessId(owner, 0)))
+			if ((nullptr == owner) || (tid == ::GetWindowThreadProcessId(owner, nullptr)))
 			{
 				async = false;
 				HWND owned = ::GetWindow(wd, GW_HWNDPREV);
@@ -118,7 +122,7 @@ namespace nana{
 				{
 					if (::GetWindow(owned, GW_OWNER) == wd)
 					{
-						if (tid != ::GetWindowThreadProcessId(owned, 0))
+						if (tid != ::GetWindowThreadProcessId(owned, nullptr))
 						{
 							async = true;
 							break;
@@ -176,6 +180,8 @@ namespace nana{
 			return screen_size();
 		}
 
+		
+
 		//platform-dependent
 		native_interface::window_result native_interface::create_window(native_window_type owner, bool nested, const rectangle& r, const appearance& app)
 		{
@@ -202,7 +208,8 @@ namespace nana{
 				::ClientToScreen(reinterpret_cast<HWND>(owner), &pt);
 
 			HWND wnd = ::CreateWindowEx(style_ex, STR("NanaWindowInternal"), STR("Nana Window"),
-											style, pt.x, pt.y, 100, 100,
+											style,
+											pt.x, pt.y, 100, 100,
 											reinterpret_cast<HWND>(owner), 0, ::GetModuleHandle(0), 0);
 
 			//A window may have a border, this should be adjusted the client area fit for the specified size.
@@ -235,8 +242,8 @@ namespace nana{
 			nana::detail::platform_scope_guard psg;
 
 			XSetWindowAttributes win_attr;
-			unsigned long attr_mask =	CWBackPixmap | CWBackPixel | CWBorderPixel |
-										CWWinGravity | CWBitGravity | CWColormap | CWEventMask;
+			unsigned long attr_mask = CWBackPixmap | CWBackPixel | CWBorderPixel |
+							CWWinGravity | CWBitGravity | CWColormap | CWEventMask;
 
 			Display * disp = restrict::spec.open_display();
 			win_attr.colormap = restrict::spec.colormap();
@@ -369,7 +376,7 @@ namespace nana{
 
 		native_window_type native_interface::create_child_window(native_window_type parent, const rectangle& r)
 		{
-			if(0 == parent) return 0;
+			if(nullptr == parent) return nullptr;
 #if defined(NANA_WINDOWS)
 			HWND handle = ::CreateWindowEx(WS_EX_CONTROLPARENT,		// Extended possibilites for variation
 										STR("NanaWindowInternal"),
@@ -465,17 +472,17 @@ namespace nana{
 			{
 				if(is_window_visible(wd))
 					show_window(wd, false, true);
-				Display* disp = restrict::spec.open_display();
-				const nana::detail::atombase_tag  & atombase = restrict::spec.atombase();
+				auto disp = restrict::spec.open_display();
+				auto & atombase = restrict::spec.atombase();
 				::XSetTransientForHint(disp, reinterpret_cast<Window>(wd), owner);
 				::XChangeProperty(disp, reinterpret_cast<Window>(wd),
-								atombase.net_wm_state, XA_ATOM, sizeof(int) * 8,
+								atombase.net_wm_state, XA_ATOM, sizeof(int) * 8, 
 								PropModeReplace,
 								reinterpret_cast<const unsigned char*>(&atombase.net_wm_state_modal), 1);
 			}
 		}
 #endif
-
+		
 		void native_interface::enable_window(native_window_type wd, bool is_enabled)
 		{
 #if defined(NANA_WINDOWS)
@@ -490,7 +497,7 @@ namespace nana{
 			}
 
 			::XSelectInput(restrict::spec.open_display(), reinterpret_cast<Window>(wd), mask);
-#endif
+#endif		
 		}
 
 		bool native_interface::window_icon(native_window_type wd, const nana::paint::image& img)
@@ -533,10 +540,10 @@ namespace nana{
 		void native_interface::activate_window(native_window_type wd)
 		{
 #if defined(NANA_WINDOWS)
-			HWND native_wd = reinterpret_cast<HWND>(wd);
+			auto native_wd = reinterpret_cast<HWND>(wd);
 			if (::IsWindow(native_wd))
 			{
-				if (::GetWindowThreadProcessId(native_wd, 0) == ::GetCurrentThreadId())
+				if (::GetWindowThreadProcessId(native_wd, nullptr) == ::GetCurrentThreadId())
 				{
 					::EnableWindow(native_wd, true);
 					::SetActiveWindow(native_wd);
@@ -564,18 +571,18 @@ namespace nana{
 			//event, when the client receives the event, the specified window has been already
 			//destroyed. This is a feature which is different from Windows. So the following
 			//works should be handled before calling XDestroyWindow.
-			nana::gui::detail::bedrock & bedrock = nana::gui::detail::bedrock::instance();
+			auto & bedrock = bedrock::instance();
 			if(wd == bedrock.get_menu())
 				bedrock.empty_menu();
 
-			Display * disp = restrict::spec.open_display();
+			Display* disp = restrict::spec.open_display();
 			restrict::spec.remove(wd);
-			nana::gui::detail::bedrock::core_window_t * iwd = bedrock.wd_manager.root(wd);
+			auto iwd = bedrock.wd_manager.root(wd);
 			if(iwd)
 			{
-				//Before calling window_manager::destroy, make sure the window is invisible.
-				//It is a behavior like Windows.
 				{
+					//Before calling window_manager::destroy, make sure the window is invisible.
+					//It is a behavior like Windows.
 					nana::detail::platform_scope_guard psg;
 					restrict::spec.set_error_handler();
 					::XUnmapWindow(disp, reinterpret_cast<Window>(wd));
@@ -629,11 +636,10 @@ namespace nana{
 			//_NET_WM_STATE_MAXIMIZED_VERT and _NET_WM_STATE_FULLSCREEN.
 			Display * disp = restrict::spec.open_display();
 			Window default_root = XDefaultRootWindow(disp);
-
 			const nana::detail::atombase_tag & atombase = restrict::spec.atombase();
 			XEvent evt;
 			evt.xclient.type = ClientMessage;
-			evt.xclient.display = disp;
+			evt.xclient.display = restrict::spec.open_display();
 			evt.xclient.message_type = atombase.net_wm_state;
 			evt.xclient.format = 32;
 			evt.xclient.window = reinterpret_cast<Window>(wd);
@@ -653,7 +659,6 @@ namespace nana{
 			evt.xclient.data.l[0] = NormalState;
 			evt.xclient.data.l[1] = 0;
 			::XSendEvent(disp, default_root, False, SubstructureRedirectMask | SubstructureNotifyMask, &evt);
-
 			::XMapWindow(disp, reinterpret_cast<Window>(wd));
 			restrict::spec.set_error_handler();
 			::XSetInputFocus(disp, reinterpret_cast<Window>(wd), RevertToPointerRoot, CurrentTime);
@@ -692,7 +697,7 @@ namespace nana{
 		void native_interface::refresh_window(native_window_type wd)
 		{
 #if defined(NANA_WINDOWS)
-			::InvalidateRect(reinterpret_cast<HWND>(wd), 0, true);
+			::InvalidateRect(reinterpret_cast<HWND>(wd), nullptr, true);
 #elif defined(NANA_X11)
 #endif
 		}
@@ -843,7 +848,7 @@ namespace nana{
 #if defined(NANA_WINDOWS)
 			if(::GetWindowThreadProcessId(reinterpret_cast<HWND>(wd), 0) != ::GetCurrentThreadId())
 			{
-				nana::detail::messages::move_window * mw = new nana::detail::messages::move_window;
+				auto * mw = new nana::detail::messages::move_window;
 				mw->x = x;
 				mw->y = y;
 				mw->width = width;
@@ -922,18 +927,18 @@ namespace nana{
 				return;
 
 			HWND fg_wd = ::GetForegroundWindow();
-			DWORD fg_tid = ::GetWindowThreadProcessId(fg_wd, 0);
+			DWORD fg_tid = ::GetWindowThreadProcessId(fg_wd, nullptr);
 			::AttachThreadInput(::GetCurrentThreadId(), fg_tid, TRUE);
 			::ShowWindow(native_wd, SW_SHOWNORMAL);
 			::SetWindowPos(native_wd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 			::SetWindowPos(native_wd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 			::AttachThreadInput(::GetCurrentThreadId(), fg_tid, FALSE);
 #else
-			set_window_z_order(wd, 0, z_order_action::top);
-#endif		
+			set_window_z_order(wd, nullptr, z_order_action::top);
+#endif
 		}
 
-		void native_interface::set_window_z_order(native_window_type wd, native_window_type wd_after, z_order_action::t action_if_no_wd_after)
+		void native_interface::set_window_z_order(native_window_type wd, native_window_type wd_after, z_order_action action_if_no_wd_after)
 		{
 #if defined(NANA_WINDOWS)
 			HWND wa = reinterpret_cast<HWND>(wd_after);
@@ -987,13 +992,12 @@ namespace nana{
 #endif
 		}
 
-		//Set the window area size.
 		void native_interface::window_size(native_window_type wd, unsigned width, unsigned height)
 		{
 #if defined(NANA_WINDOWS)
 			if(::GetWindowThreadProcessId(reinterpret_cast<HWND>(wd), 0) != ::GetCurrentThreadId())
 			{
-				nana::detail::messages::move_window * mw = new nana::detail::messages::move_window;
+				auto * mw = new nana::detail::messages::move_window;
 				mw->width = width;
 				mw->height = height;
 				mw->ignore = mw->Pos;
@@ -1012,11 +1016,10 @@ namespace nana{
 					r.left = pos.x;
 					r.top = pos.y;
 				}
-
 				::MoveWindow(reinterpret_cast<HWND>(wd), r.left, r.top, static_cast<int>(width), static_cast<int>(height), true);
 			}
 #elif defined(NANA_X11)
-			Display * disp = restrict::spec.open_display();
+			auto disp = restrict::spec.open_display();
 			nana::detail::platform_scope_guard psg;
 
 			//Check the XSizeHints for testing whether the window is sizable.
@@ -1090,14 +1093,15 @@ namespace nana{
 			int length = ::GetWindowTextLength(reinterpret_cast<HWND>(wd));
 			if(length > 0)
 			{
-				//One for NULL terminator which will written by GetWindowText.
 				nana::string str;
-				str.resize(length + 1);
-
+                //One for NULL terminator which GetWindowText will write.
+				str.resize(length+1);
+				
 				::GetWindowText(reinterpret_cast<HWND>(wd), &(str[0]), static_cast<int>(str.size()));
-
-				//Remove the null terminator that writtien by GetWindowText
+				
+				//Remove the null terminator writtien by GetWindowText
 				str.resize(length);
+
 				return str;
 			}
 			return nana::string();
@@ -1112,17 +1116,13 @@ namespace nana{
 				{
 					if(size > 1)
 					{
-					#if defined(NANA_UNICODE)
 						nana::string str = nana::charset(*strlist);
-					#else
-						nana::string str = *strlist;
-					#endif
 						::XFreeStringList(strlist);
 						return str;
 					}
 				}
 			}
-			return STR("Nana Window");
+			return nana::string();
 #endif
 		}
 
@@ -1206,10 +1206,10 @@ namespace nana{
 #if defined(NANA_WINDOWS)
 			if(::GetCurrentThreadId() != ::GetWindowThreadProcessId(reinterpret_cast<HWND>(wd), 0))
 			{
-				nana::detail::messages::caret* c = new nana::detail::messages::caret;
-				c->x = x;
-				c->y = y;
-				::PostMessage(reinterpret_cast<HWND>(wd), nana::detail::messages::operate_caret, 2, reinterpret_cast<LPARAM>(c));
+				auto cp = new nana::detail::messages::caret;
+				cp->x = x;
+				cp->y = y;
+				::PostMessage(reinterpret_cast<HWND>(wd), nana::detail::messages::operate_caret, 2, reinterpret_cast<LPARAM>(cp));
 			}
 			else
 				::SetCaretPos(x, y);
@@ -1320,7 +1320,7 @@ namespace nana{
 #if defined(NANA_WINDOWS)
 			if(wd && (::GetFocus() != reinterpret_cast<HWND>(wd)))
 			{
-				if(::GetCurrentThreadId() != ::GetWindowThreadProcessId(reinterpret_cast<HWND>(wd), 0))
+				if(::GetCurrentThreadId() != ::GetWindowThreadProcessId(reinterpret_cast<HWND>(wd), nullptr))
 					::PostMessage(reinterpret_cast<HWND>(wd), nana::detail::messages::async_set_focus, 0, 0);
 				else
 					::SetFocus(reinterpret_cast<HWND>(wd));

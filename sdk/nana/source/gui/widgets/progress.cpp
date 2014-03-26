@@ -21,18 +21,14 @@ namespace gui
 		{
 			//class trigger
 			trigger::trigger()
-				:   graph_(0), draw_width_(static_cast<unsigned>(-1)), has_value_(true),
+				:   graph_(nullptr), draw_width_(static_cast<unsigned>(-1)), has_value_(true),
                     unknown_(false), max_(100), value_(0)
 			{}
 
-			void trigger::bind_window(trigger::widget_reference wd)
+			void trigger::attached(widget_reference wd, graph_reference graph)
 			{
-				widget_ = &wd;
-			}
-
-			void trigger::attached(graph_reference graph)
-			{
-				graph_ = &graph;
+				widget_	= &wd;
+				graph_	= &graph;
 			}
 
 			unsigned trigger::value() const
@@ -42,7 +38,7 @@ namespace gui
 
 			unsigned trigger::value(unsigned v)
 			{
-				nana::gui::internal_scope_guard isg;
+				internal_scope_guard isg;
 				if(false == unknown_)
 				{
 					if(value_ != v)
@@ -54,14 +50,14 @@ namespace gui
 				if(_m_check_changing(value_))
 				{
 					_m_draw();
-					nana::gui::API::update_window(widget_->handle());
+					API::update_window(widget_->handle());
 				}
 				return v;
 			}
 
 			unsigned trigger::inc()
 			{
-				nana::gui::internal_scope_guard isg;
+				internal_scope_guard isg;
 				if(false == unknown_)
 				{
 					if(value_ < max_)
@@ -71,7 +67,7 @@ namespace gui
 					value_ += 5;
 
 				if(_m_check_changing(value_))
-					nana::gui::API::refresh_window(widget_->handle());
+					API::refresh_window(widget_->handle());
 				return value_;
 			}
 
@@ -117,16 +113,11 @@ namespace gui
 
 			void trigger::_m_draw_box(graph_reference graph)
 			{
-				unsigned width = graph.width();
-				unsigned height = graph.height();
-				graph.shadow_rectangle(0, 0, width, height, gui::color::button_face_shadow_end, gui::color::button_face_shadow_start, true);
-				graph.line(0, height - 2, 0, 0, 0x808080);
-				graph.line(0, 0, width - 2, 0, 0x808080);
+				rectangle r = graph.size();
+				graph.shadow_rectangle(r, gui::color::button_face_shadow_end, gui::color::button_face_shadow_start, true);
 
-				int right = width - 1;
-				int bottom = height - 1;
-				graph.line(0, bottom, right, bottom, 0xFFFFFF);
-				graph.line(right, 0, right, bottom, 0xFFFFFF);
+				graph.rectangle_line(r,
+						0x808080, 0x808080, 0xFFFFFF, 0xFFFFFF);
 			}
 
 			void trigger::_m_draw_progress(graph_reference graph)
@@ -146,7 +137,8 @@ namespace gui
 					int left = (value_ < block ? 0 : value_ - block) + border;
 					int right = (value_ >= width - 1 + border? width - 1 + border: value_);
 
-					graph.shadow_rectangle(left, border, right - left + 1, height, 0x6FFFA8, 0x107515, true);
+					if(right >= left)
+						graph.shadow_rectangle(left, border, right - left + 1, height, 0x6FFFA8, 0x107515, true);
 
 					if(value_ >= width + block)	value_ = 0;
 				}
@@ -182,7 +174,7 @@ namespace gui
 
 		unsigned progress::value(unsigned val)
 		{
-			nana::gui::internal_scope_guard isg;
+			internal_scope_guard isg;
 			if(API::empty_window(this->handle()) == false)
 				return get_drawer_trigger().value(val);
 			return 0;
@@ -190,7 +182,7 @@ namespace gui
 
 		unsigned progress::inc()
 		{
-			nana::gui::internal_scope_guard isg;
+			internal_scope_guard isg;
 			return get_drawer_trigger().inc();
 		}
 

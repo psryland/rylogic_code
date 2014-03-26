@@ -11,6 +11,7 @@
 
 #include <nana/gui/drawing.hpp>
 #include <nana/gui/programming_interface.hpp>
+#include <nana/gui/detail/basic_window.hpp>
 
 namespace nana
 {
@@ -20,12 +21,12 @@ namespace gui
 	//@brief:	This name is only visible for this compiling-unit
 	namespace restrict
 	{
-		typedef gui::detail::bedrock::core_window_t core_window_t;
-		extern gui::detail::bedrock& bedrock;
+		typedef detail::bedrock::core_window_t core_window_t;
+		extern detail::bedrock& bedrock;
 
-		inline nana::gui::detail::drawer& get_drawer(nana::gui::window wnd)
+		inline detail::drawer& get_drawer(window wd)
 		{
-			return reinterpret_cast<core_window_t*>(wnd)->drawer;
+			return reinterpret_cast<core_window_t*>(wd)->drawer;
 		}
 	}
     
@@ -64,16 +65,28 @@ namespace gui
 			restrict::get_drawer(handle_).bitblt(x, y, width, height, source, srcx, srcy);
 		}
 
-		void drawing::draw(const draw_fn_t & f)
+		void drawing::draw(const draw_fn_t& f)
 		{
 			if(API::empty_window(handle_))	return;
-			restrict::get_drawer(handle_).draw(f, false);			
+			restrict::get_drawer(handle_).draw(draw_fn_t(f), false);		
+		}
+
+		void drawing::draw(draw_fn_t&& f)
+		{
+			if(API::empty_window(handle_))	return;
+			restrict::get_drawer(handle_).draw(std::move(f), false);
 		}
 
 		drawing::diehard_t drawing::draw_diehard(const draw_fn_t& f)
 		{
-			if(API::empty_window(handle_))	return 0;
-			return reinterpret_cast<drawing::diehard_t>(restrict::get_drawer(handle_).draw(f, true));		
+			if(API::empty_window(handle_)) return nullptr;
+			return reinterpret_cast<diehard_t>(restrict::get_drawer(handle_).draw(draw_fn_t(f), true));
+		}
+
+		drawing::diehard_t drawing::draw_diehard(draw_fn_t&& f)
+		{
+			if(API::empty_window(handle_))	return nullptr;
+			return reinterpret_cast<diehard_t>(restrict::get_drawer(handle_).draw(std::move(f), true));
 		}
 
 		void drawing::erase(diehard_t d)

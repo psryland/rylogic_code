@@ -77,9 +77,9 @@ namespace detail
 			bool focus_changed;
 		};
 
-		struct update_state
+		enum class update_state
 		{
-			enum t{none, lazy, refresh};
+			none, lazy, refresh
 		};
 
 		struct edge_nimbus_action
@@ -88,17 +88,15 @@ namespace detail
 			bool rendered;
 		};
 
-		typedef std::vector<edge_nimbus_action>	edge_nimbus_container;
-
 		//basic_window
 		//@brief: constructor for the root window
 		basic_window(basic_window* owner, gui::category::root_tag**);
 
 		template<typename Category>
 		basic_window(basic_window* parent, const rectangle& r, Category**)
-			: other(static_cast<category::flags::t>(Category::value))
+			: other(Category::value)
 		{
-			drawer.attached(this);
+			drawer.bind(this);
 			if(parent)
 			{
 				_m_init_pos_and_size(parent, r);
@@ -138,7 +136,7 @@ namespace detail
 		nana::gui::detail::drawer	drawer;	//Self Drawer with owen graphics
 		basic_window*		root_widget;	//A pointer refers to the root basic window, if the window is a root, the pointer refers to itself.
 		paint::graphics*	root_graph;		//Refer to the root buffer graphics
-		gui::cursor::t	predef_cursor;
+		cursor	predef_cursor;
 
 		struct flags_type
 		{
@@ -153,7 +151,7 @@ namespace detail
 			bool fullscreen	:1;	//When the window is maximizing whether it fit for fullscreen.
 			unsigned Reserved: 23;
 			unsigned char tab;		//indicate a window that can receive the keyboard TAB
-			mouse_action::t	action;
+			mouse_action	action;
 		}flags;
 
 		struct
@@ -170,7 +168,7 @@ namespace detail
 
 		struct
 		{
-			effects::edge_nimbus::t	edge_nimbus;
+			effects::edge_nimbus	edge_nimbus;
 			effects::bground_interface * bground;
 			double	bground_fade_rate;
 		}effect;
@@ -194,11 +192,11 @@ namespace detail
 				bool			ime_enabled;
 			};
 
-			gui::category::flags::t category;
+			category::flags category;
 			basic_window *active_window;	//if flags.take_active is false, the active_window still keeps the focus,
 											//if the active_window is null, the parent of this window keeps focus.
-			paint::graphics glass_buffer;	//if effect.bground is available. Refer to window_layout::make_glass_background.
-			update_state::t	upd_state;
+			paint::graphics glass_buffer;	//if effect.bground is avaiable. Refer to window_layout::make_bground.
+			update_state	upd_state;
 
 			union
 			{
@@ -206,7 +204,7 @@ namespace detail
 				attr_frame_tag * frame;
 			}attribute;
 
-			other_tag(gui::category::flags::t);
+			other_tag(gui::category::flags);
 			~other_tag();
 		}other;
 

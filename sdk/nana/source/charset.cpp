@@ -16,6 +16,11 @@
 #include <cwchar>
 #include <clocale>
 
+//GCC 4.7.0 does not implement the <codecvt> and codecvt_utfx classes
+#ifndef STD_CODECVT_NOT_SUPPORTED
+	#include <codecvt>
+#endif
+
 #if defined(NANA_MINGW)
 	#include <windows.h>
 #endif
@@ -38,10 +43,10 @@ namespace nana
 				}
 			}
 		};
-		
+
 		bool wc2mb(std::string& mbstr, const wchar_t * s)
 		{
-			if(0 == s || *s == 0)
+			if(nullptr == s || *s == 0)
 			{
 				mbstr.clear();
 				return true;
@@ -57,7 +62,7 @@ namespace nana
 #else
 			locale_initializer::init();
 			std::mbstate_t mbstate = std::mbstate_t();
-			std::size_t len = std::wcsrtombs(0, &s, 0, &mbstate);
+			std::size_t len = std::wcsrtombs(nullptr, &s, 0, &mbstate);
 			if(len == static_cast<std::size_t>(-1))
 				return false;
 
@@ -74,7 +79,7 @@ namespace nana
 		
 		bool mb2wc(std::wstring& wcstr, const char* s)
 		{
-			if(0 == s || *s == 0)
+			if(nullptr == s || *s == 0)
 			{
 				wcstr.clear();
 				return true;
@@ -89,7 +94,7 @@ namespace nana
 #else
 			locale_initializer::init();
 			std::mbstate_t mbstate = std::mbstate_t();
-			std::size_t len = std::mbsrtowcs(0, &s, 0, &mbstate);
+			std::size_t len = std::mbsrtowcs(nullptr, &s, 0, &mbstate);
 			if(len == static_cast<std::size_t>(-1))
 				return false;
 			
@@ -106,7 +111,7 @@ namespace nana
 
 		bool mb2wc(std::string& wcstr, const char* s)
 		{
-			if(0 == s || *s == 0)
+			if(nullptr == s || *s == 0)
 			{
 				wcstr.clear();
 				return true;
@@ -121,7 +126,7 @@ namespace nana
 #else
 			locale_initializer::init();
 			std::mbstate_t mbstate = std::mbstate_t();
-			std::size_t len = std::mbsrtowcs(0, &s, 0, &mbstate);
+			std::size_t len = std::mbsrtowcs(nullptr, &s, 0, &mbstate);
 			if(len == static_cast<std::size_t>(-1))
 				return false;
 			
@@ -136,6 +141,261 @@ namespace nana
 			return true;
 		}
 
+		class charset_encoding_interface
+		{
+		public:
+			virtual ~charset_encoding_interface(){}
+
+			virtual charset_encoding_interface * clone() const = 0;
+
+			virtual std::string str() const = 0;
+			virtual std::string&& str_move() = 0;
+			virtual std::string str(unicode) const = 0;
+
+			virtual std::wstring wstr() const = 0;
+			virtual std::wstring&& wstr_move() = 0;
+		};
+
+#ifndef STD_CODECVT_NOT_SUPPORTED
+		class charset_string
+			: public charset_encoding_interface
+		{
+		public:
+			charset_string(const std::string& s)
+				: data_(s), is_unicode_(false)
+			{}
+
+			charset_string(std::string&& s)
+				: data_(std::move(s)), is_unicode_(false)
+			{}
+
+			charset_string(const std::string& s, unicode encoding)
+				: data_(s), is_unicode_(true), utf_x_(encoding)
+			{}
+
+			charset_string(std::string&& s, unicode encoding)
+				: data_(std::move(s)), is_unicode_(true), utf_x_(encoding)
+			{}
+		private:
+			virtual charset_encoding_interface * clone() const
+			{
+				return new charset_string(*this);
+			}
+
+			virtual std::string str() const
+			{
+				if(is_unicode_)
+				{
+					std::wstring wcstr;
+					switch(utf_x_)
+					{
+					case unicode::utf8:
+						wcstr = std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(data_);
+						break;
+					case unicode::utf16:
+						wcstr = std::wstring_convert<std::codecvt_utf16<wchar_t, 0x10FFFF, std::little_endian>>().from_bytes(data_);
+						break;
+					case unicode::utf32:
+						wcstr.append(reinterpret_cast<const wchar_t*>(data_.c_str()), data_.size() / sizeof(wchar_t));
+						break;
+					}
+
+					std::string mbstr;
+					wc2mb(mbstr, wcstr.c_str());
+					return mbstr;
+				}
+				return data_;
+			}
+
+			virtual std::string&& str_move()
+			{
+				if(is_unicode_)
+					data_ = std::move(str());
+				return std::move(data_);
+			}
+
+			virtual std::string str(unicode encoding) const
+			{
+				if(is_unicode_ && (utf_x_ != encoding))
+				{
+					switch(utf_x_)
+					{
+					case unicode::utf8:
+						switch(encoding)
+						{
+						case unicode::utf16:
+							return std::wstring_convert<std::codecvt_utf16<char16_t>, char16_t>().to_bytes(
+								std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().from_bytes(data_)
+								);
+						case unicode::utf32:
+							{
+								std::u32string u32str = std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>().from_bytes(data_);
+								return std::string(reinterpret_cast<const char*>(u32str.c_str()), u32str.size() * sizeof(char32_t));
+							}
+						}
+						break;
+					case unicode::utf16:
+						switch(encoding)
+						{
+						case unicode::utf8:
+							return std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>().to_bytes(
+								std::wstring_convert<std::codecvt_utf16<char16_t>, char16_t>().from_bytes(data_)
+								);
+						case unicode::utf32:
+							{
+								std::u32string u32str = std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().from_bytes(data_);
+								return std::string(reinterpret_cast<const char*>(u32str.c_str()), u32str.size() * sizeof(char32_t));
+							}
+						}
+						break;
+					case unicode::utf32:
+						switch(encoding)
+						{
+						case unicode::utf8:
+							return std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t>().to_bytes(
+									std::u32string(reinterpret_cast<const char32_t*>(data_.c_str()), data_.size() / sizeof(char32_t))
+								);
+						case unicode::utf16:
+							return std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().to_bytes(
+									std::u32string(reinterpret_cast<const char32_t*>(data_.c_str()), data_.size() / sizeof(char32_t))
+								);
+						}
+						break;
+					}
+					return std::string();
+				}
+
+				std::wstring wcstr;
+				if(mb2wc(wcstr, data_.c_str()))
+				{
+					switch(encoding)
+					{
+					case unicode::utf8:
+						return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(wcstr);
+					case unicode::utf16:
+						return std::wstring_convert<std::codecvt_utf16<wchar_t, 0x10FFFF, std::little_endian>>().to_bytes(wcstr);
+					case unicode::utf32:
+	#if defined(NANA_WINDOWS)
+						{
+							const char * bytes = reinterpret_cast<const char*>(wcstr.c_str());
+							std::u32string utf32str = std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().from_bytes(bytes, bytes + sizeof(wchar_t) * wcstr.size());
+							return std::string(reinterpret_cast<const char*>(utf32str.c_str()), sizeof(char32_t) * utf32str.size());
+						}
+	#elif defined(NANA_LINUX)
+						return std::string(reinterpret_cast<const char*>(wcstr.c_str()), sizeof(wchar_t) * wcstr.size());
+	#else
+						throw std::runtime_error("Bad charset");
+	#endif
+					}
+				}
+				return std::string();
+			}
+
+			virtual std::wstring wstr() const
+			{
+				if(is_unicode_)
+				{
+					switch(utf_x_)
+					{
+					case unicode::utf8:
+						return std::wstring_convert<std::codecvt_utf8<wchar_t, 0x10FFFF, std::little_endian>>().from_bytes(data_);
+					case unicode::utf16:
+						return std::wstring_convert<std::codecvt_utf16<wchar_t, 0x10FFFF, std::little_endian>>().from_bytes(data_);
+					case unicode::utf32:
+						return std::wstring(reinterpret_cast<const wchar_t*>(data_.c_str()), data_.size() * sizeof(wchar_t));
+					}
+					return std::wstring();
+				}
+
+				std::wstring wcstr;
+				mb2wc(wcstr, data_.c_str());
+				return wcstr;
+			}
+
+			virtual std::wstring && wstr_move()
+			{
+				wdata_for_move_ = std::move(wstr());
+				return std::move(wdata_for_move_);
+			}
+		private:
+			std::string data_;
+			std::wstring wdata_for_move_;
+			bool is_unicode_;
+			unicode utf_x_;
+		};
+
+		class charset_wstring
+			: public charset_encoding_interface
+		{
+		public:
+			charset_wstring(const std::wstring& s)
+				: data_(s)
+			{}
+
+			charset_wstring(std::wstring&& s)
+				: data_(std::move(s))
+			{}
+
+			virtual charset_encoding_interface * clone() const
+			{
+				return new charset_wstring(*this);
+			}
+
+			virtual std::string str() const
+			{
+				if(data_.size())
+				{
+					std::string mbstr;
+					wc2mb(mbstr, data_.c_str());
+					return mbstr;
+				}
+				return std::string();
+			}
+
+			virtual std::string&& str_move()
+			{
+				data_for_move_ = str();
+				return std::move(data_for_move_);
+			}
+
+			virtual std::string str(unicode encoding) const
+			{
+				switch(encoding)
+				{
+				case unicode::utf8:
+					return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(data_);
+				case unicode::utf16:
+					return std::wstring_convert<std::codecvt_utf16<wchar_t, 0x10FFFF, std::little_endian>>().to_bytes(data_);
+				case unicode::utf32:
+	#if defined (NANA_WINDOWS)
+					{
+						const char* bytes = reinterpret_cast<const char*>(data_.c_str());
+						std::u32string utf32str = std::wstring_convert<std::codecvt_utf16<char32_t>, char32_t>().from_bytes(bytes, bytes + sizeof(wchar_t) * data_.size());
+						return std::string(reinterpret_cast<const char*>(utf32str.c_str()), sizeof(char32_t) * utf32str.size());
+					}
+	#elif defined(NANA_LINUX)
+					return std::string(reinterpret_cast<const char*>(data_.c_str()), data_.size() * sizeof(wchar_t));
+	#else
+					throw std::runtime_error("Bad charset");
+	#endif
+				}
+				return std::string();
+			}
+
+			virtual std::wstring wstr() const
+			{
+				return data_;
+			}
+
+			virtual std::wstring&& wstr_move()
+			{
+				return std::move(data_);
+			}
+		private:
+			std::wstring data_;
+			std::string data_for_move_;
+		};
+#else
 		unsigned long utf8char(const unsigned char*& p, const unsigned char* end)
 		{
 			if(p != end)
@@ -503,18 +763,6 @@ namespace nana
 			return utf16str;
 		}
 
-		class charset_encoding_interface
-		{
-		public:
-			virtual ~charset_encoding_interface(){}
-
-			virtual charset_encoding_interface * clone() const = 0;
-
-			virtual std::string str() const = 0;
-			virtual std::string str(unicode::t) const = 0;
-			virtual std::wstring wstr() const = 0;
-		};
-
 		class charset_string
 			: public charset_encoding_interface
 		{
@@ -523,9 +771,16 @@ namespace nana
 				: data_(s), is_unicode_(false)
 			{}
 
+			charset_string(std::string&& s)
+				: data_(std::move(s)), is_unicode_(false)
+			{}
 
-			charset_string(const std::string& s, unicode::t encoding)
+			charset_string(const std::string& s, unicode encoding)
 				: data_(s), is_unicode_(true), utf_x_(encoding)
+			{}
+
+			charset_string(std::string&& s, unicode encoding)
+				: data_(std::move(s)), is_unicode_(true), utf_x_(encoding)
 			{}
 		private:
 			virtual charset_encoding_interface * clone() const
@@ -541,31 +796,16 @@ namespace nana
 					switch(utf_x_)
 					{
 					case unicode::utf8:
-#if defined(NANA_WINDOWS)
-						strbuf = detail::utf8_to_utf16(data_, true);
-						detail::put_utf16char(strbuf, 0, true);
-#else
 						strbuf = detail::utf8_to_utf32(data_, true);
 						detail::put_utf32char(strbuf, 0, true);
-#endif
 						break;
 					case unicode::utf16:
-#if defined(NANA_WINDOWS)
-						strbuf = data_;
-						detail::put_utf16char(strbuf, 0, true);
-#else
 						strbuf = detail::utf16_to_utf32(data_);
 						detail::put_utf32char(strbuf, 0, true);
-#endif
 						break;
 					case unicode::utf32:
-#if defined(NANA_WINDOWS)
-						strbuf = detail::utf32_to_utf16(data_);
-						detail::put_utf16char(strbuf, 0, true);
-#else
 						strbuf = data_;
 						detail::put_utf32char(strbuf, 0, true);
-#endif
 						break;
 					}
 
@@ -576,7 +816,14 @@ namespace nana
 				return data_;
 			}
 
-			virtual std::string str(unicode::t encoding) const
+			virtual std::string && str_move()
+			{
+				if(is_unicode_)
+					data_ = std::move(str());
+				return std::move(data_);
+			}
+
+			virtual std::string str(unicode encoding) const
 			{
 				if(is_unicode_ && (utf_x_ != encoding))
 				{
@@ -618,21 +865,9 @@ namespace nana
 					}
 					return std::string();
 				}
-
 				std::string wcstr;
 				if(mb2wc(wcstr, data_.c_str()))
 				{
-#if defined(NANA_WINDOWS)
-					switch(encoding)
-					{
-					case unicode::utf8:
-						return utf16_to_utf8(wcstr);
-					case unicode::utf16:
-						return wcstr;
-					case unicode::utf32:
-						return utf16_to_utf32(wcstr);
-					}
-#else
 					switch(encoding)
 					{
 					case unicode::utf8:
@@ -642,7 +877,6 @@ namespace nana
 					case unicode::utf32:
 						return wcstr;
 					}
-#endif
 				}
 				return std::string();
 			}
@@ -652,20 +886,6 @@ namespace nana
 				if(is_unicode_)
 				{
 					std::string bytes;
-#if defined(NANA_WINDOWS)
-					switch(utf_x_)
-					{
-					case unicode::utf8:
-						bytes = detail::utf8_to_utf16(data_, true);
-						break;
-					case unicode::utf16:
-						bytes = data_;
-						break;
-					case unicode::utf32:
-						bytes = detail::utf32_to_utf16(data_);
-						break;
-					}
-#else
 					switch(utf_x_)
 					{
 					case unicode::utf8:
@@ -678,7 +898,6 @@ namespace nana
 						bytes = data_;
 						break;
 					}
-#endif
 					return std::wstring(reinterpret_cast<const wchar_t*>(bytes.c_str()), bytes.size() / sizeof(wchar_t));
 				}
 
@@ -686,10 +905,17 @@ namespace nana
 				mb2wc(wcstr, data_.c_str());
 				return wcstr;
 			}
+
+			virtual std::wstring&& wstr_move()
+			{
+				wdata_for_move_ = std::move(wstr());
+				return std::move(wdata_for_move_);
+			}
 		private:
 			std::string data_;
+			std::wstring wdata_for_move_;
 			bool is_unicode_;
-			unicode::t utf_x_;
+			unicode utf_x_;
 		};
 
 
@@ -711,34 +937,28 @@ namespace nana
 				if(data_.size())
 				{
 					std::string mbstr;
-					if(wc2mb(mbstr, data_.c_str()))
-						return mbstr;
+					wc2mb(mbstr, data_.c_str());
+					return mbstr;
 				}
 				return std::string();
 			}
 
-			virtual std::string str(unicode::t encoding) const
+			virtual std::string && str_move()
+			{
+				data_for_move_ = std::move(str());
+				return std::move(data_for_move_);
+			}
+
+			virtual std::string str(unicode encoding) const
 			{
 				switch(encoding)
 				{
 				case unicode::utf8:
-#if defined(NANA_WINDOWS)
-					return detail::utf16_to_utf8(std::string(reinterpret_cast<const char*>(data_.c_str()), data_.size() * sizeof(wchar_t)));
-#else
 					return detail::utf32_to_utf8(std::string(reinterpret_cast<const char*>(data_.c_str()), data_.size() * sizeof(wchar_t)));
-#endif
 				case unicode::utf16:
-#if defined(NANA_WINDOWS)
-					return std::string(reinterpret_cast<const char*>(data_.c_str()), data_.size() * sizeof(wchar_t));
-#else
 					return detail::utf32_to_utf16(std::string(reinterpret_cast<const char*>(data_.c_str()), data_.size() * sizeof(wchar_t)));
-#endif
 				case unicode::utf32:
-#if defined(NANA_WINDOWS)
-					return detail::utf16_to_utf32(std::string(reinterpret_cast<const char*>(data_.c_str()), data_.size() * sizeof(wchar_t)));
-#else
 					return std::string(reinterpret_cast<const char*>(data_.c_str()), data_.size() * sizeof(wchar_t));
-#endif
 				}
 				return std::string();
 			}
@@ -747,9 +967,16 @@ namespace nana
 			{
 				return data_;
 			}
+
+			virtual std::wstring && wstr_move()
+			{
+				return std::move(data_);
+			}
 		private:
 			std::wstring data_;
+			std::string data_for_move_;
 		};
+#endif
 	}
 	//class charset
 		charset::charset(const charset& rhs)
@@ -766,16 +993,45 @@ namespace nana
 			return *this;
 		}
 
+		charset::charset(charset&& r)
+			: impl_(r.impl_)
+		{
+			r.impl_ = 0;
+		}
+
+		charset & charset::operator=(charset&& r)
+		{
+			if(this != &r)
+			{
+				delete impl_;
+				impl_ = r.impl_;
+				r.impl_ = 0;
+			}
+			return *this;
+		}
+
 		charset::charset(const std::string& s)
 			: impl_(new detail::charset_string(s))
 		{}
 
-		charset::charset(const std::string& s, unicode::t encoding)
+		charset::charset(std::string&& s)
+			: impl_(new detail::charset_string(std::move(s)))
+		{}
+
+		charset::charset(const std::string& s, unicode encoding)
 			: impl_(new detail::charset_string(s, encoding))
+		{}
+
+		charset::charset(std::string&& s, unicode encoding)
+			: impl_(new detail::charset_string(std::move(s), encoding))
 		{}
 
 		charset::charset(const std::wstring& s)
 			: impl_(new detail::charset_wstring(s))
+		{}
+
+		charset::charset(std::wstring&& s)
+			: impl_(new detail::charset_wstring(std::move(s)))
 		{}
 
 		charset::~charset()
@@ -788,12 +1044,22 @@ namespace nana
 			return impl_->str();
 		}
 
+		charset::operator std::string&&()
+		{
+			return impl_->str_move();
+		}
+
 		charset::operator std::wstring() const
 		{
 			return impl_->wstr();
 		}
 
-		std::string charset::to_bytes(unicode::t encoding) const
+		charset::operator std::wstring&&()
+		{
+			return impl_->wstr_move();
+		}
+
+		std::string charset::to_bytes(unicode encoding) const
 		{
 			return impl_->str(encoding);
 		}

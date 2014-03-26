@@ -12,6 +12,7 @@
 #ifndef NANA_PAINT_GADGET_HPP
 #define NANA_PAINT_GADGET_HPP
 #include "graphics.hpp"
+#include "image.hpp"
 #include <nana/basic_types.hpp>
 
 namespace nana
@@ -28,6 +29,7 @@ namespace gadget
 	void arrow_16_pixels(nana::paint::graphics&, int x, int y, unsigned color, uint32_t style, directions::t direction);
 	void close_16_pixels(nana::paint::graphics&, int x, int y, uint32_t style, uint32_t color);
 	void cross(nana::paint::graphics&, int x, int y, uint32_t size, uint32_t thickness, nana::color_t color);
+
 }//end namespace gadget
 	
 }//end namespace paint

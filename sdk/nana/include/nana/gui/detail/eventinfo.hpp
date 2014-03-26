@@ -21,81 +21,78 @@ namespace nana
 {
 namespace gui
 {
-	struct event_code
+	enum class event_code
 	{
-		enum t
-		{
-			click,
-			dbl_click,
-			mouse_enter,
-			mouse_move,
-			mouse_leave,
-			mouse_down,
-			mouse_up,
-			mouse_wheel,
-			mouse_drop,
-			expose,
-			sizing, size,
-			move,
-			unload,
-			destroy,
-			focus,
-			key_down,
-			key_char,
-			key_up,
-			shortkey,
+		click,
+		dbl_click,
+		mouse_enter,
+		mouse_move,
+		mouse_leave,
+		mouse_down,
+		mouse_up,
+		mouse_wheel,
+		mouse_drop,
+		expose,
+		sizing, size,
+		move,
+		unload,
+		destroy,
+		focus,
+		key_down,
+		key_char,
+		key_up,
+		shortkey,
 
-			//Unoperational events
-			elapse,
+		//Unoperational events
+		elapse,
 
-			//End indicator, it's not an event.
-			end
-		};
-	};//end scoped enum event_code
+		//End indicator, it's not an event.
+		end
+	};
 
 	namespace detail
 	{
-			struct tag_mouse
-			{
-				short x;
-				short y;
+		struct tag_mouse
+		{
+			short x;
+			short y;
 
-				bool left_button;
-				bool mid_button;
-				bool right_button;
-				bool shift;
-				bool ctrl;
-			};
+			bool left_button;
+			bool mid_button;
+			bool right_button;
+			bool shift;
+			bool ctrl;
+		};
 
-			struct tag_keyboard
-			{
-				mutable nana::char_t key;
-				mutable bool ignore;
-				unsigned char ctrl;
-			};
+		struct tag_keyboard
+		{
+			mutable nana::char_t key;
+			mutable bool ignore;
+			unsigned char ctrl;
+		};
 
-			struct tag_wheel
-			{
-				short x;
-				short y;
-				bool upwards;
-				bool shift;
-				bool ctrl;
-			};
+		struct tag_wheel
+		{
+			short x;
+			short y;
+			bool upwards;
+			bool shift;
+			bool ctrl;
+		};
 
-			struct tag_dropinfo
-			{
-				std::vector<nana::string> filenames;
-				nana::point pos;
-			};
+		struct tag_dropinfo
+		{
+			std::vector<nana::string> filenames;
+			nana::point pos;
+		};
 	}//end namespace detail
 
 	//eventinfo
 	//@brief:
 	struct eventinfo
 	{
-		event_code::t	identifier;	//for identifying what event is
-		gui::window		window;		//which window the event triggered on
+		event_code identifier;	//for identifying what event is
+		gui::window window;		//which window the event triggered on
 
 		union
 		{
@@ -113,7 +110,7 @@ namespace gui
 
 			struct
 			{
-				window_border::t border;
+				window_border border;
 				mutable unsigned width;
 				mutable unsigned height;
 			}sizing;
@@ -146,28 +143,30 @@ namespace gui
 	{
 		struct check
 		{
-			inline static bool accept(event_code::t evtid, unsigned category)
+			inline static bool accept(event_code evtid, category::flags categ)
 			{
-				return (evtid < event_code::end) && ((event_category[evtid] & category) == event_category[evtid]);
+				return true;
+				//return (evtid < event_name::end) && ((static_cast<int>(event_category[evtid]) & static_cast<int>(categ)) == static_cast<int>(event_category[evtid]));
 			}
 
-			static unsigned event_category[event_code::end];
+			static category::flags event_category[static_cast<int>(event_code::end)];
 		};
 
 		struct event_type_tag{};
 
-		template<event_code::t Code>
+		template<event_code Event>
 		struct basic_event
 			:public event_type_tag
 		{
-			static const event_code::t identifier = Code;
+			const static event_code identifier = Event;
 		};
 	}//end namespace detail
 
 	namespace events
 	{
-		typedef detail::basic_event<event_code::click>			click;
-		typedef detail::basic_event<event_code::dbl_click>		dbl_click;
+		typedef detail::basic_event<event_code::click>		click;
+		typedef detail::basic_event<event_code::dbl_click>	dbl_click;
+
 		typedef detail::basic_event<event_code::mouse_enter>	mouse_enter;
 		typedef detail::basic_event<event_code::mouse_move>		mouse_move;
 		typedef detail::basic_event<event_code::mouse_leave>	mouse_leave;

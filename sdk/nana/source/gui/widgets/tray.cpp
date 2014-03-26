@@ -23,17 +23,17 @@ namespace nana{ namespace gui{
 			bool enabled;
 			event_handle closed;
 
-			void closed_helper(const nana::gui::eventinfo& ei)
+			void closed_helper(const eventinfo& ei)
 			{
 				API::tray_delete(wd);
-				wd = 0;
+				wd = nullptr;
 			}
 		};
 
 		tray::tray()
 			: impl_(new tray_impl)
 		{
-			impl_->wd = 0;
+			impl_->wd = nullptr;
 			impl_->enabled = false;
 		}
 
@@ -46,17 +46,12 @@ namespace nana{ namespace gui{
 
 		void tray::bind(window wd)
 		{
-			if(0 == impl_->wd)
+			if(nullptr == impl_->wd)
 			{
+				//The wd may not be the root category widget.
+				//The destroy event needs the root category widget
 				impl_->wd = API::root(wd);
-				
-				//The parameter wd may not be the real root window.
-				window root = API::root(impl_->wd); //the handle is guaranteed a root window.
-
-				if(root)
-				{
-					impl_->closed = API::make_event<events::destroy>(root, nana::functor<void(const nana::gui::eventinfo&)>(*impl_, &tray_impl::closed_helper));
-				}
+				impl_->closed = API::make_event<events::destroy>(API::root(impl_->wd), std::bind(&tray_impl::closed_helper, impl_, std::placeholders::_1));
 			}
 		}
 
@@ -64,23 +59,19 @@ namespace nana{ namespace gui{
 		{
 			if(impl_->wd)
 			{
-				if(impl_->closed)
-				{
-					API::umake_event(impl_->closed);
-					impl_->closed = 0;
-				}
+				API::umake_event(impl_->closed);
+				impl_->closed = nullptr;
 
 				API::tray_delete(impl_->wd);
-				impl_->wd = 0;
+				impl_->wd = nullptr;
 			}
 		}
 
 		bool tray::add(const nana::char_t* tip, const nana::char_t* image) const
 		{
 			if(impl_->wd)
-			{
 				return (impl_->enabled = API::tray_insert(impl_->wd, tip, image));
-			}
+
 			return false;
 		}
 
@@ -91,7 +82,7 @@ namespace nana{ namespace gui{
 			return *this;
 		}
 
-		tray & tray::icon(const nana::char_t * ico)
+		tray & tray::icon(const char_t * ico)
 		{
 			if(impl_->wd)
 				API::tray_icon(impl_->wd, ico);
@@ -100,11 +91,11 @@ namespace nana{ namespace gui{
 
 		void tray::umake_event()
 		{
-			if(impl_->wd)
+			if (impl_->wd)
 				detail::bedrock::instance().wd_manager.tray_umake_event(impl_->wd);
 		}
 
-		bool tray::_m_make_event(event_code::t code, const nana::functor<void(const eventinfo&)>& fn) const
+		bool tray::_m_make_event(event_code code, const event_fn_t& fn) const
 		{
 			return (impl_->wd
 				? detail::bedrock::instance().wd_manager.tray_make_event(impl_->wd, code, fn) : false);

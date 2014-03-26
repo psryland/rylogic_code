@@ -201,7 +201,8 @@ namespace gadget
 				double_arrow_line(graph, x + 8, y + 5, color, false);
 				double_arrow_line(graph, x + 9, y + 6, color, false);
 				break;
-			default:	break;
+			default:
+				break;
 			}
 		}
 	}//end namespace detail

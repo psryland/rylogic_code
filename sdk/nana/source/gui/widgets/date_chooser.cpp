@@ -23,7 +23,7 @@ namespace nana{ namespace gui{
 			//class trigger: public gui::drawer_trigger
 
 				trigger::trigger()
-					: widget_(0), chose_(false), page_(page::date), pos_(where::none)
+					: widget_(nullptr), chose_(false), page_(page::date), pos_(where::none)
 				{
 					const nana::string ws[] = {STR("S"), STR("M"), STR("T"), STR("W"), STR("T"), STR("F"), STR("S")};
 					const nana::string ms[] = {STR("January"), STR("February"), STR("March"), STR("April"), STR("May"), STR("June"), STR("July"), STR("August"), STR("September"), STR("October"), STR("November"), STR("December")};
@@ -67,7 +67,7 @@ namespace nana{ namespace gui{
 					color_.bkcolor = 0x88C4FF;
 				}
 
-				trigger::where::t trigger::_m_pos_where(graph_reference graph, int x, int y)
+				trigger::where trigger::_m_pos_where(graph_reference graph, int x, int y)
 				{
 					int xend = static_cast<int>(graph.width()) - 1;
 					int yend = static_cast<int>(graph.height()) - 1;
@@ -106,8 +106,7 @@ namespace nana{ namespace gui{
 					{
 						nana::point refpos(1, static_cast<int>(topbar_height) + 1);
 
-						unsigned height = graph.height() - 2 - topbar_height;
-						nana::paint::graphics gbuf(width, height);
+						nana::paint::graphics gbuf(width, graph.height() - 2 - topbar_height);
 						gbuf.rectangle(0xF0F0F0, true);
 
 						switch(page_)
@@ -118,6 +117,7 @@ namespace nana{ namespace gui{
 						case page::month:
 							_m_draw_months(refpos, gbuf);
 							break;
+						default:	break;
 						}
 
 						graph.bitblt(refpos.x, refpos.y, gbuf);
@@ -216,8 +216,9 @@ namespace nana{ namespace gui{
 
 				void trigger::_m_draw_pos(drawing_basis & dbasis, graph_reference graph, int x, int y, int number, bool primary, bool sel)
 				{
-					std::stringstream ss;
-					ss<<number;
+				    //The C++ library comes with MinGW does not provide std::to_wstring() conversion
+				    std::wstringstream ss;
+				    ss<<number;
 					_m_draw_pos(dbasis, graph, x, y, nana::charset(ss.str()), primary, sel);
 				}
 
@@ -329,13 +330,9 @@ namespace nana{ namespace gui{
 					x -= dbasis_.refpos.x;
 					y -= dbasis_.refpos.y;
 
-					int lines;
-					int rows;
-					if(page_ == page::date)
-					{
-						lines = rows = 7;
-					}
-					else if(page_ == page::month)
+					int lines = 7, rows = 7;	//defaultly for page::date
+
+					if(page_ == page::month)
 					{
 						lines = 3;
 						rows = 4;
@@ -353,7 +350,6 @@ namespace nana{ namespace gui{
 						if(page_ == page::date)
 						{
 							if(n < 8) return false; //Here is week title bar
-
 							int dw = nana::date::day_of_week(chmonth_.year, chmonth_.month, 1);
 							n -= (dw ? dw + 7 : 14);
 						}
@@ -363,7 +359,7 @@ namespace nana{ namespace gui{
 					return false;
 				}
 
-				void trigger::_m_perf_transform(transform_action::t tfid, graph_reference graph,  graph_reference dirtybuf, graph_reference newbuf, const nana::point& refpos)
+				void trigger::_m_perf_transform(transform_action tfid, graph_reference graph, graph_reference dirtybuf, graph_reference newbuf, const nana::point& refpos)
 				{
 					const int sleep_time = 15;
 					const int count = 20;
@@ -384,7 +380,7 @@ namespace nana{ namespace gui{
 							graph.bitblt(dr, dirtybuf);
 
 							nr.width = off_x;
-							graph.bitblt(nr, newbuf, nana::point(static_cast<int>(dirtybuf.width()) - off_x, 0));
+							graph.bitblt(nr, newbuf, nana::point(static_cast<int>(dr.width), 0));
 
 							API::update_window(*widget_);
 							nana::system::sleep(sleep_time);
@@ -393,7 +389,6 @@ namespace nana{ namespace gui{
 					else if(tfid == transform_action::to_left)
 					{
 						double delta = dirtybuf.width() / double(count);
-
 						nana::rectangle dr(refpos.x, refpos.y, 0, dirtybuf.height());
 						nana::rectangle nr(0, refpos.y, 0, newbuf.height());
 
@@ -401,6 +396,7 @@ namespace nana{ namespace gui{
 						{
 							int off_x = static_cast<int>(delta * i);
 							dr.width = dirtybuf.width() - off_x;
+
 							graph.bitblt(dr, dirtybuf, nana::point(off_x, 0));
 
 							nr.x = refpos.x + static_cast<int>(dr.width);
@@ -413,52 +409,53 @@ namespace nana{ namespace gui{
 					}
 					else if(tfid == transform_action::to_leave)
 					{
-						nana::paint::graphics dzbuf(newbuf.width(), newbuf.height());
-						nana::paint::graphics nzbuf(newbuf.width(), newbuf.height());
+						nana::paint::graphics dzbuf(newbuf.size());
+						nana::paint::graphics nzbuf(newbuf.size());
 
+						nana::rectangle r;
 						for(int i = 1; i < count; ++i)
 						{
-							int zo_width = static_cast<int>(newbuf.width() - delta * i);
-							int zo_height = static_cast<int>(newbuf.height() - delta_h * i);
-							int dx = static_cast<int>(newbuf.width() - zo_width) / 2;
-							int dy = static_cast<int>(newbuf.height() - zo_height) / 2;
+							r.width = static_cast<int>(newbuf.width() - delta * i);
+							r.height = static_cast<int>(newbuf.height() - delta_h * i);
+							r.x = static_cast<int>(newbuf.width() - r.width) / 2;
+							r.y = static_cast<int>(newbuf.height() - r.height) / 2;
 
 							dzbuf.rectangle(0xFFFFFF, true);
-							dirtybuf.stretch(dzbuf, nana::rectangle(dx, dy, zo_width, zo_height));
+							dirtybuf.stretch(dzbuf, r);
 
-							zo_width = static_cast<int>(newbuf.width() + delta * (count - i));
-							zo_height = static_cast<int>(newbuf.height() + delta_h * (count - i));
-							dx = static_cast<int>(newbuf.width() - zo_width) / 2;
-							dy = static_cast<int>(newbuf.height() - zo_height) / 2;
-							newbuf.stretch(nzbuf, nana::rectangle(dx, dy, zo_width, zo_height));
+							r.width = static_cast<int>(newbuf.width() + delta * (count - i));
+							r.height = static_cast<int>(newbuf.height() + delta_h * (count - i));
+							r.x = static_cast<int>(newbuf.width() - r.width) / 2;
+							r.y = static_cast<int>(newbuf.height() - r.height) / 2;
+							newbuf.stretch(nzbuf, r);
 
 							nzbuf.blend(nzbuf.size(), dzbuf, nana::point(), fade * (count - i));
 							graph.bitblt(refpos.x, refpos.y, dzbuf);
 
 							API::update_window(*widget_);
-
 							nana::system::sleep(sleep_time);
 						}
 					}
 					else if(tfid == transform_action::to_enter)
 					{
-						nana::paint::graphics dzbuf(newbuf.width(), newbuf.height());
-						nana::paint::graphics nzbuf(newbuf.width(), newbuf.height());
+						nana::paint::graphics dzbuf(newbuf.size());
+						nana::paint::graphics nzbuf(newbuf.size());
 
+						nana::rectangle r;
 						for(int i = 1; i < count; ++i)
 						{
-							int zo_width = static_cast<int>(newbuf.width() + delta * i);
-							int zo_height = static_cast<int>(newbuf.height() + delta_h * i);
-							int dx = static_cast<int>(newbuf.width() - zo_width) / 2;
-							int dy = static_cast<int>(newbuf.height() - zo_height) / 2;
-							dirtybuf.stretch(dzbuf, nana::rectangle(dx, dy, zo_width, zo_height));
+							r.width = static_cast<int>(newbuf.width() + delta * i);
+							r.height = static_cast<int>(newbuf.height() + delta_h * i);
+							r.x = static_cast<int>(newbuf.width() - r.width) / 2;
+							r.y = static_cast<int>(newbuf.height() - r.height) / 2;
+							dirtybuf.stretch(dzbuf, r);
 
-							zo_width = static_cast<int>(newbuf.width() - delta * (count - i));
-							zo_height = static_cast<int>(newbuf.height() - delta_h * (count - i));
-							dx = (static_cast<int>(newbuf.width()) - zo_width) / 2;
-							dy = (static_cast<int>(newbuf.height()) - zo_height) / 2;
+							r.width = static_cast<int>(newbuf.width() - delta * (count - i));
+							r.height = static_cast<int>(newbuf.height() - delta_h * (count - i));
+							r.x = static_cast<int>(newbuf.width() - r.width) / 2;
+							r.y = static_cast<int>(newbuf.height() - r.height) / 2;
 							nzbuf.rectangle(0xFFFFFF, true);
-							newbuf.stretch(nzbuf, nana::rectangle(dx, dy, zo_width, zo_height));
+							newbuf.stretch(nzbuf, r);
 
 							nzbuf.blend(nzbuf.size(), dzbuf, nana::point(), fade * (count - i));
 							graph.bitblt(refpos.x, refpos.y, dzbuf);
@@ -467,6 +464,7 @@ namespace nana{ namespace gui{
 							nana::system::sleep(sleep_time);
 						}
 					}
+
 					graph.bitblt(nana::rectangle(refpos, newbuf.size()), newbuf);
 				}
 
@@ -475,14 +473,10 @@ namespace nana{ namespace gui{
 					_m_draw(graph);
 				}
 
-				void trigger::bind_window(widget_reference wd)
+				void trigger::attached(widget_reference widget, graph_reference graph)
 				{
-					widget_ = &wd;
-				}
-
-				void trigger::attached(graph_reference graph)
-				{
-					window wd = *widget_;
+					widget_ = &widget;
+					window wd = widget_->handle();
 					using namespace API::dev;
 					make_drawer_event<events::mouse_move>(wd);
 					make_drawer_event<events::mouse_leave>(wd);
@@ -490,14 +484,9 @@ namespace nana{ namespace gui{
 					make_drawer_event<events::mouse_up>(wd);
 				}
 
-				void trigger::detached()
-				{
-					API::dev::umake_drawer_event(*widget_);
-				}
-
 				void trigger::mouse_move(graph_reference graph, const eventinfo& ei)
 				{
-					where::t pos = _m_pos_where(graph, ei.mouse.x, ei.mouse.y);
+					where pos = _m_pos_where(graph, ei.mouse.x, ei.mouse.y);
 					if(pos == pos_ && pos_ != where::textarea) return;
 					pos_ = pos;
 					_m_draw(graph);
@@ -515,8 +504,8 @@ namespace nana{ namespace gui{
 				void trigger::mouse_up(graph_reference graph, const eventinfo& ei)
 				{
 					bool redraw = true;
-					where::t pos = _m_pos_where(graph, ei.mouse.x, ei.mouse.y);
-					transform_action::t tfid = transform_action::none;
+					where pos = _m_pos_where(graph, ei.mouse.x, ei.mouse.y);
+					transform_action tfid = transform_action::none;
 
 					if(pos == where::topbar)
 					{
@@ -623,6 +612,7 @@ namespace nana{ namespace gui{
 						{
 							nana::point refpos(1, static_cast<int>(topbar_height) + 1);
 							nana::rectangle r(0, 0, graph.width() - 2, graph.height() - 2 - topbar_height);
+
 							nana::paint::graphics dirtybuf(r.width, r.height);
 							dirtybuf.bitblt(r, graph, refpos);
 

@@ -6,7 +6,7 @@
  *	(See accompanying file LICENSE_1_0.txt or copy at 
  *	http://www.boost.org/LICENSE_1_0.txt)
  *
- *	@file: nana/detail/win32/platform_spec.hpp
+ *	@file: nana/detail/platform_spec.hpp
  *
  *	This file provides basis class and data structrue that required by nana
  *	This file should not be included by any header files.
@@ -18,11 +18,11 @@
 #include <nana/deploy.hpp>
 #include <nana/gui/basis.hpp>
 #include <nana/paint/image.hpp>
-#include <nana/memory.hpp>
 #include <nana/gui/detail/eventinfo.hpp>
 
 #include <windows.h>
 #include <map>
+#include <memory>
 
 namespace nana
 {
@@ -30,9 +30,9 @@ namespace nana
 namespace detail
 {
 	//struct messages
-	//This defines some messages that are used for remote thread invocation.
-	//Some Windows APIs are window-thread-dependent, the operation in other thread
-	//must be posted to its own thread.
+	//@brief:	This defines some messages that are used for remote thread invocation.
+	//			Some Windows APIs are window-thread-dependent, the operation in other thread
+	//			must be posted to its own thread.
 	struct messages
 	{
 		struct caret
@@ -87,15 +87,13 @@ namespace detail
 
 	struct drawable_impl_type
 	{
-		//typedef nana::refer<font_tag*, font_tag::deleter> font_refer_t;
-		typedef nana::shared_ptr<font_tag> font_ptr_t;
+		typedef std::shared_ptr<font_tag> font_ptr_t;
 
 		HDC		context;
 		HBITMAP	pixmap;
 		pixel_rgb_t*	pixbuf_ptr;
 		std::size_t		bytes_per_line;
-		font_ptr_t	font;
-
+		font_ptr_t font;
 
 		struct pen_spec
 		{
@@ -116,7 +114,6 @@ namespace detail
 			nana::color_t color;
 
 			void set(HDC context, t style, nana::color_t color);
-			void remove();
 		}brush;
 
 		struct round_region_spec
@@ -141,15 +138,15 @@ namespace detail
 
 		void fgcolor(nana::color_t);
 	private:
-		nana::color_t fgcolor_;
+		unsigned fgcolor_;
 	};
 
 	class platform_spec
 	{
 	public:
-		typedef drawable_impl_type::font_ptr_t font_ptr_t;
+		typedef drawable_impl_type::font_ptr_t	font_ptr_t;
 		typedef ::nana::gui::event_code event_code;
-		typedef ::nana::gui::native_window_type native_window_type;
+		typedef ::nana::gui::native_window_type	native_window_type;
 
 		class co_initializer
 		{
@@ -168,13 +165,13 @@ namespace detail
 		unsigned font_height_to_size(unsigned) const;
 		font_ptr_t make_native_font(const nana::char_t* name, unsigned height, unsigned weight, bool italic, bool underline, bool strike_out);
 
-		void event_register_filter(native_window_type, event_code::t);
+		void event_register_filter(native_window_type, event_code);
 		static platform_spec& instance();
 
 		void keep_window_icon(native_window_type, const nana::paint::image&);
 		void release_window_icon(native_window_type);
 	private:
-		font_ptr_t def_font_ptr_;
+		font_ptr_t	def_font_ptr_;
 		std::map<native_window_type, nana::paint::image> iconbase_;
 	};
 

@@ -12,6 +12,7 @@
  *	implemented the event callback trigger. The capacity of event managment is implemented with
  *	event_manager
  */
+
 #include <nana/config.hpp>
 #include GUI_BEDROCK_HPP
 #include <nana/gui/detail/timer_trigger.hpp>
@@ -37,16 +38,16 @@ namespace detail
 	void timer_trigger_proc(std::size_t id);
 #endif
 	//class timer_trigger
-		nana::threads::recursive_mutex  timer_trigger::mutex_;
+		std::recursive_mutex timer_trigger::mutex_;
 		timer_trigger::holder_timer_type	timer_trigger::holder_timer_;
 		timer_trigger::holder_handle_type	timer_trigger::holder_handle_;
 
 		void timer_trigger::create_timer(timer_object timer, unsigned interval)
 		{
 			//Thread-Safe Required!
-			threads::lock_guard<threads::recursive_mutex> lock(mutex_);
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
 
-			if(_m_find_by_timer_object(timer) == 0)
+			if(nullptr == _m_find_by_timer_object(timer))
 			{
 #if defined(NANA_WINDOWS)
 				timer_handle handle = reinterpret_cast<timer_handle>(::SetTimer(0, 0, interval, timer_trigger_proc));
@@ -62,7 +63,7 @@ namespace detail
 		void timer_trigger::kill_timer(timer_object timer)
 		{
 			//Thread-Safe Required!
-			threads::lock_guard<threads::recursive_mutex> lock(mutex_);
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
 
 			timer_handle* ptr = _m_find_by_timer_object(timer);
 			if(ptr)
@@ -80,9 +81,9 @@ namespace detail
 		void timer_trigger::set_interval(timer_object timer, unsigned interval)
 		{
 			//Thread-Safe Required!
-			threads::lock_guard<threads::recursive_mutex> lock(mutex_);
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
 
-			timer_handle* old = _m_find_by_timer_object(timer);
+			auto old = _m_find_by_timer_object(timer);
 			if(old)
 			{
 #if defined(NANA_WINDOWS)
@@ -102,32 +103,26 @@ namespace detail
 		{
 			eventinfo ei;
 			ei.elapse.timer = object;
-			nana::gui::detail::bedrock& bedrock = nana::gui::detail::bedrock::instance();
-			bedrock.evt_manager.answer(event_code::elapse,
-				reinterpret_cast<window>(object),
-				ei,
+			bedrock::instance().evt_manager.answer(
+				event_code::elapse,
+				reinterpret_cast<window>(object), ei,
 				event_manager::event_kind::user);
 		}
 
 		timer_trigger::timer_handle* timer_trigger::_m_find_by_timer_object(timer_object t)
 		{
-			std::map<timer_object, timer_handle>::iterator it = holder_timer_.find(t);
-			if(it != holder_timer_.end())
-				return &(it->second);
-
-			return 0;
+			//Thread-Safe Required!
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
+			auto i = holder_timer_.find(t);
+			return (i != holder_timer_.end() ? &(i->second) : nullptr);
 		}
 
 		timer_trigger::timer_object* timer_trigger::find_by_timer_handle(timer_handle h)
 		{
 			//Thread-Safe Required!
-			threads::lock_guard<threads::recursive_mutex> lock(mutex_);
-
-			std::map<timer_handle, timer_object>::iterator it = holder_handle_.find(h);
-			if(it != holder_handle_.end())
-				return &(it->second);
-
-			return 0;
+			std::lock_guard<decltype(mutex_)> lock(mutex_);
+			auto i = holder_handle_.find(h);
+			return (i != holder_handle_.end() ? &(i->second) : nullptr);
 		}
 
 	//end class timer_trigger

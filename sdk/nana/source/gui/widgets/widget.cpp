@@ -17,12 +17,12 @@ namespace nana
 namespace gui
 {
 	//class widget
-	//@brief: The definition of class widget
+	//@brief:The definition of class widget
 		widget::~widget(){}
 
 		nana::string widget::caption() const
 		{
-			return _m_caption();
+			return this->_m_caption();
 		}
 		
 		void widget::caption(const nana::string& str)
@@ -30,12 +30,12 @@ namespace gui
 			_m_caption(str);
 		}
 
-		nana::gui::cursor::t widget::cursor() const
+		nana::gui::cursor widget::cursor() const
 		{
 			return _m_cursor();
 		}
 
-		void widget::cursor(nana::gui::cursor::t cur)
+		void widget::cursor(nana::gui::cursor cur)
 		{
 			_m_cursor(cur);
 		}
@@ -72,7 +72,7 @@ namespace gui
 
 		bool widget::empty() const
 		{
-			return (0 == handle());
+			return (nullptr == handle());	
 		}
 
 		void widget::focus()
@@ -179,12 +179,12 @@ namespace gui
 			API::dev::window_caption(handle(), str);
 		}
 
-		nana::gui::cursor::t widget::_m_cursor() const
+		nana::gui::cursor widget::_m_cursor() const
 		{
 			return API::window_cursor(handle());
 		}
 
-		void widget::_m_cursor(nana::gui::cursor::t cur)
+		void widget::_m_cursor(nana::gui::cursor cur)
 		{
 			API::window_cursor(handle(), cur);
 		}

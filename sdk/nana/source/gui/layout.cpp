@@ -66,17 +66,17 @@ namespace gui
 		//end struct element_tag
 
 		gird::gird(gird * owner, unsigned scale)
-			: event_handle_(0)
+			: event_handle_(nullptr)
 		{
 			owner_.kind = kind_gird;
 			owner_.u.ref_gird = owner;
 		}
 
 		gird::gird()
-			: event_handle_(0)
+			: event_handle_(nullptr)
 		{
 			owner_.kind = kind_window;
-			owner_.u.ref_widget = 0;
+			owner_.u.ref_widget = nullptr;
 		}
 
 		gird::gird(window wd)
@@ -86,40 +86,34 @@ namespace gui
 			if(event_handle_)
 			{
 				owner_.u.ref_widget = wd;
-				nana::size sz = API::window_size(wd);
-				area_.width = sz.width;
-				area_.height = sz.height;
+				area_ = API::window_size(wd);
 			}
 			else
-				owner_.u.ref_widget = 0;
+				owner_.u.ref_widget = nullptr;
 		}
 
 		gird::~gird()
 		{
 			API::umake_event(event_handle_);
 
-			for(std::vector<element_tag*>::iterator i = elements_.begin(); i != elements_.end(); ++i)
-				delete (*i);
+			for(auto i : elements_)
+				delete i;
 
-			for(std::vector<element_tag*>::iterator i = child_.begin(); i != child_.end(); ++i)
-				delete (*i);
+			for(auto i : child_)
+				delete i;
 		}
 
 		void gird::bind(window wd)
 		{
-			if(owner_.u.ref_widget == 0)
+			if(nullptr == owner_.u.ref_widget)
 			{
 				owner_.kind = kind_window;
 				event_handle_ = API::make_event<events::size>(wd, nana::make_fun(*this, &gird::_m_resize));
 				if(event_handle_)
 				{
 					owner_.u.ref_widget = wd;
-					nana::size sz = API::window_size(wd);
-					area_.width = sz.width;
-					area_.height = sz.height;
+					area_ = API::window_size(wd);
 				}
-				else
-					owner_.u.ref_widget = 0;
 			}
 		}
 
@@ -131,10 +125,9 @@ namespace gui
 			return p->u.ref_gird;
 		}
 
-		void gird::push(nana::gui::window wd, unsigned blank, unsigned scale)
+		void gird::push(window wd, unsigned blank, unsigned scale)
 		{
-			element_tag* p = new element_tag(wd, blank, scale);
-			child_.push_back(p);
+			child_.push_back(new element_tag(wd, blank, scale));
 			_m_adjust_children();
 		}
 
@@ -146,7 +139,7 @@ namespace gui
 			return p->u.ref_gird;
 		}
 
-		void gird::add(nana::gui::window wd, unsigned blank, unsigned scale)
+		void gird::add(window wd, unsigned blank, unsigned scale)
 		{
 			elements_.push_back(new element_tag(wd, blank, scale));
 			_m_adjust_elements();
@@ -160,52 +153,52 @@ namespace gui
 
 		void gird::_m_resize()
 		{
-			nana::size sz = API::window_size(owner_.u.ref_widget);
-			area_.width = sz.width;
-			area_.height = sz.height;
+			area_ = API::window_size(owner_.u.ref_widget);
 			_m_adjust_children();
+		}
+
+		template<typename Container>
+		unsigned prepare_adjustable_pixels(const unsigned range_pixels, const Container& cont)
+		{
+			unsigned fixed = 0;
+			unsigned number = 0;
+
+			for(auto i : cont)
+			{
+				if(0 == i->scale) //adjustable
+					++number;
+				else
+					fixed += i->scale;
+				fixed += i->blank;
+			}
+
+			return ((number && (fixed < range_pixels)) ? (range_pixels - fixed) / number : 0);
 		}
 
 		void gird::_m_adjust_children()
 		{
-			const unsigned pixels = area_.height;
-
-			unsigned fixed = 0;
-			unsigned number_of_adjustable = 0;
-			for(std::vector<element_tag*>::iterator i = child_.begin(); i != child_.end(); ++i)
-			{
-				if(0 == (*i)->scale) //adjustable
-					++number_of_adjustable;
-				else
-					fixed += (*i)->scale;
-				fixed += (*i)->blank;
-			}
-
-			unsigned pixels_of_adjustable = 0;
-			if(number_of_adjustable && (fixed < pixels))
-				pixels_of_adjustable = (pixels - fixed) / number_of_adjustable;
+			unsigned pixels_of_adjustable = prepare_adjustable_pixels(area_.height, child_);
 
 			int top = area_.y;
 			nana::rectangle area;
-			for(std::vector<element_tag*>::iterator i = child_.begin(); i != child_.end(); ++i)
+			for(auto i : child_)
 			{
-				element_tag * p = *i;
 				area.x = area_.x;
-				area.y = top + p->blank;
+				area.y = top + i->blank;
 				area.width = area_.width;
 
-				if(0 == p->scale)
+				if(0 == i->scale)
 				{
 					top += pixels_of_adjustable;
 					area.height = pixels_of_adjustable;
 				}
 				else
 				{
-					top += p->scale;
-					area.height = p->scale;
+					top += i->scale;
+					area.height = i->scale;
 				}
-				top += p->blank;
-				p->area(area);
+				top += i->blank;
+				i->area(area);
 			}
 
 			_m_adjust_elements();
@@ -213,46 +206,29 @@ namespace gui
 
 		void gird::_m_adjust_elements()
 		{
-			const unsigned pixels = area_.width;
-			unsigned fixed = 0;
-			unsigned number_of_adjustable = 0;
-			for(std::vector<element_tag*>::iterator i = elements_.begin(); i != elements_.end(); ++i)
-			{
-				element_tag * p = *i;
-				if(0 == p->scale) //adjustable
-					++number_of_adjustable;
-				else
-					fixed += p->scale;
-				fixed += p->blank;
-			}
-
-			unsigned pixels_of_adjustable = 0;
-			if(number_of_adjustable && (fixed < pixels))
-				pixels_of_adjustable = (pixels - fixed) / number_of_adjustable;
-
+			unsigned pixels_of_adjustable = prepare_adjustable_pixels(area_.width, elements_);
 
 			int left = area_.x;
-			for(std::vector<element_tag*>::iterator i = elements_.begin(); i != elements_.end(); ++i)
+			for(auto i : elements_)
 			{
-				element_tag * p = *i;
-				nana::rectangle area(left + p->blank, area_.y, 0, area_.height);
+				nana::rectangle area(left + i->blank, area_.y, 0, area_.height);
 
-				if(0 == p->scale) //adjustable
+				if(0 == i->scale) //adjustable
 				{
 					left += pixels_of_adjustable;
 					area.width = pixels_of_adjustable;
 				}
 				else
 				{
-					left += p->scale;
-					area.width = p->scale;
+					left += i->scale;
+					area.width = i->scale;
 				}
-				left += p->blank;
-				p->area(area);
+				left += i->blank;
+				i->area(area);
 			}
 
-			for(std::vector<window>::iterator i = fasten_elements_.begin(); i != fasten_elements_.end(); ++i)
-				API::move_window(*i, area_.x, area_.y, area_.width, area_.height);
+			for(auto i : fasten_elements_)
+				API::move_window(i, area_.x, area_.y, area_.width, area_.height);
 		}
 	//end class gird
 }//end namespace gui

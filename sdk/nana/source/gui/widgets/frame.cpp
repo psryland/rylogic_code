@@ -25,7 +25,7 @@ namespace gui
 			create(wd, rectangle(), visible);
 		}
 
-		frame::frame(window wd, const rectangle& r, bool visible)
+		frame::frame(window wd, const nana::rectangle& r, bool visible)
 		{
 			create(wd, r, visible);
 		}
