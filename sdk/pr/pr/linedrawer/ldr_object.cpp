@@ -11,7 +11,7 @@
 #include "pr/common/hash.h"
 #include "pr/common/windows_com.h"
 #include "pr/maths/convexhull.h"
-#include "pr/gui/progress_dlg2.h"
+#include "pr/gui/progress_dlg.h"
 #include "pr/renderer11/renderer.h"
 
 #if PR_DBG

@@ -49,6 +49,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX64</TargetMachine>

@@ -47,13 +47,13 @@ namespace pr
 		//        size != DecodeSize(EncodeSize(size))
 		//  because encoding pads the data to a multiple of 4 bytes
 
-		// Return the length of a buffer required to encode data of length 'src_length' into
+		// Returns the size in bytes required to store 'src_length' bytes of data after encoding
 		inline unsigned int EncodeSize(unsigned int src_length)
 		{
 			return ((src_length + 2) / 3) * 4;
 		}
 
-		// Return the length of a buffer required to decode base64 data of length 'src_length' into
+		// Returns the size in bytes required to store 'src_length' bytes of data after decoding
 		inline unsigned int DecodeSize(unsigned int src_length)
 		{
 			return ((src_length + 3) / 4) * 3;

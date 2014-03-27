@@ -33,13 +33,13 @@ namespace pr
 			int m_Kd[MAX_ROUNDS+1][MAX_BC];
 
 			// Key Length
-			int m_key_length;
+			size_t m_key_length;
 
 			// Block Size
-			int	m_block_size;
+			size_t m_block_size;
 
 			// Number of Rounds
-			int m_rounds;
+			size_t m_rounds;
 
 			// Chain Block
 			char m_chain0[MAX_BLOCK_SIZE];
@@ -1060,7 +1060,7 @@ namespace pr
 			// buff ^= chain. length = m_block_size
 			void Xor(char* buff, char const* chain)
 			{
-				for (int i=0; i<m_block_size; i++)
+				for (size_t i=0; i<m_block_size; i++)
 					*(buff++) ^= *(chain++);
 			}
 
@@ -1094,7 +1094,7 @@ namespace pr
 
 				// Apply Round Transforms
 				int a0, a1, a2, a3;
-				for (int r = 1; r < m_rounds; r++)
+				for (size_t r = 1; r < m_rounds; r++)
 				{
 					Ker = m_Ke[r];
 					a0 = (
@@ -1177,7 +1177,7 @@ namespace pr
 
 				// Apply round transforms
 				int a0, a1, a2, a3;
-				for(int r = 1; r < m_rounds; r++)
+				for(size_t r = 1; r < m_rounds; r++)
 				{
 					Kdr = m_Kd[r];
 					a0 = (
@@ -1245,7 +1245,7 @@ namespace pr
 			//  key_length - 16, 24 or 32 bytes
 			//  block_size - The block size in bytes of this Rijndael (16, 24 or 32 bytes).
 			//  chain      - initial chain block for CBC and CFB modes.
-			Rijndael(char const* key, int key_length = DEFAULT_KEY_LENGTH, int block_size = DEFAULT_BLOCK_SIZE, char const* chain = nullptr)
+			Rijndael(char const* key, size_t key_length = DEFAULT_KEY_LENGTH, size_t block_size = DEFAULT_BLOCK_SIZE, char const* chain = nullptr)
 				:m_key_length(key_length)
 				,m_block_size(block_size)
 				,m_rounds()
@@ -1269,26 +1269,26 @@ namespace pr
 				default: m_rounds = 14; break; // 32 bytes = 256 bits
 				}
 
-				int key_length_in_words  = m_key_length / 4;
-				int block_count_in_words = m_block_size / 4;
-				int round_key_count      = (m_rounds + 1) * block_count_in_words;
+				size_t key_length_in_words  = m_key_length / 4;
+				size_t block_count_in_words = m_block_size / 4;
+				size_t round_key_count = (m_rounds + 1) * block_count_in_words;
 
 				// Initialise the encryption/decryption keys
-				for (int i = 0; i <= m_rounds; i++)
+				for (size_t i = 0; i <= m_rounds; i++)
 				{
-					for (int j = 0; j != block_count_in_words; ++j)
+					for (size_t j = 0; j != block_count_in_words; ++j)
 						m_Ke[i][j] = 0;
 				}
-				for (int i = 0; i <= m_rounds; i++)
+				for (size_t i = 0; i <= m_rounds; i++)
 				{
-					for (int j = 0; j != block_count_in_words; ++j)
+					for (size_t j = 0; j != block_count_in_words; ++j)
 						m_Kd[i][j] = 0;
 				}
 
 				// Copy user material bytes into temporary ints
 				int* pi = tk;
 				char const* pc = key;
-				for (int i = 0; i != key_length_in_words; ++i)
+				for (size_t i = 0; i != key_length_in_words; ++i)
 				{
 					*pi      = (unsigned char)*(pc++) << 24;
 					*pi     |= (unsigned char)*(pc++) << 16;
@@ -1297,8 +1297,8 @@ namespace pr
 				}
 
 				// Copy values into round key arrays
-				int t = 0;
-				for (int j = 0; j < key_length_in_words && t < round_key_count; ++j, ++t)
+				size_t t = 0;
+				for (size_t j = 0; j < key_length_in_words && t < round_key_count; ++j, ++t)
 				{
 					m_Ke[           t / block_count_in_words][t % block_count_in_words] = tk[j];
 					m_Kd[m_rounds - t / block_count_in_words][t % block_count_in_words] = tk[j];
@@ -1318,12 +1318,12 @@ namespace pr
 
 					if (key_length_in_words != 8)
 					{
-						for (int i = 1, j = 0; i < key_length_in_words;)
+						for (size_t i = 1, j = 0; i < key_length_in_words;)
 							tk[i++] ^= tk[j++];
 					}
 					else
 					{
-						for (int i = 1, j = 0; i < key_length_in_words / 2;)
+						for (size_t i = 1, j = 0; i < key_length_in_words / 2;)
 							tk[i++] ^= tk[j++];
 
 						tt = tk[key_length_in_words / 2 - 1];
@@ -1333,12 +1333,12 @@ namespace pr
 							(sm_S((tt >> 16) & 0xFF) & 0xFF) << 16 ^
 							(sm_S((tt >> 24) & 0xFF) & 0xFF) << 24;
 
-						for (int j = key_length_in_words / 2, i = j + 1; i < key_length_in_words;)
+						for (size_t j = key_length_in_words / 2, i = j + 1; i < key_length_in_words;)
 							tk[i++] ^= tk[j++];
 					}
 
 					// Copy values into round key arrays
-					for (int j = 0; j < key_length_in_words && t < round_key_count; ++j, ++t)
+					for (size_t j = 0; j < key_length_in_words && t < round_key_count; ++j, ++t)
 					{
 						m_Ke[           t / block_count_in_words][t % block_count_in_words] = tk[j];
 						m_Kd[m_rounds - t / block_count_in_words][t % block_count_in_words] = tk[j];
@@ -1346,9 +1346,9 @@ namespace pr
 				}
 
 				// Inverse MixColumn where needed
-				for (int r = 1; r < m_rounds; r++)
+				for (size_t r = 1; r < m_rounds; r++)
 				{
-					for (int j = 0; j != block_count_in_words; ++j)
+					for (size_t j = 0; j != block_count_in_words; ++j)
 					{
 						int tt = m_Kd[r][j];
 						m_Kd[r][j] =
@@ -1364,6 +1364,7 @@ namespace pr
 			//  in           - The plaintext.
 			//  result       - The ciphertext generated from plaintext using the key.
 			//  'in' and 'result' must point to 'm_block_size' bytes
+			// Note: in-place decryption *is* supported
 			void EncryptBlock(char const* in, char* result)
 			{
 				if (m_block_size == DEFAULT_BLOCK_SIZE)
@@ -1372,14 +1373,14 @@ namespace pr
 					return;
 				}
 
-				int block_count_in_words = m_block_size / 4;
+				size_t block_count_in_words = m_block_size / 4;
 				int SC = (block_count_in_words == 4) ? 0 : (block_count_in_words == 6 ? 1 : 2);
 				int s1 = sm_shifts(SC,1,0);
 				int s2 = sm_shifts(SC,2,0);
 				int s3 = sm_shifts(SC,3,0);
 
 				int* pi = t;
-				for (int i = 0; i != block_count_in_words; ++i)
+				for (size_t i = 0; i != block_count_in_words; ++i)
 				{
 					*pi       = ((unsigned char)*(in++) << 24);
 					*pi      |= ((unsigned char)*(in++) << 16);
@@ -1388,9 +1389,9 @@ namespace pr
 				}
 
 				// Apply Round Transforms
-				for (int r = 1; r < m_rounds; r++)
+				for (size_t r = 1; r < m_rounds; r++)
 				{
-					for (int i = 0; i != block_count_in_words; ++i)
+					for (size_t i = 0; i != block_count_in_words; ++i)
 					{
 						a[i] = (
 							sm_T1((t[(i     )                       ] >> 24) & 0xFF) ^
@@ -1402,7 +1403,7 @@ namespace pr
 				}
 
 				// Last Round is Special
-				for (int i = 0, j = 0; i != block_count_in_words; ++i)
+				for (size_t i = 0, j = 0; i != block_count_in_words; ++i)
 				{
 					int tt = m_Ke[m_rounds][i];
 					result[j++] = static_cast<char>(sm_S((t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24));
@@ -1416,6 +1417,7 @@ namespace pr
 			//  in         - The ciphertext.
 			//  result     - The plaintext generated from a ciphertext using the session key.
 			//  result_len - The length of the buffer 'result' in bytes
+			// Note: in-place decryption *is* supported
 			void DecryptBlock(char const* in, char* result)
 			{
 				if (DEFAULT_BLOCK_SIZE == m_block_size)
@@ -1424,14 +1426,14 @@ namespace pr
 					return;
 				}
 
-				int block_count_in_words = m_block_size / 4;
+				size_t block_count_in_words = m_block_size / 4;
 				int SC = block_count_in_words == 4 ? 0 : (block_count_in_words == 6 ? 1 : 2);
 				int s1 = sm_shifts(SC,1,1);
 				int s2 = sm_shifts(SC,2,1);
 				int s3 = sm_shifts(SC,3,1);
 
 				int* pi = t;
-				for (int i = 0; i < block_count_in_words; i++)
+				for (size_t i = 0; i < block_count_in_words; i++)
 				{
 					*pi       = ((unsigned char)*(in++) << 24);
 					*pi      |= ((unsigned char)*(in++) << 16);
@@ -1440,9 +1442,9 @@ namespace pr
 				}
 
 				// Apply Round Transforms
-				for (int r = 1; r < m_rounds; r++)
+				for (size_t r = 1; r < m_rounds; r++)
 				{
-					for (int i = 0; i < block_count_in_words; i++)
+					for (size_t i = 0; i < block_count_in_words; i++)
 					{
 						a[i] = (
 							sm_T5((t[(i     )                       ] >> 24) & 0xFF) ^
@@ -1454,7 +1456,7 @@ namespace pr
 				}
 
 				// Last Round is Special
-				for (int i = 0, j = 0; i < block_count_in_words; i++)
+				for (size_t i = 0, j = 0; i < block_count_in_words; i++)
 				{
 					int tt = m_Kd[m_rounds][i];
 					result[j++] = static_cast<char>(sm_Si((t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24));
@@ -1468,6 +1470,7 @@ namespace pr
 			//  result     - The buffer that receives the encrypted text
 			//  len        - The size in bytes of 'in' and 'result'. Must be a multiple of the block size
 			//  mode       - The encryption mode to use
+			// Note: in-place decryption *is* supported for ECB mode
 			void Encrypt(char const* in, char* result, size_t len, EMode mode=EMode::ECB)
 			{
 				assert(((len % m_block_size) == 0) && "Data not multiple of Block Size");
@@ -1523,6 +1526,7 @@ namespace pr
 			//  result     - The buffer that receives the decrypted text
 			//  len        - The size in bytes of 'in' and 'result'. Must be a multiple of 'm_block_size'
 			//  mode       - The encryption mode used.
+			// Note: in-place decryption *is* supported for ECB mode
 			void Decrypt(char const* in, char* result, size_t len, EMode mode=EMode::ECB)
 			{
 				assert(((len % m_block_size) == 0) && "Data not multiple of Block Size");
@@ -1574,19 +1578,19 @@ namespace pr
 			}
 
 			// Key Length
-			int KeyLength() const
+			size_t KeyLength() const
 			{
 				return m_key_length;
 			}
 
 			// Block Size
-			int BlockSize() const
+			size_t BlockSize() const
 			{
 				return m_block_size;
 			}
 
 			// Number of Rounds
-			int Rounds() const
+			size_t Rounds() const
 			{
 				return m_rounds;
 			}
@@ -1632,6 +1636,20 @@ namespace pr
 				pr::crypt::Rijndael rijndael(key, 32, block_size);
 				rijndael.Encrypt(src_, out_, sizeof(src_));
 				rijndael.Decrypt(out_, ret_, sizeof(src_));
+				PR_CHECK(memcmp(src_, ret_, sizeof(src_)) == 0, true);
+			}
+			{// In-place encryption/decryption
+				const int block_size = 16;
+				char src_[block_size * 30];
+				char ret_[sizeof(src_)] = {};
+				for (int i = 0; i != sizeof(src_); ++i)
+					src_[i] = ret_[i] = char(i % 256);
+
+				char const key[33] = "PaulRulz!!OhYeah!!InYourFacePunk"; // 256bit
+				pr::crypt::Rijndael rijndael(key, 32, block_size);
+				rijndael.Encrypt(ret_, ret_, sizeof(src_));
+				PR_CHECK(memcmp(src_, ret_, sizeof(src_)) != 0, true);
+				rijndael.Decrypt(ret_, ret_, sizeof(src_));
 				PR_CHECK(memcmp(src_, ret_, sizeof(src_)) == 0, true);
 			}
 		}

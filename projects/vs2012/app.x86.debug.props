@@ -30,6 +30,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <OpenMPSupport>true</OpenMPSupport>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>

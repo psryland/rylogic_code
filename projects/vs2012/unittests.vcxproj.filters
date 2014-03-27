@@ -771,9 +771,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\scope.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\gui\progress_dlg2.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_forward.h">
       <Filter>pr\linedrawer</Filter>
     </ClInclude>
@@ -809,6 +806,51 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\crypt\rijndael.h">
       <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\atlgdix.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\context_menu.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\font_helper.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\gdiplus.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\graph_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\grid_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\menu_helper.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\mfc_helper.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\misc.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\progress_dlg.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\recent_files.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\richedit.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\round_button_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\scaled_dc.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\wtl_tab_view_ctrl.h">
+      <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

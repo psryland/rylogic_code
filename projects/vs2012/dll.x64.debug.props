@@ -49,6 +49,7 @@
       <OmitFramePointers>false</OmitFramePointers>
       <OpenMPSupport>true</OpenMPSupport>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX64</TargetMachine>

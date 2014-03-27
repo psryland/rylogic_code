@@ -32,6 +32,7 @@
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <OpenMPSupport>true</OpenMPSupport>
+      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>

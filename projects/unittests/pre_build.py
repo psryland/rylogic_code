@@ -31,11 +31,9 @@ exclude = [
 	"pr/macros/on_exit.h",
 	"pr/maths/pr_to_ode.h",
 	"pr/physics/",
-	"pr/renderer/",
 	"pr/sound/",
 	"pr/storage/xfile",
 	"pr/terrain/",
-	"pr/threads/thread.h",
 	]
 
 try:
