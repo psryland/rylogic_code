@@ -6,8 +6,6 @@
   <PropertyGroup>
     <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)</IntDir>
-    <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
-    <CustomBuildAfterTargets>Build;Rebuild</CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">
@@ -44,18 +42,15 @@
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PostBuildEvent>
-      <Command>
-      </Command>
-      <Message>Deploy done as a custom build step</Message>
+      <Command>\script\DeployBin.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
     </ProjectReference>
     <CustomBuildStep>
-      <Command>\script\DeployBin.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
+      <Command>
+      </Command>
     </CustomBuildStep>
-    <CustomBuildStep>
-      <Message>Publishing binary...</Message>
-    </CustomBuildStep>
+    <CustomBuildStep />
   </ItemDefinitionGroup>
 </Project>

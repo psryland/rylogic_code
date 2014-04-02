@@ -10,6 +10,7 @@ The Natvis framework is not used for visualizations when:
  The program is built with Edit and Continue enabled
   i.e. Debug Information Format, use Program Database (/Zi)
   
+ Options->Debugging->General-> "Show raw structure of objects in variables windows"
   
 Diagnosing Natvis errors
   Natvis diagnostics helps you to troubleshoot issues when writing new visualizations.

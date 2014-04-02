@@ -12,23 +12,18 @@ using pr.common;
 using pr.util;
 using pr.extn;
 
-// /// <summary>Example use of settings</summary>
-// public sealed class Settings :SettingsBase
-// {
-//     public static readonly Settings Default = new Settings(0);
-//     protected override SettingsBase DefaultData { get { return Default; } }
-//
-//     public string Str { get { return get(x => x.Str); } set { set(x => x.Str, value); } }
-//     public int    Int { get { return get(x => x.Int); } set { set(x => x.Int, value); } }
-//
-//     public Settings(ELoadOptions opts = ELoadOptions.Normal)
-//     {
-//         // Try to load from file, if that fails, fall through an load defaults
-//         if (opts == ELoadOptions.Normal) try { Reload(); return; } catch {}
-//         Str = "default";
-//         Int = 4;
-//     }
-// }
+// Example use of settings
+//  private sealed class Settings :SettingsBase<Settings>
+//  {
+//  	public string Str { get { return get(x => x.Str); } set { set(x => x.Str, value); } }
+//  	public int    Int { get { return get(x => x.Int); } set { set(x => x.Int, value); } }
+//  	public Settings()
+//  	{
+//  		Str = "default";
+//  		Int = 4;
+//  	}
+//		public Settings(string filepath) :base(filepath) {}
+//  }
 
 namespace pr.common
 {

@@ -17,6 +17,7 @@
 
 #include <exception>
 #include <functional>
+#include <iostream>
 #include <cassert>
 
 // Macro enum generator functions
