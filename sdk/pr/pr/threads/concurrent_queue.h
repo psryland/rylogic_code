@@ -21,14 +21,15 @@ namespace pr
 		// Base class for concurrent queues
 		struct IConcurrentQueue
 		{
-		protected:
 			typedef std::unique_lock<std::mutex> MLock;
 
-			std::mutex m_mutex;
-			std::condition_variable m_cv;
+		protected:
+			std::mutex& m_mutex;
+			std::condition_variable m_cv_added;
+			std::condition_variable m_cv_empty;
 			bool m_last;
 
-			IConcurrentQueue() :m_mutex() ,m_cv() ,m_last(false) {}
+			IConcurrentQueue(std::mutex& mutex) :m_mutex(mutex) ,m_cv_added() ,m_cv_empty() ,m_last(false) {}
 			IConcurrentQueue(IConcurrentQueue const&);
 			IConcurrentQueue& operator=(IConcurrentQueue const&);
 
@@ -36,23 +37,23 @@ namespace pr
 			// Queueing anything after 'm_last' has been set throws an exception
 			void LastAdded()
 			{
-				{
-					MLock lock(m_mutex);
-					m_last = true;
-				}
-				m_cv.notify_all();
+				MLock lock(m_mutex);
+				m_last = true;
+				m_cv_added.notify_all();
+				m_cv_empty.notify_all();
 			}
 		};
 
-		template <typename T> class ConcurrentQueue :IConcurrentQueue
+		template <typename T> struct ConcurrentQueue :IConcurrentQueue
 		{
+		private:
 			std::deque<T> m_queue;
 
 			ConcurrentQueue(ConcurrentQueue const&);
 			ConcurrentQueue& operator=(ConcurrentQueue const&);
 
 		public:
-			ConcurrentQueue() {}
+			explicit ConcurrentQueue(std::mutex& mutex) :IConcurrentQueue(mutex) {}
 
 			// A scope object for locking the queue
 			// Allows enumeration methods while locked
@@ -88,24 +89,40 @@ namespace pr
 			// Dequeue blocks until data is available in the queue
 			// Returns true if an item was dequeued, or false if no
 			// more data will be added to the queue.
-			bool Dequeue(T& item)
+			bool Dequeue(T& item, MLock& lock)
 			{
-				MLock lock(m_mutex);
-				m_cv.wait(lock, [&](){ return !m_queue.empty() || m_last; });
+				if (m_queue.empty()) m_cv_empty.notify_all(); // notify before we block
+				m_cv_added.wait(lock, [&]{ return !m_queue.empty() || m_last; });
 				if (m_queue.empty()) return false;
 				item = m_queue.front();
 				m_queue.pop_front();
 				return true;
 			}
+			bool Dequeue(T& item)
+			{
+				MLock lock(m_mutex);
+				return Dequeue(item, lock);
+			}
 
 			// Add something to the queue
+			void Enqueue(T&& item, MLock&)
+			{
+				m_queue.push_back(std::move(item));
+				m_cv_added.notify_one();
+			}
 			void Enqueue(T&& item)
 			{
-				{
-					MLock lock(m_mutex);
-					m_queue.push_back(std::move(item));
-				}
-				m_cv.notify_one();
+				MLock lock(m_mutex);
+				Enqueue(std::forward<T>(item), lock);
+			}
+
+			// Block until the queue is empty
+			// WARNING: don't assume this means the consumer has finished
+			// processing the last item removed from the queue.
+			void Flush()
+			{
+				MLock lock(m_mutex);
+				m_cv_empty.wait(lock, [&]{ return m_queue.empty(); });
 			}
 		};
 	}
@@ -146,27 +163,31 @@ namespace pr
 		PRUnitTest(pr_threads_concurrent_queue)
 		{
 			using namespace pr::unittests::threads;
-			pr::threads::ConcurrentQueue<Item> queue;
+
+			std::mutex mutex;
+			pr::threads::ConcurrentQueue<Item> queue(mutex);
 			std::vector<std::string> items;
 
 			std::thread t0(Produce, "t0_", std::ref(queue));
 			std::thread t1(Produce, "t1_", std::ref(queue));
 			std::thread t2(Produce, "t2_", std::ref(queue));
-			std::thread t3(Consume, std::ref(queue), std::ref(items));
 
 			t0.join();
 			t1.join();
-
 			{
 				pr::threads::ConcurrentQueue<Item>::Lock lock(queue);
 				auto size = lock.m_queue.size() + items.size();
 				PR_CHECK(size >= 20 && size <= 30, true); // since t0,t1 have finished
 			}
 
-			t2.join();
+			// Start consuming
+			std::thread t3(Consume, std::ref(queue), std::ref(items));
 
+			// Finish adding
+			t2.join();
 			queue.LastAdded();
 
+			// Finish consuming
 			t3.join();
 
 			PR_CHECK(items.size(), 30U);

@@ -43,7 +43,7 @@ try:
 		'/P',
 		'/nologo',
 		'/TP',
-		'/EP', #no line numbers
+		#'/EP', #no line numbers
 		]
 	#/GS /analyze- /W3 /wd"4351" /Gy /Zc:wchar_t /ZI /Gm /Od /Ob0 /GF /WX- /Zc:forScope /RTC1 /Gd /Oy- /MTd /openmp /fp:precise /errorReport:prompt /EHsc 
 

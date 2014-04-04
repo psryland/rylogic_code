@@ -202,6 +202,7 @@
 #include "pr/meta/and.h"
 #include "pr/meta/constants.h"
 #include "pr/meta/enableif.h"
+#include "pr/meta/flags_enum.h"
 #include "pr/meta/function_arity.h"
 #include "pr/meta/gcf.h"
 #include "pr/meta/if.h"

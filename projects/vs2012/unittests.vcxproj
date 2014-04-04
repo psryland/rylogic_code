@@ -231,6 +231,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\meta\and.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\constants.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\enableif.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\meta\flags_enum.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\function_arity.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\gcf.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\if.h" />

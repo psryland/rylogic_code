@@ -14,7 +14,6 @@
 #include <atlbase.h>
 #include <atlapp.h>
 #include "pr/common/timers.h"
-#include "pr/common/log.h"
 #include "pr/common/fmt.h"
 #include "pr/common/array.h"
 
@@ -28,7 +27,7 @@ namespace pr
 		// The step function for a context.
 		// First parameter is the step time in seconds
 		typedef std::function<void(double)> StepFunc;
-	
+
 	private:
 		struct Context
 		{
@@ -97,8 +96,6 @@ namespace pr
 		// Runs the message loop until WM_QUIT
 		virtual int Run()
 		{
-			pr::log::Log::Write(pr::log::Level::Debug, "file", 1, "WTF", 0);
-
 			// Initialise 'm_msg'
 			::PeekMessage(&m_msg, 0, 0, 0, PM_NOREMOVE);
 			while (m_msg.message != WM_QUIT)
@@ -111,7 +108,7 @@ namespace pr
 						::TranslateMessage(&m_msg);
 						::DispatchMessage(&m_msg);
 					}
-					
+
 					if (IsIdleMessage(&m_msg))
 					{
 						int idle_count = 0;
@@ -144,7 +141,7 @@ namespace pr
 							auto time_skip = (frames_behind - 1) * ctx.m_ticks_per_frame;
 							ctx.m_last_time += time_skip;
 							elapsed -= time_skip;
-							PR_LOG(Warn, pr::FmtS("Dropping %d frames for %s", frames_behind - 1, ctx.m_name.c_str()));
+							//PR_LOG(Warn, pr::FmtS("Dropping %d frames for %s", frames_behind - 1, ctx.m_name.c_str()));
 						}
 
 						// 'ctx' requires stepping
@@ -153,8 +150,8 @@ namespace pr
 							sw.start(true);
 							ctx.m_step(pr::rtc::ToSec(step_interval));
 							sw.stop();
-							if (sw.period() > ctx.m_ticks_per_frame)
-								PR_LOG(Warn, pr::FmtS("'%s' step() took %3.3fms, frame time: %3.3fms", ctx.m_name.c_str(), sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
+							//if (sw.period() > ctx.m_ticks_per_frame)
+							//	PR_LOG(Warn, pr::FmtS("'%s' step() took %3.3fms, frame time: %3.3fms", ctx.m_name.c_str(), sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
 						}
 						ctx.m_last_time += step_interval;
 
