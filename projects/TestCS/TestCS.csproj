@@ -45,45 +45,45 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="checkedlistbox_ui.cs">
+    <Compile Include="src\checkedlistbox_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="colour_wheel_ui.cs">
+    <Compile Include="src\colour_wheel_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="graph_control_ui.cs">
+    <Compile Include="src\graph_control_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="hint_balloon_ui.cs">
+    <Compile Include="src\hint_balloon_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="test_app_ui.cs">
+    <Compile Include="src\test_app_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="tree_grid_ui.cs">
+    <Compile Include="src\tree_grid_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="view3d_ui.cs">
+    <Compile Include="src\view3d_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="program.cs" />
+    <Compile Include="src\program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="toolform_ui.cs">
+    <Compile Include="src\toolform_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <EmbeddedResource Include="checkedlistbox_ui.resx">
+    <EmbeddedResource Include="src\checkedlistbox_ui.resx">
       <DependentUpon>checkedlistbox_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="colour_wheel_ui.resx">
+    <EmbeddedResource Include="src\colour_wheel_ui.resx">
       <DependentUpon>colour_wheel_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="test_app_ui.resx">
+    <EmbeddedResource Include="src\test_app_ui.resx">
       <DependentUpon>test_app_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="graph_control_ui.resx">
+    <EmbeddedResource Include="src\graph_control_ui.resx">
       <DependentUpon>graph_control_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="hint_balloon_ui.resx">
+    <EmbeddedResource Include="src\hint_balloon_ui.resx">
       <DependentUpon>hint_balloon_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -95,7 +95,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <EmbeddedResource Include="tree_grid_ui.resx">
+    <EmbeddedResource Include="src\tree_grid_ui.resx">
       <DependentUpon>tree_grid_ui.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
@@ -112,7 +112,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Rylogic.csproj">
+    <ProjectReference Include="..\..\sdk\pr\prcs\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>Rylogic</Name>
     </ProjectReference>
