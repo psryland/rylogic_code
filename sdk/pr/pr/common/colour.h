@@ -28,7 +28,7 @@ namespace pr
 	// Forward declaration
 	struct Colour;
 	struct Colour32;
-	
+
 	// Predefined windows colours
 	namespace EColours
 	{
@@ -178,17 +178,17 @@ namespace pr
 			#pragma endregion
 		};
 	}
-	
+
 	// Equivelent to D3DCOLOR
 	struct Colour32
 	{
 		uint32 m_aarrggbb;
-		
+
 		static Colour32 make(EColours::Type col)                { Colour32 c; return c.set(col); }
 		static Colour32 make(uint32 aarrggbb)                   { Colour32 c; return c.set(aarrggbb); }
 		static Colour32 make(float r, float g, float b, float a){ Colour32 c; return c.set(r,g,b,a); }
 		static Colour32 make(int r, int g, int b, int a)        { Colour32 c; return c.set(r,g,b,a); }
-		
+
 		Colour32& operator = (Colour const& c);
 		Colour32& operator = (uint32 i)                         { m_aarrggbb = i; return *this; }
 		Colour32& operator = (int i)                            { m_aarrggbb = uint32(i); return *this; }
@@ -196,14 +196,14 @@ namespace pr
 		operator uint32() const                                 { return m_aarrggbb; }
 		operator Colour() const;
 		PR_SUPPORT_WINGDI(Colour32& operator = (const COLORREF& c) { set(GetRValue(c), GetGValue(c), GetBValue(c), uint8(255)); return *this; })
-		
+
 		Colour32& zero()                                        { m_aarrggbb = 0; return *this; }
 		Colour32& set(EColours::Type col)                       { m_aarrggbb = static_cast<uint32>(col); return *this; }
 		Colour32& set(uint32 aarrggbb)                          { m_aarrggbb = aarrggbb; return *this; }
 		Colour32& set(uint8 r_, uint8 g_, uint8 b_, uint8 a_)   { m_aarrggbb = (a_<<24) | (r_<<16) | (g_<<8) | (b_); return *this; }
 		Colour32& set(int   r_, int   g_, int   b_, int   a_)   { return set(uint8(r_&0xff),   uint8(g_&0xff),   uint8(b_&0xff),   uint8(a_&0xff)); }
 		Colour32& set(float r_, float g_, float b_, float a_)   { return set(uint8(r_*255.0f), uint8(g_*255.0f), uint8(b_*255.0f), uint8(a_*255.0f)); }
-		
+
 		Colour32 rgba() const                                   { return Colour32::make(((m_aarrggbb&0x00ffffff)<<8)|(m_aarrggbb>>24)); }
 		Colour32 aooo() const                                   { return Colour32::make(m_aarrggbb & 0xFF000000); }
 		Colour32 oroo() const                                   { return Colour32::make(m_aarrggbb & 0x00FF0000); }
@@ -218,12 +218,12 @@ namespace pr
 		uint8    r() const                                      { return uint8((m_aarrggbb >> 16) & 0xFF); }
 		uint8    g() const                                      { return uint8((m_aarrggbb >>  8) & 0xFF); }
 		uint8    b() const                                      { return uint8((m_aarrggbb >>  0) & 0xFF); }
-		
-		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const             { return RGB(r(), g(), b()); })
+
+		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const          { return RGB(r(), g(), b()); })
 		inline uint8 const* ToArray() const                     { return reinterpret_cast<uint8 const*>(this); }
 		inline uint8*       ToArray()                           { return reinterpret_cast<uint8*>      (this); }
-		inline uint8 const& operator [] (std::size_t i) const   { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
-		inline uint8&       operator [] (std::size_t i)         { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
+		inline uint8 const& operator [] (std::size_t i) const   { assert(i < 4); return ToArray()[i]; }
+		inline uint8&       operator [] (std::size_t i)         { assert(i < 4); return ToArray()[i]; }
 	};
 
 	Colour32 const Colour32Zero   = { 0x00000000 };
@@ -236,7 +236,7 @@ namespace pr
 	Colour32 const Colour32Yellow = { 0xFFFFFF00 };
 	Colour32 const Colour32Purple = { 0xFFFF00FF };
 	Colour32 const Colour32Gray   = { 0xFF808080 };
-	
+
 	// Equality operators
 	inline bool operator == (Colour32 lhs, Colour32 rhs) { return lhs.m_aarrggbb == rhs.m_aarrggbb; }
 	inline bool operator != (Colour32 lhs, Colour32 rhs) { return !(lhs == rhs); }
@@ -245,7 +245,7 @@ namespace pr
 	inline bool operator <= (Colour32 lhs, Colour32 rhs) { return lhs.m_aarrggbb <= rhs.m_aarrggbb; }
 	inline bool operator >= (Colour32 lhs, Colour32 rhs) { return lhs.m_aarrggbb >= rhs.m_aarrggbb; }
 	inline bool EqualNoA    (Colour32 lhs, Colour32 rhs) { return lhs.orgb() == rhs.orgb(); }
-	
+
 	// Binary operators
 	inline Colour32 operator + (Colour32 lhs, Colour32 rhs) { Colour32 c; return c.set(Clamp(lhs.r() + rhs.r()  ,0  ,255  ) ,Clamp(lhs.g() + rhs.g()  ,0  ,255  ) ,Clamp(lhs.b() + rhs.b()  ,0  ,255  ) ,Clamp(lhs.a() + rhs.a()  ,0  ,255  )); }
 	inline Colour32 operator - (Colour32 lhs, Colour32 rhs) { Colour32 c; return c.set(Clamp(lhs.r() - rhs.r()  ,0  ,255  ) ,Clamp(lhs.g() - rhs.g()  ,0  ,255  ) ,Clamp(lhs.b() - rhs.b()  ,0  ,255  ) ,Clamp(lhs.a() - rhs.a()  ,0  ,255  )); }
@@ -253,20 +253,20 @@ namespace pr
 	inline Colour32 operator * (float s, Colour32 rhs)      { Colour32 c; return c.set(Clamp(rhs.r() * s        ,0.f,255.f) ,Clamp(rhs.g() * s        ,0.f,255.f) ,Clamp(rhs.b() * s        ,0.f,255.f) ,Clamp(rhs.a() * s        ,0.f,255.f)); }
 	inline Colour32 operator * (Colour32 lhs, Colour32 rhs) { Colour32 c; return c.set(Clamp(lhs.r()*rhs.r()/255,0  ,255  ) ,Clamp(lhs.g()*rhs.g()/255,0  ,255  ) ,Clamp(lhs.b()*rhs.b()/255,0  ,255  ) ,Clamp(lhs.a()*rhs.a()/255,0  ,255  )); }
 	inline Colour32 operator / (Colour32 lhs, float s)      { Colour32 c; return c.set(Clamp(lhs.r() / s        ,0.f,255.f) ,Clamp(lhs.g() / s        ,0.f,255.f) ,Clamp(lhs.b() / s        ,0.f,255.f) ,Clamp(lhs.a() / s        ,0.f,255.f)); }
-	
+
 	// Assignment operators
 	inline Colour32& operator += (Colour32& lhs, Colour32 rhs) { lhs = lhs + rhs; return lhs; }
 	inline Colour32& operator -= (Colour32& lhs, Colour32 rhs) { lhs = lhs - rhs; return lhs; }
 	inline Colour32& operator *= (Colour32& lhs, float s)      { lhs = lhs * s;   return lhs; }
 	inline Colour32& operator *= (Colour32& lhs, Colour32 rhs) { lhs = lhs * rhs; return lhs; }
 	inline Colour32& operator /= (Colour32& lhs, float s)      { lhs = lhs / s;   return lhs; }
-	
+
 	// Random colours
 	inline Colour32 RandomRGB(Rnd& rnd, float a) { return Colour32::make(rnd.u8(), rnd.u8(), rnd.u8(), uint8(a*255.0f)); }
 	inline Colour32 RandomRGB(float a)           { return RandomRGB(rand::Rand(), a); }
 	inline Colour32 RandomRGB(Rnd& rnd)          { return RandomRGB(rnd, 1.0f); }
 	inline Colour32 RandomRGB()                  { return RandomRGB(rand::Rand()); }
-	
+
 	// Equivalent to pr::v4, XMVECTOR, etc
 	struct Colour
 	{
@@ -292,17 +292,17 @@ namespace pr
 		Colour32     argb() const	                             { return Colour32::make(r,g,b,a); }
 		float const* ToArray() const                             { return reinterpret_cast<float const*>(this); }
 		float*       ToArray()                                   { return reinterpret_cast<float*>      (this); }
-		
+
 		Colour& operator = (Colour32 c32)                        { return set(c32); }
 		operator Colour32() const;
-		
+
 		typedef float const (&array_ref)[4];
 		operator array_ref() const                               { return reinterpret_cast<array_ref>(*this); }
-		
+
 		PR_SUPPORT_WINGDI(Colour& operator = (const COLORREF& c)    { set(GetRValue(c), GetGValue(c), GetBValue(c), 255); return *this; })
 		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const              { return RGB(r*255.0f, g*255.0f, b*255.0f); })
 	};
-	
+
 	Colour const ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};
 	Colour const ColourOne    = {1.0f, 1.0f, 1.0f, 1.0f};
 	Colour const ColourWhite  = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -310,20 +310,20 @@ namespace pr
 	Colour const ColourRed    = {1.0f, 0.0f, 0.0f, 1.0f};
 	Colour const ColourGreen  = {0.0f, 1.0f, 0.0f, 1.0f};
 	Colour const ColourBlue   = {0.0f, 0.0f, 1.0f, 1.0f};
-	
+
 	// DirectXMath conversion functions
 	PR_SUPPORT_DX(inline DirectX::XMVECTOR const& dxcv(Colour const& c) { return c.vec; })
 	PR_SUPPORT_DX(inline DirectX::XMVECTOR&       dxcv(Colour&       c) { return c.vec; })
-	
+
 	inline Colour32& Colour32::operator = (Colour const& c)             { return set(c.r, c.g, c.b, c.a); }
-	
+
 	// Binary operators
 	inline Colour operator + (Colour const& lhs, Colour const& rhs)     { Colour c = {Clamp(lhs.r+rhs.r,0.0f,1.0f), Clamp(lhs.g+rhs.g,0.0f,1.0f), Clamp(lhs.b+rhs.b,0.0f,1.0f), Clamp(lhs.a+rhs.a,0.0f,1.0f)}; return c; }
 	inline Colour operator - (Colour const& lhs, Colour const& rhs)     { Colour c = {Clamp(lhs.r-rhs.r,0.0f,1.0f), Clamp(lhs.g-rhs.g,0.0f,1.0f), Clamp(lhs.b-rhs.b,0.0f,1.0f), Clamp(lhs.a-rhs.a,0.0f,1.0f)}; return c; }
 	inline Colour operator * (Colour const& lhs, float s)               { Colour c = {Clamp(lhs.r*s,    0.0f,1.0f), Clamp(lhs.g*s,    0.0f,1.0f), Clamp(lhs.b*s,    0.0f,1.0f), Clamp(lhs.a*s,    0.0f,1.0f)}; return c; }
 	inline Colour operator * (float s, Colour const& rhs)               { Colour c = {Clamp(s*rhs.r,    0.0f,1.0f), Clamp(s*rhs.g,    0.0f,1.0f), Clamp(s*rhs.b,    0.0f,1.0f), Clamp(s*rhs.a,    0.0f,1.0f)}; return c; }
 	inline Colour operator / (Colour const& lhs, float s)               { Colour c = {Clamp(lhs.r/s,    0.0f,1.0f), Clamp(lhs.g/s,    0.0f,1.0f), Clamp(lhs.b/s,    0.0f,1.0f), Clamp(lhs.a/s,    0.0f,1.0f)}; return c; }
-	
+
 	// Equality operators
 	inline bool FEql        (Colour const& lhs, Colour const& rhs)      { return FEql(lhs.r, rhs.r) && FEql(lhs.g, rhs.g) && FEql(lhs.b, rhs.b) && FEql(lhs.a, rhs.a); }
 	inline bool FEqlNoA     (Colour const& lhs, Colour const& rhs)      { return FEql(lhs.r, rhs.r) && FEql(lhs.g, rhs.g) && FEql(lhs.b, rhs.b); }
@@ -334,19 +334,19 @@ namespace pr
 	inline bool operator >  (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	
+
 	// Assignment operators
 	inline Colour& operator += (Colour& lhs, Colour const& rhs)         { lhs = lhs + rhs; return lhs; }
 	inline Colour& operator -= (Colour& lhs, Colour const& rhs)         { lhs = lhs - rhs; return lhs; }
 	inline Colour& operator *= (Colour& lhs, float s)                   { lhs = lhs * s; return lhs; }
 	inline Colour& operator /= (Colour& lhs, float s)                   { lhs = lhs / s; return lhs; }
-	
+
 	// Conversion operators
 	inline Colour32::operator Colour() const { return Colour::make(*this); }
 	inline Colour::operator Colour32() const { return Colour32::make(r,g,b,a); }
-	
+
 	// Miscellaneous *******************************************************************************************
-	
+
 	// Find the 4D distance squared between two colours
 	inline int DistanceSq(Colour32 lhs, Colour32 rhs)
 	{
@@ -355,7 +355,7 @@ namespace pr
 				Sqr((int)lhs.b() - (int)rhs.b()) +
 				Sqr((int)lhs.a() - (int)rhs.a());
 	}
-	
+
 	// Linear interpolate between colours
 	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, float frac)
 	{

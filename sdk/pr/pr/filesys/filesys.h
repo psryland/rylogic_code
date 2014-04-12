@@ -57,16 +57,16 @@ namespace pr
 			ReadWrite = Write | Read
 		};
 
-		// Unix Time = seconds since midnight January 1, 1970 UTC 
-		// FILETIME = 100-nanosecond intervals since January 1, 1601 UTC 
+		// Unix Time = seconds since midnight January 1, 1970 UTC
+		// FILETIME = 100-nanosecond intervals since January 1, 1601 UTC
 
 		// File timestamp data for a file.
 		// Note: these timestamps are in UTC unix time
 		struct FileTime
 		{
 			time_t m_last_access;   // Note: time_t is 64bit
-			time_t m_last_modified; 
-			time_t m_created;       
+			time_t m_last_modified;
+			time_t m_created;
 		};
 
 		// Convert a UTC unix time to a local timezone unix time
@@ -467,7 +467,7 @@ namespace pr
 			pathname += extension;
 			return Standardise(pathname);
 		}
-		template <typename String> inline String Make(String const& drive, String const& path, String const& filetitle, String const& extension)	
+		template <typename String> inline String Make(String const& drive, String const& path, String const& filetitle, String const& extension)
 		{
 			typedef String::value_type Char;
 			String pathname;
@@ -517,7 +517,7 @@ namespace pr
 		}
 
 		// Move 'src' to 'dst' replacing 'dst' if it already exists
-		template <typename String> inline bool ReplaceFile(String const& src, String const& dst)
+		template <typename String> inline bool RepFile(String const& src, String const& dst)
 		{
 			if (!FileExists(dst)) return RenameFile(src, dst);
 			return ::ReplaceFileA(dst.c_str(), src.c_str(), 0, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, 0, 0) != 0;

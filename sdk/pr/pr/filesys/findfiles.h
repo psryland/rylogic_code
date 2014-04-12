@@ -17,6 +17,7 @@
 //		std::string path = ff.fullpath();
 //	}
 
+#pragma once
 #ifndef PR_FILESYS_FINDFILES
 #define PR_FILESYS_FINDFILES
 
@@ -107,7 +108,7 @@ namespace pr
 			}
 
 			// Return the full pathname (as a String)
-			String const& fullpath2() const
+			String fullpath2() const
 			{
 				return m_root;
 			}

@@ -67,7 +67,7 @@ namespace pr
 				{
 					char const* err_msg = pr::FmtS("Failed to create application\nReturned error: %s", ex.what());
 					MessageBox(err_msg, "Application Startup Error", MB_OK|MB_ICONERROR);
-					PR_LOG(Error, err_msg);
+					//PR_LOG(Error, err_msg);
 					CloseApp(E_FAIL);
 					return E_FAIL;
 				}
@@ -75,7 +75,7 @@ namespace pr
 				{
 					char const* err_msg = pr::FmtS("Failed to create application due to an unknown exception");
 					MessageBox(err_msg, "Application Startup Error", MB_OK|MB_ICONERROR);
-					PR_LOG(Error, err_msg);
+					//PR_LOG(Error, err_msg);
 					CloseApp(E_FAIL);
 					return E_FAIL;
 				}

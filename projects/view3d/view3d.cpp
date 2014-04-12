@@ -621,7 +621,7 @@ VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreate(size_t width, size
 	}
 	catch (std::exception const& e)
 	{
-		PR_LOGE(Exception, e, "Failed to create texture");
+		//PR_LOGE(Exception, e, "Failed to create texture");
 		return EView3DResult::Failed;
 	}
 }
@@ -645,7 +645,7 @@ VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreateFromFile(char const
 	}
 	catch (std::exception& e)
 	{
-		PR_LOGE(Exception, e, "Failed to create texture from file");
+		//PR_LOGE(Exception, e, "Failed to create texture from file");
 		return EView3DResult::Failed;
 	}
 }

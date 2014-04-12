@@ -1363,6 +1363,23 @@ namespace pr
 	};
 }
 
+// Specialise std types for pr::string
+namespace std
+{
+	// Specialise hash functor for pr::string
+	template <typename T, int L, bool F, typename A>
+	struct hash<pr::string<T,L,F,A>> :public unary_function<pr::string<T,L,F,A>, size_t>
+	{
+		typedef pr::string<T,L,F,A> _Kty;
+		size_t operator()(const _Kty& _Keyval) const
+		{
+			// hash _Keyval to size_t value by pseudorandomizing transform
+			return _Hash_seq((unsigned char const *)_Keyval.c_str(), _Keyval.size() * sizeof(_Elem));
+		}
+	};
+}
+	
+
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 namespace pr
