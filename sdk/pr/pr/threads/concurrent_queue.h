@@ -44,15 +44,19 @@ namespace pr
 			}
 		};
 
+		// Concurrent queue implementation.
+		// Caller provides the mutex on which the queue is synchronised
 		template <typename T> struct ConcurrentQueue :IConcurrentQueue
 		{
-		private:
+		protected:
+
 			std::deque<T> m_queue;
 
 			ConcurrentQueue(ConcurrentQueue const&);
 			ConcurrentQueue& operator=(ConcurrentQueue const&);
 
 		public:
+
 			explicit ConcurrentQueue(std::mutex& mutex) :IConcurrentQueue(mutex) {}
 
 			// A scope object for locking the queue
@@ -82,26 +86,49 @@ namespace pr
 				{}
 			};
 
+			// Tests if the LastAdded flag is set and the queue is empty
+			bool Exhausted() const
+			{
+				MLock lock(m_mutex);
+				return m_last && m_queue.empty();
+			}
+
 			// Call this after the last item has been added to the queue.
 			// Queueing anything after 'm_last' has been set throws an exception
-			using IConcurrentQueue::LastAdded;
+			void LastAdded()
+			{
+				IConcurrentQueue::LastAdded();
+			}
 
 			// Dequeue blocks until data is available in the queue
 			// Returns true if an item was dequeued, or false if no
 			// more data will be added to the queue.
-			bool Dequeue(T& item, MLock& lock)
+			bool Dequeue(T& item, MLock& lock, int timeout_ms = ~0)
 			{
-				if (m_queue.empty()) m_cv_empty.notify_all(); // notify before we block
-				m_cv_added.wait(lock, [&]{ return !m_queue.empty() || m_last; });
-				if (m_queue.empty()) return false;
+				// Notify before we block. Waiting threads won't see 'm_queue'
+				// as empty unless we actually wait (which releases the lock)
+				if (m_queue.empty())
+					m_cv_empty.notify_all();
+				
+				// Wait for an item to dequeue
+				if (timeout_ms == ~0)
+					m_cv_added.wait(lock, [&]{ return !m_queue.empty() || m_last; });
+				else
+					m_cv_added.wait_for(lock, std::chrono::milliseconds(timeout_ms), [&]{ return !m_queue.empty() || m_last; });
+
+				// Timeout or last added
+				if (m_queue.empty())
+					return false;
+				
+				// Pop the queued item
 				item = m_queue.front();
 				m_queue.pop_front();
 				return true;
 			}
-			bool Dequeue(T& item)
+			bool Dequeue(T& item, int timeout_ms = ~0)
 			{
 				MLock lock(m_mutex);
-				return Dequeue(item, lock);
+				return Dequeue(item, lock, timeout_ms);
 			}
 
 			// Add something to the queue
@@ -115,6 +142,16 @@ namespace pr
 				MLock lock(m_mutex);
 				Enqueue(std::forward<T>(item), lock);
 			}
+			void Enqueue(T const& item, MLock&)
+			{
+				m_queue.push_back(item);
+				m_cv_added.notify_one();
+			}
+			void Enqueue(T const& item)
+			{
+				MLock lock(m_mutex);
+				Enqueue(item, lock);
+			}
 
 			// Block until the queue is empty
 			// WARNING: don't assume this means the consumer has finished
@@ -124,6 +161,13 @@ namespace pr
 				MLock lock(m_mutex);
 				m_cv_empty.wait(lock, [&]{ return m_queue.empty(); });
 			}
+		};
+	
+		// Concurrent queue that provides it's own mutex
+		template <typename T> struct ConcurrentQueue2 :ConcurrentQueue<T>
+		{
+			std::mutex m_mutex;
+			ConcurrentQueue2() :ConcurrentQueue<T>(m_mutex) {}
 		};
 	}
 }

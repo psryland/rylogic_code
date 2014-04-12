@@ -2,7 +2,7 @@
 // Recurse Directory
 //  Copyright © Rylogic Ltd 2010
 //**************************************************************
-
+#pragma once
 #ifndef PR_FILESYS_RECURSE_DIRECTORY_H
 #define PR_FILESYS_RECURSE_DIRECTORY_H
 
@@ -10,7 +10,6 @@
 #include <windows.h>
 #include <string>
 #include "pr/filesys/findfiles.h"
-#include "pr/common/assert.h"
 
 namespace pr
 {
@@ -18,11 +17,13 @@ namespace pr
 	{
 		// Recursively enumerate directories below and including 'path'
 		// PathCB should have a signature: bool (*EnumDirectories)(String pathname)
+		// Returns false if 'EnumDirectories' returns false, indicating that the search ended early
 		template <typename String, typename PathCB>
 		bool RecurseDirectory(String path, PathCB EnumDirectories)
 		{
 			// Enum this directory
-			if (!EnumDirectories(path)) { return false; }
+			if (!EnumDirectories(path))
+				return false;
 
 			// Recurse the directories in this directory
 			// Append a mask to the dir path
@@ -47,6 +48,7 @@ namespace pr
 		// 'file_masks' is a semicolon separated, null terminated, list of file masks
 		// PathCB should have a signature: bool (*EnumFiles)(String pathname)
 		// SkipDirCB should have a signature: bool (*SkipDir)(String pathname)
+		// Returns false if 'EnumFiles' returns false, indicating that the search ended early
 		template <typename String, typename PathCB, typename SkipDirCB>
 		bool RecurseFiles(String path, PathCB EnumFiles, const char* file_masks, SkipDirCB SkipDir)
 		{

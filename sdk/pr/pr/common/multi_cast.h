@@ -2,14 +2,14 @@
 // Multicast
 //  Copyright © Oct 2011 Rylogic Ltd
 //******************************************
-	
+
+#pragma once
 #ifndef PR_MULTI_CAST_H
 #define PR_MULTI_CAST_H
-#pragma once
-	
+
 #include <vector>
-#include "pr/threads/critical_section.h"
-	
+#include <mutex>
+
 namespace pr
 {
 	// Another variation on a multicast delegate
@@ -24,17 +24,17 @@ namespace pr
 	template <typename Type> class MultiCast
 	{
 		typedef std::vector<Type> TypeCont; TypeCont m_cont;
-		pr::threads::CritSection m_cs;
-		
+		mutable std::mutex m_cs;
+
 	public:
 		typedef typename TypeCont::const_iterator citer;
 		typedef typename TypeCont::iterator       iter;
-		
+
 		// A lock context for accessing the clients
 		class Lock
 		{
 			MultiCast<Type>&    m_mc;
-			pr::threads::CSLock m_lock;
+			std::lock_guard<std::mutex> m_lock;
 			Lock(Lock const&);
 			Lock& operator =(Lock const&);
 		public:
@@ -44,21 +44,21 @@ namespace pr
 			citer end() const   { return m_mc.m_cont.end(); }
 			iter  end()         { return m_mc.m_cont.end(); }
 		};
-		
+
 		void operator =  (Type client)
 		{
-			pr::threads::CSLock lock(m_cs);
+			std::lock_guard<std::mutex> lock(m_cs);
 			m_cont.resize(0);
 			m_cont.push_back(client);
 		}
 		void operator += (Type client)
 		{
-			pr::threads::CSLock lock(m_cs);
+			std::lock_guard<std::mutex> lock(m_cs);
 			m_cont.push_back(client);
 		}
 		void operator -= (Type client)
 		{
-			pr::threads::CSLock lock(m_cs);
+			std::lock_guard<std::mutex> lock(m_cs);
 			for (TypeCont::const_iterator i = m_cont.begin(), iend = m_cont.end(); i != iend; ++i)
 				if (*i == client) { m_cont.erase(i); break; }
 		}
@@ -66,4 +66,3 @@ namespace pr
 }
 
 #endif
-

@@ -16,6 +16,7 @@
 //		}
 //	}
 
+#pragma once
 #ifndef PR_PIPE_H
 #define PR_PIPE_H
 
@@ -25,7 +26,6 @@
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/exception.h"
-#include "pr/threads/critical_section.h"
 
 namespace pr
 {
@@ -38,7 +38,7 @@ namespace pr
 			EResult_ListenThreadCreationFailed,
 		};
 		typedef pr::Exception<EResult> Exception;
-		
+
 		// Receive function for incoming data,
 		// 'data' is a pointer to a temporary buffer
 		// 'data_size' is the amount of data available
@@ -54,13 +54,13 @@ namespace pr
 	template <std::size_t BufferSize = 1024>
 	class Pipe
 	{
-		pr::tstring              m_pipe_name;       // The unique name for the pipe
-		pipe::OnRecv             m_recv;            // The function to call when data is received
-		pr::threads::CritSection m_cs;              // A critical section for adding/removing listen threads
-		std::vector<HANDLE>      m_listen_thread;   // The threads that are listening for data
-		HANDLE                   m_pipe;            // The handle to the pipe for outgoing data
-		void*                    m_user_data;       // User data for the pipe
-		volatile bool            m_terminate;
+		pr::tstring         m_pipe_name;     // The unique name for the pipe
+		pipe::OnRecv        m_recv;          // The function to call when data is received
+		mutable std::mutex  m_cs;            // A critical section for adding/removing listen threads
+		std::vector<HANDLE> m_listen_thread; // The threads that are listening for data
+		HANDLE              m_pipe;          // The handle to the pipe for outgoing data
+		void*               m_user_data;     // User data for the pipe
+		volatile bool       m_terminate;
 
 	public:
 		Pipe(_TCHAR const* pipe_name, pipe::OnRecv recv_func, void* user_data)
@@ -89,7 +89,7 @@ namespace pr
 			DWORD written = 0;
 			if( WriteFile(m_pipe, data, (DWORD)data_size, &written, NULL) && written == data_size )
 				return true;
-			
+
 			if( !OpenPipe() ) return false;
 			return WriteFile(m_pipe, data, (DWORD)data_size, &written, NULL) && written == data_size;
 		}
@@ -97,15 +97,15 @@ namespace pr
 		// Begin a thread to listen for data on the pipe
 		void SpawnListenThread()
 		{
-			if( m_terminate ) return;
+			if (m_terminate)
+				return;
 
 			DWORD listen_thread_id;
 			HANDLE listen_thread = CreateThread(NULL, 0, ListenThreadMain, this, 0, &listen_thread_id);
 			if (!listen_thread) throw pipe::Exception(pipe::EResult_ListenThreadCreationFailed);
-			
-			m_cs.Enter();
+
+			std::lock_guard<std::mutex> lock(m_cs);
 			m_listen_thread.push_back(listen_thread);
-			m_cs.Leave();
 		}
 
 		// End all threads that are listening for data
@@ -113,10 +113,9 @@ namespace pr
 		{
 			m_terminate = true;
 
-			m_cs.Enter();
+			std::lock_guard<std::mutex> lock(m_cs);
 			for( std::vector<HANDLE>::const_iterator h = m_listen_thread.begin(), h_end = m_listen_thread.end(); h != h_end; ++h )
 				CloseHandle(*h);
-			m_cs.Leave();
 		}
 
 	private:
@@ -124,27 +123,26 @@ namespace pr
 		{
 			Pipe* this_ = static_cast<Pipe*>(user);
 			this_->Listen();
-			this_->m_cs.Enter();
+			std::lock_guard<std::mutex> lock(this_->m_cs);
 			std::vector<HANDLE>::iterator t = std::find(this_->m_listen_thread.begin(), this_->m_listen_thread.end(), GetCurrentThread());
 			if( t != this_->m_listen_thread.end() )
 			{
 				if( *t ) CloseHandle(*t);
 				this_->m_listen_thread.erase(t);
 			}
-			this_->m_cs.Leave();
 			return 0;
 		}
 		void Listen()
 		{
-			HANDLE pipe = CreateNamedPipe(	GetPipeName().c_str(),		// pipe name 
-											PIPE_ACCESS_DUPLEX,			// read/write access 
-											PIPE_TYPE_MESSAGE |			// message type pipe 
-											PIPE_READMODE_MESSAGE |		// message-read mode 
-											PIPE_WAIT,					// blocking mode 
-											PIPE_UNLIMITED_INSTANCES,	// max. instances  
-											BufferSize,					// output buffer size 
-											BufferSize,					// input buffer size 
-											NMPWAIT_USE_DEFAULT_WAIT,	// client time-out 
+			HANDLE pipe = CreateNamedPipe(	GetPipeName().c_str(),		// pipe name
+											PIPE_ACCESS_DUPLEX,			// read/write access
+											PIPE_TYPE_MESSAGE |			// message type pipe
+											PIPE_READMODE_MESSAGE |		// message-read mode
+											PIPE_WAIT,					// blocking mode
+											PIPE_UNLIMITED_INSTANCES,	// max. instances
+											BufferSize,					// output buffer size
+											BufferSize,					// input buffer size
+											NMPWAIT_USE_DEFAULT_WAIT,	// client time-out
 											NULL);
 			// If the pipe couldn't be opened, then wait a bit, and try again
 			if( !pipe )		{ Sleep(500); SpawnListenThread(); return; }
@@ -158,15 +156,14 @@ namespace pr
 
 			DWORD readed = 0;
 			char buffer[BufferSize + 1];
-			while( ReadFile(pipe, buffer, BufferSize, &readed, NULL) && !m_terminate )
+			while (ReadFile(pipe, buffer, BufferSize, &readed, NULL) && !m_terminate)
 			{
 				buffer[readed] = 0;
-				m_cs.Enter();
+				std::lock_guard<std::mutex> lock(m_cs);
 				m_recv(buffer, readed, readed == BufferSize, m_user_data);
-				m_cs.Leave();
 			}
 		}
-		
+
 		// Open the pipe for sending
 		bool OpenPipe()
 		{

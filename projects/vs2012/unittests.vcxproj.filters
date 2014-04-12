@@ -177,9 +177,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\maths.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\maths\mathsassert.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\matrix2x2.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -531,25 +528,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\macros\stringise.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\atomic.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\critical_section.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\event.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\item_queue.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\mutex.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\threads\process.h">
-      <Filter>pr\threads</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\threads\semaphore.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\threads\sim_message_pump.h">
@@ -854,6 +833,12 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\meta\flags_enum.h">
       <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\threads\wait_state.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\newline_strip.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

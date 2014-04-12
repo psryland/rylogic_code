@@ -193,7 +193,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\line3.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\line3_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\maths.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\maths\mathsassert.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\matrix2x2.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\matrix2x2_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\matrix3x3.h" />
@@ -249,6 +248,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h" />
     <ClInclude Include="..\..\sdk\pr\pr\network\tcpip.h" />
     <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\newline_strip.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\csv.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\settings.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\sqlite.h" />
@@ -260,17 +260,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\str\prstringstream.h" />
     <ClInclude Include="..\..\sdk\pr\pr\str\prstringutility.h" />
     <ClInclude Include="..\..\sdk\pr\pr\str\tostring.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\threads\atomic.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\concurrent_queue.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\threads\critical_section.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\threads\event.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\threads\item_queue.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\threads\mutex.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\name_thread.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\pause_thread.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\process.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\threads\semaphore.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\sim_message_pump.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\wait_state.h" />
     <ClInclude Include="..\unittests\pp_output.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\messagemap_dbg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h" />
