@@ -92,8 +92,6 @@ namespace pr
 			// Logger context. A single Context is shared by many instances of Logger
 			struct Context
 			{
-				std::mutex m_mutex;
-
 				// Queue of log events to report
 				LogQueue m_queue;
 
@@ -106,8 +104,7 @@ namespace pr
 
 				template <typename OutputCB>
 				Context(OutputCB log_cb, int occurrences_batch_size)
-					:m_mutex()
-					,m_queue(m_mutex)
+					:m_queue()
 					,m_cv_idle()
 					,m_idle()
 					,m_thread(LogConsumerThread<OutputCB>, std::ref(*this), log_cb, occurrences_batch_size)
@@ -119,12 +116,12 @@ namespace pr
 				}
 				void WaitTillIdle(bool idle)
 				{
-					LogQueue::MLock lock(m_mutex);
+					LogQueue::MLock lock(m_queue.m_mutex);
 					m_cv_idle.wait(lock, [&]{ return m_idle == idle; });
 				}
 				bool Dequeue(Event& ev)
 				{
-					LogQueue::MLock lock(m_mutex);
+					LogQueue::MLock lock(m_queue.m_mutex);
 					m_cv_idle.notify_all();
 					m_idle = true;
 					auto r = m_queue.Dequeue(ev, lock);
@@ -133,7 +130,7 @@ namespace pr
 				}
 				void Enqueue(Event&& ev)
 				{
-					LogQueue::MLock lock(m_mutex);
+					LogQueue::MLock lock(m_queue.m_mutex);
 					m_cv_idle.notify_all();
 					m_idle = false;
 					m_queue.Enqueue(std::forward<Event>(ev), lock);

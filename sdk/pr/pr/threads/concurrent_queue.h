@@ -46,18 +46,18 @@ namespace pr
 
 		// Concurrent queue implementation.
 		// Caller provides the mutex on which the queue is synchronised
-		template <typename T> struct ConcurrentQueue :IConcurrentQueue
+		template <typename T> struct ConcurrentQueue2 :IConcurrentQueue
 		{
 		protected:
 
 			std::deque<T> m_queue;
 
-			ConcurrentQueue(ConcurrentQueue const&);
-			ConcurrentQueue& operator=(ConcurrentQueue const&);
+			ConcurrentQueue2(ConcurrentQueue2 const&);
+			ConcurrentQueue2& operator=(ConcurrentQueue2 const&);
 
 		public:
 
-			explicit ConcurrentQueue(std::mutex& mutex) :IConcurrentQueue(mutex) {}
+			explicit ConcurrentQueue2(std::mutex& mutex) :IConcurrentQueue(mutex) {}
 
 			// A scope object for locking the queue
 			// Allows enumeration methods while locked
@@ -70,7 +70,7 @@ namespace pr
 			//   }
 			class Lock
 			{
-				ConcurrentQueue<T>& m_owner;
+				ConcurrentQueue2<T>& m_owner;
 				IConcurrentQueue::MLock m_lock;
 
 				Lock(Lock const&);
@@ -79,7 +79,7 @@ namespace pr
 			public:
 				std::deque<T>& m_queue;
 
-				explicit Lock(ConcurrentQueue<T>& queue)
+				explicit Lock(ConcurrentQueue2<T>& queue)
 					:m_owner(queue)
 					,m_lock(m_owner.m_mutex)
 					,m_queue(m_owner.m_queue)
@@ -109,7 +109,7 @@ namespace pr
 				// as empty unless we actually wait (which releases the lock)
 				if (m_queue.empty())
 					m_cv_empty.notify_all();
-				
+
 				// Wait for an item to dequeue
 				if (timeout_ms == ~0)
 					m_cv_added.wait(lock, [&]{ return !m_queue.empty() || m_last || pred(); });
@@ -119,25 +119,37 @@ namespace pr
 				// Timeout or last added
 				if (m_queue.empty())
 					return false;
-				
+
 				// Pop the queued item
 				item = m_queue.front();
 				m_queue.pop_front();
 				return true;
+			}
+			template <typename Pred> bool Dequeue(T& item, MLock& lock, Pred pred)
+			{
+				return Dequeue(item, lock, pred, ~0);
+			}
+			bool Dequeue(T& item, MLock& lock, int timeout_ms)
+			{
+				return Dequeue(item, lock, []{ return false; }, timeout_ms);
+			}
+			bool Dequeue(T& item, MLock& lock)
+			{
+				return Dequeue(item, lock, ~0);
 			}
 			template <typename Pred> bool Dequeue(T& item, Pred pred, int timeout_ms)
 			{
 				MLock lock(m_mutex);
 				return Dequeue(item, lock, pred, timeout_ms);
 			}
+			template <typename Pred> bool Dequeue(T& item, Pred pred)
+			{
+				return Dequeue(item, pred, ~0);
+			}
 			bool Dequeue(T& item, int timeout_ms)
 			{
 				MLock lock(m_mutex);
 				return Dequeue(item, lock, []{ return false; }, timeout_ms);
-			}
-			template <typename Pred> bool Dequeue(T& item, Pred pred)
-			{
-				return Dequeue(item, pred, ~0);
 			}
 			bool Dequeue(T& item)
 			{
@@ -181,12 +193,12 @@ namespace pr
 				m_cv_added.notify_all();
 			}
 		};
-	
+
 		// Concurrent queue that provides it's own mutex
-		template <typename T> struct ConcurrentQueue2 :ConcurrentQueue<T>
+		template <typename T> struct ConcurrentQueue :ConcurrentQueue2<T>
 		{
 			std::mutex m_mutex;
-			ConcurrentQueue2() :ConcurrentQueue<T>(m_mutex) {}
+			ConcurrentQueue() :ConcurrentQueue2<T>(m_mutex) {}
 		};
 	}
 }
@@ -227,8 +239,7 @@ namespace pr
 		{
 			using namespace pr::unittests::threads;
 
-			std::mutex mutex;
-			pr::threads::ConcurrentQueue<Item> queue(mutex);
+			pr::threads::ConcurrentQueue<Item> queue;
 			std::vector<std::string> items;
 
 			std::thread t0(Produce, "t0_", std::ref(queue));
