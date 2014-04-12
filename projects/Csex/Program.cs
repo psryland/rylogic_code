@@ -93,6 +93,9 @@ namespace Csex
 				"    -showtree\n" +
 				"       Display a tree grid view of a text file containing whitespace indenting\n" +
 				"\n" +
+				"    -showbase64\n" +
+				"       Display a tool for encoding/decoding base64 text\n" +
+				"\n" +
 				// NEW_COMMAND - add a help string
 				"\n"+
 				"  Type Cex -command -help for help on a particular command\n"+
@@ -114,6 +117,7 @@ namespace Csex
 				case "-find_duplicate_files": m_cmd = new FindDuplicateFiles(); break;
 				case "-showexif": m_cmd = new ShowExif(); break;
 				case "-showtree": m_cmd = new ShowTree(); break;
+				case "-showbase64": m_cmd = new ShowBase64(); break;
 					// NEW_COMMAND - handle the command
 				}
 			}
