@@ -9,27 +9,31 @@
 //  std::sort(csv.begin(), csv.end(), pr::csv::SortColumn<>(0));                            // Sort by column zero
 //  csv.erase(std::unique(csv.begin(), csv.end(), pr::csv::UniqueColumn<>(0)), csv.end());  // Make unique in column zero
 
-#ifndef PR_STORAGE_CSV_H
-#define PR_STORAGE_CSV_H
+#pragma once
 
 #include <cstdio>
 #include <string>
 #include <vector>
 #include <iostream>
-
-//"pr/common/assert.h" should be included prior to this for pr asserts
-#ifndef PR_ASSERT_STR
-#   define PR_ASSERT_STR_DEFINED
-#   define PR_ASSERT_STR(grp, exp, str)
-#endif
+#include <fstream>
+#include <cassert>
 
 namespace pr
 {
 	namespace csv
 	{
-		typedef std::string      Str;
-		typedef std::vector<Str> Row;
-		typedef std::vector<Row> Csv;
+		typedef std::string Str;
+		struct Row :std::vector<Str>
+		{
+			Row() :std::vector<Str>() {}
+			Row(size_t sz) :std::vector<Str>(sz) {}
+		};
+		struct Csv :std::vector<Row>
+		{
+			Csv() :std::vector<Row>() {}
+			Csv(size_t sz) :std::vector<Row>(sz) {}
+		};
+
 		struct Loc
 		{
 			std::size_t row, col;
@@ -47,152 +51,336 @@ namespace pr
 		inline Row const& ItemT(Csv const& csv, std::size_t row)                  { if (row >= csv.size()) throw std::exception("row index out of range"   ); return csv[row]; }
 		inline Str const& ItemT(Csv const& csv, std::size_t row, std::size_t col) { return ItemT(ItemT(csv, row), col); }
 
-		// Set an element in the csv
-		inline void SetItem(Csv& csv, std::size_t row, std::size_t col, Str const& str)
+		// CSV items can optionally be in quotes to allow elements to contain
+		// ',' and '\n' characters. Quotes are escaped using double quotes.
+		inline Str EscapeString(Str str)
 		{
-			if (csv.size()      <= row) csv.resize(row+1);
-			if (csv[row].size() <= col) csv[row].resize(col+1);
-			csv[row][col] = str;
+			// Search for characters that need escaping
+			if (!std::any_of(std::begin(str), std::end(str), [](char c){ return c == '"' || c == ',' || c == '\n'; }))
+				return str;
+
+			Str out; out.reserve(str.size() * 11 / 10);
+			out.push_back('"');
+			for (char ch : str)
+			{
+				if (ch == '"') out.push_back('"');
+				out.push_back(ch);
+			}
+			out.push_back('"');
+			return out;
+		}
+		inline Str UnescapeString(Str str)
+		{
+			if (str.size() < 2 || str[0] != '"')
+				return str;
+
+			Str out; out.reserve(str.size());
+			char const* ptr = str.c_str();
+			for (++ptr; *ptr != 0; ++ptr)
+			{
+				if (*ptr == '"' && *(++ptr) != '"') break;
+				out.push_back(*ptr);
+			}
+			if (*ptr != 0) throw std::exception("'csv' string incorrectly escaped");
+			return out;
 		}
 
-		// This allows a 'Loc' to be used to remove ',' and '\n' characters from a stream
-		// while also maintaining the csv row,col position
+		// Set an element in the csv
+		inline Str& Item(Csv& csv, std::size_t row, std::size_t col)
+		{
+			if (row >= csv     .size()) csv     .resize(row + 1);
+			if (col >= csv[row].size()) csv[row].resize(col + 1);
+			return csv[row][col];
+		}
+
+		// Set an element in the csv, throwing if out of range
+		inline Str& ItemT(Csv& csv, std::size_t row, std::size_t col)
+		{
+			if (row >= csv     .size()) throw std::exception("row index out of range"   );
+			if (col >= csv[row].size()) throw std::exception("column index out of range");
+			return csv[row][col];
+		}
+
+		// This allows a 'Loc' to be used in a stream to remove ',' and '\n'
+		// characters while also maintaining the csv row,col position
 		template <typename Stream> inline Stream& operator >> (Stream& s, Loc& loc)
 		{
-			PR_ASSERT_STR(PR_DBG, s.peek() == '\n' || s.peek() == ',', "Expected ',' or '\n' as the next charactor in the stream");
-			loc.inc(s.get());
-			return s;
+			int ch = s.peek();
+			if (s.eof()) return s;
+			if (s.bad()) throw std::exception("invalid stream");
+			if (ch != ',' || ch != '\n') throw std::exception("expected a csv item or row delimiter");
+			loc.inc(ch);
+			s.get();
 		}
 
-		// Increment a stream to the next csv element
-		template <typename Stream> inline bool NextItem(Stream& file, Loc* loc = 0)
+		// Read one element from a stream.
+		// Returns true if a whole element was read, false if the stream is eof.
+		// Throws on partial element or bad stream.
+		// 's' will point at the next item (or eof) after a successful read.
+		// Use 'loc' to determine new rows vs new items
+		template <typename Stream> bool Read(Stream& s, Str& item, Loc& loc)
 		{
-			int ch;
-			for (ch = file.get(); !file.eof() && ch != '\n' && ch != ','; ch = file.get()) {}
-			if (loc) loc->inc(ch);
-			return !file.bad();
-		}
+			// Assume 's' is pointing to the first character of the item
+			int ch = s.peek();
+			if (s.eof()) return false;
+			if (s.bad()) throw std::exception("invalid stream");
 
-		// Increment a stream to the next csv row
-		template <typename Stream> inline bool NextRow(Stream& file, Loc* loc = 0)
-		{
-			int ch;
-			for (ch = file.get(); !file.eof() && ch != '\n'; ch = file.get()) {}
-			if (loc) loc->inc(ch);
-			return !file.bad();
-		}
+			// If the first character is a quote, then this is a quoted item
+			if (ch == '"')
+			{
+				s.get(); // skip the first '"'
 
-		// Read one element from a stream
-		template <typename Stream> inline bool Read(Stream& file, Str& str, Loc* loc = 0)
-		{
-			int ch;
-			for (ch = file.get(); !file.eof() && ch != '\n' && ch != ','; ch = file.get()) if (ch != '\r') str.push_back(static_cast<char>(ch));
-			if (loc) loc->inc(ch);
-			return !file.bad();
+				// Read to the next single '"'
+				bool esc = false;
+				for (ch = s.peek(); s.good(); s.get(), ch = s.peek())
+				{
+					if (ch == '"')
+					{
+						if (esc) item.push_back(char(ch));
+						esc = !esc;
+					}
+					else
+					{
+						if (esc) break;
+						item.push_back(char(ch));
+					}
+				}
+
+				// Expect the quoted string to be closed
+				if (!esc) // i.e. we should've seen one '"' followed by not '"' or eof
+					throw std::exception("incomplete csv item");
+			}
+
+			// Read to the next ',' or '\n'
+			for (ch = s.get(); s.good() && ch != ',' && ch != '\n'; ch = s.get())
+				item.push_back(char(ch));
+
+			if (!s.eof()) loc.inc(ch);
+			return true;
 		}
-		template <typename Stream, std::size_t N> inline bool Read(Stream& file, char (&str)[N], Loc* loc = 0)
+		template <typename Stream, std::size_t N> bool Read(Stream& s, char (&item)[N], Loc& loc)
 		{
-			int ch,i;
-			for (i = 0, ch = file.get(); !file.eof() && i != N-1 && ch != '\n' && ch != ','; ch = file.get()) if (ch != '\r') str[i++] = static_cast<char>(ch);
-			if (!file.eof() && ch != '\n' && ch != ',') NextItem(file, loc); else if (loc) loc->inc(ch);
-			str[i] = 0;
-			return !file.bad();
+			struct adapter
+			{
+				char* m_data;
+				size_t m_size, m_capacity;
+				template <size_t N> explicit adapter(char (&item)[N]) :m_data(item) ,m_size(0) ,m_capacity(N) { m_data[0] = 0; }
+				void push_back(char ch)
+				{
+					if (m_size >= m_capacity - 1) throw std::overflow_error();
+					m_data[m_size++] = ch;
+					m_data[m_size] = 0;
+				}
+			};
+
+			adapter adp(item);
+			return Read(s, adp, loc);
+		}
+		template <typename Stream> inline bool Read(Stream& s, Str& item)
+		{
+			Loc loc;
+			return Read(s, item, loc);
+		}
+		template <typename Stream, std::size_t N> inline bool Read(Stream& s, char (&item)[N])
+		{
+			Loc loc;
+			return Read(s, item, loc);
 		}
 
 		// Read one row from the stream
-		template <typename Stream> inline bool Read(Stream& file, Row& row, Loc* loc = 0)
+		// Returns true if a whole row is read, false if nothing was read
+		// Throws on bad stream or partial element read.
+		// 's' will point at the next item (or eof) after a successful read.
+		// Use 'loc' to determine new rows vs new items
+		template <typename Stream> bool Read(Stream& s, Row& row, Loc& loc)
 		{
-			for (Str str; !file.eof() && Read(file, str, loc); str.resize(0))
+			// Assume 's' is pointing to the first character in a row of items
+			int ch = s.peek();
+			if (s.eof()) return false;
+			if (s.bad()) throw std::exception("invalid stream");
+
+			// Empty row
+			if (ch == '\n')
 			{
-				bool row_end = file.unget().get() == '\n';
-				if (!row_end || !str.empty()) row.push_back(str);
-				if (row_end) break;
+				loc.inc(ch);
+				s.get();
+				return true;
 			}
-			return !file.bad();
-		}
 
-		// Read all csv data from a stream
-		template <typename Stream> inline bool Read(Stream& file, Csv& csv, Loc* loc = 0)
-		{
-			Row row; Str str;
-			for (int ch = file.get(); !file.eof(); ch = file.get())
+			// Read to the end of the row
+			for (Str str; Read(s, str, loc);)
 			{
-				switch (ch) {
-				default:   str.push_back(static_cast<char>(ch)); break;
-				case ',':  row.push_back(str); str.resize(0); break;
-				case '\n': row.push_back(str); str.resize(0); csv.push_back(row); row.resize(0); break;
-				case '\r': break;
-				}
-				if (loc) loc->inc(ch);
-			}
-			if (!str.empty()) row.push_back(str);
-			if (!row.empty()) csv.push_back(row);
-			return !file.bad();
-		}
-
-		// Populate a Csv object from a file
-		template <typename tchar> inline bool Load(tchar const* csv_filename, Csv& csv, Loc* loc = 0)
-		{
-			std::ifstream in(csv_filename);
-			if (!in.is_open()) return false;
-			return Read(in, csv, loc);
-		}
-
-		// Write one row to a stream
-		template <typename Stream> inline void Write(Stream& file, Row& row)
-		{
-			for (Row::const_iterator i = row.begin(), iend = row.end(); i != iend; ++i)
-				file << *i << (iend-i > 1 ? ',' : '\n');
-		}
-
-		// Write all csv data to a stream
-		template <typename Stream> inline void Write(Stream& file, Csv& csv)
-		{
-			for (Csv::const_iterator i = csv.begin(), iend = csv.end(); i != iend; ++i)
-				Write(file, *i);
-		}
-
-		// Write a Csv object to a file
-		template <typename tchar> inline bool Save(tchar const* csv_filename, Csv const& csv)
-		{
-			std::ofstream out(csv_filename);
-			if (!out.is_open()) return false;
-			for (Csv::const_iterator r = csv.begin(), rend = csv.end(); r != rend; ++r)
-			{
-				for (Row::const_iterator cbegin = r->begin(), cend = r->end(), c = cbegin; c != cend; ++c)
-					((c != cbegin) ? (out << ',') : (out)) << *c;
-				out << '\n';
+				row.push_back(str);
+				str.resize(0);
+				if (loc.col == 0) break; // start of a new line means end of the row
 			}
 			return true;
 		}
-
-		// Predicate for sorting on a column
-		template <typename ElemCompare = std::less<std::string> >
-		struct SortColumn
+		template <typename Stream> inline bool Read(Stream& s, Row& row)
 		{
-			ElemCompare m_compare;
-			std::size_t m_column;
-			SortColumn(std::size_t column, ElemCompare const& compare = std::less<std::string>()) :m_column(column) ,m_compare(compare) {}
-			bool operator () (Row const& lhs, Row const& rhs) const
-			{
-				PR_ASSERT_STR(PR_DBG, m_column < lhs.size() && m_column < rhs.size(), "Attempting to compare rows without enough columns");
-				return m_compare(lhs[m_column], rhs[m_column]);
-			}
-		};
+			Loc loc;
+			return Read(s, row, loc);
+		}
 
-		// Predicate for making rows unique based on a particular column
-		template <typename ElemCompare = std::equal_to<std::string> >
-		struct UniqueColumn
+		// Read all csv data from a stream
+		// Returns true if csv is read, false if nothing was read
+		// Throws on bad stream or partial element read.
+		// 's' will point at eof after a successful read.
+		template <typename Stream> bool Read(Stream& s, Csv& csv, Loc& loc)
 		{
-			ElemCompare m_compare;
-			std::size_t m_column;
-			UniqueColumn(std::size_t column, ElemCompare const& compare = std::equal_to<std::string>()) :m_column(column) ,m_compare(compare) {}
-			bool operator () (Row const& lhs, Row const& rhs) const
+			// Assume 's' is pointing to the first character in csv data
+			s.peek();
+			if (s.eof()) return false;
+			if (s.bad()) throw std::exception("invalid stream");
+
+			// Read to the end of the data
+			for (Row row; Read(s, row, loc);)
 			{
-				PR_ASSERT_STR(PR_DBG, m_column < lhs.size() && m_column < rhs.size(), "Attempting to compare rows without enough columns");
-				return m_compare(lhs[m_column], rhs[m_column]);
+				csv.push_back(row);
+				row.resize(0);
+				if (s.eof()) break; // end of data
 			}
-		};
+			return true;
+		}
+		template <typename Stream> inline bool Read(Stream& s, Csv& csv)
+		{
+			Loc loc;
+			return Read(s, csv, loc);
+		}
+
+		// Write one item to a stream
+		template <typename Stream> inline void Write(Stream& s, Str const& item)
+		{
+			s << EscapeString(item);
+		}
+
+		// Write one row to a stream
+		template <typename Stream> inline void Write(Stream& s, Row const& row)
+		{
+			auto count = row.size();
+			for (auto item : row)
+			{
+				Write(s, item);
+				if (--count != 0) s << ",";
+			}
+		}
+
+		// Write all csv data to a stream
+		template <typename Stream> inline void Write(Stream& s, Csv const& csv)
+		{
+			auto count = csv.size();
+			for (auto row : csv)
+			{
+				Write(s, row);
+				if (--count != 0) s << '\n';
+			}
+		}
+
+		// Write a Csv object to a file
+		template <typename tchar> inline void Save(tchar const* csv_filename, Csv const& csv)
+		{
+			std::ofstream out(csv_filename);
+			if (!out.is_open()) throw std::exception("failed to open file for writing");
+			Write(out, csv);
+		}
+
+		// Populate a Csv object from a file
+		template <typename tchar> inline bool Load(tchar const* csv_filename, Csv& csv, Loc& loc)
+		{
+			std::ifstream in(csv_filename);
+			if (!in.is_open()) throw std::exception("failed to open file for reading");
+			return Read(in, csv, loc);
+		}
+		template <typename tchar> inline bool Load(tchar const* csv_filename, Csv& csv)
+		{
+			Loc loc;
+			return Load(csv_filename, csv, loc);
+		}
+
+		// Insert an item delimiter into a stream
+		inline Csv& endi(Csv& csv)
+		{
+			if (csv.empty()) csv.push_back(Row());
+			csv.back().push_back(Str());
+			return csv;
+		}
+		inline Row& endi(Row& row)
+		{
+			row.push_back(Str());
+			return row;
+		}
+
+		// Insert a row delimiter into a stream
+		inline Csv& endr(Csv& csv)
+		{
+			csv.push_back(Row());
+			return csv;
+		}
+
+		// Csv streaming operators
+		inline Csv& operator << (Csv& csv, Str str)
+		{
+			if (csv.empty()) csv.push_back(Row());
+			if (csv.back().empty()) csv.back().push_back(Str());
+			csv.back().back().append(str);
+			return csv;
+		}
+		inline Row& operator << (Row& row, Str str)
+		{
+			if (row.empty()) row.push_back(Str());
+			row.back().append(str);
+			return row;
+		}
+
+		// Item,row delimiter manipulator
+		inline Csv& operator << (Csv& csv, Csv& (__cdecl *func)(Csv&))
+		{
+			return (*func)(csv);
+		}
+		inline Row& operator << (Row& row, Row& (__cdecl *func)(Row&))
+		{
+			return (*func)(row);
+		}
+
+		// Generate stream to Csv
+		template <typename T> inline Csv& operator << (Csv& csv, T item)
+		{
+			std::stringstream ss; ss << item;
+			return csv << Str(ss.str());
+		}
+		template <typename T> inline Row& operator << (Row& row, T item)
+		{
+			std::stringstream ss; ss << item;
+			return row << Str(ss.str());
+		}
+
+		//// Predicate for sorting on a column
+		//template <typename ElemCompare = std::less<std::string> >
+		//struct SortColumn
+		//{
+		//	ElemCompare m_compare;
+		//	std::size_t m_column;
+		//	SortColumn(std::size_t column, ElemCompare const& compare = std::less<std::string>()) :m_column(column) ,m_compare(compare) {}
+		//	bool operator () (Row const& lhs, Row const& rhs) const
+		//	{
+		//		PR_ASSERT_STR(PR_DBG, m_column < lhs.size() && m_column < rhs.size(), "Attempting to compare rows without enough columns");
+		//		return m_compare(lhs[m_column], rhs[m_column]);
+		//	}
+		//};
+
+		//// Predicate for making rows unique based on a particular column
+		//template <typename ElemCompare = std::equal_to<std::string> >
+		//struct UniqueColumn
+		//{
+		//	ElemCompare m_compare;
+		//	std::size_t m_column;
+		//	UniqueColumn(std::size_t column, ElemCompare const& compare = std::equal_to<std::string>()) :m_column(column) ,m_compare(compare) {}
+		//	bool operator () (Row const& lhs, Row const& rhs) const
+		//	{
+		//		PR_ASSERT_STR(PR_DBG, m_column < lhs.size() && m_column < rhs.size(), "Attempting to compare rows without enough columns");
+		//		return m_compare(lhs[m_column], rhs[m_column]);
+		//	}
+		//};
 	}
 }
 
@@ -205,65 +393,115 @@ namespace pr
 	{
 		PRUnitTest(pr_storage_csv)
 		{
-			{//SaveCsv
-				pr::csv::Csv csv;
-				pr::csv::SetItem(csv, 1, 1, "Hello");
-				pr::csv::SetItem(csv, 1, 2, "World");
-				PR_CHECK(pr::csv::Save("test_csv.csv", csv), true);
-				PR_CHECK(pr::csv::Item(csv, 1,1), "Hello");
-				PR_CHECK(pr::csv::Item(csv, 1,2), "World");
+			using namespace pr::csv;
+
+			{// Escape round trip
+				Str str = "A \"string\" with \r\n quotes, commas, and 'new' lines";
+				auto esc = EscapeString(str);
+				PR_CHECK(esc, "\"A \"\"string\"\" with \r\n quotes, commas, and 'new' lines\"");
+				auto ori = UnescapeString(esc);
+				PR_CHECK(ori, str);
 			}
-			{//LoadCsv
-				pr::csv::Csv csv;
-				PR_CHECK(pr::csv::Load("test_csv.csv", csv), true);
+			{// Basic csv
+				Csv csv;
+				Item(csv, 1, 1) = "Hello";
+				Item(csv, 1, 2) = "World";
+				PR_CHECK(ItemT(csv, 0).size(), 0U);
+				PR_CHECK(ItemT(csv, 1,0).size(), 0U);
+				PR_CHECK(ItemT(csv, 1,1), "Hello");
+				PR_CHECK(ItemT(csv, 1,2), "World");
+
+				Loc loc;
+				Csv csv2;
+				Save("test_csv.csv", csv);
+				Load("test_csv.csv", csv2, loc);
+				PR_CHECK(pr::filesys::EraseFile<std::string>("test_csv.csv"), true);
+				PR_CHECK(loc.row == 1 && loc.col == 2, true);
+
 				PR_CHECK(csv.size(), 2U);
 				PR_CHECK(csv[1].size(), 3U);
-				PR_CHECK(csv[1][1], "Hello");
-				PR_CHECK(csv[1][2], "World");
+				PR_CHECK(ItemT(csv, 0).size(), 0U);
+				PR_CHECK(ItemT(csv, 1,0).size(), 0U);
+				PR_CHECK(ItemT(csv, 1,1), "Hello");
+				PR_CHECK(ItemT(csv, 1,2), "World");
 			}
-			{//SaveCsvStream
-				std::ofstream csv("test_csv.csv");
-				PR_CHECK(csv.is_open(), true);
-				csv << "Hello,World\n";
-				csv << "a,,b,c\n";
-				csv << '\n';
-				csv << 1 << ',' << 2.0f << ',' << 3.0 << '\n';
-			}
-			{//LoadCsvStream
-				std::ifstream csv("test_csv.csv");
-				PR_CHECK(csv.is_open(), true);
-				pr::csv::Loc loc;
+			{// Save csv with escaped items
+				Csv csv1;
+				csv1 << "One" << endi << "Two" << endi << "Three" << endi << "\"Four\"" << endi << "\"," << "\r\n\"" << endr;
+				csv1 << "1,1" << endi << "2\r2" << endi << "3\n3" << endi << "4\r\n" << endr;
+				csv1 << endr;
+				csv1 << 1 << endi << 3.14 << endi << '3' << endi << 16;
 
-				std::string s0; char s1[10];
-				PR_CHECK(pr::csv::Read(csv, s0, &loc), true);
-				PR_CHECK(pr::csv::Read(csv, s1, &loc), true);
+				Csv csv2;
+				Save("test_csv.csv", csv1);
+				Load("test_csv.csv", csv2);
+				PR_CHECK(pr::filesys::EraseFile<std::string>("test_csv.csv"), true);
+
+				PR_CHECK(csv2.size(), 4U);
+				PR_CHECK(csv2[0].size(), 5U);
+				PR_CHECK(csv2[1].size(), 4U);
+				PR_CHECK(csv2[2].size(), 0U);
+				PR_CHECK(csv2[3].size(), 4U);
+
+				PR_CHECK(csv2[0][0], "One"      );
+				PR_CHECK(csv2[0][1], "Two"      );
+				PR_CHECK(csv2[0][2], "Three"    );
+				PR_CHECK(csv2[0][3], "\"Four\"" );
+				PR_CHECK(csv2[0][4], "\",\r\n\"");
+
+				PR_CHECK(csv2[1][0], "1,1"  );
+				PR_CHECK(csv2[1][1], "2\r2" );
+				PR_CHECK(csv2[1][2], "3\n3" );
+				PR_CHECK(csv2[1][3], "4\r\n");
+
+				PR_CHECK(csv2[3][0], "1"  );
+				PR_CHECK(csv2[3][1], "3.14" );
+				PR_CHECK(csv2[3][2], "3" );
+				PR_CHECK(csv2[3][3], "16");
+			}
+/*
+			{// Stream csv
+				std::ofstream outf("test_csv.csv");
+				outf
+					<< "Hello,World\n"
+					<< "a,,b,c\n"
+					<< ",skip\n"
+					<< 1 << ',' << 2.0f << ',' << 3.0 << '\n';
+				outf.close();
+
+				std::ifstream inf("test_csv.csv");
+
+				Loc loc;
+				Str s0; char s1[10];
+				PR_CHECK(Read(inf, s0, loc), true);
+				PR_CHECK(Read(inf, s1, loc), true);
 				PR_CHECK(s0, "Hello");
 				PR_CHECK(std::string(s1), "World");
+				PR_CHECK(loc.row = 1 && loc.col == 0, true);
 
 				char ch;
-				csv >> ch >> loc >> loc; PR_CHECK(ch, 'a');
-				csv >> ch >> loc; PR_CHECK(ch, 'b');
-				csv >> ch >> loc; PR_CHECK(ch, 'c');
+				inf >> ch >> loc; PR_CHECK(ch, 'a');
+				inf >> loc;       PR_CHECK(loc.row == 1 && loc.col == 1, true);
+				inf >> ch >> loc; PR_CHECK(ch, 'b');
+				inf >> ch >> loc; PR_CHECK(ch, 'c');
 
-				pr::csv::NextItem(csv, &loc);
+				PR_CHECK(loc.row == 2 && loc.col == 0, true);
+				csv >> loc;
+				PR_CHECK(loc.row == 2 && loc.col == 1, true);
+				csv >> loc;
+				PR_CHECK(loc.row == 3 && loc.col == 0, true);
+
 				int i; float f; double d;
 				csv >> i >> loc >> f >> loc >> d >> loc;
 				PR_CHECK(i, 1);
 				PR_CHECK(f, 2.0f);
 				PR_CHECK(d, 3.0);
+
 				PR_CHECK(loc.row == 4 && loc.col == 0, true);
-			}
-			{//CsvCleanUp
 				PR_CHECK(pr::filesys::EraseFile<std::string>("test_csv.csv"), true);
 			}
+		*/
 		}
 	}
 }
-#endif
-
-#ifdef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT_STR
-#endif
-
 #endif

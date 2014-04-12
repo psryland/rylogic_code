@@ -201,8 +201,10 @@ namespace pr.util
 				foreach (var row in m_data)
 				{
 					var first = true;
-					foreach (var elem in row)
+					foreach (var e in row)
 					{
+						var elem = e ?? string.Empty;
+
 						// Comma separate
 						if (!first) file.Write(',');
 						first = false;
