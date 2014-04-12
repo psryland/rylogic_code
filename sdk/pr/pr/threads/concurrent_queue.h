@@ -103,7 +103,7 @@ namespace pr
 			// Dequeue blocks until data is available in the queue
 			// Returns true if an item was dequeued, or false if no
 			// more data will be added to the queue.
-			bool Dequeue(T& item, MLock& lock, int timeout_ms = ~0)
+			template <typename Pred> bool Dequeue(T& item, MLock& lock, Pred pred, int timeout_ms)
 			{
 				// Notify before we block. Waiting threads won't see 'm_queue'
 				// as empty unless we actually wait (which releases the lock)
@@ -112,9 +112,9 @@ namespace pr
 				
 				// Wait for an item to dequeue
 				if (timeout_ms == ~0)
-					m_cv_added.wait(lock, [&]{ return !m_queue.empty() || m_last; });
+					m_cv_added.wait(lock, [&]{ return !m_queue.empty() || m_last || pred(); });
 				else
-					m_cv_added.wait_for(lock, std::chrono::milliseconds(timeout_ms), [&]{ return !m_queue.empty() || m_last; });
+					m_cv_added.wait_for(lock, std::chrono::milliseconds(timeout_ms), [&]{ return !m_queue.empty() || m_last || pred(); });
 
 				// Timeout or last added
 				if (m_queue.empty())
@@ -125,10 +125,23 @@ namespace pr
 				m_queue.pop_front();
 				return true;
 			}
-			bool Dequeue(T& item, int timeout_ms = ~0)
+			template <typename Pred> bool Dequeue(T& item, Pred pred, int timeout_ms)
 			{
 				MLock lock(m_mutex);
-				return Dequeue(item, lock, timeout_ms);
+				return Dequeue(item, lock, pred, timeout_ms);
+			}
+			bool Dequeue(T& item, int timeout_ms)
+			{
+				MLock lock(m_mutex);
+				return Dequeue(item, lock, []{ return false; }, timeout_ms);
+			}
+			template <typename Pred> bool Dequeue(T& item, Pred pred)
+			{
+				return Dequeue(item, pred, ~0);
+			}
+			bool Dequeue(T& item)
+			{
+				return Dequeue(item, []{ return false; }, ~0);
 			}
 
 			// Add something to the queue
@@ -160,6 +173,12 @@ namespace pr
 			{
 				MLock lock(m_mutex);
 				m_cv_empty.wait(lock, [&]{ return m_queue.empty(); });
+			}
+
+			// Pulse 'm_cv_added' to cause any thread waiting in 'Dequeue' to wake up and test its sleep condition
+			void Signal()
+			{
+				m_cv_added.notify_all();
 			}
 		};
 	
