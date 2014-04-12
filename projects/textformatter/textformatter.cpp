@@ -12,56 +12,9 @@
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/str/prstring.h"
-#include "pr/script/char_stream.h"
+#include "pr/script/script.h"
 
 typedef std::unique_ptr<pr::script::Src> SrcPtr;
-
-// Strip/Insert new lines.
-struct Newlines :pr::script::Src
-{
-	SrcPtr m_src;
-	pr::script::Buffer<> m_buf;
-	pr::uint m_lines_min;
-	pr::uint m_lines_max;
-
-	Newlines(Src* src, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
-		:m_src(src)
-		,m_buf(*m_src)
-		,m_lines_min(0)
-		,m_lines_max(0xFFFFFFFF)
-	{
-		if (arg_end - arg < 2) throw std::exception("<newlines> insufficient arguments");
-		m_lines_min = pr::str::as<pr::uint>(*arg++, 0, 10);
-		m_lines_max = pr::str::as<pr::uint>(*arg++, 0, 10);
-	}
-
-protected:
-	char peek() const { return *m_buf; }
-	void next()       { ++m_buf; }
-	void seek()
-	{
-		for (;;)
-		{
-			if (!m_buf.empty() || *m_buf != '\n') break;
-
-			// Look for consecutive lines that contain only whitespace characters
-			// If the number of lines is less than 'm_lines_min' add lines up to 'm_lines_min'
-			// If the number of lines is greater than 'm_lines_max' delete lines back to 'm_lines_max'
-			pr::uint line_count = 0;
-			for (; *m_buf.m_src;)
-			{
-				if (*m_buf.m_src == '\n')               { m_buf.clear(); ++line_count; ++m_buf.m_src; }
-				else if (pr::str::IsLineSpace(*m_buf.m_src)) { m_buf.buffer(); }
-				else break;
-			}
-			for (line_count = pr::Clamp(line_count, m_lines_min, m_lines_max); line_count; --line_count)
-			{
-				m_buf.push_front('\n');
-			}
-			break;
-		}
-	}
-};
 
 //
 struct Main :pr::cmdline::IOptionReceiver
@@ -105,11 +58,18 @@ struct Main :pr::cmdline::IOptionReceiver
 	{
 		try
 		{
-			if (pr::str::EqualI(option, "-f") && arg != arg_end) { m_in_file  = *arg++; m_src.reset(new pr::script::FileSrc(m_in_file.c_str())); return true; }
+			if (pr::str::EqualI(option, "-f") && arg != arg_end) { m_in_file  = *arg++; m_src = std::make_unique<pr::script::FileSrc>(m_in_file.c_str()); return true; }
 			if (pr::str::EqualI(option, "-o") && arg != arg_end) { m_out_file = *arg++; return true; }
 			if (pr::str::EqualI(option, "-h")) { ShowHelp(); return false; }
 			if (!m_src) { printf("Error: the -f option must be given before any commands\n"); return false; }
-			if (pr::str::EqualI(option, "-newlines")) { m_src.reset(new Newlines(m_src.release(), arg, arg_end)); return true; }
+			if (pr::str::EqualI(option, "-newlines"))
+			{
+				if (arg_end - arg < 2) throw std::exception("<newlines> insufficient arguments");
+				size_t lines_min = pr::str::as<pr::uint>(*arg++, 0, 10);
+				size_t lines_max = pr::str::as<pr::uint>(*arg++, 0, 10);
+				m_src = std::make_unique<pr::script::NewLineStrip>(*m_src.release(), lines_max, lines_min);
+				return true;
+			}
 			// NEW_COMMAND - add option
 
 			printf("Error: Unknown option '%s'\n", option.c_str());

@@ -10,6 +10,7 @@
 #include "pr/script/keywords.h"
 #include "pr/script/char_stream.h"
 #include "pr/script/stream_stack.h"
+#include "pr/script/newline_strip.h"
 #include "pr/script/comment_strip.h"
 #include "pr/script/pp_macro.h"
 #include "pr/script/pp_macro_db.h"
@@ -19,4 +20,3 @@
 #include "pr/script/tokeniser.h"
 
 #endif
-
