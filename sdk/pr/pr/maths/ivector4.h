@@ -23,7 +23,7 @@ namespace pr
 		int y;
 		int z;
 		int w;
-		
+
 		iv4&                       set(int x_, int y_, int z_, int w_) { x = x_; y = y_; z = z_; w = w_; return *this; }
 		template <typename T> iv4& set(T const& vec, int z_, int w_)   { x = GetXi(vec); y = GetYi(vec); z = z_;         w = w_;         return *this; }
 		template <typename T> iv4& set(T const& vec, int w_)           { x = GetXi(vec); y = GetYi(vec); z = GetZi(vec); w = w_;         return *this; }
@@ -31,11 +31,11 @@ namespace pr
 		iv4&                       set(int const* vec)                 { x = vec[0]; y = vec[1]; z = vec[2]; w = vec[3]; return *this; }
 		int const*                 ToArray() const                     { return reinterpret_cast<int const*>(this); }
 		int*                       ToArray()                           { return reinterpret_cast<int*>      (this); }
-		int const&                 operator [] (int i) const           { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
-		int&                       operator [] (int i)                 { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
+		int const&                 operator [] (int i) const           { assert(i < 4); return ToArray()[i]; }
+		int&                       operator [] (int i)                 { assert(i < 4); return ToArray()[i]; }
 		iv4& operator =  (v4 const& vec);
 		operator v4 () const;
-		
+
 		static iv4 make(int x, int y, int z, int w)     { iv4 v; return v.set(x, y, z, w); }
 		static iv4 make(iv2 const& vec, int z, int w)   { iv4 v; return v.set(vec, z, w); }
 		static iv4 make(v4 const& vec)                  { iv4 v; return v.set(vec); }
@@ -48,20 +48,20 @@ namespace pr
 	iv4 const iv4YAxis  = {0, 1, 0, 0};
 	iv4 const iv4ZAxis  = {0, 0, 1, 0};
 	iv4 const iv4Origin = {0, 0, 0, 1};
-	
+
 	// Element accessors
 	inline int GetX(iv4 const& v) { return v.x; }
 	inline int GetY(iv4 const& v) { return v.y; }
 	inline int GetZ(iv4 const& v) { return v.z; }
 	inline int GetW(iv4 const& v) { return v.w; }
-	
+
 	// Assignment operators
 	template <typename T> inline iv4& operator += (iv4& lhs, T rhs) { lhs.x += GetXi(rhs); lhs.y += GetYi(rhs); lhs.z += GetZi(rhs); lhs.w += GetWi(rhs); return lhs; }
 	template <typename T> inline iv4& operator -= (iv4& lhs, T rhs) { lhs.x -= GetXi(rhs); lhs.y -= GetYi(rhs); lhs.z -= GetZi(rhs); lhs.w -= GetWi(rhs); return lhs; }
 	template <typename T> inline iv4& operator *= (iv4& lhs, T rhs) { lhs.x *= GetXi(rhs); lhs.y *= GetYi(rhs); lhs.z *= GetZi(rhs); lhs.w *= GetWi(rhs); return lhs; }
-	template <typename T> inline iv4& operator /= (iv4& lhs, T rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x /= GetXi(rhs); lhs.y /= GetYi(rhs); lhs.z /= GetZi(rhs); lhs.w /= GetWi(rhs); return lhs; }
-	template <typename T> inline iv4& operator %= (iv4& lhs, T rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x %= GetXi(rhs); lhs.y %= GetYi(rhs); lhs.z %= GetZi(rhs); lhs.w %= GetWi(rhs); return lhs; }
-	
+	template <typename T> inline iv4& operator /= (iv4& lhs, T rhs) { assert(!IsZero4(rhs)); lhs.x /= GetXi(rhs); lhs.y /= GetYi(rhs); lhs.z /= GetZi(rhs); lhs.w /= GetWi(rhs); return lhs; }
+	template <typename T> inline iv4& operator %= (iv4& lhs, T rhs) { assert(!IsZero4(rhs)); lhs.x %= GetXi(rhs); lhs.y %= GetYi(rhs); lhs.z %= GetZi(rhs); lhs.w %= GetWi(rhs); return lhs; }
+
 	// Binary operators
 	template <typename T> inline iv4 operator + (iv4 const& lhs, T rhs) { iv4 v = lhs; return v += rhs; }
 	template <typename T> inline iv4 operator - (iv4 const& lhs, T rhs) { iv4 v = lhs; return v -= rhs; }
@@ -71,13 +71,13 @@ namespace pr
 	inline iv4 operator + (int lhs, iv4 const& rhs)                     { iv4 v = rhs; return v += lhs; }
 	inline iv4 operator - (int lhs, iv4 const& rhs)                     { iv4 v = rhs; return v -= lhs; }
 	inline iv4 operator * (int lhs, iv4 const& rhs)                     { iv4 v = rhs; return v *= lhs; }
-	inline iv4 operator / (int lhs, iv4 const& rhs)                     { PR_ASSERT(PR_DBG_MATHS, All4(rhs,maths::NonZero<int>), ""); return iv4::make(lhs/GetXi(rhs), lhs/GetYi(rhs), lhs/GetZi(rhs), lhs/GetWi(rhs)); }
-	inline iv4 operator % (int lhs, iv4 const& rhs)                     { PR_ASSERT(PR_DBG_MATHS, All4(rhs,maths::NonZero<int>), ""); return iv4::make(lhs%GetXi(rhs), lhs%GetYi(rhs), lhs%GetZi(rhs), lhs%GetWi(rhs)); }
-	
+	inline iv4 operator / (int lhs, iv4 const& rhs)                     { assert(All4(rhs,maths::NonZero<int>)); return iv4::make(lhs/GetXi(rhs), lhs/GetYi(rhs), lhs/GetZi(rhs), lhs/GetWi(rhs)); }
+	inline iv4 operator % (int lhs, iv4 const& rhs)                     { assert(All4(rhs,maths::NonZero<int>)); return iv4::make(lhs%GetXi(rhs), lhs%GetYi(rhs), lhs%GetZi(rhs), lhs%GetWi(rhs)); }
+
 	// Unary operators
 	inline iv4 operator + (iv4 const& vec) { return vec; }
 	inline iv4 operator - (iv4 const& vec) { return iv4::make(-vec.x, -vec.y, -vec.z, -vec.w); }
-	
+
 	// Equality operators
 	inline bool operator == (iv4 const& lhs, iv4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (iv4 const& lhs, iv4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }

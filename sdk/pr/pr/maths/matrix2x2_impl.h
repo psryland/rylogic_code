@@ -51,7 +51,7 @@ namespace pr
 			ans[i] = Dot2(lhs_t[i], rhs);
 		return ans;
 	}
-	
+
 	// Unary operators
 	inline m2x2 operator + (m2x2 const& mat) { return mat; }
 	inline m2x2 operator - (m2x2 const& mat) { return m2x2::make(-mat.x, -mat.y); }
@@ -97,7 +97,7 @@ namespace pr
 	}
 	inline m2x2& Inverse(m2x2& m)
 	{
-		float det = Determinant(m); PR_ASSERT(PR_DBG_MATHS, det != 0.0f, "Matrix is singular");
+		float det = Determinant(m); assert(det != 0.0f && "Matrix is singular");
 		float inv_det = 1.0f / det;
 		float xx = m.x.x; m.x.x =  inv_det * m.y.y; m.y.y =  inv_det * xx;
 		float xy = m.x.y; m.x.y = -inv_det * m.y.x; m.y.x = -inv_det * xy;
@@ -105,7 +105,7 @@ namespace pr
 	}
 	inline m2x2& InverseFast(m2x2& m)
 	{
-		PR_ASSERT(PR_DBG_MATHS, FEql(Determinant(m) ,1.0f), "Matrix is not pure rotation");
+		assert(FEql(Determinant(m) ,1.0f) && "Matrix is not pure rotation");
 		float xx = m.x.x; m.x.x =  m.y.y; m.y.y =  xx;
 		float xy = m.x.y; m.x.y = -m.y.x; m.y.x = -xy;
 		return m;

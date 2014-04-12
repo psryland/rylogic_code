@@ -12,15 +12,10 @@
 
 #include <cmath>
 #include <cfloat>
+#include <cassert>
 #include <functional>
 #include <utility>
 #include "pr/maths/maths.h"
-
-//"pr/common/assert.h" should be included prior to this for pr asserts
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
 
 namespace pr
 {
@@ -59,23 +54,23 @@ namespace pr
 		Type  m_min;
 		Type  m_max;
 		uint  m_count;
-		
+
 	public:
 		uint Count() const     { return m_count; }
 		Type Mean() const      { return m_mean; }
 		Type Sum() const       { return m_mean * m_count; }
 		Type Minimum() const   { return m_min; }
 		Type Maximum() const   { return m_max; }
-		
+
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
 		Type PopStdDev() const { return pr::Sqrt(PopStdVar()); }
 		Type SamStdDev() const { return pr::Sqrt(SamStdVar()); }
 		Type PopStdVar() const { return m_var * (1.0 / (m_count + (m_count == 0))); }
 		Type SamStdVar() const { return m_var * (1.0 / (m_count - (m_count != 1))); }
-		
+
 		Stat() { Reset(); }
-		
+
 		// Reset the stats
 		void Reset()
 		{
@@ -85,7 +80,7 @@ namespace pr
 			m_min   =  pr::maths::limits<Type>::max();
 			m_max   = -pr::maths::limits<Type>::max();
 		}
-		
+
 		// Accumulate statistics for 'value' in a single pass.
 		// Note, this method is more accurate than the sum of squares, square of sums approach.
 		template <typename MinFunc, typename MaxFunc> void Add(Type const& value, MinFunc min_of, MaxFunc max_of)
@@ -100,10 +95,12 @@ namespace pr
 		}
 		void Add(Type const& value)
 		{
-			Add(value, std::min<Type>, std::max<Type>);
+			Add(value
+				,[](Type const& l, Type const& r){ return std::min(l,r); }
+				,[](Type const& l, Type const& r){ return std::max(l,r); });
 		}
 	};
-	
+
 	// Exponental moving average:
 	//   avr(k) = a * X(k) + (1 - a) * avr(k-1)
 	//          = a * X(k) + avr(k-1) - a * avr(k-1)
@@ -147,10 +144,10 @@ namespace pr
 		Type   m_var;
 		uint   m_size;
 		uint   m_count;
-		
+
 	public:
 		Type Mean() const { return m_mean; }
-		
+
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
 		// Note: for a moving variance the choice between population/sample sd is a bit arbitrary
@@ -158,7 +155,7 @@ namespace pr
 		Type SamStdDev() const { return pr::Sqrt(SamStdVar()); }
 		Type PopStdVar() const { return m_var * (1.0 / (m_count + (m_count == 0))); }
 		Type SamStdVar() const { return m_var * (1.0 / (m_count - (m_count != 1))); }
-		
+
 		ExpMovingAvr(uint window_size)
 		{
 			Reset(window_size);
@@ -191,7 +188,7 @@ namespace pr
 			}
 		}
 	};
-	
+
 	// A moving window average
 	// Let: D(k) = X(k) - X(k-N) => X(k-N) = X(k) - D(k)
 	// Average:
@@ -204,7 +201,7 @@ namespace pr
 		Type  m_mean;
 		uint  m_count;
 		uint  m_size;
-		
+
 		Type Var() const
 		{
 			Type var = Type();
@@ -216,7 +213,7 @@ namespace pr
 		}
 	public:
 		Type Mean() const { return m_mean; }
-		
+
 		// NOTE: no recursive variance because we would need to buffer the averages as well
 		// so that we could remove (X(k-N) - avr(k-N))² at each iteration
 		// Use the population standard deviation when all data values in a set have been considered.
@@ -225,14 +222,14 @@ namespace pr
 		Type SamStdDev() const { return pr::Sqrt(SamStdVar()); }
 		Type PopStdVar() const { return Var() * (1.0 / (m_count + (m_count == 0))); }
 		Type SamStdVar() const { return Var() * (1.0 / (m_count - (m_count != 1))); }
-		
+
 		MovingAvr(uint window_size = MaxWindowSize)
 		{
 			Reset(window_size);
 		}
 		void Reset(uint window_size = MaxWindowSize)
 		{
-			PR_ASSERT(PR_DBG, window_size <= MaxWindowSize, "");
+			assert(window_size <= MaxWindowSize);
 			m_in    = &m_window[0];
 			m_size  = window_size;
 			m_mean  = Type();
@@ -259,10 +256,5 @@ namespace pr
 		}
 	};
 }
-	
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
-#endif
-	
+
 #endif

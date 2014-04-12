@@ -40,7 +40,7 @@ namespace pr
 	inline BoundingBox operator - (BoundingBox const& lhs, v4 const& offset)  { BoundingBox bb = lhs; return bb -= offset; }
 	inline BoundingBox operator * (m4x4 const& m, BoundingBox const& rhs)
 	{
-		PR_ASSERT(PR_DBG_MATHS, rhs.IsValid(), "Transforming an invalid bounding box");
+		assert(rhs.IsValid() && "Transforming an invalid bounding box");
 		BoundingBox bb = BoundingBox::make(m.pos, v4Zero);
 		m4x4 mat = GetTranspose3x3(m);
 		for (int i = 0; i != 3; ++i)
@@ -72,7 +72,7 @@ namespace pr
 		switch (side)
 		{
 		default:
-		case EBBoxPlane_NumberOf: PR_ASSERT(PR_DBG_MATHS, false, "Unknown side index"); return Plane();
+		case EBBoxPlane_NumberOf: assert(false && "Unknown side index"); return Plane();
 		case EBBoxPlane_Lx: return plane::make( 1.0f,  0.0f,  0.0f, bbox.m_centre.x + bbox.m_radius.x);
 		case EBBoxPlane_Ux: return plane::make(-1.0f,  0.0f,  0.0f, bbox.m_centre.x + bbox.m_radius.x);
 		case EBBoxPlane_Ly: return plane::make( 0.0f,  1.0f,  0.0f, bbox.m_centre.y + bbox.m_radius.y);
@@ -85,7 +85,7 @@ namespace pr
 	// Return a corner of the bounding box
 	inline v4 GetCorner(BoundingBox const& bbox, uint corner)
 	{
-		PR_ASSERT(PR_DBG_MATHS, corner < 8, "Invalid corner index");
+		assert(corner < 8 && "Invalid corner index");
 		int x = ((corner >> 0) & 0x1) * 2 - 1;
 		int y = ((corner >> 1) & 0x1) * 2 - 1;
 		int z = ((corner >> 2) & 0x1) * 2 - 1;

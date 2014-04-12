@@ -15,7 +15,7 @@ namespace pr
 	inline Frustum  Frustum::makeWH(float width, float height, float z, float zfar) { Frustum f; return f.setWH(width, height, z, zfar); }
 	inline Frustum  Frustum::makeFA(float fovY, float aspect, float zfar)           { Frustum f; return f.setFA(fovY, aspect, zfar); }
 	inline Frustum  Frustum::makeHV(float horz_angle, float vert_angle, float zfar) { Frustum f; return f.setHV(horz_angle, vert_angle, zfar); }
-	
+
 	inline Frustum& Frustum::setWH(float width, float height, float z, float zfar)
 	{
 		m_Tnorms.x.set(    z, 0.0f, -width  * 0.5f, 0.0f); // left
@@ -42,7 +42,7 @@ namespace pr
 		float w = 2.0f * pr::Tan(horz_angle * 0.5f);
 		return setWH(w, h, 1.0f, zfar);
 	}
-	
+
 	// Get/Set the z position of the sharp end.
 	// This is the distance to the far clip plane
 	inline void Frustum::ZDist(float zfar)
@@ -63,7 +63,7 @@ namespace pr
 	{
 		return m_Tnorms.w.w/m_Tnorms.y.w - m_Tnorms.w.z/m_Tnorms.y.z;
 	}
-	
+
 	// Return the Y field of view
 	inline float Frustum::FovY() const
 	{
@@ -77,7 +77,7 @@ namespace pr
 		return (m_Tnorms.z.y/m_Tnorms.x.y - m_Tnorms.z.x/m_Tnorms.x.x) /
 		       (m_Tnorms.z.z/m_Tnorms.y.z - m_Tnorms.z.w/m_Tnorms.y.w);
 	}
-	
+
 	// Return a vector containing the dimensions of the frustum
 	// half_width, half_height, zfar, longest_edge_length
 	inline pr::v4 Frustum::Dim() const
@@ -90,7 +90,7 @@ namespace pr
 	{
 		switch (plane_index)
 		{
-		default: PR_ASSERT(PR_DBG_MATHS, false, "Invalid plane index"); return pr::v4ZAxis;
+		default: assert(false && "Invalid plane index"); return pr::v4ZAxis;
 		case XPos: return Plane::make(m_Tnorms.x.x, m_Tnorms.y.x, m_Tnorms.z.x, m_Tnorms.w.x);
 		case XNeg: return Plane::make(m_Tnorms.x.y, m_Tnorms.y.y, m_Tnorms.z.y, m_Tnorms.w.y);
 		case YPos: return Plane::make(m_Tnorms.x.z, m_Tnorms.y.z, m_Tnorms.z.z, m_Tnorms.w.z);
@@ -98,7 +98,7 @@ namespace pr
 		case ZFar: return pr::v4ZAxis;
 		}
 	}
-	
+
 	// Return a matrix containing the inward pointing normals as the x,y,z,w vectors
 	// where: x=left, y=right, z=top, w=bottom
 	inline pr::m4x4 Frustum::Normals() const
@@ -116,7 +116,7 @@ namespace pr
 		Frustum f = {rhs.m_Tnorms * GetTranspose4x4(m)}; // = Transpose(m * Transpose(rhs))
 		return f;
 	}
-	
+
 	// Equality operators
 	inline bool operator == (Frustum const& lhs, Frustum const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (Frustum const& lhs, Frustum const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
@@ -165,7 +165,7 @@ namespace pr
 				return false;
 			}
 		}
-		
+
 		// Clip to the frustum planes
 		pr::v4 d0 = frustum.m_Tnorms * s;
 		pr::v4 d1 = frustum.m_Tnorms * e;

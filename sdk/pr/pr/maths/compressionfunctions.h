@@ -32,15 +32,15 @@ namespace pr
 		int z = (idx / 9);
 		return v4::make(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f);
 	}
-	
+
 	// Compress a v2 into a maximum number of bits
 	template <int MaxBits, typename ReturnType> inline ReturnType PackNormV2(const v2& vec)
 	{
-		PR_ASSERT(PR_DBG_MATHS, Abs(vec.x) <= 1.0f && Abs(vec.y) <= 1.0f, "Only supports vectors with components in the range -1 to 1");
+		assert(Abs(vec.x) <= 1.0f && Abs(vec.y) <= 1.0f && "Only supports vectors with components in the range -1 to 1");
 		const ReturnType Bits  = MaxBits / 2;
 		const ReturnType Scale = (static_cast<ReturnType>(1) << Bits) / 2 - 1;
 		const ReturnType Mask  = (static_cast<ReturnType>(1) << Bits) - 1;
-		
+
 		ReturnType x = static_cast<ReturnType>((vec.x + 1.0f) * Scale) & Mask;
 		ReturnType y = static_cast<ReturnType>((vec.y + 1.0f) * Scale) & Mask;
 		return (x << Bits) | y;
@@ -50,7 +50,7 @@ namespace pr
 		const PackedType Bits  = MaxBits / 2;
 		const PackedType Scale = (static_cast<PackedType>(1) << Bits) / 2 - 1;
 		const PackedType Mask  = (static_cast<PackedType>(1) << Bits) - 1;
-		
+
 		v2 vec =
 		{
 			((packed_vec >> Bits) & Mask) / static_cast<float>(Scale) - 1.0f,
@@ -58,17 +58,17 @@ namespace pr
 		};
 		return vec;
 	}
-	
+
 	// Compress a v4 into a maximum number of bits
 	template <int MaxBits, typename ReturnType> inline ReturnType PackNormV4(const v4& vec)
 	{
-		PR_ASSERT(PR_DBG_MATHS, Abs(vec.x) <= 1.0f && Abs(vec.y) <= 1.0f && Abs(vec.z) <= 1.0f && (Abs(vec.w) == 0.0f || Abs(vec.w) == 1.0f), "Only supports vectors with components in the range -1 to 1, and w as 0 or 1");
-		
+		assert(Abs(vec.x) <= 1.0f && Abs(vec.y) <= 1.0f && Abs(vec.z) <= 1.0f && (Abs(vec.w) == 0.0f || Abs(vec.w) == 1.0f) && "Only supports vectors with components in the range -1 to 1, and w as 0 or 1");
+
 		// Use 1 bit for w and divide the remaining bits by 3
 		const ReturnType Bits  = (MaxBits - 1) / 3;
 		const ReturnType Scale = (static_cast<ReturnType>(1) << Bits) / 2 - 1;
 		const ReturnType Mask  = (static_cast<ReturnType>(1) << Bits) - 1;
-		
+
 		ReturnType x = static_cast<ReturnType>((vec.x + 1.0f) * Scale) & Mask;
 		ReturnType y = static_cast<ReturnType>((vec.y + 1.0f) * Scale) & Mask;
 		ReturnType z = static_cast<ReturnType>((vec.z + 1.0f) * Scale) & Mask;
@@ -83,7 +83,7 @@ namespace pr
 		const PackedType Bits  = (MaxBits - 1) / 3;
 		const PackedType Scale = (static_cast<PackedType>(1) << Bits) / 2 - 1;
 		const PackedType Mask  = (static_cast<PackedType>(1) << Bits) - 1;
-		
+
 		v4 vec =
 		{
 			((packed_vec >> (2 * Bits + 1)) & Mask) / static_cast<float>(Scale) - 1.0f,
@@ -93,7 +93,7 @@ namespace pr
 		};
 		return vec;
 	}
-	
+
 	namespace impl
 	{
 		#define CompressQuat32_Mask1   0x3FF       // = (1 << 10) - 1
@@ -102,7 +102,7 @@ namespace pr
 		#define CompressQuat32_Ofs2    0xFF
 		#define CompressQuat32_FScale1 723.3710f   // = Scale1 / (2.0 * 0.707106)
 		#define CompressQuat32_FScale2 442.5391f   // = Scale2 / (2.0 * 0.577350)
-		
+
 		// Compress a normalised quaternion into 32bits.
 		// The algorithm and reasoning is as follows:
 		// - We can drop one component because it can be recreated using the knowledge that the quat is normalised.
@@ -126,7 +126,7 @@ namespace pr
 		template <typename T> uint32 CompressQuat32(Quat const& orientation)
 		{
 			Quat ori = orientation;
-			
+
 			// Choose the largest component
 			int largest1 = 0;
 			if (Abs(ori[largest1]) < Abs(ori[1])) largest1 = 1;
@@ -134,7 +134,7 @@ namespace pr
 			if (Abs(ori[largest1]) < Abs(ori[3])) largest1 = 3;
 			if (ori[largest1] < 0.0f) ori = -ori;    // Ensure the one we drop is positive
 			ori[largest1] = 0.0f;
-			
+
 			// Choose the next largest component
 			float flargest2;
 			int largest2 = 0;
@@ -143,10 +143,10 @@ namespace pr
 			if (Abs(ori[largest2]) < Abs(ori[3])) largest2 = 3;
 			flargest2 = ori[largest2];
 			ori[largest2] = 0.0f;
-			
+
 			// Compress the remaining three components
 			int the_big_one = static_cast<int>(flargest2 * CompressQuat32_FScale1) + CompressQuat32_Ofs1;
-			PR_ASSERT(PR_DBG_MATHS, (the_big_one & CompressQuat32_Mask1) == the_big_one, "");
+			assert((the_big_one & CompressQuat32_Mask1) == the_big_one);
 			uint32 compressed_quat = (largest1    << 30) |   // index of the largest
 									 (largest2    << 28) |   // index of the second largest
 									 (the_big_one << 18);    // The compressed value of the second largest
@@ -154,9 +154,9 @@ namespace pr
 			for (int i = 0; i != 4; ++i)
 			{
 				if (i == largest1 || i == largest2) continue;
-				
+
 				int compressed_value = static_cast<int>((ori[i] * CompressQuat32_FScale2) + CompressQuat32_Ofs2);
-				PR_ASSERT(PR_DBG_MATHS, (compressed_value & CompressQuat32_Mask2) == compressed_value, "");
+				assert((compressed_value & CompressQuat32_Mask2) == compressed_value);
 				compressed_quat |= compressed_value << shift;
 				shift = 0;
 			}
@@ -166,10 +166,10 @@ namespace pr
 		{
 			int largest1 = (compressed_orientation >> 30) & 0x3;
 			int largest2 = (compressed_orientation >> 28) & 0x3;
-			
+
 			Quat orientation;
 			orientation[largest2] = (int((compressed_orientation >> 18) & CompressQuat32_Mask1) - CompressQuat32_Ofs1) / CompressQuat32_FScale1;
-			
+
 			int shift = 9;
 			float sq_sum = orientation[largest2] * orientation[largest2];
 			for (int i = 0; i != 4; ++i)
@@ -177,7 +177,7 @@ namespace pr
 				if (i == largest1 || i == largest2) continue;
 				orientation[i] = ((int(compressed_orientation >> shift) & CompressQuat32_Mask2) - CompressQuat32_Ofs2) / CompressQuat32_FScale2;
 				shift = 0;
-				
+
 				sq_sum += orientation[i] * orientation[i];
 			}
 			orientation[largest1] = Sqrt(1.0f - sq_sum);
@@ -190,15 +190,15 @@ namespace pr
 		#undef CompressQuat32_FScale1
 		#undef CompressQuat32_FScale2
 	}
-	
+
 	inline uint32 CompressQuat32(Quat const& orientation)         { return impl::CompressQuat32<void>(orientation); }
 	inline Quat   DecompressQuat32(uint32 compressed_orientation) { return impl::DecompressQuat32<void>(compressed_orientation); }
-	
+
 	// Pack a normalised 32bit float into 4 floats assuming each float is stored using 8bit precision
 	// This is mainly used for packing a normalised float value into a Colour32
 	inline pr::v4 EncodeNormalisedF32toV4(float value)
 	{
-		PR_ASSERT(PR_DBG_MATHS, value >= 0 && value <= 1, "Only supports floats in the range [0,1]");
+		assert(value >= 0 && value <= 1 && "Only supports floats in the range [0,1]");
 		pr::v4 const shifts = pr::v4::make(1.677721e+7f, 6.553599e+4f, 2.559999e+2f, 9.999999e-1f); // 256^3, 256^2, 256, 1
 		pr::v4 packed = pr::Frac(value * shifts);
 		packed.y -= packed.x / 256.0f;
@@ -213,7 +213,7 @@ namespace pr
 	}
 	inline pr::v2 EncodeNormalisedF32toV2(float value)
 	{
-		PR_ASSERT(PR_DBG_MATHS, value >= 0 && value <= 1, "Only supports floats in the range [0,1]");
+		assert(value >= 0 && value <= 1 && "Only supports floats in the range [0,1]");
 		pr::v2 const shifts = pr::v2::make(2.559999e2f, 9.999999e-1f);
 		pr::v2 packed = pr::Frac(value * shifts);
 		packed.y -= packed.x / 256.0f;
@@ -224,7 +224,7 @@ namespace pr
 		pr::v2 const shifts = pr::v2::make(3.90625e-3f, 1.0f);
 		return pr::Dot2(value, shifts);
 	}
-	
+
 	////*****
 	//// Compress a normalised quaternion into 32bits.
 	//// The algorithm and reasoning is as follows:

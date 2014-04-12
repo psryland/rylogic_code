@@ -53,12 +53,12 @@ namespace pr
 		v4                        w1() const                                  { pr::v4 v = *this; v.w = 1.0f; return v; }
 		Array const&              ToArray() const                             { return reinterpret_cast<Array const&>(*this); }
 		Array&                    ToArray()                                   { return reinterpret_cast<Array&>      (*this); }
-		float const&              operator [] (int i) const                   { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
-		float&                    operator [] (int i)                         { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
+		float const&              operator [] (int i) const                   { assert(i < 4); return ToArray()[i]; }
+		float&                    operator [] (int i)                         { assert(i < 4); return ToArray()[i]; }
 		v4& operator = (iv4 const& rhs);
 		v2  vec2(int i0, int i1) const;
 		v3  vec3(int i0, int i1, int i2) const;
-		
+
 		static v4                       make(float x)                               { v4 vec; return vec.set(x); }
 		static v4                       make(float x, float y, float z, float w)    { v4 vec; return vec.set(x, y, z, w); }
 		template <typename T> static v4 make(T const& v, float z, float w)          { v4 vec; return vec.set(v, z, w); }
@@ -69,7 +69,7 @@ namespace pr
 		static v4                       normal3(float x, float y, float z, float w) { v4 vec; return Normalise3(vec.set(x, y, z, w)); }
 		static v4                       normal4(float x, float y, float z, float w) { v4 vec; return Normalise4(vec.set(x, y, z, w)); }
 	};
-	
+
 	v4 const v4Zero   = {0.0f, 0.0f, 0.0f, 0.0f};
 	v4 const v4One    = {1.0f, 1.0f, 1.0f, 1.0f};
 	v4 const v4Min    = {maths::float_min, maths::float_min, maths::float_min, maths::float_min};
@@ -78,7 +78,7 @@ namespace pr
 	v4 const v4YAxis  = {0.0f, 1.0f, 0.0f, 0.0f};
 	v4 const v4ZAxis  = {0.0f, 0.0f, 1.0f, 0.0f};
 	v4 const v4Origin = {0.0f, 0.0f, 0.0f, 1.0f};
-	
+
 	// Limits
 	namespace maths
 	{
@@ -88,20 +88,20 @@ namespace pr
 			static v4 max() { return v4Max; }
 		};
 	}
-	
+
 	// Element access
 	inline float GetX(v4 const& v) { return v.x; }
 	inline float GetY(v4 const& v) { return v.y; }
 	inline float GetZ(v4 const& v) { return v.z; }
 	inline float GetW(v4 const& v) { return v.w; }
-	
+
 	// Assignment operators
 	template <typename T> inline v4& operator += (v4& lhs, T const& rhs) { lhs.x += GetXf(rhs); lhs.y += GetYf(rhs); lhs.z += GetZf(rhs); lhs.w += GetWf(rhs); return lhs; }
 	template <typename T> inline v4& operator -= (v4& lhs, T const& rhs) { lhs.x -= GetXf(rhs); lhs.y -= GetYf(rhs); lhs.z -= GetZf(rhs); lhs.w -= GetWf(rhs); return lhs; }
 	template <typename T> inline v4& operator *= (v4& lhs, T const& rhs) { lhs.x *= GetXf(rhs); lhs.y *= GetYf(rhs); lhs.z *= GetZf(rhs); lhs.w *= GetWf(rhs); return lhs; }
-	template <typename T> inline v4& operator /= (v4& lhs, T const& rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x /= GetXf(rhs);              lhs.y /= GetYf(rhs);              lhs.z /= GetZf(rhs);              lhs.w /= GetWf(rhs);              return lhs; }
-	template <typename T> inline v4& operator %= (v4& lhs, T const& rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x  = Fmod(lhs.x, GetXf(rhs)); lhs.y  = Fmod(lhs.y, GetYf(rhs)); lhs.z  = Fmod(lhs.z, GetZf(rhs)); lhs.w  = Fmod(lhs.w, GetWf(rhs)); return lhs; }
-	
+	template <typename T> inline v4& operator /= (v4& lhs, T const& rhs) { assert(!IsZero4(rhs)); lhs.x /= GetXf(rhs);              lhs.y /= GetYf(rhs);              lhs.z /= GetZf(rhs);              lhs.w /= GetWf(rhs);              return lhs; }
+	template <typename T> inline v4& operator %= (v4& lhs, T const& rhs) { assert(!IsZero4(rhs)); lhs.x  = Fmod(lhs.x, GetXf(rhs)); lhs.y  = Fmod(lhs.y, GetYf(rhs)); lhs.z  = Fmod(lhs.z, GetZf(rhs)); lhs.w  = Fmod(lhs.w, GetWf(rhs)); return lhs; }
+
 	// Binary operators
 	template <typename T> inline v4 operator + (v4 const& lhs, T const& rhs) { v4 v = lhs; return v += rhs; }
 	template <typename T> inline v4 operator - (v4 const& lhs, T const& rhs) { v4 v = lhs; return v -= rhs; }
@@ -111,13 +111,13 @@ namespace pr
 	inline v4 operator + (float lhs, v4 const& rhs)                          { v4 v = rhs; return v += lhs; }
 	inline v4 operator - (float lhs, v4 const& rhs)                          { v4 v = rhs; return v -= lhs; }
 	inline v4 operator * (float lhs, v4 const& rhs)                          { v4 v = rhs; return v *= lhs; }
-	inline v4 operator / (float lhs, v4 const& rhs)                          { PR_ASSERT(PR_DBG_MATHS, All4(rhs,maths::NonZero<float>), ""); return v4::make(     lhs /GetXf(rhs),       lhs /GetYf(rhs),       lhs /GetZf(rhs),       lhs /GetWf(rhs)); }
-	inline v4 operator % (float lhs, v4 const& rhs)                          { PR_ASSERT(PR_DBG_MATHS, All4(rhs,maths::NonZero<float>), ""); return v4::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs)), Fmod(lhs, GetZf(rhs)), Fmod(lhs, GetWf(rhs))); }
-	
+	inline v4 operator / (float lhs, v4 const& rhs)                          { assert(All4(rhs,maths::NonZero<float>)); return v4::make(     lhs /GetXf(rhs),       lhs /GetYf(rhs),       lhs /GetZf(rhs),       lhs /GetWf(rhs)); }
+	inline v4 operator % (float lhs, v4 const& rhs)                          { assert(All4(rhs,maths::NonZero<float>)); return v4::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs)), Fmod(lhs, GetZf(rhs)), Fmod(lhs, GetWf(rhs))); }
+
 	// Unary operators
 	inline v4 operator + (v4 const& v) { return v; }
 	inline v4 operator - (v4 const& v) { return v4::make(-v.x, -v.y, -v.z, -v.w); }
-	
+
 	// Equality operators
 	inline bool operator == (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
@@ -125,7 +125,7 @@ namespace pr
 	inline bool operator >  (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (v4 const& lhs, v4 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	
+
 	// DirectXMath conversion functions
 	#if PR_MATHS_USE_DIRECTMATH
 	inline DirectX::XMVECTOR const& dxv4(v4 const& v) { return v.vec; }
@@ -139,13 +139,13 @@ namespace pr
 	inline v3&         cast_v3(v4& vec)         { return reinterpret_cast<v3&>        (vec); }
 	inline Quat const& cast_q (v4 const& vec)   { return reinterpret_cast<Quat const&>(vec); }
 	inline Quat&       cast_q (v4& vec)         { return reinterpret_cast<Quat&>      (vec); }
-	
+
 	// Min/Max/Clamp
 	template <> inline v4 Max(v4 const& lhs, v4 const& rhs)              { return v4::make(Max(lhs.x,rhs.x), Max(lhs.y,rhs.y), Max(lhs.z,rhs.z), Max(lhs.w,rhs.w)); }
 	template <> inline v4 Min(v4 const& lhs, v4 const& rhs)              { return v4::make(Min(lhs.x,rhs.x), Min(lhs.y,rhs.y), Min(lhs.z,rhs.z), Min(lhs.w,rhs.w)); }
 	template <> inline v4 Clamp(v4 const& x, v4 const& mn, v4 const& mx) { return v4::make(Clamp(x.x,mn.x,mx.x), Clamp(x.y,mn.y,mx.y), Clamp(x.z,mn.z,mx.z), Clamp(x.w,mn.w,mx.w)); }
 	inline v4             Clamp(v4 const& x, float mn, float mx)         { return v4::make(Clamp(x.x,mn,mx),     Clamp(x.y,mn,mx),     Clamp(x.z,mn,mx),     Clamp(x.w,mn,mx));     }
-	
+
 	// Functions
 	v4&     Zero(v4& v);
 	bool    IsFinite(v4 const& v);

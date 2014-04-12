@@ -14,11 +14,11 @@
 #include "pr/maths/maths.h"
 
 #ifndef PR_DBG_CONVEX_HULL
-#	define PR_DBG_CONVEX_HULL 0
-#endif//PR_DBG_CONVEX_HULL
+#define PR_DBG_CONVEX_HULL 0
+#endif
 #if PR_DBG_CONVEX_HULL
-#	include "pr/linedrawer/ldr_helper.h"
-#endif//PR_DBG_CONVEX_HULL
+#include "pr/linedrawer/ldr_helper.h"
+#endif
 
 namespace pr
 {
@@ -78,7 +78,7 @@ namespace pr
 			#if PR_DBG_CONVEX_HULL
 			void const* g_data;
 			template <typename HData> void DumpFaces(HData const& data);
-			template <typename HData> void DumpVerts(HData const& data);			
+			template <typename HData> void DumpVerts(HData const& data);
 			#endif//PR_DBG_CONVEX_HULL
 
 			// Add a face to the face container
@@ -91,7 +91,7 @@ namespace pr
 				// Set the face in the face container
 				pr::hull::SetFace(*data.m_flast, a, b, c);
 				++data.m_flast;
-					
+
 				// Record the half space that this face represents
 				v4 const& A = data.m_vcont[*(data.m_vbegin + a)];
 				v4 e0 = data.m_vcont[*(data.m_vbegin + b)] - A;
@@ -100,7 +100,7 @@ namespace pr
 				plane   = Normalise3(Cross3(e0, e1));
 				plane.w = -Dot3(plane, A);
 				++data.m_hs_last;
-	
+
 				PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
 			}
 
@@ -110,7 +110,7 @@ namespace pr
 			bool InitHull(HData& data)
 			{
 				PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::FileOutput ldr_extm("C:/DeleteMe/hull_extremeverts.pr_script", true); ldr_extm.clear());
-				
+
 				// A minimum of 4 verts are needed for a hull with volume
 				if( data.m_vend - data.m_vbegin < 4 )
 					return false;
@@ -137,7 +137,7 @@ namespace pr
 						return false;
 				}
 				PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Line("zaxis", "FF0000FF", data.m_vcont[*vmin], data.m_vcont[*vmax], ldr_extm));
-				
+
 				// Use these extreme verts as the Z axis
 				v4 zaxis = data.m_vcont[*vmax] - data.m_vcont[*vmin];
 
@@ -149,7 +149,7 @@ namespace pr
 
 				v4 const& zmin = data.m_vcont[*data.m_vbegin];
 				float zaxis_lensq = Length3Sq(zaxis);
-				
+
 				{// Find the most radially distant vertex from the zaxis
 					float dmax = 0.0f;
 					for( typename HData::VertIter i = data.m_vhull_last; i != data.m_vend; ++i )
@@ -158,7 +158,7 @@ namespace pr
 						float d = Length3Sq(vert) - Sqr(Dot3(vert, zaxis)) / zaxis_lensq;
 						if( d > dmax ) {dmax = d; vmax = i;}
 					}
-					
+
 					// If all verts lie on the zaxis...
 					if( dmax < maths::tiny )
 						return false;
@@ -180,7 +180,7 @@ namespace pr
 						float d = Dot3(axis, data.m_vcont[*i] - zmin);
 						if( Abs(d) > dmax ) {dmax = Abs(d); vmax = i; flip = d < 0.0f;}
 					}
-					
+
 					// If all verts lie on in the plane...
 					if( dmax < maths::tiny )
 						return false;
@@ -263,7 +263,7 @@ namespace pr
 			{
 				struct Edge	 { typename HData::VIndex m_i0, m_i1; };
 				Edge *m_begin, *m_last, *m_end;
-				
+
 				Perimeter(Edge* buf, int count)
 				:m_begin(buf)
 				,m_last(m_begin)
@@ -284,7 +284,7 @@ namespace pr
 					++m_last;
 					PR_EXPAND(PR_DBG_CONVEX_HULL, DumpEdges());
 				}
-				
+
 				#if PR_DBG_CONVEX_HULL
 				void DumpEdges()
 				{
@@ -313,7 +313,7 @@ namespace pr
 				typename HData::VIndex v_idx = static_cast<typename HData::VIndex>(data.m_vhull_last - data.m_vbegin);
 				v4 const& vert = data.m_vcont[*data.m_vhull_last];
 				++data.m_vhull_last;
-			
+
 				// Allocate stack memory for the edges remaining when the faces that can
 				// see 'v' are removed. The number of perimeter edges will ultimately be
 				// 2 * vis_face_count, however in the worst case we can receive the faces
@@ -321,15 +321,15 @@ namespace pr
 				int max_edge_count = 3 * data.m_vis_face_count;
 				Perimeter<HData> perimeter(PR_ALLOCA_POD(Perimeter<HData>::Edge, max_edge_count), max_edge_count);
 
-				// If the number of visible faces is less than the size of 
-				// the visible face cache then we don't need to retest the faces 
+				// If the number of visible faces is less than the size of
+				// the visible face cache then we don't need to retest the faces
 				if( data.m_vis_face_count <= HData::MaxVisFaceCount )
 				{
 					for( int* i = data.m_visible_face + data.m_vis_face_count; i-- != data.m_visible_face; )
 					{
 						typename HData::FaceIter	face  = data.m_fbegin   + *i;
 						v4*							plane = data.m_hs_begin + *i;
-				
+
 						typename HData::VIndex a, b, c;
 						pr::hull::GetFace(*face, a, b, c);
 
@@ -357,7 +357,7 @@ namespace pr
 							++plane;
 							continue;
 						}
-					
+
 						typename HData::VIndex a, b, c;
 						pr::hull::GetFace(*face, a, b, c);
 
@@ -372,7 +372,7 @@ namespace pr
 						PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
 					}
 				}
-	
+
 				// Add faces for each remaining edge
 				for( Perimeter<HData>::Edge const* edge = perimeter.m_begin; edge != perimeter.m_last; ++edge )
 				{
@@ -431,13 +431,13 @@ namespace pr
 	// -The indices in the faces refer to the positions in the vert index container. This allows
 	//   new or old vert indices to be used. For new indices, map the verts using the vert index
 	//   buffer. For old indices use the vert index bufer as a look up map.
-    // -You may need to provide the "hull::SetFace" and "hull::GetFace" functions for your face 
+    // -You may need to provide the "hull::SetFace" and "hull::GetFace" functions for your face
     //   and vert index types
 	template <typename VertCont, typename VIter, typename FIter>
 	bool ConvexHull(VertCont const& vcont, VIter vbegin, VIter vend, FIter fbegin, FIter fend, std::size_t& vert_count, std::size_t& face_count)
 	{
 		using namespace impl::hull;
-		
+
 		vert_count = 0;
 		face_count = 0;
 
@@ -449,7 +449,7 @@ namespace pr
 		PR_EXPAND(PR_DBG_CONVEX_HULL, g_data = &data);
 		PR_EXPAND(PR_DBG_CONVEX_HULL, DumpVerts(data));
 		PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
-		
+
 		// Find an initial volume
 		if( !InitHull(data) )
 			return false;
@@ -457,7 +457,7 @@ namespace pr
 		// Test the unclassified verts and move any that are within the convex hull to
 		// the 'non-hull' end of the range. 'v' is the vert most not in the convex hull.
 		// 'vis_count' is the number of faces of the current hull that can "see" 'v'
-		VIter v = PartitionVerts(data);		
+		VIter v = PartitionVerts(data);
 
 		// While there are unclassified verts remaining
 		PR_EXPAND(PR_DBG_CONVEX_HULL, int iteration = 0);
@@ -511,7 +511,7 @@ namespace pr
 		{
 			return reinterpret_cast<Face<StrideInBytes, VIndex>*>(index);
 		}
-	
+
 		// Get/Set the indices of a face
 		template <typename Face, typename VIndex> inline void SetFace(Face& face, VIndex a, VIndex b, VIndex c)
 		{

@@ -22,7 +22,7 @@ namespace pr
 		v4 z;
 		union { v4 w; v4 pos; };
 		typedef v4 Array[4];
-		
+
 		static m4x4  make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
 		static m4x4  make(m3x3 const& ori, v4 const& translation);
 		static m4x4  make(Quat const& quat, v4 const& translation);
@@ -47,8 +47,8 @@ namespace pr
 		void         col(int i, v4 const& col)              { (*this)[i] = col; }
 		Array const& ToArray() const                        { return reinterpret_cast<Array const&>(*this); }
 		Array&       ToArray()                              { return reinterpret_cast<Array&>      (*this); }
-		v4 const&    operator [] (int i) const              { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
-		v4&          operator [] (int i)                    { PR_ASSERT(PR_DBG_MATHS, i < 4, ""); return ToArray()[i]; }
+		v4 const&    operator [] (int i) const              { assert(i < 4); return ToArray()[i]; }
+		v4&          operator [] (int i)                    { assert(i < 4); return ToArray()[i]; }
 	};
 
 	m4x4 const m4x4Zero     = {v4Zero, v4Zero, v4Zero, v4Zero};
@@ -59,7 +59,7 @@ namespace pr
 	inline v4 const& GetY(m4x4 const& m) { return m.y; }
 	inline v4 const& GetZ(m4x4 const& m) { return m.z; }
 	inline v4 const& GetW(m4x4 const& m) { return m.w; }
-	
+
 	// Assignment operators
 	m4x4& operator += (m4x4& lhs, float rhs);
 	m4x4& operator -= (m4x4& lhs, float rhs);
@@ -82,7 +82,7 @@ namespace pr
 	m4x4 operator / (m4x4 const& lhs, float rhs);
 	m4x4 operator * (m4x4 const& lhs, m4x4 const& rhs);
 	v4   operator * (m4x4 const& lhs, v4 const& rhs);
-	
+
 	// Unary operators
 	m4x4 operator + (m4x4 const& mat);
 	m4x4 operator - (m4x4 const& mat);
@@ -143,7 +143,7 @@ namespace pr
 	m4x4& Rotation4x4(m4x4& mat, float pitch, float yaw, float roll, v4 const& translation);
 	m4x4& Rotation4x4(m4x4& mat, v4 const& axis, float angle, v4 const& translation);
 	m4x4& Rotation4x4(m4x4& mat, v4 const& angular_displacement, v4 const& translation);
-	m4x4& Rotation4x4(m4x4& mat, v4 const& from, v4 const& to, v4 const& translation);		
+	m4x4& Rotation4x4(m4x4& mat, v4 const& from, v4 const& to, v4 const& translation);
 	m4x4& Rotation4x4(m4x4& mat, Quat const& quat, v4 const& translation);
 	m4x4  Rotation4x4(float pitch, float yaw, float roll, v4 const& translation);
 	m4x4  Rotation4x4(v3 const& axis, float angle, v4 const& translation);

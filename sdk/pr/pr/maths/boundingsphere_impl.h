@@ -25,8 +25,8 @@ namespace pr
 	inline float           BoundingSphere::DiametreSq() const                       { return Sqr(Diametre()); }
 
 	// Assignment operators
-	inline BoundingSphere& operator += (BoundingSphere& lhs, v4 const& offset)      { PR_ASSERT(PR_DBG_MATHS, offset.w == 0.0f, ""); lhs.m_ctr_rad += offset; return lhs; }
-	inline BoundingSphere& operator -= (BoundingSphere& lhs, v4 const& offset)      { PR_ASSERT(PR_DBG_MATHS, offset.w == 0.0f, ""); lhs.m_ctr_rad -= offset; return lhs; }
+	inline BoundingSphere& operator += (BoundingSphere& lhs, v4 const& offset)      { assert(offset.w == 0.0f); lhs.m_ctr_rad += offset; return lhs; }
+	inline BoundingSphere& operator -= (BoundingSphere& lhs, v4 const& offset)      { assert(offset.w == 0.0f); lhs.m_ctr_rad -= offset; return lhs; }
 	inline BoundingSphere& operator *= (BoundingSphere& lhs, float s)               { lhs.m_ctr_rad.w *= s; return lhs; }
 	inline BoundingSphere& operator /= (BoundingSphere& lhs, float s)               { lhs *= (1.0f / s); return lhs; }
 

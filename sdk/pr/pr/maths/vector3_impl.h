@@ -84,12 +84,12 @@ namespace pr
 	inline v3 SLerp3(v3 const& src, v3 const& dest, float frac)
 	{
 		float s_len = Length3(src), d_len = Length3(dest);
-		return (s_len + frac*(d_len - s_len)) * Normalise3(src + frac*(dest - src)); 
+		return (s_len + frac*(d_len - s_len)) * Normalise3(src + frac*(dest - src));
 	}
 	inline float CosAngle3(v3 const& lhs, v3 const& rhs)
 	{
 		// Return the cosine of the angle between two vectors
-		PR_ASSERT(PR_DBG_MATHS, !IsZero3(lhs) && !IsZero3(rhs), "CosAngle undefined for zero vectors");
+		assert(!IsZero3(lhs) && !IsZero3(rhs) && "CosAngle undefined for zero vectors");
 		return Clamp(Dot3(lhs,rhs) / Sqrt(Length3Sq(lhs) * Length3Sq(rhs)), -1.0f, 1.0f);
 	}
 }

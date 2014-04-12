@@ -50,19 +50,19 @@ namespace pr
 		void         col(int i, v4 const& col)    { (*this)[i] = col; }
 		Array const& ToArray() const              { return reinterpret_cast<Array const&>(*this); }
 		Array&       ToArray()                    { return reinterpret_cast<Array&>      (*this); }
-		v4 const&    operator [] (int i) const    { PR_ASSERT(PR_DBG_MATHS, i < 3, ""); return ToArray()[i]; }
-		v4&          operator [] (int i)          { PR_ASSERT(PR_DBG_MATHS, i < 3, ""); return ToArray()[i]; }
+		v4 const&    operator [] (int i) const    { assert(i < 3); return ToArray()[i]; }
+		v4&          operator [] (int i)          { assert(i < 3); return ToArray()[i]; }
 	};
 
 	m3x3 const m3x3Zero     = {v4Zero, v4Zero, v4Zero};
 	m3x3 const m3x3Identity = {v4XAxis, v4YAxis, v4ZAxis};
-	
+
 	// Element accessors
 	inline v4 const& GetX(m3x3 const& m) { return m.x; }
 	inline v4 const& GetY(m3x3 const& m) { return m.y; }
 	inline v4 const& GetZ(m3x3 const& m) { return m.z; }
 	inline v4 const& GetW(m3x3 const&  ) { return pr::v4Origin; }
-	
+
 	// Assignment operators
 	m3x3& operator += (m3x3& lhs, float rhs);
 	m3x3& operator -= (m3x3& lhs, float rhs);
@@ -84,7 +84,7 @@ namespace pr
 	m3x3 operator / (m3x3 const& lhs, float rhs);
 	v4   operator * (m3x3 const& lhs, v4 const& rhs);
 	v3   operator * (m3x3 const& lhs, v3 const& rhs);
-	
+
 	// Unary operators
 	m3x3 operator + (m3x3 const& mat);
 	m3x3 operator - (m3x3 const& mat);

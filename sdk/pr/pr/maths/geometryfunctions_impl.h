@@ -14,14 +14,14 @@ namespace pr
 	// Return the distance that 'point' is from the infinite plane: 'plane'
 	inline float Distance_PointToPlane(v4 const& point, v4 const& a, v4 const& b, v4 const& c)
 	{
-		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f, "");
+		assert(point.w == 1.0f);
 		v4 plane = Normalise3(Cross3(b - a, c - a));
 		plane.w = -Dot3(plane, a);
 		return Dot4(plane, point);
 	}
 	inline float Distance_PointToPlane(v4 const& point, Plane const& plane)
 	{
-		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f, "");
+		assert(point.w == 1.0f);
 		return Dot4(plane, point);
 	}
 
@@ -85,21 +85,21 @@ namespace pr
 	// Return the 2D volume (i.e. area) of the triangle
 	inline float Volume_Triangle(v4 const& a, v4 const& b, v4 const& c)
 	{
-		PR_ASSERT(PR_DBG_MATHS, a.w == 1.0f && b.w == 1.0f && c.w == 1.0f, "");
+		assert(a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 		return Length3(Cross3(b-a, c-a)) / 2.0f;
 	}
 
 	// Return the volume of a tetrahedron
 	inline float Volume_Tetrahedron(v4 const& a, v4 const& b, v4 const& c, v4 const& d)
 	{
-		PR_ASSERT(PR_DBG_MATHS, a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && d.w == 1.0f, "");
+		assert(a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && d.w == 1.0f);
 		return Triple3(b-a, c-a, d-a) / 6.0f;
 	}
 
 	// Returns true if 'point' lies in front of the plane described by abc (Cross3(b-a, c-a))
 	inline bool PointInFrontOfPlane(v4 const& point, v4 const& a, v4 const& b, v4 const& c)
 	{
-		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f, "");
+		assert(point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 		return Triple3(point - a, b - a, c - a) >= 0.0f;
 	}
 
@@ -116,8 +116,8 @@ namespace pr
 	// Returns the parametric value of the closest point on 'line'
 	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& end, float& t)
 	{
-		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f && start.w == 1.0f && end.w == 1.0f, "");
-		PR_ASSERT(PR_DBG_MATHS, start != end, "");
+		assert(point.w == 1.0f && start.w == 1.0f && end.w == 1.0f);
+		assert(start != end);
 		v4 line = end - start;
 		t = Dot3(point - start, line) / Length3Sq(line);
 		return start + t * line;
@@ -129,7 +129,7 @@ namespace pr
 	// Returns the parametric value of the closest point on 'line'
 	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, v4 const& start, v4 const& end, float& t)
 	{
-		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f && start.w == 1.0f && end.w == 1.0f, "");
+		assert(point.w == 1.0f && start.w == 1.0f && end.w == 1.0f);
 		v4 line = end - start;
 
 		// Project 'point' onto 'line', but defer divide by 'line.Length3Sq()'
@@ -167,7 +167,7 @@ namespace pr
 	// largest root of a quartic equation.
 	inline v2 ClosestPoint_PointToEllipse(float x, float y, float major, float minor)
 	{
-		PR_ASSERT(PR_DBG_MATHS, major >= 0.0f && minor >= 0.0f && major >= minor, "");
+		assert(major >= 0.0f && minor >= 0.0f && major >= minor);
 
 		// Special case minor axis lengths of zero
 		if( minor < maths::tiny )
@@ -199,7 +199,7 @@ namespace pr
 		template <typename T>
 		v4 ClosestPoint_PointToTriangle(v4 const& p, v4 const& a, v4 const& b, v4 const& c, v4& barycentric)
 		{
-			PR_ASSERT(PR_DBG_MATHS, p.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f, "");
+			assert(p.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 
 			// Check if P in vertex region outside A
 			v4 ab = b - a;
@@ -267,7 +267,7 @@ namespace pr
 		template <typename T>
         v4 ClosestPoint_PointToTetrahedron(v4 const& p, v4 const& a, v4 const& b, v4 const& c, v4 const& d, v4& barycentric)
 		{
-			PR_ASSERT(PR_DBG_MATHS, p.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && d.w == 1.0f, "");
+			assert(p.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && d.w == 1.0f);
 
 			// Start out assuming point inside all halfspaces, so closest to itself
 			v4 closest_point = p;
@@ -325,7 +325,7 @@ namespace pr
 		template <bool test_degenerates>
 		void ClosestPoint_LineSegmentToLineSegment(v4 const& s0, v4 const& e0, v4 const& s1, v4 const& e1, float& t0, float& t1)
 		{
-			PR_ASSERT(PR_DBG_MATHS, s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && e1.w == 1.0f, "");
+			assert(s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && e1.w == 1.0f);
 
 			v4 line0				= e0 - s0;
 			v4 line1				= e1 - s1;
@@ -406,8 +406,8 @@ namespace pr
 		template <typename T>
 		void ClosestPoint_LineSegmentToInfiniteLine(v4 const& s0, v4 const& e0, v4 const& s1, v4 const& line1, float& t0, float& t1)
 		{
-			PR_ASSERT(PR_DBG_MATHS, s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && line1.w == 0.0f, "");
-			PR_ASSERT(PR_DBG_MATHS, !IsZero3(line1), "The infinite line should not be degenerate");
+			assert(s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && line1.w == 0.0f);
+			assert(!IsZero3(line1) && "The infinite line should not be degenerate");
 
 			v4 line0				= e0 - s0;
 			float line0_length_sq	= Length3Sq(line0);
@@ -457,8 +457,8 @@ namespace pr
 		void ClosestPoint_InfiniteLineToInfiniteLine(v4 const& s0, v4 const& line0, v4 const& s1, v4 const& line1, float& t0, float& t1)
 		{
 			// Degenerate lines should not be passed to this function
-			PR_ASSERT(PR_DBG_MATHS, !IsZero3(line0) && !IsZero3(line1), "");
-			PR_ASSERT(PR_DBG_MATHS, s0.w == 1.0f && line0.w == 0.0f && s1.w == 1.0f && line1.w == 0.0f, "");
+			assert(!IsZero3(line0) && !IsZero3(line1));
+			assert(s0.w == 1.0f && line0.w == 0.0f && s1.w == 1.0f && line1.w == 0.0f);
 
 			v4 r    = s0 - s1;
 			float a = Dot3(line0, line0);
@@ -487,7 +487,7 @@ namespace pr
 	// Return the bary centric coordinates for 'point' with respect to triangle a,b,c
 	inline v4 BaryCentric(v4 const& point, v4 const& a, v4 const& b, v4 const& c)
 	{
-		PR_ASSERT(PR_DBG_MATHS, point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f, "");
+		assert(point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 		v4 ab = b - a, ac = c - a, pa = point - a;
 		float d00 = Dot3(ab, ab);
 		float d01 = Dot3(ab, ac);
@@ -495,7 +495,7 @@ namespace pr
 		float d20 = Dot3(pa, ab);
 		float d21 = Dot3(pa, ac);
 		float denom = d00 * d11 - d01 * d01;
-		PR_ASSERT(PR_DBG_MATHS, denom != 0.0f, "This triangle has no area");
+		assert(denom != 0.0f && "This triangle has no area");
 		v4 bary;
 		bary.y = (d11 * d20 - d01 * d21) / denom;
 		bary.z = (d00 * d21 - d01 * d20) / denom;
@@ -798,7 +798,7 @@ namespace pr
 	// Returns true if any part of the line segment is within the slab
 	inline bool ClipToSlab(v4 const& norm, float dist1, float dist2, v4& s, v4& e)
 	{
-		PR_ASSERT(PR_DBG_MATHS, dist1 <= dist2, "");
+		assert(dist1 <= dist2);
 		Plane plane; plane::set(plane, norm, dist1);
 
 		float slab_width = dist2 - dist1;

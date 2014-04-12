@@ -18,7 +18,7 @@ namespace pr
 		      unsigned int& uint()			{ return data[MaxLength - 1]; }
 		LargeInt&			set(unsigned int* array, unsigned int length);
 		LargeInt&			operator = (unsigned int value);
-	
+
 		enum { MaxLength = 16 };
 		unsigned int data[MaxLength];	// data are big endian. i.e. LSB is at data[MaxLength - 1]
 	};
@@ -46,13 +46,13 @@ namespace pr
 	LargeInt operator << (const LargeInt& lhs, unsigned int rhs);
 	LargeInt operator >> (const LargeInt& lhs, unsigned int rhs);
 	LargeInt operator %  (const LargeInt& lhs, unsigned int rhs);
-	
+
 	LargeInt operator + (const LargeInt& lhs, const LargeInt& rhs);
 	LargeInt operator - (const LargeInt& lhs, const LargeInt& rhs);
 	LargeInt operator * (const LargeInt& lhs, const LargeInt& rhs);
 	LargeInt operator / (const LargeInt& lhs, const LargeInt& rhs);
 	LargeInt operator % (const LargeInt& lhs, const LargeInt& rhs);
-	
+
 	const LargeInt LargeIntZero = LargeInt();
 	const LargeInt LargeIntOne  = LargeIntZero + 1;
 
@@ -60,7 +60,7 @@ namespace pr
 	// unsigned int array[] = {0x01234567, 0x89ABCDEF};
 	inline LargeInt& LargeInt::set(unsigned int* array, unsigned int length)
 	{
-		PR_ASSERT(PR_DBG_MATHS, length <= MaxLength, "");
+		assert(length <= MaxLength);
 		memset(data, 0, sizeof(data));
 		memcpy(data + MaxLength - length, array, sizeof(unsigned int) * length);
 		return *this;
@@ -206,7 +206,7 @@ namespace pr
 		unsigned int* in			= out - rhs / 32;
 		unsigned int  shift_down	= rhs % 32;
 		unsigned int  shift_up		= 32 - shift_down;
-	
+
 		while( in > lhs.data )
 		{
 			unsigned __int64 v1 = *in;
@@ -314,7 +314,7 @@ namespace pr
 		LargeInt result	= LargeIntZero;
 		LargeInt numer	= lhs;
 		LargeInt denom	= rhs; denom <<= right_shift;
-		
+
 		while( right_shift >= 0 )
 		{
 			unsigned int highest_bit_denom = HighBit(denom);

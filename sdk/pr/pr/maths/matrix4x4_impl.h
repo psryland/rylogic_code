@@ -36,7 +36,7 @@ namespace pr
 	}
 	inline m4x4& m4x4::set(Quat const& quat, v4 const& translation)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsNormal4(quat), "'quat' should be a normalised quaternion");
+		assert(IsNormal4(quat) && "'quat' should be a normalised quaternion");
 
 #if PR_MATHS_USE_DIRECTMATH
 		dxm4(*this) = DirectX::XMMatrixRotationQuaternion(quat.vec);
@@ -48,7 +48,7 @@ namespace pr
 	}
 	inline m4x4& m4x4::set(v4 const& axis, float angle, v4 const& translation)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsNormal3(axis), "'axis' should be normalised");
+		assert(IsNormal3(axis) && "'axis' should be normalised");
 #if PR_MATHS_USE_DIRECTMATH
 		dxm4(*this) = DirectX::XMMatrixRotationNormal(axis.vec, angle);
 #else
@@ -65,7 +65,7 @@ namespace pr
 	}
 	inline m4x4& m4x4::set(v4 const& from, v4 const& to, v4 const& translation)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsNormal3(from) && IsNormal3(to), "'from' and 'to' should be normalised");
+		assert(IsNormal3(from) && IsNormal3(to) && "'from' and 'to' should be normalised");
 
 		float cos_angle = Dot3(from, to);   // Cos angle
 		if (cos_angle >= 1.0f - pr::maths::tiny)
@@ -226,7 +226,7 @@ namespace pr
 	// Return the 4x4 determinant of the affine transform 'mat'
 	inline float DeterminantFast4(pr::m4x4 const& mat)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsAffine(mat), "'mat' must be an affine transform to use this function");
+		assert(IsAffine(mat) && "'mat' must be an affine transform to use this function");
 		return
 			(mat.x.x * mat.y.y * mat.z.z) +
 			(mat.x.y * mat.y.z * mat.z.x) +
@@ -331,7 +331,7 @@ namespace pr
 		v4 det;
 		dxv4(det) = DirectX::XMMatrixDeterminant(dxm4(mat));
 		dxm4(mat) = DirectX::XMMatrixInverse(&dxv4(det), dxm4(mat));
-		PR_ASSERT(PR_DBG_MATHS, det.x != 0.f, "Matrix has no inverse");
+		assert(det.x != 0.f && "Matrix has no inverse");
 #else
 		m4x4  A = GetTranspose4x4(mat); // Take the transpose so that row operations are faster
 		m4x4& B = mat; B.identity();
@@ -349,7 +349,7 @@ namespace pr
 			}
 			if (col[pivot] < maths::tiny)
 			{
-				PR_ASSERT(PR_DBG_MATHS, false, "Matrix has no inverse");
+				assert(false && "Matrix has no inverse");
 				return mat;
 			}
 
@@ -390,7 +390,7 @@ namespace pr
 	// Find the inverse of this matrix. It must be orthonormal
 	inline m4x4& InverseFast(m4x4& mat)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsOrthonormal(mat), "Matrix is not orthonormal");
+		assert(IsOrthonormal(mat) && "Matrix is not orthonormal");
 		v4 translation = mat.pos;
 		Transpose3x3(mat);
 		mat.pos.x = -(translation.x * mat.x.x + translation.y * mat.y.x + translation.z * mat.z.x);
@@ -412,7 +412,7 @@ namespace pr
 		mat.x = Normalise3(mat.x);
 		mat.y = Normalise3(Cross3(mat.z, mat.x));
 		mat.z = Cross3(mat.x, mat.y);
-		PR_ASSERT(PR_DBG_MATHS, IsOrthonormal(mat), "");
+		assert(IsOrthonormal(mat));
 		return mat;
 	}
 
@@ -428,7 +428,7 @@ namespace pr
 	// Return the axis and angle of a rotation matrix
 	inline void GetAxisAngle(m4x4 const& mat, v4& axis, float& angle)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsOrthonormal(mat), "Matrix is not pure rotation");
+		assert(IsOrthonormal(mat) && "Matrix is not pure rotation");
 
 		angle = pr::ACos(0.5f * (Trace3(mat) - 1.0f));
 		axis = 1000.0f * Kernel(m4x4Identity - mat);
@@ -569,8 +569,8 @@ namespace pr
 
 	inline m4x4& LookAt(m4x4& mat, v4 const& eye, v4 const& at, v4 const& up)
 	{
-		PR_ASSERT(PR_DBG_MATHS, eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f, "Invalid position/direction vectors passed to Lookat");
-		PR_ASSERT(PR_DBG_MATHS, !pr::Parallel(at - eye, up), "Lookat point and up axis are aligned");
+		assert(eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f && "Invalid position/direction vectors passed to Lookat");
+		assert(!pr::Parallel(at - eye, up) && "Lookat point and up axis are aligned");
 		mat.z = Normalise3(eye - at);
 		mat.x = Normalise3(Cross3(up, mat.z));
 		mat.y = Cross3(mat.z, mat.x);

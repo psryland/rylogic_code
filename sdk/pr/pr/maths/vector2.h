@@ -22,31 +22,31 @@ namespace pr
 		float x;
 		float y;
 		typedef float Array[2];
-		
+
 		v2&                       set(float x_)                            { x = y = x_; return *this; }
 		v2&                       set(float x_, float y_)                  { x = x_; y = y_; return *this; }
 		template <typename T> v2& set(T const& v)                          { x = GetXf(v); y = GetYf(v); return *this; }
 		template <typename T> v2& set(T const* v)                          { x = AsReal(v[0]); y = GetYf(v[1]); return *this; }
 		Array const&              ToArray() const                          { return reinterpret_cast<Array const&>(*this); }
 		Array&                    ToArray()                                { return reinterpret_cast<Array&>      (*this); }
-		float const&              operator [] (int i)    const             { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
-		float&                    operator [] (int i)                      { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
+		float const&              operator [] (int i)    const             { assert(i < 2); return ToArray()[i]; }
+		float&                    operator [] (int i)                      { assert(i < 2); return ToArray()[i]; }
 		v2& operator = (iv2 const& rhs);
-		
+
 		static v2                       make(float x)             { v2 vec; return vec.set(x); }
 		static v2                       make(float x, float y)    { v2 vec; return vec.set(x, y); }
 		template <typename T> static v2 make(T const& v)          { v2 vec; return vec.set(v); }
 		template <typename T> static v2 make(T const* v)          { v2 vec; return vec.set(v); }
 		static v2                       normal2(float x, float y) { v2 vec; return Normalise2(vec.set(x,y)); }
 	};
-	
+
 	v2 const v2Zero  = {0.0f, 0.0f};
 	v2 const v2One   = {1.0f, 1.0f};
 	v2 const v2Min   = {maths::float_min, maths::float_min};
 	v2 const v2Max   = {maths::float_max, maths::float_max};
 	v2 const v2XAxis = {1.0f, 0.0f};
 	v2 const v2YAxis = {0.0f, 1.0f};
-	
+
 	// Limits
 	namespace maths
 	{
@@ -56,20 +56,20 @@ namespace pr
 			static v2 max() { return v2Max; }
 		};
 	}
-	
+
 	// Element accessors
 	inline float GetX(v2 const& v) { return v.x; }
 	inline float GetY(v2 const& v) { return v.y; }
 	inline float GetZ(v2 const&  ) { return 0.0f; }
 	inline float GetW(v2 const&  ) { return 0.0f; }
-	
+
 	// Assignment operators
 	template <typename T> inline v2& operator += (v2& lhs, T rhs) { lhs.x += GetXf(rhs); lhs.y += GetYf(rhs); return lhs; }
 	template <typename T> inline v2& operator -= (v2& lhs, T rhs) { lhs.x -= GetXf(rhs); lhs.y -= GetYf(rhs); return lhs; }
 	template <typename T> inline v2& operator *= (v2& lhs, T rhs) { lhs.x *= GetXf(rhs); lhs.y *= GetYf(rhs); return lhs; }
-	template <typename T> inline v2& operator /= (v2& lhs, T rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x /= GetXf(rhs);              lhs.y /= GetYf(rhs);              return lhs; }
-	template <typename T> inline v2& operator %= (v2& lhs, T rhs) { PR_ASSERT(PR_DBG_MATHS, !IsZero4(rhs), ""); lhs.x  = Fmod(lhs.x, GetXf(rhs)); lhs.y  = Fmod(lhs.y, GetYf(rhs)); return lhs; }
-	
+	template <typename T> inline v2& operator /= (v2& lhs, T rhs) { assert(!IsZero4(rhs)); lhs.x /= GetXf(rhs);              lhs.y /= GetYf(rhs);              return lhs; }
+	template <typename T> inline v2& operator %= (v2& lhs, T rhs) { assert(!IsZero4(rhs)); lhs.x  = Fmod(lhs.x, GetXf(rhs)); lhs.y  = Fmod(lhs.y, GetYf(rhs)); return lhs; }
+
 	// Binary operators
 	template <typename T> inline v2 operator + (v2 const& lhs, T rhs) { v2 v = lhs; return v += rhs; }
 	template <typename T> inline v2 operator - (v2 const& lhs, T rhs) { v2 v = lhs; return v -= rhs; }
@@ -79,13 +79,13 @@ namespace pr
 	inline v2 operator + (float lhs, v2 const& rhs)                   { v2 v = rhs; return v += lhs; }
 	inline v2 operator - (float lhs, v2 const& rhs)                   { v2 v = rhs; return v -= lhs; }
 	inline v2 operator * (float lhs, v2 const& rhs)                   { v2 v = rhs; return v *= lhs; }
-	inline v2 operator / (float lhs, v2 const& rhs)                   { PR_ASSERT(PR_DBG_MATHS, All2(rhs,maths::NonZero<float>), ""); return v2::make(     lhs /GetXf(rhs),       lhs /GetYf(rhs) ); }
-	inline v2 operator % (float lhs, v2 const& rhs)                   { PR_ASSERT(PR_DBG_MATHS, All2(rhs,maths::NonZero<float>), ""); return v2::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs))); }
-	
+	inline v2 operator / (float lhs, v2 const& rhs)                   { assert(All2(rhs,maths::NonZero<float>)); return v2::make(     lhs /GetXf(rhs),       lhs /GetYf(rhs) ); }
+	inline v2 operator % (float lhs, v2 const& rhs)                   { assert( All2(rhs,maths::NonZero<float>)); return v2::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs))); }
+
 	// Unary operators
 	inline v2 operator + (v2 const& vec) { return vec; }
 	inline v2 operator - (v2 const& vec) { return v2::make(-vec.x, -vec.y); }
-	
+
 	// Equality operators
 	inline bool operator == (v2 const& lhs, v2 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (v2 const& lhs, v2 const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
@@ -99,7 +99,7 @@ namespace pr
 	template <> inline v2 Min(v2 const& lhs, v2 const& rhs)              { return v2::make(Min(lhs.x,rhs.x), Min(lhs.y,rhs.y)); }
 	template <> inline v2 Clamp(v2 const& x, v2 const& mn, v2 const& mx) { return v2::make(Clamp(x.x,mn.x,mx.x), Clamp(x.y,mn.y,mx.y)); }
 	inline v2             Clamp(v2 const& x, float mn, float mx)         { return v2::make(Clamp(x.x,mn,mx),     Clamp(x.y,mn,mx)); }
-	
+
 	// Functions
 	v2&   Zero(v2& v);
 	bool  IsFinite(v2 const& v);

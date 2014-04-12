@@ -71,7 +71,7 @@ namespace pr
 				discriminant = Sqrt(discriminant);
 				if( quadratic.m_b < 0.0f )	{ discriminant = -0.5f * (quadratic.m_b - discriminant); }
 				else						{ discriminant = -0.5f * (quadratic.m_b + discriminant); }
-				
+
 				Roots r = {2, discriminant / quadratic.m_a, quadratic.m_c / discriminant};
 				return r;
 			}
@@ -144,7 +144,7 @@ namespace pr
 				// Calculate depressed equation (x^4 coefft. = 1, x^3 coefft. = 0)
 				// by substituting x = y - b / 4a
 				// See http://www.sosmath.com/algebra/factor/fac12/fac12.html
-				Quartic depressed_eqn = 
+				Quartic depressed_eqn =
 				{
 					1.0f,
 					0.0f,
@@ -206,11 +206,6 @@ namespace pr
 
 #endif//PR_MATHS_POLYNOMIAL_H
 
-
-
-
-
-	
 ////   bezout
 ////   This code is based on MgcIntr2DElpElp.cpp written by David Eberly.  His
 ////  code along with many other excellent examples are avaiable at his site:
@@ -239,7 +234,6 @@ namespace pr
 //        AD*DF - AF*AF
 //    );
 //};
-
 
 //   intersectEllipseEllipse
 //   This code is based on MgcIntr2DElpElp.cpp written by David Eberly.  His
@@ -277,7 +271,7 @@ namespace pr
 //
 //        for ( var x = 0; x < xRoots.length; x++ ) {
 //            var test =
-//                ( a[0]*xRoots[x] + a[1]*yRoots[y] + a[3] ) * xRoots[x] + 
+//                ( a[0]*xRoots[x] + a[1]*yRoots[y] + a[3] ) * xRoots[x] +
 //                ( a[2]*yRoots[y] + a[4] ) * yRoots[y] + a[5];
 //            if ( Math.abs(test) < norm0 ) {
 //                test =
@@ -294,8 +288,6 @@ namespace pr
 //
 //    return result;
 //}
-
-
 
 	//// A polynomial of maximum order 'N'
 	//// c0 + c1.x + c2.x^2 + c3.x^3 + ... + cN.x^N
@@ -317,7 +309,7 @@ namespace pr
 	//	}
 	//	void Set(float const* coefs, uint num_coefs)
 	//	{
-	//		PR_ASSERT(PR_DBG_MATHS, num_coefs <= N, "This object cannot represent a polynomial of this order");
+	//		assert(num_coefs <= N && "This object cannot represent a polynomial of this order");
 	//		m_degree = num_coefs - 1;
 	//		float* in = m_coefs + m_degree;
 	//		float const* out = coefs;
@@ -557,7 +549,7 @@ namespace pr
 	//		}
 	//		return results;
 	//	}
-	//	
+	//
 	//	float* QuarticRoots() const
 	//	{
 	//		var results=new Array();

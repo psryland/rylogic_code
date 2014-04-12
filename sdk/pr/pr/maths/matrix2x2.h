@@ -18,7 +18,7 @@ namespace pr
 		v2 x;
 		v2 y;
 		typedef v2 Array[2];
-		
+
 		static m2x2  make(v2 const& x, v2 const& y);
 		static m2x2  make(float xx, float xy, float yx, float yy);
 		static m2x2  make(float const* mat);
@@ -31,25 +31,25 @@ namespace pr
 		m2x2&        identity();
 		Array const& ToArray() const               { return reinterpret_cast<Array const&>(*this); }
 		Array&       ToArray()                     { return reinterpret_cast<Array&>      (*this); }
-		v2 const&    operator [](uint i) const     { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
-		v2&          operator [](uint i)           { PR_ASSERT(PR_DBG_MATHS, i < 2, ""); return ToArray()[i]; }
+		v2 const&    operator [](uint i) const     { assert(i < 2); return ToArray()[i]; }
+		v2&          operator [](uint i)           { assert(i < 2); return ToArray()[i]; }
 	};
 
 	m2x2 const m2x2Zero     = {v2Zero, v2Zero};
 	m2x2 const m2x2Identity = {v2XAxis, v2YAxis};
-	
+
 	// Element accessors
 	inline v4 GetX(m2x2 const& m) { return v4::make(m.x, 0.0f, 0.0f); }
 	inline v4 GetY(m2x2 const& m) { return v4::make(m.y, 0.0f, 0.0f); }
 	inline v4 GetZ(m2x2 const&  ) { return pr::v4ZAxis; }
 	inline v4 GetW(m2x2 const&  ) { return pr::v4Origin; }
-	
+
 	// Assignment operators
 	m2x2& operator += (m2x2& lhs, m2x2 const& rhs);
 	m2x2& operator -= (m2x2& lhs, m2x2 const& rhs);
 	m2x2& operator *= (m2x2& lhs, float s);
 	m2x2& operator /= (m2x2& lhs, float s);
-	
+
 	// Binary operators
 	m2x2 operator + (m2x2 const& lhs, m2x2 const& rhs);
 	m2x2 operator - (m2x2 const& lhs, m2x2 const& rhs);
@@ -57,11 +57,11 @@ namespace pr
 	m2x2 operator * (m2x2 const& lhs, float s);
 	m2x2 operator * (float s, m2x2 const& rhs);
 	m2x2 operator / (m2x2 const& lhs, float s);
-	
+
 	// Unary operators
 	m2x2 operator + (m2x2 const& mat);
 	m2x2 operator - (m2x2 const& mat);
-	
+
 	// Equality operators
 	bool operator == (m2x2 const& lhs, m2x2 const& rhs);
 	bool operator != (m2x2 const& lhs, m2x2 const& rhs);
@@ -69,7 +69,7 @@ namespace pr
 	bool operator >  (m2x2 const& lhs, m2x2 const& rhs);
 	bool operator <= (m2x2 const& lhs, m2x2 const& rhs);
 	bool operator >= (m2x2 const& lhs, m2x2 const& rhs);
-	
+
 	// Functions
 	bool    IsFinite(m2x2 const& m);
 	bool    IsFinite(m2x2 const& m, float max_value);
@@ -83,5 +83,5 @@ namespace pr
 	m2x2    GetInverse(m2x2 const& m);
 	m2x2    GetInverseFast(m2x2 const& m);
 }
-	
+
 #endif

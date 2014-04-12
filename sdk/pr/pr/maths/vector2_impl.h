@@ -73,12 +73,12 @@ namespace pr
 	}
 	inline v2 Lerp(v2 const& src, v2 const& dest, float frac)
 	{
-		return src + frac * (dest - src); 
+		return src + frac * (dest - src);
 	}
 	inline v2 SLerp2(v2 const& src, v2 const& dest, float frac)
 	{
 		float s_len = Length2(src), d_len = Length2(dest);
-		return (s_len + frac*(d_len - s_len)) * Normalise2(src + frac*(dest - src)); 
+		return (s_len + frac*(d_len - s_len)) * Normalise2(src + frac*(dest - src));
 	}
 	inline uint Quadrant(v2 const& v)
 	{
@@ -93,7 +93,7 @@ namespace pr
 	inline float CosAngle2(v2 const& lhs, v2 const& rhs)
 	{
 		// Return the cosine of the angle between two vectors
-		PR_ASSERT(PR_DBG_MATHS, !IsZero2(lhs) && !IsZero2(rhs), "CosAngle undefined for zero vectors");
+		assert(!IsZero2(lhs) && !IsZero2(rhs) && "CosAngle undefined for zero vectors");
 		return Clamp(Dot2(lhs,rhs) / Sqrt(Length2Sq(lhs) * Length2Sq(rhs)), -1.0f, 1.0f);
 	}
 }

@@ -6,18 +6,13 @@
 #pragma once
 #ifndef PR_MATHS_SPLINE_H
 #define PR_MATHS_SPLINE_H
-	
+
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/matrix4x4.h"
 #include "pr/maths/vector_rand.h"
 #include "pr/maths/boundingbox.h"
-
-#ifndef PR_ASSERT
-#   define PR_ASSERT_STR_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
 
 namespace pr
 {
@@ -28,11 +23,11 @@ namespace pr
 	struct Spline :pr::m4x4
 	{
 		enum { Start, SCtrl, ECtrl, End };
-		
+
 		// Construct a spline from 4 control points
 		static Spline make(v4 const& start, v4 const& start_ctrl, v4 const& end_ctrl, v4 const& end)
 		{
-			PR_ASSERT(PR_DBG, start.w == 1.0f && start_ctrl.w == 1.0f && end_ctrl.w == 1.0f && end.w == 1.0f, "Splines are constructed from 4 positions");
+			assert(start.w == 1.0f && start_ctrl.w == 1.0f && end_ctrl.w == 1.0f && end.w == 1.0f && "Splines are constructed from 4 positions");
 			Spline s;
 			s.x = start;
 			s.y = start_ctrl;
@@ -44,13 +39,13 @@ namespace pr
 		{
 			return make(spline[Spline::Start], spline[Spline::SCtrl], spline[Spline::ECtrl], spline[Spline::End]);
 		}
-		
+
 		// Interpretation of the control points
 		v4 Point0() const   { return x; }
 		v4 Forward0() const { return y - x; }
 		v4 Forward1() const { return w - z; }
 		v4 Point1() const   { return w; }
-		
+
 		// Return the position along the spline at 'time'
 		v4 Position(float time) const
 		{
@@ -61,7 +56,7 @@ namespace pr
 			blend.w = time * time * time;
 			return (static_cast<pr::m4x4 const&>(*this) * blend).w1();
 		}
-		
+
 		// Return the tangent along the spline at 'time'
 		// Notes about velocity:
 		// A spline from (0,0,0) to (1,0,0) with control points at (1/3,0,0) and (2/3,0,0) will
@@ -75,7 +70,7 @@ namespace pr
 			dblend.w = 3.0f * time * time;
 			return (*this * dblend).w0();
 		}
-		
+
 		// Return the acceleration along the spline at 'time'
 		v4 Acceleration(float time) const
 		{
@@ -86,7 +81,7 @@ namespace pr
 			ddblend.w = 6.0f * time;
 			return (*this * ddblend).w0();
 		}
-		
+
 		// Return an object to world transform for a position along the spline
 		// 'axis' is the axis id that will lie along the tangent of the spline
 		// By default, the z axis is aligned to the spline with Y as up
@@ -96,7 +91,7 @@ namespace pr
 			return pr::OriFromDir(Velocity(time), axis, up, Position(time));
 		}
 	};
-	
+
 	// Equality operators
 	inline bool operator == (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
@@ -104,7 +99,7 @@ namespace pr
 	inline bool operator >  (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	
+
 	// Split 'spline' at 't' to produce two new splines
 	// Given the 4 control points P0,P1,P2,P3 of 'spline'
 	// the position is given by:
@@ -116,7 +111,7 @@ namespace pr
 	// Note: 'spline' passed by value to prevent aliasing problems with 'lhs' and 'rhs'
 	inline void Split(pr::Spline const& spline, float t, pr::Spline& lhs, pr::Spline& rhs)
 	{
-		PR_ASSERT(PR_DBG_MATHS, &lhs != &rhs, "lhs and rhs must not be the same spline");
+		assert(&lhs != &rhs && "lhs and rhs must not be the same spline");
 		pr::v4 P5;
 		lhs.x = spline.x;                      // P0
 		lhs.y = Lerp(spline.x, spline.y, t);   // P4
@@ -127,7 +122,7 @@ namespace pr
 		rhs.y = Lerp(P5, rhs.z, t);            // P8
 		lhs.w = rhs.x = Lerp(lhs.z, rhs.y, t); // P9
 	}
-	
+
 	// Return the length of a spline from t0 to t1
 	inline float Length(pr::Spline const& spline, float t0, float t1, float tol = pr::maths::tiny)
 	{
@@ -136,19 +131,19 @@ namespace pr
 			float poly_length  = pr::Length3(s.y - s.x) + pr::Length3(s.z - s.y) + pr::Length3(s.w - s.z);
 			float chord_length = pr::Length3(s.w - s.x);
 			if ((poly_length - chord_length) < tol) return (poly_length + chord_length) * 0.5f;
-			
+
 			Spline lhs, rhs;
 			pr::Split(s, 0.5f, lhs, rhs);
 			return Len(lhs, tol) + Len(rhs, tol);
 		}};
-		
+
 		// Trim 'spline' to the region of interest
 		pr::Spline clipped = spline, dummy;
 		if (t0 != 0.0f) Split(clipped, t0, dummy, clipped);
 		if (t1 != 1.0f) Split(clipped, t1, clipped, dummy);
 		return L::Len(clipped, tol);
 	}
-	
+
 	// Find the closest point on 'spline' to 'pt'
 	// Note: the analytic solution to this problem involves solving a 5th order polynomial
 	// This method uses Newton's method and relies on a "good" initial estimate of the nearest point
@@ -173,7 +168,7 @@ namespace pr
 		}
 		return time;
 	}
-	
+
 	// This overload attempts to find the nearest point robustly
 	// by testing 3 starting points and returning minimum.
 	inline float ClosestPoint_PointToSpline(pr::Spline const& spline, pr::v4 const& pt)
@@ -188,7 +183,7 @@ namespace pr
 		if (d1 < d0 && d1 < d2) return t1;
 		return t2;
 	}
-	
+
 	namespace impl
 	{
 		namespace spline
@@ -198,7 +193,7 @@ namespace pr
 				Elem* m_next; Spline const* m_spline; int m_ins; float m_err;
 				Elem(Spline const& s, int ins) :m_next(0) ,m_spline(&s) ,m_ins(ins) ,m_err(pr::Length3(s.y - s.x) + pr::Length3(s.z - s.y) + pr::Length3(s.w - s.z) - pr::Length3(s.w - s.x)) {}
 			};
-			
+
 			// Insert 'elem' into the priority queue of which 'queue' is the head
 			inline Elem* QInsert(Elem* queue, Elem& elem)
 			{
@@ -208,27 +203,27 @@ namespace pr
 				i->m_next = &elem;
 				return queue;
 			}
-				
+
 			// Breadth-first recursive raster of this spline
 			template <typename Cont> void Raster(Cont& points, Elem* queue, int& pts_remaining, float tol)
 			{
 				// Pop the top spline segment from the queue or we've run out of points
 				Elem const& elem = *queue;
 				queue = queue->m_next;
-				
+
 				// Stop if the error is less than 'tol'
 				if (elem.m_err < tol || pts_remaining <= 0)
 					return;
-				
+
 				// Subdivide the spline segment and insert the mid-point into 'points'
 				Spline Lhalf, Rhalf;                       // Spline seqments for each half
 				Split(*elem.m_spline, 0.5f, Lhalf, Rhalf); // splits the spline at t=0.5
 				points.insert(points.begin() + elem.m_ins, Lhalf.Point1());
-				
+
 				// Increment the insert position for all elements after 'elem.m_ins'
 				for (Elem* i = queue; i != 0; i = i->m_next)
 					i->m_ins += (i->m_ins > elem.m_ins);
-				
+
 				// Insert both halves into the queue
 				Elem lhs(Lhalf, elem.m_ins), rhs(Rhalf, elem.m_ins+1);  // Create queue elements for each half
 				queue = QInsert(queue, lhs);
@@ -237,7 +232,7 @@ namespace pr
 			}
 		}
 	}
-	
+
 	// Fill a container of points with a rastered version of this spline
 	template <typename Cont> void Raster(pr::Spline const& spline, Cont& points, int max_points, float tol = pr::maths::tiny)
 	{
@@ -247,7 +242,7 @@ namespace pr
 		int pts_remaining = max_points - 2;
 		impl::spline::Raster(points, &elem, pts_remaining, tol);
 	}
-	
+
 	// Random infinite spline within a bounding box
 	struct RandSpline :pr::Spline
 	{
@@ -256,7 +251,7 @@ namespace pr
 		pr::Rnd         m_rng;
 		pr::uint        m_seed;
 		float           m_clock;  // The current 'time' along the spline [0,1)
-		
+
 		RandSpline(pr::BoundingBox const& bbox = pr::BBoxUnit, pr::uint seed = 1)
 		:m_next()
 		,m_bbox(bbox)
@@ -287,25 +282,20 @@ namespace pr
 			m_clock += dt;
 			for (int i = 0; i != 2 && m_clock >= 1.0f; ++i, m_clock -= 1.0f) Roll();
 		}
-		
+
 		// Return an object to world transform for the current position on the spline
 		pr::m4x4 O2W() const                           { return pr::Spline::O2W(m_clock); }
 		pr::m4x4 O2W(int axis, pr::v4 const& up) const { return pr::Spline::O2W(m_clock, axis, up); }
-		
+
 		// Return the current position along the spline
 		pr::v4 Position() const { return pr::Spline::Position(m_clock); }
-		
+
 		// Return the current velocity along the spline
 		pr::v4 Velocity() const { return pr::Spline::Velocity(m_clock); }
-		
+
 		// Return the acceleration along the spline at 'time'
 		pr::v4 Acceleration() const { return pr::Spline::Acceleration(m_clock); }
 	};
 }
-	
-#ifdef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT
-#endif
-	
+
 #endif

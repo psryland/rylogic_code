@@ -112,7 +112,7 @@ namespace pr
 	template <typename T> inline void   Swap(T& x, T& y)                                        { T tmp = x; x = y; y = tmp; }
 
 	template <typename T> inline T      Sqr(T x)                                                { return x * x; }
-	template <typename T> inline T      Sqrt(T x)                                               { PR_ASSERT(PR_DBG_MATHS, x >= 0 && IsFinite(x), ""); return static_cast<T>(sqrt(static_cast<double>(x))); }
+	template <typename T> inline T      Sqrt(T x)                                               { assert(x >= 0 && IsFinite(x)); return static_cast<T>(sqrt(static_cast<double>(x))); }
 
 	template <typename T> inline T      Len2Sq(T x, T y)                                        { return Sqr(x) + Sqr(y); }
 	template <typename T> inline T      Len3Sq(T x, T y, T z)                                   { return Sqr(x) + Sqr(y) + Sqr(z); }
@@ -129,10 +129,10 @@ namespace pr
 
 	template <typename T> inline T      Max  (T const& x, T const& y)                           { return (x > y) ? x : y; }
 	template <typename T> inline T      Min  (T const& x, T const& y)                           { return (x > y) ? y : x; }
-	template <typename T> inline T      Clamp(T const& x, T const& mn, T const& mx)             { PR_ASSERT(PR_DBG_MATHS, mn <= mx   , ""); return (mx < x) ? mx : (x < mn) ? mn : x; }
-	template <>           inline float  Max  (float const& x, float const& y)                   { PR_ASSERT(PR_DBG_MATHS, IsFinite(x), ""); return (x > y) ? x : y; }
-	template <>           inline float  Min  (float const& x, float const& y)                   { PR_ASSERT(PR_DBG_MATHS, IsFinite(x), ""); return (x > y) ? y : x; }
-	template <>           inline float  Clamp(float const& x, float const& mn, float const& mx) { PR_ASSERT(PR_DBG_MATHS, IsFinite(x) && mn <= mx, ""); return (mx < x) ? mx : (x < mn) ? mn : x; }
+	template <typename T> inline T      Clamp(T const& x, T const& mn, T const& mx)             { assert(mn <= mx   ); return (mx < x) ? mx : (x < mn) ? mn : x; }
+	template <>           inline float  Max  (float const& x, float const& y)                   { assert(IsFinite(x)); return (x > y) ? x : y; }
+	template <>           inline float  Min  (float const& x, float const& y)                   { assert(IsFinite(x)); return (x > y) ? y : x; }
+	template <>           inline float  Clamp(float const& x, float const& mn, float const& mx) { assert(IsFinite(x) && mn <= mx); return (mx < x) ? mx : (x < mn) ? mn : x; }
 
 	template <typename T> inline T      Normalise2(T const& v)                       { return v / Length2(v); }
 	template <typename T> inline T      Normalise3(T const& v)                       { return v / Length3(v); }

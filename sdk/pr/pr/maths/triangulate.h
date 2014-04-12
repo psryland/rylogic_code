@@ -22,7 +22,7 @@
 
 //#define PR_GEOMETRY_TRIANGULATE_PR_EXPAND
 #ifdef PR_GEOMETRY_TRIANGULATE_PR_EXPAND
-	#include "pr/macros/link.h"	
+	#include "pr/macros/link.h"
 	#include "pr/filesys/AutoFile.h"
 	#include "pr/linedrawer/ldr_helper.h"
 #endif//PR_GEOMETRY_TRIANGULATE_PR_EXPAND
@@ -32,7 +32,7 @@ namespace pr
 	namespace triangulate
 	{
 		typedef std::size_t VIndex;
-		
+
 		enum EChain
 		{
 			EUnused		= 0,
@@ -96,7 +96,7 @@ namespace pr
 					(vert[Axis1] - edgeS[Axis1])*(edgeE[Axis0] - edgeS[Axis0]);
 		}
 
-		// Returns true if 'vert' is "less than" (meaning to the left of) 'rhs' 
+		// Returns true if 'vert' is "less than" (meaning to the left of) 'rhs'
 		// if 'vert' is on the line it is considered on the right
 		template <int Axis0, int Axis1>
 		inline bool LessThan(v4 const& vert, v4 const& edgeS, v4 const& edgeE)
@@ -115,12 +115,12 @@ namespace pr
 			Vert			m_convex_chain;
 			Vert			m_ear_chain;
 			Vert			m_free_chain;
-		
+
 			// Returns true if 'vert' is convex
 			inline bool IsConvex(Vert& vert) const
 			{
 				return LessThan<Axis0, Axis1>(
-					Vertex(m_verts, vert.m_edge_out->m_idx), 
+					Vertex(m_verts, vert.m_edge_out->m_idx),
 					Vertex(m_verts, vert.m_edge_in ->m_idx),
 					Vertex(m_verts, vert.m_idx) );
 			}
@@ -128,7 +128,7 @@ namespace pr
 			// Return true if 'vert' is an ear of the polygon
 			inline bool IsEar(Vert& vert) const
 			{
-				PR_ASSERT(PR_DBG_GEOM, vert.m_type & EConvex, "Should only be testing convex verts");
+				assert(vert.m_type & EConvex && "Should only be testing convex verts");
 				if( vert.m_edge_in == vert.m_edge_out ) return false;
 
 				v4 const& a = Vertex(m_verts, vert.m_edge_in->m_idx);
@@ -155,7 +155,7 @@ namespace pr
 				}
 				return true;
 			}
-			
+
 			// If a vert was previously convex it will stay convex. If not,
 			// check whether it has become convex. If the vert is convex,
 			// check whether it was not an ear and now is or visa versa
@@ -172,7 +172,7 @@ namespace pr
 					else if( !is_ear && vert.m_type == EEar    )	{ ChainInsert(vert, &m_convex_chain); }
 				}
 			}
-		
+
 			// Constructor
 			Triangulator(Triangulator const&);
 			Triangulator& operator = (Triangulator const&);
@@ -190,7 +190,7 @@ namespace pr
 				for( Vert* v = m_adj, *v_end = m_adj + num_verts; v != v_end; ++v )
 				{
 					if( v->m_type != EFree ) continue; // Only categorise verts that are part of the polygon
-					PR_ASSERT(PR_DBG_GEOM, v->m_edge_in != v->m_edge_out, "");
+					assert(v->m_edge_in != v->m_edge_out);
 					ChainInit(*v, EFree);
 					ChainInsert(*v, IsConvex(*v) ? &m_convex_chain : &m_concave_chain);
 				}
@@ -216,7 +216,7 @@ namespace pr
 				#ifdef PR_GEOMETRY_TRIANGULATE_PR_EXPAND
 				AppendFile("C:/Deleteme/triangulate_result.pr_script");
 				ldr::Triangle("face", "8000FF00",
-					Vertex(m_verts, vert.m_edge_in->m_idx), 
+					Vertex(m_verts, vert.m_edge_in->m_idx),
 					Vertex(m_verts, vert.m_idx),
 					Vertex(m_verts, vert.m_edge_out->m_idx) );
 				EndFile();
@@ -244,7 +244,7 @@ namespace pr
 					max_dist = dist;
 					diag = d;
 				}
-				PR_ASSERT(PR_DBG_GEOM, diag && diag->m_type == EConcave, "");
+				assert(diag && diag->m_type == EConcave);
 				Vert& diag1 = *diag;
 
 				#ifdef PR_GEOMETRY_TRIANGULATE_PR_EXPAND
@@ -278,9 +278,9 @@ namespace pr
 						//	if( v->m_nearest > best_ear->m_nearest ) best_ear = v;
 
 						Vert& ear = *best_ear;//*ChainBegin(m_ear_chain);
-						PR_ASSERT(PR_DBG_GEOM, ear.m_type == EEar, "");
+						assert(ear.m_type == EEar);
 						ChainInsert(ear, &m_free_chain);
-						
+
 						// Examine the adjacent verts
 						Vert& vertL		 = *ear.m_edge_in;
 						Vert& vertR		 = *ear.m_edge_out;
@@ -295,12 +295,12 @@ namespace pr
 						DumpVerts();
 						#endif//PR_GEOMETRY_TRIANGULATE_PR_EXPAND
 					}
-						
+
 					// If there are still concave verts then the polygon
 					// must have contained holes. Add diagonals and new ears
 					if( !ChainEmpty(m_concave_chain) )
 					{
-						PR_ASSERT(PR_DBG_GEOM, !ChainEmpty(m_convex_chain), "");
+						assert(!ChainEmpty(m_convex_chain));
 
 						// Add diagonals. If there are verts free in the free chain,
 						// use them, otherwise allocate them on the stack
@@ -330,7 +330,7 @@ namespace pr
 				ldr::GroupStart("Concave");
 				for( Vert* v = ChainBegin(m_concave_chain); v != ChainEnd(m_concave_chain); v = v->m_next )
 					ldr::Box("vert", "FF00FF00", Vertex(m_verts, v->m_idx), 0.08f);
-				ldr::GroupEnd();		
+				ldr::GroupEnd();
 
 				ldr::GroupStart("Convex");
 				for( Vert* v = ChainBegin(m_convex_chain); v != ChainEnd(m_convex_chain); v = v->m_next )
@@ -340,7 +340,7 @@ namespace pr
 				ldr::GroupStart("Ears");
 				for( Vert* v = ChainBegin(m_ear_chain); v != ChainEnd(m_ear_chain); v = v->m_next )
 					ldr::Box("vert", "FFFFFF00", Vertex(m_verts, v->m_idx), 0.08f);
-				ldr::GroupEnd();		
+				ldr::GroupEnd();
 				EndFile();
 			}
 			#endif//PR_GEOMETRY_TRIANGULATE_PR_EXPAND
@@ -362,13 +362,13 @@ namespace pr
 	template <int Axis0, int Axis1, typename VertCntr, typename EdgeCntr, typename FaceOut>
 	void Triangulate(VertCntr const& verts, std::size_t num_verts, EdgeCntr const& edges, std::size_t num_edges, FaceOut& face_out)
 	{
-		PR_ASSERT(PR_DBG_GEOM, num_edges >= 2, "");
+		assert(num_edges >= 2);
 		#ifdef PR_GEOMETRY_TRIANGULATE_PR_EXPAND
 		StartFile("C:/Deleteme/triangulate_result.pr_script"); EndFile();
 		StartFile("C:/Deleteme/triangulate_polygon.pr_script");
 		ldr::GroupStart("Polygon");
 		for( std::size_t e = 0; e != num_edges; ++e )
-			ldr::Line("edge", "FFA00000", 
+			ldr::Line("edge", "FFA00000",
 				triangulate::Vertex(verts, triangulate::EdgeIndex0(edges, e)),
 				triangulate::Vertex(verts, triangulate::EdgeIndex1(edges, e)));
 		ldr::GroupEnd();
@@ -389,11 +389,10 @@ namespace pr
 
 		// Do the triangulation
 		triangulate::Triangulator<Axis0, Axis1, VertCntr, FaceOut> triangulator(verts, num_verts, adj, face_out);
-		
+
 		// Free the adjacency data
 		_freea(adj);
 	}
-
 }//namespace pr
 
 #endif//PR_MATHS_TRIANGULATE_H

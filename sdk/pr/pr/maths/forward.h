@@ -7,14 +7,15 @@
 #ifndef PR_MATHS_FORWARD_H
 #define PR_MATHS_FORWARD_H
 
-#include "pr/maths/mathsassert.h"
 #include <intrin.h>
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
 #include <memory.h>
 #include <iterator>
+#include <algorithm>
 #include <thread>
+#include <cassert>
 
 #define PR_MATHS_USE_D3DX ERROR_FIX_PLEASE
 #define PR_MATHS_USE_OPEN_MP ERROR_FIX_PLEASE

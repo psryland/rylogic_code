@@ -146,7 +146,7 @@ namespace pr
 		cast_v3(vec) = SLerp3(cast_v3(src), cast_v3(dest), frac);
 		return vec;
 	}
-	
+
 	// returns +1 if all are positive, -1 if all are negative, or 0 if there's a mixture
 	inline int SignCombined3(v4 const& v)
 	{
@@ -172,21 +172,21 @@ namespace pr
 	}
 	inline v4 Perpendicular(v4 const& v)
 	{
-		PR_ASSERT(PR_DBG_MATHS, !IsZero3(v), "Cannot make a perpendicular to a zero vector");
+		assert(!IsZero3(v) && "Cannot make a perpendicular to a zero vector");
 		v4 vec = Cross3(v, CreateNotParallelTo(v));
 		vec *= Length3(v) / Length3(vec);
 		return vec;
 	}
 	inline uint Octant(v4 const& v)
 	{
-		// Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4    
+		// Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4
 		return (v.x >= 0.0f) | ((v.y >= 0.0f) << 1) | ((v.z >= 0.0f) << 2);
 	}
 
 	// Return a vector representing the approximate rotation between two orthonormal transforms
 	inline v4 RotationVectorApprox(m3x3 const& from, m3x3 const& to)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsOrthonormal(from) && IsOrthonormal(to), "This only works for orthonormal matrices");
+		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
 		m3x3 cpm_x_i2wR = to - from;
 		m3x3 w2iR = GetTranspose(from);
 		m3x3 cpm = cpm_x_i2wR * w2iR;
@@ -194,7 +194,7 @@ namespace pr
 	}
 	inline v4 RotationVectorApprox(m4x4 const& from, m4x4 const& to)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsOrthonormal(from) && IsOrthonormal(to), "This only works for orthonormal matrices");
+		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
 
 		m4x4 cpm_x_i2wR = to - from;
 		m4x4 w2iR = GetTranspose3x3(from); Zero(w2iR.pos);
@@ -235,7 +235,7 @@ namespace pr
 				v4 V1 = {1,2,3,4};
 				float len1_3 = (float)::sqrt(1*1 + 2*2 + 3*3);
 				float len1_4 = (float)::sqrt(1*1 + 2*2 + 3*3 + 4*4);
-			
+
 				PR_CLOSE(Length3(V1), len1_3, pr::maths::tiny);
 				PR_CLOSE(Length4(V1), len1_4, pr::maths::tiny);
 				PR_CHECK(IsNormal3(V1), false);

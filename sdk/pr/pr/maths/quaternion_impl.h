@@ -20,7 +20,7 @@ namespace pr
 		w = w_;
 		return *this;
 	}
-	
+
 	// Create a quaternion from an axis and an angle
 	inline Quat& Quat::set(v4 const& axis, float angle)
 	{
@@ -31,7 +31,7 @@ namespace pr
 		w = pr::Cos(0.5f * angle);
 		return *this;
 	}
-	
+
 	// Create a quaternion from Euler angles
 	inline Quat& Quat::set(float pitch, float yaw, float roll)
 	{
@@ -44,7 +44,7 @@ namespace pr
 		w = cos_r * cos_p * cos_y + sin_r * sin_p * sin_y;
 		return *this;
 	}
-	
+
 	// Create a quaternion from a rotation matrix
 	inline Quat& Quat::set(m3x3 const& m)
 	{
@@ -70,7 +70,7 @@ namespace pr
 			return set((m.z.x + m.x.z) * s, (m.y.z + m.z.y) * s, 0.25f / s, (m.x.y - m.y.x) * s);
 		}
 	}
-	
+
 	// Create a quaternion from a rotation matrix
 	inline Quat& Quat::set(m4x4 const& m)
 	{
@@ -81,7 +81,7 @@ namespace pr
 		return set(cast_m3x3(m));
 		#endif
 	}
-	
+
 	// Construct a quaternion from two vectors represent start and end orientations
 	inline Quat& Quat::set(v4 const& from, v4 const& to)
 	{
@@ -93,7 +93,7 @@ namespace pr
 		*this = Normalise4(*this);
 		return *this;
 	}
-	
+
 	// Quaternion multiply
 	// Note about quat multiply vs. r = q*v*conj(q):
 	// To rotate a vector or another quaternion, use the "sandwich product"
@@ -112,7 +112,7 @@ namespace pr
 		q.w = lhs.w*rhs.w - lhs.x*rhs.x - lhs.y*rhs.y - lhs.z*rhs.z;
 		return q;
 	}
-	
+
 	// Functions
 	inline bool IsZero(Quat const& quat)
 	{
@@ -137,30 +137,30 @@ namespace pr
 	{
 		Quat q = quat; return Conjugate(q);
 	}
-	
+
 	// Return the axis and angle from a quaternion
 	inline void AxisAngle(Quat const& quat, v4& axis, float& angle)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsNormal4(quat), "quat isn't normalised");
+		assert(IsNormal4(quat) && "quat isn't normalised");
 		float w = pr::Clamp(quat.w, -1.0f, 1.0f);
 		float s = pr::Sqrt(1.0f - w * w);
 		if (FEql(s, 0.0f))  axis = pr::v4ZAxis; // axis arbitrary for angle = 0
 		else                axis.set(quat.x/s, quat.y/s, quat.z/s, 0.0f);
 		angle = 2.0f * pr::ACos(w);
 	}
-	
+
 	// Spherically interpolate between quaternions
 	inline Quat Slerp(Quat const& src, Quat const& dst, float frac)
 	{
 		if (FLessEql(frac, 0.0f)) { return src; }
 		if (FGtrEql(frac, 1.0f)) { return dst; }
-		
+
 		// Calculate cosine
 		Quat abs_dst;
 		float cos_angle = src.x*dst.x + src.y*dst.y + src.z*dst.z + src.w*dst.w;
 		if (cos_angle >= 0) { abs_dst =  dst; }
 		else                { abs_dst = -dst; cos_angle = -cos_angle; }
-		
+
 		// Calculate coefficients
 		if (FGtr(1.0f, cos_angle, 0.05f))
 		{
@@ -176,14 +176,14 @@ namespace pr
 			return Normalise4(Lerp(src, abs_dst, frac));
 		}
 	}
-	
+
 	// Rotate 'rotatee' by 'rotator'
 	inline Quat Rotate(Quat const& rotator, Quat const& rotatee)
 	{
-		PR_ASSERT(PR_DBG_MATHS, FEql(Length4Sq(rotator), 1.0f), "Non-unit quaternion used for rotation");
+		assert(FEql(Length4Sq(rotator), 1.0f) && "Non-unit quaternion used for rotation");
 		return rotator * rotatee * GetConjugate(rotator);
 	}
-	
+
 	// Rotate a vector by a quaternion
 	// This is an optimised version of: r = q*v*conj(q) for when v.w == 0
 	inline v4 Rotate(Quat const& lhs, v4 const& rhs)

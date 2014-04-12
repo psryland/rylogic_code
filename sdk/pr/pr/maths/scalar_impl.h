@@ -29,7 +29,7 @@ namespace pr
 	{
 		return Rsqrt0<PR_MATHS_USE_INTRINSICS>(x);
 	}
-	
+
 	// High(er) precision reciprocal square root
 	template <int Intrin> inline float Rsqrt1(float x)
 	{
@@ -53,7 +53,7 @@ namespace pr
 	{
 		return Rsqrt1<PR_MATHS_USE_INTRINSICS>(x);
 	}
-	
+
 	// Cube root
 	inline float Cubert(float x)
 	{
@@ -63,18 +63,18 @@ namespace pr
 		if (x == 0.0f) return x;
 		as.f = x;
 		uint32 bits = as.i;
-		
+
 		bits = (bits + (uint32)2 * 0x3f800000) / 3;
-		
+
 		as.i = bits;
 		float guess = as.f;
-		
+
 		x *= 1.0f / 3.0f;
 		guess = (x / (guess*guess) + guess * (2.0f / 3.0f));
 		guess = (x / (guess*guess) + guess * (2.0f / 3.0f));
 		return (flip_sign ? -guess : guess);
 	}
-	
+
 	inline uint Hash(float value, uint max_value)
 	{
 		// Arbitrary prime
@@ -100,20 +100,20 @@ namespace pr
 	{
 		return static_cast<int>(x*scale) / static_cast<float>(scale);
 	}
-	
+
 	// Return the cosine of the angle of the triangle apex opposite 'opp'
 	inline float CosAngle(float adj0, float adj1, float opp)
 	{
-		PR_ASSERT(PR_DBG_MATHS, !FEqlZero(adj0) && !FEqlZero(adj1), "Angle undefined an when adjacent length is zero");
+		assert(!FEqlZero(adj0) && !FEqlZero(adj1) && "Angle undefined an when adjacent length is zero");
 		return Clamp((adj0*adj0 + adj1*adj1 - opp*opp) / (2.0f * adj0 * adj1), -1.0f, 1.0f);
 	}
-	
+
 	// Return the angle (in radians) of the triangle apex opposite 'opp'
 	inline float Angle(float adj0, float adj1, float opp)
 	{
 		return ACos(CosAngle(adj0, adj1, opp));
 	}
-	
+
 	// Return the length of a triangle side given by two adjacent side lengths and an angle between them
 	inline float Length(float adj0, float adj1, float angle)
 	{
@@ -123,4 +123,3 @@ namespace pr
 }
 
 #endif
-

@@ -31,11 +31,11 @@ namespace pr
 	// Create from quaterion
 	inline m3x3& m3x3::set(Quat const& quat)
 	{
-		PR_ASSERT(PR_DBG_MATHS, !IsZero(quat), "'quat' is a zero quaternion");
-		
+		assert(!IsZero(quat) && "'quat' is a zero quaternion");
+
 		float quat_length_sq = Length4Sq(quat);
 		float s              = 2.0f / quat_length_sq;
-		
+
 		float xs = quat.x *  s, ys = quat.y *  s, zs = quat.z *  s;
 		float wx = quat.w * xs, wy = quat.w * ys, wz = quat.w * zs;
 		float xx = quat.x * xs, xy = quat.x * ys, xz = quat.x * zs;
@@ -47,12 +47,12 @@ namespace pr
 		x.w =                   y.w =                   z.w = 0.0f;
 		return *this;
 	}
-	
+
 	// Create a transform representing the rotation from one vector to another.
 	// 'from' and 'to' should be normalised
 	inline m3x3& m3x3::set(v4 const& from, v4 const& to)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsNormal3(from) && IsNormal3(to), "'from' and 'to' should be normalised");
+		assert(IsNormal3(from) && IsNormal3(to) && "'from' and 'to' should be normalised");
 
 		float cos_angle    = Dot3(from, to);      // Cos angle
 		v4 axis_sine_angle = Cross3(from, to);    // Axis multiplied by sine of the angle
@@ -63,18 +63,18 @@ namespace pr
 	// Create from an axis, angle
 	inline m3x3& m3x3::set(v4 const& axis_norm, v4 const& axis_sine_angle, float cos_angle)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsNormal3(axis_norm), "'axis_norm' should be normalised");
+		assert(IsNormal3(axis_norm) && "'axis_norm' should be normalised");
 
 		v4 trace_vec = axis_norm * (1.0f - cos_angle);
-		
+
 		x.x = trace_vec.x * axis_norm.x + cos_angle;
 		y.y = trace_vec.y * axis_norm.y + cos_angle;
 		z.z = trace_vec.z * axis_norm.z + cos_angle;
-		
+
 		trace_vec.x *= axis_norm.y;
 		trace_vec.z *= axis_norm.x;
 		trace_vec.y *= axis_norm.z;
-		
+
 		x.y = trace_vec.x + axis_sine_angle.z;
 		x.z = trace_vec.z - axis_sine_angle.y;
 		x.w = 0.0f;
@@ -90,7 +90,7 @@ namespace pr
 	// Create from an axis and angle. 'axis' should be normalised
 	inline m3x3& m3x3::set(v4 const& axis_norm, float angle)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsNormal3(axis_norm), "'axis_norm' should be normalised");
+		assert(IsNormal3(axis_norm) && "'axis_norm' should be normalised");
 		return set(axis_norm, axis_norm * pr::Sin(angle), pr::Cos(angle));
 	}
 
@@ -98,7 +98,7 @@ namespace pr
 	// the rotation in radians and the direction represents the axis of rotation
 	inline m3x3& m3x3::set(v4 const& angular_displacement)
 	{
-		PR_ASSERT(PR_DBG_MATHS, FEql(angular_displacement.w, 0.0f), "'angular_displacement' should be a scaled direction vector");
+		assert(FEql(angular_displacement.w, 0.0f) && "'angular_displacement' should be a scaled direction vector");
 		float len = Length3(angular_displacement);
 		return len > maths::tiny ? set(angular_displacement/len, len) : identity();
 	}
@@ -121,7 +121,7 @@ namespace pr
 		return *this;
 		#endif
 	}
-	
+
 	// Create from a pointer to an array of 12 floats, i.e. 4x3
 	inline m3x3& m3x3::set(float const* mat)
 	{
@@ -139,7 +139,7 @@ namespace pr
 	}
 	inline m3x3&     m3x3::zero()                                  { return *this = m3x3Zero; }
 	inline m3x3&     m3x3::identity()                              { return *this = m3x3Identity; }
-	
+
 	// Assignment operators
 	inline m3x3& operator += (m3x3& lhs, float rhs)                { cast_v3(lhs.x) += rhs;   cast_v3(lhs.y) += rhs;   cast_v3(lhs.z) += rhs;   return lhs; }
 	inline m3x3& operator -= (m3x3& lhs, float rhs)                { cast_v3(lhs.x) -= rhs;   cast_v3(lhs.y) -= rhs;   cast_v3(lhs.z) -= rhs;   return lhs; }
@@ -241,7 +241,7 @@ namespace pr
 	{
 		return v4::make(mat.y.y*mat.z.z - mat.y.z*mat.z.y, -mat.y.x*mat.z.z + mat.y.z*mat.z.x, mat.y.x*mat.z.y - mat.y.y*mat.z.x, 0.0f);
 	}
-	
+
 	inline m3x3& Transpose(m3x3& mat)
 	{
 		Swap(mat.x.y, mat.y.x);
@@ -249,7 +249,7 @@ namespace pr
 		Swap(mat.y.z, mat.z.y);
 		return mat;
 	}
-	
+
 	inline m3x3 GetTranspose(m3x3 const& mat)
 	{
 		m3x3 m = mat;
@@ -260,10 +260,10 @@ namespace pr
 	{
 		return !FEql(Determinant3(mat), 0.0f);
 	}
-	
+
 	inline m3x3& Inverse(m3x3& mat)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsInvertable(mat), "Matrix has no inverse");
+		assert(IsInvertable(mat) && "Matrix has no inverse");
 		float inv_det = 1.0f / Determinant3(mat);
 		m3x3  tmp     = GetTranspose(mat);
 		mat.x = Cross3(tmp.y, tmp.z) * inv_det;
@@ -271,10 +271,10 @@ namespace pr
 		mat.z = Cross3(tmp.x, tmp.y) * inv_det;
 		return mat;
 	}
-	
+
 	inline m3x3 GetInverse(m3x3 const& mat)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsInvertable(mat), "Matrix has no inverse");
+		assert(IsInvertable(mat) && "Matrix has no inverse");
 		float inv_det = 1.0f / Determinant3(mat);
 		m3x3 tmp;
 		tmp.x = Cross3(mat.y, mat.z) * inv_det;
@@ -282,13 +282,13 @@ namespace pr
 		tmp.z = Cross3(mat.x, mat.y) * inv_det;
 		return Transpose(tmp);
 	}
-	
+
 	inline m3x3& InverseFast(m3x3& mat)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsOrthonormal(mat), "Matrix is not orthonormal");
+		assert(IsOrthonormal(mat) && "Matrix is not orthonormal");
 		return Transpose(mat);
 	}
-	
+
 	inline m3x3 GetInverseFast(m3x3 const& mat)
 	{
 		m3x3 m = mat;
@@ -316,8 +316,8 @@ namespace pr
 	// Return the axis and angle of a rotation matrix
 	inline void GetAxisAngle(m3x3 const& mat, v4& axis, float& angle)
 	{
-		PR_ASSERT(PR_DBG_MATHS, IsOrthonormal(mat), "Matrix is not a pure rotation matrix");
-		
+		assert(IsOrthonormal(mat) && "Matrix is not a pure rotation matrix");
+
 		angle = pr::ACos(0.5f * (Trace3(mat) - 1.0f));
 		axis = 1000.0f * Kernel(pr::m3x3Identity - mat);
 		if (IsZero3(axis)) { axis = v4XAxis; angle = 0.0f; return; }
@@ -331,7 +331,7 @@ namespace pr
 		v4 XcXp = Cross3(X, Xprim);
 		if (Dot3(XcXp, axis) < 0.0f) angle = -angle;
 	}
-	
+
 	// Cosntruct a rotation matrix
 	inline m3x3& Rotation3x3 (m3x3& mat, float pitch, float yaw, float roll)   { return mat.set(pitch, yaw, roll); }
 	inline m3x3& Rotation3x3 (m3x3& mat, v3 const& axis_norm, float angle)     { return mat.set(v4::make(axis_norm, 0.0f), angle); }
@@ -343,17 +343,17 @@ namespace pr
 	inline m3x3  Rotation3x3 (v3 const& axis, float angle)                     { m3x3 m; return Rotation3x3(m, axis, angle); }
 	inline m3x3  Rotation3x3 (v4 const& axis_norm, float angle)                { m3x3 m; return Rotation3x3(m, axis_norm, angle); }
 	inline m3x3  Rotation3x3 (const Quat& quat)                                { m3x3 m; return Rotation3x3(m, quat); }
-	
+
 	// Construct a scale matrix
 	inline m3x3& Scale3x3    (m3x3& mat, float scale)                          { Zero(mat); mat.x.x = mat.y.y = mat.z.z = scale; return mat; }
 	inline m3x3& Scale3x3    (m3x3& mat, float sx, float sy, float sz)         { Zero(mat); mat.x.x = sx; mat.y.y = sy; mat.z.z = sz; return mat; }
 	inline m3x3  Scale3x3    (float scale)                                     { m3x3 m; return Scale3x3(m, scale); }
 	inline m3x3  Scale3x3    (float sx, float sy, float sz)                    { m3x3 m; return Scale3x3(m, sx, sy, sz); }
-	
+
 	// Construct a shear matrix
 	inline m3x3& Shear3x3    (m3x3& mat, float sxy, float sxz, float syx, float syz, float szx, float szy) { mat.x.set(1.0f, sxy, sxz, 0.0f); mat.y.set(syx, 1.0f, syz, 0.0f); mat.z.set(szx, szy, 1.0f, 0.0f); return mat; }
 	inline m3x3  Shear3x3    (float sxy, float sxz, float syx, float syz, float szx, float szy)            { m3x3 m; return Shear3x3(m, sxy, sxz, syx, syz, szx, szy); }
-	
+
 	// Diagonalise a 3x3 matrix. From numerical recipes
 	namespace impl
 	{
@@ -405,13 +405,13 @@ namespace pr
 
 						for( int k = 0; k != i; ++k )
 							impl::Rotate(mat, k, i, k, j, s, tau); //changes mat( 0:i-1 ,i) and mat( 0:i-1 ,j)
-						
+
 						for( int k = i + 1; k != j; ++k )
 							impl::Rotate(mat, i, k, k, j, s, tau); //changes mat(i, i+1:j-1 ) and mat( i+1:j-1 ,j)
-						
+
 						for( int k = j + 1; k != 3; ++k )
 							impl::Rotate(mat, i, k, j, k, s, tau); //changes mat(i, j+1:2 ) and mat(j, j+1:2 )
-						
+
 						for( int k = 0; k != 3; ++k )
 							impl::Rotate(eigen_vectors, k, i, k, j, s, tau); //changes EigenVec( 0:2 ,i) and evec( 0:2 ,j)
 					}
@@ -461,7 +461,7 @@ namespace pr
 		m3x3 m;
 		return RotationToZAxis(m, from);
 	}
-	
+
 	// Make an orientation matrix from a direction vector
 	// 'dir' is the direction to align the 'axis'th axis to
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
@@ -479,7 +479,7 @@ namespace pr
 		m3x3 m;
 		return OriFromDir(m, dir, axis, up);
 	}
-	
+
 	// Make a scaled orientation matrix from a direction vector
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
 	inline m3x3& ScaledOriFromDir(m3x3& ori, v4 const& dir, int axis, v4 const& up)
@@ -495,7 +495,7 @@ namespace pr
 		m3x3 ori;
 		return ScaledOriFromDir(ori, dir, axis, up);
 	}
-	
+
 	// Return the cross product matrix for 'vec'. This matrix can be used to take the
 	// cross product of another vector: e.g. Cross(v1, v2) == CrossProductMatrix3x3(v1) * v2
 	inline m3x3 CrossProductMatrix3x3(v4 const& vec)
