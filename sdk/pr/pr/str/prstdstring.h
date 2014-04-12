@@ -20,18 +20,8 @@
 #include <stdexcept>
 #include <algorithm>
 #include <type_traits>
-#include "pr/meta/if.h"  // these will be removed when pre-C++11 is a thing of the past
-#include "pr/meta/ispod.h"
-#include "pr/meta/ispointer.h"
-#include "pr/meta/enableif.h"
-#include "pr/meta/alignmentof.h"
-#include "pr/meta/alignedstorage.h"
-#include "pr/meta/remove_pointer.h"
+#include <cassert>
 
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
 #ifndef PR_NOEXCEPT
 #   define PR_NOEXCEPT_DEFINED
 #   if _MSC_VER >= 1900
@@ -65,14 +55,14 @@ namespace pr
 		typedef std::ptrdiff_t difference_type;
 		typedef Type           value_type;
 		typedef Allocator      allocator_type;
-		typedef typename pr::meta::remove_pointer<Allocator>::type AllocType; // The type of the allocator ignoring pointers
+		typedef typename std::remove_pointer<Allocator>::type AllocType; // The type of the allocator ignoring pointers
 
 		enum
 		{
 			LocalLength      = LocalCount,
 			LocalSizeInBytes = LocalCount * sizeof(value_type),
-			TypeIsPod        = pr::meta::is_pod<Type>::value,
-			TypeAlignment    = pr::meta::alignment_of<Type>::value,
+			TypeIsPod        = std::is_pod<Type>::value,
+			TypeAlignment    = std::alignment_of<Type>::value,
 		};
 
 		// End of string index position
@@ -105,7 +95,7 @@ namespace pr
 		};
 
 	private:
-		typedef typename pr::meta::aligned_storage<sizeof(Type), pr::meta::alignment_of<Type>::value>::type TLocalStore;
+		typedef typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type TLocalStore;
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays
 		Type*       m_ptr;                // Pointer to the array of data
 		size_type   m_capacity;           // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
@@ -117,10 +107,10 @@ namespace pr
 
 		// Access to the allocator object (independant over whether its a pointer or instance)
 		// (enable_if requires type inference to work, hence the 'A' template parameter)
-		template <typename A> typename pr::meta::enable_if<!pr::meta::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return m_allocator; }
-		template <typename A> typename pr::meta::enable_if< pr::meta::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
-		template <typename A> typename pr::meta::enable_if<!pr::meta::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return m_allocator; }
-		template <typename A> typename pr::meta::enable_if< pr::meta::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return *m_allocator; }
+		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return m_allocator; }
+		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
+		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return m_allocator; }
+		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return *m_allocator; }
 
 		// return true if 'ptr' points with the current container
 		bool inside(const_pointer ptr) const { return m_ptr <= ptr && ptr < m_ptr + m_count; }
@@ -152,13 +142,13 @@ namespace pr
 			struct ConstExpr { static bool Sink(bool b) {return b;} };
 			if (!ConstExpr::Sink(Fixed))
 			{
-				PR_ASSERT(PR_DBG, m_capacity >= LocalLength, "");
+				assert(m_capacity >= LocalLength);
 				if (new_count <= m_capacity) return;
 
 				// Allocate 50% more space
 				size_type bigger, new_cap = new_count;
 				if (autogrow && new_cap < (bigger = m_count*3/2)) { new_cap = bigger; }
-				PR_ASSERT(PR_DBG, autogrow || new_count >= m_count, "don't use ensure_space to trim the allocated memory");
+				assert(autogrow || new_count >= m_count && "don't use ensure_space to trim the allocated memory");
 				Type* new_array = alloc().allocate(new_cap);
 
 				// Copy elements from the old array to the new array
@@ -169,11 +159,11 @@ namespace pr
 
 				m_ptr = new_array;
 				m_capacity = new_cap;
-				PR_ASSERT(PR_DBG, m_capacity >= LocalLength, "");
+				assert(m_capacity >= LocalLength);
 			}
 			else
 			{
-				PR_ASSERT(PR_DBG, new_count <= m_capacity, "non-allocating container capacity exceeded");
+				assert(new_count <= m_capacity && "non-allocating container capacity exceeded");
 				if (new_count > m_capacity)
 					throw std::overflow_error("pr::string<> out of memory");
 			}
@@ -359,7 +349,7 @@ namespace pr
 		// Add an element to the end of the array without "ensure_space" first
 		void push_back_fast(value_type value)
 		{
-			PR_ASSERT(PR_DBG, (m_count + 1) <= m_capacity, "Container overflow");
+			assert(m_count + 1 <= m_capacity && "Container overflow");
 			m_ptr[size()] = value;
 			m_count++;
 			m_ptr[size()] = 0;
@@ -368,7 +358,7 @@ namespace pr
 		// Deletes the element at the end of the array.
 		void pop_back()
 		{
-			PR_ASSERT(PR_DBG, !empty(), "");
+			assert(!empty());
 			--m_count;
 		}
 
@@ -415,12 +405,12 @@ namespace pr
 		// indexed access
 		const_reference at(size_type pos) const
 		{
-			PR_ASSERT(PR_DBG, pos < size(), "out of range");
+			assert(pos < size() && "out of range");
 			return m_ptr[pos];
 		}
 		reference at(size_type pos)
 		{
-			PR_ASSERT(PR_DBG, pos < size(), "out of range");
+			assert(pos < size() && "out of range");
 			return m_ptr[pos];
 		}
 
@@ -437,7 +427,7 @@ namespace pr
 		// determine new minimum length of allocated storage
 		void reserve(size_type new_cap = 0)
 		{
-			PR_ASSERT(PR_DBG, new_cap >= size(), "reserve amount less than current size");
+			assert(new_cap >= size() && "reserve amount less than current size");
 			ensure_space(new_cap, false);
 		}
 
@@ -460,12 +450,12 @@ namespace pr
 		// Index operator
 		const_reference operator [](size_type i) const
 		{
-			PR_ASSERT(PR_DBG, i < m_count, "out of range");
+			assert(i < m_count && "out of range");
 			return m_ptr[i];
 		}
 		reference operator [](size_type i)
 		{
-			PR_ASSERT(PR_DBG, i < m_count, "out of range");
+			assert(i < m_count && "out of range");
 			return m_ptr[i];
 		}
 
@@ -630,7 +620,7 @@ namespace pr
 		// assign right [rofs, rofs + count)
 		template <typename tarr> string& assign(tarr const& right, size_type rofs, size_type count)
 		{
-			PR_ASSERT(PR_DBG, rofs <= length(right), "");
+			assert(rofs <= length(right));
 
 			size_type num = length(right) - rofs;
 			if (count > num) count = num;
@@ -665,7 +655,7 @@ namespace pr
 		// insert count * ch at ofs
 		string& insert(size_type ofs, size_type count, value_type ch)
 		{
-			PR_ASSERT(PR_DBG, ofs <= size(), "");
+			assert(ofs <= size() && "");
 			ensure_space(m_count + count, true);
 			traits::move(m_ptr + ofs + count, m_ptr + ofs, m_count - ofs);
 			traits::fill(m_ptr + ofs, count, ch);
@@ -683,10 +673,10 @@ namespace pr
 		// insert right [rofs, rofs + count) at ofs
 		template <typename tstr> string& insert(size_type ofs, tstr const& right, size_type rofs, size_type count)
 		{
-			PR_ASSERT(PR_DBG, size() >= ofs && right.size() >= rofs, ""); // ofs or rofs off end
+			assert(size() >= ofs && right.size() >= rofs); // ofs or rofs off end
 			size_type num = right.size() - rofs;
 			if (num < count) count = num; // trim count to size
-			PR_ASSERT(PR_DBG, npos - size() > count, ""); // result too long
+			assert(npos - size() > count); // result too long
 			if (count == 0) return *this;
 			ensure_space(m_count + count, true); // make room and insert new stuff
 			traits::move(m_ptr + ofs + count, m_ptr + ofs, m_count - ofs); // empty out hole
@@ -706,9 +696,9 @@ namespace pr
 		// insert [ptr, ptr + count) at ofs
 		string& insert(size_type ofs, Type const* ptr, size_type count)
 		{
-			PR_ASSERT(PR_DBG, ofs < m_count, "offset off the end of this string");
-			PR_ASSERT(PR_DBG, count <= traits::length(ptr), "'count' is longer than the null terminated string 'ptr'");
-			PR_ASSERT(PR_DBG, npos - size() > count, "result too long");
+			assert(ofs < m_count && "offset off the end of this string");
+			assert(count <= traits::length(ptr) && "'count' is longer than the null terminated string 'ptr'");
+			assert(npos - size() > count && "result too long");
 
 			if (count == 0)
 				return *this;
@@ -774,7 +764,7 @@ namespace pr
 		// append right [rofs, rofs + count)
 		template <typename tstr> string& append(tstr const& right, size_type rofs, size_type count)
 		{
-			PR_ASSERT(PR_DBG, rofs <= right.size(), "");
+			assert(rofs <= right.size());
 
 			size_type num = right.size() - rofs;
 			if (num < count) count = num;
@@ -853,7 +843,7 @@ namespace pr
 		// compare [ofs, ofs + n0) with right [rofs, rofs + count)
 		template <typename tstr> int compare(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count) const
 		{
-			PR_ASSERT(PR_DBG, rofs <= right.size(), "");
+			assert(rofs <= right.size());
 			if (right.size() - rofs < count) count = right.size() - rofs;
 			return compare(ofs, n0, right.c_str() + rofs, count);
 		}
@@ -891,10 +881,10 @@ namespace pr
 		// replace [ofs, ofs + n0) with right [rofs, rofs + count)
 		template <typename tstr> string& replace(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count)
 		{
-			PR_ASSERT(PR_DBG, ofs < size() && rofs <= right.size(), "");
+			assert(ofs < size() && rofs <= right.size());
 			if (size()       - ofs  < n0   ) n0    = size()       - ofs;  // trim n0 to size
 			if (right.size() - rofs < count) count = right.size() - rofs; // trim count to size
-			PR_ASSERT(PR_DBG, !(npos - count <= size() - n0), "");        // result too long
+			assert(!(npos - count <= size() - n0));                       // result too long
 			size_type rcount  = m_count - n0 - ofs;                       // length of preserved tail (incl null)
 			ensure_space(m_count + count - n0, true);
 
@@ -932,13 +922,13 @@ namespace pr
 		// replace [ofs, ofs + n0) with [ptr, ptr + count)
 		string& replace(size_type ofs, size_type n0, const_pointer ptr, size_type count)
 		{
-			PR_ASSERT(PR_DBG, count == 0 || ptr != 0, "");
+			assert(count == 0 || ptr != 0);
 			if (inside(ptr)) return replace(ofs, n0, *this, ptr - m_ptr, count); // substring, replace carefully
 
-			PR_ASSERT(PR_DBG, !(size() < ofs), "");                       // ofs off end
-			if (size() - ofs < n0) n0 = size() - ofs;                     // trim n0 to size
-			PR_ASSERT(PR_DBG, !(npos - count <= size() - n0), "");        // result too long
-			size_type rcount = m_count - n0 - ofs;                        // length of preserved tail (incl null)
+			assert(!(size() < ofs));                  // ofs off end
+			if (size() - ofs < n0) n0 = size() - ofs; // trim n0 to size
+			assert(!(npos - count <= size() - n0));   // result too long
+			size_type rcount = m_count - n0 - ofs;    // length of preserved tail (incl null)
 
 			if (count < n0) // smaller hole, move tail up
 				traits::move(m_ptr + ofs + count, m_ptr + ofs + n0, rcount);
@@ -958,17 +948,17 @@ namespace pr
 		// replace [ofs, ofs + n0) with [ptr, <null>)
 		string& replace(size_type ofs, size_type n0, const_pointer ptr)
 		{
-			PR_ASSERT(PR_DBG, ptr != 0, "");
+			assert(ptr != nullptr);
 			return replace(ofs, n0, ptr, traits::length(ptr));
 		}
 
 		// replace [ofs, ofs + n0) with count * ch
 		string& replace(size_type ofs, size_type n0, size_type count, value_type ch)
 		{
-			PR_ASSERT(PR_DBG, !(size() < ofs), "");                // ofs off end
-			if (size() - ofs < n0) n0 = size() - ofs;                     // trim n0 to size
-			PR_ASSERT(PR_DBG, !(npos - count <= size() - n0), ""); // result too long
-			size_type rcount = m_count - n0 - ofs;                        // length of preserved tail (incl null)
+			assert(!(size() < ofs));                  // ofs off end
+			if (size() - ofs < n0) n0 = size() - ofs; // trim n0 to size
+			assert(!(npos - count <= size() - n0));   // result too long
+			size_type rcount = m_count - n0 - ofs;    // length of preserved tail (incl null)
 
 			if (count < n0) // smaller hole, move tail up
 				traits::move(m_ptr + ofs + count, m_ptr + ofs + n0, rcount);
@@ -1234,6 +1224,30 @@ namespace pr
 		}
 	};
 
+	namespace impl
+	{
+		// A static instance of the locale, because this thing takes ages to construct
+		inline std::locale const& locale()
+		{
+			static std::locale s_locale("");
+			return s_locale;
+		}
+		template <typename String> inline String narrow(wchar_t const* from, std::size_t len = 0)
+		{
+			if (len == 0) len = wcslen(from);
+			std::vector<char> buffer(len + 1);
+			std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
+			return String(&buffer[0], &buffer[len]);
+		};
+		template <typename String> inline String widen(char const* from, std::size_t len = 0)
+		{
+			if (len == 0) len = strlen(from);
+			std::vector<wchar_t> buffer(len + 1);
+			std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
+			return String(&buffer[0], &buffer[len]);
+		}
+	}
+
 	// string concatenation
 	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>
 	inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs)
@@ -1331,22 +1345,22 @@ namespace pr
 	}
 	template <int L, bool F, typename A> inline std::basic_ostream<char>& operator << (std::basic_ostream<char>& ostrm, string<wchar_t,L,F,A> const& str)
 	{
-		return ostrm << Narrow(str.c_str(), str.size());
+		return ostrm << impl::narrow<string<char>>(str.c_str(), str.size());
 	}
 	template <int L, bool F, typename A> inline std::basic_ostream<wchar_t>& operator << (std::basic_ostream<wchar_t>& ostrm, string<char,L,F,A> const& str)
 	{
-		return ostrm << Widen(str.c_str(), str.size());
+		return ostrm << impl::widen<string<wchar_t>>(str.c_str(), str.size());
 	}
 	template <int L, bool F, typename A> inline std::basic_istream<char>& operator >> (std::basic_istream<char>& istrm, string<wchar_t,L,F,A>& str)
 	{
 		std::basic_string<char> s;
-		istrm >> s; str.append(Widen(s.c_str(), s.size()));
+		istrm >> s; str.append(impl::widen<string<wchar_t>>(s.c_str(), s.size()));
 		return istrm;
 	}
 	template <int L, bool F, typename A> inline std::basic_istream<wchar_t>& operator >> (std::basic_istream<wchar_t>& istrm, string<char,L,F,A>& str)
 	{
 		std::basic_string<wchar_t> s;
-		istrm >> s; str.append(Narrow(s.c_str(), s.size()));
+		istrm >> s; str.append(impl::narrow<string<char>>(s.c_str(), s.size()));
 		return istrm;
 	}
 
@@ -1378,10 +1392,11 @@ namespace std
 		}
 	};
 }
-	
 
 #if PR_UNITTESTS
+#include <string>
 #include "pr/common/unittests.h"
+#include "pr/str/prstringcore.h"
 namespace pr
 {
 	namespace unittests
@@ -1532,10 +1547,6 @@ namespace pr
 #ifdef PR_NOEXCEPT_DEFINED
 #   undef PR_NOEXCEPT_DEFINED
 #   undef PR_NOEXCEPT
-#endif
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
 #endif
 
 #endif
