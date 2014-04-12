@@ -21,8 +21,8 @@ namespace pr
 			BaseInstance const* m_instance; // Instance data for the model that this nugget belongs to
 		};
 		inline bool operator < (DrawListElement const& lhs, DrawListElement const& rhs) { return lhs.m_sort_key < rhs.m_sort_key; }
-		
-		static_assert(pr::meta::is_pod<DrawListElement>::value, "Drawlist elements must be POD types");
+
+		static_assert(std::is_pod<DrawListElement>::value, "Drawlist elements must be POD types");
 	}
 }
 
